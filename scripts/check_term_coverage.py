@@ -86,6 +86,12 @@ COMMON_WORDS = {
     "Positiva signaler", "Negativa signaler",
     "Fas 1 runtime", "Fas 2 runtime", "Fas 3 runtime",
     "Fas 1", "Fas 2", "Fas 3",
+    # Språknamn
+    "Engelska", "Svenska", "English", "Swedish",
+    # Interna kod-symboler / rubriker som inte är domänbegrepp
+    "CheckResult", "SECTIONS",
+    "Required files", "Optional files",
+    "Source", "Mirror", "Validate", "Spara",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

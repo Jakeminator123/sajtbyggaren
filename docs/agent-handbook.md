@@ -42,7 +42,7 @@ flowchart LR
 
 - **Skapa en ny term i koden utan att uppdatera policy.** Görs - men då måste policy uppdateras i samma PR.
 - **Kalla något `template`, `starter`, `boilerplate` istället för `Scaffold`.** Använd kanoniskt namn.
-- **Återinföra `tier2`/`tier3`/`F2`/`F3` för quality gate.** Förbjudet. EN gate eller ny policy-version.
+- **Återinföra tier-uppdelning för quality gate.** Termerna står i `naming-dictionary.v1.json:globallyForbidden`. EN gate eller ny policy-version.
 - **Skriva runtime-logik i `backend.py`.** Backoffice är admin, inte runtime.
 - **Lägga LLM-anrop i fel fas.** Kontrollera `allowedToCallLLM` i `llm-flow-concepts.v1.json`.
 

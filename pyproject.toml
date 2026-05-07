@@ -1,13 +1,20 @@
 [project]
 name = "sajtbyggaren"
 version = "0.0.1"
-description = "Sajtbyggaren backoffice och governance-verktyg"
+description = "Sajtbyggaren backoffice and governance tooling."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
   "streamlit>=1.39",
   "jsonschema>=4.23",
   "pydantic>=2.9",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "pytest-cov>=5.0",
+  "ruff>=0.6",
 ]
 
 [tool.setuptools]
@@ -20,3 +27,15 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
 ignore = ["E501"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra -q --strict-markers"
+markers = [
+  "governance: governance and cross-policy consistency tests",
+  "tooling: tests for scripts under scripts/",
+]
+filterwarnings = [
+  "ignore::DeprecationWarning",
+]

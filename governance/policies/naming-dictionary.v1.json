@@ -226,7 +226,7 @@
       "definition": "Abstraktion för var en genererad sajt körs. Implementationer: StackBlitzRuntime, FlyRuntime, LocalRuntime.",
       "ownerPackage": "packages/preview-runtime",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["VM", "sandbox", "preview-host", "vercelSandbox"]
+      "aliasesForbidden": ["VM", "sandbox", "preview-host", "vercelSandbox", "webcontainer"]
     },
     {
       "id": "previewRuntimeKind",
@@ -378,6 +378,8 @@
     "tier1",
     "tier2",
     "tier3",
+    "F2-only",
+    "F3-only",
     "template-library"
   ]
 }
