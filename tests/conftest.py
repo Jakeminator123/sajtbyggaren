@@ -78,3 +78,28 @@ def page_quality(policies: dict[str, dict]) -> dict:
 @pytest.fixture(scope="session")
 def preview_runtime_policy(policies: dict[str, dict]) -> dict:
     return policies["preview-runtime-policy.v1.json"]
+
+
+@pytest.fixture(scope="session")
+def project_dna_policy(policies: dict[str, dict]) -> dict:
+    return policies["project-dna.v1.json"]
+
+
+@pytest.fixture(scope="session")
+def embedding_policy(policies: dict[str, dict]) -> dict:
+    return policies["embedding-policy.v1.json"]
+
+
+@pytest.fixture(scope="session")
+def fix_registry(policies: dict[str, dict]) -> dict:
+    return policies["fix-registry.v1.json"]
+
+
+@pytest.fixture(scope="session")
+def llm_models(policies: dict[str, dict]) -> dict:
+    return policies["llm-models.v1.json"]
+
+
+@pytest.fixture(scope="session")
+def engine_run_policy(policies: dict[str, dict]) -> dict:
+    return policies["engine-run.v1.json"]

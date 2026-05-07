@@ -1,16 +1,31 @@
 {
   "$schema": "../schemas/engine-run.schema.json",
   "policyId": "engine-run.v1",
-  "version": 1,
+  "version": 2,
   "status": "draft-but-authoritative",
-  "purpose": "Definierar artefaktkedjan för en Engine Run. En prompt blir en runId med exakt åtta artefakter och en Engine Event-trace. Ingen utspridd fix-kedja, ingen extra init-väg.",
+  "purpose": "Definierar artefaktkedjan för en Engine Run. En prompt blir en runId med exakt åtta artefakter och en Engine Event-trace. Ingen utspridd fix-kedja, ingen extra init-väg. Version 2 lägger till mode (init/followup) och Project DNA-koppling.",
   "principles": [
     "En Engine Run = en runId = en mapp under data/runs/<runId>/.",
     "Tre faser, åtta artefakter, en trace. Inget annat.",
     "Repair Pipeline finns på exakt EN plats i kodbasen (packages/generation/repair/).",
     "Quality Gate finns på exakt EN plats (packages/generation/quality-gate/).",
-    "Inga LLM-anrop utanför fas 1, 2 och 3. Preview Runtime gör inga LLM-anrop."
+    "Inga LLM-anrop utanför fas 1, 2 och 3. Preview Runtime gör inga LLM-anrop.",
+    "Init skapar Project DNA. Follow-up läser Project DNA och får inte byta scaffoldId utan explicit redesign-intent."
   ],
+  "modes": {
+    "init": {
+      "purpose": "Första generationen av ett projekt. Skapar Project DNA i slutet av Fas 2.",
+      "writesProjectDna": true,
+      "readsProjectDna": false,
+      "requiresProjectId": false
+    },
+    "followup": {
+      "purpose": "Patchar inom befintlig Project DNA. Klassificerar FollowUp Intent och respekterar Scaffold Lock + Variant Lock.",
+      "writesProjectDna": false,
+      "readsProjectDna": true,
+      "requiresProjectId": true
+    }
+  },
   "phases": [
     {
       "id": "understand",
@@ -57,7 +72,7 @@
       "id": "input",
       "filename": "input.json",
       "writtenBy": "understand",
-      "purpose": "Den oförändrade prompten plus runId, timestamp, operator language, requested overrides."
+      "purpose": "Den oförändrade prompten plus runId, timestamp, mode (init/followup), projectId om followup, detected language."
     },
     {
       "id": "siteBrief",

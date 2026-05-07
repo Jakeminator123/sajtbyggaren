@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import uuid
 from datetime import datetime, timezone
@@ -39,6 +40,22 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_RUNS_DIR = REPO_ROOT / "data" / "runs"
+
+# Make packages/ importable when running this script directly.
+sys.path.insert(0, str(REPO_ROOT))
+
+
+def _resolve_brief_model() -> str:
+    """Read briefModel.model from llm-models.v1.json. Falls back to gpt-5.4."""
+    policy_path = REPO_ROOT / "governance" / "policies" / "llm-models.v1.json"
+    try:
+        models = json.loads(policy_path.read_text(encoding="utf-8"))
+        for role in models.get("roles", []):
+            if role.get("id") == "briefModel":
+                return role.get("model", "gpt-5.4")
+    except Exception:  # noqa: BLE001
+        pass
+    return "gpt-5.4"
 
 
 # ----- helpers ---------------------------------------------------------------
@@ -92,32 +109,39 @@ def emit(run_id: str, run_dir: Path, phase: str, event: str, status: str, messag
     print(f"[{phase}.{event}] {arrow}: {message}")
 
 
-# ----- detection helpers (minimal, deterministic) ----------------------------
-
-
-SWEDISH_HINTS = {
-    "skapa", "för", "hemsida", "sajt", "och", "att", "med", "på", "elektriker",
-    "rörmokare", "tandläkare", "restaurang", "i", "av", "ett", "en",
-}
+# ----- detection helpers (delegated to packages/generation/brief) -----------
 
 
 def detect_language(prompt: str) -> str:
-    tokens = {t.lower() for t in prompt.replace(",", " ").split() if t}
-    if tokens & SWEDISH_HINTS:
-        return "sv"
-    return "en"
+    """Delegate to the canonical detector in packages/generation/brief.
+
+    Kept as a thin wrapper so callers in this script don't need to import
+    deeper. Single source of truth lives in packages.generation.brief.extract.
+    """
+    from packages.generation.brief import detect_language as _real_detect
+
+    return _real_detect(prompt)
 
 
 # ----- phase: understand (Site Brief) ----------------------------------------
 
 
-def run_phase_understand(prompt: str, run_dir: Path, run_id: str) -> dict[str, Any]:
+def run_phase_understand(
+    prompt: str,
+    run_dir: Path,
+    run_id: str,
+    *,
+    mode: str = "init",
+    project_id: str | None = None,
+) -> dict[str, Any]:
     emit(run_id, run_dir, "understand", "started", "started", f'Reading prompt ({len(prompt)} chars)')
 
     detected = detect_language(prompt)
 
     input_payload = {
         "runId": run_id,
+        "mode": mode,
+        "projectId": project_id,
         "rawPrompt": prompt,
         "detectedLanguage": detected,
         "createdAt": utcnow_iso(),
@@ -125,21 +149,69 @@ def run_phase_understand(prompt: str, run_dir: Path, run_id: str) -> dict[str, A
     write_json(run_dir / "input.json", input_payload)
     emit(run_id, run_dir, "understand", "input.written", "done", "input.json written", "input.json")
 
-    site_brief = {
-        "runId": run_id,
-        "language": detected,
-        "rawPrompt": prompt,
-        "businessTypeGuess": None,
-        "pageCount": None,
-        "tone": [],
-        "requestedCapabilities": [],
-        "sourceModelRole": "briefModel",
-        "modelUsed": "mock",
-        "createdAt": utcnow_iso(),
-        "_status": "mock - real briefModel call wired in Sprint 2",
-    }
+    # Try real briefModel; falls back to mock inside extract_site_brief if no API key.
+    has_key = bool(os.environ.get("OPENAI_API_KEY"))
+    model_name = _resolve_brief_model()
+    try:
+        from packages.generation.brief import extract_site_brief, site_brief_to_artifact
+
+        if has_key:
+            emit(run_id, run_dir, "understand", "brief.calling-llm", "started", f"Calling briefModel ({model_name})")
+        else:
+            emit(run_id, run_dir, "understand", "brief.mock", "started", "No OPENAI_API_KEY - mock brief")
+
+        result = extract_site_brief(prompt, model=model_name, language_hint=detected)
+        site_brief = site_brief_to_artifact(result, run_id=run_id, model=model_name)
+        if result.source == "mock-llm-error":
+            emit(
+                run_id,
+                run_dir,
+                "understand",
+                "brief.degraded",
+                "degraded",
+                f"LLM call failed, used mock fallback: {result.error}",
+            )
+    except Exception as exc:  # noqa: BLE001
+        sys.stderr.write(f"[dev_generate.understand] {type(exc).__name__}: {exc}\n")
+        sys.stderr.flush()
+        emit(
+            run_id,
+            run_dir,
+            "understand",
+            "brief.fallback",
+            "degraded",
+            f"briefModel error, fallback to inline mock: {type(exc).__name__}: {exc}",
+        )
+        site_brief = {
+            "runId": run_id,
+            "language": detected,
+            "rawPrompt": prompt,
+            "businessTypeGuess": None,
+            "pageCount": None,
+            "tone": [],
+            "requestedCapabilities": [],
+            "conversionGoals": [],
+            "servicesMentioned": [],
+            "contentDepth": None,
+            "sourceModelRole": "briefModel",
+            "modelUsed": "mock",
+            "briefSource": "mock-import-error",
+            "briefError": f"{type(exc).__name__}: {exc}",
+            "createdAt": utcnow_iso(),
+            "_status": "mock-import-error",
+        }
+
     write_json(run_dir / "site-brief.json", site_brief)
-    emit(run_id, run_dir, "understand", "brief.written", "done", "site-brief.json written (mock)", "site-brief.json")
+    source_label = site_brief.get("briefSource", site_brief.get("_status", "unknown"))
+    emit(
+        run_id,
+        run_dir,
+        "understand",
+        "brief.written",
+        "done",
+        f"site-brief.json written (source: {source_label})",
+        "site-brief.json",
+    )
 
     emit(run_id, run_dir, "understand", "done", "done", "Phase 1 complete")
     return site_brief
@@ -176,7 +248,7 @@ def run_phase_plan(run_dir: Path, run_id: str, site_brief: dict[str, Any]) -> di
 
     generation_package = {
         "runId": run_id,
-        "structuredBrief": site_brief,
+        "siteBrief": site_brief,
         "scaffold": site_plan["selectedScaffold"],
         "scaffoldVariant": site_plan["selectedVariant"],
         "routePlan": site_plan["routePlan"],
@@ -267,13 +339,24 @@ def run_phase_build(run_dir: Path, run_id: str, generation_package: dict[str, An
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run a mock Engine Run end-to-end.")
+    parser = argparse.ArgumentParser(description="Run an Engine Run end-to-end (Phase 1 may use real briefModel).")
     parser.add_argument("prompt", help="The user prompt to feed into the engine.")
     parser.add_argument(
         "--phase",
         choices=["brief", "plan", "build", "all"],
         default="all",
         help="Which phase to run. Default: all.",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["init", "followup"],
+        default=os.environ.get("SAJTBYGGAREN_MODE", "init"),
+        help="Engine Run mode. Default: init (or SAJTBYGGAREN_MODE env).",
+    )
+    parser.add_argument(
+        "--project-id",
+        default=None,
+        help="Project ID for follow-up mode. Required when --mode=followup.",
     )
     parser.add_argument(
         "--run-id",
@@ -287,18 +370,31 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    if args.mode == "followup" and not args.project_id:
+        print("--mode=followup requires --project-id.", file=sys.stderr)
+        return 2
+
     runs_dir = Path(args.data_runs_dir)
     run_id = args.run_id or make_run_id()
     run_dir = runs_dir / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    emit(run_id, run_dir, "engine", "run.started", "started", f"runId={run_id} phase={args.phase}")
+    emit(
+        run_id,
+        run_dir,
+        "engine",
+        "run.started",
+        "started",
+        f"runId={run_id} phase={args.phase} mode={args.mode}",
+    )
 
     site_brief: dict[str, Any] | None = None
     generation_package: dict[str, Any] | None = None
 
     if args.phase in ("brief", "all"):
-        site_brief = run_phase_understand(args.prompt, run_dir, run_id)
+        site_brief = run_phase_understand(
+            args.prompt, run_dir, run_id, mode=args.mode, project_id=args.project_id
+        )
 
     if args.phase in ("plan", "all"):
         if site_brief is None:

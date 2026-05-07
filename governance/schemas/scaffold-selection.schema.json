@@ -11,6 +11,7 @@
     "purpose",
     "principles",
     "primaryMethod",
+    "prefersEmbedding",
     "wordMatching",
     "embedding",
     "reranker",
@@ -27,6 +28,7 @@
     "purpose": { "type": "string" },
     "principles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
     "primaryMethod": { "enum": ["embedding-plus-llm-rerank"] },
+    "prefersEmbedding": { "type": "boolean", "const": true },
     "wordMatching": {
       "type": "object",
       "additionalProperties": false,

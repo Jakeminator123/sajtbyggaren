@@ -103,6 +103,11 @@ COMMON_WORDS = {
     "Scaffold Selector", "Dossier Selector",
     "Selected Scaffold", "Variant",
     "Globalt", "Skickas",
+    "Embedding Domains", "FollowUp",
+    "Mechanical Fixes", "LLM Fixes",
+    # Python stdlib + interna kod-symboler
+    "KeyError", "TimeoutExpired", "VIEWS", "Principer",
+    "BaseModel", "Field", "FileNotFoundError", "BriefResult",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

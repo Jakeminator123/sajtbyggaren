@@ -1,0 +1,139 @@
+{
+  "$schema": "../schemas/fix-registry.schema.json",
+  "policyId": "fix-registry.v1",
+  "version": 2,
+  "status": "draft-but-authoritative",
+  "purpose": "Central lista över alla Mechanical Fixes och LLM Fixes. Repair Pipeline läser hit. Ingen kod får implementera fix utanför detta register. Version 2 lägger till loop-limits, priority och onFailure per fix.",
+  "principles": [
+    "En fix = en post i registret. Inga oregistrerade fixar.",
+    "Mekaniska fixar körs först, alltid. LLM fixar bara om mekaniska inte räcker.",
+    "Sandwich-mönster (mekanisk -> LLM -> mekanisk -> validate) körs på exakt EN plats: packages/generation/repair/.",
+    "Varje fix-applicering sparas i Repair Result (vilken fix, vilken fil, vad ändrades).",
+    "Element Preservation Guard är en LLM Fix, inte en stage av sig själv.",
+    "Repair Pipeline har hård loop-cap från loopLimits. När capen nås markeras körningen som degraded - inte oändlig loop."
+  ],
+  "loopLimits": {
+    "maxMechanicalIterationsPerStage": 2,
+    "maxLlmFixesPerRun": 2,
+    "maxTotalSandwichPasses": 3,
+    "abortBehavior": "mark-degraded-and-emit-engine-event"
+  },
+  "stages": [
+    "post-codegen",
+    "post-typecheck",
+    "post-build",
+    "post-route-scan"
+  ],
+  "mechanicalFixes": [
+    {
+      "id": "remove-unused-imports",
+      "stage": "post-codegen",
+      "purpose": "Tar bort imports som inte används.",
+      "deterministic": true,
+      "priority": 10,
+      "idempotent": true,
+      "onFailure": "skip-and-log"
+    },
+    {
+      "id": "fix-jsx-tag-balance",
+      "stage": "post-codegen",
+      "purpose": "Stänger oavslutade JSX-taggar och korrigerar fel kapsling där det är otvetydigt.",
+      "deterministic": true,
+      "priority": 5,
+      "idempotent": true,
+      "onFailure": "abort-pipeline"
+    },
+    {
+      "id": "normalize-quotes",
+      "stage": "post-codegen",
+      "purpose": "Normaliserar enkel/dubbel-quotes enligt Prettier-defaults.",
+      "deterministic": true,
+      "priority": 50,
+      "idempotent": true,
+      "onFailure": "skip-and-log"
+    },
+    {
+      "id": "ensure-default-export",
+      "stage": "post-codegen",
+      "purpose": "Säkerställer att page.tsx-filer har default export.",
+      "deterministic": true,
+      "priority": 20,
+      "idempotent": true,
+      "onFailure": "abort-pipeline"
+    },
+    {
+      "id": "strip-hard-dossier-sdk-imports-in-design-mode",
+      "stage": "post-codegen",
+      "purpose": "I design-mode: tar bort SDK-imports från Hard Dossiers (Stripe, DB, etc.) som inte ska köras utan riktiga env-värden.",
+      "deterministic": true,
+      "priority": 15,
+      "idempotent": true,
+      "onFailure": "skip-and-log"
+    },
+    {
+      "id": "rename-route-segments-to-policy",
+      "stage": "post-codegen",
+      "purpose": "Ändrar route-segment till de namn som finns i Generation Package (t.ex. om LLM skrivit /services istället för /tjanster).",
+      "deterministic": true,
+      "priority": 25,
+      "idempotent": true,
+      "onFailure": "skip-and-log"
+    },
+    {
+      "id": "ensure-metadata-export",
+      "stage": "post-codegen",
+      "purpose": "Lägger till tom metadata-export om page.tsx saknar den.",
+      "deterministic": true,
+      "priority": 30,
+      "idempotent": true,
+      "onFailure": "skip-and-log"
+    },
+    {
+      "id": "normalize-tailwind-classes",
+      "stage": "post-codegen",
+      "purpose": "Sorterar Tailwind-klasser med prettier-plugin-tailwindcss-konvention.",
+      "deterministic": true,
+      "priority": 60,
+      "idempotent": true,
+      "onFailure": "skip-and-log"
+    }
+  ],
+  "llmFixes": [
+    {
+      "id": "targeted-file-repair",
+      "trigger": "typecheck-fail-after-mechanical",
+      "purpose": "Skickar enbart de filer som har typecheck-fel (plus närmaste imports) till repairModel.",
+      "modelRole": "repairModel",
+      "priority": 10,
+      "maxRetries": 1,
+      "onFailure": "mark-degraded"
+    },
+    {
+      "id": "preserve-element-guard",
+      "trigger": "high-value-section-missing",
+      "purpose": "Återinsätter förlorade Hero/CTA/Pricing-sektioner som scaffolden krävde men codegen råkade utelämna.",
+      "modelRole": "repairModel",
+      "priority": 5,
+      "maxRetries": 1,
+      "onFailure": "mark-degraded"
+    },
+    {
+      "id": "import-resolver",
+      "trigger": "broken-import-after-mechanical",
+      "purpose": "Hjälper till att lösa imports som mechanical fixers inte kunde resolva (t.ex. ny shadcn-primitiv som behöver läggas till).",
+      "modelRole": "repairModel",
+      "priority": 20,
+      "maxRetries": 1,
+      "onFailure": "skip-and-log"
+    },
+    {
+      "id": "route-recovery",
+      "trigger": "route-scan-fail-required-page-missing",
+      "purpose": "Skapar en saknad obligatorisk route-fil från Site Plan när codegen hoppat över den.",
+      "modelRole": "repairModel",
+      "priority": 15,
+      "maxRetries": 1,
+      "onFailure": "mark-degraded"
+    }
+  ]
+}
