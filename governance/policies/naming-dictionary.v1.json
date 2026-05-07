@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/naming-dictionary.schema.json",
   "policyId": "naming-dictionary.v1",
-  "version": 5,
+  "version": 6,
   "status": "draft-but-authoritative",
-  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 5 lägger till Mock Mode, Brief Source och Loop Limits.",
+  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 6 introducerar Starter som eget koncept (separat från Scaffold) och lägger till Starter Registry samt fyra Dossier-typer (Site/Feature/Integration/Data Dossier) som eget axel ovanpå soft/hybrid/hard.",
   "rules": [
     "Ett begrepp får ha exakt ett kanoniskt namn.",
     "Ett kanoniskt namn får bo i exakt en huvudsaklig mapp (se repo-boundaries).",
@@ -31,10 +31,26 @@
     {
       "id": "scaffold",
       "canonical": "Scaffold",
-      "definition": "Sajtens grammatik. Teknisk startpunkt + route-struktur + sektionsgrammatik + tillåtna dossiers + kvalitetsregler. Inte en mall.",
+      "definition": "Sajtens grammatik. Route-struktur + sektionsgrammatik + tillåtna dossiers + kvalitetsregler. Inte en mall och inte en körbar kodbas - för det senare se Starter.",
       "ownerPackage": "packages/generation/orchestration/scaffolds",
       "aliasesAllowed": ["ScaffoldDefinition"],
-      "aliasesForbidden": ["template", "starter", "boilerplate", "pack"]
+      "aliasesForbidden": ["template", "boilerplate", "pack"]
+    },
+    {
+      "id": "starter",
+      "canonical": "Starter",
+      "definition": "Körbar kodbas (Next.js-app) som scaffolds patchar ovanpå. Tom på företagsspecifik logik. Bor i data/starters/<starterId>/. En starter är teknisk grund; en scaffold är sajtens grammatik. Reviewer-modell: 5 starters (marketing-base, saas-base, commerce-base, portfolio-base, docs-base) täcker de 14 scaffold-IDs.",
+      "ownerPackage": "data/starters",
+      "aliasesAllowed": ["StarterBase"],
+      "aliasesForbidden": ["template", "boilerplate", "scaffold"]
+    },
+    {
+      "id": "starterRegistry",
+      "canonical": "Starter Registry",
+      "definition": "Centralt index över giltiga Starter-id:n och deras källor. Sanningskälla i data/starters/README.md tabellen tills en formell policy etableras.",
+      "ownerPackage": "data/starters",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
     },
     {
       "id": "scaffoldVariant",

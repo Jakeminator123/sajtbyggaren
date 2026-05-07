@@ -1,0 +1,58 @@
+---
+description: Stanna alltid på main; byt aldrig branch utan att operatör uttryckligen ber om det
+alwaysApply: true
+---
+
+# Branch-disciplin
+
+## Grundregel
+
+Agenten stannar alltid på `main` om inget annat anges. Detta gäller både lokalt arbete och alla operationer mot remote.
+
+## När agenten får skapa eller byta branch
+
+Endast när operatör uttryckligen säger något av:
+
+- "skapa en branch för X"
+- "gör det på en ny branch"
+- "byt till branch Y"
+- "öppna en PR för X"
+
+Om instruktionen är otydlig: fråga operatör innan branch skapas.
+
+## Vad agenten aldrig gör utan tillstånd
+
+- Skapar feature-branches "för säkerhets skull"
+- Pushar till feature-branches när uppgiften kunde ha gjorts på `main`
+- Lämnar kvar lokala branches efter att de är mergade
+- Lämnar kvar remote branches efter att de är mergade
+
+## Naming när branch faktiskt behövs
+
+- Format: `cursor/<kort-syfte-pa-svenska-utan-aaoo>` (eftersom git inte hanterar åäö konsekvent på alla plattformar)
+- Exempel: `cursor/marketing-base`, `cursor/dossier-typer-v2`
+- Aldrig: `cursor/work`, `cursor/wip`, `cursor/test`, `cursor/temp`
+
+## Cleanup-rutin
+
+Efter merge till `main`:
+
+1. `git push origin --delete <branchname>` (ta bort på GitHub)
+2. `git branch -d <branchname>` (ta bort lokalt)
+3. `git fetch origin --prune` (rensa stale referenser)
+
+Mål: `git branch -a` ska bara visa `main` plus `origin/main` när inget pågår.
+
+## Commits direkt på main
+
+Tillåtet endast för:
+
+- Små städuppgifter operatör uttryckligen bett om
+- Dokumentationsuppdateringar
+- Versions-bumps i policy/schema som följer existerande ADR
+
+Allt annat (nya features, refaktorisering, ny arkitektur) går via PR även när inga andra brancher finns.
+
+## Status-kontroll
+
+Före varje commit: agenten kör `git branch --show-current` och verifierar att den är på `main` om inget annat sagts. Om branch är något annat, stoppar agenten och frågar operatör.
