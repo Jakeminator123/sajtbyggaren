@@ -8,8 +8,19 @@
     "Scaffold är sajtens grammatik, inte en mall.",
     "Få och välvalda primära Scaffolds (10-14 st), inte 50.",
     "Scaffold säger inte 'om ord X i prompt, välj mig' - val sker via Selection Profile + embeddings + small LLM rerank.",
-    "Scaffold-realisering av en Dossier är scaffold-specifik; Dossier-kontraktet är portabelt."
+    "Scaffold-realisering av en Dossier är scaffold-specifik; Dossier-kontraktet är portabelt.",
+    "Scaffold-registret är ärvt arbetsmaterial från Sajtmaskin, inte hugget i sten - operatör får lägga till, ta bort, byta namn eller dela upp scaffolds via ADR."
   ],
+  "registryStatus": {
+    "policy": "inherited-working-material",
+    "inheritedFrom": "Jakeminator123/sajtmaskin",
+    "rationale": "De 14 scaffold-IDs nedan är utgångsläge för diskussion, inte permanent kontrakt. Sajtmaskin hade halvt slumpmässig segmentering; Sajtbyggaren ska revidera registret när vi har tre fungerande scaffolds att jämföra mot.",
+    "revisionRules": [
+      "Lägga till ny scaffold kräver ADR + naming-dictionary-uppdatering.",
+      "Ta bort scaffold kräver ADR + migration-anteckning om eventuella beroenden.",
+      "Byta namn på scaffold kräver ADR + alias-period i naming-dictionary tills alla referenser är uppdaterade."
+    ]
+  },
   "scaffoldDirectoryLayout": {
     "ownerPackage": "packages/generation/orchestration/scaffolds",
     "perScaffoldPath": "packages/generation/orchestration/scaffolds/<scaffoldId>/",

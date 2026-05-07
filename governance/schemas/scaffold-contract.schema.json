@@ -25,6 +25,17 @@
     "status": { "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"] },
     "purpose": { "type": "string" },
     "principles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "registryStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy", "rationale"],
+      "properties": {
+        "policy": { "enum": ["inherited-working-material", "stable", "frozen"] },
+        "inheritedFrom": { "type": "string" },
+        "rationale": { "type": "string" },
+        "revisionRules": { "type": "array", "items": { "type": "string" } }
+      }
+    },
     "scaffoldDirectoryLayout": {
       "type": "object",
       "additionalProperties": false,
