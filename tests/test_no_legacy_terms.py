@@ -27,6 +27,15 @@ PRODUCT_PATHS = [
 ]
 
 EXTENSIONS = {".md", ".mdc", ".py", ".ts", ".tsx", ".js", ".jsx", ".json"}
+EXCLUDE_DIRS = {
+    "node_modules",
+    ".next",
+    "dist",
+    "build",
+    "out",
+    ".turbo",
+    ".generated",
+}
 
 # Fields whose values are *meant* to list forbidden terms.
 ANTI_PATTERN_KEYS = {
@@ -66,6 +75,9 @@ def _iter_files():
                 if not sub.is_file():
                     continue
                 if sub.suffix not in EXTENSIONS:
+                    continue
+                rel_parts = sub.relative_to(REPO_ROOT).parts
+                if any(part in EXCLUDE_DIRS for part in rel_parts):
                     continue
                 yield sub
 

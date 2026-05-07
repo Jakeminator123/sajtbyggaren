@@ -116,6 +116,18 @@ COMMON_WORDS = {
     # React / Next / shadcn-typer som dyker upp i runtime-kod
     "ReactNode", "RootLayout", "NextConfig",
     "ButtonPrimitive", "VariantProps", "ClassValue",
+    "NextRequest", "NextResponse", "ComponentProps",
+    "CardAction", "CardContent", "CardDescription", "CardFooter", "CardHeader", "CardTitle",
+    "InputPrimitive",
+    # Viewser implementation-symboler (tekniska typer, inte domänbegrepp)
+    "ChatMessage", "ChatMessageSchema", "ChatPayloadSchema", "ChatPanelProps",
+    "BuildModelUsage", "FilesPayload", "RouteContext",
+    "DossierInfo", "DossierOption", "DossierPicker", "DossierPickerProps",
+    "RunMeta", "RunHistory", "RunHistoryItem", "RunHistoryProps", "RunsApiPayload",
+    "ScrollArea", "ScrollAreaPrimitive", "ScrollBar",
+    "StackblitzFileMap",
+    "TokenMeterContext", "TokenMeterContextValue", "TokenMeterProvider", "TokenMeterState",
+    "UsageDelta", "UsageSummary", "ViewerPanelProps",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
@@ -250,6 +262,8 @@ def main() -> int:
             continue
         # Use POSIX-style relative path so prefix-matching works on Windows too.
         rel = path.relative_to(REPO_ROOT).as_posix()
+        if rel.endswith("package-lock.json"):
+            continue
 
         # Hoppa över själva naming-dictionary, schemas och rules; de listar termer.
         if rel.startswith("governance/policies/") or rel.startswith("governance/schemas/") or rel.startswith("governance/rules/"):
