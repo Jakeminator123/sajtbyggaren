@@ -1,6 +1,7 @@
 streamlit>=1.39
 jsonschema>=4.23
 pydantic>=2.9
+openai>=1.50
 
 # dev tooling (also installable via `pip install -e .[dev]`)
 pytest>=8.3

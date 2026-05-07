@@ -1,8 +1,0 @@
-# packages/generation/brief
-#
-# Phase 1 - Understand: prompt -> Site Brief.
-# Implements language detection and structured brief extraction.
-#
-# Implemented in Sprint 1. See:
-#   governance/policies/engine-run.v1.json (phase: understand)
-#   governance/policies/llm-flow-concepts.v1.json (phase: site_brief)
