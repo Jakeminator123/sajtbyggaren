@@ -18,10 +18,20 @@
     {
       "path": "backend.py",
       "owns": ["backoffice-UI", "policy-redigering", "scaffold-/dossier-redigering", "eval-/telemetri-översikt"],
-      "mayImportFrom": ["governance/", "scripts/", "data/"],
+      "mayImportFrom": ["backoffice/", "governance/", "scripts/", "data/", "referens/", "tests/", ".cursor/rules/"],
       "mustNotDo": [
         "ingå i användarens runtime-flöde",
         "duplicera generation-logik",
+        "skriva till packages/ eller apps/",
+        "skriva till referens/ eller tests/ (read-only)"
+      ]
+    },
+    {
+      "path": "backoffice/",
+      "owns": ["paths, loaders, health-helpers för backend.py", "Streamlit-vyer (vid utbrytning från backend.py)"],
+      "mayImportFrom": ["governance/", "scripts/", "data/", "referens/", "tests/", ".cursor/rules/"],
+      "mustNotDo": [
+        "ingå i användarens runtime-flöde",
         "skriva till packages/ eller apps/"
       ]
     },
@@ -88,11 +98,12 @@
     {
       "path": "packages/generation/planning/",
       "owns": [
-        "Fas 2 Plan: Site Brief -> Site Plan -> Generation Package",
-        "Scaffold Selector, Variant Selector, Route Planner, Dossier Selector, Contract Planner, BuildSpec Resolver"
+        "Fas 2 Plan: Site Brief -> Site Plan -> Generation Package (orkestrering)",
+        "anropar Scaffold Selector, Variant Selector, Route Planner, Dossier Selector, Contract Planner, BuildSpec Resolver"
       ],
       "mayImportFrom": ["packages/policies", "packages/shared", "packages/generation/orchestration"],
       "mustNotDo": [
+        "implementera Selector- eller Resolver-logik själv (importera från orchestration/selection/)",
         "skriva genererade filer",
         "köra repair",
         "starta preview"

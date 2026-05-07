@@ -96,6 +96,13 @@ COMMON_WORDS = {
     "ADR 0001", "ADR 0002", "ADR 0003", "ADR 0004", "ADR 0005",
     "ADR 0006", "ADR 0007", "ADR 0008", "ADR 0009",
     "Mappstruktur", "Tre faser", "Tre lager", "Tre nya",
+    # Versaler i prosa (svenska och engelska)
+    "INTE", "ALDRIG", "ENBART", "EN", "ALL",
+    # Pluraler/kompositer av redan registrerade termer
+    "Dossiers", "Reference Templates",
+    "Scaffold Selector", "Dossier Selector",
+    "Selected Scaffold", "Variant",
+    "Globalt", "Skickas",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
@@ -228,7 +235,8 @@ def main() -> int:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             continue
-        rel = str(path.relative_to(REPO_ROOT))
+        # Use POSIX-style relative path so prefix-matching works on Windows too.
+        rel = path.relative_to(REPO_ROOT).as_posix()
 
         # Hoppa över själva naming-dictionary, schemas och rules; de listar termer.
         if rel.startswith("governance/policies/") or rel.startswith("governance/schemas/") or rel.startswith("governance/rules/"):

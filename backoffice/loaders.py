@@ -60,3 +60,26 @@ def read_text(path_str: str, _signature: tuple[str, float]) -> str:
 
 def text_of(path: Path) -> str:
     return read_text(str(path), _file_signature(path))
+
+
+def safe_load_policy(name: str) -> tuple[dict[str, Any] | None, str | None]:
+    """Load a policy without raising. Returns (data, error_message)."""
+    path = POLICIES_DIR / name
+    if not path.exists():
+        return None, f"Policy {name} saknas"
+    try:
+        return load_policy(name), None
+    except Exception as exc:
+        return None, f"Kunde inte ladda {name}: {exc}"
+
+
+def list_run_ids() -> list[str]:
+    """List runIds present under data/runs/, newest first."""
+    from .paths import RUNS_DIR
+
+    if not RUNS_DIR.exists():
+        return []
+    return sorted(
+        [p.name for p in RUNS_DIR.iterdir() if p.is_dir()],
+        reverse=True,
+    )

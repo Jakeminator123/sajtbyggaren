@@ -194,7 +194,7 @@
       "id": "interaction_polish",
       "name": "Interaction polish",
       "weight": 10,
-      "ownerPackage": "packages/web",
+      "ownerPackage": "apps/web",
       "definition": "Interactive states feel intentional without distracting from business goals.",
       "positiveSignals": [
         "hover/focus states",

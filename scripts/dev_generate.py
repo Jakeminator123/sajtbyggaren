@@ -114,10 +114,12 @@ def detect_language(prompt: str) -> str:
 def run_phase_understand(prompt: str, run_dir: Path, run_id: str) -> dict[str, Any]:
     emit(run_id, run_dir, "understand", "started", "started", f'Reading prompt ({len(prompt)} chars)')
 
+    detected = detect_language(prompt)
+
     input_payload = {
         "runId": run_id,
         "rawPrompt": prompt,
-        "operatorLanguage": "sv",
+        "detectedLanguage": detected,
         "createdAt": utcnow_iso(),
     }
     write_json(run_dir / "input.json", input_payload)
@@ -125,7 +127,7 @@ def run_phase_understand(prompt: str, run_dir: Path, run_id: str) -> dict[str, A
 
     site_brief = {
         "runId": run_id,
-        "language": detect_language(prompt),
+        "language": detected,
         "rawPrompt": prompt,
         "businessTypeGuess": None,
         "pageCount": None,

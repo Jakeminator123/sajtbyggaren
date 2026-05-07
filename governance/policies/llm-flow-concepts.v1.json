@@ -108,10 +108,10 @@
         "resolvedPolicy"
       ],
       "outputArtifacts": [
-        "scaffoldPlan",
+        "sitePlan",
         "routePlan"
       ],
-      "ownerPackage": "packages/generation",
+      "ownerPackage": "packages/generation/planning",
       "allowedToCallLLM": false,
       "mustNotDo": [
         "route around policy",
@@ -126,13 +126,13 @@
       "inputArtifacts": [
         "siteBrief",
         "resolvedPolicy",
-        "scaffoldPlan",
+        "sitePlan",
         "routePlan"
       ],
       "outputArtifacts": [
         "generationPackage"
       ],
-      "ownerPackage": "packages/generation",
+      "ownerPackage": "packages/generation/planning",
       "allowedToCallLLM": false,
       "mustNotDo": [
         "call codegen before package is complete",
@@ -148,9 +148,9 @@
         "generationPackage"
       ],
       "outputArtifacts": [
-        "codegenResult"
+        "generatedFiles"
       ],
-      "ownerPackage": "packages/generation",
+      "ownerPackage": "packages/generation/build",
       "allowedToCallLLM": true,
       "mustNotDo": [
         "mutate policy",
@@ -163,13 +163,13 @@
       "canonicalName": "Mechanical Autofix",
       "purpose": "Run deterministic repairs before asking another LLM to fix code.",
       "inputArtifacts": [
-        "codegenResult",
+        "generatedFiles",
         "buildErrors_optional"
       ],
       "outputArtifacts": [
         "autofixResult"
       ],
-      "ownerPackage": "packages/builder",
+      "ownerPackage": "packages/generation/repair",
       "allowedToCallLLM": false,
       "mustNotDo": [
         "change design intent",
@@ -188,7 +188,7 @@
       "outputArtifacts": [
         "repairResult"
       ],
-      "ownerPackage": "packages/generation",
+      "ownerPackage": "packages/generation/repair",
       "allowedToCallLLM": true,
       "mustNotDo": [
         "full rewrite",
@@ -200,7 +200,7 @@
       "id": "preview_runtime",
       "order": 100,
       "canonicalName": "Preview Runtime",
-      "purpose": "Run the generated site in a runtime abstraction such as StackBlitz, local, or VM/Fly.",
+      "purpose": "Run the generated site in a runtime abstraction. Implementations: LocalRuntime, StackBlitzRuntime, FlyRuntime.",
       "inputArtifacts": [
         "finalFiles",
         "runtimeConfig"
@@ -227,9 +227,9 @@
         "page-quality-traits.v1.json"
       ],
       "outputArtifacts": [
-        "qualityReport"
+        "qualityResult"
       ],
-      "ownerPackage": "tests/evals",
+      "ownerPackage": "packages/generation/quality-gate",
       "allowedToCallLLM": true,
       "mustNotDo": [
         "promote below gate",

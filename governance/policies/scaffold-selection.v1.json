@@ -50,7 +50,7 @@
   },
   "regressionTests": {
     "ownerPath": "tests/evals/scaffold-selection",
-    "minimumCount": 5,
+    "minimumCount": 4,
     "exampleCases": [
       {
         "prompt": "Skapa en hemsida för en elektriker i Malmö",

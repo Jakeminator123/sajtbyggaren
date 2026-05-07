@@ -1,6 +1,6 @@
 # Kvalitetsskydd och regression-tester
 
-Det här dokumentet beskriver vad som hindrar repot från att glida ifrån governance. Tre lager skydd, plus en CI-grind på toppen.
+Det här dokumentet beskriver vad som hindrar repot från att glida ifrån governance. Fyra lager lokala skydd, plus en CI-grind på toppen.
 
 ## Lager 1: Schema-validering
 

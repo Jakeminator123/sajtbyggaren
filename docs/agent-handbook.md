@@ -6,10 +6,13 @@ Det här är vad varje AI-agent (eller mänsklig medhjälpare) behöver veta inn
 
 1. [`docs/PROJECT_BRIEF.md`](PROJECT_BRIEF.md) - vad och varför.
 2. [`docs/architecture/system-overview.md`](architecture/system-overview.md) - hur lagren hänger ihop.
-3. [`governance/policies/naming-dictionary.v1.json`](../governance/policies/naming-dictionary.v1.json) - kanoniska termer.
-4. [`governance/policies/repo-boundaries.v1.json`](../governance/policies/repo-boundaries.v1.json) - mappägarskap.
-5. [`docs/architecture/llm-flow.md`](architecture/llm-flow.md) - fas 1-3.
-6. [`docs/migration-plan.md`](migration-plan.md) - vad har plockats varifrån.
+3. [`docs/glossary.md`](glossary.md) - mänsklig genomgång av alla begrepp.
+4. [`governance/policies/naming-dictionary.v1.json`](../governance/policies/naming-dictionary.v1.json) - kanoniska termer (sanningskälla).
+5. [`governance/policies/repo-boundaries.v1.json`](../governance/policies/repo-boundaries.v1.json) - mappägarskap.
+6. [`governance/policies/engine-run.v1.json`](../governance/policies/engine-run.v1.json) - artefaktkontraktet för en körning.
+7. [`docs/architecture/llm-flow.md`](architecture/llm-flow.md) - fas 1-3.
+8. [`governance/decisions/0009-engine-run-and-llm-models.md`](../governance/decisions/0009-engine-run-and-llm-models.md) - varför Engine Run-modellen ser ut så.
+9. [`docs/migration-plan.md`](migration-plan.md) - sprint-ordning och vad som plockats varifrån.
 
 ## Hårda regler för agentarbete
 

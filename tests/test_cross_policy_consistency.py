@@ -236,3 +236,45 @@ def test_scaffold_registry_ids_are_kebab_case(scaffold_contract: dict):
     pattern = re.compile(r"^[a-z][a-z0-9-]*$")
     bad = [s["id"] for s in scaffold_contract["primaryScaffoldRegistry"] if not pattern.match(s["id"])]
     assert not bad, f"Non-kebab-case scaffold ids: {bad}"
+
+
+@pytest.mark.governance
+def test_regression_minimum_count_matches_example_cases(
+    scaffold_selection: dict, policies: dict[str, dict]
+):
+    """`minimumCount` must not exceed the actual `exampleCases` length."""
+    dossier_selection = policies["dossier-selection.v1.json"]
+
+    for label, policy in [
+        ("scaffold-selection", scaffold_selection),
+        ("dossier-selection", dossier_selection),
+    ]:
+        rt = policy["regressionTests"]
+        actual = len(rt["exampleCases"])
+        minimum = rt["minimumCount"]
+        assert minimum <= actual, (
+            f"{label}.regressionTests.minimumCount ({minimum}) exceeds "
+            f"exampleCases length ({actual}). Either lower minimumCount "
+            f"or add more cases."
+        )
+
+
+@pytest.mark.governance
+def test_llm_flow_phase_owners_match_repo_boundaries(
+    llm_flow: dict, repo_boundaries: dict
+):
+    """Every llm-flow phase ownerPackage must be a path that exists in repo-boundaries."""
+    boundary_paths = {o["path"].rstrip("/") for o in repo_boundaries["ownership"]}
+    boundary_paths.add("backend.py")
+
+    bad = []
+    for phase in llm_flow["phases"]:
+        owner = phase.get("ownerPackage", "").rstrip("/")
+        if not owner:
+            bad.append(f"{phase['canonicalName']} has no ownerPackage")
+            continue
+        if owner not in boundary_paths and not any(
+            owner.startswith(p + "/") or owner == p for p in boundary_paths if p
+        ):
+            bad.append(f"{phase['canonicalName']} -> {owner}")
+    assert not bad, f"llm-flow phase owners not in repo-boundaries: {bad}"

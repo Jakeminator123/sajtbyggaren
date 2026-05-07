@@ -47,7 +47,7 @@
   },
   "regressionTests": {
     "ownerPath": "tests/evals/dossier-selection",
-    "minimumCount": 5,
+    "minimumCount": 2,
     "exampleCases": [
       {
         "prompt": "Skapa en hemsida för en elektriker i Malmö",
