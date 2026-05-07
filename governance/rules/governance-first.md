@@ -1,0 +1,26 @@
+---
+description: Governance JSON är sanningskälla. Inga koncept får införas i kod innan de finns i governance/.
+alwaysApply: true
+---
+
+# Governance först
+
+## Princip
+
+Sajtbyggaren styrs av JSON-policies under [`governance/policies/`](../policies/). De är sanningskälla. Allt annat (kod, docs, .cursor/rules) härleds från dem.
+
+## Hårda regler
+
+- Om ett koncept berör flera mappar måste det definieras i en policy under `governance/policies/` **innan** det skrivs i kod.
+- Inga begrepp får ha synonymer eller alias som inte är registrerade i [`governance/policies/naming-dictionary.v1.json`](../policies/naming-dictionary.v1.json).
+- Inga termer i listan `globallyForbidden` får återinföras (`v0`, `tier1`, `tier2`, `tier3`, `preview-host`, `sandbox` som produktterm, m.fl.).
+- Alla policies måste valideras mot motsvarande JSON Schema i [`governance/schemas/`](../schemas/) innan ändring committas. Kör `scripts/governance-validate.py`.
+- `.cursor/rules/*.mdc` är speglar av filer i `governance/rules/`. Redigera ALDRIG `.cursor/rules/` direkt; kör `scripts/rules-sync.py` istället.
+
+## Vid tveksamhet
+
+Om du som agent inte är säker på vad ett begrepp betyder eller var det hör hemma:
+
+1. Sök i [`governance/policies/naming-dictionary.v1.json`](../policies/naming-dictionary.v1.json).
+2. Om det inte finns där, lägg INTE till det i kod. Föreslå en uppdatering av policyn först.
+3. Kontrollera [`governance/policies/repo-boundaries.v1.json`](../policies/repo-boundaries.v1.json) för var det får bo.

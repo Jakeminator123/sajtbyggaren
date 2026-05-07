@@ -1,0 +1,339 @@
+FRÅGA:
+
+Skriv struktur hur du tänker dig att scaffoldsen ser ut. Utgå från att jag har full tillgång till allt material på: https://vercel.com/templates samt skriv hur och vad en dossein ska vad a och se ut och användas. Skriv också ut det gina självklarheterna vilket är att embeddings och/eller att enklare LLmer ska välja scaffolds och att ordmatchning til lstor del ska bort. Vill du argumentera emot mig blir jag glad, men jag kommer ha vässade argumänt mot ordmathningar
+
+
+---
+
+SVAR:
+
+Ja — här är hur jag skulle strukturera scaffolds och dossierer i nya Sajtmaskin.
+Jag håller med dig om grundtesen: ordmatchning ska bort som primär scaffold-väljare. Den kan få leva kvar som fallback/debug-signal, men inte som huvudmotor. Om målet är 9/10-kvalitet och mindre namnkaos ska scaffold-valet göras av embeddings, lätt LLM-klassificering, policy och eval-data, inte if prompt.includes("restaurant").
+Jag kan inte verifiera Vercels live-templatebibliotek här, så jag behandlar vercel.com/templates som en tillgänglig referens-corpus: templates används som inspirations-, struktur- och komponentmaterial, inte som saker du kopierar rakt in.
+Din målbild är att nya Sajtmaskin ska bygga vidare på nuvarande Jakeminator123/sajtmaskin men bli tydligare, mer kontrollerad och kunna ersätta dagens GitHub-version när den är färdig . Därför ska scaffolds vara produktionsprimitiver, inte lösa templates.
+
+1. Vad ett scaffold är
+Ett scaffold är inte “en mall”.
+Ett scaffold är:
+En kontrollerad byggstartpunkt för en viss typ av sajt,med route-struktur, layoutlogik, sektionsgrammatik,tillåtna dossierer, kvalitetsregler och design-variant-yta.
+Alltså:
+Scaffold = struktur + intention + constraints + kompatibilitetTemplate = exempel / referens / konkret implementationDossier = kapacitetsmodul / kunskapsmodul / feature-blockVariant = visuell riktning inom scaffold
+Jag skulle vara stenhård med den distinktionen.
+Om du kallar allt “template”, “scaffold”, “variant”, “starter”, “pack” och “dossier” lite om vartannat kommer du hamna i samma röra igen.
+
+2. Övergripande scaffold-struktur
+Jag skulle ha relativt få primära scaffolds. Inte 50. Hellre 10–14 riktigt bra.
+packages/generation/scaffolds/  registry.ts  local-service-business/    scaffold.json    routes.json    sections.json    quality-contract.json    compatible-dossiers.json    variants/      trust-first.json      premium-local.json      emergency-response.json      calm-professional.json    examples/      electrician.md      plumber.md      cleaning-company.md  professional-services/    scaffold.json    routes.json    sections.json    quality-contract.json    compatible-dossiers.json    variants/  restaurant-hospitality/  clinic-healthcare/  real-estate/  agency-studio/  consultant-expert/  saas-product/  ecommerce-lite/  course-education/  nonprofit-community/  portfolio-creator/  event-campaign/  app-landing/
+Varje scaffold ska vara en egen liten värld, men med samma filstruktur.
+
+3. Scaffold-registret
+Centralt register:
+// packages/generation/scaffolds/registry.tsexport const scaffoldRegistry = [  "local-service-business",  "professional-services",  "restaurant-hospitality",  "clinic-healthcare",  "real-estate",  "agency-studio",  "consultant-expert",  "saas-product",  "ecommerce-lite",  "course-education",  "nonprofit-community",  "portfolio-creator",  "event-campaign",  "app-landing"] as const;
+Men själva sanningen bör ligga i JSON:
+{  "id": "local-service-business",  "version": "1.0.0",  "label": "Local Service Business",  "purpose": "For local service companies that need trust, clarity, calls/leads and service explanation.",  "bestFor": [    "electrician",    "plumber",    "cleaning company",    "roofer",    "landscaper",    "moving company",    "locksmith",    "painter"  ],  "notFor": [    "SaaS product",    "large ecommerce",    "portfolio-only creator",    "editorial publication"  ],  "primaryConversion": ["call", "quote_request", "booking_request"],  "defaultPageCount": 5,  "minPageCount": 3,  "maxPageCount": 7,  "defaultTone": ["trustworthy", "local", "direct", "professional"],  "defaultDepth": {    "visual": "medium-high",    "content": "high",    "trust": "high"  },  "routeFamilies": [    "home",    "services",    "service-detail",    "about",    "contact"  ],  "compatibleDossiers": [    "contact-form",    "service-list",    "service-area",    "reviews",    "faq",    "emergency-cta",    "before-after-gallery",    "trust-badges"  ],  "requiredQualityTraits": [    "business_fit",    "conversion_clarity",    "trust_signals",    "content_specificity",    "technical_correctness"  ]}
+Det viktiga: scaffolden säger inte “om ordet elektriker finns, välj mig”. Den säger:
+Jag passar semantiskt för lokala tjänsteföretag med hög trust/conversion.
+Sedan väljer embedding/LLM-systemet den.
+
+4. De scaffolds jag hade börjat med
+1. local-service-business
+För elektriker, rörmokare, städ, målare, takläggare, flyttfirma, låssmed.
+Typisk route-plan:
+/ /tjanster /tjanster/[service] /om-oss /kontakt
+Kärnsektioner:
+Hero med lokal positioneringService cardsTrust blockProcess: så fungerar detReviewsService areaFAQKontakt/offert
+Viktigaste kvalitet:
+TrovärdighetLokal konkretionTydlig CTAInte startup-fluff
+
+2. professional-services
+För advokat, redovisning, B2B-konsult, rekrytering, försäkring, finansnära tjänster.
+Route-plan:
+/ /tjanster /expertis /case /om-oss /kontakt
+Kärnsektioner:
+Authority heroExpertise gridProblem → solutionCase studiesProcessTeam credentialsContact CTA
+Viktigaste kvalitet:
+AuktoritetSaklighetFörtroendeStrukturerad kompetens
+
+3. restaurant-hospitality
+För restaurang, café, hotell, catering, food truck.
+Route-plan:
+/ /meny /boka /om /kontakt
+Kärnsektioner:
+Atmospheric heroMenu previewSignature dishesOpening hoursBooking CTAGalleryLocation block
+Viktigaste kvalitet:
+StämningVisuell aptitSnabb informationMobil först
+
+4. clinic-healthcare
+För tandläkare, vårdklinik, fysioterapi, skönhetsklinik, psykolog.
+Route-plan:
+/ /behandlingar /behandlingar/[treatment] /team /boka /kontakt
+Kärnsektioner:
+Calm heroTreatmentsSafety/trustPractitioner profilesPatient journeyFAQBooking
+Viktigaste kvalitet:
+TrygghetTydlighetLugnRegulatorisk försiktighet
+
+5. real-estate
+För mäklare, fastighetsbolag, property management, nyproduktion.
+Route-plan:
+/ /bostader /salja /om-oss /kontakt
+Kärnsektioner:
+Premium heroProperty cardsValuation CTAArea expertiseProcessTrust/reviewsContact
+Viktigaste kvalitet:
+PremiumkänslaBildytaFörtroendeObjektsstruktur
+
+6. agency-studio
+För designbyrå, webbyrå, brandingstudio, contentstudio.
+Route-plan:
+/ /arbete /tjanster /om /kontakt
+Kärnsektioner:
+Conceptual heroSelected workService philosophyCase studiesProcessStudio profileCTA
+Viktigaste kvalitet:
+OriginalitetVisuell rytmCase-baserad trovärdighetInte generisk portfolio
+
+7. consultant-expert
+För enskild expert, coach, rådgivare, föreläsare.
+Route-plan:
+/ /erbjudande /om /insikter /kontakt
+Kärnsektioner:
+Authority heroPoint of viewOffer cardsProof/resultsAbout expertLead magnetBooking/contact
+Viktigaste kvalitet:
+Personlig auktoritetTydlig nischFörtroendeKonvertering utan att kännas säljig
+
+8. saas-product
+För SaaS, AI-verktyg, produktplattformar.
+Route-plan:
+/ /features /pricing /customers /docs-or-resources /contact
+Kärnsektioner:
+Product heroFeature gridWorkflow demoIntegrationsPricingTestimonials/logosFAQCTA
+Viktigaste kvalitet:
+ProduktklarhetFeature hierarchyConversionTeknisk trovärdighet
+
+9. ecommerce-lite
+För småbutik, produktkatalog, premiumvarumärke utan tung commerce.
+Route-plan:
+/ /produkter /produkter/[product] /om /kontakt
+Kärnsektioner:
+Brand heroProduct gridFeatured productValue propsStoryFAQCTA
+Viktigaste kvalitet:
+ProduktfokusBildhanteringKöplogikVarumärkeskänsla
+
+10. course-education
+För utbildning, kurs, skola, workshop, mentorprogram.
+Route-plan:
+/ /program /program/[program] /om /ansok /kontakt
+Kärnsektioner:
+Learning outcome heroProgram modulesInstructor credibilityStudent resultsScheduleFAQApplication CTA
+Viktigaste kvalitet:
+Tydliga utfallStrukturTrovärdighetNästa steg
+
+11. nonprofit-community
+För förening, initiativ, kampanj, lokal organisation.
+Route-plan:
+/ /om /engagera-dig /projekt /kontakt
+Kärnsektioner:
+Mission heroImpact numbersProjectsStoriesVolunteer/donate CTAPartnersContact
+Viktigaste kvalitet:
+MissionMänsklighetTrovärdig påverkanEnkel handling
+
+12. portfolio-creator
+För fotograf, konstnär, kreatör, frilansare.
+Route-plan:
+/ /arbete /om /kontakt
+Kärnsektioner:
+Visual heroGallery/work gridSelected projectBioServicesContact
+Viktigaste kvalitet:
+BildrytmPersonlighetArbetsprovMinimal men inte tom
+
+13. event-campaign
+För event, festival, konferens, lansering, tidsbegränsad kampanj.
+Route-plan:
+/ /program /talare /biljetter /plats /kontakt
+Kärnsektioner:
+Event heroDate/locationScheduleSpeakersTicketsSponsorsFAQ
+Viktigaste kvalitet:
+MomentumTydlig tid/platsKonverteringMobil användbarhet
+
+14. app-landing
+För mobilapp, webbapp, waitlist, beta.
+Route-plan:
+/ /features /how-it-works /pricing-or-waitlist /contact
+Kärnsektioner:
+App heroScreens/mockupsWorkflowFeature benefitsSocial proofWaitlist CTA
+Viktigaste kvalitet:
+ProduktlöfteDemo-känslaTydlig onboarding
+
+5. Hur Vercel templates ska användas
+Jag skulle inte importera Vercel templates som direkta scaffolds.
+Jag skulle skapa en template-ingestion-pipeline:
+Vercel Template→ Template Metadata→ Template Embedding→ Structure Extraction→ Section Pattern Extraction→ Component Pattern Extraction→ Style/Stack Tags→ Candidate Reference
+Alltså: Vercel templates blir ett referensbibliotek, inte produktens skelett.
+data/reference-templates/vercel/  raw/  normalized/  embeddings/  extracted-patterns/    sections/    layouts/    components/    style-signatures/
+Varje template kan normaliseras till:
+{  "id": "vercel-template-next-saas-starter-x",  "source": "vercel/templates",  "sourceUrl": "https://vercel.com/templates/...",  "framework": "nextjs",  "tags": ["saas", "dashboard", "auth", "stripe"],  "visualStyle": ["clean", "dashboard", "modern"],  "routeShape": ["home", "pricing", "dashboard", "auth"],  "sectionPatterns": [    "hero-with-product-shot",    "logo-cloud",    "feature-grid",    "pricing-table",    "faq"  ],  "componentPatterns": [    "navbar",    "pricing-card",    "auth-form",    "dashboard-shell"  ],  "embeddingText": "A clean SaaS starter with pricing, auth, dashboard, feature sections..."}
+Sedan kan scaffolden använda templates som referenser:
+{  "scaffoldId": "saas-product",  "referenceTemplateQuery": {    "semantic": "SaaS landing page with pricing, feature grid, product workflow and conversion CTA",    "allowedSources": ["vercel/templates"],    "topK": 5  }}
+Men scaffolden ska fortfarande vara din egen styrda struktur.
+
+6. Scaffold-filernas exakta form
+Jag skulle ge varje scaffold dessa filer:
+local-service-business/  scaffold.json  routes.json  sections.json  quality-contract.json  compatible-dossiers.json  selection-profile.json  variants/    premium-local.json    emergency-response.json    calm-professional.json  eval-prompts.json
+scaffold.json
+{  "id": "local-service-business",  "version": "1.0.0",  "label": "Local Service Business",  "description": "A conversion-oriented business website for local service providers.",  "buildIntent": ["website"],  "businessComplexity": ["simple", "medium"],  "primaryJobs": [    "explain services",    "build trust",    "generate calls",    "generate quote requests"  ],  "defaultLanguageBehavior": "follow-user-language",  "defaultPageCount": 5,  "supportsSinglePage": true,  "supportsMultiPage": true,  "supportsAppFeatures": false}
+routes.json
+{  "defaultRoutes": [    {      "id": "home",      "path": "/",      "required": true,      "purpose": "Position the company, create trust and drive the main CTA."    },    {      "id": "services",      "path": "/tjanster",      "required": true,      "purpose": "Show the company’s core services."    },    {      "id": "about",      "path": "/om-oss",      "required": false,      "purpose": "Build trust through story, team and credentials."    },    {      "id": "contact",      "path": "/kontakt",      "required": true,      "purpose": "Convert visitors into calls, bookings or quote requests."    }  ],  "optionalRoutes": [    {      "id": "emergency",      "path": "/akut",      "when": "urgent service business"    },    {      "id": "service-area",      "path": "/omraden",      "when": "local SEO or multi-area service"    }  ]}
+sections.json
+{  "home": {    "requiredSections": [      "hero",      "service-summary",      "trust-proof",      "process",      "reviews",      "contact-cta"    ],    "optionalSections": [      "service-area",      "before-after-gallery",      "faq",      "certifications"    ],    "sectionOrderRules": [      "Hero must include business type, location if known, and primary CTA.",      "Trust proof must appear before the final CTA.",      "Reviews should not be generic; use realistic industry-specific language."    ]  }}
+quality-contract.json
+{  "scorecardWeights": {    "business_fit": 1.2,    "trust_signals": 1.2,    "conversion_clarity": 1.1,    "content_specificity": 1.1,    "visual_hierarchy": 1.0,    "technical_correctness": 1.0  },  "mustPass": [    "Every page has a clear purpose.",    "The homepage contains a concrete local/business-specific value proposition.",    "The main CTA is visible above the fold.",    "No lorem ipsum.",    "No generic phrases like 'we are passionate about solutions' unless supported by specifics.",    "Generated code must typecheck."  ],  "avoid": [    "Overly abstract startup language for local businesses.",    "Too many capabilities for simple sites.",    "Random color choices not tied to brief or policy.",    "Template-like section repetition."  ]}
+compatible-dossiers.json
+{  "required": [    "contact-cta"  ],  "recommended": [    "contact-form",    "service-list",    "reviews",    "faq",    "service-area",    "trust-badges"  ],  "conditional": [    {      "id": "emergency-cta",      "when": "business has urgent response use case"    },    {      "id": "before-after-gallery",      "when": "visual proof improves conversion"    },    {      "id": "booking-request",      "when": "appointments are relevant"    }  ],  "disallowedByDefault": [    "pricing-table-saas",    "dashboard-shell",    "auth-flow",    "checkout"  ]}
+selection-profile.json
+Detta är viktigt om du vill bort från ordmatchning.
+{  "id": "local-service-business",  "embeddingText": "A local service business website for companies such as electricians, plumbers, cleaners, roofers and moving companies. The site focuses on trust, services, local area, fast contact, quote requests, reviews and practical conversion.",  "semanticSignals": [    "local service provider",    "physical service",    "quote request",    "phone call conversion",    "service area",    "trust and certification",    "emergency support"  ],  "negativeSignals": [    "software product",    "dashboard app",    "online course",    "restaurant menu",    "portfolio gallery only"  ],  "llmClassificationHints": [    "Choose this scaffold when the user wants a company site for a service performed for customers in a local or regional area.",    "Do not choose this scaffold merely because the prompt contains a trade-like word if the desired output is actually a SaaS, marketplace or directory."  ],  "minConfidence": 0.72,  "requiresTieBreakWhenWithin": 0.08}
+
+7. Scaffold-val: embeddings + enkel LLM, inte ordmatchning
+Här håller jag med dig starkt.
+Gamla sättet:
+if (prompt.includes("restaurant")) return "restaurant";if (prompt.includes("lawyer")) return "professional-services";if (prompt.includes("app")) return "saas-product";
+Det ska bort som primär logik.
+Nya sättet:
+1. Structured Brief skapas.2. Brief + expanded prompt bäddas in.3. Scaffold selection profiles bäddas in.4. Top-K scaffolds hämtas via embedding similarity.5. Lätt LLM gör rerank/tie-break.6. Policy kontrollerar att valet är tillåtet.7. Eval/logg sparar varför scaffold valdes.
+Flöde:
+
+Exempel på trace:
+{  "selectedScaffold": "local-service-business",  "confidence": 0.86,  "method": "embedding+llm-rerank",  "candidates": [    {      "id": "local-service-business",      "embeddingScore": 0.88,      "llmScore": 0.91    },    {      "id": "professional-services",      "embeddingScore": 0.74,      "llmScore": 0.62    },    {      "id": "app-landing",      "embeddingScore": 0.48,      "llmScore": 0.31    }  ],  "reason": "Prompt describes a local electrician company in Malmö with service/contact needs.",  "rejected": [    {      "id": "saas-product",      "reason": "No software product or pricing/product workflow requested."    }  ]}
+Det här är mycket bättre än ordmatchning, eftersom det förstår att:
+"Jag vill ha en hemsida för en elektriker"
+och:
+"Jag bygger en SaaS som hjälper elektriker planera jobb"
+inte ska ha samma scaffold.
+
+8. Ska ordmatchning bort helt?
+Jag skulle argumentera emot dig lite här: ordmatchning ska inte bort helt. Den ska degraderas.
+Inte:
+word match → scaffold
+Utan:
+word match → weak signal / debug / fallback / guardrail
+Ordmatchning är dåligt som primär intelligens, men användbart för:
+1. Hårda användarord   "Jag vill ha en restaurangmeny" → menu capability bör övervägas.2. Negativa spärrar   "utan bokningsformulär" → booking dossier ska blockas.3. Compliance   "läkare", "juridisk rådgivning", "finansiell rådgivning" → policy guardrails.4. Debug   Varför valde systemet detta?5. Fallback   Om embeddings/LLM misslyckas.
+Så min position:
+Ordmatchning ska bort från förarsätet.Ordmatchning får sitta i baksätet med säkerhetsbälte.
+Det borde bli:
+Embeddings: recallSmall LLM: semantic judgmentPolicy: constraintsWord matching: weak hints and guardrailsEval-data: long-term correction
+
+9. Vad en dossier är
+En dossier är en återanvändbar capability-/kunskapsmodul som kan injiceras i generationen.
+I gamla Sajtmaskin finns redan idén att en Dossier är en återanvändbar capability-modul som injiceras i codegen-prompten, med hård/mjuk klass och fidelity . Jag tycker den idén är värd att behålla, men göra striktare.
+En dossier ska inte vara “en komponent”.
+En dossier är:
+En semantisk modul som säger:- när den ska användas- vad den tillför- vilka routes/sektioner den påverkar- vilka datafält den behöver- vilka kodmönster den får skapa- vilka risker den har- hur den valideras
+Exempel:
+contact-formreviewsservice-areabooking-requestpricing-tablefaqgalleryteam-sectioncase-studiesauthpaymentsdatabaseemail-captureanalyticsmap-locationemergency-cta
+
+10. Dossier-struktur
+Jag skulle lägga dem här:
+packages/generation/dossiers/  registry.ts  soft/    contact-form/      dossier.json      prompt.md      schema.json      code-contract.json      examples.md      evals.json    reviews/    faq/    service-area/    gallery/    team-section/    case-studies/    emergency-cta/  hard/    auth/      dossier.json      prompt.md      schema.json      code-contract.json      env-contract.json      integration-contract.json      evals.json    payments/    database/    email/    storage/    maps/
+Jag skulle dela upp dossierer i minst tre klasser:
+soft dossier= påverkar content/layout men kräver ingen riktig extern integrationhard dossier= kräver env, backend, databas, auth, betalning eller extern APIhybrid dossier= kan renderas som mock i designläge men kräver hard mode i integrationsläge
+Exempel:
+reviews = softfaq = softservice-area = soft/hybridcontact-form = hybridbooking = hybrid/hardauth = hardpayments = harddatabase = hard
+Detta kopplar bra till idén om F2/F3 eller designläge/integrationsläge.
+
+11. Exempel: soft dossier
+{  "id": "reviews",  "version": "1.0.0",  "class": "soft",  "label": "Reviews / Testimonials",  "purpose": "Adds realistic trust-building customer proof.",  "bestFor": [    "local-service-business",    "clinic-healthcare",    "professional-services",    "real-estate",    "course-education"  ],  "notFor": [    "very early app landing without customers"  ],  "activation": {    "selectionMode": "semantic",    "defaultWhen": [      "trust is important",      "local services",      "healthcare",      "professional credibility",      "conversion-focused company site"    ],    "requiresUserMention": false  },  "inputs": {    "required": [],    "optional": [      "businessType",      "location",      "customerType",      "tone"    ]  },  "affects": {    "routes": ["/", "/om-oss"],    "sections": ["trust-proof", "testimonial-section"]  },  "promptContract": {    "must": [      "Use realistic industry-specific review copy.",      "Avoid fake full names unless the project style allows sample content.",      "Reviews must support the primary conversion goal."    ],    "avoid": [      "Generic praise like 'Great service!' repeated multiple times.",      "Too many reviews on small sites."    ]  },  "qualityChecks": [    "reviews_are_specific",    "reviews_support_trust",    "no_lorem_ipsum"  ]}
+
+12. Exempel: hybrid dossier contact-form
+{  "id": "contact-form",  "version": "1.0.0",  "class": "hybrid",  "label": "Contact Form",  "purpose": "Adds a conversion-oriented contact form with accessible fields and clear success/error states.",  "bestFor": [    "local-service-business",    "professional-services",    "clinic-healthcare",    "agency-studio",    "consultant-expert"  ],  "activation": {    "selectionMode": "semantic",    "defaultWhen": [      "lead generation",      "quote request",      "booking request",      "contact page required"    ],    "requiresUserMention": false  },  "designModeBehavior": {    "mode": "static-or-client-only",    "allowsMockSubmit": true,    "requiresEnv": false  },  "integrationModeBehavior": {    "requiresBackend": true,    "requiresEnv": ["EMAIL_PROVIDER_API_KEY"],    "allowedProviders": ["resend", "sendgrid", "smtp"]  },  "inputs": {    "required": ["primaryConversionGoal"],    "optional": [      "businessType",      "location",      "fields",      "recipientEmailEnvKey"    ]  },  "defaultFields": [    "name",    "email",    "phone",    "message"  ],  "fieldRules": [    "For local services, include phone.",    "For quote requests, include project description.",    "For healthcare, avoid sensitive medical data unless explicitly required and policy allows it."  ],  "affects": {    "routes": ["/kontakt"],    "sections": ["contact-form", "final-cta"]  },  "codeContract": {    "must": [      "Use accessible labels.",      "Show validation errors.",      "Show success state.",      "Do not hardcode secrets.",      "Do not require real provider keys in design preview."    ],    "avoid": [      "Forms with no submit behavior at all.",      "Hidden required fields.",      "Server actions that fail build without env."    ]  }}
+
+13. Exempel: hard dossier payments
+{  "id": "payments",  "version": "1.0.0",  "class": "hard",  "label": "Payments",  "purpose": "Adds payment capability with clear env and integration boundaries.",  "bestFor": [    "ecommerce-lite",    "course-education",    "saas-product",    "event-campaign"  ],  "activation": {    "selectionMode": "explicit-or-strong-semantic",    "requiresUserMention": true,    "strongSignals": [      "sell products",      "checkout",      "subscription",      "paid course",      "tickets"    ]  },  "requires": {    "env": [      "STRIPE_SECRET_KEY",      "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"    ],    "backend": true,    "database": "optional"  },  "designModeBehavior": {    "mode": "mocked-ui-only",    "mustNotImportServerSdk": true  },  "integrationModeBehavior": {    "mode": "real-integration",    "qualityGate": ["typecheck", "build", "env-check"]  },  "codeContract": {    "must": [      "Never expose secret keys to client.",      "Use placeholder-safe behavior in design mode.",      "Clearly separate pricing UI from payment execution."    ],    "avoid": [      "Importing Stripe server SDK in client components.",      "Creating checkout routes without env guard.",      "Pretending payment works when only UI exists."    ]  }}
+
+14. Hur dossierer ska väljas
+Dossierer ska väljas efter scaffold och brief, inte direkt efter raw prompt.
+
+Logik:
+1. Scaffold begränsar möjliga dossierer.2. Brief beskriver behov.3. Embeddings hämtar relevanta dossierer.4. Liten LLM rerankar.5. Policy stoppar överlastning.6. Hard dossierer kräver explicit eller stark signal.
+Exempel:
+Prompt:
+Skapa en hemsida för en elektriker i Malmö.
+Val:
+{  "scaffold": "local-service-business",  "dossiers": [    "contact-form",    "service-list",    "reviews",    "service-area",    "faq",    "emergency-cta"  ],  "rejectedDossiers": [    {      "id": "payments",      "reason": "No payment/checkout need."    },    {      "id": "auth",      "reason": "No user accounts requested."    }  ]}
+Prompt:
+Skapa en SaaS landing page för ett verktyg där elektriker kan planera jobb.
+Val:
+{  "scaffold": "saas-product",  "dossiers": [    "pricing-table",    "feature-grid",    "product-workflow",    "waitlist",    "faq"  ],  "rejectedDossiers": [    {      "id": "emergency-cta",      "reason": "The user is not asking for an electrician service company."    }  ]}
+Detta är exakt varför ordmatchning faller sönder.
+
+15. Dossier som prompt-injektion
+En dossier ska inte bara “läggas till”. Den ska komponeras in i generation package.
+type SelectedDossier = {  id: string;  class: "soft" | "hybrid" | "hard";  reason: string;  affectsRoutes: string[];  promptBlock: string;  codeContract: string[];  validationRules: string[];};
+I GenerationPackage:
+type GenerationPackage = {  structuredBrief: StructuredSiteBrief;  scaffold: ScaffoldDefinition;  scaffoldVariant: ScaffoldVariant;  routePlan: RoutePlan;  selectedDossiers: SelectedDossier[];  buildSpec: BuildSpec;  dynamicContext: DynamicContext;};
+Prompt-blocken ska bli något i stil med:
+## Selected Dossiers### contact-formPurpose: Add a conversion-oriented contact form.Use on: /kontakt and final CTA section.Must:- accessible labels- validation states- success state- no hardcoded secretsDesign mode:- mocked submit allowedIntegration mode:- requires EMAIL_PROVIDER_API_KEY### reviewsPurpose: Build trust with realistic industry-specific customer proof.Must:- specific to electrician/local service context- no generic repeated praise
+
+16. Scaffold + dossier + variant: ansvarsfördelning
+Det här är viktigt.
+Scaffold säger:Vilken typ av sajt är detta?Variant säger:Vilket visuellt uttryck ska den ha?Dossier säger:Vilka extra förmågor/sektioner/kontrakt behövs?Policy säger:Vad räknas som kvalitet?Brief säger:Vad vill användaren?BuildSpec säger:Hur strikt ska vi bygga/testa?
+Exempel:
+Prompt:"Skapa en exklusiv hemsida för en tandläkarklinik i Göteborg med bokning och behandlingar."Structured Brief:clinic-healthcare, Göteborg, premium, booking, treatmentsScaffold:clinic-healthcareVariant:calm-premiumDossiers:booking-request, treatment-list, team-section, reviews, faqPolicy:healthcare-safe copy, trust high, no exaggerated claimsBuildSpec:design preview first, no real booking backend unless integration mode
+Det är kontrollerbart.
+
+17. Hur embeddings ska byggas
+Jag skulle ha separata embedding-index:
+1. scaffold-index2. dossier-index3. reference-template-index4. section-pattern-index5. style-signature-index
+Inte ett enda stort index.
+data/embeddings/  scaffolds.index  dossiers.index  vercel-templates.index  section-patterns.index  style-signatures.index
+Varför? För att frågorna är olika.
+Scaffold-frågan:
+Vilken typ av sajt ska detta vara?
+Dossier-frågan:
+Vilka capabilities behövs?
+Template-frågan:
+Vilka referenser kan inspirera layout/stack/sektioner?
+Style-frågan:
+Vilket uttryck matchar briefen?
+Att blanda dem i ett index gör retrieval oprecist.
+
+18. Selection Pipeline
+Jag skulle skriva scaffold-valet ungefär så här:
+export async function selectScaffold(input: {  brief: StructuredSiteBrief;  policy: ScaffoldSelectionPolicy;}): Promise<ScaffoldSelectionResult> {  const query = composeScaffoldEmbeddingQuery(input.brief);  const candidates = await scaffoldIndex.search(query, {    topK: 5  });  const reranked = await smallLlmRerankScaffolds({    brief: input.brief,    candidates,    policy: input.policy  });  const gated = applyScaffoldPolicyGate({    brief: input.brief,    candidates: reranked,    policy: input.policy  });  return {    selected: gated.winner,    confidence: gated.confidence,    candidates: gated.candidates,    trace: gated.trace  };}
+Detta är bra världsklass-arkitektur eftersom varje val blir observerbart.
+
+19. Scaffold selection policy
+{  "policyId": "scaffold-selection.v1",  "primaryMethod": "embedding-plus-llm-rerank",  "wordMatching": {    "enabled": true,    "role": "weak-signal-and-guardrail-only",    "mayDirectlySelectScaffold": false  },  "embedding": {    "topK": 5,    "minScore": 0.62  },  "reranker": {    "modelClass": "small-llm",    "mustReturnReasons": true,    "tieBreakMargin": 0.08  },  "fallback": {    "whenLowConfidence": "ask-clarifying-or-use-general-business",    "defaultScaffold": "professional-services"  },  "trace": {    "storeCandidates": true,    "storeRejectedReasons": true  }}
+Det där är din anti-ordmatchningsregel i policyform.
+
+20. Mina invändningar mot “bara embeddings”
+Du bad mig gärna argumentera emot dig. Här är min invändning:
+Embeddings ensamma räcker inte heller.
+Embeddings är bra på “det här liknar det här”, men sämre på:
+- hårda constraints- negationer- “inte X”- specialfall- compliance- om prompten beskriver kundens kund snarare än själva sajten- när en bransch förekommer som målgrupp, inte som sajtägare
+Exempel:
+"Bygg en SaaS för restauranger"
+Embeddings kan dra mot restaurant-hospitality.
+Men rätt scaffold är ofta:
+saas-product
+Därför behöver du:
+Embeddings för recall.Liten LLM för förståelse.Policy för regler.Trace för felsökning.Eval för förbättring.
+Min rekommendation:
+Aldrig ordmatchning som primärval.Aldrig embeddings som ensam domare.Alltid policy-gated semantic selection.
+
+21. Hur detta ska se ut i repo
+governance/  policies/    scaffold-selection.v1.json    dossier-selection.v1.json    page-quality-traits.v1.json    llm-flow.v1.jsonpackages/  generation/    scaffolds/      registry.ts      local-service-business/        scaffold.json        routes.json        sections.json        quality-contract.json        compatible-dossiers.json        selection-profile.json        variants/      professional-services/      restaurant-hospitality/      clinic-healthcare/      real-estate/      agency-studio/      consultant-expert/      saas-product/      ecommerce-lite/      course-education/      nonprofit-community/      portfolio-creator/      event-campaign/      app-landing/    dossiers/      registry.ts      soft/        reviews/        faq/        service-area/        gallery/        team-section/      hybrid/        contact-form/        booking-request/        newsletter/        map-location/      hard/        auth/        payments/        database/        email/        storage/    selection/      select-scaffold.ts      select-dossiers.ts      embedding-query.ts      small-llm-rerank.ts      policy-gate.ts      selection-trace.tsdata/  reference-templates/    vercel/      normalized/      embeddings/      extracted-patterns/  embeddings/    scaffolds/    dossiers/    vercel-templates/    section-patterns/    style-signatures/tests/  evals/    scaffold-selection/      electrician-vs-electrician-saas.json      restaurant-vs-restaurant-saas.json      clinic-vs-healthcare-app.json    dossier-selection/
+
+22. Eval-exempel som skyddar mot dåliga scaffold-val
+Du behöver evals som attackerar ordmatchning.
+[  {    "prompt": "Skapa en hemsida för en elektriker i Malmö",    "expectedScaffold": "local-service-business",    "mustNotSelect": ["saas-product", "app-landing"]  },  {    "prompt": "Skapa en SaaS för elektriker som hanterar bokningar och fakturor",    "expectedScaffold": "saas-product",    "mustNotSelect": ["local-service-business"]  },  {    "prompt": "Skapa en restauranghemsida med meny och bordsbokning",    "expectedScaffold": "restaurant-hospitality",    "mustNotSelect": ["saas-product"]  },  {    "prompt": "Skapa en app landing page för ett bokningssystem för restauranger",    "expectedScaffold": "saas-product",    "mustNotSelect": ["restaurant-hospitality"]  }]
+Detta gör dina argument mot ordmatchning mätbara.
+
+23. Min slutdesign
+Jag skulle bygga nya Sajtmaskin så här:
+Structured Brief→ Scaffold Selection   - embeddings top-K   - small LLM rerank   - policy gate   - trace→ Scaffold Variant Selection   - style embeddings   - policy/user override→ Dossier Selection   - scaffold compatibility   - embeddings top-K   - small LLM rerank   - hard/soft gate→ Reference Template Retrieval   - Vercel template corpus   - section/style patterns→ Generation Package→ Codegen→ Quality Gate
+Det är detta som gör systemet “världsklassigt”:
+Scaffolds är få, tydliga och semantiska.Dossierer är capabilities med kontrakt.Vercel templates är referenser, inte sanning.Embeddings hittar kandidater.Liten LLM väljer med omdöme.Policy stoppar dumma val.Ordmatchning är bara svag signal.Allt loggas i en trace.Evals skyddar mot regression.
+Min viktigaste mening:
+
+Scaffoldsen ska inte försöka vara många templates. De ska vara få, välvalda produktgrammatiker. Dossiererna ska sedan ge dem förmågor.
+
+Det är där du får kontroll, kvalitet och möjlighet att faktiskt förbättra systemet över tid utan att hamna i ny namnröra.

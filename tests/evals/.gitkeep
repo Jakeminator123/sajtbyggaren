@@ -1,0 +1,5 @@
+# Evals struktureras i undermappar:
+#   tests/evals/baseline/            - sajtmaskin-tagg-jämförelse (innan fas 1)
+#   tests/evals/scaffold-selection/  - regression-tester per scaffold-selection.v1.json
+#   tests/evals/dossier-selection/   - regression-tester per dossier-selection.v1.json
+#   tests/evals/quality-gate/        - end-to-end mot page-quality-traits.v1.json

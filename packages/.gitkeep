@@ -1,0 +1,8 @@
+# Fylls i ordning enligt docs/migration-plan.md:
+# 1. packages/policies (typade laddare)
+# 2. packages/generation/brief (fas 1)
+# 3. packages/generation/orchestration (fas 2)
+# 4. packages/generation/{codegen,finalize,quality-gate} (fas 3)
+# 5. packages/preview-runtime (StackBlitz först)
+# 6. packages/builder
+# 7. packages/shared

@@ -1,0 +1,383 @@
+{
+  "$schema": "../schemas/naming-dictionary.schema.json",
+  "policyId": "naming-dictionary.v1",
+  "version": 2,
+  "status": "draft-but-authoritative",
+  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 2 utökar med scaffold-/dossier-selection-begrepp och WebContainer-runtime-begrepp.",
+  "rules": [
+    "Ett begrepp får ha exakt ett kanoniskt namn.",
+    "Ett kanoniskt namn får bo i exakt en huvudsaklig mapp (se repo-boundaries).",
+    "Synonym/alias accepteras endast om det står i 'aliasesAllowed' och då bara som dokumentationskommentar; kod och policies använder alltid kanoniskt namn.",
+    "Förbjudna alias (se 'aliasesForbidden') får inte återinföras.",
+    "Nya termer måste deklareras här innan de används någon annanstans (se rules/term-discipline.md)."
+  ],
+  "terms": [
+    {
+      "id": "siteBrief",
+      "canonical": "Site Brief",
+      "definition": "Strukturerat businessobjekt om sajten: bransch, sidor, ton, färger, capabilities. Output från fas 1.",
+      "ownerPackage": "packages/generation/brief",
+      "aliasesAllowed": ["StructuredSiteBrief"],
+      "aliasesForbidden": ["brief", "deepBrief", "structuredBrief", "siteSpec", "websiteSpec"]
+    },
+    {
+      "id": "generationPackage",
+      "canonical": "Generation Package",
+      "definition": "Den enda nyttolasten som skickas till codegen-LLM. Innehåller systemPrompt, brief, policy, scaffold, routes, dossiers, buildSpec, kvalitetsmål.",
+      "ownerPackage": "packages/generation/package",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["llmPayload", "promptBundle", "dynamicContextBag"]
+    },
+    {
+      "id": "scaffold",
+      "canonical": "Scaffold",
+      "definition": "Sajtens grammatik. Teknisk startpunkt + route-struktur + sektionsgrammatik + tillåtna dossiers + kvalitetsregler. Inte en mall.",
+      "ownerPackage": "packages/generation/orchestration/scaffolds",
+      "aliasesAllowed": ["ScaffoldDefinition"],
+      "aliasesForbidden": ["template", "starter", "boilerplate", "pack"]
+    },
+    {
+      "id": "scaffoldVariant",
+      "canonical": "Scaffold Variant",
+      "definition": "Visuell/personlig variant inom en Scaffold: typografi, färgschema, motif, prompt hints.",
+      "ownerPackage": "packages/generation/orchestration/scaffold-variants",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["theme", "skin", "style"]
+    },
+    {
+      "id": "scaffoldRegistry",
+      "canonical": "Scaffold Registry",
+      "definition": "Centralt index över giltiga Scaffold-id:n. Sanningskälla i scaffold-contract.v1.json:primaryScaffoldRegistry.",
+      "ownerPackage": "packages/generation/orchestration/scaffolds",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["scaffoldList", "templateList"]
+    },
+    {
+      "id": "selectionProfile",
+      "canonical": "Selection Profile",
+      "definition": "Per-Scaffold-fil med embeddingText, semanticSignals, negativeSignals och llmClassificationHints som styr Scaffold Selector. Ersätter ordmatchning.",
+      "ownerPackage": "packages/generation/orchestration/scaffolds",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["matcher", "rules", "trigger"]
+    },
+    {
+      "id": "qualityContract",
+      "canonical": "Quality Contract",
+      "definition": "Per-Scaffold-fil med scorecardWeights, mustPass och avoid. Härleder vikter från page-quality-traits men kan justera per Scaffold.",
+      "ownerPackage": "packages/generation/orchestration/scaffolds",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["scoreConfig", "qualityRules"]
+    },
+    {
+      "id": "dossier",
+      "canonical": "Dossier",
+      "definition": "Återanvändbar capability-/kunskapsmodul som kan slås på i en sajt. Klass: hard / soft / hybrid.",
+      "ownerPackage": "packages/generation/orchestration/dossiers",
+      "aliasesAllowed": ["capabilityModule"],
+      "aliasesForbidden": ["package", "plugin", "feature", "addon"]
+    },
+    {
+      "id": "dossierClass",
+      "canonical": "Dossier Class",
+      "definition": "En av soft, hybrid eller hard. Avgör om Dossiern kräver env, backend, integration eller bara content/layout.",
+      "ownerPackage": "packages/generation/orchestration/dossiers",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["dossierType", "dossierKind"]
+    },
+    {
+      "id": "softDossier",
+      "canonical": "Soft Dossier",
+      "definition": "Dossier som påverkar content/layout men inte kräver extern integration eller env.",
+      "ownerPackage": "packages/generation/orchestration/dossiers",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "hybridDossier",
+      "canonical": "Hybrid Dossier",
+      "definition": "Dossier som kan renderas som mock i designläge men kräver backend/env i integrationsläge.",
+      "ownerPackage": "packages/generation/orchestration/dossiers",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "hardDossier",
+      "canonical": "Hard Dossier",
+      "definition": "Dossier som kräver env, backend, databas, auth, betalning eller extern API. Mockas inte.",
+      "ownerPackage": "packages/generation/orchestration/dossiers",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "compatibleDossier",
+      "canonical": "Compatible Dossier",
+      "definition": "Dossier som listas i en Scaffolds compatible-dossiers.json under required, recommended eller conditional.",
+      "ownerPackage": "packages/generation/orchestration/scaffolds",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "compatibilityFilter",
+      "canonical": "Compatibility Filter",
+      "definition": "Steg i Dossier Selector som filtrerar bort kandidater som inte är kompatibla med Selected Scaffold.",
+      "ownerPackage": "packages/generation/orchestration/dossiers",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "capabilityEmbeddingQuery",
+      "canonical": "Capability Embedding Query",
+      "definition": "Embedding-fråga som söker Top-K Dossier-kandidater för aktuell Site Brief.",
+      "ownerPackage": "packages/generation/orchestration/dossiers",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "selectionTrace",
+      "canonical": "Selection Trace",
+      "definition": "Strukturerad logg över Scaffold/Dossier-val: kandidater, scores, LLM-reasons, accept/reject. Sparas under data/runs/<runId>/.",
+      "ownerPackage": "packages/generation/orchestration",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["selectionLog", "trace"]
+    },
+    {
+      "id": "policyGate",
+      "canonical": "Policy Gate",
+      "definition": "Filtersteg som avvisar Scaffold-/Dossier-val som bryter mot policies, även om embedding och LLM rekommenderar dem.",
+      "ownerPackage": "packages/generation/orchestration",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "wordMatching",
+      "canonical": "Word Matching",
+      "definition": "Direkt strängmatchning mot promptens innehåll. Tillåtet endast som svag signal eller guardrail; aldrig som primär selector.",
+      "ownerPackage": "packages/generation/orchestration",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["keywordMatching", "stringMatching"]
+    },
+    {
+      "id": "embeddingIndex",
+      "canonical": "Embedding Index",
+      "definition": "Sökbar embedding-baserad index. Ett per domän: scaffolds, dossiers, reference-templates, section-patterns, style-signatures.",
+      "ownerPackage": "packages/generation/orchestration",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["vectorStore", "vectorDb"]
+    },
+    {
+      "id": "referenceTemplate",
+      "canonical": "Reference Template",
+      "definition": "Externt material (t.ex. Vercel templates) som används som inspirations- och struktur-corpus, inte som produktens skelett.",
+      "ownerPackage": "data/reference-templates",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["template-library", "v0-template"]
+    },
+    {
+      "id": "sectionPattern",
+      "canonical": "Section Pattern",
+      "definition": "Återkommande sektionsstruktur extraherad från Reference Templates (hero-with-product-shot, logo-cloud, pricing-table).",
+      "ownerPackage": "data/reference-templates",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "styleSignature",
+      "canonical": "Style Signature",
+      "definition": "Visuellt fingeravtryck (typografi, färg, motif, depth) extraherat från Reference Template eller Scaffold Variant.",
+      "ownerPackage": "data/reference-templates",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "routePlan",
+      "canonical": "Route Plan",
+      "definition": "Lista över sidor/rutter som ska finnas i den genererade sajten med ordning och syfte.",
+      "ownerPackage": "packages/generation/orchestration/routing",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["sitemap", "navigation", "pageList"]
+    },
+    {
+      "id": "contractPlan",
+      "canonical": "Contract Plan",
+      "definition": "Tekniska krav: auth, betalning, databas, env-variabler, integrationer som sajten behöver.",
+      "ownerPackage": "packages/generation/orchestration/contracts",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["dependencies", "requirements", "integrations"]
+    },
+    {
+      "id": "buildSpec",
+      "canonical": "BuildSpec",
+      "definition": "Körnings- och kvalitetspolicy: changeScope, qualityTarget, contextPolicy, verificationPolicy, tokenBudgets.",
+      "ownerPackage": "packages/generation/orchestration/build-spec",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["config", "settings", "options"]
+    },
+    {
+      "id": "qualityGate",
+      "canonical": "Quality Gate",
+      "definition": "Mätbar acceptansgräns mot Page Quality Traits. EN gate. Inte F2/F3-tier.",
+      "ownerPackage": "packages/generation/quality-gate",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["F2", "F3", "tier2", "tier3", "designPreview", "integrationsBuild"]
+    },
+    {
+      "id": "previewRuntime",
+      "canonical": "Preview Runtime",
+      "definition": "Abstraktion för var en genererad sajt körs. Implementationer: StackBlitzRuntime, FlyRuntime, LocalRuntime.",
+      "ownerPackage": "packages/preview-runtime",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["VM", "sandbox", "preview-host", "vercelSandbox"]
+    },
+    {
+      "id": "previewRuntimeKind",
+      "canonical": "PreviewRuntimeKind",
+      "definition": "Sluten typunion för giltiga Preview Runtime-värden: stackblitz | local | fly. Definierad i packages/preview-runtime/PreviewRuntime.ts.",
+      "ownerPackage": "packages/preview-runtime",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "previewRuntimeConfig",
+      "canonical": "PreviewRuntimeConfig",
+      "definition": "Konfigurationsobjekt som skickas till PreviewRuntime.start(): kind, projectName, env. Definierad i packages/preview-runtime/PreviewRuntime.ts.",
+      "ownerPackage": "packages/preview-runtime",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "previewSession",
+      "canonical": "Preview Session",
+      "definition": "Aktiv session från en Preview Runtime: id, url, kind, createdAt. Returneras av PreviewRuntime.start() och stoppas av PreviewRuntime.stop().",
+      "ownerPackage": "packages/preview-runtime",
+      "aliasesAllowed": ["PreviewSession"],
+      "aliasesForbidden": ["sandboxSession"]
+    },
+    {
+      "id": "previewFile",
+      "canonical": "Preview File",
+      "definition": "En fil i den filuppsättning som monteras i Preview Runtime: path + content. Definierad i packages/preview-runtime/PreviewRuntime.ts.",
+      "ownerPackage": "packages/preview-runtime",
+      "aliasesAllowed": ["PreviewFile"],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "resolvedPolicy",
+      "canonical": "Resolved Policy",
+      "definition": "Output från fas 1 policy_resolution: page-quality-traits + naming + repo-boundaries + generation-constraints sammanvägda för aktuell Site Brief.",
+      "ownerPackage": "packages/policies",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "repairCandidate",
+      "canonical": "Repair Candidate",
+      "definition": "Versionsstatus när Quality Gate failat och LLM Repair har producerat en ny version som väntar på re-evaluering eller accept.",
+      "ownerPackage": "packages/builder",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["repairAvailable"]
+    },
+    {
+      "id": "stackBlitzRuntime",
+      "canonical": "StackBlitzRuntime",
+      "definition": "Preview Runtime-implementation som kör genererade Next.js-sajter via WebContainer i browserfliken.",
+      "ownerPackage": "packages/preview-runtime/stackblitz",
+      "aliasesAllowed": ["WebContainerRuntime"],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "flyRuntime",
+      "canonical": "FlyRuntime",
+      "definition": "Preview Runtime-implementation som kör genererade sajter på Fly.io VM. Används bara när StackBlitz inte räcker.",
+      "ownerPackage": "packages/preview-runtime/fly",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["preview-host"]
+    },
+    {
+      "id": "localRuntime",
+      "canonical": "LocalRuntime",
+      "definition": "Preview Runtime-implementation för utvecklarens egen maskin. Inte användarvänd.",
+      "ownerPackage": "packages/preview-runtime/local",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "webContainer",
+      "canonical": "WebContainer",
+      "definition": "Browser-baserad Node.js-runtime (StackBlitz) som tillåter npm install / npm run dev i en flik. Underliggande teknologi för StackBlitzRuntime.",
+      "ownerPackage": "packages/preview-runtime/stackblitz",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "promotedSite",
+      "canonical": "Promoted Site",
+      "definition": "En version som klarat Quality Gate och blivit accepterad som aktuell version.",
+      "ownerPackage": "packages/builder",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["finalSite", "deployedSite", "publishedSite"]
+    },
+    {
+      "id": "backoffice",
+      "canonical": "Backoffice",
+      "definition": "backend.py Streamlit-app för att redigera governance, scaffolds, dossiers, evals, telemetri. INTE i användarens runtime.",
+      "ownerPackage": "backend.py",
+      "aliasesAllowed": ["adminPanel"],
+      "aliasesForbidden": ["dashboard", "frontoffice"]
+    },
+    {
+      "id": "policy",
+      "canonical": "Policy",
+      "definition": "JSON-fil under governance/policies/. Sanningskälla för en domän (kvalitet, namn, gränser, flöde, runtime, scaffold-/dossier-kontrakt och -val).",
+      "ownerPackage": "governance/policies",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["config", "rule", "settings"]
+    },
+    {
+      "id": "rule",
+      "canonical": "Rule",
+      "definition": "Mänsklig instruktion under governance/rules/ som speglas till .cursor/rules/. Beskriver beteende, inte data.",
+      "ownerPackage": "governance/rules",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["policy", "instruction"]
+    },
+    {
+      "id": "schema",
+      "canonical": "Schema",
+      "definition": "JSON Schema-fil under governance/schemas/ som validerar en motsvarande Policy. Ett schema per policy.",
+      "ownerPackage": "governance/schemas",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "codeContract",
+      "canonical": "Code Contract",
+      "definition": "Per-Dossier-fil (code-contract.json) som listar must/avoid för den kod LLM:en får producera när Dossiern aktiveras.",
+      "ownerPackage": "packages/generation/orchestration/dossiers",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "envContract",
+      "canonical": "Env Contract",
+      "definition": "Per-Dossier-fil (env-contract.json) som beskriver requires + designModeBehavior + integrationModeBehavior. Krävs för hybrid- och hard-Dossiers.",
+      "ownerPackage": "packages/generation/orchestration/dossiers",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    }
+  ],
+  "globallyForbidden": [
+    "v0",
+    "vercel-sandbox",
+    "preview-host",
+    "AI_GATEWAY",
+    "demoUrl",
+    "directiveCascade",
+    "promptPolish",
+    "promptRewrite",
+    "deepBriefObject",
+    "tier1",
+    "tier2",
+    "tier3",
+    "template-library"
+  ]
+}

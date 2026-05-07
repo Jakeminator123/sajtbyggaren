@@ -1,0 +1,70 @@
+{
+  "$schema": "../schemas/preview-runtime-policy.schema.json",
+  "policyId": "preview-runtime-policy.v1",
+  "version": 1,
+  "status": "draft-but-authoritative",
+  "purpose": "Bestämmer vilken Preview Runtime som används, när, och hur runtime-specifika namn hålls borta från produktterminologin.",
+  "principles": [
+    "Preview Runtime är en abstraktion. Produktkoden talar bara om 'Preview Runtime', aldrig 'VM' eller 'sandbox'.",
+    "Sajtbyggaren startar med StackBlitz som default. Andra runtimes läggs till bara om eval-batchen visar bevisat behov.",
+    "Det finns EN quality gate; det finns INTE en F2- och F3-tier. Lager läggs först om eval kräver det."
+  ],
+  "default": "stackblitz",
+  "runtimes": [
+    {
+      "kind": "stackblitz",
+      "status": "primary",
+      "useWhen": [
+        "iteration på Next.js-sajt utan tunga server-side-integrationer",
+        "snabb dev-loop"
+      ],
+      "limitations": [
+        "vissa Node-API:er saknas i WebContainer",
+        "långa byggen kan vara långsammare än lokal Node"
+      ],
+      "envInjection": "client-only via WebContainer FS"
+    },
+    {
+      "kind": "fly",
+      "status": "secondary",
+      "useWhen": [
+        "F3-likt scenario: sajten kräver riktig build (tier-3 SDK:er, Stripe, DB) som inte fungerar i StackBlitz",
+        "produktnära smoke-test innan promotion"
+      ],
+      "limitations": [
+        "kostar pengar",
+        "långsammare uppstart än StackBlitz"
+      ],
+      "envInjection": "via Fly secrets injection"
+    },
+    {
+      "kind": "local",
+      "status": "developer-only",
+      "useWhen": [
+        "felsökning på utvecklarmaskin",
+        "ingen användarvänd preview"
+      ],
+      "limitations": [
+        "kräver att utvecklaren har Node och deps installerade"
+      ],
+      "envInjection": "läs från .env.local"
+    }
+  ],
+  "promotionRule": "En Promoted Site får aldrig promotas direkt från en Preview Runtime som inte kunnat köra hela quality gate-batchen utan att skippa checks.",
+  "qualityGate": {
+    "checks": ["typecheck", "build", "route-scan", "preview-smoke"],
+    "comment": "Inte tier-uppdelad. Om typecheck eller build skippas måste det loggas explicit i version-meta som 'degraded'."
+  },
+  "forbiddenTerms": [
+    "VM",
+    "sandbox",
+    "preview-host",
+    "webcontainer",
+    "vercelSandbox",
+    "tier1",
+    "tier2",
+    "tier3",
+    "F2-only",
+    "F3-only"
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "$schema": "../schemas/dossier-selection.schema.json",
+  "policyId": "dossier-selection.v1",
+  "version": 1,
+  "status": "draft-but-authoritative",
+  "purpose": "Bestämmer hur Dossier Selector väljer kompatibla Dossiers från Selected Scaffold + Site Brief.",
+  "principles": [
+    "Dossiers väljs efter Scaffold och Brief, aldrig direkt efter raw prompt.",
+    "Compatibility med Selected Scaffold är ett hårt filter, inte en signal.",
+    "Hard Dossiers kräver explicit eller stark semantisk signal i brief.",
+    "Inga Dossiers injiceras automatiskt i alla Scaffolds."
+  ],
+  "pipeline": [
+    "compatibility_filter",
+    "capability_embedding_query",
+    "small_llm_rerank",
+    "policy_gate",
+    "selected_dossiers"
+  ],
+  "compatibilityFilter": {
+    "source": "scaffold/<scaffoldId>/compatible-dossiers.json",
+    "rule": "Endast Dossiers i `required`, `recommended` eller `conditional` är kandidater. Allt i `disallowedByDefault` filtreras bort."
+  },
+  "embedding": {
+    "indexName": "dossiers",
+    "topK": 8,
+    "minScore": 0.6
+  },
+  "reranker": {
+    "modelClass": "small-llm",
+    "mustReturnReasons": true
+  },
+  "policyGate": {
+    "hardDossierRule": "Hard Dossier får bara aktiveras om brief innehåller explicit user mention eller stark semantisk signal från `activation.strongSignals` i dossier.json.",
+    "maxDossiersPerSite": {
+      "default": 6,
+      "rationale": "För många Dossiers gör sajten överlastad. Höj bara med explicit policy-bump."
+    },
+    "alwaysActivate": [
+      "Dossiers i `compatible-dossiers.json:required` för Selected Scaffold"
+    ]
+  },
+  "trace": {
+    "storeSelected": true,
+    "storeRejectedReasons": true,
+    "storedAtPath": "data/runs/<runId>/dossier-selection.json"
+  },
+  "regressionTests": {
+    "ownerPath": "tests/evals/dossier-selection",
+    "minimumCount": 5,
+    "exampleCases": [
+      {
+        "prompt": "Skapa en hemsida för en elektriker i Malmö",
+        "scaffold": "local-service-business",
+        "expectedDossiers": ["contact-form", "service-list", "reviews", "service-area", "faq"],
+        "mustNotSelect": ["payments", "auth"]
+      },
+      {
+        "prompt": "Skapa en SaaS landing page för ett verktyg där elektriker kan planera jobb",
+        "scaffold": "saas-product",
+        "expectedDossiers": ["pricing-table", "feature-grid", "product-workflow"],
+        "mustNotSelect": ["emergency-cta", "service-area"]
+      }
+    ]
+  }
+}

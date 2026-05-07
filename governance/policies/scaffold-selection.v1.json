@@ -1,0 +1,77 @@
+{
+  "$schema": "../schemas/scaffold-selection.schema.json",
+  "policyId": "scaffold-selection.v1",
+  "version": 1,
+  "status": "draft-but-authoritative",
+  "purpose": "Bestämmer hur Scaffold Selector väljer Scaffold från Site Brief. Ordmatchning är degraderad till svag signal.",
+  "principles": [
+    "Ordmatchning får inte direkt välja Scaffold.",
+    "Embedding ger recall. Small LLM rerank ger semantiskt omdöme. Policy gate stoppar dumma val. Trace gör valet observerbart.",
+    "Eval-batch skyddar mot regression genom att kräva specifika valresultat per testprompt."
+  ],
+  "primaryMethod": "embedding-plus-llm-rerank",
+  "wordMatching": {
+    "enabled": true,
+    "role": "weak-signal-and-guardrail-only",
+    "mayDirectlySelectScaffold": false,
+    "useFor": [
+      "hårda användarord som signal till capability (inte scaffold)",
+      "negativa spärrar (`utan bokningsformulär`)",
+      "compliance-vakter (`läkare`, `juridisk rådgivning`)",
+      "debug-kommentarer i Selection Trace",
+      "fallback om embedding/LLM misslyckas"
+    ]
+  },
+  "embedding": {
+    "indexName": "scaffolds",
+    "topK": 5,
+    "minScore": 0.62
+  },
+  "reranker": {
+    "modelClass": "small-llm",
+    "mustReturnReasons": true,
+    "tieBreakMargin": 0.08
+  },
+  "policyGate": {
+    "rejectIf": [
+      "Selected scaffold's `notFor` matchar brief.businessType",
+      "Selected scaffold är inte i `primaryScaffoldRegistry`",
+      "Confidence under `minConfidence` i Selection Profile"
+    ]
+  },
+  "fallback": {
+    "whenLowConfidence": "ask-clarifying-or-use-general-business",
+    "defaultScaffold": "professional-services"
+  },
+  "trace": {
+    "storeCandidates": true,
+    "storeRejectedReasons": true,
+    "storedAtPath": "data/runs/<runId>/scaffold-selection.json"
+  },
+  "regressionTests": {
+    "ownerPath": "tests/evals/scaffold-selection",
+    "minimumCount": 5,
+    "exampleCases": [
+      {
+        "prompt": "Skapa en hemsida för en elektriker i Malmö",
+        "expectedScaffold": "local-service-business",
+        "mustNotSelect": ["saas-product", "app-landing"]
+      },
+      {
+        "prompt": "Skapa en SaaS för elektriker som hanterar bokningar och fakturor",
+        "expectedScaffold": "saas-product",
+        "mustNotSelect": ["local-service-business"]
+      },
+      {
+        "prompt": "Skapa en restauranghemsida med meny och bordsbokning",
+        "expectedScaffold": "restaurant-hospitality",
+        "mustNotSelect": ["saas-product"]
+      },
+      {
+        "prompt": "Skapa en app landing page för ett bokningssystem för restauranger",
+        "expectedScaffold": "saas-product",
+        "mustNotSelect": ["restaurant-hospitality"]
+      }
+    ]
+  }
+}

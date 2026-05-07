@@ -1,0 +1,78 @@
+{
+  "$schema": "../schemas/dossier-contract.schema.json",
+  "policyId": "dossier-contract.v1",
+  "version": 1,
+  "status": "draft-but-authoritative",
+  "purpose": "Definierar vad en Dossier är, vilka klasser som finns, och exakt vilken filstruktur och vilka fält varje Dossier måste följa.",
+  "principles": [
+    "Dossier är en återanvändbar capability-/kunskapsmodul, inte en komponent.",
+    "Dossiers är portabla. Dossier-realiseringar är scaffold-specifika.",
+    "Samma Dossier kan användas i flera Scaffolds, men UI/fält/route varierar med scaffold + brief + policy.",
+    "Hard Dossiers kräver explicit eller stark semantisk signal; Soft Dossiers kan aktiveras via brief alone."
+  ],
+  "dossierClasses": [
+    {
+      "class": "soft",
+      "definition": "Påverkar content/layout men kräver ingen extern integration eller env.",
+      "examples": ["reviews", "faq", "service-area", "gallery", "team-section"]
+    },
+    {
+      "class": "hybrid",
+      "definition": "Kan renderas som mock i designläge men kräver backend/env i integrationsläge.",
+      "examples": ["contact-form", "booking-request", "newsletter", "map-location"]
+    },
+    {
+      "class": "hard",
+      "definition": "Kräver env, backend, databas, auth, betalning eller extern API. Mockas inte.",
+      "examples": ["auth", "payments", "database", "email", "storage"]
+    }
+  ],
+  "dossierDirectoryLayout": {
+    "ownerPackage": "packages/generation/orchestration/dossiers",
+    "perDossierPath": "packages/generation/orchestration/dossiers/<class>/<dossierId>/",
+    "requiredFilesAllClasses": [
+      "dossier.json",
+      "prompt.md",
+      "code-contract.json"
+    ],
+    "additionalRequiredFilesByClass": {
+      "soft": ["examples.md"],
+      "hybrid": ["env-contract.json", "examples.md"],
+      "hard": ["env-contract.json", "integration-contract.json", "evals.json"]
+    }
+  },
+  "dossierJsonRequiredFields": [
+    "id",
+    "version",
+    "class",
+    "label",
+    "purpose",
+    "bestFor",
+    "activation",
+    "affects",
+    "promptContract"
+  ],
+  "activationFieldRequirements": {
+    "soft": {
+      "selectionMode": "semantic",
+      "requiresUserMention": false
+    },
+    "hybrid": {
+      "selectionMode": "semantic",
+      "requiresUserMention": false
+    },
+    "hard": {
+      "selectionMode": "explicit-or-strong-semantic",
+      "requiresUserMention": true
+    }
+  },
+  "promptContractRequiredFields": ["must", "avoid"],
+  "codeContractRequiredFields": ["must", "avoid"],
+  "envContractRequiredFields": ["requires", "designModeBehavior", "integrationModeBehavior"],
+  "forbiddenInDossierFiles": [
+    "alias för Dossier som inte står i naming-dictionary",
+    "automatisk injektion i alla Scaffolds utan compatibility-check",
+    "hårdkodade hemligheter eller exempel-API-nycklar",
+    "duplicerad scorecard som inte härleds från page-quality-traits"
+  ]
+}

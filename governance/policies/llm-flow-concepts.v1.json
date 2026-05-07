@@ -1,0 +1,306 @@
+{
+  "$schema": "../schemas/llm-flow-concepts.schema.json",
+  "policyId": "llm-flow-concepts.v1",
+  "version": 1,
+  "status": "draft-but-authoritative",
+  "northStar": "One controlled generation lane from user intent to promoted site. No hidden secondary init path may bypass this policy.",
+  "canonicalFlow": [
+    "raw_prompt",
+    "site_brief",
+    "intent_resolution",
+    "policy_resolution",
+    "scaffold_resolution",
+    "generation_package",
+    "codegen",
+    "mechanical_autofix",
+    "llm_repair",
+    "preview_runtime",
+    "quality_evaluation",
+    "promotion"
+  ],
+  "phases": [
+    {
+      "id": "raw_prompt",
+      "order": 10,
+      "canonicalName": "Raw Prompt",
+      "purpose": "Capture the user's unmodified request and entry source.",
+      "inputArtifacts": [
+        "user_message",
+        "entry_source"
+      ],
+      "outputArtifacts": [
+        "rawPrompt"
+      ],
+      "ownerPackage": "apps/web",
+      "allowedToCallLLM": false,
+      "mustNotDo": [
+        "infer final design",
+        "choose scaffold",
+        "rewrite user intent"
+      ]
+    },
+    {
+      "id": "site_brief",
+      "order": 20,
+      "canonicalName": "Site Brief",
+      "purpose": "Create a structured business/site brief from the raw prompt.",
+      "inputArtifacts": [
+        "rawPrompt",
+        "user_profile_optional"
+      ],
+      "outputArtifacts": [
+        "siteBrief"
+      ],
+      "ownerPackage": "packages/generation",
+      "allowedToCallLLM": true,
+      "mustNotDo": [
+        "emit code",
+        "pick final preview runtime"
+      ]
+    },
+    {
+      "id": "intent_resolution",
+      "order": 30,
+      "canonicalName": "Intent Resolution",
+      "purpose": "Resolve build intent, site type, follow-up intent, and business constraints.",
+      "inputArtifacts": [
+        "siteBrief",
+        "rawPrompt"
+      ],
+      "outputArtifacts": [
+        "resolvedIntent"
+      ],
+      "ownerPackage": "packages/generation",
+      "allowedToCallLLM": false,
+      "mustNotDo": [
+        "duplicate brief schema",
+        "create new entry mode names"
+      ]
+    },
+    {
+      "id": "policy_resolution",
+      "order": 40,
+      "canonicalName": "Policy Resolution",
+      "purpose": "Load page quality traits, naming, repo boundaries, and generation constraints from JSON policies.",
+      "inputArtifacts": [
+        "siteBrief",
+        "resolvedIntent",
+        "page-quality-traits.v1.json"
+      ],
+      "outputArtifacts": [
+        "resolvedPolicy"
+      ],
+      "ownerPackage": "packages/policies",
+      "allowedToCallLLM": false,
+      "mustNotDo": [
+        "hard-code trait weights",
+        "invent quality dimensions"
+      ]
+    },
+    {
+      "id": "scaffold_resolution",
+      "order": 50,
+      "canonicalName": "Scaffold Resolution",
+      "purpose": "Choose the minimum viable scaffold and route plan for the requested site.",
+      "inputArtifacts": [
+        "siteBrief",
+        "resolvedIntent",
+        "resolvedPolicy"
+      ],
+      "outputArtifacts": [
+        "scaffoldPlan",
+        "routePlan"
+      ],
+      "ownerPackage": "packages/generation",
+      "allowedToCallLLM": false,
+      "mustNotDo": [
+        "route around policy",
+        "lock visual style before policy resolution"
+      ]
+    },
+    {
+      "id": "generation_package",
+      "order": 60,
+      "canonicalName": "Generation Package",
+      "purpose": "Compose the exact prompt payload: system rules, brief, policy, scaffold, routes, and quality target.",
+      "inputArtifacts": [
+        "siteBrief",
+        "resolvedPolicy",
+        "scaffoldPlan",
+        "routePlan"
+      ],
+      "outputArtifacts": [
+        "generationPackage"
+      ],
+      "ownerPackage": "packages/generation",
+      "allowedToCallLLM": false,
+      "mustNotDo": [
+        "call codegen before package is complete",
+        "include stale docs as truth"
+      ]
+    },
+    {
+      "id": "codegen",
+      "order": 70,
+      "canonicalName": "Codegen",
+      "purpose": "Generate the site files from the Generation Package.",
+      "inputArtifacts": [
+        "generationPackage"
+      ],
+      "outputArtifacts": [
+        "codegenResult"
+      ],
+      "ownerPackage": "packages/generation",
+      "allowedToCallLLM": true,
+      "mustNotDo": [
+        "mutate policy",
+        "silently skip requested pages"
+      ]
+    },
+    {
+      "id": "mechanical_autofix",
+      "order": 80,
+      "canonicalName": "Mechanical Autofix",
+      "purpose": "Run deterministic repairs before asking another LLM to fix code.",
+      "inputArtifacts": [
+        "codegenResult",
+        "buildErrors_optional"
+      ],
+      "outputArtifacts": [
+        "autofixResult"
+      ],
+      "ownerPackage": "packages/builder",
+      "allowedToCallLLM": false,
+      "mustNotDo": [
+        "change design intent",
+        "invent features"
+      ]
+    },
+    {
+      "id": "llm_repair",
+      "order": 90,
+      "canonicalName": "LLM Repair",
+      "purpose": "Use an LLM only for targeted code repair when mechanical fixes fail.",
+      "inputArtifacts": [
+        "autofixResult",
+        "buildErrors"
+      ],
+      "outputArtifacts": [
+        "repairResult"
+      ],
+      "ownerPackage": "packages/generation",
+      "allowedToCallLLM": true,
+      "mustNotDo": [
+        "full rewrite",
+        "drop high-value sections",
+        "change policy"
+      ]
+    },
+    {
+      "id": "preview_runtime",
+      "order": 100,
+      "canonicalName": "Preview Runtime",
+      "purpose": "Run the generated site in a runtime abstraction such as StackBlitz, local, or VM/Fly.",
+      "inputArtifacts": [
+        "finalFiles",
+        "runtimeConfig"
+      ],
+      "outputArtifacts": [
+        "previewSession",
+        "previewUrl"
+      ],
+      "ownerPackage": "packages/preview-runtime",
+      "allowedToCallLLM": false,
+      "mustNotDo": [
+        "own generation logic",
+        "rename runtime-specific terms into product terms"
+      ]
+    },
+    {
+      "id": "quality_evaluation",
+      "order": 110,
+      "canonicalName": "Quality Evaluation",
+      "purpose": "Score the site against the ten page quality traits and technical gates.",
+      "inputArtifacts": [
+        "previewSession",
+        "finalFiles",
+        "page-quality-traits.v1.json"
+      ],
+      "outputArtifacts": [
+        "qualityReport"
+      ],
+      "ownerPackage": "tests/evals",
+      "allowedToCallLLM": true,
+      "mustNotDo": [
+        "promote below gate",
+        "hide blocking failures"
+      ]
+    },
+    {
+      "id": "promotion",
+      "order": 120,
+      "canonicalName": "Promotion",
+      "purpose": "Promote the generated site only after build, preview, and quality gates pass.",
+      "inputArtifacts": [
+        "qualityReport",
+        "finalFiles",
+        "previewUrl"
+      ],
+      "outputArtifacts": [
+        "promotedSite"
+      ],
+      "ownerPackage": "packages/builder",
+      "allowedToCallLLM": false,
+      "mustNotDo": [
+        "promote draft files",
+        "skip audit trail"
+      ]
+    }
+  ],
+  "terms": [
+    {
+      "term": "Site Brief",
+      "id": "siteBrief",
+      "definition": "Structured description of the business, pages, offer, tone, constraints, and required capabilities.",
+      "avoid": [
+        "brief summary",
+        "deep brief object unless specifically LLM-created"
+      ]
+    },
+    {
+      "term": "Generation Package",
+      "id": "generationPackage",
+      "definition": "The single payload that enters codegen. If a signal is not in this package, codegen should not rely on it.",
+      "avoid": [
+        "dynamic context as a loose bag",
+        "hidden prompt state"
+      ]
+    },
+    {
+      "term": "Page Quality Trait",
+      "id": "pageQualityTrait",
+      "definition": "One of the ten JSON-defined dimensions used to drive generation and eval scoring.",
+      "avoid": [
+        "ad hoc quality words"
+      ]
+    },
+    {
+      "term": "Preview Runtime",
+      "id": "previewRuntime",
+      "definition": "Abstraction for where generated sites run. Examples: StackBlitzRuntime, LocalRuntime, FlyRuntime.",
+      "avoid": [
+        "VM as product term",
+        "sandbox as catch-all"
+      ]
+    },
+    {
+      "term": "Promotion",
+      "id": "promotion",
+      "definition": "The controlled step where a draft site becomes the accepted current version.",
+      "avoid": [
+        "save means done",
+        "preview means promoted"
+      ]
+    }
+  ]
+}

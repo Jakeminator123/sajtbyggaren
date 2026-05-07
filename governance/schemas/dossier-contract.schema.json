@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dossier-contract.schema.json",
+  "title": "Dossier Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policyId",
+    "version",
+    "status",
+    "purpose",
+    "principles",
+    "dossierClasses",
+    "dossierDirectoryLayout",
+    "dossierJsonRequiredFields",
+    "activationFieldRequirements",
+    "promptContractRequiredFields",
+    "codeContractRequiredFields",
+    "envContractRequiredFields",
+    "forbiddenInDossierFiles"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "policyId": { "type": "string", "pattern": "^dossier-contract\\.v[0-9]+$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"] },
+    "purpose": { "type": "string" },
+    "principles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "dossierClasses": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["class", "definition", "examples"],
+        "properties": {
+          "class": { "enum": ["soft", "hybrid", "hard"] },
+          "definition": { "type": "string" },
+          "examples": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "dossierDirectoryLayout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ownerPackage", "perDossierPath", "requiredFilesAllClasses", "additionalRequiredFilesByClass"],
+      "properties": {
+        "ownerPackage": { "type": "string" },
+        "perDossierPath": { "type": "string" },
+        "requiredFilesAllClasses": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "additionalRequiredFilesByClass": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["soft", "hybrid", "hard"],
+          "properties": {
+            "soft": { "type": "array", "items": { "type": "string" } },
+            "hybrid": { "type": "array", "items": { "type": "string" } },
+            "hard": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "dossierJsonRequiredFields": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "activationFieldRequirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["soft", "hybrid", "hard"],
+      "properties": {
+        "soft": { "type": "object" },
+        "hybrid": { "type": "object" },
+        "hard": { "type": "object" }
+      }
+    },
+    "promptContractRequiredFields": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "codeContractRequiredFields": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "envContractRequiredFields": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "forbiddenInDossierFiles": { "type": "array", "items": { "type": "string" } }
+  }
+}

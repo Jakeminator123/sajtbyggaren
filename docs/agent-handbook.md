@@ -1,0 +1,53 @@
+# Agent-handbok
+
+Det här är vad varje AI-agent (eller mänsklig medhjälpare) behöver veta innan de börjar arbeta i Sajtbyggaren.
+
+## Läs i denna ordning
+
+1. [`docs/PROJECT_BRIEF.md`](PROJECT_BRIEF.md) - vad och varför.
+2. [`docs/architecture/system-overview.md`](architecture/system-overview.md) - hur lagren hänger ihop.
+3. [`governance/policies/naming-dictionary.v1.json`](../governance/policies/naming-dictionary.v1.json) - kanoniska termer.
+4. [`governance/policies/repo-boundaries.v1.json`](../governance/policies/repo-boundaries.v1.json) - mappägarskap.
+5. [`docs/architecture/llm-flow.md`](architecture/llm-flow.md) - fas 1-3.
+6. [`docs/migration-plan.md`](migration-plan.md) - vad har plockats varifrån.
+
+## Hårda regler för agentarbete
+
+- **Governance först.** Ett koncept som rör flera mappar måste finnas i en policy under `governance/policies/` innan det får finnas i kod.
+- **Inga synonymer.** Använd exakt det kanoniska namnet i `naming-dictionary.v1.json`. Lägg inte till alias som inte står i `aliasesAllowed`.
+- **Mappgränser respekteras.** Importgränserna i `repo-boundaries.v1.json` blockerar review.
+- **`.cursor/rules` är speglar.** Redigera aldrig direkt; ändra under `governance/rules/` och kör `python scripts/rules_sync.py`.
+- **Validera policies före commit.** `python scripts/governance_validate.py` ska returnera exit-kod 0.
+- **Svenska först.** Svara alltid på svenska, även när användaren skriver engelska. Använd riktiga `å`, `ä`, `ö`. Aldrig `\u00f6` eller ASCII-translit.
+
+## Arbetsflöde för en typisk uppgift
+
+```mermaid
+flowchart LR
+    s1[Läs naming-dictionary]
+    s2[Läs repo-boundaries]
+    s3{"Krävs nytt koncept?"}
+    s4[Uppdatera policy först]
+    s5[Implementera i ägar-paket]
+    s6[Validera + sync]
+    s7[Commit]
+
+    s1 --> s2 --> s3
+    s3 -- ja --> s4 --> s5
+    s3 -- nej --> s5
+    s5 --> s6 --> s7
+```
+
+## Vanliga fallgropar
+
+- **Skapa en ny term i koden utan att uppdatera policy.** Görs - men då måste policy uppdateras i samma PR.
+- **Kalla något `template`, `starter`, `boilerplate` istället för `Scaffold`.** Använd kanoniskt namn.
+- **Återinföra `tier2`/`tier3`/`F2`/`F3` för quality gate.** Förbjudet. EN gate eller ny policy-version.
+- **Skriva runtime-logik i `backend.py`.** Backoffice är admin, inte runtime.
+- **Lägga LLM-anrop i fel fas.** Kontrollera `allowedToCallLLM` i `llm-flow-concepts.v1.json`.
+
+## När du fastnar
+
+- Kolla först om det finns en relevant ADR i [`governance/decisions/`](../governance/decisions/).
+- Kolla om termen står i `naming-dictionary.v1.json` med en annan betydelse än du tror.
+- Föreslå en policy-uppdatering hellre än att hitta en kreativ workaround i kod.

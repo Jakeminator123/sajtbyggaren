@@ -1,0 +1,27 @@
+{
+  "folders": [
+    {
+      "path": ".",
+      "name": "Sajtbyggaren"
+    }
+  ],
+  "settings": {
+    "files.associations": {
+      "*.mdc": "markdown"
+    },
+    "files.exclude": {
+      "**/.git": true,
+      "**/node_modules": true
+    },
+    "search.exclude": {
+      "**/.git": true,
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/build": true,
+      "**/.next": true,
+      "**/out": true,
+      "**/.venv": true,
+      "**/__pycache__": true
+    }
+  }
+}

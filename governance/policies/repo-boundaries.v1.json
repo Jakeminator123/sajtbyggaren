@@ -1,0 +1,214 @@
+{
+  "$schema": "../schemas/repo-boundaries.schema.json",
+  "policyId": "repo-boundaries.v1",
+  "version": 2,
+  "status": "draft-but-authoritative",
+  "purpose": "Bestämmer vad varje mapp äger, vad den får importera och vad den ALDRIG får göra. Bryter mot detta = blockerande review. Version 2 utökar med scaffold/dossier/selection-paketen och reference-templates.",
+  "ownership": [
+    {
+      "path": "governance/",
+      "owns": ["policies", "schemas", "rules", "decisions"],
+      "mayImportFrom": [],
+      "mustNotDo": [
+        "innehålla körbar applikationskod",
+        "duplicera koncept som finns i policies",
+        "innehålla data eller versioner"
+      ]
+    },
+    {
+      "path": "backend.py",
+      "owns": ["backoffice-UI", "policy-redigering", "scaffold-/dossier-redigering", "eval-/telemetri-översikt"],
+      "mayImportFrom": ["governance/", "scripts/", "data/"],
+      "mustNotDo": [
+        "ingå i användarens runtime-flöde",
+        "duplicera generation-logik",
+        "skriva till packages/ eller apps/"
+      ]
+    },
+    {
+      "path": "scripts/",
+      "owns": ["governance-validate", "rules-sync", "eval-run", "migrate-from-sajtmaskin"],
+      "mayImportFrom": ["governance/", "data/"],
+      "mustNotDo": [
+        "innehålla produktlogik",
+        "anropa LLM utanför eval-run"
+      ]
+    },
+    {
+      "path": "packages/policies/",
+      "owns": ["typade laddare och validators för governance-JSON"],
+      "mayImportFrom": ["governance/"],
+      "mustNotDo": [
+        "exportera mutbar policy-state",
+        "duplicera fältnamn som inte finns i schemas"
+      ]
+    },
+    {
+      "path": "packages/generation/",
+      "owns": [
+        "fas 1: brief",
+        "fas 2: orchestration (scaffold, variant, route, dossier, contract, build-spec, package)",
+        "fas 3: codegen, finalize, quality-gate"
+      ],
+      "mayImportFrom": ["packages/policies", "packages/shared", "packages/builder"],
+      "mustNotDo": [
+        "äga preview runtime",
+        "äga frontend",
+        "äga UI"
+      ]
+    },
+    {
+      "path": "packages/generation/orchestration/scaffolds/",
+      "owns": [
+        "Scaffold-definitioner (en mapp per Scaffold)",
+        "scaffold.json, routes.json, sections.json, quality-contract.json, compatible-dossiers.json, selection-profile.json",
+        "Scaffold Variants under variants/",
+        "Scaffold Registry"
+      ],
+      "mayImportFrom": ["packages/policies", "packages/shared"],
+      "mustNotDo": [
+        "innehålla LLM-anrop",
+        "innehålla word-matching som scaffold-väljare",
+        "duplicera fält som finns i page-quality-traits eller naming-dictionary"
+      ]
+    },
+    {
+      "path": "packages/generation/orchestration/dossiers/",
+      "owns": [
+        "Dossier-definitioner under soft/, hybrid/, hard/",
+        "dossier.json, prompt.md, code-contract.json, env-contract.json (hybrid/hard), integration-contract.json (hard), examples.md, evals.json (hard)",
+        "Dossier Registry"
+      ],
+      "mayImportFrom": ["packages/policies", "packages/shared"],
+      "mustNotDo": [
+        "automatiskt injicera Dossier i alla Scaffolds",
+        "hårdkoda hemligheter eller exempel-API-nycklar",
+        "duplicera scorecard som inte härleds från page-quality-traits"
+      ]
+    },
+    {
+      "path": "packages/generation/orchestration/selection/",
+      "owns": [
+        "Scaffold Selector",
+        "Dossier Selector",
+        "Compatibility Filter",
+        "Capability Embedding Query",
+        "Policy Gate",
+        "Selection Trace"
+      ],
+      "mayImportFrom": ["packages/policies", "packages/shared", "packages/generation/orchestration/scaffolds", "packages/generation/orchestration/dossiers"],
+      "mustNotDo": [
+        "låta word matching vara primär selector",
+        "duplicera Embedding Index per fil; använd packages/generation/orchestration/embedding"
+      ]
+    },
+    {
+      "path": "packages/generation/orchestration/embedding/",
+      "owns": [
+        "Embedding Index per domän (scaffolds, dossiers, reference-templates, section-patterns, style-signatures)",
+        "embedding-query-builder",
+        "small-llm-rerank-klient"
+      ],
+      "mayImportFrom": ["packages/policies", "packages/shared"],
+      "mustNotDo": [
+        "blanda flera domäner i samma index",
+        "exponera mutbar index-state till andra paket"
+      ]
+    },
+    {
+      "path": "data/reference-templates/",
+      "owns": [
+        "Reference Templates (Vercel-corpus och annat referensmaterial)",
+        "raw/, normalized/, embeddings/, extracted-patterns/{sections,layouts,components,style-signatures}/"
+      ],
+      "mayImportFrom": [],
+      "mustNotDo": [
+        "vara produktens skelett",
+        "kopieras direkt in i genererade sajter utan extraktion"
+      ]
+    },
+    {
+      "path": "packages/builder/",
+      "owns": ["version-livscykel", "promotion", "version-state"],
+      "mayImportFrom": ["packages/policies", "packages/shared", "packages/generation"],
+      "mustNotDo": [
+        "äga LLM-anrop"
+      ]
+    },
+    {
+      "path": "packages/preview-runtime/",
+      "owns": ["PreviewRuntime-interface", "StackBlitzRuntime", "FlyRuntime", "LocalRuntime"],
+      "mayImportFrom": ["packages/shared"],
+      "mustNotDo": [
+        "äga generation-logik",
+        "läcka runtime-specifika namn (VM, sandbox, webcontainer) till andra paket"
+      ]
+    },
+    {
+      "path": "packages/shared/",
+      "owns": ["primitives", "ids", "result-typer"],
+      "mayImportFrom": [],
+      "mustNotDo": [
+        "importera från andra packages eller apps"
+      ]
+    },
+    {
+      "path": "apps/web/",
+      "owns": ["användarens UI"],
+      "mayImportFrom": ["packages/policies", "packages/shared", "apps/api"],
+      "mustNotDo": [
+        "anropa LLM direkt",
+        "äga generation-logik"
+      ]
+    },
+    {
+      "path": "apps/api/",
+      "owns": ["HTTP-yta för apps/web"],
+      "mayImportFrom": ["packages/generation", "packages/builder", "packages/preview-runtime", "packages/policies", "packages/shared"],
+      "mustNotDo": [
+        "duplicera backoffice-funktionalitet"
+      ]
+    },
+    {
+      "path": "tests/evals/",
+      "owns": ["eval-batch", "scorecard-körning", "regression-detektion"],
+      "mayImportFrom": ["packages/", "governance/"],
+      "mustNotDo": [
+        "muta governance-policies",
+        "muta versioner under data/"
+      ]
+    },
+    {
+      "path": "data/",
+      "owns": ["versions", "runs", "lokal persistent state"],
+      "mayImportFrom": [],
+      "mustNotDo": [
+        "innehålla logik",
+        "innehålla policies"
+      ]
+    },
+    {
+      "path": "docs/",
+      "owns": ["mänsklig dokumentation"],
+      "mayImportFrom": [],
+      "mustNotDo": [
+        "definiera kanonisk terminologi (det gör naming-dictionary)",
+        "innehålla körbar kod"
+      ]
+    },
+    {
+      "path": ".cursor/rules/",
+      "owns": ["Cursor-agent-regler (spegel)"],
+      "mayImportFrom": ["governance/rules/"],
+      "mustNotDo": [
+        "vara originalkälla; måste alltid speglas från governance/rules/"
+      ]
+    }
+  ],
+  "globalRules": [
+    "Om ett begrepp berör flera mappar måste det finnas i governance/policies/ INNAN det finns i kod.",
+    "Inga relativa imports korsar paketgränser; använd alias eller workspace-paketnamn.",
+    "Inga circular imports.",
+    "Alla policy-läsande paket går via packages/policies/, aldrig direkt via fs."
+  ]
+}

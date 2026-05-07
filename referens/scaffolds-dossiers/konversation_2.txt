@@ -1,0 +1,95 @@
+FRÅGA:
+
+Vi stannar lite här. Skapa en scaffold som jag kan få som zip. Skapa en eller två dossiers. Förklara hur det skioljer sig med tex en scaffold för ett "local-service-business", men cokså hur de extrasidor som denne kan få i jämföreelse med tex en app-sida såsom kanske "app-ecommerce" (om vi säger att en heter så.. Samt hur dosseiner ska kunna integreras till alla shaffolds alldelest oavsätt då desa är generella byggklossar.. eller missförstår jag?
+
+
+---
+
+
+SVAR:
+
+Jag gör detta som ett litet konkret startpaket: en riktig scaffold-mapp, två dossierer, policies/kontrakt och en kort README som visar hur delarna kopplas ihop.Jag lägger även med slot-tänk: scaffolden definierar var saker får bo, dossiern definierar vad den behöver. Då blir dossierer generella utan att bli slarvigt universella.Thought for 8m 38sJag skapade ett konkret zip-paket åt dig. Jag utgick från att nya versionen ska vara en renare Sajtmaskin-struktur som senare kan ersätta nuvarande master, med tydligare namngivning och högre kontroll än dagens blandade initieringsflöden .
+Ladda ner zippen här
+Backup-format:
+Ladda ner tar.gz här
+Jag validerade paketet med:
+node scripts/validate-pack.mjs[validate-pack] OK
+Vad paketet innehåller
+sajtmaskin-scaffold-dossier-pack/  README.md  .env.example  governance/    policies/      scaffold-selection.v1.json      dossier-selection.v1.json  docs/    SCAFFOLDS_VS_DOSSIERS.md    LOCAL_SERVICE_VS_APP_ECOMMERCE.md    FLOW.md  packages/    generation/      scaffolds/        local-service-business/          scaffold.json          routes.json          sections.json          quality-contract.json          compatible-dossiers.json          selection-profile.json          variants/            premium-local.json            emergency-response.json          examples/            electrician-brief.example.json        _sketches/          app-ecommerce/            README.md      dossiers/        registry.json        hybrid/          contact-form/            dossier.json            prompt.md            code-contract.json            env-contract.json            examples.md        soft/          reviews/            dossier.json            prompt.md            code-contract.json            examples.md      types/        scaffold.types.ts        dossier.types.ts      selection/        select-dossier-compatibility.ts  scripts/    validate-pack.mjs
+Min modell: scaffold vs dossier
+Du tänker nästan rätt om dossierer, men jag skulle justera det så här:
+Scaffold = sajtens grammatikDossier  = återanvändbar capability/byggklossVariant  = visuell riktningPolicy   = regler för val, kvalitet och constraints
+En dossier ska kunna användas av många scaffolds, men den ska inte automatiskt injiceras i alla scaffolds.
+Rätt modell:
+Alla scaffolds kan konsumera samma dossier-interface.Men varje scaffold + brief + policy avgör om dossiern ska användas.
+Fel modell:
+Alla dossierer är generella, därför kan de alltid läggas in överallt.
+Det är en viktig skillnad. Annars får du snabbt samma problem igen: ett namn betyder flera saker i olika sammanhang.
+Exempel: local-service-business
+Det fulla scaffoldet i paketet är:
+local-service-business
+Det är gjort för:
+elektrikerrörmokarestädmålaretakläggarelåssmedflyttfirmalokala tjänsteföretag
+Dess grundsidor är:
+/ /tjanster /om-oss /kontakt
+Dess extrasidor är typiskt:
+/tjanster/[service]  -> djupsida för specifik tjänst/omraden             -> lokal SEO / serviceområden/akut                -> akut hjälp / snabb CTA/referenser          -> projekt, före/efter, kundbevis/fragor-svar         -> invändningar, prisfrågor, trygghet
+Poängen med dessa extrasidor är:
+Kan jag lita på företaget?Gör de det jag behöver?Jobbar de i mitt område?Hur snabbt kan jag få hjälp?Hur tar jag kontakt?
+Alltså: trust, lokal relevans, serviceförklaring och konvertering.
+Jämförelse: app-ecommerce
+Jag lade inte in ett fullständigt app-ecommerce-scaffold, men jag lade in en skiss för jämförelse.
+En sådan scaffold skulle inte främst ha trust-/SEO-sidor. Den skulle ha produkt-, transaktions- och app-state-sidor.
+Typiska sidor:
+/ /produkter /produkter/[productSlug] /cart /checkout /account /account/orders /support /returns
+Poängen med dessa extrasidor är:
+Vad kan jag köpa?Vilken produkt passar?Vad finns i varukorgen?Hur betalar jag?Var är min order?Hur får jag support?
+Så skillnaden är:
+ScaffoldExtrasidor betyder främstlocal-service-businessTrust, SEO, tjänsteförklaring, kontaktapp-ecommerceProduktflöde, köpflöde, konto, order, support
+Det är därför samma dossier kan användas i båda, men realiseras olika.
+Exempel: contact-form dossier
+I paketet finns dossiern:
+packages/generation/dossiers/hybrid/contact-form/
+Den är hybrid, vilket betyder:
+Designläge: kan vara mock/static/client-onlyIntegrationsläge: kan kräva backend/env/email provider
+Samma dossier används olika:
+I local-service-business
+/kontaktOffertförfråganNamnE-postTelefonMeddelande / servicebehov
+CTA:
+Begär offertKontakta ossBoka kostnadsfri rådgivning
+I app-ecommerce
+/support eller /contactSupportärendeOrdernummerE-postMeddelande
+CTA:
+Kontakta supportSkicka ärende
+Alltså: samma dossier, olika realisering.
+Exempel: reviews dossier
+I paketet finns också:
+packages/generation/dossiers/soft/reviews/
+Den är soft, vilket betyder att den inte kräver env, backend, databas eller extern integration.
+I local-service-business betyder den:
+kundomdömentrygghetsnabb återkopplingutfört jobblokal trovärdighet
+I app-ecommerce betyder den snarare:
+produktrecensionerbutikstrustleveransupplevelsesupportkvalitetköptrygghet
+Samma byggkloss, men inte samma innehåll.
+Den viktiga arkitekturregeln
+Jag skulle formulera regeln så här i nya Sajtmaskin:
+Dossierer är portabla.Dossier-realiseringar är scaffold-specifika.
+Det betyder:
+contact-form kan användas av nästan alla scaffolds.Men contact-form får inte betyda samma UI, samma fields och samma route överallt.
+Annars blir contact-form ett nytt namnkaos.
+Hur valet ska fungera
+I paketet finns policy som säger att ordmatchning inte får välja scaffold direkt:
+governance/policies/scaffold-selection.v1.json
+Principen är:
+Structured Brief→ embedding top-K→ liten LLM rerank→ policy gate→ selected scaffold→ compatible dossiers→ dossier embedding/rerank→ selected dossiers
+Ordmatchning får bara vara:
+svag signaldebugguardrailfallback-hint
+Inte:
+if prompt includes "elektriker" => local-service-business
+Det här skyddar mot klassiska fel som:
+"Skapa en hemsida för en elektriker i Malmö"→ local-service-business"Skapa en app/ecommerce-plattform för elektriker"→ inte local-service-business
+Mitt svar på din fråga: missförstår du?
+Lite, men på ett bra sätt.
+Du har rätt i att dossierer ska vara generella byggklossar. Men de ska inte vara generella på sättet “lägg in överallt”. De ska vara generella på sättet:
+Samma interface.Samma kontraktstyp.Samma aktiveringsmodell.Olika scaffold-specifik realisering.
+Det är så du får återanvändning utan att förlora kontroll.

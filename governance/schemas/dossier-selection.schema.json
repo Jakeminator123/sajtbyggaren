@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dossier-selection.schema.json",
+  "title": "Dossier Selection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policyId",
+    "version",
+    "status",
+    "purpose",
+    "principles",
+    "pipeline",
+    "compatibilityFilter",
+    "embedding",
+    "reranker",
+    "policyGate",
+    "trace",
+    "regressionTests"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "policyId": { "type": "string", "pattern": "^dossier-selection\\.v[0-9]+$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"] },
+    "purpose": { "type": "string" },
+    "principles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "pipeline": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "compatibilityFilter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "rule"],
+      "properties": {
+        "source": { "type": "string" },
+        "rule": { "type": "string" }
+      }
+    },
+    "embedding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["indexName", "topK", "minScore"],
+      "properties": {
+        "indexName": { "type": "string" },
+        "topK": { "type": "integer", "minimum": 1 },
+        "minScore": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "reranker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelClass", "mustReturnReasons"],
+      "properties": {
+        "modelClass": { "enum": ["small-llm", "medium-llm", "large-llm"] },
+        "mustReturnReasons": { "type": "boolean" }
+      }
+    },
+    "policyGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hardDossierRule", "maxDossiersPerSite", "alwaysActivate"],
+      "properties": {
+        "hardDossierRule": { "type": "string" },
+        "maxDossiersPerSite": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["default", "rationale"],
+          "properties": {
+            "default": { "type": "integer", "minimum": 1 },
+            "rationale": { "type": "string" }
+          }
+        },
+        "alwaysActivate": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["storeSelected", "storeRejectedReasons", "storedAtPath"],
+      "properties": {
+        "storeSelected": { "type": "boolean" },
+        "storeRejectedReasons": { "type": "boolean" },
+        "storedAtPath": { "type": "string" }
+      }
+    },
+    "regressionTests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ownerPath", "minimumCount", "exampleCases"],
+      "properties": {
+        "ownerPath": { "type": "string" },
+        "minimumCount": { "type": "integer", "minimum": 1 },
+        "exampleCases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["prompt", "scaffold", "expectedDossiers", "mustNotSelect"],
+            "properties": {
+              "prompt": { "type": "string" },
+              "scaffold": { "type": "string" },
+              "expectedDossiers": { "type": "array", "items": { "type": "string" } },
+              "mustNotSelect": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

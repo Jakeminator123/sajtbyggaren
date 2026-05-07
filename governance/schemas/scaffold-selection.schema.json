@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scaffold-selection.schema.json",
+  "title": "Scaffold Selection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policyId",
+    "version",
+    "status",
+    "purpose",
+    "principles",
+    "primaryMethod",
+    "wordMatching",
+    "embedding",
+    "reranker",
+    "policyGate",
+    "fallback",
+    "trace",
+    "regressionTests"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "policyId": { "type": "string", "pattern": "^scaffold-selection\\.v[0-9]+$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"] },
+    "purpose": { "type": "string" },
+    "principles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "primaryMethod": { "enum": ["embedding-plus-llm-rerank"] },
+    "wordMatching": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "role", "mayDirectlySelectScaffold", "useFor"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "role": { "type": "string" },
+        "mayDirectlySelectScaffold": { "const": false },
+        "useFor": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "embedding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["indexName", "topK", "minScore"],
+      "properties": {
+        "indexName": { "type": "string" },
+        "topK": { "type": "integer", "minimum": 1 },
+        "minScore": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "reranker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelClass", "mustReturnReasons", "tieBreakMargin"],
+      "properties": {
+        "modelClass": { "enum": ["small-llm", "medium-llm", "large-llm"] },
+        "mustReturnReasons": { "type": "boolean" },
+        "tieBreakMargin": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "policyGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rejectIf"],
+      "properties": {
+        "rejectIf": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "fallback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["whenLowConfidence", "defaultScaffold"],
+      "properties": {
+        "whenLowConfidence": { "type": "string" },
+        "defaultScaffold": { "type": "string" }
+      }
+    },
+    "trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["storeCandidates", "storeRejectedReasons", "storedAtPath"],
+      "properties": {
+        "storeCandidates": { "type": "boolean" },
+        "storeRejectedReasons": { "type": "boolean" },
+        "storedAtPath": { "type": "string" }
+      }
+    },
+    "regressionTests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ownerPath", "minimumCount", "exampleCases"],
+      "properties": {
+        "ownerPath": { "type": "string" },
+        "minimumCount": { "type": "integer", "minimum": 1 },
+        "exampleCases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["prompt", "expectedScaffold", "mustNotSelect"],
+            "properties": {
+              "prompt": { "type": "string" },
+              "expectedScaffold": { "type": "string" },
+              "mustNotSelect": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

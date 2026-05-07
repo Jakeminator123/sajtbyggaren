@@ -1,0 +1,30 @@
+---
+description: Sajtbyggaren är en kontrollerad ombyggnad av Jakeminator123/sajtmaskin, inte en kopia.
+alwaysApply: true
+---
+
+# Projektriktning
+
+Sajtbyggaren bygger om `Jakeminator123/sajtmaskin` med `master` som referensbranch. Målet är inte att återskapa det gamla repot som-det-är, utan att bygga en mer strukturerad, styrbar och tydligt namngiven version.
+
+## Riktlinjer
+
+- Behandla gamla `sajtmaskin` som referensmaterial och reservdelslager, inte som källa att kopiera rakt av.
+- Använd explicita domännamn enligt [`naming-dictionary.v1.json`](../policies/naming-dictionary.v1.json) för hemsidebygge, redigering, scheman, policies, governance, publicering och validering.
+- Sprid inte besläktad logik över orelaterade filer. Håll ägargränser tydliga enligt [`repo-boundaries.v1.json`](../policies/repo-boundaries.v1.json).
+- `backend.py` ligger i roten som backoffice (Streamlit), inte som del av användarens runtime.
+- Låt scheman och policies styra redigerbart beteende där det går.
+- Gör governance explicit: vad som får ändras, hur ändringar valideras, vem som äger vad ska vara synligt i `governance/`.
+- Föredra en liten sammanhängande kärna före UI, generatorer, integrationer och deploy-komplexitet.
+- Plocka in goda idéer från referensrepot (glossary, scheman, quality gates, dossiers/capabilities, agent-router) men ta inte med legacy-komplexitet by default.
+
+## Arbetsordning
+
+1. Governance först (policies, schemas, rules, decisions).
+2. Backoffice-skelett (`backend.py`).
+3. Migrationsrapport och baseline-eval.
+4. Fas 1 runtime (Site Brief).
+5. Fas 2 runtime (Orchestration).
+6. Fas 3 runtime (Codegen, Finalize, Quality Gate).
+7. PreviewRuntime (StackBlitz först).
+8. apps/web sist; followup-flöde först när init är 9.0/10.

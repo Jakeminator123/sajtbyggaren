@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scaffold-contract.schema.json",
+  "title": "Scaffold Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policyId",
+    "version",
+    "status",
+    "purpose",
+    "principles",
+    "scaffoldDirectoryLayout",
+    "scaffoldJsonRequiredFields",
+    "selectionProfileRequiredFields",
+    "qualityContractRequiredFields",
+    "compatibleDossiersFields",
+    "primaryScaffoldRegistry",
+    "forbiddenInScaffoldFiles"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "policyId": { "type": "string", "pattern": "^scaffold-contract\\.v[0-9]+$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"] },
+    "purpose": { "type": "string" },
+    "principles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "scaffoldDirectoryLayout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ownerPackage", "perScaffoldPath", "requiredFiles"],
+      "properties": {
+        "ownerPackage": { "type": "string" },
+        "perScaffoldPath": { "type": "string" },
+        "requiredFiles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "optionalFiles": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "scaffoldJsonRequiredFields": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "selectionProfileRequiredFields": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "qualityContractRequiredFields": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "compatibleDossiersFields": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required"],
+      "properties": {
+        "required": { "type": "array", "items": { "type": "string" } },
+        "optional": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "primaryScaffoldRegistry": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "rationale"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "label": { "type": "string" },
+          "rationale": { "type": "string" }
+        }
+      }
+    },
+    "forbiddenInScaffoldFiles": { "type": "array", "items": { "type": "string" } }
+  }
+}

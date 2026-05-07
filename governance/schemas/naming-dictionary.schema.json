@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "naming-dictionary.schema.json",
+  "title": "Naming Dictionary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["policyId", "version", "status", "purpose", "rules", "terms", "globallyForbidden"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "policyId": { "type": "string", "pattern": "^naming-dictionary\\.v[0-9]+$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"] },
+    "purpose": { "type": "string" },
+    "rules": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "terms": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "canonical", "definition", "ownerPackage", "aliasesAllowed", "aliasesForbidden"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$" },
+          "canonical": { "type": "string", "minLength": 1 },
+          "definition": { "type": "string", "minLength": 1 },
+          "ownerPackage": { "type": "string", "minLength": 1 },
+          "aliasesAllowed": { "type": "array", "items": { "type": "string" } },
+          "aliasesForbidden": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "globallyForbidden": { "type": "array", "items": { "type": "string" } }
+  }
+}

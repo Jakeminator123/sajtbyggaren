@@ -1,0 +1,50 @@
+FRÅGA:
+
+https://webcontainers.io/guides/introduction Läs igenom och säg mig hur jag ska göra för att använda denna på min localhost:3000 så som att man testar lite att skapa npm run dev-testning av sajt osv?
+
+---
+
+
+SVAR:
+
+Jag går igenom WebContainers-guiden och gör om den till ett kort praktiskt upplägg för localhost:3000, med npm/dev-server, preview-portar, headers och vanliga fallgropar.Thought for 4m 25sJa. Tänk så här:
+DelKörs var?URLDin WebContainer-hostvanlig Vite-app på din datorlocalhost:3000Test-sajten inuti WebContainerNode/Vite inuti browsernURL från server-readyPreviewiframe (inbäddad vy)sätts automatiskt
+WebContainers är alltså en Node.js-runtime direkt i browserfliken, med virtuell filstruktur och processer som npm install och npm run dev. Du monterar filer med mount (ladda in filer), kör kommandon med spawn (starta process), och fångar preview-URL via server-ready (server klar). 
+Gör så här i Cursor
+1. Skapa host-appen
+npm create vite@latest webcontainer-local -- --template vanillacd webcontainer-localnpm inpm i @webcontainer/api
+2. Sätt Vite till localhost:3000 + rätt headers
+Ändra/skapa vite.config.js:
+import { defineConfig } from 'vite';export default defineConfig({  server: {    port: 3000,    strictPort: true,    headers: {      'Cross-Origin-Embedder-Policy': 'require-corp',      'Cross-Origin-Opener-Policy': 'same-origin',    },  },});
+WebContainers kräver COOP/COEP-headers eftersom de behöver SharedArrayBuffer (delat minne). Vite stödjer både server.port och server.headers, så detta är rätt plats lokalt. 
+3. Skapa filerna som ska köras inuti WebContainer
+Skapa src/files.js:
+export const files = {  'package.json': {    file: {      contents: JSON.stringify(        {          scripts: {            dev: 'vite --host 0.0.0.0',          },          dependencies: {            vite: 'latest',          },          devDependencies: {},        },        null,        2      ),    },  },  'index.html': {    file: {      contents: `        <div id="app"></div>        <script type="module" src="/src/main.js"></script>      `,    },  },  src: {    directory: {      'main.js': {        file: {          contents: `            import './style.css';            document.querySelector('#app').innerHTML = \`              <main>                <h1>WebContainer test</h1>                <p>Denna sajt körs via npm run dev inuti browsern.</p>                <button id="btn">Klicka</button>                <p id="out"></p>              </main>            \`;            document.querySelector('#btn').addEventListener('click', () => {              document.querySelector('#out').textContent = 'Det funkar.';            });          `,        },      },      'style.css': {        file: {          contents: `            body {              font-family: system-ui, sans-serif;              margin: 40px;            }            button {              padding: 10px 14px;              cursor: pointer;            }          `,        },      },    },  },};
+Detta är WebContainers FileSystemTree (filträd): objektet blir en liten Vite-sajt som laddas in i den virtuella filstrukturen. Docs visar just att man laddar filer med mount och sedan kör processer med spawn. 
+4. Ersätt src/main.js i host-appen
+import { WebContainer } from '@webcontainer/api';import { files } from './files.js';import './style.css';document.querySelector('#app').innerHTML = `  <main class="layout">    <section class="panel">      <h1>WebContainer localhost:3000</h1>      <button id="start">Starta npm run dev</button>      <pre id="terminal"></pre>    </section>    <section class="preview">      <iframe id="preview" title="Preview"></iframe>    </section>  </main>`;const startButton = document.querySelector('#start');const terminal = document.querySelector('#terminal');const preview = document.querySelector('#preview');function log(data) {  terminal.textContent += data;  terminal.scrollTop = terminal.scrollHeight;}function getWebContainer() {  // boot (starta runtime) får bara göras en gång per sida.  window.__webcontainerBoot ??= WebContainer.boot();  return window.__webcontainerBoot;}startButton.addEventListener('click', async () => {  startButton.disabled = true;  terminal.textContent = '';  try {    log('Bootar WebContainer...\n');    const webcontainer = await getWebContainer();    log('Monterar filer...\n');    await webcontainer.mount(files);    webcontainer.on('server-ready', (port, url) => {      log(`\nServer klar på port ${port}\n${url}\n`);      preview.src = url;    });    log('Kör npm install...\n');    const installProcess = await webcontainer.spawn('npm', ['install']);    installProcess.output.pipeTo(      new WritableStream({        write(data) {          log(data);        },      })    );    const installExitCode = await installProcess.exit;    if (installExitCode !== 0) {      throw new Error('npm install misslyckades');    }    log('\nKör npm run dev...\n');    const devProcess = await webcontainer.spawn('npm', ['run', 'dev']);    devProcess.output.pipeTo(      new WritableStream({        write(data) {          log(data);        },      })    );  } catch (error) {    log(`\nFel: ${error.message}\n`);    startButton.disabled = false;  }});
+Viktigt: WebContainer.boot() får i praktiken bara göras en gång per sida/session. Därför cachas den i window.__webcontainerBoot. Docs säger också att server-ready ger dig port och URL som du sedan sätter på en iframe. 
+5. Lite CSS för host-appen
+Ersätt src/style.css:
+body {  margin: 0;  font-family: system-ui, sans-serif;}.layout {  display: grid;  grid-template-columns: 420px 1fr;  height: 100vh;}.panel {  padding: 20px;  border-right: 1px solid #ddd;  overflow: auto;}button {  padding: 10px 14px;  cursor: pointer;}#terminal {  margin-top: 16px;  padding: 12px;  height: 70vh;  overflow: auto;  background: #111;  color: #eee;  white-space: pre-wrap;  font-size: 13px;}.preview {  height: 100vh;}iframe {  width: 100%;  height: 100%;  border: 0;}
+6. Kör lokalt
+npm run dev
+Öppna:
+http://localhost:3000
+Klicka Starta npm run dev.
+Du bör se:
+
+
+npm install
+
+
+npm run dev
+
+
+preview i höger iframe
+
+
+Vanliga fel
+FelOrsakFixSharedArrayBuffer is not definedCOOP/COEP saknaskontrollera vite.config.js headersWebContainer bootar två gångerHMR eller dubbelklickanvänd window.__webcontainerBoot som ovanTom iframenpm install eller npm run dev failadeläs terminalpanelenlocalhost:3000 upptagetannan app körsstäng den eller byt portexterna assets strularCOEP blockerar vissa cross-origin resurseranvänd lokala assets eller testa credentialless
+Min rekommendation: börja exakt med koden ovan. När det funkar, byt ut files.js mot den test-sajt du vill generera/köra.
+Säkerhet: 91%. Jag är säker på huvudflödet och headers/boot/mount/spawn/server-ready. Små versionsdetaljer kan ändras eftersom vite: latest kan ge ny Vite-version; för stabilitet kan du pinna version, t.ex. "vite": "5.4.0" eller den version du använder i projektet.
