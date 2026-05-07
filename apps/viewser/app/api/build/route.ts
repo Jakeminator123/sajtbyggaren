@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
+import { assertLocalhost } from "@/lib/localhost-guard";
 import { runBuild } from "@/lib/build-runner";
 
 const BuildPayloadSchema = z.object({
-  dossierId: z.string().min(1).default("painter-palma"),
+  siteId: z.string().min(1).default("painter-palma"),
 });
 
 export async function POST(request: NextRequest) {
+  const guard = assertLocalhost(request);
+  if (guard) return guard;
+
   try {
     const json = await request.json().catch(() => ({}));
     const payload = BuildPayloadSchema.parse(json);
-    const result = await runBuild(payload.dossierId);
+    const result = await runBuild(payload.siteId);
 
     return NextResponse.json({
       runId: result.runId,

@@ -119,15 +119,22 @@ COMMON_WORDS = {
     "NextRequest", "NextResponse", "ComponentProps",
     "CardAction", "CardContent", "CardDescription", "CardFooter", "CardHeader", "CardTitle",
     "InputPrimitive",
-    # Viewser implementation-symboler (tekniska typer, inte domänbegrepp)
+    # Viewser implementation-symboler (lokala UI-identifierare, inte domänbegrepp).
+    # Viewser-appen ligger på apps/viewser och dessa namn bor enbart där.
     "ChatMessage", "ChatMessageSchema", "ChatPayloadSchema", "ChatPanelProps",
     "BuildModelUsage", "FilesPayload", "RouteContext",
-    "DossierInfo", "DossierOption", "DossierPicker", "DossierPickerProps",
+    "ProjectInputInfo", "ProjectInputOption", "ProjectInputPicker", "ProjectInputPickerProps",
     "RunMeta", "RunHistory", "RunHistoryItem", "RunHistoryProps", "RunsApiPayload",
     "ScrollArea", "ScrollAreaPrimitive", "ScrollBar",
     "StackblitzFileMap",
     "TokenMeterContext", "TokenMeterContextValue", "TokenMeterProvider", "TokenMeterState",
     "UsageDelta", "UsageSummary", "ViewerPanelProps",
+    "BuildPayloadSchema", "ChatPanel", "TokenMeter", "ViewerPanel",
+    "Providers", "TokenMeterContextValue",
+    # Viewser interna error-typer och rubriker (inte domänbegrepp)
+    "RunNotFoundError", "DossierEditor",
+    # Migrationsplanens prosa-rubriker för parallellspår (inte domänbegrepp)
+    "Builder MVP hardening", "Viewser MVP",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

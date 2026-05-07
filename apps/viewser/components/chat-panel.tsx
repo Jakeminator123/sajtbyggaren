@@ -20,15 +20,16 @@ type BuildModelUsage = {
 };
 
 type ChatPanelProps = {
-  dossierId: string;
+  siteId: string;
   onBuildDone: (runId: string) => void;
 };
 
-export function ChatPanel({ dossierId, onBuildDone }: ChatPanelProps) {
+export function ChatPanel({ siteId, onBuildDone }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Hej! Beskriv vad du vill bygga, så kan jag hjälpa och sedan trigga build.",
+      content:
+        "Hej! Detta är Viewser-chatten (backed by briefModel). Jag kan diskutera valt project input, men ändrar inte Site Dossier eller Deep Brief i denna runda. Klicka 'Build' när du vill köra builder MVP.",
     },
   ]);
   const [prompt, setPrompt] = useState("");
@@ -87,7 +88,7 @@ export function ChatPanel({ dossierId, onBuildDone }: ChatPanelProps) {
       const response = await fetch("/api/build", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dossierId }),
+        body: JSON.stringify({ siteId }),
       });
       const payload = (await response.json()) as {
         error?: string;
@@ -165,7 +166,7 @@ export function ChatPanel({ dossierId, onBuildDone }: ChatPanelProps) {
         </div>
 
         <Button disabled={busy} onClick={() => void runBuild()} variant="secondary">
-          Build {dossierId}
+          Build {siteId}
         </Button>
       </CardContent>
     </Card>

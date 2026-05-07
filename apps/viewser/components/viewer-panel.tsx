@@ -22,9 +22,12 @@ export function ViewerPanel({ runId }: ViewerPanelProps) {
   useEffect(() => {
     if (!runId || !containerRef.current) return;
 
+    const node = containerRef.current;
     let cancelled = false;
     setStatus(`Laddar filer för ${runId}...`);
     setError(null);
+    // Riv tidigare embed innan vi monterar nytt så vi inte staplar iframes.
+    node.innerHTML = "";
 
     void (async () => {
       try {
@@ -66,6 +69,7 @@ export function ViewerPanel({ runId }: ViewerPanelProps) {
 
     return () => {
       cancelled = true;
+      if (node) node.innerHTML = "";
     };
   }, [runId]);
 

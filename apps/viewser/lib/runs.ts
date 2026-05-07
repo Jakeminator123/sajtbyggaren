@@ -80,6 +80,13 @@ export async function readBuildResult(runId: string): Promise<Record<string, unk
   return readJsonFile(path.join(runDir, "build-result.json"));
 }
 
-export function dossierAbsolutePath(siteId: string): string {
+/**
+ * Resolve the canonical Site Dossier file for a given siteId.
+ *
+ * Note: siteId callers MUST validate via `assertSafeSiteId` (see
+ * `lib/project-inputs.ts`) before passing to this helper, so a crafted siteId
+ * cannot path-escape `examples/`.
+ */
+export function siteDossierAbsolutePath(siteId: string): string {
   return path.join(repoRoot(), "examples", `${siteId}.site-dossier.json`);
 }

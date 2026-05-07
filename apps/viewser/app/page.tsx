@@ -3,23 +3,26 @@
 import { useEffect, useState } from "react";
 
 import { ChatPanel } from "@/components/chat-panel";
-import { DossierPicker, type DossierOption } from "@/components/dossier-picker";
+import {
+  ProjectInputPicker,
+  type ProjectInputOption,
+} from "@/components/project-input-picker";
 import { RunHistory, type RunHistoryItem } from "@/components/run-history";
 import { TokenMeter } from "@/components/token-meter";
 import { ViewerPanel } from "@/components/viewer-panel";
 
 type RunsApiPayload = {
   runs?: RunHistoryItem[];
-  dossiers?: DossierOption[];
+  projectInputs?: ProjectInputOption[];
   error?: string;
 };
 
 export default function Home() {
   const [runs, setRuns] = useState<RunHistoryItem[]>([]);
-  const [dossiers, setDossiers] = useState<DossierOption[]>([]);
-  const [selectedDossierId, setSelectedDossierId] = useState("painter-palma");
+  const [projectInputs, setProjectInputs] = useState<ProjectInputOption[]>([]);
+  const [selectedSiteId, setSelectedSiteId] = useState("painter-palma");
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-  const [statusText, setStatusText] = useState("Laddar runs och dossiers...");
+  const [statusText, setStatusText] = useState("Laddar runs och project inputs...");
 
   async function refreshRuns() {
     const response = await fetch("/api/runs", { cache: "no-store" });
@@ -29,17 +32,17 @@ export default function Home() {
     }
 
     const nextRuns = payload.runs ?? [];
-    const nextDossiers = payload.dossiers ?? [];
+    const nextInputs = payload.projectInputs ?? [];
     setRuns(nextRuns);
-    setDossiers(nextDossiers);
+    setProjectInputs(nextInputs);
 
     if (!selectedRunId && nextRuns.length > 0) {
       setSelectedRunId(nextRuns[0].runId);
     }
-    if (!nextDossiers.find((item) => item.siteId === selectedDossierId) && nextDossiers.length) {
-      setSelectedDossierId(nextDossiers[0].siteId);
+    if (!nextInputs.find((item) => item.siteId === selectedSiteId) && nextInputs.length) {
+      setSelectedSiteId(nextInputs[0].siteId);
     }
-    setStatusText("Redo.");
+    setStatusText("Redo. Localhost-only operator-prototype.");
   }
 
   useEffect(() => {
@@ -47,6 +50,7 @@ export default function Home() {
       const message = error instanceof Error ? error.message : "Kunde inte läsa initial data.";
       setStatusText(message);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -60,10 +64,10 @@ export default function Home() {
       </header>
 
       <section className="grid gap-3 md:grid-cols-2">
-        <DossierPicker
-          dossiers={dossiers}
-          selectedDossierId={selectedDossierId}
-          onSelect={setSelectedDossierId}
+        <ProjectInputPicker
+          inputs={projectInputs}
+          selectedSiteId={selectedSiteId}
+          onSelect={setSelectedSiteId}
         />
         <RunHistory
           runs={runs}
@@ -74,7 +78,7 @@ export default function Home() {
 
       <section className="grid flex-1 gap-4 md:grid-cols-2">
         <ChatPanel
-          dossierId={selectedDossierId}
+          siteId={selectedSiteId}
           onBuildDone={(runId) => {
             setSelectedRunId(runId);
             setStatusText(`Build klar: ${runId}`);

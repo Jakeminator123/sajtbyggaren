@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 
-import { listSiteDossiers } from "@/lib/dossiers";
+import { assertLocalhost } from "@/lib/localhost-guard";
+import { listProjectInputs } from "@/lib/project-inputs";
 import { listRuns } from "@/lib/runs";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const guard = assertLocalhost(request);
+  if (guard) return guard;
+
   try {
-    const [runs, dossiers] = await Promise.all([listRuns(20), listSiteDossiers()]);
-    return NextResponse.json({ runs, dossiers });
+    const [runs, projectInputs] = await Promise.all([
+      listRuns(20),
+      listProjectInputs(),
+    ]);
+    return NextResponse.json({ runs, projectInputs });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Okänt fel vid hämtning av runs.";

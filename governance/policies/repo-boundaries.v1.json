@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/repo-boundaries.schema.json",
   "policyId": "repo-boundaries.v1",
-  "version": 6,
+  "version": 7,
   "status": "draft-but-authoritative",
-  "purpose": "Bestämmer vad varje mapp äger, vad den får importera och vad den ALDRIG får göra. Bryter mot detta = blockerande review. Version 6 lägger till apps/viewser/ som operator-frontad localhost-yta för chat + build + preview. Version 5 lägger till data/starters/ som ägare av körbara basprojekt (5 starters för 14 scaffolds enligt reviewer-modellen).",
+  "purpose": "Bestämmer vad varje mapp äger, vad den får importera och vad den ALDRIG får göra. Bryter mot detta = blockerande review. Version 7 förtydligar apps/viewser/ som strikt localhost-only operator-prototype och förbjuder canonical-runtime-funktioner (Project DNA, follow-up, Repair Pipeline, Quality Gate, Dossier-edit). Version 6 lade till apps/viewser/. Version 5 lade till data/starters/ som ägare av körbara basprojekt (5 starters för 14 scaffolds enligt reviewer-modellen).",
   "ownership": [
     {
       "path": "governance/",
@@ -265,15 +265,19 @@
     {
       "path": "apps/viewser/",
       "owns": [
-        "operator-frontad localhost-app för chat, build-triggning och preview av senaste run",
-        "route handlers för OpenAI-chat och build_site.py-körning i servermiljö",
-        "visning av data/runs/artefakter i viewer-panel"
+        "localhost-only operator-prototype för chat, manuell build-triggning och preview av senaste run",
+        "Next.js API route handlers för OpenAI-chat och build_site.py-körning",
+        "läsning av build-result.json och associerad generated-files-snapshot för preview",
+        "lokala UI-implementationsidentifierare (chat panel, viewer panel, token meter) som inte är canonical domänbegrepp"
       ],
-      "mayImportFrom": ["packages/shared", "examples/", "data/runs/"],
+      "mayImportFrom": ["packages/shared", "examples/", "data/runs/", ".generated/"],
       "mustNotDo": [
         "anropa LLM från klientkomponenter eller utanför server-route",
-        "skriva till data/runs/ (endast läsa befintliga run-artefakter)",
-        "bli produktionsberoende av extern deployplattform i MVP-läget"
+        "skriva till data/runs/, examples/, packages/ eller governance/ (endast läsa)",
+        "implementera Dossier-edit, Project DNA, follow-up, Repair Pipeline eller Quality Gate (de hör till packages/generation och kommer i Sprint 2-3)",
+        "bli produktionsberoende av extern deployplattform - viewser är prototyp, inte canonical runtime",
+        "exponera publika endpoints utan localhost-guard",
+        "skapa egna artefaktkontrakt utöver det som build_site.py redan producerar"
       ]
     },
     {
