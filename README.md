@@ -66,6 +66,7 @@ Korta motiveringar i [`governance/decisions/`](governance/decisions/):
 - [0005](governance/decisions/0005-scaffold-dossier-model.md) - Scaffold-/Dossier-modell med embedding-driven selection.
 - [0006](governance/decisions/0006-term-discipline.md) - Term-disciplin (deklaration före användning).
 - [0007](governance/decisions/0007-language-policy.md) - Språkpolicy.
+- [0008](governance/decisions/0008-defer-evals-until-flow-exists.md) - Skjut upp baseline-eval tills LLM-flödet finns.
 
 ## Status
 
@@ -74,11 +75,14 @@ Korta motiveringar i [`governance/decisions/`](governance/decisions/):
 | Governance-skelett | klart |
 | Backoffice-skelett | klart |
 | Term-disciplin (regel + script) | klart |
-| Baseline-eval mot sajtmaskin-taggar | inte startad |
-| Fas 1 runtime (Site Brief) | inte startad |
+| Regression-tester och CI | klart |
+| Fas 1 runtime (Site Brief CLI) | inte startad |
 | Fas 2 runtime (Orchestration) | inte startad |
 | Fas 3 runtime (Codegen + Quality Gate) | inte startad |
+| LocalRuntime | inte startad |
 | StackBlitzRuntime | inte startad |
+| Eval på egna körningar | inte startad |
+| Sajtmaskin-baseline-jämförelse | uppskjuten ([ADR 0008](governance/decisions/0008-defer-evals-until-flow-exists.md)) |
 | `apps/web` | inte startad |
 
 Detaljer: [`docs/migration-plan.md`](docs/migration-plan.md).

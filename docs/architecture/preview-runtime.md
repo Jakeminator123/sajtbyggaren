@@ -1,6 +1,6 @@
 # Preview Runtime
 
-Sanningskälla: [`preview-runtime-policy.v1.json`](../../governance/policies/preview-runtime-policy.v1.json) + interface i [`referens/starter-skiss/PreviewRuntime.ts`](../../referens/starter-skiss/PreviewRuntime.ts) (flyttas till `packages/preview-runtime/` när den fasen börjar).
+Sanningskälla: [`preview-runtime-policy.v1.json`](../../governance/policies/preview-runtime-policy.v1.json). Interface skissas i `packages/preview-runtime/` när den fasen börjar (utkast i kommentarerna nedan).
 
 ## Princip
 

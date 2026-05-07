@@ -11,7 +11,7 @@ Sajtbyggaren behöver kunna iterera snabbt i utveckling utan VM-kostnad, men än
 
 ## Beslut
 
-- Det finns ett **interface** `PreviewRuntime` ([`referens/starter-skiss/PreviewRuntime.ts`](../../referens/starter-skiss/PreviewRuntime.ts) som utgångspunkt; flyttas in i `packages/preview-runtime/` när den fasen börjar) med implementationerna `StackBlitzRuntime`, `FlyRuntime`, `LocalRuntime`.
+- Det finns ett **interface** `PreviewRuntime` (skissas i `packages/preview-runtime/` när den fasen börjar) med implementationerna `StackBlitzRuntime`, `FlyRuntime`, `LocalRuntime`.
 - Default är **StackBlitz**. `FlyRuntime` används bara när eval-batchen visar att StackBlitz inte räcker (t.ex. tier-3 SDK:er, Stripe, DB-integrationer).
 - Det finns **EN** quality gate, inte F2 och F3. Om en check (typecheck/build/route-scan/preview-smoke) skippas måste det loggas som `degraded` i version-meta.
 - Termer som `VM`, `sandbox`, `preview-host`, `webcontainer`, `vercelSandbox`, `tier1`, `tier2`, `tier3` är `globallyForbidden` i naming-dictionary och `forbiddenTerms` i preview-runtime-policy.
