@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/llm-models.schema.json",
   "policyId": "llm-models.v1",
-  "version": 1,
+  "version": 2,
   "status": "draft-but-authoritative",
-  "purpose": "Mappar Model Roles till konkreta modellnamn. Provider-agnostisk - byts utan att produktkoden ändras. Tunn första version: en linje av modeller, gpt-5.4 överallt.",
+  "purpose": "Mappar Model Roles till konkreta modellnamn. Provider-agnostisk - byts utan att produktkoden ändras. Tunn första version: en linje av modeller, gpt-5.4 överallt. Version 2 lägger till sharedModelGroups som gör delning explicit.",
   "principles": [
     "Ingen kod får anropa en LLM utan att gå via en registrerad Model Role.",
     "Provider-agnostiskt: model-strängen är opaque för produktkoden. Provider-resolveren mappar mot OpenAI, Anthropic eller annan.",
@@ -64,6 +64,23 @@
     "anthropic": "Inte aktiv. Lägg till provider-rad här om vi vill blanda in Claude. Kräver ANTHROPIC_API_KEY.",
     "swap-rule": "Att byta provider för en role är en policy-bump (version: 2), inte en kodändring."
   },
+  "sharedModelGroups": [
+    {
+      "groupId": "smallReasoning",
+      "purpose": "Light reasoning, classification, rerank.",
+      "roles": ["briefModel", "planningModel", "rerankModel", "verifierModel"]
+    },
+    {
+      "groupId": "heavyCodegen",
+      "purpose": "Code generation and code-aware repair.",
+      "roles": ["codegenModel", "repairModel"]
+    },
+    {
+      "groupId": "embedding",
+      "purpose": "Semantic search.",
+      "roles": ["embeddingModel"]
+    }
+  ],
   "forbiddenLegacyTierNames": [
     "fast",
     "pro",

@@ -278,3 +278,111 @@ def test_llm_flow_phase_owners_match_repo_boundaries(
         ):
             bad.append(f"{phase['canonicalName']} -> {owner}")
     assert not bad, f"llm-flow phase owners not in repo-boundaries: {bad}"
+
+
+@pytest.mark.governance
+def test_phase_blocks_cover_all_phases(llm_flow: dict):
+    """phaseBlocks must reference every phase id exactly once."""
+    phase_ids = {p["id"] for p in llm_flow["phases"]}
+    block_phase_ids: list[str] = []
+    for block in llm_flow["phaseBlocks"]:
+        block_phase_ids.extend(block["phaseIds"])
+
+    missing = phase_ids - set(block_phase_ids)
+    assert not missing, f"phaseBlocks miss phase ids: {sorted(missing)}"
+
+    extra = set(block_phase_ids) - phase_ids
+    assert not extra, f"phaseBlocks reference unknown phase ids: {sorted(extra)}"
+
+    duplicates = [pid for pid in block_phase_ids if block_phase_ids.count(pid) > 1]
+    assert not duplicates, f"Phase id appears in multiple blocks: {sorted(set(duplicates))}"
+
+
+@pytest.mark.governance
+def test_engine_run_modes_are_init_and_followup(engine_run_policy: dict):
+    modes = engine_run_policy["modes"]
+    assert set(modes.keys()) == {"init", "followup"}
+    assert modes["init"]["writesProjectDna"] is True
+    assert modes["init"]["readsProjectDna"] is False
+    assert modes["followup"]["writesProjectDna"] is False
+    assert modes["followup"]["readsProjectDna"] is True
+    assert modes["followup"]["requiresProjectId"] is True
+
+
+@pytest.mark.governance
+def test_embedding_policy_owner_paths_exist(
+    embedding_policy: dict, repo_boundaries: dict
+):
+    boundary_paths = {o["path"].rstrip("/") for o in repo_boundaries["ownership"]}
+    bad = []
+    for domain in embedding_policy["domains"]:
+        owner = domain.get("ownerPackage", "").rstrip("/")
+        if not any(owner.startswith(p) for p in boundary_paths if p):
+            bad.append(f"{domain['id']} -> {owner}")
+    assert not bad, f"embedding-policy domains owner paths not in repo-boundaries: {bad}"
+
+
+@pytest.mark.governance
+def test_embedding_policy_consumes_real_phases_and_roles(
+    embedding_policy: dict, llm_flow: dict, llm_models: dict
+):
+    phase_ids = {p["id"] for p in llm_flow["phases"]}
+    role_ids = {r["id"] for r in llm_models["roles"]}
+
+    for domain in embedding_policy["domains"]:
+        for phase in domain["consumedByPhases"]:
+            assert phase in phase_ids, (
+                f"embedding domain {domain['id']} references unknown phase '{phase}'"
+            )
+        for role in domain["consumedByRoles"]:
+            assert role in role_ids, (
+                f"embedding domain {domain['id']} references unknown model role '{role}'"
+            )
+
+
+@pytest.mark.governance
+def test_fix_registry_llm_fixes_reference_real_model_roles(
+    fix_registry: dict, llm_models: dict
+):
+    role_ids = {r["id"] for r in llm_models["roles"]}
+    for fix in fix_registry["llmFixes"]:
+        assert fix["modelRole"] in role_ids, (
+            f"LLM fix {fix['id']} references unknown model role {fix['modelRole']}"
+        )
+
+
+@pytest.mark.governance
+def test_fix_registry_stages_referenced_by_mechanical_fixes(fix_registry: dict):
+    valid_stages = set(fix_registry["stages"])
+    for fix in fix_registry["mechanicalFixes"]:
+        assert fix["stage"] in valid_stages, (
+            f"mechanical fix {fix['id']} uses unknown stage {fix['stage']}"
+        )
+
+
+@pytest.mark.governance
+def test_shared_model_groups_cover_every_role(llm_models: dict):
+    role_ids = {r["id"] for r in llm_models["roles"]}
+    grouped: list[str] = []
+    for group in llm_models["sharedModelGroups"]:
+        grouped.extend(group["roles"])
+    assert set(grouped) == role_ids, (
+        "Every model role must belong to exactly one sharedModelGroup. "
+        f"Difference: {role_ids.symmetric_difference(grouped)}"
+    )
+
+
+@pytest.mark.governance
+def test_project_dna_intents_match_followup_intent_term(
+    project_dna_policy: dict, naming_dictionary: dict
+):
+    """The followUpIntent term in naming-dictionary must list the same intents."""
+    term = next(
+        (t for t in naming_dictionary["terms"] if t["id"] == "followUpIntent"),
+        None,
+    )
+    assert term is not None, "followUpIntent term missing from naming-dictionary"
+    intents_in_dna = {i["id"] for i in project_dna_policy["followUpIntents"]}
+    assert "redesign" in intents_in_dna and "clarify" in intents_in_dna
+    # The term's definition should mention 'classification' so we know it is canonical.
+    assert "klassificering" in term["definition"].lower() or "classification" in term["definition"].lower()

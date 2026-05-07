@@ -1,0 +1,68 @@
+{
+  "$schema": "../schemas/embedding-policy.schema.json",
+  "policyId": "embedding-policy.v1",
+  "version": 1,
+  "status": "draft-but-authoritative",
+  "purpose": "Definierar de fem Embedding Domains som driver semantic recall i Sajtbyggaren. Lägger fast principen att embeddings + small LLM rerank har företräde framför ordmatchning och regex.",
+  "principles": [
+    "always-prefer-embedding-over-regex: Selection-beslut grundas i embeddings + small LLM rerank, inte if-prompt-includes.",
+    "word-matching-as-weak-signal-only: Word matching tillåtet bara som svag signal, guardrail eller fallback. Aldrig som primär selector.",
+    "selection-trace-required: Varje selector-beslut sparar Selection Trace med kandidater, scores och rerank-reasons.",
+    "one-index-per-domain: Inga blandade index. En domän = ett index = en frågesyfte.",
+    "embedding-text-is-curated: embeddingText i selection-profile är medveten skrivning, inte autogenererad sammanfattning."
+  ],
+  "embeddingModelRole": "embeddingModel",
+  "domains": [
+    {
+      "id": "scaffolds",
+      "purpose": "Recall för Scaffold Selector. Hittar top-K scaffolds som semantiskt matchar Site Brief.",
+      "indexedFrom": "selection-profile.json per Scaffold",
+      "ownerPackage": "packages/generation/orchestration/embedding",
+      "consumedByRoles": ["rerankModel"],
+      "consumedByPhases": ["scaffold_resolution"],
+      "topKDefault": 5,
+      "minScoreDefault": 0.62
+    },
+    {
+      "id": "dossiers",
+      "purpose": "Recall för Dossier Selector. Hittar top-K dossiers som semantiskt matchar capability-behovet.",
+      "indexedFrom": "dossier.json per Dossier (purpose, bestFor, activation)",
+      "ownerPackage": "packages/generation/orchestration/embedding",
+      "consumedByRoles": ["rerankModel"],
+      "consumedByPhases": ["scaffold_resolution"],
+      "topKDefault": 8,
+      "minScoreDefault": 0.6
+    },
+    {
+      "id": "reference-templates",
+      "purpose": "Inspirationskandidater. Hittar referenstemplates som har liknande layoutstruktur som målet.",
+      "indexedFrom": "data/reference-templates/normalized/<id>.json",
+      "ownerPackage": "packages/generation/orchestration/embedding",
+      "consumedByRoles": ["codegenModel"],
+      "consumedByPhases": ["codegen"],
+      "topKDefault": 5,
+      "minScoreDefault": 0.55
+    },
+    {
+      "id": "section-patterns",
+      "purpose": "Komposition under codegen. Hittar väletablerade sektionsmönster (hero-with-product-shot, logo-cloud, pricing-table) som passar Site Plan.",
+      "indexedFrom": "data/reference-templates/extracted-patterns/sections/",
+      "ownerPackage": "packages/generation/orchestration/embedding",
+      "consumedByRoles": ["codegenModel"],
+      "consumedByPhases": ["codegen"],
+      "topKDefault": 10,
+      "minScoreDefault": 0.5
+    },
+    {
+      "id": "style-signatures",
+      "purpose": "Variant-matchning. Hittar visuella fingeravtryck som matchar tone, depth och bransch.",
+      "indexedFrom": "data/reference-templates/extracted-patterns/style-signatures/",
+      "ownerPackage": "packages/generation/orchestration/embedding",
+      "consumedByRoles": ["rerankModel"],
+      "consumedByPhases": ["scaffold_resolution"],
+      "topKDefault": 5,
+      "minScoreDefault": 0.55
+    }
+  ],
+  "implementationStatus": "Index byggs i kommande sprint. Policyn låser kontraktet."
+}

@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/repo-boundaries.schema.json",
   "policyId": "repo-boundaries.v1",
-  "version": 3,
+  "version": 4,
   "status": "draft-but-authoritative",
-  "purpose": "Bestämmer vad varje mapp äger, vad den får importera och vad den ALDRIG får göra. Bryter mot detta = blockerande review. Version 3 utökar med Engine Run-paketen (engine, brief, planning, build, repair, quality-gate).",
+  "purpose": "Bestämmer vad varje mapp äger, vad den får importera och vad den ALDRIG får göra. Bryter mot detta = blockerande review. Version 4 lägger till data/projects/ för Project DNA-state.",
   "ownership": [
     {
       "path": "governance/",
@@ -273,11 +273,23 @@
     },
     {
       "path": "data/",
-      "owns": ["versions", "runs", "lokal persistent state"],
+      "owns": ["versions", "runs", "projects", "lokal persistent state"],
       "mayImportFrom": [],
       "mustNotDo": [
         "innehålla logik",
         "innehålla policies"
+      ]
+    },
+    {
+      "path": "data/projects/",
+      "owns": [
+        "Project DNA-state per projektId",
+        "data/projects/<projectId>/dna.json"
+      ],
+      "mayImportFrom": [],
+      "mustNotDo": [
+        "innehålla Engine Run-artefakter (de bor under data/runs/<runId>/)",
+        "muteras direkt av runtime utan att gå via packages/builder/project-dna/"
       ]
     },
     {

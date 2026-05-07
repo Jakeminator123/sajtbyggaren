@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fix-registry.schema.json",
+  "title": "Fix Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policyId",
+    "version",
+    "status",
+    "purpose",
+    "principles",
+    "stages",
+    "mechanicalFixes",
+    "llmFixes"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "policyId": { "type": "string", "pattern": "^fix-registry\\.v[0-9]+$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"] },
+    "purpose": { "type": "string" },
+    "principles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "stages": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "mechanicalFixes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "stage", "purpose", "deterministic"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "stage": { "type": "string" },
+          "purpose": { "type": "string" },
+          "deterministic": { "type": "boolean", "const": true }
+        }
+      }
+    },
+    "llmFixes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "trigger", "purpose", "modelRole"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "trigger": { "type": "string" },
+          "purpose": { "type": "string" },
+          "modelRole": { "type": "string" }
+        }
+      }
+    }
+  }
+}

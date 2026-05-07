@@ -1,9 +1,26 @@
 {
   "$schema": "../schemas/llm-flow-concepts.schema.json",
   "policyId": "llm-flow-concepts.v1",
-  "version": 1,
+  "version": 2,
   "status": "draft-but-authoritative",
   "northStar": "One controlled generation lane from user intent to promoted site. No hidden secondary init path may bypass this policy.",
+  "phaseBlocks": [
+    {
+      "id": "understand",
+      "label": "Fas 1 - Understand",
+      "phaseIds": ["raw_prompt", "site_brief", "intent_resolution", "policy_resolution"]
+    },
+    {
+      "id": "plan",
+      "label": "Fas 2 - Plan",
+      "phaseIds": ["scaffold_resolution", "generation_package"]
+    },
+    {
+      "id": "build",
+      "label": "Fas 3 - Build",
+      "phaseIds": ["codegen", "mechanical_autofix", "llm_repair", "preview_runtime", "quality_evaluation", "promotion"]
+    }
+  ],
   "canonicalFlow": [
     "raw_prompt",
     "site_brief",

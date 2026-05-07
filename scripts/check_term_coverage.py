@@ -103,6 +103,8 @@ COMMON_WORDS = {
     "Scaffold Selector", "Dossier Selector",
     "Selected Scaffold", "Variant",
     "Globalt", "Skickas",
+    "Embedding Domains", "FollowUp",
+    "Mechanical Fixes", "LLM Fixes",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

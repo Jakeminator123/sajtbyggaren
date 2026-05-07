@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project-dna.schema.json",
+  "title": "Project DNA",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policyId",
+    "version",
+    "status",
+    "purpose",
+    "principles",
+    "storage",
+    "fields",
+    "followUpIntents",
+    "implementationStatus"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "policyId": { "type": "string", "pattern": "^project-dna\\.v[0-9]+$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"] },
+    "purpose": { "type": "string" },
+    "principles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["directory", "filename", "format"],
+      "properties": {
+        "directory": { "type": "string" },
+        "filename": { "type": "string" },
+        "format": { "type": "string" }
+      }
+    },
+    "fields": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "purpose", "writableBy", "lockedAfterCreation"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string" },
+          "purpose": { "type": "string" },
+          "writableBy": { "type": "array", "items": { "type": "string" } },
+          "lockedAfterCreation": { "type": "boolean" }
+        }
+      }
+    },
+    "followUpIntents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "purpose", "scaffold", "variant", "dossiers", "routes"],
+        "properties": {
+          "id": { "type": "string" },
+          "purpose": { "type": "string" },
+          "scaffold": { "type": "string" },
+          "variant": { "type": "string" },
+          "dossiers": { "type": "string" },
+          "routes": { "type": "string" }
+        }
+      }
+    },
+    "implementationStatus": { "type": "string" }
+  }
+}

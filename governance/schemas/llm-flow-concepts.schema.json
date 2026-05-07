@@ -4,13 +4,27 @@
   "title": "LLM Flow Concepts",
   "type": "object",
   "additionalProperties": false,
-  "required": ["policyId", "version", "status", "northStar", "canonicalFlow", "phases", "terms"],
+  "required": ["policyId", "version", "status", "northStar", "phaseBlocks", "canonicalFlow", "phases", "terms"],
   "properties": {
     "$schema": { "type": "string" },
     "policyId": { "type": "string", "pattern": "^llm-flow-concepts\\.v[0-9]+$" },
     "version": { "type": "integer", "minimum": 1 },
     "status": { "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"] },
     "northStar": { "type": "string" },
+    "phaseBlocks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "phaseIds"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "label": { "type": "string" },
+          "phaseIds": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+        }
+      }
+    },
     "canonicalFlow": {
       "type": "array",
       "minItems": 1,

@@ -10,6 +10,7 @@
     "status",
     "purpose",
     "principles",
+    "prefersEmbedding",
     "pipeline",
     "compatibilityFilter",
     "embedding",
@@ -25,6 +26,7 @@
     "status": { "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"] },
     "purpose": { "type": "string" },
     "principles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "prefersEmbedding": { "type": "boolean", "const": true },
     "pipeline": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
     "compatibilityFilter": {
       "type": "object",

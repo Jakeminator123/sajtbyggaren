@@ -10,6 +10,7 @@
     "status",
     "purpose",
     "principles",
+    "modes",
     "phases",
     "artifacts",
     "trace",
@@ -23,6 +24,35 @@
     "status": { "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"] },
     "purpose": { "type": "string" },
     "principles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "modes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["init", "followup"],
+      "properties": {
+        "init": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["purpose", "writesProjectDna", "readsProjectDna", "requiresProjectId"],
+          "properties": {
+            "purpose": { "type": "string" },
+            "writesProjectDna": { "type": "boolean" },
+            "readsProjectDna": { "type": "boolean" },
+            "requiresProjectId": { "type": "boolean" }
+          }
+        },
+        "followup": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["purpose", "writesProjectDna", "readsProjectDna", "requiresProjectId"],
+          "properties": {
+            "purpose": { "type": "string" },
+            "writesProjectDna": { "type": "boolean" },
+            "readsProjectDna": { "type": "boolean" },
+            "requiresProjectId": { "type": "boolean" }
+          }
+        }
+      }
+    },
     "phases": {
       "type": "array",
       "minItems": 1,

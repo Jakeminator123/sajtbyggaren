@@ -1,0 +1,150 @@
+{
+  "$schema": "../schemas/project-dna.schema.json",
+  "policyId": "project-dna.v1",
+  "version": 1,
+  "status": "draft-but-authoritative",
+  "purpose": "Definierar Project DNA: vad ett projekt ÄR (till skillnad från vad en enskild Engine Run gör). DNA skapas vid init, läses vid follow-up, forkas vid redesign. Tunn första version - full runtime-implementation kommer i kommande sprint.",
+  "principles": [
+    "scaffoldId är hårt låst per projekt. Får bara bytas via Project Fork.",
+    "variantId är mjukt låst. Får ändras inom samma scaffoldId vid restyle-intent.",
+    "Init-mode skapar DNA; follow-up-mode läser DNA; redesign-intent triggar Project Fork som skapar ny DNA-version.",
+    "DNA-data lever utanför Engine Run-mappar - det är projekt-state, inte run-state."
+  ],
+  "storage": {
+    "directory": "data/projects/<projectId>/",
+    "filename": "dna.json",
+    "format": "json"
+  },
+  "fields": [
+    {
+      "id": "projectId",
+      "type": "string",
+      "purpose": "Stabil identifierare för projektet över alla Engine Runs.",
+      "writableBy": ["init"],
+      "lockedAfterCreation": true
+    },
+    {
+      "id": "scaffoldId",
+      "type": "string",
+      "purpose": "Vald Scaffold. Hårt låst.",
+      "writableBy": ["init", "redesign-fork"],
+      "lockedAfterCreation": true
+    },
+    {
+      "id": "variantId",
+      "type": "string",
+      "purpose": "Vald Scaffold Variant. Mjukt låst.",
+      "writableBy": ["init", "restyle", "redesign-fork"],
+      "lockedAfterCreation": false
+    },
+    {
+      "id": "selectedDossiers",
+      "type": "string[]",
+      "purpose": "Aktiva Dossiers. Får utökas eller krympas vid section-add/section-remove.",
+      "writableBy": ["init", "section-add", "section-remove", "redesign-fork"],
+      "lockedAfterCreation": false
+    },
+    {
+      "id": "themeTokens",
+      "type": "object",
+      "purpose": "CSS variables för färg, typografi, motif. Mjukt låst.",
+      "writableBy": ["init", "restyle", "redesign-fork"],
+      "lockedAfterCreation": false
+    },
+    {
+      "id": "language",
+      "type": "string",
+      "purpose": "Slutanvändarens språk för genererad content. Hårt låst per DNA-version.",
+      "writableBy": ["init", "redesign-fork"],
+      "lockedAfterCreation": true
+    },
+    {
+      "id": "routeBaseline",
+      "type": "object[]",
+      "purpose": "Initial Route Plan. Får utökas eller krympas vid page-add/page-remove.",
+      "writableBy": ["init", "page-add", "page-remove", "redesign-fork"],
+      "lockedAfterCreation": false
+    },
+    {
+      "id": "dnaVersion",
+      "type": "string",
+      "purpose": "Major version (1, 2, ...). Bumpas vid Project Fork.",
+      "writableBy": ["init", "redesign-fork"],
+      "lockedAfterCreation": false
+    },
+    {
+      "id": "previousDnaVersion",
+      "type": "string?",
+      "purpose": "Länk till tidigare DNA-version vid Project Fork.",
+      "writableBy": ["redesign-fork"],
+      "lockedAfterCreation": false
+    }
+  ],
+  "followUpIntents": [
+    {
+      "id": "text-edit",
+      "purpose": "Ändra text på befintlig sida.",
+      "scaffold": "locked",
+      "variant": "locked",
+      "dossiers": "locked",
+      "routes": "locked"
+    },
+    {
+      "id": "section-add",
+      "purpose": "Lägg till sektion (t.ex. FAQ).",
+      "scaffold": "locked",
+      "variant": "locked",
+      "dossiers": "may-extend",
+      "routes": "locked"
+    },
+    {
+      "id": "section-remove",
+      "purpose": "Ta bort sektion.",
+      "scaffold": "locked",
+      "variant": "locked",
+      "dossiers": "may-shrink",
+      "routes": "locked"
+    },
+    {
+      "id": "page-add",
+      "purpose": "Lägg till ny sida.",
+      "scaffold": "locked",
+      "variant": "locked",
+      "dossiers": "locked",
+      "routes": "may-extend"
+    },
+    {
+      "id": "page-remove",
+      "purpose": "Ta bort sida.",
+      "scaffold": "locked",
+      "variant": "locked",
+      "dossiers": "locked",
+      "routes": "may-shrink"
+    },
+    {
+      "id": "restyle",
+      "purpose": "Ändra visuellt uttryck (premium, brutalistisk, etc.).",
+      "scaffold": "locked",
+      "variant": "may-change",
+      "dossiers": "locked",
+      "routes": "locked"
+    },
+    {
+      "id": "redesign",
+      "purpose": "Byt scaffold eller affärstyp. Triggar Project Fork.",
+      "scaffold": "may-change-via-fork",
+      "variant": "may-change-via-fork",
+      "dossiers": "may-change-via-fork",
+      "routes": "may-change-via-fork"
+    },
+    {
+      "id": "clarify",
+      "purpose": "Otydlig follow-up. System ber om förtydligande, inget Engine Run startas.",
+      "scaffold": "n/a",
+      "variant": "n/a",
+      "dossiers": "n/a",
+      "routes": "n/a"
+    }
+  ],
+  "implementationStatus": "Termer och fält är låsta. Runtime-implementation (läs/skriv DNA, klassificera FollowUp Intent, forka) kommer i kommande sprint."
+}

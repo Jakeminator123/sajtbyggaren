@@ -10,6 +10,7 @@
     "Eval-batch skyddar mot regression genom att kräva specifika valresultat per testprompt."
   ],
   "primaryMethod": "embedding-plus-llm-rerank",
+  "prefersEmbedding": true,
   "wordMatching": {
     "enabled": true,
     "role": "weak-signal-and-guardrail-only",

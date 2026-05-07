@@ -10,6 +10,7 @@
     "Hard Dossiers kräver explicit eller stark semantisk signal i brief.",
     "Inga Dossiers injiceras automatiskt i alla Scaffolds."
   ],
+  "prefersEmbedding": true,
   "pipeline": [
     "compatibility_filter",
     "capability_embedding_query",

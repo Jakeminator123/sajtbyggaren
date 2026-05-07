@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "embedding-policy.schema.json",
+  "title": "Embedding Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policyId",
+    "version",
+    "status",
+    "purpose",
+    "principles",
+    "embeddingModelRole",
+    "domains",
+    "implementationStatus"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "policyId": { "type": "string", "pattern": "^embedding-policy\\.v[0-9]+$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"] },
+    "purpose": { "type": "string" },
+    "principles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "embeddingModelRole": { "type": "string" },
+    "domains": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "purpose",
+          "indexedFrom",
+          "ownerPackage",
+          "consumedByRoles",
+          "consumedByPhases",
+          "topKDefault",
+          "minScoreDefault"
+        ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "purpose": { "type": "string" },
+          "indexedFrom": { "type": "string" },
+          "ownerPackage": { "type": "string" },
+          "consumedByRoles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "consumedByPhases": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "topKDefault": { "type": "integer", "minimum": 1 },
+          "minScoreDefault": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "implementationStatus": { "type": "string" }
+  }
+}

@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/naming-dictionary.schema.json",
   "policyId": "naming-dictionary.v1",
-  "version": 3,
+  "version": 4,
   "status": "draft-but-authoritative",
-  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 3 utökar med Engine Run-artefakter, Repair Pipeline och Model Role.",
+  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 4 utökar med Project DNA, FollowUp Intent, Engine Run mode, Embedding Domain, Mechanical Fix och LLM Fix.",
   "rules": [
     "Ett begrepp får ha exakt ett kanoniskt namn.",
     "Ett kanoniskt namn får bo i exakt en huvudsaklig mapp (se repo-boundaries).",
@@ -451,6 +451,86 @@
         "embeddingModel"
       ],
       "aliasesForbidden": ["fast", "pro", "max", "codex", "anthropic"]
+    },
+    {
+      "id": "projectDna",
+      "canonical": "Project DNA",
+      "definition": "Persistent state per projekt: scaffoldId, variantId, valda dossiers, theme tokens, language, route-baseline. Init skapar DNA, follow-up patchar inom DNA, redesign forkar DNA.",
+      "ownerPackage": "data/projects",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["projectState", "projectMeta"]
+    },
+    {
+      "id": "projectFork",
+      "canonical": "Project Fork",
+      "definition": "Kontrollerad uppdatering av Project DNA vid redesign-intent. Bumpas som major version och behåller länk till tidigare DNA.",
+      "ownerPackage": "data/projects",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "followUpIntent",
+      "canonical": "FollowUp Intent",
+      "definition": "Klassificering av en follow-up-prompt. En av: text-edit, section-add, section-remove, page-add, page-remove, restyle, redesign, clarify. Avgör vad Engine Run får ändra inom Project DNA.",
+      "ownerPackage": "packages/generation/brief",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["changeIntent", "patchIntent"]
+    },
+    {
+      "id": "scaffoldLock",
+      "canonical": "Scaffold Lock",
+      "definition": "Hårt lås i Project DNA. Scaffold byts bara vid redesign-intent som triggar Project Fork.",
+      "ownerPackage": "data/projects",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "variantLock",
+      "canonical": "Variant Lock",
+      "definition": "Mjukt lås i Project DNA. Variant kan ändras vid restyle-intent inom samma scaffoldId.",
+      "ownerPackage": "data/projects",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "engineRunMode",
+      "canonical": "Engine Run mode",
+      "definition": "init eller followup. Skrivs i input.json och styr om DNA skapas eller läses.",
+      "ownerPackage": "packages/generation/engine",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "embeddingDomain",
+      "canonical": "Embedding Domain",
+      "definition": "Ett av fem embedding-index: scaffolds, dossiers, reference-templates, section-patterns, style-signatures. Definieras i embedding-policy.v1.json.",
+      "ownerPackage": "packages/generation/orchestration/embedding",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "mechanicalFix",
+      "canonical": "Mechanical Fix",
+      "definition": "Deterministisk reparationsregel registrerad i fix-registry.v1.json. Körs av Repair Pipeline innan eventuell LLM Fix.",
+      "ownerPackage": "packages/generation/repair",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["autofix", "deterministicFix"]
+    },
+    {
+      "id": "llmFix",
+      "canonical": "LLM Fix",
+      "definition": "LLM-driven reparation registrerad i fix-registry.v1.json. Triggas av specifik felsignatur efter att Mechanical Fix inte räckt.",
+      "ownerPackage": "packages/generation/repair",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["aiFix", "smartFix"]
+    },
+    {
+      "id": "fixRegistry",
+      "canonical": "Fix Registry",
+      "definition": "Central lista över alla Mechanical Fixes och LLM Fixes. Sanningskälla i fix-registry.v1.json. Repair Pipeline läser hit; ingen kod får implementera fix utanför registry.",
+      "ownerPackage": "governance/policies",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
     }
   ],
   "globallyForbidden": [
