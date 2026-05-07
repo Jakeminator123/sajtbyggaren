@@ -1,0 +1,18 @@
+{
+  "$schema": "../../../../../governance/schemas/scaffold.schema.json",
+  "id": "local-service-business",
+  "version": "1.0.0",
+  "label": "Local Service Business",
+  "description": "Conversion-oriented site for local service providers (painters, electricians, plumbers, cleaners, roofers). Focus on trust, services, local area and quote/call conversion.",
+  "buildIntent": ["website"],
+  "primaryJobs": [
+    "explain services",
+    "build trust",
+    "generate calls",
+    "generate quote requests"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

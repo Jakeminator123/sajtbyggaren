@@ -1,0 +1,35 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Position the company, build trust and drive the primary contact CTA."
+    },
+    {
+      "id": "services",
+      "path": "/tjanster",
+      "required": true,
+      "purpose": "List the company's core services with concrete copy and a CTA to contact."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Build trust through story, team and credentials."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Convert visitors to calls or quote requests with phone, email and address."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "service-area",
+      "path": "/omraden",
+      "when": "site needs explicit local SEO surface for multiple service areas"
+    }
+  ]
+}

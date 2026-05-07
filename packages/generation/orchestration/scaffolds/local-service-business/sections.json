@@ -1,0 +1,33 @@
+{
+  "home": {
+    "requiredSections": ["hero", "service-summary", "trust-proof", "contact-cta"],
+    "optionalSections": ["service-area", "reviews", "faq", "certifications"],
+    "sectionOrderRules": [
+      "Hero must include business type, location if known and a primary CTA.",
+      "Trust proof must appear before the final CTA.",
+      "Sections should not repeat the same value proposition."
+    ]
+  },
+  "services": {
+    "requiredSections": ["services-intro", "service-list", "contact-cta"],
+    "optionalSections": ["faq"],
+    "sectionOrderRules": [
+      "Services intro must connect business identity to the offered services.",
+      "Service list items must be concrete, not generic."
+    ]
+  },
+  "about": {
+    "requiredSections": ["about-story", "team", "trust-proof"],
+    "optionalSections": ["service-area"],
+    "sectionOrderRules": [
+      "About story must be specific and human, not generic 'we are passionate about quality' copy."
+    ]
+  },
+  "contact": {
+    "requiredSections": ["contact-info", "contact-cta"],
+    "optionalSections": [],
+    "sectionOrderRules": [
+      "Phone, email and address must all be present and not be lorem placeholders."
+    ]
+  }
+}

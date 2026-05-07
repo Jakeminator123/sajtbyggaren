@@ -56,6 +56,7 @@ EXCLUDE_DIRS = {
     "data",
     "referens",
     ".streamlit",
+    ".generated",
 }
 
 # Vanliga ord som inte ska räknas som domänbegrepp.
@@ -108,6 +109,12 @@ COMMON_WORDS = {
     # Python stdlib + interna kod-symboler
     "KeyError", "TimeoutExpired", "VIEWS", "Principer",
     "BaseModel", "Field", "FileNotFoundError", "BriefResult",
+    "SystemExit",
+    # Page-komponenter som genereras i builder och i .generated/
+    "AboutPage", "ContactPage", "ServicesPage", "ServicePage",
+    # React / Next / shadcn-typer som dyker upp i runtime-kod
+    "ReactNode", "RootLayout", "NextConfig",
+    "ButtonPrimitive", "VariantProps", "ClassValue",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

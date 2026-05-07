@@ -19,6 +19,7 @@ out/
 
 data/runs/
 data/versions/
+.generated/
 *.log
 
 .DS_Store

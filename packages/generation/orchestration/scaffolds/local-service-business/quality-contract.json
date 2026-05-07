@@ -1,0 +1,24 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "trust_signals": 1.2,
+    "conversion_clarity": 1.1,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Every page has a clear purpose.",
+    "Homepage contains a concrete local or business-specific value proposition.",
+    "Primary CTA is visible above the fold on the homepage.",
+    "No lorem ipsum or sample placeholder copy.",
+    "All routes from routes.json are present.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Overly abstract startup language for local businesses.",
+    "Random color choices not derived from variant tokens.",
+    "Template-like section repetition.",
+    "Forms or features that fail at build because of missing env."
+  ]
+}

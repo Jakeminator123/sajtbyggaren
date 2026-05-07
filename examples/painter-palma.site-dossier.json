@@ -1,0 +1,70 @@
+{
+  "$schema": "../packages/generation/orchestration/dossiers/site-dossier.schema.json",
+  "dossierType": "site",
+  "dossierClass": "soft",
+  "siteId": "painter-palma",
+  "scaffoldId": "local-service-business",
+  "variantId": "nordic-trust",
+  "language": "sv",
+  "company": {
+    "name": "Målare i Palma",
+    "businessType": "painter",
+    "tagline": "Hantverk på vita väggar och i medelhavsljus",
+    "story": "En liten målerifirma som arbetar i lägenheter, restauranger och butiker runt Palma de Mallorca. Vi tar oss tid med ytan, väljer färger med hänsyn till ljuset och lämnar inget halvfärdigt.",
+    "founded": 2018,
+    "team": [
+      { "name": "Anders Holm", "role": "Grundare och målare" },
+      { "name": "Lina Sjöberg", "role": "Måleriassistent" }
+    ]
+  },
+  "location": {
+    "city": "Palma de Mallorca",
+    "region": "Mallorca, Balearerna",
+    "country": "Spanien",
+    "serviceAreas": ["Palma centrum", "Santa Catalina", "Portixol", "El Terreno", "Son Vida"]
+  },
+  "services": [
+    {
+      "id": "interior-painting",
+      "label": "Inomhusmålning",
+      "summary": "Tak, väggar och lister i lägenheter, butiker och hotell. Slätstrukna ytor som tål medelhavsklimatet."
+    },
+    {
+      "id": "exterior-painting",
+      "label": "Fasadmålning",
+      "summary": "Putsade fasader, terrasser och staket. Färger som klarar sol, salt och vinterregn på Mallorca."
+    },
+    {
+      "id": "color-consultation",
+      "label": "Färgsättning",
+      "summary": "Vi hjälper dig att hitta en palett som passar rummet, ljuset och vad du gör i lokalen."
+    },
+    {
+      "id": "renovation-painting",
+      "label": "Renoveringsmåleri",
+      "summary": "Spackling, slipning, grundning och slutstrykning vid renovering. Vi tar hand om hela ytan, inte bara färgen."
+    }
+  ],
+  "tone": {
+    "primary": "lugn",
+    "secondary": ["lokal", "hantverksstolt", "ärlig"],
+    "avoid": ["startup-svada", "överdrivna löften", "rabattjakt"]
+  },
+  "trustSignals": [
+    "Tio års erfarenhet i Palma och omnejd",
+    "Försäkrad och godkänd för arbete i hotell och restauranger",
+    "Vi lämnar alltid skriftlig offert innan jobbet börjar"
+  ],
+  "conversionGoals": ["quote_request", "call"],
+  "contact": {
+    "phone": "+34 600 12 34 56",
+    "email": "hej@malareipalma.es",
+    "addressLines": ["Carrer de Sant Magí 12", "07013 Palma de Mallorca"],
+    "openingHours": "Mån–Fre 08:00–17:00"
+  },
+  "selectedDossiers": {
+    "required": ["contact-cta"],
+    "recommended": ["service-list", "service-area", "reviews", "trust-badges"],
+    "rationale": "Lokal målerifirma som främst konverterar via offertförfrågan och samtal."
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "local-service-business",
+  "embeddingText": "A local service business website for companies such as painters, electricians, plumbers, cleaners, roofers, landscapers and moving companies. The site focuses on trust, service explanation, local area, fast contact, quote requests, reviews and practical conversion.",
+  "semanticSignals": [
+    "local service provider",
+    "physical service performed at customer location",
+    "quote request",
+    "phone call conversion",
+    "service area",
+    "trust and certification",
+    "emergency response"
+  ],
+  "negativeSignals": [
+    "software product",
+    "dashboard application",
+    "online course",
+    "restaurant menu",
+    "portfolio gallery only",
+    "ecommerce checkout",
+    "multi-tenant SaaS"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold when the user wants a company site for a service performed for customers in a local or regional area.",
+    "Do not choose this scaffold merely because the prompt contains a trade word if the desired output is actually a SaaS, marketplace or directory."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}
