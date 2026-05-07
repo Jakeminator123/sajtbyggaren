@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import streamlit as st
 
@@ -14,6 +15,50 @@ from ._helpers import safe_render
 SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
 DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
 REFERENCE_TEMPLATES_DIR = REPO_ROOT / "data" / "reference-templates"
+
+# Marker the building-blocks UI uses to tag files that were created as
+# placeholders by the "Lägg till första filuppsättning"-button. Anything
+# carrying this marker must NOT count as "Implementerad: ja".
+PLACEHOLDER_MARKER = "placeholder, fill per scaffold-contract"
+
+
+def is_placeholder_file(path: Path) -> bool:
+    """Return True if file looks like a placeholder created by the builder.
+
+    A scaffold counts as "Implementerad" only when none of its required
+    JSON files contain the placeholder marker. Otherwise the table would
+    silently report half-baked scaffolds as implemented.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return False
+    if PLACEHOLDER_MARKER in text:
+        return True
+    if path.suffix == ".json":
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError:
+            return False
+        if isinstance(payload, dict) and "_status" in payload:
+            return True
+    return False
+
+
+def scaffold_is_real(scaffold_dir: Path) -> bool:
+    """Scaffold is real iff at least one required file exists and none are placeholders."""
+    if not scaffold_dir.exists():
+        return False
+    required = ["scaffold.json", "routes.json", "sections.json"]
+    real_files = 0
+    for fname in required:
+        fpath = scaffold_dir / fname
+        if not fpath.exists():
+            continue
+        if is_placeholder_file(fpath):
+            return False
+        real_files += 1
+    return real_files > 0
 
 
 def _list_scaffold_dirs() -> list:
@@ -45,18 +90,34 @@ def view_scaffolds() -> None:
     st.caption(contract.get("purpose", ""))
 
     registry = contract.get("primaryScaffoldRegistry", [])
-    existing = {d.name for d in _list_scaffold_dirs()}
+    real_scaffolds = {d.name for d in _list_scaffold_dirs() if scaffold_is_real(d)}
+    placeholder_scaffolds = {
+        d.name for d in _list_scaffold_dirs()
+        if d.exists() and not scaffold_is_real(d)
+    }
+
+    def _status(scaffold_id: str) -> str:
+        if scaffold_id in real_scaffolds:
+            return "ja"
+        if scaffold_id in placeholder_scaffolds:
+            return "platshållare"
+        return "nej"
 
     rows = [
         {
             "id": s["id"],
             "label": s["label"],
-            "Implementerad": "ja" if s["id"] in existing else "nej",
+            "Implementerad": _status(s["id"]),
             "rationale": s["rationale"],
         }
         for s in registry
     ]
     st.dataframe(rows, use_container_width=True, hide_index=True)
+    if placeholder_scaffolds:
+        st.warning(
+            "Följande scaffolds har bara platshållarfiler och bör fyllas eller tas "
+            f"bort: {', '.join(sorted(placeholder_scaffolds))}"
+        )
 
     st.divider()
     st.subheader("Filer per Scaffold (kontrakt)")
@@ -83,9 +144,11 @@ def view_scaffolds() -> None:
     if not edit_mode:
         return
 
-    candidate_ids = [s["id"] for s in registry if s["id"] not in existing]
+    candidate_ids = [
+        s["id"] for s in registry if s["id"] not in real_scaffolds
+    ]
     if not candidate_ids:
-        st.info("Alla 14 Scaffolds är redan skapade.")
+        st.info("Alla 14 Scaffolds är redan implementerade.")
         return
     pick = st.selectbox("Välj Scaffold att skapa", candidate_ids, key="scaffold_create_select")
     if st.button(f"Skapa mapp för {pick}", key="scaffold_create"):
@@ -96,13 +159,16 @@ def view_scaffolds() -> None:
             if not path.exists():
                 if path.suffix == ".json":
                     path.write_text(
-                        json.dumps({"_status": "placeholder, fill per scaffold-contract"}, indent=2)
-                        + "\n",
+                        json.dumps({"_status": PLACEHOLDER_MARKER}, indent=2) + "\n",
                         encoding="utf-8",
                     )
                 else:
                     path.write_text("# placeholder\n", encoding="utf-8")
-        st.success(f"Skapade {target.relative_to(REPO_ROOT)} med platshållare.")
+        st.success(
+            f"Skapade {target.relative_to(REPO_ROOT)} med platshållare. "
+            "Tabellen ovan visar den nu som 'platshållare', inte 'ja' - "
+            "fyll filerna enligt scaffold-contract innan den räknas som implementerad."
+        )
 
 
 def view_variants() -> None:

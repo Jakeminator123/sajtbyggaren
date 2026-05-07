@@ -20,10 +20,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
 import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -40,6 +42,11 @@ SCAFFOLDS_DIR = (
 GENERATED_DIR = REPO_ROOT / ".generated"
 RUNS_DIR = REPO_ROOT / "data" / "runs"
 
+# Files the builder must NEVER write under any siteId. Case-insensitive.
+# `.env.example` is allowed (canonical placeholder).
+_FORBIDDEN_ENV_PATTERN = re.compile(r"^\.env(\..+)?$", flags=re.IGNORECASE)
+_ALLOWED_ENV_NAMES = {".env.example"}
+
 
 # ---------------------------------------------------------------------------
 # Small helpers
@@ -51,9 +58,18 @@ def utc_now() -> datetime:
 
 
 def make_run_id(site_id: str) -> str:
-    """Sortable, readable run id like 20260507T143000Z-painter-palma."""
-    stamp = utc_now().strftime("%Y%m%dT%H%M%SZ")
-    return f"{stamp}-{site_id}"
+    """Sortable, readable run id with millisecond precision and a uuid suffix.
+
+    Example: ``20260507T143000.123Z-ab12cd34-painter-palma``. The uuid suffix
+    eliminates the race window where two regenerations within the same
+    millisecond could reuse a run directory and truncate each other's
+    ``trace.ndjson``.
+    """
+    now = utc_now()
+    stamp = now.strftime("%Y%m%dT%H%M%S")
+    millis = f"{now.microsecond // 1000:03d}"
+    short = uuid.uuid4().hex[:8]
+    return f"{stamp}.{millis}Z-{short}-{site_id}"
 
 
 def load_json(path: Path) -> dict:
@@ -61,14 +77,26 @@ def load_json(path: Path) -> dict:
         return json.load(f)
 
 
-def write(path: Path, contents: str) -> None:
-    """Write text to disk. Builder must never write a real `.env` file."""
+def assert_not_env_secret(path: Path) -> None:
+    """Refuse to touch real .env files (case-insensitive). .env.example is OK."""
     name = path.name
-    if name == ".env" or name.startswith(".env.") and name != ".env.example":
+    if name in _ALLOWED_ENV_NAMES:
+        return
+    if _FORBIDDEN_ENV_PATTERN.match(name):
         raise AssertionError(
             f"Builder must not write secret env files (attempted: {path}). "
-            "Integration Dossiers handle their own env contracts."
+            "Integration Dossiers handle their own env contracts via env-contract.json."
         )
+
+
+def write(path: Path, contents: str) -> None:
+    """Write text to disk through the central guard. Use for ALL file writes.
+
+    This is the single chokepoint that enforces the env-secret block.
+    Helpers that previously called ``Path.write_text`` directly must go via
+    this function instead so the guard cannot be bypassed.
+    """
+    assert_not_env_secret(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="\n") as f:
         f.write(contents)
@@ -120,6 +148,34 @@ class Trace:
 # ---------------------------------------------------------------------------
 
 
+def _ignore_secret_envs(_dir: str, names: list[str]) -> list[str]:
+    """shutil.copytree ignore-callback that drops any real .env file.
+
+    `.env.example` is preserved (canonical placeholder). Combined with the
+    pattern-based ignore list this guarantees that a starter that accidentally
+    contains a real `.env` or `.env.local` cannot leak into a generated site.
+    """
+    drop: list[str] = []
+    for name in names:
+        if name in _ALLOWED_ENV_NAMES:
+            continue
+        if _FORBIDDEN_ENV_PATTERN.match(name):
+            drop.append(name)
+    return drop
+
+
+def _ignore_combined(dir_path: str, names: list[str]) -> set[str]:
+    base_ignore = shutil.ignore_patterns(
+        "node_modules",
+        ".next",
+        "out",
+        "*.tsbuildinfo",
+        "next-env.d.ts",
+    )(dir_path, names)
+    secret_ignore = set(_ignore_secret_envs(dir_path, names))
+    return set(base_ignore) | secret_ignore
+
+
 def copy_starter(starter_id: str, target: Path) -> None:
     source = STARTERS_DIR / starter_id
     if not source.exists():
@@ -127,13 +183,6 @@ def copy_starter(starter_id: str, target: Path) -> None:
             f"Starter '{starter_id}' missing at {source}. "
             "Run the starter setup before building."
         )
-    ignore = shutil.ignore_patterns(
-        "node_modules",
-        ".next",
-        "out",
-        "*.tsbuildinfo",
-        "next-env.d.ts",
-    )
     # Preserve existing target's node_modules / .next so we do not force a
     # fresh `npm install` on every regeneration.
     preserved = {"node_modules", ".next"}
@@ -145,9 +194,9 @@ def copy_starter(starter_id: str, target: Path) -> None:
                 shutil.rmtree(entry)
             else:
                 entry.unlink()
-        shutil.copytree(source, target, ignore=ignore, dirs_exist_ok=True)
+        shutil.copytree(source, target, ignore=_ignore_combined, dirs_exist_ok=True)
     else:
-        shutil.copytree(source, target, ignore=ignore)
+        shutil.copytree(source, target, ignore=_ignore_combined)
 
 
 def variant_css(variant: dict) -> str:
@@ -188,7 +237,7 @@ def patch_globals_css(target: Path, variant: dict) -> None:
         new_contents = (
             f"{marker}\n{block}{end}\n\n{original}"
         )
-    css.write_text(new_contents, encoding="utf-8", newline="\n")
+    write(css, new_contents)
 
 
 def patch_layout(
@@ -209,7 +258,7 @@ def patch_layout(
         f'description: "{desc_escaped}",',
     )
     text = text.replace('lang="en"', 'lang="sv"')
-    layout.write_text(text, encoding="utf-8", newline="\n")
+    write(layout, text)
 
 
 def patch_package_json(target: Path, dossier: dict) -> None:
@@ -440,18 +489,44 @@ def route_to_page_path(target: Path, route: str) -> Path:
     return target / "app" / route.lstrip("/") / "page.tsx"
 
 
+# Detects "export default function|const|class ..." or "export { default }"
+_DEFAULT_EXPORT_RE = re.compile(
+    r"export\s+default\s+(?:async\s+)?(?:function|class|const|let|var|\w+)"
+    r"|export\s*\{\s*default\b",
+    flags=re.MULTILINE,
+)
+
+
 def assert_routes_present(target: Path, routes: list[str]) -> None:
-    """Hard guard: every route must exist as a page.tsx file."""
-    missing = []
+    """Hard guard: every route must exist as a page.tsx with a default export.
+
+    Checks both file existence AND that the file declares a default export so
+    Next.js can mount the route. This catches the common error where a renderer
+    template wrote an empty file or a file that was patched without exporting
+    a component.
+    """
+    missing: list[str] = []
+    no_export: list[str] = []
     for route in routes:
         path = route_to_page_path(target, route)
         if not path.exists():
             missing.append(f"{route} -> {path}")
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError as exc:
+            missing.append(f"{route} -> unreadable ({exc})")
+            continue
+        if not _DEFAULT_EXPORT_RE.search(text):
+            no_export.append(f"{route} -> {path} has no default export")
+
+    problems: list[str] = []
     if missing:
-        raise SystemExit(
-            "Builder failed: required routes missing:\n  "
-            + "\n  ".join(missing)
-        )
+        problems.append("missing route files:\n  " + "\n  ".join(missing))
+    if no_export:
+        problems.append("routes without default export:\n  " + "\n  ".join(no_export))
+    if problems:
+        raise SystemExit("Builder failed: " + "; ".join(problems))
 
 
 # ---------------------------------------------------------------------------
@@ -562,7 +637,7 @@ def write_phase1_understand(
     scaffold: dict,
 ) -> dict:
     """Phase 1 understand: input.json + site-brief.json."""
-    trace.event("understand", "started", "started", "Phase 1 understand starts")
+    trace.event("understand", "phase.started", "started", "Phase 1 understand starts")
 
     rel_dossier = (
         str(dossier_path.relative_to(REPO_ROOT)).replace("\\", "/")
@@ -577,7 +652,7 @@ def write_phase1_understand(
     }
     write_json(run_dir / "input.json", input_data)
     trace.event(
-        "understand", "input_written", "done",
+        "understand", "input.written", "done",
         "Captured dossier path and runId",
         payload_path="input.json",
     )
@@ -585,11 +660,11 @@ def write_phase1_understand(
     brief = build_site_brief_mock(dossier, scaffold)
     write_json(run_dir / "site-brief.json", brief)
     trace.event(
-        "understand", "site_brief_written", "done",
+        "understand", "site_brief.written", "done",
         "Mock Site Brief derived from dossier (briefSource=mock-no-key)",
         payload_path="site-brief.json",
     )
-    trace.event("understand", "completed", "done", "Phase 1 understand done")
+    trace.event("understand", "phase.completed", "done", "Phase 1 understand done")
     return brief
 
 
@@ -602,14 +677,14 @@ def write_phase2_plan(
     variant: dict,
 ) -> tuple[dict, dict]:
     """Phase 2 plan: site-plan.json + generation-package.json."""
-    trace.event("plan", "started", "started", "Phase 2 plan starts")
+    trace.event("plan", "phase.started", "started", "Phase 2 plan starts")
 
     site_plan = build_site_plan_mock(
         dossier, scaffold, scaffold_routes, variant
     )
     write_json(run_dir / "site-plan.json", site_plan)
     trace.event(
-        "plan", "site_plan_written", "done",
+        "plan", "site_plan.written", "done",
         f"Site Plan picked scaffold={scaffold['id']} variant={variant['id']}",
         payload_path="site-plan.json",
     )
@@ -617,12 +692,74 @@ def write_phase2_plan(
     package = build_generation_package(dossier, scaffold, variant)
     write_json(run_dir / "generation-package.json", package)
     trace.event(
-        "plan", "generation_package_written", "done",
+        "plan", "generation_package.written", "done",
         "Generation Package composed",
         payload_path="generation-package.json",
     )
-    trace.event("plan", "completed", "done", "Phase 2 plan done")
+    trace.event("plan", "phase.completed", "done", "Phase 2 plan done")
     return site_plan, package
+
+
+def snapshot_generated_files(target_dir: Path, run_dir: Path) -> Path:
+    """Snapshot generated files into ``data/runs/<runId>/generated-files/``.
+
+    The dev preview at ``.generated/<siteId>/`` keeps mutating across runs
+    (regenerations, npm install, build cache). The Engine Run contract in
+    ``engine-run.v1.json`` says the canonical Generated Files belong under
+    the run directory. We snapshot the source-relevant files only and skip
+    ``node_modules`` and build output for size reasons.
+    """
+    snap_dir = run_dir / "generated-files"
+    if snap_dir.exists():
+        shutil.rmtree(snap_dir)
+    shutil.copytree(target_dir, snap_dir, ignore=_ignore_combined)
+    return snap_dir
+
+
+def write_repair_result_skeleton(run_dir: Path) -> dict:
+    """Skeleton repair-result.json. Repair Pipeline is not implemented yet.
+
+    Status ``not-run`` makes it impossible to confuse this with an actual
+    repair attempt.
+    """
+    payload = {
+        "status": "not-run",
+        "reason": "Repair Pipeline is not implemented in Builder MVP yet.",
+        "mechanicalFixesApplied": [],
+        "llmFixesApplied": [],
+        "remainingErrors": [],
+    }
+    write_json(run_dir / "repair-result.json", payload)
+    return payload
+
+
+def write_quality_result_skeleton(run_dir: Path) -> dict:
+    """Skeleton quality-result.json. Quality Gate is not implemented yet."""
+    payload = {
+        "status": "not-run",
+        "reason": "Quality Gate is not implemented in Builder MVP yet.",
+        "checks": {
+            "typecheck": "skipped",
+            "build": "delegated-to-build-result",
+            "route-scan": "delegated-to-build-result",
+            "policy-compliance": "skipped",
+        },
+        "scorecard": None,
+    }
+    write_json(run_dir / "quality-result.json", payload)
+    return payload
+
+
+def empty_model_usage() -> dict:
+    """Zeroed token / cost spend. Replace with real numbers when LLM is wired in."""
+    return {
+        "byRole": {},
+        "totalInputTokens": 0,
+        "totalOutputTokens": 0,
+        "totalCostUsd": 0.0,
+        "currency": "USD",
+        "source": "mock-no-key",
+    }
 
 
 def write_build_result(
@@ -637,7 +774,13 @@ def write_build_result(
     target_dir: Path,
     duration_ms: int,
 ) -> dict:
-    rel_target = str(target_dir.relative_to(REPO_ROOT)).replace("\\", "/")
+    """Write build-result.json. ``generatedFilesDir`` points at the canonical
+    snapshot under the run directory, not at the dev preview, so downstream
+    consumers (Backoffice, eval batch) can trust it across regenerations.
+    """
+    snap_dir = run_dir / "generated-files"
+    rel_snapshot = str(snap_dir.relative_to(REPO_ROOT)).replace("\\", "/")
+    rel_preview = str(target_dir.relative_to(REPO_ROOT)).replace("\\", "/")
     result = {
         "siteId": dossier["siteId"],
         "starterId": "marketing-base",
@@ -650,14 +793,20 @@ def write_build_result(
         "modelUsed": "mock",
         "briefSource": "mock-no-key",
         "routes": routes,
-        "generatedFilesDir": rel_target,
+        "generatedFilesDir": rel_snapshot,
+        "devPreviewDir": rel_preview,
         "npmSteps": npm_steps,
+        "modelUsage": empty_model_usage(),
+        "finalize": {
+            "snapshotDir": rel_snapshot,
+            "snapshotedAt": utc_now().isoformat(),
+        },
         "status": overall_status,
         "runDurationMs": duration_ms,
     }
     write_json(run_dir / "build-result.json", result)
     trace.event(
-        "build", "build_result_written", "done",
+        "build", "build.result.written", "done",
         f"Build result status={overall_status}",
         payload_path="build-result.json",
     )
@@ -703,7 +852,7 @@ def build(
 
     # Phase 3: build
     target = GENERATED_DIR / site_id
-    trace.event("build", "started", "started", "Phase 3 build starts")
+    trace.event("build", "phase.started", "started", "Phase 3 build starts")
 
     print(f"Copying marketing-base -> {target}")
     copy_starter("marketing-base", target)
@@ -728,8 +877,8 @@ def build(
     routes_all = all_default_routes(scaffold_routes)
     assert_routes_present(target, routes_required)
     trace.event(
-        "build", "files_generated", "done",
-        f"Wrote {len(routes_all)} default routes",
+        "build", "files.written", "done",
+        f"Wrote {len(routes_all)} default routes with default exports verified",
     )
 
     npm_steps: list[dict] = []
@@ -743,7 +892,7 @@ def build(
                 {"name": "npm install", "ok": ok, "seconds": round(secs, 1)}
             )
             trace.event(
-                "build", "npm_install", "done" if ok else "failed",
+                "build", "npm.install", "done" if ok else "failed",
                 f"npm install ok={ok} seconds={secs:.1f}",
             )
             if not ok:
@@ -759,7 +908,7 @@ def build(
                 {"name": "npm run build", "ok": ok, "seconds": round(secs, 1)}
             )
             trace.event(
-                "build", "npm_build", "done" if ok else "failed",
+                "build", "npm.build", "done" if ok else "failed",
                 f"next build ok={ok} seconds={secs:.1f}",
             )
             if not ok:
@@ -768,9 +917,32 @@ def build(
     else:
         overall_status = "skipped"
         trace.event(
-            "build", "skip_build", "degraded",
+            "build", "build.skipped", "degraded",
             "Build skipped via --skip-build",
         )
+
+    # Snapshot generated files into the canonical run directory.
+    print("Snapshotting generated files into run directory")
+    snapshot_generated_files(target, run_dir)
+    trace.event(
+        "build", "generated_files.snapshotted", "done",
+        "Snapshotted generated files into data/runs/<runId>/generated-files/",
+        payload_path="generated-files/",
+    )
+
+    # Skeleton repair + quality artefacts so downstream consumers see all 8.
+    write_repair_result_skeleton(run_dir)
+    trace.event(
+        "build", "repair_result.written", "done",
+        "Repair Pipeline not implemented (skeleton status=not-run)",
+        payload_path="repair-result.json",
+    )
+    write_quality_result_skeleton(run_dir)
+    trace.event(
+        "build", "quality_result.written", "done",
+        "Quality Gate not implemented (skeleton status=not-run)",
+        payload_path="quality-result.json",
+    )
 
     duration_ms = int((time.monotonic() - started) * 1000)
     write_build_result(
@@ -779,10 +951,10 @@ def build(
     )
 
     if overall_status == "failed":
-        trace.event("build", "completed", "failed", "Phase 3 build failed")
+        trace.event("build", "phase.completed", "failed", "Phase 3 build failed")
         raise SystemExit(1)
 
-    trace.event("build", "completed", "done", "Phase 3 build done")
+    trace.event("build", "phase.completed", "done", "Phase 3 build done")
     print(f"Generated site at {target}")
     print(f"Run artifacts at {run_dir}")
     return target, run_dir

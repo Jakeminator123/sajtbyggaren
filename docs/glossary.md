@@ -34,6 +34,10 @@ Termer i `code` är de kanoniska namnen. Allt annat (synonymer, alias) är förb
 | `Soft Dossier` | Påverkar content/layout men kräver inte extern integration. Exempel: `reviews`, `faq`. |
 | `Hybrid Dossier` | Kan renderas som mock i designläge men kräver backend/env i integrationsläge. Exempel: `contact-form`, `booking-request`. |
 | `Hard Dossier` | Kräver env, backend, databas, auth, betalning eller extern API. Exempel: `auth`, `payments`, `database`. Mockas inte. |
+| `Site Dossier` | Dossier-typ som levererar unikt site-/kundinnehåll: företagsfakta, brand-data, logotyp, ton, serviceområden, kontakt. Vanligen `Soft Dossier`. Den dossier-typ som nästan alltid finns per sajt. |
+| `Feature Dossier` | Dossier-typ som levererar en återanvändbar funktion (pacman-game, ROI-räknare, before/after-slider, gallery). Klass oftast `Soft Dossier` eller `Hybrid Dossier`. Kräver inte extern tjänst. |
+| `Integration Dossier` | Dossier-typ som levererar hård extern integration (Stripe, Supabase, Clerk, Shopify, Sanity). Alltid `Hard Dossier`. Kräver env, backend och leverantörsspecifika code-/env-contracts. |
+| `Data Dossier` | Dossier-typ som levererar återanvändbar kunskap eller data (kommunlistor, FAQ-bibliotek, lokala SEO-fraser). Vanligen `Soft Dossier`. |
 | `Compatible Dossier` | `Dossier` som är listad i en `Scaffold`s `compatible-dossiers.json` under `required`, `recommended` eller `conditional`. |
 
 ## Selection (hur Scaffold och Dossiers väljs)

@@ -28,7 +28,7 @@
       "kind": "fly",
       "status": "secondary",
       "useWhen": [
-        "F3-likt scenario: sajten kräver riktig build (tier-3 SDK:er, Stripe, DB) som inte fungerar i StackBlitz",
+        "sajten kräver riktig build som inte fungerar i StackBlitz (Hard Dossier-integrationer som Stripe, Supabase, databas)",
         "produktnära smoke-test innan promotion"
       ],
       "limitations": [

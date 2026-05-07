@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from pathlib import Path
 
 import streamlit as st
@@ -15,6 +17,34 @@ from ._helpers import safe_render
 def _hard_reset_caches() -> None:
     loaders.load_json.clear()
     loaders.read_text.clear()
+
+
+def atomic_write_text(target: Path, contents: str) -> None:
+    """Write text atomically: tmp -> fsync -> os.replace.
+
+    Avoids leaving a half-written policy on disk if Streamlit crashes
+    mid-write or the OS interrupts between truncate and content. ``os.replace``
+    is atomic on the same filesystem on both Windows and POSIX.
+    """
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=f".{target.name}.", suffix=".tmp", dir=str(target.parent)
+    )
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
+            f.write(contents)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, target)
+    except Exception:
+        # Best-effort cleanup; if replace already happened the unlink is a no-op
+        # because the temp file no longer exists at this path.
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
 
 
 def view_policies() -> None:
@@ -61,16 +91,30 @@ def view_policies() -> None:
                 st.error(f"Ogiltig JSON, sparar inte: {exc}")
                 return
 
-            # 2. Skriv backup, applicera, kör governance_validate, rollback om fel.
+            # 2. Atomic write -> validate -> rollback on fail.
             backup = text
-            selected_path.write_text(new_text, encoding="utf-8")
+            try:
+                atomic_write_text(selected_path, new_text)
+            except OSError as exc:
+                st.error(
+                    f"Kunde inte skriva atomiskt till {selected}: {exc}. "
+                    "Inget på disk har ändrats."
+                )
+                return
             _hard_reset_caches()
 
             from .. import health
 
             result = health.run_governance_validate()
             if not result.ok:
-                selected_path.write_text(backup, encoding="utf-8")
+                try:
+                    atomic_write_text(selected_path, backup)
+                except OSError as exc:
+                    st.error(
+                        f"governance_validate failade OCH rollback misslyckades ({exc}). "
+                        "Filen kan vara i obekant skick. Kontrollera mot git."
+                    )
+                    return
                 _hard_reset_caches()
                 st.error(
                     f"governance_validate failade efter spara - automatisk rollback genomfört.\n\n"

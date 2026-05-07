@@ -63,7 +63,7 @@ flowchart TB
 - Inte byta `Quality Gate` mot `verify` som top-level term i naming-dictionary i denna runda.
 - Inte byta `promotion` mot `release` som top-level term i denna runda.
 - Inte byta `Scaffold Variant` mot bara `Variant` i denna runda.
-- Inte införa `qualitygate`, `previewGate`, `finalize` eller `snapshot phase` - de står i `globallyForbidden` av en anledning.
+- Inte införa nya parallella faser. `understand` / `plan` / `build` är canonical. Reviewer-vokabulären (`brief`/`plan`/`package`/`generate`/`verify`/`repair`) är delmoment, inte topplista. Den fullständiga listan över namn som globalt förbjuds (gamla sajtmaskin-ord) ligger i [`naming-dictionary.v1.json`](../../governance/policies/naming-dictionary.v1.json) under fältet `globallyForbidden`. Den listan upprätthålls automatiskt av `tests/test_no_legacy_terms.py` som blockerar varje commit som återinför någon av dem. Vill någon utöka eller krympa listan krävs ADR + naming-dictionary-bumpning.
 
 Dessa byten kan göras senare via egen ADR. Tills dess är reviewer-vokabulären en intern läs-karta för att förklara delar, inte ett namn på något i kodbasen.
 

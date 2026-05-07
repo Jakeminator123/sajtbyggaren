@@ -258,6 +258,10 @@ def main() -> int:
             continue
         if rel.startswith("docs/agent-handbook.md") or rel.startswith("docs/PROJECT_BRIEF.md"):
             continue
+        # known-issues.md är en bug-tracking-fil med interna IDs (B11, BO5)
+        # som inte är domänbegrepp och inte ska behöva registreras.
+        if rel == "docs/known-issues.md":
+            continue
 
         candidates = find_candidates(text, suffix_known)
         for cand in candidates:
