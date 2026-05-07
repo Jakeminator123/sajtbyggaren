@@ -38,11 +38,16 @@ def build_engine_mindmap(
     llm_flow: dict[str, Any],
     llm_models: dict[str, Any],
     engine_run: dict[str, Any],
+    project_dna: dict[str, Any] | None = None,
+    embedding_policy: dict[str, Any] | None = None,
+    fix_registry: dict[str, Any] | None = None,
+    preview_runtime: dict[str, Any] | None = None,
 ) -> str:
-    """Build a mermaid diagram of the full engine: phase blocks, phases, model roles.
+    """Build a mermaid diagram of the full engine.
 
-    The diagram is generated from the three policies above, so editing any of
-    them updates the diagram automatically next time the cache is cleared.
+    Includes phase blocks, phases, model roles, Engine Run modes, Project DNA,
+    Embedding Domains, Fix Registry and Preview Runtime. Generated from policies
+    so editing any of them updates the diagram automatically.
     """
     lines: list[str] = ["flowchart LR"]
 
@@ -55,7 +60,7 @@ def build_engine_mindmap(
         block_label = block["label"].replace('"', "'")
         lines.append(f'  subgraph {block_id} ["{block_label}"]')
         previous_phase: str | None = None
-        for phase_id in block["phaseIds"]:
+        for phase_id in block.get("phaseIds", []):
             phase = phases_by_id.get(phase_id)
             if phase is None:
                 continue
@@ -64,13 +69,24 @@ def build_engine_mindmap(
             if previous_phase is not None:
                 lines.append(f"    {previous_phase} --> {phase_id}")
             previous_phase = phase_id
+        if previous_phase is None:
+            lines.append(f'    {block_id}_empty["(no phases yet)"]')
         lines.append("  end")
 
-    # Connect blocks in order.
+    # Connect blocks in order. Skip blocks with no phaseIds.
+    def _last_phase(block: dict) -> str | None:
+        ids = block.get("phaseIds") or []
+        return ids[-1] if ids else None
+
+    def _first_phase(block: dict) -> str | None:
+        ids = block.get("phaseIds") or []
+        return ids[0] if ids else None
+
     for prev_block, next_block in zip(phase_blocks, phase_blocks[1:]):
-        prev_last = prev_block["phaseIds"][-1]
-        next_first = next_block["phaseIds"][0]
-        lines.append(f"  {prev_last} --> {next_first}")
+        prev_last = _last_phase(prev_block)
+        next_first = _first_phase(next_block)
+        if prev_last and next_first:
+            lines.append(f"  {prev_last} --> {next_first}")
 
     # Model role nodes (one per role) with the model name.
     for role in llm_models.get("roles", []):
@@ -97,14 +113,54 @@ def build_engine_mindmap(
 
     # Engine Run mode markers.
     modes = engine_run.get("modes", {})
-    if "init" in modes:
-        lines.append('  initMode(["Mode: init"])')
-        if phase_blocks:
-            lines.append(f'  initMode -.-> {phase_blocks[0]["phaseIds"][0]}')
-    if "followup" in modes:
-        lines.append('  followupMode(["Mode: followup"])')
-        if phase_blocks:
-            lines.append(f'  followupMode -.-> {phase_blocks[0]["phaseIds"][0]}')
+    first_phase = _first_phase(phase_blocks[0]) if phase_blocks else None
+    if "init" in modes and first_phase:
+        lines.append('  initMode(["Mode: init<br/>writes Project DNA"])')
+        lines.append(f"  initMode -.-> {first_phase}")
+    if "followup" in modes and first_phase:
+        lines.append('  followupMode(["Mode: followup<br/>reads Project DNA"])')
+        lines.append(f"  followupMode -.-> {first_phase}")
+
+    # Project DNA node, connected from init and followup modes.
+    if project_dna:
+        lines.append('  projectDna(["Project DNA<br/>scaffold/variant/dossiers/themeTokens"])')
+        if "init" in modes:
+            lines.append("  initMode --> projectDna")
+        if "followup" in modes:
+            lines.append("  projectDna --> followupMode")
+
+    # Embedding Domains as a cluster pointing into scaffold_resolution.
+    if embedding_policy:
+        lines.append("  subgraph embeddings [Embedding Domains]")
+        for domain in embedding_policy.get("domains", []):
+            did = domain["id"].replace("-", "_")
+            label = domain["id"].replace('"', "'")
+            lines.append(f'    {did}["{label}"]')
+        lines.append("  end")
+        if "scaffold_resolution" in phases_by_id:
+            lines.append("  embeddings -.-> scaffold_resolution")
+        if "embeddingModel" in {r["id"] for r in llm_models.get("roles", [])}:
+            lines.append("  embeddingModel -.-> embeddings")
+
+    # Fix Registry as a cluster connected to llm_repair / mechanical_autofix.
+    if fix_registry:
+        lines.append("  subgraph fixes [Fix Registry]")
+        lines.append('    mechanicalFixes["Mechanical Fixes"]')
+        lines.append('    llmFixes["LLM Fixes"]')
+        lines.append("  end")
+        if "mechanical_autofix" in phases_by_id:
+            lines.append("  mechanicalFixes -.-> mechanical_autofix")
+        if "llm_repair" in phases_by_id:
+            lines.append("  llmFixes -.-> llm_repair")
+
+    # Preview Runtime + Quality Gate visibility.
+    if preview_runtime:
+        lines.append('  previewRuntimePolicy(["Preview Runtime<br/>Local/StackBlitz/Fly"])')
+        if "preview_runtime" in phases_by_id:
+            lines.append("  previewRuntimePolicy -.-> preview_runtime")
+        lines.append('  qualityGate(["Quality Gate<br/>typecheck/build/route/preview-smoke"])')
+        if "quality_evaluation" in phases_by_id:
+            lines.append("  quality_evaluation -.-> qualityGate")
 
     return "\n".join(lines)
 

@@ -10,11 +10,16 @@ phases actually read. Adding new fields requires a naming-dictionary entry.
 
 from __future__ import annotations
 
+import logging
 import os
+import sys
 from datetime import datetime, timezone
 from typing import Any, Optional
 
 from pydantic import BaseModel, Field
+
+
+logger = logging.getLogger("sajtbyggaren.brief")
 
 
 SWEDISH_HINTS = {
@@ -32,7 +37,12 @@ def detect_language(prompt: str) -> str:
 
 
 class SiteBrief(BaseModel):
-    """Structured Site Brief produced by Phase 1 Understand."""
+    """Structured Site Brief produced by Phase 1 Understand.
+
+    The schema covers what Phase 2 (Plan) and Phase 3 (Build) need to reach
+    9/10 on the page-quality-traits scorecard. Conversion goals and listed
+    services are crucial for `conversion_clarity` and `content_specificity`.
+    """
 
     language: str = Field(description="ISO 639-1 code, e.g. sv or en.")
     business_type: Optional[str] = Field(
@@ -58,6 +68,24 @@ class SiteBrief(BaseModel):
     location_hint: Optional[str] = Field(
         default=None,
         description="City or region if mentioned in the prompt.",
+    )
+    conversion_goals: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Concrete actions the site should drive: 'call', 'quote-request', "
+            "'booking', 'newsletter-signup', 'purchase'. 0-3 items."
+        ),
+    )
+    services_mentioned: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Specific services/products the user mentioned (e.g. 'akut-elservice', "
+            "'paneldragning', 'laddbox-installation'). Drives concrete copy."
+        ),
+    )
+    content_depth: Optional[str] = Field(
+        default=None,
+        description="One of: 'shallow', 'medium', 'rich'. How detailed the copy should feel.",
     )
     raw_prompt: str = Field(description="The original prompt as received.")
     notes_for_planner: Optional[str] = Field(
@@ -87,6 +115,9 @@ def _mock_brief(prompt: str, language_hint: str | None) -> SiteBrief:
         tone=[],
         requested_capabilities=[],
         location_hint=None,
+        conversion_goals=[],
+        services_mentioned=[],
+        content_depth=None,
         raw_prompt=prompt,
         notes_for_planner=(
             "Mock brief - OPENAI_API_KEY saknades, ingen riktig extraktion utförd."
@@ -120,39 +151,65 @@ def _real_brief(prompt: str, model: str, language_hint: str | None) -> SiteBrief
     return parsed
 
 
+class BriefResult(BaseModel):
+    """Resultatet av extract_site_brief: brief plus källinformation."""
+
+    brief: SiteBrief
+    source: str  # "real" | "mock-no-key" | "mock-llm-error"
+    error: Optional[str] = None
+
+
 def extract_site_brief(
     prompt: str,
     *,
     model: str = "gpt-5.4",
     language_hint: str | None = None,
-) -> SiteBrief:
+) -> BriefResult:
     """Phase 1 Understand entry point.
 
-    Returns a SiteBrief. If OPENAI_API_KEY is missing, returns a mock brief
-    so callers don't need to branch on environment.
+    Returns a BriefResult that always contains a valid SiteBrief plus a
+    transparent `source` field so callers (and artefakter) inte ljuger om
+    huruvida riktig LLM användes.
     """
     if not os.environ.get("OPENAI_API_KEY"):
-        return _mock_brief(prompt, language_hint)
+        return BriefResult(
+            brief=_mock_brief(prompt, language_hint),
+            source="mock-no-key",
+        )
 
     try:
-        return _real_brief(prompt, model=model, language_hint=language_hint)
-    except Exception as exc:  # noqa: BLE001
-        # Soft-fall back to mock so the pipeline doesn't die mid-run.
-        mock = _mock_brief(prompt, language_hint)
-        mock.notes_for_planner = (
-            f"Mock brief efter LLM-fel: {type(exc).__name__}: {exc}"
+        return BriefResult(
+            brief=_real_brief(prompt, model=model, language_hint=language_hint),
+            source="real",
         )
-        return mock
+    except Exception as exc:  # noqa: BLE001
+        # Log to stderr so operators see this in terminal/CI output.
+        message = f"briefModel error: {type(exc).__name__}: {exc}"
+        logger.warning(message)
+        sys.stderr.write(f"[briefModel] {message}\n")
+        sys.stderr.flush()
+        mock = _mock_brief(prompt, language_hint)
+        mock.notes_for_planner = f"Mock brief efter LLM-fel: {type(exc).__name__}: {exc}"
+        return BriefResult(
+            brief=mock,
+            source="mock-llm-error",
+            error=f"{type(exc).__name__}: {exc}",
+        )
 
 
 def site_brief_to_artifact(
-    brief: SiteBrief,
+    result: BriefResult,
     *,
     run_id: str,
     model: str,
-    used_real_llm: bool,
 ) -> dict[str, Any]:
-    """Serialise a SiteBrief into the artifact shape that dev_generate.py writes."""
+    """Serialise a BriefResult into the artifact shape that dev_generate.py writes.
+
+    Reads source from the BriefResult so modelUsed/_status reflects the actual
+    code path (real, mock-no-key, mock-llm-error). Never claims real when fallback occurred.
+    """
+    brief = result.brief
+    is_real = result.source == "real"
     return {
         "runId": run_id,
         "language": brief.language,
@@ -163,9 +220,14 @@ def site_brief_to_artifact(
         "targetAudience": brief.target_audience,
         "requestedCapabilities": brief.requested_capabilities,
         "locationHint": brief.location_hint,
+        "conversionGoals": brief.conversion_goals,
+        "servicesMentioned": brief.services_mentioned,
+        "contentDepth": brief.content_depth,
         "notesForPlanner": brief.notes_for_planner,
         "sourceModelRole": "briefModel",
-        "modelUsed": model if used_real_llm else "mock",
+        "modelUsed": model if is_real else "mock",
+        "briefSource": result.source,
+        "briefError": result.error,
         "createdAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "_status": "real" if used_real_llm else "mock - real briefModel call wired but no key set",
+        "_status": result.source,
     }

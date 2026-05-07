@@ -48,20 +48,39 @@ def view_policies() -> None:
         st.json(data, expanded=False)
     with tab_edit:
         st.warning(
-            "Att redigera en policy kan bryta cross-policy-tester. "
-            "Kör System Health efter spara."
+            "Edit-läget skriver till disk + kör governance_validate direkt. "
+            "Vid validation-fail rullas ändringen tillbaka automatiskt."
         )
         text = selected_path.read_text(encoding="utf-8")
         new_text = st.text_area("JSON", value=text, height=600, key=f"edit-{selected}")
         if st.button("Spara", key=f"save-{selected}"):
+            # 1. JSON-validera
             try:
                 json.loads(new_text)
             except json.JSONDecodeError as exc:
                 st.error(f"Ogiltig JSON, sparar inte: {exc}")
                 return
+
+            # 2. Skriv backup, applicera, kör governance_validate, rollback om fel.
+            backup = text
             selected_path.write_text(new_text, encoding="utf-8")
             _hard_reset_caches()
-            st.success("Sparat. Kör validering i System Health.")
+
+            from .. import health
+
+            result = health.run_governance_validate()
+            if not result.ok:
+                selected_path.write_text(backup, encoding="utf-8")
+                _hard_reset_caches()
+                st.error(
+                    f"governance_validate failade efter spara - automatisk rollback genomfört.\n\n"
+                    f"Output:\n{result.output}"
+                )
+                return
+
+            st.success(
+                f"Sparat och validerat. {selected} är fortfarande policy-konsistent."
+            )
 
 
 def view_naming_dictionary() -> None:

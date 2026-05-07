@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import traceback
 from typing import Any, Callable
 
 import streamlit as st
@@ -20,10 +21,18 @@ def render_check(result: health.CheckResult) -> None:
 
 
 def safe_render(fn: Callable[..., Any], *args: Any, **kwargs: Any) -> None:
-    """Wrap a render call so a single broken policy doesn't kill the page."""
+    """Wrap a render call so a single broken policy doesn't kill the page.
+
+    Shows the full traceback in an expander so developers can debug rather than
+    silently swallowing every error.
+    """
     try:
         fn(*args, **kwargs)
     except KeyError as exc:
         st.error(f"Saknat fält i policy: {exc}")
-    except Exception as exc:
-        st.error(f"Oväntat fel i vyn: {exc}")
+        with st.expander("Visa traceback"):
+            st.code(traceback.format_exc(), language="text")
+    except Exception as exc:  # noqa: BLE001
+        st.error(f"Oväntat fel ({type(exc).__name__}): {exc}")
+        with st.expander("Visa traceback"):
+            st.code(traceback.format_exc(), language="text")

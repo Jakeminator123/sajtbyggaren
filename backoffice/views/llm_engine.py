@@ -25,8 +25,9 @@ def _hard_reset_caches() -> None:
 def view_mindmap() -> None:
     st.title("Mindmap - hela LLM-kedjan")
     st.caption(
-        "Diagram genereras dynamiskt från `llm-flow-concepts`, `llm-models` och "
-        "`engine-run`. Editera dessa policies så uppdateras diagrammet automatiskt."
+        "Diagram genereras dynamiskt från sju policies: llm-flow-concepts, llm-models, "
+        "engine-run, project-dna, embedding-policy, fix-registry och preview-runtime-policy. "
+        "Editera valfri policy så uppdateras diagrammet automatiskt."
     )
 
     flow, err = loaders.safe_load_policy("llm-flow-concepts.v1.json")
@@ -42,8 +43,22 @@ def view_mindmap() -> None:
         st.error(err)
         return
 
-    diagram = build_engine_mindmap(flow, models, engine_run)
-    render_mermaid(diagram, height=900)
+    # Optional layers - degrade gracefully if missing.
+    project_dna, _ = loaders.safe_load_policy("project-dna.v1.json")
+    embedding_policy, _ = loaders.safe_load_policy("embedding-policy.v1.json")
+    fix_registry, _ = loaders.safe_load_policy("fix-registry.v1.json")
+    preview_runtime, _ = loaders.safe_load_policy("preview-runtime-policy.v1.json")
+
+    diagram = build_engine_mindmap(
+        flow,
+        models,
+        engine_run,
+        project_dna=project_dna,
+        embedding_policy=embedding_policy,
+        fix_registry=fix_registry,
+        preview_runtime=preview_runtime,
+    )
+    render_mermaid(diagram, height=1100)
 
     with st.expander("Visa mermaid-källkod"):
         st.code(diagram, language="text")
@@ -130,32 +145,69 @@ def view_model_roles() -> None:
         return
 
     role_ids = [r["id"] for r in models.get("roles", [])]
-    selected_role = st.selectbox("Välj roll", role_ids, key="model_role_select")
-    role = next((r for r in models["roles"] if r["id"] == selected_role), None)
-    if not role:
+    if not role_ids:
+        st.warning("Inga roller registrerade i llm-models.v1.json.")
         return
 
-    new_model = st.text_input("Modell", value=role.get("model", ""), key="model_input")
-    new_provider = st.text_input("Provider", value=role.get("provider", "openai"), key="provider_input")
+    selected_role = st.selectbox("Välj roll", role_ids, key="model_role_select")
+    role = next((r for r in models.get("roles", []) if r["id"] == selected_role), None)
+    if not role:
+        st.error(f"Rollen '{selected_role}' kunde inte hittas.")
+        return
 
-    if st.button("Spara ändringen", key="model_save"):
+    new_model = st.text_input("Modell", value=role.get("model", ""), key="model_input").strip()
+    new_provider = (
+        st.text_input("Provider", value=role.get("provider", "openai"), key="provider_input").strip()
+    )
+
+    forbidden_tier = set(models.get("forbiddenLegacyTierNames", []))
+    validation_errors: list[str] = []
+    if not new_model:
+        validation_errors.append("Modellnamn får inte vara tomt.")
+    if not new_provider:
+        validation_errors.append("Provider får inte vara tom.")
+    if new_model.lower() in forbidden_tier or new_provider.lower() in forbidden_tier:
+        validation_errors.append(
+            f"Värde står i forbiddenLegacyTierNames: {sorted(forbidden_tier)}"
+        )
+
+    if validation_errors:
+        for err in validation_errors:
+            st.error(err)
+
+    if st.button(
+        "Spara ändringen", key="model_save", disabled=bool(validation_errors)
+    ):
         for r in models["roles"]:
             if r["id"] == selected_role:
                 r["model"] = new_model
                 r["provider"] = new_provider
                 break
+
         path = POLICIES_DIR / "llm-models.v1.json"
         backup = path.read_text(encoding="utf-8")
-        try:
-            path.write_text(
-                json.dumps(models, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-            )
-            _hard_reset_caches()
-            st.success(f"Sparade {selected_role} -> {new_model} ({new_provider}).")
-            st.info("Verifiera i System Health att governance_validate fortfarande passerar.")
-        except Exception as exc:
+        path.write_text(
+            json.dumps(models, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+
+        # Run governance_validate to confirm the change is policy-safe; rollback if not.
+        from .. import health
+
+        validate_result = health.run_governance_validate()
+        if not validate_result.ok:
             path.write_text(backup, encoding="utf-8")
-            st.error(f"Misslyckades, rollback: {exc}")
+            _hard_reset_caches()
+            st.error(
+                f"governance_validate failade efter spara - rollback genomfört. "
+                f"Output:\n{validate_result.output}"
+            )
+            return
+
+        _hard_reset_caches()
+        st.success(
+            f"Sparade {selected_role} -> {new_model} ({new_provider}). "
+            f"governance_validate OK."
+        )
 
 
 def view_fix_types() -> None:

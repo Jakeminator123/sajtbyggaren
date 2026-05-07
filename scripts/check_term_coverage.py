@@ -107,7 +107,7 @@ COMMON_WORDS = {
     "Mechanical Fixes", "LLM Fixes",
     # Python stdlib + interna kod-symboler
     "KeyError", "TimeoutExpired", "VIEWS", "Principer",
-    "BaseModel", "Field",
+    "BaseModel", "Field", "FileNotFoundError", "BriefResult",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

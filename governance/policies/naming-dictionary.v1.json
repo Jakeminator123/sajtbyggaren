@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/naming-dictionary.schema.json",
   "policyId": "naming-dictionary.v1",
-  "version": 4,
+  "version": 5,
   "status": "draft-but-authoritative",
-  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 4 utökar med Project DNA, FollowUp Intent, Engine Run mode, Embedding Domain, Mechanical Fix och LLM Fix.",
+  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 5 lägger till Mock Mode, Brief Source och Loop Limits.",
   "rules": [
     "Ett begrepp får ha exakt ett kanoniskt namn.",
     "Ett kanoniskt namn får bo i exakt en huvudsaklig mapp (se repo-boundaries).",
@@ -529,6 +529,30 @@
       "canonical": "Fix Registry",
       "definition": "Central lista över alla Mechanical Fixes och LLM Fixes. Sanningskälla i fix-registry.v1.json. Repair Pipeline läser hit; ingen kod får implementera fix utanför registry.",
       "ownerPackage": "governance/policies",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "mockMode",
+      "canonical": "Mock Mode",
+      "definition": "Fallback-läge när en Engine Run-fas inte kan köra riktig LLM (saknad API-nyckel eller LLM-fel). Artefakter skrivs ändå men markeras med modelUsed=mock och briefSource=mock-no-key/mock-llm-error så de aldrig förväxlas med riktiga svar.",
+      "ownerPackage": "packages/generation",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["fakeMode", "stubMode"]
+    },
+    {
+      "id": "briefSource",
+      "canonical": "Brief Source",
+      "definition": "Fält i site-brief.json som beskriver om briefen kommer från real LLM-anrop, mock-no-key eller mock-llm-error. Aldrig förkortat till bara 'real'/'mock' utan precision.",
+      "ownerPackage": "packages/generation/brief",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "loopLimits",
+      "canonical": "Loop Limits",
+      "definition": "Hård cap för hur många mekaniska iterations, LLM-fixes och sandwich-pass som Repair Pipeline får köra per Engine Run. När capen nås markeras körningen som degraded.",
+      "ownerPackage": "packages/generation/repair",
       "aliasesAllowed": [],
       "aliasesForbidden": []
     }

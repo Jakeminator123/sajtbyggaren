@@ -7,6 +7,7 @@ Falls back to a deterministic mock when OPENAI_API_KEY is not set.
 """
 
 from .extract import (
+    BriefResult,
     SiteBrief,
     detect_language,
     extract_site_brief,
@@ -14,6 +15,7 @@ from .extract import (
 )
 
 __all__ = [
+    "BriefResult",
     "SiteBrief",
     "detect_language",
     "extract_site_brief",

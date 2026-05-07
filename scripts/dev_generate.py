@@ -109,20 +109,18 @@ def emit(run_id: str, run_dir: Path, phase: str, event: str, status: str, messag
     print(f"[{phase}.{event}] {arrow}: {message}")
 
 
-# ----- detection helpers (minimal, deterministic) ----------------------------
-
-
-SWEDISH_HINTS = {
-    "skapa", "för", "hemsida", "sajt", "och", "att", "med", "på", "elektriker",
-    "rörmokare", "tandläkare", "restaurang", "i", "av", "ett", "en",
-}
+# ----- detection helpers (delegated to packages/generation/brief) -----------
 
 
 def detect_language(prompt: str) -> str:
-    tokens = {t.lower() for t in prompt.replace(",", " ").split() if t}
-    if tokens & SWEDISH_HINTS:
-        return "sv"
-    return "en"
+    """Delegate to the canonical detector in packages/generation/brief.
+
+    Kept as a thin wrapper so callers in this script don't need to import
+    deeper. Single source of truth lives in packages.generation.brief.extract.
+    """
+    from packages.generation.brief import detect_language as _real_detect
+
+    return _real_detect(prompt)
 
 
 # ----- phase: understand (Site Brief) ----------------------------------------
@@ -152,21 +150,30 @@ def run_phase_understand(
     emit(run_id, run_dir, "understand", "input.written", "done", "input.json written", "input.json")
 
     # Try real briefModel; falls back to mock inside extract_site_brief if no API key.
-    used_real = bool(os.environ.get("OPENAI_API_KEY"))
+    has_key = bool(os.environ.get("OPENAI_API_KEY"))
     model_name = _resolve_brief_model()
     try:
         from packages.generation.brief import extract_site_brief, site_brief_to_artifact
 
-        if used_real:
+        if has_key:
             emit(run_id, run_dir, "understand", "brief.calling-llm", "started", f"Calling briefModel ({model_name})")
         else:
             emit(run_id, run_dir, "understand", "brief.mock", "started", "No OPENAI_API_KEY - mock brief")
 
-        brief = extract_site_brief(prompt, model=model_name, language_hint=detected)
-        site_brief = site_brief_to_artifact(
-            brief, run_id=run_id, model=model_name, used_real_llm=used_real
-        )
+        result = extract_site_brief(prompt, model=model_name, language_hint=detected)
+        site_brief = site_brief_to_artifact(result, run_id=run_id, model=model_name)
+        if result.source == "mock-llm-error":
+            emit(
+                run_id,
+                run_dir,
+                "understand",
+                "brief.degraded",
+                "degraded",
+                f"LLM call failed, used mock fallback: {result.error}",
+            )
     except Exception as exc:  # noqa: BLE001
+        sys.stderr.write(f"[dev_generate.understand] {type(exc).__name__}: {exc}\n")
+        sys.stderr.flush()
         emit(
             run_id,
             run_dir,
@@ -183,21 +190,26 @@ def run_phase_understand(
             "pageCount": None,
             "tone": [],
             "requestedCapabilities": [],
+            "conversionGoals": [],
+            "servicesMentioned": [],
+            "contentDepth": None,
             "sourceModelRole": "briefModel",
             "modelUsed": "mock",
+            "briefSource": "mock-import-error",
+            "briefError": f"{type(exc).__name__}: {exc}",
             "createdAt": utcnow_iso(),
-            "_status": f"mock fallback after exception: {type(exc).__name__}",
+            "_status": "mock-import-error",
         }
 
     write_json(run_dir / "site-brief.json", site_brief)
-    label = "real briefModel" if used_real and site_brief.get("modelUsed") != "mock" else "mock"
+    source_label = site_brief.get("briefSource", site_brief.get("_status", "unknown"))
     emit(
         run_id,
         run_dir,
         "understand",
         "brief.written",
         "done",
-        f"site-brief.json written ({label})",
+        f"site-brief.json written (source: {source_label})",
         "site-brief.json",
     )
 
@@ -236,7 +248,7 @@ def run_phase_plan(run_dir: Path, run_id: str, site_brief: dict[str, Any]) -> di
 
     generation_package = {
         "runId": run_id,
-        "structuredBrief": site_brief,
+        "siteBrief": site_brief,
         "scaffold": site_plan["selectedScaffold"],
         "scaffoldVariant": site_plan["selectedVariant"],
         "routePlan": site_plan["routePlan"],

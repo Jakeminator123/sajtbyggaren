@@ -27,56 +27,56 @@
       "id": "scaffoldId",
       "type": "string",
       "purpose": "Vald Scaffold. Hårt låst.",
-      "writableBy": ["init", "redesign-fork"],
+      "writableBy": ["init", "redesign"],
       "lockedAfterCreation": true
     },
     {
       "id": "variantId",
       "type": "string",
       "purpose": "Vald Scaffold Variant. Mjukt låst.",
-      "writableBy": ["init", "restyle", "redesign-fork"],
+      "writableBy": ["init", "restyle", "redesign"],
       "lockedAfterCreation": false
     },
     {
       "id": "selectedDossiers",
       "type": "string[]",
       "purpose": "Aktiva Dossiers. Får utökas eller krympas vid section-add/section-remove.",
-      "writableBy": ["init", "section-add", "section-remove", "redesign-fork"],
+      "writableBy": ["init", "section-add", "section-remove", "redesign"],
       "lockedAfterCreation": false
     },
     {
       "id": "themeTokens",
       "type": "object",
       "purpose": "CSS variables för färg, typografi, motif. Mjukt låst.",
-      "writableBy": ["init", "restyle", "redesign-fork"],
+      "writableBy": ["init", "restyle", "redesign"],
       "lockedAfterCreation": false
     },
     {
       "id": "language",
       "type": "string",
       "purpose": "Slutanvändarens språk för genererad content. Hårt låst per DNA-version.",
-      "writableBy": ["init", "redesign-fork"],
+      "writableBy": ["init", "redesign"],
       "lockedAfterCreation": true
     },
     {
       "id": "routeBaseline",
       "type": "object[]",
       "purpose": "Initial Route Plan. Får utökas eller krympas vid page-add/page-remove.",
-      "writableBy": ["init", "page-add", "page-remove", "redesign-fork"],
+      "writableBy": ["init", "page-add", "page-remove", "redesign"],
       "lockedAfterCreation": false
     },
     {
       "id": "dnaVersion",
       "type": "string",
       "purpose": "Major version (1, 2, ...). Bumpas vid Project Fork.",
-      "writableBy": ["init", "redesign-fork"],
+      "writableBy": ["init", "redesign"],
       "lockedAfterCreation": false
     },
     {
       "id": "previousDnaVersion",
       "type": "string?",
       "purpose": "Länk till tidigare DNA-version vid Project Fork.",
-      "writableBy": ["redesign-fork"],
+      "writableBy": ["redesign"],
       "lockedAfterCreation": false
     }
   ],
@@ -132,10 +132,10 @@
     {
       "id": "redesign",
       "purpose": "Byt scaffold eller affärstyp. Triggar Project Fork.",
-      "scaffold": "may-change-via-fork",
-      "variant": "may-change-via-fork",
-      "dossiers": "may-change-via-fork",
-      "routes": "may-change-via-fork"
+      "scaffold": "may-change-via-redesign",
+      "variant": "may-change-via-redesign",
+      "dossiers": "may-change-via-redesign",
+      "routes": "may-change-via-redesign"
     },
     {
       "id": "clarify",
