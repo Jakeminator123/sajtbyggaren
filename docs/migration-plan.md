@@ -20,6 +20,22 @@ Beslutet att skjuta upp baseline-eval (tidigare steg 3) tills LLM-flödet finns 
 11. **Followup-flöde** när init är `~9.0/10` stabilt.
 12. **Sajtmaskin-baseline-eval (om alls)** sist, när Sajtbyggaren har 20-50 egna körningar att stå sig på.
 
+### Dev/operator-milstolpar (parallellspår, inte canonical runtime)
+
+Dessa är prototyp-ytor som hjälper operatören jobba **innan** Sprint 2-5 är
+klara. De räknas inte som Sprint-leverabler och förbrukar inte
+sprint-numreringen.
+
+- **Builder MVP hardening** (klart i tidigare PR): `scripts/build_site.py`
+  uppfyller phase 3 artefaktkontrakt (generated-files snapshot, repair/quality
+  skeletons, `modelUsage`-stub, hård route-guard). Ersätts när Sprint 3 ger
+  riktig Repair Pipeline och Quality Gate.
+- **Viewser MVP** (denna PR): `apps/viewser/` ger en localhost-only operator-
+  prototype för chat + manuell build + preview. Den implementerar **inte**
+  Dossier-edit, Project DNA, follow-up, Repair Pipeline eller Quality Gate -
+  de hör till Sprint 2-3. Ersätts av riktig Engine Run-yta när Sprint 4-5
+  LocalRuntime/StackBlitzRuntime är på plats.
+
 ## Baseline-kandidater (referens, inte mål)
 
 Tre April-taggar är intressanta som **inspiration** under manual port. De portas inte automatiskt.
@@ -73,3 +89,5 @@ Tre April-taggar är intressanta som **inspiration** under manual port. De porta
 | Sprint 6+ - Fler scaffolds, dossiers, evals | inte startad |
 | `apps/web` | inte startad |
 | Sajtmaskin-baseline-jämförelse | uppskjuten enligt [ADR 0008](../governance/decisions/0008-defer-evals-until-flow-exists.md) |
+| Builder MVP hardening (parallellspår) | klart |
+| Viewser MVP (parallellspår) | i PR |

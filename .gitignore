@@ -12,6 +12,8 @@ build/
 .next/
 out/
 .turbo/
+!apps/viewser/app/api/build/
+!apps/viewser/app/api/build/route.ts
 
 .env
 .env.*

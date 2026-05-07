@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/naming-dictionary.schema.json",
   "policyId": "naming-dictionary.v1",
-  "version": 7,
+  "version": 9,
   "status": "draft-but-authoritative",
-  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 7 registrerar Site/Feature/Integration/Data Dossier som riktiga termer (kompletterande typ-axel ovanpå soft/hybrid/hard, som behålls oförändrad). Version 6 introducerade Starter som eget koncept (separat från Scaffold) och Starter Registry.",
+  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 9 begränsar Viewser-vokabulären: Viewser är canonical operator-yta, men UI-komponenter (Chat Panel, Viewer Panel, Token Meter) är lokala implementationsidentifierare och inte separata domänbegrepp. Version 9 registrerar också 'Project Input' som operator-facing alias för Site Dossier för att skilja capability Dossier från projektets site-data i Viewser-UI. Version 8 registrerade Viewser och tre UI-komponenter (chatPanel/viewerPanel/tokenMeter) som senare avregistrerades i v9. Version 7 registrerar Site/Feature/Integration/Data Dossier som riktiga termer (kompletterande typ-axel ovanpå soft/hybrid/hard, som behålls oförändrad). Version 6 introducerade Starter som eget koncept (separat från Scaffold) och Starter Registry.",
   "rules": [
     "Ett begrepp får ha exakt ett kanoniskt namn.",
     "Ett kanoniskt namn får bo i exakt en huvudsaklig mapp (se repo-boundaries).",
@@ -127,9 +127,9 @@
     {
       "id": "siteDossier",
       "canonical": "Site Dossier",
-      "definition": "Dossier-typ som levererar unikt site-/kundinnehåll: företagsfakta, brand-data, logotyp, ton, serviceområden, kontakt. Vanligen Soft Dossier. Den dossier-typ som nästan alltid finns per sajt.",
+      "definition": "Dossier-typ som levererar unikt site-/kundinnehåll: företagsfakta, brand-data, logotyp, ton, serviceområden, kontakt. Vanligen Soft Dossier. Den dossier-typ som nästan alltid finns per sajt. I operator-UI (Viewser) presenteras instanser som 'Project Input' eller 'Example' så att de inte blandas ihop med capability Dossier i picker.",
       "ownerPackage": "packages/generation/orchestration/dossiers",
-      "aliasesAllowed": [],
+      "aliasesAllowed": ["Project Input", "Example"],
       "aliasesForbidden": []
     },
     {
@@ -601,6 +601,14 @@
       "canonical": "Loop Limits",
       "definition": "Hård cap för hur många mekaniska iterations, LLM-fixes och sandwich-pass som Repair Pipeline får köra per Engine Run. När capen nås markeras körningen som degraded.",
       "ownerPackage": "packages/generation/repair",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "viewser",
+      "canonical": "Viewser",
+      "definition": "Localhost-only operator-prototype (apps/viewser) som driver Builder MVP via chat + manuell build-knapp och visar senaste run i en preview-viewer. Inte en canonical runtime; ersätts av reguljär Engine Run-yta när Sprint 4 LocalRuntime/StackBlitzRuntime finns.",
+      "ownerPackage": "apps/viewser",
       "aliasesAllowed": [],
       "aliasesForbidden": []
     }

@@ -116,6 +116,25 @@ COMMON_WORDS = {
     # React / Next / shadcn-typer som dyker upp i runtime-kod
     "ReactNode", "RootLayout", "NextConfig",
     "ButtonPrimitive", "VariantProps", "ClassValue",
+    "NextRequest", "NextResponse", "ComponentProps",
+    "CardAction", "CardContent", "CardDescription", "CardFooter", "CardHeader", "CardTitle",
+    "InputPrimitive",
+    # Viewser implementation-symboler (lokala UI-identifierare, inte domänbegrepp).
+    # Viewser-appen ligger på apps/viewser och dessa namn bor enbart där.
+    "ChatMessage", "ChatMessageSchema", "ChatPayloadSchema", "ChatPanelProps",
+    "BuildModelUsage", "FilesPayload", "RouteContext",
+    "ProjectInputInfo", "ProjectInputOption", "ProjectInputPicker", "ProjectInputPickerProps",
+    "RunMeta", "RunHistory", "RunHistoryItem", "RunHistoryProps", "RunsApiPayload",
+    "ScrollArea", "ScrollAreaPrimitive", "ScrollBar",
+    "StackblitzFileMap",
+    "TokenMeterContext", "TokenMeterContextValue", "TokenMeterProvider", "TokenMeterState",
+    "UsageDelta", "UsageSummary", "ViewerPanelProps",
+    "BuildPayloadSchema", "ChatPanel", "TokenMeter", "ViewerPanel",
+    "Providers", "TokenMeterContextValue",
+    # Viewser interna error-typer och rubriker (inte domänbegrepp)
+    "RunNotFoundError", "DossierEditor",
+    # Migrationsplanens prosa-rubriker för parallellspår (inte domänbegrepp)
+    "Builder MVP hardening", "Viewser MVP",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
@@ -250,6 +269,8 @@ def main() -> int:
             continue
         # Use POSIX-style relative path so prefix-matching works on Windows too.
         rel = path.relative_to(REPO_ROOT).as_posix()
+        if rel.endswith("package-lock.json"):
+            continue
 
         # Hoppa över själva naming-dictionary, schemas och rules; de listar termer.
         if rel.startswith("governance/policies/") or rel.startswith("governance/schemas/") or rel.startswith("governance/rules/"):
