@@ -67,6 +67,7 @@ COMMON_WORDS = {
     "Path", "List", "Dict", "Tuple", "Optional", "Any", "Union", "Type",
     "TypeError", "ValueError", "RuntimeError", "Exception", "Iterator",
     "ArgumentParser", "ImportError", "UnicodeDecodeError", "Input", "Output",
+    "AssertionError", "FileExistsError", "NotImplementedError",
     "Boolean", "Iterable", "Sequence", "Mapping", "Callable",
     # Framework / lib
     "React", "Next", "NextJs", "NextJS", "Vite", "Tailwind", "TypeScript",
