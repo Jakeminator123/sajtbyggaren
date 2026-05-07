@@ -1,0 +1,77 @@
+{
+  "$schema": "../schemas/llm-models.schema.json",
+  "policyId": "llm-models.v1",
+  "version": 1,
+  "status": "draft-but-authoritative",
+  "purpose": "Mappar Model Roles till konkreta modellnamn. Provider-agnostisk - byts utan att produktkoden ändras. Tunn första version: en linje av modeller, gpt-5.4 överallt.",
+  "principles": [
+    "Ingen kod får anropa en LLM utan att gå via en registrerad Model Role.",
+    "Provider-agnostiskt: model-strängen är opaque för produktkoden. Provider-resolveren mappar mot OpenAI, Anthropic eller annan.",
+    "Tunn första version: en modell för alla generation-roller. Optimering kommer när vi vet vad faktisk användning kräver.",
+    "Embeddings är inte en chat-modell och bor i samma policy men i en egen sektion."
+  ],
+  "defaults": {
+    "provider": "openai",
+    "generationModel": "gpt-5.4",
+    "embeddingModel": "text-embedding-3-small"
+  },
+  "roles": [
+    {
+      "id": "briefModel",
+      "purpose": "Fas 1 Understand - extrahera Site Brief från raw prompt.",
+      "model": "gpt-5.4",
+      "provider": "openai"
+    },
+    {
+      "id": "planningModel",
+      "purpose": "Fas 2 Plan - reasoning där det behövs (route-hints, dossier-rationale).",
+      "model": "gpt-5.4",
+      "provider": "openai"
+    },
+    {
+      "id": "rerankModel",
+      "purpose": "Scaffold Selector och Dossier Selector rerank av top-K kandidater.",
+      "model": "gpt-5.4",
+      "provider": "openai"
+    },
+    {
+      "id": "codegenModel",
+      "purpose": "Fas 3 Build - generera filerna utifrån Generation Package.",
+      "model": "gpt-5.4",
+      "provider": "openai"
+    },
+    {
+      "id": "repairModel",
+      "purpose": "Repair Pipeline - LLM-fix när mekaniska fixes inte räcker.",
+      "model": "gpt-5.4",
+      "provider": "openai"
+    },
+    {
+      "id": "verifierModel",
+      "purpose": "Read-only granskning av Generated Files som producerar findings till Quality Gate.",
+      "model": "gpt-5.4",
+      "provider": "openai"
+    },
+    {
+      "id": "embeddingModel",
+      "purpose": "Embedding-index för Scaffold-/Dossier-/Section Pattern-/Style Signature-index.",
+      "model": "text-embedding-3-small",
+      "provider": "openai"
+    }
+  ],
+  "providerNotes": {
+    "openai": "Default provider tills vi vet att vi behöver mer än en. Kräver OPENAI_API_KEY i .env.",
+    "anthropic": "Inte aktiv. Lägg till provider-rad här om vi vill blanda in Claude. Kräver ANTHROPIC_API_KEY.",
+    "swap-rule": "Att byta provider för en role är en policy-bump (version: 2), inte en kodändring."
+  },
+  "forbiddenLegacyTierNames": [
+    "fast",
+    "pro",
+    "max",
+    "codex",
+    "anthropic",
+    "tier1",
+    "tier2",
+    "tier3"
+  ]
+}

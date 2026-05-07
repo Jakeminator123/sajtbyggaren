@@ -67,6 +67,35 @@ Korta motiveringar i [`governance/decisions/`](governance/decisions/):
 - [0006](governance/decisions/0006-term-discipline.md) - Term-disciplin (deklaration före användning).
 - [0007](governance/decisions/0007-language-policy.md) - Språkpolicy.
 - [0008](governance/decisions/0008-defer-evals-until-flow-exists.md) - Skjut upp baseline-eval tills LLM-flödet finns.
+- [0009](governance/decisions/0009-engine-run-and-llm-models.md) - Engine Run-artefaktkedja + Model Roles + centraliserad Repair Pipeline.
+
+## Engine Run
+
+En körning är en `runId` med exakt 8 artefakter och en append-only trace. Det här är artefaktkontraktet hela motorn arbetar mot:
+
+```text
+data/runs/<runId>/
+  input.json
+  site-brief.json          (fas 1: Understand)
+  site-plan.json           (fas 2: Plan)
+  generation-package.json  (fas 2: Plan)
+  generated-files/         (fas 3: Build)
+  repair-result.json       (fas 3: Build)
+  quality-result.json      (fas 3: Build)
+  build-result.json        (fas 3: Build)
+  trace.ndjson             (Engine Events, append-only)
+```
+
+Mock-driver kör hela kedjan utan LLM-anrop:
+
+```bash
+python scripts/dev_generate.py "Skapa hemsida för elektriker i Malmö"
+python scripts/dev_generate.py "..." --phase brief    # bara fas 1
+python scripts/dev_generate.py "..." --phase plan     # läs brief, kör fas 2
+python scripts/dev_generate.py "..." --phase build    # läs package, kör fas 3
+```
+
+Detaljer: [`engine-run.v1.json`](governance/policies/engine-run.v1.json), [ADR 0009](governance/decisions/0009-engine-run-and-llm-models.md).
 
 ## Status
 
@@ -76,14 +105,14 @@ Korta motiveringar i [`governance/decisions/`](governance/decisions/):
 | Backoffice-skelett | klart |
 | Term-disciplin (regel + script) | klart |
 | Regression-tester och CI | klart |
-| Fas 1 runtime (Site Brief CLI) | inte startad |
-| Fas 2 runtime (Orchestration) | inte startad |
-| Fas 3 runtime (Codegen + Quality Gate) | inte startad |
-| LocalRuntime | inte startad |
-| StackBlitzRuntime | inte startad |
-| Eval på egna körningar | inte startad |
-| Sajtmaskin-baseline-jämförelse | uppskjuten ([ADR 0008](governance/decisions/0008-defer-evals-until-flow-exists.md)) |
+| Sprint 1 - Mock Engine Run | klart |
+| Sprint 2 - Riktig fas 1 + fas 2 + en scaffold | inte startad |
+| Sprint 3 - Riktig fas 3 (codegen + repair + gate) | inte startad |
+| Sprint 4 - LocalRuntime | inte startad |
+| Sprint 5 - StackBlitzRuntime | inte startad |
+| Sprint 6+ - Fler scaffolds, dossiers, evals | inte startad |
 | `apps/web` | inte startad |
+| Sajtmaskin-baseline-jämförelse | uppskjuten ([ADR 0008](governance/decisions/0008-defer-evals-until-flow-exists.md)) |
 
 Detaljer: [`docs/migration-plan.md`](docs/migration-plan.md).
 

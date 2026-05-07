@@ -66,6 +66,10 @@ def validate_policy(policy_file: Path) -> list[str]:
 # Cross-checken ignorerar värden under dessa nycklar.
 ANTI_PATTERN_KEYS = {
     "forbiddenTerms",
+    "forbiddenLegacyTierNames",
+    "forbiddenInScaffoldFiles",
+    "forbiddenInDossierFiles",
+    "forbiddenPatterns",
     "aliasesForbidden",
     "globallyForbidden",
     "mustNotDo",

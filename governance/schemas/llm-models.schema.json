@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "llm-models.schema.json",
+  "title": "LLM Models",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policyId",
+    "version",
+    "status",
+    "purpose",
+    "principles",
+    "defaults",
+    "roles",
+    "providerNotes",
+    "forbiddenLegacyTierNames"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "policyId": { "type": "string", "pattern": "^llm-models\\.v[0-9]+$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"] },
+    "purpose": { "type": "string" },
+    "principles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "generationModel", "embeddingModel"],
+      "properties": {
+        "provider": { "type": "string" },
+        "generationModel": { "type": "string" },
+        "embeddingModel": { "type": "string" }
+      }
+    },
+    "roles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "purpose", "model", "provider"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]*Model$" },
+          "purpose": { "type": "string" },
+          "model": { "type": "string" },
+          "provider": { "type": "string" }
+        }
+      }
+    },
+    "providerNotes": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "forbiddenLegacyTierNames": { "type": "array", "items": { "type": "string" } }
+  }
+}

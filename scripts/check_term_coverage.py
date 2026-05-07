@@ -92,6 +92,10 @@ COMMON_WORDS = {
     "CheckResult", "SECTIONS",
     "Required files", "Optional files",
     "Source", "Mirror", "Validate", "Spara",
+    # ADR-referenser och prosa-rubriker
+    "ADR 0001", "ADR 0002", "ADR 0003", "ADR 0004", "ADR 0005",
+    "ADR 0006", "ADR 0007", "ADR 0008", "ADR 0009",
+    "Mappstruktur", "Tre faser", "Tre lager", "Tre nya",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

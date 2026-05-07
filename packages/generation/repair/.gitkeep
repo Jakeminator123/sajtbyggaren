@@ -1,0 +1,10 @@
+# packages/generation/repair
+#
+# Repair Pipeline (centralized). The ONLY place fix-logic may live.
+# Steps: normalize -> mechanical fixes -> typecheck/syntax check ->
+# optional LLM fix -> re-check -> Repair Result.
+#
+# Implemented in Sprint 3. See:
+#   governance/policies/engine-run.v1.json
+#   governance/policies/naming-dictionary.v1.json (term: repairPipeline)
+#   governance/decisions/0009-engine-run-and-llm-models.md

@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "engine-run.schema.json",
+  "title": "Engine Run",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policyId",
+    "version",
+    "status",
+    "purpose",
+    "principles",
+    "phases",
+    "artifacts",
+    "trace",
+    "preview",
+    "forbiddenPatterns"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "policyId": { "type": "string", "pattern": "^engine-run\\.v[0-9]+$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"] },
+    "purpose": { "type": "string" },
+    "principles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "phases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "purpose", "writes", "ownerPackage", "allowedToCallLLM", "mustNotDo"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+          "label": { "type": "string" },
+          "purpose": { "type": "string" },
+          "writes": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "ownerPackage": { "type": "string" },
+          "allowedToCallLLM": { "type": "boolean" },
+          "mustNotDo": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "filename", "writtenBy", "purpose"],
+        "properties": {
+          "id": { "type": "string" },
+          "filename": { "type": "string" },
+          "writtenBy": { "type": "string" },
+          "purpose": { "type": "string" }
+        }
+      }
+    },
+    "trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["filename", "format", "appendOnly", "fieldsPerEvent"],
+      "properties": {
+        "filename": { "type": "string" },
+        "format": { "type": "string" },
+        "appendOnly": { "type": "boolean" },
+        "fieldsPerEvent": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      }
+    },
+    "preview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["purpose", "outputArtifact", "writtenBy"],
+      "properties": {
+        "purpose": { "type": "string" },
+        "outputArtifact": { "type": "string" },
+        "writtenBy": { "type": "string" }
+      }
+    },
+    "forbiddenPatterns": { "type": "array", "items": { "type": "string" } }
+  }
+}

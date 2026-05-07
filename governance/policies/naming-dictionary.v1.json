@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/naming-dictionary.schema.json",
   "policyId": "naming-dictionary.v1",
-  "version": 2,
+  "version": 3,
   "status": "draft-but-authoritative",
-  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 2 utökar med scaffold-/dossier-selection-begrepp och WebContainer-runtime-begrepp.",
+  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 3 utökar med Engine Run-artefakter, Repair Pipeline och Model Role.",
   "rules": [
     "Ett begrepp får ha exakt ett kanoniskt namn.",
     "Ett kanoniskt namn får bo i exakt en huvudsaklig mapp (se repo-boundaries).",
@@ -363,6 +363,94 @@
       "ownerPackage": "packages/generation/orchestration/dossiers",
       "aliasesAllowed": [],
       "aliasesForbidden": []
+    },
+    {
+      "id": "engineRun",
+      "canonical": "Engine Run",
+      "definition": "En hel körning från prompt till Promoted Site eller Repair Candidate. Identifieras med en runId och har en mapp under data/runs/<runId>/ med alla artefakter och en trace.ndjson.",
+      "ownerPackage": "packages/generation/engine",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["pipelineRun", "execution"]
+    },
+    {
+      "id": "engineEvent",
+      "canonical": "Engine Event",
+      "definition": "Append-only händelse i en Engine Run: phase, status (started|done|failed|degraded), message, optional payloadPath. Skrivs till trace.ndjson.",
+      "ownerPackage": "packages/generation/engine",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["log", "step"]
+    },
+    {
+      "id": "sitePlan",
+      "canonical": "Site Plan",
+      "definition": "Output från fas 2 Plan: vald Scaffold, Variant, Route Plan, valda Dossiers och BuildSpec. En enda fil site-plan.json.",
+      "ownerPackage": "packages/generation/planning",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["plan", "scaffoldPlan"]
+    },
+    {
+      "id": "generatedFiles",
+      "canonical": "Generated Files",
+      "definition": "Filerna som codegen-LLM producerat innan Repair Pipeline. Skrivs till data/runs/<runId>/generated-files/.",
+      "ownerPackage": "packages/generation/build",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["rawFiles", "outputFiles"]
+    },
+    {
+      "id": "repairPipeline",
+      "canonical": "Repair Pipeline",
+      "definition": "Centraliserad reparationskedja: normalize -> mechanical fixes -> typecheck/syntax -> optional LLM fix -> re-check -> final result. Får bo på exakt EN plats i kodbasen.",
+      "ownerPackage": "packages/generation/repair",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["fixLoop", "autofixChain", "repairLoop", "repairLoopCore"]
+    },
+    {
+      "id": "repairResult",
+      "canonical": "Repair Result",
+      "definition": "Strukturerat resultat av Repair Pipeline: applicerade fixes, kvarvarande fel, om LLM-fix kördes, slutstatus.",
+      "ownerPackage": "packages/generation/repair",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "previewResult",
+      "canonical": "Preview Result",
+      "definition": "Resultat från PreviewRuntime efter en Engine Run: previewSession, previewUrl, eventuell startup-output, status.",
+      "ownerPackage": "packages/preview-runtime",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "qualityResult",
+      "canonical": "Quality Result",
+      "definition": "Output från Quality Gate: per-check status, scorecard, samlat pass/fail, ev. degraderingar.",
+      "ownerPackage": "packages/generation/quality-gate",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "buildResult",
+      "canonical": "Build Result",
+      "definition": "Sammanslagen Engine Run-rapport som täcker generatedFiles + repairResult + previewResult + qualityResult.",
+      "ownerPackage": "packages/generation/build",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "modelRole",
+      "canonical": "Model Role",
+      "definition": "En av plats där en LLM får anropas. Mappar mot konkret modell i llm-models.v1.json. Ingen kod får anropa LLM utan att en registrerad Model Role driver anropet.",
+      "ownerPackage": "governance/policies",
+      "aliasesAllowed": [
+        "briefModel",
+        "planningModel",
+        "rerankModel",
+        "codegenModel",
+        "repairModel",
+        "verifierModel",
+        "embeddingModel"
+      ],
+      "aliasesForbidden": ["fast", "pro", "max", "codex", "anthropic"]
     }
   ],
   "globallyForbidden": [

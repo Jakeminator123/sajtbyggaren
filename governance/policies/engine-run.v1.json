@@ -1,0 +1,131 @@
+{
+  "$schema": "../schemas/engine-run.schema.json",
+  "policyId": "engine-run.v1",
+  "version": 1,
+  "status": "draft-but-authoritative",
+  "purpose": "Definierar artefaktkedjan för en Engine Run. En prompt blir en runId med exakt åtta artefakter och en Engine Event-trace. Ingen utspridd fix-kedja, ingen extra init-väg.",
+  "principles": [
+    "En Engine Run = en runId = en mapp under data/runs/<runId>/.",
+    "Tre faser, åtta artefakter, en trace. Inget annat.",
+    "Repair Pipeline finns på exakt EN plats i kodbasen (packages/generation/repair/).",
+    "Quality Gate finns på exakt EN plats (packages/generation/quality-gate/).",
+    "Inga LLM-anrop utanför fas 1, 2 och 3. Preview Runtime gör inga LLM-anrop."
+  ],
+  "phases": [
+    {
+      "id": "understand",
+      "label": "Fas 1 - Understand",
+      "purpose": "Tag emot prompten, detektera språk, expandera/strukturera, producera Site Brief.",
+      "writes": ["input.json", "site-brief.json"],
+      "ownerPackage": "packages/generation/brief",
+      "allowedToCallLLM": true,
+      "mustNotDo": [
+        "välja Scaffold",
+        "köra codegen",
+        "köra repair",
+        "starta preview"
+      ]
+    },
+    {
+      "id": "plan",
+      "label": "Fas 2 - Plan",
+      "purpose": "Välj Scaffold, Variant, Route Plan, Dossiers och BuildSpec. Producera Site Plan och Generation Package.",
+      "writes": ["site-plan.json", "generation-package.json"],
+      "ownerPackage": "packages/generation/planning",
+      "allowedToCallLLM": true,
+      "mustNotDo": [
+        "skriva genererade filer",
+        "köra repair",
+        "starta preview"
+      ]
+    },
+    {
+      "id": "build",
+      "label": "Fas 3 - Build",
+      "purpose": "Anropa codegen-LLM, skriv Generated Files, kör Repair Pipeline, kör Quality Gate, producera Build Result.",
+      "writes": ["generated-files/", "repair-result.json", "quality-result.json", "build-result.json"],
+      "ownerPackage": "packages/generation/build",
+      "allowedToCallLLM": true,
+      "mustNotDo": [
+        "duplicera repair-logik utanför packages/generation/repair/",
+        "duplicera gate-logik utanför packages/generation/quality-gate/"
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "input",
+      "filename": "input.json",
+      "writtenBy": "understand",
+      "purpose": "Den oförändrade prompten plus runId, timestamp, operator language, requested overrides."
+    },
+    {
+      "id": "siteBrief",
+      "filename": "site-brief.json",
+      "writtenBy": "understand",
+      "purpose": "Strukturerad Site Brief med språk, businessType, sidor, ton, capabilities."
+    },
+    {
+      "id": "sitePlan",
+      "filename": "site-plan.json",
+      "writtenBy": "plan",
+      "purpose": "Vald Scaffold, Variant, Route Plan, valda Dossiers och BuildSpec."
+    },
+    {
+      "id": "generationPackage",
+      "filename": "generation-package.json",
+      "writtenBy": "plan",
+      "purpose": "Den enda nyttolasten som skickas till codegen-LLM."
+    },
+    {
+      "id": "generatedFiles",
+      "filename": "generated-files/",
+      "writtenBy": "build",
+      "purpose": "Filerna codegen producerade. Innan Repair Pipeline."
+    },
+    {
+      "id": "repairResult",
+      "filename": "repair-result.json",
+      "writtenBy": "build",
+      "purpose": "Vad Repair Pipeline gjorde: mekaniska fixes, ev. LLM-fix, kvarvarande fel."
+    },
+    {
+      "id": "qualityResult",
+      "filename": "quality-result.json",
+      "writtenBy": "build",
+      "purpose": "Output från Quality Gate: per-check status, samlat pass/fail."
+    },
+    {
+      "id": "buildResult",
+      "filename": "build-result.json",
+      "writtenBy": "build",
+      "purpose": "Samlad rapport: status, runDurationMs, modelUsage, finalize-stat."
+    }
+  ],
+  "trace": {
+    "filename": "trace.ndjson",
+    "format": "newline-delimited Engine Events",
+    "appendOnly": true,
+    "fieldsPerEvent": [
+      "runId",
+      "phase",
+      "event",
+      "status",
+      "message",
+      "timestamp",
+      "payloadPath"
+    ]
+  },
+  "preview": {
+    "purpose": "Preview Runtime körs separat efter en Engine Run och producerar Preview Result. Den blandas inte in i fas 1-3.",
+    "outputArtifact": "preview-result.json",
+    "writtenBy": "preview-runtime"
+  },
+  "forbiddenPatterns": [
+    "Repair-kod utanför packages/generation/repair/",
+    "Quality-gate-kod utanför packages/generation/quality-gate/",
+    "Att en fas läser/muterar artefakt från en senare fas",
+    "Att Preview Runtime lägger sig i fas 1 eller fas 2",
+    "Att en fas anropar LLM utanför sin Model Role-mappning"
+  ]
+}

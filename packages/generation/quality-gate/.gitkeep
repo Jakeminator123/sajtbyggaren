@@ -1,0 +1,9 @@
+# packages/generation/quality-gate
+#
+# Quality Gate (centralized). The ONLY place gate-checks may live.
+# Initial checks: typecheck, route-scan, policy-compliance, manual/dev score.
+# Output: Quality Result (pass/fail per check + summary).
+#
+# Implemented in Sprint 3. See:
+#   governance/policies/engine-run.v1.json
+#   governance/policies/page-quality-traits.v1.json

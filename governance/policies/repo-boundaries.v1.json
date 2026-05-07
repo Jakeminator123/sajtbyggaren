@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/repo-boundaries.schema.json",
   "policyId": "repo-boundaries.v1",
-  "version": 2,
+  "version": 3,
   "status": "draft-but-authoritative",
-  "purpose": "Bestämmer vad varje mapp äger, vad den får importera och vad den ALDRIG får göra. Bryter mot detta = blockerande review. Version 2 utökar med scaffold/dossier/selection-paketen och reference-templates.",
+  "purpose": "Bestämmer vad varje mapp äger, vad den får importera och vad den ALDRIG får göra. Bryter mot detta = blockerande review. Version 3 utökar med Engine Run-paketen (engine, brief, planning, build, repair, quality-gate).",
   "ownership": [
     {
       "path": "governance/",
@@ -46,15 +46,97 @@
     {
       "path": "packages/generation/",
       "owns": [
+        "Engine Run-orkestrering (under engine/)",
         "fas 1: brief",
-        "fas 2: orchestration (scaffold, variant, route, dossier, contract, build-spec, package)",
-        "fas 3: codegen, finalize, quality-gate"
+        "fas 2: planning (orchestration)",
+        "fas 3: build (codegen + repair + quality-gate)"
       ],
       "mayImportFrom": ["packages/policies", "packages/shared", "packages/builder"],
       "mustNotDo": [
         "äga preview runtime",
         "äga frontend",
         "äga UI"
+      ]
+    },
+    {
+      "path": "packages/generation/engine/",
+      "owns": [
+        "Engine Run-livscykel: skapa runId, mapp, trace.ndjson",
+        "EngineEvent-emitter",
+        "fas-orkestrator som anropar brief -> planning -> build i ordning"
+      ],
+      "mayImportFrom": ["packages/policies", "packages/shared", "packages/generation/brief", "packages/generation/planning", "packages/generation/build"],
+      "mustNotDo": [
+        "duplicera brief-/plan-/build-logik",
+        "anropa LLM direkt"
+      ]
+    },
+    {
+      "path": "packages/generation/brief/",
+      "owns": [
+        "Fas 1 Understand: prompt -> Site Brief",
+        "language detection",
+        "structured-site-brief schema och resolver"
+      ],
+      "mayImportFrom": ["packages/policies", "packages/shared"],
+      "mustNotDo": [
+        "välja Scaffold",
+        "köra codegen",
+        "köra repair"
+      ]
+    },
+    {
+      "path": "packages/generation/planning/",
+      "owns": [
+        "Fas 2 Plan: Site Brief -> Site Plan -> Generation Package",
+        "Scaffold Selector, Variant Selector, Route Planner, Dossier Selector, Contract Planner, BuildSpec Resolver"
+      ],
+      "mayImportFrom": ["packages/policies", "packages/shared", "packages/generation/orchestration"],
+      "mustNotDo": [
+        "skriva genererade filer",
+        "köra repair",
+        "starta preview"
+      ]
+    },
+    {
+      "path": "packages/generation/build/",
+      "owns": [
+        "Fas 3 Build: Generation Package -> Generated Files -> Build Result",
+        "codegen-LLM-anrop",
+        "fil-normalize"
+      ],
+      "mayImportFrom": ["packages/policies", "packages/shared", "packages/generation/repair", "packages/generation/quality-gate"],
+      "mustNotDo": [
+        "implementera repair-logik själv (importera repair-pipelinen)",
+        "implementera gate-logik själv (importera quality-gate)"
+      ]
+    },
+    {
+      "path": "packages/generation/repair/",
+      "owns": [
+        "Repair Pipeline (centraliserad)",
+        "mekanisk autofix-registry",
+        "LLM-fix-anrop när mekaniska fixes inte räcker",
+        "Repair Result"
+      ],
+      "mayImportFrom": ["packages/policies", "packages/shared"],
+      "mustNotDo": [
+        "låta repair-logik dupliceras i andra paket",
+        "starta preview",
+        "anropa codegen utanför LLM-fix"
+      ]
+    },
+    {
+      "path": "packages/generation/quality-gate/",
+      "owns": [
+        "Quality Gate (centraliserad)",
+        "checks: typecheck, route-scan, policy-compliance, manual/dev score",
+        "Quality Result"
+      ],
+      "mayImportFrom": ["packages/policies", "packages/shared", "packages/preview-runtime"],
+      "mustNotDo": [
+        "köra repair",
+        "muta filer"
       ]
     },
     {

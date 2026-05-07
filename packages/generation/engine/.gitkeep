@@ -1,0 +1,8 @@
+# packages/generation/engine
+#
+# Engine Run lifecycle: create runId, scaffold the run directory,
+# emit Engine Events, orchestrate brief -> planning -> build.
+#
+# Implemented in Sprint 1. See:
+#   governance/policies/engine-run.v1.json
+#   docs/architecture/llm-flow.md

@@ -1,0 +1,10 @@
+# packages/generation/planning
+#
+# Phase 2 - Plan: Site Brief -> Site Plan + Generation Package.
+# Hosts the Scaffold Selector, Variant Selector, Route Planner,
+# Dossier Selector, Contract Planner and BuildSpec Resolver.
+#
+# Implemented in Sprint 2. See:
+#   governance/policies/engine-run.v1.json (phase: plan)
+#   governance/policies/scaffold-selection.v1.json
+#   governance/policies/dossier-selection.v1.json
