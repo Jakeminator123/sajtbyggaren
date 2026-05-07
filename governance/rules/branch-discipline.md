@@ -1,5 +1,5 @@
 ---
-description: Stanna alltid på main; byt aldrig branch utan att operatör uttryckligen ber om det
+description: Stanna alltid på main; pusha direkt mot origin/main som standard. PR används bara när operatören uttryckligen ber om det.
 alwaysApply: true
 ---
 
@@ -7,33 +7,56 @@ alwaysApply: true
 
 ## Grundregel
 
-Agenten stannar alltid på `main` om inget annat anges. Detta gäller både lokalt arbete och alla operationer mot remote.
+Agenten stannar alltid på `main` om inget annat anges. **Standardflödet är commit + push direkt mot `origin/main`**, inte feature-branch + PR. Remote är `https://github.com/Jakeminator123/sajtbyggaren.git`.
 
-## När agenten får skapa eller byta branch
+## Standardflöde: commit + push på main
+
+För all vanlig agent-aktivitet pushas ändringen direkt:
+
+1. Verifiera att aktuell branch är `main` (`git branch --show-current`).
+2. Stage + commit med atomisk avgränsning (en commit per logiskt steg).
+3. Kör de fyra guards (se nedan). Alla ska vara gröna.
+4. `git push origin main`.
+
+Detta gäller oavsett om ändringen är dokumentation, ny rule, ny policy, ny scaffold, ny dossier, kod, test eller refaktorisering.
+
+## När agenten skapar en branch eller PR
 
 Endast när operatör uttryckligen säger något av:
 
 - "skapa en branch för X"
 - "gör det på en ny branch"
-- "byt till branch Y"
 - "öppna en PR för X"
+- "byt till branch Y"
+
+För riktigt stora eller riskabla ändringar (t.ex. naming-dictionary major-bump som rör alla policies, omfattande arkitektur-ändring av `engine-run.v1`) **frågar agenten innan commit**, inte automatisk PR. Operatören väljer om det blir direkt push eller branch + PR.
 
 Om instruktionen är otydlig: fråga operatör innan branch skapas.
 
 ## Vad agenten aldrig gör utan tillstånd
 
-- Skapar feature-branches "för säkerhets skull"
+- Skapar feature-branches "för säkerhets skull" eller "för att vara försiktig"
 - Pushar till feature-branches när uppgiften kunde ha gjorts på `main`
+- Skapar PR utan att operatören uttryckligen bett om det
 - Lämnar kvar lokala branches efter att de är mergade
 - Lämnar kvar remote branches efter att de är mergade
+- Force-pushar till `main` (`git push --force` eller liknande)
 
-## Naming när branch faktiskt behövs
+## Push-fel
 
-- Format: `cursor/<kort-syfte-pa-svenska-utan-aaoo>` (eftersom git inte hanterar åäö konsekvent på alla plattformar)
+Om `git push origin main` avvisas (non-fast-forward, hooks, eller annat):
+
+1. Stoppa direkt - ingen automatisk `--force` eller `--force-with-lease`.
+2. Kör `git fetch origin && git status` för att förstå läget.
+3. Fråga operatör innan rebase, merge eller force-push.
+
+## Naming när branch ändå behövs
+
+- Format: `cursor/<kort-syfte-pa-svenska-utan-aaoo>` (git hanterar åäö inkonsekvent på olika plattformar)
 - Exempel: `cursor/marketing-base`, `cursor/dossier-typer-v2`
 - Aldrig: `cursor/work`, `cursor/wip`, `cursor/test`, `cursor/temp`
 
-## Cleanup-rutin
+## Cleanup-rutin (när branch ändå har använts)
 
 Efter merge till `main`:
 
@@ -43,16 +66,21 @@ Efter merge till `main`:
 
 Mål: `git branch -a` ska bara visa `main` plus `origin/main` när inget pågår.
 
-## Commits direkt på main
+## Före varje commit (de fyra guards)
 
-Tillåtet endast för:
+Agenten kör i denna ordning:
 
-- Små städuppgifter operatör uttryckligen bett om
-- Dokumentationsuppdateringar
-- Versions-bumps i policy/schema som följer existerande ADR
+1. `git branch --show-current` - verifiera `main`
+2. `python scripts/governance_validate.py`
+3. `python scripts/rules_sync.py --check`
+4. `python scripts/check_term_coverage.py --strict`
+5. `python -m pytest -q`
 
-Allt annat (nya features, refaktorisering, ny arkitektur) går via PR även när inga andra brancher finns.
+Alla ska vara gröna. Om någon failar: stoppa, fixa, eller fråga operatören om något är oklart. Aldrig commit + push på rött.
 
-## Status-kontroll
+## Commit-meddelanden
 
-Före varje commit: agenten kör `git branch --show-current` och verifierar att den är på `main` om inget annat sagts. Om branch är något annat, stoppar agenten och frågar operatör.
+- Commit-titlar på engelska enligt `code-in-english.md`
+- Body på engelska
+- ÅÄÖ skrivs korrekt om de förekommer (aldrig `\u00f6` eller ASCII-translit)
+- Format: kort imperativ titel + 1-3 raders kropp som förklarar varför, inte vad

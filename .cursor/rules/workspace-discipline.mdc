@@ -1,0 +1,67 @@
+<!-- AUTO-GENERATED FROM governance/rules/workspace-discipline.md. Do not edit directly. Run: python scripts/rules_sync.py -->
+---
+description: Agenten stannar inom workspacet. Tittar inte i Downloads, Desktop-rot eller andra användarmappar utan att fråga.
+alwaysApply: true
+---
+
+# Workspace-disciplin
+
+## Grundregel
+
+Agenten arbetar bara inom workspace-roten `c:\Users\jakem\Desktop\sajtbyggaren\` och dess underliggande mappar. Allt utanför workspacet ska behandlas som operatörens privata yta och inte läsas, listas eller modifieras utan operatörens uttryckliga tillstånd.
+
+## Vad är "utanför workspacet"
+
+Allt som **inte** ligger under `c:\Users\jakem\Desktop\sajtbyggaren\`. Konkreta exempel som kräver tillstånd:
+
+- `C:\Users\jakem\Downloads\` (även när zippar uppenbart hör hit)
+- `C:\Users\jakem\Desktop\` (rot-nivån, andra mappar)
+- `C:\Users\jakem\Documents\`, `C:\Users\jakem\AppData\`
+- `C:\Users\jakem\.cursor\` (cursor-konfiguration utanför workspace)
+- `C:\Users\<andra-användare>\`
+- `C:\Program Files\`, `C:\Windows\` (utöver att exekvera tools därifrån - se nedan)
+
+## Vad agenten alltid får göra
+
+- Läsa, skriva, lista, söka i filer och mappar **inom** workspace-roten
+- Kalla MCP-verktyg som operatören explicit installerat
+- Hämta publika webbresurser via `WebFetch`/`WebSearch` (men dokumentera vad och varför)
+- Använda Cursor-skills som finns i agentens skill-lista (de cachas av Cursor utanför workspace, men exponeras av agenten)
+- **Exekvera** tools (`git`, `python`, `node`, `npm`, etc.) som råkar ligga utanför workspace - exekvering är hela poängen, så länge arbetsmappen är `cwd` inom workspace
+
+## Vad agenten inte får göra utan att fråga
+
+- `Get-ChildItem` / `ls` / `Glob` mot mappar utanför workspace-roten
+- `Read` av filer utanför workspace-roten
+- Kopiera filer från externa mappar in i workspace utan operatörens grönt ljus
+- Unzippa arkiv utanför workspace eller från externa platser till workspace
+- Inspektera operatörens git-konfig, ssh-keys, env-filer eller annan känslig data utanför workspace
+
+## Hur agenten frågar tillstånd
+
+Innan en operation utanför workspace: säg vad som ska göras och vänta på explicit ja:
+
+> Jag behöver läsa `C:\Users\jakem\Downloads\portfolio-blog.zip` för att verifiera dess innehåll innan vi flyttar den till `data/starters/portfolio-base/`. OK?
+
+Operatören svarar ja eller nej. Aldrig spekulativt utforska.
+
+## Om agenten av misstag har gått utanför
+
+1. Stoppa direkt.
+2. Erkänn öppet i nästa svar: vad som listades/lästes, varför.
+3. Vänta på operatörens beslut innan något material flyttas in i workspacet.
+4. Notera mönstret så det inte upprepas.
+
+## Specialfall: starter-installationer
+
+När en starter ska byggas (t.ex. `marketing-base` via `npx create-next-app`) eller en ZIP unzippas (t.ex. `vercel/platforms`):
+
+1. Operatören laddar ner ZIPen själv eller godkänner att agenten gör det via en explicit URL.
+2. Operatören anger var ZIPen ligger.
+3. Agenten unzippar **bara** till `data/starters/<id>/` och tar bort eventuell nästlad `.git/`.
+4. Agenten verifierar med `npm install && npm run build` om Node är på PATH.
+5. Vid behov skriver agenten en ADR om eventuell harmonisering.
+
+## Tooling som ligger utanför workspace
+
+Agenten får exekvera tools som installerats av operatören även när själva binärerna ligger utanför workspace (t.ex. `C:\Program Files\nodejs\node.exe`). Det räknas inte som workspace-överträdelse - det är hela poängen med exekvering. Det som inte är OK är att **bläddra** i deras installationsmappar.
