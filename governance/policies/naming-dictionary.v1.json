@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/naming-dictionary.schema.json",
   "policyId": "naming-dictionary.v1",
-  "version": 6,
+  "version": 7,
   "status": "draft-but-authoritative",
-  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 6 introducerar Starter som eget koncept (separat från Scaffold) och lägger till Starter Registry samt fyra Dossier-typer (Site/Feature/Integration/Data Dossier) som eget axel ovanpå soft/hybrid/hard.",
+  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 7 registrerar Site/Feature/Integration/Data Dossier som riktiga termer (kompletterande typ-axel ovanpå soft/hybrid/hard, som behålls oförändrad). Version 6 introducerade Starter som eget koncept (separat från Scaffold) och Starter Registry.",
   "rules": [
     "Ett begrepp får ha exakt ett kanoniskt namn.",
     "Ett kanoniskt namn får bo i exakt en huvudsaklig mapp (se repo-boundaries).",
@@ -120,6 +120,38 @@
       "id": "hardDossier",
       "canonical": "Hard Dossier",
       "definition": "Dossier som kräver env, backend, databas, auth, betalning eller extern API. Mockas inte.",
+      "ownerPackage": "packages/generation/orchestration/dossiers",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "siteDossier",
+      "canonical": "Site Dossier",
+      "definition": "Dossier-typ som levererar unikt site-/kundinnehåll: företagsfakta, brand-data, logotyp, ton, serviceområden, kontakt. Vanligen Soft Dossier. Den dossier-typ som nästan alltid finns per sajt.",
+      "ownerPackage": "packages/generation/orchestration/dossiers",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "featureDossier",
+      "canonical": "Feature Dossier",
+      "definition": "Dossier-typ som levererar en återanvändbar funktion (t.ex. pacman-game, ROI-räknare, before/after-slider, gallery). Klass är oftast Soft eller Hybrid. Kräver inte extern tjänst.",
+      "ownerPackage": "packages/generation/orchestration/dossiers",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "integrationDossier",
+      "canonical": "Integration Dossier",
+      "definition": "Dossier-typ som levererar en hård extern integration (Stripe, Supabase, Clerk, Shopify, Sanity). Alltid Hard Dossier. Kräver env, backend och leverantörsspecifikt code-contract och env-contract.",
+      "ownerPackage": "packages/generation/orchestration/dossiers",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "dataDossier",
+      "canonical": "Data Dossier",
+      "definition": "Dossier-typ som levererar återanvändbar kunskap eller data (kommunlistor, FAQ-bibliotek, branschspecifika SEO-fraser, standardrätter för restaurang). Vanligen Soft Dossier.",
       "ownerPackage": "packages/generation/orchestration/dossiers",
       "aliasesAllowed": [],
       "aliasesForbidden": []
