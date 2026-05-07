@@ -4,7 +4,7 @@ Generell starter för 9 av 14 scaffolds. Inte en Vercel-template - byggs själv 
 
 ## Status
 
-Tom. Setup väntar på Node.js i operatörens PATH.
+Klar (2026-05-07). Setup kördes via Volta-installerad Node 24 + npm 11. `npm run build` (Turbopack) går igenom på cirka 17 sekunder. Default Vercel sample-content är borttaget och ersatt med tomma platshållare som scaffolds patchar ovanpå.
 
 ## Setup-instruktioner
 
