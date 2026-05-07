@@ -105,6 +105,8 @@ COMMON_WORDS = {
     "Globalt", "Skickas",
     "Embedding Domains", "FollowUp",
     "Mechanical Fixes", "LLM Fixes",
+    # Python stdlib + interna kod-symboler
+    "KeyError", "TimeoutExpired", "VIEWS", "Principer",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
