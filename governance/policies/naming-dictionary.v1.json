@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/naming-dictionary.schema.json",
   "policyId": "naming-dictionary.v1",
-  "version": 7,
+  "version": 8,
   "status": "draft-but-authoritative",
-  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 7 registrerar Site/Feature/Integration/Data Dossier som riktiga termer (kompletterande typ-axel ovanpå soft/hybrid/hard, som behålls oförändrad). Version 6 introducerade Starter som eget koncept (separat från Scaffold) och Starter Registry.",
+  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 8 registrerar Viewser och dess centrala UI-komponenter för operator-flödet. Version 7 registrerar Site/Feature/Integration/Data Dossier som riktiga termer (kompletterande typ-axel ovanpå soft/hybrid/hard, som behålls oförändrad). Version 6 introducerade Starter som eget koncept (separat från Scaffold) och Starter Registry.",
   "rules": [
     "Ett begrepp får ha exakt ett kanoniskt namn.",
     "Ett kanoniskt namn får bo i exakt en huvudsaklig mapp (se repo-boundaries).",
@@ -601,6 +601,38 @@
       "canonical": "Loop Limits",
       "definition": "Hård cap för hur många mekaniska iterations, LLM-fixes och sandwich-pass som Repair Pipeline får köra per Engine Run. När capen nås markeras körningen som degraded.",
       "ownerPackage": "packages/generation/repair",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "viewser",
+      "canonical": "Viewser",
+      "definition": "Operator-fronted utvecklingsyta som driver Engine Run via chat och visar senaste build i preview-viewer.",
+      "ownerPackage": "apps/viewser",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "chatPanel",
+      "canonical": "Chat Panel",
+      "definition": "UI-komponent i Viewser där operatören skriver promptar, ser svar och triggar build.",
+      "ownerPackage": "apps/viewser",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "viewerPanel",
+      "canonical": "Viewer Panel",
+      "definition": "UI-komponent i Viewser som renderar vald build i preview-runtime via inbäddad viewer.",
+      "ownerPackage": "apps/viewser",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "tokenMeter",
+      "canonical": "Token Meter",
+      "definition": "UI-komponent i Viewser som visar ackumulerad tokenanvändning och uppskattad kostnad för chat/build.",
+      "ownerPackage": "apps/viewser",
       "aliasesAllowed": [],
       "aliasesForbidden": []
     }
