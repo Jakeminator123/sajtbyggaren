@@ -1,13 +1,19 @@
 """Deterministic Builder MVP for Sajtbyggaren.
 
-Reads a Site Dossier, a Scaffold and a Variant from the repository and writes
-a runnable Next.js project under `.generated/<siteId>/` by copying the
+Reads a Site Dossier, a Scaffold and a Variant from the repository, writes
+canonical Engine Run artifacts under `data/runs/<runId>/`, and produces a
+runnable Next.js project under `.generated/<siteId>/` by copying the
 `marketing-base` Starter and patching it with the dossier's content and the
 variant's tokens.
 
+By default the builder also runs `npm install` (when `node_modules` is
+missing) and `npm run build`. Pass `--skip-build` to skip those steps during
+fast dev iteration.
+
 This is the minimal happy path described in `docs/migration-plan.md` Sprint 2
-and the Builder MVP plan. It deliberately does not call any LLM, does not
-implement Repair Pipeline or Quality Gate, and does not do follow-up.
+and `docs/architecture/builder-mvp.md`. It deliberately does not call any
+LLM, does not implement Repair Pipeline or Quality Gate, and does not do
+follow-up.
 """
 
 from __future__ import annotations
@@ -15,9 +21,12 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 STARTERS_DIR = REPO_ROOT / "data" / "starters"
@@ -29,11 +38,86 @@ SCAFFOLDS_DIR = (
     / "scaffolds"
 )
 GENERATED_DIR = REPO_ROOT / ".generated"
+RUNS_DIR = REPO_ROOT / "data" / "runs"
+
+
+# ---------------------------------------------------------------------------
+# Small helpers
+# ---------------------------------------------------------------------------
+
+
+def utc_now() -> datetime:
+    return datetime.now(tz=timezone.utc)
+
+
+def make_run_id(site_id: str) -> str:
+    """Sortable, readable run id like 20260507T143000Z-painter-palma."""
+    stamp = utc_now().strftime("%Y%m%dT%H%M%SZ")
+    return f"{stamp}-{site_id}"
 
 
 def load_json(path: Path) -> dict:
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def write(path: Path, contents: str) -> None:
+    """Write text to disk. Builder must never write a real `.env` file."""
+    name = path.name
+    if name == ".env" or name.startswith(".env.") and name != ".env.example":
+        raise AssertionError(
+            f"Builder must not write secret env files (attempted: {path}). "
+            "Integration Dossiers handle their own env contracts."
+        )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="\n") as f:
+        f.write(contents)
+
+
+def write_json(path: Path, data: Any) -> None:
+    write(path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+
+
+# ---------------------------------------------------------------------------
+# Trace (append-only Engine Events)
+# ---------------------------------------------------------------------------
+
+
+class Trace:
+    """Append-only Engine Event log per `engine-run.v1.json:trace`."""
+
+    def __init__(self, run_id: str, run_dir: Path) -> None:
+        self.run_id = run_id
+        self.path = run_dir / "trace.ndjson"
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        # Initialize empty file so the trace is canonical for this run.
+        with self.path.open("w", encoding="utf-8", newline="\n"):
+            pass
+
+    def event(
+        self,
+        phase: str,
+        event: str,
+        status: str,
+        message: str = "",
+        payload_path: str | None = None,
+    ) -> None:
+        record = {
+            "runId": self.run_id,
+            "phase": phase,
+            "event": event,
+            "status": status,
+            "message": message,
+            "timestamp": utc_now().isoformat(),
+            "payloadPath": payload_path,
+        }
+        with self.path.open("a", encoding="utf-8", newline="\n") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+# ---------------------------------------------------------------------------
+# Starter copy and patch helpers
+# ---------------------------------------------------------------------------
 
 
 def copy_starter(starter_id: str, target: Path) -> None:
@@ -50,8 +134,8 @@ def copy_starter(starter_id: str, target: Path) -> None:
         "*.tsbuildinfo",
         "next-env.d.ts",
     )
-    # Preserve existing target's node_modules / lockfile if present so we do
-    # not force a fresh `npm install` on every regeneration.
+    # Preserve existing target's node_modules / .next so we do not force a
+    # fresh `npm install` on every regeneration.
     preserved = {"node_modules", ".next"}
     if target.exists():
         for entry in target.iterdir():
@@ -61,16 +145,9 @@ def copy_starter(starter_id: str, target: Path) -> None:
                 shutil.rmtree(entry)
             else:
                 entry.unlink()
-        # Copy contents of source over the cleaned target.
         shutil.copytree(source, target, ignore=ignore, dirs_exist_ok=True)
     else:
         shutil.copytree(source, target, ignore=ignore)
-
-
-def write(path: Path, contents: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8", newline="\n") as f:
-        f.write(contents)
 
 
 def variant_css(variant: dict) -> str:
@@ -133,6 +210,18 @@ def patch_layout(
     )
     text = text.replace('lang="en"', 'lang="sv"')
     layout.write_text(text, encoding="utf-8", newline="\n")
+
+
+def patch_package_json(target: Path, dossier: dict) -> None:
+    pkg_path = target / "package.json"
+    pkg = load_json(pkg_path)
+    pkg["name"] = dossier["siteId"]
+    write(pkg_path, json.dumps(pkg, ensure_ascii=False, indent=2) + "\n")
+
+
+# ---------------------------------------------------------------------------
+# Page renderers (kept identical to v1 - just JSX templates with dossier copy)
+# ---------------------------------------------------------------------------
 
 
 def render_home(dossier: dict) -> str:
@@ -328,49 +417,294 @@ def write_pages(target: Path, dossier: dict) -> None:
     write(target / "app" / "kontakt" / "page.tsx", render_contact(dossier))
 
 
-def write_manifest(
-    target: Path,
+# ---------------------------------------------------------------------------
+# Route guards
+# ---------------------------------------------------------------------------
+
+
+def required_routes(scaffold_routes: dict) -> list[str]:
+    return [
+        r["path"]
+        for r in scaffold_routes["defaultRoutes"]
+        if r.get("required")
+    ]
+
+
+def all_default_routes(scaffold_routes: dict) -> list[str]:
+    return [r["path"] for r in scaffold_routes["defaultRoutes"]]
+
+
+def route_to_page_path(target: Path, route: str) -> Path:
+    if route == "/":
+        return target / "app" / "page.tsx"
+    return target / "app" / route.lstrip("/") / "page.tsx"
+
+
+def assert_routes_present(target: Path, routes: list[str]) -> None:
+    """Hard guard: every route must exist as a page.tsx file."""
+    missing = []
+    for route in routes:
+        path = route_to_page_path(target, route)
+        if not path.exists():
+            missing.append(f"{route} -> {path}")
+    if missing:
+        raise SystemExit(
+            "Builder failed: required routes missing:\n  "
+            + "\n  ".join(missing)
+        )
+
+
+# ---------------------------------------------------------------------------
+# npm runner
+# ---------------------------------------------------------------------------
+
+
+def run_npm(command: list[str], cwd: Path) -> tuple[bool, float, str]:
+    """Run an npm command and return (ok, seconds, last_lines).
+
+    Uses shell=True on Windows so npm.cmd is found via PATHEXT.
+    """
+    start = time.monotonic()
+    proc = subprocess.run(
+        command,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        shell=True,
+    )
+    elapsed = time.monotonic() - start
+    output = (proc.stdout or "") + (proc.stderr or "")
+    last_lines = "\n".join(output.splitlines()[-25:])
+    return proc.returncode == 0, elapsed, last_lines
+
+
+# ---------------------------------------------------------------------------
+# Mock artefacts (no LLM yet)
+# ---------------------------------------------------------------------------
+
+
+def build_site_brief_mock(dossier: dict, scaffold: dict) -> dict:
+    """Mock Site Brief derived from the dossier (no LLM)."""
+    return {
+        "briefSource": "mock-no-key",
+        "modelUsed": "mock",
+        "language": dossier["language"],
+        "businessType": dossier["company"]["businessType"],
+        "companyName": dossier["company"]["name"],
+        "tagline": dossier["company"]["tagline"],
+        "location": dossier["location"],
+        "tone": dossier["tone"],
+        "trustSignals": dossier["trustSignals"],
+        "conversionGoals": dossier["conversionGoals"],
+        "requestedCapabilities": [
+            svc["id"] for svc in dossier["services"]
+        ],
+        "scaffoldHint": scaffold["id"],
+    }
+
+
+def build_site_plan_mock(
+    dossier: dict, scaffold: dict, scaffold_routes: dict, variant: dict
+) -> dict:
+    """Mock Site Plan derived from scaffold + variant + dossier (no LLM)."""
+    return {
+        "scaffoldId": scaffold["id"],
+        "scaffoldVersion": scaffold["version"],
+        "variantId": variant["id"],
+        "starterId": "marketing-base",
+        "routes": [
+            {"path": r["path"], "id": r["id"], "purpose": r["purpose"]}
+            for r in scaffold_routes["defaultRoutes"]
+        ],
+        "selectedDossiers": dossier.get("selectedDossiers", {}),
+        "buildSpec": {
+            "qualityTarget": 9.0,
+            "verificationPolicy": "build-must-pass",
+            "previewRuntime": "stackblitz",
+        },
+    }
+
+
+def build_generation_package(
     dossier: dict,
     scaffold: dict,
     variant: dict,
-) -> None:
-    manifest = {
+) -> dict:
+    """Generation Package - the only payload that would go to codegen-LLM."""
+    return {
+        "policyVersions": {
+            "engineRun": "engine-run.v1",
+            "namingDictionary": "naming-dictionary.v1",
+            "scaffoldContract": "scaffold-contract.v1",
+        },
+        "siteBriefRef": "site-brief.json",
+        "sitePlanRef": "site-plan.json",
+        "scaffoldId": scaffold["id"],
+        "variantId": variant["id"],
+        "starterId": "marketing-base",
+        "language": dossier["language"],
+        "engineMode": "init",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Engine Run artefakts
+# ---------------------------------------------------------------------------
+
+
+def write_phase1_understand(
+    run_dir: Path,
+    trace: Trace,
+    dossier_path: Path,
+    dossier: dict,
+    scaffold: dict,
+) -> dict:
+    """Phase 1 understand: input.json + site-brief.json."""
+    trace.event("understand", "started", "started", "Phase 1 understand starts")
+
+    rel_dossier = (
+        str(dossier_path.relative_to(REPO_ROOT)).replace("\\", "/")
+    )
+    input_data = {
+        "runId": trace.run_id,
+        "mode": "init",
+        "rawPrompt": None,
+        "dossierPath": rel_dossier,
+        "detectedLanguage": dossier["language"],
+        "timestamp": utc_now().isoformat(),
+    }
+    write_json(run_dir / "input.json", input_data)
+    trace.event(
+        "understand", "input_written", "done",
+        "Captured dossier path and runId",
+        payload_path="input.json",
+    )
+
+    brief = build_site_brief_mock(dossier, scaffold)
+    write_json(run_dir / "site-brief.json", brief)
+    trace.event(
+        "understand", "site_brief_written", "done",
+        "Mock Site Brief derived from dossier (briefSource=mock-no-key)",
+        payload_path="site-brief.json",
+    )
+    trace.event("understand", "completed", "done", "Phase 1 understand done")
+    return brief
+
+
+def write_phase2_plan(
+    run_dir: Path,
+    trace: Trace,
+    dossier: dict,
+    scaffold: dict,
+    scaffold_routes: dict,
+    variant: dict,
+) -> tuple[dict, dict]:
+    """Phase 2 plan: site-plan.json + generation-package.json."""
+    trace.event("plan", "started", "started", "Phase 2 plan starts")
+
+    site_plan = build_site_plan_mock(
+        dossier, scaffold, scaffold_routes, variant
+    )
+    write_json(run_dir / "site-plan.json", site_plan)
+    trace.event(
+        "plan", "site_plan_written", "done",
+        f"Site Plan picked scaffold={scaffold['id']} variant={variant['id']}",
+        payload_path="site-plan.json",
+    )
+
+    package = build_generation_package(dossier, scaffold, variant)
+    write_json(run_dir / "generation-package.json", package)
+    trace.event(
+        "plan", "generation_package_written", "done",
+        "Generation Package composed",
+        payload_path="generation-package.json",
+    )
+    trace.event("plan", "completed", "done", "Phase 2 plan done")
+    return site_plan, package
+
+
+def write_build_result(
+    run_dir: Path,
+    trace: Trace,
+    dossier: dict,
+    scaffold: dict,
+    variant: dict,
+    routes: list[str],
+    npm_steps: list[dict],
+    overall_status: str,
+    target_dir: Path,
+    duration_ms: int,
+) -> dict:
+    rel_target = str(target_dir.relative_to(REPO_ROOT)).replace("\\", "/")
+    result = {
         "siteId": dossier["siteId"],
         "starterId": "marketing-base",
         "scaffoldId": scaffold["id"],
         "scaffoldVersion": scaffold["version"],
         "variantId": variant["id"],
         "language": dossier["language"],
-        "generatedAt": datetime.now(tz=timezone.utc).isoformat(),
-        "routes": [r["path"] for r in load_json(
-            SCAFFOLDS_DIR / scaffold["id"] / "routes.json"
-        )["defaultRoutes"]],
         "engineMode": "init",
         "buildSource": "scripts/build_site.py",
+        "modelUsed": "mock",
+        "briefSource": "mock-no-key",
+        "routes": routes,
+        "generatedFilesDir": rel_target,
+        "npmSteps": npm_steps,
+        "status": overall_status,
+        "runDurationMs": duration_ms,
     }
-    write(
-        target / "generation.manifest.json",
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+    write_json(run_dir / "build-result.json", result)
+    trace.event(
+        "build", "build_result_written", "done",
+        f"Build result status={overall_status}",
+        payload_path="build-result.json",
     )
+    return result
 
 
-def patch_package_json(target: Path, dossier: dict) -> None:
-    pkg_path = target / "package.json"
-    pkg = load_json(pkg_path)
-    pkg["name"] = dossier["siteId"]
-    write(pkg_path, json.dumps(pkg, ensure_ascii=False, indent=2) + "\n")
+# ---------------------------------------------------------------------------
+# Main build orchestration
+# ---------------------------------------------------------------------------
 
 
-def build(dossier_path: Path) -> Path:
+def build(
+    dossier_path: Path,
+    do_build: bool = True,
+) -> tuple[Path, Path]:
+    """Generate a site and Engine Run artefakts. Returns (target, run_dir)."""
+    started = time.monotonic()
+
     dossier = load_json(dossier_path)
+    site_id = dossier["siteId"]
     scaffold_id = dossier["scaffoldId"]
     variant_id = dossier["variantId"]
 
     scaffold_dir = SCAFFOLDS_DIR / scaffold_id
     scaffold = load_json(scaffold_dir / "scaffold.json")
+    scaffold_routes = load_json(scaffold_dir / "routes.json")
     variant = load_json(scaffold_dir / "variants" / f"{variant_id}.json")
 
-    target = GENERATED_DIR / dossier["siteId"]
+    run_id = make_run_id(site_id)
+    run_dir = RUNS_DIR / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    trace = Trace(run_id, run_dir)
+
+    print(f"runId: {run_id}")
+
+    # Phase 1: understand
+    write_phase1_understand(run_dir, trace, dossier_path, dossier, scaffold)
+
+    # Phase 2: plan
+    write_phase2_plan(
+        run_dir, trace, dossier, scaffold, scaffold_routes, variant
+    )
+
+    # Phase 3: build
+    target = GENERATED_DIR / site_id
+    trace.event("build", "started", "started", "Phase 3 build starts")
+
     print(f"Copying marketing-base -> {target}")
     copy_starter("marketing-base", target)
 
@@ -390,11 +724,68 @@ def build(dossier_path: Path) -> Path:
     print("Writing pages: /, /tjanster, /om-oss, /kontakt")
     write_pages(target, dossier)
 
-    print("Writing generation.manifest.json")
-    write_manifest(target, dossier, scaffold, variant)
+    routes_required = required_routes(scaffold_routes)
+    routes_all = all_default_routes(scaffold_routes)
+    assert_routes_present(target, routes_required)
+    trace.event(
+        "build", "files_generated", "done",
+        f"Wrote {len(routes_all)} default routes",
+    )
 
+    npm_steps: list[dict] = []
+    overall_status = "ok"
+
+    if do_build:
+        if not (target / "node_modules").exists():
+            print("Running npm install...")
+            ok, secs, last = run_npm(["npm", "install"], target)
+            npm_steps.append(
+                {"name": "npm install", "ok": ok, "seconds": round(secs, 1)}
+            )
+            trace.event(
+                "build", "npm_install", "done" if ok else "failed",
+                f"npm install ok={ok} seconds={secs:.1f}",
+            )
+            if not ok:
+                overall_status = "failed"
+                print(last, file=sys.stderr)
+
+        if overall_status == "ok":
+            print("Running npm run build...")
+            ok, secs, last = run_npm(
+                ["npm", "run", "build"], target,
+            )
+            npm_steps.append(
+                {"name": "npm run build", "ok": ok, "seconds": round(secs, 1)}
+            )
+            trace.event(
+                "build", "npm_build", "done" if ok else "failed",
+                f"next build ok={ok} seconds={secs:.1f}",
+            )
+            if not ok:
+                overall_status = "failed"
+                print(last, file=sys.stderr)
+    else:
+        overall_status = "skipped"
+        trace.event(
+            "build", "skip_build", "degraded",
+            "Build skipped via --skip-build",
+        )
+
+    duration_ms = int((time.monotonic() - started) * 1000)
+    write_build_result(
+        run_dir, trace, dossier, scaffold, variant,
+        routes_all, npm_steps, overall_status, target, duration_ms,
+    )
+
+    if overall_status == "failed":
+        trace.event("build", "completed", "failed", "Phase 3 build failed")
+        raise SystemExit(1)
+
+    trace.event("build", "completed", "done", "Phase 3 build done")
     print(f"Generated site at {target}")
-    return target
+    print(f"Run artifacts at {run_dir}")
+    return target, run_dir
 
 
 def main() -> int:
@@ -406,6 +797,11 @@ def main() -> int:
         required=True,
         help="Path to the Site Dossier JSON file.",
     )
+    parser.add_argument(
+        "--skip-build",
+        action="store_true",
+        help="Skip npm install + npm run build (file generation only).",
+    )
     args = parser.parse_args()
 
     dossier_path = Path(args.dossier).resolve()
@@ -413,7 +809,7 @@ def main() -> int:
         print(f"Dossier not found: {dossier_path}", file=sys.stderr)
         return 1
 
-    build(dossier_path)
+    build(dossier_path, do_build=not args.skip_build)
     return 0
 
 
