@@ -1514,15 +1514,6 @@ def build(
             "Build skipped via --skip-build",
         )
 
-    # Snapshot generated files into the canonical run directory.
-    print("Snapshotting generated files into run directory")
-    snapshot_generated_files(target, run_dir)
-    trace.event(
-        "build", "generated_files.snapshotted", "done",
-        "Snapshotted generated files into data/runs/<runId>/generated-files/",
-        payload_path="generated-files/",
-    )
-
     # codegenModel v1 manifest (deterministic in Sprint 3A; LLM in 3B).
     from packages.generation.codegen import produce_codegen_artefakt
 
@@ -1538,7 +1529,11 @@ def build(
         f"(source={codegen_result.source})",
     )
 
-    # Quality Gate + Repair Pipeline (real checks; ADR 0015).
+    # Quality Gate + Repair Pipeline (real checks; ADR 0015 + 0016).
+    # Repair may mutate target/, so we snapshot AFTER this call so
+    # data/runs/<runId>/generated-files/ reflects the post-repair state
+    # (Sprint 3B v1.1 fix - previously snapshotted pre-repair which
+    # made the canonical artefact stale when a fix succeeded).
     do_typecheck = overall_status == "ok"
     quality_payload, repair_payload = run_phase3_quality_and_repair(
         run_dir, target, routes_required_with_dossiers, npm_steps,
@@ -1555,6 +1550,17 @@ def build(
         f"Repair Pipeline status={repair_payload['status']} "
         f"(remainingErrors={len(repair_payload['remainingErrors'])})",
         payload_path="repair-result.json",
+    )
+
+    # Snapshot generated files into the canonical run directory.
+    # Must run AFTER Quality Gate + Repair so the snapshot captures
+    # any mechanical fixes the Repair Pipeline applied to target/.
+    print("Snapshotting generated files into run directory")
+    snapshot_generated_files(target, run_dir)
+    trace.event(
+        "build", "generated_files.snapshotted", "done",
+        "Snapshotted generated files into data/runs/<runId>/generated-files/",
+        payload_path="generated-files/",
     )
 
     # Quality Gate status propagation (ADR 0015):

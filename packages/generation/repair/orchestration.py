@@ -83,11 +83,17 @@ def execute_phase3_quality_and_repair(
         do_repair=do_repair,
     )
 
-    if (
-        repair_result.iterations > 0
-        and repair_result.qualityStatusAfter is not None
-        and repair_result.qualityStatusAfter != initial_quality.status
-    ):
+    # Sprint 3B v1.1 fix: any successful sandwich pass mutates target/
+    # so the initial QualityResult.checks list is stale even if the
+    # AGGREGATE status (ok/degraded/failed) is unchanged. A run that
+    # fixed one of two route-scan findings is still ``degraded`` after
+    # repair, but the post-repair gate has fewer findings - the
+    # operator-facing artefact must reflect that. Re-run when
+    # ``iterations > 0`` regardless of the status delta. The cost is
+    # one extra route-scan + policy-compliance walk (ms-cheap;
+    # typecheck and build-status are already either skipped or
+    # impossible to re-validate without re-running npm).
+    if repair_result.iterations > 0:
         final_quality = run_quality_gate(
             target_dir=target_dir,
             required_routes=required_routes,

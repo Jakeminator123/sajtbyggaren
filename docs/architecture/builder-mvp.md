@@ -29,6 +29,58 @@ flowchart LR
 
 Site Brief-fältet `briefSource` säger om utdatan kom från riktig LLM eller fallback: `real`, `mock-no-key`, eller `mock-llm-error`.
 
+## Phase 3 ordering (Sprint 3B v1.1)
+
+Inuti Phase 3 körs stegen i denna ordning. Sprint 3B v1.1 ändrade
+ordningen på snapshot för att fånga post-repair-tillstånd (ADR 0016
+Bug A); resten är samma som Sprint 3A.
+
+```text
+1. Copy starter -> target/
+2. Patch starter (package.json, layout.tsx, globals.css)
+3. Mount Dossier components (write to target/components/)
+4. Write pages (write to target/app/<route>/page.tsx)
+5. npm install + npm run build  (skipped when --skip-build)
+6. codegen.manifest.emitted     (trace event; no disk change)
+7. Quality Gate (initial)       (4 checks; reads target/)
+8. Repair Pipeline              (sandwich loop; may mutate target/)
+   - dispatch mechanical fixes
+   - if any success -> re-run Quality Gate
+   - cap at 3 sandwich passes / no-progress guard
+9. Quality Gate (final)         (re-run when iterations > 0; ms-cheap)
+10. Snapshot generated-files/   (POST-repair so snapshot captures fixes)
+11. write build-result.json     (status reflects post-repair gate)
+```
+
+Sprint 3B v1.1-kontrakt:
+
+- `quality-result.json` reflekterar **post-repair** Quality Gate
+  (steg 9). Pre-repair status finns på
+  `repair-result.json:qualityStatusBefore`.
+- `data/runs/<runId>/generated-files/` reflekterar **post-repair**
+  filer (steg 10) - tidigare snapshot-pre-repair gjorde att en lyckad
+  fix inte syntes i Backoffice.
+- `build-result.json:status` reflekterar **post-repair** aggregat:
+  `ok` / `degraded` / `failed` / `skipped`.
+
+### Vad Quality Gate kontrollerar och var
+
+| Check | Implementation | Kontrollerar |
+|---|---|---|
+| `typecheck` | `packages/generation/quality_gate/checks.py:run_typecheck_check` | `npx tsc --noEmit` mot `target_dir` (skippad utan `node_modules`) |
+| `route-scan` | `packages/generation/quality_gate/checks.py:run_route_scan_check` | Required routes har `page.tsx` med `export default` |
+| `build-status` | `packages/generation/quality_gate/checks.py:run_build_status_check` | Aggregerar `npm install` + `npm run build` resultat (läser, kör inte om) |
+| `policy-compliance` | `packages/generation/quality_gate/checks.py:run_policy_compliance_check` | Inga förbjudna `.env*`-filer under `target_dir` |
+
+### Vad Repair Pipeline gör och var
+
+| Steg | Implementation | Kontrollerar / muterar |
+|---|---|---|
+| Dispatch | `packages/generation/repair/repair.py:_dispatch_mechanical_fixes` | Iterar `MECHANICAL_FIXES` i prioritetsordning |
+| `ensure-default-export` | `packages/generation/repair/fixes/ensure_default_export.py` | Adresserar route-scan-findings tagged `(saknar export default)`. Heuristic: prefer `Page` > exact-one-candidate > skip. Append-only mutation. |
+| Sandwich-loop | `packages/generation/repair/repair.py:run_repair_pipeline` | Bound av `fix-registry.v1.json:loopLimits.maxTotalSandwichPasses=3` + no-progress-guard |
+| Phase-3 orchestration | `packages/generation/repair/orchestration.py:execute_phase3_quality_and_repair` | Single sandwich-anropsplats per `fix-registry`-policy |
+
 ## Kommandon
 
 Bygga ett exempel från workspace-roten:

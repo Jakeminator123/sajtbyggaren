@@ -75,6 +75,39 @@ def test_dossier_classes_are_only_soft_and_hard() -> None:
 
 
 # ---------------------------------------------------------------------------
+# ADR 0016 - F2/F3, lane and fidelity terms must stay globally forbidden
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.governance
+def test_legacy_lane_and_fidelity_terms_are_globally_forbidden() -> None:
+    """ADR 0016 reaction to the architect-reviewer round: the old
+    sajtmaskin vocabulary about modes/lanes/fidelity must not creep
+    back into sajtbyggaren. Canonical phase ordering lives in
+    engine-run.v1.json (phase 1 understand / phase 2 plan / phase 3
+    build); fix vocabulary is Quality Gate / Repair Pipeline /
+    PreviewRuntime / Mechanical Fix / LLM Fix.
+    """
+    forbidden = set(_naming().get("globallyForbidden", []))
+    for forbidden_term in [
+        "F2",
+        "F3",
+        "F2-only",
+        "F3-only",
+        "verify lane",
+        "preview lane",
+        "verify-lane",
+        "preview-lane",
+        "fidelity",
+        "fidelity levels",
+    ]:
+        assert forbidden_term in forbidden, (
+            f"'{forbidden_term}' must stay in globallyForbidden "
+            f"(ADR 0016 - no parallel vocabulary for phase/quality)."
+        )
+
+
+# ---------------------------------------------------------------------------
 # Operator-flow lock: the eight-step flow must be representable with current terms
 # ---------------------------------------------------------------------------
 

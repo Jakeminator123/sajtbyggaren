@@ -139,9 +139,16 @@ def test_ensure_default_export_appends_for_const_arrow(tmp_path):
 
 
 @pytest.mark.tooling
-def test_ensure_default_export_picks_first_component_cased_symbol(tmp_path):
-    """When multiple component-cased symbols exist, the FIRST is picked
-    so the fix is deterministic."""
+def test_ensure_default_export_prefers_page_symbol_over_others(tmp_path):
+    """When the file declares both ``Page`` and other component-cased
+    symbols, the fix MUST default-export ``Page`` because that is the
+    Next.js App Router convention for the route entry of
+    app/<route>/page.tsx.
+
+    Sprint 3B v1.0 picked the first match, which would have exported
+    ``Header`` here - that makes route-scan green but renders the
+    wrong component. Sprint 3B v1.1 (ADR 0016) prefers ``Page``.
+    """
     page = _write_page(
         tmp_path,
         "/",
@@ -158,10 +165,57 @@ def test_ensure_default_export_picks_first_component_cased_symbol(tmp_path):
 
     assert fixes[0].success is True
     text = page.read_text(encoding="utf-8")
-    # First match wins. The Header symbol is declared before Page so
-    # default export targets Header (not Page). This test pins the
-    # heuristic so a future change is intentional.
-    assert "export default Header;" in text
+    assert "export default Page;" in text
+    assert "export default Header;" not in text
+
+
+@pytest.mark.tooling
+def test_ensure_default_export_uses_only_candidate_when_no_page(tmp_path):
+    """If the file declares exactly ONE component-cased symbol and it
+    is not named ``Page``, default-export that single candidate. Common
+    for files that name the component after the route, e.g. ``Hero``,
+    ``About``."""
+    page = _write_page(
+        tmp_path,
+        "/hero",
+        "function Hero() { return <div>hero</div>; }\n",
+    )
+    quality = _make_quality_with_route_findings(
+        [_route_scan_finding(
+            "/hero", "app/hero/page.tsx", "saknar export default"
+        )]
+    )
+
+    fixes = apply_ensure_default_export(tmp_path, quality)
+
+    assert fixes[0].success is True
+    assert "export default Hero;" in page.read_text(encoding="utf-8")
+
+
+@pytest.mark.tooling
+def test_ensure_default_export_skips_when_no_page_and_multiple_candidates(
+    tmp_path,
+):
+    """File declares Header + Footer (no Page) - the fix MUST refuse
+    rather than guess wrong. Sprint 3B v1.0 would have exported
+    Header (first match); v1.1 returns success=False and leaves the
+    file untouched so the operator (or a Sprint 5+ LLM-fix) can pick.
+    """
+    body = (
+        "function Header() { return <header />; }\n"
+        "function Footer() { return <footer />; }\n"
+    )
+    page = _write_page(tmp_path, "/", body)
+    quality = _make_quality_with_route_findings(
+        [_route_scan_finding("/", "app/page.tsx", "saknar export default")]
+    )
+
+    fixes = apply_ensure_default_export(tmp_path, quality)
+
+    assert len(fixes) == 1
+    assert fixes[0].success is False
+    assert "no exportable" in fixes[0].detail.lower()
+    assert page.read_text(encoding="utf-8") == body
 
 
 @pytest.mark.tooling
@@ -526,6 +580,53 @@ def test_execute_phase3_orchestration_returns_post_repair_quality(tmp_path):
     assert final_quality.status == "ok"
     assert repair_result.status == "fixed"
     assert repair_result.iterations == 1
+
+
+@pytest.mark.tooling
+def test_execute_phase3_orchestration_reruns_when_findings_reduced_but_status_same(
+    tmp_path,
+):
+    """Sprint 3B v1.1 regression for Bug B: when a sandwich pass fixes
+    SOME findings but the aggregate status is unchanged (degraded ->
+    degraded with fewer findings), the orchestration helper must
+    still re-run Quality Gate so quality-result.json reflects the
+    reduced findings list. Sprint 3B v1.0 short-circuited on status
+    equality and returned the stale initial QualityResult.
+    """
+    _write_page(
+        tmp_path,
+        "/tjanster",
+        "function Page() { return <div>x</div>; }\n",
+    )
+    _write_page(
+        tmp_path,
+        "/utils",
+        "const cn = (...args: string[]) => args.join(' ');\n",
+    )
+
+    final_quality, repair_result = execute_phase3_quality_and_repair(
+        target_dir=tmp_path,
+        required_routes=["/tjanster", "/utils"],
+        npm_steps=[],
+        build_status="ok",
+        do_typecheck=False,
+    )
+
+    assert repair_result.iterations == 1
+    assert repair_result.status == "partial-fix"
+    # Status stays degraded (utils is unfixable), but findings list
+    # MUST shrink: pre-repair had 2 route-scan findings, post-repair
+    # has 1 (only utils remains).
+    assert final_quality.status == "degraded"
+    route_scan = next(c for c in final_quality.checks if c.name == "route-scan")
+    assert route_scan.status == "failed"
+    assert len(route_scan.findings) == 1
+    assert any("/utils" in f for f in route_scan.findings)
+    assert not any("/tjanster" in f for f in route_scan.findings), (
+        "Stale finding for /tjanster still present in final quality "
+        "result - orchestration helper short-circuited on status "
+        "equality (Sprint 3B v1.0 Bug B regressed)."
+    )
 
 
 @pytest.mark.tooling

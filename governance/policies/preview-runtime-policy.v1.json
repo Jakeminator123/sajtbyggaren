@@ -7,7 +7,7 @@
   "principles": [
     "Preview Runtime är en abstraktion. Produktkoden talar bara om 'Preview Runtime', aldrig 'VM' eller 'sandbox'.",
     "Sajtbyggaren startar med StackBlitz som default. Andra runtimes läggs till bara om eval-batchen visar bevisat behov.",
-    "Det finns EN quality gate; det finns INTE en F2- och F3-tier. Lager läggs först om eval kräver det."
+    "Det finns EN Quality Gate; nya lager läggs först om eval-batchen visar bevisat behov (se ADR 0016)."
   ],
   "default": "stackblitz",
   "runtimes": [

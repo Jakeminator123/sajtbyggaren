@@ -41,11 +41,22 @@ EXCLUDE_DIRS = {
 
 # Files that legitimately mention forbidden terms because their job is to
 # verify the terms are removed (regression tests) or document why they are
-# removed (cleanup READMEs). Keep this list short and explicit.
+# removed (cleanup READMEs / glossary entries / migration history). Keep
+# this list short and explicit.
 EXCLUDE_FILES = {
     "tests/test_naming_consistency.py",
     "packages/generation/orchestration/dossiers/README.md",
     "tests/test_no_legacy_terms.py",
+    # ADR 0016 hardened globallyForbidden with F2/F3/lane/fidelity. These
+    # three docs explicitly contrast canonical sajtbyggaren vocabulary
+    # against the legacy sajtmaskin one, so they mention F2/F3 in
+    # negative-space context (Quality Gate is NOT an F2/F3 tier; the
+    # import log says we did NOT inherit F2/F3). Excluding them keeps
+    # the historical record readable without re-allowing the terms in
+    # canonical text.
+    "docs/glossary.md",
+    "docs/known-issues.md",
+    "docs/migration/import-log.md",
 }
 
 # Fields whose values are *meant* to list forbidden terms.

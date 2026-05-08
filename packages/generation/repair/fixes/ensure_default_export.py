@@ -80,6 +80,13 @@ _EXPORTABLE_SYMBOL_RE = re.compile(
     flags=re.MULTILINE,
 )
 
+# Next.js App Router convention: the route component is the symbol
+# named ``Page`` in app/<route>/page.tsx. The fix prefers it over any
+# other component-cased symbol so a file that declares both ``Header``
+# and ``Page`` default-exports ``Page`` (the canonical route entry),
+# not the first declaration. Sprint 3B v1.1 fix - see ADR 0016.
+_PAGE_SYMBOL = "Page"
+
 # Mirrors checks._DEFAULT_EXPORT_RE so the fix never appends a default
 # export to a file that already has one (idempotency safety net even
 # though route-scan would not flag such a file).
@@ -143,18 +150,35 @@ def _candidate_paths(quality_result: QualityResult) -> list[str]:
 
 
 def _pick_exportable_symbol(text: str) -> str | None:
-    """Return the first exportable component-cased symbol in the file,
-    or None when no unambiguous candidate exists.
+    """Choose which component-cased symbol to default-export, if any.
 
-    Multiple matches are allowed (a file may declare a helper sub-
-    component before the main page); we pick the FIRST so the fix is
-    deterministic. Tests in tests/test_repair_fixes.py lock this
-    behaviour.
+    Sprint 3B v1.1 heuristic (ADR 0016, replaces v1.0 first-match):
+
+    1. If a top-level ``Page`` symbol exists, return ``"Page"``. That
+       is the Next.js App Router convention for the route entry of
+       ``app/<route>/page.tsx``; if the file declared it, it is by
+       far the most likely intended default export.
+    2. Else if exactly ONE component-cased symbol exists, return it.
+       That covers single-component files (``Hero`` only, etc.).
+    3. Else return None. Multiple candidates without ``Page`` are
+       ambiguous; default-exporting an arbitrary one risks rendering
+       the wrong component (the v1.0 first-match heuristic could
+       export a header sub-component instead of the route page).
+       Better to surface ``no exportable symbol`` and let the
+       operator (or a Sprint 5+ LLM-fix) pick.
     """
-    match = _EXPORTABLE_SYMBOL_RE.search(text)
-    if match is None:
+    matches = _EXPORTABLE_SYMBOL_RE.findall(text)
+    if not matches:
         return None
-    return match.group(1)
+
+    if _PAGE_SYMBOL in matches:
+        return _PAGE_SYMBOL
+
+    unique = list(dict.fromkeys(matches))
+    if len(unique) == 1:
+        return unique[0]
+
+    return None
 
 
 def apply_ensure_default_export(

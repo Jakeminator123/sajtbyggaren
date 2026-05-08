@@ -132,6 +132,39 @@ def test_build_site_does_not_implement_repair_inline():
 
 
 @pytest.mark.tooling
+def test_build_site_snapshot_runs_after_phase3_quality_and_repair():
+    """Sprint 3B v1.1 regression for Bug A: ``snapshot_generated_files``
+    must be called AFTER ``run_phase3_quality_and_repair`` in the
+    builder so the canonical ``data/runs/<runId>/generated-files/``
+    snapshot reflects any mechanical fixes the Repair Pipeline applied
+    to ``target/``. Sprint 3B v1.0 had snapshot first which made the
+    snapshot stale whenever a fix succeeded.
+
+    Source-level lock: read ``build()`` and assert the
+    ``snapshot_generated_files(`` call site appears AFTER the
+    ``run_phase3_quality_and_repair(`` call site.
+    """
+    import inspect
+
+    from scripts import build_site
+
+    body = inspect.getsource(build_site.build)
+    snapshot_idx = body.find("snapshot_generated_files(")
+    repair_idx = body.find("run_phase3_quality_and_repair(")
+    assert snapshot_idx > 0 and repair_idx > 0, (
+        "Both snapshot_generated_files() and "
+        "run_phase3_quality_and_repair() must be called from build()."
+    )
+    assert snapshot_idx > repair_idx, (
+        "snapshot_generated_files() must run AFTER "
+        "run_phase3_quality_and_repair() so the canonical "
+        "data/runs/<runId>/generated-files/ snapshot captures any "
+        "mechanical fixes the Repair Pipeline applied to target/. "
+        "Sprint 3B v1.0 had this order reversed (Bug A)."
+    )
+
+
+@pytest.mark.tooling
 def test_build_site_phase3_orchestration_is_thin():
     """The phase 3 wiring helper ``run_phase3_quality_and_repair`` exists
     and stays under ~50 lines. If it grows past that, Quality Gate or

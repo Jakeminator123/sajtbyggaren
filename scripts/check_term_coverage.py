@@ -132,6 +132,13 @@ COMMON_WORDS = {
     # it is not a separate domain term. Same treatment as
     # PlanningChoice / RepairFix (Sprint 2B / 3A).
     "MechanicalFixSpec",
+    # Generic React component names that appear in test fixtures, ADR
+    # examples and docstring snippets. They are standard component-
+    # cased identifiers (Header, Footer, Hero, About) used by the
+    # ensure-default-export heuristic tests and the Sprint 3B v1.1 ADR.
+    # Not domain terms - same treatment as AboutPage / ContactPage /
+    # ServicesPage above.
+    "Header", "Footer", "Hero", "About",
     # Page-komponenter som genereras i builder och i .generated/
     "AboutPage", "ContactPage", "ServicesPage", "ServicePage",
     # React / Next / shadcn-typer som dyker upp i runtime-kod

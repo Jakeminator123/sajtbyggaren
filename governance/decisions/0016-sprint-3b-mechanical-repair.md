@@ -2,6 +2,8 @@
 
 **Status:** accepted
 **Datum:** 2026-05-09
+**Senast uppdaterad:** 2026-05-09 (v1.1-tillägg: post-merge audit fixar
+bug A/B/D + term-disciplin)
 **Beroenden:** ADR 0009 (Engine Run + Model Roles), ADR 0013 (schema-lock),
 ADR 0014 (Sprint 2B planning helper), ADR 0015 (Sprint 3A codegen + Quality
 Gate + Repair skeleton).
@@ -228,3 +230,123 @@ Sprint 3B v1 anses levererad när:
 Inga nya bug-IDs öppnas av Sprint 3B. Befintliga bug B13 (produktlogik
 i scripts/) och bug B20 (commerce-base oharmoniserad) kvarstår per
 `docs/known-issues.md`.
+
+## Sprint 3B v1.1 — post-merge audit fixar
+
+Efter `deb3eca` flaggade en cloud-agent + en arkitekt-reviewer fyra
+konkreta riskpunkter. Tre var äkta buggar; en var en
+arkitektur-disciplin-rekommendation. Alla fyra åtgärdas i en separat
+patch som bygger ovanpå Sprint 3B v1 utan att bryta kontraktet.
+
+### Bug A — `generated-files/` snapshot var pre-repair
+
+`scripts/build_site.py:build()` tog `snapshot_generated_files(target,
+run_dir)` *före* `run_phase3_quality_and_repair()`. Konsekvens: när
+Repair Pipeline lyckades mutera en fil under `target/` så reflekterade
+inte längre `data/runs/<runId>/generated-files/`-snapshot:en (som
+`build-result.json:generatedFilesDir` pekar på) den faktiska post-repair-
+koden. Operatören skulle kunnat se "Repair status=fixed" men ändå läsa
+den ofixade filen i Backoffice.
+
+**Fix:** snapshot flyttas till EFTER `run_phase3_quality_and_repair`-
+anropet. Phase ordering blir nu deterministisk:
+codegen-emit → QG → Repair (som muterar `target/`) → final QG →
+snapshot → write build-result. Källkods-regression i
+`tests/test_build_site_size.py:test_build_site_snapshot_runs_after_phase3_quality_and_repair`.
+
+### Bug B — `quality-result.json` kunde visa pre-repair findings
+
+`packages/generation/repair/orchestration.py:execute_phase3_quality_and_repair`
+hade villkoret `repair_result.qualityStatusAfter !=
+initial_quality.status` för att avgöra om gate skulle re-runas en
+final gång. Konsekvens: när en sandwich-pass fixade NÅGRA findings men
+aggregat-statusen var oförändrad (degraded → degraded med färre
+findings), returnerades `initial_quality` med stale findings-list.
+`repair-result.json:remainingErrors` visade rätt subset, men
+`quality-result.json:checks[].findings` listade fortfarande det fixade
+felet.
+
+**Fix:** villkoret förenklas till bara `iterations > 0`. Kostnad: en
+extra route-scan + policy-compliance per fixed run (ms-snabbt; typecheck
+är redan skipped eller var det redan, build-status går aldrig att
+re-validera utan att köra om npm). Regression-test i
+`tests/test_repair_fixes.py:test_execute_phase3_orchestration_reruns_when_findings_reduced_but_status_same`.
+
+### Bug C — npm-build kan inte flippa `failed` → `ok` inom samma run
+
+`packages/generation/quality_gate/checks.py:run_build_status_check` läser
+det `build_status` som builderns `run_npm` redan producerade. Sandwich-
+loopen kör om Quality Gate efter en mekanisk fix, men `run_npm` kallas
+INTE om. Konsekvens: om `next build` failade på "missing default
+export" så fixar Sprint 3B v1 filen på disk, men `build-status` förblir
+`failed` så `qualityStatusAfter` blir `failed` även om route-scan flippade
+till `ok`. Operatören ser `repair-result.status="partial-fix"` istället
+för `"fixed"`.
+
+**Beslut:** detta är *inte* en bugg; det är medveten Sprint 3B v1-
+limitation. npm install + npm run build är dyra (~10s+) och re-run
+risk:erar att introducera nya fel som vår mekaniska fix inte var
+designad för. En valbar `--rebuild-after-repair`-flagga (eller `do_npm_rerun=True`-
+parameter) reserveras för Sprint 3B-next eller en explicit operator-
+opt-in. För Sprint 3B v1 är förståelsen: mekaniska fixes adresserar
+*soft failures* (route-scan, policy-compliance). *Blocking failures*
+(typecheck, build-status) kvarstår som remainingErrors tills LLM-fix
+landar (Sprint 5+ per registry's `targeted-file-repair`).
+
+### Bug D — `_pick_exportable_symbol` kunde exportera fel komponent
+
+`packages/generation/repair/fixes/ensure_default_export.py:_pick_exportable_symbol`
+returnerade FÖRSTA component-cased-symbolen i filen. Konsekvens: en
+fil med `function Header() { ... }` deklarerad före `function Page()`
+fick `export default Header;` appendad. Route-scan blev grön (default
+export finns) men Next-sidan renderar `Header`, inte `Page`.
+
+**Fix:** ny heuristic i tre steg:
+
+1. Om `Page`-symbol finns top-level → returnera `"Page"`. Det är
+   Next.js App Router-konvention för route-entry i
+   `app/<route>/page.tsx`.
+2. Annars om EXAKT EN component-cased-symbol finns → returnera den.
+   Täcker single-component-filer (`Hero` ensam, etc.).
+3. Annars `None`. Multipla candidates utan `Page` är tvetydiga;
+   default-exportering av en godtyckligt vald skulle riskera fel
+   komponent. Säkrare att returnera `success=False` och låta
+   operatören (eller en framtida LLM-fix) välja.
+
+Tests i `tests/test_repair_fixes.py`: `_prefers_page_symbol_over_others`,
+`_uses_only_candidate_when_no_page`,
+`_skips_when_no_page_and_multiple_candidates`.
+
+### Term-disciplin — utökad `globallyForbidden`
+
+Arkitekt-reviewer-rundan flaggade att den gamla sajtmaskin-vokabulären
+om mode/lane/fidelity inte får sprida sig in i sajtbyggaren. Canonical
+fas-kedjan är `engine-run.v1.json:phases` (understand/plan/build);
+canonical fix-vokabulär är `Quality Gate`, `Repair Pipeline`,
+`PreviewRuntime`, `Mechanical Fix`, `LLM Fix`. Inga "lanes", inga
+"fidelity-tiers", inga F2/F3.
+
+`governance/policies/naming-dictionary.v1.json` bumpas till v13 och
+utökar `globallyForbidden` med:
+
+- `F2`, `F3` (utöver redan blockerade `F2-only`, `F3-only`)
+- `verify lane`, `preview lane`, `verify-lane`, `preview-lane`
+- `fidelity`, `fidelity levels`
+
+Lock-test:
+`tests/test_naming_consistency.py:test_legacy_lane_and_fidelity_terms_are_globally_forbidden`.
+
+### Vad detta INTE är (utöver vad v1 redan utelämnade)
+
+- **Inte ändring av Sprint 3B v1-kontraktet.** `RepairResult`,
+  `QualityResult` och `CodegenResult` är oförändrade. Endast
+  implementation-detaljer i orchestration-helpern och
+  ensure-default-export-heuristic ändras.
+- **Inte återinförande av npm-rerun.** Bug C-beslut: dokumentera, inte
+  fixa. Sprint 3B-next eller `--rebuild-after-repair`-flagga handles
+  det.
+- **Inte ny phase eller ny artefakt.** Phase-ordningen flyttas internt;
+  artefakterna är samma som ADR 0015 låste.
+- **Inte ny canonical term.** Tvärtom: vi hårdar discipline mot
+  parallel-vokabulär.
+
