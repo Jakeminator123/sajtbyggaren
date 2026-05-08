@@ -84,6 +84,17 @@ Format per bugg:
 - **`B13` Låg** - `scripts/build_site.py` innehåller produktlogik vilket
   bryter mot `repo-boundaries.v1.json:39`. Naturlig flytt blir
   `packages/generation/build/` när ramverket växer.
+- **`B19` Medel** (öppen 2026-05-08) - Två nästan-parallella init-pipelines:
+  `scripts/build_site.py` (Project Input → Next.js + alla artefakter) och
+  `scripts/dev_generate.py` (prompt → mock artefakter). De skriver samma
+  artefakttyper men via olika kod-vägar, vilket är exakt det mönster ADR
+  0013 var skriven för att skydda mot. ADR 0013 låste artefaktkontrakten
+  och `B17` fixade en första drift-bugg, men de två scripten delar
+  fortfarande inte en planning-modul. Naturlig fix: Sprint 2B implementerar
+  planningModel som en helper i `packages/generation/planning/`, och
+  båda scripten anropar samma helper. Tills dess kvarstår risk för att
+  framtida ändringar driver isär. Markerad **öppen** (inte stängd) tills
+  båda scripten delar samma planning-helper.
 
 ## Stängda - regression-test säkrar fixet
 
@@ -120,12 +131,39 @@ Format per bugg:
   saknade `timeout`-parameter; ett hängande `npm install` eller `npm run
   build` skulle blockera buildern på obestämd tid och lämna
   `data/runs/<runId>/` halvskrivet. Fix: konstanterna
-  `NPM_INSTALL_TIMEOUT_SECONDS = 600` och `NPM_BUILD_TIMEOUT_SECONDS = 300`
-  + `subprocess.TimeoutExpired` fångas i `run_npm` och returnerar
+  `NPM_INSTALL_TIMEOUT_SECONDS = 600` och `NPM_BUILD_TIMEOUT_SECONDS = 300`,
+  `subprocess.TimeoutExpired` fångas i `run_npm` och returnerar
   `(False, elapsed, "timeout: ...")` så `build-result.json` får
   `status=failed` istället för att processen hänger. Test:
   `tests/test_builder_hardening.py::test_run_npm_returns_failure_on_timeout`
   och `test_build_calls_run_npm_with_documented_timeouts`.
+- **`B17` Medel** (stängd 2026-05-08) - `scripts/dev_generate.py`
+  build-fasen läste fortfarande gamla nycklar (`scaffold`,
+  `scaffoldVariant`) från Generation Package när placeholder-filen
+  skrevs, trots att ADR 0013 låste den canonical formen till
+  `scaffoldId` / `variantId` / `starterId`. Resultatet: placeholder
+  innehöll `// scaffold: None` istället för faktiska värden. Inget
+  produktionsproblem (det är en mock-fil) men exakt det driftmönster
+  som ADR 0013 var skriven för att blockera. Fix: byt
+  `generation_package.get('scaffold')` → `.get('scaffoldId')`,
+  `.get('scaffoldVariant')` → `.get('variantId')` plus tillägg av
+  `starterId`. Test:
+  `tests/test_dev_generate.py::test_dev_generate_placeholder_uses_canonical_field_names`.
+- **`B18` Medel** (stängd 2026-05-08) - Konceptuell namnkrock: termer
+  som `service-list`, `service-area`, `reviews`, `trust-badges`,
+  `contact-cta`, `trust-proof` användes både som **sektioner** (i
+  `local-service-business/sections.json`, vilket är korrekt per ADR
+  0012) och som **Dossier-IDs** (i `compatible-dossiers.json` och
+  `selectedDossiers.recommended` på alla tre Project Inputs:
+  `painter-palma`, `arcade-hall`, `foto-ram`). Det är samma
+  vokabulär-läcka som ADR 0012 var skriven för att rensa.
+  Fix: rensade `compatible-dossiers.json` (ingen sektion listad som
+  Dossier längre, comment-fältet förklarar varför), tomma `recommended`-
+  listor i alla tre Project Inputs (med rationale som dokumenterar
+  beslutet), `dev_generate.py` mock-plan skriver `selectedDossiers: []`
+  istället för `["contact-form", "reviews"]`. Capability-map principle
+  uppdaterad: "empty capability list = gap, not feature - planningModel
+  must not pretend to implement a capability that has no Dossier".
 
 ## Process
 

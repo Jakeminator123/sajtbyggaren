@@ -8,7 +8,8 @@
     "A capability slug is the contract; the Dossier is the implementation. New capabilities require either a Dossier under packages/generation/orchestration/dossiers/{soft,hard}/ or an explicit empty-list comment so codegen knows to surface the gap.",
     "Empty dossiers list is allowed - it means the capability is recognised but no implementation exists yet. The comment field documents the plan.",
     "default must be one of dossiers when set. It is the planningModel fallback when no other signal differentiates the candidates.",
-    "Dossier IDs match folder names under packages/generation/orchestration/dossiers/{soft,hard}/. The dossier's manifest.json declares its class and capability."
+    "Dossier IDs match folder names under packages/generation/orchestration/dossiers/{soft,hard}/. The dossier's manifest.json declares its class and capability.",
+    "Empty capability = gap, not feature. planningModel MUST NOT include a capability with an empty dossiers list in the implemented selectedDossiers of a Site Plan. It MAY surface the gap to the operator (e.g. via a notesForPlanner entry on the Site Brief) so the project either drops the capability, picks a different one or waits for the planned Dossier to be imported."
   ],
   "capabilities": {
     "interactive-game": {

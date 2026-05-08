@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
 **Datum:** 2026-05-08
-**Senaste commit på `main`:** `c8d8043` (docstring-sync efter Sprint 2A; PR #7 `3dbffe4` är den senaste merge-commit:en)
-**Aktiv branch:** `main`
+**Senaste commit på `main`:** uppdateras vid varje pre-Sprint cleanup. Kör `git log --oneline -1` för aktuell HEAD.
+**Aktiv branch:** `main` (per `governance/rules/branch-discipline.md` är direkt commit + push mot `origin/main` standardflödet — PR används bara när operatören uttryckligen ber om det).
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet.
 
@@ -11,49 +11,54 @@ Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minu
 En policy-driven hemsidegenerator som ersätter `Jakeminator123/sajtmaskin`. Mål: 9/10 kvalitet, ingen plattformsinlåsning, governance som sanningskälla.
 
 Tre lager:
+
 - **`governance/`** – JSON-policies + JSON-Schemas + ADR. Sanningskällan.
 - **`backoffice/` + `backend.py`** – Streamlit-administration (inte runtime).
 - **`packages/` + `apps/`** – framtida runtime + kund-UI (mestadels tom än).
 
 ## Vad funkar idag
 
-- ADR 0001–0012 + 14 policies + matchande schemas
-- 4 automatiska checks: `governance_validate.py`, `rules_sync.py`, `check_term_coverage.py --strict`, `pytest`
-- GitHub Actions kör alla på push/PR
-- **Sprint 2A klar (PR #7, `3dbffe4`):** både `scripts/build_site.py` och `scripts/dev_generate.py` anropar riktiga `briefModel` (gpt-5.4) via OpenAI med Pydantic structured output när `OPENAI_API_KEY` finns; mock-fallback annars. `site-brief.json` markeras med `briefSource` (`real` / `mock-no-key` / `mock-llm-error`) och `modelUsed`.
-- `scripts/build_site.py`: deterministisk Builder MVP - skriver alla canonical artefakter inkl. `generated-files/`-snapshot, kör `npm install` + `npm run build` på `.generated/<siteId>/`, gated bakom `--skip-build` för snabb iteration.
+- ADR 0001–0013 + 15 policies + matchande schemas.
+- 4 automatiska checks: `governance_validate.py`, `rules_sync.py`, `check_term_coverage.py --strict`, `pytest`. GitHub Actions kör alla på push/PR.
+- **Sprint 2A (PR #7, `3dbffe4`):** både `scripts/build_site.py` och `scripts/dev_generate.py` anropar riktiga `briefModel` (gpt-5.4) via OpenAI med Pydantic structured output när `OPENAI_API_KEY` finns; mock-fallback annars. `site-brief.json` markeras med `briefSource` (`real` / `mock-no-key` / `mock-llm-error`) och `modelUsed`. `has_openai_api_key()`-helpern stripar whitespace så `"   "` räknas som saknad nyckel.
+- **ADR 0013 schema-låsning:** site-brief, site-plan, generation-package och sections har JSON Schemas under `governance/schemas/`. Båda scripten validerar artefakter vid skrivning via `packages/generation/artifacts/validate.py`. `capability-map.v1.json` registrerar 12 capability-slugs (men bara `interactive-game` har en riktig Dossier idag).
+- `scripts/build_site.py`: deterministisk Builder MVP - skriver alla canonical artefakter inkl. `generated-files/`-snapshot. `npm install`/`npm run build` har timeouts (600s/300s) som ger `status=failed` istället för att hänga. `--skip-build` för snabb iteration.
 - `scripts/dev_generate.py`: mock-pipeline för regression - skriver alla 8 artefakter + `trace.ndjson` (fas 2-3 är mock).
 - Backoffice (`streamlit run backend.py`) visar Status, Governance, LLM Engine, Building Blocks, Engine Runs, Evals, Playground.
 - `local-service-business`-scaffolden + `marketing-base`-startern + `interactive-game-loop`-dossiern finns implementerade.
 
 ## Vad är mock än så länge
 
-- Fas 2 `planningModel`: scaffold/variant/dossier-val är deterministisk stub (planeras Sprint 2B).
+- Fas 2 `planningModel`: scaffold/variant/dossier-val är deterministisk stub. Sprint 2B-mål: koppla in `planningModel` med samma `OPENAI_API_KEY`-gate + mock-fallback-mönster.
 - Fas 3: `codegenModel`, Repair Pipeline (`packages/generation/repair/`), Quality Gate (`packages/generation/quality-gate/`), Preview Runtime - alla planerade Sprint 3-5.
-- Övriga scaffold-IDs i `scaffold-contract.v1.json` har inget content under `packages/generation/orchestration/scaffolds/<id>/`.
+- Övriga scaffold-IDs i `scaffold-contract.v1.json` har inget content under `packages/generation/orchestration/scaffolds/<id>/` - bara `local-service-business` har körbara filer. Sprint 2B lägger till en andra (rekommenderat: `ecommerce-lite`).
 - `apps/web` finns inte alls.
+- 11 av 12 capability-slugs i `capability-map.v1.json` har tom `dossiers`-lista. Hård-Dossier-import (resend-contact-form, stripe-checkout, clerk-auth, etc. från `referens/min-ide-templates/`) sker tidigast i Sprint 3.
 
-## Öppna beslut som operatör måste ta
+## Beslutsläge för arkitektur-frågor
 
-Reviewer-konversation i `referens/utlatanden/konversation-allmant-arkitektur.txt` föreslår tre arkitekturskift som inte är bekräftade än:
+Tre arkitekturförslag från tidiga reviewer-utlåtanden är **avgjorda av ADR** och hör inte längre hemma som "öppna beslut":
 
-1. **6-stegs-flow** (`Plan → Generate → Verify → Repair → Preview → Release`) ersätter dagens 3-fas (`understand → plan → build`).
-2. **4 dossier-typer** (`site / feature / integration / data`) på en separat axel från `soft / hybrid / hard`.
-3. **5 starters** (`marketing-base`, `saas-base`, `commerce-base`, `portfolio-base`, `docs-base`) under `data/starters/<id>/` istället för 14.
-4. **Scaffolds är arvet, inte hugget i sten** – se `governance/decisions/0011-scaffolds-as-inherited-working-material.md`.
+| Förslag                                               | Status                                                                                                          | Referens                                          |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| 6-stegs-flow (`Plan → Generate → ...`) ersätter 3-fas | **Avvisat.** Canonical är `understand → plan → build`.                                                          | `engine-run.v1.json`, `llm-flow-concepts.v1.json` |
+| 4 dossier-typer (`site/feature/integration/data`)     | **Avvisat.** Endast `soft` och `hard` per ADR 0012. Övriga är på `naming-dictionary.v1.json:globallyForbidden`. | ADR 0012                                          |
+| 5 starters istället för 14                            | **Accepterat som plan.** Just nu finns bara `marketing-base` med innehåll. De andra fyra är gitkeep-mappar.     | README "Starter"-listan                           |
+| Scaffolds som ärvt arbetsmaterial, inte hugget i sten | **Accepterat.**                                                                                                 | ADR 0011                                          |
 
 ## Reading order för ny agent
 
 Läs i denna ordning:
 
-1. `AGENTS.md` (top-level rules)
+1. `AGENTS.md` (top-level rules + venv-setup)
 2. `docs/glossary.md` (alla termer)
 3. `governance/policies/naming-dictionary.v1.json` (kanon)
 4. `governance/policies/engine-run.v1.json` (artefaktkedjan)
 5. `governance/policies/repo-boundaries.v1.json` (vad får importera vad)
-6. `governance/decisions/0001` till `0011` (varför vi gör som vi gör)
-7. `referens/utlatanden/konversation-allmant-arkitektur.txt` (reviewerns omtag)
+6. `governance/decisions/0001` till `0013` (varför vi gör som vi gör — särskilt 0012 vocabulary compression och 0013 schema-låsning)
+7. `governance/rules/branch-discipline.md` (commit + push direkt mot main är standard, inte PR)
 8. `docs/migration-plan.md` (sprint-läget)
+9. `docs/known-issues.md` (öppna och stängda buggar med IDs)
 
 ## Köra och testa
 
@@ -85,8 +90,8 @@ python -m pytest -q
 
 ## Commit-krav
 
-- Aldrig commit utan att alla 4 checks passerar
-- Alltid PR-flöde, aldrig push direkt till `main`
+- Aldrig commit utan att alla 4 guards passerar (se ovan)
+- Standardflöde: commit + push direkt mot `origin/main`. PR används bara när operatören explicit ber om det. Detaljer i `governance/rules/branch-discipline.md`.
 - Commit-meddelanden på engelska, dokumentation på svenska
 - ÅÄÖ ska skrivas korrekt – aldrig `\u00f6` eller ASCII-translit
 

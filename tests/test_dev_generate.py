@@ -127,6 +127,34 @@ def test_dev_generate_plan_then_build_can_resume(tmp_path: Path):
 
 
 @pytest.mark.tooling
+def test_dev_generate_placeholder_uses_canonical_field_names(tmp_path: Path):
+    """B17 regression: build placeholder must read scaffoldId/variantId/starterId
+    from the Generation Package, not the legacy 'scaffold'/'scaffoldVariant' keys
+    that used to live there before ADR 0013 schema-locked the artefact contract.
+    """
+    rc, runs_dir, output = _run_dev_generate(
+        tmp_path, "Skapa hemsida för elektriker i Malmö"
+    )
+    assert rc == 0, output
+
+    run_dir = _only_run_dir(runs_dir)
+    placeholder = (run_dir / "generated-files" / "app.tsx").read_text(encoding="utf-8")
+
+    assert "scaffold: None" not in placeholder, (
+        "B17 regressed: placeholder is reading the legacy 'scaffold' key "
+        "and rendering None instead of the canonical scaffoldId."
+    )
+    assert "variant:  None" not in placeholder, (
+        "B17 regressed: placeholder is reading the legacy 'scaffoldVariant' key "
+        "and rendering None instead of the canonical variantId."
+    )
+    pkg = json.loads((run_dir / "generation-package.json").read_text(encoding="utf-8"))
+    assert pkg["scaffoldId"] in placeholder
+    assert pkg["variantId"] in placeholder
+    assert pkg["starterId"] in placeholder
+
+
+@pytest.mark.tooling
 def test_dev_generate_language_detection(tmp_path: Path):
     rc, runs_dir, _ = _run_dev_generate(
         tmp_path, "Skapa hemsida för en elektriker i Malmö", "--phase", "brief"

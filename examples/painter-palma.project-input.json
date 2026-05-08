@@ -63,7 +63,7 @@
   },
   "selectedDossiers": {
     "required": ["interactive-game-loop"],
-    "recommended": ["service-list", "service-area", "reviews", "trust-badges"],
-    "rationale": "Pacman-proof for dossier mounting in builder while keeping local business profile."
+    "recommended": [],
+    "rationale": "Pacman-proof for dossier mounting in builder while keeping local business profile. Sections such as service-list / reviews / trust-proof live in sections.json and must not appear here as Dossier IDs (ADR 0012)."
   }
 }

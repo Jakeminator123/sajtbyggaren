@@ -11,9 +11,10 @@ Beslutet att skjuta upp baseline-eval (tidigare steg 3) tills LLM-flödet finns 
 2. **Backoffice-skelett** (klart): [`backend.py`](../backend.py) + `backoffice/`-modulen
 3. **Term-disciplin och regression-tester** (klart): scripts + `tests/` + GitHub Actions
 4. **Sprint 1 - Mock Engine Run** (klart): [`scripts/dev_generate.py`](../scripts/dev_generate.py) producerar alla 8 artefakter + `trace.ndjson` utan riktiga LLM-anrop. Låser artefaktkontraktet.
-5. **Sprint 2 - Riktig fas 1 + fas 2 + första scaffolden**: koppla in `briefModel` och `planningModel`. Skapa `local-service-business`-scaffolden med alla obligatoriska filer, en variant (`premium-local`), två dossiers (`contact-form`, `reviews`).
+5. **Sprint 2 - Riktig fas 1 + fas 2 + första scaffolden**: koppla in `briefModel` och `planningModel`. `local-service-business`-scaffolden finns redan med alla obligatoriska filer (`scaffold.json`, `routes.json`, `sections.json`, `quality-contract.json`, `compatible-dossiers.json`, `selection-profile.json`) och en variant (`nordic-trust`).
    - **Sprint 2A klar (PR #7, `3dbffe4`)**: både `scripts/build_site.py` och `scripts/dev_generate.py` anropar `briefModel` via `OPENAI_API_KEY` när nyckeln finns. Saknad nyckel eller LLM-fel faller tillbaka till Mock Mode och markerar `site-brief.json` med `briefSource` (`real`, `mock-no-key`, `mock-llm-error`) och `modelUsed`. Tester (`tests/test_builder_brief.py`) täcker real/mock-paths och determinism.
-   - Kvar att göra i Sprint 2B: koppla in `planningModel` med samma `OPENAI_API_KEY`-gate + mock-fallback-mönster (artefaktfält `planSource`/`modelUsed`/`planError`). Bygg ut `local-service-business`-scaffolden med `premium-local`-variant + `contact-form`- och `reviews`-dossiers.
+   - **ADR 0013 är klar**: artefaktkontrakt låst för `site-brief.json`, `site-plan.json`, `generation-package.json` och `sections.json`. `capability-map.v1.json` registrerar 12 capability-slugs men bara `interactive-game` har en riktig Dossier idag (`interactive-game-loop`). Alla andra slugs är dokumenterade gap som väntar på MIN_IDE-import i Sprint 3.
+   - Kvar att göra i Sprint 2B: koppla in `planningModel` med samma `OPENAI_API_KEY`-gate + mock-fallback-mönster (artefaktfält `planSource`/`modelUsed`/`planError`). Lägg till en andra scaffold (`ecommerce-lite` är reviewerns rekommendation) så Selector har något att välja mellan. Begränsa scope: ingen ny `hard` Dossier i denna sprint - `contact-form`, `reviews` etc. är **sektioner i `sections.json`**, inte Dossiers, och hård-Dossier-import sker tidigast i Sprint 3 (`resend-contact-form` planerad enligt `capability-map.v1.json`).
 6. **Sprint 3 - Riktig fas 3**: `codegenModel` + Repair Pipeline (mekaniska fixes + ev. LLM-fix) + Quality Gate (typecheck + route-scan + policy-compliance + manual score).
 7. **Sprint 4 - LocalRuntime placeholder och iframe-preview**: enklast tänkbara dev-runtime.
 8. **Sprint 5 - StackBlitzRuntime** som secondary (delningsbar preview).
@@ -48,20 +49,20 @@ sprint-numreringen.
 
 Tre April-taggar är intressanta som **inspiration** under manual port. De portas inte automatiskt.
 
-| Tag/Commit | Datum | Varför intressant |
-|------------|-------|-------------------|
+| Tag/Commit                                    | Datum      | Varför intressant                                                                                     |
+| --------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------- |
 | `ba33b28` (`baseline-before-design-priority`) | 2026-04-16 | Liten build-fix-commit; "exceptionally good generation quality" innan Design Priority-lagret tillkom. |
-| `1f4e869` (`restore-milstolpe-4232ab3`) | 2026-04 | "Simpler pipeline, richer prompts" - närmast vår målarkitektur. |
-| `04b3215` (`milestone-best-version`) | 2026-04-10 | Tagg "best generation quality so far"; bevisas inte av commit ensamt. |
+| `1f4e869` (`restore-milstolpe-4232ab3`)       | 2026-04    | "Simpler pipeline, richer prompts" - närmast vår målarkitektur.                                       |
+| `04b3215` (`milestone-best-version`)          | 2026-04-10 | Tagg "best generation quality so far"; bevisas inte av commit ensamt.                                 |
 
 ## Februari-commits (selektivt)
 
-| Commit | Område | Använd för |
-|--------|--------|------------|
-| `3e7ca17` | Builder/auth checkpoint | Builder-livscykel-mönster (kommer i `apps/`-fasen) |
-| `a5b4fb2` | Builder baseline | Builder-livscykel-mönster |
-| `29971fb` | Stream UX | Streaming-handling i UI (fas 3 codegen) |
-| `9eccc75` | Stream/builder responsiveness | Streaming-handling i UI |
+| Commit    | Område                        | Använd för                                         |
+| --------- | ----------------------------- | -------------------------------------------------- |
+| `3e7ca17` | Builder/auth checkpoint       | Builder-livscykel-mönster (kommer i `apps/`-fasen) |
+| `a5b4fb2` | Builder baseline              | Builder-livscykel-mönster                          |
+| `29971fb` | Stream UX                     | Streaming-handling i UI (fas 3 codegen)            |
+| `9eccc75` | Stream/builder responsiveness | Streaming-handling i UI                            |
 
 ## Inte-ta-med-listan
 
@@ -83,20 +84,20 @@ Tre April-taggar är intressanta som **inspiration** under manual port. De porta
 
 ## Status
 
-| Steg | Status |
-|------|--------|
-| Governance-skelett | klart |
-| Backoffice-skelett | klart |
-| Regression-tester (governance) | klart |
-| GitHub Actions (CI) | klart |
-| Sprint 1 - Mock Engine Run | klart |
-| Sprint 2 - Riktig fas 1 + fas 2 + första scaffolden | påbörjad: Sprint 2A klar, fas 2 kvar |
-| Sprint 3 - Riktig fas 3 (codegen + repair + quality gate) | inte startad |
-| Sprint 4 - LocalRuntime | inte startad |
-| Sprint 5 - StackBlitzRuntime | inte startad |
-| Sprint 6+ - Fler scaffolds, dossiers, evals | inte startad |
-| `apps/web` | inte startad |
-| Sajtmaskin-baseline-jämförelse | uppskjuten enligt [ADR 0008](../governance/decisions/0008-defer-evals-until-flow-exists.md) |
-| Builder MVP hardening (parallellspår) | klart |
-| Viewser MVP (parallellspår) | klart |
-| Vocabulary compression (parallellspår, ADR 0012) | klart |
+| Steg                                                      | Status                                                                                      |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Governance-skelett                                        | klart                                                                                       |
+| Backoffice-skelett                                        | klart                                                                                       |
+| Regression-tester (governance)                            | klart                                                                                       |
+| GitHub Actions (CI)                                       | klart                                                                                       |
+| Sprint 1 - Mock Engine Run                                | klart                                                                                       |
+| Sprint 2 - Riktig fas 1 + fas 2 + första scaffolden       | påbörjad: Sprint 2A klar, fas 2 kvar                                                        |
+| Sprint 3 - Riktig fas 3 (codegen + repair + quality gate) | inte startad                                                                                |
+| Sprint 4 - LocalRuntime                                   | inte startad                                                                                |
+| Sprint 5 - StackBlitzRuntime                              | inte startad                                                                                |
+| Sprint 6+ - Fler scaffolds, dossiers, evals               | inte startad                                                                                |
+| `apps/web`                                                | inte startad                                                                                |
+| Sajtmaskin-baseline-jämförelse                            | uppskjuten enligt [ADR 0008](../governance/decisions/0008-defer-evals-until-flow-exists.md) |
+| Builder MVP hardening (parallellspår)                     | klart                                                                                       |
+| Viewser MVP (parallellspår)                               | klart                                                                                       |
+| Vocabulary compression (parallellspår, ADR 0012)          | klart                                                                                       |

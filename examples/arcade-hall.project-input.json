@@ -75,7 +75,7 @@
   },
   "selectedDossiers": {
     "required": ["interactive-game-loop"],
-    "recommended": ["service-list", "service-area", "reviews", "trust-badges"],
-    "rationale": "Pacman på sajten är en perfekt teaser för en faktisk spelhall - besökaren får direkt en känsla för stället innan de kommer dit."
+    "recommended": [],
+    "rationale": "Pacman på sajten är en perfekt teaser för en faktisk spelhall - besökaren får direkt en känsla för stället innan de kommer dit. Sections (service-list, reviews, trust-proof) deklareras i sections.json och hör inte hit (ADR 0012)."
   }
 }

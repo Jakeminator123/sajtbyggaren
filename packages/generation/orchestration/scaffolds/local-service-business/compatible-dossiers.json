@@ -1,24 +1,11 @@
 {
-  "required": ["contact-cta"],
-  "recommended": [
-    "service-list",
-    "service-area",
-    "reviews",
-    "trust-badges",
-    "faq"
-  ],
+  "_comment": "Real Dossier IDs only. Items like 'contact-cta', 'service-list', 'reviews' and 'trust-badges' are SECTIONS (declared in sections.json) and must not appear here. ADR 0012 distinguishes Dossiers (re-usable capabilities, e.g. interactive-game-loop) from sections (parts of a single page). The recommended list is empty until the planned hard Dossiers (resend-contact-form, supabase-auth, stripe-checkout) are imported from MIN_IDE per capability-map.v1.json.",
+  "required": [],
+  "recommended": [],
   "conditional": [
     {
-      "id": "emergency-cta",
-      "when": "business has urgent response use case (electrician, plumber, locksmith)"
-    },
-    {
-      "id": "before-after-gallery",
-      "when": "visual proof improves conversion (painter, cleaner, landscaper)"
-    },
-    {
-      "id": "booking-request",
-      "when": "appointments are relevant"
+      "id": "interactive-game-loop",
+      "when": "user explicitly asks for an interactive game / mini-game / arcade element"
     }
   ],
   "disallowedByDefault": [
