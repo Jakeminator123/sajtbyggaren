@@ -57,6 +57,9 @@ EXCLUDE_DIRS = {
     "referens",
     ".streamlit",
     ".generated",
+    # Operator-only reference workspace (gitignored) - never scan as product source
+    "MIN_IDE",
+    "övrigt",
 }
 
 # Vanliga ord som inte ska räknas som domänbegrepp.
@@ -134,7 +137,7 @@ COMMON_WORDS = {
     # Viewser interna error-typer och rubriker (inte domänbegrepp)
     "RunNotFoundError", "DossierEditor",
     # Migrationsplanens prosa-rubriker för parallellspår (inte domänbegrepp)
-    "Builder MVP hardening", "Viewser MVP",
+    "Builder MVP hardening", "Viewser MVP", "Vocabulary compression",
     # Generic prose ord som dyker upp i operator-flöde-text (ADR 0012)
     "Build", "Page", "Scaffolds",
 }
