@@ -519,13 +519,29 @@ def load_selected_dossier_manifests(project_input: dict) -> list[dict]:
 
 
 def mount_dossier_components(target: Path, selected_dossiers: list[dict]) -> list[str]:
+    """Copy each dossier's components into ``components/``.
+
+    Filename collisions across dossiers are a hard build error: two dossiers
+    cannot silently overwrite each other's components. Operators must rename or
+    move the conflicting file before the build can proceed.
+    """
     copied: list[str] = []
+    seen: dict[str, str] = {}
     components_target = target / "components"
     for info in selected_dossiers:
         components_dir = info["dir"] / "components"
         if not components_dir.exists():
             continue
         for source in sorted(components_dir.glob("*.tsx")):
+            previous = seen.get(source.name)
+            if previous is not None and previous != info["id"]:
+                raise SystemExit(
+                    "Builder failed: dossier component collision -> "
+                    f"'{info['id']}' and '{previous}' both export "
+                    f"components/{source.name}. Rename one of them or move it "
+                    "into a dossier-specific subfolder before retrying."
+                )
+            seen[source.name] = info["id"]
             destination = components_target / source.name
             write(destination, source.read_text(encoding="utf-8"))
             copied.append(source.name)
@@ -652,7 +668,15 @@ def run_npm(command: list[str], cwd: Path) -> tuple[bool, float, str]:
 
 
 def build_site_brief_mock(dossier: dict, scaffold: dict) -> dict:
-    """Mock Site Brief derived from the dossier (no LLM)."""
+    """Mock Site Brief derived from the dossier (no LLM).
+
+    ``requestedCapabilities`` honours an explicit value from the Project Input,
+    including an explicit empty list. Only when the field is absent does the
+    builder fall back to the service-id stub.
+    """
+    requested = dossier.get("requestedCapabilities")
+    if requested is None:
+        requested = [svc["id"] for svc in dossier["services"]]
     return {
         "briefSource": "mock-no-key",
         "modelUsed": "mock",
@@ -664,8 +688,7 @@ def build_site_brief_mock(dossier: dict, scaffold: dict) -> dict:
         "tone": dossier["tone"],
         "trustSignals": dossier["trustSignals"],
         "conversionGoals": dossier["conversionGoals"],
-        "requestedCapabilities": dossier.get("requestedCapabilities")
-        or [svc["id"] for svc in dossier["services"]],
+        "requestedCapabilities": requested,
         "scaffoldHint": scaffold["id"],
     }
 

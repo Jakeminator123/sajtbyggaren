@@ -47,3 +47,85 @@ def test_generated_pacman_site_passes_npm_build() -> None:
         errors="replace",
     )
     assert run.returncode == 0, run.stdout + "\n" + run.stderr
+
+
+@pytest.mark.tooling
+def test_explicit_empty_requested_capabilities_is_respected() -> None:
+    """An explicit empty ``requestedCapabilities`` must NOT fall back to service ids."""
+    from scripts.build_site import build_site_brief_mock
+
+    dossier = {
+        "language": "sv",
+        "company": {"name": "Test", "businessType": "painter", "tagline": "t"},
+        "location": {"city": "x", "region": "y", "country": "z", "serviceAreas": []},
+        "tone": {"primary": "lugn", "secondary": [], "avoid": []},
+        "trustSignals": [],
+        "conversionGoals": [],
+        "services": [{"id": "interior-painting", "label": "x", "summary": "y"}],
+        "requestedCapabilities": [],
+    }
+    scaffold = {"id": "local-service-business"}
+
+    brief = build_site_brief_mock(dossier, scaffold)
+
+    assert brief["requestedCapabilities"] == [], (
+        "Explicit empty requestedCapabilities must be honoured, not silently "
+        "replaced by service ids."
+    )
+
+
+@pytest.mark.tooling
+def test_missing_requested_capabilities_falls_back_to_services() -> None:
+    """When the field is absent the legacy service-id fallback still kicks in."""
+    from scripts.build_site import build_site_brief_mock
+
+    dossier = {
+        "language": "sv",
+        "company": {"name": "Test", "businessType": "painter", "tagline": "t"},
+        "location": {"city": "x", "region": "y", "country": "z", "serviceAreas": []},
+        "tone": {"primary": "lugn", "secondary": [], "avoid": []},
+        "trustSignals": [],
+        "conversionGoals": [],
+        "services": [
+            {"id": "interior-painting", "label": "a", "summary": "b"},
+            {"id": "exterior-painting", "label": "c", "summary": "d"},
+        ],
+    }
+    scaffold = {"id": "local-service-business"}
+
+    brief = build_site_brief_mock(dossier, scaffold)
+
+    assert brief["requestedCapabilities"] == ["interior-painting", "exterior-painting"]
+
+
+@pytest.mark.tooling
+def test_dossier_component_collision_fails_fast(tmp_path: Path) -> None:
+    """Two dossiers exporting the same component filename must fail loudly."""
+    from scripts.build_site import mount_dossier_components
+
+    dossier_a = tmp_path / "dossier-a"
+    (dossier_a / "components").mkdir(parents=True)
+    (dossier_a / "components" / "card-component.tsx").write_text(
+        "export default function A() { return null; }\n", encoding="utf-8"
+    )
+
+    dossier_b = tmp_path / "dossier-b"
+    (dossier_b / "components").mkdir(parents=True)
+    (dossier_b / "components" / "card-component.tsx").write_text(
+        "export default function B() { return null; }\n", encoding="utf-8"
+    )
+
+    target = tmp_path / "site"
+
+    selected = [
+        {"id": "dossier-a", "class": "soft", "dir": dossier_a, "manifest": {}},
+        {"id": "dossier-b", "class": "soft", "dir": dossier_b, "manifest": {}},
+    ]
+
+    with pytest.raises(SystemExit) as excinfo:
+        mount_dossier_components(target, selected)
+
+    message = str(excinfo.value)
+    assert "card-component.tsx" in message
+    assert "dossier-a" in message
+    assert "dossier-b" in message
