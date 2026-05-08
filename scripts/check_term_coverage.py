@@ -139,7 +139,7 @@ COMMON_WORDS = {
     # multi-cap PascalCase icons need explicit allowlisting.
     "MapPin", "ShieldCheck", "PartyPopper", "ShoppingBag",
     # Konsumentvarumärken som dyker upp i exempel-content (inte domänbegrepp)
-    "PlayStation",
+    "PlayStation", "LinkedIn",
     "TokenMeterContext", "TokenMeterContextValue", "TokenMeterProvider", "TokenMeterState",
     "UsageDelta", "UsageSummary", "ViewerPanelProps",
     "BuildPayloadSchema", "ChatPanel", "TokenMeter", "ViewerPanel",
