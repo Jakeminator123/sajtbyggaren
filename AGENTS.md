@@ -55,12 +55,12 @@ Commands are documented in the README under "Snabbstart". Key commands:
 
 - The ruff binary is shipped inside the venv. If the binary is not on
   `$PATH`, invoke via `python -m ruff check .` or `python -m ruff format .`.
-- Run `python -m ruff check .` for the current lint count. After the
-  recent ruff auto-fix sweep (commit added in this branch) only 4
-  findings remain, all in the bug-bear family (rules b905, b017, b033)
-  and intentional - they require a code judgement call rather than an
-  auto-fix. Fix any new lint findings in dedicated `chore: ruff auto-fixes`
-  commits, never mixed with feature work.
+- Run `python -m ruff check .` for the current lint count. The baseline
+  is **0 findings** as of the post-Sprint-2B cleanup (`e8143cf` and later).
+  Any new finding is a real bug to fix, not a `noqa` candidate — `noqa`
+  comments must be backed by an ADR. Fix any new lint findings in dedicated
+  `chore: ruff auto-fixes` commits, never mixed with feature work.
+  `tests/test_docs_freshness.py` enforces that this number matches reality.
 - `.env` is not required for backoffice, mock/real engine dry-runs, governance checks or
   the test suite. `OPENAI_API_KEY` is required when you want
   `scripts/build_site.py` and `scripts/dev_generate.py` to call the real

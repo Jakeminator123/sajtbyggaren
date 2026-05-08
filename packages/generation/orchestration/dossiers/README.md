@@ -52,10 +52,21 @@ Varje `dossier.json` deklarerar `class` (soft eller hard).
 
 ## Status
 
-Inga Dossiers är implementerade än. Builder MVP läser bara ett `Project Input`
-under `examples/<siteId>.project-input.json` (t.ex. `painter-palma`) och
-patchar `marketing-base`-startern med dess content. Det är inte en formell
-Dossier-definition.
+En (1) soft Dossier är implementerad idag: [`soft/interactive-game-loop/`](soft/interactive-game-loop/)
+(capability `interactive-game`, defaultForCapability=true). Den är instructions-
+only (inga verbatim filer) och definierar state/loop/controls/collision/score/
+restart-kontraktet för spelbara mini-spel.
+
+Övriga 11 capability-slugs i [`governance/policies/capability-map.v1.json`](../../../../governance/policies/capability-map.v1.json)
+har tomma `dossiers`-listor och är dokumenterade gap (`empty list = gap, not
+feature`). De väntar på MIN_IDE-import i Sprint 3+. Ingen hard Dossier
+(stripe-checkout, supabase-auth, clerk-auth, shopify-cart) är implementerad än.
+
+Builder MVP läser primärt ett `Project Input` under
+`examples/<siteId>.project-input.json` (t.ex. `painter-palma`) och patchar
+startern (`site_plan["starterId"]`) med dess content. Det är inte en formell
+Dossier-realisering — den första riktiga Dossier-mountingen ligger i Sprint 3
+tillsammans med `codegenModel`.
 
 ## Kompatibilitet är default-allow
 

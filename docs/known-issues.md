@@ -101,6 +101,49 @@ Format per bugg:
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B23` Låg** (stängd 2026-05-08, post-audit-2) - Bug C end-to-end:
+  `build_plan_artefakts` i `scripts/build_site.py` anropar
+  `validate_site_plan(site_plan)` EFTER `merge_operator_selected_with_helper`,
+  men det specifika anrops-ordet var inte regression-skyddat. Två rena
+  enhetstester fanns för mergens beteende, ett brett schema-test fanns
+  för validatorn, men inget test gjorde det olagligt att flytta tillbaka
+  validate-anropet till **före** mergen. Fix: nytt source-regex-test
+  som hittar `merge_operator_selected_with_helper(` och
+  `validate_site_plan(site_plan)` i funktionsbody:n och säkrar att
+  validate kommer efter merge. Samma stil som B19-skyddstesterna.
+  Test: `tests/test_planning.py::test_b23_build_site_revalidates_site_plan_after_operator_merge`.
+- **`B24` Låg** (stängd 2026-05-08, post-audit-2) - Bug A coverage gap:
+  `merge_operator_selected_with_helper` har tre kodpaths (operator=None,
+  list, dict) men bara None- och dict-paths var direkt testade. List-pathen
+  (`plan.py:535-544`) var funktionellt korrekt vid läsning men hade inget
+  test som blockerade en framtida regression där t.ex. helperns
+  `rejected[]` tappas när operator skickar en plain list. Fix: två nya
+  tester för list-form-mergen. Test:
+  `tests/test_planning.py::test_merge_operator_list_with_no_helper_signal_returns_plain_list`,
+  `tests/test_planning.py::test_merge_operator_list_with_helper_gap_promotes_to_object_form`.
+- **`B25` Låg** (stängd 2026-05-08, post-audit-2) - `AGENTS.md` Gotchas-
+  stycket sade "only 4 findings remain, all in the bug-bear family"
+  trots att `python -m ruff check .` returnerade `All checks passed!`
+  (0 findings). Drift uppstod i en tidigare ruff-städ-commit som inte
+  uppdaterade AGENTS.md. Risk: ny agent läser docs och tror 4 findings
+  är "intentional", lägger tillbaka dem för konsistens. Fix: AGENTS.md
+  uppdaterad till "baseline is **0 findings**" + ny pytest-guard
+  `tests/test_docs_freshness.py::test_agents_md_ruff_baseline_claim_matches_reality`
+  som parsar AGENTS.md för "baseline is **N findings**", kör ruff,
+  och bryter om siffrorna inte matchar.
+- **`B26` Låg** (stängd 2026-05-08, post-audit-2) -
+  `packages/generation/orchestration/dossiers/README.md` sade "Inga
+  Dossiers är implementerade än" trots att `soft/interactive-game-loop/`
+  fanns på disk med `manifest.json`, `instructions.md` och
+  `components/pacman-game.tsx`. `docs/handoff.md:29` hade redan korrekt
+  status, så de två dokumenten motsa varandra. Risk: ny agent läser
+  README (ägar-pathens lokala doc) före handoff och skriver om
+  `pacman-game` från scratch. Fix: README uppdaterad med korrekt status
+  + `interactive-game-loop`-länk + förklaring att övriga 11 capability-
+  slugs är gap. Ny pytest-guard
+  `tests/test_docs_freshness.py::test_dossier_readme_implementation_status_matches_disk`
+  walkar `soft/`, `hard/` och bryter om README påstår 0 Dossiers när disk
+  har minst en, eller om en disk-Dossier inte nämns vid id i README.
 - **`B21` Medel** (stängd 2026-05-08) - `filter_capabilities()` i
   `packages/generation/planning/plan.py` antog att `default` i
   `capability-map.v1.json` alltid fanns i capabilityns `dossiers`-lista.
@@ -184,7 +227,8 @@ Format per bugg:
   alltid speglar verkligheten. Builder läser nu också `starterId` från
   planen istället för att hårdkoda `marketing-base` i `copy_starter`-anropet,
   vilket gör `produce_site_plan` faktiskt auktoritativ.
-  Fix: Sprint 2B-commit. Tester:
+  Fix: `c70392e` (Sprint 2B-commit), tightened by `6582040` (post-audit-1
+  cleanup) och `e8143cf` (hygiene pass). Tester:
   `tests/test_planning.py::test_b19_dev_generate_imports_produce_site_plan`,
   `tests/test_planning.py::test_b19_build_site_imports_produce_site_plan`,
   `tests/test_planning.py::test_b19_neither_script_keeps_legacy_local_planner_function`,

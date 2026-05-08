@@ -509,6 +509,54 @@ def test_merge_keeps_operator_required_and_appends_helper_rejected():
 
 
 # ---------------------------------------------------------------------------
+# B24 closure: merge_operator_selected_with_helper(operator=list) path
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_merge_operator_list_with_no_helper_signal_returns_plain_list():
+    """When operator passes selectedDossiers as a flat list AND helper has
+    no rejected/rationale to report, the merge stays in the simple list form.
+    The site-plan schema accepts both shapes via oneOf.
+    """
+    operator = ["interactive-game-loop"]
+    helper_payload = {
+        "required": [],
+        "recommended": ["interactive-game-loop"],
+        "conditional": [],
+    }
+    merged = merge_operator_selected_with_helper(operator, helper_payload)
+    assert merged == ["interactive-game-loop"]
+
+
+@pytest.mark.tooling
+def test_merge_operator_list_with_helper_gap_promotes_to_object_form():
+    """When operator passes selectedDossiers as a list but the helper has
+    a rejected[] gap report, the merge MUST upgrade to object form so the
+    gap survives. Dropping it would silently erase the operator's view of
+    which capabilities are still missing - exactly what Bug A guarded.
+    """
+    operator = ["interactive-game-loop"]
+    helper_payload = {
+        "required": [],
+        "recommended": ["interactive-game-loop"],
+        "conditional": [],
+        "rationale": "Helper rationale",
+        "rejected": [{"id": "payments", "reason": "No Dossier implemented yet."}],
+    }
+    merged = merge_operator_selected_with_helper(operator, helper_payload)
+    assert isinstance(merged, dict), (
+        "Helper-reported gaps require object-form selectedDossiers so the "
+        "rejected[] survives. List form would silently drop the gap report."
+    )
+    assert merged["recommended"] == ["interactive-game-loop"]
+    assert merged["rejected"] == [
+        {"id": "payments", "reason": "No Dossier implemented yet."}
+    ]
+    assert merged["rationale"] == "Helper rationale"
+
+
+# ---------------------------------------------------------------------------
 # B19 closure: source-code regression on the two scripts
 # ---------------------------------------------------------------------------
 
@@ -555,4 +603,54 @@ def test_b19_neither_script_keeps_legacy_local_planner_function():
     ) is None, (
         "The inline pre-Sprint-2B mock plan literal was removed in Sprint 2B. "
         "Plan construction must go through produce_site_plan."
+    )
+
+
+# ---------------------------------------------------------------------------
+# B23 closure: build_plan_artefakts must revalidate the site plan AFTER
+# the operator-merge step. produce_site_plan validates internally, but the
+# subsequent merge_operator_selected_with_helper call mutates
+# selectedDossiers, which means the post-merge plan is a NEW object that
+# has not been schema-validated yet. Bug C tracked this gap.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_b23_build_site_revalidates_site_plan_after_operator_merge():
+    """If a future refactor removes the post-merge ``validate_site_plan(site_plan)``
+    call from ``build_plan_artefakts``, this guard fails loudly. The
+    validation must come AFTER the merge - validating the helper output
+    before merging is not enough because the merge can introduce shapes
+    that the schema rejects (or, worse, drop required fields).
+    """
+    source = (SCRIPTS_DIR / "build_site.py").read_text(encoding="utf-8")
+
+    func_match = re.search(
+        r"def\s+build_plan_artefakts\s*\([\s\S]*?(?=\ndef\s|\Z)",
+        source,
+    )
+    assert func_match is not None, (
+        "build_plan_artefakts function not found in scripts/build_site.py. "
+        "If it was renamed, update this test to point at the new symbol."
+    )
+    body = func_match.group(0)
+
+    merge_pos = body.find("merge_operator_selected_with_helper(")
+    revalidate_pos = body.find("validate_site_plan(site_plan)")
+
+    assert merge_pos != -1, (
+        "build_plan_artefakts must call merge_operator_selected_with_helper "
+        "to fold operator-selected dossiers into the helper output. Bug A "
+        "tracked the regression where this merge was skipped."
+    )
+    assert revalidate_pos != -1, (
+        "build_plan_artefakts must call validate_site_plan(site_plan) AFTER "
+        "the merge. Bug C tracked the regression where the post-merge plan "
+        "was written to disk without re-validation."
+    )
+    assert revalidate_pos > merge_pos, (
+        "validate_site_plan(site_plan) must come AFTER "
+        "merge_operator_selected_with_helper. If you reversed them, the "
+        "validation runs against the pre-merge plan and the merge can "
+        "smuggle in a payload that violates site-plan.schema.json."
     )
