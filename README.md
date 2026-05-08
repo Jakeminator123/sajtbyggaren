@@ -8,6 +8,32 @@ Projektet är en kontrollerad ombyggnad av [`Jakeminator123/sajtmaskin`](https:/
 
 > Policies styr arkitekturen. Koden härleds. Allt annat är referens.
 
+## Operator-flödet (åtta steg)
+
+Låst i [ADR 0012](governance/decisions/0012-vocabulary-compression.md):
+
+```text
+Init Prompt
+  ↓
+Project Input (Deep Brief)         examples/<siteId>.project-input.json
+  ↓
+Starter                            data/starters/<starterId>/
+  ↓
+Scaffold                           packages/generation/orchestration/scaffolds/<scaffoldId>/
+  ↓
+Variant                            .../scaffolds/<scaffoldId>/variants/<variantId>.json
+  ↓
+Dossier (soft eller hard)          packages/generation/orchestration/dossiers/<class>/<dossierId>/
+  ↓
+Generation Package
+  ↓
+Build                              .generated/<siteId>/  +  data/runs/<runId>/
+```
+
+`painter-palma` är ett `Project Input`, inte en Dossier. `pacman-game` är en
+soft Dossier. `stripe-checkout` är en hard Dossier. Inga andra dossier-typer
+(Site/Feature/Integration/Data/Hybrid) finns; de är globally forbidden.
+
 ## Tre lager
 
 ```text
@@ -113,6 +139,9 @@ Detaljer: [`engine-run.v1.json`](governance/policies/engine-run.v1.json), [ADR 0
 | Sprint 6+ - Fler scaffolds, dossiers, evals | inte startad |
 | `apps/web` | inte startad |
 | Sajtmaskin-baseline-jämförelse | uppskjuten ([ADR 0008](governance/decisions/0008-defer-evals-until-flow-exists.md)) |
+| Builder MVP hardening (parallellspår) | klart |
+| Viewser MVP (parallellspår) | klart |
+| Vocabulary compression (parallellspår, [ADR 0012](governance/decisions/0012-vocabulary-compression.md)) | klart |
 
 Detaljer: [`docs/migration-plan.md`](docs/migration-plan.md).
 

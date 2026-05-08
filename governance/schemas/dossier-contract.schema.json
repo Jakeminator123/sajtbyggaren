@@ -34,7 +34,7 @@
         "additionalProperties": false,
         "required": ["class", "definition", "examples"],
         "properties": {
-          "class": { "enum": ["soft", "hybrid", "hard"] },
+          "class": { "enum": ["soft", "hard"] },
           "definition": { "type": "string" },
           "examples": { "type": "array", "items": { "type": "string" } }
         }
@@ -51,10 +51,9 @@
         "additionalRequiredFilesByClass": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["soft", "hybrid", "hard"],
+          "required": ["soft", "hard"],
           "properties": {
             "soft": { "type": "array", "items": { "type": "string" } },
-            "hybrid": { "type": "array", "items": { "type": "string" } },
             "hard": { "type": "array", "items": { "type": "string" } }
           }
         }
@@ -64,10 +63,9 @@
     "activationFieldRequirements": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["soft", "hybrid", "hard"],
+      "required": ["soft", "hard"],
       "properties": {
         "soft": { "type": "object" },
-        "hybrid": { "type": "object" },
         "hard": { "type": "object" }
       }
     },

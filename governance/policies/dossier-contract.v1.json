@@ -1,63 +1,47 @@
 {
   "$schema": "../schemas/dossier-contract.schema.json",
   "policyId": "dossier-contract.v1",
-  "version": 1,
+  "version": 2,
   "status": "draft-but-authoritative",
-  "purpose": "Definierar vad en Dossier är, vilka klasser som finns, och exakt vilken filstruktur och vilka fält varje Dossier måste följa.",
+  "purpose": "Definierar vad en Dossier är, vilka klasser som finns, och exakt vilken filstruktur och vilka fält varje Dossier måste följa. Version 2 (ADR 0012) tar bort 'hybrid' som klass; en Dossier som behöver mock i designläge är 'hard' med mockMode-konfiguration.",
   "principles": [
-    "Dossier är en återanvändbar capability-/kunskapsmodul, inte en komponent.",
-    "Dossiers är portabla. Dossier-realiseringar är scaffold-specifika.",
-    "Samma Dossier kan användas i flera Scaffolds, men UI/fält/route varierar med scaffold + brief + policy.",
-    "Hard Dossiers kräver explicit eller stark semantisk signal; Soft Dossiers kan aktiveras via brief alone."
+    "Dossier är en återanvändbar capability/legokloss, inte en komponent och inte ett konkret kundprojekt (det är Project Input).",
+    "En Dossier har default-kompatibilitet med alla Scaffolds tills den explicit deklarerar 'incompatibleScaffolds'.",
+    "Hard Dossiers kräver explicit eller stark semantisk signal; Soft Dossiers kan aktiveras via brief alone.",
+    "En Dossier deklarerar exakt en 'capability' (t.ex. payments, ai-chat, faq-section, interactive-game)."
   ],
   "dossierClasses": [
     {
       "class": "soft",
-      "definition": "Påverkar content/layout men kräver ingen extern integration eller env.",
-      "examples": ["reviews", "faq", "service-area", "gallery", "team-section"]
-    },
-    {
-      "class": "hybrid",
-      "definition": "Kan renderas som mock i designläge men kräver backend/env i integrationsläge.",
-      "examples": ["contact-form", "booking-request", "newsletter", "map-location"]
+      "definition": "Återanvändbar frontend/content capability utan secrets eller externa API:er.",
+      "examples": ["pacman-game", "mouse-reactive-background", "pricing-calculator", "before-after-slider", "faq-accordion"]
     },
     {
       "class": "hard",
-      "definition": "Kräver env, backend, databas, auth, betalning eller extern API. Mockas inte.",
-      "examples": ["auth", "payments", "database", "email", "storage"]
+      "definition": "Kräver env, secrets, backend, auth, databas, betalning eller extern API. Får ha mockMode-konfiguration för designläge.",
+      "examples": ["stripe-checkout", "supabase-auth", "clerk-auth", "shopify-cart", "openai-chat"]
     }
   ],
   "dossierDirectoryLayout": {
     "ownerPackage": "packages/generation/orchestration/dossiers",
     "perDossierPath": "packages/generation/orchestration/dossiers/<class>/<dossierId>/",
     "requiredFilesAllClasses": [
-      "dossier.json",
-      "prompt.md",
-      "code-contract.json"
+      "manifest.json",
+      "instructions.md"
     ],
     "additionalRequiredFilesByClass": {
-      "soft": ["examples.md"],
-      "hybrid": ["env-contract.json", "examples.md"],
-      "hard": ["env-contract.json", "integration-contract.json", "evals.json"]
+      "soft": [],
+      "hard": []
     }
   },
   "dossierJsonRequiredFields": [
     "id",
-    "version",
-    "class",
     "label",
-    "purpose",
-    "bestFor",
-    "activation",
-    "affects",
-    "promptContract"
+    "capability",
+    "summary"
   ],
   "activationFieldRequirements": {
     "soft": {
-      "selectionMode": "semantic",
-      "requiresUserMention": false
-    },
-    "hybrid": {
       "selectionMode": "semantic",
       "requiresUserMention": false
     },
@@ -73,6 +57,7 @@
     "alias för Dossier som inte står i naming-dictionary",
     "automatisk injektion i alla Scaffolds utan compatibility-check",
     "hårdkodade hemligheter eller exempel-API-nycklar",
-    "duplicerad scorecard som inte härleds från page-quality-traits"
+    "duplicerad scorecard som inte härleds från page-quality-traits",
+    "klassen 'hybrid' (borttagen i ADR 0012; använd 'hard' med mockMode istället)"
   ]
 }

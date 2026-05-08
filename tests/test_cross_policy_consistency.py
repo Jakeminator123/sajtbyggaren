@@ -225,9 +225,10 @@ def test_preview_runtime_forbidden_terms_are_in_globally_forbidden(
 
 @pytest.mark.governance
 def test_dossier_classes_are_well_known(dossier_contract: dict):
+    """ADR 0012: only soft and hard remain as canonical dossier classes."""
     classes = {c["class"] for c in dossier_contract["dossierClasses"]}
-    assert classes == {"soft", "hybrid", "hard"}, (
-        f"dossierClasses must be exactly soft/hybrid/hard, got {sorted(classes)}"
+    assert classes == {"soft", "hard"}, (
+        f"dossierClasses must be exactly soft/hard, got {sorted(classes)}"
     )
 
 
