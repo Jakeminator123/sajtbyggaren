@@ -1269,32 +1269,30 @@ def run_phase3_quality_and_repair(
     overall_status: str,
     do_typecheck: bool,
 ) -> tuple[dict, dict]:
-    """Thin wiring around packages/generation/{quality_gate, repair}.
+    """Thin wiring around packages/generation/repair (which itself
+    orchestrates quality_gate + repair).
 
-    Sprint 3A replaces the previous skeleton writers with real Quality
-    Gate checks (typecheck/route-scan/build-status/policy-compliance)
-    and a no-fix-applied Repair Pipeline. All product logic lives in
-    the two packages; this function stays in scripts/ as the
-    orchestrator-level wiring per ADR 0015.
+    Sprint 3B routes the full sandwich loop through
+    ``execute_phase3_quality_and_repair`` so this function stays at
+    fewer than 60 lines and contains no Quality Gate or Repair logic.
+    All product logic lives in the packages per ADR 0015 + 0016 +
+    repo-boundaries.v1.json. ``quality-result.json`` records the FINAL
+    (post-repair) Quality Gate output; pre-repair status is preserved
+    on ``repair-result.json:qualityStatusBefore``.
     """
-    from packages.generation.quality_gate import run_quality_gate
-    from packages.generation.repair import run_repair_pipeline
+    from packages.generation.repair import execute_phase3_quality_and_repair
 
-    quality_result = run_quality_gate(
+    final_quality, repair_result = execute_phase3_quality_and_repair(
         target_dir=target,
         required_routes=routes_required,
         npm_steps=npm_steps,
         build_status=overall_status,
         do_typecheck=do_typecheck,
     )
-    quality_payload = quality_result.model_dump()
+
+    quality_payload = final_quality.model_dump()
     write_json(run_dir / "quality-result.json", quality_payload)
 
-    repair_result = run_repair_pipeline(
-        quality_result,
-        target_dir=target,
-        do_repair=overall_status != "skipped",
-    )
     repair_payload = repair_result.model_dump()
     write_json(run_dir / "repair-result.json", repair_payload)
 

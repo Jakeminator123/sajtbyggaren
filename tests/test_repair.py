@@ -58,8 +58,11 @@ def test_repair_returns_not_needed_when_quality_is_ok(tmp_path):
 
 @pytest.mark.tooling
 def test_repair_returns_no_fix_applied_on_failed_quality(tmp_path):
-    """Sprint 3A v1: failures are surfaced in remainingErrors but not
-    fixed (no mechanical or LLM fixes implemented yet).
+    """Sprint 3B v1: typecheck failures cannot be repaired by the
+    current mechanical fix registry (which only ships
+    ``ensure-default-export``), so they remain surfaced in
+    remainingErrors with the Sprint 3B v1 reason that explains why no
+    fix was applied. Sprint 5+ wires LLM-fix for typecheck failures.
 
     Uses typecheck=failed so _aggregate_status returns "failed" (a
     blocking check). route-scan-only failure aggregates to "degraded",
@@ -84,7 +87,8 @@ def test_repair_returns_no_fix_applied_on_failed_quality(tmp_path):
     assert result.mechanicalFixesApplied == []
     assert result.llmFixesApplied == []
     assert any("typecheck: " in err for err in result.remainingErrors)
-    assert "Sprint 3A v1" in result.reason
+    assert "Sprint 3B v1" in result.reason
+    assert result.iterations == 0
 
 
 @pytest.mark.tooling

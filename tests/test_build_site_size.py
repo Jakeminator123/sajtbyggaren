@@ -49,20 +49,48 @@ def test_build_site_does_not_reintroduce_skeleton_writers():
 
 @pytest.mark.tooling
 def test_build_site_imports_sprint_3a_packages():
-    """The thin wiring depends on importing all three Sprint 3A packages.
-    If a refactor drops one of them, the pipeline silently regresses
-    to skeleton or worse.
+    """The thin wiring depends on the Sprint 3A+ packages.
+
+    Sprint 3A required direct imports of all three packages
+    (codegen, quality_gate, repair). Sprint 3B (ADR 0016) routes
+    Quality Gate through ``packages.generation.repair`` because the
+    fix-registry policy mandates that the sandwich pattern (mechanical
+    -> validate -> mechanical -> ...) lives in EXACTLY ONE place. As a
+    result ``packages.generation.quality_gate`` is now an indirect
+    dependency for scripts/, called via
+    ``execute_phase3_quality_and_repair`` in
+    ``packages/generation/repair/orchestration.py``.
+
+    This test enforces:
+    - Direct imports of codegen + repair must remain in scripts/.
+    - The repair package must import quality_gate (so the indirection
+      cannot silently drop the gate).
     """
     source = BUILD_SITE.read_text(encoding="utf-8")
     for module in (
         "packages.generation.codegen",
-        "packages.generation.quality_gate",
         "packages.generation.repair",
     ):
         assert module in source, (
             f"scripts/build_site.py must import {module}. "
-            f"Sprint 3A wiring is incomplete without it (ADR 0015)."
+            f"Sprint 3A+ wiring is incomplete without it "
+            f"(ADR 0015 + 0016)."
         )
+
+    repair_orch = (
+        REPO_ROOT
+        / "packages"
+        / "generation"
+        / "repair"
+        / "orchestration.py"
+    )
+    repair_orch_source = repair_orch.read_text(encoding="utf-8")
+    assert "from packages.generation.quality_gate" in repair_orch_source, (
+        "packages/generation/repair/orchestration.py must import "
+        "quality_gate so the Sprint 3B sandwich loop can re-run the "
+        "gate after applying a mechanical fix (ADR 0016 + "
+        "fix-registry.v1.json:loopLimits)."
+    )
 
 
 @pytest.mark.tooling

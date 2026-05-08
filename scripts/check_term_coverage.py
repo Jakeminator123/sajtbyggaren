@@ -127,6 +127,11 @@ COMMON_WORDS = {
     "CodegenSource", "CodegenFileSource", "CodegenFileRole",
     "QualityStatus", "CheckStatus", "CheckName",
     "RepairStatus",
+    # Sprint 3B mechanical fix dispatcher metadata. ``MechanicalFixSpec``
+    # is a Python dataclass that mirrors fix-registry.v1.json entries;
+    # it is not a separate domain term. Same treatment as
+    # PlanningChoice / RepairFix (Sprint 2B / 3A).
+    "MechanicalFixSpec",
     # Page-komponenter som genereras i builder och i .generated/
     "AboutPage", "ContactPage", "ServicesPage", "ServicePage",
     # React / Next / shadcn-typer som dyker upp i runtime-kod
