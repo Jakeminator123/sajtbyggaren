@@ -1,11 +1,48 @@
+# Dependency and build outputs
 node_modules
 dist
 build
-#.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.development
-.env.test
-.env.production
+.next
+out
+.turbo
+
+# Python caches and venv
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Engine Run artefakter och dev-output
+data/runs/
+data/versions/
+.generated/
+
+# Env-filer (alla varianter); .env.example forblir lasbar
+.env
+.env.*
+!.env.example
+
+# Operator-only material som inte ska indexeras av Cursor
+MIN_IDE/
+
+# Tunga binarer under referens/. Text-utlatanden och .json/.md/.txt-content
+# dar ar fortsatt sokbara for agenten - bara binarfiler ignoreras.
+referens/**/*.png
+referens/**/*.jpg
+referens/**/*.jpeg
+referens/**/*.gif
+referens/**/*.webp
+referens/**/*.zip
+referens/**/*.rar
+referens/**/*.tar
+referens/**/*.tar.gz
+referens/**/*.tgz
+referens/**/*.7z
+referens/**/*.pdf
+
+# Tmp och logs
+*.log
+.tmp-*
+.tmp.*
