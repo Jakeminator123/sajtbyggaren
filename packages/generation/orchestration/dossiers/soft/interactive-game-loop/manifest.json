@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../../../../governance/schemas/dossier.schema.json",
+  "id": "interactive-game-loop",
+  "label": "Interactive Game Loop",
+  "capability": "interactive-game",
+  "class": "soft",
+  "codeFidelity": "rewritable",
+  "complexity": "medium",
+  "defaultForCapability": true,
+  "summary": "Instructions-only dossier for playable mini-games (Pac-Man, Snake, Tetris, platformers, arcade clones, quiz games). Enforces the state + loop + controls + collision + score + restart contract so output is actually playable rather than a static screenshot-alike. No verbatim files — game rules and visuals are always project-specific.",
+  "envVars": [],
+  "dependencies": [],
+  "files": [],
+  "exposes": [],
+  "lastVerified": "2026-05-01"
+}
