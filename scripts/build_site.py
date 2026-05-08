@@ -27,7 +27,7 @@ import subprocess
 import sys
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -64,7 +64,7 @@ _ALLOWED_ENV_NAMES = {".env.example"}
 
 
 def utc_now() -> datetime:
-    return datetime.now(tz=timezone.utc)
+    return datetime.now(tz=UTC)
 
 
 def make_run_id(site_id: str) -> str:
