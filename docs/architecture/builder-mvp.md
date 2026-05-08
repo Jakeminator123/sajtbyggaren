@@ -1,6 +1,6 @@
 # Builder MVP
 
-Deterministisk byggare som binder ihop kedjan Project Input + Starter + Scaffold + Variant till en körbar Next.js-sajt. Sedan Sprint 2A anropar fas 1 riktiga `briefModel` när `OPENAI_API_KEY` finns och faller annars tillbaka till en deterministisk mock. Fas 2 och 3 är fortfarande deterministiska stubs - ingen riktig planering, ingen riktig codegen, ingen Repair Pipeline, ingen Quality Gate.
+Deterministisk byggare som binder ihop kedjan Project Input + Starter + Scaffold + Variant till en körbar Next.js-sajt. Sedan Sprint 2B anropar fas 1 riktiga `briefModel` och fas 2 `planningModel` (via `packages/generation/planning/produce_site_plan`) när `OPENAI_API_KEY` finns, med mock fallback för båda. Fas 3 är fortfarande deterministisk stub - ingen riktig codegen, ingen Repair Pipeline, ingen Quality Gate.
 
 ## Vad den gör
 
@@ -17,7 +17,7 @@ flowchart LR
   Input[Project Input] --> Phase1[Phase 1 understand]
   Phase1 --> Brief[site-brief.json briefModel or mock]
   Phase1 --> Phase2[Phase 2 plan]
-  Phase2 --> Plan[site-plan.json mock]
+  Phase2 --> Plan[site-plan.json via produce_site_plan real-or-mock]
   Phase2 --> Pkg[generation-package.json]
   Phase2 --> Phase3[Phase 3 build]
   Phase3 --> Files[".generated/<siteId>/ pages"]
@@ -91,7 +91,7 @@ Total runtime: 7.6 s, exit: 0
 }
 ```
 
-`trace.ndjson` har 13 Engine Events fördelade över understand (4), plan (4) och build (5).
+`trace.ndjson` har nu fler än 13 Engine Events: Sprint 2B lade till plan-händelser (`planning.calling-llm`, `planning.mock`, `planning.degraded`) i `scripts/dev_generate.py`. Exakt antal beror på code path (`real` vs `mock-*`).
 
 ## Engine Run-artefakter
 
@@ -101,7 +101,7 @@ Total runtime: 7.6 s, exit: 0
 |----------|---------------|----------|
 | `input.json` | understand | Den oförändrade inmatningen plus `runId`, `mode=init`, `dossierPath` (Project Input-path), `detectedLanguage` |
 | `site-brief.json` | understand | Site Brief från `briefModel` när `OPENAI_API_KEY` är satt (`briefSource=real`, `modelUsed=gpt-5.4`), annars mock med `briefSource=mock-no-key` eller `briefSource=mock-llm-error` om LLM-anropet failade |
-| `site-plan.json` | plan | Vald Scaffold + Variant + routes + valda dossiers + BuildSpec (deterministisk stub - planningModel kopplas i Sprint 2B) |
+| `site-plan.json` | plan | Vald Scaffold + Variant + routes + valda dossiers + BuildSpec via `produce_site_plan` (`planSource`: `real` / `mock-no-key` / `mock-llm-error` / `pinned`) |
 | `generation-package.json` | plan | Sammanfattning av vad codegen-LLM skulle få (utan att vi anropar någon) |
 | `generated-files/` | build | Snapshot av filerna under `.generated/<siteId>/` exklusive `node_modules` och `.next` |
 | `repair-result.json` | build | `status=not-run` skeleton tills Repair Pipeline byggs i Sprint 3 |
@@ -126,7 +126,7 @@ Buildern har sex hårda spärrar:
 
 Det här gör Builder MVP **inte** efter Sprint 2A. Operatören får utöka när nästa milstolpe är låst.
 
-- Fas 2 (`planningModel`) är fortfarande mock - scaffold/variant/dossiers väljs deterministiskt utan LLM. Sprint 2B kopplar in det.
+- Fas 2 körs via `produce_site_plan`; builder-pathen är `pinned` (Project Input styr scaffold/variant), dev-driver kan köra real `planningModel` när nyckel finns.
 - Fas 3 är deterministisk patch på `marketing-base` - ingen `codegenModel`, ingen Repair Pipeline (`packages/generation/repair/`), ingen Quality Gate (`packages/generation/quality-gate/`). Sprint 3 levererar dessa.
 - Ingen Stripe, Supabase, Clerk, Shopify eller annan `hard` Dossier.
 - Ingen preview-release och inget `Promoted Site`-läge.

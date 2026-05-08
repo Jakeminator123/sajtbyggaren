@@ -1,5 +1,0 @@
-{
-  "capabilities": {
-    "interactive-game": ["interactive-game-loop"]
-  }
-}

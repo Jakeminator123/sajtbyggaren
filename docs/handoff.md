@@ -31,7 +31,7 @@ Tre lager:
 ## Vad är mock än så länge
 
 - Fas 3: `codegenModel`, Repair Pipeline (`packages/generation/repair/`), Quality Gate (`packages/generation/quality-gate/`), Preview Runtime - alla planerade Sprint 3-5.
-- `data/starters/commerce-base/` är fortfarande oharmoniserad zip/README. Ecommerce-lite mappar därför till `marketing-base` tills en separat starter-harmoniserings-sprint plockar upp `vercel/commerce`-zipen, kör Next-codemods och bryter ut Shopify-integrationen till en hard Dossier (se `docs/known-issues.md` `P2B-COMMERCE`).
+- `data/starters/commerce-base/` är fortfarande oharmoniserad zip/README. Ecommerce-lite mappar därför till `marketing-base` tills en separat starter-harmoniserings-sprint plockar upp `vercel/commerce`-zipen, kör Next-codemods och bryter ut Shopify-integrationen till en hard Dossier (se issue-id b20 i `docs/known-issues.md`).
 - Övriga 12 scaffold-IDs i `scaffold-contract.v1.json` har inget content under `packages/generation/orchestration/scaffolds/<id>/` - bara `local-service-business` och `ecommerce-lite` har körbara filer.
 - `apps/web` finns inte alls.
 - 11 av 12 capability-slugs i `capability-map.v1.json` har tom `dossiers`-lista. Hård-Dossier-import (resend-contact-form, stripe-checkout, clerk-auth, commerce-shopify, etc. från `referens/min-ide-templates/` och `data/starters/commerce-base/commerce-main.zip`) sker tidigast i Sprint 3. `produce_site_plan` registrerar dem som `selectedDossiers.rejected[]` med `comment` från capability-map som motivering.

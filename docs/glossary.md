@@ -46,6 +46,7 @@ Termer i `code` är de kanoniska namnen. Allt annat (synonymer, alias) är förb
 | `Word Matching` | Direkt strängmatchning mot promptens innehåll. Tillåtet **endast** som svag signal eller guardrail; aldrig som primär selector. Förbjudet att direkt välja `Scaffold` på ord. |
 | `Policy Gate` | Filtersteg som avvisar val som bryter mot policies, även om embedding och LLM rekommenderar dem. |
 | `Selection Trace` | Strukturerad logg över `Scaffold`-/`Dossier`-val: kandidater, scores, LLM-reasons, accept/reject. Sparas under `data/runs/<runId>/`. |
+| `Capability Map` | Policyfilen [`capability-map.v1.json`](../governance/policies/capability-map.v1.json) som mappar capability-slugs till implementerade `Dossier`-ID:n. Tom `dossiers`-lista betyder **gap**, inte feature. |
 | `Reference Template` | Externt material (t.ex. Vercel templates) som används som inspirations- och struktur-corpus, inte som produktens skelett. |
 | `Section Pattern` | Återkommande sektionsstruktur extraherad från `Reference Templates` (hero-with-product-shot, logo-cloud, pricing-table). |
 | `Style Signature` | Visuellt fingeravtryck (typografi, färg, motif, depth) extraherat från `Reference Template` eller `Scaffold Variant`. |
@@ -66,6 +67,8 @@ Termer i `code` är de kanoniska namnen. Allt annat (synonymer, alias) är förb
 | `Route Plan` | Lista över sidor/rutter som ska finnas i den genererade sajten med ordning och syfte. |
 | `Contract Plan` | Tekniska krav: auth, betalning, databas, env-variabler, integrationer som sajten behöver. |
 | `BuildSpec` | Körnings- och kvalitetspolicy: changeScope, qualityTarget, contextPolicy, verificationPolicy, tokenBudgets. |
+| `planSource` | Sanningsfält i `site-plan.json` som säger vilken path som producerade planen: `real`, `mock-no-key`, `mock-llm-error`, `mock-pre-sprint-2b` (historisk) eller `pinned`. |
+| `pinned` | `planSource`-värde för builder-pathen där `Project Input` redan pinat `scaffoldId`/`variantId` och planningModel inte ska välja om. Capability-gap filtreras ändå och kan synas i `selectedDossiers.rejected[]`. |
 | `Resolved Policy` | Output från fas 1 policy_resolution: `page-quality-traits` + naming + repo-boundaries + generation-constraints sammanvägda för aktuell `Site Brief`. |
 
 ## Preview Runtime

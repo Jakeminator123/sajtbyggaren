@@ -40,7 +40,7 @@ flowchart LR
 
 | Steg | Kallar LLM? | Får inte göra |
 |------|-------------|---------------|
-| `scaffold_resolution` | nej | route around policy, lock visual style before policy resolution |
+| `scaffold_resolution` | ja (planningModel) eller mock-fallback | route around policy, lock visual style before policy resolution |
 | `generation_package` | nej | call codegen before package is complete |
 
 ### Fas 3 - Codegen, Finalize, Quality Gate

@@ -27,6 +27,7 @@ for Phase 2 Plan. Both ``scripts/build_site.py`` and
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -45,6 +46,7 @@ from packages.generation.planning import (
     filter_capabilities,
     load_capability_map,
     load_scaffold_registry,
+    merge_operator_selected_with_helper,
     produce_site_plan,
     resolve_planning_model,
 )
@@ -197,6 +199,31 @@ def test_filter_capabilities_rejects_unknown_capability():
     assert "not registered" in rejected[0].reason.lower()
 
 
+@pytest.mark.tooling
+def test_filter_capabilities_dedupes_input():
+    cap_map = load_capability_map()
+    selected, rejected = filter_capabilities(
+        ["contact-form", "contact-form", "contact-form"], cap_map
+    )
+    assert selected == []
+    assert len(rejected) == 1
+    assert rejected[0].id == "contact-form"
+
+
+@pytest.mark.tooling
+def test_filter_capabilities_raises_when_default_not_in_dossiers():
+    cap_map = {
+        "capabilities": {
+            "demo-capability": {
+                "dossiers": ["one-dossier"],
+                "default": "some-other-dossier",
+            }
+        }
+    }
+    with pytest.raises(RuntimeError, match="not listed in dossiers"):
+        filter_capabilities(["demo-capability"], cap_map)
+
+
 # ---------------------------------------------------------------------------
 # produce_site_plan: mock-no-key path
 # ---------------------------------------------------------------------------
@@ -323,6 +350,21 @@ def test_produce_site_plan_pinned_rejects_unknown_variant(monkeypatch):
         )
 
 
+@pytest.mark.tooling
+def test_produce_site_plan_pinned_rejects_nonexistent_starter(monkeypatch):
+    monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
+    with pytest.raises(RuntimeError, match="no starter exists"):
+        produce_site_plan(
+            _baseline_brief(),
+            run_id="test-pin-4",
+            pinned={
+                "scaffoldId": "local-service-business",
+                "variantId": "nordic-trust",
+                "starterId": "starter-that-does-not-exist",
+            },
+        )
+
+
 # ---------------------------------------------------------------------------
 # produce_site_plan: mock-llm-error path
 # ---------------------------------------------------------------------------
@@ -411,6 +453,61 @@ def test_produce_site_plan_real_path_returns_validated_artefakts(monkeypatch):
     assert selected["rejected"][0]["id"] == "contact-form"
 
 
+@pytest.mark.tooling
+def test_site_plan_and_generation_package_share_createdAt_within_run(monkeypatch):
+    monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
+    result = produce_site_plan(_baseline_brief(), run_id="test-createdAt-1")
+    assert result.site_plan["createdAt"] == result.generation_package["createdAt"]
+
+
+@pytest.mark.tooling
+def test_merge_preserves_helper_rejected_when_operator_object_has_no_rejected():
+    operator = {
+        "required": ["interactive-game-loop"],
+        "recommended": [],
+        "conditional": [],
+        "rationale": "Operator-picked dossiers.",
+    }
+    helper_payload = {
+        "required": [],
+        "recommended": ["interactive-game-loop"],
+        "conditional": [],
+        "rationale": "Helper rationale",
+        "rejected": [{"id": "payments", "reason": "No Dossier implemented yet."}],
+    }
+    merged = merge_operator_selected_with_helper(operator, helper_payload)
+    assert isinstance(merged, dict)
+    assert merged["required"] == ["interactive-game-loop"]
+    assert merged["rejected"] == [{"id": "payments", "reason": "No Dossier implemented yet."}]
+    assert merged["rationale"] == "Operator-picked dossiers."
+
+
+@pytest.mark.tooling
+def test_merge_keeps_operator_required_and_appends_helper_rejected():
+    operator = {
+        "required": ["interactive-game-loop"],
+        "recommended": [],
+        "conditional": [],
+        "rejected": [{"id": "contact-form", "reason": "Operator note"}],
+    }
+    helper_payload = {
+        "required": [],
+        "recommended": ["interactive-game-loop"],
+        "conditional": [],
+        "rationale": "Helper rationale",
+        "rejected": [
+            {"id": "contact-form", "reason": "Duplicate should not be added"},
+            {"id": "payments", "reason": "No Dossier implemented yet."},
+        ],
+    }
+    merged = merge_operator_selected_with_helper(operator, helper_payload)
+    assert isinstance(merged, dict)
+    assert merged["required"] == ["interactive-game-loop"]
+    rejected_ids = {item["id"] for item in merged["rejected"]}
+    assert rejected_ids == {"contact-form", "payments"}
+    assert merged["rationale"] == "Helper rationale"
+
+
 # ---------------------------------------------------------------------------
 # B19 closure: source-code regression on the two scripts
 # ---------------------------------------------------------------------------
@@ -432,7 +529,10 @@ def test_b19_dev_generate_imports_produce_site_plan():
 @pytest.mark.tooling
 def test_b19_build_site_imports_produce_site_plan():
     source = (SCRIPTS_DIR / "build_site.py").read_text(encoding="utf-8")
-    assert "from packages.generation.planning import produce_site_plan" in source, (
+    assert re.search(
+        r"from packages\.generation\.planning import[\s\S]*produce_site_plan",
+        source,
+    ), (
         "scripts/build_site.py must call into the shared planning helper."
     )
 
@@ -445,11 +545,14 @@ def test_b19_neither_script_keeps_legacy_local_planner_function():
     """
     build_source = (SCRIPTS_DIR / "build_site.py").read_text(encoding="utf-8")
     dev_source = (SCRIPTS_DIR / "dev_generate.py").read_text(encoding="utf-8")
-    assert "def build_site_plan_mock" not in build_source, (
+    assert re.search(r"def\s+build_site_plan_mock\s*\(", build_source) is None, (
         "build_site_plan_mock was removed in Sprint 2B - reintroducing it "
         "reopens B19. Use packages.generation.planning.produce_site_plan instead."
     )
-    assert '"planSource": "mock-pre-sprint-2b"' not in dev_source, (
+    assert re.search(
+        r"site_plan\s*=\s*\{[\s\S]*?\"planSource\"\s*:\s*\"mock-pre-sprint-2b\"",
+        dev_source,
+    ) is None, (
         "The inline pre-Sprint-2B mock plan literal was removed in Sprint 2B. "
         "Plan construction must go through produce_site_plan."
     )

@@ -83,8 +83,10 @@ Format per bugg:
   subprocess; ingen async / cancellation. Beror på round 3.
 - **`B13` Låg** - `scripts/build_site.py` innehåller produktlogik vilket
   bryter mot `repo-boundaries.v1.json:39`. Naturlig flytt blir
-  `packages/generation/build/` när ramverket växer.
-- **`P2B-COMMERCE` Låg** (öppen 2026-05-08) - `data/starters/commerce-base/`
+  `packages/generation/build/` när ramverket växer. (Sprint 2B audit-fix
+  uppdaterade importgränserna så planning/brief/artifacts-importer inte
+  längre bryter policyn, men den större arkitektur-skulden kvarstår.)
+- **`B20` Låg** (öppen 2026-05-08) - `data/starters/commerce-base/`
   innehåller bara en README och en oharmoniserad `commerce-main.zip` (kopia
   av `vercel/commerce`). Ecommerce-lite-scaffolden (Sprint 2B) använder
   `marketing-base` som starter tills commerce-base är harmoniserad: Next 16,
@@ -99,6 +101,23 @@ Format per bugg:
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B21` Medel** (stängd 2026-05-08) - `filter_capabilities()` i
+  `packages/generation/planning/plan.py` antog att `default` i
+  `capability-map.v1.json` alltid fanns i capabilityns `dossiers`-lista.
+  Om policyn drev isär kunde plan-helpern välja en Dossier som inte var
+  tillåten av samma entry. Fix: fail-loud runtime-check i helpern
+  (`default not in dossiers` -> `RuntimeError`) + dedupe av
+  `requestedCapabilities` för att undvika dubbletter i `rejected[]`.
+  Tester: `tests/test_planning.py::test_filter_capabilities_raises_when_default_not_in_dossiers`,
+  `tests/test_planning.py::test_filter_capabilities_dedupes_input`.
+- **`B22` Medel** (stängd 2026-05-08) - alla scaffold-filer pekade på
+  `$schema=governance/schemas/scaffold.schema.json` men filen saknades.
+  Det gav falsk trygghet i IDE/validering och ingen central guard för
+  scaffold.json-fälten. Fix: ny
+  `governance/schemas/scaffold.schema.json`, `validate_scaffold()` i
+  `packages/generation/artifacts/validate.py`, auto-validering i
+  `packages/generation/planning/load_scaffold_registry()`, samt ny testfil
+  `tests/test_scaffold_schema.py`.
 - **`B12` Låg** (stängd 2026-05-08) - smoke-tester skrev tidigare till
   riktiga `.generated/` och `data/runs/` istället för `tmp_path`, vilket
   spammade run-historiken med ~10-15 mappar per `pytest`-körning.

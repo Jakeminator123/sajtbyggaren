@@ -38,6 +38,7 @@ SCHEMAS: dict[str, str] = {
     "sitePlan": "site-plan.schema.json",
     "generationPackage": "generation-package.schema.json",
     "sections": "sections.schema.json",
+    "scaffold": "scaffold.schema.json",
 }
 
 
@@ -96,6 +97,11 @@ def validate_sections(payload: dict[str, Any]) -> None:
     repo (per ADR 0013).
     """
     validate_artifact("sections", payload)
+
+
+def validate_scaffold(payload: dict[str, Any]) -> None:
+    """Validate a Scaffold's scaffold.json against scaffold.schema.json."""
+    validate_artifact("scaffold", payload)
 
 
 def _format_validation_error(error: ValidationError) -> str:

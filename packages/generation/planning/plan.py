@@ -38,6 +38,7 @@ logger = logging.getLogger("sajtbyggaren.planning")
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
 DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
+STARTERS_DIR = REPO_ROOT / "data" / "starters"
 DEFAULT_CAPABILITY_MAP_PATH = (
     REPO_ROOT / "governance" / "policies" / "capability-map.v1.json"
 )
@@ -49,7 +50,7 @@ DEFAULT_SCAFFOLD_ID = "local-service-business"
 # Only ``marketing-base`` has verified runnable content today. The
 # ``ecommerce-lite`` scaffold reuses ``marketing-base`` as chrome until
 # the commerce-base starter harmonisation sprint lands (see
-# docs/known-issues.md P2B-COMMERCE). When ``commerce-base`` is real,
+# docs/known-issues.md B20). When ``commerce-base`` is real,
 # this mapping (or the planner's choice) becomes per-scaffold.
 SCAFFOLD_TO_STARTER: dict[str, str] = {
     "local-service-business": "marketing-base",
@@ -141,6 +142,7 @@ def load_scaffold_registry(
     registry: list[dict[str, Any]] = []
     if not base.exists():
         return registry
+    from packages.generation.artifacts import validate_scaffold, validate_sections
 
     for scaffold_dir in sorted(base.iterdir()):
         if not scaffold_dir.is_dir():
@@ -149,8 +151,11 @@ def load_scaffold_registry(
         if not scaffold_json.exists():
             continue
         scaffold = _read_json(scaffold_json)
+        validate_scaffold(scaffold)
         routes = _read_json_or_default(scaffold_dir / "routes.json", {"defaultRoutes": []})
         sections = _read_json_or_default(scaffold_dir / "sections.json", {})
+        if sections:
+            validate_sections(sections)
         selection = _read_json_or_default(scaffold_dir / "selection-profile.json", {})
         compatible = _read_json_or_default(
             scaffold_dir / "compatible-dossiers.json",
@@ -214,7 +219,11 @@ def filter_capabilities(
     selected: list[str] = []
     rejected: list[RejectedCapability] = []
     capabilities = capability_map.get("capabilities", {})
+    seen: set[str] = set()
     for cap in requested:
+        if cap in seen:
+            continue
+        seen.add(cap)
         entry = capabilities.get(cap)
         if entry is None:
             rejected.append(
@@ -230,6 +239,11 @@ def filter_capabilities(
             rejected.append(RejectedCapability(id=cap, reason=reason))
             continue
         default = entry.get("default") or dossiers[0]
+        if default not in dossiers:
+            raise RuntimeError(
+                f"Capability {cap!r} has default={default!r} that is not listed in dossiers={dossiers} "
+                "in capability-map.v1.json."
+            )
         if default not in selected:
             selected.append(default)
     return selected, rejected
@@ -495,6 +509,63 @@ def _resolve_starter_id(scaffold_id: str) -> str:
     return starter
 
 
+def merge_operator_selected_with_helper(
+    operator: dict[str, Any] | list[str] | None,
+    helper_payload: list[str] | dict[str, Any],
+) -> list[str] | dict[str, Any]:
+    """Merge Project Input selectedDossiers with helper output.
+
+    Strategy:
+      - operator=None -> helper is authoritative.
+      - operator=list -> keep operator list as selected IDs, but if helper has
+        rejected/rationale, convert to object form so gap reporting survives.
+      - operator=dict -> operator owns required/recommended/conditional/rationale
+        while helper-reported rejected[] is appended (deduped by id).
+
+    This preserves operator intent without silently discarding capability gaps
+    detected by ``filter_capabilities``.
+    """
+    if operator is None:
+        return helper_payload
+
+    helper_obj = helper_payload if isinstance(helper_payload, dict) else {}
+    helper_rejected = helper_obj.get("rejected", []) if isinstance(helper_obj, dict) else []
+    helper_rationale = helper_obj.get("rationale") if isinstance(helper_obj, dict) else None
+
+    if isinstance(operator, list):
+        if not helper_rejected and not helper_rationale:
+            return list(operator)
+        return {
+            "required": [],
+            "recommended": list(operator),
+            "conditional": [],
+            "rationale": helper_rationale or "Merged operator-selected dossiers with helper gap report.",
+            "rejected": list(helper_rejected),
+        }
+
+    if not isinstance(operator, dict):
+        return helper_payload
+
+    merged: dict[str, Any] = dict(operator)
+    merged["required"] = list(operator.get("required", [])) if isinstance(operator.get("required"), list) else []
+    merged["recommended"] = list(operator.get("recommended", [])) if isinstance(operator.get("recommended"), list) else []
+    merged["conditional"] = list(operator.get("conditional", [])) if isinstance(operator.get("conditional"), list) else []
+
+    rejected_by_id: dict[str, dict[str, Any]] = {}
+    for item in operator.get("rejected", []) if isinstance(operator.get("rejected"), list) else []:
+        if isinstance(item, dict) and isinstance(item.get("id"), str):
+            rejected_by_id[item["id"]] = item
+    for item in helper_rejected:
+        if isinstance(item, dict) and isinstance(item.get("id"), str) and item["id"] not in rejected_by_id:
+            rejected_by_id[item["id"]] = item
+    if rejected_by_id:
+        merged["rejected"] = list(rejected_by_id.values())
+
+    if not merged.get("rationale"):
+        merged["rationale"] = helper_rationale or "Merged operator-selected dossiers with helper gap report."
+    return merged
+
+
 def _assemble_site_plan(
     *,
     run_id: str,
@@ -506,6 +577,7 @@ def _assemble_site_plan(
     model_used: str,
     verification_policy: str,
     preview_runtime: str,
+    created_at: str,
 ) -> dict[str, Any]:
     site_plan: dict[str, Any] = {
         "runId": run_id,
@@ -523,7 +595,7 @@ def _assemble_site_plan(
         "modelUsed": model_used,
         "planSource": plan_source,
         "planError": plan_error,
-        "createdAt": _utc_now_iso(),
+        "createdAt": created_at,
     }
     scaffold_version = (scaffold.get("scaffold") or {}).get("version")
     if isinstance(scaffold_version, str) and scaffold_version:
@@ -539,6 +611,7 @@ def _assemble_generation_package(
     site_brief: dict[str, Any],
     engine_mode: str,
     project_id: str | None,
+    created_at: str,
 ) -> dict[str, Any]:
     package: dict[str, Any] = {
         "runId": run_id,
@@ -556,7 +629,7 @@ def _assemble_generation_package(
         "starterId": starter_id,
         "language": site_brief["language"],
         "engineMode": engine_mode,
-        "createdAt": _utc_now_iso(),
+        "createdAt": created_at,
     }
     if project_id is not None:
         package["projectId"] = project_id
@@ -673,6 +746,7 @@ def produce_site_plan(
         # gate. dev_generate.py is mock-only: 'fast' is the honest label.
         verification_policy = "build-must-pass" if pinned is not None else "fast"
 
+    created_at = _utc_now_iso()
     site_plan = _assemble_site_plan(
         run_id=run_id,
         choice=choice,
@@ -683,6 +757,7 @@ def produce_site_plan(
         model_used=model_used,
         verification_policy=verification_policy,
         preview_runtime=preview_runtime,
+        created_at=created_at,
     )
     validate_site_plan(site_plan)
 
@@ -693,6 +768,7 @@ def produce_site_plan(
         site_brief=site_brief,
         engine_mode=engine_mode,
         project_id=project_id,
+        created_at=created_at,
     )
     validate_generation_package(generation_package)
 
@@ -734,6 +810,24 @@ def _resolve_pinned_choice(
             f"Project Input pins variantId={variant_id!r} but scaffold "
             f"{scaffold_id!r} only declares variants {sorted(variant_ids)}."
         )
+    pinned_starter = pinned.get("starterId")
+    if pinned_starter is not None:
+        if not isinstance(pinned_starter, str) or not pinned_starter.strip():
+            raise RuntimeError(
+                f"Project Input pins starterId={pinned_starter!r} but starterId must be a non-empty string."
+            )
+        starter_path = STARTERS_DIR / pinned_starter
+        if not starter_path.exists():
+            raise RuntimeError(
+                f"Project Input pins starterId={pinned_starter!r} but no starter exists at {starter_path}."
+            )
+        expected_starter = _resolve_starter_id(scaffold_id)
+        if pinned_starter != expected_starter:
+            raise RuntimeError(
+                f"Project Input pins starterId={pinned_starter!r} for scaffoldId={scaffold_id!r}, "
+                f"but Sprint 2B mapping expects {expected_starter!r}. "
+                "Update SCAFFOLD_TO_STARTER first if this remapping is intentional."
+            )
 
     requested = list(site_brief.get("requestedCapabilities") or [])
     selected, rejected = filter_capabilities(requested, capability_map)

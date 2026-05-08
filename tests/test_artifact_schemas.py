@@ -156,6 +156,14 @@ def test_site_plan_rejects_unknown_previewRuntime():
 
 
 @pytest.mark.tooling
+def test_site_plan_rejects_empty_routePlan():
+    payload = _minimal_site_plan()
+    payload["routePlan"] = []
+    with pytest.raises(ArtifactSchemaError, match="routePlan|minItems|too short"):
+        validate_site_plan(payload)
+
+
+@pytest.mark.tooling
 @pytest.mark.parametrize(
     "value",
     ["real", "mock-no-key", "mock-llm-error", "mock-pre-sprint-2b", "pinned"],

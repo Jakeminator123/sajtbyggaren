@@ -86,11 +86,14 @@ def view_playground() -> None:
     api_key_set = has_openai_api_key()
     if api_key_set:
         st.success(
-            "OPENAI_API_KEY är satt - **fas 1 (briefModel)** anropar riktig LLM. "
-            "Fas 2 och 3 är fortfarande mock tills runtime byggs."
+            "OPENAI_API_KEY är satt - **fas 1 (briefModel) och fas 2 (planningModel)** "
+            "anropar riktig LLM. Fas 3 är fortfarande mock placeholder tills Sprint 3."
         )
     else:
-        st.info("Ingen OPENAI_API_KEY satt - **alla phases mockade**.")
+        st.info(
+            "Ingen OPENAI_API_KEY satt - fas 1 och fas 2 kör mock fallback "
+            "(`mock-no-key`), fas 3 är mock placeholder."
+        )
 
     prompt = st.text_area(
         "Prompt",

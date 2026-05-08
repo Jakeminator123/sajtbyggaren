@@ -14,8 +14,11 @@ Four main components:
 2. Streamlit backoffice — operator UI for governance editing
 3. Mock engine run — 3-phase pipeline (understand, plan, build), no real codegen
 4. Builder MVP — deterministic Next.js builder. Phase 1 (Site Brief) calls
-   `briefModel` via OpenAI when `OPENAI_API_KEY` is set, otherwise falls back
-   to a mock. Phases 2-3 are still deterministic stubs (Sprint 2B / Sprint 3).
+ `briefModel` via OpenAI when `OPENAI_API_KEY` is set, otherwise falls back
+ to a mock. Phase 2 (Plan) now goes through shared
+ `packages/generation/planning/produce_site_plan` (real `planningModel`
+ with mock fallback). Phase 3 remains deterministic placeholder until
+ Sprint 3 (`codegenModel` + Repair Pipeline + Quality Gate).
 
 ### Python environment
 
@@ -37,7 +40,7 @@ On Linux (Cloud Agent VMs), `python3.12-venv` must be installed first
 | Service           | Command                                                                     | Notes                                                                                                                                     |
 | ----------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | Backoffice        | `streamlit run backend.py --server.headless true`                           | Serves on port 8501                                                                                                                       |
-| Engine run (mock) | `python scripts/dev_generate.py "your prompt"`                              | Writes artifacts to `data/runs/`. Calls `briefModel` if `OPENAI_API_KEY` is set, else mock.                                               |
+| Engine run | `python scripts/dev_generate.py "your prompt"`                                   | Writes artifacts to `data/runs/`. Calls `briefModel` + `planningModel` when `OPENAI_API_KEY` is set; mock fallback otherwise.             |
 | Builder MVP       | `python scripts/build_site.py --dossier examples/<slug>.project-input.json` | Real Next.js output under `.generated/<siteId>/` + canonical artifacts under `data/runs/<runId>/`. Add `--skip-build` for fast iteration. |
 
 ### Lint, test, validate
@@ -58,11 +61,12 @@ Commands are documented in the README under "Snabbstart". Key commands:
   and intentional - they require a code judgement call rather than an
   auto-fix. Fix any new lint findings in dedicated `chore: ruff auto-fixes`
   commits, never mixed with feature work.
-- `.env` is not required for backoffice, mock engine, governance checks or
+- `.env` is not required for backoffice, mock/real engine dry-runs, governance checks or
   the test suite. `OPENAI_API_KEY` is required when you want
   `scripts/build_site.py` and `scripts/dev_generate.py` to call the real
-  `briefModel`; without it both fall back to mock and write
-  `briefSource=mock-no-key` into `site-brief.json`.
+  `briefModel`/`planningModel`; without it both fall back to mock and write
+  `briefSource=mock-no-key` into `site-brief.json` plus
+  `planSource=mock-no-key` into `site-plan.json`.
 - All code identifiers and JSON field names must be in English; operator-
   facing text (docs, rules, UI labels) is in Swedish.
 - The `check_term_coverage.py --strict` script flags capitalized phrases

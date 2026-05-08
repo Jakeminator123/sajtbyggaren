@@ -38,7 +38,13 @@
     {
       "path": "scripts/",
       "owns": ["governance-validate", "rules-sync", "eval-run", "migrate-from-sajtmaskin"],
-      "mayImportFrom": ["governance/", "data/"],
+      "mayImportFrom": [
+        "governance/",
+        "data/",
+        "packages/generation/brief",
+        "packages/generation/planning",
+        "packages/generation/artifacts"
+      ],
       "mustNotDo": [
         "innehålla produktlogik",
         "anropa LLM utanför eval-run"
@@ -101,7 +107,13 @@
         "Fas 2 Plan: Site Brief -> Site Plan -> Generation Package (orkestrering)",
         "anropar Scaffold Selector, Variant Selector, Route Planner, Dossier Selector, Contract Planner, BuildSpec Resolver"
       ],
-      "mayImportFrom": ["packages/policies", "packages/shared", "packages/generation/orchestration"],
+      "mayImportFrom": [
+        "packages/policies",
+        "packages/shared",
+        "packages/generation/orchestration",
+        "packages/generation/brief",
+        "packages/generation/artifacts"
+      ],
       "mustNotDo": [
         "implementera Selector- eller Resolver-logik själv (importera från orchestration/selection/)",
         "skriva genererade filer",

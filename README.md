@@ -163,10 +163,13 @@ data/runs/<runId>/
   trace.ndjson             (Engine Events, append-only)
 ```
 
-Dev-drivern kör hela kedjan från prompt till artefakter. Sedan Sprint 2A
-anropar fas 1 riktiga `briefModel` när `OPENAI_API_KEY` finns, annars mock.
-Fas 2 + fas 3 är fortfarande deterministiska stubs (planningModel/codegenModel
-kopplas i Sprint 2B respektive Sprint 3).
+Dev-drivern kör hela kedjan från prompt till artefakter.
+- Fas 1 (Understand): anropar `briefModel` när `OPENAI_API_KEY` finns, annars mock.
+- Fas 2 (Plan): anropar `planningModel` via den gemensamma helpern
+  `packages/generation/planning/produce_site_plan` när `OPENAI_API_KEY` finns,
+  annars mock fallback (`mock-no-key`/`mock-llm-error`).
+- Fas 3 (Build): är fortfarande deterministisk placeholder (ingen `codegenModel`,
+  ingen Repair Pipeline, ingen Quality Gate ännu; Sprint 3).
 
 ```bash
 python scripts/dev_generate.py "Skapa hemsida för elektriker i Malmö"
@@ -186,7 +189,7 @@ Detaljer: [`engine-run.v1.json`](governance/policies/engine-run.v1.json), [ADR 0
 | Term-disciplin (regel + script) | klart |
 | Regression-tester och CI | klart |
 | Sprint 1 - Mock Engine Run | klart |
-| Sprint 2 - Riktig fas 1 + fas 2 + en scaffold | påbörjad: Sprint 2A klar (`briefModel` kopplad i `scripts/build_site.py` och `scripts/dev_generate.py` med mock-fallback), Sprint 2B kvar (`planningModel` + scaffold-content) |
+| Sprint 2 - Riktig fas 1 + fas 2 + andra scaffolden | klart: Sprint 2A + Sprint 2B (`briefModel` + `planningModel` kopplade via gemensamma helpers, `ecommerce-lite` tillagd, B19 stängd) |
 | Sprint 3 - Riktig fas 3 (codegen + repair + gate) | inte startad |
 | Sprint 4 - LocalRuntime | inte startad |
 | Sprint 5 - StackBlitzRuntime | inte startad |

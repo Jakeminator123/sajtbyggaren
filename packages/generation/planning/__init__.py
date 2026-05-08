@@ -33,6 +33,7 @@ from .plan import (
     filter_capabilities,
     load_capability_map,
     load_scaffold_registry,
+    merge_operator_selected_with_helper,
     produce_site_plan,
 )
 
@@ -46,6 +47,7 @@ __all__ = [
     "filter_capabilities",
     "load_capability_map",
     "load_scaffold_registry",
+    "merge_operator_selected_with_helper",
     "produce_site_plan",
     "resolve_planning_model",
 ]

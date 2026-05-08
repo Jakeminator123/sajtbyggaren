@@ -1109,7 +1109,11 @@ def build_plan_artefakts(
     Both this builder and ``scripts/dev_generate.py`` go through the same
     helper. That is what closes ``docs/known-issues.md`` B19.
     """
-    from packages.generation.planning import produce_site_plan
+    from packages.generation.artifacts import validate_site_plan
+    from packages.generation.planning import (
+        merge_operator_selected_with_helper,
+        produce_site_plan,
+    )
 
     pinned = {
         "scaffoldId": scaffold["id"],
@@ -1130,14 +1134,15 @@ def build_plan_artefakts(
     )
 
     site_plan = dict(result.site_plan)
-    # Project Input may carry a richer selectedDossiers object (rationale
-    # plus required/recommended) that the operator wrote by hand. When
-    # present we honor it instead of the helper's filter-only object so
-    # the canonical Site Plan reflects the operator's intent. The helper
-    # is still authoritative for runs that have NO Project Input.
+    # Merge operator-selected dossiers with helper output so capability
+    # gaps (selectedDossiers.rejected[]) are never silently dropped.
     operator_selected = dossier.get("selectedDossiers")
-    if operator_selected:
-        site_plan["selectedDossiers"] = operator_selected
+    site_plan["selectedDossiers"] = merge_operator_selected_with_helper(
+        operator_selected, result.site_plan["selectedDossiers"]
+    )
+    # Revalidate after merge: helper validated before this function mutates
+    # selectedDossiers, but the merged payload is a new object.
+    validate_site_plan(site_plan)
 
     return site_plan, dict(result.generation_package)
 
