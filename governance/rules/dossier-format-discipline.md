@@ -1,0 +1,18 @@
+---
+description: Dossier-formatet är låst till manifest.json + instructions.md + components/.
+alwaysApply: true
+---
+
+# Dossier-format-disciplin
+
+En dossier består av exakt:
+
+- `manifest.json`
+- `instructions.md`
+- `components/`
+
+Inga andra filer får läggas i en dossier-mapp utan ADR som uppdaterar kontraktet.
+
+En dossier deklarerar exakt en `capability` i `manifest.json`. Capability-fältet är obligatoriskt.
+
+Dossier-klasser är enbart `soft` och `hard`. `hybrid` är förbjudet.

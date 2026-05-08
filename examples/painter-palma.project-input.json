@@ -54,6 +54,7 @@
     "Vi lämnar alltid skriftlig offert innan jobbet börjar"
   ],
   "conversionGoals": ["quote_request", "call"],
+  "requestedCapabilities": ["interactive-game"],
   "contact": {
     "phone": "+34 600 12 34 56",
     "email": "hej@malareipalma.es",
@@ -61,8 +62,8 @@
     "openingHours": "Mån–Fre 08:00–17:00"
   },
   "selectedDossiers": {
-    "required": ["contact-cta"],
+    "required": ["interactive-game-loop"],
     "recommended": ["service-list", "service-area", "reviews", "trust-badges"],
-    "rationale": "Lokal målerifirma som främst konverterar via offertförfrågan och samtal."
+    "rationale": "Pacman-proof for dossier mounting in builder while keeping local business profile."
   }
 }
