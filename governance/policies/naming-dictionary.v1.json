@@ -264,9 +264,33 @@
       "id": "qualityGate",
       "canonical": "Quality Gate",
       "definition": "Mätbar acceptansgräns mot Page Quality Traits. EN gate. Inte F2/F3-tier.",
-      "ownerPackage": "packages/generation/quality-gate",
+      "ownerPackage": "packages/generation/quality_gate",
       "aliasesAllowed": [],
       "aliasesForbidden": ["F2", "F3", "tier2", "tier3", "designPreview", "integrationsBuild"]
+    },
+    {
+      "id": "codegenResult",
+      "canonical": "CodegenResult",
+      "definition": "Strukturerat manifest från codegenModel om vilka filer fas 3 producerar. Sprint 3A v1 är deterministisk; senare sprintar emittar manifestet från riktigt LLM-anrop innan filer skrivs.",
+      "ownerPackage": "packages/generation/codegen",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["codegenManifest", "fileManifest", "outputSpec"]
+    },
+    {
+      "id": "codegenFile",
+      "canonical": "CodegenFile",
+      "definition": "En entry i CodegenResult.files: relativ filsökväg + source (codegen/dossier-mount/starter-patched/scaffold) + role (page/component/config/theme).",
+      "ownerPackage": "packages/generation/codegen",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["fileSpec", "outputFile", "generatedFile"]
+    },
+    {
+      "id": "repairFix",
+      "canonical": "RepairFix",
+      "definition": "En entry i RepairResult.mechanicalFixesApplied eller llmFixesApplied: kind (mechanical/llm) + name + target + detail + success. Sprint 3A v1 emitter aldrig RepairFix; Sprint 3B+ fyller listorna när Fix Registry kopplas in.",
+      "ownerPackage": "packages/generation/repair",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["repairAttempt", "fixEntry", "patch"]
     },
     {
       "id": "previewRuntime",
@@ -472,7 +496,7 @@
       "id": "qualityResult",
       "canonical": "Quality Result",
       "definition": "Output från Quality Gate: per-check status, scorecard, samlat pass/fail, ev. degraderingar.",
-      "ownerPackage": "packages/generation/quality-gate",
+      "ownerPackage": "packages/generation/quality_gate",
       "aliasesAllowed": [],
       "aliasesForbidden": []
     },

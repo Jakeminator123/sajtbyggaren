@@ -297,16 +297,30 @@ def test_trace_event_names_use_dotted_form(
 
 
 # ---------------------------------------------------------------------------
-# Repair + Quality skeletons report status=not-run
+# Sprint 3A (ADR 0015): Quality Gate + Repair Pipeline produce real results,
+# not the Sprint 2B skeleton with status=not-run.
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.tooling
-def test_repair_and_quality_skeleton_status_not_run(
+def test_repair_and_quality_results_are_not_skeleton(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    """Skeleton artefakter must clearly say ``not-run`` so they cannot be confused with real results."""
+    """Sprint 3A replaces the skeleton writers with real pipeline calls.
+
+    The artefakter must:
+      - Use the new statuses (quality: ok/degraded/failed; repair:
+        not-needed/no-fix-applied/fixed/partial-fix), never ``not-run``.
+      - Carry a ``checks`` array on quality-result.json with the four
+        Sprint 3A check names (typecheck, route-scan, build-status,
+        policy-compliance).
+
+    For ``--skip-build``, the painter-palma example produces all required
+    routes from the marketing-base starter, so route-scan and policy-
+    compliance pass while typecheck and build-status are skipped. Quality
+    Gate aggregates this to ``ok`` and Repair Pipeline reports ``not-needed``.
+    """
     from scripts.build_site import build
 
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
@@ -315,8 +329,42 @@ def test_repair_and_quality_skeleton_status_not_run(
     repair = json.loads((run_dir / "repair-result.json").read_text(encoding="utf-8"))
     quality = json.loads((run_dir / "quality-result.json").read_text(encoding="utf-8"))
 
-    assert repair["status"] == "not-run"
-    assert quality["status"] == "not-run"
+    assert quality["status"] in {"ok", "degraded", "failed"}, (
+        f"Quality Gate must report Sprint 3A status, got {quality['status']!r}. "
+        f"If this says 'not-run', the skeleton writer has crept back into "
+        f"scripts/build_site.py (B-test in test_build_site_size.py should "
+        f"have caught it first)."
+    )
+    assert repair["status"] in {
+        "not-needed", "no-fix-applied", "fixed", "partial-fix"
+    }, (
+        f"Repair Pipeline must report Sprint 3A status, got {repair['status']!r}. "
+        f"The skeleton path returned 'not-run' which Sprint 3A removed."
+    )
+
+    check_names = {check["name"] for check in quality["checks"]}
+    assert check_names == {
+        "typecheck", "route-scan", "build-status", "policy-compliance"
+    }, (
+        f"Quality Gate must run the four Sprint 3A checks. Got {check_names!r}."
+    )
+
+    by_name = {check["name"]: check for check in quality["checks"]}
+    assert by_name["build-status"]["status"] == "skipped", (
+        "do_build=False must produce build-status=skipped, not failed/ok."
+    )
+    assert by_name["typecheck"]["status"] == "skipped", (
+        "typecheck must be skipped when build was skipped (no node_modules)."
+    )
+    assert by_name["route-scan"]["status"] == "ok", (
+        "painter-palma + marketing-base produces all required routes; "
+        "route-scan should be ok."
+    )
+
+    assert quality["status"] == "ok"
+    assert repair["status"] == "not-needed"
+    assert repair["mechanicalFixesApplied"] == []
+    assert repair["llmFixesApplied"] == []
 
 
 # ---------------------------------------------------------------------------

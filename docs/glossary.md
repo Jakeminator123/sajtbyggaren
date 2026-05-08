@@ -56,7 +56,7 @@ Termer i `code` är de kanoniska namnen. Allt annat (synonymer, alias) är förb
 | Term | Vad det är |
 |------|------------|
 | `Repair Pipeline` | Centraliserad reparationskedja: normalize → mechanical fixes → typecheck/syntax → optional LLM fix → re-check → final. Får bo på exakt **EN** plats: `packages/generation/repair/`. Det löser den utspridda fix-rörran från sajtmaskin. |
-| `Quality Gate` | Mätbar acceptansgräns. **EN** gate på `packages/generation/quality-gate/`. Inte en F2/F3-tier-uppdelning. |
+| `Quality Gate` | Mätbar acceptansgräns. **EN** gate på `packages/generation/quality_gate/`. Inte en F2/F3-tier-uppdelning. |
 | `Code Contract` | Per-`Dossier`-fil (`code-contract.json`) som listar must/avoid för den kod LLM:en får producera när `Dossier`n aktiveras. |
 | `Env Contract` | Per-`Dossier`-fil (`env-contract.json`) för hybrid/hard-Dossiers. Listar requires + designModeBehavior + integrationModeBehavior. |
 

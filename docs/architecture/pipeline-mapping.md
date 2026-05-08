@@ -53,7 +53,7 @@ flowchart TB
 | `brief` | [packages/generation/brief/](../../packages/generation/brief/) (briefModel + structured site-brief schema) |
 | `plan` + `package` | [packages/generation/planning/](../../packages/generation/planning/) (kommer; Builder MVP gör det inline i `scripts/build_site.py`) |
 | `generate` | [packages/generation/build/](../../packages/generation/build/) (kommer; Builder MVP gör det inline) |
-| `verify` | [packages/generation/quality-gate/](../../packages/generation/quality-gate/) (kommer; Builder MVP delegerar till `next build`) |
+| `verify` | [packages/generation/quality_gate/](../../packages/generation/quality_gate/) (kommer; Builder MVP delegerar till `next build`) |
 | `repair` | [packages/generation/repair/](../../packages/generation/repair/) (kommer; ej aktiverad) |
 | `preview` | [packages/preview-runtime/](../../packages/preview-runtime/) |
 | `release` | [packages/builder/](../../packages/builder/) (kommer) |

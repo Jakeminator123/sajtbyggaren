@@ -119,6 +119,14 @@ COMMON_WORDS = {
     # Scaffold, Variant) are already registered in naming-dictionary.v1.
     "PlanResult", "PlanningChoice", "PlanningModelResolutionError",
     "RejectedCapability",
+    # Sprint 3A internal Literal types (typing aliases that name the
+    # status/source enums of CodegenResult / QualityResult / RepairResult).
+    # The canonical domain types CodegenResult, CodegenFile and RepairFix
+    # are registered in naming-dictionary.v1 - the Literal aliases below
+    # are Python implementation symbols, not separate domain terms.
+    "CodegenSource", "CodegenFileSource", "CodegenFileRole",
+    "QualityStatus", "CheckStatus", "CheckName",
+    "RepairStatus",
     # Page-komponenter som genereras i builder och i .generated/
     "AboutPage", "ContactPage", "ServicesPage", "ServicePage",
     # React / Next / shadcn-typer som dyker upp i runtime-kod

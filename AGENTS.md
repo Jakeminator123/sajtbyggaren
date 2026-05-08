@@ -15,10 +15,14 @@ Four main components:
 3. Mock engine run — 3-phase pipeline (understand, plan, build), no real codegen
 4. Builder MVP — deterministic Next.js builder. Phase 1 (Site Brief) calls
  `briefModel` via OpenAI when `OPENAI_API_KEY` is set, otherwise falls back
- to a mock. Phase 2 (Plan) now goes through shared
+ to a mock. Phase 2 (Plan) goes through shared
  `packages/generation/planning/produce_site_plan` (real `planningModel`
- with mock fallback). Phase 3 remains deterministic placeholder until
- Sprint 3 (`codegenModel` + Repair Pipeline + Quality Gate).
+ with mock fallback). Phase 3 (Sprint 3A, ADR 0015) emits a deterministic
+ codegen v1 manifest from `packages/generation/codegen/`, runs real
+ Quality Gate checks (typecheck/route-scan/build-status/policy-compliance)
+ from `packages/generation/quality_gate/`, and routes the result through
+ a no-fix-applied Repair Pipeline in `packages/generation/repair/`. Real
+ `codegenModel` LLM calls + mechanical fixes land in Sprint 3B.
 
 ### Python environment
 

@@ -1,14 +1,14 @@
 {
   "$schema": "../schemas/engine-run.schema.json",
   "policyId": "engine-run.v1",
-  "version": 2,
+  "version": 3,
   "status": "draft-but-authoritative",
-  "purpose": "Definierar artefaktkedjan för en Engine Run. En prompt blir en runId med exakt åtta artefakter och en Engine Event-trace. Ingen utspridd fix-kedja, ingen extra init-väg. Version 2 lägger till mode (init/followup) och Project DNA-koppling.",
+  "purpose": "Definierar artefaktkedjan för en Engine Run. En prompt blir en runId med exakt åtta artefakter och en Engine Event-trace. Ingen utspridd fix-kedja, ingen extra init-väg. Version 2 lägger till mode (init/followup) och Project DNA-koppling. Version 3 (Sprint 3A) byter Quality Gate-paketnamn från quality-gate/ till quality_gate/ för Python-import-kompatibilitet (ADR 0015).",
   "principles": [
     "En Engine Run = en runId = en mapp under data/runs/<runId>/.",
     "Tre faser, åtta artefakter, en trace. Inget annat.",
     "Repair Pipeline finns på exakt EN plats i kodbasen (packages/generation/repair/).",
-    "Quality Gate finns på exakt EN plats (packages/generation/quality-gate/).",
+    "Quality Gate finns på exakt EN plats (packages/generation/quality_gate/).",
     "Inga LLM-anrop utanför fas 1, 2 och 3. Preview Runtime gör inga LLM-anrop.",
     "Init skapar Project DNA. Follow-up läser Project DNA och får inte byta scaffoldId utan explicit redesign-intent."
   ],
@@ -63,7 +63,7 @@
       "allowedToCallLLM": true,
       "mustNotDo": [
         "duplicera repair-logik utanför packages/generation/repair/",
-        "duplicera gate-logik utanför packages/generation/quality-gate/"
+        "duplicera gate-logik utanför packages/generation/quality_gate/"
       ]
     }
   ],
@@ -141,7 +141,7 @@
   },
   "forbiddenPatterns": [
     "Repair-kod utanför packages/generation/repair/",
-    "Quality-gate-kod utanför packages/generation/quality-gate/",
+    "Quality-gate-kod utanför packages/generation/quality_gate/",
     "Att en fas läser/muterar artefakt från en senare fas",
     "Att Preview Runtime lägger sig i fas 1 eller fas 2",
     "Att en fas anropar LLM utanför sin Model Role-mappning"

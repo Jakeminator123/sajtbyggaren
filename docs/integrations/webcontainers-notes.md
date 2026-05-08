@@ -105,6 +105,6 @@ För dessa fall: `FlyRuntime`. Bytet sker via `preview-runtime-policy.v1.json:de
 
 1. Skapa `packages/preview-runtime/PreviewRuntime.ts` (flytta från `struktur/`).
 2. Skapa `packages/preview-runtime/stackblitz/StackBlitzRuntime.ts`.
-3. Skriv `quality-gate`-checks som kör i StackBlitzRuntime: `typecheck`, `build`, `route-scan`, `preview-smoke`.
+3. Skriv `quality_gate`-checks som kör i StackBlitzRuntime: `typecheck`, `build`, `route-scan`, `preview-smoke`.
 4. Lägg till regression-tester under `tests/evals/preview-runtime/`.
 5. Backoffice får en sektion "Preview Runtime status" som visar default-runtime och eventuella degraderingar.

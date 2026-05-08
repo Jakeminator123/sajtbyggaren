@@ -1,0 +1,57 @@
+"""Pydantic types for Quality Gate output.
+
+Locked by ADR 0015 so Repair Pipeline can rely on a stable shape and so
+build-result.json can serialise the QualityResult without drift.
+"""
+
+from __future__ import annotations
+
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+CheckName = Literal[
+    "typecheck",
+    "route-scan",
+    "build-status",
+    "policy-compliance",
+]
+
+CheckStatus = Literal["ok", "failed", "skipped"]
+
+QualityStatus = Literal["ok", "degraded", "failed"]
+
+
+class CheckResult(BaseModel):
+    """One Quality Gate check.
+
+    ``findings`` lists specific issues (missing routes, tsc errors,
+    forbidden file paths) so Repair Pipeline can act on them. ``detail``
+    is a short human-readable summary for operators reading
+    quality-result.json.
+    """
+
+    name: CheckName
+    status: CheckStatus
+    detail: str = ""
+    findings: list[str] = Field(default_factory=list)
+    durationMs: int = 0
+
+
+class QualityResult(BaseModel):
+    """Aggregated Quality Gate output.
+
+    ``status`` rules:
+      - ``ok`` when every check is ``ok`` or ``skipped``.
+      - ``failed`` when typecheck or build-status is ``failed``
+        (these are blocking).
+      - ``degraded`` when route-scan or policy-compliance is ``failed``
+        but typecheck and build-status are ok or skipped.
+
+    ``summary`` is a short string that build-result.json can surface
+    without rendering the full check list.
+    """
+
+    status: QualityStatus
+    checks: list[CheckResult]
+    summary: str = ""

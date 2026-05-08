@@ -246,7 +246,7 @@
       "outputArtifacts": [
         "qualityResult"
       ],
-      "ownerPackage": "packages/generation/quality-gate",
+      "ownerPackage": "packages/generation/quality_gate",
       "allowedToCallLLM": true,
       "mustNotDo": [
         "promote below gate",

@@ -146,6 +146,7 @@ Korta motiveringar i [`governance/decisions/`](governance/decisions/):
 - [0012](governance/decisions/0012-vocabulary-compression.md) - Vocabulary compression (Dossier-klasser låsta till soft/hard).
 - [0013](governance/decisions/0013-schema-locking-before-sprint-2b.md) - Schema-låsning före Sprint 2B.
 - [0014](governance/decisions/0014-sprint-2b-planning-helper.md) - Sprint 2B planning helper (gemensam `produce_site_plan`, planSource pinned, ecommerce-lite scaffold).
+- [0015](governance/decisions/0015-sprint-3a-codegen-quality-repair.md) - Sprint 3A: deterministisk `codegenModel v1`, riktiga Quality Gate-checks och no-fix Repair Pipeline under `packages/generation/{codegen,quality_gate,repair}/`.
 
 ## Engine Run
 
@@ -169,8 +170,12 @@ Dev-drivern kör hela kedjan från prompt till artefakter.
 - Fas 2 (Plan): anropar `planningModel` via den gemensamma helpern
   `packages/generation/planning/produce_site_plan` när `OPENAI_API_KEY` finns,
   annars mock fallback (`mock-no-key`/`mock-llm-error`).
-- Fas 3 (Build): är fortfarande deterministisk placeholder (ingen `codegenModel`,
-  ingen Repair Pipeline, ingen Quality Gate ännu; Sprint 3).
+- Fas 3 (Build): Sprint 3A landade deterministisk `codegenModel v1`-manifest
+  (`packages/generation/codegen/`), riktiga Quality Gate-checks
+  (typecheck/route-scan/build-status/policy-compliance via
+  `packages/generation/quality_gate/`) och no-fix-applied Repair Pipeline
+  (`packages/generation/repair/`). Real `codegenModel`-LLM-anrop, mekaniska
+  fixes och LLM-fix kommer i Sprint 3B+.
 
 ```bash
 python scripts/dev_generate.py "Skapa hemsida för elektriker i Malmö"
@@ -191,7 +196,7 @@ Detaljer: [`engine-run.v1.json`](governance/policies/engine-run.v1.json), [ADR 0
 | Regression-tester och CI | klart |
 | Sprint 1 - Mock Engine Run | klart |
 | Sprint 2 - Riktig fas 1 + fas 2 + andra scaffolden | klart: Sprint 2A + Sprint 2B (`briefModel` + `planningModel` kopplade via gemensamma helpers, `ecommerce-lite` tillagd, B19 stängd) |
-| Sprint 3 - Riktig fas 3 (codegen + repair + gate) | inte startad |
+| Sprint 3 - Riktig fas 3 (codegen + repair + gate) | Sprint 3A klar (ADR 0015): codegen v1 + Quality Gate + no-fix Repair under `packages/generation/{codegen,quality_gate,repair}/`. Sprint 3B (real `codegenModel` + mekanisk Fix Registry) inte startad |
 | Sprint 4 - LocalRuntime | inte startad |
 | Sprint 5 - StackBlitzRuntime | inte startad |
 | Sprint 6+ - Fler scaffolds, dossiers, evals | inte startad |

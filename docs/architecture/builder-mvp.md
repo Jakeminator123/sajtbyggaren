@@ -127,7 +127,7 @@ Buildern har sex hårda spärrar:
 Det här gör Builder MVP **inte** efter Sprint 2A. Operatören får utöka när nästa milstolpe är låst.
 
 - Fas 2 körs via `produce_site_plan`; builder-pathen är `pinned` (Project Input styr scaffold/variant), dev-driver kan köra real `planningModel` när nyckel finns.
-- Fas 3 är deterministisk patch på `marketing-base` - ingen `codegenModel`, ingen Repair Pipeline (`packages/generation/repair/`), ingen Quality Gate (`packages/generation/quality-gate/`). Sprint 3 levererar dessa.
+- Fas 3 är deterministisk patch på `marketing-base` - ingen `codegenModel`, ingen Repair Pipeline (`packages/generation/repair/`), ingen Quality Gate (`packages/generation/quality_gate/`). Sprint 3 levererar dessa.
 - Ingen Stripe, Supabase, Clerk, Shopify eller annan `hard` Dossier.
 - Ingen preview-release och inget `Promoted Site`-läge.
 - Bara en starter (`marketing-base`) och en scaffold (`local-service-business`) implementerade. Project Inputs som finns att bygga: `painter-palma`, `arcade-hall`, `foto-ram`.

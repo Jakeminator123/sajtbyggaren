@@ -26,8 +26,11 @@ LLM status (as of Sprint 2B):
       filter still runs so requested capabilities without an
       implemented Dossier surface as `selectedDossiers.rejected[]`.
     - Phase 3 Build: deterministic codegen using the chosen
-      Starter (`copy_starter(site_plan["starterId"], ...)`), plus
-      Repair Pipeline and Quality Gate skeleton artefakter.
+      Starter (`copy_starter(site_plan["starterId"], ...)`). Sprint 3A
+      now wires real Quality Gate (typecheck + route-scan + build-status
+      + policy-compliance) and a no-fix-applied Repair Pipeline through
+      `packages.generation.{codegen, quality_gate, repair}`. Skeleton
+      result writers are gone (ADR 0015).
 """
 
 from __future__ import annotations
@@ -1250,38 +1253,44 @@ def snapshot_generated_files(target_dir: Path, run_dir: Path) -> Path:
     return snap_dir
 
 
-def write_repair_result_skeleton(run_dir: Path) -> dict:
-    """Skeleton repair-result.json. Repair Pipeline is not implemented yet.
+def run_phase3_quality_and_repair(
+    run_dir: Path,
+    target: Path,
+    routes_required: list[str],
+    npm_steps: list[dict],
+    overall_status: str,
+    do_typecheck: bool,
+) -> tuple[dict, dict]:
+    """Thin wiring around packages/generation/{quality_gate, repair}.
 
-    Status ``not-run`` makes it impossible to confuse this with an actual
-    repair attempt.
+    Sprint 3A replaces the previous skeleton writers with real Quality
+    Gate checks (typecheck/route-scan/build-status/policy-compliance)
+    and a no-fix-applied Repair Pipeline. All product logic lives in
+    the two packages; this function stays in scripts/ as the
+    orchestrator-level wiring per ADR 0015.
     """
-    payload = {
-        "status": "not-run",
-        "reason": "Repair Pipeline is not implemented in Builder MVP yet.",
-        "mechanicalFixesApplied": [],
-        "llmFixesApplied": [],
-        "remainingErrors": [],
-    }
-    write_json(run_dir / "repair-result.json", payload)
-    return payload
+    from packages.generation.quality_gate import run_quality_gate
+    from packages.generation.repair import run_repair_pipeline
 
+    quality_result = run_quality_gate(
+        target_dir=target,
+        required_routes=routes_required,
+        npm_steps=npm_steps,
+        build_status=overall_status,
+        do_typecheck=do_typecheck,
+    )
+    quality_payload = quality_result.model_dump()
+    write_json(run_dir / "quality-result.json", quality_payload)
 
-def write_quality_result_skeleton(run_dir: Path) -> dict:
-    """Skeleton quality-result.json. Quality Gate is not implemented yet."""
-    payload = {
-        "status": "not-run",
-        "reason": "Quality Gate is not implemented in Builder MVP yet.",
-        "checks": {
-            "typecheck": "skipped",
-            "build": "delegated-to-build-result",
-            "route-scan": "delegated-to-build-result",
-            "policy-compliance": "skipped",
-        },
-        "scorecard": None,
-    }
-    write_json(run_dir / "quality-result.json", payload)
-    return payload
+    repair_result = run_repair_pipeline(
+        quality_result,
+        target_dir=target,
+        do_repair=overall_status != "skipped",
+    )
+    repair_payload = repair_result.model_dump()
+    write_json(run_dir / "repair-result.json", repair_payload)
+
+    return quality_payload, repair_payload
 
 
 def empty_model_usage(source: str = "mock-no-key") -> dict:
@@ -1400,7 +1409,7 @@ def build(
     site_brief = write_phase1_understand(run_dir, trace, dossier_path, dossier, scaffold)
 
     # Phase 2: plan (delegates to packages.generation.planning.produce_site_plan)
-    site_plan, _generation_package = write_phase2_plan(
+    site_plan, generation_package = write_phase2_plan(
         run_dir, trace, dossier, scaffold, variant, site_brief
     )
 
@@ -1491,19 +1500,42 @@ def build(
         payload_path="generated-files/",
     )
 
-    # Skeleton repair + quality artefacts so downstream consumers see all 8.
-    write_repair_result_skeleton(run_dir)
-    trace.event(
-        "build", "repair_result.written", "done",
-        "Repair Pipeline not implemented (skeleton status=not-run)",
-        payload_path="repair-result.json",
+    # codegenModel v1 manifest (deterministic in Sprint 3A; LLM in 3B).
+    from packages.generation.codegen import produce_codegen_artefakt
+
+    codegen_result = produce_codegen_artefakt(
+        generation_package,
+        routes_written=routes_all_with_dossiers,
+        dossier_components=copied_components,
+        starter_id=starter_id,
     )
-    write_quality_result_skeleton(run_dir)
+    trace.event(
+        "build", "codegen.manifest.emitted", "done",
+        f"codegenModel v1 manifest: {len(codegen_result.files)} files "
+        f"(source={codegen_result.source})",
+    )
+
+    # Quality Gate + Repair Pipeline (real checks; ADR 0015).
+    do_typecheck = overall_status == "ok"
+    quality_payload, repair_payload = run_phase3_quality_and_repair(
+        run_dir, target, routes_required_with_dossiers, npm_steps,
+        overall_status, do_typecheck,
+    )
     trace.event(
         "build", "quality_result.written", "done",
-        "Quality Gate not implemented (skeleton status=not-run)",
+        f"Quality Gate status={quality_payload['status']} "
+        f"({len(quality_payload['checks'])} checks)",
         payload_path="quality-result.json",
     )
+    trace.event(
+        "build", "repair_result.written", "done",
+        f"Repair Pipeline status={repair_payload['status']} "
+        f"(remainingErrors={len(repair_payload['remainingErrors'])})",
+        payload_path="repair-result.json",
+    )
+
+    if quality_payload["status"] == "failed" and overall_status == "ok":
+        overall_status = "failed"
 
     duration_ms = int((time.monotonic() - started) * 1000)
     write_build_result(
