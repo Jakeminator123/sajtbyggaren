@@ -81,14 +81,21 @@ Format per bugg:
   status. Beror på round 3.
 - **`BO4` Medel** - `backoffice/views/playground.py:46-53` blockerar 180s i
   subprocess; ingen async / cancellation. Beror på round 3.
-- **`B12` Låg** - smoke-tester skriver till riktiga `.generated/` och
-  `data/runs/` istället för `tmp_path`. Härdade tester i
-  `test_builder_hardening.py` använder `tmp_path` där det går; smoke-tester
-  i `test_builder_smoke.py` rör fortfarande verklig disk för slutgiltig
-  verifiering. Acceptabelt så länge `.gitignore` håller dem utanför git.
 - **`B13` Låg** - `scripts/build_site.py` innehåller produktlogik vilket
   bryter mot `repo-boundaries.v1.json:39`. Naturlig flytt blir
   `packages/generation/build/` när ramverket växer.
+
+## Stängda - regression-test säkrar fixet
+
+- **`B12` Låg** (stängd 2026-05-08) - smoke-tester skrev tidigare till
+  riktiga `.generated/` och `data/runs/` istället för `tmp_path`, vilket
+  spammade run-historiken med ~10-15 mappar per `pytest`-körning.
+  Fix: `e376439`. `scripts/build_site.py::build()` accepterar nu en
+  `runs_dir`-parameter och `--runs-dir`-flagga, och alla tester i
+  `tests/test_builder_smoke.py`, `tests/test_builder_hardening.py` och
+  `tests/test_dossier_mounting.py` skickar in `tmp_path`. Verifierat
+  2026-05-08: `data/runs/` har 6 mappar både före och efter en full
+  `pytest tests/ -q`-körning.
 
 ## Process
 
