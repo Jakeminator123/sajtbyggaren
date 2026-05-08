@@ -28,12 +28,12 @@ Efter fork eller setup ska följande gälla:
 - Tom eller minimal `.env.example`, **aldrig** `.env`
 - **Inget** av: auth, databas, betalningar, CMS-koppling, analytics, hårdkodad copy, hårdkodade färger, hårdkodade CTA-länkar
 
-Auth/databas/betalningar/CMS-integrationer hör hemma i `Integration Dossier`, inte i starter.
+Auth/databas/betalningar/CMS-integrationer hör hemma i `hard` Dossier, inte i starter.
 
 ## Hur en starter används vid generation
 
 ```
-Site Brief
+Project Input (Deep Brief)
    ↓
 Plan väljer starterId (t.ex. "marketing-base")
    ↓
@@ -43,11 +43,9 @@ Scaffold injicerar routes och sektioner
    ↓
 Variant injicerar CSS-tokens
    ↓
-Site Dossier injicerar copy/bilder
+Project Input tillför copy/bilder/site-data
    ↓
-Feature Dossiers injicerar funktionalitet
-   ↓
-Integration Dossiers injicerar externa kopplingar
+Dossiers (soft / hard) kopplas på där de är kompatibla
    ↓
 Verify → Repair → Preview → Release
 ```

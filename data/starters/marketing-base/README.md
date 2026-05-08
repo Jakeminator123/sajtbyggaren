@@ -40,7 +40,7 @@ När create-next-app + shadcn init är klara, gör följande innan första commi
 
 - Hårdkodad copy ("Welcome to Next.js" etc.)
 - Hårdkodade färger (allt går via Tailwind/CSS-variabler)
-- Auth, databas, betalningar (hör till Integration Dossier)
+- Auth, databas, betalningar (hör till en hard Dossier)
 - Bilder eller fonter utöver shadcn/ui-defaults
 
 ## Scaffolds som använder denna bas

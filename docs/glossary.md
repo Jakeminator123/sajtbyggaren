@@ -29,16 +29,12 @@ Termer i `code` är de kanoniska namnen. Allt annat (synonymer, alias) är förb
 | `Scaffold Registry` | Centralt index över giltiga `Scaffold`-id:n. Sanningskälla i `scaffold-contract.v1.json:primaryScaffoldRegistry`. |
 | `Selection Profile` | Per-`Scaffold`-fil med embedding-text, semanticSignals, negativeSignals, llmClassificationHints. Det är **denna** som styr `Scaffold Selector`, inte ordmatchning. |
 | `Quality Contract` | Per-`Scaffold`-fil med scorecard-vikter, must-pass och avoid. Härleder från `page-quality-traits` men kan justera per `Scaffold`. |
-| `Dossier` | Återanvändbar capability-/kunskapsmodul (kontaktformulär, recensioner, prislista, bokning). Klass: `soft` / `hybrid` / `hard`. |
-| `Dossier Class` | En av `soft` (bara content/layout), `hybrid` (kan mockas i designläge, kräver backend i integrationsläge), `hard` (kräver env, backend, betalning). |
-| `Soft Dossier` | Påverkar content/layout men kräver inte extern integration. Exempel: `reviews`, `faq`. |
-| `Hybrid Dossier` | Kan renderas som mock i designläge men kräver backend/env i integrationsläge. Exempel: `contact-form`, `booking-request`. |
-| `Hard Dossier` | Kräver env, backend, databas, auth, betalning eller extern API. Exempel: `auth`, `payments`, `database`. Mockas inte. |
-| `Site Dossier` | Dossier-typ som levererar unikt site-/kundinnehåll: företagsfakta, brand-data, logotyp, ton, serviceområden, kontakt. Vanligen `Soft Dossier`. Den dossier-typ som nästan alltid finns per sajt. |
-| `Feature Dossier` | Dossier-typ som levererar en återanvändbar funktion (pacman-game, ROI-räknare, before/after-slider, gallery). Klass oftast `Soft Dossier` eller `Hybrid Dossier`. Kräver inte extern tjänst. |
-| `Integration Dossier` | Dossier-typ som levererar hård extern integration (Stripe, Supabase, Clerk, Shopify, Sanity). Alltid `Hard Dossier`. Kräver env, backend och leverantörsspecifika code-/env-contracts. |
-| `Data Dossier` | Dossier-typ som levererar återanvändbar kunskap eller data (kommunlistor, FAQ-bibliotek, lokala SEO-fraser). Vanligen `Soft Dossier`. |
-| `Compatible Dossier` | `Dossier` som är listad i en `Scaffold`s `compatible-dossiers.json` under `required`, `recommended` eller `conditional`. |
+| `Project Input` | Strukturerad tolkning av init-promptens kund-/site-data. Driver vad sajten ska handla om (företagsfakta, ton, tjänster, kontakt). Filer: `examples/<siteId>.project-input.json`. Alias: `Deep Brief`. **Är inte en Dossier.** |
+| `Dossier` | Återanvändbar capability/legokloss som kan kopplas på en `Route`/section/slot. Klass: `soft` eller `hard`. Default-kompatibel med alla `Scaffolds`. |
+| `Dossier Class` | En av `soft` (frontend/content utan secrets) eller `hard` (kräver env/backend/auth/betalning/extern API). ADR 0012 tog bort `hybrid` - en Dossier som behöver mock i designläge är `hard` med `mockMode`-konfiguration. |
+| `Soft Dossier` | Återanvändbar frontend/content capability. Exempel: `pacman-game`, `mouse-reactive-background`, `pricing-calculator`. |
+| `Hard Dossier` | Kräver env, secrets, backend, auth, databas, betalning eller extern API. Exempel: `stripe-checkout`, `supabase-auth`, `clerk-auth`, `shopify-cart`. |
+| `Compatible Dossier` | Operator- eller selector-rekommenderad koppling. Default-allow: en Dossier är kompatibel med alla Scaffolds tills den deklarerar motsatsen. |
 
 ## Selection (hur Scaffold och Dossiers väljs)
 

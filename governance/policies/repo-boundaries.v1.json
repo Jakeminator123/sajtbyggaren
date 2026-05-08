@@ -290,6 +290,18 @@
       ]
     },
     {
+      "path": "examples/",
+      "owns": [
+        "Project Input-filer (examples/<siteId>.project-input.json)",
+        "exempel-projekt som drivs av Builder MVP och Viewser"
+      ],
+      "mayImportFrom": [],
+      "mustNotDo": [
+        "innehålla körbar kod eller hemligheter",
+        "innehålla capability/Dossier-definitioner (de hör till packages/generation/orchestration/dossiers/)"
+      ]
+    },
+    {
       "path": "data/",
       "owns": ["versions", "runs", "projects", "lokal persistent state"],
       "mayImportFrom": [],

@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/naming-dictionary.schema.json",
   "policyId": "naming-dictionary.v1",
-  "version": 9,
+  "version": 10,
   "status": "draft-but-authoritative",
-  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 9 begränsar Viewser-vokabulären: Viewser är canonical operator-yta, men UI-komponenter (Chat Panel, Viewer Panel, Token Meter) är lokala implementationsidentifierare och inte separata domänbegrepp. Version 9 registrerar också 'Project Input' som operator-facing alias för Site Dossier för att skilja capability Dossier från projektets site-data i Viewser-UI. Version 8 registrerade Viewser och tre UI-komponenter (chatPanel/viewerPanel/tokenMeter) som senare avregistrerades i v9. Version 7 registrerar Site/Feature/Integration/Data Dossier som riktiga termer (kompletterande typ-axel ovanpå soft/hybrid/hard, som behålls oförändrad). Version 6 introducerade Starter som eget koncept (separat från Scaffold) och Starter Registry.",
+  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 10 (ADR 0012) komprimerar vokabulären: tar bort Site/Feature/Integration/Data/Hybrid Dossier som canonical termer eftersom de dubblade modellen ovanpå Dossier-klasserna. Inför 'Project Input' som canonical begrepp för konkreta operator-projekt (t.ex. painter-palma) och låser Dossier-klasser till bara soft och hard. Version 9 begränsade Viewser-vokabulären; tidigare versioner se git-historiken.",
   "rules": [
     "Ett begrepp får ha exakt ett kanoniskt namn.",
     "Ett kanoniskt namn får bo i exakt en huvudsaklig mapp (se repo-boundaries).",
@@ -85,33 +85,49 @@
       "aliasesForbidden": ["scoreConfig", "qualityRules"]
     },
     {
+      "id": "initPrompt",
+      "canonical": "Init Prompt",
+      "definition": "Den första råa promptens text från operatören. Steg 1 i operator-flödet (ADR 0012). Bör inte muteras eller polishas; tolkningen sker i nästa steg (Project Input).",
+      "ownerPackage": "packages/generation/brief",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["promptPolish", "promptRewrite"]
+    },
+    {
+      "id": "projectInput",
+      "canonical": "Project Input",
+      "definition": "Strukturerad tolkning av operatörens Init Prompt och konkreta kund-/site-data. Driver vad sajten ska handla om (företagsfakta, ton, tjänster, kontakt). Filer: examples/<siteId>.project-input.json. Är inte en Dossier - en Dossier är en återanvändbar capability, ett Project Input är ett konkret kundprojekt.",
+      "ownerPackage": "examples",
+      "aliasesAllowed": ["Deep Brief", "Example Project"],
+      "aliasesForbidden": ["Site Dossier", "siteDossier", "site-dossier"]
+    },
+    {
+      "id": "route",
+      "canonical": "Route",
+      "definition": "En faktisk sida i den genererade sajten (t.ex. /, /kontakt, /tjanster). Bestäms av Scaffold. En Scaffold är inte en Route - Scaffold är grammatiken, Route är resultatet.",
+      "ownerPackage": "packages/generation/orchestration/routing",
+      "aliasesAllowed": ["Page"],
+      "aliasesForbidden": []
+    },
+    {
       "id": "dossier",
       "canonical": "Dossier",
-      "definition": "Återanvändbar capability-/kunskapsmodul som kan slås på i en sajt. Klass: hard / soft / hybrid.",
+      "definition": "Återanvändbar capability/legokloss som kan kopplas på en Route, section eller slot i en Scaffold. Default-kompatibel med alla Scaffolds. Klass: soft eller hard.",
       "ownerPackage": "packages/generation/orchestration/dossiers",
-      "aliasesAllowed": ["capabilityModule"],
-      "aliasesForbidden": ["package", "plugin", "feature", "addon"]
+      "aliasesAllowed": ["Capability"],
+      "aliasesForbidden": ["package", "plugin", "feature", "addon", "Site Dossier", "Feature Dossier", "Integration Dossier", "Data Dossier", "Hybrid Dossier"]
     },
     {
       "id": "dossierClass",
       "canonical": "Dossier Class",
-      "definition": "En av soft, hybrid eller hard. Avgör om Dossiern kräver env, backend, integration eller bara content/layout.",
+      "definition": "En av soft eller hard. Avgör om Dossiern kräver env, backend och integration eller bara content/layout. ADR 0012 tog bort 'hybrid' som klass; en Dossier som behöver mock i designläge är hard med mockMode-konfiguration.",
       "ownerPackage": "packages/generation/orchestration/dossiers",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["dossierType", "dossierKind"]
+      "aliasesForbidden": ["dossierType", "dossierKind", "hybrid", "Hybrid Dossier"]
     },
     {
       "id": "softDossier",
       "canonical": "Soft Dossier",
-      "definition": "Dossier som påverkar content/layout men inte kräver extern integration eller env.",
-      "ownerPackage": "packages/generation/orchestration/dossiers",
-      "aliasesAllowed": [],
-      "aliasesForbidden": []
-    },
-    {
-      "id": "hybridDossier",
-      "canonical": "Hybrid Dossier",
-      "definition": "Dossier som kan renderas som mock i designläge men kräver backend/env i integrationsläge.",
+      "definition": "Dossier som påverkar content/layout/UI men inte kräver extern integration eller env. Exempel: pacman-game, mouse-reactive-background, pricing-calculator, before-after-slider.",
       "ownerPackage": "packages/generation/orchestration/dossiers",
       "aliasesAllowed": [],
       "aliasesForbidden": []
@@ -119,39 +135,7 @@
     {
       "id": "hardDossier",
       "canonical": "Hard Dossier",
-      "definition": "Dossier som kräver env, backend, databas, auth, betalning eller extern API. Mockas inte.",
-      "ownerPackage": "packages/generation/orchestration/dossiers",
-      "aliasesAllowed": [],
-      "aliasesForbidden": []
-    },
-    {
-      "id": "siteDossier",
-      "canonical": "Site Dossier",
-      "definition": "Dossier-typ som levererar unikt site-/kundinnehåll: företagsfakta, brand-data, logotyp, ton, serviceområden, kontakt. Vanligen Soft Dossier. Den dossier-typ som nästan alltid finns per sajt. I operator-UI (Viewser) presenteras instanser som 'Project Input' eller 'Example' så att de inte blandas ihop med capability Dossier i picker.",
-      "ownerPackage": "packages/generation/orchestration/dossiers",
-      "aliasesAllowed": ["Project Input", "Example"],
-      "aliasesForbidden": []
-    },
-    {
-      "id": "featureDossier",
-      "canonical": "Feature Dossier",
-      "definition": "Dossier-typ som levererar en återanvändbar funktion (t.ex. pacman-game, ROI-räknare, before/after-slider, gallery). Klass är oftast Soft eller Hybrid. Kräver inte extern tjänst.",
-      "ownerPackage": "packages/generation/orchestration/dossiers",
-      "aliasesAllowed": [],
-      "aliasesForbidden": []
-    },
-    {
-      "id": "integrationDossier",
-      "canonical": "Integration Dossier",
-      "definition": "Dossier-typ som levererar en hård extern integration (Stripe, Supabase, Clerk, Shopify, Sanity). Alltid Hard Dossier. Kräver env, backend och leverantörsspecifikt code-contract och env-contract.",
-      "ownerPackage": "packages/generation/orchestration/dossiers",
-      "aliasesAllowed": [],
-      "aliasesForbidden": []
-    },
-    {
-      "id": "dataDossier",
-      "canonical": "Data Dossier",
-      "definition": "Dossier-typ som levererar återanvändbar kunskap eller data (kommunlistor, FAQ-bibliotek, branschspecifika SEO-fraser, standardrätter för restaurang). Vanligen Soft Dossier.",
+      "definition": "Dossier som kräver env, secrets, backend, auth, databas, betalning eller extern API. Exempel: stripe-checkout, supabase-auth, clerk-auth, shopify-cart. Får ha mockMode-konfiguration för designläge.",
       "ownerPackage": "packages/generation/orchestration/dossiers",
       "aliasesAllowed": [],
       "aliasesForbidden": []
@@ -628,6 +612,11 @@
     "tier3",
     "F2-only",
     "F3-only",
-    "template-library"
+    "template-library",
+    "Site Dossier",
+    "Feature Dossier",
+    "Integration Dossier",
+    "Data Dossier",
+    "Hybrid Dossier"
   ]
 }

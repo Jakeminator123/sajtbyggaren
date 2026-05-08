@@ -170,8 +170,8 @@ def test_all_eight_engine_run_artifacts_present() -> None:
     """B1: data/runs/<runId>/ must hold all 8 artefakter (5 json + 1 ndjson + 1 dir + skeletons)."""
     from scripts.build_site import build
 
-    dossier_path = REPO_ROOT / "examples" / "painter-palma.site-dossier.json"
-    target, run_dir = build(dossier_path, do_build=False)
+    project_input_path = REPO_ROOT / "examples" / "painter-palma.project-input.json"
+    target, run_dir = build(project_input_path, do_build=False)
     assert target.exists()
 
     expected = [
@@ -206,8 +206,8 @@ def test_build_result_has_model_usage_stub() -> None:
     """B2/BO1: ``modelUsage`` must be present even when LLM is not called yet."""
     from scripts.build_site import build
 
-    dossier_path = REPO_ROOT / "examples" / "painter-palma.site-dossier.json"
-    _, run_dir = build(dossier_path, do_build=False)
+    project_input_path = REPO_ROOT / "examples" / "painter-palma.project-input.json"
+    _, run_dir = build(project_input_path, do_build=False)
     result = json.loads((run_dir / "build-result.json").read_text(encoding="utf-8"))
 
     assert "modelUsage" in result
@@ -230,8 +230,8 @@ def test_generated_files_dir_points_to_run_snapshot() -> None:
     """B11: build-result.generatedFilesDir must be the canonical snapshot path."""
     from scripts.build_site import build
 
-    dossier_path = REPO_ROOT / "examples" / "painter-palma.site-dossier.json"
-    _, run_dir = build(dossier_path, do_build=False)
+    project_input_path = REPO_ROOT / "examples" / "painter-palma.project-input.json"
+    _, run_dir = build(project_input_path, do_build=False)
     result = json.loads((run_dir / "build-result.json").read_text(encoding="utf-8"))
 
     rel_run = str(run_dir.relative_to(REPO_ROOT)).replace("\\", "/")
@@ -250,8 +250,8 @@ def test_trace_event_names_use_dotted_form() -> None:
     """B3: event names must follow ``area.action`` format, matching dev_generate.py."""
     from scripts.build_site import build
 
-    dossier_path = REPO_ROOT / "examples" / "painter-palma.site-dossier.json"
-    _, run_dir = build(dossier_path, do_build=False)
+    project_input_path = REPO_ROOT / "examples" / "painter-palma.project-input.json"
+    _, run_dir = build(project_input_path, do_build=False)
     events: list[dict] = []
     with (run_dir / "trace.ndjson").open("r", encoding="utf-8") as f:
         for line in f:
@@ -288,8 +288,8 @@ def test_repair_and_quality_skeleton_status_not_run() -> None:
     """Skeleton artefakter must clearly say ``not-run`` so they cannot be confused with real results."""
     from scripts.build_site import build
 
-    dossier_path = REPO_ROOT / "examples" / "painter-palma.site-dossier.json"
-    _, run_dir = build(dossier_path, do_build=False)
+    project_input_path = REPO_ROOT / "examples" / "painter-palma.project-input.json"
+    _, run_dir = build(project_input_path, do_build=False)
     repair = json.loads((run_dir / "repair-result.json").read_text(encoding="utf-8"))
     quality = json.loads((run_dir / "quality-result.json").read_text(encoding="utf-8"))
 

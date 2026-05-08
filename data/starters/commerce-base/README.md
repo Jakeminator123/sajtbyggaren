@@ -35,11 +35,11 @@ Det vi måste göra:
 - Lägg till shadcn/ui via `npx shadcn@latest init` (templaten levereras inte med shadcn enligt Vercel-listningen)
 - Säkerställ TypeScript strict
 - Ta bort hårdkodad copy
-- Behåll `lib/shopify` men dokumentera den som **bytbar** via Integration Dossier (kan ersättas med Medusa, BigCommerce, egen JSON, Airtable)
+- Behåll `lib/shopify` men dokumentera den som **bytbar** via en hard Dossier (kan ersättas med Medusa, BigCommerce, egen JSON, Airtable)
 
 ## Adaptermönster
 
-Codegen ska kunna byta provider via `lib/<provider>.ts` med samma interface. Standard: Shopify. Kan bytas via Integration Dossier `commerce-shopify`, `commerce-medusa`, etc.
+Codegen ska kunna byta provider via `lib/<provider>.ts` med samma interface. Standard: Shopify. Kan bytas via hard Dossiers som `commerce-shopify`, `commerce-medusa`, etc.
 
 ## Scaffolds som använder denna bas
 
