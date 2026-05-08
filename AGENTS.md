@@ -28,6 +28,10 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
+On Linux (Cloud Agent VMs), `python3.12-venv` must be installed first
+(`sudo apt-get install -y python3.12-venv`). Activate with
+`source .venv/bin/activate`. The update script handles this automatically.
+
 ### Running services
 
 | Service           | Command                                                                     | Notes                                                                                                                                     |
