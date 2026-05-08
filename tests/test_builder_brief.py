@@ -19,7 +19,7 @@ if str(REPO_ROOT) not in sys.path:
 @pytest.mark.tooling
 def test_builder_uses_brief_extractor_when_api_key_exists(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch,
 ) -> None:
     from scripts.build_site import build
 
@@ -88,8 +88,8 @@ def test_builder_uses_brief_extractor_when_api_key_exists(
 @pytest.mark.tooling
 def test_builder_falls_back_to_mock_when_brief_extractor_fails(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
+    monkeypatch,
+    capsys,
 ) -> None:
     from scripts.build_site import build
 
@@ -140,7 +140,7 @@ def test_builder_falls_back_to_mock_when_brief_extractor_fails(
 )
 def test_builder_fallback_is_deterministic_for_examples(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch,
     example_name: str,
 ) -> None:
     from scripts.build_site import build

@@ -18,7 +18,7 @@ if str(REPO_ROOT) not in sys.path:
 @pytest.mark.tooling
 def test_builder_mounts_pacman_dossier_files(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch,
 ) -> None:
     from scripts.build_site import build
 

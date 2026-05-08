@@ -25,8 +25,8 @@ if str(REPO_ROOT) not in sys.path:
 @pytest.mark.tooling
 def test_builder_smoke_writes_routes_and_run_artifacts(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
+    monkeypatch,
+    capsys,
 ) -> None:
     from scripts.build_site import build  # imported lazily to avoid heavy import on collection
 

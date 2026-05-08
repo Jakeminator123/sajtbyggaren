@@ -168,7 +168,7 @@ def test_route_guard_blocks_missing_route(tmp_path: Path) -> None:
 @pytest.mark.tooling
 def test_all_eight_engine_run_artifacts_present(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch,
 ) -> None:
     """B1: data/runs/<runId>/ must hold all 8 artefakter (5 json + 1 ndjson + 1 dir + skeletons)."""
     from scripts.build_site import build
@@ -208,7 +208,7 @@ def test_all_eight_engine_run_artifacts_present(
 @pytest.mark.tooling
 def test_build_result_has_model_usage_stub(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch,
 ) -> None:
     """B2/BO1: ``modelUsage`` must be present even when LLM is not called yet."""
     from scripts.build_site import build
@@ -236,7 +236,7 @@ def test_build_result_has_model_usage_stub(
 @pytest.mark.tooling
 def test_generated_files_dir_points_to_run_snapshot(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch,
 ) -> None:
     """B11: build-result.generatedFilesDir must be the canonical snapshot path."""
     from scripts.build_site import build
@@ -262,7 +262,7 @@ def test_generated_files_dir_points_to_run_snapshot(
 @pytest.mark.tooling
 def test_trace_event_names_use_dotted_form(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch,
 ) -> None:
     """B3: event names must follow ``area.action`` format, matching dev_generate.py."""
     from scripts.build_site import build
@@ -304,7 +304,7 @@ def test_trace_event_names_use_dotted_form(
 @pytest.mark.tooling
 def test_repair_and_quality_skeleton_status_not_run(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch,
 ) -> None:
     """Skeleton artefakter must clearly say ``not-run`` so they cannot be confused with real results."""
     from scripts.build_site import build
