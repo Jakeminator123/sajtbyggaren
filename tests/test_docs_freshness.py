@@ -16,8 +16,9 @@ the parsing pattern - that is the explicit cost of the guard. The benefit
 is that drift between docs and code is now a CI failure instead of an
 audit finding three sprints later.
 
-Closes B25 (AGENTS.md ruff drift) and B26 (dossier README implementation
-count drift) per docs/known-issues.md.
+Closes B25 (AGENTS.md ruff drift), B26 (dossier README implementation
+count drift), and B27 (substring false-positive in dossier id presence
+check) per docs/known-issues.md.
 """
 
 from __future__ import annotations
@@ -48,6 +49,25 @@ def _list_dossiers_on_disk() -> list[str]:
             if child.is_dir() and (child / "manifest.json").exists():
                 found.append(child.name)
     return found
+
+
+def _id_appears_as_token(dossier_id: str, text: str) -> bool:
+    """Return True if ``dossier_id`` appears as a whole id-token in ``text``.
+
+    Plain substring matching (``id in text``) gave a false positive when
+    one dossier id was a substring of another - e.g. a hypothetical
+    ``game`` Dossier would incorrectly count as "mentioned in README"
+    just because the README mentioned ``interactive-game-loop``. This
+    helper requires the id to be bordered on BOTH sides by characters
+    that are NOT in ``[\\w-]`` (alphanumerics, underscore, or hyphen).
+
+    That boundary lets the id match inside backticks, square brackets,
+    parentheses, slashes (e.g. ``soft/interactive-game-loop/``), spaces,
+    commas, or end-of-string - but it correctly REJECTS the id when it
+    sits inside another hyphenated token. Closes B27.
+    """
+    pattern = r"(?<![\w-])" + re.escape(dossier_id) + r"(?![\w-])"
+    return re.search(pattern, text) is not None
 
 
 @pytest.mark.tooling
@@ -140,9 +160,58 @@ def test_dossier_readme_implementation_status_matches_disk():
         )
 
     for dossier_id in actual_dossiers:
-        assert dossier_id in readme, (
+        assert _id_appears_as_token(dossier_id, readme), (
             f"Dossier '{dossier_id}' exists on disk under "
             f"packages/generation/orchestration/dossiers/ but is not "
             f"mentioned by id in dossiers/README.md. Add it to the Status "
-            f"section so operators can find it."
+            f"section so operators can find it. (Substring matches inside "
+            f"another hyphenated token do NOT count - see B27.)"
         )
+
+
+@pytest.mark.tooling
+def test_id_appears_as_token_distinguishes_overlapping_dossier_ids():
+    """B27 regression: ``dossier_id in text`` substring matching gave a
+    false positive for overlapping ids. A hypothetical ``game`` Dossier
+    on disk would have been considered "mentioned in README" just because
+    the README mentioned ``interactive-game-loop``. The id-token helper
+    must treat hyphens as part of the id, not as token-separators.
+
+    If a future refactor reverts to plain substring matching, this test
+    fails because ``game`` would suddenly be reported as "present" inside
+    ``interactive-game-loop``.
+    """
+    readme_like = (
+        "See [interactive-game-loop](soft/interactive-game-loop/) for the "
+        "playable mini-game contract. Backtick form: `interactive-game-loop`. "
+        "Comma at end: interactive-game-loop, ok."
+    )
+
+    assert _id_appears_as_token("interactive-game-loop", readme_like) is True, (
+        "The full id must match - link text, path, backtick and comma "
+        "boundaries are all valid token boundaries."
+    )
+
+    assert _id_appears_as_token("game", readme_like) is False, (
+        "Substring 'game' must NOT match inside 'interactive-game-loop'. "
+        "If this assertion fails, the dossier_id presence check has been "
+        "reverted to plain substring matching and B27 has reopened."
+    )
+    assert _id_appears_as_token("game-loop", readme_like) is False, (
+        "Substring 'game-loop' must NOT match inside 'interactive-game-loop'."
+    )
+    assert _id_appears_as_token("interactive", readme_like) is False, (
+        "Substring 'interactive' must NOT match inside 'interactive-game-loop'."
+    )
+    assert _id_appears_as_token("loop", readme_like) is False, (
+        "Substring 'loop' must NOT match inside 'interactive-game-loop'."
+    )
+    assert _id_appears_as_token("interactive-game", readme_like) is False, (
+        "Substring 'interactive-game' must NOT match inside "
+        "'interactive-game-loop'."
+    )
+
+    bare_id = "Status: pacman-game is the only implementation."
+    assert _id_appears_as_token("pacman-game", bare_id) is True
+    assert _id_appears_as_token("pacman", bare_id) is False
+    assert _id_appears_as_token("game", bare_id) is False

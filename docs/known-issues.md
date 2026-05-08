@@ -101,6 +101,24 @@ Format per bugg:
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B27` Låg** (stängd 2026-05-08, audit-3) - `tests/test_docs_freshness.py`
+  använde `dossier_id in readme` (Python `str in str` substring-match) för
+  att verifiera att en disk-Dossier nämns i `dossiers/README.md`. Det gav
+  falsk-positiv för överlappande IDs: en hypotetisk `game`-Dossier på disk
+  skulle räknas som "nämnd" bara för att README:n nämner
+  `interactive-game-loop` (`'game' in 'interactive-game-loop' == True`).
+  Bevis: `python -c "print('game' in 'interactive-game-loop')"` → `True`.
+  Risk-fönster: idag bara en Dossier på disk så testet passerade ändå,
+  men så fort en andra Dossier vars id är substring av den första
+  importerades skulle testet ge tyst "OK" trots att README:n inte hade
+  uppdaterats. Fix: ny `_id_appears_as_token()`-helper i samma fil som
+  matchar med custom token-boundary `(?<![\w-])id(?![\w-])` så att hyphen
+  räknas som id-tecken, inte token-separator. Tester:
+  `tests/test_docs_freshness.py::test_dossier_readme_implementation_status_matches_disk`
+  (uppdaterad till att använda helpern), och nya
+  `tests/test_docs_freshness.py::test_id_appears_as_token_distinguishes_overlapping_dossier_ids`
+  som täcker sex överlapps-scenarier (full id, prefix, suffix, mid-substring,
+  hyphen-prefix, hyphen-suffix) plus ett "bara id"-scenario.
 - **`B23` Låg** (stängd 2026-05-08, post-audit-2) - Bug C end-to-end:
   `build_plan_artefakts` i `scripts/build_site.py` anropar
   `validate_site_plan(site_plan)` EFTER `merge_operator_selected_with_helper`,
