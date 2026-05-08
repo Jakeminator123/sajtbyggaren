@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/naming-dictionary.schema.json",
   "policyId": "naming-dictionary.v1",
-  "version": 10,
+  "version": 11,
   "status": "draft-but-authoritative",
-  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 10 (ADR 0012) komprimerar vokabulären: tar bort Site/Feature/Integration/Data/Hybrid Dossier som canonical termer eftersom de dubblade modellen ovanpå Dossier-klasserna. Inför 'Project Input' som canonical begrepp för konkreta operator-projekt (t.ex. painter-palma) och låser Dossier-klasser till bara soft och hard. Version 9 begränsade Viewser-vokabulären; tidigare versioner se git-historiken.",
+  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 11 registrerar Capability som canonical term för Dossier-fältet capability i MIN_IDE-formatet. Version 10 (ADR 0012) komprimerar vokabulären: tar bort Site/Feature/Integration/Data/Hybrid Dossier som canonical termer eftersom de dubblade modellen ovanpå Dossier-klasserna. Inför 'Project Input' som canonical begrepp för konkreta operator-projekt (t.ex. painter-palma) och låser Dossier-klasser till bara soft och hard. Version 9 begränsade Viewser-vokabulären; tidigare versioner se git-historiken.",
   "rules": [
     "Ett begrepp får ha exakt ett kanoniskt namn.",
     "Ett kanoniskt namn får bo i exakt en huvudsaklig mapp (se repo-boundaries).",
@@ -113,8 +113,16 @@
       "canonical": "Dossier",
       "definition": "Återanvändbar capability/legokloss som kan kopplas på en Route, section eller slot i en Scaffold. Default-kompatibel med alla Scaffolds. Klass: soft eller hard.",
       "ownerPackage": "packages/generation/orchestration/dossiers",
-      "aliasesAllowed": ["Capability"],
+      "aliasesAllowed": [],
       "aliasesForbidden": ["package", "plugin", "feature", "addon", "Site Dossier", "Feature Dossier", "Integration Dossier", "Data Dossier", "Hybrid Dossier"]
+    },
+    {
+      "id": "capability",
+      "canonical": "Capability",
+      "definition": "Det kanoniska fältet på en Dossier som beskriver vilken förmåga den tillför (t.ex. interactive-game). En Dossier deklarerar exakt en Capability.",
+      "ownerPackage": "packages/generation/orchestration/dossiers",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
     },
     {
       "id": "dossierClass",
