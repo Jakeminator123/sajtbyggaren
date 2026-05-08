@@ -11,9 +11,12 @@ missing) and `npm run build`. Pass `--skip-build` to skip those steps during
 fast dev iteration.
 
 This is the minimal happy path described in `docs/migration-plan.md` Sprint 2
-and `docs/architecture/builder-mvp.md`. It deliberately does not call any
-LLM, does not implement Repair Pipeline or Quality Gate, and does not do
-follow-up.
+and `docs/architecture/builder-mvp.md`. As of Sprint 2A the builder calls
+`briefModel` for the Site Brief phase when `OPENAI_API_KEY` is set, and falls
+back to a deterministic mock Site Brief otherwise (or when the LLM call
+fails). All later phases - Planning (`planningModel`), Codegen
+(`codegenModel`), Repair Pipeline, Quality Gate and follow-up - are still
+deterministic stubs and do not call any LLM yet.
 """
 
 from __future__ import annotations
