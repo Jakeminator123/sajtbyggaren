@@ -23,7 +23,7 @@ if str(REPO_ROOT) not in sys.path:
 
 
 @pytest.mark.tooling
-def test_builder_smoke_writes_routes_and_run_artifacts() -> None:
+def test_builder_smoke_writes_routes_and_run_artifacts(tmp_path: Path) -> None:
     from scripts.build_site import build  # imported lazily to avoid heavy import on collection
 
     project_input_path = (
@@ -31,7 +31,7 @@ def test_builder_smoke_writes_routes_and_run_artifacts() -> None:
     )
     assert project_input_path.exists(), "painter-palma project input must exist"
 
-    target, run_dir = build(project_input_path, do_build=False)
+    target, run_dir = build(project_input_path, do_build=False, runs_dir=tmp_path)
 
     # Generated routes
     expected_pages = [

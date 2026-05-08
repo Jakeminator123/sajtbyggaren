@@ -109,6 +109,20 @@ def write(path: Path, contents: str) -> None:
         f.write(contents)
 
 
+def _to_repo_relative(path: Path) -> str:
+    """Return ``path`` as POSIX-style string relative to REPO_ROOT when possible.
+
+    Tests pass ``runs_dir=tmp_path`` outside the repo to keep ``data/runs/`` clean,
+    in which case the absolute path is returned unchanged.
+    """
+    resolved = path.resolve()
+    try:
+        relative = resolved.relative_to(REPO_ROOT)
+    except ValueError:
+        return str(resolved).replace("\\", "/")
+    return str(relative).replace("\\", "/")
+
+
 def write_json(path: Path, data: Any) -> None:
     write(path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
 
@@ -644,17 +658,26 @@ def assert_routes_present(target: Path, routes: list[str]) -> None:
 def run_npm(command: list[str], cwd: Path) -> tuple[bool, float, str]:
     """Run an npm command and return (ok, seconds, last_lines).
 
-    Uses shell=True on Windows so npm.cmd is found via PATHEXT.
+    Uses ``shutil.which`` to resolve ``npm`` (or ``npm.cmd`` on Windows) so the
+    subprocess is invoked with ``shell=False``. ``shell=True`` with a list
+    silently drops every argument after the first on POSIX, which made
+    ``npm install`` collapse to a bare ``npm`` invocation in CI and exit 1
+    after printing the help screen.
     """
+    npm_path = shutil.which("npm")
+    if npm_path is None:
+        return False, 0.0, "npm executable not found on PATH"
+
+    full_command = [npm_path, *command[1:]] if command and command[0] == "npm" else [npm_path, *command]
     start = time.monotonic()
     proc = subprocess.run(
-        command,
+        full_command,
         cwd=cwd,
         capture_output=True,
         text=True,
         encoding="utf-8",
         errors="replace",
-        shell=True,
+        shell=False,
     )
     elapsed = time.monotonic() - start
     output = (proc.stdout or "") + (proc.stderr or "")
@@ -892,8 +915,8 @@ def write_build_result(
     consumers (Backoffice, eval batch) can trust it across regenerations.
     """
     snap_dir = run_dir / "generated-files"
-    rel_snapshot = str(snap_dir.relative_to(REPO_ROOT)).replace("\\", "/")
-    rel_preview = str(target_dir.relative_to(REPO_ROOT)).replace("\\", "/")
+    rel_snapshot = _to_repo_relative(snap_dir)
+    rel_preview = _to_repo_relative(target_dir)
     result = {
         "siteId": dossier["siteId"],
         "starterId": "marketing-base",
@@ -934,8 +957,13 @@ def write_build_result(
 def build(
     dossier_path: Path,
     do_build: bool = True,
+    runs_dir: Path | None = None,
 ) -> tuple[Path, Path]:
-    """Generate a site and Engine Run artefakts. Returns (target, run_dir)."""
+    """Generate a site and Engine Run artefakts. Returns (target, run_dir).
+
+    ``runs_dir`` defaults to ``RUNS_DIR`` (``data/runs``); pass an isolated
+    path (``tmp_path`` in tests) to keep the canonical history clean.
+    """
     started = time.monotonic()
 
     dossier = load_json(dossier_path)
@@ -948,8 +976,9 @@ def build(
     scaffold_routes = load_json(scaffold_dir / "routes.json")
     variant = load_json(scaffold_dir / "variants" / f"{variant_id}.json")
 
+    runs_root = runs_dir if runs_dir is not None else RUNS_DIR
     run_id = make_run_id(site_id)
-    run_dir = RUNS_DIR / run_id
+    run_dir = runs_root / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     trace = Trace(run_id, run_dir)
 
@@ -1093,6 +1122,11 @@ def main() -> int:
         action="store_true",
         help="Skip npm install + npm run build (file generation only).",
     )
+    parser.add_argument(
+        "--runs-dir",
+        default=None,
+        help="Override canonical data/runs/ path (used by tests to isolate artefakts).",
+    )
     args = parser.parse_args()
 
     dossier_path = Path(args.dossier).resolve()
@@ -1100,7 +1134,8 @@ def main() -> int:
         print(f"Dossier not found: {dossier_path}", file=sys.stderr)
         return 1
 
-    build(dossier_path, do_build=not args.skip_build)
+    runs_dir = Path(args.runs_dir).resolve() if args.runs_dir else None
+    build(dossier_path, do_build=not args.skip_build, runs_dir=runs_dir)
     return 0
 
 

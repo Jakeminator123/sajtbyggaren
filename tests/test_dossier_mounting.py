@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -15,11 +16,11 @@ if str(REPO_ROOT) not in sys.path:
 
 
 @pytest.mark.tooling
-def test_builder_mounts_pacman_dossier_files() -> None:
+def test_builder_mounts_pacman_dossier_files(tmp_path: Path) -> None:
     from scripts.build_site import build
 
     project_input_path = REPO_ROOT / "examples" / "painter-palma.project-input.json"
-    target, _run_dir = build(project_input_path, do_build=False)
+    target, _run_dir = build(project_input_path, do_build=False, runs_dir=tmp_path)
 
     assert (target / "components" / "pacman-game.tsx").exists(), (
         "Selected dossier component must be copied into generated components/"
@@ -30,7 +31,16 @@ def test_builder_mounts_pacman_dossier_files() -> None:
 
 
 @pytest.mark.tooling
-def test_generated_pacman_site_passes_npm_build() -> None:
+def test_generated_pacman_site_passes_npm_build(tmp_path: Path) -> None:
+    """Opt-in npm install + next build verification.
+
+    Skipped by default because it requires network access and pulls a few
+    hundred MB of node_modules. Set ``SAJTBYGGAREN_VERIFY_BUILD=1`` to enable
+    it locally or in a manually triggered CI lane.
+    """
+    if os.environ.get("SAJTBYGGAREN_VERIFY_BUILD") != "1":
+        pytest.skip("Set SAJTBYGGAREN_VERIFY_BUILD=1 to run the slow npm build verification")
+
     npm = shutil.which("npm")
     if not npm:
         pytest.skip("npm is required for dossier mounting build verification")
@@ -39,13 +49,23 @@ def test_generated_pacman_site_passes_npm_build() -> None:
     project_input_path = REPO_ROOT / "examples" / "painter-palma.project-input.json"
 
     run = subprocess.run(
-        [sys.executable, str(script_path), "--dossier", str(project_input_path)],
+        [
+            sys.executable,
+            str(script_path),
+            "--dossier",
+            str(project_input_path),
+            "--runs-dir",
+            str(tmp_path),
+        ],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
         encoding="utf-8",
         errors="replace",
     )
+    if run.returncode != 0:
+        print("STDOUT:", run.stdout)
+        print("STDERR:", run.stderr)
     assert run.returncode == 0, run.stdout + "\n" + run.stderr
 
 
