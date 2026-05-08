@@ -33,3 +33,7 @@ Thumbs.db
 
 .tmp-*
 .tmp.*
+
+# Operator-only reference workspace - copies/forks of MIN_IDE-style examples.
+# Files in MIN_IDE/ are read-only inspiration and never get committed.
+MIN_IDE/

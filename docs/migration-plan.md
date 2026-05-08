@@ -26,15 +26,21 @@ Dessa är prototyp-ytor som hjälper operatören jobba **innan** Sprint 2-5 är
 klara. De räknas inte som Sprint-leverabler och förbrukar inte
 sprint-numreringen.
 
-- **Builder MVP hardening** (klart i tidigare PR): `scripts/build_site.py`
+- **Builder MVP hardening** (klart, PR #3): `scripts/build_site.py`
   uppfyller phase 3 artefaktkontrakt (generated-files snapshot, repair/quality
   skeletons, `modelUsage`-stub, hård route-guard). Ersätts när Sprint 3 ger
   riktig Repair Pipeline och Quality Gate.
-- **Viewser MVP** (denna PR): `apps/viewser/` ger en localhost-only operator-
+- **Viewser MVP** (klart, PR #4): `apps/viewser/` ger en localhost-only operator-
   prototype för chat + manuell build + preview. Den implementerar **inte**
   Dossier-edit, Project DNA, follow-up, Repair Pipeline eller Quality Gate -
   de hör till Sprint 2-3. Ersätts av riktig Engine Run-yta när Sprint 4-5
   LocalRuntime/StackBlitzRuntime är på plats.
+- **Vocabulary compression** (klart, PR #5, ADR 0012): låste operator-flödet
+  till åtta steg och tog bort de fyra dossier-typerna som dubblade modellen
+  ovanpå Dossier-klasserna. Bara `Dossier` med klass `soft` eller `hard` kvar.
+  `painter-palma` är canonical `Project Input`, inte Dossier. Se
+  [ADR 0012](../governance/decisions/0012-vocabulary-compression.md) för
+  vilka termer som flyttades till `globallyForbidden`.
 
 ## Baseline-kandidater (referens, inte mål)
 
@@ -90,4 +96,5 @@ Tre April-taggar är intressanta som **inspiration** under manual port. De porta
 | `apps/web` | inte startad |
 | Sajtmaskin-baseline-jämförelse | uppskjuten enligt [ADR 0008](../governance/decisions/0008-defer-evals-until-flow-exists.md) |
 | Builder MVP hardening (parallellspår) | klart |
-| Viewser MVP (parallellspår) | i PR |
+| Viewser MVP (parallellspår) | klart |
+| Vocabulary compression (parallellspår, ADR 0012) | klart |

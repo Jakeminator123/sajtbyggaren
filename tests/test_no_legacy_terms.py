@@ -35,6 +35,9 @@ EXCLUDE_DIRS = {
     "out",
     ".turbo",
     ".generated",
+    # Operator-only reference workspace (gitignored) - never scan as product source
+    "MIN_IDE",
+    "övrigt",
 }
 
 # Files that legitimately mention forbidden terms because their job is to
