@@ -21,19 +21,20 @@ Tre lager:
 - ADR 0001–0013 + 15 policies + matchande schemas.
 - 4 automatiska checks: `governance_validate.py`, `rules_sync.py`, `check_term_coverage.py --strict`, `pytest`. GitHub Actions kör alla på push/PR.
 - **Sprint 2A (PR #7, `3dbffe4`):** både `scripts/build_site.py` och `scripts/dev_generate.py` anropar riktiga `briefModel` (gpt-5.4) via OpenAI med Pydantic structured output när `OPENAI_API_KEY` finns; mock-fallback annars. `site-brief.json` markeras med `briefSource` (`real` / `mock-no-key` / `mock-llm-error`) och `modelUsed`. `has_openai_api_key()`-helpern stripar whitespace så `"   "` räknas som saknad nyckel.
-- **ADR 0013 schema-låsning:** site-brief, site-plan, generation-package och sections har JSON Schemas under `governance/schemas/`. Båda scripten validerar artefakter vid skrivning via `packages/generation/artifacts/validate.py`. `capability-map.v1.json` registrerar 12 capability-slugs (men bara `interactive-game` har en riktig Dossier idag).
+- **Sprint 2B:** `packages/generation/planning/produce_site_plan` är enda källan för Site Plan + Generation Package. Båda scripten anropar samma helper - `dev_generate.py` utan pinning (planSource `real` / `mock-no-key` / `mock-llm-error`), `build_site.py` med `pinned={scaffoldId, variantId}` från Project Input (planSource `pinned`, planningModel skippas eftersom operatörens val är auktoritativt). Capability-filter ("tom dossier-lista = gap") körs centralt så `selectedDossiers.rejected[]` alltid speglar verkligheten. Builder läser `starterId` från planen istället för att hårdkoda `marketing-base`. **B19 stängd.**
+- **ADR 0013 schema-låsning:** site-brief, site-plan, generation-package och sections har JSON Schemas under `governance/schemas/`. Båda scripten validerar artefakter vid skrivning via `packages/generation/artifacts/validate.py`. `capability-map.v1.json` registrerar 12 capability-slugs (men bara `interactive-game` har en riktig Dossier idag). `site-plan.schema.json:planSource` accepterar nu också `pinned` (Sprint 2B).
 - `scripts/build_site.py`: deterministisk Builder MVP - skriver alla canonical artefakter inkl. `generated-files/`-snapshot. `npm install`/`npm run build` har timeouts (600s/300s) som ger `status=failed` istället för att hänga. `--skip-build` för snabb iteration.
-- `scripts/dev_generate.py`: mock-pipeline för regression - skriver alla 8 artefakter + `trace.ndjson` (fas 2-3 är mock).
+- `scripts/dev_generate.py`: mock-pipeline för regression - skriver alla 8 artefakter + `trace.ndjson` (fas 1+2 anropar real LLM när nyckel finns; fas 3 är fortsatt mock placeholder).
 - Backoffice (`streamlit run backend.py`) visar Status, Governance, LLM Engine, Building Blocks, Engine Runs, Evals, Playground.
-- `local-service-business`-scaffolden + `marketing-base`-startern + `interactive-game-loop`-dossiern finns implementerade.
+- Två scaffolds har innehåll: `local-service-business` (variant `nordic-trust`) och `ecommerce-lite` (variant `clean-store`, Sprint 2B). Båda mappar till `marketing-base`-starter via `SCAFFOLD_TO_STARTER` i `packages/generation/planning/plan.py`. `interactive-game-loop`-dossiern är den enda implementerade Dossiern idag.
 
 ## Vad är mock än så länge
 
-- Fas 2 `planningModel`: scaffold/variant/dossier-val är deterministisk stub. Sprint 2B-mål: koppla in `planningModel` med samma `OPENAI_API_KEY`-gate + mock-fallback-mönster.
 - Fas 3: `codegenModel`, Repair Pipeline (`packages/generation/repair/`), Quality Gate (`packages/generation/quality-gate/`), Preview Runtime - alla planerade Sprint 3-5.
-- Övriga scaffold-IDs i `scaffold-contract.v1.json` har inget content under `packages/generation/orchestration/scaffolds/<id>/` - bara `local-service-business` har körbara filer. Sprint 2B lägger till en andra (rekommenderat: `ecommerce-lite`).
+- `data/starters/commerce-base/` är fortfarande oharmoniserad zip/README. Ecommerce-lite mappar därför till `marketing-base` tills en separat starter-harmoniserings-sprint plockar upp `vercel/commerce`-zipen, kör Next-codemods och bryter ut Shopify-integrationen till en hard Dossier (se `docs/known-issues.md` `P2B-COMMERCE`).
+- Övriga 12 scaffold-IDs i `scaffold-contract.v1.json` har inget content under `packages/generation/orchestration/scaffolds/<id>/` - bara `local-service-business` och `ecommerce-lite` har körbara filer.
 - `apps/web` finns inte alls.
-- 11 av 12 capability-slugs i `capability-map.v1.json` har tom `dossiers`-lista. Hård-Dossier-import (resend-contact-form, stripe-checkout, clerk-auth, etc. från `referens/min-ide-templates/`) sker tidigast i Sprint 3.
+- 11 av 12 capability-slugs i `capability-map.v1.json` har tom `dossiers`-lista. Hård-Dossier-import (resend-contact-form, stripe-checkout, clerk-auth, commerce-shopify, etc. från `referens/min-ide-templates/` och `data/starters/commerce-base/commerce-main.zip`) sker tidigast i Sprint 3. `produce_site_plan` registrerar dem som `selectedDossiers.rejected[]` med `comment` från capability-map som motivering.
 
 ## Beslutsläge för arkitektur-frågor
 

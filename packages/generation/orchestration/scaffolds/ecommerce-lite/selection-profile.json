@@ -1,0 +1,28 @@
+{
+  "id": "ecommerce-lite",
+  "embeddingText": "A small product-focused storefront for premium brands, single-product shops, niche product catalogues and direct-to-consumer brands selling a curated range. The site introduces the brand, showcases the product range and routes visitors towards purchase or contact. Cart, checkout and payment integrations are imported as separate hard Dossiers when needed.",
+  "semanticSignals": [
+    "online shop",
+    "product catalogue",
+    "premium brand",
+    "direct-to-consumer",
+    "single-product site",
+    "buy now",
+    "physical product",
+    "lookbook"
+  ],
+  "negativeSignals": [
+    "marketplace with many third-party sellers",
+    "B2B SaaS dashboard",
+    "service business with no products",
+    "donation-only nonprofit",
+    "personal blog",
+    "course platform"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold when the user wants to sell physical or digital products from their own brand and the catalogue is small enough that a hand-curated grid is honest.",
+    "Do not choose this scaffold when the prompt is actually about a marketplace, a SaaS subscription product, or a pure service business that happens to also sell merch."
+  ],
+  "minConfidence": 0.7,
+  "requiresTieBreakWhenWithin": 0.08
+}

@@ -1,0 +1,36 @@
+{
+  "home": {
+    "requiredSections": ["hero", "product-grid", "value-props", "shop-cta"],
+    "optionalSections": ["editorial-feature", "trust-proof", "newsletter-signup"],
+    "sectionOrderRules": [
+      "Hero must include the brand name, the core promise and a primary CTA pointing to /produkter.",
+      "Product grid must show concrete products with image, name and price when available - never placeholder cards.",
+      "Value props must connect to the brand promise, not generic 'fast shipping' filler unless the brand actually offers it."
+    ]
+  },
+  "products": {
+    "requiredSections": ["products-intro", "product-grid", "shop-cta"],
+    "optionalSections": ["filter-bar", "trust-proof", "faq"],
+    "sectionOrderRules": [
+      "Products intro must explain what unifies the range, not generic 'welcome to our shop' copy.",
+      "Product grid items must be concrete, not lorem-style placeholders.",
+      "Filter bar is optional but when present must reflect actual product attributes (category, size, material)."
+    ]
+  },
+  "about": {
+    "requiredSections": ["about-story", "values"],
+    "optionalSections": ["team", "production", "press"],
+    "sectionOrderRules": [
+      "About story must be specific to the brand and avoid stock-startup language.",
+      "Values must be concrete - what the brand actually does or refuses to do."
+    ]
+  },
+  "contact": {
+    "requiredSections": ["contact-info", "shop-cta"],
+    "optionalSections": ["store-locator", "faq"],
+    "sectionOrderRules": [
+      "Phone, email and address must all be present and not be lorem placeholders.",
+      "Store locator only when the brand has a physical address."
+    ]
+  }
+}

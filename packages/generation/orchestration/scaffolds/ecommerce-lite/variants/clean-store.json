@@ -1,0 +1,38 @@
+{
+  "id": "clean-store",
+  "label": "Clean Store",
+  "description": "Editorial, product-led visual expression. Generous white space, oversized product imagery, restrained typography, neutral palette with a warm accent. Suits curated single-brand shops that want the product to lead and the chrome to step back.",
+  "tokens": {
+    "color": {
+      "background": "#fbfaf7",
+      "foreground": "#1a1a1a",
+      "muted": "#6e6e68",
+      "border": "#e8e6e0",
+      "primary": "#1a1a1a",
+      "primaryForeground": "#fbfaf7",
+      "accent": "#c9a87c",
+      "accentForeground": "#1a1a1a"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.25
+    },
+    "radius": {
+      "sm": "0.25rem",
+      "md": "0.375rem",
+      "lg": "0.5rem"
+    },
+    "spacing": {
+      "section": "6rem",
+      "container": "min(76rem, 92vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": ["editorial", "premium-but-restrained", "product-led", "calm"]
+  }
+}

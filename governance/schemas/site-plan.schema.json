@@ -117,8 +117,8 @@
     },
     "planSource": {
       "type": "string",
-      "enum": ["real", "mock-no-key", "mock-llm-error", "mock-pre-sprint-2b"],
-      "description": "Truth field about which code path produced this plan. Mirrors briefSource on Site Brief."
+      "enum": ["real", "mock-no-key", "mock-llm-error", "mock-pre-sprint-2b", "pinned"],
+      "description": "Truth field about which code path produced this plan. Mirrors briefSource on Site Brief. 'pinned' means a Project Input pre-selected scaffold/variant and planningModel was not asked to choose (Sprint 2B builder path). 'mock-pre-sprint-2b' is retained for historical artefakts written before produce_site_plan() landed."
     },
     "planError": {
       "type": ["string", "null"],

@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../../governance/schemas/scaffold.schema.json",
+  "id": "ecommerce-lite",
+  "version": "0.1.0",
+  "label": "Ecommerce Lite",
+  "description": "Minimal product-focused storefront for small shops, premium single-brand sites and product catalogues. Sprint 2B baseline: scaffold + variant only, runs on the marketing-base starter until commerce-base harmonisation lands. Built-in commerce features (cart, checkout, payments) are scheduled as hard Dossiers in a future sprint and intentionally absent here.",
+  "buildIntent": ["website"],
+  "primaryJobs": [
+    "introduce the brand",
+    "showcase products",
+    "drive checkout intent"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

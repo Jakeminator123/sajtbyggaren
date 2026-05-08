@@ -2,12 +2,16 @@
 
 Runs an Engine Run from a prompt to artifacts under data/runs/<runId>/.
 
-LLM status (as of Sprint 2A, ADR 0013):
+LLM status (as of Sprint 2B):
     - Phase 1 Understand: calls real `briefModel` via OpenAI when
       OPENAI_API_KEY is set, otherwise falls back to a deterministic
       mock and writes briefSource=mock-no-key into site-brief.json.
-    - Phase 2 Plan: deterministic stub (planningModel wires in Sprint 2B).
-      site-plan.json carries planSource=mock-pre-sprint-2b.
+    - Phase 2 Plan: calls real `planningModel` via the shared
+      `packages.generation.planning.produce_site_plan` helper when
+      OPENAI_API_KEY is set. Falls back to deterministic mock with
+      planSource=mock-no-key when the key is missing or
+      planSource=mock-llm-error if the call raises. Same helper is
+      used by scripts/build_site.py - that is what closes B19.
     - Phase 3 Build: deterministic placeholder files; codegenModel,
       Repair Pipeline and Quality Gate land in Sprint 3.
 
@@ -236,71 +240,63 @@ def run_phase_understand(
 
 
 def run_phase_plan(run_dir: Path, run_id: str, site_brief: dict[str, Any]) -> dict[str, Any]:
-    emit(run_id, run_dir, "plan", "started", "started", "Selecting scaffold, variant, routes, dossiers (mock)")
+    """Phase 2 Plan: delegate to the shared produce_site_plan helper.
 
-    from packages.generation.artifacts import (
-        validate_generation_package,
-        validate_site_plan,
+    Both this script and scripts/build_site.py go through the SAME helper
+    (packages.generation.planning.produce_site_plan). Local plan-construction
+    code in this file used to mirror builder code and silently drifted -
+    that drift is what docs/known-issues.md B19 tracked. Keep this function
+    a thin wrapper: any new plan logic belongs in the helper, not here.
+    """
+    from packages.generation.brief import has_openai_api_key
+    from packages.generation.planning import produce_site_plan
+
+    if has_openai_api_key():
+        emit(run_id, run_dir, "plan", "planning.calling-llm", "started", "Calling planningModel (real)")
+    else:
+        emit(run_id, run_dir, "plan", "planning.mock", "started", "No OPENAI_API_KEY - mock plan")
+
+    result = produce_site_plan(
+        site_brief,
+        run_id=run_id,
+        engine_mode="init",
+        project_id=None,
     )
 
-    # selectedDossiers stays empty in the pre-Sprint-2B mock: only
-    # interactive-game-loop is a real Dossier today, and a generic prompt
-    # ("elektriker i Malmö") cannot honestly motivate a Pacman game. Earlier
-    # versions wrote ["contact-form", "reviews"] which were neither real
-    # Dossiers (contact-form is planned via MIN_IDE/resend-contact-form;
-    # reviews is a section, not a Dossier - see ADR 0012). The list is empty
-    # until planningModel is wired in Sprint 2B and can pick from
-    # capability-map.v1.json.
-    site_plan = {
-        "runId": run_id,
-        "scaffoldId": "local-service-business",
-        "variantId": "premium-local",
-        "starterId": "marketing-base",
-        "routePlan": [
-            {"id": "home", "path": "/", "purpose": "Position company, drive primary CTA."},
-            {"id": "services", "path": "/tjanster", "purpose": "Show services."},
-            {"id": "contact", "path": "/kontakt", "purpose": "Convert to call or quote."},
-        ],
-        "selectedDossiers": [],
-        "buildSpec": {
-            "qualityTarget": 9.0,
-            "verificationPolicy": "fast",
-            "previewRuntime": "local",
-        },
-        "sourceModelRole": "planningModel",
-        "modelUsed": "mock",
-        "planSource": "mock-pre-sprint-2b",
-        "planError": None,
-        "createdAt": utcnow_iso(),
-    }
-    validate_site_plan(site_plan)
-    write_json(run_dir / "site-plan.json", site_plan)
-    emit(run_id, run_dir, "plan", "site-plan.written", "done", "site-plan.json written (mock)", "site-plan.json")
+    if result.source == "mock-llm-error":
+        emit(
+            run_id,
+            run_dir,
+            "plan",
+            "planning.degraded",
+            "degraded",
+            f"planningModel call failed, used mock fallback: {result.error}",
+        )
 
-    generation_package = {
-        "runId": run_id,
-        "policyVersions": {
-            "engineRun": "engine-run.v1",
-            "llmModels": "llm-models.v1",
-            "pageQualityTraits": "page-quality-traits.v1",
-            "namingDictionary": "naming-dictionary.v1",
-        },
-        "siteBriefRef": "site-brief.json",
-        "sitePlanRef": "site-plan.json",
-        "scaffoldId": site_plan["scaffoldId"],
-        "variantId": site_plan["variantId"],
-        "starterId": site_plan["starterId"],
-        "language": site_brief["language"],
-        "engineMode": "init",
-        "projectId": None,
-        "createdAt": utcnow_iso(),
-    }
-    validate_generation_package(generation_package)
-    write_json(run_dir / "generation-package.json", generation_package)
-    emit(run_id, run_dir, "plan", "package.written", "done", "generation-package.json written (mock)", "generation-package.json")
+    write_json(run_dir / "site-plan.json", result.site_plan)
+    emit(
+        run_id,
+        run_dir,
+        "plan",
+        "site-plan.written",
+        "done",
+        f"site-plan.json written (planSource={result.source})",
+        "site-plan.json",
+    )
+
+    write_json(run_dir / "generation-package.json", result.generation_package)
+    emit(
+        run_id,
+        run_dir,
+        "plan",
+        "package.written",
+        "done",
+        "generation-package.json written",
+        "generation-package.json",
+    )
 
     emit(run_id, run_dir, "plan", "done", "done", "Phase 2 complete")
-    return generation_package
+    return result.generation_package
 
 
 # ----- phase: build (Generated Files + Repair + Quality) ---------------------

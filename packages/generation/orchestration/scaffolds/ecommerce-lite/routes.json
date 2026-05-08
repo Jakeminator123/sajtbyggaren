@@ -1,0 +1,35 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Position the brand and route visitors to the product range with a single primary CTA."
+    },
+    {
+      "id": "products",
+      "path": "/produkter",
+      "required": true,
+      "purpose": "List the product range with concrete copy, prices when available and a visible path to checkout."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Build trust through brand story, materials, sourcing and people."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Convert visitors who need help before buying with email, phone and store address."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "lookbook",
+      "path": "/lookbook",
+      "when": "site needs an editorial or curated visual surface beyond the product list"
+    }
+  ]
+}

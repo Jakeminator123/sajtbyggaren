@@ -156,6 +156,28 @@ def test_site_plan_rejects_unknown_previewRuntime():
 
 
 @pytest.mark.tooling
+@pytest.mark.parametrize(
+    "value",
+    ["real", "mock-no-key", "mock-llm-error", "mock-pre-sprint-2b", "pinned"],
+)
+def test_site_plan_accepts_all_planSource_enum_values(value: str):
+    """Sprint 2B added 'pinned' for the builder path (Project Input pre-pin
+    skips planningModel). 'mock-pre-sprint-2b' stays for historical artefakts.
+    """
+    payload = _minimal_site_plan()
+    payload["planSource"] = value
+    validate_site_plan(payload)
+
+
+@pytest.mark.tooling
+def test_site_plan_rejects_unknown_planSource():
+    payload = _minimal_site_plan()
+    payload["planSource"] = "totally-made-up"
+    with pytest.raises(ArtifactSchemaError, match="planSource"):
+        validate_site_plan(payload)
+
+
+@pytest.mark.tooling
 def test_generation_package_rejects_bad_engineMode():
     payload = _minimal_generation_package()
     payload["engineMode"] = "draft"

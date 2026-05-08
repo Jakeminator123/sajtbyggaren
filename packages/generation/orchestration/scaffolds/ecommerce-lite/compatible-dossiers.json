@@ -1,0 +1,16 @@
+{
+  "_comment": "Real Dossier IDs only. Items like 'product-grid', 'product-card', 'shop-cta', 'filter-bar' are SECTIONS (declared in sections.json) and must not appear here. ADR 0012 distinguishes Dossiers (re-usable capabilities, e.g. interactive-game-loop) from sections (parts of a single page). The recommended list is empty until commerce-oriented hard Dossiers (stripe-checkout, shopify-storefront, snipcart-cart) are imported from MIN_IDE per capability-map.v1.json. interactive-game-loop is conditional because some brands run small gamified promo loops (advent calendar, scratch-and-win).",
+  "required": [],
+  "recommended": [],
+  "conditional": [
+    {
+      "id": "interactive-game-loop",
+      "when": "brand explicitly asks for a gamified promotion (advent calendar, scratch-and-win, mini-quiz)"
+    }
+  ],
+  "disallowedByDefault": [
+    "auth-flow",
+    "dashboard-shell",
+    "pricing-table-saas"
+  ]
+}

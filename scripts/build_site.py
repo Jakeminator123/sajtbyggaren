@@ -11,12 +11,22 @@ missing) and `npm run build`. Pass `--skip-build` to skip those steps during
 fast dev iteration.
 
 This is the minimal happy path described in `docs/migration-plan.md` Sprint 2
-and `docs/architecture/builder-mvp.md`. As of Sprint 2A the builder calls
-`briefModel` for the Site Brief phase when `OPENAI_API_KEY` is set, and falls
-back to a deterministic mock Site Brief otherwise (or when the LLM call
-fails). All later phases - Planning (`planningModel`), Codegen
-(`codegenModel`), Repair Pipeline, Quality Gate and follow-up - are still
-deterministic stubs and do not call any LLM yet.
+and `docs/architecture/builder-mvp.md`.
+
+LLM status (as of Sprint 2B):
+    - Phase 1 Understand: calls `briefModel` via OpenAI when
+      `OPENAI_API_KEY` is set, otherwise mock Site Brief.
+    - Phase 2 Plan: delegates to
+      `packages.generation.planning.produce_site_plan` - the SAME helper
+      that `scripts/dev_generate.py` uses. The builder always passes a
+      `pinned` payload (scaffoldId/variantId/starterId from the Project
+      Input), which makes `planSource = 'pinned'` and skips the LLM
+      because the operator's choice is authoritative. The capability
+      filter still runs so requested capabilities without an
+      implemented Dossier surface as `selectedDossiers.rejected[]`.
+    - Phase 3 Build: deterministic codegen using the chosen
+      Starter (`copy_starter(site_plan["starterId"], ...)`), plus
+      Repair Pipeline and Quality Gate skeleton artefakter.
 """
 
 from __future__ import annotations
@@ -1080,71 +1090,56 @@ def build_site_brief(run_id: str, dossier: dict, scaffold: dict) -> dict:
         )
 
 
-def build_site_plan_mock(
-    run_id: str,
-    dossier: dict,
-    scaffold: dict,
-    scaffold_routes: dict,
-    variant: dict,
-) -> dict:
-    """Mock Site Plan derived from scaffold + variant + dossier (no LLM).
-
-    Returns the canonical Site Plan artefakt shape locked in
-    ``governance/schemas/site-plan.schema.json`` (ADR 0013). planSource is
-    'mock-pre-sprint-2b' because planningModel is not wired in yet.
-    """
-    return {
-        "runId": run_id,
-        "scaffoldId": scaffold["id"],
-        "scaffoldVersion": scaffold["version"],
-        "variantId": variant["id"],
-        "starterId": "marketing-base",
-        "routePlan": [
-            {"id": r["id"], "path": r["path"], "purpose": r["purpose"]}
-            for r in scaffold_routes["defaultRoutes"]
-        ],
-        "selectedDossiers": dossier.get("selectedDossiers", {}),
-        "buildSpec": {
-            "qualityTarget": 9.0,
-            "verificationPolicy": "build-must-pass",
-            "previewRuntime": "stackblitz",
-        },
-        "sourceModelRole": "planningModel",
-        "modelUsed": "mock",
-        "planSource": "mock-pre-sprint-2b",
-        "planError": None,
-        "createdAt": utc_now().isoformat(timespec="seconds"),
-    }
-
-
-def build_generation_package(
+def build_plan_artefakts(
     run_id: str,
     dossier: dict,
     scaffold: dict,
     variant: dict,
-) -> dict:
-    """Generation Package - the only payload that would go to codegen-LLM.
+    site_brief: dict,
+) -> tuple[dict, dict]:
+    """Delegate Phase 2 Plan to the shared produce_site_plan helper.
 
-    Canonical shape locked in
-    ``governance/schemas/generation-package.schema.json`` (ADR 0013).
+    The builder pins scaffoldId/variantId from the Project Input (the
+    operator already made that decision when authoring the Project
+    Input), so this call always returns ``planSource = 'pinned'`` and
+    does not touch planningModel. The capability filter still runs so
+    requestedCapabilities without an implemented Dossier surface as
+    ``selectedDossiers.rejected[]`` instead of being silently dropped.
+
+    Both this builder and ``scripts/dev_generate.py`` go through the same
+    helper. That is what closes ``docs/known-issues.md`` B19.
     """
-    return {
-        "runId": run_id,
-        "policyVersions": {
-            "engineRun": "engine-run.v1",
-            "namingDictionary": "naming-dictionary.v1",
-            "scaffoldContract": "scaffold-contract.v1",
-        },
-        "siteBriefRef": "site-brief.json",
-        "sitePlanRef": "site-plan.json",
+    from packages.generation.planning import produce_site_plan
+
+    pinned = {
         "scaffoldId": scaffold["id"],
         "variantId": variant["id"],
-        "starterId": "marketing-base",
-        "language": dossier["language"],
-        "engineMode": "init",
-        "projectId": None,
-        "createdAt": utc_now().isoformat(timespec="seconds"),
     }
+    pinned_starter = dossier.get("starterId")
+    if isinstance(pinned_starter, str) and pinned_starter:
+        pinned["starterId"] = pinned_starter
+
+    result = produce_site_plan(
+        site_brief,
+        run_id=run_id,
+        pinned=pinned,
+        engine_mode="init",
+        project_id=None,
+        verification_policy="build-must-pass",
+        preview_runtime="local",
+    )
+
+    site_plan = dict(result.site_plan)
+    # Project Input may carry a richer selectedDossiers object (rationale
+    # plus required/recommended) that the operator wrote by hand. When
+    # present we honor it instead of the helper's filter-only object so
+    # the canonical Site Plan reflects the operator's intent. The helper
+    # is still authoritative for runs that have NO Project Input.
+    operator_selected = dossier.get("selectedDossiers")
+    if operator_selected:
+        site_plan["selectedDossiers"] = operator_selected
+
+    return site_plan, dict(result.generation_package)
 
 
 # ---------------------------------------------------------------------------
@@ -1200,34 +1195,33 @@ def write_phase2_plan(
     trace: Trace,
     dossier: dict,
     scaffold: dict,
-    scaffold_routes: dict,
     variant: dict,
+    site_brief: dict,
 ) -> tuple[dict, dict]:
-    """Phase 2 plan: site-plan.json + generation-package.json."""
+    """Phase 2 plan: site-plan.json + generation-package.json.
+
+    Schema validation runs inside ``produce_site_plan``; the artefakts
+    arriving here are already validated. Writing them is the only thing
+    left for the builder to do.
+    """
     trace.event("plan", "phase.started", "started", "Phase 2 plan starts")
 
-    from packages.generation.artifacts import (
-        validate_generation_package,
-        validate_site_plan,
+    site_plan, package = build_plan_artefakts(
+        trace.run_id, dossier, scaffold, variant, site_brief
     )
 
-    site_plan = build_site_plan_mock(
-        trace.run_id, dossier, scaffold, scaffold_routes, variant
-    )
-    validate_site_plan(site_plan)
     write_json(run_dir / "site-plan.json", site_plan)
     trace.event(
         "plan", "site_plan.written", "done",
-        f"Site Plan picked scaffold={scaffold['id']} variant={variant['id']}",
+        f"Site Plan picked scaffold={scaffold['id']} variant={variant['id']} "
+        f"starter={site_plan['starterId']} planSource={site_plan['planSource']}",
         payload_path="site-plan.json",
     )
 
-    package = build_generation_package(trace.run_id, dossier, scaffold, variant)
-    validate_generation_package(package)
     write_json(run_dir / "generation-package.json", package)
     trace.event(
         "plan", "generation_package.written", "done",
-        "Generation Package composed",
+        "Generation Package composed via produce_site_plan helper",
         payload_path="generation-package.json",
     )
     trace.event("plan", "phase.completed", "done", "Phase 2 plan done")
@@ -1303,6 +1297,7 @@ def write_build_result(
     site_brief: dict,
     scaffold: dict,
     variant: dict,
+    starter_id: str,
     routes: list[str],
     npm_steps: list[dict],
     overall_status: str,
@@ -1312,6 +1307,10 @@ def write_build_result(
     """Write build-result.json. ``generatedFilesDir`` points at the canonical
     snapshot under the run directory, not at the dev preview, so downstream
     consumers (Backoffice, eval batch) can trust it across regenerations.
+
+    ``starter_id`` mirrors what ``site-plan.json`` chose - the builder no
+    longer hardcodes ``marketing-base`` here so the build result reflects
+    the planner's pick (Sprint 2B).
     """
     snap_dir = run_dir / "generated-files"
     rel_snapshot = _to_repo_relative(snap_dir)
@@ -1320,7 +1319,7 @@ def write_build_result(
     brief_source = site_brief.get("briefSource", "mock-no-key")
     result = {
         "siteId": dossier["siteId"],
-        "starterId": "marketing-base",
+        "starterId": starter_id,
         "scaffoldId": scaffold["id"],
         "scaffoldVersion": scaffold["version"],
         "variantId": variant["id"],
@@ -1394,17 +1393,21 @@ def build(
     # Phase 1: understand
     site_brief = write_phase1_understand(run_dir, trace, dossier_path, dossier, scaffold)
 
-    # Phase 2: plan
-    write_phase2_plan(
-        run_dir, trace, dossier, scaffold, scaffold_routes, variant
+    # Phase 2: plan (delegates to packages.generation.planning.produce_site_plan)
+    site_plan, _generation_package = write_phase2_plan(
+        run_dir, trace, dossier, scaffold, variant, site_brief
     )
 
-    # Phase 3: build
+    # Phase 3: build. The Starter to copy is whatever the plan picked - we
+    # used to hardcode 'marketing-base' here, which made the planSource a
+    # decoration rather than authoritative. Reading site_plan["starterId"]
+    # also future-proofs the builder for the day commerce-base is harmonised.
     target = GENERATED_DIR / site_id
     trace.event("build", "phase.started", "started", "Phase 3 build starts")
 
-    print(f"Copying marketing-base -> {target}")
-    copy_starter("marketing-base", target)
+    starter_id = site_plan["starterId"]
+    print(f"Copying starter {starter_id} -> {target}")
+    copy_starter(starter_id, target)
 
     print("Patching package.json")
     patch_package_json(target, dossier)
@@ -1498,7 +1501,7 @@ def build(
 
     duration_ms = int((time.monotonic() - started) * 1000)
     write_build_result(
-        run_dir, trace, dossier, site_brief, scaffold, variant,
+        run_dir, trace, dossier, site_brief, scaffold, variant, starter_id,
         routes_all_with_dossiers, npm_steps, overall_status, target, duration_ms,
     )
 

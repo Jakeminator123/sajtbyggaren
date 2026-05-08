@@ -84,17 +84,18 @@ Format per bugg:
 - **`B13` Låg** - `scripts/build_site.py` innehåller produktlogik vilket
   bryter mot `repo-boundaries.v1.json:39`. Naturlig flytt blir
   `packages/generation/build/` när ramverket växer.
-- **`B19` Medel** (öppen 2026-05-08) - Två nästan-parallella init-pipelines:
-  `scripts/build_site.py` (Project Input → Next.js + alla artefakter) och
-  `scripts/dev_generate.py` (prompt → mock artefakter). De skriver samma
-  artefakttyper men via olika kod-vägar, vilket är exakt det mönster ADR
-  0013 var skriven för att skydda mot. ADR 0013 låste artefaktkontrakten
-  och `B17` fixade en första drift-bugg, men de två scripten delar
-  fortfarande inte en planning-modul. Naturlig fix: Sprint 2B implementerar
-  planningModel som en helper i `packages/generation/planning/`, och
-  båda scripten anropar samma helper. Tills dess kvarstår risk för att
-  framtida ändringar driver isär. Markerad **öppen** (inte stängd) tills
-  båda scripten delar samma planning-helper.
+- **`P2B-COMMERCE` Låg** (öppen 2026-05-08) - `data/starters/commerce-base/`
+  innehåller bara en README och en oharmoniserad `commerce-main.zip` (kopia
+  av `vercel/commerce`). Ecommerce-lite-scaffolden (Sprint 2B) använder
+  `marketing-base` som starter tills commerce-base är harmoniserad: Next 16,
+  shadcn/ui, TypeScript strict, npm-lock istället för pnpm-lock, och
+  Shopify-integrationen flyttad ut till en hard Dossier (planerat
+  `commerce-shopify` per `capability-map.v1.json`). Naturlig fix: separat
+  starter-harmoniserings-sprint som packar upp zipen, kör Next-codemods,
+  rensar copy och bryter ut produkt-grid/cart/checkout till soft- och
+  hard-Dossiers. Tills dess är scaffold + starter avsiktligt frikopplade -
+  `produce_site_plan` mappar `ecommerce-lite -> marketing-base` via
+  `SCAFFOLD_TO_STARTER`-konstanten i `packages/generation/planning/plan.py`.
 
 ## Stängda - regression-test säkrar fixet
 
@@ -149,6 +150,26 @@ Format per bugg:
   `.get('scaffoldVariant')` → `.get('variantId')` plus tillägg av
   `starterId`. Test:
   `tests/test_dev_generate.py::test_dev_generate_placeholder_uses_canonical_field_names`.
+- **`B19` Medel** (stängd 2026-05-08, Sprint 2B) - Två nästan-parallella
+  init-pipelines: `scripts/build_site.py` (Project Input → Next.js + alla
+  artefakter) och `scripts/dev_generate.py` (prompt → mock artefakter)
+  skrev samma artefakttyper men via olika kod-vägar - exakt det
+  driftmönster ADR 0013 var skriven för att blockera. Sprint 2B introducerar
+  `packages/generation/planning/produce_site_plan` som enda källan för
+  Site Plan + Generation Package. Båda scripten är tunna wrappers ovanpå
+  helpern: builder skickar `pinned={scaffoldId, variantId}` från Project
+  Input (planSource=`pinned`), `dev_generate` lämnar `pinned=None` så
+  helpern kan välja via planningModel (real när `OPENAI_API_KEY` finns,
+  annars mock-no-key/mock-llm-error). Capability-map.v1-principen "tom
+  dossier-lista = gap" hanteras centralt så `selectedDossiers.rejected[]`
+  alltid speglar verkligheten. Builder läser nu också `starterId` från
+  planen istället för att hårdkoda `marketing-base` i `copy_starter`-anropet,
+  vilket gör `produce_site_plan` faktiskt auktoritativ.
+  Fix: Sprint 2B-commit. Tester:
+  `tests/test_planning.py::test_b19_dev_generate_imports_produce_site_plan`,
+  `tests/test_planning.py::test_b19_build_site_imports_produce_site_plan`,
+  `tests/test_planning.py::test_b19_neither_script_keeps_legacy_local_planner_function`,
+  `tests/test_planning.py::test_registry_contains_at_least_two_scaffolds_with_content`.
 - **`B18` Medel** (stängd 2026-05-08) - Konceptuell namnkrock: termer
   som `service-list`, `service-area`, `reviews`, `trust-badges`,
   `contact-cta`, `trust-proof` användes både som **sektioner** (i

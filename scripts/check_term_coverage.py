@@ -112,6 +112,13 @@ COMMON_WORDS = {
     "BaseModel", "Field", "FileNotFoundError", "BriefResult",
     "BriefModelResolutionError", "ValidationError", "ArtifactSchemaError",
     "SystemExit",
+    # planning module internal class identifiers (Sprint 2B). Mirrors the
+    # brief module's BriefResult/BriefModelResolutionError treatment - these
+    # are Python implementation symbols, not domain terms. The canonical
+    # domain terms (Site Plan, Generation Package, Capability Map, Dossier,
+    # Scaffold, Variant) are already registered in naming-dictionary.v1.
+    "PlanResult", "PlanningChoice", "PlanningModelResolutionError",
+    "RejectedCapability",
     # Page-komponenter som genereras i builder och i .generated/
     "AboutPage", "ContactPage", "ServicesPage", "ServicePage",
     # React / Next / shadcn-typer som dyker upp i runtime-kod

@@ -1,0 +1,25 @@
+{
+  "scorecardWeights": {
+    "business_fit": 1.2,
+    "content_specificity": 1.2,
+    "conversion_clarity": 1.1,
+    "visual_hierarchy": 1.1,
+    "trust_signals": 1.0,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Every page has a clear purpose.",
+    "Homepage contains a concrete product-led value proposition, not generic shop copy.",
+    "Primary CTA on the homepage routes to /produkter.",
+    "Product grid items are concrete - no lorem ipsum, no placeholder cards.",
+    "All routes from routes.json are present.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Generic 'welcome to our shop' copy.",
+    "Filter bars that pretend to filter without real data behind them.",
+    "Cart or checkout UI - those are hard Dossiers and not part of Sprint 2B output.",
+    "Random color choices not derived from variant tokens.",
+    "Forms or features that fail at build because of missing env."
+  ]
+}
