@@ -261,27 +261,6 @@ def patch_globals_css(target: Path, variant: dict) -> None:
     write(css, new_contents)
 
 
-def patch_layout(
-    target: Path,
-    site_title: str,
-    site_description: str,
-) -> None:
-    layout = target / "app" / "layout.tsx"
-    text = layout.read_text(encoding="utf-8")
-    title_escaped = site_title.replace('"', '\\"')
-    desc_escaped = site_description.replace('"', '\\"')
-    text = text.replace(
-        'title: "",',
-        f'title: "{title_escaped}",',
-    )
-    text = text.replace(
-        'description: "",',
-        f'description: "{desc_escaped}",',
-    )
-    text = text.replace('lang="en"', 'lang="sv"')
-    write(layout, text)
-
-
 def patch_package_json(target: Path, dossier: dict) -> None:
     pkg_path = target / "package.json"
     pkg = load_json(pkg_path)
@@ -290,76 +269,245 @@ def patch_package_json(target: Path, dossier: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Page renderers (kept identical to v1 - just JSX templates with dossier copy)
+# Page renderers - JSX templates that compose lucide-react icons with the
+# shadcn button primitive shipped by marketing-base. The renderers are kept
+# generic so the same builder works for very different Project Inputs (a
+# small painter firm and a video game arcade should both look polished).
 # ---------------------------------------------------------------------------
 
 
-def render_home(dossier: dict) -> str:
+SERVICE_ICONS: dict[str, str] = {
+    "interior-painting": "Paintbrush",
+    "exterior-painting": "House",
+    "color-consultation": "Palette",
+    "renovation-painting": "Hammer",
+    "arcade-games": "Gamepad2",
+    "retro-consoles": "Joystick",
+    "tournaments": "Trophy",
+    "tournaments-monthly": "Trophy",
+    "birthday-parties": "Cake",
+    "private-events": "PartyPopper",
+    "food-drinks": "Coffee",
+    "merch-shop": "ShoppingBag",
+}
+DEFAULT_SERVICE_ICON = "Sparkles"
+
+
+def _icon_for_service(service_id: str) -> str:
+    return SERVICE_ICONS.get(service_id, DEFAULT_SERVICE_ICON)
+
+
+def _phone_href(phone: str) -> str:
+    return phone.replace(" ", "").replace("(", "").replace(")", "")
+
+
+def _nav_items(dossier_routes: list[str]) -> list[tuple[str, str]]:
+    items: list[tuple[str, str]] = [
+        ("/", "Hem"),
+        ("/tjanster", "Tjänster"),
+        ("/om-oss", "Om oss"),
+        ("/kontakt", "Kontakt"),
+    ]
+    if "/spel" in dossier_routes:
+        items.append(("/spel", "Spel"))
+    return items
+
+
+def _collect_icons_for_pages(services: list[dict], dossier_routes: list[str]) -> list[str]:
+    used: set[str] = {
+        DEFAULT_SERVICE_ICON,
+        "Phone",
+        "Mail",
+        "MapPin",
+        "Clock",
+        "ShieldCheck",
+        "ArrowRight",
+        "Quote",
+    }
+    for svc in services:
+        used.add(_icon_for_service(svc["id"]))
+    if "/spel" in dossier_routes:
+        used.add("Gamepad2")
+    return sorted(used)
+
+
+def render_layout(dossier: dict, dossier_routes: list[str]) -> str:
+    """Whole-file layout.tsx with sticky header and footer.
+
+    Replaces the marketing-base placeholder layout. The previous patch_layout
+    only swapped title/description; now the layout actively composes the
+    company name into a navigation shell so every page feels finished.
+    """
+    company = dossier["company"]
+    contact = dossier["contact"]
+    title = company["name"].replace('"', '\\"')
+    description = company["tagline"].replace('"', '\\"')
+    nav_items = _nav_items(dossier_routes)
+    nav_links = "\n".join(
+        f'            <a href="{href}" className="text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors">{label}</a>'
+        for href, label in nav_items
+    )
+    phone_href = _phone_href(contact["phone"])
+    return (
+        'import type { Metadata } from "next";\n'
+        'import { Geist, Geist_Mono } from "next/font/google";\n'
+        'import { Mail, MapPin, Phone } from "lucide-react";\n'
+        'import "./globals.css";\n'
+        "\n"
+        'const geistSans = Geist({\n'
+        '  variable: "--font-geist-sans",\n'
+        '  subsets: ["latin"],\n'
+        '});\n'
+        "\n"
+        'const geistMono = Geist_Mono({\n'
+        '  variable: "--font-geist-mono",\n'
+        '  subsets: ["latin"],\n'
+        '});\n'
+        "\n"
+        "export const metadata: Metadata = {\n"
+        f'  title: "{title}",\n'
+        f'  description: "{description}",\n'
+        "};\n"
+        "\n"
+        "export default function RootLayout({\n"
+        "  children,\n"
+        "}: Readonly<{\n"
+        "  children: React.ReactNode;\n"
+        "}>) {\n"
+        "  return (\n"
+        '    <html\n'
+        '      lang="sv"\n'
+        '      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}\n'
+        '    >\n'
+        '      <body className="min-h-full flex flex-col bg-[color:var(--background)] text-[color:var(--foreground)]">\n'
+        '        <header className="sticky top-0 z-40 border-b border-[color:var(--border)] bg-[color:var(--background)]/80 backdrop-blur supports-[backdrop-filter]:bg-[color:var(--background)]/60">\n'
+        '          <div className="mx-auto flex w-[var(--container-width)] items-center justify-between gap-6 py-4">\n'
+        '            <a href="/" className="flex items-center gap-2 text-base font-semibold">\n'
+        f'              <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-[color:var(--primary)] text-[color:var(--primary-foreground)] text-xs font-bold uppercase">{company["name"][:2]}</span>\n'
+        f'              <span className="hidden sm:inline">{company["name"]}</span>\n'
+        '            </a>\n'
+        '            <nav className="flex items-center gap-5 text-sm font-medium">\n'
+        f"{nav_links}\n"
+        '            </nav>\n'
+        f'            <a href="/kontakt" className="hidden md:inline-flex items-center gap-1 rounded-md bg-[color:var(--primary)] px-4 py-2 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Kontakta oss</a>\n'
+        '          </div>\n'
+        '        </header>\n'
+        '        <div className="flex-1">{children}</div>\n'
+        '        <footer className="border-t border-[color:var(--border)] bg-[color:var(--background)]">\n'
+        '          <div className="mx-auto grid w-[var(--container-width)] gap-8 py-12 md:grid-cols-3">\n'
+        '            <div className="flex flex-col gap-3">\n'
+        f'              <p className="text-base font-semibold">{company["name"]}</p>\n'
+        f'              <p className="text-sm text-[color:var(--muted)]">{company["tagline"]}</p>\n'
+        '            </div>\n'
+        '            <div className="flex flex-col gap-2 text-sm">\n'
+        '              <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Kontakt</p>\n'
+        f'              <a href="tel:{phone_href}" className="inline-flex items-center gap-2 hover:underline"><Phone className="size-4" />{contact["phone"]}</a>\n'
+        f'              <a href="mailto:{contact["email"]}" className="inline-flex items-center gap-2 hover:underline"><Mail className="size-4" />{contact["email"]}</a>\n'
+        '              <p className="inline-flex items-start gap-2 text-[color:var(--muted)]"><MapPin className="size-4 mt-0.5" />'
+        + ", ".join(contact["addressLines"]) +
+        "</p>\n"
+        '            </div>\n'
+        '            <div className="flex flex-col gap-2 text-sm text-[color:var(--muted)]">\n'
+        '              <p className="text-xs uppercase tracking-widest">Sajt</p>\n'
+        + "\n".join(
+            f'              <a href="{href}" className="hover:underline">{label}</a>'
+            for href, label in nav_items
+        ) + "\n"
+        '            </div>\n'
+        '          </div>\n'
+        '          <div className="border-t border-[color:var(--border)] py-4">\n'
+        f'            <p className="mx-auto w-[var(--container-width)] text-xs text-[color:var(--muted)]">© {{new Date().getFullYear()}} {company["name"]}. Alla rättigheter förbehållna.</p>\n'
+        '          </div>\n'
+        '        </footer>\n'
+        '      </body>\n'
+        '    </html>\n'
+        "  );\n"
+        "}\n"
+    )
+
+
+def render_home(dossier: dict, dossier_routes: list[str]) -> str:
     company = dossier["company"]
     location = dossier["location"]
     services = dossier["services"]
     trust = dossier["trustSignals"]
     contact = dossier["contact"]
+    icons_used = _collect_icons_for_pages(services, dossier_routes)
+    icon_import = (
+        "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
+    )
     services_grid = "\n".join(
-        f"            <li key=\"{svc['id']}\" className=\"rounded-md border p-5\">\n"
-        f"              <h3 className=\"text-lg font-semibold\">{svc['label']}</h3>\n"
-        f"              <p className=\"mt-2 text-sm text-[color:var(--muted)]\">{svc['summary']}</p>\n"
-        f"            </li>"
+        f'            <li key="{svc["id"]}" className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--card,var(--background))] p-6 transition-all hover:border-[color:var(--primary)] hover:shadow-sm">\n'
+        f'              <span className="mb-4 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(svc["id"])} className="size-5" /></span>\n'
+        f'              <h3 className="text-lg font-semibold">{svc["label"]}</h3>\n'
+        f'              <p className="mt-2 text-sm text-[color:var(--muted)] leading-relaxed">{svc["summary"]}</p>\n'
+        '            </li>'
         for svc in services
     )
     trust_items = "\n".join(
-        f"            <li key=\"trust-{i}\" className=\"flex gap-3\">\n"
-        f"              <span className=\"mt-1 inline-block h-1.5 w-1.5 rounded-full bg-[color:var(--accent)]\" />\n"
-        f"              <span>{item}</span>\n"
-        f"            </li>"
+        f'            <li key="trust-{i}" className="flex items-start gap-3">\n'
+        f'              <ShieldCheck className="mt-0.5 size-5 shrink-0 text-[color:var(--primary)]" />\n'
+        f'              <span className="text-base">{item}</span>\n'
+        '            </li>'
         for i, item in enumerate(trust)
     )
+    spel_cta = (
+        '          <a href="/spel" className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Gamepad2 className="size-4" />Spela direkt</a>\n'
+        if "/spel" in dossier_routes
+        else ""
+    )
     return (
+        icon_import +
+        "\n"
         "export default function Home() {\n"
         "  return (\n"
-        "    <main className=\"flex flex-1 flex-col\">\n"
-        "      <section className=\"bg-[color:var(--background)] text-[color:var(--foreground)]\">\n"
-        "        <div className=\"mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[var(--section-spacing)]\">\n"
-        f"          <p className=\"text-sm uppercase tracking-widest text-[color:var(--muted)]\">{location['city']}</p>\n"
-        f"          <h1 className=\"max-w-2xl text-4xl font-semibold leading-tight md:text-5xl\">{company['name']}</h1>\n"
-        f"          <p className=\"max-w-2xl text-lg text-[color:var(--muted)]\">{company['tagline']}</p>\n"
-        "          <div className=\"flex flex-wrap gap-3\">\n"
-        f"            <a href=\"/kontakt\" className=\"rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)]\">Begär offert</a>\n"
-        f"            <a href=\"tel:{contact['phone'].replace(' ', '')}\" className=\"rounded-md border px-5 py-3 text-sm font-medium\">Ring {contact['phone']}</a>\n"
-        "          </div>\n"
-        "        </div>\n"
-        "      </section>\n"
+        '    <main className="flex flex-1 flex-col">\n'
+        '      <section className="relative overflow-hidden bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/30">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        '          <div className="flex items-center gap-2 text-sm uppercase tracking-widest text-[color:var(--muted)]">\n'
+        '            <MapPin className="size-4" />\n'
+        f'            <span>{location["city"]}</span>\n'
+        '          </div>\n'
+        f'          <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl">{company["name"]}</h1>\n'
+        f'          <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed md:text-xl">{company["tagline"]}</p>\n'
+        '          <div className="flex flex-wrap gap-3">\n'
+        '            <a href="/kontakt" className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Begär offert<ArrowRight className="size-4" /></a>\n'
+        f'            <a href="tel:{_phone_href(contact["phone"])}" className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />Ring {contact["phone"]}</a>\n'
+        f"{spel_cta}"
+        '          </div>\n'
+        '        </div>\n'
+        '      </section>\n'
         "\n"
-        "      <section className=\"border-t bg-[color:var(--background)]\">\n"
-        "        <div className=\"mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]\">\n"
-        "          <div className=\"flex flex-col gap-2\">\n"
-        "            <h2 className=\"text-2xl font-semibold\">Tjänster</h2>\n"
-        "            <p className=\"max-w-2xl text-[color:var(--muted)]\">Vi tar oss tid med ytan och lämnar inget halvfärdigt.</p>\n"
-        "          </div>\n"
-        "          <ul className=\"grid gap-4 md:grid-cols-2\">\n"
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        '          <div className="flex flex-col gap-3">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Tjänster</p>\n'
+        '            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">Vad vi tar oss an</h2>\n'
+        '          </div>\n'
+        '          <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{services_grid}\n"
-        "          </ul>\n"
-        "          <a href=\"/tjanster\" className=\"text-sm font-medium underline\">Se alla tjänster</a>\n"
-        "        </div>\n"
-        "      </section>\n"
+        '          </ul>\n'
+        '          <a href="/tjanster" className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Se alla tjänster<ArrowRight className="size-4" /></a>\n'
+        '        </div>\n'
+        '      </section>\n'
         "\n"
-        "      <section className=\"border-t bg-[color:var(--background)]\">\n"
-        "        <div className=\"mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[var(--section-spacing)]\">\n"
-        "          <h2 className=\"text-2xl font-semibold\">Varför oss</h2>\n"
-        "          <ul className=\"flex flex-col gap-3 text-base\">\n"
+        '      <section className="border-t border-[color:var(--border)] bg-[color:var(--accent)]/20">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[var(--section-spacing)]">\n'
+        '          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Varför oss</h2>\n'
+        '          <ul className="grid gap-4 md:grid-cols-2">\n'
         f"{trust_items}\n"
-        "          </ul>\n"
-        "        </div>\n"
-        "      </section>\n"
+        '          </ul>\n'
+        '        </div>\n'
+        '      </section>\n'
         "\n"
-        "      <section className=\"border-t bg-[color:var(--primary)] text-[color:var(--primary-foreground)]\">\n"
-        "        <div className=\"mx-auto flex w-[var(--container-width)] flex-col gap-4 py-[var(--section-spacing)]\">\n"
-        "          <h2 className=\"text-2xl font-semibold\">Få en offert utan kostnad</h2>\n"
-        "          <p className=\"max-w-2xl opacity-90\">Beskriv jobbet så hör vi av oss inom en arbetsdag.</p>\n"
-        "          <a href=\"/kontakt\" className=\"w-fit rounded-md bg-[color:var(--primary-foreground)] px-5 py-3 text-sm font-medium text-[color:var(--primary)]\">Kontakta oss</a>\n"
-        "        </div>\n"
-        "      </section>\n"
-        "    </main>\n"
+        '      <section className="border-t border-[color:var(--border)] bg-[color:var(--primary)] text-[color:var(--primary-foreground)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-4 py-[var(--section-spacing)]">\n'
+        '          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Hör av dig idag</h2>\n'
+        '          <p className="max-w-2xl text-base opacity-90 md:text-lg">Beskriv kort vad du behöver så återkommer vi inom en arbetsdag.</p>\n'
+        '          <a href="/kontakt" className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary-foreground)] px-5 py-3 text-sm font-medium text-[color:var(--primary)] hover:opacity-90 transition-opacity">Kontakta oss<ArrowRight className="size-4" /></a>\n'
+        '        </div>\n'
+        '      </section>\n'
+        '    </main>\n'
         "  );\n"
         "}\n"
     )
@@ -367,31 +515,38 @@ def render_home(dossier: dict) -> str:
 
 def render_services(dossier: dict) -> str:
     services = dossier["services"]
+    icons_used = sorted({
+        _icon_for_service(svc["id"]) for svc in services
+    } | {"ArrowRight"})
+    icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
     items = "\n".join(
-        f"          <article key=\"{svc['id']}\" className=\"rounded-md border p-6\">\n"
-        f"            <h2 className=\"text-xl font-semibold\">{svc['label']}</h2>\n"
-        f"            <p className=\"mt-3 text-[color:var(--muted)]\">{svc['summary']}</p>\n"
-        f"          </article>"
+        f'          <article key="{svc["id"]}" className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all hover:border-[color:var(--primary)] hover:shadow-sm">\n'
+        f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(svc["id"])} className="size-6" /></span>\n'
+        f'            <h2 className="text-xl font-semibold">{svc["label"]}</h2>\n'
+        f'            <p className="mt-3 text-[color:var(--muted)] leading-relaxed">{svc["summary"]}</p>\n'
+        '          </article>'
         for svc in services
     )
     return (
+        icon_import +
+        "\n"
         "export default function ServicesPage() {\n"
         "  return (\n"
-        "    <main className=\"flex flex-1 flex-col\">\n"
-        "      <section className=\"bg-[color:var(--background)] text-[color:var(--foreground)]\">\n"
-        "        <div className=\"mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]\">\n"
-        "          <header className=\"flex flex-col gap-3\">\n"
-        "            <p className=\"text-sm uppercase tracking-widest text-[color:var(--muted)]\">Tjänster</p>\n"
-        "            <h1 className=\"text-3xl font-semibold md:text-4xl\">Vad vi gör</h1>\n"
-        "            <p className=\"max-w-2xl text-[color:var(--muted)]\">Vi arbetar med inomhus- och fasadmåleri samt färgsättning. Här är vad vi tar oss an.</p>\n"
-        "          </header>\n"
-        "          <div className=\"grid gap-4 md:grid-cols-2\">\n"
+        '    <main className="flex flex-1 flex-col">\n'
+        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        '          <header className="flex flex-col gap-3">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Tjänster</p>\n'
+        '            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Vad vi gör</h1>\n'
+        '            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">Allt vi erbjuder, samlat på ett ställe. Klicka på en tjänst eller hör av dig direkt.</p>\n'
+        '          </header>\n'
+        '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{items}\n"
-        "          </div>\n"
-        "          <a href=\"/kontakt\" className=\"w-fit rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)]\">Begär offert</a>\n"
-        "        </div>\n"
-        "      </section>\n"
-        "    </main>\n"
+        '          </div>\n'
+        '          <a href="/kontakt" className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Begär offert<ArrowRight className="size-4" /></a>\n'
+        '        </div>\n'
+        '      </section>\n'
+        '    </main>\n'
         "  );\n"
         "}\n"
     )
@@ -403,36 +558,42 @@ def render_about(dossier: dict) -> str:
     location = dossier["location"]
     areas_html = ", ".join(location["serviceAreas"])
     team_items = "\n".join(
-        f"            <li key=\"{member['name']}\" className=\"rounded-md border p-5\">\n"
-        f"              <p className=\"text-base font-semibold\">{member['name']}</p>\n"
-        f"              <p className=\"mt-1 text-sm text-[color:var(--muted)]\">{member['role']}</p>\n"
-        f"            </li>"
+        f'            <li key="{member["name"]}" className="rounded-xl border border-[color:var(--border)] p-6">\n'
+        f'              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-full bg-[color:var(--accent)] text-[color:var(--accent-foreground)] text-sm font-semibold uppercase">{member["name"].split()[0][:1]}{member["name"].split()[-1][:1] if len(member["name"].split()) > 1 else ""}</span>\n'
+        f'              <p className="text-base font-semibold">{member["name"]}</p>\n'
+        f'              <p className="mt-1 text-sm text-[color:var(--muted)]">{member["role"]}</p>\n'
+        '            </li>'
         for member in team
     )
     return (
+        'import { MapPin, Quote } from "lucide-react";\n'
+        "\n"
         "export default function AboutPage() {\n"
         "  return (\n"
-        "    <main className=\"flex flex-1 flex-col\">\n"
-        "      <section className=\"bg-[color:var(--background)] text-[color:var(--foreground)]\">\n"
-        "        <div className=\"mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]\">\n"
-        "          <header className=\"flex flex-col gap-3\">\n"
-        "            <p className=\"text-sm uppercase tracking-widest text-[color:var(--muted)]\">Om oss</p>\n"
-        f"            <h1 className=\"text-3xl font-semibold md:text-4xl\">{company['name']}</h1>\n"
-        "          </header>\n"
-        f"          <p className=\"max-w-2xl text-base text-[color:var(--muted)]\">{company['story']}</p>\n"
-        "          <div className=\"flex flex-col gap-4\">\n"
-        "            <h2 className=\"text-xl font-semibold\">Teamet</h2>\n"
-        "            <ul className=\"grid gap-3 md:grid-cols-2\">\n"
+        '    <main className="flex flex-1 flex-col">\n'
+        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        '          <header className="flex flex-col gap-3">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Om oss</p>\n'
+        f'            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">{company["name"]}</h1>\n'
+        '          </header>\n'
+        '          <div className="relative max-w-3xl rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 md:p-8">\n'
+        '            <Quote className="absolute -top-3 -left-3 size-8 text-[color:var(--primary)]/20" />\n'
+        f'            <p className="text-lg text-[color:var(--foreground)] leading-relaxed">{company["story"]}</p>\n'
+        '          </div>\n'
+        '          <div className="flex flex-col gap-4">\n'
+        '            <h2 className="text-2xl font-semibold tracking-tight">Teamet</h2>\n'
+        '            <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{team_items}\n"
-        "            </ul>\n"
-        "          </div>\n"
-        "          <div className=\"flex flex-col gap-2\">\n"
-        "            <h2 className=\"text-xl font-semibold\">Områden vi arbetar i</h2>\n"
-        f"            <p className=\"text-[color:var(--muted)]\">{areas_html}</p>\n"
-        "          </div>\n"
-        "        </div>\n"
-        "      </section>\n"
-        "    </main>\n"
+        '            </ul>\n'
+        '          </div>\n'
+        '          <div className="flex flex-col gap-2">\n'
+        '            <h2 className="inline-flex items-center gap-2 text-2xl font-semibold tracking-tight"><MapPin className="size-5" />Områden vi arbetar i</h2>\n'
+        f'            <p className="text-[color:var(--muted)] leading-relaxed">{areas_html}</p>\n'
+        '          </div>\n'
+        '        </div>\n'
+        '      </section>\n'
+        '    </main>\n'
         "  );\n"
         "}\n"
     )
@@ -441,50 +602,59 @@ def render_about(dossier: dict) -> str:
 def render_contact(dossier: dict) -> str:
     contact = dossier["contact"]
     address_lines = "\n".join(
-        f"                <span className=\"block\">{line}</span>"
+        f'                <span className="block">{line}</span>'
         for line in contact["addressLines"]
     )
     return (
+        'import { Clock, Mail, MapPin, Phone } from "lucide-react";\n'
+        "\n"
         "export default function ContactPage() {\n"
         "  return (\n"
-        "    <main className=\"flex flex-1 flex-col\">\n"
-        "      <section className=\"bg-[color:var(--background)] text-[color:var(--foreground)]\">\n"
-        "        <div className=\"mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]\">\n"
-        "          <header className=\"flex flex-col gap-3\">\n"
-        "            <p className=\"text-sm uppercase tracking-widest text-[color:var(--muted)]\">Kontakt</p>\n"
-        "            <h1 className=\"text-3xl font-semibold md:text-4xl\">Hör av dig</h1>\n"
-        "            <p className=\"max-w-2xl text-[color:var(--muted)]\">Beskriv jobbet kort så återkommer vi inom en arbetsdag med tider och offert.</p>\n"
-        "          </header>\n"
-        "          <div className=\"grid gap-4 md:grid-cols-2\">\n"
-        "            <article className=\"rounded-md border p-6\">\n"
-        "              <h2 className=\"text-base font-semibold\">Telefon</h2>\n"
-        f"              <a href=\"tel:{contact['phone'].replace(' ', '')}\" className=\"mt-2 block text-lg\">{contact['phone']}</a>\n"
-        f"              <p className=\"mt-1 text-sm text-[color:var(--muted)]\">{contact['openingHours']}</p>\n"
-        "            </article>\n"
-        "            <article className=\"rounded-md border p-6\">\n"
-        "              <h2 className=\"text-base font-semibold\">E-post</h2>\n"
-        f"              <a href=\"mailto:{contact['email']}\" className=\"mt-2 block text-lg\">{contact['email']}</a>\n"
-        "            </article>\n"
-        "            <article className=\"rounded-md border p-6 md:col-span-2\">\n"
-        "              <h2 className=\"text-base font-semibold\">Adress</h2>\n"
-        "              <address className=\"mt-2 not-italic\">\n"
+        '    <main className="flex flex-1 flex-col">\n'
+        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        '          <header className="flex flex-col gap-3">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Kontakt</p>\n'
+        '            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Hör av dig</h1>\n'
+        '            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">Beskriv jobbet kort så återkommer vi inom en arbetsdag med tider och offert.</p>\n'
+        '          </header>\n'
+        '          <div className="grid gap-4 md:grid-cols-2">\n'
+        '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
+        '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><Phone className="size-5" /></span>\n'
+        '              <h2 className="text-base font-semibold">Telefon</h2>\n'
+        f'              <a href="tel:{_phone_href(contact["phone"])}" className="mt-2 block text-lg font-medium hover:underline">{contact["phone"]}</a>\n'
+        '              <p className="mt-2 inline-flex items-center gap-2 text-sm text-[color:var(--muted)]">\n'
+        '                <Clock className="size-4" />\n'
+        f'                <span>{contact["openingHours"]}</span>\n'
+        '              </p>\n'
+        '            </article>\n'
+        '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
+        '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><Mail className="size-5" /></span>\n'
+        '              <h2 className="text-base font-semibold">E-post</h2>\n'
+        f'              <a href="mailto:{contact["email"]}" className="mt-2 block text-lg font-medium hover:underline">{contact["email"]}</a>\n'
+        '            </article>\n'
+        '            <article className="rounded-xl border border-[color:var(--border)] p-6 md:col-span-2">\n'
+        '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><MapPin className="size-5" /></span>\n'
+        '              <h2 className="text-base font-semibold">Adress</h2>\n'
+        '              <address className="mt-2 not-italic">\n'
         f"{address_lines}\n"
-        "              </address>\n"
-        "            </article>\n"
-        "          </div>\n"
-        "        </div>\n"
-        "      </section>\n"
-        "    </main>\n"
+        '              </address>\n'
+        '            </article>\n'
+        '          </div>\n'
+        '        </div>\n'
+        '      </section>\n'
+        '    </main>\n'
         "  );\n"
         "}\n"
     )
 
 
-def write_pages(target: Path, dossier: dict) -> None:
-    write(target / "app" / "page.tsx", render_home(dossier))
+def write_pages(target: Path, dossier: dict, dossier_routes: list[str]) -> None:
+    write(target / "app" / "page.tsx", render_home(dossier, dossier_routes))
     write(target / "app" / "tjanster" / "page.tsx", render_services(dossier))
     write(target / "app" / "om-oss" / "page.tsx", render_about(dossier))
     write(target / "app" / "kontakt" / "page.tsx", render_contact(dossier))
+    write(target / "app" / "layout.tsx", render_layout(dossier, dossier_routes))
 
 
 def selected_required_dossiers(project_input: dict) -> list[str]:
@@ -1002,22 +1172,15 @@ def build(
     print("Patching package.json")
     patch_package_json(target, dossier)
 
-    print("Patching app/layout.tsx")
-    patch_layout(
-        target,
-        site_title=dossier["company"]["name"],
-        site_description=dossier["company"]["tagline"],
-    )
-
     print("Injecting variant tokens into app/globals.css")
     patch_globals_css(target, variant)
-
-    print("Writing pages: /, /tjanster, /om-oss, /kontakt")
-    write_pages(target, dossier)
 
     selected_dossiers = load_selected_dossier_manifests(dossier)
     copied_components = mount_dossier_components(target, selected_dossiers)
     dossier_routes = write_dossier_routes(target, selected_dossiers)
+
+    print("Writing pages: /, /tjanster, /om-oss, /kontakt and layout")
+    write_pages(target, dossier, dossier_routes)
 
     routes_required = required_routes(scaffold_routes)
     routes_all = all_default_routes(scaffold_routes)

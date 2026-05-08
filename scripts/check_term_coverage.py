@@ -134,6 +134,10 @@ COMMON_WORDS = {
     "GameState", "KeyboardEvent", "PacmanGame",
     "Snake", "Tetris", "ThreeCanvasShell",
     "PowerShell", "SkipBuild", "NoServe", "DryRun",
+    # lucide-react icon names used by build_site.py page renderers.
+    # 1-cap names like Phone/Mail/Sparkles never trigger PASCAL_RE; only
+    # multi-cap PascalCase icons need explicit allowlisting.
+    "MapPin", "ShieldCheck", "PartyPopper", "ShoppingBag",
     "TokenMeterContext", "TokenMeterContextValue", "TokenMeterProvider", "TokenMeterState",
     "UsageDelta", "UsageSummary", "ViewerPanelProps",
     "BuildPayloadSchema", "ChatPanel", "TokenMeter", "ViewerPanel",
