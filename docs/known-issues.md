@@ -101,6 +101,23 @@ Format per bugg:
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B28` Låg** (stängd 2026-05-08, audit-4) - `tests/test_docs_freshness.py`
+  parsade ruffs felräknings-output med regexen `r"Found\s+(\d+)\s+error"`
+  (utan `errors?`). Reviewer-claim: "regex fails to match on 2+ findings,
+  actual = -1, safety assertion fails". Verifiering visade att claimet
+  är **tekniskt felaktigt** - `re.search` tillåter partiell match så
+  `error` matchar som prefix av `errors`, vilket bevisades med
+  `re.search(r"Found\s+(\d+)\s+error", "Found 5 errors.")` → match,
+  group1=`'5'`. Men förslaget är ändå värt att applicera av tre
+  defensiva skäl: (1) codifierar intent istället för att lita på
+  substring-prefix-tillfällighet, (2) framtidssäkrar mot ruff-format-
+  ändringar, (3) samma strukturella lärdom som B27 ("regex som råkar
+  fungera men inte uttrycker intent"). Fix: bytt till
+  `r"Found\s+(\d+)\s+errors?"` med explicit `s?`, kompilerad en gång
+  som modul-konstant `_RUFF_FOUND_RE`. Test:
+  `tests/test_docs_freshness.py::test_ruff_found_regex_handles_singular_and_plural`
+  med fyra explicita assertioner (singular+plural+stort tal+full
+  ruff-output med både singular- och plural-fall).
 - **`B27` Låg** (stängd 2026-05-08, audit-3) - `tests/test_docs_freshness.py`
   använde `dossier_id in readme` (Python `str in str` substring-match) för
   att verifiera att en disk-Dossier nämns i `dossiers/README.md`. Det gav

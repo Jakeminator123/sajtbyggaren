@@ -17,8 +17,9 @@ is that drift between docs and code is now a CI failure instead of an
 audit finding three sprints later.
 
 Closes B25 (AGENTS.md ruff drift), B26 (dossier README implementation
-count drift), and B27 (substring false-positive in dossier id presence
-check) per docs/known-issues.md.
+count drift), B27 (substring false-positive in dossier id presence
+check), and B28 (ruff output regex relied on substring-prefix accident
+for plural form) per docs/known-issues.md.
 """
 
 from __future__ import annotations
@@ -32,6 +33,12 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
+
+# Compiled at import time so the meta-test can assert against the same
+# pattern that the AGENTS.md guard uses. The trailing 's?' is intentional:
+# ruff prints 'Found 1 error.' for a single finding and 'Found 5 errors.'
+# for multiple. Closes B28.
+_RUFF_FOUND_RE = re.compile(r"Found\s+(\d+)\s+errors?")
 
 
 def _list_dossiers_on_disk() -> list[str]:
@@ -103,7 +110,11 @@ def test_agents_md_ruff_baseline_claim_matches_reality():
         actual = 0
     else:
         combined = (result.stdout or "") + "\n" + (result.stderr or "")
-        m = re.search(r"Found\s+(\d+)\s+error", combined)
+        # Use 'errors?' (with optional trailing s) to explicitly accept both
+        # "Found 1 error." and "Found 5 errors." rather than relying on the
+        # substring-prefix accident where 'error' happens to match as a prefix
+        # of 'errors'. Closes B28 - same defensive principle as B27.
+        m = _RUFF_FOUND_RE.search(combined)
         actual = int(m.group(1)) if m else -1
 
     assert actual >= 0, (
@@ -215,3 +226,39 @@ def test_id_appears_as_token_distinguishes_overlapping_dossier_ids():
     assert _id_appears_as_token("pacman-game", bare_id) is True
     assert _id_appears_as_token("pacman", bare_id) is False
     assert _id_appears_as_token("game", bare_id) is False
+
+
+@pytest.mark.tooling
+def test_ruff_found_regex_handles_singular_and_plural():
+    """B28 regression: the ruff-output parser used the literal pattern
+    ``Found\\s+(\\d+)\\s+error`` (no trailing 's?'). It happened to work
+    on plural input ``Found 5 errors.`` because Python ``re.search`` allows
+    partial matching - ``error`` matches as a prefix of ``errors`` - but
+    that is an implementation accident, not codified intent. A future
+    refactor that switched to ``re.fullmatch`` or appended ``\\.?`` would
+    silently break on plural inputs and the AGENTS.md guard would start
+    returning ``actual = -1`` for any 2+ finding ruff run.
+
+    Fix: pattern is now ``Found\\s+(\\d+)\\s+errors?`` with explicit
+    ``s?``. This test pins both forms so the intent cannot drift again.
+    """
+    assert _RUFF_FOUND_RE.search("Found 1 error.") is not None
+    assert _RUFF_FOUND_RE.search("Found 1 error.").group(1) == "1"
+
+    assert _RUFF_FOUND_RE.search("Found 5 errors.") is not None
+    assert _RUFF_FOUND_RE.search("Found 5 errors.").group(1) == "5"
+
+    assert _RUFF_FOUND_RE.search("Found 47 errors.") is not None
+    assert _RUFF_FOUND_RE.search("Found 47 errors.").group(1) == "47"
+
+    full_ruff_singular = (
+        "scripts/foo.py:10:1: F401 unused import\n"
+        "Found 1 error.\n"
+    )
+    full_ruff_plural = (
+        "scripts/foo.py:10:1: F401 unused import\n"
+        "scripts/bar.py:5:1: E501 line too long\n"
+        "Found 2 errors.\n"
+    )
+    assert _RUFF_FOUND_RE.search(full_ruff_singular).group(1) == "1"
+    assert _RUFF_FOUND_RE.search(full_ruff_plural).group(1) == "2"
