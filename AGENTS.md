@@ -48,10 +48,12 @@ Commands are documented in the README under "Snabbstart". Key commands:
 
 - The ruff binary is shipped inside the venv. If the binary is not on
   `$PATH`, invoke via `python -m ruff check .` or `python -m ruff format .`.
-- Run `python -m ruff check .` for the current lint count. Pre-existing
-  unsorted-import (rule i001) and Optional-modernisation (rule up045)
-  findings are not release-blocking; fix them in dedicated
-  `chore: ruff auto-fixes` commits, never mixed with feature work.
+- Run `python -m ruff check .` for the current lint count. After the
+  recent ruff auto-fix sweep (commit added in this branch) only 4
+  findings remain, all in the bug-bear family (rules b905, b017, b033)
+  and intentional - they require a code judgement call rather than an
+  auto-fix. Fix any new lint findings in dedicated `chore: ruff auto-fixes`
+  commits, never mixed with feature work.
 - `.env` is not required for backoffice, mock engine, governance checks or
   the test suite. `OPENAI_API_KEY` is required when you want
   `scripts/build_site.py` and `scripts/dev_generate.py` to call the real

@@ -9,11 +9,9 @@ We can't run Streamlit's render loop in pytest, but we can:
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
-
 
 VIEW_MODULES = [
     "backoffice.views.status",

@@ -14,7 +14,6 @@ import pytest
 
 from .conftest import REPO_ROOT
 
-
 # Mirror the product directories the test should scan.
 PRODUCT_PATHS = [
     "backend.py",

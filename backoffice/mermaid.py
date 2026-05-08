@@ -11,7 +11,6 @@ from typing import Any
 
 import streamlit as st
 
-
 _MERMAID_CDN = "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs"
 
 

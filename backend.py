@@ -26,7 +26,6 @@ from backoffice.views import (
     status,
 )
 
-
 st.set_page_config(
     page_title="Sajtbyggaren Backoffice",
     page_icon=":wrench:",

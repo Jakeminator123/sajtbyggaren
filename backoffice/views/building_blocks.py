@@ -11,7 +11,6 @@ from .. import loaders
 from ..paths import REPO_ROOT
 from ._helpers import safe_render
 
-
 SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
 DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
 REFERENCE_TEMPLATES_DIR = REPO_ROOT / "data" / "reference-templates"

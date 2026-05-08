@@ -13,11 +13,10 @@ from __future__ import annotations
 import logging
 import os
 import sys
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
-
 
 logger = logging.getLogger("sajtbyggaren.brief")
 
@@ -45,7 +44,7 @@ class SiteBrief(BaseModel):
     """
 
     language: str = Field(description="ISO 639-1 code, e.g. sv or en.")
-    business_type: Optional[str] = Field(
+    business_type: str | None = Field(
         default=None,
         description="A short slug describing the business (e.g. 'electrician', 'dental-clinic').",
     )
@@ -53,7 +52,7 @@ class SiteBrief(BaseModel):
         default_factory=list,
         description="Who the site is meant to convert. 0-5 items.",
     )
-    page_count: Optional[int] = Field(
+    page_count: int | None = Field(
         default=None,
         description="Number of pages the site should have. Omit if unclear.",
     )
@@ -65,7 +64,7 @@ class SiteBrief(BaseModel):
         default_factory=list,
         description="Slugs of capabilities the user explicitly asked for (e.g. 'contact-form', 'reviews').",
     )
-    location_hint: Optional[str] = Field(
+    location_hint: str | None = Field(
         default=None,
         description="City or region if mentioned in the prompt.",
     )
@@ -83,12 +82,12 @@ class SiteBrief(BaseModel):
             "'paneldragning', 'laddbox-installation'). Drives concrete copy."
         ),
     )
-    content_depth: Optional[str] = Field(
+    content_depth: str | None = Field(
         default=None,
         description="One of: 'shallow', 'medium', 'rich'. How detailed the copy should feel.",
     )
     raw_prompt: str = Field(description="The original prompt as received.")
-    notes_for_planner: Optional[str] = Field(
+    notes_for_planner: str | None = Field(
         default=None,
         description="One-line summary that Phase 2 Plan can use as orientation.",
     )
@@ -156,7 +155,7 @@ class BriefResult(BaseModel):
 
     brief: SiteBrief
     source: str  # "real" | "mock-no-key" | "mock-llm-error"
-    error: Optional[str] = None
+    error: str | None = None
 
 
 def extract_site_brief(
@@ -228,6 +227,6 @@ def site_brief_to_artifact(
         "modelUsed": model if is_real else "mock",
         "briefSource": result.source,
         "briefError": result.error,
-        "createdAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "createdAt": datetime.now(UTC).isoformat(timespec="seconds"),
         "_status": result.source,
     }

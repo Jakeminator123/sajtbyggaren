@@ -35,7 +35,6 @@ import re
 import sys
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 NAMING = REPO_ROOT / "governance" / "policies" / "naming-dictionary.v1.json"
 
@@ -71,22 +70,20 @@ COMMON_WORDS = {
     "TypeError", "ValueError", "RuntimeError", "Exception", "Iterator",
     "ArgumentParser", "ImportError", "UnicodeDecodeError", "Input", "Output",
     "AssertionError", "FileExistsError", "NotImplementedError",
-    "Boolean", "Iterable", "Sequence", "Mapping", "Callable",
+    "Iterable", "Sequence", "Mapping", "Callable",
     # Framework / lib
     "React", "Next", "NextJs", "NextJS", "Vite", "Tailwind", "TypeScript",
     "Python", "Streamlit", "FastAPI", "Pydantic", "Flask", "Django",
     "JsonSchema", "Draft202012Validator",
     # Web standards / native browser APIs
-    "HTML", "CSS", "URL", "URI", "DOM", "API", "HTTP", "HTTPS", "JSON",
-    "REST", "GraphQL", "WebSocket", "OAuth", "CORS", "TLS", "SSL",
+    "HTML", "CSS", "URL", "URI", "DOM", "API", "HTTP", "HTTPS", "REST", "GraphQL", "WebSocket", "OAuth", "CORS", "TLS", "SSL",
     "SharedArrayBuffer", "SharedArrayBuffer is not defined",
     # Sajtbyggaren-meta-nyckelord (egennamn för repon)
     "Sajtbyggaren", "Sajtmaskin", "Jakeminator123", "Jakemiantor123",
     "Lovable", "GitHub", "Cursor", "Vercel", "StackBlitz",
     "WebContainer", "WebContainers", "Fly", "Stripe", "OpenAI", "Anthropic",
     # Generic word fragments som dyker upp i text
-    "ADR", "PR", "CI", "ID", "UUID", "MD", "LLM", "JSON",
-    "PascalCase", "Backup",
+    "ADR", "PR", "CI", "ID", "UUID", "MD", "LLM", "PascalCase", "Backup",
     # Generiska prosa-fraser
     "Positiva signaler", "Negativa signaler",
     "Fas 1 runtime", "Fas 2 runtime", "Fas 3 runtime",

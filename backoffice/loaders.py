@@ -13,7 +13,7 @@ from typing import Any
 
 import streamlit as st
 
-from .paths import POLICIES_DIR, RULES_DIR, DECISIONS_DIR, SCHEMAS_DIR
+from .paths import DECISIONS_DIR, POLICIES_DIR, RULES_DIR, SCHEMAS_DIR
 
 
 def _file_signature(path: Path) -> tuple[str, float]:

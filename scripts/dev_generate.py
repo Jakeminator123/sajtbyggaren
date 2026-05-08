@@ -33,10 +33,9 @@ import json
 import os
 import sys
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_RUNS_DIR = REPO_ROOT / "data" / "runs"
@@ -62,12 +61,12 @@ def _resolve_brief_model() -> str:
 
 
 def utcnow_iso() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def make_run_id() -> str:
     """Sortable, human-readable runId: 2026-05-07T07-12-34Z-<short>."""
-    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%SZ")
+    stamp = datetime.now(UTC).strftime("%Y-%m-%dT%H-%M-%SZ")
     short = uuid.uuid4().hex[:6]
     return f"{stamp}-{short}"
 
