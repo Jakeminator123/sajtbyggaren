@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sajtbyggaren.local/schemas/site-brief.schema.json",
+  "title": "Site Brief",
+  "description": "Phase 1 Understand artefact: structured business/site brief produced by briefModel (or its mock fallback). Locked by ADR 0013 before Sprint 2B wires planningModel.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "runId",
+    "language",
+    "rawPrompt",
+    "tone",
+    "targetAudience",
+    "requestedCapabilities",
+    "conversionGoals",
+    "servicesMentioned",
+    "sourceModelRole",
+    "modelUsed",
+    "briefSource",
+    "createdAt"
+  ],
+  "properties": {
+    "runId": {
+      "type": "string",
+      "description": "Engine Run identifier the brief belongs to."
+    },
+    "language": {
+      "type": "string",
+      "description": "ISO 639-1 code, e.g. 'sv' or 'en'."
+    },
+    "rawPrompt": {
+      "type": "string",
+      "description": "The original prompt as briefModel saw it. May include language hint preamble."
+    },
+    "businessTypeGuess": {
+      "type": ["string", "null"],
+      "description": "Short slug describing the business (e.g. 'electrician', 'photo-studio'). Null when ambiguous."
+    },
+    "pageCount": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Number of pages briefModel inferred. Null when not derivable."
+    },
+    "tone": {
+      "type": "array",
+      "items": {"type": "string"},
+      "maxItems": 8,
+      "description": "Tone words (e.g. 'trustworthy', 'premium', 'local')."
+    },
+    "targetAudience": {
+      "type": "array",
+      "items": {"type": "string"},
+      "maxItems": 8,
+      "description": "Who the site is meant to convert."
+    },
+    "requestedCapabilities": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Capability slugs the user explicitly asked for (e.g. 'contact-form', 'reviews'). Lookup target for capability-map.v1."
+    },
+    "locationHint": {
+      "type": ["string", "null"],
+      "description": "City or region if mentioned. Free-form string, may include country."
+    },
+    "conversionGoals": {
+      "type": "array",
+      "items": {"type": "string"},
+      "maxItems": 5,
+      "description": "Concrete actions: 'call', 'quote-request', 'booking', 'newsletter-signup', 'purchase'."
+    },
+    "servicesMentioned": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Specific services/products the user mentioned."
+    },
+    "contentDepth": {
+      "type": ["string", "null"],
+      "enum": ["shallow", "medium", "rich", null],
+      "description": "How detailed the copy should feel."
+    },
+    "notesForPlanner": {
+      "type": ["string", "null"],
+      "description": "One-line orientation for Phase 2 Plan."
+    },
+    "sourceModelRole": {
+      "type": "string",
+      "const": "briefModel",
+      "description": "Locked: this artefact is always written by the briefModel role."
+    },
+    "modelUsed": {
+      "type": "string",
+      "description": "Concrete model identifier (e.g. 'gpt-5.4') or 'mock' when fallback ran."
+    },
+    "briefSource": {
+      "type": "string",
+      "enum": ["real", "mock-no-key", "mock-llm-error", "mock-import-error"],
+      "description": "Truth field about which code path produced this brief. Never claims 'real' when fallback ran."
+    },
+    "briefError": {
+      "type": ["string", "null"],
+      "description": "Error message when briefSource indicates a fallback path. Null on success or no-key path."
+    },
+    "attemptedModel": {
+      "type": ["string", "null"],
+      "description": "Model that was attempted before LLM-error fallback. Null when no LLM call was attempted."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the brief was written."
+    },
+    "scaffoldHint": {
+      "type": "string",
+      "description": "Optional scaffold suggestion the builder attaches when running from a Project Input. Not produced by dev_generate.py."
+    }
+  }
+}

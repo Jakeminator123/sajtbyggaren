@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sajtbyggaren.local/schemas/site-plan.schema.json",
+  "title": "Site Plan",
+  "description": "Phase 2 Plan artefact: chosen Scaffold + Variant + route plan + selected Dossiers + BuildSpec. Locked by ADR 0013 before Sprint 2B wires planningModel.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "runId",
+    "scaffoldId",
+    "variantId",
+    "starterId",
+    "routePlan",
+    "selectedDossiers",
+    "buildSpec",
+    "sourceModelRole",
+    "modelUsed",
+    "planSource",
+    "createdAt"
+  ],
+  "properties": {
+    "runId": {
+      "type": "string",
+      "description": "Engine Run identifier the plan belongs to."
+    },
+    "scaffoldId": {
+      "type": "string",
+      "description": "Chosen Scaffold identifier (e.g. 'local-service-business')."
+    },
+    "scaffoldVersion": {
+      "type": "string",
+      "description": "Optional scaffold version pin. Useful when the same scaffoldId is migrated across versions."
+    },
+    "variantId": {
+      "type": "string",
+      "description": "Chosen Variant identifier within the scaffold (e.g. 'nordic-trust')."
+    },
+    "starterId": {
+      "type": "string",
+      "description": "Chosen Starter identifier (e.g. 'marketing-base')."
+    },
+    "routePlan": {
+      "type": "array",
+      "description": "Routes that should exist in the generated site, in order.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "path", "purpose"],
+        "properties": {
+          "id": {"type": "string"},
+          "path": {"type": "string"},
+          "purpose": {"type": "string"}
+        }
+      }
+    },
+    "selectedDossiers": {
+      "description": "Active Dossiers for this run. Either a flat list of IDs (legacy mock) or an object split into required / recommended / conditional buckets. The object form may carry a free-form rationale string copied from Project Input for traceability.",
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "required": {"type": "array", "items": {"type": "string"}},
+            "recommended": {"type": "array", "items": {"type": "string"}},
+            "conditional": {"type": "array", "items": {"type": "string"}},
+            "rationale": {"type": "string"},
+            "rejected": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "reason"],
+                "properties": {
+                  "id": {"type": "string"},
+                  "reason": {"type": "string"}
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "buildSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["qualityTarget", "verificationPolicy", "previewRuntime"],
+      "properties": {
+        "qualityTarget": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Target page-quality score from page-quality-traits.v1.json. Default 9.0."
+        },
+        "verificationPolicy": {
+          "type": "string",
+          "enum": ["fast", "build-must-pass"],
+          "description": "How strict the build verification is in this run."
+        },
+        "previewRuntime": {
+          "type": "string",
+          "enum": ["local", "stackblitz", "fly"],
+          "description": "Preview Runtime to use after the run. Names match preview-runtime-policy.v1.json."
+        }
+      }
+    },
+    "sourceModelRole": {
+      "type": "string",
+      "const": "planningModel",
+      "description": "Locked: this artefact is always attributed to the planningModel role even while the plan is mock."
+    },
+    "modelUsed": {
+      "type": "string",
+      "description": "Concrete model identifier (e.g. 'gpt-5.4') or 'mock' when fallback / pre-Sprint-2B stub ran."
+    },
+    "planSource": {
+      "type": "string",
+      "enum": ["real", "mock-no-key", "mock-llm-error", "mock-pre-sprint-2b"],
+      "description": "Truth field about which code path produced this plan. Mirrors briefSource on Site Brief."
+    },
+    "planError": {
+      "type": ["string", "null"],
+      "description": "Error message when planSource indicates a fallback path. Null otherwise."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the plan was written."
+    }
+  }
+}

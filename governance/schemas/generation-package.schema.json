@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sajtbyggaren.local/schemas/generation-package.schema.json",
+  "title": "Generation Package",
+  "description": "Phase 2 Plan artefact: the only payload that enters codegen-LLM. References siteBrief and sitePlan by relative path inside the run directory. Locked by ADR 0013 before Sprint 2B wires planningModel.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "runId",
+    "policyVersions",
+    "siteBriefRef",
+    "sitePlanRef",
+    "scaffoldId",
+    "variantId",
+    "starterId",
+    "language",
+    "engineMode",
+    "createdAt"
+  ],
+  "properties": {
+    "runId": {
+      "type": "string",
+      "description": "Engine Run identifier the package belongs to."
+    },
+    "policyVersions": {
+      "type": "object",
+      "additionalProperties": {"type": "string"},
+      "description": "Map of policy short-name to policy version pin (e.g. {'engineRun': 'engine-run.v1'}). Codegen reads this to know which policy generation it should obey."
+    },
+    "siteBriefRef": {
+      "type": "string",
+      "description": "Filename reference inside the run directory pointing to the Site Brief artefact. Always 'site-brief.json' in canonical runs."
+    },
+    "sitePlanRef": {
+      "type": "string",
+      "description": "Filename reference inside the run directory pointing to the Site Plan artefact. Always 'site-plan.json' in canonical runs."
+    },
+    "scaffoldId": {
+      "type": "string",
+      "description": "Mirror of sitePlan.scaffoldId, denormalised for codegen convenience."
+    },
+    "variantId": {
+      "type": "string",
+      "description": "Mirror of sitePlan.variantId."
+    },
+    "starterId": {
+      "type": "string",
+      "description": "Mirror of sitePlan.starterId."
+    },
+    "language": {
+      "type": "string",
+      "description": "Mirror of siteBrief.language. Locked here so codegen does not have to read the brief file just to pick a language."
+    },
+    "engineMode": {
+      "type": "string",
+      "enum": ["init", "followup"],
+      "description": "Whether this run creates Project DNA (init) or patches inside existing DNA (followup)."
+    },
+    "projectId": {
+      "type": ["string", "null"],
+      "description": "Required when engineMode is 'followup'; null on init."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the package was written."
+    }
+  }
+}

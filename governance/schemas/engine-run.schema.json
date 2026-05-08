@@ -82,7 +82,11 @@
           "id": { "type": "string" },
           "filename": { "type": "string" },
           "writtenBy": { "type": "string" },
-          "purpose": { "type": "string" }
+          "purpose": { "type": "string" },
+          "schema": {
+            "type": "string",
+            "description": "Optional pointer to the JSON Schema in governance/schemas/ that validates this artefact. Locked by ADR 0013 for fas 1+2 artefacts; fas 3 artefacts get schemas in Sprint 3."
+          }
         }
       }
     },

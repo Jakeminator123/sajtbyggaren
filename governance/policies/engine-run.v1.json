@@ -78,19 +78,22 @@
       "id": "siteBrief",
       "filename": "site-brief.json",
       "writtenBy": "understand",
-      "purpose": "Strukturerad Site Brief med språk, businessType, sidor, ton, capabilities."
+      "purpose": "Strukturerad Site Brief med språk, businessType, sidor, ton, capabilities.",
+      "schema": "site-brief.schema.json"
     },
     {
       "id": "sitePlan",
       "filename": "site-plan.json",
       "writtenBy": "plan",
-      "purpose": "Vald Scaffold, Variant, Route Plan, valda Dossiers och BuildSpec."
+      "purpose": "Vald Scaffold, Variant, Route Plan, valda Dossiers och BuildSpec.",
+      "schema": "site-plan.schema.json"
     },
     {
       "id": "generationPackage",
       "filename": "generation-package.json",
       "writtenBy": "plan",
-      "purpose": "Den enda nyttolasten som skickas till codegen-LLM."
+      "purpose": "Den enda nyttolasten som skickas till codegen-LLM.",
+      "schema": "generation-package.schema.json"
     },
     {
       "id": "generatedFiles",

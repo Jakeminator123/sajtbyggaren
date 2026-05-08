@@ -116,8 +116,10 @@ def test_builder_falls_back_to_mock_when_brief_extractor_fails(
     assert brief["sourceModelRole"] == "briefModel"
     assert brief["attemptedModel"] == "gpt-5.4"
     assert "synthetic extractor failure" in brief["briefError"]
-    assert brief["companyName"] == "Målare i Palma"
+    # Project Input fields project into canonical Site Brief fields per ADR 0013.
+    assert brief["businessTypeGuess"] == "painter"
     assert brief["requestedCapabilities"] == ["interactive-game"]
+    assert brief["locationHint"] is not None and "Palma" in brief["locationHint"]
 
     result = json.loads((run_dir / "build-result.json").read_text(encoding="utf-8"))
     assert result["briefSource"] == "mock-llm-error"
@@ -163,7 +165,12 @@ def test_builder_fallback_is_deterministic_for_examples(
     assert (first_run_dir / "site-brief.json").exists()
     first_brief = json.loads((first_run_dir / "site-brief.json").read_text(encoding="utf-8"))
     second_brief = json.loads((second_run_dir / "site-brief.json").read_text(encoding="utf-8"))
-    assert first_brief == second_brief
+    # runId and createdAt are intrinsically per-run; everything else must
+    # be byte-identical for the fallback to count as deterministic.
+    volatile = {"runId", "createdAt"}
+    first_stable = {k: v for k, v in first_brief.items() if k not in volatile}
+    second_stable = {k: v for k, v in second_brief.items() if k not in volatile}
+    assert first_stable == second_stable
     assert first_brief["briefSource"] == "mock-no-key"
 
     snapshot_files = [

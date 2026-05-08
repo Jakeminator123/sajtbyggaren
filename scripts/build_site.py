@@ -866,28 +866,59 @@ def run_npm(command: list[str], cwd: Path) -> tuple[bool, float, str]:
 # ---------------------------------------------------------------------------
 
 
-def build_site_brief_mock(dossier: dict, scaffold: dict) -> dict:
+def build_site_brief_mock(run_id: str, dossier: dict, scaffold: dict) -> dict:
     """Mock Site Brief derived from the dossier (no LLM).
 
-    ``requestedCapabilities`` honours an explicit value from the Project Input,
-    including an explicit empty list. Only when the field is absent does the
-    builder fall back to the service-id stub.
+    Returns the canonical Site Brief artefakt shape locked in
+    ``governance/schemas/site-brief.schema.json`` (ADR 0013). Project Input
+    fields are projected into the canonical fields rather than written
+    alongside; the per-Project-Input data still lives in the source file
+    under ``examples/`` for downstream phases that need the raw company /
+    trust-signal payload.
+
+    ``requestedCapabilities`` honours an explicit value from the Project
+    Input, including an explicit empty list. Only when the field is absent
+    does the builder fall back to the service-id stub.
     """
     requested = dossier.get("requestedCapabilities")
     if requested is None:
         requested = [svc["id"] for svc in dossier["services"]]
+    company = dossier["company"]
+    location = dossier.get("location") or {}
+    tone_block = dossier.get("tone") or {}
+    if isinstance(tone_block, dict):
+        tone_words = [tone_block.get("primary")] + list(tone_block.get("secondary") or [])
+        tone = [t for t in tone_words if t]
+    else:
+        tone = list(tone_block)
+    location_parts = [
+        location.get("city"),
+        location.get("region"),
+        location.get("country"),
+    ]
+    location_hint = ", ".join(p for p in location_parts if p) or None
     return {
-        "briefSource": "mock-no-key",
-        "modelUsed": "mock",
+        "runId": run_id,
         "language": dossier["language"],
-        "businessType": dossier["company"]["businessType"],
-        "companyName": dossier["company"]["name"],
-        "tagline": dossier["company"]["tagline"],
-        "location": dossier["location"],
-        "tone": dossier["tone"],
-        "trustSignals": dossier["trustSignals"],
-        "conversionGoals": dossier["conversionGoals"],
-        "requestedCapabilities": requested,
+        "rawPrompt": project_input_to_brief_prompt(dossier),
+        "businessTypeGuess": company.get("businessType"),
+        "pageCount": None,
+        "tone": tone,
+        "targetAudience": [],
+        "requestedCapabilities": list(requested),
+        "locationHint": location_hint,
+        "conversionGoals": list(dossier.get("conversionGoals") or []),
+        "servicesMentioned": [svc["id"] for svc in dossier.get("services", [])],
+        "contentDepth": None,
+        "notesForPlanner": (
+            f"Mock brief for Project Input '{dossier.get('siteId')}' - planningModel "
+            "wires in Sprint 2B."
+        ),
+        "sourceModelRole": "briefModel",
+        "modelUsed": "mock",
+        "briefSource": "mock-no-key",
+        "briefError": None,
+        "createdAt": utc_now().isoformat(timespec="seconds"),
         "scaffoldHint": scaffold["id"],
     }
 
@@ -949,18 +980,17 @@ def project_input_to_brief_prompt(dossier: dict) -> str:
 
 
 def _mock_brief_after_llm_failure(
+    run_id: str,
     dossier: dict,
     scaffold: dict,
     *,
     error: str,
     attempted_model: str | None,
 ) -> dict:
-    brief = build_site_brief_mock(dossier, scaffold)
+    brief = build_site_brief_mock(run_id, dossier, scaffold)
     brief.update(
         {
             "briefSource": "mock-llm-error",
-            "modelUsed": "mock",
-            "sourceModelRole": "briefModel",
             "briefError": error,
             "attemptedModel": attempted_model,
         }
@@ -972,7 +1002,7 @@ def build_site_brief(run_id: str, dossier: dict, scaffold: dict) -> dict:
     """Build Site Brief with briefModel when available, otherwise mock fallback."""
     if not os.environ.get("OPENAI_API_KEY"):
         print("No OPENAI_API_KEY - using mock Site Brief")
-        return build_site_brief_mock(dossier, scaffold)
+        return build_site_brief_mock(run_id, dossier, scaffold)
 
     model: str | None = None
     try:
@@ -995,6 +1025,7 @@ def build_site_brief(run_id: str, dossier: dict, scaffold: dict) -> dict:
                 file=sys.stderr,
             )
             return _mock_brief_after_llm_failure(
+                run_id,
                 dossier,
                 scaffold,
                 error=error,
@@ -1012,6 +1043,7 @@ def build_site_brief(run_id: str, dossier: dict, scaffold: dict) -> dict:
             file=sys.stderr,
         )
         return _mock_brief_after_llm_failure(
+            run_id,
             dossier,
             scaffold,
             error=error,
@@ -1020,16 +1052,26 @@ def build_site_brief(run_id: str, dossier: dict, scaffold: dict) -> dict:
 
 
 def build_site_plan_mock(
-    dossier: dict, scaffold: dict, scaffold_routes: dict, variant: dict
+    run_id: str,
+    dossier: dict,
+    scaffold: dict,
+    scaffold_routes: dict,
+    variant: dict,
 ) -> dict:
-    """Mock Site Plan derived from scaffold + variant + dossier (no LLM)."""
+    """Mock Site Plan derived from scaffold + variant + dossier (no LLM).
+
+    Returns the canonical Site Plan artefakt shape locked in
+    ``governance/schemas/site-plan.schema.json`` (ADR 0013). planSource is
+    'mock-pre-sprint-2b' because planningModel is not wired in yet.
+    """
     return {
+        "runId": run_id,
         "scaffoldId": scaffold["id"],
         "scaffoldVersion": scaffold["version"],
         "variantId": variant["id"],
         "starterId": "marketing-base",
-        "routes": [
-            {"path": r["path"], "id": r["id"], "purpose": r["purpose"]}
+        "routePlan": [
+            {"id": r["id"], "path": r["path"], "purpose": r["purpose"]}
             for r in scaffold_routes["defaultRoutes"]
         ],
         "selectedDossiers": dossier.get("selectedDossiers", {}),
@@ -1038,16 +1080,27 @@ def build_site_plan_mock(
             "verificationPolicy": "build-must-pass",
             "previewRuntime": "stackblitz",
         },
+        "sourceModelRole": "planningModel",
+        "modelUsed": "mock",
+        "planSource": "mock-pre-sprint-2b",
+        "planError": None,
+        "createdAt": utc_now().isoformat(timespec="seconds"),
     }
 
 
 def build_generation_package(
+    run_id: str,
     dossier: dict,
     scaffold: dict,
     variant: dict,
 ) -> dict:
-    """Generation Package - the only payload that would go to codegen-LLM."""
+    """Generation Package - the only payload that would go to codegen-LLM.
+
+    Canonical shape locked in
+    ``governance/schemas/generation-package.schema.json`` (ADR 0013).
+    """
     return {
+        "runId": run_id,
         "policyVersions": {
             "engineRun": "engine-run.v1",
             "namingDictionary": "naming-dictionary.v1",
@@ -1060,6 +1113,8 @@ def build_generation_package(
         "starterId": "marketing-base",
         "language": dossier["language"],
         "engineMode": "init",
+        "projectId": None,
+        "createdAt": utc_now().isoformat(timespec="seconds"),
     }
 
 
@@ -1097,6 +1152,9 @@ def write_phase1_understand(
     )
 
     brief = build_site_brief(trace.run_id, dossier, scaffold)
+    from packages.generation.artifacts import validate_site_brief
+
+    validate_site_brief(brief)
     write_json(run_dir / "site-brief.json", brief)
     brief_source = brief.get("briefSource", "unknown")
     trace.event(
@@ -1119,9 +1177,15 @@ def write_phase2_plan(
     """Phase 2 plan: site-plan.json + generation-package.json."""
     trace.event("plan", "phase.started", "started", "Phase 2 plan starts")
 
-    site_plan = build_site_plan_mock(
-        dossier, scaffold, scaffold_routes, variant
+    from packages.generation.artifacts import (
+        validate_generation_package,
+        validate_site_plan,
     )
+
+    site_plan = build_site_plan_mock(
+        trace.run_id, dossier, scaffold, scaffold_routes, variant
+    )
+    validate_site_plan(site_plan)
     write_json(run_dir / "site-plan.json", site_plan)
     trace.event(
         "plan", "site_plan.written", "done",
@@ -1129,7 +1193,8 @@ def write_phase2_plan(
         payload_path="site-plan.json",
     )
 
-    package = build_generation_package(dossier, scaffold, variant)
+    package = build_generation_package(trace.run_id, dossier, scaffold, variant)
+    validate_generation_package(package)
     write_json(run_dir / "generation-package.json", package)
     trace.event(
         "plan", "generation_package.written", "done",

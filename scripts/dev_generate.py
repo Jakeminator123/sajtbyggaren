@@ -187,20 +187,25 @@ def run_phase_understand(
             "businessTypeGuess": None,
             "pageCount": None,
             "tone": [],
+            "targetAudience": [],
             "requestedCapabilities": [],
+            "locationHint": None,
             "conversionGoals": [],
             "servicesMentioned": [],
             "contentDepth": None,
+            "notesForPlanner": None,
             "sourceModelRole": "briefModel",
             "modelUsed": "mock",
             "briefSource": "mock-import-error",
             "briefError": f"{type(exc).__name__}: {exc}",
             "createdAt": utcnow_iso(),
-            "_status": "mock-import-error",
         }
 
+    from packages.generation.artifacts import validate_site_brief
+
+    validate_site_brief(site_brief)
     write_json(run_dir / "site-brief.json", site_brief)
-    source_label = site_brief.get("briefSource", site_brief.get("_status", "unknown"))
+    source_label = site_brief.get("briefSource", "unknown")
     emit(
         run_id,
         run_dir,
@@ -221,10 +226,16 @@ def run_phase_understand(
 def run_phase_plan(run_dir: Path, run_id: str, site_brief: dict[str, Any]) -> dict[str, Any]:
     emit(run_id, run_dir, "plan", "started", "started", "Selecting scaffold, variant, routes, dossiers (mock)")
 
+    from packages.generation.artifacts import (
+        validate_generation_package,
+        validate_site_plan,
+    )
+
     site_plan = {
         "runId": run_id,
-        "selectedScaffold": "local-service-business",
-        "selectedVariant": "premium-local",
+        "scaffoldId": "local-service-business",
+        "variantId": "premium-local",
+        "starterId": "marketing-base",
         "routePlan": [
             {"id": "home", "path": "/", "purpose": "Position company, drive primary CTA."},
             {"id": "services", "path": "/tjanster", "purpose": "Show services."},
@@ -234,33 +245,37 @@ def run_phase_plan(run_dir: Path, run_id: str, site_brief: dict[str, Any]) -> di
         "buildSpec": {
             "qualityTarget": 9.0,
             "verificationPolicy": "fast",
-            "previewPolicy": "local",
+            "previewRuntime": "local",
         },
         "sourceModelRole": "planningModel",
         "modelUsed": "mock",
+        "planSource": "mock-pre-sprint-2b",
+        "planError": None,
         "createdAt": utcnow_iso(),
-        "_status": "mock - real Scaffold/Dossier Selectors wired in Sprint 2",
     }
+    validate_site_plan(site_plan)
     write_json(run_dir / "site-plan.json", site_plan)
     emit(run_id, run_dir, "plan", "site-plan.written", "done", "site-plan.json written (mock)", "site-plan.json")
 
     generation_package = {
         "runId": run_id,
-        "siteBrief": site_brief,
-        "scaffold": site_plan["selectedScaffold"],
-        "scaffoldVariant": site_plan["selectedVariant"],
-        "routePlan": site_plan["routePlan"],
-        "selectedDossiers": site_plan["selectedDossiers"],
-        "buildSpec": site_plan["buildSpec"],
         "policyVersions": {
             "engineRun": "engine-run.v1",
             "llmModels": "llm-models.v1",
             "pageQualityTraits": "page-quality-traits.v1",
             "namingDictionary": "naming-dictionary.v1",
         },
+        "siteBriefRef": "site-brief.json",
+        "sitePlanRef": "site-plan.json",
+        "scaffoldId": site_plan["scaffoldId"],
+        "variantId": site_plan["variantId"],
+        "starterId": site_plan["starterId"],
+        "language": site_brief["language"],
+        "engineMode": "init",
+        "projectId": None,
         "createdAt": utcnow_iso(),
-        "_status": "mock",
     }
+    validate_generation_package(generation_package)
     write_json(run_dir / "generation-package.json", generation_package)
     emit(run_id, run_dir, "plan", "package.written", "done", "generation-package.json written (mock)", "generation-package.json")
 

@@ -126,7 +126,6 @@ def test_site_brief_to_artifact_real_run():
     assert artifact["businessTypeGuess"] == "electrician"
     assert artifact["sourceModelRole"] == "briefModel"
     assert artifact["modelUsed"] == "gpt-5.4"
-    assert artifact["_status"] == "real"
     assert artifact["briefSource"] == "real"
     assert artifact["briefError"] is None
     assert artifact["locationHint"] == "Malmö"
@@ -142,7 +141,6 @@ def test_site_brief_to_artifact_mock_no_key():
     result = BriefResult(brief=brief, source="mock-no-key")
     artifact = site_brief_to_artifact(result, run_id="run-x", model="gpt-5.4")
     assert artifact["modelUsed"] == "mock"
-    assert artifact["_status"] == "mock-no-key"
     assert artifact["briefSource"] == "mock-no-key"
     assert artifact["businessTypeGuess"] is None
 
@@ -158,7 +156,6 @@ def test_site_brief_to_artifact_mock_llm_error():
     )
     artifact = site_brief_to_artifact(result, run_id="run-y", model="gpt-5.4")
     assert artifact["modelUsed"] == "mock"
-    assert artifact["_status"] == "mock-llm-error"
     assert artifact["briefSource"] == "mock-llm-error"
     assert artifact["briefError"] == "RuntimeError: boom"
 

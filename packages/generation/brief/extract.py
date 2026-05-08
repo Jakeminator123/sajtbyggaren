@@ -202,10 +202,12 @@ def site_brief_to_artifact(
     run_id: str,
     model: str,
 ) -> dict[str, Any]:
-    """Serialise a BriefResult into the artifact shape that dev_generate.py writes.
+    """Serialise a BriefResult into the canonical Site Brief artefakt.
 
-    Reads source from the BriefResult so modelUsed/_status reflects the actual
-    code path (real, mock-no-key, mock-llm-error). Never claims real when fallback occurred.
+    Shape locked by ``governance/schemas/site-brief.schema.json`` (ADR 0013).
+    Reads source from the BriefResult so modelUsed/briefSource reflects the
+    actual code path (real, mock-no-key, mock-llm-error). Never claims real
+    when fallback occurred.
     """
     brief = result.brief
     is_real = result.source == "real"
@@ -228,5 +230,4 @@ def site_brief_to_artifact(
         "briefSource": result.source,
         "briefError": result.error,
         "createdAt": datetime.now(UTC).isoformat(timespec="seconds"),
-        "_status": result.source,
     }

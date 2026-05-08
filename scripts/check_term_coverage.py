@@ -110,7 +110,7 @@ COMMON_WORDS = {
     # Python stdlib + interna kod-symboler
     "KeyError", "TimeoutExpired", "VIEWS", "Principer",
     "BaseModel", "Field", "FileNotFoundError", "BriefResult",
-    "BriefModelResolutionError", "ValidationError",
+    "BriefModelResolutionError", "ValidationError", "ArtifactSchemaError",
     "SystemExit",
     # Page-komponenter som genereras i builder och i .generated/
     "AboutPage", "ContactPage", "ServicesPage", "ServicePage",

@@ -93,7 +93,7 @@ def test_explicit_empty_requested_capabilities_is_respected() -> None:
     }
     scaffold = {"id": "local-service-business"}
 
-    brief = build_site_brief_mock(dossier, scaffold)
+    brief = build_site_brief_mock("test-run-id", dossier, scaffold)
 
     assert brief["requestedCapabilities"] == [], (
         "Explicit empty requestedCapabilities must be honoured, not silently "
@@ -120,7 +120,7 @@ def test_missing_requested_capabilities_falls_back_to_services() -> None:
     }
     scaffold = {"id": "local-service-business"}
 
-    brief = build_site_brief_mock(dossier, scaffold)
+    brief = build_site_brief_mock("test-run-id", dossier, scaffold)
 
     assert brief["requestedCapabilities"] == ["interior-painting", "exterior-painting"]
 
