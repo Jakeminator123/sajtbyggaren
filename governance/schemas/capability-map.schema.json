@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "capability-map.schema.json",
+  "title": "Capability Map",
+  "description": "Map abstract capability slugs (e.g. interactive-game, payments, analytics) to candidate Dossier IDs. The planningModel reads this when a Site Brief lists requestedCapabilities so it knows which Dossiers are even candidates before running embedding + rerank. Locked by ADR 0013 as a Sprint 2B prerequisite.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policyId",
+    "version",
+    "status",
+    "purpose",
+    "principles",
+    "capabilities"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "policyId": { "type": "string", "pattern": "^capability-map\\.v[0-9]+$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"] },
+    "purpose": { "type": "string" },
+    "principles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "capabilities": {
+      "type": "object",
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dossiers"],
+          "properties": {
+            "dossiers": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*$"
+              },
+              "uniqueItems": true,
+              "description": "Dossier IDs that satisfy this capability. Empty list = capability is recognised but no Dossier exists yet (codegen must surface this to the operator)."
+            },
+            "default": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$",
+              "description": "Default Dossier ID for this capability when planningModel has no other signal. Must be one of dossiers."
+            },
+            "comment": {
+              "type": "string",
+              "description": "Operator-facing note (e.g. 'No Dossier yet; resend-contact-form planned for Sprint 3')."
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

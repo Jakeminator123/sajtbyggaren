@@ -1,0 +1,64 @@
+{
+  "$schema": "../schemas/capability-map.schema.json",
+  "policyId": "capability-map.v1",
+  "version": 1,
+  "status": "draft-but-authoritative",
+  "purpose": "Map abstract capability slugs (the strings briefModel emits in siteBrief.requestedCapabilities) to the Dossiers that can satisfy them. planningModel reads this in Sprint 2B to know which Dossiers are even candidates before running embedding + rerank.",
+  "principles": [
+    "A capability slug is the contract; the Dossier is the implementation. New capabilities require either a Dossier under packages/generation/orchestration/dossiers/{soft,hard}/ or an explicit empty-list comment so codegen knows to surface the gap.",
+    "Empty dossiers list is allowed - it means the capability is recognised but no implementation exists yet. The comment field documents the plan.",
+    "default must be one of dossiers when set. It is the planningModel fallback when no other signal differentiates the candidates.",
+    "Dossier IDs match folder names under packages/generation/orchestration/dossiers/{soft,hard}/. The dossier's manifest.json declares its class and capability."
+  ],
+  "capabilities": {
+    "interactive-game": {
+      "dossiers": ["interactive-game-loop"],
+      "default": "interactive-game-loop",
+      "comment": "Pacman-style soft Dossier; verified mounted by tests/test_dossier_mounting.py."
+    },
+    "contact-form": {
+      "dossiers": [],
+      "comment": "No Dossier in repo yet. MIN_IDE has resend-contact-form (hard) which is the planned import for Sprint 3."
+    },
+    "newsletter-subscribe": {
+      "dossiers": [],
+      "comment": "No Dossier in repo yet. MIN_IDE has mailchimp-newsletter (hard) as the planned import."
+    },
+    "payments": {
+      "dossiers": [],
+      "comment": "No Dossier in repo yet. MIN_IDE has stripe-checkout (hard) as the planned import."
+    },
+    "auth": {
+      "dossiers": [],
+      "comment": "No Dossier in repo yet. MIN_IDE has clerk-auth (hard) as the planned import; supabase-auth is a future alternative."
+    },
+    "analytics": {
+      "dossiers": [],
+      "comment": "No Dossier in repo yet. MIN_IDE has plausible-analytics and vercel-analytics (both hard) as planned imports."
+    },
+    "ai-chat": {
+      "dossiers": [],
+      "comment": "No Dossier in repo yet. MIN_IDE has openai-chat (hard) as the planned import."
+    },
+    "error-tracking": {
+      "dossiers": [],
+      "comment": "No Dossier in repo yet. MIN_IDE has sentry-error-tracking (hard) as the planned import."
+    },
+    "faq-section": {
+      "dossiers": [],
+      "comment": "No Dossier in repo yet. MIN_IDE has faq-accordion (soft) as the planned import."
+    },
+    "carousel": {
+      "dossiers": [],
+      "comment": "No Dossier in repo yet. MIN_IDE has embla-carousel (soft) as the planned import."
+    },
+    "marquee": {
+      "dossiers": [],
+      "comment": "No Dossier in repo yet. MIN_IDE has marquee-scroller (soft) as the planned import."
+    },
+    "command-search": {
+      "dossiers": [],
+      "comment": "No Dossier in repo yet. MIN_IDE has cmdk-command-palette (soft) as the planned import."
+    }
+  }
+}
