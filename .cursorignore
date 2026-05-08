@@ -1,7 +1,7 @@
 node_modules
 dist
 build
-.env
+#.env
 .env.local
 .env.development.local
 .env.test.local
@@ -9,6 +9,3 @@ build
 .env.development
 .env.test
 .env.production
-
-# Operator-only reference workspace; agent reads on request, never indexed.
-MIN_IDE/
