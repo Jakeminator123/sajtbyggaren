@@ -12,6 +12,7 @@ from .validate import (
     load_schema,
     validate_artifact,
     validate_generation_package,
+    validate_sections,
     validate_site_brief,
     validate_site_plan,
 )
@@ -22,6 +23,7 @@ __all__ = [
     "load_schema",
     "validate_artifact",
     "validate_generation_package",
+    "validate_sections",
     "validate_site_brief",
     "validate_site_plan",
 ]

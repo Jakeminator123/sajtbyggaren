@@ -1348,6 +1348,12 @@ def build(
     scaffold_routes = load_json(scaffold_dir / "routes.json")
     variant = load_json(scaffold_dir / "variants" / f"{variant_id}.json")
 
+    sections_path = scaffold_dir / "sections.json"
+    if sections_path.exists():
+        from packages.generation.artifacts import validate_sections
+
+        validate_sections(load_json(sections_path))
+
     runs_root = runs_dir if runs_dir is not None else RUNS_DIR
     run_id = make_run_id(site_id)
     run_dir = runs_root / run_id

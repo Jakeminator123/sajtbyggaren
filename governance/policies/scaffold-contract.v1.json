@@ -36,7 +36,10 @@
       "variants/<variantId>.json",
       "examples/<example>.example.json",
       "eval-prompts.json"
-    ]
+    ],
+    "validatedAgainst": {
+      "sections.json": "sections.schema.json"
+    }
   },
   "scaffoldJsonRequiredFields": [
     "id",

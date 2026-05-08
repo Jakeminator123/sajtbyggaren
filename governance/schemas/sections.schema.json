@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sajtbyggaren.local/schemas/sections.schema.json",
+  "title": "Sections",
+  "description": "Per-route section grammar for a Scaffold. Locked by ADR 0013 so future scaffolds cannot drift from local-service-business' shape. Top-level keys are route IDs (matching routes.json defaultRoutes[*].id); each route declares the sections that are required, optional and how they may be ordered.",
+  "type": "object",
+  "minProperties": 1,
+  "patternProperties": {
+    "^[a-z][a-z0-9_-]*$": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requiredSections", "optionalSections", "sectionOrderRules"],
+      "properties": {
+        "requiredSections": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "Section IDs that codegen MUST emit for this route."
+        },
+        "optionalSections": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "uniqueItems": true,
+          "description": "Section IDs that codegen MAY emit when the brief justifies them."
+        },
+        "sectionOrderRules": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Free-form natural-language constraints that codegen has to honour (e.g. 'hero must be first', 'CTA above the fold')."
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

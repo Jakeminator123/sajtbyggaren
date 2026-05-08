@@ -37,6 +37,7 @@ SCHEMAS: dict[str, str] = {
     "siteBrief": "site-brief.schema.json",
     "sitePlan": "site-plan.schema.json",
     "generationPackage": "generation-package.schema.json",
+    "sections": "sections.schema.json",
 }
 
 
@@ -84,6 +85,17 @@ def validate_site_plan(payload: dict[str, Any]) -> None:
 
 def validate_generation_package(payload: dict[str, Any]) -> None:
     validate_artifact("generationPackage", payload)
+
+
+def validate_sections(payload: dict[str, Any]) -> None:
+    """Validate a Scaffold's sections.json against sections.schema.json.
+
+    Not a runtime Engine Run artefakt - it's a design-time Scaffold file -
+    but reuses the same schema-loader plumbing because the validation
+    semantics are identical and we want one home for jsonschema in this
+    repo (per ADR 0013).
+    """
+    validate_artifact("sections", payload)
 
 
 def _format_validation_error(error: ValidationError) -> str:

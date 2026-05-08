@@ -44,7 +44,12 @@
         "ownerPackage": { "type": "string" },
         "perScaffoldPath": { "type": "string" },
         "requiredFiles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-        "optionalFiles": { "type": "array", "items": { "type": "string" } }
+        "optionalFiles": { "type": "array", "items": { "type": "string" } },
+        "validatedAgainst": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Map of scaffold filename to JSON Schema filename in governance/schemas/. Locked by ADR 0013 - currently sections.json points at sections.schema.json; other scaffold files get schemas in later sprints."
+        }
       }
     },
     "scaffoldJsonRequiredFields": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
