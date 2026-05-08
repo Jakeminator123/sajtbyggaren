@@ -85,3 +85,22 @@ Alla ska vara gröna. Om någon failar: stoppa, fixa, eller fråga operatören o
 - Body på engelska
 - ÅÄÖ skrivs korrekt om de förekommer (aldrig `\u00f6` eller ASCII-translit)
 - Format: kort imperativ titel + 1-3 raders kropp som förklarar varför, inte vad
+
+### Multi-line commit-meddelanden på Windows/PowerShell
+
+PowerShell saknar bash-style heredoc (`"$(cat <<'EOF' ... EOF)"`). Försök
+att passa heredoc till `git commit -m` direkt på Windows ger
+`Missing file specification after redirection operator`. För att
+undvika att skapa skräpfiler i repo-roten:
+
+1. Skriv meddelandet till `$env:TEMP\sb-commit-msg.txt` (utanför repo).
+2. `git commit -F $env:TEMP\sb-commit-msg.txt`.
+3. `Remove-Item $env:TEMP\sb-commit-msg.txt` (städ; men även om du
+   glömmer ligger filen utanför repo).
+
+Skapa **aldrig** commit-message-filer som `.commit-msg.tmp` i repo-roten
+i samma steg som `git add -A`. Race-villkoret är: filen finns på disk när
+`git add -A` körs, så den hamnar i index trots att du tänkt radera den
+direkt efter commit. `.gitignore` fångar nya temporära mönster
+(`.tmp-*`, `.tmp.*`, `.commit-msg.tmp`), men prevention via `$env:TEMP`
+är säkrare än att lita på ignore-mönstret.

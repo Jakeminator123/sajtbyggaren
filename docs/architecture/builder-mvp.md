@@ -1,6 +1,6 @@
 # Builder MVP
 
-Deterministisk byggare som binder ihop kedjan Project Input + Starter + Scaffold + Variant till en körbar Next.js-sajt. Sedan Sprint 2B anropar fas 1 riktiga `briefModel` och fas 2 `planningModel` (via `packages/generation/planning/produce_site_plan`) när `OPENAI_API_KEY` finns, med mock fallback för båda. Fas 3 är fortfarande deterministisk stub - ingen riktig codegen, ingen Repair Pipeline, ingen Quality Gate.
+Deterministisk byggare som binder ihop kedjan Project Input + Starter + Scaffold + Variant till en körbar Next.js-sajt. Sedan Sprint 2B anropar fas 1 riktiga `briefModel` och fas 2 `planningModel` (via `packages/generation/planning/produce_site_plan`) när `OPENAI_API_KEY` finns, med mock fallback för båda. Sedan Sprint 3A (ADR 0015) producerar fas 3 deterministisk `codegenModel v1`-manifest (`packages/generation/codegen/`), riktiga Quality Gate-checks (`packages/generation/quality_gate/`) och no-fix-applied Repair Pipeline (`packages/generation/repair/`). Real `codegenModel`-LLM-anrop, mekaniska fixes (Fix Registry) och LLM-fix kommer i Sprint 3B+; Quality Gate-scoring mot Page Quality Traits kommer i Sprint 3C.
 
 ## Vad den gör
 

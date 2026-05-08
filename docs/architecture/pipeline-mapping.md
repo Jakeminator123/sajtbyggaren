@@ -11,9 +11,9 @@ Reviewer-konversationen i [referens/utlatanden/utlatande-2-llm-flode.txt](../../
 | `understand` | `brief` | `input.json` + `site-brief.json` |
 | `plan` | `plan` | `site-plan.json` |
 | `plan` | `package` | `generation-package.json` |
-| `build` | `generate` | filer under `.generated/<siteId>/` |
-| `build` | `verify` | `npm run build` (typecheck + bundle) |
-| `build` | `repair` | inte aktiverad i Builder MVP |
+| `build` | `generate` | filer under `.generated/<siteId>/` + `codegenModel v1`-manifest in-memory (Sprint 3A; ADR 0015) |
+| `build` | `verify` | Quality Gate-checks (typecheck/route-scan/build-status/policy-compliance) som skrivs till `quality-result.json` (Sprint 3A) |
+| `build` | `repair` | Repair Pipeline med `not-needed`/`no-fix-applied`-status som skrivs till `repair-result.json` (Sprint 3A; mekaniska fixes från Sprint 3B) |
 | efter Engine Run | `preview` | Preview Runtime tar över |
 | efter Engine Run | `release` | Promotion när preview är godkänd |
 
@@ -31,7 +31,7 @@ flowchart TB
     subgraph buildBlock [build]
       generate[generate]
       verify[verify]
-      repair["repair (off in MVP)"]
+      repair[repair]
     end
     brief --> planStep --> packageStep --> generate --> verify --> repair
   end
@@ -51,10 +51,10 @@ flowchart TB
 | Delmoment | Path |
 |-----------|------|
 | `brief` | [packages/generation/brief/](../../packages/generation/brief/) (briefModel + structured site-brief schema) |
-| `plan` + `package` | [packages/generation/planning/](../../packages/generation/planning/) (kommer; Builder MVP gör det inline i `scripts/build_site.py`) |
-| `generate` | [packages/generation/build/](../../packages/generation/build/) (kommer; Builder MVP gör det inline) |
-| `verify` | [packages/generation/quality_gate/](../../packages/generation/quality_gate/) (kommer; Builder MVP delegerar till `next build`) |
-| `repair` | [packages/generation/repair/](../../packages/generation/repair/) (kommer; ej aktiverad) |
+| `plan` + `package` | [packages/generation/planning/](../../packages/generation/planning/) (Sprint 2B: `produce_site_plan` är canonical) |
+| `generate` | [packages/generation/codegen/](../../packages/generation/codegen/) (Sprint 3A: `codegenModel v1`-manifest, deterministisk; LLM från Sprint 3B). Filer skrivs fortfarande av `scripts/build_site.py` tills B13/`packages/generation/build/`-flytten görs. |
+| `verify` | [packages/generation/quality_gate/](../../packages/generation/quality_gate/) (Sprint 3A: typecheck + route-scan + build-status + policy-compliance) |
+| `repair` | [packages/generation/repair/](../../packages/generation/repair/) (Sprint 3A: kontrakt klart; mekaniska fixes från Sprint 3B) |
 | `preview` | [packages/preview-runtime/](../../packages/preview-runtime/) |
 | `release` | [packages/builder/](../../packages/builder/) (kommer) |
 

@@ -102,16 +102,16 @@
       "purpose": "Filerna codegen producerade. Innan Repair Pipeline."
     },
     {
-      "id": "repairResult",
-      "filename": "repair-result.json",
-      "writtenBy": "build",
-      "purpose": "Vad Repair Pipeline gjorde: mekaniska fixes, ev. LLM-fix, kvarvarande fel."
-    },
-    {
       "id": "qualityResult",
       "filename": "quality-result.json",
       "writtenBy": "build",
-      "purpose": "Output från Quality Gate: per-check status, samlat pass/fail."
+      "purpose": "Output från Quality Gate: per-check status (typecheck/route-scan/build-status/policy-compliance), samlat pass/fail/degraded. Skrivs FÖRE repair-result.json så Repair Pipeline har gate-resultatet att agera på."
+    },
+    {
+      "id": "repairResult",
+      "filename": "repair-result.json",
+      "writtenBy": "build",
+      "purpose": "Vad Repair Pipeline gjorde: mekaniska fixes, ev. LLM-fix, kvarvarande fel. Skrivs EFTER quality-result.json eftersom Repair Pipeline tar QualityResult som input."
     },
     {
       "id": "buildResult",
