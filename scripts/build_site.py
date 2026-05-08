@@ -39,6 +39,13 @@ SCAFFOLDS_DIR = (
     / "orchestration"
     / "scaffolds"
 )
+DOSSIERS_DIR = (
+    REPO_ROOT
+    / "packages"
+    / "generation"
+    / "orchestration"
+    / "dossiers"
+)
 GENERATED_DIR = REPO_ROOT / ".generated"
 RUNS_DIR = REPO_ROOT / "data" / "runs"
 
@@ -466,6 +473,90 @@ def write_pages(target: Path, dossier: dict) -> None:
     write(target / "app" / "kontakt" / "page.tsx", render_contact(dossier))
 
 
+def selected_required_dossiers(project_input: dict) -> list[str]:
+    selected = project_input.get("selectedDossiers", {})
+    required = selected.get("required", [])
+    if not isinstance(required, list):
+        return []
+    return [item for item in required if isinstance(item, str) and item.strip()]
+
+
+def resolve_dossier_dir(dossier_id: str) -> tuple[str, Path]:
+    for dossier_class in ("soft", "hard"):
+        path = DOSSIERS_DIR / dossier_class / dossier_id
+        if path.exists():
+            return dossier_class, path
+    raise SystemExit(
+        f"Selected dossier '{dossier_id}' not found under {DOSSIERS_DIR}/soft or /hard."
+    )
+
+
+def load_selected_dossier_manifests(project_input: dict) -> list[dict]:
+    manifests: list[dict] = []
+    for dossier_id in selected_required_dossiers(project_input):
+        dossier_class, dossier_dir = resolve_dossier_dir(dossier_id)
+        manifest_path = dossier_dir / "manifest.json"
+        if not manifest_path.exists():
+            raise SystemExit(f"Dossier '{dossier_id}' missing manifest.json at {manifest_path}")
+        manifest = load_json(manifest_path)
+        if manifest.get("id") != dossier_id:
+            raise SystemExit(
+                f"Dossier manifest id mismatch for {manifest_path}: expected '{dossier_id}', got '{manifest.get('id')}'"
+            )
+        if manifest.get("class") != dossier_class:
+            raise SystemExit(
+                f"Dossier manifest class mismatch for {manifest_path}: expected '{dossier_class}', got '{manifest.get('class')}'"
+            )
+        manifests.append(
+            {
+                "id": dossier_id,
+                "class": dossier_class,
+                "dir": dossier_dir,
+                "manifest": manifest,
+            }
+        )
+    return manifests
+
+
+def mount_dossier_components(target: Path, selected_dossiers: list[dict]) -> list[str]:
+    copied: list[str] = []
+    components_target = target / "components"
+    for info in selected_dossiers:
+        components_dir = info["dir"] / "components"
+        if not components_dir.exists():
+            continue
+        for source in sorted(components_dir.glob("*.tsx")):
+            destination = components_target / source.name
+            write(destination, source.read_text(encoding="utf-8"))
+            copied.append(source.name)
+    return copied
+
+
+def write_dossier_routes(target: Path, selected_dossiers: list[dict]) -> list[str]:
+    routes: list[str] = []
+    selected_ids = {info["id"] for info in selected_dossiers}
+
+    if "interactive-game-loop" in selected_ids:
+        write(
+            target / "app" / "spel" / "page.tsx",
+            (
+                'import { PacmanGame } from "@/components/pacman-game";\n\n'
+                "export default function Page() {\n"
+                "  return (\n"
+                '    <main className="mx-auto w-[min(100%,72rem)] px-4 py-10">\n'
+                '      <h1 className="mb-3 text-3xl font-semibold">Pacman-spel</h1>\n'
+                '      <p className="mb-6 text-sm text-[color:var(--muted)]">Tryck pilarna for att styra och R for att starta om.</p>\n'
+                "      <PacmanGame />\n"
+                "    </main>\n"
+                "  );\n"
+                "}\n"
+            ),
+        )
+        routes.append("/spel")
+
+    return routes
+
+
 # ---------------------------------------------------------------------------
 # Route guards
 # ---------------------------------------------------------------------------
@@ -573,9 +664,8 @@ def build_site_brief_mock(dossier: dict, scaffold: dict) -> dict:
         "tone": dossier["tone"],
         "trustSignals": dossier["trustSignals"],
         "conversionGoals": dossier["conversionGoals"],
-        "requestedCapabilities": [
-            svc["id"] for svc in dossier["services"]
-        ],
+        "requestedCapabilities": dossier.get("requestedCapabilities")
+        or [svc["id"] for svc in dossier["services"]],
         "scaffoldHint": scaffold["id"],
     }
 
@@ -873,12 +963,18 @@ def build(
     print("Writing pages: /, /tjanster, /om-oss, /kontakt")
     write_pages(target, dossier)
 
+    selected_dossiers = load_selected_dossier_manifests(dossier)
+    copied_components = mount_dossier_components(target, selected_dossiers)
+    dossier_routes = write_dossier_routes(target, selected_dossiers)
+
     routes_required = required_routes(scaffold_routes)
     routes_all = all_default_routes(scaffold_routes)
-    assert_routes_present(target, routes_required)
+    routes_required_with_dossiers = sorted(set(routes_required + dossier_routes))
+    routes_all_with_dossiers = sorted(set(routes_all + dossier_routes))
+    assert_routes_present(target, routes_required_with_dossiers)
     trace.event(
         "build", "files.written", "done",
-        f"Wrote {len(routes_all)} default routes with default exports verified",
+        f"Wrote {len(routes_all_with_dossiers)} routes and copied {len(copied_components)} dossier components with default exports verified",
     )
 
     npm_steps: list[dict] = []
@@ -947,7 +1043,7 @@ def build(
     duration_ms = int((time.monotonic() - started) * 1000)
     write_build_result(
         run_dir, trace, dossier, scaffold, variant,
-        routes_all, npm_steps, overall_status, target, duration_ms,
+        routes_all_with_dossiers, npm_steps, overall_status, target, duration_ms,
     )
 
     if overall_status == "failed":
