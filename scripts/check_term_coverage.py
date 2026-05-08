@@ -110,7 +110,7 @@ COMMON_WORDS = {
     # Python stdlib + interna kod-symboler
     "KeyError", "TimeoutExpired", "VIEWS", "Principer",
     "BaseModel", "Field", "FileNotFoundError", "BriefResult",
-    "BriefModelResolutionError",
+    "BriefModelResolutionError", "ValidationError",
     "SystemExit",
     # Page-komponenter som genereras i builder och i .generated/
     "AboutPage", "ContactPage", "ServicesPage", "ServicePage",
@@ -141,7 +141,7 @@ COMMON_WORDS = {
     "TokenMeterContext", "TokenMeterContextValue", "TokenMeterProvider", "TokenMeterState",
     "UsageDelta", "UsageSummary", "ViewerPanelProps",
     "BuildPayloadSchema", "ChatPanel", "TokenMeter", "ViewerPanel",
-    "Providers", "TokenMeterContextValue",
+    "Providers",
     # Viewser interna error-typer och rubriker (inte domänbegrepp)
     "RunNotFoundError", "DossierEditor",
     # Migrationsplanens prosa-rubriker för parallellspår (inte domänbegrepp)

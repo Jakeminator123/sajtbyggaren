@@ -166,7 +166,9 @@ def test_site_brief_to_artifact_mock_llm_error():
 @pytest.mark.tooling
 def test_site_brief_pydantic_validates_required_fields():
     """language and raw_prompt are required."""
-    with pytest.raises(Exception):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
         SiteBrief(business_type="electrician")  # type: ignore[call-arg]
 
 

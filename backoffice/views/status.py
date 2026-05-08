@@ -80,7 +80,7 @@ def view_system_health() -> None:
         st.info("Inga körningar än. Tryck 'Kör allt' för att börja.")
     else:
         cols = st.columns(len(results))
-        for col, result in zip(cols, results):
+        for col, result in zip(cols, results, strict=True):
             col.metric(result.name, "OK" if result.ok else "FEL")
         st.divider()
         for result in results:

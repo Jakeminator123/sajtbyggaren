@@ -81,7 +81,9 @@ def build_engine_mindmap(
         ids = block.get("phaseIds") or []
         return ids[0] if ids else None
 
-    for prev_block, next_block in zip(phase_blocks, phase_blocks[1:]):
+    from itertools import pairwise
+
+    for prev_block, next_block in pairwise(phase_blocks):
         prev_last = _last_phase(prev_block)
         next_first = _first_phase(next_block)
         if prev_last and next_first:
