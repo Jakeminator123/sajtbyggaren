@@ -58,6 +58,20 @@ streamlit run backend.py                 # backoffice för att se/redigera gover
 
 Detaljer om kvalitetsskydden: [`docs/quality.md`](docs/quality.md).
 
+## Dev-skript (PowerShell)
+
+Tre fristående launchers under [`scripts/`](scripts/) som vart och ett bootar en yta. Inga av dem är produktkod - de wrappar bara befintliga kommandon så operatören kan starta delarna utan att memorera flaggor.
+
+```powershell
+scripts/dev-backoffice.ps1               # backoffice (Streamlit) på :8501
+scripts/dev-builder.ps1                  # bygger painter-palma och startar Next.js på :3000
+scripts/dev-builder.ps1 -SkipBuild       # samma men hoppar över npm-build (snabb iteration)
+scripts/dev-builder.ps1 -NoServe         # bara builder, ingen dev-server
+scripts/dev-viewser.ps1                  # viewser-prototyp på :3000 (kan inte köras parallellt med builder-servern)
+```
+
+`dev-builder.ps1` simulerar operatörsflödet: läser ett Project Input, kör hela [`scripts/build_site.py`](scripts/build_site.py)-pipen och öppnar resultatet (inklusive `/spel`-routen från `interactive-game-loop`-dossiern). `dev-viewser.ps1` är den localhost-only operator-prototypen med chat + manuell build-knapp.
+
 ## Var vad bor
 
 | Mapp | Roll |
