@@ -1,0 +1,899 @@
+REVIEWER SVARAR:
+
+Ja, nu börjar det här se ut som Sajtbyggaren, inte gamla Sajtmaskin. Gamla Sajtmaskin är referens/arv, men nya repot är kontrollerad rekonstruktion och ska inte ärva master rakt av .
+
+Kort dom
+Fråga	Svar
+Är vi på väg mot 9/10?	Ja, arkitekturen går åt rätt håll.
+Är generatorn 9/10 idag?	Nej. Mer som 3–4/10 som riktig LLM-generator.
+Är grunden bra?	Ja, 8/10.
+Kan vi börja testa sidor?	Ja, deterministiska builds nu. Riktig prompt→sajt kräver Sprint 2B/3.
+Är StackBlitz inkopplat?	Delvis i Viewser-prototypen, inte canonical runtime än.
+Behövs Postgres nu?	Nej, inte för buildern. Senare bara för användarsajter som behöver databas/auth/bokning.
+Hur repot är tänkt att fungera
+
+Det låsta flödet är detta:
+
+Init Prompt
+  ↓
+Project Input
+  ↓
+Starter
+  ↓
+Scaffold
+  ↓
+Variant
+  ↓
+Dossier
+  ↓
+Generation Package
+  ↓
+Build
+
+Det står i README som operator-flödets åtta steg och är även låst i ADR 0012 .
+
+Enkel översättning
+Term	Vad det betyder
+Project Input (strukturerad brief)	Kundens data: företag, tjänster, ton, mål, kontakt.
+Starter (körbar basapp)	Tunn Next.js-bas, typ marketing-base.
+Scaffold (sajtens grammatik)	Vilka sidor/routes och sektioner sajten ska ha.
+Variant (visuellt uttryck)	Färg, typografi, spacing, radius, känsla.
+Dossier (capability-paket)	Extra förmåga, t.ex. spel, kontaktformulär, Stripe, auth.
+Generation Package (LLM-payload)	Det enda paketet codegen-LLM ska få.
+Build (byggkörning)	Skriver filer + artefakter till .generated/ och data/runs/.
+Nuvarande status
+
+docs/migration-plan.md säger att:
+
+Del	Status
+Governance	klart
+Backoffice	klart
+Regressionstester/CI	klart
+Sprint 1 mock engine	klart
+Sprint 2	påbörjad: Sprint 2A klar, fas 2 kvar
+Sprint 3 codegen/repair/quality gate	inte startad
+Sprint 4 LocalRuntime	inte startad
+Sprint 5 StackBlitzRuntime	inte startad
+apps/web	inte startad
+
+Det står tydligt i statuslistan .
+
+Sprint 2A betyder: buildern använder nu OPENAI_API_KEY för briefModel när nyckeln finns, annars mock fallback med briefSource i site-brief.json .
+
+Är vi på väg mot 9/10?
+
+Ja, för att kvaliteten är definierad som policy, inte bara känsla. page-quality-traits.v1.json sätter:
+
+Mått	Värde
+Target score	9.0
+Gate score	8.6
+Block below	7.5
+
+Traits (kvalitetsdrag) täcker bland annat:
+
+business fit
+visual hierarchy
+conversion clarity
+content specificity
+trust/proof
+responsive composition
+accessibility
+performance
+interaction polish
+technical correctness
+
+Det är rätt målbild för seriösa företagshemsidor. Men själva mätningen/gaten är inte byggd ännu, eftersom Sprint 3 inte är startad .
+
+Min poäng just nu:
+
+Område	Poäng
+Arkitektur/riktning	8.5/10
+Termdisciplin	8/10
+Nuvarande builder-MVP	6/10
+Riktig LLM-generator	3.5/10
+Potential mot 9/10	8/10
+Exempel: hur en scaffold ser ut
+
+En Scaffold (sajtens grammatik) ligger här:
+
+packages/generation/orchestration/scaffolds/local-service-business/
+
+Exempel scaffold.json:
+
+{
+  "id": "local-service-business",
+  "version": "1.0.0",
+  "label": "Local Service Business",
+  "description": "Conversion-oriented site for local service providers...",
+  "buildIntent": ["website"],
+  "primaryJobs": [
+    "explain services",
+    "build trust",
+    "generate calls",
+    "generate quote requests"
+  ],
+  "defaultPageCount": 4
+}
+
+Det riktiga fältinnehållet syns i repo: local-service-business är för målare, elektriker, rörmokare, städ, takläggare osv. och fokuserar på trust + offert/call-conversion .
+
+Routes (sidor) är t.ex.:
+
+Route	Syfte
+/	positionera företaget och driva CTA
+/tjanster	lista tjänster
+/om-oss	bygga förtroende
+/kontakt	konvertera till samtal/offert
+/omraden	valfri lokal SEO-sida
+
+Framtida full scaffold-struktur ska ha:
+
+scaffold.json
+routes.json
+sections.json
+quality-contract.json
+compatible-dossiers.json
+selection-profile.json
+variants/
+examples/
+eval-prompts.json
+
+Det står i scaffold/dossier-modellen .
+
+Starters: ska nya starter-repon in?
+
+Ja, men inte många.
+
+En Starter (körbar basapp) är inte en snygg färdig hemsida. Den ska vara en tunn Next.js-bas med rätt teknik: Next.js, TypeScript strict, Tailwind, shadcn, npm lockfile, ESLint/Prettier .
+
+Nuvarande plan säger att fem starters ska täcka de flesta scaffolds:
+
+Starter	Roll	Status
+marketing-base	lokal service, konsult, restaurang, clinic, app landing m.m.	klar
+saas-base	SaaS	mapp finns, kod saknas
+commerce-base	e-handel	mapp finns, kod saknas
+portfolio-base	portfolio/agency	mapp finns, kod saknas
+docs-base	kurs/docs/education	mapp finns, kod saknas
+
+Min syn: det är okej att starters känns tunna/tråkiga. De ska inte bära wow. Wow och relevans ska komma från:
+
+Scaffold + Variant + Section Patterns + Dossiers + Project Input
+
+Men starters måste ha bra grund: stabil layout, shadcn, Tailwind, komponentprimitiver, rätt scripts och ingen hårdkodad business-copy.
+
+Viktigt: auth, databas, betalningar, CMS osv. ska inte bo i starter. Det ska bo i hard Dossier .
+
+Variants: vad gör de?
+
+En Variant (visuellt uttryck) är site-wide känsla. Exempel:
+
+local-service-business/variants/nordic-trust.json
+
+Den innehåller färger, typografi, radius, spacing och motion. nordic-trust är lugn, ljus och trovärdig med navy-accent och generös spacing .
+
+Variant ska alltså svara på:
+
+Hur ska sajten kännas?
+
+Scaffold svarar på:
+
+Vilken struktur ska sajten ha?
+Dossiers: hur funkar de?
+
+En Dossier (capability-paket) är extra funktion/förmåga. ADR 0012 förenklar till bara två klasser:
+
+Klass	Vad
+soft	frontend/content, inga secrets
+hard	kräver env, backend, auth, databas, betalning eller API
+
+Exempel som finns nu:
+
+packages/generation/orchestration/dossiers/soft/interactive-game-loop/
+
+Manifestet säger att den har capability interactive-game, klass soft, medium complexity och default för capabilityn .
+
+Den har också riktig Pacman-komponent:
+
+components/pacman-game.tsx
+
+Komponenten har state, score, fyra spöken, pellets, keyboard, touch och restart .
+
+Testerna bevisar att buildern kopierar komponenten och skapar /spel/page.tsx med default export .
+
+En sak jag skulle städa: manifestet säger fortfarande "files": [] och "exposes": [] trots att komponenten finns. Det funkar som proof nu, men generellt bör dossierns manifest bli sanningen.
+
+Hur flödet kommer fungera när det är “rätt”
+
+Målflöde:
+
+Användare skriver prompt
+  ↓
+briefModel gör Site Brief
+  ↓
+planningModel väljer scaffold + variant + dossiers
+  ↓
+Generation Package skapas
+  ↓
+codegenModel genererar section/page-filer
+  ↓
+Repair Pipeline fixar mekaniska fel
+  ↓
+Quality Gate mäter traits
+  ↓
+PreviewRuntime visar sidan
+
+Engine Run-kontraktet säger exakt tre faser och åtta artefakter: input.json, site-brief.json, site-plan.json, generation-package.json, generated-files/, repair-result.json, quality-result.json, build-result.json plus trace.ndjson .
+
+Det är bra. Det hindrar gamla problemet där allt låg utspritt i massa specialflöden.
+
+Hur långt kvar innan vi kan testa generera sidor?
+
+Beror på vad du menar med “generera”.
+
+Nivå	Kan vi idag?	Kommentar
+Project Input → Next.js-sida	Ja	scripts/build_site.py bygger .generated/<siteId>/.
+Prompt → Site Brief	Ja, Sprint 2A	Kräver OPENAI_API_KEY, annars mock.
+Prompt → scaffold/variant/dossier-val	Inte riktigt	Sprint 2B kvar.
+Prompt → LLM-genererade sections	Nej	Sprint 3 kvar.
+Automatisk repair	Nej	Sprint 3 kvar.
+Quality Gate ≥ 8.6	Nej	Sprint 3 kvar.
+StackBlitz-delbar runtime	Delvis/prototyp	Viewser finns, canonical runtime kvar.
+
+Min uppskattning:
+
+Mål	Kvar
+Testa fler deterministiska builds	nu
+Testa prompt → plan	1–2 bra Grind-vändor
+Testa första LLM-section-generation	2–4 bra Grind-vändor
+Börja mäta 9/10 seriöst	efter Sprint 3 quality gate
+Känna “det här kan bli produkt”	efter 20–50 egna eval-körningar
+StackBlitz: är det inkopplat?
+
+Delvis.
+
+Det finns en Viewser (localhost-only operator-prototyp) som binder ihop chat, manuell build och preview via StackBlitz . Den har @stackblitz/sdk som dependency .
+
+Men Viewser är inte canonical runtime. README säger uttryckligen att Sprint 4 LocalRuntime / StackBlitzRuntime ska ersätta preview-vägen senare .
+
+ADR 0003 säger att det ska finnas ett PreviewRuntime-interface med StackBlitzRuntime, FlyRuntime, LocalRuntime, och default ska vara StackBlitz .
+
+Så status:
+
+StackBlitz preview-prototyp: ja
+Canonical PreviewRuntime: nej
+Produktredo StackBlitzRuntime: nej
+Behövs Postgres?
+
+Inte nu för buildern.
+
+Nuvarande Python-sidan kräver streamlit, jsonschema, pydantic, openai, pytest, ruff enligt requirements.txt . Engine Run sparas som filer under data/runs/, inte i databas.
+
+För användarsajter: Postgres ska bara in när sajten faktiskt behöver persistent data.
+
+Use case	Behöver Postgres?
+vanlig företagshemsida	Nej
+kontaktformulär som skickar mail	Nej
+bokningssystem med admin	Ja
+login/auth/profiler	Ja
+e-handel/orderhistorik	Ja
+CMS/blogg där kunden redigerar	Ja
+
+Min rekommendation:
+
+Postgres ska vara en hard Dossier, inte en starter och inte en scaffold.
+
+Alltså exempel:
+
+packages/generation/orchestration/dossiers/hard/supabase-database/
+packages/generation/orchestration/dossiers/hard/postgres-storage/
+
+Där deklarerar man env-vars (miljövariabler) som:
+
+DATABASE_URL=...
+
+eller Supabase-variabler om man väljer Supabase.
+
+Vad jag hade valt
+
+För Sajtbyggarens egen app senare: managed Postgres, t.ex. Supabase eller Neon.
+För genererade användarsajter: Supabase som första hard Dossier, eftersom den täcker databas + auth + enkel dashboard bättre än ren Postgres för småföretag.
+
+Men inte nu. För tidigt databasbygge riskerar att dra in gammalt Sajtmaskin-kaos.
+
+Vad jag tycker ni ska göra härnäst
+Prio	Nästa steg	Varför
+1	Städa stale docs	README och builder-mvp säger fortfarande delvis fel status.
+2	Sprint 2B: planningModel	Då kan prompt välja scaffold/variant/dossiers.
+3	Lägg till andra scaffolden	Annars betyder selector inget.
+4	Gör dossier-manifest sanningsenligt	interactive-game-loop bör lista files/exposes.
+5	Börja Section Patterns	För Sprint 3 codegen per sektion, inte hel sida.
+6	Enkel Quality Gate-skeleton	Så 9/10-målet blir mätbart.
+
+Min starkaste rekommendation: bygg inte fler stora grejer innan planningModel + andra scaffolden finns. Annars blir allt fortfarande manuellt valt i Project Input.
+
+Självgranskning
+
+Jag är ganska säker på helhetsbilden: 88%.
+
+Osäkerheten är främst att vissa docs är stale efter Sprint 2A. Exempel: docs/migration-plan.md säger Sprint 2A klar, medan README-status fortfarande säger Sprint 2 inte startad . Så jag litar mest på migration-plan, policies och tester.
+
+
+---
+
+
+
+jag svarar:
+
+"Hur ska "Scaffold (sajtens grammatik) Vilka sidor/routes och sektioner sajten ska ha." se ut? kan du ge format på typ allt det där? Vad säger du att sajtmaskin har för poäng av 0 - 10? (På master altså). Behöver inte stackblitz postgres? Jag kommer nu ge lite readme-filer so mjag skapat ung som bara är på ett ungefär hur jag tänker mig att llm-flödet ska funka så vi kanske kan låsa mer (om det är bra). me nlåses inte allt iaf via backoffice och alla scheman och polecys och governance? Aja, för vad det är värt.. Koll kanske framföall: "PROMPT - Init "LLM SOM TAR ANVÄNDARENS PROMPT OCH BRODERAR UT DEN ELLER FÖRMINASKAR". En användare uttrycker att de vill ha en tv-spelsbutik för personer som gillar 80-tal och retro, med fyrkantiga former, Billy's panpizza och Jolt Cola. Utifrån detta kan Deep Brief utveckla konceptet. Det kan antas att sidan har en maskulin ton och att ett 8-bit typsnitt skulle passa bra. Användaren kan också vilja ha en medlemssida, enklare tv-spel, gammaldags 3D-animering och en highscore-lista för besökare eller de som köpt flest spel. "Deep Brief bör kunna utvidga och förkorta texter, och det kan vara bra att sätta en ungefärlig storlek på prompten i antal rader eller tecken. Det kan vara värt att överväga om allt detta ska dokumenteras i ett strikt policydokument eller om det ska gå direkt till variants. Jag föreslår att ha 10-15 olika typer av frågor, vilket kan ingå i en dynamisk prompt. Vi vill alltid ha svar på typ av repo, scaffold, docin, samt antal sidor eller routes. Det kan också vara bra att inkludera specifikationer för färger och andra antaganden, om de inte redan finns i scaffold variants." Vi kommer då ha typ: - initsial prompt - expanderad/förminskad rpompt som broderats ut från LLMen som sköter deta - repo - scaffold - ev dessein(er) - variant - (möjligen någoi nform av spec som svarar på alla frågor utan avtaganden eller expleceita önskemål frn prompt I stort sätt tänker jag att detta är den dynamiska delen --- Den statiska delen är väl kanske just vilken stack som används som typ finns mestadels i package-filen. (här vet jag itne helt säkert), men kanske finns här också explecita bygginstruktioner och guardrails. --- TILLSAMMANS BORE DETTA BLI EN SYSTEMPROMPT FRÅN EN INIT: Deep breef -> Väljer repo -> välkjer scaffold -> Variant -> (eventuella dosseiner) = DYNAMIC PROMPT + STATIC PROMPT --------------------------------------------------------------------------------------------------------------------------- PROMPT - Follow up Här tänker jag att vi kan titta på site-machine-reporten, eller så gör vi inte det, men vi måste separera vad som faktiskt sker i en follow-up. Ta följande exempel: Jag kan skriva i chatten, "vad är klockan?" eller "kan du lägga in en klocka?" Jag kan specificera, "kan du lägga in en klocka på första sidan under headern?" eller "jag vill lägga in en klocka men också en 3D-dinosaurie." Jag kan fråga, "föreslår du att jag ska sätta in en klocka?" eller "kan du gå till Aftonbladet eller www.aftonbladet.se och ta den klockan samt det typsnittet och sätta in på den tredje sidan med en egen inspiration?" Allt detta skiljer sig åt beroende på hur en fråga ställs, vilket gör att vi måste kategorisera. Jag hänvisar till sajtmaskin som löser detta någorlunda bra, även om vi behöver ha det mer strukturerat. En follow-up måste ha koll på kontexten, vilken version det är, alltså någon form av chatt-ID, versions-ID, projekt-ID eller liknande. Tidigare i site-machine-repot kallades det för delta brief. Jag trodde att man skickade med en summering av tidigare ändringar, och jag är osäker på om hela variant,""
+
+(och skicakr med delar av det som är gcursorignorat ((med du får titta om du vill)) 'MIN_IDE' och altås i ndermappar här: 
+
+----
+
+
+REVIEWER SVARAR:
+
+Ja, jag tycker vi kan börja låsa mer av modellen nu, men låsa rätt saker. Det nya repot är Jakeminator123/sajtbyggaren på main . Gamla sajtmaskin/master är referens/arv, inte något vi ska fortsätta bygga ovanpå rakt av .
+
+1. Poäng: gamla Sajtmaskin på master
+
+Min bedömning av gamla Sajtmaskin master:
+
+Område	Poäng
+Ambition / idé	8/10
+Faktisk genereringskraft	6.5/10
+Kodbasens styrbarhet	4/10
+Namn/termer/flöde	3/10
+Produktionsduglighet	4.5/10
+Som referensmaterial	8/10
+Som grund att fortsätta bygga på	4/10
+
+Total: cirka 5.5/10.
+
+Inte dåligt, men för rörigt. Sajtmaskin verkar ha många fungerande idéer, men för många init-vägar, gamla begrepp, preview-/VM-spår och specialfall. Det är därför Sajtbyggaren gör en kontrollerad rekonstruktion och inte ärver master rakt av .
+
+2. Hur en Scaffold ska se ut
+
+En Scaffold (sajtens grammatik) är inte en starter, inte ett repo och inte en färdig sida.
+
+Den ska svara på:
+
+Vilken typ av sajt är detta?
+Vilka sidor/routes ska finnas?
+Vilka sektioner får finnas på varje sida?
+Vilka dossiers passar?
+Vilka kvalitetsregler gäller?
+Vilken typ av variant passar?
+
+Den tänkta filstrukturen finns redan beskriven i docs:
+
+packages/generation/orchestration/scaffolds/<scaffoldId>/
+  scaffold.json
+  routes.json
+  sections.json
+  quality-contract.json
+  compatible-dossiers.json
+  selection-profile.json
+  variants/
+    <variantId>.json
+  examples/
+    <example>.example.json
+  eval-prompts.json
+
+Det matchar modellen i docs/architecture/scaffold-dossier-model.md .
+
+Exempel: scaffold.json (grunddata)
+{
+  "$schema": "../../../../../governance/schemas/scaffold.schema.json",
+  "id": "retro-game-store",
+  "version": "1.0.0",
+  "label": "Retro Game Store",
+  "description": "Commerce-oriented website for retro gaming shops, collectibles, arcade rooms and nostalgia stores.",
+  "buildIntent": ["website"],
+  "primaryJobs": [
+    "present the store identity",
+    "show product categories",
+    "build nostalgia and trust",
+    "drive visits, purchases or membership"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": true
+}
+Exempel: routes.json (sidor)
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Introduce the store, nostalgia angle and primary CTA."
+    },
+    {
+      "id": "products",
+      "path": "/spel",
+      "required": true,
+      "purpose": "Show product categories, retro consoles and featured games."
+    },
+    {
+      "id": "about",
+      "path": "/om-butiken",
+      "required": false,
+      "purpose": "Tell the store story and build trust."
+    },
+    {
+      "id": "membership",
+      "path": "/medlem",
+      "required": false,
+      "purpose": "Explain membership, points, events and perks."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakt",
+      "required": true,
+      "purpose": "Let visitors contact, visit or ask about products."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "highscore",
+      "path": "/highscore",
+      "when": "User asks for scoreboards, arcade competition, member ranking or game results."
+    }
+  ]
+}
+
+Jämför nuvarande local-service-business, där routes är /, /tjanster, /om-oss, /kontakt och valfri /omraden .
+
+Exempel: sections.json (sektioner)
+{
+  "routes": {
+    "home": {
+      "required": [
+        "hero",
+        "nostalgia-proof",
+        "featured-categories",
+        "visit-or-buy-cta"
+      ],
+      "optional": [
+        "mini-game-teaser",
+        "membership-teaser",
+        "event-strip"
+      ],
+      "orderRules": [
+        "hero must be first",
+        "primary CTA must appear above the fold",
+        "proof section must appear before final CTA"
+      ]
+    },
+    "products": {
+      "required": [
+        "category-grid",
+        "featured-products",
+        "condition-and-trade-info"
+      ],
+      "optional": [
+        "rare-finds",
+        "console-repair-info"
+      ]
+    },
+    "membership": {
+      "required": [
+        "membership-benefits",
+        "points-or-highscore-explainer",
+        "signup-cta"
+      ],
+      "optional": [
+        "member-leaderboard-placeholder"
+      ]
+    }
+  }
+}
+
+Det här är viktigt: codegen ska senare generera sektioner, inte hela stora sidor i ett svep.
+
+Exempel: quality-contract.json (kvalitetsregler)
+{
+  "scorecardWeights": {
+    "business_fit": 12,
+    "visual_hierarchy": 10,
+    "conversion_clarity": 10,
+    "content_specificity": 12,
+    "trust_and_proof": 10,
+    "responsive_composition": 10,
+    "accessibility_baseline": 10,
+    "performance_sanity": 8,
+    "interaction_polish": 8,
+    "technical_correctness": 10
+  },
+  "mustPass": [
+    "technical_correctness",
+    "accessibility_baseline",
+    "conversion_clarity"
+  ],
+  "avoid": [
+    "generic ecommerce copy",
+    "fake product counts",
+    "unlicensed Nintendo/Sega branding unless user provided it",
+    "too many animations that hide the buying path"
+  ]
+}
+
+Det kopplar till page-quality-traits.v1.json, där målscore är 9.0, gate är 8.6 och block under 7.5 .
+
+Exempel: compatible-dossiers.json (vilka legobitar som passar)
+{
+  "required": [],
+  "recommended": [
+    "contact-form",
+    "reviews",
+    "trust-badges"
+  ],
+  "conditional": [
+    {
+      "dossierId": "interactive-game-loop",
+      "when": "User asks for playable game, arcade mini-game, highscore or retro game mechanic."
+    },
+    {
+      "dossierId": "newsletter-signup",
+      "when": "User asks for club, membership, events or product drops."
+    },
+    {
+      "dossierId": "postgres-storage",
+      "when": "User asks for persistent highscore, member accounts, inventory or admin."
+    }
+  ],
+  "disallowedByDefault": [
+    "stripe-checkout",
+    "auth"
+  ]
+}
+Exempel: selection-profile.json (hur selector hittar rätt scaffold)
+{
+  "embeddingText": "Retro game store, arcade shop, used games, collectors, 80s nostalgia, consoles, membership, product categories, highscore, events.",
+  "semanticSignals": [
+    "retro gaming",
+    "tv-spelsbutik",
+    "arcade",
+    "begagnade spel",
+    "konsoler",
+    "80-tal",
+    "samlarobjekt",
+    "highscore",
+    "medlemssida"
+  ],
+  "negativeSignals": [
+    "SaaS for game inventory",
+    "game development studio",
+    "streaming platform",
+    "mobile app landing page"
+  ],
+  "examplePrompts": [
+    "Skapa en hemsida för en tv-spelsbutik med 80-talskänsla och begagnade Nintendo-spel.",
+    "Bygg en retro arcade-butik med medlemsklubb och highscore-lista."
+  ]
+}
+
+Detta är bättre än if prompt contains game. Docs säger också att word matching bara ska vara svag signal, inte primär selector .
+
+3. Hur Starter, Scaffold, Variant och Dossier hänger ihop
+Starter = körbar Next.js-bas
+Scaffold = sajtens struktur/grammatik
+Variant = visuellt uttryck
+Dossier = capability/feature
+Project Input = kundens data
+Generation Package = allt codegen behöver
+Starter (basrepo)
+
+Starter ska vara tunn. Den får gärna kännas tråkig. Den ska bara ge stabil Next.js/Tailwind/shadcn-grund.
+
+Nuvarande plan säger fem starters:
+
+Starter	Ska täcka
+marketing-base	lokal service, restaurang, konsult, clinic, event, app landing
+saas-base	SaaS
+commerce-base	e-handel
+portfolio-base	portfolio/agency
+docs-base	kurs/docs/education
+
+Starter ska inte innehålla auth, databas, betalning, CMS, analytics eller hårdkodad copy. Det ska ligga i Dossiers eller Project Input .
+
+Variant (visuell stil)
+
+Variant är typ:
+
+{
+  "id": "pixel-nostalgia",
+  "label": "Pixel Nostalgia",
+  "description": "Dark arcade-inspired look with blocky spacing, neon accents and restrained 8-bit references.",
+  "tokens": {
+    "color": {
+      "background": "#111018",
+      "foreground": "#f5f1e8",
+      "primary": "#ffcc00",
+      "accent": "#00d4ff"
+    },
+    "typography": {
+      "fontFamilyDisplay": "pixel-safe-display",
+      "fontFamilyBody": "system-ui"
+    },
+    "motion": {
+      "level": "playful"
+    }
+  }
+}
+
+Nuvarande nordic-trust gör detta för lokala serviceföretag: lugn, ljus, trovärdig färg- och typografiprofil .
+
+Dossier (capability)
+
+Dossier är t.ex.:
+
+interactive-game-loop
+contact-form
+reviews
+stripe-checkout
+postgres-storage
+auth
+
+interactive-game-loop finns redan som soft Dossier med capability interactive-game och har en konkret Pacman-komponent med state, score, keyboard/touch och restart .
+
+4. Din PROMPT Init-idé
+
+Din idé är i grunden rätt, men jag skulle byta några ord så det inte blir samma namnkaos igen.
+
+Din modell, översatt till rätt termer
+Du skrev	Jag skulle låsa som
+initial prompt	Init Prompt
+expanderad/förminskad prompt	Site Brief / Project Input
+repo	Starter
+scaffold	Scaffold
+dessein/docin	Dossier
+variant	Variant
+spec	helst inte ny term; använd Generation Package eller Site Plan
+
+Viktigt: kalla inte starter för repo i kod/policy. ADR 0012 säger att operatören kan säga repo i UI, men canonical term är Starter .
+
+Jag skulle låsa Init-flödet så här
+1. Init Prompt
+   Användarens råtext.
+
+2. Understand / briefModel
+   Gör Site Brief:
+   - language
+   - businessType
+   - audience
+   - offer/services
+   - conversionGoals
+   - tone
+   - visual cues
+   - explicit requestedCapabilities
+   - assumptions with confidence
+
+3. Plan / planningModel
+   Gör Site Plan:
+   - starterId
+   - scaffoldId
+   - variantId
+   - selectedDossiers
+   - routePlan
+   - sectionPlan
+   - buildSpec
+
+4. Generation Package
+   Samlar allt codegenModel behöver.
+
+5. Build / codegenModel
+   Genererar filer/sections.
+
+6. Repair + Quality Gate
+   Fixar och mäter.
+
+Det matchar Engine Run: understand, plan, build .
+
+5. Viktig korrigering i ditt exempel
+
+Du skrev:
+
+Det kan antas att sidan har en maskulin ton
+
+Jag skulle inte låta Deep Brief anta “maskulin” om användaren inte skriver det. Bättre:
+
+retro arcade
+nostalgisk
+samlar-kultur
+energidryck/pizza/lan-party
+8-bit / CRT / neon / pixel
+lite kaxig men inte exkluderande
+
+Alltså: härled från uttryck och kultur, inte kön. Det ger bättre och tryggare output.
+
+6. Ska “10–15 frågor” finnas?
+
+Ja, men inte alltid som frågor till användaren.
+
+Jag skulle ha en intern Brief Question Matrix (frågematris) som briefModel fyller i:
+
+Fråga	Källa
+Vad är verksamheten?	prompt eller inferens
+Vilken målgrupp?	prompt/inferens
+Vad ska besökaren göra?	prompt/inferens
+Vilka sidor behövs?	scaffold/default + prompt
+Vilka capabilities behövs?	prompt
+Vilken ton?	prompt/inferens
+Vilken visuell riktning?	prompt/inferens
+Finns hårda krav?	prompt
+Behövs databas/auth/betalning?	prompt
+Vilka antaganden gjordes?	alltid explicit
+
+Men användaren ska bara få följdfrågor när något är blockande. Exempel:
+
+Vill du ha faktisk medlemsinloggning, eller bara en statisk medlemssida?
+
+Det är en viktig skillnad eftersom faktisk inloggning kräver hard Dossier och troligen databas.
+
+7. Follow-up: din idé är rätt, men måste klassas
+
+Follow-up behöver klassificeras innan vi låter den ändra filer.
+
+Exempelklasser:
+
+Follow-up-typ	Exempel	Ska ändra kod?
+chat_question	“Vad är klockan?”	Nej
+advice_question	“Borde jag lägga till en klocka?”	Nej
+content_edit	“Ändra rubriken”	Ja, liten
+layout_edit	“Lägg klockan under headern”	Ja
+feature_add	“Lägg till klocka och 3D-dinosaurie”	Ja, kan kräva dossier
+external_reference	“Inspireras av Aftonbladets klocka”	Ja, men med policy
+redesign	“Gör om allt till 80-tal arcade”	Ja, kan byta variant/scaffold
+
+Follow-up måste alltid ha:
+
+projectId
+chatId
+baseVersionId
+currentVersionId
+Project DNA
+previous Site Brief
+previous Site Plan
+requested change
+classification
+
+Engine Run-policyn säger också att followup läser Project DNA och inte får byta scaffold utan explicit redesign-intent .
+
+8. Låses detta via Backoffice, schemas, policies och governance?
+
+Ja, men dela upp det:
+
+Ska låsas hårt	Var
+Begrepp	naming dictionary + ADR
+Engine Run-faser	engine-run.v1.json
+Model Roles	llm-models.v1.json
+Scaffold-format	scaffold schema/policy
+Dossier-format	dossier schema/policy
+Quality traits	page-quality-traits.v1.json
+Preview-runtime-regler	preview policy/ADR
+UI-text och operatörsval	backoffice
+
+Men alla kreativa detaljer ska inte in i policy. Exempel:
+
+Sak	Policy?
+“Scaffold har routes/sections/quality-contract”	Ja
+“Retro store kan använda pixel-känsla”	Variant/selection-profile
+“Billy’s panpizza ska bli gul CTA”	Nej, LLM/variant kan använda som kreativ signal
+“Maskulin ton”	Nej, riskabel inferens
+“Medlemssida kräver auth om login efterfrågas”	Ja, Dossier/Planning policy
+9. Behöver StackBlitz Postgres?
+
+Nej, StackBlitz behöver inte Postgres i sig.
+
+StackBlitz är preview-runtime: den kör/visar frontendprojektet. ADR 0003 säger att default ska vara StackBlitzRuntime, och FlyRuntime bara används om StackBlitz inte räcker, t.ex. tyngre integrationer .
+
+Men en genererad användarsajt kan behöva Postgres om den har:
+
+Feature	Behöver DB?
+vanlig hemsida	Nej
+kontaktformulär via mail	Nej
+highscore-lista som sparas	Ja
+medlemskonto	Ja
+adminpanel	Ja
+bokningar	Ja
+orderhistorik	Ja
+
+För StackBlitz-preview med DB hade jag gjort så här:
+
+Design-preview:
+  använd mock-data
+
+Integration-preview:
+  använd Supabase/Neon via env
+
+Production:
+  samma Supabase/Neon, riktiga env-vars
+
+Min rekommendation: Supabase först för användarsajter, inte egen Postgres i StackBlitz. Supabase ger Postgres + auth + dashboard. Neon är också bra om man bara vill ha ren Postgres.
+
+10. Vad som bör låsas härnäst
+
+Jag skulle låsa dessa tre dokument/policies först:
+
+A. site-brief.schema.json (Project Input / Site Brief)
+{
+  "language": "sv",
+  "businessType": "retro-game-store",
+  "audience": ["retro gamers", "collectors"],
+  "offer": ["used games", "consoles", "membership"],
+  "conversionGoals": ["visit_store", "join_membership"],
+  "visualDirection": {
+    "mood": ["retro", "arcade", "nostalgic"],
+    "avoid": ["generic ecommerce", "modern SaaS look"]
+  },
+  "requestedCapabilities": ["interactive-game", "membership"],
+  "assumptions": [
+    {
+      "text": "8-bit typography may fit the requested 80s retro direction.",
+      "confidence": 0.8
+    }
+  ]
+}
+B. site-plan.schema.json (Plan)
+{
+  "starterId": "marketing-base",
+  "scaffoldId": "retro-game-store",
+  "variantId": "pixel-nostalgia",
+  "selectedDossiers": {
+    "required": ["interactive-game-loop"],
+    "conditional": ["postgres-storage"],
+    "rejected": [
+      {
+        "id": "auth",
+        "reason": "User asked for member page but not explicit login."
+      }
+    ]
+  },
+  "routePlan": [
+    { "path": "/", "sections": ["hero", "featured-categories", "cta"] },
+    { "path": "/spel", "sections": ["category-grid", "rare-finds"] },
+    { "path": "/medlem", "sections": ["membership-benefits"] }
+  ]
+}
+C. follow-up-intent.schema.json (Follow-up-klassning)
+{
+  "intent": "feature_add",
+  "requiresCodeChange": true,
+  "target": {
+    "route": "/",
+    "section": "below-header"
+  },
+  "requestedCapabilities": ["clock-widget", "visual-3d"],
+  "requiresScaffoldUnlock": false,
+  "requiresVariantUnlock": false,
+  "needsUserClarification": false
+}
+Min slutsats
+
+Din README-idé är bra som tanke, men jag skulle formulera den i Sajtbyggarens låsta termer:
+
+Init Prompt
+→ Site Brief
+→ Site Plan
+→ Generation Package
+→ Build
+
+Inte:
+
+prompt
+→ broderad prompt
+→ repo
+→ docin
+→ spec
+
+För då kommer namnkaoset tillbaka.
+
+Poäng på din idé: 8/10
+Poäng om den låses i rätt schemas/policies: 9/10
+Risk om den skrivs fritt i README utan canonical terms: 5/10
+
+Säkerhet: 89%
+

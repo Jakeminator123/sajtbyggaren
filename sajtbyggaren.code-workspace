@@ -5,5 +5,7 @@
       "name": "Sajtbyggaren"
     }
   ],
-  "settings": {}
+  "settings": {
+    "files.autoSave": "afterDelay"
+  }
 }
