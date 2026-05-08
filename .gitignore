@@ -31,6 +31,11 @@ Thumbs.db
 
 .streamlit/secrets.toml
 
+# Per-developer VS Code/Cursor overrides. Shared editor settings live in
+# .vscode/settings.json (committed); machine-local terminal paths and
+# similar must go in User Settings or *.local.json instead.
+.vscode/*.local.json
+
 .tmp-*
 .tmp.*
 

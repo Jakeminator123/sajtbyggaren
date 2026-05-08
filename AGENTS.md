@@ -30,11 +30,11 @@ pip install -r requirements.txt
 
 ### Running services
 
-| Service | Command | Notes |
-|---------|---------|-------|
-| Backoffice | `streamlit run backend.py --server.headless true` | Serves on port 8501 |
-| Engine run (mock) | `python scripts/dev_generate.py "your prompt"` | Writes artifacts to `data/runs/`. Calls `briefModel` if `OPENAI_API_KEY` is set, else mock. |
-| Builder MVP | `python scripts/build_site.py --dossier examples/<slug>.project-input.json` | Real Next.js output under `.generated/<siteId>/` + canonical artifacts under `data/runs/<runId>/`. Add `--skip-build` for fast iteration. |
+| Service           | Command                                                                     | Notes                                                                                                                                     |
+| ----------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Backoffice        | `streamlit run backend.py --server.headless true`                           | Serves on port 8501                                                                                                                       |
+| Engine run (mock) | `python scripts/dev_generate.py "your prompt"`                              | Writes artifacts to `data/runs/`. Calls `briefModel` if `OPENAI_API_KEY` is set, else mock.                                               |
+| Builder MVP       | `python scripts/build_site.py --dossier examples/<slug>.project-input.json` | Real Next.js output under `.generated/<siteId>/` + canonical artifacts under `data/runs/<runId>/`. Add `--skip-build` for fast iteration. |
 
 ### Lint, test, validate
 

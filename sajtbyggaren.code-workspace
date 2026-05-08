@@ -5,41 +5,5 @@
       "name": "Sajtbyggaren"
     }
   ],
-  "settings": {
-    "files.associations": {
-      "*.mdc": "markdown"
-    },
-    "files.exclude": {
-      "**/.git": true,
-      "**/node_modules": true,
-      "**/__pycache__": true,
-      "**/.venv": true
-    },
-    "search.exclude": {
-      "**/.git": true,
-      "**/node_modules": true,
-      "**/dist": true,
-      "**/build": true,
-      "**/.next": true,
-      "**/out": true,
-      "**/.venv": true,
-      "**/__pycache__": true,
-      "**/data/runs": true,
-      "**/data/versions": true,
-      "**/referens/**/*.tar.gz": true,
-      "**/referens/**/*.zip": true,
-      "**/referens/**/*.png": true
-    },
-    "files.eol": "\n",
-    "[json]": {
-      "editor.tabSize": 2
-    },
-    "[python]": {
-      "editor.tabSize": 4,
-      "editor.formatOnSave": false
-    },
-    "[markdown]": {
-      "editor.wordWrap": "on"
-    }
-  }
+  "settings": {}
 }

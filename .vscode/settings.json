@@ -1,0 +1,41 @@
+{
+  "files.associations": {
+    "*.mdc": "markdown"
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/node_modules": true,
+    "**/__pycache__": true,
+    "**/.venv": true
+  },
+  "search.exclude": {
+    "**/.git": true,
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/.next": true,
+    "**/out": true,
+    "**/.venv": true,
+    "**/__pycache__": true,
+    "**/data/runs": true,
+    "**/data/versions": true,
+    "**/referens/**/*.tar.gz": true,
+    "**/referens/**/*.zip": true,
+    "**/referens/**/*.png": true
+  },
+  "files.eol": "\n",
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 1000,
+  "[json]": {
+    "editor.tabSize": 2,
+    "editor.formatOnSave": true
+  },
+  "[python]": {
+    "editor.tabSize": 4,
+    "editor.formatOnSave": true
+  },
+  "[markdown]": {
+    "editor.wordWrap": "on",
+    "editor.formatOnSave": true
+  }
+}
