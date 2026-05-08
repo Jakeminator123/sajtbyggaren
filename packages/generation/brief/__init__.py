@@ -30,6 +30,7 @@ from .extract import (
 from .models import (
     BRIEF_ROLE_ID,
     BriefModelResolutionError,
+    has_openai_api_key,
     resolve_brief_model,
 )
 
@@ -40,6 +41,7 @@ __all__ = [
     "SiteBrief",
     "detect_language",
     "extract_site_brief",
+    "has_openai_api_key",
     "resolve_brief_model",
     "site_brief_to_artifact",
 ]

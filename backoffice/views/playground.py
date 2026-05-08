@@ -81,7 +81,9 @@ def view_playground() -> None:
         "subprocess. Anropar riktig LLM om `OPENAI_API_KEY` finns, annars mock."
     )
 
-    api_key_set = bool(os.environ.get("OPENAI_API_KEY"))
+    from packages.generation.brief import has_openai_api_key
+
+    api_key_set = has_openai_api_key()
     if api_key_set:
         st.success(
             "OPENAI_API_KEY är satt - **fas 1 (briefModel)** anropar riktig LLM. "

@@ -16,9 +16,10 @@ import pytest
 
 from packages.generation.brief import (
     BriefModelResolutionError,
+    has_openai_api_key,
     resolve_brief_model,
 )
-from packages.generation.brief.models import DEFAULT_POLICY_PATH
+from packages.generation.brief.models import DEFAULT_POLICY_PATH, OPENAI_API_KEY_ENV
 
 
 @pytest.mark.tooling
@@ -102,3 +103,38 @@ def test_returns_declared_model_for_synthetic_policy(tmp_path: Path):
         encoding="utf-8",
     )
     assert resolve_brief_model(policy_path=policy) == "gpt-test-4"
+
+
+@pytest.mark.tooling
+def test_has_openai_api_key_treats_unset_as_missing(monkeypatch):
+    monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
+    assert has_openai_api_key() is False
+
+
+@pytest.mark.tooling
+def test_has_openai_api_key_treats_empty_as_missing(monkeypatch):
+    monkeypatch.setenv(OPENAI_API_KEY_ENV, "")
+    assert has_openai_api_key() is False
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize("whitespace", ["   ", "\n", "\t", "  \n  ", " \r\n\t "])
+def test_has_openai_api_key_treats_whitespace_as_missing(monkeypatch, whitespace: str):
+    """Stray newlines/spaces in the env var must not route to the real LLM path."""
+    monkeypatch.setenv(OPENAI_API_KEY_ENV, whitespace)
+    assert has_openai_api_key() is False, (
+        f"Whitespace-only OPENAI_API_KEY ({whitespace!r}) must be treated as missing"
+    )
+
+
+@pytest.mark.tooling
+def test_has_openai_api_key_accepts_real_looking_value(monkeypatch):
+    monkeypatch.setenv(OPENAI_API_KEY_ENV, "sk-test-1234567890")
+    assert has_openai_api_key() is True
+
+
+@pytest.mark.tooling
+def test_has_openai_api_key_accepts_value_with_surrounding_whitespace(monkeypatch):
+    """A real key with stray surrounding whitespace must still count as set."""
+    monkeypatch.setenv(OPENAI_API_KEY_ENV, "  sk-test-1234567890\n")
+    assert has_openai_api_key() is True

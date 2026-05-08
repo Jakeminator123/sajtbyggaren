@@ -1,14 +1,17 @@
 """Resolve briefModel metadata from llm-models.v1.json.
 
 Single source of truth for "which OpenAI model does briefModel map to right
-now?". Both scripts/build_site.py and scripts/dev_generate.py used to keep
-their own copy of this lookup, which guaranteed they would drift apart.
-This module is the only place the policy file is read for briefModel.
+now?" plus a tiny helper for "is OPENAI_API_KEY actually usable?". Both
+scripts/build_site.py and scripts/dev_generate.py used to keep their own
+copy of these lookups, which guaranteed they would drift apart. This
+module is the only place the policy file is read for briefModel and the
+only place the env-var presence check is implemented.
 """
 
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -16,6 +19,22 @@ DEFAULT_POLICY_PATH = REPO_ROOT / "governance" / "policies" / "llm-models.v1.jso
 
 BRIEF_ROLE_ID = "briefModel"
 EXPECTED_PROVIDER = "openai"
+OPENAI_API_KEY_ENV = "OPENAI_API_KEY"
+
+
+def has_openai_api_key() -> bool:
+    """True when OPENAI_API_KEY is set to a non-whitespace value.
+
+    Whitespace-only values (e.g. ``"   "``, ``"\\n"``) are treated as
+    missing. Without this guard, a stray newline pasted into a shell
+    profile would route through the real-LLM code path and surface as
+    a confusing OpenAI auth error instead of cleanly falling back to
+    the mock Site Brief with briefSource=mock-no-key.
+    """
+    value = os.environ.get(OPENAI_API_KEY_ENV)
+    if value is None:
+        return False
+    return bool(value.strip())
 
 
 class BriefModelResolutionError(RuntimeError):

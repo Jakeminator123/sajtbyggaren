@@ -11,12 +11,13 @@ phases actually read. Adding new fields requires a naming-dictionary entry.
 from __future__ import annotations
 
 import logging
-import os
 import sys
 from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
+
+from .models import has_openai_api_key
 
 logger = logging.getLogger("sajtbyggaren.brief")
 
@@ -170,7 +171,7 @@ def extract_site_brief(
     transparent `source` field so callers (and artefakter) inte ljuger om
     huruvida riktig LLM användes.
     """
-    if not os.environ.get("OPENAI_API_KEY"):
+    if not has_openai_api_key():
         return BriefResult(
             brief=_mock_brief(prompt, language_hint),
             source="mock-no-key",

@@ -158,7 +158,9 @@ def run_phase_understand(
     emit(run_id, run_dir, "understand", "input.written", "done", "input.json written", "input.json")
 
     # Try real briefModel; falls back to mock inside extract_site_brief if no API key.
-    has_key = bool(os.environ.get("OPENAI_API_KEY"))
+    from packages.generation.brief import has_openai_api_key
+
+    has_key = has_openai_api_key()
     model_name = _resolve_brief_model()
     try:
         from packages.generation.brief import extract_site_brief, site_brief_to_artifact

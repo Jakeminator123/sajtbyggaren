@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -831,7 +830,16 @@ def assert_routes_present(target: Path, routes: list[str]) -> None:
 # ---------------------------------------------------------------------------
 
 
-def run_npm(command: list[str], cwd: Path) -> tuple[bool, float, str]:
+NPM_INSTALL_TIMEOUT_SECONDS = 600
+NPM_BUILD_TIMEOUT_SECONDS = 300
+
+
+def run_npm(
+    command: list[str],
+    cwd: Path,
+    *,
+    timeout: float | None = None,
+) -> tuple[bool, float, str]:
     """Run an npm command and return (ok, seconds, last_lines).
 
     Uses ``shutil.which`` to resolve ``npm`` (or ``npm.cmd`` on Windows) so the
@@ -839,6 +847,12 @@ def run_npm(command: list[str], cwd: Path) -> tuple[bool, float, str]:
     silently drops every argument after the first on POSIX, which made
     ``npm install`` collapse to a bare ``npm`` invocation in CI and exit 1
     after printing the help screen.
+
+    A ``timeout`` (seconds) is required for long-running steps - without it
+    a hung npm install/build would block the builder forever and leave the
+    run directory half-written. ``subprocess.TimeoutExpired`` is caught so
+    the caller still gets a deterministic ``(False, elapsed, message)``
+    tuple instead of an uncaught exception.
     """
     npm_path = shutil.which("npm")
     if npm_path is None:
@@ -846,15 +860,28 @@ def run_npm(command: list[str], cwd: Path) -> tuple[bool, float, str]:
 
     full_command = [npm_path, *command[1:]] if command and command[0] == "npm" else [npm_path, *command]
     start = time.monotonic()
-    proc = subprocess.run(
-        full_command,
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        shell=False,
-    )
+    try:
+        proc = subprocess.run(
+            full_command,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            shell=False,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        elapsed = time.monotonic() - start
+        partial = ((exc.stdout or b"") + (exc.stderr or b"")) if isinstance(exc.stdout, bytes) else ""
+        if isinstance(partial, bytes):
+            partial_text = partial.decode("utf-8", errors="replace")
+        else:
+            partial_text = (exc.stdout or "") + (exc.stderr or "") if isinstance(exc.stdout, str) else ""
+        last_lines = "\n".join(partial_text.splitlines()[-25:]) if partial_text else ""
+        cmd_str = " ".join(command)
+        message = f"timeout: '{cmd_str}' did not finish within {timeout:.0f}s"
+        return False, elapsed, f"{message}\n{last_lines}".strip()
     elapsed = time.monotonic() - start
     output = (proc.stdout or "") + (proc.stderr or "")
     last_lines = "\n".join(output.splitlines()[-25:])
@@ -1000,7 +1027,9 @@ def _mock_brief_after_llm_failure(
 
 def build_site_brief(run_id: str, dossier: dict, scaffold: dict) -> dict:
     """Build Site Brief with briefModel when available, otherwise mock fallback."""
-    if not os.environ.get("OPENAI_API_KEY"):
+    from packages.generation.brief import has_openai_api_key
+
+    if not has_openai_api_key():
         print("No OPENAI_API_KEY - using mock Site Brief")
         return build_site_brief_mock(run_id, dossier, scaffold)
 
@@ -1405,8 +1434,11 @@ def build(
 
     if do_build:
         if not (target / "node_modules").exists():
-            print("Running npm install...")
-            ok, secs, last = run_npm(["npm", "install"], target)
+            print(f"Running npm install (timeout {NPM_INSTALL_TIMEOUT_SECONDS}s)...")
+            ok, secs, last = run_npm(
+                ["npm", "install"], target,
+                timeout=NPM_INSTALL_TIMEOUT_SECONDS,
+            )
             npm_steps.append(
                 {"name": "npm install", "ok": ok, "seconds": round(secs, 1)}
             )
@@ -1419,9 +1451,10 @@ def build(
                 print(last, file=sys.stderr)
 
         if overall_status == "ok":
-            print("Running npm run build...")
+            print(f"Running npm run build (timeout {NPM_BUILD_TIMEOUT_SECONDS}s)...")
             ok, secs, last = run_npm(
                 ["npm", "run", "build"], target,
+                timeout=NPM_BUILD_TIMEOUT_SECONDS,
             )
             npm_steps.append(
                 {"name": "npm run build", "ok": ok, "seconds": round(secs, 1)}

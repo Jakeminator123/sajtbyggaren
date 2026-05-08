@@ -96,6 +96,36 @@ Format per bugg:
   `tests/test_dossier_mounting.py` skickar in `tmp_path`. Verifierat
   2026-05-08: `data/runs/` har 6 mappar både före och efter en full
   `pytest tests/ -q`-körning.
+- **`B14` Låg** (stängd 2026-05-08) - efter Sprint 2A drev tre docstrings
+  isär från koden: `README.md` "Engine Run"-stycket sa fortfarande att
+  dev-drivern kör utan LLM-anrop, `scripts/dev_generate.py` modul-docstring
+  sa "fully mocked: no LLM calls", och `packages/generation/brief/__init__.py`
+  påstod att `extract_site_brief` returnerar `SiteBrief` (canonical signatur
+  är `BriefResult`). Fix: docs-only commit som synkar alla tre med
+  verkligheten. README listar nu också ADR 0010-0013. Test: dokumentations-
+  ändringar fångas av `check_term_coverage --strict` om nya termer smyger in.
+- **`B15` Medel** (stängd 2026-05-08) - `OPENAI_API_KEY` med whitespace-
+  only värde (t.ex. `"   "`, `"\n"`) räknades som satt i fem callsites
+  (`packages/generation/brief/extract.py`, `scripts/dev_generate.py`,
+  `scripts/build_site.py`, `backoffice/views/status.py`,
+  `backoffice/views/playground.py`). Det skickade real-LLM-vägen mot
+  OpenAI med en tom nyckel och föll med en otydlig auth-error istället
+  för att rent fall back till mock. Fix: ny `has_openai_api_key()`-helper
+  i `packages/generation/brief/models.py` strippar och kollar non-empty.
+  Alla fem callsites importerar samma helper. Test:
+  `tests/test_brief_model_resolver.py::test_has_openai_api_key_treats_whitespace_as_missing`
+  (parametriserad över fem whitespace-varianter) plus tre tester för
+  unset / empty / surrounding whitespace.
+- **`B16` Medel** (stängd 2026-05-08) - `scripts/build_site.py::run_npm`
+  saknade `timeout`-parameter; ett hängande `npm install` eller `npm run
+  build` skulle blockera buildern på obestämd tid och lämna
+  `data/runs/<runId>/` halvskrivet. Fix: konstanterna
+  `NPM_INSTALL_TIMEOUT_SECONDS = 600` och `NPM_BUILD_TIMEOUT_SECONDS = 300`
+  + `subprocess.TimeoutExpired` fångas i `run_npm` och returnerar
+  `(False, elapsed, "timeout: ...")` så `build-result.json` får
+  `status=failed` istället för att processen hänger. Test:
+  `tests/test_builder_hardening.py::test_run_npm_returns_failure_on_timeout`
+  och `test_build_calls_run_npm_with_documented_timeouts`.
 
 ## Process
 

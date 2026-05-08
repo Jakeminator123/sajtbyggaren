@@ -92,8 +92,11 @@ def view_system_health() -> None:
 
     st.divider()
     st.subheader("API-nycklar")
-    openai_set = bool(os.environ.get("OPENAI_API_KEY"))
-    anthropic_set = bool(os.environ.get("ANTHROPIC_API_KEY"))
+    from packages.generation.brief import has_openai_api_key
+
+    openai_set = has_openai_api_key()
+    anthropic_value = os.environ.get("ANTHROPIC_API_KEY")
+    anthropic_set = bool(anthropic_value and anthropic_value.strip())
     a, b = st.columns(2)
     a.metric("OPENAI_API_KEY", "satt" if openai_set else "saknas")
     b.metric("ANTHROPIC_API_KEY", "satt" if anthropic_set else "saknas")

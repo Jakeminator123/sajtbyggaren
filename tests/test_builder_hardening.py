@@ -317,3 +317,88 @@ def test_repair_and_quality_skeleton_status_not_run(
 
     assert repair["status"] == "not-run"
     assert quality["status"] == "not-run"
+
+
+# ---------------------------------------------------------------------------
+# B16 - npm install / npm run build must not hang forever
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_run_npm_returns_failure_on_timeout(monkeypatch, tmp_path: Path) -> None:
+    """run_npm must catch subprocess.TimeoutExpired and return (False, elapsed, msg)."""
+    import subprocess
+
+    from scripts import build_site
+
+    monkeypatch.setattr(build_site.shutil, "which", lambda _: "/usr/bin/npm")
+
+    def fake_run(*_args, **kwargs):
+        raise subprocess.TimeoutExpired(
+            cmd=kwargs.get("args", ["npm", "install"]),
+            timeout=kwargs.get("timeout", 1.0),
+            output=b"partial install output\nstill working\n",
+            stderr=b"",
+        )
+
+    monkeypatch.setattr(build_site.subprocess, "run", fake_run)
+
+    ok, elapsed, last = build_site.run_npm(["npm", "install"], tmp_path, timeout=1.0)
+
+    assert ok is False
+    assert elapsed >= 0.0
+    assert "timeout" in last.lower()
+    assert "npm install" in last
+
+
+@pytest.mark.tooling
+def test_npm_timeout_constants_are_defined() -> None:
+    """build_site.py must expose NPM_INSTALL_TIMEOUT_SECONDS and NPM_BUILD_TIMEOUT_SECONDS."""
+    from scripts import build_site
+
+    assert hasattr(build_site, "NPM_INSTALL_TIMEOUT_SECONDS"), (
+        "Removing the npm install timeout would re-open B16."
+    )
+    assert hasattr(build_site, "NPM_BUILD_TIMEOUT_SECONDS"), (
+        "Removing the npm run build timeout would re-open B16."
+    )
+    assert build_site.NPM_INSTALL_TIMEOUT_SECONDS > 0
+    assert build_site.NPM_BUILD_TIMEOUT_SECONDS > 0
+
+
+@pytest.mark.tooling
+def test_build_calls_run_npm_with_documented_timeouts(monkeypatch, tmp_path: Path) -> None:
+    """build() must pass the documented timeouts to run_npm for both steps.
+
+    npm install is skipped when ``node_modules`` already exists in the
+    generated dir (which is the case in dev), so the assertion only
+    enforces the timeout value when run_npm is actually called for that
+    step. ``npm run build`` always runs in do_build=True so it is
+    asserted unconditionally.
+    """
+    from scripts import build_site
+
+    captured: list[dict] = []
+
+    def fake_run_npm(command, _cwd, *, timeout=None):
+        captured.append({"command": list(command), "timeout": timeout})
+        return True, 0.1, ""
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(build_site, "run_npm", fake_run_npm)
+
+    project_input_path = REPO_ROOT / "examples" / "painter-palma.project-input.json"
+    build_site.build(project_input_path, do_build=True, runs_dir=tmp_path)
+
+    install_calls = [c for c in captured if c["command"][:2] == ["npm", "install"]]
+    build_calls = [c for c in captured if c["command"][:2] == ["npm", "run"]]
+
+    assert build_calls, "build(do_build=True) must call run_npm for npm run build"
+    for call in build_calls:
+        assert call["timeout"] == build_site.NPM_BUILD_TIMEOUT_SECONDS, (
+            f"npm run build must use NPM_BUILD_TIMEOUT_SECONDS, got {call['timeout']!r}"
+        )
+    for call in install_calls:
+        assert call["timeout"] == build_site.NPM_INSTALL_TIMEOUT_SECONDS, (
+            f"npm install must use NPM_INSTALL_TIMEOUT_SECONDS, got {call['timeout']!r}"
+        )
