@@ -23,9 +23,14 @@ if str(REPO_ROOT) not in sys.path:
 
 
 @pytest.mark.tooling
-def test_builder_smoke_writes_routes_and_run_artifacts(tmp_path: Path) -> None:
+def test_builder_smoke_writes_routes_and_run_artifacts(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+) -> None:
     from scripts.build_site import build  # imported lazily to avoid heavy import on collection
 
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     project_input_path = (
         REPO_ROOT / "examples" / "painter-palma.project-input.json"
     )
@@ -82,6 +87,9 @@ def test_builder_smoke_writes_routes_and_run_artifacts(tmp_path: Path) -> None:
     assert brief["briefSource"] == "mock-no-key"
     assert brief["modelUsed"] == "mock"
     assert brief["language"] == "sv"
+    captured = capsys.readouterr()
+    assert "OPENAI_API_KEY" in captured.out
+    assert "mock Site Brief" in captured.out
 
 
 @pytest.mark.tooling

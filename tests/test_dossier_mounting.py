@@ -16,9 +16,13 @@ if str(REPO_ROOT) not in sys.path:
 
 
 @pytest.mark.tooling
-def test_builder_mounts_pacman_dossier_files(tmp_path: Path) -> None:
+def test_builder_mounts_pacman_dossier_files(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
     from scripts.build_site import build
 
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     project_input_path = REPO_ROOT / "examples" / "painter-palma.project-input.json"
     target, _run_dir = build(project_input_path, do_build=False, runs_dir=tmp_path)
 
@@ -47,6 +51,8 @@ def test_generated_pacman_site_passes_npm_build(tmp_path: Path) -> None:
 
     script_path = REPO_ROOT / "scripts" / "build_site.py"
     project_input_path = REPO_ROOT / "examples" / "painter-palma.project-input.json"
+    env = os.environ.copy()
+    env.pop("OPENAI_API_KEY", None)
 
     run = subprocess.run(
         [
@@ -62,6 +68,7 @@ def test_generated_pacman_site_passes_npm_build(tmp_path: Path) -> None:
         text=True,
         encoding="utf-8",
         errors="replace",
+        env=env,
     )
     if run.returncode != 0:
         print("STDOUT:", run.stdout)

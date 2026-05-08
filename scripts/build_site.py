@@ -20,17 +20,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 STARTERS_DIR = REPO_ROOT / "data" / "starters"
 SCAFFOLDS_DIR = (
     REPO_ROOT
@@ -61,7 +64,7 @@ _ALLOWED_ENV_NAMES = {".env.example"}
 
 
 def utc_now() -> datetime:
-    return datetime.now(tz=timezone.utc)
+    return datetime.now(tz=UTC)
 
 
 def make_run_id(site_id: str) -> str:
@@ -886,6 +889,140 @@ def build_site_brief_mock(dossier: dict, scaffold: dict) -> dict:
     }
 
 
+def resolve_brief_model() -> str:
+    """Read the briefModel model from llm-models.v1.json."""
+    policy_path = REPO_ROOT / "governance" / "policies" / "llm-models.v1.json"
+    models = load_json(policy_path)
+    for role in models.get("roles", []):
+        if role.get("id") != "briefModel":
+            continue
+        if role.get("provider") != "openai":
+            raise RuntimeError(
+                "briefModel provider must be openai for scripts/build_site.py "
+                f"(got {role.get('provider')!r})"
+            )
+        model = role.get("model")
+        if not isinstance(model, str) or not model.strip():
+            raise RuntimeError("briefModel is missing a non-empty model value")
+        return model
+    raise RuntimeError("briefModel role missing from llm-models.v1.json")
+
+
+def _join_values(values: list[Any]) -> str:
+    return ", ".join(str(value) for value in values if value)
+
+
+def project_input_to_brief_prompt(dossier: dict) -> str:
+    """Create deterministic briefModel input from a Project Input.
+
+    Builder examples already contain structured Project Input data, while
+    briefModel expects a raw prompt. This adapter only restates existing facts
+    so Phase 1 can run without inventing additional planning behavior.
+    """
+    company = dossier["company"]
+    location = dossier["location"]
+    tone = dossier.get("tone", {})
+    selected = dossier.get("selectedDossiers", {})
+
+    services = "\n".join(
+        f"- {service['id']}: {service['label']} — {service['summary']}"
+        for service in dossier.get("services", [])
+    )
+    trust = "\n".join(f"- {item}" for item in dossier.get("trustSignals", []))
+
+    return (
+        "Build a business website from this Project Input.\n\n"
+        f"Company: {company.get('name')}\n"
+        f"Business type: {company.get('businessType')}\n"
+        f"Tagline: {company.get('tagline')}\n"
+        f"Story: {company.get('story')}\n"
+        f"Location: {location.get('city')}, {location.get('region')}, {location.get('country')}\n"
+        f"Service areas: {_join_values(location.get('serviceAreas', []))}\n"
+        f"Language: {dossier.get('language')}\n"
+        f"Tone primary: {tone.get('primary')}\n"
+        f"Tone secondary: {_join_values(tone.get('secondary', []))}\n"
+        f"Tone avoid: {_join_values(tone.get('avoid', []))}\n"
+        f"Conversion goals: {_join_values(dossier.get('conversionGoals', []))}\n"
+        f"Requested capabilities: {_join_values(dossier.get('requestedCapabilities', []))}\n"
+        f"Required dossiers: {_join_values(selected.get('required', []))}\n\n"
+        "Services:\n"
+        f"{services}\n\n"
+        "Trust signals:\n"
+        f"{trust}\n"
+    )
+
+
+def _mock_brief_after_llm_failure(
+    dossier: dict,
+    scaffold: dict,
+    *,
+    error: str,
+    attempted_model: str | None,
+) -> dict:
+    brief = build_site_brief_mock(dossier, scaffold)
+    brief.update(
+        {
+            "briefSource": "mock-llm-error",
+            "modelUsed": "mock",
+            "sourceModelRole": "briefModel",
+            "briefError": error,
+            "attemptedModel": attempted_model,
+        }
+    )
+    return brief
+
+
+def build_site_brief(run_id: str, dossier: dict, scaffold: dict) -> dict:
+    """Build Site Brief with briefModel when available, otherwise mock fallback."""
+    if not os.environ.get("OPENAI_API_KEY"):
+        print("No OPENAI_API_KEY - using mock Site Brief")
+        return build_site_brief_mock(dossier, scaffold)
+
+    model: str | None = None
+    try:
+        model = resolve_brief_model()
+        prompt = project_input_to_brief_prompt(dossier)
+
+        from packages.generation.brief import extract_site_brief, site_brief_to_artifact
+
+        print(f"Calling briefModel ({model}) for Site Brief")
+        result = extract_site_brief(
+            prompt,
+            model=model,
+            language_hint=dossier.get("language"),
+        )
+        if result.source != "real":
+            error = result.error or f"briefModel returned fallback source {result.source}"
+            print(
+                "Warning: briefModel failed - using mock Site Brief fallback "
+                f"({error})",
+                file=sys.stderr,
+            )
+            return _mock_brief_after_llm_failure(
+                dossier,
+                scaffold,
+                error=error,
+                attempted_model=model,
+            )
+
+        brief = site_brief_to_artifact(result, run_id=run_id, model=model)
+        brief["scaffoldHint"] = scaffold["id"]
+        return brief
+    except Exception as exc:  # noqa: BLE001
+        error = f"{type(exc).__name__}: {exc}"
+        print(
+            "Warning: briefModel path failed - using mock Site Brief fallback "
+            f"({error})",
+            file=sys.stderr,
+        )
+        return _mock_brief_after_llm_failure(
+            dossier,
+            scaffold,
+            error=error,
+            attempted_model=model,
+        )
+
+
 def build_site_plan_mock(
     dossier: dict, scaffold: dict, scaffold_routes: dict, variant: dict
 ) -> dict:
@@ -963,11 +1100,12 @@ def write_phase1_understand(
         payload_path="input.json",
     )
 
-    brief = build_site_brief_mock(dossier, scaffold)
+    brief = build_site_brief(trace.run_id, dossier, scaffold)
     write_json(run_dir / "site-brief.json", brief)
+    brief_source = brief.get("briefSource", "unknown")
     trace.event(
         "understand", "site_brief.written", "done",
-        "Mock Site Brief derived from dossier (briefSource=mock-no-key)",
+        f"Site Brief written (briefSource={brief_source})",
         payload_path="site-brief.json",
     )
     trace.event("understand", "phase.completed", "done", "Phase 1 understand done")
@@ -1056,15 +1194,15 @@ def write_quality_result_skeleton(run_dir: Path) -> dict:
     return payload
 
 
-def empty_model_usage() -> dict:
-    """Zeroed token / cost spend. Replace with real numbers when LLM is wired in."""
+def empty_model_usage(source: str = "mock-no-key") -> dict:
+    """Zeroed token / cost spend until model usage accounting is wired in."""
     return {
         "byRole": {},
         "totalInputTokens": 0,
         "totalOutputTokens": 0,
         "totalCostUsd": 0.0,
         "currency": "USD",
-        "source": "mock-no-key",
+        "source": source,
     }
 
 
@@ -1072,6 +1210,7 @@ def write_build_result(
     run_dir: Path,
     trace: Trace,
     dossier: dict,
+    site_brief: dict,
     scaffold: dict,
     variant: dict,
     routes: list[str],
@@ -1087,6 +1226,8 @@ def write_build_result(
     snap_dir = run_dir / "generated-files"
     rel_snapshot = _to_repo_relative(snap_dir)
     rel_preview = _to_repo_relative(target_dir)
+    model_used = site_brief.get("modelUsed", "mock")
+    brief_source = site_brief.get("briefSource", "mock-no-key")
     result = {
         "siteId": dossier["siteId"],
         "starterId": "marketing-base",
@@ -1096,13 +1237,13 @@ def write_build_result(
         "language": dossier["language"],
         "engineMode": "init",
         "buildSource": "scripts/build_site.py",
-        "modelUsed": "mock",
-        "briefSource": "mock-no-key",
+        "modelUsed": model_used,
+        "briefSource": brief_source,
         "routes": routes,
         "generatedFilesDir": rel_snapshot,
         "devPreviewDir": rel_preview,
         "npmSteps": npm_steps,
-        "modelUsage": empty_model_usage(),
+        "modelUsage": empty_model_usage(source=brief_source),
         "finalize": {
             "snapshotDir": rel_snapshot,
             "snapshotedAt": utc_now().isoformat(),
@@ -1155,7 +1296,7 @@ def build(
     print(f"runId: {run_id}")
 
     # Phase 1: understand
-    write_phase1_understand(run_dir, trace, dossier_path, dossier, scaffold)
+    site_brief = write_phase1_understand(run_dir, trace, dossier_path, dossier, scaffold)
 
     # Phase 2: plan
     write_phase2_plan(
@@ -1257,7 +1398,7 @@ def build(
 
     duration_ms = int((time.monotonic() - started) * 1000)
     write_build_result(
-        run_dir, trace, dossier, scaffold, variant,
+        run_dir, trace, dossier, site_brief, scaffold, variant,
         routes_all_with_dossiers, npm_steps, overall_status, target, duration_ms,
     )
 
