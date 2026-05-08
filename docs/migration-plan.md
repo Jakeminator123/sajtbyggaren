@@ -12,7 +12,8 @@ Beslutet att skjuta upp baseline-eval (tidigare steg 3) tills LLM-flödet finns 
 3. **Term-disciplin och regression-tester** (klart): scripts + `tests/` + GitHub Actions
 4. **Sprint 1 - Mock Engine Run** (klart): [`scripts/dev_generate.py`](../scripts/dev_generate.py) producerar alla 8 artefakter + `trace.ndjson` utan riktiga LLM-anrop. Låser artefaktkontraktet.
 5. **Sprint 2 - Riktig fas 1 + fas 2 + första scaffolden**: koppla in `briefModel` och `planningModel`. Skapa `local-service-business`-scaffolden med alla obligatoriska filer, en variant (`premium-local`), två dossiers (`contact-form`, `reviews`).
-   - Sprint 2A är klar: buildern använder `OPENAI_API_KEY` för Site Brief via `briefModel` när nyckeln finns. Saknad nyckel eller LLM-fel faller tillbaka till Mock Mode och markerar `site-brief.json` med `briefSource`.
+   - **Sprint 2A klar (PR #7, `3dbffe4`)**: både `scripts/build_site.py` och `scripts/dev_generate.py` anropar `briefModel` via `OPENAI_API_KEY` när nyckeln finns. Saknad nyckel eller LLM-fel faller tillbaka till Mock Mode och markerar `site-brief.json` med `briefSource` (`real`, `mock-no-key`, `mock-llm-error`) och `modelUsed`. Tester (`tests/test_builder_brief.py`) täcker real/mock-paths och determinism.
+   - Kvar att göra i Sprint 2B: koppla in `planningModel` med samma `OPENAI_API_KEY`-gate + mock-fallback-mönster (artefaktfält `planSource`/`modelUsed`/`planError`). Bygg ut `local-service-business`-scaffolden med `premium-local`-variant + `contact-form`- och `reviews`-dossiers.
 6. **Sprint 3 - Riktig fas 3**: `codegenModel` + Repair Pipeline (mekaniska fixes + ev. LLM-fix) + Quality Gate (typecheck + route-scan + policy-compliance + manual score).
 7. **Sprint 4 - LocalRuntime placeholder och iframe-preview**: enklast tänkbara dev-runtime.
 8. **Sprint 5 - StackBlitzRuntime** som secondary (delningsbar preview).

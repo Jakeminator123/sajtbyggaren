@@ -45,9 +45,26 @@ apps/         - web/api som konsumerar packages
 
 ## Snabbstart
 
-```bash
-pip install -r requirements.txt
+Skapa en lokal virtualenv och installera beroenden (rekommenderat - `.venv/` är
+gitignorerad och ska aldrig committas):
 
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+På macOS/Linux:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Kör validerings- och teskedjan:
+
+```bash
 python scripts/governance_validate.py    # validerar policies mot schemas
 python scripts/rules_sync.py --check     # verifierar att .cursor/rules är speglad
 python scripts/check_term_coverage.py    # hittar nya termer som saknar registrering
@@ -55,6 +72,16 @@ python -m pytest tests/                  # pytest-svit för cross-policy-konsist
 
 streamlit run backend.py                 # backoffice för att se/redigera governance
 ```
+
+För att låta fas 1 anropa riktiga `briefModel` istället för mock:
+
+```powershell
+$env:OPENAI_API_KEY = "sk-..."
+python scripts/build_site.py --dossier examples/painter-palma.project-input.json --skip-build
+```
+
+Saknas nyckeln eller failar LLM-anropet skrivs `site-brief.json` med
+`briefSource=mock-no-key` respektive `briefSource=mock-llm-error`.
 
 Detaljer om kvalitetsskydden: [`docs/quality.md`](docs/quality.md).
 
@@ -152,7 +179,7 @@ Detaljer: [`engine-run.v1.json`](governance/policies/engine-run.v1.json), [ADR 0
 | Term-disciplin (regel + script) | klart |
 | Regression-tester och CI | klart |
 | Sprint 1 - Mock Engine Run | klart |
-| Sprint 2 - Riktig fas 1 + fas 2 + en scaffold | inte startad |
+| Sprint 2 - Riktig fas 1 + fas 2 + en scaffold | påbörjad: Sprint 2A klar (`briefModel` kopplad i `scripts/build_site.py` och `scripts/dev_generate.py` med mock-fallback), Sprint 2B kvar (`planningModel` + scaffold-content) |
 | Sprint 3 - Riktig fas 3 (codegen + repair + gate) | inte startad |
 | Sprint 4 - LocalRuntime | inte startad |
 | Sprint 5 - StackBlitzRuntime | inte startad |

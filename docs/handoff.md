@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-07
-**Senaste commit på `main`:** `a17439d` (Merge PR #2)
-**Aktiv branch när handoff skrevs:** `cursor/handoff-och-stadning`
+**Datum:** 2026-05-08
+**Senaste commit på `main`:** `c8d8043` (docstring-sync efter Sprint 2A; PR #7 `3dbffe4` är den senaste merge-commit:en)
+**Aktiv branch:** `main`
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet.
 
@@ -17,19 +17,21 @@ Tre lager:
 
 ## Vad funkar idag
 
-- 5 ADR (0001–0010) + 13 policies + matchande schemas
-- 4 automatiska checks: `governance_validate.py`, `rules_sync.py`, `check_term_coverage.py`, `pytest`
+- ADR 0001–0012 + 14 policies + matchande schemas
+- 4 automatiska checks: `governance_validate.py`, `rules_sync.py`, `check_term_coverage.py --strict`, `pytest`
 - GitHub Actions kör alla på push/PR
-- `briefModel` (fas 1): riktig OpenAI-anrop med Pydantic structured output, fallback till mock
-- `dev_generate.py`: kör Engine Run end-to-end och skriver 8 artefakter + `trace.ndjson` (fas 2-3 är mock)
-- Backoffice (`py backend.py`) visar Status, Governance, LLM Engine, Building Blocks, Engine Runs, Evals, Playground
+- **Sprint 2A klar (PR #7, `3dbffe4`):** både `scripts/build_site.py` och `scripts/dev_generate.py` anropar riktiga `briefModel` (gpt-5.4) via OpenAI med Pydantic structured output när `OPENAI_API_KEY` finns; mock-fallback annars. `site-brief.json` markeras med `briefSource` (`real` / `mock-no-key` / `mock-llm-error`) och `modelUsed`.
+- `scripts/build_site.py`: deterministisk Builder MVP - skriver alla canonical artefakter inkl. `generated-files/`-snapshot, kör `npm install` + `npm run build` på `.generated/<siteId>/`, gated bakom `--skip-build` för snabb iteration.
+- `scripts/dev_generate.py`: mock-pipeline för regression - skriver alla 8 artefakter + `trace.ndjson` (fas 2-3 är mock).
+- Backoffice (`streamlit run backend.py`) visar Status, Governance, LLM Engine, Building Blocks, Engine Runs, Evals, Playground.
+- `local-service-business`-scaffolden + `marketing-base`-startern + `interactive-game-loop`-dossiern finns implementerade.
 
 ## Vad är mock än så länge
 
-- Fas 2: Scaffold/Variant/Route/Dossier-selection (skriver platshållardata)
-- Fas 3: Codegen, Repair Pipeline, Quality Gate, Preview Runtime
-- Inget av de 14 scaffold-IDs i `scaffold-contract.v1.json` har innehåll i `packages/generation/orchestration/scaffolds/<id>/`
-- `apps/web` finns inte alls
+- Fas 2 `planningModel`: scaffold/variant/dossier-val är deterministisk stub (planeras Sprint 2B).
+- Fas 3: `codegenModel`, Repair Pipeline (`packages/generation/repair/`), Quality Gate (`packages/generation/quality-gate/`), Preview Runtime - alla planerade Sprint 3-5.
+- Övriga scaffold-IDs i `scaffold-contract.v1.json` har inget content under `packages/generation/orchestration/scaffolds/<id>/`.
+- `apps/web` finns inte alls.
 
 ## Öppna beslut som operatör måste ta
 
@@ -56,21 +58,29 @@ Läs i denna ordning:
 ## Köra och testa
 
 ```powershell
+# Lokal venv (rekommenderat - .venv/ är gitignorerad)
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+
 # Backoffice
 streamlit run backend.py
 
-# Engine Run i mock
-py scripts/dev_generate.py --prompt "Skapa hemsida för en elektriker i Malmö"
+# Engine Run i mock-pipeline (anropar briefModel om OPENAI_API_KEY finns)
+python scripts/dev_generate.py "Skapa hemsida för en elektriker i Malmö"
 
-# Engine Run med riktig brief (kräver OPENAI_API_KEY)
+# Builder MVP - genererar riktig Next.js-sajt
+python scripts/build_site.py --dossier examples/painter-palma.project-input.json --skip-build
+
+# Med riktig briefModel
 $env:OPENAI_API_KEY = "sk-..."
-py scripts/dev_generate.py --prompt "..."
+python scripts/build_site.py --dossier examples/painter-palma.project-input.json --skip-build
 
 # Alla checks
-py scripts/governance_validate.py
-py scripts/rules_sync.py --check
-py scripts/check_term_coverage.py --strict
-py -m pytest -q
+python scripts/governance_validate.py
+python scripts/rules_sync.py --check
+python scripts/check_term_coverage.py --strict
+python -m pytest -q
 ```
 
 ## Commit-krav

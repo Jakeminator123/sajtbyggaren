@@ -2,31 +2,68 @@
 
 ### Overview
 
-This is a Python-only project (no Node.js/Docker needed). Three main components:
+The operator/governance/builder layer is Python. The **output** of the
+builder is a Next.js project (TypeScript), so Node.js is required when you
+actually run `scripts/build_site.py` end-to-end (it shells out to
+`npm install` + `npm run build`). For pure governance/validation/test work
+no Node.js is needed.
+
+Four main components:
 
 1. Governance validation — JSON policies validated against schemas
 2. Streamlit backoffice — operator UI for governance editing
-3. Mock engine run — 3-phase pipeline (understand, plan, build)
+3. Mock engine run — 3-phase pipeline (understand, plan, build), no real codegen
+4. Builder MVP — deterministic Next.js builder. Phase 1 (Site Brief) calls
+   `briefModel` via OpenAI when `OPENAI_API_KEY` is set, otherwise falls back
+   to a mock. Phases 2-3 are still deterministic stubs (Sprint 2B / Sprint 3).
+
+### Python environment
+
+A local virtualenv at `.venv/` is the recommended setup. `.venv/` is in
+`.gitignore` and must never be committed.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
 
 ### Running services
 
 | Service | Command | Notes |
 |---------|---------|-------|
 | Backoffice | `streamlit run backend.py --server.headless true` | Serves on port 8501 |
-| Engine run (mock) | `python scripts/dev_generate.py "your prompt"` | Writes artifacts to `data/runs/` |
+| Engine run (mock) | `python scripts/dev_generate.py "your prompt"` | Writes artifacts to `data/runs/`. Calls `briefModel` if `OPENAI_API_KEY` is set, else mock. |
+| Builder MVP | `python scripts/build_site.py --dossier examples/<slug>.project-input.json` | Real Next.js output under `.generated/<siteId>/` + canonical artifacts under `data/runs/<runId>/`. Add `--skip-build` for fast iteration. |
 
 ### Lint, test, validate
 
 Commands are documented in the README under "Snabbstart". Key commands:
 
-- Lint: `python3 -m ruff check .` (ruff is installed but not on PATH; invoke via python module)
-- Tests: `python3 -m pytest tests/ -v`
-- Governance validation: `python3 scripts/governance_validate.py && python3 scripts/rules_sync.py --check && python3 scripts/check_term_coverage.py`
+- Lint: `python -m ruff check .` (ruff is installed inside the venv)
+- Tests: `python -m pytest tests/ -v`
+- Governance validation: `python scripts/governance_validate.py && python scripts/rules_sync.py --check && python scripts/check_term_coverage.py --strict`
 
 ### Gotchas
 
-- The ruff binary is not on `$PATH` in this environment; always invoke as `python3 -m ruff check .` or `python3 -m ruff format .`.
-- The existing codebase has 15 import-ordering lint errors (all isort-related). These are pre-existing and not blocking.
-- No `.env` file is required to run the backoffice or mock engine. API keys are only needed for future real LLM sprints.
-- All code identifiers and JSON field names must be in English; operator-facing text (docs, rules, UI labels) is in Swedish.
-- The `check_term_coverage.py --strict` script flags capitalized phrases (backtick-quoted or bold in markdown) as potential domain terms. Avoid using uppercase multi-word phrases in backticks or bold in `.md` files unless they are registered in the naming dictionary.
+- The ruff binary is shipped inside the venv. If the binary is not on
+  `$PATH`, invoke via `python -m ruff check .` or `python -m ruff format .`.
+- Run `python -m ruff check .` for the current lint count. Pre-existing
+  unsorted-import (rule i001) and Optional-modernisation (rule up045)
+  findings are not release-blocking; fix them in dedicated
+  `chore: ruff auto-fixes` commits, never mixed with feature work.
+- `.env` is not required for backoffice, mock engine, governance checks or
+  the test suite. `OPENAI_API_KEY` is required when you want
+  `scripts/build_site.py` and `scripts/dev_generate.py` to call the real
+  `briefModel`; without it both fall back to mock and write
+  `briefSource=mock-no-key` into `site-brief.json`.
+- All code identifiers and JSON field names must be in English; operator-
+  facing text (docs, rules, UI labels) is in Swedish.
+- The `check_term_coverage.py --strict` script flags capitalized phrases
+  (backtick-quoted or bold in markdown) as potential domain terms. Avoid
+  using uppercase multi-word phrases in backticks or bold in `.md` files
+  unless they are registered in the naming dictionary.
+- Tests use `tmp_path` for run artefacts and no longer pollute
+  `data/runs/`. If you see test runs leaving behind run directories, that
+  is a regression of `e376439` and must be filed in
+  `docs/known-issues.md`.

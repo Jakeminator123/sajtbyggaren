@@ -1,13 +1,13 @@
 # Builder MVP
 
-Deterministisk minimal byggare som binder ihop kedjan Project Input + Starter + Scaffold + Variant till en körbar Next.js-sajt. Detta är förstå-/plan-/build-flödet utan LLM-anrop, utan reparation och utan kvalitetsgate.
+Deterministisk byggare som binder ihop kedjan Project Input + Starter + Scaffold + Variant till en körbar Next.js-sajt. Sedan Sprint 2A anropar fas 1 riktiga `briefModel` när `OPENAI_API_KEY` finns och faller annars tillbaka till en deterministisk mock. Fas 2 och 3 är fortfarande deterministiska stubs - ingen riktig planering, ingen riktig codegen, ingen Repair Pipeline, ingen Quality Gate.
 
 ## Vad den gör
 
 Givet ett [Project Input](../../examples/painter-palma.project-input.json) producerar [scripts/build_site.py](../../scripts/build_site.py):
 
 1. En körbar Next.js-app under `.generated/<siteId>/` (gitignorerad dev-output).
-2. Sex kanoniska Engine Run-artefakter under `data/runs/<runId>/` (gitignorerade men strukturellt sanning).
+2. De kanoniska Engine Run-artefakterna under `data/runs/<runId>/` (gitignorerade men strukturellt sanning).
 3. En append-only `trace.ndjson` med Engine Events från alla tre faser.
 
 Den nya kedjan i sin enklaste form:
@@ -15,7 +15,7 @@ Den nya kedjan i sin enklaste form:
 ```mermaid
 flowchart LR
   Input[Project Input] --> Phase1[Phase 1 understand]
-  Phase1 --> Brief[site-brief.json mock]
+  Phase1 --> Brief[site-brief.json briefModel or mock]
   Phase1 --> Phase2[Phase 2 plan]
   Phase2 --> Plan[site-plan.json mock]
   Phase2 --> Pkg[generation-package.json]
@@ -26,6 +26,8 @@ flowchart LR
   Npm -->|ok| Result[build-result.json status=ok]
   Phase3 --> Trace[trace.ndjson]
 ```
+
+Site Brief-fältet `briefSource` säger om utdatan kom från riktig LLM eller fallback: `real`, `mock-no-key`, eller `mock-llm-error`.
 
 ## Kommandon
 
@@ -98,13 +100,16 @@ Total runtime: 7.6 s, exit: 0
 | Artefakt | Skrivs av fas | Innehåll |
 |----------|---------------|----------|
 | `input.json` | understand | Den oförändrade inmatningen plus `runId`, `mode=init`, `dossierPath` (Project Input-path), `detectedLanguage` |
-| `site-brief.json` | understand | Mock Site Brief härledd från Project Input. `briefSource=mock-no-key`, `modelUsed=mock` |
-| `site-plan.json` | plan | Vald Scaffold + Variant + routes + valda dossiers + BuildSpec |
+| `site-brief.json` | understand | Site Brief från `briefModel` när `OPENAI_API_KEY` är satt (`briefSource=real`, `modelUsed=gpt-5.4`), annars mock med `briefSource=mock-no-key` eller `briefSource=mock-llm-error` om LLM-anropet failade |
+| `site-plan.json` | plan | Vald Scaffold + Variant + routes + valda dossiers + BuildSpec (deterministisk stub - planningModel kopplas i Sprint 2B) |
 | `generation-package.json` | plan | Sammanfattning av vad codegen-LLM skulle få (utan att vi anropar någon) |
-| `build-result.json` | build | Slutstatus, npm-steg, körtid, modelUsed=mock |
+| `generated-files/` | build | Snapshot av filerna under `.generated/<siteId>/` exklusive `node_modules` och `.next` |
+| `repair-result.json` | build | `status=not-run` skeleton tills Repair Pipeline byggs i Sprint 3 |
+| `quality-result.json` | build | `status=not-run` skeleton tills Quality Gate byggs i Sprint 3 |
+| `build-result.json` | build | Slutstatus, npm-steg, körtid, `modelUsed`, `briefSource`, `modelUsage`-stub |
 | `trace.ndjson` | alla | Append-only Engine Events |
 
-`generated-files/`, `repair-result.json` och `quality-result.json` produceras inte än. Generated files speglas till `.generated/<siteId>/` för dev-preview.
+Generated files speglas till `.generated/<siteId>/` för dev-preview.
 
 ## Builder-guards
 
@@ -119,14 +124,13 @@ Buildern har sex hårda spärrar:
 
 ## Begränsningar i denna runda
 
-Det här gör Builder MVP **inte** i denna runda. Operatören får utöka när nästa milstolpe är låst.
+Det här gör Builder MVP **inte** efter Sprint 2A. Operatören får utöka när nästa milstolpe är låst.
 
-- Ingen LLM-fix - allt är mock eller deterministisk patch.
-- Ingen Repair Pipeline.
-- Ingen Quality Gate.
+- Fas 2 (`planningModel`) är fortfarande mock - scaffold/variant/dossiers väljs deterministiskt utan LLM. Sprint 2B kopplar in det.
+- Fas 3 är deterministisk patch på `marketing-base` - ingen `codegenModel`, ingen Repair Pipeline (`packages/generation/repair/`), ingen Quality Gate (`packages/generation/quality-gate/`). Sprint 3 levererar dessa.
 - Ingen Stripe, Supabase, Clerk, Shopify eller annan `hard` Dossier.
 - Ingen preview-release och inget `Promoted Site`-läge.
-- Bara en kombination: starter `marketing-base` + scaffold `local-service-business` + variant `nordic-trust` + project input `painter-palma`.
+- Bara en starter (`marketing-base`) och en scaffold (`local-service-business`) implementerade. Project Inputs som finns att bygga: `painter-palma`, `arcade-hall`, `foto-ram`.
 - Ingen follow-up - buildern kör alltid `engineMode=init`. Project DNA läses inte än.
 
 ## Filer att läsa när du orienterar dig
