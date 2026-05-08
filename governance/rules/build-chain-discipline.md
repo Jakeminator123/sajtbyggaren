@@ -1,55 +1,68 @@
 ---
-description: Disciplinen för bygg-kedjan - Starter, Scaffold, Variant, Dossier, Policy. Init vs follow-up. Embeddings före ordmatchning.
+description: Disciplinen för bygg-kedjan - Project Input, Starter, Scaffold, Variant, Dossier, Policy. Init vs follow-up. Embeddings före ordmatchning.
 alwaysApply: true
 ---
 
 # Bygg-kedjans disciplin
 
-Den här regeln finns för att Sajtbyggaren ska slippa det namnkaos som dödade gamla `Jakeminator123/sajtmaskin`. Den kompletterar [`governance-first.md`](governance-first.md) (JSON är sanning), [`term-discipline.md`](term-discipline.md) (inga nya namn utan naming-dictionary) och [`project-direction.md`](project-direction.md) (varför vi alls bygger om).
+Den här regeln finns för att Sajtbyggaren ska slippa det namnkaos som dödade gamla `Jakeminator123/sajtmaskin`. Den kompletterar [`governance-first.md`](governance-first.md) (JSON är sanning), [`term-discipline.md`](term-discipline.md) (inga nya namn utan naming-dictionary), [`vocabulary-discipline.md`](vocabulary-discipline.md) (en namn per begrepp, ADR krävs för nya termer) och [`project-direction.md`](project-direction.md) (varför vi alls bygger om).
 
-## De fem byggklossarna får aldrig blandas ihop
+## Det enda flödet
+
+```
+Init Prompt
+  ↓
+Project Input (Deep Brief)
+  ↓
+Starter
+  ↓
+Scaffold
+  ↓
+Variant
+  ↓
+Dossier
+  ↓
+Generation Package
+  ↓
+Build
+```
+
+Det är operator-modellen. Inga andra ord, inga mellanstationer, inga parallella axlar.
+
+## Byggklossarna får aldrig blandas ihop
 
 | Roll | Vad det är | Var det bor |
 |------|------------|-------------|
+| **Project Input** | Konkret kundprojekt: företagsfakta, ton, tjänster, kontakt. Driver vad sajten ska handla om. | `examples/<siteId>.project-input.json` |
 | **Starter** | Körbar Next.js-kodbas (`npm install` + `npm run build` går igenom). Tom på företagsspecifik logik. | `data/starters/<starterId>/` |
-| **Scaffold** | Sajtens grammatik: routes, sektionsslots, kvalitetsregler, kompatibla dossiers. **Inte** en mall, **inte** ett repo. | `packages/generation/orchestration/scaffolds/<scaffoldId>/` |
-| **Scaffold Variant** | Visuell/personlig riktning: tokens, typografi, motif. Bestämmer **inte** struktur eller innehåll. | `.../scaffolds/<scaffoldId>/variants/<variantId>.json` |
-| **Dossier** | Återanvändbar capability- eller innehållsmodul (klass + typ nedan). | `packages/generation/orchestration/dossiers/<class>/<dossierId>/` |
+| **Scaffold** | Sajtens grammatik: routes, sektionsslots, kvalitetsregler. **Inte** en sida, **inte** ett repo, **inte** en mall. | `packages/generation/orchestration/scaffolds/<scaffoldId>/` |
+| **Variant** | Sajt-wide visuellt uttryck: tokens, typografi, motif. Bestämmer **inte** struktur eller innehåll. | `.../scaffolds/<scaffoldId>/variants/<variantId>.json` |
+| **Dossier** | Återanvändbar capability/legokloss. Default-kompatibel med alla Scaffolds. | `packages/generation/orchestration/dossiers/<class>/<dossierId>/` |
 | **Policy** | JSON under [`governance/policies/`](../policies/) som styr hur något får göras. | `governance/policies/` |
 
 Mental modell:
 
-> Starter bygger. Scaffold formar. Variant stylar. Dossier fyller. Policy styr.
+> Project Input beskriver. Starter bygger. Scaffold formar. Variant stylar. Dossier kopplas på. Policy styr.
 
-Förbjudna sammanblandningar: en Scaffold är inte ett repo, en Starter är inte en mall, en Variant väljer inte routes, en Dossier är inte en komponent. Vercel templates är **Reference Templates** under `data/reference-templates/`, aldrig produktens skelett.
+Förbjudna sammanblandningar: en Scaffold är inte en sida (en `Route`/`Page` är en sida; en Scaffold definierar vilka). En Starter är inte en mall. En Variant väljer inte routes. En Dossier är inte en sida och inte en komponent. Vercel templates är **Reference Templates** under `data/reference-templates/`, aldrig produktens skelett.
 
-## Dossier har två oberoende axlar
+## Project Input vs Dossier - lås det
 
-**Klass** (vad som krävs tekniskt, från [`naming-dictionary.v1.json`](../policies/naming-dictionary.v1.json)):
+- **Project Input** = ett konkret kundprojekt. Exempel: `painter-palma`. Filändelse `*.project-input.json`. Bestämmer att sajten handlar om en målare i Palma.
+- **Dossier** = en återanvändbar legokloss. Exempel: `pacman-game`, `stripe-checkout`. Kan kopplas på vilken sajt som helst om den är kompatibel.
 
-- `Soft Dossier` - påverkar bara content/layout
-- `Hybrid Dossier` - mock i designläge, backend/env i integrationsläge
-- `Hard Dossier` - kräver env, backend, databas, auth, betalning eller extern API
+Förväxla aldrig. `painter-palma` är aldrig en Dossier. `pacman-game` är aldrig ett Project Input.
 
-**Typ** (vad den levererar, registrerad i naming-dictionary v6):
+## Dossier-klasser: bara soft eller hard
 
-- `Site Dossier` - unikt kund-/sajtinnehåll (företagsfakta, brandfärg, team)
-- `Feature Dossier` - återanvändbar funktion (pacman-spel, ROI-räknare, before/after-slider)
-- `Integration Dossier` - extern koppling (Stripe, Supabase, Shopify, Clerk)
-- `Data Dossier` - återanvändbar kunskap (kommunlistor, branschsvarslistor)
+| Klass | Innebörd | Exempel |
+|---|---|---|
+| `soft` | Återanvändbar frontend/content capability. Inga secrets eller externa API:er. | `pacman-game`, `mouse-reactive-background`, `pricing-calculator`, `before-after-slider`. |
+| `hard` | Kräver env, secrets, backend, auth, databas, betalning eller extern API. | `stripe-checkout`, `supabase-auth`, `clerk-auth`, `shopify-cart`. |
 
-Exempel:
+`hybrid` är borttaget i ADR 0012. En Dossier som behöver mock i designläge men integration i live-läge är `hard` med en `mockMode`-konfiguration.
 
-| Sak | Klass | Typ |
-|-----|-------|-----|
-| Pacman-spel | `soft` | `feature` |
-| Stripe Checkout | `hard` | `integration` |
-| Företagsfakta för en målare | `soft` | `site` |
-| Företagets faktiska brandfärg | `soft` | `site` (varianten konsumerar) |
-| Kontaktformulär | `hybrid` | `feature` |
-| Branschspecifik FAQ | `soft` | `data` |
-
-Variant ändrar **hur** något känns. Dossier lägger till **vad** något är, vet eller kan göra. Det är gränsen.
+Tidigare typer (`Site Dossier`, `Feature Dossier`, `Integration Dossier`, `Data Dossier`) är borttagna i ADR 0012. De ligger i `naming-dictionary.v1.json:globallyForbidden`.
 
 ## Init är inte follow-up
 
@@ -62,7 +75,7 @@ Variant ändrar **hur** något känns. Dossier lägger till **vad** något är, 
 
 Scaffold- och Dossier-val sker enligt [`scaffold-selection.v1.json`](../policies/scaffold-selection.v1.json) och [`dossier-selection.v1.json`](../policies/dossier-selection.v1.json):
 
-1. **Compatibility Filter** (Dossier-val): bara dossiers som scaffolden listar i `compatible-dossiers.json` är kandidater.
+1. **Compatibility Filter** (Dossier-val): default-kompatibel med alla Scaffolds; en Dossier kan ha explicit `incompatibleScaffolds`-lista om den verkligen inte funkar.
 2. **Embedding top-K**: recall via curerad `embeddingText` per `Selection Profile`. Domäner enligt [`embedding-policy.v1.json`](../policies/embedding-policy.v1.json) - ett index per domän, aldrig blandat.
 3. **Small LLM rerank**: semantiskt omdöme med `mustReturnReasons: true`.
 4. **Policy Gate**: hårda spärrar (`notFor`, `minConfidence`, `Hard Dossier` kräver explicit signal).
@@ -81,11 +94,12 @@ Scaffold- och Dossier-val sker enligt [`scaffold-selection.v1.json`](../policies
 
 ## 60-sekunders-checklista innan kod skrivs
 
-1. Finns begreppet i [`naming-dictionary.v1.json`](../policies/naming-dictionary.v1.json)? Om inte - stop, lägg till termen först (se [`term-discipline.md`](term-discipline.md)).
+1. Finns begreppet i [`naming-dictionary.v1.json`](../policies/naming-dictionary.v1.json)? Om inte - stop, lägg till termen först (se [`term-discipline.md`](term-discipline.md)) och dokumentera ADR (se [`vocabulary-discipline.md`](vocabulary-discipline.md)).
 2. Är ägar-pathen klar enligt [`repo-boundaries.v1.json`](../policies/repo-boundaries.v1.json)?
 3. Är jag i rätt fas enligt [`engine-run.v1.json`](../policies/engine-run.v1.json) (`understand` / `plan` / `build`)?
 4. Vid val: går jag via embedding + small LLM rerank + Policy Gate + Selection Trace, eller fuskar jag med Word Matching?
 5. Vid follow-up: respekterar jag Scaffold Lock och Variant Lock i `Project DNA`?
 6. Vid runtime: pratar jag om `Preview Runtime` (abstraktionen), inte den specifika implementationen?
+7. Är det jag bygger ett **Project Input** (kundprojekt), en **Dossier** (capability) eller en **Scaffold** (grammatik)? Om jag är osäker - stoppa, fråga.
 
 Stanna och fråga operatören om någon punkt är otydlig. Det är billigare än att importera sajtmaskins namnskuggor.

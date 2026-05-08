@@ -1,10 +1,10 @@
 # Builder MVP
 
-Deterministisk minimal byggare som binder ihop kedjan Starter + Scaffold + Variant + Site Dossier till en körbar Next.js-sajt. Detta är förstå-/plan-/build-flödet utan LLM-anrop, utan reparation och utan kvalitetsgate.
+Deterministisk minimal byggare som binder ihop kedjan Project Input + Starter + Scaffold + Variant till en körbar Next.js-sajt. Detta är förstå-/plan-/build-flödet utan LLM-anrop, utan reparation och utan kvalitetsgate.
 
 ## Vad den gör
 
-Givet en [Site Dossier](../../examples/painter-palma.site-dossier.json) producerar [scripts/build_site.py](../../scripts/build_site.py):
+Givet ett [Project Input](../../examples/painter-palma.project-input.json) producerar [scripts/build_site.py](../../scripts/build_site.py):
 
 1. En körbar Next.js-app under `.generated/<siteId>/` (gitignorerad dev-output).
 2. Sex kanoniska Engine Run-artefakter under `data/runs/<runId>/` (gitignorerade men strukturellt sanning).
@@ -14,7 +14,7 @@ Den nya kedjan i sin enklaste form:
 
 ```mermaid
 flowchart LR
-  Dossier[Site Dossier] --> Phase1[Phase 1 understand]
+  Input[Project Input] --> Phase1[Phase 1 understand]
   Phase1 --> Brief[site-brief.json mock]
   Phase1 --> Phase2[Phase 2 plan]
   Phase2 --> Plan[site-plan.json mock]
@@ -32,14 +32,18 @@ flowchart LR
 Bygga ett exempel från workspace-roten:
 
 ```powershell
-python scripts/build_site.py --dossier examples/painter-palma.site-dossier.json
+python scripts/build_site.py --dossier examples/painter-palma.project-input.json
 ```
 
 Snabb iteration utan att starta npm:
 
 ```powershell
-python scripts/build_site.py --dossier examples/painter-palma.site-dossier.json --skip-build
+python scripts/build_site.py --dossier examples/painter-palma.project-input.json --skip-build
 ```
+
+Notera: argumentet heter fortfarande `--dossier` av bakåtkompatibilitet. Det
+pekar på en Project Input-fil. Argumentnamnet kan döpas om i nästa
+hardening-runda om det bedöms vara värt risken.
 
 Manuell preview när buildern är klar:
 
@@ -93,8 +97,8 @@ Total runtime: 7.6 s, exit: 0
 
 | Artefakt | Skrivs av fas | Innehåll |
 |----------|---------------|----------|
-| `input.json` | understand | Den oförändrade inmatningen plus `runId`, `mode=init`, `dossierPath`, `detectedLanguage` |
-| `site-brief.json` | understand | Mock Site Brief härledd från dossiern. `briefSource=mock-no-key`, `modelUsed=mock` |
+| `input.json` | understand | Den oförändrade inmatningen plus `runId`, `mode=init`, `dossierPath` (Project Input-path), `detectedLanguage` |
+| `site-brief.json` | understand | Mock Site Brief härledd från Project Input. `briefSource=mock-no-key`, `modelUsed=mock` |
 | `site-plan.json` | plan | Vald Scaffold + Variant + routes + valda dossiers + BuildSpec |
 | `generation-package.json` | plan | Sammanfattning av vad codegen-LLM skulle få (utan att vi anropar någon) |
 | `build-result.json` | build | Slutstatus, npm-steg, körtid, modelUsed=mock |
@@ -120,15 +124,15 @@ Det här gör Builder MVP **inte** i denna runda. Operatören får utöka när n
 - Ingen LLM-fix - allt är mock eller deterministisk patch.
 - Ingen Repair Pipeline.
 - Ingen Quality Gate.
-- Ingen Stripe, Supabase, Clerk, Shopify eller annan Integration Dossier.
+- Ingen Stripe, Supabase, Clerk, Shopify eller annan `hard` Dossier.
 - Ingen preview-release och inget `Promoted Site`-läge.
-- Bara en kombination: starter `marketing-base` + scaffold `local-service-business` + variant `nordic-trust` + dossier `painter-palma`.
+- Bara en kombination: starter `marketing-base` + scaffold `local-service-business` + variant `nordic-trust` + project input `painter-palma`.
 - Ingen follow-up - buildern kör alltid `engineMode=init`. Project DNA läses inte än.
 
 ## Filer att läsa när du orienterar dig
 
 - [scripts/build_site.py](../../scripts/build_site.py)
-- [examples/painter-palma.site-dossier.json](../../examples/painter-palma.site-dossier.json)
+- [examples/painter-palma.project-input.json](../../examples/painter-palma.project-input.json)
 - [packages/generation/orchestration/scaffolds/local-service-business/](../../packages/generation/orchestration/scaffolds/local-service-business/)
 - [governance/policies/engine-run.v1.json](../../governance/policies/engine-run.v1.json)
 - [governance/policies/scaffold-contract.v1.json](../../governance/policies/scaffold-contract.v1.json)

@@ -1,7 +1,5 @@
 {
-  "$schema": "../packages/generation/orchestration/dossiers/site-dossier.schema.json",
-  "dossierType": "site",
-  "dossierClass": "soft",
+  "$schema": "../packages/generation/orchestration/project-input/project-input.schema.json",
   "siteId": "painter-palma",
   "scaffoldId": "local-service-business",
   "variantId": "nordic-trust",

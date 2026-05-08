@@ -135,6 +135,8 @@ COMMON_WORDS = {
     "RunNotFoundError", "DossierEditor",
     # Migrationsplanens prosa-rubriker för parallellspår (inte domänbegrepp)
     "Builder MVP hardening", "Viewser MVP",
+    # Generic prose ord som dyker upp i operator-flöde-text (ADR 0012)
+    "Build", "Page", "Scaffolds",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

@@ -81,12 +81,12 @@ export async function readBuildResult(runId: string): Promise<Record<string, unk
 }
 
 /**
- * Resolve the canonical Site Dossier file for a given siteId.
+ * Resolve the canonical Project Input file for a given siteId.
  *
  * Note: siteId callers MUST validate via `assertSafeSiteId` (see
  * `lib/project-inputs.ts`) before passing to this helper, so a crafted siteId
  * cannot path-escape `examples/`.
  */
-export function siteDossierAbsolutePath(siteId: string): string {
-  return path.join(repoRoot(), "examples", `${siteId}.site-dossier.json`);
+export function projectInputAbsolutePath(siteId: string): string {
+  return path.join(repoRoot(), "examples", `${siteId}.project-input.json`);
 }

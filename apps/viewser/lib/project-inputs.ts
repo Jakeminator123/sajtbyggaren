@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { siteDossierAbsolutePath } from "@/lib/runs";
+import { projectInputAbsolutePath } from "@/lib/runs";
 
 export type ProjectInputInfo = {
   siteId: string;
@@ -29,7 +29,7 @@ export async function listProjectInputs(): Promise<ProjectInputInfo[]> {
   const dir = examplesDir();
   const entries = await fs.readdir(dir, { withFileTypes: true });
   const siteFiles = entries
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".site-dossier.json"))
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".project-input.json"))
     .map((entry) => entry.name);
 
   const inputs = await Promise.all(
@@ -59,7 +59,7 @@ export async function listProjectInputs(): Promise<ProjectInputInfo[]> {
 
 export async function assertProjectInputExists(siteId: string): Promise<string> {
   assertSafeSiteId(siteId);
-  const target = siteDossierAbsolutePath(siteId);
+  const target = projectInputAbsolutePath(siteId);
   const examples = examplesDir();
   const relative = path.relative(examples, target);
   if (relative.startsWith("..") || path.isAbsolute(relative)) {

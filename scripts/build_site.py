@@ -1,10 +1,10 @@
 """Deterministic Builder MVP for Sajtbyggaren.
 
-Reads a Site Dossier, a Scaffold and a Variant from the repository, writes
+Reads a Project Input, a Scaffold and a Variant from the repository, writes
 canonical Engine Run artifacts under `data/runs/<runId>/`, and produces a
 runnable Next.js project under `.generated/<siteId>/` by copying the
-`marketing-base` Starter and patching it with the dossier's content and the
-variant's tokens.
+`marketing-base` Starter and patching it with the project input's content and
+the variant's tokens.
 
 By default the builder also runs `npm install` (when `node_modules` is
 missing) and `npm run build`. Pass `--skip-build` to skip those steps during
@@ -85,7 +85,7 @@ def assert_not_env_secret(path: Path) -> None:
     if _FORBIDDEN_ENV_PATTERN.match(name):
         raise AssertionError(
             f"Builder must not write secret env files (attempted: {path}). "
-            "Integration Dossiers handle their own env contracts via env-contract.json."
+            "Hard Dossiers handle their own env contracts via env-contract.json."
         )
 
 
@@ -962,12 +962,12 @@ def build(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Build a generated site from a Site Dossier."
+        description="Build a generated site from a Project Input."
     )
     parser.add_argument(
         "--dossier",
         required=True,
-        help="Path to the Site Dossier JSON file.",
+        help="Path to the Project Input JSON file (examples/<siteId>.project-input.json).",
     )
     parser.add_argument(
         "--skip-build",

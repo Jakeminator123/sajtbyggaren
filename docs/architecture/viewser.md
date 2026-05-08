@@ -15,25 +15,25 @@ Viewser är ett dev-verktyg, inte en produkt. Den får inte:
 - exponera publika endpoints (localhost-guard avvisar non-local anrop)
 - bli produktionsberoende av en deploy-plattform
 
-## Mentalmodell vs canonical termer
+## Mentalmodell
 
-| Operator-yta i Viewser   | Canonical term                                  |
-|--------------------------|--------------------------------------------------|
-| Project Input / Example  | Site Dossier (`*.site-dossier.json`)            |
-| Build-knapp              | Manuell trigger av Builder MVP                  |
-| Viewer                   | StackBlitz embed av Generated Files-snapshot    |
-| Token Meter              | Lokal aggregering av OpenAI usage + buildResult |
+| Operator-yta i Viewser | Vad det är |
+|---|---|
+| Project Input          | Konkret kundprojekt (t.ex. `painter-palma`). Filer: `examples/<siteId>.project-input.json`. |
+| Build-knapp            | Manuell trigger av Builder MVP |
+| Viewer                 | StackBlitz embed av Generated Files-snapshot |
+| Token Meter            | Lokal aggregering av OpenAI usage + buildResult |
 
-`painter-palma` är en **Site Dossier** (project-input), **inte** en capability
-Dossier. UI-text använder "Project Input" så att det inte blandas ihop med
-soft/hybrid/hard-Dossier i operatörens picker.
+`painter-palma` är ett **Project Input**, **inte** en Dossier. En Dossier är
+en återanvändbar capability/legokloss (t.ex. `pacman-game`, `stripe-checkout`).
+Klassen är `soft` eller `hard` (se ADR 0012).
 
 ## Dataflöde
 
 1. Operatören skriver i Chat Panel.
 2. `POST /api/chat` anropar OpenAI server-side (`briefModel`-modellen).
-   Chatten är inte full `brief.assist` - den **diskuterar** valt input men
-   muterar inte Site Dossier eller Deep Brief i denna runda.
+   Chatten är inte full `brief.assist` - den **diskuterar** valt Project Input
+   men muterar inte data i denna runda.
 3. Operatören klickar build för valt `siteId`.
 4. `POST /api/build` kör `python scripts/build_site.py --dossier <path>`.
 5. Run-artefakter hamnar i `data/runs/<runId>/` enligt builder MVP.

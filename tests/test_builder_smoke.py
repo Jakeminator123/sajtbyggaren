@@ -26,12 +26,12 @@ if str(REPO_ROOT) not in sys.path:
 def test_builder_smoke_writes_routes_and_run_artifacts() -> None:
     from scripts.build_site import build  # imported lazily to avoid heavy import on collection
 
-    dossier_path = (
-        REPO_ROOT / "examples" / "painter-palma.site-dossier.json"
+    project_input_path = (
+        REPO_ROOT / "examples" / "painter-palma.project-input.json"
     )
-    assert dossier_path.exists(), "painter-palma dossier must exist"
+    assert project_input_path.exists(), "painter-palma project input must exist"
 
-    target, run_dir = build(dossier_path, do_build=False)
+    target, run_dir = build(project_input_path, do_build=False)
 
     # Generated routes
     expected_pages = [

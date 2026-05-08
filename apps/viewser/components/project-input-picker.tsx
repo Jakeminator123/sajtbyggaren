@@ -28,8 +28,9 @@ export function ProjectInputPicker({
       </CardHeader>
       <CardContent className="space-y-2">
         <p className="text-xs text-muted-foreground">
-          Välj exempel-projekt (Site Dossier) som builder ska använda. Detta är inte
-          en capability Dossier.
+          Välj Project Input (kundprojekt/Deep Brief) som builder ska använda.
+          Detta är inte en capability Dossier - en Dossier är en återanvändbar
+          legokloss som kan kopplas på vilken sajt som helst.
         </p>
         <select
           className="w-full rounded-md border bg-background px-3 py-2 text-sm"

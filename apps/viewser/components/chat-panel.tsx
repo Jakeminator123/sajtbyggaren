@@ -29,7 +29,7 @@ export function ChatPanel({ siteId, onBuildDone }: ChatPanelProps) {
     {
       role: "assistant",
       content:
-        "Hej! Detta är Viewser-chatten (backed by briefModel). Jag kan diskutera valt project input, men ändrar inte Site Dossier eller Deep Brief i denna runda. Klicka 'Build' när du vill köra builder MVP.",
+        "Hej! Detta är Viewser-chatten (backed by briefModel). Jag kan diskutera valt Project Input men ändrar inte data i denna runda. Klicka 'Build' när du vill köra Builder MVP.",
     },
   ]);
   const [prompt, setPrompt] = useState("");

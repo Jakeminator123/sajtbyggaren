@@ -1,7 +1,9 @@
-"""Regression tests for naming and docs consistency (round 2).
+"""Regression tests for naming and docs consistency.
 
 Each test corresponds to a specific bug ID from the audits captured in
-``docs/known-issues.md``.
+``docs/known-issues.md``. ADR 0012 removed the four Dossier-typ-axel terms
+(Site/Feature/Integration/Data Dossier) and the `hybrid` Dossier class so the
+operator-vokabulär stays at one canonical chain.
 """
 
 from __future__ import annotations
@@ -25,32 +27,84 @@ def _term_ids() -> set[str]:
 
 
 # ---------------------------------------------------------------------------
-# N1 - glossary.md must list the four dossier-type terms
+# ADR 0012 - Dossier type-axis is removed; only Project Input + soft/hard remain
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.governance
-def test_glossary_lists_four_dossier_types() -> None:
-    """N1: docs/glossary.md must define Site/Feature/Integration/Data Dossier."""
-    glossary = (REPO_ROOT / "docs" / "glossary.md").read_text(encoding="utf-8")
-    for canonical in ["Site Dossier", "Feature Dossier", "Integration Dossier", "Data Dossier"]:
-        assert canonical in glossary, f"docs/glossary.md missing {canonical}"
+def test_dossier_type_axis_terms_are_removed() -> None:
+    ids = _term_ids()
+    for removed in ["siteDossier", "featureDossier", "integrationDossier", "dataDossier", "hybridDossier"]:
+        assert removed not in ids, (
+            f"naming-dictionary still has '{removed}' as canonical term; "
+            "ADR 0012 removed the Dossier type axis."
+        )
+
+
+@pytest.mark.governance
+def test_project_input_term_is_registered() -> None:
+    ids = _term_ids()
+    assert "projectInput" in ids, "projectInput must be canonical (ADR 0012)"
+    project_input = next(t for t in _naming()["terms"] if t["id"] == "projectInput")
+    assert "Deep Brief" in project_input["aliasesAllowed"], (
+        "projectInput should allow 'Deep Brief' as alias"
+    )
+
+
+@pytest.mark.governance
+def test_dossier_type_terms_are_globally_forbidden() -> None:
+    forbidden = set(_naming().get("globallyForbidden", []))
+    for forbidden_term in [
+        "Site Dossier",
+        "Feature Dossier",
+        "Integration Dossier",
+        "Data Dossier",
+        "Hybrid Dossier",
+    ]:
+        assert forbidden_term in forbidden, (
+            f"'{forbidden_term}' must be in globallyForbidden after ADR 0012"
+        )
+
+
+@pytest.mark.governance
+def test_dossier_classes_are_only_soft_and_hard() -> None:
+    ids = _term_ids()
+    assert "softDossier" in ids
+    assert "hardDossier" in ids
+    assert "hybridDossier" not in ids
 
 
 # ---------------------------------------------------------------------------
-# N2 - pipeline-mapping.md must not lie about what is in globallyForbidden
+# Operator-flow lock: the eight-step flow must be representable with current terms
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.governance
+def test_operator_flow_terms_exist() -> None:
+    """ADR 0012's eight-step flow must be expressible in current terms."""
+    ids = _term_ids()
+    required = {
+        "projectInput",
+        "starter",
+        "scaffold",
+        "scaffoldVariant",
+        "dossier",
+        "generationPackage",
+        "buildResult",
+    }
+    missing = required - ids
+    assert not missing, f"ADR 0012 flow terms missing: {missing}"
+
+
+# ---------------------------------------------------------------------------
+# pipeline-mapping.md must not lie about what is in globallyForbidden
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.governance
 def test_pipeline_mapping_does_not_misclaim_globally_forbidden() -> None:
-    """N2: any term the doc claims is in globallyForbidden must actually be there."""
     doc = (REPO_ROOT / "docs" / "architecture" / "pipeline-mapping.md").read_text(encoding="utf-8")
     forbidden = set(_naming().get("globallyForbidden", []))
-
-    # The doc may reference forbidden words explicitly. The bug we fix here is
-    # the doc making a positive claim "X står i globallyForbidden" when X is
-    # not in the list. We pattern-match that specific claim shape.
     pattern = re.compile(r"`([^`]+)`\s+(?:och|och även|samt|,)?[^`]{0,40}?st(?:år|\u00e5r)\s+i\s+`?globallyForbidden")
     for match in pattern.finditer(doc):
         term = match.group(1)
@@ -60,26 +114,24 @@ def test_pipeline_mapping_does_not_misclaim_globally_forbidden() -> None:
 
 
 # ---------------------------------------------------------------------------
-# N3 - dossier owner-path must exist on disk
+# dossier owner-path must exist on disk
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.governance
 def test_dossier_owner_path_exists_on_disk() -> None:
-    """N3: ownerPackage for dossier-terms must point to a real directory."""
     dossier_dir = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
-    assert dossier_dir.is_dir(), "Dossier owner-path missing; create the directory or update repo-boundaries"
+    assert dossier_dir.is_dir(), "Dossier owner-path missing"
     assert (dossier_dir / "README.md").exists(), "Dossier folder must explain its layout"
 
 
 # ---------------------------------------------------------------------------
-# N4 - preview-runtime-policy must not say "no F2/F3 tier" then mention F3
+# preview-runtime-policy must not say "no F2/F3 tier" then mention F3
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.governance
 def test_preview_runtime_policy_self_consistent() -> None:
-    """N4: policy must not contradict itself by mixing 'no tier' with 'F3-likt'."""
     policy = json.loads(
         (REPO_ROOT / "governance" / "policies" / "preview-runtime-policy.v1.json").read_text(encoding="utf-8")
     )
@@ -89,25 +141,6 @@ def test_preview_runtime_policy_self_consistent() -> None:
         assert phrase not in serialized, (
             f"preview-runtime-policy contains '{phrase}' which contradicts the no-tier principle"
         )
-
-
-# ---------------------------------------------------------------------------
-# Naming v7 sanity: four dossier-type terms registered with consistent owner
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.governance
-def test_four_dossier_type_terms_registered() -> None:
-    ids = _term_ids()
-    for required in ["siteDossier", "featureDossier", "integrationDossier", "dataDossier"]:
-        assert required in ids, f"Missing naming-dictionary term: {required}"
-
-    expected_owner = "packages/generation/orchestration/dossiers"
-    for term in _naming()["terms"]:
-        if term["id"] in {"siteDossier", "featureDossier", "integrationDossier", "dataDossier"}:
-            assert term["ownerPackage"] == expected_owner, (
-                f"{term['id']} ownerPackage drift: {term['ownerPackage']}"
-            )
 
 
 # ---------------------------------------------------------------------------
@@ -128,7 +161,6 @@ def test_placeholder_detector_recognises_status_field(tmp_path: Path) -> None:
     real.write_text('{"id": "x", "version": "1.0.0"}\n', encoding="utf-8")
     assert not is_placeholder_file(real)
 
-    # Whole-scaffold check: dir with placeholders is not real
     scaffold_dir = tmp_path / "fake-scaffold"
     scaffold_dir.mkdir()
     (scaffold_dir / "scaffold.json").write_text(

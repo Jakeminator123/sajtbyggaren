@@ -37,6 +37,15 @@ EXCLUDE_DIRS = {
     ".generated",
 }
 
+# Files that legitimately mention forbidden terms because their job is to
+# verify the terms are removed (regression tests) or document why they are
+# removed (cleanup READMEs). Keep this list short and explicit.
+EXCLUDE_FILES = {
+    "tests/test_naming_consistency.py",
+    "packages/generation/orchestration/dossiers/README.md",
+    "tests/test_no_legacy_terms.py",
+}
+
 # Fields whose values are *meant* to list forbidden terms.
 ANTI_PATTERN_KEYS = {
     "forbiddenTerms",
@@ -78,6 +87,9 @@ def _iter_files():
                     continue
                 rel_parts = sub.relative_to(REPO_ROOT).parts
                 if any(part in EXCLUDE_DIRS for part in rel_parts):
+                    continue
+                rel_posix = sub.relative_to(REPO_ROOT).as_posix()
+                if rel_posix in EXCLUDE_FILES:
                     continue
                 yield sub
 

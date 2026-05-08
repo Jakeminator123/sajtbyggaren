@@ -45,4 +45,4 @@ Det vi måste göra:
 ## Förbjudna ändringar
 
 - Ta bort multi-tenant-logiken (det är hela poängen med denna starter)
-- Lägga till Stripe, Clerk eller annan auth-leverantör som bas - de hör till Integration Dossier
+- Lägga till Stripe, Clerk eller annan auth-leverantör som bas - de hör till en hard Dossier

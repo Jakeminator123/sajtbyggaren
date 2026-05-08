@@ -4,17 +4,29 @@ Den här mappen är ägar-pathen för alla **Dossier**-definitioner enligt
 [`repo-boundaries.v1.json`](../../../../governance/policies/repo-boundaries.v1.json)
 och [`naming-dictionary.v1.json`](../../../../governance/policies/naming-dictionary.v1.json).
 
-## Två oberoende axlar
+## Dossier i en mening
 
-Varje Dossier har två klassningar:
+En Dossier är en återanvändbar capability/legokloss som kan kopplas på vilken
+sajt som helst om den är kompatibel. Default-kompatibel med alla Scaffolds.
+En Dossier är inte ett konkret kundprojekt - det är `Project Input`, som bor
+under `examples/<siteId>.project-input.json`.
 
-1. Klass (tekniskt krav): `soft` / `hybrid` / `hard`. Avgör om Dossiern
-   kräver env, backend, integration eller bara påverkar content/layout.
-2. Typ (vad den levererar): `Site Dossier` / `Feature Dossier` /
-   `Integration Dossier` / `Data Dossier`. Registrerad i naming-dictionary v7.
+## Klasser (ADR 0012)
 
-Mappstrukturen följer klass-axeln tills vidare, eftersom den styr
-filuppsättning och env-kontrakt:
+Bara två klasser:
+
+- **`soft`** - återanvändbar frontend/content capability utan secrets eller
+  externa API:er. Exempel: `pacman-game`, `mouse-reactive-background`,
+  `pricing-calculator`, `before-after-slider`.
+- **`hard`** - kräver env, secrets, backend, auth, databas, betalning eller
+  extern API. Får ha `mockMode`-konfiguration för designläge. Exempel:
+  `stripe-checkout`, `supabase-auth`, `clerk-auth`, `shopify-cart`.
+
+Tidigare versioner hade också `hybrid` som klass och en separat typ-axel.
+Båda är borttagna - se ADR 0012 för detaljer och de termer som nu ligger i
+`naming-dictionary.v1.json:globallyForbidden`.
+
+## Mappstruktur
 
 ```text
 packages/generation/orchestration/dossiers/
@@ -23,13 +35,6 @@ packages/generation/orchestration/dossiers/
       dossier.json
       prompt.md
       code-contract.json
-      examples.md
-  hybrid/
-    <dossierId>/
-      dossier.json
-      prompt.md
-      code-contract.json
-      env-contract.json
       examples.md
   hard/
     <dossierId>/
@@ -43,24 +48,24 @@ packages/generation/orchestration/dossiers/
   README.md  (this file)
 ```
 
-Varje `dossier.json` deklarerar både `class` och `type` (en av de fyra
-typerna ovan). Migration av mappstruktur till `site/feature/integration/data/`
-är ett separat ADR-beslut.
+Varje `dossier.json` deklarerar `class` (soft eller hard).
 
 ## Status
 
-Inga Dossiers är implementerade än. Builder MVP använder bara
-`examples/painter-palma.site-dossier.json` som körbar Site Dossier-input,
-inte en formell Dossier-definition under denna mapp.
+Inga Dossiers är implementerade än. Builder MVP läser bara ett `Project Input`
+under `examples/<siteId>.project-input.json` (t.ex. `painter-palma`) och
+patchar `marketing-base`-startern med dess content. Det är inte en formell
+Dossier-definition.
+
+## Kompatibilitet är default-allow
+
+En Dossier är kompatibel med alla Scaffolds tills den explicit deklarerar
+motsatsen via en `incompatibleScaffolds`-lista i `dossier.json`. Detta är
+omvänt mot tidigare modell där Scaffolds opt-in:ade Dossiers via
+`compatible-dossiers.json` (den blir framöver bara en hint, inte ett filter).
 
 ## Inte autoinjektion
 
-Reviewer-konversationen i
-[`referens/scaffolds-dossiers/konversation.txt`](../../../../referens/scaffolds-dossiers/konversation.txt)
-betonar:
-
-> Dossierer är portabla. Dossier-realiseringar är scaffold-specifika.
-
-En Dossier får alltså användas av många scaffolds, men injiceras aldrig
-automatiskt i alla. `compatible-dossiers.json` per scaffold + Dossier
-Selector + Policy Gate avgör om Dossiern aktiveras.
+En Dossier får användas av många Scaffolds, men injiceras aldrig automatiskt
+i alla. Operator (eller Selector i framtida runda) avgör vilka Dossiers som
+aktiveras per Project Input.
