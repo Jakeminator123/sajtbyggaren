@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../../docs/schemas/strict/dossier.schema.json",
+  "id": "faq-accordion",
+  "label": "FAQ Accordion",
+  "capability": "faq-section",
+  "codeFidelity": "rewritable",
+  "complexity": "simple",
+  "defaultForCapability": true,
+  "summary": "Accessible FAQ section using native <details>/<summary> elements (so the open/close toggle works even without JS) and a tiny client effect that closes other items when one opens (singleOpen mode). No external icon dependency — uses a plain '+'/'−' glyph. Generic React component that takes a typed array of questions and answers; the codegen LLM is expected to write copy that matches the brief's domain rather than reuse the example data verbatim.",
+  "envVars": [],
+  "dependencies": [],
+  "files": [
+    {
+      "path": "components/faq-accordion.tsx",
+      "role": "client"
+    }
+  ],
+  "exposes": [
+    {
+      "name": "FaqAccordion",
+      "type": "component",
+      "import": "@/components/faq-accordion"
+    }
+  ],
+  "lastVerified": "2026-04-21"
+}

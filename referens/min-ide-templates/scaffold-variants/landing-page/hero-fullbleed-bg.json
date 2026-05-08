@@ -1,0 +1,87 @@
+{
+  "id": "hero-fullbleed-bg",
+  "scaffoldId": "landing-page",
+  "label": "Full-bleed Hero",
+  "description": "Cinematic, immersive landing page where the hero section spans the full viewport height with a layered background (image, gradient mesh, or subtle motion canvas) and a centered CTA stack — for product launches, lifestyle brands, hospitality, and anything that wants visual impact before reading. Breaks the split-hero default so the hero IS the surface, not a two-column billboard.",
+  "keywords": [
+    "fullbleed",
+    "full-bleed",
+    "immersive",
+    "cinematic",
+    "hero-image",
+    "hero-video",
+    "centered-hero",
+    "landing-impact",
+    "lifestyle",
+    "hospitality",
+    "campaign",
+    "experience",
+    "atmosphere",
+    "fullscreen",
+    "filmisk",
+    "atmosfär",
+    "kampanj"
+  ],
+  "fontPairings": [
+    {
+      "heading": "Cormorant Garamond",
+      "body": "Inter"
+    },
+    {
+      "heading": "Tenor Sans",
+      "body": "DM Sans"
+    },
+    {
+      "heading": "Playfair Display",
+      "body": "Manrope"
+    }
+  ],
+  "signatureMotif": "single full-viewport hero with layered background imagery and a centered, breathing CTA cluster — no two-column split above the fold",
+  "colorMode": "either",
+  "promptHints": [
+    "Build the hero as a single full-bleed section spanning the full viewport height (min-h-screen). The background carries the visual story (atmospheric image, gradient mesh, or subtle motion canvas); the foreground holds ONLY a tight centered cluster: eyebrow line, oversized headline (clamp-based, not fixed px), short standfirst, and one or two CTAs.",
+    "Do NOT split the hero into a left text column + right product/screenshot card. The whole viewport IS the hero. Subsequent sections can use grids, but section #1 must be visually unified.",
+    "Treat negative space as a feature: never fill the hero edges with logos, badges, or chips. Trust the background and let the centered cluster breathe with generous margin from the top/bottom of the fold."
+  ],
+  "signaturePatterns": {
+    "layouts": [
+      "Hero is one section with min-h-screen, a full-bleed absolute-positioned background layer (image, gradient mesh, or canvas) covering 100% width and height, and a centered foreground cluster with max-w-3xl: eyebrow, h1 (text-5xl→text-7xl responsive), one short standfirst paragraph, primary CTA + ghost CTA stacked or side-by-side.",
+      "Use a scroll indicator (animated chevron or thin progress hint) anchored at the bottom-center of the hero, signaling there is more below — never a sticky chat button or floating widget that competes with the hero focus.",
+      "Section #2 starts with a generous top padding (py-24 or more) and uses a single-column long-form structure: lead paragraph, pull quote, and a row of three vertical cards — no recreating a split-hero in section 2.",
+      "Feature sections alternate full-bleed accent panels (colored or imagery) with constrained centered content blocks (max-w-4xl) so the rhythm stays cinematic, not card-grid-heavy.",
+      "Final CTA section returns to full-viewport height with a single centered headline + one CTA, mirroring the hero's compositional weight (bookend pattern)."
+    ],
+    "motifs": [
+      "Background uses a layered atmospheric photograph (warm tone) OR a CSS gradient mesh (3+ radial gradients with color-mix on theme tokens) OR a quiet animated canvas (e.g. drifting particles at very low opacity); a 30-50% black-to-transparent overlay ensures foreground text reads.",
+      "Foreground typography is large and confident: headline at clamp(2.75rem, 6vw, 5.5rem) with tight leading (1.05), eyebrow in small caps with letter-spacing, body at 18px+ for readability against the layered background.",
+      "CTAs are pill-shaped or sharp-rectangular (not glassy) with primary in a bold theme accent and secondary as a transparent outline that picks up the background mood — no drop-shadowed cards on top of the hero.",
+      "Page rhythm uses occasional full-bleed accent stripes (colored panels spanning 100vw at intermediate sections) to reinforce the cinematic cadence between content blocks."
+    ],
+    "antiPatterns": [
+      "Never split the hero into a left text column + right image/product card — that is the corporate-grid / bold-startup territory. This variant's whole reason for existing is to break that default.",
+      "Avoid stacking 4+ logo strips, trust badges, or stat chips inside the hero — those belong below the fold. The hero must stay visually quiet so the background reads.",
+      "Do not use small or screenshot-heavy hero images placed inside a card; the background should fill 100vw × 100vh, not be a contained graphic.",
+      "Avoid busy navbars with mega-menus over the hero; use a thin transparent header that becomes solid only after scroll, so the hero stays uninterrupted.",
+      "Never use a generic SaaS gradient (purple-to-blue diagonal) — pick atmospheric, tonal palettes that look photographic or filmic, not template-y."
+    ]
+  },
+  "themeTokens": {
+    "background": "oklch(0.99 0.005 90)",
+    "foreground": "oklch(0.18 0.01 250)",
+    "card": "oklch(0.99 0.005 90)",
+    "primary": "oklch(0.45 0.13 35)",
+    "primaryForeground": "oklch(0.98 0 0)",
+    "secondary": "oklch(0.94 0.005 90)",
+    "muted": "oklch(0.94 0.005 90)",
+    "accent": "oklch(0.62 0.16 35)",
+    "border": "oklch(0.88 0.005 90)",
+    "ring": "oklch(0.45 0.13 35)",
+    "radius": "0.75rem",
+    "bodyBackgroundImage": "radial-gradient(circle at top left, color-mix(in oklab, var(--color-primary) 12%, transparent) 0%, transparent 38%), radial-gradient(circle at bottom right, color-mix(in oklab, var(--color-accent) 10%, transparent) 0%, transparent 36%)"
+  },
+  "sourceTemplateIds": [
+    "marketing-portfolio-starter-kit",
+    "ecommerce-storefront-starter"
+  ],
+  "default": false
+}

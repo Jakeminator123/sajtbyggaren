@@ -10,6 +10,7 @@ Den här mappen samlar **externt input** som ligger till grund för Sajtbyggaren
 | [`llm-flode/`](llm-flode/) | Mermaid-diagram över init- och follow-up-flödena, plus eventuella konversationer om hur shadcn passar in. Underlag för [`docs/architecture/llm-flow.md`](../docs/architecture/llm-flow.md). | Bevaras under fas 1-3-implementationen. |
 | [`scaffolds-dossiers/`](scaffolds-dossiers/) | Reviewer-konversationer om Scaffold-/Dossier-modellen + ett komplett exempelpaket (zip + tar.gz). Underlag för [`scaffold-contract.v1.json`](../governance/policies/scaffold-contract.v1.json) och [`dossier-contract.v1.json`](../governance/policies/dossier-contract.v1.json). | Bevaras tills fas 2 är implementerad. |
 | [`preview-runtime/`](preview-runtime/) | WebContainer-konversation som ligger till grund för [`docs/integrations/webcontainers-notes.md`](../docs/integrations/webcontainers-notes.md). | Bevaras tills `StackBlitzRuntime` är implementerad. |
+| [`min-ide-templates/`](min-ide-templates/) | Git-spårad referenskopia av `MIN_IDE/` (dossiers, scaffolds, scaffold-variants, prompts) för formatjämförelser och migration. | Bevaras som underlag under dossier/scaffold-arbetet. |
 
 ## Regler för referens-materialet
 

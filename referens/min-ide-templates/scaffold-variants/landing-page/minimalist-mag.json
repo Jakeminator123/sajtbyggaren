@@ -1,0 +1,72 @@
+{
+  "id": "minimalist-mag",
+  "scaffoldId": "landing-page",
+  "label": "Minimalist Magazine",
+  "description": "Cool, modern editorial variant with oversized typography, abundant white space, and quiet typographic hierarchy — for design publications, product blogs, and modern publishing where restraint signals quality.",
+  "keywords": [
+    "content",
+    "minimal",
+    "editorial",
+    "magazine",
+    "modern",
+    "publication",
+    "design",
+    "typography",
+    "white-space",
+    "swiss"
+  ],
+  "fontPairings": [
+    {
+      "heading": "Fraunces",
+      "body": "Inter"
+    },
+    {
+      "heading": "Space Grotesk",
+      "body": "IBM Plex Sans"
+    }
+  ],
+  "signatureMotif": "oversized display typography against generous white space with thin rules and quiet metadata",
+  "colorMode": "light",
+  "promptHints": [
+    "Treat typography as the primary visual element — let large headlines and confident type pairings carry the design.",
+    "Use abundant white space and thin dividing rules instead of cards, shadows, or colored panels."
+  ],
+  "signaturePatterns": {
+    "layouts": [
+      "Use a homepage with one oversized lead headline (60-90px), a short standfirst paragraph, and a single hero image — followed by a sparse two-column index of secondary stories with metadata only.",
+      "Build article pages with a wide left margin, a single narrow reading column (~600px), and quiet bylines/dates set in small caps above the headline.",
+      "Use category pages as alphabetized or chronological indexes with thin horizontal rules between rows; let typography hierarchy alone signal importance — no badges or chips.",
+      "Compose the homepage hero as a full-bleed quiet image with the lead headline anchored bottom-left, and the rest of the page reduced to a clean type-only stack.",
+      "Use editor's-note or about pages as long-form prose with pull quotes set in display font, generous line-height (1.7+), and small-cap eyebrow labels for sections."
+    ],
+    "motifs": [
+      "Off-white or near-white backgrounds (#FAFAF8 or similar) with deep ink text, rare accent color used only on links/marks.",
+      "Display serif or geometric sans for headlines paired with restrained body type at 17-19px and line-height 1.6+ for true reading comfort.",
+      "Thin (1px) horizontal rules separating sections rather than card surfaces or shadows; ample 80-120px vertical spacing between major blocks.",
+      "Small-caps or all-caps metadata at 11-12px with letter-spacing, used sparingly to mark categories, dates, and bylines — never as headings."
+    ],
+    "antiPatterns": [
+      "Avoid the warm/paper feel of warm-editorial — this variant is cooler, more disciplined, more design-publication.",
+      "Never use card surfaces, drop shadows, gradients, or colored backgrounds; the design relies on typography and rules alone.",
+      "Avoid CTA-heavy or marketing-style sections that interrupt the reading rhythm; this variant prioritizes editorial trust over conversion.",
+      "Do not stack many small visual elements (chips, tags, icons) — the visual signature is restraint, not a magazine of busy widgets."
+    ]
+  },
+  "themeTokens": {
+    "background": "oklch(0.985 0.002 90)",
+    "foreground": "oklch(0.18 0.005 250)",
+    "card": "oklch(0.995 0.001 90)",
+    "primary": "oklch(0.22 0.04 250)",
+    "primaryForeground": "oklch(0.98 0 0)",
+    "secondary": "oklch(0.96 0.002 90)",
+    "muted": "oklch(0.95 0.002 90)",
+    "accent": "oklch(0.55 0.18 25)",
+    "border": "oklch(0.85 0.003 90)",
+    "ring": "oklch(0.22 0.04 250)",
+    "radius": "0.25rem"
+  },
+  "sourceTemplateIds": [
+    "blog-a-next-js-14-blog-with-server-components",
+    "documentation-nextra-docs-starter-kit"
+  ]
+}

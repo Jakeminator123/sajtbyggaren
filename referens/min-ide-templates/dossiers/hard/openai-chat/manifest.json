@@ -1,0 +1,40 @@
+{
+  "$schema": "../../../../docs/schemas/strict/dossier.schema.json",
+  "id": "openai-chat",
+  "label": "OpenAI Chat",
+  "capability": "ai-chat",
+  "codeFidelity": "rewritable",
+  "complexity": "medium",
+  "defaultForCapability": true,
+  "summary": "Streaming chat assistant powered by OpenAI via the Vercel AI SDK. Provides a server route that streams completions and a client chat UI that the codegen LLM is free to restyle. Use when the site needs a customer-facing assistant, a product Q&A widget, or a guided onboarding chatbot.",
+  "envVars": [
+    {
+      "key": "OPENAI_API_KEY",
+      "required": true,
+      "enforcement": "build",
+      "purpose": "Server-side OpenAI API authentication. Find it at platform.openai.com/api-keys. Tagged 'build' for safety; promote to 'feature-runtime' once the chat route guarantees a graceful 503 + UI banner when the key is missing instead of throwing at module load."
+    }
+  ],
+  "dependencies": ["ai", "@ai-sdk/openai", "@ai-sdk/react"],
+  "files": [
+    {
+      "path": "components/chat-panel.tsx",
+      "role": "client",
+      "injectionMode": "rewritable"
+    },
+    {
+      "path": "components/api/chat/route.ts",
+      "role": "server",
+      "injectionMode": "verbatim"
+    }
+  ],
+  "exposes": [
+    {
+      "name": "ChatPanel",
+      "type": "component",
+      "import": "@/components/chat-panel"
+    }
+  ],
+  "lastVerified": "2026-04-20",
+  "sourceRepoUrl": "https://github.com/vercel/ai/tree/main/examples/next-openai"
+}

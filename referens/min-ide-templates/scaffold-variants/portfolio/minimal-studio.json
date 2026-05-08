@@ -1,0 +1,69 @@
+{
+  "id": "minimal-studio",
+  "scaffoldId": "portfolio",
+  "label": "Minimal Studio",
+  "description": "Cleaner studio portfolio for architects, consultants, and restrained creative practices.",
+  "keywords": [
+    "studio",
+    "minimal",
+    "architect",
+    "consultant",
+    "clean",
+    "portfolio",
+    "designer",
+    "artist"
+  ],
+  "fontPairings": [
+    {
+      "heading": "Instrument Sans",
+      "body": "Inter"
+    }
+  ],
+  "signatureMotif": "quiet studio minimalism, generous spacing, and refined project metadata",
+  "colorMode": "light",
+  "promptHints": [
+    "Prefer fewer, stronger layout moves with plenty of calm space around projects.",
+    "This should feel like a curated studio presence, not a loud campaign site."
+  ],
+  "signaturePatterns": {
+    "layouts": [
+      "Use a restrained split hero with a quiet text block on the left and one large featured project image anchored right.",
+      "Compose project archives as a disciplined two-column grid with oversized thumbnails and a slim metadata line beneath each entry.",
+      "Build project detail pages with a full-width lead image followed by narrow text sections and staggered supporting images in calm vertical rhythm.",
+      "Use an index-style about page with a short studio statement, compact capability list, and contact details aligned in a clean sidebar.",
+      "Present selected work as stacked case-study bands with generous white space between sections and minimal transitional ornament."
+    ],
+    "motifs": [
+      "Large quiet margins, soft off-white surfaces, and thin neutral borders make each project block feel pinned into a gallery wall.",
+      "Refined project metadata appears in small uppercase or muted labels, separated from titles with precise spacing and hairline rules.",
+      "Typography stays crisp and understated, with medium-weight sans headings and highly readable body copy set in airy line lengths.",
+      "Images do most of the talking, while interface chrome remains minimal with rounded cards, subtle dividers, and no decorative texture."
+    ],
+    "antiPatterns": [
+      "Avoid loud marketing-section stacks with testimonial carousels, badge clouds, and aggressive conversion banners that break the studio calm.",
+      "Never use saturated gradients, neon accents, or dark dramatic hero treatments that overpower the restrained architectural presentation.",
+      "Avoid dense masonry collage layouts that feel editorial-chaotic; this variant needs measured grids and deliberate spacing around work.",
+      "Do not over-style project cards with heavy shadows, glass effects, or layered floating UI that distracts from the imagery."
+    ]
+  },
+  "themeTokens": {
+    "background": "oklch(0.99 0.002 260)",
+    "foreground": "oklch(0.2 0.01 260)",
+    "card": "oklch(1 0 0)",
+    "primary": "oklch(0.48 0.08 260)",
+    "primaryForeground": "oklch(0.98 0 0)",
+    "secondary": "oklch(0.96 0.003 260)",
+    "muted": "oklch(0.95 0.003 260)",
+    "accent": "oklch(0.9 0.01 250)",
+    "border": "oklch(0.89 0.003 260)",
+    "ring": "oklch(0.48 0.08 260)",
+    "radius": "0.8rem"
+  },
+  "sourceTemplateIds": [
+    "portfolio-magic-portfolio-for-next-js",
+    "portfolio-next-js-portfolio-with-pageview-counter",
+    "portfolio-nim-minimalist-personal-site",
+    "authentication-partner-gallery"
+  ],
+  "default": true
+}

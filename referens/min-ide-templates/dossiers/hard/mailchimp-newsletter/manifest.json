@@ -1,0 +1,52 @@
+{
+  "$schema": "../../../../docs/schemas/strict/dossier.schema.json",
+  "id": "mailchimp-newsletter",
+  "label": "Mailchimp Newsletter Subscribe",
+  "capability": "newsletter-subscribe",
+  "codeFidelity": "rewritable",
+  "complexity": "medium",
+  "defaultForCapability": true,
+  "summary": "Newsletter subscription form that POSTs to a Next.js Route Handler and adds the email to a Mailchimp audience. Client component owns the form state + UX feedback (loading / success / already-subscribed / error); server route owns the Mailchimp REST call + email validation. Designed to degrade gracefully when MAILCHIMP_API_KEY or MAILCHIMP_AUDIENCE_ID is missing — the route returns 503 with a clear message and the form shows a 'configure newsletter to enable signups' banner so F3 build does not crash.",
+  "envVars": [
+    {
+      "key": "MAILCHIMP_API_KEY",
+      "required": true,
+      "enforcement": "feature-runtime",
+      "purpose": "Mailchimp REST API key. Mailchimp → Account & Billing → Extras → API keys. Format '<hex>-us21' where suffix = data-center id. Tagged 'feature-runtime' because the route returns 503 + UI banner when missing."
+    },
+    {
+      "key": "MAILCHIMP_AUDIENCE_ID",
+      "required": true,
+      "enforcement": "feature-runtime",
+      "purpose": "ID of the audience (formerly 'list') new subscribers are added to. Find it in Mailchimp under Audience → Settings → Audience name and defaults. Same 503-fallback pattern as MAILCHIMP_API_KEY."
+    },
+    {
+      "key": "MAILCHIMP_DC",
+      "required": false,
+      "enforcement": "warn-only",
+      "purpose": "Optional override for the Mailchimp data-center subdomain (e.g. 'us21'). When unset, the route derives it from the API key suffix (the '-us21' part). Only set this if your key format is unusual or you proxy Mailchimp through a custom host."
+    }
+  ],
+  "dependencies": [],
+  "files": [
+    {
+      "path": "components/newsletter-form.tsx",
+      "role": "client",
+      "injectionMode": "rewritable"
+    },
+    {
+      "path": "components/api/newsletter-subscribe/route.ts",
+      "role": "server",
+      "injectionMode": "verbatim"
+    }
+  ],
+  "exposes": [
+    {
+      "name": "NewsletterForm",
+      "type": "component",
+      "import": "@/components/newsletter-form"
+    }
+  ],
+  "lastVerified": "2026-04-21",
+  "sourceRepoUrl": "https://mailchimp.com/developer/marketing/api/list-members/"
+}

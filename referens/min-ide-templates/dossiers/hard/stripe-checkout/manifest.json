@@ -1,0 +1,46 @@
+{
+  "$schema": "../../../../docs/schemas/strict/dossier.schema.json",
+  "id": "stripe-checkout",
+  "label": "Stripe Checkout",
+  "capability": "payments",
+  "codeFidelity": "verbatim",
+  "complexity": "medium",
+  "defaultForCapability": true,
+  "summary": "Hosted Stripe Checkout for one-time and subscription payments. Adds a server route that creates checkout sessions and a client button that redirects to Stripe's hosted page. Webhook handling is intentionally out of scope — add separately when subscriptions need lifecycle events.",
+  "envVars": [
+    {
+      "key": "STRIPE_SECRET_KEY",
+      "required": true,
+      "enforcement": "build",
+      "purpose": "Server-side Stripe API authentication. Find it in the Stripe dashboard under Developers > API keys. Tagged 'build' because the checkout-session route instantiates the Stripe client at module scope; a missing/placeholder value makes deploy crash on first request."
+    },
+    {
+      "key": "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+      "required": true,
+      "enforcement": "warn-only",
+      "purpose": "Client-side Stripe.js initialization. Safe to expose; the secret key is never sent to the browser. Tagged 'warn-only' because the publishable key is in the harmless placeholder set and a missing real value only disables the checkout button gracefully."
+    }
+  ],
+  "dependencies": ["stripe", "@stripe/stripe-js"],
+  "files": [
+    {
+      "path": "components/checkout-button.tsx",
+      "role": "client",
+      "injectionMode": "rewritable"
+    },
+    {
+      "path": "components/api/checkout-session/route.ts",
+      "role": "server",
+      "injectionMode": "verbatim"
+    }
+  ],
+  "exposes": [
+    {
+      "name": "CheckoutButton",
+      "type": "component",
+      "import": "@/components/checkout-button"
+    }
+  ],
+  "lastVerified": "2026-04-20",
+  "sourceRepoUrl": "https://github.com/stripe-samples/checkout-one-time-payments"
+}

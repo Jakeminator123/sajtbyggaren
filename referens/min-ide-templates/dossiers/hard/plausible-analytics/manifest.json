@@ -1,0 +1,42 @@
+{
+  "$schema": "../../../../docs/schemas/strict/dossier.schema.json",
+  "id": "plausible-analytics",
+  "label": "Plausible Analytics",
+  "capability": "analytics",
+  "codeFidelity": "verbatim",
+  "complexity": "simple",
+  "defaultForCapability": false,
+  "summary": "Privacy-friendly page-view analytics via Plausible. Drops a single <Script src=\"https://plausible.io/js/script.js\" data-domain={NEXT_PUBLIC_PLAUSIBLE_DOMAIN} /> into the root layout. Self-hosted Plausible installations override the script host via NEXT_PUBLIC_PLAUSIBLE_API_HOST. No cookies, no consent banner required, no PII collected — runs in production only and skips dev/preview when domain is unset. Use as a privacy-focused alternative to vercel-analytics; defaultForCapability=false so vercel-analytics wins on Vercel-hosted projects unless the brief explicitly asks for Plausible.",
+  "envVars": [
+    {
+      "key": "NEXT_PUBLIC_PLAUSIBLE_DOMAIN",
+      "required": true,
+      "enforcement": "warn-only",
+      "purpose": "Site domain registered in Plausible (e.g. 'bonan-och-boken.se'). Found under Site Settings → General. The script disables itself client-side when this value is empty so missing config never crashes the build."
+    },
+    {
+      "key": "NEXT_PUBLIC_PLAUSIBLE_API_HOST",
+      "required": false,
+      "enforcement": "warn-only",
+      "purpose": "Optional self-hosted Plausible URL (e.g. 'https://analytics.example.com'). Defaults to 'https://plausible.io' when unset. Only set this if you self-host Plausible — leave empty for the SaaS offering."
+    }
+  ],
+  "dependencies": [],
+  "files": [
+    {
+      "path": "components/plausible-analytics.tsx",
+      "role": "client",
+      "injectionMode": "verbatim"
+    }
+  ],
+  "exposes": [
+    {
+      "name": "PlausibleAnalytics",
+      "type": "component",
+      "import": "@/components/plausible-analytics"
+    }
+  ],
+  "lastVerified": "2026-04-21",
+  "sourceRepoUrl": "https://github.com/plausible/analytics",
+  "notes": "Hard dossier example for new authors. Mounts as a sibling to the existing vercel-analytics dossier on the analytics capability. Uses NEXT_PUBLIC_* keys because the script attribute is read client-side; both keys are intentionally non-secret (they ship in the page source by design)."
+}

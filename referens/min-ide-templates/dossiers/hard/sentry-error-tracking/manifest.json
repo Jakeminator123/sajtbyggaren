@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../../docs/schemas/strict/dossier.schema.json",
+  "id": "sentry-error-tracking",
+  "label": "Sentry Error Tracking",
+  "capability": "error-tracking",
+  "codeFidelity": "verbatim",
+  "complexity": "simple",
+  "defaultForCapability": true,
+  "summary": "Production error tracking + performance monitoring via Sentry. Adds three init shims (client / server / edge) plus an instrumentation entry that wires them into Next.js. Self-disables when NEXT_PUBLIC_SENTRY_DSN is empty so dev/preview environments do not ship beacons. Use when the brief asks for crash reporting, observability, 'know when the site breaks', or production-grade monitoring.",
+  "envVars": [
+    {
+      "key": "NEXT_PUBLIC_SENTRY_DSN",
+      "required": false,
+      "enforcement": "warn-only",
+      "purpose": "Sentry Data Source Name (e.g. 'https://abc@o12345.ingest.sentry.io/67890'). Sentry → Settings → Projects → Client Keys (DSN). Tagged 'warn-only' because Sentry.init() short-circuits when empty — SDK bundled but inert, no crash."
+    },
+    {
+      "key": "SENTRY_ENVIRONMENT",
+      "required": false,
+      "enforcement": "warn-only",
+      "purpose": "Logical environment tag attached to events (e.g. 'production', 'preview', 'staging'). Defaults to NODE_ENV when unset. Set explicitly in Vercel preview deploys so preview crashes do not pollute the production project."
+    },
+    {
+      "key": "SENTRY_TRACES_SAMPLE_RATE",
+      "required": false,
+      "enforcement": "warn-only",
+      "purpose": "Float 0.0-1.0 controlling what fraction of transactions are sent for performance tracing. Defaults to 0.1 (10%). Lower for high-traffic sites to keep the Sentry quota in check; raise to 1.0 only on low-volume internal apps."
+    }
+  ],
+  "dependencies": ["@sentry/nextjs"],
+  "files": [
+    {
+      "path": "components/sentry.client.config.ts",
+      "role": "client",
+      "injectionMode": "verbatim"
+    },
+    {
+      "path": "components/sentry.server.config.ts",
+      "role": "server",
+      "injectionMode": "verbatim"
+    },
+    {
+      "path": "components/sentry.edge.config.ts",
+      "role": "server",
+      "injectionMode": "verbatim"
+    },
+    {
+      "path": "components/instrumentation.ts",
+      "role": "server",
+      "injectionMode": "verbatim"
+    }
+  ],
+  "exposes": [],
+  "lastVerified": "2026-04-21",
+  "sourceRepoUrl": "https://github.com/getsentry/sentry-javascript",
+  "notes": "All four files mount at the project root, NOT under app/ or components/. Inject paths: sentry.client.config.ts, sentry.server.config.ts, sentry.edge.config.ts, instrumentation.ts — the file names are load-bearing for Next.js' instrumentation hook to find them. Documenting via instructions.md because the schema does not have a 'rename-on-emit' field."
+}

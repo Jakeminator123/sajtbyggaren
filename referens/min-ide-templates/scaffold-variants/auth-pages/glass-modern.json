@@ -1,0 +1,72 @@
+{
+  "id": "glass-modern",
+  "scaffoldId": "auth-pages",
+  "label": "Glass Modern",
+  "description": "Brand-forward authentication surface with subtle glassmorphism, gradient backgrounds, and modern product polish — for SaaS that wants the auth flow to feel like the rest of the app.",
+  "keywords": [
+    "login",
+    "auth",
+    "signup",
+    "saas",
+    "modern",
+    "glass",
+    "gradient",
+    "brand",
+    "polish",
+    "consumer"
+  ],
+  "fontPairings": [
+    {
+      "heading": "Geist",
+      "body": "Geist"
+    },
+    {
+      "heading": "Sora",
+      "body": "Inter"
+    }
+  ],
+  "signatureMotif": "soft glass card hovering on a subtle brand gradient with crisp typography and gentle motion",
+  "colorMode": "either",
+  "promptHints": [
+    "Make the auth surface feel brand-forward — like a beautifully crafted product moment, not a utility form.",
+    "Use a subtle gradient or aurora background and a single elevated glass-style card that anchors the screen."
+  ],
+  "signaturePatterns": {
+    "layouts": [
+      "Use a centered glass card (440-500px wide) floating on a soft brand gradient background, with the brand mark above the form and small auxiliary links below.",
+      "Use a split layout where the left side carries a calm brand statement, product screenshot, or testimonial and the right side holds a clean auth form on a slightly translucent panel.",
+      "Use a single-column onboarding flow with a sticky brand bar on top, a glass card in the middle, and progress dots near the footer rather than a heavy stepper.",
+      "Use a magic-link or email-verification confirmation page with the same glass card frame, a large success-state icon, and a calm 'open your inbox'-style instruction.",
+      "Use a recovery or 2FA page where the field is centered inside the glass card with reassuring helper text, leaving the gradient backdrop visible around the edges."
+    ],
+    "motifs": [
+      "Soft glass cards with backdrop-blur, semi-transparent backgrounds, 1rem-1.25rem radii, and gentle 0 8px 32px rgba(0,0,0,0.06) shadows.",
+      "Subtle multi-stop brand gradients (or aurora) on the page background, kept low-contrast so form text reads cleanly even on light themes.",
+      "Generous spacing inside the card with clear primary/secondary action hierarchy and small social-login buttons aligned in a single row.",
+      "Quiet motion: the card fades + lifts in on mount, inputs animate their focus ring smoothly, success states cross-fade rather than swap abruptly."
+    ],
+    "antiPatterns": [
+      "Avoid the dense product-form look of clean-auth — this variant should feel airy and consumer-grade, not like an internal admin tool.",
+      "Never use heavy hard borders, brutalist edges, or stacked corporate forms; the visual signature relies on softness.",
+      "Avoid noisy decorative blobs, oversized illustrations, or marketing copy crammed into the form area — the gradient should do the visual work.",
+      "Do not pile on shadows, gradients, AND borders at the same time; pick one elevation cue per surface so the glass effect stays believable."
+    ]
+  },
+  "themeTokens": {
+    "background": "oklch(0.98 0.01 280)",
+    "foreground": "oklch(0.18 0.02 280)",
+    "card": "oklch(1 0 0 / 0.7)",
+    "primary": "oklch(0.55 0.18 285)",
+    "primaryForeground": "oklch(0.99 0 0)",
+    "secondary": "oklch(0.94 0.02 280)",
+    "muted": "oklch(0.93 0.01 280)",
+    "accent": "oklch(0.78 0.13 320)",
+    "border": "oklch(0.88 0.01 280)",
+    "ring": "oklch(0.55 0.18 285)",
+    "radius": "1.25rem"
+  },
+  "sourceTemplateIds": [
+    "authentication-clerk-authentication-starter",
+    "saas-vercel-with-clerk-auth"
+  ]
+}

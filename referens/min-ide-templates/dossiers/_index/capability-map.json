@@ -1,0 +1,61 @@
+{
+  "$comment": "View of capability → dossier ids. Can be regenerated from either backoffice/pages/dossiers.py (Capability map tab → 'Bygg om') or `npm run dossiers:capability-map:write` (scripts/dossiers/regenerate-capability-map.ts). Runtime walks data/dossiers/{hard,soft}/ directly; this file is for tooling + sanity check during curation.",
+  "generatedAt": "2026-05-01T12:26:20.291Z",
+  "capabilities": {
+    "ai-chat": [
+      "openai-chat"
+    ],
+    "analytics": [
+      "plausible-analytics",
+      "vercel-analytics"
+    ],
+    "auth": [
+      "clerk-auth"
+    ],
+    "carousel": [
+      "embla-carousel"
+    ],
+    "command-search": [
+      "cmdk-command-palette"
+    ],
+    "contact-form": [
+      "resend-contact-form"
+    ],
+    "error-tracking": [
+      "sentry-error-tracking"
+    ],
+    "faq-section": [
+      "faq-accordion"
+    ],
+    "interactive-game": [
+      "interactive-game-loop"
+    ],
+    "marquee": [
+      "marquee-scroller"
+    ],
+    "newsletter-subscribe": [
+      "mailchimp-newsletter"
+    ],
+    "parallax-pointer": [
+      "pointer-parallax"
+    ],
+    "parallax-scroll": [
+      "scroll-parallax"
+    ],
+    "payments": [
+      "stripe-checkout"
+    ],
+    "physics-3d": [
+      "three-fiber-physics"
+    ],
+    "pricing-section": [
+      "pricing-tier-table"
+    ],
+    "testimonials-section": [
+      "testimonials-grid"
+    ],
+    "visual-3d": [
+      "three-fiber-canvas"
+    ]
+  }
+}

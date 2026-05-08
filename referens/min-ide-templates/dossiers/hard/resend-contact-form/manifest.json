@@ -1,0 +1,52 @@
+{
+  "$schema": "../../../../docs/schemas/strict/dossier.schema.json",
+  "id": "resend-contact-form",
+  "label": "Resend Contact Form",
+  "capability": "contact-form",
+  "codeFidelity": "rewritable",
+  "complexity": "medium",
+  "defaultForCapability": true,
+  "summary": "Server-rendered contact form that submits to a Next.js Route Handler and sends the message as an email via Resend. Client component owns the form state + UX feedback (loading / success / error); server route owns the API call + validation. Designed to degrade gracefully when RESEND_API_KEY is missing — the route returns 503 with a clear message and the form shows a 'configure email to enable submissions' state.",
+  "envVars": [
+    {
+      "key": "RESEND_API_KEY",
+      "required": true,
+      "enforcement": "feature-runtime",
+      "purpose": "Server-side Resend authentication. Find it in the Resend dashboard under API Keys. Route returns 503 with a clear message when missing so F3 build does not crash."
+    },
+    {
+      "key": "EMAIL_FROM",
+      "required": true,
+      "enforcement": "feature-runtime",
+      "purpose": "From-address used in outgoing emails. Must be a verified domain in Resend (e.g. 'Site <noreply@yourdomain.com>'). Same 503-fallback as RESEND_API_KEY."
+    },
+    {
+      "key": "CONTACT_EMAIL_TO",
+      "required": true,
+      "enforcement": "feature-runtime",
+      "purpose": "Inbox that receives form submissions. Free-form email address; Resend does not need to verify it. Same 503-fallback as RESEND_API_KEY."
+    }
+  ],
+  "dependencies": ["resend"],
+  "files": [
+    {
+      "path": "components/contact-form.tsx",
+      "role": "client",
+      "injectionMode": "rewritable"
+    },
+    {
+      "path": "components/api/contact/route.ts",
+      "role": "server",
+      "injectionMode": "verbatim"
+    }
+  ],
+  "exposes": [
+    {
+      "name": "ContactForm",
+      "type": "component",
+      "import": "@/components/contact-form"
+    }
+  ],
+  "lastVerified": "2026-04-21",
+  "sourceRepoUrl": "https://github.com/resend/resend-node"
+}

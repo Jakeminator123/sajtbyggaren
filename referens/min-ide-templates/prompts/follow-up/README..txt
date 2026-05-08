@@ -1,0 +1,2 @@
+Här tror jag att vi har olika benämningar. Jag har tidigare kallat det för en `delta-brief`, vilket är en kort summering av allt som tidigare har sagts. Jag är osäker på om LLM har förståelse för vad det innebär och vilka filer och regler som finns att förhålla sig till. Det kan jag inte svara på,
+ eftersom jag inte vet tillräckligt mycket.

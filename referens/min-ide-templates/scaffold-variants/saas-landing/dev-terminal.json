@@ -1,0 +1,69 @@
+{
+  "id": "dev-terminal",
+  "scaffoldId": "saas-landing",
+  "label": "Dev Terminal",
+  "description": "Developer-facing SaaS variant with API-first framing and technical product proof.",
+  "keywords": [
+    "api",
+    "developer",
+    "terminal",
+    "cli",
+    "devtools",
+    "sdk",
+    "platform",
+    "open-source"
+  ],
+  "fontPairings": [
+    {
+      "heading": "JetBrains Mono",
+      "body": "Space Grotesk"
+    }
+  ],
+  "signatureMotif": "terminal previews, code framing, and dense technical product proof",
+  "colorMode": "dark",
+  "promptHints": [
+    "Market the product through developer trust, API clarity, and technical proof instead of broad lifestyle benefits.",
+    "Treat code examples and product surface previews as first-class design elements."
+  ],
+  "signaturePatterns": {
+    "layouts": [
+      "Use a left-aligned hero with terse API value proposition, dual CTAs, and a large right-side terminal window showing real request and response flow.",
+      "Build feature sections as alternating 60/40 splits where one side shows SDK code tabs and the other side stacks technical proof bullets.",
+      "Present integration steps as a horizontal three-step strip of command line, config snippet, and live dashboard result cards.",
+      "Use a dense social-proof band made of logo row, uptime or throughput stats, and small open-source or compliance badges in one compressed block.",
+      "Structure pricing or plan comparison as dark bordered cards beneath an implementation FAQ, with API limits and developer features surfaced before marketing copy."
+    ],
+    "motifs": [
+      "Dark graphite surfaces with thin cool borders, softened 0.85rem corners, and luminous green primary accents that feel like terminal success states.",
+      "Terminal chrome, code fences, and monospace labels are first-class framing devices, not decorative snippets buried deep in the layout.",
+      "Technical proof appears immediately through response payloads, SDK tabs, metric callouts, and compact badges for uptime, latency, or security claims.",
+      "Cards feel layered but restrained, using subtle inner highlights and low-elevation shadows instead of glossy glassmorphism or playful depth tricks."
+    ],
+    "antiPatterns": [
+      "Avoid bright startup gradients, abstract blob backgrounds, or pastel illustrations that weaken the developer-tool credibility of the interface.",
+      "Never lead with lifestyle photography or team-happy marketing scenes; the hero should prove the product through code and system behavior.",
+      "Avoid oversized copy-only sections with vague platform promises when a terminal preview, API example, or benchmark could carry the message.",
+      "Do not use soft consumer-app pricing tables with cute icons; plans should read like infrastructure choices with limits, features, and implementation detail."
+    ]
+  },
+  "themeTokens": {
+    "background": "oklch(0.12 0.01 265)",
+    "foreground": "oklch(0.95 0.006 265)",
+    "card": "oklch(0.17 0.01 265)",
+    "primary": "oklch(0.68 0.18 160)",
+    "primaryForeground": "oklch(0.1 0 0)",
+    "secondary": "oklch(0.2 0.01 265)",
+    "muted": "oklch(0.18 0.008 265)",
+    "accent": "oklch(0.72 0.1 85)",
+    "border": "oklch(0.28 0.01 265)",
+    "ring": "oklch(0.68 0.18 160)",
+    "radius": "0.85rem"
+  },
+  "sourceTemplateIds": [
+    "saas-router-so-headless-forms-and-lead-routing",
+    "saas-xata-typo-tolerant-full-text-search",
+    "saas-evervault-encryption-starter-kit-for-next-js",
+    "saas-paddle-billing-subscription-starter"
+  ],
+  "default": false
+}

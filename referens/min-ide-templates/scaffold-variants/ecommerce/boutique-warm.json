@@ -1,0 +1,69 @@
+{
+  "id": "boutique-warm",
+  "scaffoldId": "ecommerce",
+  "label": "Boutique Warm",
+  "description": "Smaller curated storefronts with lifestyle framing and richer product storytelling.",
+  "keywords": [
+    "boutique",
+    "handmade",
+    "artisan",
+    "shop",
+    "store",
+    "curated",
+    "lokal butik",
+    "present"
+  ],
+  "fontPairings": [
+    {
+      "heading": "DM Serif Display",
+      "body": "Inter"
+    }
+  ],
+  "signatureMotif": "editorial storefront framing, warm surfaces, and tactile merchandising",
+  "colorMode": "light",
+  "promptHints": [
+    "Lead with merchandising and product mood before dense catalog controls.",
+    "Product storytelling should feel curated rather than catalog-first."
+  ],
+  "signaturePatterns": {
+    "layouts": [
+      "Use a split hero with editorial lifestyle photography on one side and a tight product story card with price and CTA on the other.",
+      "Open collection pages with a featured product strip above the grid, then transition into a calm 3-column catalog with generous gutters.",
+      "Build product detail pages as a two-column composition with large imagery, stacked purchase controls, and a warm storytelling block below.",
+      "Use gift-guide sections as staggered editorial cards, mixing product cutouts, short narrative captions, and occasional highlighted picks.",
+      "Frame trust and brand story as alternating image-and-copy bands, ending with a compact newsletter or in-store pickup callout."
+    ],
+    "motifs": [
+      "Warm cream backgrounds, soft white product cards, and earthy accent buttons create a tactile boutique storefront at first glance.",
+      "Large serif headlines paired with restrained sans body text give product storytelling an editorial magazine-shop feel.",
+      "Use 1rem rounded corners, thin warm-gray borders, and very soft shadows so merchandise feels curated instead of tech-polished.",
+      "Lifestyle photography should feel natural and softly lit, with product cutouts and detail crops used as supporting merchandising moments."
+    ],
+    "antiPatterns": [
+      "Avoid dense marketplace-style filter rails dominating the first screen; this variant should introduce mood and curation before control-heavy catalog UI.",
+      "Never use cold monochrome minimalism or stark black-and-white contrast; the storefront should feel warm, giftable, and human.",
+      "Avoid loud promo badges, flashing sale strips, or aggressive conversion banners that undermine the calm boutique presentation.",
+      "Do not make product grids feel warehouse-like with tiny cards and cramped spacing; items need breathing room and storytelling context."
+    ]
+  },
+  "themeTokens": {
+    "background": "oklch(0.985 0.008 55)",
+    "foreground": "oklch(0.24 0.015 30)",
+    "card": "oklch(0.995 0.005 55)",
+    "primary": "oklch(0.62 0.16 40)",
+    "primaryForeground": "oklch(0.99 0 0)",
+    "secondary": "oklch(0.95 0.01 55)",
+    "muted": "oklch(0.95 0.005 35)",
+    "accent": "oklch(0.84 0.05 70)",
+    "border": "oklch(0.9 0.006 45)",
+    "ring": "oklch(0.62 0.16 40)",
+    "radius": "1rem"
+  },
+  "sourceTemplateIds": [
+    "ecommerce-blazity-enterprise-ecommerce-starter",
+    "ecommerce-stripe-subscription-starter",
+    "ecommerce-your-next-store-commerce-with-next-js-and-stripe",
+    "starter-next-js-app-router-playground"
+  ],
+  "default": false
+}

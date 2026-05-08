@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../../docs/schemas/strict/dossier.schema.json",
+  "id": "vercel-analytics",
+  "label": "Vercel Analytics",
+  "capability": "analytics",
+  "codeFidelity": "verbatim",
+  "complexity": "simple",
+  "defaultForCapability": true,
+  "summary": "Page-view + Core Web Vitals tracking via Vercel Analytics. Adds the <Analytics /> + <SpeedInsights /> components to the root layout. Zero configuration when deployed on Vercel — the runtime injects the project token automatically. Self-disables in development; safe to keep mounted in any environment.",
+  "envVars": [],
+  "dependencies": ["@vercel/analytics", "@vercel/speed-insights"],
+  "files": [
+    {
+      "path": "components/analytics-providers.tsx",
+      "role": "client",
+      "injectionMode": "verbatim"
+    }
+  ],
+  "exposes": [
+    {
+      "name": "AnalyticsProviders",
+      "type": "component",
+      "import": "@/components/analytics-providers"
+    }
+  ],
+  "lastVerified": "2026-04-21",
+  "sourceRepoUrl": "https://github.com/vercel/analytics"
+}

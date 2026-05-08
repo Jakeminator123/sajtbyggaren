@@ -1,0 +1,84 @@
+{
+  "$schema": "../../../docs/schemas/strict/scaffold-variant.schema.json",
+  "id": "studio-soft",
+  "scaffoldId": "base-nextjs",
+  "label": "Studio Soft",
+  "description": "Light Next.js starter with a soft warm palette, generous whitespace, and quietly designed surfaces. Best when the prompt sounds creative or design-curious but has not committed to a real product, brand, or content shape yet.",
+  "keywords": [
+    "studio",
+    "soft",
+    "light",
+    "designer",
+    "starter",
+    "minimal",
+    "calm",
+    "warm",
+    "blank",
+    "canvas",
+    "atelier",
+    "lugn"
+  ],
+  "fontPairings": [
+    {
+      "heading": "Inter",
+      "body": "Inter"
+    },
+    {
+      "heading": "Plus Jakarta Sans",
+      "body": "Inter"
+    }
+  ],
+  "signatureMotif": "soft warm light surfaces, generous whitespace, and quiet designer-leaning baseline",
+  "colorMode": "light",
+  "promptHints": [
+    "Treat the page as a calm light studio canvas — generous whitespace, gentle warmth, and one soft primary accent.",
+    "Stay extension-friendly: avoid committing to a strong product or brand voice unless the prompt clearly asks for it.",
+    "Prefer airy single-column rhythm and small descriptive cards over dense dashboards or marketing collages."
+  ],
+  "signaturePatterns": {
+    "layouts": [
+      "Use a centered single-column shell with a narrow max-width, slim transparent top bar, and tall vertical rhythm separating soft section blocks.",
+      "Build the hero as a gently centered or left-aligned headline stack with one calm primary action, one ghost link, and abundant breathing room around it.",
+      "Compose feature areas as a three-card row of soft pastel surfaces with rounded corners, short copy, and small icons sized as quiet markers rather than illustrations.",
+      "Lay out content or about pages as a single reading column with generous line-height, small caption-style metadata, and quiet horizontal rules between blocks.",
+      "Use forms and onboarding screens as a centered card with rounded corners, gentle shadow, and stacked fields with calm helper text underneath."
+    ],
+    "motifs": [
+      "Pair off-white warm backgrounds with cream cards, 1px low-contrast borders, and a soft dusty primary accent that never shouts.",
+      "Keep typography quiet with Inter throughout, modest size jumps, and slightly heavier line-height so the page feels like a carefully spaced studio note.",
+      "Use sparse soft chrome: faint section dividers, restrained hover fills, gentle 1.1rem radii, and almost no decorative background treatment beyond a subtle gradient wash.",
+      "Let spacing and rhythm carry the design — predictable gutters, balanced negative space, and small rounded chips when categorisation is needed."
+    ],
+    "antiPatterns": [
+      "Avoid bright SaaS gradients, oversized hero headlines, or marketing spectacle that turns this calm starter into a launch landing page.",
+      "Never lean on dark surfaces, neon accents, or high-contrast brutalist edges; the variant relies on warmth, softness, and quiet contrast.",
+      "Avoid dense dashboards, multi-column data grids, or product-feature stacks before the prompt clearly demands an actual product surface.",
+      "Do not pile glassmorphism, drop shadows, and gradients on the same surface; pick one quiet elevation cue so the studio softness stays believable."
+    ]
+  },
+  "themeTokens": {
+    "background": "oklch(0.985 0.006 80)",
+    "foreground": "oklch(0.24 0.02 60)",
+    "card": "oklch(1 0 0)",
+    "cardForeground": "oklch(0.24 0.02 60)",
+    "primary": "oklch(0.62 0.1 50)",
+    "primaryForeground": "oklch(0.99 0 0)",
+    "secondary": "oklch(0.95 0.01 70)",
+    "secondaryForeground": "oklch(0.3 0.02 60)",
+    "muted": "oklch(0.94 0.01 70)",
+    "mutedForeground": "oklch(0.48 0.015 60)",
+    "accent": "oklch(0.9 0.03 60)",
+    "accentForeground": "oklch(0.28 0.02 60)",
+    "border": "oklch(0.9 0.01 70)",
+    "ring": "oklch(0.62 0.1 50)",
+    "radius": "1.1rem",
+    "bodyBackgroundImage": "radial-gradient(circle at top left, color-mix(in oklab, var(--color-primary) 6%, transparent) 0%, transparent 38%), radial-gradient(circle at bottom right, color-mix(in oklab, var(--color-accent) 8%, transparent) 0%, transparent 42%)"
+  },
+  "sourceTemplateIds": [
+    "starter-sanity-next-js-clean-app",
+    "starter-next-js-app-router-playground",
+    "blog-next-js-wisp-corporate-blog-starter",
+    "saas-vercel-with-clerk-auth"
+  ],
+  "default": false
+}

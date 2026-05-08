@@ -1,0 +1,84 @@
+{
+  "$schema": "../../../docs/schemas/strict/scaffold-variant.schema.json",
+  "id": "fresh-mint",
+  "scaffoldId": "base-nextjs",
+  "label": "Fresh Mint",
+  "description": "Light Next.js starter with a fresh teal accent, crisp surfaces, and a slightly more product-confident posture than starter-neutral. Best when the prompt sounds like a clean modern Next.js base that wants a hint of brand without committing to a real product yet.",
+  "keywords": [
+    "fresh",
+    "mint",
+    "teal",
+    "modern",
+    "starter",
+    "clean",
+    "nextjs",
+    "minimal",
+    "crisp",
+    "baseline",
+    "fräsch",
+    "modern-start"
+  ],
+  "fontPairings": [
+    {
+      "heading": "Geist",
+      "body": "Geist"
+    },
+    {
+      "heading": "Manrope",
+      "body": "Inter"
+    }
+  ],
+  "signatureMotif": "crisp light surfaces, a fresh teal accent, and product-leaning starter rhythm",
+  "colorMode": "light",
+  "promptHints": [
+    "Treat the page as a clean modern Next.js base with one fresh teal accent — confident but not yet branded.",
+    "Stay extension-friendly: prefer flexible neutral surfaces and let the accent carry the freshness instead of a full color story.",
+    "Use crisp 1px borders, medium radii, and a calm vertical rhythm; avoid playful textures or oversized marketing chrome."
+  ],
+  "signaturePatterns": {
+    "layouts": [
+      "Use a centered single-column shell with a slim top bar holding a small wordmark, three nav links, and one outlined primary action on the right.",
+      "Build the hero as a left-aligned headline stack with one teal primary action, one ghost link, and an optional small product preview card beside it.",
+      "Compose feature areas as a three-card row with equal heights, white surfaces on a tinted page, small icon badges, and short single-paragraph copy.",
+      "Lay out docs or settings pages with a narrow sidebar, sticky section anchors, and a calm reading column anchored by consistent row spacing.",
+      "Use forms and onboarding screens as a centered white card with a soft teal-tinted halo, single-column fields, and a restrained footer of secondary links."
+    ],
+    "motifs": [
+      "Pair near-white cool backgrounds with bright white cards, 1px hairline borders, and a fresh teal primary that reads as a calm brand cue rather than a campaign color.",
+      "Keep typography crisp with Geist or Manrope headings, modest size jumps, and clean medium weights so headings feel product-ready without dominating.",
+      "Use sparse interface chrome: small rounded chips for status, faint section dividers, and gentle teal focus rings on inputs and primary actions.",
+      "Let spacing carry the design — predictable gutters, even card heights, and a soft top-of-page wash that keeps the surface from feeling dead-flat."
+    ],
+    "antiPatterns": [
+      "Avoid full-bleed marketing heroes, bold gradient skies, or layered hero illustrations that imply a finished campaign or product launch.",
+      "Never lean on dark surfaces, neon accents, or terminal chrome; the freshness comes from light surfaces and a single calm teal.",
+      "Avoid stacking multiple accent colors, rainbow chips, or pastel collages that would cost the variant its quiet product-leaning posture.",
+      "Do not overload starter pages with dense dashboard widgets, complex data tables, or multi-column app-shell layouts before the prompt clearly asks for them."
+    ]
+  },
+  "themeTokens": {
+    "background": "oklch(0.985 0.005 200)",
+    "foreground": "oklch(0.22 0.02 220)",
+    "card": "oklch(1 0 0)",
+    "cardForeground": "oklch(0.22 0.02 220)",
+    "primary": "oklch(0.66 0.12 185)",
+    "primaryForeground": "oklch(0.12 0.02 200)",
+    "secondary": "oklch(0.95 0.01 200)",
+    "secondaryForeground": "oklch(0.28 0.02 220)",
+    "muted": "oklch(0.94 0.008 200)",
+    "mutedForeground": "oklch(0.46 0.015 220)",
+    "accent": "oklch(0.9 0.04 180)",
+    "accentForeground": "oklch(0.26 0.03 200)",
+    "border": "oklch(0.9 0.008 200)",
+    "ring": "oklch(0.66 0.12 185)",
+    "radius": "0.8rem",
+    "bodyBackgroundImage": "radial-gradient(circle at top right, color-mix(in oklab, var(--color-primary) 7%, transparent) 0%, transparent 38%), radial-gradient(circle at bottom left, color-mix(in oklab, var(--color-accent) 6%, transparent) 0%, transparent 40%)"
+  },
+  "sourceTemplateIds": [
+    "starter-next-js-app-router-playground",
+    "starter-sanity-next-js-clean-app",
+    "saas-finwise-saas-landing-page",
+    "saas-vercel-with-clerk-auth"
+  ],
+  "default": false
+}

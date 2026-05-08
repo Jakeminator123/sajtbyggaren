@@ -1,0 +1,83 @@
+{
+  "$schema": "../../../docs/schemas/strict/scaffold-variant.schema.json",
+  "id": "playground-mono",
+  "scaffoldId": "base-nextjs",
+  "label": "Playground Mono",
+  "description": "Dark developer-flavored Next.js starter with a monospace heading face and a calm prototype-shell vibe. Best when the prompt sounds like a sandbox, internal tool, or open-ended dev playground rather than a finished product.",
+  "keywords": [
+    "playground",
+    "sandbox",
+    "prototype",
+    "developer",
+    "devtool",
+    "starter",
+    "mono",
+    "monospace",
+    "experiment",
+    "lab",
+    "leksak",
+    "kod"
+  ],
+  "fontPairings": [
+    {
+      "heading": "JetBrains Mono",
+      "body": "Inter"
+    },
+    {
+      "heading": "Geist Mono",
+      "body": "Geist"
+    }
+  ],
+  "signatureMotif": "calm dark playground shell, mono headings, and prototype-friendly chrome",
+  "colorMode": "dark",
+  "promptHints": [
+    "Treat the page as a working developer playground or sandbox shell, not a marketed product surface.",
+    "Use mono headings and small monospaced labels to signal that this is scaffolding ready for code, not a finished brand.",
+    "Keep one calm primary accent (cool blue) and let dark surfaces, hairline borders, and tabs do the visual work."
+  ],
+  "signaturePatterns": {
+    "layouts": [
+      "Use a centered single-column shell with a thin top toolbar that reads like a tab strip, a compact title block, and content panels separated by subtle dividers.",
+      "Build the hero as a left-aligned mono headline, a short body line, and a small command-style preview block beside or below the primary action.",
+      "Compose feature or section areas as a two-column grid of dark cards with small mono labels in the corner and short descriptive copy underneath.",
+      "Lay out docs or settings pages with a narrow left rail, sticky section anchors, and a calm reading column that mimics a working IDE side panel.",
+      "Use forms and config screens as stacked dark cards with key-value rows, inline helper text, and a single bright primary button anchoring the bottom."
+    ],
+    "motifs": [
+      "Pair near-black graphite surfaces with hairline cool borders, a single cool blue primary, and small mono labels that feel like devtool chrome.",
+      "Use mono for headings, tab labels, and metric callouts; switch to a clean sans body so paragraphs still read like a real product page.",
+      "Cards should feel like inspectable panels: subtle inner highlights, 0.6–0.75rem corners, and content density slightly higher than a marketing page.",
+      "Let interactivity read as utilitarian — calm focus rings, restrained hovers, and small chips for status rather than glossy buttons."
+    ],
+    "antiPatterns": [
+      "Avoid full-bleed marketing heroes, gradient lifestyle backgrounds, or oversized brand statements that turn the playground into a launch page.",
+      "Never lean on neon glows, dramatic accent washes, or terminal-cosplay green-on-black; this variant stays calm and prototype-grade.",
+      "Avoid playful illustrations, emoji-heavy chrome, or pastel cards that erase the developer-tool reading and reduce extension flexibility.",
+      "Do not stack multiple accent colors or fill the page with dense dashboard widgets before the prompt clearly asks for an operational dashboard."
+    ]
+  },
+  "themeTokens": {
+    "background": "oklch(0.13 0.008 260)",
+    "foreground": "oklch(0.94 0.005 260)",
+    "card": "oklch(0.17 0.008 260)",
+    "cardForeground": "oklch(0.94 0.005 260)",
+    "primary": "oklch(0.65 0.15 245)",
+    "primaryForeground": "oklch(0.1 0 0)",
+    "secondary": "oklch(0.2 0.008 260)",
+    "secondaryForeground": "oklch(0.94 0.005 260)",
+    "muted": "oklch(0.18 0.006 260)",
+    "mutedForeground": "oklch(0.7 0.005 260)",
+    "accent": "oklch(0.22 0.008 260)",
+    "accentForeground": "oklch(0.94 0.005 260)",
+    "border": "oklch(0.27 0.008 260)",
+    "ring": "oklch(0.65 0.15 245)",
+    "radius": "0.7rem"
+  },
+  "sourceTemplateIds": [
+    "starter-next-js-app-router-playground",
+    "starter-next-js-motherduck-wasm-minimal",
+    "ai-mux-ai-vercel-workflows-starter",
+    "saas-evervault-encryption-starter-kit-for-next-js"
+  ],
+  "default": false
+}

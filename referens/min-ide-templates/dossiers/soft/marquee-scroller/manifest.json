@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../../docs/schemas/strict/dossier.schema.json",
+  "id": "marquee-scroller",
+  "label": "Marquee Scroller",
+  "capability": "marquee",
+  "codeFidelity": "rewritable",
+  "complexity": "simple",
+  "defaultForCapability": true,
+  "summary": "CSS-driven horizontal marquee for logo strips, quote tickers, and 'as seen in' rows. Duplicates the children once so the loop is seamless, supports left/right direction + speed presets, pauses on hover, and freezes entirely when prefers-reduced-motion is set (the static row stays visible — the children are NEVER hidden). No JavaScript animation loop, no IntersectionObserver, no dependency — pure CSS keyframes for a smooth, GPU-accelerated infinite scroll.",
+  "envVars": [],
+  "dependencies": [],
+  "files": [
+    {
+      "path": "components/marquee.tsx",
+      "role": "client"
+    }
+  ],
+  "exposes": [
+    {
+      "name": "Marquee",
+      "type": "component",
+      "import": "@/components/marquee"
+    }
+  ],
+  "lastVerified": "2026-04-21",
+  "notes": "CSS-only; intentionally avoids framer-motion to keep the bundle small for sites that only need a logo strip. If the brief asks for parallax or scroll-driven reveal, use the parallax dossiers instead."
+}

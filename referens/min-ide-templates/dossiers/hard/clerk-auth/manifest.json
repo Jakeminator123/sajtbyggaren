@@ -1,0 +1,68 @@
+{
+  "$schema": "../../../../docs/schemas/strict/dossier.schema.json",
+  "id": "clerk-auth",
+  "label": "Clerk Authentication",
+  "capability": "auth",
+  "codeFidelity": "verbatim",
+  "complexity": "medium",
+  "defaultForCapability": true,
+  "summary": "Drop-in user authentication via Clerk. Adds the <ClerkProvider /> wrapper for the root layout, a Next.js middleware that protects routes, and pre-built <SignInButton /> / <UserButton /> UI primitives. Use when the brief asks for login, signup, accounts, gated dashboards, or 'a way for users to log in'. The middleware file MUST stay verbatim — Clerk's matcher syntax and route ordering are load-bearing for session resolution.",
+  "envVars": [
+    {
+      "key": "CLERK_SECRET_KEY",
+      "required": true,
+      "enforcement": "build",
+      "purpose": "Server-side Clerk API authentication. Clerk dashboard → API Keys → Secret keys (sk_test_/sk_live_). Tagged 'build' because the middleware reads this at module init; a missing value crashes every request through the middleware."
+    },
+    {
+      "key": "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
+      "required": true,
+      "enforcement": "build",
+      "purpose": "Client-side Clerk SDK init. Clerk dashboard → API Keys → Publishable keys (pk_test_/pk_live_). Tagged 'build' because <ClerkProvider> throws synchronously on mount when missing, black-screening the whole app."
+    },
+    {
+      "key": "NEXT_PUBLIC_CLERK_SIGN_IN_URL",
+      "required": false,
+      "enforcement": "warn-only",
+      "purpose": "Optional override for the sign-in route path. Defaults to '/sign-in' when unset. Only set this if the project mounts the Clerk sign-in component on a non-default path (e.g. '/login')."
+    },
+    {
+      "key": "NEXT_PUBLIC_CLERK_SIGN_UP_URL",
+      "required": false,
+      "enforcement": "warn-only",
+      "purpose": "Optional override for the sign-up route path. Defaults to '/sign-up' when unset. Only set this if the project uses a different signup path (e.g. '/register')."
+    }
+  ],
+  "dependencies": ["@clerk/nextjs"],
+  "files": [
+    {
+      "path": "components/clerk-provider-shell.tsx",
+      "role": "client",
+      "injectionMode": "verbatim"
+    },
+    {
+      "path": "components/auth-buttons.tsx",
+      "role": "client",
+      "injectionMode": "rewritable"
+    },
+    {
+      "path": "components/middleware.ts",
+      "role": "server",
+      "injectionMode": "verbatim"
+    }
+  ],
+  "exposes": [
+    {
+      "name": "ClerkProviderShell",
+      "type": "component",
+      "import": "@/components/clerk-provider-shell"
+    },
+    {
+      "name": "AuthButtons",
+      "type": "component",
+      "import": "@/components/auth-buttons"
+    }
+  ],
+  "lastVerified": "2026-04-21",
+  "sourceRepoUrl": "https://github.com/clerk/javascript"
+}

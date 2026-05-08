@@ -1,0 +1,96 @@
+{
+  "$schema": "../../../docs/schemas/strict/scaffold-variant.schema.json",
+  "id": "corporate-grid",
+  "scaffoldId": "landing-page",
+  "label": "Corporate Grid",
+  "description": "B2B, enterprise and consulting landing pages for agencies, law firms, finance and professional services. Emphasizes trust signals, partner logos, case studies, and formal credibility — built for compliance, enterprise SaaS, accounting, legal and management consulting where clients need reassurance before action.",
+  "keywords": [
+    "b2b",
+    "consulting",
+    "consultancy",
+    "agency",
+    "corporate",
+    "enterprise",
+    "trust",
+    "professional",
+    "compliance",
+    "fintech",
+    "law",
+    "legal",
+    "accounting",
+    "advisory",
+    "management consulting",
+    "byrå",
+    "företag",
+    "företagskunder",
+    "redovisning",
+    "redovisningsbyrå",
+    "juridik",
+    "juridikbyrå",
+    "advokatbyrå",
+    "advokat",
+    "revisor",
+    "finans",
+    "finanskonsult",
+    "konsultbolag"
+  ],
+  "fontPairings": [
+    {
+      "heading": "Manrope",
+      "body": "Inter"
+    },
+    {
+      "heading": "Plus Jakarta Sans",
+      "body": "IBM Plex Sans"
+    }
+  ],
+  "signatureMotif": "B2B trust signals, partner logos, enterprise case studies, and measured consulting hierarchy on a precise neutral grid",
+  "colorMode": "light",
+  "promptHints": [
+    "Use this variant for B2B, enterprise, consulting, agency, finance, legal, accounting and professional-services prompts where trust and formal credibility matter more than expressive atmospherics.",
+    "Lead with business clarity, partner trust, and a measured hierarchy — not lifestyle mood, startup velocity, or local warmth.",
+    "Prefer proof blocks (KPI metrics, client logos, case studies, compliance badges) over decorative illustration cards.",
+    "Keep font weights restrained — bold for headings, regular for body. Avoid playful type mixing."
+  ],
+  "signaturePatterns": {
+    "layouts": [
+      "Use a 60/40 hero split with left-aligned headline and proof bullets, paired with a right-side dashboard screenshot or client-results card.",
+      "Place a single-row logo strip directly under the hero, followed by a three-column trust band for metrics, certifications, or service guarantees.",
+      "Build services as a strict three-card grid with equal heights, restrained icons, short summaries, and one consistent CTA row alignment.",
+      "Use alternating case-study sections with a text block on one side and a bordered outcome panel on the other.",
+      "Structure pricing or engagement models as a three-column table, with the middle option slightly raised but still visually conservative."
+    ],
+    "motifs": [
+      "Use bright white cards on pale neutral backgrounds with 1px cool-gray borders, soft shadow, and medium rounded corners.",
+      "Keep all sections locked to a visible grid rhythm with consistent column widths, even gutters, and generous horizontal padding.",
+      "Favor proof-first components like logo bars, KPI stats, testimonial quotes, and compliance badges over decorative illustrations.",
+      "Use restrained blue accents for links, buttons, and highlights while keeping the overall page predominantly neutral and light."
+    ],
+    "antiPatterns": [
+      "Avoid playful collage layouts, tilted cards, or overlapping sticker elements that weaken enterprise trust and formal clarity.",
+      "Never lead with abstract 3D blobs, loud gradients, or expressive hero art before showing business proof or service value.",
+      "Avoid oversized display typography, mixed font personalities, or editorial text treatments that feel more lifestyle than corporate.",
+      "Do not use dense dark-mode hero blocks or black-heavy sections that break the variant’s light, measured consulting tone."
+    ]
+  },
+  "themeTokens": {
+    "background": "oklch(0.99 0.002 255)",
+    "foreground": "oklch(0.23 0.01 255)",
+    "card": "oklch(1 0 0)",
+    "primary": "oklch(0.56 0.14 250)",
+    "primaryForeground": "oklch(0.98 0 0)",
+    "secondary": "oklch(0.96 0.004 255)",
+    "muted": "oklch(0.95 0.004 255)",
+    "accent": "oklch(0.92 0.015 240)",
+    "border": "oklch(0.89 0.004 255)",
+    "ring": "oklch(0.56 0.14 250)",
+    "radius": "0.95rem"
+  },
+  "sourceTemplateIds": [
+    "saas-next-js-enterprise-boilerplate",
+    "multi-tenant-apps-b2b-multi-tenant-starter-kit",
+    "blog-next-js-wisp-corporate-blog-starter",
+    "saas-paddle-billing-subscription-starter"
+  ],
+  "default": true
+}

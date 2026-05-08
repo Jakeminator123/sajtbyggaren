@@ -1,0 +1,84 @@
+{
+  "$schema": "../../../docs/schemas/strict/scaffold-variant.schema.json",
+  "id": "starter-neutral",
+  "scaffoldId": "base-nextjs",
+  "label": "Starter Neutral",
+  "description": "Quiet near-monochrome Next.js starter. Built as a safe extension-first baseline when the prompt is generic and the future direction is still open.",
+  "keywords": [
+    "starter",
+    "minimal",
+    "neutral",
+    "clean",
+    "nextjs",
+    "baseline",
+    "extension",
+    "blank",
+    "default",
+    "grundmall",
+    "tom",
+    "ren"
+  ],
+  "fontPairings": [
+    {
+      "heading": "Geist",
+      "body": "Geist"
+    },
+    {
+      "heading": "Inter",
+      "body": "Inter"
+    }
+  ],
+  "signatureMotif": "quiet near-monochrome shell, restrained tokens, and extension-first clarity",
+  "colorMode": "either",
+  "promptHints": [
+    "Stay intentionally minimal and extension-friendly when the prompt is underspecified — this is a baseline, not a finished product.",
+    "Do not pretend to be a polished marketing or product site unless the prompt clearly demands it; one calm primary accent is enough.",
+    "Let spacing and typography carry the design instead of decorative chrome, illustrations, or stacked accent colors."
+  ],
+  "signaturePatterns": {
+    "layouts": [
+      "Use a centered single-column shell with a slim max-width, compact top bar, and evenly spaced content sections divided by quiet borders.",
+      "Build heroes as left-aligned headline stacks with one primary action, one secondary link, and an optional small code or preview panel beside them.",
+      "Compose feature areas as simple two-by-two card grids with equal heights, muted surfaces, and short copy instead of illustrated storytelling blocks.",
+      "Lay out docs or settings pages with a narrow sidebar, sticky section headings, and a calm content pane using consistent row spacing.",
+      "Use forms and auth screens as centered cards with minimal helper text, single-column fields, and a restrained footer of secondary links."
+    ],
+    "motifs": [
+      "Apply near-monochrome surfaces with one cool primary accent, 1px low-contrast borders, and medium radius cards that feel default but polished.",
+      "Keep typography quiet with Geist or Inter throughout, modest size jumps, medium weights, and generous line-height instead of bold display moments.",
+      "Use sparse interface chrome: muted section dividers, subtle hover fills, soft focus rings, and almost no decorative background treatment.",
+      "Let spacing carry the design, with clean vertical rhythm, predictable gutters, and components that align to a simple baseline grid."
+    ],
+    "antiPatterns": [
+      "Avoid full-bleed marketing spectacle like oversized gradient heroes, glowing orbs, and layered parallax scenes that imply a finished brand system.",
+      "Never overload starter pages with dense dashboard widgets, data-heavy chrome, or complex multicolumn layouts before the prompt clearly asks for them.",
+      "Avoid loud visual personalities such as playful blobs, retro textures, glassmorphism panels, or hand-crafted illustrations that reduce extension flexibility.",
+      "Do not stack multiple accent colors, pill badges, or promotional ribbons that make the scaffold feel product-specific on first glance."
+    ]
+  },
+  "themeTokens": {
+    "background": "oklch(0.15 0.004 0)",
+    "foreground": "oklch(0.95 0.004 0)",
+    "card": "oklch(0.18 0.004 0)",
+    "cardForeground": "oklch(0.95 0.004 0)",
+    "primary": "oklch(0.58 0.16 258)",
+    "primaryForeground": "oklch(0.98 0 0)",
+    "secondary": "oklch(0.22 0.004 0)",
+    "secondaryForeground": "oklch(0.95 0.004 0)",
+    "muted": "oklch(0.22 0.004 0)",
+    "mutedForeground": "oklch(0.72 0.004 0)",
+    "accent": "oklch(0.25 0.004 0)",
+    "accentForeground": "oklch(0.95 0.004 0)",
+    "border": "oklch(0.28 0.004 0)",
+    "ring": "oklch(0.58 0.16 258)",
+    "radius": "0.625rem",
+    "bodyBackgroundImage": "radial-gradient(circle at top left, color-mix(in oklab, var(--color-primary) 8%, transparent) 0%, transparent 32%), radial-gradient(circle at bottom right, color-mix(in oklab, var(--color-foreground) 4%, transparent) 0%, transparent 38%)"
+  },
+  "sourceTemplateIds": [
+    "starter-next-js-app-router-playground",
+    "starter-next-js-motherduck-wasm-minimal",
+    "starter-sanity-next-js-clean-app",
+    "ai-mux-ai-vercel-workflows-starter"
+  ],
+  "default": true
+}

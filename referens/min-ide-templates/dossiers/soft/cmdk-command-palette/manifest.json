@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../../docs/schemas/strict/dossier.schema.json",
+  "id": "cmdk-command-palette",
+  "label": "Command Palette (cmd+k)",
+  "capability": "command-search",
+  "codeFidelity": "rewritable",
+  "complexity": "simple",
+  "defaultForCapability": true,
+  "summary": "Cmd/Ctrl+K command palette built on the cmdk primitive. Ships a dialog wrapper that traps focus, restores it on close, registers the global shortcut, and groups items by section. The codegen LLM populates the items array with project-specific actions (navigate to page, run command, switch theme) — the wrapper owns keyboard handling, fuzzy matching, and accessibility so that surface stays consistent across projects.",
+  "envVars": [],
+  "dependencies": [
+    "cmdk"
+  ],
+  "files": [
+    {
+      "path": "components/command-palette.tsx",
+      "role": "client"
+    }
+  ],
+  "exposes": [
+    {
+      "name": "CommandPalette",
+      "type": "component",
+      "import": "@/components/command-palette"
+    }
+  ],
+  "lastVerified": "2026-04-21",
+  "sourceRepoUrl": "https://github.com/pacocoursey/cmdk"
+}

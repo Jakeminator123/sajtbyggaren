@@ -1,0 +1,68 @@
+{
+  "id": "warm-editorial",
+  "scaffoldId": "landing-page",
+  "label": "Warm Editorial",
+  "description": "Broader content-first variant for publishing, CMS-led sites, and service storytelling.",
+  "keywords": [
+    "content",
+    "story",
+    "editorial",
+    "cms",
+    "warm",
+    "publishing",
+    "magazine",
+    "community"
+  ],
+  "fontPairings": [
+    {
+      "heading": "Merriweather",
+      "body": "DM Sans"
+    }
+  ],
+  "signatureMotif": "content-first rhythm, warm editorial hierarchy, and calm section flow",
+  "colorMode": "light",
+  "promptHints": [
+    "Organize the experience around storytelling and reading cadence rather than conversion-only stacking.",
+    "Favor rich content hierarchy, callouts, and believable editorial structure."
+  ],
+  "signaturePatterns": {
+    "layouts": [
+      "Use a magazine-style homepage with a featured lead story spanning two columns beside a stacked list of secondary articles.",
+      "Build article pages with a narrow reading column, generous side margins, and a right-rail for pull quotes or section navigation.",
+      "Use a sectioned content hub with alternating editorial bands: intro copy, curated story grid, expert callout, then newsletter block.",
+      "Compose service storytelling pages as long-form narratives with chapter-like sections, inline testimonials, and a soft CTA near the end.",
+      "Use author or category archives with a prominent intro header followed by a masonry-like card rhythm that still preserves clear reading order."
+    ],
+    "motifs": [
+      "Pair warm paper-like backgrounds with dark ink text, muted beige separators, and terracotta accents that appear sparingly on interactive elements.",
+      "Use serif headlines over clean sans body copy, with oversized editorial spacing and clear typographic contrast between feature stories and supporting content.",
+      "Show cards and callouts as soft surfaced panels with 1rem radius, thin low-contrast borders, and almost no heavy shadow.",
+      "Introduce calm hierarchy through eyebrow labels, pull quotes, divider rules, and captioned imagery that make pages feel published rather than marketed."
+    ],
+    "antiPatterns": [
+      "Avoid startup-style landing stacks with repetitive feature blocks and aggressive CTA repetition that interrupts the reading cadence.",
+      "Never use glossy gradients, neon accents, or glassmorphism panels; they break the quiet editorial warmth of the variant.",
+      "Avoid ultra-dense dashboard grids or cramped multi-column text layouts that make the experience feel utilitarian instead of readable.",
+      "Do not make every section full-bleed and visually loud; this variant needs measured margins and breathing room between story beats."
+    ]
+  },
+  "themeTokens": {
+    "background": "oklch(0.985 0.004 80)",
+    "foreground": "oklch(0.22 0.015 40)",
+    "card": "oklch(0.995 0.003 80)",
+    "primary": "oklch(0.58 0.11 45)",
+    "primaryForeground": "oklch(0.98 0 0)",
+    "secondary": "oklch(0.96 0.004 75)",
+    "muted": "oklch(0.95 0.004 65)",
+    "accent": "oklch(0.88 0.03 65)",
+    "border": "oklch(0.89 0.004 65)",
+    "ring": "oklch(0.58 0.11 45)",
+    "radius": "1rem"
+  },
+  "sourceTemplateIds": [
+    "blog-a-next-js-14-blog-with-server-components",
+    "blog-blog-with-agility-cms-and-next-js",
+    "blog-clean-next-js-sanity-app",
+    "blog-launchpad-next-js-strapi-starter"
+  ]
+}

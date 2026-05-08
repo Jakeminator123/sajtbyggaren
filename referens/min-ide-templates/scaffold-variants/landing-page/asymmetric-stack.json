@@ -1,0 +1,85 @@
+{
+  "id": "asymmetric-stack",
+  "scaffoldId": "landing-page",
+  "label": "Asymmetric Stack",
+  "description": "Vertical, scroll-rhythm landing page that abandons the split-hero entirely. Uses oversized typography blocks anchored to alternating sides of the viewport, floating illustrations or product fragments that overlap section boundaries, and a tall column rhythm — for design studios, creative agencies, indie products, and anything that wants to feel made by hand rather than templated. The hero is a tall typography block, not a 60/40 grid.",
+  "keywords": [
+    "asymmetric",
+    "stack",
+    "vertical",
+    "scroll-rhythm",
+    "typography-led",
+    "studio",
+    "creative-agency",
+    "indie",
+    "handmade",
+    "experimental",
+    "alternating",
+    "off-grid",
+    "byrå",
+    "studio-portfolio",
+    "creative",
+    "designstudio"
+  ],
+  "fontPairings": [
+    {
+      "heading": "Fraunces",
+      "body": "Inter"
+    },
+    {
+      "heading": "Bricolage Grotesque",
+      "body": "Inter"
+    },
+    {
+      "heading": "Instrument Serif",
+      "body": "DM Sans"
+    }
+  ],
+  "signatureMotif": "alternating left/right anchored typography blocks with floating illustration fragments that bleed across section boundaries — vertical rhythm replaces hero-split",
+  "colorMode": "light",
+  "promptHints": [
+    "Build the hero as a tall vertical typography block, NOT a left-text/right-image grid. Anchor the headline hard to one side (left or right), let the opposite side breathe with empty space, and place a small illustration or product fragment floating asymmetrically across the boundary into the next section.",
+    "Use the whole page as a scroll-rhythm composition: each section anchors typography to the opposite side from the section above (left → right → left → right). This creates a zig-zag reading path that feels designed by hand.",
+    "Floating elements (small illustrations, photo fragments, sticky badges) should overlap section boundaries — bottom of section #1 contains the top half of an element whose bottom half sits inside section #2. This visually stitches the page together vertically."
+  ],
+  "signaturePatterns": {
+    "layouts": [
+      "Hero is a tall section (min-h-[80vh] or similar) with a single oversized headline anchored hard to the left edge (max-w-2xl, no centering), a short standfirst directly below, and one CTA — the right half of the viewport stays empty except for one floating illustration fragment placed off-grid.",
+      "Section #2 anchors its content to the RIGHT (mirroring the hero), with the headline and supporting copy in a max-w-xl right-aligned column, and the left half empty except for a number, a thin rule, or a small mark — alternating rhythm between sections.",
+      "Use a vertically stacked feature list (not a grid): each feature gets its own min-h-[40vh] block with one large numeral (01, 02, 03...) on the alternating side, a short heading, and a single sentence — no card surfaces, no horizontal grids.",
+      "Place floating illustrations or product fragments so they OVERLAP section boundaries: the bottom 40% of section #1 contains the top 40% of an element whose remaining 60% extends into section #2 (use absolute positioning + negative top/bottom margins).",
+      "Footer/final-CTA section anchors hard to one side again with a single oversized question or invitation, no card, no form-block — just type, the CTA, and generous bottom padding (py-32+)."
+    ],
+    "motifs": [
+      "Typography is the primary surface: headlines use a serif or expressive display face at clamp(3rem, 8vw, 6rem) with leading 1.0 and tracking tight; body copy stays at 17-19px in a calm sans, generous line-height (1.65+).",
+      "Floating fragments are illustrations, photo crops, or small product details (NOT full screenshots) that read as collage — picture them as torn paper or magazine cutouts placed deliberately off-grid.",
+      "Background is mostly off-white (#FAFAF8 or similar warm paper tone) or a single quiet color; no gradient meshes, no glow spills. The composition does the work, not the surface.",
+      "Use thin rules (1px), small-cap eyebrow labels, and large numerals as the only repeating UI elements — no cards, no shadows, no chips, no badges."
+    ],
+    "antiPatterns": [
+      "Never use a left-text + right-image grid for the hero. The whole point of this variant is breaking that template — if the hero looks like a 60/40 split, the variant has failed.",
+      "Avoid card-based feature grids (3-up or 4-up cards with icons). Replace with tall stacked feature blocks anchored to alternating sides.",
+      "Do not use heavy product screenshots or dashboard mockups; this variant favors illustration fragments, photographic crops, or no imagery at all over saturated UI screenshots.",
+      "Avoid centered everything (centered hero text, centered CTAs, centered cards) — centering kills the asymmetric rhythm. Anchor each block hard to one edge.",
+      "Never stack content as one continuous narrow centered column (max-w-3xl mx-auto for the entire page) — this variant requires the alternating left/right rhythm to read."
+    ]
+  },
+  "themeTokens": {
+    "background": "oklch(0.985 0.005 90)",
+    "foreground": "oklch(0.2 0.01 250)",
+    "card": "oklch(0.99 0.003 90)",
+    "primary": "oklch(0.32 0.06 250)",
+    "primaryForeground": "oklch(0.98 0 0)",
+    "secondary": "oklch(0.95 0.005 90)",
+    "muted": "oklch(0.94 0.005 90)",
+    "accent": "oklch(0.65 0.18 30)",
+    "border": "oklch(0.85 0.005 90)",
+    "ring": "oklch(0.32 0.06 250)",
+    "radius": "0.5rem"
+  },
+  "sourceTemplateIds": [
+    "portfolio-bridger-portfolio",
+    "marketing-portfolio-starter-kit"
+  ],
+  "default": false
+}

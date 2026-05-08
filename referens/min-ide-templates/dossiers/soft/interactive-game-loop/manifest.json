@@ -1,0 +1,16 @@
+{
+  "$schema": "../../../../docs/schemas/strict/dossier.schema.json",
+  "id": "interactive-game-loop",
+  "label": "Interactive Game Loop",
+  "capability": "interactive-game",
+  "codeFidelity": "rewritable",
+  "complexity": "medium",
+  "defaultForCapability": true,
+  "summary": "Instructions-only dossier for playable mini-games (Pac-Man, Snake, Tetris, platformers, arcade clones, quiz games). Enforces the state + loop + controls + collision + score + restart contract so output is actually playable rather than a static screenshot-alike. No verbatim files — game rules and visuals are always project-specific.",
+  "envVars": [],
+  "dependencies": [],
+  "files": [],
+  "exposes": [],
+  "lastVerified": "2026-05-01",
+  "notes": "Pure guidance — when the prompt is a game, the dossier makes the codegen-LLM produce React state, a real update loop, keyboard/touch controls, collision logic, a visible score, win/lose/restart, and accessibility primitives. If the same prompt also needs WebGL physics (bouncing/gravity/rigid bodies) the physics-3d dossier is selected in addition."
+}

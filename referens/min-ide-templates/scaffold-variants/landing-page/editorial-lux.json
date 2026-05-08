@@ -1,0 +1,74 @@
+{
+  "id": "editorial-lux",
+  "scaffoldId": "landing-page",
+  "label": "Editorial Lux",
+  "description": "Premium, lifestyle, and fashion-led landing pages with editorial framing.",
+  "keywords": [
+    "luxury",
+    "premium",
+    "fashion",
+    "editorial",
+    "exclusive",
+    "elegant",
+    "lyx",
+    "mode"
+  ],
+  "fontPairings": [
+    {
+      "heading": "Cormorant Garamond",
+      "body": "Raleway"
+    },
+    {
+      "heading": "EB Garamond",
+      "body": "Outfit"
+    }
+  ],
+  "signatureMotif": "editorial framing, premium contrast, and restrained luxury accents",
+  "colorMode": "dark",
+  "promptHints": [
+    "Use stronger storytelling and atmosphere than a normal brochure page.",
+    "Treat whitespace and image framing as part of the premium experience."
+  ],
+  "signaturePatterns": {
+    "layouts": [
+      "Use a cinematic split hero with one oversized portrait or campaign image opposite a narrow text column and a single gold-accent CTA.",
+      "Compose feature storytelling as alternating full-width image bands and offset copy blocks, with generous top and bottom whitespace between sections.",
+      "Build product or collection highlights as a staggered two-column editorial grid with varied image crops, caption text, and a floating detail card.",
+      "Present testimonials or brand statements in a centered narrow column framed by thin borders, followed by a luxurious logo strip or press row.",
+      "Use a three-card offering section with the center card slightly raised, darker than the page, and finished with refined border treatment."
+    ],
+    "motifs": [
+      "Pair near-black surfaces with warm ivory typography, muted bronze accents, and occasional soft gold highlights that feel expensive rather than flashy.",
+      "Use thin editorial rules, framed image containers, and oversized serif headlines to create magazine-like hierarchy and visual restraint.",
+      "Let whitespace feel intentional and abundant, with narrow text measures, tall section spacing, and carefully cropped imagery carrying the mood.",
+      "Favor rounded corners around 1.2rem, soft dark cards, and subtle border contrast instead of bright shadows or glossy glass effects."
+    ],
+    "antiPatterns": [
+      "Avoid loud neon gradients, iridescent blobs, or startup-style glow effects that break the restrained luxury mood.",
+      "Never stack dense feature grids or dashboard-like icon blocks that make the page feel SaaS-functional instead of editorial-premium.",
+      "Avoid bright white backgrounds or high-key pastel sections; the experience should stay moody, atmospheric, and contrast-led.",
+      "Do not use chunky pill-heavy UI, playful illustrations, or cartoon iconography that cheapen the fashion-led framing."
+    ]
+  },
+  "themeTokens": {
+    "background": "oklch(0.15 0.01 35)",
+    "foreground": "oklch(0.93 0.01 80)",
+    "card": "oklch(0.18 0.01 35)",
+    "primary": "oklch(0.78 0.1 85)",
+    "primaryForeground": "oklch(0.12 0 0)",
+    "secondary": "oklch(0.24 0.01 35)",
+    "muted": "oklch(0.22 0.01 35)",
+    "accent": "oklch(0.55 0.06 40)",
+    "border": "oklch(0.3 0.01 45)",
+    "ring": "oklch(0.78 0.1 85)",
+    "radius": "1.2rem",
+    "bodyBackgroundImage": "radial-gradient(ellipse at top, color-mix(in oklab, var(--color-primary) 14%, transparent) 0%, transparent 38%), radial-gradient(circle at bottom right, color-mix(in oklab, var(--color-accent) 18%, transparent) 0%, transparent 32%)"
+  },
+  "sourceTemplateIds": [
+    "portfolio-magic-portfolio-for-next-js",
+    "portfolio-next-js-portfolio-with-pageview-counter",
+    "portfolio-nim-minimalist-personal-site",
+    "blog-a-next-js-14-blog-with-server-components"
+  ],
+  "default": false
+}
