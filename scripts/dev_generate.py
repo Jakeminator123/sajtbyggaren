@@ -45,16 +45,15 @@ sys.path.insert(0, str(REPO_ROOT))
 
 
 def _resolve_brief_model() -> str:
-    """Read briefModel.model from llm-models.v1.json. Falls back to gpt-5.4."""
-    policy_path = REPO_ROOT / "governance" / "policies" / "llm-models.v1.json"
-    try:
-        models = json.loads(policy_path.read_text(encoding="utf-8"))
-        for role in models.get("roles", []):
-            if role.get("id") == "briefModel":
-                return role.get("model", "gpt-5.4")
-    except Exception:  # noqa: BLE001
-        pass
-    return "gpt-5.4"
+    """Resolve briefModel via the canonical helper in packages.generation.brief.
+
+    Wraps the strict resolver so the call sites in this script don't need to
+    import the package directly. Strict by design: a misconfigured policy
+    surfaces immediately instead of pinning an old default model.
+    """
+    from packages.generation.brief import resolve_brief_model
+
+    return resolve_brief_model()
 
 
 # ----- helpers ---------------------------------------------------------------

@@ -893,22 +893,15 @@ def build_site_brief_mock(dossier: dict, scaffold: dict) -> dict:
 
 
 def resolve_brief_model() -> str:
-    """Read the briefModel model from llm-models.v1.json."""
-    policy_path = REPO_ROOT / "governance" / "policies" / "llm-models.v1.json"
-    models = load_json(policy_path)
-    for role in models.get("roles", []):
-        if role.get("id") != "briefModel":
-            continue
-        if role.get("provider") != "openai":
-            raise RuntimeError(
-                "briefModel provider must be openai for scripts/build_site.py "
-                f"(got {role.get('provider')!r})"
-            )
-        model = role.get("model")
-        if not isinstance(model, str) or not model.strip():
-            raise RuntimeError("briefModel is missing a non-empty model value")
-        return model
-    raise RuntimeError("briefModel role missing from llm-models.v1.json")
+    """Resolve briefModel via the canonical helper in packages.generation.brief.
+
+    Thin local wrapper kept only so the rest of this module can call it
+    without importing through `packages.generation.brief.resolve_brief_model`
+    everywhere.
+    """
+    from packages.generation.brief import resolve_brief_model as _resolve
+
+    return _resolve()
 
 
 def _join_values(values: list[Any]) -> str:

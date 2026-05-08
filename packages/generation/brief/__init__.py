@@ -13,11 +13,19 @@ from .extract import (
     extract_site_brief,
     site_brief_to_artifact,
 )
+from .models import (
+    BRIEF_ROLE_ID,
+    BriefModelResolutionError,
+    resolve_brief_model,
+)
 
 __all__ = [
+    "BRIEF_ROLE_ID",
+    "BriefModelResolutionError",
     "BriefResult",
     "SiteBrief",
     "detect_language",
     "extract_site_brief",
+    "resolve_brief_model",
     "site_brief_to_artifact",
 ]
