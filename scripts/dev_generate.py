@@ -1,8 +1,18 @@
-"""Engine Run dev driver (mock chain).
+"""Engine Run dev driver.
 
 Runs an Engine Run from a prompt to artifacts under data/runs/<runId>/.
-This first version is fully mocked: no LLM calls, no real codegen.
-It exists to lock the artifact contract before runtime code is written.
+
+LLM status (as of Sprint 2A, ADR 0013):
+    - Phase 1 Understand: calls real `briefModel` via OpenAI when
+      OPENAI_API_KEY is set, otherwise falls back to a deterministic
+      mock and writes briefSource=mock-no-key into site-brief.json.
+    - Phase 2 Plan: deterministic stub (planningModel wires in Sprint 2B).
+      site-plan.json carries planSource=mock-pre-sprint-2b.
+    - Phase 3 Build: deterministic placeholder files; codegenModel,
+      Repair Pipeline and Quality Gate land in Sprint 3.
+
+All artefakter (site-brief.json, site-plan.json, generation-package.json)
+are validated against governance/schemas/ before they are written.
 
 Usage:
     python scripts/dev_generate.py "Skapa hemsida för elektriker i Malmö"

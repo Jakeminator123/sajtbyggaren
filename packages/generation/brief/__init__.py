@@ -1,9 +1,23 @@
 """Phase 1 Understand: turn a raw prompt into a structured Site Brief.
 
 Public API:
-    extract_site_brief(prompt: str, *, model: str = ..., language_hint: str | None = None) -> SiteBrief
+    extract_site_brief(prompt: str, *, model: str = ..., language_hint: str | None = None) -> BriefResult
+        Always returns a BriefResult that wraps a SiteBrief plus a
+        truth-field `source` (`real` / `mock-no-key` / `mock-llm-error`).
+        Never raises on an OpenAI failure - the failure is captured in
+        `source` + `error` so callers can write deterministic artefakter.
 
-Falls back to a deterministic mock when OPENAI_API_KEY is not set.
+    site_brief_to_artifact(result: BriefResult, *, run_id: str, model: str) -> dict
+        Serialises a BriefResult into the canonical site-brief.json shape
+        locked by governance/schemas/site-brief.schema.json.
+
+    resolve_brief_model() -> str
+        Returns the briefModel model string from llm-models.v1.json. Strict.
+
+    detect_language(prompt: str) -> str
+        ISO 639-1 (sv/en) inference from prompt content.
+
+Mock fallback runs when OPENAI_API_KEY is not set (or whitespace-only).
 """
 
 from .extract import (

@@ -141,6 +141,10 @@ Korta motiveringar i [`governance/decisions/`](governance/decisions/):
 - [0007](governance/decisions/0007-language-policy.md) - Språkpolicy.
 - [0008](governance/decisions/0008-defer-evals-until-flow-exists.md) - Skjut upp baseline-eval tills LLM-flödet finns.
 - [0009](governance/decisions/0009-engine-run-and-llm-models.md) - Engine Run-artefaktkedja + Model Roles + centraliserad Repair Pipeline.
+- [0010](governance/decisions/0010-tighten-llm-chain-and-backoffice.md) - Strama åt LLM-kedjan + backoffice.
+- [0011](governance/decisions/0011-scaffolds-as-inherited-working-material.md) - Scaffolds som ärvt arbetsmaterial.
+- [0012](governance/decisions/0012-vocabulary-compression.md) - Vocabulary compression (Dossier-klasser låsta till soft/hard).
+- [0013](governance/decisions/0013-schema-locking-before-sprint-2b.md) - Schema-låsning före Sprint 2B.
 
 ## Engine Run
 
@@ -159,7 +163,10 @@ data/runs/<runId>/
   trace.ndjson             (Engine Events, append-only)
 ```
 
-Mock-driver kör hela kedjan utan LLM-anrop:
+Dev-drivern kör hela kedjan från prompt till artefakter. Sedan Sprint 2A
+anropar fas 1 riktiga `briefModel` när `OPENAI_API_KEY` finns, annars mock.
+Fas 2 + fas 3 är fortfarande deterministiska stubs (planningModel/codegenModel
+kopplas i Sprint 2B respektive Sprint 3).
 
 ```bash
 python scripts/dev_generate.py "Skapa hemsida för elektriker i Malmö"
