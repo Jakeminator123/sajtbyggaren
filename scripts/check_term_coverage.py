@@ -138,6 +138,8 @@ COMMON_WORDS = {
     # 1-cap names like Phone/Mail/Sparkles never trigger PASCAL_RE; only
     # multi-cap PascalCase icons need explicit allowlisting.
     "MapPin", "ShieldCheck", "PartyPopper", "ShoppingBag",
+    # Konsumentvarumärken som dyker upp i exempel-content (inte domänbegrepp)
+    "PlayStation",
     "TokenMeterContext", "TokenMeterContextValue", "TokenMeterProvider", "TokenMeterState",
     "UsageDelta", "UsageSummary", "ViewerPanelProps",
     "BuildPayloadSchema", "ChatPanel", "TokenMeter", "ViewerPanel",

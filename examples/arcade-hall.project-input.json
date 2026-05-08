@@ -1,0 +1,81 @@
+{
+  "$schema": "../packages/generation/orchestration/project-input/project-input.schema.json",
+  "siteId": "arcade-hall",
+  "scaffoldId": "local-service-business",
+  "variantId": "nordic-trust",
+  "language": "sv",
+  "company": {
+    "name": "Pixel Palace",
+    "businessType": "arcade",
+    "tagline": "Stockholms hemtrevliga retro-arkad - kom som du är, spela som du vill",
+    "story": "Vi öppnade Pixel Palace för att samla allt det bästa från åttio- och nittiotalets spelhallar på ett ställe. Originalmaskiner, nyrenoverade konsoller, månadsturneringar och ett kök som faktiskt vill att du sitter kvar. Vuxna gamla raggare. Barn på kalas. Familjer på söndagsfika. Alla får plats.",
+    "founded": 2022,
+    "team": [
+      { "name": "Elin Rask", "role": "Grundare och retro-purist" },
+      { "name": "Noah Wallin", "role": "Teknik och underhåll" },
+      { "name": "Saga Lund", "role": "Eventansvarig" }
+    ]
+  },
+  "location": {
+    "city": "Stockholm",
+    "region": "Södermalm",
+    "country": "Sverige",
+    "serviceAreas": ["Södermalm", "Hornstull", "Mariatorget", "Slussen", "Gamla stan"]
+  },
+  "services": [
+    {
+      "id": "arcade-games",
+      "label": "Klassiska arkadspel",
+      "summary": "Pacman, Donkey Kong, Galaga, Street Fighter II och 30+ originalmaskiner som vi själva har plockat hem från hela Europa."
+    },
+    {
+      "id": "retro-consoles",
+      "label": "Retrokonsoller",
+      "summary": "NES, SNES, Mega Drive, N64, PlayStation 1 och Dreamcast i avskilda spelbås. Boka per timme eller hela kvällen."
+    },
+    {
+      "id": "tournaments-monthly",
+      "label": "Månadsturneringar",
+      "summary": "Första lördagen i månaden kör vi turnering. Tetris, Mario Kart, Smash Bros eller fight night - olika varje gång."
+    },
+    {
+      "id": "birthday-parties",
+      "label": "Födelsedagskalas",
+      "summary": "Privat zon, obegränsat spelande, tårta och fika. Vi tar hand om allt så ni bara behöver dyka upp."
+    },
+    {
+      "id": "private-events",
+      "label": "Företags- och privatevent",
+      "summary": "AW, kickoff, möhippa eller klassträff. Hela lokalen för er, hyrd bartender på begäran och en värd som håller ihop kvällen."
+    },
+    {
+      "id": "food-drinks",
+      "label": "Mat och dryck",
+      "summary": "Riktigt bra burgare, varma ostrullar, slushice och kalla öl. Inget mikrad pizza."
+    }
+  ],
+  "tone": {
+    "primary": "lekfull",
+    "secondary": ["nostalgisk", "varm", "icke-gatekeeping"],
+    "avoid": ["hipster-svada", "esport-tråkighet", "barnförbud-känsla"]
+  },
+  "trustSignals": [
+    "Över 30 originalmaskiner, alla underhållna av husteknikern",
+    "Månadsturneringar sedan 2023 med över 600 deltagare totalt",
+    "Familjevänlig fram till 20:00, vuxna efter det",
+    "Boka privat zon för kalas eller företagsevent"
+  ],
+  "conversionGoals": ["booking_request", "call"],
+  "requestedCapabilities": ["interactive-game"],
+  "contact": {
+    "phone": "+46 8 123 45 67",
+    "email": "hej@pixelpalace.se",
+    "addressLines": ["Hornsgatan 124", "118 28 Stockholm"],
+    "openingHours": "Mån-Tor 16-23, Fre-Lör 14-02, Sön 12-22"
+  },
+  "selectedDossiers": {
+    "required": ["interactive-game-loop"],
+    "recommended": ["service-list", "service-area", "reviews", "trust-badges"],
+    "rationale": "Pacman på sajten är en perfekt teaser för en faktisk spelhall - besökaren får direkt en känsla för stället innan de kommer dit."
+  }
+}
