@@ -18,7 +18,7 @@ Tre lager:
 
 ## Vad funkar idag
 
-- ADR 0001–0013 + 15 policies + matchande schemas.
+- ADR 0001–0014 + 15 policies + matchande schemas.
 - 4 automatiska checks: `governance_validate.py`, `rules_sync.py`, `check_term_coverage.py --strict`, `pytest`. GitHub Actions kör alla på push/PR.
 - **Sprint 2A (PR #7, `3dbffe4`):** både `scripts/build_site.py` och `scripts/dev_generate.py` anropar riktiga `briefModel` (gpt-5.4) via OpenAI med Pydantic structured output när `OPENAI_API_KEY` finns; mock-fallback annars. `site-brief.json` markeras med `briefSource` (`real` / `mock-no-key` / `mock-llm-error`) och `modelUsed`. `has_openai_api_key()`-helpern stripar whitespace så `"   "` räknas som saknad nyckel.
 - **Sprint 2B:** `packages/generation/planning/produce_site_plan` är enda källan för Site Plan + Generation Package. Båda scripten anropar samma helper - `dev_generate.py` utan pinning (planSource `real` / `mock-no-key` / `mock-llm-error`), `build_site.py` med `pinned={scaffoldId, variantId}` från Project Input (planSource `pinned`, planningModel skippas eftersom operatörens val är auktoritativt). Capability-filter ("tom dossier-lista = gap") körs centralt så `selectedDossiers.rejected[]` alltid speglar verkligheten. Builder läser `starterId` från planen istället för att hårdkoda `marketing-base`. **B19 stängd.**
@@ -56,7 +56,7 @@ Läs i denna ordning:
 3. `governance/policies/naming-dictionary.v1.json` (kanon)
 4. `governance/policies/engine-run.v1.json` (artefaktkedjan)
 5. `governance/policies/repo-boundaries.v1.json` (vad får importera vad)
-6. `governance/decisions/0001` till `0013` (varför vi gör som vi gör — särskilt 0012 vocabulary compression och 0013 schema-låsning)
+6. `governance/decisions/0001` till `0014` (varför vi gör som vi gör — särskilt 0012 vocabulary compression, 0013 schema-låsning, 0014 Sprint 2B planning helper)
 7. `governance/rules/branch-discipline.md` (commit + push direkt mot main är standard, inte PR)
 8. `docs/migration-plan.md` (sprint-läget)
 9. `docs/known-issues.md` (öppna och stängda buggar med IDs)

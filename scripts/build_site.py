@@ -2,9 +2,10 @@
 
 Reads a Project Input, a Scaffold and a Variant from the repository, writes
 canonical Engine Run artifacts under `data/runs/<runId>/`, and produces a
-runnable Next.js project under `.generated/<siteId>/` by copying the
-`marketing-base` Starter and patching it with the project input's content and
-the variant's tokens.
+runnable Next.js project under `.generated/<siteId>/` by copying the Starter
+named in `site_plan["starterId"]` (resolved by `produce_site_plan` from the
+`SCAFFOLD_TO_STARTER` mapping) and patching it with the project input's
+content and the variant's tokens.
 
 By default the builder also runs `npm install` (when `node_modules` is
 missing) and `npm run build`. Pass `--skip-build` to skip those steps during

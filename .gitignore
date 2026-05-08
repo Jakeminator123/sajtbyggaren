@@ -42,3 +42,11 @@ Thumbs.db
 # Operator-only reference workspace - copies/forks of MIN_IDE-style examples.
 # Files in MIN_IDE/ are read-only inspiration and never get committed.
 MIN_IDE/
+
+# Starter-source zips/tarballs - we keep README.md per starter but raw source
+# archives (e.g. data/starters/commerce-base/commerce-main.zip) are operator-
+# local material and must never be committed. The harmonised starter content
+# lives directly under data/starters/<id>/ once a starter-harmonisation sprint
+# unzips and ports it.
+data/starters/**/*.zip
+data/starters/**/*.tar.gz

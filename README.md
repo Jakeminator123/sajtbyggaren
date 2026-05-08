@@ -145,6 +145,7 @@ Korta motiveringar i [`governance/decisions/`](governance/decisions/):
 - [0011](governance/decisions/0011-scaffolds-as-inherited-working-material.md) - Scaffolds som ärvt arbetsmaterial.
 - [0012](governance/decisions/0012-vocabulary-compression.md) - Vocabulary compression (Dossier-klasser låsta till soft/hard).
 - [0013](governance/decisions/0013-schema-locking-before-sprint-2b.md) - Schema-låsning före Sprint 2B.
+- [0014](governance/decisions/0014-sprint-2b-planning-helper.md) - Sprint 2B planning helper (gemensam `produce_site_plan`, planSource pinned, ecommerce-lite scaffold).
 
 ## Engine Run
 
