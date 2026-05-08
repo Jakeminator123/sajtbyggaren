@@ -81,6 +81,17 @@ def produce_codegen_artefakt(
             )
         )
 
+    # Builder always writes app/layout.tsx via render_layout (see
+    # scripts/build_site.py:write_pages). The manifest must mention it
+    # or the v1 promise of "adapt the actual builder output" is broken.
+    files.append(
+        CodegenFile(
+            path="app/layout.tsx",
+            source="codegen",
+            role="layout",
+        )
+    )
+
     files.append(
         CodegenFile(
             path="package.json",

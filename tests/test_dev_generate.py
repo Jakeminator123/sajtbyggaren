@@ -88,7 +88,14 @@ def test_dev_generate_trace_has_expected_events(tmp_path: Path):
     assert "run.started" in statuses
     assert "run.done" in statuses
     assert "files.written" in statuses
-    assert "quality.done" in statuses
+    # Sprint 3A harmonised event names: dev_generate now emits the same
+    # dotted phase events as scripts/build_site.py (was: quality.done /
+    # repair.done / result.written, now: quality_result.written /
+    # repair_result.written / build.result.written). A single Backoffice
+    # consumer can render both runner outputs without per-driver casing.
+    assert "quality_result.written" in statuses
+    assert "repair_result.written" in statuses
+    assert "build.result.written" in statuses
 
 
 @pytest.mark.tooling

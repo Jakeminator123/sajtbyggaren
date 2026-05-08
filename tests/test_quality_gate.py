@@ -265,3 +265,62 @@ def test_quality_result_round_trips_through_pydantic(tmp_path):
     restored = QualityResult.model_validate(payload)
     assert restored.status == result.status
     assert len(restored.checks) == len(result.checks)
+
+
+# ---------------------------------------------------------------------------
+# Bug-fix locks (post-ec8339e cloud-agent review)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_typecheck_does_not_use_shell_true_with_list():
+    """Cloud-agent finding: ``subprocess.run([list], shell=True)`` silently
+    drops every argument after the first on POSIX (sh -c "npx" passes the
+    rest as positional args $0..$N to the shell, not to the command). The
+    typecheck check must mirror scripts/build_site.py:run_npm and use
+    shutil.which + shell=False.
+    """
+    import inspect
+
+    from packages.generation.quality_gate import checks as quality_checks
+
+    source = inspect.getsource(quality_checks.run_typecheck_check)
+    assert "shutil.which(" in source, (
+        "run_typecheck_check must resolve the executable via "
+        "shutil.which (mirrors scripts/build_site.py:run_npm)."
+    )
+    code_lines = [
+        line for line in source.splitlines()
+        if not line.lstrip().startswith("#")
+    ]
+    code = "\n".join(code_lines)
+    assert "shell=False" in code, (
+        "run_typecheck_check must call subprocess.run with shell=False."
+    )
+    assert "shell=True" not in code, (
+        "run_typecheck_check must not use shell=True in actual code "
+        "(comments are fine, but the subprocess.run call must use "
+        "shell=False). shell=True with a list silently drops args on "
+        "POSIX. Use shutil.which + shell=False instead."
+    )
+
+
+@pytest.mark.tooling
+def test_quality_gate_route_scan_is_authoritative_in_builder(tmp_path, monkeypatch):
+    """Cloud-agent finding: assert_routes_present used to crash the build
+    via SystemExit before Quality Gate route-scan could write structured
+    findings to quality-result.json. Sprint 3A removed the call from the
+    canonical build flow so route-scan owns the route check.
+    """
+    import inspect
+
+    from scripts import build_site
+
+    build_source = inspect.getsource(build_site.build)
+    assert "assert_routes_present(target," not in build_source, (
+        "scripts/build_site.py:build() must not call assert_routes_present. "
+        "Quality Gate route-scan handles missing routes structurally; "
+        "calling assert_routes_present here would crash the build before "
+        "quality-result.json is written. The function still exists for "
+        "B8/B9 regression tests in tests/test_builder_hardening.py."
+    )

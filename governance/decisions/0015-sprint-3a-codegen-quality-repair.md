@@ -58,9 +58,22 @@ anrop som emittar `CodegenFile` *innan* skrivning. Då blir
 (produktlogik i scripts/) stängs i samma rörelse.
 
 `codegen-result.json` skrivs **inte** som canonical artefakt eftersom
-`engine-run.v1.json:artifacts` listar exakt åtta artefakter och codegen-
-metadatat ryms inom `build-result.json`. Manifestet feedas till Quality
-Gate och Repair Pipeline in-memory.
+`engine-run.v1.json:artifacts` listar exakt åtta artefakter. Sprint 3A
+v1 surfar codegen-metadatat som ett kompakt `codegen`-fält i
+`build-result.json` (source, modelUsed, fileCount, rationale; den fulla
+`files`-listan utelämnas eftersom snapshotten under
+`generatedFilesDir` redan är auktoritativ on-disk-record). Sprint 3B
+fyller i `codegen.fileCount` mot riktigt LLM-anrop och kan sedan välja
+att utöka build-result med en länk till manifestet om Backoffice
+behöver det.
+
+Manifestet feedas **inte** till Quality Gate eller Repair Pipeline i
+v1 - tidigare versioner av denna ADR antydde att det skulle göras
+in-memory, men v1-värdet av att kors-validera manifestet mot disk är
+litet (Quality Gate route-scan + policy-compliance läser disk redan).
+Sprint 3B kan introducera den feed:en när codegenModel emittar entries
+*innan* skrivning så manifestet blir auktoritativt och jämförelse
+faktiskt fångar drift.
 
 ### 3) Quality Gate kör fyra checks
 
@@ -80,6 +93,25 @@ Gate och Repair Pipeline in-memory.
 `QualityResult.status` aggregeras till `ok` (alla checks ok eller
 skipped), `degraded` (någon check failed men typecheck/build var ok)
 eller `failed` (typecheck eller build failed).
+
+`scripts/build_site.py` propagerar gate-statusen till `build-result.
+status`:
+
+- `failed` flippar `overall_status="failed"` och `SystemExit(1)`.
+- `degraded` flippar `overall_status="degraded"` men exit-koden förblir
+  0. Build-resultatet är därmed ärligt (operatören ser `degraded` i
+  build-result.json), men en `degraded` build är fortfarande shippable
+  - Repair Pipeline `remainingErrors[]` är källan för triage.
+- `ok` rör inte `overall_status`.
+
+Sprint 3A tar **bort** anropet till `assert_routes_present` från
+huvud-builden så Quality Gate route-scan blir auktoritativ. Funktionen
+kvarstår i `scripts/build_site.py` som utility för B8/B9-regression-
+tester (`tests/test_builder_hardening.py`) men interrupterar inte
+canonical build-flödet längre. Tidigare crashade
+`assert_routes_present(SystemExit)` *före* Quality Gate hann skriva
+`quality-result.json`, vilket gjorde route-scan-grenen i Quality Gate
+till dead code i felfallet.
 
 ### 4) Repair Pipeline har strukturerat no-fix-applied-läge
 
@@ -103,15 +135,28 @@ mekaniska inte räcker. Kontraktet (`RepairResult`-typen) är låst nu.
 "produktlogik" och får importera bara från
 `packages/generation/{brief,planning,artifacts}`. Sprint 3A utökar
 `mayImportFrom` med de tre nya paketen. Det är tunn wiring, inte
-produktlogik:
+produktlogik. Faktisk sekvens i `scripts/build_site.py:build()`:
 
 ```python
-# scripts/build_site.py (Phase 3, slutet)
-codegen_result = produce_codegen_artefakt(generation_package, ...)
-quality_result = run_quality_gate(target, run_dir, codegen_result, ...)
-repair_result = run_repair_pipeline(quality_result, target, ...)
-write_json(run_dir / "quality-result.json", quality_result.model_dump(by_alias=True))
-write_json(run_dir / "repair-result.json", repair_result.model_dump(by_alias=True))
+# Phase 3 - end of build()
+codegen_result = produce_codegen_artefakt(
+    generation_package,
+    routes_written=routes_all_with_dossiers,
+    dossier_components=copied_components,
+    starter_id=starter_id,
+)
+quality_payload, repair_payload = run_phase3_quality_and_repair(
+    run_dir, target, routes_required_with_dossiers, npm_steps,
+    overall_status, do_typecheck,
+)
+# QG status propagation: failed -> exit 1, degraded -> exit 0
+# but build_result.status="degraded".
+write_build_result(..., codegen_summary={
+    "source": codegen_result.source,
+    "modelUsed": codegen_result.modelUsed,
+    "fileCount": len(codegen_result.files),
+    "rationale": codegen_result.rationale,
+})
 ```
 
 Skeleton-funktionerna `write_repair_result_skeleton` och
@@ -121,6 +166,23 @@ B13 förvärras inte av Sprint 3A: ny logik landar uteslutande i
 `packages/generation/`. När B13 stängs i en framtida sprint flyttas
 write_pages/mount_dossier_components/patch_globals_css till
 `packages/generation/build/` eller `packages/generation/codegen/`.
+
+### 6) Spök-paket: `packages/generation/build/` finns inte ännu
+
+Både `engine-run.v1.json:phases.build.ownerPackage` och
+`repo-boundaries.v1.json` listar `packages/generation/build/` som ägare
+av fas 3, men paketet finns inte på disk. All faktisk fas-3-orkestrering
+ligger i `scripts/build_site.py`. Sprint 3A *förvärrar inte* gapet
+(scripts-spannen växer inte med tunn wiring), men *stänger inte heller*
+det. Detta är samma B13-skuld som flaggades i pre-Sprint-3A-auditrapporten
+och en peer-reviewer-runda hittade samma sak om policies vs. faktisk
+tråddragning.
+
+Sprint 3B/4 kan stänga skulden genom att flytta
+`write_pages`/`patch_globals_css`/`mount_dossier_components` (samt den
+tunna wirings-helpern `run_phase3_quality_and_repair`) till ett nytt
+`packages/generation/build/`-paket. Sprint 3A noterar gapet i denna ADR
+istället för att försöka åtgärda två saker samtidigt.
 
 ## Konsekvenser
 

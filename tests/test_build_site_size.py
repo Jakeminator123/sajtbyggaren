@@ -154,6 +154,64 @@ def test_produce_site_plan_remains_canonical_plan_source():
 
 
 @pytest.mark.tooling
+def test_build_result_includes_codegen_summary(tmp_path, monkeypatch):
+    """ADR 0015 reserves a ``codegen`` slot in build-result.json for the
+    codegenModel v1 metadata (source, modelUsed, fileCount, rationale).
+    The full files list is intentionally omitted - the snapshot under
+    generatedFilesDir is the authoritative on-disk record.
+    """
+    from scripts.build_site import build
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    project_input = REPO_ROOT / "examples" / "painter-palma.project-input.json"
+    _, run_dir = build(project_input, do_build=False, runs_dir=tmp_path)
+
+    import json
+
+    build_result = json.loads(
+        (run_dir / "build-result.json").read_text(encoding="utf-8")
+    )
+    assert "codegen" in build_result, (
+        "build-result.json must include a 'codegen' field per ADR 0015. "
+        "The codegenModel v1 manifest source/modelUsed/fileCount/rationale "
+        "must be surfaced here so Backoffice can show codegen status "
+        "without opening trace.ndjson."
+    )
+    codegen = build_result["codegen"]
+    assert codegen["source"] == "deterministic-v1"
+    assert codegen["modelUsed"] == "deterministic"
+    assert codegen["fileCount"] >= 1
+    assert "marketing-base" in codegen["rationale"]
+
+
+@pytest.mark.tooling
+def test_degraded_quality_propagates_to_build_status():
+    """ADR 0015 says Quality Gate ``degraded`` status flips
+    overall_status to ``degraded`` so build-result.json is honest about
+    soft-failure runs (route-scan or policy-compliance failed but
+    typecheck/build are ok). Exit code stays 0.
+
+    Source-level lock: the propagation logic must be present in
+    scripts/build_site.py:build(). If a future refactor drops it,
+    degraded runs would silently report status=ok which would mislead
+    operators looking at build-result.json.
+    """
+    import inspect
+
+    from scripts import build_site
+
+    source = inspect.getsource(build_site.build)
+    assert (
+        'quality_payload["status"] == "degraded"' in source
+        and 'overall_status = "degraded"' in source
+    ), (
+        "build() must propagate Quality Gate 'degraded' to overall_status "
+        "(ADR 0015). Otherwise a route-scan or policy-compliance soft "
+        "failure would report status=ok in build-result.json."
+    )
+
+
+@pytest.mark.tooling
 def test_quality_result_payload_has_real_checks_not_skeleton():
     """Black-box read of the wiring: the runtime payload that ends up in
     quality-result.json must contain a ``checks`` list with the four

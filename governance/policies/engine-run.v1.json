@@ -57,7 +57,7 @@
     {
       "id": "build",
       "label": "Fas 3 - Build",
-      "purpose": "Anropa codegen-LLM, skriv Generated Files, kör Repair Pipeline, kör Quality Gate, producera Build Result.",
+      "purpose": "Anropa codegenModel (deterministisk v1 i Sprint 3A; LLM från Sprint 3B), skriv Generated Files, kör Quality Gate, kör Repair Pipeline mot Quality Gate-resultatet, producera Build Result.",
       "writes": ["generated-files/", "repair-result.json", "quality-result.json", "build-result.json"],
       "ownerPackage": "packages/generation/build",
       "allowedToCallLLM": true,

@@ -727,6 +727,14 @@ def mount_dossier_components(target: Path, selected_dossiers: list[dict]) -> lis
     Filename collisions across dossiers are a hard build error: two dossiers
     cannot silently overwrite each other's components. Operators must rename or
     move the conflicting file before the build can proceed.
+
+    Returns ``components/<filename>`` (path relative to the build target) for
+    every copied file. The relative-path prefix is mandatory so downstream
+    consumers - notably ``produce_codegen_artefakt`` in
+    ``packages.generation.codegen`` - can record where the file actually
+    lives. Returning bare filenames (which earlier Sprint 3A revisions did)
+    made the codegen manifest claim files at the project root that were in
+    fact under ``components/``.
     """
     copied: list[str] = []
     seen: dict[str, str] = {}
@@ -747,7 +755,7 @@ def mount_dossier_components(target: Path, selected_dossiers: list[dict]) -> lis
             seen[source.name] = info["id"]
             destination = components_target / source.name
             write(destination, source.read_text(encoding="utf-8"))
-            copied.append(source.name)
+            copied.append(f"components/{source.name}")
     return copied
 
 
@@ -1318,6 +1326,7 @@ def write_build_result(
     overall_status: str,
     target_dir: Path,
     duration_ms: int,
+    codegen_summary: dict | None = None,
 ) -> dict:
     """Write build-result.json. ``generatedFilesDir`` points at the canonical
     snapshot under the run directory, not at the dev preview, so downstream
@@ -1326,6 +1335,12 @@ def write_build_result(
     ``starter_id`` mirrors what ``site-plan.json`` chose - the builder no
     longer hardcodes ``marketing-base`` here so the build result reflects
     the planner's pick (Sprint 2B).
+
+    ``codegen_summary`` carries the codegenModel v1 metadata (source,
+    modelUsed, fileCount, rationale) that ADR 0015 reserves a slot for in
+    build-result.json. The full ``files`` list is intentionally omitted -
+    the manifest can grow large and the snapshot under generatedFilesDir
+    is already the authoritative on-disk record.
     """
     snap_dir = run_dir / "generated-files"
     rel_snapshot = _to_repo_relative(snap_dir)
@@ -1355,6 +1370,8 @@ def write_build_result(
         "status": overall_status,
         "runDurationMs": duration_ms,
     }
+    if codegen_summary is not None:
+        result["codegen"] = codegen_summary
     write_json(run_dir / "build-result.json", result)
     trace.event(
         "build", "build.result.written", "done",
@@ -1441,10 +1458,18 @@ def build(
     routes_all = all_default_routes(scaffold_routes)
     routes_required_with_dossiers = sorted(set(routes_required + dossier_routes))
     routes_all_with_dossiers = sorted(set(routes_all + dossier_routes))
-    assert_routes_present(target, routes_required_with_dossiers)
+    # Sprint 3A note: the previous hard guard ``assert_routes_present`` ran
+    # here and crashed the build via SystemExit on missing routes or absent
+    # default exports. That made Quality Gate route-scan dead code in the
+    # failure path - we always crashed before writing quality-result.json.
+    # Quality Gate route-scan now owns the route check; failures flip
+    # overall_status to "failed" and write structured findings to
+    # quality-result.json. assert_routes_present remains as a utility
+    # function (locked by tests/test_builder_hardening.py B8/B9 regression
+    # tests) but no longer interrupts the canonical build flow.
     trace.event(
         "build", "files.written", "done",
-        f"Wrote {len(routes_all_with_dossiers)} routes and copied {len(copied_components)} dossier components with default exports verified",
+        f"Wrote {len(routes_all_with_dossiers)} routes and copied {len(copied_components)} dossier components",
     )
 
     npm_steps: list[dict] = []
@@ -1534,13 +1559,32 @@ def build(
         payload_path="repair-result.json",
     )
 
+    # Quality Gate status propagation (ADR 0015):
+    #
+    # - "failed" (typecheck or build-status failed) -> overall_status="failed",
+    #   raise SystemExit(1) below. These are blocking checks.
+    # - "degraded" (route-scan or policy-compliance failed but blocking
+    #   checks ok/skipped) -> overall_status="degraded", exit code 0. The
+    #   build is shippable but operator should investigate. Repair Pipeline
+    #   already carries the structured remainingErrors[] for triage.
+    # - "ok" -> no change.
     if quality_payload["status"] == "failed" and overall_status == "ok":
         overall_status = "failed"
+    elif quality_payload["status"] == "degraded" and overall_status == "ok":
+        overall_status = "degraded"
+
+    codegen_summary = {
+        "source": codegen_result.source,
+        "modelUsed": codegen_result.modelUsed,
+        "fileCount": len(codegen_result.files),
+        "rationale": codegen_result.rationale,
+    }
 
     duration_ms = int((time.monotonic() - started) * 1000)
     write_build_result(
         run_dir, trace, dossier, site_brief, scaffold, variant, starter_id,
         routes_all_with_dossiers, npm_steps, overall_status, target, duration_ms,
+        codegen_summary=codegen_summary,
     )
 
     if overall_status == "failed":

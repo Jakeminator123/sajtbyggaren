@@ -64,10 +64,15 @@ def test_codegen_emits_one_page_per_route():
 def test_codegen_emits_dossier_mount_entries():
     """dossier_components paths become CodegenFile entries with
     source=dossier-mount, role=component.
+
+    Paths must include the ``components/`` prefix because that is where
+    ``scripts/build_site.py:mount_dossier_components`` actually writes
+    the files. An earlier Sprint 3A revision used bare filenames which
+    made the manifest lie about the on-disk location.
     """
     components = [
-        "app/components/pacman-game.tsx",
-        "app/components/before-after-slider.tsx",
+        "components/pacman-game.tsx",
+        "components/before-after-slider.tsx",
     ]
     result = produce_codegen_artefakt(
         {},
@@ -79,6 +84,26 @@ def test_codegen_emits_dossier_mount_entries():
     assert {f.path for f in component_files} == set(components)
     for f in component_files:
         assert f.source == "dossier-mount"
+
+
+@pytest.mark.tooling
+def test_codegen_dossier_paths_match_builder_mount_path():
+    """Lock the contract that mount_dossier_components returns
+    ``components/<filename>``. If the builder ever changes its return
+    shape, this test catches it before the manifest goes out of sync
+    with disk.
+    """
+    import inspect
+
+    from scripts.build_site import mount_dossier_components
+
+    source = inspect.getsource(mount_dossier_components)
+    assert 'copied.append(f"components/{source.name}")' in source, (
+        "mount_dossier_components must return paths prefixed with "
+        "'components/' so the codegen manifest mirrors disk. "
+        "If you renamed the prefix or moved the helper, update the "
+        "test and produce_codegen_artefakt at the same time."
+    )
 
 
 @pytest.mark.tooling
@@ -94,6 +119,25 @@ def test_codegen_always_includes_patched_starter_files():
     assert "app/globals.css" in paths
     starter_patched = [f for f in result.files if f.source == "starter-patched"]
     assert len(starter_patched) >= 2
+
+
+@pytest.mark.tooling
+def test_codegen_always_includes_app_layout():
+    """scripts/build_site.py:write_pages always writes app/layout.tsx (via
+    render_layout). The manifest must record it as a CodegenFile with
+    role=layout. Earlier Sprint 3A v1 forgot the layout entry, which
+    broke the "adapt actual builder output" promise of v1.
+    """
+    result = produce_codegen_artefakt(
+        {}, routes_written=[], dossier_components=[], starter_id="marketing-base"
+    )
+    paths_by_role: dict[str, set[str]] = {}
+    for f in result.files:
+        paths_by_role.setdefault(f.role, set()).add(f.path)
+    assert "app/layout.tsx" in paths_by_role.get("layout", set()), (
+        "Codegen manifest must include app/layout.tsx with role=layout. "
+        "The builder writes it on every run; missing it makes v1 dishonest."
+    )
 
 
 @pytest.mark.tooling

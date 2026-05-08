@@ -17,6 +17,7 @@ Sprint 3A v1 implements four checks:
 from __future__ import annotations
 
 import re
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -79,14 +80,28 @@ def run_typecheck_check(
             ),
         )
 
+    # Mirror scripts/build_site.py:run_npm: resolve the executable via
+    # shutil.which and call subprocess with shell=False. shell=True with a
+    # list silently drops every argument after the first on POSIX (sh -c
+    # only treats args[0] as the command and passes the rest as positional
+    # args), so the previous shell=True+list invocation collapsed to a
+    # bare `npx` on Linux.
+    npx_path = shutil.which("npx")
+    if npx_path is None:
+        return CheckResult(
+            name="typecheck",
+            status="skipped",
+            detail="npx inte tillgängligt på PATH.",
+        )
+
     try:
         result = subprocess.run(
-            ["npx", "--no-install", "tsc", "--noEmit"],
+            [npx_path, "--no-install", "tsc", "--noEmit"],
             cwd=str(target_dir),
             capture_output=True,
             text=True,
             timeout=timeout,
-            shell=True,
+            shell=False,
             check=False,
         )
     except subprocess.TimeoutExpired:

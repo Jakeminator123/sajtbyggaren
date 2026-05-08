@@ -104,9 +104,9 @@ Total runtime: 7.6 s, exit: 0
 | `site-plan.json` | plan | Vald Scaffold + Variant + routes + valda dossiers + BuildSpec via `produce_site_plan` (`planSource`: `real` / `mock-no-key` / `mock-llm-error` / `pinned`) |
 | `generation-package.json` | plan | Sammanfattning av vad codegen-LLM skulle få (utan att vi anropar någon) |
 | `generated-files/` | build | Snapshot av filerna under `.generated/<siteId>/` exklusive `node_modules` och `.next` |
-| `repair-result.json` | build | `status=not-run` skeleton tills Repair Pipeline byggs i Sprint 3 |
-| `quality-result.json` | build | `status=not-run` skeleton tills Quality Gate byggs i Sprint 3 |
-| `build-result.json` | build | Slutstatus, npm-steg, körtid, `modelUsed`, `briefSource`, `modelUsage`-stub |
+| `repair-result.json` | build | `RepairResult` från `packages/generation/repair/` (Sprint 3A): `status=not-needed` när Quality Gate är ok, annars `status=no-fix-applied` med `remainingErrors[]`. Mekaniska fixes + LLM-fix kommer i Sprint 3B+ |
+| `quality-result.json` | build | `QualityResult` från `packages/generation/quality_gate/` (Sprint 3A): fyra checks (typecheck/route-scan/build-status/policy-compliance) med per-check `status` + aggregat `ok`/`degraded`/`failed`. Scoring mot Page Quality Traits kommer i Sprint 3C |
+| `build-result.json` | build | Slutstatus (`ok`/`degraded`/`failed`/`skipped`), npm-steg, körtid, `modelUsed`, `briefSource`, `modelUsage`-stub, plus `codegen` (source/modelUsed/fileCount/rationale) per ADR 0015 |
 | `trace.ndjson` | alla | Append-only Engine Events |
 
 Generated files speglas till `.generated/<siteId>/` för dev-preview.
@@ -117,17 +117,17 @@ Buildern har sex hårda spärrar:
 
 1. Buildern skriver aldrig `.env` eller `.env.<scope>`-filer. Försök ger `AssertionError`. `.env.example` är tillåten.
 2. `node_modules` och `.next` exkluderas från `copy_starter` och bevaras vid regeneration.
-3. Required routes från `routes.json` måste existera som `app/<route>/page.tsx`. Saknas en route exit:ar buildern med kod 1 innan npm.
+3. Required routes-checken körs nu av Quality Gate route-scan (Sprint 3A). Saknas en route flippas `quality-result.json:status` till `failed`, `build-result.json:status` blir `failed` och builder exit:ar 1. Den gamla `assert_routes_present`-funktionen finns kvar som B8/B9-regression-utility men interrupterar inte huvud-builden längre.
 4. `npm install` körs bara om `node_modules` saknas. Failar steget skrivs `build-result.json` med `status=failed` och buildern exit:ar 1.
 5. `npm run build` körs alltid när `--skip-build` inte är satt. Failar build skrivs `status=failed` och builder exit:ar 1.
 6. `.generated/<siteId>/` är gitignorerad. `data/runs/` är också gitignorerad så lokala körningar förorenar inte git-status.
 
 ## Begränsningar i denna runda
 
-Det här gör Builder MVP **inte** efter Sprint 2A. Operatören får utöka när nästa milstolpe är låst.
+Det här gör Builder MVP **inte** efter Sprint 3A. Operatören får utöka när nästa milstolpe är låst.
 
 - Fas 2 körs via `produce_site_plan`; builder-pathen är `pinned` (Project Input styr scaffold/variant), dev-driver kan köra real `planningModel` när nyckel finns.
-- Fas 3 är deterministisk patch på `marketing-base` - ingen `codegenModel`, ingen Repair Pipeline (`packages/generation/repair/`), ingen Quality Gate (`packages/generation/quality_gate/`). Sprint 3 levererar dessa.
+- Fas 3 har Sprint 3A-vertikalen klar: deterministisk `codegenModel v1`-manifest (`packages/generation/codegen/`), riktiga Quality Gate-checks (`packages/generation/quality_gate/`) och no-fix-applied Repair Pipeline (`packages/generation/repair/`). Real `codegenModel`-LLM-anrop, mekaniska fixes (Fix Registry) och LLM-fix kommer i Sprint 3B+. Quality Gate-scoring mot Page Quality Traits kommer i Sprint 3C.
 - Ingen Stripe, Supabase, Clerk, Shopify eller annan `hard` Dossier.
 - Ingen preview-release och inget `Promoted Site`-läge.
 - Bara en starter (`marketing-base`) och en scaffold (`local-service-business`) implementerade. Project Inputs som finns att bygga: `painter-palma`, `arcade-hall`, `foto-ram`.
