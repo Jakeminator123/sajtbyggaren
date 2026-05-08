@@ -1,0 +1,86 @@
+{
+  "$schema": "../packages/generation/orchestration/project-input/project-input.schema.json",
+  "siteId": "foto-ram",
+  "scaffoldId": "local-service-business",
+  "variantId": "nordic-trust",
+  "language": "sv",
+  "company": {
+    "name": "Norrljus Studio",
+    "businessType": "photo-studio",
+    "tagline": "Modern fotostudio i Göteborg som även gör handgjorda ramar i ek och valnöt",
+    "story": "Norrljus är ett litet team som tar porträtt, bröllop och produktbilder i en ljus studio på andra sidan älven. Vi bygger även egna ramar i massiva träslag - svensktillverkade, oljade och syrafria. Du kan boka en fotosession och få bilden levererad färdiginramad, eller köpa enbart ramar via vår katalog.",
+    "founded": 2019,
+    "team": [
+      { "name": "Nora Engström", "role": "Studiochef och porträttfotograf" },
+      { "name": "Filip Hägglund", "role": "Bröllops- och produktfotograf" },
+      { "name": "Sara Lindqvist", "role": "Ramsnickare" }
+    ]
+  },
+  "location": {
+    "city": "Göteborg",
+    "region": "Hisingen",
+    "country": "Sverige",
+    "serviceAreas": ["Lindholmen", "Eriksberg", "Majorna", "Linnéstaden", "Vasastan"]
+  },
+  "services": [
+    {
+      "id": "portrait-photography",
+      "label": "Porträtt",
+      "summary": "Studiosession för enskilda eller par. En timme i studion, bildbehandlade filer och en utvald bild i fysiskt format på köpet."
+    },
+    {
+      "id": "wedding-photography",
+      "label": "Bröllop",
+      "summary": "Hela dagen, från morgonens förberedelser till första dansen. Levererat som högupplöst galleri och ett valfritt urval i tryckt fotobok."
+    },
+    {
+      "id": "family-photography",
+      "label": "Familj",
+      "summary": "Familjen i studio eller i favoritparken. Avslappnat, lekfullt, och alltid med en plan B om någon är trött."
+    },
+    {
+      "id": "product-photography",
+      "label": "Produktfoto",
+      "summary": "Rena studioplåtningar för webshopar, look book och pressbilder. Optimerat för shopify, woocommerce och egen e-handel."
+    },
+    {
+      "id": "headshot-photography",
+      "label": "Headshots",
+      "summary": "LinkedIn, författarbild eller pressbild. Du går härifrån med tre färdigredigerade bilder samma dag."
+    },
+    {
+      "id": "framing-service",
+      "label": "Inramning på beställning",
+      "summary": "Vi mäter, snickrar och oljar din ram i ek eller valnöt. Glas, passepartout och upphängning ingår. Klart inom 14 dagar."
+    },
+    {
+      "id": "frames-shop",
+      "label": "Ramar online",
+      "summary": "Sex standardstorlekar i ek och valnöt finns att beställa direkt. Gratis frakt över 1500 kr i hela Sverige, 30 dagars öppet köp."
+    }
+  ],
+  "tone": {
+    "primary": "stilren",
+    "secondary": ["varm", "hantverksstolt", "rakt-på"],
+    "avoid": ["kommersiell-svada", "stockfotokänsla", "premium-snobberi"]
+  },
+  "trustSignals": [
+    "Plåtat över 200 par sedan 2019",
+    "Alla ramar tillverkas i studion - inga importerade IKEA-kopior",
+    "Gratis frakt över 1500 kr, 30 dagars öppet köp på allt",
+    "Fysiskt showroom om du vill se ramen innan du beställer"
+  ],
+  "conversionGoals": ["booking_request", "shop_visit", "call"],
+  "requestedCapabilities": ["interactive-game"],
+  "contact": {
+    "phone": "+46 31 12 34 56",
+    "email": "hej@norrljus.se",
+    "addressLines": ["Lindholmsallén 8", "417 53 Göteborg"],
+    "openingHours": "Tis-Fre 10-18, Lör 11-15, sön-mån stängt"
+  },
+  "selectedDossiers": {
+    "required": ["interactive-game-loop"],
+    "recommended": ["service-list", "service-area", "reviews", "trust-badges"],
+    "rationale": "En liten interaktiv detalj på sajten (Pacman på /spel) ger en lekfull touch som matchar studions tonalitet utan att störa konvertering."
+  }
+}
