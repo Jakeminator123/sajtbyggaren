@@ -133,7 +133,7 @@ COMMON_WORDS = {
     "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
     "GameState", "KeyboardEvent", "PacmanGame",
     "Snake", "Tetris", "ThreeCanvasShell",
-    "PowerShell", "SkipBuild", "NoServe",
+    "PowerShell", "SkipBuild", "NoServe", "DryRun",
     "TokenMeterContext", "TokenMeterContextValue", "TokenMeterProvider", "TokenMeterState",
     "UsageDelta", "UsageSummary", "ViewerPanelProps",
     "BuildPayloadSchema", "ChatPanel", "TokenMeter", "ViewerPanel",

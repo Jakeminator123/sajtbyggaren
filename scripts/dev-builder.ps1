@@ -13,13 +13,15 @@
   scripts/dev-builder.ps1
   scripts/dev-builder.ps1 -ProjectInput examples/painter-palma.project-input.json
   scripts/dev-builder.ps1 -SkipBuild
+  scripts/dev-builder.ps1 -Port 3100
 #>
 
 [CmdletBinding()]
 param(
     [string]$ProjectInput = "examples/painter-palma.project-input.json",
     [switch]$SkipBuild,
-    [switch]$NoServe
+    [switch]$NoServe,
+    [int]$Port = 3000
 )
 
 $ErrorActionPreference = "Stop"
@@ -56,7 +58,7 @@ if (-not (Test-Path $siteDir)) {
 Write-Host ""
 Write-Host "Starting Next.js dev server"
 Write-Host "  cwd:  $siteDir"
-Write-Host "  url:  http://localhost:3000"
+Write-Host "  url:  http://localhost:$Port"
 
 if (-not (Test-Path (Join-Path $siteDir "node_modules"))) {
     Write-Host "  installing dependencies (first run)..."
@@ -65,4 +67,4 @@ if (-not (Test-Path (Join-Path $siteDir "node_modules"))) {
 }
 
 Push-Location $siteDir
-try { npm run dev } finally { Pop-Location }
+try { npm run dev -- --port $Port } finally { Pop-Location }

@@ -60,17 +60,23 @@ Detaljer om kvalitetsskydden: [`docs/quality.md`](docs/quality.md).
 
 ## Dev-skript (PowerShell)
 
-Tre fristående launchers under [`scripts/`](scripts/) som vart och ett bootar en yta. Inga av dem är produktkod - de wrappar bara befintliga kommandon så operatören kan starta delarna utan att memorera flaggor.
+Fristående launchers under [`scripts/`](scripts/) som vart och ett bootar en yta. Inga av dem är produktkod - de wrappar bara befintliga kommandon så operatören kan starta delarna utan att memorera flaggor.
 
 ```powershell
 scripts/dev-backoffice.ps1               # backoffice (Streamlit) på :8501
 scripts/dev-builder.ps1                  # bygger painter-palma och startar Next.js på :3000
 scripts/dev-builder.ps1 -SkipBuild       # samma men hoppar över npm-build (snabb iteration)
 scripts/dev-builder.ps1 -NoServe         # bara builder, ingen dev-server
-scripts/dev-viewser.ps1                  # viewser-prototyp på :3000 (kan inte köras parallellt med builder-servern)
+scripts/dev-builder.ps1 -Port 3100       # parallell-kör med viewser genom att flytta porten
+scripts/dev-viewser.ps1                  # viewser-prototyp på :3000
+scripts/dev-viewser.ps1 -Port 3200       # parallell-kör med builder genom att flytta porten
+scripts/clean-runs.ps1                   # rensar gamla data/runs/<runId>/-mappar (default behåller 5 senaste)
+scripts/clean-runs.ps1 -Keep 0 -DryRun   # förhandsvisa total rensning
 ```
 
-`dev-builder.ps1` simulerar operatörsflödet: läser ett Project Input, kör hela [`scripts/build_site.py`](scripts/build_site.py)-pipen och öppnar resultatet (inklusive `/spel`-routen från `interactive-game-loop`-dossiern). `dev-viewser.ps1` är den localhost-only operator-prototypen med chat + manuell build-knapp.
+`dev-builder.ps1` simulerar operatörsflödet: läser ett Project Input, kör hela [`scripts/build_site.py`](scripts/build_site.py)-pipen och öppnar resultatet (inklusive `/spel`-routen från `interactive-game-loop`-dossiern). `dev-viewser.ps1` är den localhost-only operator-prototypen med chat + manuell build-knapp. `dev-builder` och `dev-viewser` försöker båda :3000 om inte `-Port` anges, så vid parallell-körning sätter du en port på en av dem.
+
+`clean-runs.ps1` är en bekvämlighetsrensare. Tester skriver inte längre till `data/runs/` (de använder `tmp_path`), men varje `dev-builder.ps1`-körning lägger till en katalog där eftersom runs är canonical historik enligt [`engine-run.v1.json`](governance/policies/engine-run.v1.json).
 
 ## Var vad bor
 

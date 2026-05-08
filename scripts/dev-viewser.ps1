@@ -14,7 +14,8 @@
 
 [CmdletBinding()]
 param(
-    [switch]$SkipInstall
+    [switch]$SkipInstall,
+    [int]$Port = 3000
 )
 
 $ErrorActionPreference = "Stop"
@@ -27,7 +28,7 @@ if (-not (Test-Path $viewserDir)) {
 
 Write-Host "Sajtbyggaren viewser prototype"
 Write-Host "  cwd:  $viewserDir"
-Write-Host "  url:  http://localhost:3000"
+Write-Host "  url:  http://localhost:$Port"
 
 if (-not (Test-Path (Join-Path $viewserDir ".env.local"))) {
     Write-Warning "apps/viewser/.env.local missing. Copy .env.example and add OPENAI_API_KEY before chat works."
@@ -39,7 +40,7 @@ try {
         Write-Host "  installing dependencies (first run)..."
         npm install
     }
-    npm run dev
+    npm run dev -- --port $Port
 } finally {
     Pop-Location
 }
