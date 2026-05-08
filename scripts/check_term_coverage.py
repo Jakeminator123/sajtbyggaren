@@ -144,6 +144,8 @@ COMMON_WORDS = {
     "Providers",
     # Viewser interna error-typer och rubriker (inte domänbegrepp)
     "RunNotFoundError", "DossierEditor",
+    # MIN_IDE TypeScript-symboler refererade i ADRs men inte canonical i sajtbyggaren
+    "VariantHints", "VariantThemeTokenHints", "ScaffoldVariantThemeTokens",
     # Migrationsplanens prosa-rubriker för parallellspår (inte domänbegrepp)
     "Builder MVP hardening", "Viewser MVP", "Vocabulary compression",
     # Generic prose ord som dyker upp i operator-flöde-text (ADR 0012)
