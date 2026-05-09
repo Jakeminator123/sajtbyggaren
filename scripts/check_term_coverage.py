@@ -132,6 +132,13 @@ COMMON_WORDS = {
     # it is not a separate domain term. Same treatment as
     # PlanningChoice / RepairFix (Sprint 2B / 3A).
     "MechanicalFixSpec",
+    # Sprint 3B-next codegenModel implementation symbols (ADR 0017).
+    # CodegenLLMResponse is the narrow Pydantic schema the OpenAI call
+    # parses into; CodegenUsage is a token-usage stub mirroring
+    # build-result.json:modelUsage shape; CodegenModelResolutionError
+    # mirrors PlanningModelResolutionError. The canonical domain types
+    # CodegenResult / CodegenFile are registered in naming-dictionary.v1.
+    "CodegenLLMResponse", "CodegenUsage", "CodegenModelResolutionError",
     # Generic React component names that appear in test fixtures, ADR
     # examples and docstring snippets. They are standard component-
     # cased identifiers (Header, Footer, Hero, About) used by the

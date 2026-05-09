@@ -217,9 +217,15 @@ def test_produce_site_plan_remains_canonical_plan_source():
 @pytest.mark.tooling
 def test_build_result_includes_codegen_summary(tmp_path, monkeypatch):
     """ADR 0015 reserves a ``codegen`` slot in build-result.json for the
-    codegenModel v1 metadata (source, modelUsed, fileCount, rationale).
-    The full files list is intentionally omitted - the snapshot under
-    generatedFilesDir is the authoritative on-disk record.
+    codegenModel manifest metadata. ADR 0017 (Sprint 3B-next) extends
+    the slot with ``riskNotes`` and ``usage`` so token-tracking and
+    LLM-emitted risk notes can surface to Backoffice without opening
+    trace.ndjson.
+
+    With OPENAI_API_KEY removed and starter=marketing-base, the new
+    expected source is ``mock-no-key`` (was ``deterministic-v1`` before
+    Sprint 3B-next; deterministic-v1 is now reserved for starters that
+    are explicitly out of real-codegen scope).
     """
     from scripts.build_site import build
 
@@ -234,15 +240,21 @@ def test_build_result_includes_codegen_summary(tmp_path, monkeypatch):
     )
     assert "codegen" in build_result, (
         "build-result.json must include a 'codegen' field per ADR 0015. "
-        "The codegenModel v1 manifest source/modelUsed/fileCount/rationale "
-        "must be surfaced here so Backoffice can show codegen status "
-        "without opening trace.ndjson."
+        "The codegenModel manifest source/modelUsed/fileCount/rationale "
+        "(plus riskNotes/usage from ADR 0017) must be surfaced here so "
+        "Backoffice can show codegen status without opening trace.ndjson."
     )
     codegen = build_result["codegen"]
-    assert codegen["source"] == "deterministic-v1"
-    assert codegen["modelUsed"] == "deterministic"
+    # marketing-base + no-key -> mock-no-key per ADR 0017.
+    assert codegen["source"] == "mock-no-key"
+    assert codegen["modelUsed"] == "mock"
     assert codegen["fileCount"] >= 1
     assert "marketing-base" in codegen["rationale"]
+    # Sprint 3B-next contract: riskNotes + usage always present.
+    assert "riskNotes" in codegen
+    assert codegen["riskNotes"] == []  # mock-no-key never emits risk notes
+    assert "usage" in codegen
+    assert codegen["usage"]["totalTokens"] == 0  # no LLM call -> zero usage
 
 
 @pytest.mark.tooling
