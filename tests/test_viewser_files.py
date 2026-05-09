@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -153,6 +154,38 @@ def test_build_runner_returns_structured_failure_instead_of_throwing() -> None:
         "build-runner.ts must read build-result.json from disk in the "
         "exit !== 0 branch so failed runs reach the UI with their "
         "structured failure data instead of a bare 500."
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_404_branch_guards_cancelled_before_setstate() -> None:
+    """Race-condition guard: when /api/runs/<runId>/files returns 404,
+    the in-flight async effect must not write setState for a runId
+    that has already been replaced by a newer one. Without the
+    cancelled-guard a stale 404 from a previous runId overwrites the
+    UI state for the currently selected run (e.g. flips it to
+    "preview saknas" even though the new run has preview files).
+
+    Source-lock the cancelled-check inside the 404 branch so a future
+    refactor cannot drop it. The other branches (success, catch) are
+    already guarded; this brings the 404 path in line with them.
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    # Find the 404 branch and verify a `cancelled` guard sits between
+    # the `response.status === 404` check and `setUnavailable(true)`.
+    # Multi-line regex is more robust than substring tricks here.
+    pattern = re.compile(
+        r"response\.status\s*===\s*404[\s\S]{0,400}?if\s*\(\s*cancelled\s*\)\s*return\s*;[\s\S]{0,200}?setUnavailable\(true\)",
+        re.MULTILINE,
+    )
+    assert pattern.search(text), (
+        "viewer-panel.tsx 404-branch saknar cancelled-guard innan "
+        "setUnavailable / setStatus. Det skapar race-condition mellan "
+        "snabba runId-byten där en stale 404 skriver över state för en "
+        "nyladdad run."
     )
 
 
