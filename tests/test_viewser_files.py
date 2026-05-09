@@ -193,6 +193,60 @@ def test_page_useeffect_guards_success_path_with_cancelled_check() -> None:
 
 
 @pytest.mark.tooling
+def test_viewer_panel_keeps_containerref_mounted_across_unavailable_transitions() -> None:
+    """Stuck-state guard: when a 404-driven setUnavailable(true) used to
+    replace ``<div ref={containerRef}>`` with the pedagogic tips block
+    via an ``unavailable ? tips : <div ref>`` ternary, containerRef.current
+    fell to null. The effect's first-line check
+    ``if (!runId || !containerRef.current) { ... return; }`` then
+    short-circuited on the NEXT runId change, leaving the UI stale
+    because useEffect only depends on ``[runId]`` - the dependency
+    array does not re-trigger on ``unavailable``-transitions, so the
+    fetch never runs for the new runId.
+
+    Fix: render containerRef-div ALWAYS and toggle visibility via the
+    Tailwind ``hidden`` class. That keeps containerRef.current bound
+    across transitions so subsequent fetches can run normally.
+
+    Source-lock both the negative pattern (no ternary swap) and the
+    positive pattern (containerRef-div has ``unavailable``-conditional
+    ``hidden`` in className) so a future refactor cannot regress.
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    # Negative: containerRef-div must NOT sit as the else-branch of an
+    # `unavailable ? tips : <div ref={containerRef}>` ternary. That
+    # pattern unmounts the ref whenever unavailable flips to true.
+    forbidden = re.compile(
+        r"unavailable\s*\?\s*\([\s\S]{0,400}?\)\s*:\s*\(\s*<div\s+ref=\{containerRef\}",
+        re.MULTILINE,
+    )
+    assert not forbidden.search(text), (
+        "viewer-panel.tsx: containerRef-div får inte sitta i else-grenen "
+        "av en `unavailable ? tips : <div ref>` ternary - det avmonterar "
+        "ref när unavailable=true och låser UI:t i stuck state vid nästa "
+        "runId-byte (effekten har bara `[runId]` som dep)."
+    )
+
+    # Positive: containerRef-div must reference `unavailable` and the
+    # `hidden` class together in its className, indicating an always-
+    # mounted pattern with Tailwind visibility toggle.
+    hidden_toggle = re.compile(
+        r"ref=\{containerRef\}[\s\S]{0,300}?className=[\s\S]{0,300}?unavailable[\s\S]{0,80}?\"hidden\"",
+        re.MULTILINE,
+    )
+    assert hidden_toggle.search(text), (
+        "viewer-panel.tsx: containerRef-div måste behållas mounted oavsett "
+        "unavailable-state och toggla visibility via Tailwind `hidden`-klass "
+        "kopplad till `unavailable`. Det säkrar att containerRef.current "
+        "är bunden över alla unavailable-transitions så useEffect kan köra "
+        "fetch på varje runId-byte."
+    )
+
+
+@pytest.mark.tooling
 def test_viewer_panel_404_branch_guards_cancelled_before_setstate() -> None:
     """Race-condition guard: when /api/runs/<runId>/files returns 404,
     the in-flight async effect must not write setState for a runId
