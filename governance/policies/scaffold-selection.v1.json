@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/scaffold-selection.schema.json",
   "policyId": "scaffold-selection.v1",
-  "version": 1,
+  "version": 2,
   "status": "draft-but-authoritative",
-  "purpose": "Bestämmer hur Scaffold Selector väljer Scaffold från Site Brief. Ordmatchning är degraderad till svag signal.",
+  "purpose": "Bestämmer hur Scaffold Selector väljer Scaffold från Site Brief. Ordmatchning är degraderad till svag signal. Version 2 (Starter/Dossier Hygiene 1A) byter fallback.defaultScaffold från 'professional-services' till 'local-service-business' eftersom 'professional-services' inte finns på disk under packages/generation/orchestration/scaffolds/ - bara i primaryScaffoldRegistry-listan. 'local-service-business' har full filuppsättning enligt scaffold-contract.v1:scaffoldDirectoryLayout.requiredFiles och matchar packages/generation/planning/plan.py:DEFAULT_SCAFFOLD_ID. När fler scaffolds harmoniseras kan detta uppdateras igen.",
   "principles": [
     "Ordmatchning får inte direkt välja Scaffold.",
     "Embedding ger recall. Small LLM rerank ger semantiskt omdöme. Policy gate stoppar dumma val. Trace gör valet observerbart.",
@@ -42,7 +42,7 @@
   },
   "fallback": {
     "whenLowConfidence": "ask-clarifying-or-use-general-business",
-    "defaultScaffold": "professional-services"
+    "defaultScaffold": "local-service-business"
   },
   "trace": {
     "storeCandidates": true,

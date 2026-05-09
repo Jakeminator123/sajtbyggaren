@@ -32,23 +32,31 @@ Båda är borttagna - se ADR 0012 för detaljer och de termer som nu ligger i
 packages/generation/orchestration/dossiers/
   soft/
     <dossierId>/
-      dossier.json
-      prompt.md
-      code-contract.json
-      examples.md
+      manifest.json
+      instructions.md
+      components/                    (optional, soft-only)
+        <componentName>.tsx
   hard/
     <dossierId>/
-      dossier.json
-      prompt.md
-      code-contract.json
-      env-contract.json
-      integration-contract.json
-      examples.md
-      evals.json
+      manifest.json
+      instructions.md
+      components/                    (optional, soft-only ideal)
+      code-contract.json             (optional, planerad Sprint 3+)
+      env-contract.json              (optional, planerad Sprint 3+)
+      integration-contract.json      (optional, planerad Sprint 3+)
+      examples.md                    (optional)
+      evals.json                     (optional)
   README.md  (this file)
 ```
 
-Varje `dossier.json` deklarerar `class` (soft eller hard).
+`manifest.json` validerar mot
+[`governance/schemas/dossier.schema.json`](../../../../governance/schemas/dossier.schema.json)
+och deklarerar `class` (`soft` eller `hard`), `capability`, `codeFidelity`,
+`complexity`, `defaultForCapability`, `summary`, `envVars`, `dependencies`,
+`files`, `exposes` och `lastVerified`. Obligatoriska filer per
+[`dossier-contract.v1.json:dossierDirectoryLayout.requiredFilesAllClasses`](../../../../governance/policies/dossier-contract.v1.json)
+är idag bara `manifest.json` och `instructions.md`. Övriga filer i listan
+ovan är optional och fylls när hard Dossiers importeras i Sprint 3+.
 
 ## Status
 

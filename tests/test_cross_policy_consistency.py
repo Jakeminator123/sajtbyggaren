@@ -23,6 +23,68 @@ def test_default_scaffold_is_in_registry(scaffold_selection: dict, scaffold_cont
 
 
 @pytest.mark.governance
+def test_default_scaffold_exists_on_disk(
+    scaffold_selection: dict, scaffold_contract: dict, repo_root
+):
+    """`scaffold-selection.v1.fallback.defaultScaffold` must point to a
+    scaffold that has full file presence under
+    `packages/generation/orchestration/scaffolds/<id>/` per
+    `scaffold-contract.v1.json:scaffoldDirectoryLayout.requiredFiles`.
+
+    The previous guard only checked the JSON registry list, which is
+    aspirational (it lists all 14 planned scaffolds). The fallback
+    triggers at runtime when the Scaffold Selector cannot find a
+    high-confidence pick - if it points at a scaffold whose folder
+    does not exist, the planner will crash. Starter/Dossier Hygiene
+    1A switched the default from `professional-services` (registry-
+    only) to `local-service-business` (disk + registry). This guard
+    blocks future drift back to a registry-only default.
+    """
+    default = scaffold_selection["fallback"]["defaultScaffold"]
+    scaffold_dir = (
+        repo_root
+        / "packages"
+        / "generation"
+        / "orchestration"
+        / "scaffolds"
+        / default
+    )
+    assert scaffold_dir.is_dir(), (
+        f"fallback.defaultScaffold '{default}' has no folder at "
+        f"{scaffold_dir.relative_to(repo_root).as_posix()}/. The "
+        f"fallback would crash at runtime. Either implement the "
+        f"scaffold or change defaultScaffold to one that exists on "
+        f"disk (e.g. local-service-business)."
+    )
+    layout = scaffold_contract.get("scaffoldDirectoryLayout", {})
+    required_files = list(layout.get("requiredFiles", []) or [])
+    if not required_files:
+        # Layout block missing required-files list: fall back to the
+        # canonical six so the test still has teeth if the contract
+        # is slimmed down in a future bump.
+        required_files = [
+            "scaffold.json",
+            "routes.json",
+            "sections.json",
+            "quality-contract.json",
+            "compatible-dossiers.json",
+            "selection-profile.json",
+        ]
+    missing = [
+        filename
+        for filename in required_files
+        if not (scaffold_dir / filename).exists()
+    ]
+    assert not missing, (
+        f"fallback.defaultScaffold '{default}' is missing required "
+        f"files {missing} per "
+        f"scaffold-contract.v1:scaffoldDirectoryLayout.requiredFiles. "
+        f"A scaffold without its full file set cannot be the planner "
+        f"fallback - the missing pieces would surface as runtime errors."
+    )
+
+
+@pytest.mark.governance
 def test_regression_scaffold_ids_are_real(scaffold_selection: dict, scaffold_contract: dict):
     """Every scaffold id used in regressionTests must be in the registry."""
     registry_ids = {s["id"] for s in scaffold_contract["primaryScaffoldRegistry"]}
