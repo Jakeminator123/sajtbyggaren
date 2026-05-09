@@ -42,6 +42,12 @@ export function ViewerPanel({ runId }: ViewerPanelProps) {
           // Det är förväntat för dev_generate-mock-runs (placeholder-pipeline).
           // Visa pedagogisk fallback istället för stack trace.
           if (response.status === 404) {
+            // Cancelled-guard: a stale 404 from a previous runId must
+            // not overwrite UI state for the run that is currently
+            // selected (race condition when runId changes faster than
+            // the in-flight fetch resolves). Mirrors the guard on the
+            // success / catch paths below.
+            if (cancelled) return;
             setUnavailable(true);
             setStatus(
               "Förhandsvisning saknas för denna run. Mock-runs (scripts/dev_generate.py) skriver inte en faktisk Next.js-app. Kör Build via en Project Input istället.",
