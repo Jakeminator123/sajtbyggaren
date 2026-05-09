@@ -1,5 +1,5 @@
 {
-  "$schema": "../packages/generation/orchestration/project-input/project-input.schema.json",
+  "$schema": "../governance/schemas/project-input.schema.json",
   "siteId": "painter-palma",
   "scaffoldId": "local-service-business",
   "variantId": "nordic-trust",

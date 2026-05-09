@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project-input.schema.json",
+  "title": "Project Input",
+  "description": "Strukturerad tolkning av operatörens Init Prompt och konkreta kund-/site-data. Driver vad sajten ska handla om (företagsfakta, ton, tjänster, kontakt). En Project Input är inte en Dossier - en Dossier är en återanvändbar capability, ett Project Input är ett konkret kundprojekt. Filer: examples/<siteId>.project-input.json. Naming-dictionary id: projectInput (canonical 'Project Input', ADR 0012).",
+  "type": "object",
+  "required": [
+    "siteId",
+    "scaffoldId",
+    "variantId",
+    "language",
+    "company",
+    "location",
+    "services",
+    "tone",
+    "trustSignals",
+    "conversionGoals",
+    "requestedCapabilities",
+    "contact",
+    "selectedDossiers"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference. Should be relative to this file under governance/schemas/."
+    },
+    "siteId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable id for this Project Input. Matches the filename stem (examples/<siteId>.project-input.json)."
+    },
+    "scaffoldId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Pinned Scaffold id from packages/generation/orchestration/scaffolds/. produce_site_plan honors this as a hard pin in the planning helper."
+    },
+    "variantId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Pinned Scaffold Variant id. Must be one of the scaffold's variants/<variantId>.json."
+    },
+    "language": {
+      "type": "string",
+      "minLength": 2,
+      "description": "BCP-47-ish language tag (sv, en, en-GB). Used by builder for copy generation."
+    },
+    "starterId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional Starter pin. When present produce_site_plan validates that the starter exists on disk and matches the canonical scaffold->starter mapping (data/starters/README.md scaffold-starter-mapping block)."
+    },
+    "company": {
+      "type": "object",
+      "required": ["name", "businessType"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "businessType": {"type": "string", "minLength": 1},
+        "tagline": {"type": "string"},
+        "story": {"type": "string"},
+        "founded": {"type": ["number", "integer"]},
+        "team": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "role"],
+            "properties": {
+              "name": {"type": "string"},
+              "role": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "location": {
+      "type": "object",
+      "required": ["city", "country"],
+      "properties": {
+        "city": {"type": "string"},
+        "region": {"type": "string"},
+        "country": {"type": "string"},
+        "serviceAreas": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "services": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "label"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "label": {"type": "string", "minLength": 1},
+          "summary": {"type": "string"}
+        }
+      }
+    },
+    "tone": {
+      "type": "object",
+      "properties": {
+        "primary": {"type": "string"},
+        "secondary": {"type": "array", "items": {"type": "string"}},
+        "avoid": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "trustSignals": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "conversionGoals": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "requestedCapabilities": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Capability slugs from governance/policies/capability-map.v1.json. Empty list is valid (no extra capabilities requested)."
+    },
+    "contact": {
+      "type": "object",
+      "properties": {
+        "phone": {"type": "string"},
+        "email": {"type": "string"},
+        "addressLines": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "openingHours": {"type": "string"}
+      }
+    },
+    "selectedDossiers": {
+      "description": "Operator-pinned Dossiers. Object form is canonical post-B18; the legacy plain-list form is still tolerated by produce_site_plan via merge_operator_selected_with_helper.",
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        {
+          "type": "object",
+          "properties": {
+            "required": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "recommended": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "conditional": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "rationale": {"type": "string"},
+            "rejected": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "reason"],
+                "properties": {
+                  "id": {"type": "string"},
+                  "reason": {"type": "string"}
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
