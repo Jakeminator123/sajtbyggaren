@@ -457,7 +457,7 @@ def test_dev_generate_writes_modelusage_into_build_result(
         "Skapa en hemsida för en elektriker i Malmö", run_dir, run_id
     )
     gen_pkg = run_phase_plan(run_dir, run_id, site_brief)
-    run_phase_build(run_dir, run_id, gen_pkg)
+    run_phase_build(run_dir, run_id, gen_pkg, site_brief=site_brief)
 
     build_result = json.loads(
         (run_dir / "build-result.json").read_text(encoding="utf-8")
@@ -484,6 +484,86 @@ def test_dev_generate_writes_modelusage_into_build_result(
     # Envelope-level invariants from Sprint 2A still hold.
     for field in ("totalInputTokens", "totalOutputTokens", "totalCostUsd", "currency", "source"):
         assert field in usage
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    "brief_source",
+    ["real", "mock-no-key", "mock-llm-error"],
+)
+def test_dev_generate_modelusage_source_follows_brief_source(
+    tmp_path: Path, monkeypatch, brief_source: str
+) -> None:
+    """B38 (post-3C-lite-audit-2): ``run_phase_build`` used to hardcode
+    ``base_source="mock-no-key"`` when composing
+    ``build-result.json:modelUsage``. That meant a real-key run with
+    ``site-brief.json:briefSource=real`` would still surface as
+    ``modelUsage.source="mock-no-key"`` to Backoffice / Builder UX
+    consumers, breaking the Sprint 2A invariant that the envelope-level
+    ``source`` reflects how the OVERALL pipeline ran.
+
+    The fix threads ``site_brief`` through ``run_phase_build`` and reads
+    ``briefSource`` off it. This regression locks the new behaviour for
+    all three Sprint 2A truth values without requiring a real OpenAI
+    call (we synthesise the brief dict directly).
+    """
+    from scripts.dev_generate import run_phase_build, run_phase_plan, run_phase_understand
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    run_id = f"test-modelusage-source-{brief_source}"
+    run_dir = tmp_path / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    site_brief = run_phase_understand(
+        "Skapa en hemsida för en elektriker i Malmö", run_dir, run_id
+    )
+    # Override the briefSource so we can prove the value is threaded
+    # through to modelUsage.source without relying on real LLM calls.
+    site_brief["briefSource"] = brief_source
+
+    gen_pkg = run_phase_plan(run_dir, run_id, site_brief)
+    run_phase_build(run_dir, run_id, gen_pkg, site_brief=site_brief)
+
+    build_result = json.loads(
+        (run_dir / "build-result.json").read_text(encoding="utf-8")
+    )
+    assert build_result["modelUsage"]["source"] == brief_source, (
+        f"modelUsage.source must mirror site-brief.briefSource "
+        f"({brief_source!r}). Got {build_result['modelUsage']['source']!r}."
+    )
+
+
+@pytest.mark.tooling
+def test_dev_generate_modelusage_source_defaults_to_mock_no_key_without_brief(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """B38 backwards compatibility: callers that have not threaded the
+    brief through (passing ``site_brief=None`` or omitting it) keep the
+    legacy ``mock-no-key`` value so existing tests / scripts do not
+    break silently. New callsites in ``main()`` always pass it; this
+    test pins the fallback so a future refactor cannot regress to
+    ``KeyError`` or ``None`` source.
+    """
+    from scripts.dev_generate import run_phase_build, run_phase_plan, run_phase_understand
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    run_id = "test-modelusage-fallback"
+    run_dir = tmp_path / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    site_brief = run_phase_understand(
+        "Skapa en hemsida för en elektriker i Malmö", run_dir, run_id
+    )
+    gen_pkg = run_phase_plan(run_dir, run_id, site_brief)
+    # Intentionally omit site_brief argument to lock the fallback path.
+    run_phase_build(run_dir, run_id, gen_pkg)
+
+    build_result = json.loads(
+        (run_dir / "build-result.json").read_text(encoding="utf-8")
+    )
+    assert build_result["modelUsage"]["source"] == "mock-no-key"
 
 
 @pytest.mark.tooling

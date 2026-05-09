@@ -103,14 +103,40 @@ async function runBuildOnce(siteId: string): Promise<{
       `build_site.py överskred ${BUILD_TIMEOUT_MS}ms och avbröts. stderr=${stderr.slice(-500)}`,
     );
   }
+
+  // Builder MVP contract (docs/architecture/builder-mvp.md "Builder-
+  // guards"): when npm install / npm run build fails, build_site.py
+  // STILL writes the canonical artefakter (build-result.json with
+  // status=failed, plus quality-result.json + repair-result.json + the
+  // generated-files/ snapshot) and exits 1. The dev wrapper used to
+  // throw on any non-zero exit, which dropped the runId on the floor
+  // and forced /api/build to return 500 with no way for the UI to
+  // surface a failed run. Treat the structured-failure path as a
+  // pedagogical result instead: if a runId resolves and
+  // build-result.json exists on disk, return it so the Run History
+  // entry shows up with status=failed and the RunDetailsPanel can
+  // render the four artefakter for diagnosis.
+  const runIdMatch = stdout.match(RUN_ID_PATTERN);
+  const runId = runIdMatch?.[1] ?? (await detectLatestRunIdByMtime());
+
   if (exitCode !== 0) {
+    if (runId) {
+      try {
+        await runDirFromId(runId);
+        const buildResult = await readBuildResult(runId);
+        return { runId, buildResult, stderr };
+      } catch {
+        // No structured failure on disk - fall through to throw below.
+      }
+    }
     throw new Error(
-      `build_site.py misslyckades (${exitCode}).\n${stderr || stdout}`.slice(0, 4000),
+      `build_site.py misslyckades (${exitCode}) utan strukturerad output.\n${stderr || stdout}`.slice(
+        0,
+        4000,
+      ),
     );
   }
 
-  const runIdMatch = stdout.match(RUN_ID_PATTERN);
-  const runId = runIdMatch?.[1] ?? (await detectLatestRunIdByMtime());
   if (!runId) {
     throw new Error("Kunde inte hitta runId från build-resultatet.");
   }

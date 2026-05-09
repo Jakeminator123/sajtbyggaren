@@ -176,6 +176,19 @@ COMMON_WORDS = {
     "UsageDelta", "UsageSummary", "ViewerPanelProps",
     "BuildPayloadSchema", "ChatPanel", "TokenMeter", "ViewerPanel",
     "Providers",
+    # Builder UX MVP (post-3C-lite-audit-2): RunDetailsPanel + 5 sektion-
+    # komponenter + interna TS-typer som bara används i apps/viewser.
+    # Samma behandling som tidigare viewser-symboler ovan: implementation-
+    # detaljer, inte canonical domain terms. Per coach-rule: inga nya
+    # canonical termer utan ADR; dessa registreras därför inte i
+    # naming-dictionary.v1 utan tillåts som lokal allowlist.
+    "ArtefactBundle", "RunArtefactBundle", "RunDetailsPanel", "RunDetailsPanelProps",
+    "BuildSection", "QualitySection", "RepairSection", "CodegenSection", "ModelsSection",
+    "StatusBadge", "StatusDot", "MissingNote", "BuildStatusIndicator", "BuildStage",
+    "ByRoleEntry", "NpmStep",
+    # NodeJS stdlib-typ (motsvarighet till Python ErrnoException) som
+    # bara dyker upp i lib/runs.ts ENOENT-detection.
+    "ErrnoException",
     # Viewser interna error-typer och rubriker (inte domänbegrepp)
     "RunNotFoundError", "DossierEditor",
     # MIN_IDE TypeScript-symboler refererade i ADRs men inte canonical i sajtbyggaren

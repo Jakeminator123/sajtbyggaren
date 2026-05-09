@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export type RunHistoryItem = {
   runId: string;
@@ -13,33 +14,92 @@ type RunHistoryProps = {
   runs: RunHistoryItem[];
   selectedRunId: string | null;
   onSelect: (runId: string) => void;
+  isBuilding?: boolean;
+};
+
+const STATUS_DOT_COLORS: Record<string, string> = {
+  ok: "bg-emerald-500",
+  passed: "bg-emerald-500",
+  "mock-complete": "bg-sky-500",
+  degraded: "bg-amber-500",
+  warning: "bg-amber-500",
+  failed: "bg-red-500",
+  skipped: "bg-muted-foreground/40",
+  unknown: "bg-muted-foreground/40",
 };
 
 function shortRun(runId: string): string {
-  return runId.length > 26 ? `${runId.slice(0, 26)}...` : runId;
+  return runId.length > 28 ? `${runId.slice(0, 28)}...` : runId;
 }
 
-export function RunHistory({ runs, selectedRunId, onSelect }: RunHistoryProps) {
+function StatusDot({ status }: { status: string }) {
+  const className = STATUS_DOT_COLORS[status] ?? "bg-muted-foreground/40";
+  return (
+    <span
+      aria-label={`status: ${status}`}
+      className={`inline-block size-2 rounded-full ${className}`}
+    />
+  );
+}
+
+export function RunHistory({
+  runs,
+  selectedRunId,
+  onSelect,
+  isBuilding = false,
+}: RunHistoryProps) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm">Run History</CardTitle>
+        <CardTitle className="flex items-center justify-between gap-2 text-sm">
+          <span>Run History</span>
+          <span className="text-xs text-muted-foreground">
+            {runs.length} {runs.length === 1 ? "run" : "runs"}
+          </span>
+        </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-2">
+        {isBuilding ? (
+          <div className="flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+            <span className="inline-block size-2 animate-pulse rounded-full bg-amber-500" />
+            Build pågår... ny run dyker upp när scripts/build_site.py är klar.
+          </div>
+        ) : null}
         {runs.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Inga runs än.</p>
+          <p className="text-sm text-muted-foreground">
+            Inga runs än. Klicka Build för att skapa en.
+          </p>
         ) : (
-          <select
-            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-            value={selectedRunId ?? ""}
-            onChange={(event) => onSelect(event.target.value)}
-          >
-            {runs.slice(0, 5).map((run) => (
-              <option key={run.runId} value={run.runId}>
-                {shortRun(run.runId)} | {run.siteId} | {run.status}
-              </option>
-            ))}
-          </select>
+          <ScrollArea className="h-44 rounded-md border">
+            <ul className="divide-y divide-border/40">
+              {runs.map((run) => {
+                const selected = run.runId === selectedRunId;
+                return (
+                  <li key={run.runId}>
+                    <button
+                      type="button"
+                      onClick={() => onSelect(run.runId)}
+                      className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs transition-colors ${
+                        selected
+                          ? "bg-muted text-foreground"
+                          : "hover:bg-muted/50"
+                      }`}
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <StatusDot status={run.status} />
+                        <span className="truncate font-mono">
+                          {shortRun(run.runId)}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-muted-foreground">
+                        {run.siteId} · {run.status}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </ScrollArea>
         )}
       </CardContent>
     </Card>
