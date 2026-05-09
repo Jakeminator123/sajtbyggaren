@@ -14,6 +14,35 @@ Reviewerns rekommendation: **fem starters täcker våra 14 scaffolds**. Se ADR 0
 | `portfolio-base` | `portfolio-creator`, `agency-studio` | Fork av [vercel/examples → solutions/blog](https://github.com/vercel/examples/tree/main/solutions/blog) | Mapp finns, kod saknas |
 | `docs-base` | `course-education` | Fork av [shuding/nextra](https://github.com/shuding/nextra) | Mapp finns, kod saknas |
 
+## Scaffold → Starter routing (canonical)
+
+Den här mappningen är sanningskällan för vilken Starter respektive Scaffold
+körs på. `packages/generation/planning/plan.py:SCAFFOLD_TO_STARTER` MÅSTE
+vara en delmängd av (och konsistent med) listan nedan. Drift fångas av
+`tests/test_starter_scaffold_mapping.py`.
+
+Format: en rad per scaffold med exakt en starter. Tillfälliga avvikelser
+(t.ex. B20: `ecommerce-lite` kör på `marketing-base` tills `commerce-base`
+är harmoniserad) MÅSTE markeras explicit på samma rad så review kan
+skilja avsedd avvikelse från regression.
+
+<!-- scaffold-starter-mapping:start -->
+- local-service-business: marketing-base
+- professional-services: marketing-base
+- restaurant-hospitality: marketing-base
+- clinic-healthcare: marketing-base
+- real-estate: marketing-base
+- nonprofit-community: marketing-base
+- event-campaign: marketing-base
+- app-landing: marketing-base
+- consultant-expert: marketing-base
+- ecommerce-lite: marketing-base (B20: temporary; canonical target is commerce-base after harmonisation)
+- saas-product: saas-base
+- portfolio-creator: portfolio-base
+- agency-studio: portfolio-base
+- course-education: docs-base
+<!-- scaffold-starter-mapping:end -->
+
 ## Hårda krav per starter
 
 Efter fork eller setup ska följande gälla:
