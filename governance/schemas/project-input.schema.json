@@ -51,12 +51,13 @@
     },
     "company": {
       "type": "object",
-      "required": ["name", "businessType"],
+      "description": "Required fields are the ones scripts/build_site.py renders directly into TSX (name + tagline + story + businessType). team / founded are optional - team defaults to [] and the renderers handle that.",
+      "required": ["name", "businessType", "tagline", "story"],
       "properties": {
         "name": {"type": "string", "minLength": 1},
         "businessType": {"type": "string", "minLength": 1},
-        "tagline": {"type": "string"},
-        "story": {"type": "string"},
+        "tagline": {"type": "string", "minLength": 1},
+        "story": {"type": "string", "minLength": 1},
         "founded": {"type": ["number", "integer"]},
         "team": {
           "type": "array",
@@ -64,8 +65,8 @@
             "type": "object",
             "required": ["name", "role"],
             "properties": {
-              "name": {"type": "string"},
-              "role": {"type": "string"}
+              "name": {"type": "string", "minLength": 1},
+              "role": {"type": "string", "minLength": 1}
             }
           }
         }
@@ -73,14 +74,16 @@
     },
     "location": {
       "type": "object",
-      "required": ["city", "country"],
+      "description": "city + serviceAreas are required because the renderers index them directly. country/region are optional metadata.",
+      "required": ["city", "country", "serviceAreas"],
       "properties": {
-        "city": {"type": "string"},
+        "city": {"type": "string", "minLength": 1},
         "region": {"type": "string"},
-        "country": {"type": "string"},
+        "country": {"type": "string", "minLength": 1},
         "serviceAreas": {
           "type": "array",
-          "items": {"type": "string"}
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
         }
       }
     },
@@ -89,11 +92,12 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["id", "label"],
+        "description": "summary is required because render_home and render_services render it as a paragraph; an absent summary would crash the builder with KeyError.",
+        "required": ["id", "label", "summary"],
         "properties": {
           "id": {"type": "string", "minLength": 1},
           "label": {"type": "string", "minLength": 1},
-          "summary": {"type": "string"}
+          "summary": {"type": "string", "minLength": 1}
         }
       }
     },
@@ -120,14 +124,17 @@
     },
     "contact": {
       "type": "object",
+      "description": "All four fields are required because the contact page (render_contact) renders each one directly into TSX. An absent field would crash the builder with KeyError before Quality Gate runs. Operators that want to ship without a phone/email/address must explicitly pass an empty string or list and then take responsibility for the resulting copy.",
+      "required": ["phone", "email", "addressLines", "openingHours"],
       "properties": {
-        "phone": {"type": "string"},
-        "email": {"type": "string"},
+        "phone": {"type": "string", "minLength": 1},
+        "email": {"type": "string", "minLength": 1},
         "addressLines": {
           "type": "array",
-          "items": {"type": "string"}
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
         },
-        "openingHours": {"type": "string"}
+        "openingHours": {"type": "string", "minLength": 1}
       }
     },
     "selectedDossiers": {

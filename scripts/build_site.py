@@ -132,7 +132,9 @@ def _to_repo_relative(path: Path) -> str:
     """Return ``path`` as POSIX-style string relative to REPO_ROOT when possible.
 
     Tests pass ``runs_dir=tmp_path`` outside the repo to keep ``data/runs/`` clean,
-    in which case the absolute path is returned unchanged.
+    in which case the absolute path is returned unchanged. Operators may also
+    pass ``--dossier`` paths that live outside the repo (e.g. an ad-hoc fixture
+    in ``$TEMP``); they hit the same fallback.
     """
     resolved = path.resolve()
     try:
@@ -140,6 +142,64 @@ def _to_repo_relative(path: Path) -> str:
     except ValueError:
         return str(resolved).replace("\\", "/")
     return str(relative).replace("\\", "/")
+
+
+def _coerce_subprocess_text(stream: object) -> str:
+    """Return a subprocess stdout/stderr capture as a string, regardless of
+    whether the runtime gave us ``None``, ``bytes`` or ``str``.
+
+    ``subprocess.TimeoutExpired`` and ``subprocess.run(...).{stdout,stderr}``
+    are typed as ``str | bytes | None`` depending on whether ``text=True``
+    was set and how far the process got before the timeout fired. Callers
+    that want to surface the partial output to the operator must handle
+    all three branches; this helper centralises that so each callsite
+    cannot drop one stream silently.
+    """
+    if stream is None:
+        return ""
+    if isinstance(stream, bytes):
+        return stream.decode("utf-8", errors="replace")
+    return str(stream)
+
+
+def _member_initials(full_name: str) -> str:
+    """Return up to two initials from a person's name.
+
+    The earlier inline expression chained ``.split()[-1][:1]`` etc. inside
+    an f-string in ``render_about``. After the JSX-escape rewrite (Sprint
+    3B-next-cleanup) all interpolated values must be plain strings before
+    they are wrapped by ``_jsx_safe_string``, so the initials logic moves
+    here. Single-name people get just their first letter.
+    """
+    parts = full_name.split()
+    if not parts:
+        return ""
+    first = parts[0][:1]
+    if len(parts) == 1:
+        return first
+    return first + parts[-1][:1]
+
+
+def _jsx_safe_string(text: str) -> str:
+    """Wrap user-supplied text as a safe JSX expression.
+
+    Returns the string in the form ``{"<json-encoded>"}``. Use as a drop-in
+    replacement for raw f-string interpolation in JSX text content OR as the
+    full attribute value (the part after ``=``):
+
+        # Text content
+        f"<h1>{_jsx_safe_string(name)}</h1>"
+
+        # Attribute value
+        f"<a href={_jsx_safe_string('tel:' + phone)}>"
+
+    Routing the value through ``json.dumps`` ensures every JSX-special
+    character (``<``, ``>``, ``{``, ``}``, ``&``, ``"``, ``\\``) becomes
+    valid JS string-literal content. The earlier raw-interpolation approach
+    let a customer name with ``<`` or ``{`` produce invalid TSX that
+    ``next build`` would reject mid-pipeline.
+    """
+    return "{" + json.dumps(text, ensure_ascii=False) + "}"
 
 
 def write_json(path: Path, data: Any) -> None:
@@ -456,17 +516,17 @@ def render_home(dossier: dict, dossier_routes: list[str]) -> str:
         "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
     )
     services_grid = "\n".join(
-        f'            <li key="{svc["id"]}" className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--card,var(--background))] p-6 transition-all hover:border-[color:var(--primary)] hover:shadow-sm">\n'
+        f'            <li key={_jsx_safe_string(svc["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--card,var(--background))] p-6 transition-all hover:border-[color:var(--primary)] hover:shadow-sm">\n'
         f'              <span className="mb-4 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(svc["id"])} className="size-5" /></span>\n'
-        f'              <h3 className="text-lg font-semibold">{svc["label"]}</h3>\n'
-        f'              <p className="mt-2 text-sm text-[color:var(--muted)] leading-relaxed">{svc["summary"]}</p>\n'
+        f'              <h3 className="text-lg font-semibold">{_jsx_safe_string(svc["label"])}</h3>\n'
+        f'              <p className="mt-2 text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
         '            </li>'
         for svc in services
     )
     trust_items = "\n".join(
         f'            <li key="trust-{i}" className="flex items-start gap-3">\n'
         f'              <ShieldCheck className="mt-0.5 size-5 shrink-0 text-[color:var(--primary)]" />\n'
-        f'              <span className="text-base">{item}</span>\n'
+        f'              <span className="text-base">{_jsx_safe_string(item)}</span>\n'
         '            </li>'
         for i, item in enumerate(trust)
     )
@@ -485,13 +545,13 @@ def render_home(dossier: dict, dossier_routes: list[str]) -> str:
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         '          <div className="flex items-center gap-2 text-sm uppercase tracking-widest text-[color:var(--muted)]">\n'
         '            <MapPin className="size-4" />\n'
-        f'            <span>{location["city"]}</span>\n'
+        f'            <span>{_jsx_safe_string(location["city"])}</span>\n'
         '          </div>\n'
-        f'          <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl">{company["name"]}</h1>\n'
-        f'          <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed md:text-xl">{company["tagline"]}</p>\n'
+        f'          <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl">{_jsx_safe_string(company["name"])}</h1>\n'
+        f'          <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed md:text-xl">{_jsx_safe_string(company["tagline"])}</p>\n'
         '          <div className="flex flex-wrap gap-3">\n'
         '            <a href="/kontakt" className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Begär offert<ArrowRight className="size-4" /></a>\n'
-        f'            <a href="tel:{_phone_href(contact["phone"])}" className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />Ring {contact["phone"]}</a>\n'
+        f'            <a href={_jsx_safe_string("tel:" + _phone_href(contact["phone"]))} className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />Ring {_jsx_safe_string(contact["phone"])}</a>\n'
         f"{spel_cta}"
         '          </div>\n'
         '        </div>\n'
@@ -539,10 +599,10 @@ def render_services(dossier: dict) -> str:
     } | {"ArrowRight"})
     icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
     items = "\n".join(
-        f'          <article key="{svc["id"]}" className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all hover:border-[color:var(--primary)] hover:shadow-sm">\n'
+        f'          <article key={_jsx_safe_string(svc["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all hover:border-[color:var(--primary)] hover:shadow-sm">\n'
         f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(svc["id"])} className="size-6" /></span>\n'
-        f'            <h2 className="text-xl font-semibold">{svc["label"]}</h2>\n'
-        f'            <p className="mt-3 text-[color:var(--muted)] leading-relaxed">{svc["summary"]}</p>\n'
+        f'            <h2 className="text-xl font-semibold">{_jsx_safe_string(svc["label"])}</h2>\n'
+        f'            <p className="mt-3 text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
         '          </article>'
         for svc in services
     )
@@ -577,10 +637,10 @@ def render_about(dossier: dict) -> str:
     location = dossier["location"]
     areas_html = ", ".join(location["serviceAreas"])
     team_items = "\n".join(
-        f'            <li key="{member["name"]}" className="rounded-xl border border-[color:var(--border)] p-6">\n'
-        f'              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-full bg-[color:var(--accent)] text-[color:var(--accent-foreground)] text-sm font-semibold uppercase">{member["name"].split()[0][:1]}{member["name"].split()[-1][:1] if len(member["name"].split()) > 1 else ""}</span>\n'
-        f'              <p className="text-base font-semibold">{member["name"]}</p>\n'
-        f'              <p className="mt-1 text-sm text-[color:var(--muted)]">{member["role"]}</p>\n'
+        f'            <li key={_jsx_safe_string(member["name"])} className="rounded-xl border border-[color:var(--border)] p-6">\n'
+        f'              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-full bg-[color:var(--accent)] text-[color:var(--accent-foreground)] text-sm font-semibold uppercase">{_jsx_safe_string(_member_initials(member["name"]))}</span>\n'
+        f'              <p className="text-base font-semibold">{_jsx_safe_string(member["name"])}</p>\n'
+        f'              <p className="mt-1 text-sm text-[color:var(--muted)]">{_jsx_safe_string(member["role"])}</p>\n'
         '            </li>'
         for member in team
     )
@@ -594,11 +654,11 @@ def render_about(dossier: dict) -> str:
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         '          <header className="flex flex-col gap-3">\n'
         '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Om oss</p>\n'
-        f'            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">{company["name"]}</h1>\n'
+        f'            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">{_jsx_safe_string(company["name"])}</h1>\n'
         '          </header>\n'
         '          <div className="relative max-w-3xl rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 md:p-8">\n'
         '            <Quote className="absolute -top-3 -left-3 size-8 text-[color:var(--primary)]/20" />\n'
-        f'            <p className="text-lg text-[color:var(--foreground)] leading-relaxed">{company["story"]}</p>\n'
+        f'            <p className="text-lg text-[color:var(--foreground)] leading-relaxed">{_jsx_safe_string(company["story"])}</p>\n'
         '          </div>\n'
         '          <div className="flex flex-col gap-4">\n'
         '            <h2 className="text-2xl font-semibold tracking-tight">Teamet</h2>\n'
@@ -608,7 +668,7 @@ def render_about(dossier: dict) -> str:
         '          </div>\n'
         '          <div className="flex flex-col gap-2">\n'
         '            <h2 className="inline-flex items-center gap-2 text-2xl font-semibold tracking-tight"><MapPin className="size-5" />Områden vi arbetar i</h2>\n'
-        f'            <p className="text-[color:var(--muted)] leading-relaxed">{areas_html}</p>\n'
+        f'            <p className="text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(areas_html)}</p>\n'
         '          </div>\n'
         '        </div>\n'
         '      </section>\n'
@@ -621,7 +681,7 @@ def render_about(dossier: dict) -> str:
 def render_contact(dossier: dict) -> str:
     contact = dossier["contact"]
     address_lines = "\n".join(
-        f'                <span className="block">{line}</span>'
+        f'                <span className="block">{_jsx_safe_string(line)}</span>'
         for line in contact["addressLines"]
     )
     return (
@@ -641,16 +701,16 @@ def render_contact(dossier: dict) -> str:
         '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
         '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><Phone className="size-5" /></span>\n'
         '              <h2 className="text-base font-semibold">Telefon</h2>\n'
-        f'              <a href="tel:{_phone_href(contact["phone"])}" className="mt-2 block text-lg font-medium hover:underline">{contact["phone"]}</a>\n'
+        f'              <a href={_jsx_safe_string("tel:" + _phone_href(contact["phone"]))} className="mt-2 block text-lg font-medium hover:underline">{_jsx_safe_string(contact["phone"])}</a>\n'
         '              <p className="mt-2 inline-flex items-center gap-2 text-sm text-[color:var(--muted)]">\n'
         '                <Clock className="size-4" />\n'
-        f'                <span>{contact["openingHours"]}</span>\n'
+        f'                <span>{_jsx_safe_string(contact["openingHours"])}</span>\n'
         '              </p>\n'
         '            </article>\n'
         '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
         '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><Mail className="size-5" /></span>\n'
         '              <h2 className="text-base font-semibold">E-post</h2>\n'
-        f'              <a href="mailto:{contact["email"]}" className="mt-2 block text-lg font-medium hover:underline">{contact["email"]}</a>\n'
+        f'              <a href={_jsx_safe_string("mailto:" + contact["email"])} className="mt-2 block text-lg font-medium hover:underline">{_jsx_safe_string(contact["email"])}</a>\n'
         '            </article>\n'
         '            <article className="rounded-xl border border-[color:var(--border)] p-6 md:col-span-2">\n'
         '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><MapPin className="size-5" /></span>\n'
@@ -895,12 +955,16 @@ def run_npm(
         )
     except subprocess.TimeoutExpired as exc:
         elapsed = time.monotonic() - start
-        partial = ((exc.stdout or b"") + (exc.stderr or b"")) if isinstance(exc.stdout, bytes) else ""
-        if isinstance(partial, bytes):
-            partial_text = partial.decode("utf-8", errors="replace")
-        else:
-            partial_text = (exc.stdout or "") + (exc.stderr or "") if isinstance(exc.stdout, str) else ""
-        last_lines = "\n".join(partial_text.splitlines()[-25:]) if partial_text else ""
+        # exc.stdout / exc.stderr are independently None | bytes | str. The
+        # earlier implementation only built partial_text from one of them
+        # and silently dropped the other when the type-check on stdout
+        # mismatched - in particular stdout=None + stderr="<error log>"
+        # would lose the only diagnostic the operator has. Decode each
+        # stream individually and concatenate.
+        partial_text = _coerce_subprocess_text(exc.stdout) + _coerce_subprocess_text(exc.stderr)
+        last_lines = (
+            "\n".join(partial_text.splitlines()[-25:]) if partial_text else ""
+        )
         cmd_str = " ".join(command)
         message = f"timeout: '{cmd_str}' did not finish within {timeout:.0f}s"
         return False, elapsed, f"{message}\n{last_lines}".strip()
@@ -1174,9 +1238,10 @@ def write_phase1_understand(
     """Phase 1 understand: input.json + site-brief.json."""
     trace.event("understand", "phase.started", "started", "Phase 1 understand starts")
 
-    rel_dossier = (
-        str(dossier_path.relative_to(REPO_ROOT)).replace("\\", "/")
-    )
+    # Dossier path may live outside the repo (operator pointed at an
+    # ad-hoc fixture in $TEMP). _to_repo_relative falls back to the
+    # absolute POSIX form so this never raises ValueError mid-build.
+    rel_dossier = _to_repo_relative(dossier_path)
     input_data = {
         "runId": trace.run_id,
         "mode": "init",

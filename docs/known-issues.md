@@ -101,6 +101,69 @@ Format per bugg:
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B29` Hög** (stängd 2026-05-09, post-Sprint-3B-next-review) -
+  `governance/schemas/project-input.schema.json` (introducerat i
+  PR #10 / commit `124b13f`) markerade `services[].summary`,
+  `company.tagline`, `company.story`, `location.serviceAreas` och alla
+  fyra `contact.*`-fält som **valfria**, men `scripts/build_site.py`-
+  renderers indexerar dem ovillkorligt (t.ex. `svc["summary"]`,
+  `company["tagline"]`, `contact["addressLines"]`). En schema-valid
+  Project Input kraschade därför med `KeyError` mid-build, **innan**
+  Quality Gate hann skriva ett strukturerat felresultat. Fix: stramat
+  schemat så `required` reflekterar builder-kontraktet. Övriga
+  fält (`team`, `founded`, `region`) är fortsatt valfria eftersom
+  buildern hanterar deras frånvaro via `.get()`. Test:
+  `tests/test_builder_audit_post_3b_next.py::
+  test_company_required_includes_tagline_and_story` plus de övriga
+  per-fält-låsen + en negativ test
+  (`test_schema_rejects_payload_missing_company_tagline`).
+
+- **`B30` Hög** (stängd 2026-05-09, post-Sprint-3B-next-review) -
+  Renderers i `scripts/build_site.py` (`render_home`, `render_services`,
+  `render_about`, `render_contact`) interpolerade rå kundtext direkt
+  in i TSX/JSX via f-strings utan escape. Tecken som `<`, `>`, `{`,
+  `}` eller `"` i kundnamn / tagline / service-summary / address-rader
+  kunde producera ogiltig TSX som `next build` (eller en typecheck-
+  pass) skulle avvisa. Fix: ny `_jsx_safe_string(text)`-helper som
+  wrapar all dynamic text i `{"..."}` JSX-expression-form via
+  `json.dumps`. Alla raw f-string-interpoleringar i de fyra renderers
+  passerar genom helpern. `_phone_href`-resultat (digit-only) behåller
+  kvotad attribut-form via `_jsx_safe_string("tel:" + ...)` för
+  konsistens. `_member_initials`-helper extraheras ur den tidigare
+  inline-expressionen i `render_about` så att initial-strängen är ett
+  plain-string-värde innan escape. Test:
+  `tests/test_builder_audit_post_3b_next.py::
+  test_jsx_safe_string_wraps_text_as_jsx_expression`,
+  `test_render_home_jsx_escapes_special_characters`,
+  `test_render_contact_jsx_escapes_phone_and_email`,
+  `test_renderers_use_jsx_safe_string_for_customer_text`
+  (källkods-lock som kräver att alla fyra renderers anropar helpern).
+
+- **`B31` Medel** (stängd 2026-05-09, post-Sprint-3B-next-review) -
+  `scripts/build_site.py:write_phase1_understand` anropade
+  `dossier_path.relative_to(REPO_ROOT)` utan fallback. CLI:n accepterar
+  godtycklig `--dossier`-path, så en operator som pekar på en
+  ad-hoc-fixture utanför repot fick en `ValueError`-stack-trace
+  istället för ett strukturerat fel. Den befintliga
+  `_to_repo_relative()`-helpern (rad 131-142) hade redan rätt
+  beteende (try/except). Fix: bytt till helpern. Test:
+  `test_to_repo_relative_handles_external_path` +
+  `test_write_phase1_understand_does_not_raise_on_external_path`
+  (källkods-lock).
+
+- **`B32` Låg** (stängd 2026-05-09, post-Sprint-3B-next-review) -
+  `scripts/build_site.py:run_npm` byggde bara
+  `partial_text` från `exc.stdout` när `isinstance(exc.stdout, bytes)`,
+  och fall till `else`-grenen som inte hanterade `exc.stdout=None +
+  exc.stderr="<error log>"`-fallet. Operatören tappade den enda
+  diagnostik npm-timeout producerade. Fix: ny
+  `_coerce_subprocess_text(stream)`-helper hanterar `None | bytes |
+  str` enhetligt; `run_npm` decodar `exc.stdout` och `exc.stderr`
+  separat och konkatenerar. Test:
+  `test_coerce_subprocess_text_handles_all_three_types`,
+  `test_run_npm_timeout_preserves_stderr_when_stdout_is_none`,
+  `test_run_npm_timeout_preserves_stderr_with_bytes_stream`.
+
 - **`B28` Låg** (stängd 2026-05-08, audit-4) - `tests/test_docs_freshness.py`
   parsade ruffs felräknings-output med regexen `r"Found\s+(\d+)\s+error"`
   (utan `errors?`). Reviewer-claim: "regex fails to match on 2+ findings,
