@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sajtbyggaren.local/schemas/repair-result.schema.json",
   "title": "Repair Result",
-  "description": "Phase 3 Repair Pipeline output for an Engine Run. Reflects what the sandwich-loop in packages.generation.repair did with the Quality Gate findings: not-needed / no-fix-applied / fixed / partial-fix, plus telemetry around mechanical and LLM fixes. ADR 0013 deferred this schema until Sprint 3+; ADR 0017 + Sprint 3C-lite ship it now to close the contract gap. The shape mirrors packages.generation.repair.RepairResult; tests/test_artefact_schema_drift.py locks the two against drift.",
+  "description": "Phase 3 Repair Pipeline output for an Engine Run. Reflects what the sandwich-loop in packages.generation.repair did with the Quality Gate findings: not-needed / no-fix-applied / fixed / partial-fix, plus telemetry around mechanical and LLM fixes. ADR 0013 deferred this schema until Sprint 3+; ADR 0017 + Sprint 3C-lite ship it now to close the contract gap. The shape mirrors packages.generation.repair.RepairResult; tests/test_artefact_schema_3c_lite.py locks the two against drift (top-level + nested $defs).",
   "type": "object",
   "additionalProperties": false,
   "required": ["status"],

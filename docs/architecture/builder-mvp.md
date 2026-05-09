@@ -76,8 +76,21 @@ Sprint 3B v1.1-kontrakt:
 (ADR 0017) JSON-schemas under `governance/schemas/quality-result.schema.json`
 respektive `governance/schemas/repair-result.schema.json`. Validering körs
 via `packages/generation/artifacts/validate_quality_result` och
-`validate_repair_result` innan artefakterna skrivs till disk; en
-schema-överträdelse fails build innan `data/runs/<runId>/` skapas.
+`validate_repair_result` **i Phase 3, innan respektive artefakt skrivs
+till disk**. Det betyder:
+
+- Ett schema-fel på `quality-result.json` eller `repair-result.json`
+  raisar `ArtifactSchemaError` innan `write_json` så **de specifika
+  artefakterna skrivs aldrig malformade**.
+- `data/runs/<runId>/` har redan skapats i Phase 0 (init) tillsammans
+  med `input.json`, `site-brief.json`, `site-plan.json` och
+  `generation-package.json` när Phase 3-validators körs. Ett sent
+  schema-fel lämnar därför en partial run-dir på disk; Backoffice ser
+  Phase 1+2-artefakterna men inga Phase 3-artefakter. Det är
+  förväntat beteende, inte ett "build kraschade tomt"-läge.
+- Operatörer som vill ha "all-or-nothing"-semantik kan radera
+  partial run-dir manuellt eller köra om buildern (varje run är
+  idempotent på Phase 1+2 input).
 
 ### Page Quality Traits — planerad femte check (Sprint 3C-full)
 

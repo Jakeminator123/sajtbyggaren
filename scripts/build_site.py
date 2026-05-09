@@ -1399,63 +1399,19 @@ def run_phase3_quality_and_repair(
 
 
 def empty_model_usage(source: str = "mock-no-key") -> dict:
-    """Zeroed token / cost spend stub.
+    """Backwards-compatible wrapper around the shared
+    ``packages.generation.artifacts.compose_model_usage`` helper.
 
-    Sprint 3C-lite (ADR 0017) starts populating ``byRole.codegenModel``
-    from ``codegen.usage`` when the real codegen call ran; brief and
-    planning roles stay explicit ``null`` until those resolvers also
-    track usage (Sprint 3C-full or later). This helper still returns
-    the zeroed envelope; ``write_build_result`` mixes in the codegen
-    numbers when ``codegen_summary["usage"]`` carries non-zero tokens.
+    Sprint 3C-lite extracted the composition logic into
+    ``packages/generation/artifacts/model_usage.py`` so
+    ``scripts/dev_generate.py`` can call it without importing a
+    private helper across script boundaries (Sprint 3C-lite audit
+    fynd 1). This wrapper preserves the historical name + signature
+    for tests and any operator script that imported the symbol.
     """
-    return {
-        "byRole": {
-            "briefModel": None,
-            "planningModel": None,
-            "codegenModel": None,
-        },
-        "totalInputTokens": 0,
-        "totalOutputTokens": 0,
-        "totalCostUsd": 0.0,
-        "currency": "USD",
-        "source": source,
-    }
+    from packages.generation.artifacts import compose_model_usage
 
-
-def _model_usage_from_codegen(
-    base_source: str, codegen_summary: dict | None
-) -> dict:
-    """Compose modelUsage with codegen.usage merged into byRole.
-
-    - briefModel and planningModel stay ``null`` because those resolvers
-      do not yet track usage. Showing 0 would be a lie ("we ran a real
-      brief but spent no tokens"); ``null`` says "we don't know" honestly.
-    - codegenModel gets populated when codegen.source == "real" AND
-      usage.totalTokens > 0; otherwise it stays null.
-    - totalInputTokens / totalOutputTokens reflect the codegen totals
-      only (since brief/planning are unknown). totalCostUsd stays 0
-      because we have no per-model price table yet.
-    - source field on the envelope itself tracks how the OVERALL
-      pipeline ran (briefSource passed in by caller). It is independent
-      of the per-role accounting and stays as Sprint 2A defined it.
-    """
-    usage = empty_model_usage(source=base_source)
-    if not codegen_summary:
-        return usage
-    codegen_source = codegen_summary.get("source")
-    codegen_usage = codegen_summary.get("usage") or {}
-    if codegen_source == "real" and codegen_usage.get("totalTokens", 0) > 0:
-        prompt = int(codegen_usage.get("promptTokens", 0))
-        completion = int(codegen_usage.get("completionTokens", 0))
-        total = int(codegen_usage.get("totalTokens", prompt + completion))
-        usage["byRole"]["codegenModel"] = {
-            "promptTokens": prompt,
-            "completionTokens": completion,
-            "totalTokens": total,
-        }
-        usage["totalInputTokens"] = prompt
-        usage["totalOutputTokens"] = completion
-    return usage
+    return compose_model_usage(source, codegen_summary=None)
 
 
 def write_build_result(
@@ -1487,6 +1443,8 @@ def write_build_result(
     the manifest can grow large and the snapshot under generatedFilesDir
     is already the authoritative on-disk record.
     """
+    from packages.generation.artifacts import compose_model_usage
+
     snap_dir = run_dir / "generated-files"
     rel_snapshot = _to_repo_relative(snap_dir)
     rel_preview = _to_repo_relative(target_dir)
@@ -1507,7 +1465,7 @@ def write_build_result(
         "generatedFilesDir": rel_snapshot,
         "devPreviewDir": rel_preview,
         "npmSteps": npm_steps,
-        "modelUsage": _model_usage_from_codegen(brief_source, codegen_summary),
+        "modelUsage": compose_model_usage(brief_source, codegen_summary),
         "finalize": {
             "snapshotDir": rel_snapshot,
             "snapshotedAt": utc_now().isoformat(),

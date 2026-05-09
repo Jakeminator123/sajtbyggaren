@@ -196,12 +196,43 @@ def test_repair_result_schema_rejects_unknown_top_level_field() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _schema_property_names(schema: dict) -> set[str]:
-    return set(schema.get("properties", {}).keys())
+def _schema_property_names(schema: dict, defs_key: str | None = None) -> set[str]:
+    """Return the set of property names at a schema level.
+
+    ``defs_key=None`` -> top-level ``properties``.
+    ``defs_key="checkResult"`` -> ``$defs.checkResult.properties``.
+
+    Sprint 3C-lite v2 (audit fynd 2): the drift guard previously only
+    looked at the top level, so a Pydantic-vs-schema mismatch on a
+    nested model (CheckResult, RepairFix) slipped through.
+    """
+    if defs_key is None:
+        return set(schema.get("properties", {}).keys())
+    nested = schema.get("$defs", {}).get(defs_key, {})
+    return set(nested.get("properties", {}).keys())
 
 
 def _pydantic_field_names(model_cls) -> set[str]:
     return set(model_cls.model_fields.keys())
+
+
+def _assert_no_drift(
+    *,
+    schema_props: set[str],
+    pydantic_fields: set[str],
+    schema_label: str,
+    model_label: str,
+) -> None:
+    missing_in_schema = pydantic_fields - schema_props
+    missing_in_pydantic = schema_props - pydantic_fields
+    assert not missing_in_schema, (
+        f"{model_label} Pydantic fields {missing_in_schema} are not in "
+        f"{schema_label}. Bump both together."
+    )
+    assert not missing_in_pydantic, (
+        f"{schema_label} properties {missing_in_pydantic} are not on "
+        f"the {model_label} Pydantic model."
+    )
 
 
 @pytest.mark.governance
@@ -213,18 +244,31 @@ def test_quality_result_schema_matches_pydantic_fields() -> None:
     from packages.generation.quality_gate import QualityResult
 
     schema = json.loads(QUALITY_SCHEMA.read_text(encoding="utf-8"))
-    schema_props = _schema_property_names(schema)
-    pydantic_fields = _pydantic_field_names(QualityResult)
-
-    missing_in_schema = pydantic_fields - schema_props
-    missing_in_pydantic = schema_props - pydantic_fields
-    assert not missing_in_schema, (
-        f"QualityResult Pydantic fields {missing_in_schema} are not in "
-        f"quality-result.schema.json. Bump both together."
+    _assert_no_drift(
+        schema_props=_schema_property_names(schema),
+        pydantic_fields=_pydantic_field_names(QualityResult),
+        schema_label="quality-result.schema.json",
+        model_label="QualityResult",
     )
-    assert not missing_in_pydantic, (
-        f"quality-result.schema.json properties {missing_in_pydantic} "
-        f"are not on the QualityResult Pydantic model."
+
+
+@pytest.mark.governance
+def test_quality_result_nested_check_result_matches_pydantic() -> None:
+    """Sprint 3C-lite v2 audit fynd 2: the previous drift guard only
+    walked top-level fields. ``QualityResult.checks`` is an array of
+    ``CheckResult``; if someone adds a field to the Pydantic CheckResult
+    without updating ``$defs.checkResult.properties`` (or vice versa),
+    the artefakt-on-disk and the in-memory model silently disagree at
+    the nested level. Lock that here too.
+    """
+    from packages.generation.quality_gate import CheckResult
+
+    schema = json.loads(QUALITY_SCHEMA.read_text(encoding="utf-8"))
+    _assert_no_drift(
+        schema_props=_schema_property_names(schema, defs_key="checkResult"),
+        pydantic_fields=_pydantic_field_names(CheckResult),
+        schema_label="quality-result.schema.json:$defs/checkResult",
+        model_label="CheckResult",
     )
 
 
@@ -233,18 +277,26 @@ def test_repair_result_schema_matches_pydantic_fields() -> None:
     from packages.generation.repair import RepairResult
 
     schema = json.loads(REPAIR_SCHEMA.read_text(encoding="utf-8"))
-    schema_props = _schema_property_names(schema)
-    pydantic_fields = _pydantic_field_names(RepairResult)
-
-    missing_in_schema = pydantic_fields - schema_props
-    missing_in_pydantic = schema_props - pydantic_fields
-    assert not missing_in_schema, (
-        f"RepairResult Pydantic fields {missing_in_schema} are not in "
-        f"repair-result.schema.json. Bump both together."
+    _assert_no_drift(
+        schema_props=_schema_property_names(schema),
+        pydantic_fields=_pydantic_field_names(RepairResult),
+        schema_label="repair-result.schema.json",
+        model_label="RepairResult",
     )
-    assert not missing_in_pydantic, (
-        f"repair-result.schema.json properties {missing_in_pydantic} "
-        f"are not on the RepairResult Pydantic model."
+
+
+@pytest.mark.governance
+def test_repair_result_nested_repair_fix_matches_pydantic() -> None:
+    """Same nested-drift guard for RepairFix - the Pydantic model that
+    backs ``mechanicalFixesApplied[]`` and ``llmFixesApplied[]``."""
+    from packages.generation.repair import RepairFix
+
+    schema = json.loads(REPAIR_SCHEMA.read_text(encoding="utf-8"))
+    _assert_no_drift(
+        schema_props=_schema_property_names(schema, defs_key="repairFix"),
+        pydantic_fields=_pydantic_field_names(RepairFix),
+        schema_label="repair-result.schema.json:$defs/repairFix",
+        model_label="RepairFix",
     )
 
 
@@ -316,7 +368,7 @@ def test_model_usage_includes_codegen_when_real_call_returned_tokens() -> None:
     """When codegen.source == "real" and totalTokens > 0, the codegen
     role gets populated; brief/planning stay null because they do not
     yet track usage."""
-    from scripts.build_site import _model_usage_from_codegen
+    from packages.generation.artifacts import compose_model_usage
 
     codegen_summary = {
         "source": "real",
@@ -330,7 +382,7 @@ def test_model_usage_includes_codegen_when_real_call_returned_tokens() -> None:
             "totalTokens": 697,
         },
     }
-    usage = _model_usage_from_codegen("real", codegen_summary)
+    usage = compose_model_usage("real", codegen_summary)
     assert usage["byRole"]["codegenModel"] == {
         "promptTokens": 533,
         "completionTokens": 164,
@@ -347,18 +399,91 @@ def test_model_usage_keeps_codegen_null_for_non_real_source() -> None:
     """deterministic-v1 / mock-no-key / mock-llm-error must not produce
     a codegenModel byRole entry - only real LLM calls contribute usage.
     """
-    from scripts.build_site import _model_usage_from_codegen
+    from packages.generation.artifacts import compose_model_usage
 
     for source in ("deterministic-v1", "mock-no-key", "mock-llm-error"):
         codegen_summary = {
             "source": source,
             "usage": {"promptTokens": 0, "completionTokens": 0, "totalTokens": 0},
         }
-        usage = _model_usage_from_codegen("mock-no-key", codegen_summary)
+        usage = compose_model_usage("mock-no-key", codegen_summary)
         assert usage["byRole"]["codegenModel"] is None, (
             f"codegenModel must stay null for source={source!r}; only "
             "real calls populate it."
         )
+
+
+@pytest.mark.tooling
+def test_compose_model_usage_lives_in_shared_artifacts_module() -> None:
+    """Sprint 3C-lite v2 audit fynd 1 required moving the helper out of
+    scripts/build_site.py so scripts/dev_generate.py can use the same
+    composition without importing a private (underscore-prefixed)
+    helper across script boundaries.
+    """
+    # Public symbol, callable. The same module exposes
+    # CANONICAL_LLM_ROLES so callers can iterate the canonical role set
+    # without hardcoding it.
+    from packages.generation.artifacts import (
+        CANONICAL_LLM_ROLES,
+        compose_model_usage,
+    )
+
+    assert callable(compose_model_usage)
+    assert CANONICAL_LLM_ROLES == ("briefModel", "planningModel", "codegenModel")
+
+
+@pytest.mark.tooling
+def test_dev_generate_writes_modelusage_into_build_result(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Sprint 3C-lite v2 audit fynd 1: dev_generate.py used to write
+    build-result.json without modelUsage, leaving Backoffice / Builder
+    UX consumers with a missing field whenever they read a mock run.
+    Verify the field is populated end-to-end through run_phase_build.
+    """
+    from scripts.dev_generate import (
+        run_phase_build,
+        run_phase_plan,
+        run_phase_understand,
+    )
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    run_id = "test-3c-lite-modelusage"
+    run_dir = tmp_path / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    site_brief = run_phase_understand(
+        "Skapa en hemsida för en elektriker i Malmö", run_dir, run_id
+    )
+    gen_pkg = run_phase_plan(run_dir, run_id, site_brief)
+    run_phase_build(run_dir, run_id, gen_pkg)
+
+    build_result = json.loads(
+        (run_dir / "build-result.json").read_text(encoding="utf-8")
+    )
+
+    assert "modelUsage" in build_result, (
+        "dev_generate.py:build-result.json must include modelUsage so "
+        "Backoffice / Builder UX consumers see the same shape "
+        "regardless of which runner produced the run."
+    )
+    usage = build_result["modelUsage"]
+    assert "byRole" in usage
+    assert set(usage["byRole"].keys()) == {
+        "briefModel",
+        "planningModel",
+        "codegenModel",
+    }
+    # Without an API key the codegen path is mock-no-key -> all roles null.
+    for role, value in usage["byRole"].items():
+        assert value is None, (
+            f"Without OPENAI_API_KEY the {role} byRole entry must be "
+            f"null (we did not run a real model). Got {value!r}."
+        )
+    # Envelope-level invariants from Sprint 2A still hold.
+    for field in ("totalInputTokens", "totalOutputTokens", "totalCostUsd", "currency", "source"):
+        assert field in usage
 
 
 @pytest.mark.tooling

@@ -402,18 +402,36 @@ def run_phase_build(run_dir: Path, run_id: str, generation_package: dict[str, An
         "repair-result.json",
     )
 
+    # Sprint 3C-lite (ADR 0017) audit fynd 1: dev_generate previously
+    # wrote build-result.json without modelUsage. Backoffice / Builder
+    # UX consumers that read every run expect the same shape regardless
+    # of runner. The shared compose_model_usage helper produces the
+    # canonical envelope (byRole + zeroed totals + null for roles that
+    # do not yet track usage). Codegen-source / usage flow through the
+    # same way the real builder does.
+    from packages.generation.artifacts import compose_model_usage
+
+    codegen_summary = {
+        "source": codegen_result.source,
+        "modelUsed": codegen_result.modelUsed,
+        "fileCount": len(codegen_result.files),
+        "rationale": codegen_result.rationale,
+        "riskNotes": list(codegen_result.riskNotes),
+        "usage": codegen_result.usage.model_dump(),
+    }
+    if codegen_result.error is not None:
+        codegen_summary["error"] = codegen_result.error
+
     build_result = {
         "runId": run_id,
         "status": "mock-complete",
         "filesWritten": 2,
         "repairResultPath": "repair-result.json",
         "qualityResultPath": "quality-result.json",
-        "codegen": {
-            "source": codegen_result.source,
-            "modelUsed": codegen_result.modelUsed,
-            "fileCount": len(codegen_result.files),
-            "rationale": codegen_result.rationale,
-        },
+        "codegen": codegen_summary,
+        "modelUsage": compose_model_usage(
+            base_source="mock-no-key", codegen_summary=codegen_summary
+        ),
         "createdAt": utcnow_iso(),
     }
     write_json(run_dir / "build-result.json", build_result)

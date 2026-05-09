@@ -11,6 +11,7 @@ Sprint 3C-lite (ADR 0017) adds ``validate_quality_result`` and
 that the brief / plan / generation-package artefakts already have.
 """
 
+from .model_usage import CANONICAL_LLM_ROLES, compose_model_usage
 from .validate import (
     SCHEMAS,
     ArtifactSchemaError,
@@ -27,7 +28,9 @@ from .validate import (
 
 __all__ = [
     "ArtifactSchemaError",
+    "CANONICAL_LLM_ROLES",
     "SCHEMAS",
+    "compose_model_usage",
     "load_schema",
     "validate_artifact",
     "validate_generation_package",

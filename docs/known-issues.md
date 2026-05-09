@@ -101,6 +101,58 @@ Format per bugg:
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B33` Medel** (stängd 2026-05-09, post-Sprint-3C-lite-review) -
+  `scripts/dev_generate.py:run_phase_build` skrev `build-result.json`
+  utan `modelUsage`-fältet. När operatören körde dev_generate med
+  `OPENAI_API_KEY` aktiverade `produce_codegen_artefakt` real LLM
+  (matching marketing-base), `codegen.source` blev `real`, men
+  build-result.json saknade ändå modelUsage. Backoffice / Builder UX
+  som läser alla runs (mock + real builder) skulle hamna i
+  shape-mismatch. Fix: flyttat composition-logiken till
+  `packages/generation/artifacts/model_usage.py:compose_model_usage`
+  (publik shared helper); både `scripts/build_site.py:write_build_result`
+  och `scripts/dev_generate.py:run_phase_build` anropar samma
+  helper med samma codegen_summary-shape (riskNotes + usage
+  inkluderade). Test:
+  `tests/test_artefact_schema_3c_lite.py::test_dev_generate_writes_modelusage_into_build_result`
+  + `test_compose_model_usage_lives_in_shared_artifacts_module`.
+
+- **`B34` Låg** (stängd 2026-05-09, post-Sprint-3C-lite-review) -
+  Drift-guards i `tests/test_artefact_schema_3c_lite.py:207-248`
+  jämförde bara top-level Pydantic-fält mot top-level schema
+  ``properties``. Nested ``$defs/checkResult`` (vs `CheckResult`-
+  modellen) och ``$defs/repairFix`` (vs `RepairFix`-modellen) var
+  inte fält-låsta, så ett tillagt Pydantic-fält på `CheckResult`
+  utan motsvarande `$defs/checkResult.properties`-bump skulle
+  passera testet trots att artefakten-på-disk och in-memory-modellen
+  drev isär. Test-claim "schema↔Pydantic locked" var överdrivet.
+  Fix: ny `_assert_no_drift`-helper + `_schema_property_names(schema,
+  defs_key=...)`-parameter; två nya tester
+  (`test_quality_result_nested_check_result_matches_pydantic`,
+  `test_repair_result_nested_repair_fix_matches_pydantic`)
+  täcker nested-drift för båda artefakterna.
+
+- **`B35` Låg** (stängd 2026-05-09, post-Sprint-3C-lite-review) -
+  `docs/architecture/builder-mvp.md` påstod att schema-överträdelse
+  fails build "innan `data/runs/<runId>/` skapas". Det stämmer inte:
+  `run_dir.mkdir(...)` körs i Phase 0 init (`scripts/build_site.py:1565`)
+  innan Phase 1 / 2 / 3 — och schema-validators för
+  `quality-result.json` / `repair-result.json` kör först i Phase 3.
+  Ett sent schemafel lämnar därför en partial run-dir med
+  Phase 1+2-artefakter på disk. Inte en runtime-bug men fel ops-
+  förväntan. Fix: doc-stycket omskrivet att vara ärligt om vad
+  validatorn faktiskt gör (skyddar de två specifika artefakterna,
+  inte hela run-dir); operatörer som vill ha all-or-nothing får
+  rensa partial run-dir manuellt.
+
+- **`B36` Låg** (stängd 2026-05-09, post-Sprint-3C-lite-review) -
+  Schemafilernas description-fält refererade `tests/test_artefact_schema_drift.py`
+  som inte finns i repot; korrekt filnamn är
+  `tests/test_artefact_schema_3c_lite.py`. Onboarding-fel som ledde
+  ny agent fel när hen följde länken från schemat. Fix: båda schemafiler
+  uppdaterade till korrekt filnamn med tillägget "(top-level + nested
+  $defs)" så scope är tydlig.
+
 - **`B29` Hög** (stängd 2026-05-09, post-Sprint-3B-next-review) -
   `governance/schemas/project-input.schema.json` (introducerat i
   PR #10 / commit `124b13f`) markerade `services[].summary`,
