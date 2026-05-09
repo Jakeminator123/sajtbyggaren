@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/naming-dictionary.schema.json",
   "policyId": "naming-dictionary.v1",
-  "version": 13,
+  "version": 14,
   "status": "draft-but-authoritative",
-  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 13 (ADR 0016) lägger till F2, F3, verify lane, preview lane, fidelity och fidelity levels på globallyForbidden för att förhindra att den gamla sajtmaskin-vokabulären om mode/lane/fidelity sprids tillbaka i sajtbyggaren - canonical är phase 1 understand / phase 2 plan / phase 3 build (engine-run.v1) plus Quality Gate / Repair Pipeline / PreviewRuntime / Mechanical Fix / LLM Fix. Version 12 (ADR 0013) registrerar Capability Map som canonical policy-term och lägger 'delta-brief' på globallyForbidden eftersom det är gammalt sajtmaskin-namn för det canonical Site Brief gör i followup-mode. Version 11 registrerar Capability som canonical term för Dossier-fältet capability i MIN_IDE-formatet. Version 10 (ADR 0012) komprimerar vokabulären: tar bort Site/Feature/Integration/Data/Hybrid Dossier som canonical termer eftersom de dubblade modellen ovanpå Dossier-klasserna. Inför 'Project Input' som canonical begrepp för konkreta operator-projekt (t.ex. painter-palma) och låser Dossier-klasser till bara soft och hard. Version 9 begränsade Viewser-vokabulären; tidigare versioner se git-historiken.",
+  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 14 (ADR 0016 v1.1, post-reviewer-clean) tar bort de generella tier-bokstäverna ur globallyForbidden så de inte ens ska behöva nämnas i policy-text. De specifika legacy-flaggor som faktiskt fanns i sajtmaskins kod (`F2-only`, `F3-only`) kvarstår som blocklist tillsammans med lane- och fidelity-vokabulären. Version 13 lade till sådan disciplin (verify lane, preview lane, fidelity, fidelity levels). Canonical fas-kedja är phase 1 understand / phase 2 plan / phase 3 build (engine-run.v1) plus Quality Gate / Repair Pipeline / PreviewRuntime / Mechanical Fix / LLM Fix. Version 12 (ADR 0013) registrerar Capability Map som canonical policy-term och lägger 'delta-brief' på globallyForbidden eftersom det är gammalt sajtmaskin-namn för det canonical Site Brief gör i followup-mode. Version 11 registrerar Capability som canonical term för Dossier-fältet capability i MIN_IDE-formatet. Version 10 (ADR 0012) komprimerar vokabulären: tar bort Site/Feature/Integration/Data/Hybrid Dossier som canonical termer eftersom de dubblade modellen ovanpå Dossier-klasserna. Inför 'Project Input' som canonical begrepp för konkreta operator-projekt (t.ex. painter-palma) och låser Dossier-klasser till bara soft och hard. Version 9 begränsade Viewser-vokabulären; tidigare versioner se git-historiken.",
   "rules": [
     "Ett begrepp får ha exakt ett kanoniskt namn.",
     "Ett kanoniskt namn får bo i exakt en huvudsaklig mapp (se repo-boundaries).",
@@ -263,10 +263,10 @@
     {
       "id": "qualityGate",
       "canonical": "Quality Gate",
-      "definition": "Mätbar acceptansgräns mot Page Quality Traits. EN gate. Inte F2/F3-tier.",
+      "definition": "Mätbar acceptansgräns mot Page Quality Traits. EN gate; inga parallella tier-axlar.",
       "ownerPackage": "packages/generation/quality_gate",
       "aliasesAllowed": [],
-      "aliasesForbidden": ["F2", "F3", "tier2", "tier3", "designPreview", "integrationsBuild"]
+      "aliasesForbidden": ["tier2", "tier3", "designPreview", "integrationsBuild"]
     },
     {
       "id": "codegenResult",
@@ -652,8 +652,6 @@
     "tier1",
     "tier2",
     "tier3",
-    "F2",
-    "F3",
     "F2-only",
     "F3-only",
     "verify lane",

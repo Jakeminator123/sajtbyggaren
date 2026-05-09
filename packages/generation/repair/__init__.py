@@ -28,7 +28,11 @@ as ``RepairFix(success=False, ...)`` so the orchestrator continues
 producing a well-formed RepairResult.
 """
 
-from .fixes import MECHANICAL_FIXES, MechanicalFixSpec
+from .fixes import (
+    MECHANICAL_FIXES,
+    MechanicalFixSpec,
+    unimplemented_registry_fixes,
+)
 from .models import RepairFix, RepairResult, RepairStatus
 from .orchestration import execute_phase3_quality_and_repair
 from .repair import run_repair_pipeline
@@ -41,4 +45,5 @@ __all__ = [
     "RepairStatus",
     "execute_phase3_quality_and_repair",
     "run_repair_pipeline",
+    "unimplemented_registry_fixes",
 ]

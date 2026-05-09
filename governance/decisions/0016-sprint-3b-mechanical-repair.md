@@ -293,6 +293,48 @@ opt-in. För Sprint 3B v1 är förståelsen: mekaniska fixes adresserar
 (typecheck, build-status) kvarstår som remainingErrors tills LLM-fix
 landar (Sprint 5+ per registry's `targeted-file-repair`).
 
+### Bug E — `MECHANICAL_FIXES`-paritet wording var överdriven
+
+Reviewer-rundan flaggade att kommentar och ADR-text påstod att
+`packages/generation/repair/fixes/__init__.py:MECHANICAL_FIXES`
+"mirrors" registry-listan. Det är inte sant: registret listar 8
+mekaniska fixar men dispatchern kör bara `ensure-default-export`.
+
+**Beslut:** registret är **superset**-spec; `MECHANICAL_FIXES` är
+**implementation-subset**. Tester verifierar:
+
+1. Varje entry i `MECHANICAL_FIXES` finns i registret (no rogue fixes).
+2. För varje implementerad fix mirror:ar `MechanicalFixSpec`
+   registry-entry byte-for-byte (id, stage, priority, idempotent,
+   onFailure).
+3. `unimplemented_registry_fixes()` returnerar listan av registry-id
+   som saknar implementation. Sprint 3B v1.1 har 7 av 8 där.
+
+`packages/generation/repair/fixes/__init__.py:unimplemented_registry_fixes()`
+exposeras som offentlig API så Backoffice (när BO2 implementeras) kan
+rendera "registry coverage". Ny test:
+`test_unimplemented_registry_fixes_lists_pluggable_remainder`.
+
+### Bug F — `onFailure=abort-pipeline` matchade inte implementationen
+
+Reviewer-rundan flaggade att registry-entry för `ensure-default-export`
+hade `onFailure=abort-pipeline`, men `apply_ensure_default_export`
+returnerar `RepairFix(success=False, ...)` för en fil och fortsätter
+med nästa finding. Det är de facto `skip-and-log`, inte
+`abort-pipeline`.
+
+**Beslut:** korrigera **registret** (inte implementationen). Strikt
+abort-pipeline skulle göra Sprint 3B v1.1's `partial-fix`-väg omöjlig
+- en fil med "no exportable symbol" skulle aborta hela körningen
+även när andra filer är fixbara. Det är fel beteende när partial-fix
+är legitimt utfall.
+
+Konkret: `governance/policies/fix-registry.v1.json` bumps till v3,
+`mechanicalFixes[id="ensure-default-export"].onFailure` blir
+`skip-and-log`. `MechanicalFixSpec.on_failure` följer. Lock-test:
+`test_ensure_default_export_uses_skip_and_log_semantics` plus
+`test_ensure_default_export_spec_matches_registry_entry` (befintligt).
+
 ### Bug D — `_pick_exportable_symbol` kunde exportera fel komponent
 
 `packages/generation/repair/fixes/ensure_default_export.py:_pick_exportable_symbol`
@@ -320,16 +362,19 @@ Tests i `tests/test_repair_fixes.py`: `_prefers_page_symbol_over_others`,
 ### Term-disciplin — utökad `globallyForbidden`
 
 Arkitekt-reviewer-rundan flaggade att den gamla sajtmaskin-vokabulären
-om mode/lane/fidelity inte får sprida sig in i sajtbyggaren. Canonical
-fas-kedjan är `engine-run.v1.json:phases` (understand/plan/build);
-canonical fix-vokabulär är `Quality Gate`, `Repair Pipeline`,
-`PreviewRuntime`, `Mechanical Fix`, `LLM Fix`. Inga "lanes", inga
-"fidelity-tiers", inga F2/F3.
+om mode, lane och fidelity inte får sprida sig in i sajtbyggaren.
+Canonical fas-kedjan är `engine-run.v1.json:phases` (understand /
+plan / build); canonical fix-vokabulär är `Quality Gate`,
+`Repair Pipeline`, `PreviewRuntime`, `Mechanical Fix`, `LLM Fix`.
+Inga lanes; inga parallella tier-axlar.
 
-`governance/policies/naming-dictionary.v1.json` bumpas till v13 och
-utökar `globallyForbidden` med:
+`governance/policies/naming-dictionary.v1.json` bumpas (v13 lade till
+lane- och fidelity-blocklistorna; v14 cleanup tar bort de generella
+tier-bokstäverna ur både `globallyForbidden` och Quality Gate's
+`aliasesForbidden` så de inte ens behöver namnges i policy-text — de
+specifika legacy-flaggor `F2-only`/`F3-only` som faktiskt fanns i
+sajtmaskins kod kvarstår). Tilläggen i `globallyForbidden`:
 
-- `F2`, `F3` (utöver redan blockerade `F2-only`, `F3-only`)
 - `verify lane`, `preview lane`, `verify-lane`, `preview-lane`
 - `fidelity`, `fidelity levels`
 
