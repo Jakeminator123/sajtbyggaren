@@ -76,29 +76,6 @@ Format per bugg:
 
 ## Öppna - inte fixade än
 
-- **`B41` Medel** (öppen 2026-05-09, Builder UX MVP smoke-test) -
-  `npm run build` mot `.generated/painter-palma/` failar Next 16
-  prerendering på `/_global-error` med
-  `TypeError: Cannot read properties of null (reading 'useContext')`
-  + flera `Each child in a list should have a unique "key" prop`-
-  warnings från `<meta>` / `<__next_viewport_boundary__>`. Tidigare
-  runs (`20260509T130316.466Z-...`) hade `status=ok`, så regressionen
-  är ny - troligen orsakad av antingen (a) en uppdaterad Next /
-  React-dep i `data/starters/marketing-base/package.json` som drog
-  in en bryggande prerendering-ändring, (b) saknad `error.tsx` /
-  `global-error.tsx` i marketing-base som Next 16 nu kräver, eller
-  (c) ett Tailwind 4 / `metadata`-API-glapp. Builder UX MVP-flödet
-  är **inte** blockerat av detta tack vare B40-fixen: failed builds
-  visas som `status=failed` i Run History med fyra strukturerade
-  artefakter i RunDetailsPanel. Men nya sajter blir inte previewbara
-  förrän marketing-base fungerar igen. Naturlig owner: separat
-  starter-harmoniserings-agent (samma spår som B20). Diagnos kan
-  starta med `npm ls next react react-dom` i `data/starters/marketing-base/`
-  + jämförelse mot `apps/viewser/package.json` (samma Next 16.2.6-
-  paket men Viewser bygger fint, så troligen en starter-specifik
-  fil som behöver Next 16-codemod). Reproduktion:
-  `python scripts/build_site.py --dossier examples/painter-palma.project-input.json`.
-
 - **`BO2` Medel** - Backoffice trace viewer är rå dataframe;
   `data/runs/<runId>/trace.ndjson` borde grupperas per fas och färgas efter
   status. Beror på round 3.
@@ -123,6 +100,29 @@ Format per bugg:
   `SCAFFOLD_TO_STARTER`-konstanten i `packages/generation/planning/plan.py`.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B41` Medel** (stängd 2026-05-09, Builder UX MVP smoke-test) -
+  `npm run build` mot `.generated/painter-palma/` hade failat Next 16
+  prerendering på `/_global-error` med
+  `TypeError: Cannot read properties of null (reading 'useContext')`.
+  Nattdiagnosen verifierade att både en helt färsk
+  `.generated/painter-palma/` och `data/starters/marketing-base/`
+  byggde grönt med samma `next@16.2.5` / `react@19.2.4`, vilket pekade
+  bort från kundcopy, Dossier-montering och starter-dependencies. Den
+  kvarvarande driftkällan var `scripts/build_site.py:copy_starter`:
+  funktionen bevarade både `node_modules/` och `.next/` mellan
+  regenerationer. `node_modules/` är en avsiktlig npm-cache, men `.next/`
+  är framework-genererad build output och kan bära stale prerender-state
+  över template- eller dependency-ändringar. Fixen bevarar därför bara
+  `node_modules/` och tar bort `.next/` vid varje regeneration innan
+  startern kopieras in. Verifierat med färsk
+  `python scripts/build_site.py --dossier examples/painter-palma.project-input.json`
+  utan `OPENAI_API_KEY`: `build-result.json:status=ok`,
+  `quality-result.json:status=ok`, `generated-files/` finns. Standalone
+  `cd data/starters/marketing-base && npm run build && npm run lint`
+  passerar också. Fix: `fix(starters): repair marketing base build`.
+  Test: `tests/test_builder_hardening.py::
+  test_copy_starter_drops_stale_next_cache_but_preserves_node_modules`.
 
 - **`B40` Medel** (stängd 2026-05-09, Builder UX MVP smoke-test) -
   `apps/viewser/lib/build-runner.ts:runBuildOnce` kastade

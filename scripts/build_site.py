@@ -304,9 +304,14 @@ def copy_starter(starter_id: str, target: Path) -> None:
             f"Starter '{starter_id}' missing at {source}. "
             "Run the starter setup before building."
         )
-    # Preserve existing target's node_modules / .next so we do not force a
-    # fresh `npm install` on every regeneration.
-    preserved = {"node_modules", ".next"}
+    # Preserve existing target's node_modules so we do not force a fresh
+    # `npm install` on every regeneration, but never preserve `.next`.
+    # Next's build cache is derived output, not source, and can carry stale
+    # prerender state across starter/package changes. B41 reproduced as a
+    # generated-site `/_global-error` prerender failure while a clean target
+    # built successfully, so every regeneration now starts with a clean
+    # framework build cache.
+    preserved = {"node_modules"}
     if target.exists():
         for entry in target.iterdir():
             if entry.name in preserved:
