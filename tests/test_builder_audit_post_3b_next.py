@@ -379,19 +379,157 @@ def test_render_contact_jsx_escapes_phone_and_email() -> None:
 
 @pytest.mark.tooling
 def test_renderers_use_jsx_safe_string_for_customer_text() -> None:
-    """B30 source-level lock: the four renderers must call
-    _jsx_safe_string on every dynamic customer-text interpolation. A
-    refactor that quietly drops the helper from one of them re-opens
-    B30 silently.
+    """B30 source-level lock: every renderer that interpolates customer
+    text must call _jsx_safe_string. A refactor that quietly drops the
+    helper from one of them re-opens B30 silently.
+
+    ``render_layout`` was missed in the original B30 cleanup - it
+    composes header + footer from company.name, company.tagline,
+    contact.* and addressLines but kept raw f-string interpolation.
+    Adding it to the list catches that gap and prevents the next
+    renderer from sneaking in the same way.
     """
     import inspect
 
     from scripts import build_site
 
-    for fn_name in ("render_home", "render_services", "render_about", "render_contact"):
+    for fn_name in (
+        "render_layout",
+        "render_home",
+        "render_services",
+        "render_about",
+        "render_contact",
+    ):
         fn = getattr(build_site, fn_name)
         source = inspect.getsource(fn)
         assert "_jsx_safe_string(" in source, (
             f"{fn_name} does not call _jsx_safe_string. Customer text "
             f"must be JSX-escaped or B30 regresses."
         )
+
+
+@pytest.mark.tooling
+def test_render_layout_jsx_escapes_customer_text() -> None:
+    """B30 follow-up: render_layout was missed in the first cleanup -
+    it interpolated customer data directly via raw f-strings into the
+    header (logo + brand name) and footer (brand, tagline, address,
+    phone, email, copyright row). This test renders a layout with
+    JSX-special characters in those fields and verifies they all reach
+    the output via {"..."}-form rather than as raw JSX text.
+    """
+    from scripts.build_site import render_layout
+
+    dossier = {
+        "company": {
+            "name": '<Studio> {Curly}',
+            "tagline": 'Hand & "Quote"',
+            "businessType": "test",
+            "story": "ok",
+        },
+        "contact": {
+            "phone": "+46 70 123 45 67",
+            "email": 'op"er@example.com',
+            "addressLines": ["Line <one>", "Line {two}"],
+            "openingHours": "Mon-Fri",
+        },
+        "location": {
+            "city": "X",
+            "country": "SE",
+            "serviceAreas": ["A"],
+        },
+    }
+    output = render_layout(dossier, dossier_routes=["/", "/kontakt"])
+
+    # Customer text appears via _jsx_safe_string wrapping.
+    assert '{"<Studio> {Curly}"}' in output, (
+        "render_layout must wrap company.name through _jsx_safe_string; "
+        "raw <Studio> would break JSX parsing."
+    )
+    assert '{"Hand & \\"Quote\\""}' in output, (
+        "render_layout must wrap company.tagline through "
+        "_jsx_safe_string so the literal double quote does not close "
+        "the surrounding JSX attribute or text."
+    )
+    assert '{"+46 70 123 45 67"}' in output
+    assert '{"Line <one>, Line {two}"}' in output, (
+        "render_layout must wrap the joined address line through "
+        "_jsx_safe_string; raw < and { would break JSX text parsing."
+    )
+
+    # Negative smell - none of the JSX-special characters should appear
+    # as raw inline JSX text. The double-quote-wrapped form prefixes the
+    # value with a JSON quote, so these patterns can only appear if the
+    # wrapping was bypassed.
+    forbidden_smells = [
+        ">{Curly}",  # raw { in JSX text after >
+        "><Studio>",  # raw < in JSX text after >
+        '<Studio> {Curly}<',  # raw company.name as plain text
+    ]
+    for smell in forbidden_smells:
+        assert smell not in output, (
+            f"render_layout leaked raw JSX-special characters: "
+            f"{smell!r} appears in output - B30 regression."
+        )
+
+
+@pytest.mark.tooling
+def test_render_layout_metadata_uses_js_string_literal() -> None:
+    """B30 follow-up: the metadata block in layout.tsx is JS-object
+    syntax, not JSX. The earlier ``"{title}".replace('"', '\\\\"')``
+    approach only escaped double quotes; backslash, newline or other
+    control characters could still produce an invalid JS string. Force
+    the metadata path through ``_js_string_literal`` (json.dumps) which
+    handles every special character.
+    """
+    from scripts.build_site import render_layout
+
+    dossier = {
+        "company": {
+            "name": 'Studio with "quotes" and \\backslash',
+            "tagline": "Line one\nline two",
+            "businessType": "test",
+            "story": "ok",
+        },
+        "contact": {
+            "phone": "+46",
+            "email": "x@y.z",
+            "addressLines": ["A"],
+            "openingHours": "h",
+        },
+        "location": {"city": "x", "country": "y", "serviceAreas": ["z"]},
+    }
+    output = render_layout(dossier, dossier_routes=["/", "/kontakt"])
+
+    # The metadata block expects a JSON-encoded string literal (with
+    # quotes already attached). title_line is the FULL line including
+    # surrounding indentation.
+    assert (
+        '  title: "Studio with \\"quotes\\" and \\\\backslash",\n'
+        in output
+    ), "render_layout metadata.title must use _js_string_literal so backslash + quote survive."
+    assert (
+        '  description: "Line one\\nline two",\n' in output
+    ), "render_layout metadata.description must use _js_string_literal so newline becomes \\n."
+
+
+@pytest.mark.tooling
+def test_render_layout_does_not_use_legacy_replace_quote_only_escape() -> None:
+    """Source-level lock: render_layout must not regress to the manual
+    ``.replace('"', '\\\\"')`` escape that only protected double quotes.
+    The new path runs through ``_js_string_literal`` which uses
+    ``json.dumps`` to cover every special character.
+    """
+    import inspect
+
+    from scripts import build_site
+
+    source = inspect.getsource(build_site.render_layout)
+    assert '.replace(\'"\', \'\\\\"\')' not in source, (
+        "render_layout still uses the legacy `.replace('\"', '\\\\\"')` "
+        "manual escape. Switch to `_js_string_literal(...)` which "
+        "handles backslash, newline, control characters, etc."
+    )
+    assert "_js_string_literal(" in source, (
+        "render_layout must call _js_string_literal for the metadata "
+        "title/description lines (B30 follow-up)."
+    )

@@ -202,6 +202,27 @@ def _jsx_safe_string(text: str) -> str:
     return "{" + json.dumps(text, ensure_ascii=False) + "}"
 
 
+def _js_string_literal(text: str) -> str:
+    """Return user-supplied text as a JS string literal (with surrounding
+    double quotes already included).
+
+    Use in non-JSX positions where a JS string is expected, e.g. inside an
+    object literal:
+
+        export const metadata: Metadata = {
+          title: <_js_string_literal>,
+          description: <_js_string_literal>,
+        };
+
+    The earlier ``"{title}".replace('"', '\\\\"')`` approach only escaped
+    double quotes; a backslash, newline or non-printing character in the
+    source text could still produce an invalid string literal. Going
+    through ``json.dumps`` covers every special character a JS string
+    cannot contain raw.
+    """
+    return json.dumps(text, ensure_ascii=False)
+
+
 def write_json(path: Path, data: Any) -> None:
     write(path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
 
@@ -419,14 +440,18 @@ def render_layout(dossier: dict, dossier_routes: list[str]) -> str:
     """
     company = dossier["company"]
     contact = dossier["contact"]
-    title = company["name"].replace('"', '\\"')
-    description = company["tagline"].replace('"', '\\"')
     nav_items = _nav_items(dossier_routes)
+    # nav_items entries come from the hardcoded _nav_items helper (canonical
+    # routes + Swedish labels), not customer data, so href + label are safe
+    # to inline. Customer-supplied values (company.name, company.tagline,
+    # contact.*, addressLines) all go through _jsx_safe_string for JSX
+    # positions or _js_string_literal for the metadata object literal -
+    # see B30 in docs/known-issues.md.
     nav_links = "\n".join(
         f'            <a href="{href}" className="text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors">{label}</a>'
         for href, label in nav_items
     )
-    phone_href = _phone_href(contact["phone"])
+    address_line = ", ".join(contact["addressLines"])
     return (
         'import type { Metadata } from "next";\n'
         'import { Geist, Geist_Mono } from "next/font/google";\n'
@@ -444,8 +469,8 @@ def render_layout(dossier: dict, dossier_routes: list[str]) -> str:
         '});\n'
         "\n"
         "export const metadata: Metadata = {\n"
-        f'  title: "{title}",\n'
-        f'  description: "{description}",\n'
+        f'  title: {_js_string_literal(company["name"])},\n'
+        f'  description: {_js_string_literal(company["tagline"])},\n'
         "};\n"
         "\n"
         "export default function RootLayout({\n"
@@ -462,29 +487,27 @@ def render_layout(dossier: dict, dossier_routes: list[str]) -> str:
         '        <header className="sticky top-0 z-40 border-b border-[color:var(--border)] bg-[color:var(--background)]/80 backdrop-blur supports-[backdrop-filter]:bg-[color:var(--background)]/60">\n'
         '          <div className="mx-auto flex w-[var(--container-width)] items-center justify-between gap-6 py-4">\n'
         '            <a href="/" className="flex items-center gap-2 text-base font-semibold">\n'
-        f'              <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-[color:var(--primary)] text-[color:var(--primary-foreground)] text-xs font-bold uppercase">{company["name"][:2]}</span>\n'
-        f'              <span className="hidden sm:inline">{company["name"]}</span>\n'
+        f'              <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-[color:var(--primary)] text-[color:var(--primary-foreground)] text-xs font-bold uppercase">{_jsx_safe_string(company["name"][:2])}</span>\n'
+        f'              <span className="hidden sm:inline">{_jsx_safe_string(company["name"])}</span>\n'
         '            </a>\n'
         '            <nav className="flex items-center gap-5 text-sm font-medium">\n'
         f"{nav_links}\n"
         '            </nav>\n'
-        f'            <a href="/kontakt" className="hidden md:inline-flex items-center gap-1 rounded-md bg-[color:var(--primary)] px-4 py-2 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Kontakta oss</a>\n'
+        '            <a href="/kontakt" className="hidden md:inline-flex items-center gap-1 rounded-md bg-[color:var(--primary)] px-4 py-2 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Kontakta oss</a>\n'
         '          </div>\n'
         '        </header>\n'
         '        <div className="flex-1">{children}</div>\n'
         '        <footer className="border-t border-[color:var(--border)] bg-[color:var(--background)]">\n'
         '          <div className="mx-auto grid w-[var(--container-width)] gap-8 py-12 md:grid-cols-3">\n'
         '            <div className="flex flex-col gap-3">\n'
-        f'              <p className="text-base font-semibold">{company["name"]}</p>\n'
-        f'              <p className="text-sm text-[color:var(--muted)]">{company["tagline"]}</p>\n'
+        f'              <p className="text-base font-semibold">{_jsx_safe_string(company["name"])}</p>\n'
+        f'              <p className="text-sm text-[color:var(--muted)]">{_jsx_safe_string(company["tagline"])}</p>\n'
         '            </div>\n'
         '            <div className="flex flex-col gap-2 text-sm">\n'
         '              <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Kontakt</p>\n'
-        f'              <a href="tel:{phone_href}" className="inline-flex items-center gap-2 hover:underline"><Phone className="size-4" />{contact["phone"]}</a>\n'
-        f'              <a href="mailto:{contact["email"]}" className="inline-flex items-center gap-2 hover:underline"><Mail className="size-4" />{contact["email"]}</a>\n'
-        '              <p className="inline-flex items-start gap-2 text-[color:var(--muted)]"><MapPin className="size-4 mt-0.5" />'
-        + ", ".join(contact["addressLines"]) +
-        "</p>\n"
+        f'              <a href={_jsx_safe_string("tel:" + _phone_href(contact["phone"]))} className="inline-flex items-center gap-2 hover:underline"><Phone className="size-4" />{_jsx_safe_string(contact["phone"])}</a>\n'
+        f'              <a href={_jsx_safe_string("mailto:" + contact["email"])} className="inline-flex items-center gap-2 hover:underline"><Mail className="size-4" />{_jsx_safe_string(contact["email"])}</a>\n'
+        f'              <p className="inline-flex items-start gap-2 text-[color:var(--muted)]"><MapPin className="size-4 mt-0.5" />{_jsx_safe_string(address_line)}</p>\n'
         '            </div>\n'
         '            <div className="flex flex-col gap-2 text-sm text-[color:var(--muted)]">\n'
         '              <p className="text-xs uppercase tracking-widest">Sajt</p>\n'
@@ -495,7 +518,7 @@ def render_layout(dossier: dict, dossier_routes: list[str]) -> str:
         '            </div>\n'
         '          </div>\n'
         '          <div className="border-t border-[color:var(--border)] py-4">\n'
-        f'            <p className="mx-auto w-[var(--container-width)] text-xs text-[color:var(--muted)]">© {{new Date().getFullYear()}} {company["name"]}. Alla rättigheter förbehållna.</p>\n'
+        f'            <p className="mx-auto w-[var(--container-width)] text-xs text-[color:var(--muted)]">© {{new Date().getFullYear()}} {_jsx_safe_string(company["name"])}. Alla rättigheter förbehållna.</p>\n'
         '          </div>\n'
         '        </footer>\n'
         '      </body>\n'
