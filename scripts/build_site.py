@@ -1582,7 +1582,11 @@ def build(
         "modelUsed": codegen_result.modelUsed,
         "fileCount": len(codegen_result.files),
         "rationale": codegen_result.rationale,
+        "riskNotes": list(codegen_result.riskNotes),
+        "usage": codegen_result.usage.model_dump(),
     }
+    if codegen_result.error is not None:
+        codegen_summary["error"] = codegen_result.error
 
     duration_ms = int((time.monotonic() - started) * 1000)
     write_build_result(
