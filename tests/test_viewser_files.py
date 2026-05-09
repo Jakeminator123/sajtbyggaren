@@ -158,6 +158,41 @@ def test_build_runner_returns_structured_failure_instead_of_throwing() -> None:
 
 
 @pytest.mark.tooling
+def test_page_useeffect_guards_success_path_with_cancelled_check() -> None:
+    """Race-condition guard for app/page.tsx initial fetch:
+    the success path of the useEffect-IIFE used to call refreshRuns()
+    which itself ran setRuns / setProjectInputs / setSelectedRunId /
+    setSelectedSiteId / setStatusText UNCONDITIONALLY after its own
+    await. The cancelled-flag on the catch branch then only protected
+    error-path stale updates, not success-path stale updates. If the
+    component unmounted (or the dependency array changed) while
+    /api/runs was in flight, a successful resolution arriving after
+    unmount still wrote five setState calls onto a stale tree.
+
+    The fix splits the call into a pure ``fetchRuns`` data fetcher
+    and a separate ``applyRunsData`` state mutator, with the
+    cancelled-guard sitting between them. Source-lock that ordering
+    so a future refactor cannot collapse the two back into one
+    function and silently drop the guard.
+    """
+    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+
+    # Look for ``await fetchRuns()`` -> ``if (cancelled) return`` ->
+    # ``applyRunsData`` (or ``setRuns(``) ordering inside the same
+    # try-block. The 0-300 character window keeps the regex tight
+    # against accidental matches across unrelated code.
+    pattern = re.compile(
+        r"await\s+fetchRuns\(\)[\s\S]{0,300}?if\s*\(\s*cancelled\s*\)\s*return\s*;[\s\S]{0,300}?(?:applyRunsData|setRuns\()",
+        re.MULTILINE,
+    )
+    assert pattern.search(text), (
+        "page.tsx useEffect saknar cancelled-guard mellan await fetchRuns() "
+        "och applyRunsData / setRuns. Det skapar race condition där en "
+        "stale success-resolution skriver state efter unmount."
+    )
+
+
+@pytest.mark.tooling
 def test_viewer_panel_404_branch_guards_cancelled_before_setstate() -> None:
     """Race-condition guard: when /api/runs/<runId>/files returns 404,
     the in-flight async effect must not write setState for a runId
