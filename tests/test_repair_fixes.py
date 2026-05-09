@@ -726,6 +726,52 @@ def test_ensure_default_export_spec_matches_registry_entry():
 
 
 @pytest.mark.tooling
+def test_ensure_default_export_uses_skip_and_log_semantics():
+    """Sprint 3B v1.1: the registry entry was corrected from
+    onFailure=abort-pipeline to onFailure=skip-and-log because the
+    actual implementation lets a per-file failure be logged via
+    RepairFix(success=False) and continues with the next finding.
+    Lock the new contract so a future "harden to abort-pipeline"
+    refactor cannot ship without updating both registry AND
+    implementation behaviour at the same time.
+    """
+    assert ENSURE_DEFAULT_EXPORT_SPEC.on_failure == "skip-and-log"
+
+
+@pytest.mark.tooling
+def test_unimplemented_registry_fixes_lists_pluggable_remainder():
+    """Sprint 3B v1.1 (post-reviewer-clean): the registry is a SUPERSET
+    of what the dispatcher currently runs. ``unimplemented_registry_fixes()``
+    surfaces the gap so audit + Backoffice can render an honest
+    "registry coverage" view. Sprint 3B v1 ships ensure-default-export
+    only; the other 7 mechanical fixes from the registry are
+    intentionally unimplemented and pluggable.
+    """
+    from packages.generation.repair import unimplemented_registry_fixes
+
+    unimplemented = unimplemented_registry_fixes()
+    assert "ensure-default-export" not in unimplemented, (
+        "ensure-default-export IS implemented; it must not appear in "
+        "unimplemented_registry_fixes()."
+    )
+    expected_remaining = {
+        "remove-unused-imports",
+        "fix-jsx-tag-balance",
+        "normalize-quotes",
+        "strip-hard-dossier-sdk-imports-in-design-mode",
+        "rename-route-segments-to-policy",
+        "ensure-metadata-export",
+        "normalize-tailwind-classes",
+    }
+    assert expected_remaining.issubset(set(unimplemented)), (
+        "Sprint 3B v1.1 expected the seven non-implemented mechanical "
+        "fixes to be reported as unimplemented; the registry or the "
+        "dispatcher has drifted. Got unimplemented="
+        f"{unimplemented!r}."
+    )
+
+
+@pytest.mark.tooling
 def test_max_total_sandwich_passes_matches_registry_loop_limit():
     """The hardcoded loop cap must mirror
     ``fix-registry.v1.json:loopLimits.maxTotalSandwichPasses``."""

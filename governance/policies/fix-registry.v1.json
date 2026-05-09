@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/fix-registry.schema.json",
   "policyId": "fix-registry.v1",
-  "version": 2,
+  "version": 3,
   "status": "draft-but-authoritative",
-  "purpose": "Central lista över alla Mechanical Fixes och LLM Fixes. Repair Pipeline läser hit. Ingen kod får implementera fix utanför detta register. Version 2 lägger till loop-limits, priority och onFailure per fix.",
+  "purpose": "Central lista över alla Mechanical Fixes och LLM Fixes. Repair Pipeline läser hit. Ingen kod får implementera fix utanför detta register. Version 2 lägger till loop-limits, priority och onFailure per fix. Version 3 (Sprint 3B v1.1, post-reviewer-clean) korrigerar ensure-default-export från onFailure=abort-pipeline till onFailure=skip-and-log: tidigare semantiken matchade inte implementationen i packages/generation/repair/fixes/ensure_default_export.py som låter en fil failas och fortfarande försöker övriga filer (partial-fix-vägen). Registret är spec; koden är subset (Sprint 3B v1 levererar 1 av 8 mechanicalFixes; resten är pluggable via samma dispatcher).",
   "principles": [
     "En fix = en post i registret. Inga oregistrerade fixar.",
     "Mekaniska fixar körs först, alltid. LLM fixar bara om mekaniska inte räcker.",
@@ -55,11 +55,11 @@
     {
       "id": "ensure-default-export",
       "stage": "post-codegen",
-      "purpose": "Säkerställer att page.tsx-filer har default export.",
+      "purpose": "Säkerställer att page.tsx-filer har default export. Per Sprint 3B v1.1 (post-reviewer-clean): onFailure=skip-and-log eftersom fixen kan misslyckas på en fil (ingen exportable symbol) men ska låta repair-pipelinen försöka övriga filer/fixes vidare. Strikt abort-pipeline-semantik kräver att ALLA filer kan repareras eller att hela körningen abort:as – det är fel beteende när partial-fix är ett legitimt utfall.",
       "deterministic": true,
       "priority": 20,
       "idempotent": true,
-      "onFailure": "abort-pipeline"
+      "onFailure": "skip-and-log"
     },
     {
       "id": "strip-hard-dossier-sdk-imports-in-design-mode",

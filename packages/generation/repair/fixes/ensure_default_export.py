@@ -3,7 +3,9 @@
 Registry entry: ``governance/policies/fix-registry.v1.json``,
 ``mechanicalFixes`` array, ``id="ensure-default-export"``,
 ``stage="post-codegen"``, ``priority=20``, ``idempotent=true``,
-``onFailure="abort-pipeline"``.
+``onFailure="skip-and-log"`` (registry v3, Sprint 3B v1.1 cleanup;
+v2 had ``onFailure="abort-pipeline"`` which did not match the
+implementation - see ``MechanicalFixSpec`` and ADR 0016).
 
 What it does
 ------------
@@ -18,13 +20,15 @@ Quality Gate ``route-scan`` produces findings of two shapes:
 2. ``"<route> -> <relpath> (saknar export default)"`` -- the page file
    exists but has no ``export default`` statement. This fix appends
    ``export default <Symbol>;\\n`` to the file when it can find an
-   unambiguous exportable symbol (a top-level ``function Page``,
-   ``const Page = ...``, etc.) that matches the file's expected
-   component name. If no such symbol can be found, the fix returns a
-   ``RepairFix(success=False, ...)`` entry without mutating the file --
-   the registry's ``onFailure="abort-pipeline"`` is interpreted as
-   "this fix cannot proceed; the orchestrator will surface the failure
-   and stop trying further fixes on this file".
+   unambiguous exportable symbol that matches the file's expected
+   component name (Sprint 3B v1.1 heuristic: prefer ``Page`` >
+   exact-one-candidate > skip). If no such symbol can be found, the
+   fix returns a ``RepairFix(success=False, ...)`` entry WITHOUT
+   mutating the file. The registry's ``onFailure="skip-and-log"``
+   semantics: a per-file failure does NOT abort the whole pipeline;
+   the dispatcher continues with the next finding, and the operator
+   sees the failure in ``mechanicalFixesApplied[]`` so a Sprint 5+
+   LLM-fix or manual edit can pick it up.
 
 Determinism guarantees
 ----------------------
@@ -119,11 +123,13 @@ ENSURE_DEFAULT_EXPORT_SPEC = MechanicalFixSpec(
     stage="post-codegen",
     priority=20,
     idempotent=True,
-    on_failure="abort-pipeline",
+    on_failure="skip-and-log",
     description=(
         "Append `export default <Symbol>;` to a page.tsx that already "
         "defines an unambiguous top-level component but is missing the "
-        "default export."
+        "default export. A per-file failure (no exportable symbol, "
+        "unreadable file) is logged via RepairFix(success=False) and "
+        "the dispatcher continues with the next finding."
     ),
 )
 
@@ -255,7 +261,7 @@ def apply_ensure_default_export(
                     detail=(
                         "No exportable component-cased symbol found; "
                         "skipping per fix-registry onFailure="
-                        "abort-pipeline (do not invent a stub)."
+                        "skip-and-log (do not invent a stub)."
                     ),
                     success=False,
                 )

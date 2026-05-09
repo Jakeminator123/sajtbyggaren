@@ -82,16 +82,21 @@ def test_dossier_classes_are_only_soft_and_hard() -> None:
 @pytest.mark.governance
 def test_legacy_lane_and_fidelity_terms_are_globally_forbidden() -> None:
     """ADR 0016 reaction to the architect-reviewer round: the old
-    sajtmaskin vocabulary about modes/lanes/fidelity must not creep
-    back into sajtbyggaren. Canonical phase ordering lives in
+    sajtmaskin vocabulary about modes, lanes and fidelity must not
+    creep back into sajtbyggaren. Canonical phase ordering lives in
     engine-run.v1.json (phase 1 understand / phase 2 plan / phase 3
     build); fix vocabulary is Quality Gate / Repair Pipeline /
     PreviewRuntime / Mechanical Fix / LLM Fix.
+
+    Sprint 3B v1.1 follow-up (post-reviewer-clean): the generic
+    tier letters F2 and F3 were intentionally REMOVED from the
+    blocklist so policy text never has to name them. The specific
+    sajtmaskin legacy flags ``F2-only``/``F3-only`` stay because they
+    were registered before this cleanup and still appear in pre-
+    sajtbyggaren references.
     """
     forbidden = set(_naming().get("globallyForbidden", []))
     for forbidden_term in [
-        "F2",
-        "F3",
         "F2-only",
         "F3-only",
         "verify lane",
