@@ -72,6 +72,50 @@ Sprint 3B v1.1-kontrakt:
 | `build-status` | `packages/generation/quality_gate/checks.py:run_build_status_check` | Aggregerar `npm install` + `npm run build` resultat (läser, kör inte om) |
 | `policy-compliance` | `packages/generation/quality_gate/checks.py:run_policy_compliance_check` | Inga förbjudna `.env*`-filer under `target_dir` |
 
+`quality-result.json` och `repair-result.json` har sedan Sprint 3C-lite
+(ADR 0017) JSON-schemas under `governance/schemas/quality-result.schema.json`
+respektive `governance/schemas/repair-result.schema.json`. Validering körs
+via `packages/generation/artifacts/validate_quality_result` och
+`validate_repair_result` innan artefakterna skrivs till disk; en
+schema-överträdelse fails build innan `data/runs/<runId>/` skapas.
+
+### Page Quality Traits — planerad femte check (Sprint 3C-full)
+
+`governance/policies/page-quality-traits.v1.json` definierar trait-listan
+(conversion clarity, content specificity, visual coherence, etc.) som
+ska driva 9/10-bedömningen Sprint 3C-full siktar mot. Sprint 3C-lite
+**implementerar inte** denna check eftersom det skulle:
+
+- utvidga `QualityResult.checks`-listan från 4 till 5 entries och därmed
+  bryta de befintliga kontrakts-låsen (`test_run_quality_gate_aggregates_to_ok_when_all_pass`
+  + `test_quality_result_payload_has_real_checks_not_skeleton`),
+- kräva en scoring-modell som inte finns ännu (LLM-baserad evaluator
+  eller deterministisk rubric-checker mot `data/reference-templates/`),
+- introducera ny vokabulär (scorecard, trait-score) som behöver registreras
+  i `naming-dictionary.v1.json` innan den kan användas.
+
+Sprint 3C-full landar Page Quality Traits-checken som femte entry i
+`QualityResult.checks` plus en separat `pageQualityScore`-artefakt om
+scoringen behöver mer plats än ett `findings`-fält. Tills dess är
+trait-policyn ren spec — Backoffice får läsa den som "planerad", inte
+som live-data.
+
+### `build-result.json:modelUsage`
+
+Sprint 3C-lite börjar populera `modelUsage.byRole`:
+
+- `briefModel` och `planningModel` är explicit `null` eftersom de
+  resolvers inte spårar token-usage ännu. `null` säger "vi vet inte",
+  inte "vi spenderade 0 tokens".
+- `codegenModel` får ett `{promptTokens, completionTokens, totalTokens}`-
+  block när `codegen.source == "real"` och total > 0; annars `null`.
+- `totalInputTokens` / `totalOutputTokens` på envelope-nivån summerar
+  bara codegen-numren (eftersom de andra två är okända).
+
+Sprint 3C-full eller en separat sprint adderar usage-spårning på
+`briefModel` och `planningModel`; den utvidgningen är icke-breaking
+eftersom `byRole`-mappen växer från `null` till objekt.
+
 ### Vad Repair Pipeline gör och var
 
 | Steg | Implementation | Kontrollerar / muterar |

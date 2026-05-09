@@ -1379,24 +1379,83 @@ def run_phase3_quality_and_repair(
     )
 
     quality_payload = final_quality.model_dump()
+    # Schema-lock per Sprint 3C-lite (ADR 0017). Validation is strict:
+    # if the QualityResult shape drifts from quality-result.schema.json
+    # the build fails before write_json so a malformed artefakt never
+    # reaches data/runs/.
+    from packages.generation.artifacts import (
+        validate_quality_result,
+        validate_repair_result,
+    )
+
+    validate_quality_result(quality_payload)
     write_json(run_dir / "quality-result.json", quality_payload)
 
     repair_payload = repair_result.model_dump()
+    validate_repair_result(repair_payload)
     write_json(run_dir / "repair-result.json", repair_payload)
 
     return quality_payload, repair_payload
 
 
 def empty_model_usage(source: str = "mock-no-key") -> dict:
-    """Zeroed token / cost spend until model usage accounting is wired in."""
+    """Zeroed token / cost spend stub.
+
+    Sprint 3C-lite (ADR 0017) starts populating ``byRole.codegenModel``
+    from ``codegen.usage`` when the real codegen call ran; brief and
+    planning roles stay explicit ``null`` until those resolvers also
+    track usage (Sprint 3C-full or later). This helper still returns
+    the zeroed envelope; ``write_build_result`` mixes in the codegen
+    numbers when ``codegen_summary["usage"]`` carries non-zero tokens.
+    """
     return {
-        "byRole": {},
+        "byRole": {
+            "briefModel": None,
+            "planningModel": None,
+            "codegenModel": None,
+        },
         "totalInputTokens": 0,
         "totalOutputTokens": 0,
         "totalCostUsd": 0.0,
         "currency": "USD",
         "source": source,
     }
+
+
+def _model_usage_from_codegen(
+    base_source: str, codegen_summary: dict | None
+) -> dict:
+    """Compose modelUsage with codegen.usage merged into byRole.
+
+    - briefModel and planningModel stay ``null`` because those resolvers
+      do not yet track usage. Showing 0 would be a lie ("we ran a real
+      brief but spent no tokens"); ``null`` says "we don't know" honestly.
+    - codegenModel gets populated when codegen.source == "real" AND
+      usage.totalTokens > 0; otherwise it stays null.
+    - totalInputTokens / totalOutputTokens reflect the codegen totals
+      only (since brief/planning are unknown). totalCostUsd stays 0
+      because we have no per-model price table yet.
+    - source field on the envelope itself tracks how the OVERALL
+      pipeline ran (briefSource passed in by caller). It is independent
+      of the per-role accounting and stays as Sprint 2A defined it.
+    """
+    usage = empty_model_usage(source=base_source)
+    if not codegen_summary:
+        return usage
+    codegen_source = codegen_summary.get("source")
+    codegen_usage = codegen_summary.get("usage") or {}
+    if codegen_source == "real" and codegen_usage.get("totalTokens", 0) > 0:
+        prompt = int(codegen_usage.get("promptTokens", 0))
+        completion = int(codegen_usage.get("completionTokens", 0))
+        total = int(codegen_usage.get("totalTokens", prompt + completion))
+        usage["byRole"]["codegenModel"] = {
+            "promptTokens": prompt,
+            "completionTokens": completion,
+            "totalTokens": total,
+        }
+        usage["totalInputTokens"] = prompt
+        usage["totalOutputTokens"] = completion
+    return usage
 
 
 def write_build_result(
@@ -1448,7 +1507,7 @@ def write_build_result(
         "generatedFilesDir": rel_snapshot,
         "devPreviewDir": rel_preview,
         "npmSteps": npm_steps,
-        "modelUsage": empty_model_usage(source=brief_source),
+        "modelUsage": _model_usage_from_codegen(brief_source, codegen_summary),
         "finalize": {
             "snapshotDir": rel_snapshot,
             "snapshotedAt": utc_now().isoformat(),

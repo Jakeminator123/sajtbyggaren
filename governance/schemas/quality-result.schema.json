@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sajtbyggaren.local/schemas/quality-result.schema.json",
+  "title": "Quality Result",
+  "description": "Phase 3 Quality Gate output for an Engine Run. Aggregates the four checks (typecheck / route-scan / build-status / policy-compliance) into a single status the Repair Pipeline can act on. ADR 0013 deferred this schema until Sprint 3+; ADR 0017 + Sprint 3C-lite ship it now to close the contract gap. The shape mirrors packages.generation.quality_gate.QualityResult; tests/test_artefact_schema_drift.py locks the two against drift.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "checks"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["ok", "degraded", "failed"],
+      "description": "Aggregate status across all four checks. Rules: ok when every check is ok or skipped; failed when typecheck or build-status failed (blocking); degraded when only soft checks (route-scan / policy-compliance) failed."
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Per-check results in the order Quality Gate ran them. Sprint 3A v1 ships exactly four checks; future sprints (e.g. Page Quality Traits in 3C-full) may extend the enum without breaking the schema's array-of-CheckResult shape.",
+      "items": { "$ref": "#/$defs/checkResult" }
+    },
+    "summary": {
+      "type": "string",
+      "description": "Short one-line operator summary that trace.ndjson can surface without rendering the full check list."
+    }
+  },
+  "$defs": {
+    "checkResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "status"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["typecheck", "route-scan", "build-status", "policy-compliance"],
+          "description": "Canonical check name. Locked by ADR 0015; adding a name here requires bumping the schema and the QualityResult Pydantic Literal at the same time."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["ok", "failed", "skipped"],
+          "description": "Per-check status. skipped means the check could not run (e.g. typecheck without node_modules); not a substitute for failed."
+        },
+        "detail": {
+          "type": "string",
+          "description": "Short human-readable summary for operators reading quality-result.json."
+        },
+        "findings": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Specific issues (missing routes, tsc errors, forbidden file paths). Repair Pipeline filters these against the Fix Registry to dispatch mechanical fixes."
+        },
+        "durationMs": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Wall-clock duration the check took. Zero for skipped checks."
+        }
+      }
+    }
+  }
+}

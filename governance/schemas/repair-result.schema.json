@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sajtbyggaren.local/schemas/repair-result.schema.json",
+  "title": "Repair Result",
+  "description": "Phase 3 Repair Pipeline output for an Engine Run. Reflects what the sandwich-loop in packages.generation.repair did with the Quality Gate findings: not-needed / no-fix-applied / fixed / partial-fix, plus telemetry around mechanical and LLM fixes. ADR 0013 deferred this schema until Sprint 3+; ADR 0017 + Sprint 3C-lite ship it now to close the contract gap. The shape mirrors packages.generation.repair.RepairResult; tests/test_artefact_schema_drift.py locks the two against drift.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["not-needed", "no-fix-applied", "fixed", "partial-fix"],
+      "description": "Aggregate Repair Pipeline status. not-needed when Quality Gate was already ok; no-fix-applied when failures had no applicable mechanical or LLM fix; fixed when the sandwich loop drove gate-status to ok; partial-fix when at least one mechanical fix succeeded but the gate still reports degraded or failed after re-run."
+    },
+    "reason": {
+      "type": "string",
+      "description": "One-paragraph explanation of why the pipeline reached this status. Operator-facing."
+    },
+    "mechanicalFixesApplied": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/repairFix" },
+      "description": "One entry per mechanical fix attempt during this run. Empty when no findings matched a registered fix or when do_repair was False."
+    },
+    "llmFixesApplied": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/repairFix" },
+      "description": "One entry per LLM-fix call. Always empty in Sprint 3B / 3B-next; populated when Sprint 5+ wires the LLM-fix path per fix-registry.v1.json:llmFixes."
+    },
+    "remainingErrors": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Findings the pipeline could not (or chose not to) fix, formatted as '<check-name>: <finding>'. After a sandwich pass this reflects POST-repair findings, not pre-repair."
+    },
+    "qualityStatusBefore": {
+      "type": ["string", "null"],
+      "enum": ["ok", "degraded", "failed", null],
+      "description": "QualityResult.status at the start of the pipeline. Null when caller did not run the pipeline against a real Quality Gate result (mock pipelines, dev_generate)."
+    },
+    "qualityStatusAfter": {
+      "type": ["string", "null"],
+      "enum": ["ok", "degraded", "failed", null],
+      "description": "QualityResult.status after the final re-run. Null on Sprint 3A-shaped callers; equals qualityStatusBefore when iterations is 0."
+    },
+    "iterations": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of successful sandwich-loop passes (apply-fixes + re-run-gate cycles). Bounded by fix-registry.v1.json:loopLimits.maxTotalSandwichPasses."
+    }
+  },
+  "$defs": {
+    "repairFix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "name", "target"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["mechanical", "llm"],
+          "description": "Whether the fix came from a deterministic mechanical fix (Sprint 3B+) or an LLM-fix call (Sprint 5+)."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Registry id of the fix from governance/policies/fix-registry.v1.json (e.g. 'ensure-default-export')."
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "description": "POSIX-style relative path to the file the fix attempted to mutate."
+        },
+        "detail": {
+          "type": "string",
+          "description": "Per-attempt detail (what was changed, or why the attempt failed)."
+        },
+        "success": {
+          "type": "boolean",
+          "description": "Whether the fix actually mutated the target. False entries record attempts that hit the fix's onFailure path (skip-and-log etc.)."
+        }
+      }
+    }
+  }
+}

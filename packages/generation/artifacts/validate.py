@@ -39,6 +39,8 @@ SCHEMAS: dict[str, str] = {
     "generationPackage": "generation-package.schema.json",
     "sections": "sections.schema.json",
     "scaffold": "scaffold.schema.json",
+    "qualityResult": "quality-result.schema.json",
+    "repairResult": "repair-result.schema.json",
 }
 
 
@@ -102,6 +104,26 @@ def validate_sections(payload: dict[str, Any]) -> None:
 def validate_scaffold(payload: dict[str, Any]) -> None:
     """Validate a Scaffold's scaffold.json against scaffold.schema.json."""
     validate_artifact("scaffold", payload)
+
+
+def validate_quality_result(payload: dict[str, Any]) -> None:
+    """Validate a quality-result.json payload (Sprint 3C-lite, ADR 0017).
+
+    Locks the QualityResult shape that ``packages.generation.quality_gate``
+    produces. Schemas + validators were deferred from ADR 0013 until
+    Sprint 3+; this is the closeout.
+    """
+    validate_artifact("qualityResult", payload)
+
+
+def validate_repair_result(payload: dict[str, Any]) -> None:
+    """Validate a repair-result.json payload (Sprint 3C-lite, ADR 0017).
+
+    Locks the RepairResult shape (status, reason, mechanicalFixesApplied,
+    llmFixesApplied, remainingErrors, qualityStatusBefore /After,
+    iterations). Counterpart to validate_quality_result.
+    """
+    validate_artifact("repairResult", payload)
 
 
 def _format_validation_error(error: ValidationError) -> str:

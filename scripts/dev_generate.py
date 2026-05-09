@@ -371,7 +371,17 @@ def run_phase_build(run_dir: Path, run_id: str, generation_package: dict[str, An
         build_status="skipped",
         do_typecheck=False,
     )
-    write_json(run_dir / "quality-result.json", quality_result.model_dump())
+    # Schema-lock per Sprint 3C-lite (ADR 0017): mock pipeline goes
+    # through the same validator as the real builder so a future shape
+    # drift surfaces here too, not just in production runs.
+    from packages.generation.artifacts import (
+        validate_quality_result,
+        validate_repair_result,
+    )
+
+    quality_payload = quality_result.model_dump()
+    validate_quality_result(quality_payload)
+    write_json(run_dir / "quality-result.json", quality_payload)
     emit(
         run_id, run_dir, "build", "quality_result.written", "done",
         f"Quality Gate status={quality_result.status} "
@@ -382,7 +392,9 @@ def run_phase_build(run_dir: Path, run_id: str, generation_package: dict[str, An
     repair_result = run_repair_pipeline(
         quality_result, target_dir=files_dir, do_repair=False
     )
-    write_json(run_dir / "repair-result.json", repair_result.model_dump())
+    repair_payload = repair_result.model_dump()
+    validate_repair_result(repair_payload)
+    write_json(run_dir / "repair-result.json", repair_payload)
     emit(
         run_id, run_dir, "build", "repair_result.written", "done",
         f"Repair Pipeline status={repair_result.status} "
