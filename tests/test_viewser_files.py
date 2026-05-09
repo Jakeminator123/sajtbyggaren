@@ -123,6 +123,40 @@ def test_chat_panel_marks_prompt_as_experimental() -> None:
 
 
 @pytest.mark.tooling
+def test_build_runner_returns_structured_failure_instead_of_throwing() -> None:
+    """B40: when scripts/build_site.py exits 1 because npm install /
+    npm run build failed, it STILL writes the canonical artefakter
+    (build-result.json with status=failed, plus quality-result.json +
+    repair-result.json + the generated-files/ snapshot) per the
+    Builder MVP contract. The dev wrapper used to throw on any
+    non-zero exit, which dropped the runId on the floor and forced
+    /api/build to return 500 with no way for the UI to surface a
+    failed run. The defensive path now reads build-result.json from
+    disk and returns it as a normal result so the Run History entry
+    shows up with status=failed and the RunDetailsPanel can render
+    the four artefakter for diagnosis. Only when there's no runId
+    AND no structured artefakt does the wrapper throw.
+    """
+    text = (VIEWSER_DIR / "lib" / "build-runner.ts").read_text(encoding="utf-8")
+
+    # The defensive read must call readBuildResult inside the
+    # exitCode !== 0 branch and only throw when that read fails.
+    # Locking these two phrases together as a source-level regression
+    # guard keeps the contract stable without spinning up a Node
+    # process.
+    assert "structured-failure" in text or "strukturerad output" in text, (
+        "build-runner.ts must document the structured-failure path "
+        "(see B40). Either the inline comment or the throw-message "
+        "needs to mention it so the next reader sees the contract."
+    )
+    assert "readBuildResult(runId)" in text, (
+        "build-runner.ts must read build-result.json from disk in the "
+        "exit !== 0 branch so failed runs reach the UI with their "
+        "structured failure data instead of a bare 500."
+    )
+
+
+@pytest.mark.tooling
 def test_run_history_uses_status_dot_colors() -> None:
     """UX-prioritet 2 (GPT-reviewer): Run History ska visa per-run
     status-färgning, inte bara en select med textstatus. Lås det

@@ -76,6 +76,29 @@ Format per bugg:
 
 ## Öppna - inte fixade än
 
+- **`B41` Medel** (öppen 2026-05-09, Builder UX MVP smoke-test) -
+  `npm run build` mot `.generated/painter-palma/` failar Next 16
+  prerendering på `/_global-error` med
+  `TypeError: Cannot read properties of null (reading 'useContext')`
+  + flera `Each child in a list should have a unique "key" prop`-
+  warnings från `<meta>` / `<__next_viewport_boundary__>`. Tidigare
+  runs (`20260509T130316.466Z-...`) hade `status=ok`, så regressionen
+  är ny - troligen orsakad av antingen (a) en uppdaterad Next /
+  React-dep i `data/starters/marketing-base/package.json` som drog
+  in en bryggande prerendering-ändring, (b) saknad `error.tsx` /
+  `global-error.tsx` i marketing-base som Next 16 nu kräver, eller
+  (c) ett Tailwind 4 / `metadata`-API-glapp. Builder UX MVP-flödet
+  är **inte** blockerat av detta tack vare B40-fixen: failed builds
+  visas som `status=failed` i Run History med fyra strukturerade
+  artefakter i RunDetailsPanel. Men nya sajter blir inte previewbara
+  förrän marketing-base fungerar igen. Naturlig owner: separat
+  starter-harmoniserings-agent (samma spår som B20). Diagnos kan
+  starta med `npm ls next react react-dom` i `data/starters/marketing-base/`
+  + jämförelse mot `apps/viewser/package.json` (samma Next 16.2.6-
+  paket men Viewser bygger fint, så troligen en starter-specifik
+  fil som behöver Next 16-codemod). Reproduktion:
+  `python scripts/build_site.py --dossier examples/painter-palma.project-input.json`.
+
 - **`BO2` Medel** - Backoffice trace viewer är rå dataframe;
   `data/runs/<runId>/trace.ndjson` borde grupperas per fas och färgas efter
   status. Beror på round 3.
@@ -100,6 +123,34 @@ Format per bugg:
   `SCAFFOLD_TO_STARTER`-konstanten i `packages/generation/planning/plan.py`.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B40` Medel** (stängd 2026-05-09, Builder UX MVP smoke-test) -
+  `apps/viewser/lib/build-runner.ts:runBuildOnce` kastade
+  ovillkorligt en error så fort `scripts/build_site.py` exit:ade
+  med kod != 0. Det bröt det dokumenterade Builder MVP-kontraktet
+  (`docs/architecture/builder-mvp.md` "Builder-guards"): när
+  `npm install` / `npm run build` failar skriver `build_site.py`
+  ändå alla canonical artefakter (`build-result.json` med
+  `status=failed`, `quality-result.json`, `repair-result.json`,
+  `generated-files/`-snapshot) och exit:ar 1 - exit-koden är en
+  **avsiktlig** signal till operatören, inte en crash. Wrappers
+  exception droppade dock runId:et på golvet, vilket gjorde att
+  `/api/build` returnerade 500 utan att UI:t fick en runId att
+  navigera till. Run History uppdaterades inte och RunDetailsPanel
+  fick aldrig se den strukturerade failure-rapporten. Upptäckt under
+  smoke-test efter `e80148c` när marketing-base-startern råkade
+  failed på `/_global-error`-prerendering (separat issue, se nedan).
+  Fix: i `exitCode !== 0`-grenen försöker wrappers nu läsa
+  `build-result.json` från disk via samma `readBuildResult(runId)`-
+  helper som success-pathen. Lyckas läsningen returneras
+  `{runId, buildResult}` precis som vid framgång - UI:t ser då en
+  failed run i Run History och kan rendera artefaktpanelerna
+  pedagogiskt. Endast när läsningen failar (exit !=0 + ingen
+  strukturerad output på disk) kastar wrappers exception som
+  tidigare. Test: `tests/test_viewser_files.py::
+  test_build_runner_returns_structured_failure_instead_of_throwing`
+  (source-lock på "structured-failure"-comment + `readBuildResult(runId)`
+  i exit-branch).
 
 - **`B38` Medel** (stängd 2026-05-09, post-3C-lite-audit-2) -
   `scripts/dev_generate.py:run_phase_build` byggde `modelUsage`-
