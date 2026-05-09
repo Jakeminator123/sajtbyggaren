@@ -1,7 +1,7 @@
 # Handoff – Sajtbyggaren
 
 **Datum:** 2026-05-09
-**Senaste commit på `main`:** `6b8c45e` (Sprint 3C-lite + audit-fix). Kör `git log --oneline -1` för aktuell HEAD.
+**Aktuell HEAD:** kör `git log --oneline -1` för verifierad SHA. Senaste milstolpe: post-3C-lite-audit-2 + Builder UX MVP (B38 + B39 + RunDetailsPanel). Föregående baseline var `6b8c45e` (Sprint 3C-lite + audit-fix).
 **Aktiv branch:** `main` (per `governance/rules/branch-discipline.md` är direkt commit + push mot `origin/main` standardflödet — PR används bara när operatören uttryckligen ber om det).
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet.
@@ -41,6 +41,8 @@ Tre lager:
 | 3B-next (ADR 0017) | Real codegenModel via `OPENAI_API_KEY` + structured `CodegenLLMResponse` (rationale + 0-3 riskNotes). Files-listan stannar deterministisk för att skydda mot LLM-hallucinationer. Truth-fields: `real` / `mock-llm-error` / `mock-no-key` / `deterministic-v1`. |
 | 3C-lite (ADR 0017 §) | JSON-schemas för `quality-result.json` + `repair-result.json` + drift-guards (top-level + nested `$defs`). `modelUsage.byRole` med tre canonical LLM-roller (briefModel/planningModel som null tills de spårar usage; codegenModel populerad på `source="real"`). Page Quality Traits dokumenterad som Sprint 3C-full-arbete. |
 | Post-3C-lite audit (B33-B36) | dev_generate emitterar samma `modelUsage`-shape som builder via shared `compose_model_usage` helper. Nested drift-guard. Doc-fix om partial run-dir. Schema-description filename. |
+| Post-3C-lite audit-2 (B38, B39) | `dev_generate.py:run_phase_build` läser `briefSource` från Phase 1 site-brief så `modelUsage.source` återger verklig pipeline-källa istället för hårdkodat `mock-no-key`. Doc-drift i `handoff.md` (CLI-flaggor per script) + `known-issues.md` (line-ref till `build_site.py:1523`). Tre nya regression-tester (parametriserade real / mock-no-key / mock-llm-error + fallback-default). |
+| Builder UX MVP | Operator-prototypen `apps/viewser/` får en `<RunDetailsPanel>` med fem pedagogiska sektioner (Build / Quality / Repair / Codegen / Models) som läser från ny endpoint `/api/runs/[runId]/artifacts`. UI defensivt mot saknade fält i äldre runs ("saknas i äldre run" / "ej spårad än" / "unknown"). `<RunHistory>` får status-färgning, `<ChatPanel>` får `BuildStatusIndicator` + experimentell prompt-märkning, `<ViewerPanel>` får pedagogisk fallback för dev_generate-mock-runs. PreviewRuntime / StackBlitzRuntime / FlyRuntime är fortsatt parkerat som Sprint 4-5. |
 
 ### Phase 3 ordering (canonical)
 
@@ -63,8 +65,8 @@ Validatorerna i steg 7-9 skyddar de specifika artefakterna från att skrivas mal
 ### Skiriptyta
 
 - `scripts/build_site.py`: deterministisk Builder MVP. Skriver alla canonical artefakter inkl. `generated-files/`-snapshot. Tunn wiring runt `packages/generation/`-paketen (B13 är inte stängd men tre nya paket växte under den).
-- `scripts/dev_generate.py`: mock-pipeline för regression. Skriver alla 8 artefakter + `trace.ndjson`. Sedan post-3C-lite-audit emitterar samma `modelUsage`-shape som builder.
-- `--skip-build` för snabb iteration. `--runs-dir` för isolerade test-paths.
+- `scripts/dev_generate.py`: mock-pipeline för regression. Skriver alla 8 artefakter + `trace.ndjson`. Sedan post-3C-lite-audit emitterar samma `modelUsage`-shape som builder, och `modelUsage.source` följer faktisk `briefSource` istället för att vara hårdkodad (B38).
+- CLI-flaggor skiljer sig mellan scripten: `scripts/build_site.py` har `--skip-build` + `--runs-dir`; `scripts/dev_generate.py` har `--phase {brief,plan,build,all}` + `--data-runs-dir`. Ingen av flaggorna är delade.
 
 ### Backoffice + Viewser
 
@@ -88,16 +90,23 @@ Validatorerna i steg 7-9 skyddar de specifika artefakterna från att skrivas mal
 - 11 av 14 scaffolds är gitkeep-mappar utan content.
 - `apps/web/` finns inte alls.
 
-## För nästa agent: Builder UX MVP
+## För nästa agent: efter Builder UX MVP
 
-Sprint 3C-lite stänger motor-spåret tillräckligt att Builder UX kan börja på en stabil bas. Nästa agent bör fokusera på:
+Builder UX MVP är levererad i denna runda: operator-flödet **Project Input → Build → Run skapas → Run-lista → Preview → Artefaktpaneler** fungerar end-to-end. Naturliga nästa spår är:
+
+1. **PreviewRuntime / StackBlitzRuntime / LocalRuntime / FlyRuntime** (Sprint 4-5). Befintlig StackBlitz-embed i `viewer-panel.tsx` är dev-prototyp, inte canonical runtime.
+2. **Backoffice trace-vy (BO2)** — `data/runs/<runId>/trace.ndjson` borde grupperas per fas och färgas efter status; bra parallellt UX-spår.
+3. B13 — produktlogik flyttas ut ur `scripts/build_site.py` när LLM file-emission widens i Sprint 3C-full.
+4. **Page Quality Traits-scoring** (Sprint 3C-full) — femte Quality Gate-check enligt `governance/policies/page-quality-traits.v1.json`.
+5. **Brief / planning usage tracking** — utvidga resolvers så `modelUsage.byRole.briefModel` / `planningModel` flippar från null till usage-dict.
 
 ### Säkra utgångspunkter
 
-- `data/runs/<runId>/build-result.json` har enhetlig shape från BÅDA `scripts/build_site.py` och `scripts/dev_generate.py` (post-3C-lite-audit). Inkluderar `siteId`, `status`, `codegen` (källa + rationale + riskNotes + usage), `modelUsage.byRole` med tre canonical LLM-roller, `routes`, `npmSteps`.
+- `data/runs/<runId>/build-result.json` har **partiell shape-parity** mellan `scripts/build_site.py` och `scripts/dev_generate.py`. Båda emitterar `runId`, `status`, `codegen` (källa + rationale + riskNotes + usage) och `modelUsage.byRole` med tre canonical LLM-roller (post-Sprint 3C-lite + B38). Builder skriver dessutom `siteId`, `routes`, `npmSteps`, `generatedFilesDir`, `devPreviewDir`, `briefSource` på top-level — dev_generate-mocken gör inte det. `<RunDetailsPanel>` är skriven defensivt mot detta: top-level-fält som saknas renderas som "saknas i äldre run" / "saknas (dev_generate-pipeline kör inte npm)" istället för krascher.
 - `data/runs/<runId>/quality-result.json` + `repair-result.json` är schema-låsta (`governance/schemas/{quality,repair}-result.schema.json`) med drift-guards mot Pydantic-modellen på top-level + nested `$defs`.
 - `data/runs/<runId>/trace.ndjson` är append-only Engine Events; har `engine.run.started` / `understand.*` / `plan.*` / `build.*` / `phase.completed` events.
 - `examples/<siteId>.project-input.json` är schema-låst (`governance/schemas/project-input.schema.json` v1).
+- `apps/viewser/app/api/runs/[runId]/artifacts/route.ts` returnerar de fyra canonical Engine Run-artefakterna i ett anrop: `{runId, buildResult, qualityResult, repairResult, siteBrief, missingArtefacts}`. Saknade filer surfaceas via `missingArtefacts[]`-listan så framtida UI-arbete inte behöver särfall-koda enskilda 404:or.
 
 ### Out-of-scope för Builder UX MVP (per reviewer + ADR)
 

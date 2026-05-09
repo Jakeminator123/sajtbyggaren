@@ -101,6 +101,43 @@ Format per bugg:
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B38` Medel** (stängd 2026-05-09, post-3C-lite-audit-2) -
+  `scripts/dev_generate.py:run_phase_build` byggde `modelUsage`-
+  envelopen via `compose_model_usage(base_source="mock-no-key", ...)`.
+  Värdet var hårdkodat trots att `compose_model_usage`-helperns
+  dokumenterade semantik säger att `base_source` är `briefSource`-
+  värdet och spårar hur OVERALL pipeline kördes (`real` /
+  `mock-no-key` / `mock-llm-error`). Resultat: en operator som körde
+  `python scripts/dev_generate.py "..."` med `OPENAI_API_KEY` satt
+  fick `site-brief.json:briefSource=real` men
+  `build-result.json:modelUsage.source=mock-no-key`. Det bryter
+  Sprint 2A-invarianten och skulle få Builder UX-paneler att visa
+  fel modellstatus när de läser dev_generate-runs. Fix:
+  `run_phase_build` tar nu en valfri `site_brief: dict | None`-
+  parameter och läser `briefSource` därifrån; `main()` skickar in
+  briefen från Phase 1 (eller läser `site-brief.json` från disk
+  när `--phase build` körs ensam). Default-fallback är fortfarande
+  `mock-no-key` så bakåtkompatibla anrop inte spricker. Test:
+  `tests/test_artefact_schema_3c_lite.py::test_dev_generate_modelusage_source_follows_brief_source`
+  (parametriserad över real/mock-no-key/mock-llm-error utan att kräva
+  riktig OpenAI-call - `site_brief["briefSource"]` muteras direkt) +
+  `test_dev_generate_modelusage_source_defaults_to_mock_no_key_without_brief`
+  (låser fallback-pathen).
+
+- **`B39` Låg** (stängd 2026-05-09, post-3C-lite-audit-2) -
+  `docs/handoff.md` "Skiriptyta"-sektionen sade generiskt
+  "`--runs-dir` för isolerade test-paths" - men flaggnamnet skiljer
+  sig per script: `scripts/build_site.py` har `--runs-dir`,
+  `scripts/dev_generate.py` har `--data-runs-dir`. Risk: nästa
+  agent copy-paste:ar fel flagga och misslyckas tyst eller skriver
+  till fel path. Samtidigt rättades `known-issues.md:138` line-ref
+  för B35 (`scripts/build_site.py:1565` → faktiskt
+  `scripts/build_site.py:1523` där `run_dir.mkdir(...)` sitter).
+  Fix: handoff förtydligad per-script + line-ref korrigerad.
+  Inga regression-tester - detta är ren doc-drift utan
+  runtime-impact, men nämns här så framtida audit ser att fyndet
+  inte var nytt vid Builder UX MVP-runda.
+
 - **`B33` Medel** (stängd 2026-05-09, post-Sprint-3C-lite-review) -
   `scripts/dev_generate.py:run_phase_build` skrev `build-result.json`
   utan `modelUsage`-fältet. När operatören körde dev_generate med
@@ -135,7 +172,7 @@ Format per bugg:
 - **`B35` Låg** (stängd 2026-05-09, post-Sprint-3C-lite-review) -
   `docs/architecture/builder-mvp.md` påstod att schema-överträdelse
   fails build "innan `data/runs/<runId>/` skapas". Det stämmer inte:
-  `run_dir.mkdir(...)` körs i Phase 0 init (`scripts/build_site.py:1565`)
+  `run_dir.mkdir(...)` körs i Phase 0 init (`scripts/build_site.py:1523`)
   innan Phase 1 / 2 / 3 — och schema-validators för
   `quality-result.json` / `repair-result.json` kör först i Phase 3.
   Ett sent schemafel lämnar därför en partial run-dir med

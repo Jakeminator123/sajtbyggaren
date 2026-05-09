@@ -22,10 +22,17 @@ def test_viewser_expected_files_exist() -> None:
         "app/api/build/route.ts",
         "app/api/runs/route.ts",
         "app/api/runs/[runId]/files/route.ts",
+        # Builder UX MVP: artefact bundle endpoint feeds RunDetailsPanel
+        # the four canonical Engine Run artefakter in one round-trip.
+        "app/api/runs/[runId]/artifacts/route.ts",
         "components/chat-panel.tsx",
         "components/viewer-panel.tsx",
         "components/token-meter.tsx",
         "components/project-input-picker.tsx",
+        "components/run-history.tsx",
+        # Builder UX MVP: 5-section pedagogical render of build/quality/
+        # repair/codegen/models with defensive fallbacks for older runs.
+        "components/run-details-panel.tsx",
         "lib/openai.ts",
         "lib/build-runner.ts",
         "lib/localhost-guard.ts",
@@ -67,10 +74,69 @@ def test_viewser_api_routes_call_localhost_guard() -> None:
         "app/api/build/route.ts",
         "app/api/runs/route.ts",
         "app/api/runs/[runId]/files/route.ts",
+        "app/api/runs/[runId]/artifacts/route.ts",
     ]
     for route in routes:
         text = (VIEWSER_DIR / route).read_text(encoding="utf-8")
         assert "assertLocalhost" in text, f"{route} saknar localhost-guard"
+
+
+@pytest.mark.tooling
+def test_run_details_panel_handles_missing_artefakter_defensively() -> None:
+    """B38 / Builder UX MVP: ÄLDRE runs (pre-Sprint 3A) saknar
+    quality-result.json + repair-result.json, och dev_generate-runs
+    saknar routes / npmSteps / generatedFilesDir på top-level. UI:t
+    måste rendera dessa fall som "saknas i äldre run" / "ej spårad än"
+    istället för att krascha eller visa odefinierade fält som rå JSON.
+
+    Locking the fallback strings here makes accidental regression
+    surface as a string-mismatch rather than a runtime crash in the
+    browser.
+    """
+    panel_text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+    expected_fallbacks = [
+        "saknas i äldre run",
+        "ej spårad än",
+        "saknas i denna run",
+    ]
+    for fallback in expected_fallbacks:
+        assert fallback in panel_text, (
+            f"RunDetailsPanel saknar defensiv fallback-text {fallback!r}. "
+            "UI:t måste vara läsbart för pre-Sprint-3A runs och dev_generate-mocks."
+        )
+
+
+@pytest.mark.tooling
+def test_chat_panel_marks_prompt_as_experimental() -> None:
+    """Builder UX MVP scope: free-form prompt får visas men ska inte
+    framstå som primary path. Project Input + Build är den stabila
+    vägen tills en separat sprint kopplar promptens output till
+    run-flödet.
+    """
+    text = (VIEWSER_DIR / "components" / "chat-panel.tsx").read_text(encoding="utf-8")
+    assert "experimentell" in text.lower() or "experimental" in text.lower(), (
+        "Promptfältet ska visa pedagogisk text om att det är experimentellt "
+        "och inte påverkar run-flödet i denna runda."
+    )
+
+
+@pytest.mark.tooling
+def test_run_history_uses_status_dot_colors() -> None:
+    """UX-prioritet 2 (GPT-reviewer): Run History ska visa per-run
+    status-färgning, inte bara en select med textstatus. Lås det
+    färgkonceptet så framtida refactor inte återgår till plain
+    select.
+    """
+    text = (VIEWSER_DIR / "components" / "run-history.tsx").read_text(encoding="utf-8")
+    assert "STATUS_DOT_COLORS" in text, (
+        "RunHistory ska mappa status -> färgklass via STATUS_DOT_COLORS-tabellen."
+    )
+    for status in ("ok", "failed", "degraded", "mock-complete"):
+        assert status in text, (
+            f"RunHistory saknar färg-mapping för status {status!r}."
+        )
 
 
 @pytest.mark.tooling

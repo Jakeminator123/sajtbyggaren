@@ -302,7 +302,12 @@ def run_phase_plan(run_dir: Path, run_id: str, site_brief: dict[str, Any]) -> di
 # ----- phase: build (Generated Files + Repair + Quality) ---------------------
 
 
-def run_phase_build(run_dir: Path, run_id: str, generation_package: dict[str, Any]) -> dict[str, Any]:
+def run_phase_build(
+    run_dir: Path,
+    run_id: str,
+    generation_package: dict[str, Any],
+    site_brief: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Mock fas 3 for the dev driver.
 
     Sprint 3A harmonises the artefact contract: ``quality-result.json``
@@ -321,6 +326,14 @@ def run_phase_build(run_dir: Path, run_id: str, generation_package: dict[str, An
     skipped because the mock target has no app/ tree, typecheck because
     there is no node_modules, build-status because there is no npm run
     build.
+
+    ``site_brief`` carries the Phase 1 understand result; we read
+    ``briefSource`` from it so ``build-result.json:modelUsage.source``
+    reflects how the OVERALL pipeline ran (``real`` /
+    ``mock-no-key`` / ``mock-llm-error``). Falling back to
+    ``mock-no-key`` when ``site_brief`` is omitted keeps backwards
+    compatibility for callers that have not threaded the brief through
+    yet, but every callsite in ``main()`` does.
     """
     emit(run_id, run_dir, "build", "phase.started", "started", "Codegen mock - writing placeholder files")
 
@@ -422,6 +435,12 @@ def run_phase_build(run_dir: Path, run_id: str, generation_package: dict[str, An
     if codegen_result.error is not None:
         codegen_summary["error"] = codegen_result.error
 
+    # Post-3C-lite-audit fynd 2 (B38): the previous version hardcoded
+    # base_source="mock-no-key" so a real-key run still surfaced as
+    # mock in build-result.json:modelUsage.source. Read the live
+    # briefSource from the Phase 1 brief so the field is honest.
+    brief_source = (site_brief or {}).get("briefSource", "mock-no-key")
+
     build_result = {
         "runId": run_id,
         "status": "mock-complete",
@@ -430,7 +449,7 @@ def run_phase_build(run_dir: Path, run_id: str, generation_package: dict[str, An
         "qualityResultPath": "quality-result.json",
         "codegen": codegen_summary,
         "modelUsage": compose_model_usage(
-            base_source="mock-no-key", codegen_summary=codegen_summary
+            base_source=brief_source, codegen_summary=codegen_summary
         ),
         "createdAt": utcnow_iso(),
     }
@@ -529,7 +548,13 @@ def main() -> int:
                 )
                 return 2
             generation_package = read_json(pkg_path)
-        run_phase_build(run_dir, run_id, generation_package)
+        # Re-load the brief from disk if --phase build runs standalone
+        # so modelUsage.source reflects how Phase 1 actually ran.
+        if site_brief is None:
+            brief_path = run_dir / "site-brief.json"
+            if brief_path.exists():
+                site_brief = read_json(brief_path)
+        run_phase_build(run_dir, run_id, generation_package, site_brief=site_brief)
 
     emit(run_id, run_dir, "engine", "run.done", "done", f"runId={run_id}")
     print(f"\nRun complete: {run_dir}")

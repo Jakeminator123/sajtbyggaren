@@ -81,6 +81,73 @@ export async function readBuildResult(runId: string): Promise<Record<string, unk
 }
 
 /**
+ * Defensive reader: returns parsed JSON or null when the artefact is
+ * missing. Builder UX MVP needs to render older runs (pre-Sprint 3A) and
+ * partial run-dirs (Phase 3 schema-validator failure leaves Phase 1+2
+ * artefakter on disk) without 500-ing the API. The caller decides how
+ * to surface "saknas i äldre run" / "ej spårad än" labels in UI.
+ */
+export async function readArtefactOrNull(
+  runId: string,
+  filename: string,
+): Promise<Record<string, unknown> | null> {
+  try {
+    const runDir = await runDirFromId(runId);
+    return await readJsonFile(path.join(runDir, filename));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export type RunArtefactBundle = {
+  runId: string;
+  buildResult: Record<string, unknown> | null;
+  qualityResult: Record<string, unknown> | null;
+  repairResult: Record<string, unknown> | null;
+  siteBrief: Record<string, unknown> | null;
+  missingArtefacts: string[];
+};
+
+/**
+ * Read the four artefakter Builder UX MVP needs to render a run-detail
+ * view, defensively. Any missing file is recorded in `missingArtefacts`
+ * so the UI can show "saknas i äldre run" instead of crashing.
+ */
+export async function readRunArtefacts(runId: string): Promise<RunArtefactBundle> {
+  // runDirFromId throws on path-escape / missing dir, which is a 4xx-
+  // worthy hard error - bubble it up. Per-file misses are soft.
+  await runDirFromId(runId);
+
+  const filenames = [
+    "build-result.json",
+    "quality-result.json",
+    "repair-result.json",
+    "site-brief.json",
+  ] as const;
+  const [buildResult, qualityResult, repairResult, siteBrief] = await Promise.all(
+    filenames.map((name) => readArtefactOrNull(runId, name)),
+  );
+
+  const missingArtefacts: string[] = [];
+  if (!buildResult) missingArtefacts.push("build-result.json");
+  if (!qualityResult) missingArtefacts.push("quality-result.json");
+  if (!repairResult) missingArtefacts.push("repair-result.json");
+  if (!siteBrief) missingArtefacts.push("site-brief.json");
+
+  return {
+    runId,
+    buildResult,
+    qualityResult,
+    repairResult,
+    siteBrief,
+    missingArtefacts,
+  };
+}
+
+/**
  * Resolve the canonical Project Input file for a given siteId.
  *
  * Note: siteId callers MUST validate via `assertSafeSiteId` (see
