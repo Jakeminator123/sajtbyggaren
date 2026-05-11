@@ -78,6 +78,54 @@ def test_copy_starter_ignore_blocks_env_files(tmp_path: Path) -> None:
     assert ".next" in skipped
 
 
+@pytest.mark.tooling
+def test_copy_starter_drops_stale_next_cache_but_preserves_node_modules(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """B41: regeneration must not carry stale `.next` build output forward.
+
+    The builder intentionally preserves ``node_modules`` between
+    regenerations to avoid a full npm install on every run, but ``.next``
+    is framework-derived output. Keeping it lets stale prerender/cache
+    state survive package or template changes and can surface as Next's
+    internal ``/_global-error`` prerender crash even though a clean target
+    builds successfully.
+    """
+    import scripts.build_site as build_site
+
+    starters_dir = tmp_path / "starters"
+    source = starters_dir / "marketing-base"
+    (source / "app").mkdir(parents=True)
+    (source / "app" / "page.tsx").write_text(
+        "export default function Home() { return <main />; }\n",
+        encoding="utf-8",
+    )
+    (source / "package.json").write_text('{"name":"marketing-base"}\n', encoding="utf-8")
+    (source / ".next").mkdir()
+    (source / ".next" / "source-cache").write_text("ignored\n", encoding="utf-8")
+
+    target = tmp_path / "generated" / "painter-palma"
+    (target / "node_modules").mkdir(parents=True)
+    (target / "node_modules" / "kept.txt").write_text("keep\n", encoding="utf-8")
+    (target / ".next").mkdir()
+    (target / ".next" / "stale.txt").write_text("stale\n", encoding="utf-8")
+    (target / "old.txt").write_text("remove\n", encoding="utf-8")
+
+    monkeypatch.setattr(build_site, "STARTERS_DIR", starters_dir)
+
+    build_site.copy_starter("marketing-base", target)
+
+    assert (target / "node_modules" / "kept.txt").exists()
+    assert not (target / ".next").exists(), (
+        "copy_starter must remove stale .next output before each regeneration "
+        "so Next prerender caches cannot leak across builds."
+    )
+    assert not (target / "old.txt").exists()
+    assert (target / "app" / "page.tsx").exists()
+    assert (target / "package.json").exists()
+
+
 # ---------------------------------------------------------------------------
 # B6/B10 - runId must not collide on rapid regeneration
 # ---------------------------------------------------------------------------
