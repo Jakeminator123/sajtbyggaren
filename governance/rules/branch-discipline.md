@@ -66,6 +66,35 @@ Efter merge till `main`:
 
 Mål: `git branch -a` ska bara visa `main` plus `origin/main` när inget pågår.
 
+## Parallella agenter
+
+När flera agenter jobbar samtidigt mot samma repo (typiskt: en lokal agent på `main` plus en cloud-/feature-agent på en egen branch), gäller en strikt rollfördelning som hindrar att två agenter rör samma filer.
+
+### Mainline-steward
+
+Stannar på `main` och pushar direkt till `origin/main`, men bara för låg-risk-arbete:
+
+- docs, governance-text och agent/reviewer-checklists
+- lokal branch-cleanup (`git branch -d`, `git fetch --prune`)
+- sanity-rapporter (kör de fyra guards + verifiera artefakter)
+- små verifierade fixar där alla fyra guards är gröna före push
+
+Mainline-steward får inte röra filer som ligger i scope för en pågående feature-/grind-agent.
+
+### Feature-agent (även kallad grind-agent när den körs i cloud)
+
+Jobbar alltid på egen branch enligt namnformatet ovan. Pushar bara till sin branch. Mergar via operatör eller PR. Behöver inte vänta in mainline-steward; rebase mot uppdaterad `main` hanteras vid merge.
+
+### Scope-läckage förebyggs så här
+
+1. Före varje main-commit läser mainline-steward `docs/known-issues.md` och senaste `docs/handoff.md` för att se vilka B-IDs eller sprint-spår som är aktiva. De filer som ett aktivt spår räknar upp som scope är off-limits för mainline-arbete tills feature-agenten är klar.
+2. Om mainline-steward upptäcker att en städning kräver att den rör en off-limits-fil: stoppa, rapportera till operatören, och låt feature-agenten ta ändringen i sin branch i stället.
+3. Operatören kan när som helst nominera en specifik fil-lista som off-limits för en pågående uppgift; den listan har företräde över det här regelverket.
+
+### Push-race
+
+Två agenter får aldrig pusha samtidigt till `main`. Den lokala agenten kör `git fetch --prune` och verifierar `main == origin/main` direkt före sin push; om remote rörde sig mellan fetch och push avbryts pushen och operatör beslutar nästa steg. Aldrig `--force` eller `--force-with-lease` på `main`.
+
 ## Före varje commit (de fyra guards)
 
 Agenten kör i denna ordning:

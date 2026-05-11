@@ -99,6 +99,44 @@ Format per bugg:
   `produce_site_plan` mappar `ecommerce-lite -> marketing-base` via
   `SCAFFOLD_TO_STARTER`-konstanten i `packages/generation/planning/plan.py`.
 
+  Filer som hör till detta spår och som mainline-arbete inte ska röra
+  så länge en feature-agent jobbar på B20 (se branch-discipline.md
+  "Parallella agenter"):
+
+  - `data/starters/commerce-base/` (allt under)
+  - `data/starters/README.md` (mappnings-blocket)
+  - `packages/generation/planning/plan.py` (`SCAFFOLD_TO_STARTER`)
+  - `tests/test_starter_scaffold_mapping.py`
+
+  Review-checklist när B20 stängs (för cloud-reviewer eller operatör
+  som signerar av PR):
+
+  1. `data/starters/commerce-base/` har faktisk starter-kod (åtminstone
+     `package.json`, `app/`-mapp, `components/`, lockfil).
+  2. `cd data/starters/commerce-base && npm install && npm run build`
+     går igenom utan att kräva Shopify-env eller annan extern secret.
+  3. Hårda krav uppfyllda enligt `data/starters/README.md`: Next.js 16,
+     TypeScript strict, Tailwind 4, shadcn/ui initialiserad,
+     `package-lock.json` (inte `pnpm-lock.yaml`), ESLint flat + Prettier,
+     inga `.env`-filer.
+  4. Ingen hårdkodad kundcopy, hårdkodade färger eller hårdkodade
+     CTA-länkar. Shopify-anrop bor endast under `lib/<provider>/`;
+     adapter-mönstret är intakt så `lib/medusa/`, `lib/bigcommerce/`
+     etc. kan kopplas in via hard Dossier.
+  5. `packages/generation/planning/plan.py:SCAFFOLD_TO_STARTER` har
+     `ecommerce-lite: commerce-base`.
+  6. `data/starters/README.md`:s `scaffold-starter-mapping`-block har
+     raden `ecommerce-lite: commerce-base` utan `(B20: ...)`-noten.
+  7. Alla governance-tester i `tests/test_starter_scaffold_mapping.py`
+     gröna - särskilt `test_b20_temporary_mapping_is_explicit` som
+     stänger sig av automatiskt när mappningen flippas.
+  8. `python scripts/build_site.py --dossier <ecommerce-input>` (eller
+     närmaste motsvarande dossier-exempel som plockar
+     `ecommerce-lite`) producerar `build-result.json` status=ok och
+     `quality-result.json` status=ok.
+  9. Denna B20-post flyttas till "Stängda - regression-test säkrar
+     fixet"-avsnittet med datum + fix-SHA.
+
 ## Stängda - regression-test säkrar fixet
 
 - **`B43` Medel** (stängd 2026-05-11, post-review-2 audit) -
