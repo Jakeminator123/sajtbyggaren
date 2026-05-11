@@ -24,7 +24,7 @@ const sections = [
   {
     title: "4. Tredjepartstjänster",
     content:
-      "Stripe (betalning), Vercel (hosting), Google OAuth (inloggning), GitHub OAuth (inloggning/import), AI-modeller (OpenAI/Anthropic via v0).",
+      "Stripe (betalning), Vercel (hosting), Google OAuth (inloggning), GitHub OAuth (inloggning/import), AI-modeller (OpenAI/Anthropic).",
   },
   {
     title: "5. Cookies",

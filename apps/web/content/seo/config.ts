@@ -237,7 +237,6 @@ export const SEO_COMPARE: SeoCompareConfig[] = [
   { slug: "weebly", label: "Weebly", targetKeyword: "alternativ till weebly", competitorSummary: "äldre mall-byggare, numera del av Square" },
   { slug: "one-se", label: "One.com", targetKeyword: "alternativ till one.com", competitorSummary: "populär svensk/skandinavisk webbhotells- och byggare" },
   { slug: "loopia", label: "Loopia", targetKeyword: "alternativ till loopia", competitorSummary: "svensk webbhotellleverantör med sajtbyggare" },
-  { slug: "v0", label: "v0", targetKeyword: "alternativ till v0", competitorSummary: "AI-baserat UI/komponent-verktyg från Vercel" },
 ];
 
 /* ── Stad × Användningsområde (top-20 städer × top-10 typer = 200) ── */

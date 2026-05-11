@@ -240,7 +240,6 @@ export interface ColorThemeExtraction {
 
 // Ready-to-use prompt for template generation
 export interface TemplateGenerationData {
-  // Super prompt for v0/AI generation
   generation_prompt: string;
 
   // Key features to include
