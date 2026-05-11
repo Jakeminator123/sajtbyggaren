@@ -66,7 +66,16 @@ export function ViewerPanel({ runId }: ViewerPanelProps) {
         if (cancelled || !containerRef.current) return;
         setStatus("Startar StackBlitz...");
 
+        // B43 (post-review-2): the dynamic import + embedProject have
+        // their own awaits. If the operator switches runId between
+        // them, cleanup sets cancelled=true but the in-flight
+        // embedProject still mounts the stale preview into the
+        // always-mounted ref-div. Re-check cancelled after BOTH
+        // awaits and explicitly clear the node if we mounted into
+        // a stale tree.
         const sdk = (await import("@stackblitz/sdk")).default;
+        if (cancelled || !containerRef.current) return;
+
         await sdk.embedProject(
           containerRef.current,
           {
@@ -81,9 +90,16 @@ export function ViewerPanel({ runId }: ViewerPanelProps) {
             height: 480,
           },
         );
-        if (!cancelled) {
-          setStatus(`Förhandsvisning aktiv för ${runId}`);
+
+        if (cancelled) {
+          // Stale embed mounted while we were unmounting. Tear it
+          // down so the next runId starts from an empty node.
+          if (containerRef.current) {
+            containerRef.current.innerHTML = "";
+          }
+          return;
         }
+        setStatus(`Förhandsvisning aktiv för ${runId}`);
       } catch (caught) {
         if (!cancelled) {
           const message = caught instanceof Error ? caught.message : "Okänt viewer-fel.";

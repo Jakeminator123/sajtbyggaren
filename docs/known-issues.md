@@ -101,6 +101,42 @@ Format per bugg:
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B43` Medel** (stängd 2026-05-11, post-review-2 audit) -
+  `apps/viewser/components/viewer-panel.tsx` success-path-grenen hade
+  cancelled-guard FÖRE `await import("@stackblitz/sdk")` men inga
+  guards EFTER. Två awaits till (dynamisk import + `embedProject`)
+  exekverade utan ny cancelled-check, så om operatör bytte runId
+  mid-flight rann den gamla embedProject färdig och mountade stale
+  preview i den always-mounted ref-divden (post-PR-#13 ref-div är
+  alltid monterad — så avmontering räddar inte längre). Fix:
+  cancelled-check EFTER dynamic import + cleanup-branch EFTER
+  embedProject som rensar `containerRef.current.innerHTML` om
+  cancelled blev true under embed-flight. Test:
+  `tests/test_viewser_files.py::test_viewer_panel_guards_cancelled_after_dynamic_import_and_embed`
+  kräver minst 2 cancelled-referenser i success-path-blocket OCH
+  source-lockar att `innerHTML = ""`-cleanup existerar inom en
+  `if (cancelled)`-gren.
+
+- **`B42` Medel** (stängd 2026-05-11, post-review-2 audit) -
+  `apps/viewser/lib/build-runner.ts` använde
+  `runIdMatch?.[1] ?? (await detectLatestRunIdByMtime())` i BÅDA
+  success- och failure-grenarna. När `scripts/build_site.py`
+  kraschar FÖRE den skriver ut `runId: ...` (t.ex. KeyError på
+  Project Input-load, FileNotFoundError på scaffold-lookup),
+  faller mtime-fallbacken tillbaka till TIDIGARE run-dir på disk
+  och felaktigt märker den som denna build:s "strukturerade
+  failure" (B40-kontraktet). UI:t fick då en gammal run med
+  fel siteId returnerad som om den var det aktuella failed-
+  resultatet. Reviewer flaggade detta i post-review-2-audit som
+  "B40 sväljer riktiga fel". Fix: ny `runIdFromStdout`-variabel
+  som STRIKT använder process-stdout i failure-grenen.
+  Success-grenen behåller mtime-fallback eftersom `exitCode === 0`
+  garanterar att senaste dir IS denna build:s. Test:
+  `tests/test_viewser_files.py::test_build_runner_returns_structured_failure_instead_of_throwing`
+  utökad med assertion som söker upp `if (exitCode !== 0) { ... }`-
+  blocket och kräver att `detectLatestRunIdByMtime` INTE förekommer
+  där.
+
 - **`B41` Medel** (stängd 2026-05-09, Builder UX MVP smoke-test) -
   `npm run build` mot `.generated/painter-palma/` hade failat Next 16
   prerendering på `/_global-error` med
