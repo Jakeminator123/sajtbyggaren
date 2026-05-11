@@ -8,7 +8,7 @@ import { MinimalFooter } from "@/components/layout";
 const sections = [
   {
     title: "1. Om tjänsten",
-    content: 'Sajtmaskin ("Tjänsten") är en AI-driven plattform för webbplatsgenerering som drivs av Pretty Good AB, org.nr DG97. Genom att använda Tjänsten godkänner du dessa villkor.',
+    content: 'Sajtbyggaren ("Tjänsten") är en AI-driven plattform för webbplatsgenerering som drivs av Pretty Good AB, org.nr DG97. Genom att använda Tjänsten godkänner du dessa villkor.',
   },
   {
     title: "2. Användarkonto",
@@ -40,7 +40,7 @@ const sections = [
   },
   {
     title: "9. Kontakt",
-    content: "Pretty Good AB (DG97) — support@sajtmaskin.se — sajtstudio.se",
+    content: "Pretty Good AB (DG97) — hej@sajtbyggaren.se — sajtstudio.se",
   },
 ];
 

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 const faqs = [
   {
     q: "Behöver jag kunna programmera?",
-    a: "Nej, absolut inte. SajtMaskin är byggt för att vem som helst ska kunna skapa en professionell hemsida. Berätta bara om ditt företag så sköter AI:n resten. Under huven används React och Next.js, men du behöver aldrig röra en rad kod.",
+    a: "Nej, absolut inte. Sajtbyggaren är byggt för att vem som helst ska kunna skapa en professionell hemsida. Berätta bara om ditt företag så sköter AI:n resten. Under huven används React och Next.js, men du behöver aldrig röra en rad kod.",
   },
   {
     q: "Vilken teknik byggs mina sidor med?",
@@ -69,8 +69,8 @@ export default function FAQPage() {
             </Link>
           </Button>
           <Button className="btn-3d btn-glow bg-primary text-primary-foreground hover:bg-primary/90" asChild>
-            <Link href="/builder">
-              Öppna builder
+            <Link href="/priser">
+              Se priser
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
@@ -80,7 +80,7 @@ export default function FAQPage() {
           <div className="max-w-3xl">
             <p className="mb-3 text-xs font-medium uppercase tracking-widest text-primary">Vanliga frågor</p>
             <h1 className="text-3xl font-(--font-heading) tracking-tight text-foreground md:text-5xl">
-              Frågor och svar om SajtMaskin
+              Frågor och svar om Sajtbyggaren
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
               Här samlar vi de vanligaste frågorna om hur plattformen fungerar, vilken teknik som används och hur snabbt du kan gå från idé till publicerad sajt.
@@ -102,13 +102,13 @@ export default function FAQPage() {
               </p>
               <div className="mt-6 space-y-3">
                 <Button className="w-full btn-3d btn-glow bg-primary text-primary-foreground hover:bg-primary/90" asChild>
-                  <Link href="/builder">
-                    Skapa din sajt nu
+                  <Link href="/priser">
+                    Se priser
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
                 <Button variant="ghost" className="w-full border border-primary/20 text-primary hover:bg-primary/5" asChild>
-                  <a href="mailto:hej@sajtmaskin.se">Kontakta teamet</a>
+                  <a href="mailto:hej@sajtbyggaren.se">Kontakta teamet</a>
                 </Button>
               </div>
             </aside>

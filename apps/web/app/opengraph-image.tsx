@@ -1,5 +1,15 @@
 import { ImageResponse } from "next/og";
 
+/**
+ * OG-image för Sajtbyggaren.
+ *
+ * Satori (motorn bakom next/og) kräver att varje <div> som har fler än ett
+ * barn explicit sätter `display: flex`, `display: contents` eller
+ * `display: none`. Ett enda barn får sakna det. Subtitle-blocket är därför
+ * uppdelat på två rader istället för text + <br /> + text (som räknas som
+ * tre barn utan flex).
+ */
+
 export const runtime = "edge";
 export const alt = "Sajtbyggaren – AI-driven webbplatsgenerering";
 export const size = { width: 1200, height: 630 };
@@ -16,7 +26,8 @@ export default function OgImage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #0a0a0a 0%, #111827 50%, #0a0a0a 100%)",
+          background:
+            "linear-gradient(135deg, #0a0a0a 0%, #111827 50%, #0a0a0a 100%)",
           fontFamily: "system-ui, sans-serif",
         }}
       >
@@ -28,7 +39,8 @@ export default function OgImage() {
             left: 0,
             right: 0,
             height: 4,
-            background: "linear-gradient(90deg, #14b8a6, #3b82f6, #f59e0b, #14b8a6)",
+            background:
+              "linear-gradient(90deg, #14b8a6, #3b82f6, #f59e0b, #14b8a6)",
           }}
         />
 
@@ -47,7 +59,14 @@ export default function OgImage() {
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
-            <circle cx="20" cy="20" r="18" stroke="#3b82f6" strokeWidth="2" fill="none" />
+            <circle
+              cx="20"
+              cy="20"
+              r="18"
+              stroke="#3b82f6"
+              strokeWidth="2"
+              fill="none"
+            />
             <g transform="translate(20 21) rotate(-25)">
               <path
                 d="M0 -10 C3 -7 5 -3 5 2 C5 9 2 13 0 15 C-2 13 -5 9 -5 2 C-5 -3 -3 -7 0 -10 Z"
@@ -56,23 +75,13 @@ export default function OgImage() {
                 fill="none"
               />
               <circle cx="0" cy="2" r="2" stroke="#f43f5e" strokeWidth="1.5" fill="none" />
-              <path
-                d="M-5 6 L-9 9 L-5 11"
-                stroke="#3b82f6"
-                strokeWidth="2"
-                fill="none"
-              />
-              <path
-                d="M5 6 L9 9 L5 11"
-                stroke="#3b82f6"
-                strokeWidth="2"
-                fill="none"
-              />
+              <path d="M-5 6 L-9 9 L-5 11" stroke="#3b82f6" strokeWidth="2" fill="none" />
+              <path d="M5 6 L9 9 L5 11" stroke="#3b82f6" strokeWidth="2" fill="none" />
             </g>
           </svg>
           <span
             style={{
-              fontSize: 48,
+              fontSize: 56,
               fontWeight: 700,
               color: "#ffffff",
               letterSpacing: "-0.03em",
@@ -84,16 +93,19 @@ export default function OgImage() {
 
         <div
           style={{
-            fontSize: 28,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 8,
             color: "rgba(255,255,255,0.7)",
+            fontSize: 28,
             textAlign: "center",
-            maxWidth: 700,
+            maxWidth: 800,
             lineHeight: 1.4,
           }}
         >
-          AI-driven webbplatsgenerering.
-          <br />
-          Skapa professionella webbplatser på minuter.
+          <div>AI-driven webbplatsgenerering.</div>
+          <div>Skapa professionella webbplatser på minuter.</div>
         </div>
 
         <div
@@ -103,7 +115,7 @@ export default function OgImage() {
             marginTop: 48,
           }}
         >
-          {["Analyserad", "Kategori", "Audit", "Fritext"].map((label) => (
+          {["Snabbt", "Professionellt", "Ditt företag"].map((label) => (
             <div
               key={label}
               style={{
@@ -114,7 +126,7 @@ export default function OgImage() {
                 borderRadius: 12,
                 border: "1px solid rgba(255,255,255,0.12)",
                 background: "rgba(255,255,255,0.04)",
-                color: "rgba(255,255,255,0.6)",
+                color: "rgba(255,255,255,0.7)",
                 fontSize: 16,
                 fontWeight: 500,
               }}

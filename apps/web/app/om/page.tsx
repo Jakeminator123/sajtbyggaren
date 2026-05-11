@@ -4,7 +4,8 @@ import { MinimalFooter } from "@/components/layout";
 
 export const metadata: Metadata = {
   title: "Om oss",
-  description: "Om Sajtmaskin — AI-driven webbplattform för svenska företag.",
+  description:
+    "Om Sajtbyggaren — AI-driven webbplattform för svenska företag.",
 };
 
 export default function OmPage() {
@@ -19,7 +20,7 @@ export default function OmPage() {
             &larr; Tillbaka
           </Link>
 
-          <h1 className="mb-2 text-2xl font-semibold tracking-tight">Om Sajtmaskin</h1>
+          <h1 className="mb-2 text-2xl font-semibold tracking-tight">Om Sajtbyggaren</h1>
           <p className="mb-10 text-sm text-muted-foreground">
             AI-driven webbplattform av Pretty Good AB. React, Next.js, TypeScript.
           </p>
@@ -33,10 +34,10 @@ export default function OmPage() {
             <div>
               <h2 className="mb-1 text-sm font-medium text-foreground">Kontakt</h2>
               <a
-                href="mailto:support@sajtmaskin.se"
+                href="mailto:hej@sajtbyggaren.se"
                 className="text-primary hover:underline underline-offset-4"
               >
-                support@sajtmaskin.se
+                hej@sajtbyggaren.se
               </a>
             </div>
 

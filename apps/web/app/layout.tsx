@@ -3,7 +3,6 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import "@/styles/landing-v2.css";
-import { AnalyticsTracker } from "@/components/layout/analytics-tracker";
 import { CookieBanner } from "@/components/layout/cookie-banner";
 import { OrganizationJsonLd, SoftwareApplicationJsonLd } from "@/components/layout/json-ld";
 import { VercelInsights } from "@/components/layout/vercel-insights";
@@ -83,7 +82,6 @@ export default async function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light" enableSystem={false} nonce={nonce}>
           <OrganizationJsonLd nonce={nonce} />
           <SoftwareApplicationJsonLd nonce={nonce} />
-          <AnalyticsTracker />
           <VercelInsights enabled={enableVercelInsights} />
           {children}
           <Toaster position="top-right" />

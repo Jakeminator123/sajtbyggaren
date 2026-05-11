@@ -1,3 +1,5 @@
+import { URLS } from "@/lib/config";
+
 interface JsonLdProps {
   nonce?: string;
 }
@@ -9,7 +11,7 @@ export function OrganizationJsonLd({ nonce }: JsonLdProps) {
     name: "Pretty Good AB",
     alternateName: "Sajtstudio",
     url: "https://sajtstudio.se",
-    sameAs: ["https://sajtmaskin.se"],
+    sameAs: [URLS.baseUrl],
   };
 
   return (
@@ -26,11 +28,12 @@ export function SoftwareApplicationJsonLd({ nonce }: JsonLdProps) {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "Sajtmaskin",
+    name: "Sajtbyggaren",
     applicationCategory: "WebApplication",
     operatingSystem: "Web",
-    description: "AI-driven webbplatsgenerering. Skapa professionella webbplatser på minuter.",
-    url: "https://sajtmaskin.se",
+    description:
+      "AI-driven webbplatsgenerering. Skapa professionella webbplatser på minuter.",
+    url: URLS.baseUrl,
     offers: {
       "@type": "Offer",
       price: "49",

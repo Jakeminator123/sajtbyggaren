@@ -4,17 +4,29 @@ export function MinimalFooter() {
   return (
     <footer className="border-t border-border/30 bg-background">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-        <Link href="/" className="text-sm font-medium text-foreground/80 transition-colors hover:text-foreground">
-          Sajtmaskin
+        <Link
+          href="/"
+          className="text-sm font-medium text-foreground/80 transition-colors hover:text-foreground"
+        >
+          Sajtbyggaren
         </Link>
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <Link href="/landningssidor" className="transition-colors hover:text-foreground">
-            Sajtkarta
+          <Link
+            href="/faq"
+            className="transition-colors hover:text-foreground"
+          >
+            FAQ
           </Link>
-          <Link href="/privacy" className="transition-colors hover:text-foreground">
+          <Link
+            href="/privacy"
+            className="transition-colors hover:text-foreground"
+          >
             Integritet
           </Link>
-          <Link href="/terms" className="transition-colors hover:text-foreground">
+          <Link
+            href="/terms"
+            className="transition-colors hover:text-foreground"
+          >
             Villkor
           </Link>
           <span className="text-muted-foreground/50">

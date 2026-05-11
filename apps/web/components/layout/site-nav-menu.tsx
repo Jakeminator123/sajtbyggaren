@@ -23,25 +23,18 @@ type NavGroup = {
 
 const navGroups: NavGroup[] = [
   {
-    title: "Bygg",
+    title: "Sajtbyggaren",
     links: [
-      { href: "/", label: "Skapa" },
-      { href: "/templates", label: "Mallar" },
-    ],
-  },
-  {
-    title: "Utforska",
-    links: [
-      { href: "/#funktioner", label: "Funktioner" },
-      { href: "/#teknik", label: "Teknik" },
-    ],
-  },
-  {
-    title: "Hjälp & info",
-    links: [
-      { href: "/buy-credits", label: "Priser" },
-      { href: "/faq", label: "FAQ" },
+      { href: "/", label: "Start" },
+      { href: "/priser", label: "Priser" },
       { href: "/om", label: "Om oss" },
+    ],
+  },
+  {
+    title: "Resurser",
+    links: [
+      { href: "/faq", label: "FAQ" },
+      { href: "/blogg", label: "Blogg" },
     ],
   },
   {

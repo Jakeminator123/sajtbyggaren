@@ -8,7 +8,7 @@ import { MinimalFooter } from "@/components/layout";
 const sections = [
   {
     title: "1. Personuppgiftsansvarig",
-    content: "Pretty Good AB, org.nr DG97 är personuppgiftsansvarig. Kontakt: support@sajtmaskin.se",
+    content: "Pretty Good AB, org.nr DG97 är personuppgiftsansvarig. Kontakt: hej@sajtbyggaren.se",
   },
   {
     title: "2. Vilka uppgifter samlar vi in?",
@@ -40,7 +40,7 @@ const sections = [
   },
   {
     title: "9. Kontakt",
-    content: "Pretty Good AB (DG97) — support@sajtmaskin.se",
+    content: "Pretty Good AB (DG97) — hej@sajtbyggaren.se",
   },
 ];
 

@@ -13,7 +13,7 @@ export function LandingFooter() {
               <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
                 <Zap className="w-3.5 h-3.5 text-primary-foreground" />
               </div>
-              <span className="text-sm text-foreground font-(--font-heading)">SajtMaskin</span>
+              <span className="text-sm text-foreground font-(--font-heading)">Sajtbyggaren</span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed max-w-[200px]">
               Professionella hemsidor f&ouml;r svenska f&ouml;retag &mdash; snabbt, enkelt och med riktig teknik bakom.
@@ -45,21 +45,13 @@ export function LandingFooter() {
                 </Link>
               </li>
               <li>
-                <a href="#priser" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                <Link href="/priser" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
                   Priser
-                </a>
-              </li>
-              <li>
-                <Link href="/templates" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                  Mallar
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/landningssidor"
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Sajtkarta
+                <Link href="/faq" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  FAQ
                 </Link>
               </li>
             </ul>
@@ -79,7 +71,7 @@ export function LandingFooter() {
               </li>
               <li>
                 <a
-                  href="mailto:support@sajtmaskin.se?subject=Karri%C3%A4r"
+                  href="mailto:hej@sajtbyggaren.se?subject=Karri%C3%A4r"
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Karri&auml;r
@@ -87,7 +79,7 @@ export function LandingFooter() {
               </li>
               <li>
                 <a
-                  href="mailto:support@sajtmaskin.se"
+                  href="mailto:hej@sajtbyggaren.se"
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Kontakt

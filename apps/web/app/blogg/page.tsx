@@ -4,7 +4,7 @@ import { MinimalFooter } from "@/components/layout";
 
 export const metadata: Metadata = {
   title: "Blogg",
-  description: "Artiklar om Sajtmaskin — kommer snart.",
+  description: "Artiklar om Sajtbyggaren — kommer snart.",
 };
 
 export default function BloggPage() {
@@ -23,10 +23,10 @@ export default function BloggPage() {
           <p className="mb-8 text-sm text-muted-foreground">Kommer snart.</p>
 
           <Link
-            href="/builder"
+            href="/priser"
             className="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Öppna builder
+            Se priser
           </Link>
         </div>
       </main>

@@ -14,9 +14,6 @@ import { Button } from "@/components/ui/button";
 export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
-      {/* Navbar har optional onLoginClick/onRegisterClick. apps/web är ren UI
-          utan auth ännu (se apps/web/README.md) så vi låter Navbar:s
-          interna defaults gälla. */}
       <Navbar />
 
       <main className="flex-1">

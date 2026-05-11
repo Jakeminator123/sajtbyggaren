@@ -12,10 +12,10 @@ export function LandingMinimalFooter() {
           aria-label="Sidfot"
         >
           <Link
-            href="/landningssidor"
+            href="/faq"
             className="inline-flex min-h-11 items-center rounded-md underline-offset-4 transition-colors duration-200 ease-out hover:text-foreground motion-reduce:transition-none"
           >
-            Sajtkarta
+            FAQ
           </Link>
           <Link
             href="/privacy"

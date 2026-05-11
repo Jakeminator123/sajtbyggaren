@@ -1,34 +1,27 @@
 import Link from "next/link";
-import {
-  POPULAR_CITY_SLUGS,
-  POPULAR_USECASE_SLUGS,
-  SEO_CITIES,
-  SEO_USECASES,
-  hrefForSeoLanding,
-} from "@/content/seo/config";
+
+/**
+ * Footer för apps/web.
+ *
+ * Scope: ren marknadsföring/UI. Alla länkar härinifrån måste finnas i
+ * apps/web. SEO-cluster (städer + use-cases) togs bort vid migreringen
+ * eftersom motsvarande landningssidor inte ingår i apps/web ännu —
+ * de återinförs när /hemsida/[slug] och /skapa-hemsida/[slug] byggs
+ * (se governance/decisions/0018-apps-web-import.md).
+ */
 
 const productLinks = [
   { label: "Skapa", href: "/" },
-  { label: "Templates", href: "/templates" },
-  { label: "Priser", href: "/buy-credits" },
-  { label: "Alla landningssidor", href: "/landningssidor" },
+  { label: "Priser", href: "/priser" },
+  { label: "FAQ", href: "/faq" },
+  { label: "Blogg", href: "/blogg" },
 ];
 
-const popularCityLinks = POPULAR_CITY_SLUGS.map((slug) => {
-  const cfg = SEO_CITIES.find((c) => c.slug === slug);
-  return cfg
-    ? { label: cfg.label, href: hrefForSeoLanding("city", cfg.slug) }
-    : null;
-}).filter((x): x is { label: string; href: string } => x !== null);
-
-const popularUsecaseLinks = POPULAR_USECASE_SLUGS.map((slug) => {
-  const cfg = SEO_USECASES.find((u) => u.slug === slug);
-  return cfg
-    ? { label: cfg.label, href: hrefForSeoLanding("usecase", cfg.slug) }
-    : null;
-}).filter((x): x is { label: string; href: string } => x !== null);
-
-const companyLinks = [
+const companyLinks: Array<{
+  label: string;
+  href: string;
+  external?: boolean;
+}> = [
   { label: "Om oss", href: "/om" },
   { label: "Sajtstudio.se", href: "https://sajtstudio.se", external: true },
 ];
@@ -47,11 +40,15 @@ export function Footer() {
         <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="text-foreground text-lg font-semibold tracking-tight">
-              Sajtmaskin
+            <Link
+              href="/"
+              className="text-foreground text-lg font-semibold tracking-tight"
+            >
+              Sajtbyggaren
             </Link>
             <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-              AI-driven webbplatsgenerering. Skapa professionella webbplatser på minuter.
+              AI-driven webbplatsgenerering. Skapa professionella webbplatser
+              på minuter.
             </p>
             <p className="text-muted-foreground/60 mt-4 text-xs">
               En tjänst från{" "}
@@ -89,7 +86,7 @@ export function Footer() {
             <ul className="mt-3 space-y-2">
               {companyLinks.map((link) => (
                 <li key={link.href}>
-                  {"external" in link && link.external ? (
+                  {link.external ? (
                     <a
                       href={link.href}
                       target="_blank"
@@ -129,44 +126,11 @@ export function Footer() {
           </div>
         </div>
 
-        {/* SEO clusters */}
-        <div className="border-border/50 mt-10 grid grid-cols-1 gap-8 border-t pt-8 md:grid-cols-2">
-          <div>
-            <h3 className="text-foreground text-sm font-medium">Populära orter</h3>
-            <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
-              {popularCityLinks.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-muted-foreground hover:text-foreground text-sm transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-foreground text-sm font-medium">Populära användningsområden</h3>
-            <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
-              {popularUsecaseLinks.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-muted-foreground hover:text-foreground text-sm transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
         {/* Bottom */}
         <div className="border-border/50 mt-10 border-t pt-6">
           <p className="text-muted-foreground/60 text-center text-xs">
-            &copy; {new Date().getFullYear()} Pretty Good AB (DG97). Alla rättigheter förbehållna.
+            &copy; {new Date().getFullYear()} Pretty Good AB (DG97). Alla
+            rättigheter förbehållna.
           </p>
         </div>
       </div>

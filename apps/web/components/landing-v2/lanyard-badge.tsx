@@ -238,7 +238,7 @@ export function LanyardBadge() {
                 </div>
 
                 <h3 className="text-sm text-foreground font-(--font-heading) tracking-tight leading-none">
-                  SajtMaskin
+                  Sajtbyggaren
                 </h3>
                 <p className="text-[10px] text-muted-foreground mt-0.5 mb-2.5">AI-driven webbplatsgenerering</p>
 
@@ -289,8 +289,8 @@ export function LanyardBadge() {
                 <div className="w-14 h-14 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-3">
                   <Zap className="w-7 h-7 text-primary" />
                 </div>
-                <p className="text-xs text-foreground font-(--font-heading)">SajtMaskin</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">sajtmaskin.se</p>
+                <p className="text-xs text-foreground font-(--font-heading)">Sajtbyggaren</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">sajtbyggaren.se</p>
               </div>
             </div>
           </div>
