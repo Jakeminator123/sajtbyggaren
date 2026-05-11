@@ -140,20 +140,39 @@ def test_build_runner_returns_structured_failure_instead_of_throwing() -> None:
     """
     text = (VIEWSER_DIR / "lib" / "build-runner.ts").read_text(encoding="utf-8")
 
-    # The defensive read must call readBuildResult inside the
-    # exitCode !== 0 branch and only throw when that read fails.
-    # Locking these two phrases together as a source-level regression
-    # guard keeps the contract stable without spinning up a Node
-    # process.
-    assert "structured-failure" in text or "strukturerad output" in text, (
-        "build-runner.ts must document the structured-failure path "
-        "(see B40). Either the inline comment or the throw-message "
-        "needs to mention it so the next reader sees the contract."
+    # B40: the failure branch must read build-result.json from disk so
+    # the UI sees a structured failed run instead of bare 500.
+    assert re.search(r"exitCode\s*!==\s*0", text), (
+        "build-runner.ts saknar exitCode !== 0-gren - hela B40-kontraktet "
+        "hänger på den."
     )
-    assert "readBuildResult(runId)" in text, (
-        "build-runner.ts must read build-result.json from disk in the "
-        "exit !== 0 branch so failed runs reach the UI with their "
-        "structured failure data instead of a bare 500."
+    assert "readBuildResult" in text, (
+        "build-runner.ts måste läsa build-result.json från disk i failure-"
+        "grenen så failed runs når UI:t med strukturerad data istället för "
+        "bare 500."
+    )
+
+    # B42 (post-review-2): the failure path must NOT fall back to
+    # detectLatestRunIdByMtime() - that would return a PRIOR run-dir
+    # whenever build_site.py crashes BEFORE printing `runId:`,
+    # mislabeling someone else's run as the current failed build.
+    # Only the success path may use the mtime fallback (where
+    # exitCode === 0 guarantees the latest dir IS this build's).
+    failure_block = re.search(
+        r"if\s*\(\s*exitCode\s*!==\s*0\s*\)\s*\{[\s\S]*?\n\s{0,4}\}",
+        text,
+        re.MULTILINE,
+    )
+    assert failure_block, (
+        "Kunde inte hitta `if (exitCode !== 0) { ... }`-blocket i "
+        "build-runner.ts."
+    )
+    assert "detectLatestRunIdByMtime" not in failure_block.group(0), (
+        "build-runner.ts failure-grenen får inte använda "
+        "detectLatestRunIdByMtime() som fallback. När build_site.py "
+        "kraschar FÖRE `print(runId:)` returnerar mtime-fallbacken en "
+        "tidigare run och felaktigt märker den som denna build:s "
+        "strukturerade failure (B42 post-review-2 fynd)."
     )
 
 
@@ -230,19 +249,87 @@ def test_viewer_panel_keeps_containerref_mounted_across_unavailable_transitions(
         "runId-byte (effekten har bara `[runId]` som dep)."
     )
 
-    # Positive: containerRef-div must reference `unavailable` and the
-    # `hidden` class together in its className, indicating an always-
-    # mounted pattern with Tailwind visibility toggle.
-    hidden_toggle = re.compile(
-        r"ref=\{containerRef\}[\s\S]{0,300}?className=[\s\S]{0,300}?unavailable[\s\S]{0,80}?\"hidden\"",
-        re.MULTILINE,
+    # Positive (beteende, inte exakt syntax): containerRef måste
+    # vara always-mounted via en `<div ... ref={containerRef} ... />`
+    # som finns OAVSETT `unavailable`-state. Hitta `ref={containerRef}`
+    # och kontrollera att JSX-elementet i samma element-block referar
+    # till `unavailable` på något sätt (className-toggle, data-attr,
+    # cn(...)-helper, eller annan visibility-mekanism) - alla
+    # acceptabla refactorer som behåller beteendet.
+    #
+    # B43 (post-review-2): den tidigare regex låste exakt
+    # `className="...unavailable...hidden"`-ordning + literal `"hidden"`
+    # vilket gjorde att en harmlös `cn(...)` / template-literal-refactor
+    # bröt testet. Nu testar vi bara att unavailable-flaggan påverkar
+    # ref-divden via något observerbart JSX-attribut.
+    ref_element = re.search(
+        r"<div\b[^>]*\bref=\{containerRef\}[^>]*/?>",
+        text,
     )
-    assert hidden_toggle.search(text), (
-        "viewer-panel.tsx: containerRef-div måste behållas mounted oavsett "
-        "unavailable-state och toggla visibility via Tailwind `hidden`-klass "
-        "kopplad till `unavailable`. Det säkrar att containerRef.current "
-        "är bunden över alla unavailable-transitions så useEffect kan köra "
-        "fetch på varje runId-byte."
+    assert ref_element, (
+        "viewer-panel.tsx: ingen `<div ... ref={containerRef} ... />` "
+        "hittades. Always-mounted pattern kräver en self-closing eller "
+        "kort JSX-tag med ref={containerRef}."
+    )
+    assert "unavailable" in ref_element.group(0), (
+        "viewer-panel.tsx: ref-div måste referera till `unavailable` i "
+        "ett JSX-attribut (t.ex. className-toggle, data-attr, cn(...)). "
+        "Det signalerar att unavailable-flaggan styr visibility utan att "
+        "avmontera ref:en. Hittad ref-div:\n"
+        f"{ref_element.group(0)!r}"
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_guards_cancelled_after_dynamic_import_and_embed() -> None:
+    """B43 (post-review-2): the StackBlitz embed path has TWO awaits
+    after the initial cancelled-guard: ``await import("@stackblitz/sdk")``
+    and ``await sdk.embedProject(...)``. If the operator switches runId
+    between them, useEffect cleanup sets cancelled=true but the
+    in-flight embedProject still mounts the STALE preview into the
+    always-mounted ref-div. Reviewer flagged this in the post-review-2
+    audit.
+
+    Fix: re-check cancelled AFTER the dynamic import and AFTER the
+    embedProject await. When cancelled is true post-embed, clear the
+    node so the next runId starts from a clean slate.
+
+    Source-lock the guard density: at least two cancelled-checks must
+    appear between the StackBlitz import and the final setStatus call.
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    # Isolate the success-path block from the dynamic import to the
+    # final setStatus call.
+    block = re.search(
+        r"const sdk = \(await import\(\"@stackblitz/sdk\"\)\)[\s\S]*?setStatus\(`Förhandsvisning aktiv",
+        text,
+    )
+    assert block, (
+        "viewer-panel.tsx: kunde inte hitta success-path-blocket från "
+        "StackBlitz-import till final setStatus. Refactor utan ekvivalent "
+        "kommunikation av runId-success bryter detta test."
+    )
+    cancelled_checks = re.findall(r"\bcancelled\b", block.group(0))
+    assert len(cancelled_checks) >= 2, (
+        "viewer-panel.tsx success-path saknar tillräcklig cancelled-guard-"
+        "täthet mellan StackBlitz-import och setStatus. Förväntat minst 2 "
+        "cancelled-referenser (en efter import, en efter embedProject) - "
+        f"hittade {len(cancelled_checks)}. B43-fyndet: stale embed kan "
+        "mountas i ref-divden om operatör byter runId mid-flight."
+    )
+
+    # Verify the node-cleanup on stale embed exists (otherwise we'd
+    # just NOT setStatus but the iframe still sits in the DOM).
+    assert re.search(
+        r"if\s*\(\s*cancelled\s*\)\s*\{[\s\S]{0,300}?innerHTML\s*=\s*\"\"",
+        text,
+    ), (
+        "viewer-panel.tsx: post-embed cancelled-grenen måste rensa "
+        "containerRef.current.innerHTML så stale embed inte sitter kvar i "
+        "den always-mounted ref-divden."
     )
 
 

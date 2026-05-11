@@ -112,21 +112,30 @@ async function runBuildOnce(siteId: string): Promise<{
   // throw on any non-zero exit, which dropped the runId on the floor
   // and forced /api/build to return 500 with no way for the UI to
   // surface a failed run. Treat the structured-failure path as a
-  // pedagogical result instead: if a runId resolves and
-  // build-result.json exists on disk, return it so the Run History
-  // entry shows up with status=failed and the RunDetailsPanel can
-  // render the four artefakter for diagnosis.
-  const runIdMatch = stdout.match(RUN_ID_PATTERN);
-  const runId = runIdMatch?.[1] ?? (await detectLatestRunIdByMtime());
+  // pedagogical result instead: if THIS process printed `runId: ...`
+  // to stdout AND build-result.json exists on disk, return it so the
+  // Run History entry shows up with status=failed and the
+  // RunDetailsPanel can render the four artefakter for diagnosis.
+  //
+  // B42 (post-review-2): the previous version fell back to
+  // detectLatestRunIdByMtime() in the failure path too. That meant a
+  // crash BEFORE build_site.py printed `runId:` (e.g. KeyError on the
+  // Project Input load, FileNotFoundError on scaffold lookup) would
+  // pick the PRIOR run-dir on disk and return it as the current
+  // build's "structured failure". The wrapper now only honors the
+  // mtime-fallback on the success-path (where build_site.py must have
+  // completed, so the latest run-dir IS this build's) and STRICTLY
+  // requires the printed runId in the failure-path.
+  const runIdFromStdout = stdout.match(RUN_ID_PATTERN)?.[1] ?? null;
 
   if (exitCode !== 0) {
-    if (runId) {
+    if (runIdFromStdout) {
       try {
-        await runDirFromId(runId);
-        const buildResult = await readBuildResult(runId);
-        return { runId, buildResult, stderr };
+        await runDirFromId(runIdFromStdout);
+        const buildResult = await readBuildResult(runIdFromStdout);
+        return { runId: runIdFromStdout, buildResult, stderr };
       } catch {
-        // No structured failure on disk - fall through to throw below.
+        // runId printed but artefakter incomplete - fall through.
       }
     }
     throw new Error(
@@ -137,6 +146,10 @@ async function runBuildOnce(siteId: string): Promise<{
     );
   }
 
+  // Success path: mtime-fallback is safe because exitCode === 0 means
+  // build_site.py wrote the run-dir successfully even if the stdout
+  // buffer was truncated mid-line.
+  const runId = runIdFromStdout ?? (await detectLatestRunIdByMtime());
   if (!runId) {
     throw new Error("Kunde inte hitta runId från build-resultatet.");
   }
