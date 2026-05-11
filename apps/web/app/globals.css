@@ -1,0 +1,585 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+@config "../tailwind.config.cjs";
+
+@layer base {
+  :root {
+    /* Sajtmaskin brandbook — off-white + near-black + sand.
+       Hex reference (see public/Brandbook Sajtmaskin.docx):
+       bg #F7F6F3 · muted/stone #EFEDE7 · accent/sand #E6E1D8
+       card #FFFFFF · text #0F0F0F · text-sec #6F6F6F */
+    --background: 43 21% 96%;
+    --foreground: 0 0% 6%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 6%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 6%;
+    --primary: 0 0% 6%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 43 21% 92%;
+    --secondary-foreground: 0 0% 6%;
+    --muted: 43 21% 92%;
+    --muted-foreground: 0 0% 44%;
+    --accent: 39 24% 88%;
+    --accent-foreground: 0 0% 6%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 43 21% 88%;
+    --input: 43 21% 92%;
+    --ring: 0 0% 6%;
+    --radius: 0.5rem;
+
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* Spacing scale (8px base per brandbook) */
+    --space-xxs: 4px;
+    --space-xs: 8px;
+    --space-sm: 16px;
+    --space-md: 24px;
+    --space-lg: 32px;
+    --space-xl: 64px;
+
+    /* Subtle shadows (no color glow) */
+    --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.12);
+
+    /* Brandbook semantic tokens */
+    --brand-ink: 0 0% 6%;
+    --brand-sand: 39 24% 88%;
+    --brand-stone: 43 21% 92%;
+
+    /* Legacy aliases — mapped to ink/sand so existing classes like
+       bg-brand-orange, text-brand-navy keep compiling but degrade to
+       the brandbook's monochrome palette. */
+    --brand-navy: var(--brand-ink);
+    --brand-orange: var(--brand-ink);
+    --accent-orange: var(--brand-ink);
+    --brand-amber: var(--brand-ink);
+    --brand-warm: var(--brand-sand);
+    --brand-blue: var(--brand-ink);
+    --brand-teal: var(--brand-sand);
+
+    --chart-1: 0 0% 6%;
+    --chart-2: 0 0% 20%;
+    --chart-3: 0 0% 35%;
+    --chart-4: 39 24% 65%;
+    --chart-5: 0 0% 56%;
+
+    /* Sidebar — HSL components (use as hsl(var(--sidebar))) */
+    --sidebar: 43 21% 96%;
+    --sidebar-foreground: 0 0% 6%;
+    --sidebar-primary: 0 0% 6%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 43 21% 92%;
+    --sidebar-accent-foreground: 0 0% 6%;
+    --sidebar-border: 43 21% 88%;
+    --sidebar-ring: 0 0% 6%;
+
+    /* Scrollbar — HSL triplets (subtle chrome; use hsl(var(--scrollbar-thumb) / α)) */
+    --scrollbar-thumb: 43 21% 82%;
+    --scrollbar-thumb-hover: 0 0% 44%;
+
+    /* Semantic status tokens — kept functional */
+    --status-success: 142 50% 36%;
+    --status-warning: 38 70% 50%;
+    --status-error: 0 62% 45%;
+    --status-info: 210 40% 40%;
+
+    /* Code-section editors (builder panel) */
+    --code-section-border: 43 21% 80%;
+    --code-section-bg: 43 21% 96%;
+    --code-section-text: 0 0% 20%;
+    --code-section-accent: var(--primary);
+  }
+
+  /* Dark mode tokens per brandbook — runtime forced to light in layout.tsx.
+     Hex reference: bg #181818 · card #242424 · accent #50443C · text #EFEDE7 · sec #A3A3A3 */
+  .dark {
+    color-scheme: dark;
+    --background: 0 0% 9%;
+    --foreground: 43 21% 92%;
+    --card: 0 0% 14%;
+    --card-foreground: 43 21% 92%;
+    --popover: 0 0% 14%;
+    --popover-foreground: 43 21% 92%;
+    --primary: 43 21% 92%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 43 21% 92%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 64%;
+    --accent: 22 14% 28%;
+    --accent-foreground: 43 21% 92%;
+    --destructive: 0 52% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 43 21% 92%;
+
+    --brand-ink: 43 21% 92%;
+    --brand-sand: 22 14% 28%;
+    --brand-stone: 0 0% 14%;
+    --brand-navy: var(--brand-ink);
+    --brand-orange: var(--brand-ink);
+    --accent-orange: var(--brand-ink);
+    --brand-amber: var(--brand-ink);
+    --brand-warm: var(--brand-sand);
+    --brand-blue: var(--brand-ink);
+    --brand-teal: var(--brand-sand);
+
+    --sidebar: 0 0% 9%;
+    --sidebar-foreground: 43 21% 92%;
+    --sidebar-primary: 43 21% 92%;
+    --sidebar-primary-foreground: 0 0% 9%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 43 21% 92%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 43 21% 92%;
+
+    --scrollbar-thumb: 0 0% 28%;
+    --scrollbar-thumb-hover: 0 0% 64%;
+
+    /* Code-section editors (builder panel) */
+    --code-section-border: 0 0% 28%;
+    --code-section-bg: 0 0% 14%;
+    --code-section-text: 43 21% 82%;
+  }
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  html {
+    color-scheme: light;
+    background-color: hsl(var(--background)) !important;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--scrollbar-thumb) / 0.45) transparent;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  html::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  html::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  html::-webkit-scrollbar-thumb {
+    background: hsl(var(--scrollbar-thumb) / 0.55);
+    border-radius: 9999px;
+  }
+
+  html::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--scrollbar-thumb-hover) / 0.4);
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    background-color: hsl(var(--background)) !important;
+  }
+
+  /* Rounded corners via --radius: 0.75rem variable above.
+     Shadcn/ui components use var(--radius) automatically. */
+
+  /* Optimize shader background rendering */
+  .shader-background {
+    contain: layout style paint;
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  /* Smooth transitions for auth state changes */
+  .smooth-transition {
+    transition:
+      opacity var(--transition-slow) var(--ease-out-soft),
+      transform var(--transition-slow) var(--ease-out-soft);
+  }
+
+  /* Prevent layout shift during auth transitions */
+  .auth-persist {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Optimize rendering performance for dropdowns and overlays */
+  .dropdown-content,
+  .dialog-content,
+  .popover-content {
+    transform: translateZ(0);
+    will-change: transform, opacity;
+  }
+
+  /* No-JS fallback — tokens only (avoid hex in layout.tsx) */
+  .noscript-fallback {
+    padding: 2rem;
+    max-width: 36rem;
+    margin-left: auto;
+    margin-right: auto;
+    font-family: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    color: hsl(var(--foreground));
+    background-color: hsl(var(--background));
+  }
+}
+
+/* Custom scrollbar for dark theme */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--scrollbar-thumb) / 0.45) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--scrollbar-thumb) / 0.55);
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--scrollbar-thumb-hover) / 0.45);
+  }
+
+  /* Opt-in: hide scrollbars (e.g. nested panels) */
+  .scrollbar-hidden {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  /* Gradient animation for text */
+  @keyframes gradient {
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  .animate-gradient {
+    background-size: 200% auto;
+    animation: gradient 3s ease infinite;
+  }
+
+  .animate-gradient-slow {
+    background-size: 300% auto;
+    animation: gradient 8s ease infinite;
+  }
+
+  /* Premium glow pulse for card hover states */
+  @keyframes glowPulse {
+    0%, 100% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  .animate-glow-pulse {
+    animation: glowPulse 3s ease-in-out infinite;
+  }
+
+  /* Toast animations */
+  @keyframes slide-in {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-out {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+
+  .animate-slide-in {
+    animation: slide-in 0.3s ease-out forwards;
+  }
+
+  .animate-slide-out {
+    animation: slide-out 0.3s ease-in forwards;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     ANIMATION LIBRARY - Reusable UI animations
+     ═══════════════════════════════════════════════════════════════ */
+
+  /* --- Fade Animations --- */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeInDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeInScale {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.4s ease-out;
+  }
+
+  .animate-fadeInUp {
+    animation: fadeInUp 0.5s ease-out forwards;
+  }
+
+  .animate-fadeInDown {
+    animation: fadeInDown 0.5s ease-out;
+  }
+
+  .animate-fadeInScale {
+    animation: fadeInScale 0.3s ease-out;
+  }
+
+  /* --- Stagger Delays (for sequential animations) --- */
+  .stagger-1 {
+    animation-delay: 0.05s;
+  }
+  .stagger-2 {
+    animation-delay: 0.1s;
+  }
+  .stagger-3 {
+    animation-delay: 0.15s;
+  }
+  .stagger-4 {
+    animation-delay: 0.2s;
+  }
+  .stagger-5 {
+    animation-delay: 0.25s;
+  }
+  .stagger-6 {
+    animation-delay: 0.3s;
+  }
+
+  /* --- Credit Warning Animation --- */
+  @keyframes creditPulse {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.8;
+    }
+    50% {
+      transform: scale(1.05);
+      opacity: 1;
+    }
+  }
+
+  .animate-creditPulse {
+    animation: creditPulse 2s ease-in-out infinite;
+  }
+
+  /* --- Shimmer Effect (for loading states) --- */
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      hsl(var(--foreground) / 0.04) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  /* --- Card Hover Effect --- */
+  .hover-lift {
+    transition:
+      transform var(--transition-slow) var(--ease-out-soft),
+      box-shadow var(--transition-slow) var(--ease-out-soft);
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 40px -10px hsl(var(--primary) / 0.15);
+  }
+
+  /* --- Focus Ring --- */
+  .focus-ring-animate:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring));
+  }
+
+  /* Prevent content jump during state changes */
+  .prevent-shift {
+    min-height: 100vh;
+    position: relative;
+  }
+
+  .gpu-accelerate {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+
+}
+
+@theme inline {
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+  --font-heading: var(--font-inter), "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: var(--font-inter), "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --color-chart-5: hsl(var(--chart-5));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-1: hsl(var(--chart-1));
+  --color-ring: hsl(var(--ring));
+  --color-input: hsl(var(--input));
+  --color-border: hsl(var(--border));
+  --color-destructive: hsl(var(--destructive));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card: hsl(var(--card));
+  --color-foreground: hsl(var(--foreground));
+  --color-background: hsl(var(--background));
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@keyframes subtle-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.animate-subtle-pulse {
+  animation: subtle-pulse 3s ease-in-out infinite;
+}
+
+@keyframes chat-shadow-pulse {
+  0%, 100% {
+    box-shadow:
+      0 4px 24px -4px hsl(var(--foreground) / 0.08),
+      0 1px 4px -1px hsl(var(--foreground) / 0.04);
+  }
+  50% {
+    box-shadow:
+      0 8px 40px -4px hsl(var(--foreground) / 0.14),
+      0 2px 8px -2px hsl(var(--foreground) / 0.06);
+  }
+}
+
+.animate-chat-shadow-pulse {
+  animation: chat-shadow-pulse 4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-subtle-pulse,
+  .animate-chat-shadow-pulse {
+    animation: none;
+  }
+}

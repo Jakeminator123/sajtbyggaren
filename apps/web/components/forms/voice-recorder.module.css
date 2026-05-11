@@ -1,0 +1,80 @@
+.audioLevelIndicator {
+  transform: scaleX(var(--level));
+}
+
+.audioBar {
+  height: calc(8px + (var(--level) * var(--bar-factor)));
+  opacity: var(--bar-opacity, 0.3);
+}
+
+.barIndex1 {
+  --bar-factor: 4px;
+}
+
+.barIndex2 {
+  --bar-factor: 8px;
+}
+
+.barIndex3 {
+  --bar-factor: 12px;
+}
+
+.barIndex4 {
+  --bar-factor: 16px;
+}
+
+.barIndex5 {
+  --bar-factor: 20px;
+}
+
+.barActive {
+  --bar-opacity: 1;
+}
+
+.barInactive {
+  --bar-opacity: 0.3;
+}
+
+.level0 {
+  --level: 0;
+}
+
+.level1 {
+  --level: 0.1;
+}
+
+.level2 {
+  --level: 0.2;
+}
+
+.level3 {
+  --level: 0.3;
+}
+
+.level4 {
+  --level: 0.4;
+}
+
+.level5 {
+  --level: 0.5;
+}
+
+.level6 {
+  --level: 0.6;
+}
+
+.level7 {
+  --level: 0.7;
+}
+
+.level8 {
+  --level: 0.8;
+}
+
+.level9 {
+  --level: 0.9;
+}
+
+.level10 {
+  --level: 1;
+}

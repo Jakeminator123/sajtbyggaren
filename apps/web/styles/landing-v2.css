@@ -1,0 +1,470 @@
+/* Primary hero/builder CTAs — subtle monochrome shadow per brandbook */
+.landing-cta-primary {
+  box-shadow: var(--shadow-sm);
+  transition:
+    box-shadow var(--transition-base) var(--ease-out-soft),
+    background-color var(--transition-base) var(--ease-out-soft),
+    opacity var(--transition-base) var(--ease-out-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-cta-primary {
+    transition: background-color var(--transition-base) var(--ease-out-soft), opacity var(--transition-base) var(--ease-out-soft);
+  }
+}
+
+.landing-cta-primary:hover:not(:disabled) {
+  box-shadow: var(--shadow-md);
+}
+
+.landing-cta-primary:disabled {
+  box-shadow: none;
+}
+
+.shader-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.14;
+  mix-blend-mode: multiply;
+  animation: landing-v2-shader-float 20s ease-in-out infinite;
+}
+
+.shader-orb-1 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, hsl(var(--brand-sand) / 0.5) 0%, transparent 70%);
+  top: -100px;
+  left: -100px;
+  animation-duration: 25s;
+}
+
+.shader-orb-2 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, hsl(var(--brand-stone) / 0.5) 0%, transparent 70%);
+  bottom: -150px;
+  right: -150px;
+  animation-duration: 30s;
+  animation-delay: -5s;
+}
+
+.shader-orb-3 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, hsl(var(--foreground) / 0.03) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation-name: landing-v2-shader-float-centered;
+  animation-duration: 35s;
+  animation-delay: -10s;
+}
+
+.grid-background {
+  background-image:
+    linear-gradient(hsl(var(--foreground) / 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--foreground) / 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  /* Static grid — calmer than infinite motion */
+  animation: none;
+}
+
+/* Landing page chat backdrop — monochrome sand/stone per brandbook */
+.landing-chat-bg [data-landing-bg] .shader-orb-1 {
+  background: radial-gradient(circle, hsl(var(--brand-sand) / 0.4) 0%, transparent 70%);
+}
+.landing-chat-bg [data-landing-bg] .shader-orb-2 {
+  background: radial-gradient(circle, hsl(var(--brand-stone) / 0.4) 0%, transparent 70%);
+}
+.landing-chat-bg [data-landing-bg] .shader-orb-3 {
+  background: radial-gradient(circle, hsl(var(--foreground) / 0.03) 0%, transparent 70%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-chat-bg .shader-orb {
+    animation: none !important;
+    opacity: 0.14;
+  }
+  .landing-chat-bg .shader-orb-3 {
+    transform: translate(-50%, -50%);
+  }
+  .landing-chat-bg .landing-chat-bg-grid.grid-background {
+    animation: none !important;
+    opacity: 0.028;
+  }
+  .landing-chat-bg .landing-chat-bg-noise {
+    opacity: 0.015;
+  }
+}
+
+/* btn-3d and btn-glow removed in redesign — replaced with calm transitions */
+.btn-3d {
+  transition: all var(--transition-base) var(--ease-out-soft);
+}
+
+.btn-3d:hover {
+  transform: translateY(-1px);
+}
+
+.btn-3d:active {
+  transform: translateY(0) scale(0.98);
+  transition: all var(--transition-fast, 150ms cubic-bezier(0.4, 0, 0.2, 1));
+}
+
+.btn-glow {
+  /* no-op — glow removed for minimalist design */
+}
+
+.card-3d {
+  transform-style: preserve-3d;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow:
+    0 1px 3px hsl(var(--foreground) / 0.06),
+    0 2px 8px hsl(var(--foreground) / 0.04);
+}
+
+.card-3d:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow:
+    0 8px 16px hsl(var(--foreground) / 0.08),
+    0 16px 32px hsl(var(--foreground) / 0.04),
+    0 0 0 1px hsl(var(--brand-sand) / 0.6);
+}
+
+.input-3d {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow:
+    0 1px 3px hsl(var(--foreground) / 0.06),
+    0 0 0 1px hsl(var(--foreground) / 0.06);
+}
+
+.input-3d:focus-within {
+  transform: translateY(-1px);
+  box-shadow:
+    0 2px 8px hsl(var(--foreground) / 0.08),
+    0 0 0 2px hsl(var(--primary) / 0.2);
+}
+
+.voice-wave-bar-horizontal {
+  height: 16px;
+  animation: landing-v2-voice-wave-horizontal 1.2s ease-in-out infinite;
+}
+
+.animate-marquee {
+  animation: landing-v2-marquee 30s linear infinite;
+}
+
+.animate-fade-up {
+  animation: landing-v2-fade-up 0.7s ease-out both;
+}
+
+.animate-hero-pulse {
+  animation: landing-v2-hero-pulse 4s ease-in-out infinite;
+}
+
+@keyframes landing-v2-hero-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 0 hsl(var(--foreground) / 0),
+      0 20px 60px -15px hsl(var(--foreground) / 0.08);
+  }
+  50% {
+    box-shadow:
+      0 0 40px 4px hsl(var(--foreground) / 0.04),
+      0 25px 70px -15px hsl(var(--foreground) / 0.12);
+  }
+}
+
+[data-scroll-container] {
+  scroll-behavior: smooth;
+}
+
+@keyframes landing-v2-shader-float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(50px, -50px) scale(1.1);
+  }
+  50% {
+    transform: translate(-30px, 40px) scale(0.95);
+  }
+  75% {
+    transform: translate(40px, 30px) scale(1.05);
+  }
+}
+
+@keyframes landing-v2-shader-float-centered {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  25% {
+    transform: translate(calc(-50% + 50px), calc(-50% - 50px)) scale(1.1);
+  }
+  50% {
+    transform: translate(calc(-50% - 30px), calc(-50% + 40px)) scale(0.95);
+  }
+  75% {
+    transform: translate(calc(-50% + 40px), calc(-50% + 30px)) scale(1.05);
+  }
+}
+
+@keyframes landing-v2-grid-move {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 50px 50px;
+  }
+}
+
+@keyframes landing-v2-voice-wave-horizontal {
+  0%,
+  100% {
+    height: 12px;
+    opacity: 0.3;
+  }
+  25% {
+    height: 32px;
+    opacity: 0.7;
+  }
+  50% {
+    height: 40px;
+    opacity: 0.9;
+  }
+  75% {
+    height: 24px;
+    opacity: 0.6;
+  }
+}
+
+@keyframes landing-v2-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes landing-v2-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rocket-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-2px) rotate(-1.5deg);
+  }
+  75% {
+    transform: translateY(1.5px) rotate(1deg);
+  }
+}
+
+@keyframes rocket-glow-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 6px hsl(var(--foreground) / 0.2));
+  }
+  50% {
+    filter: drop-shadow(0 0 14px hsl(var(--foreground) / 0.35));
+  }
+}
+
+@keyframes rocket-shake {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(-6deg);
+  }
+  25% {
+    transform: translate(-1px, 0.5px) rotate(-7deg);
+  }
+  50% {
+    transform: translate(1px, -0.5px) rotate(-5deg);
+  }
+  75% {
+    transform: translate(-0.5px, 0.5px) rotate(-6.5deg);
+  }
+}
+
+@keyframes exhaust-particle {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(12px) scale(0);
+    opacity: 0;
+  }
+}
+
+/* ── Wireframe 3D shape animations ── */
+@keyframes wf-spin-kf {
+  from { transform: rotateX(0deg) rotateY(0deg); }
+  to { transform: rotateX(360deg) rotateY(360deg); }
+}
+@keyframes wf-spin-reverse-kf {
+  from { transform: rotateX(360deg) rotateY(0deg); }
+  to { transform: rotateX(0deg) rotateY(360deg); }
+}
+@keyframes wf-spin-diamond-kf {
+  from { transform: rotateX(45deg) rotateZ(45deg) rotateY(0deg); }
+  to { transform: rotateX(45deg) rotateZ(45deg) rotateY(360deg); }
+}
+@keyframes wf-spin-slow-kf {
+  from { transform: rotateY(0deg) rotateX(15deg); }
+  to { transform: rotateY(360deg) rotateX(15deg); }
+}
+@keyframes wf-spin-fast-kf {
+  from { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+  to { transform: rotateX(360deg) rotateY(720deg) rotateZ(360deg); }
+}
+@keyframes wf-spin-pulse-kf {
+  0% { transform: rotateX(0deg) rotateY(0deg) scale(1); }
+  25% { transform: rotateX(90deg) rotateY(90deg) scale(1.06); }
+  50% { transform: rotateX(180deg) rotateY(180deg) scale(0.94); }
+  75% { transform: rotateX(270deg) rotateY(270deg) scale(1.06); }
+  100% { transform: rotateX(360deg) rotateY(360deg) scale(1); }
+}
+@keyframes float-particle-kf {
+  0%, 100% { transform: translateY(0) translateX(0); opacity: 0.3; }
+  25% { transform: translateY(-18px) translateX(8px); opacity: 0.7; }
+  50% { transform: translateY(-4px) translateX(-12px); opacity: 0.5; }
+  75% { transform: translateY(-22px) translateX(4px); opacity: 0.4; }
+}
+@keyframes scan-line-kf {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(200%); }
+}
+@keyframes modal-content-enter-kf {
+  from { opacity: 0; transform: scale(0.95) translateY(14px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes modal-backdrop-enter-kf {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.wf-spin { transform-style: preserve-3d; animation: wf-spin-kf 20s linear infinite; }
+.wf-spin-reverse { transform-style: preserve-3d; animation: wf-spin-reverse-kf 15s linear infinite; }
+.wf-spin-diamond { transform-style: preserve-3d; animation: wf-spin-diamond-kf 18s linear infinite; }
+.wf-spin-slow { transform-style: preserve-3d; animation: wf-spin-slow-kf 30s linear infinite; }
+.wf-spin-slow-offset { transform-style: preserve-3d; animation: wf-spin-slow-kf 25s linear infinite reverse; }
+.wf-spin-fast { transform-style: preserve-3d; animation: wf-spin-fast-kf 10s linear infinite; }
+.wf-spin-pulse { transform-style: preserve-3d; animation: wf-spin-pulse-kf 20s ease-in-out infinite; }
+
+.modal-scan-line {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    hsl(var(--foreground) / 0.02) 45%,
+    hsl(var(--foreground) / 0.04) 50%,
+    hsl(var(--foreground) / 0.02) 55%,
+    transparent 100%
+  );
+  animation: scan-line-kf 4s linear infinite;
+  pointer-events: none;
+}
+
+.modal-content-enter {
+  animation: modal-content-enter-kf 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.modal-backdrop-enter {
+  animation: modal-backdrop-enter-kf 0.25s ease-out both;
+}
+
+/* Landing page (see ChatArea <main class="landing-v2-page">): motion beyond .landing-chat-bg */
+@media (prefers-reduced-motion: reduce) {
+  .landing-v2-page .animate-marquee {
+    animation: none !important;
+  }
+
+  .landing-v2-page .wf-spin,
+  .landing-v2-page .wf-spin-reverse,
+  .landing-v2-page .wf-spin-diamond,
+  .landing-v2-page .wf-spin-slow,
+  .landing-v2-page .wf-spin-slow-offset,
+  .landing-v2-page .wf-spin-fast,
+  .landing-v2-page .wf-spin-pulse {
+    animation: none !important;
+  }
+
+  .landing-v2-page .modal-scan-line {
+    animation: none !important;
+    opacity: 0.12;
+  }
+
+  .landing-v2-page .modal-content-enter,
+  .landing-v2-page .modal-backdrop-enter {
+    animation: none !important;
+  }
+
+  .landing-v2-page .voice-wave-bar-horizontal {
+    animation: none !important;
+  }
+
+  .landing-v2-page .animate-pulse,
+  .landing-v2-page .animate-bounce,
+  .landing-v2-page .animate-ping {
+    animation: none !important;
+  }
+
+  .intent-card {
+    animation: none !important;
+  }
+}
+
+/* Hero chat scroll area */
+.hero-chat-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--scrollbar-thumb) / 0.35) transparent;
+}
+.hero-chat-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.hero-chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.hero-chat-scroll::-webkit-scrollbar-thumb {
+  background: hsl(var(--scrollbar-thumb) / 0.4);
+  border-radius: 4px;
+}
+.hero-chat-scroll::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--scrollbar-thumb-hover) / 0.35);
+}
+
+/* Intent cards */
+.intent-card {
+  backdrop-filter: blur(8px);
+  transition:
+    transform var(--transition-base) var(--ease-out-soft),
+    box-shadow var(--transition-base) var(--ease-out-soft);
+}
+@media (hover: hover) {
+  .intent-card:hover {
+    transform: translateY(-2px);
+    animation: subtle-pulse 3s ease-in-out infinite;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intent-card:hover {
+    animation: none;
+  }
+}
