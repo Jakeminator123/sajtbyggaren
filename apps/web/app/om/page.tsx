@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { MinimalFooter } from "@/components/layout";
+import { Footer } from "@/components/layout/footer";
+import { Navbar } from "@/components/layout/navbar";
+import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Om oss",
@@ -10,49 +12,64 @@ export const metadata: Metadata = {
 
 export default function OmPage() {
   return (
-    <>
-      <main className="min-h-screen bg-background text-foreground">
-        <div className="mx-auto max-w-2xl px-6 py-16">
-          <Link
-            href="/"
-            className="mb-8 inline-block text-sm text-muted-foreground hover:text-foreground"
-          >
-            &larr; Tillbaka
-          </Link>
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <Navbar />
 
-          <h1 className="mb-2 text-2xl font-semibold tracking-tight">Om Sajtbyggaren</h1>
-          <p className="mb-10 text-sm text-muted-foreground">
-            AI-driven webbplattform av Pretty Good AB. React, Next.js, TypeScript.
+      <main className="flex-1 pt-14">
+        <section className="mx-auto max-w-3xl px-6 py-20 sm:py-24">
+          <p className="mb-3 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+            En tjänst från Pretty Good AB
+          </p>
+          <h1 className="font-heading text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+            Om Sajtbyggaren
+          </h1>
+          <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
+            Vi hjälper svenska företag att gå från idé till publicerad sajt —
+            med bra prestanda, korrekt SEO och verktyg anpassade för svensk
+            kontext.
           </p>
 
-          <div className="space-y-6 text-sm leading-relaxed text-muted-foreground">
-            <p>
-              Vi hjälper företag att gå från idé till publicerad sajt — med bra prestanda och
-              verktyg anpassade för svensk kontext.
-            </p>
+          <div className="mt-12 grid gap-10 sm:grid-cols-2">
+            <div>
+              <h2 className="text-base font-semibold text-foreground">
+                Bakom plattformen
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                Sajtbyggaren drivs av Pretty Good AB (org.nr DG97), ett svenskt
+                bolag med fokus på AI-driven produktutveckling. Plattformen är
+                byggd med React 19, Next.js 16 och TypeScript.
+              </p>
+            </div>
 
             <div>
-              <h2 className="mb-1 text-sm font-medium text-foreground">Kontakt</h2>
-              <a
-                href="mailto:hej@sajtbyggaren.se"
-                className="text-primary hover:underline underline-offset-4"
-              >
-                hej@sajtbyggaren.se
-              </a>
-            </div>
-
-            <div className="flex gap-4 text-xs">
-              <Link href="/faq" className="text-primary hover:underline underline-offset-4">
-                FAQ
-              </Link>
-              <Link href="/privacy" className="text-primary hover:underline underline-offset-4">
-                Integritetspolicy
-              </Link>
+              <h2 className="text-base font-semibold text-foreground">
+                Kontakt
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                Maila oss på{" "}
+                <a
+                  href="mailto:hej@sajtbyggaren.se"
+                  className="text-primary underline-offset-4 hover:underline"
+                >
+                  hej@sajtbyggaren.se
+                </a>
+                {" "}så hör vi av oss inom en arbetsdag.
+              </p>
             </div>
           </div>
-        </div>
+
+          <div className="mt-12 flex flex-wrap gap-3">
+            <Button asChild>
+              <Link href="/priser">Se priser</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/faq">Vanliga frågor</Link>
+            </Button>
+          </div>
+        </section>
       </main>
-      <MinimalFooter />
-    </>
+
+      <Footer />
+    </div>
   );
 }

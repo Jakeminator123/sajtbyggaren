@@ -1,9 +1,11 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { useState } from "react"
-import { ArrowLeft, ArrowRight, ChevronDown } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import Link from "next/link";
+import { useState } from "react";
+import { ArrowRight, ChevronDown } from "lucide-react";
+import { Footer } from "@/components/layout/footer";
+import { Navbar } from "@/components/layout/navbar";
+import { Button } from "@/components/ui/button";
 
 const faqs = [
   {
@@ -30,14 +32,14 @@ const faqs = [
     q: "Kan jag byta plan när som helst?",
     a: "Ja, du kan skala upp när du behöver mer tempo eller fler iterationer. Credits som du redan köpt ligger kvar.",
   },
-]
+];
 
 function FaqItem({ q, a, id }: { q: string; a: string; id: string }) {
-  const [open, setOpen] = useState(false)
-  const answerId = `faq-answer-${id}`
+  const [open, setOpen] = useState(false);
+  const answerId = `faq-answer-${id}`;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/20 bg-card/35 transition-colors hover:border-border/35">
+    <div className="overflow-hidden rounded-2xl border border-border/40 bg-card transition-colors hover:border-border/70">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
@@ -45,76 +47,84 @@ function FaqItem({ q, a, id }: { q: string; a: string; id: string }) {
         aria-expanded={open}
         aria-controls={answerId}
       >
-        <span className="text-sm font-medium text-foreground md:text-base">{q}</span>
+        <span className="text-sm font-medium text-foreground md:text-base">
+          {q}
+        </span>
         <ChevronDown
-          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-300 ${
+            open ? "rotate-180" : ""
+          }`}
         />
       </button>
-      <div id={answerId} role="region" className={`overflow-hidden transition-all duration-300 ${open ? "max-h-48 opacity-100" : "max-h-0 opacity-0"}`}>
-        <p className="px-5 pb-5 text-sm leading-relaxed text-muted-foreground">{a}</p>
+      <div
+        id={answerId}
+        role="region"
+        className={`overflow-hidden transition-all duration-300 ${
+          open ? "max-h-72 opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        <p className="px-5 pb-5 text-sm leading-relaxed text-muted-foreground">
+          {a}
+        </p>
       </div>
     </div>
-  )
+  );
 }
 
 export default function FAQPage() {
   return (
-    <main className="min-h-screen bg-background px-6 py-10 md:py-16">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-10 flex items-center justify-between gap-4">
-          <Button variant="ghost" className="border border-border/20 bg-background/50" asChild>
-            <Link href="/">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Till startsidan
-            </Link>
-          </Button>
-          <Button className="btn-3d btn-glow bg-primary text-primary-foreground hover:bg-primary/90" asChild>
-            <Link href="/priser">
-              Se priser
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <Navbar />
 
-        <section className="rounded-[36px] border border-border/20 bg-card/30 p-6 shadow-[0_28px_80px_rgba(6,10,20,0.3)] md:p-10">
-          <div className="max-w-3xl">
-            <p className="mb-3 text-xs font-medium uppercase tracking-widest text-primary">Vanliga frågor</p>
-            <h1 className="text-3xl font-(--font-heading) tracking-tight text-foreground md:text-5xl">
-              Frågor och svar om Sajtbyggaren
-            </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
-              Här samlar vi de vanligaste frågorna om hur plattformen fungerar, vilken teknik som används och hur snabbt du kan gå från idé till publicerad sajt.
-            </p>
-          </div>
+      <main className="flex-1 pt-14">
+        <section className="mx-auto max-w-5xl px-6 py-20 sm:py-24">
+          <p className="mb-3 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+            Vanliga frågor
+          </p>
+          <h1 className="font-heading text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+            Frågor och svar om Sajtbyggaren
+          </h1>
+          <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
+            Här samlar vi de vanligaste frågorna om hur plattformen fungerar,
+            vilken teknik som används och hur snabbt du kan gå från idé till
+            publicerad sajt.
+          </p>
 
-          <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1.2fr)_320px]">
+          <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,1.2fr)_320px]">
             <div className="space-y-3">
               {faqs.map((faq, i) => (
                 <FaqItem key={faq.q} q={faq.q} a={faq.a} id={String(i)} />
               ))}
             </div>
 
-            <aside className="rounded-[28px] border border-primary/20 bg-primary/8 p-5">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary/75">Fortfarande osäker?</p>
-              <h2 className="mt-3 text-xl font-(--font-heading) text-foreground">Vi hjälper gärna till personligt.</h2>
+            <aside className="rounded-2xl border border-border bg-muted/30 p-6">
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                Fortfarande osäker?
+              </p>
+              <h2 className="mt-3 text-xl font-semibold text-foreground">
+                Vi hjälper gärna till personligt.
+              </h2>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                Om du vill bolla upplägg, credits, domän eller om ni behöver ett team runt lanseringen går det snabbt att höra av sig.
+                Om du vill bolla upplägg, credits, domän eller om ni behöver
+                ett team runt lanseringen går det snabbt att höra av sig.
               </p>
               <div className="mt-6 space-y-3">
-                <Button className="w-full btn-3d btn-glow bg-primary text-primary-foreground hover:bg-primary/90" asChild>
+                <Button asChild className="w-full">
                   <Link href="/priser">
                     Se priser
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
-                <Button variant="ghost" className="w-full border border-primary/20 text-primary hover:bg-primary/5" asChild>
+                <Button asChild variant="outline" className="w-full">
                   <a href="mailto:hej@sajtbyggaren.se">Kontakta teamet</a>
                 </Button>
               </div>
             </aside>
           </div>
         </section>
-      </div>
-    </main>
-  )
+      </main>
+
+      <Footer />
+    </div>
+  );
 }

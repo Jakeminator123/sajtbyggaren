@@ -1,42 +1,50 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { MinimalFooter } from "@/components/layout";
+import { Footer } from "@/components/layout/footer";
+import { Navbar } from "@/components/layout/navbar";
 
 const sections = [
   {
     title: "1. Personuppgiftsansvarig",
-    content: "Pretty Good AB, org.nr DG97 är personuppgiftsansvarig. Kontakt: hej@sajtbyggaren.se",
+    content:
+      "Pretty Good AB, org.nr DG97 är personuppgiftsansvarig. Kontakt: hej@sajtbyggaren.se",
   },
   {
     title: "2. Vilka uppgifter samlar vi in?",
-    content: "Kontoinformation (e-post, namn via OAuth), betalningsuppgifter (hanteras av Stripe), användningsdata (sidvisningar, projekt) och teknisk data (IP, webbläsare).",
+    content:
+      "Kontoinformation (e-post, namn via OAuth), betalningsuppgifter (hanteras av Stripe), användningsdata (sidvisningar, projekt) och teknisk data (IP, webbläsare).",
   },
   {
     title: "3. Hur använder vi dina uppgifter?",
-    content: "Tillhandahålla och förbättra Tjänsten, hantera konto och credits, bearbeta betalningar, kommunicera om tjänsteändringar och analysera användningsmönster.",
+    content:
+      "Tillhandahålla och förbättra Tjänsten, hantera konto och credits, bearbeta betalningar, kommunicera om tjänsteändringar och analysera användningsmönster.",
   },
   {
     title: "4. Tredjepartstjänster",
-    content: "Stripe (betalning), Vercel (hosting), Google OAuth (inloggning), GitHub OAuth (inloggning/import), AI-modeller (OpenAI/Anthropic via v0).",
+    content:
+      "Stripe (betalning), Vercel (hosting), Google OAuth (inloggning), GitHub OAuth (inloggning/import), AI-modeller (OpenAI/Anthropic via v0).",
   },
   {
     title: "5. Cookies",
-    content: "Nödvändiga cookies för session/autentisering. Analyscookies (anonymiserad statistik) med ditt samtycke. Hantera via cookie-bannern.",
+    content:
+      "Nödvändiga cookies för session/autentisering. Analyscookies (anonymiserad statistik) med ditt samtycke. Hantera via cookie-bannern.",
   },
   {
     title: "6. Dina rättigheter (GDPR)",
-    content: "Tillgång, rättelse, radering, dataportabilitet, invändning mot behandling. Klagomål till Integritetsskyddsmyndigheten (IMY).",
+    content:
+      "Tillgång, rättelse, radering, dataportabilitet, invändning mot behandling. Klagomål till Integritetsskyddsmyndigheten (IMY).",
   },
   {
     title: "7. Lagring och säkerhet",
-    content: "Data lagras inom EU/EES med kryptering, åtkomstkontroll och regelbundna säkerhetsgranskningar.",
+    content:
+      "Data lagras inom EU/EES med kryptering, åtkomstkontroll och regelbundna säkerhetsgranskningar.",
   },
   {
     title: "8. Ändringar",
-    content: "Väsentliga ändringar meddelas via e-post eller i Tjänsten. Senaste versionen finns alltid på denna sida.",
+    content:
+      "Väsentliga ändringar meddelas via e-post eller i Tjänsten. Senaste versionen finns alltid på denna sida.",
   },
   {
     title: "9. Kontakt",
@@ -47,17 +55,28 @@ const sections = [
 function Accordion({ title, content }: { title: string; content: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border-b border-border/30 last:border-0">
+    <div className="border-b border-border/50 last:border-0">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between gap-4 py-4 text-left"
+        aria-expanded={open}
       >
         <span className="text-sm font-medium text-foreground">{title}</span>
-        <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+            open ? "rotate-180" : ""
+          }`}
+        />
       </button>
-      <div className={`overflow-hidden transition-all duration-200 ${open ? "max-h-60 pb-4 opacity-100" : "max-h-0 opacity-0"}`}>
-        <p className="text-sm leading-relaxed text-muted-foreground">{content}</p>
+      <div
+        className={`overflow-hidden transition-all duration-200 ${
+          open ? "max-h-72 pb-4 opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          {content}
+        </p>
       </div>
     </div>
   );
@@ -65,26 +84,30 @@ function Accordion({ title, content }: { title: string; content: string }) {
 
 export default function PrivacyPage() {
   return (
-    <>
-      <main className="bg-background text-foreground min-h-screen">
-        <div className="mx-auto max-w-2xl px-6 py-16">
-          <Link href="/" className="text-muted-foreground hover:text-foreground mb-8 inline-block text-sm">
-            &larr; Tillbaka
-          </Link>
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <Navbar />
 
-          <h1 className="mb-2 text-2xl font-semibold tracking-tight">Integritetspolicy</h1>
-          <p className="text-muted-foreground mb-8 text-xs">
+      <main className="flex-1 pt-14">
+        <section className="mx-auto max-w-3xl px-6 py-20 sm:py-24">
+          <p className="mb-3 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+            Juridiskt
+          </p>
+          <h1 className="font-heading text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+            Integritetspolicy
+          </h1>
+          <p className="mt-4 text-sm text-muted-foreground">
             Senast uppdaterad: {new Date().toISOString().split("T")[0]}
           </p>
 
-          <div>
+          <div className="mt-12">
             {sections.map((s) => (
               <Accordion key={s.title} title={s.title} content={s.content} />
             ))}
           </div>
-        </div>
+        </section>
       </main>
-      <MinimalFooter />
-    </>
+
+      <Footer />
+    </div>
   );
 }

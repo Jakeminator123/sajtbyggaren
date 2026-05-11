@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { MinimalFooter } from "@/components/layout";
+import { Footer } from "@/components/layout/footer";
+import { Navbar } from "@/components/layout/navbar";
+import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Blogg",
@@ -9,28 +11,35 @@ export const metadata: Metadata = {
 
 export default function BloggPage() {
   return (
-    <>
-      <main className="min-h-screen bg-background text-foreground">
-        <div className="mx-auto max-w-2xl px-6 py-16">
-          <Link
-            href="/"
-            className="mb-8 inline-block text-sm text-muted-foreground hover:text-foreground"
-          >
-            &larr; Tillbaka
-          </Link>
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <Navbar />
 
-          <h1 className="mb-2 text-2xl font-semibold tracking-tight">Blogg</h1>
-          <p className="mb-8 text-sm text-muted-foreground">Kommer snart.</p>
+      <main className="flex-1 pt-14">
+        <section className="mx-auto max-w-3xl px-6 py-24 text-center sm:py-32">
+          <p className="mb-3 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+            Blogg
+          </p>
+          <h1 className="font-heading text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+            Artiklar kommer snart.
+          </h1>
+          <p className="mt-6 text-base leading-relaxed text-muted-foreground">
+            Vi förbereder artiklar om hur AI-genererade sajter byggs i
+            praktiken, vad som gör dem snabba, och hur du tar din digitala
+            närvaro till nästa nivå.
+          </p>
 
-          <Link
-            href="/priser"
-            className="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            Se priser
-          </Link>
-        </div>
+          <div className="mt-10 flex flex-wrap justify-center gap-3">
+            <Button asChild>
+              <Link href="/priser">Se priser</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/om">Läs mer om Sajtbyggaren</Link>
+            </Button>
+          </div>
+        </section>
       </main>
-      <MinimalFooter />
-    </>
+
+      <Footer />
+    </div>
   );
 }
