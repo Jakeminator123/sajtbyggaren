@@ -18,6 +18,28 @@ type RunsApiPayload = {
   error?: string;
 };
 
+type FetchedRunsPayload = {
+  nextRuns: RunHistoryItem[];
+  nextInputs: ProjectInputOption[];
+};
+
+// Pure data fetcher. Separated from setState so callers can place a
+// cancellation guard between the await and the state mutation. Without
+// this split the success path runs setState unconditionally even when
+// the effect has been cancelled (component unmount), which races with
+// a fresh effect that has already populated state.
+async function fetchRuns(): Promise<FetchedRunsPayload> {
+  const response = await fetch("/api/runs", { cache: "no-store" });
+  const payload = (await response.json()) as RunsApiPayload;
+  if (!response.ok || payload.error) {
+    throw new Error(payload.error ?? "Kunde inte läsa /api/runs.");
+  }
+  return {
+    nextRuns: payload.runs ?? [],
+    nextInputs: payload.projectInputs ?? [],
+  };
+}
+
 export default function Home() {
   const [runs, setRuns] = useState<RunHistoryItem[]>([]);
   const [projectInputs, setProjectInputs] = useState<ProjectInputOption[]>([]);
@@ -26,18 +48,9 @@ export default function Home() {
   const [statusText, setStatusText] = useState("Laddar runs och project inputs...");
   const [building, setBuilding] = useState(false);
 
-  async function refreshRuns() {
-    const response = await fetch("/api/runs", { cache: "no-store" });
-    const payload = (await response.json()) as RunsApiPayload;
-    if (!response.ok || payload.error) {
-      throw new Error(payload.error ?? "Kunde inte läsa /api/runs.");
-    }
-
-    const nextRuns = payload.runs ?? [];
-    const nextInputs = payload.projectInputs ?? [];
+  function applyRunsData({ nextRuns, nextInputs }: FetchedRunsPayload) {
     setRuns(nextRuns);
     setProjectInputs(nextInputs);
-
     if (!selectedRunId && nextRuns.length > 0) {
       setSelectedRunId(nextRuns[0].runId);
     }
@@ -51,10 +64,15 @@ export default function Home() {
     let cancelled = false;
     // Wrap refresh in an async IIFE so the React 19
     // `react-hooks/set-state-in-effect` rule sees subscription-style
-    // updates (after await) rather than synchronous-in-effect.
+    // updates (after await) rather than synchronous-in-effect. The
+    // cancelled-guards on BOTH success and catch paths mirror the
+    // pattern in viewer-panel / run-details-panel: a stale resolution
+    // arriving after unmount must not write setState.
     void (async () => {
       try {
-        await refreshRuns();
+        const data = await fetchRuns();
+        if (cancelled) return;
+        applyRunsData(data);
       } catch (error) {
         if (cancelled) return;
         const message = error instanceof Error ? error.message : "Kunde inte läsa initial data.";
@@ -99,10 +117,12 @@ export default function Home() {
             onBuildDone={(runId) => {
               setSelectedRunId(runId);
               setStatusText(`Build klar: ${runId}`);
-              void refreshRuns().catch((error) => {
-                const message = error instanceof Error ? error.message : "Kunde inte uppdatera runs.";
-                setStatusText(message);
-              });
+              void fetchRuns()
+                .then(applyRunsData)
+                .catch((error) => {
+                  const message = error instanceof Error ? error.message : "Kunde inte uppdatera runs.";
+                  setStatusText(message);
+                });
             }}
             onBuildEnd={() => setBuilding(false)}
           />

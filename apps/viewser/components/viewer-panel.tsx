@@ -21,6 +21,12 @@ export function ViewerPanel({ runId }: ViewerPanelProps) {
   const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
+    // containerRef-div is now mounted unconditionally (see render
+    // below) so containerRef.current is bound on every runId change,
+    // including transitions out of unavailable=true. The remaining
+    // null-check covers the very first render before React has
+    // attached the ref (effect runs after commit, but we still keep
+    // the guard for defense in depth).
     if (!runId || !containerRef.current) {
       setUnavailable(false);
       return;
@@ -111,9 +117,23 @@ export function ViewerPanel({ runId }: ViewerPanelProps) {
             scripts/build_site.py som producerar en riktig Next.js-app som
             embed:as via StackBlitz.
           </div>
-        ) : (
-          <div ref={containerRef} className="h-[480px] overflow-hidden rounded-md border" />
-        )}
+        ) : null}
+        {/*
+          containerRef-div hålls mounted oavsett `unavailable` så
+          containerRef.current är bunden över transitions. Tidigare
+          satt den i else-grenen av en `unavailable ? tips : <div ref>`
+          ternary, vilket avmonterade ref när 404 satte
+          unavailable=true - det låste UI:t i stuck state när nästa
+          runId valdes (effekten har bara `[runId]` som dep och kör
+          inte om vid unavailable-flip). Hidden via Tailwind när
+          tips-blocket äger ytan.
+        */}
+        <div
+          ref={containerRef}
+          className={`h-[480px] overflow-hidden rounded-md border ${
+            unavailable ? "hidden" : ""
+          }`}
+        />
       </CardContent>
     </Card>
   );
