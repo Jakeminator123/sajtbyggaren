@@ -82,6 +82,7 @@ COMMON_WORDS = {
     "Sajtbyggaren", "Sajtmaskin", "Jakeminator123", "Jakemiantor123",
     "Lovable", "GitHub", "Cursor", "Vercel", "StackBlitz",
     "WebContainer", "WebContainers", "Fly", "Stripe", "OpenAI", "Anthropic",
+    "OpenClaw", "Pretty Good AB",
     # Generic word fragments som dyker upp i text
     "ADR", "PR", "CI", "ID", "UUID", "MD", "LLM", "PascalCase", "Backup",
     # Generiska prosa-fraser
@@ -345,6 +346,15 @@ def main() -> int:
         # known-issues.md är en bug-tracking-fil med interna IDs (B11, BO5)
         # som inte är domänbegrepp och inte ska behöva registreras.
         if rel == "docs/known-issues.md":
+            continue
+        # apps/web/ är en publik UI-konsument av domänspråket, inte en källa.
+        # Importen i ADR 0018 drog in ~500 shadcn/Radix-primitiver, page-
+        # komponenter och lokala typ-aliaser som inte är canonical termer.
+        # ADR 0019 dokumenterar path-exclusion-beslutet. Om apps/web/ någon
+        # gång börjar introducera äkta domänbegrepp registreras de i
+        # naming-dictionary precis som vanligt — det här är inte en
+        # disciplineringsbefrielse, bara en path-skip.
+        if rel.startswith("apps/web/"):
             continue
 
         candidates = find_candidates(text, suffix_known)

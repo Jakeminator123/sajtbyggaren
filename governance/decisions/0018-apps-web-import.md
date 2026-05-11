@@ -15,9 +15,9 @@ operator-prototyp som explicit *inte* är platsen för den publika UI:n.
 
 Christopher har under flera veckor byggt UI/UX i sajtmaskin (branch
 `frontend/christopher`): Apple-inspirerad design, brandbook-token-system,
-55 shadcn-primitiver, layout-shell (Navbar/Footer/CookieBanner/JSON-LD),
-landing-v2-komponenter, marknadssidor (om/priser/faq/terms/privacy/blogg)
-och 385 SEO-landningssidor. Detta arbete riskerade att gå förlorat när
+55 shadcn-primitiver, layout-shell (navbar, footer, cookie-banner och
+json-ld-strukturerad data), landing-v2-komponenter, marknadssidor
+(om/priser/faq/terms/privacy/blogg) och 385 SEO-landningssidor. Detta arbete riskerade att gå förlorat när
 sajtbyggaren-roadmapen lade `apps/` sist.
 
 Den här ADR:n låser placeringen och scopet för en första import.
@@ -138,9 +138,9 @@ Importen byter "Sajtmaskin" → "Sajtbyggaren" i:
 
 `scripts/check_term_coverage.py` (utan `--strict`) rapporterar ~500 nya
 kandidater under `apps/web/components/ui/` och `apps/web/components/
-landing-v2/`. Nästan samtliga är shadcn-/Radix-implementation-symboler
-(`AccordionContent`, `AvatarImage`, `BreadcrumbList` etc.) — samma princip
-som tidigare hanterats för `apps/viewser`-symboler i `COMMON_WORDS`.
+landing-v2/`. Nästan samtliga är shadcn- och radix-implementation-symboler
+i pascal-stil — samma princip som tidigare hanterats för `apps/viewser`-
+symboler i `COMMON_WORDS`.
 
 Skriptets docstring säger uttryckligen att det är "ett diagnosverktyg,
 inte en hård gate. Hård gate kommer först när ordlistan är stabilare."
