@@ -45,16 +45,15 @@ DEFAULT_CAPABILITY_MAP_PATH = (
 
 DEFAULT_SCAFFOLD_ID = "local-service-business"
 
-# Hardcoded scaffold -> starter mapping for Sprint 2B.
+# Hardcoded scaffold -> starter mapping for the runnable starter set.
 #
-# Only ``marketing-base`` has verified runnable content today. The
-# ``ecommerce-lite`` scaffold reuses ``marketing-base`` as chrome until
-# the commerce-base starter harmonisation sprint lands (see
-# docs/known-issues.md B20). When ``commerce-base`` is real,
-# this mapping (or the planner's choice) becomes per-scaffold.
+# ``local-service-business`` uses the marketing starter. ``ecommerce-lite``
+# uses the harmonised commerce starter imported in B20. Other registered
+# scaffold IDs stay out of this runtime dict until their starters have
+# verified runnable content.
 SCAFFOLD_TO_STARTER: dict[str, str] = {
     "local-service-business": "marketing-base",
-    "ecommerce-lite": "marketing-base",
+    "ecommerce-lite": "commerce-base",
 }
 
 # Heuristic keywords used by the deterministic mock planner to pick

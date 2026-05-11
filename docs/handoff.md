@@ -75,7 +75,7 @@ Validatorerna i steg 7-9 skyddar de specifika artefakterna från att skrivas mal
 
 ### Scaffolds + Dossiers
 
-- Två scaffolds har innehåll: `local-service-business` (variant `nordic-trust`) och `ecommerce-lite` (variant `clean-store`, mappar till `marketing-base`-starter via `SCAFFOLD_TO_STARTER` tills commerce-base är harmoniserad — B20).
+- Två scaffolds har innehåll: `local-service-business` (variant `nordic-trust`) och `ecommerce-lite` (variant `clean-store`, mappar till `commerce-base` via `SCAFFOLD_TO_STARTER`).
 - En Dossier är implementerad: `interactive-game-loop` (soft).
 
 ## Vad är mock än så länge
@@ -86,7 +86,7 @@ Validatorerna i steg 7-9 skyddar de specifika artefakterna från att skrivas mal
 - **brief/planning usage tracking**: `briefModel` och `planningModel` returnerar inte token-counts. `modelUsage.byRole.briefModel` / `planningModel` är null tills resolvers utvidgas. `compose_model_usage` är klar att ta emot dem.
 - **modelUsage cost-aggregation**: `totalCostUsd` är alltid 0.0 — kräver per-model price-table policy.
 - **Preview Runtime**: `apps/viewser/` är operator-prototyp; canonical `PreviewRuntime` (`StackBlitzRuntime` / `LocalRuntime` / `FlyRuntime`) är Sprint 4-5.
-- `data/starters/commerce-base/` oharmoniserad zip (B20).
+- `data/starters/commerce-base/` harmoniserad från `vercel/commerce` och bygger utan Shopify-env (B20 stängd).
 - 11 av 14 scaffolds är gitkeep-mappar utan content.
 - `apps/web/` finns inte alls.
 
@@ -134,7 +134,7 @@ Builder UX MVP är levererad i denna runda: operator-flödet **Project Input →
 | ID | Allvar | Beskrivning |
 |---|---|---|
 | B13 | Låg | Produktlogik i `scripts/build_site.py` (write_pages / mount_dossier_components / patch_globals_css). Stängs naturligt när LLM file-emission widens. |
-| B20 | Låg | `data/starters/commerce-base/` oharmoniserad. Separat starter-spår. |
+| B20 | Låg | Stängd: `commerce-base` är harmoniserad och `ecommerce-lite` mappar dit. |
 | BO2 | Medel | Backoffice trace-vy är rå dataframe. Bra parallellt UX-spår. |
 | BO4 | Medel | `backoffice/views/playground.py` 180s blocking subprocess. Async-cancellation behövs. |
 

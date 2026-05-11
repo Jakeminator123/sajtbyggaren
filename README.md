@@ -147,6 +147,9 @@ Korta motiveringar i [`governance/decisions/`](governance/decisions/):
 - [0013](governance/decisions/0013-schema-locking-before-sprint-2b.md) - Schema-låsning före Sprint 2B.
 - [0014](governance/decisions/0014-sprint-2b-planning-helper.md) - Sprint 2B planning helper (gemensam `produce_site_plan`, planSource pinned, ecommerce-lite scaffold).
 - [0015](governance/decisions/0015-sprint-3a-codegen-quality-repair.md) - Sprint 3A: deterministisk `codegenModel v1`, riktiga Quality Gate-checks och no-fix Repair Pipeline under `packages/generation/{codegen,quality_gate,repair}/`.
+- [0016](governance/decisions/0016-sprint-3b-mechanical-repair.md) - Sprint 3B: första mekaniska repair-fixen och sandwich-loop.
+- [0017](governance/decisions/0017-sprint-3b-next-real-codegen-model.md) - Sprint 3B-next: minimal real codegenModel v1.
+- [0018](governance/decisions/0018-b20-commerce-base-harmonisering.md) - B20 commerce-base harmonisering.
 
 ## Engine Run
 

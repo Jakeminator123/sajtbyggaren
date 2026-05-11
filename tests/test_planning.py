@@ -262,10 +262,7 @@ def test_produce_site_plan_picks_ecommerce_lite_on_commerce_signal(monkeypatch):
     result = produce_site_plan(brief, run_id="test-run-2")
 
     assert result.site_plan["scaffoldId"] == "ecommerce-lite"
-    assert result.site_plan["starterId"] == "marketing-base", (
-        "Sprint 2B uses marketing-base as ecommerce-lite's starter until "
-        "commerce-base harmonisation lands."
-    )
+    assert result.site_plan["starterId"] == "commerce-base"
 
 
 @pytest.mark.tooling
