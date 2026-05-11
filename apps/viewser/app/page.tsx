@@ -18,7 +18,7 @@ type RunsApiPayload = {
   error?: string;
 };
 
-type RunsData = {
+type FetchedRunsPayload = {
   nextRuns: RunHistoryItem[];
   nextInputs: ProjectInputOption[];
 };
@@ -28,7 +28,7 @@ type RunsData = {
 // this split the success path runs setState unconditionally even when
 // the effect has been cancelled (component unmount), which races with
 // a fresh effect that has already populated state.
-async function fetchRuns(): Promise<RunsData> {
+async function fetchRuns(): Promise<FetchedRunsPayload> {
   const response = await fetch("/api/runs", { cache: "no-store" });
   const payload = (await response.json()) as RunsApiPayload;
   if (!response.ok || payload.error) {
@@ -48,7 +48,7 @@ export default function Home() {
   const [statusText, setStatusText] = useState("Laddar runs och project inputs...");
   const [building, setBuilding] = useState(false);
 
-  function applyRunsData({ nextRuns, nextInputs }: RunsData) {
+  function applyRunsData({ nextRuns, nextInputs }: FetchedRunsPayload) {
     setRuns(nextRuns);
     setProjectInputs(nextInputs);
     if (!selectedRunId && nextRuns.length > 0) {

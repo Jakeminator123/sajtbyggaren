@@ -160,6 +160,7 @@ COMMON_WORDS = {
     "BuildModelUsage", "FilesPayload", "RouteContext",
     "ProjectInputInfo", "ProjectInputOption", "ProjectInputPicker", "ProjectInputPickerProps",
     "RunMeta", "RunHistory", "RunHistoryItem", "RunHistoryProps", "RunsApiPayload",
+    "FetchedRunsPayload",
     "ScrollArea", "ScrollAreaPrimitive", "ScrollBar",
     "StackblitzFileMap",
     "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
