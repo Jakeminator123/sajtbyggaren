@@ -1,45 +1,44 @@
 # commerce-base
 
-Specialstarter för `ecommerce-lite`-scaffolden. Hög-prestanda e-handel med Server Components.
+Specialstarter för `ecommerce-lite`-scaffolden. Basen är importerad från
+`vercel/commerce` och harmoniserad för Sajtbyggaren.
 
 ## Status
 
-Tom. Operatör har laddat ned ZIP - väntar på unzip + harmonisering.
+Byggbar basstarter. Verifieras med npm och ska kunna bygga utan riktiga
+Shopify-nycklar.
 
 ## Källa
 
-Fork av [vercel/commerce](https://github.com/vercel/commerce).
+Upstream: [vercel/commerce](https://github.com/vercel/commerce)
 
-## Setup-instruktioner
+Pinned commit: `1df2cf6f6c935f4782eed27351fa18f276917a4d`
 
-1. Unzippa det nedladdade arkivet till `data/starters/commerce-base/`
-2. Ta bort `.git/` från den unzippade mappen
-3. Verifiera build:
-   ```powershell
-   cd data/starters/commerce-base
-   npm install
-   npm run build
-   ```
-4. Harmonisera (se `data/starters/README.md`)
+Upstream-runtime-branding rensad: WelcomeToast-komponenten, Vercel
+Deploy-knappen i footern, "View the source"-länken till
+`github.com/vercel/commerce` och "Created by Vercel"-noten är borttagna
+så startern är ett neutralt basprojekt. Akademisk attribution till
+upstream lever kvar i denna README och i `license.md` enligt
+upstream-licensens villkor.
 
-## Krav på harmonisering
+## Kommandon
 
-`vercel/commerce` ger oss:
-- Next.js (vilken version operatör behöver verifiera vid unzip)
-- Tailwind
-- App Router + RSC
-- Shopify-adapter i `lib/shopify`
+```powershell
+cd data/starters/commerce-base
+npm install
+npm run build
+npm run lint
+```
 
-Det vi måste göra:
-- Uppgradera till Next.js 16 om behövs
-- Lägg till shadcn/ui via `npx shadcn@latest init` (templaten levereras inte med shadcn enligt Vercel-listningen)
-- Säkerställ TypeScript strict
-- Ta bort hårdkodad copy
-- Behåll `lib/shopify` men dokumentera den som **bytbar** via en hard Dossier (kan ersättas med Medusa, BigCommerce, egen JSON, Airtable)
+## Shopify-adapter
 
-## Adaptermönster
+Shopify finns kvar som bytbar adapter under `lib/shopify`. Den är valfri:
+tomma Shopify-värden i `.env.example` ska fortfarande ge en byggbar bas.
+När adaptern aktiveras måste `SHOPIFY_STORE_DOMAIN` och
+`SHOPIFY_STOREFRONT_ACCESS_TOKEN` sättas tillsammans.
 
-Codegen ska kunna byta provider via `lib/<provider>.ts` med samma interface. Standard: Shopify. Kan bytas via hard Dossiers som `commerce-shopify`, `commerce-medusa`, etc.
+Auth, databas, betalning, checkout och CMS-koppling ingår inte som krav i
+basen. Sådana integrationer ska komma via hard Dossiers.
 
 ## Scaffolds som använder denna bas
 
@@ -47,5 +46,7 @@ Codegen ska kunna byta provider via `lib/<provider>.ts` med samma interface. Sta
 
 ## Förbjudna ändringar
 
-- Ta bort `lib/<provider>` adapter-laget (vi vill kunna byta backend)
-- Hårdkoda Shopify-anrop utanför `lib/shopify`
+- Lägg inte riktiga `.env`-filer i startern.
+- Kräv inte auth, databas, betalning, CMS eller Shopify-env för build.
+- Hårdkoda inte Shopify-anrop utanför adapterlagret under `lib/shopify`.
+- Gör inte denna bas till en färdig kundsajt med kundspecifik copy.

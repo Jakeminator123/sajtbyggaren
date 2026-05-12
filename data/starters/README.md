@@ -10,7 +10,7 @@ Reviewerns rekommendation: **fem starters täcker våra 14 scaffolds**. Se ADR 0
 |----|------|-------|--------|
 | `marketing-base` | 9 av 14 scaffolds (local-service-business, professional-services, restaurant-hospitality, clinic-healthcare, real-estate, nonprofit-community, event-campaign, app-landing, consultant-expert) | Egen bas via `create-next-app` + `shadcn init` | Klar, build verifierad |
 | `saas-base` | `saas-product` | Fork av [vercel/platforms](https://github.com/vercel/platforms) | Mapp finns, kod saknas |
-| `commerce-base` | `ecommerce-lite` | Fork av [vercel/commerce](https://github.com/vercel/commerce) | Mapp finns, kod saknas |
+| `commerce-base` | `ecommerce-lite` | Fork av [vercel/commerce](https://github.com/vercel/commerce) | Vendor-import klar (2026-05-11, upstream `1df2cf6`); bygger lokalt; runtime-mapping pausad tills B13/route-emission löst (ADR 0018) |
 | `portfolio-base` | `portfolio-creator`, `agency-studio` | Fork av [vercel/examples → solutions/blog](https://github.com/vercel/examples/tree/main/solutions/blog) | Mapp finns, kod saknas |
 | `docs-base` | `course-education` | Fork av [shuding/nextra](https://github.com/shuding/nextra) | Mapp finns, kod saknas |
 
