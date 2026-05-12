@@ -14,6 +14,13 @@ Upstream: [vercel/commerce](https://github.com/vercel/commerce)
 
 Pinned commit: `1df2cf6f6c935f4782eed27351fa18f276917a4d`
 
+Upstream-runtime-branding rensad: WelcomeToast-komponenten, Vercel
+Deploy-knappen i footern, "View the source"-länken till
+`github.com/vercel/commerce` och "Created by Vercel"-noten är borttagna
+så startern är ett neutralt basprojekt. Akademisk attribution till
+upstream lever kvar i denna README och i `license.md` enligt
+upstream-licensens villkor.
+
 ## Kommandon
 
 ```powershell
