@@ -86,30 +86,57 @@ Format per bugg:
   `packages/generation/build/` när ramverket växer. (Sprint 2B audit-fix
   uppdaterade importgränserna så planning/brief/artifacts-importer inte
   längre bryter policyn, men den större arkitektur-skulden kvarstår.)
-- **`B20` Låg** (öppen 2026-05-08) - `data/starters/commerce-base/`
-  innehåller bara en README och en oharmoniserad `commerce-main.zip` (kopia
-  av `vercel/commerce`). Ecommerce-lite-scaffolden (Sprint 2B) använder
-  `marketing-base` som starter tills commerce-base är harmoniserad: Next 16,
-  shadcn/ui, TypeScript strict, npm-lock istället för pnpm-lock, och
-  Shopify-integrationen flyttad ut till en hard Dossier (planerat
-  `commerce-shopify` per `capability-map.v1.json`). Naturlig fix: separat
-  starter-harmoniserings-sprint som packar upp zipen, kör Next-codemods,
-  rensar copy och bryter ut produkt-grid/cart/checkout till soft- och
-  hard-Dossiers. Tills dess är scaffold + starter avsiktligt frikopplade -
-  `produce_site_plan` mappar `ecommerce-lite -> marketing-base` via
-  `SCAFFOLD_TO_STARTER`-konstanten i `packages/generation/planning/plan.py`.
+- **`B20` Låg** (öppen 2026-05-08, status: **vendor done, activation
+  blocked by B13 route-emission**) - status uppdaterad 2026-05-12.
+
+  **Steg 1 (vendor) landad i PR #16 commit `4b4c3af`:**
+  `data/starters/commerce-base/` är nu vendoriserad och harmoniserad
+  från `vercel/commerce` upstream commit
+  `1df2cf6f6c935f4782eed27351fa18f276917a4d`. Hårda krav uppfyllda
+  enligt `data/starters/README.md`: Next.js 16, TypeScript strict,
+  Tailwind 4, shadcn-konfiguration, `package-lock.json`, ESLint flat
+  + Prettier, ingen `.env`. `npm ci` + `npm run build` + `npm run lint`
+  gröna lokalt; Shopify-anrop guard:ade så builden inte kräver
+  Shopify-env. Se [ADR
+  0018](../governance/decisions/0018-b20-commerce-base-harmonisering.md).
+
+  **Steg 2 (mapping-flipp) pausad — blockerad av B13:** ett tidigt
+  försök att flippa runtime-mappningen i samma PR (commit `58c5e63`,
+  reverterad i `a3d4828`) avslöjade att `scripts/build_site.py` är
+  hårdkodad mot `local-service-business`-routes på fyra nivåer
+  (`_nav_items()`, hardcoded `/tjanster`-CTA i `render_home`,
+  `write_pages()`, avsaknad av `render_products`). Ad-hoc
+  `ecommerce-lite`-generation gav Quality Gate `status=degraded` med
+  route-scan failure `"/produkter -> app\produkter\page.tsx
+  (saknas)"`. `packages/generation/codegen/codegen.py` är dessutom
+  scope-låst till `marketing-base` (ADR 0017), så ecommerce-lite kan
+  inte heller köra real `codegenModel`. Tills detta är löst mappar
+  `produce_site_plan` fortfarande `ecommerce-lite -> marketing-base`
+  via `SCAFFOLD_TO_STARTER`-konstanten i
+  `packages/generation/planning/plan.py`, och raden i
+  `data/starters/README.md` mappnings-blocket står kvar med
+  `(B20: temporary; ...)`-noten.
+
+  **Nästa PR (16b / B13 route-emission):** måste antingen refaktorera
+  `scripts/build_site.py` så page-emission drivs av scaffolds
+  `routes.json` per scaffold (nya renderers för product-grid,
+  products-intro, shop-cta), eller utvidga `codegenModel`-scope till
+  ecommerce-lite + commerce-base (kräver ny ADR ovanpå ADR 0017).
+  Först därefter kan mapping-flippen göras säkert.
 
   Filer som hör till detta spår och som mainline-arbete inte ska röra
   så länge en feature-agent jobbar på B20 (se branch-discipline.md
   "Parallella agenter"):
 
   - `data/starters/commerce-base/` (allt under)
-  - `data/starters/README.md` (mappnings-blocket)
+  - `data/starters/README.md` (mappnings-blocket + commerce-base Status-rad)
   - `packages/generation/planning/plan.py` (`SCAFFOLD_TO_STARTER`)
   - `tests/test_starter_scaffold_mapping.py`
+  - `scripts/build_site.py` (för 16b/B13-spåret)
+  - `packages/generation/codegen/codegen.py` (om scope utvidgas)
 
   Review-checklist när B20 stängs (för cloud-reviewer eller operatör
-  som signerar av PR):
+  som signerar av PR 16b):
 
   1. `data/starters/commerce-base/` har faktisk starter-kod (åtminstone
      `package.json`, `app/`-mapp, `components/`, lockfil).
@@ -133,7 +160,9 @@ Format per bugg:
   8. `python scripts/build_site.py --dossier <ecommerce-input>` (eller
      närmaste motsvarande dossier-exempel som plockar
      `ecommerce-lite`) producerar `build-result.json` status=ok och
-     `quality-result.json` status=ok.
+     `quality-result.json` status=ok. Specifikt: `app/produkter/page.tsx`
+     emitteras, `app/tjanster/page.tsx` emitteras INTE för ecommerce-
+     lite-scaffolden.
   9. Denna B20-post flyttas till "Stängda - regression-test säkrar
      fixet"-avsnittet med datum + fix-SHA.
 
