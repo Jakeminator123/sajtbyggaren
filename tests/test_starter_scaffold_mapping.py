@@ -3,7 +3,7 @@
 ``packages.generation.planning.SCAFFOLD_TO_STARTER`` is the runtime
 mapping the planner uses to decide which Starter a chosen Scaffold runs
 on. It is a hand-maintained Python dict today (see ADR 0014 and the
-historical commerce-base hold described in docs/known-issues.md). The
+known commerce-base hold described in docs/known-issues.md). The
 canonical operator-facing source is the table + machine-readable block
 in ``data/starters/README.md``.
 
@@ -24,11 +24,11 @@ These tests close both gaps:
    commerce-base hold).
 3. Every Starter ID referenced in the canonical mapping must exist on
    disk under ``data/starters/<id>/`` with a ``README.md``.
-4. Any future temporary commerce-base hold (ecommerce-lite mapped away
-   from commerce-base) must be marked with the literal token B20 on its
-   mapping line so reviewers can distinguish intentional temporary
-   routing from a regression. When ecommerce-lite maps to commerce-base,
-   the guard returns immediately.
+4. The known commerce-base hold (ecommerce-lite -> marketing-base
+   instead of commerce-base) must be marked with the literal token
+   B20 on its mapping line so reviewers can distinguish the
+   intentional temporary routing from a regression. The marker token
+   itself is documented in docs/known-issues.md as the bug ID.
 
 Closes the test gap captured in the Starter/Dossier Hygiene 1A audit
 (scope 3).
@@ -195,7 +195,7 @@ def test_canonical_mapping_starters_exist_on_disk() -> None:
 
 @pytest.mark.governance
 def test_b20_temporary_mapping_is_explicit() -> None:
-    """Any B20-style drift (ecommerce-lite -> another starter, instead
+    """The known B20 drift (ecommerce-lite -> marketing-base, instead
     of the canonical commerce-base) must be flagged on its mapping
     line. Without the marker reviewers cannot tell intentional
     temporary routing from a real regression.

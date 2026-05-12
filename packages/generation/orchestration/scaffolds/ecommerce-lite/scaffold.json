@@ -3,7 +3,7 @@
   "id": "ecommerce-lite",
   "version": "0.1.0",
   "label": "Ecommerce Lite",
-  "description": "Minimal product-focused storefront for small shops, premium single-brand sites and product catalogues. Runs on the harmonised commerce-base starter. Built-in commerce features (cart, checkout, payments) remain hard Dossier capabilities and are intentionally absent from the scaffold baseline.",
+  "description": "Minimal product-focused storefront for small shops, premium single-brand sites and product catalogues. Sprint 2B baseline: scaffold + variant only, runs on the marketing-base starter until commerce-base harmonisation lands. Built-in commerce features (cart, checkout, payments) are scheduled as hard Dossiers in a future sprint and intentionally absent here.",
   "buildIntent": ["website"],
   "primaryJobs": [
     "introduce the brand",

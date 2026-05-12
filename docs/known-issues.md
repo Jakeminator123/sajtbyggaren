@@ -86,19 +86,30 @@ Format per bugg:
   `packages/generation/build/` när ramverket växer. (Sprint 2B audit-fix
   uppdaterade importgränserna så planning/brief/artifacts-importer inte
   längre bryter policyn, men den större arkitektur-skulden kvarstår.)
-## Stängda - regression-test säkrar fixet
+- **`B20` Låg** (öppen 2026-05-08) - `data/starters/commerce-base/`
+  innehåller bara en README och en oharmoniserad `commerce-main.zip` (kopia
+  av `vercel/commerce`). Ecommerce-lite-scaffolden (Sprint 2B) använder
+  `marketing-base` som starter tills commerce-base är harmoniserad: Next 16,
+  shadcn/ui, TypeScript strict, npm-lock istället för pnpm-lock, och
+  Shopify-integrationen flyttad ut till en hard Dossier (planerat
+  `commerce-shopify` per `capability-map.v1.json`). Naturlig fix: separat
+  starter-harmoniserings-sprint som packar upp zipen, kör Next-codemods,
+  rensar copy och bryter ut produkt-grid/cart/checkout till soft- och
+  hard-Dossiers. Tills dess är scaffold + starter avsiktligt frikopplade -
+  `produce_site_plan` mappar `ecommerce-lite -> marketing-base` via
+  `SCAFFOLD_TO_STARTER`-konstanten i `packages/generation/planning/plan.py`.
 
-- **`B20` Låg** (stängd 2026-05-11, commerce-base harmonisering) -
-  `data/starters/commerce-base/` innehåller nu ett harmoniserat basprojekt
-  importerat från `vercel/commerce` commit
-  `1df2cf6f6c935f4782eed27351fa18f276917a4d`. Startern använder Next.js 16,
-  TypeScript strict, Tailwind 4, shadcn-konfiguration, npm-lockfil, ESLint
-  flat config och Prettier. Shopify finns kvar som valfri adapter under
-  `lib/shopify` och no-env build returnerar tom live-data i stället för att
-  kräva secrets. `SCAFFOLD_TO_STARTER` mappar nu
-  `ecommerce-lite -> commerce-base`.
+  Filer som hör till detta spår och som mainline-arbete inte ska röra
+  så länge en feature-agent jobbar på B20 (se branch-discipline.md
+  "Parallella agenter"):
 
-  Review-checklist från B20-spåret bevarad:
+  - `data/starters/commerce-base/` (allt under)
+  - `data/starters/README.md` (mappnings-blocket)
+  - `packages/generation/planning/plan.py` (`SCAFFOLD_TO_STARTER`)
+  - `tests/test_starter_scaffold_mapping.py`
+
+  Review-checklist när B20 stängs (för cloud-reviewer eller operatör
+  som signerar av PR):
 
   1. `data/starters/commerce-base/` har faktisk starter-kod (åtminstone
      `package.json`, `app/`-mapp, `components/`, lockfil).
@@ -121,9 +132,12 @@ Format per bugg:
      stänger sig av automatiskt när mappningen flippas.
   8. `python scripts/build_site.py --dossier <ecommerce-input>` (eller
      närmaste motsvarande dossier-exempel som plockar
-     `ecommerce-lite`) ska produceras grönt när builderns route-rendering
-     stödjer `ecommerce-lite` fullt ut. I B20 är scope begränsat till
-     starter + mapping, inte Builder UX.
+     `ecommerce-lite`) producerar `build-result.json` status=ok och
+     `quality-result.json` status=ok.
+  9. Denna B20-post flyttas till "Stängda - regression-test säkrar
+     fixet"-avsnittet med datum + fix-SHA.
+
+## Stängda - regression-test säkrar fixet
 
 - **`B43` Medel** (stängd 2026-05-11, post-review-2 audit) -
   `apps/viewser/components/viewer-panel.tsx` success-path-grenen hade

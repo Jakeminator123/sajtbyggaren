@@ -47,10 +47,8 @@ from .models import (
 logger = logging.getLogger("sajtbyggaren.codegen")
 
 # Sprint 3B-next is intentionally limited to marketing-base.
-# B20 harmonised data/starters/commerce-base as a buildable starter, but
-# real codegenModel support still stays scoped to marketing-base until a
-# separate codegen widening sprint confirms e-commerce route semantics.
-# Adding more starters to this set requires:
+# data/starters/commerce-base is unharmonised (B20); other starters
+# are gitkeep-only. Adding more starters to this set requires:
 #   1. The starter to actually exist with content under data/starters/.
 #   2. A separate sprint that confirms codegenModel can reason about
 #      the starter's structure (e.g. e-commerce-specific routes).
