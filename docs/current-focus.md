@@ -21,7 +21,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `2aafa41` (2026-05-13, post-PR #21 + fem mainline-steward-pushar till och med agentflöde/main-backup-formalisering `2aafa41`; alla guards gröna lokalt; ingen öppen PR)
+Last verified state: `4d5b4de` (2026-05-14, post-Prompt-till-sajt MVP v1: fri prompt i Viewser → minimal Project Input via briefModel → `scripts/build_site.py` → runId i Run History. backup-6 från `504befc` pushad till origin före sprintstart. Alla guards gröna lokalt; ingen öppen PR)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -30,38 +30,53 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `2aafa41` efter PR #21 (lucide-react i commerce-base
-och ADR 0020, mergad `04fc2fa` 2026-05-13 19:55 UTC) plus fem
-mainline-steward-pushar samma kväll. Full `npm run build` mot
-`.generated/atelje-bird/` (eller någon annan ecommerce-lite-
-genererad sajt) är nu grön: 11 statiska sidor inkl `/produkter`
-plus commerce-base:s egna dynamiska routes prerenderas utan
-`Module not found`-fel. Föregående PR #20 (B20 step 2 mapping-flip
-+ ADR 0019) squash-mergades samma dag 19:33 UTC och aktiverade
+`main` är vid `4d5b4de` efter Prompt-till-sajt MVP v1 (Builder-
+sprint 2026-05-13/14, Scout-RO-godkänd). Operatören kan nu skriva
+en fri prompt i Viewser, helpern (`scripts/prompt_to_project_input.py`)
+kör briefModel, mappar Site Brief deterministiskt mot en schema-valid
+Project Input, skriver den till `data/prompt-inputs/<siteId>.project-input.json`
++ sidecar `<siteId>.meta.json` (projectId/version/originalPrompt/
+briefSource), och `apps/viewser/app/api/prompt/route.ts` triggar
+`runBuild` med dossier-path-override. RunHistory uppdateras via
+samma `fetchRuns`-loop som `/api/build`. backup-6 från `504befc`
+ligger på origin som fallback.
+
+Föregående: PR #21 (lucide-react i commerce-base + ADR 0020,
+mergad `04fc2fa` 2026-05-13 19:55 UTC) gjorde full `npm run build`
+mot `.generated/atelje-bird/` grön (11 statiska sidor + commerce-
+base:s dynamiska routes utan `Module not found`). PR #20 (B20 step 2
+mapping-flip + ADR 0019, samma dag 19:33 UTC) aktiverade
 `SCAFFOLD_TO_STARTER["ecommerce-lite"] = "commerce-base"`. Real
 codegenModel-scope är fortsatt låst till `marketing-base` per
 ADR 0017 (ingen utvidgning beslutad).
 
-Mainline-steward-pushar efter PR #21 (alla pure docs/governance,
-ingen produktkod):
+Prompt-till-sajt MVP v1-pushen (2026-05-14):
 
-- `0db29e6` — `.cursorignore` ignorerar nu hela `referens/` (inte
-  bara binärerna). Operatörspreferens; mappen finns kvar på disk
-  så docs-länkar funkar.
-- `06a6047` — `docs/handoff.md` refreshad till post-PR-#20/#21-
-  state, ny "Bugbot-loop på PR"-sektion med GraphQL-tolkning,
-  pre-push checklist utökad med ADR-krav och blocker-vs-followup-
-  åtskillnad.
-- `09c53b0` — `scripts/check_term_coverage.py:COMMON_WORDS`
-  allowlistar `Cursor Bugbot`, `SUCCESS`, `FAILURE`, `COMPLETED`,
-  `NEUTRAL`, `Module not found` (citerade Bugbot/GitHub-status-
-  strängar och Node-felmeddelanden i handoff.md, inte domänbegrepp).
-- `ebc9c09` — `docs/current-focus.md` uppdaterar Queue/Next action
-  efter RO-audit så Prompt-till-sajt-loopen i Viewser är prio 1.
-- `2aafa41` — agentflödet formaliseras: tre fasta roller
-  (`Scout-agent`, `Builder-agent`, `Steward-agent`), sprintarbete på
-  `main` med `backup-N` först, och Scout-agenten som RO-bugggranskare
-  före direktpush.
+- `afaa8a8` — `docs(workflow): formalize progress estimate + scout
+  model level`. Operatörs-supplied: Builder slutrapport ska ge en
+  grov progress-procent + bedömning av nästa etapp; Scout föreslår
+  modell-/insatsnivå 1-10; Steward verifierar att current-focus +
+  handoff fortfarande pekar rätt.
+- `4d5b4de` — `feat(viewser): prompt-till-sajt MVP v1`. Ny
+  `scripts/prompt_to_project_input.py` (briefModel + Site Brief →
+  schema-valid Project Input + sidecar meta i `data/prompt-inputs/`),
+  ny `/api/prompt` route med localhost-guard + Zod-payload (1-4000
+  tecken), ny PromptBuilder-UI-panel, `runBuild` får
+  dossier-path-override bakom ALLOWED_DOSSIER_ROOTS-whitelist
+  (examples/ + data/prompt-inputs/), 11 nya helper-tester + 2 nya
+  viewser-guards. Ingen ADR/policy-bump (sidecar-meta undviker
+  project-input.schema.json-migration).
+
+Mainline-steward-pushar efter PR #21 (pure docs/governance):
+
+- `0db29e6` — `.cursorignore` ignorerar nu hela `referens/`.
+- `06a6047` — `docs/handoff.md` refreshad till post-PR-#20/#21-state.
+- `09c53b0` — `check_term_coverage.py` allowlistar Bugbot/GitHub-
+  statussträngar.
+- `ebc9c09` — `current-focus.md` Queue/Next action efter RO-audit.
+- `2aafa41` — agentflödet formaliseras (3 fasta roller +
+  backup-N-disciplin + Scout som RO-bugggranskare).
+- `504befc` — `agent-prompts.md` flyttad in i `docs/`.
 
 Mainline-steward-pushar som också ligger på main:
 - `bba8e36` - ny `bugbot-pr-loop`-regel (8-min poll + 10-iter
@@ -74,54 +89,55 @@ Mainline-steward-pushar som också ligger på main:
   `packages/generation/build/` (B13a-destinationen) och blockar
   `.cursor/mcp.json`.
 
-Branches städade 2026-05-13: feat/b20-step-2-mapping-flip raderad
-lokalt + remote efter merge. Kvar lokalt: `main`, `backup-1`,
-`backup-4`, `backup-5`. Remote har även äldre `backup-2` och
-`backup-3`. `frontend/christopher-import` (PR #17, stängd) ska inte
-röras i nästa sprint.
+Branches städade 2026-05-13/14: feat/b20-step-2-mapping-flip raderad
+lokalt + remote efter merge. `backup-6` (från `504befc`) skapad och
+pushad till origin före Prompt-till-sajt-sprinten. Kvar lokalt:
+`main`, `backup-1`, `backup-4`, `backup-5`, `backup-6`. Remote har
+även äldre `backup-2` och `backup-3`. `frontend/christopher-import`
+(PR #17, stängd) ska inte röras i nästa sprint.
 
 ## Current active sprint
 
-Ingen pågående produktimplementation. Sprintstart ska skapa nästa
+Ingen pågående produktimplementation. Prompt-till-sajt MVP v1 är
+klar; nästa Builder-sprint blir "Follow-up prompt → ny version"
+(läs `data/prompt-inputs/<siteId>.meta.json`, bumpa version,
+generera ny build från följdprompt). Sprintstart ska skapa nästa
 `backup-N` från synkad `main` och sedan fortsätta arbetet på `main`.
-Nästa roll är **Builder-agent** enligt
-[`docs/agent-prompts.md`](agent-prompts.md).
 
 ## Next action - direktiv till nästa agent
 
-**Prompt-till-sajt-loopen i Viewser** (RO-audit-rekommendation
-2026-05-13). B20 + lucide-fix:en är stängda, ingen aktiv blocker,
-och RO-audit identifierar att den största produktluckan nu är
-"Prompt i Viewser → riktig sajt: saknas". Övriga kedjor finns
-delvis (se Queue prio 1 för läget).
+**Steward-pass först:** uppdatera `docs/handoff.md` så det
+reflekterar den nya promptdrivna loopen (Prompt-till-sajt MVP v1
+landad `4d5b4de`). Överväg också om den experimentella
+chat-panel-prompten i `apps/viewser/components/chat-panel.tsx`
+ska markeras deprecated eller tas bort - den var tänkt som
+platshållare för exakt det flöde som nu är byggt; den nya
+`PromptBuilder` är canonical promptyta. Builder lät den ligga
+för scope-disciplin under MVP v1-sprinten.
 
-Konkret målbild: operatör skriver fri prompt i Viewser-UI → en
-helper konverterar till minimal Project Input → `build_site.py`
-körs (i bakgrunden eller via subprocess på samma sätt som
-`apps/viewser/lib/build-runner.ts` redan gör för Project-Input-
-flödet) → resulterande `runId` dyker upp i `<RunHistory>` och
-kan inspekteras i `<RunDetailsPanel>`.
+**Sedan Builder-sprint: "Follow-up prompt → ny version".**
+Konkret målbild: operatör väljer en befintlig run (eller siteId
+under `data/prompt-inputs/`) → skriver en följdprompt → helpern
+läser sidecar-meta, bumpar `version`, genererar ny Project Input
+(diff-applicerad eller helt ny baserad på följdpromptens
+intentioner) → `build_site.py` körs → ny runId med samma
+`projectId` syns i Run History.
 
 Sannolikt scope (verifiera i sprint-start):
 
-- Ny `apps/viewser/`-route (t.ex. `app/prompt/page.tsx` +
-  `app/api/prompt/route.ts`).
-- Ny prompt-till-Project-Input-helper. Två alternativ:
-  återanvänd `briefModel` direkt (Phase 1 redan gör prompt →
-  Site Brief; sedan en deterministisk Site Brief → minimal
-  Project Input-mappning), eller en ny tunn helper i
-  `packages/generation/brief/` om den existerande shape:n inte
-  räcker.
-- Eventuell `examples/`-mappning så `assertSafeSiteId`-mönstret
-  i `apps/viewser/lib/runs.ts` fortfarande håller path-escape-
-  risken borta (siteId blir genererat i bakvägen, så validering
-  måste ske före file write).
+- Utöka `scripts/prompt_to_project_input.py` (eller lägg
+  syskon-script `scripts/follow_up_prompt.py`) som tar
+  `--project-id` + `--prompt` och bumpar `meta.version`.
+- Ny `/api/prompt/follow-up`-route (eller utökad `/api/prompt`
+  med `mode: "init" | "followup"`).
+- UI-utökning av `PromptBuilder` så operator kan välja
+  "ny sajt" vs "följdprompt på senaste run".
+- Tester som låser version-bump och projectId-stabilitet
+  över N follow-ups.
 
-Arbeta på `main` per `governance/rules/branch-discipline.md`, men skapa
-först nästa `backup-N` från synkad `main`. Detta rör `apps/viewser/**`
-och troligen `packages/generation/`-gränsen, så håll sprintscope smalt och
-låt Scout-agenten göra RO-bugggranskning före push. ADR sannolikt inte krävs
-om ingen policy/schema rörs, men kontrollera.
+ADR sannolikt inte krävs i denna sprint heller om sidecar-meta
+fortsatt håller. Om det visar sig att Project Input-schemat
+behöver ett `projectId`/`version`-fält - då krävs ADR.
 
 Övrig queue (B13a, write_pages-refactor, BO2/BO4) kvarstår men
 är inte produkt-blockerande just nu.
@@ -153,7 +169,8 @@ Innan `git push origin main`:
 ## Blocked items
 
 (Inga aktiva blockers just nu — B20 + lucide-fix mergade,
-sanity-rundan grön mot `04fc2fa`. Nästa val är operatörsdrivet,
+sanity-rundan grön mot `04fc2fa`, Prompt-till-sajt MVP v1
+mergad direktpush `4d5b4de`. Nästa val är operatörsdrivet,
 se "Next action" + "Queue".)
 
 ## Do not start yet
@@ -175,25 +192,27 @@ se "Next action" + "Queue".)
 
 ## Queue
 
-1. **Prompt-till-sajt-loopen i Viewser** (RO-audit-rekommendation
-   2026-05-13: nästa konkreta produktsteg). Kedjeläget:
-   - Fri prompt → artefakter: finns delvis via
-     `scripts/dev_generate.py`.
-   - Project Input → riktig sajt: finns via
-     `scripts/build_site.py`.
-   - **Prompt i Viewser → riktig sajt: saknas** ← nästa steg.
-   - Follow-up prompt → ny version: saknas.
+1. **Follow-up prompt → ny version** (nästa konkreta produktsteg
+   efter Prompt-till-sajt MVP v1, 2026-05-14). Kedjeläget:
+   - Fri prompt → artefakter: finns via `scripts/dev_generate.py`.
+   - Project Input → riktig sajt: finns via `scripts/build_site.py`.
+   - Prompt i Viewser → riktig sajt: **finns** via Prompt-till-sajt
+     MVP v1 (`/api/prompt`, `PromptBuilder`, helper i
+     `scripts/prompt_to_project_input.py`).
+   - **Follow-up prompt → ny version: saknas** ← nästa steg.
    - Lokal preview: finns manuellt, inte produktigt kopplat.
-   Konkret målbild: prompt → minimal Project Input → build_site →
-   runId i Viewser. Egen sprint på `main` med ny `backup-N` först. Sannolikt
-   kräver det en ny `apps/viewser/`-route + en ny
-   prompt-till-Project-Input-helper i `packages/generation/brief/`
-   eller liknande.
-2. B13a arkitektur-flytt (egen sprint, kräver ADR).
-3. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
+   Sidecar-meta `data/prompt-inputs/<siteId>.meta.json` har redan
+   `projectId` + `version` så ingen schema-migration behövs i
+   första iterationen. Se "Next action" för scope-skiss.
+2. **Steward: deprecate eller ta bort experimentella chat-prompten**
+   i `apps/viewser/components/chat-panel.tsx`. PromptBuilder är
+   nu canonical promptyta. Builder lät den ligga för
+   scope-disciplin; Steward kan rensa.
+3. B13a arkitektur-flytt (egen sprint, kräver ADR).
+4. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
    lucide-typen av starter-vs-codegen-konflikt; ADR 0020:s
    "INTE beslutar"-sektion).
-4. BO2/BO4 backoffice-skuld (round-1-skuld).
+5. BO2/BO4 backoffice-skuld (round-1-skuld).
 
 ## Loopen vi följer
 
