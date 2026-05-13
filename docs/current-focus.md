@@ -21,7 +21,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `4d5b4de` (2026-05-14, post-Prompt-till-sajt MVP v1: fri prompt i Viewser → minimal Project Input via briefModel → `scripts/build_site.py` → runId i Run History. backup-6 från `504befc` pushad till origin före sprintstart. Alla guards gröna lokalt; ingen öppen PR)
+Last verified state: `c6e2f1d` (2026-05-14, post-Prompt-till-sajt MVP v1 + review-hotfix: prompt-helpern faller nu tillbaka till mock Site Brief om `extract_site_brief` eller `site_brief_to_artifact` kastar. backup-6 från `504befc` pushad till origin före sprintstart. Alla guards gröna lokalt; ingen öppen PR)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -30,8 +30,9 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `4d5b4de` efter Prompt-till-sajt MVP v1 (Builder-
-sprint 2026-05-13/14, Scout-RO-godkänd). Operatören kan nu skriva
+`main` är vid `c6e2f1d` efter Prompt-till-sajt MVP v1 (Builder-
+sprint 2026-05-13/14, Scout-RO-godkänd) plus review-hotfix för
+prompt-helperns brief-fallback. Operatören kan nu skriva
 en fri prompt i Viewser, helpern (`scripts/prompt_to_project_input.py`)
 kör briefModel, mappar Site Brief deterministiskt mot en schema-valid
 Project Input, skriver den till `data/prompt-inputs/<siteId>.project-input.json`
@@ -66,6 +67,11 @@ Prompt-till-sajt MVP v1-pushen (2026-05-14):
   (examples/ + data/prompt-inputs/), 11 nya helper-tester + 2 nya
   viewser-guards. Ingen ADR/policy-bump (sidecar-meta undviker
   project-input.schema.json-migration).
+- `c6e2f1d` — `fix(viewser): fall back when prompt brief extraction
+  raises`. Review-hotfix: `extract_site_brief` och
+  `site_brief_to_artifact` ligger nu i fallback-try/catch så
+  promptflödet skriver schema-valid mock Project Input även vid
+  oväntade LLM-/serialiseringsfel. Regressions täcker båda grenarna.
 
 Mainline-steward-pushar efter PR #21 (pure docs/governance):
 
