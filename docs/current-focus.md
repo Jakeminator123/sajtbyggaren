@@ -19,9 +19,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-## Last verified
-
-Last verified state: `75c980b` (2026-05-13, B20 step 2 mapping-flip mergad via PR #20 + ADR 0019; bugbot-pr-loop-regel tillagd `bba8e36`; branch `feat/b20-step-2-mapping-flip` städad lokalt + remote)
+Last verified state: `04fc2fa` (2026-05-13, lucide-react fix mergad via PR #21 + ADR 0020; full `npm run build` på `.generated/atelje-bird/` är nu grön; branch `feat/commerce-base-lucide-react` städad lokalt + remote)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -30,15 +28,16 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `75c980b` efter att PR #20 (B20 step 2 mapping-flip
-+ ADR 0019) squash-mergades 2026-05-13 19:33 UTC.
-`SCAFFOLD_TO_STARTER["ecommerce-lite"]` är nu `commerce-base`;
-ecommerce-lite-fixturen `examples/atelje-bird.project-input.json`
-producerar `app/produkter/page.tsx` (inte `/tjanster`) genom
-`source=deterministic-v1` codegen och passerar Quality Gate
-route-scan + policy-compliance med `--skip-build`. Real
-codegenModel-scope är fortsatt låst till `marketing-base` per
-ADR 0017 (ingen utvidgning beslutad).
+`main` är vid `04fc2fa` efter att PR #21 (lucide-react i
+commerce-base + ADR 0020) squash-mergades 2026-05-13 19:55 UTC.
+Full `npm run build` mot `.generated/atelje-bird/` (eller någon
+annan ecommerce-lite-genererad sajt) är nu grön: 11 statiska
+sidor inkl `/produkter` plus commerce-base:s egna dynamiska
+routes prerenderas utan `Module not found`-fel. Föregående PR
+#20 (B20 step 2 mapping-flip + ADR 0019) squash-mergades samma
+dag 19:33 UTC och aktiverade `SCAFFOLD_TO_STARTER["ecommerce-lite"]
+= "commerce-base"`. Real codegenModel-scope är fortsatt låst
+till `marketing-base` per ADR 0017 (ingen utvidgning beslutad).
 
 Mainline-steward-pushar som också ligger på main:
 - `bba8e36` - ny `bugbot-pr-loop`-regel (8-min poll + 10-iter
@@ -62,38 +61,25 @@ Ingen pågående feature-PR.
 
 ## Next action - direktiv till nästa agent
 
-**Sanity-runda på `main` efter B20-merge + (om operatör vill)
-plocka lucide-react-konflikten som ny B-ID.**
+**Plocka från queue.** B20 + lucide-fix:en är stängda, ingen
+aktiv blocker. Naturliga nästa steg är (i prioriteringsordning):
 
-Sanity-rundan: kör `python scripts/focus_check.py` (ska visa OK
-mot `75c980b`), kör `python scripts/review_check.py` om du vill
-ha hela kedjan på en gång, och verifiera artefakter med
-`python scripts/build_site.py --dossier
-examples/atelje-bird.project-input.json --skip-build` och
-`python scripts/build_site.py --dossier
-examples/painter-palma.project-input.json --skip-build` så att
-ingen scaffold-driven path har drivit.
+1. **B13a arkitektur-flytt**: `scripts/build_site.py` produktlogik
+   till `packages/generation/build/`. Egen sprint, kräver
+   troligen egen ADR eftersom den rör mappgränser i
+   `repo-boundaries.v1.json`. Destinationen pre-allokerad i
+   `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
+2. **`write_pages` icon-bibliotek-agnostisk**: lyfter den
+   underliggande arkitekturskuld som ADR 0020 explicit lämnade
+   öppen. Förebygger att samma lucide-konflikt uppstår igen för
+   en framtida starter som inte använder lucide. Egen sprint.
+3. **Prompt-till-sajt-loopen**: nästa fas i produktarbetet,
+   inte direkt blockerad av något konkret B-ID just nu.
+4. **BO2/BO4 backoffice-skuld**: dataframes -> grupperad +
+   färgad trace-viewer + async/cancellation i
+   `backoffice/views/playground.py`.
 
-Lucide-react-konflikten (introducerad som synlig av PR #20):
-full `npm run build` mot `.generated/atelje-bird/` faller på
-`Module not found: lucide-react` eftersom
-`scripts/build_site.py:write_pages` hardcodar lucide-imports per
-renderer (`render_home`, `render_about`, `render_contact`,
-`render_layout`, `render_products`) men `commerce-base/package.json`
-bara har `@heroicons/react`. Marketing-base har `lucide-react` så
-det syns inte där. Två fix-vägar:
-
-- Lägg `lucide-react` i `commerce-base/package.json` med
-  `package-lock.json`-uppdatering. Snabbast, men starter-doktrinen
-  i `data/starters/README.md` rad 105 säger att nya deps i en
-  starter kräver operatörsgodkännande.
-- Gör `write_pages` icon-bibliotek-agnostisk per starter (mappa
-  ikoner via en starter-config eller använd inline SVG). Bredare
-  refactor av deterministic-v1 codegen.
-
-När operatör har valt väg: lägg upp som nytt B-ID i
-`docs/known-issues.md` och plocka som egen PR enligt
-`governance/rules/branch-discipline.md` + `bugbot-pr-loop.md`.
+Operatör väljer riktning innan agenten startar.
 
 ### Pre-push self-review checklist (lärt från B13b + B20)
 
@@ -122,9 +108,9 @@ Innan `git push` på en feature-branch:
 
 ## Blocked items
 
-(Inga aktiva blockers just nu — B20 step 2 är mergad och
-sanity-rundan är nästa konkreta arbete; lucide-react-konflikten
-väntar på operatörsbeslut om fix-väg.)
+(Inga aktiva blockers just nu — B20 + lucide-fix mergade,
+sanity-rundan grön mot `04fc2fa`. Nästa val är operatörsdrivet,
+se "Next action" + "Queue".)
 
 ## Do not start yet
 
@@ -142,11 +128,12 @@ väntar på operatörsbeslut om fix-väg.)
 
 ## Queue
 
-1. Sanity-runda på `main` efter B20-merge (se "Next action" ovan).
-2. Lucide-react fix-väg när operatör valt riktning (eget B-ID).
-3. B13a arkitektur-flytt (egen sprint, kräver ADR).
-4. Återgå till prompt-till-sajt-loopen eller plocka upp någon av
-   BO2/BO4 (Backoffice-skuld från round 1).
+1. B13a arkitektur-flytt (egen sprint, kräver ADR).
+2. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
+   lucide-typen av starter-vs-codegen-konflikt; ADR 0020:s
+   "INTE beslutar"-sektion).
+3. Prompt-till-sajt-loopen (nästa produktfas).
+4. BO2/BO4 backoffice-skuld (round-1-skuld).
 
 ## Loopen vi följer
 

@@ -94,6 +94,40 @@ Format per bugg:
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B20-followup-lucide` Låg** (stängd 2026-05-13, squash-merge
+  `04fc2fa` via PR #21) - följduppgift på den stängda B20-posten:
+  full `npm run build` mot `.generated/atelje-bird/` (eller någon
+  annan ecommerce-lite-genererad sajt) fallerade med
+  `Module not found: lucide-react` eftersom
+  `scripts/build_site.py:write_pages` hardcodar lucide-imports per
+  renderer men `commerce-base/package.json` bara hade
+  `@heroicons/react`. `marketing-base` har lucide som dep så
+  konflikten var osynlig pre-B20.
+
+  **Fix:** ny [ADR
+  0020](../governance/decisions/0020-commerce-base-lucide-react.md)
+  dokumenterar operatörsgivet dep-godkännande. `lucide-react`
+  ^1.14.0 (matchar marketing-base:s exakta version) tillagd i
+  `data/starters/commerce-base/package.json`;
+  `data/starters/commerce-base/package-lock.json` regenererad via
+  `npm install` (1 added package). `data/starters/commerce-base/
+  README.md` ny sektion "Runtime-deps utöver upstream" som pekar
+  på ADR 0020.
+
+  Verifiering: `cd data/starters/commerce-base && npm run build`
+  grön (13 routes prerendered, Shopify env-skip-loggrad);
+  `cd .generated/atelje-bird && npm install && npm run build`
+  grön (11 statiska sidor inkl `/produkter` plus commerce-base:s
+  egna dynamiska routes); `pytest tests/ -q` 381 passed + 3 skipped;
+  4 guards + ruff gröna; Cursor Bugbot på PR #21 SUCCESS-conclusion
+  (inga inline-fynd).
+
+  Out of scope (architecturskuld kvarstår): `write_pages` är
+  fortfarande hardcoded mot lucide. En framtida starter utan
+  lucide skulle träffa samma konflikt. Spåras i
+  `docs/current-focus.md` Queue som "`write_pages` icon-bibliotek-
+  agnostisk refactor".
+
 - **`B20` Låg** (stängd 2026-05-13, squash-merge `75c980b` via PR #20)
   - aktiverade `ecommerce-lite -> commerce-base`-routingen. Spåret
   hade två steg: step 1 (vendor-import av
@@ -142,18 +176,13 @@ Format per bugg:
   "Show resolved" och alla CI-checks (Cursor Bugbot NEUTRAL,
   governance SUCCESS, GitGuardian SUCCESS) passerade.
 
-  **Known follow-up (öppen, väntar på operatörsval av fix-väg):**
-  full `npm run build` mot `.generated/atelje-bird/` faller på
-  `Module not found: lucide-react` eftersom
-  `scripts/build_site.py:write_pages` hardcodar lucide-imports per
-  renderer (`render_home`, `render_about`, `render_contact`,
-  `render_layout`, `render_products`) men `commerce-base/package.json`
-  bara har `@heroicons/react`. Marketing-base har `lucide-react` så
-  det syns inte där. Inte Shopify-env-relaterat. Påverkar inte
-  `--skip-build`-acceptansen. Spåra ett nytt B-ID när operatör
-  valt fix-väg (lägg `lucide-react` i `commerce-base/package.json`
-  med lockfil-uppdatering, eller gör `write_pages` icon-bibliotek-
-  agnostisk per starter).
+  **Known follow-up (stängd 2026-05-13 via PR #21 + ADR 0020 — se
+  separat post nedan):** lucide-react-konflikten är löst via väg A
+  (lägg dep i commerce-base). Full `npm run build` mot
+  `.generated/atelje-bird/` är nu grön. `write_pages` hardcodar
+  fortfarande lucide-imports vilket lämnar arkitekturskuld för en
+  framtida starter som inte använder lucide; den skulden spåras
+  i `docs/current-focus.md` Queue och i ADR 0020:s "INTE beslutar".
 
 - **`B13b` Låg** (stängd 2026-05-13, squash-merge `fda1464` via PR #19) -
   `scripts/build_site.py:write_pages` var hårdkodad mot
