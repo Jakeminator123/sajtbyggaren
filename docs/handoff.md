@@ -1,10 +1,11 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-13 (kvällssession, post-PR #20 + PR #21)
-**Aktuell HEAD på `main`:** `ebc9c09` (post-mainline-steward-pushar ovanpå `09c53b0`). Kör `git log --oneline -1` för senaste SHA.
+**Datum:** 2026-05-13 (kvällssession, post-PR #20 + PR #21 + agentflöde)
+**Aktuell HEAD på `main`:** `2aafa41` (agentflöde/main-backup-formalisering ovanpå RO-audit Queue update `ebc9c09`). Kör `git log --oneline -1` för senaste SHA.
 **Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
+Färdiga startprompter för Scout/Builder/Steward finns i [`docs/agent-prompts.md`](agent-prompts.md).
 
 ## Branch-policy: var jobbar agenten egentligen?
 
@@ -45,7 +46,7 @@ Tre lager:
 - `backoffice/` + `backend.py` — Streamlit-administration (inte runtime).
 - `packages/` + `apps/` — runtime + kund-UI.
 
-## Vad funkar idag (post-PR #21 merge, `04fc2fa` + post-fixes till `0db29e6`)
+## Vad funkar idag (post-PR #21 merge, `04fc2fa` + post-fixes till `2aafa41`)
 
 ### Governance + guards
 
@@ -73,12 +74,15 @@ Tre lager:
 
 ## Nästa konkreta uppgift
 
-Se `docs/current-focus.md` → **"Next action"**. Kort version: ingen aktiv blocker. Operatör väljer från Queue:
+Se `docs/current-focus.md` → **"Next action"**. Kort version: ingen aktiv blocker. Nästa sprint är:
 
-1. **B13a arkitektur-flytt** — `scripts/build_site.py` produktlogik till `packages/generation/build/`. Egen sprint, kräver troligen egen ADR (rör mappgränser i `repo-boundaries.v1.json`). Destinationen pre-allokerad i `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
-2. **`write_pages` icon-bibliotek-agnostisk refactor** — lyfter den arkitekturskuld som ADR 0020 explicit lämnade öppen. Förebygger att samma lucide-typen av starter-vs-codegen-konflikt uppstår igen för en framtida starter utan lucide.
-3. **Prompt-till-sajt-loopen** — nästa fas i produktarbetet, inte direkt blockerad av något konkret B-ID.
+1. **Prompt-till-sajt-loopen** — fri prompt i Viewser → minimal Project Input → `scripts/build_site.py` → `runId` i Run History / Run Details. Körs av Builder-agent på `main` med ny `backup-N` först och Scout-agentens RO-bugggranskning före push.
+2. **B13a arkitektur-flytt** — `scripts/build_site.py` produktlogik till `packages/generation/build/`. Egen sprint, kräver troligen egen ADR (rör mappgränser i `repo-boundaries.v1.json`). Destinationen pre-allokerad i `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
+3. **`write_pages` icon-bibliotek-agnostisk refactor** — lyfter den arkitekturskuld som ADR 0020 explicit lämnade öppen. Förebygger att samma lucide-typen av starter-vs-codegen-konflikt uppstår igen för en framtida starter utan lucide.
 4. **BO2/BO4 backoffice-skuld** — dataframes → grupperad + färgad trace-viewer + async/cancellation i `backoffice/views/playground.py`.
+
+PR #17 / `frontend/christopher-import` är reference only: återöppna inte PR #17,
+starta inte `apps/web`, men behåll branchen som framtida design-/copy-referens.
 
 ## Operatörspreferenser (2026-05-13)
 
@@ -113,7 +117,7 @@ Innan `git push origin main`:
 
 ## Standard loop (för referens)
 
-Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standard loop". Åtta steg, varav steg 7 (uppdatera `current-focus.md`) är obligatoriskt agentens ansvar — inte operatörens.
+Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standard loop". Tio steg, varav steg 8 (uppdatera `current-focus.md`) är obligatoriskt agentens ansvar — inte operatörens.
 
 ```text
 0. Drift-check (python scripts/focus_check.py).
@@ -131,6 +135,10 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+2aafa41 docs(workflow): formalize main backup agent flow
+ebc9c09 docs(focus): bump Last verified to 09c53b0 + RO-audit Queue update (Standard loop step 7)
+09c53b0 fix(check_term_coverage): allowlist Bugbot/GitHub status-strings
+06a6047 docs(handoff): refresh for post-PR #20/#21 state at 0db29e6
 0db29e6 chore(cursorignore): ignore referens/ from Cursor indexing
 b0bb6c3 docs: close B20-followup-lucide post-merge + bump focus to 04fc2fa (Standard loop step 7)
 04fc2fa feat(commerce-base): add lucide-react dep to fix ecommerce-lite full build (#21)

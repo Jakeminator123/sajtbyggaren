@@ -5,15 +5,16 @@ Det här är vad varje AI-agent (eller mänsklig medhjälpare) behöver veta inn
 ## Läs i denna ordning
 
 0. [`docs/current-focus.md`](current-focus.md) - aktuell köplan. Läs alltid först.
-1. [`docs/PROJECT_BRIEF.md`](PROJECT_BRIEF.md) - vad och varför.
-2. [`docs/architecture/system-overview.md`](architecture/system-overview.md) - hur lagren hänger ihop.
-3. [`docs/glossary.md`](glossary.md) - mänsklig genomgång av alla begrepp.
-4. [`governance/policies/naming-dictionary.v1.json`](../governance/policies/naming-dictionary.v1.json) - kanoniska termer (sanningskälla).
-5. [`governance/policies/repo-boundaries.v1.json`](../governance/policies/repo-boundaries.v1.json) - mappägarskap.
-6. [`governance/policies/engine-run.v1.json`](../governance/policies/engine-run.v1.json) - artefaktkontraktet för en körning.
-7. [`docs/architecture/llm-flow.md`](architecture/llm-flow.md) - fas 1-3.
-8. [`governance/decisions/0009-engine-run-and-llm-models.md`](../governance/decisions/0009-engine-run-and-llm-models.md) - varför Engine Run-modellen ser ut så.
-9. [`docs/migration-plan.md`](migration-plan.md) - sprint-ordning och vad som plockats varifrån.
+1. [`docs/agent-prompts.md`](agent-prompts.md) - fasta agentroller och copy-paste-startprompter.
+2. [`docs/PROJECT_BRIEF.md`](PROJECT_BRIEF.md) - vad och varför.
+3. [`docs/architecture/system-overview.md`](architecture/system-overview.md) - hur lagren hänger ihop.
+4. [`docs/glossary.md`](glossary.md) - mänsklig genomgång av alla begrepp.
+5. [`governance/policies/naming-dictionary.v1.json`](../governance/policies/naming-dictionary.v1.json) - kanoniska termer (sanningskälla).
+6. [`governance/policies/repo-boundaries.v1.json`](../governance/policies/repo-boundaries.v1.json) - mappägarskap.
+7. [`governance/policies/engine-run.v1.json`](../governance/policies/engine-run.v1.json) - artefaktkontraktet för en körning.
+8. [`docs/architecture/llm-flow.md`](architecture/llm-flow.md) - fas 1-3.
+9. [`governance/decisions/0009-engine-run-and-llm-models.md`](../governance/decisions/0009-engine-run-and-llm-models.md) - varför Engine Run-modellen ser ut så.
+10. [`docs/migration-plan.md`](migration-plan.md) - sprint-ordning och vad som plockats varifrån.
 
 ## Hårda regler för agentarbete
 
@@ -93,6 +94,8 @@ Projektet använder tre fasta agentroller:
 Operatören beslutar riktning och godkänner risk. Extern GPT-reviewer kan ge
 beslutsstöd men ändrar inte repo. Bugbot är inte en egen agentroll i
 standardflödet; den används bara om operatören uttryckligen väljer PR-flöde.
+Färdiga startprompter för rollerna finns i
+[`docs/agent-prompts.md`](agent-prompts.md).
 
 ## Parallella agenter
 

@@ -2,6 +2,8 @@
 
 Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 **först**, innan något annat i `docs/` eller `governance/`.
+Startpromptar och rollgränser finns i
+[`docs/agent-prompts.md`](agent-prompts.md).
 
 ## Vem uppdaterar denna fil
 
@@ -19,7 +21,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `ebc9c09` (2026-05-13, post-PR #21 + fyra mainline-steward-pushar till och med RO-audit Queue update `ebc9c09`; alla guards gröna lokalt; ingen öppen PR)
+Last verified state: `2aafa41` (2026-05-13, post-PR #21 + fem mainline-steward-pushar till och med agentflöde/main-backup-formalisering `2aafa41`; alla guards gröna lokalt; ingen öppen PR)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -28,8 +30,8 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `09c53b0` efter PR #21 (lucide-react i commerce-base
-+ ADR 0020, mergad `04fc2fa` 2026-05-13 19:55 UTC) plus tre
+`main` är vid `2aafa41` efter PR #21 (lucide-react i commerce-base
+och ADR 0020, mergad `04fc2fa` 2026-05-13 19:55 UTC) plus fem
 mainline-steward-pushar samma kväll. Full `npm run build` mot
 `.generated/atelje-bird/` (eller någon annan ecommerce-lite-
 genererad sajt) är nu grön: 11 statiska sidor inkl `/produkter`
@@ -54,6 +56,12 @@ ingen produktkod):
   allowlistar `Cursor Bugbot`, `SUCCESS`, `FAILURE`, `COMPLETED`,
   `NEUTRAL`, `Module not found` (citerade Bugbot/GitHub-status-
   strängar och Node-felmeddelanden i handoff.md, inte domänbegrepp).
+- `ebc9c09` — `docs/current-focus.md` uppdaterar Queue/Next action
+  efter RO-audit så Prompt-till-sajt-loopen i Viewser är prio 1.
+- `2aafa41` — agentflödet formaliseras: tre fasta roller
+  (`Scout-agent`, `Builder-agent`, `Steward-agent`), sprintarbete på
+  `main` med `backup-N` först, och Scout-agenten som RO-bugggranskare
+  före direktpush.
 
 Mainline-steward-pushar som också ligger på main:
 - `bba8e36` - ny `bugbot-pr-loop`-regel (8-min poll + 10-iter
@@ -67,14 +75,17 @@ Mainline-steward-pushar som också ligger på main:
   `.cursor/mcp.json`.
 
 Branches städade 2026-05-13: feat/b20-step-2-mapping-flip raderad
-lokalt + remote efter merge. Kvar: `main`, `backup-{1..4}` och
-`frontend/christopher-import` (PR #17, stängd men branch behållen
-per operatörsbeslut).
+lokalt + remote efter merge. Kvar lokalt: `main`, `backup-1`,
+`backup-4`, `backup-5`. Remote har även äldre `backup-2` och
+`backup-3`. `frontend/christopher-import` (PR #17, stängd) ska inte
+röras i nästa sprint.
 
 ## Current active sprint
 
 Ingen pågående produktimplementation. Sprintstart ska skapa nästa
 `backup-N` från synkad `main` och sedan fortsätta arbetet på `main`.
+Nästa roll är **Builder-agent** enligt
+[`docs/agent-prompts.md`](agent-prompts.md).
 
 ## Next action - direktiv till nästa agent
 
@@ -158,6 +169,9 @@ se "Next action" + "Queue".)
   `render_home/render_services/render_layout` (predaterar PR #19).
   Migrera till `_pick_contact_route` när tillfälle ges; ingen aktiv
   B-ID skriven på det än.
+- PR #17 / `frontend/christopher-import` - behåll som design-/copy-
+  referens only. Återöppna inte PR #17 och starta inte `apps/web` förrän
+  Prompt-till-sajt MVP fungerar.
 
 ## Queue
 
