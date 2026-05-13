@@ -81,13 +81,43 @@ Format per bugg:
   status. Beror på round 3.
 - **`BO4` Medel** - `backoffice/views/playground.py:46-53` blockerar 180s i
   subprocess; ingen async / cancellation. Beror på round 3.
-- **`B13` Låg** - `scripts/build_site.py` innehåller produktlogik vilket
+- **`B13a` Låg** - `scripts/build_site.py` innehåller produktlogik vilket
   bryter mot `repo-boundaries.v1.json:39`. Naturlig flytt blir
   `packages/generation/build/` när ramverket växer. (Sprint 2B audit-fix
   uppdaterade importgränserna så planning/brief/artifacts-importer inte
   längre bryter policyn, men den större arkitektur-skulden kvarstår.)
+  Tidigare kallad `B13`; splittad i `B13a` (arkitektur-flytt, denna post)
+  och `B13b` (route-emission) den 2026-05-13 efter att
+  `docs/current-focus.md` började använda namnet "B13" för bara den
+  ena halvan.
+- **`B13b` Låg** (öppen 2026-05-13, status: **kod klar, inväntar merge av
+  PR #19**) - `scripts/build_site.py:write_pages` var hårdkodad mot
+  `local-service-business`-routes (`/tjanster`, `/om-oss`, `/kontakt`)
+  på fyra nivåer (`_nav_items()`, hardcoded `/tjanster`-CTA i
+  `render_home`, `write_pages()`, avsaknad av `render_products`). Det
+  blockerade aktiveringen av `ecommerce-lite -> commerce-base` (B20
+  step 2): ad-hoc-generation gav Quality Gate `status=degraded` med
+  route-scan failure `"/produkter -> app\produkter\page.tsx
+  (saknas)"`.
+
+  **Fix i PR #19 (`feat/b13-route-emission`):** `write_pages` läser nu
+  scaffoldens `routes.json` och dispatchar per route id
+  (home/services/products/about/contact). Ny `render_products`-
+  renderer för `/produkter`. Nya helpers `_nav_items_from_scaffold`,
+  `_pick_listing_route`, `_NAV_LABEL_BY_ROUTE_ID`,
+  `_LISTING_COPY_BY_ROUTE_ID`. Okänt route-id ger `SystemExit` så
+  scaffolds inte tyst kan saknas en renderer. Ny
+  `examples/atelje-bird.project-input.json` (ecommerce-lite-fixture)
+  för end-to-end-smoke. Test:
+  `tests/test_builder_route_emission.py` (14 tester) låser
+  scaffold-driven dispatch + ecommerce-lite-smoken
+  `test_ecommerce_lite_fixture_writes_produkter_and_passes_route_scan`.
+
+  Flyttas till "Stängda - regression-test säkrar fixet" efter merge
+  (Standard loop steg 7).
 - **`B20` Låg** (öppen 2026-05-08, status: **vendor done, activation
-  blocked by B13 route-emission**) - status uppdaterad 2026-05-12.
+  blocked by B13b route-emission until PR #19 merges**) - status
+  uppdaterad 2026-05-13.
 
   **Steg 1 (vendor) landad i PR #16 commit `4b4c3af`:**
   `data/starters/commerce-base/` är nu vendoriserad och harmoniserad
@@ -100,7 +130,7 @@ Format per bugg:
   Shopify-env. Se [ADR
   0018](../governance/decisions/0018-b20-commerce-base-harmonisering.md).
 
-  **Steg 2 (mapping-flipp) pausad — blockerad av B13:** ett tidigt
+  **Steg 2 (mapping-flipp) pausad — blockerad av B13b:** ett tidigt
   försök att flippa runtime-mappningen i samma PR (commit `58c5e63`,
   reverterad i `a3d4828`) avslöjade att `scripts/build_site.py` är
   hårdkodad mot `local-service-business`-routes på fyra nivåer
@@ -117,7 +147,7 @@ Format per bugg:
   `data/starters/README.md` mappnings-blocket står kvar med
   `(B20: temporary; ...)`-noten.
 
-  **Nästa PR (16b / B13 route-emission):** måste antingen refaktorera
+  **Nästa PR (PR #19 / B13b route-emission):** måste antingen refaktorera
   `scripts/build_site.py` så page-emission drivs av scaffolds
   `routes.json` per scaffold (nya renderers för product-grid,
   products-intro, shop-cta), eller utvidga `codegenModel`-scope till
@@ -132,7 +162,7 @@ Format per bugg:
   - `data/starters/README.md` (mappnings-blocket + commerce-base Status-rad)
   - `packages/generation/planning/plan.py` (`SCAFFOLD_TO_STARTER`)
   - `tests/test_starter_scaffold_mapping.py`
-  - `scripts/build_site.py` (för 16b/B13-spåret)
+  - `scripts/build_site.py` (för PR #19 / B13b-spåret)
   - `packages/generation/codegen/codegen.py` (om scope utvidgas)
 
   Review-checklist när B20 stängs (för cloud-reviewer eller operatör

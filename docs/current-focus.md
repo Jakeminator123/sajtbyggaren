@@ -21,12 +21,22 @@ agent: "uppdatera current-focus innan något annat".
 
 ## Last verified
 
-Last verified state: `5443d34` (2026-05-13, B13 route-emission PR #19 öppen och inväntar Bugbot-review)
+Last verified state: `5443d34` (2026-05-13, B13b route-emission PR #19 öppen och inväntar Bugbot-review)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
 varnar om något har drivit (glömd push, glömd pull, öppna oväntade
 PRs, etcetera).
+
+## Notes on B13 naming (2026-05-13)
+
+B13 i `docs/known-issues.md` har splittats i B13a (arkitektur-
+flytt av produktlogik från `scripts/build_site.py` till
+`packages/generation/build/` — fortfarande öppen) och B13b
+(route-emission, kod klar, inväntar merge av PR #19). När den här
+filen nämner "B13b" är det route-emission-spåret; den större
+arkitektur-flytten kvarstår som B13a oavsett vad som händer med
+PR #19.
 
 ## Current stage
 
@@ -36,7 +46,7 @@ mergat på `main` som `90856d1` 2026-05-13: `AGENTS.md` har rätt
 commerce-base från PR #16 ligger fortfarande kvar
 (`ff3d5124b659b786b0edde5685a857882dcad6c1`, 2026-05-12).
 
-B13 route-emission är **implementerad** på `feat/b13-route-emission`
+B13b route-emission är **implementerad** på `feat/b13-route-emission`
 (commits `6a0a1c5` + `6516c28` + docs-bump `5443d34`).
 `scripts/build_site.py:write_pages` läser nu
 `scaffold_routes["defaultRoutes"]` och dispatchar per route id i stället
@@ -68,7 +78,7 @@ i en fix-runda, kör `python scripts/review_check.py` lokalt, merge
 - **Aktivering av `ecommerce-lite -> commerce-base`** - blockerad
   tills **PR #19** är mergad. `SCAFFOLD_TO_STARTER` i
   `packages/generation/planning/plan.py` står kvar med
-  `ecommerce-lite: marketing-base` tills B13 ligger på `main` och en
+  `ecommerce-lite: marketing-base` tills B13b ligger på `main` och en
   uppföljande PR flippar mappingen + uppdaterar
   `data/starters/README.md` och `docs/known-issues.md` B20-posten.
 
@@ -89,8 +99,8 @@ i en fix-runda, kör `python scripts/review_check.py` lokalt, merge
    `docs/known-issues.md`, lägg test som verifierar att
    `atelje-bird` byggs mot `commerce-base` när codegenModel-scope
    utvidgas eller deterministisk fallback duger).
-3. Sanity-runda på `main` + uppdatera `docs/known-issues.md` B13 +
-   B20-posten (markera B13 som fixad).
+3. Sanity-runda på `main` + uppdatera `docs/known-issues.md` B13b +
+   B20-posten (markera B13b som fixad (B13a är arkitektur-skuld, kvarstår)).
 4. Därefter: granska **PR #17** eller återgå till prompt-till-sajt-loopen.
 
 ## Loopen vi följer
