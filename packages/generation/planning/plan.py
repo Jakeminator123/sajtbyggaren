@@ -47,14 +47,16 @@ DEFAULT_SCAFFOLD_ID = "local-service-business"
 
 # Hardcoded scaffold -> starter mapping for Sprint 2B.
 #
-# Only ``marketing-base`` has verified runnable content today. The
-# ``ecommerce-lite`` scaffold reuses ``marketing-base`` as chrome until
-# the commerce-base starter harmonisation sprint lands (see
-# docs/known-issues.md B20). When ``commerce-base`` is real,
-# this mapping (or the planner's choice) becomes per-scaffold.
+# ``marketing-base`` covers the local-service-business chrome and is the
+# only starter wired into ``_REAL_CODEGEN_STARTERS`` in
+# packages/generation/codegen/codegen.py (see ADR 0017). ``commerce-base``
+# was vendored in PR #16 and activated for ``ecommerce-lite`` in B20
+# step 2 (closes docs/known-issues.md B20); ecommerce-lite runs through
+# the deterministic-v1 codegen path until real-codegen scope is widened
+# in a follow-up sprint with its own ADR extension on top of 0017.
 SCAFFOLD_TO_STARTER: dict[str, str] = {
     "local-service-business": "marketing-base",
-    "ecommerce-lite": "marketing-base",
+    "ecommerce-lite": "commerce-base",
 }
 
 # Heuristic keywords used by the deterministic mock planner to pick
