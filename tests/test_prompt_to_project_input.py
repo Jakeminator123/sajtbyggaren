@@ -202,6 +202,72 @@ def test_generate_writes_project_input_and_meta(
 
 
 @pytest.mark.tooling
+def test_generate_falls_back_when_extract_site_brief_raises(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    project_input_schema: dict,
+) -> None:
+    """Unexpected exceptions from extract_site_brief must not crash the
+    prompt-driven Viewser flow. The script should still write a
+    schema-valid placeholder Project Input and record the failure in
+    meta.briefError.
+    """
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key-not-used")
+
+    def raise_llm_error(*_args: object, **_kwargs: object) -> object:
+        raise RuntimeError("network timeout")
+
+    monkeypatch.setattr(
+        "packages.generation.brief.extract_site_brief",
+        raise_llm_error,
+    )
+
+    project_input, meta, project_input_path, meta_path = generate(
+        "Skapa en hemsida för en elektriker i Malmö",
+        output_dir=tmp_path,
+    )
+
+    jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
+    assert project_input_path.exists()
+    assert meta_path.exists()
+    assert meta["briefSource"] == "mock-llm-error"
+    assert "RuntimeError" in meta["briefError"]
+    assert "network timeout" in meta["briefError"]
+
+
+@pytest.mark.tooling
+def test_generate_falls_back_when_site_brief_to_artifact_raises(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    project_input_schema: dict,
+) -> None:
+    """The fallback must also cover exceptions after brief extraction,
+    including serialization errors in site_brief_to_artifact.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    def raise_serializer_error(*_args: object, **_kwargs: object) -> object:
+        raise ValueError("bad artifact shape")
+
+    monkeypatch.setattr(
+        "packages.generation.brief.site_brief_to_artifact",
+        raise_serializer_error,
+    )
+
+    project_input, meta, project_input_path, meta_path = generate(
+        "Skapa en hemsida för en elektriker i Malmö",
+        output_dir=tmp_path,
+    )
+
+    jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
+    assert project_input_path.exists()
+    assert meta_path.exists()
+    assert meta["briefSource"] == "mock-llm-error"
+    assert "ValueError" in meta["briefError"]
+    assert "bad artifact shape" in meta["briefError"]
+
+
+@pytest.mark.tooling
 def test_generate_respects_explicit_site_id(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

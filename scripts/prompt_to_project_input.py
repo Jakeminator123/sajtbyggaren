@@ -375,6 +375,45 @@ def write_project_input(
     return project_input_path, meta_path
 
 
+def _mock_brief_artifact_after_failure(
+    prompt: str,
+    *,
+    language: str,
+    model: str,
+    error: Exception,
+) -> dict[str, Any]:
+    """Return a schema-shaped mock Site Brief when brief extraction fails.
+
+    ``extract_site_brief`` already catches the expected OpenAI failure
+    path, but this helper covers bugs or unexpected exceptions in either
+    ``extract_site_brief`` itself or ``site_brief_to_artifact``. The
+    prompt-driven flow should degrade to a schema-valid placeholder
+    Project Input, not crash the whole Viewser request.
+    """
+    message = f"{type(error).__name__}: {error}"
+    return {
+        "runId": "prompt-helper",
+        "language": language,
+        "rawPrompt": prompt,
+        "businessTypeGuess": None,
+        "pageCount": None,
+        "tone": [],
+        "targetAudience": [],
+        "requestedCapabilities": [],
+        "locationHint": None,
+        "conversionGoals": [],
+        "servicesMentioned": [],
+        "contentDepth": None,
+        "notesForPlanner": f"Mock brief after prompt helper failure: {message}",
+        "sourceModelRole": "briefModel",
+        "modelUsed": "mock",
+        "briefSource": "mock-llm-error",
+        "briefError": message,
+        "attemptedModel": model,
+        "createdAt": datetime.now(UTC).isoformat(timespec="seconds"),
+    }
+
+
 def generate(
     prompt: str,
     *,
@@ -400,17 +439,25 @@ def generate(
         model = resolve_brief_model()
     except Exception:  # noqa: BLE001
         # Mirror dev_generate.py's tolerance: a misconfigured llm-models
-        # policy must not block the prompt-driven loop entirely. The
-        # mock fallback inside extract_site_brief still produces a
-        # valid Site Brief; we just label modelUsed=mock.
+        # policy must not block the prompt-driven loop entirely.
         model = "gpt-5.4"
 
-    brief_result = extract_site_brief(prompt, model=model, language_hint=language)
-    brief_artifact = site_brief_to_artifact(
-        brief_result,
-        run_id="prompt-helper",
-        model=model,
-    )
+    try:
+        brief_result = extract_site_brief(
+            prompt, model=model, language_hint=language
+        )
+        brief_artifact = site_brief_to_artifact(
+            brief_result,
+            run_id="prompt-helper",
+            model=model,
+        )
+    except Exception as exc:  # noqa: BLE001
+        brief_artifact = _mock_brief_artifact_after_failure(
+            prompt,
+            language=language,
+            model=model,
+            error=exc,
+        )
 
     final_site_id = site_id or slugify_site_id(prompt)
     if not _SITE_ID_PATTERN.match(final_site_id):
