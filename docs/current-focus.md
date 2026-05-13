@@ -8,7 +8,7 @@ färsk - om den inte stämmer ska du fixa den, inte hoppa över den.
 
 ## Last verified
 
-Last verified state: `3f7487e` (2026-05-13, post-PR #16 + lightweight loop)
+Last verified state: `d0c476f` (2026-05-13, post-PR #16 + lightweight loop + focus_check)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
