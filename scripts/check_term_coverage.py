@@ -148,6 +148,7 @@ COMMON_WORDS = {
     "Header", "Footer", "Hero", "About",
     # Page-komponenter som genereras i builder och i .generated/
     "AboutPage", "ContactPage", "ServicesPage", "ServicePage",
+    "ProductsPage",
     # React / Next / shadcn-typer som dyker upp i runtime-kod
     "ReactNode", "RootLayout", "NextConfig",
     "ButtonPrimitive", "VariantProps", "ClassValue",
