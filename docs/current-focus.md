@@ -10,7 +10,7 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 varje merge eller direktpush till `main` ska agenten i samma eller direkt
 efterföljande commit:
 
-1. Uppdatera "Current stage" och "Current active PR" till nya läget.
+1. Uppdatera "Current stage" och "Current active sprint" till nya läget.
 2. Stryka från "Queue" / "Blocked" det som blev klart.
 3. Lägga till nya blockers eller queue-items om något upptäcktes.
 4. Bumpa "Last verified state"-SHA:n till nya HEAD.
@@ -19,7 +19,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `09c53b0` (2026-05-13, post-PR #21 + tre mainline-steward-pushar: `.cursorignore` referens/-ignored `0db29e6`, handoff refresh till post-PR-#20/#21-state `06a6047`, check_term_coverage allowlist för Bugbot/GitHub-status-strängar `09c53b0`; alla guards gröna lokalt; ingen öppen PR)
+Last verified state: `ebc9c09` (2026-05-13, post-PR #21 + fyra mainline-steward-pushar till och med RO-audit Queue update `ebc9c09`; alla guards gröna lokalt; ingen öppen PR)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -71,9 +71,10 @@ lokalt + remote efter merge. Kvar: `main`, `backup-{1..4}` och
 `frontend/christopher-import` (PR #17, stängd men branch behållen
 per operatörsbeslut).
 
-## Current active PR
+## Current active sprint
 
-Ingen pågående feature-PR.
+Ingen pågående produktimplementation. Sprintstart ska skapa nästa
+`backup-N` från synkad `main` och sedan fortsätta arbetet på `main`.
 
 ## Next action - direktiv till nästa agent
 
@@ -105,21 +106,22 @@ Sannolikt scope (verifiera i sprint-start):
   risken borta (siteId blir genererat i bakvägen, så validering
   måste ske före file write).
 
-Egen branch + PR per `governance/rules/branch-discipline.md`
-(detta rör `apps/viewser/**` och troligen `packages/generation/`-
-gränsen — feature-PR-territorium). ADR sannolikt inte krävs om
-ingen policy/schema rörs, men kontrollera.
+Arbeta på `main` per `governance/rules/branch-discipline.md`, men skapa
+först nästa `backup-N` från synkad `main`. Detta rör `apps/viewser/**`
+och troligen `packages/generation/`-gränsen, så håll sprintscope smalt och
+låt Scout-agenten göra RO-bugggranskning före push. ADR sannolikt inte krävs
+om ingen policy/schema rörs, men kontrollera.
 
 Övrig queue (B13a, write_pages-refactor, BO2/BO4) kvarstår men
 är inte produkt-blockerande just nu.
 
 ### Pre-push self-review checklist (lärt från B13b + B20)
 
-Innan `git push` på en feature-branch:
+Innan `git push origin main`:
 
-- Jämför `git diff origin/main..HEAD --stat` rad-för-rad mot din PR-
-  beskrivnings "What changed"-lista. Bugbot fångade på PR #19 att
-  `docs/known-issues.md` ändrades utan att stå i listan.
+- Jämför `git diff origin/main..HEAD --stat` rad-för-rad mot sprintens
+  deklarerade scope. PR #19-lärdomen kvarstår: ändrade filer som inte
+  nämns i scope är ofta scope-läckage.
 - Sök efter samma sorts hardcoded-pattern som PR:n säger sig fixa.
   PR #19 fixade hardcoded `/tjanster`/`/om-oss`/`/kontakt`, men en
   ny `render_products` introducerade hardcoded `/kontakt` igen.
@@ -130,13 +132,12 @@ Innan `git push` på en feature-branch:
 - För varje ny renderer som tar `dossier`: kontrollera om den
   länkar någonstans och om den pathen ska komma från scaffolden
   (`_pick_*_route`) eller bara från dossiern.
-- Om PR ändrar `SCAFFOLD_TO_STARTER` eller liknande policy-
-  förankrad dict: skapa motsvarande ADR i samma PR (lärdom från
+- Om sprinten ändrar `SCAFFOLD_TO_STARTER` eller liknande policy-
+  förankrad dict: skapa motsvarande ADR i samma ändringsrunda (lärdom från
   PR #20:s Bugbot-iteration 1, åtgärdad via ADR 0019).
-- Om PR har en informativ post-merge-followup som inte blockerar
-  merge: lägg den under "Post-merge sanity needed", INTE under
-  "Known risks / blockers". Bugbot tolkar varje rad i blocker-
-  sektionen som hård gate (lärdom från PR #20:s Bugbot-iteration 1).
+- Om sprinten har en informativ post-merge-followup som inte blockerar
+  push: lägg den i `docs/current-focus.md`, men håll blocker-listan ren från
+  nice-to-have.
 
 ## Blocked items
 
@@ -170,7 +171,7 @@ se "Next action" + "Queue".)
    - Follow-up prompt → ny version: saknas.
    - Lokal preview: finns manuellt, inte produktigt kopplat.
    Konkret målbild: prompt → minimal Project Input → build_site →
-   runId i Viewser. Egen sprint, egen branch + PR. Sannolikt
+   runId i Viewser. Egen sprint på `main` med ny `backup-N` först. Sannolikt
    kräver det en ny `apps/viewser/`-route + en ny
    prompt-till-Project-Input-helper i `packages/generation/brief/`
    eller liknande.
@@ -183,9 +184,9 @@ se "Next action" + "Queue".)
 ## Loopen vi följer
 
 Se [`docs/agent-handbook.md`](agent-handbook.md) under rubriken "Standard
-loop". Kort: implementation-agent → ro-review-agent → operatör + extern
-reviewer beslutar → fix-agent vid behov → final sanity → merge →
-uppdatera denna fil → nästa etapp.
+loop". Kort: Scout vid behov → skapa `backup-N` → Builder/Steward jobbar på
+`main` → Scout RO-review före push → operatör + extern reviewer beslutar →
+final sanity → commit/push till `main` → uppdatera denna fil → nästa etapp.
 
 Operatörspreferens (2026-05-13): svara kort och koncist på svenska,
 förklara dev-uttryck med korta parenteser första gången per

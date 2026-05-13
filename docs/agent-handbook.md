@@ -63,39 +63,70 @@ Kort lista över det som oftast missas av agenten men fångas av en reviewer-run
 1. Verifiera varje claim mot källan, inte mot commit-meddelandet. Läs koden för varje "stängd B-ID" innan stämpling.
 2. Race conditions kommer i kluster. En ny `useEffect` med `await` ska ha cancelled-guard på success-, error- och cleanup-vägen; saknad guard på en gren är vanligaste regressionvägen (se B42/B43 i `docs/known-issues.md`).
 3. Source-lock-tester ska låsa beteende, inte syntax. Tighta regex för exakta strängar bryts av harmlösa refactor-er; lås egenskaper ("får inte förekomma X i felgrenen") istället för exakta literaler.
-4. Verifiera de fyra guards lokalt om PR saknar CI:
+4. Verifiera de fyra guards lokalt eftersom standardflödet går direkt på
+   `main`:
    - `python scripts/governance_validate.py`
    - `python scripts/rules_sync.py --check`
    - `python scripts/check_term_coverage.py --strict`
    - `python -m pytest tests/ -q`
-5. Verifiera scope. En PR som rör fil X ska deklarera X i sin scope-rad. Scope-läckage är värt en blocker, inte ett godkännande med kommentar.
+5. Verifiera scope. En sprint som rör fil X ska deklarera X i sin scope-rad.
+   Scope-läckage är värt en blocker, inte ett godkännande med kommentar.
 6. Naming-dictionary. Nya canonical termer kräver ADR. Lokala TS/Python-symboler bor i `scripts/check_term_coverage.py:COMMON_WORDS`.
-7. Branch cleanup efter merge. Både lokal och remote branch ska raderas. `git branch -a` ska bara visa `main` plus backupper när inget pågår.
+7. Backup-disciplin. Inför varje ny sprint ska en ny `backup-N` skapas från
+   synkad `main`; backupen är fallback, inte arbetsbranch.
+
+## Fasta agentroller
+
+Projektet använder tre fasta agentroller:
+
+- **Scout-agent** - read-only. Läser, utreder, hittar risker och fungerar som
+  RO-bugggranskare före push när sprinten går direkt på `main`. Lämnar
+  rekommendation eller Builder-prompt. Gör inga filändringar, commits eller
+  pushar.
+- **Builder-agent** - implementation. Skapar sprintens `backup-N`, jobbar
+  vidare på `main`, implementerar, testar och rapporterar innan push om
+  ändringen är stor eller riskabel.
+- **Steward-agent** - ordning och sanity. Jobbar på `main` med låg-risk
+  docs/governance/fokusuppdateringar, kör sanity och håller
+  `docs/current-focus.md` färsk.
+
+Operatören beslutar riktning och godkänner risk. Extern GPT-reviewer kan ge
+beslutsstöd men ändrar inte repo. Bugbot är inte en egen agentroll i
+standardflödet; den används bara om operatören uttryckligen väljer PR-flöde.
 
 ## Parallella agenter
 
-När flera agenter jobbar samtidigt (typiskt: lokal mainline-steward på `main` plus en cloud-/feature-agent på egen branch) gäller den rollfördelning som beskrivs i [`governance/rules/branch-discipline.md`](../governance/rules/branch-discipline.md) under rubriken "Parallella agenter". Sammanfattning:
+När flera agenter jobbar samtidigt gäller rollfördelningen i
+[`governance/rules/branch-discipline.md`](../governance/rules/branch-discipline.md)
+under rubriken "Parallella agenter". Sammanfattning:
 
-- Mainline-steward gör docs/governance/checklist/cleanup på `main`. Får inte röra filer som ligger i scope för en pågående feature-agent.
-- Feature-agent jobbar på egen branch, pushar bara till den branchen, och mergar via operatör eller PR.
-- Aktiva spår (B-IDs eller sprintar) listas i `docs/known-issues.md`. De filer ett aktivt spår räknar upp som scope är off-limits för mainline-arbete tills feature-agenten är klar.
+- Steward-agent får inte röra filer som ligger i scope för en pågående
+  Builder-sprint.
+- Builder-agent äger sina scope-filer tills sprinten är klar.
+- Aktiva spår (B-IDs eller sprintar) listas i `docs/known-issues.md` eller
+  `docs/current-focus.md`. De filerna är off-limits för annat arbete tills
+  Builder-agenten är klar.
 
 ## Standard loop
 
-Varje etapp följer samma åtta steg. Loopen är medvetet kort - syftet är att
+Varje etapp följer samma korta loop. Syftet är att
 varje delsteg har en tydlig ägare och en tydlig avlämningsyta.
 
 0. **Drift-check.** Första kommando i varje ny agentsession är `python scripts/focus_check.py`. Det jämför HEAD mot "Last verified"-SHA:n i [`docs/current-focus.md`](current-focus.md) och varnar om glömd push, glömd pull eller stalad focus-fil. Lös varningar innan något annat startas.
-1. **Implementation-agent** genomför en avgränsad uppgift på egen branch (eller direkt på `main` om uppgiften kvalificerar som mainline-steward-arbete enligt `governance/rules/branch-discipline.md`).
-2. **Ro-review** läser diff i read-only-läge enligt reglerna i [`.cursor/BUGBOT.md`](../.cursor/BUGBOT.md). Två vägar beroende på flöde:
-   - **PR-flöde:** Cursor Bugbot är aktiv på repot med trigger-läge "every push to a PR" och draft-PR-review på. Bugbot postar kommentarer automatiskt. Implementation-agenten väntar in Bugbot-rapporten innan ready-markering.
-   - **Mainline-steward direktpush:** Implementation-agenten kör sin egen pre-push-granskning via en explore-subagent i read-only-läge (typiskt `Task(subagent_type="explore", readonly=true)`). Subagenten läser senaste commit-diff och `.cursor/BUGBOT.md` och rapporterar misstänkta problem. Resultatet delas med operatören innan `git push`.
-3. **Operatör + extern reviewer** beslutar: merge, fix eller skrota.
-4. **Fix-agent** gör endast begärd fix. Inga sido-städningar utan ny prompt.
-5. **Final sanity** kör `python scripts/review_check.py` (samma kedja som pre-merge-guards).
-6. **Merge** (squash) eller direkt push till `main` om mainline-steward.
-7. **Uppdatera [`docs/current-focus.md`](current-focus.md)** i samma eller direkt efterföljande commit. **Obligatoriskt och agentens ansvar - inte operatörens.** Bumpa "Last verified"-SHA:n till nya HEAD, stryk det som blev klart, lägg till nya blockers/queue-items. Hoppas inte över. Filen är projektets enda aktuella köplan.
-8. **Nästa etapp** plockas från queue-listan i `docs/current-focus.md`.
+1. **Scout vid behov.** Om uppdraget är stort eller oklart gör Scout-agenten
+   read-only-audit och lämnar rekommenderad Builder-prompt.
+2. **Sprint-backup.** Builder- eller Steward-agenten skapar nästa `backup-N`
+   från synkad `main` och stannar sedan kvar på `main`.
+3. **Implementation på main.** Builder-agenten genomför en avgränsad uppgift
+   direkt på `main`. Steward-agenten gör bara låg-risk docs/governance/sanity.
+4. **RO-review.** Scout-agenten granskar diffen read-only före push och
+   klassar fynd som blocker, risk, nice-to-have eller falskt fynd. Vid
+   PR-undantag kan Bugbot användas, men PR är inte standardflödet.
+5. **Operatör + extern reviewer** beslutar: fortsätt, fixa eller skrota.
+6. **Final sanity** kör `python scripts/review_check.py` (samma kedja som pre-push-guards).
+7. **Commit + push till main** efter gröna guards och godkänd riktning.
+8. **Uppdatera [`docs/current-focus.md`](current-focus.md)** i samma eller direkt efterföljande commit. **Obligatoriskt och agentens ansvar - inte operatörens.** Bumpa "Last verified"-SHA:n till nya HEAD, stryk det som blev klart, lägg till nya blockers/queue-items. Hoppas inte över. Filen är projektets enda aktuella köplan.
+9. **Nästa etapp** plockas från queue-listan i `docs/current-focus.md`.
 
-Pull request-mallen i [`.github/pull_request_template.md`](../.github/pull_request_template.md)
-tvingar fram scope, ändrade filer, verifiering och risker per PR.
+Om operatören uttryckligen väljer PR-flöde används pull request-mallen i
+[`.github/pull_request_template.md`](../.github/pull_request_template.md).

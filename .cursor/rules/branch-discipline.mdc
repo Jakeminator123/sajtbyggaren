@@ -1,6 +1,6 @@
 <!-- AUTO-GENERATED FROM governance/rules/branch-discipline.md. Do not edit directly. Run: python scripts/rules_sync.py -->
 ---
-description: Stanna alltid på main; pusha direkt mot origin/main som standard. PR används bara när operatören uttryckligen ber om det.
+description: Jobba på main med numrerad backup-branch före varje sprint. PR används inte som standard.
 alwaysApply: true
 ---
 
@@ -8,40 +8,70 @@ alwaysApply: true
 
 ## Grundregel
 
-Agenten stannar alltid på `main` om inget annat anges. **Standardflödet är commit + push direkt mot `origin/main`**, inte feature-branch + PR. Remote är `https://github.com/Jakeminator123/sajtbyggaren.git`.
+Agenten jobbar på `main` genom hela sprinten om operatören inte uttryckligen
+säger något annat. **Standardflödet är backup-branch först, därefter commit +
+push direkt mot `origin/main`**. Remote är
+`https://github.com/Jakeminator123/sajtbyggaren.git`.
+
+Backup-branchen är bara en återställningspunkt. Den är inte en arbetsbranch,
+ska inte checkas ut för implementation och ska inte få en PR.
+
+## Sprintstart: skapa backup-branch
+
+Inför varje ny sprintrunda skapar agenten en numrerad backup-branch från ren
+och synkad `main`:
+
+1. Verifiera att aktuell branch är `main` (`git branch --show-current`).
+2. Verifiera att `main` är synkad med `origin/main` (`git status` eller
+   `python scripts/focus_check.py`).
+3. Lista befintliga backups med `git branch -a --list "*backup-*"`.
+4. Välj nästa nummer: högsta befintliga `backup-N` + 1.
+5. Skapa backupen från nuvarande `main`: `git branch backup-N`.
+6. Pusha backupen när operatören vill ha fjärrbackup:
+   `git push origin backup-N`.
+7. Stanna kvar på `main` och gör sprintarbetet där.
+
+Exempel: om `backup-1` till `backup-5` finns blir nästa `backup-6`.
 
 ## Standardflöde: commit + push på main
 
-För all vanlig agent-aktivitet pushas ändringen direkt:
+För all vanlig agent-aktivitet pushas ändringen direkt till `main`:
 
-1. Verifiera att aktuell branch är `main` (`git branch --show-current`).
-2. Stage + commit med atomisk avgränsning (en commit per logiskt steg).
-3. Kör de fyra guards (se nedan). Alla ska vara gröna.
-4. `git push origin main`.
+1. Verifiera att aktuell branch är `main`.
+2. Verifiera att sprintens backup-branch finns.
+3. Stage + commit med atomisk avgränsning (en commit per logiskt steg).
+4. Kör de fyra guards (se nedan). Alla ska vara gröna.
+5. Vid icke-trivial produkt- eller workflow-diff: låt Scout-agenten göra
+   read-only bug review av diffen före push.
+6. `git push origin main`.
 
-Detta gäller oavsett om ändringen är dokumentation, ny rule, ny policy, ny scaffold, ny dossier, kod, test eller refaktorisering.
+Detta gäller dokumentation, governance, kod, tester, scaffolds, dossiers och
+refaktoriseringar. Om ändringen är stor eller riskabel ska agenten stanna och
+be operatören bekräfta riktningen innan commit, men den skapar inte automatiskt
+en feature-branch eller PR.
 
-## När agenten skapar en branch eller PR
+Scout-agenten ersätter Bugbot som pre-push-granskare i direkt-main-flödet.
+Scout får inte fixa fynden själv, utan rapporterar blocker, risk,
+nice-to-have eller falskt fynd. Builder- eller Steward-agenten gör sedan
+eventuell fix inom samma scope.
 
-Endast när operatör uttryckligen säger något av:
+## När agenten skapar annan branch eller PR
 
-- "skapa en branch för X"
-- "gör det på en ny branch"
+Endast när operatören uttryckligen säger något av:
+
 - "öppna en PR för X"
+- "gör detta på separat arbetsbranch"
 - "byt till branch Y"
 
-För riktigt stora eller riskabla ändringar (t.ex. naming-dictionary major-bump som rör alla policies, omfattande arkitektur-ändring av `engine-run.v1`) **frågar agenten innan commit**, inte automatisk PR. Operatören väljer om det blir direkt push eller branch + PR.
-
-Om instruktionen är otydlig: fråga operatör innan branch skapas.
+Om instruktionen är otydlig: fråga operatör innan branch eller PR skapas.
 
 ## Vad agenten aldrig gör utan tillstånd
 
-- Skapar feature-branches "för säkerhets skull" eller "för att vara försiktig"
-- Pushar till feature-branches när uppgiften kunde ha gjorts på `main`
-- Skapar PR utan att operatören uttryckligen bett om det
-- Lämnar kvar lokala branches efter att de är mergade
-- Lämnar kvar remote branches efter att de är mergade
-- Force-pushar till `main` (`git push --force` eller liknande)
+- Skapar feature-branches "för säkerhets skull" eller "för att vara försiktig".
+- Arbetar på backup-branches.
+- Öppnar PR utan uttryckligt uppdrag.
+- Tar bort backup-branches.
+- Force-pushar till `main` (`git push --force` eller liknande).
 
 ## Push-fel
 
@@ -51,13 +81,13 @@ Om `git push origin main` avvisas (non-fast-forward, hooks, eller annat):
 2. Kör `git fetch origin && git status` för att förstå läget.
 3. Fråga operatör innan rebase, merge eller force-push.
 
-## Naming när branch ändå behövs
+## Naming när arbetsbranch ändå behövs
 
 - Format: `cursor/<kort-syfte-pa-svenska-utan-aaoo>` (git hanterar åäö inkonsekvent på olika plattformar)
 - Exempel: `cursor/marketing-base`, `cursor/dossier-typer-v2`
 - Aldrig: `cursor/work`, `cursor/wip`, `cursor/test`, `cursor/temp`
 
-## Cleanup-rutin (när branch ändå har använts)
+## Cleanup-rutin (när arbetsbranch ändå har använts)
 
 Efter merge till `main`:
 
@@ -65,7 +95,8 @@ Efter merge till `main`:
 2. `git branch -d <branchname>` (ta bort lokalt)
 3. `git fetch origin --prune` (rensa stale referenser)
 
-Mål: `git branch -a` ska bara visa `main` plus `origin/main` när inget pågår.
+Mål: `git branch -a` ska bara visa `main`, `origin/main` och bevarade
+`backup-N`-branches när inget pågår.
 
 ## Parallella agenter
 
@@ -82,14 +113,23 @@ Stannar på `main` och pushar direkt till `origin/main`, men bara för låg-risk
 
 Mainline-steward får inte röra filer som ligger i scope för en pågående feature-/grind-agent.
 
-### Feature-agent (även kallad grind-agent när den körs i cloud)
+### Scout-agent
 
-Jobbar alltid på egen branch enligt namnformatet ovan. Pushar bara till sin branch. Mergar via operatör eller PR. Behöver inte vänta in mainline-steward; rebase mot uppdaterad `main` hanteras vid merge.
+Är read-only i alla lägen. När Builder- eller Steward-agenten jobbar direkt
+på `main` kan Scout-agenten granska diffen före push och leta efter buggar,
+scope-läckage, saknade tester och stale docs. Scout-agenten ändrar inget.
+
+### Builder-agent
+
+Jobbar normalt direkt på `main` efter att sprintens backup-branch har skapats.
+Pushar till `origin/main` först efter gröna guards och operatörens godkännande
+om arbetet är stort eller riskabelt. Skapar inte PR om operatören inte ber om
+det uttryckligen.
 
 ### Scope-läckage förebyggs så här
 
-1. Före varje main-commit läser mainline-steward `docs/known-issues.md` och senaste `docs/handoff.md` för att se vilka B-IDs eller sprint-spår som är aktiva. De filer som ett aktivt spår räknar upp som scope är off-limits för mainline-arbete tills feature-agenten är klar.
-2. Om mainline-steward upptäcker att en städning kräver att den rör en off-limits-fil: stoppa, rapportera till operatören, och låt feature-agenten ta ändringen i sin branch i stället.
+1. Före varje main-commit läser mainline-steward `docs/known-issues.md` och senaste `docs/handoff.md` för att se vilka B-IDs eller sprint-spår som är aktiva. De filer som ett aktivt spår räknar upp som scope är off-limits för andra agenter tills Builder-agenten är klar.
+2. Om mainline-steward upptäcker att en städning kräver att den rör en off-limits-fil: stoppa, rapportera till operatören, och låt Builder-agenten ta ändringen i samma sprint i stället.
 3. Operatören kan när som helst nominera en specifik fil-lista som off-limits för en pågående uppgift; den listan har företräde över det här regelverket.
 
 ### Push-race

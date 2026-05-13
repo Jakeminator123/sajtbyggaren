@@ -1,49 +1,39 @@
 # Handoff – Sajtbyggaren
 
 **Datum:** 2026-05-13 (kvällssession, post-PR #20 + PR #21)
-**Aktuell HEAD på `main`:** `0db29e6` (efter `.cursorignore`-tweak ovanpå B20-followup-lucide-close `b0bb6c3`). Kör `git log --oneline -1` för senaste SHA.
-**Aktiv branch:** `main`. Inga feature-branches öppna. Inga öppna PRs.
+**Aktuell HEAD på `main`:** `ebc9c09` (post-mainline-steward-pushar ovanpå `09c53b0`). Kör `git log --oneline -1` för senaste SHA.
+**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
 
 ## Branch-policy: var jobbar agenten egentligen?
 
-**`main` är hemmabasen.** Du står på `main` mellan uppgifter och pullar in från `origin/main` när du startar en session. Du LÄMNAR `main` bara när du faktiskt ska ändra kod under granskning.
+**`main` är arbetsytan.** Du står på `main` före, under och efter sprinten om operatören inte uttryckligen säger något annat. Inför varje ny sprintrunda skapar agenten en numrerad backup-branch från ren/synkad `main`, men fortsätter jobba på `main`.
 
-Två lägen, båda definierade i [`governance/rules/branch-discipline.md`](../governance/rules/branch-discipline.md):
+Detta är definierat i [`governance/rules/branch-discipline.md`](../governance/rules/branch-discipline.md):
 
-### Mainline-steward – direkt på `main`
+### Sprintstart – backup först
 
-För **tiny + safe** ändringar:
+1. Kör `python scripts/focus_check.py`.
+2. Verifiera att branch är `main` och att den är synkad med `origin/main`.
+3. Lista `backup-*` och välj högsta nummer + 1.
+4. Skapa `git branch backup-N` från aktuell `main`.
+5. Pusha backupen om operatören vill ha fjärrbackup: `git push origin backup-N`.
+6. Stanna kvar på `main` och gör arbetet där.
 
-- Dokumentation (`docs/*.md`).
-- Governance-regler (`governance/rules/*.md`) + rules_sync.
-- `.gitignore`, `.cursorignore`, `.vscode/settings.json`, redaktionella editor-config.
-- Standard loop steg 7 (bumpa `current-focus.md` Last verified-SHA efter merge).
-- Andra agents städ-arbete som inte rör en pågående feature.
+Backup-branchen är bara fallback. Den är inte arbetsbranch och ska inte få PR.
 
-Flöde: `git pull --ff-only origin main` → ändra → `git commit` → `git push origin main`. Inga PR:er, ingen Bugbot.
+### Tre agentroller
 
-### Feature-PR – via `feat/<spår>`-branch + PR
+- **Scout-agent** är read-only: audit, plan, risker, RO-bugggranskning före push, nästa Builder-prompt.
+- **Builder-agent** implementerar: skapar sprintens backup, jobbar på `main`, testar, rapporterar och pushar först efter gröna guards.
+- **Steward-agent** håller ordning: docs/current-focus, handoff, sanity och låg-risk governance på `main`.
 
-För allt som **kan introducera buggar**:
+### PR är undantag
 
-- `scripts/*.py` (builder, dev_generate, governance-validatorer, lint-tooling).
-- `packages/generation/**` (codegen, quality_gate, repair, planning, brief, artifacts).
-- `apps/viewser/**` (UI som operatörer ser).
-- `governance/policies/*.json` + `governance/schemas/*.json` (kontrakt).
-- `examples/*.project-input.json` när de driver tester eller fixtures.
-- Tester som låser nytt beteende (även om bara test-filen ändras).
-- `data/starters/<starter>/` (kräver dessutom ADR-referens i PR per `.cursor/BUGBOT.md`).
-- `packages/generation/planning/plan.py:SCAFFOLD_TO_STARTER` (kräver ADR i SAMMA PR — Bugbot blockar annars; lärdom från PR #20).
+PR skapas bara om operatören uttryckligen ber om PR/separat arbetsbranch. Annars används Scout-agentens RO-review + lokala guards före `git push origin main`.
 
-Flöde: `git checkout -b feat/<spår>` → arbeta → `git push -u origin feat/<spår>` → öppna PR → invänta Bugbot + governance-CI → ev. fix-runda enligt `governance/rules/bugbot-pr-loop.md` → squash-merge → städa branchen lokalt + remote.
-
-### Varför inte alltid `main`?
-
-Cursor Bugbot triggar bara på **pull requests** i denna repo-konfig. PR #19 körde tre Bugbot-rundor (3 buggar fångade) och PR #20 körde en runda (2 fynd). Mönstret "mainline-steward för tiny, PR för kod" är inte byråkrati — det är det som faktiskt har räddat fem buggar från att landa.
-
-Vill du ha Bugbot på direkt-pushar till `main` också? Det måste konfigureras i Cursor-dashboarden (repo settings → Bugbot → triggers). Idag är "every push to a PR" + "draft-PR-review" aktivt; "every push to main" är inte påslaget.
+Cursor Bugbot triggar i nuvarande repo-konfig främst på PR. Eftersom operatörspreferensen nu är `main` + backup används Bugbot inte som standardgate. För direkt-main-flödet är Scout-agenten pre-push-granskare. För större risker ska agenten stoppa, rapportera och låta operatör + extern reviewer besluta innan push.
 
 ## Vad är Sajtbyggaren
 
@@ -94,14 +84,14 @@ Se `docs/current-focus.md` → **"Next action"**. Kort version: ingen aktiv bloc
 
 - **Språk:** alltid svenska. Riktiga svenska tecken (`å`, `ä`, `ö`). Se [`governance/rules/always-swedish.md`](../governance/rules/always-swedish.md).
 - **Reply-style:** kort + koncist. Förklara dev-uttryck med korta parenteser första gången per konversation (operatören är inte utvecklare i grunden). Se [`governance/rules/reply-style.md`](../governance/rules/reply-style.md).
-- **Branch-städning:** ta bort feature-branches direkt efter merge, både lokalt och på origin. Behåll `backup-{1..4}` och `frontend/christopher-import` (PR #17, stängd men branchen lever).
-- **Create-PR-knappen i Cursor:** användaren kan av misstag trycka den. Om branchen redan har en öppen PR: säg till och gör ingenting. GitHub tillåter inte två öppna PR:er från samma branch mot samma bas.
+- **Backup-branches:** inför varje sprintrunda skapas nästa `backup-N` från synkad `main`. Backupen är fallback och ska inte raderas utan uttryckligt beslut.
+- **Create-PR-knappen i Cursor:** användaren kan av misstag trycka den. Standard är att inte öppna PR; fråga operatören om PR verkligen är avsikten.
 - **PowerShell + git commit -m flerrads:** PowerShell saknar bash heredoc. Skriv message till `$env:TEMP\sb-commit-msg.txt` och `git commit -F`. Aldrig `.commit-msg.tmp` i repo-roten (race med `git add -A`). Detaljerat i `governance/rules/branch-discipline.md` "Multi-line commit-meddelanden på Windows/PowerShell".
 - **Cursor IDE git-editor pipe error på Windows** är vanligt (`ENOENT \\\\.\\pipe\\vscode-git-...sock`). Fall tillbaka till `git commit -m` eller `-F` från shell direkt.
 
-## Bugbot-loop på PR (kritisk lärdom från PR #20)
+## Bugbot-loop vid PR-undantag
 
-Hela rutinen står i [`governance/rules/bugbot-pr-loop.md`](../governance/rules/bugbot-pr-loop.md). Sammanfattning:
+Standardflödet är inte PR, men om operatören uttryckligen väljer PR-flöde står hela rutinen i [`governance/rules/bugbot-pr-loop.md`](../governance/rules/bugbot-pr-loop.md). Sammanfattning:
 
 1. Efter `gh pr create`: verifiera att Bugbot är aktiverad (en check med `name == "Cursor Bugbot"` ELLER en review från `author.login == "cursor"`). Om aktiverad: skriv exakt strängen `kommer nu vänta i upp till högst 8 min på att bugbotten blir klar` till operatören.
 2. Polla 60–90s × max 8 min. Stoppa så fort `Cursor Bugbot`-checken är `COMPLETED`.
@@ -110,17 +100,16 @@ Hela rutinen står i [`governance/rules/bugbot-pr-loop.md`](../governance/rules/
 5. Rött → fix-loop iteration N (max 10). Per iteration: läs aktiva trådar, minimal-fix, push, **markera trådar som resolved via GraphQL** så loopens nästa poll blir korrekt.
 6. > 10 iterationer → posta `[NÖDLÄGE PR]`-kommentar och lämna åt operatör.
 
-## Pre-push self-review checklist (lärt från PR #19 + PR #20)
+## Pre-push self-review checklist
 
-Innan `git push` på en feature-branch:
+Innan `git push origin main`:
 
-1. `git diff origin/main..HEAD --stat` — jämför listan rad för rad mot PR-beskrivningens "What changed". Bugbot blockerar PR:er där en ändrad fil saknas i listan.
-2. Sök efter samma sorts hardcoded-pattern som PR:n säger sig fixa. Klassiskt blindspot på nya filer (PR #19: vi fixade hardcoded `/tjanster` i existerande renderers men introducerade hardcoded `/kontakt` i den nya `render_products`).
+1. `git diff origin/main..HEAD --stat` — jämför listan rad för rad mot sprintens deklarerade scope.
+2. Sök efter samma sorts hardcoded-pattern som sprinten säger sig fixa. Klassiskt blindspot på nya filer (PR #19: vi fixade hardcoded `/tjanster` i existerande renderers men introducerade hardcoded `/kontakt` i den nya `render_products`).
 3. Print-/logg-meddelanden i present tense ("Writing X") måste komma FÖRE handlingen, inte efter, så operatören ser vad som är i flygt vid crash.
 4. För varje ny renderer/komponent som tar `dossier`: kontrollera om den länkar någonstans och om pathen ska komma från scaffolden (`_pick_*_route`) eller dossiern.
-5. Uppdatera PR-beskrivningens "What changed" + "What did not change" varje gång du commitar — inte bara vid PR-öppnandet.
-6. Om PR ändrar `SCAFFOLD_TO_STARTER` eller `data/starters/<starter>/`: skapa motsvarande ADR i SAMMA PR (lärdom från PR #20:s Bugbot-iteration 1, åtgärdad via ADR 0019; för starter-deps se PR #21:s ADR 0020).
-7. Om PR har en informativ post-merge-followup som inte blockerar merge: lägg den under "Post-merge sanity needed" i PR-mallen, INTE under "Known risks / blockers" — Bugbot tolkar varje rad i blocker-sektionen som hård gate (lärdom från PR #20:s Bugbot-iteration 1).
+5. Om sprinten ändrar `SCAFFOLD_TO_STARTER` eller `data/starters/<starter>/`: skapa motsvarande ADR i samma ändringsrunda (lärdom från PR #20:s Bugbot-iteration 1, åtgärdad via ADR 0019; för starter-deps se PR #21:s ADR 0020).
+6. Om sprinten har en informativ followup som inte blockerar push: lägg den i `docs/current-focus.md`, inte som blocker.
 
 ## Standard loop (för referens)
 
@@ -128,14 +117,15 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 
 ```text
 0. Drift-check (python scripts/focus_check.py).
-1. Implementation-agent på egen branch (eller main om mainline-steward).
-2. Ro-review: Bugbot på PR (följ governance/rules/bugbot-pr-loop.md), eller egen explore-subagent i RO-läge för main-push.
-3. Operatör + extern reviewer beslutar.
-4. Fix-agent (om Bugbot/reviewer hittade fynd).
-5. Final sanity (python scripts/review_check.py).
-6. Merge (squash) eller direkt push till main.
-7. Bumpa SHA i current-focus.md + uppdatera Queue/Blocked + flytta stängda B-IDs i known-issues.md.
-8. Nästa etapp.
+1. Scout-agent vid behov.
+2. Skapa nästa backup-N från synkad main.
+3. Builder/Steward jobbar på main.
+4. Scout-agent gör RO-review före push.
+5. Operatör + extern reviewer beslutar.
+6. Final sanity (python scripts/review_check.py).
+7. Commit + push till main.
+8. Bumpa SHA i current-focus.md + uppdatera Queue/Blocked + flytta stängda B-IDs i known-issues.md.
+9. Nästa etapp.
 ```
 
 ## Sista commit-historiken (för snabb orientering)
