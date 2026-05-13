@@ -40,6 +40,16 @@ När adaptern aktiveras måste `SHOPIFY_STORE_DOMAIN` och
 Auth, databas, betalning, checkout och CMS-koppling ingår inte som krav i
 basen. Sådana integrationer ska komma via hard Dossiers.
 
+## Runtime-deps utöver upstream
+
+`lucide-react` (matchar `marketing-base`-versionen) lades till 2026-05-13
+per [ADR 0020](../../../governance/decisions/0020-commerce-base-lucide-react.md)
+för att stödja `scripts/build_site.py:write_pages`-renderers som
+hardcodar `import from "lucide-react"`. Den underliggande
+arkitekturskulden (icon-bibliotek-agnostisk codegen) kvarstår som
+öppen architecturpost; tilläggsbeslutet är dokumenterat i ADR 0020:s
+"INTE beslutar"-sektion.
+
 ## Scaffolds som använder denna bas
 
 - `ecommerce-lite`
