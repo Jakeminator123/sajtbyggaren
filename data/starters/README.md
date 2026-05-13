@@ -10,7 +10,7 @@ Reviewerns rekommendation: **fem starters täcker våra 14 scaffolds**. Se ADR 0
 |----|------|-------|--------|
 | `marketing-base` | 9 av 14 scaffolds (local-service-business, professional-services, restaurant-hospitality, clinic-healthcare, real-estate, nonprofit-community, event-campaign, app-landing, consultant-expert) | Egen bas via `create-next-app` + `shadcn init` | Klar, build verifierad |
 | `saas-base` | `saas-product` | Fork av [vercel/platforms](https://github.com/vercel/platforms) | Mapp finns, kod saknas |
-| `commerce-base` | `ecommerce-lite` | Fork av [vercel/commerce](https://github.com/vercel/commerce) | Vendor-import klar (2026-05-11, upstream `1df2cf6`); bygger lokalt; runtime-mapping pausad tills B13/route-emission löst (ADR 0018) |
+| `commerce-base` | `ecommerce-lite` | Fork av [vercel/commerce](https://github.com/vercel/commerce) | Vendor-import klar (2026-05-11, upstream `1df2cf6`); bygger lokalt; runtime-mapping aktiverad i B20 step 2 (kör genom `deterministic-v1` codegen tills real-codegen-scope utvidgas) |
 | `portfolio-base` | `portfolio-creator`, `agency-studio` | Fork av [vercel/examples → solutions/blog](https://github.com/vercel/examples/tree/main/solutions/blog) | Mapp finns, kod saknas |
 | `docs-base` | `course-education` | Fork av [shuding/nextra](https://github.com/shuding/nextra) | Mapp finns, kod saknas |
 
@@ -22,9 +22,10 @@ vara en delmängd av (och konsistent med) listan nedan. Drift fångas av
 `tests/test_starter_scaffold_mapping.py`.
 
 Format: en rad per scaffold med exakt en starter. Tillfälliga avvikelser
-(t.ex. B20: `ecommerce-lite` kör på `marketing-base` tills `commerce-base`
-är harmoniserad) MÅSTE markeras explicit på samma rad så review kan
-skilja avsedd avvikelse från regression.
+(t.ex. om en scaffold tillfälligt kör på fel starter under en pågående
+harmonisering) MÅSTE markeras explicit på samma rad med en
+parentetisk note som innehåller B-ID:t från `docs/known-issues.md`,
+så review kan skilja avsedd avvikelse från regression.
 
 <!-- scaffold-starter-mapping:start -->
 - local-service-business: marketing-base
@@ -36,7 +37,7 @@ skilja avsedd avvikelse från regression.
 - event-campaign: marketing-base
 - app-landing: marketing-base
 - consultant-expert: marketing-base
-- ecommerce-lite: marketing-base (B20: temporary; canonical target is commerce-base after harmonisation)
+- ecommerce-lite: commerce-base
 - saas-product: saas-base
 - portfolio-creator: portfolio-base
 - agency-studio: portfolio-base
