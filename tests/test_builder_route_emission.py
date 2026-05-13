@@ -379,3 +379,57 @@ def test_ecommerce_lite_fixture_writes_produkter_and_passes_route_scan(
         f"findings: {by_name['route-scan'].get('findings')}"
     )
     assert quality["status"] == "ok"
+
+
+
+# ---------------------------------------------------------------------------
+# Bugbot fyndet: "Writing pages: ..." print must run BEFORE write_pages.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_writing_pages_announcement_runs_before_write_pages() -> None:
+    """Source-level lock for the Bugbot fix on PR #19.
+
+    The announcement print must precede the ``write_pages(`` call so the
+    operator sees which step is in flight if ``write_pages`` raises
+    SystemExit (e.g. unknown scaffold route id). Locking the order via
+    source inspection rather than capsys because the announcement is UX
+    glue, not testable runtime state.
+    """
+    import inspect
+
+    from scripts import build_site
+
+    body = inspect.getsource(build_site.build)
+    print_idx = body.find('"Writing pages: "')
+    write_call_idx = body.find("write_pages(\n        target, dossier")
+    assert print_idx > 0 and write_call_idx > 0, (
+        "Both the 'Writing pages: ' print and the write_pages(target, dossier, ...) "
+        "call must appear in build(). If you renamed either, update this test."
+    )
+    assert print_idx < write_call_idx, (
+        "The 'Writing pages: ' print must run BEFORE write_pages() so the "
+        "operator sees which step is in flight if write_pages raises "
+        "SystemExit. Bugbot caught this on PR #19; do not move the print "
+        "back below the call."
+    )
+
+
+@pytest.mark.tooling
+def test_build_verifies_write_pages_return_matches_announced_routes() -> None:
+    """Companion lock for the Bugbot fix: the announcement is honest only
+    if build() verifies that write_pages returned the same paths it
+    announced. Without the check a silent dispatch drift (renderer added
+    but path mismatched) would print the wrong list with no traceback.
+    """
+    import inspect
+
+    from scripts import build_site
+
+    body = inspect.getsource(build_site.build)
+    assert "if paths_written != routes_to_write" in body, (
+        "build() must compare write_pages' return value against the "
+        "list announced by the print above. Dropping the check lets "
+        "the print say one thing while write_pages emits another."
+    )

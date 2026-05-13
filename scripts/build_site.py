@@ -1792,14 +1792,32 @@ def build(
     copied_components = mount_dossier_components(target, selected_dossiers)
     dossier_routes = write_dossier_routes(target, selected_dossiers)
 
+    # Announce BEFORE the write so the operator can see which step
+    # is in flight if write_pages raises (e.g. SystemExit for an
+    # unknown scaffold route id). Bugbot caught this on PR #19: the
+    # original post-write print left the operator with no
+    # breadcrumbs when write_pages aborted mid-loop. We derive the
+    # path list from scaffold_routes (already on hand) instead of
+    # waiting for write_pages' return value, then verify the
+    # return matches so a silent dispatch mismatch cannot drift
+    # the announcement.
+    routes_to_write = all_default_routes(scaffold_routes)
+    print(
+        "Writing pages: "
+        + ", ".join(routes_to_write)
+        + " and layout"
+    )
     paths_written = write_pages(
         target, dossier, scaffold_routes, dossier_routes
     )
-    print(
-        "Writing pages: "
-        + ", ".join(paths_written)
-        + " and layout"
-    )
+    if paths_written != routes_to_write:
+        raise SystemExit(
+            "Builder failed: write_pages returned "
+            f"{paths_written!r} but scaffold declared "
+            f"{routes_to_write!r}. The dispatch table and the "
+            "scaffold registry have drifted; reconcile them "
+            "before retrying."
+        )
 
     routes_required = required_routes(scaffold_routes)
     routes_all = all_default_routes(scaffold_routes)
