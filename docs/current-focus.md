@@ -21,7 +21,7 @@ agent: "uppdatera current-focus innan något annat".
 
 ## Last verified
 
-Last verified state: `40183df` (2026-05-13, ownership clarified + PR #18 noted)
+Last verified state: `927540e` (2026-05-13, focus_check warns on undocumented PRs)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
