@@ -53,8 +53,9 @@ Output:
 2. Blockers/risker.
 3. Filer som troligen påverkas.
 4. Vad som inte ska röras.
-5. Vid diff-review: klassning per fynd som blocker, risk, nice-to-have eller falskt fynd.
-6. Färdig prompt till Builder-agent när nästa steg kräver implementation.
+5. Rekommenderad modell-/insatsnivå 1-10 för nästa agentpass, där 1 är trivial docs/städ och 10 är hög-risk arkitektur/produktkod som kräver starkaste modell och extra review.
+6. Vid diff-review: klassning per fynd som blocker, risk, nice-to-have eller falskt fynd.
+7. Färdig prompt till Builder-agent när nästa steg kräver implementation.
 
 Gör inga ändringar.
 
@@ -114,6 +115,7 @@ Slutrapport:
 - verifiering
 - Scout/RO-review-status om den kördes
 - risker/blockers
+- progressbedömning: ungefär hur många procent av sprinten som är klart, hur mycket som återstår och hur stor nästa etapp bedöms vara
 - `git status --short`
 - nästa rekommenderade Steward-steg
 
@@ -172,6 +174,7 @@ Slutrapport:
 - HEAD SHA
 - ändrade filer
 - verifiering
+- om `docs/current-focus.md` och `docs/handoff.md` fortfarande pekar på rätt nästa steg
 - `git status --short`
 - nästa etapp enligt `current-focus`
 
@@ -214,6 +217,10 @@ Definition of done:
 ## Copy-paste prompt - nästa Builder-agent
 
 Du är Builder-agent för Jakeminator123/sajtbyggaren.
+
+Du får börja nu. Detta är nästa riktiga sprint.
+Stoppa om scope växer utanför prompten.
+Rapportera innan push.
 
 Uppdrag:
 Bygg Prompt-till-sajt MVP v1:
@@ -281,5 +288,6 @@ Slutrapport:
 - verifiering.
 - Scout/RO-review-status om körd.
 - risker/blockers.
+- progressbedömning: ungefär hur många procent av Prompt-till-sajt MVP v1 som är klart, hur mycket som återstår och hur stor nästa etapp bedöms vara.
 - `git status --short`.
 - nästa rekommenderade Steward-steg.

@@ -124,12 +124,14 @@ varje delsteg har en tydlig ägare och en tydlig avlämningsyta.
    direkt på `main`. Steward-agenten gör bara låg-risk docs/governance/sanity.
 4. **RO-review.** Scout-agenten granskar diffen read-only före push och
    klassar fynd som blocker, risk, nice-to-have eller falskt fynd. Vid
-   PR-undantag kan Bugbot användas, men PR är inte standardflödet.
+   PR-undantag kan Bugbot användas, men PR är inte standardflödet. Inför en
+   ny större sprint ska Scout också föreslå modell-/insatsnivå 1-10 för nästa
+   agentpass.
 5. **Operatör + extern reviewer** beslutar: fortsätt, fixa eller skrota.
 6. **Final sanity** kör `python scripts/review_check.py` (samma kedja som pre-push-guards).
 7. **Commit + push till main** efter gröna guards och godkänd riktning.
 8. **Uppdatera [`docs/current-focus.md`](current-focus.md)** i samma eller direkt efterföljande commit. **Obligatoriskt och agentens ansvar - inte operatörens.** Bumpa "Last verified"-SHA:n till nya HEAD, stryk det som blev klart, lägg till nya blockers/queue-items. Hoppas inte över. Filen är projektets enda aktuella köplan.
-9. **Nästa etapp** plockas från queue-listan i `docs/current-focus.md`.
+9. **Nästa etapp** plockas från queue-listan i `docs/current-focus.md`. Builder-agenten ska i slutrapporten ge en grov progressbedömning i procent för sprinten och nästa etapp.
 
 Om operatören uttryckligen väljer PR-flöde används pull request-mallen i
 [`.github/pull_request_template.md`](../.github/pull_request_template.md).
