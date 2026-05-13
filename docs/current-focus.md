@@ -21,7 +21,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `fd67fbd` (2026-05-14, post-Prompt-till-sajt MVP v1 + review-hotfix + Viewser mini-sprint: StackBlitz-preview mount isolerad och gamla ChatPanel borttagen från home så PromptBuilder är enda primära promptyta. backup-6 från `504befc` pushad till origin före sprintstart. Alla guards gröna lokalt; ingen öppen PR)
+Last verified state: `e421a00` (2026-05-14, post-Prompt-till-sajt MVP v1 + audit-hotfix-sprint: ZodError -> 400 i `/api/prompt`, whitespace-trim före `.min(1)`, `--`-separator i Python-spawn så dash-prefixade prompts inte tolkas som CLI-options av argparse, stale viewer-panel fallback-copy uppdaterad till PromptBuilder-flödet, prompt-helperns brief-imports flyttade till modulnivå så test-monkeypatch faktiskt biter, plus allowlist av `ZodError` i `check_term_coverage`. backup-7 från `fb11925` pushad till origin före hotfix-sprinten. Alla guards gröna lokalt; ingen öppen PR)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -30,10 +30,11 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `fd67fbd` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `e421a00` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
-prompt-helperns brief-fallback och en Viewser mini-sprint som tog bort
-gamla ChatPanel från home. Operatören kan nu skriva
+prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
+gamla ChatPanel från home och en audit-hotfix-sprint som städade
+fyra Scout-fynd i prompt-flödet. Operatören kan nu skriva
 en fri prompt i Viewser, helpern (`scripts/prompt_to_project_input.py`)
 kör briefModel, mappar Site Brief deterministiskt mot en schema-valid
 Project Input, skriver den till `data/prompt-inputs/<siteId>.project-input.json`
@@ -42,8 +43,9 @@ briefSource), och `apps/viewser/app/api/prompt/route.ts` triggar
 `runBuild` med dossier-path-override. PromptBuilder är nu den enda
 primära promptytan på Viewser-home; legacy ChatPanel finns kvar som
 komponent men importeras/renderas inte från `app/page.tsx`. RunHistory
-uppdateras via samma `fetchRuns`-loop som `/api/build`. backup-6 från `504befc`
-ligger på origin som fallback.
+uppdateras via samma `fetchRuns`-loop som `/api/build`. backup-7 från `fb11925`
+ligger på origin som fallback efter audit-hotfix-sprinten; backup-6 från
+`504befc` ligger kvar som fallback för MVP-pushen.
 
 Föregående: PR #21 (lucide-react i commerce-base + ADR 0020,
 mergad `04fc2fa` 2026-05-13 19:55 UTC) gjorde full `npm run build`
@@ -84,6 +86,37 @@ Prompt-till-sajt MVP v1-pushen (2026-05-14):
   `test_viewser_prompt_primary.py` låser att PromptBuilder är canonical
   promptyta på Viewser-home.
 
+Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
+
+- `fe56344` — `fix(prompt-helper): hoist brief imports to module level
+  for monkeypatching`. Lyfter `detect_language`,
+  `extract_site_brief`, `site_brief_to_artifact` och
+  `resolve_brief_model` från function-scope till modulnivå så
+  fallback-tester faktiskt patchar lookup-namnen som
+  `prompt_to_project_input.generate` använder. Tidigare patch mot
+  `packages.generation.brief.*` no-opp:ade tyst.
+- `cb54ca9` — `docs(agent-prompts): expand role catalog with parallel-
+  agent rules`. Utökar Scout/Builder/Steward-startprompter och låser
+  parallell-agent-disciplinen.
+- `1033bf6` — `fix(prompt-route): return 400 on Zod errors and trim
+  whitespace at API edge`. Splitt:ar try/catch så `ZodError` -> 400
+  med valideringsmeddelandet, lägger `.trim()` före `.min(1)` i
+  payload-schemat så whitespace-only prompts fångas vid API-gränsen
+  istället för att slinka ned till helperns 500-gren. Två nya
+  source-lock-tester i `tests/test_viewser_files.py`.
+- `e067006` — `fix(prompt-runner): pass -- to argparse so dashed
+  prompts spawn cleanly`. `spawn(...,[scriptPath, "--", trimmed])` så
+  en prompt som börjar med `-` eller `--` (vanlig punktlista) inte
+  tolkas som CLI-option av argparse i `prompt_to_project_input.py`.
+- `c039ebd` — `fix(viewer-panel): refresh stale fallback copy after
+  legacy chat panel removal`. 404-fallback och tip-block hänvisar nu
+  till promptfältet istället för den borttagna Build-knappen i
+  ChatPanel.
+- `e421a00` — `chore(check_term_coverage): allowlist ZodError TS
+  symbol`. Speglar Pydantic `ValidationError`-behandlingen så
+  `ZodError` (extern lib-symbol från `zod`) inte räknas som
+  okänt domänbegrepp i strict-läget.
+
 Mainline-steward-pushar efter PR #21 (pure docs/governance):
 
 - `0db29e6` — `.cursorignore` ignorerar nu hela `referens/`.
@@ -108,10 +141,12 @@ Mainline-steward-pushar som också ligger på main:
 
 Branches städade 2026-05-13/14: feat/b20-step-2-mapping-flip raderad
 lokalt + remote efter merge. `backup-6` (från `504befc`) skapad och
-pushad till origin före Prompt-till-sajt-sprinten. Kvar lokalt:
-`main`, `backup-1`, `backup-4`, `backup-5`, `backup-6`. Remote har
-även äldre `backup-2` och `backup-3`. `frontend/christopher-import`
-(PR #17, stängd) ska inte röras i nästa sprint.
+pushad till origin före Prompt-till-sajt-sprinten. `backup-7` (från
+`fb11925`) skapad och pushad till origin före audit-hotfix-sprinten.
+Kvar lokalt: `main`, `backup-1`, `backup-4`, `backup-5`, `backup-6`,
+`backup-7`. Remote har även äldre `backup-2` och `backup-3`.
+`frontend/christopher-import` (PR #17, stängd) ska inte röras i
+nästa sprint.
 
 ## Current active sprint
 
@@ -182,8 +217,8 @@ Innan `git push origin main`:
 
 (Inga aktiva blockers just nu — B20 + lucide-fix mergade,
 sanity-rundan grön mot `04fc2fa`, Prompt-till-sajt MVP v1
-mergad direktpush `4d5b4de`. Nästa val är operatörsdrivet,
-se "Next action" + "Queue".)
+mergad direktpush `4d5b4de`, audit-hotfix-sprint klar till
+`e421a00`. Nästa val är operatörsdrivet, se "Next action" + "Queue".)
 
 ## Do not start yet
 
@@ -216,14 +251,15 @@ se "Next action" + "Queue".)
    Sidecar-meta `data/prompt-inputs/<siteId>.meta.json` har redan
    `projectId` + `version` så ingen schema-migration behövs i
    första iterationen. Se "Next action" för scope-skiss.
-2. **Steward: uppdatera `docs/handoff.md`** för post-Prompt-till-
-   sajt-state (`fd67fbd`) så snabböverlämningen matchar
-   `current-focus.md`.
-3. B13a arkitektur-flytt (egen sprint, kräver ADR).
-4. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
+2. B13a arkitektur-flytt (egen sprint, kräver ADR).
+3. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
    lucide-typen av starter-vs-codegen-konflikt; ADR 0020:s
    "INTE beslutar"-sektion).
-5. BO2/BO4 backoffice-skuld (round-1-skuld).
+4. BO2/BO4 backoffice-skuld (round-1-skuld).
+5. **PromptBuilder polish (nice-to-have)**: setTimeout för
+   stage-transition "thinking" → "building" saknar cleanup vid
+   unmount. Låg risk men låt nästa Builder rensa om PromptBuilder
+   ändå rörs i Follow-up-sprinten.
 
 ## Loopen vi följer
 
