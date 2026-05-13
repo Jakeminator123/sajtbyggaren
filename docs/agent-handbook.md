@@ -4,6 +4,7 @@ Det här är vad varje AI-agent (eller mänsklig medhjälpare) behöver veta inn
 
 ## Läs i denna ordning
 
+0. [`docs/current-focus.md`](current-focus.md) - aktuell köplan. Läs alltid först.
 1. [`docs/PROJECT_BRIEF.md`](PROJECT_BRIEF.md) - vad och varför.
 2. [`docs/architecture/system-overview.md`](architecture/system-overview.md) - hur lagren hänger ihop.
 3. [`docs/glossary.md`](glossary.md) - mänsklig genomgång av alla begrepp.
@@ -78,3 +79,27 @@ När flera agenter jobbar samtidigt (typiskt: lokal mainline-steward på `main` 
 - Mainline-steward gör docs/governance/checklist/cleanup på `main`. Får inte röra filer som ligger i scope för en pågående feature-agent.
 - Feature-agent jobbar på egen branch, pushar bara till den branchen, och mergar via operatör eller PR.
 - Aktiva spår (B-IDs eller sprintar) listas i `docs/known-issues.md`. De filer ett aktivt spår räknar upp som scope är off-limits för mainline-arbete tills feature-agenten är klar.
+
+## Standard loop
+
+Varje etapp följer samma åtta steg. Loopen är medvetet kort - syftet är att
+varje delsteg har en tydlig ägare och en tydlig avlämningsyta.
+
+1. **Implementation-agent** genomför en avgränsad uppgift på egen branch
+   (eller direkt på `main` om uppgiften kvalificerar som mainline-steward-
+   arbete enligt `governance/rules/branch-discipline.md`).
+2. **Ro-review-agent** läser PR/diff i read-only-läge, letar scope-läckage,
+   buggar, hemligheter, branding-strängar och mapping-risker.
+3. **Operatör + extern reviewer** beslutar: merge, fix eller skrota.
+4. **Fix-agent** gör endast begärd fix. Inga sido-städningar utan ny prompt.
+5. **Final sanity** kör `python scripts/review_check.py` (samma kedja som
+   pre-merge-guards).
+6. **Merge** (squash) eller direkt push till `main` om mainline-steward.
+7. **Uppdatera [`docs/current-focus.md`](current-focus.md)** i samma eller
+   direkt efterföljande commit. Filen är projektets enda aktuella köplan.
+8. **Nästa etapp** plockas från queue-listan i `docs/current-focus.md`.
+
+Pull request-mallen i [`.github/pull_request_template.md`](../.github/pull_request_template.md)
+tvingar fram scope, ändrade filer, verifiering och risker per PR.
+[`.cursor/BUGBOT.md`](../.cursor/BUGBOT.md) beskriver de granskningsregler
+som ro-review-agent (manuell eller automatisk) ska följa.
