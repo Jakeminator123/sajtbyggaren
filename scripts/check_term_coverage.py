@@ -120,6 +120,11 @@ COMMON_WORDS = {
     "BaseModel", "Field", "FileNotFoundError", "BriefResult",
     "BriefModelResolutionError", "ValidationError", "ArtifactSchemaError",
     "SystemExit",
+    # Zod (TS) error class. Mirrors how Pydantic's ValidationError is
+    # treated above - external library symbol, not a domain term. Used
+    # in apps/viewser/app/api/prompt/route.ts to split client-side
+    # validation errors (400) from server errors (500).
+    "ZodError",
     # planning module internal class identifiers (Sprint 2B). Mirrors the
     # brief module's BriefResult/BriefModelResolutionError treatment - these
     # are Python implementation symbols, not domain terms. The canonical
