@@ -21,7 +21,7 @@ agent: "uppdatera current-focus innan något annat".
 
 ## Last verified
 
-Last verified state: `fda1464` (2026-05-13, B13b route-emission mergad via PR #19; branches städade; PR #17 stängd)
+Last verified state: `75c980b` (2026-05-13, B20 step 2 mapping-flip mergad via PR #20 + ADR 0019; bugbot-pr-loop-regel tillagd `bba8e36`; branch `feat/b20-step-2-mapping-flip` städad lokalt + remote)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -30,23 +30,29 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `fda1464` efter att PR #19 (B13b route-emission)
-squash-mergades 2026-05-13 18:38 UTC. `scripts/build_site.py:write_pages`
-är nu scaffold-drivet: `ecommerce-lite` genererar `/produkter` och
+`main` är vid `75c980b` efter att PR #20 (B20 step 2 mapping-flip
++ ADR 0019) squash-mergades 2026-05-13 19:33 UTC.
+`SCAFFOLD_TO_STARTER["ecommerce-lite"]` är nu `commerce-base`;
 ecommerce-lite-fixturen `examples/atelje-bird.project-input.json`
-passerar Quality Gate route-scan.
+producerar `app/produkter/page.tsx` (inte `/tjanster`) genom
+`source=deterministic-v1` codegen och passerar Quality Gate
+route-scan + policy-compliance med `--skip-build`. Real
+codegenModel-scope är fortsatt låst till `marketing-base` per
+ADR 0017 (ingen utvidgning beslutad).
 
-Pre-PR #19 mainline-steward-pushar som också ligger på main:
-- `61f9f69` - ny `reply-style`-regel (kort+koncis svenska med
+Mainline-steward-pushar som också ligger på main:
+- `bba8e36` - ny `bugbot-pr-loop`-regel (8-min poll + 10-iter
+  fix-loop + nödläge-eskalering) under `governance/rules/`.
+- `af8b337` - refresh av `docs/handoff.md` för main-as-default-
+  policy + post-B13b-state.
+- `61f9f69` - `reply-style`-regel (kort+koncis svenska med
   parens-förklaringar för dev-uttryck) under `governance/rules/`.
 - `b4fe4a8` + `1c2227b` - `.gitignore`/`.cursorignore` pre-allokerar
   `packages/generation/build/` (B13a-destinationen) och blockar
   `.cursor/mcp.json`.
 
-Branches städade 2026-05-13: lokala `feat/b13-route-emission` och
-`review/builder-ux-mvp-86068f7` raderade; remotes
-`cursor/setup-dev-environment-c32f` och `fix/b20-commerce-base`
-raderade. Kvar: `main`, `backup-{1..4}` och
+Branches städade 2026-05-13: feat/b20-step-2-mapping-flip raderad
+lokalt + remote efter merge. Kvar: `main`, `backup-{1..4}` och
 `frontend/christopher-import` (PR #17, stängd men branch behållen
 per operatörsbeslut).
 
@@ -56,52 +62,40 @@ Ingen pågående feature-PR.
 
 ## Next action - direktiv till nästa agent
 
-**B20 step 2: aktivera `ecommerce-lite -> commerce-base`-mappningen.**
+**Sanity-runda på `main` efter B20-merge + (om operatör vill)
+plocka lucide-react-konflikten som ny B-ID.**
 
-Förutsättningar är redan på plats: B13b route-emission är mergad
-(`fda1464`), `commerce-base`-starter är vendoriserad sedan PR #16
-(`ff3d512`), `examples/atelje-bird.project-input.json` finns som
-ecommerce-lite-fixture, `_pick_contact_route` + scaffold-driven
-nav/listing är på plats.
+Sanity-rundan: kör `python scripts/focus_check.py` (ska visa OK
+mot `75c980b`), kör `python scripts/review_check.py` om du vill
+ha hela kedjan på en gång, och verifiera artefakter med
+`python scripts/build_site.py --dossier
+examples/atelje-bird.project-input.json --skip-build` och
+`python scripts/build_site.py --dossier
+examples/painter-palma.project-input.json --skip-build` så att
+ingen scaffold-driven path har drivit.
 
-Konkret att göra på egen branch `feat/b20-step-2-mapping-flip`:
+Lucide-react-konflikten (introducerad som synlig av PR #20):
+full `npm run build` mot `.generated/atelje-bird/` faller på
+`Module not found: lucide-react` eftersom
+`scripts/build_site.py:write_pages` hardcodar lucide-imports per
+renderer (`render_home`, `render_about`, `render_contact`,
+`render_layout`, `render_products`) men `commerce-base/package.json`
+bara har `@heroicons/react`. Marketing-base har `lucide-react` så
+det syns inte där. Två fix-vägar:
 
-1. Kör `python scripts/focus_check.py` först. Adresera varningar
-   innan du börjar.
-2. Ändra i `packages/generation/planning/plan.py:SCAFFOLD_TO_STARTER`:
-   `"ecommerce-lite": "marketing-base"` -> `"ecommerce-lite": "commerce-base"`.
-3. Uppdatera `data/starters/README.md` scaffold-starter-mapping-blocket:
-   stryk `(B20: temporary; ...)`-noten från `ecommerce-lite`-raden.
-4. Kör `python -m pytest tests/test_starter_scaffold_mapping.py -v`.
-   `test_b20_temporary_mapping_is_explicit` ska nu klara sig själv
-   (den triggar bara när mappningen är `marketing-base`).
-5. Kör `python scripts/build_site.py --dossier
-   examples/atelje-bird.project-input.json --skip-build` och bekräfta:
-   - `build-result.json` har `starterId: commerce-base`.
-   - `quality-result.json` har `status: ok` (eller `degraded` med en
-     known cause - inte route-scan failure).
-   - `app/produkter/page.tsx` emitteras, `app/tjanster/page.tsx`
-     emitteras INTE.
-6. Risk: real-codegenModel i
-   `packages/generation/codegen/codegen.py:_REAL_CODEGEN_STARTERS` är
-   låst till `marketing-base` (ADR 0017). För ecommerce-lite faller
-   den tillbaka till `deterministic-v1`. Det är OK för B20 step 2;
-   utvidgning av real-codegen-scope är separat sprint som kräver
-   ADR-utökning ovanpå 0017.
-7. Försök att köra full `npm run build` på en
-   genererad `.generated/atelje-bird/` (utan `--skip-build`). Om det
-   misslyckas pga Shopify-env eller liknande externa beroenden:
-   dokumentera under "Known risks" i PR-beskrivningen och be
-   operatören välja om B20 stängs på `--skip-build`-nivå eller om
-   commerce-base behöver mer guarding först.
-8. Standard loop: branch -> commit -> push -> PR -> invänta Bugbot ->
-   åtgärda fynd -> merge.
-9. Post-merge Standard loop steg 7: flytta B20-posten i
-   `docs/known-issues.md` till "Stängda - regression-test säkrar
-   fixet"-avsnittet med merge-SHA, och bumpa "Last verified"-SHA:n
-   här.
+- Lägg `lucide-react` i `commerce-base/package.json` med
+  `package-lock.json`-uppdatering. Snabbast, men starter-doktrinen
+  i `data/starters/README.md` rad 105 säger att nya deps i en
+  starter kräver operatörsgodkännande.
+- Gör `write_pages` icon-bibliotek-agnostisk per starter (mappa
+  ikoner via en starter-config eller använd inline SVG). Bredare
+  refactor av deterministic-v1 codegen.
 
-### Pre-push self-review checklist (lärt från B13b)
+När operatör har valt väg: lägg upp som nytt B-ID i
+`docs/known-issues.md` och plocka som egen PR enligt
+`governance/rules/branch-discipline.md` + `bugbot-pr-loop.md`.
+
+### Pre-push self-review checklist (lärt från B13b + B20)
 
 Innan `git push` på en feature-branch:
 
@@ -118,11 +112,19 @@ Innan `git push` på en feature-branch:
 - För varje ny renderer som tar `dossier`: kontrollera om den
   länkar någonstans och om den pathen ska komma från scaffolden
   (`_pick_*_route`) eller bara från dossiern.
+- Om PR ändrar `SCAFFOLD_TO_STARTER` eller liknande policy-
+  förankrad dict: skapa motsvarande ADR i samma PR (lärdom från
+  PR #20:s Bugbot-iteration 1, åtgärdad via ADR 0019).
+- Om PR har en informativ post-merge-followup som inte blockerar
+  merge: lägg den under "Post-merge sanity needed", INTE under
+  "Known risks / blockers". Bugbot tolkar varje rad i blocker-
+  sektionen som hård gate (lärdom från PR #20:s Bugbot-iteration 1).
 
 ## Blocked items
 
-(Inga aktiva blockers just nu — B20 step 2 är nästa PR och dess
-förutsättningar är på plats.)
+(Inga aktiva blockers just nu — B20 step 2 är mergad och
+sanity-rundan är nästa konkreta arbete; lucide-react-konflikten
+väntar på operatörsbeslut om fix-väg.)
 
 ## Do not start yet
 
@@ -140,8 +142,8 @@ förutsättningar är på plats.)
 
 ## Queue
 
-1. B20 step 2 mapping-flipp (se "Next action" ovan).
-2. Sanity-runda på `main` efter B20-merge.
+1. Sanity-runda på `main` efter B20-merge (se "Next action" ovan).
+2. Lucide-react fix-väg när operatör valt riktning (eget B-ID).
 3. B13a arkitektur-flytt (egen sprint, kräver ADR).
 4. Återgå till prompt-till-sajt-loopen eller plocka upp någon av
    BO2/BO4 (Backoffice-skuld från round 1).

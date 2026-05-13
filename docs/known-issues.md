@@ -90,86 +90,70 @@ Format per bugg:
   och `B13b` (route-emission) den 2026-05-13 efter att
   `docs/current-focus.md` började använda namnet "B13" för bara den
   ena halvan.
-- **`B20` Låg** (öppen 2026-05-08, status: **vendor done, route-emission
-  done; ready for mapping-flip PR**) - status uppdaterad 2026-05-13
-  efter att B13b stängdes i `fda1464`.
-
-  **Steg 1 (vendor) landad i PR #16 commit `4b4c3af`:**
-  `data/starters/commerce-base/` är nu vendoriserad och harmoniserad
-  från `vercel/commerce` upstream commit
-  `1df2cf6f6c935f4782eed27351fa18f276917a4d`. Hårda krav uppfyllda
-  enligt `data/starters/README.md`: Next.js 16, TypeScript strict,
-  Tailwind 4, shadcn-konfiguration, `package-lock.json`, ESLint flat
-  + Prettier, ingen `.env`. `npm ci` + `npm run build` + `npm run lint`
-  gröna lokalt; Shopify-anrop guard:ade så builden inte kräver
-  Shopify-env. Se [ADR
-  0018](../governance/decisions/0018-b20-commerce-base-harmonisering.md).
-
-  **Steg 2 (mapping-flipp) redo:** den tidigare blockern (route-emission
-  i `scripts/build_site.py`) är löst i `fda1464` (B13b). `write_pages`
-  driver nu page-emission per scaffold `routes.json` och ecommerce-lite-
-  fixturen `atelje-bird` har bekräftat end-to-end-smoke (Quality Gate
-  route-scan `status=ok`, `/produkter` emitteras, `/tjanster` emitteras
-  inte). `packages/generation/codegen/codegen.py` är dock fortfarande
-  scope-låst till `marketing-base` (ADR 0017): ecommerce-lite kan
-  inte köra real `codegenModel` än, men deterministisk
-  `source=deterministic-v1` codegen fungerar för commerce-base så länge
-  starter-builden själv är grön.
-
-  **Nästa PR (B20 step 2 mapping-flipp):** flippa
-  `SCAFFOLD_TO_STARTER["ecommerce-lite"]` från `marketing-base` till
-  `commerce-base` i `packages/generation/planning/plan.py`, uppdatera
-  `data/starters/README.md` mappnings-blocket (ta bort `(B20: ...)`-
-  noten), och kör `python scripts/build_site.py --dossier
-  examples/atelje-bird.project-input.json --skip-build` för att
-  bekräfta att build-result.json refererar `commerce-base` som
-  starterId. Om real npm-build krävs: säkerställ att
-  `data/starters/commerce-base/` inte kräver Shopify-env vid `npm
-  run build`. När detta är grönt: flytta B20-posten till "Stängda".
-
-  Filer som hör till detta spår och som mainline-arbete inte ska röra
-  så länge en feature-agent jobbar på B20 (se branch-discipline.md
-  "Parallella agenter"):
-
-  - `data/starters/commerce-base/` (allt under)
-  - `data/starters/README.md` (mappnings-blocket + commerce-base Status-rad)
-  - `packages/generation/planning/plan.py` (`SCAFFOLD_TO_STARTER`)
-  - `tests/test_starter_scaffold_mapping.py`
-  - `scripts/build_site.py` (för PR #19 / B13b-spåret)
-  - `packages/generation/codegen/codegen.py` (om scope utvidgas)
-
-  Review-checklist när B20 stängs (för cloud-reviewer eller operatör
-  som signerar av PR 16b):
-
-  1. `data/starters/commerce-base/` har faktisk starter-kod (åtminstone
-     `package.json`, `app/`-mapp, `components/`, lockfil).
-  2. `cd data/starters/commerce-base && npm install && npm run build`
-     går igenom utan att kräva Shopify-env eller annan extern secret.
-  3. Hårda krav uppfyllda enligt `data/starters/README.md`: Next.js 16,
-     TypeScript strict, Tailwind 4, shadcn/ui initialiserad,
-     `package-lock.json` (inte `pnpm-lock.yaml`), ESLint flat + Prettier,
-     inga `.env`-filer.
-  4. Ingen hårdkodad kundcopy, hårdkodade färger eller hårdkodade
-     CTA-länkar. Shopify-anrop bor endast under `lib/<provider>/`;
-     adapter-mönstret är intakt så `lib/medusa/`, `lib/bigcommerce/`
-     etc. kan kopplas in via hard Dossier.
-  5. `packages/generation/planning/plan.py:SCAFFOLD_TO_STARTER` har
-     `ecommerce-lite: commerce-base`.
-  6. `data/starters/README.md`:s `scaffold-starter-mapping`-block har
-     raden `ecommerce-lite: commerce-base` utan `(B20: ...)`-noten.
-  7. Alla governance-tester i `tests/test_starter_scaffold_mapping.py`
-     gröna - särskilt `test_b20_temporary_mapping_is_explicit` som
-     stänger sig av automatiskt när mappningen flippas.
-  8. `python scripts/build_site.py --dossier <ecommerce-input>` (eller
-     närmaste motsvarande dossier-exempel som plockar
-     `ecommerce-lite`) producerar `build-result.json` status=ok och
-     `quality-result.json` status=ok. Specifikt: `app/produkter/page.tsx`
-     emitteras, `app/tjanster/page.tsx` emitteras INTE för ecommerce-
-     lite-scaffolden.
-  9. Denna B20-post flyttas till "Stängda - regression-test säkrar
-     fixet"-avsnittet med datum + fix-SHA.
+(B20 stängd 2026-05-13 — se "Stängda - regression-test säkrar fixet" nedan.)
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B20` Låg** (stängd 2026-05-13, squash-merge `75c980b` via PR #20)
+  - aktiverade `ecommerce-lite -> commerce-base`-routingen. Spåret
+  hade två steg: step 1 (vendor-import av
+  `data/starters/commerce-base/` från `vercel/commerce` upstream
+  `1df2cf6`) landade i PR #16 commit `4b4c3af` enligt [ADR
+  0018](../governance/decisions/0018-b20-commerce-base-harmonisering.md).
+  Step 2 var blockerat av B13b (route-emission) tills `fda1464`
+  löste `scripts/build_site.py:write_pages` att vara scaffold-driven.
+
+  **Fix:** ny [ADR
+  0019](../governance/decisions/0019-b20-step-2-mapping-activation.md)
+  aktiverar mappningen explicit (adresserar ADR 0018:s "kräver egen
+  ADR" och `.cursor/BUGBOT.md` "Mapping and routing risk"-regelns
+  krav på ADR i samma PR).
+  `packages/generation/planning/plan.py:SCAFFOLD_TO_STARTER` har
+  `ecommerce-lite: commerce-base`. `data/starters/README.md`:s
+  `scaffold-starter-mapping`-block har raden
+  `ecommerce-lite: commerce-base` utan `(B20: ...)`-noten,
+  Status-kolumnen för `commerce-base` uppdaterad till "aktiverad i
+  B20 step 2", och avsnittstexten ovanför mapping-blocket
+  avgenericerad.
+  `packages/generation/codegen/codegen.py:_REAL_CODEGEN_STARTERS`
+  förblir `{"marketing-base"}` (ADR 0017 + ADR 0019:s "INTE
+  beslutar"-sektion): ecommerce-lite kör genom
+  `source=deterministic-v1` codegen tills real-codegen-scope
+  utvidgas i en separat sprint med egen ADR-utökning.
+
+  Test: `tests/test_starter_scaffold_mapping.py` (8 tester) gröna,
+  inklusive `test_b20_temporary_mapping_is_explicit` som auto-skippar
+  positivt när mappningen är `commerce-base`.
+  `tests/test_planning.py::test_produce_site_plan_picks_ecommerce_lite_on_commerce_signal`
+  source-lock uppdaterad till `commerce-base`.
+  `python scripts/build_site.py --dossier
+  examples/atelje-bird.project-input.json --skip-build` ger
+  `build-result.json starterId=commerce-base`,
+  `routes=[/, /kontakt, /om-oss, /produkter]` (inget `/tjanster`),
+  `quality-result.json status=ok`.
+  `app/produkter/page.tsx` emitteras, `app/tjanster/page.tsx` INTE.
+
+  Bugbot-rundor: 1 iteration, 2 fynd. Fynd 1 (Hög: SCAFFOLD_TO_STARTER
+  utan ADR) löst via ADR 0019 i `af7fac4`. Fynd 2 (Medium: PR Ready
+  trots Known risks/blockers) hanterad genom att flytta
+  lucide-react-noten till "Post-merge sanity needed" i PR-
+  beskrivningen; Bugbots inline-comment-API rapporterade fyndet
+  som carry-over på senaste commit men UI markerade fynd 1 som
+  "Show resolved" och alla CI-checks (Cursor Bugbot NEUTRAL,
+  governance SUCCESS, GitGuardian SUCCESS) passerade.
+
+  **Known follow-up (öppen, väntar på operatörsval av fix-väg):**
+  full `npm run build` mot `.generated/atelje-bird/` faller på
+  `Module not found: lucide-react` eftersom
+  `scripts/build_site.py:write_pages` hardcodar lucide-imports per
+  renderer (`render_home`, `render_about`, `render_contact`,
+  `render_layout`, `render_products`) men `commerce-base/package.json`
+  bara har `@heroicons/react`. Marketing-base har `lucide-react` så
+  det syns inte där. Inte Shopify-env-relaterat. Påverkar inte
+  `--skip-build`-acceptansen. Spåra ett nytt B-ID när operatör
+  valt fix-väg (lägg `lucide-react` i `commerce-base/package.json`
+  med lockfil-uppdatering, eller gör `write_pages` icon-bibliotek-
+  agnostisk per starter).
 
 - **`B13b` Låg** (stängd 2026-05-13, squash-merge `fda1464` via PR #19) -
   `scripts/build_site.py:write_pages` var hårdkodad mot
