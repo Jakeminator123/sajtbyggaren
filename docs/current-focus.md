@@ -21,7 +21,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `e421a00` (2026-05-14, post-Prompt-till-sajt MVP v1 + audit-hotfix-sprint: ZodError -> 400 i `/api/prompt`, whitespace-trim före `.min(1)`, `--`-separator i Python-spawn så dash-prefixade prompts inte tolkas som CLI-options av argparse, stale viewer-panel fallback-copy uppdaterad till PromptBuilder-flödet, prompt-helperns brief-imports flyttade till modulnivå så test-monkeypatch faktiskt biter, plus allowlist av `ZodError` i `check_term_coverage`. backup-7 från `fb11925` pushad till origin före hotfix-sprinten. Alla guards gröna lokalt; ingen öppen PR)
+Last verified state: `2f0af68` (2026-05-14, post-Prompt-till-sajt MVP v1 + audit-hotfix-sprint: ZodError -> 400 i `/api/prompt`, whitespace-trim före `.min(1)`, `--`-separator i Python-spawn så dash-prefixade prompts inte tolkas som CLI-options av argparse, stale viewer-panel fallback-copy uppdaterad till PromptBuilder-flödet, prompt-helperns brief-imports flyttade till modulnivå så test-monkeypatch faktiskt biter, allowlist av `ZodError` i `check_term_coverage`, plus docs-bump i `2f0af68`. Faktisk kod-HEAD för audit-hotfixen är `e421a00`; `2f0af68` är Standard-loop-steg-7 docs-commit ovanpå. backup-7 från `fb11925` pushad till origin före hotfix-sprinten. Alla guards gröna lokalt; ingen öppen PR)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -30,7 +30,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `e421a00` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `2f0af68` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -116,6 +116,11 @@ Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
   symbol`. Speglar Pydantic `ValidationError`-behandlingen så
   `ZodError` (extern lib-symbol från `zod`) inte räknas som
   okänt domänbegrepp i strict-läget.
+- `2f0af68` — `docs: bump focus + handoff to e421a00 post-audit-
+  hotfix-sprint`. Standard loop steg 7 efter audit-hotfix-sprinten:
+  bumpar SHA + uppdaterar Queue/Blocked. (Ovanpå denna ligger en
+  följdfix `docs: correct verified HEAD to 2f0af68` som speglar
+  faktisk HEAD efter Scout-RO-feedback.)
 
 Mainline-steward-pushar efter PR #21 (pure docs/governance):
 
@@ -218,7 +223,8 @@ Innan `git push origin main`:
 (Inga aktiva blockers just nu — B20 + lucide-fix mergade,
 sanity-rundan grön mot `04fc2fa`, Prompt-till-sajt MVP v1
 mergad direktpush `4d5b4de`, audit-hotfix-sprint klar till
-`e421a00`. Nästa val är operatörsdrivet, se "Next action" + "Queue".)
+`e421a00` med docs-bump i `2f0af68`. Nästa val är operatörsdrivet,
+se "Next action" + "Queue".)
 
 ## Do not start yet
 
