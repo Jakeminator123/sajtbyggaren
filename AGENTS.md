@@ -35,11 +35,11 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-On Linux (Cloud Agent VMs), the venv package must be installed first
-(`sudo apt-get install -y python3-venv`). On Ubuntu Noble `python3.12-venv`
-is not directly installable but `python3-venv` pulls it in transitively.
-Activate with
-`source .venv/bin/activate`. The update script handles this automatically.
+On Linux (Cloud Agent VMs), the venv package must be installed first.
+On Ubuntu Noble use `sudo apt-get install -y python3.12-venv` (the
+meta-package `python3-venv` may not be available depending on sources).
+Activate with `source .venv/bin/activate`. The update script handles
+this automatically.
 
 ### Running services
 
