@@ -406,16 +406,85 @@ def _phone_href(phone: str) -> str:
     return phone.replace(" ", "").replace("(", "").replace(")", "")
 
 
-def _nav_items(dossier_routes: list[str]) -> list[tuple[str, str]]:
+# Default Swedish nav labels per scaffold route id. Unknown ids fall back
+# to a slug-to-Title-Case form via _nav_label_for_route. Centralised so
+# different scaffolds share the same vocabulary (e.g. "contact" -> "Kontakt"
+# everywhere) without duplicating literals in each renderer.
+_NAV_LABEL_BY_ROUTE_ID: dict[str, str] = {
+    "home": "Hem",
+    "services": "Tjänster",
+    "products": "Produkter",
+    "about": "Om oss",
+    "contact": "Kontakt",
+}
+
+
+# Copy fragments per "listing" route id (services vs products). render_home
+# renders the same overall hero/list/trust structure for both scaffolds but
+# swaps eyebrow, heading and CTA copy so the cross-link sounds right.
+_LISTING_COPY_BY_ROUTE_ID: dict[str, dict[str, str]] = {
+    "services": {
+        "eyebrow": "Tjänster",
+        "heading": "Vad vi tar oss an",
+        "cta": "Se alla tjänster",
+    },
+    "products": {
+        "eyebrow": "Produkter",
+        "heading": "Vårt sortiment",
+        "cta": "Se alla produkter",
+    },
+}
+
+
+def _nav_label_for_route(route_id: str) -> str:
+    """Return the Swedish nav label for a scaffold route id.
+
+    Known ids use the centralised lookup. Unknown ids fall back to a
+    human-readable form so an early-preview scaffold can still produce
+    a sensible nav without first registering its labels here.
+    """
+    if route_id in _NAV_LABEL_BY_ROUTE_ID:
+        return _NAV_LABEL_BY_ROUTE_ID[route_id]
+    return route_id.replace("-", " ").replace("_", " ").title()
+
+
+def _nav_items_from_scaffold(
+    scaffold_default_routes: list[dict],
+    dossier_routes: list[str],
+) -> list[tuple[str, str]]:
+    """Build the (href, label) nav items for header + footer.
+
+    Driven by the scaffold's ``defaultRoutes`` (so different scaffolds
+    can emit different nav structures) plus any Dossier-contributed
+    routes that should appear in the nav. Currently the only such
+    Dossier-route is ``/spel`` (interactive-game-loop); when more
+    Dossiers add navigable pages this branch widens.
+    """
     items: list[tuple[str, str]] = [
-        ("/", "Hem"),
-        ("/tjanster", "Tjänster"),
-        ("/om-oss", "Om oss"),
-        ("/kontakt", "Kontakt"),
+        (route["path"], _nav_label_for_route(route["id"]))
+        for route in scaffold_default_routes
     ]
     if "/spel" in dossier_routes:
         items.append(("/spel", "Spel"))
     return items
+
+
+def _pick_listing_route(
+    scaffold_default_routes: list[dict],
+) -> dict | None:
+    """Return the scaffold's primary listing route (services or products).
+
+    Used by ``render_home`` to point the secondary CTA at the right
+    place: ``/tjanster`` for local-service-business, ``/produkter``
+    for ecommerce-lite. Returns ``None`` for scaffolds that declare
+    neither (the home page then omits the listing cross-link entirely
+    instead of inventing a path that has no matching route).
+    """
+    by_id = {r["id"]: r for r in scaffold_default_routes}
+    for candidate in ("services", "products"):
+        if candidate in by_id:
+            return by_id[candidate]
+    return None
 
 
 def _collect_icons_for_pages(services: list[dict], dossier_routes: list[str]) -> list[str]:
@@ -436,19 +505,39 @@ def _collect_icons_for_pages(services: list[dict], dossier_routes: list[str]) ->
     return sorted(used)
 
 
-def render_layout(dossier: dict, dossier_routes: list[str]) -> str:
+def render_layout(
+    dossier: dict,
+    dossier_routes: list[str],
+    *,
+    scaffold_default_routes: list[dict] | None = None,
+) -> str:
     """Whole-file layout.tsx with sticky header and footer.
 
-    Replaces the marketing-base placeholder layout. The previous patch_layout
-    only swapped title/description; now the layout actively composes the
-    company name into a navigation shell so every page feels finished.
+    Nav items are built from ``scaffold_default_routes`` so different
+    scaffolds emit different navigation shells (e.g. ecommerce-lite
+    points at ``/produkter`` instead of ``/tjanster``). When
+    ``scaffold_default_routes`` is ``None`` the renderer falls back
+    to the local-service-business defaults; this keeps the unit
+    tests in tests/test_builder_audit_post_3b_next.py (which only
+    check JSX escaping) functional without forcing every caller to
+    pass the scaffold registry.
     """
     company = dossier["company"]
     contact = dossier["contact"]
-    nav_items = _nav_items(dossier_routes)
-    # nav_items entries come from the hardcoded _nav_items helper (canonical
-    # routes + Swedish labels), not customer data, so href + label are safe
-    # to inline. Customer-supplied values (company.name, company.tagline,
+    if scaffold_default_routes is None:
+        scaffold_default_routes = [
+            {"id": "home", "path": "/"},
+            {"id": "services", "path": "/tjanster"},
+            {"id": "about", "path": "/om-oss"},
+            {"id": "contact", "path": "/kontakt"},
+        ]
+    nav_items = _nav_items_from_scaffold(
+        scaffold_default_routes, dossier_routes
+    )
+    # nav_items entries come from _nav_items_from_scaffold (canonical
+    # paths + Swedish labels driven by scaffold_default_routes), not
+    # customer data, so href + label are safe to inline.
+    # Customer-supplied values (company.name, company.tagline,
     # contact.*, addressLines) all go through _jsx_safe_string for JSX
     # positions or _js_string_literal for the metadata object literal -
     # see B30 in docs/known-issues.md.
@@ -533,12 +622,32 @@ def render_layout(dossier: dict, dossier_routes: list[str]) -> str:
     )
 
 
-def render_home(dossier: dict, dossier_routes: list[str]) -> str:
+def render_home(
+    dossier: dict,
+    dossier_routes: list[str],
+    *,
+    listing_route: dict | None = None,
+) -> str:
+    """Home page renderer.
+
+    ``listing_route`` is the scaffold's primary listing surface
+    (``{"id": "services", "path": "/tjanster"}`` for
+    local-service-business, ``{"id": "products", "path": "/produkter"}``
+    for ecommerce-lite). When ``None`` the renderer falls back to
+    ``services``/``/tjanster`` so existing unit tests that only
+    verify JSX escaping keep working without passing the scaffold.
+    """
     company = dossier["company"]
     location = dossier["location"]
     services = dossier["services"]
     trust = dossier["trustSignals"]
     contact = dossier["contact"]
+    if listing_route is None:
+        listing_route = {"id": "services", "path": "/tjanster"}
+    listing_copy = _LISTING_COPY_BY_ROUTE_ID.get(
+        listing_route["id"], _LISTING_COPY_BY_ROUTE_ID["services"]
+    )
+    listing_path = listing_route["path"]
     icons_used = _collect_icons_for_pages(services, dossier_routes)
     icon_import = (
         "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
@@ -588,13 +697,13 @@ def render_home(dossier: dict, dossier_routes: list[str]) -> str:
         '      <section className="border-t border-[color:var(--border)]">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         '          <div className="flex flex-col gap-3">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Tjänster</p>\n'
-        '            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">Vad vi tar oss an</h2>\n'
+        f'            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">{listing_copy["eyebrow"]}</p>\n'
+        f'            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">{listing_copy["heading"]}</h2>\n'
         '          </div>\n'
         '          <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{services_grid}\n"
         '          </ul>\n'
-        '          <a href="/tjanster" className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Se alla tjänster<ArrowRight className="size-4" /></a>\n'
+        f'          <a href="{listing_path}" className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">{listing_copy["cta"]}<ArrowRight className="size-4" /></a>\n'
         '        </div>\n'
         '      </section>\n'
         "\n"
@@ -756,12 +865,134 @@ def render_contact(dossier: dict) -> str:
     )
 
 
-def write_pages(target: Path, dossier: dict, dossier_routes: list[str]) -> None:
-    write(target / "app" / "page.tsx", render_home(dossier, dossier_routes))
-    write(target / "app" / "tjanster" / "page.tsx", render_services(dossier))
-    write(target / "app" / "om-oss" / "page.tsx", render_about(dossier))
-    write(target / "app" / "kontakt" / "page.tsx", render_contact(dossier))
-    write(target / "app" / "layout.tsx", render_layout(dossier, dossier_routes))
+# Route id -> renderer function. Each renderer accepts the dossier
+# plus the kwargs it actually needs; the dispatcher fills them in.
+# Adding a new scaffold route id means adding both the path in the
+# scaffold's routes.json AND a renderer here. The dispatcher raises
+# SystemExit on unknown route ids so a scaffold cannot silently
+# request a page with no implementation - that would otherwise
+# surface as a route-scan failure with no obvious owner.
+_ROUTE_RENDERERS: dict[str, str] = {
+    "home": "render_home",
+    "services": "render_services",
+    "products": "render_products",
+    "about": "render_about",
+    "contact": "render_contact",
+}
+
+
+def render_products(dossier: dict) -> str:
+    """Products-page renderer for ecommerce-lite (B13 route-emission).
+
+    Reads the ``services`` array from the Project Input. The schema
+    keeps the field named ``services`` because the renderer reads
+    the same id/label/summary tuple regardless of scaffold; the
+    rename to a dedicated ``products`` field is deliberately left
+    for the next sprint that flips ``SCAFFOLD_TO_STARTER`` to
+    ``commerce-base`` (current focus: B13 is route-emission only).
+    """
+    products = dossier["services"]
+    icons_used = sorted(
+        {_icon_for_service(item["id"]) for item in products}
+        | {"ArrowRight", "ShoppingBag"}
+    )
+    icon_import = (
+        "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
+    )
+    items = "\n".join(
+        f'          <article key={_jsx_safe_string(item["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all hover:border-[color:var(--primary)] hover:shadow-sm">\n'
+        f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(item["id"])} className="size-6" /></span>\n'
+        f'            <h2 className="text-xl font-semibold">{_jsx_safe_string(item["label"])}</h2>\n'
+        f'            <p className="mt-3 text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(item["summary"])}</p>\n'
+        '          </article>'
+        for item in products
+    )
+    return (
+        icon_import +
+        "\n"
+        "export default function ProductsPage() {\n"
+        "  return (\n"
+        '    <main className="flex flex-1 flex-col">\n'
+        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        '          <header className="flex flex-col gap-3">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Produkter</p>\n'
+        '            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Vårt sortiment</h1>\n'
+        '            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">Här är våra produkter. Hör av dig om du undrar något så hjälper vi dig hela vägen till beställning.</p>\n'
+        '          </header>\n'
+        '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
+        f"{items}\n"
+        '          </div>\n'
+        '          <a href="/kontakt" className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity"><ShoppingBag className="size-4" />Fråga om en beställning<ArrowRight className="size-4" /></a>\n'
+        '        </div>\n'
+        '      </section>\n'
+        '    </main>\n'
+        "  );\n"
+        "}\n"
+    )
+
+
+def write_pages(
+    target: Path,
+    dossier: dict,
+    scaffold_routes: dict,
+    dossier_routes: list[str],
+) -> list[str]:
+    """Write every page declared in ``scaffold_routes["defaultRoutes"]``.
+
+    The renderer for each route is selected by route id, not by
+    path, so a future scaffold can keep the id ``"contact"`` while
+    moving the path from ``/kontakt`` to ``/kontakta-oss`` without
+    duplicating the renderer.
+
+    Returns the list of paths written (one per default route) so
+    the caller can mention them in the trace event without
+    rebuilding the list.
+
+    Raises ``SystemExit`` for scaffold route ids that have no
+    registered renderer: silently skipping such routes would later
+    surface as Quality Gate route-scan failures with no obvious
+    owner. The error message names the route id so the operator
+    can add a renderer or remove the route from the scaffold.
+    """
+    default_routes = scaffold_routes["defaultRoutes"]
+    listing_route = _pick_listing_route(default_routes)
+    written: list[str] = []
+    for route in default_routes:
+        route_id = route["id"]
+        path = route["path"]
+        if route_id == "home":
+            content = render_home(
+                dossier, dossier_routes, listing_route=listing_route
+            )
+        elif route_id == "services":
+            content = render_services(dossier)
+        elif route_id == "products":
+            content = render_products(dossier)
+        elif route_id == "about":
+            content = render_about(dossier)
+        elif route_id == "contact":
+            content = render_contact(dossier)
+        else:
+            raise SystemExit(
+                "Builder failed: scaffold route id "
+                f"{route_id!r} (path={path!r}) has no registered "
+                "renderer in scripts/build_site.py. Add a "
+                "render_<id>() function and register it in "
+                "write_pages, or remove the route from the "
+                "scaffold's routes.json."
+            )
+        write(route_to_page_path(target, path), content)
+        written.append(path)
+    write(
+        target / "app" / "layout.tsx",
+        render_layout(
+            dossier,
+            dossier_routes,
+            scaffold_default_routes=default_routes,
+        ),
+    )
+    return written
 
 
 def selected_required_dossiers(project_input: dict) -> list[str]:
@@ -1559,8 +1790,14 @@ def build(
     copied_components = mount_dossier_components(target, selected_dossiers)
     dossier_routes = write_dossier_routes(target, selected_dossiers)
 
-    print("Writing pages: /, /tjanster, /om-oss, /kontakt and layout")
-    write_pages(target, dossier, dossier_routes)
+    paths_written = write_pages(
+        target, dossier, scaffold_routes, dossier_routes
+    )
+    print(
+        "Writing pages: "
+        + ", ".join(paths_written)
+        + " and layout"
+    )
 
     routes_required = required_routes(scaffold_routes)
     routes_all = all_default_routes(scaffold_routes)

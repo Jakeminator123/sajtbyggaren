@@ -1,0 +1,69 @@
+{
+  "$schema": "../governance/schemas/project-input.schema.json",
+  "siteId": "atelje-bird",
+  "scaffoldId": "ecommerce-lite",
+  "variantId": "clean-store",
+  "language": "sv",
+  "company": {
+    "name": "Ateljé Bird",
+    "businessType": "ceramics-studio",
+    "tagline": "Handdrejad keramik från en liten ateljé i Hälsingland",
+    "story": "Ateljé Bird är Klara Birds enmansateljé i en gammal lanthandel utanför Bollnäs. Allt drejas, glaseras och bränns på plats i små serier. Inga två stycken är exakt likadana - och det är meningen.",
+    "founded": 2021,
+    "team": [
+      { "name": "Klara Bird", "role": "Drejare och grundare" }
+    ]
+  },
+  "location": {
+    "city": "Bollnäs",
+    "region": "Hälsingland",
+    "country": "Sverige",
+    "serviceAreas": ["Bollnäs", "Söderhamn", "Gävle", "Hudiksvall"]
+  },
+  "services": [
+    {
+      "id": "mugs-stoneware",
+      "label": "Stengodsmuggar",
+      "summary": "Drejade muggar i stengods med matt glasyr. Tål diskmaskin och mikro, rymmer 3 dl och är stapelbara."
+    },
+    {
+      "id": "bowls-everyday",
+      "label": "Vardagsskålar",
+      "summary": "Mellanstora skålar för havregryn, soppa eller frukt. Säljs styckevis eller som set om fyra."
+    },
+    {
+      "id": "vases-table",
+      "label": "Bordsvaser",
+      "summary": "Små vaser för en kvist eller en bukett ängsblommor. Två höjder, fem glasyrer."
+    },
+    {
+      "id": "plates-dinner",
+      "label": "Middagstallrikar",
+      "summary": "Tjocka, lite oregelbundna tallrikar i naturvit lera. Säljs i par."
+    }
+  ],
+  "tone": {
+    "primary": "stilren",
+    "secondary": ["hantverksstolt", "lugn", "personlig"],
+    "avoid": ["premium-snobberi", "massproducerad-känsla"]
+  },
+  "trustSignals": [
+    "Allt drejas och bränns för hand i ateljén",
+    "Små serier, ofta unika exemplar",
+    "Fri frakt över 1000 kr inom Sverige",
+    "Öppet köp i 30 dagar"
+  ],
+  "conversionGoals": ["shop_visit", "product_purchase"],
+  "requestedCapabilities": [],
+  "contact": {
+    "phone": "+46 70 123 45 67",
+    "email": "hej@ateljebird.se",
+    "addressLines": ["Storgatan 14", "821 30 Bollnäs"],
+    "openingHours": "Fre-Lör 11-16, övriga dagar enligt överenskommelse"
+  },
+  "selectedDossiers": {
+    "required": [],
+    "recommended": [],
+    "rationale": "Ren ecommerce-lite-baseline: scaffold + variant räcker, inga interaktiva Dossiers behövs för att visa produktkatalogen."
+  }
+}
