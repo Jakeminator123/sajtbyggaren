@@ -634,20 +634,28 @@ def render_home(
     (``{"id": "services", "path": "/tjanster"}`` for
     local-service-business, ``{"id": "products", "path": "/produkter"}``
     for ecommerce-lite). When ``None`` the renderer falls back to
-    ``services``/``/tjanster`` so existing unit tests that only
-    verify JSX escaping keep working without passing the scaffold.
+    ``services``/``/tjanster`` because:
+
+      - Both shipping scaffolds today register either a ``services``
+        or a ``products`` route, so ``write_pages`` always passes a
+        concrete value (``_pick_listing_route`` cannot return None
+        for either of them).
+      - The pre-B13 B30 unit tests in
+        ``tests/test_builder_audit_post_3b_next.py`` call
+        ``render_home(dossier, dossier_routes=...)`` directly to
+        exercise JSX escaping and depend on the services grid
+        being rendered. Forcing them to pass a scaffold would
+        re-couple JSX-escape regression tests to scaffold shape.
+
+    A scaffold that registers neither route is a future case
+    (currently hypothetical). When that lands, this fallback must
+    move to a None-aware branch that suppresses the listing CTA.
     """
     company = dossier["company"]
     location = dossier["location"]
     services = dossier["services"]
     trust = dossier["trustSignals"]
     contact = dossier["contact"]
-    if listing_route is None:
-        listing_route = {"id": "services", "path": "/tjanster"}
-    listing_copy = _LISTING_COPY_BY_ROUTE_ID.get(
-        listing_route["id"], _LISTING_COPY_BY_ROUTE_ID["services"]
-    )
-    listing_path = listing_route["path"]
     icons_used = _collect_icons_for_pages(services, dossier_routes)
     icon_import = (
         "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
@@ -672,6 +680,16 @@ def render_home(
         if "/spel" in dossier_routes
         else ""
     )
+    if listing_route is None:
+        # See render_home docstring for why this fallback exists:
+        # the B30 unit tests call render_home without a scaffold
+        # and every shipping scaffold today registers either a
+        # services or products route via write_pages.
+        listing_route = {"id": "services", "path": "/tjanster"}
+    listing_copy = _LISTING_COPY_BY_ROUTE_ID.get(
+        listing_route["id"], _LISTING_COPY_BY_ROUTE_ID["services"]
+    )
+    listing_path = listing_route["path"]
     return (
         icon_import +
         "\n"
@@ -863,22 +881,6 @@ def render_contact(dossier: dict) -> str:
         "  );\n"
         "}\n"
     )
-
-
-# Route id -> renderer function. Each renderer accepts the dossier
-# plus the kwargs it actually needs; the dispatcher fills them in.
-# Adding a new scaffold route id means adding both the path in the
-# scaffold's routes.json AND a renderer here. The dispatcher raises
-# SystemExit on unknown route ids so a scaffold cannot silently
-# request a page with no implementation - that would otherwise
-# surface as a route-scan failure with no obvious owner.
-_ROUTE_RENDERERS: dict[str, str] = {
-    "home": "render_home",
-    "services": "render_services",
-    "products": "render_products",
-    "about": "render_about",
-    "contact": "render_contact",
-}
 
 
 def render_products(dossier: dict) -> str:
