@@ -469,6 +469,26 @@ def _nav_items_from_scaffold(
     return items
 
 
+def _pick_contact_route(
+    scaffold_default_routes: list[dict],
+) -> dict:
+    """Return the scaffold's contact route, falling back to /kontakt.
+
+    Renderers that link operators to the contact page (render_products
+    CTA today; render_home/render_services to be migrated in a
+    follow-up sprint) route the href through this helper so a
+    scaffold that ever moves the contact id to ``/kontakta-oss``
+    keeps its CTAs aligned with the nav. The fallback is the
+    canonical local-service-business value so renderers called
+    without a scaffold (unit tests that only exercise JSX escaping)
+    still produce a valid href.
+    """
+    for route in scaffold_default_routes:
+        if route.get("id") == "contact":
+            return route
+    return {"id": "contact", "path": "/kontakt"}
+
+
 def _pick_listing_route(
     scaffold_default_routes: list[dict],
 ) -> dict | None:
@@ -883,7 +903,11 @@ def render_contact(dossier: dict) -> str:
     )
 
 
-def render_products(dossier: dict) -> str:
+def render_products(
+    dossier: dict,
+    *,
+    contact_path: str = "/kontakt",
+) -> str:
     """Products-page renderer for ecommerce-lite (B13 route-emission).
 
     Reads the ``services`` array from the Project Input. The schema
@@ -892,6 +916,12 @@ def render_products(dossier: dict) -> str:
     rename to a dedicated ``products`` field is deliberately left
     for the next sprint that flips ``SCAFFOLD_TO_STARTER`` to
     ``commerce-base`` (current focus: B13 is route-emission only).
+
+    ``contact_path`` defaults to ``/kontakt`` so unit tests that
+    call the renderer without a scaffold still produce a valid
+    href. write_pages threads the scaffold's actual contact route
+    in so a scaffold that moves contact to ``/kontakta-oss`` keeps
+    the CTA aligned with the nav (Bugbot PR #19 follow-up).
     """
     products = dossier["services"]
     icons_used = sorted(
@@ -925,7 +955,7 @@ def render_products(dossier: dict) -> str:
         '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{items}\n"
         '          </div>\n'
-        '          <a href="/kontakt" className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity"><ShoppingBag className="size-4" />Fråga om en beställning<ArrowRight className="size-4" /></a>\n'
+        f'          <a href="{contact_path}" className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity"><ShoppingBag className="size-4" />Fråga om en beställning<ArrowRight className="size-4" /></a>\n'
         '        </div>\n'
         '      </section>\n'
         '    </main>\n'
@@ -959,6 +989,7 @@ def write_pages(
     """
     default_routes = scaffold_routes["defaultRoutes"]
     listing_route = _pick_listing_route(default_routes)
+    contact_route = _pick_contact_route(default_routes)
     written: list[str] = []
     for route in default_routes:
         route_id = route["id"]
@@ -970,7 +1001,9 @@ def write_pages(
         elif route_id == "services":
             content = render_services(dossier)
         elif route_id == "products":
-            content = render_products(dossier)
+            content = render_products(
+                dossier, contact_path=contact_route["path"]
+            )
         elif route_id == "about":
             content = render_about(dossier)
         elif route_id == "contact":

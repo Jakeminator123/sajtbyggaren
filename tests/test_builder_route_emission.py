@@ -433,3 +433,90 @@ def test_build_verifies_write_pages_return_matches_announced_routes() -> None:
         "list announced by the print above. Dropping the check lets "
         "the print say one thing while write_pages emits another."
     )
+
+
+
+# ---------------------------------------------------------------------------
+# Bugbot follow-up: render_products CTA must use the scaffold's contact path
+# instead of a hardcoded /kontakt.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_pick_contact_route_returns_scaffold_contact() -> None:
+    """_pick_contact_route must return the scaffold's contact route."""
+    from scripts.build_site import _pick_contact_route
+
+    contact = _pick_contact_route(LSB_ROUTES["defaultRoutes"])
+    assert contact["id"] == "contact"
+    assert contact["path"] == "/kontakt"
+
+
+@pytest.mark.tooling
+def test_pick_contact_route_falls_back_when_missing() -> None:
+    """A scaffold without a contact id must still produce a valid href so
+    renderers do not have to handle None. Fallback is the canonical
+    local-service-business value.
+    """
+    from scripts.build_site import _pick_contact_route
+
+    contact = _pick_contact_route([{"id": "home", "path": "/"}])
+    assert contact == {"id": "contact", "path": "/kontakt"}
+
+
+@pytest.mark.tooling
+def test_render_products_uses_threaded_contact_path() -> None:
+    """Bugbot fix: render_products must not hardcode /kontakt. The CTA
+    href must match the contact_path kwarg threaded by write_pages.
+    """
+    from scripts.build_site import render_products
+
+    output = render_products(_minimal_dossier(), contact_path="/kontakta-oss")
+    assert 'href="/kontakta-oss"' in output, (
+        "render_products CTA must interpolate contact_path; the hardcoded "
+        "/kontakt that Bugbot caught on PR #19 must not return."
+    )
+    # The hardcoded /kontakt must not appear when an override was passed.
+    # A naive regression would leave both the literal and the f-string.
+    assert 'href="/kontakt"' not in output, (
+        "render_products CTA still contains hardcoded /kontakt despite "
+        "contact_path override - Bugbot regression."
+    )
+
+
+@pytest.mark.tooling
+def test_render_products_default_contact_path_is_kontakt() -> None:
+    """Backward compat: calling render_products without contact_path must
+    still produce /kontakt so existing unit tests + the local-service-
+    business scaffold (which uses /kontakt) keep working without
+    threading.
+    """
+    from scripts.build_site import render_products
+
+    output = render_products(_minimal_dossier())
+    assert 'href="/kontakt"' in output
+
+
+@pytest.mark.tooling
+def test_write_pages_threads_scaffold_contact_path_into_render_products(
+    tmp_path: Path,
+) -> None:
+    """End-to-end smoke for the dispatch: write_pages must pass the
+    scaffold's contact path into render_products, not a hardcoded value.
+
+    We build a synthetic scaffold whose contact route lives at
+    ``/kontakta-oss`` and verify the products page links there.
+    """
+    from scripts.build_site import write_pages
+
+    custom_routes = {
+        "defaultRoutes": [
+            {"id": "home", "path": "/", "required": True, "purpose": "Home"},
+            {"id": "products", "path": "/produkter", "required": True, "purpose": "Products"},
+            {"id": "contact", "path": "/kontakta-oss", "required": True, "purpose": "Contact"},
+        ]
+    }
+    write_pages(tmp_path, _minimal_dossier(), custom_routes, [])
+    produkter = (tmp_path / "app" / "produkter" / "page.tsx").read_text(encoding="utf-8")
+    assert 'href="/kontakta-oss"' in produkter
+    assert 'href="/kontakt"' not in produkter
