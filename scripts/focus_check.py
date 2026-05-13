@@ -161,6 +161,25 @@ def main() -> int:
             prs = []
         report["open_prs"] = ", ".join(f"#{p['number']}" for p in prs) or "(none)"
 
+        # Cross-check: every open PR must be mentioned somewhere in
+        # docs/current-focus.md (queue, blocked, do-not-start-yet, etc).
+        # Otherwise the operator is likely unaware of it.
+        if prs and FOCUS_FILE.exists():
+            focus_text = FOCUS_FILE.read_text(encoding="utf-8")
+            undocumented = [
+                p for p in prs if f"#{p['number']}" not in focus_text
+            ]
+            if undocumented:
+                lines = [
+                    f"#{p['number']} ({p['headRefName']}: {p['title']})"
+                    for p in undocumented
+                ]
+                warnings.append(
+                    "open PR(s) not documented in docs/current-focus.md:\n  - "
+                    + "\n  - ".join(lines)
+                    + "\nAdd each to Queue, Blocked, or Do not start yet."
+                )
+
     branch_code, branches = run(["git", "branch", "--format=%(refname:short)"])
     if branch_code == 0:
         extras = [
