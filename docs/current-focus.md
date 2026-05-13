@@ -6,6 +6,15 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Uppdatera filen i samma commit som ändrar köläget. Filen ska alltid vara
 färsk - om den inte stämmer ska du fixa den, inte hoppa över den.
 
+## Last verified
+
+Last verified state: `3f7487e` (2026-05-13, post-PR #16 + lightweight loop)
+
+Kör `python scripts/focus_check.py` som första steg i varje session.
+Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
+varnar om något har drivit (glömd push, glömd pull, öppna oväntade
+PRs, etcetera).
+
 ## Current stage
 
 Post-PR #16. Vendor-only commerce-base är landad på `main` (merge commit

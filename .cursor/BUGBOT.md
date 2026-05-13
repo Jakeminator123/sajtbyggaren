@@ -1,10 +1,11 @@
 # Bugbot review rules for sajtbyggaren
 
-> **Status: passive.** Cursor Bugbot is not confirmed active on this repo
-> yet. These rules are written so they can be activated by toggling
-> Bugbot on in the repository settings - no rewrites needed. Until then
-> they double as a manual checklist for the ro-review-agent role in
-> `docs/agent-handbook.md` under "Standard loop".
+> **Status: active.** Cursor Bugbot is enabled on this repository with
+> trigger mode "every push to a PR" and draft-PR review on. Autofix is
+> off, so Bugbot posts comments and lets the operator decide. These
+> rules also double as the manual checklist that ro-review-agents (or
+> the implementation-agent's own pre-push explore subagent) follow when
+> work goes directly to main and never sees a PR.
 
 ## Always flag
 

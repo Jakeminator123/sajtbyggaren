@@ -85,21 +85,17 @@ När flera agenter jobbar samtidigt (typiskt: lokal mainline-steward på `main` 
 Varje etapp följer samma åtta steg. Loopen är medvetet kort - syftet är att
 varje delsteg har en tydlig ägare och en tydlig avlämningsyta.
 
-1. **Implementation-agent** genomför en avgränsad uppgift på egen branch
-   (eller direkt på `main` om uppgiften kvalificerar som mainline-steward-
-   arbete enligt `governance/rules/branch-discipline.md`).
-2. **Ro-review-agent** läser PR/diff i read-only-läge, letar scope-läckage,
-   buggar, hemligheter, branding-strängar och mapping-risker.
+0. **Drift-check.** Första kommando i varje ny agentsession är `python scripts/focus_check.py`. Det jämför HEAD mot "Last verified"-SHA:n i [`docs/current-focus.md`](current-focus.md) och varnar om glömd push, glömd pull eller stalad focus-fil. Lös varningar innan något annat startas.
+1. **Implementation-agent** genomför en avgränsad uppgift på egen branch (eller direkt på `main` om uppgiften kvalificerar som mainline-steward-arbete enligt `governance/rules/branch-discipline.md`).
+2. **Ro-review** läser diff i read-only-läge enligt reglerna i [`.cursor/BUGBOT.md`](../.cursor/BUGBOT.md). Två vägar beroende på flöde:
+   - **PR-flöde:** Cursor Bugbot är aktiv på repot med trigger-läge "every push to a PR" och draft-PR-review på. Bugbot postar kommentarer automatiskt. Implementation-agenten väntar in Bugbot-rapporten innan ready-markering.
+   - **Mainline-steward direktpush:** Implementation-agenten kör sin egen pre-push-granskning via en explore-subagent i read-only-läge (typiskt `Task(subagent_type="explore", readonly=true)`). Subagenten läser senaste commit-diff och `.cursor/BUGBOT.md` och rapporterar misstänkta problem. Resultatet delas med operatören innan `git push`.
 3. **Operatör + extern reviewer** beslutar: merge, fix eller skrota.
 4. **Fix-agent** gör endast begärd fix. Inga sido-städningar utan ny prompt.
-5. **Final sanity** kör `python scripts/review_check.py` (samma kedja som
-   pre-merge-guards).
+5. **Final sanity** kör `python scripts/review_check.py` (samma kedja som pre-merge-guards).
 6. **Merge** (squash) eller direkt push till `main` om mainline-steward.
-7. **Uppdatera [`docs/current-focus.md`](current-focus.md)** i samma eller
-   direkt efterföljande commit. Filen är projektets enda aktuella köplan.
+7. **Uppdatera [`docs/current-focus.md`](current-focus.md)** i samma eller direkt efterföljande commit. Bumpa även "Last verified"-SHA:n till nya HEAD. Filen är projektets enda aktuella köplan.
 8. **Nästa etapp** plockas från queue-listan i `docs/current-focus.md`.
 
 Pull request-mallen i [`.github/pull_request_template.md`](../.github/pull_request_template.md)
 tvingar fram scope, ändrade filer, verifiering och risker per PR.
-[`.cursor/BUGBOT.md`](../.cursor/BUGBOT.md) beskriver de granskningsregler
-som ro-review-agent (manuell eller automatisk) ska följa.
