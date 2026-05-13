@@ -21,7 +21,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `c6e2f1d` (2026-05-14, post-Prompt-till-sajt MVP v1 + review-hotfix: prompt-helpern faller nu tillbaka till mock Site Brief om `extract_site_brief` eller `site_brief_to_artifact` kastar. backup-6 från `504befc` pushad till origin före sprintstart. Alla guards gröna lokalt; ingen öppen PR)
+Last verified state: `fd67fbd` (2026-05-14, post-Prompt-till-sajt MVP v1 + review-hotfix + Viewser mini-sprint: StackBlitz-preview mount isolerad och gamla ChatPanel borttagen från home så PromptBuilder är enda primära promptyta. backup-6 från `504befc` pushad till origin före sprintstart. Alla guards gröna lokalt; ingen öppen PR)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -30,16 +30,19 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `c6e2f1d` efter Prompt-till-sajt MVP v1 (Builder-
-sprint 2026-05-13/14, Scout-RO-godkänd) plus review-hotfix för
-prompt-helperns brief-fallback. Operatören kan nu skriva
+`main` är vid `fd67fbd` efter Prompt-till-sajt MVP v1 (Builder-
+sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
+prompt-helperns brief-fallback och en Viewser mini-sprint som tog bort
+gamla ChatPanel från home. Operatören kan nu skriva
 en fri prompt i Viewser, helpern (`scripts/prompt_to_project_input.py`)
 kör briefModel, mappar Site Brief deterministiskt mot en schema-valid
 Project Input, skriver den till `data/prompt-inputs/<siteId>.project-input.json`
 + sidecar `<siteId>.meta.json` (projectId/version/originalPrompt/
 briefSource), och `apps/viewser/app/api/prompt/route.ts` triggar
-`runBuild` med dossier-path-override. RunHistory uppdateras via
-samma `fetchRuns`-loop som `/api/build`. backup-6 från `504befc`
+`runBuild` med dossier-path-override. PromptBuilder är nu den enda
+primära promptytan på Viewser-home; legacy ChatPanel finns kvar som
+komponent men importeras/renderas inte från `app/page.tsx`. RunHistory
+uppdateras via samma `fetchRuns`-loop som `/api/build`. backup-6 från `504befc`
 ligger på origin som fallback.
 
 Föregående: PR #21 (lucide-react i commerce-base + ADR 0020,
@@ -72,6 +75,14 @@ Prompt-till-sajt MVP v1-pushen (2026-05-14):
   `site_brief_to_artifact` ligger nu i fallback-try/catch så
   promptflödet skriver schema-valid mock Project Input även vid
   oväntade LLM-/serialiseringsfel. Regressions täcker båda grenarna.
+- `ea4b165` — `fix(viewser): isolate StackBlitz preview mount`.
+  StackBlitz SDK embed mountas nu i en unmanaged child-node istället
+  för att ersätta React-ägda preview-shellen. Cleanup använder
+  `replaceChildren()`. Source-lock uppdaterad i `test_viewser_files.py`.
+- `fd67fbd` — `refactor(viewser): remove legacy chat panel from home`.
+  `app/page.tsx` importerar/renderar inte längre `ChatPanel`; nya
+  `test_viewser_prompt_primary.py` låser att PromptBuilder är canonical
+  promptyta på Viewser-home.
 
 Mainline-steward-pushar efter PR #21 (pure docs/governance):
 
@@ -104,24 +115,16 @@ pushad till origin före Prompt-till-sajt-sprinten. Kvar lokalt:
 
 ## Current active sprint
 
-Ingen pågående produktimplementation. Prompt-till-sajt MVP v1 är
-klar; nästa Builder-sprint blir "Follow-up prompt → ny version"
+Ingen pågående produktimplementation. Prompt-till-sajt MVP v1 och
+mini-sprinten som gjorde PromptBuilder till enda primära promptyta är
+klara. Nästa Builder-sprint blir "Follow-up prompt → ny version"
 (läs `data/prompt-inputs/<siteId>.meta.json`, bumpa version,
 generera ny build från följdprompt). Sprintstart ska skapa nästa
 `backup-N` från synkad `main` och sedan fortsätta arbetet på `main`.
 
 ## Next action - direktiv till nästa agent
 
-**Steward-pass först:** uppdatera `docs/handoff.md` så det
-reflekterar den nya promptdrivna loopen (Prompt-till-sajt MVP v1
-landad `4d5b4de`). Överväg också om den experimentella
-chat-panel-prompten i `apps/viewser/components/chat-panel.tsx`
-ska markeras deprecated eller tas bort - den var tänkt som
-platshållare för exakt det flöde som nu är byggt; den nya
-`PromptBuilder` är canonical promptyta. Builder lät den ligga
-för scope-disciplin under MVP v1-sprinten.
-
-**Sedan Builder-sprint: "Follow-up prompt → ny version".**
+**Builder-sprint: "Follow-up prompt → ny version".**
 Konkret målbild: operatör väljer en befintlig run (eller siteId
 under `data/prompt-inputs/`) → skriver en följdprompt → helpern
 läser sidecar-meta, bumpar `version`, genererar ny Project Input
@@ -144,6 +147,9 @@ Sannolikt scope (verifiera i sprint-start):
 ADR sannolikt inte krävs i denna sprint heller om sidecar-meta
 fortsatt håller. Om det visar sig att Project Input-schemat
 behöver ett `projectId`/`version`-fält - då krävs ADR.
+
+Steward får gärna uppdatera `docs/handoff.md` innan eller efter
+follow-up-sprinten, men det blockerar inte nästa Builder-pass.
 
 Övrig queue (B13a, write_pages-refactor, BO2/BO4) kvarstår men
 är inte produkt-blockerande just nu.
@@ -210,10 +216,9 @@ se "Next action" + "Queue".)
    Sidecar-meta `data/prompt-inputs/<siteId>.meta.json` har redan
    `projectId` + `version` så ingen schema-migration behövs i
    första iterationen. Se "Next action" för scope-skiss.
-2. **Steward: deprecate eller ta bort experimentella chat-prompten**
-   i `apps/viewser/components/chat-panel.tsx`. PromptBuilder är
-   nu canonical promptyta. Builder lät den ligga för
-   scope-disciplin; Steward kan rensa.
+2. **Steward: uppdatera `docs/handoff.md`** för post-Prompt-till-
+   sajt-state (`fd67fbd`) så snabböverlämningen matchar
+   `current-focus.md`.
 3. B13a arkitektur-flytt (egen sprint, kräver ADR).
 4. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
    lucide-typen av starter-vs-codegen-konflikt; ADR 0020:s
