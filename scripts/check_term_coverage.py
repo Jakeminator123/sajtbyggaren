@@ -186,6 +186,20 @@ COMMON_WORDS = {
     "UsageDelta", "UsageSummary", "ViewerPanelProps",
     "BuildPayloadSchema", "ChatPanel", "TokenMeter", "ViewerPanel",
     "Providers",
+    # Prompt-till-sajt MVP v1: viewser-lokala TS-/Python-implementation-
+    # symboler för fri-prompt-flödet (apps/viewser/components/prompt-builder,
+    # apps/viewser/lib/prompt-runner, apps/viewser/app/api/prompt/route,
+    # tests/test_prompt_to_project_input). PromptBuilder är en
+    # React-komponent (lokal UI-identifierare), inte ett canonical
+    # domänbegrepp - samma behandling som ChatPanel / ProjectInputPicker
+    # ovan. PromptHelperResult / PromptApiPayload / PromptStage* är TS-
+    # interfaces och unioner; PromptPayloadSchema är ett Zod-schema.
+    # MonkeyPatch är pytest stdlib-typen som testet tar in via
+    # monkeypatch-fixturen.
+    "PromptApiPayload", "PromptBuilder", "PromptBuilderProps",
+    "PromptHelperResult", "PromptPayloadSchema",
+    "PromptStage", "PromptStageIndicator",
+    "MonkeyPatch",
     # Builder UX MVP (post-3C-lite-audit-2): RunDetailsPanel + 5 sektion-
     # komponenter + interna TS-typer som bara används i apps/viewser.
     # Samma behandling som tidigare viewser-symboler ovan: implementation-

@@ -18,6 +18,31 @@ function pythonCommand(): string {
   return process.platform === "win32" ? "python" : "python3";
 }
 
+// Allow callers (the prompt-driven flow in particular) to pass a fully
+// resolved Project Input path that lives outside `examples/`. Whitelist
+// the two repo-local roots we trust so a crafted `dossierPath` from the
+// API surface cannot point build_site.py at an arbitrary file on disk.
+const ALLOWED_DOSSIER_ROOTS = ["examples", path.join("data", "prompt-inputs")];
+
+function assertDossierPathAllowed(absoluteDossierPath: string): void {
+  const root = repoRoot();
+  const resolved = path.resolve(absoluteDossierPath);
+  for (const subdir of ALLOWED_DOSSIER_ROOTS) {
+    const allowed = path.resolve(root, subdir);
+    const relative = path.relative(allowed, resolved);
+    if (
+      relative &&
+      !relative.startsWith("..") &&
+      !path.isAbsolute(relative)
+    ) {
+      return;
+    }
+  }
+  throw new Error(
+    `Dossier-path ligger utanför tillåtna rötter (${ALLOWED_DOSSIER_ROOTS.join(", ")}): ${absoluteDossierPath}`,
+  );
+}
+
 async function detectLatestRunIdByMtime(): Promise<string | null> {
   const root = runsDir();
   const entries = await fs.readdir(root, { withFileTypes: true });
@@ -40,12 +65,28 @@ async function detectLatestRunIdByMtime(): Promise<string | null> {
   return live[0].name;
 }
 
-async function runBuildOnce(siteId: string): Promise<{
+async function runBuildOnce(
+  siteId: string,
+  dossierPathOverride?: string,
+): Promise<{
   runId: string;
   buildResult: Record<string, unknown>;
   stderr: string;
 }> {
-  const dossierPath = await assertProjectInputExists(siteId);
+  // The default flow validates that examples/<siteId>.project-input.json
+  // exists. The prompt-driven flow already wrote the Project Input to
+  // data/prompt-inputs/<siteId>.project-input.json via the Python helper
+  // and passes that absolute path here; we only re-check that the path
+  // sits under one of the allowed roots so a crafted API payload cannot
+  // point build_site.py at /etc/passwd.
+  let dossierPath: string;
+  if (dossierPathOverride) {
+    assertDossierPathAllowed(dossierPathOverride);
+    await fs.access(dossierPathOverride);
+    dossierPath = dossierPathOverride;
+  } else {
+    dossierPath = await assertProjectInputExists(siteId);
+  }
   const scriptPath = path.join(repoRoot(), "scripts", "build_site.py");
 
   const child = spawn(
@@ -163,8 +204,18 @@ async function runBuildOnce(siteId: string): Promise<{
  * Run build_site.py for a given siteId. Concurrent invocations are serialized
  * with a single in-flight promise so two parallel POSTs do not race over the
  * same `.generated/<siteId>/` directory or confuse the "latest run" fallback.
+ *
+ * `dossierPathOverride` is the bridge for the prompt-driven flow: the
+ * Python helper writes the Project Input to `data/prompt-inputs/` (NOT
+ * to `examples/`, which apps/viewser is forbidden to write to per
+ * repo-boundaries.v1.json) and passes the resulting absolute path here
+ * so build_site.py reads from the scratch directory instead of the
+ * curated examples set.
  */
-export async function runBuild(siteId: string): Promise<{
+export async function runBuild(
+  siteId: string,
+  dossierPathOverride?: string,
+): Promise<{
   runId: string;
   buildResult: Record<string, unknown>;
   stderr: string;
@@ -177,7 +228,7 @@ export async function runBuild(siteId: string): Promise<{
     }
   }
 
-  const promise = runBuildOnce(siteId);
+  const promise = runBuildOnce(siteId, dossierPathOverride);
   inFlight = promise.finally(() => {
     if (inFlight === promise) {
       inFlight = null;

@@ -7,6 +7,7 @@ import {
   ProjectInputPicker,
   type ProjectInputOption,
 } from "@/components/project-input-picker";
+import { PromptBuilder } from "@/components/prompt-builder";
 import { RunDetailsPanel } from "@/components/run-details-panel";
 import { RunHistory, type RunHistoryItem } from "@/components/run-history";
 import { TokenMeter } from "@/components/token-meter";
@@ -106,6 +107,24 @@ export default function Home() {
           selectedRunId={selectedRunId}
           onSelect={(runId) => setSelectedRunId(runId)}
           isBuilding={building}
+        />
+      </section>
+
+      <section>
+        <PromptBuilder
+          isBusy={building}
+          onBuildStart={() => setBuilding(true)}
+          onBuildEnd={() => setBuilding(false)}
+          onBuildDone={(runId) => {
+            setSelectedRunId(runId);
+            setStatusText(`Build klar via prompt: ${runId}`);
+            void fetchRuns()
+              .then(applyRunsData)
+              .catch((error) => {
+                const message = error instanceof Error ? error.message : "Kunde inte uppdatera runs.";
+                setStatusText(message);
+              });
+          }}
         />
       </section>
 

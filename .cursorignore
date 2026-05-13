@@ -24,6 +24,7 @@ __pycache__/
 # Engine Run artefakter och dev-output
 data/runs/
 data/versions/
+data/prompt-inputs/
 .generated/
 
 # Env-filer (alla varianter); .env.example forblir lasbar

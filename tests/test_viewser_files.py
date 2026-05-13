@@ -26,6 +26,8 @@ def test_viewser_expected_files_exist() -> None:
         # Builder UX MVP: artefact bundle endpoint feeds RunDetailsPanel
         # the four canonical Engine Run artefakter in one round-trip.
         "app/api/runs/[runId]/artifacts/route.ts",
+        # Prompt-till-sajt MVP v1: free-prompt -> Project Input -> build.
+        "app/api/prompt/route.ts",
         "components/chat-panel.tsx",
         "components/viewer-panel.tsx",
         "components/token-meter.tsx",
@@ -34,10 +36,14 @@ def test_viewser_expected_files_exist() -> None:
         # Builder UX MVP: 5-section pedagogical render of build/quality/
         # repair/codegen/models with defensive fallbacks for older runs.
         "components/run-details-panel.tsx",
+        # Prompt-till-sajt MVP v1: prompt textarea + status panel that
+        # wires through /api/prompt to runBuild.
+        "components/prompt-builder.tsx",
         "lib/openai.ts",
         "lib/build-runner.ts",
         "lib/localhost-guard.ts",
         "lib/project-inputs.ts",
+        "lib/prompt-runner.ts",
         "lib/runs.ts",
         "lib/stackblitz-files.ts",
         ".env.example",
@@ -76,10 +82,50 @@ def test_viewser_api_routes_call_localhost_guard() -> None:
         "app/api/runs/route.ts",
         "app/api/runs/[runId]/files/route.ts",
         "app/api/runs/[runId]/artifacts/route.ts",
+        "app/api/prompt/route.ts",
     ]
     for route in routes:
         text = (VIEWSER_DIR / route).read_text(encoding="utf-8")
         assert "assertLocalhost" in text, f"{route} saknar localhost-guard"
+
+
+@pytest.mark.tooling
+def test_build_runner_whitelists_dossier_path_overrides() -> None:
+    """Prompt-till-sajt MVP v1 låter API-routen `/api/prompt` skicka in en
+    absolut dossier-path direkt till `runBuild`. Det är medvetet, men en
+    crafted payload får ALDRIG kunna peka build_site.py mot en godtycklig
+    fil utanför `examples/` eller `data/prompt-inputs/`. Lås whitelist-
+    funktionen så en framtida refactor inte tar bort guarden."""
+    text = (VIEWSER_DIR / "lib" / "build-runner.ts").read_text(encoding="utf-8")
+    assert "ALLOWED_DOSSIER_ROOTS" in text, (
+        "build-runner.ts saknar ALLOWED_DOSSIER_ROOTS-whitelist för "
+        "dossier-path overrides från prompt-flödet."
+    )
+    assert "examples" in text and "prompt-inputs" in text, (
+        "build-runner.ts whitelisten måste täcka både examples/ och "
+        "data/prompt-inputs/ - de två rötter där en Project Input får ligga."
+    )
+    assert "assertDossierPathAllowed" in text, (
+        "build-runner.ts saknar assertDossierPathAllowed-anrop som "
+        "validerar override-paths innan spawn av build_site.py."
+    )
+
+
+@pytest.mark.tooling
+def test_prompt_route_passes_dossier_override_to_run_build() -> None:
+    """Prompt-flödet får inte falla tillbaka till `runBuild(siteId)` utan
+    dossier-path override - det skulle leta i `examples/` istället för
+    `data/prompt-inputs/` och misslyckas med 'Project Input saknas'.
+    Lås kontraktet att routen alltid skickar in helper.dossierPath."""
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "runBuild(helper.siteId, helper.dossierPath)" in text, (
+        "/api/prompt måste anropa runBuild med BÅDE siteId och "
+        "helper.dossierPath. Utan path-override hamnar lookupen i "
+        "examples/ och det prompt-genererade Project Inputet hittas "
+        "inte (det ligger i data/prompt-inputs/)."
+    )
 
 
 @pytest.mark.tooling
