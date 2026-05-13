@@ -124,21 +124,31 @@ def main() -> int:
     else:
         report["focus_sha"] = focus_sha[:7]
         if head_sha and not head_sha.startswith(focus_sha):
-            # Count how many commits separate them.
+            # Count how many commits separate them. 1 commit ahead is
+            # the natural bump-commit case (or a small follow-up that
+            # does not change the focus state), so we only warn at 2+.
             count_code, count_text = run(
                 ["git", "rev-list", "--count", f"{focus_sha}..HEAD"]
             )
             n = int(count_text) if count_code == 0 and count_text.isdigit() else None
-            if n:
-                warnings.append(
-                    f"docs/current-focus.md is stale: HEAD is {n} commit(s) ahead "
-                    f"of the focus SHA {focus_sha[:7]}. Update the focus file "
-                    "(or read the recent commits to understand the new state)."
-                )
-            else:
+            if n is None:
                 warnings.append(
                     "docs/current-focus.md SHA does not match HEAD and could not be "
                     "compared (focus SHA may be on a different branch or rebased away)."
+                )
+            elif n >= 2:
+                _, recent = run(
+                    ["git", "log", "--oneline", f"{focus_sha}..HEAD"]
+                )
+                warnings.append(
+                    f"docs/current-focus.md is stale: HEAD is {n} commits ahead "
+                    f"of the focus SHA {focus_sha[:7]}. Update the focus file "
+                    "(or read the recent commits to understand the new state). "
+                    f"Recent commits:\n{recent}"
+                )
+            else:
+                report["focus_drift"] = (
+                    "1 commit ahead of focus SHA - within bump tolerance"
                 )
 
     pr_code, pr_json = run(
