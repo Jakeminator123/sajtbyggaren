@@ -90,34 +90,9 @@ Format per bugg:
   och `B13b` (route-emission) den 2026-05-13 efter att
   `docs/current-focus.md` började använda namnet "B13" för bara den
   ena halvan.
-- **`B13b` Låg** (öppen 2026-05-13, status: **kod klar, inväntar merge av
-  PR #19**) - `scripts/build_site.py:write_pages` var hårdkodad mot
-  `local-service-business`-routes (`/tjanster`, `/om-oss`, `/kontakt`)
-  på fyra nivåer (`_nav_items()`, hardcoded `/tjanster`-CTA i
-  `render_home`, `write_pages()`, avsaknad av `render_products`). Det
-  blockerade aktiveringen av `ecommerce-lite -> commerce-base` (B20
-  step 2): ad-hoc-generation gav Quality Gate `status=degraded` med
-  route-scan failure `"/produkter -> app\produkter\page.tsx
-  (saknas)"`.
-
-  **Fix i PR #19 (`feat/b13-route-emission`):** `write_pages` läser nu
-  scaffoldens `routes.json` och dispatchar per route id
-  (home/services/products/about/contact). Ny `render_products`-
-  renderer för `/produkter`. Nya helpers `_nav_items_from_scaffold`,
-  `_pick_listing_route`, `_NAV_LABEL_BY_ROUTE_ID`,
-  `_LISTING_COPY_BY_ROUTE_ID`. Okänt route-id ger `SystemExit` så
-  scaffolds inte tyst kan saknas en renderer. Ny
-  `examples/atelje-bird.project-input.json` (ecommerce-lite-fixture)
-  för end-to-end-smoke. Test:
-  `tests/test_builder_route_emission.py` (14 tester) låser
-  scaffold-driven dispatch + ecommerce-lite-smoken
-  `test_ecommerce_lite_fixture_writes_produkter_and_passes_route_scan`.
-
-  Flyttas till "Stängda - regression-test säkrar fixet" efter merge
-  (Standard loop steg 7).
-- **`B20` Låg** (öppen 2026-05-08, status: **vendor done, activation
-  blocked by B13b route-emission until PR #19 merges**) - status
-  uppdaterad 2026-05-13.
+- **`B20` Låg** (öppen 2026-05-08, status: **vendor done, route-emission
+  done; ready for mapping-flip PR**) - status uppdaterad 2026-05-13
+  efter att B13b stängdes i `fda1464`.
 
   **Steg 1 (vendor) landad i PR #16 commit `4b4c3af`:**
   `data/starters/commerce-base/` är nu vendoriserad och harmoniserad
@@ -130,29 +105,27 @@ Format per bugg:
   Shopify-env. Se [ADR
   0018](../governance/decisions/0018-b20-commerce-base-harmonisering.md).
 
-  **Steg 2 (mapping-flipp) pausad — blockerad av B13b:** ett tidigt
-  försök att flippa runtime-mappningen i samma PR (commit `58c5e63`,
-  reverterad i `a3d4828`) avslöjade att `scripts/build_site.py` är
-  hårdkodad mot `local-service-business`-routes på fyra nivåer
-  (`_nav_items()`, hardcoded `/tjanster`-CTA i `render_home`,
-  `write_pages()`, avsaknad av `render_products`). Ad-hoc
-  `ecommerce-lite`-generation gav Quality Gate `status=degraded` med
-  route-scan failure `"/produkter -> app\produkter\page.tsx
-  (saknas)"`. `packages/generation/codegen/codegen.py` är dessutom
-  scope-låst till `marketing-base` (ADR 0017), så ecommerce-lite kan
-  inte heller köra real `codegenModel`. Tills detta är löst mappar
-  `produce_site_plan` fortfarande `ecommerce-lite -> marketing-base`
-  via `SCAFFOLD_TO_STARTER`-konstanten i
-  `packages/generation/planning/plan.py`, och raden i
-  `data/starters/README.md` mappnings-blocket står kvar med
-  `(B20: temporary; ...)`-noten.
+  **Steg 2 (mapping-flipp) redo:** den tidigare blockern (route-emission
+  i `scripts/build_site.py`) är löst i `fda1464` (B13b). `write_pages`
+  driver nu page-emission per scaffold `routes.json` och ecommerce-lite-
+  fixturen `atelje-bird` har bekräftat end-to-end-smoke (Quality Gate
+  route-scan `status=ok`, `/produkter` emitteras, `/tjanster` emitteras
+  inte). `packages/generation/codegen/codegen.py` är dock fortfarande
+  scope-låst till `marketing-base` (ADR 0017): ecommerce-lite kan
+  inte köra real `codegenModel` än, men deterministisk
+  `source=deterministic-v1` codegen fungerar för commerce-base så länge
+  starter-builden själv är grön.
 
-  **Nästa PR (PR #19 / B13b route-emission):** måste antingen refaktorera
-  `scripts/build_site.py` så page-emission drivs av scaffolds
-  `routes.json` per scaffold (nya renderers för product-grid,
-  products-intro, shop-cta), eller utvidga `codegenModel`-scope till
-  ecommerce-lite + commerce-base (kräver ny ADR ovanpå ADR 0017).
-  Först därefter kan mapping-flippen göras säkert.
+  **Nästa PR (B20 step 2 mapping-flipp):** flippa
+  `SCAFFOLD_TO_STARTER["ecommerce-lite"]` från `marketing-base` till
+  `commerce-base` i `packages/generation/planning/plan.py`, uppdatera
+  `data/starters/README.md` mappnings-blocket (ta bort `(B20: ...)`-
+  noten), och kör `python scripts/build_site.py --dossier
+  examples/atelje-bird.project-input.json --skip-build` för att
+  bekräfta att build-result.json refererar `commerce-base` som
+  starterId. Om real npm-build krävs: säkerställ att
+  `data/starters/commerce-base/` inte kräver Shopify-env vid `npm
+  run build`. När detta är grönt: flytta B20-posten till "Stängda".
 
   Filer som hör till detta spår och som mainline-arbete inte ska röra
   så länge en feature-agent jobbar på B20 (se branch-discipline.md
@@ -197,6 +170,41 @@ Format per bugg:
      fixet"-avsnittet med datum + fix-SHA.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B13b` Låg** (stängd 2026-05-13, squash-merge `fda1464` via PR #19) -
+  `scripts/build_site.py:write_pages` var hårdkodad mot
+  `local-service-business`-routes (`/tjanster`, `/om-oss`, `/kontakt`)
+  på fyra nivåer (`_nav_items()`, hardcoded `/tjanster`-CTA i
+  `render_home`, `write_pages()`, avsaknad av `render_products`).
+  Blockerade aktiveringen av `ecommerce-lite -> commerce-base` (B20
+  step 2): ad-hoc-generation gav Quality Gate `status=degraded` med
+  route-scan failure `"/produkter -> app\produkter\page.tsx
+  (saknas)"`.
+
+  **Fix:** `write_pages` läser nu scaffoldens `routes.json` och
+  dispatchar per route id (home/services/products/about/contact). Ny
+  `render_products`-renderer för `/produkter` med scaffold-driven
+  `contact_path`. Nya helpers `_nav_items_from_scaffold`,
+  `_pick_listing_route`, `_pick_contact_route`, `_NAV_LABEL_BY_ROUTE_ID`,
+  `_LISTING_COPY_BY_ROUTE_ID`. Okänt route-id ger `SystemExit` så
+  scaffolds inte tyst kan saknas en renderer.
+  "Writing pages: ..."-printet flyttat till FÖRE `write_pages`-anropet
+  (Bugbot-fynd: tidigare post-call print gav operatör inga ledtrådar
+  när `write_pages` misslyckades med `SystemExit`). Ny
+  `examples/atelje-bird.project-input.json` (ecommerce-lite-fixture)
+  för end-to-end-smoke.
+
+  Test: `tests/test_builder_route_emission.py` (21 tester) låser
+  scaffold-driven dispatch, nav/listing/contact-path-threading,
+  print-ordningen samt ecommerce-lite-smoken
+  `test_ecommerce_lite_fixture_writes_produkter_and_passes_route_scan`.
+
+  Bugbot-rundor under granskning: 3 fynd, alla åtgärdade (print-order
+  `7f670b8`, `/kontakt`-hardcoding i `render_products` `5ac4ab8`,
+  PR-description-scope `gh pr edit`). Pre-existing hardcoded
+  `/kontakt`-CTAs i `render_home/services/layout` kvarstår som
+  teknisk skuld (predaterar denna PR) - tracked under "Öppna" om
+  någon vill skriva ny B-ID på det.
 
 - **`B43` Medel** (stängd 2026-05-11, post-review-2 audit) -
   `apps/viewser/components/viewer-panel.tsx` success-path-grenen hade

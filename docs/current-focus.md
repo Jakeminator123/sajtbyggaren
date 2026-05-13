@@ -21,94 +21,130 @@ agent: "uppdatera current-focus innan något annat".
 
 ## Last verified
 
-Last verified state: `b4fe4a8` (2026-05-13, mainline-steward gitignore-pre-allow för B13a-destination + .cursor/mcp.json-precaution; PR #19 öppen)
+Last verified state: `fda1464` (2026-05-13, B13b route-emission mergad via PR #19; branches städade; PR #17 stängd)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
 varnar om något har drivit (glömd push, glömd pull, öppna oväntade
 PRs, etcetera).
 
-## Notes on B13 naming (2026-05-13)
-
-B13 i `docs/known-issues.md` har splittats i B13a (arkitektur-
-flytt av produktlogik från `scripts/build_site.py` till
-`packages/generation/build/` — fortfarande öppen) och B13b
-(route-emission, kod klar, inväntar merge av PR #19). När den här
-filen nämner "B13b" är det route-emission-spåret; den större
-arkitektur-flytten kvarstår som B13a oavsett vad som händer med
-PR #19.
-
 ## Current stage
 
-Post-PR #16 + PR #18. PR #18 (cursor/setup-dev-environment-c32f) har
-mergat på `main` som `90856d1` 2026-05-13: `AGENTS.md` har rätt
-`python3.12-venv`-paketnamn för Cloud Agent VMs. Vendor-only
-commerce-base från PR #16 ligger fortfarande kvar
-(`ff3d5124b659b786b0edde5685a857882dcad6c1`, 2026-05-12).
+`main` är vid `fda1464` efter att PR #19 (B13b route-emission)
+squash-mergades 2026-05-13 18:38 UTC. `scripts/build_site.py:write_pages`
+är nu scaffold-drivet: `ecommerce-lite` genererar `/produkter` och
+ecommerce-lite-fixturen `examples/atelje-bird.project-input.json`
+passerar Quality Gate route-scan.
 
-Mainline-steward direktpush `b4fe4a8` (2026-05-13) städar två footguns
-som dök upp under B13-arbetet: `.gitignore` + `.cursorignore` matchar
-inte längre `packages/generation/build/` (den blivande destinationen
-för B13a-arkitektur-flytten); `.cursor/mcp.json` är gitignored så
-MCP-OAuth-tokens inte kan slinka in i en commit. Existerande
-`packages/generation/build/.gitkeep` är nu spårad (den var tyst
-ignorerad sedan 2026-05-11).
+Pre-PR #19 mainline-steward-pushar som också ligger på main:
+- `61f9f69` - ny `reply-style`-regel (kort+koncis svenska med
+  parens-förklaringar för dev-uttryck) under `governance/rules/`.
+- `b4fe4a8` + `1c2227b` - `.gitignore`/`.cursorignore` pre-allokerar
+  `packages/generation/build/` (B13a-destinationen) och blockar
+  `.cursor/mcp.json`.
 
-B13b route-emission ligger på feature-branchen `feat/b13-route-emission`
-som **PR #19** (HEAD `7f670b8` inkluderar Bugbots print-order-fix).
-Den fullständiga statusen för B13b och alla detaljer om PR #19 lever
-på branchen; den merge:n återställer denna fil till sin uppdaterade
-form.
+Branches städade 2026-05-13: lokala `feat/b13-route-emission` och
+`review/builder-ux-mvp-86068f7` raderade; remotes
+`cursor/setup-dev-environment-c32f` och `fix/b20-commerce-base`
+raderade. Kvar: `main`, `backup-{1..4}` och
+`frontend/christopher-import` (PR #17, stängd men branch behållen
+per operatörsbeslut).
 
 ## Current active PR
 
-**PR #19** (`feat/b13-route-emission` → `main`) — öppen, inväntar
-Cursor Bugbot-re-run efter print-order-fix-pushen `7f670b8`. Squash-
-merge när Bugbot är nöjd och operatör godkänner.
+Ingen pågående feature-PR.
 
-## Next action
+## Next action - direktiv till nästa agent
 
-Vänta in Bugbot-rapporten på **PR #19** (Bugbot-fyndet
-"Writing pages-print kör efter write_pages" är fixat i `7f670b8` med
-två source-level regression-tests). Eventuell ny fix-runda → merge
-(squash). Direkt efter merge: bumpa SHA:n här till mergekommiten på
-`main` och flytta B13b från "Öppna" till "Stängda" i
-`docs/known-issues.md`.
+**B20 step 2: aktivera `ecommerce-lite -> commerce-base`-mappningen.**
+
+Förutsättningar är redan på plats: B13b route-emission är mergad
+(`fda1464`), `commerce-base`-starter är vendoriserad sedan PR #16
+(`ff3d512`), `examples/atelje-bird.project-input.json` finns som
+ecommerce-lite-fixture, `_pick_contact_route` + scaffold-driven
+nav/listing är på plats.
+
+Konkret att göra på egen branch `feat/b20-step-2-mapping-flip`:
+
+1. Kör `python scripts/focus_check.py` först. Adresera varningar
+   innan du börjar.
+2. Ändra i `packages/generation/planning/plan.py:SCAFFOLD_TO_STARTER`:
+   `"ecommerce-lite": "marketing-base"` -> `"ecommerce-lite": "commerce-base"`.
+3. Uppdatera `data/starters/README.md` scaffold-starter-mapping-blocket:
+   stryk `(B20: temporary; ...)`-noten från `ecommerce-lite`-raden.
+4. Kör `python -m pytest tests/test_starter_scaffold_mapping.py -v`.
+   `test_b20_temporary_mapping_is_explicit` ska nu klara sig själv
+   (den triggar bara när mappningen är `marketing-base`).
+5. Kör `python scripts/build_site.py --dossier
+   examples/atelje-bird.project-input.json --skip-build` och bekräfta:
+   - `build-result.json` har `starterId: commerce-base`.
+   - `quality-result.json` har `status: ok` (eller `degraded` med en
+     known cause - inte route-scan failure).
+   - `app/produkter/page.tsx` emitteras, `app/tjanster/page.tsx`
+     emitteras INTE.
+6. Risk: real-codegenModel i
+   `packages/generation/codegen/codegen.py:_REAL_CODEGEN_STARTERS` är
+   låst till `marketing-base` (ADR 0017). För ecommerce-lite faller
+   den tillbaka till `deterministic-v1`. Det är OK för B20 step 2;
+   utvidgning av real-codegen-scope är separat sprint som kräver
+   ADR-utökning ovanpå 0017.
+7. Försök att köra full `npm run build` på en
+   genererad `.generated/atelje-bird/` (utan `--skip-build`). Om det
+   misslyckas pga Shopify-env eller liknande externa beroenden:
+   dokumentera under "Known risks" i PR-beskrivningen och be
+   operatören välja om B20 stängs på `--skip-build`-nivå eller om
+   commerce-base behöver mer guarding först.
+8. Standard loop: branch -> commit -> push -> PR -> invänta Bugbot ->
+   åtgärda fynd -> merge.
+9. Post-merge Standard loop steg 7: flytta B20-posten i
+   `docs/known-issues.md` till "Stängda - regression-test säkrar
+   fixet"-avsnittet med merge-SHA, och bumpa "Last verified"-SHA:n
+   här.
+
+### Pre-push self-review checklist (lärt från B13b)
+
+Innan `git push` på en feature-branch:
+
+- Jämför `git diff origin/main..HEAD --stat` rad-för-rad mot din PR-
+  beskrivnings "What changed"-lista. Bugbot fångade på PR #19 att
+  `docs/known-issues.md` ändrades utan att stå i listan.
+- Sök efter samma sorts hardcoded-pattern som PR:n säger sig fixa.
+  PR #19 fixade hardcoded `/tjanster`/`/om-oss`/`/kontakt`, men en
+  ny `render_products` introducerade hardcoded `/kontakt` igen.
+  Klassiskt blindspot på nya filer.
+- Om printar/loggar har present tense ("Writing X"): placera dem
+  FÖRE handlingen, inte efter. Operatör ska se vad som är i flygt
+  vid crash.
+- För varje ny renderer som tar `dossier`: kontrollera om den
+  länkar någonstans och om den pathen ska komma från scaffolden
+  (`_pick_*_route`) eller bara från dossiern.
 
 ## Blocked items
 
-- **Aktivering av `ecommerce-lite -> commerce-base`** — blockerad
-  tills **PR #19** är mergad. `SCAFFOLD_TO_STARTER` i
-  `packages/generation/planning/plan.py` står kvar med
-  `ecommerce-lite: marketing-base` tills B13b ligger på `main` och en
-  uppföljande PR flippar mappingen + uppdaterar
-  `data/starters/README.md` och `docs/known-issues.md` B20-posten.
+(Inga aktiva blockers just nu — B20 step 2 är nästa PR och dess
+förutsättningar är på plats.)
 
 ## Do not start yet
 
-- **PR #17** (`frontend/christopher-import`) — ligger draft, ska inte
-  granskas eller mergeas förrän **PR #19** är mergad.
-- StackBlitz-preview, Fly-deploy, PreviewRuntime — inte påbörjat.
+- StackBlitz-preview, Fly-deploy, PreviewRuntime - inte påbörjat.
 - Nya starters utöver `marketing-base` och `commerce-base` (vendor).
 - Större Builder UX-utbyggnad.
-- B13a arkitektur-flytt (`scripts/build_site.py` produktlogik →
-  `packages/generation/build/`) — kvarstår som öppen post men kräver
-  egen sprint + sannolikt egen ADR; destinationen är nu pre-allokerad
-  i `.gitignore` + `.cursorignore`.
+- B13a arkitektur-flytt (`scripts/build_site.py` produktlogik ->
+  `packages/generation/build/`) - kvarstår som öppen post men kräver
+  egen sprint + sannolikt egen ADR. Destinationen är pre-allokerad i
+  `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
+- Pre-existing hardcoded `/kontakt`-CTAs i
+  `render_home/render_services/render_layout` (predaterar PR #19).
+  Migrera till `_pick_contact_route` när tillfälle ges; ingen aktiv
+  B-ID skriven på det än.
 
 ## Queue
 
-1. Invänta Bugbot på **PR #19**, ev. fix-runda, merge.
-2. Aktivera mapping `ecommerce-lite -> commerce-base` (separat PR:
-   flippa `SCAFFOLD_TO_STARTER`, uppdatera `data/starters/README.md`
-   mappnings-blocket, stryk "B20 step 2 blocked"-noten från
-   `docs/known-issues.md`, lägg test som verifierar att
-   `atelje-bird` byggs mot `commerce-base` när codegenModel-scope
-   utvidgas eller deterministisk fallback duger).
-3. Sanity-runda på `main` + uppdatera `docs/known-issues.md` B13b +
-   B20-posten (markera B13b som fixad; B13a är arkitektur-skuld,
-   kvarstår).
-4. Därefter: granska **PR #17** eller återgå till prompt-till-sajt-loopen.
+1. B20 step 2 mapping-flipp (se "Next action" ovan).
+2. Sanity-runda på `main` efter B20-merge.
+3. B13a arkitektur-flytt (egen sprint, kräver ADR).
+4. Återgå till prompt-till-sajt-loopen eller plocka upp någon av
+   BO2/BO4 (Backoffice-skuld från round 1).
 
 ## Loopen vi följer
 
@@ -116,3 +152,8 @@ Se [`docs/agent-handbook.md`](agent-handbook.md) under rubriken "Standard
 loop". Kort: implementation-agent → ro-review-agent → operatör + extern
 reviewer beslutar → fix-agent vid behov → final sanity → merge →
 uppdatera denna fil → nästa etapp.
+
+Operatörspreferens (2026-05-13): svara kort och koncist på svenska,
+förklara dev-uttryck med korta parenteser första gången per
+konversation. Mönstret är formaliserat i
+[`governance/rules/reply-style.md`](../governance/rules/reply-style.md).
