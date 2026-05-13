@@ -50,22 +50,47 @@ beslutar nästa steg.
 
 ## 3. Tolka Bugbot-resultatet
 
-Två signaler räknas:
+Bugbots summary-review-body uppdateras inte mellan commits — den
+står kvar med "found N potential issues" från första körningen
+även när inline-comments markeras som "Show resolved" i UI:n. Att
+läsa enbart bodyn ger falskt rött. Använd istället tre signaler:
 
-- Bugbot-reviewens body innehåller `found 0 potential issues` eller
-  motsvarande "no issues"-formulering, **eller**
-  `Cursor Bugbot`-checken har `conclusion == "SUCCESS"` →
-  räknas som **grönt**.
-- Bodyn säger `found N potential issues` med N ≥ 1, eller
-  `conclusion == "FAILURE"` på checken → räknas som **rött**.
-  Hämta inline-kommentarerna för att se de konkreta fynden:
-  ```
-  gh api repos/<owner>/<repo>/pulls/<num>/comments
-  ```
+1. **Cursor Bugbot-checken i `statusCheckRollup`.** `SUCCESS` =
+   grönt. `FAILURE` = rött. `NEUTRAL` = informativt (Bugbot postar
+   tillsammans med inline-fynd, men det säger ingenting om
+   resolved-state).
+2. **Inline-kommentarer per fynd, hämtade med resolved-flaggan.**
+   GitHub:s REST API exponerar inte `is_resolved` direkt på
+   `pulls/<num>/comments`, så använd GraphQL-vägen:
+   ```
+   gh api graphql -f query='query($n:Int!){
+     repository(owner:"<owner>", name:"<repo>"){
+       pullRequest(number:$n){
+         reviewThreads(first:100){nodes{
+           isResolved
+           comments(first:1){nodes{
+             author{login}
+             body
+           }}
+         }}
+       }
+     }
+   }' -F n=<num>
+   ```
+   Räkna `nodes` där `comments[0].author.login == "cursor"` OCH
+   `isResolved == false`. Den siffran är de **aktiva** Bugbot-
+   fynden på senaste commit.
+3. **Övriga checks i `statusCheckRollup`** (typiskt `governance`,
+   `GitGuardian Security Checks`). Alla ska vara `SUCCESS`.
 
-`conclusion == "NEUTRAL"` på checken är typiskt det Bugbot
-postar tillsammans med inline-fynd; tolka då efter bodyn ("found N
-potential issues") snarare än efter check-conclusion.
+**Grönt** = Bugbot-checken `SUCCESS` ELLER (`NEUTRAL` OCH 0 aktiva
+inline-fynd från GraphQL-frågan ovan), OCH alla övriga checks
+`SUCCESS`, OCH `mergeStateStatus == "CLEAN"`, OCH
+`mergeable == "MERGEABLE"`.
+
+**Rött** = Bugbot-checken `FAILURE`, ELLER ≥ 1 aktivt
+(ej-resolvat) Bugbot-inline-fynd, ELLER någon annan check
+`FAILURE`.
 
 ## 4. Grönt → merge automatiskt
 
@@ -91,15 +116,28 @@ loopen. Operatör kan alltid avbryta genom att skriva `stopp`.
 Räkna iterationer från och med första Bugbot-rödt-svar (iteration 1).
 Per iteration:
 
-1. Läs alla inline-kommentarer från Bugbot. Sortera efter allvar
-   (`High` → `Medium` → `Low`).
+1. Läs alla aktiva inline-kommentarer från Bugbot via GraphQL-
+   frågan i sektion 3. Sortera efter allvar (`High` → `Medium` →
+   `Low`).
 2. Implementera minsta möjliga fix per fynd. Ingen sido-städning,
    ingen scope-utvidgning.
 3. Kör de fyra guards lokalt + relevanta tester. Allt ska vara
    grönt innan push.
 4. Commit + push till samma feature-branch (varje push triggar ny
    Bugbot-runda).
-5. Återgå till steg 2 i denna regel (polla 8 min).
+5. **Markera adresserade kommentar-trådar som resolved** efter
+   pushen, så GraphQL-frågan i nästa poll ger korrekt aktiv-
+   räkning. Om Bugbot inte själv markerar tråden via en ny
+   kommentar (vanligast), gör det manuellt:
+   ```
+   gh api graphql -f query='mutation($id:ID!){
+     resolveReviewThread(input:{threadId:$id}){thread{isResolved}}
+   }' -F id=<threadId-from-step-1>
+   ```
+   Detta är inte att "fuska bort" Bugbot — det är att signalera
+   till loopen att fyndet är hanterat. Bugbot postar inte
+   "resolved"-signal själv på sin egen tråd.
+6. Återgå till steg 2 i denna regel (polla 8 min).
 
 Om iterationsräknaren skulle bli > 10:
 
