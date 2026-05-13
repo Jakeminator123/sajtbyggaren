@@ -3,8 +3,21 @@
 Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 **först**, innan något annat i `docs/` eller `governance/`.
 
-Uppdatera filen i samma commit som ändrar köläget. Filen ska alltid vara
-färsk - om den inte stämmer ska du fixa den, inte hoppa över den.
+## Vem uppdaterar denna fil
+
+**Agenten.** Inte operatören. Standard loop steg 7 i
+[`docs/agent-handbook.md`](agent-handbook.md) är obligatoriskt: efter
+varje merge eller direktpush till `main` ska agenten i samma eller direkt
+efterföljande commit:
+
+1. Uppdatera "Current stage" och "Current active PR" till nya läget.
+2. Stryka från "Queue" / "Blocked" det som blev klart.
+3. Lägga till nya blockers eller queue-items om något upptäcktes.
+4. Bumpa "Last verified state"-SHA:n till nya HEAD.
+
+Operatören (Jakob) **verifierar** att det är gjort. Om operatören
+upptäcker att filen är inaktuell är det första instruktionen till nästa
+agent: "uppdatera current-focus innan något annat".
 
 ## Last verified
 
@@ -46,6 +59,9 @@ från andra scaffolds. Det blockerar aktivering av
 
 - PR #17 (`frontend/christopher-import`) - ligger draft, ska inte
   granskas eller mergeas förrän B13 är klar.
+- PR #18 (`cursor/setup-dev-environment-c32f`) - Cursor BG-agent-fix
+  för `python3.12-venv`-paketnamn i `AGENTS.md`. Liten och säker,
+  men operatör beslutar om merge. Inte i agentens kö.
 - StackBlitz-preview, Fly-deploy, PreviewRuntime - inte påbörjat.
 - Nya starters utöver `marketing-base` och `commerce-base` (vendor).
 - Större Builder UX-utbyggnad.

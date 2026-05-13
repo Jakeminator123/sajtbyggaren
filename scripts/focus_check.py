@@ -199,6 +199,13 @@ def main() -> int:
         else:
             print("\nResult: WARN - review warnings above before continuing.")
 
+        print(
+            "\nReminder: when this session's work is committed, bump the "
+            "'Last verified' SHA in docs/current-focus.md to the new HEAD "
+            "and update queue/next-action. This is Standard loop step 7 "
+            "and it is the agent's job, not the operator's."
+        )
+
     return 1 if errors else 0
 
 

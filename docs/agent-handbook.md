@@ -94,7 +94,7 @@ varje delsteg har en tydlig ägare och en tydlig avlämningsyta.
 4. **Fix-agent** gör endast begärd fix. Inga sido-städningar utan ny prompt.
 5. **Final sanity** kör `python scripts/review_check.py` (samma kedja som pre-merge-guards).
 6. **Merge** (squash) eller direkt push till `main` om mainline-steward.
-7. **Uppdatera [`docs/current-focus.md`](current-focus.md)** i samma eller direkt efterföljande commit. Bumpa även "Last verified"-SHA:n till nya HEAD. Filen är projektets enda aktuella köplan.
+7. **Uppdatera [`docs/current-focus.md`](current-focus.md)** i samma eller direkt efterföljande commit. **Obligatoriskt och agentens ansvar - inte operatörens.** Bumpa "Last verified"-SHA:n till nya HEAD, stryk det som blev klart, lägg till nya blockers/queue-items. Hoppas inte över. Filen är projektets enda aktuella köplan.
 8. **Nästa etapp** plockas från queue-listan i `docs/current-focus.md`.
 
 Pull request-mallen i [`.github/pull_request_template.md`](../.github/pull_request_template.md)
