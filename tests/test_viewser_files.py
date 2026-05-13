@@ -177,6 +177,29 @@ def test_prompt_route_passes_dossier_override_to_run_build() -> None:
 
 
 @pytest.mark.tooling
+def test_prompt_runner_uses_double_dash_to_protect_dashed_prompts() -> None:
+    """Audit fynd 3: vanliga prompter börjar med `-` eller `--` (t.ex.
+    en inklistrad punktlista: "- skapa en sajt..."). Utan `--`-separator
+    tolkar argparse i `scripts/prompt_to_project_input.py` prompten som
+    en CLI-option och spawnen fallerar innan Project Input hinner
+    skrivas.
+
+    Lås att lib/prompt-runner.ts skickar in `--` mellan scriptPath och
+    prompten så argparse stannar option-parsning.
+    """
+    text = (VIEWSER_DIR / "lib" / "prompt-runner.ts").read_text(encoding="utf-8")
+    pattern = re.compile(
+        r"\[\s*scriptPath\s*,\s*\"--\"\s*,\s*trimmed\s*\]",
+        re.MULTILINE,
+    )
+    assert pattern.search(text), (
+        "prompt-runner.ts spawn-args måste vara `[scriptPath, \"--\", trimmed]` "
+        "så en prompt som börjar med `-` (punktlista) eller `--` inte "
+        "tolkas som CLI-option av argparse i prompt_to_project_input.py."
+    )
+
+
+@pytest.mark.tooling
 def test_run_details_panel_handles_missing_artefakter_defensively() -> None:
     """B38 / Builder UX MVP: ÄLDRE runs (pre-Sprint 3A) saknar
     quality-result.json + repair-result.json, och dev_generate-runs

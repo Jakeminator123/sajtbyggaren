@@ -49,7 +49,11 @@ export async function runPromptToProjectInput(
   }
 
   const scriptPath = path.join(repoRoot(), "scripts", "prompt_to_project_input.py");
-  const child = spawn(pythonCommand(), [scriptPath, trimmed], {
+  // The `--` separator stops argparse from interpreting a prompt that
+  // happens to start with `-` or `--` (e.g. a pasted bullet list like
+  // "- skapa en sajt...") as a CLI option. Without it the spawn fails
+  // before the helper can write a Project Input.
+  const child = spawn(pythonCommand(), [scriptPath, "--", trimmed], {
     cwd: repoRoot(),
     env: process.env,
     stdio: ["ignore", "pipe", "pipe"],
