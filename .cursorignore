@@ -53,3 +53,5 @@ referens/**/*.pdf
 *.log
 .tmp-*
 .tmp.*
+
+referens/
