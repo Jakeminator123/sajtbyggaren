@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-import { ChatPanel } from "@/components/chat-panel";
 import {
   ProjectInputPicker,
   type ProjectInputOption,
@@ -129,24 +128,7 @@ export default function Home() {
       </section>
 
       <section className="grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="flex flex-col gap-4">
-          <ChatPanel
-            siteId={selectedSiteId}
-            onBuildStart={() => setBuilding(true)}
-            onBuildDone={(runId) => {
-              setSelectedRunId(runId);
-              setStatusText(`Build klar: ${runId}`);
-              void fetchRuns()
-                .then(applyRunsData)
-                .catch((error) => {
-                  const message = error instanceof Error ? error.message : "Kunde inte uppdatera runs.";
-                  setStatusText(message);
-                });
-            }}
-            onBuildEnd={() => setBuilding(false)}
-          />
-          <ViewerPanel runId={selectedRunId} />
-        </div>
+        <ViewerPanel runId={selectedRunId} />
         <RunDetailsPanel runId={selectedRunId} />
       </section>
     </main>
