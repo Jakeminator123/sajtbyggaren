@@ -44,6 +44,13 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from packages.generation.brief import (  # noqa: E402
+    detect_language,
+    extract_site_brief,
+    site_brief_to_artifact,
+)
+from packages.generation.brief.models import resolve_brief_model  # noqa: E402
+
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "data" / "prompt-inputs"
 SCHEMA_PATH = REPO_ROOT / "governance" / "schemas" / "project-input.schema.json"
 
@@ -427,13 +434,6 @@ def generate(
     by both the CLI main() and the unit tests so the test path doesn't
     have to assemble argv-shaped input.
     """
-    from packages.generation.brief import (
-        detect_language,
-        extract_site_brief,
-        site_brief_to_artifact,
-    )
-    from packages.generation.brief.models import resolve_brief_model
-
     language = detect_language(prompt)
     try:
         model = resolve_brief_model()

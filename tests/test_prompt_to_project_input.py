@@ -218,7 +218,7 @@ def test_generate_falls_back_when_extract_site_brief_raises(
         raise RuntimeError("network timeout")
 
     monkeypatch.setattr(
-        "packages.generation.brief.extract_site_brief",
+        "prompt_to_project_input.extract_site_brief",
         raise_llm_error,
     )
 
@@ -250,7 +250,7 @@ def test_generate_falls_back_when_site_brief_to_artifact_raises(
         raise ValueError("bad artifact shape")
 
     monkeypatch.setattr(
-        "packages.generation.brief.site_brief_to_artifact",
+        "prompt_to_project_input.site_brief_to_artifact",
         raise_serializer_error,
     )
 
