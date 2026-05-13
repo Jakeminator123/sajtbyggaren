@@ -21,7 +21,7 @@ agent: "uppdatera current-focus innan något annat".
 
 ## Last verified
 
-Last verified state: `a13d798` (2026-05-13, B13 splittad i B13a/B13b; PR #19 inväntar Bugbot-review)
+Last verified state: `b4fe4a8` (2026-05-13, mainline-steward gitignore-pre-allow för B13a-destination + .cursor/mcp.json-precaution; PR #19 öppen)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -46,36 +46,38 @@ mergat på `main` som `90856d1` 2026-05-13: `AGENTS.md` har rätt
 commerce-base från PR #16 ligger fortfarande kvar
 (`ff3d5124b659b786b0edde5685a857882dcad6c1`, 2026-05-12).
 
-B13b route-emission är **implementerad** på `feat/b13-route-emission`
-(commits `6a0a1c5` + `6516c28` + docs-bump `5443d34`).
-`scripts/build_site.py:write_pages` läser nu
-`scaffold_routes["defaultRoutes"]` och dispatchar per route id i stället
-för att hårdkoda `/tjanster`. Smoke-testet
-`test_ecommerce_lite_fixture_writes_produkter_and_passes_route_scan`
-bekräftar att `examples/atelje-bird.project-input.json`
-(`scaffoldId=ecommerce-lite`) genererar `/produkter` och Quality Gate
-route-scan blir `status=ok`. Pytest 381 passed, 3 förväntade skips.
-Ruff, governance_validate, rules_sync och check_term_coverage.py
---strict gröna. Pre-push ro-review (explore RO-subagent) körd; två
-fynd åtgärdade i `6516c28` (död `_ROUTE_RENDERERS`-dict + docstring
-för `render_home(listing_route=None)`-fallback).
+Mainline-steward direktpush `b4fe4a8` (2026-05-13) städar två footguns
+som dök upp under B13-arbetet: `.gitignore` + `.cursorignore` matchar
+inte längre `packages/generation/build/` (den blivande destinationen
+för B13a-arkitektur-flytten); `.cursor/mcp.json` är gitignored så
+MCP-OAuth-tokens inte kan slinka in i en commit. Existerande
+`packages/generation/build/.gitkeep` är nu spårad (den var tyst
+ignorerad sedan 2026-05-11).
+
+B13b route-emission ligger på feature-branchen `feat/b13-route-emission`
+som **PR #19** (HEAD `7f670b8` inkluderar Bugbots print-order-fix).
+Den fullständiga statusen för B13b och alla detaljer om PR #19 lever
+på branchen; den merge:n återställer denna fil till sin uppdaterade
+form.
 
 ## Current active PR
 
-**PR #19** (`feat/b13-route-emission` → `main`) - öppen, inväntar
-Cursor Bugbot-review. HEAD `5443d34`. Squash-merge när Bugbot är
-nöjd och operatör godkänner.
+**PR #19** (`feat/b13-route-emission` → `main`) — öppen, inväntar
+Cursor Bugbot-re-run efter print-order-fix-pushen `7f670b8`. Squash-
+merge när Bugbot är nöjd och operatör godkänner.
 
 ## Next action
 
-Vänta in Bugbot-rapporten på **PR #19**, åtgärda eventuella findings
-i en fix-runda, kör `python scripts/review_check.py` lokalt, merge
+Vänta in Bugbot-rapporten på **PR #19** (Bugbot-fyndet
+"Writing pages-print kör efter write_pages" är fixat i `7f670b8` med
+två source-level regression-tests). Eventuell ny fix-runda → merge
 (squash). Direkt efter merge: bumpa SHA:n här till mergekommiten på
-`main`.
+`main` och flytta B13b från "Öppna" till "Stängda" i
+`docs/known-issues.md`.
 
 ## Blocked items
 
-- **Aktivering av `ecommerce-lite -> commerce-base`** - blockerad
+- **Aktivering av `ecommerce-lite -> commerce-base`** — blockerad
   tills **PR #19** är mergad. `SCAFFOLD_TO_STARTER` i
   `packages/generation/planning/plan.py` står kvar med
   `ecommerce-lite: marketing-base` tills B13b ligger på `main` och en
@@ -84,11 +86,15 @@ i en fix-runda, kör `python scripts/review_check.py` lokalt, merge
 
 ## Do not start yet
 
-- **PR #17** (`frontend/christopher-import`) - ligger draft, ska inte
+- **PR #17** (`frontend/christopher-import`) — ligger draft, ska inte
   granskas eller mergeas förrän **PR #19** är mergad.
-- StackBlitz-preview, Fly-deploy, PreviewRuntime - inte påbörjat.
+- StackBlitz-preview, Fly-deploy, PreviewRuntime — inte påbörjat.
 - Nya starters utöver `marketing-base` och `commerce-base` (vendor).
 - Större Builder UX-utbyggnad.
+- B13a arkitektur-flytt (`scripts/build_site.py` produktlogik →
+  `packages/generation/build/`) — kvarstår som öppen post men kräver
+  egen sprint + sannolikt egen ADR; destinationen är nu pre-allokerad
+  i `.gitignore` + `.cursorignore`.
 
 ## Queue
 
@@ -100,7 +106,8 @@ i en fix-runda, kör `python scripts/review_check.py` lokalt, merge
    `atelje-bird` byggs mot `commerce-base` när codegenModel-scope
    utvidgas eller deterministisk fallback duger).
 3. Sanity-runda på `main` + uppdatera `docs/known-issues.md` B13b +
-   B20-posten (markera B13b som fixad (B13a är arkitektur-skuld, kvarstår)).
+   B20-posten (markera B13b som fixad; B13a är arkitektur-skuld,
+   kvarstår).
 4. Därefter: granska **PR #17** eller återgå till prompt-till-sajt-loopen.
 
 ## Loopen vi följer

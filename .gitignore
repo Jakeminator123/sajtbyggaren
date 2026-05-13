@@ -14,6 +14,13 @@ out/
 .turbo/
 !apps/viewser/app/api/build/
 !apps/viewser/app/api/build/route.ts
+# Reserve the destination for the B13a architecture-move (see
+# docs/known-issues.md). The bare `build/` rule above matches at any
+# depth, including packages/generation/build/, which would silently
+# drop the new package the day the move PR lands. Pre-allow it now so
+# the trap is gone before anyone hits it.
+!packages/generation/build/
+!packages/generation/build/**
 
 .env
 .env.*
@@ -35,6 +42,14 @@ Thumbs.db
 # .vscode/settings.json (committed); machine-local terminal paths and
 # similar must go in User Settings or *.local.json instead.
 .vscode/*.local.json
+
+# Cursor MCP credentials. When Cursor authenticates an MCP server it
+# writes OAuth tokens into .cursor/mcp.json; that file must NEVER be
+# committed even if a developer accidentally `git add`s it. The shared
+# .cursor/ rules + .cursor/settings.json + .cursor/BUGBOT.md ARE
+# committed (team-shared editor rules); only the per-machine MCP
+# credential file is excluded here.
+.cursor/mcp.json
 
 .tmp-*
 .tmp.*

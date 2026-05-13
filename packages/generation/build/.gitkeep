@@ -1,0 +1,9 @@
+# packages/generation/build
+#
+# Phase 3 - Build: Generation Package -> Generated Files -> Build Result.
+# Calls codegen LLM, normalizes files, then delegates to:
+#   - packages/generation/repair/ for fixes
+#   - packages/generation/quality-gate/ for checks
+#
+# Implemented in Sprint 3. See:
+#   governance/policies/engine-run.v1.json (phase: build)

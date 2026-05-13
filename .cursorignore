@@ -5,6 +5,13 @@ build
 .next
 out
 .turbo
+# Reserve the destination for the B13a architecture-move (see
+# docs/known-issues.md). The bare `build` rule above matches at any
+# depth, including packages/generation/build/, which would hide the
+# new package from agent indexing once the move PR lands. Pre-allow it
+# now so the trap is gone before anyone hits it.
+!packages/generation/build/
+!packages/generation/build/**
 
 # Python caches and venv
 .venv/
