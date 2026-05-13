@@ -82,6 +82,14 @@ COMMON_WORDS = {
     "Sajtbyggaren", "Sajtmaskin", "Jakeminator123", "Jakemiantor123",
     "Lovable", "GitHub", "Cursor", "Vercel", "StackBlitz",
     "WebContainer", "WebContainers", "Fly", "Stripe", "OpenAI", "Anthropic",
+    # GitHub Actions / Cursor Bugbot status-strängar och Node.js
+    # error-meddelanden som dyker upp i docs/handoff.md och
+    # governance/rules/bugbot-pr-loop.md som tekniska citat (inte
+    # domänbegrepp). Mirrors how "SharedArrayBuffer is not defined"
+    # is registered as a quoted error-string further up.
+    "Cursor Bugbot",
+    "SUCCESS", "FAILURE", "COMPLETED", "NEUTRAL",
+    "Module not found",
     # Generic word fragments som dyker upp i text
     "ADR", "PR", "CI", "ID", "UUID", "MD", "LLM", "PascalCase", "Backup",
     # Generiska prosa-fraser
