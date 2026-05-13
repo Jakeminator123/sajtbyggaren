@@ -37,7 +37,7 @@ export function ViewerPanel({ runId }: ViewerPanelProps) {
     setStatus(`Laddar filer för ${runId}...`);
     setError(null);
     setUnavailable(false);
-    node.innerHTML = "";
+    node.replaceChildren();
 
     void (async () => {
       try {
@@ -76,8 +76,18 @@ export function ViewerPanel({ runId }: ViewerPanelProps) {
         const sdk = (await import("@stackblitz/sdk")).default;
         if (cancelled || !containerRef.current) return;
 
+        // StackBlitz SDK replaces the target element with an iframe
+        // (`target.replaceWith(frame)`). Never pass it the React-owned
+        // shell div itself; create an unmanaged child and let the SDK
+        // replace that child. React then keeps owning a stable shell,
+        // avoiding DOM placement crashes when sibling status/error UI
+        // re-renders while StackBlitz mutates the preview DOM.
+        const mountTarget = document.createElement("div");
+        mountTarget.className = "h-full w-full";
+        containerRef.current.replaceChildren(mountTarget);
+
         await sdk.embedProject(
-          containerRef.current,
+          mountTarget,
           {
             title: `Viewser Preview ${runId}`,
             description: "Generated site snapshot",
@@ -95,7 +105,7 @@ export function ViewerPanel({ runId }: ViewerPanelProps) {
           // Stale embed mounted while we were unmounting. Tear it
           // down so the next runId starts from an empty node.
           if (containerRef.current) {
-            containerRef.current.innerHTML = "";
+            containerRef.current.replaceChildren();
           }
           return;
         }
@@ -111,7 +121,7 @@ export function ViewerPanel({ runId }: ViewerPanelProps) {
 
     return () => {
       cancelled = true;
-      if (node) node.innerHTML = "";
+      if (node) node.replaceChildren();
     };
   }, [runId]);
 

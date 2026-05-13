@@ -368,13 +368,15 @@ def test_viewer_panel_guards_cancelled_after_dynamic_import_and_embed() -> None:
     )
 
     # Verify the node-cleanup on stale embed exists (otherwise we'd
-    # just NOT setStatus but the iframe still sits in the DOM).
+    # just NOT setStatus but the iframe still sits in the DOM). The
+    # cleanup now uses replaceChildren() instead of innerHTML so the
+    # React-owned shell keeps a cleaner DOM mutation pattern.
     assert re.search(
-        r"if\s*\(\s*cancelled\s*\)\s*\{[\s\S]{0,300}?innerHTML\s*=\s*\"\"",
+        r"if\s*\(\s*cancelled\s*\)\s*\{[\s\S]{0,300}?replaceChildren\(\)",
         text,
     ), (
         "viewer-panel.tsx: post-embed cancelled-grenen måste rensa "
-        "containerRef.current.innerHTML så stale embed inte sitter kvar i "
+        "containerRef.current så stale embed inte sitter kvar i "
         "den always-mounted ref-divden."
     )
 
