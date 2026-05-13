@@ -112,6 +112,54 @@ def test_build_runner_whitelists_dossier_path_overrides() -> None:
 
 
 @pytest.mark.tooling
+def test_prompt_route_returns_400_for_zod_validation_errors() -> None:
+    """Audit fynd 1: ogiltig payload (tom prompt, för lång prompt, fel
+    typ) är ett klient-/valideringsfel, inte serverfel. Före fixen
+    fångade en bred try alla fel som 500, vilket gjorde API-kontraktet
+    missvisande och försvårade felsökning.
+
+    Lås att routen särskiljer ZodError -> 400 från övriga fel -> 500
+    så framtida refactor inte återinför den breda 500-grenen.
+    """
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "instanceof z.ZodError" in text, (
+        "/api/prompt måste skilja Zod-valideringsfel från serverfel via "
+        "`error instanceof z.ZodError` och returnera 400 för validering, "
+        "inte den breda 500-grenen."
+    )
+    assert re.search(r"status:\s*400", text), (
+        "/api/prompt saknar `status: 400`-svar för Zod-validering. "
+        "Klient-/valideringsfel ska aldrig returneras som 500."
+    )
+
+
+@pytest.mark.tooling
+def test_prompt_payload_schema_trims_whitespace_before_length_check() -> None:
+    """Audit fynd 2: en whitespace-only prompt (`"   "`) passerar
+    `.string().min(1)` men trimmades senare i `runPromptToProjectInput`
+    och kastades som "Prompt får inte vara tom." vilket sedan blev 500.
+    UI:n stoppar normalfallet men API-gränsen gjorde inte det.
+
+    Lås att schemat trimmar FÖRE min/max så whitespace-only fångas vid
+    API-gränsen och returneras som 400 (via ZodError).
+    """
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+    pattern = re.compile(
+        r"z\s*\.\s*string\(\)\s*\.\s*trim\(\)\s*\.\s*min\(\s*1",
+        re.MULTILINE,
+    )
+    assert pattern.search(text), (
+        "PromptPayloadSchema.prompt måste vara `z.string().trim().min(1)..."
+        ".max(4000)` så whitespace-only payloads fångas av `.min(1)` "
+        "EFTER trim. Utan trim slipper `' '` igenom till helpern."
+    )
+
+
+@pytest.mark.tooling
 def test_prompt_route_passes_dossier_override_to_run_build() -> None:
     """Prompt-flödet får inte falla tillbaka till `runBuild(siteId)` utan
     dossier-path override - det skulle leta i `examples/` istället för
