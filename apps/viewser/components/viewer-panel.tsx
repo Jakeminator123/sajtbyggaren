@@ -56,7 +56,7 @@ export function ViewerPanel({ runId }: ViewerPanelProps) {
             if (cancelled) return;
             setUnavailable(true);
             setStatus(
-              "Förhandsvisning saknas för denna run. Mock-runs (scripts/dev_generate.py) skriver inte en faktisk Next.js-app. Kör Build via en Project Input istället.",
+              "Förhandsvisning saknas för denna run. Mock-runs (scripts/dev_generate.py) skriver inte en faktisk Next.js-app. Skicka en prompt i promptfältet ovan för att köra en riktig builder-run.",
             );
             return;
           }
@@ -139,9 +139,10 @@ export function ViewerPanel({ runId }: ViewerPanelProps) {
         ) : null}
         {unavailable ? (
           <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
-            Tips: välj en Project Input och klicka Build. Det kör
-            scripts/build_site.py som producerar en riktig Next.js-app som
-            embed:as via StackBlitz.
+            Tips: skicka en prompt i promptfältet ovan. Det kör
+            scripts/prompt_to_project_input.py + scripts/build_site.py
+            och producerar en riktig Next.js-app som embed:as via
+            StackBlitz.
           </div>
         ) : null}
         {/*
