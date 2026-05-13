@@ -19,7 +19,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `04fc2fa` (2026-05-13, lucide-react fix mergad via PR #21 + ADR 0020; full `npm run build` på `.generated/atelje-bird/` är nu grön; branch `feat/commerce-base-lucide-react` städad lokalt + remote)
+Last verified state: `09c53b0` (2026-05-13, post-PR #21 + tre mainline-steward-pushar: `.cursorignore` referens/-ignored `0db29e6`, handoff refresh till post-PR-#20/#21-state `06a6047`, check_term_coverage allowlist för Bugbot/GitHub-status-strängar `09c53b0`; alla guards gröna lokalt; ingen öppen PR)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -28,16 +28,32 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `04fc2fa` efter att PR #21 (lucide-react i
-commerce-base + ADR 0020) squash-mergades 2026-05-13 19:55 UTC.
-Full `npm run build` mot `.generated/atelje-bird/` (eller någon
-annan ecommerce-lite-genererad sajt) är nu grön: 11 statiska
-sidor inkl `/produkter` plus commerce-base:s egna dynamiska
-routes prerenderas utan `Module not found`-fel. Föregående PR
-#20 (B20 step 2 mapping-flip + ADR 0019) squash-mergades samma
-dag 19:33 UTC och aktiverade `SCAFFOLD_TO_STARTER["ecommerce-lite"]
-= "commerce-base"`. Real codegenModel-scope är fortsatt låst
-till `marketing-base` per ADR 0017 (ingen utvidgning beslutad).
+`main` är vid `09c53b0` efter PR #21 (lucide-react i commerce-base
++ ADR 0020, mergad `04fc2fa` 2026-05-13 19:55 UTC) plus tre
+mainline-steward-pushar samma kväll. Full `npm run build` mot
+`.generated/atelje-bird/` (eller någon annan ecommerce-lite-
+genererad sajt) är nu grön: 11 statiska sidor inkl `/produkter`
+plus commerce-base:s egna dynamiska routes prerenderas utan
+`Module not found`-fel. Föregående PR #20 (B20 step 2 mapping-flip
++ ADR 0019) squash-mergades samma dag 19:33 UTC och aktiverade
+`SCAFFOLD_TO_STARTER["ecommerce-lite"] = "commerce-base"`. Real
+codegenModel-scope är fortsatt låst till `marketing-base` per
+ADR 0017 (ingen utvidgning beslutad).
+
+Mainline-steward-pushar efter PR #21 (alla pure docs/governance,
+ingen produktkod):
+
+- `0db29e6` — `.cursorignore` ignorerar nu hela `referens/` (inte
+  bara binärerna). Operatörspreferens; mappen finns kvar på disk
+  så docs-länkar funkar.
+- `06a6047` — `docs/handoff.md` refreshad till post-PR-#20/#21-
+  state, ny "Bugbot-loop på PR"-sektion med GraphQL-tolkning,
+  pre-push checklist utökad med ADR-krav och blocker-vs-followup-
+  åtskillnad.
+- `09c53b0` — `scripts/check_term_coverage.py:COMMON_WORDS`
+  allowlistar `Cursor Bugbot`, `SUCCESS`, `FAILURE`, `COMPLETED`,
+  `NEUTRAL`, `Module not found` (citerade Bugbot/GitHub-status-
+  strängar och Node-felmeddelanden i handoff.md, inte domänbegrepp).
 
 Mainline-steward-pushar som också ligger på main:
 - `bba8e36` - ny `bugbot-pr-loop`-regel (8-min poll + 10-iter
@@ -61,25 +77,41 @@ Ingen pågående feature-PR.
 
 ## Next action - direktiv till nästa agent
 
-**Plocka från queue.** B20 + lucide-fix:en är stängda, ingen
-aktiv blocker. Naturliga nästa steg är (i prioriteringsordning):
+**Prompt-till-sajt-loopen i Viewser** (RO-audit-rekommendation
+2026-05-13). B20 + lucide-fix:en är stängda, ingen aktiv blocker,
+och RO-audit identifierar att den största produktluckan nu är
+"Prompt i Viewser → riktig sajt: saknas". Övriga kedjor finns
+delvis (se Queue prio 1 för läget).
 
-1. **B13a arkitektur-flytt**: `scripts/build_site.py` produktlogik
-   till `packages/generation/build/`. Egen sprint, kräver
-   troligen egen ADR eftersom den rör mappgränser i
-   `repo-boundaries.v1.json`. Destinationen pre-allokerad i
-   `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
-2. **`write_pages` icon-bibliotek-agnostisk**: lyfter den
-   underliggande arkitekturskuld som ADR 0020 explicit lämnade
-   öppen. Förebygger att samma lucide-konflikt uppstår igen för
-   en framtida starter som inte använder lucide. Egen sprint.
-3. **Prompt-till-sajt-loopen**: nästa fas i produktarbetet,
-   inte direkt blockerad av något konkret B-ID just nu.
-4. **BO2/BO4 backoffice-skuld**: dataframes -> grupperad +
-   färgad trace-viewer + async/cancellation i
-   `backoffice/views/playground.py`.
+Konkret målbild: operatör skriver fri prompt i Viewser-UI → en
+helper konverterar till minimal Project Input → `build_site.py`
+körs (i bakgrunden eller via subprocess på samma sätt som
+`apps/viewser/lib/build-runner.ts` redan gör för Project-Input-
+flödet) → resulterande `runId` dyker upp i `<RunHistory>` och
+kan inspekteras i `<RunDetailsPanel>`.
 
-Operatör väljer riktning innan agenten startar.
+Sannolikt scope (verifiera i sprint-start):
+
+- Ny `apps/viewser/`-route (t.ex. `app/prompt/page.tsx` +
+  `app/api/prompt/route.ts`).
+- Ny prompt-till-Project-Input-helper. Två alternativ:
+  återanvänd `briefModel` direkt (Phase 1 redan gör prompt →
+  Site Brief; sedan en deterministisk Site Brief → minimal
+  Project Input-mappning), eller en ny tunn helper i
+  `packages/generation/brief/` om den existerande shape:n inte
+  räcker.
+- Eventuell `examples/`-mappning så `assertSafeSiteId`-mönstret
+  i `apps/viewser/lib/runs.ts` fortfarande håller path-escape-
+  risken borta (siteId blir genererat i bakvägen, så validering
+  måste ske före file write).
+
+Egen branch + PR per `governance/rules/branch-discipline.md`
+(detta rör `apps/viewser/**` och troligen `packages/generation/`-
+gränsen — feature-PR-territorium). ADR sannolikt inte krävs om
+ingen policy/schema rörs, men kontrollera.
+
+Övrig queue (B13a, write_pages-refactor, BO2/BO4) kvarstår men
+är inte produkt-blockerande just nu.
 
 ### Pre-push self-review checklist (lärt från B13b + B20)
 
@@ -128,11 +160,24 @@ se "Next action" + "Queue".)
 
 ## Queue
 
-1. B13a arkitektur-flytt (egen sprint, kräver ADR).
-2. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
+1. **Prompt-till-sajt-loopen i Viewser** (RO-audit-rekommendation
+   2026-05-13: nästa konkreta produktsteg). Kedjeläget:
+   - Fri prompt → artefakter: finns delvis via
+     `scripts/dev_generate.py`.
+   - Project Input → riktig sajt: finns via
+     `scripts/build_site.py`.
+   - **Prompt i Viewser → riktig sajt: saknas** ← nästa steg.
+   - Follow-up prompt → ny version: saknas.
+   - Lokal preview: finns manuellt, inte produktigt kopplat.
+   Konkret målbild: prompt → minimal Project Input → build_site →
+   runId i Viewser. Egen sprint, egen branch + PR. Sannolikt
+   kräver det en ny `apps/viewser/`-route + en ny
+   prompt-till-Project-Input-helper i `packages/generation/brief/`
+   eller liknande.
+2. B13a arkitektur-flytt (egen sprint, kräver ADR).
+3. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
    lucide-typen av starter-vs-codegen-konflikt; ADR 0020:s
    "INTE beslutar"-sektion).
-3. Prompt-till-sajt-loopen (nästa produktfas).
 4. BO2/BO4 backoffice-skuld (round-1-skuld).
 
 ## Loopen vi följer
