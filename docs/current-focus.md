@@ -21,7 +21,7 @@ agent: "uppdatera current-focus innan något annat".
 
 ## Last verified
 
-Last verified state: `5443d34` (2026-05-13, B13b route-emission PR #19 öppen och inväntar Bugbot-review)
+Last verified state: `a13d798` (2026-05-13, B13 splittad i B13a/B13b; PR #19 inväntar Bugbot-review)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
