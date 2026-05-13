@@ -50,10 +50,11 @@ DEFAULT_SCAFFOLD_ID = "local-service-business"
 # ``marketing-base`` covers the local-service-business chrome and is the
 # only starter wired into ``_REAL_CODEGEN_STARTERS`` in
 # packages/generation/codegen/codegen.py (see ADR 0017). ``commerce-base``
-# was vendored in PR #16 and activated for ``ecommerce-lite`` in B20
-# step 2 (closes docs/known-issues.md B20); ecommerce-lite runs through
-# the deterministic-v1 codegen path until real-codegen scope is widened
-# in a follow-up sprint with its own ADR extension on top of 0017.
+# was vendored in PR #16 (ADR 0018, vendor-only checkpoint) and the
+# runtime mapping ``ecommerce-lite -> commerce-base`` was activated in
+# B20 step 2 per ADR 0019; ecommerce-lite runs through the
+# deterministic-v1 codegen path until real-codegen scope is widened in
+# a follow-up sprint with its own ADR extension on top of 0017.
 SCAFFOLD_TO_STARTER: dict[str, str] = {
     "local-service-business": "marketing-base",
     "ecommerce-lite": "commerce-base",
