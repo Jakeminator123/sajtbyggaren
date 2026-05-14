@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `f787eb7` (2026-05-14, B50 route-href/contact-route hardening + canonical route-path follow-up är landad i `scripts/build_site.py` + `tests/test_builder_route_emission.py`. Scaffold-route-hrefs serialiseras säkert, saknad contact-route fail-fastar, homepage hittar inte längre på `/tjanster` när listing-route saknas och scaffold-routes avvisar protocol-relative URLs/dot-segments innan href- eller page-path-emission. Inga öppna PRs.)
+Last verified state: `2ad01a2` (2026-05-14, A-mini cleanup B51/B52/B54/B55 efter B50. Nav-labels JSX-escapas i `render_layout` header+footer, `/spel` dedupas mot scaffold-defaultRoutes, `apps/viewser/lib/stackblitz-files.ts` filtrerar `.env*` defensivt från upload-loopen, `test_viewser_env_file_is_not_committed` använder `git ls-files`-semantik så gitignored lokal `.env.local` inte triggar falskt alarm. B53 registrerad som queue-item (routes.json governance-schema). Inga öppna PRs.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `f787eb7` lokalt före focus-bump-commit; senaste Builder-commit stänger B50:s Scout-follow-up genom att validera scaffold-routes som kanoniska site paths innan både href- och page-path-emission. B50:s huvudfix i `4940cbb` serialiserar scaffold-route-hrefs som JSX-uttryck, fail-fastar saknad contact-route och omitar homepage-listing-CTA när scaffolden saknar listing-route. Den bygger på orkestrator-playbooken i `e026642`, `27f7fe9` (focus efter PR #26), PR #26:s produktkompass (`docs/product-operating-context.md`) i `1cba454`, `6daee58` (B45 `_pick_contact_route`-propagation till layout/home/services/products), `c2d8632` (PR #24 docs-base starter, squash-merge), `10eb286` (B48 follow-up-semantik i dev-driver/backoffice), `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `2ad01a2` lokalt och på origin; senaste Builder-commit är A-mini cleanup som stänger B51 (nav-label JSX-escape i `render_layout`), B52 (`/spel`-dedupe i `_nav_items_from_scaffold`), B54 (defensiv `.env*`-filter i `apps/viewser/lib/stackblitz-files.ts` upload-loop) och B55 (`test_viewser_env_file_is_not_committed` använder git-tracking-semantik istället för disk-existens). B53 (`governance/schemas/routes.schema.json` för scaffold-routes-kontrakt) är registrerad som queue-item, inte implementerad i denna sprint. Föregående: `f787eb7` (B50 canonical route-path follow-up via Scout) ovanpå `4940cbb` (B50 huvudfix). Den bygger på orkestrator-playbooken i `e026642`, `27f7fe9` (focus efter PR #26), PR #26:s produktkompass (`docs/product-operating-context.md`) i `1cba454`, `6daee58` (B45 `_pick_contact_route`-propagation till layout/home/services/products), `c2d8632` (PR #24 docs-base starter, squash-merge), `10eb286` (B48 follow-up-semantik i dev-driver/backoffice), `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -274,46 +274,76 @@ utan merge, reference only).
 
 ## Current active sprint
 
-Ingen pågående produktimplementation på `main`. Prompt-till-sajt MVP v1,
+Ingen pågående produktimplementation på `main`. A-mini cleanup
+(B51/B52/B54/B55 + B53 registrerad), Prompt-till-sajt MVP v1,
 mini-sprinten som gjorde PromptBuilder till enda primära promptyta, follow-up
 prompt versions, PR #23 backoffice trace/playground, PR #22 `portfolio-base`
 starter, B48 follow-up-semantik, PR #24 `docs-base` starter, B45
-kontakt-route-propagation, Codex-IDE agent-parity-regeln, mergead
-branch-cleanup, PR #26 produktkompass/agentläsordning och
+kontakt-route-propagation, B50 route-hardening, Codex-IDE agent-parity-regeln,
+mergead branch-cleanup, PR #26 produktkompass/agentläsordning och
 orkestrator-playbooken för längre fleragentpass är klara. Inga öppna PRs.
 
 ## Next action - direktiv till nästa agent
 
-**Builder-mini-sprint: B49 page-map-driven sidebar för docs-base.**
+**Read-only Grind/Scout: demo-baseline-audit för kärnflödet.**
 
-- B45 är klar i `6daee58`: `write_pages()` trådar scaffoldens contact-path
-  till layout, home, services och products, och tester låser frånvaro av
-  hardcoded `href="/kontakt"` i renderer-helpers.
-- `AGENTS.md` innehåller nu Codex-IDE-regeln från `04fb92f`: Codex agerar
-  Cursor-kompatibel repo-agent och följer `.cursor`-reglerna, men ändrar
-  governance-källorna om en regel behöver uppdateras.
-- PR #26 är mergead i `1cba454` och lägger produktkompassen i
-  `docs/product-operating-context.md`. Den förtydligar att B49 fortfarande
-  är ett giltigt enabling-steg när det gör nästa småföretagarsajt mer
-  korrekt, previewbar eller aktiverbar.
-- B50 är stängd i `4940cbb` + Scout-follow-up `f787eb7`: route-hrefs
+Operatörens coach-beslut 2026-05-14 (efter A-mini cleanup): nästa pass
+ska INTE vara B49 docs-base sidebar och INTE en ny starter. Båda
+breddar produkten innan kärnflödet är bevisat. Istället sätts en
+read-only grind-agent på demo-baseline-audit som mäter:
+
+```text
+prompt -> företagshemsida -> preview -> följdprompt -> ny version
+```
+
+mot fyra konkreta småföretagstestfall (elektriker Malmö, frisörsalong
+Göteborg, naprapatklinik Stockholm, liten keramik-e-handel). Målet är
+att hitta vad som faktiskt blockerar en trovärdig första produktdemo,
+inte att lägga till ny yta.
+
+Förväntad rapport från grind-agenten:
+
+1. Kan vi demonstrera 4 sajter idag? Ja/nej.
+2. Vilka av 4 passerar build?
+3. Vilka av 4 får rimlig preview?
+4. Grov kvalitetspoäng per sajt (1-10 på 8 axlar).
+5. Topp 3 blockers.
+6. Minsta nästa Builder-sprint.
+7. Om B49 bör tas före/efter quality baseline.
+8. Om ny starter fortfarande är rätt nästa steg eller bör vänta.
+
+Grind-agenten får INTE editera, committa, pusha eller skapa PR. Den
+levererar rapport som operatören kan skicka till sin reviewer.
+
+Föregående cleanup-status:
+
+- A-mini cleanup landad i `2ad01a2`. B51 (nav-label JSX-escape),
+  B52 (`/spel`-dedupe), B54 (`.env*`-filter i StackBlitz upload),
+  B55 (test_viewser_env_file gitignore-semantik) stängda med
+  regression-tester. B53 (routes.schema.json) registrerad som queue.
+- B50 stängd i `4940cbb` + Scout-follow-up `f787eb7`: route-hrefs
   går via `_route_href()`, saknad contact-route ger tydligt builder-fel,
   `render_home()` hittar inte längre på `/tjanster` när listing-route
   saknas och route paths avvisar protocol-relative URLs/dot-segments innan
   href/page-path skrivs.
-- Nästa Builder-sprint bör vara B49 page-map-driven sidebar för `docs-base`.
-  Kräver att antingen Nextra-theme-docs `Layout` får fungera (PR #24-bodyn
-  noterar att den failade validering i miljön) eller en lokal
-  `_meta.ts`-driven sidebar byggs. Måste vara klar innan
-  `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`.
-- Tidigare audit-fix-sprintar 2026-05-14: B44 (PromptBuilder false success),
-  B46 (ChatPanel-radering) och B50 (route-href/contact-route hardening)
-  är stängda. Öppna B-IDs: B47 commerce-base Shopify handles och B49
-  docs-base page-map sidebar. Inga blockers.
+- B45 klar i `6daee58`: `write_pages()` trådar scaffoldens contact-path
+  till layout, home, services och products, och tester låser frånvaro av
+  hardcoded `href="/kontakt"` i renderer-helpers.
+- `AGENTS.md` innehåller Codex-IDE-regeln från `04fb92f`: Codex agerar
+  Cursor-kompatibel repo-agent och följer `.cursor`-reglerna, men ändrar
+  governance-källorna om en regel behöver uppdateras.
+- PR #26 mergead i `1cba454`: produktkompassen i
+  `docs/product-operating-context.md`. Den förtydligar att tekniskt
+  intressanta sidospår parkeras om de inte hjälper kärnflödet.
+
+Öppna B-IDs: B13a (arkitektur-flytt, kräver ADR), B47 (commerce-base
+Shopify handles), B49 (docs-base page-map sidebar), B53 (routes.schema),
+BO4-followup-cancel (Playground-cancellation). Ingen är blocker idag.
 
 `portfolio-base` och `docs-base` är båda starter-underlag; ingen
 `SCAFFOLD_TO_STARTER`-mappning eller real-codegen-scope är aktiverad
-av #22 eller #24.
+av #22 eller #24. Real codegen-scope är fortfarande `marketing-base`-only
+per ADR 0017.
 
 ### Pre-push self-review checklist (lärt från B13b + B20)
 
@@ -360,18 +390,35 @@ i `c073d486` och PR-branchen är inte längre kvar på GitHub.
 
 ## Queue
 
-1. B49 (medel): page-map-driven sidebar för `docs-base`-startern; måste
+1. **Demo-baseline-audit (read-only Grind/Scout)** - mäter kärnflödet
+   mot 4 testfall, levererar quality-scorecard + topp 3 blockers.
+   Inte en starter-sprint; målet är att hitta vad som faktiskt
+   blockerar första riktiga produktdemo.
+2. **Demo-baseline-fixar** - när grind-agenten levererat rapporten;
+   smal Builder-sprint som åtgärdar topp 1-2 fynd.
+3. B49 (medel): page-map-driven sidebar för `docs-base`-startern; måste
    vara klar innan `course-education -> docs-base` aktiveras i
    `SCAFFOLD_TO_STARTER`. Antingen återinför Nextra-theme-docs `Layout`
-   eller bygg lokal `_meta.ts`-/filsystem-driven nav.
-2. B47 (låg): commerce-base Shopify-handles dokumenteras eller får
+   eller bygg lokal `_meta.ts`-/filsystem-driven nav. Coach-beslut:
+   tas EFTER demo-baseline-audit, inte före.
+4. **StackBlitz-utvärdering** (read-only först): hur stabil är
+   StackBlitz som första användarnära preview-yta? Inte stor sprint än.
+5. B53 (låg): `governance/schemas/routes.schema.json` för scaffold-
+   routes-kontraktet (egen schema-sprint, mönster från B22).
+6. B47 (låg): commerce-base Shopify-handles dokumenteras eller får
    fallback. Egen e-commerce-sprint, ej blocker idag.
-3. B13a arkitektur-flytt (egen sprint, kräver ADR).
-4. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
+7. B13a arkitektur-flytt (egen sprint, kräver ADR).
+8. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
    lucide-typen av starter-vs-codegen-konflikt; ADR 0020:s
    "INTE beslutar"-sektion).
-5. Cancellation-followup (låg): riktig cancellation/background-jobb i
+9. Cancellation-followup (låg): riktig cancellation/background-jobb i
    playground-vyn om operatören behöver avbryta redan startade körningar.
+
+**Vänta med ny/sista starter** tills minst följande är sant: marketing-
+base real codegen stabil, 4 demo-sajter kan byggas (minst 3/4), follow-up
+versions funkar, build-fail från fri prompt är förstådda, enkelt
+scorecard finns. Annars blir ny starter mer yta att felsöka utan att
+stärka kärnflödet.
 
 ## Loopen vi följer
 
