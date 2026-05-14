@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-14 (post-Prompt-till-sajt MVP v1 + audit-hotfix + post-push-verifiering)
-**Aktuell HEAD på `main`:** `c3dcc14` (post-push-verifierad `main`/`origin/main`; docs-följdfix ovanpå Standard loop docs-bump `2f0af68`, som ligger ovanpå audit-hotfix-sprinten + ZodError-allowlist `e421a00`, Prompt-till-sajt MVP v1, Viewser mini-sprinten och prompt-helperns review-hotfix). Kör `git log --oneline -1` för senaste SHA.
-**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-7` (från `fb11925`) ligger på origin som senaste fallback.
+**Datum:** 2026-05-14 (post-follow-up prompt versions)
+**Aktuell HEAD på `main`:** `2701b00` (Builder direktpush `feat(viewser): add follow-up prompt versions` ovanpå Steward-processcommit `006be38`). Kör `git log --oneline -1` för senaste SHA.
+**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-8` finns lokalt efter follow-up-sprinten; `backup-7` (från `fb11925`) ligger på origin som tidigare fallback.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
 Färdiga startprompter för Scout/Builder/Steward finns i [`docs/agent-prompts.md`](agent-prompts.md).
@@ -46,7 +46,7 @@ Tre lager:
 - `backoffice/` + `backend.py` — Streamlit-administration (inte runtime).
 - `packages/` + `apps/` — runtime + kund-UI.
 
-## Vad funkar idag (post-audit-hotfix-sprint, HEAD `c3dcc14`)
+## Vad funkar idag (post-follow-up prompt versions, HEAD `2701b00`)
 
 ### Governance + guards
 
@@ -68,12 +68,13 @@ Tre lager:
 - **B20 step 2 (PR #20, `75c980b`, ADR 0019):** `SCAFFOLD_TO_STARTER["ecommerce-lite"] = "commerce-base"`. Ecommerce-lite-fixturen `examples/atelje-bird.project-input.json` producerar `/produkter` via `source=deterministic-v1` codegen. Real codegenModel-scope förblir `marketing-base`-only tills separat sprint utvidgar via ADR ovanpå 0017.
 - **B20-followup-lucide (PR #21, `04fc2fa`, ADR 0020):** `lucide-react` ^1.14.0 tillagd i `commerce-base/package.json` så `scripts/build_site.py:write_pages`s hardcodade lucide-imports inte längre ger `Module not found` vid full `npm run build`.
 
-### Prompt-till-sajt MVP v1 + audit-hotfix (kod-HEAD `e421a00`, docs-HEAD `c3dcc14`)
+### Prompt-till-sajt MVP v1 + follow-up versions (kod-HEAD `2701b00`)
 
 - **`/api/prompt`** tar fri prompt, kör `runPromptToProjectInput` (spawnar `scripts/prompt_to_project_input.py` med `--`-separator så dash-prefixade prompts inte fastnar i argparse), och triggar `runBuild` med dossier-path-override (whitelist via `ALLOWED_DOSSIER_ROOTS` mot `examples/` + `data/prompt-inputs/`).
 - **PromptBuilder** är canonical promptyta på Viewser-home; legacy ChatPanel finns kvar som komponent men importeras inte. ProjectInputPicker är read-only-select (Build-knappen togs bort).
 - **Payload-validering**: `z.string().trim().min(1).max(4000)` så whitespace-only payloads fångas vid API-gränsen. `ZodError` returneras som `400` med valideringsmeddelandet; bara genuina serverfel blir `500`.
 - **Helper-skriptet** `scripts/prompt_to_project_input.py` använder briefModel + Site Brief och skriver `data/prompt-inputs/<siteId>.project-input.json` + sidecar `<siteId>.meta.json` med `projectId/version/originalPrompt/briefSource`. Brief-imports ligger på modulnivå så fallback-tester monkeypatchar lookup-namnen som `generate()` faktiskt använder.
+- **Follow-up prompt versions** är landat: operatören kan fortsätta på befintlig prompt-input/run, behålla `projectId`, bumpa `version` och få ny build/run för samma sajtspår.
 - **ViewerPanel** fallback-copy hänvisar nu till promptfältet, inte den borttagna Build-knappen.
 
 ### Builder UX MVP
@@ -82,14 +83,15 @@ Tre lager:
 
 ## Nästa konkreta uppgift
 
-Se `docs/current-focus.md` → **"Next action"**. Kort version: ingen aktiv blocker. Nästa sprint är:
+Se `docs/current-focus.md` → **"Next action"**. Kort version: ingen aktiv blocker på `main`, men två draft-PRs ska inte mergas än:
 
-1. **Follow-up prompt → ny version** — operatör väljer en befintlig run (eller siteId under `data/prompt-inputs/`), skriver en följdprompt, helpern läser sidecar-meta, bumpar `version`, genererar ny Project Input, `build_site.py` körs, ny runId med samma `projectId` syns i Run History. Sidecar-meta har redan `projectId` + `version` så ingen schema-migration krävs i första iterationen. Bedömd storlek: ~70% av Prompt-till-sajt MVP v1-sprintens omfång.
-2. **B13a arkitektur-flytt** — `scripts/build_site.py` produktlogik till `packages/generation/build/`. Egen sprint, kräver troligen egen ADR (rör mappgränser i `repo-boundaries.v1.json`). Destinationen pre-allokerad i `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
-3. **`write_pages` icon-bibliotek-agnostisk refactor** — lyfter den arkitekturskuld som ADR 0020 explicit lämnade öppen. Förebygger att samma lucide-typen av starter-vs-codegen-konflikt uppstår igen för en framtida starter utan lucide.
-4. **BO2/BO4 backoffice-skuld** — dataframes → grupperad + färgad trace-viewer + async/cancellation i `backoffice/views/playground.py`.
+1. **#22 portfolio-base starter** — draft; uppdatera/verifiera mot senaste `main` innan ready/merge.
+2. **#23 backoffice trace/playground** — draft; Bugbot-status/fynd måste vara klara innan ready/merge.
+3. **B13a arkitektur-flytt** — `scripts/build_site.py` produktlogik till `packages/generation/build/`. Egen sprint, kräver troligen egen ADR (rör mappgränser i `repo-boundaries.v1.json`). Destinationen pre-allokerad i `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
+4. **`write_pages` icon-bibliotek-agnostisk refactor** — lyfter den arkitekturskuld som ADR 0020 explicit lämnade öppen. Förebygger att samma lucide-typen av starter-vs-codegen-konflikt uppstår igen för en framtida starter utan lucide.
+5. **BO2/BO4 backoffice-skuld** — dataframes → grupperad + färgad trace-viewer + async/cancellation i `backoffice/views/playground.py`; se #23 innan ny separat sprint planeras.
 
-Nice-to-have för PromptBuilder: setTimeout för stage-transition "thinking" → "building" saknar cleanup vid unmount. Låg risk men kan polishas i Follow-up-sprinten.
+Nice-to-have för PromptBuilder: setTimeout för stage-transition "thinking" → "building" saknar cleanup vid unmount. Låg risk men kan polishas om PromptBuilder rörs igen.
 
 PR #17 / `frontend/christopher-import` är reference only: återöppna inte PR #17,
 starta inte `apps/web`, men behåll branchen som framtida design-/copy-referens.
@@ -145,6 +147,8 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+2701b00 feat(viewser): add follow-up prompt versions
+006be38 docs(workflow): formalize steward post-push verification
 c3dcc14 docs: correct verified HEAD to 2f0af68 in focus + handoff
 2f0af68 docs: bump focus + handoff to e421a00 post-audit-hotfix-sprint
 e421a00 chore(check_term_coverage): allowlist ZodError TS symbol

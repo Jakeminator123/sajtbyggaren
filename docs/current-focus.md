@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `c3dcc14` (2026-05-14, post-push-verifierad main efter Prompt-till-sajt MVP v1 + audit-hotfix-sprint: ZodError -> 400 i `/api/prompt`, whitespace-trim före `.min(1)`, `--`-separator i Python-spawn så dash-prefixade prompts inte tolkas som CLI-options av argparse, stale viewer-panel fallback-copy uppdaterad till PromptBuilder-flödet, prompt-helperns brief-imports flyttade till modulnivå så test-monkeypatch faktiskt biter, allowlist av `ZodError` i `check_term_coverage`, docs-bump i `2f0af68` och följdfix i `c3dcc14`. Faktisk kod-HEAD för audit-hotfixen är `e421a00`; `c3dcc14` är verifierad `main`/`origin/main` ovanpå Standard-loop-docs. backup-7 från `fb11925` pushad till origin före hotfix-sprinten. Alla guards gröna lokalt; ingen öppen PR)
+Last verified state: `2701b00` (2026-05-14, post-follow-up prompt versions: Builder landade `feat(viewser): add follow-up prompt versions` direkt på `main`, lokal `main` och `origin/main` är synkade på `2701b00`, och `focus_check.py` rapporterar endast lokal `.cursor/settings.json` som ocommittad operatörsinställning. Öppna PRs finns: #22 portfolio-base starter och #23 backoffice trace/playground är båda draft och ska inte mergas förrän respektive base-/Bugbot-status är klar.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `c3dcc14` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `2701b00` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -51,10 +51,12 @@ Project Input, skriver den till `data/prompt-inputs/<siteId>.project-input.json`
 briefSource), och `apps/viewser/app/api/prompt/route.ts` triggar
 `runBuild` med dossier-path-override. PromptBuilder är nu den enda
 primära promptytan på Viewser-home; legacy ChatPanel finns kvar som
-komponent men importeras/renderas inte från `app/page.tsx`. RunHistory
-uppdateras via samma `fetchRuns`-loop som `/api/build`. backup-7 från `fb11925`
-ligger på origin som fallback efter audit-hotfix-sprinten; backup-6 från
-`504befc` ligger kvar som fallback för MVP-pushen.
+komponent men importeras/renderas inte från `app/page.tsx`. Follow-up
+prompt versions är nu landat: operatören kan fortsätta på befintlig
+prompt-input/run, behålla `projectId`, bumpa version och få ny build/run
+för samma sajtspår. RunHistory uppdateras via samma `fetchRuns`-loop som
+`/api/build`. backup-8 finns lokalt efter follow-up-sprinten; backup-7 från
+`fb11925` ligger på origin som fallback efter audit-hotfix-sprinten.
 
 Föregående: PR #21 (lucide-react i commerce-base + ADR 0020,
 mergad `04fc2fa` 2026-05-13 19:55 UTC) gjorde full `npm run build`
@@ -131,6 +133,13 @@ Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
 - `c3dcc14` — `docs: correct verified HEAD to 2f0af68 in focus +
   handoff`. Följdfix ovanpå `2f0af68`; lokal `main` och `origin/main`
   är post-push-verifierade på denna SHA.
+- `006be38` — `docs(workflow): formalize steward post-push
+  verification`. Låser Builder→Steward-post-push-flödet i docs,
+  governance-spegeln och `focus_check.py`-remindern.
+- `2701b00` — `feat(viewser): add follow-up prompt versions`.
+  Follow-up prompt versions landat direkt på `main`: promptflödet kan
+  fortsätta på befintligt `projectId`, bumpa version och skriva nya
+  prompt-inputs/runs för samma sajtspår.
 
 Mainline-steward-pushar efter PR #21 (pure docs/governance):
 
@@ -165,44 +174,27 @@ nästa sprint.
 
 ## Current active sprint
 
-Ingen pågående produktimplementation. Prompt-till-sajt MVP v1 och
-mini-sprinten som gjorde PromptBuilder till enda primära promptyta är
-klara. Nästa Builder-sprint blir "Follow-up prompt → ny version"
-(läs `data/prompt-inputs/<siteId>.meta.json`, bumpa version,
-generera ny build från följdprompt). Sprintstart ska skapa nästa
-`backup-N` från synkad `main` och sedan fortsätta arbetet på `main`.
+Ingen pågående produktimplementation på `main`. Prompt-till-sajt MVP v1,
+mini-sprinten som gjorde PromptBuilder till enda primära promptyta och
+follow-up prompt versions är klara. Nästa arbete är PR-/queue-triage:
+#22 och #23 är öppna draft-PRs och ska inte mergas förrän respektive
+base-/Bugbot-status är klar.
 
 ## Next action - direktiv till nästa agent
 
-**Builder-sprint: "Follow-up prompt → ny version".**
-Konkret målbild: operatör väljer en befintlig run (eller siteId
-under `data/prompt-inputs/`) → skriver en följdprompt → helpern
-läser sidecar-meta, bumpar `version`, genererar ny Project Input
-(diff-applicerad eller helt ny baserad på följdpromptens
-intentioner) → `build_site.py` körs → ny runId med samma
-`projectId` syns i Run History.
+**PR-/queue-triage efter follow-up prompt versions.**
 
-Sannolikt scope (verifiera i sprint-start):
+- #22 `portfolio-base` starter är öppen draft-PR. Den ska inte mergas
+  förrän branchen/base-läget är uppdaterat mot senaste `main` och
+  operatören uttryckligen vill gå från draft till ready.
+- #23 backoffice trace/playground är öppen draft-PR. Den ska inte
+  markeras ready eller mergas förrän Bugbot-status/fynd är klara.
+- Lokal `.cursor/settings.json` är ändrad av operatörsmiljön och ska
+  inte committas utan explicit operatörsbeslut.
 
-- Utöka `scripts/prompt_to_project_input.py` (eller lägg
-  syskon-script `scripts/follow_up_prompt.py`) som tar
-  `--project-id` + `--prompt` och bumpar `meta.version`.
-- Ny `/api/prompt/follow-up`-route (eller utökad `/api/prompt`
-  med `mode: "init" | "followup"`).
-- UI-utökning av `PromptBuilder` så operator kan välja
-  "ny sajt" vs "följdprompt på senaste run".
-- Tester som låser version-bump och projectId-stabilitet
-  över N follow-ups.
-
-ADR sannolikt inte krävs i denna sprint heller om sidecar-meta
-fortsatt håller. Om det visar sig att Project Input-schemat
-behöver ett `projectId`/`version`-fält - då krävs ADR.
-
-Steward får gärna uppdatera `docs/handoff.md` innan eller efter
-follow-up-sprinten, men det blockerar inte nästa Builder-pass.
-
-Övrig queue (B13a, write_pages-refactor, BO2/BO4) kvarstår men
-är inte produkt-blockerande just nu.
+När PR-spåren är utredda är nästa produktval åter öppet: B13a,
+`write_pages` icon-bibliotek-agnostisk refactor eller nästa Builder UX-
+steg.
 
 ### Pre-push self-review checklist (lärt från B13b + B20)
 
@@ -230,12 +222,15 @@ Innan `git push origin main`:
 
 ## Blocked items
 
-(Inga aktiva blockers just nu — B20 + lucide-fix mergade,
-sanity-rundan grön mot `04fc2fa`, Prompt-till-sajt MVP v1
-mergad direktpush `4d5b4de`, audit-hotfix-sprint klar till
-`e421a00` med docs-bump i `2f0af68` och post-push-verifierad main
-vid `c3dcc14`. Nästa val är operatörsdrivet,
-se "Next action" + "Queue".)
+Öppna PRs blockerar inte `main`, men får inte mergas ännu:
+
+- #22 `portfolio-base` starter: draft; uppdatera/verifiera mot senaste
+  `main` innan ready/merge.
+- #23 backoffice trace/playground: draft; Bugbot-status/fynd måste vara
+  klara innan ready/merge.
+
+Lokal `.cursor/settings.json` är ocommittad operatörs-/plugininställning
+och ska inte ingå i Steward-commit utan explicit beslut.
 
 ## Do not start yet
 
@@ -256,27 +251,20 @@ se "Next action" + "Queue".)
 
 ## Queue
 
-1. **Follow-up prompt → ny version** (nästa konkreta produktsteg
-   efter Prompt-till-sajt MVP v1, 2026-05-14). Kedjeläget:
-   - Fri prompt → artefakter: finns via `scripts/dev_generate.py`.
-   - Project Input → riktig sajt: finns via `scripts/build_site.py`.
-   - Prompt i Viewser → riktig sajt: **finns** via Prompt-till-sajt
-     MVP v1 (`/api/prompt`, `PromptBuilder`, helper i
-     `scripts/prompt_to_project_input.py`).
-   - **Follow-up prompt → ny version: saknas** ← nästa steg.
-   - Lokal preview: finns manuellt, inte produktigt kopplat.
-   Sidecar-meta `data/prompt-inputs/<siteId>.meta.json` har redan
-   `projectId` + `version` så ingen schema-migration behövs i
-   första iterationen. Se "Next action" för scope-skiss.
-2. B13a arkitektur-flytt (egen sprint, kräver ADR).
-3. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
+1. **#22 portfolio-base starter** — draft-PR; uppdatera/verifiera mot
+   senaste `main` före ready/merge.
+2. **#23 backoffice trace/playground** — draft-PR; invänta/hantera
+   Bugbot-status/fynd före ready/merge.
+3. B13a arkitektur-flytt (egen sprint, kräver ADR).
+4. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
    lucide-typen av starter-vs-codegen-konflikt; ADR 0020:s
    "INTE beslutar"-sektion).
-4. BO2/BO4 backoffice-skuld (round-1-skuld).
-5. **PromptBuilder polish (nice-to-have)**: setTimeout för
+5. BO2/BO4 backoffice-skuld (round-1-skuld; se #23 innan ny separat
+   sprint planeras).
+6. **PromptBuilder polish (nice-to-have)**: setTimeout för
    stage-transition "thinking" → "building" saknar cleanup vid
    unmount. Låg risk men låt nästa Builder rensa om PromptBuilder
-   ändå rörs i Follow-up-sprinten.
+   ändå rörs igen.
 
 ## Loopen vi följer
 
