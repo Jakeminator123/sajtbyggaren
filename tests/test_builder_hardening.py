@@ -498,3 +498,43 @@ def test_build_calls_run_npm_with_documented_timeouts(monkeypatch, tmp_path: Pat
         assert call["timeout"] == build_site.NPM_INSTALL_TIMEOUT_SECONDS, (
             f"npm install must use NPM_INSTALL_TIMEOUT_SECONDS, got {call['timeout']!r}"
         )
+
+
+@pytest.mark.tooling
+def test_failed_npm_build_step_is_written_with_log_excerpt(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Run Details must preserve the real npm error, not just ok/failed."""
+    from scripts import build_site
+
+    def fake_run_npm(command, _cwd, *, timeout=None):
+        if command[:3] == ["npm", "run", "build"]:
+            return False, 2.3, "Failed to compile\napp/page.tsx\nType error: boom"
+        return True, 0.4, ""
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(build_site, "run_npm", fake_run_npm)
+
+    project_input_path = REPO_ROOT / "examples" / "painter-palma.project-input.json"
+    runs_dir = tmp_path / "runs"
+    generated_dir = tmp_path / "generated"
+
+    with pytest.raises(SystemExit):
+        build_site.build(
+            project_input_path,
+            do_build=True,
+            runs_dir=runs_dir,
+            generated_dir=generated_dir,
+        )
+
+    run_dirs = [path for path in runs_dir.iterdir() if path.is_dir()]
+    assert len(run_dirs) == 1
+    build_result = json.loads(
+        (run_dirs[0] / "build-result.json").read_text(encoding="utf-8")
+    )
+
+    build_step = next(
+        step for step in build_result["npmSteps"] if step["name"] == "npm run build"
+    )
+    assert build_step["ok"] is False
+    assert "Type error: boom" in build_step["logExcerpt"]

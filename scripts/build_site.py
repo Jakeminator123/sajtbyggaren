@@ -1312,6 +1312,13 @@ def run_npm(
     return proc.returncode == 0, elapsed, last_lines
 
 
+def _npm_step_result(name: str, ok: bool, seconds: float, log_excerpt: str) -> dict:
+    step: dict[str, object] = {"name": name, "ok": ok, "seconds": round(seconds, 1)}
+    if not ok and log_excerpt.strip():
+        step["logExcerpt"] = log_excerpt.strip()
+    return step
+
+
 # ---------------------------------------------------------------------------
 # Mock artefacts (no LLM yet)
 # ---------------------------------------------------------------------------
@@ -1931,7 +1938,7 @@ def build(
                 target,
                 timeout=NPM_INSTALL_TIMEOUT_SECONDS,
             )
-            npm_steps.append({"name": "npm install", "ok": ok, "seconds": round(secs, 1)})
+            npm_steps.append(_npm_step_result("npm install", ok, secs, last))
             trace.event(
                 "build",
                 "npm.install",
@@ -1949,7 +1956,7 @@ def build(
                 target,
                 timeout=NPM_BUILD_TIMEOUT_SECONDS,
             )
-            npm_steps.append({"name": "npm run build", "ok": ok, "seconds": round(secs, 1)})
+            npm_steps.append(_npm_step_result("npm run build", ok, secs, last))
             trace.event(
                 "build",
                 "npm.build",

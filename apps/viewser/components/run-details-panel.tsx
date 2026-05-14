@@ -70,6 +70,7 @@ type NpmStep = {
   name?: string;
   ok?: boolean;
   seconds?: number;
+  logExcerpt?: string;
 };
 
 function BuildSection({ build }: { build: Record<string, unknown> | null }) {
@@ -90,6 +91,7 @@ function BuildSection({ build }: { build: Record<string, unknown> | null }) {
   const siteId = asString(build.siteId, "saknas i äldre run");
   const briefSource = asString(build.briefSource, "unknown");
   const generatedFilesDir = asString(build.generatedFilesDir, "saknas i äldre run");
+  const devPreviewDir = asString(build.devPreviewDir, "saknas i äldre run");
   const runDurationMs = asNumber(build.runDurationMs, 0);
   const routes = Array.isArray(build.routes) ? (build.routes as string[]) : [];
   const npmSteps = Array.isArray(build.npmSteps) ? (build.npmSteps as NpmStep[]) : [];
@@ -117,6 +119,10 @@ function BuildSection({ build }: { build: Record<string, unknown> | null }) {
           <span className="text-muted-foreground">generatedFilesDir:</span>{" "}
           <span className="font-mono break-all">{generatedFilesDir}</span>
         </p>
+        <p>
+          <span className="text-muted-foreground">devPreviewDir:</span>{" "}
+          <span className="font-mono break-all">{devPreviewDir}</span>
+        </p>
         {routes.length > 0 ? (
           <div>
             <p className="text-muted-foreground">routes:</p>
@@ -143,6 +149,11 @@ function BuildSection({ build }: { build: Record<string, unknown> | null }) {
                   {typeof step.seconds === "number"
                     ? ` (${step.seconds.toFixed(1)} s)`
                     : null}
+                  {step.logExcerpt ? (
+                    <pre className="mt-1 whitespace-pre-wrap rounded bg-muted p-2 text-[11px] text-muted-foreground">
+                      {step.logExcerpt}
+                    </pre>
+                  ) : null}
                 </li>
               ))}
             </ul>

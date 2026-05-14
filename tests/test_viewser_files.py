@@ -497,6 +497,26 @@ def test_run_details_panel_handles_missing_artefakter_defensively() -> None:
 
 
 @pytest.mark.tooling
+def test_run_details_panel_surfaces_npm_failure_log_excerpt() -> None:
+    """Build mismatch triage needs the original npm error in Run Details."""
+    panel_text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert "devPreviewDir" in panel_text, (
+        "RunDetailsPanel must show build-result.json:devPreviewDir so "
+        "operators can compare the runnable preview dir with generatedFilesDir."
+    )
+    assert "logExcerpt" in panel_text, (
+        "RunDetailsPanel must render npmSteps[].logExcerpt so transient "
+        "npm build failures keep their first actionable error."
+    )
+    assert "whitespace-pre-wrap" in panel_text, (
+        "npm failure excerpts must preserve line breaks when rendered."
+    )
+
+
+@pytest.mark.tooling
 def test_chat_panel_component_is_removed() -> None:
     """B46: legacy ChatPanel component is dead code as of audit-fix
     2026-05-14. PromptBuilder is the only operator-facing prompt
