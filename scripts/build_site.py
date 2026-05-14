@@ -53,20 +53,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 STARTERS_DIR = REPO_ROOT / "data" / "starters"
-SCAFFOLDS_DIR = (
-    REPO_ROOT
-    / "packages"
-    / "generation"
-    / "orchestration"
-    / "scaffolds"
-)
-DOSSIERS_DIR = (
-    REPO_ROOT
-    / "packages"
-    / "generation"
-    / "orchestration"
-    / "dossiers"
-)
+SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
+DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
 DEFAULT_GENERATED_DIR = REPO_ROOT.parent / "sajtbyggaren-output" / ".generated"
 RUNS_DIR = REPO_ROOT / "data" / "runs"
 
@@ -247,6 +235,16 @@ def _js_string_literal(text: str) -> str:
     return json.dumps(text, ensure_ascii=False)
 
 
+def _route_href(route_path: str) -> str:
+    """Return a scaffold route path as a safe JSX href attribute value."""
+    if not isinstance(route_path, str) or not route_path.startswith("/"):
+        raise SystemExit(
+            "Builder failed: scaffold route path must be an absolute "
+            f"site path starting with '/' (got {route_path!r})."
+        )
+    return _jsx_safe_string(route_path)
+
+
 def write_json(path: Path, data: Any) -> None:
     write(path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
 
@@ -325,8 +323,7 @@ def copy_starter(starter_id: str, target: Path) -> None:
     source = STARTERS_DIR / starter_id
     if not source.exists():
         raise SystemExit(
-            f"Starter '{starter_id}' missing at {source}. "
-            "Run the starter setup before building."
+            f"Starter '{starter_id}' missing at {source}. Run the starter setup before building."
         )
     # Preserve existing target's node_modules so we do not force a fresh
     # `npm install` on every regeneration, but never preserve `.next`.
@@ -384,9 +381,7 @@ def patch_globals_css(target: Path, variant: dict) -> None:
         _, _, after = rest.partition(end)
         new_contents = f"{before}{marker}\n{block}{end}{after}"
     else:
-        new_contents = (
-            f"{marker}\n{block}{end}\n\n{original}"
-        )
+        new_contents = f"{marker}\n{block}{end}\n\n{original}"
     write(css, new_contents)
 
 
@@ -485,8 +480,7 @@ def _nav_items_from_scaffold(
     Dossiers add navigable pages this branch widens.
     """
     items: list[tuple[str, str]] = [
-        (route["path"], _nav_label_for_route(route["id"]))
-        for route in scaffold_default_routes
+        (route["path"], _nav_label_for_route(route["id"])) for route in scaffold_default_routes
     ]
     if "/spel" in dossier_routes:
         items.append(("/spel", "Spel"))
@@ -496,19 +490,23 @@ def _nav_items_from_scaffold(
 def _pick_contact_route(
     scaffold_default_routes: list[dict],
 ) -> dict:
-    """Return the scaffold's contact route, falling back to /kontakt.
+    """Return the scaffold's contact route.
 
     Renderers that link operators to the contact page route hrefs
     through this helper so a scaffold that ever moves the contact id
-    to ``/kontakta-oss`` keeps its CTAs aligned with the nav. The
-    fallback is the canonical local-service-business value so renderers
-    called without a scaffold (unit tests that only exercise JSX
-    escaping) still produce a valid href.
+    to ``/kontakta-oss`` keeps its CTAs aligned with the nav. Missing
+    contact routes fail fast: otherwise the builder could silently emit
+    CTA links to ``/kontakt`` without writing the matching page.
     """
     for route in scaffold_default_routes:
         if route.get("id") == "contact":
             return route
-    return {"id": "contact", "path": "/kontakt"}
+    route_ids = [str(route.get("id", "<missing>")) for route in scaffold_default_routes]
+    raise SystemExit(
+        "Builder failed: scaffold routes.json defaultRoutes must include "
+        "a route with id='contact' because generated navigation and CTAs "
+        f"link to the contact page. Found route ids: {route_ids!r}."
+    )
 
 
 def _pick_listing_route(
@@ -574,11 +572,10 @@ def render_layout(
             {"id": "about", "path": "/om-oss"},
             {"id": "contact", "path": "/kontakt"},
         ]
-    nav_items = _nav_items_from_scaffold(
-        scaffold_default_routes, dossier_routes
-    )
+    nav_items = _nav_items_from_scaffold(scaffold_default_routes, dossier_routes)
     if contact_path is None:
         contact_path = _pick_contact_route(scaffold_default_routes)["path"]
+    contact_href = _route_href(contact_path)
     # nav_items entries come from _nav_items_from_scaffold (canonical
     # paths + Swedish labels driven by scaffold_default_routes), not
     # customer data, so href + label are safe to inline.
@@ -587,7 +584,7 @@ def render_layout(
     # positions or _js_string_literal for the metadata object literal -
     # see B30 in docs/known-issues.md.
     nav_links = "\n".join(
-        f'            <a href="{href}" className="text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors">{label}</a>'
+        f'            <a href={_route_href(href)} className="text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors">{label}</a>'
         for href, label in nav_items
     )
     address_line = ", ".join(contact["addressLines"])
@@ -597,19 +594,19 @@ def render_layout(
         'import { Mail, MapPin, Phone } from "lucide-react";\n'
         'import "./globals.css";\n'
         "\n"
-        'const geistSans = Geist({\n'
+        "const geistSans = Geist({\n"
         '  variable: "--font-geist-sans",\n'
         '  subsets: ["latin"],\n'
-        '});\n'
+        "});\n"
         "\n"
-        'const geistMono = Geist_Mono({\n'
+        "const geistMono = Geist_Mono({\n"
         '  variable: "--font-geist-mono",\n'
         '  subsets: ["latin"],\n'
-        '});\n'
+        "});\n"
         "\n"
         "export const metadata: Metadata = {\n"
-        f'  title: {_js_string_literal(company["name"])},\n'
-        f'  description: {_js_string_literal(company["tagline"])},\n'
+        f"  title: {_js_string_literal(company['name'])},\n"
+        f"  description: {_js_string_literal(company['tagline'])},\n"
         "};\n"
         "\n"
         "export default function RootLayout({\n"
@@ -618,50 +615,51 @@ def render_layout(
         "  children: React.ReactNode;\n"
         "}>) {\n"
         "  return (\n"
-        '    <html\n'
+        "    <html\n"
         '      lang="sv"\n'
-        '      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}\n'
-        '    >\n'
+        "      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}\n"
+        "    >\n"
         '      <body className="min-h-full flex flex-col bg-[color:var(--background)] text-[color:var(--foreground)]">\n'
         '        <header className="sticky top-0 z-40 border-b border-[color:var(--border)] bg-[color:var(--background)]/80 backdrop-blur supports-[backdrop-filter]:bg-[color:var(--background)]/60">\n'
         '          <div className="mx-auto flex w-[var(--container-width)] items-center justify-between gap-6 py-4">\n'
         '            <a href="/" className="flex items-center gap-2 text-base font-semibold">\n'
         f'              <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-[color:var(--primary)] text-[color:var(--primary-foreground)] text-xs font-bold uppercase">{_jsx_safe_string(company["name"][:2])}</span>\n'
         f'              <span className="hidden sm:inline">{_jsx_safe_string(company["name"])}</span>\n'
-        '            </a>\n'
+        "            </a>\n"
         '            <nav className="flex items-center gap-5 text-sm font-medium">\n'
         f"{nav_links}\n"
-        '            </nav>\n'
-        f'            <a href="{contact_path}" className="hidden md:inline-flex items-center gap-1 rounded-md bg-[color:var(--primary)] px-4 py-2 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Kontakta oss</a>\n'
-        '          </div>\n'
-        '        </header>\n'
+        "            </nav>\n"
+        f'            <a href={contact_href} className="hidden md:inline-flex items-center gap-1 rounded-md bg-[color:var(--primary)] px-4 py-2 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Kontakta oss</a>\n'
+        "          </div>\n"
+        "        </header>\n"
         '        <div className="flex-1">{children}</div>\n'
         '        <footer className="border-t border-[color:var(--border)] bg-[color:var(--background)]">\n'
         '          <div className="mx-auto grid w-[var(--container-width)] gap-8 py-12 md:grid-cols-3">\n'
         '            <div className="flex flex-col gap-3">\n'
         f'              <p className="text-base font-semibold">{_jsx_safe_string(company["name"])}</p>\n'
         f'              <p className="text-sm text-[color:var(--muted)]">{_jsx_safe_string(company["tagline"])}</p>\n'
-        '            </div>\n'
+        "            </div>\n"
         '            <div className="flex flex-col gap-2 text-sm">\n'
         '              <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Kontakt</p>\n'
         f'              <a href={_jsx_safe_string("tel:" + _phone_href(contact["phone"]))} className="inline-flex items-center gap-2 hover:underline"><Phone className="size-4" />{_jsx_safe_string(contact["phone"])}</a>\n'
         f'              <a href={_jsx_safe_string("mailto:" + contact["email"])} className="inline-flex items-center gap-2 hover:underline"><Mail className="size-4" />{_jsx_safe_string(contact["email"])}</a>\n'
         f'              <p className="inline-flex items-start gap-2 text-[color:var(--muted)]"><MapPin className="size-4 mt-0.5" />{_jsx_safe_string(address_line)}</p>\n'
-        '            </div>\n'
+        "            </div>\n"
         '            <div className="flex flex-col gap-2 text-sm text-[color:var(--muted)]">\n'
         '              <p className="text-xs uppercase tracking-widest">Sajt</p>\n'
         + "\n".join(
-            f'              <a href="{href}" className="hover:underline">{label}</a>'
+            f'              <a href={_route_href(href)} className="hover:underline">{label}</a>'
             for href, label in nav_items
-        ) + "\n"
-        '            </div>\n'
-        '          </div>\n'
+        )
+        + "\n"
+        "            </div>\n"
+        "          </div>\n"
         '          <div className="border-t border-[color:var(--border)] py-4">\n'
         f'            <p className="mx-auto w-[var(--container-width)] text-xs text-[color:var(--muted)]">© {{new Date().getFullYear()}} {_jsx_safe_string(company["name"])}. Alla rättigheter förbehållna.</p>\n'
-        '          </div>\n'
-        '        </footer>\n'
-        '      </body>\n'
-        '    </html>\n'
+        "          </div>\n"
+        "        </footer>\n"
+        "      </body>\n"
+        "    </html>\n"
         "  );\n"
         "}\n"
     )
@@ -679,23 +677,16 @@ def render_home(
     ``listing_route`` is the scaffold's primary listing surface
     (``{"id": "services", "path": "/tjanster"}`` for
     local-service-business, ``{"id": "products", "path": "/produkter"}``
-    for ecommerce-lite). When ``None`` the renderer falls back to
-    ``services``/``/tjanster`` because:
+    for ecommerce-lite). When ``None`` the renderer keeps the listing
+    section content but omits the cross-link rather than inventing a
+    route that may not exist.
 
-      - Both shipping scaffolds today register either a ``services``
-        or a ``products`` route, so ``write_pages`` always passes a
-        concrete value (``_pick_listing_route`` cannot return None
-        for either of them).
-      - The pre-B13 B30 unit tests in
-        ``tests/test_builder_audit_post_3b_next.py`` call
-        ``render_home(dossier, dossier_routes=...)`` directly to
-        exercise JSX escaping and depend on the services grid
-        being rendered. Forcing them to pass a scaffold would
-        re-couple JSX-escape regression tests to scaffold shape.
-
-    A scaffold that registers neither route is a future case
-    (currently hypothetical). When that lands, this fallback must
-    move to a None-aware branch that suppresses the listing CTA.
+    The pre-B13 B30 unit tests in
+    ``tests/test_builder_audit_post_3b_next.py`` call
+    ``render_home(dossier, dossier_routes=...)`` directly to exercise
+    JSX escaping and depend on the service/product grid being rendered.
+    Keeping the section but dropping the CTA preserves those tests
+    without creating a ghost route.
     """
     company = dossier["company"]
     location = dossier["location"]
@@ -703,22 +694,20 @@ def render_home(
     trust = dossier["trustSignals"]
     contact = dossier["contact"]
     icons_used = _collect_icons_for_pages(services, dossier_routes)
-    icon_import = (
-        "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
-    )
+    icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
     services_grid = "\n".join(
         f'            <li key={_jsx_safe_string(svc["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--card,var(--background))] p-6 transition-all hover:border-[color:var(--primary)] hover:shadow-sm">\n'
         f'              <span className="mb-4 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(svc["id"])} className="size-5" /></span>\n'
         f'              <h3 className="text-lg font-semibold">{_jsx_safe_string(svc["label"])}</h3>\n'
         f'              <p className="mt-2 text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
-        '            </li>'
+        "            </li>"
         for svc in services
     )
     trust_items = "\n".join(
         f'            <li key="trust-{i}" className="flex items-start gap-3">\n'
         f'              <ShieldCheck className="mt-0.5 size-5 shrink-0 text-[color:var(--primary)]" />\n'
         f'              <span className="text-base">{_jsx_safe_string(item)}</span>\n'
-        '            </li>'
+        "            </li>"
         for i, item in enumerate(trust)
     )
     spel_cta = (
@@ -726,19 +715,17 @@ def render_home(
         if "/spel" in dossier_routes
         else ""
     )
-    if listing_route is None:
-        # See render_home docstring for why this fallback exists:
-        # the B30 unit tests call render_home without a scaffold
-        # and every shipping scaffold today registers either a
-        # services or products route via write_pages.
-        listing_route = {"id": "services", "path": "/tjanster"}
-    listing_copy = _LISTING_COPY_BY_ROUTE_ID.get(
-        listing_route["id"], _LISTING_COPY_BY_ROUTE_ID["services"]
-    )
-    listing_path = listing_route["path"]
+    contact_href = _route_href(contact_path)
+    listing_copy = _LISTING_COPY_BY_ROUTE_ID["services"]
+    listing_link = ""
+    if listing_route is not None:
+        listing_copy = _LISTING_COPY_BY_ROUTE_ID.get(
+            listing_route["id"], _LISTING_COPY_BY_ROUTE_ID["services"]
+        )
+        listing_href = _route_href(listing_route["path"])
+        listing_link = f'          <a href={listing_href} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">{listing_copy["cta"]}<ArrowRight className="size-4" /></a>\n'
     return (
-        icon_import +
-        "\n"
+        icon_import + "\n"
         "export default function Home() {\n"
         "  return (\n"
         '    <main className="flex flex-1 flex-col">\n'
@@ -746,48 +733,48 @@ def render_home(
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         '          <div className="flex items-center gap-2 text-sm uppercase tracking-widest text-[color:var(--muted)]">\n'
         '            <MapPin className="size-4" />\n'
-        f'            <span>{_jsx_safe_string(location["city"])}</span>\n'
-        '          </div>\n'
+        f"            <span>{_jsx_safe_string(location['city'])}</span>\n"
+        "          </div>\n"
         f'          <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl">{_jsx_safe_string(company["name"])}</h1>\n'
         f'          <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed md:text-xl">{_jsx_safe_string(company["tagline"])}</p>\n'
         '          <div className="flex flex-wrap gap-3">\n'
-        f'            <a href="{contact_path}" className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Begär offert<ArrowRight className="size-4" /></a>\n'
+        f'            <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Begär offert<ArrowRight className="size-4" /></a>\n'
         f'            <a href={_jsx_safe_string("tel:" + _phone_href(contact["phone"]))} className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />Ring {_jsx_safe_string(contact["phone"])}</a>\n'
         f"{spel_cta}"
-        '          </div>\n'
-        '        </div>\n'
-        '      </section>\n'
+        "          </div>\n"
+        "        </div>\n"
+        "      </section>\n"
         "\n"
         '      <section className="border-t border-[color:var(--border)]">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         '          <div className="flex flex-col gap-3">\n'
         f'            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">{listing_copy["eyebrow"]}</p>\n'
         f'            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">{listing_copy["heading"]}</h2>\n'
-        '          </div>\n'
+        "          </div>\n"
         '          <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{services_grid}\n"
-        '          </ul>\n'
-        f'          <a href="{listing_path}" className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">{listing_copy["cta"]}<ArrowRight className="size-4" /></a>\n'
-        '        </div>\n'
-        '      </section>\n'
+        "          </ul>\n"
+        f"{listing_link}"
+        "        </div>\n"
+        "      </section>\n"
         "\n"
         '      <section className="border-t border-[color:var(--border)] bg-[color:var(--accent)]/20">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[var(--section-spacing)]">\n'
         '          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Varför oss</h2>\n'
         '          <ul className="grid gap-4 md:grid-cols-2">\n'
         f"{trust_items}\n"
-        '          </ul>\n'
-        '        </div>\n'
-        '      </section>\n'
+        "          </ul>\n"
+        "        </div>\n"
+        "      </section>\n"
         "\n"
         '      <section className="border-t border-[color:var(--border)] bg-[color:var(--primary)] text-[color:var(--primary-foreground)]">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-4 py-[var(--section-spacing)]">\n'
         '          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Hör av dig idag</h2>\n'
         '          <p className="max-w-2xl text-base opacity-90 md:text-lg">Beskriv kort vad du behöver så återkommer vi inom en arbetsdag.</p>\n'
-        f'          <a href="{contact_path}" className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary-foreground)] px-5 py-3 text-sm font-medium text-[color:var(--primary)] hover:opacity-90 transition-opacity">Kontakta oss<ArrowRight className="size-4" /></a>\n'
-        '        </div>\n'
-        '      </section>\n'
-        '    </main>\n'
+        f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary-foreground)] px-5 py-3 text-sm font-medium text-[color:var(--primary)] hover:opacity-90 transition-opacity">Kontakta oss<ArrowRight className="size-4" /></a>\n'
+        "        </div>\n"
+        "      </section>\n"
+        "    </main>\n"
         "  );\n"
         "}\n"
     )
@@ -799,21 +786,19 @@ def render_services(
     contact_path: str = "/kontakt",
 ) -> str:
     services = dossier["services"]
-    icons_used = sorted({
-        _icon_for_service(svc["id"]) for svc in services
-    } | {"ArrowRight"})
+    contact_href = _route_href(contact_path)
+    icons_used = sorted({_icon_for_service(svc["id"]) for svc in services} | {"ArrowRight"})
     icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
     items = "\n".join(
         f'          <article key={_jsx_safe_string(svc["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all hover:border-[color:var(--primary)] hover:shadow-sm">\n'
         f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(svc["id"])} className="size-6" /></span>\n'
         f'            <h2 className="text-xl font-semibold">{_jsx_safe_string(svc["label"])}</h2>\n'
         f'            <p className="mt-3 text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
-        '          </article>'
+        "          </article>"
         for svc in services
     )
     return (
-        icon_import +
-        "\n"
+        icon_import + "\n"
         "export default function ServicesPage() {\n"
         "  return (\n"
         '    <main className="flex flex-1 flex-col">\n'
@@ -823,14 +808,14 @@ def render_services(
         '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Tjänster</p>\n'
         '            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Vad vi gör</h1>\n'
         '            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">Allt vi erbjuder, samlat på ett ställe. Klicka på en tjänst eller hör av dig direkt.</p>\n'
-        '          </header>\n'
+        "          </header>\n"
         '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{items}\n"
-        '          </div>\n'
-        f'          <a href="{contact_path}" className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Begär offert<ArrowRight className="size-4" /></a>\n'
-        '        </div>\n'
-        '      </section>\n'
-        '    </main>\n'
+        "          </div>\n"
+        f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Begär offert<ArrowRight className="size-4" /></a>\n'
+        "        </div>\n"
+        "      </section>\n"
+        "    </main>\n"
         "  );\n"
         "}\n"
     )
@@ -846,7 +831,7 @@ def render_about(dossier: dict) -> str:
         f'              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-full bg-[color:var(--accent)] text-[color:var(--accent-foreground)] text-sm font-semibold uppercase">{_jsx_safe_string(_member_initials(member["name"]))}</span>\n'
         f'              <p className="text-base font-semibold">{_jsx_safe_string(member["name"])}</p>\n'
         f'              <p className="mt-1 text-sm text-[color:var(--muted)]">{_jsx_safe_string(member["role"])}</p>\n'
-        '            </li>'
+        "            </li>"
         for member in team
     )
     return (
@@ -860,24 +845,24 @@ def render_about(dossier: dict) -> str:
         '          <header className="flex flex-col gap-3">\n'
         '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Om oss</p>\n'
         f'            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">{_jsx_safe_string(company["name"])}</h1>\n'
-        '          </header>\n'
+        "          </header>\n"
         '          <div className="relative max-w-3xl rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 md:p-8">\n'
         '            <Quote className="absolute -top-3 -left-3 size-8 text-[color:var(--primary)]/20" />\n'
         f'            <p className="text-lg text-[color:var(--foreground)] leading-relaxed">{_jsx_safe_string(company["story"])}</p>\n'
-        '          </div>\n'
+        "          </div>\n"
         '          <div className="flex flex-col gap-4">\n'
         '            <h2 className="text-2xl font-semibold tracking-tight">Teamet</h2>\n'
         '            <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{team_items}\n"
-        '            </ul>\n'
-        '          </div>\n'
+        "            </ul>\n"
+        "          </div>\n"
         '          <div className="flex flex-col gap-2">\n'
         '            <h2 className="inline-flex items-center gap-2 text-2xl font-semibold tracking-tight"><MapPin className="size-5" />Områden vi arbetar i</h2>\n'
         f'            <p className="text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(areas_html)}</p>\n'
-        '          </div>\n'
-        '        </div>\n'
-        '      </section>\n'
-        '    </main>\n'
+        "          </div>\n"
+        "        </div>\n"
+        "      </section>\n"
+        "    </main>\n"
         "  );\n"
         "}\n"
     )
@@ -901,7 +886,7 @@ def render_contact(dossier: dict) -> str:
         '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Kontakt</p>\n'
         '            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Hör av dig</h1>\n'
         '            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">Beskriv jobbet kort så återkommer vi inom en arbetsdag med tider och offert.</p>\n'
-        '          </header>\n'
+        "          </header>\n"
         '          <div className="grid gap-4 md:grid-cols-2">\n'
         '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
         '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><Phone className="size-5" /></span>\n'
@@ -909,25 +894,25 @@ def render_contact(dossier: dict) -> str:
         f'              <a href={_jsx_safe_string("tel:" + _phone_href(contact["phone"]))} className="mt-2 block text-lg font-medium hover:underline">{_jsx_safe_string(contact["phone"])}</a>\n'
         '              <p className="mt-2 inline-flex items-center gap-2 text-sm text-[color:var(--muted)]">\n'
         '                <Clock className="size-4" />\n'
-        f'                <span>{_jsx_safe_string(contact["openingHours"])}</span>\n'
-        '              </p>\n'
-        '            </article>\n'
+        f"                <span>{_jsx_safe_string(contact['openingHours'])}</span>\n"
+        "              </p>\n"
+        "            </article>\n"
         '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
         '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><Mail className="size-5" /></span>\n'
         '              <h2 className="text-base font-semibold">E-post</h2>\n'
         f'              <a href={_jsx_safe_string("mailto:" + contact["email"])} className="mt-2 block text-lg font-medium hover:underline">{_jsx_safe_string(contact["email"])}</a>\n'
-        '            </article>\n'
+        "            </article>\n"
         '            <article className="rounded-xl border border-[color:var(--border)] p-6 md:col-span-2">\n'
         '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><MapPin className="size-5" /></span>\n'
         '              <h2 className="text-base font-semibold">Adress</h2>\n'
         '              <address className="mt-2 not-italic">\n'
         f"{address_lines}\n"
-        '              </address>\n'
-        '            </article>\n'
-        '          </div>\n'
-        '        </div>\n'
-        '      </section>\n'
-        '    </main>\n'
+        "              </address>\n"
+        "            </article>\n"
+        "          </div>\n"
+        "        </div>\n"
+        "      </section>\n"
+        "    </main>\n"
         "  );\n"
         "}\n"
     )
@@ -947,31 +932,28 @@ def render_products(
     for the next sprint that flips ``SCAFFOLD_TO_STARTER`` to
     ``commerce-base`` (current focus: B13 is route-emission only).
 
-    ``contact_path`` defaults to ``/kontakt`` so unit tests that
-    call the renderer without a scaffold still produce a valid
-    href. write_pages threads the scaffold's actual contact route
-    in so a scaffold that moves contact to ``/kontakta-oss`` keeps
-    the CTA aligned with the nav (Bugbot PR #19 follow-up).
+    ``contact_path`` defaults to ``/kontakt`` so direct unit tests
+    still produce a valid href. write_pages threads the scaffold's
+    actual contact route in so a scaffold that moves contact to
+    ``/kontakta-oss`` keeps the CTA aligned with the nav (Bugbot PR
+    #19 follow-up).
     """
     products = dossier["services"]
+    contact_href = _route_href(contact_path)
     icons_used = sorted(
-        {_icon_for_service(item["id"]) for item in products}
-        | {"ArrowRight", "ShoppingBag"}
+        {_icon_for_service(item["id"]) for item in products} | {"ArrowRight", "ShoppingBag"}
     )
-    icon_import = (
-        "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
-    )
+    icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
     items = "\n".join(
         f'          <article key={_jsx_safe_string(item["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all hover:border-[color:var(--primary)] hover:shadow-sm">\n'
         f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(item["id"])} className="size-6" /></span>\n'
         f'            <h2 className="text-xl font-semibold">{_jsx_safe_string(item["label"])}</h2>\n'
         f'            <p className="mt-3 text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(item["summary"])}</p>\n'
-        '          </article>'
+        "          </article>"
         for item in products
     )
     return (
-        icon_import +
-        "\n"
+        icon_import + "\n"
         "export default function ProductsPage() {\n"
         "  return (\n"
         '    <main className="flex flex-1 flex-col">\n'
@@ -981,14 +963,14 @@ def render_products(
         '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Produkter</p>\n'
         '            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Vårt sortiment</h1>\n'
         '            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">Här är våra produkter. Hör av dig om du undrar något så hjälper vi dig hela vägen till beställning.</p>\n'
-        '          </header>\n'
+        "          </header>\n"
         '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{items}\n"
-        '          </div>\n'
-        f'          <a href="{contact_path}" className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity"><ShoppingBag className="size-4" />Fråga om en beställning<ArrowRight className="size-4" /></a>\n'
-        '        </div>\n'
-        '      </section>\n'
-        '    </main>\n'
+        "          </div>\n"
+        f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity"><ShoppingBag className="size-4" />Fråga om en beställning<ArrowRight className="size-4" /></a>\n'
+        "        </div>\n"
+        "      </section>\n"
+        "    </main>\n"
         "  );\n"
         "}\n"
     )
@@ -1032,13 +1014,9 @@ def write_pages(
                 contact_path=contact_route["path"],
             )
         elif route_id == "services":
-            content = render_services(
-                dossier, contact_path=contact_route["path"]
-            )
+            content = render_services(dossier, contact_path=contact_route["path"])
         elif route_id == "products":
-            content = render_products(
-                dossier, contact_path=contact_route["path"]
-            )
+            content = render_products(dossier, contact_path=contact_route["path"])
         elif route_id == "about":
             content = render_about(dossier)
         elif route_id == "contact":
@@ -1180,11 +1158,7 @@ def write_dossier_routes(target: Path, selected_dossiers: list[dict]) -> list[st
 
 
 def required_routes(scaffold_routes: dict) -> list[str]:
-    return [
-        r["path"]
-        for r in scaffold_routes["defaultRoutes"]
-        if r.get("required")
-    ]
+    return [r["path"] for r in scaffold_routes["defaultRoutes"] if r.get("required")]
 
 
 def all_default_routes(scaffold_routes: dict) -> list[str]:
@@ -1270,7 +1244,9 @@ def run_npm(
     if npm_path is None:
         return False, 0.0, "npm executable not found on PATH"
 
-    full_command = [npm_path, *command[1:]] if command and command[0] == "npm" else [npm_path, *command]
+    full_command = (
+        [npm_path, *command[1:]] if command and command[0] == "npm" else [npm_path, *command]
+    )
     start = time.monotonic()
     try:
         proc = subprocess.run(
@@ -1292,9 +1268,7 @@ def run_npm(
         # would lose the only diagnostic the operator has. Decode each
         # stream individually and concatenate.
         partial_text = _coerce_subprocess_text(exc.stdout) + _coerce_subprocess_text(exc.stderr)
-        last_lines = (
-            "\n".join(partial_text.splitlines()[-25:]) if partial_text else ""
-        )
+        last_lines = "\n".join(partial_text.splitlines()[-25:]) if partial_text else ""
         cmd_str = " ".join(command)
         message = f"timeout: '{cmd_str}' did not finish within {timeout:.0f}s"
         return False, elapsed, f"{message}\n{last_lines}".strip()
@@ -1465,8 +1439,7 @@ def build_site_brief(run_id: str, dossier: dict, scaffold: dict) -> dict:
         if result.source != "real":
             error = result.error or f"briefModel returned fallback source {result.source}"
             print(
-                "Warning: briefModel failed - using mock Site Brief fallback "
-                f"({error})",
+                f"Warning: briefModel failed - using mock Site Brief fallback ({error})",
                 file=sys.stderr,
             )
             return _mock_brief_after_llm_failure(
@@ -1483,8 +1456,7 @@ def build_site_brief(run_id: str, dossier: dict, scaffold: dict) -> dict:
     except Exception as exc:  # noqa: BLE001
         error = f"{type(exc).__name__}: {exc}"
         print(
-            "Warning: briefModel path failed - using mock Site Brief fallback "
-            f"({error})",
+            f"Warning: briefModel path failed - using mock Site Brief fallback ({error})",
             file=sys.stderr,
         )
         return _mock_brief_after_llm_failure(
@@ -1582,7 +1554,9 @@ def write_phase1_understand(
     }
     write_json(run_dir / "input.json", input_data)
     trace.event(
-        "understand", "input.written", "done",
+        "understand",
+        "input.written",
+        "done",
         "Captured dossier path and runId",
         payload_path="input.json",
     )
@@ -1594,7 +1568,9 @@ def write_phase1_understand(
     write_json(run_dir / "site-brief.json", brief)
     brief_source = brief.get("briefSource", "unknown")
     trace.event(
-        "understand", "site_brief.written", "done",
+        "understand",
+        "site_brief.written",
+        "done",
         f"Site Brief written (briefSource={brief_source})",
         payload_path="site-brief.json",
     )
@@ -1618,13 +1594,13 @@ def write_phase2_plan(
     """
     trace.event("plan", "phase.started", "started", "Phase 2 plan starts")
 
-    site_plan, package = build_plan_artefakts(
-        trace.run_id, dossier, scaffold, variant, site_brief
-    )
+    site_plan, package = build_plan_artefakts(trace.run_id, dossier, scaffold, variant, site_brief)
 
     write_json(run_dir / "site-plan.json", site_plan)
     trace.event(
-        "plan", "site_plan.written", "done",
+        "plan",
+        "site_plan.written",
+        "done",
         f"Site Plan picked scaffold={scaffold['id']} variant={variant['id']} "
         f"starter={site_plan['starterId']} planSource={site_plan['planSource']}",
         payload_path="site-plan.json",
@@ -1632,7 +1608,9 @@ def write_phase2_plan(
 
     write_json(run_dir / "generation-package.json", package)
     trace.event(
-        "plan", "generation_package.written", "done",
+        "plan",
+        "generation_package.written",
+        "done",
         "Generation Package composed via produce_site_plan helper",
         payload_path="generation-package.json",
     )
@@ -1784,7 +1762,9 @@ def write_build_result(
         result["codegen"] = codegen_summary
     write_json(run_dir / "build-result.json", result)
     trace.event(
-        "build", "build.result.written", "done",
+        "build",
+        "build.result.written",
+        "done",
         f"Build result status={overall_status}",
         payload_path="build-result.json",
     )
@@ -1875,14 +1855,8 @@ def build(
     # return matches so a silent dispatch mismatch cannot drift
     # the announcement.
     routes_to_write = all_default_routes(scaffold_routes)
-    print(
-        "Writing pages: "
-        + ", ".join(routes_to_write)
-        + " and layout"
-    )
-    paths_written = write_pages(
-        target, dossier, scaffold_routes, dossier_routes
-    )
+    print("Writing pages: " + ", ".join(routes_to_write) + " and layout")
+    paths_written = write_pages(target, dossier, scaffold_routes, dossier_routes)
     if paths_written != routes_to_write:
         raise SystemExit(
             "Builder failed: write_pages returned "
@@ -1906,7 +1880,9 @@ def build(
     # function (locked by tests/test_builder_hardening.py B8/B9 regression
     # tests) but no longer interrupts the canonical build flow.
     trace.event(
-        "build", "files.written", "done",
+        "build",
+        "files.written",
+        "done",
         f"Wrote {len(routes_all_with_dossiers)} routes and copied {len(copied_components)} dossier components",
     )
 
@@ -1917,14 +1893,15 @@ def build(
         if not (target / "node_modules").exists():
             print(f"Running npm install (timeout {NPM_INSTALL_TIMEOUT_SECONDS}s)...")
             ok, secs, last = run_npm(
-                ["npm", "install"], target,
+                ["npm", "install"],
+                target,
                 timeout=NPM_INSTALL_TIMEOUT_SECONDS,
             )
-            npm_steps.append(
-                {"name": "npm install", "ok": ok, "seconds": round(secs, 1)}
-            )
+            npm_steps.append({"name": "npm install", "ok": ok, "seconds": round(secs, 1)})
             trace.event(
-                "build", "npm.install", "done" if ok else "failed",
+                "build",
+                "npm.install",
+                "done" if ok else "failed",
                 f"npm install ok={ok} seconds={secs:.1f}",
             )
             if not ok:
@@ -1934,14 +1911,15 @@ def build(
         if overall_status == "ok":
             print(f"Running npm run build (timeout {NPM_BUILD_TIMEOUT_SECONDS}s)...")
             ok, secs, last = run_npm(
-                ["npm", "run", "build"], target,
+                ["npm", "run", "build"],
+                target,
                 timeout=NPM_BUILD_TIMEOUT_SECONDS,
             )
-            npm_steps.append(
-                {"name": "npm run build", "ok": ok, "seconds": round(secs, 1)}
-            )
+            npm_steps.append({"name": "npm run build", "ok": ok, "seconds": round(secs, 1)})
             trace.event(
-                "build", "npm.build", "done" if ok else "failed",
+                "build",
+                "npm.build",
+                "done" if ok else "failed",
                 f"next build ok={ok} seconds={secs:.1f}",
             )
             if not ok:
@@ -1950,7 +1928,9 @@ def build(
     else:
         overall_status = "skipped"
         trace.event(
-            "build", "build.skipped", "degraded",
+            "build",
+            "build.skipped",
+            "degraded",
             "Build skipped via --skip-build",
         )
 
@@ -1964,7 +1944,9 @@ def build(
         starter_id=starter_id,
     )
     trace.event(
-        "build", "codegen.manifest.emitted", "done",
+        "build",
+        "codegen.manifest.emitted",
+        "done",
         f"codegenModel v1 manifest: {len(codegen_result.files)} files "
         f"(source={codegen_result.source})",
     )
@@ -1976,17 +1958,25 @@ def build(
     # made the canonical artefact stale when a fix succeeded).
     do_typecheck = overall_status == "ok"
     quality_payload, repair_payload = run_phase3_quality_and_repair(
-        run_dir, target, routes_required_with_dossiers, npm_steps,
-        overall_status, do_typecheck,
+        run_dir,
+        target,
+        routes_required_with_dossiers,
+        npm_steps,
+        overall_status,
+        do_typecheck,
     )
     trace.event(
-        "build", "quality_result.written", "done",
+        "build",
+        "quality_result.written",
+        "done",
         f"Quality Gate status={quality_payload['status']} "
         f"({len(quality_payload['checks'])} checks)",
         payload_path="quality-result.json",
     )
     trace.event(
-        "build", "repair_result.written", "done",
+        "build",
+        "repair_result.written",
+        "done",
         f"Repair Pipeline status={repair_payload['status']} "
         f"(remainingErrors={len(repair_payload['remainingErrors'])})",
         payload_path="repair-result.json",
@@ -1998,7 +1988,9 @@ def build(
     print("Snapshotting generated files into run directory")
     snapshot_generated_files(target, run_dir)
     trace.event(
-        "build", "generated_files.snapshotted", "done",
+        "build",
+        "generated_files.snapshotted",
+        "done",
         "Snapshotted generated files into data/runs/<runId>/generated-files/",
         payload_path="generated-files/",
     )
@@ -2030,8 +2022,18 @@ def build(
 
     duration_ms = int((time.monotonic() - started) * 1000)
     write_build_result(
-        run_dir, trace, dossier, site_brief, scaffold, variant, starter_id,
-        routes_all_with_dossiers, npm_steps, overall_status, target, duration_ms,
+        run_dir,
+        trace,
+        dossier,
+        site_brief,
+        scaffold,
+        variant,
+        starter_id,
+        routes_all_with_dossiers,
+        npm_steps,
+        overall_status,
+        target,
+        duration_ms,
         codegen_summary=codegen_summary,
     )
 
@@ -2046,9 +2048,7 @@ def build(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Build a generated site from a Project Input."
-    )
+    parser = argparse.ArgumentParser(description="Build a generated site from a Project Input.")
     parser.add_argument(
         "--dossier",
         required=True,

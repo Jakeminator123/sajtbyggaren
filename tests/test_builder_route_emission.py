@@ -89,6 +89,12 @@ def _minimal_dossier() -> dict:
     }
 
 
+def _route_href_attr(path: str) -> str:
+    from scripts.build_site import _route_href
+
+    return f"href={_route_href(path)}"
+
+
 # ---------------------------------------------------------------------------
 # Nav + listing-route helpers
 # ---------------------------------------------------------------------------
@@ -114,6 +120,25 @@ def test_nav_label_for_unknown_route_id_falls_back_to_title_case() -> None:
 
     assert _nav_label_for_route("look-book") == "Look Book"
     assert _nav_label_for_route("service_area") == "Service Area"
+
+
+@pytest.mark.tooling
+def test_route_href_serializes_scaffold_path_as_jsx_expression() -> None:
+    """B50: scaffold route paths must not be raw-interpolated into href."""
+    from scripts.build_site import _route_href
+
+    tricky = '/kontakt" onClick={alert(1)}'
+
+    assert _route_href("/kontakt") == '{"/kontakt"}'
+    assert _route_href(tricky) == '{"/kontakt\\" onClick={alert(1)}"}'
+
+
+@pytest.mark.tooling
+def test_route_href_rejects_non_absolute_paths() -> None:
+    from scripts.build_site import _route_href
+
+    with pytest.raises(SystemExit, match="must be an absolute site path"):
+        _route_href("kontakt")
 
 
 @pytest.mark.tooling
@@ -197,11 +222,11 @@ def test_render_home_links_to_products_for_ecommerce_lite() -> None:
     listing = {"id": "products", "path": "/produkter"}
     output = render_home(_minimal_dossier(), dossier_routes=[], listing_route=listing)
 
-    assert 'href="/produkter"' in output
+    assert _route_href_attr("/produkter") in output
     assert "Se alla produkter" in output
     assert "Produkter" in output
     # The hardcoded local-service-business CTA copy must be gone.
-    assert 'href="/tjanster"' not in output
+    assert _route_href_attr("/tjanster") not in output
     assert "Se alla tjänster" not in output
 
 
@@ -216,8 +241,23 @@ def test_render_home_links_to_services_for_local_service_business() -> None:
     listing = {"id": "services", "path": "/tjanster"}
     output = render_home(_minimal_dossier(), dossier_routes=[], listing_route=listing)
 
-    assert 'href="/tjanster"' in output
+    assert _route_href_attr("/tjanster") in output
     assert "Se alla tjänster" in output
+    assert "Se alla produkter" not in output
+
+
+@pytest.mark.tooling
+def test_render_home_omits_listing_cross_link_when_route_missing() -> None:
+    """B50/listing contract: do not invent /tjanster for new scaffolds
+    that declare neither services nor products.
+    """
+    from scripts.build_site import render_home
+
+    output = render_home(_minimal_dossier(), dossier_routes=[], listing_route=None)
+
+    assert _route_href_attr("/tjanster") not in output
+    assert _route_href_attr("/produkter") not in output
+    assert "Se alla tjänster" not in output
     assert "Se alla produkter" not in output
 
 
@@ -243,8 +283,7 @@ def test_render_products_emits_default_export_and_product_items() -> None:
     # One article per product (= service entry in Project Input).
     for product in dossier["services"]:
         assert f'{{"{product["label"]}"}}' in output, (
-            f"render_products must render product label {product['label']!r} "
-            "via _jsx_safe_string."
+            f"render_products must render product label {product['label']!r} via _jsx_safe_string."
         )
         assert f'{{"{product["summary"]}"}}' in output
 
@@ -284,8 +323,13 @@ def test_write_pages_emits_local_service_business_routes(tmp_path: Path) -> None
     written = write_pages(tmp_path, _minimal_dossier(), LSB_ROUTES, [])
 
     assert written == ["/", "/tjanster", "/om-oss", "/kontakt"]
-    for relative in ("page.tsx", "tjanster/page.tsx", "om-oss/page.tsx",
-                     "kontakt/page.tsx", "layout.tsx"):
+    for relative in (
+        "page.tsx",
+        "tjanster/page.tsx",
+        "om-oss/page.tsx",
+        "kontakt/page.tsx",
+        "layout.tsx",
+    ):
         assert (tmp_path / "app" / relative).exists(), (
             f"Expected app/{relative} to exist after write_pages."
         )
@@ -309,9 +353,9 @@ def test_write_pages_emits_ecommerce_lite_routes(tmp_path: Path) -> None:
     # Layout is always written + must have the ecommerce-lite nav (Produkter).
     layout = (tmp_path / "app" / "layout.tsx").read_text(encoding="utf-8")
     assert "Produkter" in layout
-    assert 'href="/produkter"' in layout
+    assert _route_href_attr("/produkter") in layout
     assert "Tjänster" not in layout
-    assert 'href="/tjanster"' not in layout
+    assert _route_href_attr("/tjanster") not in layout
 
 
 @pytest.mark.tooling
@@ -326,6 +370,7 @@ def test_write_pages_unknown_route_id_raises(tmp_path: Path) -> None:
         "defaultRoutes": [
             {"id": "home", "path": "/", "required": True, "purpose": "Home"},
             {"id": "lookbook", "path": "/lookbook", "required": True, "purpose": "Lookbook"},
+            {"id": "contact", "path": "/kontakt", "required": True, "purpose": "Contact"},
         ]
     }
     with pytest.raises(SystemExit) as exc:
@@ -353,9 +398,7 @@ def test_ecommerce_lite_fixture_writes_produkter_and_passes_route_scan(
     from scripts.build_site import build
 
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    project_input_path = (
-        REPO_ROOT / "examples" / "atelje-bird.project-input.json"
-    )
+    project_input_path = REPO_ROOT / "examples" / "atelje-bird.project-input.json"
     assert project_input_path.exists()
 
     target, run_dir = build(project_input_path, do_build=False, runs_dir=tmp_path)
@@ -364,23 +407,18 @@ def test_ecommerce_lite_fixture_writes_produkter_and_passes_route_scan(
     assert (target / "app" / "produkter" / "page.tsx").exists()
     assert not (target / "app" / "tjanster" / "page.tsx").exists()
 
-    build_result = json.loads(
-        (run_dir / "build-result.json").read_text(encoding="utf-8")
-    )
+    build_result = json.loads((run_dir / "build-result.json").read_text(encoding="utf-8"))
     assert build_result["scaffoldId"] == "ecommerce-lite"
     assert "/produkter" in build_result["routes"]
     assert "/tjanster" not in build_result["routes"]
 
-    quality = json.loads(
-        (run_dir / "quality-result.json").read_text(encoding="utf-8")
-    )
+    quality = json.loads((run_dir / "quality-result.json").read_text(encoding="utf-8"))
     by_name = {check["name"]: check for check in quality["checks"]}
     assert by_name["route-scan"]["status"] == "ok", (
         "ecommerce-lite route-scan must pass after B13 - missing "
         f"findings: {by_name['route-scan'].get('findings')}"
     )
     assert quality["status"] == "ok"
-
 
 
 # ---------------------------------------------------------------------------
@@ -404,7 +442,7 @@ def test_writing_pages_announcement_runs_before_write_pages() -> None:
 
     body = inspect.getsource(build_site.build)
     print_idx = body.find('"Writing pages: "')
-    write_call_idx = body.find("write_pages(\n        target, dossier")
+    write_call_idx = body.find("paths_written = write_pages(")
     assert print_idx > 0 and write_call_idx > 0, (
         "Both the 'Writing pages: ' print and the write_pages(target, dossier, ...) "
         "call must appear in build(). If you renamed either, update this test."
@@ -436,7 +474,6 @@ def test_build_verifies_write_pages_return_matches_announced_routes() -> None:
     )
 
 
-
 # ---------------------------------------------------------------------------
 # Bugbot follow-up: render_products CTA must use the scaffold's contact path
 # instead of a hardcoded /kontakt.
@@ -454,15 +491,14 @@ def test_pick_contact_route_returns_scaffold_contact() -> None:
 
 
 @pytest.mark.tooling
-def test_pick_contact_route_falls_back_when_missing() -> None:
-    """A scaffold without a contact id must still produce a valid href so
-    renderers do not have to handle None. Fallback is the canonical
-    local-service-business value.
+def test_pick_contact_route_fails_when_missing() -> None:
+    """B50: a scaffold without contact id must fail before ghost CTAs
+    point at /kontakt without a matching route.
     """
     from scripts.build_site import _pick_contact_route
 
-    contact = _pick_contact_route([{"id": "home", "path": "/"}])
-    assert contact == {"id": "contact", "path": "/kontakt"}
+    with pytest.raises(SystemExit, match="must include a route with id='contact'"):
+        _pick_contact_route([{"id": "home", "path": "/"}])
 
 
 @pytest.mark.tooling
@@ -473,13 +509,13 @@ def test_render_products_uses_threaded_contact_path() -> None:
     from scripts.build_site import render_products
 
     output = render_products(_minimal_dossier(), contact_path="/kontakta-oss")
-    assert 'href="/kontakta-oss"' in output, (
+    assert _route_href_attr("/kontakta-oss") in output, (
         "render_products CTA must interpolate contact_path; the hardcoded "
         "/kontakt that Bugbot caught on PR #19 must not return."
     )
     # The hardcoded /kontakt must not appear when an override was passed.
     # A naive regression would leave both the literal and the f-string.
-    assert 'href="/kontakt"' not in output, (
+    assert _route_href_attr("/kontakt") not in output, (
         "render_products CTA still contains hardcoded /kontakt despite "
         "contact_path override - Bugbot regression."
     )
@@ -495,7 +531,7 @@ def test_render_products_default_contact_path_is_kontakt() -> None:
     from scripts.build_site import render_products
 
     output = render_products(_minimal_dossier())
-    assert 'href="/kontakt"' in output
+    assert _route_href_attr("/kontakt") in output
 
 
 @pytest.mark.tooling
@@ -525,8 +561,44 @@ def test_contact_ctas_use_threaded_contact_path_across_renderers() -> None:
     ]
 
     for output in outputs:
-        assert 'href="/kontakta-oss"' in output
-        assert 'href="/kontakt"' not in output
+        assert _route_href_attr("/kontakta-oss") in output
+        assert _route_href_attr("/kontakt") not in output
+
+
+@pytest.mark.tooling
+def test_route_hrefs_are_serialized_across_route_renderers() -> None:
+    """B50: route paths with JSX-special characters must stay data, not
+    become raw TSX syntax in generated href attributes.
+    """
+    from scripts.build_site import render_home, render_layout, render_products, render_services
+
+    contact_path = '/kontakt" onClick={alert(1)}'
+    listing_path = '/tjanster"{bad}'
+    custom_routes = [
+        {"id": "home", "path": "/", "required": True, "purpose": "Home"},
+        {"id": "services", "path": listing_path, "required": True, "purpose": "Services"},
+        {"id": "contact", "path": contact_path, "required": True, "purpose": "Contact"},
+    ]
+    dossier = _minimal_dossier()
+
+    outputs = [
+        render_layout(dossier, [], scaffold_default_routes=custom_routes),
+        render_home(
+            dossier,
+            [],
+            listing_route={"id": "services", "path": listing_path},
+            contact_path=contact_path,
+        ),
+        render_services(dossier, contact_path=contact_path),
+        render_products(dossier, contact_path=contact_path),
+    ]
+
+    for output in outputs:
+        assert _route_href_attr(contact_path) in output
+        assert f'href="{contact_path}"' not in output
+    assert _route_href_attr(listing_path) in outputs[0]
+    assert _route_href_attr(listing_path) in outputs[1]
+    assert f'href="{listing_path}"' not in outputs[1]
 
 
 @pytest.mark.tooling
@@ -544,7 +616,7 @@ def test_contact_renderer_helpers_do_not_literal_code_kontakt_href() -> None:
     ):
         source = inspect.getsource(getattr(build_site, fn_name))
         assert 'href="/kontakt"' not in source, (
-            f"{fn_name} still literal-codes href=\"/kontakt\" instead "
+            f'{fn_name} still literal-codes href="/kontakt" instead '
             "of interpolating the scaffold contact path."
         )
 
@@ -570,8 +642,8 @@ def test_write_pages_threads_scaffold_contact_path_into_render_products(
     }
     write_pages(tmp_path, _minimal_dossier(), custom_routes, [])
     produkter = (tmp_path / "app" / "produkter" / "page.tsx").read_text(encoding="utf-8")
-    assert 'href="/kontakta-oss"' in produkter
-    assert 'href="/kontakt"' not in produkter
+    assert _route_href_attr("/kontakta-oss") in produkter
+    assert _route_href_attr("/kontakt") not in produkter
 
 
 @pytest.mark.tooling
@@ -601,5 +673,48 @@ def test_write_pages_threads_contact_path_into_all_contact_ctas(
         "produkter/page.tsx",
     ):
         output = (tmp_path / "app" / relative).read_text(encoding="utf-8")
-        assert 'href="/kontakta-oss"' in output
-        assert 'href="/kontakt"' not in output
+        assert _route_href_attr("/kontakta-oss") in output
+        assert _route_href_attr("/kontakt") not in output
+
+
+@pytest.mark.tooling
+def test_write_pages_fails_when_contact_route_is_missing(tmp_path: Path) -> None:
+    """B50: missing contact route is a scaffold config error, not a
+    reason to invent /kontakt.
+    """
+    from scripts.build_site import write_pages
+
+    routes_without_contact = {
+        "defaultRoutes": [
+            {"id": "home", "path": "/", "required": True, "purpose": "Home"},
+            {"id": "services", "path": "/tjanster", "required": True, "purpose": "Services"},
+        ]
+    }
+
+    with pytest.raises(SystemExit, match="must include a route with id='contact'"):
+        write_pages(tmp_path, _minimal_dossier(), routes_without_contact, [])
+
+
+@pytest.mark.tooling
+def test_write_pages_omits_listing_cross_link_when_listing_route_missing(
+    tmp_path: Path,
+) -> None:
+    """A scaffold with home/contact but no services/products must not
+    emit a homepage CTA to a route it never writes.
+    """
+    from scripts.build_site import write_pages
+
+    routes_without_listing = {
+        "defaultRoutes": [
+            {"id": "home", "path": "/", "required": True, "purpose": "Home"},
+            {"id": "contact", "path": "/kontakt", "required": True, "purpose": "Contact"},
+        ]
+    }
+
+    write_pages(tmp_path, _minimal_dossier(), routes_without_listing, [])
+    home = (tmp_path / "app" / "page.tsx").read_text(encoding="utf-8")
+
+    assert _route_href_attr("/tjanster") not in home
+    assert _route_href_attr("/produkter") not in home
+    assert "Se alla tjänster" not in home
+    assert "Se alla produkter" not in home
