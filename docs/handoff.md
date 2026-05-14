@@ -1,7 +1,7 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-14 (post-PR #24 + #25 merge + workspace cleanup)
-**Aktuell repo-HEAD på `main`:** `3178a82` (parallell-agent + operator workspace-cleanup: `.cursor/settings.json` vercel-toggle, `README.md` ADR 0016-0020 + Sprint 3B+3B-next-status, `docs/agent-prompts.md` Codex-IDE-baseline). Bygger på `c073d486` (PR #25 AGENTS.md gotcha för `/sajtbyggaren-output`-permissions), `19c3564` (Steward focus-bump efter PR #24), `c2d8632` (PR #24 docs-base starter + B49-fixup), `97ce7a8` workspace-cleanup, `10eb286` B48 follow-up-semantik, `5d746e9` audit-fix B44+B46. Kör `git log --oneline -1` för senaste lokala SHA.
+**Datum:** 2026-05-14 (post-B45 Builder-mini-sprint)
+**Aktuell repo-HEAD på `main`:** `6daee58` (B45: `render_layout`, `render_home`, `render_services` och `render_products` route:ar kontakt-CTA:er via scaffoldens contact-path; tester låser att renderer-helpers inte literal-kodar `href="/kontakt"`). Bygger på `3178a82` (parallell-agent + operator workspace-cleanup), `c073d486` (PR #25 AGENTS.md gotcha för `/sajtbyggaren-output`-permissions), `19c3564` (Steward focus-bump efter PR #24), `c2d8632` (PR #24 docs-base starter + B49-fixup), `97ce7a8` workspace-cleanup, `10eb286` B48 follow-up-semantik, `5d746e9` audit-fix B44+B46. Kör `git log --oneline -1` för senaste lokala SHA.
 **Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-10` finns lokalt från pre-audit-fix-läget; `backup-9` finns lokalt från pre-PR-#23-läget; `backup-8` finns lokalt efter follow-up-sprinten; `backup-7` (från `fb11925`) ligger på origin som tidigare fallback. Worktree `../sajtbyggaren-pr24` är borttaget efter merge.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
@@ -46,7 +46,7 @@ Tre lager:
 - `backoffice/` + `backend.py` — Streamlit-administration (inte runtime).
 - `packages/` + `apps/` — runtime + kund-UI.
 
-## Vad funkar idag (post-PR #24 + #25 merge + workspace cleanup, repo-HEAD `3178a82`)
+## Vad funkar idag (post-B45 Builder-mini-sprint, repo-HEAD `6daee58`)
 
 ### Governance + guards
 
@@ -65,6 +65,7 @@ Tre lager:
 - Repair Pipeline med ensure-default-export-fix och sandwich-loop i `packages/generation/repair/`.
 - Real `codegenModel` (scope: `marketing-base`) i `packages/generation/codegen/`. `_REAL_CODEGEN_STARTERS = {"marketing-base"}` (ADR 0017). Truth-fields: `real` / `mock-llm-error` / `mock-no-key` / `deterministic-v1`.
 - **B13b route-emission (PR #19, `fda1464`):** `scripts/build_site.py:write_pages` är scaffold-drivet. `ecommerce-lite` genererar `/produkter` (inte `/tjanster`), nav följer scaffolden, contact-CTA på `render_products` följer scaffold (`_pick_contact_route`).
+- **B45 contact-route propagation (`6daee58`):** layout, home, services och products får sina kontakt-CTA:er via scaffoldens contact-route (`_pick_contact_route`/`contact_path`). En scaffold som flyttar contact-id till `/kontakta-oss` får därmed nav och CTA:er i synk.
 - **B20 step 2 (PR #20, `75c980b`, ADR 0019):** `SCAFFOLD_TO_STARTER["ecommerce-lite"] = "commerce-base"`. Ecommerce-lite-fixturen `examples/atelje-bird.project-input.json` producerar `/produkter` via `source=deterministic-v1` codegen. Real codegenModel-scope förblir `marketing-base`-only tills separat sprint utvidgar via ADR ovanpå 0017.
 - **B20-followup-lucide (PR #21, `04fc2fa`, ADR 0020):** `lucide-react` ^1.14.0 tillagd i `commerce-base/package.json` så `scripts/build_site.py:write_pages`s hardcodade lucide-imports inte längre ger `Module not found` vid full `npm run build`.
 
@@ -98,8 +99,8 @@ Tre lager:
 
 Se `docs/current-focus.md` → **"Next action"**. Kort version: `main` är i bra läge utan öppna PRs:
 
-1. **B45 `_pick_contact_route`-propagation** — till `render_layout`, `render_home`, `render_services` så ingen renderer literal-kodar `href="/kontakt"` (se motsvarande post i `docs/known-issues.md`). Liten Builder-mini-sprint.
-2. **B49 page-map-driven sidebar för `docs-base`** — krävs innan `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`. Antingen återinför Nextra-theme-docs `Layout` eller bygg lokal `_meta.ts`-/filsystem-driven nav.
+1. **B49 page-map-driven sidebar för `docs-base`** — krävs innan `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`. Antingen återinför Nextra-theme-docs `Layout` eller bygg lokal `_meta.ts`-/filsystem-driven nav.
+2. **B47 commerce-base Shopify-handles** — dokumentera starterkrav eller bygg fallback.
 3. **B13a arkitektur-flytt** — `scripts/build_site.py` produktlogik till `packages/generation/build/`. Egen sprint, kräver troligen egen ADR (rör mappgränser i `repo-boundaries.v1.json`). Destinationen pre-allokerad i `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
 4. **`write_pages` icon-bibliotek-agnostisk refactor** — lyfter den arkitekturskuld som ADR 0020 explicit lämnade öppen. Förebygger att samma lucide-typen av starter-vs-codegen-konflikt uppstår igen för en framtida starter utan lucide.
 5. **Cancellation-followup** — lågprioriterad separat sprint om operatören behöver avbryta redan startade playground-körningar.
@@ -160,6 +161,7 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+6daee58 fix(builder): thread contact route through CTAs
 3178a82 chore(workspace): integrate operator + parallel-agent docs/settings touch
 c073d486 docs: add cloud agent gotcha for /sajtbyggaren-output permissions (PR #25)
 19c3564 docs(focus): post-PR #24 docs-base merge + B49 follow-up

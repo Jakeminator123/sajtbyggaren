@@ -89,17 +89,6 @@ Format per bugg:
   och `B13b` (route-emission) den 2026-05-13 efter att
   `docs/current-focus.md` började använda namnet "B13" för bara den
   ena halvan.
-- **`B45` Låg** - `scripts/build_site.py` innehåller fortfarande hardcoded
-  `/kontakt`-CTAs i `render_layout` (raderad 610), `render_home` (728, 761)
-  och `render_services` (800). `_pick_contact_route` finns och används
-  redan av `render_products` (B13b-fixen, raderad 992-1005). Resten av
-  renderkedjan ärver fortfarande `/kontakt`-literalen från
-  `local-service-business`-tiden, så en framtida scaffold som flyttar
-  kontakt-id till t.ex. `/kontakta-oss` får trasiga CTA:er innan
-  routes-fixen propageras. Måste få egen mini-sprint som låter alla
-  renderers ta `contact_path` från scaffolden via samma
-  `_pick_contact_route`-helper. Test bör låsa att ingen renderer-helper
-  i `scripts/build_site.py` literal-kodar `href="/kontakt"`.
 - **`B47` Låg** - `commerce-base` Shopify-startsidan kräver Shopify-handles
   `hidden-homepage-featured-items` och `hidden-homepage-carousel`, och
   footern kräver `next-js-frontend-footer-menu`. Saknas de blir delar av
@@ -141,6 +130,24 @@ arkitekturändring, inte en bugg.
 (B20 stängd 2026-05-13 — se "Stängda - regression-test säkrar fixet" nedan.)
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B45` Låg** (stängd 2026-05-14, B45 Builder-mini-sprint) -
+  `scripts/build_site.py` hade hardcoded `/kontakt`-CTAs i
+  `render_layout`, `render_home` och `render_services`, trots att
+  `_pick_contact_route` redan fanns och användes av `render_products`.
+  En framtida scaffold som flyttar contact-routen till exempelvis
+  `/kontakta-oss` skulle därför få nav + products-CTA rätt men layout/home/
+  services-CTAs fel.
+  **Fix:** `render_layout`, `render_home`, `render_services` och
+  `render_products` route:ar nu kontakt-CTA:er via `contact_path`, och
+  `write_pages()` trådar `contact_route["path"]` från scaffoldens
+  `defaultRoutes` till alla fyra renderer-ytor. Direkta renderer-unit-
+  tester behåller bakåtkompatibel fallback `/kontakt`.
+  Fix: `6daee58`.
+  Test:
+  `tests/test_builder_route_emission.py::test_contact_ctas_use_threaded_contact_path_across_renderers`,
+  `tests/test_builder_route_emission.py::test_contact_renderer_helpers_do_not_literal_code_kontakt_href`,
+  `tests/test_builder_route_emission.py::test_write_pages_threads_contact_path_into_all_contact_ctas`.
 
 - **`B48` Medel** (stängd 2026-05-14, follow-up-semantik sprint) -
   `scripts/dev_generate.py` exponerade `--mode followup` och

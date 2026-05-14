@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `3178a82` (2026-05-14, post-PR #24 + #25 merge + parallell-agent workspace-cleanup: PR #24 docs-base starter + Steward-fixup för B49 mergad i `c2d8632`; Steward focus-bump i `19c3564`; PR #25 cloud-agent AGENTS.md gotcha för `/sajtbyggaren-output`-permissions mergad i `c073d486`; och `3178a82` integrerar pending operator-/parallell-agent-edits: `.cursor/settings.json` vercel-plugin borttaget (operator-toggle), `README.md` ADR-lista 0016-0020 + Sprint 3B+3B-next-status, `docs/agent-prompts.md` ny Codex-IDE-baseline-sektion. Inga öppna PRs.)
+Last verified state: `6daee58` (2026-05-14, post-B45 Builder-mini-sprint: `render_layout`, `render_home`, `render_services` och `render_products` route:ar kontakt-CTA:er via scaffoldens `_pick_contact_route`/`contact_path`; nya regressionstester låser att renderer-helpers inte literal-kodar `href="/kontakt"` och att `write_pages()` trådar `/kontakta-oss` till layout/home/services/products. Föregående workspace-state: `3178a82`; inga öppna PRs.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `3178a82`; senaste produktcommit är `c2d8632` (PR #24 docs-base starter, squash-merge) ovanpå `10eb286` (B48 follow-up-semantik i dev-driver/backoffice), `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `6daee58`; senaste produktcommit är `6daee58` (B45 `_pick_contact_route`-propagation till layout/home/services/products) ovanpå `c2d8632` (PR #24 docs-base starter, squash-merge), `10eb286` (B48 follow-up-semantik i dev-driver/backoffice), `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -266,26 +266,24 @@ nästa sprint.
 Ingen pågående produktimplementation på `main`. Prompt-till-sajt MVP v1,
 mini-sprinten som gjorde PromptBuilder till enda primära promptyta, follow-up
 prompt versions, PR #23 backoffice trace/playground, PR #22 `portfolio-base`
-starter, B48 follow-up-semantik och PR #24 `docs-base` starter är klara.
-Inga öppna PRs.
+starter, B48 follow-up-semantik, PR #24 `docs-base` starter och B45
+kontakt-route-propagation är klara. Inga öppna PRs.
 
 ## Next action - direktiv till nästa agent
 
-**Builder-mini-sprint: B45 `_pick_contact_route`-propagation, alternativt B49
-page-map-driven sidebar för docs-base.**
+**Builder-mini-sprint: B49 page-map-driven sidebar för docs-base.**
 
-- Nästa små Builder-sprint på `main` bör vara B45:
-  `_pick_contact_route`-propagation till `render_layout`, `render_home` och
-  `render_services`, så ingen renderer literal-kodar `href="/kontakt"`.
-- Alternativ Builder-sprint: B49 page-map-driven sidebar för `docs-base`.
+- B45 är klar i `6daee58`: `write_pages()` trådar scaffoldens contact-path
+  till layout, home, services och products, och tester låser frånvaro av
+  hardcoded `href="/kontakt"` i renderer-helpers.
+- Nästa Builder-sprint bör vara B49 page-map-driven sidebar för `docs-base`.
   Kräver att antingen Nextra-theme-docs `Layout` får fungera (PR #24-bodyn
   noterar att den failade validering i miljön) eller en lokal
   `_meta.ts`-driven sidebar byggs. Måste vara klar innan
   `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`.
 - Tidigare audit-fix-sprintar 2026-05-14: B44 (PromptBuilder false success)
-  och B46 (ChatPanel-radering) stängda. Öppna B-IDs: B45 hardcoded
-  `/kontakt`, B47 commerce-base Shopify handles, B49 docs-base page-map
-  sidebar. Inga blockers.
+  och B46 (ChatPanel-radering) stängda. Öppna B-IDs: B47 commerce-base
+  Shopify handles, B49 docs-base page-map sidebar. Inga blockers.
 
 `portfolio-base` och `docs-base` är båda starter-underlag; ingen
 `SCAFFOLD_TO_STARTER`-mappning eller real-codegen-scope är aktiverad
@@ -330,31 +328,23 @@ i `c073d486`.
   `packages/generation/build/`) - kvarstår som öppen post men kräver
   egen sprint + sannolikt egen ADR. Destinationen är pre-allokerad i
   `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
-- Pre-existing hardcoded `/kontakt`-CTAs i
-  `render_home/render_services/render_layout` (predaterar PR #19).
-  Migrera till `_pick_contact_route` när tillfälle ges; ingen aktiv
-  B-ID skriven på det än.
 - PR #17 / `frontend/christopher-import` - behåll som design-/copy-
   referens only. Återöppna inte PR #17 och starta inte `apps/web` förrän
   Prompt-till-sajt MVP fungerar.
 
 ## Queue
 
-1. B45 (låg): `_pick_contact_route`-propagation till
-   `render_layout/render_home/render_services` så ingen renderer
-   literal-kodar `href="/kontakt"`. Egen mini-sprint med test som
-   låser frånvaron av literalen.
-2. B49 (medel): page-map-driven sidebar för `docs-base`-startern; måste
+1. B49 (medel): page-map-driven sidebar för `docs-base`-startern; måste
    vara klar innan `course-education -> docs-base` aktiveras i
    `SCAFFOLD_TO_STARTER`. Antingen återinför Nextra-theme-docs `Layout`
    eller bygg lokal `_meta.ts`-/filsystem-driven nav.
-3. B47 (låg): commerce-base Shopify-handles dokumenteras eller får
+2. B47 (låg): commerce-base Shopify-handles dokumenteras eller får
    fallback. Egen e-commerce-sprint, ej blocker idag.
-4. B13a arkitektur-flytt (egen sprint, kräver ADR).
-5. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
+3. B13a arkitektur-flytt (egen sprint, kräver ADR).
+4. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
    lucide-typen av starter-vs-codegen-konflikt; ADR 0020:s
    "INTE beslutar"-sektion).
-6. Cancellation-followup (låg): riktig cancellation/background-jobb i
+5. Cancellation-followup (låg): riktig cancellation/background-jobb i
    playground-vyn om operatören behöver avbryta redan startade körningar.
 
 ## Loopen vi följer
