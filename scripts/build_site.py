@@ -498,14 +498,12 @@ def _pick_contact_route(
 ) -> dict:
     """Return the scaffold's contact route, falling back to /kontakt.
 
-    Renderers that link operators to the contact page (render_products
-    CTA today; render_home/render_services to be migrated in a
-    follow-up sprint) route the href through this helper so a
-    scaffold that ever moves the contact id to ``/kontakta-oss``
-    keeps its CTAs aligned with the nav. The fallback is the
-    canonical local-service-business value so renderers called
-    without a scaffold (unit tests that only exercise JSX escaping)
-    still produce a valid href.
+    Renderers that link operators to the contact page route hrefs
+    through this helper so a scaffold that ever moves the contact id
+    to ``/kontakta-oss`` keeps its CTAs aligned with the nav. The
+    fallback is the canonical local-service-business value so renderers
+    called without a scaffold (unit tests that only exercise JSX
+    escaping) still produce a valid href.
     """
     for route in scaffold_default_routes:
         if route.get("id") == "contact":
@@ -554,6 +552,7 @@ def render_layout(
     dossier_routes: list[str],
     *,
     scaffold_default_routes: list[dict] | None = None,
+    contact_path: str | None = None,
 ) -> str:
     """Whole-file layout.tsx with sticky header and footer.
 
@@ -578,6 +577,8 @@ def render_layout(
     nav_items = _nav_items_from_scaffold(
         scaffold_default_routes, dossier_routes
     )
+    if contact_path is None:
+        contact_path = _pick_contact_route(scaffold_default_routes)["path"]
     # nav_items entries come from _nav_items_from_scaffold (canonical
     # paths + Swedish labels driven by scaffold_default_routes), not
     # customer data, so href + label are safe to inline.
@@ -631,7 +632,7 @@ def render_layout(
         '            <nav className="flex items-center gap-5 text-sm font-medium">\n'
         f"{nav_links}\n"
         '            </nav>\n'
-        '            <a href="/kontakt" className="hidden md:inline-flex items-center gap-1 rounded-md bg-[color:var(--primary)] px-4 py-2 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Kontakta oss</a>\n'
+        f'            <a href="{contact_path}" className="hidden md:inline-flex items-center gap-1 rounded-md bg-[color:var(--primary)] px-4 py-2 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Kontakta oss</a>\n'
         '          </div>\n'
         '        </header>\n'
         '        <div className="flex-1">{children}</div>\n'
@@ -671,6 +672,7 @@ def render_home(
     dossier_routes: list[str],
     *,
     listing_route: dict | None = None,
+    contact_path: str = "/kontakt",
 ) -> str:
     """Home page renderer.
 
@@ -749,7 +751,7 @@ def render_home(
         f'          <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl">{_jsx_safe_string(company["name"])}</h1>\n'
         f'          <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed md:text-xl">{_jsx_safe_string(company["tagline"])}</p>\n'
         '          <div className="flex flex-wrap gap-3">\n'
-        '            <a href="/kontakt" className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Begär offert<ArrowRight className="size-4" /></a>\n'
+        f'            <a href="{contact_path}" className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Begär offert<ArrowRight className="size-4" /></a>\n'
         f'            <a href={_jsx_safe_string("tel:" + _phone_href(contact["phone"]))} className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />Ring {_jsx_safe_string(contact["phone"])}</a>\n'
         f"{spel_cta}"
         '          </div>\n'
@@ -782,7 +784,7 @@ def render_home(
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-4 py-[var(--section-spacing)]">\n'
         '          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Hör av dig idag</h2>\n'
         '          <p className="max-w-2xl text-base opacity-90 md:text-lg">Beskriv kort vad du behöver så återkommer vi inom en arbetsdag.</p>\n'
-        '          <a href="/kontakt" className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary-foreground)] px-5 py-3 text-sm font-medium text-[color:var(--primary)] hover:opacity-90 transition-opacity">Kontakta oss<ArrowRight className="size-4" /></a>\n'
+        f'          <a href="{contact_path}" className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary-foreground)] px-5 py-3 text-sm font-medium text-[color:var(--primary)] hover:opacity-90 transition-opacity">Kontakta oss<ArrowRight className="size-4" /></a>\n'
         '        </div>\n'
         '      </section>\n'
         '    </main>\n'
@@ -791,7 +793,11 @@ def render_home(
     )
 
 
-def render_services(dossier: dict) -> str:
+def render_services(
+    dossier: dict,
+    *,
+    contact_path: str = "/kontakt",
+) -> str:
     services = dossier["services"]
     icons_used = sorted({
         _icon_for_service(svc["id"]) for svc in services
@@ -821,7 +827,7 @@ def render_services(dossier: dict) -> str:
         '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{items}\n"
         '          </div>\n'
-        '          <a href="/kontakt" className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Begär offert<ArrowRight className="size-4" /></a>\n'
+        f'          <a href="{contact_path}" className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Begär offert<ArrowRight className="size-4" /></a>\n'
         '        </div>\n'
         '      </section>\n'
         '    </main>\n'
@@ -1020,10 +1026,15 @@ def write_pages(
         path = route["path"]
         if route_id == "home":
             content = render_home(
-                dossier, dossier_routes, listing_route=listing_route
+                dossier,
+                dossier_routes,
+                listing_route=listing_route,
+                contact_path=contact_route["path"],
             )
         elif route_id == "services":
-            content = render_services(dossier)
+            content = render_services(
+                dossier, contact_path=contact_route["path"]
+            )
         elif route_id == "products":
             content = render_products(
                 dossier, contact_path=contact_route["path"]
@@ -1049,6 +1060,7 @@ def write_pages(
             dossier,
             dossier_routes,
             scaffold_default_routes=default_routes,
+            contact_path=contact_route["path"],
         ),
     )
     return written

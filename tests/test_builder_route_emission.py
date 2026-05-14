@@ -29,6 +29,7 @@ so the regression cannot land silently.
 
 from __future__ import annotations
 
+import inspect
 import json
 import sys
 from pathlib import Path
@@ -498,6 +499,57 @@ def test_render_products_default_contact_path_is_kontakt() -> None:
 
 
 @pytest.mark.tooling
+def test_contact_ctas_use_threaded_contact_path_across_renderers() -> None:
+    """B45: layout, home and services CTAs must use the threaded
+    scaffold contact path, matching the render_products B13 follow-up.
+    """
+    from scripts.build_site import render_home, render_layout, render_services
+
+    custom_routes = [
+        {"id": "home", "path": "/", "required": True, "purpose": "Home"},
+        {"id": "services", "path": "/tjanster", "required": True, "purpose": "Services"},
+        {"id": "about", "path": "/om-oss", "required": True, "purpose": "About"},
+        {"id": "contact", "path": "/kontakta-oss", "required": True, "purpose": "Contact"},
+    ]
+    dossier = _minimal_dossier()
+
+    outputs = [
+        render_layout(dossier, [], scaffold_default_routes=custom_routes),
+        render_home(
+            dossier,
+            [],
+            listing_route={"id": "services", "path": "/tjanster"},
+            contact_path="/kontakta-oss",
+        ),
+        render_services(dossier, contact_path="/kontakta-oss"),
+    ]
+
+    for output in outputs:
+        assert 'href="/kontakta-oss"' in output
+        assert 'href="/kontakt"' not in output
+
+
+@pytest.mark.tooling
+def test_contact_renderer_helpers_do_not_literal_code_kontakt_href() -> None:
+    """B45 source lock: renderer helpers may keep /kontakt as a default
+    kwarg/fallback, but must not literal-code ``href="/kontakt"``.
+    """
+    from scripts import build_site
+
+    for fn_name in (
+        "render_layout",
+        "render_home",
+        "render_services",
+        "render_products",
+    ):
+        source = inspect.getsource(getattr(build_site, fn_name))
+        assert 'href="/kontakt"' not in source, (
+            f"{fn_name} still literal-codes href=\"/kontakt\" instead "
+            "of interpolating the scaffold contact path."
+        )
+
+
+@pytest.mark.tooling
 def test_write_pages_threads_scaffold_contact_path_into_render_products(
     tmp_path: Path,
 ) -> None:
@@ -520,3 +572,34 @@ def test_write_pages_threads_scaffold_contact_path_into_render_products(
     produkter = (tmp_path / "app" / "produkter" / "page.tsx").read_text(encoding="utf-8")
     assert 'href="/kontakta-oss"' in produkter
     assert 'href="/kontakt"' not in produkter
+
+
+@pytest.mark.tooling
+def test_write_pages_threads_contact_path_into_all_contact_ctas(
+    tmp_path: Path,
+) -> None:
+    """B45 end-to-end dispatch: write_pages must pass the scaffold's
+    contact path into layout, home, services and products.
+    """
+    from scripts.build_site import write_pages
+
+    custom_routes = {
+        "defaultRoutes": [
+            {"id": "home", "path": "/", "required": True, "purpose": "Home"},
+            {"id": "services", "path": "/tjanster", "required": True, "purpose": "Services"},
+            {"id": "products", "path": "/produkter", "required": True, "purpose": "Products"},
+            {"id": "about", "path": "/om-oss", "required": True, "purpose": "About"},
+            {"id": "contact", "path": "/kontakta-oss", "required": True, "purpose": "Contact"},
+        ]
+    }
+    write_pages(tmp_path, _minimal_dossier(), custom_routes, [])
+
+    for relative in (
+        "layout.tsx",
+        "page.tsx",
+        "tjanster/page.tsx",
+        "produkter/page.tsx",
+    ):
+        output = (tmp_path / "app" / relative).read_text(encoding="utf-8")
+        assert 'href="/kontakta-oss"' in output
+        assert 'href="/kontakt"' not in output
