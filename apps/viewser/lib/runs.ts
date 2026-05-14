@@ -2,11 +2,14 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 const RUN_ID_PATTERN = /^[a-zA-Z0-9._-]+$/;
+const SITE_ID_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
 export type RunMeta = {
   runId: string;
   status: string;
   siteId: string;
+  projectId?: string;
+  version?: number | null;
   createdAt: string;
 };
 
@@ -17,6 +20,10 @@ function repoRoot(): string {
 export function runsDir(): string {
   const configured = process.env.VIEWSER_RUNS_DIR ?? "../../data/runs";
   return path.resolve(process.cwd(), configured);
+}
+
+function promptInputsDir(): string {
+  return path.resolve(repoRoot(), "data", "prompt-inputs");
 }
 
 export function assertSafeRunId(runId: string): void {
@@ -39,14 +46,22 @@ export async function listRuns(limit = 20): Promise<RunMeta[]> {
     directories.map(async (runId) => {
       const buildResultPath = path.join(dir, runId, "build-result.json");
       try {
-        const result = await readJsonFile<{ status?: string; siteId?: string }>(buildResultPath);
+        const result = await readJsonFile<{ status?: string; siteId?: string }>(
+          buildResultPath,
+        );
+        const promptMeta = await readPromptMeta(result.siteId);
         const stats = await fs.stat(path.join(dir, runId));
-        return {
+        const meta: RunMeta = {
           runId,
           status: result.status ?? "unknown",
           siteId: result.siteId ?? "unknown",
+          version: promptMeta.version,
           createdAt: stats.birthtime.toISOString(),
         };
+        if (promptMeta.projectId) {
+          meta.projectId = promptMeta.projectId;
+        }
+        return meta;
       } catch {
         return null;
       }
@@ -57,6 +72,34 @@ export async function listRuns(limit = 20): Promise<RunMeta[]> {
     .filter((meta): meta is RunMeta => meta !== null)
     .sort((a, b) => (a.runId > b.runId ? -1 : 1))
     .slice(0, limit);
+}
+
+async function readPromptMeta(
+  siteId: string | undefined,
+): Promise<{ projectId?: string; version: number | null }> {
+  if (!siteId || siteId === "unknown" || !SITE_ID_PATTERN.test(siteId)) {
+    return { version: null };
+  }
+
+  try {
+    const meta = await readJsonFile<{
+      projectId?: unknown;
+      siteId?: unknown;
+      version?: unknown;
+    }>(path.join(promptInputsDir(), `${siteId}.meta.json`));
+    if (typeof meta.siteId === "string" && meta.siteId !== siteId) {
+      return { version: null };
+    }
+    return {
+      projectId: typeof meta.projectId === "string" ? meta.projectId : undefined,
+      version: typeof meta.version === "number" ? meta.version : null,
+    };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return { version: null };
+    }
+    return { version: null };
+  }
 }
 
 export async function runDirFromId(runId: string): Promise<string> {

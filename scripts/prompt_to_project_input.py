@@ -24,9 +24,9 @@ Output contract (for callers like apps/viewser/app/api/prompt/route.ts):
 - Writes ``data/prompt-inputs/<siteId>.project-input.json`` (validates
   against governance/schemas/project-input.schema.json before writing).
 - Writes ``data/prompt-inputs/<siteId>.meta.json`` with projectId,
-  version, originalPrompt, briefSource. The follow-up sprint will read
-  the meta sidecar to do "prompt -> ny version" without forcing a
-  schema migration in this sprint.
+  version, originalPrompt, briefSource. Follow-up mode reads that sidecar,
+  reuses projectId, increments version and writes a fresh Project Input
+  from the operator's latest prompt without changing the Project Input schema.
 """
 
 from __future__ import annotations
@@ -382,6 +382,42 @@ def write_project_input(
     return project_input_path, meta_path
 
 
+def read_existing_meta(site_id: str, *, output_dir: Path) -> dict[str, Any]:
+    """Read the sidecar meta that anchors follow-up prompt versions."""
+    if not _SITE_ID_PATTERN.match(site_id):
+        raise SystemExit(
+            f"Follow-up siteId {site_id!r} does not match the lower-case "
+            "alphanumeric/dash pattern required by Viewser."
+        )
+
+    meta_path = output_dir / f"{site_id}.meta.json"
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise SystemExit(
+            f"Follow-up meta sidecar saknas: {meta_path}. Kör först en "
+            "prompt-build som skapar data/prompt-inputs/<siteId>.meta.json."
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise SystemExit(
+            f"Follow-up meta sidecar är inte giltig JSON: {meta_path}"
+        ) from exc
+
+    project_id = meta.get("projectId")
+    version = meta.get("version")
+    if not isinstance(project_id, str) or not project_id.strip():
+        raise SystemExit(f"Follow-up meta saknar projectId: {meta_path}")
+    if not isinstance(version, int) or version < 1:
+        raise SystemExit(f"Follow-up meta har ogiltig version: {meta_path}")
+
+    meta_site_id = meta.get("siteId")
+    if isinstance(meta_site_id, str) and meta_site_id != site_id:
+        raise SystemExit(
+            f"Follow-up meta siteId mismatch: path={site_id!r}, meta={meta_site_id!r}"
+        )
+    return meta
+
+
 def _mock_brief_artifact_after_failure(
     prompt: str,
     *,
@@ -427,6 +463,8 @@ def generate(
     output_dir: Path = DEFAULT_OUTPUT_DIR,
     site_id: str | None = None,
     project_id: str | None = None,
+    version: int = 1,
+    meta_overrides: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], Path, Path]:
     """End-to-end: prompt -> Site Brief -> Project Input on disk.
 
@@ -467,7 +505,9 @@ def generate(
             "apps/viewser/lib/project-inputs.ts and build_site.py."
         )
 
-    scaffold_id, variant_id = pick_scaffold(prompt, brief_artifact.get("businessTypeGuess"))
+    scaffold_id, variant_id = pick_scaffold(
+        prompt, brief_artifact.get("businessTypeGuess")
+    )
     project_input = site_brief_to_project_input(
         brief_artifact,
         site_id=final_site_id,
@@ -477,9 +517,10 @@ def generate(
     )
     _validate_against_schema(project_input)
 
+    now = datetime.now(UTC).isoformat(timespec="seconds")
     meta = {
         "projectId": project_id or uuid.uuid4().hex,
-        "version": 1,
+        "version": version,
         "siteId": final_site_id,
         "originalPrompt": prompt,
         "scaffoldId": scaffold_id,
@@ -487,13 +528,41 @@ def generate(
         "briefSource": brief_artifact.get("briefSource"),
         "briefError": brief_artifact.get("briefError"),
         "modelUsed": brief_artifact.get("modelUsed"),
-        "createdAt": datetime.now(UTC).isoformat(timespec="seconds"),
+        "createdAt": now,
     }
+    if meta_overrides:
+        meta.update(meta_overrides)
 
     project_input_path, meta_path = write_project_input(
         project_input, meta, output_dir=output_dir
     )
     return project_input, meta, project_input_path, meta_path
+
+
+def generate_followup(
+    prompt: str,
+    *,
+    site_id: str,
+    output_dir: Path = DEFAULT_OUTPUT_DIR,
+) -> tuple[dict[str, Any], dict[str, Any], Path, Path]:
+    """Generate a new Project Input version from an existing meta sidecar."""
+    existing_meta = read_existing_meta(site_id, output_dir=output_dir)
+    previous_version = existing_meta["version"]
+    now = datetime.now(UTC).isoformat(timespec="seconds")
+    return generate(
+        prompt,
+        output_dir=output_dir,
+        site_id=site_id,
+        project_id=existing_meta["projectId"],
+        version=previous_version + 1,
+        meta_overrides={
+            "originalPrompt": existing_meta.get("originalPrompt", prompt),
+            "latestPrompt": prompt,
+            "previousVersion": previous_version,
+            "createdAt": existing_meta.get("createdAt", now),
+            "updatedAt": now,
+        },
+    )
 
 
 def main() -> int:
@@ -526,15 +595,35 @@ def main() -> int:
             "to a fresh uuid hex when omitted."
         ),
     )
+    parser.add_argument(
+        "--followup-site-id",
+        default=None,
+        help=(
+            "Read data/prompt-inputs/<siteId>.meta.json, reuse its projectId "
+            "and increment version for a follow-up prompt."
+        ),
+    )
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir).resolve()
-    project_input, meta, project_input_path, meta_path = generate(
-        args.prompt,
-        output_dir=output_dir,
-        site_id=args.site_id,
-        project_id=args.project_id,
-    )
+    if args.followup_site_id:
+        if args.site_id or args.project_id:
+            raise SystemExit(
+                "--followup-site-id cannot be combined with --site-id "
+                "or --project-id."
+            )
+        project_input, meta, project_input_path, meta_path = generate_followup(
+            args.prompt,
+            output_dir=output_dir,
+            site_id=args.followup_site_id,
+        )
+    else:
+        project_input, meta, project_input_path, meta_path = generate(
+            args.prompt,
+            output_dir=output_dir,
+            site_id=args.site_id,
+            project_id=args.project_id,
+        )
 
     # Output contract: emit the same key/value shape that build_site.py
     # uses for runId so apps/viewser/lib/build-runner.ts can parse it
@@ -543,6 +632,7 @@ def main() -> int:
     print(f"projectId: {meta['projectId']}")
     print(f"dossierPath: {project_input_path}")
     print(f"metaPath: {meta_path}")
+    print(f"version: {meta['version']}")
     print(f"briefSource: {meta['briefSource']}")
     return 0
 

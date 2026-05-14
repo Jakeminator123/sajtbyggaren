@@ -112,6 +112,10 @@ export default function Home() {
       <section>
         <PromptBuilder
           isBusy={building}
+          runs={runs}
+          projectInputs={projectInputs}
+          selectedRunId={selectedRunId}
+          selectedSiteId={selectedSiteId}
           onBuildStart={() => setBuilding(true)}
           onBuildEnd={() => setBuilding(false)}
           onBuildDone={(runId) => {
