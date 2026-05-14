@@ -5,6 +5,12 @@
     },
     "vercel": {
       "enabled": true
+    },
+    "linear": {
+      "enabled": true
+    },
+    "sanity": {
+      "enabled": true
     }
   }
 }
