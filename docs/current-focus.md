@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `d43bce2` (2026-05-14, post-docs sync efter settings-commit: `main` och `origin/main` är synkade på `d43bce2`. Senaste produktläge är fortsatt `9944abb` efter PR #23 + #22: backoffice trace/playground och `portfolio-base` starter är squash-mergeade. `.cursor/settings.json` är committad i `e9093c0` och aktiverar `linear` + `sanity` bredvid befintliga pluginer. Inga öppna PRs.)
+Last verified state: `5d746e9` (2026-05-14, post-audit-fix Builder-sprint för B44 + B46: `/api/prompt` exponerar `buildStatus`, PromptBuilder klassificerar via `classifyBuildStatus`, `app/page.tsx` använder `headerStatusForOutcome`, legacy `ChatPanel` raderad. `34551b4` Steward-cleanup för Viewser-/starter-docs ligger ovanpå `d43bce2`. Senaste produktläge före denna sprint: `9944abb` (PR #23 + #22 squash-merge). Inga öppna PRs.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `d43bce2`; senaste produktcommit är `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `5d746e9`; senaste produktcommit är `5d746e9` (Builder audit-fix för B44 + B46) ovanpå `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -159,6 +159,19 @@ Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
   produktkod ändrad.
 - `d43bce2` — `docs: sync handoff after settings commit`.
   Synkar current-focus/handoff efter settings-commiten.
+- `34551b4` — `docs(cleanup): modernize viewser copy and starter
+  routing notes`. Steward-cleanup efter Scout-fynd: README, Viewser,
+  starter-routing och migration-plan moderniserade till PromptBuilder
+  + follow-up versions; `.cursor/settings.json`-status och stale
+  PromptBuilder-timeout-nice-to-have rensade.
+- `5d746e9` — `fix(viewser): audit-fix sprint for B44 + B46`. B44 stängd:
+  `/api/prompt` exponerar `buildStatus`, PromptBuilder klassificerar
+  utfall via `classifyBuildStatus`, `app/page.tsx` använder
+  `PromptBuildOutcome` + `headerStatusForOutcome`. B46 stängd:
+  `apps/viewser/components/chat-panel.tsx` raderad, tester +
+  vocabulary-discipline + check_term_coverage rensade. Två nya öppna
+  poster: B45 (hardcoded `/kontakt`) och B47 (commerce-base Shopify
+  handles).
 
 Mainline-steward-pushar efter PR #21 (pure docs/governance):
 

@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-14 (post-PR #23 + #22 + settings-sync + docs-sync)
-**Aktuell repo-HEAD på `main`:** `d43bce2` (docs-sync efter settings-commit `e9093c0`, som aktiverade `linear` + `sanity` i `.cursor/settings.json`). Aktuell produkt-HEAD är `9944abb` (squash-merge PR #22 `feat(starters): add harmonized portfolio-base starter` ovanpå PR #23 `e1ad5ca` och follow-up prompt versions `2701b00`). Kör `git log --oneline -1` för senaste lokala SHA.
-**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-9` finns lokalt från pre-PR-#23-läget; `backup-8` finns lokalt efter follow-up-sprinten; `backup-7` (från `fb11925`) ligger på origin som tidigare fallback.
+**Datum:** 2026-05-14 (post-audit-fix Builder-sprint för B44 + B46)
+**Aktuell repo-HEAD på `main`:** `5d746e9` (Builder audit-fix för B44 PromptBuilder false success + B46 ChatPanel removal, ovanpå Steward-cleanup `34551b4` och docs-sync `d43bce2`). Aktuell produkt-HEAD före audit-fixen är `9944abb` (squash-merge PR #22 `feat(starters): add harmonized portfolio-base starter` ovanpå PR #23 `e1ad5ca` och follow-up prompt versions `2701b00`). Kör `git log --oneline -1` för senaste lokala SHA.
+**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-10` finns lokalt från pre-audit-fix-läget; `backup-9` finns lokalt från pre-PR-#23-läget; `backup-8` finns lokalt efter follow-up-sprinten; `backup-7` (från `fb11925`) ligger på origin som tidigare fallback.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
 Färdiga startprompter för Scout/Builder/Steward finns i [`docs/agent-prompts.md`](agent-prompts.md).
@@ -46,7 +46,7 @@ Tre lager:
 - `backoffice/` + `backend.py` — Streamlit-administration (inte runtime).
 - `packages/` + `apps/` — runtime + kund-UI.
 
-## Vad funkar idag (post-PR #22, repo-HEAD `d43bce2`)
+## Vad funkar idag (post-audit-fix Builder-sprint, repo-HEAD `5d746e9`)
 
 ### Governance + guards
 
@@ -157,6 +157,8 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+5d746e9 fix(viewser): audit-fix sprint for B44 + B46
+34551b4 docs(cleanup): modernize viewser copy and starter routing notes
 d43bce2 docs: sync handoff after settings commit
 e9093c0 Liten settings.json bara som committades
 9944abb feat(starters): add harmonized portfolio-base starter
