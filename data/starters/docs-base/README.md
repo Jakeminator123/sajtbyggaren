@@ -43,21 +43,41 @@ Harmoniserad enligt starter-kraven i `data/starters/README.md`:
 
 `shuding/nextra/examples/docs` ger oss:
 
-- Markdown-driven sidor
-- Sidebar-navigering
-- Sökfunktion
-- Light/dark mode
-- Tailwind
+- Markdown/MDX-driven sidor via Nextra-pluginet och `/docs/[[...mdxPath]]`
+- Hybrid sökfunktion (Nextra `Search`-komponent + `pagefind`-postbuild
+  som indexerar `.next/server/app`)
+- Light/dark mode via inline boot-skript + `ThemeToggle`-komponent
+- Tailwind 4
 
 ## Nextra-specialfall
 
 Nextra-pluginet är avsiktligt kvar i `next.config.mjs`. Startern behåller
-docs-theme, sidebar, sök, markdown/MDX och light/dark-mönster.
+docs-themes CSS, Nextras MDX-resolver (`importPage`/`generateStaticParamsFor`)
+och light/dark-mönster.
 
 Startern skapar inga top-level app routes för `/program`, `/lectures` eller
 `/resources`. De lämnas för framtida scaffold-injektion av
 `course-education`. Neutral placeholder-content ligger under Nextra docs-
 innehållet.
+
+## Manual sidebar discipline
+
+Sidomenyn i `src/app/layout.tsx` (`<aside>`-blocket) är **manuellt
+underhållen**. Den listar fyra fasta länkar (`/docs`, `/docs/course-shell`,
+`/docs/authoring`, `/docs/scaffold-slots`) och läser inte från `_meta.ts`-
+filerna i `src/app/` eller `src/content/`.
+
+Konsekvens: när en scaffold (eller framtida content-uppdatering) lägger
+till en ny MDX-fil i `src/content/` måste samma sprint också uppdatera
+`<aside>`-blocket i `src/app/layout.tsx` så att den nya sidan dyker upp
+i sidomenyn. Annars är pagen routbar via `/docs/<slug>` men osynlig i
+nav.
+
+`_meta.ts`-filerna är kvar som Nextra-plugin-metadata för en framtida
+migrering till page-map-driven layout, men styr inte synlig navigation
+idag. Detta spåras som öppen följd-uppgift i `docs/known-issues.md`
+("page-map-driven sidebar för docs-base") och bör lösas innan startern
+aktiveras i `SCAFFOLD_TO_STARTER`.
 
 ## Scaffolds som använder denna bas
 

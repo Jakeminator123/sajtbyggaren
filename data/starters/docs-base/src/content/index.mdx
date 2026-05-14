@@ -1,8 +1,9 @@
 # Overview
 
 This starter is a neutral documentation base for education and course
-experiences. It keeps the Nextra docs theme, markdown authoring, sidebar
-navigation, search, and light or dark mode.
+experiences. It keeps the Nextra plugin, markdown/MDX authoring, the
+`/docs/[[...mdxPath]]` catch-all route, hybrid Nextra + Pagefind search,
+and a light/dark theme toggle.
 
 The generated scaffold can replace this placeholder content with program
 pages, lecture lists, and resource libraries.
@@ -10,9 +11,10 @@ pages, lecture lists, and resource libraries.
 ## What belongs here
 
 - reusable course documentation structure
-- markdown and MDX content
-- sidebar navigation metadata
-- neutral layout defaults
+- markdown and MDX content in `src/content/`
+- a manually maintained sidebar in `src/app/layout.tsx` that scaffolds
+  must keep in sync with new content (see Authoring)
+- neutral layout and theme defaults
 
 ## What stays outside
 

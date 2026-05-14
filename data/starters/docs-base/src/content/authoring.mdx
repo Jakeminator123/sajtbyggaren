@@ -1,18 +1,38 @@
 # Authoring
 
-Nextra renders markdown and MDX files from the content directory. Use `_meta`
-files to control sidebar labels and ordering.
+Nextra renders markdown and MDX files from the content directory; new
+files become routable pages automatically through the `/docs/[[...mdxPath]]`
+catch-all route.
+
+## How navigation works in this starter
+
+The sidebar in `src/app/layout.tsx` is **manually maintained**. It lists a
+fixed set of links (`/docs`, `/docs/course-shell`, `/docs/authoring`,
+`/docs/scaffold-slots`) and does **not** read from the `_meta.ts` files in
+this starter. The `_meta.ts` files are kept as Nextra plugin metadata for
+future migration to a page-map driven layout, but they currently do not
+control the visible navigation.
+
+When a scaffold injects new MDX files into `src/content/`, you must also
+update the `<aside>` block in `src/app/layout.tsx` so the new pages appear
+in the sidebar. See `data/starters/docs-base/README.md` ("Manual sidebar
+discipline") for the canonical recipe.
+
+This is tracked as a known follow-up: replacing the manual sidebar with a
+page-map / `_meta`-driven version once Nextra's docs `Layout` component
+validates cleanly in this environment.
 
 ## Markdown support
 
-The starter keeps standard Nextra docs behavior:
+The starter keeps standard Nextra markdown/MDX features:
 
-- headings generate table of contents entries
-- sidebar items follow content metadata
-- code blocks are rendered by the theme
-- search uses the docs theme search integration
+- headings generate table of contents entries via `nextra-theme-docs`
+- code blocks render with the docs theme
+- search uses Nextra's `Search` component plus a `pagefind` postbuild step
+  that indexes the built site
 
 ## Scaffold integration
 
-Later scaffolds can replace or extend the content directory without changing the
-theme setup.
+Later scaffolds can replace or extend the content directory without changing
+the Nextra plugin or theme setup. They must, however, sync the sidebar in
+`src/app/layout.tsx` with any new top-level docs page they introduce.
