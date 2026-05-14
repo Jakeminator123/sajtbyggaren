@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,27 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 VIEWSER_DIR = REPO_ROOT / "apps" / "viewser"
 NAMING_PATH = REPO_ROOT / "governance" / "policies" / "naming-dictionary.v1.json"
+
+
+def _is_tracked_in_git(path: Path) -> bool:
+    """Return True iff ``path`` is tracked by git.
+
+    Uses ``git ls-files`` which returns the path if it is tracked and an
+    empty string otherwise. Gitignored files that exist on disk are not
+    tracked and therefore return False. This lets a developer keep a
+    local ``.env.local`` without breaking the "not committed" guard.
+    """
+    rel = path.relative_to(REPO_ROOT).as_posix()
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(REPO_ROOT), "ls-files", "--error-unmatch", rel],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return False
+    return result.returncode == 0
 
 
 @pytest.mark.tooling
@@ -60,8 +82,21 @@ def test_viewser_legacy_dossier_picker_removed() -> None:
 
 @pytest.mark.tooling
 def test_viewser_env_file_is_not_committed() -> None:
-    assert not (VIEWSER_DIR / ".env").exists()
-    assert not (VIEWSER_DIR / ".env.local").exists()
+    """B55: ``.env`` and ``.env.local`` may exist on disk locally for
+    developer convenience (Next.js dev workflow), but must never be
+    committed. The guard previously used ``.exists()`` which fired on any
+    local file, including gitignored ones, which gave operators a false
+    "the env file is committed" alarm. Check git tracking semantics
+    instead so a local-only ``.env.local`` does not break the test while a
+    truly committed env file still fails it loudly.
+    """
+    for env_path in (VIEWSER_DIR / ".env", VIEWSER_DIR / ".env.local"):
+        assert not _is_tracked_in_git(env_path), (
+            f"{env_path.relative_to(REPO_ROOT)} är trackat i git. Env-filer "
+            "får aldrig committas - kör `git rm --cached <fil>` och säkerställ "
+            "att den är gitignored. Lokala dev-värden hör hemma i .env.local "
+            "som ska vara gitignored, inte committad."
+        )
 
 
 @pytest.mark.tooling
@@ -86,6 +121,34 @@ def test_viewser_api_routes_call_localhost_guard() -> None:
     for route in routes:
         text = (VIEWSER_DIR / route).read_text(encoding="utf-8")
         assert "assertLocalhost" in text, f"{route} saknar localhost-guard"
+
+
+@pytest.mark.tooling
+def test_stackblitz_files_filter_dotenv_files_from_preview_upload() -> None:
+    """B54: ``readRunFilesForStackblitz`` reads every file under the run's
+    ``generated-files/`` snapshot (or ``.generated/<siteId>/`` fallback) and
+    bundles it for the StackBlitz preview upload. Builder already blocks
+    ``.env*`` from landing in those snapshots today (B4/B5 enforce a case-
+    insensitive ignore in ``copy_starter``), but the upload layer must have
+    its own defensive filter so a future starter, manual operator edit, or
+    drift in the builder cannot leak a ``.env``/``.env.local``/``.env.production``
+    into a public preview. Lock the presence of the filter so a refactor
+    cannot quietly drop it.
+
+    The expected pattern is a ``.env``-prefix check on the file's basename,
+    case-insensitive (mirrors the case-variant coverage in B4).
+    """
+    text = (VIEWSER_DIR / "lib" / "stackblitz-files.ts").read_text(encoding="utf-8")
+    assert re.search(
+        r'\.toLowerCase\(\)\.startsWith\(["\']\.env["\']\)',
+        text,
+    ), (
+        "stackblitz-files.ts saknar ``.env*``-filter i upload-loopen. B54 "
+        "kräver att en ``.env``/``.env.local``/``.ENV`` aldrig kan följa "
+        "med upp till StackBlitz-preview, även om Builder-blockaden "
+        "tappar effekt eller om en operatör manuellt lägger en .env i en "
+        "starter för lokal test."
+    )
 
 
 @pytest.mark.tooling

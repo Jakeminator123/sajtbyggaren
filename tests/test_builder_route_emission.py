@@ -193,6 +193,90 @@ def test_nav_items_includes_dossier_route_when_present() -> None:
 
 
 @pytest.mark.tooling
+def test_nav_items_dedupes_spel_when_scaffold_also_declares_it() -> None:
+    """B52: ``/spel`` can arrive from both ``dossier_routes`` (when the
+    interactive-game-loop Dossier is selected) and from a future scaffold
+    that adopts the same path in its ``defaultRoutes``. The nav must list
+    the route exactly once - duplicated href/label pairs would render two
+    visually identical nav links pointing at the same page.
+    """
+    from scripts.build_site import _nav_items_from_scaffold
+
+    routes_with_spel = [
+        {"id": "home", "path": "/"},
+        {"id": "spel", "path": "/spel"},
+        {"id": "contact", "path": "/kontakt"},
+    ]
+    items = _nav_items_from_scaffold(routes_with_spel, ["/spel"])
+    spel_entries = [entry for entry in items if entry[0] == "/spel"]
+    assert len(spel_entries) == 1, (
+        f"/spel duplicated in nav: {items!r}. _nav_items_from_scaffold must "
+        "dedupe Dossier-injected /spel against scaffold defaultRoutes entries."
+    )
+    items_without_scaffold_spel = _nav_items_from_scaffold(
+        LSB_ROUTES["defaultRoutes"], ["/spel"]
+    )
+    spel_in_lsb = [entry for entry in items_without_scaffold_spel if entry[0] == "/spel"]
+    assert len(spel_in_lsb) == 1, (
+        "Dossier-only /spel must still appear exactly once in nav even when "
+        "scaffold does not declare the route."
+    )
+
+
+@pytest.mark.tooling
+def test_render_layout_jsx_escapes_unknown_nav_label_fallback() -> None:
+    """B51: when a scaffold declares a route id that is not in
+    ``_NAV_LABEL_BY_ROUTE_ID`` the fallback turns the id into a Title Case
+    label via ``str.title()``. That label must still pass through
+    ``_jsx_safe_string`` before it is written into TSX, otherwise a future
+    scaffold (or governance drift) that lets an unusual id reach the
+    renderer would emit raw text into nav. Locked here so the customer-
+    text discipline from B30 covers governance-driven text too.
+    """
+    from scripts.build_site import render_layout
+
+    routes_with_unknown = [
+        {"id": "home", "path": "/"},
+        {"id": "look-book", "path": "/look-book"},
+        {"id": "contact", "path": "/kontakt"},
+    ]
+    output = render_layout(
+        _minimal_dossier(),
+        dossier_routes=[],
+        scaffold_default_routes=routes_with_unknown,
+    )
+    assert '{"Look Book"}' in output, (
+        "render_layout must wrap nav label fallback in _jsx_safe_string so "
+        "{\"Look Book\"} appears as a JSX expression, not raw >Look Book<."
+    )
+    assert ">Look Book<" not in output, (
+        "render_layout leaks raw nav label fallback as JSX text. Wrap label "
+        "in _jsx_safe_string (header AND footer nav)."
+    )
+
+
+@pytest.mark.tooling
+def test_render_layout_escapes_known_nav_labels_consistently() -> None:
+    """B51 follow-on: known labels (Hem, Tjänster, etc.) must also be wrapped
+    so the discipline is uniform. Otherwise a reviewer cannot tell from the
+    source which labels are trusted and which are not - and a future label
+    added to ``_NAV_LABEL_BY_ROUTE_ID`` could silently land unescaped.
+    """
+    from scripts.build_site import render_layout
+
+    output = render_layout(
+        _minimal_dossier(),
+        dossier_routes=[],
+        scaffold_default_routes=LSB_ROUTES["defaultRoutes"],
+    )
+    for safe_label in ('{"Hem"}', '{"Tjänster"}', '{"Om oss"}', '{"Kontakt"}'):
+        assert safe_label in output, (
+            f"render_layout must wrap nav label {safe_label!r} as JSX "
+            "expression for consistency with B30 + B51."
+        )
+
+
+@pytest.mark.tooling
 @pytest.mark.parametrize("route_path", ["//example.com", "/../secret", "/foo/../bar"])
 def test_route_to_page_path_rejects_non_canonical_paths(
     tmp_path: Path,

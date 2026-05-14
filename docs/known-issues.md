@@ -111,6 +111,19 @@ Format per bugg:
   `_meta.ts` + filsystemet. Test bör låsa relationen så framtida
   scaffold-injektion av MDX inte tyst kan saknas i nav. Ej blocker idag
   (docs-base är inte aktiverad i runtime).
+- **`B53` Låg** - `governance/schemas/` saknar en `routes.schema.json` som
+  validerar scaffold-routes-kontraktet som `scripts/build_site.py` redan
+  hårdkräver. Buildern kräver att `routes.json` har en route med
+  `id="contact"` (annars raisas `SystemExit` i `_pick_contact_route`), men
+  ingen schemafil låser detta i governance-lagret. Risk: en framtida
+  starter/scaffold kan tappa contact-route utan att fångas tidigt; felet
+  fångas först när buildern kör. Spåra som dokumentations-/contract-
+  schema-sprint som lägger till `routes.schema.json` + `validate_routes()`
+  i `packages/generation/artifacts/validate.py` med auto-validering i
+  `load_scaffold_registry()` (samma mönster som B22 löste för
+  `scaffold.schema.json`). Ej blocker - byggtidsguarden täcker redan
+  scenariot, men en schema-fil ger tidigare felfångst + IDE-stöd.
+
 ### Notera (inte en bugg) - dev-preview-output utanför repo
 
 `scripts/build_site.py` skriver dev-preview-builden till
@@ -129,6 +142,76 @@ arkitekturändring, inte en bugg.
 (B20 stängd 2026-05-13 — se "Stängda - regression-test säkrar fixet" nedan.)
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B51` Låg** (stängd 2026-05-14, A-mini cleanup efter B50) -
+  `scripts/build_site.py:render_layout` skrev nav-labels direkt som JSX-
+  text utan `_jsx_safe_string`-wrap. Kända route-id:n (`home`, `services`,
+  `products`, `about`, `contact`) gav alltid säkra svenska labels från
+  `_NAV_LABEL_BY_ROUTE_ID`-lookupen, men en framtida scaffold som
+  introducerar ett okänt route-id föll via `_nav_label_for_route` till
+  `route_id.replace("-", " ").replace("_", " ").title()` och labeln
+  skrevs rått som JSX-text. Inkonsistent jämfört med kundtext (B30 gör
+  redan all kundtext via `_jsx_safe_string`); en governance-driven
+  ändring av ett route-id skulle kunna producera ogiltig TSX.
+  **Fix:** header-nav och footer-nav-länkar i `render_layout` wrappar
+  nu `label` i `_jsx_safe_string(label)`. Diskussion om varför labeln
+  inte är "trusted" trots att den kommer från scaffold-fil: route-id är
+  inte path-validerat på samma sätt som `_route_href` validerar paths
+  (B50), så samma defensiva discipline appliceras nu uniformt.
+  Test:
+  `tests/test_builder_route_emission.py::test_render_layout_jsx_escapes_unknown_nav_label_fallback`,
+  `tests/test_builder_route_emission.py::test_render_layout_escapes_known_nav_labels_consistently`.
+
+- **`B52` Låg** (stängd 2026-05-14, A-mini cleanup efter B50) -
+  `_nav_items_from_scaffold` appenderade `("/spel", "Spel")` till
+  nav-items om dossier-routen `/spel` fanns, utan dedupe mot scaffoldens
+  `defaultRoutes`. För aktuella scaffolds är `/spel` inte deklarerat så
+  duplicering triggas inte idag, men en framtida scaffold som adopterar
+  `/spel` som default-route + samtidig interactive-game-loop-dossier
+  hade gett två identiska nav-länkar.
+  **Fix:** `_nav_items_from_scaffold` bygger nu en `existing_paths`-set
+  av scaffold-paths och appendrar bara `/spel` från dossier-routes om
+  pathen inte redan finns. Scaffold-ordning bevaras, dossier-injicerad
+  `/spel` hamnar sist.
+  Test:
+  `tests/test_builder_route_emission.py::test_nav_items_dedupes_spel_when_scaffold_also_declares_it`.
+
+- **`B54` Låg** (stängd 2026-05-14, A-mini cleanup efter B50) -
+  `apps/viewser/lib/stackblitz-files.ts:readRunFilesForStackblitz` läser
+  varje fil under run-mappens `generated-files/`-snapshot och bundlar
+  den för StackBlitz-preview-uploaden. Filterlogiken hade bara
+  `FILES_TO_SKIP = {"package-lock.json"}` + `BINARY_EXTENSIONS`; den
+  filtrerade **inte** `.env*`-filer explicit. Builder blockerar redan
+  `.env*` från att hamna i `generated-files/` (B4/B5,
+  case-insensitive ignore i `copy_starter`), så scenariot triggas
+  inte i normalt flöde. Men upload-lagret bör ha egen defensiv guard
+  så en framtida starter, manuell operatörsedit eller drift i buildern
+  inte kan läcka en `.env`/`.env.local`/`.env.production` upp till en
+  publik StackBlitz-preview.
+  **Fix:** ny `isDotenvFile(basename)`-helper som returnerar
+  `basename.toLowerCase().startsWith(".env")`. Walk-loopen i
+  `readRunFilesForStackblitz` hoppar över filer som matchar. Speglar
+  B4:s case-variant-täckning (`.ENV`, `.Env.Local`).
+  Test:
+  `tests/test_viewser_files.py::test_stackblitz_files_filter_dotenv_files_from_preview_upload`
+  (källkods-lock som kräver att `.toLowerCase().startsWith(".env")`
+  finns i filen).
+
+- **`B55` Låg** (stängd 2026-05-14, A-mini cleanup efter B50) -
+  `tests/test_viewser_files.py::test_viewser_env_file_is_not_committed`
+  hette `_is_not_committed` men kontrollerade `(path).exists()`, vilket
+  failed-fel på en gitignored lokal `.env.local` (en korrekt Next.js-
+  dev-workflow för Viewser). Operatören fick en falsk "committed"-alarm
+  trots att filen var ignorerad. Testnamn och kontroll var ur fas.
+  **Fix:** ny `_is_tracked_in_git(path)`-helper kör
+  `git ls-files --error-unmatch <rel>` och returnerar `True` iff filen
+  är trackad. Testet kollar nu git-tracking, inte disk-existens. En
+  lokal gitignored `.env.local` får finnas; en faktiskt committad
+  `.env`/`.env.local` failar testet med tydligt meddelande inkluderande
+  remediation (`git rm --cached`).
+  Test:
+  `tests/test_viewser_files.py::test_viewser_env_file_is_not_committed`
+  (samma test, ny korrekt semantik).
 
 - **`B50` Medel** (stängd 2026-05-14, commits `4940cbb` + `f787eb7`) -
   `scripts/build_site.py` interpolerade scaffold-route-paths direkt i

@@ -26,6 +26,19 @@ const BINARY_EXTENSIONS = new Set([
 
 const FILES_TO_SKIP = new Set(["package-lock.json"]);
 
+/**
+ * B54: defensive filter against `.env*` leaking into a public StackBlitz
+ * preview. Builder's `copy_starter` already blocks `.env*` from landing
+ * in `generated-files/` (B4/B5, case-insensitive), but this layer must
+ * have its own filter so a future starter, manual operator edit, or
+ * drift in the builder cannot bypass the upstream guard. Matches
+ * `.env`, `.env.local`, `.env.production`, and case variants like
+ * `.ENV` or `.Env.Local`.
+ */
+function isDotenvFile(basename: string): boolean {
+  return basename.toLowerCase().startsWith(".env");
+}
+
 export type StackblitzFileMap = Record<string, string>;
 
 export class RunNotFoundError extends Error {
@@ -123,6 +136,7 @@ export async function readRunFilesForStackblitz(runId: string): Promise<Stackbli
     const ext = path.extname(filePath).toLowerCase();
     const base = path.basename(filePath);
     if (FILES_TO_SKIP.has(base) || BINARY_EXTENSIONS.has(ext)) continue;
+    if (isDotenvFile(base)) continue;
 
     const stats = await fs.stat(filePath);
     if (stats.size > MAX_FILE_BYTES) continue;

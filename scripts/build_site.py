@@ -501,11 +501,18 @@ def _nav_items_from_scaffold(
     routes that should appear in the nav. Currently the only such
     Dossier-route is ``/spel`` (interactive-game-loop); when more
     Dossiers add navigable pages this branch widens.
+
+    Dossier-routes are deduped against the scaffold paths so a future
+    scaffold that adopts ``/spel`` in ``defaultRoutes`` does not get
+    the entry rendered twice (B52). Scaffold order is preserved; the
+    Dossier-injected route lands at the end, after the scaffold's own
+    nav structure.
     """
     items: list[tuple[str, str]] = [
         (route["path"], _nav_label_for_route(route["id"])) for route in scaffold_default_routes
     ]
-    if "/spel" in dossier_routes:
+    existing_paths = {href for href, _ in items}
+    if "/spel" in dossier_routes and "/spel" not in existing_paths:
         items.append(("/spel", "Spel"))
     return items
 
@@ -600,14 +607,17 @@ def render_layout(
         contact_path = _pick_contact_route(scaffold_default_routes)["path"]
     contact_href = _route_href(contact_path)
     # nav_items entries come from _nav_items_from_scaffold (canonical
-    # paths + Swedish labels driven by scaffold_default_routes), not
-    # customer data, so href + label are safe to inline.
-    # Customer-supplied values (company.name, company.tagline,
-    # contact.*, addressLines) all go through _jsx_safe_string for JSX
-    # positions or _js_string_literal for the metadata object literal -
-    # see B30 in docs/known-issues.md.
+    # paths + Swedish labels driven by scaffold_default_routes). Paths go
+    # through _route_href which validates them as canonical site paths
+    # (B50). Labels go through _jsx_safe_string so an unknown route id
+    # that falls through to the ``.title()`` slug-to-Title-Case branch
+    # (e.g. "look-book" -> "Look Book") cannot leak raw HTML/JSX into
+    # the nav (B51). Customer-supplied values (company.name,
+    # company.tagline, contact.*, addressLines) all go through
+    # _jsx_safe_string for JSX positions or _js_string_literal for the
+    # metadata object literal - see B30 in docs/known-issues.md.
     nav_links = "\n".join(
-        f'            <a href={_route_href(href)} className="text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors">{label}</a>'
+        f'            <a href={_route_href(href)} className="text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors">{_jsx_safe_string(label)}</a>'
         for href, label in nav_items
     )
     address_line = ", ".join(contact["addressLines"])
@@ -671,7 +681,7 @@ def render_layout(
         '            <div className="flex flex-col gap-2 text-sm text-[color:var(--muted)]">\n'
         '              <p className="text-xs uppercase tracking-widest">Sajt</p>\n'
         + "\n".join(
-            f'              <a href={_route_href(href)} className="hover:underline">{label}</a>'
+            f'              <a href={_route_href(href)} className="hover:underline">{_jsx_safe_string(label)}</a>'
             for href, label in nav_items
         )
         + "\n"
