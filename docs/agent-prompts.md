@@ -11,6 +11,11 @@ Aktuell sprint, stoppregler och kö finns alltid i
 uppdrag i den här filen; skriv dem i `current-focus.md` eller i operatörens
 prompt.
 
+För längre arbetspass där en Codex-agent ska samordna flera agentroller,
+använd [`docs/orchestrator-playbook.md`](orchestrator-playbook.md). Den
+beskriver ett orkestrator-arbetssätt ovanpå Scout, Builder och Steward; den
+inför inte en fjärde fast agentroll.
+
 ## Gemensam modell
 
 Grundprincip:

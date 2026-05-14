@@ -10,6 +10,10 @@ For non-trivial changes, keep `docs/product-operating-context.md` in view:
 the product target is better small-business websites through the core loop
 `prompt -> företagshemsida -> preview -> följdprompt -> ny version`.
 
+For long Codex-IDE sessions with subagents, use
+`docs/orchestrator-playbook.md` as the operating playbook. It coordinates the
+existing Scout/Builder/Steward roles; it does not create a fourth fixed role.
+
 Do not edit `.cursor/rules/` directly. Those files are generated mirrors; the
 source lives under `governance/rules/`. If a rule needs to change, update the
 governance source and run the rule sync check.
