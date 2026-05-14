@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-14 (post-B45 + Codex-IDE agentregel + branch-cleanup)
-**Aktuell repo-HEAD på `main`:** `04fb92f` (`AGENTS.md` låser att Codex-IDE-agenten följer `.cursor/BUGBOT.md` och `.cursor/rules/` som aktiva arbetsregler, men ändrar governance-källorna i stället för speglarna). Bygger på `9446200` (B45 focus/handoff), `6daee58` (B45 contact-route propagation), `3178a82` (parallell-agent + operator workspace-cleanup), `c073d486` (PR #25 AGENTS.md gotcha för `/sajtbyggaren-output`-permissions), `19c3564` (Steward focus-bump efter PR #24), `c2d8632` (PR #24 docs-base starter + B49-fixup), `97ce7a8` workspace-cleanup, `10eb286` B48 follow-up-semantik, `5d746e9` audit-fix B44+B46. Kör `git log --oneline -1` för senaste lokala SHA.
-**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-12` finns på origin från `9446200` som aktuell fallback. De mergeade Cursor-PR-brancherna för PR #22, #23, #24 och #25 är borta från GitHub eller bekräftat redan borttagna. Kvarvarande remote arbetsbrancher som inte ska raderas utan separat beslut: `feat/backoffice-trace-playground-cleanup` (ingen egen PR, inte ancestry-mergead efter squash) och `frontend/christopher-import` (PR #17 stängd utan merge, reference only).
+**Datum:** 2026-05-14 (post-PR #26 produktkompass)
+**Aktuell repo-HEAD på `main`:** `1cba454` (PR #26: `docs/product-operating-context.md` + agentläsordning, squash-mergead efter Codex Scout-review och gröna GitHub-checkar). Bygger på `6daee58` (B45 contact-route propagation), `3178a82` (parallell-agent + operator workspace-cleanup), `c073d486` (PR #25 AGENTS.md gotcha för `/sajtbyggaren-output`-permissions), `19c3564` (Steward focus-bump efter PR #24), `c2d8632` (PR #24 docs-base starter + B49-fixup), `97ce7a8` workspace-cleanup, `10eb286` B48 follow-up-semantik, `5d746e9` audit-fix B44+B46. Kör `git log --oneline -1` för senaste lokala SHA.
+**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-13` finns på origin från pre-PR-#26-läget. PR #26:s branch `cursor/product-operating-context` är raderad på GitHub. Kvarvarande remote arbetsbrancher som inte ska raderas utan separat beslut: `feat/backoffice-trace-playground-cleanup` (ingen egen PR, inte ancestry-mergead efter squash) och `frontend/christopher-import` (PR #17 stängd utan merge, reference only).
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
 Färdiga startprompter för Scout/Builder/Steward finns i [`docs/agent-prompts.md`](agent-prompts.md).
@@ -46,7 +46,7 @@ Tre lager:
 - `backoffice/` + `backend.py` — Streamlit-administration (inte runtime).
 - `packages/` + `apps/` — runtime + kund-UI.
 
-## Vad funkar idag (post-B45 + agentregel, repo-HEAD `04fb92f`)
+## Vad funkar idag (post-PR #26, repo-HEAD `1cba454`)
 
 ### Governance + guards
 
@@ -97,13 +97,14 @@ Tre lager:
 
 ## Nästa konkreta uppgift
 
-Se `docs/current-focus.md` → **"Next action"**. Kort version: `main` är i bra läge, men PR #26 är öppen som draft för produktkompass + agentläsordning:
+Se `docs/current-focus.md` → **"Next action"**. Kort version: `main` är i bra läge utan öppna PRs:
 
 1. **B49 page-map-driven sidebar för `docs-base`** — krävs innan `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`. Antingen återinför Nextra-theme-docs `Layout` eller bygg lokal `_meta.ts`-/filsystem-driven nav.
 2. **B47 commerce-base Shopify-handles** — dokumentera starterkrav eller bygg fallback.
-3. **B13a arkitektur-flytt** — `scripts/build_site.py` produktlogik till `packages/generation/build/`. Egen sprint, kräver troligen egen ADR (rör mappgränser i `repo-boundaries.v1.json`). Destinationen pre-allokerad i `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
-4. **`write_pages` icon-bibliotek-agnostisk refactor** — lyfter den arkitekturskuld som ADR 0020 explicit lämnade öppen. Förebygger att samma lucide-typen av starter-vs-codegen-konflikt uppstår igen för en framtida starter utan lucide.
-5. **Cancellation-followup** — lågprioriterad separat sprint om operatören behöver avbryta redan startade playground-körningar.
+3. **B50 route-href/contact-route hardening** — extern bugg-reviewer hittade att route-paths interpoleras direkt i TSX-href och att `_pick_contact_route()` tyst faller tillbaka till `/kontakt`. Ta som separat Builder-bugfix, inte som del av B49.
+4. **B13a arkitektur-flytt** — `scripts/build_site.py` produktlogik till `packages/generation/build/`. Egen sprint, kräver troligen egen ADR (rör mappgränser i `repo-boundaries.v1.json`). Destinationen pre-allokerad i `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
+5. **`write_pages` icon-bibliotek-agnostisk refactor** — lyfter den arkitekturskuld som ADR 0020 explicit lämnade öppen. Förebygger att samma lucide-typen av starter-vs-codegen-konflikt uppstår igen för en framtida starter utan lucide.
+6. **Cancellation-followup** — lågprioriterad separat sprint om operatören behöver avbryta redan startade playground-körningar.
 
 PromptBuilder stage-timeout är inte längre listad som aktiv nice-to-have; Scout verifierade att cleanup redan finns.
 
@@ -161,6 +162,7 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+1cba454 docs(product): add operating context for agents
 04fb92f docs(agents): align Codex with Cursor rules
 9446200 docs(focus): record B45 contact route fix
 6daee58 fix(builder): thread contact route through CTAs

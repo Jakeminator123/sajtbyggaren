@@ -111,6 +111,20 @@ Format per bugg:
   `_meta.ts` + filsystemet. Test bör låsa relationen så framtida
   scaffold-injektion av MDX inte tyst kan saknas i nav. Ej blocker idag
   (docs-base är inte aktiverad i runtime).
+- **`B50` Medel** - `scripts/build_site.py` interpolerar scaffold-route-
+  paths direkt i TSX-attribut (`href="{contact_path}"`,
+  `href="{listing_path}"`) och `_pick_contact_route()` faller tyst tillbaka
+  till `/kontakt` när scaffold saknar contact-route. Källa: extern
+  bugg-reviewer 2026-05-14 efter B45. Risken är låg i dagens två
+  kontrollerade scaffold-filer, men växer när fler scaffolds/starters
+  läggs till: avvikande route-tecken kan ge trasig TSX, och tyst fallback
+  kan dölja scaffold-konfigfel. Fix bör införa en route-href-helper som
+  serialiserar route-paths säkert för JSX och ett fail-fast- eller
+  explicit-degraded-beteende när en required contact-route saknas i
+  scaffoldens `routes.json`. Test bör använda en syntetisk scaffold-route
+  med specialtecken och en scaffold utan contact-route. Den separata
+  source-grep-skörheten i B45-testet bedöms låg impact och behöver inte
+  egen post om B50 får beteendetester.
 
 ### Notera (inte en bugg) - dev-preview-output utanför repo
 

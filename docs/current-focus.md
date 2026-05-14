@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `04fb92f` (2026-05-14, post-B45 Builder-mini-sprint + Codex-IDE agent-parity rule: `render_layout`, `render_home`, `render_services` och `render_products` route:ar kontakt-CTA:er via scaffoldens `_pick_contact_route`/`contact_path`; `AGENTS.md` låser att Codex-IDE-agenten följer `.cursor/BUGBOT.md` och `.cursor/rules/` men ändrar governance-källorna, inte speglarna. Föregående workspace-state: `3178a82`; inga öppna PRs.)
+Last verified state: `1cba454` (2026-05-14, PR #26 produktkompass + agentläsordning squash-mergead: `docs/product-operating-context.md` finns och agenternas läsordning pekar dit. Bugg-reviewer-fyndet om öppen PR i focus/handoff är stängt i PR #26. Föregående produktcommit är B45 `6daee58`; inga öppna PRs.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `04fb92f`; senaste produktcommit är `6daee58` (B45 `_pick_contact_route`-propagation till layout/home/services/products), följt av `9446200` (B45 focus/handoff) och `04fb92f` (Codex-IDE följer Cursor-regler i `AGENTS.md`). Detta ligger ovanpå `c2d8632` (PR #24 docs-base starter, squash-merge), `10eb286` (B48 follow-up-semantik i dev-driver/backoffice), `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `1cba454`; senaste produkt-/workflowcommit är PR #26:s produktkompass (`docs/product-operating-context.md`) ovanpå `6daee58` (B45 `_pick_contact_route`-propagation till layout/home/services/products), `c2d8632` (PR #24 docs-base starter, squash-merge), `10eb286` (B48 follow-up-semantik i dev-driver/backoffice), `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -279,9 +279,8 @@ mini-sprinten som gjorde PromptBuilder till enda primära promptyta, follow-up
 prompt versions, PR #23 backoffice trace/playground, PR #22 `portfolio-base`
 starter, B48 follow-up-semantik, PR #24 `docs-base` starter, B45
 kontakt-route-propagation, Codex-IDE agent-parity-regeln och mergead
-branch-cleanup är klara. PR #26 är öppen som draft för
-`docs/product-operating-context.md` och kopplad agentläsordning; den ska
-mergeas eller stängas innan nästa större Builder-sprint startar.
+branch-cleanup och PR #26 produktkompass/agentläsordning är klara. Inga
+öppna PRs.
 
 ## Next action - direktiv till nästa agent
 
@@ -293,9 +292,10 @@ mergeas eller stängas innan nästa större Builder-sprint startar.
 - `AGENTS.md` innehåller nu Codex-IDE-regeln från `04fb92f`: Codex agerar
   Cursor-kompatibel repo-agent och följer `.cursor`-reglerna, men ändrar
   governance-källorna om en regel behöver uppdateras.
-- PR #26 lägger produktkompassen i `docs/product-operating-context.md`.
-  Den förtydligar att B49 fortfarande är ett giltigt enabling-steg när det
-  gör nästa småföretagarsajt mer korrekt, previewbar eller aktiverbar.
+- PR #26 är mergead i `1cba454` och lägger produktkompassen i
+  `docs/product-operating-context.md`. Den förtydligar att B49 fortfarande
+  är ett giltigt enabling-steg när det gör nästa småföretagarsajt mer
+  korrekt, previewbar eller aktiverbar.
 - Nästa Builder-sprint bör vara B49 page-map-driven sidebar för `docs-base`.
   Kräver att antingen Nextra-theme-docs `Layout` får fungera (PR #24-bodyn
   noterar att den failade validering i miljön) eller en lokal
@@ -303,7 +303,8 @@ mergeas eller stängas innan nästa större Builder-sprint startar.
   `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`.
 - Tidigare audit-fix-sprintar 2026-05-14: B44 (PromptBuilder false success)
   och B46 (ChatPanel-radering) stängda. Öppna B-IDs: B47 commerce-base
-  Shopify handles, B49 docs-base page-map sidebar. Inga blockers.
+  Shopify handles, B49 docs-base page-map sidebar, B50 route-href/contact-
+  route hardening efter extern bugg-reviewer. Inga blockers.
 
 `portfolio-base` och `docs-base` är båda starter-underlag; ingen
 `SCAFFOLD_TO_STARTER`-mappning eller real-codegen-scope är aktiverad
