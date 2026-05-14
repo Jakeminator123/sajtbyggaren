@@ -5,7 +5,10 @@ export function GET(request: Request) {
   const title = url.searchParams.get("title") ?? "";
 
   return new ImageResponse(
-    <div tw="flex h-full w-full items-center justify-center bg-background text-foreground">
+    <div
+      tw="flex h-full w-full items-center justify-center"
+      style={{ backgroundColor: "#ffffff", color: "#111827" }}
+    >
       <div tw="flex w-full flex-col p-12">
         <h1 tw="text-5xl font-bold tracking-tight">{title}</h1>
       </div>
