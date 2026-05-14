@@ -7,7 +7,7 @@ Startpromptar och rollgränser finns i
 
 ## Vem uppdaterar denna fil
 
-**Agenten.** Inte operatören. Standard loop steg 7 i
+**Agenten.** Inte operatören. Standard loop steg 8 i
 [`docs/agent-handbook.md`](agent-handbook.md) är obligatoriskt: efter
 varje merge eller direktpush till `main` ska agenten i samma eller direkt
 efterföljande commit:
@@ -17,11 +17,20 @@ efterföljande commit:
 3. Lägga till nya blockers eller queue-items om något upptäcktes.
 4. Bumpa "Last verified state"-SHA:n till nya HEAD.
 
+Steward ska dessutom post-push-verifiera origin/main-SHA, `git status`,
+`python scripts/focus_check.py` och om `origin/main` matchar lokal `main`.
+Uppdatera `current-focus.md` och/eller `handoff.md` när ny faktisk HEAD
+avslutar en sprint, active sprint ändras, next action/queue/blocked ändras,
+ett beslut påverkar agentflöde, branchflöde, grindmode eller rollansvar, ny
+risk/blocker/nice-to-have blir viktig för nästa agent, eller extern PR/
+Grind-agent ändrar vad `main` betyder. Uppdatera inte för ren mikrostatus
+som inte ändrar nästa agents arbete.
+
 Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `2f0af68` (2026-05-14, post-Prompt-till-sajt MVP v1 + audit-hotfix-sprint: ZodError -> 400 i `/api/prompt`, whitespace-trim före `.min(1)`, `--`-separator i Python-spawn så dash-prefixade prompts inte tolkas som CLI-options av argparse, stale viewer-panel fallback-copy uppdaterad till PromptBuilder-flödet, prompt-helperns brief-imports flyttade till modulnivå så test-monkeypatch faktiskt biter, allowlist av `ZodError` i `check_term_coverage`, plus docs-bump i `2f0af68`. Faktisk kod-HEAD för audit-hotfixen är `e421a00`; `2f0af68` är Standard-loop-steg-7 docs-commit ovanpå. backup-7 från `fb11925` pushad till origin före hotfix-sprinten. Alla guards gröna lokalt; ingen öppen PR)
+Last verified state: `c3dcc14` (2026-05-14, post-push-verifierad main efter Prompt-till-sajt MVP v1 + audit-hotfix-sprint: ZodError -> 400 i `/api/prompt`, whitespace-trim före `.min(1)`, `--`-separator i Python-spawn så dash-prefixade prompts inte tolkas som CLI-options av argparse, stale viewer-panel fallback-copy uppdaterad till PromptBuilder-flödet, prompt-helperns brief-imports flyttade till modulnivå så test-monkeypatch faktiskt biter, allowlist av `ZodError` i `check_term_coverage`, docs-bump i `2f0af68` och följdfix i `c3dcc14`. Faktisk kod-HEAD för audit-hotfixen är `e421a00`; `c3dcc14` är verifierad `main`/`origin/main` ovanpå Standard-loop-docs. backup-7 från `fb11925` pushad till origin före hotfix-sprinten. Alla guards gröna lokalt; ingen öppen PR)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -30,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `2f0af68` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `c3dcc14` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -118,9 +127,10 @@ Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
   okänt domänbegrepp i strict-läget.
 - `2f0af68` — `docs: bump focus + handoff to e421a00 post-audit-
   hotfix-sprint`. Standard loop steg 7 efter audit-hotfix-sprinten:
-  bumpar SHA + uppdaterar Queue/Blocked. (Ovanpå denna ligger en
-  följdfix `docs: correct verified HEAD to 2f0af68` som speglar
-  faktisk HEAD efter Scout-RO-feedback.)
+  bumpar SHA + uppdaterar Queue/Blocked.
+- `c3dcc14` — `docs: correct verified HEAD to 2f0af68 in focus +
+  handoff`. Följdfix ovanpå `2f0af68`; lokal `main` och `origin/main`
+  är post-push-verifierade på denna SHA.
 
 Mainline-steward-pushar efter PR #21 (pure docs/governance):
 
@@ -223,7 +233,8 @@ Innan `git push origin main`:
 (Inga aktiva blockers just nu — B20 + lucide-fix mergade,
 sanity-rundan grön mot `04fc2fa`, Prompt-till-sajt MVP v1
 mergad direktpush `4d5b4de`, audit-hotfix-sprint klar till
-`e421a00` med docs-bump i `2f0af68`. Nästa val är operatörsdrivet,
+`e421a00` med docs-bump i `2f0af68` och post-push-verifierad main
+vid `c3dcc14`. Nästa val är operatörsdrivet,
 se "Next action" + "Queue".)
 
 ## Do not start yet
@@ -271,8 +282,9 @@ se "Next action" + "Queue".)
 
 Se [`docs/agent-handbook.md`](agent-handbook.md) under rubriken "Standard
 loop". Kort: Scout vid behov → skapa `backup-N` → Builder/Steward jobbar på
-`main` → Scout RO-review före push → operatör + extern reviewer beslutar →
-final sanity → commit/push till `main` → uppdatera denna fil → nästa etapp.
+`main` → Scout RO-review före push → vid push-OK och clean tree får Builder
+pusha direkt → Steward post-push-verifierar → uppdatera denna fil vid faktisk
+fokus-/handoff-förändring → nästa etapp.
 
 Operatörspreferens (2026-05-13): svara kort och koncist på svenska,
 förklara dev-uttryck med korta parenteser första gången per
