@@ -1,7 +1,7 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-14 (post-workspace-hygien-pass)
-**Aktuell repo-HEAD på `main`:** `134df07` (workspace-hygien-pass: cursorignore-cleanup, ny cursorindexingignore + editorconfig, vscode-perf-/prettier-settings, externaliserad dev-preview-path och viewser prettier-deps). Bygger på audit-fix-sprinten `5d746e9` (B44 + B46) och Steward-cleanupen `34551b4`. Aktuell produkt-HEAD före hygien-passet är `9944abb` (squash-merge PR #22 `feat(starters): add harmonized portfolio-base starter` ovanpå PR #23 `e1ad5ca` och follow-up prompt versions `2701b00`). Kör `git log --oneline -1` för senaste lokala SHA.
+**Datum:** 2026-05-14 (post-follow-up-semantik sprint)
+**Aktuell repo-HEAD på `main`:** `10eb286` (B48: `scripts/dev_generate.py` trådar follow-up `mode/projectId` till planfasen; Backoffice Playground-runnern är låst med test). Ligger ovanpå hygiene/docs-commits `134df07`, `de7fd7c`, `ec11c41` och audit-fix-sprinten `5d746e9`. Kör `git log --oneline -1` för senaste lokala SHA.
 **Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-10` finns lokalt från pre-audit-fix-läget; `backup-9` finns lokalt från pre-PR-#23-läget; `backup-8` finns lokalt efter follow-up-sprinten; `backup-7` (från `fb11925`) ligger på origin som tidigare fallback.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
@@ -46,7 +46,7 @@ Tre lager:
 - `backoffice/` + `backend.py` — Streamlit-administration (inte runtime).
 - `packages/` + `apps/` — runtime + kund-UI.
 
-## Vad funkar idag (post-workspace-hygien-pass, repo-HEAD `134df07`)
+## Vad funkar idag (post-follow-up-semantik sprint, repo-HEAD `10eb286`)
 
 ### Governance + guards
 
@@ -72,6 +72,7 @@ Tre lager:
 
 - **`/api/prompt`** tar fri prompt, kör `runPromptToProjectInput` (spawnar `scripts/prompt_to_project_input.py` med `--`-separator så dash-prefixade prompts inte fastnar i argparse), och triggar `runBuild` med dossier-path-override (whitelist via `ALLOWED_DOSSIER_ROOTS` mot `examples/` + `data/prompt-inputs/`). Response-payloaden inkluderar nu `buildStatus` (B44) så klienten kan klassificera ok/degraded/failed istället för att tolka varje returnerad `runId` som lyckad build.
 - **PromptBuilder** är enda promptytan på Viewser-home (legacy `ChatPanel` är raderad i B46-fixen). ProjectInputPicker är read-only-select (Build-knappen togs bort). Stage-indikatorn renderar tre distinkta paneler (success/degraded/failed) baserat på `classifyBuildStatus(buildStatus)`; `app/page.tsx` skickar `PromptBuildOutcome` vidare till `headerStatusForOutcome` så headern aldrig säger "Build klar via prompt:" för en degraderad eller failed run.
+- **Dev-driver follow-up-semantik** är nu trådad: `scripts/dev_generate.py --mode followup --project-id <id>` skriver både `input.json` och `generation-package.json` som follow-up med samma `projectId`. Backoffice Playground skickar `--project-id` + `SAJTBYGGAREN_MODE=followup` till subprocessen och har regressionstest.
 - **Payload-validering**: `z.string().trim().min(1).max(4000)` så whitespace-only payloads fångas vid API-gränsen. `ZodError` returneras som `400` med valideringsmeddelandet; bara genuina serverfel blir `500`.
 - **Helper-skriptet** `scripts/prompt_to_project_input.py` använder briefModel + Site Brief och skriver `data/prompt-inputs/<siteId>.project-input.json` + sidecar `<siteId>.meta.json` med `projectId/version/originalPrompt/briefSource`. Brief-imports ligger på modulnivå så fallback-tester monkeypatchar lookup-namnen som `generate()` faktiskt använder.
 - **Follow-up prompt versions** är landat: operatören kan fortsätta på befintlig prompt-input/run, behålla `projectId`, bumpa `version` och få ny build/run för samma sajtspår.
@@ -94,12 +95,13 @@ Tre lager:
 
 ## Nästa konkreta uppgift
 
-Se `docs/current-focus.md` → **"Next action"**. Kort version: ingen aktiv PR-blocker och inga öppna PRs. Nästa Builder-beslut är follow-up-semantiken i dev-driver/backoffice:
+Se `docs/current-focus.md` → **"Next action"**. Kort version: `main` är i bra läge, men PR #24 är öppen draft:
 
-1. **Follow-up-semantik i `scripts/dev_generate.py` + Backoffice Playground** — `--mode followup` och Project ID exponeras, men planfasen skickar fortfarande `engine_mode="init"` och `project_id=None`. Antingen dölj/disable:a follow-up där tills kontraktet är riktigt, eller för `mode`/`project_id` hela vägen genom planfasen och lås med test.
-2. **B13a arkitektur-flytt** — `scripts/build_site.py` produktlogik till `packages/generation/build/`. Egen sprint, kräver troligen egen ADR (rör mappgränser i `repo-boundaries.v1.json`). Destinationen pre-allokerad i `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
-3. **`write_pages` icon-bibliotek-agnostisk refactor** — lyfter den arkitekturskuld som ADR 0020 explicit lämnade öppen. Förebygger att samma lucide-typen av starter-vs-codegen-konflikt uppstår igen för en framtida starter utan lucide.
-4. **Cancellation-followup** — lågprioriterad separat sprint om operatören behöver avbryta redan startade playground-körningar.
+1. **PR #24 `docs-base` starter** — draft; verifiera base/checks/Bugbot och operatörs-OK innan ready/merge.
+2. Hardcoded kontakt-CTA — `_pick_contact_route`-propagation till `render_layout`, `render_home`, `render_services` så ingen renderer literal-kodar `href="/kontakt"` (se motsvarande post i `docs/known-issues.md`).
+3. **B13a arkitektur-flytt** — `scripts/build_site.py` produktlogik till `packages/generation/build/`. Egen sprint, kräver troligen egen ADR (rör mappgränser i `repo-boundaries.v1.json`). Destinationen pre-allokerad i `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
+4. **`write_pages` icon-bibliotek-agnostisk refactor** — lyfter den arkitekturskuld som ADR 0020 explicit lämnade öppen. Förebygger att samma lucide-typen av starter-vs-codegen-konflikt uppstår igen för en framtida starter utan lucide.
+5. **Cancellation-followup** — lågprioriterad separat sprint om operatören behöver avbryta redan startade playground-körningar.
 
 PromptBuilder stage-timeout är inte längre listad som aktiv nice-to-have; Scout verifierade att cleanup redan finns.
 
@@ -157,6 +159,9 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+10eb286 fix(dev-generate): thread follow-up mode into plan phase
+ec11c41 docs: sync generated output path across docs
+de7fd7c docs(focus): bump verified SHA after workspace hygiene pass
 134df07 chore(workspace): perf hygiene + .generated externalization + viewser prettier setup
 9ff7c50 docs(focus): bump verified SHA + queue after audit-fix B44+B46
 5d746e9 fix(viewser): audit-fix sprint for B44 + B46

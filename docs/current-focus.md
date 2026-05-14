@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `134df07` (2026-05-14, post-workspace-hygien-pass: `.cursorignore` utökad, `.cursorindexingignore` + `.editorconfig` tillagda, `.vscode/settings.json` får watcher-exclude + prettier-format-on-save + tsserver memory-bump, dev-preview-output flyttad från in-repo `.generated/` till `../sajtbyggaren-output/.generated/<siteId>` via ny `resolve_generated_dir()` + `--generated-dir`/`SAJTBYGGAREN_GENERATED_DIR`-overrides, ny `builder-smoke` CI-job, `apps/viewser` prettier 3.8.3 + plugin tillagda, `konversation.txt` untrackad. Bygger på audit-fix-sprinten `5d746e9` (B44 + B46) och Steward-cleanupen `34551b4`. Inga öppna PRs.)
+Last verified state: `10eb286` (2026-05-14, post-follow-up-semantik sprint: `scripts/dev_generate.py` trådar nu `--mode followup` + `--project-id` hela vägen till `produce_site_plan()`, så `input.json` och `generation-package.json` matchar (`engineMode=followup`, `projectId=<id>`). Backoffice Playground-runnern är source-lockad att skicka `--project-id` och `SAJTBYGGAREN_MODE=followup`. Föregående hygiene/docs-commits: `134df07`, `de7fd7c`, `ec11c41`. Öppen PR: #24 `docs-base` starter, draft, ska inte mergas förrän operatör + checks/base-status är klar.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `134df07`; senaste produktcommit är `5d746e9` (Builder audit-fix för B44 + B46) ovanpå `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `10eb286`; senaste produktcommit är `10eb286` (B48 follow-up-semantik i dev-driver/backoffice) ovanpå `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -50,8 +50,7 @@ Project Input, skriver den till `data/prompt-inputs/<siteId>.project-input.json`
 + sidecar `<siteId>.meta.json` (projectId/version/originalPrompt/
 briefSource), och `apps/viewser/app/api/prompt/route.ts` triggar
 `runBuild` med dossier-path-override. PromptBuilder är nu den enda
-primära promptytan på Viewser-home; legacy ChatPanel finns kvar som
-komponent men importeras/renderas inte från `app/page.tsx`. Follow-up
+primära promptytan på Viewser-home; legacy ChatPanel är raderad. Follow-up
 prompt versions är nu landat: operatören kan fortsätta på befintlig
 prompt-input/run, behålla `projectId`, bumpa version och få ny build/run
 för samma sajtspår. RunHistory uppdateras via samma `fetchRuns`-loop som
@@ -184,6 +183,16 @@ Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
   CI-job, `apps/viewser` får prettier 3.8.3 + plugin, `konversation.txt`
   untrackas. Inte en buggfix - se note i `docs/known-issues.md`
   "Notera (inte en bugg)" om den nya output-pathen.
+- `de7fd7c` — `docs(focus): bump verified SHA after workspace hygiene pass`.
+  Standard loop steg 8 efter workspace-hygien-passet.
+- `ec11c41` — `docs: sync generated output path across docs`.
+  Synkar `AGENTS.md`, `README.md` och `docs/architecture/builder-mvp.md`
+  till nya defaulten `../sajtbyggaren-output/.generated/<siteId>/`.
+- `10eb286` — `fix(dev-generate): thread follow-up mode into plan phase`.
+  B48 stängd: `run_phase_plan()` tar `mode`/`project_id` och skickar dem
+  till `produce_site_plan()`, så `generation-package.json` matchar
+  `input.json` vid follow-up. Tester låser både CLI/dev-driver och
+  Backoffice Playground-subprocessen.
 
 Mainline-steward-pushar efter PR #21 (pure docs/governance):
 
@@ -222,21 +231,20 @@ nästa sprint.
 
 Ingen pågående produktimplementation på `main`. Prompt-till-sajt MVP v1,
 mini-sprinten som gjorde PromptBuilder till enda primära promptyta, follow-up
-prompt versions, PR #23 backoffice trace/playground och PR #22 `portfolio-base`
-starter är klara. Inga öppna PRs finns just nu.
+prompt versions, PR #23 backoffice trace/playground, PR #22 `portfolio-base`
+starter och B48 follow-up-semantik är klara. Öppen PR finns: #24 `docs-base`
+starter är draft.
 
 ## Next action - direktiv till nästa agent
 
-**Nästa Builder-beslut: follow-up-semantik i dev-driver/backoffice.**
+**PR-/queue-triage efter B48.**
 
-- `scripts/dev_generate.py` exponerar `--mode followup` och `--project-id`,
-  men planfasen skickar fortfarande `engine_mode="init"` och
-  `project_id=None` till `produce_site_plan()`. Backoffice Playground kan
-  därför starta follow-up-körning där `input.json` säger followup medan
-  `generation-package.json` fortfarande speglar init.
-- Nästa Builder bör antingen dölja/disable:a follow-up i Backoffice/dev-driver
-  tills kontraktet är riktigt, eller föra `mode`/`project_id` hela vägen genom
-  planfasen och låsa beteendet med test.
+- #24 `docs-base` starter är öppen draft-PR. Den ska inte mergas förrän
+  operatören vill gå vidare, branch/base-läge är verifierat mot senaste
+  `main`, och checks/Bugbot-status är kända.
+- Nästa små Builder-sprint på `main` bör annars vara B45:
+  `_pick_contact_route`-propagation till `render_layout`, `render_home` och
+  `render_services`, så ingen renderer literal-kodar `href="/kontakt"`.
 - Audit-fix-sprinten 2026-05-14 stängde B44 (PromptBuilder false success
   via ny `buildStatus` på `/api/prompt` + outcome-aware UI/header) och B46
   (raderade legacy `ChatPanel`-komponent + uppdaterade tester/allowlist).
@@ -274,7 +282,10 @@ Innan `git push origin main`:
 
 ## Blocked items
 
-Inga öppna PR-blockers just nu.
+Öppna PRs blockerar inte `main`, men får inte mergas ännu:
+
+- #24 `docs-base` starter: draft; verifiera base/checks/Bugbot och operatörs-OK
+  innan ready/merge.
 
 ## Do not start yet
 
@@ -296,7 +307,7 @@ Inga öppna PR-blockers just nu.
 
 ## Queue
 
-1. Follow-up-semantik i dev-driver/backoffice: se "Next action".
+1. #24 `docs-base` starter: draft-PR; triage/verifiera innan ready/merge.
 2. B45 (låg): `_pick_contact_route`-propagation till
    `render_layout/render_home/render_services` så ingen renderer
    literal-kodar `href="/kontakt"`. Egen mini-sprint med test som
