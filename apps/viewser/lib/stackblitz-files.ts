@@ -27,16 +27,75 @@ const BINARY_EXTENSIONS = new Set([
 const FILES_TO_SKIP = new Set(["package-lock.json"]);
 
 /**
- * B54: defensive filter against `.env*` leaking into a public StackBlitz
- * preview. Builder's `copy_starter` already blocks `.env*` from landing
- * in `generated-files/` (B4/B5, case-insensitive), but this layer must
- * have its own filter so a future starter, manual operator edit, or
- * drift in the builder cannot bypass the upstream guard. Matches
- * `.env`, `.env.local`, `.env.production`, and case variants like
- * `.ENV` or `.Env.Local`.
+ * B54 + B58: defensive filter against `.env*` leaking into a public
+ * StackBlitz preview. Builder's `copy_starter` already blocks `.env*`
+ * from landing in `generated-files/` (B4/B5, case-insensitive), but this
+ * layer must have its own filter so a future starter, manual operator
+ * edit, or drift in the builder cannot bypass the upstream guard.
+ * Matches `.env`, `.env.local`, `.env.production`, and case variants
+ * like `.ENV` or `.Env.Local`.
+ *
+ * Allowlist exception: `.env.example` is public placeholder content (it
+ * documents which env variables the generated site expects and contains
+ * NAMES only, no secrets). It is the only `.env*` file explicitly
+ * untracked by `.gitignore` (`!.env.example`). Operators in the
+ * StackBlitz preview need to see it so they can copy it to `.env.local`
+ * inside the WebContainer to wire up live env-vars. B58 follow-up to B54
+ * (reviewer 2026-05-14: blocking `.env.example` was a low-risk
+ * functional regression).
  */
 function isDotenvFile(basename: string): boolean {
-  return basename.toLowerCase().startsWith(".env");
+  const lower = basename.toLowerCase();
+  if (!lower.startsWith(".env")) return false;
+  if (lower === ".env.example") return false;
+  return true;
+}
+
+function ensureWebpackFlag(command: string): string {
+  const trimmed = command.trim();
+  if (!trimmed) return "next dev --webpack";
+  if (trimmed.includes("--webpack")) return trimmed;
+  if (!/\bnext\s+dev\b/.test(trimmed)) return trimmed;
+  return `${trimmed} --webpack`;
+}
+
+function patchPackageJsonForStackblitz(content: string): string {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return content;
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return content;
+  }
+
+  const packageJson = { ...(parsed as Record<string, unknown>) };
+  const currentScripts = packageJson.scripts;
+  const scripts =
+    currentScripts &&
+    typeof currentScripts === "object" &&
+    !Array.isArray(currentScripts)
+      ? { ...(currentScripts as Record<string, unknown>) }
+      : {};
+
+  const currentDev = typeof scripts.dev === "string" ? scripts.dev : "next dev";
+  scripts.dev = ensureWebpackFlag(currentDev);
+  packageJson.scripts = scripts;
+
+  const currentStackblitz = packageJson.stackblitz;
+  const stackblitz =
+    currentStackblitz &&
+    typeof currentStackblitz === "object" &&
+    !Array.isArray(currentStackblitz)
+      ? { ...(currentStackblitz as Record<string, unknown>) }
+      : {};
+  stackblitz.installDependencies = true;
+  stackblitz.startCommand = "npm run dev";
+  packageJson.stackblitz = stackblitz;
+
+  return `${JSON.stringify(packageJson, null, 2)}\n`;
 }
 
 export type StackblitzFileMap = Record<string, string>;
@@ -144,8 +203,10 @@ export async function readRunFilesForStackblitz(runId: string): Promise<Stackbli
 
     const relPath = path.relative(sourceDir, filePath).split(path.sep).join("/");
     const content = await fs.readFile(filePath, "utf-8");
-    projectFiles[relPath] = content;
-    totalBytes += stats.size;
+    const patchedContent =
+      relPath === "package.json" ? patchPackageJsonForStackblitz(content) : content;
+    projectFiles[relPath] = patchedContent;
+    totalBytes += Buffer.byteLength(patchedContent, "utf-8");
   }
 
   return projectFiles;

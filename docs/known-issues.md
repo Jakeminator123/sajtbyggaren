@@ -123,6 +123,16 @@ Format per bugg:
   `load_scaffold_registry()` (samma mönster som B22 löste för
   `scaffold.schema.json`). Ej blocker - byggtidsguarden täcker redan
   scenariot, men en schema-fil ger tidigare felfångst + IDE-stöd.
+- **`B56` Medel** - StackBlitz-preview för Next 16-runs startar via `next dev`
+  (Turbopack default), vilket kan faila i WebContainer med felet "Turbopack is
+  not supported on this platform ... use next dev --webpack". Arkitekturen är
+  annars korrekt: Viewser embed:ar vald run-sajt (generated files), inte
+  Viewser själv.
+  Fix: open.
+  Test:
+  `tests/test_viewser_files.py::test_stackblitz_files_patches_package_json_for_webpack`,
+  `tests/test_viewser_files.py::test_stackblitz_files_does_not_duplicate_webpack_flag`,
+  `tests/test_viewser_files.py::test_stackblitz_files_does_not_write_back_package_json_to_disk`.
 
 ### Notera (inte en bugg) - dev-preview-output utanför repo
 
@@ -142,6 +152,43 @@ arkitekturändring, inte en bugg.
 (B20 stängd 2026-05-13 — se "Stängda - regression-test säkrar fixet" nedan.)
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B57` Medel** (stängd 2026-05-14, reviewer-fynd-follow-up efter A-mini
+  cleanup) - B55-guarden från föregående sprint kollade bara
+  `apps/viewser/.env` och `apps/viewser/.env.local` med hårdkodade
+  Path-objekt. `.gitignore` säger däremot `.env.*` (allt) undantag
+  `.env.example`, så en framtida `.env.production`, `.env.staging`,
+  `.env.development` eller någon annan variant skulle kunna trackas
+  utan att fångas av testet. Reviewer-fyndet (Cursor-agent, 2026-05-14)
+  flaggade detta som 35% sannolikhet, 8/10 impact (secret leakage).
+  **Fix:** testet kör nu `git ls-files apps/viewser/.env*` och bygger
+  ett set av alla trackade matchningar. Den enda tillåtna är
+  `apps/viewser/.env.example` (publik placeholder, explicit
+  `!.env.example` i `.gitignore`). Alla andra trackade `.env*` failar
+  testet med tydlig `git rm --cached`-remediation.
+  Test:
+  `tests/test_viewser_files.py::test_viewser_env_file_is_not_committed`
+  (samma test, ny robust glob-baserad logik).
+
+- **`B58` Låg** (stängd 2026-05-14, reviewer-fynd-follow-up efter A-mini
+  cleanup) - B54-filtret från föregående sprint blockerade alla
+  `.env*`-filer från StackBlitz-upload-loopen via prefix-check på
+  `.env`. Det inkluderade `.env.example`, vilket är publik placeholder
+  som **ska** följa med upp till preview så operatörer ser vilka
+  env-vars sajten förväntar sig. Reviewer-fyndet (Cursor-agent, 2026-05-14)
+  flaggade detta som 20% sannolikhet, 3/10 impact (dev/preview-friktion,
+  funktionell regression).
+  **Fix:** `isDotenvFile` i `apps/viewser/lib/stackblitz-files.ts` har
+  nu explicit allowlist-check: `if (lower === ".env.example") return false`
+  innan den generella `startsWith(".env")`-check:en. `.env.example` följer
+  därför med upp till preview medan alla andra `.env*`-varianter
+  (`.env`, `.env.local`, `.env.production`, `.ENV`, `.Env.Local`) blockas.
+  Test:
+  `tests/test_viewser_files.py::test_stackblitz_files_filter_dotenv_files_from_preview_upload`
+  (utökad till att kräva både prefix-check, `toLowerCase()` och
+  `.env.example`-allowlist),
+  `tests/test_viewser_files.py::test_stackblitz_files_allow_env_example_through_filter`
+  (källkods-lock på `=== ".env.example"`-pattern).
 
 - **`B51` Låg** (stängd 2026-05-14, A-mini cleanup efter B50) -
   `scripts/build_site.py:render_layout` skrev nav-labels direkt som JSX-

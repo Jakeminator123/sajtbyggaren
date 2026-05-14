@@ -82,21 +82,39 @@ def test_viewser_legacy_dossier_picker_removed() -> None:
 
 @pytest.mark.tooling
 def test_viewser_env_file_is_not_committed() -> None:
-    """B55: ``.env`` and ``.env.local`` may exist on disk locally for
-    developer convenience (Next.js dev workflow), but must never be
-    committed. The guard previously used ``.exists()`` which fired on any
-    local file, including gitignored ones, which gave operators a false
-    "the env file is committed" alarm. Check git tracking semantics
-    instead so a local-only ``.env.local`` does not break the test while a
-    truly committed env file still fails it loudly.
+    """B57: ``.gitignore`` says ``.env.*`` (allt), undantag ``.env.example``.
+    Tidigare guard (B55) kollade bara två hårdkodade filer
+    (``.env`` + ``.env.local``) vilket lämnade en lucka för
+    ``.env.production``, ``.env.staging``, ``.env.development`` eller
+    en framtida variant som råkar bli ``git add``-ad. Reviewer-fyndet
+    (2026-05-14) flaggade detta som mellanrisk: 35% sannolikhet, 8/10
+    impact (secret leakage).
+
+    B57-guarden glob-listar **alla** trackade filer som matchar
+    ``apps/viewser/.env*`` via ``git ls-files`` och verifierar att den
+    enda tillåtna är ``apps/viewser/.env.example`` (publik placeholder,
+    explicit ``!.env.example`` i ``.gitignore``). En framtida
+    ``.env.production`` som råkar trackas failar testet med tydlig
+    remediation.
     """
-    for env_path in (VIEWSER_DIR / ".env", VIEWSER_DIR / ".env.local"):
-        assert not _is_tracked_in_git(env_path), (
-            f"{env_path.relative_to(REPO_ROOT)} är trackat i git. Env-filer "
-            "får aldrig committas - kör `git rm --cached <fil>` och säkerställ "
-            "att den är gitignored. Lokala dev-värden hör hemma i .env.local "
-            "som ska vara gitignored, inte committad."
-        )
+    result = subprocess.run(
+        ["git", "-C", str(REPO_ROOT), "ls-files", "apps/viewser/.env*"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        pytest.skip(f"git ls-files unavailable: {result.stderr.strip()}")
+    tracked = {line.strip() for line in result.stdout.splitlines() if line.strip()}
+    allowed = {"apps/viewser/.env.example"}
+    unexpected = tracked - allowed
+    assert not unexpected, (
+        f"Otrackade env-filer hittade i git: {sorted(unexpected)!r}. "
+        ".env*-filer (utom .env.example) får aldrig committas. "
+        "Kör `git rm --cached <fil>` och säkerställ att .gitignore "
+        "blockar dem. Endast .env.example är tillåten i index "
+        "(publik placeholder, explicit !.env.example i .gitignore)."
+    )
 
 
 @pytest.mark.tooling
@@ -125,22 +143,29 @@ def test_viewser_api_routes_call_localhost_guard() -> None:
 
 @pytest.mark.tooling
 def test_stackblitz_files_filter_dotenv_files_from_preview_upload() -> None:
-    """B54: ``readRunFilesForStackblitz`` reads every file under the run's
-    ``generated-files/`` snapshot (or ``.generated/<siteId>/`` fallback) and
-    bundles it for the StackBlitz preview upload. Builder already blocks
-    ``.env*`` from landing in those snapshots today (B4/B5 enforce a case-
-    insensitive ignore in ``copy_starter``), but the upload layer must have
-    its own defensive filter so a future starter, manual operator edit, or
-    drift in the builder cannot leak a ``.env``/``.env.local``/``.env.production``
-    into a public preview. Lock the presence of the filter so a refactor
-    cannot quietly drop it.
+    """B54 + B58: ``readRunFilesForStackblitz`` reads every file under the
+    run's ``generated-files/`` snapshot (or ``.generated/<siteId>/`` fallback)
+    and bundles it for the StackBlitz preview upload. Builder already
+    blocks ``.env*`` from landing in those snapshots today (B4/B5 enforce
+    a case-insensitive ignore in ``copy_starter``), but the upload layer
+    must have its own defensive filter so a future starter, manual
+    operator edit, or drift in the builder cannot leak a
+    ``.env``/``.env.local``/``.env.production`` into a public preview.
 
-    The expected pattern is a ``.env``-prefix check on the file's basename,
-    case-insensitive (mirrors the case-variant coverage in B4).
+    B58 follow-up (reviewer 2026-05-14): the filter must NOT block
+    ``.env.example``. That file is a public placeholder (explicit
+    ``!.env.example`` in ``.gitignore``) documenting which env variables
+    the generated site expects. Operators in the preview need it to wire
+    up live env-vars. Reviewer flagged the original B54 filter as a
+    low-risk functional regression (20% / 3/10).
+
+    Lock both invariants:
+    1. A case-insensitive ``.env``-prefix check exists in the filter.
+    2. ``.env.example`` is explicitly allowlisted so it passes through.
     """
     text = (VIEWSER_DIR / "lib" / "stackblitz-files.ts").read_text(encoding="utf-8")
     assert re.search(
-        r'\.toLowerCase\(\)\.startsWith\(["\']\.env["\']\)',
+        r'\.startsWith\(["\']\.env["\']\)',
         text,
     ), (
         "stackblitz-files.ts saknar ``.env*``-filter i upload-loopen. B54 "
@@ -148,6 +173,94 @@ def test_stackblitz_files_filter_dotenv_files_from_preview_upload() -> None:
         "med upp till StackBlitz-preview, även om Builder-blockaden "
         "tappar effekt eller om en operatör manuellt lägger en .env i en "
         "starter för lokal test."
+    )
+    assert re.search(
+        r'\.toLowerCase\(\)',
+        text,
+    ), (
+        "stackblitz-files.ts ``.env*``-filtret måste vara case-insensitivt "
+        "(toLowerCase). Mirror B4:s case-variant-täckning (``.ENV``, "
+        "``.Env.Local`` etc.)."
+    )
+    assert re.search(
+        r'\.env\.example',
+        text,
+    ), (
+        "stackblitz-files.ts saknar allowlist-undantag för ``.env.example``. "
+        "B58 kräver att den publika placeholder-filen följer med upp till "
+        "StackBlitz-preview så operatörer ser vilka env-vars sajten "
+        "förväntar sig. Endast ``.env.example`` (lower-case) får passera "
+        "genom det annars heltäckande ``.env*``-filtret."
+    )
+
+
+@pytest.mark.tooling
+def test_stackblitz_files_allow_env_example_through_filter() -> None:
+    """B58: explicit lock that ``.env.example`` is not filtered out by the
+    ``.env*`` guard. Uses source-text inspection (same pattern as the
+    other stackblitz-files lock tests) because the TS function is
+    internal and not directly callable from Python.
+
+    The expected pattern: a check that returns ``false`` (i.e. NOT a
+    dotenv file to filter) when ``basename.toLowerCase() === ".env.example"``.
+    """
+    text = (VIEWSER_DIR / "lib" / "stackblitz-files.ts").read_text(encoding="utf-8")
+    assert re.search(
+        r'=== ["\']\.env\.example["\']',
+        text,
+    ), (
+        "stackblitz-files.ts måste ha en explicit allowlist-check för "
+        '``.env.example`` (typ ``if (lower === ".env.example") return false;``) '
+        "innan det generella ``.env*``-filtret slår till. Annars blockas den "
+        "publika placeholder-filen från StackBlitz-preview (B58)."
+    )
+
+
+@pytest.mark.tooling
+def test_stackblitz_files_patches_package_json_for_webpack() -> None:
+    """B56: StackBlitz-preview ska patcha package.json i-memory så Next 16
+    kör med Webpack i WebContainer.
+    """
+    text = (VIEWSER_DIR / "lib" / "stackblitz-files.ts").read_text(encoding="utf-8")
+    assert "patchPackageJsonForStackblitz" in text, (
+        "stackblitz-files.ts måste innehålla en package.json-patch-funktion "
+        "för StackBlitz-preview."
+    )
+    assert 'scripts.dev = ensureWebpackFlag(currentDev)' in text, (
+        "stackblitz-files.ts måste patcha scripts.dev via ensureWebpackFlag."
+    )
+    assert 'stackblitz.startCommand = "npm run dev"' in text, (
+        "stackblitz-files.ts måste sätta stackblitz.startCommand till "
+        "`npm run dev` för WebContainer-start."
+    )
+    assert re.search(
+        r'relPath\s*===\s*["\']package\.json["\']\s*\?\s*patchPackageJsonForStackblitz\(content\)\s*:\s*content',
+        text,
+    ), (
+        "package.json-patchen måste ske inline i fil-map-loopen (bytes till "
+        "StackBlitz), inte via diskmutation."
+    )
+
+
+@pytest.mark.tooling
+def test_stackblitz_files_does_not_duplicate_webpack_flag() -> None:
+    """Idempotens: redan patchat kommando ska inte få dubbel --webpack."""
+    text = (VIEWSER_DIR / "lib" / "stackblitz-files.ts").read_text(encoding="utf-8")
+    assert 'if (trimmed.includes("--webpack")) return trimmed;' in text, (
+        "ensureWebpackFlag måste kortsluta när --webpack redan finns."
+    )
+    assert "return `${trimmed} --webpack`;" in text, (
+        "ensureWebpackFlag måste append:a --webpack när det saknas."
+    )
+
+
+@pytest.mark.tooling
+def test_stackblitz_files_does_not_write_back_package_json_to_disk() -> None:
+    """B56-scope: patchen får inte skriva starter/run-snapshot till disk."""
+    text = (VIEWSER_DIR / "lib" / "stackblitz-files.ts").read_text(encoding="utf-8")
+    assert "writeFile(" not in text and ".writeFile(" not in text, (
+        "stackblitz-files.ts får inte skriva package.json till disk i B56; "
+        "endast in-memory patch innan embedProject."
     )
 
 
