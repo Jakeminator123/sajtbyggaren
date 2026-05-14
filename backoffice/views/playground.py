@@ -13,7 +13,6 @@ import subprocess
 import sys
 import threading
 import time
-from dataclasses import dataclass
 from typing import Any
 
 import streamlit as st
@@ -24,15 +23,6 @@ from ._trace import load_trace_events, render_trace_viewer
 
 PLAYGROUND_TIMEOUT_SECONDS = 180
 LOG_EXCERPT_LINES = 80
-
-
-@dataclass(frozen=True)
-class PlaygroundRunResult:
-    exit_code: int
-    output: str
-    run_id: str | None
-    timed_out: bool
-    elapsed_seconds: float
 
 
 def _extract_run_id(output: str) -> str | None:
@@ -97,7 +87,7 @@ def _run_dev_generate(
     *,
     status_slot: Any | None = None,
     timeout_seconds: int = PLAYGROUND_TIMEOUT_SECONDS,
-) -> PlaygroundRunResult:
+) -> dict[str, Any]:
     args = [
         sys.executable,
         str(SCRIPTS_DIR / "dev_generate.py"),
@@ -144,7 +134,13 @@ def _run_dev_generate(
         )
     except FileNotFoundError as exc:
         output = f"dev_generate.py kunde inte startas: {exc}"
-        return PlaygroundRunResult(1, output, None, False, 0.0)
+        return {
+            "exit_code": 1,
+            "output": output,
+            "run_id": None,
+            "timed_out": False,
+            "elapsed_seconds": 0.0,
+        }
 
     if process.stdout is not None:
         reader = threading.Thread(target=_reader, args=(process.stdout,), daemon=True)
@@ -198,13 +194,13 @@ def _run_dev_generate(
         exit_code=exit_code,
         lines=output_lines,
     )
-    return PlaygroundRunResult(
-        exit_code=exit_code,
-        output=output,
-        run_id=_extract_run_id(output),
-        timed_out=timed_out,
-        elapsed_seconds=elapsed,
-    )
+    return {
+        "exit_code": exit_code,
+        "output": output,
+        "run_id": _extract_run_id(output),
+        "timed_out": timed_out,
+        "elapsed_seconds": elapsed,
+    }
 
 
 def view_playground() -> None:
@@ -274,19 +270,19 @@ def view_playground() -> None:
                 project_id=project_id,
                 status_slot=status_slot,
             )
-            if not requires_existing_run and result.run_id:
-                st.session_state["playground_run_id"] = result.run_id
-            st.session_state["playground_output"] = result.output
+            if not requires_existing_run and result["run_id"]:
+                st.session_state["playground_run_id"] = result["run_id"]
+            st.session_state["playground_output"] = result["output"]
             st.session_state["playground_phase"] = phase
-            st.session_state["playground_exit_code"] = result.exit_code
-            st.session_state["playground_timed_out"] = result.timed_out
-            st.session_state["playground_elapsed_seconds"] = result.elapsed_seconds
-            if result.exit_code == 0:
-                st.success(f"Subprocess klar på {result.elapsed_seconds:.1f}s.")
-            elif result.timed_out:
+            st.session_state["playground_exit_code"] = result["exit_code"]
+            st.session_state["playground_timed_out"] = result["timed_out"]
+            st.session_state["playground_elapsed_seconds"] = result["elapsed_seconds"]
+            if result["exit_code"] == 0:
+                st.success(f"Subprocess klar på {result['elapsed_seconds']:.1f}s.")
+            elif result["timed_out"]:
                 st.error(f"Timeout efter {PLAYGROUND_TIMEOUT_SECONDS}s.")
             else:
-                st.error(f"Subprocess failade med exit code {result.exit_code}.")
+                st.error(f"Subprocess failade med exit code {result['exit_code']}.")
 
     if a.button("Fas 1: brief", use_container_width=True, key="pg_brief", disabled=not can_run):
         _run("brief", requires_existing_run=False)
