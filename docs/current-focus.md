@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `97ce7a8` (2026-05-14, post-workspace cleanup: B48 follow-up-semantik är landad i `10eb286`, `5199d94` bumpade focus/handoff, och `97ce7a8` lägger `.review-*/` i `.gitignore` + `.cursorignore` + VS Code watcher-exclude samt uppdaterar stale `build-runner.ts`-kommentaren till nya external generated-dir. Öppen PR: #24 `docs-base` starter, draft, ska inte mergas förrän operatör + checks/base-status är klar.)
+Last verified state: `c2d8632` (2026-05-14, post-PR #24 docs-base merge med Steward-fixup för B49: ny `data/starters/docs-base/`-starter (Nextra/Pagefind/MDX) under `data/starters/docs-base/` plus harden:ad ThemeToggle (useState lazy-init + aria-pressed + suppressHydrationWarning) och ärlig sidebar-copy i `authoring.mdx` / `index.mdx` / starter-README. B49 (page-map-driven sidebar för docs-base) öppen i `known-issues.md` som följdsteg innan runtime-aktivering av `course-education -> docs-base`. Bygger på workspace-cleanup `97ce7a8` + B48 follow-up-semantik `10eb286`. Inga öppna PRs.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `97ce7a8`; senaste produktcommit är `10eb286` (B48 follow-up-semantik i dev-driver/backoffice) ovanpå `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `c2d8632`; senaste produktcommit är `c2d8632` (PR #24 docs-base starter, squash-merge) ovanpå `10eb286` (B48 follow-up-semantik i dev-driver/backoffice), `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -199,6 +199,18 @@ Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
   build-runner comment`. `.review-*/` ignoreras i git/Cursor/VS Code
   watcher och `build-runner.ts`-kommentaren pekar på external
   generated preview directory.
+- `8997596` — `docs(focus): bump verified SHA after workspace cleanup`.
+  Standard loop steg 8 efter parallell-agentens workspace-cleanup.
+- `c2d8632` — `feat(starters): add harmonized docs-base starter (PR #24)`.
+  Squash-merge: ny `data/starters/docs-base/`-starter (Nextra 4.6.1 +
+  Pagefind + MDX) + Steward-fixup för coachens fynd: ärlig sidebar-
+  copy i `authoring.mdx`/`index.mdx`/starter-README + harden:ad
+  ThemeToggle (useState lazy-init istället för DOM-mutation, plus
+  aria-pressed + suppressHydrationWarning, lint-clean mot React 19/
+  Next 16's `react-hooks/set-state-in-effect`-regel). `docs-base` är
+  starter-underlag, inte aktiverad i `SCAFFOLD_TO_STARTER`. B49 öppen
+  som följdsteg innan runtime-aktivering: page-map-driven sidebar
+  istället för manuell `<aside>` i `layout.tsx`.
 
 Mainline-steward-pushar efter PR #21 (pure docs/governance):
 
@@ -238,29 +250,30 @@ nästa sprint.
 Ingen pågående produktimplementation på `main`. Prompt-till-sajt MVP v1,
 mini-sprinten som gjorde PromptBuilder till enda primära promptyta, follow-up
 prompt versions, PR #23 backoffice trace/playground, PR #22 `portfolio-base`
-starter och B48 follow-up-semantik är klara. Öppen PR finns: #24 `docs-base`
-starter är draft.
+starter, B48 follow-up-semantik och PR #24 `docs-base` starter är klara.
+Inga öppna PRs.
 
 ## Next action - direktiv till nästa agent
 
-**PR-/queue-triage efter B48.**
+**Builder-mini-sprint: B45 `_pick_contact_route`-propagation, alternativt B49
+page-map-driven sidebar för docs-base.**
 
-- #24 `docs-base` starter är öppen draft-PR. Den ska inte mergas förrän
-  operatören vill gå vidare, branch/base-läge är verifierat mot senaste
-  `main`, och checks/Bugbot-status är kända.
-- Nästa små Builder-sprint på `main` bör annars vara B45:
+- Nästa små Builder-sprint på `main` bör vara B45:
   `_pick_contact_route`-propagation till `render_layout`, `render_home` och
   `render_services`, så ingen renderer literal-kodar `href="/kontakt"`.
-- Audit-fix-sprinten 2026-05-14 stängde B44 (PromptBuilder false success
-  via ny `buildStatus` på `/api/prompt` + outcome-aware UI/header) och B46
-  (raderade legacy `ChatPanel`-komponent + uppdaterade tester/allowlist).
-  Två nya öppna B-IDs tillagda: B45 (hardcoded `/kontakt` i
-  `render_layout/render_home/render_services`) och B47 (commerce-base
-  Shopify handles). Inga blockers, men nästa Scout/Builder bör veta om
-  dem.
+- Alternativ Builder-sprint: B49 page-map-driven sidebar för `docs-base`.
+  Kräver att antingen Nextra-theme-docs `Layout` får fungera (PR #24-bodyn
+  noterar att den failade validering i miljön) eller en lokal
+  `_meta.ts`-driven sidebar byggs. Måste vara klar innan
+  `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`.
+- Tidigare audit-fix-sprintar 2026-05-14: B44 (PromptBuilder false success)
+  och B46 (ChatPanel-radering) stängda. Öppna B-IDs: B45 hardcoded
+  `/kontakt`, B47 commerce-base Shopify handles, B49 docs-base page-map
+  sidebar. Inga blockers.
 
-`portfolio-base` är nu bara starter-underlag; ingen `SCAFFOLD_TO_STARTER`-
-mappning eller real-codegen-scope är aktiverad av #22.
+`portfolio-base` och `docs-base` är båda starter-underlag; ingen
+`SCAFFOLD_TO_STARTER`-mappning eller real-codegen-scope är aktiverad
+av #22 eller #24.
 
 ### Pre-push self-review checklist (lärt från B13b + B20)
 
@@ -288,16 +301,18 @@ Innan `git push origin main`:
 
 ## Blocked items
 
-Öppna PRs blockerar inte `main`, men får inte mergas ännu:
+Öppna PRs blockerar inte `main`, men status:
 
-- #24 `docs-base` starter: draft; verifiera base/checks/Bugbot och operatörs-OK
-  innan ready/merge.
+- #25 `cursor/env-setup-9fef`: draft, parallell cloud-agent docs-PR som
+  lägger till en gotcha för `/sajtbyggaren-output`-permissions i
+  `AGENTS.md`. Inte vår sprint, övervaka och låt den landa när operatör
+  ger OK.
 
 ## Do not start yet
 
 - StackBlitz-preview, Fly-deploy, PreviewRuntime - inte påbörjat.
-- Nya starters utöver `marketing-base`, `commerce-base` och `portfolio-base`
-  (vendor).
+- Nya starters utöver `marketing-base`, `commerce-base`, `portfolio-base`
+  och `docs-base` (vendor).
 - Större Builder UX-utbyggnad.
 - B13a arkitektur-flytt (`scripts/build_site.py` produktlogik ->
   `packages/generation/build/`) - kvarstår som öppen post men kräver
@@ -313,11 +328,14 @@ Innan `git push origin main`:
 
 ## Queue
 
-1. #24 `docs-base` starter: draft-PR; triage/verifiera innan ready/merge.
-2. B45 (låg): `_pick_contact_route`-propagation till
+1. B45 (låg): `_pick_contact_route`-propagation till
    `render_layout/render_home/render_services` så ingen renderer
    literal-kodar `href="/kontakt"`. Egen mini-sprint med test som
    låser frånvaron av literalen.
+2. B49 (medel): page-map-driven sidebar för `docs-base`-startern; måste
+   vara klar innan `course-education -> docs-base` aktiveras i
+   `SCAFFOLD_TO_STARTER`. Antingen återinför Nextra-theme-docs `Layout`
+   eller bygg lokal `_meta.ts`-/filsystem-driven nav.
 3. B47 (låg): commerce-base Shopify-handles dokumenteras eller får
    fallback. Egen e-commerce-sprint, ej blocker idag.
 4. B13a arkitektur-flytt (egen sprint, kräver ADR).

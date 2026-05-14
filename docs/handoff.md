@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-14 (post-workspace cleanup)
-**Aktuell repo-HEAD på `main`:** `97ce7a8` (`.review-*/` ignoreras i git/Cursor/VS Code watcher och stale `build-runner.ts`-kommentar är synkad till external generated-dir). B48 follow-up-semantik landade i `10eb286` och dokumenterades i `5199d94`. Kör `git log --oneline -1` för senaste lokala SHA.
-**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-10` finns lokalt från pre-audit-fix-läget; `backup-9` finns lokalt från pre-PR-#23-läget; `backup-8` finns lokalt efter follow-up-sprinten; `backup-7` (från `fb11925`) ligger på origin som tidigare fallback.
+**Datum:** 2026-05-14 (post-PR #24 docs-base merge)
+**Aktuell repo-HEAD på `main`:** `c2d8632` (squash-merge av PR #24 `docs-base` starter + Steward-fixup för B49: ny Nextra/Pagefind/MDX-starter under `data/starters/docs-base/` + harden:ad ThemeToggle + ärlig sidebar-copy). Bygger på `97ce7a8` workspace-cleanup, `10eb286` B48 follow-up-semantik, `5d746e9` audit-fix B44+B46. Kör `git log --oneline -1` för senaste lokala SHA.
+**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-10` finns lokalt från pre-audit-fix-läget; `backup-9` finns lokalt från pre-PR-#23-läget; `backup-8` finns lokalt efter follow-up-sprinten; `backup-7` (från `fb11925`) ligger på origin som tidigare fallback. Worktree `../sajtbyggaren-pr24` är borttaget efter merge.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
 Färdiga startprompter för Scout/Builder/Steward finns i [`docs/agent-prompts.md`](agent-prompts.md).
@@ -46,7 +46,7 @@ Tre lager:
 - `backoffice/` + `backend.py` — Streamlit-administration (inte runtime).
 - `packages/` + `apps/` — runtime + kund-UI.
 
-## Vad funkar idag (post-workspace cleanup, repo-HEAD `97ce7a8`)
+## Vad funkar idag (post-PR #24 merge, repo-HEAD `c2d8632`)
 
 ### Governance + guards
 
@@ -86,7 +86,8 @@ Tre lager:
 
 ### Starter-katalog
 
-- `data/starters/portfolio-base/` finns nu som harmoniserad starter via PR #22. Den är starter-underlag, inte aktiverad `SCAFFOLD_TO_STARTER`-mappning och inte real-codegen-scope.
+- `data/starters/portfolio-base/` (PR #22) och `data/starters/docs-base/` (PR #24) finns nu som harmoniserade starters. Båda är starter-underlag, inte aktiverade i `SCAFFOLD_TO_STARTER`-mappning och inte i real-codegen-scope.
+- `docs-base` (Nextra 4.6.1 + Pagefind + MDX): sidomenyn i `src/app/layout.tsx` är manuellt underhållen — scaffold-injektion av nya MDX måste också uppdatera `<aside>`-blocket. Detta är dokumenterat ärligt i `authoring.mdx`/`index.mdx`/starter-README och spårat som `B49` i `known-issues.md` (page-map-driven sidebar krävs innan runtime-aktivering).
 - Befintliga aktiva starterflöden är oförändrade: `marketing-base` för real codegen-scope och `commerce-base` för ecommerce-lite deterministic-v1 enligt tidigare ADR-spår.
 
 ### Builder UX MVP
@@ -95,10 +96,10 @@ Tre lager:
 
 ## Nästa konkreta uppgift
 
-Se `docs/current-focus.md` → **"Next action"**. Kort version: `main` är i bra läge, men PR #24 är öppen draft:
+Se `docs/current-focus.md` → **"Next action"**. Kort version: `main` är i bra läge utan öppna PRs:
 
-1. **PR #24 `docs-base` starter** — draft; verifiera base/checks/Bugbot och operatörs-OK innan ready/merge.
-2. Hardcoded kontakt-CTA — `_pick_contact_route`-propagation till `render_layout`, `render_home`, `render_services` så ingen renderer literal-kodar `href="/kontakt"` (se motsvarande post i `docs/known-issues.md`).
+1. **B45 `_pick_contact_route`-propagation** — till `render_layout`, `render_home`, `render_services` så ingen renderer literal-kodar `href="/kontakt"` (se motsvarande post i `docs/known-issues.md`). Liten Builder-mini-sprint.
+2. **B49 page-map-driven sidebar för `docs-base`** — krävs innan `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`. Antingen återinför Nextra-theme-docs `Layout` eller bygg lokal `_meta.ts`-/filsystem-driven nav.
 3. **B13a arkitektur-flytt** — `scripts/build_site.py` produktlogik till `packages/generation/build/`. Egen sprint, kräver troligen egen ADR (rör mappgränser i `repo-boundaries.v1.json`). Destinationen pre-allokerad i `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
 4. **`write_pages` icon-bibliotek-agnostisk refactor** — lyfter den arkitekturskuld som ADR 0020 explicit lämnade öppen. Förebygger att samma lucide-typen av starter-vs-codegen-konflikt uppstår igen för en framtida starter utan lucide.
 5. **Cancellation-followup** — lågprioriterad separat sprint om operatören behöver avbryta redan startade playground-körningar.
@@ -159,6 +160,8 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+c2d8632 feat(starters): add harmonized docs-base starter (PR #24)
+8997596 docs(focus): bump verified SHA after workspace cleanup
 97ce7a8 chore(workspace): ignore PR review worktrees and sync build-runner comment
 5199d94 docs(focus): record B48 follow-up semantics landing
 10eb286 fix(dev-generate): thread follow-up mode into plan phase

@@ -236,6 +236,15 @@ COMMON_WORDS = {
     "VariantHints", "VariantThemeTokenHints", "ScaffoldVariantThemeTokens",
     # Migrationsplanens prosa-rubriker för parallellspår (inte domänbegrepp)
     "Builder MVP hardening", "Viewser MVP", "Vocabulary compression",
+    # docs-base starter (PR #24): React/Nextra-symboler refererade i docs
+    # men bara använda inuti `data/starters/docs-base/`. ThemeToggle är
+    # lokal React-komponent; Layout är Nextra-theme-docs-symbolen som
+    # nämns i B49-noten i `known-issues.md`.
+    "ThemeToggle", "Layout",
+    # Aktuella öppna B-IDs som dyker upp som backtick-prosa i
+    # known-issues.md / current-focus.md / handoff.md. Svaga
+    # interna identifierare, inte domänbegrepp.
+    "B49",
     # Generic prose ord som dyker upp i operator-flöde-text (ADR 0012)
     "Build", "Page", "Scaffolds",
 }

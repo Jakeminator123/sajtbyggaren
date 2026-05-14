@@ -107,6 +107,21 @@ Format per bugg:
   e-commerce-sprint som antingen ger fallback-copy/produkter eller
   dokumenterar starter-kraven. Ej blocker för aktiva flöden idag (real
   codegen-scope är fortfarande `marketing-base`-only per ADR 0017).
+- **`B49` Medel** - `data/starters/docs-base/src/app/layout.tsx` har en
+  manuellt underhållen `<aside>`-sidebar med fyra fasta `/docs/...`-länkar
+  istället för att läsa från Nextra-page-map / `_meta.ts`-filerna. Källan:
+  Steward-Scout-pass på PR #24 (2026-05-14, coach + tre subagents).
+  `_meta.ts`-filerna importeras inte någonstans i layouten. Fixupen i
+  PR #24 (commit `3f93655`) skrev om `authoring.mdx`, `index.mdx` och
+  starter-README så de tydligt säger att sidebar är manuellt
+  underhållen och måste edit:as när scaffold injicerar nya MDX, men
+  arkitektur-skulden står kvar. Innan `course-education -> docs-base`
+  aktiveras i `SCAFFOLD_TO_STARTER` ska antingen Nextra-theme-docs
+  `Layout` få fungera (PR #24-bodyn säger att den failade validering
+  i miljön) eller en lokal page-map-driven sidebar bygga sig själv från
+  `_meta.ts` + filsystemet. Test bör låsa relationen så framtida
+  scaffold-injektion av MDX inte tyst kan saknas i nav. Ej blocker idag
+  (docs-base är inte aktiverad i runtime).
 
 ### Notera (inte en bugg) - dev-preview-output utanför repo
 
