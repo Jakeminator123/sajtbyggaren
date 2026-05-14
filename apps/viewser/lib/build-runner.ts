@@ -203,7 +203,9 @@ async function runBuildOnce(
 /**
  * Run build_site.py for a given siteId. Concurrent invocations are serialized
  * with a single in-flight promise so two parallel POSTs do not race over the
- * same `.generated/<siteId>/` directory or confuse the "latest run" fallback.
+ * same generated preview directory (by default
+ * `../sajtbyggaren-output/.generated/<siteId>/`) or confuse the "latest run"
+ * fallback.
  *
  * `dossierPathOverride` is the bridge for the prompt-driven flow: the
  * Python helper writes the Project Input to `data/prompt-inputs/` (NOT

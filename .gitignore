@@ -56,6 +56,7 @@ Thumbs.db
 .tmp.*
 .commit-msg.tmp
 konversation.txt
+.review-*/
 
 # Operator-only reference workspace - copies/forks of MIN_IDE-style examples.
 # Files in MIN_IDE/ are read-only inspiration and never get committed.

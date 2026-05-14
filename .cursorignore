@@ -109,6 +109,7 @@ data/starters/**/public/**/*.eot
 MIN_IDE/
 .git/
 konversation.txt
+.review-*/
 .streamlit/secrets.toml
 .cursor/mcp.json
 .vscode/*.local.json

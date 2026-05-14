@@ -10,6 +10,7 @@
     "**/__pycache__/**": true,
     "**/.next/**": true,
     "**/.generated/**": true,
+    "**/.review-*/**": true,
     "**/data/runs/**": true,
     "**/data/versions/**": true,
     "**/MIN_IDE/**": true,
