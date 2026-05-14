@@ -235,13 +235,36 @@ def _js_string_literal(text: str) -> str:
     return json.dumps(text, ensure_ascii=False)
 
 
-def _route_href(route_path: str) -> str:
-    """Return a scaffold route path as a safe JSX href attribute value."""
+def _validated_site_route_path(route_path: str) -> str:
+    """Return a scaffold route path after fail-fast canonical validation."""
     if not isinstance(route_path, str) or not route_path.startswith("/"):
         raise SystemExit(
             "Builder failed: scaffold route path must be an absolute "
             f"site path starting with '/' (got {route_path!r})."
         )
+    if route_path.startswith("//"):
+        raise SystemExit(
+            "Builder failed: scaffold route path must be a root-relative "
+            f"site path, not a protocol-relative URL (got {route_path!r})."
+        )
+    if "\\" in route_path or "?" in route_path or "#" in route_path:
+        raise SystemExit(
+            "Builder failed: scaffold route path must be a canonical site "
+            f"path without backslashes, query strings or fragments (got {route_path!r})."
+        )
+    if route_path != "/":
+        segments = route_path.split("/")[1:]
+        if any(segment in {"", ".", ".."} for segment in segments):
+            raise SystemExit(
+                "Builder failed: scaffold route path must not contain empty, "
+                f"'.' or '..' path segments (got {route_path!r})."
+            )
+    return route_path
+
+
+def _route_href(route_path: str) -> str:
+    """Return a scaffold route path as a safe JSX href attribute value."""
+    route_path = _validated_site_route_path(route_path)
     return _jsx_safe_string(route_path)
 
 
@@ -1166,6 +1189,7 @@ def all_default_routes(scaffold_routes: dict) -> list[str]:
 
 
 def route_to_page_path(target: Path, route: str) -> Path:
+    route = _validated_site_route_path(route)
     if route == "/":
         return target / "app" / "page.tsx"
     return target / "app" / route.lstrip("/") / "page.tsx"

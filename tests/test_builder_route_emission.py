@@ -134,11 +134,25 @@ def test_route_href_serializes_scaffold_path_as_jsx_expression() -> None:
 
 
 @pytest.mark.tooling
-def test_route_href_rejects_non_absolute_paths() -> None:
+@pytest.mark.parametrize(
+    "route_path",
+    [
+        "kontakt",
+        "//example.com",
+        "/../secret",
+        "/foo/../bar",
+        "/foo//bar",
+        "/foo/.",
+        "/foo\\bar",
+        "/foo?x=1",
+        "/foo#section",
+    ],
+)
+def test_route_href_rejects_non_canonical_paths(route_path: str) -> None:
     from scripts.build_site import _route_href
 
-    with pytest.raises(SystemExit, match="must be an absolute site path"):
-        _route_href("kontakt")
+    with pytest.raises(SystemExit, match="scaffold route path"):
+        _route_href(route_path)
 
 
 @pytest.mark.tooling
@@ -176,6 +190,18 @@ def test_nav_items_includes_dossier_route_when_present() -> None:
     assert ("/spel", "Spel") in items
     items_no_dossier = _nav_items_from_scaffold(LSB_ROUTES["defaultRoutes"], [])
     assert ("/spel", "Spel") not in items_no_dossier
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize("route_path", ["//example.com", "/../secret", "/foo/../bar"])
+def test_route_to_page_path_rejects_non_canonical_paths(
+    tmp_path: Path,
+    route_path: str,
+) -> None:
+    from scripts.build_site import route_to_page_path
+
+    with pytest.raises(SystemExit, match="scaffold route path"):
+        route_to_page_path(tmp_path, route_path)
 
 
 @pytest.mark.tooling
@@ -693,6 +719,23 @@ def test_write_pages_fails_when_contact_route_is_missing(tmp_path: Path) -> None
 
     with pytest.raises(SystemExit, match="must include a route with id='contact'"):
         write_pages(tmp_path, _minimal_dossier(), routes_without_contact, [])
+
+
+@pytest.mark.tooling
+def test_write_pages_rejects_non_canonical_scaffold_route(tmp_path: Path) -> None:
+    """B50 follow-up: scaffold routes must not escape the site route space."""
+    from scripts.build_site import write_pages
+
+    routes_with_escaping_path = {
+        "defaultRoutes": [
+            {"id": "home", "path": "/", "required": True, "purpose": "Home"},
+            {"id": "about", "path": "/../secret", "required": True, "purpose": "About"},
+            {"id": "contact", "path": "/kontakt", "required": True, "purpose": "Contact"},
+        ]
+    }
+
+    with pytest.raises(SystemExit, match=r"must not contain .* path segments"):
+        write_pages(tmp_path, _minimal_dossier(), routes_with_escaping_path, [])
 
 
 @pytest.mark.tooling
