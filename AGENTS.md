@@ -83,3 +83,8 @@ Commands are documented in the README under "Snabbstart". Key commands:
   `data/runs/`. If you see test runs leaving behind run directories, that
   is a regression of `e376439` and must be filed in
   `docs/known-issues.md`.
+- The builder writes generated sites to `../sajtbyggaren-output/` by
+  default (resolves to `/sajtbyggaren-output/` on Cloud Agent VMs). The
+  update script creates this directory with open permissions. If tests
+  fail with a permission error on that path, run
+  `sudo mkdir -p /sajtbyggaren-output && sudo chmod 777 /sajtbyggaren-output`.
