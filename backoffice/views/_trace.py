@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import Counter, defaultdict
 from collections.abc import Mapping
 from pathlib import Path
@@ -16,6 +17,14 @@ IMPORTANT_EVENT_TOKENS = ("quality", "repair", "codegen")
 ERROR_STATUS_TOKENS = ("error", "failed", "failure")
 WARNING_STATUS_TOKENS = ("degraded", "skipped", "timeout")
 SUCCESS_STATUS_TOKENS = ("done", "ok", "completed", "success")
+
+
+def _contains_token(text: str, tokens: tuple[str, ...]) -> bool:
+    """Match telemetry tokens without substring false positives."""
+    return any(
+        re.search(rf"(?<![\w-]){re.escape(token)}(?![\w-])", text)
+        for token in tokens
+    )
 
 
 def load_trace_events(trace_path: Path) -> tuple[list[dict[str, Any]], int]:
@@ -45,20 +54,20 @@ def _text_value(event: Mapping[str, Any], key: str) -> str:
 
 def event_severity(event: Mapping[str, Any]) -> Severity:
     """Classify a trace event for visual emphasis in the backoffice."""
-    status = _text_value(event, "status").lower()
+    status = _text_value(event, "status").strip().lower()
     event_name = _text_value(event, "event").lower()
     message = _text_value(event, "message").lower()
 
-    if any(token in status for token in ERROR_STATUS_TOKENS):
+    if status in ERROR_STATUS_TOKENS:
         return "error"
-    if any(token in status for token in WARNING_STATUS_TOKENS):
+    if status in WARNING_STATUS_TOKENS:
         return "warning"
-    if any(token in status for token in SUCCESS_STATUS_TOKENS):
+    if status in SUCCESS_STATUS_TOKENS:
         return "success"
     searchable = f"{event_name} {message}"
-    if any(token in searchable for token in ERROR_STATUS_TOKENS):
+    if _contains_token(searchable, ERROR_STATUS_TOKENS):
         return "error"
-    if any(token in searchable for token in WARNING_STATUS_TOKENS):
+    if _contains_token(searchable, WARNING_STATUS_TOKENS):
         return "warning"
     return "info"
 
@@ -143,6 +152,9 @@ def _filter_events(
     statuses: list[str],
     query: str,
 ) -> list[dict[str, Any]]:
+    if not phases or not statuses:
+        return []
+
     query_normalized = query.strip().lower()
     filtered: list[dict[str, Any]] = []
     for event in events:

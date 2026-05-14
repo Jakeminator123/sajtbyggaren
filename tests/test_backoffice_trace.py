@@ -96,6 +96,28 @@ def test_trace_summary_and_severity_mark_important_events() -> None:
 
 
 @pytest.mark.tooling
+@pytest.mark.parametrize("status", ["broken", "token", "revoked"])
+def test_event_severity_does_not_match_ok_inside_status_words(status: str) -> None:
+    from backoffice.views._trace import event_severity
+
+    assert event_severity({"status": status, "event": "noop", "message": ""}) == "info"
+
+
+@pytest.mark.tooling
+def test_filter_events_empty_phase_or_status_selection_returns_empty() -> None:
+    from backoffice.views._trace import _filter_events
+
+    events = [
+        {"phase": "engine", "status": "started", "event": "run.started"},
+        {"phase": "build", "status": "done", "event": "phase.completed"},
+    ]
+
+    assert _filter_events(events, [], ["started", "done"], "") == []
+    assert _filter_events(events, ["engine", "build"], [], "") == []
+    assert _filter_events(events, ["engine"], ["started"], "") == [events[0]]
+
+
+@pytest.mark.tooling
 def test_playground_extracts_run_id_from_supported_outputs() -> None:
     from backoffice.views.playground import _extract_run_id
 
