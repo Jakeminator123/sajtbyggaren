@@ -5,16 +5,17 @@ Det här är vad varje AI-agent (eller mänsklig medhjälpare) behöver veta inn
 ## Läs i denna ordning
 
 0. [`docs/current-focus.md`](current-focus.md) - aktuell köplan. Läs alltid först.
-1. [`docs/agent-prompts.md`](agent-prompts.md) - fasta agentroller och copy-paste-startprompter.
-2. [`docs/PROJECT_BRIEF.md`](PROJECT_BRIEF.md) - vad och varför.
-3. [`docs/architecture/system-overview.md`](architecture/system-overview.md) - hur lagren hänger ihop.
-4. [`docs/glossary.md`](glossary.md) - mänsklig genomgång av alla begrepp.
-5. [`governance/policies/naming-dictionary.v1.json`](../governance/policies/naming-dictionary.v1.json) - kanoniska termer (sanningskälla).
-6. [`governance/policies/repo-boundaries.v1.json`](../governance/policies/repo-boundaries.v1.json) - mappägarskap.
-7. [`governance/policies/engine-run.v1.json`](../governance/policies/engine-run.v1.json) - artefaktkontraktet för en körning.
-8. [`docs/architecture/llm-flow.md`](architecture/llm-flow.md) - fas 1-3.
-9. [`governance/decisions/0009-engine-run-and-llm-models.md`](../governance/decisions/0009-engine-run-and-llm-models.md) - varför Engine Run-modellen ser ut så.
-10. [`docs/migration-plan.md`](migration-plan.md) - sprint-ordning och vad som plockats varifrån.
+1. [`docs/product-operating-context.md`](product-operating-context.md) - produktkompass och prioriteringsfilter.
+2. [`docs/agent-prompts.md`](agent-prompts.md) - fasta agentroller och copy-paste-startprompter.
+3. [`docs/PROJECT_BRIEF.md`](PROJECT_BRIEF.md) - vad och varför.
+4. [`docs/architecture/system-overview.md`](architecture/system-overview.md) - hur lagren hänger ihop.
+5. [`docs/glossary.md`](glossary.md) - mänsklig genomgång av alla begrepp.
+6. [`governance/policies/naming-dictionary.v1.json`](../governance/policies/naming-dictionary.v1.json) - kanoniska termer (sanningskälla).
+7. [`governance/policies/repo-boundaries.v1.json`](../governance/policies/repo-boundaries.v1.json) - mappägarskap.
+8. [`governance/policies/engine-run.v1.json`](../governance/policies/engine-run.v1.json) - artefaktkontraktet för en körning.
+9. [`docs/architecture/llm-flow.md`](architecture/llm-flow.md) - fas 1-3.
+10. [`governance/decisions/0009-engine-run-and-llm-models.md`](../governance/decisions/0009-engine-run-and-llm-models.md) - varför Engine Run-modellen ser ut så.
+11. [`docs/migration-plan.md`](migration-plan.md) - sprint-ordning och vad som plockats varifrån.
 
 ## Hårda regler för agentarbete
 
@@ -24,6 +25,9 @@ Det här är vad varje AI-agent (eller mänsklig medhjälpare) behöver veta inn
 - **`.cursor/rules` är speglar.** Redigera aldrig direkt; ändra under `governance/rules/` och kör `python scripts/rules_sync.py`.
 - **Validera policies före commit.** `python scripts/governance_validate.py` ska returnera exit-kod 0.
 - **Svenska först.** Svara alltid på svenska, även när användaren skriver engelska. Använd riktiga `å`, `ä`, `ö`. Aldrig `\u00f6` eller ASCII-translit.
+- **Produktkompassen först vid tradeoffs.** Om en ändring inte hjälper
+  `prompt -> företagshemsida -> preview -> följdprompt -> ny version`
+  ska den parkeras om operatören inte uttryckligen prioriterar den.
 
 ## Arbetsflöde för en typisk uppgift
 

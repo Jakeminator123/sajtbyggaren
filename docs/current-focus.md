@@ -279,7 +279,9 @@ mini-sprinten som gjorde PromptBuilder till enda primära promptyta, follow-up
 prompt versions, PR #23 backoffice trace/playground, PR #22 `portfolio-base`
 starter, B48 follow-up-semantik, PR #24 `docs-base` starter, B45
 kontakt-route-propagation, Codex-IDE agent-parity-regeln och mergead
-branch-cleanup är klara. Inga öppna PRs.
+branch-cleanup är klara. PR #26 är öppen som draft för
+`docs/product-operating-context.md` och kopplad agentläsordning; den ska
+mergeas eller stängas innan nästa större Builder-sprint startar.
 
 ## Next action - direktiv till nästa agent
 
@@ -291,6 +293,9 @@ branch-cleanup är klara. Inga öppna PRs.
 - `AGENTS.md` innehåller nu Codex-IDE-regeln från `04fb92f`: Codex agerar
   Cursor-kompatibel repo-agent och följer `.cursor`-reglerna, men ändrar
   governance-källorna om en regel behöver uppdateras.
+- PR #26 lägger produktkompassen i `docs/product-operating-context.md`.
+  Den förtydligar att B49 fortfarande är ett giltigt enabling-steg när det
+  gör nästa småföretagarsajt mer korrekt, previewbar eller aktiverbar.
 - Nästa Builder-sprint bör vara B49 page-map-driven sidebar för `docs-base`.
   Kräver att antingen Nextra-theme-docs `Layout` får fungera (PR #24-bodyn
   noterar att den failade validering i miljön) eller en lokal

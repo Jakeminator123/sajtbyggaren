@@ -97,7 +97,7 @@ Tre lager:
 
 ## Nästa konkreta uppgift
 
-Se `docs/current-focus.md` → **"Next action"**. Kort version: `main` är i bra läge utan öppna PRs:
+Se `docs/current-focus.md` → **"Next action"**. Kort version: `main` är i bra läge, men PR #26 är öppen som draft för produktkompass + agentläsordning:
 
 1. **B49 page-map-driven sidebar för `docs-base`** — krävs innan `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`. Antingen återinför Nextra-theme-docs `Layout` eller bygg lokal `_meta.ts`-/filsystem-driven nav.
 2. **B47 commerce-base Shopify-handles** — dokumentera starterkrav eller bygg fallback.
