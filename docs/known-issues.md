@@ -93,7 +93,7 @@ Format per bugg:
 
 ## Stängda - regression-test säkrar fixet
 
-- **`BO2` Medel** (stängd 2026-05-13, commit `32ac6c3`) - Backoffice trace
+- **`BO2` Medel** (stängd 2026-05-14, squash-merge `e1ad5ca` via PR #23) - Backoffice trace
   viewer dumpade tidigare bara rå dataframe för `trace.ndjson`.
   Fix: ny backoffice-helper `backoffice/views/_trace.py` läser halvskrivna
   trace-rader defensivt, summerar events, grupperar per fas, lägger filter för
@@ -104,7 +104,7 @@ Format per bugg:
   `tests/test_backoffice_trace.py::test_trace_summary_and_severity_mark_important_events`,
   `tests/test_backoffice_trace.py::test_trace_views_use_structured_trace_viewer`.
 
-- **`BO4` Medel** (stängd 2026-05-13, commit `32ac6c3`) -
+- **`BO4` Medel** (stängd 2026-05-14, squash-merge `e1ad5ca` via PR #23) -
   `backoffice/views/playground.py` var en svart låda medan
   `scripts/dev_generate.py` körde via `subprocess.run(... timeout=180)`.
   Fix: Playground använder nu en kontrollerad `subprocess.Popen`-runner som

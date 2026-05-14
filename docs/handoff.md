@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-14 (post-follow-up prompt versions)
-**Aktuell HEAD på `main`:** `2701b00` (Builder direktpush `feat(viewser): add follow-up prompt versions` ovanpå Steward-processcommit `006be38`). Kör `git log --oneline -1` för senaste SHA.
-**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-8` finns lokalt efter follow-up-sprinten; `backup-7` (från `fb11925`) ligger på origin som tidigare fallback.
+**Datum:** 2026-05-14 (post-PR #23 backoffice trace/playground)
+**Aktuell produkt-HEAD på `main`:** `e1ad5ca` (squash-merge PR #23 `feat(backoffice): improve trace viewer and playground logs` ovanpå follow-up prompt versions `2701b00`). Kör `git log --oneline -1` för senaste lokala SHA.
+**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-9` finns lokalt från pre-PR-#23-läget; `backup-8` finns lokalt efter follow-up-sprinten; `backup-7` (från `fb11925`) ligger på origin som tidigare fallback.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
 Färdiga startprompter för Scout/Builder/Steward finns i [`docs/agent-prompts.md`](agent-prompts.md).
@@ -46,7 +46,7 @@ Tre lager:
 - `backoffice/` + `backend.py` — Streamlit-administration (inte runtime).
 - `packages/` + `apps/` — runtime + kund-UI.
 
-## Vad funkar idag (post-follow-up prompt versions, HEAD `2701b00`)
+## Vad funkar idag (post-PR #23, produkt-HEAD `e1ad5ca`)
 
 ### Governance + guards
 
@@ -77,19 +77,24 @@ Tre lager:
 - **Follow-up prompt versions** är landat: operatören kan fortsätta på befintlig prompt-input/run, behålla `projectId`, bumpa `version` och få ny build/run för samma sajtspår.
 - **ViewerPanel** fallback-copy hänvisar nu till promptfältet, inte den borttagna Build-knappen.
 
+### Backoffice trace/playground (PR #23, produkt-HEAD `e1ad5ca`)
+
+- **Engine Runs** och **Playground** använder en gemensam strukturerad trace-viewer i `backoffice/views/_trace.py` för `trace.ndjson`: halvskrivna rader hoppas över defensivt, events summeras, grupperas per fas och kan filtreras på fas/status/söktext.
+- **Playground** kör `scripts/dev_generate.py` via kontrollerad `subprocess.Popen`-runner istället för svart-låde-`subprocess.run`, och visar status, elapsed time, exit code och loggutdrag under/efter körning.
+- **BO2/BO4** är stängda i `docs/known-issues.md`; kvar finns bara lågprioriterade `BO4-followup-cancel` för riktig cancellation/background-jobb.
+
 ### Builder UX MVP
 
 `apps/viewser/` har en `<RunDetailsPanel>` med fem sektioner (Build / Quality / Repair / Codegen / Models) som läser från `/api/runs/[runId]/artifacts`. `<RunHistory>` har status-färgning. PreviewRuntime / StackBlitzRuntime / FlyRuntime är parkerat som Sprint 4-5.
 
 ## Nästa konkreta uppgift
 
-Se `docs/current-focus.md` → **"Next action"**. Kort version: ingen aktiv blocker på `main`, men två draft-PRs ska inte mergas än:
+Se `docs/current-focus.md` → **"Next action"**. Kort version: ingen aktiv blocker på `main`; nästa PR-spår är #22:
 
-1. **#22 portfolio-base starter** — draft; uppdatera/verifiera mot senaste `main` innan ready/merge.
-2. **#23 backoffice trace/playground** — draft; Bugbot-status/fynd måste vara klara innan ready/merge.
-3. **B13a arkitektur-flytt** — `scripts/build_site.py` produktlogik till `packages/generation/build/`. Egen sprint, kräver troligen egen ADR (rör mappgränser i `repo-boundaries.v1.json`). Destinationen pre-allokerad i `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
-4. **`write_pages` icon-bibliotek-agnostisk refactor** — lyfter den arkitekturskuld som ADR 0020 explicit lämnade öppen. Förebygger att samma lucide-typen av starter-vs-codegen-konflikt uppstår igen för en framtida starter utan lucide.
-5. **BO2/BO4 backoffice-skuld** — dataframes → grupperad + färgad trace-viewer + async/cancellation i `backoffice/views/playground.py`; se #23 innan ny separat sprint planeras.
+1. **#22 portfolio-base starter** — uppdatera/rebasea mot senaste `main` efter PR #23 + Steward-docs, kör snabb Scout/GitHub-koll och mergea bara om checks/Bugbot fortsatt är gröna.
+2. **B13a arkitektur-flytt** — `scripts/build_site.py` produktlogik till `packages/generation/build/`. Egen sprint, kräver troligen egen ADR (rör mappgränser i `repo-boundaries.v1.json`). Destinationen pre-allokerad i `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
+3. **`write_pages` icon-bibliotek-agnostisk refactor** — lyfter den arkitekturskuld som ADR 0020 explicit lämnade öppen. Förebygger att samma lucide-typen av starter-vs-codegen-konflikt uppstår igen för en framtida starter utan lucide.
+4. **BO4-followup-cancel** — lågprioriterad separat sprint om operatören behöver avbryta redan startade Playground-körningar.
 
 Nice-to-have för PromptBuilder: setTimeout för stage-transition "thinking" → "building" saknar cleanup vid unmount. Låg risk men kan polishas om PromptBuilder rörs igen.
 
@@ -147,6 +152,7 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+e1ad5ca feat(backoffice): improve trace viewer and playground logs
 2701b00 feat(viewser): add follow-up prompt versions
 006be38 docs(workflow): formalize steward post-push verification
 c3dcc14 docs: correct verified HEAD to 2f0af68 in focus + handoff

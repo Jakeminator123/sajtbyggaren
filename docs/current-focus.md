@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `2701b00` (2026-05-14, post-follow-up prompt versions: Builder landade `feat(viewser): add follow-up prompt versions` direkt på `main`, lokal `main` och `origin/main` är synkade på `2701b00`, och `focus_check.py` rapporterar endast lokal `.cursor/settings.json` som ocommittad operatörsinställning. Öppna PRs finns: #22 portfolio-base starter och #23 backoffice trace/playground är båda draft och ska inte mergas förrän respektive base-/Bugbot-status är klar.)
+Last verified state: `e1ad5ca` (2026-05-14, post-PR #23: backoffice trace/playground mergead till `origin/main` ovanpå `2701b00`; BO2/BO4 är stängda i `docs/known-issues.md` med `BO4-followup-cancel` kvar som separat lågprioriterad post. Lokal `backup-9` skapad från pre-merge `main`; lokal `.cursor/settings.json` är fortsatt ocommittad operatörsinställning. #22 portfolio-base starter är enda öppna PR-spåret och ska uppdateras mot senaste main före merge.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `2701b00` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `e1ad5ca` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -55,8 +55,12 @@ komponent men importeras/renderas inte från `app/page.tsx`. Follow-up
 prompt versions är nu landat: operatören kan fortsätta på befintlig
 prompt-input/run, behålla `projectId`, bumpa version och få ny build/run
 för samma sajtspår. RunHistory uppdateras via samma `fetchRuns`-loop som
-`/api/build`. backup-8 finns lokalt efter follow-up-sprinten; backup-7 från
-`fb11925` ligger på origin som fallback efter audit-hotfix-sprinten.
+`/api/build`. PR #23 har dessutom landat backoffice trace/playground-
+förbättringar: Engine Runs och Playground använder en gemensam strukturerad
+trace-viewer och Playground visar subprocess-status/loggutdrag medan körningen
+pågår. `backup-9` finns lokalt från pre-PR-#23-läget; backup-8 finns lokalt
+efter follow-up-sprinten; backup-7 från `fb11925` ligger på origin som fallback
+efter audit-hotfix-sprinten.
 
 Föregående: PR #21 (lucide-react i commerce-base + ADR 0020,
 mergad `04fc2fa` 2026-05-13 19:55 UTC) gjorde full `npm run build`
@@ -140,6 +144,10 @@ Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
   Follow-up prompt versions landat direkt på `main`: promptflödet kan
   fortsätta på befintligt `projectId`, bumpa version och skriva nya
   prompt-inputs/runs för samma sajtspår.
+- `e1ad5ca` — `feat(backoffice): improve trace viewer and playground
+  logs`. PR #23 squash-mergead: BO2/BO4-städning med gemensam
+  trace-viewer för Engine Runs/Playground, synlig Playground-subprocess-
+  status/loggar och stängda `BO2`/`BO4` i `docs/known-issues.md`.
 
 Mainline-steward-pushar efter PR #21 (pure docs/governance):
 
@@ -167,32 +175,32 @@ Branches städade 2026-05-13/14: feat/b20-step-2-mapping-flip raderad
 lokalt + remote efter merge. `backup-6` (från `504befc`) skapad och
 pushad till origin före Prompt-till-sajt-sprinten. `backup-7` (från
 `fb11925`) skapad och pushad till origin före audit-hotfix-sprinten.
-Kvar lokalt: `main`, `backup-1`, `backup-4`, `backup-5`, `backup-6`,
-`backup-7`. Remote har även äldre `backup-2` och `backup-3`.
+`backup-8` finns lokalt efter follow-up-sprinten och `backup-9` finns
+lokalt från pre-PR-#23-läget. Kvar lokalt: `main`, `backup-1`,
+`backup-4`, `backup-5`, `backup-6`, `backup-7`, `backup-8`, `backup-9`.
+Remote har även äldre `backup-2` och `backup-3`.
 `frontend/christopher-import` (PR #17, stängd) ska inte röras i
 nästa sprint.
 
 ## Current active sprint
 
 Ingen pågående produktimplementation på `main`. Prompt-till-sajt MVP v1,
-mini-sprinten som gjorde PromptBuilder till enda primära promptyta och
-follow-up prompt versions är klara. Nästa arbete är PR-/queue-triage:
-#22 och #23 är öppna draft-PRs och ska inte mergas förrän respektive
-base-/Bugbot-status är klar.
+mini-sprinten som gjorde PromptBuilder till enda primära promptyta, follow-up
+prompt versions och PR #23 backoffice trace/playground är klara. Nästa arbete
+är att uppdatera #22 mot senaste `main`, göra snabb Scout/GitHub-koll och bara
+mergea om base-/Bugbot-/check-läget fortfarande är grönt.
 
 ## Next action - direktiv till nästa agent
 
-**PR-/queue-triage efter follow-up prompt versions.**
+**PR-/queue-triage efter PR #23.**
 
-- #22 `portfolio-base` starter är öppen draft-PR. Den ska inte mergas
-  förrän branchen/base-läget är uppdaterat mot senaste `main` och
-  operatören uttryckligen vill gå från draft till ready.
-- #23 backoffice trace/playground är öppen draft-PR. Den ska inte
-  markeras ready eller mergas förrän Bugbot-status/fynd är klara.
+- #22 `portfolio-base` starter är enda öppna PR-spåret. Uppdatera/rebasea
+  mot senaste `main` efter PR #23 + Steward-docs, kör snabb Scout/GitHub-
+  kontroll och mergea bara om checkarna fortsatt är gröna.
 - Lokal `.cursor/settings.json` är ändrad av operatörsmiljön och ska
   inte committas utan explicit operatörsbeslut.
 
-När PR-spåren är utredda är nästa produktval åter öppet: B13a,
+När #22-spåret är utrett är nästa produktval åter öppet: B13a,
 `write_pages` icon-bibliotek-agnostisk refactor eller nästa Builder UX-
 steg.
 
@@ -222,12 +230,10 @@ Innan `git push origin main`:
 
 ## Blocked items
 
-Öppna PRs blockerar inte `main`, men får inte mergas ännu:
+Öppna PRs blockerar inte `main`, men ska verifieras innan merge:
 
-- #22 `portfolio-base` starter: draft; uppdatera/verifiera mot senaste
-  `main` innan ready/merge.
-- #23 backoffice trace/playground: draft; Bugbot-status/fynd måste vara
-  klara innan ready/merge.
+- #22 `portfolio-base` starter: uppdatera/verifiera mot senaste `main`
+  efter PR #23 + Steward-docs innan merge.
 
 Lokal `.cursor/settings.json` är ocommittad operatörs-/plugininställning
 och ska inte ingå i Steward-commit utan explicit beslut.
@@ -251,17 +257,15 @@ och ska inte ingå i Steward-commit utan explicit beslut.
 
 ## Queue
 
-1. **#22 portfolio-base starter** — draft-PR; uppdatera/verifiera mot
-   senaste `main` före ready/merge.
-2. **#23 backoffice trace/playground** — draft-PR; invänta/hantera
-   Bugbot-status/fynd före ready/merge.
-3. B13a arkitektur-flytt (egen sprint, kräver ADR).
-4. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
+1. **#22 portfolio-base starter** — uppdatera/verifiera mot senaste
+   `main` efter PR #23 + Steward-docs före merge.
+2. B13a arkitektur-flytt (egen sprint, kräver ADR).
+3. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
    lucide-typen av starter-vs-codegen-konflikt; ADR 0020:s
    "INTE beslutar"-sektion).
-5. BO2/BO4 backoffice-skuld (round-1-skuld; se #23 innan ny separat
-   sprint planeras).
-6. **PromptBuilder polish (nice-to-have)**: setTimeout för
+4. BO4-followup-cancel (låg): riktig cancellation/background-jobb i
+   Playground om operatören behöver avbryta redan startade körningar.
+5. **PromptBuilder polish (nice-to-have)**: setTimeout för
    stage-transition "thinking" → "building" saknar cleanup vid
    unmount. Låg risk men låt nästa Builder rensa om PromptBuilder
    ändå rörs igen.
