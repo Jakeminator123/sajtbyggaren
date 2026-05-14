@@ -221,7 +221,7 @@ def main() -> int:
         print(
             "\nReminder: when this session's work is committed, bump the "
             "'Last verified' SHA in docs/current-focus.md to the new HEAD "
-            "and update queue/next-action. This is Standard loop step 7 "
+            "and update queue/next-action. This is Standard loop step 8 "
             "and it is the agent's job, not the operator's."
         )
 
