@@ -1,11 +1,11 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-14 (post-PR #26 produktkompass)
-**Aktuell repo-HEAD på `main`:** `1cba454` (PR #26: `docs/product-operating-context.md` + agentläsordning, squash-mergead efter Codex Scout-review och gröna GitHub-checkar). Bygger på `6daee58` (B45 contact-route propagation), `3178a82` (parallell-agent + operator workspace-cleanup), `c073d486` (PR #25 AGENTS.md gotcha för `/sajtbyggaren-output`-permissions), `19c3564` (Steward focus-bump efter PR #24), `c2d8632` (PR #24 docs-base starter + B49-fixup), `97ce7a8` workspace-cleanup, `10eb286` B48 follow-up-semantik, `5d746e9` audit-fix B44+B46. Kör `git log --oneline -1` för senaste lokala SHA.
-**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-13` finns på origin från pre-PR-#26-läget. PR #26:s branch `cursor/product-operating-context` är raderad på GitHub. Kvarvarande remote arbetsbrancher som inte ska raderas utan separat beslut: `feat/backoffice-trace-playground-cleanup` (ingen egen PR, inte ancestry-mergead efter squash) och `frontend/christopher-import` (PR #17 stängd utan merge, reference only).
+**Datum:** 2026-05-14 (post-orkestrator-playbook)
+**Aktuell repo-HEAD på `main`:** `e026642` lokalt före focus-bump-commit (`docs/orchestrator-playbook.md` + länkar från `AGENTS.md`, `docs/agent-handbook.md` och `docs/agent-prompts.md`). Bygger på `27f7fe9` (focus efter PR #26), `1cba454` (PR #26 produktkompass), `6daee58` (B45 contact-route propagation), `3178a82` (parallell-agent + operator workspace-cleanup), `c073d486` (PR #25 AGENTS.md gotcha för `/sajtbyggaren-output`-permissions), `19c3564` (Steward focus-bump efter PR #24), `c2d8632` (PR #24 docs-base starter + B49-fixup), `97ce7a8` workspace-cleanup, `10eb286` B48 follow-up-semantik, `5d746e9` audit-fix B44+B46. Kör `git log --oneline -1` för senaste lokala SHA.
+**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-14` finns på origin från pre-orkestrator-läget. PR #26:s branch `cursor/product-operating-context` är raderad på GitHub. Kvarvarande remote arbetsbrancher som inte ska raderas utan separat beslut: `feat/backoffice-trace-playground-cleanup` (ingen egen PR, inte ancestry-mergead efter squash) och `frontend/christopher-import` (PR #17 stängd utan merge, reference only).
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
-Färdiga startprompter för Scout/Builder/Steward finns i [`docs/agent-prompts.md`](agent-prompts.md).
+Färdiga startprompter för Scout/Builder/Steward finns i [`docs/agent-prompts.md`](agent-prompts.md). För längre fleragentpass används [`docs/orchestrator-playbook.md`](orchestrator-playbook.md); den samordnar befintliga roller och skapar inte en fjärde fast roll.
 
 ## Branch-policy: var jobbar agenten egentligen?
 

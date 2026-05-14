@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `1cba454` (2026-05-14, PR #26 produktkompass + agentläsordning squash-mergead: `docs/product-operating-context.md` finns och agenternas läsordning pekar dit. Bugg-reviewer-fyndet om öppen PR i focus/handoff är stängt i PR #26. Föregående produktcommit är B45 `6daee58`; inga öppna PRs.)
+Last verified state: `e026642` (2026-05-14, orkestrator-playbook för längre Codex-IDE-pass finns i `docs/orchestrator-playbook.md` och är länkad från `AGENTS.md`, `docs/agent-handbook.md` och `docs/agent-prompts.md`. PR #26 produktkompass + agentläsordning är landad i `1cba454`; `27f7fe9` recordade PR #26-landningen i focus. Inga öppna PRs.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `1cba454`; senaste produkt-/workflowcommit är PR #26:s produktkompass (`docs/product-operating-context.md`) ovanpå `6daee58` (B45 `_pick_contact_route`-propagation till layout/home/services/products), `c2d8632` (PR #24 docs-base starter, squash-merge), `10eb286` (B48 follow-up-semantik i dev-driver/backoffice), `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `e026642` lokalt före focus-bump-commit; senaste workflowcommit är orkestrator-playbooken (`docs/orchestrator-playbook.md`) som gör längre Codex-IDE-pass copy-pastebara utan att skapa en fjärde fast agentroll. Den bygger på `27f7fe9` (focus efter PR #26), PR #26:s produktkompass (`docs/product-operating-context.md`) i `1cba454`, `6daee58` (B45 `_pick_contact_route`-propagation till layout/home/services/products), `c2d8632` (PR #24 docs-base starter, squash-merge), `10eb286` (B48 follow-up-semantik i dev-driver/backoffice), `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -278,9 +278,9 @@ Ingen pågående produktimplementation på `main`. Prompt-till-sajt MVP v1,
 mini-sprinten som gjorde PromptBuilder till enda primära promptyta, follow-up
 prompt versions, PR #23 backoffice trace/playground, PR #22 `portfolio-base`
 starter, B48 follow-up-semantik, PR #24 `docs-base` starter, B45
-kontakt-route-propagation, Codex-IDE agent-parity-regeln och mergead
-branch-cleanup och PR #26 produktkompass/agentläsordning är klara. Inga
-öppna PRs.
+kontakt-route-propagation, Codex-IDE agent-parity-regeln, mergead
+branch-cleanup, PR #26 produktkompass/agentläsordning och
+orkestrator-playbooken för längre fleragentpass är klara. Inga öppna PRs.
 
 ## Next action - direktiv till nästa agent
 
