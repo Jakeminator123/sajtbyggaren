@@ -6,7 +6,7 @@ Deterministisk byggare som binder ihop kedjan Project Input + Starter + Scaffold
 
 Givet ett [Project Input](../../examples/painter-palma.project-input.json) producerar [scripts/build_site.py](../../scripts/build_site.py):
 
-1. En körbar Next.js-app under `.generated/<siteId>/` (gitignorerad dev-output).
+1. En körbar Next.js-app under `../sajtbyggaren-output/.generated/<siteId>/` som default (gitignorerad dev-output, utanför repo för lägre watcher-load i Cursor).
 2. De kanoniska Engine Run-artefakterna under `data/runs/<runId>/` (gitignorerade men strukturellt sanning).
 3. En append-only `trace.ndjson` med Engine Events från alla tre faser.
 
@@ -20,7 +20,7 @@ flowchart LR
   Phase2 --> Plan[site-plan.json via produce_site_plan real-or-mock]
   Phase2 --> Pkg[generation-package.json]
   Phase2 --> Phase3[Phase 3 build]
-  Phase3 --> Files[".generated/<siteId>/ pages"]
+  Phase3 --> Files["../sajtbyggaren-output/.generated/<siteId>/ pages"]
   Phase3 --> Npm{"npm run build"}
   Npm -->|fail| Fail[exit 1]
   Npm -->|ok| Result[build-result.json status=ok]
@@ -159,7 +159,7 @@ hardening-runda om det bedöms vara värt risken.
 Manuell preview när buildern är klar:
 
 ```powershell
-cd .generated/painter-palma
+cd ../sajtbyggaren-output/.generated/painter-palma
 npm run dev
 ```
 
@@ -167,13 +167,13 @@ npm run dev
 
 ```text
 runId: 20260507T130917Z-painter-palma
-Copying marketing-base -> .generated/painter-palma
+Copying marketing-base -> ../sajtbyggaren-output/.generated/painter-palma
 Patching package.json
 Patching app/layout.tsx
 Injecting variant tokens into app/globals.css
 Writing pages: /, /tjanster, /om-oss, /kontakt
 Running npm run build...
-Generated site at .generated/painter-palma
+Generated site at ../sajtbyggaren-output/.generated/painter-palma
 Run artifacts at data/runs/20260507T130917Z-painter-palma
 
 Total runtime: 7.6 s, exit: 0
@@ -212,13 +212,13 @@ Total runtime: 7.6 s, exit: 0
 | `site-brief.json` | understand | Site Brief från `briefModel` när `OPENAI_API_KEY` är satt (`briefSource=real`, `modelUsed=gpt-5.4`), annars mock med `briefSource=mock-no-key` eller `briefSource=mock-llm-error` om LLM-anropet failade |
 | `site-plan.json` | plan | Vald Scaffold + Variant + routes + valda dossiers + BuildSpec via `produce_site_plan` (`planSource`: `real` / `mock-no-key` / `mock-llm-error` / `pinned`) |
 | `generation-package.json` | plan | Sammanfattning av vad codegen-LLM skulle få (utan att vi anropar någon) |
-| `generated-files/` | build | Snapshot av filerna under `.generated/<siteId>/` exklusive `node_modules` och `.next` |
+| `generated-files/` | build | Snapshot av filerna under `../sajtbyggaren-output/.generated/<siteId>/` exklusive `node_modules` och `.next` |
 | `repair-result.json` | build | `RepairResult` från `packages/generation/repair/` (Sprint 3A): `status=not-needed` när Quality Gate är ok, annars `status=no-fix-applied` med `remainingErrors[]`. Mekaniska fixes + LLM-fix kommer i Sprint 3B+ |
 | `quality-result.json` | build | `QualityResult` från `packages/generation/quality_gate/` (Sprint 3A): fyra checks (typecheck/route-scan/build-status/policy-compliance) med per-check `status` + aggregat `ok`/`degraded`/`failed`. Scoring mot Page Quality Traits kommer i Sprint 3C |
 | `build-result.json` | build | Slutstatus (`ok`/`degraded`/`failed`/`skipped`), npm-steg, körtid, `modelUsed`, `briefSource`, `modelUsage`-stub, plus `codegen` (source/modelUsed/fileCount/rationale) per ADR 0015 |
 | `trace.ndjson` | alla | Append-only Engine Events |
 
-Generated files speglas till `.generated/<siteId>/` för dev-preview.
+Generated files speglas till `../sajtbyggaren-output/.generated/<siteId>/` för dev-preview.
 
 ## Builder-guards
 
@@ -229,7 +229,7 @@ Buildern har sex hårda spärrar:
 3. Required routes-checken körs nu av Quality Gate route-scan (Sprint 3A). Saknas en route flippas `quality-result.json:status` till `failed`, `build-result.json:status` blir `failed` och builder exit:ar 1. Den gamla `assert_routes_present`-funktionen finns kvar som B8/B9-regression-utility men interrupterar inte huvud-builden längre.
 4. `npm install` körs bara om `node_modules` saknas. Failar steget skrivs `build-result.json` med `status=failed` och buildern exit:ar 1.
 5. `npm run build` körs alltid när `--skip-build` inte är satt. Failar build skrivs `status=failed` och builder exit:ar 1.
-6. `.generated/<siteId>/` är gitignorerad. `data/runs/` är också gitignorerad så lokala körningar förorenar inte git-status.
+6. `../sajtbyggaren-output/.generated/<siteId>/` ligger utanför repo-roten som default (kan override:as med `--generated-dir` eller `SAJTBYGGAREN_GENERATED_DIR`). `data/runs/` är gitignorerad så lokala körningar förorenar inte git-status.
 
 ## Begränsningar i denna runda
 

@@ -27,7 +27,7 @@ Dossier (soft eller hard)          packages/generation/orchestration/dossiers/<c
   ↓
 Generation Package
   ↓
-Build                              .generated/<siteId>/  +  data/runs/<runId>/
+Build                              ../sajtbyggaren-output/.generated/<siteId>/  +  data/runs/<runId>/
 ```
 
 `painter-palma` är ett `Project Input`, inte en Dossier. `pacman-game` är en
@@ -95,6 +95,7 @@ scripts/dev-builder.ps1                  # bygger painter-palma och startar Next
 scripts/dev-builder.ps1 -SkipBuild       # samma men hoppar över npm-build (snabb iteration)
 scripts/dev-builder.ps1 -NoServe         # bara builder, ingen dev-server
 scripts/dev-builder.ps1 -Port 3100       # parallell-kör med viewser genom att flytta porten
+scripts/dev-builder.ps1 -generateddir C:/temp/.generated  # override av preview-root
 scripts/dev-viewser.ps1                  # viewser-prototyp på :3000
 scripts/dev-viewser.ps1 -Port 3200       # parallell-kör med builder genom att flytta porten
 scripts/clean-runs.ps1                   # rensar gamla data/runs/<runId>/-mappar (default behåller 5 senaste)
@@ -102,6 +103,8 @@ scripts/clean-runs.ps1 -Keep 0 -DryRun   # förhandsvisa total rensning
 ```
 
 `dev-builder.ps1` simulerar operatörsflödet: läser ett Project Input, kör hela [`scripts/build_site.py`](scripts/build_site.py)-pipen och öppnar resultatet (inklusive `/spel`-routen från `interactive-game-loop`-dossiern). `dev-viewser.ps1` är den localhost-only operator-prototypen med PromptBuilder, run history och preview av senaste run; den kan starta ny sajt från fri prompt och fortsätta på befintligt sajtspår med follow-up prompt versions. `dev-builder` och `dev-viewser` försöker båda :3000 om inte `-Port` anges, så vid parallell-körning sätter du en port på en av dem.
+
+Preview-output skrivs som standard till `../sajtbyggaren-output/.generated/<siteId>/` (utanför repo-roten) för att minska file-watcher-load i Cursor. Du kan override:a målet per körning med `--generated-dir` (`build_site.py`) eller PowerShell-flaggan `-generateddir` (`dev-builder.ps1`), eller globalt med env-varn `SAJTBYGGAREN_GENERATED_DIR`.
 
 `clean-runs.ps1` är en bekvämlighetsrensare. Tester skriver inte längre till `data/runs/` (de använder `tmp_path`), men varje `dev-builder.ps1`-körning lägger till en katalog där eftersom runs är canonical historik enligt [`engine-run.v1.json`](governance/policies/engine-run.v1.json).
 

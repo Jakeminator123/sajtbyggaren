@@ -47,7 +47,7 @@ this automatically.
 | ----------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | Backoffice        | `streamlit run backend.py --server.headless true`                           | Serves on port 8501                                                                                                                       |
 | Engine run | `python scripts/dev_generate.py "your prompt"`                                   | Writes artifacts to `data/runs/`. Calls `briefModel` + `planningModel` when `OPENAI_API_KEY` is set; mock fallback otherwise.             |
-| Builder MVP       | `python scripts/build_site.py --dossier examples/<slug>.project-input.json` | Real Next.js output under `.generated/<siteId>/` + canonical artifacts under `data/runs/<runId>/`. Add `--skip-build` for fast iteration. |
+| Builder MVP       | `python scripts/build_site.py --dossier examples/<slug>.project-input.json` | Real Next.js output under `../sajtbyggaren-output/.generated/<siteId>/` by default (override with `--generated-dir` or env `SAJTBYGGAREN_GENERATED_DIR`) + canonical artifacts under `data/runs/<runId>/`. Add `--skip-build` for fast iteration. |
 
 ### Lint, test, validate
 
