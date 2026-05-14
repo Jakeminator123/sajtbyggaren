@@ -12,7 +12,7 @@ Reviewerns rekommendation: **fem starters täcker våra 14 scaffolds**. Se ADR 0
 | `saas-base` | `saas-product` | Fork av [vercel/platforms](https://github.com/vercel/platforms) | Mapp finns, kod saknas |
 | `commerce-base` | `ecommerce-lite` | Fork av [vercel/commerce](https://github.com/vercel/commerce) | Vendor-import klar (2026-05-11, upstream `1df2cf6`); bygger lokalt; runtime-mapping aktiverad i B20 step 2 (kör genom `deterministic-v1` codegen tills real-codegen-scope utvidgas) |
 | `portfolio-base` | `portfolio-creator`, `agency-studio` | Fork av [vercel/examples → solutions/blog](https://github.com/vercel/examples/tree/main/solutions/blog) | Vendor-import klar (2026-05-14, upstream `72aaac1`); bygger lokalt; runtime-mapping aktiveras inte i denna PR |
-| `docs-base` | `course-education` | Fork av [shuding/nextra](https://github.com/shuding/nextra) | Mapp finns, kod saknas |
+| `docs-base` | `course-education` | Fork av [shuding/nextra](https://github.com/shuding/nextra) | Vendor-import klar (2026-05-14, upstream `36ba79c`); bygger lokalt; runtime-mapping aktiveras inte i denna PR |
 
 ## Scaffold → Starter routing (målbild)
 
