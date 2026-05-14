@@ -79,9 +79,9 @@ Tre lager:
 
 ### Backoffice trace/playground (PR #23, produkt-HEAD `e1ad5ca`)
 
-- **Engine Runs** och **Playground** använder en gemensam strukturerad trace-viewer i `backoffice/views/_trace.py` för `trace.ndjson`: halvskrivna rader hoppas över defensivt, events summeras, grupperas per fas och kan filtreras på fas/status/söktext.
-- **Playground** kör `scripts/dev_generate.py` via kontrollerad `subprocess.Popen`-runner istället för svart-låde-`subprocess.run`, och visar status, elapsed time, exit code och loggutdrag under/efter körning.
-- **BO2/BO4** är stängda i `docs/known-issues.md`; kvar finns bara lågprioriterade `BO4-followup-cancel` för riktig cancellation/background-jobb.
+- Engine-runs-vyn och playground-vyn använder en gemensam strukturerad trace-viewer i `backoffice/views/_trace.py` för `trace.ndjson`: halvskrivna rader hoppas över defensivt, events summeras, grupperas per fas och kan filtreras på fas/status/söktext.
+- Playground-vyn kör `scripts/dev_generate.py` via kontrollerad `subprocess.Popen`-runner istället för svart-låde-`subprocess.run`, och visar status, elapsed time, exit code och loggutdrag under/efter körning.
+- Backoffice trace/playground-posterna är stängda i `docs/known-issues.md`; kvar finns bara lågprioriterad cancellation-followup för riktig cancellation/background-jobb.
 
 ### Builder UX MVP
 
@@ -94,7 +94,7 @@ Se `docs/current-focus.md` → **"Next action"**. Kort version: ingen aktiv bloc
 1. **#22 portfolio-base starter** — uppdatera/rebasea mot senaste `main` efter PR #23 + Steward-docs, kör snabb Scout/GitHub-koll och mergea bara om checks/Bugbot fortsatt är gröna.
 2. **B13a arkitektur-flytt** — `scripts/build_site.py` produktlogik till `packages/generation/build/`. Egen sprint, kräver troligen egen ADR (rör mappgränser i `repo-boundaries.v1.json`). Destinationen pre-allokerad i `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
 3. **`write_pages` icon-bibliotek-agnostisk refactor** — lyfter den arkitekturskuld som ADR 0020 explicit lämnade öppen. Förebygger att samma lucide-typen av starter-vs-codegen-konflikt uppstår igen för en framtida starter utan lucide.
-4. **BO4-followup-cancel** — lågprioriterad separat sprint om operatören behöver avbryta redan startade Playground-körningar.
+4. **Cancellation-followup** — lågprioriterad separat sprint om operatören behöver avbryta redan startade playground-körningar.
 
 Nice-to-have för PromptBuilder: setTimeout för stage-transition "thinking" → "building" saknar cleanup vid unmount. Låg risk men kan polishas om PromptBuilder rörs igen.
 

@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `7ddb2ed` (2026-05-14, post-PR #23 + Steward-docs: backoffice trace/playground mergead till `origin/main` ovanpå `2701b00`, och Steward-docs uppdaterade queue/focus/handoff/known-issues efter squash-merge. BO2/BO4 är stängda i `docs/known-issues.md` med `BO4-followup-cancel` kvar som separat lågprioriterad post. Lokal `backup-9` skapad från pre-merge `main`; lokal `.cursor/settings.json` är fortsatt ocommittad operatörsinställning. #22 portfolio-base starter är enda öppna PR-spåret och ska uppdateras mot senaste main före merge.)
+Last verified state: `7ddb2ed` (2026-05-14, post-PR #23 + Steward-docs: backoffice trace/playground mergead till `origin/main` ovanpå `2701b00`, och Steward-docs uppdaterade queue/focus/handoff/known-issues efter squash-merge. Backoffice trace/playground-skulden är stängd i `docs/known-issues.md`, med cancellation-followup kvar som separat lågprioriterad post. Lokal `backup-9` skapad från pre-merge `main`; lokal `.cursor/settings.json` är fortsatt ocommittad operatörsinställning. #22 portfolio-base starter är enda öppna PR-spåret och ska uppdateras mot senaste main före merge.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -56,8 +56,8 @@ prompt versions är nu landat: operatören kan fortsätta på befintlig
 prompt-input/run, behålla `projectId`, bumpa version och få ny build/run
 för samma sajtspår. RunHistory uppdateras via samma `fetchRuns`-loop som
 `/api/build`. PR #23 har dessutom landat backoffice trace/playground-
-förbättringar: Engine Runs och Playground använder en gemensam strukturerad
-trace-viewer och Playground visar subprocess-status/loggutdrag medan körningen
+förbättringar: engine-runs-vyn och playground-vyn använder en gemensam strukturerad
+trace-viewer och playground visar subprocess-status/loggutdrag medan körningen
 pågår. `backup-9` finns lokalt från pre-PR-#23-läget; backup-8 finns lokalt
 efter follow-up-sprinten; backup-7 från `fb11925` ligger på origin som fallback
 efter audit-hotfix-sprinten.
@@ -145,9 +145,9 @@ Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
   fortsätta på befintligt `projectId`, bumpa version och skriva nya
   prompt-inputs/runs för samma sajtspår.
 - `e1ad5ca` — `feat(backoffice): improve trace viewer and playground
-  logs`. PR #23 squash-mergead: BO2/BO4-städning med gemensam
-  trace-viewer för Engine Runs/Playground, synlig Playground-subprocess-
-  status/loggar och stängda `BO2`/`BO4` i `docs/known-issues.md`.
+  logs`. PR #23 squash-mergead: backoffice trace/playground-städning med
+  gemensam trace-viewer, synlig subprocess-status/loggar och stängda
+  backoffice-poster i `docs/known-issues.md`.
 
 Mainline-steward-pushar efter PR #21 (pure docs/governance):
 
@@ -263,8 +263,8 @@ och ska inte ingå i Steward-commit utan explicit beslut.
 3. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
    lucide-typen av starter-vs-codegen-konflikt; ADR 0020:s
    "INTE beslutar"-sektion).
-4. BO4-followup-cancel (låg): riktig cancellation/background-jobb i
-   Playground om operatören behöver avbryta redan startade körningar.
+4. Cancellation-followup (låg): riktig cancellation/background-jobb i
+   playground-vyn om operatören behöver avbryta redan startade körningar.
 5. **PromptBuilder polish (nice-to-have)**: setTimeout för
    stage-transition "thinking" → "building" saknar cleanup vid
    unmount. Låg risk men låt nästa Builder rensa om PromptBuilder
