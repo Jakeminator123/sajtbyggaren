@@ -127,6 +127,26 @@ arkitekturändring, inte en bugg.
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B48` Medel** (stängd 2026-05-14, follow-up-semantik sprint) -
+  `scripts/dev_generate.py` exponerade `--mode followup` och
+  `--project-id`, och Backoffice Playground skickade dessa vidare till
+  subprocessen, men dev-driverns planfas hårdkodade fortfarande
+  `engine_mode="init"` och `project_id=None` när den anropade
+  `produce_site_plan()`. Resultat: `input.json` kunde säga
+  `mode=followup` medan `generation-package.json` sa `engineMode=init`
+  och saknade `projectId`.
+  **Fix:** `run_phase_plan()` tar nu `mode` och `project_id` som
+  keyword-only argument och skickar dem vidare till
+  `produce_site_plan()`. `main()` trådar CLI/env-värdena från
+  `--mode` / `--project-id` hela vägen till planfasen, både för
+  `--phase all` och separata `--phase plan`-körningar.
+  Test:
+  `tests/test_dev_generate.py::test_dev_generate_followup_threads_mode_and_project_id_to_package`
+  låser att `input.json` och `generation-package.json` matchar i
+  follow-up-läget. `tests/test_backoffice_trace.py::test_playground_runner_forwards_followup_project_id`
+  låser att Backoffice Playground-runnern skickar `--project-id` och
+  `SAJTBYGGAREN_MODE=followup` till subprocessen.
+
 - **`B44` Hög** (stängd 2026-05-14, post-audit Builder-fix) - PromptBuilder
   och `app/page.tsx` tolkade alla returnerade `runId` som lyckad build.
   `lib/build-runner.ts` returnerar medvetet `runId` + `buildResult` även

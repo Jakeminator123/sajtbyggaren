@@ -149,6 +149,57 @@ def test_playground_runner_uses_popen_not_subprocess_run() -> None:
 
 
 @pytest.mark.tooling
+def test_playground_runner_forwards_followup_project_id(monkeypatch) -> None:
+    """Backoffice Playground must pass project_id through to dev_generate.
+
+    This protects the follow-up semantics contract from regressing at the UI
+    runner layer. The deeper dev_generate test locks that the package artifact
+    receives the same mode/projectId.
+    """
+    from backoffice.views import playground
+
+    captured: dict[str, list[str]] = {}
+
+    class stdout_stub:
+        def readline(self) -> str:
+            return ""
+
+        def close(self) -> None:
+            return None
+
+    class process_stub:
+        stdout = stdout_stub()
+
+        def __init__(self, args, **kwargs) -> None:
+            captured["args"] = list(args)
+            captured["kwargs"] = kwargs
+
+        def poll(self) -> int:
+            return 0
+
+        def wait(self) -> int:
+            return 0
+
+    monkeypatch.setattr(playground.subprocess, "Popen", process_stub)
+
+    result = playground._run_dev_generate(
+        "Uppdatera hero",
+        "followup",
+        "plan",
+        run_id="run-123",
+        project_id="project-abc",
+        timeout_seconds=1,
+    )
+
+    assert result["exit_code"] == 0
+    assert "--mode" in captured["args"]
+    assert "followup" in captured["args"]
+    assert "--project-id" in captured["args"]
+    assert "project-abc" in captured["args"]
+    assert captured["kwargs"]["env"]["SAJTBYGGAREN_MODE"] == "followup"
+
+
+@pytest.mark.tooling
 def test_trace_views_use_structured_trace_viewer() -> None:
     from backoffice.views import engine_runs, playground
 

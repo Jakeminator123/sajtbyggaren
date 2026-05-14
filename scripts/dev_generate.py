@@ -239,7 +239,14 @@ def run_phase_understand(
 # ----- phase: plan (Site Plan + Generation Package) --------------------------
 
 
-def run_phase_plan(run_dir: Path, run_id: str, site_brief: dict[str, Any]) -> dict[str, Any]:
+def run_phase_plan(
+    run_dir: Path,
+    run_id: str,
+    site_brief: dict[str, Any],
+    *,
+    mode: str = "init",
+    project_id: str | None = None,
+) -> dict[str, Any]:
     """Phase 2 Plan: delegate to the shared produce_site_plan helper.
 
     Both this script and scripts/build_site.py go through the SAME helper
@@ -259,8 +266,8 @@ def run_phase_plan(run_dir: Path, run_id: str, site_brief: dict[str, Any]) -> di
     result = produce_site_plan(
         site_brief,
         run_id=run_id,
-        engine_mode="init",
-        project_id=None,
+        engine_mode=mode,
+        project_id=project_id,
     )
 
     if result.source == "mock-llm-error":
@@ -535,7 +542,13 @@ def main() -> int:
                 )
                 return 2
             site_brief = read_json(brief_path)
-        generation_package = run_phase_plan(run_dir, run_id, site_brief)
+        generation_package = run_phase_plan(
+            run_dir,
+            run_id,
+            site_brief,
+            mode=args.mode,
+            project_id=args.project_id,
+        )
 
     if args.phase in ("build", "all"):
         if generation_package is None:

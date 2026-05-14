@@ -134,6 +134,39 @@ def test_dev_generate_plan_then_build_can_resume(tmp_path: Path):
 
 
 @pytest.mark.tooling
+def test_dev_generate_followup_threads_mode_and_project_id_to_package(tmp_path: Path):
+    """Follow-up mode must stay consistent across input.json and
+    generation-package.json.
+
+    Backoffice Playground and the CLI expose --mode followup + --project-id.
+    The bug found by Scout was that Phase 1 wrote input.json as followup while
+    Phase 2 still hardcoded engineMode=init and projectId=None. This locks the
+    contract at the artifact boundary instead of only checking CLI output.
+    """
+    project_id = "stable-project-id"
+    rc, runs_dir, output = _run_dev_generate(
+        tmp_path,
+        "Uppdatera startsidan med tydligare CTA",
+        "--mode",
+        "followup",
+        "--project-id",
+        project_id,
+    )
+    assert rc == 0, output
+
+    run_dir = _only_run_dir(runs_dir)
+    input_payload = json.loads((run_dir / "input.json").read_text(encoding="utf-8"))
+    package = json.loads(
+        (run_dir / "generation-package.json").read_text(encoding="utf-8")
+    )
+
+    assert input_payload["mode"] == "followup"
+    assert input_payload["projectId"] == project_id
+    assert package["engineMode"] == "followup"
+    assert package["projectId"] == project_id
+
+
+@pytest.mark.tooling
 def test_dev_generate_placeholder_uses_canonical_field_names(tmp_path: Path):
     """B17 regression: build placeholder must read scaffoldId/variantId/starterId
     from the Generation Package, not the legacy 'scaffold'/'scaffoldVariant' keys
