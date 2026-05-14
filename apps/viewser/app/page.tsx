@@ -6,7 +6,10 @@ import {
   ProjectInputPicker,
   type ProjectInputOption,
 } from "@/components/project-input-picker";
-import { PromptBuilder } from "@/components/prompt-builder";
+import {
+  PromptBuilder,
+  type PromptBuildOutcome,
+} from "@/components/prompt-builder";
 import { RunDetailsPanel } from "@/components/run-details-panel";
 import { RunHistory, type RunHistoryItem } from "@/components/run-history";
 import { TokenMeter } from "@/components/token-meter";
@@ -22,6 +25,13 @@ type FetchedRunsPayload = {
   nextRuns: RunHistoryItem[];
   nextInputs: ProjectInputOption[];
 };
+
+function headerStatusForOutcome(runId: string, outcome: PromptBuildOutcome): string {
+  if (outcome === "ok") return `Build klar via prompt: ${runId}`;
+  if (outcome === "degraded") return `Build klar med varning: ${runId}`;
+  if (outcome === "failed") return `Build misslyckades: ${runId}`;
+  return `Build klar med okänd status: ${runId}`;
+}
 
 // Pure data fetcher. Separated from setState so callers can place a
 // cancellation guard between the await and the state mutation. Without
@@ -118,9 +128,14 @@ export default function Home() {
           selectedSiteId={selectedSiteId}
           onBuildStart={() => setBuilding(true)}
           onBuildEnd={() => setBuilding(false)}
-          onBuildDone={(runId) => {
+          onBuildDone={(runId, outcome: PromptBuildOutcome) => {
             setSelectedRunId(runId);
-            setStatusText(`Build klar via prompt: ${runId}`);
+            // B44: never claim "Build klar" for a structured failure or
+            // an unknown status. PromptBuilder classifies the outcome
+            // from build-result.json:status; the header copy reflects
+            // whichever bucket the run landed in so a failed run does
+            // not look successful in the page header.
+            setStatusText(headerStatusForOutcome(runId, outcome));
             void fetchRuns()
               .then(applyRunsData)
               .catch((error) => {

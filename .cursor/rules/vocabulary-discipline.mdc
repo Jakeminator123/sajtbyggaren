@@ -35,7 +35,7 @@ Build
   utan en ADR som motiverar varför ett befintligt begrepp inte räcker.
 - Inga nya `*-dossier`, `*-input`, `*-project`, `*-brief`, `*-package`-suffix
   på filnamnsmönster utan samma ADR-krav.
-- UI-komponentnamn (`ChatPanel`, `RunHistory`, `TokenMeter`, `ProjectInputPicker`)
+- UI-komponentnamn (`PromptBuilder`, `RunHistory`, `TokenMeter`, `ProjectInputPicker`)
   räknas som lokala implementationsidentifierare och hör inte hemma i
   naming-dictionary om de bara bor i en enda app.
 - Inga interna mellannamn för redan registrerade begrepp. Ett namn per begrepp.

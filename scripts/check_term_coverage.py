@@ -170,8 +170,8 @@ COMMON_WORDS = {
     "InputPrimitive",
     # Viewser implementation-symboler (lokala UI-identifierare, inte domänbegrepp).
     # Viewser-appen ligger på apps/viewser och dessa namn bor enbart där.
-    "ChatMessage", "ChatMessageSchema", "ChatPayloadSchema", "ChatPanelProps",
-    "BuildModelUsage", "FilesPayload", "RouteContext",
+    "ChatMessage", "ChatMessageSchema", "ChatPayloadSchema",
+    "FilesPayload", "RouteContext",
     "ProjectInputInfo", "ProjectInputOption", "ProjectInputPicker", "ProjectInputPickerProps",
     "RunMeta", "RunHistory", "RunHistoryItem", "RunHistoryProps", "RunsApiPayload",
     "FetchedRunsPayload",
@@ -189,22 +189,30 @@ COMMON_WORDS = {
     "PlayStation", "LinkedIn",
     "TokenMeterContext", "TokenMeterContextValue", "TokenMeterProvider", "TokenMeterState",
     "UsageDelta", "UsageSummary", "ViewerPanelProps",
-    "BuildPayloadSchema", "ChatPanel", "TokenMeter", "ViewerPanel",
+    "BuildPayloadSchema", "TokenMeter", "ViewerPanel",
     "Providers",
     # Prompt-till-sajt MVP v1: viewser-lokala TS-/Python-implementation-
     # symboler för fri-prompt-flödet (apps/viewser/components/prompt-builder,
     # apps/viewser/lib/prompt-runner, apps/viewser/app/api/prompt/route,
     # tests/test_prompt_to_project_input). PromptBuilder är en
     # React-komponent (lokal UI-identifierare), inte ett canonical
-    # domänbegrepp - samma behandling som ChatPanel / ProjectInputPicker
-    # ovan. PromptHelperResult / PromptApiPayload / PromptStage* är TS-
+    # domänbegrepp - samma behandling som ProjectInputPicker ovan.
+    # PromptHelperResult / PromptApiPayload / PromptStage* är TS-
     # interfaces och unioner; PromptPayloadSchema är ett Zod-schema.
-    # MonkeyPatch är pytest stdlib-typen som testet tar in via
+    # PromptBuildOutcome är unionen som klassificerar build-status
+    # (B44: ok/degraded/failed/unknown) på vägen från /api/prompt
+    # till PromptBuilder + page.tsx. MonkeyPatch är pytest stdlib-typen
+    # som testet tar in via
     # monkeypatch-fixturen.
     "PromptApiPayload", "PromptBuilder", "PromptBuilderProps",
-    "PromptHelperOptions", "PromptHelperResult", "PromptMode",
-    "PromptPayloadSchema",
-    "PromptStage", "PromptStageIndicator",
+    "PromptBuildOutcome", "PromptHelperOptions", "PromptHelperResult",
+    "PromptMode", "PromptPayloadSchema",
+    "PromptStage", "PromptStageIndicator", "ResultMeta",
+    # ChatPanel-namnet finns kvar i historisk docs (current-focus,
+    # handoff) och i tests/test_viewser_files.py som låser borttagningen
+    # (se B46). Komponenten själv är raderad, men strängen är fortfarande
+    # ett legitimt referensnamn i prosa och testassertions.
+    "ChatPanel",
     "MonkeyPatch", "ZodIssueCode",
     # Builder UX MVP (post-3C-lite-audit-2): RunDetailsPanel + 5 sektion-
     # komponenter + interna TS-typer som bara används i apps/viewser.

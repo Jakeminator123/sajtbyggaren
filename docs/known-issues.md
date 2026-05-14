@@ -89,9 +89,70 @@ Format per bugg:
   och `B13b` (route-emission) den 2026-05-13 efter att
   `docs/current-focus.md` började använda namnet "B13" för bara den
   ena halvan.
+- **`B45` Låg** - `scripts/build_site.py` innehåller fortfarande hardcoded
+  `/kontakt`-CTAs i `render_layout` (raderad 610), `render_home` (728, 761)
+  och `render_services` (800). `_pick_contact_route` finns och används
+  redan av `render_products` (B13b-fixen, raderad 992-1005). Resten av
+  renderkedjan ärver fortfarande `/kontakt`-literalen från
+  `local-service-business`-tiden, så en framtida scaffold som flyttar
+  kontakt-id till t.ex. `/kontakta-oss` får trasiga CTA:er innan
+  routes-fixen propageras. Måste få egen mini-sprint som låter alla
+  renderers ta `contact_path` från scaffolden via samma
+  `_pick_contact_route`-helper. Test bör låsa att ingen renderer-helper
+  i `scripts/build_site.py` literal-kodar `href="/kontakt"`.
+- **`B47` Låg** - `commerce-base` Shopify-startsidan kräver Shopify-handles
+  `hidden-homepage-featured-items` och `hidden-homepage-carousel`, och
+  footern kräver `next-js-frontend-footer-menu`. Saknas de blir delar av
+  ett färdigbyggt `commerce-base`-spår tomma. Spåra som separat
+  e-commerce-sprint som antingen ger fallback-copy/produkter eller
+  dokumenterar starter-kraven. Ej blocker för aktiva flöden idag (real
+  codegen-scope är fortfarande `marketing-base`-only per ADR 0017).
+
 (B20 stängd 2026-05-13 — se "Stängda - regression-test säkrar fixet" nedan.)
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B44` Hög** (stängd 2026-05-14, post-audit Builder-fix) - PromptBuilder
+  och `app/page.tsx` tolkade alla returnerade `runId` som lyckad build.
+  `lib/build-runner.ts` returnerar medvetet `runId` + `buildResult` även
+  när `buildResult.status === "failed"` (B40-kontraktet: failed runs
+  måste synas i Run History), men `/api/prompt` skickade inte vidare
+  status-fältet och PromptBuilder visade grön "Build klar" för fail-
+  runs. Sannolikhet 85%, impact 7/10.
+  **Fix:** `/api/prompt/route.ts` läser nu `build-result.json:status`
+  via en defensiv `extractBuildStatus`-helper och exponerar fältet som
+  `buildStatus` på response-payloaden. PromptBuilder klassificerar
+  utfallet via en ny `classifyBuildStatus`-helper (`ok` /
+  `degraded` / `failed` / `unknown`) och renderar tre distinkta UI-
+  paneler (grön success, gul varning, röd failed). `app/page.tsx`
+  tar emot `PromptBuildOutcome` i `onBuildDone` och använder
+  `headerStatusForOutcome` så headern aldrig säger "Build klar via
+  prompt:" för en degraderad eller failed run.
+  Test:
+  `tests/test_viewser_files.py::test_prompt_route_surfaces_build_status`,
+  `tests/test_viewser_files.py::test_prompt_builder_classifies_failed_build_distinctly`,
+  `tests/test_viewser_files.py::test_page_uses_outcome_aware_header_for_prompt_build_done`.
+
+- **`B46` Låg** (stängd 2026-05-14, post-audit Builder-fix) - Legacy
+  `apps/viewser/components/chat-panel.tsx` var inte längre monterad
+  någonstans (PromptBuilder tog över i `fd67fbd`), men filen levde
+  kvar och innehöll samma "runId == success"-logik som B44. Audit
+  rekommenderade antingen samma status-fix eller borttagning;
+  borttagning valdes för att eliminera duplicerad surface i
+  stället för att underhålla två parallella prompt-/build-paneler.
+  **Fix:** `components/chat-panel.tsx` raderad. `tests/test_viewser_files.py`
+  uppdaterad: `chat-panel.tsx` borttaget från required-files-listan,
+  `test_chat_panel_marks_prompt_as_experimental` ersatt med
+  `test_chat_panel_component_is_removed` som låser borttagningen.
+  `tests/test_viewser_prompt_primary.py` docstring uppdaterad,
+  inline-asserts pekar nu på audit-fixen istället för "remains as a
+  component for now". `scripts/check_term_coverage.py` allowlist
+  rensar `ChatPanel`/`ChatPanelProps`/`BuildModelUsage` som inte
+  längre finns någonstans i koden. `governance/rules/vocabulary-discipline.md`
+  byter exempel `ChatPanel` mot `PromptBuilder`; `.cursor/rules/`
+  spegeln synkad via `scripts/rules_sync.py`. `/api/chat`-routen
+  och `lib/openai.ts` lämnas orörda — de är fortfarande standalone
+  endpoints och Scout pekade inte ut dem.
 
 - **`BO2` Medel** (stängd 2026-05-14, squash-merge `e1ad5ca` via PR #23) - Backoffice trace
   viewer dumpade tidigare bara rå dataframe för `trace.ndjson`.

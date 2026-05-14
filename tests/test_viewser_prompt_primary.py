@@ -1,9 +1,11 @@
 """Guards for Viewser's canonical prompt surface.
 
 Prompt-till-sajt MVP v1 introduced PromptBuilder as the operator-facing
-prompt -> Project Input -> build_site.py path. The old ChatPanel remains
-as a component for now, but must not be mounted as the primary prompt
-surface on the Viewser home page.
+prompt -> Project Input -> build_site.py path. The legacy ChatPanel was
+removed entirely in the B46 audit-fix (2026-05-14); these guards lock
+that PromptBuilder remains the canonical prompt surface and that no
+restored ChatPanel can sneak in via app/page.tsx without tripping the
+test.
 """
 
 from __future__ import annotations
@@ -25,10 +27,11 @@ def test_prompt_builder_is_primary_home_prompt_surface() -> None:
         "prompt -> site flow."
     )
     assert 'from "@/components/chat-panel"' not in text, (
-        "ChatPanel must not be imported by app/page.tsx. It is the old "
-        "experimental chat surface and should not compete with PromptBuilder."
+        "ChatPanel was deleted in the B46 audit-fix; no app file may "
+        "re-introduce the import without restoring the component plus "
+        "the false-success surface that came with it."
     )
     assert "<ChatPanel" not in text, (
-        "ChatPanel must not be mounted on the Viewser home page. "
-        "PromptBuilder is the primary prompt surface."
+        "ChatPanel was deleted in the B46 audit-fix; PromptBuilder is "
+        "the only operator-facing prompt surface on the Viewser home page."
     )

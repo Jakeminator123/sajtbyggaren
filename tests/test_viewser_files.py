@@ -28,7 +28,6 @@ def test_viewser_expected_files_exist() -> None:
         "app/api/runs/[runId]/artifacts/route.ts",
         # Prompt-till-sajt MVP v1: free-prompt -> Project Input -> build.
         "app/api/prompt/route.ts",
-        "components/chat-panel.tsx",
         "components/viewer-panel.tsx",
         "components/token-meter.tsx",
         "components/project-input-picker.tsx",
@@ -322,16 +321,100 @@ def test_run_details_panel_handles_missing_artefakter_defensively() -> None:
 
 
 @pytest.mark.tooling
-def test_chat_panel_marks_prompt_as_experimental() -> None:
-    """Builder UX MVP scope: free-form prompt får visas men ska inte
-    framstå som primary path. Project Input + Build är den stabila
-    vägen tills en separat sprint kopplar promptens output till
-    run-flödet.
+def test_chat_panel_component_is_removed() -> None:
+    """B46: legacy ChatPanel component is dead code as of audit-fix
+    2026-05-14. PromptBuilder is the only operator-facing prompt
+    surface (test_viewser_prompt_primary.py locks it as canonical on
+    home). The component file was deleted to remove the second
+    "runId == success" code path the audit flagged. Lock the deletion
+    here so a future restore would surface as a test failure rather
+    than silently re-introducing the false-success surface.
     """
-    text = (VIEWSER_DIR / "components" / "chat-panel.tsx").read_text(encoding="utf-8")
-    assert "experimentell" in text.lower() or "experimental" in text.lower(), (
-        "Promptfältet ska visa pedagogisk text om att det är experimentellt "
-        "och inte påverkar run-flödet i denna runda."
+    assert not (VIEWSER_DIR / "components" / "chat-panel.tsx").exists(), (
+        "components/chat-panel.tsx should not exist after the B46 audit-fix. "
+        "Use PromptBuilder for the operator prompt -> Project Input -> build flow."
+    )
+
+
+@pytest.mark.tooling
+def test_prompt_route_surfaces_build_status() -> None:
+    """B44: /api/prompt must propagate build-result.json:status to the
+    client so PromptBuilder can render success / degraded / failed
+    instead of treating any returned runId as a green build.
+    build-runner.ts intentionally returns the structured failure path
+    with a runId (B40) so failed runs still appear in Run History;
+    without buildStatus on the wire the operator UI used to flag those
+    as "Build klar".
+    """
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "buildStatus" in text, (
+        "/api/prompt route.ts must include `buildStatus` in the response "
+        "payload so PromptBuilder can classify the build outcome."
+    )
+    assert "extractBuildStatus" in text or "buildResult.status" in text, (
+        "/api/prompt route.ts must read build-result.json:status to populate "
+        "buildStatus on the response."
+    )
+
+
+@pytest.mark.tooling
+def test_prompt_builder_classifies_failed_build_distinctly() -> None:
+    """B44: PromptBuilder must classify build outcomes via classifyBuildStatus
+    and render distinct UI for success / degraded / failed instead of
+    falling through to a single green "Build klar" banner whenever a
+    runId is present. Lock the classification helper and the three
+    distinct UI strings so a future refactor cannot collapse them.
+    """
+    text = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "classifyBuildStatus" in text, (
+        "prompt-builder.tsx must export/use a classifyBuildStatus helper "
+        "that maps build-result.json:status to ok/degraded/failed/unknown."
+    )
+    assert "PromptBuildOutcome" in text, (
+        "prompt-builder.tsx must expose a PromptBuildOutcome type so page.tsx "
+        "can render an outcome-aware header instead of a hard-coded 'Build klar'."
+    )
+    for stage_literal in (
+        "\"degraded\"",
+        "\"failed\"",
+    ):
+        assert stage_literal in text, (
+            f"prompt-builder.tsx must distinguish stage {stage_literal} so "
+            "degraded/failed builds do not render as success."
+        )
+    assert "Build klar med varning" in text, (
+        "prompt-builder.tsx must render a degraded headline distinct from "
+        "the success banner."
+    )
+    assert "Build misslyckades" in text, (
+        "prompt-builder.tsx must render a dedicated failure headline when "
+        "build-result.json status=failed."
+    )
+
+
+@pytest.mark.tooling
+def test_page_uses_outcome_aware_header_for_prompt_build_done() -> None:
+    """B44: app/page.tsx must propagate the PromptBuildOutcome from
+    PromptBuilder into setStatusText so the page header does not say
+    "Build klar via prompt:" for a structured failure run. Source-lock
+    the headerStatusForOutcome helper so a future refactor cannot drop
+    the classification.
+    """
+    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+    assert "PromptBuildOutcome" in text, (
+        "page.tsx must import PromptBuildOutcome from @/components/prompt-builder."
+    )
+    assert "headerStatusForOutcome" in text, (
+        "page.tsx must use headerStatusForOutcome to map the outcome to a "
+        "header string instead of hardcoding 'Build klar via prompt:'."
+    )
+    assert "Build misslyckades" in text, (
+        "page.tsx header must show a dedicated failure string when the "
+        "PromptBuilder reports outcome=failed."
     )
 
 

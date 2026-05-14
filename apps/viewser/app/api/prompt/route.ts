@@ -37,6 +37,17 @@ const PromptPayloadSchema = z.object({
 
 let promptInFlight: Promise<unknown> | null = null;
 
+// Read the raw `status` field from build-result.json without trusting
+// its type. build_site.py writes "ok" / "degraded" / "failed" / "skipped";
+// dev_generate.py writes "mock-complete". Anything else collapses to
+// null so the client surface explicitly handles the unknown case
+// instead of silently rendering a green "build klar" banner over a
+// failed run (B44).
+function extractBuildStatus(buildResult: Record<string, unknown>): string | null {
+  const value = buildResult.status;
+  return typeof value === "string" ? value : null;
+}
+
 async function runPromptBuildOnce(
   payload: z.infer<typeof PromptPayloadSchema>,
 ) {
@@ -57,6 +68,13 @@ async function runPromptBuildOnce(
     projectId: helper.projectId,
     version: helper.version,
     briefSource: helper.briefSource,
+    // B44: surface the canonical build status so the operator UI can
+    // distinguish ok / degraded / failed instead of treating any
+    // returned runId as a successful build. build-runner.ts intentionally
+    // returns the structured failure path with a runId so failed runs
+    // still appear in Run History (B40 contract); without buildStatus
+    // on the wire PromptBuilder used to flag those as "Build klar".
+    buildStatus: extractBuildStatus(build.buildResult),
     buildResult: build.buildResult,
   };
 }

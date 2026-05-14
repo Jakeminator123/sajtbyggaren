@@ -212,8 +212,13 @@ starter är klara. Inga öppna PRs finns just nu.
 - Nästa Builder bör antingen dölja/disable:a follow-up i Backoffice/dev-driver
   tills kontraktet är riktigt, eller föra `mode`/`project_id` hela vägen genom
   planfasen och låsa beteendet med test.
-- Docs-copy för Viewser och starter-routing har moderniserats i
-  Steward-cleanupen efter Scout-fyndet.
+- Audit-fix-sprinten 2026-05-14 stängde B44 (PromptBuilder false success
+  via ny `buildStatus` på `/api/prompt` + outcome-aware UI/header) och B46
+  (raderade legacy `ChatPanel`-komponent + uppdaterade tester/allowlist).
+  Två nya öppna B-IDs tillagda: B45 (hardcoded `/kontakt` i
+  `render_layout/render_home/render_services`) och B47 (commerce-base
+  Shopify handles). Inga blockers, men nästa Scout/Builder bör veta om
+  dem.
 
 `portfolio-base` är nu bara starter-underlag; ingen `SCAFFOLD_TO_STARTER`-
 mappning eller real-codegen-scope är aktiverad av #22.
@@ -267,11 +272,17 @@ Inga öppna PR-blockers just nu.
 ## Queue
 
 1. Follow-up-semantik i dev-driver/backoffice: se "Next action".
-2. B13a arkitektur-flytt (egen sprint, kräver ADR).
-3. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
+2. B45 (låg): `_pick_contact_route`-propagation till
+   `render_layout/render_home/render_services` så ingen renderer
+   literal-kodar `href="/kontakt"`. Egen mini-sprint med test som
+   låser frånvaron av literalen.
+3. B47 (låg): commerce-base Shopify-handles dokumenteras eller får
+   fallback. Egen e-commerce-sprint, ej blocker idag.
+4. B13a arkitektur-flytt (egen sprint, kräver ADR).
+5. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
    lucide-typen av starter-vs-codegen-konflikt; ADR 0020:s
    "INTE beslutar"-sektion).
-4. Cancellation-followup (låg): riktig cancellation/background-jobb i
+6. Cancellation-followup (låg): riktig cancellation/background-jobb i
    playground-vyn om operatören behöver avbryta redan startade körningar.
 
 ## Loopen vi följer

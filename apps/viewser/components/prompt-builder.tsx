@@ -8,8 +8,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { RunHistoryItem } from "@/components/run-history";
 import { Textarea } from "@/components/ui/textarea";
 
-type PromptStage = "idle" | "thinking" | "building" | "success" | "failed";
+type PromptStage =
+  | "idle"
+  | "thinking"
+  | "building"
+  | "success"
+  | "degraded"
+  | "failed";
 type PromptMode = "init" | "followup";
+
+// PromptBuildOutcome mirrors the canonical statuses build_site.py and
+// dev_generate.py write into build-result.json:status (see B44).
+// Anything we cannot classify ("unknown") is surfaced as a degraded
+// result so the operator never sees a false-success badge.
+export type PromptBuildOutcome = "ok" | "degraded" | "failed" | "unknown";
 
 type PromptApiPayload = {
   runId?: string;
@@ -17,6 +29,7 @@ type PromptApiPayload = {
   projectId?: string;
   version?: number | null;
   briefSource?: string | null;
+  buildStatus?: string | null;
   error?: string;
 };
 
@@ -28,8 +41,31 @@ type PromptBuilderProps = {
   selectedSiteId: string;
   onBuildStart: () => void;
   onBuildEnd: () => void;
-  onBuildDone: (runId: string) => void;
+  onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
 };
+
+// Map the wire `buildStatus` (any string from build-result.json) to
+// the three operator-visible outcomes. "ok"/"mock-complete"/"skipped"
+// count as success; "degraded" surfaces a warning; "failed" is an
+// explicit failure; everything else (including null/missing) is
+// reported as "unknown" and rendered as degraded so we never go green
+// over an unrecognised status.
+export function classifyBuildStatus(
+  status: string | null | undefined,
+): PromptBuildOutcome {
+  if (status === "ok" || status === "mock-complete" || status === "skipped") {
+    return "ok";
+  }
+  if (status === "degraded") return "degraded";
+  if (status === "failed") return "failed";
+  return "unknown";
+}
+
+function outcomeToStage(outcome: PromptBuildOutcome): PromptStage {
+  if (outcome === "ok") return "success";
+  if (outcome === "failed") return "failed";
+  return "degraded";
+}
 
 export function PromptBuilder({
   isBusy,
@@ -50,6 +86,8 @@ export function PromptBuilder({
     siteId: string;
     version: number | null;
     briefSource: string | null;
+    buildStatus: string | null;
+    outcome: PromptBuildOutcome;
   } | null>(null);
   const stageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -120,14 +158,22 @@ export function PromptBuilder({
         throw new Error(payload.error ?? "Prompt-anropet misslyckades.");
       }
 
-      setStage("success");
+      // B44: classify build status from build-result.json so the
+      // operator UI distinguishes ok / degraded / failed instead of
+      // showing "Build klar" for a structured failure (build-runner.ts
+      // returns a runId on failed builds so the run still appears in
+      // Run History).
+      const outcome = classifyBuildStatus(payload.buildStatus);
+      setStage(outcomeToStage(outcome));
       setLastResult({
         runId: payload.runId,
         siteId: payload.siteId,
         version: payload.version ?? null,
         briefSource: payload.briefSource ?? null,
+        buildStatus: payload.buildStatus ?? null,
+        outcome,
       });
-      onBuildDone(payload.runId);
+      onBuildDone(payload.runId, outcome);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Okänt fel.");
       setStage("failed");
@@ -229,6 +275,8 @@ function PromptStageIndicator({
     siteId: string;
     version: number | null;
     briefSource: string | null;
+    buildStatus: string | null;
+    outcome: PromptBuildOutcome;
   } | null;
 }) {
   if (stage === "thinking") {
@@ -253,23 +301,44 @@ function PromptStageIndicator({
         <p>
           Build klar: <code>{lastResult.runId}</code>
         </p>
-        <p className="text-xs opacity-80">
-          siteId: <code>{lastResult.siteId}</code>
-          {lastResult.version ? (
-            <>
-              {" · "}version: <code>{lastResult.version}</code>
-            </>
-          ) : null}
-          {lastResult.briefSource ? (
-            <>
-              {" · "}briefSource: <code>{lastResult.briefSource}</code>
-            </>
-          ) : null}
+        <ResultMeta lastResult={lastResult} />
+      </div>
+    );
+  }
+  if (stage === "degraded" && lastResult) {
+    const headline =
+      lastResult.outcome === "degraded"
+        ? "Build klar med varning"
+        : "Build klar med okänd status";
+    const detail =
+      lastResult.outcome === "degraded"
+        ? "Quality Gate eller policy-kontroll markerade fynd. Inspektera Run Details."
+        : `Okänd build-status (${lastResult.buildStatus ?? "saknas"}). Inspektera Run Details.`;
+    return (
+      <div className="flex flex-col gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+        <p>
+          {headline}: <code>{lastResult.runId}</code>
         </p>
+        <p className="text-xs opacity-80">{detail}</p>
+        <ResultMeta lastResult={lastResult} />
       </div>
     );
   }
   if (stage === "failed") {
+    if (lastResult && lastResult.outcome === "failed") {
+      return (
+        <div className="flex flex-col gap-1 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+          <p>
+            Build misslyckades: <code>{lastResult.runId}</code>
+          </p>
+          <p className="text-xs opacity-80">
+            build-result.json status=failed (npm install/build eller Quality
+            Gate). Se Run Details för detaljer.
+          </p>
+          <ResultMeta lastResult={lastResult} />
+        </div>
+      );
+    }
     return (
       <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300">
         Prompt-bygget misslyckades. Se felmeddelandet ovan.
@@ -277,4 +346,36 @@ function PromptStageIndicator({
     );
   }
   return null;
+}
+
+function ResultMeta({
+  lastResult,
+}: {
+  lastResult: {
+    siteId: string;
+    version: number | null;
+    briefSource: string | null;
+    buildStatus: string | null;
+  };
+}) {
+  return (
+    <p className="text-xs opacity-80">
+      siteId: <code>{lastResult.siteId}</code>
+      {lastResult.version ? (
+        <>
+          {" · "}version: <code>{lastResult.version}</code>
+        </>
+      ) : null}
+      {lastResult.briefSource ? (
+        <>
+          {" · "}briefSource: <code>{lastResult.briefSource}</code>
+        </>
+      ) : null}
+      {lastResult.buildStatus ? (
+        <>
+          {" · "}buildStatus: <code>{lastResult.buildStatus}</code>
+        </>
+      ) : null}
+    </p>
+  );
 }
