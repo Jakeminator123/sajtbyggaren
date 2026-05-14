@@ -123,16 +123,6 @@ Format per bugg:
   `load_scaffold_registry()` (samma mönster som B22 löste för
   `scaffold.schema.json`). Ej blocker - byggtidsguarden täcker redan
   scenariot, men en schema-fil ger tidigare felfångst + IDE-stöd.
-- **`B56` Medel** - StackBlitz-preview för Next 16-runs startar via `next dev`
-  (Turbopack default), vilket kan faila i WebContainer med felet "Turbopack is
-  not supported on this platform ... use next dev --webpack". Arkitekturen är
-  annars korrekt: Viewser embed:ar vald run-sajt (generated files), inte
-  Viewser själv.
-  Fix: open.
-  Test:
-  `tests/test_viewser_files.py::test_stackblitz_files_patches_package_json_for_webpack`,
-  `tests/test_viewser_files.py::test_stackblitz_files_does_not_duplicate_webpack_flag`,
-  `tests/test_viewser_files.py::test_stackblitz_files_does_not_write_back_package_json_to_disk`.
 
 ### Notera (inte en bugg) - dev-preview-output utanför repo
 
@@ -189,6 +179,21 @@ arkitekturändring, inte en bugg.
   `.env.example`-allowlist),
   `tests/test_viewser_files.py::test_stackblitz_files_allow_env_example_through_filter`
   (källkods-lock på `=== ".env.example"`-pattern).
+
+- **`B56` Medel** (stängd 2026-05-14, commit `8fae26a`) - StackBlitz-preview
+  för Next 16-runs startade via `next dev` (Turbopack default), vilket kunde
+  faila i WebContainer med felet "Turbopack is not supported on this
+  platform ... use next dev --webpack".
+  **Fix:** `apps/viewser/lib/stackblitz-files.ts` patchar nu bara
+  `package.json`-bytesen som skickas till StackBlitz (ingen diskmutation av
+  starter eller run-snapshot): `scripts.dev` säkras via
+  `ensureWebpackFlag(...)` och `stackblitz.startCommand` sätts till
+  `npm run dev`. Inline-patchen körs endast för
+  `relPath === "package.json"`.
+  Test:
+  `tests/test_viewser_files.py::test_stackblitz_files_patches_package_json_for_webpack`,
+  `tests/test_viewser_files.py::test_stackblitz_files_does_not_duplicate_webpack_flag`,
+  `tests/test_viewser_files.py::test_stackblitz_files_does_not_write_back_package_json_to_disk`.
 
 - **`B51` Låg** (stängd 2026-05-14, A-mini cleanup efter B50) -
   `scripts/build_site.py:render_layout` skrev nav-labels direkt som JSX-
