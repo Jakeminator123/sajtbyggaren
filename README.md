@@ -150,6 +150,11 @@ Korta motiveringar i [`governance/decisions/`](governance/decisions/):
 - [0013](governance/decisions/0013-schema-locking-before-sprint-2b.md) - Schema-låsning före Sprint 2B.
 - [0014](governance/decisions/0014-sprint-2b-planning-helper.md) - Sprint 2B planning helper (gemensam `produce_site_plan`, planSource pinned, ecommerce-lite scaffold).
 - [0015](governance/decisions/0015-sprint-3a-codegen-quality-repair.md) - Sprint 3A: deterministisk `codegenModel v1`, riktiga Quality Gate-checks och no-fix Repair Pipeline under `packages/generation/{codegen,quality_gate,repair}/`.
+- [0016](governance/decisions/0016-sprint-3b-mechanical-repair.md) - Sprint 3B: första mekaniska repair-fixen och sandwich-loop.
+- [0017](governance/decisions/0017-sprint-3b-next-real-codegen-model.md) - Sprint 3B-next: minimal real `codegenModel` för `marketing-base`.
+- [0018](governance/decisions/0018-b20-commerce-base-harmonisering.md) - `commerce-base` som harmoniserad starter.
+- [0019](governance/decisions/0019-b20-step-2-mapping-activation.md) - Aktiverar `ecommerce-lite -> commerce-base`.
+- [0020](governance/decisions/0020-commerce-base-lucide-react.md) - Lägger `lucide-react` i `commerce-base`.
 
 ## Engine Run
 
@@ -176,9 +181,11 @@ Dev-drivern kör hela kedjan från prompt till artefakter.
 - Fas 3 (Build): Sprint 3A landade deterministisk `codegenModel v1`-manifest
   (`packages/generation/codegen/`), riktiga Quality Gate-checks
   (typecheck/route-scan/build-status/policy-compliance via
-  `packages/generation/quality_gate/`) och no-fix-applied Repair Pipeline
-  (`packages/generation/repair/`). Real `codegenModel`-LLM-anrop, mekaniska
-  fixes och LLM-fix kommer i Sprint 3B+.
+  `packages/generation/quality_gate/`). Sprint 3B lade första mekaniska
+  repair-fixen (`ensure-default-export`) och sandwich-loopen i
+  `packages/generation/repair/`. Sprint 3B-next lade ett smalt real
+  `codegenModel`-anrop för `marketing-base`; filerna produceras fortfarande
+  deterministiskt och LLM:en får bara skriva rationale/risk-notes.
 
 ```bash
 python scripts/dev_generate.py "Skapa hemsida för elektriker i Malmö"
@@ -199,7 +206,7 @@ Detaljer: [`engine-run.v1.json`](governance/policies/engine-run.v1.json), [ADR 0
 | Regression-tester och CI | klart |
 | Sprint 1 - Mock Engine Run | klart |
 | Sprint 2 - Riktig fas 1 + fas 2 + andra scaffolden | klart: Sprint 2A + Sprint 2B (`briefModel` + `planningModel` kopplade via gemensamma helpers, `ecommerce-lite` tillagd, B19 stängd) |
-| Sprint 3 - Riktig fas 3 (codegen + repair + gate) | Sprint 3A klar (ADR 0015): codegen v1 + Quality Gate + no-fix Repair under `packages/generation/{codegen,quality_gate,repair}/`. Sprint 3B (real `codegenModel` + mekanisk Fix Registry) inte startad |
+| Sprint 3 - Riktig fas 3 (codegen + repair + gate) | Sprint 3A + 3B + 3B-next klara: codegen-manifest, Quality Gate, första mekaniska repair-fixen och minimal real `codegenModel` för `marketing-base`. Kvar i senare sprint: bredare file-emission, fler repair-fixar, modelUsage-aggregering och B13a-flytten |
 | Sprint 4 - LocalRuntime | inte startad |
 | Sprint 5 - StackBlitzRuntime | inte startad |
 | Sprint 6+ - Fler scaffolds, dossiers, evals | inte startad |

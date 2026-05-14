@@ -32,6 +32,33 @@ Så väljer du agent:
 - Bygga/fixa produkt, tester eller sprintscope -> Builder-agent.
 - Docs, current-focus, handoff, sanity, branchordning -> Steward-agent.
 
+## Baseline för Codex-IDE
+
+När flera agentpass körs bredvid varandra i Codex-IDE är standarden:
+
+1. Starta med Scout när nästa steg är oklart. Scout läser bara, gör
+   repo-baseline, listar risker och lämnar en konkret Builder- eller
+   Steward-prompt.
+2. Kör högst en skrivande Builder åt gången. Builder får ett B-ID eller
+   ett smalt sprintscope och äger de filerna tills sprinten är klar.
+3. Låt Steward ta över efter push eller när läget behöver städas.
+   Steward får bara röra docs/governance/sanity om inget annat sägs.
+4. Säg alltid vilka andra agentpass som körs och vilka filer de äger.
+   Om du är osäker: ge den nya agenten Scout-roll först.
+5. Pusha aldrig från två agentpass samtidigt. Den agent som ska pusha
+   kör final sanity, verifierar att `main` matchar `origin/main`, och
+   stannar om remote har rört sig.
+
+Första rundan i Codex-IDE bör därför se ut så här:
+
+1. Scout: "Gör read-only repo-baseline, kontrollera `current-focus`,
+   `handoff`, öppna PRs och föreslå nästa sprintprompt."
+2. Builder: "Implementera bara den sprint Scout pekar ut. Skapa backup
+   först, rör bara scope-filerna, kör guards och rapportera diffen."
+3. Scout: "RO-review av Builder-diffen före push."
+4. Steward: "Efter push, verifiera SHA/status och uppdatera
+   `current-focus`/`handoff` om nästa agents arbete ändrats."
+
 Parallella agenter:
 
 - Två agenter får inte pusha samtidigt till `main`.

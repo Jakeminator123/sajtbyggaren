@@ -3,9 +3,6 @@
     "supabase": {
       "enabled": true
     },
-    "vercel": {
-      "enabled": true
-    },
     "linear": {
       "enabled": true
     },
