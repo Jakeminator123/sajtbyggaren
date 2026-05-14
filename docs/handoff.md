@@ -1,7 +1,7 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-14 (post-follow-up-semantik sprint)
-**Aktuell repo-HEAD på `main`:** `10eb286` (B48: `scripts/dev_generate.py` trådar follow-up `mode/projectId` till planfasen; Backoffice Playground-runnern är låst med test). Ligger ovanpå hygiene/docs-commits `134df07`, `de7fd7c`, `ec11c41` och audit-fix-sprinten `5d746e9`. Kör `git log --oneline -1` för senaste lokala SHA.
+**Datum:** 2026-05-14 (post-workspace cleanup)
+**Aktuell repo-HEAD på `main`:** `97ce7a8` (`.review-*/` ignoreras i git/Cursor/VS Code watcher och stale `build-runner.ts`-kommentar är synkad till external generated-dir). B48 follow-up-semantik landade i `10eb286` och dokumenterades i `5199d94`. Kör `git log --oneline -1` för senaste lokala SHA.
 **Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-10` finns lokalt från pre-audit-fix-läget; `backup-9` finns lokalt från pre-PR-#23-läget; `backup-8` finns lokalt efter follow-up-sprinten; `backup-7` (från `fb11925`) ligger på origin som tidigare fallback.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
@@ -46,7 +46,7 @@ Tre lager:
 - `backoffice/` + `backend.py` — Streamlit-administration (inte runtime).
 - `packages/` + `apps/` — runtime + kund-UI.
 
-## Vad funkar idag (post-follow-up-semantik sprint, repo-HEAD `10eb286`)
+## Vad funkar idag (post-workspace cleanup, repo-HEAD `97ce7a8`)
 
 ### Governance + guards
 
@@ -159,6 +159,8 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+97ce7a8 chore(workspace): ignore PR review worktrees and sync build-runner comment
+5199d94 docs(focus): record B48 follow-up semantics landing
 10eb286 fix(dev-generate): thread follow-up mode into plan phase
 ec11c41 docs: sync generated output path across docs
 de7fd7c docs(focus): bump verified SHA after workspace hygiene pass

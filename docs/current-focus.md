@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `10eb286` (2026-05-14, post-follow-up-semantik sprint: `scripts/dev_generate.py` trådar nu `--mode followup` + `--project-id` hela vägen till `produce_site_plan()`, så `input.json` och `generation-package.json` matchar (`engineMode=followup`, `projectId=<id>`). Backoffice Playground-runnern är source-lockad att skicka `--project-id` och `SAJTBYGGAREN_MODE=followup`. Föregående hygiene/docs-commits: `134df07`, `de7fd7c`, `ec11c41`. Öppen PR: #24 `docs-base` starter, draft, ska inte mergas förrän operatör + checks/base-status är klar.)
+Last verified state: `97ce7a8` (2026-05-14, post-workspace cleanup: B48 follow-up-semantik är landad i `10eb286`, `5199d94` bumpade focus/handoff, och `97ce7a8` lägger `.review-*/` i `.gitignore` + `.cursorignore` + VS Code watcher-exclude samt uppdaterar stale `build-runner.ts`-kommentaren till nya external generated-dir. Öppen PR: #24 `docs-base` starter, draft, ska inte mergas förrän operatör + checks/base-status är klar.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `10eb286`; senaste produktcommit är `10eb286` (B48 follow-up-semantik i dev-driver/backoffice) ovanpå `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `97ce7a8`; senaste produktcommit är `10eb286` (B48 follow-up-semantik i dev-driver/backoffice) ovanpå `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -193,6 +193,12 @@ Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
   till `produce_site_plan()`, så `generation-package.json` matchar
   `input.json` vid follow-up. Tester låser både CLI/dev-driver och
   Backoffice Playground-subprocessen.
+- `5199d94` — `docs(focus): record B48 follow-up semantics landing`.
+  Standard loop steg 8 efter B48-sprinten; dokumenterar PR #24 draft.
+- `97ce7a8` — `chore(workspace): ignore PR review worktrees and sync
+  build-runner comment`. `.review-*/` ignoreras i git/Cursor/VS Code
+  watcher och `build-runner.ts`-kommentaren pekar på external
+  generated preview directory.
 
 Mainline-steward-pushar efter PR #21 (pure docs/governance):
 
