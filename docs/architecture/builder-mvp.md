@@ -239,8 +239,8 @@ Det här gör Builder MVP **inte** efter Sprint 3A. Operatören får utöka när
 - Fas 3 har Sprint 3A-vertikalen klar: deterministisk `codegenModel v1`-manifest (`packages/generation/codegen/`), riktiga Quality Gate-checks (`packages/generation/quality_gate/`) och no-fix-applied Repair Pipeline (`packages/generation/repair/`). Real `codegenModel`-LLM-anrop, mekaniska fixes (Fix Registry) och LLM-fix kommer i Sprint 3B+. Quality Gate-scoring mot Page Quality Traits kommer i Sprint 3C.
 - Ingen Stripe, Supabase, Clerk, Shopify eller annan `hard` Dossier.
 - Ingen preview-release och inget `Promoted Site`-läge.
-- Bara en starter (`marketing-base`) och en scaffold (`local-service-business`) implementerade. Project Inputs som finns att bygga: `painter-palma`, `arcade-hall`, `foto-ram`.
-- Ingen follow-up - buildern kör alltid `engineMode=init`. Project DNA läses inte än.
+- Aktiva runtime-starters är `marketing-base` och `commerce-base`. `portfolio-base` finns som harmoniserad starter-underlag men är inte aktiverad i `SCAFFOLD_TO_STARTER`.
+- Viewser kan skapa follow-up prompt versions ovanpå befintliga prompt-inputs/runs. `scripts/dev_generate.py` och Backoffice Playground har däremot en öppen kontraktsrisk: follow-up kan väljas i input, men planfasen skickar fortfarande init-mode till plan-helpern.
 
 ## Filer att läsa när du orienterar dig
 

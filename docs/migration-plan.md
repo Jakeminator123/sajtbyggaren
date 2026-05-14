@@ -33,11 +33,13 @@ sprint-numreringen.
   uppfyller phase 3 artefaktkontrakt (generated-files snapshot, repair/quality
   skeletons, `modelUsage`-stub, hård route-guard). Ersätts när Sprint 3 ger
   riktig Repair Pipeline och Quality Gate.
-- **Viewser MVP** (klart, PR #4): `apps/viewser/` ger en localhost-only operator-
-  prototype för chat + manuell build + preview. Den implementerar **inte**
-  Dossier-edit, Project DNA, follow-up, Repair Pipeline eller Quality Gate -
-  de hör till Sprint 2-3. Ersätts av riktig Engine Run-yta när Sprint 4-5
-  LocalRuntime/StackBlitzRuntime är på plats.
+- **Viewser MVP** (klart, PR #4 + senare PromptBuilder-sprintar):
+  `apps/viewser/` ger en localhost-only operator-prototype för fri prompt,
+  follow-up prompt versions, build-trigger, run history och preview. Den
+  implementerar **inte** Dossier-edit, canonical Project DNA-editor, Repair
+  Pipeline eller Quality Gate - de hör till `packages/generation/`. Ersätts av
+  riktig Engine Run-yta när Sprint 4-5 LocalRuntime/StackBlitzRuntime är på
+  plats.
 - **Vocabulary compression** (klart, PR #5, ADR 0012): låste operator-flödet
   till åtta steg och tog bort de fyra dossier-typerna som dubblade modellen
   ovanpå Dossier-klasserna. Bara `Dossier` med klass `soft` eller `hard` kvar.

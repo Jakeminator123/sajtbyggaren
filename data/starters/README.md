@@ -14,18 +14,19 @@ Reviewerns rekommendation: **fem starters täcker våra 14 scaffolds**. Se ADR 0
 | `portfolio-base` | `portfolio-creator`, `agency-studio` | Fork av [vercel/examples → solutions/blog](https://github.com/vercel/examples/tree/main/solutions/blog) | Vendor-import klar (2026-05-14, upstream `72aaac1`); bygger lokalt; runtime-mapping aktiveras inte i denna PR |
 | `docs-base` | `course-education` | Fork av [shuding/nextra](https://github.com/shuding/nextra) | Mapp finns, kod saknas |
 
-## Scaffold → Starter routing (canonical)
+## Scaffold → Starter routing (målbild)
 
-Den här mappningen är sanningskällan för vilken Starter respektive Scaffold
-körs på. `packages/generation/planning/plan.py:SCAFFOLD_TO_STARTER` MÅSTE
-vara en delmängd av (och konsistent med) listan nedan. Drift fångas av
+Den här listan är målbilden för vilken Starter respektive Scaffold ska köra på
+när varje starter är aktiverad. Aktiv runtime styrs fortfarande av
+`packages/generation/planning/plan.py:SCAFFOLD_TO_STARTER`, som MÅSTE vara en
+delmängd av (och konsistent med) listan nedan. I nuläget är `portfolio-base`
+harmoniserad som starter-underlag, men `portfolio-creator` och `agency-studio`
+är inte aktiverade i runtime-mappningen. Drift fångas av
 `tests/test_starter_scaffold_mapping.py`.
 
-Format: en rad per scaffold med exakt en starter. Tillfälliga avvikelser
-(t.ex. om en scaffold tillfälligt kör på fel starter under en pågående
-harmonisering) MÅSTE markeras explicit på samma rad med en
-parentetisk note som innehåller B-ID:t från `docs/known-issues.md`,
-så review kan skilja avsedd avvikelse från regression.
+Format: en rad per scaffold med exakt en mål-starter. Om aktiv runtime avviker
+från målbilden ska det framgå i status-/handoff-dokumenten eller via B-ID i
+`docs/known-issues.md`, så review kan skilja avsedd vänteläge från regression.
 
 <!-- scaffold-starter-mapping:start -->
 - local-service-business: marketing-base

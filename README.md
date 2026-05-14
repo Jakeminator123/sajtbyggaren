@@ -101,7 +101,7 @@ scripts/clean-runs.ps1                   # rensar gamla data/runs/<runId>/-mappa
 scripts/clean-runs.ps1 -Keep 0 -DryRun   # förhandsvisa total rensning
 ```
 
-`dev-builder.ps1` simulerar operatörsflödet: läser ett Project Input, kör hela [`scripts/build_site.py`](scripts/build_site.py)-pipen och öppnar resultatet (inklusive `/spel`-routen från `interactive-game-loop`-dossiern). `dev-viewser.ps1` är den localhost-only operator-prototypen med chat + manuell build-knapp. `dev-builder` och `dev-viewser` försöker båda :3000 om inte `-Port` anges, så vid parallell-körning sätter du en port på en av dem.
+`dev-builder.ps1` simulerar operatörsflödet: läser ett Project Input, kör hela [`scripts/build_site.py`](scripts/build_site.py)-pipen och öppnar resultatet (inklusive `/spel`-routen från `interactive-game-loop`-dossiern). `dev-viewser.ps1` är den localhost-only operator-prototypen med PromptBuilder, run history och preview av senaste run; den kan starta ny sajt från fri prompt och fortsätta på befintligt sajtspår med follow-up prompt versions. `dev-builder` och `dev-viewser` försöker båda :3000 om inte `-Port` anges, så vid parallell-körning sätter du en port på en av dem.
 
 `clean-runs.ps1` är en bekvämlighetsrensare. Tester skriver inte längre till `data/runs/` (de använder `tmp_path`), men varje `dev-builder.ps1`-körning lägger till en katalog där eftersom runs är canonical historik enligt [`engine-run.v1.json`](governance/policies/engine-run.v1.json).
 

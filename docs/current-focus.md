@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `e9093c0` (2026-05-14, post-settings-sync: `main` och `origin/main` är synkade på `e9093c0`. Senaste produktläge är fortsatt `9944abb` efter PR #23 + #22: backoffice trace/playground och `portfolio-base` starter är squash-mergeade. `e9093c0` ändrar bara `.cursor/settings.json` och aktiverar `linear` + `sanity` bredvid befintliga pluginer. Inga öppna PRs.)
+Last verified state: `d43bce2` (2026-05-14, post-docs sync efter settings-commit: `main` och `origin/main` är synkade på `d43bce2`. Senaste produktläge är fortsatt `9944abb` efter PR #23 + #22: backoffice trace/playground och `portfolio-base` starter är squash-mergeade. `.cursor/settings.json` är committad i `e9093c0` och aktiverar `linear` + `sanity` bredvid befintliga pluginer. Inga öppna PRs.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `e9093c0`; senaste produktcommit är `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `d43bce2`; senaste produktcommit är `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -62,7 +62,8 @@ pågår. `backup-9` finns lokalt från pre-PR-#23-läget; backup-8 finns lokalt
 efter follow-up-sprinten; backup-7 från `fb11925` ligger på origin som fallback
 efter audit-hotfix-sprinten. PR #22 har också landat `portfolio-base` som ny
 harmoniserad starter under `data/starters/portfolio-base/`. Commit `e9093c0`
-ändrar bara `.cursor/settings.json` och aktiverar `linear` + `sanity`.
+ändrar bara `.cursor/settings.json` och aktiverar `linear` + `sanity`; commit
+`d43bce2` synkar handoff/focus efter settings-commiten.
 
 Föregående: PR #21 (lucide-react i commerce-base + ADR 0020,
 mergad `04fc2fa` 2026-05-13 19:55 UTC) gjorde full `npm run build`
@@ -156,6 +157,8 @@ Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
 - `e9093c0` — `Liten settings.json bara som committades`.
   Aktiverar `linear` och `sanity` i `.cursor/settings.json`; ingen
   produktkod ändrad.
+- `d43bce2` — `docs: sync handoff after settings commit`.
+  Synkar current-focus/handoff efter settings-commiten.
 
 Mainline-steward-pushar efter PR #21 (pure docs/governance):
 
@@ -199,12 +202,18 @@ starter är klara. Inga öppna PRs finns just nu.
 
 ## Next action - direktiv till nästa agent
 
-**Nästa produktval är öppet.**
+**Nästa Builder-beslut: follow-up-semantik i dev-driver/backoffice.**
 
-- Välj nästa sprint: B13a arkitektur-flytt, `write_pages` icon-bibliotek-
-  agnostisk refactor eller nästa Builder UX-steg.
-- Lokal `.cursor/settings.json` är ändrad av operatörsmiljön och ska
-  inte committas utan explicit operatörsbeslut.
+- `scripts/dev_generate.py` exponerar `--mode followup` och `--project-id`,
+  men planfasen skickar fortfarande `engine_mode="init"` och
+  `project_id=None` till `produce_site_plan()`. Backoffice Playground kan
+  därför starta follow-up-körning där `input.json` säger followup medan
+  `generation-package.json` fortfarande speglar init.
+- Nästa Builder bör antingen dölja/disable:a follow-up i Backoffice/dev-driver
+  tills kontraktet är riktigt, eller föra `mode`/`project_id` hela vägen genom
+  planfasen och låsa beteendet med test.
+- Docs-copy för Viewser och starter-routing har moderniserats i
+  Steward-cleanupen efter Scout-fyndet.
 
 `portfolio-base` är nu bara starter-underlag; ingen `SCAFFOLD_TO_STARTER`-
 mappning eller real-codegen-scope är aktiverad av #22.
@@ -237,9 +246,6 @@ Innan `git push origin main`:
 
 Inga öppna PR-blockers just nu.
 
-Lokal `.cursor/settings.json` är ocommittad operatörs-/plugininställning
-och ska inte ingå i Steward-commit utan explicit beslut.
-
 ## Do not start yet
 
 - StackBlitz-preview, Fly-deploy, PreviewRuntime - inte påbörjat.
@@ -260,16 +266,13 @@ och ska inte ingå i Steward-commit utan explicit beslut.
 
 ## Queue
 
-1. B13a arkitektur-flytt (egen sprint, kräver ADR).
-2. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
+1. Follow-up-semantik i dev-driver/backoffice: se "Next action".
+2. B13a arkitektur-flytt (egen sprint, kräver ADR).
+3. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
    lucide-typen av starter-vs-codegen-konflikt; ADR 0020:s
    "INTE beslutar"-sektion).
-3. Cancellation-followup (låg): riktig cancellation/background-jobb i
+4. Cancellation-followup (låg): riktig cancellation/background-jobb i
    playground-vyn om operatören behöver avbryta redan startade körningar.
-4. **PromptBuilder polish (nice-to-have)**: setTimeout för
-   stage-transition "thinking" → "building" saknar cleanup vid
-   unmount. Låg risk men låt nästa Builder rensa om PromptBuilder
-   ändå rörs igen.
 
 ## Loopen vi följer
 
