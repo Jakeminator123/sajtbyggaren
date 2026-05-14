@@ -11,7 +11,7 @@ Reviewerns rekommendation: **fem starters täcker våra 14 scaffolds**. Se ADR 0
 | `marketing-base` | 9 av 14 scaffolds (local-service-business, professional-services, restaurant-hospitality, clinic-healthcare, real-estate, nonprofit-community, event-campaign, app-landing, consultant-expert) | Egen bas via `create-next-app` + `shadcn init` | Klar, build verifierad |
 | `saas-base` | `saas-product` | Fork av [vercel/platforms](https://github.com/vercel/platforms) | Mapp finns, kod saknas |
 | `commerce-base` | `ecommerce-lite` | Fork av [vercel/commerce](https://github.com/vercel/commerce) | Vendor-import klar (2026-05-11, upstream `1df2cf6`); bygger lokalt; runtime-mapping aktiverad i B20 step 2 (kör genom `deterministic-v1` codegen tills real-codegen-scope utvidgas) |
-| `portfolio-base` | `portfolio-creator`, `agency-studio` | Fork av [vercel/examples → solutions/blog](https://github.com/vercel/examples/tree/main/solutions/blog) | Mapp finns, kod saknas |
+| `portfolio-base` | `portfolio-creator`, `agency-studio` | Fork av [vercel/examples → solutions/blog](https://github.com/vercel/examples/tree/main/solutions/blog) | Vendor-import klar (2026-05-14, upstream `72aaac1`); bygger lokalt; runtime-mapping aktiveras inte i denna PR |
 | `docs-base` | `course-education` | Fork av [shuding/nextra](https://github.com/shuding/nextra) | Mapp finns, kod saknas |
 
 ## Scaffold → Starter routing (canonical)
