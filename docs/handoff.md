@@ -1,7 +1,7 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-14 (post-PR #23 + #22)
-**Aktuell produkt-HEAD på `main`:** `9944abb` (squash-merge PR #22 `feat(starters): add harmonized portfolio-base starter` ovanpå PR #23 `e1ad5ca` och follow-up prompt versions `2701b00`). Kör `git log --oneline -1` för senaste lokala SHA.
+**Datum:** 2026-05-14 (post-PR #23 + #22 + settings-sync)
+**Aktuell repo-HEAD på `main`:** `e9093c0` (endast `.cursor/settings.json`: `linear` + `sanity` aktiverade). Aktuell produkt-HEAD är `9944abb` (squash-merge PR #22 `feat(starters): add harmonized portfolio-base starter` ovanpå PR #23 `e1ad5ca` och follow-up prompt versions `2701b00`). Kör `git log --oneline -1` för senaste lokala SHA.
 **Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-9` finns lokalt från pre-PR-#23-läget; `backup-8` finns lokalt efter follow-up-sprinten; `backup-7` (från `fb11925`) ligger på origin som tidigare fallback.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
@@ -46,7 +46,7 @@ Tre lager:
 - `backoffice/` + `backend.py` — Streamlit-administration (inte runtime).
 - `packages/` + `apps/` — runtime + kund-UI.
 
-## Vad funkar idag (post-PR #22, produkt-HEAD `9944abb`)
+## Vad funkar idag (post-PR #22, repo-HEAD `e9093c0`)
 
 ### Governance + guards
 
@@ -156,6 +156,7 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+e9093c0 Liten settings.json bara som committades
 9944abb feat(starters): add harmonized portfolio-base starter
 e1ad5ca feat(backoffice): improve trace viewer and playground logs
 2701b00 feat(viewser): add follow-up prompt versions

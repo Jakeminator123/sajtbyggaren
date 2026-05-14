@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `9944abb` (2026-05-14, post-PR #23 + #22: backoffice trace/playground och `portfolio-base` starter är squash-mergeade till `origin/main`; `main` och `origin/main` är synkade på `9944abb`. Backoffice trace/playground-skulden är stängd i `docs/known-issues.md`, med cancellation-followup kvar som separat lågprioriterad post. Lokal `backup-9` skapad från pre-merge `main`; lokal `.cursor/settings.json` är fortsatt ocommittad operatörsinställning. Inga öppna PRs.)
+Last verified state: `e9093c0` (2026-05-14, post-settings-sync: `main` och `origin/main` är synkade på `e9093c0`. Senaste produktläge är fortsatt `9944abb` efter PR #23 + #22: backoffice trace/playground och `portfolio-base` starter är squash-mergeade. `e9093c0` ändrar bara `.cursor/settings.json` och aktiverar `linear` + `sanity` bredvid befintliga pluginer. Inga öppna PRs.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `e9093c0`; senaste produktcommit är `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -61,7 +61,8 @@ trace-viewer och playground visar subprocess-status/loggutdrag medan körningen
 pågår. `backup-9` finns lokalt från pre-PR-#23-läget; backup-8 finns lokalt
 efter follow-up-sprinten; backup-7 från `fb11925` ligger på origin som fallback
 efter audit-hotfix-sprinten. PR #22 har också landat `portfolio-base` som ny
-harmoniserad starter under `data/starters/portfolio-base/`.
+harmoniserad starter under `data/starters/portfolio-base/`. Commit `e9093c0`
+ändrar bara `.cursor/settings.json` och aktiverar `linear` + `sanity`.
 
 Föregående: PR #21 (lucide-react i commerce-base + ADR 0020,
 mergad `04fc2fa` 2026-05-13 19:55 UTC) gjorde full `npm run build`
@@ -152,6 +153,9 @@ Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
 - `9944abb` — `feat(starters): add harmonized portfolio-base starter`.
   PR #22 squash-mergead efter update-branch mot post-PR-#23 main och gröna
   governance-, Bugbot- och secret-scan-checkar.
+- `e9093c0` — `Liten settings.json bara som committades`.
+  Aktiverar `linear` och `sanity` i `.cursor/settings.json`; ingen
+  produktkod ändrad.
 
 Mainline-steward-pushar efter PR #21 (pure docs/governance):
 
