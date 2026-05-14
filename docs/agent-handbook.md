@@ -126,11 +126,15 @@ varje delsteg har en tydlig ägare och en tydlig avlämningsyta.
    klassar fynd som blocker, risk, nice-to-have eller falskt fynd. Vid
    PR-undantag kan Bugbot användas, men PR är inte standardflödet. Inför en
    ny större sprint ska Scout också föreslå modell-/insatsnivå 1-10 för nästa
-   agentpass.
-5. **Operatör + extern reviewer** beslutar: fortsätt, fixa eller skrota.
+   agentpass. Om Scout säger att push är OK och working tree är clean får
+   Builder pusha direkt utan ny manuell operatörs-OK.
+5. **Operatör + extern reviewer** beslutar: fortsätt, fixa eller skrota när
+   Scout inte redan har gett tydlig push-OK eller när risken kräver det.
 6. **Final sanity** kör `python scripts/review_check.py` (samma kedja som pre-push-guards).
-7. **Commit + push till main** efter gröna guards och godkänd riktning.
-8. **Uppdatera [`docs/current-focus.md`](current-focus.md)** i samma eller direkt efterföljande commit. **Obligatoriskt och agentens ansvar - inte operatörens.** Bumpa "Last verified"-SHA:n till nya HEAD, stryk det som blev klart, lägg till nya blockers/queue-items. Hoppas inte över. Filen är projektets enda aktuella köplan.
+7. **Commit + push till main** efter gröna guards och godkänd riktning. När
+   Builder har pushat klart skickas Builder-resultatet till Steward för
+   post-push-verifiering.
+8. **Steward verifierar post-push och uppdaterar [`docs/current-focus.md`](current-focus.md) / [`docs/handoff.md`](handoff.md) vid behov.** Rapportera alltid: pushed SHA, `git status`, `python scripts/focus_check.py`, om `origin/main` matchar lokal `main`, samt om docs uppdaterades och varför. Uppdatera docs när ny faktisk HEAD avslutar en sprint, active sprint ändras, next action/queue/blocked ändras, agentflöde/branchflöde/Grindmode/rollansvar ändras, ny risk/blocker/nice-to-have blir viktig för nästa agent, eller extern PR/Grind-agent ändrar vad `main` betyder. Hoppa över docs för ren mikrostatus som inte ändrar nästa agents arbete.
 9. **Nästa etapp** plockas från queue-listan i `docs/current-focus.md`. Builder-agenten ska i slutrapporten ge en grov progressbedömning i procent för sprinten och nästa etapp.
 
 Om operatören uttryckligen väljer PR-flöde används pull request-mallen i

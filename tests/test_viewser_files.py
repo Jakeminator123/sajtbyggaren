@@ -177,6 +177,45 @@ def test_prompt_route_passes_dossier_override_to_run_build() -> None:
 
 
 @pytest.mark.tooling
+def test_prompt_route_supports_followup_mode_without_schema_migration() -> None:
+    """Follow-up prompt ska styras av sidecar-meta, inte Project Input-schema."""
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+    assert 'z.enum(["init", "followup"])' in text, (
+        "/api/prompt måste ha explicit init/followup-läge så UI:t kan "
+        "skilja ny sajt från ny version."
+    )
+    assert "siteId" in text and "Följdprompt kräver valt siteId" in text, (
+        "Följdprompt-läget måste kräva siteId vid API-gränsen innan "
+        "prompt-helpern spawnas."
+    )
+    assert "projectId: z" not in text and "version: z" not in text, (
+        "/api/prompt ska inte validera projectId/version som klientpayload; "
+        "sidecar-meta räcker i denna sprint."
+    )
+
+
+@pytest.mark.tooling
+def test_prompt_route_serializes_prompt_helper_before_build() -> None:
+    """Sidecar version bump + Project Input write must not race before build."""
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "promptInFlight" in text, (
+        "/api/prompt måste serialisera prompt-helpern före runBuild så två "
+        "följdpromptar för samma siteId inte läser samma meta.version."
+    )
+    helper_index = text.index("const helper = await runPromptToProjectInput")
+    build_index = text.index("runBuild(helper.siteId, helper.dossierPath)")
+    queue_index = text.index("promptInFlight")
+    assert queue_index < helper_index < build_index, (
+        "Prompt-queue måste omfatta både helpern och builden, inte bara "
+        "runBuild-steget."
+    )
+
+
+@pytest.mark.tooling
 def test_prompt_runner_uses_double_dash_to_protect_dashed_prompts() -> None:
     """Audit fynd 3: vanliga prompter börjar med `-` eller `--` (t.ex.
     en inklistrad punktlista: "- skapa en sajt..."). Utan `--`-separator
@@ -189,13 +228,69 @@ def test_prompt_runner_uses_double_dash_to_protect_dashed_prompts() -> None:
     """
     text = (VIEWSER_DIR / "lib" / "prompt-runner.ts").read_text(encoding="utf-8")
     pattern = re.compile(
-        r"\[\s*scriptPath\s*,\s*\"--\"\s*,\s*trimmed\s*\]",
+        r"args\.push\(\s*\"--\"\s*,\s*trimmed\s*\)",
         re.MULTILINE,
     )
     assert pattern.search(text), (
-        "prompt-runner.ts spawn-args måste vara `[scriptPath, \"--\", trimmed]` "
+        "prompt-runner.ts spawn-args måste lägga `--` direkt före prompten "
         "så en prompt som börjar med `-` (punktlista) eller `--` inte "
         "tolkas som CLI-option av argparse i prompt_to_project_input.py."
+    )
+
+
+@pytest.mark.tooling
+def test_prompt_runner_passes_followup_site_id_to_helper() -> None:
+    text = (VIEWSER_DIR / "lib" / "prompt-runner.ts").read_text(encoding="utf-8")
+    assert "--followup-site-id" in text, (
+        "prompt-runner.ts måste kunna skicka valt siteId till "
+        "prompt_to_project_input.py för följdprompt-versioner."
+    )
+    assert "Följdprompt kräver ett valt siteId" in text, (
+        "prompt-runner.ts måste stoppa följdprompt utan siteId innan spawn."
+    )
+
+
+@pytest.mark.tooling
+def test_project_input_picker_includes_prompt_inputs_directory() -> None:
+    text = (VIEWSER_DIR / "lib" / "project-inputs.ts").read_text(encoding="utf-8")
+    assert '"prompt-inputs"' in text, (
+        "listProjectInputs måste även läsa data/prompt-inputs/ så operatorn "
+        "kan välja prompt-genererade siteIds för följdprompt."
+    )
+    assert '"examples"' in text, (
+        "examples/ måste fortsatt finnas kvar som Project Input-källa."
+    )
+
+
+@pytest.mark.tooling
+def test_prompt_builder_exposes_followup_mode_and_cleans_stage_timer() -> None:
+    text = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert '"followup"' in text and "Följdprompt på vald run/siteId" in text, (
+        "PromptBuilder måste låta operatorn välja följdprompt-läge."
+    )
+    assert "clearTimeout(stageTimerRef.current)" in text, (
+        "PromptBuilder måste städa stage-transition-timeouten vid unmount "
+        "och när prompt-anropet avslutas."
+    )
+
+
+@pytest.mark.tooling
+def test_run_history_can_show_prompt_project_id_and_version() -> None:
+    run_history = (VIEWSER_DIR / "components" / "run-history.tsx").read_text(
+        encoding="utf-8"
+    )
+    runs_lib = (VIEWSER_DIR / "lib" / "runs.ts").read_text(encoding="utf-8")
+    assert "projectId?: string" in run_history and "version?: number" in run_history, (
+        "RunHistoryItem måste kunna bära sidecar projectId/version för "
+        "prompt-genererade runs."
+    )
+    assert "run.projectId" in run_history and "run.version" in run_history, (
+        "RunHistory måste rendera projectId/version när /api/runs skickar dem."
+    )
+    assert "prompt-inputs" in runs_lib and "projectId" in runs_lib, (
+        "listRuns måste enrich:a runs med data/prompt-inputs/<siteId>.meta.json."
     )
 
 
@@ -516,12 +611,11 @@ def test_viewser_does_not_register_ui_components_in_naming_dictionary() -> None:
 
 @pytest.mark.tooling
 def test_viewser_scope_excludes_canonical_runtime_features() -> None:
-    """Viewser MVP får INTE innehålla Dossier-edit, DNA, follow-up, repair, quality."""
+    """Viewser MVP får INTE innehålla Dossier-edit, DNA, repair, quality."""
     forbidden_substrings = [
         "ProjectDna",
         "RepairPipeline",
         "QualityGate",
-        "FollowUp",
         "DossierEditor",
     ]
     for path in VIEWSER_DIR.rglob("*.ts*"):

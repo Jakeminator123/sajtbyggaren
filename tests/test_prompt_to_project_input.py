@@ -35,6 +35,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 from prompt_to_project_input import (  # noqa: E402
     generate,
+    generate_followup,
     pick_scaffold,
     site_brief_to_project_input,
     slugify_site_id,
@@ -295,4 +296,77 @@ def test_generate_rejects_unsafe_explicit_site_id(
             "valfri prompt",
             output_dir=tmp_path,
             site_id="../escape",
+        )
+
+
+@pytest.mark.tooling
+def test_generate_followup_bumps_version_and_reuses_project_id(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    project_input_schema: dict,
+) -> None:
+    """Follow-up prompts keep projectId stable while version increments."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    _, initial_meta, _, meta_path = generate(
+        "Skapa en hemsida för en elektriker i Malmö",
+        output_dir=tmp_path,
+        site_id="electrician-malmo",
+        project_id="stable-project-id",
+    )
+
+    project_input, meta, project_input_path, next_meta_path = generate_followup(
+        "Lägg till mer fokus på laddboxar och offertförfrågan.",
+        output_dir=tmp_path,
+        site_id="electrician-malmo",
+    )
+
+    jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
+    assert project_input_path.name == "electrician-malmo.project-input.json"
+    assert next_meta_path == meta_path
+    assert meta["projectId"] == initial_meta["projectId"] == "stable-project-id"
+    assert meta["siteId"] == "electrician-malmo"
+    assert meta["version"] == 2
+    assert meta["previousVersion"] == 1
+    assert meta["originalPrompt"] == initial_meta["originalPrompt"]
+    assert meta["latestPrompt"].startswith("Lägg till mer fokus")
+
+
+@pytest.mark.tooling
+def test_generate_followup_supports_multiple_version_bumps(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    generate(
+        "Skapa en hemsida för en målare",
+        output_dir=tmp_path,
+        site_id="malare-lund",
+        project_id="stable-project-id",
+    )
+
+    _, meta_v2, _, _ = generate_followup(
+        "Gör tonen varmare.",
+        output_dir=tmp_path,
+        site_id="malare-lund",
+    )
+    _, meta_v3, _, _ = generate_followup(
+        "Lyft fram fasadmålning.",
+        output_dir=tmp_path,
+        site_id="malare-lund",
+    )
+
+    assert meta_v2["projectId"] == "stable-project-id"
+    assert meta_v2["version"] == 2
+    assert meta_v3["projectId"] == "stable-project-id"
+    assert meta_v3["version"] == 3
+    assert meta_v3["previousVersion"] == 2
+
+
+@pytest.mark.tooling
+def test_generate_followup_requires_existing_meta(tmp_path: Path) -> None:
+    with pytest.raises(SystemExit, match="meta sidecar saknas"):
+        generate_followup(
+            "Lägg till ny text.",
+            output_dir=tmp_path,
+            site_id="missing-site",
         )

@@ -76,11 +76,10 @@ Format per bugg:
 
 ## Öppna - inte fixade än
 
-- **`BO2` Medel** - Backoffice trace viewer är rå dataframe;
-  `data/runs/<runId>/trace.ndjson` borde grupperas per fas och färgas efter
-  status. Beror på round 3.
-- **`BO4` Medel** - `backoffice/views/playground.py:46-53` blockerar 180s i
-  subprocess; ingen async / cancellation. Beror på round 3.
+- **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
+  subprocess-status och loggutdrag medan körningen pågår, men riktig
+  cancellation/background-jobb är fortfarande inte implementerat. Det bör tas
+  som separat sprint om operatören behöver avbryta en redan startad körning.
 - **`B13a` Låg** - `scripts/build_site.py` innehåller produktlogik vilket
   bryter mot `repo-boundaries.v1.json:39`. Naturlig flytt blir
   `packages/generation/build/` när ramverket växer. (Sprint 2B audit-fix
@@ -93,6 +92,29 @@ Format per bugg:
 (B20 stängd 2026-05-13 — se "Stängda - regression-test säkrar fixet" nedan.)
 
 ## Stängda - regression-test säkrar fixet
+
+- **`BO2` Medel** (stängd 2026-05-14, squash-merge `e1ad5ca` via PR #23) - Backoffice trace
+  viewer dumpade tidigare bara rå dataframe för `trace.ndjson`.
+  Fix: ny backoffice-helper `backoffice/views/_trace.py` läser halvskrivna
+  trace-rader defensivt, summerar events, grupperar per fas, lägger filter för
+  fas/status/söktext och markerar fel, varningar, quality-, repair- och
+  codegen-events tydligt. Både `Engine Runs` och `Playground` använder samma
+  viewer och behåller rådata i expander.
+  Test: `tests/test_backoffice_trace.py::test_load_trace_events_tolerates_partial_ndjson`,
+  `tests/test_backoffice_trace.py::test_trace_summary_and_severity_mark_important_events`,
+  `tests/test_backoffice_trace.py::test_trace_views_use_structured_trace_viewer`.
+
+- **`BO4` Medel** (stängd 2026-05-14, squash-merge `e1ad5ca` via PR #23) -
+  `backoffice/views/playground.py` var en svart låda medan
+  `scripts/dev_generate.py` körde via `subprocess.run(... timeout=180)`.
+  Fix: Playground använder nu en kontrollerad `subprocess.Popen`-runner som
+  visar körstatus, fas, tid, exit code och senaste loggrader under/efter
+  körning. Timeout dödar endast den startade processen och bevarar fångad
+  output. RunId-parsningen ligger i egen helper.
+  Test: `tests/test_backoffice_trace.py::test_playground_extracts_run_id_from_supported_outputs`,
+  `tests/test_backoffice_trace.py::test_playground_runner_uses_popen_not_subprocess_run`.
+  Kvarvarande avgränsning: riktig cancellation/background-jobb kräver separat
+  design och spåras som `BO4-followup-cancel`.
 
 - **`B20-followup-lucide` Låg** (stängd 2026-05-13, squash-merge
   `04fc2fa` via PR #21) - följduppgift på den stängda B20-posten:

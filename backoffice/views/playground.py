@@ -8,13 +8,75 @@ from __future__ import annotations
 
 import json
 import os
+import queue
 import subprocess
 import sys
+import threading
+import time
+from typing import Any
 
 import streamlit as st
 
 from ..paths import REPO_ROOT, RUNS_DIR, SCRIPTS_DIR
 from ._helpers import safe_render
+from ._trace import load_trace_events, render_trace_viewer
+
+PLAYGROUND_TIMEOUT_SECONDS = 180
+LOG_EXCERPT_LINES = 80
+
+
+def _extract_run_id(output: str) -> str | None:
+    found_run_id: str | None = None
+    for line in output.splitlines():
+        if line.startswith("Run complete:"):
+            run_path = line.replace("Run complete:", "").strip()
+            normalized = run_path.replace("\\", "/").rstrip("/")
+            found_run_id = normalized.rsplit("/", 1)[-1] or None
+        elif "runId=" in line:
+            for token in line.split():
+                if token.startswith("runId="):
+                    found_run_id = token.split("=", 1)[1]
+                    break
+    return found_run_id
+
+
+def _format_log_excerpt(lines: list[str], *, limit: int = LOG_EXCERPT_LINES) -> str:
+    excerpt = lines[-limit:]
+    if not excerpt:
+        return "Väntar på output från subprocess..."
+    prefix = ""
+    if len(lines) > limit:
+        prefix = f"... visar senaste {limit} av {len(lines)} rader ...\n"
+    return prefix + "".join(excerpt).rstrip()
+
+
+def _render_process_status(
+    status_slot: Any | None,
+    *,
+    phase: str,
+    state: str,
+    elapsed_seconds: float,
+    exit_code: int | None,
+    lines: list[str],
+) -> None:
+    if status_slot is None:
+        return
+
+    exit_text = "-" if exit_code is None else str(exit_code)
+    status_slot.markdown(
+        "\n".join(
+            [
+                f"**Status:** {state}",
+                f"**Fas:** `{phase}`",
+                f"**Tid:** {elapsed_seconds:.1f}s",
+                f"**Exit code:** `{exit_text}`",
+                "",
+                "```text",
+                _format_log_excerpt(lines),
+                "```",
+            ]
+        )
+    )
 
 
 def _run_dev_generate(
@@ -23,7 +85,10 @@ def _run_dev_generate(
     phase: str,
     run_id: str | None = None,
     project_id: str | None = None,
-) -> tuple[int, str, str | None]:
+    *,
+    status_slot: Any | None = None,
+    timeout_seconds: int = PLAYGROUND_TIMEOUT_SECONDS,
+) -> dict[str, Any]:
     args = [
         sys.executable,
         str(SCRIPTS_DIR / "dev_generate.py"),
@@ -41,37 +106,102 @@ def _run_dev_generate(
     env = os.environ.copy()
     env["SAJTBYGGAREN_MODE"] = mode
 
+    output_lines: list[str] = []
+    output_queue: queue.Queue[str] = queue.Queue()
+    started_at = time.monotonic()
+
+    def _reader(stream: Any) -> None:
+        for line in iter(stream.readline, ""):
+            if not line:
+                break
+            output_queue.put(line)
+        stream.close()
+
+    def _drain_output() -> None:
+        while True:
+            try:
+                output_lines.append(output_queue.get_nowait())
+            except queue.Empty:
+                break
+
     try:
-        result = subprocess.run(
+        process = subprocess.Popen(
             args,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
             cwd=str(REPO_ROOT),
             env=env,
-            timeout=180,
         )
-    except subprocess.TimeoutExpired:
-        return 1, "Timeout efter 180s", None
     except FileNotFoundError as exc:
-        return 1, f"dev_generate.py kunde inte startas: {exc}", None
+        output = f"dev_generate.py kunde inte startas: {exc}"
+        return {
+            "exit_code": 1,
+            "output": output,
+            "run_id": None,
+            "timed_out": False,
+            "elapsed_seconds": 0.0,
+        }
 
-    output = (result.stdout or "") + (result.stderr or "")
+    if process.stdout is not None:
+        reader = threading.Thread(target=_reader, args=(process.stdout,), daemon=True)
+        reader.start()
+    else:
+        reader = None
 
-    found_run_id: str | None = None
-    for line in output.splitlines():
-        if line.startswith("Run complete:"):
-            run_path = line.replace("Run complete:", "").strip()
-            try:
-                found_run_id = run_path.rsplit(os.sep, 1)[-1]
-            except Exception:
-                found_run_id = None
-        elif "runId=" in line and "engine.run.started" in line:
-            for token in line.split():
-                if token.startswith("runId="):
-                    found_run_id = token.split("=", 1)[1]
-                    break
+    _render_process_status(
+        status_slot,
+        phase=phase,
+        state="kör",
+        elapsed_seconds=0.0,
+        exit_code=None,
+        lines=output_lines,
+    )
 
-    return result.returncode, output, found_run_id
+    timed_out = False
+    while process.poll() is None:
+        elapsed = time.monotonic() - started_at
+        _drain_output()
+        _render_process_status(
+            status_slot,
+            phase=phase,
+            state="kör",
+            elapsed_seconds=elapsed,
+            exit_code=None,
+            lines=output_lines,
+        )
+        if elapsed > timeout_seconds:
+            timed_out = True
+            output_lines.append(f"\nTimeout efter {timeout_seconds}s\n")
+            process.kill()
+            break
+        time.sleep(0.1)
+
+    exit_code = process.wait()
+    if reader is not None:
+        reader.join(timeout=1)
+    _drain_output()
+    elapsed = time.monotonic() - started_at
+    output = "".join(output_lines)
+    if timed_out:
+        exit_code = 1
+
+    state = "timeout" if timed_out else ("klar" if exit_code == 0 else "fail")
+    _render_process_status(
+        status_slot,
+        phase=phase,
+        state=state,
+        elapsed_seconds=elapsed,
+        exit_code=exit_code,
+        lines=output_lines,
+    )
+    return {
+        "exit_code": exit_code,
+        "output": output,
+        "run_id": _extract_run_id(output),
+        "timed_out": timed_out,
+        "elapsed_seconds": elapsed,
+    }
 
 
 def view_playground() -> None:
@@ -131,16 +261,29 @@ def view_playground() -> None:
         if requires_existing_run and not rid:
             st.warning("Kör fas 1 först (eller använd 'Kör allt').")
             return
-        with st.spinner(f"Kör fas {phase}..."):
-            code, output, run_id = _run_dev_generate(
-                prompt, mode, phase, rid, project_id=project_id
+        status_slot = st.empty()
+        with st.spinner(f"Kör fas {phase}... loggar visas nedan."):
+            result = _run_dev_generate(
+                prompt,
+                mode,
+                phase,
+                rid,
+                project_id=project_id,
+                status_slot=status_slot,
             )
-            if not requires_existing_run and run_id:
-                st.session_state["playground_run_id"] = run_id
-            st.session_state["playground_output"] = output
+            if not requires_existing_run and result["run_id"]:
+                st.session_state["playground_run_id"] = result["run_id"]
+            st.session_state["playground_output"] = result["output"]
             st.session_state["playground_phase"] = phase
-            if code != 0:
-                st.error(f"Exit code {code}")
+            st.session_state["playground_exit_code"] = result["exit_code"]
+            st.session_state["playground_timed_out"] = result["timed_out"]
+            st.session_state["playground_elapsed_seconds"] = result["elapsed_seconds"]
+            if result["exit_code"] == 0:
+                st.success(f"Subprocess klar på {result['elapsed_seconds']:.1f}s.")
+            elif result["timed_out"]:
+                st.error(f"Timeout efter {PLAYGROUND_TIMEOUT_SECONDS}s.")
+            else:
+                st.error(f"Subprocess failade med exit code {result['exit_code']}.")
 
     if a.button("Fas 1: brief", use_container_width=True, key="pg_brief", disabled=not can_run):
         _run("brief", requires_existing_run=False)
@@ -153,7 +296,15 @@ def view_playground() -> None:
 
     output = st.session_state.get("playground_output", "")
     if output:
-        with st.expander("Engine Events (output från subprocess)", expanded=True):
+        exit_code = st.session_state.get("playground_exit_code")
+        elapsed = st.session_state.get("playground_elapsed_seconds")
+        label = "Subprocess-logg"
+        if exit_code is not None:
+            label += f" (exit {exit_code}"
+            if elapsed is not None:
+                label += f", {elapsed:.1f}s"
+            label += ")"
+        with st.expander(label, expanded=True):
             st.code(output, language="text")
 
     run_id = st.session_state.get("playground_run_id")
@@ -189,18 +340,13 @@ def view_playground() -> None:
         with tab_trace:
             trace = run_dir / "trace.ndjson"
             if trace.exists():
-                events = []
-                for line in trace.read_text(encoding="utf-8").splitlines():
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        events.append(json.loads(line))
-                    except json.JSONDecodeError:
-                        # Tolerate half-written events while subprocess is running.
-                        continue
+                events, skipped_lines = load_trace_events(trace)
                 if events:
-                    st.dataframe(events, use_container_width=True, hide_index=True)
+                    render_trace_viewer(
+                        events,
+                        key_prefix=f"playground-{run_id}",
+                        skipped_lines=skipped_lines,
+                    )
                 else:
                     st.warning("Trace finns men inga giltiga rader än (möjligen halvskriven).")
             else:

@@ -1,23 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import type { ProjectInputOption } from "@/components/project-input-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { RunHistoryItem } from "@/components/run-history";
 import { Textarea } from "@/components/ui/textarea";
 
 type PromptStage = "idle" | "thinking" | "building" | "success" | "failed";
+type PromptMode = "init" | "followup";
 
 type PromptApiPayload = {
   runId?: string;
   siteId?: string;
   projectId?: string;
+  version?: number | null;
   briefSource?: string | null;
   error?: string;
 };
 
 type PromptBuilderProps = {
   isBusy: boolean;
+  runs: RunHistoryItem[];
+  projectInputs: ProjectInputOption[];
+  selectedRunId: string | null;
+  selectedSiteId: string;
   onBuildStart: () => void;
   onBuildEnd: () => void;
   onBuildDone: (runId: string) => void;
@@ -25,25 +33,59 @@ type PromptBuilderProps = {
 
 export function PromptBuilder({
   isBusy,
+  runs,
+  projectInputs,
+  selectedRunId,
+  selectedSiteId,
   onBuildStart,
   onBuildEnd,
   onBuildDone,
 }: PromptBuilderProps) {
   const [prompt, setPrompt] = useState("");
+  const [mode, setMode] = useState<PromptMode>("init");
   const [stage, setStage] = useState<PromptStage>("idle");
   const [error, setError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<{
     runId: string;
     siteId: string;
+    version: number | null;
     briefSource: string | null;
   } | null>(null);
+  const stageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const localBusy = stage === "thinking" || stage === "building";
   const disabled = isBusy || localBusy;
+  const selectedRun = runs.find((run) => run.runId === selectedRunId);
+  const targetSiteId =
+    selectedRun?.siteId && selectedRun.siteId !== "unknown"
+      ? selectedRun.siteId
+      : selectedSiteId;
+  const targetInput = projectInputs.find(
+    (input) => input.siteId === targetSiteId,
+  );
+  const followupReady =
+    targetSiteId.trim().length > 0 &&
+    targetSiteId !== "unknown" &&
+    targetInput?.source === "prompt-inputs";
+  const idleButtonLabel =
+    mode === "followup" ? "Skapa ny version" : "Bygg sajt från prompt";
+  const buttonLabel = localBusy ? "Bygger sajt…" : idleButtonLabel;
+
+  useEffect(() => {
+    return () => {
+      if (stageTimerRef.current) {
+        clearTimeout(stageTimerRef.current);
+      }
+    };
+  }, []);
 
   async function submitPrompt() {
     const cleaned = prompt.trim();
     if (!cleaned || disabled) return;
+    if (mode === "followup" && !followupReady) {
+      setError("Välj en prompt-genererad run eller siteId först.");
+      return;
+    }
 
     setError(null);
     setStage("thinking");
@@ -54,7 +96,11 @@ export function PromptBuilder({
       // (runs briefModel) and then runs build_site.py. We expose two
       // visual stages so the operator can see which step is in flight
       // even though the network call is single-shot.
-      setTimeout(() => {
+      if (stageTimerRef.current) {
+        clearTimeout(stageTimerRef.current);
+      }
+      stageTimerRef.current = setTimeout(() => {
+        stageTimerRef.current = null;
         setStage((current) =>
           current === "thinking" ? "building" : current,
         );
@@ -63,7 +109,11 @@ export function PromptBuilder({
       const response = await fetch("/api/prompt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: cleaned }),
+        body: JSON.stringify({
+          prompt: cleaned,
+          mode,
+          siteId: mode === "followup" ? targetSiteId : undefined,
+        }),
       });
       const payload = (await response.json()) as PromptApiPayload;
       if (!response.ok || !payload.runId || !payload.siteId) {
@@ -74,6 +124,7 @@ export function PromptBuilder({
       setLastResult({
         runId: payload.runId,
         siteId: payload.siteId,
+        version: payload.version ?? null,
         briefSource: payload.briefSource ?? null,
       });
       onBuildDone(payload.runId);
@@ -81,6 +132,10 @@ export function PromptBuilder({
       setError(caught instanceof Error ? caught.message : "Okänt fel.");
       setStage("failed");
     } finally {
+      if (stageTimerRef.current) {
+        clearTimeout(stageTimerRef.current);
+        stageTimerRef.current = null;
+      }
       onBuildEnd();
     }
   }
@@ -92,10 +147,43 @@ export function PromptBuilder({
       </CardHeader>
       <CardContent className="flex flex-col gap-4 p-4">
         <p className="text-xs text-muted-foreground">
-          Skriv en fri prompt så genererar vi minimal Project Input via briefModel
-          och kör <code>scripts/build_site.py</code>. Resultatet hamnar i Run History
-          nedan. Generated Project Input + meta sparas i <code>data/prompt-inputs/</code>.
+          Skriv en fri prompt så genererar vi minimal Project Input via
+          briefModel och kör <code>scripts/build_site.py</code>. Välj ny sajt
+          eller följdprompt på vald run/siteId. Generated Project Input + meta
+          sparas i <code>data/prompt-inputs/</code>.
         </p>
+
+        <div className="grid gap-2 rounded-md border bg-muted/30 p-3 text-sm">
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="prompt-mode"
+              value="init"
+              checked={mode === "init"}
+              disabled={disabled}
+              onChange={() => setMode("init")}
+            />
+            Ny sajt
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="prompt-mode"
+              value="followup"
+              checked={mode === "followup"}
+              disabled={disabled}
+              onChange={() => setMode("followup")}
+            />
+            Följdprompt på vald run/siteId
+          </label>
+          {mode === "followup" ? (
+            <p className="text-xs text-muted-foreground">
+              Målsajt: <code>{targetSiteId || "saknas"}</code>. Helpern kräver
+              befintlig meta i <code>data/prompt-inputs/</code>.
+              {followupReady ? null : " Välj en prompt-genererad siteId."}
+            </p>
+          ) : null}
+        </div>
 
         <Textarea
           value={prompt}
@@ -115,12 +203,16 @@ export function PromptBuilder({
         <PromptStageIndicator stage={stage} lastResult={lastResult} />
 
         <Button
-          disabled={disabled || prompt.trim().length === 0}
+          disabled={
+            disabled ||
+            prompt.trim().length === 0 ||
+            (mode === "followup" && !followupReady)
+          }
           onClick={() => void submitPrompt()}
           variant="default"
           size="lg"
         >
-          {localBusy ? "Bygger sajt…" : "Bygg sajt från prompt"}
+          {buttonLabel}
         </Button>
       </CardContent>
     </Card>
@@ -135,6 +227,7 @@ function PromptStageIndicator({
   lastResult: {
     runId: string;
     siteId: string;
+    version: number | null;
     briefSource: string | null;
   } | null;
 }) {
@@ -162,6 +255,11 @@ function PromptStageIndicator({
         </p>
         <p className="text-xs opacity-80">
           siteId: <code>{lastResult.siteId}</code>
+          {lastResult.version ? (
+            <>
+              {" · "}version: <code>{lastResult.version}</code>
+            </>
+          ) : null}
           {lastResult.briefSource ? (
             <>
               {" · "}briefSource: <code>{lastResult.briefSource}</code>

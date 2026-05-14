@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-14 (post-Prompt-till-sajt MVP v1 + audit-hotfix)
-**Aktuell HEAD på `main`:** `2f0af68` (Standard loop steg 7 docs-bump ovanpå audit-hotfix-sprinten + ZodError-allowlist `e421a00`, som i sin tur ligger på Prompt-till-sajt MVP v1, Viewser mini-sprinten och prompt-helperns review-hotfix). Kör `git log --oneline -1` för senaste SHA.
-**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-7` (från `fb11925`) ligger på origin som senaste fallback.
+**Datum:** 2026-05-14 (post-PR #23 backoffice trace/playground)
+**Aktuell produkt-HEAD på `main`:** `e1ad5ca` (squash-merge PR #23 `feat(backoffice): improve trace viewer and playground logs` ovanpå follow-up prompt versions `2701b00`). Kör `git log --oneline -1` för senaste lokala SHA.
+**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-9` finns lokalt från pre-PR-#23-läget; `backup-8` finns lokalt efter follow-up-sprinten; `backup-7` (från `fb11925`) ligger på origin som tidigare fallback.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
 Färdiga startprompter för Scout/Builder/Steward finns i [`docs/agent-prompts.md`](agent-prompts.md).
@@ -27,8 +27,8 @@ Backup-branchen är bara fallback. Den är inte arbetsbranch och ska inte få PR
 ### Tre agentroller
 
 - **Scout-agent** är read-only: audit, plan, risker, RO-bugggranskning före push, nästa Builder-prompt.
-- **Builder-agent** implementerar: skapar sprintens backup, jobbar på `main`, testar, rapporterar och pushar först efter gröna guards.
-- **Steward-agent** håller ordning: docs/current-focus, handoff, sanity och låg-risk governance på `main`.
+- **Builder-agent** implementerar: skapar sprintens backup, jobbar på `main`, testar, rapporterar och pushar först efter gröna guards. Om Scout säger att push är OK och working tree är clean får Builder pusha utan ny manuell operatörs-OK.
+- **Steward-agent** håller ordning: docs/current-focus, handoff, sanity och låg-risk governance på `main`. Efter Builder-push verifierar Steward origin/main-SHA, `git status`, `python scripts/focus_check.py`, om `origin/main` matchar lokal `main`, samt om docs behövde uppdateras.
 
 ### PR är undantag
 
@@ -46,7 +46,7 @@ Tre lager:
 - `backoffice/` + `backend.py` — Streamlit-administration (inte runtime).
 - `packages/` + `apps/` — runtime + kund-UI.
 
-## Vad funkar idag (post-audit-hotfix-sprint, HEAD `2f0af68`)
+## Vad funkar idag (post-PR #23, produkt-HEAD `e1ad5ca`)
 
 ### Governance + guards
 
@@ -68,13 +68,20 @@ Tre lager:
 - **B20 step 2 (PR #20, `75c980b`, ADR 0019):** `SCAFFOLD_TO_STARTER["ecommerce-lite"] = "commerce-base"`. Ecommerce-lite-fixturen `examples/atelje-bird.project-input.json` producerar `/produkter` via `source=deterministic-v1` codegen. Real codegenModel-scope förblir `marketing-base`-only tills separat sprint utvidgar via ADR ovanpå 0017.
 - **B20-followup-lucide (PR #21, `04fc2fa`, ADR 0020):** `lucide-react` ^1.14.0 tillagd i `commerce-base/package.json` så `scripts/build_site.py:write_pages`s hardcodade lucide-imports inte längre ger `Module not found` vid full `npm run build`.
 
-### Prompt-till-sajt MVP v1 + audit-hotfix (kod-HEAD `e421a00`, docs-HEAD `2f0af68`)
+### Prompt-till-sajt MVP v1 + follow-up versions (kod-HEAD `2701b00`)
 
 - **`/api/prompt`** tar fri prompt, kör `runPromptToProjectInput` (spawnar `scripts/prompt_to_project_input.py` med `--`-separator så dash-prefixade prompts inte fastnar i argparse), och triggar `runBuild` med dossier-path-override (whitelist via `ALLOWED_DOSSIER_ROOTS` mot `examples/` + `data/prompt-inputs/`).
 - **PromptBuilder** är canonical promptyta på Viewser-home; legacy ChatPanel finns kvar som komponent men importeras inte. ProjectInputPicker är read-only-select (Build-knappen togs bort).
 - **Payload-validering**: `z.string().trim().min(1).max(4000)` så whitespace-only payloads fångas vid API-gränsen. `ZodError` returneras som `400` med valideringsmeddelandet; bara genuina serverfel blir `500`.
 - **Helper-skriptet** `scripts/prompt_to_project_input.py` använder briefModel + Site Brief och skriver `data/prompt-inputs/<siteId>.project-input.json` + sidecar `<siteId>.meta.json` med `projectId/version/originalPrompt/briefSource`. Brief-imports ligger på modulnivå så fallback-tester monkeypatchar lookup-namnen som `generate()` faktiskt använder.
+- **Follow-up prompt versions** är landat: operatören kan fortsätta på befintlig prompt-input/run, behålla `projectId`, bumpa `version` och få ny build/run för samma sajtspår.
 - **ViewerPanel** fallback-copy hänvisar nu till promptfältet, inte den borttagna Build-knappen.
+
+### Backoffice trace/playground (PR #23, produkt-HEAD `e1ad5ca`)
+
+- Engine-runs-vyn och playground-vyn använder en gemensam strukturerad trace-viewer i `backoffice/views/_trace.py` för `trace.ndjson`: halvskrivna rader hoppas över defensivt, events summeras, grupperas per fas och kan filtreras på fas/status/söktext.
+- Playground-vyn kör `scripts/dev_generate.py` via kontrollerad `subprocess.Popen`-runner istället för svart-låde-`subprocess.run`, och visar status, elapsed time, exit code och loggutdrag under/efter körning.
+- Backoffice trace/playground-posterna är stängda i `docs/known-issues.md`; kvar finns bara lågprioriterad cancellation-followup för riktig cancellation/background-jobb.
 
 ### Builder UX MVP
 
@@ -82,14 +89,14 @@ Tre lager:
 
 ## Nästa konkreta uppgift
 
-Se `docs/current-focus.md` → **"Next action"**. Kort version: ingen aktiv blocker. Nästa sprint är:
+Se `docs/current-focus.md` → **"Next action"**. Kort version: ingen aktiv blocker på `main`; nästa PR-spår är #22:
 
-1. **Follow-up prompt → ny version** — operatör väljer en befintlig run (eller siteId under `data/prompt-inputs/`), skriver en följdprompt, helpern läser sidecar-meta, bumpar `version`, genererar ny Project Input, `build_site.py` körs, ny runId med samma `projectId` syns i Run History. Sidecar-meta har redan `projectId` + `version` så ingen schema-migration krävs i första iterationen. Bedömd storlek: ~70% av Prompt-till-sajt MVP v1-sprintens omfång.
+1. **#22 portfolio-base starter** — uppdatera/rebasea mot senaste `main` efter PR #23 + Steward-docs, kör snabb Scout/GitHub-koll och mergea bara om checks/Bugbot fortsatt är gröna.
 2. **B13a arkitektur-flytt** — `scripts/build_site.py` produktlogik till `packages/generation/build/`. Egen sprint, kräver troligen egen ADR (rör mappgränser i `repo-boundaries.v1.json`). Destinationen pre-allokerad i `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
 3. **`write_pages` icon-bibliotek-agnostisk refactor** — lyfter den arkitekturskuld som ADR 0020 explicit lämnade öppen. Förebygger att samma lucide-typen av starter-vs-codegen-konflikt uppstår igen för en framtida starter utan lucide.
-4. **BO2/BO4 backoffice-skuld** — dataframes → grupperad + färgad trace-viewer + async/cancellation i `backoffice/views/playground.py`.
+4. **Cancellation-followup** — lågprioriterad separat sprint om operatören behöver avbryta redan startade playground-körningar.
 
-Nice-to-have för PromptBuilder: setTimeout för stage-transition "thinking" → "building" saknar cleanup vid unmount. Låg risk men kan polishas i Follow-up-sprinten.
+Nice-to-have för PromptBuilder: setTimeout för stage-transition "thinking" → "building" saknar cleanup vid unmount. Låg risk men kan polishas om PromptBuilder rörs igen.
 
 PR #17 / `frontend/christopher-import` är reference only: återöppna inte PR #17,
 starta inte `apps/web`, men behåll branchen som framtida design-/copy-referens.
@@ -110,7 +117,7 @@ Standardflödet är inte PR, men om operatören uttryckligen väljer PR-flöde s
 1. Efter `gh pr create`: verifiera att Bugbot är aktiverad (en check med `name == "Cursor Bugbot"` ELLER en review från `author.login == "cursor"`). Om aktiverad: skriv exakt strängen `kommer nu vänta i upp till högst 8 min på att bugbotten blir klar` till operatören.
 2. Polla 60–90s × max 8 min. Stoppa så fort `Cursor Bugbot`-checken är `COMPLETED`.
 3. **Tolka resultatet via 3 signaler — inte via Bugbots summary-body.** Bodyn säger "found N issues" från första körningen och uppdateras inte mellan commits. Använd istället: (a) check-conclusion, (b) GraphQL `reviewThreads.isResolved` för att räkna aktiva trådar, (c) övriga checks.
-4. Grönt = check `SUCCESS` ELLER (`NEUTRAL` OCH 0 aktiva trådar) OCH alla övriga checks `SUCCESS` OCH `mergeStateStatus == "CLEAN"`. Grönt → `gh pr merge --squash --delete-branch` automatiskt + Standard loop steg 7.
+4. Grönt = check `SUCCESS` ELLER (`NEUTRAL` OCH 0 aktiva trådar) OCH alla övriga checks `SUCCESS` OCH `mergeStateStatus == "CLEAN"`. Grönt → `gh pr merge --squash --delete-branch` automatiskt + Standard loop steg 8.
 5. Rött → fix-loop iteration N (max 10). Per iteration: läs aktiva trådar, minimal-fix, push, **markera trådar som resolved via GraphQL** så loopens nästa poll blir korrekt.
 6. > 10 iterationer → posta `[NÖDLÄGE PR]`-kommentar och lämna åt operatör.
 
@@ -127,7 +134,7 @@ Innan `git push origin main`:
 
 ## Standard loop (för referens)
 
-Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standard loop". Tio steg, varav steg 8 (uppdatera `current-focus.md`) är obligatoriskt agentens ansvar — inte operatörens.
+Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standard loop". Tio steg, varav steg 8 (Steward post-push-verifierar och uppdaterar `current-focus.md`/`handoff.md` vid faktisk fokusförändring) är obligatoriskt agentens ansvar — inte operatörens.
 
 ```text
 0. Drift-check (python scripts/focus_check.py).
@@ -135,16 +142,20 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 2. Skapa nästa backup-N från synkad main.
 3. Builder/Steward jobbar på main.
 4. Scout-agent gör RO-review före push.
-5. Operatör + extern reviewer beslutar.
+5. Operatör + extern reviewer beslutar om Scout inte redan gett push-OK.
 6. Final sanity (python scripts/review_check.py).
 7. Commit + push till main.
-8. Bumpa SHA i current-focus.md + uppdatera Queue/Blocked + flytta stängda B-IDs i known-issues.md.
+8. Steward verifierar pushed SHA, git status, focus_check, origin/main == local main, och docs-beslut. Uppdatera current-focus/handoff när HEAD, active sprint, next action/queue/blocked, agentflöde, branchflöde, grindmode, rollansvar, risk/blocker/nice-to-have eller extern PR/Grind-agent ändrar nästa agents arbete.
 9. Nästa etapp.
 ```
 
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+e1ad5ca feat(backoffice): improve trace viewer and playground logs
+2701b00 feat(viewser): add follow-up prompt versions
+006be38 docs(workflow): formalize steward post-push verification
+c3dcc14 docs: correct verified HEAD to 2f0af68 in focus + handoff
 2f0af68 docs: bump focus + handoff to e421a00 post-audit-hotfix-sprint
 e421a00 chore(check_term_coverage): allowlist ZodError TS symbol
 c039ebd fix(viewer-panel): refresh stale fallback copy after legacy chat panel removal

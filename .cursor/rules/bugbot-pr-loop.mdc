@@ -102,7 +102,7 @@ OCH `mergeStateStatus == "CLEAN"` OCH `mergeable == "MERGEABLE"`:
 1. `gh pr merge <num> --squash --delete-branch`.
 2. `git checkout main && git pull --ff-only origin main`.
 3. Ta bort lokal feature-branch om kvar (`git branch -d <branch>`).
-4. Kör Standard loop steg 7 som mainline-steward-commit på `main`:
+4. Kör Standard loop steg 8 som mainline-steward-commit på `main`:
    bumpa `Last verified`-SHA i `docs/current-focus.md`, uppdatera
    Queue / Stage / Next action, och flytta ev. stängda B-IDs till
    "Stängda - regression-test säkrar fixet"-sektionen i
@@ -163,6 +163,6 @@ loop (merge eller nödläge) före nästa PR öppnas.
   reglerna är inte denna regels scope).
 - `governance/rules/branch-discipline.md` — när en PR
   överhuvudtaget får skapas (operatör-OK krävs).
-- `docs/agent-handbook.md` Standard loop steg 2 + 6 + 7 — denna
+- `docs/agent-handbook.md` Standard loop steg 2 + 6 + 8 — denna
   regel är operationaliseringen av steg 2 (Ro-review = Bugbot på
-  PR), steg 6 (merge) och steg 7 (post-merge bump) för PR-flödet.
+  PR), steg 6 (merge) och steg 8 (post-merge bump) för PR-flödet.

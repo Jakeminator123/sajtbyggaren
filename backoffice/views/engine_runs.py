@@ -9,6 +9,7 @@ import streamlit as st
 from .. import loaders
 from ..paths import RUNS_DIR
 from ._helpers import safe_render
+from ._trace import load_trace_events, render_trace_viewer
 
 
 def view_engine_runs() -> None:
@@ -26,10 +27,14 @@ def view_engine_runs() -> None:
         )
         return
 
-    st.metric("Antal körningar", len(run_ids))
-    selected = st.selectbox("Välj runId", run_ids, key="engine_run_select")
+    metric_cols = st.columns(2)
+    metric_cols[0].metric("Antal körningar", len(run_ids))
+    metric_cols[1].metric("Senaste run", run_ids[0])
+    selected = st.selectbox("Välj runId", run_ids, index=0, key="engine_run_select")
     if not selected:
         return
+    if selected == run_ids[0]:
+        st.caption("Du tittar på senaste run.")
 
     run_dir = RUNS_DIR / selected
     expected = [
@@ -73,17 +78,13 @@ def view_engine_runs() -> None:
     with tab_trace:
         trace_path = run_dir / "trace.ndjson"
         if trace_path.exists():
-            events = []
-            for line in trace_path.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    events.append(json.loads(line))
-                except json.JSONDecodeError:
-                    continue
+            events, skipped_lines = load_trace_events(trace_path)
             if events:
-                st.dataframe(events, use_container_width=True, hide_index=True)
+                render_trace_viewer(
+                    events,
+                    key_prefix=f"engine-runs-{selected}",
+                    skipped_lines=skipped_lines,
+                )
             else:
                 st.warning("Trace finns men kunde inte parsas.")
         else:
