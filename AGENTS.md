@@ -1,5 +1,15 @@
 ## Cursor Cloud specific instructions
 
+### Codex-IDE agent parity
+
+When working from Codex-IDE, act as a Cursor-compatible repo agent for this
+repository. Treat `.cursor/BUGBOT.md` and every rule under `.cursor/rules/`
+as active operating rules in addition to this file.
+
+Do not edit `.cursor/rules/` directly. Those files are generated mirrors; the
+source lives under `governance/rules/`. If a rule needs to change, update the
+governance source and run the rule sync check.
+
 ### Overview
 
 The operator/governance/builder layer is Python. The **output** of the
