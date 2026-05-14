@@ -130,7 +130,7 @@ arkitekturändring, inte en bugg.
 
 ## Stängda - regression-test säkrar fixet
 
-- **`B50` Medel** (stängd 2026-05-14, commit `4940cbb`) -
+- **`B50` Medel** (stängd 2026-05-14, commits `4940cbb` + `f787eb7`) -
   `scripts/build_site.py` interpolerade scaffold-route-paths direkt i
   TSX-attribut (`href="{contact_path}"`, `href="{listing_path}"`) och
   `_pick_contact_route()` föll tyst tillbaka till `/kontakt` när
@@ -138,11 +138,16 @@ arkitekturändring, inte en bugg.
   scaffold-route-hrefs som JSX-uttryck, `_pick_contact_route()` fail-fastar
   med route-id-lista när contact-route saknas och `render_home()` omitar
   listing-CTA:n när scaffolden saknar både `services` och `products`
-  i stället för att hitta på `/tjanster`. Test:
+  i stället för att hitta på `/tjanster`. Scout-follow-up `f787eb7`
+  lägger samma kanoniska route-path-validering framför både `_route_href()`
+  och `route_to_page_path()`, så protocol-relative URLs, backslashes,
+  query/fragments och dot-segments inte kan bli hrefs eller page paths.
+  Test:
   `tests/test_builder_route_emission.py` låser syntetisk route med
-  specialtecken, saknad contact-route, saknad listing-route och befintliga
-  B13/B45-regressioner. `painter-palma --skip-build` verifierades isolerat
-  under `.generated/b50-*`.
+  specialtecken, saknad contact-route, saknad listing-route,
+  non-canonical route paths och befintliga B13/B45-regressioner.
+  `painter-palma --skip-build` verifierades isolerat under
+  `.generated/b50-*` och `.generated/route-hardening-*`.
 
 - **`B45` Låg** (stängd 2026-05-14, B45 Builder-mini-sprint) -
   `scripts/build_site.py` hade hardcoded `/kontakt`-CTAs i

@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `4940cbb` (2026-05-14, B50 route-href/contact-route hardening är landad i `scripts/build_site.py` + `tests/test_builder_route_emission.py`. Scaffold-route-hrefs serialiseras säkert, saknad contact-route fail-fastar och homepage hittar inte längre på `/tjanster` när listing-route saknas. Inga öppna PRs.)
+Last verified state: `f787eb7` (2026-05-14, B50 route-href/contact-route hardening + canonical route-path follow-up är landad i `scripts/build_site.py` + `tests/test_builder_route_emission.py`. Scaffold-route-hrefs serialiseras säkert, saknad contact-route fail-fastar, homepage hittar inte längre på `/tjanster` när listing-route saknas och scaffold-routes avvisar protocol-relative URLs/dot-segments innan href- eller page-path-emission. Inga öppna PRs.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `4940cbb` lokalt före focus-bump-commit; senaste Builder-commit stänger B50 genom att serialisera scaffold-route-hrefs som JSX-uttryck, fail-fasta saknad contact-route och omita homepage-listing-CTA när scaffolden saknar listing-route. Den bygger på orkestrator-playbooken i `e026642`, `27f7fe9` (focus efter PR #26), PR #26:s produktkompass (`docs/product-operating-context.md`) i `1cba454`, `6daee58` (B45 `_pick_contact_route`-propagation till layout/home/services/products), `c2d8632` (PR #24 docs-base starter, squash-merge), `10eb286` (B48 follow-up-semantik i dev-driver/backoffice), `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `f787eb7` lokalt före focus-bump-commit; senaste Builder-commit stänger B50:s Scout-follow-up genom att validera scaffold-routes som kanoniska site paths innan både href- och page-path-emission. B50:s huvudfix i `4940cbb` serialiserar scaffold-route-hrefs som JSX-uttryck, fail-fastar saknad contact-route och omitar homepage-listing-CTA när scaffolden saknar listing-route. Den bygger på orkestrator-playbooken i `e026642`, `27f7fe9` (focus efter PR #26), PR #26:s produktkompass (`docs/product-operating-context.md`) i `1cba454`, `6daee58` (B45 `_pick_contact_route`-propagation till layout/home/services/products), `c2d8632` (PR #24 docs-base starter, squash-merge), `10eb286` (B48 follow-up-semantik i dev-driver/backoffice), `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -296,9 +296,11 @@ orkestrator-playbooken för längre fleragentpass är klara. Inga öppna PRs.
   `docs/product-operating-context.md`. Den förtydligar att B49 fortfarande
   är ett giltigt enabling-steg när det gör nästa småföretagarsajt mer
   korrekt, previewbar eller aktiverbar.
-- B50 är stängd i `4940cbb`: route-hrefs går via `_route_href()`,
-  saknad contact-route ger tydligt builder-fel och `render_home()` hittar
-  inte längre på `/tjanster` när listing-route saknas.
+- B50 är stängd i `4940cbb` + Scout-follow-up `f787eb7`: route-hrefs
+  går via `_route_href()`, saknad contact-route ger tydligt builder-fel,
+  `render_home()` hittar inte längre på `/tjanster` när listing-route
+  saknas och route paths avvisar protocol-relative URLs/dot-segments innan
+  href/page-path skrivs.
 - Nästa Builder-sprint bör vara B49 page-map-driven sidebar för `docs-base`.
   Kräver att antingen Nextra-theme-docs `Layout` får fungera (PR #24-bodyn
   noterar att den failade validering i miljön) eller en lokal
