@@ -111,21 +111,6 @@ Format per bugg:
   `_meta.ts` + filsystemet. Test bör låsa relationen så framtida
   scaffold-injektion av MDX inte tyst kan saknas i nav. Ej blocker idag
   (docs-base är inte aktiverad i runtime).
-- **`B50` Medel** - `scripts/build_site.py` interpolerar scaffold-route-
-  paths direkt i TSX-attribut (`href="{contact_path}"`,
-  `href="{listing_path}"`) och `_pick_contact_route()` faller tyst tillbaka
-  till `/kontakt` när scaffold saknar contact-route. Källa: extern
-  bugg-reviewer 2026-05-14 efter B45. Risken är låg i dagens två
-  kontrollerade scaffold-filer, men växer när fler scaffolds/starters
-  läggs till: avvikande route-tecken kan ge trasig TSX, och tyst fallback
-  kan dölja scaffold-konfigfel. Fix bör införa en route-href-helper som
-  serialiserar route-paths säkert för JSX och ett fail-fast- eller
-  explicit-degraded-beteende när en required contact-route saknas i
-  scaffoldens `routes.json`. Test bör använda en syntetisk scaffold-route
-  med specialtecken och en scaffold utan contact-route. Den separata
-  source-grep-skörheten i B45-testet bedöms låg impact och behöver inte
-  egen post om B50 får beteendetester.
-
 ### Notera (inte en bugg) - dev-preview-output utanför repo
 
 `scripts/build_site.py` skriver dev-preview-builden till
@@ -144,6 +129,20 @@ arkitekturändring, inte en bugg.
 (B20 stängd 2026-05-13 — se "Stängda - regression-test säkrar fixet" nedan.)
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B50` Medel** (stängd 2026-05-14, commit `4940cbb`) -
+  `scripts/build_site.py` interpolerade scaffold-route-paths direkt i
+  TSX-attribut (`href="{contact_path}"`, `href="{listing_path}"`) och
+  `_pick_contact_route()` föll tyst tillbaka till `/kontakt` när
+  scaffold saknade contact-route. Fix: ny `_route_href()` serialiserar
+  scaffold-route-hrefs som JSX-uttryck, `_pick_contact_route()` fail-fastar
+  med route-id-lista när contact-route saknas och `render_home()` omitar
+  listing-CTA:n när scaffolden saknar både `services` och `products`
+  i stället för att hitta på `/tjanster`. Test:
+  `tests/test_builder_route_emission.py` låser syntetisk route med
+  specialtecken, saknad contact-route, saknad listing-route och befintliga
+  B13/B45-regressioner. `painter-palma --skip-build` verifierades isolerat
+  under `.generated/b50-*`.
 
 - **`B45` Låg** (stängd 2026-05-14, B45 Builder-mini-sprint) -
   `scripts/build_site.py` hade hardcoded `/kontakt`-CTAs i

@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `e026642` (2026-05-14, orkestrator-playbook för längre Codex-IDE-pass finns i `docs/orchestrator-playbook.md` och är länkad från `AGENTS.md`, `docs/agent-handbook.md` och `docs/agent-prompts.md`. PR #26 produktkompass + agentläsordning är landad i `1cba454`; `27f7fe9` recordade PR #26-landningen i focus. Inga öppna PRs.)
+Last verified state: `4940cbb` (2026-05-14, B50 route-href/contact-route hardening är landad i `scripts/build_site.py` + `tests/test_builder_route_emission.py`. Scaffold-route-hrefs serialiseras säkert, saknad contact-route fail-fastar och homepage hittar inte längre på `/tjanster` när listing-route saknas. Inga öppna PRs.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `e026642` lokalt före focus-bump-commit; senaste workflowcommit är orkestrator-playbooken (`docs/orchestrator-playbook.md`) som gör längre Codex-IDE-pass copy-pastebara utan att skapa en fjärde fast agentroll. Den bygger på `27f7fe9` (focus efter PR #26), PR #26:s produktkompass (`docs/product-operating-context.md`) i `1cba454`, `6daee58` (B45 `_pick_contact_route`-propagation till layout/home/services/products), `c2d8632` (PR #24 docs-base starter, squash-merge), `10eb286` (B48 follow-up-semantik i dev-driver/backoffice), `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `4940cbb` lokalt före focus-bump-commit; senaste Builder-commit stänger B50 genom att serialisera scaffold-route-hrefs som JSX-uttryck, fail-fasta saknad contact-route och omita homepage-listing-CTA när scaffolden saknar listing-route. Den bygger på orkestrator-playbooken i `e026642`, `27f7fe9` (focus efter PR #26), PR #26:s produktkompass (`docs/product-operating-context.md`) i `1cba454`, `6daee58` (B45 `_pick_contact_route`-propagation till layout/home/services/products), `c2d8632` (PR #24 docs-base starter, squash-merge), `10eb286` (B48 follow-up-semantik i dev-driver/backoffice), `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -296,15 +296,18 @@ orkestrator-playbooken för längre fleragentpass är klara. Inga öppna PRs.
   `docs/product-operating-context.md`. Den förtydligar att B49 fortfarande
   är ett giltigt enabling-steg när det gör nästa småföretagarsajt mer
   korrekt, previewbar eller aktiverbar.
+- B50 är stängd i `4940cbb`: route-hrefs går via `_route_href()`,
+  saknad contact-route ger tydligt builder-fel och `render_home()` hittar
+  inte längre på `/tjanster` när listing-route saknas.
 - Nästa Builder-sprint bör vara B49 page-map-driven sidebar för `docs-base`.
   Kräver att antingen Nextra-theme-docs `Layout` får fungera (PR #24-bodyn
   noterar att den failade validering i miljön) eller en lokal
   `_meta.ts`-driven sidebar byggs. Måste vara klar innan
   `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`.
-- Tidigare audit-fix-sprintar 2026-05-14: B44 (PromptBuilder false success)
-  och B46 (ChatPanel-radering) stängda. Öppna B-IDs: B47 commerce-base
-  Shopify handles, B49 docs-base page-map sidebar, B50 route-href/contact-
-  route hardening efter extern bugg-reviewer. Inga blockers.
+- Tidigare audit-fix-sprintar 2026-05-14: B44 (PromptBuilder false success),
+  B46 (ChatPanel-radering) och B50 (route-href/contact-route hardening)
+  är stängda. Öppna B-IDs: B47 commerce-base Shopify handles och B49
+  docs-base page-map sidebar. Inga blockers.
 
 `portfolio-base` och `docs-base` är båda starter-underlag; ingen
 `SCAFFOLD_TO_STARTER`-mappning eller real-codegen-scope är aktiverad
