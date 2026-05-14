@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `3f6eb27` (2026-05-14, post-PR #23 + Steward-docs: backoffice trace/playground mergead till `origin/main` ovanpå `2701b00`, och Steward-docs uppdaterade queue/focus/handoff/known-issues efter squash-merge. Backoffice trace/playground-skulden är stängd i `docs/known-issues.md`, med cancellation-followup kvar som separat lågprioriterad post. Lokal `backup-9` skapad från pre-merge `main`; lokal `.cursor/settings.json` är fortsatt ocommittad operatörsinställning. #22 portfolio-base starter är enda öppna PR-spåret och ska uppdateras mot senaste main före merge.)
+Last verified state: `9944abb` (2026-05-14, post-PR #23 + #22: backoffice trace/playground och `portfolio-base` starter är squash-mergeade till `origin/main`; `main` och `origin/main` är synkade på `9944abb`. Backoffice trace/playground-skulden är stängd i `docs/known-issues.md`, med cancellation-followup kvar som separat lågprioriterad post. Lokal `backup-9` skapad från pre-merge `main`; lokal `.cursor/settings.json` är fortsatt ocommittad operatörsinställning. Inga öppna PRs.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `e1ad5ca` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -60,7 +60,8 @@ förbättringar: engine-runs-vyn och playground-vyn använder en gemensam strukt
 trace-viewer och playground visar subprocess-status/loggutdrag medan körningen
 pågår. `backup-9` finns lokalt från pre-PR-#23-läget; backup-8 finns lokalt
 efter follow-up-sprinten; backup-7 från `fb11925` ligger på origin som fallback
-efter audit-hotfix-sprinten.
+efter audit-hotfix-sprinten. PR #22 har också landat `portfolio-base` som ny
+harmoniserad starter under `data/starters/portfolio-base/`.
 
 Föregående: PR #21 (lucide-react i commerce-base + ADR 0020,
 mergad `04fc2fa` 2026-05-13 19:55 UTC) gjorde full `npm run build`
@@ -148,6 +149,9 @@ Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
   logs`. PR #23 squash-mergead: backoffice trace/playground-städning med
   gemensam trace-viewer, synlig subprocess-status/loggar och stängda
   backoffice-poster i `docs/known-issues.md`.
+- `9944abb` — `feat(starters): add harmonized portfolio-base starter`.
+  PR #22 squash-mergead efter update-branch mot post-PR-#23 main och gröna
+  governance-, Bugbot- och secret-scan-checkar.
 
 Mainline-steward-pushar efter PR #21 (pure docs/governance):
 
@@ -186,23 +190,20 @@ nästa sprint.
 
 Ingen pågående produktimplementation på `main`. Prompt-till-sajt MVP v1,
 mini-sprinten som gjorde PromptBuilder till enda primära promptyta, follow-up
-prompt versions och PR #23 backoffice trace/playground är klara. Nästa arbete
-är att uppdatera #22 mot senaste `main`, göra snabb Scout/GitHub-koll och bara
-mergea om base-/Bugbot-/check-läget fortfarande är grönt.
+prompt versions, PR #23 backoffice trace/playground och PR #22 `portfolio-base`
+starter är klara. Inga öppna PRs finns just nu.
 
 ## Next action - direktiv till nästa agent
 
-**PR-/queue-triage efter PR #23.**
+**Nästa produktval är öppet.**
 
-- #22 `portfolio-base` starter är enda öppna PR-spåret. Uppdatera/rebasea
-  mot senaste `main` efter PR #23 + Steward-docs, kör snabb Scout/GitHub-
-  kontroll och mergea bara om checkarna fortsatt är gröna.
+- Välj nästa sprint: B13a arkitektur-flytt, `write_pages` icon-bibliotek-
+  agnostisk refactor eller nästa Builder UX-steg.
 - Lokal `.cursor/settings.json` är ändrad av operatörsmiljön och ska
   inte committas utan explicit operatörsbeslut.
 
-När #22-spåret är utrett är nästa produktval åter öppet: B13a,
-`write_pages` icon-bibliotek-agnostisk refactor eller nästa Builder UX-
-steg.
+`portfolio-base` är nu bara starter-underlag; ingen `SCAFFOLD_TO_STARTER`-
+mappning eller real-codegen-scope är aktiverad av #22.
 
 ### Pre-push self-review checklist (lärt från B13b + B20)
 
@@ -230,10 +231,7 @@ Innan `git push origin main`:
 
 ## Blocked items
 
-Öppna PRs blockerar inte `main`, men ska verifieras innan merge:
-
-- #22 `portfolio-base` starter: uppdatera/verifiera mot senaste `main`
-  efter PR #23 + Steward-docs innan merge.
+Inga öppna PR-blockers just nu.
 
 Lokal `.cursor/settings.json` är ocommittad operatörs-/plugininställning
 och ska inte ingå i Steward-commit utan explicit beslut.
@@ -241,7 +239,8 @@ och ska inte ingå i Steward-commit utan explicit beslut.
 ## Do not start yet
 
 - StackBlitz-preview, Fly-deploy, PreviewRuntime - inte påbörjat.
-- Nya starters utöver `marketing-base` och `commerce-base` (vendor).
+- Nya starters utöver `marketing-base`, `commerce-base` och `portfolio-base`
+  (vendor).
 - Större Builder UX-utbyggnad.
 - B13a arkitektur-flytt (`scripts/build_site.py` produktlogik ->
   `packages/generation/build/`) - kvarstår som öppen post men kräver
@@ -257,15 +256,13 @@ och ska inte ingå i Steward-commit utan explicit beslut.
 
 ## Queue
 
-1. **#22 portfolio-base starter** — uppdatera/verifiera mot senaste
-   `main` efter PR #23 + Steward-docs före merge.
-2. B13a arkitektur-flytt (egen sprint, kräver ADR).
-3. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
+1. B13a arkitektur-flytt (egen sprint, kräver ADR).
+2. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
    lucide-typen av starter-vs-codegen-konflikt; ADR 0020:s
    "INTE beslutar"-sektion).
-4. Cancellation-followup (låg): riktig cancellation/background-jobb i
+3. Cancellation-followup (låg): riktig cancellation/background-jobb i
    playground-vyn om operatören behöver avbryta redan startade körningar.
-5. **PromptBuilder polish (nice-to-have)**: setTimeout för
+4. **PromptBuilder polish (nice-to-have)**: setTimeout för
    stage-transition "thinking" → "building" saknar cleanup vid
    unmount. Låg risk men låt nästa Builder rensa om PromptBuilder
    ändå rörs igen.
