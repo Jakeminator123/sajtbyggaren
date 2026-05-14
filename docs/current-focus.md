@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `5d746e9` (2026-05-14, post-audit-fix Builder-sprint för B44 + B46: `/api/prompt` exponerar `buildStatus`, PromptBuilder klassificerar via `classifyBuildStatus`, `app/page.tsx` använder `headerStatusForOutcome`, legacy `ChatPanel` raderad. `34551b4` Steward-cleanup för Viewser-/starter-docs ligger ovanpå `d43bce2`. Senaste produktläge före denna sprint: `9944abb` (PR #23 + #22 squash-merge). Inga öppna PRs.)
+Last verified state: `134df07` (2026-05-14, post-workspace-hygien-pass: `.cursorignore` utökad, `.cursorindexingignore` + `.editorconfig` tillagda, `.vscode/settings.json` får watcher-exclude + prettier-format-on-save + tsserver memory-bump, dev-preview-output flyttad från in-repo `.generated/` till `../sajtbyggaren-output/.generated/<siteId>` via ny `resolve_generated_dir()` + `--generated-dir`/`SAJTBYGGAREN_GENERATED_DIR`-overrides, ny `builder-smoke` CI-job, `apps/viewser` prettier 3.8.3 + plugin tillagda, `konversation.txt` untrackad. Bygger på audit-fix-sprinten `5d746e9` (B44 + B46) och Steward-cleanupen `34551b4`. Inga öppna PRs.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `5d746e9`; senaste produktcommit är `5d746e9` (Builder audit-fix för B44 + B46) ovanpå `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `134df07`; senaste produktcommit är `5d746e9` (Builder audit-fix för B44 + B46) ovanpå `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -172,6 +172,18 @@ Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
   vocabulary-discipline + check_term_coverage rensade. Två nya öppna
   poster: B45 (hardcoded `/kontakt`) och B47 (commerce-base Shopify
   handles).
+- `9ff7c50` — `docs(focus): bump verified SHA + queue after audit-fix
+  B44+B46`. Standard loop steg 8 efter audit-fix-sprinten.
+- `134df07` — `chore(workspace): perf hygiene + .generated externalization
+  + viewser prettier setup`. Workspace-hygien-pass: utökad `.cursorignore`,
+  ny `.cursorindexingignore` + `.editorconfig`, `.vscode/settings.json`
+  får watcher-exclude + tsserver memory-bump + prettier-format-on-save,
+  `scripts/build_site.py` skriver dev-preview-output till
+  `../sajtbyggaren-output/.generated/<siteId>` som default (override via
+  `--generated-dir`/`SAJTBYGGAREN_GENERATED_DIR`), ny `builder-smoke`
+  CI-job, `apps/viewser` får prettier 3.8.3 + plugin, `konversation.txt`
+  untrackas. Inte en buggfix - se note i `docs/known-issues.md`
+  "Notera (inte en bugg)" om den nya output-pathen.
 
 Mainline-steward-pushar efter PR #21 (pure docs/governance):
 
