@@ -8,6 +8,7 @@ export type ProjectInputOption = {
   scaffoldId: string;
   variantId: string;
   language: string;
+  source: "examples" | "prompt-inputs";
 };
 
 type ProjectInputPickerProps = {
@@ -39,7 +40,7 @@ export function ProjectInputPicker({
         >
           {inputs.map((input) => (
             <option key={input.siteId} value={input.siteId}>
-              {input.companyName} ({input.siteId})
+              {input.companyName} ({input.siteId}, {input.source})
             </option>
           ))}
         </select>

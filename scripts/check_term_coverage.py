@@ -165,7 +165,7 @@ COMMON_WORDS = {
     # React / Next / shadcn-typer som dyker upp i runtime-kod
     "ReactNode", "RootLayout", "NextConfig",
     "ButtonPrimitive", "VariantProps", "ClassValue",
-    "NextRequest", "NextResponse", "ComponentProps",
+    "NextRequest", "NextResponse", "ComponentProps", "ReturnType",
     "CardAction", "CardContent", "CardDescription", "CardFooter", "CardHeader", "CardTitle",
     "InputPrimitive",
     # Viewser implementation-symboler (lokala UI-identifierare, inte domänbegrepp).
@@ -202,9 +202,10 @@ COMMON_WORDS = {
     # MonkeyPatch är pytest stdlib-typen som testet tar in via
     # monkeypatch-fixturen.
     "PromptApiPayload", "PromptBuilder", "PromptBuilderProps",
-    "PromptHelperResult", "PromptPayloadSchema",
+    "PromptHelperOptions", "PromptHelperResult", "PromptMode",
+    "PromptPayloadSchema",
     "PromptStage", "PromptStageIndicator",
-    "MonkeyPatch",
+    "MonkeyPatch", "ZodIssueCode",
     # Builder UX MVP (post-3C-lite-audit-2): RunDetailsPanel + 5 sektion-
     # komponenter + interna TS-typer som bara används i apps/viewser.
     # Samma behandling som tidigare viewser-symboler ovan: implementation-

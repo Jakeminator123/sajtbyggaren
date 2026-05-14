@@ -7,6 +7,8 @@ export type RunHistoryItem = {
   runId: string;
   status: string;
   siteId: string;
+  projectId?: string;
+  version?: number | null;
   createdAt: string;
 };
 
@@ -91,8 +93,16 @@ export function RunHistory({
                           {shortRun(run.runId)}
                         </span>
                       </span>
-                      <span className="shrink-0 text-muted-foreground">
-                        {run.siteId} · {run.status}
+                      <span className="flex shrink-0 flex-col text-right text-muted-foreground">
+                        <span>
+                          {run.siteId} · {run.status}
+                        </span>
+                        {run.projectId ? (
+                          <span className="font-mono text-[10px]">
+                            {shortRun(run.projectId)}
+                            {run.version ? ` · v${run.version}` : ""}
+                          </span>
+                        ) : null}
                       </span>
                     </button>
                   </li>

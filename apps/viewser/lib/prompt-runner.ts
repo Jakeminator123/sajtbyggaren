@@ -7,6 +7,7 @@ const SITE_ID_LINE = /^siteId:\s*(.+)$/m;
 const PROJECT_ID_LINE = /^projectId:\s*(.+)$/m;
 const DOSSIER_PATH_LINE = /^dossierPath:\s*(.+)$/m;
 const META_PATH_LINE = /^metaPath:\s*(.+)$/m;
+const VERSION_LINE = /^version:\s*(.+)$/m;
 const BRIEF_SOURCE_LINE = /^briefSource:\s*(.+)$/m;
 
 function repoRoot(): string {
@@ -22,8 +23,14 @@ export type PromptHelperResult = {
   projectId: string;
   dossierPath: string;
   metaPath: string;
+  version: number | null;
   briefSource: string | null;
   stderr: string;
+};
+
+export type PromptHelperOptions = {
+  mode?: "init" | "followup";
+  siteId?: string;
 };
 
 /**
@@ -42,6 +49,7 @@ export type PromptHelperResult = {
  */
 export async function runPromptToProjectInput(
   prompt: string,
+  options: PromptHelperOptions = {},
 ): Promise<PromptHelperResult> {
   const trimmed = prompt.trim();
   if (!trimmed) {
@@ -49,11 +57,19 @@ export async function runPromptToProjectInput(
   }
 
   const scriptPath = path.join(repoRoot(), "scripts", "prompt_to_project_input.py");
+  const args = [scriptPath];
+  if (options.mode === "followup") {
+    if (!options.siteId) {
+      throw new Error("Följdprompt kräver ett valt siteId.");
+    }
+    args.push("--followup-site-id", options.siteId);
+  }
   // The `--` separator stops argparse from interpreting a prompt that
   // happens to start with `-` or `--` (e.g. a pasted bullet list like
   // "- skapa en sajt...") as a CLI option. Without it the spawn fails
   // before the helper can write a Project Input.
-  const child = spawn(pythonCommand(), [scriptPath, "--", trimmed], {
+  args.push("--", trimmed);
+  const child = spawn(pythonCommand(), args, {
     cwd: repoRoot(),
     env: process.env,
     stdio: ["ignore", "pipe", "pipe"],
@@ -115,6 +131,8 @@ export async function runPromptToProjectInput(
   const projectId = stdout.match(PROJECT_ID_LINE)?.[1]?.trim();
   const dossierPath = stdout.match(DOSSIER_PATH_LINE)?.[1]?.trim();
   const metaPath = stdout.match(META_PATH_LINE)?.[1]?.trim();
+  const versionRaw = stdout.match(VERSION_LINE)?.[1]?.trim();
+  const parsedVersion = versionRaw ? Number.parseInt(versionRaw, 10) : null;
   const briefSource = stdout.match(BRIEF_SOURCE_LINE)?.[1]?.trim() ?? null;
 
   if (!siteId || !projectId || !dossierPath || !metaPath) {
@@ -128,6 +146,10 @@ export async function runPromptToProjectInput(
     projectId,
     dossierPath,
     metaPath,
+    version:
+      parsedVersion === null || Number.isNaN(parsedVersion)
+        ? null
+        : parsedVersion,
     briefSource: briefSource === "None" ? null : briefSource,
     stderr,
   };
