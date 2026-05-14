@@ -1,8 +1,15 @@
 # Sajtbyggaren
 
-Sajtbyggaren bygger hemsidor och appar åt företag på en kvalitet som siktar på `~9.0/10` enligt [`page-quality-traits.v1.json`](governance/policies/page-quality-traits.v1.json).
+Sajtbyggaren bygger företagshemsidor åt småföretagare på en kvalitet som
+siktar på `~9.0/10` enligt
+[`page-quality-traits.v1.json`](governance/policies/page-quality-traits.v1.json).
 
 Projektet är en kontrollerad ombyggnad av [`Jakeminator123/sajtmaskin`](https://github.com/Jakeminator123/sajtmaskin) med strikt governance, tydliga begrepp och en LLM som är **exekutor**, inte arkitekt.
+
+Produktkompassen för agenter och operatör finns i
+[`docs/product-operating-context.md`](docs/product-operating-context.md):
+Sajtbyggaren ska vinna genom bättre företagshemsidor för småföretagare, med
+kärnflödet `prompt -> företagshemsida -> preview -> följdprompt -> ny version`.
 
 ## Princip
 

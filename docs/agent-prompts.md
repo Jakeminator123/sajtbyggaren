@@ -22,6 +22,9 @@ Grundprincip:
 - Scout-agenten ersätter Bugbot som pre-push-granskare i direkt-main-flödet.
 - Bugbot används bara vid PR-undantag.
 - `docs/current-focus.md` är enda aktuella köplan.
+- `docs/product-operating-context.md` är produktkompassen för bättre
+  företagshemsidor för småföretagare. Kärnflödet är prompt ->
+  företagshemsida -> preview -> följdprompt -> ny version.
 - `docs/handoff.md` är snabb överlämning mellan agentpass.
 - `docs/agent-handbook.md` är regler och läsordning.
 - `python scripts/focus_check.py` är första drift-check i varje ny session.
@@ -92,12 +95,13 @@ trådar som resolved. Du kan användas som:
 Start:
 
 1. Läs docs/current-focus.md först.
-2. Läs docs/agent-handbook.md.
-3. Läs docs/agent-prompts.md.
-4. Läs docs/handoff.md om nuläget eller överlämningen är relevant.
-5. Kör python scripts/focus_check.py om miljön tillåter read-only shell.
-6. Kör git status --short.
-7. Läs relevanta filer och diffar för uppdraget.
+2. Läs docs/product-operating-context.md.
+3. Läs docs/agent-handbook.md.
+4. Läs docs/agent-prompts.md.
+5. Läs docs/handoff.md om nuläget eller överlämningen är relevant.
+6. Kör python scripts/focus_check.py om miljön tillåter read-only shell.
+7. Kör git status --short.
+8. Läs relevanta filer och diffar för uppdraget.
 
 Om detta är RO-review före push:
 
@@ -165,17 +169,18 @@ Du öppnar inte PR om Jakob inte uttryckligen ber om det.
 Start:
 
 1. Läs docs/current-focus.md först.
-2. Läs docs/agent-handbook.md.
-3. Läs docs/agent-prompts.md.
-4. Läs docs/handoff.md.
-5. Kör python scripts/focus_check.py.
-6. Verifiera att branch är main.
-7. Verifiera att main är synkad med origin/main.
-8. Kör git status --short och stoppa om arbetsytan är smutsig av ändringar du inte äger.
-9. Lista backup-branches med git branch -a --list "*backup-*".
-10. Skapa nästa backup-N från main.
-11. Pusha backup-N till origin om operatörens prompt eller current-focus säger att fjärrbackup ska finnas.
-12. Stanna kvar på main.
+2. Läs docs/product-operating-context.md.
+3. Läs docs/agent-handbook.md.
+4. Läs docs/agent-prompts.md.
+5. Läs docs/handoff.md.
+6. Kör python scripts/focus_check.py.
+7. Verifiera att branch är main.
+8. Verifiera att main är synkad med origin/main.
+9. Kör git status --short och stoppa om arbetsytan är smutsig av ändringar du inte äger.
+10. Lista backup-branches med git branch -a --list "*backup-*".
+11. Skapa nästa backup-N från main.
+12. Pusha backup-N till origin om operatörens prompt eller current-focus säger att fjärrbackup ska finnas.
+13. Stanna kvar på main.
 
 Innan implementation:
 
@@ -248,18 +253,20 @@ om uppdraget inte uttryckligen gäller ett litet workflow-/sanity-script.
 Start:
 
 1. Läs docs/current-focus.md först.
-2. Läs docs/agent-handbook.md.
-3. Läs docs/agent-prompts.md.
-4. Läs docs/handoff.md.
-5. Kör python scripts/focus_check.py.
-6. Kör git status --short.
-7. Verifiera senaste HEAD med git log --oneline -5.
-8. Verifiera att branch är main och att main är synkad med origin/main.
-9. Om detta är en ny Steward-sprint: skapa nästa backup-N från main enligt branch-discipline och stanna på main.
+2. Läs docs/product-operating-context.md.
+3. Läs docs/agent-handbook.md.
+4. Läs docs/agent-prompts.md.
+5. Läs docs/handoff.md.
+6. Kör python scripts/focus_check.py.
+7. Kör git status --short.
+8. Verifiera senaste HEAD med git log --oneline -5.
+9. Verifiera att branch är main och att main är synkad med origin/main.
+10. Om detta är en ny Steward-sprint: skapa nästa backup-N från main enligt branch-discipline och stanna på main.
 
 Tillåtet scope:
 
 - docs/current-focus.md
+- docs/product-operating-context.md
 - docs/handoff.md
 - docs/agent-handbook.md
 - docs/agent-prompts.md

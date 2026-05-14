@@ -2,7 +2,15 @@
 
 ## Vad
 
-Sajtbyggaren bygger hemsidor och appar åt företag på en kvalitet som siktar på `~9.0/10` enligt [`page-quality-traits.v1.json`](../governance/policies/page-quality-traits.v1.json) (worldclass-lite: stark business-tydlighet och teknisk korrekthet, även om vi ännu inte siktar på wow-design-prisnivå).
+Sajtbyggaren bygger företagshemsidor åt småföretagare på en kvalitet som
+siktar på `~9.0/10` enligt
+[`page-quality-traits.v1.json`](../governance/policies/page-quality-traits.v1.json)
+(worldclass-lite: stark business-tydlighet och teknisk korrekthet, även om vi
+ännu inte siktar på wow-design-prisnivå).
+
+Den korta produktkompassen för dagligt agentarbete finns i
+[`docs/product-operating-context.md`](product-operating-context.md). Den låser
+kärnflödet: `prompt -> företagshemsida -> preview -> följdprompt -> ny version`.
 
 ## Varför
 
