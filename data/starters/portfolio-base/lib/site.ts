@@ -5,6 +5,6 @@ export const siteUrl =
 export const siteMetadata = {
   title: "",
   description: "",
-  locale: "sv_SE",
+  locale: "en_US",
   type: "website",
 } as const;

@@ -100,7 +100,7 @@ export function getCaseStudies(): CaseStudyEntry[] {
 export function formatDate(date: string): string {
   const timestamp = date.includes("T") ? date : `${date}T00:00:00`;
 
-  return new Date(timestamp).toLocaleString("sv-SE", {
+  return new Date(timestamp).toLocaleString("en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",
