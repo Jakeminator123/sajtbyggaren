@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-14 (post-B45 Builder-mini-sprint)
-**Aktuell repo-HEAD på `main`:** `6daee58` (B45: `render_layout`, `render_home`, `render_services` och `render_products` route:ar kontakt-CTA:er via scaffoldens contact-path; tester låser att renderer-helpers inte literal-kodar `href="/kontakt"`). Bygger på `3178a82` (parallell-agent + operator workspace-cleanup), `c073d486` (PR #25 AGENTS.md gotcha för `/sajtbyggaren-output`-permissions), `19c3564` (Steward focus-bump efter PR #24), `c2d8632` (PR #24 docs-base starter + B49-fixup), `97ce7a8` workspace-cleanup, `10eb286` B48 follow-up-semantik, `5d746e9` audit-fix B44+B46. Kör `git log --oneline -1` för senaste lokala SHA.
-**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-10` finns lokalt från pre-audit-fix-läget; `backup-9` finns lokalt från pre-PR-#23-läget; `backup-8` finns lokalt efter follow-up-sprinten; `backup-7` (från `fb11925`) ligger på origin som tidigare fallback. Worktree `../sajtbyggaren-pr24` är borttaget efter merge.
+**Datum:** 2026-05-14 (post-B45 + Codex-IDE agentregel + branch-cleanup)
+**Aktuell repo-HEAD på `main`:** `04fb92f` (`AGENTS.md` låser att Codex-IDE-agenten följer `.cursor/BUGBOT.md` och `.cursor/rules/` som aktiva arbetsregler, men ändrar governance-källorna i stället för speglarna). Bygger på `9446200` (B45 focus/handoff), `6daee58` (B45 contact-route propagation), `3178a82` (parallell-agent + operator workspace-cleanup), `c073d486` (PR #25 AGENTS.md gotcha för `/sajtbyggaren-output`-permissions), `19c3564` (Steward focus-bump efter PR #24), `c2d8632` (PR #24 docs-base starter + B49-fixup), `97ce7a8` workspace-cleanup, `10eb286` B48 follow-up-semantik, `5d746e9` audit-fix B44+B46. Kör `git log --oneline -1` för senaste lokala SHA.
+**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-12` finns på origin från `9446200` som aktuell fallback. De mergeade Cursor-PR-brancherna för PR #22, #23, #24 och #25 är borta från GitHub eller bekräftat redan borttagna. Kvarvarande remote arbetsbrancher som inte ska raderas utan separat beslut: `feat/backoffice-trace-playground-cleanup` (ingen egen PR, inte ancestry-mergead efter squash) och `frontend/christopher-import` (PR #17 stängd utan merge, reference only).
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
 Färdiga startprompter för Scout/Builder/Steward finns i [`docs/agent-prompts.md`](agent-prompts.md).
@@ -46,7 +46,7 @@ Tre lager:
 - `backoffice/` + `backend.py` — Streamlit-administration (inte runtime).
 - `packages/` + `apps/` — runtime + kund-UI.
 
-## Vad funkar idag (post-B45 Builder-mini-sprint, repo-HEAD `6daee58`)
+## Vad funkar idag (post-B45 + agentregel, repo-HEAD `04fb92f`)
 
 ### Governance + guards
 
@@ -161,6 +161,8 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+04fb92f docs(agents): align Codex with Cursor rules
+9446200 docs(focus): record B45 contact route fix
 6daee58 fix(builder): thread contact route through CTAs
 3178a82 chore(workspace): integrate operator + parallel-agent docs/settings touch
 c073d486 docs: add cloud agent gotcha for /sajtbyggaren-output permissions (PR #25)

@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `6daee58` (2026-05-14, post-B45 Builder-mini-sprint: `render_layout`, `render_home`, `render_services` och `render_products` route:ar kontakt-CTA:er via scaffoldens `_pick_contact_route`/`contact_path`; nya regressionstester låser att renderer-helpers inte literal-kodar `href="/kontakt"` och att `write_pages()` trådar `/kontakta-oss` till layout/home/services/products. Föregående workspace-state: `3178a82`; inga öppna PRs.)
+Last verified state: `04fb92f` (2026-05-14, post-B45 Builder-mini-sprint + Codex-IDE agent-parity rule: `render_layout`, `render_home`, `render_services` och `render_products` route:ar kontakt-CTA:er via scaffoldens `_pick_contact_route`/`contact_path`; `AGENTS.md` låser att Codex-IDE-agenten följer `.cursor/BUGBOT.md` och `.cursor/rules/` men ändrar governance-källorna, inte speglarna. Föregående workspace-state: `3178a82`; inga öppna PRs.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `6daee58`; senaste produktcommit är `6daee58` (B45 `_pick_contact_route`-propagation till layout/home/services/products) ovanpå `c2d8632` (PR #24 docs-base starter, squash-merge), `10eb286` (B48 follow-up-semantik i dev-driver/backoffice), `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `04fb92f`; senaste produktcommit är `6daee58` (B45 `_pick_contact_route`-propagation till layout/home/services/products), följt av `9446200` (B45 focus/handoff) och `04fb92f` (Codex-IDE följer Cursor-regler i `AGENTS.md`). Detta ligger ovanpå `c2d8632` (PR #24 docs-base starter, squash-merge), `10eb286` (B48 follow-up-semantik i dev-driver/backoffice), `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -220,6 +220,13 @@ Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
   gotcha för Cloud Agent VMs som visar att
   `/sajtbyggaren-output/` måste finnas med write-permissions för
   builder-tester (annars failar de tysta).
+- `04fb92f` — `docs(agents): align Codex with Cursor rules`.
+  `AGENTS.md` låser att Codex-IDE-agenten agerar Cursor-kompatibel
+  repo-agent och följer `.cursor/BUGBOT.md` + `.cursor/rules/`, men
+  fortsätter ändra governance-källorna i stället för genererade speglar.
+- `9446200` — `docs(focus): record B45 contact route fix`.
+  Standard loop steg 8 efter B45: current-focus/handoff synkar nästa
+  konkreta uppgift till B49.
 - `3178a82` — `chore(workspace): integrate operator + parallel-agent
   docs/settings touch`. Sopar upp tre filer som drev i working tree
   efter parallell-agent-aktivitet: `.cursor/settings.json` vercel-
@@ -251,23 +258,28 @@ Mainline-steward-pushar som också ligger på main:
   `.cursor/mcp.json`.
 
 Branches städade 2026-05-13/14: feat/b20-step-2-mapping-flip raderad
-lokalt + remote efter merge. `backup-6` (från `504befc`) skapad och
-pushad till origin före Prompt-till-sajt-sprinten. `backup-7` (från
-`fb11925`) skapad och pushad till origin före audit-hotfix-sprinten.
-`backup-8` finns lokalt efter follow-up-sprinten och `backup-9` finns
-lokalt från pre-PR-#23-läget. Kvar lokalt: `main`, `backup-1`,
-`backup-4`, `backup-5`, `backup-6`, `backup-7`, `backup-8`, `backup-9`.
-Remote har även äldre `backup-2` och `backup-3`.
-`frontend/christopher-import` (PR #17, stängd) ska inte röras i
-nästa sprint.
+lokalt + remote efter merge. 2026-05-14 skapades remote `backup-12`
+från `9446200` som aktuell fallback, och de verifierat mergeade
+PR-head-brancherna `cursor/env-setup-9fef`,
+`cursor/docs-base-starter-harmonisering-98ec`,
+`cursor/portfolio-base-starter-upps-ttning-bf2e` och
+`cursor/backoffice-sp-r-lekplats-st-dning-d1d5` raderades från GitHub
+eller bekräftades redan raderade. `backup-6`, `backup-7`, `backup-8`,
+`backup-11` och `backup-12` finns på origin som fallbacks; äldre
+`backup-1`-`backup-5` finns också kvar. Kvarvarande remote
+arbetsbrancher som inte ska raderas utan separat beslut:
+`feat/backoffice-trace-playground-cleanup` (ingen egen PR, inte ancestry-
+mergead efter squash) och `frontend/christopher-import` (PR #17 stängd
+utan merge, reference only).
 
 ## Current active sprint
 
 Ingen pågående produktimplementation på `main`. Prompt-till-sajt MVP v1,
 mini-sprinten som gjorde PromptBuilder till enda primära promptyta, follow-up
 prompt versions, PR #23 backoffice trace/playground, PR #22 `portfolio-base`
-starter, B48 follow-up-semantik, PR #24 `docs-base` starter och B45
-kontakt-route-propagation är klara. Inga öppna PRs.
+starter, B48 follow-up-semantik, PR #24 `docs-base` starter, B45
+kontakt-route-propagation, Codex-IDE agent-parity-regeln och mergead
+branch-cleanup är klara. Inga öppna PRs.
 
 ## Next action - direktiv till nästa agent
 
@@ -276,6 +288,9 @@ kontakt-route-propagation är klara. Inga öppna PRs.
 - B45 är klar i `6daee58`: `write_pages()` trådar scaffoldens contact-path
   till layout, home, services och products, och tester låser frånvaro av
   hardcoded `href="/kontakt"` i renderer-helpers.
+- `AGENTS.md` innehåller nu Codex-IDE-regeln från `04fb92f`: Codex agerar
+  Cursor-kompatibel repo-agent och följer `.cursor`-reglerna, men ändrar
+  governance-källorna om en regel behöver uppdateras.
 - Nästa Builder-sprint bör vara B49 page-map-driven sidebar för `docs-base`.
   Kräver att antingen Nextra-theme-docs `Layout` får fungera (PR #24-bodyn
   noterar att den failade validering i miljön) eller en lokal
@@ -316,7 +331,7 @@ Innan `git push origin main`:
 ## Blocked items
 
 Inga öppna PR-blockers just nu. PR #25 `cursor/env-setup-9fef` är mergad
-i `c073d486`.
+i `c073d486` och PR-branchen är inte längre kvar på GitHub.
 
 ## Do not start yet
 
