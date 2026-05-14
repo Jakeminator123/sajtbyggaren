@@ -1,7 +1,7 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-14 (post-PR #24 docs-base merge)
-**Aktuell repo-HEAD på `main`:** `c2d8632` (squash-merge av PR #24 `docs-base` starter + Steward-fixup för B49: ny Nextra/Pagefind/MDX-starter under `data/starters/docs-base/` + harden:ad ThemeToggle + ärlig sidebar-copy). Bygger på `97ce7a8` workspace-cleanup, `10eb286` B48 follow-up-semantik, `5d746e9` audit-fix B44+B46. Kör `git log --oneline -1` för senaste lokala SHA.
+**Datum:** 2026-05-14 (post-PR #24 + #25 merge + workspace cleanup)
+**Aktuell repo-HEAD på `main`:** `3178a82` (parallell-agent + operator workspace-cleanup: `.cursor/settings.json` vercel-toggle, `README.md` ADR 0016-0020 + Sprint 3B+3B-next-status, `docs/agent-prompts.md` Codex-IDE-baseline). Bygger på `c073d486` (PR #25 AGENTS.md gotcha för `/sajtbyggaren-output`-permissions), `19c3564` (Steward focus-bump efter PR #24), `c2d8632` (PR #24 docs-base starter + B49-fixup), `97ce7a8` workspace-cleanup, `10eb286` B48 follow-up-semantik, `5d746e9` audit-fix B44+B46. Kör `git log --oneline -1` för senaste lokala SHA.
 **Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-10` finns lokalt från pre-audit-fix-läget; `backup-9` finns lokalt från pre-PR-#23-läget; `backup-8` finns lokalt efter follow-up-sprinten; `backup-7` (från `fb11925`) ligger på origin som tidigare fallback. Worktree `../sajtbyggaren-pr24` är borttaget efter merge.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
@@ -46,7 +46,7 @@ Tre lager:
 - `backoffice/` + `backend.py` — Streamlit-administration (inte runtime).
 - `packages/` + `apps/` — runtime + kund-UI.
 
-## Vad funkar idag (post-PR #24 merge, repo-HEAD `c2d8632`)
+## Vad funkar idag (post-PR #24 + #25 merge + workspace cleanup, repo-HEAD `3178a82`)
 
 ### Governance + guards
 
@@ -160,6 +160,9 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+3178a82 chore(workspace): integrate operator + parallel-agent docs/settings touch
+c073d486 docs: add cloud agent gotcha for /sajtbyggaren-output permissions (PR #25)
+19c3564 docs(focus): post-PR #24 docs-base merge + B49 follow-up
 c2d8632 feat(starters): add harmonized docs-base starter (PR #24)
 8997596 docs(focus): bump verified SHA after workspace cleanup
 97ce7a8 chore(workspace): ignore PR review worktrees and sync build-runner comment

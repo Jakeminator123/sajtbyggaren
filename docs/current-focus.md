@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `c2d8632` (2026-05-14, post-PR #24 docs-base merge med Steward-fixup för B49: ny `data/starters/docs-base/`-starter (Nextra/Pagefind/MDX) under `data/starters/docs-base/` plus harden:ad ThemeToggle (useState lazy-init + aria-pressed + suppressHydrationWarning) och ärlig sidebar-copy i `authoring.mdx` / `index.mdx` / starter-README. B49 (page-map-driven sidebar för docs-base) öppen i `known-issues.md` som följdsteg innan runtime-aktivering av `course-education -> docs-base`. Bygger på workspace-cleanup `97ce7a8` + B48 follow-up-semantik `10eb286`. Inga öppna PRs.)
+Last verified state: `3178a82` (2026-05-14, post-PR #24 + #25 merge + parallell-agent workspace-cleanup: PR #24 docs-base starter + Steward-fixup för B49 mergad i `c2d8632`; Steward focus-bump i `19c3564`; PR #25 cloud-agent AGENTS.md gotcha för `/sajtbyggaren-output`-permissions mergad i `c073d486`; och `3178a82` integrerar pending operator-/parallell-agent-edits: `.cursor/settings.json` vercel-plugin borttaget (operator-toggle), `README.md` ADR-lista 0016-0020 + Sprint 3B+3B-next-status, `docs/agent-prompts.md` ny Codex-IDE-baseline-sektion. Inga öppna PRs.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `c2d8632`; senaste produktcommit är `c2d8632` (PR #24 docs-base starter, squash-merge) ovanpå `10eb286` (B48 follow-up-semantik i dev-driver/backoffice), `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
+`main` är vid `3178a82`; senaste produktcommit är `c2d8632` (PR #24 docs-base starter, squash-merge) ovanpå `10eb286` (B48 follow-up-semantik i dev-driver/backoffice), `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
 prompt-helperns brief-fallback, Viewser mini-sprint som tog bort
 gamla ChatPanel från home och en audit-hotfix-sprint som städade
@@ -211,6 +211,22 @@ Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
   starter-underlag, inte aktiverad i `SCAFFOLD_TO_STARTER`. B49 öppen
   som följdsteg innan runtime-aktivering: page-map-driven sidebar
   istället för manuell `<aside>` i `layout.tsx`.
+- `19c3564` — `docs(focus): post-PR #24 docs-base merge + B49 follow-up`.
+  Standard loop steg 8 efter PR #24, plus B49 öppnad i
+  `known-issues.md` och term-coverage allowlist för
+  `ThemeToggle`/`Layout`/`B49`.
+- `c073d486` — `docs: add cloud agent gotcha for /sajtbyggaren-output
+  permissions (PR #25)`. Cloud-agent docs-PR: AGENTS.md får en
+  gotcha för Cloud Agent VMs som visar att
+  `/sajtbyggaren-output/` måste finnas med write-permissions för
+  builder-tester (annars failar de tysta).
+- `3178a82` — `chore(workspace): integrate operator + parallel-agent
+  docs/settings touch`. Sopar upp tre filer som drev i working tree
+  efter parallell-agent-aktivitet: `.cursor/settings.json` vercel-
+  blocket borttaget (operator-toggle), `README.md` ADR-lista 0016-0020
+  + Sprint 3B+3B-next-status, `docs/agent-prompts.md` ny "Baseline för
+  Codex-IDE"-sektion som kodifierar Scout-/Builder-/Steward-disciplin
+  vid parallella agentpass.
 
 Mainline-steward-pushar efter PR #21 (pure docs/governance):
 
@@ -301,12 +317,8 @@ Innan `git push origin main`:
 
 ## Blocked items
 
-Öppna PRs blockerar inte `main`, men status:
-
-- #25 `cursor/env-setup-9fef`: draft, parallell cloud-agent docs-PR som
-  lägger till en gotcha för `/sajtbyggaren-output`-permissions i
-  `AGENTS.md`. Inte vår sprint, övervaka och låt den landa när operatör
-  ger OK.
+Inga öppna PR-blockers just nu. PR #25 `cursor/env-setup-9fef` är mergad
+i `c073d486`.
 
 ## Do not start yet
 
