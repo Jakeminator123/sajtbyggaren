@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `7ddb2ed` (2026-05-14, post-PR #23 + Steward-docs: backoffice trace/playground mergead till `origin/main` ovanpå `2701b00`, och Steward-docs uppdaterade queue/focus/handoff/known-issues efter squash-merge. Backoffice trace/playground-skulden är stängd i `docs/known-issues.md`, med cancellation-followup kvar som separat lågprioriterad post. Lokal `backup-9` skapad från pre-merge `main`; lokal `.cursor/settings.json` är fortsatt ocommittad operatörsinställning. #22 portfolio-base starter är enda öppna PR-spåret och ska uppdateras mot senaste main före merge.)
+Last verified state: `3f6eb27` (2026-05-14, post-PR #23 + Steward-docs: backoffice trace/playground mergead till `origin/main` ovanpå `2701b00`, och Steward-docs uppdaterade queue/focus/handoff/known-issues efter squash-merge. Backoffice trace/playground-skulden är stängd i `docs/known-issues.md`, med cancellation-followup kvar som separat lågprioriterad post. Lokal `backup-9` skapad från pre-merge `main`; lokal `.cursor/settings.json` är fortsatt ocommittad operatörsinställning. #22 portfolio-base starter är enda öppna PR-spåret och ska uppdateras mot senaste main före merge.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
