@@ -10,7 +10,7 @@
       "enabled": true
     },
     "sanity": {
-      "enabled": true
+      "enabled": false
     }
   }
 }

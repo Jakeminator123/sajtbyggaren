@@ -2,7 +2,8 @@
 
 Reads a Project Input, a Scaffold and a Variant from the repository, writes
 canonical Engine Run artifacts under `data/runs/<runId>/`, and produces a
-runnable Next.js project under `.generated/<siteId>/` by copying the Starter
+runnable Next.js project under an external preview root (default:
+`../sajtbyggaren-output/.generated/<siteId>`) by copying the Starter
 named in `site_plan["starterId"]` (resolved by `produce_site_plan` from the
 `SCAFFOLD_TO_STARTER` mapping) and patching it with the project input's
 content and the variant's tokens.
@@ -37,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -65,7 +67,7 @@ DOSSIERS_DIR = (
     / "orchestration"
     / "dossiers"
 )
-GENERATED_DIR = REPO_ROOT / ".generated"
+DEFAULT_GENERATED_DIR = REPO_ROOT.parent / "sajtbyggaren-output" / ".generated"
 RUNS_DIR = REPO_ROOT / "data" / "runs"
 
 # Files the builder must NEVER write under any siteId. Case-insensitive.
@@ -142,6 +144,28 @@ def _to_repo_relative(path: Path) -> str:
     except ValueError:
         return str(resolved).replace("\\", "/")
     return str(relative).replace("\\", "/")
+
+
+def resolve_generated_dir(override: str | Path | None = None) -> Path:
+    """Resolve where dev-preview builds are written.
+
+    Priority:
+    1) explicit ``override`` (CLI/tests),
+    2) ``SAJTBYGGAREN_GENERATED_DIR`` env var,
+    3) ``DEFAULT_GENERATED_DIR`` (outside the repo root to reduce watcher load).
+    """
+    candidate = override
+    if candidate is None:
+        env_value = os.environ.get("SAJTBYGGAREN_GENERATED_DIR")
+        if env_value:
+            candidate = env_value
+        else:
+            candidate = DEFAULT_GENERATED_DIR
+
+    resolved = Path(candidate).expanduser()
+    if not resolved.is_absolute():
+        resolved = (REPO_ROOT / resolved).resolve()
+    return resolved
 
 
 def _coerce_subprocess_text(stream: object) -> str:
@@ -1764,11 +1788,13 @@ def build(
     dossier_path: Path,
     do_build: bool = True,
     runs_dir: Path | None = None,
+    generated_dir: str | Path | None = None,
 ) -> tuple[Path, Path]:
     """Generate a site and Engine Run artefakts. Returns (target, run_dir).
 
     ``runs_dir`` defaults to ``RUNS_DIR`` (``data/runs``); pass an isolated
     path (``tmp_path`` in tests) to keep the canonical history clean.
+    ``generated_dir`` overrides where the dev-preview site is emitted.
     """
     started = time.monotonic()
 
@@ -1804,11 +1830,13 @@ def build(
         run_dir, trace, dossier, scaffold, variant, site_brief
     )
 
+    generated_root = resolve_generated_dir(generated_dir)
+
     # Phase 3: build. The Starter to copy is whatever the plan picked - we
     # used to hardcode 'marketing-base' here, which made the planSource a
     # decoration rather than authoritative. Reading site_plan["starterId"]
     # also future-proofs the builder for the day commerce-base is harmonised.
-    target = GENERATED_DIR / site_id
+    target = generated_root / site_id
     trace.event("build", "phase.started", "started", "Phase 3 build starts")
 
     starter_id = site_plan["starterId"]
@@ -2024,6 +2052,15 @@ def main() -> int:
         default=None,
         help="Override canonical data/runs/ path (used by tests to isolate artefakts).",
     )
+    parser.add_argument(
+        "--generated-dir",
+        default=None,
+        help=(
+            "Override dev-preview output root for generated sites. "
+            "Defaults to SAJTBYGGAREN_GENERATED_DIR or "
+            "the sibling folder ../sajtbyggaren-output/.generated."
+        ),
+    )
     args = parser.parse_args()
 
     dossier_path = Path(args.dossier).resolve()
@@ -2032,7 +2069,12 @@ def main() -> int:
         return 1
 
     runs_dir = Path(args.runs_dir).resolve() if args.runs_dir else None
-    build(dossier_path, do_build=not args.skip_build, runs_dir=runs_dir)
+    build(
+        dossier_path,
+        do_build=not args.skip_build,
+        runs_dir=runs_dir,
+        generated_dir=args.generated_dir,
+    )
     return 0
 
 

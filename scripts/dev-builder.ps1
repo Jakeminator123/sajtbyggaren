@@ -21,6 +21,7 @@ param(
     [string]$ProjectInput = "examples/painter-palma.project-input.json",
     [switch]$SkipBuild,
     [switch]$NoServe,
+    [string]$GeneratedDir = $null,
     [int]$Port = 3000
 )
 
@@ -37,6 +38,7 @@ if (-not (Test-Path $ProjectInput)) {
 
 $buildArgs = @("scripts/build_site.py", "--dossier", $ProjectInput)
 if ($SkipBuild) { $buildArgs += "--skip-build" }
+if ($GeneratedDir) { $buildArgs += @("--generated-dir", $GeneratedDir) }
 
 python @buildArgs
 if ($LASTEXITCODE -ne 0) {
@@ -50,7 +52,14 @@ if ($NoServe) {
 }
 
 $siteId = (Get-Content $ProjectInput | ConvertFrom-Json).siteId
-$siteDir = Join-Path $repoRoot ".generated/$siteId"
+if ($GeneratedDir) {
+    $generatedRoot = $GeneratedDir
+} elseif ($env:SAJTBYGGAREN_GENERATED_DIR) {
+    $generatedRoot = $env:SAJTBYGGAREN_GENERATED_DIR
+} else {
+    $generatedRoot = Join-Path (Split-Path -Parent $repoRoot) "sajtbyggaren-output/.generated"
+}
+$siteDir = Join-Path $generatedRoot $siteId
 if (-not (Test-Path $siteDir)) {
     throw "Generated site missing at $siteDir"
 }

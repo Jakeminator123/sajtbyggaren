@@ -95,20 +95,19 @@ def test_builder_smoke_writes_routes_and_run_artifacts(
 @pytest.mark.tooling
 def test_builder_assertion_blocks_env_writes() -> None:
     """Builder helper must refuse to write secret .env files."""
-    from scripts.build_site import write
+    from scripts.build_site import resolve_generated_dir, write
 
-    target = REPO_ROOT / ".generated" / "painter-palma" / ".env"
+    preview_root = resolve_generated_dir()
+    target = preview_root / "painter-palma" / ".env"
     with pytest.raises(AssertionError):
         write(target, "SECRET=oops\n")
 
-    target_local = (
-        REPO_ROOT / ".generated" / "painter-palma" / ".env.local"
-    )
+    target_local = preview_root / "painter-palma" / ".env.local"
     with pytest.raises(AssertionError):
         write(target_local, "SECRET=oops\n")
 
     # `.env.example` must still be allowed - it is the canonical placeholder.
-    safe = REPO_ROOT / ".generated" / "painter-palma" / ".env.example"
+    safe = preview_root / "painter-palma" / ".env.example"
     write(safe, "# safe placeholder\n")
     assert safe.exists()
     safe.unlink()

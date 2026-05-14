@@ -1,58 +1,151 @@
-# Dependency and build outputs
+# Cursor indexing rules. Mirrors the spirit of `.gitignore` but is
+# scoped to "do not let Cursor's indexer chew on this", not "do not
+# commit this". Per-machine creds (.env, .cursor/mcp.json) live in
+# `.gitignore`; this file is about keeping the agent + search index
+# fast and focused on canonical sources.
+
+# ---------------------------------------------------------------------------
+# Dependency installs (node + python)
+# ---------------------------------------------------------------------------
+
+# `node_modules` without slash matches at any depth, so this covers
+# both `node_modules/` at the repo root and inside every starter +
+# app under `apps/`, `data/starters/<id>/`, etc. Locally these can hit
+# tens of thousands of files per starter once `npm install` runs.
 node_modules
+.venv/
+__pycache__/
+*.py[cod]
+
+# Tool caches that bloat the indexer with no value for editing.
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.swc/
+.turbo/
+
+# ---------------------------------------------------------------------------
+# Build outputs (Next.js + generic)
+# ---------------------------------------------------------------------------
+
 dist
 build
 .next
 out
-.turbo
+.vercel
+
 # Reserve the destination for the B13a architecture-move (see
 # docs/known-issues.md). The bare `build` rule above matches at any
-# depth, including packages/generation/build/, which would hide the
-# new package from agent indexing once the move PR lands. Pre-allow it
-# now so the trap is gone before anyone hits it.
+# depth, including `packages/generation/build/`, which would hide the
+# new package from agent indexing once the move PR lands. Pre-allow
+# it now so the trap is gone before anyone hits it.
 !packages/generation/build/
 !packages/generation/build/**
 
-# Python caches and venv
-.venv/
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
+# ---------------------------------------------------------------------------
+# Lockfiles - large JSON the indexer never needs for code search
+# ---------------------------------------------------------------------------
 
+# Lockfiles are committed (per `.gitignore`) and reproducibility
+# tooling reads them on disk just fine; the Cursor indexer does not
+# need to scan them when looking for code symbols. Excluding them
+# trims one of the heaviest text payloads in the repo (each
+# starter's `package-lock.json` is hundreds of KB).
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ---------------------------------------------------------------------------
 # Engine Run artefakter och dev-output
+# ---------------------------------------------------------------------------
+
+# Each Engine Run drops 8 artefakter + a generated-files snapshot
+# under `data/runs/<runId>/`. After a few dev-builder runs this grows
+# fast and offers nothing the agent needs to read on every request.
 data/runs/
 data/versions/
 data/prompt-inputs/
 .generated/
 
+# ---------------------------------------------------------------------------
 # Env-filer (alla varianter); .env.example forblir lasbar
+# ---------------------------------------------------------------------------
+
 .env
 .env.*
 !.env.example
 
+# ---------------------------------------------------------------------------
+# Starter-public binary assets
+# ---------------------------------------------------------------------------
+
+# Each starter's `public/` carries vendor logos, hero images, fonts.
+# They blow up the indexer with binary content the agent cannot
+# meaningfully use. README/JSON inside public/ stays indexable via
+# the explicit re-include lines below.
+data/starters/**/public/**/*.png
+data/starters/**/public/**/*.jpg
+data/starters/**/public/**/*.jpeg
+data/starters/**/public/**/*.gif
+data/starters/**/public/**/*.webp
+data/starters/**/public/**/*.svg
+data/starters/**/public/**/*.ico
+data/starters/**/public/**/*.avif
+data/starters/**/public/**/*.woff
+data/starters/**/public/**/*.woff2
+data/starters/**/public/**/*.ttf
+data/starters/**/public/**/*.eot
+!data/starters/**/public/**/*.md
+!data/starters/**/public/**/*.txt
+!data/starters/**/public/**/*.json
+
+# ---------------------------------------------------------------------------
 # Operator-only material som inte ska indexeras av Cursor
+# ---------------------------------------------------------------------------
+
+# `MIN_IDE/` is read-only inspiration material the operator keeps
+# locally (see governance/rules/workspace-discipline.md). Never
+# committed and not relevant for agent context.
 MIN_IDE/
+.git/
+konversation.txt
+.streamlit/secrets.toml
+.cursor/mcp.json
+.vscode/*.local.json
 
-# Tunga binarer under referens/. Text-utlatanden och .json/.md/.txt-content
-# dar ar fortsatt sokbara for agenten - bara binarfiler ignoreras.
-referens/**/*.png
-referens/**/*.jpg
-referens/**/*.jpeg
-referens/**/*.gif
-referens/**/*.webp
-referens/**/*.zip
-referens/**/*.rar
-referens/**/*.tar
-referens/**/*.tar.gz
-referens/**/*.tgz
-referens/**/*.7z
-referens/**/*.pdf
+# `referens/` is a copy/fork workspace for external references. Even
+# the text content in there is operator-only inspiration, so the
+# whole tree is excluded from indexing.
 
+
+referens/
+
+# ---------------------------------------------------------------------------
 # Tmp och logs
+# ---------------------------------------------------------------------------
+
 *.log
 .tmp-*
 .tmp.*
+.commit-msg.tmp
 
-referens/
+# Global binary payloads should never be indexed
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.ico
+*.svg
+*.avif
+*.woff
+*.woff2
+*.ttf
+*.eot
+*.zip
+*.rar
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.pdf

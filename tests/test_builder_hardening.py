@@ -299,7 +299,7 @@ def test_generated_files_dir_points_to_run_snapshot(
     expected = _to_repo_relative(run_dir / "generated-files")
     assert result["generatedFilesDir"] == expected
     # Dev preview is also exposed but as a separate field, not the canonical one.
-    assert result["devPreviewDir"].startswith(".generated/")
+    assert "/.generated/" in result["devPreviewDir"]
 
 
 # ---------------------------------------------------------------------------

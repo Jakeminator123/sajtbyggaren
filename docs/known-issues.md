@@ -108,6 +108,21 @@ Format per bugg:
   dokumenterar starter-kraven. Ej blocker för aktiva flöden idag (real
   codegen-scope är fortfarande `marketing-base`-only per ADR 0017).
 
+### Notera (inte en bugg) - dev-preview-output utanför repo
+
+`scripts/build_site.py` skriver dev-preview-builden till
+`../sajtbyggaren-output/.generated/<siteId>` som default sedan
+2026-05-14 (workspace-perf-pass). Override via `--generated-dir <path>`
+eller env `SAJTBYGGAREN_GENERATED_DIR`. CI använder
+`$RUNNER_TEMP/sajtbyggaren-output/.generated/`. Tester går genom
+`resolve_generated_dir()` så de följer samma override. Anledningen är
+att flytta tunga npm-install-/Next.js-build-output utanför Cursor-
+indexerings- och file-watcher-banan så IDE:n hålls snabb. Äldre dokumen-
+tation (README, builder-mvp.md, viewser-docs) nämner fortfarande
+`.generated/` som om den låg i repo; uppdatera om/när det blir aktuellt
+i en docs-cleanup. Ingen B-ID krävs - detta är en avsiktlig
+arkitekturändring, inte en bugg.
+
 (B20 stängd 2026-05-13 — se "Stängda - regression-test säkrar fixet" nedan.)
 
 ## Stängda - regression-test säkrar fixet

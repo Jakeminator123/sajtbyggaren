@@ -181,6 +181,9 @@ COMMON_WORDS = {
     "GameState", "KeyboardEvent", "PacmanGame",
     "Snake", "Tetris", "ThreeCanvasShell",
     "PowerShell", "SkipBuild", "NoServe", "DryRun",
+    # PowerShell terminal launcher flags that .vscode/settings.json passes
+    # to the integrated terminal. Not domain terms; just CLI args.
+    "NoLogo", "NoProfile",
     # lucide-react icon names used by build_site.py page renderers.
     # 1-cap names like Phone/Mail/Sparkles never trigger PASCAL_RE; only
     # multi-cap PascalCase icons need explicit allowlisting.
