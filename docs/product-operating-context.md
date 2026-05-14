@@ -25,6 +25,11 @@ Allt agentarbete ska testas mot frågan:
 Om svaret är nej ska ändringen normalt parkeras, även om den är tekniskt
 intressant.
 
+`docs/current-focus.md` är fortfarande köplanen. Produktkompassen ersätter
+inte valda B-ID:n eller blockerande följdsteg; den förklarar varför de ska
+hjälpa kärnflödet. En enabling-uppgift som B49 är rätt när den gör nästa
+småföretagarsajt mer korrekt, previewbar eller aktiverbar.
+
 ## Produktlöfte
 
 Slutanvändaren ska kunna beskriva sitt företag i fri text och få en
@@ -48,8 +53,9 @@ bred appbyggare.
 
 Gamla sajtmaskin är referens och baslinje, inte kodbas att återinföra rakt
 av. Det gamla projektets bredd är en varning: auth, credits, domäner,
-integrationslager, media, templates, deploy-spår och agentfunktioner fanns
-samtidigt och gjorde helheten svårstyrd. Nya Sajtbyggaren ska låna
+integrationslager, media, för många starter-spår, deploy-spår och
+agentfunktioner fanns samtidigt och gjorde helheten svårstyrd. Nya
+Sajtbyggaren ska låna
 produktidéer, men bara när de stärker kärnflödet.
 
 ## Governance-princip
@@ -71,7 +77,9 @@ Sajtbyggaren ska inte låsa sig vid en enda runtime för tidigt.
 Praktisk riktning:
 
 - `LocalRuntime` är snabb intern utveckling och felsökning.
-- `StackBlitzRuntime` är första användarnära preview- och edit-yta.
+- `StackBlitzRuntime` är första användarnära preview-yta. Eventuell
+  editbarhet ska testas som produktupplevelse ovanpå previewn, inte som
+  ansvar som flyttas in i runtime-lagret.
 - `FlyRuntime` eller annan produktionslik runtime är högre verifieringsnivå
   när build, routes, miljövariabler, assets och deploybarhet måste testas mer
   realistiskt.
@@ -116,7 +124,7 @@ Vänta om inte operatören uttryckligen säger annat:
 - booking
 - avancerad e-post
 - avatar/media-funktioner
-- marketplace eller template-bredd
+- marketplace eller för många starter-spår
 - flera konkurrerande initieringsvägar
 
 ## Första kvalitetsbaseline
