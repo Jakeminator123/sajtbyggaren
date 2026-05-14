@@ -104,6 +104,14 @@ def test_playground_extracts_run_id_from_supported_outputs() -> None:
         == "2026-abc"
     )
     assert (
+        _extract_run_id("\nRun complete: C:\\workspace\\data\\runs\\2026-win\n")
+        == "2026-win"
+    )
+    assert (
+        _extract_run_id("\nRun complete: /workspace/data/runs/2026-trailing/\n")
+        == "2026-trailing"
+    )
+    assert (
         _extract_run_id("[engine.run.started] ok: runId=2026-def phase=all mode=init")
         == "2026-def"
     )

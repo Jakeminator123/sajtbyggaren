@@ -30,7 +30,8 @@ def _extract_run_id(output: str) -> str | None:
     for line in output.splitlines():
         if line.startswith("Run complete:"):
             run_path = line.replace("Run complete:", "").strip()
-            found_run_id = run_path.rsplit(os.sep, 1)[-1] or None
+            normalized = run_path.replace("\\", "/").rstrip("/")
+            found_run_id = normalized.rsplit("/", 1)[-1] or None
         elif "runId=" in line:
             for token in line.split():
                 if token.startswith("runId="):

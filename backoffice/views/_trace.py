@@ -67,14 +67,11 @@ def event_badges(event: Mapping[str, Any]) -> list[str]:
     """Return compact labels that make important trace event types scannable."""
     event_name = _text_value(event, "event").lower()
     message = _text_value(event, "message").lower()
-    badges: list[str] = []
-    if "quality" in event_name or "quality" in message:
-        badges.append("quality")
-    if "repair" in event_name or "repair" in message:
-        badges.append("repair")
-    if "codegen" in event_name or "codegen" in message:
-        badges.append("codegen")
-    return badges
+    return [
+        token
+        for token in IMPORTANT_EVENT_TOKENS
+        if token in event_name or token in message
+    ]
 
 
 def summarize_trace_events(events: list[dict[str, Any]]) -> dict[str, Any]:
