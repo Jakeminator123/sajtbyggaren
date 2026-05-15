@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-15 (post demo-baseline-fix 1A-hotfix + bug-sweep: 21 nya B-IDs `B69`-`B87` loggade från tre parallella read-only subagents, plus 4 Scout-fynd `B64`-`B67`; Grind cloud-sprint (2-3h, PR-spår) är nästa)
-**Aktuell repo-HEAD på `main`:** den senaste docs-/Steward-bump-commiten ovanpå `d99f8ba` (`fix(prompt-helper): close B61 B62 B63 (demo-baseline-fix 1A-hotfix)`). Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA; konventionen är att raden "Last verified state" i `current-focus.md` pekar på senaste produktcommit (`d99f8ba`) och Steward-bump-commiten räknas som "within bump tolerance" av `focus_check.py`. Föregående mainline-pushar samma dag: `a12314f` (cursorignore-chore för apps/viewser node_modules+.next-pinning), `b78484f` (Verifierings-Scout findings-record som dokumenterade B61/B62/B63), `824cd3a` (Steward-bump efter 1A), `ab74c2a` (`feat(builder): demo-baseline-fix 1A`), `f29688c` (Steward-bump efter rules-commit), `d072c98` (`chore(rules): add powershell-glob and cli-safety-belt rules`).
-**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-15`, `backup-16` (post-merge sanity-pass för PR #27), `backup-17` (B60-passet), `backup-18` (cleanup/prune-passet), `backup-19` (demo-baseline-fix 1A) och `backup-20` (1A-hotfix) finns lokalt och på origin. Nästa Builder/Scout-pass ska skapa nästa lediga `backup-N` från synkad `main` innan sprintarbete. Inga öppna PRs.
+**Datum:** 2026-05-15 (post demo-baseline-fix 1B + bug-sweep PR #28: B64/B65/B66/B69-B79/B83 stängda, re-verifierings-Scout är nästa)
+**Aktuell repo-HEAD på `main`:** `885431b` (PR #28 squash-merge: `Demo-baseline-fix 1B + bug-sweep`). Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA. Föregående produktbaseline: `d99f8ba` 1A-hotfixen för B61/B62/B63.
+**Aktiv branch:** `main`. PR #28 är mergead; PR-branchen `cursor/demo-baseline-buggsvep-44a5` kan städas separat om den finns kvar lokalt/remote. `backup-21` finns på origin från Grind-sprintstart. Inga kända öppna PR-blockers.
 **Stash-läge:** `git stash list` har EN parkerad stash: `park read-only shell windows rule before demo-baseline-fix` (skapad 2026-05-15 av Scout som förberedelse för 1A-hotfix-Builder, ska poppas separat när rule-spåret tas upp igen — INTE i Grind-sprinten).
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
@@ -115,61 +115,23 @@ Tre lager:
 ## Nästa konkreta uppgift
 
 Se `docs/current-focus.md` → **"Next action"**. Kort version:
-demo-baseline-fix 1A-hotfix är landad (`d99f8ba`) och stängde de tre
-regressioner Verifierings-Scout 2026-05-15 hittade (B61/B62/B63):
+demo-baseline-fix 1B + bug-sweep är mergead i `885431b` via PR #28. Den stängde:
 
-- **B61 Hög stängd** — `_derive_story` ignorerar nu `notes_for_planner`
-  helt, ny `_derive_tagline`-helper bygger taglinen från businessType
-  + location, `_service_summary` + `_placeholder_services` returnerar
-  neutral kundsvenska istället för "Justera Project Input"-jargong.
-- **B62 Hög stängd** — `detect_language` har ny cascade SWEDISH_HINTS
-  → ENGLISH_HINTS → å/ä/ö → default sv så `frisör Göteborg` och
-  `naprapatklinik Stockholm` nu resolverar till `sv`. Plus
-  `_normalize_location_hint` skriver om `locationHint="Sweden"` till
-  `Sverige` på sv-builds.
-- **B63 Medel stängd** — `_BUSINESS_TYPE_LABEL_SV` har bindestreck-
-  varianter för briefModels faktiska slugs (`e-commerce`, `naprapath-
-  clinic`, `electrical-services`, `plumbing-services` m.fl.) plus
-  fallback omformulerad till `företag som arbetar med <slug>`.
+- **B64/B65** — Site Brief har nu `companyName`, `contactPhone`, `contactEmail`, `contactAddress`; prompt-helpern använder explicita bolags-/kontaktvärden före fallback. ADR 0022 dokumenterar schema-utökningen.
+- **B66** — `render_home()` renderar inte "Varför oss" när `trustSignals=[]`.
+- **B69** — Quality Gate route-scan får alla emitterade default-routes + dossier-routes, så `/om-oss` granskas även när scaffolden markerar den `required:false`. Aggregate-status ändrades inte; route-scan-only failure är fortsatt degraded enligt befintligt kontrakt.
+- **B70/B78** — Viewser localhost-/dossier-guards är härdade för IPv6 Host-header och symlink traversal.
+- **B71/B72/B73** — follow-up merge-docstring matchar konservativ byte-stabil semantik, `listRuns()` läser JSON bara för limit-survivors, tagline fallback saknar Project Input-jargong.
+- **B74/B75/B76/B77/B79/B83** — nice-to-have-spåret landade: dev_generate route-manifest, Project Input fail-closed schema, site-plan i Run Details, dossier-vs-starter component collision, svensk rationale och slug-suffix för service-kollisioner.
 
-Smoke-verifierat med real briefModel: `elektriker Malmö` (build/quality
-=ok, H1=`Elektriker i Malmö`, country=`Sverige`) och `frisör Göteborg`
-(build/quality=ok, language=`sv`, H1=`Frisör i Göteborg`, country=
-`Sverige`). 12 nya regression-tester + 2 stale tester omskrivna.
+Verifiering i PR #28: ruff 0 findings, full pytest grön (3 skipped E2E/slow), governance/rules/term checks gröna, Viewser `npm run build` grön, smoke-builds `elektriker Malmö` + `frisör Göteborg` båda `status=ok`, `quality=ok`. Bugbot var inte aktiv; GitHub governance, builder-smoke och secret-scan var gröna.
 
-**EFTER hotfixen** körde Scout tre parallella read-only bug-sweep-
-subagents (brief-pipeline, builder-renderers, viewser-app) som loggade
-21 ytterligare öppna B-IDs (`B69`-`B87`) i `docs/known-issues.md`,
-plus 4 fynd från Verifierings-Scout som inte täcktes av hotfix-scopet
-(`B64` SiteBrief saknar company_name, `B65` kontakt alltid placeholder,
-`B66` "Varför oss" renderas trots tom trustSignals, `B67` hårdkodad
-svensk UI). Totalt **25 öppna B-IDs**.
+**Nästa uppgift: Re-verifierings-Scout efter 1B.** Kör samma fyra demo-prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`) mot `main` vid `885431b`, poängsätt samma åtta scorecard-dimensioner som 6.2/10-baselinen och besluta:
 
-**Nästa uppgift: demo-baseline-fix 1B + bug-sweep (Grind, cloud /
-2-3h / PR-spår).** Grind åtgärdar must-land + should-land i en
-sammanhållen PR:
+- totalsnitt ≥7/10 och inget case <6.5 → Project DNA / semantic follow-up merge.
+- annars → bug-sweep round 2 eller riktad fix på sämsta case.
 
-- **Must-land (4):** B66 (conditional rendering), B69 (Quality Gate
-  route-scan utan `/om-oss` — silent kontraktsbrott), B70 (IPv6 Host-
-  header bryter localhost-guard), B78 (symlink-path-traversal i
-  build-runner whitelist — säkerhet).
-- **Should-land (5):** B64 + B65 (brief-schema-bump för company_name +
-  contact_*, kräver ADR), B71 (follow-up merge konsistens), B72
-  (`listRuns` O(N) disk-läsningar), B73 (tagline-fallback dev-jargong).
-- **Nice-to-have (6):** B74, B75, B76, B77, B79, B83.
-- **Out-of-scope:** B67, B80-B82, B84-B87 (loggas i PR-body).
-
-Grind kör på `feat/demo-baseline-fix-1b-bug-sweep`, backup-21 från
-synkad main, Bugbot-loop, squash-merge när grön. Re-verifierings-Scout
-körs **EFTER Grind-merge** (inte före — 1A-hotfix-rapportens
-estimerade snitt 7.0-7.3 är spekulation, ska bekräftas i ett enda
-scorecard-pass efter hela sprinten).
-
-PromptBuilder stage-timeout är inte längre listad som aktiv nice-to-have;
-Scout verifierade att cleanup redan finns.
-
-PR #17 / `frontend/christopher-import` är reference only: återöppna inte PR #17,
-starta inte `apps/web`, men behåll branchen som framtida design-/copy-referens.
+Kvar öppna från 1B-scope/deferred: B67, B80, B81, B82, B84, B85, B86, B87. StackBlitz B59 är fortsatt parkerad.
 
 ## Operatörspreferenser (2026-05-13)
 

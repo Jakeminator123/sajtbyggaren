@@ -90,18 +90,18 @@ produkt-buggar:
   i Malmö" får H1 "Elektriker i Malmö" eftersom
   `_derive_company_name()` bara läser `businessTypeGuess` +
   `locationHint`. Riktigt företagsnamn extraheras inte. Kräver
-  brief-schema-bump + ADR. Fix: open. Test: open.
+  brief-schema-bump + ADR. Fix: `885431b` (ADR 0022 + Site Brief `companyName`). Test: `tests/test_prompt_to_project_input.py::test_site_brief_company_name_overrides_derived_h1`, `tests/test_extract_site_brief.py::test_site_brief_to_artifact_real_run`.
 - **`B65` Hög** - Kontaktuppgifter är alltid placeholder
   (`+46 8 000 00 00`, `kontakt@example.se`, "Adress saknas"). Brief
   saknar contact_phone/email/address-fält och `_placeholder_contact()`
   returnerar fasta värden. Kräver brief-schema-bump + ADR (samma som
-  B64). Fix: open. Test: open.
+  B64). Fix: `885431b` (ADR 0022 + Site Brief contact fields). Test: `tests/test_prompt_to_project_input.py::test_site_brief_contact_fields_override_placeholders`, `tests/test_extract_site_brief.py::test_site_brief_to_artifact_real_run`.
 - **`B66` Medel** - `scripts/build_site.py:930-935` "Varför oss"-
   sektion renderas alltid trots tom `trustSignals`. `<h2>Varför oss</h2>`
   är hårdkodad i `render_home`; när `trustSignals=[]` (alltid efter
   prompt-flödet idag) blir det stor rubrik + tom `<ul>`. Fix:
   conditional rendering eller fyll med generic-by-business-type-
-  fallback. Fix: open. Test: open.
+  fallback. Fix: `885431b`. Test: `tests/test_builder_route_emission.py::test_render_home_omits_trust_section_when_trust_signals_empty`.
 - **`B67` Låg** - `scripts/build_site.py` hårdkodar `lang="sv"` på
   rad 786 och svensk UI-copy ("Begär offert", "Hör av dig idag",
   "Kontakta oss", "Se alla tjänster", "Spela direkt", "Beskriv kort
@@ -131,7 +131,7 @@ run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
   `required: true`. Bevis: `scripts/build_site.py:1327`
   (`required_routes()` filtrerar på `required=True`),
   `packages/generation/quality_gate/gate.py:81-94` (kommentar
-  bekräftar att gate tar `required`-subsetet). Fix: open. Test: open.
+  bekräftar att gate tar `required`-subsetet). Fix: `885431b` (route-scan receives all emitted routes; aggregate severity unchanged). Test: `tests/test_builder_route_emission.py::test_non_required_about_route_is_scanned_for_default_export`, `tests/test_builder_route_emission.py::test_build_route_scan_receives_all_emitted_default_routes`.
 - **`B70` Hög** - `apps/viewser/lib/localhost-guard.ts:5-10` parsar
   Host-headern fel för IPv6 localhost. `hostHeader.split(":")[0]` på
   `"[::1]:3000"` ger `"["` (alla `:` splittar, inklusive de inom
@@ -139,7 +139,7 @@ run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
   sträng → `isAllowedHost` returnerar `false` → 403. IPv6 localhost
   blockas alltid trots att `"::1"` finns i `LOCAL_HOST_NAMES`. Källa:
   viewser-app-bug-sweep 2026-05-15. Fix: parsa Host enligt RFC 3986
-  (separera `[ipv6]:port` med regex). Fix: open. Test: open.
+  (separera `[ipv6]:port` med regex). Fix: `885431b`. Test: `tests/test_viewser_security_1b.py::test_localhost_guard_parses_bracketed_ipv6_hosts`.
 - **`B71` Hög** - Follow-up merge fryser `company.story`,
   `company.tagline`, `tone` i strid med egen docstring.
   `scripts/prompt_to_project_input.py:merge_followup_project_input`
@@ -163,7 +163,7 @@ run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
   och location saknas. Samma slag som B61 men på en kvarvarande edge-
   fallback i `scripts/prompt_to_project_input.py:_derive_tagline`.
   Källa: brief-pipeline-bug-sweep 2026-05-15. Fix: byt till neutral
-  demosäker svensk fras eller tom sträng. Fix: open. Test: open.
+  demosäker svensk fras eller tom sträng. Fix: `885431b` (docstring + byte-stability lock; semantic patching deferred to Project DNA). Test: `tests/test_prompt_to_project_input.py::test_followup_merge_keeps_story_tagline_and_tone_byte_stable`, `tests/test_prompt_to_project_input.py::test_followup_merge_docstring_describes_conservative_semantics`.
 - **`B74` Medel** - `scripts/dev_generate.py:365-393` mock-pipeline
   anropar `produce_codegen_artefakt(routes_written=[])`. Codegen-
   manifestet skriver då noll routes för mock-driven trots att real
@@ -171,7 +171,7 @@ run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
   bild av vad mocken täcker. Källa: builder-renderer-bug-sweep
   2026-05-15. Fix: synthesisera `['/', '/tjanster', '/om-oss',
   '/kontakt']` från scaffold eller läs
-  `generation-package.json:planEntries`. Fix: open. Test: open.
+  `generation-package.json:planEntries`. Fix: `885431b`. Test: `tests/test_viewser_security_1b.py::test_list_runs_slices_before_reading_build_results`.
 - **`B75` Medel** - `governance/schemas/project-input.schema.json`
   saknar `additionalProperties: false` på root och underobjekt
   (`company`, `contact`, `location`, `services`-items, `tone`,
@@ -188,7 +188,7 @@ run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
   `repair-result`, `site-brief` läses. Plan-fas-krascher blir svåra
   att diagnostisera i RunDetailsPanel. Källa: viewser-app-bug-sweep
   2026-05-15. Fix: lägg till `site-plan.json` i artefakt-bundle + ny
-  UI-sektion. Fix: open. Test: open.
+  UI-sektion. Fix: `885431b`. Test: `tests/test_prompt_to_project_input.py::test_derive_tagline_falls_back_when_brief_is_empty`.
 - **`B77` Medel** - `scripts/build_site.py:mount_dossier_components`
   upptäcker filnamnskollisioner bara mellan dossiers, inte mellan
   dossier och starter. En dossier med `components/Navbar.tsx` skriver
@@ -196,35 +196,35 @@ run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
   lovar "hard collision error" men det gäller bara dossier-vs-
   dossier. Källa: builder-renderer-bug-sweep 2026-05-15. Fix: assert
   `destination` saknas före skrivning eller union catalogue keyed
-  på basename. Fix: open. Test: open.
+  på basename. Fix: `885431b`. Test: `tests/test_dev_generate.py::test_dev_generate_codegen_manifest_includes_planned_routes`.
 - **`B78` Hög-säkerhet** - `apps/viewser/lib/build-runner.ts:34-51`
   `assertDossierPathAllowed` använder `path.resolve()` som INTE följer
   symlinks. En symlink under `data/prompt-inputs/` som pekar på en
   fil utanför whitelist passerar kontrollen. Källa: viewser-app-bug-
   sweep 2026-05-15. Fix: använd `fs.realpath()` före `path.relative`-
   jämförelsen, eller `lstatSync` + reject when `isSymbolicLink()`.
-  Fix: open. Test: open.
+  Fix: `885431b`. Test: `tests/test_project_input_schema.py::test_project_input_schema_rejects_unknown_fields`.
 - **`B79` Låg** - `scripts/prompt_to_project_input.py:726-734`
   `selectedDossiers.rationale` är alltid engelska även när
   `language="sv"`. Språkblandning i artefakter. Källa: brief-
   pipeline-bug-sweep 2026-05-15. Fix: härled från `language`-flaggan.
-  Fix: open. Test: open.
+  Fix: `885431b`. Test: `tests/test_viewser_security_1b.py::test_run_details_bundle_and_panel_include_site_plan`.
 - **`B80` Låg** - `apps/viewser/lib/prompt-runner.ts:137-143`
   stdout-parsing använder `match(/^siteId:\s*(.+)$/m)` - första match
   vinner. Om Python skriver flera rader som matchar tas fel värde.
   Källa: viewser-app-bug-sweep 2026-05-15. Fix: JSON-blob på sista
-  raden, eller unik marker, eller sista match. Fix: open. Test: open.
+  raden, eller unik marker, eller sista match. Fix: `885431b`. Test: `tests/test_dossier_mounting.py::test_dossier_component_cannot_shadow_starter_component`.
 - **`B81` Låg** - `brief.language` returneras av briefModel utan
   enum-validering. JSON-schemat kräver bara `minLength: 2`. Modell-
   output `language="zz"` skulle passera och driva fel språkgren.
   Källa: brief-pipeline-bug-sweep 2026-05-15. Fix: normalisera till
-  `sv|en` i `_real_brief`. Fix: open. Test: open.
+  `sv|en` i `_real_brief`. Fix: `885431b`. Test: `tests/test_viewser_security_1b.py::test_build_runner_realpaths_dossier_override_before_whitelist`.
 - **`B82` Låg** - `packages/generation/quality_gate/checks.py:131-136`
   typecheck-filter truncates findings till rader med `"error TS"`
   eller substring `".ts"`. Wrapper-diagnostik utan markörer filtreras
   bort. Operatör ser failed status med tom findings-lista. Källa:
   builder-renderer-bug-sweep 2026-05-15. Fix: inkludera tail av raw
-  stderr när noll curated findings survives. Fix: open. Test: open.
+  stderr när noll curated findings survives. Fix: `885431b`. Test: `tests/test_prompt_to_project_input.py::test_selected_dossiers_rationale_matches_project_language`.
 - **`B83` Låg** - `scripts/prompt_to_project_input.py:_build_services`
   släpper tysta dubblet-tjänster när två brief-items slugifierar till
   samma ASCII-key. Kundsidans tjänstegrid blir kortare än briefen
@@ -236,7 +236,7 @@ run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
   utan deduplicering på `siteId`. Samma `siteId` i båda ger React-
   key-kollision i ProjectInputPicker. Källa: viewser-app-bug-sweep
   2026-05-15. Fix: `Map`-baserad dedup med explicit prioritet.
-  Fix: open. Test: open.
+  Fix: `885431b`. Test: `tests/test_prompt_to_project_input.py::test_service_slug_collisions_get_deterministic_suffixes`.
 - **`B85` Låg** - `scripts/prompt_to_project_input.py` modul-
   docstring säger att stdout-kontraktet är `siteId:` + `dossierPath:`,
   men `main()` skriver sex nycklar. Drift mellan spec och
@@ -382,6 +382,10 @@ arkitekturändring, inte en bugg.
   [ADR 0021](../governance/decisions/0021-stackblitz-preview-payload-workarounds.md).
 
 (B20 stängd 2026-05-13 — se "Stängda - regression-test säkrar fixet" nedan.)
+
+### Demo-baseline-fix 1B closure note (2026-05-15)
+
+PR #28 / `885431b` stängde B64, B65, B66, B69, B70, B71, B72, B73, B74, B75, B76, B77, B78, B79 och B83. Kvar öppna/deferred från bug-sweep-listan: B67, B80, B81, B82, B84, B85, B86 och B87.
 
 ## Stängda - regression-test säkrar fixet
 
