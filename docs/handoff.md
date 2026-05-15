@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-15 (post cleanup/prune-sprint + Finding 1-fix för dev-preview-tree)
-**Aktuell repo-HEAD på `main`:** den senaste docs-/Steward-bump-commiten ovanpå `2acdeca` (`feat(scripts): add prune_generated_previews.py with dry-run default`). Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA; konventionen är att raden "Last verified state" i `current-focus.md` pekar på senaste produktcommit (`2acdeca`) och Steward-bump-commiten räknas som "within bump tolerance" av `focus_check.py`. Föregående mainline-pushar samma dag: `7b90c0c` (Steward-sync efter B60), `65f052a` (B60-fixen för PR #27-kontraktsbrott), `dd5464f` (Steward sanity-bump efter PR #27), `e057fbd` (PR #27 follow-up prompt versions squash-merge), `86d03bf` (B59 StackBlitz WebContainer embed-blocker dokumenterad), `210a1d1` (Cursor API key-placeholder i `.env.example`), `9927bd2` (StackBlitz payload size-handling härdad), `4b98d8b` (visningsexempel-artefakter borttagna), `869b2da` (workspace settings + prior docs sync), `cf523ed` (ADR 0021 + known-issues-rad efter StackBlitz preview payload-hardening). Kör `git log --oneline -1` för senaste lokala SHA.
-**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-15`, `backup-16` (post-merge sanity-pass för PR #27), `backup-17` (B60-passet) och `backup-18` (cleanup/prune-passet) finns lokalt och på origin. Nästa Builder/Scout-pass ska skapa nästa lediga `backup-N` från synkad `main` innan sprintarbete. Inga öppna PRs.
+**Datum:** 2026-05-15 (post demo-baseline-fix 1A: tre Scout-auditade demo-blockers stängda)
+**Aktuell repo-HEAD på `main`:** den senaste docs-/Steward-bump-commiten ovanpå `ab74c2a` (`feat(builder): demo-baseline-fix 1A`). Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA; konventionen är att raden "Last verified state" i `current-focus.md` pekar på senaste produktcommit (`ab74c2a`) och Steward-bump-commiten räknas som "within bump tolerance" av `focus_check.py`. Föregående mainline-pushar samma dag: `f29688c` (Steward-bump efter rules-commit), `d072c98` (`chore(rules): add powershell-glob and cli-safety-belt rules`), `054e3b2` (Steward-bump efter Finding 1-fixen), `8d45140` (Steward-sync efter prune-sprinten), `2acdeca` (prune-script + tester), `7b90c0c` (Steward-sync efter B60), `65f052a` (B60-fixen för PR #27-kontraktsbrott), `e057fbd` (PR #27 follow-up prompt versions squash-merge), `86d03bf` (B59 StackBlitz WebContainer embed-blocker dokumenterad), `210a1d1` (Cursor API key-placeholder i `.env.example`).
+**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-15`, `backup-16` (post-merge sanity-pass för PR #27), `backup-17` (B60-passet), `backup-18` (cleanup/prune-passet) och `backup-19` (demo-baseline-fix 1A) finns lokalt och på origin. Nästa Builder/Scout-pass ska skapa nästa lediga `backup-N` från synkad `main` innan sprintarbete. Inga öppna PRs.
 **Stash-läge:** `git stash list` är tom. Den tidigare stale B56-stashen (innehöll äldre version av `ensureWebpackFlag`/`patchPackageJsonForStackblitz` utan B58-allowlistet eller `Buffer.byteLength`-beräkningen) droppades i reconciliation-passet eftersom fixen redan var integrerad i `8fae26a` på `main`.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
@@ -115,26 +115,37 @@ Tre lager:
 ## Nästa konkreta uppgift
 
 Se `docs/current-focus.md` → **"Next action"**. Kort version:
-cleanup/prune-sprinten är klar (`scripts/prune_generated_previews.py`
-med dry-run default + `--apply`-gate + current-pointer-skydd från
-`data/prompt-inputs/` pointer-filer (filtrerar `.vN`-snapshots) +
-`data/runs/*/build-result.json` siteIds + port-3000-refusal +
-optional psutil cwd-check, plus tio regression-tester och utvidgad
-`check_term_coverage`-allowlist). Smoke-körning mot lokala `.generated/`
-visade 12 toplevel-kataloger, 2 protected via current pointer, 10
-inom retention-cap; ingen mappa skulle raderas på nuvarande
-`keep-per-site=3 keep-total=10`. Inga lokala root-loggar att rensa.
+demo-baseline-fix 1A är landad (`ab74c2a`): tre Scout-auditade
+demo-blockers stängda i ett pass.
 
-Nästa naturliga steg är **demo-baseline-audit** (queue-item 2):
-read-only Grind/Scout-pass som mäter kärnflödet (`prompt -> sajt ->
-preview -> följdprompt -> ny version`) mot fyra testfall (elektriker
-Malmö, frisör Göteborg, naprapatklinik Stockholm, keramik-e-handel)
-och levererar quality-scorecard + topp 3 blockers. Audit-rapporten
-styr nästa Builder-sprint - sannolikt demo-baseline-fixar för topp
-1-2 fynd, men kan också flytta upp follow-up-promptens semantic
-patching (idag bevarar `merge_followup_project_input` story/tagline/
-tone byte-för-byte; en operatör som ber om "byt ton" eller "ändra
-story" får inget synligt utfall) som egen produkt-/Project DNA-sprint.
+1. `/_global-error` build-fel (regression/variant av B41) löst genom
+   explicit `app/global-error.tsx` i `data/starters/marketing-base/app/`
+   och `data/starters/commerce-base/app/`. Verifierat end-to-end:
+   `painter-palma` (marketing-base) + `atelje-bird` (commerce-base)
+   landar nu båda `status: ok`, `quality: ok`, `npm install + npm run
+   build` gröna i ~78s.
+2. Rå prompt landar inte längre i `company.name`/`company.story`.
+   `scripts/prompt_to_project_input.py:_company_name_from_prompt`
+   ersatt av `_derive_company_name` (läser brief.businessTypeGuess +
+   brief.locationHint via Swedish business-type label-map).
+   `_derive_story` föredrar `brief.notesForPlanner`; raw prompt
+   används aldrig som fallback. Regression-test låser exakta tokens
+   från den failande real-runen (`Enehmsida`, `båtari`, `2 sidor`).
+3. Svenska tecken bevarade i service-labels. `_slugify_label`
+   NFKD-foldar för id-fältet (`färska ägg` → `farska-agg`) men
+   `_service_label_from_text` behåller å/ä/ö i labeln. Brief
+   `services_mentioned` Field-description + system-prompt frågar nu
+   efter natural-language fraser på originalspråk.
+
+Nästa naturliga steg är **verifierings-Scout** (queue-item 1):
+kort read-only-pass som kör de fyra testfallen skarpt mot fixad kod
+och scorar om första generationens kvalitet ligger ≥6/10. Tre
+kvarstående gap från audit-rapporten som 1A inte täckte: kontakt-
+placeholder (`+46 8 000 00 00`, `kontakt@example.se`), tom
+`trustSignals`, och hård SWEDISH_HINTS-lista i `detect_language()`
+som missar korta svenska prompts. Verifierings-Scout-rapporten styr
+om Builder nästa går på demo-baseline-fix 1B eller Project DNA /
+follow-up semantic merge.
 
 PromptBuilder stage-timeout är inte längre listad som aktiv nice-to-have;
 Scout verifierade att cleanup redan finns.
@@ -193,6 +204,10 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+ab74c2a feat(builder): demo-baseline-fix 1A
+f29688c docs: bump verified SHA to rules commit
+d072c98 chore(rules): add powershell-glob and cli-safety-belt rules
+054e3b2 docs: bump verified SHA to Finding 1 fix
 2acdeca feat(scripts): add prune_generated_previews.py with dry-run default
 7b90c0c docs: record B60 fix and bump verified SHA
 65f052a fix(prompt-helper): harden follow-up snapshots and meta loading (B60)
