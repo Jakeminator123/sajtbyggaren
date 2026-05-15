@@ -32,6 +32,7 @@ Output contract (for callers like apps/viewser/app/api/prompt/route.ts):
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import re
 import sys
@@ -356,30 +357,67 @@ def _validate_against_schema(payload: dict[str, Any]) -> None:
     )
 
 
+def _current_project_input_path(output_dir: Path, site_id: str) -> Path:
+    return output_dir / f"{site_id}.project-input.json"
+
+
+def _current_meta_path(output_dir: Path, site_id: str) -> Path:
+    return output_dir / f"{site_id}.meta.json"
+
+
+def _versioned_project_input_path(
+    output_dir: Path, site_id: str, version: int
+) -> Path:
+    return output_dir / f"{site_id}.v{version}.project-input.json"
+
+
+def _versioned_meta_path(output_dir: Path, site_id: str, version: int) -> Path:
+    return output_dir / f"{site_id}.v{version}.meta.json"
+
+
 def write_project_input(
     project_input: dict[str, Any],
     meta: dict[str, Any],
     *,
     output_dir: Path,
 ) -> tuple[Path, Path]:
-    """Write project-input.json + meta.json to the scratch directory.
+    """Write immutable version snapshots plus current-pointer files.
 
-    Returns the (project_input_path, meta_path) tuple so callers can
-    print absolute paths on stdout for downstream spawn-based wiring.
+    Returns the VERSIONED (project_input_path, meta_path) tuple so the
+    caller builds the exact Project Input snapshot for this run. The
+    unversioned ``<siteId>.project-input.json`` / ``<siteId>.meta.json``
+    files remain as the operator-visible "latest" pointers for Viewser
+    selection and follow-up lookup.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     site_id = project_input["siteId"]
-    project_input_path = output_dir / f"{site_id}.project-input.json"
-    meta_path = output_dir / f"{site_id}.meta.json"
-    project_input_path.write_text(
-        json.dumps(project_input, ensure_ascii=False, indent=2) + "\n",
+    version = meta.get("version")
+    if not isinstance(version, int) or version < 1:
+        raise SystemExit("Project Input meta must include version >= 1.")
+
+    project_input_payload = (
+        json.dumps(project_input, ensure_ascii=False, indent=2) + "\n"
+    )
+    meta_payload = json.dumps(meta, ensure_ascii=False, indent=2) + "\n"
+
+    versioned_project_input_path = _versioned_project_input_path(
+        output_dir, site_id, version
+    )
+    versioned_meta_path = _versioned_meta_path(output_dir, site_id, version)
+    current_project_input_path = _current_project_input_path(output_dir, site_id)
+    current_meta_path = _current_meta_path(output_dir, site_id)
+
+    versioned_project_input_path.write_text(
+        project_input_payload,
         encoding="utf-8",
     )
-    meta_path.write_text(
-        json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
+    versioned_meta_path.write_text(meta_payload, encoding="utf-8")
+    current_project_input_path.write_text(
+        project_input_payload,
         encoding="utf-8",
     )
-    return project_input_path, meta_path
+    current_meta_path.write_text(meta_payload, encoding="utf-8")
+    return versioned_project_input_path, versioned_meta_path
 
 
 def read_existing_meta(site_id: str, *, output_dir: Path) -> dict[str, Any]:
@@ -390,7 +428,7 @@ def read_existing_meta(site_id: str, *, output_dir: Path) -> dict[str, Any]:
             "alphanumeric/dash pattern required by Viewser."
         )
 
-    meta_path = output_dir / f"{site_id}.meta.json"
+    meta_path = _current_meta_path(output_dir, site_id)
     try:
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
@@ -416,6 +454,130 @@ def read_existing_meta(site_id: str, *, output_dir: Path) -> dict[str, Any]:
             f"Follow-up meta siteId mismatch: path={site_id!r}, meta={meta_site_id!r}"
         )
     return meta
+
+
+def read_existing_project_input(site_id: str, *, output_dir: Path) -> dict[str, Any]:
+    """Read the latest Project Input snapshot for a follow-up prompt."""
+    project_input_path = _current_project_input_path(output_dir, site_id)
+    try:
+        project_input = json.loads(project_input_path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise SystemExit(
+            f"Follow-up Project Input saknas: {project_input_path}. Kör först "
+            "en prompt-build som skapar data/prompt-inputs/<siteId>.project-input.json."
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise SystemExit(
+            f"Follow-up Project Input är inte giltig JSON: {project_input_path}"
+        ) from exc
+
+    if project_input.get("siteId") != site_id:
+        raise SystemExit(
+            "Follow-up Project Input siteId mismatch: "
+            f"path={site_id!r}, payload={project_input.get('siteId')!r}"
+        )
+    return project_input
+
+
+def _unique_strings(*values: list[Any]) -> list[str]:
+    """Return a stable union of non-empty string values."""
+    seen: set[str] = set()
+    merged: list[str] = []
+    for group in values:
+        for value in group:
+            if not isinstance(value, str):
+                continue
+            cleaned = value.strip()
+            if not cleaned or cleaned in seen:
+                continue
+            seen.add(cleaned)
+            merged.append(cleaned)
+    return merged
+
+
+def _merge_services(
+    existing_services: list[dict[str, Any]],
+    candidate_services: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Append new follow-up services without rewriting existing ones."""
+    merged: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for service in [*existing_services, *candidate_services]:
+        if not isinstance(service, dict):
+            continue
+        service_id = service.get("id")
+        if not isinstance(service_id, str) or not service_id.strip():
+            continue
+        if service_id in seen:
+            continue
+        seen.add(service_id)
+        merged.append(copy.deepcopy(service))
+    return (
+        merged
+        or copy.deepcopy(existing_services)
+        or copy.deepcopy(candidate_services)
+    )
+
+
+def merge_followup_project_input(
+    previous: dict[str, Any],
+    candidate: dict[str, Any],
+    *,
+    follow_up_prompt: str,
+) -> dict[str, Any]:
+    """Preserve prior site context while applying a follow-up prompt.
+
+    This is deliberately conservative: follow-up mode is a new version
+    of the same prompt-generated site track, not a fresh init. The
+    generated candidate contributes additive signals (new services,
+    capabilities, conversion goals and a visible story note) while the
+    identity, scaffold, variant, language, contact data and existing
+    content survive unless a later Project DNA sprint introduces
+    semantic patching.
+    """
+    merged = copy.deepcopy(previous)
+    merged["siteId"] = previous["siteId"]
+    merged["scaffoldId"] = previous["scaffoldId"]
+    merged["variantId"] = previous["variantId"]
+    merged["language"] = previous["language"]
+    merged["location"] = copy.deepcopy(previous.get("location", {}))
+    merged["contact"] = copy.deepcopy(previous.get("contact", {}))
+    merged["selectedDossiers"] = copy.deepcopy(
+        previous.get("selectedDossiers", {})
+    )
+
+    company = copy.deepcopy(previous.get("company", {}))
+    candidate_company = candidate.get("company", {})
+    if not company.get("businessType") and isinstance(candidate_company, dict):
+        company["businessType"] = candidate_company.get("businessType")
+    if not company.get("tagline") and isinstance(candidate_company, dict):
+        company["tagline"] = candidate_company.get("tagline")
+
+    previous_story = " ".join(str(company.get("story", "")).split())
+    follow_up_note = " ".join(follow_up_prompt.split())[:500]
+    if follow_up_note:
+        suffix = f" Follow-up request: {follow_up_note}"
+        if suffix not in previous_story:
+            company["story"] = (previous_story + suffix).strip()
+    merged["company"] = company
+
+    merged["services"] = _merge_services(
+        list(previous.get("services") or []),
+        list(candidate.get("services") or []),
+    )
+    merged["conversionGoals"] = _unique_strings(
+        list(previous.get("conversionGoals") or []),
+        list(candidate.get("conversionGoals") or []),
+    )
+    merged["requestedCapabilities"] = _unique_strings(
+        list(previous.get("requestedCapabilities") or []),
+        list(candidate.get("requestedCapabilities") or []),
+    )
+    if "tone" not in merged or not isinstance(merged["tone"], dict):
+        merged["tone"] = copy.deepcopy(candidate.get("tone", {}))
+    if "trustSignals" not in merged:
+        merged["trustSignals"] = copy.deepcopy(candidate.get("trustSignals", []))
+    return merged
 
 
 def _mock_brief_artifact_after_failure(
@@ -464,6 +626,8 @@ def generate(
     site_id: str | None = None,
     project_id: str | None = None,
     version: int = 1,
+    mode: str = "init",
+    base_project_input: dict[str, Any] | None = None,
     meta_overrides: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], Path, Path]:
     """End-to-end: prompt -> Site Brief -> Project Input on disk.
@@ -508,23 +672,32 @@ def generate(
     scaffold_id, variant_id = pick_scaffold(
         prompt, brief_artifact.get("businessTypeGuess")
     )
-    project_input = site_brief_to_project_input(
+    candidate_project_input = site_brief_to_project_input(
         brief_artifact,
         site_id=final_site_id,
         scaffold_id=scaffold_id,
         variant_id=variant_id,
         original_prompt=prompt,
     )
+    if base_project_input is not None:
+        project_input = merge_followup_project_input(
+            base_project_input,
+            candidate_project_input,
+            follow_up_prompt=prompt,
+        )
+    else:
+        project_input = candidate_project_input
     _validate_against_schema(project_input)
 
     now = datetime.now(UTC).isoformat(timespec="seconds")
     meta = {
         "projectId": project_id or uuid.uuid4().hex,
         "version": version,
+        "mode": mode,
         "siteId": final_site_id,
         "originalPrompt": prompt,
-        "scaffoldId": scaffold_id,
-        "variantId": variant_id,
+        "scaffoldId": project_input["scaffoldId"],
+        "variantId": project_input["variantId"],
         "briefSource": brief_artifact.get("briefSource"),
         "briefError": brief_artifact.get("briefError"),
         "modelUsed": brief_artifact.get("modelUsed"),
@@ -547,6 +720,9 @@ def generate_followup(
 ) -> tuple[dict[str, Any], dict[str, Any], Path, Path]:
     """Generate a new Project Input version from an existing meta sidecar."""
     existing_meta = read_existing_meta(site_id, output_dir=output_dir)
+    previous_project_input = read_existing_project_input(
+        site_id, output_dir=output_dir
+    )
     previous_version = existing_meta["version"]
     now = datetime.now(UTC).isoformat(timespec="seconds")
     return generate(
@@ -555,9 +731,11 @@ def generate_followup(
         site_id=site_id,
         project_id=existing_meta["projectId"],
         version=previous_version + 1,
+        mode="followup",
+        base_project_input=previous_project_input,
         meta_overrides={
             "originalPrompt": existing_meta.get("originalPrompt", prompt),
-            "latestPrompt": prompt,
+            "followUpPrompt": prompt,
             "previousVersion": previous_version,
             "createdAt": existing_meta.get("createdAt", now),
             "updatedAt": now,

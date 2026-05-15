@@ -126,6 +126,70 @@ def test_copy_starter_drops_stale_next_cache_but_preserves_node_modules(
     assert (target / "package.json").exists()
 
 
+@pytest.mark.tooling
+def test_prompt_input_meta_threads_followup_version_into_run_artifacts(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Prompt-generated follow-up builds must preserve project identity per run."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    from scripts.build_site import build
+    from scripts.prompt_to_project_input import generate, generate_followup
+
+    prompt_inputs_dir = tmp_path / "data" / "prompt-inputs"
+    runs_dir = tmp_path / "runs"
+    generated_dir = tmp_path / "generated"
+
+    _, initial_meta, initial_path, _ = generate(
+        "Skapa en hemsida för en elektriker i Malmö",
+        output_dir=prompt_inputs_dir,
+        site_id="electrician-malmo",
+        project_id="stable-project-id",
+    )
+    _, followup_meta, followup_path, _ = generate_followup(
+        "Lägg till mer fokus på laddboxar och offertförfrågan.",
+        output_dir=prompt_inputs_dir,
+        site_id="electrician-malmo",
+    )
+
+    _, run_dir_v1 = build(
+        initial_path,
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+    )
+    _, run_dir_v2 = build(
+        followup_path,
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+    )
+
+    assert run_dir_v1 != run_dir_v2
+    assert initial_meta["projectId"] == followup_meta["projectId"]
+
+    build_v1 = json.loads((run_dir_v1 / "build-result.json").read_text())
+    input_v2 = json.loads((run_dir_v2 / "input.json").read_text())
+    package_v2 = json.loads(
+        (run_dir_v2 / "generation-package.json").read_text()
+    )
+    build_v2 = json.loads((run_dir_v2 / "build-result.json").read_text())
+
+    assert build_v1["engineMode"] == "init"
+    assert build_v1["projectId"] == "stable-project-id"
+    assert build_v1["version"] == 1
+    assert input_v2["mode"] == "followup"
+    assert input_v2["projectId"] == "stable-project-id"
+    assert input_v2["version"] == 2
+    assert input_v2["followUpPrompt"].startswith("Lägg till mer fokus")
+    assert package_v2["engineMode"] == "followup"
+    assert package_v2["projectId"] == "stable-project-id"
+    assert build_v2["engineMode"] == "followup"
+    assert build_v2["projectId"] == "stable-project-id"
+    assert build_v2["version"] == 2
+
+
 # ---------------------------------------------------------------------------
 # B6/B10 - runId must not collide on rapid regeneration
 # ---------------------------------------------------------------------------

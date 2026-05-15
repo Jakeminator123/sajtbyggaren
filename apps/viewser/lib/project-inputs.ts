@@ -14,6 +14,8 @@ export type ProjectInputInfo = {
 };
 
 const SITE_ID_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
+const VERSIONED_PROJECT_INPUT_PATTERN =
+  /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.v[1-9][0-9]*\.project-input\.json$/;
 
 function examplesDir(): string {
   return path.resolve(process.cwd(), "..", "..", "examples");
@@ -46,7 +48,12 @@ async function listProjectInputsFromDir(
   }
 
   const siteFiles = entries
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".project-input.json"))
+    .filter(
+      (entry) =>
+        entry.isFile() &&
+        entry.name.endsWith(".project-input.json") &&
+        !VERSIONED_PROJECT_INPUT_PATTERN.test(entry.name),
+    )
     .map((entry) => entry.name);
 
   const inputs = await Promise.all(

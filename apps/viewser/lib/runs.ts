@@ -46,20 +46,30 @@ export async function listRuns(limit = 20): Promise<RunMeta[]> {
     directories.map(async (runId) => {
       const buildResultPath = path.join(dir, runId, "build-result.json");
       try {
-        const result = await readJsonFile<{ status?: string; siteId?: string }>(
-          buildResultPath,
-        );
+        const result = await readJsonFile<{
+          status?: string;
+          siteId?: string;
+          projectId?: unknown;
+          version?: unknown;
+        }>(buildResultPath);
+        const inputMeta = await readRunInputMeta(runId);
         const promptMeta = await readPromptMeta(result.siteId);
+        const projectId =
+          stringOrUndefined(result.projectId) ??
+          inputMeta.projectId ??
+          promptMeta.projectId;
+        const version =
+          numberOrNull(result.version) ?? inputMeta.version ?? promptMeta.version;
         const stats = await fs.stat(path.join(dir, runId));
         const meta: RunMeta = {
           runId,
           status: result.status ?? "unknown",
           siteId: result.siteId ?? "unknown",
-          version: promptMeta.version,
+          version,
           createdAt: stats.birthtime.toISOString(),
         };
-        if (promptMeta.projectId) {
-          meta.projectId = promptMeta.projectId;
+        if (projectId) {
+          meta.projectId = projectId;
         }
         return meta;
       } catch {
@@ -72,6 +82,32 @@ export async function listRuns(limit = 20): Promise<RunMeta[]> {
     .filter((meta): meta is RunMeta => meta !== null)
     .sort((a, b) => (a.runId > b.runId ? -1 : 1))
     .slice(0, limit);
+}
+
+function stringOrUndefined(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function numberOrNull(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) ? value : null;
+}
+
+async function readRunInputMeta(
+  runId: string,
+): Promise<{ projectId?: string; version: number | null }> {
+  try {
+    const runDir = await runDirFromId(runId);
+    const input = await readJsonFile<{
+      projectId?: unknown;
+      version?: unknown;
+    }>(path.join(runDir, "input.json"));
+    return {
+      projectId: stringOrUndefined(input.projectId),
+      version: numberOrNull(input.version),
+    };
+  } catch {
+    return { version: null };
+  }
 }
 
 async function readPromptMeta(
@@ -91,8 +127,8 @@ async function readPromptMeta(
       return { version: null };
     }
     return {
-      projectId: typeof meta.projectId === "string" ? meta.projectId : undefined,
-      version: typeof meta.version === "number" ? meta.version : null,
+      projectId: stringOrUndefined(meta.projectId),
+      version: numberOrNull(meta.version),
     };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
