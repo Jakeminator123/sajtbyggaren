@@ -79,8 +79,15 @@ class SiteBrief(BaseModel):
     services_mentioned: list[str] = Field(
         default_factory=list,
         description=(
-            "Specific services/products the user mentioned (e.g. 'akut-elservice', "
-            "'paneldragning', 'laddbox-installation'). Drives concrete copy."
+            "Specific services/products the user mentioned, as short "
+            "natural-language phrases IN THE PROMPT'S ORIGINAL LANGUAGE "
+            "(e.g. on Swedish prompts: 'akut elservice', 'paneldragning', "
+            "'färska ägg direkt från gården'; on English prompts: "
+            "'emergency electrical', 'panel installation'). These drive "
+            "customer-facing copy on the generated services grid; "
+            "kebab-case English slugs would surface as unreadable labels. "
+            "The Project Input mapping ASCII-folds the phrase to produce "
+            "the service slug separately from the rendered label."
         ),
     )
     content_depth: str | None = Field(
@@ -99,8 +106,10 @@ _SYSTEM_INSTRUCTIONS = (
     "website to build. Extract a structured Site Brief. Be conservative: only fill "
     "fields you have evidence for. Use ISO 639-1 language codes. Do not invent "
     "businessType if the prompt is ambiguous - leave it null. Do not add capabilities "
-    "the user did not ask for. Slugs are kebab-case English even if prompt is in another "
-    "language."
+    "the user did not ask for. Slug-shaped fields (business_type, requested_capabilities, "
+    "conversion_goals) are kebab-case English even if the prompt is in another language. "
+    "The services_mentioned field is the EXCEPTION: return short natural-language phrases "
+    "in the prompt's original language so the generated website renders readable labels."
 )
 
 

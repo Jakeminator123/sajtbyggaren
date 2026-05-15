@@ -38,6 +38,7 @@ import os
 import re
 import sys
 import tempfile
+import unicodedata
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -64,6 +65,51 @@ SCHEMA_PATH = REPO_ROOT / "governance" / "schemas" / "project-input.schema.json"
 _SITE_ID_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
 _SLUG_CLEAN = re.compile(r"[^a-z0-9-]+")
 _SLUG_DASHES = re.compile(r"-{2,}")
+
+# Small Swedish business-type dictionary used to produce a readable
+# company name on the generated H1 instead of leaking the raw prompt.
+# Demo-baseline-fix 1A: briefModel returns kebab-case English slugs for
+# `businessTypeGuess`, but a Swedish first-build site reads better with
+# a Swedish noun. Operator can override the name in the Project Input
+# file before re-building. The map is intentionally short - it covers
+# the demo-baseline branches (electrician / hairdresser / naprapat /
+# ceramics) plus a handful of common small-business types. Unknown
+# business types fall back to the raw slug with a "Sajt för"-prefix
+# so the H1 still reads as a deliberate placeholder rather than the
+# user's prompt.
+_BUSINESS_TYPE_LABEL_SV: dict[str, str] = {
+    "electrician": "elektriker",
+    "plumber": "rörmokare",
+    "hairdresser": "frisör",
+    "hair-salon": "frisör",
+    "barber": "barberare",
+    "dentist": "tandläkare",
+    "dental-clinic": "tandläkare",
+    "naprapat": "naprapat",
+    "chiropractor": "kiropraktor",
+    "physiotherapist": "sjukgymnast",
+    "painter": "målare",
+    "carpenter": "snickare",
+    "construction": "byggfirma",
+    "restaurant": "restaurang",
+    "cafe": "café",
+    "bakery": "bageri",
+    "florist": "blomsterhandel",
+    "photographer": "fotograf",
+    "photo-studio": "fotostudio",
+    "ceramics-studio": "keramikstudio",
+    "pottery": "krukmakeri",
+    "yoga-studio": "yogastudio",
+    "gym": "gym",
+    "service-provider": "tjänsteföretag",
+    "consultant": "konsult",
+    "shop": "butik",
+    "online-shop": "webbshop",
+    "ecommerce": "webbshop",
+    "ecommerce-shop": "webbshop",
+    "boat-dealer": "båthandel",
+    "egg-farm": "äggproducent",
+}
 
 _SCAFFOLD_LOCAL_SERVICE = ("local-service-business", "nordic-trust")
 _SCAFFOLD_ECOMMERCE = ("ecommerce-lite", "clean-store")
@@ -101,9 +147,16 @@ def slugify_site_id(text: str, *, suffix: str | None = None) -> str:
     in data/prompt-inputs/. Operators that already know the exact id
     they want can pass it via the meta-sidecar tooling in a later
     sprint.
+
+    Demo-baseline-fix 1A (T3): the helper now NFKD-folds Swedish
+    characters before applying the `[^a-z0-9-]+` substitution. A prompt
+    like "elektriker i Malmö" previously produced
+    `elektriker-i-malm-<tail>` (with `ö` collapsed to a dash); after
+    the fold it becomes `elektriker-i-malmo-<tail>`, which is readable
+    and still satisfies `_SITE_ID_PATTERN`.
     """
-    lowered = text.lower().strip()
-    cleaned = _SLUG_CLEAN.sub("-", lowered).strip("-")
+    folded = _ascii_fold((text or "").strip()).lower()
+    cleaned = _SLUG_CLEAN.sub("-", folded).strip("-")
     cleaned = _SLUG_DASHES.sub("-", cleaned)
     stem = cleaned[:24].strip("-") or "site"
     tail = suffix or uuid.uuid4().hex[:6]
@@ -135,26 +188,223 @@ def pick_scaffold(prompt: str, brief_business_type: str | None) -> tuple[str, st
     return _SCAFFOLD_LOCAL_SERVICE
 
 
-def _company_name_from_prompt(prompt: str, fallback: str) -> str:
-    """Derive a short, human-readable company name from the prompt.
+def _capitalize_first(text: str) -> str:
+    """Capitalize the first character and keep the rest verbatim.
 
-    Truncates to 60 chars and strips control characters so the value
-    never breaks the JSX-escape pipeline downstream. This is best-effort
-    only - the operator typically edits the generated Project Input
-    file before sharing the build with anyone.
+    `str.capitalize()` lower-cases the rest of the string, which
+    destroys mid-string proper nouns (e.g. "färska ägg från Hälsingland"
+    -> "Färska ägg från hälsingland"). We only want to lift the first
+    character, so the helper keeps `text[1:]` byte-for-byte.
     """
-    cleaned = " ".join((prompt or "").split())
+    cleaned = (text or "").strip()
     if not cleaned:
-        return fallback
-    return cleaned[:60].rstrip(" ,.!?") or fallback
+        return cleaned
+    return cleaned[0].upper() + cleaned[1:]
 
 
-def _service_label(slug: str) -> str:
+def _ascii_fold(text: str) -> str:
+    """Strip accents via NFKD so the result is ASCII-safe for slugs.
+
+    Used only for the slug (id), never for the label - labels keep
+    Swedish characters (å/ä/ö) so the rendered service grid reads
+    naturally. The slug is the React key / route segment / file id
+    and therefore must stay within `[a-z0-9-]`.
+    """
+    normalised = unicodedata.normalize("NFKD", text or "")
+    return "".join(ch for ch in normalised if not unicodedata.combining(ch))
+
+
+def _slugify_label(text: str) -> str:
+    """Produce a `[a-z0-9-]+` slug from any natural-language phrase.
+
+    Demo-baseline-fix 1A (T3): the previous `_SLUG_CLEAN` substitution
+    treated Swedish characters as separators, which turned
+    "färska ägg direkt från gården" into `f-rska-gg-direkt-fr-n-g-rden`
+    and the operator-visible label into the unreadable `F Rska Gg
+    Direkt Fr N G Rden`. NFKD-folding the source string first preserves
+    "f" + "a" + "r" instead of "f" + "" + "r", so the slug becomes
+    `farska-agg-direkt-fran-garden` and the label stays human.
+    """
+    folded = _ascii_fold(text or "").lower()
+    slug = _SLUG_CLEAN.sub("-", folded).strip("-")
+    slug = _SLUG_DASHES.sub("-", slug)
+    return slug
+
+
+def _derive_company_name(
+    *,
+    business_type: str | None,
+    location_hint: str | None,
+    language: str,
+) -> str:
+    """Build a readable company name from brief signals only.
+
+    Demo-baseline-fix 1A (T2): the previous helper used
+    `prompt[:60].rstrip(' ,.!?')` as the H1, which leaked the operator
+    prompt verbatim onto the generated `/`-page (e.g. an H1 reading
+    "Skapa en varm och tydlig hemsida för Gula Gårdens Ägg, en li" -
+    truncated mid-name, mixed with the meta-instruction). The new
+    derivation only reads brief signals, so the raw prompt cannot
+    surface on customer-facing copy. Operators still edit the Project
+    Input file to override the name before sharing the build.
+    """
+    business_label = _company_business_label(business_type, language)
+    location = (location_hint or "").strip()
+    if language == "en":
+        if business_label and location:
+            return f"{business_label.capitalize()} in {location}"
+        if business_label:
+            return business_label.capitalize()
+        if location:
+            return f"New site in {location}"
+        return "New site"
+
+    if business_label and location:
+        return f"{_capitalize_first(business_label)} i {location}"
+    if business_label:
+        return _capitalize_first(business_label)
+    if location:
+        return f"Sajt i {location}"
+    return "Ny sajt"
+
+
+def _company_business_label(
+    business_type: str | None, language: str
+) -> str | None:
+    """Return a human label for the brief's businessTypeGuess slug.
+
+    Swedish builds look up the slug in `_BUSINESS_TYPE_LABEL_SV` first.
+    Unknown slugs fall back to a `"Sajt för <slug>"`-prefixed reading
+    so the H1 still reads as an obvious placeholder rather than an
+    English slug masquerading as a Swedish company name.
+    """
+    if not business_type:
+        return None
+    slug = business_type.strip().lower()
+    if not slug:
+        return None
+    if language == "en":
+        return slug.replace("-", " ").replace("_", " ").strip() or None
+    swedish = _BUSINESS_TYPE_LABEL_SV.get(slug)
+    if swedish:
+        return swedish
+    readable = slug.replace("-", " ").replace("_", " ").strip()
+    if not readable:
+        return None
+    return f"Sajt för {readable}"
+
+
+def _derive_story(
+    *,
+    business_type: str | None,
+    location_hint: str | None,
+    notes_for_planner: str | None,
+    language: str,
+) -> str:
+    """Build customer-facing `/om-oss` story copy from brief signals.
+
+    Demo-baseline-fix 1A (T2): the previous helper used the raw prompt
+    (`original_prompt.strip()[:600]`) as story copy, which surfaced
+    operator typos and meta-instructions on the public `/om-oss` page.
+    The new derivation prefers `brief.notesForPlanner` (a coherent
+    one-line orientation from briefModel) and falls back to a
+    structured placeholder built from `businessTypeGuess` +
+    `locationHint`. Raw prompt is never used as story copy.
+    """
+    notes = (notes_for_planner or "").strip()
+    if notes:
+        return " ".join(notes.split())[:600]
+
+    business_label = _company_business_label(business_type, language)
+    location = (location_hint or "").strip()
+    if language == "en":
+        if business_label and location:
+            base = (
+                f"Site for a {business_label} in {location}. "
+                "Update the Project Input file with a personal story "
+                "before sharing the build."
+            )
+        elif business_label:
+            base = (
+                f"Site for a {business_label}. Update the Project Input "
+                "file with a personal story before sharing the build."
+            )
+        elif location:
+            base = (
+                f"Site based in {location}. Update the Project Input "
+                "file with a personal story before sharing the build."
+            )
+        else:
+            base = (
+                "Story missing - update the Project Input file with "
+                "a personal description before sharing the build."
+            )
+        return base[:600]
+
+    if business_label and location:
+        base = (
+            f"Sajt för en {business_label} i {location}. "
+            "Justera Project Input-filen med en personlig story "
+            "innan sajten visas för någon."
+        )
+    elif business_label:
+        base = (
+            f"Sajt för en {business_label}. Justera Project Input-filen "
+            "med en personlig story innan sajten visas för någon."
+        )
+    elif location:
+        base = (
+            f"Sajt baserad i {location}. Justera Project Input-filen "
+            "med en personlig story innan sajten visas för någon."
+        )
+    else:
+        base = (
+            "Story saknas - justera Project Input-filen med en "
+            "personlig beskrivning innan sajten visas för någon."
+        )
+    return base[:600]
+
+
+def _service_label_from_text(text: str) -> str:
+    """Human-readable service label that preserves Swedish characters.
+
+    Used when the brief's `servicesMentioned` field already contains
+    natural-language phrases ("färska ägg direkt från gården"). We
+    capitalise the first character and keep the rest verbatim so å/ä/ö
+    survive into the rendered service grid.
+    """
+    cleaned = " ".join((text or "").split())
+    return _capitalize_first(cleaned)
+
+
+def _service_label_from_slug(slug: str) -> str:
+    """Fallback label when the brief item still looks like a kebab slug.
+
+    Pre-T3 briefs (or any future caller that hands us a slug instead of
+    a phrase) end up here. `slug.replace("-"," ").title()` is intentional
+    for the legacy path - it produces "Akut Elservice" from
+    `akut-elservice`. We keep this branch so older prompt-inputs in
+    `data/prompt-inputs/` still render with the old shape after a
+    rebuild instead of regressing to bare slugs.
+    """
     return slug.replace("-", " ").replace("_", " ").strip().title() or slug
 
 
-def _service_summary(slug: str, language: str) -> str:
-    label = _service_label(slug)
+def _looks_like_slug(text: str) -> bool:
+    """True when the input is already kebab-case ASCII (legacy brief).
+
+    Used to dispatch between `_service_label_from_text` (preserve
+    Swedish casing) and `_service_label_from_slug` (legacy fallback).
+    """
+    cleaned = (text or "").strip()
+    if not cleaned:
+        return False
+    if " " in cleaned:
+        return False
+    return bool(re.fullmatch(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?", cleaned))
+
+
+def _service_summary(label: str, language: str) -> str:
     if language == "en":
         return (
             f"{label} - placeholder summary generated from your prompt. "
@@ -190,25 +440,47 @@ def _placeholder_services(language: str) -> list[dict[str, str]]:
 def _build_services(
     services_mentioned: list[str], language: str
 ) -> list[dict[str, str]]:
-    """Map the brief's services_mentioned slugs onto Project Input services.
+    """Map the brief's services_mentioned phrases onto Project Input services.
+
+    Demo-baseline-fix 1A (T3): briefModel is now asked to return
+    natural-language phrases in the prompt's original language for the
+    `services_mentioned` field. Each phrase becomes a service with:
+
+    - `id`: ASCII-folded slug (`färska ägg` -> `farska-agg`) so it stays
+      safe as a React key / route segment.
+    - `label`: capitalised original phrase so å/ä/ö survive on the
+      rendered service grid.
+
+    The helper also accepts legacy kebab-case slugs (pre-T3 briefs and
+    follow-up prompts replayed on top of older Project Inputs) and
+    routes them through `_service_label_from_slug` so an existing
+    Project Input does not regress to bare slugs after a rebuild.
 
     Returns at least one service so the schema's ``services minItems: 1``
-    constraint is satisfied even when the brief is empty (e.g. mock
-    fallback). Caps at five so the home page services grid stays
-    visually balanced.
+    constraint is satisfied even when the brief is empty. Caps at five
+    so the home page services grid stays visually balanced.
     """
     seen: set[str] = set()
     services: list[dict[str, str]] = []
     for raw in services_mentioned[:8]:
-        slug = _SLUG_CLEAN.sub("-", raw.lower()).strip("-")
+        if not isinstance(raw, str):
+            continue
+        text = raw.strip()
+        if not text:
+            continue
+        slug = _slugify_label(text)
         if not slug or slug in seen:
             continue
         seen.add(slug)
+        if _looks_like_slug(text):
+            label = _service_label_from_slug(text)
+        else:
+            label = _service_label_from_text(text)
         services.append(
             {
                 "id": slug,
-                "label": _service_label(slug),
-                "summary": _service_summary(slug, language),
+                "label": label,
+                "summary": _service_summary(label, language),
             }
         )
         if len(services) >= 5:
@@ -280,19 +552,33 @@ def site_brief_to_project_input(
     business_type = brief.get("businessTypeGuess") or (
         "shop" if scaffold_id == "ecommerce-lite" else "service-provider"
     )
-    services = _build_services(
-        brief.get("servicesMentioned") or [], language
-    )
+    location_hint = brief.get("locationHint")
     notes = brief.get("notesForPlanner")
     tagline_default = (
         "Site generated from your prompt - update tagline in Project Input."
         if language == "en"
         else "Sajt skapad från din prompt - justera tagline i Project Input."
     )
-    story_source = original_prompt.strip() or notes or tagline_default
-    story = " ".join(story_source.split())[:600]
-    if not story:
-        story = tagline_default
+    # Demo-baseline-fix 1A (T2): name + story are now derived from
+    # brief signals only. `original_prompt` is intentionally NOT used
+    # as a fallback - it would re-introduce the raw-prompt-on-H1
+    # regression that triggered this sprint.
+    _ = original_prompt
+    company_name = _derive_company_name(
+        business_type=business_type,
+        location_hint=location_hint,
+        language=language,
+    )
+    story = _derive_story(
+        business_type=business_type,
+        location_hint=location_hint,
+        notes_for_planner=notes,
+        language=language,
+    )
+
+    services = _build_services(
+        brief.get("servicesMentioned") or [], language
+    )
 
     tone_words = list(brief.get("tone") or [])
     project_input: dict[str, Any] = {
@@ -302,9 +588,7 @@ def site_brief_to_project_input(
         "variantId": variant_id,
         "language": language,
         "company": {
-            "name": _company_name_from_prompt(
-                original_prompt, fallback="Ny sajt"
-            ),
+            "name": company_name,
             "businessType": business_type,
             "tagline": (notes or tagline_default)[:140],
             "story": story,
