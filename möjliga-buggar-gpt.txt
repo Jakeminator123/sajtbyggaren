@@ -1,0 +1,37 @@
+Bugg-reviewer körning: 2026-05-15
+Repo: C:\Users\jakem\Desktop\sajtbyggaren
+Rensning: tidigare buggfil saknades i denna workspace, så listan nedan är en ny ren baslinje med öppna kandidater.
+
+Intervall A (senaste kodpushar): 488f8a0, 93cd8cf
+
+1) Möjlig bugg: filinsamling avbryts för tidigt vid stor fil
+- Fil/rad: apps/viewser/lib/stackblitz-files.ts:266
+- Buggsannolikhet: 81%
+- Impact score: 7/10
+- Motivering: `break` vid storlekstak stoppar hela loopen och kan tappa mindre filer senare i listan; bör sannolikt vara `continue`.
+
+2) Möjlig bugg: payload-tak beräknas på originalstorlek men lagrar patchad större text
+- Fil/rad: apps/viewser/lib/stackblitz-files.ts:266, apps/viewser/lib/stackblitz-files.ts:274
+- Buggsannolikhet: 72%
+- Impact score: 6/10
+- Motivering: gränskontrollen använder `stats.size`, men faktisk addition görs med `Buffer.byteLength(patchedContent)` vilket kan överskrida taket i efterhand.
+
+3) Möjlig bugg: StackBlitz-start förutsätter att `start`-script finns
+- Fil/rad: apps/viewser/lib/stackblitz-files.ts:153
+- Buggsannolikhet: 66%
+- Impact score: 6/10
+- Motivering: `startCommand = "npm run build && npm run start"` fallbackar inte om `scripts.start` saknas och kan då ge hårt runtime-fel i preview.
+
+Intervall B (nästa bakåt i historiken): 283cf84, 98e8364, 93cd8cf
+
+4) Möjlig bugg: säkerhetsheader-commit syns inte i nuvarande konfig
+- Fil/rad: apps/viewser/next.config.ts:3
+- Buggsannolikhet: 89%
+- Impact score: 5/10
+- Motivering: filen är tom (`{}`) trots tidigare commit om COEP/COOP, vilket tyder på tappad ändring eller felaktig commitbeskrivning.
+
+5) Städning/reporisk: run-artefakter checkas in och riskerar snabb drift/storlekstillväxt
+- Fil/rad: visningsexempel/runs/20260514T080014.889Z-4d0d436f-en-hemsida-f-r-en-ishock-00cbf5/build-result.json:1
+- Buggsannolikhet: 58%
+- Impact score: 4/10
+- Motivering: incheckade generated-run-filer under `visningsexempel/runs/` kan bli snabbt inaktuella och göra framtida diff/review brusigare.
