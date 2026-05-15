@@ -125,6 +125,20 @@ COMMON_WORDS = {
     # in apps/viewser/app/api/prompt/route.ts to split client-side
     # validation errors (400) from server errors (500).
     "ZodError",
+    # psutil exception classes referenced by scripts/prune_generated_previews.py
+    # when iterating processes. External library symbols, not domain terms.
+    "AccessDenied", "NoSuchProcess",
+    # Python built-in exception classes referenced for narrow except-clauses
+    # in scripts/prune_generated_previews.py. Same treatment as KeyError /
+    # FileNotFoundError / SystemExit above.
+    "ConnectionRefusedError", "TimeoutError",
+    # pytest stdlib type used as type annotation in tests. Same treatment
+    # as MonkeyPatch above.
+    "CaptureFixture",
+    # scripts/prune_generated_previews.py implementation symbols (Python
+    # dataclasses + report container). Same treatment as PlanResult /
+    # PlanningChoice above - implementation detail, not domain terms.
+    "PreviewEntry", "PruneReport",
     # planning module internal class identifiers (Sprint 2B). Mirrors the
     # brief module's BriefResult/BriefModelResolutionError treatment - these
     # are Python implementation symbols, not domain terms. The canonical
@@ -184,6 +198,10 @@ COMMON_WORDS = {
     # PowerShell terminal launcher flags that .vscode/settings.json passes
     # to the integrated terminal. Not domain terms; just CLI args.
     "NoLogo", "NoProfile",
+    # PowerShell `Remove-Item` flag values referenced by docs/current-focus.md
+    # in the cleanup-sprint snippet (`-ErrorAction SilentlyContinue`). External
+    # PowerShell-namespace tokens, not domain terms.
+    "ErrorAction", "SilentlyContinue",
     # lucide-react icon names used by build_site.py page renderers.
     # 1-cap names like Phone/Mail/Sparkles never trigger PASCAL_RE; only
     # multi-cap PascalCase icons need explicit allowlisting.
