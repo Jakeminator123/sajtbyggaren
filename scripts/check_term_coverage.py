@@ -278,6 +278,14 @@ COMMON_WORDS = {
     # B61-fyndets text som bevis (faktisk run från 2026-05-15). Inte
     # ett domänbegrepp, men förekommer som backtick-prosa.
     "Enehmsida",
+    # Verifierings-Scout 2026-05-15 efter 1A-hotfix loggade fyra Scout-
+    # fynd (B64-B67) som inte täcktes av hotfix-scopet, plus tre
+    # parallella read-only bug-sweep-subagents loggade 21 ytterligare
+    # öppna B-IDs (B69-B87). Backtick-prosa i known-issues + handoff +
+    # current-focus.
+    "B64", "B65", "B66", "B67",
+    "B69", "B70", "B71", "B72", "B73", "B74", "B75", "B76", "B77",
+    "B78", "B79", "B80", "B81", "B82", "B83", "B84", "B85", "B86", "B87",
     # Generic prose ord som dyker upp i operator-flöde-text (ADR 0012)
     "Build", "Page", "Scaffolds",
 }

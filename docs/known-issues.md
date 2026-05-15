@@ -76,6 +76,187 @@ Format per bugg:
 
 ## Öppna - inte fixade än
 
+### Demo-baseline gap från verifierings-Scout 2026-05-15 (efter 1A)
+
+Verifierings-Scout körde fyra skarpa prompts (`elektriker Malmö`,
+`frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som
+säljer keramik`) via `prompt_to_project_input.py` + `build_site.py`
+och scorade totalsnitt 6.2 / 10. Tre fynd hamnade i 1A-hotfixen
+(B61/B62/B63, stängda). Fyra ytterligare gap kvarstår som öppna
+produkt-buggar:
+
+- **`B64` Hög** - `SiteBrief` (`packages/generation/brief/extract.py`)
+  saknar `company_name`-fält. Prompts som "Skapa hemsida för Volt & Co
+  i Malmö" får H1 "Elektriker i Malmö" eftersom
+  `_derive_company_name()` bara läser `businessTypeGuess` +
+  `locationHint`. Riktigt företagsnamn extraheras inte. Kräver
+  brief-schema-bump + ADR. Fix: open. Test: open.
+- **`B65` Hög** - Kontaktuppgifter är alltid placeholder
+  (`+46 8 000 00 00`, `kontakt@example.se`, "Adress saknas"). Brief
+  saknar contact_phone/email/address-fält och `_placeholder_contact()`
+  returnerar fasta värden. Kräver brief-schema-bump + ADR (samma som
+  B64). Fix: open. Test: open.
+- **`B66` Medel** - `scripts/build_site.py:930-935` "Varför oss"-
+  sektion renderas alltid trots tom `trustSignals`. `<h2>Varför oss</h2>`
+  är hårdkodad i `render_home`; när `trustSignals=[]` (alltid efter
+  prompt-flödet idag) blir det stor rubrik + tom `<ul>`. Fix:
+  conditional rendering eller fyll med generic-by-business-type-
+  fallback. Fix: open. Test: open.
+- **`B67` Låg** - `scripts/build_site.py` hårdkodar `lang="sv"` på
+  rad 786 och svensk UI-copy ("Begär offert", "Hör av dig idag",
+  "Kontakta oss", "Se alla tjänster", "Spela direkt", "Beskriv kort
+  vad du behöver så återkommer vi inom en arbetsdag.") på rad 605,
+  799, 881, 908, 939-941, 982, 1054, 1132. README + brief stöder
+  `language="en"` men renderer ignorerar det. Engelska sajter får
+  svensk UI. Källa: verifierings-Scout 2026-05-15. Fix: i18n-
+  arkitektur - parameterisera renderer-strings per language. Egen
+  sprint, inte i 1B-scope. Fix: open. Test: open.
+
+### Bug-sweep 2026-05-15 (tre parallella subagents efter 1A-hotfix)
+
+Tre read-only subagents granskade (1) brief + prompt-helper pipeline,
+(2) builder renderers + scaffolds + Quality Gate, (3) Viewser app +
+run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
+
+- **`B69` Hög** - Quality Gate route-scan får bara `required_routes()`
+  (subset där `required: true`), men `write_pages` emitterar alla
+  `defaultRoutes`. Scaffolden `local-service-business/routes.json`
+  har `about` (`/om-oss`) som `required: false`. Resultat: en
+  `/om-oss/page.tsx` utan default export eller med trasig syntax
+  kan landa på `main` utan att route-scan flaggar det. Quality Gate
+  rapporterar `ok` trots brott mot eget kontrakt. Källa: builder-
+  renderer-bug-sweep 2026-05-15. Fix: skicka `all_default_routes +
+  dossier_routes` till Quality Gate istället för bara `required`-
+  subsetet, ELLER ändra scaffold-routes så alla emitterade är
+  `required: true`. Bevis: `scripts/build_site.py:1327`
+  (`required_routes()` filtrerar på `required=True`),
+  `packages/generation/quality_gate/gate.py:81-94` (kommentar
+  bekräftar att gate tar `required`-subsetet). Fix: open. Test: open.
+- **`B70` Hög** - `apps/viewser/lib/localhost-guard.ts:5-10` parsar
+  Host-headern fel för IPv6 localhost. `hostHeader.split(":")[0]` på
+  `"[::1]:3000"` ger `"["` (alla `:` splittar, inklusive de inom
+  bracket); efterföljande `replace(/^\[|\]$/g, "")` på `"["` ger tom
+  sträng → `isAllowedHost` returnerar `false` → 403. IPv6 localhost
+  blockas alltid trots att `"::1"` finns i `LOCAL_HOST_NAMES`. Källa:
+  viewser-app-bug-sweep 2026-05-15. Fix: parsa Host enligt RFC 3986
+  (separera `[ipv6]:port` med regex). Fix: open. Test: open.
+- **`B71` Hög** - Follow-up merge fryser `company.story`,
+  `company.tagline`, `tone` i strid med egen docstring.
+  `scripts/prompt_to_project_input.py:merge_followup_project_input`
+  docstring säger att kandidat bidrar med "additive signals (new
+  services, capabilities, conversion goals and a visible story note)",
+  men koden tar aldrig `story` från kandidat, och `tone` lämnas orörd
+  när det redan är ett dict. Källa: brief-pipeline-bug-sweep
+  2026-05-15. Två val: (a) uppdatera docstring + test att matcha
+  faktisk byte-stabil semantic, eller (b) semantic patching nu
+  (kräver ADR, hör hemma i Project DNA-sprinten). Fix: open. Test:
+  open.
+- **`B72` Medel** - `apps/viewser/lib/runs.ts:40-84` `listRuns` läser
+  `build-result.json` för alla run-kataloger trots att svaret bara
+  behåller `limit` poster. O(N) disk-läsningar per `GET /api/runs`,
+  skalar obegränsat när `data/runs/` fylls. Källa: viewser-app-bug-
+  sweep 2026-05-15. Fix: stat alla först, sortera på mtime descending,
+  slice till limit, läs `build-result.json` bara för survivors. Fix:
+  open. Test: open.
+- **`B73` Medel** - Tagline-fallback innehåller "Project Input-filen"
+  dev-jargong i den fallback-gren som triggar när både businessType
+  och location saknas. Samma slag som B61 men på en kvarvarande edge-
+  fallback i `scripts/prompt_to_project_input.py:_derive_tagline`.
+  Källa: brief-pipeline-bug-sweep 2026-05-15. Fix: byt till neutral
+  demosäker svensk fras eller tom sträng. Fix: open. Test: open.
+- **`B74` Medel** - `scripts/dev_generate.py:365-393` mock-pipeline
+  anropar `produce_codegen_artefakt(routes_written=[])`. Codegen-
+  manifestet skriver då noll routes för mock-driven trots att real
+  build alltid spelar in dem. Artefakt-konsumenter får inkonsekvent
+  bild av vad mocken täcker. Källa: builder-renderer-bug-sweep
+  2026-05-15. Fix: synthesisera `['/', '/tjanster', '/om-oss',
+  '/kontakt']` från scaffold eller läs
+  `generation-package.json:planEntries`. Fix: open. Test: open.
+- **`B75` Medel** - `governance/schemas/project-input.schema.json`
+  saknar `additionalProperties: false` på root och underobjekt
+  (`company`, `contact`, `location`, `services`-items, `tone`,
+  `selectedDossiers`). En felstavad/extra nyckel passerar
+  `jsonschema`-valideringen tyst och kan ge `KeyError` nedströms.
+  Jämför `site-brief.schema.json` som låser
+  `additionalProperties: false`. Källa: brief-pipeline-bug-sweep
+  2026-05-15. Fix: lägg till `additionalProperties: false`; kör full
+  test-suite (kan exponera latenta extra-fält). Fix: open. Test:
+  open.
+- **`B76` Medel** - `apps/viewser/lib/runs.ts:203-211 readRunArtefacts`
+  och `apps/viewser/components/run-details-panel.tsx:531-544` saknar
+  `site-plan.json`. Bara `build-result`, `quality-result`,
+  `repair-result`, `site-brief` läses. Plan-fas-krascher blir svåra
+  att diagnostisera i RunDetailsPanel. Källa: viewser-app-bug-sweep
+  2026-05-15. Fix: lägg till `site-plan.json` i artefakt-bundle + ny
+  UI-sektion. Fix: open. Test: open.
+- **`B77` Medel** - `scripts/build_site.py:mount_dossier_components`
+  upptäcker filnamnskollisioner bara mellan dossiers, inte mellan
+  dossier och starter. En dossier med `components/Navbar.tsx` skriver
+  tyst över starter-ens egen `components/Navbar.tsx`. Docstringen
+  lovar "hard collision error" men det gäller bara dossier-vs-
+  dossier. Källa: builder-renderer-bug-sweep 2026-05-15. Fix: assert
+  `destination` saknas före skrivning eller union catalogue keyed
+  på basename. Fix: open. Test: open.
+- **`B78` Hög-säkerhet** - `apps/viewser/lib/build-runner.ts:34-51`
+  `assertDossierPathAllowed` använder `path.resolve()` som INTE följer
+  symlinks. En symlink under `data/prompt-inputs/` som pekar på en
+  fil utanför whitelist passerar kontrollen. Källa: viewser-app-bug-
+  sweep 2026-05-15. Fix: använd `fs.realpath()` före `path.relative`-
+  jämförelsen, eller `lstatSync` + reject when `isSymbolicLink()`.
+  Fix: open. Test: open.
+- **`B79` Låg** - `scripts/prompt_to_project_input.py:726-734`
+  `selectedDossiers.rationale` är alltid engelska även när
+  `language="sv"`. Språkblandning i artefakter. Källa: brief-
+  pipeline-bug-sweep 2026-05-15. Fix: härled från `language`-flaggan.
+  Fix: open. Test: open.
+- **`B80` Låg** - `apps/viewser/lib/prompt-runner.ts:137-143`
+  stdout-parsing använder `match(/^siteId:\s*(.+)$/m)` - första match
+  vinner. Om Python skriver flera rader som matchar tas fel värde.
+  Källa: viewser-app-bug-sweep 2026-05-15. Fix: JSON-blob på sista
+  raden, eller unik marker, eller sista match. Fix: open. Test: open.
+- **`B81` Låg** - `brief.language` returneras av briefModel utan
+  enum-validering. JSON-schemat kräver bara `minLength: 2`. Modell-
+  output `language="zz"` skulle passera och driva fel språkgren.
+  Källa: brief-pipeline-bug-sweep 2026-05-15. Fix: normalisera till
+  `sv|en` i `_real_brief`. Fix: open. Test: open.
+- **`B82` Låg** - `packages/generation/quality_gate/checks.py:131-136`
+  typecheck-filter truncates findings till rader med `"error TS"`
+  eller substring `".ts"`. Wrapper-diagnostik utan markörer filtreras
+  bort. Operatör ser failed status med tom findings-lista. Källa:
+  builder-renderer-bug-sweep 2026-05-15. Fix: inkludera tail av raw
+  stderr när noll curated findings survives. Fix: open. Test: open.
+- **`B83` Låg** - `scripts/prompt_to_project_input.py:_build_services`
+  släpper tysta dubblet-tjänster när två brief-items slugifierar till
+  samma ASCII-key. Kundsidans tjänstegrid blir kortare än briefen
+  anger utan spår. Källa: brief-pipeline-bug-sweep 2026-05-15. Fix:
+  disambiguerande suffix på slug-id eller stderr-warning. Fix: open.
+  Test: open.
+- **`B84` Låg** - `apps/viewser/lib/project-inputs.ts:85-93`
+  `listProjectInputs` konkatinerar `examples/` och `data/prompt-inputs/`
+  utan deduplicering på `siteId`. Samma `siteId` i båda ger React-
+  key-kollision i ProjectInputPicker. Källa: viewser-app-bug-sweep
+  2026-05-15. Fix: `Map`-baserad dedup med explicit prioritet.
+  Fix: open. Test: open.
+- **`B85` Låg** - `scripts/prompt_to_project_input.py` modul-
+  docstring säger att stdout-kontraktet är `siteId:` + `dossierPath:`,
+  men `main()` skriver sex nycklar. Drift mellan spec och
+  implementation. Källa: brief-pipeline-bug-sweep 2026-05-15. Fix:
+  uppdatera docstring eller lås nycklar med source-lock-test.
+  Fix: open. Test: open.
+- **`B86` Låg** - `scripts/build_site.py:1387-1388` hårdkodar
+  `NPM_INSTALL_TIMEOUT_SECONDS = 600` och `NPM_BUILD_TIMEOUT_SECONDS
+  = 300`. Långsamma Cloud Agent VMs överskrider regelbundet, ger
+  flaky failures orelaterade till site-correctness. Källa: builder-
+  renderer-bug-sweep 2026-05-15. Fix: CLI-flagga eller env-knapp.
+  Fix: open. Test: open.
+- **`B87` Låg** - `scripts/prompt_to_project_input.py:1091-1096`
+  fallbackar tyst till `model = "gpt-5.4"` när `resolve_brief_model()`
+  misslyckas. Operatör märker inte att policy-konfigurationen är
+  trasig. Källa: brief-pipeline-bug-sweep 2026-05-15. Fix: logga
+  högt på stderr vid resolution failure. Fix: open. Test: open.
+
+### Övriga öppna
+
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
   subprocess-status och loggutdrag medan körningen pågår, men riktig
   cancellation/background-jobb är fortfarande inte implementerat. Det bör tas

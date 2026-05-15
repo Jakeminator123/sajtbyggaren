@@ -1,9 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-15 (post demo-baseline-fix 1A-hotfix: B61/B62/B63 stängda, re-verifierings-Scout är nästa uppgift)
+**Datum:** 2026-05-15 (post demo-baseline-fix 1A-hotfix + bug-sweep: 21 nya B-IDs `B69`-`B87` loggade från tre parallella read-only subagents, plus 4 Scout-fynd `B64`-`B67`; Grind cloud-sprint (2-3h, PR-spår) är nästa)
 **Aktuell repo-HEAD på `main`:** den senaste docs-/Steward-bump-commiten ovanpå `d99f8ba` (`fix(prompt-helper): close B61 B62 B63 (demo-baseline-fix 1A-hotfix)`). Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA; konventionen är att raden "Last verified state" i `current-focus.md` pekar på senaste produktcommit (`d99f8ba`) och Steward-bump-commiten räknas som "within bump tolerance" av `focus_check.py`. Föregående mainline-pushar samma dag: `a12314f` (cursorignore-chore för apps/viewser node_modules+.next-pinning), `b78484f` (Verifierings-Scout findings-record som dokumenterade B61/B62/B63), `824cd3a` (Steward-bump efter 1A), `ab74c2a` (`feat(builder): demo-baseline-fix 1A`), `f29688c` (Steward-bump efter rules-commit), `d072c98` (`chore(rules): add powershell-glob and cli-safety-belt rules`).
 **Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-15`, `backup-16` (post-merge sanity-pass för PR #27), `backup-17` (B60-passet), `backup-18` (cleanup/prune-passet), `backup-19` (demo-baseline-fix 1A) och `backup-20` (1A-hotfix) finns lokalt och på origin. Nästa Builder/Scout-pass ska skapa nästa lediga `backup-N` från synkad `main` innan sprintarbete. Inga öppna PRs.
-**Stash-läge:** `git stash list` är tom. Den tidigare stale B56-stashen (innehöll äldre version av `ensureWebpackFlag`/`patchPackageJsonForStackblitz` utan B58-allowlistet eller `Buffer.byteLength`-beräkningen) droppades i reconciliation-passet eftersom fixen redan var integrerad i `8fae26a` på `main`.
+**Stash-läge:** `git stash list` har EN parkerad stash: `park read-only shell windows rule before demo-baseline-fix` (skapad 2026-05-15 av Scout som förberedelse för 1A-hotfix-Builder, ska poppas separat när rule-spåret tas upp igen — INTE i Grind-sprinten).
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
 Färdiga startprompter för Scout/Builder/Steward finns i [`docs/agent-prompts.md`](agent-prompts.md). För längre fleragentpass används [`docs/orchestrator-playbook.md`](orchestrator-playbook.md); den samordnar befintliga roller och skapar inte en fjärde fast roll.
@@ -137,14 +137,33 @@ Smoke-verifierat med real briefModel: `elektriker Malmö` (build/quality
 (build/quality=ok, language=`sv`, H1=`Frisör i Göteborg`, country=
 `Sverige`). 12 nya regression-tester + 2 stale tester omskrivna.
 
-**Nästa uppgift: re-verifierings-Scout (Scout RO).** Kör samma fyra
-prompter som 2026-05-15-passet (`elektriker Malmö`, `frisör Göteborg`,
-`naprapatklinik Stockholm`, `liten e-handel som säljer keramik`)
-mot post-hotfix-kod, jämför scorecard mot 6.2/10-baselinen. Om ≥7/10
-och inget case <6.5 → Project DNA / semantic follow-up merge. Om
-<7/10 → demo-baseline-fix 1B (brief-schema-tillägg för kontakt +
-trustSignals + company_name, kräver ADR + conditional rendering av
-"Varför oss"-sektion).
+**EFTER hotfixen** körde Scout tre parallella read-only bug-sweep-
+subagents (brief-pipeline, builder-renderers, viewser-app) som loggade
+21 ytterligare öppna B-IDs (`B69`-`B87`) i `docs/known-issues.md`,
+plus 4 fynd från Verifierings-Scout som inte täcktes av hotfix-scopet
+(`B64` SiteBrief saknar company_name, `B65` kontakt alltid placeholder,
+`B66` "Varför oss" renderas trots tom trustSignals, `B67` hårdkodad
+svensk UI). Totalt **25 öppna B-IDs**.
+
+**Nästa uppgift: demo-baseline-fix 1B + bug-sweep (Grind, cloud /
+2-3h / PR-spår).** Grind åtgärdar must-land + should-land i en
+sammanhållen PR:
+
+- **Must-land (4):** B66 (conditional rendering), B69 (Quality Gate
+  route-scan utan `/om-oss` — silent kontraktsbrott), B70 (IPv6 Host-
+  header bryter localhost-guard), B78 (symlink-path-traversal i
+  build-runner whitelist — säkerhet).
+- **Should-land (5):** B64 + B65 (brief-schema-bump för company_name +
+  contact_*, kräver ADR), B71 (follow-up merge konsistens), B72
+  (`listRuns` O(N) disk-läsningar), B73 (tagline-fallback dev-jargong).
+- **Nice-to-have (6):** B74, B75, B76, B77, B79, B83.
+- **Out-of-scope:** B67, B80-B82, B84-B87 (loggas i PR-body).
+
+Grind kör på `feat/demo-baseline-fix-1b-bug-sweep`, backup-21 från
+synkad main, Bugbot-loop, squash-merge när grön. Re-verifierings-Scout
+körs **EFTER Grind-merge** (inte före — 1A-hotfix-rapportens
+estimerade snitt 7.0-7.3 är spekulation, ska bekräftas i ett enda
+scorecard-pass efter hela sprinten).
 
 PromptBuilder stage-timeout är inte längre listad som aktiv nice-to-have;
 Scout verifierade att cleanup redan finns.
