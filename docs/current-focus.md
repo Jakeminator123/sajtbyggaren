@@ -41,6 +41,8 @@ PRs, etcetera).
 
 `main` är vid demo-baseline-fix 1A-commiten (`ab74c2a`) plus en Steward-bump-commit ovanpå för denna fil och `handoff.md`; faktisk HEAD-SHA syns via `git log --oneline -1` eller `python scripts/focus_check.py`. Demo-baseline-fix 1A är klar: Scout-auditens topp 3 demo-blockers stängda i ett pass — `/_global-error` build-fel borta (verifierat på `painter-palma` + `atelje-bird` med båda `status: ok`), rå prompt landar inte längre i `company.name`/`company.story` (brief-driven `_derive_company_name` + `_derive_story` ersätter prompt-as-H1/story-mönstret med Swedish business-type label-map), svenska tecken bevarade i service-labels (NFKD-fold för slugs, original-string för labels). 10 nya regression-tester i `tests/test_prompt_to_project_input.py`, 0 ruff findings, governance/rules-sync/term-coverage gröna, full pytest-suite grön (3 skipped E2E som kräver `SAJTBYGGAREN_E2E=1`).
 
+**Verifierings-Scout 2026-05-15 efter 1A** körde fyra skarpa prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`) via `prompt_to_project_input.py` + `build_site.py`. Alla fyra byggde grönt med `status: ok`. **Totalsnitt 6.2 / 10** — precis över 6/10-tröskeln, men tre nya regressioner/buggar identifierade och loggade som **B61** (notes_for_planner-läckage som customer copy — 1A-regression), **B62** (`detect_language` slår fel på korta svenska prompts → engelska sajter på 2 av 4 case) och **B63** (`_BUSINESS_TYPE_LABEL_SV` slug-glipor mot briefModels faktiska slugs). Hotfix-sprint är nästa Builder-uppgift; se "Next action".
+
 Föregående cleanup/prune-sprint är fortfarande klar: nytt `scripts/prune_generated_previews.py` med dry-run default + `--apply`-gate (env-flaggan `SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN` defaultar till OFF så `--apply` ensamt räcker; sätts den explicit till `true` blockas radering även med `--apply` som operatörs-safety-belt) + current-pointer-skydd + port-3000-refusal landade tillsammans med tolv regression-tester i `tests/test_prune_generated_previews.py` (tio från första passet plus två som låser env-/CLI-interaktionen efter Finding 1-fixen) och utvidgad allowlist i `scripts/check_term_coverage.py`. B60 är stängd: follow-up-versioneringen från PR #27 hade fyra kontraktsbrott som upptäcktes i post-merge audit (versionerade snapshots inte immutabla, follow-up-prompt läckte i `company.story`, icke-atomisk pointer-update, tyst init-fallback vid saknad sidecar) och alla fyra är nu fixade i `scripts/prompt_to_project_input.py` + `scripts/build_site.py:load_prompt_input_meta` med 5 nya/uppdaterade regression-tester. PR #27 (`feat(viewser): preserve follow-up prompt versions`, `e057fbd`) är fortfarande merge-baseline: follow-up promptar skriver immutable `<siteId>.vN.project-input.json`/`<siteId>.vN.meta.json`-snapshots i `data/prompt-inputs/`, behåller `projectId`/`originalPrompt` och lägger `followUpPrompt` på snapshot-meta. `scripts/build_site.py` läser sidecar-meta intill dossier-pathen och trådar `mode`/`projectId`/`version`/`originalPrompt`/`followUpPrompt` in i `input.json`, `generation-package.json` och `build-result.json`. `apps/viewser/lib/runs.ts` läser per-run-meta från `build-result.json` -> `input.json` -> mutable sidecar legacy-fallback, så RunHistory visar stabil `projectId` + `version` även när nya follow-ups landar. `apps/viewser/lib/project-inputs.ts` filtrerar `.vN.project-input.json`-snapshots från ProjectInputPicker (bara current pointer är valbar). `apps/viewser/lib/prompt-runner.ts` + `lib/build-runner.ts` föredrar repo-roten `.venv` Python när den finns (cloud/lokal dev-konsistens) och cleanar prompt-/build-mutex via `try/finally`.
 
 StackBlitz-preview-spåret är fortsatt avgränsat till preview-payload-only: `apps/viewser/lib/stackblitz-files.ts` patchar in-memory (`next dev/build --webpack`, `npm run build && npm run start`, lockfile med i payload, `app/global-error.tsx`-override, patched payload-bytes mot size cap, `next start`-fallback), medan `apps/viewser/next.config.ts` fortsatt är tom och testet låser att global COEP/COOP inte sätts i Viewser. Ingen ändring är gjord i starters, builder eller preview-runtime-paketet; ADR 0021 är källan för beslut/avgränsning.
@@ -297,37 +299,56 @@ klara. Inga öppna PRs efter PR #27-merge.
 
 ## Next action - direktiv till nästa agent
 
-**Verifiera demo-baseline-fix 1A mot 4 testfall + besluta nästa fokus.**
-Demo-baseline-audit har levererats (totalt-snitt 4.1-4.6 / 10 över de
-fyra testfallen elektriker Malmö, frisör Göteborg, naprapatklinik
-Stockholm, keramik-e-handel) och topp 3 demo-blockers är åtgärdade i
-`ab74c2a`. Nästa naturliga steg är en kort verifierings-Scout/Grind
-som kör de fyra prompterna skarpt mot fixad kod (`OPENAI_API_KEY` satt,
-`python scripts/dev_generate.py` per case) och scorar om sajterna nu
-ligger närmare 6/10 på första generationens kvalitet. Tre kvarstående
-gap från Scout-auditen som inte är lösta i 1A:
+**Demo-baseline-fix 1A-hotfix (Builder).** Verifierings-Scout 2026-05-15
+körde fyra skarpa prompter (`elektriker Malmö`, `frisör Göteborg`,
+`naprapatklinik Stockholm`, `liten e-handel som säljer keramik`)
+mot 1A-koden via `scripts/prompt_to_project_input.py` +
+`scripts/build_site.py`. Alla fyra byggs grönt (`status: ok`). Totalsnitt
+**6.2 / 10** — precis över 6/10-tröskeln, men två case ligger under
+(C2 5.6, C3 5.8). Tre konkreta regressioner/buggar identifierade och
+loggade som **B61**, **B62**, **B63** i `docs/known-issues.md`.
 
-1. `contact.*` är fortfarande 100% placeholder (`+46 8 000 00 00`,
-   `kontakt@example.se`, "Adress saknas") — brief-schemat saknar
-   kontaktfält. Egen sprint, kräver schema-justering eller
-   prompt-helper-tillägg.
-2. `trustSignals` är alltid tom efter prompt → "Varför oss"-sektion
-   blir tunn. Kan fyllas med generic-by-business-type-mall, eller
-   låta briefModel returnera 2-3 trust-fraser.
-3. `merge_followup_project_input` bevarar fortfarande `tone`, `story`,
-   `tagline`, `trustSignals` byte-för-byte — operatör som ber om
-   "byt ton" eller "ändra story" får v2 utan synlig förändring.
-   Detta är Project DNA / semantic patching-sprinten som väntar.
+Hotfix-scope (smal Builder-sprint):
 
-Också: `detect_language()` i `packages/generation/brief/extract.py` har
-hård SWEDISH_HINTS-lista som missar korta svenska prompts utan stop-ord
-(t.ex. "frisör Göteborg" → returnerar "en"). Real briefModel kompenserar
-oftast men den latenta buggen kvarstår.
+1. **B61 — `notes_for_planner` läcker som customer copy.** Min 1A-fix
+   `_derive_story` föredrar `brief.notesForPlanner` som story, men det
+   fältet är intern engelsk planner-orientering. Verifierat strängar
+   som renderas på `/om-oss` just nu: `"Likely a Swedish electrician
+   website targeting Malmö; prompt is minimal..."`. Samma till
+   `company.tagline`. Fix: bygg story/tagline från `businessType +
+   location` på prompts originalspråk; rendera inte
+   `notes_for_planner` på publika sidor. Plus byt ut "Justera Project
+   Input..." dev-jargong i `_service_summary` mot neutral kundvänd
+   svensk fallback ("Kontakta oss för mer information").
+2. **B62 — `detect_language()` slår fel på korta svenska prompts.**
+   Två av fyra Scout-case (`frisör Göteborg`, `naprapatklinik
+   Stockholm`) genererade hela sajten på engelska eftersom prompts
+   inte hade något ord från SWEDISH_HINTS-listan. Fix: heuristik som
+   (a) räknar fraktion svenska tecken/suffix, (b) default till `sv`
+   när språk är osäkert, (c) tvingar country till "Sverige" när
+   `language="sv"` även om briefModel returnerar det engelska
+   land-namnet.
+3. **B63 — `_BUSINESS_TYPE_LABEL_SV` slug-glipor.** briefModel
+   returnerar `e-commerce` (med bindestreck) och `naprapath-clinic`,
+   men 1A-map:en har `ecommerce`/`ecommerce-shop` resp. saknar
+   `naprapath-clinic`. Resultat: H1 blir "Sajt för e commerce".
+   Fix: utöka map:en med bindestreck-varianter ELLER skriv om
+   fallback att returnera "företag som arbetar med X" istället för
+   "Sajt för X".
 
-Verifierings-Scout-rapporten bör styra om nästa Builder-sprint blir:
-(a) demo-baseline-fix 1B (kontakt + trustSignals + språk-detection),
-(b) Project DNA / follow-up semantic merge, eller
-(c) annan blocker som dyker upp på de skarpa körningarna.
+Out-of-scope för hotfix (väntar på 1B):
+- Brief-schema-utökning för `company_name`, `contact_phone`,
+  `contact_email`, `contact_address`, `trust_signals` (kräver eventuell
+  ADR; större sprint).
+- Conditional rendering av "Varför oss"-sektion när trustSignals=[]
+  (renderas just nu med tom `<ul>`).
+- Project DNA / semantic follow-up merge (väntar tills första
+  generation ligger på 7+).
+
+Efter hotfix landar: kör verifierings-Scout igen med samma fyra
+prompter, jämför scorecard mot 6.2/10-baselinen, besluta om 1B
+(kontakt + trustSignals + company-name brief-schema-tillägg) eller
+direkt på Project DNA.
 
 B59 är fortfarande parkerad - rör inte StackBlitz-fronten. PR #27,
 B60 och cleanup/prune-sprinten är klara; ingen ny header-toggling.
@@ -407,38 +428,42 @@ i `c073d486` och PR-branchen är inte längre kvar på GitHub.
 
 ## Queue
 
-1. **Verifierings-Scout för demo-baseline-fix 1A** - kör fyra
-   testfall skarpt mot fixad kod, scora om första generationens
-   kvalitet ligger ≥6/10. Levererar mini-scorecard + go/no-go på
-   nästa sprint.
-2. **Demo-baseline-fix 1B (om verifierings-Scout indikerar)** -
-   åtgärdar de tre kvarstående gap som 1A inte täckte: kontakt-
-   placeholder, tom trustSignals, hård SWEDISH_HINTS-lista i
-   `detect_language()`. Kan kräva brief-schema-tillägg och i så
-   fall en ny ADR.
-3. **Project DNA / follow-up semantic merge (vänta)** - så fort
-   verifierings-Scout bekräftar att första generationen ligger
+1. **Demo-baseline-fix 1A-hotfix** - smal Builder-sprint som stänger
+   B61, B62, B63 (notes_for_planner-läckage, detect_language-fail på
+   korta svenska prompts, business-type slug-map-glipor). Verifierings-
+   Scout 2026-05-15 levererade en 6.2/10-baseline; hotfixen ska lyfta
+   den till 7+/10 utan brief-schema-ändring.
+2. **Re-verifierings-Scout efter hotfix** - kör samma fyra prompter
+   igen, jämför mot 6.2/10-baselinen. Om snittet är ≥7/10 → gå på
+   Project DNA. Om <7/10 → demo-baseline-fix 1B.
+3. **Demo-baseline-fix 1B (om hotfix-Scout indikerar)** - utökat scope:
+   brief-schema-tillägg för `company_name`, `contact_phone`,
+   `contact_email`, `contact_address`, `trust_signals`. Plus
+   conditional rendering av "Varför oss"-sektion när trustSignals=[].
+   Kräver troligen ADR för brief-schema-bump.
+4. **Project DNA / follow-up semantic merge (vänta)** - så fort
+   re-verifierings-Scout bekräftar att första generationen ligger
    nära 7/10 är detta nästa naturliga steg: göra
    `merge_followup_project_input` semantic så följdprompt mot
    tone/story/tagline ger synlig förändring i v2.
-4. B49 (medel): page-map-driven sidebar för `docs-base`-startern; måste
+5. B49 (medel): page-map-driven sidebar för `docs-base`-startern; måste
    vara klar innan `course-education -> docs-base` aktiveras i
    `SCAFFOLD_TO_STARTER`. Antingen återinför Nextra-theme-docs `Layout`
    eller bygg lokal `_meta.ts`-/filsystem-driven nav. Coach-beslut:
    tas EFTER demo-baseline-audit, inte före.
-4. **B59 follow-up** (parkerad - väntar på arkitekturbeslut): byte till
+6. **B59 follow-up** (parkerad - väntar på arkitekturbeslut): byte till
    lokal `next dev`-process som same-origin iframe på `localhost:NNNN`
    eller static StackBlitz-template. Ingen mer COOP/COEP-toggling.
-5. B53 (låg): `governance/schemas/routes.schema.json` för scaffold-
+7. B53 (låg): `governance/schemas/routes.schema.json` för scaffold-
    routes-kontraktet (egen schema-sprint, mönster från B22).
-6. B47 (låg): commerce-base Shopify-handles dokumenteras eller får
+8. B47 (låg): commerce-base Shopify-handles dokumenteras eller får
    fallback. Egen e-commerce-sprint, ej blocker idag.
-7. B13a arkitektur-flytt (egen sprint, kräver ADR).
-8. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
-   lucide-typen av starter-vs-codegen-konflikt; ADR 0020:s
-   "INTE beslutar"-sektion).
-9. Cancellation-followup (låg): riktig cancellation/background-jobb i
-   playground-vyn om operatören behöver avbryta redan startade körningar.
+9. B13a arkitektur-flytt (egen sprint, kräver ADR).
+10. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
+    lucide-typen av starter-vs-codegen-konflikt; ADR 0020:s
+    "INTE beslutar"-sektion).
+11. Cancellation-followup (låg): riktig cancellation/background-jobb i
+    playground-vyn om operatören behöver avbryta redan startade körningar.
 
 **Vänta med ny/sista starter** tills minst följande är sant: marketing-
 base real codegen stabil, 4 demo-sajter kan byggas (minst 3/4), follow-up

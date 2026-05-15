@@ -263,6 +263,16 @@ COMMON_WORDS = {
     # known-issues.md / current-focus.md / handoff.md. Svaga
     # interna identifierare, inte domänbegrepp.
     "B49", "B59",
+    # Verifierings-Scout 2026-05-15 efter demo-baseline-fix 1A loggade
+    # tre nya öppna B-IDs (notes_for_planner-läckage, detect_language-
+    # fail, business-type-slug-glipor). Adderade här tills de stängs.
+    "B61", "B62", "B63",
+    # "B63 Medel" är allvarsgraden för B63 som dyker upp i list-prosa.
+    "B63 Medel",
+    # "Enehmsida" är ett operatör-skrivet typo-`siteId` som citeras i
+    # B61-fyndets text som bevis (faktisk run från 2026-05-15). Inte
+    # ett domänbegrepp, men förekommer som backtick-prosa.
+    "Enehmsida",
     # Generic prose ord som dyker upp i operator-flöde-text (ADR 0012)
     "Build", "Page", "Scaffolds",
 }

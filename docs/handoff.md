@@ -1,6 +1,6 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-15 (post demo-baseline-fix 1A: tre Scout-auditade demo-blockers stängda)
+**Datum:** 2026-05-15 (post demo-baseline-fix 1A + verifierings-Scout: tre nya regressioner B61/B62/B63 loggade, hotfix är nästa Builder-sprint)
 **Aktuell repo-HEAD på `main`:** den senaste docs-/Steward-bump-commiten ovanpå `ab74c2a` (`feat(builder): demo-baseline-fix 1A`). Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA; konventionen är att raden "Last verified state" i `current-focus.md` pekar på senaste produktcommit (`ab74c2a`) och Steward-bump-commiten räknas som "within bump tolerance" av `focus_check.py`. Föregående mainline-pushar samma dag: `f29688c` (Steward-bump efter rules-commit), `d072c98` (`chore(rules): add powershell-glob and cli-safety-belt rules`), `054e3b2` (Steward-bump efter Finding 1-fixen), `8d45140` (Steward-sync efter prune-sprinten), `2acdeca` (prune-script + tester), `7b90c0c` (Steward-sync efter B60), `65f052a` (B60-fixen för PR #27-kontraktsbrott), `e057fbd` (PR #27 follow-up prompt versions squash-merge), `86d03bf` (B59 StackBlitz WebContainer embed-blocker dokumenterad), `210a1d1` (Cursor API key-placeholder i `.env.example`).
 **Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-15`, `backup-16` (post-merge sanity-pass för PR #27), `backup-17` (B60-passet), `backup-18` (cleanup/prune-passet) och `backup-19` (demo-baseline-fix 1A) finns lokalt och på origin. Nästa Builder/Scout-pass ska skapa nästa lediga `backup-N` från synkad `main` innan sprintarbete. Inga öppna PRs.
 **Stash-läge:** `git stash list` är tom. Den tidigare stale B56-stashen (innehöll äldre version av `ensureWebpackFlag`/`patchPackageJsonForStackblitz` utan B58-allowlistet eller `Buffer.byteLength`-beräkningen) droppades i reconciliation-passet eftersom fixen redan var integrerad i `8fae26a` på `main`.
@@ -115,37 +115,32 @@ Tre lager:
 ## Nästa konkreta uppgift
 
 Se `docs/current-focus.md` → **"Next action"**. Kort version:
-demo-baseline-fix 1A är landad (`ab74c2a`): tre Scout-auditade
-demo-blockers stängda i ett pass.
+demo-baseline-fix 1A är landad (`ab74c2a`) och verifierings-Scout
+2026-05-15 har kört fyra skarpa prompter mot fixad kod. **Totalsnitt
+6.2 / 10**: alla fyra byggs grönt men tre nya regressioner/buggar
+identifierade som blockar demo:
 
-1. `/_global-error` build-fel (regression/variant av B41) löst genom
-   explicit `app/global-error.tsx` i `data/starters/marketing-base/app/`
-   och `data/starters/commerce-base/app/`. Verifierat end-to-end:
-   `painter-palma` (marketing-base) + `atelje-bird` (commerce-base)
-   landar nu båda `status: ok`, `quality: ok`, `npm install + npm run
-   build` gröna i ~78s.
-2. Rå prompt landar inte längre i `company.name`/`company.story`.
-   `scripts/prompt_to_project_input.py:_company_name_from_prompt`
-   ersatt av `_derive_company_name` (läser brief.businessTypeGuess +
-   brief.locationHint via Swedish business-type label-map).
-   `_derive_story` föredrar `brief.notesForPlanner`; raw prompt
-   används aldrig som fallback. Regression-test låser exakta tokens
-   från den failande real-runen (`Enehmsida`, `båtari`, `2 sidor`).
-3. Svenska tecken bevarade i service-labels. `_slugify_label`
-   NFKD-foldar för id-fältet (`färska ägg` → `farska-agg`) men
-   `_service_label_from_text` behåller å/ä/ö i labeln. Brief
-   `services_mentioned` Field-description + system-prompt frågar nu
-   efter natural-language fraser på originalspråk.
+- **B61 Hög** — `notes_for_planner` (engelsk intern planner-orientering
+  från briefModel) läcker som customer-facing copy på `/om-oss` och
+  som `company.tagline`. Min 1A-`_derive_story` föredrar fältet som
+  story-fallback. Verifierat strängar: `"Likely a Swedish electrician
+  website targeting Malmö; prompt is minimal..."` på alla fyra Scout-
+  case. Plus dev-jargong "Justera Project Input för att förbättra
+  texten" i service summaries på rendered site.
+- **B62 Hög** — `detect_language()` slår fel på korta svenska prompts
+  utan SWEDISH_HINTS-token. Två av fyra Scout-case (`frisör Göteborg`,
+  `naprapatklinik Stockholm`) genererade hela sajten på engelska
+  ("Hair salon in Göteborg", `country=Sweden`).
+- **B63 Medel** — `_BUSINESS_TYPE_LABEL_SV` saknar bindestreck-
+  varianter (`e-commerce`, `naprapath-clinic`) som briefModel
+  faktiskt returnerar; fallback ger "Sajt för e commerce".
 
-Nästa naturliga steg är **verifierings-Scout** (queue-item 1):
-kort read-only-pass som kör de fyra testfallen skarpt mot fixad kod
-och scorar om första generationens kvalitet ligger ≥6/10. Tre
-kvarstående gap från audit-rapporten som 1A inte täckte: kontakt-
-placeholder (`+46 8 000 00 00`, `kontakt@example.se`), tom
-`trustSignals`, och hård SWEDISH_HINTS-lista i `detect_language()`
-som missar korta svenska prompts. Verifierings-Scout-rapporten styr
-om Builder nästa går på demo-baseline-fix 1B eller Project DNA /
-follow-up semantic merge.
+Nästa Builder-sprint är **demo-baseline-fix 1A-hotfix** som stänger
+B61/B62/B63 i ett smalt pass utan brief-schema-ändring. Efter
+hotfix: re-verifierings-Scout med samma fyra prompter, jämför mot
+6.2/10-baselinen. Om ≥7/10 → Project DNA. Om <7/10 →
+demo-baseline-fix 1B (brief-schema-tillägg för kontakt + trustSignals
++ company_name + conditional rendering av "Varför oss"-sektion).
 
 PromptBuilder stage-timeout är inte längre listad som aktiv nice-to-have;
 Scout verifierade att cleanup redan finns.

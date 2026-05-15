@@ -76,6 +76,47 @@ Format per bugg:
 
 ## Öppna - inte fixade än
 
+- **`B61` Hög** - `notes_for_planner` läcker som customer-facing copy på
+  `/om-oss` och som tagline. Källa: verifierings-Scout 2026-05-15 efter
+  demo-baseline-fix 1A. `scripts/prompt_to_project_input.py:_derive_story`
+  föredrar `brief.notesForPlanner` som story-fallback, men briefModel
+  skriver det fältet på engelska som intern orientering för Phase 2-
+  planneraren ("Likely a Swedish electrician website targeting Malmö;
+  prompt is minimal, so keep scope conservative and local."). Samma
+  sträng skrivs in i `company.tagline`. Verifierat på alla fyra Scout-
+  case (elektriker Malmö / frisör Göteborg / naprapatklinik Stockholm /
+  liten e-handel keramik). Detta är en regression från 1A: pre-1A
+  läckte rå prompt, post-1A läcker engelska planner-instruktioner.
+  Fix: `_derive_story` ska bygga från `businessType + location` på
+  prompts originalspråk; `notes_for_planner` får inte renderas på
+  publika sidor. `company.tagline` likadant. Test bör låsa frånvaron
+  av engelska planner-fraser i story/tagline. Fix: open. Test: open.
+- **`B62` Hög** - `packages/generation/brief/extract.py:detect_language`
+  slår fel på korta svenska prompts utan stop-ord. `SWEDISH_HINTS` är
+  en hårdkodad lista på ~20 vanliga ord (`skapa`, `för`, `med`, `på`,
+  `elektriker`, `i`, ...). Prompts som "frisör Göteborg" eller
+  "naprapatklinik Stockholm" har inget av dessa tokens, så language
+  detekteras som "en" och briefModel följer hint:en. Resultat:
+  hela sajten genereras på engelska ("Hair salon in Göteborg", "Initial
+  consultation", `country=Sweden`). Verifierat på 2 av 4 Scout-case.
+  Fix: heuristik bör (a) räkna fraktion tokens med svenska tecken
+  (`å/ä/ö`) eller suffix (`-en/-et/-er`), (b) default till `sv` när
+  språk är osäkert (operatörspopulationen är ~95% svensktalande), och
+  (c) tvinga `country="Sverige"` när `language="sv"` även om briefModel
+  returnerar `country="Sweden"`. Källa: verifierings-Scout 2026-05-15.
+  Fix: open. Test: open.
+- **`B63` Medel** - `scripts/prompt_to_project_input.py:_BUSINESS_TYPE_LABEL_SV`
+  har glipor mot briefModels faktiska businessType-slugs. briefModel
+  returnerade `business_type="e-commerce"` (med bindestreck) men map:en
+  har bara `"ecommerce"` och `"ecommerce-shop"`, och `naprapath-clinic`
+  saknas helt (jag har `naprapat` och `chiropractor`). Resultat: 1A:s
+  Swedish business-type-mapping faller på fallback-grenen och H1 blir
+  "Sajt för e commerce" eller "Sajt för naprapath clinic" istället för
+  förväntade "Webbshop" eller "Naprapatklinik". Källa: verifierings-
+  Scout 2026-05-15. Två fixar möjliga: (a) utöka map:en med fler
+  bindestreck-varianter, eller (b) bygg fallback som returnerar
+  "företag som arbetar med X" istället för "Sajt för X" så obekanta
+  slugs läser mer naturligt. Fix: open. Test: open.
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
   subprocess-status och loggutdrag medan körningen pågår, men riktig
   cancellation/background-jobb är fortfarande inte implementerat. Det bör tas
