@@ -308,7 +308,35 @@ def load_prompt_input_meta(
     "latest" sidecar for every old run.
     """
     meta_path = _prompt_meta_path_for_dossier(dossier_path)
-    if meta_path is None or not meta_path.exists():
+    if meta_path is None:
+        # Dossier filename does not match either prompt-input pattern
+        # (no `<siteId>.project-input.json` and no `<siteId>.vN.*`).
+        # Nothing in the prompt-input contract applies; keep init-mode.
+        return {"mode": "init"}
+    if not meta_path.exists():
+        # B60 fynd 4: a missing sidecar can mean either
+        #   (a) corrupt prompt-input state (interrupted run, partial copy,
+        #       manual delete on a `data/prompt-inputs/` snapshot or on a
+        #       versioned `<siteId>.vN.project-input.json` file) - must
+        #       fail loudly so the operator restores the meta instead of
+        #       silently emitting a follow-up build labelled as init with
+        #       no projectId/version, OR
+        #   (b) a curated example under `examples/` whose filename happens
+        #       to match `_CURRENT_PROMPT_INPUT_RE` but never had a
+        #       sidecar by design.
+        # A versioned filename (`.vN.project-input.json`) is unambiguously
+        # written by `prompt_to_project_input.py` and therefore must have
+        # a sidecar; the current-pointer pattern only carries the same
+        # contract when the file lives under `data/prompt-inputs/`.
+        is_versioned = (
+            _VERSIONED_PROMPT_INPUT_RE.match(dossier_path.name) is not None
+        )
+        is_under_prompt_inputs = dossier_path.parent.name == "prompt-inputs"
+        if is_versioned or is_under_prompt_inputs:
+            raise SystemExit(
+                f"Builder failed: prompt meta sidecar missing at {meta_path}. "
+                "Restore the meta or remove the orphaned project-input file."
+            )
         return {"mode": "init"}
 
     meta = load_json(meta_path)

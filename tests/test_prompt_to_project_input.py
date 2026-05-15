@@ -342,7 +342,18 @@ def test_generate_followup_bumps_version_and_reuses_project_id(
     assert project_input["company"]["name"] == initial_project_input["company"]["name"]
     assert project_input["contact"] == initial_project_input["contact"]
     assert project_input["scaffoldId"] == initial_project_input["scaffoldId"]
-    assert "Follow-up request: Lägg till mer fokus" in project_input["company"]["story"]
+    # B60 fynd 2: follow-up prompt MUST NOT leak into customer-facing
+    # company.story. The operator's prompt lives in meta.followUpPrompt
+    # only; render_about in build_site.py renders company.story directly
+    # on /om-oss, so any English workflow suffix would surface as public
+    # copy. Lock the absence of the pre-B60 leakage and lock that
+    # company.story matches v1 byte-for-byte (no merge-time mutation).
+    assert "Follow-up request" not in project_input["company"]["story"]
+    assert "Lägg till mer fokus" not in project_input["company"]["story"]
+    assert (
+        project_input["company"]["story"]
+        == initial_project_input["company"]["story"]
+    )
 
     current_meta = json.loads(
         (tmp_path / "electrician-malmo.meta.json").read_text(encoding="utf-8")
@@ -400,3 +411,100 @@ def test_generate_followup_requires_existing_meta(tmp_path: Path) -> None:
             output_dir=tmp_path,
             site_id="missing-site",
         )
+
+
+@pytest.mark.tooling
+def test_versioned_snapshot_refuses_overwrite(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """B60 fynd 1: `.vN.project-input.json` and `.vN.meta.json` snapshots
+    must be immutable. A second `generate(...)` call that targets the
+    same explicit `(site_id, project_id, version)` tuple would otherwise
+    silently overwrite the previous snapshot and break PR #27's "older
+    versions stay byte-stable" promise. Lock the SystemExit so future
+    refactors of `write_project_input` cannot drop the FileExistsError
+    guard in `_write_immutable_snapshot`.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    generate(
+        "Skapa en hemsida för en målare",
+        output_dir=tmp_path,
+        site_id="painter-immut",
+        project_id="stable-project-id",
+    )
+    with pytest.raises(SystemExit, match="Versioned snapshot already exists"):
+        generate(
+            "Försök skriva över v1 med samma siteId/projectId/version.",
+            output_dir=tmp_path,
+            site_id="painter-immut",
+            project_id="stable-project-id",
+        )
+
+
+@pytest.mark.tooling
+def test_followup_does_not_inject_workflow_text_into_company_story(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """B60 fynd 2: cover the merge helper directly so the contract is
+    locked even if a future caller bypasses `generate_followup`. The
+    follow-up prompt must not be appended to `company.story`; it lives
+    in `meta.followUpPrompt` only.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    initial_project_input, _, _, _ = generate(
+        "Skapa en hemsida för en målare",
+        output_dir=tmp_path,
+        site_id="painter-story",
+        project_id="stable-project-id",
+    )
+    expected_story = initial_project_input["company"]["story"]
+
+    followup_project_input, followup_meta, _, _ = generate_followup(
+        "Lägg till ett tydligt prisavsnitt och varmare ton.",
+        output_dir=tmp_path,
+        site_id="painter-story",
+    )
+
+    assert followup_project_input["company"]["story"] == expected_story
+    assert "Follow-up request" not in followup_project_input["company"]["story"]
+    assert (
+        "prisavsnitt" not in followup_project_input["company"]["story"]
+    ), "Follow-up prompt content leaked into customer-facing copy."
+    # Operator visibility is preserved via meta.followUpPrompt.
+    assert followup_meta["followUpPrompt"].startswith("Lägg till ett tydligt")
+
+
+@pytest.mark.tooling
+def test_pointer_writes_use_atomic_replace(tmp_path: Path) -> None:
+    """B60 fynd 3: pointer files must be written via tempfile + replace,
+    never `Path.write_text` directly. Source-lock the helper names so a
+    refactor cannot regress to non-atomic writes that leave readers
+    observing half-written JSON.
+    """
+    helper_path = REPO_ROOT / "scripts" / "prompt_to_project_input.py"
+    text = helper_path.read_text(encoding="utf-8")
+    assert "_atomic_write_text" in text, (
+        "scripts/prompt_to_project_input.py måste exponera "
+        "_atomic_write_text-helpern (tempfile + os.replace) som används "
+        "för pointer-filerna."
+    )
+    assert "os.replace(tmp_name, path)" in text, (
+        "Pointer-uppdateringen måste gå via os.replace för att vara "
+        "atomic; en framtida refactor får inte regressera till en "
+        "vanlig Path.write_text på pointer-pathen."
+    )
+    assert "_atomic_write_text(current_project_input_path" in text, (
+        "write_project_input måste använda _atomic_write_text för "
+        "current pointer Project Input."
+    )
+    assert "_atomic_write_text(current_meta_path" in text, (
+        "write_project_input måste använda _atomic_write_text för "
+        "current pointer meta."
+    )
+    # Tempfile is empty after a successful write (the actual scratch dir
+    # used by tests is `tmp_path`; functional verification happens via
+    # test_generate_writes_project_input_and_meta which reads the
+    # final pointer payload).
+    assert tmp_path.is_dir()

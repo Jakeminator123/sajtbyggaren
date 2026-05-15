@@ -190,6 +190,74 @@ def test_prompt_input_meta_threads_followup_version_into_run_artifacts(
     assert build_v2["version"] == 2
 
 
+@pytest.mark.tooling
+def test_load_prompt_input_meta_fails_loud_when_versioned_sidecar_missing(
+    tmp_path: Path,
+) -> None:
+    """B60 fynd 4: missing sidecars must be classified by context.
+
+    Three scenarios that the builder distinguishes:
+
+    1. ``data/prompt-inputs/<siteId>.vN.project-input.json`` without an
+       adjacent ``.vN.meta.json`` -> corrupt state, fail loudly.
+    2. ``data/prompt-inputs/<siteId>.project-input.json`` (current
+       pointer) without an adjacent ``<siteId>.meta.json`` -> also
+       corrupt state, fail loudly.
+    3. ``examples/<siteId>.project-input.json`` without a sidecar ->
+       curated example, init-mode is the documented contract.
+
+    Pre-B60 all three returned tyst init, which masked corruption in
+    cases 1 and 2.
+    """
+    import json as _json
+
+    from scripts.build_site import load_prompt_input_meta
+
+    prompt_inputs_dir = tmp_path / "prompt-inputs"
+    prompt_inputs_dir.mkdir()
+
+    # Case 1: versioned snapshot without its sidecar (under prompt-inputs).
+    versioned_dossier = prompt_inputs_dir / "ghost-site.v3.project-input.json"
+    versioned_dossier.write_text(
+        _json.dumps({"siteId": "ghost-site"}, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    assert not (prompt_inputs_dir / "ghost-site.v3.meta.json").exists()
+    with pytest.raises(SystemExit, match="prompt meta sidecar missing"):
+        load_prompt_input_meta(
+            versioned_dossier,
+            {"siteId": "ghost-site"},
+        )
+
+    # Case 2: current pointer without its sidecar, but under prompt-inputs/.
+    current_pointer = prompt_inputs_dir / "lonely-site.project-input.json"
+    current_pointer.write_text(
+        _json.dumps({"siteId": "lonely-site"}, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    assert not (prompt_inputs_dir / "lonely-site.meta.json").exists()
+    with pytest.raises(SystemExit, match="prompt meta sidecar missing"):
+        load_prompt_input_meta(
+            current_pointer,
+            {"siteId": "lonely-site"},
+        )
+
+    # Case 3: curated example layout. Same filename pattern as a current
+    # pointer, but path is `examples/`, so init-mode is the contract.
+    examples_dir = tmp_path / "examples"
+    examples_dir.mkdir()
+    curated_dossier = examples_dir / "painter-palma.project-input.json"
+    curated_dossier.write_text(
+        _json.dumps({"siteId": "painter-palma"}, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    result = load_prompt_input_meta(
+        curated_dossier,
+        {"siteId": "painter-palma"},
+    )
+    assert result == {"mode": "init"}
+
+
 # ---------------------------------------------------------------------------
 # B6/B10 - runId must not collide on rapid regeneration
 # ---------------------------------------------------------------------------

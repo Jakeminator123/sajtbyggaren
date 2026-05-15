@@ -34,8 +34,10 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import os
 import re
 import sys
+import tempfile
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -375,6 +377,53 @@ def _versioned_meta_path(output_dir: Path, site_id: str, version: int) -> Path:
     return output_dir / f"{site_id}.v{version}.meta.json"
 
 
+def _write_immutable_snapshot(path: Path, payload: str) -> None:
+    """Write a versioned snapshot file with O_EXCL semantics.
+
+    `.vN.project-input.json` / `.vN.meta.json` must be immutable so older
+    versions stay byte-stable across rebuilds and concurrent follow-ups.
+    `open(..., "x")` raises FileExistsError when the target path already
+    exists; we surface that as a SystemExit so a stale or racing call
+    cannot silently overwrite a previously-written version snapshot
+    (B60 fynd 1).
+    """
+    try:
+        with open(path, "x", encoding="utf-8") as handle:
+            handle.write(payload)
+    except FileExistsError as exc:
+        raise SystemExit(
+            f"Versioned snapshot already exists: {path}. "
+            "Snapshots are immutable; bump the version or remove the "
+            "existing file manually."
+        ) from exc
+
+
+def _atomic_write_text(path: Path, payload: str) -> None:
+    """Write to a sibling tempfile and atomically replace the target.
+
+    Pointer files (`<siteId>.project-input.json` / `<siteId>.meta.json`)
+    are mutable, but readers must never observe a half-written or
+    truncated payload. Staging to a tempfile in the same directory and
+    then `os.replace`-ing onto the target gives a single atomic step on
+    POSIX and a near-atomic one on Windows (B60 fynd 3).
+    """
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        dir=str(path.parent),
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(payload)
+        os.replace(tmp_name, path)
+    except Exception:
+        try:
+            os.unlink(tmp_name)
+        except FileNotFoundError:
+            pass
+        raise
+
+
 def write_project_input(
     project_input: dict[str, Any],
     meta: dict[str, Any],
@@ -388,6 +437,11 @@ def write_project_input(
     unversioned ``<siteId>.project-input.json`` / ``<siteId>.meta.json``
     files remain as the operator-visible "latest" pointers for Viewser
     selection and follow-up lookup.
+
+    Versioned snapshots are written with `_write_immutable_snapshot`
+    (refuses to overwrite an existing version) and pointer files via
+    `_atomic_write_text` (tempfile + rename, never half-written). See
+    B60 fynd 1 + 3 for context.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     site_id = project_input["siteId"]
@@ -407,16 +461,10 @@ def write_project_input(
     current_project_input_path = _current_project_input_path(output_dir, site_id)
     current_meta_path = _current_meta_path(output_dir, site_id)
 
-    versioned_project_input_path.write_text(
-        project_input_payload,
-        encoding="utf-8",
-    )
-    versioned_meta_path.write_text(meta_payload, encoding="utf-8")
-    current_project_input_path.write_text(
-        project_input_payload,
-        encoding="utf-8",
-    )
-    current_meta_path.write_text(meta_payload, encoding="utf-8")
+    _write_immutable_snapshot(versioned_project_input_path, project_input_payload)
+    _write_immutable_snapshot(versioned_meta_path, meta_payload)
+    _atomic_write_text(current_project_input_path, project_input_payload)
+    _atomic_write_text(current_meta_path, meta_payload)
     return versioned_project_input_path, versioned_meta_path
 
 
@@ -553,13 +601,16 @@ def merge_followup_project_input(
     if not company.get("tagline") and isinstance(candidate_company, dict):
         company["tagline"] = candidate_company.get("tagline")
 
-    previous_story = " ".join(str(company.get("story", "")).split())
-    follow_up_note = " ".join(follow_up_prompt.split())[:500]
-    if follow_up_note:
-        suffix = f" Follow-up request: {follow_up_note}"
-        if suffix not in previous_story:
-            company["story"] = (previous_story + suffix).strip()
+    # B60 fynd 2: never inject the follow-up prompt into `company.story`.
+    # That field is rendered as customer-facing copy on /om-oss
+    # (`render_about` in build_site.py); pre-B60 the merge appended an
+    # English `Follow-up request: ...`-suffix, which leaked internal
+    # workflow context onto the public site. The follow-up prompt is
+    # already preserved via `meta.followUpPrompt`, so the renderer-side
+    # copy stays clean and Viewser can still surface the operator's
+    # latest prompt from the sidecar.
     merged["company"] = company
+    _ = follow_up_prompt  # kept on the API for future semantic-patch hooks
 
     merged["services"] = _merge_services(
         list(previous.get("services") or []),
