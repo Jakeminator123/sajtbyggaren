@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-14 (post-Viewser/build-result observability)
-**Aktuell repo-HEAD på `main`:** `ac0bb0a` (Builder observability efter mismatch-debug: failed npm-steg sparar nu `npmSteps[].logExcerpt` i `build-result.json`, och Viewser Run Details visar både `devPreviewDir` och loggutdrag. Fixen ändrar inte build-statuslogik, Next-version, StackBlitz-runtime eller starterval). Bygger på `fc07262` (docs focus-bump efter B56 reconciliation), `e1acab9` (docs reconciliation efter B56/B57/B58), `8fae26a` (B56/B57/B58 fix-commit som landade kod + tester + B56-stängningsnotering), `e565490` (operatörens chore: dev-panel.ps1 launcher), `47df728` (focus-bump A-mini), `2ad01a2` (A-mini cleanup B51/B52/B54/B55), `f787eb7` (B50 Scout-follow-up), `4940cbb` (B50 huvudfix), `e026642` (orkestrator-playbook), `27f7fe9` (focus efter PR #26), `1cba454` (PR #26 produktkompass), `6daee58` (B45 contact-route propagation), `3178a82` (parallell-agent + operator workspace-cleanup), `c073d486` (PR #25 AGENTS.md gotcha för `/sajtbyggaren-output`-permissions), `19c3564` (Steward focus-bump efter PR #24), `c2d8632` (PR #24 docs-base starter + B49-fixup), `97ce7a8` workspace-cleanup, `10eb286` B48 follow-up-semantik, `5d746e9` audit-fix B44+B46. Kör `git log --oneline -1` för senaste lokala SHA.
-**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-18` finns lokalt från pre-B57/B58, `backup-17` finns lokalt från pre-A-mini cleanup, `backup-16` finns lokalt från pre-Scout-follow-up, `backup-15` finns lokalt från B50 pre-sprint. PR #26:s branch `cursor/product-operating-context` är raderad på GitHub. No-op-branchen `fix/b56-stackblitz-webpack-dev` är raderad lokalt + remote efter reconciliation (den pekade på samma SHA som `main` och hade ingen egen historia). Kvarvarande remote arbetsbrancher som inte ska raderas utan separat beslut: `feat/backoffice-trace-playground-cleanup` (ingen egen PR, inte ancestry-mergead efter squash) och `frontend/christopher-import` (PR #17 stängd utan merge, reference only).
+**Datum:** 2026-05-15 (post-StackBlitz preview cleanup commit)
+**Aktuell repo-HEAD på `main`:** `cf523ed` (ADR 0021 + known-issues-rad landad efter payload-hardening-sprinten. Föregående två commits i samma svep: `488f8a0` för Viewser StackBlitz payload-hardening och `d9c244a` för server-lifecycle-discipline-regeln. Scope är fortsatt preview-payload-only; inga ändringar i `data/starters/`, `scripts/build_site.py` eller `packages/preview-runtime/stackblitz`). Kör `git log --oneline -1` för senaste lokala SHA.
+**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-15` finns lokalt och på origin från cleanup-svepet. Inga öppna PRs.
 **Stash-läge:** `git stash list` är tom. Den tidigare stale B56-stashen (innehöll äldre version av `ensureWebpackFlag`/`patchPackageJsonForStackblitz` utan B58-allowlistet eller `Buffer.byteLength`-beräkningen) droppades i reconciliation-passet eftersom fixen redan var integrerad i `8fae26a` på `main`.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
@@ -98,13 +98,13 @@ Tre lager:
 
 ## Nästa konkreta uppgift
 
-Se `docs/current-focus.md` → **"Next action"**. Kort version: `main` är i bra läge utan öppna PRs, och B50 är stängd i `4940cbb` + canonical route-path follow-up `f787eb7`:
+Se `docs/current-focus.md` → **"Next action"**. Kort version: nästa pass är smal verifiering av grön marketing/local-service-run i lokal preview + StackBlitz:
 
-1. **B49 page-map-driven sidebar för `docs-base`** — krävs innan `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`. Antingen återinför Nextra-theme-docs `Layout` eller bygg lokal `_meta.ts`-/filsystem-driven nav.
-2. **B47 commerce-base Shopify-handles** — dokumentera starterkrav eller bygg fallback.
-3. **B13a arkitektur-flytt** — `scripts/build_site.py` produktlogik till `packages/generation/build/`. Egen sprint, kräver troligen egen ADR (rör mappgränser i `repo-boundaries.v1.json`). Destinationen pre-allokerad i `.gitignore` + `.cursorignore` (kommit `b4fe4a8`).
-4. **`write_pages` icon-bibliotek-agnostisk refactor** — lyfter den arkitekturskuld som ADR 0020 explicit lämnade öppen. Förebygger att samma lucide-typen av starter-vs-codegen-konflikt uppstår igen för en framtida starter utan lucide.
-5. **Cancellation-followup** — lågprioriterad separat sprint om operatören behöver avbryta redan startade playground-körningar.
+1. Verifiera lokal generated build (`npm install`, rensa `.next`, `npm run build`, `npm run start`).
+2. Verifiera att `/api/runs/<runId>/files` innehåller lockfile + payload-override (`app/global-error.tsx`) samt rätt package.json-patchning (`dev/build --webpack`, `startCommand` för build+start).
+3. Verifiera att `.env*` fortsatt blockas i payload (utom `.env.example`).
+4. Verifiera StackBlitz-preview för samma grön-run och rapportera första riktiga terminalfelrad vid fail.
+5. Håll scope preview-payload-only (inga starter-/builder-/runtime-ändringar i detta verifieringspass).
 
 PromptBuilder stage-timeout är inte längre listad som aktiv nice-to-have; Scout verifierade att cleanup redan finns.
 

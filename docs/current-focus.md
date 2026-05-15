@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `ac0bb0a` (2026-05-14, Builder observability efter Viewser/build-result mismatch-debug. `ac0bb0a` sparar `npmSteps[].logExcerpt` för failed npm-steg i `build-result.json` och visar `devPreviewDir` + loggutdrag i Viewser Run Details. Detta ändrar inte build-statuslogik, Next-version, StackBlitz-runtime eller starterval; syftet är att framtida transient/false-negative build failures behåller första riktiga npm-felet. Föregående B56/B57/B58-spår landade i `8fae26a` och docs-reconciliation i `e1acab9`; no-op-branchen `fix/b56-stackblitz-webpack-dev` är raderad lokalt + remote. Inga öppna PRs.)
+Last verified state: `cf523ed` (2026-05-15, docs + ADR-synk efter StackBlitz preview payload-hardening. Tre atomiska commits landade på `main`: regel för server-lifecycle-discipline, Viewser payload-hardening i `stackblitz-files.ts` + tester, samt ADR 0021 + known-issues-rad. `backup-15` finns lokalt och på origin. Inga öppna PRs.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `ac0bb0a` lokalt, en fokuserad Builder observability-fix efter att Viewser visade `buildStatus=failed` för run `20260514T103907.897Z-91113f6f-skapa-en-hemsida-f-r-en-bb1e4e` trots att rätt `devPreviewDir` byggde grönt manuellt. Fyndet var att den gamla artefakten pekade på rätt preview-mapp och snapshoten matchade preview-källfilerna, men `build-result.json`/`trace.ndjson` sparade bara `ok=False` och saknade npm stdout/stderr/loggutdrag. Fixen sparar därför failed npm-stegs `logExcerpt` i `build-result.json` och visar `devPreviewDir` + excerpt i Run Details. Föregående docs-head är `fc07262`; B56/B57/B58 kod landade i `8fae26a` och docs-reconciliation i `e1acab9`. B53 (`governance/schemas/routes.schema.json` för scaffold-routes-kontrakt) är fortsatt queue-item, inte implementerad i denna sprint.
+`main` är vid `cf523ed` lokalt och på origin. StackBlitz-preview-spåret är nu dokumenterat och avgränsat till preview-payload-only: `apps/viewser/lib/stackblitz-files.ts` patchar in-memory (`next dev/build --webpack`, `npm run build && npm run start`, lockfile med i payload, `app/global-error.tsx`-override), medan `apps/viewser/next.config.ts` fortsatt är tom och testet låser att global COEP/COOP inte sätts i Viewser. Ingen ändring är gjord i starters, builder eller preview-runtime-paketet; ADR 0021 är källan för beslut/avgränsning.
 
 Läget bygger på orkestrator-playbooken i `e026642`, `27f7fe9` (focus efter PR #26), PR #26:s produktkompass (`docs/product-operating-context.md`) i `1cba454`, `6daee58` (B45 `_pick_contact_route`-propagation till layout/home/services/products), `c2d8632` (PR #24 docs-base starter, squash-merge), `10eb286` (B48 follow-up-semantik i dev-driver/backoffice), `5d746e9` (Builder audit-fix för B44 + B46) och `9944abb` efter Prompt-till-sajt MVP v1 (Builder-
 sprint 2026-05-13/14, Scout-RO-godkänd), review-hotfix för
@@ -287,35 +287,25 @@ orkestrator-playbooken för längre fleragentpass är klara. Inga öppna PRs.
 
 ## Next action - direktiv till nästa agent
 
-**Read-only Grind/Scout: demo-baseline-audit för kärnflödet.**
+**Steward/Scout verifieringspass: grön marketing/local-service-run lokalt + StackBlitz.**
 
-Operatörens coach-beslut 2026-05-14 (efter A-mini cleanup): nästa pass
-ska INTE vara B49 docs-base sidebar och INTE en ny starter. Båda
-breddar produkten innan kärnflödet är bevisat. Istället sätts en
-read-only grind-agent på demo-baseline-audit som mäter:
+Nästa pass ska verifiera att preview-hardeningen faktiskt håller i en
+grön run (inte commerce-failrun), med fokus på kärnflödet:
 
-```text
-prompt -> företagshemsida -> preview -> följdprompt -> ny version
-```
+1. Välj eller skapa en grön marketing/local-service-run.
+2. Verifiera lokalt i generated dir: `npm install`, rensa `.next`,
+   `npm run build`, `npm run start`.
+3. Verifiera `/api/runs/<runId>/files`:
+   - `package-lock.json` finns i payload
+   - `app/global-error.tsx` finns i payload
+   - `.env`, `.env.local`, `.env.production` saknas
+   - `package.json` i payload har `dev/build --webpack` och
+     `stackblitz.startCommand = "npm run build && npm run start"`
+4. Verifiera StackBlitz-preview för samma run och rapportera första
+   riktiga terminalfelrad om den failar.
 
-mot fyra konkreta småföretagstestfall (elektriker Malmö, frisörsalong
-Göteborg, naprapatklinik Stockholm, liten keramik-e-handel). Målet är
-att hitta vad som faktiskt blockerar en trovärdig första produktdemo,
-inte att lägga till ny yta.
-
-Förväntad rapport från grind-agenten:
-
-1. Kan vi demonstrera 4 sajter idag? Ja/nej.
-2. Vilka av 4 passerar build?
-3. Vilka av 4 får rimlig preview?
-4. Grov kvalitetspoäng per sajt (1-10 på 8 axlar).
-5. Topp 3 blockers.
-6. Minsta nästa Builder-sprint.
-7. Om B49 bör tas före/efter quality baseline.
-8. Om ny starter fortfarande är rätt nästa steg eller bör vänta.
-
-Grind-agenten får INTE editera, committa, pusha eller skapa PR. Den
-levererar rapport som operatören kan skicka till sin reviewer.
+Detta ska göras utan breda arkitekturändringar och utan att flytta
+scope till starters/builder/runtime-paket.
 
 Föregående cleanup-status:
 

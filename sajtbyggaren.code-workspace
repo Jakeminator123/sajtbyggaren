@@ -6,6 +6,7 @@
     }
   ],
   "settings": {
-    "files.autoSave": "afterDelay"
+    "files.autoSave": "afterDelay",
+    "markdown.validate.enabled": true
   }
 }
