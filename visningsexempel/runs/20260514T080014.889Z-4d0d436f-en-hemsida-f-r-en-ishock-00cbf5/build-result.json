@@ -1,0 +1,70 @@
+{
+  "siteId": "en-hemsida-f-r-en-ishock-00cbf5",
+  "starterId": "marketing-base",
+  "scaffoldId": "local-service-business",
+  "scaffoldVersion": "1.0.0",
+  "variantId": "nordic-trust",
+  "language": "sv",
+  "engineMode": "init",
+  "buildSource": "scripts/build_site.py",
+  "modelUsed": "gpt-5.4",
+  "briefSource": "real",
+  "routes": [
+    "/",
+    "/kontakt",
+    "/om-oss",
+    "/tjanster"
+  ],
+  "generatedFilesDir": "data/runs/20260514T080014.889Z-4d0d436f-en-hemsida-f-r-en-ishock-00cbf5/generated-files",
+  "devPreviewDir": "C:/Users/jakem/Desktop/sajtbyggaren-output/.generated/en-hemsida-f-r-en-ishock-00cbf5",
+  "npmSteps": [
+    {
+      "name": "npm install",
+      "ok": true,
+      "seconds": 36.8
+    },
+    {
+      "name": "npm run build",
+      "ok": false,
+      "seconds": 7.3
+    }
+  ],
+  "modelUsage": {
+    "byRole": {
+      "briefModel": null,
+      "planningModel": null,
+      "codegenModel": {
+        "promptTokens": 524,
+        "completionTokens": 162,
+        "totalTokens": 686
+      }
+    },
+    "totalInputTokens": 524,
+    "totalOutputTokens": 162,
+    "totalCostUsd": 0.0,
+    "currency": "USD",
+    "source": "real"
+  },
+  "finalize": {
+    "snapshotDir": "data/runs/20260514T080014.889Z-4d0d436f-en-hemsida-f-r-en-ishock-00cbf5/generated-files",
+    "snapshotedAt": "2026-05-14T08:01:11.052932+00:00"
+  },
+  "status": "failed",
+  "runDurationMs": 56268,
+  "codegen": {
+    "source": "real",
+    "modelUsed": "gpt-5.4",
+    "fileCount": 7,
+    "rationale": "Strategin här är att låta startsidan bära konverteringen med tydlig lokal förtroendekänsla och snabb väg till kontakt, medan /tjanster förklarar erbjudandet, /om-oss bygger trygghet och /kontakt fångar upp leadsen med låg friktion. Eftersom inget Dossier-material finns hålls copy generisk, trovärdig och lätt att anpassa när verksamhetsdetaljer fylls på.",
+    "riskNotes": [
+      "Okänd verksamhet gör budskapet lätt för generiskt.",
+      "Saknade konverteringsmål kan ge svag CTA-prioritering.",
+      "Utan Dossier saknas konkreta bevis, case eller differentiering."
+    ],
+    "usage": {
+      "promptTokens": 524,
+      "completionTokens": 162,
+      "totalTokens": 686
+    }
+  }
+}

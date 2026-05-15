@@ -1,0 +1,48 @@
+{
+  "$schema": "../governance/schemas/project-input.schema.json",
+  "siteId": "en-hemsida-f-r-en-ishock-00cbf5",
+  "scaffoldId": "local-service-business",
+  "variantId": "nordic-trust",
+  "language": "sv",
+  "company": {
+    "name": "En hemsida för en ishockeyspelare som nått hall of fame. jak",
+    "businessType": "service-provider",
+    "tagline": "Svenskspråkig webbplats med 2 sidor för ishockeyspelaren Jakob Eberg, med fokus på hans hall of fame-meriter.",
+    "story": "En hemsida för en ishockeyspelare som nått hall of fame. jakob Eberg heter han och han vill ha två sidror!"
+  },
+  "location": {
+    "city": "Sverige",
+    "country": "Sverige",
+    "serviceAreas": [
+      "Sverige"
+    ]
+  },
+  "services": [
+    {
+      "id": "konsultation",
+      "label": "Konsultation",
+      "summary": "Inledande konsultation - platshållare som genererats från din prompt. Justera Project Input för att förbättra texten."
+    }
+  ],
+  "tone": {
+    "primary": "trustworthy",
+    "secondary": [],
+    "avoid": []
+  },
+  "trustSignals": [],
+  "conversionGoals": [],
+  "requestedCapabilities": [],
+  "contact": {
+    "phone": "+46 8 000 00 00",
+    "email": "kontakt@example.se",
+    "addressLines": [
+      "Adress saknas - uppdatera Project Input"
+    ],
+    "openingHours": "Mån-Fre 09:00-17:00"
+  },
+  "selectedDossiers": {
+    "required": [],
+    "recommended": [],
+    "rationale": "Auto-generated from prompt; operator may add Dossiers in the Project Input file before re-building."
+  }
+}

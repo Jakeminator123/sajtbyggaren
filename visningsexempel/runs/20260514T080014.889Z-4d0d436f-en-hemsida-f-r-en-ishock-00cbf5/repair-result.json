@@ -1,0 +1,12 @@
+{
+  "status": "no-fix-applied",
+  "reason": "Sprint 3B v1: mechanical fix registry ships ensure-default-export only. Quality Gate findings outside that scope are surfaced as remainingErrors for operator review (LLM-fix lands in Sprint 5+ per ADR 0015 + 0016).",
+  "mechanicalFixesApplied": [],
+  "llmFixesApplied": [],
+  "remainingErrors": [
+    "build-status: npm run build"
+  ],
+  "qualityStatusBefore": "failed",
+  "qualityStatusAfter": "failed",
+  "iterations": 0
+}
