@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-15 (post B60-fix för PR #27 follow-up versioning)
-**Aktuell repo-HEAD på `main`:** `65f052a` (`fix(prompt-helper): harden follow-up snapshots and meta loading (B60)`). Föregående mainline-pushar samma dag: `dd5464f` (Steward sanity-bump efter PR #27), `e057fbd` (PR #27 follow-up prompt versions squash-merge), `86d03bf` (B59 StackBlitz WebContainer embed-blocker dokumenterad), `210a1d1` (Cursor API key-placeholder i `.env.example`), `9927bd2` (StackBlitz payload size-handling härdad), `4b98d8b` (visningsexempel-artefakter borttagna), `869b2da` (workspace settings + prior docs sync), `cf523ed` (ADR 0021 + known-issues-rad efter StackBlitz preview payload-hardening). Kör `git log --oneline -1` för senaste lokala SHA.
-**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-15`, `backup-16` (post-merge sanity-pass för PR #27) och `backup-17` (B60-passet) finns lokalt och på origin. Nästa Builder/Scout-pass ska skapa nästa lediga `backup-N` från synkad `main` innan sprintarbete. Inga öppna PRs.
+**Datum:** 2026-05-15 (post cleanup/prune-sprint för dev-preview-tree)
+**Aktuell repo-HEAD på `main`:** `2acdeca` (`feat(scripts): add prune_generated_previews.py with dry-run default`) plus en docs-bump-commit ovanpå. Föregående mainline-pushar samma dag: `7b90c0c` (Steward-sync efter B60), `65f052a` (B60-fixen för PR #27-kontraktsbrott), `dd5464f` (Steward sanity-bump efter PR #27), `e057fbd` (PR #27 follow-up prompt versions squash-merge), `86d03bf` (B59 StackBlitz WebContainer embed-blocker dokumenterad), `210a1d1` (Cursor API key-placeholder i `.env.example`), `9927bd2` (StackBlitz payload size-handling härdad), `4b98d8b` (visningsexempel-artefakter borttagna), `869b2da` (workspace settings + prior docs sync), `cf523ed` (ADR 0021 + known-issues-rad efter StackBlitz preview payload-hardening). Kör `git log --oneline -1` för senaste lokala SHA.
+**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-15`, `backup-16` (post-merge sanity-pass för PR #27), `backup-17` (B60-passet) och `backup-18` (cleanup/prune-passet) finns lokalt och på origin. Nästa Builder/Scout-pass ska skapa nästa lediga `backup-N` från synkad `main` innan sprintarbete. Inga öppna PRs.
 **Stash-läge:** `git stash list` är tom. Den tidigare stale B56-stashen (innehöll äldre version av `ensureWebpackFlag`/`patchPackageJsonForStackblitz` utan B58-allowlistet eller `Buffer.byteLength`-beräkningen) droppades i reconciliation-passet eftersom fixen redan var integrerad i `8fae26a` på `main`.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
@@ -114,28 +114,27 @@ Tre lager:
 
 ## Nästa konkreta uppgift
 
-Se `docs/current-focus.md` → **"Next action"**. Kort version: post-merge
-sanity för PR #27 är grön (smoke 2026-05-15 verifierade siteId/projectId-
-stabilitet, v1 bit-för-bit immutabel, ProjectInputPicker filtrerade
-`.vN`-snapshots). B60 stängde sedan de fyra kontraktsbrott som auditen
-hittade i samma pass (immutability, story-leakage, atomic pointers,
-load_prompt_input_meta-fail-loud).
+Se `docs/current-focus.md` → **"Next action"**. Kort version:
+cleanup/prune-sprinten är klar (`scripts/prune_generated_previews.py`
+med dry-run default + `--apply`-gate + current-pointer-skydd från
+`data/prompt-inputs/` pointer-filer (filtrerar `.vN`-snapshots) +
+`data/runs/*/build-result.json` siteIds + port-3000-refusal +
+optional psutil cwd-check, plus tio regression-tester och utvidgad
+`check_term_coverage`-allowlist). Smoke-körning mot lokala `.generated/`
+visade 12 toplevel-kataloger, 2 protected via current pointer, 10
+inom retention-cap; ingen mappa skulle raderas på nuvarande
+`keep-per-site=3 keep-total=10`. Inga lokala root-loggar att rensa.
 
-Nästa naturliga steg är **cleanup/prune-sprinten** (queue-item 1):
-
-1. Skapa nästa lediga `backup-N` från synkad `main`.
-2. Rensa repo-rotens lokala körloggar (`npm-build-*.log`,
-   `npm-install-*.log`, `viewser-dev*.log`) - alla gitignored.
-3. Implementera `scripts/prune_generated_previews.py` med dry-run
-   default. Per Scout-spec: `SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN=true`
-   default, `--apply` krävs för radering, `--keep-per-site=N` (default
-   3), `--keep-total=N` (default 10). Skydda current pointers från
-   `data/prompt-inputs/*.project-input.json` + `data/runs/*/build-result.json`.
-   Stoppa om target är "live" (port 3000 i bruk eller cwd under en
-   target-katalog). Rör aldrig `data/runs/`, `.env*` eller
-   `data/prompt-inputs/`.
-4. Regression-tester: dry-run-default, current-pointer-skydd,
-   live-target-detektering, retention-räkning.
+Nästa naturliga steg är **demo-baseline-audit** (queue-item 2):
+read-only Grind/Scout-pass som mäter kärnflödet (`prompt -> sajt ->
+preview -> följdprompt -> ny version`) mot fyra testfall (elektriker
+Malmö, frisör Göteborg, naprapatklinik Stockholm, keramik-e-handel)
+och levererar quality-scorecard + topp 3 blockers. Audit-rapporten
+styr nästa Builder-sprint - sannolikt demo-baseline-fixar för topp
+1-2 fynd, men kan också flytta upp follow-up-promptens semantic
+patching (idag bevarar `merge_followup_project_input` story/tagline/
+tone byte-för-byte; en operatör som ber om "byt ton" eller "ändra
+story" får inget synligt utfall) som egen produkt-/Project DNA-sprint.
 
 PromptBuilder stage-timeout är inte längre listad som aktiv nice-to-have;
 Scout verifierade att cleanup redan finns.
@@ -194,6 +193,8 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+2acdeca feat(scripts): add prune_generated_previews.py with dry-run default
+7b90c0c docs: record B60 fix and bump verified SHA
 65f052a fix(prompt-helper): harden follow-up snapshots and meta loading (B60)
 dd5464f docs: sync current-focus and handoff after PR #27 merge
 e057fbd feat(viewser): preserve follow-up prompt versions (#27)

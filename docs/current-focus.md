@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `65f052a` (2026-05-15, B60 fix landad direkt på `main`. `fix(prompt-helper): harden follow-up snapshots and meta loading (B60)` stängde fyra kontraktsbrott från post-merge audit av PR #27: versionerade snapshots write-once via `open(..., "x")`, follow-up-prompten injiceras inte längre i `company.story` (engelsk workflow-text läckte ut på `/om-oss`), pointer-files skrivs atomic via `tempfile.mkstemp` + `os.replace`, och `load_prompt_input_meta` failar nu loud på saknad sidecar för versionerade snapshots eller current pointer under `data/prompt-inputs/` (curated examples utanför mappen behåller init-mode-kontraktet). Steward-sync efter B60: `dd5464f` (post-PR-#27 sanity-bump), och föregående mainline-pushar samma dag: `e057fbd` (PR #27 follow-up versions squash-merge), `86d03bf` (B59 StackBlitz WebContainer embed-blocker), `210a1d1` (Cursor API key-placeholder), `9927bd2` (StackBlitz payload size-handling), `4b98d8b` (visningsexempel-artefakter borttagna), `869b2da` (workspace settings + prior docs sync). `backup-15`, `backup-16`, `backup-17` finns lokalt och på origin. Inga öppna PRs.)
+Last verified state: `2acdeca` (2026-05-15, cleanup/prune-sprinten landad direkt på `main`. `feat(scripts): add prune_generated_previews.py with dry-run default` stängde queue-item 1 från post-B60-cleanup-spec: nytt `scripts/prune_generated_previews.py` med dry-run default, `--apply`-flagga för faktisk radering, `SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN=true`-env som operatörsspärr, current-pointer-skydd från `data/prompt-inputs/<siteId>.project-input.json` (filtrerar bort `.vN.project-input.json`-snapshots) + `data/runs/*/build-result.json:siteId`, port-3000-guard på `--apply`, optional psutil cwd-check. Tio nya regression-tester i `tests/test_prune_generated_previews.py` täcker dry-run-default, current-pointer-skydd från båda källor, versioned-snapshot-undantag, port-3000-refusal, per-site-cap, total-cap, faktisk apply-deletion, och env-override för generated-dir. `scripts/check_term_coverage.py` allowlist utökad med psutil-/builtin-/pytest-symboler + PowerShell `-ErrorAction`/`SilentlyContinue`. Inga `data/runs/`/`data/prompt-inputs/`/`.env*`/StackBlitz-filer rörda. `backup-18` skapad från synkad `main` innan sprintarbetet (lokalt + push). Föregående mainline-pushar samma dag: `7b90c0c` (Steward-sync efter B60), `65f052a` (B60 fix), `dd5464f` (post-PR-#27 sanity-bump), `e057fbd` (PR #27 follow-up versions squash-merge), `86d03bf` (B59 StackBlitz WebContainer embed-blocker), `210a1d1` (Cursor API key-placeholder), `9927bd2` (StackBlitz payload size-handling). `backup-15`, `backup-16`, `backup-17`, `backup-18` finns lokalt och på origin. Inga öppna PRs.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `65f052a` lokalt och på origin. B60 är stängd: follow-up-versioneringen från PR #27 hade fyra kontraktsbrott som upptäcktes i post-merge audit (versionerade snapshots inte immutabla, follow-up-prompt läckte i `company.story`, icke-atomisk pointer-update, tyst init-fallback vid saknad sidecar) och alla fyra är nu fixade i `scripts/prompt_to_project_input.py` + `scripts/build_site.py:load_prompt_input_meta` med 5 nya/uppdaterade regression-tester. PR #27 (`feat(viewser): preserve follow-up prompt versions`, `e057fbd`) är fortfarande merge-baseline: follow-up promptar skriver immutable `<siteId>.vN.project-input.json`/`<siteId>.vN.meta.json`-snapshots i `data/prompt-inputs/`, behåller `projectId`/`originalPrompt` och lägger `followUpPrompt` på snapshot-meta. `scripts/build_site.py` läser sidecar-meta intill dossier-pathen och trådar `mode`/`projectId`/`version`/`originalPrompt`/`followUpPrompt` in i `input.json`, `generation-package.json` och `build-result.json`. `apps/viewser/lib/runs.ts` läser per-run-meta från `build-result.json` -> `input.json` -> mutable sidecar legacy-fallback, så RunHistory visar stabil `projectId` + `version` även när nya follow-ups landar. `apps/viewser/lib/project-inputs.ts` filtrerar `.vN.project-input.json`-snapshots från ProjectInputPicker (bara current pointer är valbar). `apps/viewser/lib/prompt-runner.ts` + `lib/build-runner.ts` föredrar repo-roten `.venv` Python när den finns (cloud/lokal dev-konsistens) och cleanar prompt-/build-mutex via `try/finally`.
+`main` är vid `2acdeca` lokalt och på origin (plus en docs-bump-commit ovanpå). Cleanup/prune-sprinten är klar: nytt `scripts/prune_generated_previews.py` med dry-run default + `--apply`-gate + current-pointer-skydd + port-3000-refusal landade tillsammans med tio nya regression-tester i `tests/test_prune_generated_previews.py` och utvidgad allowlist i `scripts/check_term_coverage.py`. B60 är stängd: follow-up-versioneringen från PR #27 hade fyra kontraktsbrott som upptäcktes i post-merge audit (versionerade snapshots inte immutabla, follow-up-prompt läckte i `company.story`, icke-atomisk pointer-update, tyst init-fallback vid saknad sidecar) och alla fyra är nu fixade i `scripts/prompt_to_project_input.py` + `scripts/build_site.py:load_prompt_input_meta` med 5 nya/uppdaterade regression-tester. PR #27 (`feat(viewser): preserve follow-up prompt versions`, `e057fbd`) är fortfarande merge-baseline: follow-up promptar skriver immutable `<siteId>.vN.project-input.json`/`<siteId>.vN.meta.json`-snapshots i `data/prompt-inputs/`, behåller `projectId`/`originalPrompt` och lägger `followUpPrompt` på snapshot-meta. `scripts/build_site.py` läser sidecar-meta intill dossier-pathen och trådar `mode`/`projectId`/`version`/`originalPrompt`/`followUpPrompt` in i `input.json`, `generation-package.json` och `build-result.json`. `apps/viewser/lib/runs.ts` läser per-run-meta från `build-result.json` -> `input.json` -> mutable sidecar legacy-fallback, så RunHistory visar stabil `projectId` + `version` även när nya follow-ups landar. `apps/viewser/lib/project-inputs.ts` filtrerar `.vN.project-input.json`-snapshots från ProjectInputPicker (bara current pointer är valbar). `apps/viewser/lib/prompt-runner.ts` + `lib/build-runner.ts` föredrar repo-roten `.venv` Python när den finns (cloud/lokal dev-konsistens) och cleanar prompt-/build-mutex via `try/finally`.
 
 StackBlitz-preview-spåret är fortsatt avgränsat till preview-payload-only: `apps/viewser/lib/stackblitz-files.ts` patchar in-memory (`next dev/build --webpack`, `npm run build && npm run start`, lockfile med i payload, `app/global-error.tsx`-override, patched payload-bytes mot size cap, `next start`-fallback), medan `apps/viewser/next.config.ts` fortsatt är tom och testet låser att global COEP/COOP inte sätts i Viewser. Ingen ändring är gjord i starters, builder eller preview-runtime-paketet; ADR 0021 är källan för beslut/avgränsning.
 
@@ -295,36 +295,29 @@ klara. Inga öppna PRs efter PR #27-merge.
 
 ## Next action - direktiv till nästa agent
 
-**Cleanup/prune-sprint (Builder).** Post-merge sanity för PR #27 var
-grön (smoke 2026-05-15 verifierade siteId/projectId-stabilitet, v1
-bit-för-bit immutabel, ProjectInputPicker filtrerade `.vN`-snapshots).
-B60 stängde de fyra kontraktsbrotten som auditen flaggade efteråt.
-Nästa naturliga steg är liten cleanup-sprint enligt Scout-RO-rapport
-2026-05-15:
+**Demo-baseline-audit (read-only Grind/Scout).** Cleanup/prune-sprinten
+är klar och gick rent: `scripts/prune_generated_previews.py` med dry-run
+default + `--apply`-gate + current-pointer-skydd + port-3000-refusal +
+optional psutil cwd-check ligger på `main` med tio regression-tester.
+Smoke-körning mot lokala `.generated/` (12 toplevel-kataloger,
+`keep-per-site=3 keep-total=10`) skyddade två siteIds via current
+pointer (`enehmsida-som-s-ljer-b-t-661e23`,
+`skapa-en-varm-och-tydlig-cff4a0`) och bedömde de tio övriga som
+`keep:within-retention`; ingen mappa skulle raderas på nuvarande
+retention-cap. Nästa naturliga steg är queue-item 2: en read-only
+audit av kärnflödet (`prompt -> företagshemsida -> preview ->
+följdprompt -> ny version`) mot fyra testfall (elektriker Malmö,
+frisör Göteborg, naprapatklinik Stockholm, keramik-e-handel) som
+levererar quality-scorecard + topp 3 blockers. Audit-rapporten styr
+sedan om Builder ska prioritera demo-baseline-fixar eller en separat
+sprint för follow-up-promptens semantic patching (idag bevarar
+`merge_followup_project_input` company.story/tagline/tone byte-för-byte
+- additivt på services/capabilities/conversionGoals - vilket är en
+medveten avgränsning från B60 men ett produktgapp som dyker upp så
+fort en operatör ber om "byt ton" eller "ändra story").
 
-1. Skapa nästa `backup-N` från synkad `main` innan sprintarbete.
-2. Rensa repo-rotens lokala körloggar (`npm-build-*.log`,
-   `npm-install-*.log`, `viewser-dev*.log`). De är gitignored;
-   kommando: `Remove-Item .\npm-build-*.log, .\npm-install-*.log,
-   .\viewser-dev*.log -Force -ErrorAction SilentlyContinue`.
-3. Implementera `scripts/prune_generated_previews.py` med dry-run
-   default. Krav per Scout-spec:
-   - `SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN=true` som default;
-     `--apply` krävs för faktisk radering.
-   - `--keep-per-site=N` (default 3), `--keep-total=N` (default 10),
-     `--generated-dir=PATH`.
-   - Läs current pointers från `data/prompt-inputs/*.project-input.json`
-     och `data/runs/*/build-result.json`; pruna aldrig dessa siteIds.
-   - Pruna endast under resolverad `.generated/`-rot.
-   - Stoppa om target är "live": process på port 3000 eller cwd
-     under en target-katalog.
-   - Logga exakt vad som skulle raderas i dry-run-output.
-   - Rör aldrig `data/runs/`, `.env*` eller `data/prompt-inputs/`.
-4. Regression-tester: dry-run-default-låsning, current-pointer-skydd,
-   live-target-detektering, retention-policy-räkning.
-
-B59 är fortfarande parkerad - rör inte StackBlitz-fronten. PR #27 +
-B60 är klara; ingen ny header-toggling.
+B59 är fortfarande parkerad - rör inte StackBlitz-fronten. PR #27,
+B60 och cleanup/prune-sprinten är klara; ingen ny header-toggling.
 
 Föregående cleanup-status:
 
@@ -401,46 +394,30 @@ i `c073d486` och PR-branchen är inte längre kvar på GitHub.
 
 ## Queue
 
-1. **Cleanup/prune-sprint (low-risk, body=docs+small-script)** - se Next
-   action ovan; B60 är stängd så det är nästa naturliga pass. Två
-   deluppgifter:
-   - Rensa repo-rotens lokala körloggar
-     (`npm-build-*.log`, `npm-install-*.log`, `viewser-dev*.log`).
-   - Lägg till en enkel retention-policy för
-     `../sajtbyggaren-output/.generated/`: behåll senaste **3 previews
-     per `siteId`** *eller* senaste **10 totalt**. Implementera som
-     dry-run default; faktisk radering kräver explicit flagga.
-     Konfigurerbar via env i repo-roten (`.env`/`.env.local`):
-     `SAJTBYGGAREN_PREVIEW_RETENTION_PER_SITE` (default 3),
-     `SAJTBYGGAREN_PREVIEW_RETENTION_TOTAL` (default 10),
-     `SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN` (default true).
-     Rör inte `data/runs/` (mer känsligt; egen sprint senare). Rör
-     aldrig automatiskt `.env*`. Pruning körs manuellt via litet
-     script i `scripts/`, inte automatiskt i builder-flödet.
-2. **Demo-baseline-audit (read-only Grind/Scout)** - mäter kärnflödet
+1. **Demo-baseline-audit (read-only Grind/Scout)** - mäter kärnflödet
    mot 4 testfall, levererar quality-scorecard + topp 3 blockers.
    Inte en starter-sprint; målet är att hitta vad som faktiskt
    blockerar första riktiga produktdemo.
-3. **Demo-baseline-fixar** - när grind-agenten levererat rapporten;
+2. **Demo-baseline-fixar** - när grind-agenten levererat rapporten;
    smal Builder-sprint som åtgärdar topp 1-2 fynd.
-4. B49 (medel): page-map-driven sidebar för `docs-base`-startern; måste
+3. B49 (medel): page-map-driven sidebar för `docs-base`-startern; måste
    vara klar innan `course-education -> docs-base` aktiveras i
    `SCAFFOLD_TO_STARTER`. Antingen återinför Nextra-theme-docs `Layout`
    eller bygg lokal `_meta.ts`-/filsystem-driven nav. Coach-beslut:
    tas EFTER demo-baseline-audit, inte före.
-5. **B59 follow-up** (parkerad - väntar på arkitekturbeslut): byte till
+4. **B59 follow-up** (parkerad - väntar på arkitekturbeslut): byte till
    lokal `next dev`-process som same-origin iframe på `localhost:NNNN`
    eller static StackBlitz-template. Ingen mer COOP/COEP-toggling.
-6. B53 (låg): `governance/schemas/routes.schema.json` för scaffold-
+5. B53 (låg): `governance/schemas/routes.schema.json` för scaffold-
    routes-kontraktet (egen schema-sprint, mönster från B22).
-7. B47 (låg): commerce-base Shopify-handles dokumenteras eller får
+6. B47 (låg): commerce-base Shopify-handles dokumenteras eller får
    fallback. Egen e-commerce-sprint, ej blocker idag.
-8. B13a arkitektur-flytt (egen sprint, kräver ADR).
-9. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
+7. B13a arkitektur-flytt (egen sprint, kräver ADR).
+8. `write_pages` icon-bibliotek-agnostisk refactor (förebygger
    lucide-typen av starter-vs-codegen-konflikt; ADR 0020:s
    "INTE beslutar"-sektion).
-10. Cancellation-followup (låg): riktig cancellation/background-jobb i
-    playground-vyn om operatören behöver avbryta redan startade körningar.
+9. Cancellation-followup (låg): riktig cancellation/background-jobb i
+   playground-vyn om operatören behöver avbryta redan startade körningar.
 
 **Vänta med ny/sista starter** tills minst följande är sant: marketing-
 base real codegen stabil, 4 demo-sajter kan byggas (minst 3/4), follow-up
