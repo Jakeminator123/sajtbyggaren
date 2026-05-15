@@ -13,7 +13,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 VIEWSER_DIR = REPO_ROOT / "apps" / "viewser"
 
