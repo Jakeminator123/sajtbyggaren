@@ -244,7 +244,7 @@ COMMON_WORDS = {
     # Aktuella öppna B-IDs som dyker upp som backtick-prosa i
     # known-issues.md / current-focus.md / handoff.md. Svaga
     # interna identifierare, inte domänbegrepp.
-    "B49",
+    "B49", "B59",
     # Generic prose ord som dyker upp i operator-flöde-text (ADR 0012)
     "Build", "Page", "Scaffolds",
 }

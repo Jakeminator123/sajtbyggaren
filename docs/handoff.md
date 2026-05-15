@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-15 (post-StackBlitz preview cleanup commit)
-**Aktuell repo-HEAD på `main`:** `cf523ed` (ADR 0021 + known-issues-rad landad efter payload-hardening-sprinten. Föregående två commits i samma svep: `488f8a0` för Viewser StackBlitz payload-hardening och `d9c244a` för server-lifecycle-discipline-regeln. Scope är fortsatt preview-payload-only; inga ändringar i `data/starters/`, `scripts/build_site.py` eller `packages/preview-runtime/stackblitz`). Kör `git log --oneline -1` för senaste lokala SHA.
-**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-15` finns lokalt och på origin från cleanup-svepet. Inga öppna PRs.
+**Datum:** 2026-05-15 (post-PR #27 merge, follow-up prompt versions)
+**Aktuell repo-HEAD på `main`:** `e057fbd` (`feat(viewser): preserve follow-up prompt versions (#27)`, squash-mergad). Föregående mainline-pushar samma dag: `86d03bf` (B59 StackBlitz WebContainer embed-blocker dokumenterad), `210a1d1` (Cursor API key-placeholder i `.env.example`), `9927bd2` (StackBlitz payload size-handling härdad: patched bytes mot size cap, scan fortsätter efter oversized files, `next start`-fallback), `4b98d8b` (visningsexempel-artefakter borttagna från versionhantering, bug-notes-text behållen), `869b2da` (workspace settings + prior docs sync), `cf523ed` (ADR 0021 + known-issues-rad efter StackBlitz preview payload-hardening). Kör `git log --oneline -1` för senaste lokala SHA.
+**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-15` finns lokalt och på origin från StackBlitz payload-hardening-svepet. Nästa Builder/Scout-pass ska skapa `backup-16` från synkad `main` innan sprintarbete. Inga öppna PRs efter PR #27-merge; `cursor/f-ljdprompt-ny-version-fb95` är raderad på origin.
 **Stash-läge:** `git stash list` är tom. Den tidigare stale B56-stashen (innehöll äldre version av `ensureWebpackFlag`/`patchPackageJsonForStackblitz` utan B58-allowlistet eller `Buffer.byteLength`-beräkningen) droppades i reconciliation-passet eftersom fixen redan var integrerad i `8fae26a` på `main`.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
@@ -47,7 +47,7 @@ Tre lager:
 - `backoffice/` + `backend.py` — Streamlit-administration (inte runtime).
 - `packages/` + `apps/` — runtime + kund-UI.
 
-## Vad funkar idag (post-PR #26, repo-HEAD `1cba454`)
+## Vad funkar idag (post-PR #27, repo-HEAD `e057fbd`)
 
 ### Governance + guards
 
@@ -70,7 +70,7 @@ Tre lager:
 - **B20 step 2 (PR #20, `75c980b`, ADR 0019):** `SCAFFOLD_TO_STARTER["ecommerce-lite"] = "commerce-base"`. Ecommerce-lite-fixturen `examples/atelje-bird.project-input.json` producerar `/produkter` via `source=deterministic-v1` codegen. Real codegenModel-scope förblir `marketing-base`-only tills separat sprint utvidgar via ADR ovanpå 0017.
 - **B20-followup-lucide (PR #21, `04fc2fa`, ADR 0020):** `lucide-react` ^1.14.0 tillagd i `commerce-base/package.json` så `scripts/build_site.py:write_pages`s hardcodade lucide-imports inte längre ger `Module not found` vid full `npm run build`.
 
-### Prompt-till-sajt MVP v1 + follow-up versions + audit-fix (kod-HEAD `2701b00`, audit-fix landar 2026-05-14)
+### Prompt-till-sajt MVP v1 + follow-up versions + audit-fix (kod-HEAD `2701b00`, audit-fix landar 2026-05-14, PR #27 versionerade snapshots landar 2026-05-15)
 
 - **`/api/prompt`** tar fri prompt, kör `runPromptToProjectInput` (spawnar `scripts/prompt_to_project_input.py` med `--`-separator så dash-prefixade prompts inte fastnar i argparse), och triggar `runBuild` med dossier-path-override (whitelist via `ALLOWED_DOSSIER_ROOTS` mot `examples/` + `data/prompt-inputs/`). Response-payloaden inkluderar nu `buildStatus` (B44) så klienten kan klassificera ok/degraded/failed istället för att tolka varje returnerad `runId` som lyckad build.
 - **PromptBuilder** är enda promptytan på Viewser-home (legacy `ChatPanel` är raderad i B46-fixen). ProjectInputPicker är read-only-select (Build-knappen togs bort). Stage-indikatorn renderar tre distinkta paneler (success/degraded/failed) baserat på `classifyBuildStatus(buildStatus)`; `app/page.tsx` skickar `PromptBuildOutcome` vidare till `headerStatusForOutcome` så headern aldrig säger "Build klar via prompt:" för en degraderad eller failed run.
@@ -78,6 +78,7 @@ Tre lager:
 - **Payload-validering**: `z.string().trim().min(1).max(4000)` så whitespace-only payloads fångas vid API-gränsen. `ZodError` returneras som `400` med valideringsmeddelandet; bara genuina serverfel blir `500`.
 - **Helper-skriptet** `scripts/prompt_to_project_input.py` använder briefModel + Site Brief och skriver `data/prompt-inputs/<siteId>.project-input.json` + sidecar `<siteId>.meta.json` med `projectId/version/originalPrompt/briefSource`. Brief-imports ligger på modulnivå så fallback-tester monkeypatchar lookup-namnen som `generate()` faktiskt använder.
 - **Follow-up prompt versions** är landat: operatören kan fortsätta på befintlig prompt-input/run, behålla `projectId`, bumpa `version` och få ny build/run för samma sajtspår.
+- **PR #27 follow-up versions v2** (mergad `e057fbd`): `scripts/prompt_to_project_input.py` skriver immutable `<siteId>.vN.project-input.json` + `<siteId>.vN.meta.json`-snapshots i `data/prompt-inputs/`, behåller current pointer-filerna, bevarar `projectId`/`originalPrompt`, skriver `followUpPrompt`, och merger follow-up-prompts konservativt på existerande Project Input. `scripts/build_site.py` läser sidecar-meta intill dossier-pathen och trådar `mode`/`projectId`/`version`/`originalPrompt`/`followUpPrompt` in i `input.json`/`generation-package.json`/`build-result.json`. `apps/viewser/lib/runs.ts` läser per-run-meta från `build-result.json` -> `input.json` -> mutable sidecar legacy-fallback (RunHistory är stabil per `projectId` + `version` även när nya follow-ups landar). `apps/viewser/lib/project-inputs.ts` filtrerar `.vN.project-input.json`-snapshots från ProjectInputPicker. `apps/viewser/lib/prompt-runner.ts` + `lib/build-runner.ts` föredrar repo-roten `.venv` Python när den finns och cleanar prompt-/build-mutex via `try/finally`. PR #27 rörde inte StackBlitz-fronten (`apps/viewser/lib/stackblitz-files.ts`, `components/viewer-panel.tsx`, `next.config.ts`, `tests/test_viewser_files.py`).
 - **ViewerPanel** fallback-copy hänvisar nu till promptfältet, inte den borttagna Build-knappen.
 
 ### Backoffice trace/playground (PR #23, produkt-HEAD `e1ad5ca`)
@@ -96,17 +97,51 @@ Tre lager:
 
 `apps/viewser/` har en `<RunDetailsPanel>` med fem sektioner (Build / Quality / Repair / Codegen / Models) som läser från `/api/runs/[runId]/artifacts`. Build-sektionen visar `generatedFilesDir`, `devPreviewDir`, `npmSteps` och eventuella `logExcerpt` från failed npm-steg så transient build-mismatch kan felsökas från artefakten. `<RunHistory>` har status-färgning. PreviewRuntime / StackBlitzRuntime / FlyRuntime är parkerat som Sprint 4-5.
 
+## Vad är parkerat
+
+- **B59 - StackBlitz `template:"node"`/WebContainer-preview** är parkerat
+  efter empirisk header-utvärdering 2026-05-15: inga COOP/COEP-headers
+  blockerar iframe-load, `require-corp` ger VM-handshake-timeout,
+  `credentialless` får iframe att ladda men StackBlitz `sign_in`-check
+  faller. Header-experimentet committades **inte**. Nästa arkitekturbeslut
+  bör vara byte till lokal `next dev`-process som same-origin iframe på
+  `localhost:NNNN`, eller static StackBlitz-template - inte mer
+  header-toggling. Tills dess fungerar Run History + Run Details för
+  diagnostik och lokal `npm run build` på den genererade siten som
+  verifikation. Rör inte `apps/viewser/lib/stackblitz-files.ts`,
+  `apps/viewser/components/viewer-panel.tsx`, `apps/viewser/next.config.ts`
+  eller `tests/test_viewser_files.py` utan separat sprintbeslut.
+
 ## Nästa konkreta uppgift
 
-Se `docs/current-focus.md` → **"Next action"**. Kort version: nästa pass är smal verifiering av grön marketing/local-service-run i lokal preview + StackBlitz:
+Se `docs/current-focus.md` → **"Next action"**. Kort version: nästa pass är
+post-merge sanity för PR #27 (`/api/prompt` init + follow-up):
 
-1. Verifiera lokal generated build (`npm install`, rensa `.next`, `npm run build`, `npm run start`).
-2. Verifiera att `/api/runs/<runId>/files` innehåller lockfile + payload-override (`app/global-error.tsx`) samt rätt package.json-patchning (`dev/build --webpack`, `startCommand` för build+start).
-3. Verifiera att `.env*` fortsatt blockas i payload (utom `.env.example`).
-4. Verifiera StackBlitz-preview för samma grön-run och rapportera första riktiga terminalfelrad vid fail.
-5. Håll scope preview-payload-only (inga starter-/builder-/runtime-ändringar i detta verifieringspass).
+1. Skapa `backup-16` från synkad `main` innan sprintarbete startar.
+2. Starta Viewser (`apps/viewser`) lokalt mot repo-rotens `.venv` Python.
+3. Init-prompt via `/api/prompt`: bekräfta `data/prompt-inputs/`-current
+   pointer + `<siteId>.v1.project-input.json` + `<siteId>.v1.meta.json`,
+   `build-result.json` med `engineMode="init"`, en `projectId`,
+   `version=1`.
+4. Follow-up-prompt mot samma `siteId`: bekräfta `<siteId>.v2.*` skapas,
+   v1-snapshot oförändrad, `build-result.json` med `engineMode="followup"`,
+   **samma** `projectId`, `version=2`, `followUpPrompt` satt.
+5. Verifiera RunHistory: båda runs samma `projectId`, v1/v2 stabilt,
+   ProjectInputPicker exponerar bara current pointer.
+6. Rapportera första riktiga felrad och `runId` om något steg failar.
 
-PromptBuilder stage-timeout är inte längre listad som aktiv nice-to-have; Scout verifierade att cleanup redan finns.
+Håll scope versions-/follow-up-only. Ingen StackBlitz-headerändring,
+ingen produkt- eller starter-/runtime-utvidgning i sanity-passet.
+
+Efter grön sanity står **cleanup/prune-sprinten** näst på tur (queue-item
+1 i `current-focus.md`): rensa lokala körloggar i repo-roten och lägg
+till en enkel retention-policy för `../sajtbyggaren-output/.generated/`
+(behåll senaste 3 previews per `siteId` eller senaste 10 totalt, dry-run
+default, env-styrd via `.env`/`.env.local` i repo-roten). Den sprinten
+rör **inte** `data/runs/` och **inte** `.env*`-filerna.
+
+PromptBuilder stage-timeout är inte längre listad som aktiv nice-to-have;
+Scout verifierade att cleanup redan finns.
 
 PR #17 / `frontend/christopher-import` är reference only: återöppna inte PR #17,
 starta inte `apps/web`, men behåll branchen som framtida design-/copy-referens.
@@ -162,6 +197,15 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+e057fbd feat(viewser): preserve follow-up prompt versions (#27)
+86d03bf docs: record B59 StackBlitz WebContainer embed blocker
+210a1d1 chore(env): document Cursor API key placeholder
+9927bd2 fix(viewser): harden StackBlitz payload size handling
+4b98d8b chore(repo): remove visningsexempel artifacts and keep bug notes
+869b2da chore(workspace): sync docs state and editor settings
+cf523ed docs(adr): add ADR 0021 for StackBlitz preview workarounds
+488f8a0 feat(viewser): harden StackBlitz preview payload handling
+d9c244a chore(rules): add server-lifecycle-discipline rule
 1cba454 docs(product): add operating context for agents
 04fb92f docs(agents): align Codex with Cursor rules
 9446200 docs(focus): record B45 contact route fix
