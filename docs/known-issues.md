@@ -123,6 +123,28 @@ Format per bugg:
   `load_scaffold_registry()` (samma mönster som B22 löste för
   `scaffold.schema.json`). Ej blocker - byggtidsguarden täcker redan
   scenariot, men en schema-fil ger tidigare felfångst + IDE-stöd.
+- **`B59` Medel** - StackBlitz `template:"node"`-preview (WebContainer) i
+  Viewser är blockerad eller instabil i moderna Chrome-runtimes som kräver
+  cross-origin isolation. Tre header-lägen testades empiriskt 2026-05-15
+  (både Cursor in-app browser och lokal Chrome smoke):
+  - inga isolation headers -> iframe-load blockeras med Chrome-meddelandet
+    "Specify a Cross-Origin Embedder Policy to prevent this frame from being
+    blocked";
+  - `Cross-Origin-Embedder-Policy: require-corp` + `Cross-Origin-Opener-Policy:
+    same-origin` -> iframe-load OK, men VM-handshake timeout:ar
+    (`Timeout: Unable to establish a connection with the StackBlitz VM`);
+  - `Cross-Origin-Embedder-Policy: credentialless` + samma COOP -> iframe-load
+    OK, men StackBlitz interna `sign_in`-check faller utan credentials
+    (`https://stackblitz.com/sign_in - Unsuccessful HTTP response`) och UI:t
+    fastnar permanent i "Startar StackBlitz...".
+
+  Header-experimentet committades inte. Nästa arkitekturbeslut bör vara byte
+  till en lokal preview-server (per-run `next dev`-process embedded som
+  same-origin iframe på `localhost:NNNN`) eller en static StackBlitz-preview
+  (template `"static"` med pre-buildad HTML), inte mer header-toggling. Ej
+  blocker idag: Run History + Run Details ger diagnostik utan preview, och
+  lokal `npm run build` på den genererade siten fungerar fortfarande som
+  verifikation. Test: open (regression-test bestäms efter arkitekturval).
 
 ### Notera (inte en bugg) - dev-preview-output utanför repo
 
