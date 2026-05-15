@@ -34,8 +34,11 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 from prompt_to_project_input import (  # noqa: E402
+    _company_business_label,
     _derive_company_name,
     _derive_story,
+    _derive_tagline,
+    _normalize_location_hint,
     _slugify_label,
     generate,
     generate_followup,
@@ -521,30 +524,66 @@ def test_company_name_handles_location_only() -> None:
 
 @pytest.mark.tooling
 def test_company_name_falls_back_for_unknown_business_type_slug() -> None:
-    """Unknown English slug surfaces as an obvious placeholder, never raw."""
+    """Unknown English slug surfaces as a Swedish placeholder phrase.
+
+    Demo-baseline-fix 1A-hotfix (B63): the previous fallback emitted
+    "Sajt för <slug>", which rendered as "Sajt för thinly niche
+    business" and read as broken placeholder copy. The hotfix fallback
+    is the more natural "företag som arbetar med <slug>" reading so
+    unknown briefModel slugs still surface as readable Swedish prose.
+    """
     name = _derive_company_name(
         business_type="thinly-niche-business",
         location_hint="Lund",
         language="sv",
     )
-    assert name.startswith("Sajt för thinly niche business")
+    assert name.startswith("Företag som arbetar med thinly niche business")
     assert "Lund" in name
+    assert "Sajt för" not in name, (
+        "B63: pre-hotfix 'Sajt för X' fallback must not return."
+    )
 
 
 @pytest.mark.tooling
-def test_story_prefers_notes_for_planner() -> None:
-    notes = "2-sidig svensk företagswebb för elektriker i Malmö."
+def test_story_never_uses_notes_for_planner() -> None:
+    """B61: notes_for_planner is briefModel's English planner orientation
+    and must never surface as customer-facing /om-oss copy.
+
+    Pre-hotfix `_derive_story` returned `notes_for_planner` verbatim as
+    the story. Verifierings-Scout 2026-05-15 caught that this leaked
+    English meta instructions ("Likely a Swedish electrician website
+    targeting Malmö; prompt is minimal...") onto every Swedish demo
+    site. The hotfix ignores `notes_for_planner` entirely.
+    """
+    notes = (
+        "Likely a Swedish electrician website targeting Malmö; prompt is "
+        "minimal, so keep scope conservative and local."
+    )
     story = _derive_story(
         business_type="electrician",
         location_hint="Malmö",
         notes_for_planner=notes,
         language="sv",
     )
-    assert story == notes
+    assert story != notes, (
+        "B61: notes_for_planner must not be returned as story copy."
+    )
+    assert "Likely a Swedish" not in story, (
+        "B61: English planner prose must not surface in /om-oss copy."
+    )
+    assert "scope conservative" not in story
+    assert "elektriker" in story
+    assert "Malmö" in story
 
 
 @pytest.mark.tooling
 def test_story_constructs_placeholder_when_notes_missing() -> None:
+    """The Swedish story is built from businessType + location only.
+
+    Demo-baseline-fix 1A-hotfix (B61): the second sentence must not
+    contain the dev-jargon phrase "Justera Project Input"; rendered
+    /om-oss copy is for end customers, not operators.
+    """
     story = _derive_story(
         business_type="electrician",
         location_hint="Malmö",
@@ -553,7 +592,10 @@ def test_story_constructs_placeholder_when_notes_missing() -> None:
     )
     assert "elektriker" in story
     assert "Malmö" in story
-    assert "Justera Project Input" in story
+    assert "Justera Project Input" not in story, (
+        "B61: customer copy must not name the Project Input file."
+    )
+    assert "Byt ut" in story
 
 
 @pytest.mark.tooling
@@ -703,3 +745,337 @@ def test_pointer_writes_use_atomic_replace(tmp_path: Path) -> None:
     # test_generate_writes_project_input_and_meta which reads the
     # final pointer payload).
     assert tmp_path.is_dir()
+
+
+# ---------------------------------------------------------------------------
+# Demo-baseline-fix 1A-hotfix (B61): notes_for_planner is briefModel's
+# internal English orientation for Phase 2 ("Likely a Swedish electrician
+# website targeting Malmö; prompt is minimal..."). It must not surface
+# anywhere on the rendered site (story, tagline, service summaries).
+# Verifierings-Scout 2026-05-15 caught the 1A regression on all four
+# demo prompts; the hotfix derives all three fields from brief signals
+# only.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_tagline_never_uses_notes_for_planner() -> None:
+    """B61: company.tagline must not contain briefModel's planner notes."""
+    leak = (
+        "Likely a Swedish electrician website targeting Malmö; prompt is "
+        "minimal, so keep scope conservative and local."
+    )
+    brief = {
+        "language": "sv",
+        "businessTypeGuess": "electrician",
+        "locationHint": "Malmö",
+        "rawPrompt": "elektriker Malmö",
+        "tone": [],
+        "conversionGoals": [],
+        "servicesMentioned": [],
+        "requestedCapabilities": [],
+        "notesForPlanner": leak,
+        "briefSource": "real",
+    }
+    project_input = site_brief_to_project_input(
+        brief,
+        site_id="elektriker-malmo-leak",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="elektriker Malmö",
+    )
+    tagline = project_input["company"]["tagline"]
+    assert "Likely a Swedish" not in tagline
+    assert "scope conservative" not in tagline
+    assert tagline != leak
+    assert tagline.startswith("Lokal elektriker")
+
+
+@pytest.mark.tooling
+def test_derive_tagline_builds_from_business_type_and_location() -> None:
+    """`_derive_tagline` returns a short Swedish phrase for typical briefs."""
+    tagline = _derive_tagline(
+        business_type="electrician",
+        location_hint="Malmö",
+        language="sv",
+    )
+    assert tagline == "Lokal elektriker i Malmö"
+    assert len(tagline) <= 140
+
+
+@pytest.mark.tooling
+def test_derive_tagline_falls_back_when_brief_is_empty() -> None:
+    """Schema requires non-empty tagline; fallback must satisfy that."""
+    tagline = _derive_tagline(
+        business_type=None,
+        location_hint=None,
+        language="sv",
+    )
+    assert tagline
+    assert len(tagline) <= 140
+    assert "Likely" not in tagline
+
+
+@pytest.mark.tooling
+def test_service_summaries_do_not_leak_dev_jargon() -> None:
+    """B61: rendered services grid is customer-facing copy.
+
+    Pre-hotfix the placeholder summary read "kort beskrivning genererad
+    från din prompt. Justera Project Input för att förbättra texten",
+    which surfaced operator workflow on every Swedish demo site. The
+    hotfix replaces the second sentence with a short customer call to
+    action. The English variant is tested via the same forbidden-string
+    check.
+    """
+    brief = {
+        "language": "sv",
+        "businessTypeGuess": "electrician",
+        "locationHint": "Malmö",
+        "rawPrompt": "elektriker Malmö",
+        "tone": [],
+        "conversionGoals": [],
+        "servicesMentioned": ["paneldragning", "laddbox-installation"],
+        "requestedCapabilities": [],
+        "notesForPlanner": None,
+        "briefSource": "real",
+    }
+    project_input = site_brief_to_project_input(
+        brief,
+        site_id="elektriker-malmo-svc",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="elektriker Malmö",
+    )
+    forbidden = [
+        "Justera Project Input",
+        "placeholder generated from your prompt",
+        "kort beskrivning genererad från din prompt",
+        "Edit the Project Input",
+    ]
+    for service in project_input["services"]:
+        summary = service["summary"]
+        for needle in forbidden:
+            assert needle not in summary, (
+                f"B61: service summary leaked dev jargon {needle!r}: "
+                f"{summary!r}"
+            )
+
+
+@pytest.mark.tooling
+def test_placeholder_services_summary_is_customer_friendly() -> None:
+    """When the brief has no services_mentioned the schema-required
+    placeholder service must still pass the B61 forbidden-string check.
+    """
+    brief = {
+        "language": "sv",
+        "businessTypeGuess": None,
+        "locationHint": None,
+        "rawPrompt": "frisör Göteborg",
+        "tone": [],
+        "conversionGoals": [],
+        "servicesMentioned": [],
+        "requestedCapabilities": [],
+        "notesForPlanner": None,
+        "briefSource": "real",
+    }
+    project_input = site_brief_to_project_input(
+        brief,
+        site_id="empty-brief",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="frisör Göteborg",
+    )
+    summaries = [svc["summary"] for svc in project_input["services"]]
+    assert summaries
+    for summary in summaries:
+        assert "Justera Project Input" not in summary
+        assert "platshållare" not in summary, (
+            "B61: customer copy must not call itself a platshållare."
+        )
+        assert "placeholder" not in summary.lower()
+
+
+@pytest.mark.tooling
+def test_full_pipeline_locks_no_planner_jargon_for_scout_prompt() -> None:
+    """End-to-end B61 lock for the Verifierings-Scout 2026-05-15 case.
+
+    Builds a Project Input from a typical Scout-style brief (electrician
+    in Malmö with the exact `notesForPlanner` leak observed in the
+    audit) and asserts that none of the three customer-facing copy
+    surfaces (`company.story`, `company.tagline`, `services[].summary`)
+    contain any of the forbidden strings.
+    """
+    leak = (
+        "Likely a Swedish electrician website targeting Malmö; prompt is "
+        "minimal, so keep scope conservative and local."
+    )
+    brief = {
+        "language": "sv",
+        "businessTypeGuess": "electrician",
+        "locationHint": "Malmö",
+        "rawPrompt": "elektriker Malmö",
+        "tone": ["trustworthy"],
+        "conversionGoals": ["call"],
+        "servicesMentioned": [],
+        "requestedCapabilities": [],
+        "notesForPlanner": leak,
+        "briefSource": "real",
+    }
+    project_input = site_brief_to_project_input(
+        brief,
+        site_id="elektriker-malmo-e2e",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="elektriker Malmö",
+    )
+    forbidden = (
+        "Likely a Swedish",
+        "Justera Project Input",
+        "placeholder generated from your prompt",
+        "scope conservative",
+    )
+    surfaces = [
+        ("company.story", project_input["company"]["story"]),
+        ("company.tagline", project_input["company"]["tagline"]),
+    ]
+    surfaces.extend(
+        (f"services[{idx}].summary", svc["summary"])
+        for idx, svc in enumerate(project_input["services"])
+    )
+    for label, text in surfaces:
+        for needle in forbidden:
+            assert needle not in text, (
+                f"B61: forbidden string {needle!r} leaked into {label}: "
+                f"{text!r}"
+            )
+
+
+# ---------------------------------------------------------------------------
+# Demo-baseline-fix 1A-hotfix (B62): country normalisation. briefModel
+# sometimes returns `locationHint="Sweden"` even when the prompt is
+# Swedish; the helper rewrites it so the rendered city stays in the
+# prompt's language.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_normalize_location_hint_translates_country_on_swedish_builds() -> None:
+    assert _normalize_location_hint("Sweden", "sv") == "Sverige"
+    assert _normalize_location_hint("sweden", "sv") == "Sverige"
+    assert _normalize_location_hint(" SWEDEN ", "sv") == "Sverige"
+
+
+@pytest.mark.tooling
+def test_normalize_location_hint_preserves_english_country() -> None:
+    """English builds keep the English label so /om-oss reads in en."""
+    assert _normalize_location_hint("Sweden", "en") == "Sweden"
+
+
+@pytest.mark.tooling
+def test_normalize_location_hint_preserves_real_city() -> None:
+    """Real city names are returned unchanged on Swedish builds."""
+    assert _normalize_location_hint("Göteborg", "sv") == "Göteborg"
+    assert _normalize_location_hint("Stockholm", "sv") == "Stockholm"
+
+
+@pytest.mark.tooling
+def test_swedish_brief_with_country_location_renders_swedish_city() -> None:
+    """`locationHint="Sweden"` + language=sv -> location.city="Sverige"."""
+    brief = {
+        "language": "sv",
+        "businessTypeGuess": "hairdresser",
+        "locationHint": "Sweden",
+        "rawPrompt": "frisör i Sverige",
+        "tone": [],
+        "conversionGoals": [],
+        "servicesMentioned": [],
+        "requestedCapabilities": [],
+        "notesForPlanner": None,
+        "briefSource": "real",
+    }
+    project_input = site_brief_to_project_input(
+        brief,
+        site_id="frisor-sverige",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="frisör i Sverige",
+    )
+    assert project_input["location"]["city"] == "Sverige"
+    assert project_input["location"]["country"] == "Sverige"
+
+
+# ---------------------------------------------------------------------------
+# Demo-baseline-fix 1A-hotfix (B63): _BUSINESS_TYPE_LABEL_SV must cover
+# the hyphenated slugs briefModel actually returns ("e-commerce",
+# "naprapath-clinic"), and the fallback for unknown slugs must read as
+# Swedish prose, not the broken "Sajt för X" placeholder.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    ("slug", "expected"),
+    [
+        ("e-commerce", "webbshop"),
+        ("ecommerce", "webbshop"),
+        ("ecommerce-shop", "webbshop"),
+        ("ecommerce-store", "webbshop"),
+        ("naprapath-clinic", "naprapatklinik"),
+        ("naprapat-clinic", "naprapatklinik"),
+        ("naprapat", "naprapatklinik"),
+        ("electrical-services", "elektriker"),
+        ("plumbing-services", "rörmokare"),
+        ("hair-salon", "frisör"),
+        ("dental-clinic", "tandläkare"),
+        ("photo-studio", "fotostudio"),
+    ],
+)
+def test_business_type_map_covers_briefmodel_hyphenated_slugs(
+    slug: str, expected: str
+) -> None:
+    """B63: every hyphenated slug Verifierings-Scout flagged maps to a
+    real Swedish noun, not the fallback branch.
+    """
+    assert _company_business_label(slug, "sv") == expected
+
+
+@pytest.mark.tooling
+def test_unknown_business_type_uses_swedish_fallback_phrase() -> None:
+    """B63: unknown slugs read as Swedish prose, not 'Sajt för X'."""
+    label = _company_business_label("okänt-företag", "sv")
+    assert label is not None
+    assert label.startswith("företag som arbetar med ")
+    assert "Sajt för" not in label
+    assert "okänt företag" in label
+
+
+@pytest.mark.tooling
+def test_business_type_map_lookup_is_case_and_whitespace_safe() -> None:
+    """Defensive: lookup strips and lowercases so briefModel quirks
+    (`E-Commerce`, `  e-commerce  `) still hit the map."""
+    assert _company_business_label("E-Commerce", "sv") == "webbshop"
+    assert _company_business_label("  e-commerce  ", "sv") == "webbshop"
+
+
+@pytest.mark.tooling
+def test_company_name_for_e_commerce_brief_uses_swedish_label() -> None:
+    """`businessTypeGuess="e-commerce"` -> H1 reads "Webbshop ..."."""
+    name = _derive_company_name(
+        business_type="e-commerce",
+        location_hint="Stockholm",
+        language="sv",
+    )
+    assert name == "Webbshop i Stockholm"
+
+
+@pytest.mark.tooling
+def test_company_name_for_naprapath_clinic_brief_uses_swedish_label() -> None:
+    """`businessTypeGuess="naprapath-clinic"` -> H1 reads
+    "Naprapatklinik ..." not "Sajt för naprapath clinic".
+    """
+    name = _derive_company_name(
+        business_type="naprapath-clinic",
+        location_hint="Stockholm",
+        language="sv",
+    )
+    assert name == "Naprapatklinik i Stockholm"

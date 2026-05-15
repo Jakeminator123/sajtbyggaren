@@ -28,12 +28,59 @@ SWEDISH_HINTS = {
     "ett", "en", "kontakt", "tjänster", "om", "oss",
 }
 
+# English stop-words used to refuse the Swedish-default fallback when the
+# prompt clearly reads as English. The list is intentionally tiny: short
+# function words that operators rarely typo into a Swedish prompt
+# ("the", "a", "an", function prepositions) plus a handful of common
+# website-shaped verbs/nouns ("create", "build", "website", "site") that
+# show up in nearly every English brief in this domain. Keeping it small
+# avoids fighting the Swedish-default in mixed-vocabulary prompts; we
+# rather lean Swedish than mistakenly translate a Swedish prompt to
+# English (B62, demo-baseline-fix 1A-hotfix).
+ENGLISH_HINTS = {
+    "the", "a", "an", "and", "or", "but",
+    "in", "on", "at", "for", "of", "with", "to", "from",
+    "is", "are", "was", "were", "be", "been",
+    "create", "build", "make", "need", "want",
+    "website", "site", "page", "store", "shop",
+    "my", "our", "your",
+}
+
+# å/ä/ö (case-insensitive) are strong Swedish-language signals: even
+# English prompts that mention a Swedish city ("Malmö", "Göteborg") can
+# match here, but the cascade ordering puts ENGLISH_HINTS BEFORE this
+# check so "electrician website in Malmö" still resolves to "en".
+SWEDISH_CHARS = frozenset("åäöÅÄÖ")
+
 
 def detect_language(prompt: str) -> str:
+    """Return the prompt language as an ISO 639-1 code (sv/en).
+
+    Cascading heuristic so short Swedish prompts ("frisör Göteborg",
+    "naprapatklinik Stockholm") no longer slip through as English just
+    because they lack any of the SWEDISH_HINTS stop-words. The cascade:
+
+    1. Swedish stop-word match -> "sv".
+    2. English stop-word match (and no Swedish stop-word match above)
+       -> "en". Refuses the Swedish-default for clearly English prompts
+       even when they mention Swedish characters in a city name.
+    3. Any token contains å/ä/ö -> "sv". Catches "frisör Göteborg".
+    4. Otherwise -> "sv". The operator population is ~95% Swedish-
+       speaking, so an unknown short prompt is far more likely to be
+       Swedish than English ("naprapatklinik Stockholm").
+
+    The previous heuristic returned "en" by default, which generated
+    fully English customer copy for two of four Verifierings-Scout
+    cases (B62, demo-baseline-fix 1A-hotfix).
+    """
     tokens = {t.lower().strip(",.!?:;") for t in prompt.split() if t}
     if tokens & SWEDISH_HINTS:
         return "sv"
-    return "en"
+    if tokens & ENGLISH_HINTS:
+        return "en"
+    if any(ch in SWEDISH_CHARS for ch in prompt):
+        return "sv"
+    return "sv"
 
 
 class SiteBrief(BaseModel):

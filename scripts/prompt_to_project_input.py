@@ -71,30 +71,45 @@ _SLUG_DASHES = re.compile(r"-{2,}")
 # Demo-baseline-fix 1A: briefModel returns kebab-case English slugs for
 # `businessTypeGuess`, but a Swedish first-build site reads better with
 # a Swedish noun. Operator can override the name in the Project Input
-# file before re-building. The map is intentionally short - it covers
-# the demo-baseline branches (electrician / hairdresser / naprapat /
-# ceramics) plus a handful of common small-business types. Unknown
-# business types fall back to the raw slug with a "Sajt för"-prefix
-# so the H1 still reads as a deliberate placeholder rather than the
-# user's prompt.
+# file before re-building. The map covers the demo-baseline branches
+# (electrician / hairdresser / naprapat / ceramics) plus a handful of
+# common small-business types AND the hyphenated variants briefModel
+# actually returns in production ("e-commerce", "naprapath-clinic",
+# "electrical-services", "plumbing-services" - B63, demo-baseline-fix
+# 1A-hotfix). Unknown slugs fall through `_company_business_label` to
+# the "företag som arbetar med <slug>" branch so the H1 still reads as
+# Swedish prose rather than dev jargon.
 _BUSINESS_TYPE_LABEL_SV: dict[str, str] = {
     "electrician": "elektriker",
+    "electrical-services": "elektriker",
+    "electrical-contractor": "elektriker",
     "plumber": "rörmokare",
+    "plumbing-services": "rörmokare",
     "hairdresser": "frisör",
     "hair-salon": "frisör",
     "barber": "barberare",
+    "barber-shop": "barberare",
     "dentist": "tandläkare",
     "dental-clinic": "tandläkare",
-    "naprapat": "naprapat",
+    "naprapat": "naprapatklinik",
+    "naprapath": "naprapatklinik",
+    "naprapath-clinic": "naprapatklinik",
+    "naprapat-clinic": "naprapatklinik",
     "chiropractor": "kiropraktor",
+    "chiropractic-clinic": "kiropraktor",
     "physiotherapist": "sjukgymnast",
+    "physiotherapy-clinic": "sjukgymnast",
     "painter": "målare",
+    "painting-services": "målare",
     "carpenter": "snickare",
+    "carpentry-services": "snickare",
     "construction": "byggfirma",
+    "construction-company": "byggfirma",
     "restaurant": "restaurang",
     "cafe": "café",
     "bakery": "bageri",
     "florist": "blomsterhandel",
+    "flower-shop": "blomsterhandel",
     "photographer": "fotograf",
     "photo-studio": "fotostudio",
     "ceramics-studio": "keramikstudio",
@@ -106,7 +121,9 @@ _BUSINESS_TYPE_LABEL_SV: dict[str, str] = {
     "shop": "butik",
     "online-shop": "webbshop",
     "ecommerce": "webbshop",
+    "e-commerce": "webbshop",
     "ecommerce-shop": "webbshop",
+    "ecommerce-store": "webbshop",
     "boat-dealer": "båthandel",
     "egg-farm": "äggproducent",
 }
@@ -274,9 +291,13 @@ def _company_business_label(
     """Return a human label for the brief's businessTypeGuess slug.
 
     Swedish builds look up the slug in `_BUSINESS_TYPE_LABEL_SV` first.
-    Unknown slugs fall back to a `"Sajt för <slug>"`-prefixed reading
-    so the H1 still reads as an obvious placeholder rather than an
-    English slug masquerading as a Swedish company name.
+    Unknown slugs fall back to a "företag som arbetar med <slug>"-
+    phrased reading so the H1 still reads as a deliberate Swedish
+    placeholder rather than an English slug masquerading as a company
+    name. Pre-1A-hotfix the fallback emitted "Sajt för <slug>", which
+    rendered as "Sajt för e commerce" / "Sajt för naprapath clinic"
+    when briefModel returned hyphenated slugs the map had not yet
+    learned (B63, demo-baseline-fix 1A-hotfix).
     """
     if not business_type:
         return None
@@ -291,7 +312,7 @@ def _company_business_label(
     readable = slug.replace("-", " ").replace("_", " ").strip()
     if not readable:
         return None
-    return f"Sajt för {readable}"
+    return f"företag som arbetar med {readable}"
 
 
 def _derive_story(
@@ -301,68 +322,120 @@ def _derive_story(
     notes_for_planner: str | None,
     language: str,
 ) -> str:
-    """Build customer-facing `/om-oss` story copy from brief signals.
+    """Build customer-facing `/om-oss` story copy from brief signals only.
 
-    Demo-baseline-fix 1A (T2): the previous helper used the raw prompt
-    (`original_prompt.strip()[:600]`) as story copy, which surfaced
-    operator typos and meta-instructions on the public `/om-oss` page.
-    The new derivation prefers `brief.notesForPlanner` (a coherent
-    one-line orientation from briefModel) and falls back to a
-    structured placeholder built from `businessTypeGuess` +
-    `locationHint`. Raw prompt is never used as story copy.
+    Demo-baseline-fix 1A (T2) replaced the raw-prompt-as-story regression
+    with a `notes_for_planner`-preferred derivation. Verifierings-Scout
+    2026-05-15 then caught the follow-up regression: `notes_for_planner`
+    is briefModel's INTERNAL English orientation for Phase 2 ("Likely a
+    Swedish electrician website targeting Malmö; prompt is minimal, so
+    keep scope conservative and local."), and rendering it on `/om-oss`
+    surfaced English planner instructions to end customers (B61,
+    demo-baseline-fix 1A-hotfix).
+
+    The fix removes `notes_for_planner` from the story derivation
+    entirely; the parameter is kept on the signature for backwards
+    compatibility but is intentionally unused. Story copy is now built
+    from `businessTypeGuess` + `locationHint` only, mirroring
+    `_derive_company_name`. Operators still edit the Project Input file
+    to override the story before sharing the build.
     """
-    notes = (notes_for_planner or "").strip()
-    if notes:
-        return " ".join(notes.split())[:600]
-
+    _ = notes_for_planner  # B61: never render brief.notesForPlanner here.
     business_label = _company_business_label(business_type, language)
     location = (location_hint or "").strip()
     if language == "en":
         if business_label and location:
             base = (
                 f"Site for a {business_label} in {location}. "
-                "Update the Project Input file with a personal story "
-                "before sharing the build."
+                "Replace this paragraph with your own story so visitors "
+                "learn who you are."
             )
         elif business_label:
             base = (
-                f"Site for a {business_label}. Update the Project Input "
-                "file with a personal story before sharing the build."
+                f"Site for a {business_label}. Replace this paragraph "
+                "with your own story so visitors learn who you are."
             )
         elif location:
             base = (
-                f"Site based in {location}. Update the Project Input "
-                "file with a personal story before sharing the build."
+                f"Site based in {location}. Replace this paragraph "
+                "with your own story so visitors learn who you are."
             )
         else:
             base = (
-                "Story missing - update the Project Input file with "
-                "a personal description before sharing the build."
+                "Replace this paragraph with your own story so visitors "
+                "learn who you are."
             )
         return base[:600]
 
     if business_label and location:
         base = (
-            f"Sajt för en {business_label} i {location}. "
-            "Justera Project Input-filen med en personlig story "
-            "innan sajten visas för någon."
+            f"Vi är en {business_label} i {location}. "
+            "Byt ut den här texten mot er egen berättelse så besökarna "
+            "lär känna er."
         )
     elif business_label:
         base = (
-            f"Sajt för en {business_label}. Justera Project Input-filen "
-            "med en personlig story innan sajten visas för någon."
+            f"Vi är en {business_label}. "
+            "Byt ut den här texten mot er egen berättelse så besökarna "
+            "lär känna er."
         )
     elif location:
         base = (
-            f"Sajt baserad i {location}. Justera Project Input-filen "
-            "med en personlig story innan sajten visas för någon."
+            f"Vi finns i {location}. "
+            "Byt ut den här texten mot er egen berättelse så besökarna "
+            "lär känna er."
         )
     else:
         base = (
-            "Story saknas - justera Project Input-filen med en "
-            "personlig beskrivning innan sajten visas för någon."
+            "Byt ut den här texten mot er egen berättelse så besökarna "
+            "lär känna er."
         )
     return base[:600]
+
+
+def _derive_tagline(
+    *,
+    business_type: str | None,
+    location_hint: str | None,
+    language: str,
+) -> str:
+    """Build a short customer-facing tagline from brief signals only.
+
+    Demo-baseline-fix 1A-hotfix (B61): pre-hotfix `site_brief_to_project_input`
+    used `(brief.notesForPlanner or tagline_default)[:140]` for
+    `company.tagline`. Since `notesForPlanner` is briefModel's English
+    planner orientation, taglines on Swedish sites read as English meta
+    instructions ("Likely a Swedish electrician website targeting
+    Malmö..."). The new derivation never reads notesForPlanner; it
+    builds a short tagline from `businessTypeGuess` + `locationHint`
+    instead, falling back to a generic Swedish/English placeholder when
+    both signals are missing. Operators override the tagline in the
+    Project Input file before sharing the build.
+
+    The schema requires `company.tagline` with minLength=1, maxLength=140,
+    so the helper always returns a non-empty string capped at 140 chars.
+    """
+    business_label = _company_business_label(business_type, language)
+    location = (location_hint or "").strip()
+    if language == "en":
+        if business_label and location:
+            tagline = f"Local {business_label} in {location}"
+        elif business_label:
+            tagline = f"Your local {business_label}"
+        elif location:
+            tagline = f"Local site in {location}"
+        else:
+            tagline = "Update this tagline in the Project Input file"
+    else:
+        if business_label and location:
+            tagline = f"Lokal {business_label} i {location}"
+        elif business_label:
+            tagline = f"Din lokala {business_label}"
+        elif location:
+            tagline = f"Lokal sajt i {location}"
+        else:
+            tagline = "Justera taglinen i Project Input-filen"
+    return tagline[:140]
 
 
 def _service_label_from_text(text: str) -> str:
@@ -405,34 +478,43 @@ def _looks_like_slug(text: str) -> bool:
 
 
 def _service_summary(label: str, language: str) -> str:
+    """Return a neutral customer-facing summary for a service entry.
+
+    Demo-baseline-fix 1A-hotfix (B61): the previous summaries leaked
+    dev jargon onto rendered service cards ("placeholder generated
+    from your prompt - edit the Project Input to refine" / "Justera
+    Project Input för att förbättra texten"). The hotfix replaces the
+    second sentence with a short, customer-readable call to action so
+    the rendered services grid no longer broadcasts the operator's
+    workflow to end users. Operators still edit the Project Input
+    file to expand the description before sharing the build.
+    """
     if language == "en":
-        return (
-            f"{label} - placeholder summary generated from your prompt. "
-            "Edit the Project Input to refine."
-        )
-    return (
-        f"{label} - kort beskrivning genererad från din prompt. "
-        "Justera Project Input för att förbättra texten."
-    )
+        return f"{label} - contact us to learn more."
+    return f"{label} - kontakta oss för mer information."
 
 
 def _placeholder_services(language: str) -> list[dict[str, str]]:
+    """Schema-required service when the brief mentioned none.
+
+    The schema requires `services` with minItems=1, so the helper always
+    returns at least one entry. Demo-baseline-fix 1A-hotfix (B61): the
+    summary text is now plain customer copy instead of the previous
+    "placeholder generated from your prompt"-flavoured dev jargon.
+    """
     if language == "en":
         return [
             {
                 "id": "consultation",
                 "label": "Consultation",
-                "summary": "Initial consultation - placeholder generated from your prompt.",
+                "summary": "Consultation - contact us to learn more.",
             }
         ]
     return [
         {
             "id": "konsultation",
             "label": "Konsultation",
-            "summary": (
-                "Inledande konsultation - platshållare som genererats från din prompt. "
-                "Justera Project Input för att förbättra texten."
-            ),
+            "summary": "Konsultation - kontakta oss för mer information.",
         }
     ]
 
@@ -513,6 +595,33 @@ def _placeholder_contact(language: str) -> dict[str, Any]:
     }
 
 
+_LOCATION_HINT_SV_TRANSLATIONS = {
+    "sweden": "Sverige",
+}
+
+
+def _normalize_location_hint(
+    location_hint: str | None, language: str
+) -> str | None:
+    """Normalise English country/region names to Swedish on `language=sv`.
+
+    Demo-baseline-fix 1A-hotfix (B62): briefModel sometimes returns
+    `locationHint="Sweden"` even when the prompt language is Swedish,
+    which used to surface as `location.city="Sweden"` on the rendered
+    site. The helper rewrites the few country-name variants we know
+    about so the rendered city stays in the prompt's language.
+    """
+    if not location_hint:
+        return location_hint
+    cleaned = location_hint.strip()
+    if language != "sv":
+        return cleaned or None
+    swedish = _LOCATION_HINT_SV_TRANSLATIONS.get(cleaned.lower())
+    if swedish:
+        return swedish
+    return cleaned or None
+
+
 def _placeholder_location(
     location_hint: str | None, language: str
 ) -> dict[str, Any]:
@@ -520,9 +629,12 @@ def _placeholder_location(
 
     serviceAreas requires at least one entry. When the brief has no
     location hint we fall back to a generic Swedish placeholder so the
-    builder never crashes on a missing city.
+    builder never crashes on a missing city. `_normalize_location_hint`
+    rewrites the rare `locationHint="Sweden"` edge case to "Sverige" on
+    Swedish builds (B62, demo-baseline-fix 1A-hotfix).
     """
-    city = location_hint or ("Sweden" if language == "en" else "Sverige")
+    normalized = _normalize_location_hint(location_hint, language)
+    city = normalized or ("Sweden" if language == "en" else "Sverige")
     country = "Sweden" if language == "en" else "Sverige"
     return {
         "city": city,
@@ -552,19 +664,25 @@ def site_brief_to_project_input(
     business_type = brief.get("businessTypeGuess") or (
         "shop" if scaffold_id == "ecommerce-lite" else "service-provider"
     )
-    location_hint = brief.get("locationHint")
-    notes = brief.get("notesForPlanner")
-    tagline_default = (
-        "Site generated from your prompt - update tagline in Project Input."
-        if language == "en"
-        else "Sajt skapad från din prompt - justera tagline i Project Input."
+    # Demo-baseline-fix 1A-hotfix (B62): rewrite `locationHint="Sweden"`
+    # to "Sverige" on Swedish builds before deriving any copy from it,
+    # so H1, tagline and serviceArea all read in the prompt language.
+    location_hint = _normalize_location_hint(
+        brief.get("locationHint"), language
     )
-    # Demo-baseline-fix 1A (T2): name + story are now derived from
-    # brief signals only. `original_prompt` is intentionally NOT used
-    # as a fallback - it would re-introduce the raw-prompt-on-H1
-    # regression that triggered this sprint.
+    # Demo-baseline-fix 1A (T2) + 1A-hotfix (B61): name, tagline and
+    # story are now derived from brief signals only. `original_prompt`
+    # is not used (would re-introduce raw-prompt-on-H1) and
+    # `notesForPlanner` is not used (would leak briefModel's English
+    # planner orientation onto customer-facing /om-oss copy and the
+    # tagline strip).
     _ = original_prompt
     company_name = _derive_company_name(
+        business_type=business_type,
+        location_hint=location_hint,
+        language=language,
+    )
+    tagline = _derive_tagline(
         business_type=business_type,
         location_hint=location_hint,
         language=language,
@@ -572,7 +690,7 @@ def site_brief_to_project_input(
     story = _derive_story(
         business_type=business_type,
         location_hint=location_hint,
-        notes_for_planner=notes,
+        notes_for_planner=brief.get("notesForPlanner"),
         language=language,
     )
 
@@ -590,12 +708,10 @@ def site_brief_to_project_input(
         "company": {
             "name": company_name,
             "businessType": business_type,
-            "tagline": (notes or tagline_default)[:140],
+            "tagline": tagline,
             "story": story,
         },
-        "location": _placeholder_location(
-            brief.get("locationHint"), language
-        ),
+        "location": _placeholder_location(location_hint, language),
         "services": services,
         "tone": {
             "primary": tone_words[0] if tone_words else "trustworthy",
