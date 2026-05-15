@@ -40,3 +40,24 @@ def test_project_input_picker_filters_version_snapshots() -> None:
 
     assert "VERSIONED_PROJECT_INPUT_PATTERN" in project_inputs_ts
     assert "!VERSIONED_PROJECT_INPUT_PATTERN.test(entry.name)" in project_inputs_ts
+
+
+@pytest.mark.tooling
+def test_viewser_python_runners_prefer_repo_venv() -> None:
+    for relative in ("lib/prompt-runner.ts", "lib/build-runner.ts"):
+        text = (VIEWSER_DIR / relative).read_text(encoding="utf-8")
+        assert "existsSync" in text
+        assert '".venv"' in text
+        assert '"bin/python"' in text
+
+
+@pytest.mark.tooling
+def test_serialized_prompt_and_build_runners_clear_inflight_promises() -> None:
+    for relative, sentinel in (
+        ("app/api/prompt/route.ts", "promptInFlight = promise;"),
+        ("lib/build-runner.ts", "inFlight = promise;"),
+    ):
+        text = (VIEWSER_DIR / relative).read_text(encoding="utf-8")
+        assert sentinel in text
+        assert "return await promise;" in text
+        assert ".finally(() =>" not in text

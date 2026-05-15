@@ -91,12 +91,14 @@ async function runPromptBuildSerially(
   }
 
   const promise = runPromptBuildOnce(payload);
-  promptInFlight = promise.finally(() => {
+  promptInFlight = promise;
+  try {
+    return await promise;
+  } finally {
     if (promptInFlight === promise) {
       promptInFlight = null;
     }
-  });
-  return promise;
+  }
 }
 
 export async function POST(request: NextRequest) {
