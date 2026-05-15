@@ -877,6 +877,19 @@ def render_home(
         "            </li>"
         for i, item in enumerate(trust)
     )
+    trust_section = ""
+    if trust:
+        trust_section = (
+            '      <section className="border-t border-[color:var(--border)] bg-[color:var(--accent)]/20">\n'
+            '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[var(--section-spacing)]">\n'
+            '          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Varför oss</h2>\n'
+            '          <ul className="grid gap-4 md:grid-cols-2">\n'
+            f"{trust_items}\n"
+            "          </ul>\n"
+            "        </div>\n"
+            "      </section>\n"
+            "\n"
+        )
     spel_cta = (
         '          <a href="/spel" className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Gamepad2 className="size-4" />Spela direkt</a>\n'
         if "/spel" in dossier_routes
@@ -925,15 +938,7 @@ def render_home(
         "        </div>\n"
         "      </section>\n"
         "\n"
-        '      <section className="border-t border-[color:var(--border)] bg-[color:var(--accent)]/20">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[var(--section-spacing)]">\n'
-        '          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Varför oss</h2>\n'
-        '          <ul className="grid gap-4 md:grid-cols-2">\n'
-        f"{trust_items}\n"
-        "          </ul>\n"
-        "        </div>\n"
-        "      </section>\n"
-        "\n"
+        f"{trust_section}"
         '      <section className="border-t border-[color:var(--border)] bg-[color:var(--primary)] text-[color:var(--primary-foreground)]">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-4 py-[var(--section-spacing)]">\n'
         '          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Hör av dig idag</h2>\n'
@@ -1289,6 +1294,12 @@ def mount_dossier_components(target: Path, selected_dossiers: list[dict]) -> lis
                 )
             seen[source.name] = info["id"]
             destination = components_target / source.name
+            if destination.exists():
+                raise SystemExit(
+                    "Builder failed: dossier component would shadow an "
+                    f"existing starter component at components/{source.name}. "
+                    "Rename the dossier component before retrying."
+                )
             write(destination, source.read_text(encoding="utf-8"))
             copied.append(f"components/{source.name}")
     return copied
@@ -2092,9 +2103,7 @@ def build(
             "before retrying."
         )
 
-    routes_required = required_routes(scaffold_routes)
     routes_all = all_default_routes(scaffold_routes)
-    routes_required_with_dossiers = sorted(set(routes_required + dossier_routes))
     routes_all_with_dossiers = sorted(set(routes_all + dossier_routes))
     # Sprint 3A note: the previous hard guard ``assert_routes_present`` ran
     # here and crashed the build via SystemExit on missing routes or absent
@@ -2186,7 +2195,7 @@ def build(
     quality_payload, repair_payload = run_phase3_quality_and_repair(
         run_dir,
         target,
-        routes_required_with_dossiers,
+        routes_all_with_dossiers,
         npm_steps,
         overall_status,
         do_typecheck,

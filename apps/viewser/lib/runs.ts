@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs";
+import type { Stats } from "node:fs";
 import path from "node:path";
 
 const RUN_ID_PATTERN = /^[a-zA-Z0-9._-]+$/;
@@ -42,8 +43,24 @@ export async function listRuns(limit = 20): Promise<RunMeta[]> {
   const entries = await fs.readdir(dir, { withFileTypes: true });
   const directories = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
 
+  const liveDirectories = (
+    await Promise.all(
+      directories.map(async (runId) => {
+        try {
+          const stats = await fs.stat(path.join(dir, runId));
+          return { runId, stats };
+        } catch {
+          return null;
+        }
+      }),
+    )
+  )
+    .filter((entry): entry is { runId: string; stats: Stats } => entry !== null)
+    .sort((a, b) => b.stats.mtimeMs - a.stats.mtimeMs)
+    .slice(0, limit);
+
   const metas = await Promise.all(
-    directories.map(async (runId) => {
+    liveDirectories.map(async ({ runId, stats }) => {
       const buildResultPath = path.join(dir, runId, "build-result.json");
       try {
         const result = await readJsonFile<{
@@ -80,8 +97,7 @@ export async function listRuns(limit = 20): Promise<RunMeta[]> {
 
   return metas
     .filter((meta): meta is RunMeta => meta !== null)
-    .sort((a, b) => (a.runId > b.runId ? -1 : 1))
-    .slice(0, limit);
+    .sort((a, b) => (a.createdAt > b.createdAt ? -1 : 1));
 }
 
 function stringOrUndefined(value: unknown): string | undefined {
@@ -187,11 +203,12 @@ export type RunArtefactBundle = {
   qualityResult: Record<string, unknown> | null;
   repairResult: Record<string, unknown> | null;
   siteBrief: Record<string, unknown> | null;
+  sitePlan: Record<string, unknown> | null;
   missingArtefacts: string[];
 };
 
 /**
- * Read the four artefakter Builder UX MVP needs to render a run-detail
+ * Read the five artefakter Builder UX MVP needs to render a run-detail
  * view, defensively. Any missing file is recorded in `missingArtefacts`
  * so the UI can show "saknas i äldre run" instead of crashing.
  */
@@ -205,8 +222,9 @@ export async function readRunArtefacts(runId: string): Promise<RunArtefactBundle
     "quality-result.json",
     "repair-result.json",
     "site-brief.json",
+    "site-plan.json",
   ] as const;
-  const [buildResult, qualityResult, repairResult, siteBrief] = await Promise.all(
+  const [buildResult, qualityResult, repairResult, siteBrief, sitePlan] = await Promise.all(
     filenames.map((name) => readArtefactOrNull(runId, name)),
   );
 
@@ -215,6 +233,7 @@ export async function readRunArtefacts(runId: string): Promise<RunArtefactBundle
   if (!qualityResult) missingArtefacts.push("quality-result.json");
   if (!repairResult) missingArtefacts.push("repair-result.json");
   if (!siteBrief) missingArtefacts.push("site-brief.json");
+  if (!sitePlan) missingArtefacts.push("site-plan.json");
 
   return {
     runId,
@@ -222,6 +241,7 @@ export async function readRunArtefacts(runId: string): Promise<RunArtefactBundle
     qualityResult,
     repairResult,
     siteBrief,
+    sitePlan,
     missingArtefacts,
   };
 }

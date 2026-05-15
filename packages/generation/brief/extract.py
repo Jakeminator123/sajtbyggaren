@@ -96,6 +96,10 @@ class SiteBrief(BaseModel):
         default=None,
         description="A short slug describing the business (e.g. 'electrician', 'dental-clinic').",
     )
+    company_name: str | None = Field(
+        default=None,
+        description="Company name if the prompt explicitly mentions one. Null otherwise.",
+    )
     target_audience: list[str] = Field(
         default_factory=list,
         description="Who the site is meant to convert. 0-5 items.",
@@ -115,6 +119,18 @@ class SiteBrief(BaseModel):
     location_hint: str | None = Field(
         default=None,
         description="City or region if mentioned in the prompt.",
+    )
+    contact_phone: str | None = Field(
+        default=None,
+        description="Phone number if explicitly mentioned in the prompt. Null otherwise.",
+    )
+    contact_email: str | None = Field(
+        default=None,
+        description="Email address if explicitly mentioned in the prompt. Null otherwise.",
+    )
+    contact_address: str | None = Field(
+        default=None,
+        description="Street/postal address if explicitly mentioned in the prompt. Null otherwise.",
     )
     conversion_goals: list[str] = Field(
         default_factory=list,
@@ -155,6 +171,9 @@ _SYSTEM_INSTRUCTIONS = (
     "businessType if the prompt is ambiguous - leave it null. Do not add capabilities "
     "the user did not ask for. Slug-shaped fields (business_type, requested_capabilities, "
     "conversion_goals) are kebab-case English even if the prompt is in another language. "
+    "Extract company_name only when the prompt names a real company or brand. "
+    "Extract contact_phone, contact_email and contact_address only when the prompt "
+    "explicitly includes those details; never invent contact data. "
     "The services_mentioned field is the EXCEPTION: return short natural-language phrases "
     "in the prompt's original language so the generated website renders readable labels."
 )
@@ -273,11 +292,15 @@ def site_brief_to_artifact(
         "language": brief.language,
         "rawPrompt": brief.raw_prompt,
         "businessTypeGuess": brief.business_type,
+        "companyName": brief.company_name,
         "pageCount": brief.page_count,
         "tone": brief.tone,
         "targetAudience": brief.target_audience,
         "requestedCapabilities": brief.requested_capabilities,
         "locationHint": brief.location_hint,
+        "contactPhone": brief.contact_phone,
+        "contactEmail": brief.contact_email,
+        "contactAddress": brief.contact_address,
         "conversionGoals": brief.conversion_goals,
         "servicesMentioned": brief.services_mentioned,
         "contentDepth": brief.content_depth,

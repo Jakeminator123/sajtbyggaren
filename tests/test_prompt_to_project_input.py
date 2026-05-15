@@ -42,6 +42,7 @@ from prompt_to_project_input import (  # noqa: E402
     _slugify_label,
     generate,
     generate_followup,
+    merge_followup_project_input,
     pick_scaffold,
     site_brief_to_project_input,
     slugify_site_id,
@@ -171,6 +172,138 @@ def test_site_brief_to_project_input_uses_real_brief_fields(
     assert "paneldragning" in service_ids
     assert "laddbox-installation" in service_ids
     assert project_input["tone"]["primary"] == "trustworthy"
+
+
+@pytest.mark.tooling
+def test_site_brief_company_name_overrides_derived_h1(
+    project_input_schema: dict,
+) -> None:
+    """B64: an explicit companyName from Site Brief must survive into
+    Project Input instead of being replaced by businessType + location.
+    """
+    brief = {
+        "language": "sv",
+        "businessTypeGuess": "electrician",
+        "companyName": "Volt & Co",
+        "rawPrompt": "Skapa hemsida för Volt & Co i Malmö",
+        "tone": [],
+        "conversionGoals": [],
+        "servicesMentioned": [],
+        "requestedCapabilities": [],
+        "locationHint": "Malmö",
+        "notesForPlanner": None,
+        "briefSource": "real",
+    }
+    project_input = site_brief_to_project_input(
+        brief,
+        site_id="volt-co-malmo",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="Skapa hemsida för Volt & Co i Malmö",
+    )
+    jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
+    assert project_input["company"]["name"] == "Volt & Co"
+
+
+@pytest.mark.tooling
+def test_site_brief_without_company_name_uses_existing_fallback() -> None:
+    brief = {
+        "language": "sv",
+        "businessTypeGuess": "electrician",
+        "rawPrompt": "elektriker Malmö",
+        "tone": [],
+        "conversionGoals": [],
+        "servicesMentioned": [],
+        "requestedCapabilities": [],
+        "locationHint": "Malmö",
+        "notesForPlanner": None,
+        "briefSource": "real",
+    }
+    project_input = site_brief_to_project_input(
+        brief,
+        site_id="elektriker-malmo",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="elektriker Malmö",
+    )
+    assert project_input["company"]["name"] == "Elektriker i Malmö"
+
+
+@pytest.mark.tooling
+def test_site_brief_contact_fields_override_placeholders(
+    project_input_schema: dict,
+) -> None:
+    """B65: explicit contact values from Site Brief must map to the
+    schema-required Project Input contact block.
+    """
+    brief = {
+        "language": "sv",
+        "businessTypeGuess": "electrician",
+        "companyName": "Volt & Co",
+        "contactPhone": "0701234567",
+        "contactEmail": "hej@voltco.se",
+        "contactAddress": "Storgatan 1, 211 22 Malmö",
+        "rawPrompt": "Volt & Co, telefon 0701234567, hej@voltco.se",
+        "tone": [],
+        "conversionGoals": [],
+        "servicesMentioned": [],
+        "requestedCapabilities": [],
+        "locationHint": "Malmö",
+        "notesForPlanner": None,
+        "briefSource": "real",
+    }
+    project_input = site_brief_to_project_input(
+        brief,
+        site_id="volt-co-contact",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="Volt & Co, telefon 0701234567, hej@voltco.se",
+    )
+    jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
+    assert project_input["contact"]["phone"] == "0701234567"
+    assert project_input["contact"]["email"] == "hej@voltco.se"
+    assert project_input["contact"]["addressLines"] == [
+        "Storgatan 1, 211 22 Malmö"
+    ]
+
+
+@pytest.mark.tooling
+def test_selected_dossiers_rationale_matches_project_language() -> None:
+    """B79: Swedish prompt-generated Project Inputs should not carry
+    English operator rationale by default.
+    """
+    sv_brief = {
+        "language": "sv",
+        "businessTypeGuess": "electrician",
+        "rawPrompt": "elektriker Malmö",
+        "tone": [],
+        "conversionGoals": [],
+        "servicesMentioned": [],
+        "requestedCapabilities": [],
+        "locationHint": "Malmö",
+        "notesForPlanner": None,
+        "briefSource": "real",
+    }
+    en_brief = {**sv_brief, "language": "en", "rawPrompt": "electrician in Malmö"}
+
+    sv_project_input = site_brief_to_project_input(
+        sv_brief,
+        site_id="sv-rationale",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="elektriker Malmö",
+    )
+    en_project_input = site_brief_to_project_input(
+        en_brief,
+        site_id="en-rationale",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="electrician in Malmö",
+    )
+
+    assert "Auto-genererat" in sv_project_input["selectedDossiers"]["rationale"]
+    assert "Auto-generated" not in sv_project_input["selectedDossiers"]["rationale"]
+    assert "Auto-generated" in en_project_input["selectedDossiers"]["rationale"]
 
 
 @pytest.mark.tooling
@@ -482,6 +615,82 @@ def test_followup_does_not_inject_workflow_text_into_company_story(
     assert followup_meta["followUpPrompt"].startswith("Lägg till ett tydligt")
 
 
+@pytest.mark.tooling
+def test_followup_merge_keeps_story_tagline_and_tone_byte_stable() -> None:
+    """B71: follow-up merge is conservative until Project DNA semantic
+    patching lands. Candidate story/tagline/tone must not replace v1
+    content even when the follow-up prompt asks for a tone shift.
+    """
+    previous = {
+        "siteId": "stable-site",
+        "scaffoldId": "local-service-business",
+        "variantId": "nordic-trust",
+        "language": "sv",
+        "company": {
+            "name": "Volt & Co",
+            "businessType": "electrician",
+            "tagline": "Byte-stable tagline",
+            "story": "Byte-stable story",
+        },
+        "location": {
+            "city": "Malmö",
+            "country": "Sverige",
+            "serviceAreas": ["Malmö"],
+        },
+        "contact": {
+            "phone": "0701234567",
+            "email": "hej@voltco.se",
+            "addressLines": ["Storgatan 1"],
+            "openingHours": "Mån-Fre 09:00-17:00",
+        },
+        "tone": {"primary": "lugn", "secondary": ["lokal"], "avoid": []},
+        "services": [
+            {"id": "elservice", "label": "Elservice", "summary": "Elservice."}
+        ],
+        "conversionGoals": ["call"],
+        "requestedCapabilities": [],
+        "trustSignals": [],
+        "selectedDossiers": {"required": [], "recommended": [], "rationale": "x"},
+    }
+    candidate = {
+        **previous,
+        "company": {
+            "name": "Ny kandidat",
+            "businessType": "electrician",
+            "tagline": "Candidate tagline",
+            "story": "Candidate story",
+        },
+        "tone": {"primary": "premium", "secondary": ["varm"], "avoid": ["kall"]},
+        "services": [
+            {"id": "laddbox", "label": "Laddbox", "summary": "Laddbox."}
+        ],
+        "conversionGoals": ["quote-request"],
+    }
+
+    merged = merge_followup_project_input(
+        previous,
+        candidate,
+        follow_up_prompt="Gör tonen varmare och lyft laddboxar.",
+    )
+
+    assert merged["company"]["story"] == "Byte-stable story"
+    assert merged["company"]["tagline"] == "Byte-stable tagline"
+    assert merged["tone"] == previous["tone"]
+    assert {service["id"] for service in merged["services"]} == {
+        "elservice",
+        "laddbox",
+    }
+    assert merged["conversionGoals"] == ["call", "quote-request"]
+
+
+@pytest.mark.tooling
+def test_followup_merge_docstring_describes_conservative_semantics() -> None:
+    doc = merge_followup_project_input.__doc__ or ""
+    assert "visible story note" not in doc
+    assert "story, tagline, tone" in doc
+    assert "semantic patching" in doc
+
+
 # ---------------------------------------------------------------------------
 # Demo-baseline-fix 1A (T2): raw prompt must never become customer-facing
 # company.name or company.story copy. The previous helper used
@@ -703,6 +912,34 @@ def test_swedish_service_labels_preserve_case() -> None:
 
 
 @pytest.mark.tooling
+def test_service_slug_collisions_get_deterministic_suffixes() -> None:
+    """B83: two distinct labels that normalize to the same slug should
+    both survive instead of silently dropping the later service.
+    """
+    brief = {
+        "language": "sv",
+        "businessTypeGuess": "service-provider",
+        "locationHint": "Malmö",
+        "rawPrompt": "test",
+        "tone": [],
+        "conversionGoals": [],
+        "servicesMentioned": ["A+B", "A B", "A_B"],
+        "requestedCapabilities": [],
+        "notesForPlanner": None,
+        "briefSource": "real",
+    }
+    project_input = site_brief_to_project_input(
+        brief,
+        site_id="collision-test",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="test",
+    )
+    service_ids = [service["id"] for service in project_input["services"]]
+    assert service_ids[:3] == ["a-b", "a-b-2", "a-b-3"]
+
+
+@pytest.mark.tooling
 def test_slugify_site_id_ascii_folds_swedish_chars() -> None:
     """The siteId is operator-facing in URLs/paths. NFKD-folding before
     `_SLUG_CLEAN` means "elektriker i Malmö" reads as
@@ -811,9 +1048,11 @@ def test_derive_tagline_falls_back_when_brief_is_empty() -> None:
         location_hint=None,
         language="sv",
     )
-    assert tagline
+    assert tagline == "Välkommen"
     assert len(tagline) <= 140
     assert "Likely" not in tagline
+    assert "Project Input" not in tagline
+    assert "taglinen" not in tagline
 
 
 @pytest.mark.tooling

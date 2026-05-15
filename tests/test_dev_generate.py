@@ -195,6 +195,32 @@ def test_dev_generate_placeholder_uses_canonical_field_names(tmp_path: Path):
 
 
 @pytest.mark.tooling
+def test_dev_generate_codegen_manifest_includes_planned_routes(tmp_path: Path):
+    """B74: mock pipeline codegen must not report ``routes_written=[]``.
+
+    Even though dev_generate writes placeholder files, the CodegenResult
+    should still reflect the planned route surface so Run Details and
+    trace triage do not look like a zero-route build.
+    """
+    rc, runs_dir, output = _run_dev_generate(
+        tmp_path, "Skapa hemsida för elektriker i Malmö"
+    )
+    assert rc == 0, output
+
+    run_dir = _only_run_dir(runs_dir)
+    site_plan = json.loads(
+        (run_dir / "site-plan.json").read_text(encoding="utf-8")
+    )
+    build_result = json.loads(
+        (run_dir / "build-result.json").read_text(encoding="utf-8")
+    )
+    route_count = len(site_plan["routePlan"])
+
+    assert route_count > 0
+    assert build_result["codegen"]["fileCount"] >= route_count + 3
+
+
+@pytest.mark.tooling
 def test_dev_generate_language_detection(tmp_path: Path):
     rc, runs_dir, _ = _run_dev_generate(
         tmp_path, "Skapa hemsida för en elektriker i Malmö", "--phase", "brief"

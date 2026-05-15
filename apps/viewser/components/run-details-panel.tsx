@@ -15,6 +15,7 @@ type ArtefactBundle = {
   qualityResult: Record<string, unknown> | null;
   repairResult: Record<string, unknown> | null;
   siteBrief: Record<string, unknown> | null;
+  sitePlan: Record<string, unknown> | null;
   missingArtefacts: string[];
 };
 
@@ -71,6 +72,12 @@ type NpmStep = {
   ok?: boolean;
   seconds?: number;
   logExcerpt?: string;
+};
+
+type RoutePlanEntry = {
+  id?: string;
+  path?: string;
+  purpose?: string;
 };
 
 function BuildSection({ build }: { build: Record<string, unknown> | null }) {
@@ -160,6 +167,58 @@ function BuildSection({ build }: { build: Record<string, unknown> | null }) {
           </div>
         ) : (
           <MissingNote label="npmSteps saknas (dev_generate-pipeline kör inte npm)." />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SitePlanSection({ sitePlan }: { sitePlan: Record<string, unknown> | null }) {
+  if (!sitePlan) {
+    return (
+      <Card size="sm">
+        <CardHeader className="border-b">
+          <CardTitle className="text-sm">Site Plan</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 pt-3">
+          <MissingNote label="site-plan.json saknas i denna run." />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const scaffoldId = asString(sitePlan.scaffoldId, "unknown");
+  const variantId = asString(sitePlan.variantId, "unknown");
+  const starterId = asString(sitePlan.starterId, "unknown");
+  const routePlan = Array.isArray(sitePlan.routePlan)
+    ? (sitePlan.routePlan as RoutePlanEntry[])
+    : [];
+
+  return (
+    <Card size="sm">
+      <CardHeader className="border-b">
+        <CardTitle className="text-sm">Site Plan</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 pt-3 text-xs">
+        <p className="text-muted-foreground">
+          scaffold: <span className="font-mono">{scaffoldId}</span>
+          {" · "}variant: <span className="font-mono">{variantId}</span>
+          {" · "}starter: <span className="font-mono">{starterId}</span>
+        </p>
+        {routePlan.length > 0 ? (
+          <div>
+            <p className="text-muted-foreground">routePlan:</p>
+            <ul className="ml-4 list-disc">
+              {routePlan.map((route, index) => (
+                <li key={`${route.path ?? "route"}-${index}`}>
+                  <span className="font-mono">{route.path ?? "?"}</span>
+                  {route.id ? ` — ${route.id}` : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <MissingNote label="routePlan saknas i denna run." />
         )}
       </CardContent>
     </Card>
@@ -537,6 +596,7 @@ export function RunDetailsPanel({ runId }: RunDetailsPanelProps) {
             <ScrollArea className="h-[60vh] rounded-md border p-2">
               <div className="space-y-3 pr-2">
                 <BuildSection build={bundle.buildResult} />
+                <SitePlanSection sitePlan={bundle.sitePlan} />
                 <QualitySection quality={bundle.qualityResult} />
                 <RepairSection repair={bundle.repairResult} />
                 <CodegenSection build={bundle.buildResult} />
