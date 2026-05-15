@@ -289,6 +289,9 @@ COMMON_WORDS = {
     "B64", "B65", "B66", "B67",
     "B69", "B70", "B71", "B72", "B73", "B74", "B75", "B76", "B77",
     "B78", "B79", "B80", "B81", "B82", "B83", "B84", "B85", "B86", "B87",
+    # Extern reviewer-triage 2026-05-15 (mot d99f8ba/c273b1a): nya
+    # öppna B-IDs som loggas i docs/known-issues.md och current-focus.
+    "B88", "B89", "B90", "B91", "B92", "B93",
     # Generic prose ord som dyker upp i operator-flöde-text (ADR 0012)
     "Build", "Page", "Scaffolds",
 }

@@ -255,6 +255,39 @@ run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
   trasig. Källa: brief-pipeline-bug-sweep 2026-05-15. Fix: logga
   högt på stderr vid resolution failure. Fix: open. Test: open.
 
+### Extern reviewer-triage 2026-05-15 (mot `d99f8ba` + `c273b1a`)
+
+- **`B88` Hög** - `scripts/prompt_to_project_input.py:_placeholder_contact()`
+  skriver dev-jargong i publika kontaktfält (`"Address placeholder - update Project Input"` /
+  `"Adress saknas - uppdatera Project Input"`). Kategoriöverlapp med B61
+  ("intern arbetscopy -> publik yta"), men på kontaktytan. Källa:
+  extern reviewer + RO-verifierings-subagent 2026-05-15. Fix: open.
+  Test: open.
+- **`B89` Medel** - `packages/generation/brief/extract.py:detect_language`
+  defaultar till `sv` för korta engelska prompts utan träff i
+  `ENGLISH_HINTS` (t.ex. `plumber stockholm`, `barber malmo`,
+  `ceramic studio`). Kategoriöverlapp med B62 men annan edge-yta. Källa:
+  extern reviewer + RO-verifierings-subagent 2026-05-15. Fix: open.
+  Test: open.
+- **`B90` Låg-Medel** - `packages/generation/brief/extract.py:ENGLISH_HINTS`
+  innehåller `"a"` och `"an"`, vilket kan ge falska engelska träffar
+  (`A & O El Malmö` klassificeras som `en`). Källa: extern reviewer +
+  RO-verifierings-subagent 2026-05-15. Fix: open. Test: open.
+- **`B91` Medel** - `_normalize_location_hint` i
+  `scripts/prompt_to_project_input.py` mappar idag i praktiken bara
+  `sweden -> Sverige`; övriga vanliga engelska/svenska varianter passerar
+  oförändrat. Källa: extern reviewer + RO-verifierings-subagent
+  2026-05-15. Fix: open. Test: open.
+- **`B92` Låg** - `_BUSINESS_TYPE_LABEL_SV` mappar
+  `naprapat -> naprapatklinik`, vilket överanpassar enskild naprapat till
+  klinikform i H1-fallback. Källa: extern reviewer +
+  RO-verifierings-subagent 2026-05-15. Fix: open. Test: open.
+- **`B93` Låg-Medel** - `_company_business_label` fallback i
+  `scripts/prompt_to_project_input.py` visar rå slugtext i svensk H1
+  (`företag som arbetar med pet grooming`). Svensk mening men engelsk
+  slugläcka i kundcopy. Källa: extern reviewer +
+  RO-verifierings-subagent 2026-05-15. Fix: open. Test: open.
+
 ### Övriga öppna
 
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
@@ -385,6 +418,9 @@ arkitekturändring, inte en bugg.
   `tests/test_prompt_to_project_input.py::test_derive_tagline_falls_back_when_brief_is_empty`,
   `tests/test_prompt_to_project_input.py::test_story_constructs_placeholder_when_notes_missing`
   (uppdaterad: låser nu frånvaron av "Justera Project Input"-jargong).
+  **Scope-förtydligande:** stängningen gäller notesForPlanner/story/tagline/
+  service-summary-ytorna i 1A-hotfixen; relaterade öppna poster i samma
+  kategori är B65, B68 och B88.
 
 - **`B62` Hög** (stängd 2026-05-15, demo-baseline-fix 1A-hotfix) -
   `packages/generation/brief/extract.py:detect_language` slog fel på
@@ -418,6 +454,9 @@ arkitekturändring, inte en bugg.
   `tests/test_prompt_to_project_input.py::test_normalize_location_hint_preserves_english_country`,
   `tests/test_prompt_to_project_input.py::test_normalize_location_hint_preserves_real_city`,
   `tests/test_prompt_to_project_input.py::test_swedish_brief_with_country_location_renders_swedish_city`.
+  **Scope-förtydligande:** stängningen gäller language-cascaden och
+  `Sweden -> Sverige`-normalisering i 1A-hotfixen; relaterade öppna poster
+  för end-to-end-språkstöd är B67, B89, B90 och B91.
 
 - **`B63` Medel** (stängd 2026-05-15, demo-baseline-fix 1A-hotfix) -
   `scripts/prompt_to_project_input.py:_BUSINESS_TYPE_LABEL_SV` hade
