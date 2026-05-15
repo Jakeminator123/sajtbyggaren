@@ -474,6 +474,17 @@ i `c073d486` och PR-branchen är inte längre kvar på GitHub.
    fortsatt visar demo-risker: prioritera B67, B80, B81, B82, B84,
    B85, B86, B87 + B89-B93 (extern reviewer-triage) + B97, B98 (re-
    Scout låg-impact) eller riktad fix på det case som dröjer.
+5. **Live pipeline-matris i backoffice (operatörsförslag 2026-05-15
+   sent på kvällen)** - visualisera `prompt → brief → plan → codegen
+   → build → preview` som en live-uppdaterad matris i backoffice
+   playground-vyn. Varje cell visar status (pending/running/ok/fail),
+   senaste log-utdrag och artefakt-länk. Kombinerar befintlig
+   playground-`subprocess.Popen`-runner (B04-stängning) med en
+   pipeline-event-bus som `scripts/build_site.py` + `scripts/
+   dev_generate.py` emitterar `phase.<name>.started/finished`-events
+   till. Streamlit-realtidsuppdatering kräver `st.empty()`-pattern
+   eller WebSocket-shim. Bästa demo-/granskningsverktyg vi kan bygga
+   för dig (operatören). Egen sprint, ej blocker för 1C.
 4. B49 (medel): page-map-driven sidebar för `docs-base`-startern; måste vara klar innan `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`.
 5. **B59 follow-up** (parkerad - väntar på arkitekturbeslut): byte till lokal `next dev`-process som same-origin iframe på `localhost:NNNN` eller static StackBlitz-template. Ingen mer COOP/COEP-toggling.
 6. B53 (låg): `governance/schemas/routes.schema.json` för scaffold-routes-kontraktet.
