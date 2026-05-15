@@ -248,6 +248,7 @@ COMMON_WORDS = {
     # naming-dictionary.v1 utan tillåts som lokal allowlist.
     "ArtefactBundle", "RunArtefactBundle", "RunDetailsPanel", "RunDetailsPanelProps",
     "BuildSection", "QualitySection", "RepairSection", "CodegenSection", "ModelsSection",
+    "SitePlanSection", "RoutePlanEntry",
     "StatusBadge", "StatusDot", "MissingNote", "BuildStatusIndicator", "BuildStage",
     "ByRoleEntry", "NpmStep",
     # NodeJS stdlib-typ (motsvarighet till Python ErrnoException) som
@@ -255,6 +256,8 @@ COMMON_WORDS = {
     "ErrnoException",
     # Viewser interna error-typer och rubriker (inte domänbegrepp)
     "RunNotFoundError", "DossierEditor",
+    # Test-local component names used in dossier collision fixtures.
+    "DossierCard", "StarterCard",
     # MIN_IDE TypeScript-symboler refererade i ADRs men inte canonical i sajtbyggaren
     "VariantHints", "VariantThemeTokenHints", "ScaffoldVariantThemeTokens",
     # Migrationsplanens prosa-rubriker för parallellspår (inte domänbegrepp)
