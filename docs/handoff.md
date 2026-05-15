@@ -1,7 +1,7 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-15 (post cleanup/prune-sprint för dev-preview-tree)
-**Aktuell repo-HEAD på `main`:** `2acdeca` (`feat(scripts): add prune_generated_previews.py with dry-run default`) plus en docs-bump-commit ovanpå. Föregående mainline-pushar samma dag: `7b90c0c` (Steward-sync efter B60), `65f052a` (B60-fixen för PR #27-kontraktsbrott), `dd5464f` (Steward sanity-bump efter PR #27), `e057fbd` (PR #27 follow-up prompt versions squash-merge), `86d03bf` (B59 StackBlitz WebContainer embed-blocker dokumenterad), `210a1d1` (Cursor API key-placeholder i `.env.example`), `9927bd2` (StackBlitz payload size-handling härdad), `4b98d8b` (visningsexempel-artefakter borttagna), `869b2da` (workspace settings + prior docs sync), `cf523ed` (ADR 0021 + known-issues-rad efter StackBlitz preview payload-hardening). Kör `git log --oneline -1` för senaste lokala SHA.
+**Datum:** 2026-05-15 (post cleanup/prune-sprint + Finding 1-fix för dev-preview-tree)
+**Aktuell repo-HEAD på `main`:** den senaste docs-/Steward-bump-commiten ovanpå `2acdeca` (`feat(scripts): add prune_generated_previews.py with dry-run default`). Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA; konventionen är att raden "Last verified state" i `current-focus.md` pekar på senaste produktcommit (`2acdeca`) och Steward-bump-commiten räknas som "within bump tolerance" av `focus_check.py`. Föregående mainline-pushar samma dag: `7b90c0c` (Steward-sync efter B60), `65f052a` (B60-fixen för PR #27-kontraktsbrott), `dd5464f` (Steward sanity-bump efter PR #27), `e057fbd` (PR #27 follow-up prompt versions squash-merge), `86d03bf` (B59 StackBlitz WebContainer embed-blocker dokumenterad), `210a1d1` (Cursor API key-placeholder i `.env.example`), `9927bd2` (StackBlitz payload size-handling härdad), `4b98d8b` (visningsexempel-artefakter borttagna), `869b2da` (workspace settings + prior docs sync), `cf523ed` (ADR 0021 + known-issues-rad efter StackBlitz preview payload-hardening). Kör `git log --oneline -1` för senaste lokala SHA.
 **Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-15`, `backup-16` (post-merge sanity-pass för PR #27), `backup-17` (B60-passet) och `backup-18` (cleanup/prune-passet) finns lokalt och på origin. Nästa Builder/Scout-pass ska skapa nästa lediga `backup-N` från synkad `main` innan sprintarbete. Inga öppna PRs.
 **Stash-läge:** `git stash list` är tom. Den tidigare stale B56-stashen (innehöll äldre version av `ensureWebpackFlag`/`patchPackageJsonForStackblitz` utan B58-allowlistet eller `Buffer.byteLength`-beräkningen) droppades i reconciliation-passet eftersom fixen redan var integrerad i `8fae26a` på `main`.
 
@@ -47,7 +47,7 @@ Tre lager:
 - `backoffice/` + `backend.py` — Streamlit-administration (inte runtime).
 - `packages/` + `apps/` — runtime + kund-UI.
 
-## Vad funkar idag (post-B60, repo-HEAD `65f052a`)
+## Vad funkar idag (post cleanup/prune-sprint, kod-baseline `2acdeca`)
 
 ### Governance + guards
 

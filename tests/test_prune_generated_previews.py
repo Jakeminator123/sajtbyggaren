@@ -393,8 +393,20 @@ def test_main_dry_run_env_overrides_apply_flag(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """``SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN=true`` neutralises ``--apply``."""
+    """``SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN=true`` neutralises ``--apply``.
+
+    The env var is the operator-level safety belt: when it is exported
+    as ``true`` even an explicit ``--apply`` on the CLI must not delete
+    anything, and the human-readable output must surface the env-var
+    name so the operator understands why deletion was suppressed.
+    """
     _make_preview(isolated_env["generated"], "orphan-site-00", mtime_offset=-1)
+    monkeypatch.setattr(
+        "prune_generated_previews.is_port_in_use", lambda *a, **k: False
+    )
+    monkeypatch.setattr(
+        "prune_generated_previews.detect_processes_using_dir", lambda _t: []
+    )
     monkeypatch.setenv(DRY_RUN_ENV_VAR, "true")
 
     exit_code = main(
@@ -412,3 +424,74 @@ def test_main_dry_run_env_overrides_apply_flag(
     assert survivors == {"orphan-site-00"}
     captured = capsys.readouterr().out
     assert DRY_RUN_ENV_VAR in captured
+
+
+@pytest.mark.tooling
+def test_main_apply_deletes_when_env_is_unset(
+    isolated_env: dict[str, Path],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``--apply`` with the env var unset must actually delete entries.
+
+    Locks the post-Finding-1 fix: the dry-run env defaults to ``False``
+    so the operator's natural CLI invocation
+    (``python scripts/prune_generated_previews.py --apply``) deletes
+    overflow entries instead of silently no-op:ing because the safety
+    belt was on by default. The fixture sets the env to ``true``; this
+    test explicitly removes it so the unset state is exercised.
+    """
+    _make_preview(isolated_env["generated"], "orphan-site-00", mtime_offset=-1)
+    monkeypatch.delenv(DRY_RUN_ENV_VAR, raising=False)
+    monkeypatch.setattr(
+        "prune_generated_previews.is_port_in_use", lambda *a, **k: False
+    )
+    monkeypatch.setattr(
+        "prune_generated_previews.detect_processes_using_dir", lambda _t: []
+    )
+
+    exit_code = main(
+        [
+            "--apply",
+            "--generated-dir",
+            str(isolated_env["generated"]),
+            "--keep-total",
+            "0",
+        ]
+    )
+
+    assert exit_code == 0
+    survivors = {p.name for p in isolated_env["generated"].iterdir()}
+    assert survivors == set()
+
+
+@pytest.mark.tooling
+def test_main_apply_deletes_when_env_explicitly_false(
+    isolated_env: dict[str, Path],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An explicit ``SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN=false`` must
+    let ``--apply`` delete. Mirrors the unset case for operators who set
+    the env var defensively in their shell profile.
+    """
+    _make_preview(isolated_env["generated"], "orphan-site-00", mtime_offset=-1)
+    monkeypatch.setenv(DRY_RUN_ENV_VAR, "false")
+    monkeypatch.setattr(
+        "prune_generated_previews.is_port_in_use", lambda *a, **k: False
+    )
+    monkeypatch.setattr(
+        "prune_generated_previews.detect_processes_using_dir", lambda _t: []
+    )
+
+    exit_code = main(
+        [
+            "--apply",
+            "--generated-dir",
+            str(isolated_env["generated"]),
+            "--keep-total",
+            "0",
+        ]
+    )
+
+    assert exit_code == 0
+    survivors = {p.name for p in isolated_env["generated"].iterdir()}
+    assert survivors == set()

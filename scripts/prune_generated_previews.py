@@ -526,13 +526,16 @@ def main(argv: list[str] | None = None) -> int:
 
     generated_dir = resolve_generated_dir(args.generated_dir)
 
-    # The dry-run env flag can force-keep the script in preview mode
-    # even when ``--apply`` is on the command line. This mirrors the
-    # Scout RO-spec: an operator who exports
-    # ``SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN=true`` in their shell
-    # gets a global "no-deletion" safety belt. Setting the env var to
-    # ``false`` (or leaving it unset) lets ``--apply`` take effect.
-    dry_run_env = _env_flag(os.environ.get(DRY_RUN_ENV_VAR), default=True)
+    # The dry-run env flag is an opt-in safety belt: an operator who
+    # exports ``SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN=true`` in their
+    # shell gets a global "no-deletion" override that neutralises any
+    # ``--apply`` on the command line. The env defaults to ``False``
+    # (unset = inactive) so the natural CLI invocation
+    # ``python scripts/prune_generated_previews.py --apply`` actually
+    # deletes; the previous default=True made --apply a no-op without
+    # the operator first exporting the env var to ``false``, which
+    # contradicted the script's own help text.
+    dry_run_env = _env_flag(os.environ.get(DRY_RUN_ENV_VAR), default=False)
     apply = args.apply and not dry_run_env
 
     report = prune(
