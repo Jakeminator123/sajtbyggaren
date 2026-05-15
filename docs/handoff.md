@@ -1,9 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-15 (post demo-baseline-fix 1B + bug-sweep PR #28: B64/B65/B66/B69-B79/B83 stängda, re-verifierings-Scout är nästa)
-**Aktuell repo-HEAD på `main`:** `cc3c6f3` (docs-bump ovanpå PR #28 squash-merge `885431b`, `Demo-baseline-fix 1B + bug-sweep`). Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA. Föregående produktbaseline: `d99f8ba` 1A-hotfixen för B61/B62/B63.
-**Aktiv branch:** `main`. PR #28 är mergead; PR-branchen `cursor/demo-baseline-buggsvep-44a5` kan städas separat om den finns kvar lokalt/remote. `backup-21` finns på origin från Grind-sprintstart. Inga kända öppna PR-blockers.
-**Stash-läge:** `git stash list` har EN parkerad stash: `park read-only shell windows rule before demo-baseline-fix` (skapad 2026-05-15 av Scout som förberedelse för 1A-hotfix-Builder, ska poppas separat när rule-spåret tas upp igen — INTE i Grind-sprinten).
+**Datum:** 2026-05-15 (post-Grind PR #28 + re-Verifierings-Scout: scorecard 5.54/10 mot 6.2-baseline, alla fyra `status=ok`. Beslutsregeln triggar 1C-sprint som riktad fix på B88 + B94 + B95 + B96; re-Scout loggade fem nya öppna B-IDs B94-B98 och markerade B71 som unverified)
+**Aktuell repo-HEAD på `main`:** Steward-bump-commit ovanpå `948d2f9` (`chore(rules): add read-only-shell-windows rule`), som ligger ovanpå Grinds post-merge bumpar `cc3c6f3` + `d0ded58` och PR #28 squash-merge `885431b`. Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA. Föregående produktbaseline: `d99f8ba` 1A-hotfixen för B61/B62/B63.
+**Aktiv branch:** `main`. PR #28 är mergead; PR-branchen `cursor/demo-baseline-buggsvep-44a5` är raderad både lokalt och remote. `backup-21` finns på origin från Grind-sprintstart. Inga kända öppna PR-blockers.
+**Stash-läge:** `git stash list` är **tom**. Den tidigare parkerade `park read-only shell windows rule before demo-baseline-fix` poppades 2026-05-15 i `948d2f9` och behöver inte hanteras igen.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
 Färdiga startprompter för Scout/Builder/Steward finns i [`docs/agent-prompts.md`](agent-prompts.md). För längre fleragentpass används [`docs/orchestrator-playbook.md`](orchestrator-playbook.md); den samordnar befintliga roller och skapar inte en fjärde fast roll.
@@ -126,12 +126,27 @@ demo-baseline-fix 1B + bug-sweep är mergead i `885431b` via PR #28. Den stängd
 
 Verifiering i PR #28: ruff 0 findings, full pytest grön (3 skipped E2E/slow), governance/rules/term checks gröna, Viewser `npm run build` grön, smoke-builds `elektriker Malmö` + `frisör Göteborg` båda `status=ok`, `quality=ok`. Bugbot var inte aktiv; GitHub governance, builder-smoke och secret-scan var gröna.
 
-**Nästa uppgift: Re-verifierings-Scout efter 1B.** Kör samma fyra demo-prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`) mot `main` vid `885431b`, poängsätt samma åtta scorecard-dimensioner som 6.2/10-baselinen och besluta:
+**Nästa uppgift: Demo-baseline-fix 1C (B88 + B94 + B95 + B96).** Re-
+Verifierings-Scout rapporterade snitt 5.54/10 (case-spann 3.9-6.25),
+audit-konfidence 7/10. Alla fyra builds var `status=ok`/`quality=ok`.
+Beslutsregeln triggar (snitt <7/10 OCH e-handel-case 3.9 <6.5) →
+riktad fix på top synliga demo-blockers:
 
-- totalsnitt ≥7/10 och inget case <6.5 → Project DNA / semantic follow-up merge.
-- annars → bug-sweep round 2 eller riktad fix på sämsta case.
+- **B88** (kontakt-placeholder dev-jargong syns på alla fyra case som
+  `"Adress saknas - uppdatera Project Input"` i publik `<address>`).
+- **B94** (tom team-grid renderas alltid på `/om-oss`; conditional
+  section render likt B66).
+- **B95** (`locationHint="Sverige"` utan stad blir ortstag i hero
+  på e-handel-case; bredare variant av B91).
+- **B96** (hero-CTA "Begär offert" hardcoded i `render_home` oavsett
+  `scaffoldId`/`conversionGoals`; e-handel borde få "Shoppa nu").
 
-Kvar öppna från 1B-scope/deferred: B67, B80, B81, B82, B84, B85, B86, B87. StackBlitz B59 är fortsatt parkerad.
+Förväntad effekt: snitt 6.5-7.0/10. Project DNA / semantic follow-up
+merge (inkl. två-pass-verifiering av B71) får vänta tills vi är över
+7/10. B97, B98 är låg-impact och kan vänta. Övriga öppna B-IDs:
+B67, B80, B81, B82, B84, B85, B86, B87 (deferred från Grind),
+B89-B93 (extern reviewer-triage), B49, B53, B47, B13a, BO4-followup-
+cancel (äldre). StackBlitz B59 är fortsatt parkerad.
 
 ## Operatörspreferenser (2026-05-13)
 
@@ -184,6 +199,13 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+948d2f9 chore(rules): add read-only-shell-windows rule
+d0ded58 docs: align verified SHA with post-1B bump
+cc3c6f3 docs: bump verified SHA after demo-baseline-fix 1B
+8282bd9 docs: triage external reviewer findings B88-B93
+885431b Demo-baseline-fix 1B + bug-sweep (B64-B79) (#28)
+64c30d6 docs: log B64-B67 (Scout) + B69-B87 (bug-sweep) and queue Grind sprint
+c273b1a docs: bump verified SHA after 1A-hotfix
 d99f8ba fix(prompt-helper): close B61 B62 B63 (demo-baseline-fix 1A-hotfix)
 a12314f chore(cursorignore): pin viewser node_modules and .next explicitly
 b78484f docs: record verifierings-Scout findings (B61/B62/B63)

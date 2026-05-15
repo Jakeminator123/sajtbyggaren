@@ -292,6 +292,11 @@ COMMON_WORDS = {
     # Extern reviewer-triage 2026-05-15 (mot d99f8ba/c273b1a): nya
     # öppna B-IDs som loggas i docs/known-issues.md och current-focus.
     "B88", "B89", "B90", "B91", "B92", "B93",
+    # Re-Verifierings-Scout 2026-05-15 (post-Grind PR #28): nya öppna
+    # B-IDs efter scorecard mot 6.2/10-baselinen. Loggade i
+    # docs/known-issues.md och docs/current-focus.md som följdspår
+    # för demo-baseline-fix 1C.
+    "B94", "B95", "B96", "B97", "B98",
     # Generic prose ord som dyker upp i operator-flöde-text (ADR 0012)
     "Build", "Page", "Scaffolds",
 }

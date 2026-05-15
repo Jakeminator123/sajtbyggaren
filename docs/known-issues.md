@@ -288,6 +288,56 @@ run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
   slugläcka i kundcopy. Källa: extern reviewer +
   RO-verifierings-subagent 2026-05-15. Fix: open. Test: open.
 
+### Re-Verifierings-Scout 2026-05-15 (post-Grind PR #28 mot `d0ded58`)
+
+Re-Verifierings-Scout körde fyra demo-prompter mot fixad kod efter
+Grind PR #28-mergen och rapporterade totalsnitt **5.54/10** (case-spann
+3.9-6.25). Alla fyra builds var `status=ok`/`quality=ok`. Scout
+flaggar själv att hen sannolikt är 0.3-0.5p strikare än Scout 1's
+6.2-baseline, så jämförelsen mot baseline är osäker; det Scout är
+säker på är att språk-/H1-buggar är borta och kvarvarande svagheter
+är dev-jargong, generisk copy och scaffold-mismatch för e-handel.
+Top kvarvarande demo-blockers: **B88** (kontakt-placeholder dev-
+jargong synligt på alla fyra case), generisk service-copy ("X -
+kontakta oss för mer information." återanvänds överallt), och hero-
+CTA "Begär offert" hardcoded i `render_home` oavsett bransch
+(bryter särskilt e-handel-trovärdighet). Audit-konfidence 7/10.
+
+- **`B94` Medel** - `<ul>`/team-grid på `/om-oss` renderas alltid
+  även när `team`-listan är tom. Visuellt tom sektion på alla fyra
+  case; samma pattern som B66 (conditional section render). Källa:
+  re-Verifierings-Scout 2026-05-15. Fix: open. Test: open.
+- **`B95` Medel** - `_normalize_location_hint` fångar inte att brief
+  returnerar `locationHint="Sverige"` (utan stad) på `liten e-handel
+  som säljer keramik`-prompten. `location.city` blir då landnamnet
+  och renderas som ortstag i hero. Bredare variant av B91 — Sverige-
+  på-city-fältet specifikt, inte bara `"Sweden"`-translit. Källa:
+  re-Verifierings-Scout 2026-05-15. Fix: open. Test: open.
+- **`B96` Medel** - Hero-CTA "Begär offert" är hardcoded i
+  `scripts/build_site.py:render_home` oavsett `scaffoldId` /
+  `conversionGoals`. För `ecommerce-lite` + `conversionGoals=
+  ["purchase"]` borde CTA vara "Shoppa nu"/"Se sortimentet". Påverkar
+  främst e-handel-case (3.9/10 i re-Scout) och bryter trovärdighet
+  för frisör/naprapat där "boka tid" är rätt verb. Källa: re-
+  Verifierings-Scout 2026-05-15. Fix: open. Test: open.
+- **`B97` Låg** - `/kontakt`-paragrafen "Beskriv jobbet kort så
+  återkommer vi inom en arbetsdag med tider och offert." använder
+  `jobbet`+`offert` hardcoded — passar inte e-handel-cases (frågor om
+  beställning/retur/leverans). Källa: re-Verifierings-Scout
+  2026-05-15. Fix: open. Test: open.
+- **`B98` Låg** - "Områden vi arbetar i"-block på `/om-oss` är
+  meaningless för e-handel — borde inte renderas (eller annan rubrik)
+  när scaffold = `ecommerce-lite`. Källa: re-Verifierings-Scout
+  2026-05-15. Fix: open. Test: open.
+
+**B71-not (PR #28 stängde, men markerad som unverified av re-Scout):**
+Re-Verifierings-Scout flaggade att follow-up byte-stabilitet inte
+kan verifieras i ett första-generations-pass (kräver v1 → v2-test).
+B71-stängningen i Grind hänger på kod-/docstring-spårning i
+`tests/test_prompt_to_project_input.py`; ingen kritik mot lock-tester,
+bara att Scout inte själv kunde verifiera invarianten. Två-pass-test
+bör naturligt köras nästa gång någon ändå provkör follow-up-flödet.
+
 ### Övriga öppna
 
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
