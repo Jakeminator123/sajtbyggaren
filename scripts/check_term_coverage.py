@@ -98,6 +98,11 @@ COMMON_WORDS = {
     "Fas 1", "Fas 2", "Fas 3",
     # Språknamn
     "Engelska", "Svenska", "English", "Swedish",
+    # Land- och stadsnamn som dyker upp i hotfix-/Scout-docs som
+    # exempel-prompter eller verifieringsoutput. De är geografiska
+    # egennamn, inte domänbegrepp.
+    "Sverige", "Sweden", "Malmö", "Göteborg", "Stockholm", "Lund",
+    "Skövde", "Boston", "Småland",
     # Interna kod-symboler / rubriker som inte är domänbegrepp
     "CheckResult", "SECTIONS",
     "Required files", "Optional files",

@@ -76,47 +76,6 @@ Format per bugg:
 
 ## Öppna - inte fixade än
 
-- **`B61` Hög** - `notes_for_planner` läcker som customer-facing copy på
-  `/om-oss` och som tagline. Källa: verifierings-Scout 2026-05-15 efter
-  demo-baseline-fix 1A. `scripts/prompt_to_project_input.py:_derive_story`
-  föredrar `brief.notesForPlanner` som story-fallback, men briefModel
-  skriver det fältet på engelska som intern orientering för Phase 2-
-  planneraren ("Likely a Swedish electrician website targeting Malmö;
-  prompt is minimal, so keep scope conservative and local."). Samma
-  sträng skrivs in i `company.tagline`. Verifierat på alla fyra Scout-
-  case (elektriker Malmö / frisör Göteborg / naprapatklinik Stockholm /
-  liten e-handel keramik). Detta är en regression från 1A: pre-1A
-  läckte rå prompt, post-1A läcker engelska planner-instruktioner.
-  Fix: `_derive_story` ska bygga från `businessType + location` på
-  prompts originalspråk; `notes_for_planner` får inte renderas på
-  publika sidor. `company.tagline` likadant. Test bör låsa frånvaron
-  av engelska planner-fraser i story/tagline. Fix: open. Test: open.
-- **`B62` Hög** - `packages/generation/brief/extract.py:detect_language`
-  slår fel på korta svenska prompts utan stop-ord. `SWEDISH_HINTS` är
-  en hårdkodad lista på ~20 vanliga ord (`skapa`, `för`, `med`, `på`,
-  `elektriker`, `i`, ...). Prompts som "frisör Göteborg" eller
-  "naprapatklinik Stockholm" har inget av dessa tokens, så language
-  detekteras som "en" och briefModel följer hint:en. Resultat:
-  hela sajten genereras på engelska ("Hair salon in Göteborg", "Initial
-  consultation", `country=Sweden`). Verifierat på 2 av 4 Scout-case.
-  Fix: heuristik bör (a) räkna fraktion tokens med svenska tecken
-  (`å/ä/ö`) eller suffix (`-en/-et/-er`), (b) default till `sv` när
-  språk är osäkert (operatörspopulationen är ~95% svensktalande), och
-  (c) tvinga `country="Sverige"` när `language="sv"` även om briefModel
-  returnerar `country="Sweden"`. Källa: verifierings-Scout 2026-05-15.
-  Fix: open. Test: open.
-- **`B63` Medel** - `scripts/prompt_to_project_input.py:_BUSINESS_TYPE_LABEL_SV`
-  har glipor mot briefModels faktiska businessType-slugs. briefModel
-  returnerade `business_type="e-commerce"` (med bindestreck) men map:en
-  har bara `"ecommerce"` och `"ecommerce-shop"`, och `naprapath-clinic`
-  saknas helt (jag har `naprapat` och `chiropractor`). Resultat: 1A:s
-  Swedish business-type-mapping faller på fallback-grenen och H1 blir
-  "Sajt för e commerce" eller "Sajt för naprapath clinic" istället för
-  förväntade "Webbshop" eller "Naprapatklinik". Källa: verifierings-
-  Scout 2026-05-15. Två fixar möjliga: (a) utöka map:en med fler
-  bindestreck-varianter, eller (b) bygg fallback som returnerar
-  "företag som arbetar med X" istället för "Sajt för X" så obekanta
-  slugs läser mer naturligt. Fix: open. Test: open.
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
   subprocess-status och loggutdrag medan körningen pågår, men riktig
   cancellation/background-jobb är fortfarande inte implementerat. Det bör tas
@@ -211,6 +170,109 @@ arkitekturändring, inte en bugg.
 (B20 stängd 2026-05-13 — se "Stängda - regression-test säkrar fixet" nedan.)
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B61` Hög** (stängd 2026-05-15, demo-baseline-fix 1A-hotfix) -
+  `notes_for_planner` läckte som customer-facing copy på `/om-oss`,
+  som `company.tagline` och som dev-jargong i service summaries efter
+  demo-baseline-fix 1A. Källa: verifierings-Scout 2026-05-15.
+  `scripts/prompt_to_project_input.py:_derive_story` föredrog
+  `brief.notesForPlanner` som story-fallback, men briefModel skriver
+  fältet på engelska som intern Phase 2-orientering ("Likely a Swedish
+  electrician website targeting Malmö; prompt is minimal, so keep
+  scope conservative and local."). Samma sträng landade också i
+  `company.tagline` via `(notes or tagline_default)`-mönstret i
+  `site_brief_to_project_input`. Plus `_service_summary` skrev
+  `Justera Project Input för att förbättra texten` på rendered
+  service grid (svensk dev-jargong) och `_placeholder_services` hade
+  motsvarande "platshållare som genererats från din prompt"-fras.
+  **Fix:** `_derive_story` ignorerar nu `notes_for_planner` helt
+  (parametern kvar på signaturen för bakåtkompatibilitet, men aldrig
+  använd); ny `_derive_tagline`-helper bygger taglinen från
+  `businessTypeGuess` + `locationHint`; `_service_summary` returnerar
+  neutral kundsvenska (`Konsultation - kontakta oss för mer
+  information.`); `_placeholder_services` motsvarande engelska/svenska
+  varianter. Smoke-verifierat med real briefModel: `elektriker Malmö`
+  ger story `Vi är en elektriker i Malmö. Byt ut den här texten...`,
+  tagline `Lokal elektriker i Malmö`, service summary `Konsultation -
+  kontakta oss för mer information.` Fix: `d99f8ba`. Test:
+  `tests/test_prompt_to_project_input.py::test_story_never_uses_notes_for_planner`,
+  `tests/test_prompt_to_project_input.py::test_tagline_never_uses_notes_for_planner`,
+  `tests/test_prompt_to_project_input.py::test_service_summaries_do_not_leak_dev_jargon`,
+  `tests/test_prompt_to_project_input.py::test_placeholder_services_summary_is_customer_friendly`,
+  `tests/test_prompt_to_project_input.py::test_full_pipeline_locks_no_planner_jargon_for_scout_prompt`,
+  `tests/test_prompt_to_project_input.py::test_derive_tagline_builds_from_business_type_and_location`,
+  `tests/test_prompt_to_project_input.py::test_derive_tagline_falls_back_when_brief_is_empty`,
+  `tests/test_prompt_to_project_input.py::test_story_constructs_placeholder_when_notes_missing`
+  (uppdaterad: låser nu frånvaron av "Justera Project Input"-jargong).
+
+- **`B62` Hög** (stängd 2026-05-15, demo-baseline-fix 1A-hotfix) -
+  `packages/generation/brief/extract.py:detect_language` slog fel på
+  korta svenska prompts utan stop-ord. `SWEDISH_HINTS` är en hårdkodad
+  lista på ~20 vanliga ord; prompts som "frisör Göteborg" eller
+  "naprapatklinik Stockholm" har inget av dessa tokens, så language
+  detekterades som "en" och hela sajten genererades på engelska ("Hair
+  salon in Göteborg", `country=Sweden`). Verifierat på 2 av 4
+  Verifierings-Scout-case 2026-05-15. **Fix:** ny cascading heuristik:
+  (1) SWEDISH_HINTS-match → sv (samma som tidigare); (2) ENGLISH_HINTS-
+  match (ny lista med ~30 engelska stopord och website-shaped verbs)
+  → en; (3) någon token har å/ä/ö → sv (fångar `frisör Göteborg`);
+  (4) default sv (operatörspopulation ~95% svensktalande, fångar
+  `naprapatklinik Stockholm`). Cascade-ordningen sätter ENGLISH_HINTS
+  FÖRE å/ä/ö-checken så `electrician website in Malmö` fortsatt blir
+  `en` (Malmö har ö men prompten har stark engelsk signal). Plus ny
+  `_normalize_location_hint`-helper i `prompt_to_project_input.py`
+  som skriver om `locationHint="Sweden"` till `Sverige` på svenska
+  builds, så `location.city` inte landar som engelsk land-namn på en
+  svensk sajt. Smoke-verifierat med real briefModel: `frisör Göteborg`
+  ger nu `language=sv`, `H1=Frisör i Göteborg`, `country=Sverige`.
+  Fix: `d99f8ba`. Test:
+  `tests/test_extract_site_brief.py::test_detect_language_short_swedish_prompts_default_to_sv`
+  (parametriserad över `frisör Göteborg`, `naprapatklinik Stockholm`,
+  `Skapa en hemsida för Volt & Co`, `elektriker Malmö`,
+  `tandläkarpraktik`, `yoga`),
+  `tests/test_extract_site_brief.py::test_detect_language_english_prompts_with_swedish_chars_stay_en`
+  (parametriserad över fyra engelska prompts, inkl. `electrician
+  website in Malmö`),
+  `tests/test_prompt_to_project_input.py::test_normalize_location_hint_translates_country_on_swedish_builds`,
+  `tests/test_prompt_to_project_input.py::test_normalize_location_hint_preserves_english_country`,
+  `tests/test_prompt_to_project_input.py::test_normalize_location_hint_preserves_real_city`,
+  `tests/test_prompt_to_project_input.py::test_swedish_brief_with_country_location_renders_swedish_city`.
+
+- **`B63` Medel** (stängd 2026-05-15, demo-baseline-fix 1A-hotfix) -
+  `scripts/prompt_to_project_input.py:_BUSINESS_TYPE_LABEL_SV` hade
+  glipor mot briefModels faktiska businessType-slugs. briefModel
+  returnerade `business_type="e-commerce"` (med bindestreck) men
+  map:en hade bara `"ecommerce"` och `"ecommerce-shop"`; `naprapath-
+  clinic` saknades helt. Resultat: H1 blev `Sajt för e commerce` /
+  `Sajt för naprapath clinic` istället för `Webbshop` / `Naprapatklinik`.
+  Källa: verifierings-Scout 2026-05-15. **Fix:** map:en utökad med
+  ~10 hyphen-varianter för briefModel-slugs som faktiskt observerats
+  eller är symmetri-fix för befintliga entries: `e-commerce` →
+  `webbshop`, `ecommerce-store` → `webbshop`, `naprapath-clinic` →
+  `naprapatklinik`, `naprapat-clinic` → `naprapatklinik`,
+  `electrical-services` → `elektriker`, `electrical-contractor` →
+  `elektriker`, `plumbing-services` → `rörmokare`, `barber-shop` →
+  `barberare`, `flower-shop` → `blomsterhandel`, `chiropractic-clinic`
+  → `kiropraktor`, `physiotherapy-clinic` → `sjukgymnast`,
+  `painting-services` → `målare`, `carpentry-services` → `snickare`,
+  `construction-company` → `byggfirma`. `naprapat` och `naprapath`
+  pekar nu också på `naprapatklinik` (uppdaterat från `naprapat` så
+  H1 läser `Naprapatklinik i Stockholm` snarare än `Naprapat i
+  Stockholm`). Plus fallback i `_company_business_label` om-skriven
+  från `Sajt för {slug}` till `företag som arbetar med {slug}` så
+  framtida obekanta briefModel-slugs läser som svensk prosa istället
+  för broken placeholder copy. Lookup strippar och lower-casar redan
+  via `business_type.strip().lower()`, så `E-Commerce` /
+  `  e-commerce  ` matchar också. Fix: `d99f8ba`. Test:
+  `tests/test_prompt_to_project_input.py::test_business_type_map_covers_briefmodel_hyphenated_slugs`
+  (parametriserad över 12 hyphen-varianter inkl. `e-commerce`,
+  `naprapath-clinic`, `electrical-services`, `plumbing-services`),
+  `tests/test_prompt_to_project_input.py::test_unknown_business_type_uses_swedish_fallback_phrase`,
+  `tests/test_prompt_to_project_input.py::test_business_type_map_lookup_is_case_and_whitespace_safe`,
+  `tests/test_prompt_to_project_input.py::test_company_name_for_e_commerce_brief_uses_swedish_label`,
+  `tests/test_prompt_to_project_input.py::test_company_name_for_naprapath_clinic_brief_uses_swedish_label`,
+  `tests/test_prompt_to_project_input.py::test_company_name_falls_back_for_unknown_business_type_slug`
+  (uppdaterad: låser nu frånvaron av pre-hotfix `Sajt för X`-fallbacken).
 
 - **`B60` Hög** (stängd 2026-05-15, post-merge audit av PR #27) -
   follow-up-versioneringen från PR #27 hade fyra kontraktsbrott:

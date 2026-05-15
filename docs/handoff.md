@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-15 (post demo-baseline-fix 1A + verifierings-Scout: tre nya regressioner B61/B62/B63 loggade, hotfix är nästa Builder-sprint)
-**Aktuell repo-HEAD på `main`:** den senaste docs-/Steward-bump-commiten ovanpå `ab74c2a` (`feat(builder): demo-baseline-fix 1A`). Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA; konventionen är att raden "Last verified state" i `current-focus.md` pekar på senaste produktcommit (`ab74c2a`) och Steward-bump-commiten räknas som "within bump tolerance" av `focus_check.py`. Föregående mainline-pushar samma dag: `f29688c` (Steward-bump efter rules-commit), `d072c98` (`chore(rules): add powershell-glob and cli-safety-belt rules`), `054e3b2` (Steward-bump efter Finding 1-fixen), `8d45140` (Steward-sync efter prune-sprinten), `2acdeca` (prune-script + tester), `7b90c0c` (Steward-sync efter B60), `65f052a` (B60-fixen för PR #27-kontraktsbrott), `e057fbd` (PR #27 follow-up prompt versions squash-merge), `86d03bf` (B59 StackBlitz WebContainer embed-blocker dokumenterad), `210a1d1` (Cursor API key-placeholder i `.env.example`).
-**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-15`, `backup-16` (post-merge sanity-pass för PR #27), `backup-17` (B60-passet), `backup-18` (cleanup/prune-passet) och `backup-19` (demo-baseline-fix 1A) finns lokalt och på origin. Nästa Builder/Scout-pass ska skapa nästa lediga `backup-N` från synkad `main` innan sprintarbete. Inga öppna PRs.
+**Datum:** 2026-05-15 (post demo-baseline-fix 1A-hotfix: B61/B62/B63 stängda, re-verifierings-Scout är nästa uppgift)
+**Aktuell repo-HEAD på `main`:** den senaste docs-/Steward-bump-commiten ovanpå `d99f8ba` (`fix(prompt-helper): close B61 B62 B63 (demo-baseline-fix 1A-hotfix)`). Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA; konventionen är att raden "Last verified state" i `current-focus.md` pekar på senaste produktcommit (`d99f8ba`) och Steward-bump-commiten räknas som "within bump tolerance" av `focus_check.py`. Föregående mainline-pushar samma dag: `a12314f` (cursorignore-chore för apps/viewser node_modules+.next-pinning), `b78484f` (Verifierings-Scout findings-record som dokumenterade B61/B62/B63), `824cd3a` (Steward-bump efter 1A), `ab74c2a` (`feat(builder): demo-baseline-fix 1A`), `f29688c` (Steward-bump efter rules-commit), `d072c98` (`chore(rules): add powershell-glob and cli-safety-belt rules`).
+**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-15`, `backup-16` (post-merge sanity-pass för PR #27), `backup-17` (B60-passet), `backup-18` (cleanup/prune-passet), `backup-19` (demo-baseline-fix 1A) och `backup-20` (1A-hotfix) finns lokalt och på origin. Nästa Builder/Scout-pass ska skapa nästa lediga `backup-N` från synkad `main` innan sprintarbete. Inga öppna PRs.
 **Stash-läge:** `git stash list` är tom. Den tidigare stale B56-stashen (innehöll äldre version av `ensureWebpackFlag`/`patchPackageJsonForStackblitz` utan B58-allowlistet eller `Buffer.byteLength`-beräkningen) droppades i reconciliation-passet eftersom fixen redan var integrerad i `8fae26a` på `main`.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
@@ -115,32 +115,36 @@ Tre lager:
 ## Nästa konkreta uppgift
 
 Se `docs/current-focus.md` → **"Next action"**. Kort version:
-demo-baseline-fix 1A är landad (`ab74c2a`) och verifierings-Scout
-2026-05-15 har kört fyra skarpa prompter mot fixad kod. **Totalsnitt
-6.2 / 10**: alla fyra byggs grönt men tre nya regressioner/buggar
-identifierade som blockar demo:
+demo-baseline-fix 1A-hotfix är landad (`d99f8ba`) och stängde de tre
+regressioner Verifierings-Scout 2026-05-15 hittade (B61/B62/B63):
 
-- **B61 Hög** — `notes_for_planner` (engelsk intern planner-orientering
-  från briefModel) läcker som customer-facing copy på `/om-oss` och
-  som `company.tagline`. Min 1A-`_derive_story` föredrar fältet som
-  story-fallback. Verifierat strängar: `"Likely a Swedish electrician
-  website targeting Malmö; prompt is minimal..."` på alla fyra Scout-
-  case. Plus dev-jargong "Justera Project Input för att förbättra
-  texten" i service summaries på rendered site.
-- **B62 Hög** — `detect_language()` slår fel på korta svenska prompts
-  utan SWEDISH_HINTS-token. Två av fyra Scout-case (`frisör Göteborg`,
-  `naprapatklinik Stockholm`) genererade hela sajten på engelska
-  ("Hair salon in Göteborg", `country=Sweden`).
-- **B63 Medel** — `_BUSINESS_TYPE_LABEL_SV` saknar bindestreck-
-  varianter (`e-commerce`, `naprapath-clinic`) som briefModel
-  faktiskt returnerar; fallback ger "Sajt för e commerce".
+- **B61 Hög stängd** — `_derive_story` ignorerar nu `notes_for_planner`
+  helt, ny `_derive_tagline`-helper bygger taglinen från businessType
+  + location, `_service_summary` + `_placeholder_services` returnerar
+  neutral kundsvenska istället för "Justera Project Input"-jargong.
+- **B62 Hög stängd** — `detect_language` har ny cascade SWEDISH_HINTS
+  → ENGLISH_HINTS → å/ä/ö → default sv så `frisör Göteborg` och
+  `naprapatklinik Stockholm` nu resolverar till `sv`. Plus
+  `_normalize_location_hint` skriver om `locationHint="Sweden"` till
+  `Sverige` på sv-builds.
+- **B63 Medel stängd** — `_BUSINESS_TYPE_LABEL_SV` har bindestreck-
+  varianter för briefModels faktiska slugs (`e-commerce`, `naprapath-
+  clinic`, `electrical-services`, `plumbing-services` m.fl.) plus
+  fallback omformulerad till `företag som arbetar med <slug>`.
 
-Nästa Builder-sprint är **demo-baseline-fix 1A-hotfix** som stänger
-B61/B62/B63 i ett smalt pass utan brief-schema-ändring. Efter
-hotfix: re-verifierings-Scout med samma fyra prompter, jämför mot
-6.2/10-baselinen. Om ≥7/10 → Project DNA. Om <7/10 →
-demo-baseline-fix 1B (brief-schema-tillägg för kontakt + trustSignals
-+ company_name + conditional rendering av "Varför oss"-sektion).
+Smoke-verifierat med real briefModel: `elektriker Malmö` (build/quality
+=ok, H1=`Elektriker i Malmö`, country=`Sverige`) och `frisör Göteborg`
+(build/quality=ok, language=`sv`, H1=`Frisör i Göteborg`, country=
+`Sverige`). 12 nya regression-tester + 2 stale tester omskrivna.
+
+**Nästa uppgift: re-verifierings-Scout (Scout RO).** Kör samma fyra
+prompter som 2026-05-15-passet (`elektriker Malmö`, `frisör Göteborg`,
+`naprapatklinik Stockholm`, `liten e-handel som säljer keramik`)
+mot post-hotfix-kod, jämför scorecard mot 6.2/10-baselinen. Om ≥7/10
+och inget case <6.5 → Project DNA / semantic follow-up merge. Om
+<7/10 → demo-baseline-fix 1B (brief-schema-tillägg för kontakt +
+trustSignals + company_name, kräver ADR + conditional rendering av
+"Varför oss"-sektion).
 
 PromptBuilder stage-timeout är inte längre listad som aktiv nice-to-have;
 Scout verifierade att cleanup redan finns.
@@ -199,6 +203,10 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+d99f8ba fix(prompt-helper): close B61 B62 B63 (demo-baseline-fix 1A-hotfix)
+a12314f chore(cursorignore): pin viewser node_modules and .next explicitly
+b78484f docs: record verifierings-Scout findings (B61/B62/B63)
+824cd3a docs: bump verified SHA to demo-baseline-fix 1A
 ab74c2a feat(builder): demo-baseline-fix 1A
 f29688c docs: bump verified SHA to rules commit
 d072c98 chore(rules): add powershell-glob and cli-safety-belt rules
