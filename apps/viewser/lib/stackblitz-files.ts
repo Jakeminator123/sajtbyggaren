@@ -5,6 +5,7 @@ import { readBuildResult, runDirFromId, runsDir } from "@/lib/runs";
 
 const MAX_FILE_BYTES = 250_000;
 const MAX_TOTAL_BYTES = 5_000_000;
+const NPM_LOCKFILE = "package-lock.json";
 const BINARY_EXTENSIONS = new Set([
   ".png",
   ".jpg",
@@ -23,8 +24,6 @@ const BINARY_EXTENSIONS = new Set([
   ".gz",
   ".tar",
 ]);
-
-const FILES_TO_SKIP = new Set(["package-lock.json"]);
 
 /**
  * B54 + B58: defensive filter against `.env*` leaking into a public
@@ -45,9 +44,9 @@ const FILES_TO_SKIP = new Set(["package-lock.json"]);
  * functional regression).
  */
 function isDotenvFile(basename: string): boolean {
+  if (basename === ".env.example") return false;
   const lower = basename.toLowerCase();
   if (!lower.startsWith(".env")) return false;
-  if (lower === ".env.example") return false;
   return true;
 }
 
@@ -194,14 +193,14 @@ export async function readRunFilesForStackblitz(runId: string): Promise<Stackbli
   for (const filePath of files) {
     const ext = path.extname(filePath).toLowerCase();
     const base = path.basename(filePath);
-    if (FILES_TO_SKIP.has(base) || BINARY_EXTENSIONS.has(ext)) continue;
+    if (BINARY_EXTENSIONS.has(ext)) continue;
     if (isDotenvFile(base)) continue;
 
+    const relPath = path.relative(sourceDir, filePath).split(path.sep).join("/");
     const stats = await fs.stat(filePath);
-    if (stats.size > MAX_FILE_BYTES) continue;
+    if (stats.size > MAX_FILE_BYTES && relPath !== NPM_LOCKFILE) continue;
     if (totalBytes + stats.size > MAX_TOTAL_BYTES) break;
 
-    const relPath = path.relative(sourceDir, filePath).split(path.sep).join("/");
     const content = await fs.readFile(filePath, "utf-8");
     const patchedContent =
       relPath === "package.json" ? patchPackageJsonForStackblitz(content) : content;

@@ -202,17 +202,37 @@ def test_stackblitz_files_allow_env_example_through_filter() -> None:
     internal and not directly callable from Python.
 
     The expected pattern: a check that returns ``false`` (i.e. NOT a
-    dotenv file to filter) when ``basename.toLowerCase() === ".env.example"``.
+    dotenv file to filter) only when the original basename is exactly
+    ``.env.example``. Case variants are treated as real ``.env*`` files.
     """
     text = (VIEWSER_DIR / "lib" / "stackblitz-files.ts").read_text(encoding="utf-8")
     assert re.search(
-        r'=== ["\']\.env\.example["\']',
+        r'basename\s*===\s*["\']\.env\.example["\']',
         text,
     ), (
         "stackblitz-files.ts måste ha en explicit allowlist-check för "
-        '``.env.example`` (typ ``if (lower === ".env.example") return false;``) '
+        'exakt ``.env.example`` (typ ``if (basename === ".env.example") return false;``) '
         "innan det generella ``.env*``-filtret slår till. Annars blockas den "
-        "publika placeholder-filen från StackBlitz-preview (B58)."
+        "publika placeholder-filen från StackBlitz-preview (B58), eller så "
+        "slipper case-varianter som ``.ENV.EXAMPLE`` igenom."
+    )
+
+
+@pytest.mark.tooling
+def test_stackblitz_files_keeps_package_lock_in_preview_upload() -> None:
+    """StackBlitz must receive package-lock.json to avoid dependency drift."""
+    text = (VIEWSER_DIR / "lib" / "stackblitz-files.ts").read_text(encoding="utf-8")
+    assert "FILES_TO_SKIP" not in text, (
+        "stackblitz-files.ts får inte ha en generell skiplista som filtrerar "
+        "bort package-lock.json från StackBlitz-payloaden."
+    )
+    assert re.search(
+        r'stats\.size\s*>\s*MAX_FILE_BYTES\s*&&\s*relPath\s*!==\s*NPM_LOCKFILE',
+        text,
+    ), (
+        "package-lock.json är ofta större än MAX_FILE_BYTES och måste därför "
+        "undantas från per-filgränsen. Den ska fortfarande räknas mot "
+        "MAX_TOTAL_BYTES så payloaden förblir begränsad."
     )
 
 
@@ -251,6 +271,21 @@ def test_stackblitz_files_does_not_duplicate_webpack_flag() -> None:
     )
     assert "return `${trimmed} --webpack`;" in text, (
         "ensureWebpackFlag måste append:a --webpack när det saknas."
+    )
+
+
+@pytest.mark.tooling
+def test_viewser_does_not_set_global_cross_origin_isolation_headers() -> None:
+    """Global COEP on Viewser blocks the StackBlitz iframe itself."""
+    text = (VIEWSER_DIR / "next.config.ts").read_text(encoding="utf-8")
+    assert "Cross-Origin-Embedder-Policy" not in text, (
+        "Viewser ska inte sätta global Cross-Origin-Embedder-Policy. "
+        "Chrome blockerar då StackBlitz-iframe:n om den externa frame-responsen "
+        "inte själv skickar kompatibel COEP."
+    )
+    assert "Cross-Origin-Opener-Policy" not in text, (
+        "Viewser ska inte sätta global Cross-Origin-Opener-Policy ihop med "
+        "COEP för StackBlitz-embedden i denna MVP."
     )
 
 
@@ -823,6 +858,31 @@ def test_viewer_panel_guards_cancelled_after_dynamic_import_and_embed() -> None:
         "viewer-panel.tsx: post-embed cancelled-grenen måste rensa "
         "containerRef.current så stale embed inte sitter kvar i "
         "den always-mounted ref-divden."
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_surfaces_stackblitz_sdk_error_details() -> None:
+    """StackBlitz SDK failures must show actionable details, not "unknown"."""
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "formatViewerError" in text, (
+        "viewer-panel.tsx måste formatera SDK-fel centralt så catch-grenen "
+        "inte faller tillbaka till ett opakt 'Okänt viewer-fel'."
+    )
+    for expected in ("name:", "message:", "stack:", "slice(0, 20)"):
+        assert expected in text, (
+            "Viewer-felet måste visa Error.name, Error.message och de första "
+            f"20 stackraderna. Saknar {expected!r}."
+        )
+    assert "non-Error rejection" in text, (
+        "StackBlitz SDK kan rejecta med icke-Error-värden; de måste också "
+        "renderas läsbart."
+    )
+    assert "whitespace-pre-wrap" in text and "<pre" in text, (
+        "Viewer-feldetaljer måste renderas i ett pre-block så stackrader "
+        "och radbrytningar bevaras."
     )
 
 
