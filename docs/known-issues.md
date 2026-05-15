@@ -139,6 +139,12 @@ tation (README, builder-mvp.md, viewser-docs) nämner fortfarande
 i en docs-cleanup. Ingen B-ID krävs - detta är en avsiktlig
 arkitekturändring, inte en bugg.
 
+- StackBlitz/WebContainer-preview kör tillfälligt en patchad payload
+  (`next build --webpack`, `npm run build && npm run start`,
+  `package-lock.json` inkluderad, `app/global-error.tsx`-override) på grund av
+  kända Next 16 + WebContainer-kompatibilitetsfel. Se
+  [ADR 0021](../governance/decisions/0021-stackblitz-preview-payload-workarounds.md).
+
 (B20 stängd 2026-05-13 — se "Stängda - regression-test säkrar fixet" nedan.)
 
 ## Stängda - regression-test säkrar fixet
