@@ -371,6 +371,47 @@ def test_render_home_omits_listing_cross_link_when_route_missing() -> None:
     assert "Se alla produkter" not in output
 
 
+@pytest.mark.tooling
+def test_render_home_omits_trust_section_when_trust_signals_empty() -> None:
+    """B66: an empty trustSignals list must not render an empty
+    "Varför oss" block.
+
+    Prompt-generated Project Inputs currently carry ``trustSignals=[]``.
+    Rendering the heading with an empty ``<ul>`` made every demo site
+    look unfinished. The section should be omitted until the brief layer
+    can supply real trust signals.
+    """
+    from scripts.build_site import render_home
+
+    dossier = _minimal_dossier()
+    dossier["trustSignals"] = []
+    output = render_home(
+        dossier,
+        dossier_routes=[],
+        listing_route={"id": "services", "path": "/tjanster"},
+    )
+
+    assert "Varför oss" not in output
+    assert "trust-0" not in output
+
+
+@pytest.mark.tooling
+def test_render_home_keeps_trust_section_when_trust_signals_present() -> None:
+    """B66 positive lock: curated examples with real trust signals keep
+    the trust section unchanged.
+    """
+    from scripts.build_site import render_home
+
+    output = render_home(
+        _minimal_dossier(),
+        dossier_routes=[],
+        listing_route={"id": "services", "path": "/tjanster"},
+    )
+
+    assert "Varför oss" in output
+    assert "Tio år i branschen" in output
+
+
 # ---------------------------------------------------------------------------
 # render_products: shape contract
 # ---------------------------------------------------------------------------
@@ -582,6 +623,61 @@ def test_build_verifies_write_pages_return_matches_announced_routes() -> None:
         "list announced by the print above. Dropping the check lets "
         "the print say one thing while write_pages emits another."
     )
+
+
+@pytest.mark.tooling
+def test_build_route_scan_receives_all_emitted_default_routes() -> None:
+    """B69: Quality Gate route-scan must receive every emitted default
+    route, not only routes marked ``required=true`` in routes.json.
+
+    Both active scaffolds emit ``/om-oss`` but mark it
+    ``required=false``. Passing only ``required_routes`` to the gate let
+    a broken generated about page slip through without a route-scan
+    finding. Aggregate QualityResult severity is intentionally not
+    changed in this sprint; the lock here is that the gate input is
+    ``routes_all_with_dossiers``.
+    """
+    import inspect
+
+    from scripts import build_site
+
+    body = inspect.getsource(build_site.build)
+    call_idx = body.find("quality_payload, repair_payload = run_phase3_quality_and_repair(")
+    assert call_idx > 0
+    call_block = body[call_idx : call_idx + 300]
+    assert "routes_all_with_dossiers" in call_block
+    assert "routes_required_with_dossiers" not in call_block
+
+
+@pytest.mark.tooling
+def test_non_required_about_route_is_scanned_for_default_export(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """B69 integration lock: ``/om-oss`` is emitted even though it is
+    ``required=false``. A missing default export must therefore surface
+    in the route-scan findings.
+    """
+    from scripts import build_site
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(
+        build_site,
+        "render_about",
+        lambda _dossier: "export function AboutPage() { return null; }\n",
+    )
+
+    project_input_path = REPO_ROOT / "examples" / "painter-palma.project-input.json"
+    _target, run_dir = build_site.build(
+        project_input_path,
+        do_build=False,
+        runs_dir=tmp_path,
+    )
+
+    quality = json.loads((run_dir / "quality-result.json").read_text(encoding="utf-8"))
+    route_scan = {check["name"]: check for check in quality["checks"]}["route-scan"]
+    assert route_scan["status"] == "failed"
+    assert any("/om-oss" in finding for finding in route_scan["findings"])
 
 
 # ---------------------------------------------------------------------------

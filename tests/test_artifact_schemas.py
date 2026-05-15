@@ -135,6 +135,20 @@ def test_site_brief_rejects_wrong_sourceModelRole():
 
 
 @pytest.mark.tooling
+def test_site_brief_accepts_company_and_contact_fields():
+    payload = _minimal_site_brief()
+    payload.update(
+        {
+            "companyName": "Volt & Co",
+            "contactPhone": "0701234567",
+            "contactEmail": "hej@voltco.se",
+            "contactAddress": "Storgatan 1, 211 22 Malmö",
+        }
+    )
+    validate_site_brief(payload)
+
+
+@pytest.mark.tooling
 def test_site_plan_accepts_both_dossier_shapes():
     payload = _minimal_site_plan()
     payload["selectedDossiers"] = ["contact-form", "reviews"]

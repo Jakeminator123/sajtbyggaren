@@ -130,11 +130,15 @@ def test_extract_site_brief_uses_real_path_when_key_set(monkeypatch):
     fake_brief = SiteBrief(
         language="sv",
         business_type="electrician",
+        company_name="Volt & Co",
         target_audience=["lokala kunder"],
         page_count=5,
         tone=["trustworthy", "local"],
         requested_capabilities=["contact-form"],
         location_hint="Malmö",
+        contact_phone="0701234567",
+        contact_email="hej@voltco.se",
+        contact_address="Storgatan 1, 211 22 Malmö",
         conversion_goals=["call", "quote-request"],
         services_mentioned=["paneldragning", "laddbox-installation"],
         content_depth="rich",
@@ -155,7 +159,9 @@ def test_extract_site_brief_uses_real_path_when_key_set(monkeypatch):
     assert result.source == "real"
     assert result.error is None
     assert result.brief.business_type == "electrician"
+    assert result.brief.company_name == "Volt & Co"
     assert result.brief.location_hint == "Malmö"
+    assert result.brief.contact_phone == "0701234567"
     assert result.brief.conversion_goals == ["call", "quote-request"]
 
 
@@ -164,11 +170,15 @@ def test_site_brief_to_artifact_real_run():
     brief = SiteBrief(
         language="sv",
         business_type="electrician",
+        company_name="Volt & Co",
         target_audience=["husägare"],
         page_count=5,
         tone=["trustworthy"],
         requested_capabilities=["contact-form"],
         location_hint="Malmö",
+        contact_phone="0701234567",
+        contact_email="hej@voltco.se",
+        contact_address="Storgatan 1, 211 22 Malmö",
         conversion_goals=["call"],
         services_mentioned=["akut-elservice"],
         content_depth="medium",
@@ -180,11 +190,15 @@ def test_site_brief_to_artifact_real_run():
     assert artifact["runId"].startswith("2026-")
     assert artifact["language"] == "sv"
     assert artifact["businessTypeGuess"] == "electrician"
+    assert artifact["companyName"] == "Volt & Co"
     assert artifact["sourceModelRole"] == "briefModel"
     assert artifact["modelUsed"] == "gpt-5.4"
     assert artifact["briefSource"] == "real"
     assert artifact["briefError"] is None
     assert artifact["locationHint"] == "Malmö"
+    assert artifact["contactPhone"] == "0701234567"
+    assert artifact["contactEmail"] == "hej@voltco.se"
+    assert artifact["contactAddress"] == "Storgatan 1, 211 22 Malmö"
     assert artifact["requestedCapabilities"] == ["contact-form"]
     assert artifact["conversionGoals"] == ["call"]
     assert artifact["servicesMentioned"] == ["akut-elservice"]
@@ -199,6 +213,10 @@ def test_site_brief_to_artifact_mock_no_key():
     assert artifact["modelUsed"] == "mock"
     assert artifact["briefSource"] == "mock-no-key"
     assert artifact["businessTypeGuess"] is None
+    assert artifact["companyName"] is None
+    assert artifact["contactPhone"] is None
+    assert artifact["contactEmail"] is None
+    assert artifact["contactAddress"] is None
 
 
 @pytest.mark.tooling

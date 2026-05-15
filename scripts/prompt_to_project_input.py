@@ -250,6 +250,7 @@ def _slugify_label(text: str) -> str:
 
 def _derive_company_name(
     *,
+    company_name: str | None = None,
     business_type: str | None,
     location_hint: str | None,
     language: str,
@@ -265,6 +266,10 @@ def _derive_company_name(
     surface on customer-facing copy. Operators still edit the Project
     Input file to override the name before sharing the build.
     """
+    explicit_name = (company_name or "").strip()
+    if explicit_name:
+        return explicit_name
+
     business_label = _company_business_label(business_type, language)
     location = (location_hint or "").strip()
     if language == "en":
@@ -425,7 +430,7 @@ def _derive_tagline(
         elif location:
             tagline = f"Local site in {location}"
         else:
-            tagline = "Update this tagline in the Project Input file"
+            tagline = "Welcome"
     else:
         if business_label and location:
             tagline = f"Lokal {business_label} i {location}"
@@ -434,7 +439,7 @@ def _derive_tagline(
         elif location:
             tagline = f"Lokal sajt i {location}"
         else:
-            tagline = "Justera taglinen i Project Input-filen"
+            tagline = "Välkommen"
     return tagline[:140]
 
 
@@ -572,7 +577,13 @@ def _build_services(
     return services
 
 
-def _placeholder_contact(language: str) -> dict[str, Any]:
+def _placeholder_contact(
+    language: str,
+    *,
+    contact_phone: str | None = None,
+    contact_email: str | None = None,
+    contact_address: str | None = None,
+) -> dict[str, Any]:
     """Schema-required contact block when the brief has no real values.
 
     Every field has minLength=1 in the schema so we cannot leave them
@@ -580,17 +591,20 @@ def _placeholder_contact(language: str) -> dict[str, Any]:
     Project Input") so the operator notices them in the generated site
     and replaces them before sharing the build externally.
     """
+    phone = (contact_phone or "").strip()
+    email = (contact_email or "").strip()
+    address = (contact_address or "").strip()
     if language == "en":
         return {
-            "phone": "+46 8 000 00 00",
-            "email": "contact@example.se",
-            "addressLines": ["Address placeholder - update Project Input"],
+            "phone": phone or "+46 8 000 00 00",
+            "email": email or "contact@example.se",
+            "addressLines": [address or "Address placeholder - update Project Input"],
             "openingHours": "Mon-Fri 09:00-17:00",
         }
     return {
-        "phone": "+46 8 000 00 00",
-        "email": "kontakt@example.se",
-        "addressLines": ["Adress saknas - uppdatera Project Input"],
+        "phone": phone or "+46 8 000 00 00",
+        "email": email or "kontakt@example.se",
+        "addressLines": [address or "Adress saknas - uppdatera Project Input"],
         "openingHours": "Mån-Fre 09:00-17:00",
     }
 
@@ -678,6 +692,7 @@ def site_brief_to_project_input(
     # tagline strip).
     _ = original_prompt
     company_name = _derive_company_name(
+        company_name=brief.get("companyName"),
         business_type=business_type,
         location_hint=location_hint,
         language=language,
@@ -723,7 +738,12 @@ def site_brief_to_project_input(
         "requestedCapabilities": list(
             brief.get("requestedCapabilities") or []
         ),
-        "contact": _placeholder_contact(language),
+        "contact": _placeholder_contact(
+            language,
+            contact_phone=brief.get("contactPhone"),
+            contact_email=brief.get("contactEmail"),
+            contact_address=brief.get("contactAddress"),
+        ),
         "selectedDossiers": {
             "required": [],
             "recommended": [],
@@ -978,10 +998,10 @@ def merge_followup_project_input(
     This is deliberately conservative: follow-up mode is a new version
     of the same prompt-generated site track, not a fresh init. The
     generated candidate contributes additive signals (new services,
-    capabilities, conversion goals and a visible story note) while the
-    identity, scaffold, variant, language, contact data and existing
-    content survive unless a later Project DNA sprint introduces
-    semantic patching.
+    capabilities and conversion goals) while the identity, scaffold,
+    variant, language, location, contact data, story, tagline, tone and
+    existing content survive byte-stably unless a later Project DNA
+    sprint introduces semantic patching.
     """
     merged = copy.deepcopy(previous)
     merged["siteId"] = previous["siteId"]

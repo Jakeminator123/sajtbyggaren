@@ -36,6 +36,10 @@
       "type": ["string", "null"],
       "description": "Short slug describing the business (e.g. 'electrician', 'photo-studio'). Null when ambiguous."
     },
+    "companyName": {
+      "type": ["string", "null"],
+      "description": "Company or brand name if explicitly mentioned in the prompt. Null when absent."
+    },
     "pageCount": {
       "type": ["integer", "null"],
       "minimum": 1,
@@ -61,6 +65,18 @@
     "locationHint": {
       "type": ["string", "null"],
       "description": "City or region if mentioned. Free-form string, may include country."
+    },
+    "contactPhone": {
+      "type": ["string", "null"],
+      "description": "Phone number if explicitly mentioned in the prompt. Null when absent."
+    },
+    "contactEmail": {
+      "type": ["string", "null"],
+      "description": "Email address if explicitly mentioned in the prompt. Null when absent."
+    },
+    "contactAddress": {
+      "type": ["string", "null"],
+      "description": "Street/postal address if explicitly mentioned in the prompt. Null when absent."
     },
     "conversionGoals": {
       "type": "array",

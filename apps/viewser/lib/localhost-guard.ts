@@ -2,9 +2,24 @@ import { NextResponse } from "next/server";
 
 const LOCAL_HOST_NAMES = new Set(["localhost", "127.0.0.1", "::1"]);
 
+function hostFromHeader(hostHeader: string | null): string | null {
+  if (!hostHeader) return null;
+
+  const bracketedIpv6 = hostHeader.match(/^\[(.+)\](?::\d+)?$/);
+  if (bracketedIpv6?.[1]) {
+    return bracketedIpv6[1].toLowerCase();
+  }
+
+  const hostname = hostHeader.match(/^([^:]+)(?::\d+)?$/);
+  if (hostname?.[1]) {
+    return hostname[1].toLowerCase();
+  }
+
+  return null;
+}
+
 function isAllowedHost(hostHeader: string | null): boolean {
-  if (!hostHeader) return false;
-  const host = hostHeader.split(":")[0]?.toLowerCase().replace(/^\[|\]$/g, "");
+  const host = hostFromHeader(hostHeader);
   if (!host) return false;
   return LOCAL_HOST_NAMES.has(host);
 }

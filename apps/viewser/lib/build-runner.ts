@@ -31,14 +31,14 @@ function pythonCommand(): string {
 // API surface cannot point build_site.py at an arbitrary file on disk.
 const ALLOWED_DOSSIER_ROOTS = ["examples", path.join("data", "prompt-inputs")];
 
-function assertDossierPathAllowed(absoluteDossierPath: string): void {
+async function assertDossierPathAllowed(absoluteDossierPath: string): Promise<void> {
   const root = repoRoot();
-  const resolved = path.resolve(absoluteDossierPath);
+  const resolved = await fs.realpath(path.resolve(absoluteDossierPath));
   for (const subdir of ALLOWED_DOSSIER_ROOTS) {
-    const allowed = path.resolve(root, subdir);
+    const allowed = await fs.realpath(path.resolve(root, subdir));
     const relative = path.relative(allowed, resolved);
     if (
-      relative &&
+      (relative === "" || relative) &&
       !relative.startsWith("..") &&
       !path.isAbsolute(relative)
     ) {
@@ -88,7 +88,7 @@ async function runBuildOnce(
   // point build_site.py at /etc/passwd.
   let dossierPath: string;
   if (dossierPathOverride) {
-    assertDossierPathAllowed(dossierPathOverride);
+    await assertDossierPathAllowed(dossierPathOverride);
     await fs.access(dossierPathOverride);
     dossierPath = dossierPathOverride;
   } else {
