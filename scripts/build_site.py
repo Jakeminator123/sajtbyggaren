@@ -62,6 +62,14 @@ RUNS_DIR = REPO_ROOT / "data" / "runs"
 # `.env.example` is allowed (canonical placeholder).
 _FORBIDDEN_ENV_PATTERN = re.compile(r"^\.env(\..+)?$", flags=re.IGNORECASE)
 _ALLOWED_ENV_NAMES = {".env.example"}
+_VERSIONED_PROMPT_INPUT_RE = re.compile(
+    r"^(?P<site_id>[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)"
+    r"\.v(?P<version>[1-9][0-9]*)\.project-input\.json$"
+)
+_CURRENT_PROMPT_INPUT_RE = re.compile(
+    r"^(?P<site_id>[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)"
+    r"\.project-input\.json$"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -270,6 +278,104 @@ def _route_href(route_path: str) -> str:
 
 def write_json(path: Path, data: Any) -> None:
     write(path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+
+
+def _prompt_meta_path_for_dossier(dossier_path: Path) -> Path | None:
+    """Return the adjacent prompt-input meta path for a Project Input file."""
+    filename = dossier_path.name
+    versioned = _VERSIONED_PROMPT_INPUT_RE.match(filename)
+    if versioned:
+        return dossier_path.with_name(
+            f"{versioned.group('site_id')}.v{versioned.group('version')}.meta.json"
+        )
+
+    current = _CURRENT_PROMPT_INPUT_RE.match(filename)
+    if current:
+        return dossier_path.with_name(f"{current.group('site_id')}.meta.json")
+    return None
+
+
+def load_prompt_input_meta(
+    dossier_path: Path,
+    dossier: dict[str, Any],
+) -> dict[str, Any]:
+    """Load optional prompt metadata adjacent to data/prompt-inputs files.
+
+    Curated examples do not have sidecar metadata and therefore keep the
+    historical init-mode behaviour. Prompt-generated Project Inputs carry
+    a sidecar with stable projectId/version so each Engine Run can record
+    immutable version metadata instead of making Viewser read the mutable
+    "latest" sidecar for every old run.
+    """
+    meta_path = _prompt_meta_path_for_dossier(dossier_path)
+    if meta_path is None or not meta_path.exists():
+        return {"mode": "init"}
+
+    meta = load_json(meta_path)
+    site_id = meta.get("siteId")
+    if site_id != dossier.get("siteId"):
+        raise SystemExit(
+            "Builder failed: prompt meta siteId mismatch "
+            f"({meta_path} has {site_id!r}, Project Input has "
+            f"{dossier.get('siteId')!r})."
+        )
+
+    version = meta.get("version")
+    if version is not None and (not isinstance(version, int) or version < 1):
+        raise SystemExit(
+            f"Builder failed: prompt meta has invalid version at {meta_path}."
+        )
+
+    mode = meta.get("mode")
+    if mode not in {"init", "followup"}:
+        mode = "followup" if isinstance(version, int) and version > 1 else "init"
+
+    project_id = meta.get("projectId")
+    if project_id is not None and (
+        not isinstance(project_id, str) or not project_id.strip()
+    ):
+        raise SystemExit(
+            f"Builder failed: prompt meta has invalid projectId at {meta_path}."
+        )
+    if mode == "followup" and not project_id:
+        raise SystemExit(
+            f"Builder failed: follow-up prompt meta requires projectId at {meta_path}."
+        )
+
+    normalized = dict(meta)
+    normalized["mode"] = mode
+    normalized["metaPath"] = _to_repo_relative(meta_path)
+    return normalized
+
+
+def _prompt_meta_mode(prompt_meta: dict[str, Any] | None) -> str:
+    if not prompt_meta:
+        return "init"
+    mode = prompt_meta.get("mode")
+    return mode if mode in {"init", "followup"} else "init"
+
+
+def _prompt_meta_project_id(prompt_meta: dict[str, Any] | None) -> str | None:
+    if not prompt_meta:
+        return None
+    project_id = prompt_meta.get("projectId")
+    return project_id if isinstance(project_id, str) and project_id else None
+
+
+def _prompt_meta_version(prompt_meta: dict[str, Any] | None) -> int | None:
+    if not prompt_meta:
+        return None
+    version = prompt_meta.get("version")
+    return version if isinstance(version, int) and version >= 1 else None
+
+
+def _prompt_meta_raw_prompt(prompt_meta: dict[str, Any] | None) -> str | None:
+    if not prompt_meta:
+        return None
+    mode = _prompt_meta_mode(prompt_meta)
+    key = "followUpPrompt" if mode == "followup" else "originalPrompt"
+    value = prompt_meta.get(key)
+    return value if isinstance(value, str) else None
 
 
 # ---------------------------------------------------------------------------
@@ -1515,6 +1621,7 @@ def build_plan_artefakts(
     scaffold: dict,
     variant: dict,
     site_brief: dict,
+    prompt_meta: dict[str, Any] | None = None,
 ) -> tuple[dict, dict]:
     """Delegate Phase 2 Plan to the shared produce_site_plan helper.
 
@@ -1546,8 +1653,8 @@ def build_plan_artefakts(
         site_brief,
         run_id=run_id,
         pinned=pinned,
-        engine_mode="init",
-        project_id=None,
+        engine_mode=_prompt_meta_mode(prompt_meta),
+        project_id=_prompt_meta_project_id(prompt_meta),
         verification_policy="build-must-pass",
         preview_runtime="local",
     )
@@ -1577,6 +1684,7 @@ def write_phase1_understand(
     dossier_path: Path,
     dossier: dict,
     scaffold: dict,
+    prompt_meta: dict[str, Any] | None = None,
 ) -> dict:
     """Phase 1 understand: input.json + site-brief.json."""
     trace.event("understand", "phase.started", "started", "Phase 1 understand starts")
@@ -1587,12 +1695,23 @@ def write_phase1_understand(
     rel_dossier = _to_repo_relative(dossier_path)
     input_data = {
         "runId": trace.run_id,
-        "mode": "init",
-        "rawPrompt": None,
+        "mode": _prompt_meta_mode(prompt_meta),
+        "rawPrompt": _prompt_meta_raw_prompt(prompt_meta),
         "dossierPath": rel_dossier,
         "detectedLanguage": dossier["language"],
         "timestamp": utc_now().isoformat(),
     }
+    project_id = _prompt_meta_project_id(prompt_meta)
+    version = _prompt_meta_version(prompt_meta)
+    if project_id is not None:
+        input_data["projectId"] = project_id
+    if version is not None:
+        input_data["version"] = version
+    if prompt_meta:
+        for key in ("originalPrompt", "followUpPrompt", "previousVersion"):
+            value = prompt_meta.get(key)
+            if value is not None:
+                input_data[key] = value
     write_json(run_dir / "input.json", input_data)
     trace.event(
         "understand",
@@ -1626,6 +1745,7 @@ def write_phase2_plan(
     scaffold: dict,
     variant: dict,
     site_brief: dict,
+    prompt_meta: dict[str, Any] | None = None,
 ) -> tuple[dict, dict]:
     """Phase 2 plan: site-plan.json + generation-package.json.
 
@@ -1635,7 +1755,14 @@ def write_phase2_plan(
     """
     trace.event("plan", "phase.started", "started", "Phase 2 plan starts")
 
-    site_plan, package = build_plan_artefakts(trace.run_id, dossier, scaffold, variant, site_brief)
+    site_plan, package = build_plan_artefakts(
+        trace.run_id,
+        dossier,
+        scaffold,
+        variant,
+        site_brief,
+        prompt_meta,
+    )
 
     write_json(run_dir / "site-plan.json", site_plan)
     trace.event(
@@ -1754,6 +1881,7 @@ def write_build_result(
     target_dir: Path,
     duration_ms: int,
     codegen_summary: dict | None = None,
+    prompt_meta: dict[str, Any] | None = None,
 ) -> dict:
     """Write build-result.json. ``generatedFilesDir`` points at the canonical
     snapshot under the run directory, not at the dev preview, so downstream
@@ -1776,6 +1904,7 @@ def write_build_result(
     rel_preview = _to_repo_relative(target_dir)
     model_used = site_brief.get("modelUsed", "mock")
     brief_source = site_brief.get("briefSource", "mock-no-key")
+    engine_mode = _prompt_meta_mode(prompt_meta)
     result = {
         "siteId": dossier["siteId"],
         "starterId": starter_id,
@@ -1783,7 +1912,7 @@ def write_build_result(
         "scaffoldVersion": scaffold["version"],
         "variantId": variant["id"],
         "language": dossier["language"],
-        "engineMode": "init",
+        "engineMode": engine_mode,
         "buildSource": "scripts/build_site.py",
         "modelUsed": model_used,
         "briefSource": brief_source,
@@ -1799,6 +1928,20 @@ def write_build_result(
         "status": overall_status,
         "runDurationMs": duration_ms,
     }
+    project_id = _prompt_meta_project_id(prompt_meta)
+    version = _prompt_meta_version(prompt_meta)
+    if project_id is not None:
+        result["projectId"] = project_id
+    if version is not None:
+        result["version"] = version
+    if prompt_meta:
+        prompt_summary: dict[str, Any] = {}
+        for key in ("originalPrompt", "followUpPrompt", "previousVersion"):
+            value = prompt_meta.get(key)
+            if value is not None:
+                prompt_summary[key] = value
+        if prompt_summary:
+            result["prompt"] = prompt_summary
     if codegen_summary is not None:
         result["codegen"] = codegen_summary
     write_json(run_dir / "build-result.json", result)
@@ -1835,6 +1978,7 @@ def build(
     site_id = dossier["siteId"]
     scaffold_id = dossier["scaffoldId"]
     variant_id = dossier["variantId"]
+    prompt_meta = load_prompt_input_meta(dossier_path, dossier)
 
     scaffold_dir = SCAFFOLDS_DIR / scaffold_id
     scaffold = load_json(scaffold_dir / "scaffold.json")
@@ -1856,11 +2000,24 @@ def build(
     print(f"runId: {run_id}")
 
     # Phase 1: understand
-    site_brief = write_phase1_understand(run_dir, trace, dossier_path, dossier, scaffold)
+    site_brief = write_phase1_understand(
+        run_dir,
+        trace,
+        dossier_path,
+        dossier,
+        scaffold,
+        prompt_meta,
+    )
 
     # Phase 2: plan (delegates to packages.generation.planning.produce_site_plan)
     site_plan, generation_package = write_phase2_plan(
-        run_dir, trace, dossier, scaffold, variant, site_brief
+        run_dir,
+        trace,
+        dossier,
+        scaffold,
+        variant,
+        site_brief,
+        prompt_meta,
     )
 
     generated_root = resolve_generated_dir(generated_dir)
@@ -2076,6 +2233,7 @@ def build(
         target,
         duration_ms,
         codegen_summary=codegen_summary,
+        prompt_meta=prompt_meta,
     )
 
     if overall_status == "failed":

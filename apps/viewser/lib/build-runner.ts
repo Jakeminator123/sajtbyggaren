@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
@@ -15,6 +16,12 @@ function repoRoot(): string {
 }
 
 function pythonCommand(): string {
+  const venvPython = path.join(
+    repoRoot(),
+    ".venv",
+    process.platform === "win32" ? "Scripts/python.exe" : "bin/python",
+  );
+  if (existsSync(venvPython)) return venvPython;
   return process.platform === "win32" ? "python" : "python3";
 }
 
@@ -231,10 +238,12 @@ export async function runBuild(
   }
 
   const promise = runBuildOnce(siteId, dossierPathOverride);
-  inFlight = promise.finally(() => {
+  inFlight = promise;
+  try {
+    return await promise;
+  } finally {
     if (inFlight === promise) {
       inFlight = null;
     }
-  });
-  return promise;
+  }
 }

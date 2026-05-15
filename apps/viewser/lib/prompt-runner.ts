@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import path from "node:path";
 
 const PROMPT_TIMEOUT_MS = 90_000;
@@ -15,6 +16,12 @@ function repoRoot(): string {
 }
 
 function pythonCommand(): string {
+  const venvPython = path.join(
+    repoRoot(),
+    ".venv",
+    process.platform === "win32" ? "Scripts/python.exe" : "bin/python",
+  );
+  if (existsSync(venvPython)) return venvPython;
   return process.platform === "win32" ? "python" : "python3";
 }
 

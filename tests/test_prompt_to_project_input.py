@@ -191,11 +191,16 @@ def test_generate_writes_project_input_and_meta(
     assert project_input_path.exists()
     assert meta_path.exists()
     assert project_input_path.parent == tmp_path
+    assert project_input_path.name.endswith(".v1.project-input.json")
+    assert meta_path.name.endswith(".v1.meta.json")
+    assert (tmp_path / f"{project_input['siteId']}.project-input.json").exists()
+    assert (tmp_path / f"{project_input['siteId']}.meta.json").exists()
 
     # Meta sidecar contract: projectId + version are minimum what the
     # follow-up sprint reads to build "prompt -> ny version".
     assert "projectId" in meta and meta["projectId"]
     assert meta["version"] == 1
+    assert meta["mode"] == "init"
     assert meta["siteId"] == project_input["siteId"]
     assert meta["originalPrompt"].startswith("Skapa")
     # mock-no-key path must be honest about not calling the real LLM.
@@ -280,7 +285,8 @@ def test_generate_respects_explicit_site_id(
     )
     assert project_input["siteId"] == "custom-site-id-abc"
     assert meta["siteId"] == "custom-site-id-abc"
-    assert project_input_path.name == "custom-site-id-abc.project-input.json"
+    assert project_input_path.name == "custom-site-id-abc.v1.project-input.json"
+    assert (tmp_path / "custom-site-id-abc.project-input.json").exists()
 
 
 @pytest.mark.tooling
@@ -307,12 +313,13 @@ def test_generate_followup_bumps_version_and_reuses_project_id(
 ) -> None:
     """Follow-up prompts keep projectId stable while version increments."""
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    _, initial_meta, _, meta_path = generate(
+    initial_project_input, initial_meta, initial_path, _ = generate(
         "Skapa en hemsida för en elektriker i Malmö",
         output_dir=tmp_path,
         site_id="electrician-malmo",
         project_id="stable-project-id",
     )
+    initial_snapshot = initial_path.read_text(encoding="utf-8")
 
     project_input, meta, project_input_path, next_meta_path = generate_followup(
         "Lägg till mer fokus på laddboxar och offertförfrågan.",
@@ -321,14 +328,27 @@ def test_generate_followup_bumps_version_and_reuses_project_id(
     )
 
     jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
-    assert project_input_path.name == "electrician-malmo.project-input.json"
-    assert next_meta_path == meta_path
+    assert project_input_path.name == "electrician-malmo.v2.project-input.json"
+    assert next_meta_path.name == "electrician-malmo.v2.meta.json"
+    assert initial_path.read_text(encoding="utf-8") == initial_snapshot
     assert meta["projectId"] == initial_meta["projectId"] == "stable-project-id"
     assert meta["siteId"] == "electrician-malmo"
     assert meta["version"] == 2
+    assert meta["mode"] == "followup"
     assert meta["previousVersion"] == 1
     assert meta["originalPrompt"] == initial_meta["originalPrompt"]
-    assert meta["latestPrompt"].startswith("Lägg till mer fokus")
+    assert meta["followUpPrompt"].startswith("Lägg till mer fokus")
+    assert "latestPrompt" not in meta
+    assert project_input["company"]["name"] == initial_project_input["company"]["name"]
+    assert project_input["contact"] == initial_project_input["contact"]
+    assert project_input["scaffoldId"] == initial_project_input["scaffoldId"]
+    assert "Follow-up request: Lägg till mer fokus" in project_input["company"]["story"]
+
+    current_meta = json.loads(
+        (tmp_path / "electrician-malmo.meta.json").read_text(encoding="utf-8")
+    )
+    assert current_meta["version"] == 2
+    assert current_meta["followUpPrompt"] == meta["followUpPrompt"]
 
 
 @pytest.mark.tooling
@@ -344,12 +364,12 @@ def test_generate_followup_supports_multiple_version_bumps(
         project_id="stable-project-id",
     )
 
-    _, meta_v2, _, _ = generate_followup(
+    _, meta_v2, path_v2, meta_path_v2 = generate_followup(
         "Gör tonen varmare.",
         output_dir=tmp_path,
         site_id="malare-lund",
     )
-    _, meta_v3, _, _ = generate_followup(
+    _, meta_v3, path_v3, meta_path_v3 = generate_followup(
         "Lyft fram fasadmålning.",
         output_dir=tmp_path,
         site_id="malare-lund",
@@ -360,6 +380,16 @@ def test_generate_followup_supports_multiple_version_bumps(
     assert meta_v3["projectId"] == "stable-project-id"
     assert meta_v3["version"] == 3
     assert meta_v3["previousVersion"] == 2
+    assert path_v2.name == "malare-lund.v2.project-input.json"
+    assert path_v3.name == "malare-lund.v3.project-input.json"
+    assert meta_path_v2.name == "malare-lund.v2.meta.json"
+    assert meta_path_v3.name == "malare-lund.v3.meta.json"
+
+    current_meta = json.loads(
+        (tmp_path / "malare-lund.meta.json").read_text(encoding="utf-8")
+    )
+    assert current_meta["version"] == 3
+    assert current_meta["followUpPrompt"] == "Lyft fram fasadmålning."
 
 
 @pytest.mark.tooling
