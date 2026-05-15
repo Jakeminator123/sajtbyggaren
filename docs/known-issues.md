@@ -171,6 +171,55 @@ arkitekturändring, inte en bugg.
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B60` Hög** (stängd 2026-05-15, post-merge audit av PR #27) -
+  follow-up-versioneringen från PR #27 hade fyra kontraktsbrott:
+  1. Versionerade snapshots inte immutabla:
+     `scripts/prompt_to_project_input.py:write_project_input` skrev
+     `<siteId>.vN.project-input.json` + `<siteId>.vN.meta.json` med
+     `Path.write_text`, som tyst skriver över befintliga filer. Två
+     samtidiga follow-ups som båda läste version=N och valde N+1
+     hade skrivit över varandras snapshots; en operatör som av
+     misstag återanvände ett siteId/projectId/version-tripp hade
+     skrivit över v1. Det bryter PR #27:s "older versions stay
+     byte-stable"-löfte.
+  2. Engelsk workflow-text läckte ut i kundvänd copy:
+     `merge_followup_project_input` la in `" Follow-up request: <prompt>"`
+     i slutet av `company.story`. `scripts/build_site.py:render_about`
+     renderar `company.story` som JSX direkt på `/om-oss`-sidan, så
+     varje follow-up-prompt blev synlig som engelsk intern
+     workflow-text på en svensk kundsajt. `meta.followUpPrompt` fanns
+     redan som korrekt operatörs-yta för samma data.
+  3. Pekar-uppdateringen var icke-atomisk: fyra sekventiella
+     `Path.write_text`-anrop betydde att en process-crash mellan två
+     anrop kunde lämna pointer-meta och pointer-project-input ur
+     synk (t.ex. meta v=2 men pointer-project-input fortfarande v=1).
+  4. `load_prompt_input_meta` föll tyst tillbaka till `init` när ett
+     dossier-filnamn matchade prompt-input-mönstret men sidecaren
+     saknades. En korrupt `data/prompt-inputs/`-mapp hade då
+     producerat follow-up-builds märkta som init utan `projectId`/
+     `version` istället för att larma operatören.
+  **Fix:** `_write_immutable_snapshot` använder `open(..., "x")` så
+  versionerade snapshots failar med `SystemExit` om filen redan
+  finns. `_atomic_write_text` skriver via `tempfile.mkstemp` +
+  `os.replace` så pointer-filer är atomic-replace istället för
+  truncate-and-write. `merge_followup_project_input` bevarar nu
+  `previous.company.story` byte-för-byte och låter `meta.followUpPrompt`
+  vara den enda operatörs-/system-ytan för follow-up-prompten.
+  `scripts/build_site.py:load_prompt_input_meta` skiljer nu på (a)
+  versionerade snapshots utan sidecar och (b) current pointer under
+  `data/prompt-inputs/` utan sidecar (båda failar) vs (c) curated
+  examples utanför `data/prompt-inputs/` (behåller init-mode-kontraktet).
+  Test:
+  `tests/test_prompt_to_project_input.py::test_versioned_snapshot_refuses_overwrite`,
+  `tests/test_prompt_to_project_input.py::test_followup_does_not_inject_workflow_text_into_company_story`,
+  `tests/test_prompt_to_project_input.py::test_pointer_writes_use_atomic_replace`,
+  `tests/test_prompt_to_project_input.py::test_generate_followup_bumps_version_and_reuses_project_id`
+  (uppdaterad: lock:ar att `Follow-up request` INTE finns i
+  `company.story` och att story matchar v1 byte-för-byte),
+  `tests/test_builder_hardening.py::test_load_prompt_input_meta_fails_loud_when_versioned_sidecar_missing`
+  (täcker versioned-, current-pointer-under-prompt-inputs- och
+  curated-examples-scenarierna).
+
 - **`B57` Medel** (stängd 2026-05-14, reviewer-fynd-follow-up efter A-mini
   cleanup) - B55-guarden från föregående sprint kollade bara
   `apps/viewser/.env` och `apps/viewser/.env.local` med hårdkodade

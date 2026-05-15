@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `e057fbd` (2026-05-15, post PR #27-merge. PR #27 `feat(viewser): preserve follow-up prompt versions` squash-mergad till `main`. Föregående mainline-pushar samma dag: `86d03bf` (B59 StackBlitz WebContainer embed-blocker dokumenterad i `known-issues.md`), `210a1d1` (Cursor API key-placeholder i `.env.example`), `9927bd2` (StackBlitz payload size-handling härdad: patched payload-bytes räknas mot size cap, scan fortsätter efter oversized files, `next start`-fallback för preview), `4b98d8b` (visningsexempel-artefakter borttagna från versionhantering, bug-notes-text behållen) och `869b2da` (workspace settings + prior docs sync). `backup-15` finns lokalt och på origin. Inga öppna PRs efter PR #27-merge.)
+Last verified state: `65f052a` (2026-05-15, B60 fix landad direkt på `main`. `fix(prompt-helper): harden follow-up snapshots and meta loading (B60)` stängde fyra kontraktsbrott från post-merge audit av PR #27: versionerade snapshots write-once via `open(..., "x")`, follow-up-prompten injiceras inte längre i `company.story` (engelsk workflow-text läckte ut på `/om-oss`), pointer-files skrivs atomic via `tempfile.mkstemp` + `os.replace`, och `load_prompt_input_meta` failar nu loud på saknad sidecar för versionerade snapshots eller current pointer under `data/prompt-inputs/` (curated examples utanför mappen behåller init-mode-kontraktet). Steward-sync efter B60: `dd5464f` (post-PR-#27 sanity-bump), och föregående mainline-pushar samma dag: `e057fbd` (PR #27 follow-up versions squash-merge), `86d03bf` (B59 StackBlitz WebContainer embed-blocker), `210a1d1` (Cursor API key-placeholder), `9927bd2` (StackBlitz payload size-handling), `4b98d8b` (visningsexempel-artefakter borttagna), `869b2da` (workspace settings + prior docs sync). `backup-15`, `backup-16`, `backup-17` finns lokalt och på origin. Inga öppna PRs.)
 
 Kör `python scripts/focus_check.py` som första steg i varje session.
 Scriptet jämför HEAD mot SHA:n ovan + kollar git/gh-tillstånd och
@@ -39,7 +39,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `e057fbd` lokalt och på origin. PR #27 (`feat(viewser): preserve follow-up prompt versions`) är mergad: follow-up promptar skriver immutable `<siteId>.vN.project-input.json`/`<siteId>.vN.meta.json`-snapshots i `data/prompt-inputs/`, behåller `projectId`/`originalPrompt` och lägger `followUpPrompt` på snapshot-meta. `scripts/build_site.py` läser sidecar-meta intill dossier-pathen och trådar `mode`/`projectId`/`version`/`originalPrompt`/`followUpPrompt` in i `input.json`, `generation-package.json` och `build-result.json`. `apps/viewser/lib/runs.ts` läser per-run-meta från `build-result.json` -> `input.json` -> mutable sidecar legacy-fallback, så RunHistory visar stabil `projectId` + `version` även när nya follow-ups landar. `apps/viewser/lib/project-inputs.ts` filtrerar `.vN.project-input.json`-snapshots från ProjectInputPicker (bara current pointer är valbar). `apps/viewser/lib/prompt-runner.ts` + `lib/build-runner.ts` föredrar repo-roten `.venv` Python när den finns (cloud/lokal dev-konsistens) och cleanar prompt-/build-mutex via `try/finally`.
+`main` är vid `65f052a` lokalt och på origin. B60 är stängd: follow-up-versioneringen från PR #27 hade fyra kontraktsbrott som upptäcktes i post-merge audit (versionerade snapshots inte immutabla, follow-up-prompt läckte i `company.story`, icke-atomisk pointer-update, tyst init-fallback vid saknad sidecar) och alla fyra är nu fixade i `scripts/prompt_to_project_input.py` + `scripts/build_site.py:load_prompt_input_meta` med 5 nya/uppdaterade regression-tester. PR #27 (`feat(viewser): preserve follow-up prompt versions`, `e057fbd`) är fortfarande merge-baseline: follow-up promptar skriver immutable `<siteId>.vN.project-input.json`/`<siteId>.vN.meta.json`-snapshots i `data/prompt-inputs/`, behåller `projectId`/`originalPrompt` och lägger `followUpPrompt` på snapshot-meta. `scripts/build_site.py` läser sidecar-meta intill dossier-pathen och trådar `mode`/`projectId`/`version`/`originalPrompt`/`followUpPrompt` in i `input.json`, `generation-package.json` och `build-result.json`. `apps/viewser/lib/runs.ts` läser per-run-meta från `build-result.json` -> `input.json` -> mutable sidecar legacy-fallback, så RunHistory visar stabil `projectId` + `version` även när nya follow-ups landar. `apps/viewser/lib/project-inputs.ts` filtrerar `.vN.project-input.json`-snapshots från ProjectInputPicker (bara current pointer är valbar). `apps/viewser/lib/prompt-runner.ts` + `lib/build-runner.ts` föredrar repo-roten `.venv` Python när den finns (cloud/lokal dev-konsistens) och cleanar prompt-/build-mutex via `try/finally`.
 
 StackBlitz-preview-spåret är fortsatt avgränsat till preview-payload-only: `apps/viewser/lib/stackblitz-files.ts` patchar in-memory (`next dev/build --webpack`, `npm run build && npm run start`, lockfile med i payload, `app/global-error.tsx`-override, patched payload-bytes mot size cap, `next start`-fallback), medan `apps/viewser/next.config.ts` fortsatt är tom och testet låser att global COEP/COOP inte sätts i Viewser. Ingen ändring är gjord i starters, builder eller preview-runtime-paketet; ADR 0021 är källan för beslut/avgränsning.
 
@@ -295,32 +295,36 @@ klara. Inga öppna PRs efter PR #27-merge.
 
 ## Next action - direktiv till nästa agent
 
-**Builder/Scout post-merge sanity för PR #27: `/api/prompt` init + follow-up.**
+**Cleanup/prune-sprint (Builder).** Post-merge sanity för PR #27 var
+grön (smoke 2026-05-15 verifierade siteId/projectId-stabilitet, v1
+bit-för-bit immutabel, ProjectInputPicker filtrerade `.vN`-snapshots).
+B60 stängde de fyra kontraktsbrotten som auditen flaggade efteråt.
+Nästa naturliga steg är liten cleanup-sprint enligt Scout-RO-rapport
+2026-05-15:
 
-Skapa nästa `backup-N` (`backup-16`) från synkad `main` innan sprintarbete startar.
-Sanity-passet ska verifiera att versioneringskontraktet PR #27 faktiskt håller
-end-to-end på `main`, med fokus på kärnflödet
-`prompt -> företagshemsida -> preview -> följdprompt -> ny version`:
+1. Skapa nästa `backup-N` från synkad `main` innan sprintarbete.
+2. Rensa repo-rotens lokala körloggar (`npm-build-*.log`,
+   `npm-install-*.log`, `viewser-dev*.log`). De är gitignored;
+   kommando: `Remove-Item .\npm-build-*.log, .\npm-install-*.log,
+   .\viewser-dev*.log -Force -ErrorAction SilentlyContinue`.
+3. Implementera `scripts/prune_generated_previews.py` med dry-run
+   default. Krav per Scout-spec:
+   - `SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN=true` som default;
+     `--apply` krävs för faktisk radering.
+   - `--keep-per-site=N` (default 3), `--keep-total=N` (default 10),
+     `--generated-dir=PATH`.
+   - Läs current pointers från `data/prompt-inputs/*.project-input.json`
+     och `data/runs/*/build-result.json`; pruna aldrig dessa siteIds.
+   - Pruna endast under resolverad `.generated/`-rot.
+   - Stoppa om target är "live": process på port 3000 eller cwd
+     under en target-katalog.
+   - Logga exakt vad som skulle raderas i dry-run-output.
+   - Rör aldrig `data/runs/`, `.env*` eller `data/prompt-inputs/`.
+4. Regression-tester: dry-run-default-låsning, current-pointer-skydd,
+   live-target-detektering, retention-policy-räkning.
 
-1. Starta Viewser (`apps/viewser`) lokalt mot repo-rotens `.venv` Python.
-2. Init-prompt via `/api/prompt`: bekräfta att en ny run skrivs, att
-   `data/prompt-inputs/` får `<siteId>.project-input.json` (current pointer)
-   + `<siteId>.v1.project-input.json` + `<siteId>.v1.meta.json`-snapshot,
-   och att `build-result.json` har `engineMode="init"`, en `projectId`
-   och `version=1`.
-3. Follow-up-prompt mot samma `siteId` via `/api/prompt`: bekräfta att
-   `<siteId>.v2.project-input.json` + `<siteId>.v2.meta.json` skapas,
-   att current pointer pekar på v2-innehållet, att v1-snapshot är
-   oförändrad, och att `build-result.json` har `engineMode="followup"`,
-   **samma** `projectId` som v1, `version=2` och en `followUpPrompt`.
-4. Verifiera RunHistory i Viewser-UI:t: båda runs hör till samma
-   `projectId`, v1/v2 visas stabilt, ProjectInputPicker exponerar bara
-   current pointer (inga `.vN.project-input.json`-snapshots i listan).
-5. Rapportera första riktiga felrad och `runId` om något steg failar.
-
-Håll scope versions-/follow-up-only. Ingen StackBlitz-headerändring,
-ingen produkt- eller starter-/runtime-utvidgning i detta sanity-pass.
-B59 är parkerad - rör inte StackBlitz-fronten.
+B59 är fortfarande parkerad - rör inte StackBlitz-fronten. PR #27 +
+B60 är klara; ingen ny header-toggling.
 
 Föregående cleanup-status:
 
@@ -397,8 +401,9 @@ i `c073d486` och PR-branchen är inte längre kvar på GitHub.
 
 ## Queue
 
-1. **Cleanup/prune-sprint (low-risk, body=docs+small-script)** - efter att
-   post-merge sanity för PR #27 är grön. Två deluppgifter:
+1. **Cleanup/prune-sprint (low-risk, body=docs+small-script)** - se Next
+   action ovan; B60 är stängd så det är nästa naturliga pass. Två
+   deluppgifter:
    - Rensa repo-rotens lokala körloggar
      (`npm-build-*.log`, `npm-install-*.log`, `viewser-dev*.log`).
    - Lägg till en enkel retention-policy för

@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-15 (post-PR #27 merge, follow-up prompt versions)
-**Aktuell repo-HEAD på `main`:** `e057fbd` (`feat(viewser): preserve follow-up prompt versions (#27)`, squash-mergad). Föregående mainline-pushar samma dag: `86d03bf` (B59 StackBlitz WebContainer embed-blocker dokumenterad), `210a1d1` (Cursor API key-placeholder i `.env.example`), `9927bd2` (StackBlitz payload size-handling härdad: patched bytes mot size cap, scan fortsätter efter oversized files, `next start`-fallback), `4b98d8b` (visningsexempel-artefakter borttagna från versionhantering, bug-notes-text behållen), `869b2da` (workspace settings + prior docs sync), `cf523ed` (ADR 0021 + known-issues-rad efter StackBlitz preview payload-hardening). Kör `git log --oneline -1` för senaste lokala SHA.
-**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-15` finns lokalt och på origin från StackBlitz payload-hardening-svepet. Nästa Builder/Scout-pass ska skapa `backup-16` från synkad `main` innan sprintarbete. Inga öppna PRs efter PR #27-merge; `cursor/f-ljdprompt-ny-version-fb95` är raderad på origin.
+**Datum:** 2026-05-15 (post B60-fix för PR #27 follow-up versioning)
+**Aktuell repo-HEAD på `main`:** `65f052a` (`fix(prompt-helper): harden follow-up snapshots and meta loading (B60)`). Föregående mainline-pushar samma dag: `dd5464f` (Steward sanity-bump efter PR #27), `e057fbd` (PR #27 follow-up prompt versions squash-merge), `86d03bf` (B59 StackBlitz WebContainer embed-blocker dokumenterad), `210a1d1` (Cursor API key-placeholder i `.env.example`), `9927bd2` (StackBlitz payload size-handling härdad), `4b98d8b` (visningsexempel-artefakter borttagna), `869b2da` (workspace settings + prior docs sync), `cf523ed` (ADR 0021 + known-issues-rad efter StackBlitz preview payload-hardening). Kör `git log --oneline -1` för senaste lokala SHA.
+**Aktiv branch:** `main`. Standardflödet är `main` + numrerad `backup-N`, inte feature-PR-branch. `backup-15`, `backup-16` (post-merge sanity-pass för PR #27) och `backup-17` (B60-passet) finns lokalt och på origin. Nästa Builder/Scout-pass ska skapa nästa lediga `backup-N` från synkad `main` innan sprintarbete. Inga öppna PRs.
 **Stash-läge:** `git stash list` är tom. Den tidigare stale B56-stashen (innehöll äldre version av `ensureWebpackFlag`/`patchPackageJsonForStackblitz` utan B58-allowlistet eller `Buffer.byteLength`-beräkningen) droppades i reconciliation-passet eftersom fixen redan var integrerad i `8fae26a` på `main`.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
@@ -47,7 +47,7 @@ Tre lager:
 - `backoffice/` + `backend.py` — Streamlit-administration (inte runtime).
 - `packages/` + `apps/` — runtime + kund-UI.
 
-## Vad funkar idag (post-PR #27, repo-HEAD `e057fbd`)
+## Vad funkar idag (post-B60, repo-HEAD `65f052a`)
 
 ### Governance + guards
 
@@ -114,31 +114,28 @@ Tre lager:
 
 ## Nästa konkreta uppgift
 
-Se `docs/current-focus.md` → **"Next action"**. Kort version: nästa pass är
-post-merge sanity för PR #27 (`/api/prompt` init + follow-up):
+Se `docs/current-focus.md` → **"Next action"**. Kort version: post-merge
+sanity för PR #27 är grön (smoke 2026-05-15 verifierade siteId/projectId-
+stabilitet, v1 bit-för-bit immutabel, ProjectInputPicker filtrerade
+`.vN`-snapshots). B60 stängde sedan de fyra kontraktsbrott som auditen
+hittade i samma pass (immutability, story-leakage, atomic pointers,
+load_prompt_input_meta-fail-loud).
 
-1. Skapa `backup-16` från synkad `main` innan sprintarbete startar.
-2. Starta Viewser (`apps/viewser`) lokalt mot repo-rotens `.venv` Python.
-3. Init-prompt via `/api/prompt`: bekräfta `data/prompt-inputs/`-current
-   pointer + `<siteId>.v1.project-input.json` + `<siteId>.v1.meta.json`,
-   `build-result.json` med `engineMode="init"`, en `projectId`,
-   `version=1`.
-4. Follow-up-prompt mot samma `siteId`: bekräfta `<siteId>.v2.*` skapas,
-   v1-snapshot oförändrad, `build-result.json` med `engineMode="followup"`,
-   **samma** `projectId`, `version=2`, `followUpPrompt` satt.
-5. Verifiera RunHistory: båda runs samma `projectId`, v1/v2 stabilt,
-   ProjectInputPicker exponerar bara current pointer.
-6. Rapportera första riktiga felrad och `runId` om något steg failar.
+Nästa naturliga steg är **cleanup/prune-sprinten** (queue-item 1):
 
-Håll scope versions-/follow-up-only. Ingen StackBlitz-headerändring,
-ingen produkt- eller starter-/runtime-utvidgning i sanity-passet.
-
-Efter grön sanity står **cleanup/prune-sprinten** näst på tur (queue-item
-1 i `current-focus.md`): rensa lokala körloggar i repo-roten och lägg
-till en enkel retention-policy för `../sajtbyggaren-output/.generated/`
-(behåll senaste 3 previews per `siteId` eller senaste 10 totalt, dry-run
-default, env-styrd via `.env`/`.env.local` i repo-roten). Den sprinten
-rör **inte** `data/runs/` och **inte** `.env*`-filerna.
+1. Skapa nästa lediga `backup-N` från synkad `main`.
+2. Rensa repo-rotens lokala körloggar (`npm-build-*.log`,
+   `npm-install-*.log`, `viewser-dev*.log`) - alla gitignored.
+3. Implementera `scripts/prune_generated_previews.py` med dry-run
+   default. Per Scout-spec: `SAJTBYGGAREN_PREVIEW_RETENTION_DRY_RUN=true`
+   default, `--apply` krävs för radering, `--keep-per-site=N` (default
+   3), `--keep-total=N` (default 10). Skydda current pointers från
+   `data/prompt-inputs/*.project-input.json` + `data/runs/*/build-result.json`.
+   Stoppa om target är "live" (port 3000 i bruk eller cwd under en
+   target-katalog). Rör aldrig `data/runs/`, `.env*` eller
+   `data/prompt-inputs/`.
+4. Regression-tester: dry-run-default, current-pointer-skydd,
+   live-target-detektering, retention-räkning.
 
 PromptBuilder stage-timeout är inte längre listad som aktiv nice-to-have;
 Scout verifierade att cleanup redan finns.
@@ -197,6 +194,8 @@ Hela rutinen står i [`docs/agent-handbook.md`](agent-handbook.md) under "Standa
 ## Sista commit-historiken (för snabb orientering)
 
 ```text
+65f052a fix(prompt-helper): harden follow-up snapshots and meta loading (B60)
+dd5464f docs: sync current-focus and handoff after PR #27 merge
 e057fbd feat(viewser): preserve follow-up prompt versions (#27)
 86d03bf docs: record B59 StackBlitz WebContainer embed blocker
 210a1d1 chore(env): document Cursor API key placeholder
