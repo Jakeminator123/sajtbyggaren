@@ -249,9 +249,14 @@ def test_stackblitz_files_patches_package_json_for_webpack() -> None:
     assert 'scripts.dev = ensureWebpackFlag(currentDev)' in text, (
         "stackblitz-files.ts måste patcha scripts.dev via ensureWebpackFlag."
     )
-    assert 'stackblitz.startCommand = "npm run dev"' in text, (
+    assert 'scripts.build = ensureWebpackFlag(currentBuild)' in text, (
+        "stackblitz-files.ts måste patcha scripts.build via ensureWebpackFlag "
+        "eftersom StackBlitz startCommand kör `npm run build` före `npm run start`."
+    )
+    assert 'stackblitz.startCommand = "npm run build && npm run start"' in text, (
         "stackblitz-files.ts måste sätta stackblitz.startCommand till "
-        "`npm run dev` för WebContainer-start."
+        "`npm run build && npm run start` så StackBlitz undviker Next dev-"
+        "runtimebuggen i WebContainer och kör samma gröna production-build."
     )
     assert re.search(
         r'relPath\s*===\s*["\']package\.json["\']\s*\?\s*patchPackageJsonForStackblitz\(content\)\s*:\s*content',
@@ -271,6 +276,38 @@ def test_stackblitz_files_does_not_duplicate_webpack_flag() -> None:
     )
     assert "return `${trimmed} --webpack`;" in text, (
         "ensureWebpackFlag måste append:a --webpack när det saknas."
+    )
+    assert "dev|build" in text, (
+        "ensureWebpackFlag måste omfatta både `next dev` och `next build`; "
+        "StackBlitz WebContainer saknar native Turbopack-bindings för build."
+    )
+
+
+@pytest.mark.tooling
+def test_stackblitz_files_inject_global_error_override() -> None:
+    """Next 16 default ``/_global-error`` prerender kraschar i StackBlitz/
+    WebContainer med ``Expected workStore to be initialized``. Lokal build
+    är grön; det är en känd Next 16 + WebContainer WASM-runtime-bugg.
+
+    StackBlitz-payloaden måste därför injicera en egen
+    ``app/global-error.tsx`` så Next använder vår komponent istället för
+    sin defaulta UI och slipper den trasiga prerender-pathen. Override
+    sker bara i in-memory file-mapen; aldrig till disk, aldrig till
+    builder/starter/snapshot.
+    """
+    text = (VIEWSER_DIR / "lib" / "stackblitz-files.ts").read_text(encoding="utf-8")
+    assert 'GLOBAL_ERROR_OVERRIDE_PATH = "app/global-error.tsx"' in text, (
+        "stackblitz-files.ts saknar konstant för global-error override-path."
+    )
+    assert "GLOBAL_ERROR_OVERRIDE_CONTENT" in text, (
+        "stackblitz-files.ts saknar innehåll för global-error override."
+    )
+    assert '"use client"' in text, (
+        "global-error.tsx-overriden måste vara en client component."
+    )
+    assert "if (!(GLOBAL_ERROR_OVERRIDE_PATH in projectFiles))" in text, (
+        "stackblitz-files.ts måste bara injicera overriden om generated "
+        "site inte redan har en egen app/global-error.tsx."
     )
 
 

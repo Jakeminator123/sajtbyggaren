@@ -54,9 +54,65 @@ function ensureWebpackFlag(command: string): string {
   const trimmed = command.trim();
   if (!trimmed) return "next dev --webpack";
   if (trimmed.includes("--webpack")) return trimmed;
-  if (!/\bnext\s+dev\b/.test(trimmed)) return trimmed;
+  if (!/\bnext\s+(?:dev|build)\b/.test(trimmed)) return trimmed;
   return `${trimmed} --webpack`;
 }
+
+/**
+ * StackBlitz/WebContainer Next.js workaround: Next 16 prerenders its built-in
+ * `/_global-error` page during `next build`, and that prerender crashes inside
+ * the WebContainer WASM runtime with
+ * `Invariant: Expected workStore to be initialized`. The same generated site
+ * builds green locally; the bug is specific to the WebContainer Node-WASM
+ * environment as of Next 16.x.
+ *
+ * Override the default by injecting a minimal `app/global-error.tsx` into the
+ * StackBlitz payload. Next uses our component instead of its default UI when
+ * one is present, which sidesteps the broken default prerender path.
+ *
+ * Only injected into the in-memory StackBlitz file map; never written to disk
+ * and never affects the lokal builder, starter, or run-snapshot. Skipped when
+ * the generated site already ships its own `app/global-error.tsx`.
+ */
+const GLOBAL_ERROR_OVERRIDE_PATH = "app/global-error.tsx";
+const GLOBAL_ERROR_OVERRIDE_CONTENT = `"use client";
+
+export default function ({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  return (
+    <html lang="sv">
+      <body
+        style={{
+          fontFamily: "system-ui, sans-serif",
+          padding: "2rem",
+          color: "#111",
+          background: "#fff",
+        }}
+      >
+        <h2>Något gick fel</h2>
+        <p>{error?.message ?? "Okänt fel"}</p>
+        <button
+          onClick={() => reset()}
+          style={{
+            marginTop: "1rem",
+            padding: "0.5rem 1rem",
+            border: "1px solid #111",
+            background: "transparent",
+            cursor: "pointer",
+          }}
+        >
+          Försök igen
+        </button>
+      </body>
+    </html>
+  );
+}
+`;
 
 function patchPackageJsonForStackblitz(content: string): string {
   let parsed: unknown;
@@ -81,6 +137,9 @@ function patchPackageJsonForStackblitz(content: string): string {
 
   const currentDev = typeof scripts.dev === "string" ? scripts.dev : "next dev";
   scripts.dev = ensureWebpackFlag(currentDev);
+  const currentBuild =
+    typeof scripts.build === "string" ? scripts.build : "next build";
+  scripts.build = ensureWebpackFlag(currentBuild);
   packageJson.scripts = scripts;
 
   const currentStackblitz = packageJson.stackblitz;
@@ -91,7 +150,7 @@ function patchPackageJsonForStackblitz(content: string): string {
       ? { ...(currentStackblitz as Record<string, unknown>) }
       : {};
   stackblitz.installDependencies = true;
-  stackblitz.startCommand = "npm run dev";
+  stackblitz.startCommand = "npm run build && npm run start";
   packageJson.stackblitz = stackblitz;
 
   return `${JSON.stringify(packageJson, null, 2)}\n`;
@@ -182,7 +241,9 @@ async function walk(root: string, current: string): Promise<string[]> {
   return collected;
 }
 
-export async function readRunFilesForStackblitz(runId: string): Promise<StackblitzFileMap> {
+export async function readRunFilesForStackblitz(
+  runId: string,
+): Promise<StackblitzFileMap> {
   const sourceDir = await resolveSourceDir(runId);
   const files = await walk(sourceDir, sourceDir);
   files.sort();
@@ -196,16 +257,25 @@ export async function readRunFilesForStackblitz(runId: string): Promise<Stackbli
     if (BINARY_EXTENSIONS.has(ext)) continue;
     if (isDotenvFile(base)) continue;
 
-    const relPath = path.relative(sourceDir, filePath).split(path.sep).join("/");
+    const relPath = path
+      .relative(sourceDir, filePath)
+      .split(path.sep)
+      .join("/");
     const stats = await fs.stat(filePath);
     if (stats.size > MAX_FILE_BYTES && relPath !== NPM_LOCKFILE) continue;
     if (totalBytes + stats.size > MAX_TOTAL_BYTES) break;
 
     const content = await fs.readFile(filePath, "utf-8");
     const patchedContent =
-      relPath === "package.json" ? patchPackageJsonForStackblitz(content) : content;
+      relPath === "package.json"
+        ? patchPackageJsonForStackblitz(content)
+        : content;
     projectFiles[relPath] = patchedContent;
     totalBytes += Buffer.byteLength(patchedContent, "utf-8");
+  }
+
+  if (!(GLOBAL_ERROR_OVERRIDE_PATH in projectFiles)) {
+    projectFiles[GLOBAL_ERROR_OVERRIDE_PATH] = GLOBAL_ERROR_OVERRIDE_CONTENT;
   }
 
   return projectFiles;
