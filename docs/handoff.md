@@ -1,7 +1,7 @@
 # Handoff – Sajtbyggaren
 
 **Datum:** 2026-05-15 (post demo-baseline-fix 1B + bug-sweep PR #28: B64/B65/B66/B69-B79/B83 stängda, re-verifierings-Scout är nästa)
-**Aktuell repo-HEAD på `main`:** `885431b` (PR #28 squash-merge: `Demo-baseline-fix 1B + bug-sweep`). Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA. Föregående produktbaseline: `d99f8ba` 1A-hotfixen för B61/B62/B63.
+**Aktuell repo-HEAD på `main`:** `cc3c6f3` (docs-bump ovanpå PR #28 squash-merge `885431b`, `Demo-baseline-fix 1B + bug-sweep`). Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA. Föregående produktbaseline: `d99f8ba` 1A-hotfixen för B61/B62/B63.
 **Aktiv branch:** `main`. PR #28 är mergead; PR-branchen `cursor/demo-baseline-buggsvep-44a5` kan städas separat om den finns kvar lokalt/remote. `backup-21` finns på origin från Grind-sprintstart. Inga kända öppna PR-blockers.
 **Stash-läge:** `git stash list` har EN parkerad stash: `park read-only shell windows rule before demo-baseline-fix` (skapad 2026-05-15 av Scout som förberedelse för 1A-hotfix-Builder, ska poppas separat när rule-spåret tas upp igen — INTE i Grind-sprinten).
 
