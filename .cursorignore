@@ -17,6 +17,9 @@ node_modules
 __pycache__/
 *.py[cod]
 
+apps/viewser/node_modules
+apps/viewser/.next
+
 # Tool caches that bloat the indexer with no value for editing.
 .pytest_cache/
 .ruff_cache/
