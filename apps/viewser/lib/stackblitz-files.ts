@@ -140,6 +140,11 @@ function patchPackageJsonForStackblitz(content: string): string {
   const currentBuild =
     typeof scripts.build === "string" ? scripts.build : "next build";
   scripts.build = ensureWebpackFlag(currentBuild);
+  const currentStart =
+    typeof scripts.start === "string" ? scripts.start.trim() : "";
+  if (!currentStart) {
+    scripts.start = "next start";
+  }
   packageJson.scripts = scripts;
 
   const currentStackblitz = packageJson.stackblitz;
@@ -263,15 +268,17 @@ export async function readRunFilesForStackblitz(
       .join("/");
     const stats = await fs.stat(filePath);
     if (stats.size > MAX_FILE_BYTES && relPath !== NPM_LOCKFILE) continue;
-    if (totalBytes + stats.size > MAX_TOTAL_BYTES) break;
 
     const content = await fs.readFile(filePath, "utf-8");
     const patchedContent =
       relPath === "package.json"
         ? patchPackageJsonForStackblitz(content)
         : content;
+    const patchedBytes = Buffer.byteLength(patchedContent, "utf-8");
+    // Keep scanning remaining files: a later file can still fit even if this one does not.
+    if (totalBytes + patchedBytes > MAX_TOTAL_BYTES) continue;
     projectFiles[relPath] = patchedContent;
-    totalBytes += Buffer.byteLength(patchedContent, "utf-8");
+    totalBytes += patchedBytes;
   }
 
   if (!(GLOBAL_ERROR_OVERRIDE_PATH in projectFiles)) {

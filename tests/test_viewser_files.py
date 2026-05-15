@@ -237,6 +237,28 @@ def test_stackblitz_files_keeps_package_lock_in_preview_upload() -> None:
 
 
 @pytest.mark.tooling
+def test_stackblitz_files_total_size_uses_patched_bytes_and_skips_oversized_file() -> None:
+    """Total payload cap must use the exact bytes we store.
+
+    package.json patching can change file size, so MAX_TOTAL_BYTES has to use
+    Buffer.byteLength(patchedContent). If one file does not fit, the loop
+    should continue so later smaller files can still be included.
+    """
+    text = (VIEWSER_DIR / "lib" / "stackblitz-files.ts").read_text(encoding="utf-8")
+    assert 'const patchedBytes = Buffer.byteLength(patchedContent, "utf-8");' in text, (
+        "MAX_TOTAL_BYTES-kontrollen måste baseras på patched bytes, inte "
+        "original stats.size, annars kan payloaden bli större än taket."
+    )
+    assert re.search(
+        r"if\s*\(\s*totalBytes\s*\+\s*patchedBytes\s*>\s*MAX_TOTAL_BYTES\s*\)\s*continue;",
+        text,
+    ), (
+        "När en fil inte får plats under MAX_TOTAL_BYTES ska loopen använda "
+        "`continue` så senare mindre filer fortfarande kan inkluderas."
+    )
+
+
+@pytest.mark.tooling
 def test_stackblitz_files_patches_package_json_for_webpack() -> None:
     """B56: StackBlitz-preview ska patcha package.json i-memory så Next 16
     kör med Webpack i WebContainer.
@@ -252,6 +274,10 @@ def test_stackblitz_files_patches_package_json_for_webpack() -> None:
     assert 'scripts.build = ensureWebpackFlag(currentBuild)' in text, (
         "stackblitz-files.ts måste patcha scripts.build via ensureWebpackFlag "
         "eftersom StackBlitz startCommand kör `npm run build` före `npm run start`."
+    )
+    assert 'scripts.start = "next start"' in text, (
+        "stackblitz-files.ts måste säkra scripts.start-fallback till "
+        "`next start` när start-script saknas."
     )
     assert 'stackblitz.startCommand = "npm run build && npm run start"' in text, (
         "stackblitz-files.ts måste sätta stackblitz.startCommand till "
