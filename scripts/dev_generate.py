@@ -365,9 +365,16 @@ def run_phase_build(
     # codegenModel v1 manifest (deterministic; same path as builder).
     from packages.generation.codegen import produce_codegen_artefakt
 
+    site_plan_path = run_dir / "site-plan.json"
+    site_plan = read_json(site_plan_path) if site_plan_path.exists() else {}
+    routes_written = [
+        entry["path"]
+        for entry in site_plan.get("routePlan", [])
+        if isinstance(entry, dict) and isinstance(entry.get("path"), str)
+    ]
     codegen_result = produce_codegen_artefakt(
         generation_package,
-        routes_written=[],
+        routes_written=routes_written,
         dossier_components=[],
         starter_id=generation_package.get("starterId", "marketing-base"),
     )

@@ -203,11 +203,12 @@ export type RunArtefactBundle = {
   qualityResult: Record<string, unknown> | null;
   repairResult: Record<string, unknown> | null;
   siteBrief: Record<string, unknown> | null;
+  sitePlan: Record<string, unknown> | null;
   missingArtefacts: string[];
 };
 
 /**
- * Read the four artefakter Builder UX MVP needs to render a run-detail
+ * Read the five artefakter Builder UX MVP needs to render a run-detail
  * view, defensively. Any missing file is recorded in `missingArtefacts`
  * so the UI can show "saknas i äldre run" instead of crashing.
  */
@@ -221,8 +222,9 @@ export async function readRunArtefacts(runId: string): Promise<RunArtefactBundle
     "quality-result.json",
     "repair-result.json",
     "site-brief.json",
+    "site-plan.json",
   ] as const;
-  const [buildResult, qualityResult, repairResult, siteBrief] = await Promise.all(
+  const [buildResult, qualityResult, repairResult, siteBrief, sitePlan] = await Promise.all(
     filenames.map((name) => readArtefactOrNull(runId, name)),
   );
 
@@ -231,6 +233,7 @@ export async function readRunArtefacts(runId: string): Promise<RunArtefactBundle
   if (!qualityResult) missingArtefacts.push("quality-result.json");
   if (!repairResult) missingArtefacts.push("repair-result.json");
   if (!siteBrief) missingArtefacts.push("site-brief.json");
+  if (!sitePlan) missingArtefacts.push("site-plan.json");
 
   return {
     runId,
@@ -238,6 +241,7 @@ export async function readRunArtefacts(runId: string): Promise<RunArtefactBundle
     qualityResult,
     repairResult,
     siteBrief,
+    sitePlan,
     missingArtefacts,
   };
 }

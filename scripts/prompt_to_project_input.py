@@ -555,9 +555,14 @@ def _build_services(
         text = raw.strip()
         if not text:
             continue
-        slug = _slugify_label(text)
-        if not slug or slug in seen:
+        base_slug = _slugify_label(text)
+        if not base_slug:
             continue
+        slug = base_slug
+        suffix = 2
+        while slug in seen:
+            slug = f"{base_slug}-{suffix}"
+            suffix += 1
         seen.add(slug)
         if _looks_like_slug(text):
             label = _service_label_from_slug(text)
@@ -748,8 +753,11 @@ def site_brief_to_project_input(
             "required": [],
             "recommended": [],
             "rationale": (
-                "Auto-generated from prompt; operator may add Dossiers in "
-                "the Project Input file before re-building."
+                "Auto-genererat från prompt; operatören kan lägga till "
+                "Dossiers i Project Input-filen före ny build."
+                if language == "sv"
+                else "Auto-generated from prompt; operator may add Dossiers "
+                "in the Project Input file before re-building."
             ),
         },
     }

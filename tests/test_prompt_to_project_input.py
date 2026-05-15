@@ -268,6 +268,45 @@ def test_site_brief_contact_fields_override_placeholders(
 
 
 @pytest.mark.tooling
+def test_selected_dossiers_rationale_matches_project_language() -> None:
+    """B79: Swedish prompt-generated Project Inputs should not carry
+    English operator rationale by default.
+    """
+    sv_brief = {
+        "language": "sv",
+        "businessTypeGuess": "electrician",
+        "rawPrompt": "elektriker Malmö",
+        "tone": [],
+        "conversionGoals": [],
+        "servicesMentioned": [],
+        "requestedCapabilities": [],
+        "locationHint": "Malmö",
+        "notesForPlanner": None,
+        "briefSource": "real",
+    }
+    en_brief = {**sv_brief, "language": "en", "rawPrompt": "electrician in Malmö"}
+
+    sv_project_input = site_brief_to_project_input(
+        sv_brief,
+        site_id="sv-rationale",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="elektriker Malmö",
+    )
+    en_project_input = site_brief_to_project_input(
+        en_brief,
+        site_id="en-rationale",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="electrician in Malmö",
+    )
+
+    assert "Auto-genererat" in sv_project_input["selectedDossiers"]["rationale"]
+    assert "Auto-generated" not in sv_project_input["selectedDossiers"]["rationale"]
+    assert "Auto-generated" in en_project_input["selectedDossiers"]["rationale"]
+
+
+@pytest.mark.tooling
 def test_generate_writes_project_input_and_meta(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -870,6 +909,34 @@ def test_swedish_service_labels_preserve_case() -> None:
     assert "farska-agg-direkt-fran-garden" in slugs
     assert "gardsbutik" in slugs
     assert "lokal-produktion" in slugs
+
+
+@pytest.mark.tooling
+def test_service_slug_collisions_get_deterministic_suffixes() -> None:
+    """B83: two distinct labels that normalize to the same slug should
+    both survive instead of silently dropping the later service.
+    """
+    brief = {
+        "language": "sv",
+        "businessTypeGuess": "service-provider",
+        "locationHint": "Malmö",
+        "rawPrompt": "test",
+        "tone": [],
+        "conversionGoals": [],
+        "servicesMentioned": ["A+B", "A B", "A_B"],
+        "requestedCapabilities": [],
+        "notesForPlanner": None,
+        "briefSource": "real",
+    }
+    project_input = site_brief_to_project_input(
+        brief,
+        site_id="collision-test",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="test",
+    )
+    service_ids = [service["id"] for service in project_input["services"]]
+    assert service_ids[:3] == ["a-b", "a-b-2", "a-b-3"]
 
 
 @pytest.mark.tooling

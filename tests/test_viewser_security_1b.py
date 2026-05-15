@@ -70,3 +70,21 @@ def test_list_runs_slices_before_reading_build_results() -> None:
         "JSON reads per refresh."
     )
     assert "b.stats.mtimeMs - a.stats.mtimeMs" in function_body
+
+
+@pytest.mark.tooling
+def test_run_details_bundle_and_panel_include_site_plan() -> None:
+    """B76: Run Details should surface ``site-plan.json`` alongside
+    build, quality, repair and model artefacts.
+    """
+    runs_text = (VIEWSER_DIR / "lib" / "runs.ts").read_text(encoding="utf-8")
+    panel_text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert "sitePlan: Record<string, unknown> | null" in runs_text
+    assert '"site-plan.json"' in runs_text
+    assert "sitePlan," in runs_text
+    assert "SitePlanSection" in panel_text
+    assert "routePlan:" in panel_text
+    assert "<SitePlanSection sitePlan={bundle.sitePlan} />" in panel_text

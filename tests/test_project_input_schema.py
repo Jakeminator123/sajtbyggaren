@@ -25,6 +25,7 @@ repoints all three examples at it, and pins three guards:
 
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 
@@ -152,4 +153,44 @@ def test_at_least_one_project_input_exists() -> None:
     assert _project_input_files(), (
         "No examples/<siteId>.project-input.json found. The Builder "
         "MVP and Viewser tests rely on at least one committed example."
+    )
+
+
+def _valid_project_input_example() -> dict:
+    first = _project_input_files()[0]
+    return json.loads(first.read_text(encoding="utf-8"))
+
+
+@pytest.mark.governance
+@pytest.mark.parametrize(
+    "path",
+    [
+        ["unexpectedRootField"],
+        ["company", "unexpectedCompanyField"],
+        ["contact", "unexpectedContactField"],
+        ["services", 0, "unexpectedServiceField"],
+        ["tone", "unexpectedToneField"],
+        ["selectedDossiers", "unexpectedSelectedField"],
+    ],
+)
+def test_project_input_schema_rejects_unknown_fields(
+    schema: dict,
+    path: list[str | int],
+) -> None:
+    """B75: Project Input schema should fail closed for root and
+    load-bearing nested objects.
+    """
+    payload = copy.deepcopy(_valid_project_input_example())
+    cursor = payload
+    for segment in path[:-1]:
+        cursor = cursor[segment]
+    cursor[path[-1]] = "not allowed"
+
+    validator = jsonschema.Draft202012Validator(schema)
+    errors = sorted(validator.iter_errors(payload), key=lambda e: e.path)
+    assert errors, f"Expected schema error for extra field path {path!r}"
+    assert any(
+        "Additional properties are not allowed" in error.message
+        or "is not valid under any of the given schemas" in error.message
+        for error in errors
     )

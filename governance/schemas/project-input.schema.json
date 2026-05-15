@@ -4,6 +4,7 @@
   "title": "Project Input",
   "description": "Strukturerad tolkning av operatörens Init Prompt och konkreta kund-/site-data. Driver vad sajten ska handla om (företagsfakta, ton, tjänster, kontakt). En Project Input är inte en Dossier - en Dossier är en återanvändbar capability, ett Project Input är ett konkret kundprojekt. Filer: examples/<siteId>.project-input.json. Naming-dictionary id: projectInput (canonical 'Project Input', ADR 0012).",
   "type": "object",
+  "additionalProperties": false,
   "required": [
     "siteId",
     "scaffoldId",
@@ -51,6 +52,7 @@
     },
     "company": {
       "type": "object",
+      "additionalProperties": false,
       "description": "Required fields are the ones scripts/build_site.py renders directly into TSX (name + tagline + story + businessType). team / founded are optional - team defaults to [] and the renderers handle that.",
       "required": ["name", "businessType", "tagline", "story"],
       "properties": {
@@ -63,6 +65,7 @@
           "type": "array",
           "items": {
             "type": "object",
+            "additionalProperties": false,
             "required": ["name", "role"],
             "properties": {
               "name": {"type": "string", "minLength": 1},
@@ -74,6 +77,7 @@
     },
     "location": {
       "type": "object",
+      "additionalProperties": false,
       "description": "city + serviceAreas are required because the renderers index them directly. country/region are optional metadata.",
       "required": ["city", "country", "serviceAreas"],
       "properties": {
@@ -92,6 +96,7 @@
       "minItems": 1,
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "description": "summary is required because render_home and render_services render it as a paragraph; an absent summary would crash the builder with KeyError.",
         "required": ["id", "label", "summary"],
         "properties": {
@@ -103,6 +108,7 @@
     },
     "tone": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "primary": {"type": "string"},
         "secondary": {"type": "array", "items": {"type": "string"}},
@@ -124,6 +130,7 @@
     },
     "contact": {
       "type": "object",
+      "additionalProperties": false,
       "description": "All four fields are required because the contact page (render_contact) renders each one directly into TSX. An absent field would crash the builder with KeyError before Quality Gate runs. Operators that want to ship without a phone/email/address must explicitly pass an empty string or list and then take responsibility for the resulting copy.",
       "required": ["phone", "email", "addressLines", "openingHours"],
       "properties": {
@@ -146,6 +153,7 @@
         },
         {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "required": {
               "type": "array",
@@ -164,6 +172,7 @@
               "type": "array",
               "items": {
                 "type": "object",
+                "additionalProperties": false,
                 "required": ["id", "reason"],
                 "properties": {
                   "id": {"type": "string"},

@@ -1294,6 +1294,12 @@ def mount_dossier_components(target: Path, selected_dossiers: list[dict]) -> lis
                 )
             seen[source.name] = info["id"]
             destination = components_target / source.name
+            if destination.exists():
+                raise SystemExit(
+                    "Builder failed: dossier component would shadow an "
+                    f"existing starter component at components/{source.name}. "
+                    "Rename the dossier component before retrying."
+                )
             write(destination, source.read_text(encoding="utf-8"))
             copied.append(f"components/{source.name}")
     return copied

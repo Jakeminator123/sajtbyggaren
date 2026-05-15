@@ -156,3 +156,35 @@ def test_dossier_component_collision_fails_fast(tmp_path: Path) -> None:
     assert "card-component.tsx" in message
     assert "dossier-a" in message
     assert "dossier-b" in message
+
+
+@pytest.mark.tooling
+def test_dossier_component_cannot_shadow_starter_component(tmp_path: Path) -> None:
+    """B77: a dossier component must not overwrite a component that the
+    starter already shipped in ``target/components``.
+    """
+    from scripts.build_site import mount_dossier_components
+
+    dossier_dir = tmp_path / "dossier"
+    (dossier_dir / "components").mkdir(parents=True)
+    (dossier_dir / "components" / "card-component.tsx").write_text(
+        "export default function DossierCard() { return null; }\n",
+        encoding="utf-8",
+    )
+
+    target = tmp_path / "site"
+    (target / "components").mkdir(parents=True)
+    starter_component = target / "components" / "card-component.tsx"
+    starter_component.write_text(
+        "export default function StarterCard() { return null; }\n",
+        encoding="utf-8",
+    )
+
+    selected = [
+        {"id": "dossier-a", "class": "soft", "dir": dossier_dir, "manifest": {}},
+    ]
+
+    with pytest.raises(SystemExit, match="shadow an existing starter component"):
+        mount_dossier_components(target, selected)
+
+    assert "StarterCard" in starter_component.read_text(encoding="utf-8")
