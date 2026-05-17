@@ -1,0 +1,112 @@
+---
+description: Aktivt bug-scope för en agent-session är "Öppna - inte fixade än"-buggar med Fix: open i docs/known-issues.md, aldrig hela listan. Kör scripts/list_open_bugs.py som start-steg så agenten ser scope explicit.
+alwaysApply: true
+---
+
+# Bug-scope-disciplin
+
+## Bakgrund
+
+`docs/known-issues.md` är vår kanoniska bugg-/aning-lista. Den växer
+monotont (B1, B2, ... B98, ...) eftersom varje audit hittar nya
+buggar. Det betyder att en lång lista av B-ID:n syns även när 70+ av
+dem är stängda med regression-test.
+
+Två observerade problem:
+
+1. **Agenter förvirras.** En agent som skummar `known-issues.md`
+   och hittar "B83 - service slug-kollisioner ..." kan plocka upp
+   uppgiften utan att se att den är stängd flera commits senare. Då
+   spenderas tid på arbete som redan är gjort.
+2. **Misplaced entries blockerar.** När en PR stänger flera buggar
+   händer det att Steward glömmer flytta posten från "Öppna"-sektionen
+   till "Stängda"-sektionen. Posten har `Fix: <sha>` men ligger
+   fortfarande under "Öppna - inte fixade än", vilket sänder fel
+   signal till nästa agent.
+
+## Grundregel
+
+**Aktivt scope = endast buggar med `Fix: open` i "Öppna"-sektionen.**
+
+Allt annat (Misplaced + Stängda) är historik som skyddas av
+regression-test och får inte vara underlag för nytt agentarbete utan
+explicit operatörsdirektiv.
+
+## Sprintstart - bug-scope-steg
+
+Direkt efter `python scripts/focus_check.py` ska agenten köra:
+
+```powershell
+python scripts/list_open_bugs.py
+```
+
+Scriptet skriver fyra kategorier:
+
+- **Active** - har `Fix: open`. Det här är scope:t för nytt arbete.
+- **Misplaced** - har `Fix: <sha>` men ligger fortfarande i
+  "Öppna"-sektionen. Ett tecken på att Steward inte flyttat posten
+  efter att fixen mergades. Inte scope för Builder; rapportera som
+  städ-uppgift för nästa Steward-pass.
+- **Unknown** - ingen tydlig Fix-marker. Behöver operatörs-triage,
+  inte agent-implementation.
+- **Closed** - lever i "Stängda"-sektionen. Skyddad av
+  regression-test; om någon vill röra dem måste de först låsa upp
+  testen.
+
+## Disciplin när agenten arbetar
+
+- Om operatörens prompt nämner ett B-ID som **inte** finns i
+  `Active`-listan: stoppa och fråga. Antingen är buggen redan stängd
+  (operatören har gammal kontext), eller så är `known-issues.md` ur
+  synk (Steward-arbete krävs först).
+- Om agenten vill "fixa" en bugg i `Misplaced`-listan: nej, den är
+  redan fixad. Flytta posten till "Stängda" (Steward-arbete) istället.
+- Om agenten vill "fixa" en bugg i `Closed`: nej, det är en
+  regression. Skapa ett nytt B-ID och behandla det som en ny aning.
+
+## Format-disciplin i known-issues.md
+
+Posterna i "Öppna - inte fixade än"-sektionen MÅSTE följa formatet:
+
+```markdown
+- **`<ID>` <Hög|Medel|Låg|Hög-säkerhet|Låg-Medel|Medel-Hög>** - <beskrivning>.
+  ... (flera rader OK)
+  Fix: open. Test: open.
+```
+
+Posterna i "Stängda - regression-test säkrar fixet"-sektionen följer:
+
+```markdown
+- **`<ID>` <severity>** (stängd <datum>, <sprint>) - <beskrivning>.
+  ... Fix: `<commit-sha>`. Test: `tests/<file>.py::<test_name>`.
+```
+
+Avvik från dessa två format bryter `scripts/list_open_bugs.py`-parsen.
+Det är medvetet strikt - lös formatet, lös scope-läget gratis.
+
+## Sammanfattningsrad högst upp i known-issues.md
+
+Filen `docs/known-issues.md` har en sammanfattningsrad nära toppen:
+
+```markdown
+> **Aktivt bug-scope:** N aktiva, M misplaced (har Fix-SHA men borde
+> flyttas till Stängda), K unknown, L stängda. Kör
+> `python scripts/list_open_bugs.py` för full lista. Format-disciplin:
+> se governance/rules/bug-scope-discipline.md.
+```
+
+Raden valideras av
+`tests/test_bug_scope_discipline.py::test_known_issues_summary_line_matches_script`
+mot scriptets faktiska räkning. När du ändrar status på en bugg
+(öppen -> misplaced -> stängd, eller lägger till nytt B-ID) MÅSTE
+samma commit bumpa siffrorna i sammanfattningsraden. Då stannar testet
+grön och agenter ser läget direkt utan att köra scriptet.
+
+## Vad denna regel INTE löser
+
+- Den uppdaterar inte known-issues.md automatiskt. Steward-arbete är
+  fortfarande hand-städ; regeln gör bara att agenter ser läget rätt.
+- Den ersätter inte GitHub Issues eller en riktig issue-tracker. Den
+  förbättrar formatet som redan finns; större byte är separat beslut.
+- Den lockar inte fix-staten på själva fixen. För det finns
+  regression-test-länkarna i "Test: ..."-fältet och CI-pipen.

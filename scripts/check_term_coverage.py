@@ -125,6 +125,10 @@ COMMON_WORDS = {
     "BaseModel", "Field", "FileNotFoundError", "BriefResult",
     "BriefModelResolutionError", "ValidationError", "ArtifactSchemaError",
     "SystemExit",
+    # list_open_bugs.py / test_bug_scope_discipline.py internal dataclass
+    # name. Mirrors the BriefResult / CheckResult pattern above - it is an
+    # internal Python symbol, not a domain term.
+    "BugEntry",
     # Zod (TS) error class. Mirrors how Pydantic's ValidationError is
     # treated above - external library symbol, not a domain term. Used
     # in apps/viewser/app/api/prompt/route.ts to split client-side
