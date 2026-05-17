@@ -36,6 +36,8 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 from list_open_bugs import (  # noqa: E402
+    CLOSED_HEADING,
+    OPEN_HEADING,
     BugEntry,
     collect_bug_state,
 )
@@ -115,6 +117,78 @@ def test_no_bug_id_appears_in_both_oppna_and_stangda(
         f"B-IDs {sorted(overlap)} appear in both Öppna and Stängda; "
         "move the open entry to Stängda or delete the duplicate."
     )
+
+
+def _split_open_closed_sections(text: str) -> tuple[str, str]:
+    open_pos = text.find(OPEN_HEADING)
+    closed_pos = text.find(CLOSED_HEADING)
+    assert open_pos != -1, "Öppna-heading saknas i known-issues.md"
+    assert closed_pos != -1, "Stängda-heading saknas i known-issues.md"
+    assert closed_pos > open_pos, (
+        "Stängda-heading måste komma efter Öppna-heading i known-issues.md"
+    )
+    return text[open_pos:closed_pos], text[closed_pos:]
+
+
+@pytest.mark.tooling
+def test_parser_does_not_silently_drop_open_entries(
+    state: dict[str, list[BugEntry]],
+) -> None:
+    """Fail-open guard: every `- **` bullet in the Öppna section must
+    be represented by exactly one parsed entry in active/misplaced/unknown.
+    """
+    text = KNOWN_ISSUES.read_text(encoding="utf-8")
+    open_section, _ = _split_open_closed_sections(text)
+    open_bullet_count = len(re.findall(r"^- \*\*", open_section, flags=re.MULTILINE))
+    parsed_open_count = len(state["active"]) + len(state["misplaced"]) + len(
+        state["unknown"]
+    )
+    assert parsed_open_count == open_bullet_count, (
+        f"Öppna-section has {open_bullet_count} bug bullets but parser returned "
+        f"{parsed_open_count} entries (active+misplaced+unknown). "
+        "A bug post was silently dropped."
+    )
+
+
+@pytest.mark.tooling
+def test_parser_does_not_silently_drop_closed_entries(
+    state: dict[str, list[BugEntry]],
+) -> None:
+    """Fail-open guard for Stängda: bullet count must equal parser count."""
+    text = KNOWN_ISSUES.read_text(encoding="utf-8")
+    _, closed_section = _split_open_closed_sections(text)
+    closed_bullet_count = len(
+        re.findall(r"^- \*\*", closed_section, flags=re.MULTILINE)
+    )
+    parsed_closed_count = len(state["closed"])
+    assert parsed_closed_count == closed_bullet_count, (
+        f"Stängda-section has {closed_bullet_count} bug bullets but parser "
+        f"returned {parsed_closed_count} entries. A closed bug was silently "
+        "dropped."
+    )
+
+
+@pytest.mark.tooling
+def test_parser_fails_loud_on_synthetic_format_break() -> None:
+    """A malformed bug bullet must raise SystemExit with a line number.
+
+    This locks the runtime behavior review #29 requested: if someone
+    introduces a typo in the bug entry header (e.g. missing backticks),
+    the parser may not ignore it and continue. It must fail loudly with
+    enough context to fix the broken line quickly.
+    """
+    broken_text = f"""{OPEN_HEADING}
+
+- **B999 Hög** - malformed entry (missing backticks around ID).
+  Fix: open. Test: open.
+
+{CLOSED_HEADING}
+
+- **`B61` Låg** (stängd 2026-05-18, synthetic) - valid closed entry.
+  Fix: `abc1234`. Test: `tests/test_dummy.py::test_dummy`.
+"""
+    with pytest.raises(SystemExit, match=r"Öppna-sektionen.*rad \d+"):
+        collect_bug_state(text=broken_text)
 
 
 _SUMMARY_RE = re.compile(

@@ -81,8 +81,11 @@ Posterna i "Stängda - regression-test säkrar fixet"-sektionen följer:
   ... Fix: `<commit-sha>`. Test: `tests/<file>.py::<test_name>`.
 ```
 
-Avvik från dessa två format bryter `scripts/list_open_bugs.py`-parsen.
-Det är medvetet strikt - lös formatet, lös scope-läget gratis.
+Avvik från dessa två format gör att `scripts/list_open_bugs.py` failar
+med `SystemExit` och radnumret för den första buggposten som inte
+kunde parsas. Det är medvetet strikt - fixa formatet i markdown-filen
+eller utöka parsern med tydlig motivering om en ny variant verkligen
+behövs.
 
 ## Sammanfattningsrad högst upp i known-issues.md
 

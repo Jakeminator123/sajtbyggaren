@@ -39,8 +39,10 @@ CLOSED_HEADING = "## Stängda - regression-test säkrar fixet"
 
 # Matches the opening line of a bug entry. Severity is intentionally
 # permissive because the file uses "Hög", "Medel", "Låg", "Medel-Hög",
-# "Hög-säkerhet", "Låg-Medel", etc. ID accepts letters, digits, dash,
-# and the slash that B6/B10-style merged posts use.
+# "Hög-säkerhet", "Låg-Medel", etc. IDs in this repo also include
+# lowercase suffixes (e.g. `ticket-with-suffix`, `B20-followup-lucide`,
+# `BO4-followup-cancel`), so lowercase is allowed after the first
+# uppercase character.
 #
 # Entries in "Öppna" look like:
 #     - **`B61` Hög** - <text>
@@ -49,11 +51,12 @@ CLOSED_HEADING = "## Stängda - regression-test säkrar fixet"
 # The optional `(... )` group between severity and the leading dash
 # covers the Stängda variant so both sections parse with one regex.
 _ENTRY_RE = re.compile(
-    r"^- \*\*`(?P<id>[A-Z][A-Z0-9/-]*)` (?P<severity>[A-Za-zÅÄÖåäö-]+)\*\*"
+    r"^- \*\*`(?P<id>[A-Z][A-Za-z0-9/-]*)` (?P<severity>[A-Za-zÅÄÖåäö-]+)\*\*"
     r"(?:\s*\([^)]*\))?"
     r"\s*-\s*(?P<rest>.+?)$",
     re.MULTILINE,
 )
+_BULLET_RE = re.compile(r"^- \*\*", re.MULTILINE)
 
 # Match `Fix: \`<sha>\`` (closed via commit) inside an entry body.
 _FIX_SHA_RE = re.compile(r"Fix:\s*`?([0-9a-f]{7,40})`?")
@@ -111,7 +114,7 @@ def _split_known_issues(text: str) -> tuple[str, str]:
     return text[open_pos:closed_pos], text[closed_pos:]
 
 
-def _collect_entries(section: str) -> list[BugEntry]:
+def _collect_entries(section: str, *, section_label: str) -> list[BugEntry]:
     """Extract bug entries from a section substring.
 
     Each entry covers from one `_ENTRY_RE` match through to the
@@ -119,6 +122,23 @@ def _collect_entries(section: str) -> list[BugEntry]:
     full entry body is then scanned for Fix-status markers.
     """
     matches = list(_ENTRY_RE.finditer(section))
+    bullet_starts = list(_BULLET_RE.finditer(section))
+    if len(matches) != len(bullet_starts):
+        matched_positions = {match.start() for match in matches}
+        unmatched = [bullet for bullet in bullet_starts if bullet.start() not in matched_positions]
+        first = unmatched[0]
+        line_no = section[: first.start()].count("\n") + 1
+        line_end = section.find("\n", first.start())
+        if line_end == -1:
+            line_end = len(section)
+        snippet = section[first.start() : line_end].strip()
+        raise SystemExit(
+            f"list_open_bugs: {section_label}-sektionen har en buggpost som inte "
+            f"matchar formatet (rad {line_no}):\n"
+            f"    {snippet}\n"
+            "Förväntat: '- **`<ID>` <severity>** [(stängd ...)] - <text>'. "
+            "Se governance/rules/bug-scope-discipline.md."
+        )
     entries: list[BugEntry] = []
     for index, match in enumerate(matches):
         start = match.start()
@@ -153,8 +173,8 @@ def collect_bug_state(text: str | None = None) -> dict[str, list[BugEntry]]:
     if text is None:
         text = KNOWN_ISSUES.read_text(encoding="utf-8")
     open_section, closed_section = _split_known_issues(text)
-    open_entries = _collect_entries(open_section)
-    closed_entries = _collect_entries(closed_section)
+    open_entries = _collect_entries(open_section, section_label="Öppna")
+    closed_entries = _collect_entries(closed_section, section_label="Stängda")
     grouped: dict[str, list[BugEntry]] = {
         "active": [],
         "misplaced": [],
