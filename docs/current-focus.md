@@ -278,13 +278,18 @@ PR-head-brancherna `cursor/env-setup-9fef`,
 `cursor/docs-base-starter-harmonisering-98ec`,
 `cursor/portfolio-base-starter-upps-ttning-bf2e` och
 `cursor/backoffice-sp-r-lekplats-st-dning-d1d5` raderades från GitHub
-eller bekräftades redan raderade. `backup-6`, `backup-7`, `backup-8`,
-`backup-11` och `backup-12` finns på origin som fallbacks; äldre
-`backup-1`-`backup-5` finns också kvar. Kvarvarande remote
-arbetsbrancher som inte ska raderas utan separat beslut:
-`feat/backoffice-trace-playground-cleanup` (ingen egen PR, inte ancestry-
-mergead efter squash) och `frontend/christopher-import` (PR #17 stängd
-utan merge, reference only).
+eller bekräftades redan raderade. Backup-prune 2026-05-17 (efter
+PR #29 + PR #30-merge): `backup-1` t.o.m. `backup-8` raderade från
+origin på explicit operatörsdirektiv (~4 sprintar gamla, fallback-
+behovet täckt av yngre backup-N). `backup-9` och `backup-10` har
+aldrig existerat. Kvarvarande origin-fallbacks: `backup-11` t.o.m.
+`backup-22` (12 st, äldsta från 2026-05-14). Inga lokala backup-N
+finns kvar — alla raderades 2026-05-17 efter SHA-jämförelse mot
+origin. Kvarvarande remote arbetsbrancher som inte ska raderas utan
+separat beslut: `christopher-ui` och `frontend/christopher-import`
+(PR #17 stängd utan merge, reference only). Stale PR-head-branch
+`feat/demo-baseline-fix-1b-bug-sweep` (PR #28 mergad ovanpå) finns
+också kvar på origin men är fri att radera i nästa Steward-städ.
 
 ## Current active sprint
 
