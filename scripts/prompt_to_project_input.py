@@ -591,10 +591,15 @@ def _placeholder_contact(
 ) -> dict[str, Any]:
     """Schema-required contact block when the brief has no real values.
 
-    Every field has minLength=1 in the schema so we cannot leave them
-    blank. The placeholder strings are deliberately obvious ("uppdatera
-    Project Input") so the operator notices them in the generated site
-    and replaces them before sharing the build externally.
+    Demo-baseline-fix 1C (B88): the previous placeholders for `address`
+    were operator-facing dev jargon ("Adress saknas - uppdatera Project
+    Input"), which leaked verbatim into the public ``<address>`` tag on
+    every generated /kontakt page in the re-Scout 2026-05-15 run.
+    Schema constraint ``addressLines minItems=1 + items minLength=1``
+    forbids an empty value, so the fallback is now a brand-neutral
+    Swedish/English phrase that reads acceptably to a real visitor.
+    The operator can still override it in the generated Project Input
+    before sharing the build.
     """
     phone = (contact_phone or "").strip()
     email = (contact_email or "").strip()
@@ -603,42 +608,67 @@ def _placeholder_contact(
         return {
             "phone": phone or "+46 8 000 00 00",
             "email": email or "contact@example.se",
-            "addressLines": [address or "Address placeholder - update Project Input"],
+            "addressLines": [address or "Address available on request"],
             "openingHours": "Mon-Fri 09:00-17:00",
         }
     return {
         "phone": phone or "+46 8 000 00 00",
         "email": email or "kontakt@example.se",
-        "addressLines": [address or "Adress saknas - uppdatera Project Input"],
+        "addressLines": [address or "Adress lämnas på förfrågan"],
         "openingHours": "Mån-Fre 09:00-17:00",
     }
 
 
-_LOCATION_HINT_SV_TRANSLATIONS = {
-    "sweden": "Sverige",
+# Demo-baseline-fix 1C (B95): values that the brief sometimes returns as
+# `locationHint` even though they are country names, not cities. When we
+# see one of these we treat the location as "country only" and let the
+# renderer drop the city tag on hero rather than surfacing the country
+# name as an ortstag. Comparison is case-insensitive on the stripped
+# string.
+_COUNTRY_NAME_LOCATION_HINTS: set[str] = {
+    "sweden",
+    "sverige",
+    "norway",
+    "norge",
+    "denmark",
+    "danmark",
+    "finland",
+    "iceland",
+    "island",
 }
 
 
 def _normalize_location_hint(
     location_hint: str | None, language: str
 ) -> str | None:
-    """Normalise English country/region names to Swedish on `language=sv`.
+    """Normalise location hints, treating country names as "no city".
 
-    Demo-baseline-fix 1A-hotfix (B62): briefModel sometimes returns
-    `locationHint="Sweden"` even when the prompt language is Swedish,
-    which used to surface as `location.city="Sweden"` on the rendered
-    site. The helper rewrites the few country-name variants we know
-    about so the rendered city stays in the prompt's language.
+    Two jobs:
+
+    1. Demo-baseline-fix 1A-hotfix (B62): rewrite the rare
+       ``locationHint="Sweden"`` from briefModel to ``"Sverige"`` on
+       Swedish builds. After the B95 change this only matters as a
+       transitional translation because country names now fall through
+       to step 2.
+    2. Demo-baseline-fix 1C (B95): if the cleaned value matches one of
+       ``_COUNTRY_NAME_LOCATION_HINTS`` (sv + en variants for the
+       Nordic countries we actually see today) we return ``None`` on
+       both languages so ``_placeholder_location`` falls back to its
+       country-only city and the renderer can suppress the hero
+       ortstag. This is broader than B91 / the previous
+       ``Sweden -> Sverige`` map because it also catches
+       ``locationHint="Sverige"`` (no city) which surfaced as a hero
+       ortstag for the e-commerce prompt in the re-Verifierings-Scout
+       2026-05-15 run.
     """
     if not location_hint:
         return location_hint
     cleaned = location_hint.strip()
-    if language != "sv":
-        return cleaned or None
-    swedish = _LOCATION_HINT_SV_TRANSLATIONS.get(cleaned.lower())
-    if swedish:
-        return swedish
-    return cleaned or None
+    if not cleaned:
+        return None
+    if cleaned.lower() in _COUNTRY_NAME_LOCATION_HINTS:
+        return None
+    return cleaned
 
 
 def _placeholder_location(
@@ -647,14 +677,14 @@ def _placeholder_location(
     """Schema-required location block.
 
     serviceAreas requires at least one entry. When the brief has no
-    location hint we fall back to a generic Swedish placeholder so the
-    builder never crashes on a missing city. `_normalize_location_hint`
-    rewrites the rare `locationHint="Sweden"` edge case to "Sverige" on
-    Swedish builds (B62, demo-baseline-fix 1A-hotfix).
+    location hint (or the hint is a country name per B95) we fall back
+    to a city == country marker so ``scripts/build_site.py`` can
+    detect "country only" and suppress the hero ortstag rather than
+    rendering the country as if it were a city.
     """
     normalized = _normalize_location_hint(location_hint, language)
-    city = normalized or ("Sweden" if language == "en" else "Sverige")
     country = "Sweden" if language == "en" else "Sverige"
+    city = normalized or country
     return {
         "city": city,
         "country": country,
