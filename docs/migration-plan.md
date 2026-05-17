@@ -8,7 +8,7 @@ Beslutet att skjuta upp baseline-eval (tidigare steg 3) tills LLM-flödet finns 
 
 1. **Governance-skelett** (klart)
    - Alla policies under [`governance/policies/`](../governance/policies/) inkl. `engine-run.v1.json` och `llm-models.v1.json`
-2. **Backoffice-skelett** (klart): [`backend.py`](../backend.py) + `backoffice/`-modulen
+2. **Backoffice-skelett** (klart): [`backoffice.py`](../backoffice.py) + `backoffice/`-modulen
 3. **Term-disciplin och regression-tester** (klart): scripts + `tests/` + GitHub Actions
 4. **Sprint 1 - Mock Engine Run** (klart): [`scripts/dev_generate.py`](../scripts/dev_generate.py) producerar alla 8 artefakter + `trace.ndjson` utan riktiga LLM-anrop. Låser artefaktkontraktet.
 5. **Sprint 2 - Riktig fas 1 + fas 2 + andra scaffolden**: koppla in `briefModel` och `planningModel`. `local-service-business`-scaffolden finns redan med alla obligatoriska filer (`scaffold.json`, `routes.json`, `sections.json`, `quality-contract.json`, `compatible-dossiers.json`, `selection-profile.json`) och en variant (`nordic-trust`). `ecommerce-lite` (variant `clean-store`) tillagd i Sprint 2B med samma sex obligatoriska filer.

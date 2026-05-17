@@ -44,7 +44,7 @@ En policy-driven hemsidegenerator. Mål: 9/10 kvalitet, ingen plattformsinlåsni
 Tre lager:
 
 - `governance/` — JSON-policies + JSON-Schemas + ADR. Sanningskällan.
-- `backoffice/` + `backend.py` — Streamlit-administration (inte runtime).
+- `backoffice/` + `backoffice.py` — Streamlit-administration (inte runtime).
 - `packages/` + `apps/` — runtime + kund-UI.
 
 ## Vad funkar idag (post cleanup/prune-sprint, kod-baseline `2acdeca`)

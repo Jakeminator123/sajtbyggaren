@@ -30,11 +30,15 @@ from .plan import (
     PlanningChoice,
     PlanResult,
     RejectedCapability,
+    dossier_is_enabled,
     filter_capabilities,
     load_capability_map,
+    load_scaffold_enabled_map,
     load_scaffold_registry,
+    load_starter_registry,
     merge_operator_selected_with_helper,
     produce_site_plan,
+    starter_is_enabled,
 )
 
 __all__ = [
@@ -44,10 +48,14 @@ __all__ = [
     "PlanningModelResolutionError",
     "RejectedCapability",
     "SCAFFOLD_TO_STARTER",
+    "dossier_is_enabled",
     "filter_capabilities",
     "load_capability_map",
+    "load_scaffold_enabled_map",
     "load_scaffold_registry",
+    "load_starter_registry",
     "merge_operator_selected_with_helper",
     "produce_site_plan",
     "resolve_planning_model",
+    "starter_is_enabled",
 ]

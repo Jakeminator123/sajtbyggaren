@@ -21,7 +21,7 @@ Vi bygger om `Jakeminator123/sajtmaskin` (referensbranch `master`) eftersom det 
 Tre lager, tre regler:
 
 1. **Governance JSON är sanningskälla.** Allt annat härleds från `governance/`.
-2. **`backend.py` är Streamlit-backoffice för operatören.** Inte i användarens runtime.
+2. **`backoffice.py` är Streamlit-backoffice för operatören.** Inte i användarens runtime.
 3. **`packages/` + `apps/` är runtime.** PreviewRuntime-abstraktion med StackBlitz först, EN quality gate.
 
 ## Vad detta brief INTE är

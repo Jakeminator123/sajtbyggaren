@@ -47,8 +47,8 @@
     {
       "id": "starterRegistry",
       "canonical": "Starter Registry",
-      "definition": "Centralt index över giltiga Starter-id:n och deras källor. Sanningskälla i data/starters/README.md tabellen tills en formell policy etableras.",
-      "ownerPackage": "data/starters",
+      "definition": "Centralt index över giltiga Starter-id:n, deras källor och om de är aktiva för generation. Sanningskälla för enabled-state är governance/policies/starter-registry.v1.json; data/starters/README.md beskriver källor och harmonisering.",
+      "ownerPackage": "governance/policies",
       "aliasesAllowed": [],
       "aliasesForbidden": []
     },
@@ -391,8 +391,8 @@
     {
       "id": "backoffice",
       "canonical": "Backoffice",
-      "definition": "backend.py Streamlit-app för att redigera governance, scaffolds, dossiers, evals, telemetri. INTE i användarens runtime.",
-      "ownerPackage": "backend.py",
+      "definition": "backoffice.py Streamlit-app för att redigera governance, scaffolds, dossiers, evals, telemetri. INTE i användarens runtime.",
+      "ownerPackage": "backoffice.py",
       "aliasesAllowed": ["adminPanel"],
       "aliasesForbidden": ["dashboard", "frontoffice"]
     },

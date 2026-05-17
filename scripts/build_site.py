@@ -1250,6 +1250,10 @@ def load_selected_dossier_manifests(project_input: dict) -> list[dict]:
             raise SystemExit(
                 f"Dossier manifest class mismatch for {manifest_path}: expected '{dossier_class}', got '{manifest.get('class')}'"
             )
+        if manifest.get("enabled", True) is False:
+            raise SystemExit(
+                f"Selected dossier '{dossier_id}' is disabled in {manifest_path}."
+            )
         manifests.append(
             {
                 "id": dossier_id,

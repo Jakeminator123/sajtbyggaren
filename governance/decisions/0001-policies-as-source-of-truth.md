@@ -25,5 +25,5 @@ Varje policy har ett strikt JSON Schema i `governance/schemas/` som valideras av
 
 - Code review blockerar koncept som inte finns i en policy.
 - Cursor-regler är speglar (`scripts/rules_sync.py`), inte original.
-- Backoffice (`backend.py`) är primär redigeringsyta för policies.
+- Backoffice (`backoffice.py`) är primär redigeringsyta för policies.
 - Ändringar i en policy höjer dess `version` och `policyId`-suffix (`.v2`, `.v3`).

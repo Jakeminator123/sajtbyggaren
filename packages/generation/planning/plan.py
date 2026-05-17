@@ -42,6 +42,12 @@ STARTERS_DIR = REPO_ROOT / "data" / "starters"
 DEFAULT_CAPABILITY_MAP_PATH = (
     REPO_ROOT / "governance" / "policies" / "capability-map.v1.json"
 )
+DEFAULT_SCAFFOLD_CONTRACT_PATH = (
+    REPO_ROOT / "governance" / "policies" / "scaffold-contract.v1.json"
+)
+DEFAULT_STARTER_REGISTRY_PATH = (
+    REPO_ROOT / "governance" / "policies" / "starter-registry.v1.json"
+)
 
 DEFAULT_SCAFFOLD_ID = "local-service-business"
 
@@ -145,6 +151,7 @@ def load_scaffold_registry(
     registry: list[dict[str, Any]] = []
     if not base.exists():
         return registry
+    enabled_by_id = load_scaffold_enabled_map()
     from packages.generation.artifacts import validate_scaffold, validate_sections
 
     for scaffold_dir in sorted(base.iterdir()):
@@ -155,6 +162,8 @@ def load_scaffold_registry(
             continue
         scaffold = _read_json(scaffold_json)
         validate_scaffold(scaffold)
+        if enabled_by_id.get(scaffold["id"], True) is False:
+            continue
         routes = _read_json_or_default(scaffold_dir / "routes.json", {"defaultRoutes": []})
         sections = _read_json_or_default(scaffold_dir / "sections.json", {})
         if sections:
@@ -185,6 +194,63 @@ def load_scaffold_registry(
             }
         )
     return registry
+
+
+def _is_enabled(entry: dict[str, Any]) -> bool:
+    """Treat missing ``enabled`` as true for backward compatibility."""
+    return entry.get("enabled", True) is not False
+
+
+def load_scaffold_enabled_map(path: Path | None = None) -> dict[str, bool]:
+    """Read scaffold enabled-state from scaffold-contract.v1.json."""
+    actual = path or DEFAULT_SCAFFOLD_CONTRACT_PATH
+    if not actual.exists():
+        return {}
+    payload = _read_json(actual)
+    return {
+        entry["id"]: _is_enabled(entry)
+        for entry in payload.get("primaryScaffoldRegistry", [])
+        if isinstance(entry, dict) and isinstance(entry.get("id"), str)
+    }
+
+
+def load_starter_registry(path: Path | None = None) -> dict[str, dict[str, Any]]:
+    """Read starter-registry.v1.json keyed by starter id."""
+    actual = path or DEFAULT_STARTER_REGISTRY_PATH
+    if not actual.exists():
+        return {}
+    payload = _read_json(actual)
+    return {
+        entry["id"]: entry
+        for entry in payload.get("starters", [])
+        if isinstance(entry, dict) and isinstance(entry.get("id"), str)
+    }
+
+
+def starter_is_enabled(starter_id: str, registry_path: Path | None = None) -> bool:
+    """Return whether a Starter may be used by generation."""
+    registry = load_starter_registry(registry_path)
+    entry = registry.get(starter_id)
+    if entry is None:
+        return True
+    return _is_enabled(entry)
+
+
+def _dossier_manifest_path(dossier_id: str, dossiers_dir: Path = DOSSIERS_DIR) -> Path | None:
+    for dossier_class in ("soft", "hard"):
+        candidate = dossiers_dir / dossier_class / dossier_id / "manifest.json"
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def dossier_is_enabled(dossier_id: str, dossiers_dir: Path = DOSSIERS_DIR) -> bool:
+    """Return whether a Dossier may be selected or mounted."""
+    manifest_path = _dossier_manifest_path(dossier_id, dossiers_dir)
+    if manifest_path is None:
+        return True
+    manifest = _read_json(manifest_path)
+    return _is_enabled(manifest)
 
 
 def load_capability_map(path: Path | None = None) -> dict[str, Any]:
@@ -247,6 +313,14 @@ def filter_capabilities(
                 f"Capability {cap!r} has default={default!r} that is not listed in dossiers={dossiers} "
                 "in capability-map.v1.json."
             )
+        if not dossier_is_enabled(default):
+            rejected.append(
+                RejectedCapability(
+                    id=cap,
+                    reason=f"Default Dossier {default!r} is disabled in its manifest.",
+                )
+            )
+            continue
         if default not in selected:
             selected.append(default)
     return selected, rejected
@@ -288,10 +362,10 @@ def _pick_scaffold_from_brief(
 
 
 def _pick_variant(scaffold: dict[str, Any]) -> str:
-    variants = scaffold.get("variants") or []
+    variants = [variant for variant in scaffold.get("variants") or [] if _is_enabled(variant)]
     if not variants:
         raise RuntimeError(
-            f"Scaffold {scaffold['id']!r} has no variants under variants/. "
+            f"Scaffold {scaffold['id']!r} has no enabled variants under variants/. "
             "A scaffold must declare at least one variant for planningModel to pick from."
         )
     return variants[0]["id"]
@@ -508,6 +582,11 @@ def _resolve_starter_id(scaffold_id: str) -> str:
             f"No starter mapping registered for scaffoldId={scaffold_id!r}. "
             "Add it to SCAFFOLD_TO_STARTER in packages/generation/planning/plan.py "
             "or register the matching starter under data/starters/."
+        )
+    if not starter_is_enabled(starter):
+        raise RuntimeError(
+            f"Starter {starter!r} for scaffoldId={scaffold_id!r} is disabled "
+            "in starter-registry.v1.json."
         )
     return starter
 
@@ -803,6 +882,11 @@ def _resolve_pinned_choice(
     by_id = {entry["id"]: entry for entry in registry}
     scaffold = by_id.get(scaffold_id)
     if scaffold is None:
+        if load_scaffold_enabled_map().get(scaffold_id) is False:
+            raise RuntimeError(
+                f"Project Input pins scaffoldId={scaffold_id!r} but that Scaffold "
+                "is disabled in scaffold-contract.v1.json."
+            )
         raise RuntimeError(
             f"Project Input pins scaffoldId={scaffold_id!r} but no scaffold "
             f"with that id has scaffold.json on disk under {SCAFFOLDS_DIR}."

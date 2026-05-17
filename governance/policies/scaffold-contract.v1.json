@@ -74,71 +74,85 @@
   "primaryScaffoldRegistry": [
     {
       "id": "local-service-business",
+      "enabled": true,
       "label": "Local Service Business",
       "rationale": "Lokala tjänsteföretag (elektriker, rörmokare, städ, takläggare). Trust + lokal SEO + kontaktkonvertering."
     },
     {
       "id": "professional-services",
+      "enabled": true,
       "label": "Professional Services",
       "rationale": "Advokat, redovisning, B2B-konsult, rekrytering. Auktoritet + struktur + förtroende."
     },
     {
       "id": "restaurant-hospitality",
+      "enabled": true,
       "label": "Restaurant & Hospitality",
       "rationale": "Restaurang, café, hotell, catering. Stämning + meny + bokning."
     },
     {
       "id": "clinic-healthcare",
+      "enabled": true,
       "label": "Clinic & Healthcare",
       "rationale": "Tandläkare, vårdklinik, fysioterapi, psykolog. Trygghet + tydlighet + bokning."
     },
     {
       "id": "real-estate",
+      "enabled": true,
       "label": "Real Estate",
       "rationale": "Mäklare, fastighetsbolag. Premiumkänsla + objektsstruktur + förtroende."
     },
     {
       "id": "agency-studio",
+      "enabled": true,
       "label": "Agency & Studio",
       "rationale": "Designbyrå, webbyrå, brandingstudio. Originalitet + case-baserad trovärdighet."
     },
     {
       "id": "consultant-expert",
+      "enabled": true,
       "label": "Consultant & Expert",
       "rationale": "Enskild expert, coach, rådgivare. Personlig auktoritet + konvertering."
     },
     {
       "id": "saas-product",
+      "enabled": true,
       "label": "SaaS Product",
       "rationale": "SaaS, AI-verktyg, produktplattformar. Produktklarhet + feature hierarchy."
     },
     {
       "id": "ecommerce-lite",
+      "enabled": true,
       "label": "Ecommerce Lite",
       "rationale": "Småbutik, produktkatalog, premiumvarumärke. Produktfokus + köplogik."
     },
     {
       "id": "course-education",
+      "enabled": true,
       "label": "Course & Education",
       "rationale": "Utbildning, kurs, skola, mentorprogram. Tydliga utfall + struktur."
     },
     {
       "id": "nonprofit-community",
+      "enabled": true,
       "label": "Nonprofit & Community",
       "rationale": "Förening, initiativ, kampanj. Mission + mänsklighet + handling."
     },
     {
       "id": "portfolio-creator",
+      "enabled": true,
       "label": "Portfolio Creator",
       "rationale": "Fotograf, konstnär, kreatör, frilansare. Bildrytm + personlighet."
     },
     {
       "id": "event-campaign",
+      "enabled": true,
       "label": "Event & Campaign",
       "rationale": "Event, festival, konferens, lansering. Momentum + tid/plats + konvertering."
     },
     {
       "id": "app-landing",
+      "enabled": true,
       "label": "App Landing",
       "rationale": "Mobilapp, webbapp, waitlist, beta. Produktlöfte + demo."
     }

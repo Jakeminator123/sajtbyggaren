@@ -73,6 +73,7 @@
         "required": ["id", "label", "rationale"],
         "properties": {
           "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "enabled": { "type": "boolean", "default": true },
           "label": { "type": "string" },
           "rationale": { "type": "string" }
         }

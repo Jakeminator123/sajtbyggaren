@@ -12,7 +12,7 @@ Sajtbyggaren bygger om `Jakeminator123/sajtmaskin` med `master` som referensbran
 - Behandla gamla `sajtmaskin` som referensmaterial och reservdelslager, inte som källa att kopiera rakt av.
 - Använd explicita domännamn enligt [`naming-dictionary.v1.json`](../policies/naming-dictionary.v1.json) för hemsidebygge, redigering, scheman, policies, governance, publicering och validering.
 - Sprid inte besläktad logik över orelaterade filer. Håll ägargränser tydliga enligt [`repo-boundaries.v1.json`](../policies/repo-boundaries.v1.json).
-- `backend.py` ligger i roten som backoffice (Streamlit), inte som del av användarens runtime.
+- `backoffice.py` ligger i roten som backoffice (Streamlit), inte som del av användarens runtime.
 - Låt scheman och policies styra redigerbart beteende där det går.
 - Gör governance explicit: vad som får ändras, hur ändringar valideras, vem som äger vad ska vara synligt i `governance/`.
 - Föredra en liten sammanhängande kärna före UI, generatorer, integrationer och deploy-komplexitet.
@@ -21,7 +21,7 @@ Sajtbyggaren bygger om `Jakeminator123/sajtmaskin` med `master` som referensbran
 ## Arbetsordning
 
 1. Governance först (policies, schemas, rules, decisions).
-2. Backoffice-skelett (`backend.py`).
+2. Backoffice-skelett (`backoffice.py`).
 3. Migrationsrapport och baseline-eval.
 4. Fas 1 runtime (Site Brief).
 5. Fas 2 runtime (Orchestration).

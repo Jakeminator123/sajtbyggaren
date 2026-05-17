@@ -182,7 +182,7 @@ def view_cross_policy() -> None:
         (len(canonicals) == len(set(canonicals)), f"alla {len(canonicals)} kanoniska termer är unika")
     )
 
-    boundary_paths = {o["path"].rstrip("/") for o in rb["ownership"]} | {"backend.py"}
+    boundary_paths = {o["path"].rstrip("/") for o in rb["ownership"]} | {"backoffice.py"}
     unknown_owners = [
         t["canonical"]
         for t in nd["terms"]
