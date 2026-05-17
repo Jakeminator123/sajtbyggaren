@@ -45,7 +45,7 @@ soft Dossier. `stripe-checkout` är en hard Dossier. Inga andra dossier-typer
 
 ```text
 governance/   - JSON-policies + schemas + rules + decisions (sanningskälla)
-backend.py    - Streamlit-backoffice (operatören redigerar governance)
+backoffice.py - Streamlit-backoffice (operatören redigerar governance)
 packages/     - Runtime: generation, builder, preview-runtime, policies, shared
 apps/         - web/api som konsumerar packages
 ```
@@ -77,7 +77,7 @@ python scripts/rules_sync.py --check     # verifierar att .cursor/rules är speg
 python scripts/check_term_coverage.py    # hittar nya termer som saknar registrering
 python -m pytest tests/                  # pytest-svit för cross-policy-konsistens
 
-streamlit run backend.py                 # backoffice för att se/redigera governance
+streamlit run backoffice.py              # backoffice för att se/redigera governance
 ```
 
 För att låta fas 1 anropa riktiga `briefModel` istället för mock:
@@ -120,7 +120,7 @@ Preview-output skrivs som standard till `../sajtbyggaren-output/.generated/<site
 | Mapp | Roll |
 |------|------|
 | [`governance/`](governance/) | Policies (JSON), schemas (JSON Schema), rules (mänskliga regler), decisions (ADR). Sanningskälla. |
-| [`backend.py`](backend.py) | Streamlit-backoffice för operatören. Inte i användarens runtime. |
+| [`backoffice.py`](backoffice.py) | Streamlit-backoffice för operatören. Inte i användarens runtime. |
 | [`scripts/`](scripts/) | Validering, sync, term-coverage. |
 | [`packages/`](packages/) | Runtime (kommer fyllas under fas 1-3). |
 | [`apps/`](apps/) | Användar-UI (byggs sist). |
@@ -143,7 +143,7 @@ Detaljer: [`governance/rules/code-in-english.md`](governance/rules/code-in-engli
 Korta motiveringar i [`governance/decisions/`](governance/decisions/):
 
 - [0001](governance/decisions/0001-policies-as-source-of-truth.md) - Policies som sanningskälla.
-- [0002](governance/decisions/0002-backoffice-in-python-streamlit.md) - Backoffice som `backend.py` Streamlit, separat från runtime.
+- [0002](governance/decisions/0002-backoffice-in-python-streamlit.md) - Backoffice som `backoffice.py` Streamlit, separat från runtime.
 - [0003](governance/decisions/0003-preview-runtime-stackblitz-first.md) - PreviewRuntime-abstraktion, StackBlitz först.
 - [0004](governance/decisions/0004-migration-from-sajtmaskin-baseline.md) - Migration från sajtmaskin-baseline.
 - [0005](governance/decisions/0005-scaffold-dossier-model.md) - Scaffold-/Dossier-modell med embedding-driven selection.

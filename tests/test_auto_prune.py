@@ -120,6 +120,23 @@ def test_prune_runs_dry_run_reports_but_keeps_files(tmp_path: Path) -> None:
     assert (runs / "r1").is_dir(), "dry-run must not delete"
 
 
+def test_prune_runs_respects_protected_run_ids(tmp_path: Path) -> None:
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    now = time.time()
+    for index, name in enumerate(["protected-old", "delete-old", "new-run"]):
+        run = runs / name
+        run.mkdir()
+        _set_mtime(run, now - (3 - index) * 100)
+
+    removed = prune_runs(runs, max_runs=1, protected_run_ids={"protected-old"})
+
+    assert removed == ["delete-old"]
+    assert (runs / "protected-old").is_dir()
+    assert not (runs / "delete-old").exists()
+    assert (runs / "new-run").is_dir()
+
+
 def test_prune_prompt_inputs_removes_pointer_meta_and_versioned_snapshots(
     tmp_path: Path,
 ) -> None:

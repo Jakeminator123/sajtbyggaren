@@ -46,7 +46,7 @@ def test_readme_mentions_governance_first_principle():
     expected_phrases = [
         "Policies styr arkitekturen",
         "governance/",
-        "backend.py",
+        "backoffice.py",
     ]
     missing = [phrase for phrase in expected_phrases if phrase not in text]
     assert not missing, f"README.md missing expected phrases: {missing}"

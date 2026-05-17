@@ -391,8 +391,8 @@
     {
       "id": "backoffice",
       "canonical": "Backoffice",
-      "definition": "backend.py Streamlit-app för att redigera governance, scaffolds, dossiers, evals, telemetri. INTE i användarens runtime.",
-      "ownerPackage": "backend.py",
+      "definition": "backoffice.py Streamlit-app för att redigera governance, scaffolds, dossiers, evals, telemetri. INTE i användarens runtime.",
+      "ownerPackage": "backoffice.py",
       "aliasesAllowed": ["adminPanel"],
       "aliasesForbidden": ["dashboard", "frontoffice"]
     },

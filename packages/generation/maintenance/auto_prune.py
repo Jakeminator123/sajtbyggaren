@@ -134,6 +134,7 @@ def prune_runs(
     max_runs: int,
     *,
     dry_run: bool = False,
+    protected_run_ids: set[str] | None = None,
 ) -> list[str]:
     """Prune ``data/runs/`` down to ``max_runs`` newest directories.
 
@@ -145,9 +146,12 @@ def prune_runs(
         return []
     if not runs_dir.is_dir():
         return []
+    protected = protected_run_ids or set()
     entries: list[tuple[float, Path]] = []
     for child in runs_dir.iterdir():
         if not child.is_dir():
+            continue
+        if child.name in protected:
             continue
         try:
             mtime = child.stat().st_mtime

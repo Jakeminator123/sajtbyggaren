@@ -166,12 +166,12 @@ def test_naming_dictionary_owner_packages_align_with_repo_boundaries(
 ):
     """Every term.ownerPackage should map to a repo-boundaries path or an exact root file.
 
-    We accept the root file `backend.py` and the prefix paths in
+    We accept the root file `backoffice.py` and the prefix paths in
     ownership[].path. Anything else is a likely typo or a term whose home
     has not been defined.
     """
     boundary_paths = {o["path"].rstrip("/") for o in repo_boundaries["ownership"]}
-    boundary_paths.add("backend.py")
+    boundary_paths.add("backoffice.py")
 
     unknown: list[str] = []
     for term in naming_dictionary["terms"]:
@@ -194,7 +194,7 @@ def test_naming_dictionary_owner_packages_align_with_repo_boundaries(
 @pytest.mark.governance
 def test_llm_flow_phase_owner_packages_are_real(llm_flow: dict, repo_boundaries: dict):
     boundary_paths = {o["path"].rstrip("/") for o in repo_boundaries["ownership"]}
-    boundary_paths.add("backend.py")
+    boundary_paths.add("backoffice.py")
     unknown = []
     for phase in llm_flow["phases"]:
         owner = phase.get("ownerPackage", "").rstrip("/")
@@ -328,7 +328,7 @@ def test_llm_flow_phase_owners_match_repo_boundaries(
 ):
     """Every llm-flow phase ownerPackage must be a path that exists in repo-boundaries."""
     boundary_paths = {o["path"].rstrip("/") for o in repo_boundaries["ownership"]}
-    boundary_paths.add("backend.py")
+    boundary_paths.add("backoffice.py")
 
     bad = []
     for phase in llm_flow["phases"]:

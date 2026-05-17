@@ -8,10 +8,12 @@ keeps backoffice strictly out of the user runtime.
 
 Run:
     pip install -r requirements.txt
-    streamlit run backend.py
+    streamlit run backoffice.py
 """
 
 from __future__ import annotations
+
+from collections.abc import Callable
 
 import streamlit as st
 
@@ -22,6 +24,7 @@ from backoffice.views import (
     evals,
     governance,
     llm_engine,
+    maintenance,
     playground,
     status,
 )
@@ -34,7 +37,7 @@ st.set_page_config(
 )
 
 
-SECTIONS: dict[str, dict[str, callable]] = {
+SECTIONS: dict[str, dict[str, Callable[[], None]]] = {
     "Status": status.VIEWS,
     "Governance": governance.VIEWS,
     "LLM Engine": llm_engine.VIEWS,
@@ -42,6 +45,7 @@ SECTIONS: dict[str, dict[str, callable]] = {
     "Runs": engine_runs.VIEWS,
     "Playground": playground.VIEWS,
     "Evals": evals.VIEWS,
+    "Underhåll": maintenance.VIEWS,
 }
 
 
