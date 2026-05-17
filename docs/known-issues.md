@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 19 aktiva, 15 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 50 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 15 aktiva, 15 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 54 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -259,12 +259,6 @@ run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
 
 ### Extern reviewer-triage 2026-05-15 (mot `d99f8ba` + `c273b1a`)
 
-- **`B88` Hög** - `scripts/prompt_to_project_input.py:_placeholder_contact()`
-  skriver dev-jargong i publika kontaktfält (`"Address placeholder - update Project Input"` /
-  `"Adress saknas - uppdatera Project Input"`). Kategoriöverlapp med B61
-  ("intern arbetscopy -> publik yta"), men på kontaktytan. Källa:
-  extern reviewer + RO-verifierings-subagent 2026-05-15. Fix: open.
-  Test: open.
 - **`B89` Medel** - `packages/generation/brief/extract.py:detect_language`
   defaultar till `sv` för korta engelska prompts utan träff i
   `ENGLISH_HINTS` (t.ex. `plumber stockholm`, `barber malmo`,
@@ -305,23 +299,6 @@ kontakta oss för mer information." återanvänds överallt), och hero-
 CTA "Begär offert" hardcoded i `render_home` oavsett bransch
 (bryter särskilt e-handel-trovärdighet). Audit-konfidence 7/10.
 
-- **`B94` Medel** - `<ul>`/team-grid på `/om-oss` renderas alltid
-  även när `team`-listan är tom. Visuellt tom sektion på alla fyra
-  case; samma pattern som B66 (conditional section render). Källa:
-  re-Verifierings-Scout 2026-05-15. Fix: open. Test: open.
-- **`B95` Medel** - `_normalize_location_hint` fångar inte att brief
-  returnerar `locationHint="Sverige"` (utan stad) på `liten e-handel
-  som säljer keramik`-prompten. `location.city` blir då landnamnet
-  och renderas som ortstag i hero. Bredare variant av B91 — Sverige-
-  på-city-fältet specifikt, inte bara `"Sweden"`-translit. Källa:
-  re-Verifierings-Scout 2026-05-15. Fix: open. Test: open.
-- **`B96` Medel** - Hero-CTA "Begär offert" är hardcoded i
-  `scripts/build_site.py:render_home` oavsett `scaffoldId` /
-  `conversionGoals`. För `ecommerce-lite` + `conversionGoals=
-  ["purchase"]` borde CTA vara "Shoppa nu"/"Se sortimentet". Påverkar
-  främst e-handel-case (3.9/10 i re-Scout) och bryter trovärdighet
-  för frisör/naprapat där "boka tid" är rätt verb. Källa: re-
-  Verifierings-Scout 2026-05-15. Fix: open. Test: open.
 - **`B97` Låg** - `/kontakt`-paragrafen "Beskriv jobbet kort så
   återkommer vi inom en arbetsdag med tider och offert." använder
   `jobbet`+`offert` hardcoded — passar inte e-handel-cases (frågor om
@@ -439,7 +416,99 @@ arkitekturändring, inte en bugg.
 
 PR #28 / `885431b` stängde B64, B65, B66, B69, B70, B71, B72, B73, B74, B75, B76, B77, B78, B79 och B83. Kvar öppna/deferred från bug-sweep-listan: B67, B80, B81, B82, B84, B85, B86 och B87.
 
+### Demo-baseline-fix 1C closure note (2026-05-18)
+
+Lokal mainline-commit `b5ee710` stängde B88 (kontakt-placeholder dev-jargong), B94 (tom team-grid på `/om-oss`), B95 (landnamn som hero-ortstag) och B96 (scaffold-omedveten hero-CTA). Inga andra B-IDs påverkade. Kvar från re-Verifierings-Scout 2026-05-15 är B97 + B98 (låg-impact). Re-Verifierings-Scout med samma fyra prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`) körs efter denna bump för att jämföra mot 5.54-baselinen. Förväntad effekt: snitt 6.5-7.0/10.
+
 ## Stängda - regression-test säkrar fixet
+
+- **`B88` Hög** (stängd 2026-05-18, demo-baseline-fix 1C) -
+  `scripts/prompt_to_project_input.py:_placeholder_contact()` skrev
+  dev-jargong i publika kontaktfält
+  (`"Address placeholder - update Project Input"` /
+  `"Adress saknas - uppdatera Project Input"`), vilket syntes på
+  alla fyra demo-case i re-Verifierings-Scout 2026-05-15 som rå
+  text i `<address>`-taggen på `/kontakt`. Kategoriöverlapp med B61
+  ("intern arbetscopy -> publik yta") men på kontaktytan. **Fix:**
+  default-placeholdern är nu en branschneutral fras
+  (`"Adress lämnas på förfrågan"` på sv, `"Address available on
+  request"` på en) som läser acceptabelt för en riktig besökare;
+  operatören kan fortfarande skriva över via Project Input. Schema-
+  constraint `addressLines minItems=1 + items minLength=1` förbjuder
+  tom sträng, så signaleringen sker via copy istället för omit-
+  render. Fix: `b5ee710`. Test:
+  `tests/test_prompt_to_project_input.py::test_placeholder_contact_address_has_no_dev_jargon_on_swedish_brief`,
+  `tests/test_prompt_to_project_input.py::test_placeholder_contact_address_has_no_dev_jargon_on_english_brief`,
+  `tests/test_prompt_to_project_input.py::test_placeholder_contact_address_prefers_brief_value_over_fallback`.
+
+- **`B94` Medel** (stängd 2026-05-18, demo-baseline-fix 1C) -
+  `scripts/build_site.py:render_about` renderade alltid "Teamet"-
+  rubrik + tom `<ul>` även när `company.team=[]`, vilket syntes på
+  alla fyra demo-case i re-Verifierings-Scout 2026-05-15. Samma
+  pattern som B66 (conditional section render). Prompt-genererade
+  Project Inputs populerar inte team idag, så sektionen blev
+  alltid tom. **Fix:** `render_about` bygger ett `team_section`-
+  fragment bara när `team` har medlemmar; annars omittas hela
+  blocket (rubrik + grid). Fix: `b5ee710`. Test:
+  `tests/test_builder_route_emission.py::test_render_about_omits_team_section_when_team_empty`,
+  `tests/test_builder_route_emission.py::test_render_about_omits_team_section_when_team_missing`,
+  `tests/test_builder_route_emission.py::test_render_about_keeps_team_section_when_members_present`.
+
+- **`B95` Medel** (stängd 2026-05-18, demo-baseline-fix 1C) -
+  `_normalize_location_hint` i
+  `scripts/prompt_to_project_input.py` fångade inte att briefModel
+  returnerade `locationHint="Sverige"` (utan stad) på
+  `liten e-handel som säljer keramik`-prompten i re-Verifierings-
+  Scout 2026-05-15. Värdet passerade som `location.city="Sverige"`
+  och renderades som ortstag i hero. Bredare variant av B91 -
+  Sverige-på-city-fältet specifikt, inte bara `"Sweden"`-translit.
+  **Fix:** ny `_COUNTRY_NAME_LOCATION_HINTS`-set (Sweden, Sverige,
+  Norway, Norge, Denmark, Danmark, Finland, Iceland, Island) som
+  `_normalize_location_hint` använder för att returnera `None`
+  oavsett språk när hintet matchar ett landnamn.
+  `_placeholder_location` faller då tillbaka till `city == country`
+  som country-only-markör, och `scripts/build_site.py` får ny
+  `_location_is_country_only`-helper plus en conditional ortstag-
+  span i `render_home`. Ortstaggen renderas inte när markern är
+  satt; riktiga städer fortsätter rendera ortstag oförändrat.
+  Fix: `b5ee710`. Test:
+  `tests/test_prompt_to_project_input.py::test_normalize_location_hint_drops_english_country_names`,
+  `tests/test_prompt_to_project_input.py::test_normalize_location_hint_drops_swedish_country_names`,
+  `tests/test_prompt_to_project_input.py::test_normalize_location_hint_drops_other_nordic_country_names`,
+  `tests/test_prompt_to_project_input.py::test_normalize_location_hint_preserves_real_city`,
+  `tests/test_prompt_to_project_input.py::test_swedish_brief_with_country_location_uses_country_only_marker`,
+  `tests/test_prompt_to_project_input.py::test_english_brief_with_country_location_uses_country_only_marker`,
+  `tests/test_builder_route_emission.py::test_render_home_omits_hero_location_tag_when_country_only`,
+  `tests/test_builder_route_emission.py::test_render_home_keeps_hero_location_tag_when_real_city`,
+  `tests/test_builder_route_emission.py::test_render_home_country_only_marker_is_case_insensitive`.
+
+- **`B96` Medel** (stängd 2026-05-18, demo-baseline-fix 1C) -
+  Hero-CTA `"Begär offert"` var hardcoded i
+  `scripts/build_site.py:render_home` och CTA i `render_services`
+  oavsett `scaffoldId` / `conversionGoals`. För `ecommerce-lite` +
+  `conversionGoals=["product_purchase", "shop_visit"]` blev CTA
+  fortfarande "Begär offert", vilket bröt trovärdighet på
+  e-handel-case (3.9/10 i re-Scout) och passade dåligt för
+  frisör/naprapat där "boka tid" är rätt verb. **Fix:** ny
+  `_hero_cta_label(dossier)`-helper som routar genom
+  `_hero_cta_variant`: shop > booking > quote-prioritet. Värdena
+  är hämtade ur `_HERO_CTA_VARIANT_LABELS`-whitelist
+  (`"Shoppa nu" / "Shop now"`, `"Boka tid" / "Book a time"`,
+  `"Begär offert" / "Request a quote"`) så strängen är säker att
+  interpolera in i TSX utan JSX-escape. `render_home` (hero) och
+  `render_services` (bottom-CTA) använder båda samma helper.
+  Default-fallbacken är fortfarande "Begär offert" så
+  painter-palma-stilen demos inte regresserar.
+  Fix: `b5ee710`. Test:
+  `tests/test_builder_route_emission.py::test_hero_cta_label_defaults_to_quote_when_no_signals`,
+  `tests/test_builder_route_emission.py::test_hero_cta_label_uses_shop_verb_for_ecommerce_scaffold`,
+  `tests/test_builder_route_emission.py::test_hero_cta_label_uses_shop_verb_for_purchase_conversion_goal`,
+  `tests/test_builder_route_emission.py::test_hero_cta_label_uses_booking_verb_for_booking_conversion_goal`,
+  `tests/test_builder_route_emission.py::test_hero_cta_label_shop_beats_booking_in_priority`,
+  `tests/test_builder_route_emission.py::test_render_home_emits_scaffold_aware_hero_cta_for_ecommerce`,
+  `tests/test_builder_route_emission.py::test_render_home_emits_booking_hero_cta_for_booking_business`,
+  `tests/test_builder_route_emission.py::test_render_home_falls_back_to_quote_cta_for_default_service_business`,
+  `tests/test_builder_route_emission.py::test_render_services_uses_same_hero_cta_label_as_home`.
 
 - **`B61` Hög** (stängd 2026-05-15, demo-baseline-fix 1A-hotfix) -
   `notes_for_planner` läckte som customer-facing copy på `/om-oss`,
@@ -539,7 +608,7 @@ PR #28 / `885431b` stängde B64, B65, B66, B69, B70, B71, B72, B73, B74, B75, B7
   framtida obekanta briefModel-slugs läser som svensk prosa istället
   för broken placeholder copy. Lookup strippar och lower-casar redan
   via `business_type.strip().lower()`, så `E-Commerce` /
-  `  e-commerce  ` matchar också. Fix: `d99f8ba`. Test:
+  whitespace-runt `e-commerce` matchar också. Fix: `d99f8ba`. Test:
   `tests/test_prompt_to_project_input.py::test_business_type_map_covers_briefmodel_hyphenated_slugs`
   (parametriserad över 12 hyphen-varianter inkl. `e-commerce`,
   `naprapath-clinic`, `electrical-services`, `plumbing-services`),
@@ -1106,7 +1175,7 @@ PR #28 / `885431b` stängde B64, B65, B66, B69, B70, B71, B72, B73, B74, B75, B7
   helper med samma codegen_summary-shape (riskNotes + usage
   inkluderade). Test:
   `tests/test_artefact_schema_3c_lite.py::test_dev_generate_writes_modelusage_into_build_result`
-  + `test_compose_model_usage_lives_in_shared_artifacts_module`.
+  och `test_compose_model_usage_lives_in_shared_artifacts_module`.
 
 - **`B34` Låg** (stängd 2026-05-09, post-Sprint-3C-lite-review) -
   Drift-guards i `tests/test_artefact_schema_3c_lite.py:207-248`
@@ -1280,7 +1349,7 @@ PR #28 / `885431b` stängde B64, B65, B66, B69, B70, B71, B72, B73, B74, B75, B7
   status, så de två dokumenten motsa varandra. Risk: ny agent läser
   README (ägar-pathens lokala doc) före handoff och skriver om
   `pacman-game` från scratch. Fix: README uppdaterad med korrekt status
-  + `interactive-game-loop`-länk + förklaring att övriga 11 capability-
+  samt `interactive-game-loop`-länk och förklaring att övriga 11 capability-
   slugs är gap. Ny pytest-guard
   `tests/test_docs_freshness.py::test_dossier_readme_implementation_status_matches_disk`
   walkar `soft/`, `hard/` och bryter om README påstår 0 Dossiers när disk
