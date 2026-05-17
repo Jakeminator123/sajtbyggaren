@@ -121,6 +121,45 @@ def test_disabled_starter_blocks_resolution(
         plan._resolve_starter_id("local-service-business")
 
 
+def test_pinned_disabled_scaffold_fails_loud(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """ADR 0023 contract: a Project Input that pins a disabled scaffoldId
+    must fail loud with a message that names scaffold-contract.v1.json.
+
+    Without this lock the planner could fall back to the default scaffold
+    (or silently fail later in the build) and the operator would not know
+    which policy file to edit to re-enable the asset.
+    """
+    from packages.generation.planning import plan
+
+    policy = tmp_path / "scaffold-contract.v1.json"
+    policy.write_text(
+        json.dumps(
+            {
+                "primaryScaffoldRegistry": [
+                    {"id": "local-service-business", "enabled": False}
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(plan, "DEFAULT_SCAFFOLD_CONTRACT_PATH", policy)
+
+    registry = plan.load_scaffold_registry()
+    pinned = {
+        "scaffoldId": "local-service-business",
+        "variantId": "nordic-trust",
+    }
+    with pytest.raises(RuntimeError, match=r"disabled in scaffold-contract"):
+        plan._resolve_pinned_choice(
+            pinned,
+            registry,
+            site_brief={"requestedCapabilities": []},
+            capability_map={"capabilities": {}},
+        )
+
+
 @pytest.mark.governance
 def test_starter_registry_ids_match_known_starters(repo_root: Path) -> None:
     payload = json.loads(

@@ -82,7 +82,18 @@ def view_safe_cleanup() -> None:
 
     protected = _protected_run_ids()
     if protected:
-        st.info("Skyddade aktiva runId: " + ", ".join(sorted(protected)))
+        st.info(
+            "Skyddade aktiva runId: "
+            + ", ".join(sorted(protected))
+            + ". Skyddet är sessionsberoende - en runId hamnar här när "
+            "Engine runs- eller Playground-vyn har valt den i nuvarande session."
+        )
+    else:
+        st.caption(
+            "Inga aktiva runId i sessionen - rensningen styrs ensam av "
+            "auto-prune-reglerna nedan. Öppna en run i Engine runs eller "
+            "Playground om du vill skydda just den från denna körning."
+        )
 
     plan = plan_safe_cleanup(protected_run_ids=protected)
     st.metric(
