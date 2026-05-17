@@ -1,5 +1,6 @@
 {
   "id": "nordic-trust",
+  "enabled": true,
   "label": "Nordic Trust",
   "description": "Calm, light and trustworthy expression. Generous spacing, neutral palette with a deep navy accent, classical sans-serif typography. Suits local service businesses that want to feel solid rather than playful.",
   "tokens": {

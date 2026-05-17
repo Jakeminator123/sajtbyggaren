@@ -7,8 +7,10 @@ without importing Streamlit.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -23,6 +25,11 @@ from packages.generation.maintenance import (
 from scripts.prune_generated_previews import resolve_generated_dir
 
 from .paths import REPO_ROOT
+
+SCAFFOLD_CONTRACT_PATH = REPO_ROOT / "governance" / "policies" / "scaffold-contract.v1.json"
+STARTER_REGISTRY_PATH = REPO_ROOT / "governance" / "policies" / "starter-registry.v1.json"
+SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
+DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
 
 
 @dataclass(frozen=True)
@@ -67,6 +74,18 @@ class CleanupResult:
         return len(self.deleted_paths)
 
 
+@dataclass(frozen=True)
+class ToggleRow:
+    """One Backoffice row that can be enabled or disabled."""
+
+    id: str
+    label: str
+    enabled: bool
+    path: Path
+    group: str
+    note: str = ""
+
+
 def positive_int_from_env(name: str, environ: dict[str, str] | None = None) -> int | None:
     """Parse the opt-in retention caps used by the generation maintenance module."""
     source = environ if environ is not None else os.environ
@@ -81,6 +100,138 @@ def positive_int_from_env(name: str, environ: dict[str, str] | None = None) -> i
     except ValueError:
         return None
     return value if value > 0 else None
+
+
+def _read_json(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _atomic_write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent)
+    )
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_path, path)
+    except Exception:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+
+
+def set_collection_entry_enabled(
+    path: Path,
+    *,
+    collection_key: str,
+    item_id: str,
+    enabled: bool,
+) -> None:
+    """Set ``enabled`` on one object inside a policy collection."""
+    payload = _read_json(path)
+    entries = payload.get(collection_key)
+    if not isinstance(entries, list):
+        raise ValueError(f"{path} has no list field {collection_key!r}")
+    for entry in entries:
+        if isinstance(entry, dict) and entry.get("id") == item_id:
+            entry["enabled"] = enabled
+            _atomic_write_json(path, payload)
+            return
+    raise ValueError(f"{item_id!r} not found in {path}:{collection_key}")
+
+
+def set_top_level_enabled(path: Path, enabled: bool) -> None:
+    """Set top-level ``enabled`` on a JSON object."""
+    payload = _read_json(path)
+    if not isinstance(payload.get("id"), str):
+        raise ValueError(f"{path} has no top-level id")
+    payload["enabled"] = enabled
+    _atomic_write_json(path, payload)
+
+
+def list_scaffold_toggles(path: Path = SCAFFOLD_CONTRACT_PATH) -> list[ToggleRow]:
+    payload = _read_json(path)
+    rows: list[ToggleRow] = []
+    for entry in payload.get("primaryScaffoldRegistry", []):
+        if not isinstance(entry, dict) or not isinstance(entry.get("id"), str):
+            continue
+        rows.append(
+            ToggleRow(
+                id=entry["id"],
+                label=entry.get("label", entry["id"]),
+                enabled=entry.get("enabled", True) is not False,
+                path=path,
+                group="scaffold",
+                note=entry.get("rationale", ""),
+            )
+        )
+    return rows
+
+
+def list_variant_toggles(scaffolds_dir: Path = SCAFFOLDS_DIR) -> list[ToggleRow]:
+    rows: list[ToggleRow] = []
+    for variant_path in sorted(scaffolds_dir.glob("*/variants/*.json")):
+        payload = _read_json(variant_path)
+        variant_id = payload.get("id")
+        if not isinstance(variant_id, str):
+            continue
+        rows.append(
+            ToggleRow(
+                id=variant_id,
+                label=payload.get("label", variant_id),
+                enabled=payload.get("enabled", True) is not False,
+                path=variant_path,
+                group=variant_path.parents[1].name,
+                note=payload.get("description", ""),
+            )
+        )
+    return rows
+
+
+def list_dossier_toggles(dossiers_dir: Path = DOSSIERS_DIR) -> list[ToggleRow]:
+    rows: list[ToggleRow] = []
+    for manifest_path in sorted(dossiers_dir.glob("*/*/manifest.json")):
+        payload = _read_json(manifest_path)
+        dossier_id = payload.get("id")
+        if not isinstance(dossier_id, str):
+            continue
+        rows.append(
+            ToggleRow(
+                id=dossier_id,
+                label=payload.get("label", dossier_id),
+                enabled=payload.get("enabled", True) is not False,
+                path=manifest_path,
+                group=payload.get("class", manifest_path.parents[1].name),
+                note=payload.get("summary", ""),
+            )
+        )
+    return rows
+
+
+def list_starter_toggles(path: Path = STARTER_REGISTRY_PATH) -> list[ToggleRow]:
+    payload = _read_json(path)
+    rows: list[ToggleRow] = []
+    for entry in payload.get("starters", []):
+        if not isinstance(entry, dict) or not isinstance(entry.get("id"), str):
+            continue
+        rows.append(
+            ToggleRow(
+                id=entry["id"],
+                label=entry.get("label", entry["id"]),
+                enabled=entry.get("enabled", True) is not False,
+                path=path,
+                group="starter",
+                note=entry.get("rationale", ""),
+            )
+        )
+    return rows
 
 
 def format_megabytes(size_bytes: int) -> str:

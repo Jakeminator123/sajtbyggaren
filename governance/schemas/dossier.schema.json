@@ -6,6 +6,7 @@
   "additionalProperties": false,
   "required": [
     "id",
+    "enabled",
     "label",
     "capability",
     "class",
@@ -22,6 +23,7 @@
   "properties": {
     "$schema": { "type": "string" },
     "id": { "type": "string", "minLength": 1 },
+    "enabled": { "type": "boolean", "default": true },
     "label": { "type": "string", "minLength": 1 },
     "capability": { "type": "string", "minLength": 1 },
     "class": { "enum": ["soft", "hard"] },

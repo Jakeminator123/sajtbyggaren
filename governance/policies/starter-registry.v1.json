@@ -1,0 +1,54 @@
+{
+  "$schema": "../schemas/starter-registry.schema.json",
+  "policyId": "starter-registry.v1",
+  "version": 1,
+  "status": "draft-but-authoritative",
+  "purpose": "Formellt register över Starters som får användas av generationen och visas i Backoffice. data/starters/README.md beskriver fortfarande källor och harmonisering, men enabled-gaten bor här så den kan valideras och togglas utan att röra starter-innehåll.",
+  "principles": [
+    "Saknat enabled-fält i äldre data tolkas som true, men detta register skriver fältet explicit.",
+    "En disabled Starter får inte väljas av planningModel eller användas av en pinned Project Input.",
+    "Toggle ändrar governance-state, inte filer under data/starters/<starterId>/."
+  ],
+  "starters": [
+    {
+      "id": "marketing-base",
+      "enabled": true,
+      "label": "Marketing Base",
+      "path": "data/starters/marketing-base/",
+      "status": "active-runtime",
+      "rationale": "Primär bas för local-service-business och real codegen-scope enligt ADR 0017."
+    },
+    {
+      "id": "commerce-base",
+      "enabled": true,
+      "label": "Commerce Base",
+      "path": "data/starters/commerce-base/",
+      "status": "active-runtime",
+      "rationale": "Aktiverad för ecommerce-lite enligt ADR 0019 och ADR 0020."
+    },
+    {
+      "id": "portfolio-base",
+      "enabled": true,
+      "label": "Portfolio Base",
+      "path": "data/starters/portfolio-base/",
+      "status": "available-not-mapped",
+      "rationale": "Harmoniserat starter-underlag men inte aktiverat i runtime-mappning."
+    },
+    {
+      "id": "docs-base",
+      "enabled": true,
+      "label": "Docs Base",
+      "path": "data/starters/docs-base/",
+      "status": "available-not-mapped",
+      "rationale": "Harmoniserat starter-underlag; B49 ska lösas innan course-education aktiveras."
+    },
+    {
+      "id": "saas-base",
+      "enabled": true,
+      "label": "SaaS Base",
+      "path": "data/starters/saas-base/",
+      "status": "placeholder",
+      "rationale": "Registrerad målbas för saas-product men inte aktiv i runtime-mappning."
+    }
+  ]
+}

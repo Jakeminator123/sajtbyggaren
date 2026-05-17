@@ -13,8 +13,14 @@ from backoffice.maintenance import (
     apply_safe_cleanup,
     apply_warning_cleanup,
     format_megabytes,
+    list_dossier_toggles,
+    list_scaffold_toggles,
+    list_starter_toggles,
+    list_variant_toggles,
     plan_safe_cleanup,
     plan_warning_cleanup,
+    set_collection_entry_enabled,
+    set_top_level_enabled,
 )
 from packages.generation.maintenance import (
     MAX_GENERATED_ENV_VAR,
@@ -163,10 +169,61 @@ def view_warning_cleanup() -> None:
 
 def view_toggle() -> None:
     st.title("Toggle - Aktivera/inaktivera")
-    st.info(
-        "Toggle-vyn landar med governance-fälten i ADR 0023. Den kommer visa "
-        "Scaffolds, Variants, Dossiers och Starters i separata tabeller."
+    st.caption(
+        "Skriver `enabled: bool` enligt ADR 0023. Saknat fält behandlas som "
+        "aktivt av runtime, men Backoffice skriver alltid explicit värde."
     )
+    tabs = st.tabs(["Scaffolds", "Variants", "Dossiers", "Starters"])
+
+    def _render_rows(rows, *, collection_key: str | None = None) -> None:
+        if not rows:
+            st.info("Inga entries hittades.")
+            return
+        for row in rows:
+            cols = st.columns([2, 1, 4])
+            cols[0].markdown(f"**{row.label}**  \n`{row.id}`")
+            cols[2].caption(f"`{_relative(row.path)}`")
+            if row.note:
+                cols[2].write(row.note[:240] + ("..." if len(row.note) > 240 else ""))
+            value = cols[1].toggle(
+                "Aktiv",
+                value=row.enabled,
+                key=f"toggle-{row.path}-{row.id}",
+            )
+            if value != row.enabled:
+                backup = row.path.read_text(encoding="utf-8")
+                try:
+                    if collection_key is None:
+                        set_top_level_enabled(row.path, value)
+                    else:
+                        set_collection_entry_enabled(
+                            row.path,
+                            collection_key=collection_key,
+                            item_id=row.id,
+                            enabled=value,
+                        )
+                    from .. import health, loaders
+
+                    result = health.run_governance_validate()
+                    if not result.ok:
+                        row.path.write_text(backup, encoding="utf-8")
+                        st.error(f"Validation failade; rollback genomfört.\n\n{result.output}")
+                    else:
+                        loaders.load_json.clear()
+                        loaders.read_text.clear()
+                        st.success(f"{row.id}: enabled={value}")
+                except Exception as exc:  # noqa: BLE001
+                    row.path.write_text(backup, encoding="utf-8")
+                    st.error(f"Kunde inte spara toggle för {row.id}: {exc}")
+
+    with tabs[0]:
+        _render_rows(list_scaffold_toggles(), collection_key="primaryScaffoldRegistry")
+    with tabs[1]:
+        _render_rows(list_variant_toggles())
+    with tabs[2]:
+        _render_rows(list_dossier_toggles())
+    with tabs[3]:
+        _render_rows(list_starter_toggles(), collection_key="starters")
 
 
 VIEWS = {

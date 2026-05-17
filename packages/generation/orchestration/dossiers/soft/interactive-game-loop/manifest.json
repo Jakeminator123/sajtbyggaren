@@ -1,6 +1,7 @@
 {
   "$schema": "../../../../../../governance/schemas/dossier.schema.json",
   "id": "interactive-game-loop",
+  "enabled": true,
   "label": "Interactive Game Loop",
   "capability": "interactive-game",
   "class": "soft",

@@ -162,6 +162,9 @@ Korta motiveringar i [`governance/decisions/`](governance/decisions/):
 - [0018](governance/decisions/0018-b20-commerce-base-harmonisering.md) - `commerce-base` som harmoniserad starter.
 - [0019](governance/decisions/0019-b20-step-2-mapping-activation.md) - Aktiverar `ecommerce-lite -> commerce-base`.
 - [0020](governance/decisions/0020-commerce-base-lucide-react.md) - Lägger `lucide-react` i `commerce-base`.
+- [0021](governance/decisions/0021-stackblitz-preview-payload-workarounds.md) - StackBlitz preview-payload-workarounds.
+- [0022](governance/decisions/0022-site-brief-company-contact-fields.md) - Site Brief company/contact-fält.
+- [0023](governance/decisions/0023-enabled-toggle-for-generation-assets.md) - Enabled-toggle för generationstillgångar.
 
 ## Engine Run
 
