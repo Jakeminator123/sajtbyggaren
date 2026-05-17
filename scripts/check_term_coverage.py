@@ -73,6 +73,7 @@ COMMON_WORDS = {
     "Iterable", "Sequence", "Mapping", "Callable",
     # Framework / lib
     "React", "Next", "NextJs", "NextJS", "Vite", "Tailwind", "TypeScript",
+    "TURBOPACK", "Turbopack", "Webpack",
     "Python", "Streamlit", "FastAPI", "Pydantic", "Flask", "Django",
     "JsonSchema", "Draft202012Validator",
     # Web standards / native browser APIs
@@ -258,6 +259,80 @@ COMMON_WORDS = {
     "RunNotFoundError", "DossierEditor",
     # Test-local component names used in dossier collision fixtures.
     "DossierCard", "StarterCard",
+    # christopher-ui branch: nya viewser UI-interna identifierare för
+    # landing-style operator-konsolen. Samma behandling som
+    # PromptStageIndicator, BuildSection, StatusBadge ovan:
+    # implementation-symboler i apps/viewser/components/*, inte
+    # canonical domain terms. Per .cursor/BUGBOT.md är registrering
+    # här eller i naming-dictionary.v1 (med ADR) accepterade vägar
+    # för PascalCase-träffar.
+    "SiteHeader", "SiteHeaderProps", "StatusStrip", "StageCard",
+    "ModePill", "ModeSwitcher",
+    "TokenMeterCompact",
+    # christopher-ui fullscreen refactor: floating chat-dock, sheet drawer,
+    # ultra-minimal header. All are local UI-implementation symbols and
+    # not canonical domain terms.
+    "ConsoleDrawer", "ConsoleDrawerProps", "ConsoleIcon",
+    "ArrowUpIcon", "PromptStatusStrip", "PulseDot", "StripCard",
+    # christopher-ui discovery wizard: multi-step intake modal som ersätter
+    # direkt-bygg på första prompt. Alla symboler nedan är UI-/runner-/
+    # scrape-implementation, inte canonical domain terms enligt
+    # naming-dictionary.v1.json. Backend mapping-arvet i
+    # `prompt_to_project_input._apply_discovery_overrides` tar emot dem
+    # som JSON-fält och översätter till Project Input-schemat.
+    "DiscoveryWizard", "DiscoveryWizardProps", "DiscoveryPayload",
+    "DiscoveryPayloadSchema",
+    "CompanyStep", "SiteTypeStep", "ContentStep", "StoryStep",
+    "PagesStep", "BrandStep",
+    "EcommerceContent", "RestaurantContent", "SalonContent",
+    "PortfolioContent", "ServicesContent", "ProductRow",
+    "WizardAnswers", "WizardStepId", "WizardCategory", "WizardCategoryId",
+    "WizardBrand", "WizardContact", "ScaffoldHint", "ContentBranch",
+    "FieldConfidence", "ProductItem", "MenuItem", "ServiceItem",
+    "TeamMember", "ProjectItem",
+    "FieldLabel", "FieldStack", "HelperText", "SectionHeader",
+    "TagListInput", "TagListInputProps", "TextField", "TextareaField",
+    "Chip", "ChipRow", "ChipProps", "StepDots",
+    "ScrapeOptions", "ScrapeResult", "ScrapeResponse", "ScrapeStatus",
+    "ScrapePage", "ScrapedCorpus", "ScrapePayloadSchema",
+    # Asset-store / upload / GPT Vision-pipelinen (operatör-uppladdade
+    # bilder och logotyp). Symboler från apps/viewser/lib/asset-store/
+    # och tillhörande wizard/route-filer.
+    "AssetDropzone", "AssetDropzoneProps", "AssetCard", "AssetId",
+    "AssetRef", "AssetRole", "AssetPlacement", "AssetStore",
+    "ChangeEvent", "DragEvent", "FormData",
+    "AssetsStep", "AssetsStepProps", "WizardAssets",
+    "LocalAssetStore", "S3AssetStore",
+    "SaveAssetInput", "SaveAssetVariant",
+    "VisionResult", "VisionConfidence", "VisionBadge",
+    "OptimizedImage", "ThumbnailPreview",
+    "PLACEMENT_OPTIONS", "ACCEPT_ATTR",
+    "ALLOWED_MIMES", "ALLOWED_ROLES",
+    "MAX_FILE_BYTES", "TARGET_BUDGET_BYTES", "MAX_WIDTH_PX",
+    "SITE_ID_PATTERN", "ASSET_ID_PATTERN",
+    "BASE32_ALPHABET", "VISION_MODEL",
+    "MIME_BY_EXT", "SYSTEM_INSTRUCTIONS",
+    "UPLOADS_ROOT_DIR",
+    # shadcn dialog + progress primitives (installerade via npx shadcn add)
+    "DialogClose", "DialogContent", "DialogDescription", "DialogFooter",
+    "DialogHeader", "DialogOverlay", "DialogPortal", "DialogPrimitive",
+    "DialogTitle", "DialogTrigger",
+    "ProgressIndicator", "ProgressLabel", "ProgressPrimitive",
+    "ProgressTrack", "ProgressValue",
+    # Python stdlib + tredjepart-symboler i scrape_site.py
+    "BeautifulSoup", "RequestException",
+    # Node typings
+    "ProcessEnv",
+    # Intake-flödets historiska namn (refererat i Sajtmaskin-port-kommentarer)
+    "IntakeWizard", "MustHave",
+    # shadcn base-nova primitives wired in via `npx shadcn add` (badge,
+    # separator, tabs, label, skeleton, sheet). Mirrors ScrollAreaPrimitive /
+    # InputPrimitive / ButtonPrimitive treatment above.
+    "SeparatorPrimitive",
+    "TabsContent", "TabsList", "TabsTrigger", "TabsPrimitive",
+    "SheetClose", "SheetContent", "SheetDescription", "SheetFooter",
+    "SheetHeader", "SheetOverlay", "SheetPortal", "SheetPrimitive",
+    "SheetTitle", "SheetTrigger",
     # MIN_IDE TypeScript-symboler refererade i ADRs men inte canonical i sajtbyggaren
     "VariantHints", "VariantThemeTokenHints", "ScaffoldVariantThemeTokens",
     # Migrationsplanens prosa-rubriker för parallellspår (inte domänbegrepp)

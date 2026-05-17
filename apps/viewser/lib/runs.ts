@@ -60,7 +60,7 @@ export async function listRuns(limit = 20): Promise<RunMeta[]> {
     .slice(0, limit);
 
   const metas = await Promise.all(
-    liveDirectories.map(async ({ runId, stats }) => {
+    liveDirectories.map(async ({ runId }) => {
       const buildResultPath = path.join(dir, runId, "build-result.json");
       try {
         const result = await readJsonFile<{

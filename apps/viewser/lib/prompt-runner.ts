@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 const PROMPT_TIMEOUT_MS = 90_000;
@@ -38,6 +39,15 @@ export type PromptHelperResult = {
 export type PromptHelperOptions = {
   mode?: "init" | "followup";
   siteId?: string;
+  /**
+   * Discovery-payload från `apps/viewser/components/discovery-wizard`.
+   * Skrivs till en tempfil och skickas till
+   * `prompt_to_project_input.py --discovery <path>` så wizardens
+   * deterministiska svar patchar Project Input efter LLM-extraktion.
+   *
+   * Kontraktet följer `DiscoveryPayload` i `wizard-payload.ts`.
+   */
+  discovery?: unknown;
 };
 
 /**
@@ -71,6 +81,19 @@ export async function runPromptToProjectInput(
     }
     args.push("--followup-site-id", options.siteId);
   }
+
+  // Discovery-payload: skriv till tempdir så Python kan läsa den.
+  // Tempfilen rensas efter spawn:n oavsett utfall för att inte läcka
+  // operatörens svar på disk längre än nödvändigt. Discovery accepteras
+  // bara i init-läge — follow-up återanvänder befintlig PI.
+  let discoveryTempDir: string | null = null;
+  if (options.discovery !== undefined && options.mode !== "followup") {
+    discoveryTempDir = mkdtempSync(path.join(os.tmpdir(), "sb-discovery-"));
+    const discoveryFile = path.join(discoveryTempDir, "discovery.json");
+    writeFileSync(discoveryFile, JSON.stringify(options.discovery), "utf-8");
+    args.push("--discovery", discoveryFile);
+  }
+
   // The `--` separator stops argparse from interpreting a prompt that
   // happens to start with `-` or `--` (e.g. a pasted bullet list like
   // "- skapa en sajt...") as a CLI option. Without it the spawn fails
@@ -119,6 +142,14 @@ export async function runPromptToProjectInput(
     child.once("close", (code) => resolve(code ?? 1));
   });
   clearTimeout(timeout);
+
+  if (discoveryTempDir) {
+    try {
+      rmSync(discoveryTempDir, { recursive: true, force: true });
+    } catch {
+      // best-effort cleanup — tmp-dir städas av OS:n vid omstart om vi missar
+    }
+  }
 
   const stdout = stdoutChunks.join("");
   const stderr = stderrChunks.join("");

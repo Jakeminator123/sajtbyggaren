@@ -2,17 +2,14 @@
 
 import { useEffect, useState } from "react";
 
-import {
-  ProjectInputPicker,
-  type ProjectInputOption,
-} from "@/components/project-input-picker";
+import { ConsoleDrawer } from "@/components/console-drawer";
+import { SiteHeader } from "@/components/layout/site-header";
+import type { ProjectInputOption } from "@/components/project-input-picker";
 import {
   PromptBuilder,
   type PromptBuildOutcome,
 } from "@/components/prompt-builder";
-import { RunDetailsPanel } from "@/components/run-details-panel";
-import { RunHistory, type RunHistoryItem } from "@/components/run-history";
-import { TokenMeter } from "@/components/token-meter";
+import type { RunHistoryItem } from "@/components/run-history";
 import { ViewerPanel } from "@/components/viewer-panel";
 
 type RunsApiPayload = {
@@ -55,8 +52,9 @@ export default function Home() {
   const [projectInputs, setProjectInputs] = useState<ProjectInputOption[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState("painter-palma");
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-  const [statusText, setStatusText] = useState("Laddar runs och project inputs...");
+  const [statusText, setStatusText] = useState("Laddar runs och project inputs…");
   const [building, setBuilding] = useState(false);
+  const [consoleOpen, setConsoleOpen] = useState(false);
 
   function applyRunsData({ nextRuns, nextInputs }: FetchedRunsPayload) {
     setRuns(nextRuns);
@@ -67,7 +65,7 @@ export default function Home() {
     if (!nextInputs.find((item) => item.siteId === selectedSiteId) && nextInputs.length) {
       setSelectedSiteId(nextInputs[0].siteId);
     }
-    setStatusText("Sajtbyggaren — localhost-only operator-prototype.");
+    setStatusText("Sajtbyggaren — localhost-only operator-konsol.");
   }
 
   useEffect(() => {
@@ -96,60 +94,48 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="flex min-h-screen flex-col gap-4 p-4">
-      <header className="grid gap-3 md:grid-cols-[1fr_auto]">
-        <div className="flex flex-col justify-center">
-          <h1 className="text-2xl font-semibold">Sajtbyggaren</h1>
-          <p className="text-sm text-muted-foreground">{statusText}</p>
-        </div>
-        <TokenMeter />
-      </header>
+    <main className="relative h-[100dvh] w-full overflow-hidden bg-background">
+      <SiteHeader onOpenConsole={() => setConsoleOpen(true)} />
 
-      <section className="grid gap-3 md:grid-cols-2">
-        <ProjectInputPicker
-          inputs={projectInputs}
-          selectedSiteId={selectedSiteId}
-          onSelect={setSelectedSiteId}
-        />
-        <RunHistory
-          runs={runs}
-          selectedRunId={selectedRunId}
-          onSelect={(runId) => setSelectedRunId(runId)}
-          isBuilding={building}
-        />
-      </section>
+      <ViewerPanel runId={selectedRunId} />
 
-      <section>
-        <PromptBuilder
-          isBusy={building}
-          runs={runs}
-          projectInputs={projectInputs}
-          selectedRunId={selectedRunId}
-          selectedSiteId={selectedSiteId}
-          onBuildStart={() => setBuilding(true)}
-          onBuildEnd={() => setBuilding(false)}
-          onBuildDone={(runId, outcome: PromptBuildOutcome) => {
-            setSelectedRunId(runId);
-            // B44: never claim "Build klar" for a structured failure or
-            // an unknown status. PromptBuilder classifies the outcome
-            // from build-result.json:status; the header copy reflects
-            // whichever bucket the run landed in so a failed run does
-            // not look successful in the page header.
-            setStatusText(headerStatusForOutcome(runId, outcome));
-            void fetchRuns()
-              .then(applyRunsData)
-              .catch((error) => {
-                const message = error instanceof Error ? error.message : "Kunde inte uppdatera runs.";
-                setStatusText(message);
-              });
-          }}
-        />
-      </section>
+      <PromptBuilder
+        isBusy={building}
+        runs={runs}
+        projectInputs={projectInputs}
+        selectedRunId={selectedRunId}
+        selectedSiteId={selectedSiteId}
+        onBuildStart={() => setBuilding(true)}
+        onBuildEnd={() => setBuilding(false)}
+        onBuildDone={(runId, outcome) => {
+          setSelectedRunId(runId);
+          // B44: never claim "Build klar" for a structured failure or
+          // an unknown status. PromptBuilder classifies the outcome
+          // from build-result.json:status; the header copy reflects
+          // whichever bucket the run landed in so a failed run does
+          // not look successful in the page status.
+          setStatusText(headerStatusForOutcome(runId, outcome));
+          void fetchRuns()
+            .then(applyRunsData)
+            .catch((error) => {
+              const message = error instanceof Error ? error.message : "Kunde inte uppdatera runs.";
+              setStatusText(message);
+            });
+        }}
+      />
 
-      <section className="grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <ViewerPanel runId={selectedRunId} />
-        <RunDetailsPanel runId={selectedRunId} />
-      </section>
+      <ConsoleDrawer
+        open={consoleOpen}
+        onOpenChange={setConsoleOpen}
+        runs={runs}
+        projectInputs={projectInputs}
+        selectedSiteId={selectedSiteId}
+        onSelectSiteId={setSelectedSiteId}
+        selectedRunId={selectedRunId}
+        onSelectRunId={setSelectedRunId}
+        isBuilding={building}
+        statusText={statusText}
+      />
     </main>
   );
 }
