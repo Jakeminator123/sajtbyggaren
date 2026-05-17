@@ -144,6 +144,10 @@ COMMON_WORDS = {
     # dataclasses + report container). Same treatment as PlanResult /
     # PlanningChoice above - implementation detail, not domain terms.
     "PreviewEntry", "PruneReport",
+    # packages/generation/maintenance/auto_prune.py implementation symbol
+    # (dataclass returned by auto_prune_all()). Same treatment as
+    # PruneReport - implementation detail, not a domain term.
+    "AutoPruneReport",
     # planning module internal class identifiers (Sprint 2B). Mirrors the
     # brief module's BriefResult/BriefModelResolutionError treatment - these
     # are Python implementation symbols, not domain terms. The canonical

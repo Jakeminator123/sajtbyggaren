@@ -2004,14 +2004,25 @@ def build(
     do_build: bool = True,
     runs_dir: Path | None = None,
     generated_dir: str | Path | None = None,
+    auto_prune: bool = True,
 ) -> tuple[Path, Path]:
     """Generate a site and Engine Run artefakts. Returns (target, run_dir).
 
     ``runs_dir`` defaults to ``RUNS_DIR`` (``data/runs``); pass an isolated
     path (``tmp_path`` in tests) to keep the canonical history clean.
     ``generated_dir`` overrides where the dev-preview site is emitted.
+    ``auto_prune`` runs the opt-in retention sweep from
+    ``packages.generation.maintenance.auto_prune_all`` before Phase 0 so
+    ``data/runs/``, ``data/prompt-inputs/`` and ``.generated/`` stay under
+    the caps configured in ``.env``. Disabled automatically when ``runs_dir``
+    is overridden (tests with ``tmp_path``).
     """
     started = time.monotonic()
+
+    if auto_prune and runs_dir is None:
+        from packages.generation.maintenance import auto_prune_all
+
+        auto_prune_all(generated_dir=Path(generated_dir) if generated_dir else None)
 
     dossier = load_json(dossier_path)
     site_id = dossier["siteId"]

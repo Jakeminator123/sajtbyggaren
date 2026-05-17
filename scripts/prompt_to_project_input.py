@@ -1262,6 +1262,13 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    try:
+        from packages.generation.maintenance import auto_prune_all
+
+        auto_prune_all()
+    except Exception as exc:  # noqa: BLE001
+        print(f"auto-prune: skipped due to error: {exc}", file=sys.stderr)
+
     output_dir = Path(args.output_dir).resolve()
     if args.followup_site_id:
         if args.site_id or args.project_id:
