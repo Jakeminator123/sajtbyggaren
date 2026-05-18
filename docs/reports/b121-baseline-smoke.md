@@ -107,20 +107,38 @@ ingen unik blocker upptäcktes i detta case".
 
 ## B121 close-recommendation
 
-Alla fyra produktbaseline-prompter klarar end-to-end-kedjan från
-Discovery Payload till färdig Build Result, med korrekt
+Alla fyra produktbaseline-prompter klarar resolver- och build-kedjan
+från Discovery Payload till färdig Build Result via CLI, med korrekt
 Discovery Decision, korrekt scaffold/variant/starter-mappning, korrekta
 fallback-warnings för planned/fallback-spår och korrekt avgränsning
-mellan `candidateDossiers` och `selectedDossiers.required`.
-**B121 är close-ready.**
+mellan `candidateDossiers` och `selectedDossiers.required`. PR D
+levererar därmed kontraktsdelen av B121-stängningskriteriet.
 
-Föreslagen Steward-bump efter PR D merge: flytta B121-raden i
-`docs/known-issues.md` från "**PR A + PR B + PR C sealed**, B121 ej helt
-stängd förrän Prompt 5 Scout-audit + PR D baseline-smoke" till
-**closed/resolved** och ta bort raden ur queue:n i
-`docs/current-focus.md`. Uppdatera "Last verified state" till PR D
-merge-commit. Inga nya B-id:n behöver öppnas — frisör-Next-worker-felet
-är miljöberoende och spåras inte som produktbug.
+`docs/known-issues.md` säger att B121 stängs när Prompt 5 Scout-audit
+**och** PR D baseline-smoke har landat. PR D motsvarar det andra
+kravet. Innan B121 flyttas till closed/resolved bör Steward bekräfta
+att Prompt 5 antingen är genomförd separat (och länkad i en notis
+under `docs/reports/`) eller att Steward explicit dömer att PR D + de
+54 discovery-testerna täcker Scout-5:s 11 read-only-punkter — annars
+ligger ordningen i `docs/current-focus.md` fel jämfört med faktisk
+verifiering. Smoke-passet täcker inte Viewser → `/api/prompt`-banan
+(`composeMasterPrompt` + browser-uppladdade assets), så Steward bör
+också formulera bumpen som "B121 stängd via PR A+B+C resolver/taxonomy/
+Backoffice + PR D CLI baseline-smoke; full Viewser → preview E2E är en
+medveten icke-blocker, samma kategori som dry-run ≠ Viewser-payload
+som redan står under B121".
+
+Föreslagen Steward-bump efter PR D merge (förutsatt ovan):
+
+- Flytta B121-raden i `docs/known-issues.md` från
+  "PR A + PR B + PR C sealed, B121 ej helt stängd förrän Prompt 5
+  Scout-audit + PR D baseline-smoke" till closed/resolved med
+  formuleringen ovan.
+- Ta bort B121 från queue:n i `docs/current-focus.md`.
+- Uppdatera "Last verified state" till PR D merge-commit.
+
+Inga nya B-id:n behöver öppnas; frisör-Next-worker-felet är
+miljöberoende och spåras inte som produktbug.
 
 ## Hur smoken kördes
 
@@ -141,22 +159,28 @@ Discovery Payload-shape per case följer
 `governance/schemas/discovery-payload.schema.json`
 (`schemaVersion: 1`, `rawPrompt`, `contentBranch`, `scaffoldHint`,
 `answers.{siteType, companyName, offer, mustHave, primaryCta,
-contact}`). Wizardens egna `composeMasterPrompt`-text simulerades inte
-— Discovery Resolver är canonical för fältval och briefModel anropades
-med rå prompt enligt skarpt produktflöde.
+contact}`). Viewser-overlayens `composeMasterPrompt`-text kördes inte
+— smoke skickade enbart Discovery Payload + den korta råa prompten
+(`elektriker Malmö` etc.) till `briefModel`. Det är medvetet: PR D
+verifierar resolver/planning/build-kontraktet, inte hela Viewser →
+`/api/prompt`-banan. Den fulla overlayen (browser-byggd payload med
+operator-uppladdade assets + `composeMasterPrompt`) är en separat
+verifiering och en medveten icke-blocker för B121-stängningen.
 
-Verifierade artefakter per case:
+Verifierade artefakter per case (under smoke-tempkatalog
+`<tempdir>/runs/<runId>/`; `data/runs/` rörs inte i repo:t):
 
-- prompt-input meta-sidecar: `meta.discoveryDecision` (alla
-  obligatoriska fält enligt
-  `governance/schemas/discovery-decision.schema.json`).
-- Project Input: `scaffoldId`, `variantId`, `requestedCapabilities`,
+- prompt-input meta-sidecar (`<tempdir>/prompt-inputs/<siteId>.v1.meta.json`):
+  `meta.discoveryDecision` med alla obligatoriska fält enligt
+  `governance/schemas/discovery-decision.schema.json`.
+- Project Input (`<tempdir>/prompt-inputs/<siteId>.v1.project-input.json`):
+  `scaffoldId`, `variantId`, `requestedCapabilities`,
   `conversionGoals`, `selectedDossiers.required = []`.
-- `data/runs/<runId>/site-plan.json` (`starterId`, `scaffoldId`,
+- `<tempdir>/runs/<runId>/site-plan.json` (`starterId`, `scaffoldId`,
   `variantId`, `planSource = pinned`, `selectedDossiers.rejected`).
-- `data/runs/<runId>/generation-package.json` (`starterId`,
+- `<tempdir>/runs/<runId>/generation-package.json` (`starterId`,
   `scaffoldId`, `variantId`).
-- `data/runs/<runId>/build-result.json` (`status`, `npmSteps`,
+- `<tempdir>/runs/<runId>/build-result.json` (`status`, `npmSteps`,
   `runDurationMs`).
 
 ## Guards som följde med
