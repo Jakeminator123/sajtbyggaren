@@ -7,6 +7,10 @@ from pathlib import Path
 
 import streamlit as st
 
+from scripts.generate_dossier_candidate import (
+    DossierGenerationError,
+    generate_dossier_candidate,
+)
 from scripts.generate_variant_candidate import (
     VariantGenerationError,
     generate_variant_candidates,
@@ -19,6 +23,7 @@ from ._helpers import safe_render
 SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
 REFERENCE_TEMPLATES_DIR = REPO_ROOT / "data" / "reference-templates"
 VARIANT_CANDIDATES_DIR = REPO_ROOT / "data" / "variant-candidates"
+DOSSIER_CANDIDATES_DIR = REPO_ROOT / "data" / "dossier-candidates"
 PLACEHOLDER_MARKER = asset_graph.PLACEHOLDER_MARKER
 
 
@@ -59,6 +64,25 @@ def create_variant_candidate_from_ui(
         variant_id=variant_id,
         output_dir=VARIANT_CANDIDATES_DIR,
         enabled=False,
+        force=force,
+        use_llm=use_llm,
+    )
+
+
+def create_dossier_candidate_from_ui(
+    *,
+    brief: str,
+    candidate_id: str | None,
+    capability: str | None,
+    use_llm: bool,
+    force: bool,
+):
+    """Generate a soft Dossier candidate from Backoffice without touching canonical files."""
+    return generate_dossier_candidate(
+        brief=brief,
+        candidate_id=candidate_id,
+        capability=capability,
+        output_dir=DOSSIER_CANDIDATES_DIR,
         force=force,
         use_llm=use_llm,
     )
@@ -490,6 +514,55 @@ def view_dossiers() -> None:
         st.write(f"- `{cls}`: " + ", ".join(f"`{f}`" for f in files))
 
 
+def view_dossier_candidates() -> None:
+    st.title("Dossier Candidates")
+    st.caption(
+        "Skapar candidate-only Soft Dossier-mappar under `data/dossier-candidates/`. "
+        "Det här promoterar aldrig till canonical Dossier-mappar."
+    )
+
+    with st.form("dossier_candidate_form"):
+        candidate_id = st.text_input("Dossier id (valfritt)")
+        capability = st.text_input("Capability (valfritt)")
+        brief = st.text_area("Capability-brief", height=120)
+        use_llm = st.checkbox("Använd dossierModel om OPENAI_API_KEY finns", value=True)
+        force = st.checkbox("Skriv över befintlig kandidat med samma id", value=False)
+        submitted = st.form_submit_button("Skapa Soft Dossier-kandidat")
+
+    if submitted:
+        try:
+            result = create_dossier_candidate_from_ui(
+                brief=brief,
+                candidate_id=candidate_id.strip() or None,
+                capability=capability.strip() or None,
+                use_llm=use_llm,
+                force=force,
+            )
+        except (DossierGenerationError, ValueError, RuntimeError) as exc:
+            st.error(f"Kunde inte skapa kandidat: {exc}")
+            return
+
+        st.success(f"Skapade `{result.candidate_dir.relative_to(REPO_ROOT)}`")
+        st.write(f"**Source:** `{result.source}`")
+        st.write(f"**Model:** `{result.model_used}`")
+        st.subheader("manifest.json")
+        st.json(result.manifest, expanded=False)
+        st.subheader("instructions.md")
+        st.code(result.instructions, language="markdown")
+
+    st.divider()
+    st.subheader("Befintliga kandidater")
+    candidate_nodes = [
+        node
+        for node in asset_graph.build_graph()["nodes"]
+        if node["type"] == "dossier-candidate"
+    ]
+    if not candidate_nodes:
+        st.info("Inga Dossier-kandidater finns ännu.")
+        return
+    st.dataframe(candidate_nodes, use_container_width=True, hide_index=True)
+
+
 def view_reference_templates() -> None:
     st.title("Reference Templates")
     st.caption(
@@ -518,5 +591,6 @@ VIEWS = {
     "Variants": lambda: safe_render(view_variants),
     "Variant Candidates": lambda: safe_render(view_variant_candidates),
     "Dossiers": lambda: safe_render(view_dossiers),
+    "Dossier Candidates": lambda: safe_render(view_dossier_candidates),
     "Reference Templates": lambda: safe_render(view_reference_templates),
 }

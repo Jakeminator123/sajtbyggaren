@@ -8,7 +8,7 @@ from . import asset_graph
 
 HIGH_IMPACT_TYPES = {"starter", "scaffold"}
 MEDIUM_IMPACT_TYPES = {"variant", "soft-dossier", "hard-dossier"}
-NO_RUNTIME_TYPES = {"variant-candidate"}
+NO_RUNTIME_TYPES = {"variant-candidate", "dossier-candidate"}
 
 
 def node_key(node_type: str, node_id: str) -> str:
@@ -41,6 +41,11 @@ def _runtime_effect(node_type: str) -> str:
         return (
             "Candidate files are not part of runtime selection and are safe to review "
             "without affecting generation."
+        )
+    if node_type == "dossier-candidate":
+        return (
+            "Candidate Dossiers are not part of runtime selection until an operator "
+            "promotes them to canonical Dossier folders."
         )
     return "No runtime effect is known for this node type."
 

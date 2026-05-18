@@ -12,6 +12,7 @@ from .paths import DATA_DIR, POLICIES_DIR, REPO_ROOT
 SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
 DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
 VARIANT_CANDIDATES_DIR = DATA_DIR / "variant-candidates"
+DOSSIER_CANDIDATES_DIR = DATA_DIR / "dossier-candidates"
 EMBEDDING_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "embedding"
 PLACEHOLDER_MARKER = "placeholder, fill per scaffold-contract"
 
@@ -286,6 +287,51 @@ def _candidate_variant_nodes(scaffold_id: str) -> tuple[list[dict[str, Any]], li
     return nodes, edges
 
 
+def _candidate_dossier_nodes() -> list[dict[str, Any]]:
+    nodes: list[dict[str, Any]] = []
+    if not DOSSIER_CANDIDATES_DIR.exists():
+        return nodes
+    for candidate_class_dir in sorted(path for path in DOSSIER_CANDIDATES_DIR.iterdir() if path.is_dir()):
+        dossier_class = candidate_class_dir.name
+        for candidate_dir in sorted(path for path in candidate_class_dir.iterdir() if path.is_dir()):
+            manifest_path = candidate_dir / "manifest.json"
+            if not manifest_path.exists():
+                nodes.append(
+                    _node(
+                        node_type="dossier-candidate",
+                        node_id=f"{dossier_class}/{candidate_dir.name}",
+                        path=candidate_dir,
+                        status="incomplete",
+                        canonical=False,
+                        details="manifest.json saknas",
+                    )
+                )
+                continue
+            try:
+                payload = read_json(manifest_path)
+                status = "candidate"
+                enabled = _enabled(payload)
+                candidate_id = str(payload.get("id") or candidate_dir.name)
+                details = str(payload.get("capability") or payload.get("summary") or "")
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
+                status = "invalid"
+                enabled = None
+                candidate_id = candidate_dir.name
+                details = str(exc)
+            nodes.append(
+                _node(
+                    node_type="dossier-candidate",
+                    node_id=f"{dossier_class}/{candidate_id}",
+                    path=candidate_dir,
+                    status=status,
+                    canonical=False,
+                    enabled=enabled,
+                    details=details,
+                )
+            )
+    return nodes
+
+
 def build_graph() -> dict[str, list[dict[str, Any]]]:
     """Build a read-only graph of current generation assets."""
     nodes: list[dict[str, Any]] = []
@@ -381,6 +427,8 @@ def build_graph() -> dict[str, list[dict[str, Any]]]:
                 details=details,
             )
         )
+
+    nodes.extend(_candidate_dossier_nodes())
 
     for role in llm_models.get("roles", []):
         if not isinstance(role, dict) or not role.get("id"):

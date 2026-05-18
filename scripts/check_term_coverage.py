@@ -202,6 +202,12 @@ COMMON_WORDS = {
     "SpacingTokens", "TypographyTokens", "VariantCandidateModel",
     "VariantContext", "VariantGenerationError", "VariantGenerationResult",
     "VariantModelResolutionError", "VariantTokens", "VariantTone",
+    # Soft Dossier candidate generator implementation symbols. Dossier and
+    # Soft Dossier are already registered domain terms; these are local
+    # Python containers around candidate folder writing and dossierModel IO.
+    "DossierCandidateModel", "DossierGenerationError",
+    "DossierGenerationResult", "DossierManifestModel",
+    "DossierModelResolutionError",
     # Generic React component names that appear in test fixtures, ADR
     # examples and docstring snippets. They are standard component-
     # cased identifiers (Header, Footer, Hero, About) used by the
