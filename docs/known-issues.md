@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 85 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 26 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 85 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -423,10 +423,11 @@ integrate christopher-ui discovery and asset workflow`, merge
   `load_scaffold_registry()` (samma mönster som B22 löste för
   `scaffold.schema.json`). Ej blocker - byggtidsguarden täcker redan
   scenariot, men en schema-fil ger tidigare felfångst + IDE-stöd.
-- **`B59` Medel** - StackBlitz `template:"node"`-preview (WebContainer) i
-  Viewser är blockerad eller instabil i moderna Chrome-runtimes som kräver
-  cross-origin isolation. Tre header-lägen testades empiriskt 2026-05-15
-  (både Cursor in-app browser och lokal Chrome smoke):
+- **`B59` Medel** (status: parkerad → **förmodligen löst i B123/B124, kvar
+  att operatörverifiera end-to-end**) - StackBlitz `template:"node"`-preview
+  (WebContainer) i Viewser var blockerad eller instabil i moderna Chrome-
+  runtimes som kräver cross-origin isolation. Tre header-lägen testades
+  empiriskt 2026-05-15 (både Cursor in-app browser och lokal Chrome smoke):
   - inga isolation headers -> iframe-load blockeras med Chrome-meddelandet
     "Specify a Cross-Origin Embedder Policy to prevent this frame from being
     blocked";
@@ -438,13 +439,39 @@ integrate christopher-ui discovery and asset workflow`, merge
     (`https://stackblitz.com/sign_in - Unsuccessful HTTP response`) och UI:t
     fastnar permanent i "Startar StackBlitz...".
 
-  Header-experimentet committades inte. Nästa arkitekturbeslut bör vara byte
-  till en lokal preview-server (per-run `next dev`-process embedded som
-  same-origin iframe på `localhost:NNNN`) eller en static StackBlitz-preview
-  (template `"static"` med pre-buildad HTML), inte mer header-toggling. Ej
-  blocker idag: Run History + Run Details ger diagnostik utan preview, och
-  lokal `npm run build` på den genererade siten fungerar fortfarande som
-  verifikation. Test: open (regression-test bestäms efter arkitekturval).
+  Header-experimentet 2026-05-15 committades inte. Hypotesen då var "ingen
+  mer COOP/COEP-toggling, byt arkitektur till lokal `next dev`".
+
+  **2026-05-18 superseder-pass (B123 + B124):** operatören rapporterade exakt
+  samma "Unable to run Embedded Project — Looks like this project is being
+  embedded without proper isolation headers" + "Specify a Cross-Origin
+  Embedder Policy" som 2026-05-15-experimentet. Vi implementerade en kombi-
+  nation som **inte** testades då:
+  1. `Cross-Origin-Embedder-Policy: credentialless` + `Cross-Origin-Opener-
+     Policy: same-origin` på Viewser-host (`apps/viewser/next.config.ts`,
+     stängde B123 i `5f23d13`).
+  2. **Plus** `credentialless`-attribut på själva `<iframe>`-elementet via
+     `document.createElement`-patch runt `sdk.embedProject(...)` (stängde
+     B124 i `5d05e0d`). Parent-COEP räcker inte för iframes — Chrome kräver
+     att varje embedded iframe antingen själv svarar med en COEP-header
+     eller bär `credentialless`-attributet, och StackBlitz embed-respons
+     skickar ingen header. Iframe-attributet är vad 2026-05-15-experimentet
+     missade.
+
+  Header-konfigen är verifierad på server-sidan (`Invoke-WebRequest -Method
+  Head http://localhost:3000/` returnerar båda headers). End-to-end-grön-
+  preview-verifiering kvar för operatör i Chromium-browser (Chrome 110+,
+  Edge, Brave, Vivaldi — `credentialless`-iframe-attributet stöds inte i
+  Firefox/Safari, vilket matchar StackBlitz egen Chromium-only-baseline för
+  embedded WebContainers). Om operatören ser en grön preview kan B59
+  stängas formellt i en separat docs-commit; om embeddet fortfarande
+  fastnar i "Startar StackBlitz..." eller VM-timeout är 2026-05-15-
+  hypotesen (lokal `next dev`-process som same-origin iframe eller static
+  StackBlitz-template) fortfarande den arkitekturella nöd-vägen. Källa
+  för supersession: extern reviewer-pass 2026-05-18 (operatör + agent).
+  Test: `tests/test_viewser_isolation_headers.py` (7 source-locks som
+  fångar både host-headers och iframe-attribut). Fix: open formellt
+  (väntar end-to-end-verifikation), kandidat-SHA `5d05e0d`.
 
 ### Notera (inte en bugg) - dev-preview-output utanför repo
 
