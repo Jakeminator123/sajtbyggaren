@@ -117,6 +117,32 @@ class DiscoveryTaxonomy:
                 best_branch = category.contentBranch
         return best_branch or "business"
 
+    def pick_primary_category(
+        self, matched_categories: list[TaxonomyCategory]
+    ) -> TaxonomyCategory | None:
+        """Välj primärkategori med samma branch-prioritet som ``pick_branch``.
+
+        Tidigare valde resolvern första kategori i payloaden som
+        primärkategori, vilket var inkonsistent med branch-prioriteten:
+        ``["business", "ecommerce"]`` gav då ``contentBranch="ecommerce"``
+        men scaffold/variant/starter från ``business``. Fixen säkrar att
+        primärkategori och branch alltid kommer från samma kategori, så
+        scaffold/variant/starter och innehållsgren är samma beslut
+        (Review-feedback R2 P1 + R3 #1 på PR #34).
+        """
+        if not matched_categories:
+            return None
+        if not self.branch_priority:
+            return matched_categories[0]
+        best = matched_categories[0]
+        best_priority = self.branch_priority.get(best.contentBranch, 1_000_000)
+        for category in matched_categories[1:]:
+            priority = self.branch_priority.get(category.contentBranch, 1_000_000)
+            if priority < best_priority:
+                best = category
+                best_priority = priority
+        return best
+
 
 def load_discovery_taxonomy(
     path: Path | None = None,

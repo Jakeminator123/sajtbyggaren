@@ -238,6 +238,124 @@ def test_taxonomy_loader_pick_branch_prefers_most_specific(
     assert loaded.pick_branch([]) == "business"
 
 
+@pytest.mark.tooling
+def test_pick_primary_category_follows_branch_priority() -> None:
+    """R2 P1 + R3 #1: primary_category måste matcha branch-prioritet.
+
+    Tidigare valde resolvern första kategori i payloaden som
+    primärkategori, vilket gav self-contradictory beslut för multi-
+    select: ``["business", "ecommerce"]`` blev ``contentBranch=ecommerce``
+    men scaffold=``local-service-business`` (från ``business``).
+    """
+    from packages.generation.discovery import load_discovery_taxonomy
+
+    loaded = load_discovery_taxonomy()
+    business = loaded.get("business")
+    ecommerce = loaded.get("ecommerce")
+    restaurant = loaded.get("restaurant")
+    portfolio = loaded.get("portfolio")
+    assert business is not None
+    assert ecommerce is not None
+    assert restaurant is not None
+    assert portfolio is not None
+
+    # business priority 12 vs ecommerce priority 0 → ecommerce vinner.
+    primary = loaded.pick_primary_category([business, ecommerce])
+    assert primary is not None and primary.id == "ecommerce"
+
+    # Ordning oavsett: ecommerce vinner även om business är först.
+    primary = loaded.pick_primary_category([business, ecommerce, business])
+    assert primary is not None and primary.id == "ecommerce"
+
+    # restaurant priority 1 vs portfolio priority 3 → restaurant vinner.
+    primary = loaded.pick_primary_category([portfolio, restaurant])
+    assert primary is not None and primary.id == "restaurant"
+
+    # Tom lista → None.
+    assert loaded.pick_primary_category([]) is None
+
+
+@pytest.mark.tooling
+def test_blog_and_other_are_fallback_not_active(taxonomy_payload: dict) -> None:
+    """R1 #3 + R3 #5: kategorier utan native scaffold-mappning märks fallback.
+
+    ``blog`` och ``other`` har ingen dedikerad scaffold i
+    ``scaffold-contract.v1.json`` — de körs som vikariat via
+    ``local-service-business``. Backoffice ser ``supportStatus=fallback``
+    så detta inte förväxlas med native runtime-stöd.
+    """
+    blog = _find_category(taxonomy_payload, "blog")
+    other = _find_category(taxonomy_payload, "other")
+    assert blog["supportStatus"] == "fallback"
+    assert blog["fallbackScaffoldId"] == "local-service-business"
+    assert "activeScaffoldId" not in blog
+    assert other["supportStatus"] == "fallback"
+    assert other["fallbackScaffoldId"] == "local-service-business"
+    assert "activeScaffoldId" not in other
+
+
+@pytest.mark.tooling
+def test_candidate_dossiers_do_not_become_required_dossiers(
+    taxonomy_payload: dict,
+) -> None:
+    """R1 #8: taxonomins ``candidateDossiers`` får inte automatiskt sluta
+    upp i Project Input ``selectedDossiers.required``. PR A:s resolver
+    skickar bara kandidater till ``DiscoveryDecision.candidateDossiers``;
+    planning/capability-filter har fortfarande sista ordet om mounting.
+    """
+    from packages.generation.discovery import resolve_discovery
+
+    candidate_pi = {
+        "$schema": "../governance/schemas/project-input.schema.json",
+        "siteId": "site-1",
+        "scaffoldId": "local-service-business",
+        "variantId": "nordic-trust",
+        "language": "sv",
+        "company": {
+            "name": "Test AB",
+            "businessType": "service-provider",
+            "tagline": "x",
+            "story": "y",
+        },
+        "location": {"city": "Malmö", "country": "Sverige", "serviceAreas": ["Malmö"]},
+        "services": [{"id": "a", "label": "A", "summary": "."}],
+        "tone": {"primary": "x", "secondary": [], "avoid": []},
+        "trustSignals": [],
+        "conversionGoals": [],
+        "requestedCapabilities": [],
+        "contact": {
+            "phone": "+46",
+            "email": "a@b.c",
+            "addressLines": ["x"],
+            "openingHours": "x",
+        },
+        "selectedDossiers": {"required": [], "recommended": [], "rationale": "x"},
+    }
+    payload = {
+        "schemaVersion": 1,
+        "rawPrompt": "test",
+        "contentBranch": "business",
+        "scaffoldHint": "local-service-business",
+        "answers": {"siteType": ["business"]},
+    }
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate_pi,
+    )
+    selected = project_input["selectedDossiers"]
+    # Kandidaterna får inte ha lagts in i required.
+    if isinstance(selected, dict):
+        required_list = selected.get("required", [])
+    else:
+        required_list = []
+    for cand in decision.candidateDossiers:
+        assert cand not in required_list, (
+            f"Resolvern lade taxonomins candidateDossier {cand!r} i "
+            "selectedDossiers.required — det får bara planning/capability-filter göra."
+        )
+
+
 def _find_category(payload: dict, category_id: str) -> dict:
     for category in payload["categories"]:
         if category["id"] == category_id:

@@ -255,6 +255,14 @@ def test_brief_email_kept_when_wizard_and_scrape_blank() -> None:
 
 @pytest.mark.tooling
 def test_taxonomy_capabilities_merge_with_wizard_must_have() -> None:
+    """Wizard mustHave + taxonomy capabilities slås ihop, gap vs unknown.
+
+    Efter fix-passet (R2 P1 + R3 #2) skiljer resolvern på:
+
+    - ``contact-form`` finns i capability-map men har tom dossiers-lista
+      → ``capability-gap``.
+    - ``gallery`` finns inte alls i capability-map → ``capability-unknown``.
+    """
     payload = _payload(
         "business",
         mustHave=["Kontaktformulär", "Bildgalleri"],
@@ -267,12 +275,16 @@ def test_taxonomy_capabilities_merge_with_wizard_must_have() -> None:
     )
     caps = project_input["requestedCapabilities"]
     assert "contact-form" in caps  # från både wizard mustHave och taxonomy
-    assert "gallery" in caps  # från wizard mustHave (capability-unknown warning)
+    assert "gallery" in caps  # från wizard mustHave
     codes = {warning.code for warning in decision.fallbackWarnings}
-    assert "capability-unknown" in codes
-    # Kapacitet som ligger i capability-map (contact-form) får ingen warning.
-    cap_ids_warned = {w.capabilityId for w in decision.fallbackWarnings if w.capabilityId}
-    assert "contact-form" not in cap_ids_warned
+    assert "capability-unknown" in codes  # gallery saknar i capability-map
+    assert "capability-gap" in codes  # contact-form har tom dossiers-lista
+    by_code: dict[str, set[str]] = {}
+    for warning in decision.fallbackWarnings:
+        if warning.capabilityId:
+            by_code.setdefault(warning.code, set()).add(warning.capabilityId)
+    assert "contact-form" in by_code.get("capability-gap", set())
+    assert "gallery" in by_code.get("capability-unknown", set())
 
 
 @pytest.mark.tooling
@@ -565,3 +577,292 @@ def test_resolver_is_idempotent_on_double_invocation() -> None:
     )
     assert pi_a == pi_b
     assert decision_a.to_dict() == decision_b.to_dict()
+
+
+# ---------------------------------------------------------------------------
+# Review-fix-pass på PR #34 (B121)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_multi_select_primary_category_follows_branch_priority() -> None:
+    """R2 P1 + R3 #1: ``["business", "ecommerce"]`` ska ge ecommerce-lite.
+
+    Tidigare gav primary_category=business (första i listan) men
+    pick_branch returnerade ``ecommerce`` (lägst priority), vilket gav
+    self-contradictory beslut: ``contentBranch=ecommerce`` men
+    scaffold=``local-service-business``. Resolvern måste nu välja
+    primary_category med samma priority.
+    """
+    payload = {
+        "schemaVersion": 1,
+        "rawPrompt": "test",
+        "contentBranch": "ecommerce",
+        "scaffoldHint": "ecommerce-lite",
+        "answers": {"siteType": ["business", "ecommerce"]},
+    }
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["scaffoldId"] == "ecommerce-lite"
+    assert project_input["variantId"] == "clean-store"
+    assert decision.selectedScaffoldId == "ecommerce-lite"
+    assert decision.contentBranch == "ecommerce"
+    assert decision.expectedStarterId == "commerce-base"
+
+
+@pytest.mark.tooling
+def test_multi_select_picks_restaurant_over_portfolio() -> None:
+    """Restaurant priority 1 vs portfolio priority 3 → restaurant vinner."""
+    payload = {
+        "schemaVersion": 1,
+        "rawPrompt": "test",
+        "contentBranch": "restaurant",
+        "scaffoldHint": "local-service-business",
+        "answers": {"siteType": ["portfolio", "restaurant"]},
+    }
+    _, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    # Båda är planned med fallback local-service-business; vi kollar
+    # bara att primary_category-id i fallback-warning är restaurant.
+    category_warnings = [
+        w for w in decision.fallbackWarnings if w.code == "category-planned"
+    ]
+    primary_ids = {w.categoryId for w in category_warnings if w.categoryId}
+    assert "restaurant" in primary_ids
+    assert decision.contentBranch == "restaurant"
+    assert decision.targetScaffoldId == "restaurant-hospitality"
+
+
+@pytest.mark.tooling
+def test_capability_gap_flagged_separately_from_unknown() -> None:
+    """R2 P1 + R3 #2: ``payments`` finns i capability-map men har tom
+    dossier-lista — det är en **gap**, inte unknown. ``operatorReviewRequired``
+    måste bli True även för gap.
+    """
+    payload = _payload("ecommerce")  # taxonomin lägger payments + contact-form
+    _, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    gap_codes = [w.code for w in decision.fallbackWarnings]
+    gap_capabilities = {
+        w.capabilityId
+        for w in decision.fallbackWarnings
+        if w.code == "capability-gap" and w.capabilityId
+    }
+    assert "capability-gap" in gap_codes
+    assert "payments" in gap_capabilities
+    assert "contact-form" in gap_capabilities
+    assert decision.operatorReviewRequired is True
+
+
+@pytest.mark.tooling
+def test_capability_unknown_separate_from_gap() -> None:
+    """``gallery`` finns inte i capability-map → capability-unknown.
+    ``contact-form`` finns men har inga dossiers → capability-gap.
+    Båda måste flaggas, var och en med sin kod.
+    """
+    payload = _payload(
+        "business",
+        mustHave=["Kontaktformulär", "Bildgalleri"],
+    )
+    _, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    by_code: dict[str, set[str]] = {}
+    for warning in decision.fallbackWarnings:
+        if warning.capabilityId:
+            by_code.setdefault(warning.code, set()).add(warning.capabilityId)
+    assert "contact-form" in by_code.get("capability-gap", set())
+    assert "gallery" in by_code.get("capability-unknown", set())
+
+
+@pytest.mark.tooling
+def test_resolver_reads_capability_map_runtime_not_hardcoded(tmp_path: Path) -> None:
+    """R3 #2: capability-classification måste komma från
+    ``capability-map.v1.json``, inte en hårdkodad slug-lista i Python.
+
+    Vi injekterar en alternativ capability-map med en känd och en
+    saknad slug, och verifierar att resolvern klassificerar enligt
+    den map:en.
+    """
+    custom_map = {
+        "contact-form": {
+            "dossiers": ["fake-implemented-dossier"],
+            "default": "fake-implemented-dossier",
+        }
+    }
+    payload = _payload(
+        "business",
+        mustHave=["Kontaktformulär"],
+    )
+    _, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+        capability_map=custom_map,
+    )
+    cap_warnings = [
+        w for w in decision.fallbackWarnings if w.capabilityId == "contact-form"
+    ]
+    # Med implementerad dossier får contact-form ingen warning alls.
+    assert not cap_warnings
+
+
+@pytest.mark.tooling
+def test_scaffold_hint_used_when_site_type_empty() -> None:
+    """R3 #4: bakåtkompatibilitet — payload utan ``siteType`` men med
+    ``scaffoldHint`` ska ändå sätta scaffold/variant (samma kontrakt som
+    pre-B121 ``_apply_discovery_overrides`` hade).
+    """
+    payload = {
+        "schemaVersion": 1,
+        "rawPrompt": "test",
+        "contentBranch": "ecommerce",
+        "scaffoldHint": "ecommerce-lite",
+        "answers": {"companyName": "Hint Co"},  # ingen siteType
+    }
+    candidate = _candidate_project_input()
+    candidate["scaffoldId"] = "local-service-business"  # ska överskridas av hint
+    candidate["variantId"] = "nordic-trust"
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+    assert project_input["scaffoldId"] == "ecommerce-lite"
+    assert project_input["variantId"] == "clean-store"
+    assert decision.fieldSources["scaffoldId"] == "wizard"
+    assert decision.fieldSources["variantId"] == "wizard"
+    assert decision.expectedStarterId == "commerce-base"
+    # Inget category-warning eftersom hint pekade mot en runtime-aktiv scaffold.
+    assert decision.operatorReviewRequired is False
+
+
+@pytest.mark.tooling
+def test_scaffold_hint_ignored_when_pointing_at_non_runtime_scaffold() -> None:
+    """``scaffoldHint`` accepteras bara för local-service-business och
+    ecommerce-lite — dessa är de två par som planning.SCAFFOLD_TO_STARTER
+    faktiskt mappar idag.
+    """
+    payload = {
+        "schemaVersion": 1,
+        "rawPrompt": "test",
+        "contentBranch": "restaurant",
+        "scaffoldHint": "restaurant-hospitality",  # planned, inte runtime
+        "answers": {},
+    }
+    candidate = _candidate_project_input()
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+    # Resolvern faller tillbaka till project_input_candidate-scaffold.
+    assert project_input["scaffoldId"] == candidate["scaffoldId"]
+    assert decision.selectionSource == "default"
+
+
+@pytest.mark.tooling
+def test_followup_inherits_discovery_decision_into_v2_meta(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """R2 P2: discoveryDecision från v1 ska ärvas till v2-meta.
+
+    Followup-runs får inte ny discovery-payload (CLI förbjuder
+    ``--discovery`` + ``--followup-site-id`` tillsammans), så om
+    resolvern inte också persisterar decisionen vidare till v2 förlorar
+    Backoffice/Doctor synlighet för categoryIds, fieldSources och
+    fallbackWarnings.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.prompt_to_project_input import generate, generate_followup
+
+    discovery_payload = {
+        "schemaVersion": 1,
+        "rawPrompt": "webshop som säljer keramik",
+        "contentBranch": "ecommerce",
+        "scaffoldHint": "ecommerce-lite",
+        "answers": {
+            "siteType": ["ecommerce"],
+            "companyName": "Keramikbutiken AB",
+        },
+    }
+    generate(
+        "webshop som säljer keramik",
+        output_dir=tmp_path,
+        site_id="keramik-shop",
+        project_id="stable-project",
+        discovery=discovery_payload,
+    )
+
+    _, v2_meta, _, v2_meta_path = generate_followup(
+        "lägg till en blogg-sektion",
+        output_dir=tmp_path,
+        site_id="keramik-shop",
+    )
+
+    assert "discoveryDecision" in v2_meta, (
+        "Followup-meta måste ärva discoveryDecision från v1; annars tappar "
+        "Backoffice/Doctor synlighet för categoryIds och fieldSources."
+    )
+    v2_decision = v2_meta["discoveryDecision"]
+    assert v2_decision["selectedScaffoldId"] == "ecommerce-lite"
+    assert v2_decision["categoryIds"] == ["ecommerce"]
+    assert v2_decision["expectedStarterId"] == "commerce-base"
+
+    sidecar = json.loads(v2_meta_path.read_text(encoding="utf-8"))
+    assert sidecar["discoveryDecision"]["categoryIds"] == ["ecommerce"]
+
+
+@pytest.mark.tooling
+def test_followup_without_v1_discovery_decision_omits_field(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """När v1 inte hade discoveryDecision ska v2 också sakna det.
+
+    Prompt-only runs (utan ``--discovery``) genererar ingen decision i
+    v1; followup ska inte uppfinna en.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.prompt_to_project_input import generate, generate_followup
+
+    generate(
+        "elektriker Malmö",
+        output_dir=tmp_path,
+        site_id="el-malmo",
+        project_id="stable-project",
+    )
+
+    _, v2_meta, _, _ = generate_followup(
+        "lägg till priser",
+        output_dir=tmp_path,
+        site_id="el-malmo",
+    )
+    assert "discoveryDecision" not in v2_meta
+
+
+@pytest.mark.tooling
+def test_blog_uses_fallback_status_not_active() -> None:
+    """R1 #3 + R3 #5: blog markeras fallback eftersom ingen native
+    magasin-scaffold finns i scaffold-contract. Resolvern returnerar
+    selectionSource=fallback och en category-fallback-warning.
+    """
+    payload = _payload("blog")
+    _, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert decision.selectionSource == "fallback"
+    codes = {w.code for w in decision.fallbackWarnings}
+    assert "category-fallback" in codes

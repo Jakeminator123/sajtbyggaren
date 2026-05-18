@@ -136,9 +136,9 @@
       "labelSv": "Blogg / Magasin",
       "labelEn": "Blog / Magazine",
       "contentBranch": "business",
-      "supportStatus": "active",
+      "supportStatus": "fallback",
       "targetScaffoldId": "local-service-business",
-      "activeScaffoldId": "local-service-business",
+      "fallbackScaffoldId": "local-service-business",
       "defaultVariantId": "nordic-trust",
       "expectedStarterId": "marketing-base",
       "requestedCapabilities": ["newsletter-subscribe", "contact-form"],
@@ -150,7 +150,8 @@
         "Nyhetsbrev",
         "Kontaktformulär"
       ],
-      "rationale": "Bloggsajter kör marketing-base idag; en separat publicering-/CMS-scaffold är inte planerad i scaffold-contract."
+      "rationale": "Bloggsajter saknar dedikerad magazine-/CMS-scaffold i scaffold-contract.v1.json. Kör local-service-business + marketing-base som vikariat tills en magasin-scaffold landas via ADR. Backoffice ser fallback-status så denna mappning inte förväxlas med native scaffold-stöd.",
+      "operatorNotes": "Promotera till active eller skapa egen scaffold när en magasin/CMS-mapping landas (ADR + scaffold-contract bump)."
     },
     {
       "id": "consulting",
@@ -542,9 +543,9 @@
       "labelSv": "Annat",
       "labelEn": "Other",
       "contentBranch": "minimal",
-      "supportStatus": "active",
+      "supportStatus": "fallback",
       "targetScaffoldId": "local-service-business",
-      "activeScaffoldId": "local-service-business",
+      "fallbackScaffoldId": "local-service-business",
       "defaultVariantId": "nordic-trust",
       "expectedStarterId": "marketing-base",
       "requestedCapabilities": ["contact-form"],
@@ -554,7 +555,7 @@
         "Om oss / Om mig",
         "Kontaktformulär"
       ],
-      "rationale": "Catch-all för okänd kategori. Använder local-service-business som säkraste defaultförsök; operatorn kan ändra Project Input innan build."
+      "rationale": "Catch-all för okänd kategori. Saknar native scaffold-mappning per definition; använder local-service-business som säkraste defaultförsök. Backoffice ser fallback-status så det inte förväxlas med en kategori-specifik mappning."
     }
   ]
 }

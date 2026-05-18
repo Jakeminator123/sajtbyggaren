@@ -41,6 +41,7 @@ Field-source-regel (vinstordning per fält):
 from __future__ import annotations
 
 import copy
+import json
 import re
 from pathlib import Path
 from typing import Any
@@ -57,6 +58,19 @@ from .taxonomy import (
     TaxonomyCategory,
     load_discovery_taxonomy,
 )
+
+DEFAULT_CAPABILITY_MAP_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "governance"
+    / "policies"
+    / "capability-map.v1.json"
+)
+"""Canonical location för ``capability-map.v1.json``.
+
+Resolvern läser policyn runtime (R3 #2 på PR #34: tidigare hårdkodning
+av ``_KNOWN_CAPABILITY_SLUGS`` gjorde governance till en sekundär källa
+och kunde inte triggas av ``capability-gap``-warnings).
+"""
 
 # ---------------------------------------------------------------------------
 # Static mappings (behållna 1:1 från scripts/prompt_to_project_input.py)
@@ -94,28 +108,55 @@ _CTA_TO_CONVERSION_GOAL: dict[str, str] = {
     "Ladda ner": "download",
 }
 
-# Capability-slugs som vi vet finns i ``capability-map.v1.json``. Resolvern
-# behöver inte slå upp policyn i varje runt; den här listan speglar v1 och
-# uppdateras när nya Dossiers landas. Kapacitetsslugs utanför listan
-# rapporteras som ``capability-unknown`` warnings men bevaras i
-# ``requestedCapabilities`` så ``filter_capabilities`` i
-# ``packages/generation/planning/plan.py`` kan klassificera dem deterministiskt.
-_KNOWN_CAPABILITY_SLUGS: frozenset[str] = frozenset(
-    {
-        "interactive-game",
-        "contact-form",
-        "newsletter-subscribe",
-        "payments",
-        "auth",
-        "analytics",
-        "ai-chat",
-        "error-tracking",
-        "faq-section",
-        "carousel",
-        "marquee",
-        "command-search",
-    }
-)
+def _load_capability_map(path: Path | None = None) -> dict[str, dict[str, Any]]:
+    """Läs ``capability-map.v1.json`` och returnera capabilities-dict.
+
+    Resultatet är en map ``slug -> {dossiers: [...], default?: str, comment?: str}``.
+    Resolvern använder den för att skilja på tre fall:
+
+    1. ``known`` — slug finns och har minst en dossier; ingen warning.
+    2. ``gap`` — slug finns men ``dossiers`` är tom; lägg
+       ``capability-gap`` warning så Backoffice ser att en planerad Dossier
+       saknas. Detta är fallet idag för ``contact-form``, ``payments`` m.fl.
+       som ``planning.filter_capabilities`` annars rapporterar via Site Plan
+       ``rejectedCapabilities``.
+    3. ``unknown`` — slug saknas i map; lägg ``capability-unknown`` warning.
+
+    R3 #2 på PR #34: tidigare hårdkodade frozenset gjorde att resolvern
+    aldrig kunde trigga ``capability-gap``, så ``operatorReviewRequired``
+    blev felaktigt ``False`` för ecommerce med payments etc.
+    """
+    actual = path if path is not None else DEFAULT_CAPABILITY_MAP_PATH
+    try:
+        payload = json.loads(actual.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {}
+    capabilities = payload.get("capabilities")
+    if not isinstance(capabilities, dict):
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for slug, entry in capabilities.items():
+        if isinstance(slug, str) and isinstance(entry, dict):
+            out[slug] = entry
+    return out
+
+
+def _classify_capability(
+    slug: str, capability_map: dict[str, dict[str, Any]]
+) -> tuple[str, str | None]:
+    """Returnerar ``("known"|"gap"|"unknown", reason_or_None)``."""
+    entry = capability_map.get(slug)
+    if entry is None:
+        return ("unknown", None)
+    dossiers = entry.get("dossiers") or []
+    if not dossiers:
+        comment = entry.get("comment")
+        reason = comment if isinstance(comment, str) and comment else (
+            "Capability finns i capability-map.v1.json men har ingen "
+            "implementerad Dossier ännu."
+        )
+        return ("gap", reason)
+    return ("known", None)
 
 # Scaffold/variant-defaults för payloads utan kategori (catch-all "other"
 # vägen). Speglar ``_SCAFFOLD_LOCAL_SERVICE`` i
@@ -143,6 +184,8 @@ def resolve_discovery(
     scrape: dict[str, Any] | None = None,
     taxonomy: DiscoveryTaxonomy | None = None,
     taxonomy_path: Path | None = None,
+    capability_map: dict[str, dict[str, Any]] | None = None,
+    capability_map_path: Path | None = None,
 ) -> tuple[dict[str, Any], DiscoveryDecision]:
     """Main entry point — resolverat Project Input + ``DiscoveryDecision``.
 
@@ -156,10 +199,20 @@ def resolve_discovery(
     levererar den). Idag förväntar resolvern att ``scrape`` är ``None``
     eller ``dict`` med Project Input-fragment-shape; ``scrape`` vinner
     bara där wizard saknar explicit värde.
+
+    ``capability_map`` injekteras från ``capability-map.v1.json`` runtime
+    och används för att klassificera ``requestedCapabilities`` som
+    ``known`` / ``gap`` / ``unknown``. Tester och Backoffice-dry-run kan
+    skicka in egen map för deterministiska scenarion.
     """
     _ = raw_prompt  # bevaras för future heuristics, inte använt i v1
     project_input: dict[str, Any] = copy.deepcopy(project_input_candidate)
     decision_taxonomy = taxonomy or load_discovery_taxonomy(taxonomy_path)
+    resolved_capability_map = (
+        capability_map
+        if capability_map is not None
+        else _load_capability_map(capability_map_path)
+    )
 
     # ------------------------------------------------------------------
     # Steg 1 — extrahera ``answers`` och ``categoryIds``
@@ -231,7 +284,10 @@ def resolve_discovery(
                 )
             )
 
-    primary_category = matched_categories[0] if matched_categories else None
+    # R2 P1 + R3 #1: primary_category måste väljas med samma branch-
+    # prioritet som ``pick_branch``, annars kan multi-select ge
+    # ``contentBranch=ecommerce`` men scaffold=``local-service-business``.
+    primary_category = decision_taxonomy.pick_primary_category(matched_categories)
     selection_source: SelectionSource = _selection_source_for(
         category_ids, primary_category
     )
@@ -245,6 +301,7 @@ def resolve_discovery(
     # ------------------------------------------------------------------
     # Steg 3 — välj scaffold/variant/starter via taxonomy
     # ------------------------------------------------------------------
+    scaffold_hint_used = False
     if primary_category is not None:
         selected_scaffold_id = primary_category.runtime_scaffold_id
         target_scaffold_id = primary_category.targetScaffoldId
@@ -277,21 +334,47 @@ def resolve_discovery(
                 )
             )
     else:
-        # Tom siteType eller alla kategorier okända — bevara existing
-        # scaffold/variant från project_input_candidate (vilket är ``pick_scaffold``-
-        # resultatet från scripts/prompt_to_project_input). Resolvern
-        # rör inte fälten så test_operator_uploads' empty-pi-fall behåller
-        # sin shape.
-        selected_scaffold_id = project_input.get("scaffoldId", _DEFAULT_SCAFFOLD_ID)
-        target_scaffold_id = selected_scaffold_id
-        fallback_scaffold_id = None
-        selected_variant_id = project_input.get("variantId", _DEFAULT_VARIANT_ID)
-        expected_starter_id = _starter_for_scaffold(selected_scaffold_id)
-        content_branch = (
-            payload.get("contentBranch", "business")
-            if isinstance(payload, dict) and isinstance(payload.get("contentBranch"), str)
-            else "business"
-        )
+        # R3 #4: bakåtkompatibilitet med legacy payloads som saknar
+        # ``siteType`` men har ``scaffoldHint``. Pre-B121 accepterade
+        # ``_apply_discovery_overrides`` ``scaffoldHint`` som primär
+        # signal när den pekade mot en buildbar scaffold; resolvern
+        # behöver hålla det kontraktet så CLI-/test-payloads inte
+        # tappar scaffold-val. Hinten respekteras bara för de två
+        # scaffolds som faktiskt har runtime + variant + starter:
+        # local-service-business och ecommerce-lite.
+        hint = _scaffold_hint_from_payload(payload)
+        if hint is not None:
+            scaffold_hint_used = True
+            selected_scaffold_id, selected_variant_id, expected_starter_id = hint
+            target_scaffold_id = selected_scaffold_id
+            fallback_scaffold_id = None
+            project_input["scaffoldId"] = selected_scaffold_id
+            project_input["variantId"] = selected_variant_id
+            field_sources["scaffoldId"] = "wizard"
+            field_sources["variantId"] = "wizard"
+            content_branch = (
+                payload.get("contentBranch", "business")
+                if isinstance(payload, dict)
+                and isinstance(payload.get("contentBranch"), str)
+                else "business"
+            )
+        else:
+            # Tom siteType och ingen användbar scaffoldHint — bevara
+            # existing scaffold/variant från project_input_candidate
+            # (``pick_scaffold``-resultatet från
+            # scripts/prompt_to_project_input). Resolvern rör inte fälten
+            # så test_operator_uploads' empty-pi-fall behåller sin shape.
+            selected_scaffold_id = project_input.get("scaffoldId", _DEFAULT_SCAFFOLD_ID)
+            target_scaffold_id = selected_scaffold_id
+            fallback_scaffold_id = None
+            selected_variant_id = project_input.get("variantId", _DEFAULT_VARIANT_ID)
+            expected_starter_id = _starter_for_scaffold(selected_scaffold_id)
+            content_branch = (
+                payload.get("contentBranch", "business")
+                if isinstance(payload, dict)
+                and isinstance(payload.get("contentBranch"), str)
+                else "business"
+            )
 
     # ------------------------------------------------------------------
     # Steg 4 — patcha Project Input-fält med wizard > scrape > brief
@@ -311,6 +394,7 @@ def resolve_discovery(
         answers=answers,
         primary_category=primary_category,
         field_sources=field_sources,
+        capability_map=resolved_capability_map,
     )
     warnings.extend(capability_result["warnings"])
 
@@ -323,11 +407,18 @@ def resolve_discovery(
     if primary_category is not None:
         candidate_dossiers = list(primary_category.candidateDossiers)
 
+    # ``scaffold_hint_used`` är True när scaffoldHint-fallback användes
+    # utan en matchande kategori; resolvern behöver inte automatisk
+    # operator review i det fallet (det är samma kontrakt som pre-B121).
     operator_review_required = (
-        primary_category is None
-        or primary_category.supportStatus in {"planned", "disabled"}
+        (primary_category is None and not scaffold_hint_used)
+        or (
+            primary_category is not None
+            and primary_category.supportStatus in {"planned", "disabled"}
+        )
         or any(
-            warning.code in {"category-unknown", "capability-gap", "capability-unknown"}
+            warning.code
+            in {"category-unknown", "capability-gap", "capability-unknown"}
             for warning in warnings
         )
     )
@@ -416,10 +507,40 @@ def _starter_for_scaffold(scaffold_id: str) -> str | None:
     (capturas av ``tests/test_starter_scaffold_mapping.py`` och
     ``tests/test_discovery_resolver.py``).
     """
-    return {
-        "local-service-business": "marketing-base",
-        "ecommerce-lite": "commerce-base",
-    }.get(scaffold_id)
+    return _RUNTIME_SCAFFOLD_HINTS.get(scaffold_id, (None, None, None))[2]
+
+
+# Buildbara scaffolds som ``scaffoldHint`` får peka mot. Spegling av
+# de två par som planning.SCAFFOLD_TO_STARTER faktiskt mappar idag —
+# pre-B121 _apply_discovery_overrides accepterade samma whitelist.
+_RUNTIME_SCAFFOLD_HINTS: dict[str, tuple[str, str, str]] = {
+    "local-service-business": (
+        "local-service-business",
+        "nordic-trust",
+        "marketing-base",
+    ),
+    "ecommerce-lite": ("ecommerce-lite", "clean-store", "commerce-base"),
+}
+
+
+def _scaffold_hint_from_payload(
+    payload: dict[str, Any] | None,
+) -> tuple[str, str, str] | None:
+    """R3 #4: tolka ``payload.scaffoldHint`` när ``siteType`` saknas.
+
+    Returnerar ``(scaffoldId, variantId, expectedStarterId)`` för
+    runtime-aktiva scaffold-hints, annars ``None``. Hinten respekteras
+    bara för scaffolds som faktiskt har starter-mapping; en hint som
+    pekar mot en planned scaffold (t.ex. ``restaurant-hospitality``) tas
+    inte som hård signal eftersom det skulle krocka med taxonomins
+    ``planned`` -> ``fallbackScaffoldId``-regel.
+    """
+    if not isinstance(payload, dict):
+        return None
+    hint = payload.get("scaffoldHint")
+    if not isinstance(hint, str):
+        return None
+    return _RUNTIME_SCAFFOLD_HINTS.get(hint.strip())
 
 
 def _apply_company_fields(
@@ -643,8 +764,20 @@ def _resolve_capabilities(
     answers: dict[str, Any],
     primary_category: TaxonomyCategory | None,
     field_sources: dict[str, FieldSourceLiteral],
+    capability_map: dict[str, dict[str, Any]],
 ) -> dict[str, list[FallbackWarning]]:
-    """Bygg ``requestedCapabilities`` med fieldSources och varningar för gap."""
+    """Bygg ``requestedCapabilities`` med fieldSources och warnings.
+
+    Klassificerar varje slug via ``_classify_capability`` mot
+    ``capability-map.v1.json``:
+
+    - ``known`` → ingen warning.
+    - ``gap`` → ``capability-gap`` (slug registrerad men ingen Dossier).
+    - ``unknown`` → ``capability-unknown`` (slug saknas i map).
+
+    Båda gap- och unknown-fynd höjer ``operatorReviewRequired`` i
+    ``resolve_discovery`` (R2 P1 + R3 #2 på PR #34).
+    """
     existing = list(project_input.get("requestedCapabilities") or [])
     wizard_caps: list[str] = []
     must_have = answers.get("mustHave")
@@ -683,18 +816,35 @@ def _resolve_capabilities(
 
     warnings: list[FallbackWarning] = []
     for slug in combined:
-        if slug not in _KNOWN_CAPABILITY_SLUGS:
+        classification, reason = _classify_capability(slug, capability_map)
+        if classification == "known":
+            continue
+        if classification == "gap":
             warnings.append(
                 FallbackWarning(
-                    code="capability-unknown",
+                    code="capability-gap",
                     message=(
-                        f"Capability {slug!r} finns inte i capability-map.v1.json; "
-                        "planning rapporterar den som unknown och Backoffice kan "
-                        "föreslå Dossier-import."
+                        reason
+                        or (
+                            f"Capability {slug!r} finns i capability-map.v1.json "
+                            "men saknar implementerad Dossier."
+                        )
                     ),
                     capabilityId=slug,
                 )
             )
+            continue
+        warnings.append(
+            FallbackWarning(
+                code="capability-unknown",
+                message=(
+                    f"Capability {slug!r} finns inte i capability-map.v1.json; "
+                    "planning rapporterar den som unknown och Backoffice kan "
+                    "föreslå Dossier-import."
+                ),
+                capabilityId=slug,
+            )
+        )
     project_input["requestedCapabilities"] = combined
     if combined:
         # Toppen-källa per fält registreras på ``requestedCapabilities``;

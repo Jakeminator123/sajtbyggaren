@@ -1549,13 +1549,32 @@ def generate_followup(
     site_id: str,
     output_dir: Path = DEFAULT_OUTPUT_DIR,
 ) -> tuple[dict[str, Any], dict[str, Any], Path, Path]:
-    """Generate a new Project Input version from an existing meta sidecar."""
+    """Generate a new Project Input version from an existing meta sidecar.
+
+    Followup-flödet ärver ``discoveryDecision`` från föregående version
+    (R2 P2 på PR #34): wizard-init-runs får inte ny discovery-payload, så
+    om resolvern inte också persisterar decisionen vidare till v2 förlorar
+    Backoffice/Doctor synlighet för categoryIds, fieldSources och
+    fallbackWarnings i den aktuella versionen.
+    """
     existing_meta = read_existing_meta(site_id, output_dir=output_dir)
     previous_project_input = read_existing_project_input(
         site_id, output_dir=output_dir
     )
     previous_version = existing_meta["version"]
     now = datetime.now(UTC).isoformat(timespec="seconds")
+    meta_overrides: dict[str, Any] = {
+        "originalPrompt": existing_meta.get("originalPrompt", prompt),
+        "followUpPrompt": prompt,
+        "previousVersion": previous_version,
+        "createdAt": existing_meta.get("createdAt", now),
+        "updatedAt": now,
+    }
+    # Ärv discoveryDecision från föregående version så Backoffice/Doctor
+    # kan visa categoryIds + fieldSources + fallbackWarnings även för v2+.
+    inherited_decision = existing_meta.get("discoveryDecision")
+    if isinstance(inherited_decision, dict):
+        meta_overrides["discoveryDecision"] = inherited_decision
     return generate(
         prompt,
         output_dir=output_dir,
@@ -1564,13 +1583,7 @@ def generate_followup(
         version=previous_version + 1,
         mode="followup",
         base_project_input=previous_project_input,
-        meta_overrides={
-            "originalPrompt": existing_meta.get("originalPrompt", prompt),
-            "followUpPrompt": prompt,
-            "previousVersion": previous_version,
-            "createdAt": existing_meta.get("createdAt", now),
-            "updatedAt": now,
-        },
+        meta_overrides=meta_overrides,
     )
 
 
