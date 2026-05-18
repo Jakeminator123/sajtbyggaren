@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "discovery-taxonomy.schema.json",
+  "title": "Discovery Taxonomy",
+  "description": "Schema för governance/policies/discovery-taxonomy.v1.json. Taxonomin är canonical mapping från WizardCategoryId (apps/viewser/components/discovery-wizard/wizard-constants.ts) till targetScaffoldId/activeScaffoldId/fallbackScaffoldId/defaultVariantId/expectedStarterId/requestedCapabilities/candidateDossiers/recommendedPages. PR B låser frontend mot denna policy; PR A levererar bara backend/resolver-konsumtionen. Discovery Resolver / Discovery Taxonomy / Discovery Decision / Discovery Payload / Field Source registreras som canonical termer i ADR 0024 enligt repo-regel i .cursor/BUGBOT.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policyId",
+    "version",
+    "status",
+    "purpose",
+    "categories"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "policyId": {
+      "type": "string",
+      "pattern": "^discovery-taxonomy\\.v[0-9]+$"
+    },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": {
+      "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"]
+    },
+    "purpose": { "type": "string", "minLength": 1 },
+    "principles": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "contentBranches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "labelSv": { "type": "string" },
+          "labelEn": { "type": "string" },
+          "priority": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Lägre = mer specifik; resolvern väljer grenen med lägst priority när multi-select trasslar."
+          }
+        }
+      },
+      "description": "Optional registry av tillåtna content-branches. Frontend resolveContentBranch matchar mot dessa id:n."
+    },
+    "categories": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "labelSv",
+          "contentBranch",
+          "supportStatus",
+          "targetScaffoldId",
+          "defaultVariantId",
+          "requestedCapabilities",
+          "candidateDossiers",
+          "rationale"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "description": "WizardCategoryId från frontend. Måste finnas i wizard-constants.ts för att taxonomy ska kunna kovera kategorin."
+          },
+          "labelSv": { "type": "string", "minLength": 1 },
+          "labelEn": { "type": "string" },
+          "contentBranch": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Vilken innehållsgren denna kategori driver. Resolvern använder grenen för att välja fält-set i Project Input."
+          },
+          "supportStatus": {
+            "type": "string",
+            "enum": ["active", "fallback", "planned", "disabled"],
+            "description": "'active' = targetScaffoldId är runtime-mappad och defaultVariantId finns. 'fallback' = active scaffold används som vikariat tills target får runtime. 'planned' = target är inte runtime-mappad ännu och fallbackScaffoldId måste finnas. 'disabled' = kategorin kan inte byggas; resolvern måste returnera fallbackWarning."
+          },
+          "targetScaffoldId": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "description": "Produktens riktiga målscaffold enligt scaffold-contract.v1.json:primaryScaffoldRegistry. Får peka mot framtida scaffold (target=restaurant-hospitality även om bara local-service-business är runtime)."
+          },
+          "activeScaffoldId": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "description": "Buildbar scaffold idag när supportStatus=active. Identisk med targetScaffoldId när target är runtime-mappad."
+          },
+          "fallbackScaffoldId": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "description": "Buildbar scaffold idag när supportStatus=fallback eller planned. Måste finnas under SCAFFOLD_TO_STARTER (packages/generation/planning/plan.py)."
+          },
+          "defaultVariantId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Variant som väljs som default när operatorn inte explicit pinnar variantId. Måste finnas under selectedScaffoldId/variants/."
+          },
+          "expectedStarterId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Förväntad starter härledd från selectedScaffoldId. Måste matcha planning.SCAFFOLD_TO_STARTER om satt; saknas när scaffolden ännu inte har mapping (resolvern flaggar då via fallbackWarning starter-mapping-missing)."
+          },
+          "requestedCapabilities": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+            "uniqueItems": true,
+            "description": "Default-capabilities som taxonomin föreslår för kategorin. Resolvern slår ihop med overlay mustHave/CTA-mapping. Capabilities som saknas i capability-map.v1.json ger warning capability-unknown."
+          },
+          "candidateDossiers": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+            "uniqueItems": true,
+            "description": "Soft/hard Dossiers som är kandidater för kategorin. Är inte selectedDossiers — planning + capability-filter har sista ordet om vilka som monteras."
+          },
+          "recommendedPages": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "description": "Sidor wizarden rekommenderar för kategorin. Speglar RECOMMENDED_PAGES_BY_CATEGORY i wizard-constants.ts."
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Kort förklaring av varför mappningen ser ut som den gör. Hjälper Backoffice/operator vid review."
+          },
+          "operatorNotes": {
+            "type": "string",
+            "description": "Optional operator-anteckning (t.ex. 'Vi planerar att aktivera restaurant-hospitality i Sprint X')."
+          }
+        }
+      }
+    }
+  }
+}

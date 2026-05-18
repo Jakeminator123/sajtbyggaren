@@ -185,6 +185,21 @@ COMMON_WORDS = {
     # Scaffold, Variant) are already registered in naming-dictionary.v1.
     "PlanResult", "PlanningChoice", "PlanningModelResolutionError",
     "RejectedCapability",
+    # Discovery Resolver module (B121 PR A) internal implementation symbols.
+    # The canonical domain terms (Discovery Payload, Discovery Decision,
+    # Discovery Taxonomy, Discovery Resolver, Field Source) are registered
+    # in naming-dictionary.v1. The names below are Python dataclasses and
+    # Literal type aliases that implement the canonical terms - same
+    # treatment as PlanningChoice / RejectedCapability above. Note:
+    # ``DiscoveryPayload`` is already allowlisted further down as the
+    # christopher-ui wizard TS symbol (same name, different language).
+    "DiscoveryDecision", "DiscoveryTaxonomy",
+    "FallbackWarning", "FieldSource", "FieldSourceLiteral",
+    "SelectionSource", "SupportStatus", "TaxonomyCategory",
+    # Python stdlib typing primitive used by DiscoveryPayload TypedDict.
+    # Same treatment as MonkeyPatch / BaseModel above - external library
+    # symbol, not a domain term.
+    "TypedDict",
     # Sprint 3A internal Literal types (typing aliases that name the
     # status/source enums of CodegenResult / QualityResult / RepairResult).
     # The canonical domain types CodegenResult, CodegenFile and RepairFix

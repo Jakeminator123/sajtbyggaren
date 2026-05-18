@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "discovery-payload.schema.json",
+  "title": "Discovery Payload",
+  "description": "Strukturerad payload som Viewser-överlagrade discovery-wizarden skickar till POST /api/prompt (fältet `discovery`). Wizardens client-side TS-typ (apps/viewser/components/discovery-wizard/wizard-payload.ts:DiscoveryPayload) producerar denna shape; backendens Discovery Resolver (packages/generation/discovery/resolve.py) konsumerar den tillsammans med en Site Brief-kandidat. B121: schemat fryser ytterskalet utan att låsa wizardens fullständiga answer-shape — `answers` är medvetet löst för att tåla incrementella wizard-tillägg utan en schema-bump per fält.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "rawPrompt",
+    "contentBranch",
+    "scaffoldHint",
+    "answers"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": {
+      "const": 1,
+      "description": "Discovery Payload schema-version. Bumpas separat från policy/taxonomy så frontend och backend kan utveckla kontrakt utan att bryta varandra."
+    },
+    "rawPrompt": {
+      "type": "string",
+      "description": "Operatörens ursprungliga pitch ordagrant. Aldrig modifierad av wizarden; används av briefModel som primär källtext."
+    },
+    "contentBranch": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Wizardens beräknade innehållsgren via resolveContentBranch(siteType). Backend dubbelchecker mot governance/policies/discovery-taxonomy.v1.json och får skriva över vid konflikt."
+    },
+    "scaffoldHint": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Wizardens scaffold-förslag baserat på första valda kategorin. Hint, inte beslut — resolvern + planningModel avgör vilken scaffold som faktiskt byggs."
+    },
+    "answers": {
+      "type": "object",
+      "description": "Trimmed copy av WizardAnswers. Lös shape: wizarden lägger till fält i discreta utvecklingsspår, så backend tolererar okända nycklar och ignorerar tomma värden (stripEmpty på client-sidan).",
+      "additionalProperties": true
+    }
+  }
+}
