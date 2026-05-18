@@ -126,42 +126,82 @@ export function ViewerPanel({
         mountTarget.className = "h-full w-full";
         containerRef.current.replaceChildren(mountTarget);
 
-        await sdk.embedProject(
-          mountTarget,
-          {
-            title: `Sajtbyggaren preview ${runId}`,
-            description: "Generated site snapshot",
-            template: "node",
-            files: payload.files,
-            settings: {
-              compile: {
-                // Auto-rebuild when files ändras (StackBlitz default = on,
-                // men vi sätter explicit så det aldrig avbryts av framtida
-                // SDK-versionsändringar).
-                trigger: "auto",
+        // Patch document.createElement so the <iframe> StackBlitz SDK
+        // creates inside embedProject is tagged with the
+        // `credentialless` HTML attribute BEFORE the browser starts
+        // loading its src. Our host page sends
+        // `Cross-Origin-Embedder-Policy: credentialless` (see
+        // apps/viewser/next.config.ts), which is required for the
+        // WebContainer inside the iframe to access SharedArrayBuffer.
+        // But Chrome additionally requires that EACH embedded iframe
+        // either responds with its own COEP header or carries the
+        // credentialless attribute on the <iframe> element — and
+        // StackBlitz's embed response does not send a COEP header.
+        // Without the attribute Chrome shows "Specify a Cross-Origin
+        // Embedder Policy to prevent this frame from being blocked"
+        // in DevTools and refuses to load the embed. The attribute
+        // must be set before insertion because the browser begins
+        // fetching the iframe's document as soon as it enters the DOM
+        // with src already populated. See
+        // https://developer.chrome.com/blog/iframe-credentialless for
+        // the credentialless-iframe model and why parent COEP alone
+        // is insufficient.
+        //
+        // The patch is scoped via try/finally so we never leave the
+        // global API mutated past the SDK's internal iframe creation.
+        const originalCreateElement = document.createElement.bind(document);
+        const patchedCreateElement = ((
+          tagName: string,
+          options?: ElementCreationOptions,
+        ) => {
+          const elem = originalCreateElement(tagName, options);
+          if (typeof tagName === "string" && tagName.toLowerCase() === "iframe") {
+            elem.setAttribute("credentialless", "");
+          }
+          return elem;
+        }) as typeof document.createElement;
+        document.createElement = patchedCreateElement;
+
+        try {
+          await sdk.embedProject(
+            mountTarget,
+            {
+              title: `Sajtbyggaren preview ${runId}`,
+              description: "Generated site snapshot",
+              template: "node",
+              files: payload.files,
+              settings: {
+                compile: {
+                  // Auto-rebuild when files ändras (StackBlitz default = on,
+                  // men vi sätter explicit så det aldrig avbryts av framtida
+                  // SDK-versionsändringar).
+                  trigger: "auto",
+                },
               },
             },
-          },
-          {
-            openFile: "app/page.tsx",
-            view: "preview",
-            // Ljust tema för att matcha Sajtbyggarens egen UI istället för
-            // StackBlitz default-mörkblå. Möjliga värden: "default" (mörk),
-            // "light", "dark". `terminalHeight: 0` döljer den lilla
-            // terminal-panelen som annars syns nere i preview-läget och
-            // gör helhetsintrycket mörkare.
-            theme: "light",
-            terminalHeight: 0,
-            // Göm sidebar med fil-listan eftersom vi visar bara preview
-            // (operatören inspekterar koden via Run History-drawern i
-            // Sajtbyggaren-UI:t, inte via StackBlitz-sidebaren).
-            hideExplorer: true,
-            hideNavigation: true,
-            hideDevTools: true,
-            clickToLoad: false,
-            height: 1200,
-          },
-        );
+            {
+              openFile: "app/page.tsx",
+              view: "preview",
+              // Ljust tema för att matcha Sajtbyggarens egen UI istället för
+              // StackBlitz default-mörkblå. Möjliga värden: "default" (mörk),
+              // "light", "dark". `terminalHeight: 0` döljer den lilla
+              // terminal-panelen som annars syns nere i preview-läget och
+              // gör helhetsintrycket mörkare.
+              theme: "light",
+              terminalHeight: 0,
+              // Göm sidebar med fil-listan eftersom vi visar bara preview
+              // (operatören inspekterar koden via Run History-drawern i
+              // Sajtbyggaren-UI:t, inte via StackBlitz-sidebaren).
+              hideExplorer: true,
+              hideNavigation: true,
+              hideDevTools: true,
+              clickToLoad: false,
+              height: 1200,
+            },
+          );
+        } finally {
+          document.createElement = originalCreateElement;
+        }
 
         if (cancelled) {
           // Stale embed mounted while we were unmounting. Tear it

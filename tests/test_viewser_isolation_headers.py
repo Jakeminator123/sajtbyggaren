@@ -27,6 +27,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 NEXT_CONFIG = REPO_ROOT / "apps" / "viewser" / "next.config.ts"
+VIEWER_PANEL = REPO_ROOT / "apps" / "viewser" / "components" / "viewer-panel.tsx"
 
 
 def _load_config_source() -> str:
@@ -34,6 +35,13 @@ def _load_config_source() -> str:
         f"Expected {NEXT_CONFIG} to exist; if it was renamed, update this test."
     )
     return NEXT_CONFIG.read_text(encoding="utf-8")
+
+
+def _load_viewer_panel_source() -> str:
+    assert VIEWER_PANEL.exists(), (
+        f"Expected {VIEWER_PANEL} to exist; if it was renamed, update this test."
+    )
+    return VIEWER_PANEL.read_text(encoding="utf-8")
 
 
 def test_next_config_sets_cross_origin_embedder_policy() -> None:
@@ -76,4 +84,62 @@ def test_next_config_headers_apply_to_all_routes() -> None:
         "next.config.ts headers() must use source: '/:path*' so the isolation "
         "headers apply to the page rendering ViewerPanel (and to every preview "
         "and API route the embed touches)."
+    )
+
+
+# --------------------------------------------------------------------------
+# Source-locks for the iframe-credentialless attribute injection (B124).
+#
+# Parent COEP `credentialless` is necessary but not sufficient: each
+# embedded iframe additionally needs either its own COEP response header
+# (which StackBlitz's embed does not send) or the `credentialless` HTML
+# attribute on the <iframe> element. Without it Chrome refuses to load
+# the embed and shows "Specify a Cross-Origin Embedder Policy to prevent
+# this frame from being blocked" in DevTools.
+#
+# ViewerPanel patches document.createElement around sdk.embedProject so
+# the iframe StackBlitz creates internally is tagged before insertion.
+# These tests lock that mechanism in place.
+# --------------------------------------------------------------------------
+
+
+def test_viewer_panel_patches_create_element_for_credentialless_iframe() -> None:
+    """ViewerPanel must intercept iframe creation and tag it credentialless."""
+    source = _load_viewer_panel_source()
+    assert "document.createElement" in source, (
+        "viewer-panel.tsx must reference document.createElement somewhere — "
+        "either to create the mount target or to patch the SDK's iframe "
+        "creation. Removing all references is a regression."
+    )
+    assert 'setAttribute("credentialless"' in source, (
+        "viewer-panel.tsx must call setAttribute('credentialless', ...) on "
+        "the StackBlitz iframe. Without it Chrome blocks the embed under our "
+        "host's Cross-Origin-Embedder-Policy: credentialless. See "
+        "https://developer.chrome.com/blog/iframe-credentialless"
+    )
+
+
+def test_viewer_panel_restores_create_element_in_finally() -> None:
+    """The createElement patch must be reverted so we never leak the override."""
+    source = _load_viewer_panel_source()
+    assert "originalCreateElement" in source, (
+        "viewer-panel.tsx must hold a reference to the original "
+        "document.createElement so it can be restored after embedProject."
+    )
+    assert "} finally {" in source and "document.createElement = originalCreateElement" in source, (
+        "viewer-panel.tsx must restore document.createElement in a finally "
+        "block — leaving the patch in place would mean every future iframe "
+        "created elsewhere on the page also gets the credentialless "
+        "attribute, which has surprising security implications."
+    )
+
+
+def test_viewer_panel_only_tags_iframe_elements() -> None:
+    """The patch must scope to <iframe> only, not every createElement call."""
+    source = _load_viewer_panel_source()
+    assert 'tagName.toLowerCase() === "iframe"' in source, (
+        "The createElement patch must guard on tagName.toLowerCase() === "
+        "'iframe' so only the StackBlitz iframe gets the credentialless "
+        "attribute. Tagging arbitrary elements is incorrect (the attribute "
+        "is iframe-specific) and obscures the intent of the patch."
     )
