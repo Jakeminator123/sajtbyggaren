@@ -18,14 +18,25 @@ Det är så `StackBlitzRuntime` kommer kunna köra genererade Next.js-sajter uta
 
 ## Krav på host-miljö (Sajtbyggarens egen frontend när den finns)
 
-WebContainer kräver `SharedArrayBuffer`, vilket kräver dessa headers på host-sidan:
+WebContainer kräver `SharedArrayBuffer`, vilket kräver att host-sidan är **cross-origin isolated**. Vilken `Cross-Origin-Embedder-Policy`-värde som är rätt beror på vad du gör:
 
-```
-Cross-Origin-Embedder-Policy: require-corp
+| Use case | Embedder-policy | Varför |
+|----------|-----------------|--------|
+| Sajtbyggaren embeddar `stackblitz.com` via `sdk.embedProject(...)` (det vi gör i dag i `apps/viewser/components/viewer-panel.tsx`) | `credentialless` | Vi kan inte styra `Cross-Origin-Resource-Policy` på StackBlitz egna iframe-resurser. `require-corp` skulle blockera dem. `credentialless` är den nyare cross-origin-isolation-modellen som tillåter just det här fallet. |
+| Sajtbyggaren bootar `WebContainer.boot()` direkt i sin egen sida (framtida `StackBlitzRuntime`-väg utan iframe) | `require-corp` | Vi serverar alla resurser själva och kan tagga dem med `Cross-Origin-Resource-Policy: same-origin`. Striktare och säkrare. |
+
+För det vi gör i dag (embed via SDK) ska Next.js-konfigen alltså sätta:
+
+```http
+Cross-Origin-Embedder-Policy: credentialless
 Cross-Origin-Opener-Policy: same-origin
 ```
 
-För Vite (om vi använder det):
+Implementerat i `apps/viewser/next.config.ts:async headers()` (källkods-låst via `tests/test_viewser_isolation_headers.py`).
+
+Caveat: `credentialless` stöds bara av Chromium-baserade browsers (Chrome 96+, Edge, Brave, Vivaldi). StackBlitz egen browser-support-tabell säger att embedded WebContainer-projekt inte stöds officiellt utanför Chromium oavsett header-konfig — Firefox/Safari rendrar samma "Unable to run Embedded Project" även om vi gör allt rätt på server-sidan.
+
+Om vi i framtiden serverar en egen WebContainer-app (utan iframe-embed) byter vi till `require-corp` och taggar våra egna assets med `Cross-Origin-Resource-Policy: same-origin`. För Vite skulle det då se ut så här:
 
 ```js
 import { defineConfig } from 'vite';
@@ -98,10 +109,12 @@ För dessa fall: `FlyRuntime`. Bytet sker via `preview-runtime-policy.v1.json:de
 | Fel | Orsak | Fix |
 |-----|-------|-----|
 | `SharedArrayBuffer is not defined` | COOP/COEP saknas | sätt headers på Sajtbyggarens host |
+| "Unable to run Embedded Project — Looks like this project is being embedded without proper isolation headers" | Samma som ovan, men sett från embed-sidan: host-sidan är inte cross-origin isolated | sätt `Cross-Origin-Embedder-Policy: credentialless` + `Cross-Origin-Opener-Policy: same-origin` i `apps/viewser/next.config.ts` (krävs även när man bara embeddar stackblitz.com) |
 | Boot körs två gånger | HMR eller dubbelklick | cachea i `window.__webcontainerBoot` |
 | Tom iframe | install eller dev failade | läs terminalpanelen |
 | `localhost:3000` upptaget | annan app kör | byt port eller stäng den andra |
 | Externa assets strular | COEP blockerar | använd lokala assets eller `credentialless` |
+| Embedded preview funkar i Chrome men inte Firefox/Safari | StackBlitz stöder embedding av WebContainer-projekt officiellt bara i Chromium-browsers | använd Chrome/Edge/Brave/Vivaldi för operatörens dev-flöde |
 
 ## Nästa steg när vi börjar implementera
 

@@ -337,19 +337,18 @@ def test_stackblitz_files_inject_global_error_override() -> None:
     )
 
 
-@pytest.mark.tooling
-def test_viewser_does_not_set_global_cross_origin_isolation_headers() -> None:
-    """Global COEP on Viewser blocks the StackBlitz iframe itself."""
-    text = (VIEWSER_DIR / "next.config.ts").read_text(encoding="utf-8")
-    assert "Cross-Origin-Embedder-Policy" not in text, (
-        "Viewser ska inte sätta global Cross-Origin-Embedder-Policy. "
-        "Chrome blockerar då StackBlitz-iframe:n om den externa frame-responsen "
-        "inte själv skickar kompatibel COEP."
-    )
-    assert "Cross-Origin-Opener-Policy" not in text, (
-        "Viewser ska inte sätta global Cross-Origin-Opener-Policy ihop med "
-        "COEP för StackBlitz-embedden i denna MVP."
-    )
+# NOTE: Tidigare lockade vi in att Viewser INTE skulle sätta
+# Cross-Origin-Embedder-Policy (commit 98e8364, motivering: "Chrome
+# blockerar då StackBlitz-iframe:n"). Det stämde för require-corp men
+# missade att credentialless är specifikt designad för att tillåta
+# embedding av tredjepartsiframes som inte själva skickar CORP. När
+# next.config.ts var tom failade StackBlitz-embeddet med "Unable to
+# run Embedded Project — Looks like this project is being embedded
+# without proper isolation headers" eftersom WebContainer kräver
+# SharedArrayBuffer som bara finns i cross-origin isolated dokument.
+# Den gamla locken togs bort i samma commit som B123 stängdes; den
+# nya specifika locken (COEP MÅSTE finnas och MÅSTE vara
+# credentialless) lever i tests/test_viewser_isolation_headers.py.
 
 
 @pytest.mark.tooling

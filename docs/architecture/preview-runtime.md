@@ -49,6 +49,9 @@ Det vi inte tar med - exakta förbjudna termer står i [`naming-dictionary.v1.js
 Sammanfattat:
 
 - `WebContainer.boot()` görs en gång per sida och cachas (`window.__webcontainerBoot`).
-- Sajtbyggarens host-frontend måste skicka `Cross-Origin-Embedder-Policy: require-corp` och `Cross-Origin-Opener-Policy: same-origin`.
+- Sajtbyggarens host-frontend måste skicka cross-origin-isolation-headers så embeddet kan boota WebContainer:
+  - **Embed-fallet (det vi gör i dag i `apps/viewser`):** `Cross-Origin-Embedder-Policy: credentialless` + `Cross-Origin-Opener-Policy: same-origin`. `credentialless` används istället för `require-corp` eftersom vi inte kan styra `Cross-Origin-Resource-Policy` på StackBlitz iframe-resurser. Implementerat i `apps/viewser/next.config.ts` och källkods-låst via `tests/test_viewser_isolation_headers.py`.
+  - **Egen-WebContainer-fallet (framtida väg utan iframe):** `Cross-Origin-Embedder-Policy: require-corp` + `Cross-Origin-Opener-Policy: same-origin`. Detaljerat resonemang i [`docs/integrations/webcontainers-notes.md`](../integrations/webcontainers-notes.md).
 - `server-ready`-eventet ger preview-URL för iframe.
+- Embedded WebContainer-projekt stöds officiellt bara i Chromium-baserade browsers (Chrome, Edge, Brave, Vivaldi). Firefox/Safari rendrar "Unable to run Embedded Project" även om host-headers är rätt — operatörens dev-flöde måste alltså köras i en Chromium-browser.
 - När StackBlitz inte räcker (`hard`-Dossier-SDK:er, riktiga env-värden, tunga builds) växlar vi till `FlyRuntime` via `preview-runtime-policy.v1.json:default` eller per session.
