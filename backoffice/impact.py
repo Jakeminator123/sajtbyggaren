@@ -6,8 +6,8 @@ from typing import Any
 
 from . import asset_graph
 
-HIGH_IMPACT_TYPES = {"starter", "scaffold"}
-MEDIUM_IMPACT_TYPES = {"variant", "soft-dossier", "hard-dossier"}
+HIGH_IMPACT_TYPES = {"starter", "scaffold", "discovery-category"}
+MEDIUM_IMPACT_TYPES = {"variant", "soft-dossier", "hard-dossier", "capability"}
 NO_RUNTIME_TYPES = {"variant-candidate", "dossier-candidate"}
 
 
@@ -21,6 +21,11 @@ def _runtime_effect(node_type: str) -> str:
         return (
             "Planning fails loud for mapped Scaffolds if this Starter is disabled. "
             "Generated historical runs are not modified."
+        )
+    if node_type == "discovery-category":
+        return (
+            "Discovery-category changes affect future init-runs that resolve a new "
+            "Discovery Payload. Existing Project Inputs and generated runs are not rewritten."
         )
     if node_type == "scaffold":
         return (
@@ -36,6 +41,12 @@ def _runtime_effect(node_type: str) -> str:
         return (
             "Capability filtering rejects this Dossier when disabled. Runs that already "
             "selected it are not rewritten."
+        )
+    if node_type == "capability":
+        return (
+            "Discovery Resolver can request this capability for future init-runs; planning "
+            "then maps it through capability-map.v1 and reports gaps without auto-promoting "
+            "candidate Dossiers."
         )
     if node_type == "variant-candidate":
         return (
