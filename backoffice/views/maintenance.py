@@ -8,6 +8,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from backoffice import asset_graph, impact
 from backoffice.maintenance import (
     CleanupItem,
     apply_safe_cleanup,
@@ -186,22 +187,56 @@ def view_toggle() -> None:
     )
     tabs = st.tabs(["Scaffolds", "Variants", "Dossiers", "Starters"])
 
-    def _render_rows(rows, *, collection_key: str | None = None) -> None:
+    def _render_impact(row_id: str, node_type: str, graph: dict) -> dict:
+        result = impact.impact_for_node(node_type, row_id, graph=graph)
+        with st.expander("Konsekvens", expanded=False):
+            st.caption(result["runtimeEffect"])
+            relation_rows = impact.impact_table_rows(result)
+            if relation_rows:
+                st.dataframe(relation_rows, use_container_width=True, hide_index=True)
+            else:
+                st.write("Inga direkta relationer hittades.")
+        return result
+
+    def _node_type(row, configured_type: str) -> str:
+        if configured_type == "dossier":
+            return f"{row.group}-dossier"
+        return configured_type
+
+    def _render_rows(
+        rows,
+        *,
+        node_type: str,
+        collection_key: str | None = None,
+    ) -> None:
         if not rows:
             st.info("Inga entries hittades.")
             return
+        graph = asset_graph.build_graph()
         for row in rows:
             cols = st.columns([2, 1, 4])
             cols[0].markdown(f"**{row.label}**  \n`{row.id}`")
             cols[2].caption(f"`{_relative(row.path)}`")
             if row.note:
                 cols[2].write(row.note[:240] + ("..." if len(row.note) > 240 else ""))
+            actual_node_type = _node_type(row, node_type)
+            impact_result = _render_impact(row.id, actual_node_type, graph)
             value = cols[1].toggle(
                 "Aktiv",
                 value=row.enabled,
                 key=f"toggle-{row.path}-{row.id}",
             )
             if value != row.enabled:
+                if actual_node_type in impact.HIGH_IMPACT_TYPES:
+                    st.warning(
+                        "Detta är en högpåverkande ändring. Granska konsekvensen "
+                        "och bekräfta innan Backoffice skriver enabled-värdet."
+                    )
+                    if not st.button(
+                        f"Bekräfta ändring för {row.id}",
+                        key=f"confirm-toggle-{row.path}-{row.id}",
+                    ):
+                        continue
                 backup = row.path.read_text(encoding="utf-8")
                 try:
                     if collection_key is None:
@@ -222,19 +257,30 @@ def view_toggle() -> None:
                     else:
                         loaders.load_json.clear()
                         loaders.read_text.clear()
-                        st.success(f"{row.id}: enabled={value}")
+                        st.success(
+                            f"{row.id}: enabled={value} "
+                            f"(risk: {impact_result['riskLevel']})"
+                        )
                 except Exception as exc:  # noqa: BLE001
                     row.path.write_text(backup, encoding="utf-8")
                     st.error(f"Kunde inte spara toggle för {row.id}: {exc}")
 
     with tabs[0]:
-        _render_rows(list_scaffold_toggles(), collection_key="primaryScaffoldRegistry")
+        _render_rows(
+            list_scaffold_toggles(),
+            node_type="scaffold",
+            collection_key="primaryScaffoldRegistry",
+        )
     with tabs[1]:
-        _render_rows(list_variant_toggles())
+        _render_rows(list_variant_toggles(), node_type="variant")
     with tabs[2]:
-        _render_rows(list_dossier_toggles())
+        _render_rows(list_dossier_toggles(), node_type="dossier")
     with tabs[3]:
-        _render_rows(list_starter_toggles(), collection_key="starters")
+        _render_rows(
+            list_starter_toggles(),
+            node_type="starter",
+            collection_key="starters",
+        )
 
 
 VIEWS = {

@@ -12,7 +12,7 @@ from scripts.generate_variant_candidate import (
     generate_variant_candidates,
 )
 
-from .. import asset_graph, loaders
+from .. import asset_graph, impact, loaders
 from ..paths import REPO_ROOT
 from ._helpers import safe_render
 
@@ -64,6 +64,30 @@ def create_variant_candidate_from_ui(
     )
 
 
+def _render_impact_summary(result: dict) -> None:
+    node = result["node"]
+    cols = st.columns(4)
+    cols[0].metric("Risk", result["riskLevel"])
+    cols[1].metric("Inkommande", len(result["incoming"]))
+    cols[2].metric("Utgående", len(result["outgoing"]))
+    cols[3].metric("Runtime", "ja" if node.get("canonical") else "nej")
+    st.info(result["runtimeEffect"])
+
+    relation_rows = impact.impact_table_rows(result)
+    if relation_rows:
+        st.dataframe(relation_rows, use_container_width=True, hide_index=True)
+    else:
+        st.caption("Inga direkta relationer hittades.")
+
+    if result["affectedNodes"]:
+        with st.expander("Påverkade noder"):
+            st.dataframe(result["affectedNodes"], use_container_width=True, hide_index=True)
+    if result["affectedPaths"]:
+        with st.expander("Berörda filer"):
+            for path in result["affectedPaths"]:
+                st.write(f"- `{path}`")
+
+
 def view_control_plane() -> None:
     st.title("Kontrollplan")
     st.caption(
@@ -85,6 +109,26 @@ def view_control_plane() -> None:
 
     st.subheader("Relationer")
     st.dataframe(graph["edges"], use_container_width=True, hide_index=True)
+
+    st.divider()
+    st.subheader("Konsekvensvy")
+    st.caption(
+        "Välj en nod för att se direkta relationer och runtime-effekt innan du "
+        "inaktiverar eller ändrar något i en annan vy."
+    )
+    node_options = sorted(
+        f"{node['type']}:{node['id']}"
+        for node in graph["nodes"]
+        if node.get("type") and node.get("id")
+    )
+    if not node_options:
+        st.info("Inga noder finns i grafen.")
+        return
+    selected_node = st.selectbox("Nod", node_options, key="control_plane_impact_node")
+    selected_type, selected_id = selected_node.split(":", 1)
+    _render_impact_summary(
+        impact.impact_for_node(selected_type, selected_id, graph=graph)
+    )
 
 
 def view_scaffolds() -> None:
