@@ -66,12 +66,29 @@ export async function GET(request: NextRequest) {
   // tidigare gjorde att thumbnails "försvann en stund efter". Filerna
   // ligger statiskt på disk så vi serverar dem alltid färska och låter
   // Next.js dev-servern bestämma response-storleken.
+  const headers: Record<string, string> = {
+    "content-type": mime,
+    "content-length": String(stats.size),
+    "cache-control": "no-store",
+    // Förhindra MIME-sniffing oavsett innehåll. Stoppar t.ex. en
+    // operatör-uppladdad "fake JPEG" som faktiskt är HTML från att
+    // renderas som dokument i en flik.
+    "x-content-type-options": "nosniff",
+  };
+  // SVG kan innehålla <script> + onload-attribut som kör i operatörens
+  // dev-server-domän om någon öppnar /api/asset-preview-URL:n direkt
+  // i en ny flik (inte via <img>, där JS är inaktivt). CSP `sandbox`
+  // utan `allow-scripts` skapar en sandbox-kontext för det renderade
+  // dokumentet där inline-script och event-handlers blockeras. Vi
+  // tillåter `allow-same-origin` så att SVG:n fortfarande kan refera
+  // till externa resurser via samma origin, men script + forms är av.
+  // Bilder som laddas via <img src> ignorerar CSP-headern eftersom de
+  // aldrig parsas som dokument, så denna fix påverkar inte AssetCard.
+  if (mime === "image/svg+xml") {
+    headers["content-security-policy"] = "sandbox allow-same-origin";
+  }
   return new NextResponse(new Uint8Array(bytes), {
     status: 200,
-    headers: {
-      "content-type": mime,
-      "content-length": String(stats.size),
-      "cache-control": "no-store",
-    },
+    headers,
   });
 }
