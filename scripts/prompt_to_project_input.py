@@ -54,6 +54,11 @@ from packages.generation.brief import (  # noqa: E402
     site_brief_to_artifact,
 )
 from packages.generation.brief.models import resolve_brief_model  # noqa: E402
+from packages.generation.discovery import (  # noqa: E402
+    DiscoveryDecision,
+    apply_discovery_overrides,
+    resolve_discovery,
+)
 
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "data" / "prompt-inputs"
 SCHEMA_PATH = REPO_ROOT / "governance" / "schemas" / "project-input.schema.json"
@@ -1356,243 +1361,21 @@ def _apply_discovery_overrides(
     project_input: dict[str, Any],
     discovery: dict[str, Any],
 ) -> dict[str, Any]:
-    """Patcha Project Input med deterministiska discovery-fält.
+    """Bakåtkompatibel tunn wrapper runt Discovery Resolver.
 
-    Wizardens fält vinner alltid över LLM-extraktion när de är ifyllda —
-    operatorn har klickat och skrivit, så vi ska inte överskugga det med
-    en LLM-gissning. Fält som wizarden lämnat tomma fortsätter använda
-    LLM/site-brief-värdet, så avoid/imagery/goal/tone behåller sin
-    befintliga heuristik.
+    B121: konkret discovery-konfliktlösning bor nu i
+    ``packages/generation/discovery/resolve.py``. Hela tidigare fältmapping
+    (company/contact/services/brand/assets/scaffold/location +
+    must-have/CTA-kapaciteter) bor i resolvern med spårning via
+    ``DiscoveryDecision.fieldSources`` och ``fallbackWarnings``.
+
+    Denna wrapper bevaras för callers som bara behöver det resolverat
+    Project Input dict-result (t.ex. ``tests/test_operator_uploads.py``).
+    Den nya canonical entry point:en är ``resolve_discovery`` i
+    ``packages.generation.discovery``, som även returnerar
+    ``DiscoveryDecision`` så Backoffice/meta-sidecar får full provenance.
     """
-    if not isinstance(discovery, dict):
-        return project_input
-    answers = discovery.get("answers")
-    if not isinstance(answers, dict):
-        return project_input
-
-    company = project_input.setdefault("company", {})
-    name = answers.get("companyName")
-    if isinstance(name, str) and name.strip():
-        company["name"] = name.strip()
-    offer = answers.get("offer")
-    if isinstance(offer, str) and offer.strip():
-        # `tagline` har maxLength 140 i schemat; använd första meningen
-        # som tagline och hela texten som story om story inte är
-        # explicit ifylld i wizarden.
-        first_sentence = offer.strip().split(". ")[0][:140]
-        company["tagline"] = first_sentence
-    about_text = answers.get("aboutText")
-    if isinstance(about_text, str) and about_text.strip():
-        company["story"] = about_text.strip()[:1200]
-
-    # Kontakt — wizarden har individuella fält som mappar direkt mot
-    # schemat (phone / email / addressLines / openingHours). Den lokala
-    # `_raw`-variabeln existerar för att Pyright/basedpyright ska kunna
-    # narrowa typen: isinstance-checken på ett upprepat `answers.get(...)`
-    # på samma rad narrowar inte (Pyright kan inte garantera att andra
-    # anropet ger samma värde), men checken på en lokal variabel gör det.
-    _contact_raw = answers.get("contact")
-    answer_contact: dict[str, Any] = (
-        _contact_raw if isinstance(_contact_raw, dict) else {}
-    )
-    contact = project_input.setdefault("contact", {})
-    phone = answer_contact.get("phone")
-    if isinstance(phone, str) and phone.strip():
-        contact["phone"] = phone.strip()
-    email = answer_contact.get("email")
-    if isinstance(email, str) and email.strip():
-        contact["email"] = email.strip()
-    opening_hours = answer_contact.get("openingHours")
-    if isinstance(opening_hours, str) and opening_hours.strip():
-        contact["openingHours"] = opening_hours.strip()
-    addr = answer_contact.get("address")
-    if isinstance(addr, str) and addr.strip():
-        contact["addressLines"] = [addr.strip()]
-
-    # Services — wizardens ServiceItem-shape mappar mot Project Inputs
-    # services-array. Bevara LLM-genererade tjänster om wizarden lämnat
-    # listan tom, annars övertar wizardens listan.
-    service_items = answers.get("services")
-    if isinstance(service_items, list) and service_items:
-        mapped_services: list[dict[str, str]] = []
-        for idx, item in enumerate(service_items):
-            if not isinstance(item, dict):
-                continue
-            label = item.get("name")
-            if not isinstance(label, str) or not label.strip():
-                continue
-            description_raw = item.get("description")
-            summary = description_raw if isinstance(description_raw, str) else ""
-            slug = _slugify_label(label) or f"service-{idx + 1}"
-            mapped_services.append(
-                {
-                    "id": slug,
-                    "label": label.strip(),
-                    "summary": summary.strip() or _service_summary(label.strip(), project_input.get("language", "sv")),
-                }
-            )
-        if mapped_services:
-            project_input["services"] = mapped_services[:8]
-
-    # MustHave / pages — speglas tillbaka som requestedCapabilities-hints.
-    must_have = answers.get("mustHave")
-    if isinstance(must_have, list) and must_have:
-        extra_capabilities: list[str] = []
-        page_to_capability = {
-            "Kontaktformulär": "contact-form",
-            "Bokning online": "booking",
-            "Bildgalleri": "gallery",
-            "Blogg / Nyheter": "blog",
-            "Kundrecensioner": "testimonials",
-            "FAQ": "faq",
-            "Portfolio / Case": "portfolio",
-            "Vårt team": "team",
-            "Karta / Hitta hit": "map",
-            "Nyhetsbrev": "newsletter",
-            "Webshop / Produkter": "ecommerce",
-            "Meny / Matsedel": "menu",
-        }
-        for page in must_have:
-            cap = page_to_capability.get(str(page))
-            if cap:
-                extra_capabilities.append(cap)
-        if extra_capabilities:
-            current = project_input.get("requestedCapabilities") or []
-            project_input["requestedCapabilities"] = _unique_strings(current, extra_capabilities)
-
-    # Primary CTA → conversionGoals enum-hint.
-    cta = answers.get("primaryCta")
-    if isinstance(cta, str) and cta.strip():
-        cta_map = {
-            "Boka tid": "booking",
-            "Kontakta oss": "contact",
-            "Köp nu": "purchase",
-            "Begär offert": "lead",
-            "Registrera dig": "signup",
-            "Ring oss": "call",
-            "Ladda ner": "download",
-        }
-        goal = cta_map.get(cta.strip())
-        if goal:
-            current_goals = project_input.get("conversionGoals") or []
-            project_input["conversionGoals"] = _unique_strings(current_goals, [goal])
-
-    # Brand — tone array går in i project_input.tone.primary / secondary.
-    _brand_raw = answers.get("brand")
-    brand: dict[str, Any] = _brand_raw if isinstance(_brand_raw, dict) else {}
-    tone_tags = brand.get("toneTags")
-    if isinstance(tone_tags, list) and tone_tags:
-        clean_tones = [t for t in tone_tags if isinstance(t, str) and t.strip()]
-        if clean_tones:
-            tone_block = project_input.setdefault("tone", {})
-            tone_block["primary"] = clean_tones[0]
-            tone_block["secondary"] = clean_tones[1:5]
-    avoid_words = brand.get("wordsToAvoid")
-    if isinstance(avoid_words, str) and avoid_words.strip():
-        tone_block = project_input.setdefault("tone", {})
-        # Komma/semikolon-separerad fri text → enkel splitt.
-        tokens = [t.strip() for t in re.split(r"[;,\n]", avoid_words) if t.strip()]
-        if tokens:
-            tone_block["avoid"] = tokens[:10]
-
-    # Brand-färger från wizardens brand-step.
-    primary_color = brand.get("primaryColorHex")
-    accent_color = brand.get("accentColorHex")
-    if (
-        isinstance(primary_color, str) and primary_color.strip()
-    ) or (isinstance(accent_color, str) and accent_color.strip()):
-        brand_block = project_input.setdefault("brand", {})
-        if isinstance(primary_color, str) and primary_color.strip():
-            brand_block["primaryColorHex"] = primary_color.strip()
-        if isinstance(accent_color, str) and accent_color.strip():
-            brand_block["accentColorHex"] = accent_color.strip()
-
-    # Operatör-uppladdade assets (logo, hero, gallery). Lägg in i
-    # project_input.brand och project_input.gallery — schemat
-    # (`governance/schemas/project-input.schema.json` $defs/assetRef)
-    # validerar att varje AssetRef har assetId/filename/mimeType/sizeBytes/role.
-    _assets_raw = answers.get("assets")
-    assets: dict[str, Any] = _assets_raw if isinstance(_assets_raw, dict) else {}
-
-    def _sanitize_asset_ref(ref: dict, default_role: str) -> dict | None:
-        """Bevara fält schemat godkänner; ignorera okända/null-fält så
-        ``additionalProperties: false`` inte stoppar build:en.
-        """
-        if not isinstance(ref, dict):
-            return None
-        required = {"assetId", "filename", "mimeType", "sizeBytes"}
-        if not required.issubset(ref.keys()):
-            return None
-        clean: dict[str, Any] = {
-            "assetId": str(ref["assetId"]),
-            "filename": str(ref["filename"]),
-            "mimeType": str(ref["mimeType"]),
-            "sizeBytes": int(ref["sizeBytes"]),
-            "role": str(ref.get("role") or default_role),
-        }
-        if ref.get("width") is not None:
-            clean["width"] = int(ref["width"])
-        if ref.get("height") is not None:
-            clean["height"] = int(ref["height"])
-        alt = ref.get("alt")
-        if isinstance(alt, str) and alt.strip():
-            clean["alt"] = alt.strip()
-        placement = ref.get("placement")
-        if isinstance(placement, str) and placement.strip():
-            clean["placement"] = placement.strip()
-        subject = ref.get("visionSubject")
-        if isinstance(subject, str) and subject.strip():
-            clean["visionSubject"] = subject.strip()
-        confidence = ref.get("visionConfidence")
-        if isinstance(confidence, str) and confidence in {"low", "medium", "high"}:
-            clean["visionConfidence"] = confidence
-        return clean
-
-    logo_ref = _sanitize_asset_ref(assets.get("logo") or {}, "logo")
-    if logo_ref:
-        brand_block = project_input.setdefault("brand", {})
-        brand_block["logo"] = logo_ref
-
-    hero_ref = _sanitize_asset_ref(assets.get("heroImage") or {}, "hero")
-    if hero_ref:
-        brand_block = project_input.setdefault("brand", {})
-        brand_block["heroImage"] = hero_ref
-
-    _gallery_raw = assets.get("gallery")
-    raw_gallery: list[Any] = _gallery_raw if isinstance(_gallery_raw, list) else []
-    gallery_refs = [
-        _sanitize_asset_ref(item, "gallery") for item in raw_gallery if isinstance(item, dict)
-    ]
-    gallery_refs = [ref for ref in gallery_refs if ref is not None]
-    if gallery_refs:
-        project_input["gallery"] = gallery_refs
-
-    # Scaffold hint från wizardens första valda kategori. Bara override
-    # när planner-heuristiken pekar på fel scaffold (LLM saknar kontext).
-    scaffold_hint = discovery.get("scaffoldHint")
-    if isinstance(scaffold_hint, str) and scaffold_hint in {
-        "local-service-business",
-        "ecommerce-lite",
-    }:
-        # Bevara variantId om scaffold byts.
-        if project_input.get("scaffoldId") != scaffold_hint:
-            project_input["scaffoldId"] = scaffold_hint
-            if scaffold_hint == "ecommerce-lite":
-                project_input["variantId"] = "clean-store"
-            else:
-                project_input["variantId"] = "nordic-trust"
-
-    # Location — om kontakt-adress innehåller postnummer, plocka ut city.
-    if "addressLines" in contact:
-        line = contact["addressLines"][0]
-        m = re.search(r"\b\d{3}\s?\d{2}\s+([A-Za-zÅÄÖåäö\-]+)", line)
-        if m:
-            location = project_input.setdefault("location", {})
-            location["city"] = m.group(1).strip()
-            location.setdefault("country", "Sverige")
-            location.setdefault("serviceAreas", [m.group(1).strip()])
-
-    return project_input
+    return apply_discovery_overrides(project_input, discovery)
 
 
 def _load_discovery_file(path: Path) -> dict[str, Any]:
@@ -1720,12 +1503,18 @@ def generate(
     else:
         project_input = candidate_project_input
 
-    # Discovery-overrides patchar in operatörens explicit ifyllda
-    # wizard-svar. Körs efter LLM-extraktion så att wizardens
-    # deterministiska fält vinner över LLM-gissningar för fält där
-    # operatorn faktiskt skrev/klickade.
+    # Discovery Resolver (B121): konsoliderar wizard/scrape/brief/taxonomy
+    # till ett deterministiskt Project Input + ``DiscoveryDecision``-sidecar
+    # med ``fieldSources`` och ``fallbackWarnings``. Decision-payloaden
+    # skrivs som extra fält ``discoveryDecision`` på meta-sidecaren — ingen
+    # ny Engine Run-artefakt eftersom run-kontraktet är åtta filer.
+    discovery_decision: DiscoveryDecision | None = None
     if discovery is not None:
-        project_input = _apply_discovery_overrides(project_input, discovery)
+        project_input, discovery_decision = resolve_discovery(
+            raw_prompt=prompt,
+            payload=discovery,
+            project_input_candidate=project_input,
+        )
 
     _validate_against_schema(project_input)
 
@@ -1743,6 +1532,8 @@ def generate(
         "modelUsed": brief_artifact.get("modelUsed"),
         "createdAt": now,
     }
+    if discovery_decision is not None:
+        meta["discoveryDecision"] = discovery_decision.to_dict()
     if meta_overrides:
         meta.update(meta_overrides)
 

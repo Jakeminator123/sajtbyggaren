@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/naming-dictionary.schema.json",
   "policyId": "naming-dictionary.v1",
-  "version": 16,
+  "version": 17,
   "status": "draft-but-authoritative",
-  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 15 (Starter/Dossier Hygiene 1A, post-3B-cleanup-merge) ärligt-omformulerar codeContract och envContract: båda är optional Dossier-filer som hard Dossiers fyller från Sprint 3+ (idag har bara manifest.json/instructions.md krav), och envContract refererar inte längre 'hybrid- och hard-Dossiers' eftersom ADR 0012 tog bort hybrid-klassen. Version 14 (ADR 0016 v1.1, post-reviewer-clean) tar bort de generella tier-bokstäverna ur globallyForbidden så de inte ens ska behöva nämnas i policy-text. De specifika legacy-flaggor som faktiskt fanns i sajtmaskins kod (`F2-only`, `F3-only`) kvarstår som blocklist tillsammans med lane- och fidelity-vokabulären. Version 13 lade till sådan disciplin (verify lane, preview lane, fidelity, fidelity levels). Canonical fas-kedja är phase 1 understand / phase 2 plan / phase 3 build (engine-run.v1) plus Quality Gate / Repair Pipeline / PreviewRuntime / Mechanical Fix / LLM Fix. Version 12 (ADR 0013) registrerar Capability Map som canonical policy-term och lägger 'delta-brief' på globallyForbidden eftersom det är gammalt sajtmaskin-namn för det canonical Site Brief gör i followup-mode. Version 11 registrerar Capability som canonical term för Dossier-fältet capability i MIN_IDE-formatet. Version 10 (ADR 0012) komprimerar vokabulären: tar bort Site/Feature/Integration/Data/Hybrid Dossier som canonical termer eftersom de dubblade modellen ovanpå Dossier-klasserna. Inför 'Project Input' som canonical begrepp för konkreta operator-projekt (t.ex. painter-palma) och låser Dossier-klasser till bara soft och hard. Version 9 begränsade Viewser-vokabulären; tidigare versioner se git-historiken.",
+  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 17 (B121 Discovery Resolver, PR A) registrerar fem nya canonical termer: Discovery Payload (input från Viewser-wizarden), Discovery Decision (resolverns spårbara output med fieldSources och fallbackWarnings), Discovery Taxonomy (governance/policies/discovery-taxonomy.v1.json som mappar WizardCategoryId till scaffold/variant/starter/capability), Discovery Resolver (packages/generation/discovery/resolve.py) och Field Source (strängenum som beskriver var ett Project Input-fält kom från: wizard, scrape, brief, taxonomy, default, operator, pinned). Version 16 (Starter/Dossier Hygiene 1A, post-3B-cleanup-merge) ärligt-omformulerar codeContract och envContract: båda är optional Dossier-filer som hard Dossiers fyller från Sprint 3+ (idag har bara manifest.json/instructions.md krav), och envContract refererar inte längre 'hybrid- och hard-Dossiers' eftersom ADR 0012 tog bort hybrid-klassen. Version 14 (ADR 0016 v1.1, post-reviewer-clean) tar bort de generella tier-bokstäverna ur globallyForbidden så de inte ens ska behöva nämnas i policy-text. De specifika legacy-flaggor som faktiskt fanns i sajtmaskins kod (`F2-only`, `F3-only`) kvarstår som blocklist tillsammans med lane- och fidelity-vokabulären. Version 13 lade till sådan disciplin (verify lane, preview lane, fidelity, fidelity levels). Canonical fas-kedja är phase 1 understand / phase 2 plan / phase 3 build (engine-run.v1) plus Quality Gate / Repair Pipeline / PreviewRuntime / Mechanical Fix / LLM Fix. Version 12 (ADR 0013) registrerar Capability Map som canonical policy-term och lägger 'delta-brief' på globallyForbidden eftersom det är gammalt sajtmaskin-namn för det canonical Site Brief gör i followup-mode. Version 11 registrerar Capability som canonical term för Dossier-fältet capability i MIN_IDE-formatet. Version 10 (ADR 0012) komprimerar vokabulären: tar bort Site/Feature/Integration/Data/Hybrid Dossier som canonical termer eftersom de dubblade modellen ovanpå Dossier-klasserna. Inför 'Project Input' som canonical begrepp för konkreta operator-projekt (t.ex. painter-palma) och låser Dossier-klasser till bara soft och hard. Version 9 begränsade Viewser-vokabulären; tidigare versioner se git-historiken.",
   "rules": [
     "Ett begrepp får ha exakt ett kanoniskt namn.",
     "Ett kanoniskt namn får bo i exakt en huvudsaklig mapp (se repo-boundaries).",
@@ -658,6 +658,46 @@
       "definition": "Localhost-only operator-prototype (apps/viewser) som driver Builder MVP via chat + manuell build-knapp och visar senaste run i en preview-viewer. Inte en canonical runtime; ersätts av reguljär Engine Run-yta när Sprint 4 LocalRuntime/StackBlitzRuntime finns.",
       "ownerPackage": "apps/viewser",
       "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "discoveryPayload",
+      "canonical": "Discovery Payload",
+      "definition": "Strukturerad payload som Viewser discovery-wizarden skickar till POST /api/prompt under fältet `discovery`. Innehåller schemaVersion, rawPrompt, contentBranch, scaffoldHint och answers. Schema: governance/schemas/discovery-payload.schema.json. Klient-shape: apps/viewser/components/discovery-wizard/wizard-payload.ts.",
+      "ownerPackage": "governance/schemas",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "discoveryResolver",
+      "canonical": "Discovery Resolver",
+      "definition": "Backend-modul (packages/generation/discovery/resolve.py) som svetsar ihop Discovery Payload, Site Brief-kandidat och Discovery Taxonomy till ett deterministiskt Project Input plus Discovery Decision. Field-source-prioritet: wizard > scrape > brief > taxonomy > default. Stänger B121-arkitekturskulden där discovery-sanning tidigare passerade WizardAnswers, briefModel/masterprompt och _apply_discovery_overrides utan explicit konfliktlösare.",
+      "ownerPackage": "packages/generation/discovery",
+      "aliasesAllowed": [],
+      "aliasesForbidden": ["discovery overrides", "discovery patcher"]
+    },
+    {
+      "id": "discoveryDecision",
+      "canonical": "Discovery Decision",
+      "definition": "Spårbart resultat från Discovery Resolver. Skrivs som extra fält `discoveryDecision` på prompt-input meta-sidecaren (data/prompt-inputs/<siteId>.vN.meta.json). Innehåller categoryIds, contentBranch, selectedScaffoldId, targetScaffoldId, optional fallbackScaffoldId, selectedVariantId, optional expectedStarterId, requestedCapabilities, candidateDossiers, fallbackWarnings, fieldSources, selectionSource och operatorReviewRequired. Schema: governance/schemas/discovery-decision.schema.json.",
+      "ownerPackage": "governance/schemas",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "discoveryTaxonomy",
+      "canonical": "Discovery Taxonomy",
+      "definition": "Canonical mapping från WizardCategoryId (apps/viewser/components/discovery-wizard/wizard-constants.ts) till targetScaffoldId/activeScaffoldId/fallbackScaffoldId/defaultVariantId/expectedStarterId/requestedCapabilities/candidateDossiers/recommendedPages. Bor i governance/policies/discovery-taxonomy.v1.json; schema i governance/schemas/discovery-taxonomy.schema.json. Discovery Resolver konsumerar taxonomin; Backoffice (PR C) får edit-yta för supportStatus / scaffold-/variant-/capability-rader.",
+      "ownerPackage": "governance/policies",
+      "aliasesAllowed": [],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "fieldSource",
+      "canonical": "Field Source",
+      "definition": "Strängenum som beskriver var ett Project Input-fält kom från efter Discovery Resolver. Tillåtna värden: wizard, scrape, brief, taxonomy, default, operator, pinned. Bor i DiscoveryDecision.fieldSources som map per Project Input-fältsökväg. Operator och pinned är reserverade för framtida Backoffice-pin / Project Input starterId-pin; PR A använder bara wizard, scrape, brief, taxonomy och default.",
+      "ownerPackage": "packages/generation/discovery",
+      "aliasesAllowed": ["FieldSources"],
       "aliasesForbidden": []
     }
   ],

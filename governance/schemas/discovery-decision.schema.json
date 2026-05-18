@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "discovery-decision.schema.json",
+  "title": "Discovery Decision",
+  "description": "Strukturerat beslut producerat av backendens Discovery Resolver (packages/generation/discovery/resolve.py). Svetsar ihop Discovery Payload, Site Brief-kandidat och Discovery Taxonomy till ett spårbart beslut om scaffoldId/variantId/expectedStarterId/requestedCapabilities/candidateDossiers + fieldSources per Project Input-fält + fallbackWarnings. Skrivs till prompt-input meta-sidecaren (scripts/prompt_to_project_input.py) som extra fält `discoveryDecision`. Är *inte* en ny Engine Run-artefakt; run-kontraktet förblir åtta filer (engine-run.v1.json:phases).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "categoryIds",
+    "contentBranch",
+    "selectedScaffoldId",
+    "targetScaffoldId",
+    "selectedVariantId",
+    "requestedCapabilities",
+    "candidateDossiers",
+    "fallbackWarnings",
+    "fieldSources",
+    "selectionSource",
+    "operatorReviewRequired"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": {
+      "const": 1,
+      "description": "Bumpas separat från Discovery Payload schema; resolverns output-kontrakt får utvecklas i sin egen takt."
+    },
+    "categoryIds": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "WizardCategoryId-listan som driver beslutet. Tom lista är giltig (när payload saknar siteType) men resolvern flaggar då via operatorReviewRequired=true."
+    },
+    "contentBranch": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Slutgiltig innehållsgren efter taxonomy-konfliktlösning."
+    },
+    "selectedScaffoldId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Scaffold som faktiskt byggs idag. Identisk med targetScaffoldId när target är runtime-aktiv; identisk med fallbackScaffoldId när target är planned/fallback."
+    },
+    "targetScaffoldId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Produktens riktiga målscaffold enligt scaffold-contract. Kan vara planned (saknar runtime-mapping i planning/SCAFFOLD_TO_STARTER)."
+    },
+    "fallbackScaffoldId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Buildbar scaffold som används när targetScaffoldId saknar runtime-mapping. Närvarande endast när selectedScaffoldId != targetScaffoldId."
+    },
+    "selectedVariantId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Variant för selectedScaffoldId. Måste finnas under scaffoldens variants/."
+    },
+    "expectedStarterId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Resolverns förväntade starter härledd från selectedScaffoldId via planning.SCAFFOLD_TO_STARTER. Närvarande endast när mapping finns. produce_site_plan är fortsatt canonical för faktisk starter-resolution."
+    },
+    "requestedCapabilities": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "Normaliserade capability-slugs från overlay mustHave/CTA/branch + taxonomy. Måste finnas i capability-map.v1.json eller registreras som warning."
+    },
+    "candidateDossiers": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "Dossier-kandidater taxonomin föreslår för kategorin. Är inte selectedDossiers — planning/capability-filter har sista ordet om vilka som faktiskt monteras."
+    },
+    "fallbackWarnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "category-unknown",
+              "category-planned",
+              "category-fallback",
+              "category-disabled",
+              "scaffold-runtime-missing",
+              "variant-missing",
+              "starter-mapping-missing",
+              "capability-unknown",
+              "capability-gap",
+              "dossier-missing"
+            ],
+            "description": "Maskinläsbar varningskod. Backoffice/operator får visa förklaring per kod."
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Operator-vänlig beskrivning av varningen."
+          },
+          "categoryId": { "type": "string" },
+          "scaffoldId": { "type": "string" },
+          "capabilityId": { "type": "string" },
+          "dossierId": { "type": "string" }
+        }
+      },
+      "description": "Varningar för planned/fallback/disabled mappningar och saknade dossiers. Tom lista är giltig."
+    },
+    "fieldSources": {
+      "type": "object",
+      "description": "Map från Project Input-fältsökväg (dotted path, t.ex. 'company.name') till källan som vann. Tom map tillåts på degraded paths.",
+      "additionalProperties": {
+        "type": "string",
+        "enum": ["wizard", "scrape", "brief", "taxonomy", "default", "operator", "pinned"]
+      }
+    },
+    "selectionSource": {
+      "type": "string",
+      "enum": ["wizard", "taxonomy", "brief", "default", "fallback"],
+      "description": "Toppnivåkälla för scaffold/variant-beslutet. 'wizard' = explicit kategori; 'taxonomy' = mappad via discovery-taxonomy.v1.json; 'brief' = härledd från Site Brief; 'default' = fallback till local-service-business; 'fallback' = target var inte runtime-aktiv."
+    },
+    "operatorReviewRequired": {
+      "type": "boolean",
+      "description": "Sant när resolvern tror operatorn bör granska beslutet (t.ex. unknown category, capability gap, multi-select med motstridiga branches)."
+    },
+    "rationale": {
+      "type": "string",
+      "description": "Kort, operatör-läsbar förklaring av beslutet. Tomt fält tillåts."
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "Resolverns självskattade säkerhet i beslutet. Reserverat för Backoffice-visning; saknas när resolvern inte beräknar den."
+    }
+  }
+}
