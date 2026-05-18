@@ -630,26 +630,71 @@ _SHOP_CONVERSION_GOALS: frozenset[str] = frozenset(
 _BOOKING_CONVERSION_GOALS: frozenset[str] = frozenset(
     {"booking_request", "book_appointment"}
 )
+_SHOP_BUSINESS_TYPES: frozenset[str] = frozenset(
+    {
+        "e-commerce",
+        "ecommerce",
+        "ecommerce-shop",
+        "ecommerce-store",
+        "online-shop",
+        "shop",
+        "webshop",
+        "webbshop",
+    }
+)
+_BOOKING_BUSINESS_TYPES: frozenset[str] = frozenset(
+    {
+        "hair-salon",
+        "hairdresser",
+        "frisör",
+        "barber",
+        "barber-shop",
+        "naprapat-clinic",
+        "naprapath-clinic",
+        "naprapat",
+        "naprapath",
+        "naprapatklinik",
+        "chiropractor",
+        "chiropractic-clinic",
+        "massage",
+        "massage-therapist",
+        "physiotherapist",
+        "physiotherapy-clinic",
+        "dentist",
+        "dental-clinic",
+        "personal-training",
+        "personal-trainer",
+    }
+)
 
 
 def _hero_cta_variant(dossier: dict) -> str:
     """Return the hero CTA variant key for this Project Input.
 
-    Priority is shop > booking > quote so an ecommerce project with
-    mixed conversion goals still leads with a shopping verb. The
-    scaffold id is consulted as a defensive fallback because operators
-    sometimes pin ``ecommerce-lite`` without filling conversionGoals.
+    Explicit conversion goals win first. Business type is then used as
+    the B100 fallback for short prompts where briefModel leaves
+    ``conversionGoals=[]``. The scaffold id remains the final defensive
+    fallback because operators sometimes pin ``ecommerce-lite`` without
+    filling conversionGoals.
     """
     scaffold_id = (dossier.get("scaffoldId") or "").strip().lower()
+    company = dossier.get("company") or {}
+    business_type = str(company.get("businessType") or "").strip().lower()
     goals = {
         str(goal).strip().lower()
         for goal in (dossier.get("conversionGoals") or [])
         if isinstance(goal, str)
     }
-    if scaffold_id == "ecommerce-lite" or goals & _SHOP_CONVERSION_GOALS:
+    if goals & _SHOP_CONVERSION_GOALS:
         return "shop"
     if goals & _BOOKING_CONVERSION_GOALS:
         return "booking"
+    if business_type in _SHOP_BUSINESS_TYPES:
+        return "shop"
+    if business_type in _BOOKING_BUSINESS_TYPES:
+        return "booking"
+    if scaffold_id == "ecommerce-lite":
+        return "shop"
     return "quote"
 
 
@@ -810,7 +855,7 @@ def render_layout(
         ]
     nav_items = _nav_items_from_scaffold(scaffold_default_routes, dossier_routes)
     if contact_path is None:
-        contact_path = _pick_contact_route(scaffold_default_routes)["path"]
+        contact_path = str(_pick_contact_route(scaffold_default_routes)["path"])
     contact_href = _route_href(contact_path)
     # nav_items entries come from _nav_items_from_scaffold (canonical
     # paths + Swedish labels driven by scaffold_default_routes). Paths go
@@ -1085,6 +1130,14 @@ def render_about(dossier: dict) -> str:
     team = company.get("team", [])
     location = dossier["location"]
     areas_html = ", ".join(location["serviceAreas"])
+    location_section = ""
+    if not _location_is_country_only(location):
+        location_section = (
+            '          <div className="flex flex-col gap-2">\n'
+            '            <h2 className="inline-flex items-center gap-2 text-2xl font-semibold tracking-tight"><MapPin className="size-5" />Områden vi arbetar i</h2>\n'
+            f'            <p className="text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(areas_html)}</p>\n'
+            "          </div>\n"
+        )
     # Demo-baseline-fix 1C (B94): skip the entire team section when no
     # team members are declared, mirroring B66's trustSignals fix.
     # Previously the renderer emitted "Teamet" + an empty <ul>, which
@@ -1126,10 +1179,7 @@ def render_about(dossier: dict) -> str:
         f'            <p className="text-lg text-[color:var(--foreground)] leading-relaxed">{_jsx_safe_string(company["story"])}</p>\n'
         "          </div>\n"
         f"{team_section}"
-        '          <div className="flex flex-col gap-2">\n'
-        '            <h2 className="inline-flex items-center gap-2 text-2xl font-semibold tracking-tight"><MapPin className="size-5" />Områden vi arbetar i</h2>\n'
-        f'            <p className="text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(areas_html)}</p>\n'
-        "          </div>\n"
+        f"{location_section}"
         "        </div>\n"
         "      </section>\n"
         "    </main>\n"

@@ -781,7 +781,7 @@ def test_story_never_uses_notes_for_planner() -> None:
         "B61: English planner prose must not surface in /om-oss copy."
     )
     assert "scope conservative" not in story
-    assert "elektriker" in story
+    assert "elektriker" in story.lower()
     assert "Malmö" in story
 
 
@@ -791,7 +791,8 @@ def test_story_constructs_placeholder_when_notes_missing() -> None:
 
     Demo-baseline-fix 1A-hotfix (B61): the second sentence must not
     contain the dev-jargon phrase "Justera Project Input"; rendered
-    /om-oss copy is for end customers, not operators.
+    /om-oss copy is for end customers, not operators. B99 extends this
+    to the old "Byt ut den här texten" placeholder instruction.
     """
     story = _derive_story(
         business_type="electrician",
@@ -799,12 +800,45 @@ def test_story_constructs_placeholder_when_notes_missing() -> None:
         notes_for_planner=None,
         language="sv",
     )
-    assert "elektriker" in story
+    assert "elektriker" in story.lower()
     assert "Malmö" in story
     assert "Justera Project Input" not in story, (
         "B61: customer copy must not name the Project Input file."
     )
-    assert "Byt ut" in story
+    assert "Byt ut" not in story
+
+
+@pytest.mark.tooling
+def test_story_uses_customer_safe_notes_for_planner() -> None:
+    """B99: real-ish safe planner notes should beat generic fallback copy."""
+    story = _derive_story(
+        business_type="electrician",
+        location_hint="Malmö",
+        notes_for_planner="Lokal elektriker med fokus på tydlig kontakt.",
+        language="sv",
+    )
+    assert story == "Lokal elektriker med fokus på tydlig kontakt."
+    assert "Byt ut" not in story
+    assert "Project Input" not in story
+
+
+@pytest.mark.tooling
+def test_story_discards_internal_notes_for_planner() -> None:
+    """B61/B99: internal planner orientation is still not public copy."""
+    story = _derive_story(
+        business_type="electrician",
+        location_hint="Malmö",
+        notes_for_planner=(
+            "Likely a Swedish electrician website targeting Malmö; prompt "
+            "is minimal, so keep scope conservative and local."
+        ),
+        language="sv",
+    )
+    assert "Likely" not in story
+    assert "prompt is minimal" not in story
+    assert "Byt ut" not in story
+    assert "elektriker" in story.lower()
+    assert "Malmö" in story
 
 
 @pytest.mark.tooling
@@ -1025,19 +1059,45 @@ def test_tagline_never_uses_notes_for_planner() -> None:
     assert "Likely a Swedish" not in tagline
     assert "scope conservative" not in tagline
     assert tagline != leak
-    assert tagline.startswith("Lokal elektriker")
+    assert tagline == "Tydlig hjälp med elarbeten"
 
 
 @pytest.mark.tooling
 def test_derive_tagline_builds_from_business_type_and_location() -> None:
-    """`_derive_tagline` returns a short Swedish phrase for typical briefs."""
+    """B103: tagline should add a concrete angle instead of repeating H1."""
     tagline = _derive_tagline(
         business_type="electrician",
         location_hint="Malmö",
         language="sv",
     )
-    assert tagline == "Lokal elektriker i Malmö"
+    assert tagline == "Tydlig hjälp med elarbeten"
+    assert tagline != "Lokal elektriker i Malmö"
     assert len(tagline) <= 140
+
+
+@pytest.mark.tooling
+def test_derive_tagline_booking_businesses_do_not_repeat_h1() -> None:
+    """B103: short booking prompts need useful USP-style taglines."""
+    hair = _derive_tagline(
+        business_type="hair-salon",
+        location_hint="Göteborg",
+        language="sv",
+    )
+    naprapat = _derive_tagline(
+        business_type="naprapat-clinic",
+        location_hint="Stockholm",
+        language="sv",
+    )
+    swedish_naprapat = _derive_tagline(
+        business_type="naprapatklinik",
+        location_hint="Stockholm",
+        language="sv",
+    )
+    assert hair == "Klippning, färg och styling med enkel bokning"
+    assert naprapat == "Behandling och rådgivning med enkel bokning"
+    assert swedish_naprapat == "Behandling och rådgivning med enkel bokning"
+    assert hair != "Lokal frisör i Göteborg"
+    assert naprapat != "Lokal naprapatklinik i Stockholm"
 
 
 @pytest.mark.tooling

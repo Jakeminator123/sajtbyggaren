@@ -95,6 +95,7 @@ _BUSINESS_TYPE_LABEL_SV: dict[str, str] = {
     "naprapath": "naprapatklinik",
     "naprapath-clinic": "naprapatklinik",
     "naprapat-clinic": "naprapatklinik",
+    "naprapatklinik": "naprapatklinik",
     "chiropractor": "kiropraktor",
     "chiropractic-clinic": "kiropraktor",
     "physiotherapist": "sjukgymnast",
@@ -127,6 +128,83 @@ _BUSINESS_TYPE_LABEL_SV: dict[str, str] = {
     "boat-dealer": "båthandel",
     "egg-farm": "äggproducent",
 }
+
+_TAGLINE_BY_BUSINESS_TYPE_SV: dict[str, str] = {
+    "electrician": "Tydlig hjälp med elarbeten",
+    "electrical-services": "Tydlig hjälp med elarbeten",
+    "electrical-contractor": "Tydlig hjälp med elarbeten",
+    "hairdresser": "Klippning, färg och styling med enkel bokning",
+    "hair-salon": "Klippning, färg och styling med enkel bokning",
+    "frisör": "Klippning, färg och styling med enkel bokning",
+    "barber": "Klippning och skäggvård med enkel bokning",
+    "barber-shop": "Klippning och skäggvård med enkel bokning",
+    "naprapat": "Behandling och rådgivning med enkel bokning",
+    "naprapath": "Behandling och rådgivning med enkel bokning",
+    "naprapath-clinic": "Behandling och rådgivning med enkel bokning",
+    "naprapat-clinic": "Behandling och rådgivning med enkel bokning",
+    "naprapatklinik": "Behandling och rådgivning med enkel bokning",
+    "chiropractor": "Behandling och rådgivning med enkel bokning",
+    "physiotherapist": "Behandling och rådgivning med enkel bokning",
+    "physiotherapy-clinic": "Behandling och rådgivning med enkel bokning",
+    "shop": "Utvalt sortiment med enkel beställning",
+    "online-shop": "Utvalt sortiment med enkel beställning",
+    "ecommerce": "Utvalt sortiment med enkel beställning",
+    "e-commerce": "Utvalt sortiment med enkel beställning",
+    "ecommerce-shop": "Utvalt sortiment med enkel beställning",
+    "ecommerce-store": "Utvalt sortiment med enkel beställning",
+    "webbshop": "Utvalt sortiment med enkel beställning",
+    "ceramics-studio": "Keramik med tydlig känsla och enkel kontakt",
+    "pottery": "Keramik med tydlig känsla och enkel kontakt",
+}
+
+_TAGLINE_BY_BUSINESS_TYPE_EN: dict[str, str] = {
+    "electrician": "Clear help with electrical work",
+    "electrical-services": "Clear help with electrical work",
+    "electrical-contractor": "Clear help with electrical work",
+    "hairdresser": "Haircuts, colour and styling with simple booking",
+    "hair-salon": "Haircuts, colour and styling with simple booking",
+    "barber": "Haircuts and grooming with simple booking",
+    "barber-shop": "Haircuts and grooming with simple booking",
+    "naprapat": "Treatment and guidance with simple booking",
+    "naprapath": "Treatment and guidance with simple booking",
+    "naprapath-clinic": "Treatment and guidance with simple booking",
+    "naprapat-clinic": "Treatment and guidance with simple booking",
+    "chiropractor": "Treatment and guidance with simple booking",
+    "physiotherapist": "Treatment and guidance with simple booking",
+    "physiotherapy-clinic": "Treatment and guidance with simple booking",
+    "shop": "A curated range with simple ordering",
+    "online-shop": "A curated range with simple ordering",
+    "ecommerce": "A curated range with simple ordering",
+    "e-commerce": "A curated range with simple ordering",
+    "ecommerce-shop": "A curated range with simple ordering",
+    "ecommerce-store": "A curated range with simple ordering",
+    "ceramics-studio": "Ceramics with a clear style and simple ordering",
+    "pottery": "Ceramics with a clear style and simple ordering",
+}
+
+_PLANNER_NOTE_BLOCKLIST = frozenset(
+    {
+        "likely",
+        "prompt",
+        "brief",
+        "planner",
+        "project input",
+        "phase",
+        "keep scope",
+        "minimal",
+        "replace this",
+        "site",
+        "website",
+        "webbplats",
+        "hemsida",
+        "sajt",
+        "företagswebb",
+        "selling",
+        "focus on",
+        "byt ut",
+        "uppdatera",
+    }
+)
 
 _SCAFFOLD_LOCAL_SERVICE = ("local-service-business", "nordic-trust")
 _SCAFFOLD_ECOMMERCE = ("ecommerce-lite", "clean-store")
@@ -338,70 +416,85 @@ def _derive_story(
     surfaced English planner instructions to end customers (B61,
     demo-baseline-fix 1A-hotfix).
 
-    The fix removes `notes_for_planner` from the story derivation
-    entirely; the parameter is kept on the signature for backwards
-    compatibility but is intentionally unused. Story copy is now built
-    from `businessTypeGuess` + `locationHint` only, mirroring
-    `_derive_company_name`. Operators still edit the Project Input file
-    to override the story before sharing the build.
+    B99 extends the B61 fix: planner notes may be useful when they are
+    already customer-safe, but internal orientation ("Likely...", "prompt
+    is minimal", etc.) must still never render. If the note is not safe
+    customer copy, fall back to neutral public copy rather than an
+    operator instruction such as "Byt ut den här texten...".
     """
-    _ = notes_for_planner  # B61: never render brief.notesForPlanner here.
+    note = _customer_safe_planner_note(notes_for_planner)
+    if note:
+        return note[:600]
+
     business_label = _company_business_label(business_type, language)
     location = (location_hint or "").strip()
     if language == "en":
         if business_label and location:
             base = (
-                f"Site for a {business_label} in {location}. "
-                "Replace this paragraph with your own story so visitors "
-                "learn who you are."
+                f"{_capitalize_first(business_label)} in {location} with "
+                "a clear offer, simple contact route and a focused first "
+                "step for visitors."
             )
         elif business_label:
             base = (
-                f"Site for a {business_label}. Replace this paragraph "
-                "with your own story so visitors learn who you are."
+                f"{_capitalize_first(business_label)} with a clear offer, "
+                "simple contact route and a focused first step for visitors."
             )
         elif location:
             base = (
-                f"Site based in {location}. Replace this paragraph "
-                "with your own story so visitors learn who you are."
+                f"A local business in {location} with a clear offer and "
+                "simple contact route for visitors."
             )
         else:
             base = (
-                "Replace this paragraph with your own story so visitors "
-                "learn who you are."
+                "A business website with a clear offer, simple contact "
+                "route and focused next step for visitors."
             )
         return base[:600]
 
     if business_label and location:
         base = (
-            f"Vi är en {business_label} i {location}. "
-            "Byt ut den här texten mot er egen berättelse så besökarna "
-            "lär känna er."
+            f"{_capitalize_first(business_label)} i {location} med tydligt "
+            "erbjudande, enkel kontaktväg och ett fokuserat nästa steg för "
+            "besökaren."
         )
     elif business_label:
         base = (
-            f"Vi är en {business_label}. "
-            "Byt ut den här texten mot er egen berättelse så besökarna "
-            "lär känna er."
+            f"{_capitalize_first(business_label)} med tydligt erbjudande, "
+            "enkel kontaktväg och ett fokuserat nästa steg för besökaren."
         )
     elif location:
         base = (
-            f"Vi finns i {location}. "
-            "Byt ut den här texten mot er egen berättelse så besökarna "
-            "lär känna er."
+            f"Lokalt företag i {location} med tydligt erbjudande och enkel "
+            "kontaktväg för besökaren."
         )
     else:
         base = (
-            "Byt ut den här texten mot er egen berättelse så besökarna "
-            "lär känna er."
+            "Företagshemsida med tydligt erbjudande, enkel kontaktväg och "
+            "ett fokuserat nästa steg för besökaren."
         )
     return base[:600]
+
+
+def _customer_safe_planner_note(note: str | None) -> str | None:
+    """Return planner note text only when it is safe public copy."""
+    cleaned = " ".join((note or "").split())
+    if not cleaned:
+        return None
+    lower = cleaned.lower()
+    if any(token in lower for token in _PLANNER_NOTE_BLOCKLIST):
+        return None
+    if not cleaned.endswith((".", "!", "?")):
+        cleaned = f"{cleaned}."
+    return cleaned
 
 
 def _derive_tagline(
     *,
     business_type: str | None,
     location_hint: str | None,
+    notes_for_planner: str | None = None,
+    services_mentioned: list[str] | None = None,
     language: str,
 ) -> str:
     """Build a short customer-facing tagline from brief signals only.
@@ -420,24 +513,44 @@ def _derive_tagline(
     The schema requires `company.tagline` with minLength=1, maxLength=140,
     so the helper always returns a non-empty string capped at 140 chars.
     """
+    _ = notes_for_planner  # B61: never render planner orientation in tagline.
+    slug = (business_type or "").strip().lower()
+    mapped = (
+        _TAGLINE_BY_BUSINESS_TYPE_EN.get(slug)
+        if language == "en"
+        else _TAGLINE_BY_BUSINESS_TYPE_SV.get(slug)
+    )
+    if mapped:
+        return mapped[:140]
+
+    services = [
+        _service_label_from_text(service)
+        for service in (services_mentioned or [])
+        if isinstance(service, str) and service.strip()
+    ]
+    if services:
+        first_service = services[0].lower()
+        tagline = (
+            f"Help with {first_service}"
+            if language == "en"
+            else f"Hjälp med {first_service}"
+        )
+        return tagline[:140]
+
     business_label = _company_business_label(business_type, language)
     location = (location_hint or "").strip()
     if language == "en":
-        if business_label and location:
-            tagline = f"Local {business_label} in {location}"
-        elif business_label:
-            tagline = f"Your local {business_label}"
+        if business_label:
+            tagline = f"Clear next step for {business_label}"
         elif location:
-            tagline = f"Local site in {location}"
+            tagline = f"Clear local help in {location}"
         else:
             tagline = "Welcome"
     else:
-        if business_label and location:
-            tagline = f"Lokal {business_label} i {location}"
-        elif business_label:
-            tagline = f"Din lokala {business_label}"
+        if business_label:
+            tagline = f"Tydlig väg vidare för {business_label}"
         elif location:
-            tagline = f"Lokal sajt i {location}"
+            tagline = f"Tydlig lokal hjälp i {location}"
         else:
             tagline = "Välkommen"
     return tagline[:140]
@@ -720,11 +833,10 @@ def site_brief_to_project_input(
         brief.get("locationHint"), language
     )
     # Demo-baseline-fix 1A (T2) + 1A-hotfix (B61): name, tagline and
-    # story are now derived from brief signals only. `original_prompt`
-    # is not used (would re-introduce raw-prompt-on-H1) and
-    # `notesForPlanner` is not used (would leak briefModel's English
-    # planner orientation onto customer-facing /om-oss copy and the
-    # tagline strip).
+    # story are derived from brief signals only. `original_prompt` is not
+    # used (would re-introduce raw-prompt-on-H1). B99 allows
+    # notesForPlanner into story only when it is already safe public copy;
+    # internal planner orientation still gets discarded.
     _ = original_prompt
     company_name = _derive_company_name(
         company_name=brief.get("companyName"),
@@ -735,6 +847,8 @@ def site_brief_to_project_input(
     tagline = _derive_tagline(
         business_type=business_type,
         location_hint=location_hint,
+        notes_for_planner=brief.get("notesForPlanner"),
+        services_mentioned=brief.get("servicesMentioned") or [],
         language=language,
     )
     story = _derive_story(

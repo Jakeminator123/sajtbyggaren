@@ -546,6 +546,51 @@ def test_hero_cta_label_shop_beats_booking_in_priority() -> None:
 
 
 @pytest.mark.tooling
+def test_hero_cta_label_uses_booking_business_type_fallback() -> None:
+    """B100: short booking prompts may have conversionGoals=[] from briefModel."""
+    from scripts.build_site import _hero_cta_label
+
+    for business_type in ("hair-salon", "naprapat-clinic", "naprapatklinik", "dentist"):
+        dossier = {
+            "language": "sv",
+            "scaffoldId": "local-service-business",
+            "conversionGoals": [],
+            "company": {"businessType": business_type},
+        }
+        assert _hero_cta_label(dossier) == "Boka tid"
+
+
+@pytest.mark.tooling
+def test_hero_cta_label_uses_shop_business_type_fallback() -> None:
+    """B100: commerce business types should shop even without goals."""
+    from scripts.build_site import _hero_cta_label
+
+    dossier = {
+        "language": "sv",
+        "scaffoldId": "local-service-business",
+        "conversionGoals": [],
+        "company": {"businessType": "webshop"},
+    }
+
+    assert _hero_cta_label(dossier) == "Shoppa nu"
+
+
+@pytest.mark.tooling
+def test_hero_cta_label_explicit_goals_beat_business_type_fallback() -> None:
+    """B100: explicit conversionGoals remain the highest priority."""
+    from scripts.build_site import _hero_cta_label
+
+    dossier = {
+        "language": "sv",
+        "scaffoldId": "local-service-business",
+        "conversionGoals": ["booking_request"],
+        "company": {"businessType": "webshop"},
+    }
+
+    assert _hero_cta_label(dossier) == "Boka tid"
+
+
+@pytest.mark.tooling
 def test_render_home_emits_scaffold_aware_hero_cta_for_ecommerce() -> None:
     """B96: render_home must surface the shop verb in the hero CTA
     when the Project Input pins ecommerce-lite."""
@@ -670,6 +715,34 @@ def test_render_about_keeps_team_section_when_members_present() -> None:
     assert "Teamet" in output
     assert "Test Person" in output
     assert "Roll" in output
+
+
+@pytest.mark.tooling
+def test_render_about_omits_service_areas_when_country_only() -> None:
+    """B104: /om-oss should mirror hero country-only suppression."""
+    from scripts.build_site import render_about
+
+    dossier = _minimal_dossier()
+    dossier["location"] = {
+        "city": "Sverige",
+        "country": "Sverige",
+        "serviceAreas": ["Sverige"],
+    }
+    output = render_about(dossier)
+
+    assert "Områden vi arbetar i" not in output
+    assert "<MapPin" not in output
+
+
+@pytest.mark.tooling
+def test_render_about_keeps_service_areas_for_real_city() -> None:
+    """B104 positive lock: real local service areas still render."""
+    from scripts.build_site import render_about
+
+    output = render_about(_minimal_dossier())
+
+    assert "Områden vi arbetar i" in output
+    assert "Norrmalm" in output
 
 
 # ---------------------------------------------------------------------------
