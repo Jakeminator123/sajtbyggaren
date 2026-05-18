@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 19 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 79 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 21 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 81 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -284,6 +284,38 @@ ett stängt (B112) i samma pass.
   modellverifiering från mock-fallback. Källa: extern reviewer
   2026-05-18. Fix: open. Test: open.
 
+### Extern reviewer-triage 2026-05-18 (post-PR-#31 christopher-ui-integration)
+
+Reviewer-pass mot mainline efter att PR #31 (`feat(viewser): integrate
+christopher-ui discovery and asset workflow`, merge `3f4543d`,
+integration `0510146`) landade. Fyra fynd, två stängda (B113, B114)
++ två öppna i samma pass.
+
+- **`B115` Låg** - `SM_hero.mp4` (1.5 MB) och `LOGO_SM2.0.png`
+  (162 KB) finns både under `apps/viewser/public/` och repo-roten
+  `/public/` efter PR #31. Ingen `.gitattributes`/Git LFS — båda
+  kopiorna är vanliga git-blobs. Totalt ~3.4 MB duplicerat i historiken.
+  Inte runtime-bugg, men onödig repo-vikt och framtida driftkälla om
+  kopiorna glider isär (operatör uppdaterar logon i en bara). Fixet
+  kräver beslut om vilken plats som är kanonisk: `apps/viewser/public/`
+  serveras direkt av Next.js dev-servern och är troligen den enda
+  faktiskt använda; `/public/` på repo-roten har inget Next.js-app
+  som monterar den. Källa: extern reviewer 2026-05-18. Fix: open.
+  Test: open.
+- **`B116` Låg** - `apps/viewser/lib/build-runner.ts` har en modul-
+  global `let inFlight: Promise<unknown> | null = null;` som
+  serialiserar alla bygg-anrop globalt. Kombinerat med
+  `BUILD_TIMEOUT_MS = 600_000` (10 min, höjt från 3 min i PR #31 för
+  att kalla `.generated/<siteId>/`-byggen ska hinna med `npm install`
+  + Next 16 webpack-build) innebär det att en hängd build blockerar
+  alla nya prompter i upp till 10 minuter. Inte säkerhets- eller
+  korrekthets-bugg, men UX-risk: operatör som triggar ett hängande
+  bygge ser sin nästa prompt rejection:as som 409 conflict i upp till
+  10 minuter utan tydlig återkoppling. Lösningar är icke-triviala
+  (cancel-knapp, progress-baserad early-detection, eller per-projekt
+  i stället för global mutex). Källa: extern reviewer 2026-05-18.
+  Fix: open. Test: open.
+
 ### Övriga öppna
 
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
@@ -388,6 +420,50 @@ PR #28 / `885431b` stängde 15 buggar (alla flyttade till "Stängda" 2026-05-18 
 Lokal mainline-commit `b5ee710` stängde B88 (kontakt-placeholder dev-jargong), B94 (tom team-grid på `/om-oss`), B95 (landnamn som hero-ortstag) och B96 (scaffold-omedveten hero-CTA). Inga andra B-IDs påverkade. Kvar från re-Verifierings-Scout 2026-05-15 är B97 + B98 (låg-impact). Re-Verifierings-Scout med samma fyra prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`) körs efter denna bump för att jämföra mot 5.54-baselinen. Förväntad effekt: snitt 6.5-7.0/10.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B114` Låg** (stängd 2026-05-18, post-PR-#31 reviewer-triage) -
+  `apps/viewser/app/api/upload-asset/route.ts` POST-handler kallade
+  `await request.formData()` på rad 47 innan storlekscheck mot
+  `file.size > MAX_FILE_BYTES` (10 MB) på rad 83. En multi-hundra-MB
+  multipart-payload buffrades därför fullt i minnet bara för att
+  sedan rejection:as i size-checken. Praktisk konsekvens är mild
+  eftersom routen är gated av `assertLocalhost(request)` på rad 42,
+  så DoS-vektorn kräver att operatören eller en lokal process redan
+  kan tala med loopback. Reviewer flaggade det som "MAX_FILE_BYTES
+  vs rå upload" på samma pass som B113. **Fix:** läs
+  `Content-Length`-headern före `request.formData()` och rejection:a
+  deklarerade payloads större än `MAX_FILE_BYTES * 2` (ger
+  multipart-boundary + extra form-field-overhead nära per-fil-gränsen).
+  Existing `file.size`-check kvarstår och enforcar exakta 10 MB-per-fil-
+  ceilingen för välformade uploads nära tröskeln. Pre-existerande
+  sedan PR #31 (christopher-ui-integration, `0510146`). Källa: extern
+  reviewer 2026-05-18 (post-PR-#31). Fix: `fe9748e`. Test: open (mild
+  praktisk konsekvens + localhost-gated, så enbart källkods-läsning i
+  PR-review räcker; manuell verifiering möjlig via stor multipart-
+  curl mot lokal dev-server).
+
+- **`B113` Hög** (stängd 2026-05-18, post-PR-#31 reviewer-triage) -
+  `scripts/scrape_site.py:fetch_html` kallade
+  `requests.get(..., allow_redirects=True, ...)`. `validate_ssrf()`
+  kördes bara på den ursprungliga operatör-supplied URL:n, så en
+  publik host som 302:ade till en intern adress (AWS metadata
+  `169.254.169.254`, loopback `127.0.0.1:8501` Streamlit-backofficen,
+  link-local, eller `file:///etc/passwd` via icke-HTTPS-scheman)
+  hämtades utan ny SSRF-koll. Klassisk SSRF via redirect chain.
+  Reviewer flaggade det som "den skarpaste faktiska buggen" på post-
+  PR-#31-passet. **Fix:** följ redirects manuellt, hop-by-hop. Varje
+  Location-target går nu genom `validate_ssrf()` + scheme-allowlist
+  (`http`/`https` bara) innan nästa request fyrar. Max 5 hops för
+  att begränsa runaway redirect-loops. Pre-existerande sedan PR #31
+  (christopher-ui-integration, `0510146`). Källa: extern reviewer
+  2026-05-18 (post-PR-#31). Fix: `cd03897`. Test:
+  `tests/test_scrape_site_ssrf.py::test_fetch_html_blocks_redirect_to_loopback`,
+  `tests/test_scrape_site_ssrf.py::test_fetch_html_blocks_redirect_to_link_local_metadata`,
+  `tests/test_scrape_site_ssrf.py::test_fetch_html_blocks_redirect_to_file_scheme`,
+  `tests/test_scrape_site_ssrf.py::test_fetch_html_follows_public_redirect_chain`,
+  `tests/test_scrape_site_ssrf.py::test_fetch_html_caps_redirect_loops`,
+  `tests/test_scrape_site_ssrf.py::test_fetch_html_does_not_set_allow_redirects_true`
+  (source-lock).
 
 - **`B112` Låg** (stängd 2026-05-18, extern reviewer-triage) -
   `scripts/prompt_to_project_input.py:_product_category_name` joinade

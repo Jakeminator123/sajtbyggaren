@@ -67,6 +67,7 @@ COMMON_WORDS = {
     "True", "False", "None", "Boolean", "String", "Number", "Object", "Array",
     "ReadonlyArray",
     "Promise", "Function", "Map", "Set", "Date", "Error", "JSON", "Buffer",
+    "MagicMock",
     "Path", "List", "Dict", "Tuple", "Optional", "Any", "Union", "Type",
     "TypeError", "ValueError", "RuntimeError", "Exception", "Iterator",
     "ArgumentParser", "ImportError", "SimpleNamespace", "UnicodeDecodeError", "Input", "Output",
