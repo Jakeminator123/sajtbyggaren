@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `01c0cfb` (2026-05-18, lokal mainline-commit `feat(variants): add candidate generator`. Konvention för denna rad: SHA pekar på senaste produkt-/governance-commit; efterföljande Steward-bump-commit räknas som "within bump tolerance" av `focus_check.py`. Commiten lägger till `scripts/generate_variant_candidate.py` som ett separat CLI för draftade Scaffold Variant-kandidater under `data/variant-candidates/`, ny `governance/schemas/variant.schema.json`, `validate_variant()` i `packages/generation/artifacts/validate.py`, `variantModel` i `governance/policies/llm-models.v1.json`, variant-kontrakt-referens i `scaffold-contract.v1.json` och tester i `tests/test_variant_candidate_generator.py`. CLI:t läser scaffoldens canonical filuppsättning, befintliga variants och schema, använder OpenAI när `OPENAI_API_KEY` finns eller deterministisk fallback via `--no-llm`, och skriver `enabled:false` som default. Guards gröna: ruff, full pytest (3 skipped slow/E2E), governance_validate, rules_sync, check_term_coverage och CLI-smoke till temp-mapp. Föregående produktcommit: `9cc3067` (`fix(builder): close demo-baseline-fix 1D (B99 B100 B103 B104)`) med aktuell buggräkning 17 aktiva, 15 misplaced, 6 unknown, 58 stängda. `backup-23` finns från 1D-sprinten (lokalt + push).)
+Last verified state: `bc43eb8` (2026-05-18, lokal mainline-commit `fix(builder): close demo-baseline-fix 1E (B105 B106 B107)`. Konvention för denna rad: SHA pekar på senaste produkt-/governance-commit; efterföljande Steward-bump-commit räknas som "within bump tolerance" av `focus_check.py`. 1E är en kort riktad fix efter Re-Verifierings-Scout 4:s 6.59/10-resultat: B105 ersätter publik service-filler (`"kontakta oss för mer information"`) med branschspecifika service summaries/placeholder services, B106 gör e-handelsnamn produktkategori-baserade (keramik → keramikbutik) när explicit företagsnamn saknas, och B107 normaliserar businessType-varianter innan CTA-fallback (`naprapat*`/`naprapath*`, `webshop`/`webbshop`, etc.). Smoke 2026-05-18 med real `briefModel`: `elektriker Malmö` får elservice + el-summary utan filler-copy; `liten e-handel som säljer keramik` får H1 keramikbutik och commerce-summary. Guards gröna: ruff, full pytest (3 skipped slow/E2E), governance_validate, rules_sync, check_term_coverage, list_open_bugs. Aktuell räkning efter 1E: 17 aktiva, 15 misplaced, 6 unknown, 61 stängda. `backup-24` finns från 1E-sprinten (lokalt + push). Föregående mainline-commit: `01c0cfb` (`feat(variants): add candidate generator`).)
 
 Föregående produktcommit: `ab74c2a` (2026-05-15, demo-baseline-fix 1A landade direkt på `main`. Konvention för denna rad: SHA pekar på senaste produkt-/kodcommit; den efterföljande Steward-bump-commiten själv (denna rad-ändring) räknas som "within bump tolerance" av `focus_check.py` och får inte ge en till bump-rundgång. `feat(builder): demo-baseline-fix 1A` (`ab74c2a`) stängde Scout-auditens topp 3 demo-blockers i ett pass: (1) `/_global-error` prerender-fel (regression/variant av B41) löst genom att lägga explicit `app/global-error.tsx` i `data/starters/marketing-base/app/` och `data/starters/commerce-base/app/` med `"use client"` och inga third-party-imports - verifierat end-to-end via `painter-palma` (marketing-base) + `atelje-bird` (commerce-base) som båda nu landar `status: ok`, `quality: ok`, `npm install + npm run build` gröna; (2) rå prompt läckte ut som `company.name`/`company.story` på rendererade sajter - `scripts/prompt_to_project_input.py` skriver om `_company_name_from_prompt` till `_derive_company_name` (läser bara `brief.businessTypeGuess` + `brief.locationHint` via en liten svensk business-type label-map: electrician -> elektriker, hairdresser -> frisör, ceramics-studio -> keramikstudio, ...) och `_derive_story` (föredrar `brief.notesForPlanner`, fallback till strukturerad svensk platshållartext, aldrig raw prompt); (3) svenska tecken förstördes i service-labels (`F Rska Gg Direkt Fr N G Rden`) - `_slugify_label` NFKD-foldar för id-fältet (`färska ägg -> farska-agg`) men `_service_label_from_text` behåller å/ä/ö i labeln, och brief `services_mentioned` Field-description + system-prompt frågar nu efter natural-language fraser på originalspråk istället för kebab-case English slugs. `slugify_site_id` NFKD-foldar också före substitution så `elektriker i Malmö` ger `elektriker-i-malmo-<tail>` (förut `elektriker-i-malm-<tail>` med `ö` kollapsad till dash). Regression-tester: `test_company_name_and_story_never_contain_raw_prompt` (låser exakta tokens från den failande real-runen `enehmsida-som-s-ljer-b-t-661e23`: `Enehmsida`, `båtari`, `2 sidor`), `test_swedish_service_labels_preserve_case` (`färska ägg direkt från gården -> Färska ägg direkt från gården` som label, ASCII-only slug), `test_slugify_label_ascii_folds_swedish_chars`, `test_company_name_uses_swedish_business_type_mapping`, `test_story_prefers_notes_for_planner` plus fyra fallback-tester. Out-of-scope per Scout/coach: ingen Project DNA / semantic follow-up merge, ingen StackBlitz/COOP/COEP, inga nya starters, ingen docs/rules-sprint utöver denna bump. `backup-19` skapad från synkad `main` innan sprintarbetet (lokalt + push). Föregående mainline-pushar samma dag: `f29688c` (Steward-bump efter rules-commit), `d072c98` (powershell-glob + cli-safety-belt rules), `8d45140` (Steward-sync efter prune-sprinten), `2acdeca` (prune-script + tester), `7b90c0c` (Steward-sync efter B60), `65f052a` (B60 fix), `dd5464f` (post-PR-#27 sanity-bump), `e057fbd` (PR #27 follow-up versions squash-merge). `backup-15` t.o.m. `backup-19` finns lokalt och på origin. Inga öppna PRs.)
 
@@ -41,7 +41,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid lokal mainline-commit `01c0cfb` (`feat(variants): add candidate generator`) ovanpå 1D-fixen `9cc3067`. Variant-generatorn är ett smalt design-tooling-spår: schema + validering + CLI + tester, inte Backoffice ännu och inte canonical promotion. Den påverkar inte demo-baseline-renderingen. 1D är fortfarande senaste demo-kvalitetsfix: B99 tar bort publik story-instruktion/planner-meta, B100 ger booking-/commerce-CTA via `businessType` fallback, B103 ersätter H1-upprepande tagline med branschspecifika USP-taglines, och B104 gör `/om-oss` country-only-medveten. Nästa steg för demo-kvalitet är Re-Verifierings-Scout 4 med samma fyra demo-prompter.
+`main` är vid lokal mainline-commit `bc43eb8` (`fix(builder): close demo-baseline-fix 1E (B105 B106 B107)`) ovanpå variant-generatorn `01c0cfb` och 1D-fixen `9cc3067`. 1E tar bort den sista tydliga demo-baseline-blockern från Scout 4: generisk service-filler på elektriker-caset, plus e-handel-H1 webbshop och businessType-normalisering för CTA robusthet. Variant-generatorn är fortsatt ett separat design-tooling-spår: schema + validering + CLI + tester, inte Backoffice ännu och inte canonical promotion. Nästa steg för demo-kvalitet är Re-Verifierings-Scout 5 med samma fyra demo-prompter.
 
 Föregående baseline: PR #28 squash-merge (`885431b`) för demo-baseline-fix 1B + bug-sweep. 1B stängde must-/should-land-spåret och alla nice-to-have som hanns med: B64/B65 (Site Brief company/contact-fält + ADR 0022), B66 (tom trustSignals renderar inte "Varför oss"), B69 (Quality Gate route-scan får alla emitterade default-routes inkl. `/om-oss`; aggregate-status ändrades medvetet inte), B70 (IPv6 localhost Host-header), B71 (follow-up merge-docstring + byte-stabil story/tagline/tone), B72 (`listRuns` slicar innan JSON-läsning), B73 (tagline-fallback utan Project Input-jargong), B74 (dev_generate codegen routes), B75 (`additionalProperties: false` i Project Input-schema), B76 (Run Details visar site-plan), B77 (dossier-komponenter får inte skugga starter-komponenter), B78 (realpath-baserad dossier-whitelist), B79 (svensk selectedDossiers-rationale) och B83 (service slug-kollisioner får suffix). PR #28 verifierades med ruff, full pytest, governance/rules/term checks, Viewser `npm run build` och två isolerade smoke-builds (`elektriker Malmö`, `frisör Göteborg`) som båda landade `status=ok`, `quality=ok`. Bugbot var inte aktiv på PR:n; GitHub governance, builder-smoke och secret-scan var gröna före merge.
 
@@ -295,9 +295,10 @@ också kvar på origin men är fri att radera i nästa Steward-städ.
 
 ## Current active sprint
 
-Ingen pågående produktimplementation på `main`. Variant-generatorn landade lokalt i `01c0cfb` som separat CLI/schemagard för draftade Scaffold Variant-kandidater; Backoffice-koppling och promotion-flöde är inte byggt än. Demo-baseline-fix 1D landade i `9cc3067` och stängde B99/B100/B103/B104 från Re-Verifierings-Scout 3. B101/B102 lämnas öppna med låg prioritet (commerce-CTA route/text-mismatch i `render_home`/`render_products`), liksom B97/B98/B89-B93. Smoke med real `briefModel` verifierade att `frisör Göteborg` och `naprapatklinik Stockholm` får "Boka tid", att e-handel får "Shoppa nu", och att story/tagline-copyn inte längre innehåller "Byt ut den här texten" eller H1-upprepande "Lokal {label} i {city}". Nästa konkreta uppgift är **Re-Verifierings-Scout 4** — se "Next action".
+Ingen pågående produktimplementation på `main`. Demo-baseline-fix 1E landade lokalt i `bc43eb8` och stängde B105/B106/B107 från Re-Verifierings-Scout 4. B101/B102 lämnas öppna med låg prioritet (commerce-CTA route/text-mismatch i `render_home`/`render_products`), liksom B97/B98/B89-B93. Variant-generatorn finns i `01c0cfb` som separat CLI/schemagard för draftade Scaffold Variant-kandidater; Backoffice-koppling och promotion-flöde byggs av separat agent och är inte del av 1E. Nästa konkreta uppgift är **Re-Verifierings-Scout 5** — se "Next action".
 
-Tidigare klara sprintar: demo-baseline-fix 1D (B99 B100 B103 B104),
+Tidigare klara sprintar: demo-baseline-fix 1E (B105 B106 B107),
+demo-baseline-fix 1D (B99 B100 B103 B104),
 demo-baseline-fix 1C (B88 B94 B95 B96), A-mini cleanup
 (B51/B52/B54/B55 + B53 registrerad), Prompt-till-sajt MVP v1,
 mini-sprinten som gjorde PromptBuilder till enda primära promptyta, follow-up
@@ -313,7 +314,7 @@ PR #28 demo-baseline-fix 1B + bug-sweep, demo-baseline-fix 1A-hotfix.
 
 ## Next action - direktiv till nästa agent
 
-**Re-Verifierings-Scout 4 efter demo-baseline-fix 1D.** Kör samma
+**Re-Verifierings-Scout 5 efter demo-baseline-fix 1E.** Kör samma
 fyra demo-prompter som tidigare pass:
 
 1. `elektriker Malmö`
@@ -321,7 +322,7 @@ fyra demo-prompter som tidigare pass:
 3. `naprapatklinik Stockholm`
 4. `liten e-handel som säljer keramik`
 
-Kontrollera rendered output mot 1D-fixarna:
+Kontrollera rendered output mot 1E + 1D-fixarna:
 
 - Ingen publik story innehåller "Byt ut den här texten", intern
   planner-meta (`prompt`, `brief`, `webbplats`, `focus on`, etc.) eller
@@ -332,18 +333,22 @@ Kontrollera rendered output mot 1D-fixarna:
 - Tagline upprepar inte H1 som "Lokal {label} i {city}".
 - `/om-oss` visar inte "Områden vi arbetar i: Sverige" för country-only
   e-handel, men riktiga serviceområden renderas fortfarande.
+- Elektriker-caset har inte längre service-summaryn
+  `"Konsultation - kontakta oss för mer information."`; service-copy ska
+  vara branschspecifik eller åtminstone inte filler.
+- E-handel-caset har bättre H1 än webbshop (för keramik-prompten:
+  keramikbutik).
 
 Skriv scorecard per case med samma åtta dimensioner som tidigare:
 tydlighet, CTA, trovärdighet, branschpassning, mobilkänsla, konkret
-copy, designbalans, konvertering. Jämför mot Re-Verifierings-Scout 3:
-**5.13/10 rå / ~5.9/10 kalibrerat**, case-spann 4.88-5.75.
+copy, designbalans, konvertering. Jämför mot Re-Verifierings-Scout 4:
+**6.59/10**, case-spann 6.375-6.875.
 
 **Beslutsregel:** snitt ≥7/10 OCH inget case <6.5 → Project DNA /
 semantic follow-up merge (inkl. två-pass-verifiering av B71) är nästa.
-Annars välj riktad fix på sämsta kvarvarande case. Lågprio-rester som
-redan är kända: B101/B102 (commerce-CTA route/text), B97
-(`/kontakt`-copy) och B98 (bredare e-handelsserviceområde-yta; B104
-tog bara country-only-läckan).
+Annars välj riktad fix på sämsta kvarvarande case. Kända lågprio-rester:
+B101/B102 (commerce-CTA route/text), B97 (`/kontakt`-copy) och B98
+(bredare e-handelsserviceområde-yta; B104 tog bara country-only-läckan).
 
 B59 är fortfarande parkerad - rör inte StackBlitz-fronten. PR #27,
 B60 och cleanup/prune-sprinten är klara; ingen ny header-toggling.

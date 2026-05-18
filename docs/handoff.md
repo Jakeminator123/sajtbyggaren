@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-18 (post-variant-generator + demo-baseline-fix 1D. Lokal mainline-commit `01c0cfb` `feat(variants): add candidate generator` landade ett separat CLI/schemagard-spår för draftade Scaffold Variant-kandidater; föregående produktcommit `9cc3067` stängde B99/B100/B103/B104. 1D smoke med real `briefModel`: frisör + naprapat får "Boka tid", e-handel får "Shoppa nu", ingen "Byt ut den här texten" i verifierad output. Variant-generatorn påverkar inte demo-renderingen. Aktuellt bug-scope: 17 aktiva, 15 misplaced, 6 unknown, 58 stängda. Nästa konkreta uppgift är **Re-Verifierings-Scout 4** med samma fyra demo-prompter.)
-**Aktuell repo-HEAD på `main`:** `01c0cfb` (`feat(variants): add candidate generator`) lokalt, med denna Steward-bump ovanpå när den committas. Föregående relevanta commits: `9cc3067` (1D fix), `48d6e24` (`Lite allt möjligt`), `6eaf222` (1C Steward-bump), `b5ee710` (1C fix), `b09f935` (backup-prune note), `7fdfee2` (PR #29/#30 post-merge bump), `b3a32fc` (PR #30 squash-merge). Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA.
-**Aktiv branch:** `main`. `backup-23` skapad från synkad `main` innan 1D-sprinten (lokalt + push till origin). PR #29 och PR #30 är mergade sedan tidigare; PR-brancherna `cursor/bug-scope-disciplin` och `cursor/backoffice-rensning-styrning-7c51` är raderade både lokalt och remote. Inga öppna PRs.
+**Datum:** 2026-05-18 (post-demo-baseline-fix 1E + variant-generator. Lokal mainline-commit `bc43eb8` `fix(builder): close demo-baseline-fix 1E (B105 B106 B107)` stängde service-summary-filler, e-handel-H1 webbshop och businessType-normalisering; föregående `01c0cfb` landade separat variant-generator. 1E smoke med real `briefModel`: `elektriker Malmö` får elservice + branschsummary utan filler-copy; `liten e-handel som säljer keramik` får H1 keramikbutik. Aktuellt bug-scope: 17 aktiva, 15 misplaced, 6 unknown, 61 stängda. Nästa konkreta uppgift är **Re-Verifierings-Scout 5** med samma fyra demo-prompter.)
+**Aktuell repo-HEAD på `main`:** `bc43eb8` (`fix(builder): close demo-baseline-fix 1E (B105 B106 B107)`) lokalt, med denna Steward-bump ovanpå när den committas. Föregående relevanta commits: `01c0cfb` (variant candidate generator), `9cc3067` (1D fix), `48d6e24` (`Lite allt möjligt`), `6eaf222` (1C Steward-bump), `b5ee710` (1C fix), `b09f935` (backup-prune note), `7fdfee2` (PR #29/#30 post-merge bump), `b3a32fc` (PR #30 squash-merge). Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA.
+**Aktiv branch:** `main`. `backup-24` skapad från synkad `main` innan 1E-sprinten (lokalt + push till origin). PR #29 och PR #30 är mergade sedan tidigare; PR-brancherna `cursor/bug-scope-disciplin` och `cursor/backoffice-rensning-styrning-7c51` är raderade både lokalt och remote. Inga öppna PRs.
 **Stash-läge:** `git stash list` är **tom**.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
@@ -114,7 +114,7 @@ Tre lager:
 
 ## Nästa konkreta uppgift
 
-Se `docs/current-focus.md` → **"Next action"**. Kort version: demo-baseline-fix 1D är klar lokalt i `9cc3067`. Nästa är **Re-Verifierings-Scout 4** med samma fyra demo-prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`), jämfört mot Re-Verifierings-Scout 3:s **5.13/10 rå / ~5.9/10 kalibrerat**.
+Se `docs/current-focus.md` → **"Next action"**. Kort version: demo-baseline-fix 1E är klar lokalt i `bc43eb8`. Nästa är **Re-Verifierings-Scout 5** med samma fyra demo-prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`), jämfört mot Re-Verifierings-Scout 4:s **6.59/10**.
 
 Verifiera särskilt:
 
@@ -123,6 +123,8 @@ Verifiera särskilt:
 - E-handel har hero-CTA "Shoppa nu".
 - Tagline upprepar inte H1 som "Lokal {label} i {city}".
 - `/om-oss` visar inte "Områden vi arbetar i: Sverige" för country-only e-handel.
+- Elektriker har inte längre service-summaryn `"Konsultation - kontakta oss för mer information."`.
+- Keramik/e-handel har bättre H1 än webbshop (förväntat keramikbutik).
 
 Beslutsregel: snitt ≥7/10 och inget case <6.5 → Project DNA / semantic follow-up merge är nästa. Annars riktad fix på sämsta kvarvarande case. Kända lågprio-rester: B101/B102 (commerce-CTA route/text), B97 (`/kontakt`-copy), B98 (bredare e-handelsserviceområde-yta; B104 stängde bara country-only-läckan).
 

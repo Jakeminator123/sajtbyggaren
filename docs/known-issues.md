@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 17 aktiva, 15 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 58 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 17 aktiva, 15 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 61 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -450,6 +450,33 @@ PR #28 / `885431b` stängde B64, B65, B66, B69, B70, B71, B72, B73, B74, B75, B7
 Lokal mainline-commit `b5ee710` stängde B88 (kontakt-placeholder dev-jargong), B94 (tom team-grid på `/om-oss`), B95 (landnamn som hero-ortstag) och B96 (scaffold-omedveten hero-CTA). Inga andra B-IDs påverkade. Kvar från re-Verifierings-Scout 2026-05-15 är B97 + B98 (låg-impact). Re-Verifierings-Scout med samma fyra prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`) körs efter denna bump för att jämföra mot 5.54-baselinen. Förväntad effekt: snitt 6.5-7.0/10.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B105` Medel** (stängd 2026-05-18, demo-baseline-fix 1E) -
+  `_service_summary` i `scripts/prompt_to_project_input.py` skrev
+  publik filler-copy som `"{Label} - kontakta oss för mer information."`,
+  vilket Re-Verifierings-Scout 4 såg på alla fyra demo-case och särskilt
+  drog ner konkret copy/branschpassning för elektriker-caset. **Fix:**
+  `_service_summary()` och `_placeholder_services()` tar nu
+  `business_type` och använder branschspecifika summaries/labels, t.ex.
+  `Elservice` + "Tydlig hjälp med elarbeten, felsökning och nästa steg."
+  för elektriker och sortimentscopy för e-handel. Fix: `bc43eb8`. Test:
+  `tests/test_prompt_to_project_input.py::test_service_summary_uses_business_specific_copy_for_empty_brief`,
+  `tests/test_prompt_to_project_input.py::test_service_summary_uses_business_specific_copy_for_stub_service`.
+- **`B106` Låg** (stängd 2026-05-18, demo-baseline-fix 1E) -
+  e-handel utan explicit `companyName` föll tillbaka till generic
+  `Webbshop`, vilket gav svag H1 på keramik-caset. **Fix:**
+  `_derive_company_name()` tar nu `services_mentioned` och använder
+  första verkliga produktkategori som e-handelsnamn när businessType är
+  commerce, t.ex. `keramik` → `Keramikbutik`. Fix: `bc43eb8`. Test:
+  `tests/test_prompt_to_project_input.py::test_ecommerce_company_name_uses_product_category_when_name_missing`.
+- **`B107` Låg** (stängd 2026-05-18, demo-baseline-fix 1E) -
+  briefModel varierade mellan `naprapat-clinic`, `naprapath-clinic` och
+  svensk `naprapatklinik`; B100 fungerade men var beroende av många
+  explicita strängar. **Fix:** `scripts/build_site.py` har nu
+  `_normalize_business_type()` för CTA-fallbacken (lowercase, strip,
+  `naprapat*`/`naprapath*` → `naprapat-clinic`, `webshop`/`webbshop`
+  → `e-commerce`, etc.). Fix: `bc43eb8`. Test:
+  `tests/test_builder_route_emission.py::test_hero_cta_label_uses_booking_business_type_fallback`.
 
 - **`B99` Hög** (stängd 2026-05-18, demo-baseline-fix 1D) -
   `_derive_story` i `scripts/prompt_to_project_input.py` skrev publik
