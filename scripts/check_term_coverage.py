@@ -130,6 +130,16 @@ COMMON_WORDS = {
     "Dossiers", "Reference Templates",
     "Scaffold Selector", "Dossier Selector",
     "Selected Scaffold", "Variant",
+    # Backoffice-vy-namn (UI-labels, inte canonical domain terms) som dyker
+    # upp som backtick-prosa i docs. Sub-vyerna under det redan registrerade
+    # Backoffice-konceptet — samma kategori som Dossier Selector / Scaffold
+    # Selector ovan. "Kontrollplan" är vyns svenska label per AGENTS.md
+    # (UI-labels på svenska, kod-identifierare på engelska).
+    "Kontrollplan", "Selection Profiles",
+    "Variant Candidates", "Dossier Candidates",
+    # PR-titlar som citeras i handoff/current-focus som backtick-prosa.
+    # Samma behandling som tidigare PR-referenser; inte ett domänbegrepp.
+    "Backoffice kontrollplan mvp",
     "Globalt", "Skickas",
     "Embedding Domains", "FollowUp",
     "Mechanical Fixes", "LLM Fixes",
