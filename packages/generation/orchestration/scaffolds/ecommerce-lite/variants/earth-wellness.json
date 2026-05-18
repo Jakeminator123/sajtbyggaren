@@ -1,0 +1,45 @@
+{
+  "id": "earth-wellness",
+  "enabled": true,
+  "label": "Earth Wellness",
+  "description": "Soft, nature-led shop expression built around muted greens and grounded earth neutrals. Rounded surfaces, calm contrast and gently organic color relationships create a soothing wellness feel that is warmer and more botanical than the cleaner editorial sibling.",
+  "tokens": {
+    "color": {
+      "background": "#f4f1e8",
+      "foreground": "#243126",
+      "muted": "#6f7b68",
+      "border": "#d8d2c3",
+      "primary": "#5f7d52",
+      "primaryForeground": "#f4f1e8",
+      "accent": "#b98f63",
+      "accentForeground": "#243126"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.2
+    },
+    "radius": {
+      "sm": "0.5rem",
+      "md": "0.875rem",
+      "lg": "1.25rem"
+    },
+    "spacing": {
+      "section": "6.5rem",
+      "container": "min(74rem, 92vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "organic",
+      "calm",
+      "grounded",
+      "botanical",
+      "soft-rounded"
+    ]
+  }
+}

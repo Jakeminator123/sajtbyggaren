@@ -1,0 +1,46 @@
+{
+  "id": "noir-editorial",
+  "enabled": true,
+  "label": "Noir Editorial",
+  "description": "High-contrast luxury fashion expression with an editorial black base, crisp off-white typography and a restrained metallic gold accent. Oversized spacing, sharp edges and disciplined motion create a cooler, more dramatic premium mood than the warmer neutral sibling variant.",
+  "tokens": {
+    "color": {
+      "background": "#0a0a0a",
+      "foreground": "#f5f2eb",
+      "muted": "#a6a099",
+      "border": "#2a2622",
+      "primary": "#f5f2eb",
+      "primaryForeground": "#0a0a0a",
+      "accent": "#b38a3a",
+      "accentForeground": "#0a0a0a"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.333
+    },
+    "radius": {
+      "sm": "0rem",
+      "md": "0rem",
+      "lg": "0rem"
+    },
+    "spacing": {
+      "section": "8rem",
+      "container": "min(82rem, 90vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "luxury",
+      "editorial",
+      "high-contrast",
+      "monochrome",
+      "disciplined",
+      "dramatic"
+    ]
+  }
+}

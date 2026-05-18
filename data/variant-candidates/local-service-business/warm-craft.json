@@ -1,0 +1,46 @@
+{
+  "id": "warm-craft",
+  "enabled": true,
+  "label": "Warm Craft",
+  "description": "Warm, handcrafted and grounded visual direction for builders and tradespeople. Earthy tones, softer corners and slightly more characterful display typography create a human, material-feeling alternative to cooler trust-first variants.",
+  "tokens": {
+    "color": {
+      "background": "#f6f1e8",
+      "foreground": "#2f241b",
+      "muted": "#746556",
+      "border": "#d8c9b6",
+      "primary": "#7a4b2f",
+      "primaryForeground": "#fdf8f2",
+      "accent": "#b98a52",
+      "accentForeground": "#2f241b"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.23
+    },
+    "radius": {
+      "sm": "0.25rem",
+      "md": "0.5rem",
+      "lg": "0.875rem"
+    },
+    "spacing": {
+      "section": "4.5rem",
+      "container": "min(70rem, 94vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "warm",
+      "handcrafted",
+      "trustworthy",
+      "grounded",
+      "human",
+      "earthy"
+    ]
+  }
+}

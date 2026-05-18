@@ -1,0 +1,45 @@
+{
+  "id": "clinical-calm",
+  "enabled": true,
+  "label": "Clinical Calm",
+  "description": "A bright, cool-toned and highly restrained visual expression for care, clinic and health-adjacent service businesses. Crisp blue-green hues, minimal corner radius, generous whitespace and quiet typography create a clean, reassuring alternative to warmer trust-focused variants.",
+  "tokens": {
+    "color": {
+      "background": "#f4fbfc",
+      "foreground": "#16333a",
+      "muted": "#5f7c83",
+      "border": "#d8e8eb",
+      "primary": "#1f7a8c",
+      "primaryForeground": "#f4fbfc",
+      "accent": "#b9e3e6",
+      "accentForeground": "#16333a"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.16
+    },
+    "radius": {
+      "sm": "0.125rem",
+      "md": "0.2rem",
+      "lg": "0.3rem"
+    },
+    "spacing": {
+      "section": "6rem",
+      "container": "min(70rem, 90vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "clinical",
+      "calm",
+      "clean",
+      "reassuring",
+      "minimal"
+    ]
+  }
+}
