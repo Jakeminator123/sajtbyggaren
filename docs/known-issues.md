@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 17 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 78 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 19 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 79 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -244,6 +244,46 @@ tillbaka till quote-default). Audit-konfidence 7/10.
   tonalitet. Källa: Re-Verifierings-Scout 3 2026-05-18. Fix: open.
   Test: open.
 
+### Extern reviewer-triage 2026-05-18 (mot post-1E/B108-baseline)
+
+Reviewer-pass mot de fem senaste pusharna till `main` (`9f8bb2f`,
+`bc43eb8`, `0fc9243`, `01c0cfb`, `6e0c82e`). Tre fynd, två öppna +
+ett stängt (B112) i samma pass.
+
+- **`B110` Låg-Medel** - `scripts/build_site.py:_normalize_business_type`
+  (1E-fixen för B107) normaliserar `naprapath`/`naprapatklinik`/
+  `webshop`-varianter till en kanonisk slug, men bara i CTA-flödet
+  (`_hero_cta_variant`/`_hero_cta_label`). Mapparna i
+  `scripts/prompt_to_project_input.py` (`_BUSINESS_TYPE_LABEL_SV`,
+  `_TAGLINE_BY_BUSINESS_TYPE_SV`, `_SERVICE_LABEL_BY_BUSINESS_TYPE_SV`,
+  `_SERVICE_SUMMARY_BY_BUSINESS_TYPE_SV` plus motsvarande `_EN`-mappar)
+  nycklar direkt på rå briefModel-output. SV-mapparna är delvis
+  redundant (har t.ex. `naprapath-clinic` + `naprapat-clinic` +
+  `naprapatklinik`) men luckor finns ändå: `webshop`/`webbshop` saknas
+  i tagline/service-label/service-summary-mapparna, så en briefModel-
+  output som CTA-flödet normaliserar till `e-commerce` kan ändå ge
+  generisk fallback i tagline/service-summary. EN-mapparna saknar
+  `naprapatklinik` (svensk form). Effekten är inkonsekvent
+  copy-kvalitet snarare än krash, men "split sanning" gör att samma
+  input rendrar olika i olika rendering-steg. Riktig fix: flytta
+  `_normalize_business_type` till en delad helper och kör alla
+  business-type-lookups genom den. Kopplar mot B13a (arkitektur-flytt
+  av `scripts/build_site.py` till `packages/`). Källa: extern reviewer
+  2026-05-18. Fix: open. Test: open.
+- **`B111` Låg** - `scripts/generate_variant_candidate.py:512-533`
+  fångar alla `Exception` från `_call_variant_model` och faller
+  tillbaka till `_mock_variant_candidate` med `source="mock-llm-error"`
+  + stderr-print, sen returnerar `exit 0`. Det är inte tyst (operatör
+  som kollar artefakten ser `source`, och stderr loggas), men för
+  CI/automation som inte läser stderr kan en mock-fallback se ut som
+  en lyckad real-modelloutput i exit-code. Design-fråga snarare än
+  bugg: nuvarande beteende är medvetet "fortsätt även när modellen
+  fallerar" för operatörsergonomi. Lågprio enhancement: lägg
+  `--fail-on-llm-error` (eller `--strict`)-flagga som ger
+  `exit != 0` när real-modellanrop failar, så CI kan skilja faktisk
+  modellverifiering från mock-fallback. Källa: extern reviewer
+  2026-05-18. Fix: open. Test: open.
+
 ### Övriga öppna
 
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
@@ -348,6 +388,28 @@ PR #28 / `885431b` stängde 15 buggar (alla flyttade till "Stängda" 2026-05-18 
 Lokal mainline-commit `b5ee710` stängde B88 (kontakt-placeholder dev-jargong), B94 (tom team-grid på `/om-oss`), B95 (landnamn som hero-ortstag) och B96 (scaffold-omedveten hero-CTA). Inga andra B-IDs påverkade. Kvar från re-Verifierings-Scout 2026-05-15 är B97 + B98 (låg-impact). Re-Verifierings-Scout med samma fyra prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`) körs efter denna bump för att jämföra mot 5.54-baselinen. Förväntad effekt: snitt 6.5-7.0/10.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B112` Låg** (stängd 2026-05-18, extern reviewer-triage) -
+  `scripts/prompt_to_project_input.py:_product_category_name` joinade
+  alla `label.split()`-delar utan separator innan `_derive_company_name`
+  appendade `"butik"`. En briefModel-output med
+  `servicesMentioned=["handgjord keramik"]` på en e-handel-prompt gav
+  därför H1 `"Handgjordkeramikbutik"` i stället för den läsbara svenska
+  sammansättningen `"Keramikbutik"`. Reviewer flaggade det som
+  "naming för butikskategorier ser skör ut". **Fix:**
+  `_product_category_name` plockar nu det avslutande ordet i labeln
+  (det grammatiska substantivet) och returnerar bara det, så
+  `_derive_company_name` får ett rent ordstem att hänga `"butik"`-
+  suffixet på: `"handgjord keramik" -> "Keramik" -> "Keramikbutik"`,
+  `"ekologisk mat" -> "Mat" -> "Matbutik"`, `"unika handgjorda
+  smycken" -> "Smycken" -> "Smyckenbutik"`. Single-word categories
+  fortsätter fungera oförändrat (`"keramik" -> "Keramikbutik"`). Källa:
+  extern reviewer 2026-05-18. Fix: `adde45c`. Test:
+  `tests/test_prompt_to_project_input.py::test_product_category_name_uses_last_word_for_multi_word_service`,
+  `tests/test_prompt_to_project_input.py::test_product_category_name_preserves_single_word_categories`,
+  `tests/test_prompt_to_project_input.py::test_ecommerce_company_name_produces_clean_compound_for_multi_word_brief`,
+  `tests/test_prompt_to_project_input.py::test_ecommerce_company_name_uses_product_category_when_name_missing`
+  (B106-regressionen kvarstår oförändrad).
 
 - **`B109` Låg** (stängd 2026-05-18, post-B108 reviewer-hotfix) -
   `scripts/build_site.py:_npm_install_inputs_changed` fångade bara
