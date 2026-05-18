@@ -1818,6 +1818,14 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    if args.followup_site_id and args.discovery:
+        raise SystemExit(
+            "--discovery cannot be combined with --followup-site-id. "
+            "Discovery payloads only apply to initial Project Input "
+            "generation; follow-up runs inherit discovery state from "
+            "the previous version."
+        )
+
     discovery_payload: dict[str, Any] | None = None
     if args.discovery:
         discovery_payload = _load_discovery_file(Path(args.discovery))
