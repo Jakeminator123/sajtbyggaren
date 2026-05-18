@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 83 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 84 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -478,6 +478,54 @@ PR #28 / `885431b` stängde 15 buggar (alla flyttade till "Stängda" 2026-05-18 
 Lokal mainline-commit `b5ee710` stängde B88 (kontakt-placeholder dev-jargong), B94 (tom team-grid på `/om-oss`), B95 (landnamn som hero-ortstag) och B96 (scaffold-omedveten hero-CTA). Inga andra B-IDs påverkade. Kvar från re-Verifierings-Scout 2026-05-15 är B97 + B98 (låg-impact). Re-Verifierings-Scout med samma fyra prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`) körs efter denna bump för att jämföra mot 5.54-baselinen. Förväntad effekt: snitt 6.5-7.0/10.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B123` Medel** (stängd 2026-05-18, operatör-rapporterat post-PR-#31) -
+  `apps/viewser/next.config.ts` var en tom `NextConfig`-export utan
+  `headers()`-funktion. `apps/viewser/components/viewer-panel.tsx`
+  embeddar `stackblitz.com` via `sdk.embedProject(..., { template:
+  "node" })`, vilket bootar en WebContainer i iframen. WebContainers
+  kräver `SharedArrayBuffer`, vilket bara fungerar när host-sidan är
+  **cross-origin isolated** (Chrome och övriga Chromium-browsers
+  blockerar SAB annars). Utan `Cross-Origin-Embedder-Policy` +
+  `Cross-Origin-Opener-Policy` på Next.js-host-sidan visade
+  StackBlitz "Unable to run Embedded Project — Looks like this project
+  is being embedded without proper isolation headers" i preview-
+  canvasen i stället för en faktisk preview. Krav uttryckligen
+  dokumenterat sedan v1 i `docs/integrations/webcontainers-notes.md`,
+  `docs/architecture/preview-runtime.md` och
+  `docs/integrations/stackblitz-research.md`, men aldrig implementerat
+  i koden — pre-existerande sedan första `apps/viewser`-commiten.
+  **Fix:** lägg till `async headers()` i `next.config.ts` som sätter
+  `Cross-Origin-Embedder-Policy: credentialless` +
+  `Cross-Origin-Opener-Policy: same-origin` på alla routes
+  (`source: "/:path*"`). `credentialless` (inte `require-corp`)
+  eftersom vi embeddar tredjeparts-iframe vars
+  `Cross-Origin-Resource-Policy`-headers vi inte kan styra; StackBlitz
+  egen browser-support-sida dokumenterar `credentialless` som rätt
+  embedder-mode för embed-fallet
+  (https://developer.stackblitz.com/platform/webcontainers/browser-support#embedding).
+  Docs uppdaterade i samma commit för att skilja embed-fallet
+  (`credentialless`) från en framtida egen-WebContainer-app
+  (`require-corp`). Notera: embedded WebContainers stöds officiellt
+  bara i Chromium-baserade browsers — Firefox/Safari ger samma fel
+  även med headers korrekt satta. Tidigare negativ source-lock
+  (`tests/test_viewser_files.py::test_viewser_does_not_set_global_cross_origin_isolation_headers`,
+  införd i `98e8364`) baserades på antagandet att enda möjliga
+  COEP-värdet var `require-corp` (vilket hade blockerat StackBlitz-
+  iframen) — den togs bort i samma commit och ersattes av en
+  positiv lock i `tests/test_viewser_isolation_headers.py` som
+  faktiskt kräver att headers finns OCH att värdet är
+  `credentialless`. End-to-end-verifierat genom `npm run dev` +
+  `Invoke-WebRequest -Method Head http://localhost:3000/` som
+  returnerade `Cross-Origin-Embedder-Policy: credentialless` och
+  `Cross-Origin-Opener-Policy: same-origin` på root-routen.
+  Källa: operatörrapport 2026-05-18 (Konsol-screenshot). Fix:
+  `5f23d13`. Test:
+  `tests/test_viewser_isolation_headers.py::test_next_config_sets_cross_origin_embedder_policy`,
+  `tests/test_viewser_isolation_headers.py::test_next_config_uses_credentialless_for_embed_case`,
+  `tests/test_viewser_isolation_headers.py::test_next_config_sets_cross_origin_opener_policy_same_origin`,
+  `tests/test_viewser_isolation_headers.py::test_next_config_headers_apply_to_all_routes`
+  (source-lock).
 
 - **`B118` Låg** (stängd 2026-05-18, post-PR-#31 reviewer-triage runda 2) -
   `apps/viewser/lib/scrape-runner.ts` timeout-handler kallade
