@@ -102,7 +102,23 @@ export async function runScrapeSite(
   let timedOut = false;
   const timer = setTimeout(() => {
     timedOut = true;
-    child.kill("SIGTERM");
+    child.kill();
+    // SIGTERM kan ignoreras av en hängd Python-process som väntar på
+    // en långsam socket eller har en C-extension i busy loop. Build-
+    // och prompt-runnern har sedan länge en 5s SIGKILL-fallback för
+    // att garantera att processen försvinner — scrape-runnern fick
+    // bara `SIGTERM` när den skrevs och kunde därför läcka hängda
+    // python-processer i bakgrunden. `.unref()` så Node:s event loop
+    // inte hålls igång enbart av denna inner-timer.
+    setTimeout(() => {
+      if (!child.killed) {
+        try {
+          child.kill("SIGKILL");
+        } catch {
+          // ignore
+        }
+      }
+    }, 5_000).unref?.();
   }, SCRAPE_TIMEOUT_MS);
 
   const { exitCode, signal } = await new Promise<{
