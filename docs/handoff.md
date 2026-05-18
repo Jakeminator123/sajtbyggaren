@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-18 (post-Backoffice control-plane + demo-baseline-fix 1E. Lokal mainline-commit `860e553` `feat(backoffice): add asset control plane` landade read-only kontrollplan/doctor, asset graph, variant candidate-yta och pyrightconfig. Föregående produktcommit `bc43eb8` stängde B105/B106/B107: service-summary-filler, e-handel-H1 webbshop och businessType-normalisering. Aktuellt bug-scope: 17 aktiva, 15 misplaced, 6 unknown, 61 stängda. Nästa konkreta uppgift är **Re-Verifierings-Scout 5** med samma fyra demo-prompter.)
-**Aktuell repo-HEAD på `main`:** `860e553` (`feat(backoffice): add asset control plane`) lokalt, med denna Steward-bump ovanpå när den committas. Föregående relevanta commits: `bc43eb8` (1E fix), `01c0cfb` (variant candidate generator), `9cc3067` (1D fix), `48d6e24` (`Lite allt möjligt`), `6eaf222` (1C Steward-bump), `b5ee710` (1C fix), `b09f935` (backup-prune note), `7fdfee2` (PR #29/#30 post-merge bump), `b3a32fc` (PR #30 squash-merge). Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA.
-**Aktiv branch:** `main`. `backup-24` skapad från synkad `main` innan 1E-sprinten (lokalt + push till origin). PR #29 och PR #30 är mergade sedan tidigare; PR-brancherna `cursor/bug-scope-disciplin` och `cursor/backoffice-rensning-styrning-7c51` är raderade både lokalt och remote. Inga öppna PRs.
+**Datum:** 2026-05-18 (post-starter dependency hardening + Backoffice control-plane + demo-baseline-fix 1E. `1c68035` `fix(builder): harden starter dependency baseline` stängde B108: `marketing-base`/`commerce-base` är på auditerad Next/PostCSS-baslinje och stale `node_modules/` kastas vid dependency-input-drift. Föregående mainline-commit `860e553` landade read-only kontrollplan/doctor, asset graph, variant candidate-yta och pyrightconfig. Föregående demo-produktcommit `bc43eb8` stängde B105/B106/B107. Aktuellt bug-scope: 17 aktiva, 15 misplaced, 6 unknown, 62 stängda. Nästa konkreta uppgift är **Re-Verifierings-Scout 5** med samma fyra demo-prompter.)
+**Aktuell repo-HEAD på `main`:** `1c68035` (`fix(builder): harden starter dependency baseline`) lokalt och på `origin/main`. Föregående relevanta commits: `9cb32cf` (Backoffice docs bump), `860e553` (Backoffice control-plane), `bc43eb8` (1E fix), `01c0cfb` (variant candidate generator), `9cc3067` (1D fix), `48d6e24` (`Lite allt möjligt`), `6eaf222` (1C Steward-bump), `b5ee710` (1C fix). Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA.
+**Aktiv branch:** `main`. `backup-26-VIKTIG` är pushad till origin från pre-B108-läget (`9cb32cf`), men alla lokala branches utom `main` är raderade på operatörens uttryckliga begäran. PR #29 och PR #30 är mergade sedan tidigare; PR-brancherna `cursor/bug-scope-disciplin` och `cursor/backoffice-rensning-styrning-7c51` är raderade både lokalt och remote. Inga öppna PRs.
 **Stash-läge:** `git stash list` är **tom**.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
@@ -91,7 +91,7 @@ Tre lager:
 
 - `data/starters/portfolio-base/` (PR #22) och `data/starters/docs-base/` (PR #24) finns nu som harmoniserade starters. Båda är starter-underlag, inte aktiverade i `SCAFFOLD_TO_STARTER`-mappning och inte i real-codegen-scope.
 - `docs-base` (Nextra 4.6.1 + Pagefind + MDX): sidomenyn i `src/app/layout.tsx` är manuellt underhållen — scaffold-injektion av nya MDX måste också uppdatera `<aside>`-blocket. Detta är dokumenterat ärligt i `authoring.mdx`/`index.mdx`/starter-README och spårat som `B49` i `known-issues.md` (page-map-driven sidebar krävs innan runtime-aktivering).
-- Befintliga aktiva starterflöden är oförändrade: `marketing-base` för real codegen-scope och `commerce-base` för ecommerce-lite deterministic-v1 enligt tidigare ADR-spår.
+- Befintliga aktiva starterflöden är oförändrade i routing/codegen: `marketing-base` för real codegen-scope och `commerce-base` för ecommerce-lite deterministic-v1 enligt tidigare ADR-spår. Dependency-baslinjen är däremot hårdnad i `1c68035`: båda ligger på `next@16.2.6`, `eslint-config-next@16.2.6`, `postcss@^8.5.10` och `overrides.next.postcss=8.5.10`; `copy_starter()` tvingar om-installation när dessa package-inputs ändras.
 
 ### Builder UX MVP
 
@@ -114,7 +114,7 @@ Tre lager:
 
 ## Nästa konkreta uppgift
 
-Se `docs/current-focus.md` → **"Next action"**. Kort version: demo-baseline-fix 1E är klar lokalt i `bc43eb8`. Nästa är **Re-Verifierings-Scout 5** med samma fyra demo-prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`), jämfört mot Re-Verifierings-Scout 4:s **6.59/10**.
+Se `docs/current-focus.md` → **"Next action"**. Kort version: starter dependency hardening är klar i `1c68035`, Backoffice control-plane är klar i `860e553`, och demo-baseline-fix 1E är klar i `bc43eb8`. Nästa är **Re-Verifierings-Scout 5** med samma fyra demo-prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`), jämfört mot Re-Verifierings-Scout 4:s **6.59/10**.
 
 Verifiera särskilt:
 

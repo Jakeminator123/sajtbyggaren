@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `860e553` (2026-05-18, lokal mainline-commit `feat(backoffice): add asset control plane`. Konvention för denna rad: SHA pekar på senaste produkt-/governance-commit; efterföljande Steward-bump-commit räknas som "within bump tolerance" av `focus_check.py`. Commiten lägger till read-only `backoffice/asset_graph.py`, ny Backoffice-kontrollplan, variant candidate-yta ovanpå befintliga `scripts/generate_variant_candidate.py`, scaffold-doctor som läser requiredFiles från `scaffold-contract`, Dossier-listning utan legacy hybrid, korrekt variant-copy och `pyrightconfig.json` för scripts-importer i IDE:n. Guards gröna: ruff, full pytest (3 skipped slow/E2E), governance_validate, rules_sync, check_term_coverage och Backoffice asset graph-tester. Föregående produktcommit: `bc43eb8` (`fix(builder): close demo-baseline-fix 1E (B105 B106 B107)`) med aktuell buggräkning 17 aktiva, 15 misplaced, 6 unknown, 61 stängda. `backup-24` finns från 1E-sprinten (lokalt + push).)
+Last verified state: `1c68035` (2026-05-18, direktpushad `fix(builder): harden starter dependency baseline`. Commiten stängde B108: `marketing-base` och `commerce-base` är nu på samma auditerade Next/PostCSS-baslinje som övriga starters, Pyright-importen i `tests/test_prompt_to_project_input.py` pekar på `scripts.prompt_to_project_input`, och `copy_starter()` tar bort stale `node_modules/` när dependency-relevanta package-inputs ändras. Guards gröna: fokuserade pytest, `python -m ruff check .`, IDE-lints och temporär `npm audit --audit-level=moderate` på både marketing- och commerce-genererade sajter. Föregående produktcommit: `860e553` (`feat(backoffice): add asset control plane`). Aktuell buggräkning: 17 aktiva, 15 misplaced, 6 unknown, 62 stängda. `backup-26-VIKTIG` finns pushad på origin från pre-fix-läget; alla lokala branches utom `main` är raderade på operatörens uttryckliga begäran.)
 
 Föregående produktcommit: `ab74c2a` (2026-05-15, demo-baseline-fix 1A landade direkt på `main`. Konvention för denna rad: SHA pekar på senaste produkt-/kodcommit; den efterföljande Steward-bump-commiten själv (denna rad-ändring) räknas som "within bump tolerance" av `focus_check.py` och får inte ge en till bump-rundgång. `feat(builder): demo-baseline-fix 1A` (`ab74c2a`) stängde Scout-auditens topp 3 demo-blockers i ett pass: (1) `/_global-error` prerender-fel (regression/variant av B41) löst genom att lägga explicit `app/global-error.tsx` i `data/starters/marketing-base/app/` och `data/starters/commerce-base/app/` med `"use client"` och inga third-party-imports - verifierat end-to-end via `painter-palma` (marketing-base) + `atelje-bird` (commerce-base) som båda nu landar `status: ok`, `quality: ok`, `npm install + npm run build` gröna; (2) rå prompt läckte ut som `company.name`/`company.story` på rendererade sajter - `scripts/prompt_to_project_input.py` skriver om `_company_name_from_prompt` till `_derive_company_name` (läser bara `brief.businessTypeGuess` + `brief.locationHint` via en liten svensk business-type label-map: electrician -> elektriker, hairdresser -> frisör, ceramics-studio -> keramikstudio, ...) och `_derive_story` (föredrar `brief.notesForPlanner`, fallback till strukturerad svensk platshållartext, aldrig raw prompt); (3) svenska tecken förstördes i service-labels (`F Rska Gg Direkt Fr N G Rden`) - `_slugify_label` NFKD-foldar för id-fältet (`färska ägg -> farska-agg`) men `_service_label_from_text` behåller å/ä/ö i labeln, och brief `services_mentioned` Field-description + system-prompt frågar nu efter natural-language fraser på originalspråk istället för kebab-case English slugs. `slugify_site_id` NFKD-foldar också före substitution så `elektriker i Malmö` ger `elektriker-i-malmo-<tail>` (förut `elektriker-i-malm-<tail>` med `ö` kollapsad till dash). Regression-tester: `test_company_name_and_story_never_contain_raw_prompt` (låser exakta tokens från den failande real-runen `enehmsida-som-s-ljer-b-t-661e23`: `Enehmsida`, `båtari`, `2 sidor`), `test_swedish_service_labels_preserve_case` (`färska ägg direkt från gården -> Färska ägg direkt från gården` som label, ASCII-only slug), `test_slugify_label_ascii_folds_swedish_chars`, `test_company_name_uses_swedish_business_type_mapping`, `test_story_prefers_notes_for_planner` plus fyra fallback-tester. Out-of-scope per Scout/coach: ingen Project DNA / semantic follow-up merge, ingen StackBlitz/COOP/COEP, inga nya starters, ingen docs/rules-sprint utöver denna bump. `backup-19` skapad från synkad `main` innan sprintarbetet (lokalt + push). Föregående mainline-pushar samma dag: `f29688c` (Steward-bump efter rules-commit), `d072c98` (powershell-glob + cli-safety-belt rules), `8d45140` (Steward-sync efter prune-sprinten), `2acdeca` (prune-script + tester), `7b90c0c` (Steward-sync efter B60), `65f052a` (B60 fix), `dd5464f` (post-PR-#27 sanity-bump), `e057fbd` (PR #27 follow-up versions squash-merge). `backup-15` t.o.m. `backup-19` finns lokalt och på origin. Inga öppna PRs.)
 
@@ -41,7 +41,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid lokal mainline-commit `860e553` (`feat(backoffice): add asset control plane`) ovanpå 1E-fixen `bc43eb8`. Backoffice-spåret ger en read-only kontrollplan/doctor, asset graph och variant candidate-yta utan canonical promotion. 1E är fortfarande senaste demo-kvalitetsfixen och tog bort service-filler, e-handel-H1 webbshop och businessType-normaliseringsglipan. Nästa steg för demo-kvalitet är Re-Verifierings-Scout 5 med samma fyra demo-prompter.
+`main` är vid `1c68035` (`fix(builder): harden starter dependency baseline`) ovanpå Backoffice control-plane `860e553` och 1E-fixen `bc43eb8`. Starter-audit-risken är stängd i käll-starters, inte i genererade output-mappar: `marketing-base` och `commerce-base` använder `next@16.2.6`, PostCSS override och tvingad reinstall när dependency-inputs ändras. 1E är fortfarande senaste demo-kvalitetsfixen och tog bort service-filler, e-handel-H1 webbshop och businessType-normaliseringsglipan. Nästa steg för demo-kvalitet är Re-Verifierings-Scout 5 med samma fyra demo-prompter.
 
 Föregående baseline: PR #28 squash-merge (`885431b`) för demo-baseline-fix 1B + bug-sweep. 1B stängde must-/should-land-spåret och alla nice-to-have som hanns med: B64/B65 (Site Brief company/contact-fält + ADR 0022), B66 (tom trustSignals renderar inte "Varför oss"), B69 (Quality Gate route-scan får alla emitterade default-routes inkl. `/om-oss`; aggregate-status ändrades medvetet inte), B70 (IPv6 localhost Host-header), B71 (follow-up merge-docstring + byte-stabil story/tagline/tone), B72 (`listRuns` slicar innan JSON-läsning), B73 (tagline-fallback utan Project Input-jargong), B74 (dev_generate codegen routes), B75 (`additionalProperties: false` i Project Input-schema), B76 (Run Details visar site-plan), B77 (dossier-komponenter får inte skugga starter-komponenter), B78 (realpath-baserad dossier-whitelist), B79 (svensk selectedDossiers-rationale) och B83 (service slug-kollisioner får suffix). PR #28 verifierades med ruff, full pytest, governance/rules/term checks, Viewser `npm run build` och två isolerade smoke-builds (`elektriker Malmö`, `frisör Göteborg`) som båda landade `status=ok`, `quality=ok`. Bugbot var inte aktiv på PR:n; GitHub governance, builder-smoke och secret-scan var gröna före merge.
 
@@ -295,9 +295,10 @@ också kvar på origin men är fri att radera i nästa Steward-städ.
 
 ## Current active sprint
 
-Ingen pågående produktimplementation på `main`. Backoffice control-plane landade lokalt i `860e553`: kontrollplan/doctor, asset graph, variant candidate-yta och pyrightconfig för scripts-importer. Demo-baseline-fix 1E landade i `bc43eb8` och stängde B105/B106/B107 från Re-Verifierings-Scout 4. B101/B102 lämnas öppna med låg prioritet (commerce-CTA route/text-mismatch i `render_home`/`render_products`), liksom B97/B98/B89-B93. Nästa konkreta uppgift är **Re-Verifierings-Scout 5** — se "Next action".
+Ingen pågående produktimplementation på `main`. Starter dependency hardening landade i `1c68035` och stängde B108: käll-starters för marketing/commerce ger nu ren `npm audit`-baseline och befintliga output-mappar installerar om när package-inputs ändras. Backoffice control-plane landade i `860e553`: kontrollplan/doctor, asset graph, variant candidate-yta och pyrightconfig för scripts-importer. Demo-baseline-fix 1E landade i `bc43eb8` och stängde B105/B106/B107 från Re-Verifierings-Scout 4. B101/B102 lämnas öppna med låg prioritet (commerce-CTA route/text-mismatch i `render_home`/`render_products`), liksom B97/B98/B89-B93. Nästa konkreta uppgift är **Re-Verifierings-Scout 5** — se "Next action".
 
-Tidigare klara sprintar: demo-baseline-fix 1E (B105 B106 B107),
+Tidigare klara sprintar: starter dependency hardening (B108),
+demo-baseline-fix 1E (B105 B106 B107),
 demo-baseline-fix 1D (B99 B100 B103 B104),
 demo-baseline-fix 1C (B88 B94 B95 B96), A-mini cleanup
 (B51/B52/B54/B55 + B53 registrerad), Prompt-till-sajt MVP v1,
@@ -428,18 +429,18 @@ i `c073d486` och PR-branchen är inte längre kvar på GitHub.
 
 ## Queue
 
-1. **Re-verifierings-Scout 4** - tredje scorecard-pass efter 1D,
+1. **Re-verifierings-Scout 5** - scorecard-pass efter 1E och B108,
    samma fyra prompter (`elektriker Malmö`, `frisör Göteborg`,
    `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`),
-   jämför med Scout-3-snittet 5.13/10 (rå) / ~5.9/10 (kalibrerat).
+   jämför med Scout-4-snittet 6.59/10.
    Beslutsregel ≥7/10 OCH inget case <6.5 → Project DNA.
-2. **Project DNA / follow-up semantic merge** - om Scout 4 bekräftar
+2. **Project DNA / follow-up semantic merge** - om Scout 5 bekräftar
    ≥7/10 och inget case <6.5: gör `merge_followup_project_input`
    semantic så följdprompt mot tone/story/tagline ger synlig
    förändring i v2. Kan behöva egen ADR. B71 (PR #28-stängd, men
    markerad som unverified av re-Scout) bör verifieras i två-pass-
    test inom samma sprint.
-3. **Bug-sweep round 3 (om Scout 4 fortsatt under tröskel)** -
+3. **Bug-sweep round 3 (om Scout 5 fortsatt under tröskel)** -
    prioritera B67, B80, B81, B82, B84, B85, B86, B87 + B89-B93
    (extern reviewer-triage) + B97, B101, B102 (låg-impact-rester)
    eller riktad fix på det case som dröjer.

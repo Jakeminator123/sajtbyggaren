@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 17 aktiva, 15 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 61 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 17 aktiva, 15 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 62 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -451,6 +451,19 @@ Lokal mainline-commit `b5ee710` stängde B88 (kontakt-placeholder dev-jargong), 
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B108` Medel** (stängd 2026-05-18, starter dependency hardening) -
+  genererade `marketing-base`/`commerce-base`-sajter ärvde
+  `next@16.2.5` och sårbar transitiv `postcss`, vilket gav
+  `npm audit`-fynd i nya output-mappar. Befintliga output-mappar kunde
+  dessutom behålla gammal `node_modules/` efter starter-bumps.
+  **Fix:** `marketing-base` och `commerce-base` matchar nu den redan
+  hårdnade `docs-base`/`portfolio-base`-baslinjen (`next@16.2.6`,
+  `eslint-config-next@16.2.6`, `postcss@^8.5.10` och
+  `overrides.next.postcss=8.5.10`). `copy_starter()` tar bort
+  `node_modules/` när dependency-relevanta package-inputs ändras så
+  nästa build installerar om. Fix: `1c68035`. Test:
+  `tests/test_builder_hardening.py::test_all_starters_use_audited_next_postcss_baseline`,
+  `tests/test_builder_hardening.py::test_copy_starter_drops_node_modules_when_dependencies_change`.
 - **`B105` Medel** (stängd 2026-05-18, demo-baseline-fix 1E) -
   `_service_summary` i `scripts/prompt_to_project_input.py` skrev
   publik filler-copy som `"{Label} - kontakta oss för mer information."`,
