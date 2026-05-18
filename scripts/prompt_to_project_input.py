@@ -1386,16 +1386,26 @@ def _apply_discovery_overrides(
         company["story"] = about_text.strip()[:1200]
 
     # Kontakt — wizarden har individuella fält som mappar direkt mot
-    # schemat (phone / email / addressLines / openingHours).
-    answer_contact = answers.get("contact") if isinstance(answers.get("contact"), dict) else {}
+    # schemat (phone / email / addressLines / openingHours). Den lokala
+    # `_raw`-variabeln existerar för att Pyright/basedpyright ska kunna
+    # narrowa typen: isinstance-checken på ett upprepat `answers.get(...)`
+    # på samma rad narrowar inte (Pyright kan inte garantera att andra
+    # anropet ger samma värde), men checken på en lokal variabel gör det.
+    _contact_raw = answers.get("contact")
+    answer_contact: dict[str, Any] = (
+        _contact_raw if isinstance(_contact_raw, dict) else {}
+    )
     contact = project_input.setdefault("contact", {})
-    if isinstance(answer_contact.get("phone"), str) and answer_contact["phone"].strip():
-        contact["phone"] = answer_contact["phone"].strip()
-    if isinstance(answer_contact.get("email"), str) and answer_contact["email"].strip():
-        contact["email"] = answer_contact["email"].strip()
-    if isinstance(answer_contact.get("openingHours"), str) and answer_contact["openingHours"].strip():
-        contact["openingHours"] = answer_contact["openingHours"].strip()
-    addr = answer_contact.get("address") if isinstance(answer_contact, dict) else None
+    phone = answer_contact.get("phone")
+    if isinstance(phone, str) and phone.strip():
+        contact["phone"] = phone.strip()
+    email = answer_contact.get("email")
+    if isinstance(email, str) and email.strip():
+        contact["email"] = email.strip()
+    opening_hours = answer_contact.get("openingHours")
+    if isinstance(opening_hours, str) and opening_hours.strip():
+        contact["openingHours"] = opening_hours.strip()
+    addr = answer_contact.get("address")
     if isinstance(addr, str) and addr.strip():
         contact["addressLines"] = [addr.strip()]
 
@@ -1411,7 +1421,8 @@ def _apply_discovery_overrides(
             label = item.get("name")
             if not isinstance(label, str) or not label.strip():
                 continue
-            summary = item.get("description") if isinstance(item.get("description"), str) else ""
+            description_raw = item.get("description")
+            summary = description_raw if isinstance(description_raw, str) else ""
             slug = _slugify_label(label) or f"service-{idx + 1}"
             mapped_services.append(
                 {
@@ -1467,15 +1478,16 @@ def _apply_discovery_overrides(
             project_input["conversionGoals"] = _unique_strings(current_goals, [goal])
 
     # Brand — tone array går in i project_input.tone.primary / secondary.
-    brand = answers.get("brand") if isinstance(answers.get("brand"), dict) else {}
-    tone_tags = brand.get("toneTags") if isinstance(brand, dict) else None
+    _brand_raw = answers.get("brand")
+    brand: dict[str, Any] = _brand_raw if isinstance(_brand_raw, dict) else {}
+    tone_tags = brand.get("toneTags")
     if isinstance(tone_tags, list) and tone_tags:
         clean_tones = [t for t in tone_tags if isinstance(t, str) and t.strip()]
         if clean_tones:
             tone_block = project_input.setdefault("tone", {})
             tone_block["primary"] = clean_tones[0]
             tone_block["secondary"] = clean_tones[1:5]
-    avoid_words = brand.get("wordsToAvoid") if isinstance(brand, dict) else None
+    avoid_words = brand.get("wordsToAvoid")
     if isinstance(avoid_words, str) and avoid_words.strip():
         tone_block = project_input.setdefault("tone", {})
         # Komma/semikolon-separerad fri text → enkel splitt.
@@ -1484,8 +1496,8 @@ def _apply_discovery_overrides(
             tone_block["avoid"] = tokens[:10]
 
     # Brand-färger från wizardens brand-step.
-    primary_color = brand.get("primaryColorHex") if isinstance(brand, dict) else None
-    accent_color = brand.get("accentColorHex") if isinstance(brand, dict) else None
+    primary_color = brand.get("primaryColorHex")
+    accent_color = brand.get("accentColorHex")
     if (
         isinstance(primary_color, str) and primary_color.strip()
     ) or (isinstance(accent_color, str) and accent_color.strip()):
@@ -1499,7 +1511,8 @@ def _apply_discovery_overrides(
     # project_input.brand och project_input.gallery — schemat
     # (`governance/schemas/project-input.schema.json` $defs/assetRef)
     # validerar att varje AssetRef har assetId/filename/mimeType/sizeBytes/role.
-    assets = answers.get("assets") if isinstance(answers.get("assets"), dict) else {}
+    _assets_raw = answers.get("assets")
+    assets: dict[str, Any] = _assets_raw if isinstance(_assets_raw, dict) else {}
 
     def _sanitize_asset_ref(ref: dict, default_role: str) -> dict | None:
         """Bevara fält schemat godkänner; ignorera okända/null-fält så
@@ -1545,7 +1558,8 @@ def _apply_discovery_overrides(
         brand_block = project_input.setdefault("brand", {})
         brand_block["heroImage"] = hero_ref
 
-    raw_gallery = assets.get("gallery") if isinstance(assets.get("gallery"), list) else []
+    _gallery_raw = assets.get("gallery")
+    raw_gallery: list[Any] = _gallery_raw if isinstance(_gallery_raw, list) else []
     gallery_refs = [
         _sanitize_asset_ref(item, "gallery") for item in raw_gallery if isinstance(item, dict)
     ]
