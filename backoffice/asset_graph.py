@@ -466,6 +466,12 @@ def build_graph() -> dict[str, list[dict[str, Any]]]:
             )
         )
 
+    from . import discovery_control
+
+    discovery_graph = discovery_control.build_discovery_graph()
+    nodes.extend(discovery_graph["nodes"])
+    edges.extend(discovery_graph["edges"])
+
     return {"nodes": nodes, "edges": edges}
 
 
@@ -583,6 +589,10 @@ def run_health_checks() -> list[dict[str, str]]:
                 "details": str(embedding_policy.get("implementationStatus", "")),
             }
         )
+
+    from . import discovery_control
+
+    findings.extend(discovery_control.discovery_doctor_findings())
 
     graph = build_graph()
     for node in graph["nodes"]:

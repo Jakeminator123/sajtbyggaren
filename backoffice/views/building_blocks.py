@@ -16,7 +16,7 @@ from scripts.generate_variant_candidate import (
     generate_variant_candidates,
 )
 
-from .. import asset_graph, impact, loaders, selection_profiles
+from .. import asset_graph, discovery_control, impact, loaders, selection_profiles
 from ..paths import REPO_ROOT
 from ._helpers import safe_render
 
@@ -112,11 +112,159 @@ def _render_impact_summary(result: dict) -> None:
                 st.write(f"- `{path}`")
 
 
+def _csv_to_list(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def _render_discovery_mapping() -> None:
+    st.subheader("Discovery Mapping")
+    st.caption(
+        "Discovery category-ändringar påverkar framtida init-runs via "
+        "Discovery Resolver. Redan skapade Project Inputs skrivs inte om."
+    )
+
+    policy = discovery_control.load_discovery_policy()
+    mapping_rows = discovery_control.category_mapping_rows(policy)
+    discovery_findings = discovery_control.discovery_doctor_findings(policy)
+    discovery_graph = discovery_control.build_discovery_graph(policy)
+
+    status_counts: dict[str, int] = {}
+    for row in mapping_rows:
+        status = str(row["supportStatus"])
+        status_counts[status] = status_counts.get(status, 0) + 1
+    cols = st.columns(4)
+    for index, status in enumerate(("active", "fallback", "planned", "disabled")):
+        cols[index].metric(status, status_counts.get(status, 0))
+
+    st.dataframe(mapping_rows, use_container_width=True, hide_index=True)
+
+    with st.expander("Discovery relationer i asset graph"):
+        st.dataframe(discovery_graph["nodes"], use_container_width=True, hide_index=True)
+        st.dataframe(discovery_graph["edges"], use_container_width=True, hide_index=True)
+
+    with st.expander("Discovery gap/orphan"):
+        if discovery_findings:
+            st.dataframe(discovery_findings, use_container_width=True, hide_index=True)
+        else:
+            st.success("Inga Discovery mapping-fynd.")
+
+    category_ids = [str(row["categoryId"]) for row in mapping_rows]
+    if not category_ids:
+        return
+
+    st.divider()
+    st.subheader("Discovery Dry Run")
+    dry_category = st.selectbox("Kategori", category_ids, key="discovery_dry_category")
+    if st.button("Kör dry-run", key="discovery_dry_run"):
+        st.session_state["discovery_dry_run_result"] = discovery_control.run_discovery_dry_run(
+            dry_category
+        )
+    if "discovery_dry_run_result" in st.session_state:
+        result = st.session_state["discovery_dry_run_result"]
+        st.markdown("**DiscoveryDecision**")
+        st.json(result["decision"], expanded=False)
+        st.markdown("**Field Source**")
+        st.json(result["fieldSources"], expanded=False)
+        st.markdown("**fallbackWarnings**")
+        st.json(result["fallbackWarnings"], expanded=False)
+
+    st.divider()
+    st.subheader("Begränsad edit-mode")
+    st.warning(
+        "Edit-läget skriver endast `discovery-taxonomy.v1.json`, via atomic JSON write, "
+        "efter scaffold/variant/starter/capability/Dossier-validering. Candidate Dossiers "
+        "promoteras aldrig till `selectedDossiers.required`."
+    )
+    edit_enabled = st.toggle("Aktivera Discovery policy edit", key="discovery_edit_toggle")
+    if not edit_enabled:
+        st.caption("Read-only tills edit-toggle aktiveras.")
+        return
+
+    selected_category = st.selectbox(
+        "Välj kategori att editera",
+        category_ids,
+        key="discovery_edit_category",
+    )
+    category = next(
+        item for item in policy["categories"] if item.get("id") == selected_category
+    )
+    with st.form("discovery_edit_form"):
+        support_status = st.selectbox(
+            "supportStatus",
+            ["active", "fallback", "planned", "disabled"],
+            index=["active", "fallback", "planned", "disabled"].index(
+                category.get("supportStatus", "planned")
+            ),
+        )
+        label_sv = st.text_input("labelSv", value=str(category.get("labelSv", "")))
+        operator_notes = st.text_area(
+            "operatorNotes",
+            value=str(category.get("operatorNotes", "")),
+            height=80,
+        )
+        target_scaffold = st.text_input(
+            "targetScaffoldId",
+            value=str(category.get("targetScaffoldId", "")),
+        )
+        active_scaffold = st.text_input(
+            "activeScaffoldId",
+            value=str(category.get("activeScaffoldId", "")),
+        )
+        fallback_scaffold = st.text_input(
+            "fallbackScaffoldId",
+            value=str(category.get("fallbackScaffoldId", "")),
+        )
+        default_variant = st.text_input(
+            "defaultVariantId",
+            value=str(category.get("defaultVariantId", "")),
+        )
+        requested_capabilities = st.text_input(
+            "requestedCapabilities (comma-separated)",
+            value=", ".join(category.get("requestedCapabilities") or []),
+        )
+        candidate_dossiers = st.text_input(
+            "candidateDossiers (comma-separated)",
+            value=", ".join(category.get("candidateDossiers") or []),
+        )
+        dry_validate = st.form_submit_button("Dry-run validation")
+        save = st.form_submit_button("Spara policy")
+
+    if dry_validate or save:
+        updates = {
+            "supportStatus": support_status,
+            "labelSv": label_sv,
+            "operatorNotes": operator_notes.strip(),
+            "targetScaffoldId": target_scaffold,
+            "activeScaffoldId": active_scaffold.strip(),
+            "fallbackScaffoldId": fallback_scaffold.strip(),
+            "defaultVariantId": default_variant,
+            "requestedCapabilities": _csv_to_list(requested_capabilities),
+            "candidateDossiers": _csv_to_list(candidate_dossiers),
+        }
+        try:
+            _proposed, findings = discovery_control.save_category_update(
+                selected_category,
+                updates,
+                write=save,
+            )
+        except ValueError as exc:
+            st.error(str(exc))
+            return
+        if save:
+            loaders.load_json.clear()
+            loaders.read_text.clear()
+            st.success("Discovery-taxonomy sparad atomiskt.")
+        else:
+            st.success("Dry-run validation OK. Inget skrevs till disk.")
+        if findings:
+            st.dataframe(findings, use_container_width=True, hide_index=True)
+
+
 def view_control_plane() -> None:
     st.title("Kontrollplan")
     st.caption(
         "Read-only översikt över Starters, Scaffolds, Variants, Dossiers, "
-        "modellroller och kandidatfiler. Inga destruktiva åtgärder finns här."
+        "modellroller, Discovery mapping och kandidatfiler."
     )
 
     graph = asset_graph.build_graph()
@@ -133,6 +281,9 @@ def view_control_plane() -> None:
 
     st.subheader("Relationer")
     st.dataframe(graph["edges"], use_container_width=True, hide_index=True)
+
+    st.divider()
+    _render_discovery_mapping()
 
     st.divider()
     st.subheader("Konsekvensvy")
