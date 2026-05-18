@@ -2,7 +2,7 @@
 
 import { Check, Loader2, X } from "lucide-react";
 import Image from "next/image";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +20,11 @@ import { ContentStep } from "./steps/content-step";
 import { PagesStep } from "./steps/pages-step";
 import { SiteTypeStep } from "./steps/site-type-step";
 import { StoryStep } from "./steps/story-step";
-import { resolveContentBranch } from "./wizard-constants";
+import {
+  fallbackDiscoveryOptions,
+  resolveContentBranchFromOptions,
+} from "./discovery-options";
+import type { discoveryOption } from "./discovery-options";
 import type { WizardAnswers, WizardStepId } from "./wizard-types";
 import {
   emptyWizardAnswers,
@@ -46,7 +50,10 @@ export type DiscoveryWizardProps = {
   onOpenChange: (open: boolean) => void;
   initialPrompt: string;
   initialAnswers?: WizardAnswers;
-  onComplete: (answers: WizardAnswers) => void;
+  onComplete: (
+    answers: WizardAnswers,
+    discoveryOptions: readonly discoveryOption[],
+  ) => void;
 };
 
 const SKIPPABLE_STEPS = new Set<WizardStepId>([
@@ -55,6 +62,11 @@ const SKIPPABLE_STEPS = new Set<WizardStepId>([
   "assets",
   "brand",
 ]);
+
+type discoveryOptionsState = {
+  options: discoveryOption[];
+  source: "governance" | "fallback";
+};
 
 /**
  * Steg-metadata för den nordiska/tech-stilade två-spalts-layouten.
@@ -122,12 +134,21 @@ export function DiscoveryWizard({
     return base;
   });
   const [stepIndex, setStepIndex] = useState(0);
+  const [discoveryOptionsState, setDiscoveryOptionsState] =
+    useState<discoveryOptionsState>(() => ({
+      options: fallbackDiscoveryOptions(),
+      source: "fallback",
+    }));
   // Lyft skrape-state från CompanyStep så vi kan visa en overlay över
   // hela popupen medan /api/scrape-site körs.
   const [scrapeState, setScrapeState] = useState<ScrapeState | null>(null);
 
   const step = WIZARD_STEP_ORDER[stepIndex];
-  const branch = useMemo(() => resolveContentBranch(answers.siteType), [answers.siteType]);
+  const discoveryOptions = discoveryOptionsState.options;
+  const branch = useMemo(
+    () => resolveContentBranchFromOptions(answers.siteType, discoveryOptions),
+    [answers.siteType, discoveryOptions],
+  );
   const validationError = useMemo(
     () => validateWizardStep(step, answers, branch),
     [step, answers, branch],
@@ -156,8 +177,8 @@ export function DiscoveryWizard({
 
   const finish = useCallback(() => {
     if (validationError) return;
-    onComplete(answers);
-  }, [answers, onComplete, validationError]);
+    onComplete(answers, discoveryOptions);
+  }, [answers, discoveryOptions, onComplete, validationError]);
 
   const isFirst = stepIndex === 0;
   const isLast = stepIndex === WIZARD_STEP_ORDER.length - 1;
@@ -165,6 +186,36 @@ export function DiscoveryWizard({
 
   const meta = STEP_META[step];
   const isScraping = scrapeState?.status === "loading";
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    async function loadDiscoveryOptions() {
+      try {
+        const response = await fetch("/api/discovery-options", {
+          cache: "no-store",
+        });
+        if (!response.ok) return;
+        const payload = (await response.json()) as { options?: discoveryOption[] };
+        if (!Array.isArray(payload.options) || payload.options.length === 0) {
+          return;
+        }
+        if (!cancelled) {
+          setDiscoveryOptionsState({
+            options: payload.options,
+            source: "governance",
+          });
+        }
+      } catch {
+        // Keep the local UI cache so the operator can continue if the
+        // governance endpoint is temporarily unavailable.
+      }
+    }
+    void loadDiscoveryOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -327,7 +378,12 @@ export function DiscoveryWizard({
                 />
               ) : null}
               {step === "siteType" ? (
-                <SiteTypeStep answers={answers} onChange={updateAnswers} />
+                <SiteTypeStep
+                  answers={answers}
+                  onChange={updateAnswers}
+                  options={discoveryOptions}
+                  source={discoveryOptionsState.source}
+                />
               ) : null}
               {step === "content" ? (
                 <ContentStep
