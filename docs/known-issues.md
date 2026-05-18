@@ -313,22 +313,33 @@ pass; B119-B122 öppna och listade nedan.
   platsdata utan signalering. Fix-skiss: prova flera mönster i fallande
   ordning, inklusive `,`-separator och engelska postnummer-format.
   Källa: extern reviewer 2026-05-18 (runda 2). Fix: open. Test: open.
-- **`B121` Medel** (arkitekturskuld) - discovery-sanningen passerar nu
-  fyra lager innan den landar i Project Input: (1) wizardens
+- **`B121` Medel** (arkitekturskuld, **PR A backend sealed** 2026-05-18 via
+  PR #34, merge-commit `70c261b`) - discovery-sanningen passerade
+  tidigare fyra lager innan den landade i Project Input: (1) wizardens
   `WizardAnswers` i `apps/viewser/components/discovery-wizard/wizard-payload.ts`,
   (2) `runPromptToProjectInput` skriver `DiscoveryPayload` till tempfil,
   (3) `briefModel` får master-prompten med LLM-extraktion ovanpå,
-  (4) `_apply_discovery_overrides` patchar Project Input med
-  wizardens deterministiska fält. Varje lager kan tolka samma fält
-  något annorlunda (företagsnamn i wizard vs brief vs override), och
-  konflikten löses inte explicit utan via "sista vinner"-ordning.
-  Det öppnar för "varför blev fält X så här trots att jag fyllde i
-  Y?"-buggar som är svåra att reproducera. Fix-skiss: definiera en
-  enda sann källa per fält (sannolikt wizard wins när fältet är
-  ifyllt, annars brief, annars LLM-default) och dokumentera ordningen
-  i en helper med tester. Kopplar mot B13a-flytt eftersom mycket av
-  detta hör hemma i `packages/generation/`. Källa: extern reviewer
-  2026-05-18 (runda 2). Fix: open. Test: open.
+  (4) `_apply_discovery_overrides` patchade Project Input med
+  wizardens deterministiska fält. Konflikten löstes inte explicit
+  utan via "sista vinner"-ordning. PR A (B121-resolver/taxonomy)
+  stänger backendsidan: `packages/generation/discovery/resolve.py`
+  är canonical resolver, `governance/policies/discovery-taxonomy.v1.json`
+  är canonical mapping, och `DiscoveryDecision` skrivs som extra fält
+  `discoveryDecision` på prompt-input meta-sidecaren med
+  `fieldSources`/`fallbackWarnings`/`selectionSource`-spårning. ADR 0024
+  registrerar Discovery Payload, Discovery Resolver, Discovery Decision,
+  Discovery Taxonomy och Field Source som canonical termer.
+  **  Kvarvarande spår innan B121 stängs helt:** PR B (frontend alignment
+  — `apps/viewser/components/discovery-wizard/wizard-constants.ts`
+  bär fortfarande egen parallell-sanning för category→scaffold/variant),
+  PR C (Backoffice Discovery Control / mapping review-vy + dry-run-resolver),
+  PR D (verifierings-smoke mot fyra produktbaseline-prompter elektriker
+  Malmö / frisör Göteborg / naprapatklinik Stockholm / liten keramik-
+  e-handel). Kopplar mot B13a-flytt eftersom resolvern lever i
+  `packages/generation/`. PR #34 landade i merge-commit 70c261b 2026-05-18
+  och täcker hela PR A-scope (54 discovery-tester). Källa: extern reviewer
+  2026-05-18 (runda 2). Fix: open (PR A backend sealed; PR B/C/D pending).
+  Test: tests/test_discovery_taxonomy.py + tests/test_discovery_resolver.py.
 - **`B122` Låg** - `apps/viewser/components/prompt-builder.tsx`
   växlar från `thinking` till `building`-stage via `setTimeout(...,
   1500)` istället för på en faktisk backend-signal. Det fungerar i
