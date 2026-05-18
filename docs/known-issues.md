@@ -313,25 +313,32 @@ pass; B119-B122 öppna och listade nedan.
   platsdata utan signalering. Fix-skiss: prova flera mönster i fallande
   ordning, inklusive `,`-separator och engelska postnummer-format.
   Källa: extern reviewer 2026-05-18 (runda 2). Fix: open. Test: open.
-- **`B121` Medel** (arkitekturskuld, **PR A + PR B sealed**, B121 ej helt
-  stängd förrän PR C + PR D) - discovery-sanningen passerade tidigare fyra
-  lager innan den landade i Project Input: (1) wizardens `WizardAnswers`,
-  (2) tempfil-`DiscoveryPayload`, (3) `briefModel`, (4)
-  `_apply_discovery_overrides` utan explicit "sista vinner"-ordning.
-  **PR A** (PR #34, merge `70c261b`): canonical resolver
+- **`B121` Medel** (arkitekturskuld, **PR A + PR B + PR C sealed**, B121 ej
+  helt stängd förrän Prompt 5 Scout-audit + PR D baseline-smoke) -
+  discovery-sanningen passerade tidigare fyra lager innan den landade i
+  Project Input. **PR A** (PR #34, `70c261b`): canonical resolver
   (`packages/generation/discovery/resolve.py`), taxonomy
   (`governance/policies/discovery-taxonomy.v1.json`), `DiscoveryDecision`/
   `fieldSources` på meta-sidecar, ADR 0024 (54 discovery-tester).
-  **PR B** (PR #35, merge `ec32913`): Viewser overlay läser
+  **PR B** (PR #35, `ec32913`): Viewser overlay läser
   `/api/discovery-options` från governance taxonomy; `starterId` blockas i
   frontend; follow-up får ingen discovery; `scaffoldHint` är hint-only.
-  **Kvar innan B121 stängs:** PR C (Backoffice Discovery Control /
-  mapping review + dry-run-resolver), PR D (verifierings-smoke mot fyra
-  produktbaseline-prompter). Kopplar mot B13a-flytt (resolver i
-  `packages/generation/`). Källa: extern reviewer 2026-05-18 (runda 2).
-  Fix: open (PR A+B sealed; PR C/D pending).
+  **PR C** (PR #36, `89680fa`): Backoffice Discovery Control —
+  mapping-tabell, Doctor med error/warning-distinktion, graph/impact
+  integration, dry-run-resolver utan side-effects, gated edit-toggle bara
+  mot `discovery-taxonomy.v1.json` via `atomic_write_json`, stale
+  dry-run-skydd, riktiga Doctor-warnings i mapping-tabell istället för
+  generiska statusfraser (`06c9d5f` review-fix). Coach 8.5/10.
+  **Kvar innan B121 stängs:** Prompt 5 (Scout read-only audit av hela
+  kedjan), PR D (verifierings-smoke mot fyra produktbaseline-prompter).
+  Medvetna icke-blockers/PR C2: per-run trace, egen vy istället för
+  Kontrollplan-sektion, dry-run ≠ bit-exakt Viewser-payload.
+  Kopplar mot B13a-flytt (resolver i `packages/generation/`).
+  Källa: extern reviewer 2026-05-18 (runda 2).
+  Fix: open (PR A+B+C sealed; Scout 5 + PR D pending).
   Test: tests/test_discovery_taxonomy.py, tests/test_discovery_resolver.py,
-  tests/test_viewser_files.py (PR B guards).
+  tests/test_viewser_files.py (PR B guards),
+  tests/test_backoffice_discovery_control.py (PR C, 16 tester).
 - **`B122` Låg** - `apps/viewser/components/prompt-builder.tsx`
   växlar från `thinking` till `building`-stage via `setTimeout(...,
   1500)` istället för på en faktisk backend-signal. Det fungerar i
