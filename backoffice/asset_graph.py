@@ -107,23 +107,25 @@ def scaffold_is_real(scaffold_dir: Path, required_files: list[str] | None = None
     return scaffold_file_state(scaffold_dir, files)["status"] == "implemented"
 
 
-def list_scaffold_dirs(scaffolds_dir: Path = SCAFFOLDS_DIR) -> list[Path]:
+def list_scaffold_dirs(scaffolds_dir: Path | None = None) -> list[Path]:
     """List Scaffold directories."""
-    if not scaffolds_dir.exists():
+    base = scaffolds_dir if scaffolds_dir is not None else SCAFFOLDS_DIR
+    if not base.exists():
         return []
-    return sorted(path for path in scaffolds_dir.iterdir() if path.is_dir())
+    return sorted(path for path in base.iterdir() if path.is_dir())
 
 
 def list_dossier_dirs(
-    dossiers_dir: Path = DOSSIERS_DIR,
+    dossiers_dir: Path | None = None,
     *,
     classes: list[str] | None = None,
 ) -> list[tuple[str, Path]]:
     """List Dossier directories for canonical classes only."""
+    base = dossiers_dir if dossiers_dir is not None else DOSSIERS_DIR
     allowed_classes = classes if classes is not None else dossier_classes()
     out: list[tuple[str, Path]] = []
     for dossier_class in allowed_classes:
-        class_dir = dossiers_dir / dossier_class
+        class_dir = base / dossier_class
         if not class_dir.exists():
             continue
         for path in sorted(class_dir.iterdir()):
@@ -133,16 +135,17 @@ def list_dossier_dirs(
 
 
 def list_unregistered_dossier_class_dirs(
-    dossiers_dir: Path = DOSSIERS_DIR,
+    dossiers_dir: Path | None = None,
     *,
     classes: list[str] | None = None,
 ) -> list[Path]:
     """Return Dossier class directories not declared in the Dossier contract."""
+    base = dossiers_dir if dossiers_dir is not None else DOSSIERS_DIR
     allowed = set(classes if classes is not None else dossier_classes())
-    if not dossiers_dir.exists():
+    if not base.exists():
         return []
     return sorted(
-        path for path in dossiers_dir.iterdir() if path.is_dir() and path.name not in allowed
+        path for path in base.iterdir() if path.is_dir() and path.name not in allowed
     )
 
 
@@ -172,8 +175,50 @@ def _node(
     }
 
 
-def _edge(source: str, target: str, relation: str) -> dict[str, str]:
-    return {"from": source, "to": target, "relation": relation}
+def _edge(source: str, target: str, relation: str, details: str = "") -> dict[str, str]:
+    return {"from": source, "to": target, "relation": relation, "details": details}
+
+
+def _compatible_dossier_id(entry: Any) -> str | None:
+    """Return a Dossier id from a compatible-dossiers entry."""
+    if isinstance(entry, str) and entry.strip():
+        return entry.strip()
+    if isinstance(entry, dict) and isinstance(entry.get("id"), str) and entry["id"].strip():
+        return entry["id"].strip()
+    return None
+
+
+def _compatible_dossier_details(entry: Any) -> str:
+    """Return operator-readable details from a compatible-dossiers entry."""
+    if not isinstance(entry, dict):
+        return ""
+    when = entry.get("when")
+    return str(when) if when else ""
+
+
+def _compatible_dossier_edges(
+    scaffold_id: str,
+    compatible: dict[str, Any],
+) -> list[dict[str, str]]:
+    """Return graph edges from one Scaffold to compatible Dossiers."""
+    edges: list[dict[str, str]] = []
+    for relation in ("required", "recommended", "conditional"):
+        entries = compatible.get(relation, []) or []
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            dossier_id = _compatible_dossier_id(entry)
+            if dossier_id is None:
+                continue
+            edges.append(
+                _edge(
+                    f"scaffold:{scaffold_id}",
+                    f"dossier:{dossier_id}",
+                    relation,
+                    _compatible_dossier_details(entry),
+                )
+            )
+    return edges
 
 
 def _variant_nodes_for_scaffold(scaffold_dir: Path, scaffold_id: str) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
@@ -306,11 +351,7 @@ def build_graph() -> dict[str, list[dict[str, Any]]]:
         compatible_path = scaffold_dir / "compatible-dossiers.json"
         if compatible_path.exists() and not is_placeholder_file(compatible_path):
             compatible = read_json(compatible_path)
-            for key in ("required", "recommended", "conditional"):
-                for dossier_id in compatible.get(key, []) or []:
-                    edges.append(
-                        _edge(f"scaffold:{scaffold_id}", f"dossier:{dossier_id}", key)
-                    )
+            edges.extend(_compatible_dossier_edges(scaffold_id, compatible))
 
     for dossier_class, dossier_dir in list_dossier_dirs():
         manifest_path = dossier_dir / "manifest.json"
@@ -365,25 +406,71 @@ def run_health_checks() -> list[dict[str, str]]:
     embedding_policy = load_policy("embedding-policy.v1.json")
     required_files = scaffold_required_files(scaffold_contract)
     classes = dossier_classes(dossier_contract)
+    dossier_manifests = _dossier_manifests_by_id(classes=classes)
 
     for scaffold_dir in list_scaffold_dirs():
         state = scaffold_file_state(scaffold_dir, required_files)
         if state["status"] == "implemented":
-            continue
-        details = []
-        if state["missing"]:
-            details.append("saknar " + ", ".join(state["missing"]))
-        if state["placeholders"]:
-            details.append("platshållare " + ", ".join(state["placeholders"]))
-        findings.append(
-            {
-                "level": "warning",
-                "id": f"scaffold-files:{scaffold_dir.name}",
-                "message": f"{scaffold_dir.name} följer inte scaffold-contract fullt ut.",
-                "path": repo_relative(scaffold_dir),
-                "details": "; ".join(details),
-            }
-        )
+            details = []
+            if state["missing"]:
+                details.append("saknar " + ", ".join(state["missing"]))
+            if state["placeholders"]:
+                details.append("platshållare " + ", ".join(state["placeholders"]))
+            findings.append(
+                {
+                    "level": "warning",
+                    "id": f"scaffold-files:{scaffold_dir.name}",
+                    "message": f"{scaffold_dir.name} följer inte scaffold-contract fullt ut.",
+                    "path": repo_relative(scaffold_dir),
+                    "details": "; ".join(details),
+                }
+            )
+
+        scaffold_json = scaffold_dir / "scaffold.json"
+        if scaffold_json.exists() and not is_placeholder_file(scaffold_json):
+            scaffold_payload = read_json(scaffold_json)
+            scaffold_id = str(scaffold_payload.get("id") or scaffold_dir.name)
+        else:
+            scaffold_id = scaffold_dir.name
+        compatible_path = scaffold_dir / "compatible-dossiers.json"
+        if compatible_path.exists() and not is_placeholder_file(compatible_path):
+            compatible = read_json(compatible_path)
+            for relation in ("required", "recommended", "conditional"):
+                entries = compatible.get(relation, []) or []
+                if not isinstance(entries, list):
+                    findings.append(
+                        {
+                            "level": "error",
+                            "id": f"compatible-dossier:{scaffold_id}:{relation}",
+                            "message": f"{relation} i compatible-dossiers.json är inte en lista.",
+                            "path": repo_relative(compatible_path),
+                            "details": f"Fältet har typ {type(entries).__name__}.",
+                        }
+                    )
+                    continue
+                for index, entry in enumerate(entries):
+                    dossier_id = _compatible_dossier_id(entry)
+                    if dossier_id is None:
+                        findings.append(
+                            {
+                                "level": "error",
+                                "id": f"compatible-dossier:{scaffold_id}:{relation}:{index}",
+                                "message": "Compatible Dossier-entry saknar id.",
+                                "path": repo_relative(compatible_path),
+                                "details": json.dumps(entry, ensure_ascii=False, sort_keys=True),
+                            }
+                        )
+                        continue
+                    if dossier_id not in dossier_manifests:
+                        findings.append(
+                            {
+                                "level": "warning",
+                                "id": f"compatible-dossier:{scaffold_id}:{relation}:{dossier_id}",
+                                "message": f"{scaffold_id} refererar till okänd Dossier.",
+                                "path": repo_relative(compatible_path),
+                                "details": dossier_id,
+                            }
+                        )
 
     for class_dir in list_unregistered_dossier_class_dirs(classes=classes):
         findings.append(
@@ -395,6 +482,19 @@ def run_health_checks() -> list[dict[str, str]]:
                 "details": "Tillåtna klasser: " + ", ".join(classes),
             }
         )
+
+    for dossier_id, (dossier_class, manifest_path, payload) in dossier_manifests.items():
+        manifest_class = payload.get("class")
+        if manifest_class != dossier_class:
+            findings.append(
+                {
+                    "level": "error",
+                    "id": f"dossier-class-mismatch:{dossier_id}",
+                    "message": f"{dossier_id} har class som inte matchar mappen.",
+                    "path": repo_relative(manifest_path),
+                    "details": f"manifest class={manifest_class!r}, folder={dossier_class!r}",
+                }
+            )
 
     if not EMBEDDING_DIR.exists():
         findings.append(
@@ -457,3 +557,24 @@ def load_existing_variants(scaffold_id: str) -> list[dict[str, Any]]:
     for path in sorted(variants_dir.glob("*.json")):
         variants.append(read_json(path))
     return variants
+
+
+def _dossier_manifests_by_id(
+    dossiers_dir: Path | None = None,
+    *,
+    classes: list[str] | None = None,
+) -> dict[str, tuple[str, Path, dict[str, Any]]]:
+    """Read Dossier manifests keyed by manifest id."""
+    manifests: dict[str, tuple[str, Path, dict[str, Any]]] = {}
+    for dossier_class, dossier_dir in list_dossier_dirs(dossiers_dir, classes=classes):
+        manifest_path = dossier_dir / "manifest.json"
+        if not manifest_path.exists():
+            continue
+        try:
+            payload = read_json(manifest_path)
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+        dossier_id = payload.get("id")
+        if isinstance(dossier_id, str) and dossier_id:
+            manifests[dossier_id] = (dossier_class, manifest_path, payload)
+    return manifests

@@ -64,6 +64,55 @@ def test_real_asset_graph_contains_core_edges() -> None:
     assert ("model-role", "variantModel") in nodes
     assert ("starter:marketing-base", "scaffold:local-service-business", "maps-to") in edges
     assert ("scaffold:local-service-business", "variant:nordic-trust", "owns") in edges
+    assert (
+        "scaffold:local-service-business",
+        "dossier:interactive-game-loop",
+        "conditional",
+    ) in edges
+    assert (
+        "scaffold:ecommerce-lite",
+        "dossier:interactive-game-loop",
+        "conditional",
+    ) in edges
+    assert not any("{'id':" in edge["to"] for edge in graph["edges"])
+
+
+def test_health_checks_report_malformed_compatible_dossier_entries(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    scaffolds_dir = tmp_path / "scaffolds"
+    dossiers_dir = tmp_path / "dossiers"
+    scaffold_dir = scaffolds_dir / "demo"
+    scaffold_dir.mkdir(parents=True)
+    for filename in asset_graph.scaffold_required_files():
+        payload: dict[str, Any] = {}
+        if filename == "scaffold.json":
+            payload = {"id": "demo"}
+        if filename == "compatible-dossiers.json":
+            payload = {
+                "required": [{"when": "missing id"}],
+                "recommended": ["missing-dossier"],
+                "conditional": [{"id": "known-dossier", "when": "explicit ask"}],
+            }
+        (scaffold_dir / filename).write_text(json.dumps(payload), encoding="utf-8")
+
+    manifest = dossiers_dir / "soft" / "known-dossier" / "manifest.json"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        json.dumps({"id": "known-dossier", "class": "soft"}),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(asset_graph, "SCAFFOLDS_DIR", scaffolds_dir)
+    monkeypatch.setattr(asset_graph, "DOSSIERS_DIR", dossiers_dir)
+
+    findings = asset_graph.run_health_checks()
+    ids = {finding["id"] for finding in findings}
+
+    assert "compatible-dossier:demo:required:0" in ids
+    assert "compatible-dossier:demo:recommended:missing-dossier" in ids
+    assert "compatible-dossier:demo:conditional:known-dossier" not in ids
 
 
 def test_health_checks_report_embedding_index_as_not_implemented() -> None:
