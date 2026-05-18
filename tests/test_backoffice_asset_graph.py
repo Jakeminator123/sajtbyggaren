@@ -217,6 +217,26 @@ def test_list_variant_candidates_reports_validation_and_collision(
     assert by_candidate["broken"]["status"] == "invalid"
 
 
+def test_asset_graph_lists_dossier_candidates(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    candidates_dir = tmp_path / "dossier-candidates"
+    manifest = candidates_dir / "soft" / "faq-accordion" / "manifest.json"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        json.dumps({"id": "faq-accordion", "enabled": False, "capability": "faq-section"}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(asset_graph, "DOSSIER_CANDIDATES_DIR", candidates_dir)
+
+    graph = asset_graph.build_graph()
+
+    assert ("dossier-candidate", "soft/faq-accordion") in {
+        (node["type"], node["id"]) for node in graph["nodes"]
+    }
+
+
 def test_variant_candidate_ui_helper_writes_only_candidate_dir(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -251,6 +271,40 @@ def test_variant_candidate_ui_helper_writes_only_candidate_dir(
     assert captured["output_dir"] == building_blocks.VARIANT_CANDIDATES_DIR
     assert "packages/generation/orchestration/scaffolds" not in str(captured["output_dir"])
     assert captured["enabled"] is False
+
+
+def test_dossier_candidate_ui_helper_writes_only_candidate_dir(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_generate_dossier_candidate(**kwargs: Any) -> SimpleNamespace:
+        captured.update(kwargs)
+        return SimpleNamespace(
+            candidate_dir=Path("data/dossier-candidates/soft/faq-accordion"),
+            manifest={"id": "faq-accordion", "enabled": False},
+            instructions="# When to use\n",
+            source="deterministic-v1",
+            model_used="deterministic",
+        )
+
+    monkeypatch.setattr(
+        building_blocks,
+        "generate_dossier_candidate",
+        fake_generate_dossier_candidate,
+    )
+
+    result = building_blocks.create_dossier_candidate_from_ui(
+        brief="FAQ accordion",
+        candidate_id="faq-accordion",
+        capability="faq-section",
+        use_llm=False,
+        force=False,
+    )
+
+    assert result.manifest["enabled"] is False
+    assert captured["output_dir"] == building_blocks.DOSSIER_CANDIDATES_DIR
+    assert "packages/generation/orchestration/dossiers" not in str(captured["output_dir"])
 
 
 def test_pyrightconfig_adds_scripts_extra_path(repo_root: Path) -> None:
