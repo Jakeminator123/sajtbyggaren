@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -545,6 +546,120 @@ def compare_variant_to_existing(
                 "sharedVibes": ", ".join(sorted(candidate_vibes & vibes)),
             }
         )
+    return rows
+
+
+def _json_preview(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
+def _nested_value(payload: dict[str, Any], path: str) -> Any:
+    current: Any = payload
+    for part in path.split("."):
+        if not isinstance(current, dict):
+            return None
+        current = current.get(part)
+    return current
+
+
+def variant_diff_rows(
+    candidate: dict[str, Any],
+    canonical: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Return field-level diff rows between candidate and canonical Variant JSON."""
+    fields = [
+        "id",
+        "enabled",
+        "label",
+        "description",
+        "tokens.color.background",
+        "tokens.color.foreground",
+        "tokens.color.muted",
+        "tokens.color.border",
+        "tokens.color.primary",
+        "tokens.color.primaryForeground",
+        "tokens.color.accent",
+        "tokens.color.accentForeground",
+        "tokens.typography.fontFamilyDisplay",
+        "tokens.typography.fontFamilyBody",
+        "tokens.typography.fontFamilyMono",
+        "tokens.typography.scaleRatio",
+        "tokens.radius.sm",
+        "tokens.radius.md",
+        "tokens.radius.lg",
+        "tokens.spacing.section",
+        "tokens.spacing.container",
+        "tokens.motion.level",
+        "tone.vibe",
+    ]
+    rows: list[dict[str, Any]] = []
+    for field in fields:
+        canonical_value = _nested_value(canonical, field)
+        candidate_value = _nested_value(candidate, field)
+        rows.append(
+            {
+                "field": field,
+                "canonical": _json_preview(canonical_value),
+                "candidate": _json_preview(candidate_value),
+                "changed": canonical_value != candidate_value,
+            }
+        )
+    return rows
+
+
+def list_variant_candidates(scaffold_id: str | None = None) -> list[dict[str, Any]]:
+    """Return existing Variant candidate files with validation and collision status."""
+    from packages.generation.artifacts import ArtifactSchemaError, validate_variant
+
+    rows: list[dict[str, Any]] = []
+    if not VARIANT_CANDIDATES_DIR.exists():
+        return rows
+    scaffold_dirs = (
+        [VARIANT_CANDIDATES_DIR / scaffold_id]
+        if scaffold_id
+        else sorted(path for path in VARIANT_CANDIDATES_DIR.iterdir() if path.is_dir())
+    )
+    for candidate_dir in scaffold_dirs:
+        if not candidate_dir.exists():
+            continue
+        current_scaffold_id = candidate_dir.name
+        canonical_ids = {
+            str(variant.get("id"))
+            for variant in load_existing_variants(current_scaffold_id)
+            if variant.get("id")
+        }
+        for candidate_path in sorted(candidate_dir.glob("*.json")):
+            try:
+                payload = read_json(candidate_path)
+                candidate_id = str(payload.get("id") or candidate_path.stem)
+                validate_variant(payload)
+                status = "valid"
+                details = ""
+                enabled = _enabled(payload)
+            except (OSError, ValueError, json.JSONDecodeError, ArtifactSchemaError) as exc:
+                candidate_id = candidate_path.stem
+                status = "invalid"
+                details = str(exc)
+                enabled = None
+            modified = datetime.fromtimestamp(
+                candidate_path.stat().st_mtime,
+                tz=UTC,
+            ).isoformat(timespec="seconds")
+            rows.append(
+                {
+                    "scaffold": current_scaffold_id,
+                    "candidate": candidate_id,
+                    "source": "unknown-existing",
+                    "enabled": enabled,
+                    "status": status,
+                    "collidesWithCanonical": candidate_id in canonical_ids,
+                    "modifiedAt": modified,
+                    "path": repo_relative(candidate_path),
+                    "details": details,
+                }
+            )
     return rows
 
 
