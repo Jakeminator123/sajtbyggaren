@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `b5ee710` (2026-05-18, lokal mainline-commit `fix(builder): close demo-baseline-fix 1C (B88 B94 B95 B96)`. Konvention för denna rad: SHA pekar på senaste produkt-/governance-commit; efterföljande Steward-bump-commit räknas som "within bump tolerance" av `focus_check.py`. 1C-commiten stänger fyra top synliga demo-blockers efter re-Verifierings-Scout 2026-05-15:s 5.54/10-mätning: B88 (`_placeholder_contact` dev-jargong byts mot branschneutral fras), B94 (`render_about` omittar tom team-sektion), B95 (ny `_COUNTRY_NAME_LOCATION_HINTS`-set + country-only-markör + `_location_is_country_only`-helper som suppressar hero-ortstag), B96 (`_hero_cta_label`-helper trådar `scaffoldId` + `conversionGoals` så `ecommerce-lite` får "Shoppa nu", `booking_request` får "Boka tid", övriga behåller "Begär offert"). Påverkar `scripts/prompt_to_project_input.py` + `scripts/build_site.py`; 19 nya regression-tester i `tests/test_prompt_to_project_input.py` + `tests/test_builder_route_emission.py`. Föregående mainline-push: `b09f935` (`docs(focus): record backup-1..backup-8 prune on origin`). Föregående baseline: `b3a32fc` (PR #30 squash-merge `Backoffice maintenance and enabled toggles` ovanpå PR #29 `c2c6f39` `list_open_bugs script + bug-scope-discipline rule`). PR #30 döper om Streamlit-entrypoint (`backend.py → backoffice.py`), lägger till `Underhåll`-sektion, och lägger `enabled: bool`-toggles på Scaffolds/Variants/Dossiers/Starters med fail-loud i `packages/generation/planning/plan.py` + `scripts/build_site.py`. ADR 0023 + ny policy `governance/policies/starter-registry.v1.json` + ny schema `governance/schemas/starter-registry.schema.json`. PR #29 lägger till `scripts/list_open_bugs.py` + `governance/rules/bug-scope-discipline.md` (alwaysApply) + sammanfattningsrad i `docs/known-issues.md` (låst av `tests/test_bug_scope_discipline.py::test_known_issues_summary_line_matches_script`). Aktuell räkning efter 1C: 15 aktiva, 15 misplaced, 6 unknown, 54 stängda. `backup-22` skapad från synkad `main` innan 1C-sprinten (lokalt + push).)
+Last verified state: `b5ee710` (2026-05-18, lokal mainline-commit `fix(builder): close demo-baseline-fix 1C (B88 B94 B95 B96)`. Konvention för denna rad: SHA pekar på senaste produkt-/governance-commit; efterföljande Steward-bump-commit räknas som "within bump tolerance" av `focus_check.py`. 1C-commiten stänger fyra top synliga demo-blockers efter re-Verifierings-Scout 2026-05-15:s 5.54/10-mätning: B88 (`_placeholder_contact` dev-jargong byts mot branschneutral fras), B94 (`render_about` omittar tom team-sektion), B95 (ny `_COUNTRY_NAME_LOCATION_HINTS`-set + country-only-markör + `_location_is_country_only`-helper som suppressar hero-ortstag), B96 (`_hero_cta_label`-helper trådar `scaffoldId` + `conversionGoals` så `ecommerce-lite` får "Shoppa nu", `booking_request` får "Boka tid", övriga behåller "Begär offert"). Påverkar `scripts/prompt_to_project_input.py` + `scripts/build_site.py`; 19 nya regression-tester i `tests/test_prompt_to_project_input.py` + `tests/test_builder_route_emission.py`. Föregående mainline-push: `b09f935` (`docs(focus): record backup-1..backup-8 prune on origin`). Föregående baseline: `b3a32fc` (PR #30 squash-merge `Backoffice maintenance and enabled toggles` ovanpå PR #29 `c2c6f39` `list_open_bugs script + bug-scope-discipline rule`). PR #30 döper om Streamlit-entrypoint (`backend.py → backoffice.py`), lägger till `Underhåll`-sektion, och lägger `enabled: bool`-toggles på Scaffolds/Variants/Dossiers/Starters med fail-loud i `packages/generation/planning/plan.py` + `scripts/build_site.py`. ADR 0023 + ny policy `governance/policies/starter-registry.v1.json` + ny schema `governance/schemas/starter-registry.schema.json`. PR #29 lägger till `scripts/list_open_bugs.py` + `governance/rules/bug-scope-discipline.md` (alwaysApply) + sammanfattningsrad i `docs/known-issues.md` (låst av `tests/test_bug_scope_discipline.py::test_known_issues_summary_line_matches_script`). Aktuell räkning efter Re-Verifierings-Scout 3 2026-05-18: 21 aktiva (15 + B99/B100/B101/B102/B103/B104), 15 misplaced, 6 unknown, 54 stängda. `backup-22` skapad från synkad `main` innan 1C-sprinten (lokalt + push).)
 
 Föregående produktcommit: `ab74c2a` (2026-05-15, demo-baseline-fix 1A landade direkt på `main`. Konvention för denna rad: SHA pekar på senaste produkt-/kodcommit; den efterföljande Steward-bump-commiten själv (denna rad-ändring) räknas som "within bump tolerance" av `focus_check.py` och får inte ge en till bump-rundgång. `feat(builder): demo-baseline-fix 1A` (`ab74c2a`) stängde Scout-auditens topp 3 demo-blockers i ett pass: (1) `/_global-error` prerender-fel (regression/variant av B41) löst genom att lägga explicit `app/global-error.tsx` i `data/starters/marketing-base/app/` och `data/starters/commerce-base/app/` med `"use client"` och inga third-party-imports - verifierat end-to-end via `painter-palma` (marketing-base) + `atelje-bird` (commerce-base) som båda nu landar `status: ok`, `quality: ok`, `npm install + npm run build` gröna; (2) rå prompt läckte ut som `company.name`/`company.story` på rendererade sajter - `scripts/prompt_to_project_input.py` skriver om `_company_name_from_prompt` till `_derive_company_name` (läser bara `brief.businessTypeGuess` + `brief.locationHint` via en liten svensk business-type label-map: electrician -> elektriker, hairdresser -> frisör, ceramics-studio -> keramikstudio, ...) och `_derive_story` (föredrar `brief.notesForPlanner`, fallback till strukturerad svensk platshållartext, aldrig raw prompt); (3) svenska tecken förstördes i service-labels (`F Rska Gg Direkt Fr N G Rden`) - `_slugify_label` NFKD-foldar för id-fältet (`färska ägg -> farska-agg`) men `_service_label_from_text` behåller å/ä/ö i labeln, och brief `services_mentioned` Field-description + system-prompt frågar nu efter natural-language fraser på originalspråk istället för kebab-case English slugs. `slugify_site_id` NFKD-foldar också före substitution så `elektriker i Malmö` ger `elektriker-i-malmo-<tail>` (förut `elektriker-i-malm-<tail>` med `ö` kollapsad till dash). Regression-tester: `test_company_name_and_story_never_contain_raw_prompt` (låser exakta tokens från den failande real-runen `enehmsida-som-s-ljer-b-t-661e23`: `Enehmsida`, `båtari`, `2 sidor`), `test_swedish_service_labels_preserve_case` (`färska ägg direkt från gården -> Färska ägg direkt från gården` som label, ASCII-only slug), `test_slugify_label_ascii_folds_swedish_chars`, `test_company_name_uses_swedish_business_type_mapping`, `test_story_prefers_notes_for_planner` plus fyra fallback-tester. Out-of-scope per Scout/coach: ingen Project DNA / semantic follow-up merge, ingen StackBlitz/COOP/COEP, inga nya starters, ingen docs/rules-sprint utöver denna bump. `backup-19` skapad från synkad `main` innan sprintarbetet (lokalt + push). Föregående mainline-pushar samma dag: `f29688c` (Steward-bump efter rules-commit), `d072c98` (powershell-glob + cli-safety-belt rules), `8d45140` (Steward-sync efter prune-sprinten), `2acdeca` (prune-script + tester), `7b90c0c` (Steward-sync efter B60), `65f052a` (B60 fix), `dd5464f` (post-PR-#27 sanity-bump), `e057fbd` (PR #27 follow-up versions squash-merge). `backup-15` t.o.m. `backup-19` finns lokalt och på origin. Inga öppna PRs.)
 
@@ -177,7 +177,7 @@ Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
 - `34551b4` — `docs(cleanup): modernize viewser copy and starter
   routing notes`. Steward-cleanup efter Scout-fynd: README, Viewser,
   starter-routing och migration-plan moderniserade till PromptBuilder
-  + follow-up versions; `.cursor/settings.json`-status och stale
+  samt follow-up versions; `.cursor/settings.json`-status och stale
   PromptBuilder-timeout-nice-to-have rensade.
 - `5d746e9` — `fix(viewser): audit-fix sprint for B44 + B46`. B44 stängd:
   `/api/prompt` exponerar `buildStatus`, PromptBuilder klassificerar
@@ -189,8 +189,7 @@ Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
   handles).
 - `9ff7c50` — `docs(focus): bump verified SHA + queue after audit-fix
   B44+B46`. Standard loop steg 8 efter audit-fix-sprinten.
-- `134df07` — `chore(workspace): perf hygiene + .generated externalization
-  + viewser prettier setup`. Workspace-hygien-pass: utökad `.cursorignore`,
+- `134df07` — `chore(workspace): perf hygiene + .generated externalization + viewser prettier setup`. Workspace-hygien-pass: utökad `.cursorignore`,
   ny `.cursorindexingignore` + `.editorconfig`, `.vscode/settings.json`
   får watcher-exclude + tsserver memory-bump + prettier-format-on-save,
   `scripts/build_site.py` skriver dev-preview-output till
@@ -247,7 +246,7 @@ Audit-hotfix-sprint (2026-05-14, post-Scout-bug-audit):
   docs/settings touch`. Sopar upp tre filer som drev i working tree
   efter parallell-agent-aktivitet: `.cursor/settings.json` vercel-
   blocket borttaget (operator-toggle), `README.md` ADR-lista 0016-0020
-  + Sprint 3B+3B-next-status, `docs/agent-prompts.md` ny "Baseline för
+  samt Sprint 3B+3B-next-status, `docs/agent-prompts.md` ny "Baseline för
   Codex-IDE"-sektion som kodifierar Scout-/Builder-/Steward-disciplin
   vid parallella agentpass.
 
@@ -296,7 +295,7 @@ också kvar på origin men är fri att radera i nästa Steward-städ.
 
 ## Current active sprint
 
-Ingen pågående produktimplementation på `main`. Demo-baseline-fix 1C (B88 + B94 + B95 + B96) landade lokalt i `b5ee710` 2026-05-18. Inga öppna PRs. Nästa konkreta uppgift är re-Verifierings-Scout efter 1C — se "Next action".
+Ingen pågående produktimplementation på `main`. Demo-baseline-fix 1C (B88 + B94 + B95 + B96) landade lokalt i `b5ee710` 2026-05-18. Re-Verifierings-Scout 3 (post-1C, samma dag) körd: totalsnitt **5.13/10 (rå) / ~5.9/10 (kalibrerat mot Scout-2-skalan)**, case-spann 4.88-5.75, alla fyra builds `status=ok`/`quality=ok`/`briefSource=real`. Verdict: 1C lyfte snittet (mest case 4 där B95+B96 aktiveras) men under 7/10-tröskeln och minst ett case under 6.5 → bug-sweep round 2 rekommenderas, Project DNA / semantic follow-up merge skjuts upp. B88/B94/B95/B96 mekaniskt verifierade som stängda; B96 stängd men levereras inte i case 2 + 3 eftersom briefModel returnerar `conversionGoals=[]` för korta prompter (booking-bransch faller tillbaka till quote-default). Sex nya öppna B-IDs loggade: B99 (Hög, `_derive_story` publik platshållartext på alla 4 case), B100 (Medel, `_hero_cta_label` saknar `businessType`-fallback), B101 (Låg, hero shop-CTA länkar fel route), B102 (Låg, `render_products` egen CTA-text matchar inte hero), B103 (Medel, `_derive_tagline` upprepar H1), B104 (Låg, `render_about` "Områden vi arbetar i" inte country-only-medveten). Inga öppna PRs. Nästa konkreta uppgift är **demo-baseline-fix 1D / bug-sweep round 2** — se "Next action".
 
 Tidigare klara sprintar: demo-baseline-fix 1C (B88 B94 B95 B96), A-mini cleanup
 (B51/B52/B54/B55 + B53 registrerad), Prompt-till-sajt MVP v1,
@@ -313,63 +312,87 @@ PR #28 demo-baseline-fix 1B + bug-sweep, demo-baseline-fix 1A-hotfix.
 
 ## Next action - direktiv till nästa agent
 
-**Re-Verifierings-Scout efter demo-baseline-fix 1C.** 1C landade
-lokalt i `b5ee710` 2026-05-18 och stängde de fyra top synliga
-demo-blockers Scout flaggade i re-Verifierings-Scout 2026-05-15
-(snitt 5.54/10, case-spann 3.9-6.25):
+**Demo-baseline-fix 1D / bug-sweep round 2** ovanpå 1C (`b5ee710` +
+Steward-bump `6eaf222`). Re-Verifierings-Scout 3 2026-05-18 mätte
+snittet till **5.13/10 (rå) / ~5.9/10 (kalibrerat)** och pekar på
+att 1C levererade exakt vad den lovade — men störst hävstång ligger
+nu i (a) story-platshållartext (B99) eftersom den är publik på alla
+4 case och (b) booking-bransch-CTA (B100) eftersom det är samma
+problem 1C trodde sig lösa. Decision rule: snitt ≥7/10 OCH inget
+case <6.5 → Project DNA / semantic follow-up merge är nästa.
 
-- **B88** stängd: `_placeholder_contact` skriver inte längre dev-
-  jargong i publika kontaktfält; default är branschneutral fras
-  (`"Adress lämnas på förfrågan"` / `"Address available on request"`).
-- **B94** stängd: `render_about` omittar hela "Teamet"-blocket när
-  `team=[]` (samma conditional-render som B66:s trustSignals-fix).
-- **B95** stängd: nya `_COUNTRY_NAME_LOCATION_HINTS`-set + country-
-  only-markör i `_placeholder_location` + `_location_is_country_only`-
-  helper i `build_site.py` som suppressar hero-ortstag när
-  `city == country`. Täcker Sweden/Sverige/Norway/Norge/Denmark/
-  Danmark/Finland/Iceland/Island på båda språken.
-- **B96** stängd: ny `_hero_cta_label`-helper trådar `scaffoldId` +
-  `conversionGoals` så `ecommerce-lite` eller `product_purchase`/
-  `shop_visit` → "Shoppa nu"/"Shop now", `booking_request` → "Boka
-  tid"/"Book a time", övriga behåller "Begär offert". Påverkar både
-  `render_home` (hero) och `render_services` (bottom-CTA).
+**Sprintscope i prioritetsordning (B-IDs):**
 
-19 nya regression-tester låser fixen. Guards gröna: ruff 0 findings,
-full pytest grön (3 skipped E2E/slow), governance_validate,
-rules_sync --check, check_term_coverage --strict.
+1. **B99 Hög** — `_derive_story` i
+   `scripts/prompt_to_project_input.py` skriver platshållartexten
+   "Vi är en {label} i {city}. Byt ut den här texten mot er egen
+   berättelse så besökarna lär känna er." även när
+   `brief.notesForPlanner` är icke-tom. Verifierat publikt på
+   `/om-oss` på alla fyra demo-case. Fixa så `notesForPlanner`
+   faktiskt föredras när det finns; behåll strukturerad
+   platshållare bara när briefen är genuint tom. Lås med ny test
+   som monkey-patchar briefModel-utfall till `notesForPlanner="…"`
+   och asserterar att story inte innehåller "Byt ut den här texten".
+2. **B100 Medel** — `_hero_cta_label` i `scripts/build_site.py`
+   triggar inte "Boka tid" för korta prompter på booking-branscher
+   eftersom briefen returnerar `conversionGoals=[]` för
+   3-ords-prompter. Lägg `businessType`-fallback i prioritetskedjan:
+   hair-salon, barber, naprapat-clinic, chiropractor, massage,
+   physiotherapist, dentist, personal-training → booking;
+   e-commerce, webshop → shop. Fortsatt prioritet: explicit
+   `conversionGoals` > `businessType`-fallback > scaffold-default.
+   Lås med tester per branschmappning.
+3. **B103 Medel** — `_derive_tagline` ska inte upprepa H1. Föredra
+   `brief.tagline` → använd `notesForPlanner` som källa för
+   1-rads-USP → fall *inte* tillbaka till "Lokal {label} i {city}"
+   om H1 redan innehåller `{label}` + `{city}`.
+4. **B104 Låg** — `render_about` ska inte rendera "Områden vi
+   arbetar i" när `_location_is_country_only(dossier)` är true
+   (samma helper som B95 använder i hero). Rena trådningsfix.
+   Närbesläktad med B98 — kan slås ihop.
 
-**Re-verifierings-Scout-uppdraget:**
+**Off-limits (rör inte):**
 
-1. Kör samma fyra prompter som 2026-05-15-passet
-   (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`,
-   `liten e-handel som säljer keramik`) via
-   `scripts/prompt_to_project_input.py` + `scripts/build_site.py`.
-2. Inspektera de fyra rendered Next.js-sajterna mot Project Input på
-   disk: kontrollera att kontakt-placeholder inte längre läser
-   "uppdatera Project Input", att `/om-oss` inte renderar tom team-
-   grid, att e-handel-prompten (`liten e-handel som säljer keramik`)
-   inte längre får "Sverige" som hero-ortstag, och att e-handel-
-   prompten + frisör/naprapat-prompterna får scaffold-/booking-
-   anpassad hero-CTA istället för "Begär offert".
-3. Skriv ny scorecard per case (samma åtta dimensioner som tidigare
-   passen: tydlighet, CTA, trovärdighet, branschpassning,
-   mobilkänsla, konkret copy, designbalans, konvertering).
-4. Jämför totalsnitt mot **5.54/10-mätningen från 2026-05-15**.
+- `apps/viewser/lib/stackblitz-files.ts`,
+  `apps/viewser/components/viewer-panel.tsx`,
+  `apps/viewser/next.config.ts`, `tests/test_viewser_files.py`
+  (B59 parkerat).
+- `data/starters/`, `examples/`, `.env*`,
+  `packages/preview-runtime/`.
 
-**Beslutsregel:** snitt ≥7/10 OCH inget case <6.5 → DNA-spåret är
-nästa (semantic follow-up merge inkl. två-pass-verifiering av B71).
-Annars bug-sweep round 2 (B67, B80, B81, B82, B84, B85, B86, B87 +
-B89-B93 från extern reviewer-triage + B97, B98 från re-Scout) eller
-riktad fix på det case som dröjer.
+**Inte i scope denna sprint:** B101, B102 (commerce-CTA-mismatch,
+låg prioritet — väntar tills någon tar `render_products` separat).
+B97, B98 (re-Scout låg-impact, väntar — B104 löser delvis B98).
+B89-B93 (extern reviewer-triage, separat sprint).
 
-Förväntad effekt av 1C: snitt 6.5-7.0/10. Project DNA / semantic
-follow-up merge får fortsatt vänta tills vi är över 7/10.
+**Acceptanskriterier:**
 
-B97 och B98 (re-Scout låg-impact: jobbet/offert-hardcoded i
-`/kontakt`-paragraf, "Områden vi arbetar i" meaningless för e-
-handel) är fortfarande öppna men kan vänta. B71 (PR #28-stängd, men
-markerad som unverified av re-Scout) bör verifieras i två-pass-test
-nästa gång någon ändå provkör follow-up-flödet.
+- B99/B100/B103/B104 stängda med regression-tester.
+- Smoke-build körd manuellt på `"frisör Göteborg"` och
+  `"liten e-handel som säljer keramik"`. Hero CTA på frisör =
+  "Boka tid". Story på båda innehåller inte
+  "Byt ut den här texten".
+- `docs/known-issues.md` får stängningsposter för B99/B100/B103/
+  B104 och bug-scope-räkningen i sammanfattningsraden uppdateras
+  (21 → 17 aktiva).
+- `docs/current-focus.md` + `docs/handoff.md` bumpade till ny SHA
+  efter push.
+
+**Guards före push (alla MÅSTE vara gröna):**
+
+- `python -m ruff check .` (baseline 0 findings)
+- `python -m pytest tests/ -v` (inkl. nya tester)
+- `python scripts/governance_validate.py`
+- `python scripts/rules_sync.py --check`
+- `python scripts/check_term_coverage.py --strict`
+- `python scripts/list_open_bugs.py` (sanity-räkning)
+
+**Beslutsregel för Re-Verifierings-Scout 4 (efter denna sprint):**
+snitt ≥7/10 och inget case <6.5 → Project DNA / semantic follow-up
+merge (inkl. två-pass-verifiering av B71). Annars riktad fix på det
+case som dröjer.
+
+Skapa `backup-23` från synkad `main` innan sprintstart.
 
 B59 är fortfarande parkerad - rör inte StackBlitz-fronten. PR #27,
 B60 och cleanup/prune-sprinten är klara; ingen ny header-toggling.
@@ -449,22 +472,29 @@ i `c073d486` och PR-branchen är inte längre kvar på GitHub.
 
 ## Queue
 
-1. **Re-verifierings-Scout efter 1C** - andra scorecard-pass nu när
-   1C landat (`b5ee710`), samma fyra prompter (`elektriker Malmö`,
-   `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel
-   som säljer keramik`), jämför med 5.54-mätningen från 2026-05-15.
+1. **Demo-baseline-fix 1D / bug-sweep round 2** - se "Next action".
+   Stänger B99 (Hög, `_derive_story` platshållartext på alla 4 case),
+   B100 (Medel, `_hero_cta_label` saknar `businessType`-fallback för
+   booking-branscher med tomma `conversionGoals`), B103 (Medel,
+   `_derive_tagline` upprepar H1), B104 (Låg, `render_about`
+   country-only-medveten — kan slå ihop med B98). Förväntad effekt:
+   snitt 6.5-7.5/10 i Re-Verifierings-Scout 4.
+2. **Re-verifierings-Scout 4** - tredje scorecard-pass efter 1D,
+   samma fyra prompter (`elektriker Malmö`, `frisör Göteborg`,
+   `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`),
+   jämför med Scout-3-snittet 5.13/10 (rå) / ~5.9/10 (kalibrerat).
    Beslutsregel ≥7/10 OCH inget case <6.5 → Project DNA.
-2. **Project DNA / follow-up semantic merge** - om re-Scout efter
-   1C bekräftar ≥7/10 och inget case <6.5: gör
-   `merge_followup_project_input` semantic så följdprompt mot tone/
-   story/tagline ger synlig förändring i v2. Kan behöva egen ADR.
-   B71 (PR #28-stängd, men markerad som unverified av re-Scout)
-   bör verifieras i två-pass-test inom samma sprint.
-3. **Bug-sweep round 2 / engelska språkstöd** - om re-Scout efter 1C
-   fortsatt visar demo-risker: prioritera B67, B80, B81, B82, B84,
-   B85, B86, B87 + B89-B93 (extern reviewer-triage) + B97, B98 (re-
-   Scout låg-impact) eller riktad fix på det case som dröjer.
-4. **Live pipeline-matris i backoffice (operatörsförslag 2026-05-15
+3. **Project DNA / follow-up semantic merge** - om Scout 4 bekräftar
+   ≥7/10 och inget case <6.5: gör `merge_followup_project_input`
+   semantic så följdprompt mot tone/story/tagline ger synlig
+   förändring i v2. Kan behöva egen ADR. B71 (PR #28-stängd, men
+   markerad som unverified av re-Scout) bör verifieras i två-pass-
+   test inom samma sprint.
+4. **Bug-sweep round 3 (om Scout 4 fortsatt under tröskel)** -
+   prioritera B67, B80, B81, B82, B84, B85, B86, B87 + B89-B93
+   (extern reviewer-triage) + B97, B101, B102 (låg-impact-rester)
+   eller riktad fix på det case som dröjer.
+5. **Live pipeline-matris i backoffice (operatörsförslag 2026-05-15
    sent på kvällen)** - visualisera `prompt → brief → plan → codegen
    → build → preview` som en live-uppdaterad matris i backoffice
    playground-vyn. Varje cell visar status (pending/running/ok/fail),
@@ -475,13 +505,13 @@ i `c073d486` och PR-branchen är inte längre kvar på GitHub.
    till. Streamlit-realtidsuppdatering kräver `st.empty()`-pattern
    eller WebSocket-shim. Bästa demo-/granskningsverktyg vi kan bygga
    för dig (operatören). Egen sprint, ej blocker för re-Scout.
-5. B49 (medel): page-map-driven sidebar för `docs-base`-startern; måste vara klar innan `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`.
-6. **B59 follow-up** (parkerad - väntar på arkitekturbeslut): byte till lokal `next dev`-process som same-origin iframe på `localhost:NNNN` eller static StackBlitz-template. Ingen mer COOP/COEP-toggling.
-7. B53 (låg): `governance/schemas/routes.schema.json` för scaffold-routes-kontraktet.
-8. B47 (låg): commerce-base Shopify-handles dokumenteras eller får fallback.
-9. B13a arkitektur-flytt (egen sprint, kräver ADR).
-10. `write_pages` icon-bibliotek-agnostisk refactor.
-11. Cancellation-followup (låg): riktig cancellation/background-jobb i playground-vyn om operatören behöver avbryta redan startade körningar.
+6. B49 (medel): page-map-driven sidebar för `docs-base`-startern; måste vara klar innan `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`.
+7. **B59 follow-up** (parkerad - väntar på arkitekturbeslut): byte till lokal `next dev`-process som same-origin iframe på `localhost:NNNN` eller static StackBlitz-template. Ingen mer COOP/COEP-toggling. Bredare extern research om SDK-/Codeflow-/Teams-/MCP-ytan, kommersiell licens och browser-baseline ligger i [`docs/integrations/stackblitz-research.md`](integrations/stackblitz-research.md) som underlag inför arkitekturbeslutet.
+8. B53 (låg): `governance/schemas/routes.schema.json` för scaffold-routes-kontraktet.
+9. B47 (låg): commerce-base Shopify-handles dokumenteras eller får fallback.
+10. B13a arkitektur-flytt (egen sprint, kräver ADR).
+11. `write_pages` icon-bibliotek-agnostisk refactor.
+12. Cancellation-followup (låg): riktig cancellation/background-jobb i playground-vyn om operatören behöver avbryta redan startade körningar.
 
 **Vänta med ny/sista starter** tills minst följande är sant: marketing-base real codegen stabil, 4 demo-sajter kan byggas (minst 3/4), follow-up versions funkar, build-fail från fri prompt är förstådda, enkelt scorecard finns. Annars blir ny starter mer yta att felsöka utan att stärka kärnflödet.
 

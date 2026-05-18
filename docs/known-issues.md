@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 15 aktiva, 15 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 54 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 21 aktiva, 15 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 54 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -316,6 +316,75 @@ B71-stängningen i Grind hänger på kod-/docstring-spårning i
 `tests/test_prompt_to_project_input.py`; ingen kritik mot lock-tester,
 bara att Scout inte själv kunde verifiera invarianten. Två-pass-test
 bör naturligt köras nästa gång någon ändå provkör follow-up-flödet.
+
+### Re-Verifierings-Scout 3 2026-05-18 (post-1C mot `b5ee710`/`6eaf222`)
+
+Tredje pass-Scout körde samma fyra demo-prompter mot 1C-fixad kod
+(`b5ee710`) efter Steward-bump (`6eaf222`). Totalsnitt **5.13/10 (rå) /
+~5.9/10 (kalibrerat mot Scout-2-skalan)**, case-spann 4.88-5.75. Alla
+fyra builds `status=ok`/`quality=ok`/`briefSource=real`. Verdict: 1C
+lyfte snittet (mest case 4 där B95+B96 aktiveras), men under 7/10-
+tröskeln och minst ett case under 6.5. Rekommendation: bug-sweep
+round 2 / riktad fix innan Project DNA / semantic follow-up merge.
+B88/B94/B95/B96 mekaniskt verifierade som stängda; B96 stängd men
+levereras inte i case 2 + 3 eftersom briefModel returnerar
+`conversionGoals=[]` för korta prompter (booking-bransch faller
+tillbaka till quote-default). Audit-konfidence 7/10.
+
+- **`B99` Hög** - `_derive_story` i
+  `scripts/prompt_to_project_input.py` skriver publik platshållartext
+  ("Vi är en {label} i {city}. Byt ut den här texten mot er egen
+  berättelse så besökarna lär känna er.") på `/om-oss` även när
+  `brief.notesForPlanner` är icke-tom. Verifierat publikt på alla
+  fyra demo-case i Re-Verifierings-Scout 3 (alla hade icke-tom
+  `notesForPlanner`). Samma kategori som B88, annan yta. Test-glipa:
+  befintligt `test_story_prefers_notes_for_planner` låser bara att
+  `notesForPlanner` *kan* föredras, inte att det görs på real
+  briefModel-utfall. Källa: Re-Verifierings-Scout 3 2026-05-18.
+  Fix: open. Test: open.
+- **`B100` Medel** - `_hero_cta_label` i `scripts/build_site.py`
+  routar bara på `scaffoldId` + `conversionGoals`, inte på
+  `businessType`. För 3-ords-prompter (`frisör Göteborg`,
+  `naprapatklinik Stockholm`) returnerar briefModel
+  `conversionGoals=[]`, vilket gör att booking-branscher faller
+  tillbaka till quote-default `"Begär offert"` istället för
+  `"Boka tid"`. Den exakta bugg 1C försökte stänga blir kvar i de
+  två tyngsta demo-blockerna. Förslagen fix: `businessType`-fallback
+  i prioritetskedjan (hair-salon, barber, naprapat-clinic,
+  chiropractor, massage, physiotherapist, dentist, personal-training
+  → booking; e-commerce, webshop → shop). Källa: Re-Verifierings-
+  Scout 3 2026-05-18. Fix: open. Test: open.
+- **`B101` Låg** - Hero-CTA "Shoppa nu" på e-handel-case länkar till
+  `/kontakt` istället för `/produkter`. `render_home` i
+  `scripts/build_site.py` använder `contact_path` som primär CTA-
+  route oavsett `_hero_cta_variant`. Mismatch ger inkonsekvens,
+  inte broken UX. Förslagen fix: route-val styrt av variant
+  (shop → `_pick_products_route`, booking → contact, quote →
+  contact). Källa: Re-Verifierings-Scout 3 2026-05-18. Fix: open.
+  Test: open.
+- **`B102` Låg** - `/produkter`-bottom-CTA "Fråga om en beställning"
+  matchar inte hero-CTA "Shoppa nu" på e-handel-case.
+  `render_products` har egen hardcoded `ShoppingBag`-CTA-text som
+  inte trådas via `_hero_cta_label`. Inkonsekvent commerce-
+  tonalitet. Källa: Re-Verifierings-Scout 3 2026-05-18. Fix: open.
+  Test: open.
+- **`B103` Medel** - `_derive_tagline` i
+  `scripts/prompt_to_project_input.py` använder template "Lokal
+  {label} i {city}" när briefModel inte returnerar explicit tagline,
+  vilket bara upprepar hero-H1 ("Elektriker i Malmö" + "Lokal
+  elektriker i Malmö" på case 1, samma mönster på case 2 + 3).
+  Tagline tillför ingenting och tar plats där en faktisk USP borde
+  stå. Förslagen fix: föredra `brief.tagline` → `notesForPlanner` →
+  inte falla tillbaka till template när H1 redan innehåller
+  `{label}` + `{city}`. Källa: Re-Verifierings-Scout 3 2026-05-18.
+  Fix: open. Test: open.
+- **`B104` Låg** - `render_about` i `scripts/build_site.py` använder
+  inte `_location_is_country_only`-helpern som B95 introducerade,
+  så country-only locations renderar fortfarande `<h2>Områden vi
+  arbetar i</h2> <p>Sverige</p>` på `/om-oss` (verifierat case 4).
+  Hero suppresseras korrekt (B95), men `/om-oss` läcker. Trivial
+  trådningsfix. Närbesläktad med B98 (samma yta, annan dimension).
+  Källa: Re-Verifierings-Scout 3 2026-05-18. Fix: open. Test: open.
 
 ### Övriga öppna
 

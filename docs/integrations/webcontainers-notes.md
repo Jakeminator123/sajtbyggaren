@@ -4,6 +4,8 @@ Underlag för att bygga `StackBlitzRuntime` när `packages/preview-runtime/stack
 
 > Detta är **noteringar**, inte produktkod. Implementationen sker i `packages/preview-runtime/stackblitz/` och styrs av [`preview-runtime-policy.v1.json`](../../governance/policies/preview-runtime-policy.v1.json).
 
+Bredare extern research (SDK vs `WebContainer API`, Codeflow, Teams, MCP-läget, kommersiell licens, browser-stöd) ligger i [`stackblitz-research.md`](stackblitz-research.md). Den här filen håller sig till själva implementationsmekaniken.
+
 ## Vad WebContainer är
 
 En Node.js-runtime som körs **i browserfliken** (`@webcontainer/api`). Tillåter:

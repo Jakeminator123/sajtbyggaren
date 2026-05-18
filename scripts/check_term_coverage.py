@@ -82,6 +82,14 @@ COMMON_WORDS = {
     "Sajtbyggaren", "Sajtmaskin", "Jakeminator123", "Jakemiantor123",
     "Lovable", "GitHub", "Cursor", "Vercel", "StackBlitz",
     "WebContainer", "WebContainers", "Fly", "Stripe", "OpenAI", "Anthropic",
+    # Externa StackBlitz-/web-produktnamn och protokollnamn som citeras i
+    # docs/integrations/stackblitz-research.md. De är bibliotekstermer
+    # (samma kategori som StackBlitz/WebContainer/OpenAI ovan), inte
+    # interna sajtbyggaren-domänbegrepp. Per term-discipline.md:
+    # "Bibliotekstermer fran externa SDK:er rasknas inte" som domanbegrepp.
+    "WebContainer API", "EngineBlock", "CodeflowApp", "Teams",
+    "StackBlitz JS SDK", "StackBlitz JavaScript SDK",
+    "JavaScript", "WebAssembly", "MCP",
     # GitHub Actions / Cursor Bugbot status-strängar och Node.js
     # error-meddelanden som dyker upp i docs/handoff.md och
     # governance/rules/bugbot-pr-loop.md som tekniska citat (inte
@@ -287,7 +295,10 @@ COMMON_WORDS = {
     # fail, business-type-slug-glipor). Adderade här tills de stängs.
     "B61", "B62", "B63",
     # "B63 Medel" är allvarsgraden för B63 som dyker upp i list-prosa.
-    "B63 Medel",
+    # Samma mönster för B100/B103 efter Re-Verifierings-Scout 3
+    # (post-1C, 2026-05-18). Bug-IDs som inleder list-rader i
+    # current-focus.md / handoff.md.
+    "B63 Medel", "B100 Medel", "B103 Medel",
     # "Enehmsida" är ett operatör-skrivet typo-`siteId` som citeras i
     # B61-fyndets text som bevis (faktisk run från 2026-05-15). Inte
     # ett domänbegrepp, men förekommer som backtick-prosa.
@@ -308,6 +319,13 @@ COMMON_WORDS = {
     # docs/known-issues.md och docs/current-focus.md som följdspår
     # för demo-baseline-fix 1C.
     "B94", "B95", "B96", "B97", "B98",
+    # Re-Verifierings-Scout 3 2026-05-18 (post-1C mot b5ee710/6eaf222):
+    # sex nya öppna B-IDs efter scorecard mot 5.54-baselinen som visar
+    # att 1C lyfte case 4 men lämnade case 2 + 3 nästan oförändrade
+    # (briefModel returnerar conversionGoals=[] för korta prompter).
+    # Loggade i docs/known-issues.md, docs/current-focus.md och
+    # docs/handoff.md som bug-sweep round 2-scope.
+    "B99", "B100", "B101", "B102", "B103", "B104",
     # Generic prose ord som dyker upp i operator-flöde-text (ADR 0012)
     "Build", "Page", "Scaffolds",
 }
