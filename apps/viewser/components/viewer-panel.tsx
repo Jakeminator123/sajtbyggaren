@@ -279,7 +279,11 @@ export function ViewerPanel({
       {showBuildCard ? (
         <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-6">
           <div className="pointer-events-auto">
-            <BuildProgressCard stage={buildStage} />
+            {/* key={buildStage} forces a full remount on every stage
+                transition so elapsedSec restarts at 0 via useState(0)
+                without needing a setState call inside the effect
+                body (react-hooks/set-state-in-effect). */}
+            <BuildProgressCard key={buildStage} stage={buildStage} />
           </div>
         </div>
       ) : null}
@@ -417,15 +421,12 @@ function BuildProgressCard({ stage }: { stage: PromptStage }) {
   const [elapsedSec, setElapsedSec] = useState(0);
 
   useEffect(() => {
-    if (stage === "idle") {
-      return;
-    }
     const start = Date.now();
     const id = setInterval(() => {
       setElapsedSec(Math.floor((Date.now() - start) / 1000));
     }, 1000);
     return () => clearInterval(id);
-  }, [stage]);
+  }, []);
 
   const minutes = Math.floor(elapsedSec / 60);
   const seconds = (elapsedSec % 60).toString().padStart(2, "0");
