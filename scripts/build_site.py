@@ -476,6 +476,31 @@ def _ignore_combined(dir_path: str, names: list[str]) -> set[str]:
     return set(base_ignore) | secret_ignore
 
 
+_NPM_INSTALL_INPUT_KEYS = (
+    "dependencies",
+    "devDependencies",
+    "optionalDependencies",
+    "peerDependencies",
+    "overrides",
+    "packageManager",
+    "engines",
+)
+
+
+def _npm_install_inputs_changed(source: Path, target: Path) -> bool:
+    source_pkg_path = source / "package.json"
+    target_pkg_path = target / "package.json"
+    if not source_pkg_path.exists() or not target_pkg_path.exists():
+        return True
+
+    source_pkg = load_json(source_pkg_path)
+    try:
+        target_pkg = load_json(target_pkg_path)
+    except (OSError, json.JSONDecodeError):
+        return True
+    return any(source_pkg.get(key) != target_pkg.get(key) for key in _NPM_INSTALL_INPUT_KEYS)
+
+
 def copy_starter(starter_id: str, target: Path) -> None:
     source = STARTERS_DIR / starter_id
     if not source.exists():
@@ -483,13 +508,15 @@ def copy_starter(starter_id: str, target: Path) -> None:
             f"Starter '{starter_id}' missing at {source}. Run the starter setup before building."
         )
     # Preserve existing target's node_modules so we do not force a fresh
-    # `npm install` on every regeneration, but never preserve `.next`.
+    # `npm install` on every unchanged regeneration, but never preserve `.next`.
     # Next's build cache is derived output, not source, and can carry stale
     # prerender state across starter/package changes. B41 reproduced as a
     # generated-site `/_global-error` prerender failure while a clean target
     # built successfully, so every regeneration now starts with a clean
     # framework build cache.
     preserved = {"node_modules"}
+    if target.exists() and _npm_install_inputs_changed(source, target):
+        preserved = set()
     if target.exists():
         for entry in target.iterdir():
             if entry.name in preserved:

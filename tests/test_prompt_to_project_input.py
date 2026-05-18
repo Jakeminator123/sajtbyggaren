@@ -31,9 +31,8 @@ SCHEMA_PATH = REPO_ROOT / "governance" / "schemas" / "project-input.schema.json"
 SITE_ID_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
 
 sys.path.insert(0, str(REPO_ROOT))
-sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from prompt_to_project_input import (  # noqa: E402
+from scripts.prompt_to_project_input import (  # noqa: E402
     _build_services,
     _company_business_label,
     _derive_company_name,
@@ -364,7 +363,7 @@ def test_generate_falls_back_when_extract_site_brief_raises(
         raise RuntimeError("network timeout")
 
     monkeypatch.setattr(
-        "prompt_to_project_input.extract_site_brief",
+        "scripts.prompt_to_project_input.extract_site_brief",
         raise_llm_error,
     )
 
@@ -396,7 +395,7 @@ def test_generate_falls_back_when_site_brief_to_artifact_raises(
         raise ValueError("bad artifact shape")
 
     monkeypatch.setattr(
-        "prompt_to_project_input.site_brief_to_artifact",
+        "scripts.prompt_to_project_input.site_brief_to_artifact",
         raise_serializer_error,
     )
 

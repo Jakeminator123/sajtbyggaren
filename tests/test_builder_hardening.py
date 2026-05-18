@@ -101,13 +101,15 @@ def test_copy_starter_drops_stale_next_cache_but_preserves_node_modules(
         "export default function Home() { return <main />; }\n",
         encoding="utf-8",
     )
-    (source / "package.json").write_text('{"name":"marketing-base"}\n', encoding="utf-8")
+    package_json = '{"name":"marketing-base","dependencies":{"next":"16.2.6"}}\n'
+    (source / "package.json").write_text(package_json, encoding="utf-8")
     (source / ".next").mkdir()
     (source / ".next" / "source-cache").write_text("ignored\n", encoding="utf-8")
 
     target = tmp_path / "generated" / "painter-palma"
     (target / "node_modules").mkdir(parents=True)
     (target / "node_modules" / "kept.txt").write_text("keep\n", encoding="utf-8")
+    (target / "package.json").write_text(package_json, encoding="utf-8")
     (target / ".next").mkdir()
     (target / ".next" / "stale.txt").write_text("stale\n", encoding="utf-8")
     (target / "old.txt").write_text("remove\n", encoding="utf-8")
@@ -124,6 +126,74 @@ def test_copy_starter_drops_stale_next_cache_but_preserves_node_modules(
     assert not (target / "old.txt").exists()
     assert (target / "app" / "page.tsx").exists()
     assert (target / "package.json").exists()
+
+
+@pytest.mark.tooling
+def test_copy_starter_drops_node_modules_when_dependencies_change(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Existing generated sites must reinstall after starter dependency bumps."""
+    import scripts.build_site as build_site
+
+    starters_dir = tmp_path / "starters"
+    source = starters_dir / "marketing-base"
+    source.mkdir(parents=True)
+    (source / "package.json").write_text(
+        json.dumps(
+            {
+                "name": "marketing-base",
+                "dependencies": {"next": "16.2.6"},
+                "devDependencies": {"postcss": "^8.5.10"},
+                "overrides": {"next": {"postcss": "8.5.10"}},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    target = tmp_path / "generated" / "painter-palma"
+    (target / "node_modules").mkdir(parents=True)
+    (target / "node_modules" / "stale.txt").write_text("stale\n", encoding="utf-8")
+    (target / "package-lock.json").write_text('{"lockfileVersion":3}\n', encoding="utf-8")
+    (target / "package.json").write_text(
+        json.dumps(
+            {
+                "name": "painter-palma",
+                "dependencies": {"next": "16.2.5"},
+                "devDependencies": {"postcss": "^8.5.3"},
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(build_site, "STARTERS_DIR", starters_dir)
+
+    build_site.copy_starter("marketing-base", target)
+
+    assert not (target / "node_modules").exists()
+    assert not (target / "package-lock.json").exists()
+    package = json.loads((target / "package.json").read_text(encoding="utf-8"))
+    assert package["dependencies"]["next"] == "16.2.6"
+
+
+@pytest.mark.tooling
+def test_all_starters_use_audited_next_postcss_baseline() -> None:
+    """Generated sites inherit their npm audit posture from source starters."""
+    package_paths = sorted((REPO_ROOT / "data" / "starters").glob("*/package.json"))
+    assert package_paths, "Expected at least one starter package.json"
+
+    for package_path in package_paths:
+        package = json.loads(package_path.read_text(encoding="utf-8"))
+        starter_name = package_path.parent.name
+
+        assert package["dependencies"].get("next") == "16.2.6", starter_name
+        assert package["devDependencies"].get("eslint-config-next") == "16.2.6", starter_name
+        assert package["devDependencies"].get("postcss") == "^8.5.10", starter_name
+        assert package.get("overrides", {}).get("next", {}).get("postcss") == "8.5.10", (
+            starter_name
+        )
 
 
 @pytest.mark.tooling
