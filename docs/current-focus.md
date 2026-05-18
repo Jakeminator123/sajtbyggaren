@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `70c261b` (2026-05-18, **merge-commit för PR #34 `feat(discovery): canonical Discovery Resolver + taxonomy (B121 PR A)`** ovanpå `0fe353f`). PR #34 stänger backendsidan av B121 (canonical Discovery Resolver + taxonomy + schemas + ADR 0024 + 54 discovery-tester) över fem commits: `d4a2750` (Scout-handoff), `437d473` (initial leverans), `8e7e957` (round 1 fixar: multi-select primary_category, capability-map runtime, scaffoldHint-fallback, followup-arvet, blog/other → fallback), `b1b98bb` (round 2 fixar: ADR 0024, selectionSource-konsistens, disabled-bypass, operatorReviewRequired-trigger lossad, supportStatus-tie-break, inheritedFromVersion) och `e5cdff5` (round 3 merge-prep: category-disabled triggar review oavsett position + ADR-typo). Fyra reviewers godkände efter sista passet (9/10 mergebart). Guards efter `70c261b`: ruff 0 findings, governance 17/17 policies OK (16 + nya `discovery-taxonomy.v1.json`), rules_sync --check OK, term-coverage strict OK, **pytest alla collected passerar** (54 nya discovery-tester, 3 pre-existing skipped E2E). Branchen `feature/discovery-resolver-taxonomy` raderad från origin via `gh pr merge --delete-branch`. **B121 PR A backend sealed**; PR B (frontend alignment), PR C (Backoffice Discovery Control) och PR D (verifierings-smoke) kvar som separata pass — se "Next action".
+Last verified state: `ec32913` (2026-05-18, **merge-commit för PR #35 `feat(discovery): align Viewser overlay with governance taxonomy (B121 PR B)`** ovanpå `70c261b`). PR #35 (`efa1352` + merge `ec32913`): `/api/discovery-options`, discovery-wizard mot governance taxonomy, `starterId` blockas i frontend, follow-up utan discovery, `scaffoldHint` hint-only; scope-rena 10 filer (Viewser + `tests/test_viewser_files.py`). Coach-review 9/10. Föregående verified state: `70c261b` (PR #34 B121 PR A — canonical Discovery Resolver + taxonomy + schemas + ADR 0024 + 54 discovery-tester). **B121 PR A + PR B sealed**; PR C (Backoffice Discovery Control) och PR D (verifierings-smoke) kvar — se "Next action". Branchen `feature/discovery-frontend-alignment` kan finnas kvar lokalt på origin (låg risk enligt coach); radera inte utan operatörs-OK.
 
 Föregående verified state: `0fe353f` (2026-05-18, `fix(backoffice): close two control-plane review findings (graph key + doctor)` ovanpå PR #32-cherrypick-serien och `eb1a4ec` B125-docs-bump). Stängde två post-PR-#32-control-plane-fynd från extern review: B126 (dossier-graf-nyckel-mismatch — `_compatible_dossier_edges` byggde `dossier:{id}` medan noder var registrerade som `{class}-dossier:{id}`, vilket gjorde impact-vyn blind för scaffold→dossier-spåret) och B127 (Doctor-villkor inverterat — `run_health_checks` varnade på `status == "implemented"` med tom details-sträng och tystnade på riktiga `incomplete`/`placeholder`-scaffolds). Båda introducerades i cherry-pick-arvet från `3338d79` + `b636450` och är låsta av regressionstester i `tests/test_backoffice_asset_graph.py`. Guards efter `0fe353f`: `python -m ruff check .` (0 findings), `python scripts/governance_validate.py` (16 policies OK), `python scripts/rules_sync.py --check` (alla speglar i synk), `python scripts/check_term_coverage.py --strict` (inga okända kandidater), `python -m pytest tests/` (**701 passed, 3 skipped E2E** — +2 nya regressionstester från B126/B127-passet). Den efterföljande commiten `9291c46` (`chore(vscode): set PowerShell default formatter to ms-vscode.powershell`) är inom bump-tolerance och rör enbart `.vscode/settings.json`. Föregående produktpass var **Backoffice-kontrollplans-MVP via cherry-pick av PR #32**: sex commits från `cursor/backoffice-kontrollplan-mvp-62aa` (skapad från `ca59529` innan PR #31 Christopher-UI:n mergades, så `mergeStateStatus=CLEAN` mot main men diff-trädet hade raderat hela `apps/viewser/`-frontenden om en three-way merge gjorts) cherrypickades ovanpå `60515c6` i bevarad ordning: `3338d79` `fix(backoffice): normalize compatible dossier graph edges` (`backoffice/asset_graph.py` lyfter dossier-edge-extraktion ur `view_control_plane` till modulnivå, namngivna helpers `_compatible_dossier_id`/`_compatible_dossier_details`/`_compatible_dossier_edges`, hanterar dict-entries med `id`/`when`-fält), `b636450` `feat(backoffice): add read-only impact preview` (ny modul `backoffice/impact.py` + `impact_for_node()` som returnerar `incoming`/`outgoing`/`affectedNodes`/`affectedPaths`/`riskLevel`/`runtimeEffect`, plus konsekvensvy under `view_control_plane`), `c22bc1d` `feat(backoffice): add selection profile editor` (ny modul `backoffice/selection_profiles.py` med `validate_profile`/`signal_findings`/`write_profile`, ny gemensam `backoffice/io.py` med `atomic_write_text`/`atomic_write_json` via temp + `os.fsync` + `os.replace`, ny vy `view_selection_profiles` med edit-toggle), `2065a33` `feat(backoffice): improve variant candidate review` (`compare_variant_to_existing`/`variant_diff_rows`/`list_variant_candidates` i `asset_graph.py`, kandidater valideras via `packages/generation/artifacts.validate_variant` och Variant Candidates-vyn visar similarity table + field-level diff), `855a605` `fix(backoffice): use atomic model role writes` (refactor av `views/governance.py` + `views/llm_engine.py` att använda gemensam `..io.atomic_write_text`/`atomic_write_json` istället för lokal helper — rollback-flödet kvarstår, men alla policy-writes är nu atomic via temp-fil + rename), `00103e3` `feat(backoffice): add soft dossier candidate generator` (ny `scripts/generate_dossier_candidate.py`, mirror av `generate_variant_candidate.py`: pydantic structured output via dossierModel-rollen med mock-fallback utan `OPENAI_API_KEY`, skriver `data/dossier-candidates/soft/<id>/{manifest.json,instructions.md,components/}`, validerar via `packages/generation/artifacts.validate_dossier`, ny vy `view_dossier_candidates` i backoffice). Inga konflikter; en automatisk merge i `scripts/check_term_coverage.py` där operatörens `DevTools`/`ElementCreationOptions`-tillägg från `c7049b3` och PR #32:s nya `DossierCandidateModel`/`DossierGenerationError`/`DossierGenerationResult`/`DossierManifestModel`/`DossierModelResolutionError` samexisterar rent. PR #32 stängdes (inte mergades) med kommentar och `cursor/backoffice-kontrollplan-mvp-62aa` raderades från origin. Samtidigt städades den döda branchen `frontend/christopher-import` (PR #17 var CLOSED, ersattes av PR #31 `integrate/christopher-ui-into-main` med annan branch). Föregående produktpass var **StackBlitz embed-preview unblock + npm audit cleanup**: B123 (Medel — `apps/viewser/next.config.ts` saknade `Cross-Origin-Embedder-Policy`/`Cross-Origin-Opener-Policy` så StackBlitz embed visade "Unable to run Embedded Project" istället för preview) och B124 (Medel — uppföljare där parent-COEP visade sig otillräcklig: Chrome krävde dessutom `credentialless`-attribut på själva `<iframe>`-elementet eftersom StackBlitz embed-respons inte skickar egen COEP-header) stängda i samma pass. Båda gör B59 (parkerad header-experiment-skuld från 2026-05-15) **förmodligen löst** men kvar att verifiera end-to-end med en grön preview — se uppdaterad B59-entry i `docs/known-issues.md` (status: parkerad → "förmodligen löst i B123 + B124, väntar end-to-end-verifiering"). Föregående commits i samma pass: `5d05e0d` (B124 — `document.createElement`-patch runt `sdk.embedProject(...)` så iframen får `credentialless`-attribut innan src-fetch + 3 source-locks i `tests/test_viewser_isolation_headers.py`), `5f23d13` (B123 — `next.config.ts:async headers()` med `Cross-Origin-Embedder-Policy: credentialless` + `Cross-Origin-Opener-Policy: same-origin` på `/:path*` + 4 source-locks; tog bort gammal felformulerad negativ lock i `tests/test_viewser_files.py:test_viewser_does_not_set_global_cross_origin_isolation_headers` från `98e8364`), `c7049b3` (operatör-direktcommit, `package-lock.json`-städning från postcss-override `^8.5.10` i `apps/viewser/package.json` som tystar npm audit GHSA-qx2v-qp2m-jg93 på Nexts vendored postcss 8.4.31 — false positive per Vercels eps1lon, men ren `0 vulnerabilities` är värt 3 rader JSON). Föregående produktpass (parallel-agent-runda före): `df24488` (B118 scrape-runner SIGKILL-fallback), `6772a14` (B117 SVG-XSS via CSP sandbox + nosniff på `/api/asset-preview`), `fe9748e` (B114 upload size guard), `cd03897` (B113 SSRF redirect-validation + 6 regressionstester). PR #31 `feat(viewser): integrate christopher-ui discovery and asset workflow` är fortsatt frontend-basen (merge `3f4543d`, integration `0510146`): hela `apps/viewser/components/discovery-wizard/**`, asset upload pipeline (`apps/viewser/lib/asset-store/**` + `/api/upload-asset` + `/api/asset-preview`), URL scrape (`scripts/scrape_site.py` + `/api/scrape-site` + `apps/viewser/lib/scrape-runner.ts`), SiteHeader/ConsoleDrawer, shadcn-primitives, `BUILD_TIMEOUT_MS` 3 min → 10 min, schema-fält `brand{logo, heroImage, primaryColorHex, accentColorHex, logoText, heroText}` + `gallery[]` + `$defs/assetRef` i `governance/schemas/project-input.schema.json`, naming-dictionary v15 → v16 (AssetRef, AssetStore, operator upload). Aktuell buggräkning: **27 aktiva, 0 misplaced, 5 unknown, 87 stängda** (B126 + B127 stängda i `0fe353f`; PR #32 var feature work — inga B-IDs öppnades/stängdes där; B125 öppnad i en uppföljande docs-pass efter operatörsdiskussion om StackBlitz-embed-browserstöd, se nedan). Guards gröna efter PR #32-cherrypick: `python -m ruff check .` (0 findings), `python scripts/governance_validate.py` (16 policies OK), `python scripts/rules_sync.py --check` (alla speglar i synk), `python scripts/check_term_coverage.py --strict` (inga okända kandidater), `python -m pytest tests/` (**699 passed, 3 skipped E2E** — +24 nya tester från `tests/test_backoffice_asset_graph.py` + `test_backoffice_impact.py` + `test_backoffice_selection_profiles.py` + `test_dossier_candidate_generator.py`). `backup-pre-christopher-ui-merge` finns pushad på origin som extra säkerhet före PR #31-mergen; taggen `archive/christopher-ui-2026-05-18` pekar på `4a16528` så hela christopher-ui-branchen kan återställas vid behov. `origin/christopher-ui` är raderad enligt operatörens policy om inga långa parallella branches. **Branch-rensning under PR #32-passet:** `cursor/backoffice-kontrollplan-mvp-62aa` (PR #32 source) och `frontend/christopher-import` (PR #17 CLOSED) raderade från origin. **Kvar och flaggade som potentiellt onödiga** (väntar operatör-OK innan radering): `feat/demo-baseline-fix-1b-bug-sweep` (alternativ-väg till PR #28 som istället mergades från `cursor/demo-baseline-buggsvep-44a5`). Alla 19 `backup-*` är operatörens säkerhetskopior och rörs inte utan instruktion. PR #33 (denna docs-only state-sync) är aktuellt öppen.
 
@@ -43,7 +43,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `0fe353f` (`fix(backoffice): close two control-plane review findings (graph key + doctor)`) ovanpå `eb1a4ec` (B125 docs-registrering) och PR #32-cherrypick-serien `00103e3` → `855a605` → `2065a33` → `c22bc1d` → `b636450` → `3338d79` på `60515c6`. Den efterföljande commiten `9291c46` (`chore(vscode): set PowerShell default formatter to ms-vscode.powershell`) ligger ovanpå och är inom bump-tolerance (ren `.vscode/settings.json`-toggle, ingen produktkod). Innan PR #32-passet låg main på `60515c6` (`docs(known-issues): register B124 (closed) with Fix-SHA 5d05e0d`) ovanpå `5d05e0d` (B124 iframe credentialless-attribut), `e325c67` (docs B123-registrering), `5f23d13` (B123 cross-origin isolation headers), `c7049b3` (operatör postcss-override-cleanup), `df24488` (B118 scrape-runner SIGKILL), `6772a14` (B117 SVG-XSS), `fe9748e` (B114 upload size guard), `cd03897` (B113 SSRF redirect-validation), `d06e628` (pyright cleanup), `61da065` (--discovery + --followup-site-id rejection), `d63fab3` (BuildProgressCard reset via key-prop) och PR #31:s merge-commit `3f4543d` som tog in hela christopher-ui-frontend-integrationen. Post-PR-#31-review har körts i **tre rundor**: första rundan stängde B113 (SSRF) + B114 (upload-size) och öppnade B115 (binär-dubbletter) + B116 (`BUILD_TIMEOUT_MS` serialisering). Andra rundan stängde B117 (SVG-XSS via CSP sandbox + nosniff på `/api/asset-preview`) + B118 (scrape-runner SIGKILL-fallback) och öppnade B119-B122. Tredje rundan (operatör-rapporterad direkt från Konsol-screenshot + Chrome DevTools Issues-panel) stängde B123 + B124, vilket gör B59:s parkerade header-experiment **förmodligen löst** kvar att verifiera end-to-end. PR #32-cherrypicken ovanpå lyfter Backoffice från "byggblock-katalog med edit-toggles" till "kontrollplan med konsekvensvy, selection-profile editor, impact preview, dynamisk graf av Starters/Scaffolds/Variants/Dossiers/Model Roles + soft-dossier-candidate-generator" — feature work, inga B-IDs öppnade eller stängda. `0fe353f` stängde sedan B126 + B127 från extern review (dossier-graf-nyckel-mismatch + Doctor-villkor inverterat) — backoffice-kontrollplanen är nu hel. Föregående baseline (B108-B112 + 1B-1E-fixar) kvarstår oförändrad i koden. **Direkt nästa steg:** se "Next action" — nästa feature-spår är B121 (Discovery Resolver / canonical discovery source-of-truth). B123/B124-fixen och nya backoffice-vyerna kan operatören verifiera när det passar (`npm run dev` i `apps/viewser/` i Chromium-browser för StackBlitz-embed; `streamlit run backoffice.py --server.headless true` för kontrollplanen) men det är inte längre prerequisite för nästa sprint. Re-Verifierings-Scout 5 är fortfarande värdefull men flyttad till queue-pos 3 bakom B121 + backoffice discovery control / mapping review.
+`main` är vid `ec32913` (merge PR #35, B121 PR B — Viewser discovery overlay mot governance taxonomy) ovanpå `70c261b` (merge PR #34, B121 PR A — canonical Discovery Resolver + taxonomy). Föregående baslinje: `0fe353f` (B126/B127 backoffice-kontrollplan), PR #32-cherrypick-serien, PR #31 christopher-ui, B123/B124 StackBlitz-headers. **B121:** PR A + PR B mergade; PR C (Backoffice Discovery Control) och PR D (baseline-smoke) återstår innan B121 stängs i `known-issues.md`. Backoffice discovery mapping review är **inte** i PR B — det är PR C enligt Scout-planen. **Direkt nästa steg:** se "Next action" (PR C). Re-Verifierings-Scout 5 och PR D ligger efter PR C i kön.
 
 Föregående baseline: PR #28 squash-merge (`885431b`) för demo-baseline-fix 1B + bug-sweep. 1B stängde must-/should-land-spåret och alla nice-to-have som hanns med: B64/B65 (Site Brief company/contact-fält + ADR 0022), B66 (tom trustSignals renderar inte "Varför oss"), B69 (Quality Gate route-scan får alla emitterade default-routes inkl. `/om-oss`; aggregate-status ändrades medvetet inte), B70 (IPv6 localhost Host-header), B71 (follow-up merge-docstring + byte-stabil story/tagline/tone), B72 (`listRuns` slicar innan JSON-läsning), B73 (tagline-fallback utan Project Input-jargong), B74 (dev_generate codegen routes), B75 (`additionalProperties: false` i Project Input-schema), B76 (Run Details visar site-plan), B77 (dossier-komponenter får inte skugga starter-komponenter), B78 (realpath-baserad dossier-whitelist), B79 (svensk selectedDossiers-rationale) och B83 (service slug-kollisioner får suffix). PR #28 verifierades med ruff, full pytest, governance/rules/term checks, Viewser `npm run build` och två isolerade smoke-builds (`elektriker Malmö`, `frisör Göteborg`) som båda landade `status=ok`, `quality=ok`. Bugbot var inte aktiv på PR:n; GitHub governance, builder-smoke och secret-scan var gröna före merge.
 
@@ -299,7 +299,7 @@ också kvar på origin men är fri att radera i nästa Steward-städ.
 
 ## Current active sprint
 
-Ingen pågående produktimplementation på `main`. **B121 PR A backend sealed via PR #34 (`70c261b`)** — canonical Discovery Resolver + taxonomy + schemas + ADR 0024 + 54 discovery-tester. Frontend alignment (PR B), Backoffice Discovery Control (PR C) och verifierings-smoke (PR D) kvarstår som separata pass. Backoffice-kontrollplanen är hel sedan tidigare: PR #32-cherrypick-serien lyfte in kontrollplan/Doctor/impact-vy/selection-profiles/variant- och dossier-candidate-ytor, och `0fe353f` stängde två post-PR-#32-fynd från extern review (B126 dossier-graf-nyckel-mismatch + B127 Doctor-villkor inverterat). Tidigare landade starter dependency hardening i `1c68035` (stängde B108: ren `npm audit`-baseline + om-installation vid ändrade package-inputs), Backoffice control-plane landade i `860e553`, och demo-baseline-fix 1E i `bc43eb8` (stängde B105/B106/B107). B101/B102 lämnas öppna med låg prioritet (commerce-CTA route/text-mismatch i `render_home`/`render_products`), liksom B97/B98/B89-B93 och bug-sweep-resterna. Nästa konkreta uppgift är **B121 — Discovery Resolver / canonical discovery source-of-truth** — se "Next action".
+Ingen pågående produktimplementation på `main`. **B121 PR A + PR B sealed** (`70c261b` + `ec32913`). **Aktivt spår: PR C — Backoffice Discovery Control** (mapping review, graph/impact/Doctor, begränsad edit/dry-run). PR D (verifierings-smoke) och formell B121-stängning väntar på PR C (+ PR D). Backoffice-kontrollplanen (PR #32 + `0fe353f`) är hel; discovery-operatorvy saknas tills PR C landar. Se "Next action".
 
 Tidigare klara sprintar: starter dependency hardening (B108),
 demo-baseline-fix 1E (B105 B106 B107),
@@ -319,55 +319,29 @@ PR #28 demo-baseline-fix 1B + bug-sweep, demo-baseline-fix 1A-hotfix.
 
 ## Next action - direktiv till nästa agent
 
-**B121 PR B — Viewser frontend overlay följer backend/governance.**
-PR A landade backend-resolver + taxonomy + schemas + ADR 0024 i PR #34
-(`70c261b`). PR B alignar `apps/viewser/components/discovery-wizard/`-
-TS-konstanterna mot `governance/policies/discovery-taxonomy.v1.json`
-så frontend inte längre bär en parallell sanning för
-category→scaffold/variant/starter. Använd `docs/agent-prompts.md`
-"Prompt 3 — Builder PR B: frontend overlay följer backend/governance"
-(samma prompt-text finns i `sammansvetsning-hela.txt`-utkastet
-operatören delade 2026-05-18).
+**B121 PR C — Backoffice Discovery Control / mapping review.**
 
-Konkreta steg (per Prompt 3):
+PR A (`70c261b`, PR #34) och PR B (`ec32913`, PR #35) är mergade. PR C ska
+lägga discovery mapping i Backoffice/Kontrollplan: vy som visar
+`wizardAnswers` ⇄ `brief` ⇄ `DiscoveryDecision` ⇄ `finalProjectInput` per
+run, `supportStatus`-edit, dry-run-resolver, och koppling till befintlig
+graph/impact/Doctor-yta. **Rör inte** Viewser discovery-wizard i PR C
+(landade i PR B). Använd Scout-planen
+`.cursor/plans/discovery_resolver_b121_3ec927a0.plan.md` och
+`docs/agent-prompts.md` (Builder PR C-prompt när den finns).
 
-1. Skapa feature-branch `feature/discovery-frontend-alignment` från
-   senaste main.
-2. Alternativ A (föredragen om rimligt): skapa
-   `apps/viewser/app/api/discovery-options/route.ts` som läser
-   `governance/policies/discovery-taxonomy.v1.json` server-side och
-   returnerar bara UI-säkra fält (`id`, `label`, `contentBranch`,
-   `supportStatus`, `defaultVariantId`, `targetScaffoldLabel`,
-   `fallbackLabel` optional, `operatorNotes` optional om operator-only).
-   `DiscoveryWizard` konsumerar dessa options.
-3. Alternativ B (om A blir för stort): behåll
-   `apps/viewser/components/discovery-wizard/wizard-constants.ts` men
-   lägg en spec-test som jämför alla category-id:n och mappings mot
-   `discovery-taxonomy.v1.json`. Lägg tydlig TS-kommentar att
-   konstanterna är "UI-cache, governance är sanningskälla".
-4. Frontend **får inte** sätta `starterId` direkt. Den får skicka
-   `categoryId`, `contentBranch`, style/tone/CTA/assets och explicit
-   user answers. `scaffoldHint` är fortfarande en hint, inte ett
-   beslut — backend-resolvern avgör `selectedScaffoldId`/`fallback`.
-5. Visa fallback/planned-status diskret om kategorin inte är runtime-
-   aktiv (t.ex. "Restaurang körs som lokal tjänst tills vi har en
-   egen restaurang-scaffold"). Inte tung admin-UI — bevara
-   produktkänslan.
-6. Tester: category-list matchar taxonomy, unknown category blockas,
-   discovery payload `schemaVersion` kvar, followup-mode får inte
-   discovery, PromptBuilder init-flow fortsätter fungera. Plus Viewser
-   `npm run lint` + `npm run build` grön.
+Konkreta riktlinjer:
 
-**Beslutsregel innan PR B startar:** läs PR #34:s body + ADR 0024 +
-`packages/generation/discovery/resolve.py` så frontend-aliasen inte
-introducerar nya fältkällor utanför Field Source-enumen (wizard /
-scrape / brief / taxonomy / default / operator / pinned). PR B får
-inte ändra resolvern eller taxonomi-policyn — alla strukturella
-mappings hör hemma i governance, inte i frontend.
+1. Feature-branch från senaste `main` (`ec32913` eller nyare).
+2. Scope: `backoffice/` + ev. små `scripts/`/test-stöd — **inte** `apps/viewser/`
+   discovery-UI (redan i PR B), **inte** resolver/taxonomy-policy (PR A).
+3. När edit-yta finns: överväg att flytta scaffold↔variant↔capability-
+   cross-checks till `governance_validate.py` (reviewer-notering från PR A).
+4. Efter PR C: PR D (verifierings-smoke mot fyra baseline-prompter) stänger
+   B121 formellt om smoke + known-issues uppdateras.
 
-Efter PR B är klar: PR C (Backoffice Discovery Control) och PR D
-(verifierings-smoke mot fyra produktbaseline-prompter) — separata
-pass per Scout-planen i `.cursor/plans/discovery_resolver_b121_3ec927a0.plan.md`.
+**Föregående next action (PR B) — landad i `ec32913`:** `/api/discovery-options`,
+governance-driven wizard, `starterId` blockad, follow-up utan discovery.
 
 **Föregående next action (PR A) — landad i `70c261b`:** se Last verified state.
 
@@ -452,22 +426,9 @@ i `c073d486` och PR-branchen är inte längre kvar på GitHub.
 
 ## Queue
 
-1. **B121 PR B — Viewser frontend overlay följer backend/governance**
-   (uppföljare till PR #34 PR A som landade `70c261b`). Aligna
-   `apps/viewser/components/discovery-wizard/wizard-constants.ts` mot
-   `governance/policies/discovery-taxonomy.v1.json` så frontend inte
-   längre bär parallell-sanning för category→scaffold/variant/starter.
-   Se "Next action" för konkreta steg. Använd Prompt 3.
-2. **B121 PR C — Backoffice Discovery Control / mapping review** —
-   uppföljare till PR A + PR B. Vy som visar `wizardAnswers` ⇄ `brief`
-   ⇄ `DiscoveryDecision` ⇄ `finalProjectInput` per run så operatorn
-   kan inspektera vilken källa som vann per fält. Inkluderar
-   `supportStatus`-edit och dry-run-resolver. Reviewer 3 noterade
-   förlängd kvarvarande risk: när PR C får edit-yta bör
-   scaffold↔variant↔capability-cross-checks flyttas från test-lagret
-   till `governance_validate.py` så UI inte kan spara policy som bara
-   tester fångar.
-3. **B121 PR D — verifierings-smoke mot fyra produktbaseline-prompter**
+1. **B121 PR C — Backoffice Discovery Control / mapping review** (nästa;
+   PR A `70c261b` + PR B `ec32913` mergade). Se "Next action".
+2. **B121 PR D — verifierings-smoke mot fyra produktbaseline-prompter**
    (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`,
    `liten e-handel som säljer keramik`). Kör `prompt_to_project_input
    --discovery` + `build_site.py`, verifiera `site-plan.json`,
@@ -485,11 +446,11 @@ i `c073d486` och PR-branchen är inte längre kvar på GitHub.
    förändring i v2. Kan behöva egen ADR. B71 (PR #28-stängd, men
    markerad som unverified av re-Scout) bör verifieras i två-pass-
    test inom samma sprint.
-3. **Bug-sweep round 3 (om Scout 5 fortsatt under tröskel)** -
+5. **Bug-sweep round 3 (om Scout 5 fortsatt under tröskel)** -
    prioritera B67, B80, B81, B82, B84, B85, B86, B87 + B89-B93
    (extern reviewer-triage) + B97, B101, B102 (låg-impact-rester)
    eller riktad fix på det case som dröjer.
-4. **Live pipeline-matris i backoffice (operatörsförslag 2026-05-15
+6. **Live pipeline-matris i backoffice (operatörsförslag 2026-05-15
    sent på kvällen)** - visualisera `prompt → brief → plan → codegen
    → build → preview` som en live-uppdaterad matris i backoffice
    playground-vyn. Varje cell visar status (pending/running/ok/fail),
@@ -500,13 +461,13 @@ i `c073d486` och PR-branchen är inte längre kvar på GitHub.
    till. Streamlit-realtidsuppdatering kräver `st.empty()`-pattern
    eller WebSocket-shim. Bästa demo-/granskningsverktyg vi kan bygga
    för dig (operatören). Egen sprint, ej blocker för re-Scout.
-5. B49 (medel): page-map-driven sidebar för `docs-base`-startern; måste vara klar innan `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`.
-6. **B59 follow-up** (parkerad - väntar på arkitekturbeslut): byte till lokal `next dev`-process som same-origin iframe på `localhost:NNNN` eller static StackBlitz-template. Ingen mer COOP/COEP-toggling. Bredare extern research om SDK-/Codeflow-/Teams-/MCP-ytan, kommersiell licens och browser-baseline ligger i [`docs/integrations/stackblitz-research.md`](integrations/stackblitz-research.md) som underlag inför arkitekturbeslutet.
-7. B53 (låg): `governance/schemas/routes.schema.json` för scaffold-routes-kontraktet.
-8. B47 (låg): commerce-base Shopify-handles dokumenteras eller får fallback.
-9. B13a arkitektur-flytt (egen sprint, kräver ADR).
-10. `write_pages` icon-bibliotek-agnostisk refactor.
-11. Cancellation-followup (låg): riktig cancellation/background-jobb i playground-vyn om operatören behöver avbryta redan startade körningar.
+7. B49 (medel): page-map-driven sidebar för `docs-base`-startern; måste vara klar innan `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`.
+8. **B59 follow-up** (parkerad - väntar på arkitekturbeslut): byte till lokal `next dev`-process som same-origin iframe på `localhost:NNNN` eller static StackBlitz-template. Ingen mer COOP/COEP-toggling. Bredare extern research om SDK-/Codeflow-/Teams-/MCP-ytan, kommersiell licens och browser-baseline ligger i [`docs/integrations/stackblitz-research.md`](integrations/stackblitz-research.md) som underlag inför arkitekturbeslutet.
+9. B53 (låg): `governance/schemas/routes.schema.json` för scaffold-routes-kontraktet.
+10. B47 (låg): commerce-base Shopify-handles dokumenteras eller får fallback.
+11. B13a arkitektur-flytt (egen sprint, kräver ADR).
+12. `write_pages` icon-bibliotek-agnostisk refactor.
+13. Cancellation-followup (låg): riktig cancellation/background-jobb i playground-vyn om operatören behöver avbryta redan startade körningar.
 
 **Vänta med ny/sista starter** tills minst följande är sant: marketing-base real codegen stabil, 4 demo-sajter kan byggas (minst 3/4), follow-up versions funkar, build-fail från fri prompt är förstådda, enkelt scorecard finns. Annars blir ny starter mer yta att felsöka utan att stärka kärnflödet.
 
