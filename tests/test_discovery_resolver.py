@@ -640,10 +640,17 @@ def test_multi_select_picks_restaurant_over_portfolio() -> None:
 
 
 @pytest.mark.tooling
-def test_capability_gap_flagged_separately_from_unknown() -> None:
-    """R2 P1 + R3 #2: ``payments`` finns i capability-map men har tom
-    dossier-lista — det är en **gap**, inte unknown. ``operatorReviewRequired``
-    måste bli True även för gap.
+def test_capability_gap_flagged_as_warning_but_not_review_trigger() -> None:
+    """R2 P1 + R3 #2 (round 2): ``payments`` / ``contact-form`` finns i
+    capability-map men har tom dossier-lista — det är en **gap**, inte
+    unknown. Resolvern lägger en ``capability-gap``-warning så Backoffice
+    ser planerade Dossier-importer.
+
+    R1 #1 + huvudreviewer #4 (round 3): gap triggar dock INTE
+    ``operatorReviewRequired``. Gap är samma signal för alla runs av
+    samma kategori och skulle annars göra review-flaggan bullrig
+    ("True för nästan alla normala runs"). Bara unknown/planned/disabled
+    och okänd kategori kräver per-run-review.
     """
     payload = _payload("ecommerce")  # taxonomin lägger payments + contact-form
     _, decision = resolve_discovery(
@@ -660,7 +667,9 @@ def test_capability_gap_flagged_separately_from_unknown() -> None:
     assert "capability-gap" in gap_codes
     assert "payments" in gap_capabilities
     assert "contact-form" in gap_capabilities
-    assert decision.operatorReviewRequired is True
+    # ecommerce är active och taxonomy-capabilities är bara gap, inte
+    # unknown — review krävs inte. (R1 #1 round 3.)
+    assert decision.operatorReviewRequired is False
 
 
 @pytest.mark.tooling
@@ -744,6 +753,11 @@ def test_scaffold_hint_used_when_site_type_empty() -> None:
     assert decision.fieldSources["scaffoldId"] == "wizard"
     assert decision.fieldSources["variantId"] == "wizard"
     assert decision.expectedStarterId == "commerce-base"
+    # R2 P2 (round 3): selectionSource måste matcha fieldSources.
+    # Wizardens hint pinnar scaffoldId med "wizard"-källa, så top-level
+    # selectionSource ska också vara "wizard" (inte "default" som
+    # tidigare lekt självmotsägande mot fieldSources).
+    assert decision.selectionSource == "wizard"
     # Inget category-warning eftersom hint pekade mot en runtime-aktiv scaffold.
     assert decision.operatorReviewRequired is False
 
@@ -866,3 +880,234 @@ def test_blog_uses_fallback_status_not_active() -> None:
     assert decision.selectionSource == "fallback"
     codes = {w.code for w in decision.fallbackWarnings}
     assert "category-fallback" in codes
+
+
+# ---------------------------------------------------------------------------
+# Review-fix-pass round 3 på PR #34
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_multi_select_within_same_branch_prefers_active_over_planned() -> None:
+    """R1 #2 (round 3): ``salon`` (active) och ``healthcare`` (planned)
+    delar branch ``salon``. Tie-break på supportStatus måste välja
+    active så scaffold/variant inte tappas till planned-kategori bara
+    pga inmatningsordningen.
+    """
+    # Båda ordningarna ska ge salon som primary.
+    for order in (["salon", "healthcare"], ["healthcare", "salon"]):
+        payload = {
+            "schemaVersion": 1,
+            "rawPrompt": "test",
+            "contentBranch": "salon",
+            "scaffoldHint": "local-service-business",
+            "answers": {"siteType": order},
+        }
+        _, decision = resolve_discovery(
+            raw_prompt="test",
+            payload=payload,
+            project_input_candidate=_candidate_project_input(),
+        )
+        # Salon är active mot local-service-business (target == active).
+        assert decision.selectedScaffoldId == "local-service-business"
+        assert decision.targetScaffoldId == "local-service-business", (
+            f"Med ordning {order} föll resolvern på healthcare (planned) "
+            "istället för salon (active)."
+        )
+        assert decision.selectionSource == "taxonomy"
+
+
+@pytest.mark.tooling
+def test_disabled_category_bypasses_taxonomy_scaffold() -> None:
+    """R2 P2 (round 3): disabled-kategori får inte pinna icke-byggbar
+    scaffold via ``runtime_scaffold_id``. Resolvern behandlar disabled
+    som om kategorin är okänd — varning loggas, men scaffold/variant
+    faller till scaffoldHint eller candidate Project Input.
+    """
+    from packages.generation.discovery.taxonomy import (
+        DiscoveryTaxonomy,
+        TaxonomyCategory,
+    )
+
+    # Bygg en syntetisk taxonomy där "broken-category" är disabled och
+    # pekar mot en icke-byggbar scaffold.
+    fake_taxonomy = DiscoveryTaxonomy(
+        policy_id="discovery-taxonomy.test",
+        version=1,
+        categories={
+            "broken-category": TaxonomyCategory(
+                id="broken-category",
+                labelSv="Broken",
+                contentBranch="business",
+                supportStatus="disabled",
+                targetScaffoldId="restaurant-hospitality",  # icke-runtime
+                defaultVariantId="non-existent-variant",
+                requestedCapabilities=[],
+                candidateDossiers=[],
+                rationale="test only",
+            )
+        },
+        branch_priority={"business": 12},
+    )
+
+    payload = {
+        "schemaVersion": 1,
+        "rawPrompt": "test",
+        "contentBranch": "business",
+        "scaffoldHint": "ecommerce-lite",  # runtime-OK
+        "answers": {"siteType": ["broken-category"]},
+    }
+    candidate = _candidate_project_input()
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+        taxonomy=fake_taxonomy,
+    )
+    # Resolvern ska inte ha pinnat den icke-byggbara scaffolden.
+    assert project_input["scaffoldId"] != "restaurant-hospitality"
+    assert project_input["variantId"] != "non-existent-variant"
+    # scaffoldHint hoppar in eftersom primary_category är disabled →
+    # behandlad som None.
+    assert project_input["scaffoldId"] == "ecommerce-lite"
+    assert decision.selectionSource == "wizard"
+    # category-disabled warning ska fortfarande loggas.
+    codes = {w.code for w in decision.fallbackWarnings}
+    assert "category-disabled" in codes
+    # Disabled kräver alltid review.
+    assert decision.operatorReviewRequired is True
+
+
+@pytest.mark.tooling
+def test_disabled_category_without_scaffold_hint_keeps_candidate() -> None:
+    """När disabled-kategori används utan användbar scaffoldHint
+    behåller resolvern Project Input candidate-scaffolden (samma
+    kontrakt som okänd kategori).
+    """
+    from packages.generation.discovery.taxonomy import (
+        DiscoveryTaxonomy,
+        TaxonomyCategory,
+    )
+
+    fake_taxonomy = DiscoveryTaxonomy(
+        policy_id="discovery-taxonomy.test",
+        version=1,
+        categories={
+            "broken-category": TaxonomyCategory(
+                id="broken-category",
+                labelSv="Broken",
+                contentBranch="business",
+                supportStatus="disabled",
+                targetScaffoldId="restaurant-hospitality",
+                defaultVariantId="non-existent-variant",
+                requestedCapabilities=[],
+                candidateDossiers=[],
+                rationale="test only",
+            )
+        },
+        branch_priority={"business": 12},
+    )
+
+    payload = {
+        "schemaVersion": 1,
+        "rawPrompt": "test",
+        "contentBranch": "business",
+        "answers": {"siteType": ["broken-category"]},
+        # ingen scaffoldHint
+    }
+    candidate = _candidate_project_input()
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+        taxonomy=fake_taxonomy,
+    )
+    assert project_input["scaffoldId"] == candidate["scaffoldId"]
+    assert project_input["variantId"] == candidate["variantId"]
+    assert decision.selectionSource == "default"
+    codes = {w.code for w in decision.fallbackWarnings}
+    assert "category-disabled" in codes
+    assert decision.operatorReviewRequired is True
+
+
+@pytest.mark.tooling
+def test_followup_marks_inherited_decision_with_version(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """R1 #5 (round 3): ärvd ``discoveryDecision`` ska markeras med
+    ``inheritedFromVersion`` så Backoffice/Doctor skiljer initial
+    decision från aktuell provenance för v2+-fält.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.prompt_to_project_input import generate, generate_followup
+
+    discovery_payload = {
+        "schemaVersion": 1,
+        "rawPrompt": "webshop som säljer keramik",
+        "contentBranch": "ecommerce",
+        "scaffoldHint": "ecommerce-lite",
+        "answers": {
+            "siteType": ["ecommerce"],
+            "companyName": "Keramikbutiken AB",
+        },
+    }
+    _, v1_meta, _, _ = generate(
+        "webshop som säljer keramik",
+        output_dir=tmp_path,
+        site_id="keramik-shop",
+        project_id="stable-project",
+        discovery=discovery_payload,
+    )
+    # v1 är färsk så får inte inheritedFromVersion.
+    assert "inheritedFromVersion" not in v1_meta["discoveryDecision"]
+
+    _, v2_meta, _, _ = generate_followup(
+        "lägg till en blogg-sektion",
+        output_dir=tmp_path,
+        site_id="keramik-shop",
+    )
+    v2_decision = v2_meta["discoveryDecision"]
+    assert v2_decision["inheritedFromVersion"] == 1
+
+    # Kedja: v3 ärver från v2:s discoveryDecision (som redan har
+    # inheritedFromVersion=1). Värdet ska bevaras till första
+    # producerande versionen, inte föregående version.
+    _, v3_meta, _, _ = generate_followup(
+        "lägg till priser",
+        output_dir=tmp_path,
+        site_id="keramik-shop",
+    )
+    v3_decision = v3_meta["discoveryDecision"]
+    assert v3_decision["inheritedFromVersion"] == 1
+
+
+@pytest.mark.tooling
+def test_inherited_decision_validates_against_schema(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, decision_schema: dict
+) -> None:
+    """``inheritedFromVersion`` är optional men måste validera mot
+    discovery-decision.schema.json."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.prompt_to_project_input import generate, generate_followup
+
+    generate(
+        "test",
+        output_dir=tmp_path,
+        site_id="schema-test",
+        project_id="stable",
+        discovery={
+            "schemaVersion": 1,
+            "rawPrompt": "test",
+            "contentBranch": "business",
+            "scaffoldHint": "local-service-business",
+            "answers": {"siteType": ["business"]},
+        },
+    )
+    _, v2_meta, _, _ = generate_followup(
+        "v2",
+        output_dir=tmp_path,
+        site_id="schema-test",
+    )
+    jsonschema.Draft202012Validator(decision_schema).validate(
+        v2_meta["discoveryDecision"]
+    )

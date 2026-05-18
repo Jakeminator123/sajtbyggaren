@@ -1572,9 +1572,18 @@ def generate_followup(
     }
     # Ärv discoveryDecision från föregående version så Backoffice/Doctor
     # kan visa categoryIds + fieldSources + fallbackWarnings även för v2+.
+    # R1 #5 på PR #34 (round 3): markera ärvda decisioner med
+    # ``inheritedFromVersion`` så Backoffice kan skilja på initial
+    # discovery decision och aktuell provenance för v2+-fält.
     inherited_decision = existing_meta.get("discoveryDecision")
     if isinstance(inherited_decision, dict):
-        meta_overrides["discoveryDecision"] = inherited_decision
+        inherited_copy = copy.deepcopy(inherited_decision)
+        # Bevara den ursprungliga inheritedFromVersion om den redan finns
+        # (kedja av v1 -> v2 -> v3 ska peka till första versionen som
+        # producerade decisionen, inte föregående version).
+        if "inheritedFromVersion" not in inherited_copy:
+            inherited_copy["inheritedFromVersion"] = previous_version
+        meta_overrides["discoveryDecision"] = inherited_copy
     return generate(
         prompt,
         output_dir=output_dir,

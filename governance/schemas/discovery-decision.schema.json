@@ -133,6 +133,11 @@
       "type": "string",
       "enum": ["high", "medium", "low"],
       "description": "Resolverns självskattade säkerhet i beslutet. Reserverat för Backoffice-visning; saknas när resolvern inte beräknar den."
+    },
+    "inheritedFromVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Versionen som ``discoveryDecision`` ärvdes från. Närvarande när follow-up-runs kopierar en tidigare versions decision in i meta-sidecaren (``generate_followup`` i scripts/prompt_to_project_input.py). Saknas när decisionen är färsk för aktuell version. Backoffice/Doctor läser fältet för att markera fieldSources/categoryIds som historiska snarare än aktuell provenance (R1 #5 på PR #34, round 3)."
     }
   }
 }

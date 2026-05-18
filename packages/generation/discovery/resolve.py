@@ -287,20 +287,23 @@ def resolve_discovery(
     # R2 P1 + R3 #1: primary_category måste väljas med samma branch-
     # prioritet som ``pick_branch``, annars kan multi-select ge
     # ``contentBranch=ecommerce`` men scaffold=``local-service-business``.
+    # R2 P2 (round 3): disabled-kategori får inte pinna icke-byggbar
+    # scaffold via runtime_scaffold_id. Vi behandlar disabled som "ingen
+    # primärkategori" — warning category-disabled är redan tillagd i
+    # föregående loop, men resolvern faller tillbaka till scaffoldHint
+    # eller candidate Project Input istället för att använda
+    # taxonomy-scaffolden.
     primary_category = decision_taxonomy.pick_primary_category(matched_categories)
-    selection_source: SelectionSource = _selection_source_for(
-        category_ids, primary_category
+    primary_disabled = (
+        primary_category is not None and primary_category.supportStatus == "disabled"
     )
-    if primary_category is not None and primary_category.supportStatus in {
-        "planned",
-        "fallback",
-        "disabled",
-    }:
-        selection_source = "fallback"
+    if primary_disabled:
+        primary_category = None
 
     # ------------------------------------------------------------------
     # Steg 3 — välj scaffold/variant/starter via taxonomy
     # ------------------------------------------------------------------
+    selection_source: SelectionSource
     scaffold_hint_used = False
     if primary_category is not None:
         selected_scaffold_id = primary_category.runtime_scaffold_id
@@ -321,6 +324,11 @@ def resolve_discovery(
         project_input["variantId"] = selected_variant_id
         field_sources["scaffoldId"] = "taxonomy"
         field_sources["variantId"] = "taxonomy"
+        selection_source = (
+            "fallback"
+            if primary_category.supportStatus in {"planned", "fallback"}
+            else "taxonomy"
+        )
         if expected_starter_id is None:
             warnings.append(
                 FallbackWarning(
@@ -344,6 +352,10 @@ def resolve_discovery(
         # local-service-business och ecommerce-lite.
         hint = _scaffold_hint_from_payload(payload)
         if hint is not None:
+            # R2 P2 (round 3): selectionSource måste matcha fieldSources
+            # — wizardens hint pinnar fältet och fieldSources["scaffoldId"]
+            # blir "wizard", så top-level selectionSource ska också vara
+            # "wizard". Tidigare blev det "default" vilket var osant.
             scaffold_hint_used = True
             selected_scaffold_id, selected_variant_id, expected_starter_id = hint
             target_scaffold_id = selected_scaffold_id
@@ -352,6 +364,7 @@ def resolve_discovery(
             project_input["variantId"] = selected_variant_id
             field_sources["scaffoldId"] = "wizard"
             field_sources["variantId"] = "wizard"
+            selection_source = "wizard"
             content_branch = (
                 payload.get("contentBranch", "business")
                 if isinstance(payload, dict)
@@ -369,6 +382,7 @@ def resolve_discovery(
             fallback_scaffold_id = None
             selected_variant_id = project_input.get("variantId", _DEFAULT_VARIANT_ID)
             expected_starter_id = _starter_for_scaffold(selected_scaffold_id)
+            selection_source = "default"
             content_branch = (
                 payload.get("contentBranch", "business")
                 if isinstance(payload, dict)
@@ -410,15 +424,28 @@ def resolve_discovery(
     # ``scaffold_hint_used`` är True när scaffoldHint-fallback användes
     # utan en matchande kategori; resolvern behöver inte automatisk
     # operator review i det fallet (det är samma kontrakt som pre-B121).
-    operator_review_required = (
-        (primary_category is None and not scaffold_hint_used)
+    #
+    # R1 #1 + huvudreviewer #4 på PR #34 (round 3): ``capability-gap``
+    # bör flaggas i ``fallbackWarnings`` men ska INTE trigga
+    # operatorReviewRequired. Gap betyder att taxonomin/wizarden begär
+    # en känd capability vars Dossier ännu inte är implementerad
+    # (``contact-form``, ``payments`` m.fl. idag) — det är samma signal
+    # för alla runs och kräver ingen per-run-review. ``capability-unknown``
+    # (slug som inte ens finns i capability-map) däremot triggar review
+    # eftersom resolvern inte vet vad operatorn vill ha.
+    operator_review_required = bool(
+        (
+            primary_category is None
+            and not scaffold_hint_used
+            and len(category_ids) > 0
+        )
         or (
             primary_category is not None
-            and primary_category.supportStatus in {"planned", "disabled"}
+            and primary_category.supportStatus == "planned"
         )
+        or primary_disabled
         or any(
-            warning.code
-            in {"category-unknown", "capability-gap", "capability-unknown"}
+            warning.code in {"category-unknown", "capability-unknown"}
             for warning in warnings
         )
     )
@@ -485,16 +512,6 @@ def _collect_category_ids(answers: dict[str, Any]) -> list[str]:
         if isinstance(item, str) and item.strip():
             out.append(item.strip())
     return out
-
-
-def _selection_source_for(
-    category_ids: list[str], primary_category: TaxonomyCategory | None
-) -> SelectionSource:
-    if primary_category is not None:
-        return "taxonomy"
-    if category_ids:
-        return "wizard"
-    return "default"
 
 
 def _starter_for_scaffold(scaffold_id: str) -> str | None:

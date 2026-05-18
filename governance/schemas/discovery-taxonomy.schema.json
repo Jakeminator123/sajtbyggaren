@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "discovery-taxonomy.schema.json",
   "title": "Discovery Taxonomy",
-  "description": "Schema för governance/policies/discovery-taxonomy.v1.json. Taxonomin är canonical mapping från WizardCategoryId (apps/viewser/components/discovery-wizard/wizard-constants.ts) till targetScaffoldId/activeScaffoldId/fallbackScaffoldId/defaultVariantId/expectedStarterId/requestedCapabilities/candidateDossiers/recommendedPages. PR B låser frontend mot denna policy; PR A levererar bara backend/resolver-konsumtionen. ADR-skuld kan undvikas eftersom taxonomin bara implementerar B121 och inte ändrar operatorflödets canonical begrepp.",
+  "description": "Schema för governance/policies/discovery-taxonomy.v1.json. Taxonomin är canonical mapping från WizardCategoryId (apps/viewser/components/discovery-wizard/wizard-constants.ts) till targetScaffoldId/activeScaffoldId/fallbackScaffoldId/defaultVariantId/expectedStarterId/requestedCapabilities/candidateDossiers/recommendedPages. PR B låser frontend mot denna policy; PR A levererar bara backend/resolver-konsumtionen. Discovery Resolver / Discovery Taxonomy / Discovery Decision / Discovery Payload / Field Source registreras som canonical termer i ADR 0024 enligt repo-regel i .cursor/BUGBOT.md.",
   "type": "object",
   "additionalProperties": false,
   "required": [

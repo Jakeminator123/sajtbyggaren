@@ -120,7 +120,7 @@ class DiscoveryTaxonomy:
     def pick_primary_category(
         self, matched_categories: list[TaxonomyCategory]
     ) -> TaxonomyCategory | None:
-        """Välj primärkategori med samma branch-prioritet som ``pick_branch``.
+        """Välj primärkategori med branch-prioritet + supportStatus tie-break.
 
         Tidigare valde resolvern första kategori i payloaden som
         primärkategori, vilket var inkonsistent med branch-prioriteten:
@@ -129,19 +129,41 @@ class DiscoveryTaxonomy:
         primärkategori och branch alltid kommer från samma kategori, så
         scaffold/variant/starter och innehållsgren är samma beslut
         (Review-feedback R2 P1 + R3 #1 på PR #34).
+
+        Multi-select inom samma branch tie-breakas på ``supportStatus``:
+        ``active`` > ``fallback`` > ``planned`` > ``disabled``. Det följer
+        Review-feedback R1 #2 på PR #34 (round 3): ``["salon", "healthcare"]``
+        delar branch ``salon`` men ``salon`` är active medan ``healthcare``
+        är planned — utan tie-break föll beslutet på inmatningsordningen.
         """
         if not matched_categories:
             return None
-        if not self.branch_priority:
-            return matched_categories[0]
+
+        def status_rank(category: TaxonomyCategory) -> int:
+            return _SUPPORT_STATUS_PREFERENCE.get(category.supportStatus, 99)
+
+        def branch_rank(category: TaxonomyCategory) -> int:
+            return self.branch_priority.get(category.contentBranch, 1_000_000)
+
         best = matched_categories[0]
-        best_priority = self.branch_priority.get(best.contentBranch, 1_000_000)
         for category in matched_categories[1:]:
-            priority = self.branch_priority.get(category.contentBranch, 1_000_000)
-            if priority < best_priority:
+            if branch_rank(category) < branch_rank(best):
                 best = category
-                best_priority = priority
+                continue
+            if branch_rank(category) == branch_rank(best) and status_rank(
+                category
+            ) < status_rank(best):
+                best = category
         return best
+
+
+_SUPPORT_STATUS_PREFERENCE: dict[str, int] = {
+    "active": 0,
+    "fallback": 1,
+    "planned": 2,
+    "disabled": 3,
+}
+"""Tie-break-ordning för ``pick_primary_category`` inom samma branch."""
 
 
 def load_discovery_taxonomy(

@@ -276,6 +276,62 @@ def test_pick_primary_category_follows_branch_priority() -> None:
 
 
 @pytest.mark.tooling
+def test_pick_primary_category_tie_breaks_on_support_status() -> None:
+    """R1 #2 (round 3): inom samma branch_priority väljs kategorin med
+    bäst supportStatus (``active`` > ``fallback`` > ``planned``).
+
+    ``salon`` (active) och ``healthcare`` (planned) delar branch
+    ``salon`` (priority 2). Utan tie-break föll beslutet på listordning;
+    nu vinner alltid active.
+    """
+    from packages.generation.discovery import load_discovery_taxonomy
+
+    loaded = load_discovery_taxonomy()
+    salon = loaded.get("salon")
+    healthcare = loaded.get("healthcare")
+    assert salon is not None and salon.supportStatus == "active"
+    assert healthcare is not None and healthcare.supportStatus == "planned"
+    # Branch:en är samma; supportStatus avgör.
+    assert salon.contentBranch == healthcare.contentBranch
+
+    primary = loaded.pick_primary_category([salon, healthcare])
+    assert primary is not None and primary.id == "salon"
+    primary = loaded.pick_primary_category([healthcare, salon])
+    assert primary is not None and primary.id == "salon", (
+        "Resolvern föll på listordning istället för supportStatus tie-break."
+    )
+
+
+@pytest.mark.tooling
+def test_adr_0024_documents_canonical_discovery_terms() -> None:
+    """R2 P1 (round 3): nya canonical termer i naming-dictionary kräver
+    en åtföljande ADR enligt .cursor/BUGBOT.md. Verifiera att ADR 0024
+    finns och nämner de fem termerna.
+    """
+    adr_path = (
+        REPO_ROOT
+        / "governance"
+        / "decisions"
+        / "0024-discovery-resolver-canonical-terms.md"
+    )
+    assert adr_path.exists(), (
+        "ADR 0024 saknas — nya canonical termer i naming-dictionary "
+        "måste ha en åtföljande ADR enligt .cursor/BUGBOT.md."
+    )
+    text = adr_path.read_text(encoding="utf-8")
+    for term in (
+        "Discovery Payload",
+        "Discovery Resolver",
+        "Discovery Decision",
+        "Discovery Taxonomy",
+        "Field Source",
+    ):
+        assert term in text, (
+            f"ADR 0024 saknar definition av canonical term {term!r}."
+        )
+
+
+@pytest.mark.tooling
 def test_blog_and_other_are_fallback_not_active(taxonomy_payload: dict) -> None:
     """R1 #3 + R3 #5: kategorier utan native scaffold-mappning märks fallback.
 
