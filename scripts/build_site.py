@@ -668,6 +668,21 @@ _BOOKING_BUSINESS_TYPES: frozenset[str] = frozenset(
 )
 
 
+def _normalize_business_type(value: object) -> str:
+    """Normalize briefModel business type variants for CTA fallback lookup."""
+    raw = str(value or "").strip().lower()
+    if not raw:
+        return ""
+    compact = raw.replace("_", "-").replace(" ", "-")
+    if compact.startswith("naprapat") or compact.startswith("naprapath"):
+        return "naprapat-clinic"
+    if compact in {"frisor", "frisör", "hairdresser"}:
+        return "hair-salon"
+    if compact in {"webshop", "webbshop", "online-shop"}:
+        return "e-commerce"
+    return compact
+
+
 def _hero_cta_variant(dossier: dict) -> str:
     """Return the hero CTA variant key for this Project Input.
 
@@ -679,7 +694,7 @@ def _hero_cta_variant(dossier: dict) -> str:
     """
     scaffold_id = (dossier.get("scaffoldId") or "").strip().lower()
     company = dossier.get("company") or {}
-    business_type = str(company.get("businessType") or "").strip().lower()
+    business_type = _normalize_business_type(company.get("businessType"))
     goals = {
         str(goal).strip().lower()
         for goal in (dossier.get("conversionGoals") or [])

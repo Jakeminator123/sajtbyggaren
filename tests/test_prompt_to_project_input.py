@@ -34,6 +34,7 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 from prompt_to_project_input import (  # noqa: E402
+    _build_services,
     _company_business_label,
     _derive_company_name,
     _derive_story,
@@ -711,6 +712,20 @@ def test_company_name_uses_swedish_business_type_mapping() -> None:
 
 
 @pytest.mark.tooling
+def test_ecommerce_company_name_uses_product_category_when_name_missing() -> None:
+    """B106: e-commerce prompts should not fall back to plain "Webbshop"."""
+    name = _derive_company_name(
+        business_type="e-commerce",
+        location_hint=None,
+        services_mentioned=["keramik"],
+        language="sv",
+    )
+
+    assert name == "Keramikbutik"
+    assert name != "Webbshop"
+
+
+@pytest.mark.tooling
 def test_company_name_falls_back_when_brief_has_no_signals() -> None:
     """Empty brief -> safe placeholder; never the raw prompt."""
     name = _derive_company_name(
@@ -1192,6 +1207,33 @@ def test_placeholder_services_summary_is_customer_friendly() -> None:
             "B61: customer copy must not call itself a platshållare."
         )
         assert "placeholder" not in summary.lower()
+
+
+@pytest.mark.tooling
+def test_service_summary_uses_business_specific_copy_for_empty_brief() -> None:
+    """B105: no more public "Konsultation - kontakta oss..." filler."""
+    services = _build_services([], "sv", business_type="electrician")
+
+    assert services == [
+        {
+            "id": "elservice",
+            "label": "Elservice",
+            "summary": "Tydlig hjälp med elarbeten, felsökning och nästa steg.",
+        }
+    ]
+    assert "kontakta oss för mer information" not in services[0]["summary"]
+
+
+@pytest.mark.tooling
+def test_service_summary_uses_business_specific_copy_for_stub_service() -> None:
+    """B105: generic one-word brief services still get useful summaries."""
+    services = _build_services(["Konsultation"], "sv", business_type="electrician")
+
+    assert services[0]["label"] == "Konsultation"
+    assert services[0]["summary"] == (
+        "Tydlig hjälp med elarbeten, felsökning och nästa steg."
+    )
+    assert "kontakta oss för mer information" not in services[0]["summary"]
 
 
 @pytest.mark.tooling

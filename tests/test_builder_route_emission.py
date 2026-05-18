@@ -550,7 +550,13 @@ def test_hero_cta_label_uses_booking_business_type_fallback() -> None:
     """B100: short booking prompts may have conversionGoals=[] from briefModel."""
     from scripts.build_site import _hero_cta_label
 
-    for business_type in ("hair-salon", "naprapat-clinic", "naprapatklinik", "dentist"):
+    for business_type in (
+        "hair-salon",
+        "naprapat-clinic",
+        "naprapath clinic",
+        "naprapatklinik",
+        "dentist",
+    ):
         dossier = {
             "language": "sv",
             "scaffoldId": "local-service-business",

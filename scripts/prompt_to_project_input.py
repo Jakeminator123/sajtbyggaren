@@ -129,6 +129,19 @@ _BUSINESS_TYPE_LABEL_SV: dict[str, str] = {
     "egg-farm": "äggproducent",
 }
 
+_ECOMMERCE_BUSINESS_TYPES = frozenset(
+    {
+        "shop",
+        "online-shop",
+        "ecommerce",
+        "e-commerce",
+        "ecommerce-shop",
+        "ecommerce-store",
+        "webshop",
+        "webbshop",
+    }
+)
+
 _TAGLINE_BY_BUSINESS_TYPE_SV: dict[str, str] = {
     "electrician": "Tydlig hjälp med elarbeten",
     "electrical-services": "Tydlig hjälp med elarbeten",
@@ -155,6 +168,81 @@ _TAGLINE_BY_BUSINESS_TYPE_SV: dict[str, str] = {
     "webbshop": "Utvalt sortiment med enkel beställning",
     "ceramics-studio": "Keramik med tydlig känsla och enkel kontakt",
     "pottery": "Keramik med tydlig känsla och enkel kontakt",
+}
+
+_SERVICE_LABEL_BY_BUSINESS_TYPE_SV: dict[str, str] = {
+    "electrician": "Elservice",
+    "electrical-services": "Elservice",
+    "electrical-contractor": "Elservice",
+    "hairdresser": "Frisörtjänster",
+    "hair-salon": "Frisörtjänster",
+    "frisör": "Frisörtjänster",
+    "barber": "Klippning och skäggvård",
+    "barber-shop": "Klippning och skäggvård",
+    "naprapat": "Behandlingar",
+    "naprapath": "Behandlingar",
+    "naprapath-clinic": "Behandlingar",
+    "naprapat-clinic": "Behandlingar",
+    "naprapatklinik": "Behandlingar",
+    "chiropractor": "Behandlingar",
+    "physiotherapist": "Behandlingar",
+    "physiotherapy-clinic": "Behandlingar",
+    "shop": "Sortiment",
+    "online-shop": "Sortiment",
+    "ecommerce": "Sortiment",
+    "e-commerce": "Sortiment",
+    "ecommerce-shop": "Sortiment",
+    "ecommerce-store": "Sortiment",
+    "webbshop": "Sortiment",
+}
+
+_SERVICE_SUMMARY_BY_BUSINESS_TYPE_SV: dict[str, str] = {
+    "electrician": "Tydlig hjälp med elarbeten, felsökning och nästa steg.",
+    "electrical-services": "Tydlig hjälp med elarbeten, felsökning och nästa steg.",
+    "electrical-contractor": "Tydlig hjälp med elarbeten, felsökning och nästa steg.",
+    "hairdresser": "Klippning, färg och styling med enkel bokning.",
+    "hair-salon": "Klippning, färg och styling med enkel bokning.",
+    "frisör": "Klippning, färg och styling med enkel bokning.",
+    "barber": "Klippning och skäggvård med enkel bokning.",
+    "barber-shop": "Klippning och skäggvård med enkel bokning.",
+    "naprapat": "Behandling och rådgivning med enkel bokning.",
+    "naprapath": "Behandling och rådgivning med enkel bokning.",
+    "naprapath-clinic": "Behandling och rådgivning med enkel bokning.",
+    "naprapat-clinic": "Behandling och rådgivning med enkel bokning.",
+    "naprapatklinik": "Behandling och rådgivning med enkel bokning.",
+    "chiropractor": "Behandling och rådgivning med enkel bokning.",
+    "physiotherapist": "Behandling och rådgivning med enkel bokning.",
+    "physiotherapy-clinic": "Behandling och rådgivning med enkel bokning.",
+    "shop": "Utvalt sortiment med tydlig produktväg och enkel beställning.",
+    "online-shop": "Utvalt sortiment med tydlig produktväg och enkel beställning.",
+    "ecommerce": "Utvalt sortiment med tydlig produktväg och enkel beställning.",
+    "e-commerce": "Utvalt sortiment med tydlig produktväg och enkel beställning.",
+    "ecommerce-shop": "Utvalt sortiment med tydlig produktväg och enkel beställning.",
+    "ecommerce-store": "Utvalt sortiment med tydlig produktväg och enkel beställning.",
+    "webbshop": "Utvalt sortiment med tydlig produktväg och enkel beställning.",
+}
+
+_SERVICE_SUMMARY_BY_BUSINESS_TYPE_EN: dict[str, str] = {
+    "electrician": "Clear help with electrical work, troubleshooting and the next step.",
+    "electrical-services": "Clear help with electrical work, troubleshooting and the next step.",
+    "electrical-contractor": "Clear help with electrical work, troubleshooting and the next step.",
+    "hairdresser": "Haircuts, colour and styling with simple booking.",
+    "hair-salon": "Haircuts, colour and styling with simple booking.",
+    "barber": "Haircuts and grooming with simple booking.",
+    "barber-shop": "Haircuts and grooming with simple booking.",
+    "naprapat": "Treatment and guidance with simple booking.",
+    "naprapath": "Treatment and guidance with simple booking.",
+    "naprapath-clinic": "Treatment and guidance with simple booking.",
+    "naprapat-clinic": "Treatment and guidance with simple booking.",
+    "chiropractor": "Treatment and guidance with simple booking.",
+    "physiotherapist": "Treatment and guidance with simple booking.",
+    "physiotherapy-clinic": "Treatment and guidance with simple booking.",
+    "shop": "A curated range with a clear product path and simple ordering.",
+    "online-shop": "A curated range with a clear product path and simple ordering.",
+    "ecommerce": "A curated range with a clear product path and simple ordering.",
+    "e-commerce": "A curated range with a clear product path and simple ordering.",
+    "ecommerce-shop": "A curated range with a clear product path and simple ordering.",
+    "ecommerce-store": "A curated range with a clear product path and simple ordering.",
 }
 
 _TAGLINE_BY_BUSINESS_TYPE_EN: dict[str, str] = {
@@ -331,6 +419,7 @@ def _derive_company_name(
     company_name: str | None = None,
     business_type: str | None,
     location_hint: str | None,
+    services_mentioned: list[str] | None = None,
     language: str,
 ) -> str:
     """Build a readable company name from brief signals only.
@@ -347,6 +436,12 @@ def _derive_company_name(
     explicit_name = (company_name or "").strip()
     if explicit_name:
         return explicit_name
+
+    business_slug = (business_type or "").strip().lower()
+    if language != "en" and business_slug in _ECOMMERCE_BUSINESS_TYPES:
+        product_name = _product_category_name(services_mentioned)
+        if product_name:
+            return f"{product_name}butik"
 
     business_label = _company_business_label(business_type, language)
     location = (location_hint or "").strip()
@@ -366,6 +461,23 @@ def _derive_company_name(
     if location:
         return f"Sajt i {location}"
     return "Ny sajt"
+
+
+def _product_category_name(services_mentioned: list[str] | None) -> str | None:
+    """Return a short product category for ecommerce fallback names."""
+    for service in services_mentioned or []:
+        if not isinstance(service, str):
+            continue
+        label = _service_label_from_text(service)
+        if not label:
+            continue
+        lowered = label.lower()
+        if lowered in {"konsultation", "consultation", "e-commerce", "webbshop", "webshop"}:
+            continue
+        compact = "".join(part for part in label.split())
+        if compact:
+            return _capitalize_first(compact)
+    return None
 
 
 def _company_business_label(
@@ -595,7 +707,12 @@ def _looks_like_slug(text: str) -> bool:
     return bool(re.fullmatch(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?", cleaned))
 
 
-def _service_summary(label: str, language: str) -> str:
+def _service_summary(
+    label: str,
+    language: str,
+    *,
+    business_type: str | None = None,
+) -> str:
     """Return a neutral customer-facing summary for a service entry.
 
     Demo-baseline-fix 1A-hotfix (B61): the previous summaries leaked
@@ -607,12 +724,24 @@ def _service_summary(label: str, language: str) -> str:
     workflow to end users. Operators still edit the Project Input
     file to expand the description before sharing the build.
     """
+    slug = (business_type or "").strip().lower()
+    mapped = (
+        _SERVICE_SUMMARY_BY_BUSINESS_TYPE_EN.get(slug)
+        if language == "en"
+        else _SERVICE_SUMMARY_BY_BUSINESS_TYPE_SV.get(slug)
+    )
+    if mapped:
+        return mapped
     if language == "en":
-        return f"{label} - contact us to learn more."
-    return f"{label} - kontakta oss för mer information."
+        return f"Clear help with {label.lower()} and a simple next step."
+    return f"Tydlig hjälp med {label.lower()} och enkel väg vidare."
 
 
-def _placeholder_services(language: str) -> list[dict[str, str]]:
+def _placeholder_services(
+    language: str,
+    *,
+    business_type: str | None = None,
+) -> list[dict[str, str]]:
     """Schema-required service when the brief mentioned none.
 
     The schema requires `services` with minItems=1, so the helper always
@@ -620,25 +749,27 @@ def _placeholder_services(language: str) -> list[dict[str, str]]:
     summary text is now plain customer copy instead of the previous
     "placeholder generated from your prompt"-flavoured dev jargon.
     """
+    slug = (business_type or "").strip().lower()
     if language == "en":
-        return [
-            {
-                "id": "consultation",
-                "label": "Consultation",
-                "summary": "Consultation - contact us to learn more.",
-            }
-        ]
+        label = (slug.replace("-", " ").replace("_", " ").strip() or "Service").title()
+        summary = _service_summary(label, language, business_type=business_type)
+        return [{"id": _slugify_label(label), "label": label, "summary": summary}]
+    label = _SERVICE_LABEL_BY_BUSINESS_TYPE_SV.get(slug, "Tjänster")
+    summary = _service_summary(label, language, business_type=business_type)
     return [
         {
-            "id": "konsultation",
-            "label": "Konsultation",
-            "summary": "Konsultation - kontakta oss för mer information.",
+            "id": _slugify_label(label),
+            "label": label,
+            "summary": summary,
         }
     ]
 
 
 def _build_services(
-    services_mentioned: list[str], language: str
+    services_mentioned: list[str],
+    language: str,
+    *,
+    business_type: str | None = None,
 ) -> list[dict[str, str]]:
     """Map the brief's services_mentioned phrases onto Project Input services.
 
@@ -685,13 +816,17 @@ def _build_services(
             {
                 "id": slug,
                 "label": label,
-                "summary": _service_summary(label, language),
+                "summary": _service_summary(
+                    label,
+                    language,
+                    business_type=business_type,
+                ),
             }
         )
         if len(services) >= 5:
             break
     if not services:
-        services = _placeholder_services(language)
+        services = _placeholder_services(language, business_type=business_type)
     return services
 
 
@@ -842,6 +977,7 @@ def site_brief_to_project_input(
         company_name=brief.get("companyName"),
         business_type=business_type,
         location_hint=location_hint,
+        services_mentioned=brief.get("servicesMentioned") or [],
         language=language,
     )
     tagline = _derive_tagline(
@@ -859,7 +995,9 @@ def site_brief_to_project_input(
     )
 
     services = _build_services(
-        brief.get("servicesMentioned") or [], language
+        brief.get("servicesMentioned") or [],
+        language,
+        business_type=business_type,
     )
 
     tone_words = list(brief.get("tone") or [])
