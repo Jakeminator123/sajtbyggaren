@@ -433,6 +433,15 @@ def resolve_discovery(
     # för alla runs och kräver ingen per-run-review. ``capability-unknown``
     # (slug som inte ens finns i capability-map) däremot triggar review
     # eftersom resolvern inte vet vad operatorn vill ha.
+    #
+    # R1 (round 4): ``category-disabled`` ska trigga review oavsett om
+    # den disablade kategorin blev primary eller bara en sekundär entry
+    # i multi-select. Tidigare räckte ``primary_disabled`` som villkor,
+    # men ``["salon", "broken-disabled"]`` gav då review=False eftersom
+    # salon (active) vann tie-break och primary_disabled blev False —
+    # trots att ``category-disabled``-warning loggats. Att läsa direkt
+    # från warnings gör att alla disabled-kategorier triggar review och
+    # gör den separata ``primary_disabled``-grenen redundant.
     operator_review_required = bool(
         (
             primary_category is None
@@ -443,9 +452,9 @@ def resolve_discovery(
             primary_category is not None
             and primary_category.supportStatus == "planned"
         )
-        or primary_disabled
         or any(
-            warning.code in {"category-unknown", "capability-unknown"}
+            warning.code
+            in {"category-unknown", "category-disabled", "capability-unknown"}
             for warning in warnings
         )
     )

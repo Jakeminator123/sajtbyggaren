@@ -26,12 +26,12 @@ Project Input. Bakgrund:
 `.cursor/BUGBOT.md` säger att nya canonical termer måste antingen
 registreras i `naming-dictionary.v1.json` med en åtföljande ADR, eller
 allowlistas under `COMMON_WORDS` i `scripts/check_term_coverage.py`. PR
-#34 introducerar fem canonical termer som driver hela seamen mellan
+#34 introducerar fem canonical termer som driver hela seam-en mellan
 overlay och backend — dessa hör hemma i naming-dictionary, inte i
 term-coverage-allowlist, eftersom de är vokabulär operatorn ser i
 Backoffice/Doctor och inte bara Python-implementation-symboler.
 
-Denna ADR registrerar termerna och låser seamen så framtida sprintar
+Denna ADR registrerar termerna och låser seam-en så framtida sprintar
 inte återinför "discovery overrides"-språket utanför resolvern.
 
 ## Beslut

@@ -1031,6 +1031,80 @@ def test_disabled_category_without_scaffold_hint_keeps_candidate() -> None:
 
 
 @pytest.mark.tooling
+def test_multi_select_with_disabled_secondary_still_triggers_review() -> None:
+    """R1 round 4: ``category-disabled`` ska trigga ``operatorReviewRequired``
+    även när primary_category vann tie-break som active.
+
+    ``["good-cat" (active), "broken-cat" (disabled)]`` gav tidigare
+    ``operatorReviewRequired=False`` eftersom ``primary_disabled``-grenen
+    bara kollade om resolverns slutgiltiga primary var disabled — inte
+    om någon kategori i multi-select-listan loggade en
+    ``category-disabled``-warning. Fixen läser warning-listan direkt så
+    review krävs oavsett vilken position den disablade kategorin hade.
+    """
+    from packages.generation.discovery.taxonomy import (
+        DiscoveryTaxonomy,
+        TaxonomyCategory,
+    )
+
+    fake_taxonomy = DiscoveryTaxonomy(
+        policy_id="discovery-taxonomy.test",
+        version=1,
+        categories={
+            "good-cat": TaxonomyCategory(
+                id="good-cat",
+                labelSv="Good",
+                contentBranch="business",
+                supportStatus="active",
+                targetScaffoldId="local-service-business",
+                activeScaffoldId="local-service-business",
+                defaultVariantId="nordic-trust",
+                expectedStarterId="marketing-base",
+                requestedCapabilities=[],
+                candidateDossiers=[],
+                rationale="active",
+            ),
+            "broken-cat": TaxonomyCategory(
+                id="broken-cat",
+                labelSv="Broken",
+                contentBranch="business",
+                supportStatus="disabled",
+                targetScaffoldId="restaurant-hospitality",
+                defaultVariantId="non-existent",
+                requestedCapabilities=[],
+                candidateDossiers=[],
+                rationale="disabled",
+            ),
+        },
+        branch_priority={"business": 12},
+    )
+
+    payload = {
+        "schemaVersion": 1,
+        "rawPrompt": "test",
+        "contentBranch": "business",
+        "answers": {"siteType": ["good-cat", "broken-cat"]},
+    }
+    _, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+        taxonomy=fake_taxonomy,
+    )
+    # Active vinner tie-break — primary blev good-cat.
+    assert decision.selectedScaffoldId == "local-service-business"
+    assert decision.selectionSource == "taxonomy"
+    # Men disabled-warningen från broken-cat ska fortfarande trigga review.
+    codes = {w.code for w in decision.fallbackWarnings}
+    assert "category-disabled" in codes
+    assert decision.operatorReviewRequired is True, (
+        "category-disabled-warning för en sekundär multi-select-entry "
+        "ska trigga operatorReviewRequired oavsett om disabled-kategorin "
+        "blev primary eller inte."
+    )
+
+
+@pytest.mark.tooling
 def test_followup_marks_inherited_decision_with_version(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
