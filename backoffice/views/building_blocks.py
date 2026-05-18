@@ -7,76 +7,84 @@ from pathlib import Path
 
 import streamlit as st
 
-from .. import loaders
+from scripts.generate_variant_candidate import (
+    VariantGenerationError,
+    generate_variant_candidates,
+)
+
+from .. import asset_graph, loaders
 from ..paths import REPO_ROOT
 from ._helpers import safe_render
 
 SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
-DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
 REFERENCE_TEMPLATES_DIR = REPO_ROOT / "data" / "reference-templates"
-
-# Marker the building-blocks UI uses to tag files that were created as
-# placeholders by the "Lägg till första filuppsättning"-button. Anything
-# carrying this marker must NOT count as "Implementerad: ja".
-PLACEHOLDER_MARKER = "placeholder, fill per scaffold-contract"
+VARIANT_CANDIDATES_DIR = REPO_ROOT / "data" / "variant-candidates"
+PLACEHOLDER_MARKER = asset_graph.PLACEHOLDER_MARKER
 
 
 def is_placeholder_file(path: Path) -> bool:
-    """Return True if file looks like a placeholder created by the builder.
-
-    A scaffold counts as "Implementerad" only when none of its required
-    JSON files contain the placeholder marker. Otherwise the table would
-    silently report half-baked scaffolds as implemented.
-    """
-    try:
-        text = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        return False
-    if PLACEHOLDER_MARKER in text:
-        return True
-    if path.suffix == ".json":
-        try:
-            payload = json.loads(text)
-        except json.JSONDecodeError:
-            return False
-        if isinstance(payload, dict) and "_status" in payload:
-            return True
-    return False
+    """Return True if file looks like a placeholder created by the builder."""
+    return asset_graph.is_placeholder_file(path)
 
 
 def scaffold_is_real(scaffold_dir: Path) -> bool:
-    """Scaffold is real iff at least one required file exists and none are placeholders."""
-    if not scaffold_dir.exists():
-        return False
-    required = ["scaffold.json", "routes.json", "sections.json"]
-    real_files = 0
-    for fname in required:
-        fpath = scaffold_dir / fname
-        if not fpath.exists():
-            continue
-        if is_placeholder_file(fpath):
-            return False
-        real_files += 1
-    return real_files > 0
+    """Scaffold is real iff every required contract file exists."""
+    return asset_graph.scaffold_is_real(scaffold_dir)
 
 
 def _list_scaffold_dirs() -> list:
-    if not SCAFFOLDS_DIR.exists():
-        return []
-    return [d for d in SCAFFOLDS_DIR.iterdir() if d.is_dir()]
+    return asset_graph.list_scaffold_dirs(SCAFFOLDS_DIR)
 
 
-def _list_dossier_dirs() -> list:
-    if not DOSSIERS_DIR.exists():
-        return []
-    out = []
-    for cls in ("soft", "hybrid", "hard"):
-        cls_dir = DOSSIERS_DIR / cls
-        if cls_dir.exists():
-            for d in cls_dir.iterdir():
-                if d.is_dir():
-                    out.append((cls, d))
-    return out
+def _list_dossier_dirs(classes: list[str] | None = None) -> list:
+    return asset_graph.list_dossier_dirs(classes=classes)
+
+
+def _scaffold_options() -> list[str]:
+    return [path.name for path in _list_scaffold_dirs()]
+
+
+def create_variant_candidate_from_ui(
+    *,
+    scaffold_id: str,
+    brief: str,
+    variant_id: str | None,
+    use_llm: bool,
+    force: bool,
+):
+    """Generate a Variant candidate from Backoffice without touching canonical files."""
+    return generate_variant_candidates(
+        scaffold_id=scaffold_id,
+        brief=brief,
+        variant_id=variant_id,
+        output_dir=VARIANT_CANDIDATES_DIR,
+        enabled=False,
+        force=force,
+        use_llm=use_llm,
+    )
+
+
+def view_control_plane() -> None:
+    st.title("Kontrollplan")
+    st.caption(
+        "Read-only översikt över Starters, Scaffolds, Variants, Dossiers, "
+        "modellroller och kandidatfiler. Inga destruktiva åtgärder finns här."
+    )
+
+    graph = asset_graph.build_graph()
+    findings = asset_graph.run_health_checks()
+
+    st.subheader("Doctor")
+    if not findings:
+        st.success("Inga kända driftfynd.")
+    else:
+        st.dataframe(findings, use_container_width=True, hide_index=True)
+
+    st.subheader("Nodes")
+    st.dataframe(graph["nodes"], use_container_width=True, hide_index=True)
+
+    st.subheader("Relationer")
+    st.dataframe(graph["edges"], use_container_width=True, hide_index=True)
 
 
 def view_scaffolds() -> None:
@@ -89,10 +97,13 @@ def view_scaffolds() -> None:
     st.caption(contract.get("purpose", ""))
 
     registry = contract.get("primaryScaffoldRegistry", [])
-    real_scaffolds = {d.name for d in _list_scaffold_dirs() if scaffold_is_real(d)}
+    required_files = asset_graph.scaffold_required_files(contract)
+    real_scaffolds = {
+        d.name for d in _list_scaffold_dirs() if asset_graph.scaffold_is_real(d, required_files)
+    }
     placeholder_scaffolds = {
         d.name for d in _list_scaffold_dirs()
-        if d.exists() and not scaffold_is_real(d)
+        if d.exists() and not asset_graph.scaffold_is_real(d, required_files)
     }
 
     def _status(scaffold_id: str) -> str:
@@ -107,6 +118,7 @@ def view_scaffolds() -> None:
             "id": s["id"],
             "label": s["label"],
             "Implementerad": _status(s["id"]),
+            "requiredFiles": len(required_files),
             "rationale": s["rationale"],
         }
         for s in registry
@@ -149,7 +161,11 @@ def view_scaffolds() -> None:
     if not candidate_ids:
         st.info("Alla 14 Scaffolds är redan implementerade.")
         return
-    pick = st.selectbox("Välj Scaffold att skapa", candidate_ids, key="scaffold_create_select")
+    selected = st.selectbox("Välj Scaffold att skapa", candidate_ids, key="scaffold_create_select")
+    if not isinstance(selected, str) or not selected:
+        st.info("Välj en Scaffold innan du skapar filer.")
+        return
+    pick = selected
     if st.button(f"Skapa mapp för {pick}", key="scaffold_create"):
         target = SCAFFOLDS_DIR / pick
         target.mkdir(parents=True, exist_ok=True)
@@ -174,7 +190,8 @@ def view_variants() -> None:
     st.title("Variants")
     st.caption(
         "Variants ligger under `packages/generation/orchestration/scaffolds/<id>/variants/`. "
-        "Listar befintliga; redigering går via Policies-vyn på respektive variant.json."
+        "Canonical ändringar görs i respektive variantfil. Draftar skapas i "
+        "`data/variant-candidates/` via Variant Candidates-vyn."
     )
     scaffolds = _list_scaffold_dirs()
     if not scaffolds:
@@ -194,6 +211,66 @@ def view_variants() -> None:
     st.dataframe(rows, use_container_width=True, hide_index=True)
 
 
+def view_variant_candidates() -> None:
+    st.title("Variant Candidates")
+    st.caption(
+        "Skapar draftade Variant JSON-filer under `data/variant-candidates/`. "
+        "Det här promoterar aldrig till canonical `variants/`."
+    )
+
+    scaffold_ids = _scaffold_options()
+    if not scaffold_ids:
+        st.info("Inga Scaffolds finns att skapa kandidater för.")
+        return
+
+    with st.form("variant_candidate_form"):
+        scaffold_id = st.selectbox("Scaffold", scaffold_ids)
+        variant_id = st.text_input("Variant id (valfritt)")
+        brief = st.text_area("Variant-brief", height=120)
+        use_llm = st.checkbox("Använd variantModel om OPENAI_API_KEY finns", value=True)
+        force = st.checkbox("Skriv över befintlig kandidat med samma id", value=False)
+        submitted = st.form_submit_button("Skapa kandidat")
+
+    if submitted:
+        try:
+            [result] = create_variant_candidate_from_ui(
+                scaffold_id=scaffold_id,
+                brief=brief,
+                variant_id=variant_id.strip() or None,
+                use_llm=use_llm,
+                force=force,
+            )
+        except (VariantGenerationError, ValueError, RuntimeError) as exc:
+            st.error(f"Kunde inte skapa kandidat: {exc}")
+            return
+
+        st.success(f"Skapade `{result.path.relative_to(REPO_ROOT)}`")
+        st.write(f"**Source:** `{result.source}`")
+        st.write(f"**Model:** `{result.model_used}`")
+        st.json(result.payload)
+
+        existing = asset_graph.load_existing_variants(scaffold_id)
+        if existing:
+            st.subheader("Likhet mot canonical variants")
+            st.dataframe(
+                asset_graph.compare_variant_to_existing(result.payload, existing),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    st.divider()
+    st.subheader("Befintliga kandidater")
+    candidate_nodes = [
+        node
+        for node in asset_graph.build_graph()["nodes"]
+        if node["type"] == "variant-candidate"
+    ]
+    if candidate_nodes:
+        st.dataframe(candidate_nodes, use_container_width=True, hide_index=True)
+    else:
+        st.info("Inga variantkandidater finns ännu.")
+
+
 def view_dossiers() -> None:
     st.title("Dossiers")
     contract, err = loaders.safe_load_policy("dossier-contract.v1.json")
@@ -210,7 +287,8 @@ def view_dossiers() -> None:
             st.write("**Exempel:** " + ", ".join(cls["examples"]))
 
     st.subheader("Implementerade Dossiers")
-    items = _list_dossier_dirs()
+    allowed_classes = asset_graph.dossier_classes(contract)
+    items = _list_dossier_dirs(allowed_classes)
     if not items:
         st.info("Inga Dossiers implementerade än.")
         return
@@ -251,8 +329,10 @@ def view_reference_templates() -> None:
 
 
 VIEWS = {
+    "Kontrollplan": lambda: safe_render(view_control_plane),
     "Scaffolds": lambda: safe_render(view_scaffolds),
     "Variants": lambda: safe_render(view_variants),
+    "Variant Candidates": lambda: safe_render(view_variant_candidates),
     "Dossiers": lambda: safe_render(view_dossiers),
     "Reference Templates": lambda: safe_render(view_reference_templates),
 }

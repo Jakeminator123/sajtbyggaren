@@ -1,0 +1,23 @@
+{
+  "include": ["backoffice", "packages", "scripts", "tests", "backoffice.py"],
+  "exclude": [
+    ".venv",
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "data/runs",
+    "data/versions",
+    "data/prompt-inputs",
+    "node_modules",
+    "dist",
+    "build",
+    ".next"
+  ],
+  "pythonVersion": "3.11",
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": ["scripts"]
+    }
+  ]
+}

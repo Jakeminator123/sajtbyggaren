@@ -68,7 +68,7 @@ COMMON_WORDS = {
     "Promise", "Function", "Map", "Set", "Date", "Error", "JSON", "Buffer",
     "Path", "List", "Dict", "Tuple", "Optional", "Any", "Union", "Type",
     "TypeError", "ValueError", "RuntimeError", "Exception", "Iterator",
-    "ArgumentParser", "ImportError", "UnicodeDecodeError", "Input", "Output",
+    "ArgumentParser", "ImportError", "SimpleNamespace", "UnicodeDecodeError", "Input", "Output",
     "AssertionError", "FileExistsError", "NotImplementedError",
     "Iterable", "Sequence", "Mapping", "Callable",
     # Framework / lib
