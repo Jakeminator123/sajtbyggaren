@@ -164,12 +164,13 @@ Verifierade artefakter per case:
 Körningar efter smoke-passet (alla från `feature/b121-baseline-smoke`):
 
 - `python -m ruff check .` — 0 findings.
-- `python scripts/governance_validate.py` — alla 16 policies validerar.
+- `python scripts/governance_validate.py` — 17 policies OK.
+- `python scripts/rules_sync.py --check` — alla speglar i synk.
 - `python scripts/check_term_coverage.py --strict` — 0 nya kandidater.
 - `python scripts/list_open_bugs.py` — bug-scope oförändrad jämfört med
-  `main`.
+  `main` (27 active, 0 misplaced).
 - `python -m pytest tests/test_discovery_resolver.py
-  tests/test_discovery_taxonomy.py` — gröna.
+  tests/test_discovery_taxonomy.py` — 54 passed.
 
 Inga produktfiler ändrades i denna PR. Resolver, taxonomy, frontend
 overlay och Backoffice control är orörda; det enda som tillkommer är
