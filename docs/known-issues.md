@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 17 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 77 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 17 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 78 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -348,6 +348,24 @@ PR #28 / `885431b` stängde 15 buggar (alla flyttade till "Stängda" 2026-05-18 
 Lokal mainline-commit `b5ee710` stängde B88 (kontakt-placeholder dev-jargong), B94 (tom team-grid på `/om-oss`), B95 (landnamn som hero-ortstag) och B96 (scaffold-omedveten hero-CTA). Inga andra B-IDs påverkade. Kvar från re-Verifierings-Scout 2026-05-15 är B97 + B98 (låg-impact). Re-Verifierings-Scout med samma fyra prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`) körs efter denna bump för att jämföra mot 5.54-baselinen. Förväntad effekt: snitt 6.5-7.0/10.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B109` Låg** (stängd 2026-05-18, post-B108 reviewer-hotfix) -
+  `scripts/build_site.py:_npm_install_inputs_changed` fångade bara
+  `OSError` och `json.JSONDecodeError` när target `package.json` lästes
+  via `load_json` (som öppnar filen med `encoding="utf-8"`). En target
+  med ogiltig UTF-8 (manuell edit, korrupt download, fel encoding-write
+  i en framtida `apps/viewser`-väg) raisade `UnicodeDecodeError`, vilket
+  propagerade hela vägen ut ur `copy_starter()` och kraschade builden i
+  stället för det dokumenterade safe-fallback-beteendet "force reinstall".
+  Inkonsekvent jämfört med `(OSError, json.JSONDecodeError)`-grenen som
+  redan finns. Källa: extern reviewer (Cursor Bugbot-stil)
+  2026-05-18 mot baseline `1c68035`. **Fix:** lägg till
+  `UnicodeDecodeError` i except-tuple så alla tre läsningsfel ger samma
+  fallback `return True` (force reinstall). Source-pkg-läsningen lämnas
+  orörd avsiktligt — source-starters är repo-kontrollerade och korrupt
+  source ska larma högt. Fix: `fa277a1`. Test:
+  `tests/test_builder_hardening.py::test_npm_install_inputs_changed_falls_back_when_target_has_invalid_utf8`,
+  `tests/test_builder_hardening.py::test_copy_starter_drops_node_modules_when_target_package_json_has_invalid_utf8`.
 
 - **`B108` Medel** (stängd 2026-05-18, starter dependency hardening) -
   genererade `marketing-base`/`commerce-base`-sajter ärvde
