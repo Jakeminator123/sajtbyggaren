@@ -896,6 +896,159 @@ def test_story_discards_internal_notes_for_planner() -> None:
     assert "Malmö" in story
 
 
+# ---------------------------------------------------------------------------
+# B128 (re-Verifierings-Scout 2026-05-19): operator-/planner-instructions
+# that open with a Swedish/English build-imperative ("Bygg en liten
+# e-handel ...", "Skapa en hemsida ...") used to slip past the B99
+# blocklist because the tokens they contained ("e-handel", "keramik",
+# "köpkonvertering") were not on the blocklist and none of the B99
+# guard-strings (likely/prompt/site/byt ut/...) appeared. The result was
+# a /om-oss page that read "Bygg en liten e-handel på svenska för
+# försäljning av keramik med fokus på köpkonvertering." instead of public
+# customer copy. The fix tightens `_customer_safe_planner_note` so a note
+# that begins with a build-imperative is rejected outright.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_story_discards_swedish_build_imperative_planner_note() -> None:
+    """B128: the exact keramik-leak observed in re-Verifierings-Scout
+    2026-05-19 must not surface on /om-oss as customer copy."""
+    leak = (
+        "Bygg en liten e-handel på svenska för försäljning av keramik "
+        "med fokus på köpkonvertering."
+    )
+    story = _derive_story(
+        business_type="e-commerce",
+        location_hint=None,
+        notes_for_planner=leak,
+        language="sv",
+    )
+    assert story != leak, (
+        "B128: planner-imperativ släpptes igenom till /om-oss-copy."
+    )
+    assert "Bygg" not in story
+    assert "köpkonvertering" not in story
+    assert "på svenska" not in story
+    assert "tydligt erbjudande" in story or "enkel kontaktväg" in story, (
+        "B128: utan godkänd note ska _derive_story falla tillbaka till "
+        "den neutrala publika copyn som B99 redan låser."
+    )
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    "leading_imperative",
+    [
+        "Bygg en hemsida för min butik.",
+        "Skapa en stylig sida åt en kund.",
+        "Gör en clean landing page med produkter.",
+        "Generera en svensk företagswebb.",
+        "Designa en e-handel med fokus på keramik.",
+        "Lägg upp ett snyggt galleri.",
+        "Sätt upp en webshop med checkout.",
+        "Build a small e-commerce site for ceramics.",
+        "Create a clean landing page with green tones.",
+        "Make a two-page site that sells turtles.",
+        "Set up a portfolio for a photographer.",
+    ],
+)
+def test_customer_safe_planner_note_rejects_build_imperative(
+    leading_imperative: str,
+) -> None:
+    """B128: every typical Swedish/English build-imperative form must
+    be rejected by ``_customer_safe_planner_note``. Operator
+    instructions never become public /om-oss copy.
+    """
+    from scripts.prompt_to_project_input import _customer_safe_planner_note
+
+    assert _customer_safe_planner_note(leading_imperative) is None, (
+        f"B128: imperativ {leading_imperative!r} släpptes igenom som "
+        "publik /om-oss-copy."
+    )
+
+
+@pytest.mark.tooling
+def test_customer_safe_planner_note_keeps_present_tense_business_copy() -> None:
+    """B128 positive lock: a real customer-style 'about'-mening som råkar
+    börja med samma stam (men i tredje person presens, t.ex.
+    ``"Bygger på 25 års erfarenhet ..."``) ska fortfarande passera. Bara
+    imperativ-formen ("Bygg ...") blockeras.
+    """
+    from scripts.prompt_to_project_input import _customer_safe_planner_note
+
+    note = "Bygger på 25 års erfarenhet inom hantverk och keramik."
+    accepted = _customer_safe_planner_note(note)
+    assert accepted == note, (
+        "B128 går för långt: third-person 'Bygger' (inte imperativ) "
+        "blockerades trots att den är giltig kundvänd /om-oss-copy."
+    )
+
+
+@pytest.mark.tooling
+def test_customer_safe_planner_note_blocks_konvertering_tokens() -> None:
+    """B128: rena marketing-/operator-tokens (``konvertering``,
+    ``köpkonvertering``, ``på svenska``, ``in english``) hör inte hemma
+    i kundcopy på /om-oss även när satsen inte börjar med imperativ.
+    """
+    from scripts.prompt_to_project_input import _customer_safe_planner_note
+
+    leak_konvertering = (
+        "Liten studio med fokus på köpkonvertering och låg friktion."
+    )
+    leak_svenska = (
+        "Skriv all kundkopia på svenska för en småskalig keramikstudio."
+    )
+    leak_in_english = (
+        "Write the public copy in English for a niche ceramics shop."
+    )
+
+    assert _customer_safe_planner_note(leak_konvertering) is None
+    assert _customer_safe_planner_note(leak_svenska) is None
+    assert _customer_safe_planner_note(leak_in_english) is None
+
+
+@pytest.mark.tooling
+def test_b128_full_pipeline_blocks_keramik_planner_instruction() -> None:
+    """End-to-end B128 lock for the exact 2026-05-19 keramik-prompt: the
+    Project Input that lands on disk must not surface the operator
+    instruction as `company.story` on /om-oss.
+    """
+    leak = (
+        "Bygg en liten e-handel på svenska för försäljning av keramik "
+        "med fokus på köpkonvertering."
+    )
+    brief = {
+        "language": "sv",
+        "businessTypeGuess": "e-commerce",
+        "locationHint": None,
+        "rawPrompt": "liten e-handel som säljer keramik",
+        "tone": [],
+        "conversionGoals": ["product_purchase"],
+        "servicesMentioned": ["keramik"],
+        "requestedCapabilities": [],
+        "notesForPlanner": leak,
+        "briefSource": "real",
+    }
+    project_input = site_brief_to_project_input(
+        brief,
+        site_id="keramik-shop-b128",
+        scaffold_id="ecommerce-lite",
+        variant_id="clean-store",
+        original_prompt="liten e-handel som säljer keramik",
+    )
+    story = project_input["company"]["story"]
+    for forbidden in (
+        "Bygg",
+        "på svenska",
+        "köpkonvertering",
+    ):
+        assert forbidden not in story, (
+            f"B128: planner-instruktion-token {forbidden!r} läckte till "
+            f"company.story: {story!r}"
+        )
+
+
 @pytest.mark.tooling
 def test_company_name_and_story_never_contain_raw_prompt(
     project_input_schema: dict,

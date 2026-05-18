@@ -843,6 +843,66 @@ def _hero_cta_label(dossier: dict) -> str:
     return _HERO_CTA_VARIANT_LABELS[variant][language]
 
 
+# B102 (re-Verifierings-Scout 3 2026-05-18): commerce-CTA på /produkter
+# var hardcoded till "Fråga om en beställning" / "ShoppingBag"-glyfen, vilket
+# läste som en offerttjänst snarare än shop-flöde. Vi behåller länken mot
+# kontakt-routen (ingen checkout finns ännu i builder MVP) men byter
+# verbet så tonen följer hero-CTA "Shoppa nu". Whitelist-baserade
+# strängar håller TSX-interpolationen säker utan JSX-escape.
+_COMMERCE_BOTTOM_CTA_LABELS: dict[str, str] = {
+    "sv": "Hör av dig för att beställa",
+    "en": "Get in touch to order",
+}
+
+
+def _commerce_bottom_cta_label(dossier: dict) -> str:
+    """Return the /produkter bottom-CTA label string.
+
+    B102: "Fråga om en beställning" lät som en offert/förfrågan-tjänst
+    på e-handel-cases där hero redan stod "Shoppa nu". Den nya copyn
+    håller fortfarande den verbala dörren öppen mot kontakt-routen (ingen
+    checkout finns i builder MVP) men landar i shop-tonalitet via verbet
+    "beställa" / "order". Returvärdet är hämtat från en whitelist så
+    interpolationen i TSX är säker utan JSX-escape.
+    """
+    language = (dossier.get("language") or "sv").strip().lower()
+    if language not in _COMMERCE_BOTTOM_CTA_LABELS:
+        language = "sv"
+    return _COMMERCE_BOTTOM_CTA_LABELS[language]
+
+
+def _hero_cta_target_path(
+    dossier: dict,
+    listing_route: dict | None,
+    contact_path: str,
+) -> str:
+    """Return the route the hero CTA should link to.
+
+    B101 (re-Verifierings-Scout 3 2026-05-18): a hero CTA labelled
+    "Shoppa nu" / "Shop now" used to point at the scaffold contact
+    route even when the build emitted a real ``/produkter`` listing,
+    so the operator-visible button promised one thing and the click
+    landed somewhere else. The new rule: when the CTA variant is
+    ``shop`` and the scaffold actually emits a products listing, the
+    hero CTA jumps to that listing route. Booking and quote variants
+    keep contact as the primary target because there is no equivalent
+    "list of bookable slots" surface in the current scaffolds. Shop
+    variants fall back to contact when the scaffold has no products
+    route - the label still reads "Shoppa nu" but at least the click
+    lands on a real page instead of inventing ``/produkter`` for
+    scaffolds that never declared it.
+    """
+    variant = _hero_cta_variant(dossier)
+    if (
+        variant == "shop"
+        and listing_route is not None
+        and listing_route.get("id") == "products"
+        and listing_route.get("path")
+    ):
+        return listing_route["path"]
+    return contact_path
+
+
 def _location_is_country_only(location: dict) -> bool:
     """Return True when ``location.city`` equals ``location.country``.
 
@@ -1202,6 +1262,12 @@ def render_home(
     # (shop / booking / quote) so e-commerce projects do not get a
     # service-business "Begär offert" verb in the hero.
     hero_cta_label = _hero_cta_label(dossier)
+    # B101 (re-Verifierings-Scout 3 2026-05-18): when CTA is shop the
+    # primary hero button must link to the products listing, not the
+    # contact route. Booking and quote variants keep contact as target.
+    hero_cta_href = _route_href(
+        _hero_cta_target_path(dossier, listing_route, contact_path)
+    )
 
     # Operator-uploaded hero image (if present) renders as a banner
     # above the gradient section. The asset is placed in public/uploads/
@@ -1235,7 +1301,7 @@ def render_home(
         f'          <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl">{_jsx_safe_string(company["name"])}</h1>\n'
         f'          <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed md:text-xl">{_jsx_safe_string(company["tagline"])}</p>\n'
         '          <div className="flex flex-wrap gap-3">\n'
-        f'            <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{hero_cta_label}<ArrowRight className="size-4" /></a>\n'
+        f'            <a href={hero_cta_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{hero_cta_label}<ArrowRight className="size-4" /></a>\n'
         f'            <a href={_jsx_safe_string("tel:" + _phone_href(contact["phone"]))} className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />Ring {_jsx_safe_string(contact["phone"])}</a>\n'
         f"{spel_cta}"
         "          </div>\n"
@@ -1490,6 +1556,12 @@ def render_products(
         "          </article>"
         for item in products
     )
+    # B102 (re-Verifierings-Scout 3 2026-05-18): shop-flavoured bottom-CTA.
+    # Länken mot kontakt-routen behålls eftersom builder MVP inte har
+    # checkout, men verbet ("Hör av dig för att beställa") matchar
+    # shop-tonen från hero ("Shoppa nu") i stället för offert-känslan
+    # i den gamla copyn "Fråga om en beställning".
+    bottom_cta_label = _commerce_bottom_cta_label(dossier)
     return (
         icon_import + "\n"
         "export default function ProductsPage() {\n"
@@ -1505,7 +1577,7 @@ def render_products(
         '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{items}\n"
         "          </div>\n"
-        f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity"><ShoppingBag className="size-4" />Fråga om en beställning<ArrowRight className="size-4" /></a>\n'
+        f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity"><ShoppingBag className="size-4" />{bottom_cta_label}<ArrowRight className="size-4" /></a>\n'
         "        </div>\n"
         "      </section>\n"
         "    </main>\n"

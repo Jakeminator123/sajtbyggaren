@@ -676,6 +676,192 @@ def test_render_services_uses_same_hero_cta_label_as_home() -> None:
 
 
 # ---------------------------------------------------------------------------
+# B101 (Re-Verifierings-Scout 3 2026-05-18): hero CTA href must match the
+# CTA label. The pre-fix render_home always linked the primary hero
+# button at the scaffold contact route, so a "Shoppa nu" label on the
+# e-handel-case pointed at /kontakt instead of /produkter. The new
+# helper ``_hero_cta_target_path`` routes shop variants to the products
+# listing when one exists, and falls back to contact for every other
+# variant or scaffold without a products route.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_hero_cta_target_path_routes_shop_variant_to_products() -> None:
+    from scripts.build_site import _hero_cta_target_path
+
+    dossier = {
+        "language": "sv",
+        "scaffoldId": "ecommerce-lite",
+        "conversionGoals": ["product_purchase", "shop_visit"],
+    }
+    listing = {"id": "products", "path": "/produkter"}
+
+    assert (
+        _hero_cta_target_path(dossier, listing, "/kontakt") == "/produkter"
+    )
+
+
+@pytest.mark.tooling
+def test_hero_cta_target_path_falls_back_to_contact_when_no_products_listing() -> None:
+    """A scaffold that signals shop intent but never declares a products
+    route must keep the hero CTA pointing at contact - inventing
+    ``/produkter`` for a scaffold that has no products page would leave
+    the click on a 404.
+    """
+    from scripts.build_site import _hero_cta_target_path
+
+    dossier = {
+        "language": "sv",
+        "scaffoldId": "local-service-business",
+        "conversionGoals": ["product_purchase"],
+    }
+    services_listing = {"id": "services", "path": "/tjanster"}
+
+    assert (
+        _hero_cta_target_path(dossier, services_listing, "/kontakt") == "/kontakt"
+    )
+    assert _hero_cta_target_path(dossier, None, "/kontakt") == "/kontakt"
+
+
+@pytest.mark.tooling
+def test_hero_cta_target_path_keeps_contact_for_booking_and_quote_variants() -> None:
+    """Booking and quote variants do not have a "list of bookable slots"
+    surface today, so the hero CTA continues to point at the contact
+    route the scaffold already wires up.
+    """
+    from scripts.build_site import _hero_cta_target_path
+
+    booking = {
+        "language": "sv",
+        "scaffoldId": "local-service-business",
+        "conversionGoals": ["booking_request"],
+    }
+    quote = {
+        "language": "sv",
+        "scaffoldId": "local-service-business",
+        "conversionGoals": ["quote_request"],
+    }
+    products_listing = {"id": "products", "path": "/produkter"}
+
+    assert (
+        _hero_cta_target_path(booking, products_listing, "/kontakt") == "/kontakt"
+    )
+    assert (
+        _hero_cta_target_path(quote, products_listing, "/kontakt") == "/kontakt"
+    )
+
+
+@pytest.mark.tooling
+def test_render_home_hero_cta_links_to_products_when_shop_variant() -> None:
+    """B101: the primary hero CTA href on an e-commerce build must point
+    at /produkter, matching the "Shoppa nu" label, not the scaffold
+    contact route.
+    """
+    from scripts.build_site import render_home
+
+    dossier = _minimal_dossier()
+    dossier["scaffoldId"] = "ecommerce-lite"
+    dossier["conversionGoals"] = ["product_purchase", "shop_visit"]
+    dossier["language"] = "sv"
+    output = render_home(
+        dossier,
+        dossier_routes=[],
+        listing_route={"id": "products", "path": "/produkter"},
+    )
+
+    hero_section = output.split("</section>", 1)[0]
+    assert "Shoppa nu" in hero_section
+    primary_cta_href = _route_href_attr("/produkter")
+    assert primary_cta_href in hero_section, (
+        "B101: hero-CTA 'Shoppa nu' måste länka till /produkter, "
+        "inte /kontakt."
+    )
+    # Bottom-of-page "Kontakta oss" CTA is allowed to keep contact_href.
+    assert _route_href_attr("/kontakt") in output, (
+        "Bottom 'Kontakta oss' CTA på home must continue pointing at "
+        "the scaffold contact route - only the hero primary CTA changes."
+    )
+
+
+@pytest.mark.tooling
+def test_render_home_hero_cta_links_to_contact_when_booking_variant() -> None:
+    """B101 positive lock: bokningsdrivna service-businesses (frisör,
+    naprapat) ska fortfarande gå till kontakt-routen från hero, så
+    "Boka tid" landar på rätt yta för verksamheter utan online-bokning.
+    """
+    from scripts.build_site import render_home
+
+    dossier = _minimal_dossier()
+    dossier["scaffoldId"] = "local-service-business"
+    dossier["conversionGoals"] = ["booking_request"]
+    dossier["language"] = "sv"
+    output = render_home(
+        dossier,
+        dossier_routes=[],
+        listing_route={"id": "services", "path": "/tjanster"},
+    )
+
+    hero_section = output.split("</section>", 1)[0]
+    assert "Boka tid" in hero_section
+    assert _route_href_attr("/kontakt") in hero_section
+    assert _route_href_attr("/produkter") not in output
+
+
+@pytest.mark.tooling
+def test_render_home_hero_cta_uses_threaded_contact_path_for_quote_variant() -> None:
+    """B45 + B101: when no products route is declared but the scaffold
+    moves contact to /kontakta-oss, the quote-variant hero CTA must
+    follow the threaded contact_path, not regress to a hardcoded
+    /kontakt.
+    """
+    from scripts.build_site import render_home
+
+    dossier = _minimal_dossier()
+    dossier["scaffoldId"] = "local-service-business"
+    dossier["conversionGoals"] = ["quote_request"]
+    dossier["language"] = "sv"
+    output = render_home(
+        dossier,
+        dossier_routes=[],
+        listing_route={"id": "services", "path": "/tjanster"},
+        contact_path="/kontakta-oss",
+    )
+
+    hero_section = output.split("</section>", 1)[0]
+    assert "Begär offert" in hero_section
+    assert _route_href_attr("/kontakta-oss") in hero_section
+    assert _route_href_attr("/kontakt") not in output
+
+
+@pytest.mark.tooling
+def test_render_home_hero_cta_links_to_threaded_products_path() -> None:
+    """B101 end-to-end-shape: even when the scaffold moves products to
+    a non-default path (``/butik``) the hero CTA must follow the
+    listing route the renderer was handed, not invent a path.
+    """
+    from scripts.build_site import render_home
+
+    dossier = _minimal_dossier()
+    dossier["scaffoldId"] = "ecommerce-lite"
+    dossier["conversionGoals"] = ["product_purchase"]
+    dossier["language"] = "sv"
+    output = render_home(
+        dossier,
+        dossier_routes=[],
+        listing_route={"id": "products", "path": "/butik"},
+        contact_path="/kontakta-oss",
+    )
+
+    hero_section = output.split("</section>", 1)[0]
+    assert "Shoppa nu" in hero_section
+    assert _route_href_attr("/butik") in hero_section
+    # Bottom "Kontakta oss" still uses threaded contact_path.
+    assert _route_href_attr("/kontakta-oss") in output
+    assert _route_href_attr("/kontakt") not in output
+
+
+# ---------------------------------------------------------------------------
 # Demo-baseline-fix 1C (B94): render_about omits the team section when
 # the Project Input has no team members. Prompt-generated Project
 # Inputs never populate team today, so the section rendered an empty
@@ -776,6 +962,72 @@ def test_render_products_emits_default_export_and_product_items() -> None:
             f"render_products must render product label {product['label']!r} via _jsx_safe_string."
         )
         assert f'{{"{product["summary"]}"}}' in output
+
+
+@pytest.mark.tooling
+def test_render_products_bottom_cta_uses_shop_flavoured_label() -> None:
+    """B102: ``/produkter``-bottom-CTA ska följa shop-flödet, inte
+    läsa som en offerttjänst. Före fixen stod "Fråga om en beställning"
+    hardcoded, vilket bröt tonalitet på e-handel-cases där hero redan
+    sa "Shoppa nu".
+    """
+    from scripts.build_site import render_products
+
+    output = render_products(_minimal_dossier())
+    assert "Hör av dig för att beställa" in output
+    assert "Fråga om en beställning" not in output, (
+        "B102: pre-fix offert-läsande copy får inte återinföras."
+    )
+    # Length-stability lock: the CTA still hangs off the same shopping
+    # bag glyph and primary-button styling.
+    assert "ShoppingBag" in output
+
+
+@pytest.mark.tooling
+def test_render_products_bottom_cta_still_links_to_contact() -> None:
+    """B102 positive lock: builder MVP saknar checkout, så CTA leder
+    fortfarande till kontakt-routen. Endast copyn ändras.
+    """
+    from scripts.build_site import render_products
+
+    output = render_products(_minimal_dossier(), contact_path="/kontakta-oss")
+    assert _route_href_attr("/kontakta-oss") in output
+    assert _route_href_attr("/kontakt") not in output
+
+
+@pytest.mark.tooling
+def test_render_products_bottom_cta_localizes_for_english_dossier() -> None:
+    """B102: the English variant must shop-localise the bottom CTA too,
+    so a future ``language="en"`` e-commerce build does not regress
+    to the Swedish phrase.
+    """
+    from scripts.build_site import render_products
+
+    english_dossier = _minimal_dossier()
+    english_dossier["language"] = "en"
+    output = render_products(english_dossier)
+
+    assert "Get in touch to order" in output
+    assert "Hör av dig för att beställa" not in output
+
+
+@pytest.mark.tooling
+def test_commerce_bottom_cta_label_whitelist_is_safe_for_tsx() -> None:
+    """Whitelist-discipline lock matching the B96/B100 _hero_cta_label
+    contract: the returned string must never contain TSX-special chars
+    (``<``, ``>``, ``{``, ``}``, ``"``) so direct interpolation in TSX
+    stays safe without JSX-escape.
+    """
+    from scripts.build_site import _commerce_bottom_cta_label
+
+    for language in ("sv", "en", "unknown"):
+        label = _commerce_bottom_cta_label({"language": language})
+        for forbidden in ("<", ">", "{", "}", '"'):
+            assert forbidden not in label, (
+                f"B102: commerce CTA label {label!r} (language={language!r}) "
+                f"contains TSX-special char {forbidden!r}; whitelist must "
+                "stay safe for interpolation."
+            )
 
 
 @pytest.mark.tooling

@@ -296,7 +296,66 @@ _PLANNER_NOTE_BLOCKLIST = frozenset(
         "focus on",
         "byt ut",
         "uppdatera",
+        # B128 (re-Verifierings-Scout 2026-05-19): Swedish operator/
+        # planner-lingo som lät en instruktion av typen "Bygg en liten
+        # e-handel ... med fokus på köpkonvertering." passera B99-grindens
+        # blocklist och landa rakt på /om-oss. "konvertering" och
+        # "köpkonvertering" är operator-terminologi som småföretagskunder
+        # inte använder om sig själva i kundcopy; "på svenska" / "på
+        # engelska" är ren språk-direktiv från operatör till modell.
+        "konvertering",
+        "köpkonvertering",
+        "på svenska",
+        "på engelska",
+        "in english",
+        "in swedish",
     }
+)
+
+# B128 (re-Verifierings-Scout 2026-05-19): planner-noten startar ofta med
+# en svensk/engelsk imperativ ("Bygg en liten e-handel ...", "Skapa en
+# hemsida för ...", "Make a clean shop..."). Ingen riktig /om-oss-copy
+# inleds med en order till modellen, så vi avvisar hela noten när första
+# tokenet är en känd build-imperativ. Token-listan är medvetet tajt så
+# legitima fraser som "Bygger fortfarande på 10 års erfarenhet" passerar
+# - imperativen står typiskt utan utfyllnad efteråt och första bokstaven
+# är ofta versal, men vi nfkc-foldar och lowercaser innan vi jämför så
+# stavning inte skapar gap.
+_PLANNER_IMPERATIVE_TOKENS: frozenset[str] = frozenset(
+    {
+        # Svensk build-imperativ
+        "bygg",
+        "skapa",
+        "gör",
+        "gor",
+        "generera",
+        "designa",
+        "skriv",
+        "tillverka",
+        "konstruera",
+        "producera",
+        "utveckla",
+        "forma",
+        "programmera",
+        "rita",
+        # Engelsk build-imperativ
+        "build",
+        "create",
+        "make",
+        "design",
+        "write",
+        "develop",
+        "generate",
+        "construct",
+        "produce",
+        "draft",
+    }
+)
+
+_PLANNER_IMPERATIVE_PHRASES: tuple[str, ...] = (
+    "lägg upp",
+    "sätt upp",
+    "set up",
 )
 
 _SCAFFOLD_LOCAL_SERVICE = ("local-service-business", "nordic-trust")
@@ -605,16 +664,51 @@ def _derive_story(
 
 
 def _customer_safe_planner_note(note: str | None) -> str | None:
-    """Return planner note text only when it is safe public copy."""
+    """Return planner note text only when it is safe public copy.
+
+    B128 (re-Verifierings-Scout 2026-05-19): noten avvisas också om den
+    inleds med en svensk/engelsk build-imperativ (``"Bygg en liten
+    e-handel ..."``, ``"Skapa en hemsida ..."``, ``"Make a clean shop
+    ..."``). B99-blocklistan fokuserar på arbets-/dev-jargong och fångade
+    inte rena planner-direktiv som tonade ner sig själva. En riktig
+    /om-oss-copy börjar aldrig med ett verb i imperativ riktat till
+    modellen, så grinden är säker att stänga.
+    """
     cleaned = " ".join((note or "").split())
     if not cleaned:
         return None
     lower = cleaned.lower()
     if any(token in lower for token in _PLANNER_NOTE_BLOCKLIST):
         return None
+    if _starts_with_planner_imperative(lower):
+        return None
     if not cleaned.endswith((".", "!", "?")):
         cleaned = f"{cleaned}."
     return cleaned
+
+
+def _starts_with_planner_imperative(lower_note: str) -> bool:
+    """Return True when ``lower_note`` opens with a build-imperative.
+
+    Called by ``_customer_safe_planner_note`` for B128. The helper takes
+    the already lower-cased note (the caller has done ``.lower()`` once
+    on a whitespace-collapsed string) so we can token-match without
+    re-folding case here. Single-word tokens are checked with a word
+    boundary so ``"byggfirma"`` does not match ``"bygg"``; multi-word
+    phrases (``"lägg upp"``) are matched as prefix strings.
+    """
+    if not lower_note:
+        return False
+    stripped = lower_note.lstrip()
+    if not stripped:
+        return False
+    for phrase in _PLANNER_IMPERATIVE_PHRASES:
+        if stripped.startswith(phrase + " ") or stripped == phrase:
+            return True
+    first_token_match = re.match(r"[a-zåäöéü]+", stripped)
+    if first_token_match is None:
+        return False
+    return first_token_match.group(0) in _PLANNER_IMPERATIVE_TOKENS
 
 
 def _derive_tagline(

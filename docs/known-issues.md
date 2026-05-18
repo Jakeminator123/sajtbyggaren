@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 26 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 88 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 27 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 88 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -243,6 +243,29 @@ tillbaka till quote-default). Audit-konfidence 7/10.
   inte trådas via `_hero_cta_label`. Inkonsekvent commerce-
   tonalitet. Källa: Re-Verifierings-Scout 3 2026-05-18. Fix: open.
   Test: open.
+
+### Re-Verifierings-Scout 2026-05-19 (keramik-/e-handel-pass)
+
+Riktad uppföljning på keramik-/e-handel-caset (Scout 3: 5.9/10). Ett
+nytt fynd öppnat:
+
+- **`B128` Hög** - `scripts/prompt_to_project_input.py`
+  `_customer_safe_planner_note` / `_derive_story` blockerar
+  B99-typisk dev-jargong i `notesForPlanner` men släpper igenom
+  rena svenska/engelska build-imperativ som publik /om-oss-copy.
+  Re-Verifierings-Scout 2026-05-19 såg `company.story` läsa
+  `"Bygg en liten e-handel på svenska för försäljning av keramik
+  med fokus på köpkonvertering."` på keramik-caset — operator-/
+  planner-instruktion, inte kundtext. B99-blocklistan saknar både
+  imperativ-formerna ("Bygg", "Skapa", "Gör", "Make", "Build",
+  ...) och tokens som `köpkonvertering`/`på svenska`. Föreslagen
+  fix: ny `_starts_with_planner_imperative()`-guard som avvisar
+  noten när första tokenet är en känd build-imperativ; utöka
+  `_PLANNER_NOTE_BLOCKLIST` med operator-tokens (`konvertering`,
+  `köpkonvertering`, `på svenska`, `på engelska`, `in english`,
+  `in swedish`). Tredje person presens ("Bygger på 25 års
+  erfarenhet ...") ska fortsätta passera. Källa: Re-Verifierings-
+  Scout 2026-05-19. Fix: open. Test: open.
 
 ### Extern reviewer-triage 2026-05-18 (mot post-1E/B108-baseline)
 
