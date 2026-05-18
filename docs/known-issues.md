@@ -540,7 +540,8 @@ Backoffice, capability/dossier gaps (booking, contact-form, payments, FAQ).
 
 ## Stängda - regression-test säkrar fixet
 
-- **`B128` Hög** (stängd 2026-05-19, keramik-/e-handel-pass) -
+- **`B128` Hög** (stängd 2026-05-19, keramik-/e-handel-pass +
+  Composer-2.5-review-hardening) -
   `scripts/prompt_to_project_input.py:_customer_safe_planner_note` /
   `_derive_story` blockerade B99-typisk dev-jargong och planner-noter
   men släppte igenom rena svenska/engelska build-imperativ i
@@ -549,7 +550,7 @@ Backoffice, capability/dossier gaps (booking, contact-form, payments, FAQ).
   svenska för försäljning av keramik med fokus på köpkonvertering."`
   på keramik-caset — operator-/planner-instruktion, inte kundtext.
   B99-blocklistan saknade både imperativ-formerna och tokens som
-  `köpkonvertering`/`på svenska`. **Fix:** ny
+  `köpkonvertering`/`på svenska`. **Fix (`d1fee90`):** ny
   `_starts_with_planner_imperative()`-guard som avvisar noten när
   första tokenet är en svensk/engelsk build-imperativ (`bygg`,
   `skapa`, `gör`, `generera`, `designa`, `skriv`, `tillverka`,
@@ -560,13 +561,23 @@ Backoffice, capability/dossier gaps (booking, contact-form, payments, FAQ).
   också nya tokens (`konvertering`, `köpkonvertering`, `på svenska`,
   `på engelska`, `in english`, `in swedish`). Tredje person presens
   ("Bygger på 25 års erfarenhet ...") fortsätter passera så legitim
-  kundcopy inte blockeras. Källa: Re-Verifierings-Scout 2026-05-19.
-  Fix: `d1fee90`. Test:
+  kundcopy inte blockeras. **Hardening:** read-only
+  Composer-2.5-review hittade en bypass där ledande icke-bokstavs-
+  prefix (`"-Bygg ..."`, `"**Bygg ..."`, `"1. Bygg ..."`) släppte
+  imperativen igenom eftersom `re.match(r"[a-zåäöéü]+", stripped)`
+  returnerade `None` på första-tecken-icke-bokstav. Hotfix
+  strippar en run av ledande icke-bokstavstecken före token-match
+  så markdown/list/numeral-wrappade imperativ blockeras identiskt
+  med "rena" imperativ-noter. Källa: Re-Verifierings-Scout
+  2026-05-19 + Composer-2.5 read-only review. Fix: `d1fee90`
+  + hardening-commit. Test:
   `tests/test_prompt_to_project_input.py::test_story_discards_swedish_build_imperative_planner_note`,
   `tests/test_prompt_to_project_input.py::test_customer_safe_planner_note_rejects_build_imperative`,
   `tests/test_prompt_to_project_input.py::test_customer_safe_planner_note_keeps_present_tense_business_copy`,
   `tests/test_prompt_to_project_input.py::test_customer_safe_planner_note_blocks_konvertering_tokens`,
-  `tests/test_prompt_to_project_input.py::test_b128_full_pipeline_blocks_keramik_planner_instruction`.
+  `tests/test_prompt_to_project_input.py::test_b128_full_pipeline_blocks_keramik_planner_instruction`,
+  `tests/test_prompt_to_project_input.py::test_customer_safe_planner_note_rejects_imperative_with_leading_prefix`,
+  `tests/test_prompt_to_project_input.py::test_customer_safe_planner_note_keeps_leading_numeral_when_no_imperative`.
 
 - **`B101` Låg** (stängd 2026-05-19, keramik-/e-handel-pass) -
   Hero-CTA "Shoppa nu" på e-handel-case länkade till `/kontakt`

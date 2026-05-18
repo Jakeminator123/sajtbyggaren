@@ -1009,6 +1009,62 @@ def test_customer_safe_planner_note_blocks_konvertering_tokens() -> None:
 
 
 @pytest.mark.tooling
+@pytest.mark.parametrize(
+    "wrapped_imperative",
+    [
+        "-Bygg en sajt för keramik.",
+        "- Bygg en sajt för keramik.",
+        "* Bygg en webshop.",
+        "**Bygg en hemsida för min butik**.",
+        "1. Bygg en webshop.",
+        "1) Bygg en webshop.",
+        ">>> Skapa en webshop.",
+        "  - Make a clean shop.",
+        "* * * Build a small e-commerce site.",
+        "123 Skapa en svensk företagswebb.",
+    ],
+)
+def test_customer_safe_planner_note_rejects_imperative_with_leading_prefix(
+    wrapped_imperative: str,
+) -> None:
+    """B128 hardening (post-Composer-2.5-review 2026-05-19): the
+    pre-hotfix `_starts_with_planner_imperative` regex
+    ``re.match(r"[a-zåäöéü]+", stripped)`` returned ``None`` whenever
+    the first character was not a letter, so notes wrapped in markdown
+    bold-markers, list dashes or list numerals slipped past the guard
+    even though the build-imperative was sitting one character to the
+    right of position 0. The hardening strips a single leading run of
+    non-letter characters before the token match so the bypass is
+    closed; this parametrised fixture covers the prefix shapes
+    Composer-2.5 flagged in the read-only review.
+    """
+    from scripts.prompt_to_project_input import _customer_safe_planner_note
+
+    assert _customer_safe_planner_note(wrapped_imperative) is None, (
+        f"B128 hardening: leading-prefix imperative {wrapped_imperative!r} "
+        "slipped past the planner-imperative guard."
+    )
+
+
+@pytest.mark.tooling
+def test_customer_safe_planner_note_keeps_leading_numeral_when_no_imperative() -> None:
+    """B128 hardening positive lock: stripping the leading non-letter
+    prefix must not over-block legitimate customer copy that simply
+    starts with a list numeral or marker followed by non-imperative
+    text. The guard should only reject when the first letter-token
+    after the prefix matches a known build-imperative.
+    """
+    from scripts.prompt_to_project_input import _customer_safe_planner_note
+
+    legitimate = "1. Vi är ett litet bageri som drejar för hand."
+    accepted = _customer_safe_planner_note(legitimate)
+    assert accepted == legitimate, (
+        "B128 hardening over-blocked: leading numeral + non-imperative "
+        f"sentence rejected: {legitimate!r}"
+    )
+
+
+@pytest.mark.tooling
 def test_b128_full_pipeline_blocks_keramik_planner_instruction() -> None:
     """End-to-end B128 lock for the exact 2026-05-19 keramik-prompt: the
     Project Input that lands on disk must not surface the operator

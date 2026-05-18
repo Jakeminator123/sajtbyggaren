@@ -696,16 +696,32 @@ def _starts_with_planner_imperative(lower_note: str) -> bool:
     re-folding case here. Single-word tokens are checked with a word
     boundary so ``"byggfirma"`` does not match ``"bygg"``; multi-word
     phrases (``"lägg upp"``) are matched as prefix strings.
+
+    B128 hardening (post-Composer-2.5-review 2026-05-19): a leading
+    run of non-letter characters (markdown markers, list dashes,
+    numerals, parentheses) used to bypass the guard because
+    ``re.match(r"[a-zåäöéü]+", ...)`` returns ``None`` when the very
+    first character is punctuation. We now strip one run of leading
+    non-letter characters before the token match so a build-imperative
+    sitting behind a leading dash, bold-marker or list numeral is
+    blocked identically to a build-imperative at position 0. We do not
+    scan further into the note (e.g. past a sentence preamble like
+    "OK. Bygg ...") because that broadens the imperative surface
+    enough to risk false-blocking present-tense customer copy that
+    legitimately mentions a build-verb mid-sentence.
     """
     if not lower_note:
         return False
     stripped = lower_note.lstrip()
     if not stripped:
         return False
+    head = re.sub(r"^[^a-zåäöéü]+", "", stripped, count=1)
+    if not head:
+        return False
     for phrase in _PLANNER_IMPERATIVE_PHRASES:
-        if stripped.startswith(phrase + " ") or stripped == phrase:
+        if head.startswith(phrase + " ") or head == phrase:
             return True
-    first_token_match = re.match(r"[a-zåäöéü]+", stripped)
+    first_token_match = re.match(r"[a-zåäöéü]+", head)
     if first_token_match is None:
         return False
     return first_token_match.group(0) in _PLANNER_IMPERATIVE_TOKENS
