@@ -59,12 +59,19 @@ export async function GET(request: NextRequest) {
   const mime = MIME_BY_EXT[extname(resolvedPath).toLowerCase()] ?? "application/octet-stream";
   const bytes = await readFile(resolvedPath);
 
+  // VIKTIGT: ingen browser-cache här. När operatören byter wizard-steg
+  // re-mountar AssetCard:n och webbläsaren kan annars välja att försöka
+  // re-validera mot servern (If-Modified-Since/ETag) mot ett 60s-fönster
+  // som råkar landa precis när dev-servern just startat om — vilket
+  // tidigare gjorde att thumbnails "försvann en stund efter". Filerna
+  // ligger statiskt på disk så vi serverar dem alltid färska och låter
+  // Next.js dev-servern bestämma response-storleken.
   return new NextResponse(new Uint8Array(bytes), {
     status: 200,
     headers: {
       "content-type": mime,
       "content-length": String(stats.size),
-      "cache-control": "private, max-age=60",
+      "cache-control": "no-store",
     },
   });
 }

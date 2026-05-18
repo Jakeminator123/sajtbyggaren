@@ -185,6 +185,295 @@ export const MUST_HAVE_OPTIONS = [
   "Meny / Matsedel",
 ] as const;
 
+export type MustHaveOption = (typeof MUST_HAVE_OPTIONS)[number];
+
+/**
+ * Per-kategori rekommendation av sidor. Används av `PagesStep` för att
+ * auto-välja vettiga defaults baserat på vilka kategori-chips operatören
+ * markerat i steg 2 (SiteType). Listan är medvetet kort — fler sidor
+ * kan alltid läggas till manuellt från "Övriga sidor"-listan.
+ *
+ * Ordningen i varje array styr vilken ordning sidorna föreslås i UI:t
+ * (Startsida / Hero kommer alltid först eftersom den ÄR sajten).
+ */
+export const RECOMMENDED_PAGES_BY_CATEGORY: Record<
+  WizardCategoryId,
+  readonly MustHaveOption[]
+> = {
+  business: [
+    "Startsida / Hero",
+    "Om oss / Om mig",
+    "Vårt team",
+    "Kundrecensioner",
+    "Kontaktformulär",
+  ],
+  ecommerce: [
+    "Startsida / Hero",
+    "Webshop / Produkter",
+    "Om oss / Om mig",
+    "FAQ",
+    "Kontaktformulär",
+  ],
+  restaurant: [
+    "Startsida / Hero",
+    "Meny / Matsedel",
+    "Bokning online",
+    "Bildgalleri",
+    "Karta / Hitta hit",
+    "Om oss / Om mig",
+  ],
+  portfolio: [
+    "Startsida / Hero",
+    "Portfolio / Case",
+    "Om oss / Om mig",
+    "Kontaktformulär",
+  ],
+  landing: ["Startsida / Hero", "Kontaktformulär"],
+  blog: [
+    "Startsida / Hero",
+    "Blogg / Nyheter",
+    "Om oss / Om mig",
+    "Nyhetsbrev",
+    "Kontaktformulär",
+  ],
+  consulting: [
+    "Startsida / Hero",
+    "Om oss / Om mig",
+    "Vårt team",
+    "Priser och paket",
+    "Kundrecensioner",
+    "Kontaktformulär",
+  ],
+  tech: [
+    "Startsida / Hero",
+    "Om oss / Om mig",
+    "Priser och paket",
+    "Blogg / Nyheter",
+    "Kontaktformulär",
+  ],
+  healthcare: [
+    "Startsida / Hero",
+    "Vårt team",
+    "Bokning online",
+    "Karta / Hitta hit",
+    "FAQ",
+    "Kontaktformulär",
+  ],
+  realestate: [
+    "Startsida / Hero",
+    "Webshop / Produkter",
+    "Om oss / Om mig",
+    "Karta / Hitta hit",
+    "Kontaktformulär",
+  ],
+  salon: [
+    "Startsida / Hero",
+    "Bokning online",
+    "Priser och paket",
+    "Bildgalleri",
+    "Karta / Hitta hit",
+    "Om oss / Om mig",
+  ],
+  fitness: [
+    "Startsida / Hero",
+    "Priser och paket",
+    "Bokning online",
+    "Vårt team",
+    "Karta / Hitta hit",
+    "Om oss / Om mig",
+  ],
+  construction: [
+    "Startsida / Hero",
+    "Portfolio / Case",
+    "Om oss / Om mig",
+    "Kundrecensioner",
+    "Kontaktformulär",
+  ],
+  education: [
+    "Startsida / Hero",
+    "Om oss / Om mig",
+    "Priser och paket",
+    "Vårt team",
+    "FAQ",
+    "Kontaktformulär",
+  ],
+  event: [
+    "Startsida / Hero",
+    "Bokning online",
+    "Bildgalleri",
+    "Om oss / Om mig",
+    "Kontaktformulär",
+  ],
+  nonprofit: [
+    "Startsida / Hero",
+    "Om oss / Om mig",
+    "Vårt team",
+    "Blogg / Nyheter",
+    "Nyhetsbrev",
+    "Kontaktformulär",
+  ],
+  music: [
+    "Startsida / Hero",
+    "Bildgalleri",
+    "Bokning online",
+    "Om oss / Om mig",
+    "Kontaktformulär",
+  ],
+  hotel: [
+    "Startsida / Hero",
+    "Bokning online",
+    "Bildgalleri",
+    "Priser och paket",
+    "Karta / Hitta hit",
+    "Om oss / Om mig",
+  ],
+  legal: [
+    "Startsida / Hero",
+    "Vårt team",
+    "Priser och paket",
+    "FAQ",
+    "Kontaktformulär",
+  ],
+  accounting: [
+    "Startsida / Hero",
+    "Vårt team",
+    "Priser och paket",
+    "FAQ",
+    "Kontaktformulär",
+  ],
+  auto: [
+    "Startsida / Hero",
+    "Webshop / Produkter",
+    "Om oss / Om mig",
+    "Karta / Hitta hit",
+    "Kontaktformulär",
+  ],
+  travel: [
+    "Startsida / Hero",
+    "Bildgalleri",
+    "Priser och paket",
+    "Bokning online",
+    "Kontaktformulär",
+  ],
+  food: [
+    "Startsida / Hero",
+    "Meny / Matsedel",
+    "Webshop / Produkter",
+    "Karta / Hitta hit",
+    "Kontaktformulär",
+  ],
+  photo: [
+    "Startsida / Hero",
+    "Portfolio / Case",
+    "Bildgalleri",
+    "Om oss / Om mig",
+    "Kontaktformulär",
+  ],
+  other: ["Startsida / Hero", "Om oss / Om mig", "Kontaktformulär"],
+};
+
+/**
+ * Keyword → must-have-page-mapping. Används för att gissa extra
+ * sidor som behövs baserat på skrapad text (offer, story, products,
+ * menu, etc.). Mönstren är ordlistor — om något av orden hittas
+ * (case-insensitive substring) tipsar vi om motsvarande sida.
+ *
+ * Mönstren är avsiktligt breda och tål både svenska och engelska
+ * eftersom skrape-output kan komma från valfri språkblandning.
+ */
+const PAGE_KEYWORDS: ReadonlyArray<{
+  page: MustHaveOption;
+  keywords: readonly string[];
+}> = [
+  {
+    page: "Bokning online",
+    keywords: ["boka", "bokning", "bokningar", "boktid", "tidsbokning", "appointment", "schedule"],
+  },
+  {
+    page: "Meny / Matsedel",
+    keywords: ["meny", "matsedel", "rätt", "huvudrätt", "förrätt", "menu", "dish"],
+  },
+  {
+    page: "Webshop / Produkter",
+    keywords: ["produkt", "produkter", "shop", "köp", "varor", "sortiment", "product", "store"],
+  },
+  {
+    page: "Portfolio / Case",
+    keywords: ["portfolio", "case", "projekt", "uppdrag", "referensprojekt", "projects"],
+  },
+  {
+    page: "Vårt team",
+    keywords: ["team", "medarbetare", "personal", "kollegor", "grundare", "founders", "staff"],
+  },
+  {
+    page: "Blogg / Nyheter",
+    keywords: ["blogg", "artikel", "artiklar", "nyheter", "inlägg", "blog", "post", "news"],
+  },
+  {
+    page: "Kundrecensioner",
+    keywords: ["recension", "omdöme", "kundröster", "testimonial", "review"],
+  },
+  {
+    page: "FAQ",
+    keywords: ["faq", "frågor", "vanliga frågor", "questions"],
+  },
+  {
+    page: "Nyhetsbrev",
+    keywords: ["nyhetsbrev", "prenumerera", "newsletter", "subscribe"],
+  },
+  {
+    page: "Bildgalleri",
+    keywords: ["galleri", "bilder", "fotografier", "gallery", "photos"],
+  },
+  {
+    page: "Priser och paket",
+    keywords: ["pris", "priser", "paket", "kampanj", "pricing", "tier"],
+  },
+  {
+    page: "Karta / Hitta hit",
+    keywords: ["hitta hit", "vägbeskrivning", "adress", "karta", "directions", "location"],
+  },
+];
+
+/**
+ * Returnerar en uppsättning rekommenderade sidor baserat på (a) de
+ * kategorier som valts i steg 2 och (b) keyword-träffar i fri-text
+ * från skrape/wizard-svar. Resultatet är ordnat enligt
+ * `MUST_HAVE_OPTIONS` så UI:t alltid visar sidorna i samma ordning.
+ */
+export function suggestPagesFromAnswers(
+  siteType: readonly WizardCategoryId[],
+  textInputs: readonly (string | undefined)[] = [],
+): MustHaveOption[] {
+  const set = new Set<MustHaveOption>();
+
+  for (const id of siteType) {
+    const pages = RECOMMENDED_PAGES_BY_CATEGORY[id];
+    if (!pages) continue;
+    for (const page of pages) set.add(page);
+  }
+
+  const haystack = textInputs
+    .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+    .join(" ")
+    .toLowerCase();
+
+  if (haystack.length > 0) {
+    for (const { page, keywords } of PAGE_KEYWORDS) {
+      if (keywords.some((kw) => haystack.includes(kw))) {
+        set.add(page);
+      }
+    }
+  }
+
+  // Startsidan ÄR sajten — föreslå alltid den även om kategori/keywords
+  // inte explicit nämner den.
+  set.add("Startsida / Hero");
+
+  // Sortera enligt MUST_HAVE_OPTIONS-ordningen för stabil rendering.
+  return MUST_HAVE_OPTIONS.filter((opt) => set.has(opt));
+}
+
 /** Restaurang-specifika kök-chip i steg 3. */
 export const CUISINE_OPTIONS = [
   "Svenskt",

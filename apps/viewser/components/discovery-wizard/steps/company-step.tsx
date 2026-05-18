@@ -22,7 +22,13 @@ import {
  * `onChange()` så att kommande steg ser auto-ifyllda fält.
  */
 
-type ScrapeStatus = "idle" | "loading" | "ok" | "error";
+export type ScrapeStatus = "idle" | "loading" | "ok" | "error";
+
+export type ScrapeState = {
+  status: ScrapeStatus;
+  message: string;
+  url?: string;
+};
 
 type ScrapeResponse = {
   ok: boolean;
@@ -33,9 +39,16 @@ type ScrapeResponse = {
 export function CompanyStep({
   answers,
   onChange,
+  onScrapeStateChange,
 }: {
   answers: WizardAnswers;
   onChange: (next: Partial<WizardAnswers>) => void;
+  /**
+   * Lyfter skrape-state upp till DiscoveryWizard så den kan rendera en
+   * overlay över hela popupen medan POST /api/scrape-site pågår.
+   * Lokalt visar vi fortfarande en inline-status under URL-fältet.
+   */
+  onScrapeStateChange?: (state: ScrapeState) => void;
 }) {
   const [scrapeStatus, setScrapeStatus] = useState<ScrapeStatus>("idle");
   const [scrapeMessage, setScrapeMessage] = useState<string>("");
@@ -43,8 +56,10 @@ export function CompanyStep({
   const handleScrape = useCallback(async () => {
     const url = answers.existingSite.trim();
     if (!url) return;
+    const loadingMessage = `Hämtar innehåll från ${url}…`;
     setScrapeStatus("loading");
-    setScrapeMessage("Hämtar info från sajten…");
+    setScrapeMessage(loadingMessage);
+    onScrapeStateChange?.({ status: "loading", message: loadingMessage, url });
     try {
       const response = await fetch("/api/scrape-site", {
         method: "POST",
@@ -68,16 +83,25 @@ export function CompanyStep({
       onChange(patch);
       setScrapeStatus("ok");
       const filledCount = Object.keys(patch).length;
-      setScrapeMessage(
+      const okMessage =
         filledCount > 0
           ? `Hämtade ${filledCount} fält. Granska och justera nedan.`
-          : "Sajten kunde läsas men inga fält kunde fyllas i automatiskt.",
-      );
+          : "Sajten kunde läsas men inga fält kunde fyllas i automatiskt.";
+      setScrapeMessage(okMessage);
+      onScrapeStateChange?.({ status: "ok", message: okMessage, url });
     } catch (error) {
       setScrapeStatus("error");
-      setScrapeMessage(error instanceof Error ? error.message : "Okänt fel vid skrape.");
+      const errorMessage =
+        error instanceof Error ? error.message : "Okänt fel vid skrape.";
+      setScrapeMessage(errorMessage);
+      onScrapeStateChange?.({ status: "error", message: errorMessage, url });
     }
-  }, [answers.companyName, answers.existingSite, onChange]);
+  }, [
+    answers.companyName,
+    answers.existingSite,
+    onChange,
+    onScrapeStateChange,
+  ]);
 
   return (
     <FieldStack>

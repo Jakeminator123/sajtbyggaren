@@ -928,12 +928,18 @@ def render_layout(
         # eslint-disable-next-line @next/next/no-img-element — vi använder
         # raw <img> för att slippa Next.js Image-loader inställningar i
         # alla starters; webp:erna är redan komprimerade av sharp.
+        # VIKTIGT: `_jsx_safe_string("...")` returnerar `{"..."}` — det är
+        # ett komplett JSX-uttryck för text/attribut, INTE en sträng som kan
+        # smetas in mellan `"`-quotes. Tidigare kombinerade vi det med
+        # `src="/uploads/{...}"`, vilket producerade `src="/uploads/{"x.webp"}"`
+        # och bröt next build med "Expected '</', got '.'". Korrekt är att
+        # låta hela attribut-värdet vara ett JS-uttryck (`src={...}`).
         header_logo_jsx = (
-            f'              <img src="/uploads/{_jsx_safe_string(logo_filename)}"'
+            f'              <img src={_jsx_safe_string("/uploads/" + logo_filename)}'
             f' alt={_js_string_literal(logo_alt)} className="h-9 w-auto object-contain"{dims} />'
         )
         footer_logo_jsx = (
-            f'              <img src="/uploads/{_jsx_safe_string(logo_filename)}"'
+            f'              <img src={_jsx_safe_string("/uploads/" + logo_filename)}'
             f' alt={_js_string_literal(logo_alt)} className="h-10 w-auto object-contain mb-1"{dims} />'
         )
     else:
@@ -1107,7 +1113,7 @@ def render_home(
         hero_section_jsx = (
             '      <section className="relative w-full overflow-hidden bg-[color:var(--background)]">\n'
             '        <div className="mx-auto w-[var(--container-width)] pt-[var(--section-spacing)]">\n'
-            f'          <img src="/uploads/{_jsx_safe_string(hero_filename)}" alt={_js_string_literal(hero_alt)} className="aspect-[16/9] w-full rounded-2xl object-cover shadow-sm" />\n'
+            f'          <img src={_jsx_safe_string("/uploads/" + hero_filename)} alt={_js_string_literal(hero_alt)} className="aspect-[16/9] w-full rounded-2xl object-cover shadow-sm" />\n'
             "        </div>\n"
             "      </section>\n"
             "\n"
@@ -1263,7 +1269,7 @@ def render_about(dossier: dict) -> str:
     if about_images:
         gallery_cards = "\n".join(
             f'            <figure key={_jsx_safe_string(item["assetId"])} className="overflow-hidden rounded-xl border border-[color:var(--border)] bg-[color:var(--background)]">\n'
-            f'              <img src="/uploads/{_jsx_safe_string(item["filename"])}" alt={_js_string_literal(item.get("alt") or company["name"])} className="aspect-[4/3] w-full object-cover" />\n'
+            f'              <img src={_jsx_safe_string("/uploads/" + item["filename"])} alt={_js_string_literal(item.get("alt") or company["name"])} className="aspect-[4/3] w-full object-cover" />\n'
             "            </figure>"
             for item in about_images
         )

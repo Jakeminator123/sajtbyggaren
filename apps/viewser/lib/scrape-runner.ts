@@ -2,7 +2,12 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-const SCRAPE_TIMEOUT_MS = 30_000;
+// scripts/scrape_site.py crawlar upp till 5 sidor + ev. LLM-syntes.
+// På riktigt seg infrastruktur (eller stora sajter) kan det ta 60-90s
+// innan stdout flushas. Tidigare 30s slog ut helt rimliga scraper
+// halvvägs och returnerade "exit 1: okänt fel" eftersom SIGTERM
+// dödade processen innan den hann printa något.
+const SCRAPE_TIMEOUT_MS = 120_000;
 
 function repoRoot(): string {
   return path.resolve(process.cwd(), "..", "..");
@@ -94,19 +99,36 @@ export async function runScrapeSite(
     stderr += chunk;
   });
 
+  let timedOut = false;
   const timer = setTimeout(() => {
+    timedOut = true;
     child.kill("SIGTERM");
   }, SCRAPE_TIMEOUT_MS);
 
-  const exitCode: number = await new Promise((resolve) => {
-    child.on("close", (code) => resolve(code ?? 1));
+  const { exitCode, signal } = await new Promise<{
+    exitCode: number | null;
+    signal: NodeJS.Signals | null;
+  }>((resolve) => {
+    child.on("close", (code, sig) => resolve({ exitCode: code, signal: sig }));
   });
   clearTimeout(timer);
 
-  if (exitCode !== 0 && !stdout) {
+  if (timedOut) {
     return {
       ok: false,
-      error: `scrape_site.py exit ${exitCode}: ${stderr.trim().slice(0, 400) || "okänt fel"}`,
+      error: `Skrapning timeout efter ${Math.round(
+        SCRAPE_TIMEOUT_MS / 1000,
+      )} sekunder. Sajten kanske är väldigt långsam eller har för mycket innehåll.`,
+    };
+  }
+
+  if (exitCode !== 0 && !stdout) {
+    const reason =
+      stderr.trim().slice(0, 400) ||
+      (signal ? `dödad av signal ${signal}` : "okänt fel");
+    return {
+      ok: false,
+      error: `scrape_site.py exit ${exitCode ?? "null"}: ${reason}`,
     };
   }
 

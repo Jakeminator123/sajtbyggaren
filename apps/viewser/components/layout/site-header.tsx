@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 type SiteHeaderProps = {
   onOpenConsole: () => void;
 };
@@ -10,7 +12,7 @@ export function SiteHeader({ onOpenConsole }: SiteHeaderProps) {
       aria-hidden={false}
       className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 px-4 pt-3 sm:px-6 sm:pt-4"
     >
-      <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-border/60 bg-card/80 px-3 py-1.5 text-[12px] shadow-sm backdrop-blur-xl">
+      <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-border/60 bg-card/80 px-2.5 py-1 text-[12px] shadow-sm backdrop-blur-xl">
         <Brandmark />
         <span className="font-medium tracking-tight">Sajtbyggaren</span>
       </div>
@@ -29,12 +31,14 @@ export function SiteHeader({ onOpenConsole }: SiteHeaderProps) {
 
 function Brandmark() {
   return (
-    <span
-      aria-hidden
-      className="flex size-5 items-center justify-center rounded-[6px] bg-foreground text-background"
-    >
-      <span className="text-[9px] font-semibold leading-none">SB</span>
-    </span>
+    <Image
+      src="/LOGO_SM2.0.png"
+      alt="Sajtmaskin 2.0"
+      width={24}
+      height={24}
+      priority
+      className="size-6 rounded-md object-contain"
+    />
   );
 }
 

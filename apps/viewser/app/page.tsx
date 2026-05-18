@@ -8,6 +8,7 @@ import type { ProjectInputOption } from "@/components/project-input-picker";
 import {
   PromptBuilder,
   type PromptBuildOutcome,
+  type PromptStage,
 } from "@/components/prompt-builder";
 import type { RunHistoryItem } from "@/components/run-history";
 import { ViewerPanel } from "@/components/viewer-panel";
@@ -54,14 +55,18 @@ export default function Home() {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [statusText, setStatusText] = useState("Laddar runs och project inputs…");
   const [building, setBuilding] = useState(false);
+  const [buildStage, setBuildStage] = useState<PromptStage>("idle");
   const [consoleOpen, setConsoleOpen] = useState(false);
 
   function applyRunsData({ nextRuns, nextInputs }: FetchedRunsPayload) {
     setRuns(nextRuns);
     setProjectInputs(nextInputs);
-    if (!selectedRunId && nextRuns.length > 0) {
-      setSelectedRunId(nextRuns[0].runId);
-    }
+    // Auto-väljer INTE senaste run vid mount. Det orsakade att
+    // ViewerPanel direkt triggade en /api/runs/:runId/files-fetch
+    // mot en gammal run innan operatören överhuvudtaget bett om något,
+    // vilket gömde hero-vyn och visade en orelevant status-pill. Nu
+    // visas hero tills operatören skickar en ny prompt eller väljer
+    // en run explicit i ConsoleDrawer.
     if (!nextInputs.find((item) => item.siteId === selectedSiteId) && nextInputs.length) {
       setSelectedSiteId(nextInputs[0].siteId);
     }
@@ -97,8 +102,18 @@ export default function Home() {
     <main className="relative h-[100dvh] w-full overflow-hidden bg-background">
       <SiteHeader onOpenConsole={() => setConsoleOpen(true)} />
 
-      <ViewerPanel runId={selectedRunId} />
+      <ViewerPanel
+        runId={selectedRunId}
+        isBuilding={building}
+        buildStage={buildStage}
+      />
 
+      {/* Prompt-rutan döljs visuellt medan bygget pågår (BuildProgressCard
+          tar över hero-ytan). Vi får ABSOLUT inte unmounta komponenten
+          — den äger fetch-promise:n mot /api/prompt och setTimeout som
+          flyttar stage `thinking`→`building`. Om vi unmountar tappar
+          vi alla stage-rapporter och cardet fastnar på första steget.
+          Därför skickar vi `hidden` istället för att conditional renda. */}
       <PromptBuilder
         isBusy={building}
         runs={runs}
@@ -107,6 +122,8 @@ export default function Home() {
         selectedSiteId={selectedSiteId}
         onBuildStart={() => setBuilding(true)}
         onBuildEnd={() => setBuilding(false)}
+        onStageChange={setBuildStage}
+        hidden={building}
         onBuildDone={(runId, outcome) => {
           setSelectedRunId(runId);
           // B44: never claim "Build klar" for a structured failure or
@@ -118,7 +135,10 @@ export default function Home() {
           void fetchRuns()
             .then(applyRunsData)
             .catch((error) => {
-              const message = error instanceof Error ? error.message : "Kunde inte uppdatera runs.";
+              const message =
+                error instanceof Error
+                  ? error.message
+                  : "Kunde inte uppdatera runs.";
               setStatusText(message);
             });
         }}

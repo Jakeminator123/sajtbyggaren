@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 import { AssetDropzone } from "@/components/discovery-wizard/asset-dropzone";
 import { Button } from "@/components/ui/button";
@@ -41,17 +41,33 @@ const PLACEMENT_OPTIONS: { value: AssetPlacement; label: string }[] = [
 ];
 
 function ThumbnailPreview({ asset }: { asset: AssetRef }) {
+  // VIKTIGT: vi får INTE använda `event.currentTarget.style.display = "none"`
+  // i onError — det muterar DOM:en permanent och React behåller mutationen
+  // när elementet återanvänds vid re-render (t.ex. när operatören byter
+  // steg i wizarden eller efter cache-revalidering). Det orsakade tidigare
+  // buggen där bilderna "kom fram men försvann en stund efter".
+  // Istället håller vi failure-state i React; ny `assetId` återställer den
+  // automatiskt eftersom `useState` initierar om vid key-byte.
+  const [failed, setFailed] = useState(false);
   return (
     <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/70 bg-muted/30">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={`/api/asset-preview?assetId=${asset.assetId}&siteId=__draft`}
-        alt={asset.alt || asset.filename}
-        className="h-full w-full object-cover"
-        onError={(event) => {
-          (event.currentTarget as HTMLImageElement).style.display = "none";
-        }}
-      />
+      {failed ? (
+        <span
+          aria-label="Förhandsvisning saknas"
+          className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground"
+        >
+          {asset.filename.slice(0, 2)}
+        </span>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/api/asset-preview?assetId=${asset.assetId}&siteId=__draft`}
+          alt={asset.alt || asset.filename}
+          className="h-full w-full object-cover"
+          onError={() => setFailed(true)}
+          onLoad={() => setFailed(false)}
+        />
+      )}
     </div>
   );
 }

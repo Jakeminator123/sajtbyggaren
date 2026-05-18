@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { RunHistoryItem } from "@/components/run-history";
 
-type PromptStage =
+export type PromptStage =
   | "idle"
   | "thinking"
   | "building"
@@ -47,6 +47,24 @@ type PromptBuilderProps = {
   onBuildStart: () => void;
   onBuildEnd: () => void;
   onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
+  /**
+   * Lyfter prompt-stage upp till page.tsx så ViewerPanel kan visa
+   * en central laddnings-card under "thinking" och "building".
+   * Komponenten döljer sin lilla inline-status-pill när bygget pågår,
+   * eftersom cardet i ViewerPanel visar samma information större och
+   * mer dominant.
+   */
+  onStageChange?: (stage: PromptStage) => void;
+  /**
+   * När `true` döljs hela prompt-strippen visuellt — men komponenten
+   * stannar mountad. Detta är kritiskt: fetch-anropet mot /api/prompt,
+   * setTimeout som flyttar stage `thinking`→`building`, och alla
+   * state-updates måste leva vidare under hela bygget. Att unmounta
+   * komponenten via conditional rendering här triggade en bugg där
+   * BuildProgressCard fastnade på steg 1 eftersom `onStageChange`
+   * inte längre kunde rapportera nya stages från den döda komponenten.
+   */
+  hidden?: boolean;
 };
 
 // Map the wire `buildStatus` (any string from build-result.json) to
@@ -81,6 +99,8 @@ export function PromptBuilder({
   onBuildStart,
   onBuildEnd,
   onBuildDone,
+  onStageChange,
+  hidden = false,
 }: PromptBuilderProps) {
   const [prompt, setPrompt] = useState("");
   const [mode, setMode] = useState<PromptMode>("init");
@@ -127,6 +147,12 @@ export function PromptBuilder({
       }
     };
   }, []);
+
+  // Lyft stage-ändringar uppåt så page.tsx kan dirigera ViewerPanel:s
+  // build-progress-card. Vi rapporterar varje stage-flip exakt en gång.
+  useEffect(() => {
+    onStageChange?.(stage);
+  }, [stage, onStageChange]);
 
   /**
    * Faktisk POST mot /api/prompt + state-uppdateringar. Anropas både
@@ -245,7 +271,12 @@ export function PromptBuilder({
     });
   }
 
-  const showStrip = stage !== "idle" || !!error;
+  // Dölj inline-statuspillen under thinking/building eftersom
+  // ViewerPanel:s BuildProgressCard visar samma info större och mer
+  // dominant. Behåll pillen för error/success/degraded så operatören
+  // ser slutresultatet direkt vid prompt-rutan.
+  const isBuilding = stage === "thinking" || stage === "building";
+  const showStrip = (stage !== "idle" || !!error) && !isBuilding;
 
   return (
     <>
@@ -255,7 +286,10 @@ export function PromptBuilder({
         initialPrompt={pendingPrompt}
         onComplete={handleWizardComplete}
       />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-5 sm:pb-7">
+      <div
+        className={`pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-5 sm:pb-7 ${hidden ? "hidden" : ""}`}
+        aria-hidden={hidden}
+      >
       <div className="pointer-events-auto flex w-full max-w-[720px] flex-col gap-2">
         {showStrip ? (
           <PromptStatusStrip stage={stage} error={error} lastResult={lastResult} />
