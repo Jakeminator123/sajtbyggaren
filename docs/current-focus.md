@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `e3fa67b` (2026-05-19, **merge-commit för PR #37 `feature/b121-baseline-smoke` (B121 PR D)** ovanpå `89680fa`). PR #37 (`2713d0d` smoke-rapport + `c675607`/`1274d92` rapport-justeringar + merge `e3fa67b`): CLI baseline-smoke mot fyra produktbaseline-prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`) — alla fyra klarar `prompt_to_project_input --discovery` → `build_site.py` med korrekt `DiscoveryDecision`, scaffold/variant/starter-mappning, `fieldSources`, `fallbackWarnings` och `selectedDossiers.required = []`. Rapport: `docs/reports/b121-baseline-smoke.md`. **B121 stängd formellt** i `known-issues.md` via PR A (#34 `70c261b`) + PR B (#35 `ec32913`) + PR C (#36 `89680fa`) + PR D (#37 `e3fa67b`). Medvetna icke-blockers kvar: full Viewser → `/api/prompt` → preview E2E, per-run trace i Backoffice, capability/dossier gaps. Föregående verified state: `89680fa` (PR #36 B121 PR C — Backoffice Discovery Control, mapping-tabell, dry-run-resolver, gated edit-toggle, 16 tester i `tests/test_backoffice_discovery_control.py`). Mergade feature-branches `feature/discovery-resolver-taxonomy`, `feature/discovery-frontend-alignment`, `feature/backoffice-discovery-control`, `feature/b121-baseline-smoke` kan städas från origin vid operatör-OK; `backup-*` rörs inte.
+Last verified state: `bfcad8d` (2026-05-19, **B128-hardening (post-Composer-2.5-review)** ovanpå keramik-/e-handel-passet `d1fee90` + `6e5c33c` + `923f680`). Riktad Builder-pass på keramik-/e-handel-caset som Scout 3 (5.9/10) tappade på: **B128 (Hög, ny + stängd same-day)** — `_customer_safe_planner_note` släppte igenom svenska/engelska build-imperativ i `notesForPlanner` ("Bygg en liten e-handel på svenska för försäljning av keramik med fokus på köpkonvertering.") som publik /om-oss-copy; ny `_starts_with_planner_imperative()`-guard + utökad `_PLANNER_NOTE_BLOCKLIST`. Composer-2.5 read-only review hittade en ledande-icke-bokstavsprefix-bypass (`-Bygg ...`, `**Bygg ...**`, `1. Bygg ...`) som hardening `bfcad8d` stänger genom att strippa leading non-letter run före token-match. **B101 (Låg, stängd)** — hero-CTA "Shoppa nu" länkade till `/kontakt` istället för `/produkter`; ny `_hero_cta_target_path(dossier, listing_route, contact_path)` routar shop-varianten till listing-routen när scaffolden deklarerar `id="products"`. **B102 (Låg, stängd)** — `/produkter`-bottom-CTA "Fråga om en beställning" matchade inte shop-tonen; ny `_commerce_bottom_cta_label(dossier)` med whitelist (`"Hör av dig för att beställa"` / `"Get in touch to order"`), länk mot kontakt-routen behålls (ingen checkout i MVP). Separat dev-tooling-commit `6e5c33c` lägger opt-in `-Https`-flag i `scripts/dev-viewser.ps1` så Viewser kan starta på `https://localhost:3000` (StackBlitz embed-konsol kräver https:// origins, http:// rejectas). Guards efter `bfcad8d`: `python -m ruff check .` (0 findings), `python scripts/governance_validate.py` (17 policies OK), `python scripts/rules_sync.py --check` (alla speglar i synk), `python scripts/check_term_coverage.py --strict` (inga okända kandidater), `python -m pytest tests/test_prompt_to_project_input.py tests/test_builder_route_emission.py tests/test_bug_scope_discipline.py tests/test_docs_freshness.py -q` (197 passed). Aktuell buggräkning: **24 aktiva, 0 misplaced, 5 unknown, 91 stängda** (B101 + B102 + B128 stängda; B128 fix-SHA pekar på initial `d1fee90` + hardening commit). Variant-spåret `feat/eight-scaffold-variants` (commit `4cd1058`) finns kvar på origin som separat feature-branch och rörs inte i detta pass — coach-direktiv: ingen variant-promotion i Steward-rundan, separat sprint/PR krävs. Föregående verified state: `e3fa67b` (2026-05-19, **merge-commit för PR #37 `feature/b121-baseline-smoke` (B121 PR D)** ovanpå `89680fa`). PR #37 (`2713d0d` smoke-rapport + `c675607`/`1274d92` rapport-justeringar + merge `e3fa67b`): CLI baseline-smoke mot fyra produktbaseline-prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`) — alla fyra klarar `prompt_to_project_input --discovery` → `build_site.py` med korrekt `DiscoveryDecision`, scaffold/variant/starter-mappning, `fieldSources`, `fallbackWarnings` och `selectedDossiers.required = []`. Rapport: `docs/reports/b121-baseline-smoke.md`. **B121 stängd formellt** i `known-issues.md` via PR A (#34 `70c261b`) + PR B (#35 `ec32913`) + PR C (#36 `89680fa`) + PR D (#37 `e3fa67b`). Medvetna icke-blockers kvar: full Viewser → `/api/prompt` → preview E2E, per-run trace i Backoffice, capability/dossier gaps. Föregående verified state: `89680fa` (PR #36 B121 PR C — Backoffice Discovery Control, mapping-tabell, dry-run-resolver, gated edit-toggle, 16 tester i `tests/test_backoffice_discovery_control.py`). Mergade feature-branches `feature/discovery-resolver-taxonomy`, `feature/discovery-frontend-alignment`, `feature/backoffice-discovery-control`, `feature/b121-baseline-smoke` kan städas från origin vid operatör-OK; `backup-*` rörs inte.
 
 Föregående verified state: `0fe353f` (2026-05-18, `fix(backoffice): close two control-plane review findings (graph key + doctor)` ovanpå PR #32-cherrypick-serien och `eb1a4ec` B125-docs-bump). Stängde två post-PR-#32-control-plane-fynd från extern review: B126 (dossier-graf-nyckel-mismatch — `_compatible_dossier_edges` byggde `dossier:{id}` medan noder var registrerade som `{class}-dossier:{id}`, vilket gjorde impact-vyn blind för scaffold→dossier-spåret) och B127 (Doctor-villkor inverterat — `run_health_checks` varnade på `status == "implemented"` med tom details-sträng och tystnade på riktiga `incomplete`/`placeholder`-scaffolds). Båda introducerades i cherry-pick-arvet från `3338d79` + `b636450` och är låsta av regressionstester i `tests/test_backoffice_asset_graph.py`. Guards efter `0fe353f`: `python -m ruff check .` (0 findings), `python scripts/governance_validate.py` (16 policies OK), `python scripts/rules_sync.py --check` (alla speglar i synk), `python scripts/check_term_coverage.py --strict` (inga okända kandidater), `python -m pytest tests/` (**701 passed, 3 skipped E2E** — +2 nya regressionstester från B126/B127-passet). Den efterföljande commiten `9291c46` (`chore(vscode): set PowerShell default formatter to ms-vscode.powershell`) är inom bump-tolerance och rör enbart `.vscode/settings.json`. Föregående produktpass var **Backoffice-kontrollplans-MVP via cherry-pick av PR #32**: sex commits från `cursor/backoffice-kontrollplan-mvp-62aa` (skapad från `ca59529` innan PR #31 Christopher-UI:n mergades, så `mergeStateStatus=CLEAN` mot main men diff-trädet hade raderat hela `apps/viewser/`-frontenden om en three-way merge gjorts) cherrypickades ovanpå `60515c6` i bevarad ordning: `3338d79` `fix(backoffice): normalize compatible dossier graph edges` (`backoffice/asset_graph.py` lyfter dossier-edge-extraktion ur `view_control_plane` till modulnivå, namngivna helpers `_compatible_dossier_id`/`_compatible_dossier_details`/`_compatible_dossier_edges`, hanterar dict-entries med `id`/`when`-fält), `b636450` `feat(backoffice): add read-only impact preview` (ny modul `backoffice/impact.py` + `impact_for_node()` som returnerar `incoming`/`outgoing`/`affectedNodes`/`affectedPaths`/`riskLevel`/`runtimeEffect`, plus konsekvensvy under `view_control_plane`), `c22bc1d` `feat(backoffice): add selection profile editor` (ny modul `backoffice/selection_profiles.py` med `validate_profile`/`signal_findings`/`write_profile`, ny gemensam `backoffice/io.py` med `atomic_write_text`/`atomic_write_json` via temp + `os.fsync` + `os.replace`, ny vy `view_selection_profiles` med edit-toggle), `2065a33` `feat(backoffice): improve variant candidate review` (`compare_variant_to_existing`/`variant_diff_rows`/`list_variant_candidates` i `asset_graph.py`, kandidater valideras via `packages/generation/artifacts.validate_variant` och Variant Candidates-vyn visar similarity table + field-level diff), `855a605` `fix(backoffice): use atomic model role writes` (refactor av `views/governance.py` + `views/llm_engine.py` att använda gemensam `..io.atomic_write_text`/`atomic_write_json` istället för lokal helper — rollback-flödet kvarstår, men alla policy-writes är nu atomic via temp-fil + rename), `00103e3` `feat(backoffice): add soft dossier candidate generator` (ny `scripts/generate_dossier_candidate.py`, mirror av `generate_variant_candidate.py`: pydantic structured output via dossierModel-rollen med mock-fallback utan `OPENAI_API_KEY`, skriver `data/dossier-candidates/soft/<id>/{manifest.json,instructions.md,components/}`, validerar via `packages/generation/artifacts.validate_dossier`, ny vy `view_dossier_candidates` i backoffice). Inga konflikter; en automatisk merge i `scripts/check_term_coverage.py` där operatörens `DevTools`/`ElementCreationOptions`-tillägg från `c7049b3` och PR #32:s nya `DossierCandidateModel`/`DossierGenerationError`/`DossierGenerationResult`/`DossierManifestModel`/`DossierModelResolutionError` samexisterar rent. PR #32 stängdes (inte mergades) med kommentar och `cursor/backoffice-kontrollplan-mvp-62aa` raderades från origin. Samtidigt städades den döda branchen `frontend/christopher-import` (PR #17 var CLOSED, ersattes av PR #31 `integrate/christopher-ui-into-main` med annan branch). Föregående produktpass var **StackBlitz embed-preview unblock + npm audit cleanup**: B123 (Medel — `apps/viewser/next.config.ts` saknade `Cross-Origin-Embedder-Policy`/`Cross-Origin-Opener-Policy` så StackBlitz embed visade "Unable to run Embedded Project" istället för preview) och B124 (Medel — uppföljare där parent-COEP visade sig otillräcklig: Chrome krävde dessutom `credentialless`-attribut på själva `<iframe>`-elementet eftersom StackBlitz embed-respons inte skickar egen COEP-header) stängda i samma pass. Båda gör B59 (parkerad header-experiment-skuld från 2026-05-15) **förmodligen löst** men kvar att verifiera end-to-end med en grön preview — se uppdaterad B59-entry i `docs/known-issues.md` (status: parkerad → "förmodligen löst i B123 + B124, väntar end-to-end-verifiering"). Föregående commits i samma pass: `5d05e0d` (B124 — `document.createElement`-patch runt `sdk.embedProject(...)` så iframen får `credentialless`-attribut innan src-fetch + 3 source-locks i `tests/test_viewser_isolation_headers.py`), `5f23d13` (B123 — `next.config.ts:async headers()` med `Cross-Origin-Embedder-Policy: credentialless` + `Cross-Origin-Opener-Policy: same-origin` på `/:path*` + 4 source-locks; tog bort gammal felformulerad negativ lock i `tests/test_viewser_files.py:test_viewser_does_not_set_global_cross_origin_isolation_headers` från `98e8364`), `c7049b3` (operatör-direktcommit, `package-lock.json`-städning från postcss-override `^8.5.10` i `apps/viewser/package.json` som tystar npm audit GHSA-qx2v-qp2m-jg93 på Nexts vendored postcss 8.4.31 — false positive per Vercels eps1lon, men ren `0 vulnerabilities` är värt 3 rader JSON). Föregående produktpass (parallel-agent-runda före): `df24488` (B118 scrape-runner SIGKILL-fallback), `6772a14` (B117 SVG-XSS via CSP sandbox + nosniff på `/api/asset-preview`), `fe9748e` (B114 upload size guard), `cd03897` (B113 SSRF redirect-validation + 6 regressionstester). PR #31 `feat(viewser): integrate christopher-ui discovery and asset workflow` är fortsatt frontend-basen (merge `3f4543d`, integration `0510146`): hela `apps/viewser/components/discovery-wizard/**`, asset upload pipeline (`apps/viewser/lib/asset-store/**` + `/api/upload-asset` + `/api/asset-preview`), URL scrape (`scripts/scrape_site.py` + `/api/scrape-site` + `apps/viewser/lib/scrape-runner.ts`), SiteHeader/ConsoleDrawer, shadcn-primitives, `BUILD_TIMEOUT_MS` 3 min → 10 min, schema-fält `brand{logo, heroImage, primaryColorHex, accentColorHex, logoText, heroText}` + `gallery[]` + `$defs/assetRef` i `governance/schemas/project-input.schema.json`, naming-dictionary v15 → v16 (AssetRef, AssetStore, operator upload). Aktuell buggräkning: **27 aktiva, 0 misplaced, 5 unknown, 87 stängda** (B126 + B127 stängda i `0fe353f`; PR #32 var feature work — inga B-IDs öppnades/stängdes där; B125 öppnad i en uppföljande docs-pass efter operatörsdiskussion om StackBlitz-embed-browserstöd, se nedan). Guards gröna efter PR #32-cherrypick: `python -m ruff check .` (0 findings), `python scripts/governance_validate.py` (16 policies OK), `python scripts/rules_sync.py --check` (alla speglar i synk), `python scripts/check_term_coverage.py --strict` (inga okända kandidater), `python -m pytest tests/` (**699 passed, 3 skipped E2E** — +24 nya tester från `tests/test_backoffice_asset_graph.py` + `test_backoffice_impact.py` + `test_backoffice_selection_profiles.py` + `test_dossier_candidate_generator.py`). `backup-pre-christopher-ui-merge` finns pushad på origin som extra säkerhet före PR #31-mergen; taggen `archive/christopher-ui-2026-05-18` pekar på `4a16528` så hela christopher-ui-branchen kan återställas vid behov. `origin/christopher-ui` är raderad enligt operatörens policy om inga långa parallella branches. **Branch-rensning under PR #32-passet:** `cursor/backoffice-kontrollplan-mvp-62aa` (PR #32 source) och `frontend/christopher-import` (PR #17 CLOSED) raderade från origin. **Kvar och flaggade som potentiellt onödiga** (väntar operatör-OK innan radering): `feat/demo-baseline-fix-1b-bug-sweep` (alternativ-väg till PR #28 som istället mergades från `cursor/demo-baseline-buggsvep-44a5`). Alla 19 `backup-*` är operatörens säkerhetskopior och rörs inte utan instruktion. PR #33 (denna docs-only state-sync) är aktuellt öppen.
 
@@ -43,7 +43,7 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `e3fa67b` (merge PR #37, B121 PR D — baseline smoke + formell B121-stängning) ovanpå `89680fa` (PR #36 PR C), `ec32913` (PR #35 PR B) och `70c261b` (PR #34 PR A). Discovery-kedjan overlay → taxonomy → resolver → Project Input → Backoffice review → CLI smoke är sealed. **B121 stängd.** **Direkt nästa steg:** Re-Verifierings-Scout — produktkvalitet med nya overlayflödet (se "Next action").
+`main` är vid `bfcad8d` (B128-hardening) ovanpå keramik-/e-handel-passet `923f680`/`6e5c33c`/`d1fee90` som stängde B101/B102/B128 och lade `-Https`-flag i dev-viewser. Discovery-kedjan från B121 (merge `e3fa67b` PR #34–#37) är fortfarande sealed. **Direkt nästa steg:** **Viewser-overlay-E2E-Scout** — visuell/kvalitativ verifiering via det faktiska frontend-overlayflödet, inte ännu en torr CLI-re-scout (se "Next action").
 
 Föregående baseline: PR #28 squash-merge (`885431b`) för demo-baseline-fix 1B + bug-sweep. 1B stängde must-/should-land-spåret och alla nice-to-have som hanns med: B64/B65 (Site Brief company/contact-fält + ADR 0022), B66 (tom trustSignals renderar inte "Varför oss"), B69 (Quality Gate route-scan får alla emitterade default-routes inkl. `/om-oss`; aggregate-status ändrades medvetet inte), B70 (IPv6 localhost Host-header), B71 (follow-up merge-docstring + byte-stabil story/tagline/tone), B72 (`listRuns` slicar innan JSON-läsning), B73 (tagline-fallback utan Project Input-jargong), B74 (dev_generate codegen routes), B75 (`additionalProperties: false` i Project Input-schema), B76 (Run Details visar site-plan), B77 (dossier-komponenter får inte skugga starter-komponenter), B78 (realpath-baserad dossier-whitelist), B79 (svensk selectedDossiers-rationale) och B83 (service slug-kollisioner får suffix). PR #28 verifierades med ruff, full pytest, governance/rules/term checks, Viewser `npm run build` och två isolerade smoke-builds (`elektriker Malmö`, `frisör Göteborg`) som båda landade `status=ok`, `quality=ok`. Bugbot var inte aktiv på PR:n; GitHub governance, builder-smoke och secret-scan var gröna före merge.
 
@@ -299,9 +299,10 @@ också kvar på origin men är fri att radera i nästa Steward-städ.
 
 ## Current active sprint
 
-Ingen pågående produktimplementation på `main`. **B121 discovery-integration stängd** (`e3fa67b`, PR #34–#37). **Aktivt spår: Re-Verifierings-Scout** — visuell/kvalitativ verifiering av faktisk hemsideoutput via nya overlayflödet, inte mer discovery-plumbing. Se "Next action".
+Ingen pågående produktimplementation på `main`. **Keramik-/e-handel-pass stängd** (`d1fee90` + `6e5c33c` + `923f680` + `bfcad8d`): B101 (hero-CTA → /produkter), B102 (commerce bottom CTA shop-ton), B128 (planner-imperativ-läcka till /om-oss + Composer-2.5-hardening mot ledande-non-letter-prefix), dev-viewser `-Https`-flag för StackBlitz-kompatibel preview. **Aktivt spår: Viewser-overlay-E2E-Scout** — verklig frontend-kvalitetsmätning, inte mer CLI-discovery-plumbing. Se "Next action".
 
-Tidigare klara sprintar: starter dependency hardening (B108),
+Tidigare klara sprintar: B121 discovery-integration (PR #34–#37, `e3fa67b`),
+starter dependency hardening (B108),
 demo-baseline-fix 1E (B105 B106 B107),
 demo-baseline-fix 1D (B99 B100 B103 B104),
 demo-baseline-fix 1C (B88 B94 B95 B96), A-mini cleanup
@@ -319,35 +320,54 @@ PR #28 demo-baseline-fix 1B + bug-sweep, demo-baseline-fix 1A-hotfix.
 
 ## Next action - direktiv till nästa agent
 
-**Re-Verifierings-Scout — produktkvalitet med nya overlayflödet.**
+**Viewser-overlay-E2E-Scout — verklig frontend-kvalitetsmätning.**
 
-B121 discovery-integration är stängd (`e3fa67b`, PR #34–#37). Bygg inte
-mer discovery-plumbing. Nästa spår mäter **faktisk hemsidekvalitet**, inte
-arkitektur.
+Keramik-/e-handel-passet är stängt (`bfcad8d`, B101+B102+B128). B121
+discovery-integration är stängd. Bygg inte mer CLI-discovery-plumbing och
+kör inte ännu en torr CLI-re-scout — coach 2026-05-19: nästa riktiga spår
+är att gå genom **det faktiska Viewser-overlayflödet** (frontend wizard,
+prompt, eventuell scrape/upload, build, preview) i 4-6 case och mäta
+verklig output-kvalitet end-to-end.
 
-Kör fyra produktbaseline-prompter via det **nya Viewser-overlayflödet**
-(när möjligt) eller minst samma CLI-kedja som PR D men med fokus på
-visuell/kvalitativ bedömning:
+Förslagna case (operatör väljer slutligt set):
 
-- `elektriker Malmö`
-- `frisör Göteborg`
-- `naprapatklinik Stockholm`
-- `liten e-handel som säljer keramik`
+1. **keramik e-handel** — verifierar B101/B102/B128 i live-output (ska
+   nu visa "Shoppa nu" → /produkter, "Hör av dig för att beställa" som
+   bottom-CTA, ingen Bygg-/planner-imperativ-läcka på /om-oss).
+2. **vanligt tjänsteföretag med adress/kontakt** — verifierar
+   `_pick_contact_route`-poängsättning och adress-till-stad-regex
+   (skuggar B119/B120 i live-flödet).
+3. **scrape-case** — operatör skriver in URL, scrape-runnern hämtar
+   data, builder paketerar; verifierar scrape → discovery → build-kedjan.
+4. **sköldpaddssoppa / conflict-case** — fri prompt säger A men wizard
+   väljer B; mäter om Intent Guard-behovet (parkerat post-B121) blivit
+   skarpare nu när keramik-fallet är fixat.
+5. **"2 sidor"-case** — operatör skriver explicit sidantal i fri prompt;
+   verifierar om planning faktiskt respekterar det eller om scaffold
+   tvingar 4 routes.
+6. **follow-up-case** — kör en initial build och sedan en följdprompt
+   ("ändra färger/stil/text"); verifierar att v2 syns visuellt (B71
+   markerades unverified av Scout-3).
 
-Scout levererar: totalsnitt /10, per-case-poäng, regressioner mot
-tidigare baselines (6.2/10 pre-1A, 6.59/10 Scout-4), konkreta
-kvalitetsgap (copy, layout, kontaktdata, CTA, språk), och om
-B119/B120 (kontakt/adress-kvalitet) bör prioriteras i nästa Builder-sprint.
-
+Scout levererar: per-case-poäng /10, regressioner mot Scout-4-baseline
+6.59/10, vilka av {Intent Guard, Page Intent, variant/style-selection,
+B119/B120, Project DNA / semantic follow-up} som Builder bör prio:a först.
 Beslutsregel (oförändrad): ≥7/10 OCH inget case <6.5 → Project DNA-sprint;
 annars riktad bug-sweep på det case som dröjer.
+
+StackBlitz/HTTPS för lokal preview hanteras nu via `.\scripts\dev-viewser.ps1 -Https`
+(StackBlitz embed accepterar bara https://-origins). Variant-spåret
+`feat/eight-scaffold-variants` (commit `4cd1058`) får först stabiliseras
+av variant-promotion-PR/sprint innan det landar på main — coach-direktiv
+i denna pass: ingen variant-promotion under Steward eller Scout.
+
+**Föregående next action (Re-Verifierings-Scout 3 → keramik-pass) —
+landad i `bfcad8d`:** Builder-pass stängde B101/B102/B128;
+Composer-2.5 read-only-review hittade och hardenade en B128 bypass.
 
 **Föregående next action (B121 PR D) — landad i `e3fa67b`:** CLI
 baseline-smoke, rapport `docs/reports/b121-baseline-smoke.md`, B121
 stängd i `known-issues.md`.
-
-**Föregående next action (B121 PR A–C) — landade i `70c261b` / `ec32913` /
-`89680fa`:** resolver + taxonomy, Viewser alignment, Backoffice control.
 
 B59 är fortfarande parkerad — rör inte StackBlitz-fronten utan separat
 beslut. B125 (browser-support-fallback) väntar på egen ADR innan
@@ -428,25 +448,35 @@ i `c073d486` och PR-branchen är inte längre kvar på GitHub.
 
 ## Queue
 
-1. **Re-Verifierings-Scout** - scorecard-pass med nya overlayflödet efter
-   B121-stängning. Samma fyra prompter (`elektriker Malmö`, `frisör Göteborg`,
-   `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`),
-   jämför med Scout-4-snittet 6.59/10. Se "Next action".
+1. **Viewser-overlay-E2E-Scout** - verklig frontend-kvalitetsmätning via
+   det faktiska overlayflödet (wizard → prompt → eventuell scrape/upload
+   → build → preview). 4-6 case inkl. keramik (verifierar B101/B102/B128
+   live), tjänsteföretag med adress, scrape, sköldpaddssoppa-conflict,
+   "2 sidor"-case och en follow-up. Se "Next action".
 2. **B119/B120 kontakt/adress-kvalitet** - om Scout visar fel kontaktdata:
    prioritera `_pick_contact_route`-poängsättning och adress-till-stad-regex.
-3. **Capability/dossier gaps** - booking, contact-form, payments, FAQ ska
+3. **Intent Guard + Page Intent** (om Scout-fynd bekräftar) - prompt-mot-
+   wizard-mismatch-guard och pageIntent som faktiskt påverkar route-planen.
+   Båda var parkerade post-B121 men aktualiseras om Scout visar att fri
+   prompt och wizard fortfarande motsäger varandra.
+4. **Capability/dossier gaps** - booking, contact-form, payments, FAQ ska
    inte bara varna utan ha Dossier-implementation när taxonomy flaggar dem.
-4. **Project DNA / follow-up semantic merge** - om Re-Verifierings-Scout bekräftar
-   ≥7/10 och inget case <6.5: gör `merge_followup_project_input`
+5. **Project DNA / follow-up semantic merge** - om Viewser Overlay E2E
+   Scout bekräftar ≥7/10 och inget case <6.5: gör `merge_followup_project_input`
    semantic så följdprompt mot tone/story/tagline ger synlig
    förändring i v2. Kan behöva egen ADR. B71 (PR #28-stängd, men
    markerad som unverified av re-Scout) bör verifieras i två-pass-
    test inom samma sprint.
-5. **Bug-sweep round 3 (om Scout 5 fortsatt under tröskel)** -
+6. **Variant-promotion-sprint** - `feat/eight-scaffold-variants`
+   (commit `4cd1058`, åtta gpt-5.4-genererade scaffold-varianter)
+   ligger redo på origin men ska genom egen sprint/PR med variant-
+   selection-logik innan den landar på main. Coach 2026-05-19: ingen
+   variant-promotion under Steward eller Scout.
+7. **Bug-sweep round 3 (om Scout fortsatt under tröskel)** -
    prioritera B67, B80, B81, B82, B84, B85, B86, B87 + B89-B93
-   (extern reviewer-triage) + B97, B101, B102 (låg-impact-rester)
-   eller riktad fix på det case som dröjer.
-6. **Live pipeline-matris i backoffice (operatörsförslag 2026-05-15
+   (extern reviewer-triage) + B97/B98 (låg-impact-rester) eller
+   riktad fix på det case som dröjer.
+8. **Live pipeline-matris i backoffice (operatörsförslag 2026-05-15
    sent på kvällen)** - visualisera `prompt → brief → plan → codegen
    → build → preview` som en live-uppdaterad matris i backoffice
    playground-vyn. Varje cell visar status (pending/running/ok/fail),
@@ -457,13 +487,13 @@ i `c073d486` och PR-branchen är inte längre kvar på GitHub.
    till. Streamlit-realtidsuppdatering kräver `st.empty()`-pattern
    eller WebSocket-shim. Bästa demo-/granskningsverktyg vi kan bygga
    för dig (operatören). Egen sprint, ej blocker för re-Scout.
-7. B49 (medel): page-map-driven sidebar för `docs-base`-startern; måste vara klar innan `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`.
-8. **B59 follow-up** (parkerad - väntar på arkitekturbeslut): byte till lokal `next dev`-process som same-origin iframe på `localhost:NNNN` eller static StackBlitz-template. Ingen mer COOP/COEP-toggling. Bredare extern research om SDK-/Codeflow-/Teams-/MCP-ytan, kommersiell licens och browser-baseline ligger i [`docs/integrations/stackblitz-research.md`](integrations/stackblitz-research.md) som underlag inför arkitekturbeslutet.
-9. B53 (låg): `governance/schemas/routes.schema.json` för scaffold-routes-kontraktet.
-10. B47 (låg): commerce-base Shopify-handles dokumenteras eller får fallback.
-11. B13a arkitektur-flytt (egen sprint, kräver ADR).
-12. `write_pages` icon-bibliotek-agnostisk refactor.
-13. Cancellation-followup (låg): riktig cancellation/background-jobb i playground-vyn om operatören behöver avbryta redan startade körningar.
+9. B49 (medel): page-map-driven sidebar för `docs-base`-startern; måste vara klar innan `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`.
+10. **B59 follow-up** (parkerad - väntar på arkitekturbeslut): byte till lokal `next dev`-process som same-origin iframe på `localhost:NNNN` eller static StackBlitz-template. Ingen mer COOP/COEP-toggling. Bredare extern research om SDK-/Codeflow-/Teams-/MCP-ytan, kommersiell licens och browser-baseline ligger i [`docs/integrations/stackblitz-research.md`](integrations/stackblitz-research.md) som underlag inför arkitekturbeslutet.
+11. B53 (låg): `governance/schemas/routes.schema.json` för scaffold-routes-kontraktet.
+12. B47 (låg): commerce-base Shopify-handles dokumenteras eller får fallback.
+13. B13a arkitektur-flytt (egen sprint, kräver ADR).
+14. `write_pages` icon-bibliotek-agnostisk refactor.
+15. Cancellation-followup (låg): riktig cancellation/background-jobb i playground-vyn om operatören behöver avbryta redan startade körningar.
 
 **Vänta med ny/sista starter** tills minst följande är sant: marketing-base real codegen stabil, 4 demo-sajter kan byggas (minst 3/4), follow-up versions funkar, build-fail från fri prompt är förstådda, enkelt scorecard finns. Annars blir ny starter mer yta att felsöka utan att stärka kärnflödet.
 
