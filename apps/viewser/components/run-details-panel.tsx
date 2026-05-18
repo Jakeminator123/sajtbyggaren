@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -19,25 +20,38 @@ type ArtefactBundle = {
   missingArtefacts: string[];
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  ok: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  passed: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  "not-needed": "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  degraded: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  warning: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  "no-fix-applied": "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  failed: "bg-red-500/15 text-red-700 dark:text-red-300",
-  skipped: "bg-muted text-muted-foreground",
-  unknown: "bg-muted text-muted-foreground",
-  "mock-complete": "bg-sky-500/15 text-sky-700 dark:text-sky-300",
+const STATUS_TONE: Record<
+  string,
+  "ok" | "warn" | "fail" | "info" | "neutral"
+> = {
+  ok: "ok",
+  passed: "ok",
+  "not-needed": "ok",
+  degraded: "warn",
+  warning: "warn",
+  "no-fix-applied": "warn",
+  failed: "fail",
+  skipped: "neutral",
+  unknown: "neutral",
+  "mock-complete": "info",
 };
 
 function StatusBadge({ status }: { status: string }) {
-  const className = STATUS_COLORS[status] ?? "bg-muted text-muted-foreground";
+  const tone = STATUS_TONE[status] ?? "neutral";
+  const toneClass =
+    tone === "ok"
+      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+      : tone === "warn"
+        ? "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30"
+        : tone === "fail"
+          ? "bg-destructive/15 text-destructive border-destructive/30"
+          : tone === "info"
+            ? "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30"
+            : "bg-muted text-muted-foreground border-border";
   return (
-    <span className={`rounded px-2 py-0.5 text-xs font-medium ${className}`}>
+    <Badge variant="outline" className={`font-mono text-[10px] ${toneClass}`}>
       {status}
-    </span>
+    </Badge>
   );
 }
 
@@ -561,11 +575,13 @@ export function RunDetailsPanel({ runId }: RunDetailsPanelProps) {
   if (!runId) {
     return (
       <Card>
-        <CardHeader className="border-b">
+        <CardHeader className="border-b border-border/60 pb-3">
           <CardTitle className="text-base">Run Details</CardTitle>
         </CardHeader>
-        <CardContent className="pt-3 text-sm text-muted-foreground">
-          Välj en run i Run History eller starta en ny via Build.
+        <CardContent className="pt-4">
+          <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
+            Välj en run i Run History eller starta en ny via prompt-fältet ovan.
+          </div>
         </CardContent>
       </Card>
     );
@@ -573,18 +589,20 @@ export function RunDetailsPanel({ runId }: RunDetailsPanelProps) {
 
   return (
     <Card>
-      <CardHeader className="border-b">
-        <CardTitle className="flex items-center justify-between gap-2 text-base">
-          <span>Run Details</span>
-          <span className="font-mono text-xs text-muted-foreground">{runId}</span>
-        </CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between gap-2 border-b border-border/60 pb-3">
+        <CardTitle className="text-base">Run Details</CardTitle>
+        <Badge variant="outline" className="font-mono text-[10px]">
+          {runId.length > 26 ? `${runId.slice(0, 26)}…` : runId}
+        </Badge>
       </CardHeader>
-      <CardContent className="space-y-3 pt-3">
+      <CardContent className="space-y-3 pt-4">
         {loading ? (
-          <p className="text-sm text-muted-foreground">Laddar artefakter...</p>
+          <p className="text-sm text-muted-foreground">Laddar artefakter…</p>
         ) : null}
         {error ? (
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </p>
         ) : null}
         {bundle ? (
           <>
@@ -593,7 +611,7 @@ export function RunDetailsPanel({ runId }: RunDetailsPanelProps) {
                 Saknar i denna run: {bundle.missingArtefacts.join(", ")}
               </p>
             ) : null}
-            <ScrollArea className="h-[60vh] rounded-md border p-2">
+            <ScrollArea className="h-[58vh] rounded-lg border border-border/60 bg-background/40 p-2">
               <div className="space-y-3 pr-2">
                 <BuildSection build={bundle.buildResult} />
                 <SitePlanSection sitePlan={bundle.sitePlan} />

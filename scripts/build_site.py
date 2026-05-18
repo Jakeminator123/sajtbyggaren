@@ -533,6 +533,89 @@ def copy_starter(starter_id: str, target: Path) -> None:
         shutil.copytree(source, target, ignore=_ignore_combined)
 
 
+UPLOADS_ROOT_DIR = Path(__file__).resolve().parent.parent / "data" / "uploads"
+
+
+def iter_asset_refs(project_input: dict) -> list[dict]:
+    """Returnera alla AssetRef-objekt som finns i Project Input
+    (`brand.logo`, `brand.heroImage`, varje item i `gallery`). Tar bara
+    med refs där alla fält schemat kräver finns; trasiga refs hoppas
+    över så build:en inte kraschar på en korrupt manifest.json."""
+    refs: list[dict] = []
+    brand = project_input.get("brand") or {}
+    if isinstance(brand, dict):
+        for key in ("logo", "heroImage"):
+            ref = brand.get(key)
+            if isinstance(ref, dict) and ref.get("assetId") and ref.get("filename"):
+                refs.append(ref)
+    gallery = project_input.get("gallery") or []
+    if isinstance(gallery, list):
+        for item in gallery:
+            if isinstance(item, dict) and item.get("assetId") and item.get("filename"):
+                refs.append(item)
+    return refs
+
+
+def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> int:
+    """Kopiera operatör-uppladdade assets från data/uploads/<siteId>/
+    (eller __draft för uppladdningar som gjordes innan siteId
+    bestämdes) till genererad sajts public/uploads/. Returnerar antal
+    filer som kopierats — 0 är giltigt (operatorn laddade inte upp
+    något, generated site kör med starter-defaults).
+
+    Vi föredrar `optimized.webp` (≤200 KB efter sharp-pipelinen) och
+    faller tillbaka till `original.<ext>` om optimering inte gjordes
+    (SVG passerar orörd). Filename i public/ är den som finns i
+    AssetRef.filename så TSX-renderers kan referera den som
+    /uploads/<filename>.
+    """
+    refs = iter_asset_refs(project_input)
+    if not refs:
+        return 0
+
+    candidate_dirs = [UPLOADS_ROOT_DIR / site_id, UPLOADS_ROOT_DIR / "__draft"]
+    public_uploads = target / "public" / "uploads"
+    public_uploads.mkdir(parents=True, exist_ok=True)
+
+    copied = 0
+    for ref in refs:
+        asset_id = ref["assetId"]
+        filename = ref["filename"]
+        source_dir: Path | None = None
+        for candidate in candidate_dirs:
+            if (candidate / asset_id).is_dir():
+                source_dir = candidate / asset_id
+                break
+        if source_dir is None:
+            print(
+                f"copy_operator_uploads: asset {asset_id} saknas på disk "
+                f"(letade i {candidate_dirs}). Hoppar över."
+            )
+            continue
+
+        # Föredra webp; annars första matchande original.<ext>.
+        candidates = [
+            source_dir / "optimized.webp",
+            source_dir / "original.svg",
+            source_dir / "original.png",
+            source_dir / "original.jpg",
+            source_dir / "original.webp",
+        ]
+        source_file: Path | None = next((c for c in candidates if c.exists()), None)
+        if source_file is None:
+            print(
+                f"copy_operator_uploads: asset {asset_id} saknar variant-fil "
+                f"i {source_dir}. Hoppar över."
+            )
+            continue
+
+        dest = public_uploads / filename
+        shutil.copy2(source_file, dest)
+        copied += 1
+
+    return copied
+
+
 def variant_css(variant: dict) -> str:
     tokens = variant["tokens"]
     color = tokens["color"]
@@ -917,6 +1000,44 @@ def render_layout(
         for href, label in nav_items
     )
     address_line = ", ".join(contact["addressLines"])
+
+    # Operatör-uppladdad logotyp (om finns) → renderas i header och
+    # footer. Annars faller vi tillbaka till bokstavs-monogram-spannet
+    # som starters har använt sedan B12. Filen finns redan på plats
+    # under public/uploads/ via copy_operator_uploads ovan.
+    brand_block = dossier.get("brand") if isinstance(dossier.get("brand"), dict) else {}
+    operator_logo = brand_block.get("logo") if isinstance(brand_block, dict) else None
+    if isinstance(operator_logo, dict) and operator_logo.get("filename"):
+        logo_filename = operator_logo["filename"]
+        logo_alt = operator_logo.get("alt") or f"{company['name']} logotyp"
+        logo_width = operator_logo.get("width")
+        logo_height = operator_logo.get("height")
+        dims = ""
+        if isinstance(logo_width, int) and isinstance(logo_height, int):
+            dims = f' width={{{logo_width}}} height={{{logo_height}}}'
+        # eslint-disable-next-line @next/next/no-img-element — vi använder
+        # raw <img> för att slippa Next.js Image-loader inställningar i
+        # alla starters; webp:erna är redan komprimerade av sharp.
+        # VIKTIGT: `_jsx_safe_string("...")` returnerar `{"..."}` — det är
+        # ett komplett JSX-uttryck för text/attribut, INTE en sträng som kan
+        # smetas in mellan `"`-quotes. Tidigare kombinerade vi det med
+        # `src="/uploads/{...}"`, vilket producerade `src="/uploads/{"x.webp"}"`
+        # och bröt next build med "Expected '</', got '.'". Korrekt är att
+        # låta hela attribut-värdet vara ett JS-uttryck (`src={...}`).
+        header_logo_jsx = (
+            f'              <img src={_jsx_safe_string("/uploads/" + logo_filename)}'
+            f' alt={_js_string_literal(logo_alt)} className="h-9 w-auto object-contain"{dims} />'
+        )
+        footer_logo_jsx = (
+            f'              <img src={_jsx_safe_string("/uploads/" + logo_filename)}'
+            f' alt={_js_string_literal(logo_alt)} className="h-10 w-auto object-contain mb-1"{dims} />'
+        )
+    else:
+        header_logo_jsx = (
+            f'              <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-[color:var(--primary)] text-[color:var(--primary-foreground)] text-xs font-bold uppercase">{_jsx_safe_string(company["name"][:2])}</span>'
+        )
+        footer_logo_jsx = ""
+
     return (
         'import type { Metadata } from "next";\n'
         'import { Geist, Geist_Mono } from "next/font/google";\n'
@@ -952,7 +1073,7 @@ def render_layout(
         '        <header className="sticky top-0 z-40 border-b border-[color:var(--border)] bg-[color:var(--background)]/80 backdrop-blur supports-[backdrop-filter]:bg-[color:var(--background)]/60">\n'
         '          <div className="mx-auto flex w-[var(--container-width)] items-center justify-between gap-6 py-4">\n'
         '            <a href="/" className="flex items-center gap-2 text-base font-semibold">\n'
-        f'              <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-[color:var(--primary)] text-[color:var(--primary-foreground)] text-xs font-bold uppercase">{_jsx_safe_string(company["name"][:2])}</span>\n'
+        f"{header_logo_jsx}\n"
         f'              <span className="hidden sm:inline">{_jsx_safe_string(company["name"])}</span>\n'
         "            </a>\n"
         '            <nav className="flex items-center gap-5 text-sm font-medium">\n'
@@ -965,7 +1086,8 @@ def render_layout(
         '        <footer className="border-t border-[color:var(--border)] bg-[color:var(--background)]">\n'
         '          <div className="mx-auto grid w-[var(--container-width)] gap-8 py-12 md:grid-cols-3">\n'
         '            <div className="flex flex-col gap-3">\n'
-        f'              <p className="text-base font-semibold">{_jsx_safe_string(company["name"])}</p>\n'
+        + (f"{footer_logo_jsx}\n" if footer_logo_jsx else "")
+        + f'              <p className="text-base font-semibold">{_jsx_safe_string(company["name"])}</p>\n'
         f'              <p className="text-sm text-[color:var(--muted)]">{_jsx_safe_string(company["tagline"])}</p>\n'
         "            </div>\n"
         '            <div className="flex flex-col gap-2 text-sm">\n'
@@ -1080,11 +1202,33 @@ def render_home(
     # (shop / booking / quote) so e-commerce projects do not get a
     # service-business "Begär offert" verb in the hero.
     hero_cta_label = _hero_cta_label(dossier)
+
+    # Operator-uploaded hero image (if present) renders as a banner
+    # above the gradient section. The asset is placed in public/uploads/
+    # by copy_operator_uploads. We render a raw <img> (not next/image)
+    # because the webp files are pre-compressed by sharp and the
+    # starters ship without a Next.js Image loader config.
+    brand_block = dossier.get("brand") if isinstance(dossier.get("brand"), dict) else {}
+    hero_asset = brand_block.get("heroImage") if isinstance(brand_block, dict) else None
+    hero_section_jsx = ""
+    if isinstance(hero_asset, dict) and hero_asset.get("filename"):
+        hero_filename = hero_asset["filename"]
+        hero_alt = hero_asset.get("alt") or company["tagline"]
+        hero_section_jsx = (
+            '      <section className="relative w-full overflow-hidden bg-[color:var(--background)]">\n'
+            '        <div className="mx-auto w-[var(--container-width)] pt-[var(--section-spacing)]">\n'
+            f'          <img src={_jsx_safe_string("/uploads/" + hero_filename)} alt={_js_string_literal(hero_alt)} className="aspect-[16/9] w-full rounded-2xl object-cover shadow-sm" />\n'
+            "        </div>\n"
+            "      </section>\n"
+            "\n"
+        )
+
     return (
         icon_import + "\n"
         "export default function Home() {\n"
         "  return (\n"
         '    <main className="flex flex-1 flex-col">\n'
+        f"{hero_section_jsx}"
         '      <section className="relative overflow-hidden bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/30">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         f"{location_tag}"
@@ -1207,6 +1351,34 @@ def render_about(dossier: dict) -> str:
             "            </ul>\n"
             "          </div>\n"
         )
+
+    # Gallery images with placement="about" (or no placement, but we
+    # restrict ourselves to about so we do not overload /om-oss).
+    # The images come from operator upload via copy_operator_uploads.
+    gallery_items = dossier.get("gallery") or []
+    about_images = [
+        item
+        for item in gallery_items
+        if isinstance(item, dict)
+        and item.get("filename")
+        and (item.get("placement") in (None, "about"))
+    ]
+    gallery_section_jsx = ""
+    if about_images:
+        gallery_cards = "\n".join(
+            f'            <figure key={_jsx_safe_string(item["assetId"])} className="overflow-hidden rounded-xl border border-[color:var(--border)] bg-[color:var(--background)]">\n'
+            f'              <img src={_jsx_safe_string("/uploads/" + item["filename"])} alt={_js_string_literal(item.get("alt") or company["name"])} className="aspect-[4/3] w-full object-cover" />\n'
+            "            </figure>"
+            for item in about_images
+        )
+        gallery_section_jsx = (
+            '          <div className="flex flex-col gap-4">\n'
+            '            <h2 className="text-2xl font-semibold tracking-tight">Galleri</h2>\n'
+            '            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">\n'
+            f"{gallery_cards}\n"
+            "            </div>\n"
+            "          </div>\n"
+        )
     return (
         'import { MapPin, Quote } from "lucide-react";\n'
         "\n"
@@ -1224,6 +1396,7 @@ def render_about(dossier: dict) -> str:
         f'            <p className="text-lg text-[color:var(--foreground)] leading-relaxed">{_jsx_safe_string(company["story"])}</p>\n'
         "          </div>\n"
         f"{team_section}"
+        f"{gallery_section_jsx}"
         f"{location_section}"
         "        </div>\n"
         "      </section>\n"
@@ -1596,6 +1769,37 @@ NPM_INSTALL_TIMEOUT_SECONDS = 600
 NPM_BUILD_TIMEOUT_SECONDS = 300
 
 
+def _sanitized_npm_env() -> dict[str, str]:
+    """Return a sanitized environment for child npm subprocesses.
+
+    When ``apps/viewser`` runs ``next dev`` and spawns this builder via
+    ``POST /api/sites``, the child inherits the viewser dev-server's
+    environment. Next.js 16 enables Turbopack by default and exports
+    ``TURBOPACK=1`` (plus ``__NEXT_*`` internals) to every descendant.
+    Inside the generated site that env collides with the ``--webpack``
+    flag in the starter scripts (added to side-step the Next 16
+    ``/_global-error`` Turbopack prerender bug), and ``next build``
+    aborts with "Multiple bundler flags set: TURBOPACK=1, --webpack".
+
+    The viewser also propagates ``NODE_ENV=development`` to its
+    children. That triggers Next.js' "non-standard NODE_ENV" warning
+    inside ``next build`` and disables production optimisations.
+    Stripping ``NODE_ENV`` lets the generated site's ``next build``
+    pick the correct default ("production") for itself.
+    """
+    env = os.environ.copy()
+    for key in list(env.keys()):
+        if (
+            key == "TURBOPACK"
+            or key.startswith("TURBO_")
+            or key == "NEXT_RUNTIME"
+            or key.startswith("__NEXT_")
+        ):
+            env.pop(key, None)
+    env.pop("NODE_ENV", None)
+    return env
+
+
 def run_npm(
     command: list[str],
     cwd: Path,
@@ -1615,6 +1819,11 @@ def run_npm(
     run directory half-written. ``subprocess.TimeoutExpired`` is caught so
     the caller still gets a deterministic ``(False, elapsed, message)``
     tuple instead of an uncaught exception.
+
+    The subprocess environment is sanitized via ``_sanitized_npm_env`` to
+    remove Next.js dev-server env vars (``TURBOPACK``, ``__NEXT_*``,
+    ``NODE_ENV``) that would otherwise leak from the viewser dev server
+    into the generated site's build and break it.
     """
     npm_path = shutil.which("npm")
     if npm_path is None:
@@ -1623,6 +1832,7 @@ def run_npm(
     full_command = (
         [npm_path, *command[1:]] if command and command[0] == "npm" else [npm_path, *command]
     )
+    child_env = _sanitized_npm_env()
     start = time.monotonic()
     try:
         proc = subprocess.run(
@@ -1634,6 +1844,7 @@ def run_npm(
             errors="replace",
             shell=False,
             timeout=timeout,
+            env=child_env,
         )
     except subprocess.TimeoutExpired as exc:
         elapsed = time.monotonic() - start
@@ -2279,6 +2490,10 @@ def build(
     starter_id = site_plan["starterId"]
     print(f"Copying starter {starter_id} -> {target}")
     copy_starter(starter_id, target)
+
+    print("Copying operator uploads (logo, hero, gallery)")
+    uploads_copied = copy_operator_uploads(site_id, target, dossier)
+    print(f"  -> {uploads_copied} asset(s) copied to public/uploads/")
 
     print("Patching package.json")
     patch_package_json(target, dossier)

@@ -183,6 +183,57 @@
           }
         }
       ]
+    },
+    "brand": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Operator-supplied brand assets. Optional - omit when the operator did not upload anything. build_site.py copy_operator_uploads picks these up and copies the bytes from data/uploads/<siteId>/<assetId>/optimized.webp into the generated site's public/uploads/ before render_layout writes the header/footer. logoText/heroText are optional fallback labels render_layout uses when no logo image is set.",
+      "properties": {
+        "logo": {"$ref": "#/$defs/assetRef"},
+        "heroImage": {"$ref": "#/$defs/assetRef"},
+        "primaryColorHex": {"type": "string"},
+        "accentColorHex": {"type": "string"},
+        "logoText": {"type": "string"},
+        "heroText": {"type": "string"}
+      }
+    },
+    "gallery": {
+      "type": "array",
+      "description": "Operator-supplied photo gallery. Each item carries a placement hint that build_site.py renderers consult when placing images on home, about, services, projects, products or a dedicated gallery section. GPT Vision proposes the placement; the operator can override in the wizard.",
+      "items": {"$ref": "#/$defs/assetRef"}
+    }
+  },
+  "$defs": {
+    "assetRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Reference to an operator-uploaded image. The bytes live under data/uploads/<siteId>/<assetId>/ (LocalAssetStore today, S3AssetStore tomorrow). filename is what the generated site references as /uploads/<filename>. role and placement drive where the asset is rendered.",
+      "required": ["assetId", "filename", "mimeType", "sizeBytes", "role"],
+      "properties": {
+        "assetId": {"type": "string", "minLength": 1},
+        "filename": {"type": "string", "minLength": 1},
+        "mimeType": {
+          "type": "string",
+          "enum": ["image/png", "image/jpeg", "image/webp", "image/svg+xml"]
+        },
+        "sizeBytes": {"type": "integer", "minimum": 1},
+        "width": {"type": ["integer", "null"], "minimum": 1},
+        "height": {"type": ["integer", "null"], "minimum": 1},
+        "alt": {"type": "string"},
+        "role": {
+          "type": "string",
+          "enum": ["logo", "hero", "gallery"]
+        },
+        "placement": {
+          "type": "string",
+          "enum": ["home", "about", "services", "projects", "products", "gallery"]
+        },
+        "visionSubject": {"type": "string"},
+        "visionConfidence": {
+          "type": "string",
+          "enum": ["low", "medium", "high"]
+        }
+      }
     }
   }
 }
