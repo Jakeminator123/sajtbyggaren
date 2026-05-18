@@ -1,6 +1,6 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-18 (post-B112 extern reviewer-triage. `adde45c` `fix(builder): close B112 (clean ecommerce shop-name compound)` stängde reviewer-fynd: `_product_category_name` joinade `label.split()` utan separator → `"Handgjordkeramikbutik"` istället för `"Keramikbutik"`. Fixen plockar grammatiska substantivet (sista ordet); fyra regressionstester. Samma reviewer-pass öppnade **B110** (normaliseringsglapp mellan `build_site.py` CTA-flöde och `prompt_to_project_input.py` tagline/service-mappar — arkitektur-skuld som kopplar mot B13a) och **B111** (variantModel mock-fallback `exit 0` är medveten design men saknar `--strict`-CLI-flagga för CI). Tidigare i samma pass: `fa277a1` `fix(builder): close B109 (UnicodeDecodeError safe-fallback in copy_starter)`, `1c68035` `fix(builder): harden starter dependency baseline` (B108). Aktuellt bug-scope: 19 aktiva, 0 misplaced, 6 unknown, 79 stängda. Nästa konkreta uppgift är fortfarande **Re-Verifierings-Scout 5** med samma fyra demo-prompter.)
+**Datum:** 2026-05-18 (post-B112 extern reviewer-triage. `adde45c` `fix(builder): close B112 (clean ecommerce shop-name compound)` stängde reviewer-fynd: `_product_category_name` joinade `label.split()` utan separator → `"Handgjordkeramikbutik"` istället för `"Keramikbutik"`. Fixen plockar grammatiska substantivet (sista ordet); fyra regressionstester. Samma reviewer-pass öppnade B110 (normaliseringsglapp mellan `build_site.py` CTA-flöde och `prompt_to_project_input.py` tagline/service-mappar — arkitektur-skuld som kopplar mot B13a) och B111 (variantModel mock-fallback `exit 0` är medveten design men saknar `--strict`-CLI-flagga för CI). Tidigare i samma pass: `fa277a1` `fix(builder): close B109 (UnicodeDecodeError safe-fallback in copy_starter)`, `1c68035` `fix(builder): harden starter dependency baseline` (B108). Aktuellt bug-scope: 19 aktiva, 0 misplaced, 6 unknown, 79 stängda. Nästa konkreta uppgift är fortfarande **Re-Verifierings-Scout 5** med samma fyra demo-prompter.)
 **Aktuell repo-HEAD på `main`:** `adde45c` (`fix(builder): close B112 (clean ecommerce shop-name compound)`) + en docs-bump-commit ovanpå; kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA. Föregående relevanta commits: `b3800ca` (Steward focus-bump efter B109), `fa277a1` (B109-fix), `0d3e9b8` (Steward focus-bump efter scope-cleanup), `7742d39` (Steward bug-scope cleanup), `9f13ccc` (focus-bump efter B108), `1c68035` (B108-fix), `9cb32cf` (Backoffice docs bump), `860e553` (Backoffice control-plane), `bc43eb8` (1E fix), `01c0cfb` (variant candidate generator), `9cc3067` (1D fix), `48d6e24` (`Lite allt möjligt`), `6eaf222` (1C Steward-bump), `b5ee710` (1C fix).
 **Aktiv branch:** `main`. `backup-26-VIKTIG` (pre-B108), `backup-27` (post-B108, pre-cleanup), `backup-28` (post-cleanup, pre-B109) och `backup-29` (post-B109, pre-B112) är pushade till origin, men alla lokala branches utom `main` är raderade på operatörens uttryckliga begäran. PR #29 och PR #30 är mergade sedan tidigare; PR-brancherna `cursor/bug-scope-disciplin` och `cursor/backoffice-rensning-styrning-7c51` är raderade både lokalt och remote. Inga öppna PRs.
 **Stash-läge:** `git stash list` är **tom**.
@@ -127,6 +127,108 @@ Verifiera särskilt:
 - Keramik/e-handel har bättre H1 än webbshop (förväntat keramikbutik).
 
 Beslutsregel: snitt ≥7/10 och inget case <6.5 → Project DNA / semantic follow-up merge är nästa. Annars riktad fix på sämsta kvarvarande case. Kända lågprio-rester: B101/B102 (commerce-CTA route/text), B97 (`/kontakt`-copy), B98 (bredare e-handelsserviceområde-yta; B104 stängde bara country-only-läckan).
+
+## Handoff från detta agentpass till nästa Steward
+
+Detta pass (2026-05-18, kvällskörning) gick i fyra ron, alla på direkt
+`main` enligt branch-discipline:
+
+1. **Steward bug-scope-cleanup** (`7742d39` + `0d3e9b8`): flyttade
+   15 misplaced 1B-fixar (PR #28 / `885431b`) från "Öppna" till "Stängda"
+   i `docs/known-issues.md`. Rättade också 1B closure-noten — den
+   listade tidigare B71/B72/B75/B83 som stängda men de har `Fix: open`
+   i sina poster och är medvetet öppna (B71 markerad som unverified av
+   re-Scout). Bumpade summary-raden från `17/15/6/62` till `17/0/6/77`.
+2. **B109 reviewer-hotfix** (`fa277a1` + `b3800ca`): extern reviewer
+   (Cursor Bugbot-stil) mot baseline `1c68035` hittade att
+   `_npm_install_inputs_changed` fångade bara `(OSError, JSONDecodeError)`
+   men `load_json` läser med `encoding="utf-8"`, så ogiltig UTF-8 i
+   target-`package.json` raisade `UnicodeDecodeError` och kraschade
+   builden. Fix: lägg till `UnicodeDecodeError` i except-tuple.
+   Två regressionstester i `tests/test_builder_hardening.py`.
+3. **B112 reviewer-triage** (`adde45c` + `9bf3893`): extern reviewer
+   mot post-1E-baseline. Tre fynd verifierade genom kodläsning:
+   - B112 (Låg, stängd `adde45c`) — `_product_category_name`
+     joinade `label.split()` utan separator, så
+     `services_mentioned=["handgjord keramik"]` på e-handel-prompt gav
+     H1 `"Handgjordkeramikbutik"`. Fix: använd sista ordet
+     (grammatiska substantivet) → `"Keramikbutik"`,
+     `"Matbutik"`, `"Smyckenbutik"`. Single-word oförändrade. Tre
+     regressionstester + B106-regressionen kvarstår.
+   - B110 (Låg-Medel, öppen) — `_normalize_business_type` (B107-fixen)
+     körs bara i CTA-flödet; tagline/service-summary-mapparna i
+     `prompt_to_project_input.py` nycklar på rå briefModel-output, med
+     luckor särskilt på `webshop`/`webbshop` SV och `naprapatklinik` EN.
+     Inte krash — "split sanning" som ger inkonsekvent copy. Kopplar
+     mot B13a (arkitektur-flytt av `scripts/build_site.py` till
+     `packages/`). Verklig fix kräver delad helper, för stor för ett
+     snabbpass.
+   - B111 (Låg, öppen) — `scripts/generate_variant_candidate.py`
+     faller tillbaka till mock vid alla `Exception` från
+     `_call_variant_model` med `source="mock-llm-error"` + stderr-print
+     + `exit 0`. Medveten design men saknar
+     `--fail-on-llm-error`/`--strict`-CLI-flagga för CI-strict-mode.
+     Enhancement, inte bug.
+
+### Vad du som nästa Steward bör göra först
+
+1. `python scripts/focus_check.py` — drift-check. Förvänta dig
+   `Result: OK` med eventuell "1 commit ahead - within bump tolerance".
+2. `python scripts/list_open_bugs.py` — bug-scope. Förvänta dig
+   `Active: 19  Misplaced: 0  Unknown: 6  Closed: 79`. Misplaced > 0
+   är direkt städningssignal (öppna-poster med `Fix: <sha>` som inte
+   flyttats till Stängda).
+3. `git log --oneline -10` — kontrollera att HEAD är `9bf3893` eller
+   nyare. Två commits per sprint (Builder + Steward bump) är normalt
+   mönster sedan föregående pass.
+4. Kontrollera operatörens fråga: om hen explicit ber om att fixa
+   B110/B111 är det Builder-arbete (rör `scripts/`); annars lämna dem
+   öppna.
+
+### Vad du som nästa Steward INTE bör göra
+
+- Lämna inte B110 utan att också flytta `_normalize_business_type` till
+  delad helper. Halv-fix (ad-hoc-duplicering av normalisering) är värre
+  än ingen fix här — det skulle hänga kvar som teknisk skuld utan
+  spårning. Den hör hemma i samma sprint som B13a-arkitektur-flytten.
+- Skapa inte nya B-IDs för samma fynd som B110 eller B111 om en framtida
+  reviewer hittar dem igen. Hänvisa till befintliga B-IDs i stället.
+  Reviewer-prompter har en tendens att åter-rapportera samma observation.
+- Acceptera inte `Misplaced > 0` ohanterat. Antingen flytta dem eller
+  rapportera tillbaka till operatören att en Builder/Cloud Agent är
+  skyldig dem.
+- Bumpa inte Last verified-SHA till en docs-only-commit om det finns
+  en ny Builder-commit ovanpå. Last verified pekar på senaste
+  produktcommit, inte på sin egen bump.
+
+### Operatörsförslag som väntar på beslut (inte påbörjat)
+
+**Mini-bot-automation för Steward-städ.** Operatören frågade om
+automation i detta pass. Förslaget i tre nivåer, ingen implementerad
+ännu:
+
+- **Mini-bot (lätt):** pre-push hook eller GitHub Action som kör
+  `python scripts/list_open_bugs.py --quiet` + verifierar
+  summary-raden. Fångar ~80 % av Steward-städ-skulden för ~30 raders
+  Python. Lägst risk och snabbast påverkan.
+- **Steward-Action (medel):** GitHub Action vid push till `main` som
+  kör hela steward-guardsetet (governance, rules_sync, term_coverage,
+  bug_scope, docs_freshness) och öppnar draft-PR om något driftar.
+- **Auto-Steward (tyngre):** schemalagd Cursor Cloud Agent med fast
+  `Roll: Steward` + tydligt write-set
+  (`docs/known-issues.md`, `docs/current-focus.md`, `docs/handoff.md`).
+  Risken är scope-läckage; mitigeras via Scout RO-review före push.
+
+Lägg fram förslaget igen om operatören återupptar diskussionen.
+
+### Backup-tillstånd
+
+`backup-26-VIKTIG` (pre-B108), `backup-27` (post-B108, pre-cleanup),
+`backup-28` (post-cleanup, pre-B109) och `backup-29` (post-B109, pre-B112)
+är alla pushade på origin. Inga lokala branches utöver `main` enligt
+operatörens uttryckliga preferens. Inget nytt backup-N skapas för denna
+handoff-commit eftersom det är ren docs-only och inte ändrar
+beteende.
 
 **Demo-baseline-fix 1C closure note (2026-05-18, `b5ee710`):**
 
