@@ -12,7 +12,7 @@ from scripts.generate_variant_candidate import (
     generate_variant_candidates,
 )
 
-from .. import asset_graph, impact, loaders
+from .. import asset_graph, impact, loaders, selection_profiles
 from ..paths import REPO_ROOT
 from ._helpers import safe_render
 
@@ -255,6 +255,108 @@ def view_variants() -> None:
     st.dataframe(rows, use_container_width=True, hide_index=True)
 
 
+def view_selection_profiles() -> None:
+    st.title("Selection Profiles")
+    st.caption(
+        "Här styrs semantiska signaler för Scaffold-val. Embedding-policy är "
+        "definierad, men index byggs inte ännu."
+    )
+    if not asset_graph.EMBEDDING_DIR.exists():
+        st.info(
+            "Embedding-index saknas fortfarande. Ändringar här påverkar curated "
+            "selection-profile-data och framtida index, inte ett byggt index idag."
+        )
+
+    summaries = selection_profiles.list_profile_summaries()
+    if not summaries:
+        st.info("Inga selection-profile-filer hittades.")
+        return
+    st.dataframe(summaries, use_container_width=True, hide_index=True)
+
+    scaffold_ids = [row["scaffold"] for row in summaries]
+    selected = st.selectbox("Scaffold", scaffold_ids, key="selection_profile_scaffold")
+    try:
+        payload = selection_profiles.load_profile(selected)
+    except (OSError, ValueError) as exc:
+        st.error(f"Kunde inte läsa selection-profile: {exc}")
+        return
+
+    findings = selection_profiles.signal_findings(payload)
+    if findings:
+        st.warning("Signal-fynd: " + "; ".join(findings))
+    else:
+        st.success("Signal-listorna har inga enkla coverage-fynd.")
+
+    tab_view, tab_edit = st.tabs(["Läs", "Redigera"])
+    with tab_view:
+        st.json(payload, expanded=False)
+
+    with tab_edit:
+        edit_mode = st.toggle("Aktivera redigering", key="selection_profile_edit_toggle")
+        if not edit_mode:
+            return
+        embedding_text = st.text_area(
+            "embeddingText",
+            value=str(payload.get("embeddingText", "")),
+            height=140,
+        )
+        semantic = st.text_area(
+            "semanticSignals (en per rad)",
+            value="\n".join(payload.get("semanticSignals", []) or []),
+            height=140,
+        )
+        negative = st.text_area(
+            "negativeSignals (en per rad)",
+            value="\n".join(payload.get("negativeSignals", []) or []),
+            height=140,
+        )
+        hints = st.text_area(
+            "llmClassificationHints (en per rad)",
+            value="\n".join(payload.get("llmClassificationHints", []) or []),
+            height=140,
+        )
+        cols = st.columns(2)
+        min_confidence = cols[0].number_input(
+            "minConfidence",
+            min_value=0.0,
+            max_value=1.0,
+            value=float(payload.get("minConfidence", 0.7)),
+            step=0.01,
+        )
+        tie_break = cols[1].number_input(
+            "requiresTieBreakWhenWithin",
+            min_value=0.0,
+            max_value=1.0,
+            value=float(payload.get("requiresTieBreakWhenWithin", 0.08)),
+            step=0.01,
+        )
+
+        next_payload = {
+            "id": payload.get("id", selected),
+            "embeddingText": embedding_text.strip(),
+            "semanticSignals": selection_profiles.lines_to_list(semantic),
+            "negativeSignals": selection_profiles.lines_to_list(negative),
+            "llmClassificationHints": selection_profiles.lines_to_list(hints),
+            "minConfidence": min_confidence,
+            "requiresTieBreakWhenWithin": tie_break,
+        }
+        errors = selection_profiles.validate_profile(next_payload)
+        if errors:
+            for error in errors:
+                st.error(error)
+        st.subheader("Preview")
+        st.json(next_payload, expanded=False)
+        if st.button("Spara selection-profile", disabled=bool(errors)):
+            try:
+                selection_profiles.write_profile(selected, next_payload)
+            except ValueError as exc:
+                st.error(f"Kunde inte spara: {exc}")
+                return
+            loaders.load_json.clear()
+            loaders.read_text.clear()
+            st.success("Selection Profile sparad.")
+
+
 def view_variant_candidates() -> None:
     st.title("Variant Candidates")
     st.caption(
@@ -375,6 +477,7 @@ def view_reference_templates() -> None:
 VIEWS = {
     "Kontrollplan": lambda: safe_render(view_control_plane),
     "Scaffolds": lambda: safe_render(view_scaffolds),
+    "Selection Profiles": lambda: safe_render(view_selection_profiles),
     "Variants": lambda: safe_render(view_variants),
     "Variant Candidates": lambda: safe_render(view_variant_candidates),
     "Dossiers": lambda: safe_render(view_dossiers),
