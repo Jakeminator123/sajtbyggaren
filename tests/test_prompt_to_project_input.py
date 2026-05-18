@@ -725,6 +725,47 @@ def test_ecommerce_company_name_uses_product_category_when_name_missing() -> Non
 
 
 @pytest.mark.tooling
+def test_product_category_name_uses_last_word_for_multi_word_service() -> None:
+    """B112: multi-word categories must not concat into a garbled stem.
+
+    The previous helper joined every part of ``label.split()`` without a
+    separator, so ``"handgjord keramik"`` rendered as
+    ``"Handgjordkeramik"`` and ``_derive_company_name`` appended
+    ``"butik"`` to produce ``"Handgjordkeramikbutik"``. The Swedish
+    compound noun is ``"Keramikbutik"``; the helper now picks the
+    trailing noun of the label so the suffix attaches to a single word.
+    """
+    from scripts.prompt_to_project_input import _product_category_name
+
+    assert _product_category_name(["handgjord keramik"]) == "Keramik"
+    assert _product_category_name(["ekologisk mat"]) == "Mat"
+    assert _product_category_name(["unika handgjorda smycken"]) == "Smycken"
+
+
+@pytest.mark.tooling
+def test_product_category_name_preserves_single_word_categories() -> None:
+    """Single-word categories must still produce the expected stem."""
+    from scripts.prompt_to_project_input import _product_category_name
+
+    assert _product_category_name(["keramik"]) == "Keramik"
+    assert _product_category_name(["böcker"]) == "Böcker"
+
+
+@pytest.mark.tooling
+def test_ecommerce_company_name_produces_clean_compound_for_multi_word_brief() -> None:
+    """B112 end-to-end: handgjord keramik -> Keramikbutik, inte Handgjordkeramikbutik."""
+    name = _derive_company_name(
+        business_type="e-commerce",
+        location_hint=None,
+        services_mentioned=["handgjord keramik"],
+        language="sv",
+    )
+
+    assert name == "Keramikbutik"
+    assert "Handgjordkeramik" not in name
+
+
+@pytest.mark.tooling
 def test_company_name_falls_back_when_brief_has_no_signals() -> None:
     """Empty brief -> safe placeholder; never the raw prompt."""
     name = _derive_company_name(

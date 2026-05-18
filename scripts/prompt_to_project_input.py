@@ -464,7 +464,16 @@ def _derive_company_name(
 
 
 def _product_category_name(services_mentioned: list[str] | None) -> str | None:
-    """Return a short product category for ecommerce fallback names."""
+    """Return a short product category for ecommerce fallback names.
+
+    Multi-word service labels ("handgjord keramik", "ekologisk mat") used
+    to be concat:ed via ``"".join(label.split())``, which produced garbled
+    compound words like ``"Handgjordkeramikbutik"`` once ``"butik"`` was
+    appended by ``_derive_company_name``. Swedish reads compound nouns
+    naturally as ``<noun>butik`` (``"Keramikbutik"``, ``"Matbutik"``), so
+    pick the trailing noun of the label and let ``_derive_company_name``
+    append the ``"butik"`` suffix to that single word.
+    """
     for service in services_mentioned or []:
         if not isinstance(service, str):
             continue
@@ -474,9 +483,11 @@ def _product_category_name(services_mentioned: list[str] | None) -> str | None:
         lowered = label.lower()
         if lowered in {"konsultation", "consultation", "e-commerce", "webbshop", "webshop"}:
             continue
-        compact = "".join(part for part in label.split())
-        if compact:
-            return _capitalize_first(compact)
+        words = label.split()
+        if not words:
+            continue
+        primary_noun = words[-1]
+        return _capitalize_first(primary_noun)
     return None
 
 
