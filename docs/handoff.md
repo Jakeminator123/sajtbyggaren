@@ -1,8 +1,8 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-18 (post-Re-Verifierings-Scout 3, lokal mainline-commit `b5ee710` `fix(builder): close demo-baseline-fix 1C (B88 B94 B95 B96)` + Steward-bump `6eaf222`. 1C stängde fyra top synliga demo-blockers efter re-Verifierings-Scout 2026-05-15:s 5.54/10-mätning: B88 (kontakt-placeholder dev-jargong), B94 (tom team-grid på `/om-oss`), B95 (landnamn som hero-ortstag), B96 (scaffold-omedveten hero-CTA). Re-Verifierings-Scout 3 2026-05-18 mätte snittet till **5.13/10 (rå) / ~5.9/10 (kalibrerat mot Scout-2-skalan)**, case-spann 4.88-5.75, alla fyra builds gröna. Verdict: 1C lyfte snittet men under 7/10-tröskeln → bug-sweep round 2 (sex nya öppna B-IDs: B99 Hög, B100/B103 Medel, B101/B102/B104 Låg). Aktuellt bug-scope: 21 aktiva, 15 misplaced, 6 unknown, 54 stängda — låst av sammanfattningsraden i `docs/known-issues.md`. Nästa konkreta uppgift är **demo-baseline-fix 1D / bug-sweep round 2** (B99/B100/B103/B104).)
-**Aktuell repo-HEAD på `main`:** Steward-bump-commit ovanpå `b5ee710` (`fix(builder): close demo-baseline-fix 1C (B88 B94 B95 B96)`), som ligger ovanpå `b09f935` (`docs(focus): record backup-1..backup-8 prune on origin`), `7fdfee2` (PR #29 + #30 post-merge bump) och `b3a32fc` (PR #30 squash-merge). Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA. Föregående produktbaseline: `885431b` (PR #28 demo-baseline-fix 1B + bug-sweep) och `d99f8ba` (demo-baseline-fix 1A-hotfix).
-**Aktiv branch:** `main`. `backup-22` skapad från synkad `main` innan 1C-sprinten (lokalt + push till origin). PR #29 och PR #30 är mergade sedan tidigare; PR-brancherna `cursor/bug-scope-disciplin` och `cursor/backoffice-rensning-styrning-7c51` är raderade både lokalt och remote. Inga öppna PRs.
+**Datum:** 2026-05-18 (post-demo-baseline-fix 1D, lokal mainline-commit `9cc3067` `fix(builder): close demo-baseline-fix 1D (B99 B100 B103 B104)`. 1D stängde fyra högst prioriterade Re-Verifierings-Scout 3-fynd: B99 (publik story-placeholder/planner-meta), B100 (booking-/commerce-CTA via `businessType` fallback), B103 (tagline som upprepar H1), B104 (`/om-oss` country-only serviceområden). Smoke med real `briefModel`: frisör + naprapat får "Boka tid", e-handel får "Shoppa nu", ingen "Byt ut den här texten" i verifierad output. Aktuellt bug-scope: 17 aktiva, 15 misplaced, 6 unknown, 58 stängda. Nästa konkreta uppgift är **Re-Verifierings-Scout 4** med samma fyra demo-prompter.)
+**Aktuell repo-HEAD på `main`:** `9cc3067` (`fix(builder): close demo-baseline-fix 1D (B99 B100 B103 B104)`) lokalt, med denna Steward-bump ovanpå när den committas. Föregående relevanta commits: `48d6e24` (`Lite allt möjligt`), `6eaf222` (1C Steward-bump), `b5ee710` (1C fix), `b09f935` (backup-prune note), `7fdfee2` (PR #29/#30 post-merge bump), `b3a32fc` (PR #30 squash-merge). Kör `git log --oneline -1` eller `python scripts/focus_check.py` för faktisk HEAD-SHA.
+**Aktiv branch:** `main`. `backup-23` skapad från synkad `main` innan 1D-sprinten (lokalt + push till origin). PR #29 och PR #30 är mergade sedan tidigare; PR-brancherna `cursor/bug-scope-disciplin` och `cursor/backoffice-rensning-styrning-7c51` är raderade både lokalt och remote. Inga öppna PRs.
 **Stash-läge:** `git stash list` är **tom**.
 
 Detta är en operatörsfri översikt så att en ny agent kan ta över på 5 minuter utan att läsa hela transkriptet. Läs den FÖRE `docs/current-focus.md` om du är helt ny på projektet; läs `current-focus.md` FÖRE den om du bara behöver veta nästa konkreta uppgift.
@@ -114,18 +114,17 @@ Tre lager:
 
 ## Nästa konkreta uppgift
 
-Se `docs/current-focus.md` → **"Next action"**. Kort version: demo-baseline-fix 1C är klar (`b5ee710`) och Re-Verifierings-Scout 3 är körd (snitt **5.13/10 rå / ~5.9/10 kalibrerat**, alla fyra builds gröna). Verdict: under 7/10-tröskeln → nästa är **demo-baseline-fix 1D / bug-sweep round 2**, fokus på de fyra största hävstångerna från Scout-rapporten:
+Se `docs/current-focus.md` → **"Next action"**. Kort version: demo-baseline-fix 1D är klar lokalt i `9cc3067`. Nästa är **Re-Verifierings-Scout 4** med samma fyra demo-prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`), jämfört mot Re-Verifierings-Scout 3:s **5.13/10 rå / ~5.9/10 kalibrerat**.
 
-1. **B99 Hög** — `_derive_story` skriver platshållartext på `/om-oss` även när `brief.notesForPlanner` är icke-tom (publikt på alla 4 case).
-2. **B100 Medel** — `_hero_cta_label` saknar `businessType`-fallback; booking-branscher med tomma `conversionGoals` får quote-default istället för "Boka tid" (frisör + naprapat case 2 + 3).
-3. **B103 Medel** — `_derive_tagline` upprepar bara H1 ("Elektriker i Malmö" → "Lokal elektriker i Malmö").
-4. **B104 Låg** — `render_about` "Områden vi arbetar i" är inte country-only-medveten (kan slå ihop med B98).
+Verifiera särskilt:
 
-Off-limits: `apps/viewser/lib/stackblitz-files.ts`, `viewer-panel.tsx`, `next.config.ts`, `tests/test_viewser_files.py` (B59 parkerat). `data/starters/`, `examples/`, `.env*`, `packages/preview-runtime/`.
+- Ingen publik story innehåller "Byt ut den här texten", intern planner-meta eller rå prompt.
+- Frisör + naprapat har hero-CTA "Boka tid" trots `conversionGoals=[]`.
+- E-handel har hero-CTA "Shoppa nu".
+- Tagline upprepar inte H1 som "Lokal {label} i {city}".
+- `/om-oss` visar inte "Områden vi arbetar i: Sverige" för country-only e-handel.
 
-Inte i scope: B101, B102 (commerce-CTA-mismatch, väntar tills någon tar `render_products` separat). B97, B98 (re-Scout låg-impact). B89-B93 (extern reviewer-triage, separat sprint).
-
-Acceptanskriterier: B99/B100/B103/B104 stängda med regression-tester; smoke-build på "frisör Göteborg" och "liten e-handel som säljer keramik" verifierar att hero-CTA på frisör = "Boka tid" och story-platshållartexten inte längre läcker; `docs/known-issues.md` summary-rad uppdaterad (21 → 17 aktiva); current-focus + handoff bumpade. Skapa `backup-23` innan sprintstart. Beslutsregel för Re-Verifierings-Scout 4 efter denna sprint: snitt ≥7/10 och inget case <6.5 → Project DNA är nästa.
+Beslutsregel: snitt ≥7/10 och inget case <6.5 → Project DNA / semantic follow-up merge är nästa. Annars riktad fix på sämsta kvarvarande case. Kända lågprio-rester: B101/B102 (commerce-CTA route/text), B97 (`/kontakt`-copy), B98 (bredare e-handelsserviceområde-yta; B104 stängde bara country-only-läckan).
 
 **Demo-baseline-fix 1C closure note (2026-05-18, `b5ee710`):**
 

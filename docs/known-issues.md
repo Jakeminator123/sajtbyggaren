@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 21 aktiva, 15 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 54 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 17 aktiva, 15 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 58 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -331,29 +331,6 @@ levereras inte i case 2 + 3 eftersom briefModel returnerar
 `conversionGoals=[]` för korta prompter (booking-bransch faller
 tillbaka till quote-default). Audit-konfidence 7/10.
 
-- **`B99` Hög** - `_derive_story` i
-  `scripts/prompt_to_project_input.py` skriver publik platshållartext
-  ("Vi är en {label} i {city}. Byt ut den här texten mot er egen
-  berättelse så besökarna lär känna er.") på `/om-oss` även när
-  `brief.notesForPlanner` är icke-tom. Verifierat publikt på alla
-  fyra demo-case i Re-Verifierings-Scout 3 (alla hade icke-tom
-  `notesForPlanner`). Samma kategori som B88, annan yta. Test-glipa:
-  befintligt `test_story_prefers_notes_for_planner` låser bara att
-  `notesForPlanner` *kan* föredras, inte att det görs på real
-  briefModel-utfall. Källa: Re-Verifierings-Scout 3 2026-05-18.
-  Fix: open. Test: open.
-- **`B100` Medel** - `_hero_cta_label` i `scripts/build_site.py`
-  routar bara på `scaffoldId` + `conversionGoals`, inte på
-  `businessType`. För 3-ords-prompter (`frisör Göteborg`,
-  `naprapatklinik Stockholm`) returnerar briefModel
-  `conversionGoals=[]`, vilket gör att booking-branscher faller
-  tillbaka till quote-default `"Begär offert"` istället för
-  `"Boka tid"`. Den exakta bugg 1C försökte stänga blir kvar i de
-  två tyngsta demo-blockerna. Förslagen fix: `businessType`-fallback
-  i prioritetskedjan (hair-salon, barber, naprapat-clinic,
-  chiropractor, massage, physiotherapist, dentist, personal-training
-  → booking; e-commerce, webshop → shop). Källa: Re-Verifierings-
-  Scout 3 2026-05-18. Fix: open. Test: open.
 - **`B101` Låg** - Hero-CTA "Shoppa nu" på e-handel-case länkar till
   `/kontakt` istället för `/produkter`. `render_home` i
   `scripts/build_site.py` använder `contact_path` som primär CTA-
@@ -368,23 +345,6 @@ tillbaka till quote-default). Audit-konfidence 7/10.
   inte trådas via `_hero_cta_label`. Inkonsekvent commerce-
   tonalitet. Källa: Re-Verifierings-Scout 3 2026-05-18. Fix: open.
   Test: open.
-- **`B103` Medel** - `_derive_tagline` i
-  `scripts/prompt_to_project_input.py` använder template "Lokal
-  {label} i {city}" när briefModel inte returnerar explicit tagline,
-  vilket bara upprepar hero-H1 ("Elektriker i Malmö" + "Lokal
-  elektriker i Malmö" på case 1, samma mönster på case 2 + 3).
-  Tagline tillför ingenting och tar plats där en faktisk USP borde
-  stå. Förslagen fix: föredra `brief.tagline` → `notesForPlanner` →
-  inte falla tillbaka till template när H1 redan innehåller
-  `{label}` + `{city}`. Källa: Re-Verifierings-Scout 3 2026-05-18.
-  Fix: open. Test: open.
-- **`B104` Låg** - `render_about` i `scripts/build_site.py` använder
-  inte `_location_is_country_only`-helpern som B95 introducerade,
-  så country-only locations renderar fortfarande `<h2>Områden vi
-  arbetar i</h2> <p>Sverige</p>` på `/om-oss` (verifierat case 4).
-  Hero suppresseras korrekt (B95), men `/om-oss` läcker. Trivial
-  trådningsfix. Närbesläktad med B98 (samma yta, annan dimension).
-  Källa: Re-Verifierings-Scout 3 2026-05-18. Fix: open. Test: open.
 
 ### Övriga öppna
 
@@ -490,6 +450,52 @@ PR #28 / `885431b` stängde B64, B65, B66, B69, B70, B71, B72, B73, B74, B75, B7
 Lokal mainline-commit `b5ee710` stängde B88 (kontakt-placeholder dev-jargong), B94 (tom team-grid på `/om-oss`), B95 (landnamn som hero-ortstag) och B96 (scaffold-omedveten hero-CTA). Inga andra B-IDs påverkade. Kvar från re-Verifierings-Scout 2026-05-15 är B97 + B98 (låg-impact). Re-Verifierings-Scout med samma fyra prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`) körs efter denna bump för att jämföra mot 5.54-baselinen. Förväntad effekt: snitt 6.5-7.0/10.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B99` Hög** (stängd 2026-05-18, demo-baseline-fix 1D) -
+  `_derive_story` i `scripts/prompt_to_project_input.py` skrev publik
+  platshållartext ("Byt ut den här texten...") på `/om-oss` och kunde
+  använda `notesForPlanner` utan att skilja intern planner-orientering
+  från kundsäker copy. **Fix:** `_customer_safe_planner_note()` tillåter
+  bara rena, kundvända notes; intern meta (`prompt`, `brief`, `website`,
+  `webbplats`, `focus on`, etc.) faller tillbaka till neutral publik
+  story utan operator-instruktioner. Fix: `9cc3067`. Test:
+  `tests/test_prompt_to_project_input.py::test_story_constructs_placeholder_when_notes_missing`,
+  `tests/test_prompt_to_project_input.py::test_story_uses_customer_safe_notes_for_planner`,
+  `tests/test_prompt_to_project_input.py::test_story_discards_internal_notes_for_planner`.
+- **`B100` Medel** (stängd 2026-05-18, demo-baseline-fix 1D) -
+  `_hero_cta_label` i `scripts/build_site.py` byggde CTA-variant bara
+  från `scaffoldId` + `conversionGoals`, vilket lämnade korta
+  booking-prompter (`frisör Göteborg`, `naprapatklinik Stockholm`) på
+  quote-default när briefModel returnerade `conversionGoals=[]`.
+  **Fix:** `_hero_cta_variant()` prioriterar explicit `conversionGoals`
+  först, faller sedan tillbaka på `company.businessType` (inkl.
+  `hair-salon`, `frisör`, `naprapat-clinic`, `naprapath-clinic`,
+  `naprapatklinik`, `dentist`, commerce-varianter) och sist på
+  `scaffoldId`. Smoke 2026-05-18 verifierade `Boka tid` för frisör +
+  naprapat och `Shoppa nu` för e-handel. Fix: `9cc3067`. Test:
+  `tests/test_builder_route_emission.py::test_hero_cta_label_uses_booking_business_type_fallback`,
+  `tests/test_builder_route_emission.py::test_hero_cta_label_uses_shop_business_type_fallback`,
+  `tests/test_builder_route_emission.py::test_hero_cta_label_explicit_goals_beat_business_type_fallback`.
+- **`B103` Medel** (stängd 2026-05-18, demo-baseline-fix 1D) -
+  `_derive_tagline` i `scripts/prompt_to_project_input.py` föll
+  tillbaka till "Lokal {label} i {city}", vilket upprepade H1 på korta
+  prompts. **Fix:** nya branschspecifika tagline-mappar för sv/en
+  ger konkreta, kundvända vinklar (t.ex. "Klippning, färg och styling
+  med enkel bokning", "Behandling och rådgivning med enkel bokning",
+  "Utvalt sortiment med enkel beställning") och service-fallbacken
+  används först när businessType inte är känd. Fix: `9cc3067`. Test:
+  `tests/test_prompt_to_project_input.py::test_derive_tagline_builds_from_business_type_and_location`,
+  `tests/test_prompt_to_project_input.py::test_derive_tagline_booking_businesses_do_not_repeat_h1`,
+  `tests/test_prompt_to_project_input.py::test_tagline_never_uses_notes_for_planner`.
+- **`B104` Låg** (stängd 2026-05-18, demo-baseline-fix 1D) -
+  `render_about` använde inte B95-helpern `_location_is_country_only`,
+  så `/om-oss` kunde fortfarande visa "Områden vi arbetar i: Sverige"
+  för country-only e-handel även när hero redan suppressade ortstaget.
+  **Fix:** `render_about` bygger service-area-sektionen villkorat och
+  omittar den när `city == country`, men behåller den för riktiga
+  serviceområden. Fix: `9cc3067`. Test:
+  `tests/test_builder_route_emission.py::test_render_about_omits_service_areas_when_country_only`,
+  `tests/test_builder_route_emission.py::test_render_about_keeps_service_areas_for_real_city`.
 
 - **`B88` Hög** (stängd 2026-05-18, demo-baseline-fix 1C) -
   `scripts/prompt_to_project_input.py:_placeholder_contact()` skrev
