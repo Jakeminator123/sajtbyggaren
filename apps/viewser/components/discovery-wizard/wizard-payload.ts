@@ -7,14 +7,20 @@
  *   1. Stabilt JSON-schema som backend kan validera (Pydantic eller
  *      Zod-spegling).
  *   2. Strippa tomma fält så payloaden blir liten och så att Python-
- *      mappern kan skilja "ej ifyllt" från "explicit tomsträng".
+ *      resolvern kan skilja "ej ifyllt" från "explicit tomsträng".
  *   3. Generera en kort, rik `prompt`-text som befintlig LLM-extraktion
  *      kan använda som fallback om vissa fält saknas — det följer
  *      mönstret i `prompt-builder.tsx` där originalprompten alltid
  *      bevaras som `rawPrompt`.
  */
 
-import { resolveContentBranch, WIZARD_CATEGORIES } from "./wizard-constants";
+import {
+  fallbackDiscoveryOptions,
+  resolveContentBranchFromOptions,
+  resolveScaffoldHintFromOptions,
+  validateDiscoveryCategoryIds,
+} from "./discovery-options";
+import type { discoveryOption } from "./discovery-options";
 import type { WizardAnswers } from "./wizard-types";
 
 export type DiscoveryPayload = {
@@ -27,9 +33,9 @@ export type DiscoveryPayload = {
   schemaVersion: 1;
   /** Free-form pitch som operatorn skrev i prompt-builder-input:en. */
   rawPrompt: string;
-  /** Beräknad gren (ecommerce, restaurant, ...) — backend kan double-check. */
-  contentBranch: ReturnType<typeof resolveContentBranch>;
-  /** Scaffold-hint baserat på första valda kategorin. */
+  /** Computed branch from governance options; backend double-checks it. */
+  contentBranch: ReturnType<typeof resolveContentBranchFromOptions>;
+  /** Generic runtime-safe hint. Backend resolver decides final scaffold. */
   scaffoldHint: string;
   /** Trimmed copy of all wizard answers — tomma fält strippade. */
   answers: WizardAnswers;
@@ -72,18 +78,21 @@ function stripEmpty<T>(value: T): T {
 export function buildDiscoveryPayload(
   rawPrompt: string,
   answers: WizardAnswers,
+  discoveryOptions: readonly discoveryOption[] = fallbackDiscoveryOptions(),
 ): DiscoveryPayload {
-  const branch = resolveContentBranch(answers.siteType);
-  const firstCategory = answers.siteType[0];
-  const scaffoldHint =
-    WIZARD_CATEGORIES.find((c) => c.id === firstCategory)?.scaffoldHint ??
-    "local-service-business";
+  if (!validateDiscoveryCategoryIds(answers.siteType, discoveryOptions)) {
+    throw new Error("Okänd kategori i discovery-svaren.");
+  }
+  const branch = resolveContentBranchFromOptions(answers.siteType, discoveryOptions);
 
   return {
     schemaVersion: 1,
     rawPrompt: rawPrompt.trim(),
     contentBranch: branch,
-    scaffoldHint,
+    scaffoldHint: resolveScaffoldHintFromOptions(
+      answers.siteType,
+      discoveryOptions,
+    ),
     answers: stripEmpty(answers),
   };
 }
@@ -99,11 +108,10 @@ export function buildDiscoveryPayload(
  *
  * Operatörens originaltext bevaras i toppen ("Operatörens beskrivning")
  * och även i `discovery.rawPrompt` så att vi alltid kan referera till
- * den orörda prompten. Discovery-overrides (`_apply_discovery_overrides`
- * i `prompt_to_project_input.py`) körs efter LLM-extraktionen och
- * patchar in wizardens svar deterministiskt — master-prompten är
- * därför primärt till för att hjälpa LLM att fylla i fält wizarden
- * inte täcker (notesForPlanner, businessTypeGuess, contentDepth).
+ * den orörda prompten. Discovery Resolver körs efter LLM-extraktionen
+ * och väger in wizardens svar deterministiskt — master-prompten är
+ * därför primärt till för att hjälpa LLM att fylla i fält som wizarden
+ * inte täcker.
  */
 function joinNonEmpty(items: string[], separator = ", "): string {
   return items
@@ -136,11 +144,15 @@ function formatService(item: { name: string; price?: string; description?: strin
   return parts.join(" ");
 }
 
-export function composeMasterPrompt(rawPrompt: string, answers: WizardAnswers): string {
+export function composeMasterPrompt(
+  rawPrompt: string,
+  answers: WizardAnswers,
+  discoveryOptions: readonly discoveryOption[] = fallbackDiscoveryOptions(),
+): string {
   const sections: string[] = [];
-  const branch = resolveContentBranch(answers.siteType);
+  const branch = resolveContentBranchFromOptions(answers.siteType, discoveryOptions);
   const categoryLabels = answers.siteType
-    .map((id) => WIZARD_CATEGORIES.find((c) => c.id === id)?.label ?? id)
+    .map((id) => discoveryOptions.find((c) => c.id === id)?.label ?? id)
     .filter(Boolean);
 
   // 1. Operatörens ursprungliga pitch — bevarad ordagrant så briefModel

@@ -7,6 +7,7 @@ import {
   buildDiscoveryPayload,
   composeMasterPrompt,
 } from "@/components/discovery-wizard/wizard-payload";
+import type { discoveryOption } from "@/components/discovery-wizard/discovery-options";
 import type { WizardAnswers } from "@/components/discovery-wizard/wizard-types";
 import type { ProjectInputOption } from "@/components/project-input-picker";
 import { Button } from "@/components/ui/button";
@@ -250,7 +251,10 @@ export function PromptBuilder({
     setWizardOpen(true);
   }
 
-  function handleWizardComplete(answers: WizardAnswers) {
+  function handleWizardComplete(
+    answers: WizardAnswers,
+    discoveryOptions: readonly discoveryOption[],
+  ) {
     setWizardOpen(false);
     const cleaned = pendingPrompt.trim();
     if (!cleaned) return;
@@ -260,10 +264,20 @@ export function PromptBuilder({
     // för att extrahera tone, target_audience, requested_capabilities,
     // conversion_goals och notes_for_planner — i stället för att bara
     // gissa från operatörens första rad. Discovery-objektet skickas
-    // fortfarande separat och patchar Project Input deterministiskt
-    // i `_apply_discovery_overrides`.
-    const masterPrompt = composeMasterPrompt(cleaned, answers);
-    const discovery = buildDiscoveryPayload(cleaned, answers);
+    // separately; the backend Discovery Resolver owns scaffold and
+    // variant decisions from governance.
+    let discovery: ReturnType<typeof buildDiscoveryPayload>;
+    try {
+      discovery = buildDiscoveryPayload(cleaned, answers, discoveryOptions);
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Discovery-svaren kunde inte valideras.",
+      );
+      return;
+    }
+    const masterPrompt = composeMasterPrompt(cleaned, answers, discoveryOptions);
     void executeBuild({
       cleanedPrompt: masterPrompt,
       submissionMode: "init",

@@ -50,6 +50,7 @@ def test_viewser_expected_files_exist() -> None:
         "app/api/runs/[runId]/artifacts/route.ts",
         # Prompt-till-sajt MVP v1: free-prompt -> Project Input -> build.
         "app/api/prompt/route.ts",
+        "app/api/discovery-options/route.ts",
         "components/viewer-panel.tsx",
         "components/token-meter.tsx",
         "components/project-input-picker.tsx",
@@ -60,6 +61,7 @@ def test_viewser_expected_files_exist() -> None:
         # Prompt-till-sajt MVP v1: prompt textarea + status panel that
         # wires through /api/prompt to runBuild.
         "components/prompt-builder.tsx",
+        "components/discovery-wizard/discovery-options.ts",
         "lib/openai.ts",
         "lib/build-runner.ts",
         "lib/localhost-guard.ts",
@@ -71,6 +73,109 @@ def test_viewser_expected_files_exist() -> None:
     ]
     missing = [path for path in expected if not (VIEWSER_DIR / path).exists()]
     assert not missing, f"Missing viewser files: {missing}"
+
+
+@pytest.mark.tooling
+def test_discovery_options_route_reads_taxonomy_and_omits_starter_id() -> None:
+    text = (VIEWSER_DIR / "app" / "api" / "discovery-options" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "discovery-taxonomy.v1.json" in text, (
+        "Discovery-options-routen måste läsa Discovery Taxonomy server-side."
+    )
+    assert "scaffold-contract.v1.json" in text, (
+        "Discovery-options-routen måste slå upp targetScaffoldLabel från "
+        "scaffold-kontraktet istället för att hårdkoda UI-labels."
+    )
+    assert "expectedStarterId" not in text and "starterId" not in text, (
+        "Discovery-options-routen får inte exponera starterId/expectedStarterId "
+        "till frontend."
+    )
+    for field in (
+        "id",
+        "label",
+        "contentBranch",
+        "supportStatus",
+        "defaultVariantId",
+        "targetScaffoldLabel",
+        "fallbackLabel",
+    ):
+        assert field in text, f"Discovery-options-routen saknar fältet {field!r}."
+
+
+@pytest.mark.tooling
+def test_discovery_wizard_uses_governance_options_with_ts_cache_fallback() -> None:
+    wizard = (VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx").read_text(
+        encoding="utf-8"
+    )
+    site_type = (
+        VIEWSER_DIR
+        / "components"
+        / "discovery-wizard"
+        / "steps"
+        / "site-type-step.tsx"
+    ).read_text(encoding="utf-8")
+    constants = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "wizard-constants.ts"
+    ).read_text(encoding="utf-8")
+
+    assert 'fetch("/api/discovery-options"' in wizard, (
+        "DiscoveryWizard måste hämta kategori-options från governance-routen "
+        "när overlayen öppnas."
+    )
+    assert "fallbackDiscoveryOptions" in wizard, (
+        "DiscoveryWizard behöver en lokal UI-cache fallback så overlayen inte "
+        "blockas av ett transient route-fel."
+    )
+    assert "source === \"governance\"" in site_type, (
+        "SiteTypeStep ska kunna visa att listan följer Discovery Taxonomy."
+    )
+    assert "Backendens resolver avgör slutlig scaffold" in site_type, (
+        "SiteTypeStep ska göra fallback/planned-status begriplig utan att "
+        "frontend tar scaffold-beslutet."
+    )
+    assert "Discovery Taxonomy is the canonical" in constants, (
+        "wizard-constants.ts måste dokumentera att TS-listan bara är UI-cache."
+    )
+
+
+@pytest.mark.tooling
+def test_discovery_payload_blocks_unknown_categories_and_preserves_schema_version() -> None:
+    payload = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "wizard-payload.ts"
+    ).read_text(encoding="utf-8")
+
+    assert "schemaVersion: 1" in payload, (
+        "Discovery payload måste behålla schemaVersion=1."
+    )
+    assert "validateDiscoveryCategoryIds" in payload, (
+        "buildDiscoveryPayload måste blocka category ids som saknas i "
+        "governance-options."
+    )
+    assert "Okänd kategori" in payload, (
+        "Okända category ids ska ge tydligt klientfel före /api/prompt."
+    )
+    assert "resolveScaffoldHintFromOptions" in payload, (
+        "buildDiscoveryPayload ska härleda scaffoldHint från category-options "
+        "så ecommerce inte skickar local-service-business som motsägande hint."
+    )
+    assert '"starterId"' not in payload, (
+        "Frontendens discovery payload får inte sätta starterId."
+    )
+
+
+@pytest.mark.tooling
+def test_prompt_route_rejects_discovery_starter_id_and_followup_discovery() -> None:
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Discovery-payload får inte sätta starterId" in text, (
+        "/api/prompt måste avvisa starterId i discovery.answers."
+    )
+    assert "Discovery-wizarden används bara i init-läge" in text, (
+        "Followup mode får inte acceptera discovery-payload."
+    )
 
 
 @pytest.mark.tooling

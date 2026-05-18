@@ -1,15 +1,7 @@
 /**
- * Discovery wizard constants — kategorier, chip-listor och statiska
- * mappnings som styr stegens UI. Ported från
- * `Sajtmaskin_Genberg/src/components/builder/IntakeWizard.tsx`
- * (CATEGORIES / TONE / CTA / MUST_HAVE) men anpassade mot
- * Sajtbyggaren 2.0:s scaffold/variant-namn (se
- * `governance/policies/scaffold-contract.v1.json`).
- *
- * Hålls i en ren TS-fil — inga React-importer — så att backend-
- * mappern (`packages/generation/discovery/`) kan parsa samma
- * enum-listor via genererade JSON-sidor om vi senare väljer att
- * code-genera dem.
+ * Discovery wizard UI constants. Discovery Taxonomy is the canonical
+ * category -> branch/scaffold/variant source; these TS values are a local UI
+ * cache for labels, fallback rendering and non-governance chip lists.
  */
 
 export type WizardCategoryId =
@@ -40,10 +32,8 @@ export type WizardCategoryId =
   | "other";
 
 /**
- * Scaffold-IDs som Sajtbyggaren 2.0 idag erkänner. Speglar
- * `packages/generation/orchestration/scaffolds/<id>/` på disk.
- * Wizarden använder dessa som `scaffoldHint` i Site Brief; planner-
- * modellen har sista ordet om vilken scaffold som faktiskt väljs.
+ * Runtime-safe scaffold hints. Frontend may send these as hints only; the
+ * backend Discovery Resolver decides selected scaffold/fallback from taxonomy.
  */
 export type ScaffoldHint = "local-service-business" | "ecommerce-lite";
 
@@ -55,10 +45,9 @@ export type WizardCategory = {
 };
 
 /**
- * 25 chip-kategorier. Varje kategori mappas till en av de scaffolds
- * som Sajtbyggaren idag stödjer. Saknade vertikaler (portfolio etc.)
- * faller tillbaka till `local-service-business` tills nästa scaffold
- * är klar.
+ * 25 chip categories mirrored from Discovery Taxonomy for first render only.
+ * /api/discovery-options replaces these with governance-backed options when
+ * the overlay opens.
  */
 export const WIZARD_CATEGORIES: WizardCategory[] = [
   { id: "business", label: "Företag / Tjänster", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
@@ -88,10 +77,7 @@ export const WIZARD_CATEGORIES: WizardCategory[] = [
   { id: "other", label: "Annat", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
 ];
 
-/**
- * Content-grenar styr vilka inneråslfält som visas i steg 3. Mappas
- * från valda kategorier via `resolveContentBranch()`.
- */
+/** Content branches control which content fields are shown in step 3. */
 export type ContentBranch =
   | "ecommerce"
   | "restaurant"
@@ -108,12 +94,7 @@ export type ContentBranch =
   | "business"
   | "minimal";
 
-/**
- * Returnerar den mest specifika gren som matchar valda kategorier.
- * Mer specifika grenar (ecommerce, restaurant, etc.) vinner över
- * generiska (business, minimal). Tom siteType faller tillbaka till
- * `business`.
- */
+/** UI-cache branch resolver used only before governance options load. */
 export function resolveContentBranch(siteType: WizardCategoryId[]): ContentBranch {
   const set = new Set(siteType);
   if (set.has("ecommerce") || set.has("food")) return "ecommerce";

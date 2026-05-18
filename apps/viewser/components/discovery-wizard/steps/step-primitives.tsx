@@ -39,9 +39,16 @@ export type ChipProps = {
   selected: boolean;
   onToggle: () => void;
   size?: "sm" | "md";
+  title?: string;
 };
 
-export function Chip({ label, selected, onToggle, size = "md" }: ChipProps) {
+export function Chip({
+  label,
+  selected,
+  onToggle,
+  size = "md",
+  title,
+}: ChipProps) {
   const padding = size === "sm" ? "px-2.5 py-1" : "px-3 py-1.5";
   const text = size === "sm" ? "text-[11px]" : "text-[12px]";
   return (
@@ -49,6 +56,7 @@ export function Chip({ label, selected, onToggle, size = "md" }: ChipProps) {
       type="button"
       onClick={onToggle}
       aria-pressed={selected}
+      title={title}
       className={`${padding} ${text} rounded-full border transition-colors ${
         selected
           ? "border-foreground bg-foreground text-background"

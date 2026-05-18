@@ -21,18 +21,29 @@ const SITE_ID_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
  * `_apply_discovery_overrides` på Python-sidan där fält som inte
  * känns igen helt enkelt ignoreras.
  */
-const DiscoveryPayloadSchema = z.object({
-  // Heter `schemaVersion` (inte version) avsiktligt: test_viewser_files
-  // förbjuder en sidecar-meta-shape med "version:z" eller "projectId:z"
-  // som client-payload — de tillhör Project Input-meta, inte API-
-  // kontraktet. Discovery har sin egen schema-version som lever
-  // oberoende av PI-schemat.
-  schemaVersion: z.literal(1),
-  rawPrompt: z.string().trim().max(8000),
-  contentBranch: z.string().trim().max(40).optional(),
-  scaffoldHint: z.string().trim().max(60).optional(),
-  answers: z.record(z.string(), z.unknown()),
-});
+const DiscoveryPayloadSchema = z
+  .object({
+    // Heter `schemaVersion` (inte version) avsiktligt: test_viewser_files
+    // förbjuder en sidecar-meta-shape med "version:z" eller "projectId:z"
+    // som client-payload — de tillhör Project Input-meta, inte API-
+    // kontraktet. Discovery har sin egen schema-version som lever
+    // oberoende av PI-schemat.
+    schemaVersion: z.literal(1),
+    rawPrompt: z.string().trim().max(8000),
+    contentBranch: z.string().trim().max(40).optional(),
+    scaffoldHint: z.string().trim().max(60).optional(),
+    answers: z.record(z.string(), z.unknown()),
+  })
+  .strict()
+  .superRefine((payload, context) => {
+    if (Object.prototype.hasOwnProperty.call(payload.answers, "starterId")) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["answers", "starterId"],
+        message: "Discovery-payload får inte sätta starterId.",
+      });
+    }
+  });
 
 const PromptPayloadSchema = z.object({
   // Master-prompten från discovery-wizarden kan bli flera kilobyte
