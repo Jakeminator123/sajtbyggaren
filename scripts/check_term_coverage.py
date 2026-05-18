@@ -76,6 +76,7 @@ COMMON_WORDS = {
     # Framework / lib
     "React", "Next", "NextJs", "NextJS", "Vite", "Tailwind", "TypeScript",
     "TURBOPACK", "Turbopack", "Webpack",
+    "SIGTERM", "SIGKILL",
     "Python", "Streamlit", "FastAPI", "Pydantic", "Flask", "Django",
     "JsonSchema", "Draft202012Validator",
     # Web standards / native browser APIs

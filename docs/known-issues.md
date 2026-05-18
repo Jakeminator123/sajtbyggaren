@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 21 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 81 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 83 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -284,12 +284,70 @@ ett stängt (B112) i samma pass.
   modellverifiering från mock-fallback. Källa: extern reviewer
   2026-05-18. Fix: open. Test: open.
 
+### Extern reviewer-triage 2026-05-18 (post-PR-#31 christopher-ui-integration, runda 2)
+
+Andra reviewer-passet mot post-PR-#31-baseline. Sex nya fynd:
+B117 (SVG-XSS) och B118 (scrape-runner SIGKILL) stängda i samma
+pass; B119-B122 öppna och listade nedan.
+
+- **`B119` Låg** - `scripts/scrape_site.py:deterministic_fields`
+  (rad 417-425) väljer kontaktuppgift via
+  `next(iter(sorted(corpus.emails)))` — alfabetisk sortering, första
+  träffen vinner. En sajt med både `info@foo.se` (huvudkontakt) och
+  `aaa-removeme@foo.se` (gammal placeholder) skulle ge `aaa-removeme@`
+  som vinnande email i discovery-payloaden. Samma mönster för phones
+  och addresses. Ingen koppling till semantisk relevans (är emailen i
+  header? footer? kontakt-sida?). Effekten är "plausibel men fel"
+  kontaktinfo i Project Input, vilket är svårare att upptäcka än
+  uppenbara fel. Fix-skiss: poängsätt kandidater på var i sajten de
+  ses (mailto-länk i header > footer > body, `kontakt`/`contact`-sida
+  > start), och välj högsta poäng. Källa: extern reviewer 2026-05-18
+  (runda 2). Fix: open. Test: open.
+- **`B120` Låg** - `scripts/prompt_to_project_input.py:_apply_discovery_overrides`
+  (rad 1574-1582) försöker plocka ut stad ur kontakt-addressLines med
+  regex `r"\b\d{3}\s?\d{2}\s+([A-Za-zÅÄÖåäö\-]+)"`. Mönstret matchar
+  bara svensk postnummerstruktur (`xxx xx Stad`), så adresser i
+  format `Götgatan 12, 11646 Stockholm` ger ingen träff (kommat),
+  och internationella adresser missar helt. Effekten är tyst fallback
+  till brief-extracted location. Inte krasch, men halvfel
+  platsdata utan signalering. Fix-skiss: prova flera mönster i fallande
+  ordning, inklusive `,`-separator och engelska postnummer-format.
+  Källa: extern reviewer 2026-05-18 (runda 2). Fix: open. Test: open.
+- **`B121` Medel** (arkitekturskuld) - discovery-sanningen passerar nu
+  fyra lager innan den landar i Project Input: (1) wizardens
+  `WizardAnswers` i `apps/viewser/components/discovery-wizard/wizard-payload.ts`,
+  (2) `runPromptToProjectInput` skriver `DiscoveryPayload` till tempfil,
+  (3) `briefModel` får master-prompten med LLM-extraktion ovanpå,
+  (4) `_apply_discovery_overrides` patchar Project Input med
+  wizardens deterministiska fält. Varje lager kan tolka samma fält
+  något annorlunda (företagsnamn i wizard vs brief vs override), och
+  konflikten löses inte explicit utan via "sista vinner"-ordning.
+  Det öppnar för "varför blev fält X så här trots att jag fyllde i
+  Y?"-buggar som är svåra att reproducera. Fix-skiss: definiera en
+  enda sann källa per fält (sannolikt wizard wins när fältet är
+  ifyllt, annars brief, annars LLM-default) och dokumentera ordningen
+  i en helper med tester. Kopplar mot B13a-flytt eftersom mycket av
+  detta hör hemma i `packages/generation/`. Källa: extern reviewer
+  2026-05-18 (runda 2). Fix: open. Test: open.
+- **`B122` Låg** - `apps/viewser/components/prompt-builder.tsx`
+  växlar från `thinking` till `building`-stage via `setTimeout(...,
+  1500)` istället för på en faktisk backend-signal. Det fungerar i
+  praktiken eftersom `/api/prompt` typiskt tar > 1.5s, men en
+  prompt som returnerar snabbt (cache hit, valideringsfel) ger
+  operatören en falsk "Bygger sajt"-vy innan svaret faktiskt finns.
+  Värre: en hängd prompt visar `building` direkt fast den fastnat
+  i `thinking`-fasen, vilket ger fel mental modell. Inte backend-bugg
+  men UI-signalering. Fix-skiss: skicka faktisk stage-signal från
+  `/api/prompt` (t.ex. via Server-Sent Events eller separat
+  `/api/prompt-status?runId=`-poll). Källa: extern reviewer
+  2026-05-18 (runda 2). Fix: open. Test: open.
+
 ### Extern reviewer-triage 2026-05-18 (post-PR-#31 christopher-ui-integration)
 
-Reviewer-pass mot mainline efter att PR #31 (`feat(viewser): integrate
-christopher-ui discovery and asset workflow`, merge `3f4543d`,
-integration `0510146`) landade. Fyra fynd, två stängda (B113, B114)
-+ två öppna i samma pass.
+Första reviewer-passet mot mainline efter att PR #31 (`feat(viewser):
+integrate christopher-ui discovery and asset workflow`, merge
+`3f4543d`, integration `0510146`) landade. Fyra fynd, två stängda
+(B113, B114) + två öppna i samma pass.
 
 - **`B115` Låg** - `SM_hero.mp4` (1.5 MB) och `LOGO_SM2.0.png`
   (162 KB) finns både under `apps/viewser/public/` och repo-roten
@@ -420,6 +478,51 @@ PR #28 / `885431b` stängde 15 buggar (alla flyttade till "Stängda" 2026-05-18 
 Lokal mainline-commit `b5ee710` stängde B88 (kontakt-placeholder dev-jargong), B94 (tom team-grid på `/om-oss`), B95 (landnamn som hero-ortstag) och B96 (scaffold-omedveten hero-CTA). Inga andra B-IDs påverkade. Kvar från re-Verifierings-Scout 2026-05-15 är B97 + B98 (låg-impact). Re-Verifierings-Scout med samma fyra prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`) körs efter denna bump för att jämföra mot 5.54-baselinen. Förväntad effekt: snitt 6.5-7.0/10.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B118` Låg** (stängd 2026-05-18, post-PR-#31 reviewer-triage runda 2) -
+  `apps/viewser/lib/scrape-runner.ts` timeout-handler kallade
+  `child.kill("SIGTERM")` utan SIGKILL-eftersläp. En hängd Python-
+  process (väntande på långsam socket, fast i C-extension busy loop,
+  eller blockerad i tredjepartslib som ignorerar SIGTERM) skulle
+  överleva timeouten och stanna kvar i bakgrunden, ta RAM/fil-handles
+  tills manuell intervention. `build-runner.ts` och `prompt-runner.ts`
+  har sedan länge samma två-stegs kill-mönster: SIGTERM först, sen
+  SIGKILL via en `.unref()`'d 5-sekunders follow-up-timer om
+  `child.killed` fortfarande är `false`. scrape-runner var enda
+  spawn-helpern som saknade det. **Fix:** kopiera build-runners
+  mönster verbatim. Praktisk impact är låg (Python `requests` har
+  socket-timeout på lägre nivå), men inkonsekvensen mellan de tre
+  runners var en latent maintenance trap. Pre-existerande sedan
+  PR #31 (christopher-ui-integration, `0510146`). Källa: extern
+  reviewer 2026-05-18 (runda 2). Fix: `df24488`. Test: open (mild
+  praktisk konsekvens + matchar redan-testade mönster i build- och
+  prompt-runner; källkods-läsning räcker för regression-skydd).
+
+- **`B117` Medel** (stängd 2026-05-18, post-PR-#31 reviewer-triage runda 2) -
+  `apps/viewser/lib/asset-store/local.ts:save` sparar SVG-uppladdningar
+  orörda (rad 70-75) och `apps/viewser/app/api/asset-preview/route.ts`
+  serverar dem med `Content-Type: image/svg+xml`. När operatören
+  öppnar `/api/asset-preview?...`-URL:n direkt i en ny flik parsar
+  webbläsaren SVG:n som ett dokument och kör `<script>`-block plus
+  `onload`/`onclick`-attribut i `localhost:3000`-origin. `<img src=...>`-
+  referenser körs däremot inte som dokument så de är fortfarande
+  inerta. En malicious SVG som operatören laddar upp av misstag ger
+  alltså XSS i samma domän som backoffice-flödet. Routen är
+  `assertLocalhost`-gated, så hotmodellen är operator-pivot snarare än
+  remote attacker — men en undvikbar foot-gun. **Fix:** sätt
+  `Content-Security-Policy: "sandbox allow-same-origin"` på responsen
+  när serverad mime är `image/svg+xml`. Sandbox-direktivet skapar
+  isolerad browsing-kontext där inline-scripts och event-handlers
+  blockeras. `allow-same-origin` behålls så interna asset-referenser
+  fortfarande fungerar. Påverkar inte `<img src=...>`-konsumenter
+  eftersom de aldrig parsar responsen som dokument. Routen får också
+  `X-Content-Type-Options: nosniff` för alla content-types — stoppar
+  en "fake JPEG" som faktiskt är HTML från att sniffas och renderas
+  som dokument. Pre-existerande sedan PR #31 (christopher-ui-
+  integration, `0510146`). Källa: extern reviewer 2026-05-18 (runda 2).
+  Fix: `6772a14`. Test: open (route är localhost-gated + manuell
+  XSS-verifiering kräver malicious SVG-fixture som inte är värd att
+  committa; CSP-headern är källkods-låst genom kommentaren).
 
 - **`B114` Låg** (stängd 2026-05-18, post-PR-#31 reviewer-triage) -
   `apps/viewser/app/api/upload-asset/route.ts` POST-handler kallade
