@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 27 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 85 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 27 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 87 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -554,6 +554,45 @@ PR #28 / `885431b` stängde 15 buggar (alla flyttade till "Stängda" 2026-05-18 
 Lokal mainline-commit `b5ee710` stängde B88 (kontakt-placeholder dev-jargong), B94 (tom team-grid på `/om-oss`), B95 (landnamn som hero-ortstag) och B96 (scaffold-omedveten hero-CTA). Inga andra B-IDs påverkade. Kvar från re-Verifierings-Scout 2026-05-15 är B97 + B98 (låg-impact). Re-Verifierings-Scout med samma fyra prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`) körs efter denna bump för att jämföra mot 5.54-baselinen. Förväntad effekt: snitt 6.5-7.0/10.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B126` Medel** (stängd 2026-05-18, post-PR-#32 reviewer-fynd 1) -
+  `backoffice/asset_graph.py:_compatible_dossier_edges` byggde
+  scaffold→dossier-edges som `dossier:{id}`, men `build_graph()`
+  registrerar Dossier-noder som `{class}-dossier:{id}` (t.ex.
+  `soft-dossier:interactive-game-loop`). Kontrollplanens konsekvensvy
+  (`impact_for_node` i `backoffice/impact.py`) matchar på exakt
+  `{type}:{id}`-nyckelformat, så edges träffade aldrig sina dossier-
+  noder och hela scaffold→dossier-spåret blev blint i impact-vyn.
+  Pre-existerande sedan PR #32-cherrypicken (`3338d79` +
+  `b636450`). **Fix:** `build_graph()` förberäknar nu
+  `dossier_class_by_id`-mapping via befintliga `_dossier_manifests_by_id()`
+  och skickar den till `_compatible_dossier_edges`. Edges byggs som
+  `{class}-dossier:{id}` när id finns registrerat; saknade id:n
+  faller tillbaka till `dossier:{id}`-formen som intentionellt blir
+  en orphan-edge — `run_health_checks` fångar den som "okänd Dossier"-
+  warning i stället för att tyst slukas. Källa: extern reviewer
+  2026-05-18 (post-PR-#32 control-plane review). Fix: `0fe353f`. Test:
+  `tests/test_backoffice_asset_graph.py::test_compatible_dossier_edges_match_dossier_node_keys`,
+  `tests/test_backoffice_asset_graph.py::test_real_asset_graph_contains_core_edges`
+  (uppdaterad till korrekt `soft-dossier:`-nyckelformat).
+
+- **`B127` Medel** (stängd 2026-05-18, post-PR-#32 reviewer-fynd 2) -
+  `backoffice/asset_graph.py:run_health_checks` scaffold-loopen
+  kontrollerade `if state["status"] == "implemented":` och emitterade
+  en "följer inte scaffold-contract fullt ut"-varning **exakt** när
+  scaffolden var komplett. `state["missing"]` och
+  `state["placeholders"]` är båda tomma per `scaffold_file_state` när
+  status är `"implemented"`, så varningen fick alltid en tom
+  details-sträng — och faktiska `"incomplete"`/`"placeholder"`-
+  scaffolds slapp helt fri. Doctor-vyn signalerade alltså
+  inverterat: brus på healthy scaffolds, tystnad på de som var
+  trasiga. Pre-existerande sedan PR #32-cherrypicken (`3338d79`).
+  **Fix:** flip villkoret till `if state["status"] != "implemented":`
+  så Doctor varnar på precis `incomplete` + `placeholder` och tiger
+  om `implemented`. Kommentar i koden förklarar varför så nästa
+  läsning inte åter ramlar i samma fälla. Källa: extern reviewer
+  2026-05-18 (post-PR-#32 control-plane review). Fix: `0fe353f`. Test:
+  `tests/test_backoffice_asset_graph.py::test_doctor_warns_on_incomplete_and_placeholder_scaffolds_not_implemented`.
 
 - **`B124` Medel** (stängd 2026-05-18, operatör-rapporterat efter
   B123-fix) - B123 satte `Cross-Origin-Embedder-Policy: credentialless`
