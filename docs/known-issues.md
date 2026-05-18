@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 27 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 87 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 26 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 88 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -313,32 +313,6 @@ pass; B119-B122 öppna och listade nedan.
   platsdata utan signalering. Fix-skiss: prova flera mönster i fallande
   ordning, inklusive `,`-separator och engelska postnummer-format.
   Källa: extern reviewer 2026-05-18 (runda 2). Fix: open. Test: open.
-- **`B121` Medel** (arkitekturskuld, **PR A + PR B + PR C sealed**, B121 ej
-  helt stängd förrän Prompt 5 Scout-audit + PR D baseline-smoke) -
-  discovery-sanningen passerade tidigare fyra lager innan den landade i
-  Project Input. **PR A** (PR #34, `70c261b`): canonical resolver
-  (`packages/generation/discovery/resolve.py`), taxonomy
-  (`governance/policies/discovery-taxonomy.v1.json`), `DiscoveryDecision`/
-  `fieldSources` på meta-sidecar, ADR 0024 (54 discovery-tester).
-  **PR B** (PR #35, `ec32913`): Viewser overlay läser
-  `/api/discovery-options` från governance taxonomy; `starterId` blockas i
-  frontend; follow-up får ingen discovery; `scaffoldHint` är hint-only.
-  **PR C** (PR #36, `89680fa`): Backoffice Discovery Control —
-  mapping-tabell, Doctor med error/warning-distinktion, graph/impact
-  integration, dry-run-resolver utan side-effects, gated edit-toggle bara
-  mot `discovery-taxonomy.v1.json` via `atomic_write_json`, stale
-  dry-run-skydd, riktiga Doctor-warnings i mapping-tabell istället för
-  generiska statusfraser (`06c9d5f` review-fix). Coach 8.5/10.
-  **Kvar innan B121 stängs:** Prompt 5 (Scout read-only audit av hela
-  kedjan), PR D (verifierings-smoke mot fyra produktbaseline-prompter).
-  Medvetna icke-blockers/PR C2: per-run trace, egen vy istället för
-  Kontrollplan-sektion, dry-run ≠ bit-exakt Viewser-payload.
-  Kopplar mot B13a-flytt (resolver i `packages/generation/`).
-  Källa: extern reviewer 2026-05-18 (runda 2).
-  Fix: open (PR A+B+C sealed; Scout 5 + PR D pending).
-  Test: tests/test_discovery_taxonomy.py, tests/test_discovery_resolver.py,
-  tests/test_viewser_files.py (PR B guards),
-  tests/test_backoffice_discovery_control.py (PR C, 16 tester).
 - **`B122` Låg** - `apps/viewser/components/prompt-builder.tsx`
   växlar från `thinking` till `building`-stage via `setTimeout(...,
   1500)` istället för på en faktisk backend-signal. Det fungerar i
@@ -563,7 +537,42 @@ PR #28 / `885431b` stängde 15 buggar (alla flyttade till "Stängda" 2026-05-18 
 
 Lokal mainline-commit `b5ee710` stängde B88 (kontakt-placeholder dev-jargong), B94 (tom team-grid på `/om-oss`), B95 (landnamn som hero-ortstag) och B96 (scaffold-omedveten hero-CTA). Inga andra B-IDs påverkade. Kvar från re-Verifierings-Scout 2026-05-15 är B97 + B98 (låg-impact). Re-Verifierings-Scout med samma fyra prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`) körs efter denna bump för att jämföra mot 5.54-baselinen. Förväntad effekt: snitt 6.5-7.0/10.
 
+### B121 discovery-integration closure (2026-05-19)
+
+Steward stängde B121 formellt efter PR A+B+C+D. Merge-baseline `e3fa67b`
+(PR #37 baseline smoke). PR A (#34 `70c261b`) resolver + taxonomy, PR B
+(#35 `ec32913`) Viewser overlay alignment, PR C (#36 `89680fa`) Backoffice
+Discovery Control, PR D (#37 `e3fa67b`) CLI baseline-smoke mot fyra
+produktbaseline-prompter — rapport i
+`docs/reports/b121-baseline-smoke.md`. Scout 5 read-only-punkter bedöms
+täckta av PR A–C-kod + 54 discovery-tester + PR D smoke; full Viewser →
+`/api/prompt` → preview E2E är medveten icke-blocker (samma kategori som
+dry-run ≠ Viewser-payload). Medvetna icke-blockers kvar: per-run trace i
+Backoffice, capability/dossier gaps (booking, contact-form, payments, FAQ).
+
 ## Stängda - regression-test säkrar fixet
+
+- **`B121` Medel** (stängd 2026-05-19, discovery-integration B121 A–D) -
+  discovery-sanningen passerade tidigare fyra lager innan den landade i
+  Project Input. **PR A** (PR #34, `70c261b`): canonical resolver
+  (`packages/generation/discovery/resolve.py`), taxonomy
+  (`governance/policies/discovery-taxonomy.v1.json`), `DiscoveryDecision`/
+  `fieldSources` på meta-sidecar, ADR 0024. **PR B** (PR #35,
+  `ec32913`): Viewser overlay läser `/api/discovery-options` från
+  governance taxonomy; `starterId` blockas i frontend; follow-up utan
+  discovery; `scaffoldHint` hint-only. **PR C** (PR #36, `89680fa`):
+  Backoffice Discovery Control — mapping-tabell, Doctor error/warning-
+  distinktion, graph/impact, dry-run-resolver, gated edit-toggle mot
+  `discovery-taxonomy.v1.json` (`06c9d5f` review-fix). **PR D** (PR #37,
+  `e3fa67b`): verifierings-smoke mot fyra produktbaseline-prompter —
+  alla fyra klarar resolver → Project Input → plan → build via CLI.
+  Källa: extern reviewer 2026-05-18 (runda 2) + B121 smoke-rapport.
+  Fix: `e3fa67b`. Test:
+  `tests/test_discovery_taxonomy.py`,
+  `tests/test_discovery_resolver.py`,
+  `tests/test_viewser_files.py` (PR B guards),
+  `tests/test_backoffice_discovery_control.py` (PR C, 16 tester);
+  smoke: `docs/reports/b121-baseline-smoke.md`.
 
 - **`B126` Medel** (stängd 2026-05-18, post-PR-#32 reviewer-fynd 1) -
   `backoffice/asset_graph.py:_compatible_dossier_edges` byggde
