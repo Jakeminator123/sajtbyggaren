@@ -190,6 +190,13 @@ COMMON_WORDS = {
     # mirrors PlanningModelResolutionError. The canonical domain types
     # CodegenResult / CodegenFile are registered in naming-dictionary.v1.
     "CodegenLLMResponse", "CodegenUsage", "CodegenModelResolutionError",
+    # Variant candidate generator implementation symbols. The canonical
+    # domain term Variant is already registered/allowlisted; these names are
+    # local Python containers around schema validation and variantModel IO.
+    "ColorTokens", "ConfigDict", "MotionTokens", "RadiusTokens",
+    "SpacingTokens", "TypographyTokens", "VariantCandidateModel",
+    "VariantContext", "VariantGenerationError", "VariantGenerationResult",
+    "VariantModelResolutionError", "VariantTokens", "VariantTone",
     # Generic React component names that appear in test fixtures, ADR
     # examples and docstring snippets. They are standard component-
     # cased identifiers (Header, Footer, Hero, About) used by the

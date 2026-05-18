@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/llm-models.schema.json",
   "policyId": "llm-models.v1",
-  "version": 2,
+  "version": 3,
   "status": "draft-but-authoritative",
-  "purpose": "Mappar Model Roles till konkreta modellnamn. Provider-agnostisk - byts utan att produktkoden ändras. Tunn första version: en linje av modeller, gpt-5.4 överallt. Version 2 lägger till sharedModelGroups som gör delning explicit.",
+  "purpose": "Mappar Model Roles till konkreta modellnamn. Provider-agnostisk - byts utan att produktkoden ändras. Tunn första version: en linje av modeller, gpt-5.4 överallt. Version 2 lägger till sharedModelGroups som gör delning explicit. Version 3 lägger till variantModel för kontrollerad generering av Scaffold Variant-kandidater.",
   "principles": [
     "Ingen kod får anropa en LLM utan att gå via en registrerad Model Role.",
     "Provider-agnostiskt: model-strängen är opaque för produktkoden. Provider-resolveren mappar mot OpenAI, Anthropic eller annan.",
@@ -41,6 +41,12 @@
       "provider": "openai"
     },
     {
+      "id": "variantModel",
+      "purpose": "Design tooling - generera kandidater för Scaffold Variant JSON utifrån scaffold-kontrakt och operatörens variant-brief.",
+      "model": "gpt-5.4",
+      "provider": "openai"
+    },
+    {
       "id": "repairModel",
       "purpose": "Repair Pipeline - LLM-fix när mekaniska fixes inte räcker.",
       "model": "gpt-5.4",
@@ -72,8 +78,8 @@
     },
     {
       "groupId": "heavyCodegen",
-      "purpose": "Code generation and code-aware repair.",
-      "roles": ["codegenModel", "repairModel"]
+      "purpose": "Code generation, design-asset generation and code-aware repair.",
+      "roles": ["codegenModel", "variantModel", "repairModel"]
     },
     {
       "groupId": "embedding",

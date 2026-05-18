@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/scaffold-contract.schema.json",
   "policyId": "scaffold-contract.v1",
-  "version": 1,
+  "version": 2,
   "status": "draft-but-authoritative",
   "purpose": "Definierar exakt vilken filuppsättning, vilka fält och vilka begränsningar varje Scaffold måste följa. Saknas något fil-/fältkrav är det inte en giltig Scaffold.",
   "principles": [
@@ -38,7 +38,8 @@
       "eval-prompts.json"
     ],
     "validatedAgainst": {
-      "sections.json": "sections.schema.json"
+      "sections.json": "sections.schema.json",
+      "variants/<variantId>.json": "variant.schema.json"
     }
   },
   "scaffoldJsonRequiredFields": [

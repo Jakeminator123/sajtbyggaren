@@ -24,6 +24,7 @@ from .validate import (
     validate_sections,
     validate_site_brief,
     validate_site_plan,
+    validate_variant,
 )
 
 __all__ = [
@@ -40,4 +41,5 @@ __all__ = [
     "validate_sections",
     "validate_site_brief",
     "validate_site_plan",
+    "validate_variant",
 ]

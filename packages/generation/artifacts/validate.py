@@ -39,6 +39,7 @@ SCHEMAS: dict[str, str] = {
     "generationPackage": "generation-package.schema.json",
     "sections": "sections.schema.json",
     "scaffold": "scaffold.schema.json",
+    "variant": "variant.schema.json",
     "qualityResult": "quality-result.schema.json",
     "repairResult": "repair-result.schema.json",
 }
@@ -104,6 +105,11 @@ def validate_sections(payload: dict[str, Any]) -> None:
 def validate_scaffold(payload: dict[str, Any]) -> None:
     """Validate a Scaffold's scaffold.json against scaffold.schema.json."""
     validate_artifact("scaffold", payload)
+
+
+def validate_variant(payload: dict[str, Any]) -> None:
+    """Validate a Scaffold Variant against variant.schema.json."""
+    validate_artifact("variant", payload)
 
 
 def validate_quality_result(payload: dict[str, Any]) -> None:

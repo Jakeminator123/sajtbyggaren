@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "variant.schema.json",
+  "title": "Scaffold Variant",
+  "description": "Canonical schema for packages/generation/orchestration/scaffolds/<scaffoldId>/variants/<variantId>.json. A Variant is a site-wide visual expression only; it must not define routes, sections, content, Dossiers or starter behavior.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "enabled", "label", "description", "tokens", "tone"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "enabled": {
+      "type": "boolean",
+      "description": "When false, the planner ignores this Variant even if the file is present."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tokens": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["color", "typography", "radius", "spacing", "motion"],
+      "properties": {
+        "color": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "background",
+            "foreground",
+            "muted",
+            "border",
+            "primary",
+            "primaryForeground",
+            "accent",
+            "accentForeground"
+          ],
+          "properties": {
+            "background": { "$ref": "#/$defs/colorValue" },
+            "foreground": { "$ref": "#/$defs/colorValue" },
+            "muted": { "$ref": "#/$defs/colorValue" },
+            "border": { "$ref": "#/$defs/colorValue" },
+            "primary": { "$ref": "#/$defs/colorValue" },
+            "primaryForeground": { "$ref": "#/$defs/colorValue" },
+            "accent": { "$ref": "#/$defs/colorValue" },
+            "accentForeground": { "$ref": "#/$defs/colorValue" }
+          }
+        },
+        "typography": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fontFamilyDisplay",
+            "fontFamilyBody",
+            "fontFamilyMono",
+            "scaleRatio"
+          ],
+          "properties": {
+            "fontFamilyDisplay": { "type": "string", "minLength": 1 },
+            "fontFamilyBody": { "type": "string", "minLength": 1 },
+            "fontFamilyMono": { "type": "string", "minLength": 1 },
+            "scaleRatio": { "type": "number", "minimum": 1, "maximum": 1.6 }
+          }
+        },
+        "radius": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sm", "md", "lg"],
+          "properties": {
+            "sm": { "type": "string", "minLength": 1 },
+            "md": { "type": "string", "minLength": 1 },
+            "lg": { "type": "string", "minLength": 1 }
+          }
+        },
+        "spacing": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["section", "container"],
+          "properties": {
+            "section": { "type": "string", "minLength": 1 },
+            "container": { "type": "string", "minLength": 1 }
+          }
+        },
+        "motion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["level"],
+          "properties": {
+            "level": {
+              "type": "string",
+              "enum": ["none", "subtle", "expressive"]
+            }
+          }
+        }
+      }
+    },
+    "tone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["vibe"],
+      "properties": {
+        "vibe": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "colorValue": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    }
+  }
+}
