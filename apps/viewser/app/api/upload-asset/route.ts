@@ -42,6 +42,24 @@ export async function POST(request: NextRequest) {
   const guard = assertLocalhost(request);
   if (guard) return guard;
 
+  // Early payload-size guard: reject oversize uploads BEFORE awaiting
+  // request.formData(), which would otherwise buffer the entire payload
+  // in memory just to discover it is too large. We allow some multipart
+  // overhead (~2x MAX_FILE_BYTES headroom for boundaries + extra form
+  // fields like role/siteId) so well-formed uploads near the limit are
+  // not rejected on the Content-Length check alone. The exact per-file
+  // size is still enforced below on file.size.
+  const contentLength = request.headers.get("content-length");
+  if (contentLength) {
+    const declared = Number.parseInt(contentLength, 10);
+    if (Number.isFinite(declared) && declared > MAX_FILE_BYTES * 2) {
+      return badRequest(
+        `Payload är ${(declared / 1024 / 1024).toFixed(1)} MB; max är 10 MB per fil ` +
+          `(${((MAX_FILE_BYTES * 2) / 1024 / 1024).toFixed(0)} MB inklusive multipart-overhead).`,
+      );
+    }
+  }
+
   let form: FormData;
   try {
     form = await request.formData();
@@ -66,7 +84,9 @@ export async function POST(request: NextRequest) {
 
   const siteIdRaw = form.get("siteId");
   const siteId =
-    typeof siteIdRaw === "string" && siteIdRaw.trim() ? siteIdRaw.trim() : "__draft";
+    typeof siteIdRaw === "string" && siteIdRaw.trim()
+      ? siteIdRaw.trim()
+      : "__draft";
   if (!SITE_ID_PATTERN.test(siteId)) {
     return badRequest(
       "Fält 'siteId' måste matcha [a-z0-9_-]{1,64} eller utelämnas.",
@@ -100,7 +120,11 @@ export async function POST(request: NextRequest) {
       siteId,
       buffer,
       originalName,
-      mimeType: mime as "image/png" | "image/jpeg" | "image/webp" | "image/svg+xml",
+      mimeType: mime as
+        | "image/png"
+        | "image/jpeg"
+        | "image/webp"
+        | "image/svg+xml",
       role,
     });
     return NextResponse.json(
