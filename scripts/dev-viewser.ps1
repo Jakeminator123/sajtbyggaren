@@ -1,7 +1,8 @@
 #requires -Version 5
 <#
 .SYNOPSIS
-  Start the Viewser localhost-only operator prototype on http://localhost:3000.
+  Start the Viewser localhost-only operator prototype on http://localhost:3000
+  by default, or https://localhost:3000 with -Https.
 
 .DESCRIPTION
   Launches `apps/viewser` Next.js dev server. Viewser is the operator-only
@@ -15,6 +16,7 @@
 [CmdletBinding()]
 param(
     [switch]$SkipInstall,
+    [switch]$Https,
     [int]$Port = 3000
 )
 
@@ -28,7 +30,8 @@ if (-not (Test-Path $viewserDir)) {
 
 Write-Host "Sajtbyggaren viewser prototype"
 Write-Host "  cwd:  $viewserDir"
-Write-Host "  url:  http://localhost:$Port"
+$protocol = if ($Https) { "https" } else { "http" }
+Write-Host "  url:  ${protocol}://localhost:$Port"
 
 if (-not (Test-Path (Join-Path $viewserDir ".env.local"))) {
     Write-Warning "apps/viewser/.env.local missing. Copy .env.example and add OPENAI_API_KEY before chat works."
@@ -40,7 +43,11 @@ try {
         Write-Host "  installing dependencies (first run)..."
         npm install
     }
-    npm run dev -- --port $Port
+    $nextArgs = @("--port", $Port)
+    if ($Https) {
+        $nextArgs += "--experimental-https"
+    }
+    npm run dev -- @nextArgs
 } finally {
     Pop-Location
 }
