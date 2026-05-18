@@ -99,3 +99,31 @@ export function TokenMeter() {
     </Card>
   );
 }
+
+/**
+ * TokenMeterCompact — single-line pill version used in the sticky
+ * SiteHeader. Reuses the same context so totals stay in sync with the
+ * full TokenMeter card.
+ */
+export function TokenMeterCompact() {
+  const { totals } = useTokenMeter();
+  const warning = totals.estimatedCostUsd >= 1;
+  const tone = warning
+    ? "border-destructive/40 text-destructive"
+    : "border-border/60 text-muted-foreground";
+
+  return (
+    <div
+      className={`flex items-center gap-3 rounded-full border bg-card/60 px-3 py-1 text-[11px] font-mono ${tone}`}
+      aria-label={`Token meter: ${totals.totalTokens} tokens, $${totals.estimatedCostUsd.toFixed(4)}`}
+    >
+      <span>
+        {formatTokens(totals.totalTokens)}t · ${totals.estimatedCostUsd.toFixed(3)}
+      </span>
+      <span className="hidden text-foreground/40 sm:inline">·</span>
+      <span className="hidden sm:inline">
+        {totals.chatCalls} chat / {totals.builds} build
+      </span>
+    </div>
+  );
+}

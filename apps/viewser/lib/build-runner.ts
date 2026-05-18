@@ -6,7 +6,13 @@ import path from "node:path";
 import { assertProjectInputExists } from "@/lib/project-inputs";
 import { readBuildResult, runDirFromId, runsDir } from "@/lib/runs";
 
-const BUILD_TIMEOUT_MS = 180_000;
+// Första bygget i en helt ny `.generated/<siteId>/` involverar:
+//   - npm install från noll (typiskt 60–120 sek beroende på cache),
+//   - Next.js 16 webpack-build (30–120 sek beroende på sajtens storlek),
+//   - operator-asset-copy + sajt-rendering.
+// 3 min är därför för snålt — vi tappar perfekt rimliga byggen halvvägs.
+// 10 min ger gott om utrymme även för kalla cacher utan att vara orimligt.
+const BUILD_TIMEOUT_MS = 600_000;
 const RUN_ID_PATTERN = /runId:\s*([a-zA-Z0-9._-]+)/;
 
 let inFlight: Promise<unknown> | null = null;

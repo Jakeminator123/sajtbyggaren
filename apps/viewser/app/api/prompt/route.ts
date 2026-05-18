@@ -13,24 +13,58 @@ import { runPromptToProjectInput } from "@/lib/prompt-runner";
 // Python helper's own emptiness-check.
 const SITE_ID_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
+/**
+ * Discovery-wizardens payload. Schemat speglar `DiscoveryPayload` i
+ * `apps/viewser/components/discovery-wizard/wizard-payload.ts`. Vi
+ * validerar bara den yttersta strukturen — `answers`-objektet är
+ * intentionellt löst (operator-prototyp) och kontrolleras djupare av
+ * `_apply_discovery_overrides` på Python-sidan där fält som inte
+ * känns igen helt enkelt ignoreras.
+ */
+const DiscoveryPayloadSchema = z.object({
+  // Heter `schemaVersion` (inte version) avsiktligt: test_viewser_files
+  // förbjuder en sidecar-meta-shape med "version:z" eller "projectId:z"
+  // som client-payload — de tillhör Project Input-meta, inte API-
+  // kontraktet. Discovery har sin egen schema-version som lever
+  // oberoende av PI-schemat.
+  schemaVersion: z.literal(1),
+  rawPrompt: z.string().trim().max(8000),
+  contentBranch: z.string().trim().max(40).optional(),
+  scaffoldHint: z.string().trim().max(60).optional(),
+  answers: z.record(z.string(), z.unknown()),
+});
+
 const PromptPayloadSchema = z.object({
+  // Master-prompten från discovery-wizarden kan bli flera kilobyte
+  // (operatörens originaltext + 8 sektioner med kategori, kontakt,
+  // tjänster, story, sidor, ton). 16k är vältilltaget för worst-case
+  // (alla wizard-fält maxade) utan att riskera att brytas vid en
+  // ovanligt lång story-text.
   prompt: z
     .string()
     .trim()
     .min(1, "Prompt får inte vara tom.")
-    .max(4000, "Prompt får vara max 4000 tecken."),
+    .max(16000, "Prompt får vara max 16 000 tecken."),
   mode: z.enum(["init", "followup"]).default("init"),
   siteId: z
     .string()
     .trim()
     .regex(SITE_ID_PATTERN, "Ogiltigt siteId för följdprompt.")
     .optional(),
+  discovery: DiscoveryPayloadSchema.optional(),
 }).superRefine((payload, context) => {
   if (payload.mode === "followup" && !payload.siteId) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["siteId"],
       message: "Följdprompt kräver valt siteId.",
+    });
+  }
+  if (payload.mode === "followup" && payload.discovery) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["discovery"],
+      message: "Discovery-wizarden används bara i init-läge.",
     });
   }
 });
@@ -55,6 +89,7 @@ async function runPromptBuildOnce(
   const helper = await runPromptToProjectInput(payload.prompt, {
     mode: payload.mode,
     siteId: payload.siteId,
+    discovery: payload.discovery,
   });
 
   // Phase 2: build_site.py with the absolute dossier path produced
