@@ -140,16 +140,21 @@ def _capability_status(capability_id: str, capabilities: dict[str, dict[str, Any
 def category_mapping_rows(policy: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     """Return compact Backoffice rows for Discovery category mappings."""
     payload = policy if policy is not None else load_discovery_policy()
+    findings_by_category = _findings_by_category(discovery_doctor_findings(payload))
+    runtime_map = _runtime_mapping()
     rows: list[dict[str, Any]] = []
     for category in payload.get("categories", []):
         if not isinstance(category, dict):
             continue
+        category_id = str(category.get("id", ""))
+        findings = findings_by_category.get(category_id, [])
         rows.append(
             {
-                "categoryId": category.get("id", ""),
+                "categoryId": category_id,
                 "label": category.get("labelSv", ""),
                 "supportStatus": category.get("supportStatus", ""),
-                "mappingState": category.get("supportStatus", ""),
+                "mappingState": _mapping_state(category, runtime_map),
+                "operatorReviewRequired": _operator_review_required(category, findings),
                 "targetScaffoldId": category.get("targetScaffoldId", ""),
                 "activeScaffoldId": category.get("activeScaffoldId", ""),
                 "fallbackScaffoldId": category.get("fallbackScaffoldId", ""),
@@ -157,14 +162,63 @@ def category_mapping_rows(policy: dict[str, Any] | None = None) -> list[dict[str
                 "expectedStarterId": category.get("expectedStarterId", ""),
                 "requestedCapabilities": ", ".join(category.get("requestedCapabilities") or []),
                 "candidateDossiers": ", ".join(category.get("candidateDossiers") or []),
-                "fallbackWarnings": _category_warning_summary(category),
+                "fallbackWarnings": _warning_summary(category, findings),
                 "rationale": category.get("rationale", ""),
             }
         )
     return rows
 
 
-def _category_warning_summary(category: dict[str, Any]) -> str:
+def _findings_by_category(
+    findings: list[dict[str, str]],
+) -> dict[str, list[dict[str, str]]]:
+    by_category: dict[str, list[dict[str, str]]] = {}
+    for finding in findings:
+        parts = finding.get("id", "").split(":")
+        if len(parts) < 2:
+            continue
+        by_category.setdefault(parts[1], []).append(finding)
+    return by_category
+
+
+def _mapping_state(category: dict[str, Any], runtime_map: dict[str, str]) -> str:
+    status = str(category.get("supportStatus") or "unknown")
+    if status == "disabled":
+        return "disabled"
+    selected_scaffold = _selected_scaffold(category)
+    target_scaffold = str(category.get("targetScaffoldId") or "")
+    if selected_scaffold and selected_scaffold not in runtime_map:
+        return "orphan"
+    if selected_scaffold and target_scaffold and selected_scaffold != target_scaffold:
+        return "fallback-runtime" if status == "fallback" else "planned-fallback"
+    if selected_scaffold in runtime_map:
+        return "active-runtime"
+    return status
+
+
+def _operator_review_required(
+    category: dict[str, Any],
+    findings: list[dict[str, str]],
+) -> str:
+    status = str(category.get("supportStatus") or "")
+    if status in {"planned", "disabled"}:
+        return "ja"
+    if any(finding.get("level") == "error" for finding in findings):
+        return "ja"
+    if any(":capability:" in finding.get("id", "") for finding in findings):
+        return "ja"
+    return "nej"
+
+
+def _warning_summary(
+    category: dict[str, Any],
+    findings: list[dict[str, str]],
+) -> str:
+    if findings:
+        return "; ".join(
+            f"{finding['level']}:{finding['id'].split(':', 1)[0]}"
+            for finding in findings
+        )
     status = str(category.get("supportStatus") or "")
     if status == "planned":
         return "planned target uses fallback scaffold for future init-runs"
@@ -348,7 +402,7 @@ def _category_findings(
                 details=target_scaffold,
             )
         )
-    elif target_scaffold not in runtime_map and status in {"active", "fallback"}:
+    elif target_scaffold not in runtime_map and status == "active":
         findings.append(
             _finding(
                 level="error",
@@ -357,12 +411,12 @@ def _category_findings(
                 details=target_scaffold,
             )
         )
-    elif target_scaffold not in runtime_map and status == "planned":
+    elif target_scaffold not in runtime_map and status in {"fallback", "planned"}:
         findings.append(
             _finding(
                 level="warning",
                 finding_id=f"discovery-target-runtime:{category_id}",
-                message=f"{category_id} target-scaffold är planerad och saknar runtime-mapping.",
+                message=f"{category_id} target-scaffold saknar runtime-mapping och kör via fallback.",
                 details=target_scaffold,
             )
         )
@@ -484,7 +538,7 @@ def _category_findings(
 
 
 def discovery_gap_rows(policy: dict[str, Any] | None = None) -> list[dict[str, str]]:
-    """Return discovery-specific gap/orphan rows for the impact view."""
+    """Return Discovery-specific gap/orphan rows for the impact view."""
     return [
         {
             "level": finding["level"],
@@ -500,11 +554,25 @@ def discovery_gap_rows(policy: dict[str, Any] | None = None) -> list[dict[str, s
 
 def sample_discovery_payload(category_id: str) -> dict[str, Any]:
     """Return a minimal Discovery Payload for Backoffice dry-run."""
+    policy = load_discovery_policy()
+    category = next(
+        (
+            item
+            for item in policy.get("categories", [])
+            if isinstance(item, dict) and item.get("id") == category_id
+        ),
+        {},
+    )
+    scaffold_hint = (
+        _selected_scaffold(category)
+        if isinstance(category, dict) and category
+        else "local-service-business"
+    )
     return {
         "schemaVersion": 1,
         "rawPrompt": f"Backoffice dry-run for {category_id}",
-        "contentBranch": "business",
-        "scaffoldHint": "local-service-business",
+        "contentBranch": str(category.get("contentBranch") or "business"),
+        "scaffoldHint": scaffold_hint,
         "answers": {
             "siteType": [category_id],
             "companyName": "Demo AB",
@@ -555,6 +623,7 @@ def run_discovery_dry_run(category_id: str) -> dict[str, Any]:
         project_input_candidate=sample_project_input(),
     )
     return {
+        "categoryId": category_id,
         "projectInput": project_input,
         "decision": decision.to_dict(),
         "fieldSources": decision.fieldSources,
@@ -582,6 +651,7 @@ def proposed_policy_update(
     for category in payload.get("categories", []):
         if isinstance(category, dict) and category.get("id") == category_id:
             _apply_category_updates(category, updates)
+            _sync_expected_starter(category)
             _validate_policy_schema(payload)
             findings = discovery_doctor_findings(payload)
             blocking_levels = {"error"} if allow_warnings else {"error", "warning"}
@@ -636,6 +706,14 @@ def _apply_category_updates(category: dict[str, Any], updates: dict[str, Any]) -
         if not isinstance(value, str):
             raise ValueError(f"{field_name} must be a string")
         category[field_name] = value
+
+
+def _sync_expected_starter(category: dict[str, Any]) -> None:
+    runtime_map = _runtime_mapping()
+    selected_scaffold = _selected_scaffold(category)
+    expected_starter = runtime_map.get(selected_scaffold)
+    if expected_starter is not None:
+        category["expectedStarterId"] = expected_starter
 
 
 def save_category_update(

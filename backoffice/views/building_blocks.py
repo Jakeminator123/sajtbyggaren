@@ -125,7 +125,6 @@ def _render_discovery_mapping() -> None:
 
     policy = discovery_control.load_discovery_policy()
     mapping_rows = discovery_control.category_mapping_rows(policy)
-    discovery_findings = discovery_control.discovery_doctor_findings(policy)
     discovery_graph = discovery_control.build_discovery_graph(policy)
 
     status_counts: dict[str, int] = {}
@@ -143,8 +142,9 @@ def _render_discovery_mapping() -> None:
         st.dataframe(discovery_graph["edges"], use_container_width=True, hide_index=True)
 
     with st.expander("Discovery gap/orphan"):
-        if discovery_findings:
-            st.dataframe(discovery_findings, use_container_width=True, hide_index=True)
+        gap_rows = discovery_control.discovery_gap_rows(policy)
+        if gap_rows:
+            st.dataframe(gap_rows, use_container_width=True, hide_index=True)
         else:
             st.success("Inga Discovery mapping-fynd.")
 
@@ -161,12 +161,15 @@ def _render_discovery_mapping() -> None:
         )
     if "discovery_dry_run_result" in st.session_state:
         result = st.session_state["discovery_dry_run_result"]
-        st.markdown("**DiscoveryDecision**")
-        st.json(result["decision"], expanded=False)
-        st.markdown("**Field Source**")
-        st.json(result["fieldSources"], expanded=False)
-        st.markdown("**fallbackWarnings**")
-        st.json(result["fallbackWarnings"], expanded=False)
+        if result.get("categoryId") != dry_category:
+            st.info("Dry-run-resultatet gäller en annan kategori. Kör dry-run igen.")
+        else:
+            st.markdown("**DiscoveryDecision**")
+            st.json(result["decision"], expanded=False)
+            st.markdown("**Field Source**")
+            st.json(result["fieldSources"], expanded=False)
+            st.markdown("**fallbackWarnings**")
+            st.json(result["fallbackWarnings"], expanded=False)
 
     st.divider()
     st.subheader("Begränsad edit-mode")
@@ -188,13 +191,18 @@ def _render_discovery_mapping() -> None:
     category = next(
         item for item in policy["categories"] if item.get("id") == selected_category
     )
+    support_options = ["active", "fallback", "planned", "disabled"]
+    current_support = str(category.get("supportStatus") or "planned")
+    support_index = (
+        support_options.index(current_support)
+        if current_support in support_options
+        else support_options.index("planned")
+    )
     with st.form("discovery_edit_form"):
         support_status = st.selectbox(
             "supportStatus",
-            ["active", "fallback", "planned", "disabled"],
-            index=["active", "fallback", "planned", "disabled"].index(
-                category.get("supportStatus", "planned")
-            ),
+            support_options,
+            index=support_index,
         )
         label_sv = st.text_input("labelSv", value=str(category.get("labelSv", "")))
         operator_notes = st.text_area(

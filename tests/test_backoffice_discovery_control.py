@@ -71,6 +71,24 @@ def test_discovery_doctor_warns_on_invalid_scaffold() -> None:
     assert "discovery-selected-scaffold:business" in ids
 
 
+def test_discovery_doctor_treats_fallback_target_without_runtime_as_warning() -> None:
+    payload = copy.deepcopy(_policy())
+    category = _category(payload)
+    category["supportStatus"] = "fallback"
+    category["targetScaffoldId"] = "restaurant-hospitality"
+    category.pop("activeScaffoldId", None)
+    category["fallbackScaffoldId"] = "local-service-business"
+    category["defaultVariantId"] = "nordic-trust"
+    category["expectedStarterId"] = "marketing-base"
+
+    findings = discovery_control.discovery_doctor_findings(payload)
+    by_id = {finding["id"]: finding for finding in findings}
+
+    assert by_id["discovery-target-runtime:business"]["level"] == "warning"
+    assert "discovery-selected-runtime:business" not in by_id
+    assert "discovery-starter-mapping:business" not in by_id
+
+
 def test_discovery_doctor_warns_on_invalid_variant() -> None:
     payload = copy.deepcopy(_policy())
     category = _category(payload)
@@ -118,6 +136,7 @@ def test_valid_taxonomy_has_no_false_critical_discovery_warnings() -> None:
 def test_discovery_dry_run_returns_decision_and_field_sources() -> None:
     result = discovery_control.run_discovery_dry_run("ecommerce")
 
+    assert result["categoryId"] == "ecommerce"
     assert result["decision"]["selectedScaffoldId"] == "ecommerce-lite"
     assert result["decision"]["selectedVariantId"] == "clean-store"
     assert result["fieldSources"]["scaffoldId"] == "taxonomy"
@@ -143,6 +162,39 @@ def test_discovery_save_dry_run_does_not_write_without_operator_action(
     assert _category(on_disk)["labelSv"] == _category(original)["labelSv"]
 
 
+def test_discovery_save_write_true_updates_tmp_policy(tmp_path: Path) -> None:
+    policy_path = tmp_path / "discovery-taxonomy.v1.json"
+    original = _policy()
+    policy_path.write_text(json.dumps(original, indent=2), encoding="utf-8")
+
+    discovery_control.save_category_update(
+        "business",
+        {"labelSv": "Ny sparad label"},
+        policy_path=policy_path,
+        write=True,
+    )
+    on_disk = json.loads(policy_path.read_text(encoding="utf-8"))
+
+    assert _category(on_disk)["labelSv"] == "Ny sparad label"
+
+
+def test_discovery_invalid_save_leaves_tmp_policy_unchanged(tmp_path: Path) -> None:
+    policy_path = tmp_path / "discovery-taxonomy.v1.json"
+    original = _policy()
+    policy_path.write_text(json.dumps(original, indent=2), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="not-a-scaffold"):
+        discovery_control.save_category_update(
+            "business",
+            {"targetScaffoldId": "not-a-scaffold"},
+            policy_path=policy_path,
+            write=True,
+        )
+    on_disk = json.loads(policy_path.read_text(encoding="utf-8"))
+
+    assert on_disk == original
+
+
 def test_discovery_edit_validation_accepts_valid_change() -> None:
     payload = copy.deepcopy(_policy())
 
@@ -154,6 +206,36 @@ def test_discovery_edit_validation_accepts_valid_change() -> None:
 
     assert _category(proposed)["labelSv"] == "Företag / Tjänster test"
     assert not [finding for finding in findings if finding["level"] == "error"]
+
+
+def test_discovery_edit_validation_syncs_expected_starter_for_scaffold_change() -> None:
+    payload = copy.deepcopy(_policy())
+
+    proposed, findings = discovery_control.proposed_policy_update(
+        "business",
+        {
+            "supportStatus": "active",
+            "targetScaffoldId": "ecommerce-lite",
+            "activeScaffoldId": "ecommerce-lite",
+            "defaultVariantId": "clean-store",
+            "requestedCapabilities": ["payments", "contact-form"],
+        },
+        policy=payload,
+    )
+    category = _category(proposed)
+
+    assert category["expectedStarterId"] == "commerce-base"
+    assert not [finding for finding in findings if finding["level"] == "error"]
+
+
+def test_category_mapping_rows_surface_real_doctor_warnings() -> None:
+    rows = discovery_control.category_mapping_rows()
+    by_id = {row["categoryId"]: row for row in rows}
+
+    restaurant = by_id["restaurant"]
+    assert restaurant["mappingState"] == "planned-fallback"
+    assert restaurant["operatorReviewRequired"] == "ja"
+    assert "discovery-target-runtime" in restaurant["fallbackWarnings"]
 
 
 def test_discovery_edit_validation_rejects_required_dossier_promotion() -> None:
