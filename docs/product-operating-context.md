@@ -88,6 +88,33 @@ Produktkoden ska därför fortsätta prata med `PreviewRuntime` som abstraktion.
 StackBlitz ska testas ordentligt, men arkitekturen ska hålla dörren öppen för
 produktionslik deploy-check senare.
 
+### Browser-begränsning för embedded WebContainer-preview
+
+`StackBlitzRuntime` valdes bland annat för att skala kostnadseffektivt:
+WebContainer-runtimen körs i slutkundens egen browser, vilket gör att
+preview-kompute inte belastar Sajtbyggarens server. Det är därför
+`FlyRuntime`/server-side container-park inte är default-vägen, även om
+operatören har erfarenhet av Fly från sajtmaskin.
+
+Trade-offen är att **embedded** WebContainer-projekt officiellt bara stöds i
+Chromium-baserade browsers (Chrome, Edge, Brave, Vivaldi). Safari och
+Firefox kan inte ladda embeddet eftersom det kräver iframe-attributet
+`credentialless` som bara finns i Chromium. Det betyder att 25-35% av
+svenska SMB-kunder kommer behöva en server-byggd fallback för att kunna
+använda preview-fliken. Slutpublicerade kund-sajter är vanlig Next.js och
+funkar i alla browsers — det här är **bara** ett konstrastat krav på
+preview-fliken inne i Sajtbyggarens egen UI.
+
+`PreviewRuntime`-abstraktionen ska därför fortsätta hålla dörren öppen för
+en server-byggd fallback (kandidater i fallande ordning av oberoende från
+externa hostar: lokal `next dev`-process som same-origin iframe, ephemeral
+deploy till valfri hosting med URL i iframe, eller pre-built static export
+embed). Vilken väg som väljs är ett kommande arkitekturbeslut som ska
+landas i en ny ADR — pågående registrering är B125 i
+[`docs/known-issues.md`](known-issues.md). Tekniska detaljer kring
+WebContainer-fallet finns i
+[`docs/integrations/webcontainers-notes.md`](integrations/webcontainers-notes.md).
+
 ## Framtida sajtagent
 
 Den gamla agentidén från sajtmaskin är strategiskt viktig, men ska inte

@@ -228,6 +228,24 @@ Detaljer: [`engine-run.v1.json`](governance/policies/engine-run.v1.json), [ADR 0
 
 Detaljer: [`docs/migration-plan.md`](docs/migration-plan.md).
 
+## Browser-stöd för preview-läge
+
+Sluttkundens preview-yta i Viewser bygger på StackBlitz embedded WebContainers. Det är ett medvetet val (kompute körs i kundens egen browser, du betalar inget per aktiv kund — viktigt för skalning till hundratals samtidiga kunder utan server-side container-park), men det har en tydlig browser-begränsning som ska in här innan någon bygger vidare på preview-flödet:
+
+| Browser | Embedded WebContainer-preview | Slutpublicerade kund-sajter |
+|---------|-------------------------------|-----------------------------|
+| Chrome / Edge / Brave / Vivaldi | **Stöds fullt ut** (Chrome 110+ för iframe-credentialless) | Stöds |
+| Safari (iOS + macOS) | **Stöds inte officiellt** — embed laddar inte | Stöds (vanlig Next.js) |
+| Firefox | **Stöds inte officiellt** — embed laddar inte | Stöds (vanlig Next.js) |
+
+Det är specifikt **embedded**-WebContainers som är Chromium-only. På `stackblitz.com` direkt har Safari/Firefox beta-stöd, men inte när StackBlitz-projektet är embedded i en annan sajt (vilket är vad Viewser gör). Skälet: WebContainer kräver `SharedArrayBuffer`, vilket kräver cross-origin isolation, vilket för embedded iframe kräver ett `credentialless`-attribut som bara är implementerat i Chromium. Tekniska detaljer i [`docs/integrations/webcontainers-notes.md`](docs/integrations/webcontainers-notes.md).
+
+**Konsekvens för slutkunder:** ~25-35% av svenska SMB-kunder är på Safari (inkl. iPhone) eller Firefox och kommer inte se preview-fliken funktionsdugligt utan en server-byggd fallback. Den fallback-vägen är registrerad som öppen bugg B125 i [`docs/known-issues.md`](docs/known-issues.md) och måste byggas innan produktlansering. Slutpublicerade sajter (det kunden faktiskt levererar till sina egna besökare) är vanlig Next.js och funkar i alla browsers oavsett.
+
+**Konsekvens för operatörsflöde och utveckling:** kör Viewser-prototypen i Chrome/Edge/Brave. Allt annat (backoffice, builder-CLI, tester) är vanlig Python/Streamlit och funkar överallt.
+
+Bakgrund + arkitekturalternativ för fallback (server-byggd preview-URL, Vercel preview deployment, lokal `next dev`-process per kund, "Öppna i StackBlitz"-fallback för icke-Chromium): läs B59 + B125 i `docs/known-issues.md`. Beslutet om vilken fallback-väg som väljs ska resultera i en ny ADR innan implementation.
+
 ## Bidra
 
 Innan du gör ändringar:

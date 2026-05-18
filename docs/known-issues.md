@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 26 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 85 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 27 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 85 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -375,6 +375,55 @@ integrate christopher-ui discovery and asset workflow`, merge
   Fix: open. Test: open.
 
 ### Övriga öppna
+
+- **`B125` Hög** (produktblocker innan launch) - Embedded
+  StackBlitz/WebContainer-preview i Viewser stöds officiellt bara i
+  Chromium-browsers (Chrome 110+, Edge, Brave, Vivaldi). Safari och
+  Firefox kan inte ladda embeddet eftersom WebContainer kräver
+  `SharedArrayBuffer` -> cross-origin isolation -> iframe-attributet
+  `credentialless`, vilket bara är implementerat i Chromium. Konsekvens:
+  ~25-35% av svenska SMB-slutkunder (Safari på Mac/iPhone, Firefox)
+  kommer inte kunna använda preview-fliken i Sajtbyggarens UI. Slut-
+  publicerade kund-sajter är vanlig Next.js och funkar i alla browsers
+  — det här är **bara** ett krav på preview-flödet inne i produkten.
+  WebContainer valdes ändå som default-runtime eftersom kompute körs i
+  kundens browser och det skalar kostnadseffektivt jämfört med en
+  server-side container-park (sajtmaskin/Fly-erfarenhet visade att
+  server-side preview blir dyrt linjärt med antal aktiva kunder). B59
+  + B123 + B124 är förhistoria: B59 var det parkerade 2026-05-15-
+  experimentet där tre header-lägen testades utan grön preview; B123
+  satte korrekt host-COEP/COOP; B124 lade iframe-`credentialless`-
+  attributet — tillsammans gör de att Chrome/Edge/Brave/Vivaldi-
+  embed:en faktiskt funkar. Det som B125 nu kräver är **fallback-
+  flöde för icke-Chromium-användare**.
+
+  Kandidater i fallande ordning av oberoende från externa hostar (sätts
+  i ADR innan implementation):
+  1. **Server-byggd statisk preview**: `build_site.py` producerar redan
+     ren Next.js. Bygg static export, deploy till egen VPS / Cloudflare
+     R2 / valfri hosting, embed i iframe. Funkar överallt, ~30-60s per
+     uppdatering, billigt.
+  2. **Lokal `next dev`-process per kund** (parkerad B59-arkitektur):
+     server spinner upp en levande dev-server per aktiv kund, iframe
+     pekar dit. Snabb hot-reload men skalar dåligt — samma kostnads-
+     problem som sajtmaskin hade på Fly.
+  3. **"Öppna i StackBlitz"-fallback-knapp**: icke-Chromium-användare
+     får en länk istället för embed, klick öppnar stackblitz.com i ny
+     flik (där Safari/Firefox har beta-stöd för WebContainers). Sämst
+     UX (kund lämnar varumärket) men minst kod.
+  4. **Vercel preview-deployments**: bygg sajten en gång per ändring,
+     få tillbaka en `*.vercel.app`-URL, embed i iframe. Snabbt och
+     ingen egen infra, men kostnad per build och drar in
+     Vercel-beroende som operatören explicit vill undvika där det går.
+
+  Browser-detection ska göras client-side i Viewser:
+  `feature-detection` av iframe-`credentialless`-attribut + UA-parse,
+  visa fallback-vyn för icke-Chromium. Fallback-implementationen är
+  scope för B125. Status idag: dokumenterad i README.md "Browser-stöd
+  för preview-läge", `docs/product-operating-context.md` "Runtime och
+  preview", och `docs/integrations/webcontainers-notes.md`. Källa:
+  operatörrapport 2026-05-18 (post-B123/B124-diskussion). Fix: open.
+  Test: open.
 
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
   subprocess-status och loggutdrag medan körningen pågår, men riktig
