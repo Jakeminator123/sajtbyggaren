@@ -201,9 +201,20 @@ def _compatible_dossier_details(entry: Any) -> str:
 def _compatible_dossier_edges(
     scaffold_id: str,
     compatible: dict[str, Any],
+    dossier_class_by_id: dict[str, str] | None = None,
 ) -> list[dict[str, str]]:
-    """Return graph edges from one Scaffold to compatible Dossiers."""
+    """Return graph edges from one Scaffold to compatible Dossiers.
+
+    Edges must use the same ``{type}:{id}`` key format that the corresponding
+    Dossier nodes are registered with, otherwise the Backoffice impact view
+    cannot connect Scaffolds to their Dossiers. Dossier nodes use
+    ``{class}-dossier:{id}`` (per :func:`build_graph`); resolve the class via
+    ``dossier_class_by_id`` so edges target the same key. When the id is not
+    registered we fall back to ``dossier:{id}`` which intentionally leaves an
+    orphan-edge that :func:`run_health_checks` flags as "okänd Dossier".
+    """
     edges: list[dict[str, str]] = []
+    class_map = dossier_class_by_id or {}
     for relation in ("required", "recommended", "conditional"):
         entries = compatible.get(relation, []) or []
         if not isinstance(entries, list):
@@ -212,10 +223,12 @@ def _compatible_dossier_edges(
             dossier_id = _compatible_dossier_id(entry)
             if dossier_id is None:
                 continue
+            dossier_class = class_map.get(dossier_id)
+            target_type = f"{dossier_class}-dossier" if dossier_class else "dossier"
             edges.append(
                 _edge(
                     f"scaffold:{scaffold_id}",
-                    f"dossier:{dossier_id}",
+                    f"{target_type}:{dossier_id}",
                     relation,
                     _compatible_dossier_details(entry),
                 )
@@ -338,9 +351,16 @@ def build_graph() -> dict[str, list[dict[str, Any]]]:
     edges: list[dict[str, str]] = []
 
     scaffold_contract = load_policy("scaffold-contract.v1.json")
+    dossier_contract = load_policy("dossier-contract.v1.json")
     starter_registry = load_policy("starter-registry.v1.json")
     llm_models = load_policy("llm-models.v1.json")
     required_files = scaffold_required_files(scaffold_contract)
+    classes = dossier_classes(dossier_contract)
+    dossier_manifests = _dossier_manifests_by_id(classes=classes)
+    dossier_class_by_id = {
+        dossier_id: dossier_class
+        for dossier_id, (dossier_class, _path, _payload) in dossier_manifests.items()
+    }
 
     try:
         from packages.generation.planning.plan import SCAFFOLD_TO_STARTER
@@ -398,9 +418,11 @@ def build_graph() -> dict[str, list[dict[str, Any]]]:
         compatible_path = scaffold_dir / "compatible-dossiers.json"
         if compatible_path.exists() and not is_placeholder_file(compatible_path):
             compatible = read_json(compatible_path)
-            edges.extend(_compatible_dossier_edges(scaffold_id, compatible))
+            edges.extend(
+                _compatible_dossier_edges(scaffold_id, compatible, dossier_class_by_id)
+            )
 
-    for dossier_class, dossier_dir in list_dossier_dirs():
+    for dossier_class, dossier_dir in list_dossier_dirs(classes=classes):
         manifest_path = dossier_dir / "manifest.json"
         if manifest_path.exists():
             try:
@@ -459,7 +481,13 @@ def run_health_checks() -> list[dict[str, str]]:
 
     for scaffold_dir in list_scaffold_dirs():
         state = scaffold_file_state(scaffold_dir, required_files)
-        if state["status"] == "implemented":
+        # A Scaffold deserves a Doctor warning when it is NOT fully implemented
+        # (status is "incomplete" because required files are missing, or
+        # "placeholder" because every required file exists but at least one is
+        # still a builder placeholder). When status is "implemented" the
+        # scaffold is healthy and no warning is needed; emitting one then would
+        # always produce findings with an empty details string.
+        if state["status"] != "implemented":
             details = []
             if state["missing"]:
                 details.append("saknar " + ", ".join(state["missing"]))

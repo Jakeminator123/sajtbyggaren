@@ -64,17 +64,86 @@ def test_real_asset_graph_contains_core_edges() -> None:
     assert ("model-role", "variantModel") in nodes
     assert ("starter:marketing-base", "scaffold:local-service-business", "maps-to") in edges
     assert ("scaffold:local-service-business", "variant:nordic-trust", "owns") in edges
+    # Scaffold→Dossier edges must target the same {class}-dossier:{id} key that
+    # the Dossier node is registered with — otherwise the Backoffice impact
+    # view cannot follow the relation. interactive-game-loop is a soft Dossier.
+    assert ("soft-dossier", "interactive-game-loop") in nodes
     assert (
         "scaffold:local-service-business",
-        "dossier:interactive-game-loop",
+        "soft-dossier:interactive-game-loop",
         "conditional",
     ) in edges
     assert (
         "scaffold:ecommerce-lite",
-        "dossier:interactive-game-loop",
+        "soft-dossier:interactive-game-loop",
         "conditional",
     ) in edges
     assert not any("{'id':" in edge["to"] for edge in graph["edges"])
+
+
+def test_compatible_dossier_edges_match_dossier_node_keys(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Every Scaffold→Dossier edge must point at an existing graph node key.
+
+    Regression lock for the post-PR-#32 review finding where edges were built
+    as ``dossier:{id}`` while nodes were registered as
+    ``{class}-dossier:{id}``, leaving the impact view blind to the relation.
+    """
+    scaffolds_dir = tmp_path / "scaffolds"
+    dossiers_dir = tmp_path / "dossiers"
+    scaffold_dir = scaffolds_dir / "demo"
+    scaffold_dir.mkdir(parents=True)
+    for filename in asset_graph.scaffold_required_files():
+        payload: dict[str, Any] = {}
+        if filename == "scaffold.json":
+            payload = {"id": "demo", "label": "Demo Scaffold"}
+        if filename == "compatible-dossiers.json":
+            payload = {
+                "required": [{"id": "soft-known"}],
+                "recommended": ["hard-known"],
+                "conditional": [{"id": "missing-from-registry"}],
+            }
+        (scaffold_dir / filename).write_text(json.dumps(payload), encoding="utf-8")
+
+    for dossier_class, dossier_id in (("soft", "soft-known"), ("hard", "hard-known")):
+        manifest = dossiers_dir / dossier_class / dossier_id / "manifest.json"
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text(
+            json.dumps({"id": dossier_id, "class": dossier_class}),
+            encoding="utf-8",
+        )
+
+    monkeypatch.setattr(asset_graph, "SCAFFOLDS_DIR", scaffolds_dir)
+    monkeypatch.setattr(asset_graph, "DOSSIERS_DIR", dossiers_dir)
+
+    graph = asset_graph.build_graph()
+    node_keys = {f"{node['type']}:{node['id']}" for node in graph["nodes"]}
+    relevant = [
+        edge
+        for edge in graph["edges"]
+        if edge["from"] == "scaffold:demo"
+        and (
+            edge["to"].endswith(":soft-known")
+            or edge["to"].endswith(":hard-known")
+            or edge["to"].endswith(":missing-from-registry")
+        )
+    ]
+    by_target = {edge["to"]: edge for edge in relevant}
+
+    # Registered dossiers resolve to the {class}-dossier:{id} node key so the
+    # impact view can connect Scaffold to Dossier.
+    assert "soft-dossier:soft-known" in by_target
+    assert "soft-dossier:soft-known" in node_keys
+    assert "hard-dossier:hard-known" in by_target
+    assert "hard-dossier:hard-known" in node_keys
+
+    # Unregistered dossier ids fall back to the unqualified "dossier:" prefix
+    # so run_health_checks can flag them as an "okänd Dossier" finding instead
+    # of silently dropping the relation.
+    assert "dossier:missing-from-registry" in by_target
+    assert "dossier:missing-from-registry" not in node_keys
 
 
 def test_health_checks_report_malformed_compatible_dossier_entries(
@@ -120,6 +189,68 @@ def test_health_checks_report_embedding_index_as_not_implemented() -> None:
     ids = {finding["id"] for finding in findings}
 
     assert "embedding-index:not-implemented" in ids
+
+
+def test_doctor_warns_on_incomplete_and_placeholder_scaffolds_not_implemented(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Doctor must warn on Scaffolds that are NOT fully implemented.
+
+    Regression lock for the post-PR-#32 review finding where the warning fired
+    on ``status == "implemented"`` (i.e. the happy path) and never on
+    ``"incomplete"``/``"placeholder"`` — guaranteeing empty-details false
+    positives on healthy scaffolds and silently missing real coverage gaps.
+    """
+    scaffolds_dir = tmp_path / "scaffolds"
+    required_files = asset_graph.scaffold_required_files()
+
+    # Implemented Scaffold: every required file present, none a placeholder.
+    healthy = scaffolds_dir / "healthy"
+    healthy.mkdir(parents=True)
+    for filename in required_files:
+        (healthy / filename).write_text(
+            json.dumps({"id": "healthy"}) if filename.endswith(".json") else "ok",
+            encoding="utf-8",
+        )
+
+    # Incomplete Scaffold: required file missing.
+    incomplete = scaffolds_dir / "incomplete"
+    incomplete.mkdir()
+    for filename in required_files[:-1]:
+        (incomplete / filename).write_text(
+            json.dumps({"id": "incomplete"}), encoding="utf-8"
+        )
+
+    # Placeholder Scaffold: every file present but at least one is a builder
+    # placeholder (carries the _status sentinel).
+    placeholder = scaffolds_dir / "placeholder"
+    placeholder.mkdir()
+    for filename in required_files:
+        (placeholder / filename).write_text(
+            json.dumps({"_status": asset_graph.PLACEHOLDER_MARKER}),
+            encoding="utf-8",
+        )
+
+    monkeypatch.setattr(asset_graph, "SCAFFOLDS_DIR", scaffolds_dir)
+    monkeypatch.setattr(asset_graph, "DOSSIERS_DIR", tmp_path / "no-dossiers")
+
+    findings = asset_graph.run_health_checks()
+    warning_ids = {
+        finding["id"] for finding in findings if finding.get("level") == "warning"
+    }
+
+    # The two unhealthy Scaffolds must surface a warning.
+    assert "scaffold-files:incomplete" in warning_ids
+    assert "scaffold-files:placeholder" in warning_ids
+    # The healthy Scaffold must NOT trigger a Doctor warning.
+    assert "scaffold-files:healthy" not in warning_ids
+
+    # And the details string must explain why for the unhealthy ones, so the
+    # operator can read the finding without cross-referencing source.
+    by_id = {finding["id"]: finding for finding in findings}
+    assert "saknar" in by_id["scaffold-files:incomplete"]["details"]
+    assert "platshållare" in by_id["scaffold-files:placeholder"]["details"]
 
 
 def test_compare_variant_to_existing_counts_overlap() -> None:
