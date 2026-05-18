@@ -77,6 +77,7 @@ HTTP_TIMEOUT_SECONDS = 8
 MAX_PAGES = 5
 MAX_HTML_BYTES = 1_500_000  # 1.5 MB cap per page so a poisoned response cannot OOM the helper.
 MAX_TEXT_CORPUS = 60_000  # Cap LLM input regardless of how chatty the site is.
+MAX_REDIRECTS = 5  # Cap how many hops fetch_html follows before giving up.
 
 # Length budgets — vi vill inte överraska wizarden med 40-radig "Om oss"
 # direkt från en scrapad sida. LLM-syntesen får komprimera senare.
@@ -186,22 +187,52 @@ def validate_ssrf(url: str) -> str | None:
 
 
 def fetch_html(url: str) -> tuple[str, str | None]:
-    """Returnera (html, error). HTML är tom sträng vid fel."""
+    """Returnera (html, error). HTML är tom sträng vid fel.
+
+    Redirects följs manuellt så att varje hop går genom validate_ssrf.
+    Att låta requests följa redirects via allow_redirects=True skulle
+    annars öppna en SSRF-glipa där en publik URL 302:ar mot intern IP
+    (t.ex. http://169.254.169.254/ för AWS metadata eller
+    http://127.0.0.1:8501 för en lokal Streamlit-backoffice) och
+    requests skulle hämta det utan att validate_ssrf körs igen.
+    """
     headers = {
         "User-Agent": USER_AGENT,
         "Accept": "text/html,application/xhtml+xml",
         "Accept-Language": "sv-SE,sv;q=0.9,en;q=0.8",
     }
-    try:
-        response = requests.get(
-            url,
-            headers=headers,
-            timeout=HTTP_TIMEOUT_SECONDS,
-            allow_redirects=True,
-            stream=True,
-        )
-    except requests.RequestException as exc:
-        return "", f"HTTP-fel: {exc}"
+    current = url
+    response = None
+    for _hop in range(MAX_REDIRECTS + 1):
+        try:
+            response = requests.get(
+                current,
+                headers=headers,
+                timeout=HTTP_TIMEOUT_SECONDS,
+                allow_redirects=False,
+                stream=True,
+            )
+        except requests.RequestException as exc:
+            return "", f"HTTP-fel: {exc}"
+        if response.is_redirect or response.status_code in {301, 302, 303, 307, 308}:
+            location = response.headers.get("Location")
+            response.close()
+            if not location:
+                return "", f"HTTP {response.status_code} utan Location-header"
+            next_url = urljoin(current, location)
+            scheme = urlparse(next_url).scheme.lower()
+            if scheme not in {"http", "https"}:
+                return "", f"Redirect-mål använder icke-tillåtet schema: {scheme}"
+            ssrf_error = validate_ssrf(next_url)
+            if ssrf_error:
+                return "", f"Redirect blockerad: {ssrf_error}"
+            current = next_url
+            continue
+        break
+    else:
+        return "", f"Fler än {MAX_REDIRECTS} redirects, ger upp."
+    if response is None:
+        return "", "Ingen HTTP-respons mottagen."
     if response.status_code >= 400:
         return "", f"HTTP {response.status_code}"
     content_type = response.headers.get("Content-Type", "")
