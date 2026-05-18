@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import json
-
 import streamlit as st
 
 from .. import loaders
+from ..io import atomic_write_json, atomic_write_text
 from ..mermaid import (
     build_engine_mindmap,
     build_followup_flow_diagram,
@@ -186,16 +185,14 @@ def view_model_roles() -> None:
 
         path = POLICIES_DIR / "llm-models.v1.json"
         backup = path.read_text(encoding="utf-8")
-        path.write_text(
-            json.dumps(models, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-        )
+        atomic_write_json(path, models)
 
         # Run governance_validate to confirm the change is policy-safe; rollback if not.
         from .. import health
 
         validate_result = health.run_governance_validate()
         if not validate_result.ok:
-            path.write_text(backup, encoding="utf-8")
+            atomic_write_text(path, backup)
             _hard_reset_caches()
             st.error(
                 f"governance_validate failade efter spara - rollback genomfört. "
