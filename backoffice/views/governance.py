@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import json
-import os
-import tempfile
 from pathlib import Path
 
 import streamlit as st
 
 from .. import loaders
+from ..io import atomic_write_text
 from ..paths import DECISIONS_DIR, POLICIES_DIR, RULES_DIR
 from ._helpers import safe_render
 
@@ -17,34 +16,6 @@ from ._helpers import safe_render
 def _hard_reset_caches() -> None:
     loaders.load_json.clear()
     loaders.read_text.clear()
-
-
-def atomic_write_text(target: Path, contents: str) -> None:
-    """Write text atomically: tmp -> fsync -> os.replace.
-
-    Avoids leaving a half-written policy on disk if Streamlit crashes
-    mid-write or the OS interrupts between truncate and content. ``os.replace``
-    is atomic on the same filesystem on both Windows and POSIX.
-    """
-    target.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(
-        prefix=f".{target.name}.", suffix=".tmp", dir=str(target.parent)
-    )
-    tmp_path = Path(tmp_name)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
-            f.write(contents)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp_path, target)
-    except Exception:
-        # Best-effort cleanup; if replace already happened the unlink is a no-op
-        # because the temp file no longer exists at this path.
-        try:
-            tmp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
-        raise
 
 
 def view_policies() -> None:
