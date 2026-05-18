@@ -69,3 +69,5 @@ MIN_IDE/
 # unzips and ports it.
 data/starters/**/*.zip
 data/starters/**/*.tar.gz
+
+övrigt/
