@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 27 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 88 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 24 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 91 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -229,43 +229,8 @@ levereras inte i case 2 + 3 eftersom briefModel returnerar
 `conversionGoals=[]` för korta prompter (booking-bransch faller
 tillbaka till quote-default). Audit-konfidence 7/10.
 
-- **`B101` Låg** - Hero-CTA "Shoppa nu" på e-handel-case länkar till
-  `/kontakt` istället för `/produkter`. `render_home` i
-  `scripts/build_site.py` använder `contact_path` som primär CTA-
-  route oavsett `_hero_cta_variant`. Mismatch ger inkonsekvens,
-  inte broken UX. Förslagen fix: route-val styrt av variant
-  (shop → `_pick_products_route`, booking → contact, quote →
-  contact). Källa: Re-Verifierings-Scout 3 2026-05-18. Fix: open.
-  Test: open.
-- **`B102` Låg** - `/produkter`-bottom-CTA "Fråga om en beställning"
-  matchar inte hero-CTA "Shoppa nu" på e-handel-case.
-  `render_products` har egen hardcoded `ShoppingBag`-CTA-text som
-  inte trådas via `_hero_cta_label`. Inkonsekvent commerce-
-  tonalitet. Källa: Re-Verifierings-Scout 3 2026-05-18. Fix: open.
-  Test: open.
-
-### Re-Verifierings-Scout 2026-05-19 (keramik-/e-handel-pass)
-
-Riktad uppföljning på keramik-/e-handel-caset (Scout 3: 5.9/10). Ett
-nytt fynd öppnat:
-
-- **`B128` Hög** - `scripts/prompt_to_project_input.py`
-  `_customer_safe_planner_note` / `_derive_story` blockerar
-  B99-typisk dev-jargong i `notesForPlanner` men släpper igenom
-  rena svenska/engelska build-imperativ som publik /om-oss-copy.
-  Re-Verifierings-Scout 2026-05-19 såg `company.story` läsa
-  `"Bygg en liten e-handel på svenska för försäljning av keramik
-  med fokus på köpkonvertering."` på keramik-caset — operator-/
-  planner-instruktion, inte kundtext. B99-blocklistan saknar både
-  imperativ-formerna ("Bygg", "Skapa", "Gör", "Make", "Build",
-  ...) och tokens som `köpkonvertering`/`på svenska`. Föreslagen
-  fix: ny `_starts_with_planner_imperative()`-guard som avvisar
-  noten när första tokenet är en känd build-imperativ; utöka
-  `_PLANNER_NOTE_BLOCKLIST` med operator-tokens (`konvertering`,
-  `köpkonvertering`, `på svenska`, `på engelska`, `in english`,
-  `in swedish`). Tredje person presens ("Bygger på 25 års
-  erfarenhet ...") ska fortsätta passera. Källa: Re-Verifierings-
-  Scout 2026-05-19. Fix: open. Test: open.
+B101 + B102 stängda 2026-05-19 (keramik-/e-handel-pass, fix `d1fee90`);
+se Stängda-sektionen längre ner.
 
 ### Extern reviewer-triage 2026-05-18 (mot post-1E/B108-baseline)
 
@@ -574,6 +539,74 @@ dry-run ≠ Viewser-payload). Medvetna icke-blockers kvar: per-run trace i
 Backoffice, capability/dossier gaps (booking, contact-form, payments, FAQ).
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B128` Hög** (stängd 2026-05-19, keramik-/e-handel-pass) -
+  `scripts/prompt_to_project_input.py:_customer_safe_planner_note` /
+  `_derive_story` blockerade B99-typisk dev-jargong och planner-noter
+  men släppte igenom rena svenska/engelska build-imperativ i
+  `notesForPlanner` som publik /om-oss-copy. Re-Verifierings-Scout
+  2026-05-19 såg `company.story` läsa `"Bygg en liten e-handel på
+  svenska för försäljning av keramik med fokus på köpkonvertering."`
+  på keramik-caset — operator-/planner-instruktion, inte kundtext.
+  B99-blocklistan saknade både imperativ-formerna och tokens som
+  `köpkonvertering`/`på svenska`. **Fix:** ny
+  `_starts_with_planner_imperative()`-guard som avvisar noten när
+  första tokenet är en svensk/engelsk build-imperativ (`bygg`,
+  `skapa`, `gör`, `generera`, `designa`, `skriv`, `tillverka`,
+  `konstruera`, `producera`, `utveckla`, `forma`, `programmera`,
+  `rita`, `build`, `create`, `make`, `design`, `write`, `develop`,
+  `generate`, `construct`, `produce`, `draft`, plus fraserna
+  `lägg upp`, `sätt upp`, `set up`). `_PLANNER_NOTE_BLOCKLIST` får
+  också nya tokens (`konvertering`, `köpkonvertering`, `på svenska`,
+  `på engelska`, `in english`, `in swedish`). Tredje person presens
+  ("Bygger på 25 års erfarenhet ...") fortsätter passera så legitim
+  kundcopy inte blockeras. Källa: Re-Verifierings-Scout 2026-05-19.
+  Fix: `d1fee90`. Test:
+  `tests/test_prompt_to_project_input.py::test_story_discards_swedish_build_imperative_planner_note`,
+  `tests/test_prompt_to_project_input.py::test_customer_safe_planner_note_rejects_build_imperative`,
+  `tests/test_prompt_to_project_input.py::test_customer_safe_planner_note_keeps_present_tense_business_copy`,
+  `tests/test_prompt_to_project_input.py::test_customer_safe_planner_note_blocks_konvertering_tokens`,
+  `tests/test_prompt_to_project_input.py::test_b128_full_pipeline_blocks_keramik_planner_instruction`.
+
+- **`B101` Låg** (stängd 2026-05-19, keramik-/e-handel-pass) -
+  Hero-CTA "Shoppa nu" på e-handel-case länkade till `/kontakt`
+  istället för `/produkter`. `render_home` i `scripts/build_site.py`
+  använde `contact_path` som primär CTA-route oavsett
+  `_hero_cta_variant`, så texten lovade shop-yta men klicket
+  landade på kontakt. **Fix:** ny `_hero_cta_target_path(dossier,
+  listing_route, contact_path)`-helper som routar shop-varianten
+  till listing-routen när scaffolden faktiskt deklarerar
+  `id="products"`. Booking- och quote-varianter fortsätter peka på
+  `contact_path`. Shop-varianten faller tillbaka till `contact_path`
+  när scaffolden saknar products-route (ingen uppfinning av
+  `/produkter` när routen inte finns). Bottom-of-page "Kontakta oss"
+  CTA är orörd. Källa: Re-Verifierings-Scout 3 2026-05-18 +
+  2026-05-19. Fix: `d1fee90`. Test:
+  `tests/test_builder_route_emission.py::test_hero_cta_target_path_routes_shop_variant_to_products`,
+  `tests/test_builder_route_emission.py::test_hero_cta_target_path_falls_back_to_contact_when_no_products_listing`,
+  `tests/test_builder_route_emission.py::test_hero_cta_target_path_keeps_contact_for_booking_and_quote_variants`,
+  `tests/test_builder_route_emission.py::test_render_home_hero_cta_links_to_products_when_shop_variant`,
+  `tests/test_builder_route_emission.py::test_render_home_hero_cta_links_to_contact_when_booking_variant`,
+  `tests/test_builder_route_emission.py::test_render_home_hero_cta_uses_threaded_contact_path_for_quote_variant`,
+  `tests/test_builder_route_emission.py::test_render_home_hero_cta_links_to_threaded_products_path`.
+
+- **`B102` Låg** (stängd 2026-05-19, keramik-/e-handel-pass) -
+  `/produkter`-bottom-CTA "Fråga om en beställning" matchade inte
+  hero-CTA "Shoppa nu" på e-handel-case. Pre-fix `render_products`
+  hade hardcoded `ShoppingBag`-CTA som läste som offerttjänst-
+  förfrågan i stället för shop-flöde. **Fix:** ny
+  `_commerce_bottom_cta_label(dossier)`-helper med
+  `_COMMERCE_BOTTOM_CTA_LABELS`-whitelist (`"Hör av dig för att
+  beställa"` / `"Get in touch to order"`). Länken mot kontakt-routen
+  behålls eftersom builder MVP saknar checkout, men verbet
+  ("beställa"/"order") matchar shop-tonen från hero. Whitelist-
+  baserade strängar håller TSX-interpolationen säker utan
+  JSX-escape. Källa: Re-Verifierings-Scout 3 2026-05-18 + 2026-05-19.
+  Fix: `d1fee90`. Test:
+  `tests/test_builder_route_emission.py::test_render_products_bottom_cta_uses_shop_flavoured_label`,
+  `tests/test_builder_route_emission.py::test_render_products_bottom_cta_still_links_to_contact`,
+  `tests/test_builder_route_emission.py::test_render_products_bottom_cta_localizes_for_english_dossier`,
+  `tests/test_builder_route_emission.py::test_commerce_bottom_cta_label_whitelist_is_safe_for_tsx`.
 
 - **`B121` Medel** (stängd 2026-05-19, discovery-integration B121 A–D) -
   discovery-sanningen passerade tidigare fyra lager innan den landade i
