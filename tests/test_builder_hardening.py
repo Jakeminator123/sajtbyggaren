@@ -179,6 +179,71 @@ def test_copy_starter_drops_node_modules_when_dependencies_change(
 
 
 @pytest.mark.tooling
+def test_npm_install_inputs_changed_falls_back_when_target_has_invalid_utf8(
+    tmp_path: Path,
+) -> None:
+    """A target package.json with invalid UTF-8 must trigger a safe reinstall.
+
+    The helper already returns True (force reinstall) when the target
+    package.json is missing, unreadable (OSError), or malformed JSON
+    (json.JSONDecodeError). UnicodeDecodeError belongs in the same
+    fallback bucket: any file we cannot decode as UTF-8 cannot be diffed
+    against the source package.json, so the safe behavior is to drop
+    node_modules and let `npm install` rewrite the tree from a clean
+    state. Without UnicodeDecodeError in the except clause the build
+    would crash instead, which is the regression this test locks.
+    """
+    from scripts.build_site import _npm_install_inputs_changed
+
+    source = tmp_path / "source"
+    target = tmp_path / "target"
+    source.mkdir()
+    target.mkdir()
+    (source / "package.json").write_text(
+        json.dumps({"dependencies": {"next": "16.2.6"}}) + "\n",
+        encoding="utf-8",
+    )
+    (target / "package.json").write_bytes(b'{"name":"painter-\xff\xfepalma"}\n')
+
+    assert _npm_install_inputs_changed(source, target) is True
+
+
+@pytest.mark.tooling
+def test_copy_starter_drops_node_modules_when_target_package_json_has_invalid_utf8(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """End-to-end variant of the UnicodeDecodeError fallback.
+
+    Locks that the safe-reinstall path in `_npm_install_inputs_changed`
+    actually wires through `copy_starter`: a target whose package.json
+    has invalid UTF-8 must lose its stale node_modules instead of
+    aborting the build with UnicodeDecodeError.
+    """
+    import scripts.build_site as build_site
+
+    starters_dir = tmp_path / "starters"
+    source = starters_dir / "marketing-base"
+    source.mkdir(parents=True)
+    (source / "package.json").write_text(
+        json.dumps({"name": "marketing-base", "dependencies": {"next": "16.2.6"}})
+        + "\n",
+        encoding="utf-8",
+    )
+
+    target = tmp_path / "generated" / "painter-palma"
+    (target / "node_modules").mkdir(parents=True)
+    (target / "node_modules" / "stale.txt").write_text("stale\n", encoding="utf-8")
+    (target / "package.json").write_bytes(b'{"name":"painter-\xff\xfepalma"}\n')
+
+    monkeypatch.setattr(build_site, "STARTERS_DIR", starters_dir)
+
+    build_site.copy_starter("marketing-base", target)
+
+    assert not (target / "node_modules").exists()
+
+
+@pytest.mark.tooling
 def test_all_starters_use_audited_next_postcss_baseline() -> None:
     """Generated sites inherit their npm audit posture from source starters."""
     package_paths = sorted((REPO_ROOT / "data" / "starters").glob("*/package.json"))

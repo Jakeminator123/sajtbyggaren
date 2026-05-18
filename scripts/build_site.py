@@ -496,7 +496,10 @@ def _npm_install_inputs_changed(source: Path, target: Path) -> bool:
     source_pkg = load_json(source_pkg_path)
     try:
         target_pkg = load_json(target_pkg_path)
-    except (OSError, json.JSONDecodeError):
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        # An unreadable, malformed, or non-UTF-8 target package.json
+        # cannot be diff:ad mot source. Force a clean reinstall instead
+        # of letting the exception abort the whole build.
         return True
     return any(source_pkg.get(key) != target_pkg.get(key) for key in _NPM_INSTALL_INPUT_KEYS)
 
