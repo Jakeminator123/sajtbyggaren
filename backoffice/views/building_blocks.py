@@ -403,18 +403,55 @@ def view_variant_candidates() -> None:
                 use_container_width=True,
                 hide_index=True,
             )
+            st.subheader(f"Diff mot `{existing[0].get('id', 'canonical')}`")
+            st.dataframe(
+                asset_graph.variant_diff_rows(result.payload, existing[0]),
+                use_container_width=True,
+                hide_index=True,
+            )
 
     st.divider()
     st.subheader("Befintliga kandidater")
-    candidate_nodes = [
-        node
-        for node in asset_graph.build_graph()["nodes"]
-        if node["type"] == "variant-candidate"
-    ]
-    if candidate_nodes:
-        st.dataframe(candidate_nodes, use_container_width=True, hide_index=True)
-    else:
+    candidate_rows = asset_graph.list_variant_candidates()
+    if not candidate_rows:
         st.info("Inga variantkandidater finns ännu.")
+        return
+
+    st.dataframe(candidate_rows, use_container_width=True, hide_index=True)
+    candidate_options = [
+        f"{row['scaffold']}:{row['candidate']}" for row in candidate_rows
+    ]
+    selected_candidate = st.selectbox(
+        "Granska kandidat",
+        candidate_options,
+        key="variant_candidate_review_select",
+    )
+    selected_row = next(
+        row for row in candidate_rows if f"{row['scaffold']}:{row['candidate']}" == selected_candidate
+    )
+    candidate_path = REPO_ROOT / selected_row["path"]
+    try:
+        candidate_payload = asset_graph.read_json(candidate_path)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        st.error(f"Kunde inte läsa kandidat: {exc}")
+        return
+
+    st.json(candidate_payload, expanded=False)
+    existing = asset_graph.load_existing_variants(str(selected_row["scaffold"]))
+    if not existing:
+        st.info("Det finns ingen canonical Variant att jämföra mot för denna Scaffold.")
+        return
+    canonical_by_id = {str(variant["id"]): variant for variant in existing if variant.get("id")}
+    canonical_id = st.selectbox(
+        "Jämför mot canonical Variant",
+        sorted(canonical_by_id),
+        key="variant_candidate_diff_target",
+    )
+    diff_rows = asset_graph.variant_diff_rows(
+        candidate_payload,
+        canonical_by_id[canonical_id],
+    )
+    st.dataframe(diff_rows, use_container_width=True, hide_index=True)
 
 
 def view_dossiers() -> None:

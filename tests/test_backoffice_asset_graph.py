@@ -142,6 +142,81 @@ def test_compare_variant_to_existing_counts_overlap() -> None:
     ]
 
 
+def _variant_payload(variant_id: str) -> dict[str, Any]:
+    return {
+        "id": variant_id,
+        "enabled": False,
+        "label": "Test Variant",
+        "description": "A focused test Variant.",
+        "tokens": {
+            "color": {
+                "background": "#ffffff",
+                "foreground": "#111111",
+                "muted": "#666666",
+                "border": "#dddddd",
+                "primary": "#123456",
+                "primaryForeground": "#ffffff",
+                "accent": "#abcdef",
+                "accentForeground": "#111111",
+            },
+            "typography": {
+                "fontFamilyDisplay": "var(--font-geist-sans)",
+                "fontFamilyBody": "var(--font-geist-sans)",
+                "fontFamilyMono": "var(--font-geist-mono)",
+                "scaleRatio": 1.2,
+            },
+            "radius": {"sm": "0.25rem", "md": "0.5rem", "lg": "0.75rem"},
+            "spacing": {"section": "5rem", "container": "min(72rem, 92vw)"},
+            "motion": {"level": "subtle"},
+        },
+        "tone": {"vibe": ["calm", "credible"]},
+    }
+
+
+def test_variant_diff_rows_marks_changed_fields() -> None:
+    canonical = _variant_payload("base")
+    candidate = _variant_payload("warm")
+    candidate["tokens"]["color"]["primary"] = "#654321"
+
+    rows = asset_graph.variant_diff_rows(candidate, canonical)
+    by_field = {row["field"]: row for row in rows}
+
+    assert by_field["id"]["changed"] is True
+    assert by_field["tokens.color.primary"]["changed"] is True
+    assert by_field["tokens.color.background"]["changed"] is False
+
+
+def test_list_variant_candidates_reports_validation_and_collision(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    scaffolds_dir = tmp_path / "scaffolds"
+    candidates_dir = tmp_path / "variant-candidates"
+    variant_dir = scaffolds_dir / "demo" / "variants"
+    variant_dir.mkdir(parents=True)
+    (variant_dir / "base.json").write_text(
+        json.dumps(_variant_payload("base")),
+        encoding="utf-8",
+    )
+    candidate_dir = candidates_dir / "demo"
+    candidate_dir.mkdir(parents=True)
+    (candidate_dir / "base.json").write_text(
+        json.dumps(_variant_payload("base")),
+        encoding="utf-8",
+    )
+    (candidate_dir / "broken.json").write_text("{", encoding="utf-8")
+
+    monkeypatch.setattr(asset_graph, "SCAFFOLDS_DIR", scaffolds_dir)
+    monkeypatch.setattr(asset_graph, "VARIANT_CANDIDATES_DIR", candidates_dir)
+
+    rows = asset_graph.list_variant_candidates()
+    by_candidate = {row["candidate"]: row for row in rows}
+
+    assert by_candidate["base"]["status"] == "valid"
+    assert by_candidate["base"]["collidesWithCanonical"] is True
+    assert by_candidate["broken"]["status"] == "invalid"
+
+
 def test_variant_candidate_ui_helper_writes_only_candidate_dir(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
