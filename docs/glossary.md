@@ -105,7 +105,7 @@ I [`llm-models.v1.json`](../governance/policies/llm-models.v1.json) pekar alla g
 | `Policy` | JSON-fil under `governance/policies/`. Sanningskälla för en domän (kvalitet, namn, gränser, flöde, runtime, scaffold-/dossier-kontrakt, m.m.). |
 | `Schema` | JSON Schema-fil under `governance/schemas/` som validerar en motsvarande `Policy`. Ett schema per policy. |
 | `Rule` | Mänsklig instruktion under `governance/rules/` som speglas till `.cursor/rules/`. Beskriver beteende, inte data. |
-| `Backoffice` | `backend.py` Streamlit-app för att redigera governance, scaffolds, dossiers, evals, telemetri. **INTE** i användarens runtime. |
+| `Backoffice` | `backoffice.py` Streamlit-app för att redigera governance, scaffolds, dossiers, evals, telemetri. **INTE** i användarens runtime. |
 
 ## Globalt förbjudna termer
 

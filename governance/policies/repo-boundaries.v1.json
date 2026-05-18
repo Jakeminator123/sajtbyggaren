@@ -16,7 +16,7 @@
       ]
     },
     {
-      "path": "backend.py",
+      "path": "backoffice.py",
       "owns": ["backoffice-UI", "policy-redigering", "scaffold-/dossier-redigering", "eval-/telemetri-översikt"],
       "mayImportFrom": ["backoffice/", "governance/", "scripts/", "data/", "referens/", "tests/", ".cursor/rules/"],
       "mustNotDo": [
@@ -28,7 +28,7 @@
     },
     {
       "path": "backoffice/",
-      "owns": ["paths, loaders, health-helpers för backend.py", "Streamlit-vyer (vid utbrytning från backend.py)"],
+      "owns": ["paths, loaders, health-helpers för backoffice.py", "Streamlit-vyer (vid utbrytning från backoffice.py)"],
       "mayImportFrom": ["governance/", "scripts/", "data/", "referens/", "tests/", ".cursor/rules/"],
       "mustNotDo": [
         "ingå i användarens runtime-flöde",

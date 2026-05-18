@@ -82,9 +82,9 @@ Checklist:
 
 ## När backoffice ska visa något nytt
 
-Backoffice (`backend.py` + `backoffice/`-modulen) får aldrig dubbla logiken som finns i policies. Den **läser** governance, kör skripten och visar resultatet. Om en ny vy behövs:
+Backoffice (`backoffice.py` + `backoffice/`-modulen) får aldrig dubbla logiken som finns i policies. Den **läser** governance, kör skripten och visar resultatet. Om en ny vy behövs:
 
-1. Lägg vyfunktion i `backend.py` (eller `backoffice/views.py` om kodvolymen växer).
+1. Lägg vyfunktion i `backoffice/views/`.
 2. Lägg till i `SECTIONS`-dict så den dyker upp i sidopanelen.
 3. Använd `loaders.load_policy(...)` så caching fungerar.
 4. Om vyn behöver köra ett skript: använd `health.run_*` så output formateras enhetligt.

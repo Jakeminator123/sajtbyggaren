@@ -1,5 +1,6 @@
 {
   "id": "clean-store",
+  "enabled": true,
   "label": "Clean Store",
   "description": "Editorial, product-led visual expression. Generous white space, oversized product imagery, restrained typography, neutral palette with a warm accent. Suits curated single-brand shops that want the product to lead and the chrome to step back.",
   "tokens": {

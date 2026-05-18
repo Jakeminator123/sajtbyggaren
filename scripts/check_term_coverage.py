@@ -126,6 +126,10 @@ COMMON_WORDS = {
     "BaseModel", "Field", "FileNotFoundError", "BriefResult",
     "BriefModelResolutionError", "ValidationError", "ArtifactSchemaError",
     "SystemExit",
+    # list_open_bugs.py / test_bug_scope_discipline.py internal dataclass
+    # name. Mirrors the BriefResult / CheckResult pattern above - it is an
+    # internal Python symbol, not a domain term.
+    "BugEntry",
     # Zod (TS) error class. Mirrors how Pydantic's ValidationError is
     # treated above - external library symbol, not a domain term. Used
     # in apps/viewser/app/api/prompt/route.ts to split client-side
@@ -145,6 +149,13 @@ COMMON_WORDS = {
     # dataclasses + report container). Same treatment as PlanResult /
     # PlanningChoice above - implementation detail, not domain terms.
     "PreviewEntry", "PruneReport",
+    # Backoffice maintenance implementation dataclasses. They are local UI
+    # helper containers, not canonical domain terms.
+    "CleanupItem", "CleanupPlan", "CleanupResult", "ToggleRow",
+    # packages/generation/maintenance/auto_prune.py implementation symbol
+    # (dataclass returned by auto_prune_all()). Same treatment as
+    # PruneReport - implementation detail, not a domain term.
+    "AutoPruneReport",
     # planning module internal class identifiers (Sprint 2B). Mirrors the
     # brief module's BriefResult/BriefModelResolutionError treatment - these
     # are Python implementation symbols, not domain terms. The canonical

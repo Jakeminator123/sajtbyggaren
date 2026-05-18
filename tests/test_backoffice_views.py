@@ -21,6 +21,7 @@ VIEW_MODULES = [
     "backoffice.views.engine_runs",
     "backoffice.views.playground",
     "backoffice.views.evals",
+    "backoffice.views.maintenance",
 ]
 
 

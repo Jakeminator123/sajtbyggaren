@@ -9,7 +9,7 @@ governance/   <-- sanningskälla (JSON-policies + schemas + rules + decisions)
    ^
    | redigeras av
    |
-backend.py    <-- Streamlit-backoffice (operatören)
+backoffice.py <-- Streamlit-backoffice (operatören)
    |
    | speglar regler till
    v
@@ -28,7 +28,7 @@ apps/         <-- web/api som konsumerar packages
 | Mapp | Roll | Får importera |
 |------|------|--------------|
 | `governance/` | Policies, schemas, regler, beslut | (inget; rotsanning) |
-| `backend.py` | Streamlit-backoffice | `governance/`, `scripts/`, `data/` |
+| `backoffice.py` | Streamlit-backoffice | `governance/`, `scripts/`, `data/` |
 | `scripts/` | Validering, sync, evals | `governance/`, `data/` |
 | `packages/policies` | Typade laddare | `governance/` |
 | `packages/generation` | LLM-flöde fas 1-3 | `packages/{policies,shared,builder}` |

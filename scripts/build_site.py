@@ -695,6 +695,78 @@ _LISTING_COPY_BY_ROUTE_ID: dict[str, dict[str, str]] = {
 }
 
 
+# Demo-baseline-fix 1C (B96): hero CTA copy keyed on scaffold + conversion
+# goals. ``ecommerce-lite`` (or any project whose conversionGoals signal
+# purchase intent) gets a shopping verb; bokningsdrivna verksamheter
+# (``booking_request`` i conversionGoals) får boka-verbet; resten faller
+# tillbaka på "Begär offert" som var hardcoded före re-Verifierings-Scout
+# 2026-05-15.
+_HERO_CTA_VARIANT_LABELS: dict[str, dict[str, str]] = {
+    "shop": {"sv": "Shoppa nu", "en": "Shop now"},
+    "booking": {"sv": "Boka tid", "en": "Book a time"},
+    "quote": {"sv": "Begär offert", "en": "Request a quote"},
+}
+
+_SHOP_CONVERSION_GOALS: frozenset[str] = frozenset(
+    {"product_purchase", "shop_visit", "purchase"}
+)
+_BOOKING_CONVERSION_GOALS: frozenset[str] = frozenset(
+    {"booking_request", "book_appointment"}
+)
+
+
+def _hero_cta_variant(dossier: dict) -> str:
+    """Return the hero CTA variant key for this Project Input.
+
+    Priority is shop > booking > quote so an ecommerce project with
+    mixed conversion goals still leads with a shopping verb. The
+    scaffold id is consulted as a defensive fallback because operators
+    sometimes pin ``ecommerce-lite`` without filling conversionGoals.
+    """
+    scaffold_id = (dossier.get("scaffoldId") or "").strip().lower()
+    goals = {
+        str(goal).strip().lower()
+        for goal in (dossier.get("conversionGoals") or [])
+        if isinstance(goal, str)
+    }
+    if scaffold_id == "ecommerce-lite" or goals & _SHOP_CONVERSION_GOALS:
+        return "shop"
+    if goals & _BOOKING_CONVERSION_GOALS:
+        return "booking"
+    return "quote"
+
+
+def _hero_cta_label(dossier: dict) -> str:
+    """Return the hero CTA label string for this Project Input.
+
+    Reads ``dossier["language"]`` (defaults to ``sv``) and routes
+    through ``_hero_cta_variant`` so render_home and render_services
+    share the same wording. Values are drawn from the whitelist in
+    ``_HERO_CTA_VARIANT_LABELS`` so the returned string is safe to
+    interpolate into TSX without JSX-escaping (it never contains
+    angle brackets, quotes or curlies).
+    """
+    language = (dossier.get("language") or "sv").strip().lower()
+    if language not in ("sv", "en"):
+        language = "sv"
+    variant = _hero_cta_variant(dossier)
+    return _HERO_CTA_VARIANT_LABELS[variant][language]
+
+
+def _location_is_country_only(location: dict) -> bool:
+    """Return True when ``location.city`` equals ``location.country``.
+
+    Demo-baseline-fix 1C (B95): when the brief returns a country name
+    as ``locationHint`` (or omits it entirely), ``_placeholder_location``
+    falls back to ``city == country`` as a marker. ``render_home`` uses
+    this helper to suppress the hero ortstag rather than rendering the
+    country name as if it were a city.
+    """
+    city = (location.get("city") or "").strip().lower()
+    country = (location.get("country") or "").strip().lower()
+    return bool(city) and city == country
+
+
 def _nav_label_for_route(route_id: str) -> str:
     """Return the Swedish nav label for a scaffold route id.
 
@@ -1041,6 +1113,20 @@ def render_home(
             "\n"
         )
 
+    # Demo-baseline-fix 1C (B95): suppress the hero ortstag when the
+    # location is country-only (no real city, see _placeholder_location).
+    location_tag = ""
+    if not _location_is_country_only(location):
+        location_tag = (
+            '          <div className="flex items-center gap-2 text-sm uppercase tracking-widest text-[color:var(--muted)]">\n'
+            '            <MapPin className="size-4" />\n'
+            f"            <span>{_jsx_safe_string(location['city'])}</span>\n"
+            "          </div>\n"
+        )
+    # Demo-baseline-fix 1C (B96): hero CTA label is scaffold-aware
+    # (shop / booking / quote) so e-commerce projects do not get a
+    # service-business "Begär offert" verb in the hero.
+    hero_cta_label = _hero_cta_label(dossier)
     return (
         icon_import + "\n"
         "export default function Home() {\n"
@@ -1049,14 +1135,11 @@ def render_home(
         f"{hero_section_jsx}"
         '      <section className="relative overflow-hidden bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/30">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
-        '          <div className="flex items-center gap-2 text-sm uppercase tracking-widest text-[color:var(--muted)]">\n'
-        '            <MapPin className="size-4" />\n'
-        f"            <span>{_jsx_safe_string(location['city'])}</span>\n"
-        "          </div>\n"
+        f"{location_tag}"
         f'          <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl">{_jsx_safe_string(company["name"])}</h1>\n'
         f'          <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed md:text-xl">{_jsx_safe_string(company["tagline"])}</p>\n'
         '          <div className="flex flex-wrap gap-3">\n'
-        f'            <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Begär offert<ArrowRight className="size-4" /></a>\n'
+        f'            <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{hero_cta_label}<ArrowRight className="size-4" /></a>\n'
         f'            <a href={_jsx_safe_string("tel:" + _phone_href(contact["phone"]))} className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />Ring {_jsx_safe_string(contact["phone"])}</a>\n'
         f"{spel_cta}"
         "          </div>\n"
@@ -1107,6 +1190,10 @@ def render_services(
         "          </article>"
         for svc in services
     )
+    # Demo-baseline-fix 1C (B96): keep the bottom-of-page CTA on
+    # render_services aligned with the hero CTA verb so a booking-driven
+    # service business (e.g. frisör) reads "Boka tid" everywhere.
+    cta_label = _hero_cta_label(dossier)
     return (
         icon_import + "\n"
         "export default function ServicesPage() {\n"
@@ -1122,7 +1209,7 @@ def render_services(
         '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
         f"{items}\n"
         "          </div>\n"
-        f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Begär offert<ArrowRight className="size-4" /></a>\n'
+        f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{cta_label}<ArrowRight className="size-4" /></a>\n'
         "        </div>\n"
         "      </section>\n"
         "    </main>\n"
@@ -1136,14 +1223,30 @@ def render_about(dossier: dict) -> str:
     team = company.get("team", [])
     location = dossier["location"]
     areas_html = ", ".join(location["serviceAreas"])
-    team_items = "\n".join(
-        f'            <li key={_jsx_safe_string(member["name"])} className="rounded-xl border border-[color:var(--border)] p-6">\n'
-        f'              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-full bg-[color:var(--accent)] text-[color:var(--accent-foreground)] text-sm font-semibold uppercase">{_jsx_safe_string(_member_initials(member["name"]))}</span>\n'
-        f'              <p className="text-base font-semibold">{_jsx_safe_string(member["name"])}</p>\n'
-        f'              <p className="mt-1 text-sm text-[color:var(--muted)]">{_jsx_safe_string(member["role"])}</p>\n'
-        "            </li>"
-        for member in team
-    )
+    # Demo-baseline-fix 1C (B94): skip the entire team section when no
+    # team members are declared, mirroring B66's trustSignals fix.
+    # Previously the renderer emitted "Teamet" + an empty <ul>, which
+    # surfaced on every generated /om-oss page in the re-Verifierings-
+    # Scout 2026-05-15 run because prompt_to_project_input.py never
+    # populates team.
+    team_section = ""
+    if team:
+        team_items = "\n".join(
+            f'            <li key={_jsx_safe_string(member["name"])} className="rounded-xl border border-[color:var(--border)] p-6">\n'
+            f'              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-full bg-[color:var(--accent)] text-[color:var(--accent-foreground)] text-sm font-semibold uppercase">{_jsx_safe_string(_member_initials(member["name"]))}</span>\n'
+            f'              <p className="text-base font-semibold">{_jsx_safe_string(member["name"])}</p>\n'
+            f'              <p className="mt-1 text-sm text-[color:var(--muted)]">{_jsx_safe_string(member["role"])}</p>\n'
+            "            </li>"
+            for member in team
+        )
+        team_section = (
+            '          <div className="flex flex-col gap-4">\n'
+            '            <h2 className="text-2xl font-semibold tracking-tight">Teamet</h2>\n'
+            '            <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">\n'
+            f"{team_items}\n"
+            "            </ul>\n"
+            "          </div>\n"
+        )
 
     # Galleribilder med placement="about" (eller utan placement, men
     # vi väljer endast about för att inte överlasta /om-oss-sidan).
@@ -1188,12 +1291,7 @@ def render_about(dossier: dict) -> str:
         '            <Quote className="absolute -top-3 -left-3 size-8 text-[color:var(--primary)]/20" />\n'
         f'            <p className="text-lg text-[color:var(--foreground)] leading-relaxed">{_jsx_safe_string(company["story"])}</p>\n'
         "          </div>\n"
-        '          <div className="flex flex-col gap-4">\n'
-        '            <h2 className="text-2xl font-semibold tracking-tight">Teamet</h2>\n'
-        '            <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">\n'
-        f"{team_items}\n"
-        "            </ul>\n"
-        "          </div>\n"
+        f"{team_section}"
         f"{gallery_section_jsx}"
         '          <div className="flex flex-col gap-2">\n'
         '            <h2 className="inline-flex items-center gap-2 text-2xl font-semibold tracking-tight"><MapPin className="size-5" />Områden vi arbetar i</h2>\n'
@@ -1416,6 +1514,10 @@ def load_selected_dossier_manifests(project_input: dict) -> list[dict]:
         if manifest.get("class") != dossier_class:
             raise SystemExit(
                 f"Dossier manifest class mismatch for {manifest_path}: expected '{dossier_class}', got '{manifest.get('class')}'"
+            )
+        if manifest.get("enabled", True) is False:
+            raise SystemExit(
+                f"Selected dossier '{dossier_id}' is disabled in {manifest_path}."
             )
         manifests.append(
             {
@@ -2209,14 +2311,25 @@ def build(
     do_build: bool = True,
     runs_dir: Path | None = None,
     generated_dir: str | Path | None = None,
+    auto_prune: bool = True,
 ) -> tuple[Path, Path]:
     """Generate a site and Engine Run artefakts. Returns (target, run_dir).
 
     ``runs_dir`` defaults to ``RUNS_DIR`` (``data/runs``); pass an isolated
     path (``tmp_path`` in tests) to keep the canonical history clean.
     ``generated_dir`` overrides where the dev-preview site is emitted.
+    ``auto_prune`` runs the opt-in retention sweep from
+    ``packages.generation.maintenance.auto_prune_all`` before Phase 0 so
+    ``data/runs/``, ``data/prompt-inputs/`` and ``.generated/`` stay under
+    the caps configured in ``.env``. Disabled automatically when ``runs_dir``
+    is overridden (tests with ``tmp_path``).
     """
     started = time.monotonic()
+
+    if auto_prune and runs_dir is None:
+        from packages.generation.maintenance import auto_prune_all
+
+        auto_prune_all(generated_dir=Path(generated_dir) if generated_dir else None)
 
     dossier = load_json(dossier_path)
     site_id = dossier["siteId"]

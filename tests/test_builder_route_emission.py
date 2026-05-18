@@ -413,6 +413,266 @@ def test_render_home_keeps_trust_section_when_trust_signals_present() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Demo-baseline-fix 1C (B95): hero ortstag is suppressed when the
+# location is country-only (``city == country``). The brief sometimes
+# returns ``locationHint="Sverige"`` (no city) which used to surface as
+# an ortstag on the e-commerce demo prompt.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_render_home_omits_hero_location_tag_when_country_only() -> None:
+    from scripts.build_site import render_home
+
+    dossier = _minimal_dossier()
+    dossier["location"] = {
+        "city": "Sverige",
+        "country": "Sverige",
+        "serviceAreas": ["Sverige"],
+    }
+    output = render_home(
+        dossier,
+        dossier_routes=[],
+        listing_route={"id": "services", "path": "/tjanster"},
+    )
+
+    assert "<MapPin" not in output.split("</section>", 1)[0], (
+        "Country-only location must not render a MapPin ortstag in the "
+        "hero section."
+    )
+    assert '<span>{"Sverige"}</span>' not in output
+
+
+@pytest.mark.tooling
+def test_render_home_keeps_hero_location_tag_when_real_city() -> None:
+    """Positive lock: real cities still get the ortstag."""
+    from scripts.build_site import render_home
+
+    output = render_home(
+        _minimal_dossier(),
+        dossier_routes=[],
+        listing_route={"id": "services", "path": "/tjanster"},
+    )
+    hero = output.split("</section>", 1)[0]
+    assert "<MapPin" in hero
+    assert '<span>{"Stockholm"}</span>' in hero
+
+
+@pytest.mark.tooling
+def test_render_home_country_only_marker_is_case_insensitive() -> None:
+    """B95: the marker should match even when city/country differ in
+    casing or surrounding whitespace, so a brief that returns ``"SVERIGE"``
+    is still treated as country-only."""
+    from scripts.build_site import _location_is_country_only
+
+    assert _location_is_country_only(
+        {"city": "Sverige", "country": "Sverige"}
+    )
+    assert _location_is_country_only(
+        {"city": "  sverige ", "country": "Sverige"}
+    )
+    assert _location_is_country_only(
+        {"city": "Sweden", "country": "sweden"}
+    )
+    assert not _location_is_country_only(
+        {"city": "Stockholm", "country": "Sverige"}
+    )
+    assert not _location_is_country_only({"city": "", "country": "Sverige"})
+
+
+# ---------------------------------------------------------------------------
+# Demo-baseline-fix 1C (B96): hero CTA is scaffold- and conversion-goal
+# aware. Before the fix "Begär offert" was hardcoded in render_home and
+# render_services regardless of scaffold, which made the e-commerce
+# demo case (3.9 / 10 in re-Scout) lose conversion credibility.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_hero_cta_label_defaults_to_quote_when_no_signals() -> None:
+    from scripts.build_site import _hero_cta_label
+
+    assert _hero_cta_label({}) == "Begär offert"
+    assert _hero_cta_label({"language": "en"}) == "Request a quote"
+
+
+@pytest.mark.tooling
+def test_hero_cta_label_uses_shop_verb_for_ecommerce_scaffold() -> None:
+    from scripts.build_site import _hero_cta_label
+
+    sv = _hero_cta_label({"language": "sv", "scaffoldId": "ecommerce-lite"})
+    en = _hero_cta_label({"language": "en", "scaffoldId": "ecommerce-lite"})
+    assert sv == "Shoppa nu"
+    assert en == "Shop now"
+
+
+@pytest.mark.tooling
+def test_hero_cta_label_uses_shop_verb_for_purchase_conversion_goal() -> None:
+    from scripts.build_site import _hero_cta_label
+
+    dossier = {
+        "language": "sv",
+        "scaffoldId": "local-service-business",
+        "conversionGoals": ["product_purchase"],
+    }
+    assert _hero_cta_label(dossier) == "Shoppa nu"
+
+
+@pytest.mark.tooling
+def test_hero_cta_label_uses_booking_verb_for_booking_conversion_goal() -> None:
+    from scripts.build_site import _hero_cta_label
+
+    dossier = {
+        "language": "sv",
+        "scaffoldId": "local-service-business",
+        "conversionGoals": ["booking_request", "call"],
+    }
+    assert _hero_cta_label(dossier) == "Boka tid"
+    en_dossier = {**dossier, "language": "en"}
+    assert _hero_cta_label(en_dossier) == "Book a time"
+
+
+@pytest.mark.tooling
+def test_hero_cta_label_shop_beats_booking_in_priority() -> None:
+    """Mixed conversion goals: shop intent leads regardless of order."""
+    from scripts.build_site import _hero_cta_label
+
+    dossier = {
+        "language": "sv",
+        "scaffoldId": "ecommerce-lite",
+        "conversionGoals": ["booking_request", "product_purchase"],
+    }
+    assert _hero_cta_label(dossier) == "Shoppa nu"
+
+
+@pytest.mark.tooling
+def test_render_home_emits_scaffold_aware_hero_cta_for_ecommerce() -> None:
+    """B96: render_home must surface the shop verb in the hero CTA
+    when the Project Input pins ecommerce-lite."""
+    from scripts.build_site import render_home
+
+    dossier = _minimal_dossier()
+    dossier["scaffoldId"] = "ecommerce-lite"
+    dossier["conversionGoals"] = ["product_purchase", "shop_visit"]
+    dossier["language"] = "sv"
+    output = render_home(
+        dossier,
+        dossier_routes=[],
+        listing_route={"id": "products", "path": "/produkter"},
+    )
+
+    assert "Shoppa nu" in output
+    assert "Begär offert" not in output
+
+
+@pytest.mark.tooling
+def test_render_home_emits_booking_hero_cta_for_booking_business() -> None:
+    """B96: a service business with booking_request CTA reads 'Boka tid'
+    rather than the generic 'Begär offert' that frisör / naprapatklinik
+    used to receive."""
+    from scripts.build_site import render_home
+
+    dossier = _minimal_dossier()
+    dossier["scaffoldId"] = "local-service-business"
+    dossier["conversionGoals"] = ["booking_request"]
+    dossier["language"] = "sv"
+    output = render_home(
+        dossier,
+        dossier_routes=[],
+        listing_route={"id": "services", "path": "/tjanster"},
+    )
+
+    assert "Boka tid" in output
+    assert "Begär offert" not in output
+
+
+@pytest.mark.tooling
+def test_render_home_falls_back_to_quote_cta_for_default_service_business() -> None:
+    """B96 positive lock: today's hardcoded "Begär offert" must remain
+    the default for service-business projects without booking signals,
+    so painter-palma-style demos do not regress."""
+    from scripts.build_site import render_home
+
+    dossier = _minimal_dossier()
+    dossier["scaffoldId"] = "local-service-business"
+    dossier["conversionGoals"] = ["quote_request", "call"]
+    dossier["language"] = "sv"
+    output = render_home(
+        dossier,
+        dossier_routes=[],
+        listing_route={"id": "services", "path": "/tjanster"},
+    )
+
+    assert "Begär offert" in output
+    assert "Shoppa nu" not in output
+    assert "Boka tid" not in output
+
+
+@pytest.mark.tooling
+def test_render_services_uses_same_hero_cta_label_as_home() -> None:
+    """B96: render_services' bottom CTA must follow the same variant
+    helper so the two pages stay aligned."""
+    from scripts.build_site import render_services
+
+    dossier = _minimal_dossier()
+    dossier["scaffoldId"] = "local-service-business"
+    dossier["conversionGoals"] = ["booking_request"]
+    dossier["language"] = "sv"
+    output = render_services(dossier)
+
+    assert "Boka tid" in output
+    assert "Begär offert" not in output
+
+
+# ---------------------------------------------------------------------------
+# Demo-baseline-fix 1C (B94): render_about omits the team section when
+# the Project Input has no team members. Prompt-generated Project
+# Inputs never populate team today, so the section rendered an empty
+# "<ul>" on every demo /om-oss page in the re-Verifierings-Scout
+# 2026-05-15 run.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_render_about_omits_team_section_when_team_empty() -> None:
+    from scripts.build_site import render_about
+
+    dossier = _minimal_dossier()
+    dossier["company"]["team"] = []
+    output = render_about(dossier)
+
+    assert "Teamet" not in output
+    assert "grid-cols-3" not in output or "Teamet" not in output
+
+
+@pytest.mark.tooling
+def test_render_about_omits_team_section_when_team_missing() -> None:
+    """B94: a dossier without the optional ``team`` key behaves the
+    same as ``team=[]`` so the renderer never crashes on missing data."""
+    from scripts.build_site import render_about
+
+    dossier = _minimal_dossier()
+    dossier["company"].pop("team", None)
+    output = render_about(dossier)
+
+    assert "Teamet" not in output
+
+
+@pytest.mark.tooling
+def test_render_about_keeps_team_section_when_members_present() -> None:
+    """B94 positive lock: curated examples with real team members keep
+    the team section unchanged so painter-palma-style demos do not
+    regress."""
+    from scripts.build_site import render_about
+
+    output = render_about(_minimal_dossier())
+
+    assert "Teamet" in output
+    assert "Test Person" in output
+    assert "Roll" in output
+
+
+# ---------------------------------------------------------------------------
 # render_products: shape contract
 # ---------------------------------------------------------------------------
 

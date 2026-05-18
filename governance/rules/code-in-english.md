@@ -17,7 +17,7 @@ alwaysApply: true
 | Agentens svar till operatören | **Svenska** (se [`always-swedish.md`](always-swedish.md)) |
 | Slutanvändarens prompter | **Auto-detekteras** via `siteBrief.language` |
 | Genererad sajt-content | **Matchar `siteBrief.language`** om inte explicit override |
-| Backoffice UI-strängar (`backend.py`) | **Svenska** (operatörens UI) |
+| Backoffice UI-strängar (`backoffice.py`) | **Svenska** (operatörens UI) |
 
 ## Hårda regler för kod
 
@@ -28,7 +28,7 @@ alwaysApply: true
 
 ## Hårda regler för operatörsytor
 
-- `governance/rules/`, `.cursor/rules/`, `docs/`, ADR:er och `backend.py`-UI är på svenska. Det är vårt arbetsspråk.
+- `governance/rules/`, `.cursor/rules/`, `docs/`, ADR:er och `backoffice.py`-UI är på svenska. Det är vårt arbetsspråk.
 - Operatörens namn på saker som `Site Brief`, `Scaffold`, `Dossier` är engelska eftersom de är **kanoniska identifierare** i [`naming-dictionary.v1.json`](../policies/naming-dictionary.v1.json), men vi pratar om dem på svenska runtomkring.
 
 ## Hårda regler för slutanvändarspråk

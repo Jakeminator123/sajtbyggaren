@@ -1190,40 +1190,61 @@ def test_full_pipeline_locks_no_planner_jargon_for_scout_prompt() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Demo-baseline-fix 1A-hotfix (B62): country normalisation. briefModel
-# sometimes returns `locationHint="Sweden"` even when the prompt is
-# Swedish; the helper rewrites it so the rendered city stays in the
-# prompt's language.
+# Demo-baseline-fix 1A-hotfix (B62) + Demo-baseline-fix 1C (B95):
+# locationHint normalisation. After B95 every Nordic country name (in
+# either Swedish or English form) is mapped to ``None`` so the
+# placeholder falls back to ``city == country`` as a "country only"
+# marker. Real city names are returned unchanged on both languages.
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.tooling
-def test_normalize_location_hint_translates_country_on_swedish_builds() -> None:
-    assert _normalize_location_hint("Sweden", "sv") == "Sverige"
-    assert _normalize_location_hint("sweden", "sv") == "Sverige"
-    assert _normalize_location_hint(" SWEDEN ", "sv") == "Sverige"
+def test_normalize_location_hint_drops_english_country_names() -> None:
+    """B95: English country names map to None on every language."""
+    assert _normalize_location_hint("Sweden", "sv") is None
+    assert _normalize_location_hint("sweden", "sv") is None
+    assert _normalize_location_hint(" SWEDEN ", "sv") is None
+    assert _normalize_location_hint("Sweden", "en") is None
 
 
 @pytest.mark.tooling
-def test_normalize_location_hint_preserves_english_country() -> None:
-    """English builds keep the English label so /om-oss reads in en."""
-    assert _normalize_location_hint("Sweden", "en") == "Sweden"
+def test_normalize_location_hint_drops_swedish_country_names() -> None:
+    """B95: ``locationHint="Sverige"`` (no city) was the actual re-Scout
+    finding on the e-commerce prompt; the helper now drops it just
+    like the English variant."""
+    assert _normalize_location_hint("Sverige", "sv") is None
+    assert _normalize_location_hint("sverige", "en") is None
+    assert _normalize_location_hint("  Sverige  ", "sv") is None
+
+
+@pytest.mark.tooling
+def test_normalize_location_hint_drops_other_nordic_country_names() -> None:
+    """B95: covers the Nordic country names the helper actively knows
+    about (Norway/Norge, Denmark/Danmark, Finland, Iceland/Island)."""
+    for value in ("Norway", "Norge", "Denmark", "Danmark", "Finland", "Iceland", "Island"):
+        assert _normalize_location_hint(value, "sv") is None, value
+        assert _normalize_location_hint(value, "en") is None, value
 
 
 @pytest.mark.tooling
 def test_normalize_location_hint_preserves_real_city() -> None:
-    """Real city names are returned unchanged on Swedish builds."""
+    """B95: real city names are returned unchanged on both languages."""
     assert _normalize_location_hint("Göteborg", "sv") == "Göteborg"
     assert _normalize_location_hint("Stockholm", "sv") == "Stockholm"
+    assert _normalize_location_hint("Malmö", "en") == "Malmö"
 
 
 @pytest.mark.tooling
-def test_swedish_brief_with_country_location_renders_swedish_city() -> None:
-    """`locationHint="Sweden"` + language=sv -> location.city="Sverige"."""
+def test_swedish_brief_with_country_location_uses_country_only_marker() -> None:
+    """B95: ``locationHint="Sverige"`` + language=sv falls back to the
+    country-only marker (``location.city == location.country``) so
+    ``scripts/build_site.py:render_home`` can suppress the hero
+    ortstag. Previously this case surfaced the country name as a
+    rendered city on the e-commerce demo prompt."""
     brief = {
         "language": "sv",
         "businessTypeGuess": "hairdresser",
-        "locationHint": "Sweden",
+        "locationHint": "Sverige",
         "rawPrompt": "frisör i Sverige",
         "tone": [],
         "conversionGoals": [],
@@ -1241,6 +1262,144 @@ def test_swedish_brief_with_country_location_renders_swedish_city() -> None:
     )
     assert project_input["location"]["city"] == "Sverige"
     assert project_input["location"]["country"] == "Sverige"
+    assert project_input["location"]["city"] == project_input["location"]["country"]
+
+
+@pytest.mark.tooling
+def test_english_brief_with_country_location_uses_country_only_marker() -> None:
+    """B95 (en variant): same marker shape on English builds."""
+    brief = {
+        "language": "en",
+        "businessTypeGuess": "ecommerce-shop",
+        "locationHint": "Sweden",
+        "rawPrompt": "small ceramics e-commerce shop",
+        "tone": [],
+        "conversionGoals": [],
+        "servicesMentioned": [],
+        "requestedCapabilities": [],
+        "notesForPlanner": None,
+        "briefSource": "real",
+    }
+    project_input = site_brief_to_project_input(
+        brief,
+        site_id="ceramics-shop",
+        scaffold_id="ecommerce-lite",
+        variant_id="nordic-trust",
+        original_prompt="small ceramics e-commerce shop",
+    )
+    assert project_input["location"]["city"] == "Sweden"
+    assert project_input["location"]["country"] == "Sweden"
+    assert project_input["location"]["city"] == project_input["location"]["country"]
+
+
+# ---------------------------------------------------------------------------
+# Demo-baseline-fix 1C (B88): contact-placeholder dev jargon. Before
+# the fix the default ``addressLines`` value was operator-facing dev
+# jargon ("Adress saknas - uppdatera Project Input") that leaked
+# verbatim into the public ``<address>`` tag on every generated
+# /kontakt page. The fallback is now a brand-neutral phrase that
+# reads acceptably to a real visitor; the operator can still override
+# it via Project Input.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_placeholder_contact_address_has_no_dev_jargon_on_swedish_brief() -> None:
+    """B88: the Swedish address placeholder must read as customer copy."""
+    brief = {
+        "language": "sv",
+        "businessTypeGuess": "electrician",
+        "rawPrompt": "elektriker Malmö",
+        "tone": [],
+        "conversionGoals": [],
+        "servicesMentioned": [],
+        "requestedCapabilities": [],
+        "locationHint": "Malmö",
+        "notesForPlanner": None,
+        "briefSource": "real",
+    }
+    project_input = site_brief_to_project_input(
+        brief,
+        site_id="electrician-malmo",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="elektriker Malmö",
+    )
+    address_lines = project_input["contact"]["addressLines"]
+    assert len(address_lines) == 1
+    joined = " ".join(address_lines).lower()
+    forbidden = (
+        "adress saknas",
+        "uppdatera project input",
+        "project input",
+        "placeholder",
+        "address placeholder",
+        "update project input",
+    )
+    for token in forbidden:
+        assert token not in joined, (token, address_lines)
+    assert address_lines == ["Adress lämnas på förfrågan"]
+
+
+@pytest.mark.tooling
+def test_placeholder_contact_address_has_no_dev_jargon_on_english_brief() -> None:
+    """B88 (en variant): the English address placeholder must read as
+    customer copy too."""
+    brief = {
+        "language": "en",
+        "businessTypeGuess": "electrician",
+        "rawPrompt": "electrician in Malmö",
+        "tone": [],
+        "conversionGoals": [],
+        "servicesMentioned": [],
+        "requestedCapabilities": [],
+        "locationHint": "Malmö",
+        "notesForPlanner": None,
+        "briefSource": "real",
+    }
+    project_input = site_brief_to_project_input(
+        brief,
+        site_id="electrician-malmo-en",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="electrician in Malmö",
+    )
+    address_lines = project_input["contact"]["addressLines"]
+    joined = " ".join(address_lines).lower()
+    for token in ("placeholder", "update project input", "project input"):
+        assert token not in joined, (token, address_lines)
+    assert address_lines == ["Address available on request"]
+
+
+@pytest.mark.tooling
+def test_placeholder_contact_address_prefers_brief_value_over_fallback() -> None:
+    """B88: when the brief actually carries a customer address the
+    helper must keep that value verbatim and never substitute the
+    neutral fallback phrase."""
+    brief = {
+        "language": "sv",
+        "businessTypeGuess": "electrician",
+        "rawPrompt": "Volt & Co, Storgatan 1",
+        "companyName": "Volt & Co",
+        "contactAddress": "Storgatan 1, 211 22 Malmö",
+        "tone": [],
+        "conversionGoals": [],
+        "servicesMentioned": [],
+        "requestedCapabilities": [],
+        "locationHint": "Malmö",
+        "notesForPlanner": None,
+        "briefSource": "real",
+    }
+    project_input = site_brief_to_project_input(
+        brief,
+        site_id="volt-co-address",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="Volt & Co, Storgatan 1",
+    )
+    assert project_input["contact"]["addressLines"] == [
+        "Storgatan 1, 211 22 Malmö"
+    ]
 
 
 # ---------------------------------------------------------------------------
