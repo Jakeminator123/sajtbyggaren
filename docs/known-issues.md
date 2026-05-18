@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 84 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 6 unknown, 85 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -478,6 +478,42 @@ PR #28 / `885431b` stängde 15 buggar (alla flyttade till "Stängda" 2026-05-18 
 Lokal mainline-commit `b5ee710` stängde B88 (kontakt-placeholder dev-jargong), B94 (tom team-grid på `/om-oss`), B95 (landnamn som hero-ortstag) och B96 (scaffold-omedveten hero-CTA). Inga andra B-IDs påverkade. Kvar från re-Verifierings-Scout 2026-05-15 är B97 + B98 (låg-impact). Re-Verifierings-Scout med samma fyra prompter (`elektriker Malmö`, `frisör Göteborg`, `naprapatklinik Stockholm`, `liten e-handel som säljer keramik`) körs efter denna bump för att jämföra mot 5.54-baselinen. Förväntad effekt: snitt 6.5-7.0/10.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B124` Medel** (stängd 2026-05-18, operatör-rapporterat efter
+  B123-fix) - B123 satte `Cross-Origin-Embedder-Policy: credentialless`
+  på Viewser-host-sidan, vilket gjorde att host-dokumentet blev
+  cross-origin isolated och `SharedArrayBuffer` blev tillgängligt. Men
+  Chrome rapporterade i DevTools Issues-panelen "Specify a Cross-Origin
+  Embedder Policy to prevent this frame from being blocked" på
+  StackBlitz embed-iframen
+  (`https://stackblitz.com/run?embed=1&...`) eftersom **parent-COEP
+  räcker inte för iframes**: när host har `COEP: credentialless`
+  kräver Chrome att varje embedded iframe antingen själv svarar med
+  en COEP-header (`require-corp` eller `credentialless`) ELLER att
+  `<iframe>`-elementet bär `credentialless` HTML-attributet.
+  StackBlitz embed-respons skickar ingen COEP-header, så iframen
+  blockerades trots att host-headers var korrekt satta. **Fix:**
+  patcha `document.createElement` runt `sdk.embedProject(...)` i
+  `apps/viewser/components/viewer-panel.tsx` så att den `<iframe>`
+  StackBlitz SDK skapar internt får
+  `setAttribute("credentialless", "")` **innan** den infogas i DOM
+  (browsern börjar fetcha iframe:ns src så fort den kommer in i
+  dokumentet, så attributet måste vara satt redan vid skapandet, inte
+  efteråt). Patchen är scopead via try/finally så
+  `document.createElement` återställs så fort embedProject är klar
+  — vi muterar aldrig globala API:t längre än SDK:ns iframe-skapande
+  kräver. Bakgrund:
+  https://developer.chrome.com/blog/iframe-credentialless beskriver
+  credentialless-iframe-modellen och varför parent-COEP ensamt inte
+  täcker iframe-fallet. Chromium-only (Chrome 110+, Edge, Brave,
+  Vivaldi) — Firefox/Safari stöder inte attributet ändå, vilket
+  matchar StackBlitz egen Chromium-only-baseline för embedded
+  WebContainers. Källa: operatörrapport 2026-05-18 (Chrome DevTools
+  Issues-screenshot post-B123-fix). Fix: `5d05e0d`. Test:
+  `tests/test_viewser_isolation_headers.py::test_viewer_panel_patches_create_element_for_credentialless_iframe`,
+  `tests/test_viewser_isolation_headers.py::test_viewer_panel_restores_create_element_in_finally`,
+  `tests/test_viewser_isolation_headers.py::test_viewer_panel_only_tags_iframe_elements`
+  (source-lock).
 
 - **`B123` Medel** (stängd 2026-05-18, operatör-rapporterat post-PR-#31) -
   `apps/viewser/next.config.ts` var en tom `NextConfig`-export utan
