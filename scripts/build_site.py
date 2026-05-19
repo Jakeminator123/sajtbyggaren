@@ -448,6 +448,37 @@ def _placeholder_contact_warning_message(fields: list[str]) -> str:
     )
 
 
+def _prompt_meta_wizard_must_have(
+    prompt_meta: dict[str, Any] | None,
+) -> list[str]:
+    """Return validated B132 wizardMustHave list from prompt meta.
+
+    Scout-orchestrator merge 2026-05-19: B132 (page intent warnings) and
+    B133 (placeholder contact warnings) both add new helpers in this
+    section. The two sets of helpers are orthogonal — one reads
+    ``placeholderContactFields`` from the sidecar, the other reads
+    ``wizardMustHave``. Kept side by side so build_result downstream can
+    surface both warnings.
+    """
+    if not prompt_meta:
+        return []
+    raw_must_have = prompt_meta.get("wizardMustHave")
+    if not isinstance(raw_must_have, list):
+        return []
+
+    labels: list[str] = []
+    seen: set[str] = set()
+    for item in raw_must_have:
+        if not isinstance(item, str):
+            continue
+        label = item.strip()
+        if not label or label in seen:
+            continue
+        labels.append(label)
+        seen.add(label)
+    return labels
+
+
 # ---------------------------------------------------------------------------
 # Trace (append-only Engine Events)
 # ---------------------------------------------------------------------------
@@ -2214,6 +2245,7 @@ def build_plan_artefakts(
         site_brief,
         run_id=run_id,
         pinned=pinned,
+        wizard_must_have=_prompt_meta_wizard_must_have(prompt_meta),
         engine_mode=_prompt_meta_mode(prompt_meta),
         project_id=_prompt_meta_project_id(prompt_meta),
         verification_policy="build-must-pass",
@@ -2437,6 +2469,7 @@ def write_build_result(
     variant: dict,
     starter_id: str,
     routes: list[str],
+    page_intent_warnings: list[dict[str, Any]] | None,
     npm_steps: list[dict],
     overall_status: str,
     target_dir: Path,
@@ -2478,6 +2511,7 @@ def write_build_result(
         "modelUsed": model_used,
         "briefSource": brief_source,
         "routes": routes,
+        "pageIntentWarnings": list(page_intent_warnings or []),
         "generatedFilesDir": rel_snapshot,
         "devPreviewDir": rel_preview,
         "npmSteps": npm_steps,
@@ -2815,6 +2849,7 @@ def build(
         variant,
         starter_id,
         routes_all_with_dossiers,
+        site_plan.get("pageIntentWarnings"),
         npm_steps,
         overall_status,
         target,

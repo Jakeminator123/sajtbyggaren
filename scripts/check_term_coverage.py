@@ -85,7 +85,7 @@ COMMON_WORDS = {
     "ElementCreationOptions", "DevTools",
     # Sajtbyggaren-meta-nyckelord (egennamn för repon)
     "Sajtbyggaren", "Sajtmaskin", "Jakeminator123", "Jakemiantor123",
-    "Lovable", "GitHub", "Cursor", "Vercel", "StackBlitz",
+    "Lovable", "GitHub", "GitGuardian", "Cursor", "Vercel", "StackBlitz",
     "WebContainer", "WebContainers", "Fly", "Stripe", "OpenAI", "Anthropic",
     # Externa StackBlitz-/web-produktnamn och protokollnamn som citeras i
     # docs/integrations/stackblitz-research.md. De är bibliotekstermer
@@ -105,6 +105,7 @@ COMMON_WORDS = {
     "Module not found",
     # Generic word fragments som dyker upp i text
     "ADR", "PR", "CI", "ID", "UUID", "MD", "LLM", "PascalCase", "Backup",
+    "B129 ny",
     # Generiska prosa-fraser
     "Positiva signaler", "Negativa signaler",
     "Fas 1 runtime", "Fas 2 runtime", "Fas 3 runtime",
@@ -461,12 +462,10 @@ COMMON_WORDS = {
     "Intent Guard", "Page Intent",  # proposed produktkoncept i Scout-rapporten
     "RunId",  # docs-prosa-variant av runId (Viewser TS-typ)
     "Shoppa nu",  # hero-CTA-label (B101 + B96 produkt-strängar)
-    "GitGuardian",  # extern CI-service (samma kategori som GitHub/Vercel)
     "Bilaga B",  # rubrik i Scout-rapporten
     "Adress", "Ingen", "Enter",  # vanliga svenska/engelska ord i prosa
     "FAQ",  # vanlig acronym för "Frequently Asked Questions"
     "LocalPort",  # PowerShell Get-NetTCPConnection-parameter
-    "B129 ny",  # bug-id-fras "B129 ny" i docs/handoff.md narrative
     # Generic prose ord som dyker upp i operator-flöde-text (ADR 0012)
     "Build", "Page", "Scaffolds",
 }

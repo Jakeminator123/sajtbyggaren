@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 93 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 94 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -596,6 +596,27 @@ för follow-up eller ska städas.
   direktiv). Fix: open. Test: open.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B132` Medel** (stängd 2026-05-19, page-intent warning-only) -
+  wizardens `mustHave` kunde välja route-bärande sidor som scaffoldens
+  `routePlan` inte bygger, utan någon varning i `site-plan.json` eller
+  `build-result.json`. Exempel: `local-service-business` bygger bara
+  `/`, `/tjanster`, `/om-oss` och `/kontakt`, medan wizard-val som
+  `"Bildgalleri"` och `"Karta / Hitta hit"` implicerar `/galleri`
+  respektive `/karta`. Effekten var en tyst mindre sajt än operatören
+  valt. **Fix:** `packages/generation/planning/plan.py` emitterar nu
+  `pageIntentWarnings` i Site Plan för route-hints som saknas i
+  route-planen. `scripts/prompt_to_project_input.py` sparar wizardens
+  `mustHave` som `wizardMustHave` i meta-sidecaren, och
+  `scripts/build_site.py` skickar signalen vidare till planfasen samt
+  speglar varningarna i `build-result.json`. Ingen route-emission,
+  scaffold-route eller page-renderer ändrades. Källa: operatörs-
+  verifierat Viewser-overlay-fynd 2026-05-19. Fix: `104e480`.
+  Test:
+  `tests/test_page_intent.py::test_page_intent_warns_when_wizard_must_have_not_in_routes`,
+  `tests/test_page_intent.py::test_page_intent_silent_when_must_have_matches_routes`,
+  `tests/test_page_intent.py::test_page_intent_silent_when_must_have_has_no_route_hint`,
+  `tests/test_page_intent.py::test_build_result_carries_page_intent_warnings_without_extra_routes`.
 
 - **`B133` Medel** (stängd 2026-05-19, Viewser-overlay-E2E-Scout
   Case 3a follow-up) - `scripts/prompt_to_project_input.py:_placeholder_contact`
