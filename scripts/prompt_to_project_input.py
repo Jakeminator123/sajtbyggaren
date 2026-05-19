@@ -1665,6 +1665,32 @@ def _mock_brief_artifact_after_failure(
     }
 
 
+def _wizard_must_have_from_discovery(
+    discovery: dict[str, Any] | None,
+) -> list[str]:
+    """Extract wizard page labels for downstream page-intent warnings."""
+    if not isinstance(discovery, dict):
+        return []
+    answers = discovery.get("answers")
+    if not isinstance(answers, dict):
+        return []
+    raw_must_have = answers.get("mustHave")
+    if not isinstance(raw_must_have, list):
+        return []
+
+    labels: list[str] = []
+    seen: set[str] = set()
+    for item in raw_must_have:
+        if not isinstance(item, str):
+            continue
+        label = item.strip()
+        if not label or label in seen:
+            continue
+        labels.append(label)
+        seen.add(label)
+    return labels
+
+
 def generate(
     prompt: str,
     *,
@@ -1750,6 +1776,7 @@ def generate(
             payload=discovery,
             project_input_candidate=project_input,
         )
+    wizard_must_have = _wizard_must_have_from_discovery(discovery)
 
     if has_explicit_site_id:
         final_site_id = candidate_site_id
@@ -1801,6 +1828,12 @@ def generate(
     # operator/scrape filled every contact field.
     if placeholder_contact_fields:
         meta["placeholderContactFields"] = list(placeholder_contact_fields)
+    # B132 (Scout-orchestrator merge 2026-05-19): wizardMustHave från
+    # _wizard_must_have_from_discovery() flödar genom meta-sidecaren och
+    # konsumeras av _prompt_meta_wizard_must_have() i build_site.py för
+    # pageIntentWarnings-emit. Ortogonal mot B133.
+    if wizard_must_have:
+        meta["wizardMustHave"] = wizard_must_have
     if meta_overrides:
         meta.update(meta_overrides)
 
@@ -1851,6 +1884,15 @@ def generate_followup(
         if "inheritedFromVersion" not in inherited_copy:
             inherited_copy["inheritedFromVersion"] = previous_version
         meta_overrides["discoveryDecision"] = inherited_copy
+    inherited_wizard_must_have = existing_meta.get("wizardMustHave")
+    if isinstance(inherited_wizard_must_have, list):
+        wizard_must_have = [
+            item.strip()
+            for item in inherited_wizard_must_have
+            if isinstance(item, str) and item.strip()
+        ]
+        if wizard_must_have:
+            meta_overrides["wizardMustHave"] = wizard_must_have
     return generate(
         prompt,
         output_dir=output_dir,

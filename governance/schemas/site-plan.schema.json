@@ -107,6 +107,20 @@
         }
       }
     },
+    "pageIntentWarnings": {
+      "type": "array",
+      "description": "Non-blocking warnings for wizard must-have pages that imply a route path not present in the selected scaffold route plan.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["page", "expectedPath", "reason"],
+        "properties": {
+          "page": {"type": "string", "minLength": 1},
+          "expectedPath": {"type": "string", "minLength": 1},
+          "reason": {"type": "string", "minLength": 1}
+        }
+      }
+    },
     "sourceModelRole": {
       "type": "string",
       "const": "planningModel",

@@ -567,6 +567,61 @@ def _route_plan_from_scaffold(scaffold: dict[str, Any]) -> list[dict[str, str]]:
     ]
 
 
+_PAGE_TO_ROUTE_HINT: dict[str, str] = {
+    "Om oss / Om mig": "/om-oss",
+    "Bokning online": "/bokning",
+    "Priser och paket": "/priser",
+    "Bildgalleri": "/galleri",
+    "Karta / Hitta hit": "/karta",
+    "Blogg / Nyheter": "/blogg",
+    "FAQ": "/faq",
+    "Vårt team": "/team",
+    "Portfolio / Case": "/portfolio",
+    "Nyhetsbrev": "/nyhetsbrev",
+}
+
+
+def _pages_not_in_routes(
+    wizard_must_have: list[str],
+    routes: list[dict[str, Any]],
+) -> list[str]:
+    """Return route-bearing wizard pages missing from the scaffold routes."""
+    route_paths = {
+        route.get("path")
+        for route in routes
+        if isinstance(route, dict) and isinstance(route.get("path"), str)
+    }
+    missing: list[str] = []
+    seen: set[str] = set()
+    for page in wizard_must_have:
+        route_hint = _PAGE_TO_ROUTE_HINT.get(page)
+        if route_hint is None or route_hint in route_paths or page in seen:
+            continue
+        missing.append(page)
+        seen.add(page)
+    return missing
+
+
+def _page_intent_warnings(
+    wizard_must_have: list[str] | None,
+    routes: list[dict[str, Any]],
+) -> list[dict[str, str]]:
+    """Render non-blocking warnings for wizard page intent route gaps."""
+    if not wizard_must_have:
+        return []
+    return [
+        {
+            "page": page,
+            "expectedPath": _PAGE_TO_ROUTE_HINT[page],
+            "reason": (
+                "Wizard must-have page is not emitted by the selected "
+                "scaffold route plan."
+            ),
+        }
+        for page in _pages_not_in_routes(wizard_must_have, routes)
+    ]
+
+
 def _selected_dossiers_payload(
     choice: PlanningChoice,
 ) -> list[str] | dict[str, Any]:
@@ -674,13 +729,16 @@ def _assemble_site_plan(
     verification_policy: str,
     preview_runtime: str,
     created_at: str,
+    page_intent_warnings: list[dict[str, str]],
 ) -> dict[str, Any]:
+    route_plan = _route_plan_from_scaffold(scaffold)
     site_plan: dict[str, Any] = {
         "runId": run_id,
         "scaffoldId": choice.scaffoldId,
         "variantId": choice.variantId,
         "starterId": starter_id,
-        "routePlan": _route_plan_from_scaffold(scaffold),
+        "routePlan": route_plan,
+        "pageIntentWarnings": page_intent_warnings,
         "selectedDossiers": _selected_dossiers_payload(choice),
         "buildSpec": {
             "qualityTarget": 9.0,
@@ -746,6 +804,7 @@ def produce_site_plan(
     *,
     run_id: str,
     pinned: dict[str, str] | None = None,
+    wizard_must_have: list[str] | None = None,
     capability_map: dict[str, Any] | None = None,
     scaffold_registry: list[dict[str, Any]] | None = None,
     model: str | None = None,
@@ -843,6 +902,7 @@ def produce_site_plan(
         verification_policy = "build-must-pass" if pinned is not None else "fast"
 
     created_at = _utc_now_iso()
+    route_plan = _route_plan_from_scaffold(scaffold)
     site_plan = _assemble_site_plan(
         run_id=run_id,
         choice=choice,
@@ -854,6 +914,10 @@ def produce_site_plan(
         verification_policy=verification_policy,
         preview_runtime=preview_runtime,
         created_at=created_at,
+        page_intent_warnings=_page_intent_warnings(
+            wizard_must_have,
+            route_plan,
+        ),
     )
     validate_site_plan(site_plan)
 

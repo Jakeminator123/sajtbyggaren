@@ -162,6 +162,34 @@ def test_site_plan_accepts_both_dossier_shapes():
 
 
 @pytest.mark.tooling
+def test_site_plan_accepts_page_intent_warnings():
+    payload = _minimal_site_plan()
+    payload["pageIntentWarnings"] = [
+        {
+            "page": "Bildgalleri",
+            "expectedPath": "/galleri",
+            "reason": "Wizard must-have page is not emitted by the route plan.",
+        }
+    ]
+    validate_site_plan(payload)
+
+
+@pytest.mark.tooling
+def test_site_plan_rejects_extra_page_intent_warning_fields():
+    payload = _minimal_site_plan()
+    payload["pageIntentWarnings"] = [
+        {
+            "page": "Bildgalleri",
+            "expectedPath": "/galleri",
+            "reason": "Wizard must-have page is not emitted by the route plan.",
+            "routeWasBuilt": False,
+        }
+    ]
+    with pytest.raises(ArtifactSchemaError, match="routeWasBuilt"):
+        validate_site_plan(payload)
+
+
+@pytest.mark.tooling
 def test_site_plan_rejects_unknown_previewRuntime():
     payload = _minimal_site_plan()
     payload["buildSpec"]["previewRuntime"] = "browser"
