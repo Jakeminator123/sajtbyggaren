@@ -611,7 +611,7 @@ för follow-up eller ska städas.
   samma canonical slug. Governance-flytt till aliases-array i
   `capability-map.v1.json` lämnas till framtida ADR-sprint.
   Källa: Viewser-overlay-E2E Scout case 2, 2026-05-19. Fix:
-  `56272c7`. Test:
+  `2901e4e`. Test:
   `tests/test_discovery_resolver.py::test_resolve_capabilities_dedups_via_alias`,
   `tests/test_discovery_resolver.py::test_resolve_capabilities_preserves_unknown_slug_when_no_alias`,
   `tests/test_discovery_resolver.py::test_resolve_capabilities_alias_keeps_priority_source`.
