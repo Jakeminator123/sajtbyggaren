@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 92 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 93 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -642,6 +642,27 @@ för follow-up eller ska städas.
   `tests/test_builder_hardening.py::test_build_result_surfaces_placeholder_contact_fields_when_present`,
   `tests/test_builder_hardening.py::test_build_result_omits_placeholder_contact_fields_when_empty`,
   `tests/test_viewser_files.py::test_run_details_panel_renders_placeholder_contact_warning`.
+
+- **`B130` Medel** (stängd 2026-05-19, Viewser-overlay-E2E-Scout
+  follow-up) -
+  `scripts/prompt_to_project_input.py:generate()` beräknade automatisk
+  `siteId` från prompten före Discovery Resolver hade resolverat Project
+  Input. I wizard-overlayflödet börjar master-prompten med
+  `[Operatörens beskrivning]`, så sluggen blev
+  `operatorens-beskrivning-<tail>` även när resolverat
+  `company.name` var kundnamn som "Atelje Vit Lera" eller
+  "Frisörsalongen Tussilago". Källa: Viewser-overlay-E2E-Scout
+  2026-05-19, Case 1 Obs 1 + Case 2. **Fix (`88e1296`):**
+  `slugify_site_id()` tar nu valfri `company_name`-kwarg och föredrar
+  den när den är non-empty efter trim; prompt-fallbacken strippar
+  defensivt master-prompt-headern; `generate()` väntar med automatisk
+  siteId-beräkning tills efter Project Input + Discovery Resolver och
+  synkar därefter `project_input["siteId"]` med meta-sidecarens
+  `siteId`. Explicit caller-pinnad `site_id` behålls oförändrad.
+  Test:
+  `tests/test_prompt_to_project_input.py::test_slugify_site_id_uses_company_name_when_provided`,
+  `tests/test_prompt_to_project_input.py::test_slugify_site_id_falls_back_to_prompt_when_company_empty`,
+  `tests/test_prompt_to_project_input.py::test_slugify_site_id_strips_master_prompt_header_when_no_company_name`.
 
 - **`B128` Hög** (stängd 2026-05-19, keramik-/e-handel-pass +
   Composer-2.5-review-hardening) -
