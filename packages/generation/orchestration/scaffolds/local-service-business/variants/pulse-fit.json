@@ -1,0 +1,46 @@
+{
+  "id": "pulse-fit",
+  "enabled": true,
+  "label": "Pulse Fit",
+  "description": "Lekfull, bold och energisk uttryck med neonvarm primärfärg, hög kontrast och sportig typografi. Designad för gym, träningsstudior och prestationsdrivna lokala verksamheter som vill kännas intensiva, moderna och handlingsfokuserade.",
+  "tokens": {
+    "color": {
+      "background": "#0f1115",
+      "foreground": "#f5f7fb",
+      "muted": "#9aa3b2",
+      "border": "#2a2f3a",
+      "primary": "#ff5a1f",
+      "primaryForeground": "#0f1115",
+      "accent": "#b6ff00",
+      "accentForeground": "#0f1115"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.28
+    },
+    "radius": {
+      "sm": "0.5rem",
+      "md": "0.875rem",
+      "lg": "1.25rem"
+    },
+    "spacing": {
+      "section": "4.5rem",
+      "container": "min(76rem, 94vw)"
+    },
+    "motion": {
+      "level": "expressive"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "playful",
+      "bold",
+      "energetic",
+      "high-contrast",
+      "athletic",
+      "modern"
+    ]
+  }
+}

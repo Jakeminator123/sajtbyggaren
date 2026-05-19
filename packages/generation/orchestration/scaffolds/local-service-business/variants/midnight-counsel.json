@@ -1,0 +1,46 @@
+{
+  "id": "midnight-counsel",
+  "enabled": true,
+  "label": "Midnight Counsel",
+  "description": "Dark, high-contrast premium expression for legal, advisory and finance-oriented service firms. Uses a deep charcoal-navy base, restrained gold accents and more formal typography to feel authoritative, exclusive and composed—distinct from the lighter, softer Nordic Trust variant.",
+  "tokens": {
+    "color": {
+      "background": "#0f1117",
+      "foreground": "#f2eee3",
+      "muted": "#b6ad98",
+      "border": "#2a2f3a",
+      "primary": "#1a2230",
+      "primaryForeground": "#f2eee3",
+      "accent": "#b8964a",
+      "accentForeground": "#0f1117"
+    },
+    "typography": {
+      "fontFamilyDisplay": "Georgia, 'Times New Roman', serif",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.24
+    },
+    "radius": {
+      "sm": "0.125rem",
+      "md": "0.25rem",
+      "lg": "0.5rem"
+    },
+    "spacing": {
+      "section": "5.5rem",
+      "container": "min(70rem, 90vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "dark",
+      "authoritative",
+      "premium",
+      "formal",
+      "high-contrast",
+      "composed"
+    ]
+  }
+}

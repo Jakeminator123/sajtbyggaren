@@ -1,0 +1,45 @@
+{
+  "id": "mono-tech",
+  "enabled": true,
+  "label": "Mono Tech",
+  "description": "Cold, minimalist webshop expression with sharp typography, near-monochrome greys and very small corner radius. Designed to feel precise, product-led and quietly technical, distinct from softer editorial retail aesthetics.",
+  "tokens": {
+    "color": {
+      "background": "#f3f5f7",
+      "foreground": "#111317",
+      "muted": "#68707a",
+      "border": "#d7dde3",
+      "primary": "#111317",
+      "primaryForeground": "#f3f5f7",
+      "accent": "#8fa3b8",
+      "accentForeground": "#111317"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-mono)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.16
+    },
+    "radius": {
+      "sm": "0.125rem",
+      "md": "0.1875rem",
+      "lg": "0.25rem"
+    },
+    "spacing": {
+      "section": "5rem",
+      "container": "min(72rem, 90vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "tech-minimal",
+      "cold-neutral",
+      "sharp",
+      "precise",
+      "product-led"
+    ]
+  }
+}

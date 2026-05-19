@@ -1,0 +1,46 @@
+{
+  "id": "street-vivid",
+  "enabled": true,
+  "label": "Street Vivid",
+  "description": "High-energy streetwear expression with saturated color blocking, bold dark contrast, tighter geometry and expressive motion. Designed to feel youthful, loud and campaign-driven, clearly distinct from calmer editorial store variants.",
+  "tokens": {
+    "color": {
+      "background": "#0f0f14",
+      "foreground": "#f6f2e8",
+      "muted": "#a7a1b3",
+      "border": "#2a2636",
+      "primary": "#ff5a1f",
+      "primaryForeground": "#0f0f14",
+      "accent": "#8bff2a",
+      "accentForeground": "#0f0f14"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.32
+    },
+    "radius": {
+      "sm": "0.125rem",
+      "md": "0.25rem",
+      "lg": "0.5rem"
+    },
+    "spacing": {
+      "section": "5rem",
+      "container": "min(80rem, 94vw)"
+    },
+    "motion": {
+      "level": "expressive"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "youthful",
+      "streetwear",
+      "bold",
+      "high-contrast",
+      "energetic",
+      "color-blocked"
+    ]
+  }
+}
