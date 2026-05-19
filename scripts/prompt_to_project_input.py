@@ -1018,6 +1018,7 @@ def _placeholder_contact(
     contact_phone: str | None = None,
     contact_email: str | None = None,
     contact_address: str | None = None,
+    contact_opening_hours: str | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     """Schema-required contact block when the brief has no real values.
 
@@ -1025,11 +1026,18 @@ def _placeholder_contact(
     ``placeholder_fields`` lists which top-level keys of ``contact_dict``
     were filled with dummy fallback values because the caller did not
     pass a real value. When the operator supplied a real value in
-    ``contact_phone`` / ``contact_email`` / ``contact_address`` the
-    corresponding field is NOT in the list — that is the signal
-    ``site_brief_to_project_input`` propagates further so Viewser can
-    warn the operator about fields the end user will see as dummy data
-    (B133, 2026-05-19).
+    ``contact_phone`` / ``contact_email`` / ``contact_address`` /
+    ``contact_opening_hours`` the corresponding field is NOT in the list
+    — that is the signal ``site_brief_to_project_input`` propagates
+    further so Viewser can warn the operator about fields the end user
+    will see as dummy data (B133, 2026-05-19).
+
+    ``openingHours`` was added to the tracked set in the Codex P2 review
+    follow-up 2026-05-19. The brief itself never carries opening hours,
+    but the resolver's wizard layer can supply them; until the operator
+    fills it in, the contact page renders ``Mån-Fre 09:00-17:00`` /
+    ``Mon-Fri 09:00-17:00`` next to the phone number and the visitor
+    has no way to know those are not real business hours.
 
     Demo-baseline-fix 1C (B88): the previous placeholders for `address`
     were operator-facing dev jargon ("Adress saknas - uppdatera Project
@@ -1047,6 +1055,7 @@ def _placeholder_contact(
     phone = (contact_phone or "").strip()
     email = (contact_email or "").strip()
     address = (contact_address or "").strip()
+    opening_hours = (contact_opening_hours or "").strip()
     defaults = _placeholder_contact_defaults(language)
     placeholder_fields: list[str] = []
     if phone:
@@ -1064,11 +1073,16 @@ def _placeholder_contact(
     else:
         address_lines = list(defaults["addressLines"])
         placeholder_fields.append("addressLines")
+    if opening_hours:
+        final_opening_hours = opening_hours
+    else:
+        final_opening_hours = defaults["openingHours"]
+        placeholder_fields.append("openingHours")
     contact_dict: dict[str, Any] = {
         "phone": final_phone,
         "email": final_email,
         "addressLines": address_lines,
-        "openingHours": defaults["openingHours"],
+        "openingHours": final_opening_hours,
     }
     return contact_dict, placeholder_fields
 
@@ -1100,6 +1114,8 @@ def _recompute_placeholder_contact_fields(
         and list(address_lines) == defaults["addressLines"]
     ):
         fields.append("addressLines")
+    if contact.get("openingHours") == defaults["openingHours"]:
+        fields.append("openingHours")
     return fields
 
 
@@ -1800,9 +1816,23 @@ def generate(
     # final project_input så listan reflekterar vad operatören faktiskt
     # publicerar, inte initial briefModel-state. Tom lista = ingen
     # placeholder kvar → ingen warning skrivs i build-result.json.
+    #
+    # B133 follow-up-fix (Codex P2 review 2026-05-19): använd final
+    # ``project_input["language"]`` istället för den prompt-detekterade
+    # ``language``. ``merge_followup_project_input`` bevarar previous
+    # ``language`` + ``contact`` byte-stabilt, så en svensk v1 + engelsk
+    # följdprompt skulle annars jämföra svenska placeholder-strängar mot
+    # engelska defaults → false negative → varning tappad trots att
+    # ``kontakt@example.se`` / ``Adress lämnas på förfrågan`` ligger kvar.
+    final_language = (
+        project_input.get("language")
+        if isinstance(project_input, dict)
+        and isinstance(project_input.get("language"), str)
+        else language
+    )
     placeholder_contact_fields = _recompute_placeholder_contact_fields(
         project_input.get("contact") if isinstance(project_input, dict) else None,
-        language,
+        final_language,
     )
 
     _validate_against_schema(project_input)

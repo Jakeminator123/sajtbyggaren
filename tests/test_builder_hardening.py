@@ -552,9 +552,13 @@ def test_build_result_has_model_usage_stub(
 def test_placeholder_contact_fields_helpers_validate_meta_input() -> None:
     """B133: ``_prompt_meta_placeholder_contact_fields`` is the gate that
     keeps unexpected sidecar payloads out of ``build-result.json``. Only
-    the known contact-block keys (``phone``, ``email``, ``addressLines``)
-    are forwarded, duplicates are squashed and the warning message has
-    the canonical operator-facing wording.
+    the known contact-block keys (``phone``, ``email``, ``addressLines``,
+    ``openingHours``) are forwarded, duplicates are squashed and the
+    warning message has the canonical operator-facing wording.
+
+    ``openingHours`` was added in the Codex P2 review follow-up
+    2026-05-19 so the dummy ``Mån-Fre 09:00-17:00`` schedule surfaces
+    in the same warning channel as the other placeholder fields.
     """
     from scripts.build_site import (
         _placeholder_contact_warning_message,
@@ -564,24 +568,34 @@ def test_placeholder_contact_fields_helpers_validate_meta_input() -> None:
     assert _prompt_meta_placeholder_contact_fields(None) == []
     assert _prompt_meta_placeholder_contact_fields({}) == []
     assert _prompt_meta_placeholder_contact_fields(
-        {"placeholderContactFields": ["phone", "email", "addressLines"]}
-    ) == ["phone", "email", "addressLines"]
+        {
+            "placeholderContactFields": [
+                "phone",
+                "email",
+                "addressLines",
+                "openingHours",
+            ]
+        }
+    ) == ["phone", "email", "addressLines", "openingHours"]
     assert _prompt_meta_placeholder_contact_fields(
         {"placeholderContactFields": ["phone", "phone", "bogus", "email"]}
     ) == ["phone", "email"]
     assert _prompt_meta_placeholder_contact_fields(
         {"placeholderContactFields": "phone"}
     ) == []
+    assert _prompt_meta_placeholder_contact_fields(
+        {"placeholderContactFields": ["openingHours"]}
+    ) == ["openingHours"]
 
     assert _placeholder_contact_warning_message(["phone"]) == (
         "Contact fields phone are placeholder values - operator "
         "must fill these before publishing."
     )
     assert _placeholder_contact_warning_message(
-        ["phone", "email", "addressLines"]
+        ["phone", "email", "addressLines", "openingHours"]
     ) == (
-        "Contact fields phone, email, addressLines are placeholder values "
-        "- operator must fill these before publishing."
+        "Contact fields phone, email, addressLines, openingHours are "
+        "placeholder values - operator must fill these before publishing."
     )
 
 
@@ -614,6 +628,7 @@ def test_build_result_surfaces_placeholder_contact_fields_when_present(
         "phone",
         "email",
         "addressLines",
+        "openingHours",
     ]
 
     _, run_dir = build(
@@ -630,11 +645,12 @@ def test_build_result_surfaces_placeholder_contact_fields_when_present(
         "phone",
         "email",
         "addressLines",
+        "openingHours",
     ]
     assert (
         result["placeholderContactMessage"]
-        == "Contact fields phone, email, addressLines are placeholder values "
-        "- operator must fill these before publishing."
+        == "Contact fields phone, email, addressLines, openingHours are "
+        "placeholder values - operator must fill these before publishing."
     )
 
 

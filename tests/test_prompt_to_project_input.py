@@ -262,20 +262,26 @@ def test_site_brief_without_company_name_uses_existing_fallback() -> None:
 @pytest.mark.tooling
 def test_placeholder_contact_returns_field_list() -> None:
     """B133: ``_placeholder_contact`` returns a ``(contact_dict, fields)``
-    tuple. With no real values from briefModel, all three contact slots
-    are filled with B88 dummies and the list reports every key.
+    tuple. With no real values from briefModel, all four contact slots
+    (phone, email, addressLines, openingHours) are filled with B88
+    dummies and the list reports every key.
+
+    ``openingHours`` was added in the Codex P2 review follow-up
+    2026-05-19 — the contact page renders the fallback schedule next to
+    the phone number, so it must also surface as a placeholder warning
+    until wizard/scrape supplies real hours.
     """
     from scripts.prompt_to_project_input import _placeholder_contact
 
     contact_sv, fields_sv = _placeholder_contact("sv")
-    assert fields_sv == ["phone", "email", "addressLines"]
+    assert fields_sv == ["phone", "email", "addressLines", "openingHours"]
     assert contact_sv["phone"] == "+46 8 000 00 00"
     assert contact_sv["email"] == "kontakt@example.se"
     assert contact_sv["addressLines"] == ["Adress lämnas på förfrågan"]
     assert contact_sv["openingHours"] == "Mån-Fre 09:00-17:00"
 
     contact_en, fields_en = _placeholder_contact("en")
-    assert fields_en == ["phone", "email", "addressLines"]
+    assert fields_en == ["phone", "email", "addressLines", "openingHours"]
     assert contact_en["email"] == "contact@example.se"
     assert contact_en["addressLines"] == ["Address available on request"]
     assert contact_en["openingHours"] == "Mon-Fri 09:00-17:00"
@@ -294,16 +300,19 @@ def test_placeholder_contact_omits_filled_fields_from_list() -> None:
         contact_phone="0701234567",
         contact_email="hej@voltco.se",
         contact_address="Storgatan 1, 211 22 Malmö",
+        contact_opening_hours="Tis-Lör 10:00-18:00",
     )
     assert fields == [], "every contact slot supplied means no placeholders"
     assert contact["phone"] == "0701234567"
     assert contact["email"] == "hej@voltco.se"
     assert contact["addressLines"] == ["Storgatan 1, 211 22 Malmö"]
+    assert contact["openingHours"] == "Tis-Lör 10:00-18:00"
 
     _, only_phone_left = _placeholder_contact(
         "sv",
         contact_email="hej@voltco.se",
         contact_address="Storgatan 1, 211 22 Malmö",
+        contact_opening_hours="Tis-Lör 10:00-18:00",
     )
     assert only_phone_left == ["phone"]
 
@@ -311,6 +320,7 @@ def test_placeholder_contact_omits_filled_fields_from_list() -> None:
         "sv",
         contact_phone="0701234567",
         contact_address="Storgatan 1, 211 22 Malmö",
+        contact_opening_hours="Tis-Lör 10:00-18:00",
     )
     assert only_email_left == ["email"]
 
@@ -318,8 +328,17 @@ def test_placeholder_contact_omits_filled_fields_from_list() -> None:
         "sv",
         contact_phone="0701234567",
         contact_email="hej@voltco.se",
+        contact_opening_hours="Tis-Lör 10:00-18:00",
     )
     assert only_address_left == ["addressLines"]
+
+    _, only_hours_left = _placeholder_contact(
+        "sv",
+        contact_phone="0701234567",
+        contact_email="hej@voltco.se",
+        contact_address="Storgatan 1, 211 22 Malmö",
+    )
+    assert only_hours_left == ["openingHours"]
 
 
 @pytest.mark.tooling
@@ -351,7 +370,16 @@ def test_site_brief_to_project_input_propagates_placeholder_contact_fields() -> 
         variant_id="nordic-trust",
         original_prompt="Skapa en hemsida",
     )
-    assert placeholder_fields == ["phone", "email", "addressLines"]
+    # ``openingHours`` always lands in the list when the brief is the
+    # only source — the brief itself never carries opening hours, so
+    # the dummy schedule survives unless the resolver's wizard layer
+    # supplies real hours.
+    assert placeholder_fields == [
+        "phone",
+        "email",
+        "addressLines",
+        "openingHours",
+    ]
     assert project_input["contact"]["phone"] == "+46 8 000 00 00"
 
     rich_brief = {
@@ -360,14 +388,19 @@ def test_site_brief_to_project_input_propagates_placeholder_contact_fields() -> 
         "contactEmail": "hej@voltco.se",
         "contactAddress": "Storgatan 1, 211 22 Malmö",
     }
-    _, no_placeholders = site_brief_to_project_input(
+    _, only_hours_placeholder = site_brief_to_project_input(
         rich_brief,
         site_id="real-contact-site",
         scaffold_id="local-service-business",
         variant_id="nordic-trust",
         original_prompt="Skapa en hemsida",
     )
-    assert no_placeholders == []
+    # briefModel never returns ``contactOpeningHours``, so the dummy
+    # schedule survives ``site_brief_to_project_input``. Wizard/scrape
+    # must fill ``openingHours`` for the warning list to be empty in
+    # the final ``generate()``-level recompute (see the follow-up test
+    # for that path).
+    assert only_hours_placeholder == ["openingHours"]
 
 
 @pytest.mark.tooling
@@ -378,9 +411,10 @@ def test_generate_writes_placeholder_contact_fields_to_meta(
     """B133: when briefModel has no contact values, the meta sidecar
     must carry ``placeholderContactFields`` so ``scripts/build_site.py``
     can read it via ``load_prompt_input_meta`` and write it into
-    ``build-result.json``. Conversely, when the brief is rich the field
-    must be absent from meta — the warning must only surface when there
-    is actually placeholder data to warn about.
+    ``build-result.json``. When the brief has phone/email/address but
+    no opening hours, only ``openingHours`` survives in the warning
+    list — the brief itself never carries opening hours, so the dummy
+    schedule needs wizard/scrape to disappear.
     """
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
@@ -393,6 +427,7 @@ def test_generate_writes_placeholder_contact_fields_to_meta(
         "phone",
         "email",
         "addressLines",
+        "openingHours",
     ]
 
     def rich_brief_extract(*_args: object, **_kwargs: object) -> object:
@@ -427,7 +462,63 @@ def test_generate_writes_placeholder_contact_fields_to_meta(
         output_dir=tmp_path,
         site_id="real-meta-site",
     )
-    assert "placeholderContactFields" not in meta_filled
+    # Brief carries phone/email/address but never opening hours, so
+    # the dummy schedule survives and the warning list narrows down to
+    # ``openingHours`` only.
+    assert meta_filled.get("placeholderContactFields") == ["openingHours"]
+
+
+@pytest.mark.tooling
+def test_followup_uses_preserved_language_for_placeholder_detection(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """B133 Codex P2 follow-up: a Swedish v1 edited with a follow-up
+    prompt detected as English must still recognise its own Swedish
+    placeholder values. ``merge_followup_project_input`` preserves the
+    previous ``language`` + ``contact`` byte-stably, so the recompute
+    must use ``project_input["language"]`` (preserved Swedish) rather
+    than the prompt-detected English — otherwise the warning silently
+    disappears even though ``kontakt@example.se`` / ``Adress lämnas på
+    förfrågan`` are still rendered publicly in v2.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    _, meta_v1, _, _ = generate(
+        "Skapa en hemsida för en elektriker i Malmö",
+        output_dir=tmp_path,
+        site_id="follow-up-language-site",
+    )
+    assert meta_v1["placeholderContactFields"] == [
+        "phone",
+        "email",
+        "addressLines",
+        "openingHours",
+    ]
+
+    monkeypatch.setattr(
+        "scripts.prompt_to_project_input.detect_language",
+        lambda *_args, **_kwargs: "en",
+    )
+
+    _, meta_v2, _, _ = generate_followup(
+        "Make the headline shorter.",
+        site_id="follow-up-language-site",
+        output_dir=tmp_path,
+    )
+
+    assert meta_v2["mode"] == "followup"
+    assert meta_v2["version"] == 2
+    # Pre-fix this list silently went to ``[]`` because the recompute
+    # compared preserved Swedish placeholders against English defaults.
+    # Post-fix the preserved ``project_input["language"]`` keeps the
+    # comparison correct and the warning survives into v2.
+    assert meta_v2["placeholderContactFields"] == [
+        "phone",
+        "email",
+        "addressLines",
+        "openingHours",
+    ]
 
 
 @pytest.mark.tooling

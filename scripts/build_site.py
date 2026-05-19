@@ -406,7 +406,16 @@ def _prompt_meta_raw_prompt(prompt_meta: dict[str, Any] | None) -> str | None:
     return value if isinstance(value, str) else None
 
 
-_PLACEHOLDER_CONTACT_VALID_FIELDS = ("phone", "email", "addressLines")
+_PLACEHOLDER_CONTACT_VALID_FIELDS = (
+    "phone",
+    "email",
+    "addressLines",
+    # B133 Codex P2 follow-up: ``openingHours`` is also written from the
+    # B88 fallback ("Mån-Fre 09:00-17:00" / "Mon-Fri 09:00-17:00") when
+    # neither wizard nor scrape supplied a schedule, so it must be in
+    # the operator-warning set too.
+    "openingHours",
+)
 
 
 def _prompt_meta_placeholder_contact_fields(
