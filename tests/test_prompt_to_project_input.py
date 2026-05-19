@@ -537,7 +537,7 @@ def test_followup_with_discovery_recomputes_placeholder_fields_against_merged_co
     """
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
-    real_contact_discovery: dict[str, Any] = {
+    real_contact_discovery = {
         "schemaVersion": 1,
         "rawPrompt": "frisör i Stockholm",
         "answers": {
@@ -567,7 +567,7 @@ def test_followup_with_discovery_recomputes_placeholder_fields_against_merged_co
     # för att inte markeras som placeholder; testet använder "Tis-Lör 10:00-18:00".
     assert meta_v1.get("placeholderContactFields", []) == []
 
-    new_discovery_no_contact: dict[str, Any] = {
+    new_discovery_no_contact = {
         "schemaVersion": 1,
         "rawPrompt": "ändra ton till mer professionell",
         "answers": {
