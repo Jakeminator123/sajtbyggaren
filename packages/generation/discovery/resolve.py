@@ -95,6 +95,24 @@ _PAGE_TO_CAPABILITY: dict[str, str] = {
     "Meny / Matsedel": "menu",
 }
 
+# Aliaserna mappar mot resolverns lokala canonical
+# (_PAGE_TO_CAPABILITY-output) tills capability-map.v1.json fått en
+# aliases-array i en framtida governance-sprint.
+_CAPABILITY_ALIASES: dict[str, str] = {
+    "online-booking": "booking",
+    "webshop": "ecommerce",
+    "online-shop": "ecommerce",
+    "newsletter": "newsletter-subscribe",
+    "contact": "contact-form",
+}
+
+
+def _normalize_capability_slug(slug: str) -> str:
+    """Returnera canonical capability-slug för lokalt kända alias."""
+    cleaned = slug.strip()
+    return _CAPABILITY_ALIASES.get(cleaned.lower(), cleaned)
+
+
 # Wizardens primära CTA → ``conversionGoals``-slug. Identisk med tidigare
 # ``_apply_discovery_overrides``-mapping så befintliga produktbygg behåller
 # samma conversion-spår.
@@ -821,24 +839,26 @@ def _resolve_capabilities(
     seen: set[str] = set()
     sources_per_slug: dict[str, FieldSourceLiteral] = {}
     for slug in wizard_caps:
-        if slug not in seen:
-            combined.append(slug)
-            seen.add(slug)
-            sources_per_slug[slug] = "wizard"
+        canonical = _normalize_capability_slug(slug)
+        if canonical and canonical not in seen:
+            combined.append(canonical)
+            seen.add(canonical)
+            sources_per_slug[canonical] = "wizard"
     for slug in taxonomy_caps:
-        if slug not in seen:
-            combined.append(slug)
-            seen.add(slug)
-            sources_per_slug[slug] = "taxonomy"
+        canonical = _normalize_capability_slug(slug)
+        if canonical and canonical not in seen:
+            combined.append(canonical)
+            seen.add(canonical)
+            sources_per_slug[canonical] = "taxonomy"
     for slug in existing:
         if not isinstance(slug, str):
             continue
-        cleaned = slug.strip()
-        if not cleaned or cleaned in seen:
+        canonical = _normalize_capability_slug(slug)
+        if not canonical or canonical in seen:
             continue
-        combined.append(cleaned)
-        seen.add(cleaned)
-        sources_per_slug[cleaned] = "brief"
+        combined.append(canonical)
+        seen.add(canonical)
+        sources_per_slug[canonical] = "brief"
 
     warnings: list[FallbackWarning] = []
     for slug in combined:
