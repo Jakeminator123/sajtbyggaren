@@ -159,15 +159,43 @@ Alla ska vara gröna. Om någon failar: stoppa, fixa, eller fråga operatören o
 
 PowerShell saknar bash-style heredoc (`"$(cat <<'EOF' ... EOF)"`). Försök
 att passa heredoc till `git commit -m` direkt på Windows ger
-`Missing file specification after redirection operator`. För att
-undvika att skapa skräpfiler i repo-roten:
+`Missing file specification after redirection operator`.
 
-1. Skriv meddelandet till `$env:LOCALAPPDATA\Temp\sb-commit-msg.txt`
-   (utanför repo, alltid user-temp). Använd helst en unik filnamns-
-   suffix per commit, t.ex. tidsstämpel: `sb-commit-msg-<yyyyMMddHHmmss>.txt`.
-2. `git commit -F $env:LOCALAPPDATA\Temp\sb-commit-msg.txt`.
-3. `Remove-Item $env:LOCALAPPDATA\Temp\sb-commit-msg.txt` (städ; men även
-   om du glömmer ligger filen utanför repo).
+#### Primary: here-string piped till `git commit -F -` (rekommenderas)
+
+Skapar **inga disk-filer**; commit-meddelandet existerar bara i shell-
+pipen. Cursor- och Codex-IDE:s agent-aktivitetspanel börjar inte tracka
+temporära artefakter, och repo-review-verktyg får inga false-positives:
+
+```powershell
+@"
+chore: kort imperativ titel
+
+Body-rad 1 förklarar varför.
+Body-rad 2 listar ändrade filer eller kontext.
+
+Guards: governance_validate (17 OK), check_term_coverage --strict OK,
+pytest test_docs_freshness + test_no_legacy_terms (5 passed).
+"@ | git commit -F -
+```
+
+Säkerställ UTF-8-encoding om commit-meddelandet innehåller `å`, `ä`, `ö`
+(annars kan `git log` visa `\u00f6`):
+
+```powershell
+$OutputEncoding = [System.Text.Encoding]::UTF8
+```
+
+#### Fallback: temp-fil (om here-string failar i din shell-context)
+
+Använd bara om stdin-pipen inte fungerar (t.ex. CI med restriktiv
+PowerShell-profil eller wrapper-script som blockerar stdin).
+
+1. Skriv meddelandet till `$env:LOCALAPPDATA\Temp\sb-commit-msg-<yyyyMMddHHmmss>.txt`
+   (utanför repo, alltid user-temp). Använd unik tidsstämpel-suffix per commit.
+2. `git commit -F $env:LOCALAPPDATA\Temp\sb-commit-msg-<yyyyMMddHHmmss>.txt`.
+3. `Remove-Item $env:LOCALAPPDATA\Temp\sb-commit-msg-<yyyyMMddHHmmss>.txt`
+   (städ; men även om du glömmer ligger filen utanför repo).
 
 > **Gotcha:** Använd **inte** `$env:TEMP` i agent-shell. Cursor-/Codex-
 > agenter kör ofta sin PowerShell i elevated/system-kontext där
@@ -180,11 +208,12 @@ undvika att skapa skräpfiler i repo-roten:
 > security-context. Verifierat fall: commit `840e73f` (2026-05-19) fick
 > en helt orelaterad cached message — Steward-bumpens diff var korrekt
 > men message-fältet visade `feat(discovery): align Viewser overlay
-> with taxonomy`. Erratan landade i `848b...`-serien.
+> with taxonomy`. Erratan landade i `ce1b137`.
 
 Skapa **aldrig** commit-message-filer som `.commit-msg.tmp` i repo-roten
 i samma steg som `git add -A`. Race-villkoret är: filen finns på disk när
 `git add -A` körs, så den hamnar i index trots att du tänkt radera den
 direkt efter commit. `.gitignore` fångar nya temporära mönster
-(`.tmp-*`, `.tmp.*`, `.commit-msg.tmp`), men prevention via
-`$env:LOCALAPPDATA\Temp` är säkrare än att lita på ignore-mönstret.
+(`.tmp-*`, `.tmp.*`, `.commit-msg.tmp`), men prevention via here-string
+(eller `$env:LOCALAPPDATA\Temp` som fallback) är säkrare än att lita på
+ignore-mönstret.

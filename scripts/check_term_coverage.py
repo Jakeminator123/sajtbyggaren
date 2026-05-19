@@ -471,8 +471,13 @@ COMMON_WORDS = {
     # Scout-orchestrator-handoff-2026-05-19 + tree_view.py prose-allowlist
     # (samma kategori som tidigare scout-prosa-allowlists: case-specifika
     # eller proposed-koncept som inte är canonical domain terms ännu).
+    "B107", "B132",  # bug-IDs refererade i Scout-rapport prose (registrerade i known-issues.md)
     "B134", "B135", "B136",  # öppnade + stängda i Scout-orchestrator-pass 2026-05-19
+    "B137",  # öppnad i Viewser-overlay-E2E Scout case 4 2026-05-19 (tagline-läckage)
     "Cleanup",  # vanlig engelsk rubrik i operator-flöde-text
+    "EJ uppfyllt",  # rapport-text i Scout verdict-tabell (case 4 < 6.5-golvet)
+    "Kontakta oss",  # CTA-string citerad från generated TSX i case-rapporter
+    "Mat",  # service-namn citerat från sköldpaddssoppa-build TSX (case 4)
     "Cloud Agents",  # cursor.com-koncept som scoutorkestratorn pratar om
     "ForEach",  # PowerShell-verb i exempelkommandon
     "Konkret content",  # gap-rubrik i 9/10-tabellen

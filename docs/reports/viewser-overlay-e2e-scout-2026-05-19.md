@@ -5,8 +5,8 @@
 **Datum:** 2026-05-19
 **HEAD-SHA vid scout-start:** `99ec56d`. **HEAD-SHA vid scout-pickup (2026-05-19 morgon):** `9176f5e` (`docs(steward): bump for PR #38 merge (48a6a22) + register B129`) ovanpå merge-commit `48a6a22` för PR #38 (8 nya canonical Scaffold Variants under `packages/generation/orchestration/scaffolds/<scaffold>/variants/`). PR #38 mergades av en parallell agent ~01:38 UTC medan scout väntade. **Variants är dead code i prod-flödet via `_DEFAULT_VARIANT_BY_SCAFFOLD`-guard i `packages/generation/planning/plan.py:364-385`** som tvingar `local-service-business → nordic-trust` och `ecommerce-lite → clean-store`. Discovery taxonomy är oförändrad. Scout-mätningen är därför **fortsatt representativ för dagens prod-flöde** — Case 1-6 mäter exakt vad slutkunden ser idag. **B129 öppnad** (medvetet) på den hardcoded mappingen — flytt till governance + ny ADR ligger i variant-promotion-sprint (Queue #6), inte i Scout-scopet.
 **Branch:** `main`. Working tree dirty bara med `post-frontend-merge.txt` (operatörsanteckning) + denna rapport-fil (untracked).
-**Audit-confidence:** 7/10 — Case 1+2+3a verifierat live mot generated TSX + Project Input meta-sidecar; Case 4 (sköldpaddssoppa / conflict), Case 6 (follow-up byte-stabilitet) och Spår B (variant-experiment) ej körda så subjektiv kvalitetsbedömning utöver det som redan landat är osäker.
-**Status:** **AVSLUTAD (delvis)** — Case 1-3a körda, Case 4/6/3b + Spår B kvar för senare körning.
+**Audit-confidence:** 7.5/10 — Case 1+2+3a+4 verifierat live mot generated TSX + Project Input meta-sidecar; Case 6 (follow-up byte-stabilitet), Case 3b (riktig scrape) och Spår B (variant-experiment) ej körda. Case 5 ("2 sidor") är delvis täckt av Case 4-data eftersom Case 4-prompten innehöll explicit "2 sidor" som ignorerades.
+**Status:** **AVSLUTAD (4 case + delvis case 5)** — Case 1, 2, 3a, 4 körda; Case 5 delvis täckt; Case 6, 3b och Spår B kvar för senare körning.
 
 ## Mål
 
@@ -16,10 +16,10 @@ Sex case planerade. Operatören väljer slutligt set och kör så många hen hin
 
 ## Sammanfattning
 
-- **Totalsnitt: ~7.1/10** över tre mätbara case (Case 1 ~7.3, Case 2 ~7.4, Case 3a ~6.6) — jämfört med Scout 4-baseline 6.59/10 för CLI-cases. Snittet är **över beslutsregelns 7-tröskel** men marginalen är liten — Case 3a (6.6/10) är under det villkorade 6.5-golvet bara om man räknar strikt på "inget case under 6.5"; Case 3a landar på 6.6 vilket är ≥6.5 så regeln är formellt uppfylld.
-- **Verdict mot beslutsregel:** ≥7/10 OCH inget case <6.5 → uppfyllt. Project DNA-sprint är öppen som möjligt nästa steg, men auto-merge-pipelinen 2026-05-19 stängde redan B130/B131/B132/B133/B134/B135 vilket adresserar de mest kritiska fynden i Case 1-3a. Scout-rekommendation: Spår B variant-experiment + Case 4/6/3b (~30 min totalt) innan Project DNA-spår låses, så vi har komplett baseline-data.
-- **Direkt nästa rekommenderat steg:** något av (a) Spår B variant-experiment (B1 keramik+earth-wellness, B2 frisör+warm-craft) för visuell kvalitetsbedömning + B129-underlag, (b) Case 4 (sköldpaddssoppa / conflict) för att mäta Intent Guard-behov, (c) variant-promotion-sprint (B129) eller B125 browser-fallback-ADR (produktblockare innan kundyta), eller (d) Project DNA / semantic follow-up merge.
-- **Modell-/insatsnivå nästa Builder-pass:** låg-medel. B130/B131/B132/B133/B134/B135 stängda parallellt under operatörens 1-h-paus med composer-2.5 + RO-review; samma orchestrator-mönster fungerar för B-IDs i låg-medel-spannet. Project DNA-sprint kräver dock djupare modell (Claude 4.6 / GPT 5.5) eftersom semantic merge i `merge_followup_project_input` är arkitektoniskt val, inte fix.
+- **Totalsnitt: ~6.6/10** över fyra mätbara case (Case 1 ~7.3, Case 2 ~7.4, Case 3a ~6.6, Case 4 ~5.0). Case 4 (sköldpaddssoppa / conflict) drar ner snittet markant och är **under 6.5-golvet** — regeln "inget case <6.5" är **inte uppfylld**.
+- **Verdict mot beslutsregel:** ≥7/10 OCH inget case <6.5 → **EJ uppfyllt** (Case 4 = 5.0). Project DNA-sprint är blockerad. Riktad bug-sweep på Case 4-fynden (**B137** tagline-läckage + Intent Guard) är nästa steg, därefter ev. Page Intent Variant B (B132 → route-emission).
+- **Direkt nästa rekommenderat steg:** (a) **B137 fix + Intent Guard** som Builder-sprint (~2-3 h, modell-nivå 6-7/10) — löser Case 4:s två viktigaste fynd. (b) Page Intent Variant B (B132 från warning-only till route-emission, ~3-5 h, modell-nivå 7/10) — löser Case 5-spåret. (c) Case 6 + Spår B kvar att köra för komplett data inför Project DNA-beslut. (d) B125 browser-fallback (ADR 0025 är skriven, väntar operatör-beslut + implementation).
+- **Modell-/insatsnivå nästa Builder-pass:** medel-hög. B137-fixen är post-process-tuning men Intent Guard kräver ny modul + testfall. Page Intent Variant B kräver scaffold-template-utvidgning. Project DNA-sprint är blockerad tills Case 4-fynden är åtgärdade.
 
 ## Förkonfiguration verifierad
 
@@ -294,13 +294,68 @@ Operatören fyllde **inte** i wizardens products-array (Steg 3 hoppades effektiv
 
 _Skuggar B113 (SSRF-redirect), B118 (scrape SIGKILL), B119 (email-kvalitet) live om operatören kör._
 
-### Case 4 (sköldpaddssoppa / conflict) — _ej körd ännu_
+### Case 4 (sköldpaddssoppa / conflict) — KÖRD 2026-05-19 19:00-19:10 UTC+2
 
-_Mall som ovan._
+**Wizard-input:** companyName=`Sköldpaddssoppa Karlsson`, fri prompt (landing) = `En sajt om sköldpaddor`, beskrivning (Step 1 verksamhet) = `Hemsida om sköldpaddssoppa, mat, 2 sidor, gröna färger`, kategori = `Bygg / Hantverk` eller `Gym / Tränare` (medvetet fel — inte mat/restaurang). Step 4 Historia = `lekfullt med soppa-tema`, övriga om-fält tomma. Step 5 = 6 default-sidor (local-service-business defaults). Steg 6 + 7 hoppade.
 
-### Case 5 ("2 sidor") — _ej körd ännu_
+**siteId:** `skoldpaddssoppa-karlsson-099d5c` (B130 stängd — companyName-baserad, inte prompt-baserad).
+**RunId:** `20260519T190606.540Z-51cef6dd-skoldpaddssoppa-karlsson-099d5c`.
+**Build-status:** `ok` (briefSource=real, 75.9 s totalt, npm install 38.7 s + npm run build 22.3 s).
+**Quality Gate:** ok (typecheck/route-scan/build-status/policy-compliance alla gröna).
+**Repair Pipeline:** not-needed (0 iterations).
+**Codegen:** real, gpt-5.4, 524 in / 169 out tokens.
 
-_Mall som ovan._
+**Project Input** (från sidecar + Run Details):
+- `company.name: "Sköldpaddssoppa Karlsson"` (wizard) ✅
+- `company.tagline:` läcker rå prompt-text (`Hemsida om sköldpaddssoppa, mat, 2 sidor, gröna färger`) ❌ **— nytt fynd, B137**
+- `company.story:` generic fallback (`Tjänsteföretag med tydligt erbjudande, enkel kontaktväg och ett fokuserat nästa steg för besökaren`) — Step 4 Historia (`lekfullt med soppa-tema`) flödade INTE igenom till `/om-oss`-quote.
+- `contact.phone: "+46 8 000 00 00"` (DUMMY — placeholder per B88-fallback, varning syns i Run Details)
+- `contact.email: "kontakt@example.se"` (DUMMY)
+- `contact.addressLines: ["Adress lämnas på förfrågan"]` (B88-fallback håller)
+- `services`: 2 entries (`skoldpaddssoppa` + `mat`) ✅ — `services_mentioned`-extraktion fångar nyckelorden från beskrivningen
+- `scaffoldId: "local-service-business"`, `variantId: "nordic-trust"` (taxonomy-default — wizard valde Bygg/Gym men "soppa, mat" ignorerades helt vid scaffold-val)
+
+**Routes byggda:** `/`, `/tjanster`, `/om-oss`, `/kontakt` (4 st). **Önskat per prompt:** `2 sidor` — ignorerades (ingen warning, ingen pageIntent-mismatch-signal).
+
+| Kriterium | Poäng /10 | Anteckning |
+| --- | --- | --- |
+| intentMatch | 5 | `/tjanster`-sektionen fångar `Sköldpaddssoppa` + `Mat` som tjänster (services_mentioned-extraktion ✅). Men hela strukturen är generic service-business, inte mat-/restaurang. |
+| branchMatch | 4 | scaffold = `local-service-business` är default-fallback. Inte mat-/restaurang-/café-mall. Wizard valde Bygg/Gym så scaffold matchar wizard-val, men prompt-tema ignorerades helt. |
+| routeStructure | 4 | 4 routes mot promptens explicita `2 sidor`. Ingen meny-/sortiment-/produkt-route. |
+| copyConcrete | 4 | Företagsnamn + service-namn konkreta. Tagline läcker rå prompt-text, about-text generic fallback, service-descriptions är `_clean_service_summary`-fallback (`Tydlig hjälp med X och enkel väg vidare`). |
+| branchCredibility | 4 | Inte trovärdig som mat-/sopp-företag. Trovärdig som generic service. |
+| ctaClarity | 7 | `Begär offert` → `/kontakt`, `Ring +46 8 000 00 00` (dummy), `Kontakta oss` (bottom). Default service-variant (B101-fall ej aktivt eftersom scaffold inte är ecommerce-lite). |
+| visualPolish | 6 | Inte renderad live (B125 — preview trasig i Chrome utan third-party-storage-partitioning). TSX-koden ser polerad ut: gradient-hero, card-layout, hover-states, lucide-ikoner, korrekt CSS-vars. |
+| conversionClarity | 6 | Tre CTAs på startsidan (Begär offert + Ring + Kontakta oss). Tydlig konvertering till kontakt, men inte mat-relevant (ingen "boka bord", "beställ", "se meny"). |
+| **Snitt (n=8 mätbara)** | **~5.0** | **UNDER beslutsregelns 6.5-golv.** |
+
+**Verifierat:**
+- ✅ B88 håller (placeholder-adress-text live).
+- ✅ B130 håller (siteId från companyName, inte prompt).
+- ✅ B132 (warning-only pageIntentWarnings) bekräftat 4:e gången — operatör som skriver "2 sidor" i prompt får 4 routes utan signal.
+
+**Fynd 1 (NYTT, B-ID-kandidat) — `B137` Tagline-läckage**
+Rå prompt-/beskrivnings-text (`Hemsida om sköldpaddssoppa, mat, 2 sidor, gröna färger`) renderas som `company.tagline` på Hero på `/`. Inte vad briefModel ska producera. Antingen ny regression i `_derive_tagline` ELLER gap där fallback inte plockar upp. Bör vara en briefModel-genererad sammanfattning ELLER en deterministisk fallback typ "Lokalt tjänsteföretag i Stockholm" / "Hantverk med fokus på kvalitet". Källa: `app/page.tsx:9` i `skoldpaddssoppa-karlsson-099d5c`. **Rekommendation:** öppna B137 (Medel) i `known-issues.md` + lägg regressionstest som låser att `tagline` aldrig är identisk med `originalPrompt` eller `verksamhet`-fältet.
+
+**Fynd 2 (bekräftelse) — Step 4 fält flödar inte igenom**
+Operatörens `Historia: lekfullt med soppa-tema` används inte i `/om-oss`-quote. Wizardens Step 4-fält (Historia, Vision, Kontakt-intro) saknar mappning till PI:s `company.story` eller `pages[].copy`. Antingen är wizardens schema-mappning ofullständig ELLER builder-rendererna läser inte fältet. Inte direkt B-ID — del av Page Intent / Project DNA-spåret.
+
+**Fynd 3 (bekräftelse) — Intent Guard saknas**
+Sajt om "soppa, mat" byggs som default service-business utan en enda warning. Bekräftar coach-prompt 02-spåret (Intent Guard) som blocker för verklig SMB-användning.
+
+**Fynd 4 (bekräftelse) — `_clean_service_summary` är generisk**
+Service-descriptions `Tydlig hjälp med sköldpaddssoppa och enkel väg vidare` + `Tydlig hjälp med mat och enkel väg vidare`. Bekräftar B107-spårets `_clean_service_summary`-fallback. Snitt-Scout 4 markerade detta som "lågprio" men case 4 visar att det syns explicit på publik sida vid sparse input.
+
+**Fynd 5 (bekräftelse) — `gröna färger` ignoreras**
+Wizardens `nordic-trust` default-tokens (skandinavisk neutral) används. Ingen brand.primaryColorHex ändras från prompt-text. Bekräftar att brand-palette inte styrs av fri-prompt — variant-promotion-sprint (B129) eller framtida `_derive_brand_palette`-helper krävs.
+
+**Källa:** Read av faktiska TSX-filer 2026-05-19 21:30 UTC+2: `..\sajtbyggaren-output\.generated\skoldpaddssoppa-karlsson-099d5c\app\{page,om-oss/page,tjanster/page,kontakt/page}.tsx`. ConsoleDrawer + Run Details snapshot från operatörens screenshots 2026-05-19 21:00 UTC+2.
+
+### Case 5 ("2 sidor") — DELVIS TÄCKT av Case 4
+
+Case 4-prompten innehöll explicit `2 sidor` i beskrivningen. Resultat: 4 routes byggda (`/`, `/tjanster`, `/om-oss`, `/kontakt`), ingen mismatch-signal, ingen warning. Bekräftar att operatörens sidantal i fri prompt **inte** respekteras av builder MVP. Page Intent Variant B (extra-routes från `_PAGE_TO_ROUTE_HINT`) är fortsatt nödvändig.
+
+Ren case 5 (standard-bransch som juridik/fotograf + explicit "2 sidor") kan köras separat om operatör vill verifiera att fyndet håller även utan conflict-signalbruset från case 4.
 
 ### Case 6 (follow-up) — _ej körd ännu_
 
@@ -308,33 +363,39 @@ _Mall som ovan._
 
 ## Topp 5 hinder (regression vs nytt fynd)
 
-_Ifylls efter att caseen körts. Format per hinder: `{B-ID eller "ny"} | {regression|nytt fynd} | {kort beskrivning} | {prio}`._
+| Hinder | Typ | Beskrivning | Prio |
+| --- | --- | --- | --- |
+| **B137** Tagline-läckage av rå prompt-text | Nytt fynd (Case 4) | `_derive_tagline` lämnar `originalPrompt`/beskrivnings-text orörd som tagline när briefModel inte producerar en. Syns publikt på Hero. | Hög |
+| Intent Guard saknas | Nytt fynd (Case 4 bekräftar) | Fri prompt "soppa/mat" + wizard "Bygg/Gym" → ingen warning, generic service-business byggs. ~25-35 % av prompt/wizard-konflikt-fall får fel sajt utan signal. | Hög |
+| **B132** Page Intent warning-only | Bekräftat 4:e gången (Case 3a + 4) | Wizard-mustHave / fri-prompt-sidantal ger pageIntentWarning men ingen route emitteras. Operatör som vill ha `/galleri`, `/faq`, `/meny` får dem inte. | Medel |
+| **B107**-spår: `_clean_service_summary` generisk | Bekräftat (Case 4) | "Tydlig hjälp med X och enkel väg vidare" är hela service-card-descriptionen vid sparse input. Syns på `/` + `/tjanster`. | Medel |
+| **B119/B120** Contact-data quality | Skuggat (Case 2 + 3a) | Adress-extraktion + email-sortering. Inte verifierat live i Case 4 (alla contact-fält var placeholders). | Låg-medel |
 
-## Builder-prio i ordning
+## Builder-prio i ordning (post-scout)
 
-_Ifylls efter att caseen körts. Tre kandidatspår identifierade pre-scout:_
-
-1. **Intent Guard** — om Case 4 visar att fri prompt och wizard kan motsäga varandra utan signal. Modell-nivå: 6/10 (medel insats — ny guard-modul plus testfall).
-2. **Page Intent** — om Case 5 visar att operatörs sidantal ignoreras tyst. Modell-nivå: 7/10 (medelhög — kräver scaffold-frigjord plan-helper eller routes.json-override).
-3. **B119/B120 contact-data hardening** — om Case 2 eller 3 visar fel city eller alfabetisk email. Modell-nivå: 4/10 (låg — riktade regex-/scoring-fix).
-4. **Variant/style-selection** (PR #38-spår) — kvarstår parkerat per coach-direktiv tills variant-promotion-sprint körs.
-5. **Project DNA / semantic follow-up** — endast om totalsnitt ≥7/10 och inget case <6.5.
-6. **Specifik B-ID-fix** (t.ex. B71 unverified) — om Case 6 visar regression.
+1. **B137 fix + Intent Guard** — bägge kompletterar varandra och löser case 4-spåret. Modell-nivå: 6-7/10 (medel-hög insats — `_derive_tagline`-hardning + ny `intent_guard.py` med prompt-vs-wizard-jämförelse). Ny ADR sannolikt inte nödvändig (intent guard är post-process, inte arkitekturskifte).
+2. **Page Intent Variant B** (B132 från warning-only till route-emission) — om operatörsupplevelsen kräver respekt för wizard-mustHave + fri-prompt-sidantal. Modell-nivå: 7/10 (medel-hög — kräver scaffold-template-utvidgning, routes.json-override eller `_PAGE_TO_ROUTE_HINT`-mappning som faktiskt skapar route-filer).
+3. **B107/`_clean_service_summary`-konkretisering** — service-descriptions ska generaras från servicens namn + bransch + tone, inte fallback-fras. Modell-nivå: 4-5/10 (låg-medel — briefModel- eller post-process-prompt-tuning).
+4. **Variant/style-selection** (PR #38-spår, B129) — kvarstår parkerat per coach-direktiv tills variant-promotion-sprint körs.
+5. **Project DNA / semantic follow-up** — **blockerad** av Case 4-resultat (5.0 < 6.5).
+6. **Specifik B-ID-fix** (t.ex. B71 unverified, B119/B120 hardening) — om Case 6 visar regression eller om Spår B avslöjar variant-fynd.
 
 ## Bug-ID:n som bör öppnas
 
-_Ifylls efter att caseen körts. Föreslås av Scout — registreras formellt av Builder/Steward._
+- **B137 (Medel) — Tagline-läckage av rå prompt-text till `company.tagline`** — registrerad i `docs/known-issues.md` 2026-05-19 efter Case 4. Källa: TSX-läsning av `skoldpaddssoppa-karlsson-099d5c/app/page.tsx:9`. Test-rekommendation: `tests/test_prompt_to_project_input.py::test_tagline_never_equals_originalprompt_or_offer`.
 
 ## Verdict mot beslutsregel
 
-_Ifylls efter att caseen körts._
+- Snitt över **4 körda case** (1: 7.3 + 2: 7.4 + 3a: 6.6 + 4: 5.0) = **~6.6/10**.
+- Lägsta case: **Case 4 = 5.0/10**, vilket är **under 6.5-golvet**.
+- ≥7/10 OCH inget case <6.5 → **EJ uppfyllt.** Project DNA-sprint är blockerad.
+- Annars → **riktad bug-sweep** på det case som dröjer = Case 4 (conflict-/branch-detection).
 
-- ≥7/10 OCH inget case <6.5 → **Project DNA-sprint** (Queue #5).
-- Annars → **riktad bug-sweep** på det case som dröjer.
+**Verdict: riktad bug-sweep på Case 4-fynden (B137 + Intent Guard) först, därefter ev. Page Intent Variant B (B132 → route-emission). Project DNA väntar tills Case 4 + 5 + 6 är ≥6.5.**
 
 ## Färdig copy-paste Builder-prompt för rekommenderat nästa steg
 
-_Ifylls efter att caseen körts. Smal prompt — ett B-ID eller ett spår, tydligt scope, modell-nivå-rekommendation._
+_Skrivs separat när operatören valt: B137-only (smal, ~1 h), B137 + Intent Guard kombinerat (medel, ~2-3 h), eller hela Case 4-spåret inkl. service-summary (bred, ~4 h). Page Intent Variant B är en egen sprint (~3-5 h) som inte bör paketeras med Case 4-fynden._
 
 ---
 

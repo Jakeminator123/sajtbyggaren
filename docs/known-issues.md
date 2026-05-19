@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 98 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 26 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 98 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -594,6 +594,30 @@ för follow-up eller ska städas.
   parallellt. Källa: PR #38 post-merge-triage 2026-05-19
   (parent-agent review efter operatör-override av coach-
   direktiv). Fix: open. Test: open.
+
+### Viewser-overlay-E2E Scout 2026-05-19 — Case 4 (sköldpaddssoppa / conflict)
+
+- **`B137` Medel** (öppen, tagline-läckage av rå prompt-text) -
+  `scripts/prompt_to_project_input.py` skriver `company.tagline` =
+  rå prompt-/beskrivnings-text när briefModel inte producerar en
+  kort sammanfattning. Verifierat live i case 4 (sköldpaddssoppa):
+  `app/page.tsx:9` på Hero visar `"Hemsida om sköldpaddssoppa, mat,
+  2 sidor, gröna färger"` — operatörens fri-prompt-text läcker
+  publikt som tagline. Förväntat beteende: briefModel ska producera
+  kort marknadsföringsfras (8-15 ord), eller `_derive_tagline`-helper
+  ska ge en deterministisk fallback (typ `"Lokalt tjänsteföretag i
+  Stockholm"`) i stället för rå prompt. Effekt idag: sajter med sparse
+  briefModel-output får promptens egen text som hero-tagline, vilket
+  är dev-jargong (`"2 sidor"`, `"gröna färger"`-direktiv etc.) snarare
+  än kund-presentation. Bekräftar att briefModel-spåret + post-process-
+  fallback inte täcker case där operatören skriver instruktioner i
+  beskrivnings-fältet i stället för verksamhetsbeskrivning. Källa:
+  Viewser-overlay-E2E Scout case 4, 2026-05-19. Read av
+  `..\sajtbyggaren-output\.generated\skoldpaddssoppa-karlsson-099d5c\app\page.tsx`.
+  Fix: open. Test: open (rekommenderat
+  `tests/test_prompt_to_project_input.py::test_tagline_never_equals_originalprompt_or_offer`
+  som låser att `company.tagline` aldrig är identisk med `originalPrompt`
+  eller `offer`-fältet).
 
 ## Stängda - regression-test säkrar fixet
 
