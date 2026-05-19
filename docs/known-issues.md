@@ -661,9 +661,10 @@ för follow-up eller ska städas.
   (bevaras av `merge_followup_project_input`) framför den prompt-detekterade
   så svensk v1 + engelsk följdprompt fortsätter jämföra mot rätt språks
   defaults. Tuple-unpacking från `site_brief_to_project_input` bevarad
-  med `_`-prefix så kontraktet håller. Källa: PR #45 retroaktiv composer-2.5
-  + lokal-modell-review 2026-05-19. Fix: pending squash-merge-SHA.
-  Test: `tests/test_prompt_to_project_input.py::test_followup_with_discovery_recomputes_placeholder_fields_against_merged_contact`.
+  med `_`-prefix så kontraktet håller.   Källa: PR #45 retroaktiv composer-2.5
+  + lokal-modell-review 2026-05-19. Fix: `895d80b` (direkt-main, ej PR;
+  ruff-fix `6fe04ef` följde). Test:
+  `tests/test_prompt_to_project_input.py::test_followup_with_discovery_recomputes_placeholder_fields_against_merged_contact`.
 
 - **`B131` Medel** (stängd 2026-05-19, capability alias dedup) -
   `_resolve_capabilities` dedupade tidigare `requestedCapabilities`

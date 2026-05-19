@@ -471,7 +471,7 @@ COMMON_WORDS = {
     # Scout-orchestrator-handoff-2026-05-19 + tree_view.py prose-allowlist
     # (samma kategori som tidigare scout-prosa-allowlists: case-specifika
     # eller proposed-koncept som inte är canonical domain terms ännu).
-    "B134", "B135",  # öppnade i Scout-orchestrator-handoff (Cloud Agents pågår)
+    "B134", "B135", "B136",  # öppnade + stängda i Scout-orchestrator-pass 2026-05-19
     "Cleanup",  # vanlig engelsk rubrik i operator-flöde-text
     "Cloud Agents",  # cursor.com-koncept som scoutorkestratorn pratar om
     "ForEach",  # PowerShell-verb i exempelkommandon

@@ -235,3 +235,117 @@ Tack för förtroendet att köra autopilot under 1-h-pausen. Auto-pilot
 slutfördes utan operator-intervention. backup-31 finns som rollback om
 något i de 5 commits behöver återställas. RO-review-subagents bekräftade
 retroaktivt att alla 3 mergar var merge-ready.
+
+---
+
+## Update 2026-05-19 (kvällen, post-handoff)
+
+Sektionen ovan beskrev läget när 3 Cloud Agents (B134, B135, F2/Steward)
+fortfarande pågick. När operatören kom tillbaka körde Scout-orkestratorn
+hela auto-merge-sekvensen + en post-merge-städpass. Final main-state
+dokumenteras här så nästa agent inte tror handoff-bilden är aktuell.
+
+### Mergade efter handoffen skrevs
+
+| Commit | PR / spår | Vad |
+| --- | --- | --- |
+| `cd05ee7` | PR #46 | Steward + F2 fix-SHA + verified state-bump till `7a4e450` |
+| `cb046e1` | PR #44 | B134 wizardMustHave follow-up reset |
+| `ebf5988` | PR #45 | B135 fieldSources placeholder distinction |
+| `496b750` | direkt-main | docs(steward) sync stale body-text + scout-rapport sammanfattning (efter retroaktiv composer-2.5 + lokal-modell-review) |
+| `895d80b` | direkt-main | **B136** pre-resolve placeholder_fields mot post-merge contact (uppföljning av PR #45 follow-up provenance-glapp) |
+| `6fe04ef` | direkt-main | ruff F821-fix för B136-test (tappade `dict[str, Any]`-annotering) |
+
+### Bug-scope efter alla mergar
+
+- **25 aktiva, 0 misplaced, 5 unknown, 98 stängda** (började på 92).
+- Stängda denna session: B130 + B131 + B132 + B133 + B134 + B135 + B136.
+
+### Post-merge composer-2.5-reviews + lokal-modell-reviews
+
+6 composer-2.5-subagents granskade PR #44/#45/#46 i kontrastpar. Plus 3
+lokala modeller från operatören. Sammanlagt 9 retroaktiva reviews.
+
+**Verkliga fynd som åtgärdades:**
+
+- PR #46 stale body-text → fixad i `496b750`.
+- PR #45 follow-up provenance-glapp → fixad som B136 i `895d80b`.
+
+**Info/nit-fynd som ej åtgärdades** (framtida cleanup-kandidater för nästa
+agent):
+
+- **B134-04**: `_clean_wizard_must_have`-helpern saknar direkta unit-tester.
+  Täcks indirekt via follow-up-scenarier. Liten tech-debt.
+- **B135-F6**: tester saknar `placeholder_fields=None` vs `set()` + okänd
+  nyckel-edge-cases. Robusthet i koden täcker fallen, men explicit tests
+  saknas.
+- **PR #44 docstring-puts**: `generate_followup()`-docstring beskriver
+  ärvningsbeteendet lite för generellt, fast det nu är villkorat. Nit.
+
+**Rekommendation till nästa agent:** lägg dessa i en framtida
+"Builder cleanup pass"-prompt — alla tre tar tillsammans <30 min och kan
+köras som en samlad PR. Inte värt separata B-IDs.
+
+### Verktyg som tillkom under sessionen
+
+- `scripts/tree_view.py` — committad utility för LLM-context. Operatörens
+  lokala `tree_v2.py`-stil men generaliserad och delad. CLI-flaggor:
+  `--llm`, `--copy`, `--with-size`, `--ext`, `--max-depth`, `--no-stub`,
+  `--extra-ignore`, `--output-file`. Använd `python scripts/tree_view.py
+  apps/viewser --max-depth 3 --llm --copy` för snabb LLM-context-paste.
+
+### Final state vid handoff (2026-05-19 ~20:05 UTC+2)
+
+```
+6fe04ef chore(tests): drop unused dict[str, Any] annotation in B136 test (ruff F821 fix)
+895d80b fix(prompt-helper): close B136 — pre-resolve placeholder_fields against post-merge contact
+496b750 docs(steward): sync stale body-text + scout-rapport sammanfattning
+ebf5988 fix(discovery): close B135 — fieldSources distinguish placeholder from brief (#45)
+cb046e1 fix(prompt-helper): close B134 — reset wizardMustHave when followup has new discovery (#44)
+cd05ee7 docs(steward): close F2 fix-SHA + bump verified state to 7a4e450 (#46)
+```
+
+- 0 öppna PRs.
+- 0 lokala feature-branches.
+- backup-30 + backup-31 finns kvar (lokal + origin).
+- Origin-branches: `main` + 14 backup-branches + `backup-pre-christopher-ui-merge`.
+- Untracked: `post-frontend-merge.txt` (operatörens egen anteckning).
+- Alla guards gröna: ruff 0 findings, governance 17 OK, rules_sync OK,
+  term-coverage strict 0, pytest 16 passed för bug-scope + docs-freshness.
+
+### Fortfarande oåtgärdat på main (medvetet)
+
+- **`docs/current-focus.md`** har fortfarande långa stale "Last verified
+  state"-paragrafer från äldre sprintar (pre-PR-#39). Jag fixade Current
+  stage-rad 48 i `496b750` men inte hela historiken. Inte tech-debt —
+  det är operatörens egen konvention att bevara historik som breadcrumbs.
+  Förstå inte detta som "ofullständigt" — det är medveten design.
+- **`docs/handoff.md`** har samma — Datum-rad bytt men resten av
+  historiken bevarad.
+
+### Mot 9/10 (gap-analys oförändrad)
+
+Se sektion "Mot 9/10 i `docs/product-operating-context.md`" i denna fil
+ovan. Inget i auto-merge-pipelinen flyttar oss närmare 9/10 utöver att
+B130-B136 stängda — alla är resolver-/provenance-fynd, inga är
+visuell-rendering eller browser-fallback. Nästa Scout-pass-runda eller
+B125-ADR är vägen framåt.
+
+### Operatörsbeteende att vara medveten om
+
+- Operatören är **inte utvecklare i grunden**. Förklara dev-uttryck med
+  korta parenteser första gången per konversation
+  (`governance/rules/reply-style.md`).
+- Operatören delegerar generöst men hen vill se beslutsregler tydligt
+  ("kör autopilot", "merga efter bästa förmåga"). Beslutspunkt = säg
+  vilka val + min rekommendation, sen kör.
+- Operatören använder ofta lokala extra-modeller för parallell-review
+  ("composer-2.5", "lokala modeller" via egen Cursor-flöde). Ta deras
+  fynd seriöst — flera har visat sig stämma och leda till legit fixar
+  (PR #46 stale body-text, B136).
+- Operatören beslut: PR-flöde är **undantag** (per `branch-discipline.md`),
+  men hen är OK med både direkt-main och PR — välj baserat på risk.
+  Trivial docs-only kan committas direkt; kod-fix bör helst gå via PR.
+  Denna session bröt det principen för B136 + Steward-fixar eftersom
+  operatören var borta + fynden var tidskritiska (3 PRs blockerade på
+  reviews innan dem) — backup-31 var säkerhetsnätet.
