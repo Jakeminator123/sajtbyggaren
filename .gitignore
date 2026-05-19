@@ -29,6 +29,7 @@ out/
 data/runs/
 data/versions/
 data/prompt-inputs/
+data/embedding-index/
 .generated/
 *.log
 
