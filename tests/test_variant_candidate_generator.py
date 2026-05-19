@@ -117,6 +117,11 @@ def test_resolve_variant_model_raises_when_role_missing(tmp_path: Path) -> None:
         resolve_variant_model(policy_path=policy)
 
 
+def _variant_ids_on_disk(scaffold_id: str) -> set[str]:
+    variants_dir = SCAFFOLDS_DIR / scaffold_id / "variants"
+    return {path.stem for path in variants_dir.glob("*.json")}
+
+
 @pytest.mark.tooling
 def test_load_variant_context_reads_exact_scaffold_files() -> None:
     context = load_variant_context("local-service-business")
@@ -128,7 +133,12 @@ def test_load_variant_context_reads_exact_scaffold_files() -> None:
         "compatible-dossiers.json",
         "selection-profile.json",
     }
-    assert context.existing_variant_ids == {"nordic-trust"}
+    assert context.existing_variant_ids == _variant_ids_on_disk("local-service-business")
+    assert "nordic-trust" in context.existing_variant_ids
+
+    ecommerce = load_variant_context("ecommerce-lite")
+    assert ecommerce.existing_variant_ids == _variant_ids_on_disk("ecommerce-lite")
+    assert "clean-store" in ecommerce.existing_variant_ids
 
     prompt_payload = build_variant_prompt_payload(
         context=context,

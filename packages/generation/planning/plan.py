@@ -361,6 +361,12 @@ def _pick_scaffold_from_brief(
     return by_id.get(chosen_id, registry[0])
 
 
+_DEFAULT_VARIANT_BY_SCAFFOLD: dict[str, str] = {
+    "local-service-business": "nordic-trust",
+    "ecommerce-lite": "clean-store",
+}
+
+
 def _pick_variant(scaffold: dict[str, Any]) -> str:
     variants = [variant for variant in scaffold.get("variants") or [] if _is_enabled(variant)]
     if not variants:
@@ -368,6 +374,14 @@ def _pick_variant(scaffold: dict[str, Any]) -> str:
             f"Scaffold {scaffold['id']!r} has no enabled variants under variants/. "
             "A scaffold must declare at least one variant for planningModel to pick from."
         )
+    scaffold_id = scaffold.get("id")
+    preferred_id = (
+        _DEFAULT_VARIANT_BY_SCAFFOLD.get(scaffold_id)
+        if isinstance(scaffold_id, str)
+        else None
+    )
+    if preferred_id and any(variant.get("id") == preferred_id for variant in variants):
+        return preferred_id
     return variants[0]["id"]
 
 
