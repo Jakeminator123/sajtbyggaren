@@ -79,6 +79,36 @@ def test_slugify_handles_non_latin_script() -> None:
 
 
 @pytest.mark.tooling
+def test_slugify_site_id_uses_company_name_when_provided() -> None:
+    site_id = slugify_site_id(
+        "[Operatörens beskrivning]\nJag vill ha en varm keramiksajt",
+        suffix="abcdef",
+        company_name="Atelje Vit Lera",
+    )
+    assert site_id == "atelje-vit-lera-abcdef"
+
+
+@pytest.mark.tooling
+def test_slugify_site_id_falls_back_to_prompt_when_company_empty() -> None:
+    site_id = slugify_site_id(
+        "elektriker i Malmö",
+        suffix="abcdef",
+        company_name="   ",
+    )
+    assert site_id == "elektriker-i-malmo-abcdef"
+
+
+@pytest.mark.tooling
+def test_slugify_site_id_strips_master_prompt_header_when_no_company_name() -> None:
+    site_id = slugify_site_id(
+        "[Operatörens beskrivning]\nFrisörsalongen Tussilago i Göteborg",
+        suffix="abcdef",
+    )
+    assert site_id == "frisorsalongen-tussilago-abcdef"
+    assert not site_id.startswith("operatorens-beskrivning")
+
+
+@pytest.mark.tooling
 def test_pick_scaffold_defaults_to_local_service_business() -> None:
     scaffold_id, variant_id = pick_scaffold(
         "Skapa en hemsida för en målare", brief_business_type="painter"

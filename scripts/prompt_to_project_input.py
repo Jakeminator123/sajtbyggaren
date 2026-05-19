@@ -70,6 +70,7 @@ SCHEMA_PATH = REPO_ROOT / "governance" / "schemas" / "project-input.schema.json"
 _SITE_ID_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
 _SLUG_CLEAN = re.compile(r"[^a-z0-9-]+")
 _SLUG_DASHES = re.compile(r"-{2,}")
+_MASTER_PROMPT_OPERATOR_HEADER = "[Operatörens beskrivning]"
 
 # Small Swedish business-type dictionary used to produce a readable
 # company name on the generated H1 instead of leaking the raw prompt.
@@ -385,12 +386,26 @@ _ECOMMERCE_TOKENS = frozenset(
 )
 
 
-def slugify_site_id(text: str, *, suffix: str | None = None) -> str:
+def _site_id_text_without_master_prompt_header(text: str) -> str:
+    stripped = (text or "").strip()
+    lines = stripped.splitlines()
+    if lines and lines[0].strip() == _MASTER_PROMPT_OPERATOR_HEADER:
+        return "\n".join(lines[1:]).strip()
+    return stripped
+
+
+def slugify_site_id(
+    text: str,
+    *,
+    suffix: str | None = None,
+    company_name: str | None = None,
+) -> str:
     """Produce a siteId that satisfies _SITE_ID_PATTERN.
 
-    The first 24 chars come from the prompt (or a fallback "site" when
-    the prompt has no usable letters). A short uuid suffix is always
-    appended so two prompts that slugify to the same stem do not collide
+    The first 24 chars come from the resolved company name when one is
+    available, otherwise from the prompt (or a fallback "site" when the
+    source has no usable letters). A short uuid suffix is always
+    appended so two sources that slugify to the same stem do not collide
     in data/prompt-inputs/. Operators that already know the exact id
     they want can pass it via the meta-sidecar tooling in a later
     sprint.
@@ -402,7 +417,11 @@ def slugify_site_id(text: str, *, suffix: str | None = None) -> str:
     the fold it becomes `elektriker-i-malmo-<tail>`, which is readable
     and still satisfies `_SITE_ID_PATTERN`.
     """
-    folded = _ascii_fold((text or "").strip()).lower()
+    source = (company_name or "").strip()
+    if not source:
+        source = _site_id_text_without_master_prompt_header(text)
+
+    folded = _ascii_fold(source).lower()
     cleaned = _SLUG_CLEAN.sub("-", folded).strip("-")
     cleaned = _SLUG_DASHES.sub("-", cleaned)
     stem = cleaned[:24].strip("-") or "site"
@@ -1689,10 +1708,11 @@ def generate(
             error=exc,
         )
 
-    final_site_id = site_id or slugify_site_id(prompt)
-    if not _SITE_ID_PATTERN.match(final_site_id):
+    has_explicit_site_id = site_id is not None
+    candidate_site_id = site_id or "site"
+    if not _SITE_ID_PATTERN.match(candidate_site_id):
         raise SystemExit(
-            f"Generated siteId {final_site_id!r} does not match the "
+            f"Generated siteId {candidate_site_id!r} does not match the "
             "lower-case alphanumeric/dash pattern required by "
             "apps/viewser/lib/project-inputs.ts and build_site.py."
         )
@@ -1703,7 +1723,7 @@ def generate(
     candidate_project_input, _candidate_placeholder_contact_fields = (
         site_brief_to_project_input(
             brief_artifact,
-            site_id=final_site_id,
+            site_id=candidate_site_id,
             scaffold_id=scaffold_id,
             variant_id=variant_id,
             original_prompt=prompt,
@@ -1729,6 +1749,23 @@ def generate(
             raw_prompt=prompt,
             payload=discovery,
             project_input_candidate=project_input,
+        )
+
+    if has_explicit_site_id:
+        final_site_id = candidate_site_id
+    else:
+        company = project_input.get("company")
+        company_name = (
+            company.get("name") if isinstance(company, dict) else None
+        )
+        final_site_id = slugify_site_id(prompt, company_name=company_name)
+    project_input["siteId"] = final_site_id
+
+    if not _SITE_ID_PATTERN.match(final_site_id):
+        raise SystemExit(
+            f"Generated siteId {final_site_id!r} does not match the "
+            "lower-case alphanumeric/dash pattern required by "
+            "apps/viewser/lib/project-inputs.ts and build_site.py."
         )
 
     # B133 (2026-05-19): efter alla wizard/scrape/follow-up-merger kan
