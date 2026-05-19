@@ -472,6 +472,7 @@ COMMON_WORDS = {
     # (samma kategori som tidigare scout-prosa-allowlists: case-specifika
     # eller proposed-koncept som inte är canonical domain terms ännu).
     "B134", "B135",  # öppnade i Scout-orchestrator-handoff (Cloud Agents pågår)
+    "Cleanup",  # vanlig engelsk rubrik i operator-flöde-text
     "Cloud Agents",  # cursor.com-koncept som scoutorkestratorn pratar om
     "ForEach",  # PowerShell-verb i exempelkommandon
     "Konkret content",  # gap-rubrik i 9/10-tabellen
