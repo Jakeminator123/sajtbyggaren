@@ -521,6 +521,81 @@ def test_followup_uses_preserved_language_for_placeholder_detection(
     ]
 
 
+def test_followup_with_discovery_recomputes_placeholder_fields_against_merged_contact(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """B136: follow-up med ny discovery måste låta resolve_discovery se
+    placeholder_fields beräknade mot post-merge ``project_input.contact``,
+    inte mot candidate brief från ny prompt. ``merge_followup_project_input``
+    bevarar previous contact byte-stabilt, så candidate-listan från ny brief
+    kan flagga phone/email/openingHours som placeholder trots att v1:s real
+    contact-värden ligger kvar i den slutliga PI:n. Pre-B136 satte resolvern
+    då ``fieldSources["contact.phone"] = "default"`` på real-värden, vilket
+    var semantiskt fel och triggade ``operatorReviewRequired = True`` utan
+    fog.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    real_contact_discovery = {
+        "schemaVersion": 1,
+        "rawPrompt": "frisör i Stockholm",
+        "answers": {
+            "siteType": ["salon"],
+            "companyName": "Frisörsalongen Tussilago",
+            "offer": "Klipper hår",
+            "contact": {
+                "phone": "08-123 45 67",
+                "email": "kontakt@tussilago.se",
+                "address": "Götgatan 12, 11646 Stockholm",
+                "openingHours": "Tis-Lör 10:00-18:00",
+            },
+        },
+    }
+
+    _, meta_v1, _, _ = generate(
+        "frisör i Stockholm",
+        output_dir=tmp_path,
+        site_id="b136-followup-site",
+        discovery=real_contact_discovery,
+    )
+
+    decision_v1 = meta_v1["discoveryDecision"]
+    assert decision_v1["fieldSources"]["contact.phone"] == "wizard"
+    assert decision_v1["fieldSources"]["contact.email"] == "wizard"
+    # Wizardens openingHours måste vara olik B88-default ("Mån-Fre 09:00-17:00")
+    # för att inte markeras som placeholder; testet använder "Tis-Lör 10:00-18:00".
+    assert meta_v1.get("placeholderContactFields", []) == []
+
+    new_discovery_no_contact = {
+        "schemaVersion": 1,
+        "rawPrompt": "ändra ton till mer professionell",
+        "answers": {
+            "siteType": ["salon"],
+        },
+    }
+
+    _, meta_v2, _, _ = generate_followup(
+        "ändra ton till mer professionell",
+        site_id="b136-followup-site",
+        output_dir=tmp_path,
+        discovery=new_discovery_no_contact,
+    )
+
+    decision_v2 = meta_v2["discoveryDecision"]
+    # Pre-B136 skulle dessa rapporteras som "default" eftersom candidate-
+    # listan från ny brief flaggade phone/email/openingHours som placeholder
+    # trots att merge_followup bevarade v1:s real-värden byte-stabilt.
+    # Post-B136 ska de visa "brief" (eller annan icke-default-källa) eftersom
+    # post-merge contact är real och pre_resolve_placeholder_fields är tom.
+    assert decision_v2["fieldSources"]["contact.phone"] != "default"
+    assert decision_v2["fieldSources"]["contact.email"] != "default"
+    assert decision_v2["fieldSources"]["contact.addressLines"] != "default"
+    # Som följdkonsekvens: placeholderContactFields i meta är fortsatt tom
+    # (B133-recompute kör mot samma post-merge contact).
+    assert meta_v2.get("placeholderContactFields", []) == []
+
+
 @pytest.mark.tooling
 def test_site_brief_contact_fields_override_placeholders(
     project_input_schema: dict,
@@ -791,6 +866,119 @@ def test_generate_followup_bumps_version_and_reuses_project_id(
     )
     assert current_meta["version"] == 2
     assert current_meta["followUpPrompt"] == meta["followUpPrompt"]
+
+
+def _wizard_discovery_payload(
+    must_have: list[str],
+    *,
+    company_name: str = "Wizard Must Have AB",
+) -> dict[str, object]:
+    return {
+        "schemaVersion": 1,
+        "rawPrompt": "Skapa hemsida för Wizard Must Have AB",
+        "contentBranch": "business",
+        "scaffoldHint": "local-service-business",
+        "answers": {
+            "siteType": ["business"],
+            "companyName": company_name,
+            "mustHave": must_have,
+        },
+    }
+
+
+@pytest.mark.tooling
+def test_followup_with_new_discovery_resets_wizard_must_have(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """B134: a fresh follow-up discovery payload must replace v1 pages."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    _, initial_meta, _, _ = generate(
+        "Skapa hemsida för Wizard Must Have AB",
+        output_dir=tmp_path,
+        site_id="wizard-reset-site",
+        project_id="stable-project-id",
+        discovery=_wizard_discovery_payload(
+            ["Bokning online", "Bildgalleri"],
+        ),
+    )
+    assert initial_meta["wizardMustHave"] == ["Bokning online", "Bildgalleri"]
+
+    _project_input, followup_meta, _path, followup_meta_path = generate_followup(
+        "Byt riktning till en kort FAQ-sajt.",
+        output_dir=tmp_path,
+        site_id="wizard-reset-site",
+        discovery=_wizard_discovery_payload(["FAQ"]),
+    )
+
+    assert followup_meta["mode"] == "followup"
+    assert followup_meta["version"] == 2
+    assert followup_meta["wizardMustHave"] == ["FAQ"]
+    assert "inheritedFromVersion" not in followup_meta["discoveryDecision"]
+    written_meta = json.loads(followup_meta_path.read_text(encoding="utf-8"))
+    assert written_meta["wizardMustHave"] == ["FAQ"]
+
+
+@pytest.mark.tooling
+def test_followup_without_new_discovery_inherits_wizard_must_have(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """B134 keeps B132's warning signal for follow-ups without a new wizard."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    _, initial_meta, _, _ = generate(
+        "Skapa hemsida för Wizard Must Have AB",
+        output_dir=tmp_path,
+        site_id="wizard-inherit-site",
+        project_id="stable-project-id",
+        discovery=_wizard_discovery_payload(
+            ["Bokning online", "Bildgalleri"],
+        ),
+    )
+
+    _project_input, followup_meta, _path, followup_meta_path = generate_followup(
+        "Gör tonen varmare.",
+        output_dir=tmp_path,
+        site_id="wizard-inherit-site",
+    )
+
+    assert followup_meta["wizardMustHave"] == initial_meta["wizardMustHave"]
+    assert followup_meta["discoveryDecision"]["inheritedFromVersion"] == 1
+    written_meta = json.loads(followup_meta_path.read_text(encoding="utf-8"))
+    assert written_meta["wizardMustHave"] == initial_meta["wizardMustHave"]
+
+
+@pytest.mark.tooling
+def test_followup_with_explicit_reset_flag_clears_wizard_must_have(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """B134 opt-out: callers can explicitly clear stale page intent."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    generate(
+        "Skapa hemsida för Wizard Must Have AB",
+        output_dir=tmp_path,
+        site_id="wizard-clear-site",
+        project_id="stable-project-id",
+        discovery=_wizard_discovery_payload(
+            ["Bokning online", "Bildgalleri"],
+        ),
+    )
+
+    _project_input, followup_meta, _path, followup_meta_path = generate_followup(
+        "Gör tonen varmare.",
+        output_dir=tmp_path,
+        site_id="wizard-clear-site",
+        reset_wizard_must_have=True,
+    )
+
+    assert followup_meta["mode"] == "followup"
+    assert followup_meta["version"] == 2
+    assert followup_meta["previousVersion"] == 1
+    assert followup_meta["followUpPrompt"] == "Gör tonen varmare."
+    assert "wizardMustHave" not in followup_meta
+    written_meta = json.loads(followup_meta_path.read_text(encoding="utf-8"))
+    assert "wizardMustHave" not in written_meta
 
 
 @pytest.mark.tooling

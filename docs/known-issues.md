@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 95 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 98 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -597,6 +597,74 @@ för follow-up eller ska städas.
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B134` Medel** (stängd 2026-05-19, wizardMustHave follow-up reset) -
+  `scripts/prompt_to_project_input.py:generate_followup()` ärvde alltid
+  `existing_meta["wizardMustHave"]` och skickade listan vidare som
+  `meta_overrides["wizardMustHave"]`. Eftersom `generate()` först
+  deriverade ny `wizardMustHave` från en eventuell ny discovery-payload
+  men sedan körde `meta.update(meta_overrides)`, kunde v1-listan skriva
+  över v2-listan. Effekt: en följdversion där operatören flyttat
+  riktning från t.ex. `["Bokning online", "Bildgalleri"]` till
+  `["FAQ"]` kunde få stale `pageIntentWarnings` för sidor operatören
+  lämnat. **Fix:** `generate_followup()` ärver nu `wizardMustHave` och
+  `discoveryDecision` bara när ingen ny discovery-payload finns, och
+  har en explicit reset-flagga för callers som vill nolla page-intent-
+  signalen utan ny wizard-runda. `generate()` skyddar dessutom färsk
+  discovery-derived `wizardMustHave` och `discoveryDecision` från stale
+  `meta_overrides`. Källa: B132-skuggning i
+  Viewser-overlay-E2E Scout follow-up-spår, verifierad i kod
+  2026-05-19. Fix: `900dae5`. Test:
+  `tests/test_prompt_to_project_input.py::test_followup_with_new_discovery_resets_wizard_must_have`,
+  `tests/test_prompt_to_project_input.py::test_followup_without_new_discovery_inherits_wizard_must_have`,
+  `tests/test_prompt_to_project_input.py::test_followup_with_explicit_reset_flag_clears_wizard_must_have`.
+
+- **`B135` Medel** (stängd 2026-05-19, placeholder fieldSources) -
+  B133 surfacade `placeholderContactFields` i meta/build-result, men
+  Discovery Resolverns `fieldSources` fortsatte markera samma
+  dummy-värden som `"brief"` när wizard och scrape saknade kontaktdata.
+  Exempel: `contact.phone = "+46 8 000 00 00"` kom från
+  `_placeholder_contact` men `fieldSources["contact.phone"]` sa
+  `"brief"`, vilket gjorde Backoffice/Doctor-provenance semantiskt
+  osann. **Fix:** `resolve_discovery(...)` tar nu ett bakåtkompatibelt
+  `placeholder_fields`-argument från
+  `scripts/prompt_to_project_input.py` och `_apply_contact_fields`
+  markerar kvarvarande placeholder-contact som `"default"` i stället
+  för `"brief"`. Wizard och scrape vinner fortfarande över både
+  placeholder och brief. Resolvern sätter också
+  `operatorReviewRequired=True` när något contact-fält faktiskt landar
+  med `"default"` source, så review-flaggan matchar B133-varningen.
+  Källa: Viewser-overlay-E2E Scout Case 3a / Fynd 1, 2026-05-19.
+  Fix: `ca43588`. Test:
+  `tests/test_discovery_resolver.py::test_apply_contact_fields_sets_default_for_placeholder_phone`,
+  `tests/test_discovery_resolver.py::test_apply_contact_fields_keeps_brief_when_value_is_real`,
+  `tests/test_discovery_resolver.py::test_resolve_discovery_field_sources_distinguish_placeholder`,
+  `tests/test_discovery_resolver.py::test_generate_writes_discovery_decision_to_meta_sidecar`.
+
+- **`B136` Medel** (stängd 2026-05-19, follow-up placeholder recompute mot post-merge contact) -
+  PR #45 (B135) stängde fieldSources-felaktigheten för init-flödet, men
+  retroaktiva reviews (composer-2.5 + lokala modeller) flaggade att
+  `scripts/prompt_to_project_input.py` skickade `candidate_placeholder_contact_fields`
+  från `site_brief_to_project_input` direkt vidare till `resolve_discovery`.
+  I follow-up-läge ersätts `project_input` av `merge_followup_project_input`
+  som bevarar previous `contact` byte-stabilt, så candidate-listan från
+  ny brief-kandidat kunde flagga real v1-värden som placeholder och få
+  `_apply_contact_fields` att markera dem som `"default"` i `fieldSources`
+  + trigga `operatorReviewRequired=True` utan fog. **Fix:** `generate()`
+  beräknar nu en pre-resolve `pre_resolve_placeholder_fields` via
+  `_recompute_placeholder_contact_fields(project_input.get("contact"),
+  pre_resolve_language)` mot post-merge state, och skickar listan vidare
+  till `resolve_discovery(..., placeholder_fields=...)` istället för
+  candidate-listan. `_recompute_placeholder_contact_fields`-helpern är
+  samma som B133-flödet kör post-resolve för meta-sidecaren, så pre- och
+  post-resolve recompute använder samma värdebaserade jämförelse mot
+  B88-defaults. `pre_resolve_language` föredrar `project_input["language"]`
+  (bevaras av `merge_followup_project_input`) framför den prompt-detekterade
+  så svensk v1 + engelsk följdprompt fortsätter jämföra mot rätt språks
+  defaults. Tuple-unpacking från `site_brief_to_project_input` bevarad
+  med `_`-prefix så kontraktet håller. Källa: PR #45 retroaktiv composer-2.5
+  + lokal-modell-review 2026-05-19. Fix: pending squash-merge-SHA.
+  Test: `tests/test_prompt_to_project_input.py::test_followup_with_discovery_recomputes_placeholder_fields_against_merged_contact`.
+
 - **`B131` Medel** (stängd 2026-05-19, capability alias dedup) -
   `_resolve_capabilities` dedupade tidigare `requestedCapabilities`
   med exakt strängmatch. När wizarden mappade `Bokning online` till
@@ -611,7 +679,7 @@ för follow-up eller ska städas.
   samma canonical slug. Governance-flytt till aliases-array i
   `capability-map.v1.json` lämnas till framtida ADR-sprint.
   Källa: Viewser-overlay-E2E Scout case 2, 2026-05-19. Fix:
-  `56272c7`. Test:
+  `2901e4e`. Test:
   `tests/test_discovery_resolver.py::test_resolve_capabilities_dedups_via_alias`,
   `tests/test_discovery_resolver.py::test_resolve_capabilities_preserves_unknown_slug_when_no_alias`,
   `tests/test_discovery_resolver.py::test_resolve_capabilities_alias_keeps_priority_source`.

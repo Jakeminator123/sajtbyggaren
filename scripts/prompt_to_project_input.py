@@ -1681,19 +1681,10 @@ def _mock_brief_artifact_after_failure(
     }
 
 
-def _wizard_must_have_from_discovery(
-    discovery: dict[str, Any] | None,
-) -> list[str]:
-    """Extract wizard page labels for downstream page-intent warnings."""
-    if not isinstance(discovery, dict):
-        return []
-    answers = discovery.get("answers")
-    if not isinstance(answers, dict):
-        return []
-    raw_must_have = answers.get("mustHave")
+def _clean_wizard_must_have(raw_must_have: Any) -> list[str]:
+    """Return ordered, non-empty wizard page labels from untrusted input."""
     if not isinstance(raw_must_have, list):
         return []
-
     labels: list[str] = []
     seen: set[str] = set()
     for item in raw_must_have:
@@ -1705,6 +1696,18 @@ def _wizard_must_have_from_discovery(
         labels.append(label)
         seen.add(label)
     return labels
+
+
+def _wizard_must_have_from_discovery(
+    discovery: dict[str, Any] | None,
+) -> list[str]:
+    """Extract wizard page labels for downstream page-intent warnings."""
+    if not isinstance(discovery, dict):
+        return []
+    answers = discovery.get("answers")
+    if not isinstance(answers, dict):
+        return []
+    return _clean_wizard_must_have(answers.get("mustHave"))
 
 
 def generate(
@@ -1762,6 +1765,12 @@ def generate(
     scaffold_id, variant_id = pick_scaffold(
         prompt, brief_artifact.get("businessTypeGuess")
     )
+    # B136 (2026-05-19, post-PR-#45 follow-up review): tuple-unpacking bevarad
+    # för site_brief_to_project_input-kontraktet, men candidate-listan
+    # konsumeras inte längre vid resolve-tid. Pre-resolve placeholder_fields
+    # beräknas i stället mot post-merge project_input.contact (se nedan) så
+    # follow-up-flödet inte felaktigt markerar v1-bevarade kontaktvärden som
+    # "default" när merge_followup_project_input behåller dem byte-stabilt.
     candidate_project_input, _candidate_placeholder_contact_fields = (
         site_brief_to_project_input(
             brief_artifact,
@@ -1785,12 +1794,36 @@ def generate(
     # med ``fieldSources`` och ``fallbackWarnings``. Decision-payloaden
     # skrivs som extra fält ``discoveryDecision`` på meta-sidecaren — ingen
     # ny Engine Run-artefakt eftersom run-kontraktet är åtta filer.
+    # B136 (2026-05-19, post-PR-#45 follow-up review): placeholder_fields
+    # måste beräknas mot post-merge ``project_input.contact``, inte mot
+    # candidate brief-kandidaten. Annars markerar Discovery Resolverns
+    # ``_apply_contact_fields`` v1-bevarade real contact-värden som
+    # ``"default"`` i ``fieldSources`` när follow-up-läget kör — eftersom
+    # ``merge_followup_project_input`` håller previous contact byte-stabilt,
+    # så candidate-listan från brief-kandidaten flaggar phone/email/openingHours
+    # som placeholder trots att den slutliga contact:en är riktig från v1.
+    # Recomputen använder samma ``_recompute_placeholder_contact_fields``-helper
+    # som B133-flödet kör post-resolve för meta-sidecaren, och föredrar
+    # ``project_input["language"]`` (bevaras av ``merge_followup``) framför
+    # den prompt-detekterade när språket bytt mellan versioner.
+    pre_resolve_language = (
+        project_input.get("language")
+        if isinstance(project_input, dict)
+        and isinstance(project_input.get("language"), str)
+        else language
+    )
+    pre_resolve_placeholder_fields = _recompute_placeholder_contact_fields(
+        project_input.get("contact") if isinstance(project_input, dict) else None,
+        pre_resolve_language,
+    )
+
     discovery_decision: DiscoveryDecision | None = None
     if discovery is not None:
         project_input, discovery_decision = resolve_discovery(
             raw_prompt=prompt,
             payload=discovery,
             project_input_candidate=project_input,
+            placeholder_fields=pre_resolve_placeholder_fields,
         )
     wizard_must_have = _wizard_must_have_from_discovery(discovery)
 
@@ -1865,7 +1898,12 @@ def generate(
     if wizard_must_have:
         meta["wizardMustHave"] = wizard_must_have
     if meta_overrides:
-        meta.update(meta_overrides)
+        safe_meta_overrides = dict(meta_overrides)
+        if discovery is not None:
+            safe_meta_overrides.pop("wizardMustHave", None)
+        if discovery_decision is not None:
+            safe_meta_overrides.pop("discoveryDecision", None)
+        meta.update(safe_meta_overrides)
 
     project_input_path, meta_path = write_project_input(
         project_input, meta, output_dir=output_dir
@@ -1878,6 +1916,8 @@ def generate_followup(
     *,
     site_id: str,
     output_dir: Path = DEFAULT_OUTPUT_DIR,
+    discovery: dict[str, Any] | None = None,
+    reset_wizard_must_have: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any], Path, Path]:
     """Generate a new Project Input version from an existing meta sidecar.
 
@@ -1906,7 +1946,7 @@ def generate_followup(
     # ``inheritedFromVersion`` så Backoffice kan skilja på initial
     # discovery decision och aktuell provenance för v2+-fält.
     inherited_decision = existing_meta.get("discoveryDecision")
-    if isinstance(inherited_decision, dict):
+    if discovery is None and isinstance(inherited_decision, dict):
         inherited_copy = copy.deepcopy(inherited_decision)
         # Bevara den ursprungliga inheritedFromVersion om den redan finns
         # (kedja av v1 -> v2 -> v3 ska peka till första versionen som
@@ -1914,13 +1954,10 @@ def generate_followup(
         if "inheritedFromVersion" not in inherited_copy:
             inherited_copy["inheritedFromVersion"] = previous_version
         meta_overrides["discoveryDecision"] = inherited_copy
-    inherited_wizard_must_have = existing_meta.get("wizardMustHave")
-    if isinstance(inherited_wizard_must_have, list):
-        wizard_must_have = [
-            item.strip()
-            for item in inherited_wizard_must_have
-            if isinstance(item, str) and item.strip()
-        ]
+    if discovery is None and not reset_wizard_must_have:
+        wizard_must_have = _clean_wizard_must_have(
+            existing_meta.get("wizardMustHave")
+        )
         if wizard_must_have:
             meta_overrides["wizardMustHave"] = wizard_must_have
     return generate(
@@ -1932,6 +1969,7 @@ def generate_followup(
         mode="followup",
         base_project_input=previous_project_input,
         meta_overrides=meta_overrides,
+        discovery=discovery,
     )
 
 
