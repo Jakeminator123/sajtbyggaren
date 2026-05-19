@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 95 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 96 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -596,6 +596,27 @@ för follow-up eller ska städas.
   direktiv). Fix: open. Test: open.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B134` Medel** (stängd 2026-05-19, wizardMustHave follow-up reset) -
+  `scripts/prompt_to_project_input.py:generate_followup()` ärvde alltid
+  `existing_meta["wizardMustHave"]` och skickade listan vidare som
+  `meta_overrides["wizardMustHave"]`. Eftersom `generate()` först
+  deriverade ny `wizardMustHave` från en eventuell ny discovery-payload
+  men sedan körde `meta.update(meta_overrides)`, kunde v1-listan skriva
+  över v2-listan. Effekt: en följdversion där operatören flyttat
+  riktning från t.ex. `["Bokning online", "Bildgalleri"]` till
+  `["FAQ"]` kunde få stale `pageIntentWarnings` för sidor operatören
+  lämnat. **Fix:** `generate_followup()` ärver nu `wizardMustHave` och
+  `discoveryDecision` bara när ingen ny discovery-payload finns, och
+  har en explicit reset-flagga för callers som vill nolla page-intent-
+  signalen utan ny wizard-runda. `generate()` skyddar dessutom färsk
+  discovery-derived `wizardMustHave` och `discoveryDecision` från stale
+  `meta_overrides`. Källa: B132-skuggning i
+  Viewser-overlay-E2E Scout follow-up-spår, verifierad i kod
+  2026-05-19. Fix: `900dae5`. Test:
+  `tests/test_prompt_to_project_input.py::test_followup_with_new_discovery_resets_wizard_must_have`,
+  `tests/test_prompt_to_project_input.py::test_followup_without_new_discovery_inherits_wizard_must_have`,
+  `tests/test_prompt_to_project_input.py::test_followup_with_explicit_reset_flag_clears_wizard_must_have`.
 
 - **`B131` Medel** (stängd 2026-05-19, capability alias dedup) -
   `_resolve_capabilities` dedupade tidigare `requestedCapabilities`
