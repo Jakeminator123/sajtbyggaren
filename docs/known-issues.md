@@ -638,7 +638,8 @@ för follow-up eller ska städas.
   `tests/test_page_intent.py::test_build_result_carries_page_intent_warnings_without_extra_routes`.
 
 - **`B133` Medel** (stängd 2026-05-19, Viewser-overlay-E2E-Scout
-  Case 3a follow-up) - `scripts/prompt_to_project_input.py:_placeholder_contact`
+  Case 3a follow-up + Codex P2-review-hardening) -
+  `scripts/prompt_to_project_input.py:_placeholder_contact`
   fyllde i B88-fallback-strängar (`"+46 8 000 00 00"`,
   `"kontakt@example.se"`, `"Adress lämnas på förfrågan"`) i Project
   Input.contact när briefModel returnerade tomma kontaktfält OCH
@@ -671,13 +672,26 @@ för follow-up eller ska städas.
   Slutanvändaren ser dummy-värden tills operatör fyllt dem.")
   baserad på samma fält. Inga rendering-ändringar i builder —
   fallback-strängarna fortsätter renderas som idag, vi lägger bara
-  till en metadata-emitterad warning så operatör ser dem. Källa:
+  till en metadata-emitterad warning så operatör ser dem. **Codex
+  P2-review-hardening (2026-05-19, samma dag):** (a) `generate()`
+  använder nu `project_input["language"]` (preserved av
+  `merge_followup_project_input`) istället för den prompt-detekterade
+  `language` i `_recompute_placeholder_contact_fields`-anropet — en
+  svensk v1 + engelsk följdprompt skulle annars ge false negative
+  och tappa varningen trots att svenska placeholder-strängar låg kvar
+  i `contact`-blocket; (b) `openingHours` ("Mån-Fre 09:00-17:00" /
+  "Mon-Fri 09:00-17:00") läggs till i den spårade fält-setet eftersom
+  briefen aldrig levererar schemat och `_placeholder_contact` då alltid
+  fyller dummyn — operatör kunde tidigare publicera dummy-öppettider
+  vid sidan av telefonen utan signal. Källa:
   `docs/reports/viewser-overlay-e2e-scout-2026-05-19.md` Fynd 1
-  i Case 3a. Fix: `58b6879`. Test:
+  i Case 3a + Codex review på PR #39 (commit `6121214656`,
+  fynd P2 + P2). Fix: `58b6879` + Codex-hardening-commit. Test:
   `tests/test_prompt_to_project_input.py::test_placeholder_contact_returns_field_list`,
   `tests/test_prompt_to_project_input.py::test_placeholder_contact_omits_filled_fields_from_list`,
   `tests/test_prompt_to_project_input.py::test_site_brief_to_project_input_propagates_placeholder_contact_fields`,
   `tests/test_prompt_to_project_input.py::test_generate_writes_placeholder_contact_fields_to_meta`,
+  `tests/test_prompt_to_project_input.py::test_followup_uses_preserved_language_for_placeholder_detection`,
   `tests/test_builder_hardening.py::test_placeholder_contact_fields_helpers_validate_meta_input`,
   `tests/test_builder_hardening.py::test_build_result_surfaces_placeholder_contact_fields_when_present`,
   `tests/test_builder_hardening.py::test_build_result_omits_placeholder_contact_fields_when_empty`,
