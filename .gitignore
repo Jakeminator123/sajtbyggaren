@@ -71,3 +71,7 @@ data/starters/**/*.zip
 data/starters/**/*.tar.gz
 
 övrigt/
+
+# Guard against accidental commits of local scout helpers and Windows temp outputs.
+**/viewser_overlay_scout.py
+**/viewser-scout-runs/
