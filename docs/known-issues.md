@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 96 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 97 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -617,6 +617,28 @@ för follow-up eller ska städas.
   `tests/test_prompt_to_project_input.py::test_followup_with_new_discovery_resets_wizard_must_have`,
   `tests/test_prompt_to_project_input.py::test_followup_without_new_discovery_inherits_wizard_must_have`,
   `tests/test_prompt_to_project_input.py::test_followup_with_explicit_reset_flag_clears_wizard_must_have`.
+
+- **`B135` Medel** (stängd 2026-05-19, placeholder fieldSources) -
+  B133 surfacade `placeholderContactFields` i meta/build-result, men
+  Discovery Resolverns `fieldSources` fortsatte markera samma
+  dummy-värden som `"brief"` när wizard och scrape saknade kontaktdata.
+  Exempel: `contact.phone = "+46 8 000 00 00"` kom från
+  `_placeholder_contact` men `fieldSources["contact.phone"]` sa
+  `"brief"`, vilket gjorde Backoffice/Doctor-provenance semantiskt
+  osann. **Fix:** `resolve_discovery(...)` tar nu ett bakåtkompatibelt
+  `placeholder_fields`-argument från
+  `scripts/prompt_to_project_input.py` och `_apply_contact_fields`
+  markerar kvarvarande placeholder-contact som `"default"` i stället
+  för `"brief"`. Wizard och scrape vinner fortfarande över både
+  placeholder och brief. Resolvern sätter också
+  `operatorReviewRequired=True` när något contact-fält faktiskt landar
+  med `"default"` source, så review-flaggan matchar B133-varningen.
+  Källa: Viewser-overlay-E2E Scout Case 3a / Fynd 1, 2026-05-19.
+  Fix: `ca43588`. Test:
+  `tests/test_discovery_resolver.py::test_apply_contact_fields_sets_default_for_placeholder_phone`,
+  `tests/test_discovery_resolver.py::test_apply_contact_fields_keeps_brief_when_value_is_real`,
+  `tests/test_discovery_resolver.py::test_resolve_discovery_field_sources_distinguish_placeholder`,
+  `tests/test_discovery_resolver.py::test_generate_writes_discovery_decision_to_meta_sidecar`.
 
 - **`B131` Medel** (stängd 2026-05-19, capability alias dedup) -
   `_resolve_capabilities` dedupade tidigare `requestedCapabilities`
