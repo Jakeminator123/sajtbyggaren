@@ -76,3 +76,7 @@ data/starters/**/*.tar.gz
 # Guard against accidental commits of local scout helpers and Windows temp outputs.
 **/viewser_overlay_scout.py
 **/viewser-scout-runs/
+
+# Operator-local utility scripts (tree-printers, scratch tools för LLM-context).
+# Operatör äger filerna lokalt; om de ska committas tas raden bort medvetet.
+tree_v*.py
