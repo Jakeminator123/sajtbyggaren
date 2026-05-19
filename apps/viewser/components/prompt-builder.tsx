@@ -47,7 +47,7 @@ type PromptBuilderProps = {
   selectedSiteId: string;
   onBuildStart: () => void;
   onBuildEnd: () => void;
-  onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
+  onBuildDone: (runId: string, outcome: PromptBuildOutcome, siteId: string) => void;
   /**
    * Lyfter prompt-stage upp till page.tsx så ViewerPanel kan visa
    * en central laddnings-card under "thinking" och "building".
@@ -216,7 +216,7 @@ export function PromptBuilder({
       });
       setPrompt("");
       setPendingPrompt("");
-      onBuildDone(payload.runId, outcome);
+      onBuildDone(payload.runId, outcome, payload.siteId);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Okänt fel.");
       setStage("failed");
