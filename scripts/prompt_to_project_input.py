@@ -1765,7 +1765,7 @@ def generate(
     scaffold_id, variant_id = pick_scaffold(
         prompt, brief_artifact.get("businessTypeGuess")
     )
-    candidate_project_input, _candidate_placeholder_contact_fields = (
+    candidate_project_input, candidate_placeholder_contact_fields = (
         site_brief_to_project_input(
             brief_artifact,
             site_id=candidate_site_id,
@@ -1794,6 +1794,7 @@ def generate(
             raw_prompt=prompt,
             payload=discovery,
             project_input_candidate=project_input,
+            placeholder_fields=candidate_placeholder_contact_fields,
         )
     wizard_must_have = _wizard_must_have_from_discovery(discovery)
 
