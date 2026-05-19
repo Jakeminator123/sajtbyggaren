@@ -42,6 +42,7 @@ from packages.generation.discovery import (  # noqa: E402
     resolve_discovery,
 )
 from packages.generation.discovery.models import DiscoveryDecision  # noqa: E402
+from packages.generation.discovery.resolve import _apply_contact_fields  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -246,6 +247,68 @@ def test_brief_email_kept_when_wizard_and_scrape_blank() -> None:
     )
     assert project_input["contact"]["email"] == "brief@example.se"
     assert decision.fieldSources["contact.email"] == "brief"
+
+
+@pytest.mark.tooling
+def test_apply_contact_fields_sets_default_for_placeholder_phone() -> None:
+    candidate = _candidate_project_input()
+    field_sources: dict[str, str] = {}
+
+    _apply_contact_fields(
+        candidate,
+        answers={},
+        scrape=None,
+        field_sources=field_sources,
+        placeholder_fields={"phone"},
+    )
+
+    assert candidate["contact"]["phone"] == "+46 8 000 00 00"
+    assert field_sources["contact.phone"] == "default"
+
+
+@pytest.mark.tooling
+def test_apply_contact_fields_keeps_brief_when_value_is_real() -> None:
+    candidate = _candidate_project_input()
+    candidate["contact"]["phone"] = "0701234567"
+    field_sources: dict[str, str] = {}
+
+    _apply_contact_fields(
+        candidate,
+        answers={},
+        scrape=None,
+        field_sources=field_sources,
+    )
+
+    assert candidate["contact"]["phone"] == "0701234567"
+    assert field_sources["contact.phone"] == "brief"
+
+
+@pytest.mark.tooling
+def test_resolve_discovery_field_sources_distinguish_placeholder(
+    decision_schema: dict,
+) -> None:
+    payload = _payload("business")
+    candidate = _candidate_project_input()
+    candidate["contact"] = {
+        "phone": "+46 8 000 00 00",
+        "email": "kontakt@example.se",
+        "addressLines": ["Adress lämnas på förfrågan"],
+        "openingHours": "Mån-Fre 09:00-17:00",
+    }
+
+    _, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+        placeholder_fields=["phone", "email", "addressLines", "openingHours"],
+    )
+
+    assert decision.fieldSources["contact.phone"] == "default"
+    assert decision.fieldSources["contact.email"] == "default"
+    assert decision.fieldSources["contact.addressLines"] == "default"
+    assert decision.fieldSources["contact.openingHours"] == "default"
+    assert decision.operatorReviewRequired is True
+    jsonschema.Draft202012Validator(decision_schema).validate(decision.to_dict())
 
 
 # ---------------------------------------------------------------------------
@@ -564,6 +627,11 @@ def test_generate_writes_discovery_decision_to_meta_sidecar(
     assert decision["expectedStarterId"] == "commerce-base"
     assert decision["selectionSource"] == "taxonomy"
     assert decision["categoryIds"] == ["ecommerce"]
+    assert decision["fieldSources"]["contact.phone"] == "default"
+    assert decision["fieldSources"]["contact.email"] == "default"
+    assert decision["fieldSources"]["contact.addressLines"] == "default"
+    assert decision["fieldSources"]["contact.openingHours"] == "default"
+    assert decision["operatorReviewRequired"] is True
     assert "purchase" in project_input["conversionGoals"]
 
     sidecar = json.loads(meta_path.read_text(encoding="utf-8"))

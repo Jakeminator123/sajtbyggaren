@@ -43,6 +43,7 @@ from __future__ import annotations
 import copy
 import json
 import re
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -200,6 +201,7 @@ def resolve_discovery(
     payload: dict[str, Any] | None,
     project_input_candidate: dict[str, Any],
     scrape: dict[str, Any] | None = None,
+    placeholder_fields: Iterable[str] | None = None,
     taxonomy: DiscoveryTaxonomy | None = None,
     taxonomy_path: Path | None = None,
     capability_map: dict[str, dict[str, Any]] | None = None,
@@ -222,9 +224,19 @@ def resolve_discovery(
     och används för att klassificera ``requestedCapabilities`` som
     ``known`` / ``gap`` / ``unknown``. Tester och Backoffice-dry-run kan
     skicka in egen map för deterministiska scenarion.
+
+    ``placeholder_fields`` lists contact-block keys that
+    ``site_brief_to_project_input`` filled with deterministic default
+    values. Those values are still valid Project Input data, but their
+    field-source is ``default`` rather than ``brief``.
     """
     _ = raw_prompt  # bevaras för future heuristics, inte använt i v1
     project_input: dict[str, Any] = copy.deepcopy(project_input_candidate)
+    placeholder_contact_fields = {
+        field.strip()
+        for field in (placeholder_fields or [])
+        if isinstance(field, str) and field.strip()
+    }
     decision_taxonomy = taxonomy or load_discovery_taxonomy(taxonomy_path)
     resolved_capability_map = (
         capability_map
@@ -412,7 +424,13 @@ def resolve_discovery(
     # Steg 4 — patcha Project Input-fält med wizard > scrape > brief
     # ------------------------------------------------------------------
     _apply_company_fields(project_input, answers, field_sources)
-    _apply_contact_fields(project_input, answers, scrape, field_sources)
+    _apply_contact_fields(
+        project_input,
+        answers,
+        scrape,
+        field_sources,
+        placeholder_fields=placeholder_contact_fields,
+    )
     _apply_services_field(project_input, answers, field_sources)
     _apply_brand_and_assets(project_input, answers, field_sources)
     _apply_tone_field(project_input, answers, field_sources)
@@ -475,6 +493,7 @@ def resolve_discovery(
             in {"category-unknown", "category-disabled", "capability-unknown"}
             for warning in warnings
         )
+        or _has_placeholder_contact_source(field_sources)
     )
 
     rationale = _build_rationale(
@@ -621,7 +640,14 @@ def _apply_contact_fields(
     answers: dict[str, Any],
     scrape: dict[str, Any] | None,
     field_sources: dict[str, FieldSourceLiteral],
+    *,
+    placeholder_fields: set[str] | None = None,
 ) -> None:
+    placeholder_contact_fields = placeholder_fields or set()
+
+    def existing_source(field: str) -> FieldSourceLiteral:
+        return "default" if field in placeholder_contact_fields else "brief"
+
     contact_raw = answers.get("contact")
     answer_contact: dict[str, Any] = (
         contact_raw if isinstance(contact_raw, dict) else {}
@@ -644,7 +670,7 @@ def _apply_contact_fields(
             contact["phone"] = scrape_phone.strip()
             field_sources["contact.phone"] = "scrape"
         elif contact.get("phone"):
-            field_sources["contact.phone"] = "brief"
+            field_sources["contact.phone"] = existing_source("phone")
 
     email = answer_contact.get("email")
     if isinstance(email, str) and email.strip():
@@ -656,14 +682,14 @@ def _apply_contact_fields(
             contact["email"] = scrape_email.strip()
             field_sources["contact.email"] = "scrape"
         elif contact.get("email"):
-            field_sources["contact.email"] = "brief"
+            field_sources["contact.email"] = existing_source("email")
 
     opening_hours = answer_contact.get("openingHours")
     if isinstance(opening_hours, str) and opening_hours.strip():
         contact["openingHours"] = opening_hours.strip()
         field_sources["contact.openingHours"] = "wizard"
     elif contact.get("openingHours"):
-        field_sources["contact.openingHours"] = "brief"
+        field_sources["contact.openingHours"] = existing_source("openingHours")
 
     addr = answer_contact.get("address")
     if isinstance(addr, str) and addr.strip():
@@ -675,7 +701,21 @@ def _apply_contact_fields(
             contact["addressLines"] = [scrape_addr.strip()]
             field_sources["contact.addressLines"] = "scrape"
         elif contact.get("addressLines"):
-            field_sources["contact.addressLines"] = "brief"
+            field_sources["contact.addressLines"] = existing_source("addressLines")
+
+
+def _has_placeholder_contact_source(
+    field_sources: dict[str, FieldSourceLiteral],
+) -> bool:
+    return any(
+        field_sources.get(path) == "default"
+        for path in (
+            "contact.phone",
+            "contact.email",
+            "contact.addressLines",
+            "contact.openingHours",
+        )
+    )
 
 
 def _apply_services_field(
