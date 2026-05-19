@@ -303,6 +303,79 @@ def test_requested_capabilities_field_source_reflects_winner() -> None:
 
 
 @pytest.mark.tooling
+def test_resolve_capabilities_dedups_via_alias() -> None:
+    payload = {
+        "schemaVersion": 1,
+        "rawPrompt": "test",
+        "contentBranch": "business",
+        "scaffoldHint": "local-service-business",
+        "answers": {"mustHave": ["Bokning online"]},
+    }
+    candidate = _candidate_project_input()
+    candidate["requestedCapabilities"] = ["online-booking"]
+
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+
+    assert project_input["requestedCapabilities"] == ["booking"]
+    assert decision.requestedCapabilities == ["booking"]
+    assert "online-booking" not in {
+        warning.capabilityId for warning in decision.fallbackWarnings
+    }
+
+
+@pytest.mark.tooling
+def test_resolve_capabilities_preserves_unknown_slug_when_no_alias() -> None:
+    payload = {
+        "schemaVersion": 1,
+        "rawPrompt": "test",
+        "contentBranch": "business",
+        "scaffoldHint": "local-service-business",
+        "answers": {},
+    }
+    candidate = _candidate_project_input()
+    candidate["requestedCapabilities"] = ["custom-widget"]
+
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+
+    assert project_input["requestedCapabilities"] == ["custom-widget"]
+    by_code: dict[str, set[str]] = {}
+    for warning in decision.fallbackWarnings:
+        if warning.capabilityId:
+            by_code.setdefault(warning.code, set()).add(warning.capabilityId)
+    assert "custom-widget" in by_code.get("capability-unknown", set())
+
+
+@pytest.mark.tooling
+def test_resolve_capabilities_alias_keeps_priority_source() -> None:
+    payload = {
+        "schemaVersion": 1,
+        "rawPrompt": "test",
+        "contentBranch": "business",
+        "scaffoldHint": "local-service-business",
+        "answers": {"mustHave": ["Bokning online"]},
+    }
+    candidate = _candidate_project_input()
+    candidate["requestedCapabilities"] = ["online-booking"]
+
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+
+    assert project_input["requestedCapabilities"] == ["booking"]
+    assert decision.fieldSources["requestedCapabilities"] == "wizard"
+
+
+@pytest.mark.tooling
 def test_decision_records_candidate_dossiers_from_taxonomy() -> None:
     """Taxonomy candidate-dossier-listor surface in decision.candidateDossiers."""
     payload = _payload("business")
