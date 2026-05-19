@@ -406,6 +406,48 @@ def _prompt_meta_raw_prompt(prompt_meta: dict[str, Any] | None) -> str | None:
     return value if isinstance(value, str) else None
 
 
+_PLACEHOLDER_CONTACT_VALID_FIELDS = ("phone", "email", "addressLines")
+
+
+def _prompt_meta_placeholder_contact_fields(
+    prompt_meta: dict[str, Any] | None,
+) -> list[str]:
+    """Return validated B133 placeholderContactFields from prompt meta.
+
+    Filters to the known contact-block keys so a malformed sidecar
+    cannot smuggle arbitrary strings into build-result.json — Viewser
+    reads the list verbatim to render an operator warning.
+    """
+    if not prompt_meta:
+        return []
+    raw = prompt_meta.get("placeholderContactFields")
+    if not isinstance(raw, list):
+        return []
+    fields: list[str] = []
+    for value in raw:
+        if (
+            isinstance(value, str)
+            and value in _PLACEHOLDER_CONTACT_VALID_FIELDS
+            and value not in fields
+        ):
+            fields.append(value)
+    return fields
+
+
+def _placeholder_contact_warning_message(fields: list[str]) -> str:
+    """Human-readable warning string for build-result.json.
+
+    Composes the canonical operator-facing line that Run Details mirrors
+    via ``placeholderContactMessage`` so the warning text is consistent
+    whether the operator reads the JSON artefakt or the Viewser badge.
+    """
+    joined = ", ".join(fields)
+    return (
+        f"Contact fields {joined} are placeholder values - operator "
+        "must fill these before publishing."
+    )
+
+
 # ---------------------------------------------------------------------------
 # Trace (append-only Engine Events)
 # ---------------------------------------------------------------------------
@@ -2461,6 +2503,19 @@ def write_build_result(
                 prompt_summary[key] = value
         if prompt_summary:
             result["prompt"] = prompt_summary
+    # B133 (2026-05-19): surface placeholder contact fields so Viewser
+    # Run Details can warn the operator that the published site shows
+    # dummy contact info ("+46 8 000 00 00", "kontakt@example.se",
+    # "Adress lämnas på förfrågan") until those fields are filled in
+    # Project Input. Emitted only when the list is non-empty.
+    placeholder_contact_fields = _prompt_meta_placeholder_contact_fields(
+        prompt_meta
+    )
+    if placeholder_contact_fields:
+        result["placeholderContactFields"] = list(placeholder_contact_fields)
+        result["placeholderContactMessage"] = _placeholder_contact_warning_message(
+            placeholder_contact_fields
+        )
     if codegen_summary is not None:
         result["codegen"] = codegen_summary
     write_json(run_dir / "build-result.json", result)

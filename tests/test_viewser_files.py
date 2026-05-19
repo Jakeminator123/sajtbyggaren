@@ -719,6 +719,44 @@ def test_run_details_panel_surfaces_npm_failure_log_excerpt() -> None:
 
 
 @pytest.mark.tooling
+def test_run_details_panel_renders_placeholder_contact_warning() -> None:
+    """B133: when scripts/build_site.py writes ``placeholderContactFields``
+    into build-result.json (because scripts/prompt_to_project_input.py
+    filled contact slots with the B88 dummy fallback), the Build section
+    of RunDetailsPanel must render an operator-facing warning instead
+    of silently letting "+46 8 000 00 00" / "kontakt@example.se" /
+    "Adress lämnas på förfrågan" reach the published site without any
+    signal. Verified live in Viewser Overlay E2E Scout Case 3a
+    2026-05-19 (`docs/reports/viewser-overlay-e2e-scout-2026-05-19.md`).
+    """
+    panel_text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert "placeholderContactFields" in panel_text, (
+        "RunDetailsPanel must read build-result.json:placeholderContactFields "
+        "so the operator sees that the contact block is dummy data."
+    )
+    assert "Kontakt-fält är platshållare" in panel_text, (
+        "Warning copy must include the Swedish phrase 'Kontakt-fält är "
+        "platshållare' — operators see the badge but not the JSON."
+    )
+    assert "Slutanvändaren ser dummy-värden tills operatör fyllt dem." in panel_text, (
+        "Warning copy must explain the consequence in Swedish so the "
+        "operator can act before sharing the preview with a customer."
+    )
+    assert "placeholder-contact-warning" in panel_text, (
+        "Warning element must carry data-testid='placeholder-contact-warning' "
+        "so future Playwright/Vitest coverage can target it without DOM "
+        "scraping."
+    )
+    assert "amber-500" in panel_text, (
+        "Warning must use the existing amber-500 utility class so it "
+        "matches the established 'warn' tone in STATUS_TONE."
+    )
+
+
+@pytest.mark.tooling
 def test_chat_panel_component_is_removed() -> None:
     """B46: legacy ChatPanel component is dead code as of audit-fix
     2026-05-14. PromptBuilder is the only operator-facing prompt

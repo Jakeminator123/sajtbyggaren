@@ -444,6 +444,29 @@ COMMON_WORDS = {
     # Loggade i docs/known-issues.md, docs/current-focus.md och
     # docs/handoff.md som bug-sweep round 2-scope.
     "B99", "B100", "B101", "B102", "B103", "B104",
+    # Viewser Overlay E2E Scout 2026-05-19
+    # (docs/reports/viewser-overlay-e2e-scout-2026-05-19.md): Scout-
+    # rapportens prose innehåller case-specifika fält (företagsnamn,
+    # produktnamn, service-labels), DiscoveryWizard-UI-strängar,
+    # Build-status-texter, externa servicenamn och två proposed
+    # produktkoncept (Intent Guard, Page Intent — registreras inte
+    # som canonical termer förrän ADR landar). Samma behandling som
+    # B61's `Enehmsida` ovan: operator-/scout-prosa, inte
+    # canonical domain terms.
+    "Atelje Vit Lera", "Vas i seladon",  # case-specifika varumärken/produkter
+    "Klippning Dam",  # case-specifik service-label
+    "Befintlig hemsida", "Bildgalleri", "Bokning online",  # DiscoveryWizard labels
+    "Build klar", "Build misslyckades",  # PromptBuilder status-strängar
+    "DiscoveryWizarden",  # bestämd-form i prosa (basordet redan allowlistat)
+    "Intent Guard", "Page Intent",  # proposed produktkoncept i Scout-rapporten
+    "RunId",  # docs-prosa-variant av runId (Viewser TS-typ)
+    "Shoppa nu",  # hero-CTA-label (B101 + B96 produkt-strängar)
+    "GitGuardian",  # extern CI-service (samma kategori som GitHub/Vercel)
+    "Bilaga B",  # rubrik i Scout-rapporten
+    "Adress", "Ingen", "Enter",  # vanliga svenska/engelska ord i prosa
+    "FAQ",  # vanlig acronym för "Frequently Asked Questions"
+    "LocalPort",  # PowerShell Get-NetTCPConnection-parameter
+    "B129 ny",  # bug-id-fras "B129 ny" i docs/handoff.md narrative
     # Generic prose ord som dyker upp i operator-flöde-text (ADR 0012)
     "Build", "Page", "Scaffolds",
 }

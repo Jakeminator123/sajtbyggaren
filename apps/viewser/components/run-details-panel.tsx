@@ -117,6 +117,19 @@ function BuildSection({ build }: { build: Record<string, unknown> | null }) {
   const routes = Array.isArray(build.routes) ? (build.routes as string[]) : [];
   const npmSteps = Array.isArray(build.npmSteps) ? (build.npmSteps as NpmStep[]) : [];
   const buildSource = asString(build.buildSource, "unknown");
+  // B133 (2026-05-19): scripts/build_site.py writes placeholderContactFields
+  // only when scripts/prompt_to_project_input.py's _placeholder_contact
+  // filled at least one contact slot with a B88 dummy value
+  // (e.g. "+46 8 000 00 00", "kontakt@example.se", "Adress lämnas på
+  // förfrågan") and neither wizard nor scrape overwrote it. Without
+  // this warning the operator never sees that the published site is
+  // showing dummy contact info — verified live in Viewser Overlay
+  // E2E Scout Case 3a 2026-05-19.
+  const placeholderContactFields = Array.isArray(build.placeholderContactFields)
+    ? (build.placeholderContactFields as string[]).filter(
+        (field) => typeof field === "string" && field.length > 0,
+      )
+    : [];
 
   return (
     <Card size="sm">
@@ -132,6 +145,19 @@ function BuildSection({ build }: { build: Record<string, unknown> | null }) {
           {" · "}briefSource: <span className="font-mono">{briefSource}</span>
           {runDurationMs > 0 ? ` · ${(runDurationMs / 1000).toFixed(1)} s` : null}
         </p>
+        {placeholderContactFields.length > 0 ? (
+          <div
+            data-testid="placeholder-contact-warning"
+            className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-2 text-amber-900 dark:text-amber-200"
+          >
+            <p className="font-medium">
+              {`\u26A0 Kontakt-fält är platshållare: ${placeholderContactFields.join(", ")}.`}
+            </p>
+            <p className="mt-1 text-[11px] text-amber-900/80 dark:text-amber-200/80">
+              Slutanvändaren ser dummy-värden tills operatör fyllt dem.
+            </p>
+          </div>
+        ) : null}
         <p>
           <span className="text-muted-foreground">siteId:</span>{" "}
           <span className="font-mono">{siteId}</span>
