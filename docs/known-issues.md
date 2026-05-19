@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 26 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 98 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 28 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 98 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -598,6 +598,14 @@ för follow-up eller ska städas.
 ### Viewser-overlay-E2E Scout 2026-05-19 — Case 4 (sköldpaddssoppa / conflict)
 
 - **`B137` Medel** (öppen, tagline-läckage av rå prompt-text) -
+
+  > NOTE (orchestrator 2026-05-19, sen kväll): Discovery-metans
+  > `fieldSources.company.tagline = "wizard"` säger att taglinen kommer från
+  > wizard-overlay-mappningen, inte från `prompt_to_project_input.py`. Fix-
+  > pekaren nedan är fel-rotad. Scout RO-pass pågår parallellt och kartlägger
+  > exakt kodväg; Steward Pass 2 uppdaterar entryn med rätt fil/funktion +
+  > test-pekare.
+
   `scripts/prompt_to_project_input.py` skriver `company.tagline` =
   rå prompt-/beskrivnings-text när briefModel inte producerar en
   kort sammanfattning. Verifierat live i case 4 (sköldpaddssoppa):
@@ -618,6 +626,43 @@ för follow-up eller ska städas.
   `tests/test_prompt_to_project_input.py::test_tagline_never_equals_originalprompt_or_offer`
   som låser att `company.tagline` aldrig är identisk med `originalPrompt`
   eller `offer`-fältet).
+
+### Sköldpaddssoppa-run follow-up (orchestrator 2026-05-19, sen kväll)
+
+- **`B138` Medel** (öppen, pageCount-läckage från brief till routePlan) -
+  briefModel fångar operatörens explicita sidantal från fri-prompten
+  korrekt (`site-brief.json` har `"pageCount": 2` när operatören skrev
+  `"2 sidor"` i beskrivnings-fältet), men `produce_site_plan` ignorerar
+  `brief.pageCount` och emitterar scaffold-defaults oavsett. Verifierat
+  mot körningen `data/runs/20260519T190606.540Z-51cef6dd-skoldpaddssoppa-karlsson-099d5c/`:
+  `site-brief.json` har `pageCount=2`, `site-plan.json` emitterar
+  fyra routes (`/`, `/tjanster`, `/om-oss`, `/kontakt`) plus fyra
+  `pageIntentWarnings` för wizard-must-have-sidorna. Effekt idag:
+  operatörens explicita sidantal från fri-prompten respekteras inte
+  av planning, trots att briefen fångar det. Skiljt från B132 (warning-
+  only för wizard-must-have): B132 jämför `wizard.mustHave` mot
+  `routePlan` och varnar — B138 är `brief.pageCount` → `routePlan` och
+  ignoreras helt. Fix-pekare: `packages/generation/planning/`
+  (`produce_site_plan` eller nedströms route-emission). Källa: orchestrator
+  follow-up-verifiering av samma run som Scout case 4, 2026-05-19.
+  Fix: open. Test: open.
+
+- **`B139` Låg-medel** (öppen, tone-extraction propageras inte till
+  brand-tokens) - briefModel extraherar tone-fältet från fri-prompten
+  korrekt (`site-brief.json` har `"tone": ["grön"]` och Project Input
+  har `tone.primary: "grön"`) men renderern använder bara
+  `var(--primary)` från `nordic-trust`-CSS-tokens utan koppling till
+  `tone.primary`. Verifierat i samma sköldpaddssoppa-run: generated
+  `app/page.tsx` läser inte tone-fältet alls. Effekt idag: tone-fältet
+  är dead data i renderern — operatörens explicita färgval propagerar
+  inte till brand-tokens. Hänger ihop med variant-promotion-sprinten
+  (Queue #6) men är inte samma fix; variant-promotion handlar om
+  scaffold-variant-selection, B139 handlar om att tone-extraktion ska
+  påverka brand-tokens oavsett vilken variant som väljs. Fix-pekare:
+  open (sannolikt `packages/generation/codegen/` med en mapping
+  tone-keyword → brand-token-override). Källa: orchestrator follow-up-
+  verifiering av samma run som Scout case 4, 2026-05-19. Fix: open.
+  Test: open.
 
 ## Stängda - regression-test säkrar fixet
 
