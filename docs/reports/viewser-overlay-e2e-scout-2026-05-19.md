@@ -6,7 +6,7 @@
 **HEAD-SHA vid scout-start:** `99ec56d`. **HEAD-SHA vid scout-pickup (2026-05-19 morgon):** `9176f5e` (`docs(steward): bump for PR #38 merge (48a6a22) + register B129`) ovanpå merge-commit `48a6a22` för PR #38 (8 nya canonical Scaffold Variants under `packages/generation/orchestration/scaffolds/<scaffold>/variants/`). PR #38 mergades av en parallell agent ~01:38 UTC medan scout väntade. **Variants är dead code i prod-flödet via `_DEFAULT_VARIANT_BY_SCAFFOLD`-guard i `packages/generation/planning/plan.py:364-385`** som tvingar `local-service-business → nordic-trust` och `ecommerce-lite → clean-store`. Discovery taxonomy är oförändrad. Scout-mätningen är därför **fortsatt representativ för dagens prod-flöde** — Case 1-6 mäter exakt vad slutkunden ser idag. **B129 öppnad** (medvetet) på den hardcoded mappingen — flytt till governance + ny ADR ligger i variant-promotion-sprint (Queue #6), inte i Scout-scopet.
 **Branch:** `main`. Working tree dirty bara med `post-frontend-merge.txt` (operatörsanteckning) + denna rapport-fil (untracked).
 **Audit-confidence:** _ifylls efter att minst Case 1 har körts._
-**Status:** **PÅGÅENDE** — väntar på operatörens första case-resultat (Case 1 keramik). Två spår: **A** = Case 1-6 prod-baseline (defaults), **B** = 2 variant-experiment efter Case 1-6 är klara (se sista sektionen).
+**Status:** **AVSLUTAD (delvis)** — Case 1-3a körda, Case 4/6/3b + Spår B kvar för senare körning.
 
 ## Mål
 
