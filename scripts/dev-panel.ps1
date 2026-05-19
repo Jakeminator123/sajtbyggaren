@@ -157,7 +157,7 @@ Add-LauncherRow `
 Add-LauncherRow `
     -Form $form `
     -ButtonText "Builder" `
-    -Description "Viewser med promptfalt, run history och preview. Oppnar localhost:$BuilderPort." `
+    -Description "Viewser med promptfalt, run history och preview. Oppnar https://localhost:$BuilderPort." `
     -Top 150 `
     -OnClick {
         $statusLabel.Text = "Startar Builder/Viewser pa localhost:$BuilderPort..."
@@ -165,7 +165,7 @@ Add-LauncherRow `
         Start-PanelCommand `
             -Title "Sajtbyggaren - Builder" `
             -Command "& $script -Port $BuilderPort" `
-            -Url "http://localhost:$BuilderPort"
+            -Url "https://localhost:$BuilderPort"
     }
 
 Add-LauncherRow `
