@@ -633,7 +633,7 @@ för follow-up eller ska städas.
   fallback-strängarna fortsätter renderas som idag, vi lägger bara
   till en metadata-emitterad warning så operatör ser dem. Källa:
   `docs/reports/viewser-overlay-e2e-scout-2026-05-19.md` Fynd 1
-  i Case 3a. Fix: `915371a`. Test:
+  i Case 3a. Fix: `58b6879`. Test:
   `tests/test_prompt_to_project_input.py::test_placeholder_contact_returns_field_list`,
   `tests/test_prompt_to_project_input.py::test_placeholder_contact_omits_filled_fields_from_list`,
   `tests/test_prompt_to_project_input.py::test_site_brief_to_project_input_propagates_placeholder_contact_fields`,
