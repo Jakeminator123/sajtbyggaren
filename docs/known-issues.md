@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 24 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 91 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 91 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -537,6 +537,63 @@ täckta av PR A–C-kod + 54 discovery-tester + PR D smoke; full Viewser →
 `/api/prompt` → preview E2E är medveten icke-blocker (samma kategori som
 dry-run ≠ Viewser-payload). Medvetna icke-blockers kvar: per-run trace i
 Backoffice, capability/dossier gaps (booking, contact-form, payments, FAQ).
+
+### PR #38 variant-promotion merge — post-merge-triage (2026-05-19)
+
+Operatör-OK-merge av PR #38 `feat(variants): add eight scaffold variants
+(variantModel)` via merge-commit `48a6a22` ovanpå Steward mikro-bump
+`99ec56d`. PR:n landade åtta nya canonical Scaffold Variants (4×
+`local-service-business` `midnight-counsel`/`warm-craft`/`pulse-fit`/
+`clinical-calm` + 4× `ecommerce-lite` `noir-editorial`/`earth-wellness`/
+`mono-tech`/`street-vivid`), alla `enabled: true`, schema-valida, plus
+mirrors under `data/variant-candidates/<scaffold>/` för backoffice
+review. CI grön (governance + builder-smoke + GitGuardian); lokala
+guards efter merge: ruff 0 findings, governance 17 policies OK,
+rules_sync --check OK, pytest 62 passed för
+test_variant_candidate_generator + test_cross_policy_consistency +
+test_docs_freshness + test_bug_scope_discipline. Coach-direktiv
+2026-05-19 var "ingen variant-promotion under Steward/Scout, separat
+sprint/PR krävs"; operatör överskred medvetet med vetskap om att
+variant-selection-logik fortfarande saknas (de åtta nya variants är
+dead code i prod-flödet tills något specifikt aktiverar dem) och att
+en hardcoded default-mapping i `plan.py` introduceras som teknisk
+skuld. **Variant-promotion-sprint (Queue #6) kvarstår** för: (a)
+variant-selection-logik kopplad till dossier-rationale/wizard-val
+eller operator-decision, (b) flytt av default-mapping från kod till
+governance-policy + ADR, (c) Re-Verifierings-pass som bekräftar att
+de nya variants faktiskt kan aktiveras i prod. **B129 öppen** (se
+nedan) för teknisk skuld-spåret. PR #37-like-merge-commit kvar för
+att inte squasha bort `4cd1058` + `0511299`-historiken. Branch
+`feat/eight-scaffold-variants` lämnad kvar på origin (delete-branch
+opt-out) tills variant-promotion-sprint avgör om branchen behövs
+för follow-up eller ska städas.
+
+- **`B129` Låg-Medel** - `_DEFAULT_VARIANT_BY_SCAFFOLD` hardcoded
+  i `packages/generation/planning/plan.py:_pick_variant`
+  (rad ~364-370) istället för i en governance-policy. PR #38
+  (`48a6a22`) introducerade en `dict[str, str]` som mappar
+  `"local-service-business" → "nordic-trust"` och
+  `"ecommerce-lite" → "clean-store"` för att garantera att de åtta
+  nya `enabled: true`-variants inte råkar bli defaults via
+  `variants[0]`-fallbacken. Tekniskt korrekt och defensivt, men
+  bryter mot repo-konventionen att `governance/policies/` är
+  sanningskällan för policy-data. Effekt idag: dead code-risk
+  (de nya variants kan inte väljas i prod-flödet eftersom alla
+  scaffolds har en preferred default), framtida regression-risk
+  om någon ändrar en variants `id`-värde utan att uppdatera
+  mappningen (ingen cross-policy-test fångar mismatch i dag).
+  Fix-skiss: skapa
+  `governance/policies/scaffold-default-variants.v1.json` med
+  schema som mappar `scaffoldId → defaultVariantId` plus
+  `effectiveDate`/`rationale`-fält, läs in via
+  `packages/generation/policies.load_default_variant_map`, lägg
+  cross-policy-test som verifierar att alla referenced variants
+  finns på disk och är `enabled: true`. Egen ADR-sprint per
+  repo-konvention. Kopplar mot Queue #6 (variant-promotion-
+  sprint) som ändå måste leverera variant-selection-logik
+  parallellt. Källa: PR #38 post-merge-triage 2026-05-19
+  (parent-agent review efter operatör-override av coach-
+  direktiv). Fix: open. Test: open.
 
 ## Stängda - regression-test säkrar fixet
 
