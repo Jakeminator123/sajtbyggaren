@@ -567,6 +567,94 @@ def _route_plan_from_scaffold(scaffold: dict[str, Any]) -> list[dict[str, str]]:
     ]
 
 
+# B138: Wizardens pageCount-fält var dead data — _route_plan_from_scaffold
+# returnerade alltid scaffold-defaults oavsett operatörens önskade
+# sidantal. Vi trimmar nu route_plan när pageCount är lägre än default-
+# antalet, prioriterar '/' (home) och wizard-must-have-routes så de
+# viktigaste sidorna alltid överlever. Operator får en warning så
+# beteendet inte är magiskt.
+_HOME_PATH = "/"
+
+
+def _trim_route_plan_to_page_count(
+    route_plan: list[dict[str, str]],
+    page_count: int | None,
+    wizard_must_have: list[str] | None,
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    """Trimma route-planen till operatörens önskade pageCount.
+
+    Returnerar ``(trimmed_routes, page_count_warnings)``. Warnings är
+    samma format som ``_page_intent_warnings`` så de kan slås ihop
+    direkt utan extra packing.
+
+    Prioritetsordning för att behålla en route:
+        1. ``/`` (home) — utan home är sajten inte navigerbar.
+        2. Routes som matchar en wizard-must-have-page-hint.
+        3. Övriga scaffold-routes i deklarations-ordning.
+
+    När ``page_count`` är None, mindre än 1, eller >= len(route_plan)
+    görs ingen trimning och inga warnings genereras (caller behöver
+    inte särfalla på det).
+    """
+    if not isinstance(page_count, int) or page_count < 1:
+        return route_plan, []
+    if page_count >= len(route_plan):
+        return route_plan, []
+
+    must_have_paths: set[str] = set()
+    if wizard_must_have:
+        for page in wizard_must_have:
+            hint = _PAGE_TO_ROUTE_HINT.get(page)
+            if isinstance(hint, str):
+                must_have_paths.add(hint)
+
+    home = next(
+        (r for r in route_plan if r.get("path") == _HOME_PATH),
+        None,
+    )
+    must_have_routes = [
+        r
+        for r in route_plan
+        if r.get("path") in must_have_paths and r.get("path") != _HOME_PATH
+    ]
+    other_routes = [
+        r
+        for r in route_plan
+        if r.get("path") != _HOME_PATH and r.get("path") not in must_have_paths
+    ]
+
+    kept: list[dict[str, str]] = []
+    if home is not None:
+        kept.append(home)
+    for route in must_have_routes:
+        if len(kept) >= page_count:
+            break
+        kept.append(route)
+    for route in other_routes:
+        if len(kept) >= page_count:
+            break
+        kept.append(route)
+
+    dropped = [r for r in route_plan if r not in kept]
+    warnings: list[dict[str, str]] = []
+    if dropped:
+        warnings.append(
+            {
+                "page": "pageCount",
+                "expectedPath": "(trimmed scaffold defaults)",
+                "reason": (
+                    f"site_brief.pageCount={page_count} requested; scaffold "
+                    f"defaults had {len(route_plan)} routes. Trimmed "
+                    f"to {len(kept)}; dropped: "
+                    + ", ".join(
+                        r.get("path", "?") for r in dropped if isinstance(r, dict)
+                    )
+                ),
+            }
+        )
+    return kept, warnings
+
+
 _PAGE_TO_ROUTE_HINT: dict[str, str] = {
     "Om oss / Om mig": "/om-oss",
     "Bokning online": "/bokning",
@@ -730,8 +818,14 @@ def _assemble_site_plan(
     preview_runtime: str,
     created_at: str,
     page_intent_warnings: list[dict[str, str]],
+    route_plan: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
-    route_plan = _route_plan_from_scaffold(scaffold)
+    # B138: pageCount-trimning sker i produce_site_plan() innan denna
+    # helper kallas så vi tar en redan-trimmad route_plan in.
+    # Fallback till scaffold-defaults gör tester och äldre callers
+    # bakåtkompatibla med den gamla signaturen.
+    if route_plan is None:
+        route_plan = _route_plan_from_scaffold(scaffold)
     site_plan: dict[str, Any] = {
         "runId": run_id,
         "scaffoldId": choice.scaffoldId,
@@ -902,7 +996,18 @@ def produce_site_plan(
         verification_policy = "build-must-pass" if pinned is not None else "fast"
 
     created_at = _utc_now_iso()
-    route_plan = _route_plan_from_scaffold(scaffold)
+    full_route_plan = _route_plan_from_scaffold(scaffold)
+    # B138: Honora site_brief.pageCount genom att trimma route-planen
+    # innan _page_intent_warnings körs (warnings ska reflektera den
+    # faktiska, trimmade planen — annars varnar vi om "saknade" routes
+    # som vi själva precis tog bort).
+    requested_page_count = site_brief.get("pageCount")
+    route_plan, page_count_warnings = _trim_route_plan_to_page_count(
+        full_route_plan,
+        requested_page_count if isinstance(requested_page_count, int) else None,
+        wizard_must_have,
+    )
+    intent_warnings = _page_intent_warnings(wizard_must_have, route_plan)
     site_plan = _assemble_site_plan(
         run_id=run_id,
         choice=choice,
@@ -914,10 +1019,8 @@ def produce_site_plan(
         verification_policy=verification_policy,
         preview_runtime=preview_runtime,
         created_at=created_at,
-        page_intent_warnings=_page_intent_warnings(
-            wizard_must_have,
-            route_plan,
-        ),
+        page_intent_warnings=page_count_warnings + intent_warnings,
+        route_plan=route_plan,
     )
     validate_site_plan(site_plan)
 

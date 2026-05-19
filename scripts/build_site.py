@@ -698,21 +698,155 @@ def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> in
     return copied
 
 
-def variant_css(variant: dict) -> str:
+# Svensk tone-keyword → hex mapping för B139. Operatorn skriver fri text
+# i prompten ("vill ha grön och trygg känsla") och briefModel extraherar
+# tone-keywords till site-brief.tone[] / project-input tone.primary.
+# Innan B139-fixen läste variant_css() bara variant.tokens; nu mappar vi
+# explicita färgkeywords till hex så CSS faktiskt reflekterar valet.
+# Sammansatta fraser ("grön och trygg") matchas på första färg-ordet.
+# Lista hålls medvetet liten — bara robusta svenska färgord. Engelska
+# och hex-koder hanteras av B140 via brand.primaryColorHex.
+_TONE_KEYWORD_TO_HEX: dict[str, str] = {
+    "grön": "#16a34a",
+    "gron": "#16a34a",
+    "blå": "#2563eb",
+    "bla": "#2563eb",
+    "röd": "#dc2626",
+    "rod": "#dc2626",
+    "gul": "#eab308",
+    "orange": "#ea580c",
+    "lila": "#9333ea",
+    "rosa": "#ec4899",
+    "svart": "#0f0f0f",
+    "vit": "#fafafa",
+    "grå": "#71717a",
+    "gra": "#71717a",
+    "brun": "#92400e",
+    "turkos": "#0d9488",
+    "magenta": "#c026d3",
+    "guld": "#ca8a04",
+    "silver": "#a1a1aa",
+}
+
+
+def _tone_keyword_to_hex(tone_primary: str | None) -> str | None:
+    """Mappa en tone-keyword till hex om den innehåller ett känt färgord.
+
+    Returnerar None när ingen färg hittas så caller kan falla tillbaka
+    till variant-tokens. Matchningen är case-insensitive och tar första
+    träffen i ordet — så "grön och trygg" → grön → #16a34a.
+    """
+    if not isinstance(tone_primary, str):
+        return None
+    lower = tone_primary.strip().lower()
+    if not lower:
+        return None
+    # Direct match first (faster + deterministic when operator writes
+    # just one keyword)
+    if lower in _TONE_KEYWORD_TO_HEX:
+        return _TONE_KEYWORD_TO_HEX[lower]
+    # Word-by-word scan for first known color in compound phrase
+    for word in lower.replace(",", " ").split():
+        cleaned = word.strip(".!?;:")
+        if cleaned in _TONE_KEYWORD_TO_HEX:
+            return _TONE_KEYWORD_TO_HEX[cleaned]
+    return None
+
+
+def _hex_foreground_for(hex_color: str) -> str:
+    """Välj svart/vit foreground beroende på primärfärgens luminans.
+
+    Använder WCAG-relativ luminans-formel (sRGB → linear → Y) och
+    klipper på 0.5 så ljusa färger får mörk text och vice versa.
+    Detta är samma heuristik shadcn använder vid theme-generering.
+    """
+    h = hex_color.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    if len(h) != 6:
+        return "#fafafa"
+    try:
+        r = int(h[0:2], 16) / 255.0
+        g = int(h[2:4], 16) / 255.0
+        b = int(h[4:6], 16) / 255.0
+    except ValueError:
+        return "#fafafa"
+
+    def _linear(c: float) -> float:
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+    luminance = 0.2126 * _linear(r) + 0.7152 * _linear(g) + 0.0722 * _linear(b)
+    return "#0f0f0f" if luminance > 0.5 else "#fafafa"
+
+
+def _resolve_color_overrides(dossier: dict | None) -> dict[str, str]:
+    """Bygg ihop override-färger från operator-input (B139 + B140).
+
+    Prioritet per fält:
+      1. brand.primaryColorHex (B140 — explicit hex från wizardens vibe-step)
+      2. tone-keyword mappad till hex (B139 — extraherat från fri-prompt)
+      3. None → caller behåller variant.tokens.color
+
+    accent följer samma prioritet via brand.accentColorHex. primaryForeground
+    härleds från primary om primary är overridead, annars lämnas oförändrat.
+    """
+    overrides: dict[str, str] = {}
+    if not isinstance(dossier, dict):
+        return overrides
+
+    brand = dossier.get("brand") if isinstance(dossier.get("brand"), dict) else {}
+    tone = dossier.get("tone") if isinstance(dossier.get("tone"), dict) else {}
+
+    explicit_primary = brand.get("primaryColorHex") if isinstance(brand, dict) else None
+    if isinstance(explicit_primary, str) and explicit_primary.startswith("#"):
+        overrides["primary"] = explicit_primary
+    else:
+        tone_primary = tone.get("primary") if isinstance(tone, dict) else None
+        mapped = _tone_keyword_to_hex(tone_primary)
+        if mapped:
+            overrides["primary"] = mapped
+
+    if "primary" in overrides:
+        overrides["primaryForeground"] = _hex_foreground_for(overrides["primary"])
+
+    explicit_accent = brand.get("accentColorHex") if isinstance(brand, dict) else None
+    if isinstance(explicit_accent, str) and explicit_accent.startswith("#"):
+        overrides["accent"] = explicit_accent
+        overrides["accentForeground"] = _hex_foreground_for(explicit_accent)
+
+    return overrides
+
+
+def variant_css(variant: dict, dossier: dict | None = None) -> str:
+    """Genererar :root CSS-block med variant-tokens, ev. färg-overrides.
+
+    Sedan B139/B140-fixen accepterar funktionen ett valfritt `dossier`-
+    argument. När det finns appliceras färg-overrides från
+    brand.primaryColorHex (B140 — explicit operatörshex) eller
+    tone.primary (B139 — keyword som "grön" → #16a34a) ovanpå
+    variant.tokens.color. Övriga tokens (radius, spacing, foreground,
+    background, muted, border) följer alltid variant-defaulten.
+    """
     tokens = variant["tokens"]
     color = tokens["color"]
     radius = tokens["radius"]
     spacing = tokens["spacing"]
+    overrides = _resolve_color_overrides(dossier)
+    # Override:s vinner per fält; saknas override behålls variant-färgen.
+    primary = overrides.get("primary", color["primary"])
+    primary_fg = overrides.get("primaryForeground", color["primaryForeground"])
+    accent = overrides.get("accent", color["accent"])
+    accent_fg = overrides.get("accentForeground", color["accentForeground"])
     return (
         ":root {\n"
         f"  --background: {color['background']};\n"
         f"  --foreground: {color['foreground']};\n"
         f"  --muted: {color['muted']};\n"
         f"  --border: {color['border']};\n"
-        f"  --primary: {color['primary']};\n"
-        f"  --primary-foreground: {color['primaryForeground']};\n"
-        f"  --accent: {color['accent']};\n"
-        f"  --accent-foreground: {color['accentForeground']};\n"
+        f"  --primary: {primary};\n"
+        f"  --primary-foreground: {primary_fg};\n"
+        f"  --accent: {accent};\n"
+        f"  --accent-foreground: {accent_fg};\n"
         f"  --radius-sm: {radius['sm']};\n"
         f"  --radius-md: {radius['md']};\n"
         f"  --radius-lg: {radius['lg']};\n"
@@ -722,10 +856,18 @@ def variant_css(variant: dict) -> str:
     )
 
 
-def patch_globals_css(target: Path, variant: dict) -> None:
+def patch_globals_css(
+    target: Path, variant: dict, dossier: dict | None = None
+) -> None:
+    """Skriver variant-tokens i app/globals.css.
+
+    `dossier` är optional men rekommenderat — utan det propagerar
+    operatörens färgval (tone.primary / brand.primaryColorHex) inte
+    till renderad CSS, vilket är vad B139/B140 öppnades för.
+    """
     css = target / "app" / "globals.css"
     original = css.read_text(encoding="utf-8")
-    block = variant_css(variant)
+    block = variant_css(variant, dossier=dossier)
     marker = "/* sajtbyggaren-variant-tokens:start */"
     end = "/* sajtbyggaren-variant-tokens:end */"
     if marker in original:
@@ -2669,7 +2811,11 @@ def build(
     patch_package_json(target, dossier)
 
     print("Injecting variant tokens into app/globals.css")
-    patch_globals_css(target, variant)
+    # Skicka dossier:n så B139/B140-overrides får effekt: tone.primary
+    # (keyword som "grön") och brand.primaryColorHex (explicit hex)
+    # vinner över variant-tokenes default-färger. Saknas båda används
+    # variant.tokens.color (status quo före B139/B140-fixen).
+    patch_globals_css(target, variant, dossier=dossier)
 
     selected_dossiers = load_selected_dossier_manifests(dossier)
     copied_components = mount_dossier_components(target, selected_dossiers)

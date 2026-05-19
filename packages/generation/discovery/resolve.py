@@ -606,6 +606,76 @@ def _scaffold_hint_from_payload(
     return _RUNTIME_SCAFFOLD_HINTS.get(hint.strip())
 
 
+# B137: Operatörer som glider in builder-instruktioner ("vill ha 4 sidor och
+# grön färg, sälja keramik") i wizardens offer-fält ska INTE få den texten
+# rakt in i company.tagline. Förr trunkerades hela första meningen till 140
+# tecken vilket gav taglines som "Vi vill ha 4 sidor och grön färg på vår
+# nya hemsida". Nu filtrerar vi bort uppenbara meta-instruktioner och
+# faller tillbaka till briefModel:s tagline när offer ser ut att vara en
+# beställning snarare än en beskrivning.
+_TAGLINE_META_KEYWORDS: tuple[str, ...] = (
+    "sidor",
+    "sida",
+    "färg",
+    "farg",
+    "färgschema",
+    "färgtema",
+    "tema",
+    "vill ha",
+    "behöver",
+    "scaffold",
+    "variant",
+    "vibe",
+    "primary",
+    "skapa en",
+    "skapa min",
+    "bygga en",
+    "bygga min",
+    "ladda upp",
+    "hemsida",  # operator beskriver vad de vill bygga, inte vad de gör
+    "webbsida",
+    "ny sajt",
+)
+
+
+def _derive_smart_tagline(offer: str) -> str | None:
+    """Bygg en kort, presentabel tagline från wizardens offer-fält.
+
+    Returnerar None när texten ser ut att innehålla meta-instruktioner
+    (sidantal, färgval, "vill ha …") så caller faller tillbaka till
+    briefModel:s tagline. Annars:
+
+    * Korta texter (≤80 tecken) returneras oförändrade.
+    * Längre texter klipps vid första punkten om den ger en mening ≤100
+      tecken, annars vid sista mellanslag före 100 tecken med "…".
+
+    Trim-tröskeln 80/100 valdes deterministiskt: shadcn-baserade hero-
+    layouts på marketing-base börjar bryta på ~120 tecken, så 100 ger
+    marginal till h1-radhöjd och 80 ger en pre-truncation som operator
+    sällan behöver redigera.
+    """
+    text = offer.strip()
+    if not text:
+        return None
+    lower = text.lower()
+    if any(kw in lower for kw in _TAGLINE_META_KEYWORDS):
+        return None
+    if len(text) <= 80:
+        return text
+    # Försök bryta på första naturliga meningsslut
+    first_sentence = text.split(".")[0].strip()
+    if first_sentence and len(first_sentence) <= 100:
+        return first_sentence
+    # Mjuk trunkering: skär vid sista mellanslag inom 100 tecken så vi
+    # inte halverar ett ord, lägg till ellipsis så operator ser att det
+    # är trimmat och kan justera i wizardens följdsteg.
+    truncated = text[:100]
+    last_space = truncated.rfind(" ")
+    if last_space > 50:
+        truncated = truncated[:last_space]
+    return truncated.rstrip(" ,;:") + "…"
+
+
 def _apply_company_fields(
     project_input: dict[str, Any],
     answers: dict[str, Any],
@@ -621,9 +691,17 @@ def _apply_company_fields(
 
     offer = answers.get("offer")
     if isinstance(offer, str) and offer.strip():
-        first_sentence = offer.strip().split(". ")[0][:140]
-        company["tagline"] = first_sentence
-        field_sources["company.tagline"] = "wizard"
+        smart_tagline = _derive_smart_tagline(offer)
+        if smart_tagline:
+            company["tagline"] = smart_tagline
+            field_sources["company.tagline"] = "wizard"
+        elif company.get("tagline"):
+            # B137: offer-fältet innehåller meta-instruktioner (sidantal,
+            # färgval, etc.) — operator har glidit in builder-instruktioner
+            # i offer-rutan istället för en ren verksamhetsbeskrivning.
+            # Behåll briefModel:s tagline; offer fortsätter användas som
+            # rådata för story/services via övriga grenar.
+            field_sources["company.tagline"] = "brief"
     elif company.get("tagline"):
         field_sources["company.tagline"] = "brief"
 
