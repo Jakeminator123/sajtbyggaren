@@ -79,4 +79,6 @@ data/starters/**/*.tar.gz
 
 # Operator-local utility scripts (tree-printers, scratch tools för LLM-context).
 # Operatör äger filerna lokalt; om de ska committas tas raden bort medvetet.
-tree_v*.py
+# Pattern matchar tree_v2.py / tree_v3.py-stil men INTE scripts/tree_view.py
+# (som är den committade delade utility-versionen).
+tree_v[0-9]*.py

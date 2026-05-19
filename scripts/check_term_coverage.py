@@ -468,6 +468,18 @@ COMMON_WORDS = {
     "LocalPort",  # PowerShell Get-NetTCPConnection-parameter
     # Generic prose ord som dyker upp i operator-flöde-text (ADR 0012)
     "Build", "Page", "Scaffolds",
+    # Scout-orchestrator-handoff-2026-05-19 + tree_view.py prose-allowlist
+    # (samma kategori som tidigare scout-prosa-allowlists: case-specifika
+    # eller proposed-koncept som inte är canonical domain terms ännu).
+    "B134", "B135",  # öppnade i Scout-orchestrator-handoff (Cloud Agents pågår)
+    "Cloud Agents",  # cursor.com-koncept som scoutorkestratorn pratar om
+    "ForEach",  # PowerShell-verb i exempelkommandon
+    "Konkret content",  # gap-rubrik i 9/10-tabellen
+    "Page Intent Variant B",  # proposed produktkoncept (B132-uppföljning)
+    "PermissionError", "SubprocessError",  # Python builtin exception-namn
+    "Project DNA semantic merge",  # proposed sprint-namn (Queue #5)
+    "Task",  # Cursor subagent-tool-namn
+    "Visuell renderingsverifiering",  # gap-rubrik i 9/10-tabellen
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
