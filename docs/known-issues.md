@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 94 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 95 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -596,6 +596,25 @@ för follow-up eller ska städas.
   direktiv). Fix: open. Test: open.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B131` Medel** (stängd 2026-05-19, capability alias dedup) -
+  `_resolve_capabilities` dedupade tidigare `requestedCapabilities`
+  med exakt strängmatch. När wizarden mappade `Bokning online` till
+  resolverns lokala canonical slug `booking` och briefModel samtidigt
+  returnerade aliaset `online-booking` hamnade båda i listan, vilket
+  gav en extra `capability-unknown` på alias-slugen. Fixen lägger en
+  lokal `_CAPABILITY_ALIASES`-map i
+  `packages/generation/discovery/resolve.py` och normaliserar varje
+  slug före `seen`-lookup så aliasen `online-booking` → `booking`,
+  `webshop`/`online-shop` → `ecommerce`, `newsletter` →
+  `newsletter-subscribe` och `contact` → `contact-form` dedupas mot
+  samma canonical slug. Governance-flytt till aliases-array i
+  `capability-map.v1.json` lämnas till framtida ADR-sprint.
+  Källa: Viewser-overlay-E2E Scout case 2, 2026-05-19. Fix:
+  `56272c7`. Test:
+  `tests/test_discovery_resolver.py::test_resolve_capabilities_dedups_via_alias`,
+  `tests/test_discovery_resolver.py::test_resolve_capabilities_preserves_unknown_slug_when_no_alias`,
+  `tests/test_discovery_resolver.py::test_resolve_capabilities_alias_keeps_priority_source`.
 
 - **`B132` Medel** (stängd 2026-05-19, page-intent warning-only) -
   wizardens `mustHave` kunde välja route-bärande sidor som scaffoldens
