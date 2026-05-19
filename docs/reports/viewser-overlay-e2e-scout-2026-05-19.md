@@ -5,7 +5,7 @@
 **Datum:** 2026-05-19
 **HEAD-SHA vid scout-start:** `99ec56d`. **HEAD-SHA vid scout-pickup (2026-05-19 morgon):** `9176f5e` (`docs(steward): bump for PR #38 merge (48a6a22) + register B129`) ovanpå merge-commit `48a6a22` för PR #38 (8 nya canonical Scaffold Variants under `packages/generation/orchestration/scaffolds/<scaffold>/variants/`). PR #38 mergades av en parallell agent ~01:38 UTC medan scout väntade. **Variants är dead code i prod-flödet via `_DEFAULT_VARIANT_BY_SCAFFOLD`-guard i `packages/generation/planning/plan.py:364-385`** som tvingar `local-service-business → nordic-trust` och `ecommerce-lite → clean-store`. Discovery taxonomy är oförändrad. Scout-mätningen är därför **fortsatt representativ för dagens prod-flöde** — Case 1-6 mäter exakt vad slutkunden ser idag. **B129 öppnad** (medvetet) på den hardcoded mappingen — flytt till governance + ny ADR ligger i variant-promotion-sprint (Queue #6), inte i Scout-scopet.
 **Branch:** `main`. Working tree dirty bara med `post-frontend-merge.txt` (operatörsanteckning) + denna rapport-fil (untracked).
-**Audit-confidence:** _ifylls efter att minst Case 1 har körts._
+**Audit-confidence:** 7/10 — Case 1+2+3a verifierat live mot generated TSX + Project Input meta-sidecar; Case 4 (sköldpaddssoppa / conflict), Case 6 (follow-up byte-stabilitet) och Spår B (variant-experiment) ej körda så subjektiv kvalitetsbedömning utöver det som redan landat är osäker.
 **Status:** **AVSLUTAD (delvis)** — Case 1-3a körda, Case 4/6/3b + Spår B kvar för senare körning.
 
 ## Mål
@@ -16,12 +16,10 @@ Sex case planerade. Operatören väljer slutligt set och kör så många hen hin
 
 ## Sammanfattning
 
-_Ifylls efter att operatören har kört caseen._
-
-- Totalsnitt: TBD/10 (jämfört med Scout 4-baseline 6.59/10 för CLI-cases).
-- Verdict mot beslutsregel (≥7/10 OCH inget case <6.5 → Project DNA-sprint, annars riktad bug-sweep): TBD.
-- Direkt nästa rekommenderat steg: TBD.
-- Modell-/insatsnivå nästa Builder-pass: TBD.
+- **Totalsnitt: ~7.1/10** över tre mätbara case (Case 1 ~7.3, Case 2 ~7.4, Case 3a ~6.6) — jämfört med Scout 4-baseline 6.59/10 för CLI-cases. Snittet är **över beslutsregelns 7-tröskel** men marginalen är liten — Case 3a (6.6/10) är under det villkorade 6.5-golvet bara om man räknar strikt på "inget case under 6.5"; Case 3a landar på 6.6 vilket är ≥6.5 så regeln är formellt uppfylld.
+- **Verdict mot beslutsregel:** ≥7/10 OCH inget case <6.5 → uppfyllt. Project DNA-sprint är öppen som möjligt nästa steg, men auto-merge-pipelinen 2026-05-19 stängde redan B130/B131/B132/B133/B134/B135 vilket adresserar de mest kritiska fynden i Case 1-3a. Scout-rekommendation: Spår B variant-experiment + Case 4/6/3b (~30 min totalt) innan Project DNA-spår låses, så vi har komplett baseline-data.
+- **Direkt nästa rekommenderat steg:** något av (a) Spår B variant-experiment (B1 keramik+earth-wellness, B2 frisör+warm-craft) för visuell kvalitetsbedömning + B129-underlag, (b) Case 4 (sköldpaddssoppa / conflict) för att mäta Intent Guard-behov, (c) variant-promotion-sprint (B129) eller B125 browser-fallback-ADR (produktblockare innan kundyta), eller (d) Project DNA / semantic follow-up merge.
+- **Modell-/insatsnivå nästa Builder-pass:** låg-medel. B130/B131/B132/B133/B134/B135 stängda parallellt under operatörens 1-h-paus med composer-2.5 + RO-review; samma orchestrator-mönster fungerar för B-IDs i låg-medel-spannet. Project DNA-sprint kräver dock djupare modell (Claude 4.6 / GPT 5.5) eftersom semantic merge i `merge_followup_project_input` är arkitektoniskt val, inte fix.
 
 ## Förkonfiguration verifierad
 
