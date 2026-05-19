@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 91 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 92 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -596,6 +596,52 @@ för follow-up eller ska städas.
   direktiv). Fix: open. Test: open.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B133` Medel** (stängd 2026-05-19, Viewser-overlay-E2E-Scout
+  Case 3a follow-up) - `scripts/prompt_to_project_input.py:_placeholder_contact`
+  fyllde i B88-fallback-strängar (`"+46 8 000 00 00"`,
+  `"kontakt@example.se"`, `"Adress lämnas på förfrågan"`) i Project
+  Input.contact när briefModel returnerade tomma kontaktfält OCH
+  operatören inte fyllt fälten i wizarden OCH scrape inte kördes.
+  Discovery Resolver markerade då fieldSources["contact.phone"]="brief"
+  eftersom värdet var icke-tomt — tekniskt sant men semantiskt fel.
+  Effekten var att sajten renderade `+46 8 000 00 00` /
+  `kontakt@example.se` / `Adress lämnas på förfrågan` publikt utan
+  någon signal till operatör att kontakt-fälten var platshållare.
+  Verifierat live i Scout Case 3a 2026-05-19 (1753skincare-prompten
+  utan scrape eller manuella kontaktfält, snitt 6.6/10 där dummy
+  contact drog ner copyConcrete + branchCredibility två poäng).
+  **Fix:** `_placeholder_contact` returnerar nu en tuple
+  `(contact_dict, placeholder_fields)` där `placeholder_fields`
+  listar vilka contact-block-keys (`phone`, `email`, `addressLines`)
+  som fick B88-fallback. `site_brief_to_project_input` propagerar
+  listan vidare som andra tuple-element. `generate()` kör
+  `_recompute_placeholder_contact_fields` mot final Project Input
+  efter wizard/scrape/follow-up-merging (Discovery Resolverns
+  vinst-ordning är orörd, inga fieldSources-ändringar) och skriver
+  `placeholderContactFields` på meta-sidecaren bara när listan är
+  non-empty. `scripts/build_site.py:write_build_result` läser
+  listan via `_prompt_meta_placeholder_contact_fields` och lägger
+  till `placeholderContactFields` + `placeholderContactMessage`
+  ("Contact fields phone, email, addressLines are placeholder
+  values - operator must fill these before publishing.") på
+  `build-result.json` när non-empty. `apps/viewser/components/run-details-panel.tsx`
+  Build-sektion renderar en gulorange varning-badge
+  ("⚠ Kontakt-fält är platshållare: phone, email, addressLines.
+  Slutanvändaren ser dummy-värden tills operatör fyllt dem.")
+  baserad på samma fält. Inga rendering-ändringar i builder —
+  fallback-strängarna fortsätter renderas som idag, vi lägger bara
+  till en metadata-emitterad warning så operatör ser dem. Källa:
+  `docs/reports/viewser-overlay-e2e-scout-2026-05-19.md` Fynd 1
+  i Case 3a. Fix: `915371a`. Test:
+  `tests/test_prompt_to_project_input.py::test_placeholder_contact_returns_field_list`,
+  `tests/test_prompt_to_project_input.py::test_placeholder_contact_omits_filled_fields_from_list`,
+  `tests/test_prompt_to_project_input.py::test_site_brief_to_project_input_propagates_placeholder_contact_fields`,
+  `tests/test_prompt_to_project_input.py::test_generate_writes_placeholder_contact_fields_to_meta`,
+  `tests/test_builder_hardening.py::test_placeholder_contact_fields_helpers_validate_meta_input`,
+  `tests/test_builder_hardening.py::test_build_result_surfaces_placeholder_contact_fields_when_present`,
+  `tests/test_builder_hardening.py::test_build_result_omits_placeholder_contact_fields_when_empty`,
+  `tests/test_viewser_files.py::test_run_details_panel_renders_placeholder_contact_warning`.
 
 - **`B128` Hög** (stängd 2026-05-19, keramik-/e-handel-pass +
   Composer-2.5-review-hardening) -

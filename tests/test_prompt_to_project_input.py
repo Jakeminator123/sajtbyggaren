@@ -127,7 +127,7 @@ def test_site_brief_to_project_input_validates_against_schema(
         "notesForPlanner": None,
         "briefSource": "mock-no-key",
     }
-    project_input = site_brief_to_project_input(
+    project_input, _ = site_brief_to_project_input(
         mock_brief,
         site_id="example-site-abcdef",
         scaffold_id="local-service-business",
@@ -156,7 +156,7 @@ def test_site_brief_to_project_input_uses_real_brief_fields(
         "notesForPlanner": "Lokal elektriker som söker offertförfrågningar.",
         "briefSource": "real",
     }
-    project_input = site_brief_to_project_input(
+    project_input, _ = site_brief_to_project_input(
         rich_brief,
         site_id="elektriker-malmo-abcdef",
         scaffold_id="local-service-business",
@@ -194,7 +194,7 @@ def test_site_brief_company_name_overrides_derived_h1(
         "notesForPlanner": None,
         "briefSource": "real",
     }
-    project_input = site_brief_to_project_input(
+    project_input, _ = site_brief_to_project_input(
         brief,
         site_id="volt-co-malmo",
         scaffold_id="local-service-business",
@@ -219,7 +219,7 @@ def test_site_brief_without_company_name_uses_existing_fallback() -> None:
         "notesForPlanner": None,
         "briefSource": "real",
     }
-    project_input = site_brief_to_project_input(
+    project_input, _ = site_brief_to_project_input(
         brief,
         site_id="elektriker-malmo",
         scaffold_id="local-service-business",
@@ -227,6 +227,177 @@ def test_site_brief_without_company_name_uses_existing_fallback() -> None:
         original_prompt="elektriker Malmö",
     )
     assert project_input["company"]["name"] == "Elektriker i Malmö"
+
+
+@pytest.mark.tooling
+def test_placeholder_contact_returns_field_list() -> None:
+    """B133: ``_placeholder_contact`` returns a ``(contact_dict, fields)``
+    tuple. With no real values from briefModel, all three contact slots
+    are filled with B88 dummies and the list reports every key.
+    """
+    from scripts.prompt_to_project_input import _placeholder_contact
+
+    contact_sv, fields_sv = _placeholder_contact("sv")
+    assert fields_sv == ["phone", "email", "addressLines"]
+    assert contact_sv["phone"] == "+46 8 000 00 00"
+    assert contact_sv["email"] == "kontakt@example.se"
+    assert contact_sv["addressLines"] == ["Adress lämnas på förfrågan"]
+    assert contact_sv["openingHours"] == "Mån-Fre 09:00-17:00"
+
+    contact_en, fields_en = _placeholder_contact("en")
+    assert fields_en == ["phone", "email", "addressLines"]
+    assert contact_en["email"] == "contact@example.se"
+    assert contact_en["addressLines"] == ["Address available on request"]
+    assert contact_en["openingHours"] == "Mon-Fri 09:00-17:00"
+
+
+@pytest.mark.tooling
+def test_placeholder_contact_omits_filled_fields_from_list() -> None:
+    """B133: every field the caller fills in must be absent from the
+    placeholder list. Mixed input is the common scrape case where one
+    or two fields landed but the rest stayed empty.
+    """
+    from scripts.prompt_to_project_input import _placeholder_contact
+
+    contact, fields = _placeholder_contact(
+        "sv",
+        contact_phone="0701234567",
+        contact_email="hej@voltco.se",
+        contact_address="Storgatan 1, 211 22 Malmö",
+    )
+    assert fields == [], "every contact slot supplied means no placeholders"
+    assert contact["phone"] == "0701234567"
+    assert contact["email"] == "hej@voltco.se"
+    assert contact["addressLines"] == ["Storgatan 1, 211 22 Malmö"]
+
+    _, only_phone_left = _placeholder_contact(
+        "sv",
+        contact_email="hej@voltco.se",
+        contact_address="Storgatan 1, 211 22 Malmö",
+    )
+    assert only_phone_left == ["phone"]
+
+    _, only_email_left = _placeholder_contact(
+        "sv",
+        contact_phone="0701234567",
+        contact_address="Storgatan 1, 211 22 Malmö",
+    )
+    assert only_email_left == ["email"]
+
+    _, only_address_left = _placeholder_contact(
+        "sv",
+        contact_phone="0701234567",
+        contact_email="hej@voltco.se",
+    )
+    assert only_address_left == ["addressLines"]
+
+
+@pytest.mark.tooling
+def test_site_brief_to_project_input_propagates_placeholder_contact_fields() -> (
+    None
+):
+    """B133: when briefModel returns nothing for the three contact
+    fields, ``site_brief_to_project_input`` reports the full placeholder
+    list as the second tuple element so ``generate()`` can put it on the
+    meta sidecar (and ``scripts/build_site.py`` can surface it in
+    ``build-result.json`` for Viewser).
+    """
+    mock_brief = {
+        "language": "sv",
+        "businessTypeGuess": None,
+        "rawPrompt": "Skapa en hemsida",
+        "tone": [],
+        "conversionGoals": [],
+        "servicesMentioned": [],
+        "requestedCapabilities": [],
+        "locationHint": None,
+        "notesForPlanner": None,
+        "briefSource": "mock-no-key",
+    }
+    project_input, placeholder_fields = site_brief_to_project_input(
+        mock_brief,
+        site_id="placeholder-contact-site",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="Skapa en hemsida",
+    )
+    assert placeholder_fields == ["phone", "email", "addressLines"]
+    assert project_input["contact"]["phone"] == "+46 8 000 00 00"
+
+    rich_brief = {
+        **mock_brief,
+        "contactPhone": "0701234567",
+        "contactEmail": "hej@voltco.se",
+        "contactAddress": "Storgatan 1, 211 22 Malmö",
+    }
+    _, no_placeholders = site_brief_to_project_input(
+        rich_brief,
+        site_id="real-contact-site",
+        scaffold_id="local-service-business",
+        variant_id="nordic-trust",
+        original_prompt="Skapa en hemsida",
+    )
+    assert no_placeholders == []
+
+
+@pytest.mark.tooling
+def test_generate_writes_placeholder_contact_fields_to_meta(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """B133: when briefModel has no contact values, the meta sidecar
+    must carry ``placeholderContactFields`` so ``scripts/build_site.py``
+    can read it via ``load_prompt_input_meta`` and write it into
+    ``build-result.json``. Conversely, when the brief is rich the field
+    must be absent from meta — the warning must only surface when there
+    is actually placeholder data to warn about.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    _, meta_placeholder, _, _ = generate(
+        "Skapa en hemsida för en elektriker i Malmö",
+        output_dir=tmp_path,
+        site_id="placeholder-meta-site",
+    )
+    assert meta_placeholder.get("placeholderContactFields") == [
+        "phone",
+        "email",
+        "addressLines",
+    ]
+
+    def rich_brief_extract(*_args: object, **_kwargs: object) -> object:
+        return {
+            "language": "sv",
+            "businessTypeGuess": "electrician",
+            "companyName": "Volt & Co",
+            "contactPhone": "0701234567",
+            "contactEmail": "hej@voltco.se",
+            "contactAddress": "Storgatan 1, 211 22 Malmö",
+            "rawPrompt": "Volt & Co, telefon 0701234567, hej@voltco.se",
+            "tone": [],
+            "conversionGoals": [],
+            "servicesMentioned": ["paneldragning"],
+            "requestedCapabilities": [],
+            "locationHint": "Malmö",
+            "notesForPlanner": None,
+        }
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key-not-used")
+    monkeypatch.setattr(
+        "scripts.prompt_to_project_input.extract_site_brief",
+        rich_brief_extract,
+    )
+    monkeypatch.setattr(
+        "scripts.prompt_to_project_input.site_brief_to_artifact",
+        lambda brief, **_kw: {**brief, "briefSource": "real"},
+    )
+
+    _, meta_filled, _, _ = generate(
+        "Volt & Co, telefon 0701234567, hej@voltco.se",
+        output_dir=tmp_path,
+        site_id="real-meta-site",
+    )
+    assert "placeholderContactFields" not in meta_filled
 
 
 @pytest.mark.tooling
@@ -252,7 +423,7 @@ def test_site_brief_contact_fields_override_placeholders(
         "notesForPlanner": None,
         "briefSource": "real",
     }
-    project_input = site_brief_to_project_input(
+    project_input, _ = site_brief_to_project_input(
         brief,
         site_id="volt-co-contact",
         scaffold_id="local-service-business",
@@ -286,14 +457,14 @@ def test_selected_dossiers_rationale_matches_project_language() -> None:
     }
     en_brief = {**sv_brief, "language": "en", "rawPrompt": "electrician in Malmö"}
 
-    sv_project_input = site_brief_to_project_input(
+    sv_project_input, _ = site_brief_to_project_input(
         sv_brief,
         site_id="sv-rationale",
         scaffold_id="local-service-business",
         variant_id="nordic-trust",
         original_prompt="elektriker Malmö",
     )
-    en_project_input = site_brief_to_project_input(
+    en_project_input, _ = site_brief_to_project_input(
         en_brief,
         site_id="en-rationale",
         scaffold_id="local-service-business",
@@ -1086,7 +1257,7 @@ def test_b128_full_pipeline_blocks_keramik_planner_instruction() -> None:
         "notesForPlanner": leak,
         "briefSource": "real",
     }
-    project_input = site_brief_to_project_input(
+    project_input, _ = site_brief_to_project_input(
         brief,
         site_id="keramik-shop-b128",
         scaffold_id="ecommerce-lite",
@@ -1129,7 +1300,7 @@ def test_company_name_and_story_never_contain_raw_prompt(
         "requestedCapabilities": [],
         "briefSource": "real",
     }
-    project_input = site_brief_to_project_input(
+    project_input, _ = site_brief_to_project_input(
         brief,
         site_id="boat-skovde-abcdef",
         scaffold_id="local-service-business",
@@ -1185,7 +1356,7 @@ def test_swedish_service_labels_preserve_case() -> None:
         "requestedCapabilities": [],
         "briefSource": "real",
     }
-    project_input = site_brief_to_project_input(
+    project_input, _ = site_brief_to_project_input(
         brief,
         site_id="egg-farm-abcdef",
         scaffold_id="local-service-business",
@@ -1226,7 +1397,7 @@ def test_service_slug_collisions_get_deterministic_suffixes() -> None:
         "notesForPlanner": None,
         "briefSource": "real",
     }
-    project_input = site_brief_to_project_input(
+    project_input, _ = site_brief_to_project_input(
         brief,
         site_id="collision-test",
         scaffold_id="local-service-business",
@@ -1312,7 +1483,7 @@ def test_tagline_never_uses_notes_for_planner() -> None:
         "notesForPlanner": leak,
         "briefSource": "real",
     }
-    project_input = site_brief_to_project_input(
+    project_input, _ = site_brief_to_project_input(
         brief,
         site_id="elektriker-malmo-leak",
         scaffold_id="local-service-business",
@@ -1402,7 +1573,7 @@ def test_service_summaries_do_not_leak_dev_jargon() -> None:
         "notesForPlanner": None,
         "briefSource": "real",
     }
-    project_input = site_brief_to_project_input(
+    project_input, _ = site_brief_to_project_input(
         brief,
         site_id="elektriker-malmo-svc",
         scaffold_id="local-service-business",
@@ -1441,7 +1612,7 @@ def test_placeholder_services_summary_is_customer_friendly() -> None:
         "notesForPlanner": None,
         "briefSource": "real",
     }
-    project_input = site_brief_to_project_input(
+    project_input, _ = site_brief_to_project_input(
         brief,
         site_id="empty-brief",
         scaffold_id="local-service-business",
@@ -1511,7 +1682,7 @@ def test_full_pipeline_locks_no_planner_jargon_for_scout_prompt() -> None:
         "notesForPlanner": leak,
         "briefSource": "real",
     }
-    project_input = site_brief_to_project_input(
+    project_input, _ = site_brief_to_project_input(
         brief,
         site_id="elektriker-malmo-e2e",
         scaffold_id="local-service-business",
@@ -1604,7 +1775,7 @@ def test_swedish_brief_with_country_location_uses_country_only_marker() -> None:
         "notesForPlanner": None,
         "briefSource": "real",
     }
-    project_input = site_brief_to_project_input(
+    project_input, _ = site_brief_to_project_input(
         brief,
         site_id="frisor-sverige",
         scaffold_id="local-service-business",
@@ -1631,7 +1802,7 @@ def test_english_brief_with_country_location_uses_country_only_marker() -> None:
         "notesForPlanner": None,
         "briefSource": "real",
     }
-    project_input = site_brief_to_project_input(
+    project_input, _ = site_brief_to_project_input(
         brief,
         site_id="ceramics-shop",
         scaffold_id="ecommerce-lite",
@@ -1669,7 +1840,7 @@ def test_placeholder_contact_address_has_no_dev_jargon_on_swedish_brief() -> Non
         "notesForPlanner": None,
         "briefSource": "real",
     }
-    project_input = site_brief_to_project_input(
+    project_input, _ = site_brief_to_project_input(
         brief,
         site_id="electrician-malmo",
         scaffold_id="local-service-business",
@@ -1708,7 +1879,7 @@ def test_placeholder_contact_address_has_no_dev_jargon_on_english_brief() -> Non
         "notesForPlanner": None,
         "briefSource": "real",
     }
-    project_input = site_brief_to_project_input(
+    project_input, _ = site_brief_to_project_input(
         brief,
         site_id="electrician-malmo-en",
         scaffold_id="local-service-business",
@@ -1741,7 +1912,7 @@ def test_placeholder_contact_address_prefers_brief_value_over_fallback() -> None
         "notesForPlanner": None,
         "briefSource": "real",
     }
-    project_input = site_brief_to_project_input(
+    project_input, _ = site_brief_to_project_input(
         brief,
         site_id="volt-co-address",
         scaffold_id="local-service-business",

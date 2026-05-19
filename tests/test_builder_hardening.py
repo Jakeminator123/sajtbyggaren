@@ -544,6 +544,127 @@ def test_build_result_has_model_usage_stub(
 
 
 # ---------------------------------------------------------------------------
+# B133 - placeholder contact warning must surface in build-result.json
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_placeholder_contact_fields_helpers_validate_meta_input() -> None:
+    """B133: ``_prompt_meta_placeholder_contact_fields`` is the gate that
+    keeps unexpected sidecar payloads out of ``build-result.json``. Only
+    the known contact-block keys (``phone``, ``email``, ``addressLines``)
+    are forwarded, duplicates are squashed and the warning message has
+    the canonical operator-facing wording.
+    """
+    from scripts.build_site import (
+        _placeholder_contact_warning_message,
+        _prompt_meta_placeholder_contact_fields,
+    )
+
+    assert _prompt_meta_placeholder_contact_fields(None) == []
+    assert _prompt_meta_placeholder_contact_fields({}) == []
+    assert _prompt_meta_placeholder_contact_fields(
+        {"placeholderContactFields": ["phone", "email", "addressLines"]}
+    ) == ["phone", "email", "addressLines"]
+    assert _prompt_meta_placeholder_contact_fields(
+        {"placeholderContactFields": ["phone", "phone", "bogus", "email"]}
+    ) == ["phone", "email"]
+    assert _prompt_meta_placeholder_contact_fields(
+        {"placeholderContactFields": "phone"}
+    ) == []
+
+    assert _placeholder_contact_warning_message(["phone"]) == (
+        "Contact fields phone are placeholder values - operator "
+        "must fill these before publishing."
+    )
+    assert _placeholder_contact_warning_message(
+        ["phone", "email", "addressLines"]
+    ) == (
+        "Contact fields phone, email, addressLines are placeholder values "
+        "- operator must fill these before publishing."
+    )
+
+
+@pytest.mark.tooling
+def test_build_result_surfaces_placeholder_contact_fields_when_present(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """B133: when the prompt-input meta sidecar carries
+    ``placeholderContactFields`` (because briefModel returned no phone /
+    email / address and operator did not fill them), ``build-result.json``
+    must surface the list plus a human-readable message so Viewser Run
+    Details can warn the operator that the published site shows dummy
+    contact info.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import build
+    from scripts.prompt_to_project_input import generate
+
+    prompt_inputs_dir = tmp_path / "data" / "prompt-inputs"
+    runs_dir = tmp_path / "runs"
+    generated_dir = tmp_path / "generated"
+
+    _, meta, dossier_path, _ = generate(
+        "Skapa en hemsida för en elektriker i Malmö",
+        output_dir=prompt_inputs_dir,
+        site_id="placeholder-contact-site",
+    )
+    assert meta["placeholderContactFields"] == [
+        "phone",
+        "email",
+        "addressLines",
+    ]
+
+    _, run_dir = build(
+        dossier_path,
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+    )
+    result = json.loads(
+        (run_dir / "build-result.json").read_text(encoding="utf-8")
+    )
+
+    assert result["placeholderContactFields"] == [
+        "phone",
+        "email",
+        "addressLines",
+    ]
+    assert (
+        result["placeholderContactMessage"]
+        == "Contact fields phone, email, addressLines are placeholder values "
+        "- operator must fill these before publishing."
+    )
+
+
+@pytest.mark.tooling
+def test_build_result_omits_placeholder_contact_fields_when_empty(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """B133: ``placeholderContactFields`` must be absent from
+    ``build-result.json`` when nothing in the meta sidecar flags
+    placeholder contact data. Curated ``examples/`` Project Inputs do
+    not carry sidecars; the curator vouches that the contact block is
+    real, so the warning must stay silent.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    from scripts.build_site import build
+
+    project_input_path = (
+        REPO_ROOT / "examples" / "painter-palma.project-input.json"
+    )
+    _, run_dir = build(project_input_path, do_build=False, runs_dir=tmp_path)
+    result = json.loads(
+        (run_dir / "build-result.json").read_text(encoding="utf-8")
+    )
+
+    assert "placeholderContactFields" not in result
+    assert "placeholderContactMessage" not in result
+
+
+# ---------------------------------------------------------------------------
 # B11 - generatedFilesDir must point to data/runs/<runId>/generated-files/
 # ---------------------------------------------------------------------------
 

@@ -956,14 +956,61 @@ def _build_services(
     return services
 
 
+# B88-fallback strängar för kontaktblocket. Lyfta till modulnivå så
+# ``_recompute_placeholder_contact_fields`` kan jämföra slutligt
+# Project Input mot exakt samma värden som ``_placeholder_contact``
+# skriver in. Operatören kan fortfarande skriva över via Project Input
+# eller via wizard/scrape genom Discovery Resolver innan publicering.
+_PLACEHOLDER_CONTACT_PHONE = "+46 8 000 00 00"
+_PLACEHOLDER_CONTACT_OPENING_HOURS_SV = "Mån-Fre 09:00-17:00"
+_PLACEHOLDER_CONTACT_OPENING_HOURS_EN = "Mon-Fri 09:00-17:00"
+_PLACEHOLDER_CONTACT_EMAIL_SV = "kontakt@example.se"
+_PLACEHOLDER_CONTACT_EMAIL_EN = "contact@example.se"
+_PLACEHOLDER_CONTACT_ADDRESS_SV = "Adress lämnas på förfrågan"
+_PLACEHOLDER_CONTACT_ADDRESS_EN = "Address available on request"
+
+
+def _placeholder_contact_defaults(language: str) -> dict[str, Any]:
+    """Return the dummy contact-block values for ``language``.
+
+    Used by ``_placeholder_contact`` to fill in missing fields and by
+    ``_recompute_placeholder_contact_fields`` to detect which fields in
+    a final Project Input are still placeholder values after wizard/
+    scrape/follow-up merging.
+    """
+    if language == "en":
+        return {
+            "phone": _PLACEHOLDER_CONTACT_PHONE,
+            "email": _PLACEHOLDER_CONTACT_EMAIL_EN,
+            "addressLines": [_PLACEHOLDER_CONTACT_ADDRESS_EN],
+            "openingHours": _PLACEHOLDER_CONTACT_OPENING_HOURS_EN,
+        }
+    return {
+        "phone": _PLACEHOLDER_CONTACT_PHONE,
+        "email": _PLACEHOLDER_CONTACT_EMAIL_SV,
+        "addressLines": [_PLACEHOLDER_CONTACT_ADDRESS_SV],
+        "openingHours": _PLACEHOLDER_CONTACT_OPENING_HOURS_SV,
+    }
+
+
 def _placeholder_contact(
     language: str,
     *,
     contact_phone: str | None = None,
     contact_email: str | None = None,
     contact_address: str | None = None,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], list[str]]:
     """Schema-required contact block when the brief has no real values.
+
+    Returns a tuple ``(contact_dict, placeholder_fields)`` where
+    ``placeholder_fields`` lists which top-level keys of ``contact_dict``
+    were filled with dummy fallback values because the caller did not
+    pass a real value. When the operator supplied a real value in
+    ``contact_phone`` / ``contact_email`` / ``contact_address`` the
+    corresponding field is NOT in the list — that is the signal
+    ``site_brief_to_project_input`` propagates further so Viewser can
+    warn the operator about fields the end user will see as dummy data
+    (B133, 2026-05-19).
 
     Demo-baseline-fix 1C (B88): the previous placeholders for `address`
     were operator-facing dev jargon ("Adress saknas - uppdatera Project
@@ -973,24 +1020,68 @@ def _placeholder_contact(
     forbids an empty value, so the fallback is now a brand-neutral
     Swedish/English phrase that reads acceptably to a real visitor.
     The operator can still override it in the generated Project Input
-    before sharing the build.
+    before sharing the build, but B133 surfaces that the values are
+    placeholders so the operator does not unknowingly publish a site
+    with `+46 8 000 00 00` and `kontakt@example.se` as if they were
+    real contact details.
     """
     phone = (contact_phone or "").strip()
     email = (contact_email or "").strip()
     address = (contact_address or "").strip()
-    if language == "en":
-        return {
-            "phone": phone or "+46 8 000 00 00",
-            "email": email or "contact@example.se",
-            "addressLines": [address or "Address available on request"],
-            "openingHours": "Mon-Fri 09:00-17:00",
-        }
-    return {
-        "phone": phone or "+46 8 000 00 00",
-        "email": email or "kontakt@example.se",
-        "addressLines": [address or "Adress lämnas på förfrågan"],
-        "openingHours": "Mån-Fre 09:00-17:00",
+    defaults = _placeholder_contact_defaults(language)
+    placeholder_fields: list[str] = []
+    if phone:
+        final_phone = phone
+    else:
+        final_phone = defaults["phone"]
+        placeholder_fields.append("phone")
+    if email:
+        final_email = email
+    else:
+        final_email = defaults["email"]
+        placeholder_fields.append("email")
+    if address:
+        address_lines = [address]
+    else:
+        address_lines = list(defaults["addressLines"])
+        placeholder_fields.append("addressLines")
+    contact_dict: dict[str, Any] = {
+        "phone": final_phone,
+        "email": final_email,
+        "addressLines": address_lines,
+        "openingHours": defaults["openingHours"],
     }
+    return contact_dict, placeholder_fields
+
+
+def _recompute_placeholder_contact_fields(
+    contact: dict[str, Any] | None, language: str
+) -> list[str]:
+    """Return which contact fields still equal the B88 fallback values.
+
+    Used after wizard/scrape merging in Discovery Resolver and after
+    ``merge_followup_project_input`` so the placeholder-warning list
+    reflects the final Project Input rather than the state that
+    ``_placeholder_contact`` produced before any operator-supplied data
+    overwrote it. A field is still a placeholder iff its current value
+    is byte-identical to the fallback that ``_placeholder_contact``
+    would have written for the same language.
+    """
+    if not isinstance(contact, dict):
+        return []
+    defaults = _placeholder_contact_defaults(language)
+    fields: list[str] = []
+    if contact.get("phone") == defaults["phone"]:
+        fields.append("phone")
+    if contact.get("email") == defaults["email"]:
+        fields.append("email")
+    address_lines = contact.get("addressLines")
+    if (
+        isinstance(address_lines, list)
+        and list(address_lines) == defaults["addressLines"]
+    ):
+        fields.append("addressLines")
+    return fields
 
 
 # Demo-baseline-fix 1C (B95): values that the brief sometimes returns as
@@ -1073,7 +1164,7 @@ def site_brief_to_project_input(
     scaffold_id: str,
     variant_id: str,
     original_prompt: str,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], list[str]]:
     """Deterministic Site Brief -> Project Input mapping.
 
     Operates on the canonical Site Brief artefakt shape (the dict that
@@ -1082,6 +1173,16 @@ def site_brief_to_project_input(
     Missing fields fall back to schema-valid placeholders that the
     operator can edit in the generated Project Input file before
     re-building.
+
+    Returns a tuple ``(project_input, placeholder_contact_fields)``
+    where ``placeholder_contact_fields`` lists contact-block keys
+    (``phone``, ``email``, ``addressLines``) that were filled with B88
+    dummy values because briefModel did not return a real value. The
+    list flows through ``generate()`` onto the meta sidecar so
+    ``scripts/build_site.py`` can include ``placeholderContactFields``
+    in ``build-result.json`` and Viewser Run Details can warn the
+    operator that the published site shows dummy contact info (B133,
+    2026-05-19).
     """
     language = brief.get("language") or "sv"
     business_type = brief.get("businessTypeGuess") or (
@@ -1126,6 +1227,13 @@ def site_brief_to_project_input(
         business_type=business_type,
     )
 
+    contact_block, placeholder_contact_fields = _placeholder_contact(
+        language,
+        contact_phone=brief.get("contactPhone"),
+        contact_email=brief.get("contactEmail"),
+        contact_address=brief.get("contactAddress"),
+    )
+
     tone_words = list(brief.get("tone") or [])
     project_input: dict[str, Any] = {
         "$schema": "../governance/schemas/project-input.schema.json",
@@ -1151,12 +1259,7 @@ def site_brief_to_project_input(
         "requestedCapabilities": list(
             brief.get("requestedCapabilities") or []
         ),
-        "contact": _placeholder_contact(
-            language,
-            contact_phone=brief.get("contactPhone"),
-            contact_email=brief.get("contactEmail"),
-            contact_address=brief.get("contactAddress"),
-        ),
+        "contact": contact_block,
         "selectedDossiers": {
             "required": [],
             "recommended": [],
@@ -1169,7 +1272,7 @@ def site_brief_to_project_input(
             ),
         },
     }
-    return project_input
+    return project_input, placeholder_contact_fields
 
 
 def _validate_against_schema(payload: dict[str, Any]) -> None:
@@ -1597,12 +1700,14 @@ def generate(
     scaffold_id, variant_id = pick_scaffold(
         prompt, brief_artifact.get("businessTypeGuess")
     )
-    candidate_project_input = site_brief_to_project_input(
-        brief_artifact,
-        site_id=final_site_id,
-        scaffold_id=scaffold_id,
-        variant_id=variant_id,
-        original_prompt=prompt,
+    candidate_project_input, _candidate_placeholder_contact_fields = (
+        site_brief_to_project_input(
+            brief_artifact,
+            site_id=final_site_id,
+            scaffold_id=scaffold_id,
+            variant_id=variant_id,
+            original_prompt=prompt,
+        )
     )
     if base_project_input is not None:
         project_input = merge_followup_project_input(
@@ -1626,6 +1731,16 @@ def generate(
             project_input_candidate=project_input,
         )
 
+    # B133 (2026-05-19): efter alla wizard/scrape/follow-up-merger kan
+    # vissa contact-fält fortfarande vara B88-fallback. Recompute mot
+    # final project_input så listan reflekterar vad operatören faktiskt
+    # publicerar, inte initial briefModel-state. Tom lista = ingen
+    # placeholder kvar → ingen warning skrivs i build-result.json.
+    placeholder_contact_fields = _recompute_placeholder_contact_fields(
+        project_input.get("contact") if isinstance(project_input, dict) else None,
+        language,
+    )
+
     _validate_against_schema(project_input)
 
     now = datetime.now(UTC).isoformat(timespec="seconds")
@@ -1644,6 +1759,11 @@ def generate(
     }
     if discovery_decision is not None:
         meta["discoveryDecision"] = discovery_decision.to_dict()
+    # B133: surfaces only when there is actually a placeholder field —
+    # keeps meta + downstream build-result.json clean for runs where
+    # operator/scrape filled every contact field.
+    if placeholder_contact_fields:
+        meta["placeholderContactFields"] = list(placeholder_contact_fields)
     if meta_overrides:
         meta.update(meta_overrides)
 
