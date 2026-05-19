@@ -24,7 +24,10 @@ type FetchedRunsPayload = {
   nextInputs: ProjectInputOption[];
 };
 
-function headerStatusForOutcome(runId: string, outcome: PromptBuildOutcome): string {
+function headerStatusForOutcome(
+  runId: string,
+  outcome: PromptBuildOutcome,
+): string {
   if (outcome === "ok") return `Build klar via prompt: ${runId}`;
   if (outcome === "degraded") return `Build klar med varning: ${runId}`;
   if (outcome === "failed") return `Build misslyckades: ${runId}`;
@@ -53,10 +56,22 @@ export default function Home() {
   const [projectInputs, setProjectInputs] = useState<ProjectInputOption[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState("painter-palma");
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-  const [statusText, setStatusText] = useState("Laddar runs och project inputs…");
+  const [statusText, setStatusText] = useState(
+    "Laddar runs och project inputs…",
+  );
   const [building, setBuilding] = useState(false);
   const [buildStage, setBuildStage] = useState<PromptStage>("idle");
   const [consoleOpen, setConsoleOpen] = useState(false);
+
+  // siteId som är "aktivt" via vald run (om någon). Används för att
+  // visa "Följer vald run"-hint i ProjectInputPicker så operatören ser
+  // att panelen automatiskt följer runens DNA istället för det
+  // manuellt valda Project Input:et.
+  const activeRun = runs.find((run) => run.runId === selectedRunId);
+  const runSiteId =
+    activeRun?.siteId && activeRun.siteId !== "unknown"
+      ? activeRun.siteId
+      : null;
 
   function applyRunsData({ nextRuns, nextInputs }: FetchedRunsPayload) {
     setRuns(nextRuns);
@@ -67,10 +82,32 @@ export default function Home() {
     // vilket gömde hero-vyn och visade en orelevant status-pill. Nu
     // visas hero tills operatören skickar en ny prompt eller väljer
     // en run explicit i ConsoleDrawer.
-    if (!nextInputs.find((item) => item.siteId === selectedSiteId) && nextInputs.length) {
+    //
+    // Reset-fallbacken körs bara när ingen run är vald — annars äger
+    // run-following (handler-sync i onBuildDone/onSelectRunIdAndSync)
+    // selectedSiteId och vi får inte skriva över den med "första
+    // inputen i listan".
+    if (
+      !selectedRunId &&
+      !nextInputs.find((item) => item.siteId === selectedSiteId) &&
+      nextInputs.length
+    ) {
       setSelectedSiteId(nextInputs[0].siteId);
     }
     setStatusText("Sajtbyggaren — localhost-only operator-konsol.");
+  }
+
+  // Run-following sync via handlers (inte useEffect) för att inte bryta
+  // React 19:s `react-hooks/set-state-in-effect`. När operatören väljer
+  // en run i RunHistory / ConsoleDrawer eller en build precis blivit
+  // klar uppdaterar vi selectedRunId OCH selectedSiteId atomiskt så
+  // ProjectInputPicker aldrig visar fel run:s DNA.
+  function selectRunAndSyncSiteId(runId: string) {
+    setSelectedRunId(runId);
+    const run = runs.find((item) => item.runId === runId);
+    if (run && run.siteId && run.siteId !== "unknown") {
+      setSelectedSiteId(run.siteId);
+    }
   }
 
   useEffect(() => {
@@ -88,7 +125,10 @@ export default function Home() {
         applyRunsData(data);
       } catch (error) {
         if (cancelled) return;
-        const message = error instanceof Error ? error.message : "Kunde inte läsa initial data.";
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Kunde inte läsa initial data.";
         setStatusText(message);
       }
     })();
@@ -99,7 +139,7 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="relative h-[100dvh] w-full overflow-hidden bg-background">
+    <main className="bg-background relative h-[100dvh] w-full overflow-hidden">
       <SiteHeader onOpenConsole={() => setConsoleOpen(true)} />
 
       <ViewerPanel
@@ -124,8 +164,17 @@ export default function Home() {
         onBuildEnd={() => setBuilding(false)}
         onStageChange={setBuildStage}
         hidden={building}
-        onBuildDone={(runId, outcome) => {
+        onBuildDone={(runId, outcome, siteId) => {
           setSelectedRunId(runId);
+          // Run-following: bygget gav oss både runId och siteId i
+          // payloaden, så vi syncar selectedSiteId direkt. Det går inte
+          // att gå via selectRunAndSyncSiteId() här eftersom den nya
+          // run:en ännu inte hunnit landa i `runs`-listan (fetchRuns
+          // körs först nedan), och det är just den nya run:en vars
+          // siteId vi vill följa.
+          if (siteId) {
+            setSelectedSiteId(siteId);
+          }
           // B44: never claim "Build klar" for a structured failure or
           // an unknown status. PromptBuilder classifies the outcome
           // from build-result.json:status; the header copy reflects
@@ -152,7 +201,8 @@ export default function Home() {
         selectedSiteId={selectedSiteId}
         onSelectSiteId={setSelectedSiteId}
         selectedRunId={selectedRunId}
-        onSelectRunId={setSelectedRunId}
+        onSelectRunId={selectRunAndSyncSiteId}
+        runSiteId={runSiteId}
         isBuilding={building}
         statusText={statusText}
       />

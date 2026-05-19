@@ -24,6 +24,13 @@ type ConsoleDrawerProps = {
   onSelectSiteId: (next: string) => void;
   selectedRunId: string | null;
   onSelectRunId: (next: string) => void;
+  /**
+   * siteId från den run operatören valt (eller null om ingen run är
+   * vald). Skickas vidare till ProjectInputPicker så den kan visa
+   * "Följer vald run" och varna när runens siteId saknar Project Input
+   * på disk.
+   */
+  runSiteId: string | null;
   isBuilding: boolean;
   statusText: string;
 };
@@ -37,6 +44,7 @@ export function ConsoleDrawer({
   onSelectSiteId,
   selectedRunId,
   onSelectRunId,
+  runSiteId,
   isBuilding,
   statusText,
 }: ConsoleDrawerProps) {
@@ -69,6 +77,7 @@ export function ConsoleDrawer({
               inputs={projectInputs}
               selectedSiteId={selectedSiteId}
               onSelect={onSelectSiteId}
+              runSiteId={runSiteId}
             />
 
             <RunDetailsPanel runId={selectedRunId} />

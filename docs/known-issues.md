@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 98 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 30 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 98 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -595,6 +595,116 @@ för follow-up eller ska städas.
   (parent-agent review efter operatör-override av coach-
   direktiv). Fix: open. Test: open.
 
+### Viewser-overlay-E2E Scout 2026-05-19 — Case 4 (sköldpaddssoppa / conflict)
+
+- **`B137` Medel** (öppen, tagline-läckage av rå prompt-text) -
+  Verifierat live i case 4 (sköldpaddssoppa): `app/page.tsx:9` på Hero
+  visar `"Hemsida om sköldpaddssoppa, mat, 2 sidor, gröna färger"` —
+  operatörens fri-prompt-text läcker publikt som tagline. Förväntat
+  beteende: kort marknadsföringsfras (8-15 ord), inte rå prompt eller
+  UI-direktiv (`"2 sidor"`, `"gröna färger"`-instruktioner etc.).
+  Effekt idag: sajter där wizardens `offer`-fält innehåller
+  instruktioner i stället för verksamhetsbeskrivning får dev-jargong
+  som hero-tagline. Källa: Viewser-overlay-E2E Scout case 4,
+  2026-05-19. Read av
+  `..\sajtbyggaren-output\.generated\skoldpaddssoppa-karlsson-099d5c\app\page.tsx`.
+  Fix: open. Kodväg per Scout-rapport (PR #47, mergad):
+  `packages/generation/discovery/resolve.py:_apply_company_fields`
+  (rad 609-628). Wizardens `answers.offer` ("Beskriv din verksamhet"-
+  fältet) skriver över briefens tagline EFTER att briefen producerats.
+  `offer` används redan som rådata till briefen via
+  `composeMasterPrompt()` i
+  `apps/viewser/components/discovery-wizard/wizard-payload.ts:168-170`,
+  så fixen är att i `_apply_company_fields` antingen (a) sanera
+  `offer` mot UI-direktiv (`"2 sidor"`, `"gröna färger"`,
+  instruktions-prefix) innan det blir tagline, eller (b) låta briefens
+  tagline vinna när `offer` ser ut som UI-direktiv. Befintlig
+  `_derive_tagline` i `scripts/prompt_to_project_input.py` kvarstår
+  som fri-prompt-fallback och ska INTE tas bort. Test:
+  `tests/test_discovery_resolver.py` (eller motsvarande) — case från
+  sköldpaddssoppa-run som låser att `company.tagline` aldrig
+  innehåller substrängarna `"2 sidor"`, `"3 sidor"`, `"gröna färger"`,
+  `"mörkt tema"` etc.
+
+### Sköldpaddssoppa-run follow-up (orchestrator 2026-05-19, sen kväll)
+
+- **`B138` Medel** (öppen, pageCount-läckage från brief till routePlan) -
+  briefModel fångar operatörens explicita sidantal från fri-prompten
+  korrekt (`site-brief.json` har `"pageCount": 2` när operatören skrev
+  `"2 sidor"` i beskrivnings-fältet), men `produce_site_plan` ignorerar
+  `brief.pageCount` och emitterar scaffold-defaults oavsett. Verifierat
+  mot körningen `data/runs/20260519T190606.540Z-51cef6dd-skoldpaddssoppa-karlsson-099d5c/`:
+  `site-brief.json` har `pageCount=2`, `site-plan.json` emitterar
+  fyra routes (`/`, `/tjanster`, `/om-oss`, `/kontakt`) plus fyra
+  `pageIntentWarnings` för wizard-must-have-sidorna. Effekt idag:
+  operatörens explicita sidantal från fri-prompten respekteras inte
+  av planning, trots att briefen fångar det. Skiljt från B132 (warning-
+  only för wizard-must-have): B132 jämför `wizard.mustHave` mot
+  `routePlan` och varnar — B138 är `brief.pageCount` → `routePlan` och
+  ignoreras helt. Fix-pekare: `packages/generation/planning/`
+  (`produce_site_plan` eller nedströms route-emission). Källa: orchestrator
+  follow-up-verifiering av samma run som Scout case 4, 2026-05-19.
+  Fix: open. Test: open.
+
+- **`B139` Låg-medel** (öppen, tone-extraction propageras inte till
+  brand-tokens) - briefModel extraherar tone-fältet från fri-prompten
+  korrekt (`site-brief.json` har `"tone": ["grön"]` och Project Input
+  har `tone.primary: "grön"`) men renderern använder bara
+  `var(--primary)` från `nordic-trust`-CSS-tokens utan koppling till
+  `tone.primary`. Verifierat i samma sköldpaddssoppa-run: generated
+  `app/page.tsx` läser inte tone-fältet alls. Effekt idag: tone-fältet
+  är dead data i renderern — operatörens explicita färgval propagerar
+  inte till brand-tokens. Hänger ihop med variant-promotion-sprinten
+  (Queue #6) men är inte samma fix; variant-promotion handlar om
+  scaffold-variant-selection, B139 handlar om att tone-extraktion ska
+  påverka brand-tokens oavsett vilken variant som väljs. Källa:
+  orchestrator follow-up-verifiering av samma run som Scout case 4,
+  2026-05-19. Fix: open. Kodväg per Scout-rapport (PR #47, mergad):
+  `scripts/build_site.py:variant_css()` (rad 701-737) och
+  `scripts/build_site.py:patch_globals_css()` (rad 2107-2136). Helpern
+  läser bara `variant["tokens"]`; `tone.primary` /
+  `brand.primaryColorHex` har ingen kanal in. Fix-skiss: utöka
+  signaturen att ta dossier eller token-override-objekt och mappa
+  `tone.primary` (eller B140 explicit hex) till `--primary`/relaterade
+  vars innan CSS skrivs. Test: open.
+
+### Scout-rapport PR #47 — ytterligare fynd (2026-05-19, sen kväll)
+
+- **`B140` Låg** (öppen, brand.primaryColorHex ignoreras av variant_css)
+  - Även när discovery-resolvern skriver `brand.primaryColorHex` från
+  wizardens hex-fält (`packages/generation/discovery/resolve.py:_apply_brand_and_assets`)
+  tas det fältet aldrig in i CSS-token-skrivningen.
+  `scripts/build_site.py:variant_css()` läser bara `variant["tokens"]`.
+  Angränsande till B139 (samma helper, samma fix-yta) men spårar en
+  separat data-kanal: B139 är extraherad tone-keyword, B140 är
+  explicit operatörshex. Effekt idag: explicit primärfärg från
+  wizardens hex-fält propagerar inte till renderad CSS oavsett vilken
+  scaffold-variant som väljs. Fix-pekare:
+  `scripts/build_site.py:variant_css` / `patch_globals_css` (samma
+  utvidgning som B139 — token-override-objekt eller dossier-signatur).
+  Källa: Scout-rapport PR #47, "Eventuella ytterligare fynd",
+  2026-05-19. Fix: open. Test: open.
+
+- **`B141` Låg-medel** (öppen, codegen läser tone från död pipeline) -
+  `packages/generation/planning/plan.py:_assemble_generation_package()`
+  skriver bara `siteBriefRef`, INTE `siteBrief`-objektet, till
+  generation_package. Det betyder att
+  `packages/generation/codegen/codegen.py:_summarise_generation_package()`
+  kör `site_brief = generation_package.get("siteBrief") or {}` mot ett
+  alltid-tomt dict; `tone` / `businessType`-rationale från codegenModel
+  baseras därför aldrig på briefens data i prod-flödet. Effekt idag:
+  codegenModel får inget tone- eller businessType-underlag från
+  briefen att resonera om, vilket gör manifest/rationale-ytan tunnare
+  än vad pipelinen utlovar. Beslut behövs: antingen är
+  `siteBriefRef`-mönstret avsiktligt (cite-by-ref) och
+  `_summarise_generation_package` bör ladda briefen från ref:en, eller
+  så ska `_assemble_generation_package` skriva både `siteBrief` och
+  `siteBriefRef`. Fix-pekare:
+  `packages/generation/planning/plan.py:_assemble_generation_package`
+  + `packages/generation/codegen/codegen.py:_summarise_generation_package`.
+  Källa: Scout-rapport PR #47, "Eventuella ytterligare fynd",
+  2026-05-19. Fix: open. Test: open.
+
 ## Stängda - regression-test säkrar fixet
 
 - **`B134` Medel** (stängd 2026-05-19, wizardMustHave follow-up reset) -
@@ -661,9 +771,10 @@ för follow-up eller ska städas.
   (bevaras av `merge_followup_project_input`) framför den prompt-detekterade
   så svensk v1 + engelsk följdprompt fortsätter jämföra mot rätt språks
   defaults. Tuple-unpacking från `site_brief_to_project_input` bevarad
-  med `_`-prefix så kontraktet håller. Källa: PR #45 retroaktiv composer-2.5
-  + lokal-modell-review 2026-05-19. Fix: pending squash-merge-SHA.
-  Test: `tests/test_prompt_to_project_input.py::test_followup_with_discovery_recomputes_placeholder_fields_against_merged_contact`.
+  med `_`-prefix så kontraktet håller.   Källa: PR #45 retroaktiv composer-2.5
+  + lokal-modell-review 2026-05-19. Fix: `895d80b` (direkt-main, ej PR;
+  ruff-fix `6fe04ef` följde). Test:
+  `tests/test_prompt_to_project_input.py::test_followup_with_discovery_recomputes_placeholder_fields_against_merged_contact`.
 
 - **`B131` Medel** (stängd 2026-05-19, capability alias dedup) -
   `_resolve_capabilities` dedupade tidigare `requestedCapabilities`
