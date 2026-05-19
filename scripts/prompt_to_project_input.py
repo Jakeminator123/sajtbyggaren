@@ -1765,7 +1765,13 @@ def generate(
     scaffold_id, variant_id = pick_scaffold(
         prompt, brief_artifact.get("businessTypeGuess")
     )
-    candidate_project_input, candidate_placeholder_contact_fields = (
+    # B136 (2026-05-19, post-PR-#45 follow-up review): tuple-unpacking bevarad
+    # för site_brief_to_project_input-kontraktet, men candidate-listan
+    # konsumeras inte längre vid resolve-tid. Pre-resolve placeholder_fields
+    # beräknas i stället mot post-merge project_input.contact (se nedan) så
+    # follow-up-flödet inte felaktigt markerar v1-bevarade kontaktvärden som
+    # "default" när merge_followup_project_input behåller dem byte-stabilt.
+    candidate_project_input, _candidate_placeholder_contact_fields = (
         site_brief_to_project_input(
             brief_artifact,
             site_id=candidate_site_id,
@@ -1788,13 +1794,36 @@ def generate(
     # med ``fieldSources`` och ``fallbackWarnings``. Decision-payloaden
     # skrivs som extra fält ``discoveryDecision`` på meta-sidecaren — ingen
     # ny Engine Run-artefakt eftersom run-kontraktet är åtta filer.
+    # B136 (2026-05-19, post-PR-#45 follow-up review): placeholder_fields
+    # måste beräknas mot post-merge ``project_input.contact``, inte mot
+    # candidate brief-kandidaten. Annars markerar Discovery Resolverns
+    # ``_apply_contact_fields`` v1-bevarade real contact-värden som
+    # ``"default"`` i ``fieldSources`` när follow-up-läget kör — eftersom
+    # ``merge_followup_project_input`` håller previous contact byte-stabilt,
+    # så candidate-listan från brief-kandidaten flaggar phone/email/openingHours
+    # som placeholder trots att den slutliga contact:en är riktig från v1.
+    # Recomputen använder samma ``_recompute_placeholder_contact_fields``-helper
+    # som B133-flödet kör post-resolve för meta-sidecaren, och föredrar
+    # ``project_input["language"]`` (bevaras av ``merge_followup``) framför
+    # den prompt-detekterade när språket bytt mellan versioner.
+    pre_resolve_language = (
+        project_input.get("language")
+        if isinstance(project_input, dict)
+        and isinstance(project_input.get("language"), str)
+        else language
+    )
+    pre_resolve_placeholder_fields = _recompute_placeholder_contact_fields(
+        project_input.get("contact") if isinstance(project_input, dict) else None,
+        pre_resolve_language,
+    )
+
     discovery_decision: DiscoveryDecision | None = None
     if discovery is not None:
         project_input, discovery_decision = resolve_discovery(
             raw_prompt=prompt,
             payload=discovery,
             project_input_candidate=project_input,
-            placeholder_fields=candidate_placeholder_contact_fields,
+            placeholder_fields=pre_resolve_placeholder_fields,
         )
     wizard_must_have = _wizard_must_have_from_discovery(discovery)
 

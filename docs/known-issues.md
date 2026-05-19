@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 97 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 25 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 98 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -639,6 +639,31 @@ för follow-up eller ska städas.
   `tests/test_discovery_resolver.py::test_apply_contact_fields_keeps_brief_when_value_is_real`,
   `tests/test_discovery_resolver.py::test_resolve_discovery_field_sources_distinguish_placeholder`,
   `tests/test_discovery_resolver.py::test_generate_writes_discovery_decision_to_meta_sidecar`.
+
+- **`B136` Medel** (stängd 2026-05-19, follow-up placeholder recompute mot post-merge contact) -
+  PR #45 (B135) stängde fieldSources-felaktigheten för init-flödet, men
+  retroaktiva reviews (composer-2.5 + lokala modeller) flaggade att
+  `scripts/prompt_to_project_input.py` skickade `candidate_placeholder_contact_fields`
+  från `site_brief_to_project_input` direkt vidare till `resolve_discovery`.
+  I follow-up-läge ersätts `project_input` av `merge_followup_project_input`
+  som bevarar previous `contact` byte-stabilt, så candidate-listan från
+  ny brief-kandidat kunde flagga real v1-värden som placeholder och få
+  `_apply_contact_fields` att markera dem som `"default"` i `fieldSources`
+  + trigga `operatorReviewRequired=True` utan fog. **Fix:** `generate()`
+  beräknar nu en pre-resolve `pre_resolve_placeholder_fields` via
+  `_recompute_placeholder_contact_fields(project_input.get("contact"),
+  pre_resolve_language)` mot post-merge state, och skickar listan vidare
+  till `resolve_discovery(..., placeholder_fields=...)` istället för
+  candidate-listan. `_recompute_placeholder_contact_fields`-helpern är
+  samma som B133-flödet kör post-resolve för meta-sidecaren, så pre- och
+  post-resolve recompute använder samma värdebaserade jämförelse mot
+  B88-defaults. `pre_resolve_language` föredrar `project_input["language"]`
+  (bevaras av `merge_followup_project_input`) framför den prompt-detekterade
+  så svensk v1 + engelsk följdprompt fortsätter jämföra mot rätt språks
+  defaults. Tuple-unpacking från `site_brief_to_project_input` bevarad
+  med `_`-prefix så kontraktet håller. Källa: PR #45 retroaktiv composer-2.5
+  + lokal-modell-review 2026-05-19. Fix: pending squash-merge-SHA.
+  Test: `tests/test_prompt_to_project_input.py::test_followup_with_discovery_recomputes_placeholder_fields_against_merged_contact`.
 
 - **`B131` Medel** (stängd 2026-05-19, capability alias dedup) -
   `_resolve_capabilities` dedupade tidigare `requestedCapabilities`
