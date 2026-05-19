@@ -162,14 +162,29 @@ att passa heredoc till `git commit -m` direkt på Windows ger
 `Missing file specification after redirection operator`. För att
 undvika att skapa skräpfiler i repo-roten:
 
-1. Skriv meddelandet till `$env:TEMP\sb-commit-msg.txt` (utanför repo).
-2. `git commit -F $env:TEMP\sb-commit-msg.txt`.
-3. `Remove-Item $env:TEMP\sb-commit-msg.txt` (städ; men även om du
-   glömmer ligger filen utanför repo).
+1. Skriv meddelandet till `$env:LOCALAPPDATA\Temp\sb-commit-msg.txt`
+   (utanför repo, alltid user-temp). Använd helst en unik filnamns-
+   suffix per commit, t.ex. tidsstämpel: `sb-commit-msg-<yyyyMMddHHmmss>.txt`.
+2. `git commit -F $env:LOCALAPPDATA\Temp\sb-commit-msg.txt`.
+3. `Remove-Item $env:LOCALAPPDATA\Temp\sb-commit-msg.txt` (städ; men även
+   om du glömmer ligger filen utanför repo).
+
+> **Gotcha:** Använd **inte** `$env:TEMP` i agent-shell. Cursor-/Codex-
+> agenter kör ofta sin PowerShell i elevated/system-kontext där
+> `$env:TEMP` resolveras till `C:\WINDOWS\TEMP` i stället för operatörens
+> user-temp `C:\Users\<user>\AppData\Local\Temp`. Två separata problem:
+> (a) en stale `sb-commit-msg.txt` i system-temp från tidigare cloud-agent
+> kan plockas upp tyst och `git commit -F` använder *fel* meddelande,
+> (b) agenten saknar i regel write-access till `C:\WINDOWS\TEMP` så städ
+> failar. `$env:LOCALAPPDATA\Temp` är alltid user-temp oavsett shellets
+> security-context. Verifierat fall: commit `840e73f` (2026-05-19) fick
+> en helt orelaterad cached message — Steward-bumpens diff var korrekt
+> men message-fältet visade `feat(discovery): align Viewser overlay
+> with taxonomy`. Erratan landade i `848b...`-serien.
 
 Skapa **aldrig** commit-message-filer som `.commit-msg.tmp` i repo-roten
 i samma steg som `git add -A`. Race-villkoret är: filen finns på disk när
 `git add -A` körs, så den hamnar i index trots att du tänkt radera den
 direkt efter commit. `.gitignore` fångar nya temporära mönster
-(`.tmp-*`, `.tmp.*`, `.commit-msg.tmp`), men prevention via `$env:TEMP`
-är säkrare än att lita på ignore-mönstret.
+(`.tmp-*`, `.tmp.*`, `.commit-msg.tmp`), men prevention via
+`$env:LOCALAPPDATA\Temp` är säkrare än att lita på ignore-mönstret.
