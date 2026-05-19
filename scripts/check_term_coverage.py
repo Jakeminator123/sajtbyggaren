@@ -475,6 +475,11 @@ COMMON_WORDS = {
     "B134", "B135", "B136",  # öppnade + stängda i Scout-orchestrator-pass 2026-05-19
     "B137",  # öppnad i Viewser-overlay-E2E Scout case 4 2026-05-19 (tagline-läckage)
     "B137 fix",  # bolded phrase i current-focus narrative (Steward-prose)
+    "ADR 0025 implementation",  # bolded phrase i handoff.md next-steps-tabell
+    "AppData",  # del av Windows-path $env:LOCALAPPDATA\Temp i handoff-prose
+    "Backups",  # rubrik i handoff.md status-tabell
+    "Proposed",  # ADR-status (proposed → accepted) refererad i handoff/scout-prose
+    "Working tree",  # rubrik i handoff.md status-tabell
     "Cleanup",  # vanlig engelsk rubrik i operator-flöde-text
     "EJ uppfyllt",  # rapport-text i Scout verdict-tabell (case 4 < 6.5-golvet)
     "Kontakta oss",  # CTA-string citerad från generated TSX i case-rapporter
