@@ -1,0 +1,132 @@
+<!-- AUTO-GENERATED FROM governance/rules/shell-windows-defaults.md. Do not edit directly. Run: python scripts/rules_sync.py -->
+---
+description: Operatören kör PowerShell på Windows (WSL finns som backup men används inte default). Använd PowerShell-syntax och -kommandon i Shell-anrop. Unix-only verb som head, tail, cat, sed, awk, grep, find, mkdir -p, touch, which ger "not recognized as a name of a cmdlet" och stör loopen. Föredra Read/Glob/Grep/Edit-verktygen för fil- och sökoperationer; använd Shell bara för riktiga shell-uppgifter (git, npm, pytest, ruff, python-script).
+alwaysApply: true
+---
+
+# Shell-defaults på Windows + PowerShell
+
+## Operatörens miljö
+
+- **OS:** Windows 10+ (`win32 10.0.x`).
+- **Default-shell:** PowerShell (Cursors `Shell`-tool kör PowerShell, inte
+  bash/zsh).
+- **WSL:** finns men används inte som default. Om en uppgift kräver
+  Linux-only-verktyg, fråga operatören innan du föreslår WSL-väg.
+- **Linux/macOS:** ingen lokal installation utöver WSL.
+
+Detta är en agent-discipline-regel, inte en miljö-detektion. Behandla
+operatören som "PowerShell-only" tills hen säger något annat.
+
+## Bannade Unix-verb i Shell-anrop
+
+Följande kommandon **finns inte** i PowerShell och resulterar i
+`The term '<verb>' is not recognized as a name of a cmdlet, function,
+script file, or executable program`. Använd inte i `Shell`:
+
+| Unix | PowerShell-ersättning | Eller verktyg i Cursor |
+| --- | --- | --- |
+| `head -N file` | `Get-Content file -TotalCount N` | `Read` med `limit` |
+| `head -N` (pipe) | `... \| Select-Object -First N` | — |
+| `tail -N file` | `Get-Content file -Tail N` | `Read` med `offset: -N` |
+| `tail -f file` | `Get-Content file -Wait -Tail 0` | — |
+| `cat file` | `Get-Content file` | `Read` (rekommenderat) |
+| `cat file1 file2` | `Get-Content file1, file2` | `Read` flera ggr |
+| `grep pattern` | `Select-String -Pattern pattern` | `Grep` (rekommenderat) |
+| `grep -r pattern .` | — | `Grep` (rekommenderat) |
+| `find . -name pattern` | `Get-ChildItem -Recurse -Filter pattern` | `Glob` (rekommenderat) |
+| `which cmd` | `Get-Command cmd` | — |
+| `mkdir -p path/to/dir` | `New-Item -ItemType Directory -Force -Path path/to/dir` | — |
+| `touch file` | `New-Item -ItemType File -Path file` (eller `Set-Content`) | — |
+| `rm -rf dir` | `Remove-Item -Recurse -Force dir` | `Delete` om det är en fil |
+| `cp src dst` | `Copy-Item src dst` | — |
+| `mv src dst` | `Move-Item src dst` | — |
+| `wc -l file` | `(Get-Content file).Count` | — |
+| `sort file` | `Get-Content file \| Sort-Object` | — |
+| `sed 's/a/b/' file` | `(Get-Content file) -replace 'a','b' \| Set-Content file` | `StrReplace` (rekommenderat) |
+| `awk` (cell-extract) | `... \| ForEach-Object { ($_ -split '\s+')[N] }` | `Grep` med capture-group |
+| `&&` chain | `;` (sekvens) eller `if ($?) { ... }` (villkorad) |
+
+> **Viktigaste regeln:** för fil- och sökoperationer använd Cursors
+> specialverktyg (`Read`, `Glob`, `Grep`, `StrReplace`, `Write`, `Delete`,
+> `EditNotebook`). De är plattformsoberoende och påverkas inte av
+> shell-syntax. Spara `Shell` för riktiga shell-uppgifter: git, npm,
+> python, pytest, ruff, scripts/-anrop, miljövariabler.
+
+## Cross-platform-kommandon (preferred)
+
+Följande fungerar identiskt i både PowerShell och bash, så de är
+säkraste valet i Shell:
+
+- `git ...` (alla git-subkommandon)
+- `python ...` (alla python-anrop)
+- `npm ...` / `npx ...`
+- `pytest`, `ruff check`, `ruff format`
+- Repo-script: `python scripts/focus_check.py`,
+  `python scripts/governance_validate.py`,
+  `python scripts/check_term_coverage.py --strict`,
+  `python scripts/list_open_bugs.py`,
+  `python scripts/rules_sync.py --check`,
+  `python scripts/tree_view.py`
+- PowerShell-script: `.\scripts\dev-viewser.ps1` (operatör-script,
+  Windows-avsedd)
+
+## Pipe- och redirect-skillnader
+
+PowerShell:s pipeline skickar `[PSObject]`, inte rå text. Det betyder:
+
+- `python -m pytest -q | head -40` failar (head finns inte). Använd
+  `python -m pytest -q | Select-Object -First 40`. Eller skippa pipen
+  och låt full output skrivas — pytest har egen `-q` redan.
+- `git diff 2>&1 | head -100` failar. Använd
+  `git diff 2>&1 | Select-Object -First 100` eller
+  `(git diff 2>&1) -split "`n" | Select-Object -First 100`.
+- Output-redirect till fil: `git log > log.txt` funkar i båda; men
+  PowerShell skriver UTF-16-LE BOM som default. Vid behov använd
+  `git log | Out-File -FilePath log.txt -Encoding utf8 -NoNewline` för
+  UTF-8.
+
+## Multi-line-strängar
+
+PowerShell saknar bash-heredoc (`<<'EOF' ... EOF`). Två fungerande
+alternativ:
+
+1. **Here-string** (rekommenderas för korta strängar):
+
+   ```powershell
+   $msg = @"
+   docs(steward): bump verified state
+   
+   Body line 1
+   Body line 2
+   "@
+   git commit -m $msg
+   ```
+
+2. **Temp-fil** (rekommenderas för commit-meddelanden — se
+   `branch-discipline.md` "Multi-line commit-meddelanden på Windows/
+   PowerShell" för fullständig pattern med
+   `$env:LOCALAPPDATA\Temp\sb-commit-msg-<timestamp>.txt`).
+
+## Exit-code-semantik
+
+PowerShell-native cmdlets sätter inte alltid `$LASTEXITCODE` — det är
+reserverat för externa native processes (git, python, npm, etc.).
+
+- För externa processes: `git push; if ($LASTEXITCODE -ne 0) { ... }`.
+- För cmdlets: `Get-Content file; if (-not $?) { ... }`.
+- För båda i en chain: använd separata if-checks; PowerShell:s `&&`
+  finns bara från PowerShell 7+ och är inte garanterat tillgänglig.
+
+## Sammanfattning för agenter
+
+1. Anta PowerShell. Inte bash, inte zsh, inte sh.
+2. För fil-/sök-operationer: använd `Read`/`Glob`/`Grep`/`StrReplace`/
+   `Write`/`Delete` — inte `Shell`.
+3. För git/python/npm/pytest/ruff/repo-script: `Shell` funkar lika i
+   båda plattformar.
+4. Om du måste Unix-pipe något: använd `Select-Object -First N` (inte
+   `head`), `Select-Object -Last N` (inte `tail`), `Select-String`
+   (inte `grep`).
+5. Multi-line: here-string eller temp-fil. Aldrig heredoc i Shell-anrop.
+6. WSL bara om operatör explicit säger så.
