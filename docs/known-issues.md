@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 28 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 98 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 30 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 98 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -598,34 +598,33 @@ för follow-up eller ska städas.
 ### Viewser-overlay-E2E Scout 2026-05-19 — Case 4 (sköldpaddssoppa / conflict)
 
 - **`B137` Medel** (öppen, tagline-läckage av rå prompt-text) -
-
-  > NOTE (orchestrator 2026-05-19, sen kväll): Discovery-metans
-  > `fieldSources.company.tagline = "wizard"` säger att taglinen kommer från
-  > wizard-overlay-mappningen, inte från `prompt_to_project_input.py`. Fix-
-  > pekaren nedan är fel-rotad. Scout RO-pass pågår parallellt och kartlägger
-  > exakt kodväg; Steward Pass 2 uppdaterar entryn med rätt fil/funktion +
-  > test-pekare.
-
-  `scripts/prompt_to_project_input.py` skriver `company.tagline` =
-  rå prompt-/beskrivnings-text när briefModel inte producerar en
-  kort sammanfattning. Verifierat live i case 4 (sköldpaddssoppa):
-  `app/page.tsx:9` på Hero visar `"Hemsida om sköldpaddssoppa, mat,
-  2 sidor, gröna färger"` — operatörens fri-prompt-text läcker
-  publikt som tagline. Förväntat beteende: briefModel ska producera
-  kort marknadsföringsfras (8-15 ord), eller `_derive_tagline`-helper
-  ska ge en deterministisk fallback (typ `"Lokalt tjänsteföretag i
-  Stockholm"`) i stället för rå prompt. Effekt idag: sajter med sparse
-  briefModel-output får promptens egen text som hero-tagline, vilket
-  är dev-jargong (`"2 sidor"`, `"gröna färger"`-direktiv etc.) snarare
-  än kund-presentation. Bekräftar att briefModel-spåret + post-process-
-  fallback inte täcker case där operatören skriver instruktioner i
-  beskrivnings-fältet i stället för verksamhetsbeskrivning. Källa:
-  Viewser-overlay-E2E Scout case 4, 2026-05-19. Read av
+  Verifierat live i case 4 (sköldpaddssoppa): `app/page.tsx:9` på Hero
+  visar `"Hemsida om sköldpaddssoppa, mat, 2 sidor, gröna färger"` —
+  operatörens fri-prompt-text läcker publikt som tagline. Förväntat
+  beteende: kort marknadsföringsfras (8-15 ord), inte rå prompt eller
+  UI-direktiv (`"2 sidor"`, `"gröna färger"`-instruktioner etc.).
+  Effekt idag: sajter där wizardens `offer`-fält innehåller
+  instruktioner i stället för verksamhetsbeskrivning får dev-jargong
+  som hero-tagline. Källa: Viewser-overlay-E2E Scout case 4,
+  2026-05-19. Read av
   `..\sajtbyggaren-output\.generated\skoldpaddssoppa-karlsson-099d5c\app\page.tsx`.
-  Fix: open. Test: open (rekommenderat
-  `tests/test_prompt_to_project_input.py::test_tagline_never_equals_originalprompt_or_offer`
-  som låser att `company.tagline` aldrig är identisk med `originalPrompt`
-  eller `offer`-fältet).
+  Fix: open. Kodväg per Scout-rapport (PR #47, mergad):
+  `packages/generation/discovery/resolve.py:_apply_company_fields`
+  (rad 609-628). Wizardens `answers.offer` ("Beskriv din verksamhet"-
+  fältet) skriver över briefens tagline EFTER att briefen producerats.
+  `offer` används redan som rådata till briefen via
+  `composeMasterPrompt()` i
+  `apps/viewser/components/discovery-wizard/wizard-payload.ts:168-170`,
+  så fixen är att i `_apply_company_fields` antingen (a) sanera
+  `offer` mot UI-direktiv (`"2 sidor"`, `"gröna färger"`,
+  instruktions-prefix) innan det blir tagline, eller (b) låta briefens
+  tagline vinna när `offer` ser ut som UI-direktiv. Befintlig
+  `_derive_tagline` i `scripts/prompt_to_project_input.py` kvarstår
+  som fri-prompt-fallback och ska INTE tas bort. Test:
+  `tests/test_discovery_resolver.py` (eller motsvarande) — case från
+  sköldpaddssoppa-run som låser att `company.tagline` aldrig
+  innehåller substrängarna `"2 sidor"`, `"3 sidor"`, `"gröna färger"`,
+  `"mörkt tema"` etc.
 
 ### Sköldpaddssoppa-run follow-up (orchestrator 2026-05-19, sen kväll)
 
@@ -658,11 +657,53 @@ för follow-up eller ska städas.
   inte till brand-tokens. Hänger ihop med variant-promotion-sprinten
   (Queue #6) men är inte samma fix; variant-promotion handlar om
   scaffold-variant-selection, B139 handlar om att tone-extraktion ska
-  påverka brand-tokens oavsett vilken variant som väljs. Fix-pekare:
-  open (sannolikt `packages/generation/codegen/` med en mapping
-  tone-keyword → brand-token-override). Källa: orchestrator follow-up-
-  verifiering av samma run som Scout case 4, 2026-05-19. Fix: open.
-  Test: open.
+  påverka brand-tokens oavsett vilken variant som väljs. Källa:
+  orchestrator follow-up-verifiering av samma run som Scout case 4,
+  2026-05-19. Fix: open. Kodväg per Scout-rapport (PR #47, mergad):
+  `scripts/build_site.py:variant_css()` (rad 701-737) och
+  `scripts/build_site.py:patch_globals_css()` (rad 2107-2136). Helpern
+  läser bara `variant["tokens"]`; `tone.primary` /
+  `brand.primaryColorHex` har ingen kanal in. Fix-skiss: utöka
+  signaturen att ta dossier eller token-override-objekt och mappa
+  `tone.primary` (eller B140 explicit hex) till `--primary`/relaterade
+  vars innan CSS skrivs. Test: open.
+
+### Scout-rapport PR #47 — ytterligare fynd (2026-05-19, sen kväll)
+
+- **`B140` Låg** (öppen, brand.primaryColorHex ignoreras av variant_css)
+  - Även när discovery-resolvern skriver `brand.primaryColorHex` från
+  wizardens hex-fält (`packages/generation/discovery/resolve.py:_apply_brand_and_assets`)
+  tas det fältet aldrig in i CSS-token-skrivningen.
+  `scripts/build_site.py:variant_css()` läser bara `variant["tokens"]`.
+  Angränsande till B139 (samma helper, samma fix-yta) men spårar en
+  separat data-kanal: B139 är extraherad tone-keyword, B140 är
+  explicit operatörshex. Effekt idag: explicit primärfärg från
+  wizardens hex-fält propagerar inte till renderad CSS oavsett vilken
+  scaffold-variant som väljs. Fix-pekare:
+  `scripts/build_site.py:variant_css` / `patch_globals_css` (samma
+  utvidgning som B139 — token-override-objekt eller dossier-signatur).
+  Källa: Scout-rapport PR #47, "Eventuella ytterligare fynd",
+  2026-05-19. Fix: open. Test: open.
+
+- **`B141` Låg-medel** (öppen, codegen läser tone från död pipeline) -
+  `packages/generation/planning/plan.py:_assemble_generation_package()`
+  skriver bara `siteBriefRef`, INTE `siteBrief`-objektet, till
+  generation_package. Det betyder att
+  `packages/generation/codegen/codegen.py:_summarise_generation_package()`
+  kör `site_brief = generation_package.get("siteBrief") or {}` mot ett
+  alltid-tomt dict; `tone` / `businessType`-rationale från codegenModel
+  baseras därför aldrig på briefens data i prod-flödet. Effekt idag:
+  codegenModel får inget tone- eller businessType-underlag från
+  briefen att resonera om, vilket gör manifest/rationale-ytan tunnare
+  än vad pipelinen utlovar. Beslut behövs: antingen är
+  `siteBriefRef`-mönstret avsiktligt (cite-by-ref) och
+  `_summarise_generation_package` bör ladda briefen från ref:en, eller
+  så ska `_assemble_generation_package` skriva både `siteBrief` och
+  `siteBriefRef`. Fix-pekare:
+  `packages/generation/planning/plan.py:_assemble_generation_package`
+  + `packages/generation/codegen/codegen.py:_summarise_generation_package`.
+  Källa: Scout-rapport PR #47, "Eventuella ytterligare fynd",
+  2026-05-19. Fix: open. Test: open.
 
 ## Stängda - regression-test säkrar fixet
 
