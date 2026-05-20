@@ -28,6 +28,19 @@ export interface AssetRef {
   placement?: AssetPlacement;
   visionSubject?: string;
   visionConfidence?: VisionConfidence;
+  /**
+   * Publik URL där den optimerade bytes:n kan hämtas (HTTPS, ingen auth).
+   *
+   * Satt av `VercelBlobAssetStore` när ASSET_STORE_DRIVER=vercel-blob, då
+   * raderna ovan inte räcker — filen ligger inte på disk utan i en remote
+   * blob-store. `LocalAssetStore` lämnar fältet `undefined` (filen finns
+   * under `data/uploads/<siteId>/<assetId>/optimized.webp`).
+   *
+   * `scripts/build_site.py copy_operator_uploads` ska föredra `sourceUrl`
+   * framför disk-lookup när fältet finns (HTTP-fetch → skriv till
+   * `public/uploads/<filename>`). Se `docs/backend-handoff.md` gap #11.
+   */
+  sourceUrl?: string;
 }
 
 export interface SaveAssetInput {

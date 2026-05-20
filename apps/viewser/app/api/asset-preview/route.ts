@@ -1,20 +1,30 @@
 import { existsSync, statSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
 
 import { NextRequest, NextResponse } from "next/server";
 
 import { getAssetStore } from "@/lib/asset-store";
+import { LocalAssetStore } from "@/lib/asset-store/local";
 import { assertLocalhost } from "@/lib/localhost-guard";
-import { readFile } from "node:fs/promises";
 
 /**
  * GET /api/asset-preview?assetId=...&siteId=...
  *
- * Strömmar tillbaka den optimerade webp-varianten (eller SVG-originalet)
- * för en uppladdad asset så att wizardens AssetCard kan rendera en
- * thumbnail. Localhost-only.
+ * Returnerar en thumbnail av den uppladdade asset:n så wizardens
+ * AssetCard kan rendera en preview. Beteende beror på vilken
+ * `AssetStore`-driver som är aktiv:
  *
- * Den här endpointen läser bara från `data/uploads/` — inga skrivningar.
+ *   - LocalAssetStore: strömmar bytes direkt från
+ *     `data/uploads/<siteId>/<assetId>/optimized.webp` (eller SVG-
+ *     originalet). no-store cache så thumbnailen syns omedelbart.
+ *
+ *   - VercelBlobAssetStore: HTTP 307-redirect till blob-URL:n så
+ *     browsern hämtar bytes direkt från CDN:en (snabbare än att proxa
+ *     genom Next.js dev-servern, och vi slipper buffra bytes onödigt).
+ *     Vi slår upp `AssetRef.sourceUrl` via `store.load()`.
+ *
+ * Localhost-only.
  */
 
 const SITE_ID_PATTERN = /^[a-z0-9_-]{1,64}$/i;
@@ -43,11 +53,41 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Ogiltigt siteId." }, { status: 400 });
   }
 
+  const store = getAssetStore();
+
+  // Non-local-driver:s (idag bara VercelBlobAssetStore) har ingen
+  // disk-sökväg. Vi slår upp manifestet och redirectar till blob-URL:n.
+  if (!(store instanceof LocalAssetStore)) {
+    let ref;
+    try {
+      ref = await store.load(siteId, assetId);
+    } catch (caught) {
+      const message =
+        caught instanceof Error ? caught.message : "Misslyckades läsa manifest.";
+      return NextResponse.json({ error: message }, { status: 502 });
+    }
+    if (!ref || !ref.sourceUrl) {
+      return NextResponse.json(
+        { error: "Asset saknas i remote store (sourceUrl saknas)." },
+        { status: 404 },
+      );
+    }
+    // 307 Temporary Redirect bevarar metoden (GET) och säger åt browsern
+    // att inte cacha redirecten själv — då slipper vi att en flyttad
+    // asset visar gammal cache. CDN:en bakom blob-URL:n cache:ar
+    // bytes:en själv så preview-hastigheten blir likvärdig disk.
+    return NextResponse.redirect(ref.sourceUrl, {
+      status: 307,
+      headers: { "cache-control": "no-store" },
+    });
+  }
+
   let resolvedPath: string;
   try {
-    resolvedPath = getAssetStore().resolveOptimizedPath(siteId, assetId);
+    resolvedPath = store.resolveOptimizedPath(siteId, assetId);
   } catch (caught) {
-    const message = caught instanceof Error ? caught.message : "Hittade inte asset.";
+    const message =
+      caught instanceof Error ? caught.message : "Hittade inte asset.";
     return NextResponse.json({ error: message }, { status: 404 });
   }
 
@@ -56,7 +96,9 @@ export async function GET(request: NextRequest) {
   }
 
   const stats = statSync(resolvedPath);
-  const mime = MIME_BY_EXT[extname(resolvedPath).toLowerCase()] ?? "application/octet-stream";
+  const mime =
+    MIME_BY_EXT[extname(resolvedPath).toLowerCase()] ??
+    "application/octet-stream";
   const bytes = await readFile(resolvedPath);
 
   // VIKTIGT: ingen browser-cache här. När operatören byter wizard-steg
