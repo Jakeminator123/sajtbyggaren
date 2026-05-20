@@ -12,42 +12,59 @@
  * delobjekt — varje delobjekt har egen `id` så att vi kan rendera
  * stabila keys utan att slumpa generera.
  *
- * Ported från `Sajtmaskin_Genberg/src/components/builder/IntakeWizard.tsx`
- * `WizardAnswers`-typen, men trimmad så bara fält som faktiskt syns
- * i UI:t finns kvar. Saknade fält (avoid, imagery, goal) tas in från
- * scrape/LLM endast.
+ * 2026-05-19 — 5-stegs-omstrukturering: stegen heter nu `foundation`,
+ * `visual`, `functions`, `content`, `media` och mappar 1:1 mot de fyra
+ * pipeline-delarna (Scaffold/Starter, Variant, Dossier, Copy + Assets).
+ * Nya fält tillagda: `businessFamily`, `vibe`, `moodImages`,
+ * `selectedFunctions`, `specialRequests`, `productImages` per produkt,
+ * `media.{favicon,ogImage,backgroundVideo}`. Gamla fält behålls för att
+ * `wizard-payload.ts` / `composeMasterPrompt` ska fungera utan stora
+ * backend-ändringar.
  */
 
-import type { ContentBranch, WizardCategoryId } from "./wizard-constants";
+import type {
+  BusinessFamilyId,
+  ContentBranch,
+  TypographyFeelId,
+  WizardCategoryId,
+} from "./wizard-constants";
 import type { AssetRef } from "@/lib/asset-store/types";
 
 export type WizardStepId =
-  | "company"
-  | "siteType"
+  | "foundation"
+  | "visual"
+  | "functions"
   | "content"
-  | "story"
-  | "pages"
-  | "assets"
-  | "brand";
+  | "media";
 
 export const WIZARD_STEP_ORDER: WizardStepId[] = [
-  "company",
-  "siteType",
+  "foundation",
+  "visual",
+  "functions",
   "content",
-  "story",
-  "pages",
-  "assets",
-  "brand",
+  "media",
 ];
 
 export const WIZARD_STEP_TITLES: Record<WizardStepId, string> = {
-  company: "Ditt företag",
-  siteType: "Kategori",
+  foundation: "Företaget & sajttypen",
+  visual: "Visuell identitet",
+  functions: "Funktioner & sidor",
+  content: "Innehåll & ton",
+  media: "Bilder & media",
+};
+
+/**
+ * Pipeline-del som steget primärt styr — visas som badge i UI:t så
+ * operatören förstår vad varje fråga "pratar med" på backend.
+ */
+export type PipelinePart = "Sidor" | "Visuellt" | "Funktioner" | "Innehåll" | "Media";
+
+export const WIZARD_STEP_PIPELINE_BADGE: Record<WizardStepId, PipelinePart> = {
+  foundation: "Sidor",
+  visual: "Visuellt",
+  functions: "Funktioner",
   content: "Innehåll",
-  story: "Om företaget",
-  pages: "Sidor och CTA",
-  assets: "Bilder och logotyp",
-  brand: "Ton och stil",
+  media: "Media",
 };
 
 export type ProductItem = {
@@ -57,6 +74,8 @@ export type ProductItem = {
   description?: string;
   category?: string;
   imageUrl?: string;
+  /** Per-produkt-bild (nytt i Pass 1 — uppladdad via dropzone i steg 4). */
+  productImage?: AssetRef;
 };
 
 export type MenuItem = {
@@ -106,6 +125,23 @@ export type WizardBrand = {
 };
 
 /**
+ * Steg 2 — Visuell identitet. Drivs av vald `vibeId` (en av 10
+ * varianter i `VIBE_OPTIONS`), plus typography-feel och valfri
+ * kombination av egna färger + referenser + mood-bilder.
+ *
+ * `useCustomColors=true` betyder att backend ska skriva över variantens
+ * default `--primary` och `--accent` med `brand.primaryColorHex` /
+ * `brand.accentColorHex` (kräver att Gap 1 stängs av backend; se
+ * `docs/backend-handoff.md`).
+ */
+export type WizardVibe = {
+  vibeId: string;
+  useCustomColors: boolean;
+  typographyFeel: TypographyFeelId | "";
+  references: string;
+};
+
+/**
  * Operatör-uppladdade bilder. Logo + hero är skalärer (max 1 stycken
  * vardera); gallery är en lista. Varje AssetRef har redan gått genom
  * sharp-pipelinen och GPT Vision-klassificeringen i `/api/upload-asset`,
@@ -119,6 +155,18 @@ export type WizardAssets = {
 };
 
 /**
+ * Steg 5 — extra media-assets utöver logo/hero/gallery. Behöver
+ * backend-stöd för att fullt utnyttjas (favicon → .ico-konvertering,
+ * OG-image → 1200×630 crop, video → mime-validering). Se
+ * `docs/backend-handoff.md` för exakt vad som behövs.
+ */
+export type WizardMedia = {
+  favicon: AssetRef | null;
+  ogImage: AssetRef | null;
+  backgroundVideo: AssetRef | null;
+};
+
+/**
  * Confidence-nivå per fält när det fylldes från scrape/LLM. UI:t
  * använder den för att visa en diskret "auto-ifylld"-badge så
  * operatorn vet vilka svar som behöver granskas extra noga.
@@ -126,16 +174,32 @@ export type WizardAssets = {
 export type FieldConfidence = "high" | "medium" | "low";
 
 export type WizardAnswers = {
-  /** Steg 1 — Företag */
+  /** Steg 1 — Företaget & sajttypen */
   companyName: string;
   offer: string;
   existingSite: string;
   contact: WizardContact;
-
-  /** Steg 2 — Kategori (multi-select chip) */
+  /** Ny i Pass 1 — primär verksamhetsfamilj som driver scaffold/starter. */
+  businessFamily: BusinessFamilyId | "";
+  /** Sub-kategori (sub-specialisering). Multi-select bibehållen för bakåtkompat. */
   siteType: WizardCategoryId[];
 
-  /** Steg 3 — Innehåll (gren-beroende fält) */
+  /** Steg 2 — Visuell identitet */
+  vibe: WizardVibe;
+  /** Ton + designStyle + färger + ord-att-undvika. Levde tidigare i sista steget. */
+  brand: WizardBrand;
+  /** Nya mood-bilder — referenser, ej sajt-assets. */
+  moodImages: AssetRef[];
+
+  /** Steg 3 — Funktioner & sidor */
+  /** Funktionsval från `FUNCTION_GROUPS` (chip-IDs som "fn-team"). */
+  selectedFunctions: string[];
+  /** Konkret sidlista — kan utökas auto från `selectedFunctions`. */
+  mustHave: string[];
+  primaryCta: string;
+  specialRequests: string;
+
+  /** Steg 4 — Innehåll & ton */
   products: ProductItem[];
   menuItems: MenuItem[];
   services: ServiceItem[];
@@ -146,23 +210,15 @@ export type WizardAnswers = {
   priceTier: string;
   bookingUrl: string;
   uniqueSellingPoints: string[];
-
-  /** Steg 4 — Story */
   aboutText: string;
   historyText: string;
   visionText: string;
   contactIntroText: string;
-
-  /** Steg 5 — Sidor + CTA + målgrupp */
-  mustHave: string[];
-  primaryCta: string;
   targetAudience: string;
 
-  /** Steg 6 — Bilder och logotyp */
+  /** Steg 5 — Bilder & media */
   assets: WizardAssets;
-
-  /** Steg 7 — Ton och stil */
-  brand: WizardBrand;
+  media: WizardMedia;
 
   /** Meta — vilka fält som autifylldes (för UI-feedback) */
   scrapedFields: Partial<Record<keyof Omit<WizardAnswers, "scrapedFields">, FieldConfidence>>;
@@ -174,7 +230,26 @@ export function emptyWizardAnswers(): WizardAnswers {
     offer: "",
     existingSite: "",
     contact: { phone: "", email: "", address: "", openingHours: "" },
+    businessFamily: "",
     siteType: [],
+    vibe: {
+      vibeId: "",
+      useCustomColors: false,
+      typographyFeel: "",
+      references: "",
+    },
+    brand: {
+      toneTags: [],
+      designStyle: "",
+      primaryColorHex: "",
+      accentColorHex: "",
+      wordsToAvoid: "",
+    },
+    moodImages: [],
+    selectedFunctions: [],
+    mustHave: [],
+    primaryCta: "",
+    specialRequests: "",
     products: [],
     menuItems: [],
     services: [],
@@ -189,20 +264,16 @@ export function emptyWizardAnswers(): WizardAnswers {
     historyText: "",
     visionText: "",
     contactIntroText: "",
-    mustHave: [],
-    primaryCta: "",
     targetAudience: "",
     assets: {
       logo: null,
       heroImage: null,
       gallery: [],
     },
-    brand: {
-      toneTags: [],
-      designStyle: "",
-      primaryColorHex: "",
-      accentColorHex: "",
-      wordsToAvoid: "",
+    media: {
+      favicon: null,
+      ogImage: null,
+      backgroundVideo: null,
     },
     scrapedFields: {},
   };
@@ -218,28 +289,29 @@ export function validateWizardStep(
   branch: ContentBranch,
 ): string | null {
   switch (step) {
-    case "company":
+    case "foundation":
       if (answers.companyName.trim().length < 2) return "Ange minst 2 tecken för företagsnamn.";
       if (answers.offer.trim().length < 3) return "Beskriv kort vad ni gör.";
+      if (!answers.businessFamily) return "Välj vilken typ av verksamhet det är.";
       return null;
-    case "siteType":
-      if (answers.siteType.length === 0) return "Välj minst en kategori.";
+    case "visual":
+      // Vibe + färger är valfria — vi har goda defaults via scaffold.
+      // Steget kan alltid hoppas över.
+      return null;
+    case "functions":
+      // Minst en funktion eller sida bör vara vald så pipeline har något att jobba med.
+      if (answers.selectedFunctions.length === 0 && answers.mustHave.length === 0) {
+        return "Välj minst en funktion eller sida.";
+      }
       return null;
     case "content":
       // Innehållssteget är alltid valfritt — utan tjänster/produkter
       // kan generator-modellen ändå mocka eller fråga senare.
       void branch;
       return null;
-    case "story":
-      return null;
-    case "pages":
-      if (answers.mustHave.length === 0) return "Välj minst en sida att bygga.";
-      return null;
-    case "assets":
+    case "media":
       // Bilder är alltid valfria — operatorn kan hoppa över för att
       // få en text-only sajt med monogram-logo.
-      return null;
-    case "brand":
       return null;
     default:
       return null;

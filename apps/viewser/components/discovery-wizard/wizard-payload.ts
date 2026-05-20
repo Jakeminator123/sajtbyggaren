@@ -21,6 +21,11 @@ import {
   validateDiscoveryCategoryIds,
 } from "./discovery-options";
 import type { discoveryOption } from "./discovery-options";
+import {
+  BUSINESS_FAMILIES,
+  findFunctionChoice,
+  findVibe,
+} from "./wizard-constants";
 import type { WizardAnswers } from "./wizard-types";
 
 export type DiscoveryPayload = {
@@ -85,14 +90,20 @@ export function buildDiscoveryPayload(
   }
   const branch = resolveContentBranchFromOptions(answers.siteType, discoveryOptions);
 
+  // Scaffold hint — använd businessFamily som primär källa när den finns,
+  // annars fall tillbaka till siteType-baserade resolvern. Detta gör att
+  // operatorens family-val styr scaffold deterministiskt även om sub-
+  // kategori-chips inte är ifyllda.
+  const family = BUSINESS_FAMILIES.find((f) => f.id === answers.businessFamily);
+  const scaffoldHint = family
+    ? family.scaffoldHint
+    : resolveScaffoldHintFromOptions(answers.siteType, discoveryOptions);
+
   return {
     schemaVersion: 1,
     rawPrompt: rawPrompt.trim(),
     contentBranch: branch,
-    scaffoldHint: resolveScaffoldHintFromOptions(
-      answers.siteType,
-      discoveryOptions,
-    ),
+    scaffoldHint,
     answers: stripEmpty(answers),
   };
 }
@@ -179,8 +190,20 @@ export function composeMasterPrompt(
 
   // 3. Kategori / scaffold-signal — hjälper briefModel pinpoint:a
   // businessTypeGuess utan att gissa fritt från prompten.
-  if (categoryLabels.length > 0) {
-    sections.push(`[Verksamhetstyp]\nValda kategorier: ${categoryLabels.join(", ")}.\nGren: ${branch}.`);
+  const familyMeta = BUSINESS_FAMILIES.find(
+    (f) => f.id === answers.businessFamily,
+  );
+  if (familyMeta || categoryLabels.length > 0) {
+    const verksamhetLines: string[] = [];
+    if (familyMeta) {
+      verksamhetLines.push(`Verksamhetsfamilj: ${familyMeta.label}.`);
+      verksamhetLines.push(`Scaffold-hint: ${familyMeta.scaffoldHint}.`);
+    }
+    if (categoryLabels.length > 0) {
+      verksamhetLines.push(`Sub-kategorier: ${categoryLabels.join(", ")}.`);
+    }
+    verksamhetLines.push(`Content-branch: ${branch}.`);
+    sections.push(`[Verksamhetstyp]\n${verksamhetLines.join("\n")}`);
   }
 
   // 4. Innehållsblock — varje wizard-gren bidrar med sina egna
@@ -251,11 +274,27 @@ export function composeMasterPrompt(
   if (answers.mustHave.length > 0) {
     pageLines.push(`Sidor att bygga: ${answers.mustHave.join(", ")}.`);
   }
+  if (answers.selectedFunctions.length > 0) {
+    const functionLabels = answers.selectedFunctions
+      .map((id) => {
+        const choice = findFunctionChoice(id);
+        if (!choice) return null;
+        const cap = choice.capability ? ` (${choice.capability})` : "";
+        return `${choice.label}${cap}`;
+      })
+      .filter((s): s is string => Boolean(s));
+    if (functionLabels.length > 0) {
+      pageLines.push(`Önskade funktioner: ${functionLabels.join(", ")}.`);
+    }
+  }
   if (answers.primaryCta.trim()) {
     pageLines.push(`Primär call-to-action: "${answers.primaryCta.trim()}".`);
   }
   if (answers.targetAudience.trim()) {
     pageLines.push(`Målgrupp: ${answers.targetAudience.trim()}`);
+  }
+  if (answers.specialRequests.trim()) {
+    pageLines.push(`Specialönskemål: ${answers.specialRequests.trim()}`);
   }
   if (pageLines.length > 0) {
     sections.push(`[Sidor och konvertering]\n${pageLines.join("\n")}`);
@@ -263,6 +302,16 @@ export function composeMasterPrompt(
 
   // 7. Ton / brand / visuell stil — driver tone[] och planner-input.
   const brandLines: string[] = [];
+  const vibeMeta = answers.vibe.vibeId ? findVibe(answers.vibe.vibeId) : undefined;
+  if (vibeMeta) {
+    brandLines.push(`Vald vibe: ${vibeMeta.label} — ${vibeMeta.description}`);
+  }
+  if (answers.vibe.typographyFeel) {
+    brandLines.push(`Typografi-känsla: ${answers.vibe.typographyFeel}.`);
+  }
+  if (answers.vibe.references.trim()) {
+    brandLines.push(`Visuella referenser: ${answers.vibe.references.trim()}.`);
+  }
   if (answers.brand.toneTags.length > 0) {
     brandLines.push(`Tonarter: ${answers.brand.toneTags.join(", ")}.`);
   }
@@ -270,16 +319,26 @@ export function composeMasterPrompt(
     brandLines.push(`Visuell stil: ${answers.brand.designStyle.trim()}.`);
   }
   if (answers.brand.primaryColorHex.trim()) {
-    brandLines.push(`Primärfärg: ${answers.brand.primaryColorHex.trim()}.`);
+    const note = answers.vibe.useCustomColors ? " (operator-override)" : "";
+    brandLines.push(`Primärfärg: ${answers.brand.primaryColorHex.trim()}${note}.`);
   }
   if (answers.brand.accentColorHex.trim()) {
-    brandLines.push(`Accentfärg: ${answers.brand.accentColorHex.trim()}.`);
+    const note = answers.vibe.useCustomColors ? " (operator-override)" : "";
+    brandLines.push(`Accentfärg: ${answers.brand.accentColorHex.trim()}${note}.`);
   }
   if (answers.brand.wordsToAvoid.trim()) {
     brandLines.push(`Undvik dessa ord och uttryck: ${answers.brand.wordsToAvoid.trim()}.`);
   }
   if (brandLines.length > 0) {
     sections.push(`[Ton och visuellt språk]\n${brandLines.join("\n")}`);
+  }
+  if (answers.moodImages.length > 0) {
+    const moodLines = answers.moodImages.map((m) => {
+      const alt = m.alt.trim() || "Mood-referens";
+      const subject = m.visionSubject ? ` — ${m.visionSubject}` : "";
+      return `  - "${alt}"${subject}`;
+    });
+    sections.push(`[Mood-referenser]\n${moodLines.join("\n")}`);
   }
 
   // 8. Bilder och logotyp — operatorn har laddat upp bilder genom
@@ -315,6 +374,29 @@ export function composeMasterPrompt(
   }
   if (assetLines.length > 0) {
     sections.push(`[Bilder och visuella tillgångar]\n${assetLines.join("\n")}`);
+  }
+
+  // 8b. Extra media-assets (favicon/OG/video) — kräver backend-stöd för
+  // full funktionalitet (se docs/backend-handoff.md). Vi skickar ändå
+  // info till briefModel så den vet att operatören tänkt på dem.
+  const mediaLines: string[] = [];
+  if (answers.media.favicon) {
+    mediaLines.push(
+      `Favicon: "${answers.media.favicon.filename}" (kräver .ico-konvertering).`,
+    );
+  }
+  if (answers.media.ogImage) {
+    mediaLines.push(
+      `OG-image: "${answers.media.ogImage.filename}" (kräver 1200×630 crop).`,
+    );
+  }
+  if (answers.media.backgroundVideo) {
+    mediaLines.push(
+      `Bakgrundsvideo: "${answers.media.backgroundVideo.filename}" (${answers.media.backgroundVideo.mimeType}).`,
+    );
+  }
+  if (mediaLines.length > 0) {
+    sections.push(`[Extra media]\n${mediaLines.join("\n")}`);
   }
 
   // 9. Instruktioner till backend — kort sektion som hjälper planner-

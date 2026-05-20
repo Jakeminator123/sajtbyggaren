@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { BuilderShell } from "@/components/builder/builder-shell";
 import { ConsoleDrawer } from "@/components/console-drawer";
 import { SiteHeader } from "@/components/layout/site-header";
 import type { ProjectInputOption } from "@/components/project-input-picker";
@@ -138,6 +139,58 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Aktuell runs- + project-input-state avgör om vi är i "builder-mode"
+  // (= en prompt-genererad sajt är vald, follow-ups via FloatingChat är
+  // möjliga) eller i pre-build-läget med hero + DiscoveryWizard.
+  //
+  // Vi följer EXAKT samma logik som PromptBuilder använder internt för
+  // sin `followupReady`-flagga — annars riskerar vi att visa BuilderShell
+  // för en sajt som backend faktiskt vägrar göra followup på.
+  const builderTarget = useMemo(() => {
+    if (!selectedRunId) return null;
+    const selectedRun = runs.find((run) => run.runId === selectedRunId);
+    const targetSiteId =
+      selectedRun?.siteId && selectedRun.siteId !== "unknown"
+        ? selectedRun.siteId
+        : selectedSiteId;
+    if (!targetSiteId || targetSiteId === "unknown") return null;
+    const targetInput = projectInputs.find(
+      (input) => input.siteId === targetSiteId,
+    );
+    if (targetInput?.source !== "prompt-inputs") return null;
+    return { siteId: targetSiteId };
+  }, [selectedRunId, runs, selectedSiteId, projectInputs]);
+
+  const builderActive = builderTarget !== null;
+
+  function handleBuildDone(
+    runId: string,
+    outcome: PromptBuildOutcome,
+    siteId?: string,
+  ) {
+    setSelectedRunId(runId);
+    // Run-following: bygget gav oss både runId och siteId i payloaden, så
+    // vi syncar selectedSiteId direkt. Det går inte att gå via
+    // selectRunAndSyncSiteId() här eftersom den nya run:en ännu inte
+    // hunnit landa i `runs`-listan (fetchRuns körs först nedan), och
+    // det är just den nya run:en vars siteId vi vill följa.
+    if (siteId && siteId !== "unknown") {
+      setSelectedSiteId(siteId);
+    }
+    // B44: never claim "Build klar" for a structured failure or
+    // an unknown status. PromptBuilder/FloatingChat klassar outcome
+    // från build-result.json:status; header-copyn reflekterar
+    // resultatet så ett misslyckat bygge aldrig ser grönt ut.
+    setStatusText(headerStatusForOutcome(runId, outcome));
+    void fetchRuns()
+      .then(applyRunsData)
+      .catch((error) => {
+        const message =
+          error instanceof Error ? error.message : "Kunde inte uppdatera runs.";
+        setStatusText(message);
+      });
+  }
+
   return (
     <main className="bg-background relative h-[100dvh] w-full overflow-hidden">
       <SiteHeader onOpenConsole={() => setConsoleOpen(true)} />
@@ -149,49 +202,56 @@ export default function Home() {
       />
 
       {/* Prompt-rutan döljs visuellt medan bygget pågår (BuildProgressCard
-          tar över hero-ytan). Vi får ABSOLUT inte unmounta komponenten
-          — den äger fetch-promise:n mot /api/prompt och setTimeout som
-          flyttar stage `thinking`→`building`. Om vi unmountar tappar
-          vi alla stage-rapporter och cardet fastnar på första steget.
-          Därför skickar vi `hidden` istället för att conditional renda. */}
-      <PromptBuilder
-        isBusy={building}
-        runs={runs}
-        projectInputs={projectInputs}
-        selectedRunId={selectedRunId}
-        selectedSiteId={selectedSiteId}
-        onBuildStart={() => setBuilding(true)}
-        onBuildEnd={() => setBuilding(false)}
-        onStageChange={setBuildStage}
-        hidden={building}
-        onBuildDone={(runId, outcome, siteId) => {
-          setSelectedRunId(runId);
-          // Run-following: bygget gav oss både runId och siteId i
-          // payloaden, så vi syncar selectedSiteId direkt. Det går inte
-          // att gå via selectRunAndSyncSiteId() här eftersom den nya
-          // run:en ännu inte hunnit landa i `runs`-listan (fetchRuns
-          // körs först nedan), och det är just den nya run:en vars
-          // siteId vi vill följa.
-          if (siteId) {
-            setSelectedSiteId(siteId);
-          }
-          // B44: never claim "Build klar" for a structured failure or
-          // an unknown status. PromptBuilder classifies the outcome
-          // from build-result.json:status; the header copy reflects
-          // whichever bucket the run landed in so a failed run does
-          // not look successful in the page status.
-          setStatusText(headerStatusForOutcome(runId, outcome));
-          void fetchRuns()
-            .then(applyRunsData)
-            .catch((error) => {
-              const message =
-                error instanceof Error
-                  ? error.message
-                  : "Kunde inte uppdatera runs.";
-              setStatusText(message);
-            });
-        }}
-      />
+          tar över hero-ytan) OCH när builder-mode är aktivt (då tar
+          FloatingChat över follow-up-flödet). Vi får ABSOLUT inte
+          unmounta komponenten under bygget — den äger fetch-promise:n
+          mot /api/prompt och setTimeout som flyttar stage `thinking`→
+          `building`. Om vi unmountar mid-build tappar vi alla stage-
+          rapporter och cardet fastnar på första steget. Därför skickar
+          vi `hidden` istället för att conditional renda. När builder-
+          mode är aktivt och inget initial-bygge pågår är det säkert
+          att unmounta — då tar FloatingChat över helt. */}
+      {builderActive && !building ? null : (
+        <PromptBuilder
+          isBusy={building}
+          runs={runs}
+          projectInputs={projectInputs}
+          selectedRunId={selectedRunId}
+          selectedSiteId={selectedSiteId}
+          onBuildStart={() => setBuilding(true)}
+          onBuildEnd={() => setBuilding(false)}
+          onStageChange={setBuildStage}
+          hidden={building || builderActive}
+          onBuildDone={handleBuildDone}
+        />
+      )}
+
+      {/* Builder-shell: floating draggable chat + dolt verktygsmeny.
+          Visas så snart vi har en prompt-genererad run vald. Pre-build
+          eller exempel-only-runs faller tillbaka till PromptBuilder
+          ovan. FloatingChat skickar follow-up-prompts till /api/prompt
+          med mode:"followup" och delar build-state med page.tsx så
+          ViewerPanel:s BuildProgressCard fortsätter fungera under
+          rebuild-cykeln. */}
+      {builderActive && builderTarget ? (
+        <BuilderShell
+          siteId={builderTarget.siteId}
+          runId={selectedRunId}
+          isBuilding={building}
+          onBuildStart={() => setBuilding(true)}
+          onBuildEnd={() => setBuilding(false)}
+          onBuildDone={handleBuildDone}
+          onNewSite={() => {
+            // Återgår till pre-build-läget: rensar både selectedRunId
+            // och buildStage så hero + DiscoveryWizard tar över igen.
+            setSelectedRunId(null);
+            setBuildStage("idle");
+            setStatusText("Beskriv en ny sajt nedan så bygger vi den åt dig.");
+          }}
+          onOpenConsole={() => setConsoleOpen(true)}
+          onOpenHistory={() => setConsoleOpen(true)}
+        />
+      ) : null}
 
       <ConsoleDrawer
         open={consoleOpen}
