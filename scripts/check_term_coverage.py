@@ -355,6 +355,12 @@ COMMON_WORDS = {
     "WizardBrand", "WizardContact", "ScaffoldHint", "ContentBranch",
     "FieldConfidence", "ProductItem", "MenuItem", "ServiceItem",
     "TeamMember", "ProjectItem",
+    # Next.js page-komponenter för wizard-driven extra routes
+    # (B132 follow-up sprint 2026-05-21). Samma kategori som
+    # PortfolioContent/TeamMember ovan: React/Next-symboler, inte
+    # canonical domain terms.
+    "FaqPage", "GalleryPage", "MapPage", "PortfolioPage",
+    "PricingPage", "TeamPage",
     "FieldLabel", "FieldStack", "HelperText", "SectionHeader",
     "TagListInput", "TagListInputProps", "TextField", "TextareaField",
     "Chip", "ChipRow", "ChipProps", "StepDots",
@@ -458,7 +464,7 @@ COMMON_WORDS = {
     # canonical domain terms.
     "Atelje Vit Lera", "Vas i seladon",  # case-specifika varumärken/produkter
     "Klippning Dam",  # case-specifik service-label
-    "Befintlig hemsida", "Bildgalleri", "Bokning online",  # DiscoveryWizard labels
+    "Befintlig hemsida", "Bildgalleri", "Bokning online", "Nyhetsbrev",  # DiscoveryWizard labels
     "Build klar", "Build misslyckades",  # PromptBuilder status-strängar
     "DiscoveryWizarden",  # bestämd-form i prosa (basordet redan allowlistat)
     "Intent Guard", "Page Intent",  # proposed produktkoncept i Scout-rapporten
@@ -646,6 +652,13 @@ def main() -> int:
         # Skippas så interna feature-namn i en pågående plan inte
         # felklassas som okända domänbegrepp.
         if rel.startswith(".cursor/plans/"):
+            continue
+        # Operatör-/agent-lokala temp-noteringar (t.ex. ``tmp_known_issues_pr52.md``)
+        # bor under ``.cursor/`` toppnivå med ``tmp_``-prefix och innehåller
+        # bug-tracking-IDs som inte är canonical domain terms. Samma motivering
+        # som för ``docs/known-issues.md``-undantaget nedan: en intern B-ID-tabell
+        # ska inte tvinga in B-IDs som domänbegrepp.
+        if rel.startswith(".cursor/tmp_"):
             continue
         if rel.startswith("docs/agent-handbook.md") or rel.startswith("docs/PROJECT_BRIEF.md"):
             continue

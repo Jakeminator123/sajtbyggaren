@@ -666,11 +666,166 @@ _PAGE_TO_ROUTE_HINT: dict[str, str] = {
 }
 
 
+# Wizard pages that the deterministic Builder can emit as real routes
+# without introducing new integration layers (no booking, payments,
+# auth, newsletter). Each entry maps a wizard mustHave label to a route
+# definition that ``write_pages`` knows how to render. Restricted to a
+# small set of scaffolds today (only ``local-service-business``) so the
+# expansion lands incrementally; ecommerce-lite and future scaffolds
+# need their own renderer review before opting in.
+_WIZARD_ROUTE_DEFINITIONS: dict[str, dict[str, str]] = {
+    "FAQ": {
+        "id": "faq",
+        "path": "/faq",
+        "purpose": (
+            "Answer recurring customer questions in a single readable "
+            "page so visitors do not need to call to clarify basics."
+        ),
+    },
+    "Bildgalleri": {
+        "id": "gallery",
+        "path": "/galleri",
+        "purpose": (
+            "Showcase project photos uploaded by the operator so "
+            "visitors can see real work before contacting."
+        ),
+    },
+    "Karta / Hitta hit": {
+        "id": "map",
+        "path": "/karta",
+        "purpose": (
+            "Show address, service area and a static map link so "
+            "local visitors can find or navigate to the business."
+        ),
+    },
+    "Vårt team": {
+        "id": "team",
+        "path": "/team",
+        "purpose": (
+            "Introduce the team members and their roles to build "
+            "trust before the visitor takes the contact step."
+        ),
+    },
+    "Priser och paket": {
+        "id": "pricing",
+        "path": "/priser",
+        "purpose": (
+            "List packages, price ranges or hourly rates so visitors "
+            "know what to expect before requesting a quote."
+        ),
+    },
+    "Portfolio / Case": {
+        "id": "portfolio",
+        "path": "/portfolio",
+        "purpose": (
+            "Showcase completed work as named cases so visitors can "
+            "judge quality and relevance to their own need."
+        ),
+    },
+}
+
+
+# Scaffolds whose renderer set in ``scripts/build_site.py`` can mount
+# the wizard-driven extras above. New scaffolds opt in explicitly when
+# the corresponding render_* helpers exist.
+_WIZARD_ROUTE_SCAFFOLDS: frozenset[str] = frozenset({"local-service-business"})
+
+
+# Wizard pages that intentionally stay warning-only because emitting
+# a route would require a real integration layer that the deterministic
+# Builder does not have today. Each entry carries the reason text shown
+# in ``pageIntentWarnings``; the path hint in ``_PAGE_TO_ROUTE_HINT`` is
+# what an operator would expect a future integration to land at.
+_WIZARD_ROUTE_UNSUPPORTED_REASONS: dict[str, str] = {
+    "Bokning online": (
+        "Wizard must-have page Bokning online requires a real "
+        "booking integration; deterministic Builder emits no fake "
+        "booking surface in v1."
+    ),
+    "Blogg / Nyheter": (
+        "Wizard must-have page Blogg / Nyheter requires editorial "
+        "tooling (CMS or markdown ingest); not in deterministic "
+        "Builder v1."
+    ),
+    "Nyhetsbrev": (
+        "Wizard must-have page Nyhetsbrev requires a newsletter "
+        "integration (signup + provider); not in deterministic "
+        "Builder v1."
+    ),
+}
+
+
+def _insert_wizard_extras_before_contact(
+    scaffold_routes: list[dict[str, str]],
+    wizard_extras: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    """Compose the final routePlan with wizard extras sitting before
+    the contact route.
+
+    Keeping ``/kontakt`` (or whatever path the scaffold maps the
+    contact id to) at the end of the routePlan matches both visitor
+    intuition and the nav layout produced by
+    ``scripts.build_site._nav_items_from_scaffold``. When no contact
+    route is present the extras are appended at the tail so the
+    function never silently drops them.
+    """
+    if not wizard_extras:
+        return list(scaffold_routes)
+    contact_idx = next(
+        (i for i, route in enumerate(scaffold_routes) if route.get("id") == "contact"),
+        None,
+    )
+    if contact_idx is None:
+        return list(scaffold_routes) + list(wizard_extras)
+    return (
+        list(scaffold_routes[:contact_idx])
+        + list(wizard_extras)
+        + list(scaffold_routes[contact_idx:])
+    )
+
+
+def _wizard_extra_routes(
+    scaffold_id: str | None,
+    wizard_must_have: list[str] | None,
+    scaffold_default_paths: set[str],
+) -> list[dict[str, str]]:
+    """Return wizard-driven route entries to append to the routePlan.
+
+    The deterministic Builder only emits these for scaffolds in
+    ``_WIZARD_ROUTE_SCAFFOLDS``. Routes whose path already exists in
+    the scaffold defaults are skipped silently so trimming
+    ``brief.pageCount`` cannot accidentally collide with a wizard
+    extra. Order follows the operator's mustHave order so the route
+    list reflects the wizard intent rather than a hash-sorted set.
+    """
+    if not wizard_must_have or scaffold_id not in _WIZARD_ROUTE_SCAFFOLDS:
+        return []
+    seen_paths: set[str] = set()
+    extras: list[dict[str, str]] = []
+    for page in wizard_must_have:
+        route_def = _WIZARD_ROUTE_DEFINITIONS.get(page)
+        if route_def is None:
+            continue
+        path = route_def["path"]
+        if path in scaffold_default_paths or path in seen_paths:
+            continue
+        extras.append(dict(route_def))
+        seen_paths.add(path)
+    return extras
+
+
 def _pages_not_in_routes(
     wizard_must_have: list[str],
     routes: list[dict[str, Any]],
 ) -> list[str]:
-    """Return route-bearing wizard pages missing from the scaffold routes."""
+    """Return route-bearing wizard pages missing from the route plan.
+
+    A page is "missing" when the wizard mustHave entry maps to a path
+    in ``_PAGE_TO_ROUTE_HINT`` that does not appear in the supplied
+    ``routes`` (scaffold defaults + wizard extras combined). Wizard
+    extras that ``_wizard_extra_routes`` emitted as real routes are
+    therefore filtered out here automatically.
+    """
     route_paths = {
         route.get("path")
         for route in routes
@@ -691,20 +846,32 @@ def _page_intent_warnings(
     wizard_must_have: list[str] | None,
     routes: list[dict[str, Any]],
 ) -> list[dict[str, str]]:
-    """Render non-blocking warnings for wizard page intent route gaps."""
+    """Render non-blocking warnings for wizard page intent route gaps.
+
+    Pages that ``_wizard_extra_routes`` emitted as real routes are
+    filtered out via ``_pages_not_in_routes``. Pages in
+    ``_WIZARD_ROUTE_UNSUPPORTED_REASONS`` keep their specific reason
+    string so the operator can tell "no integration yet" apart from
+    "scaffold simply does not have this surface".
+    """
     if not wizard_must_have:
         return []
-    return [
-        {
-            "page": page,
-            "expectedPath": _PAGE_TO_ROUTE_HINT[page],
-            "reason": (
-                "Wizard must-have page is not emitted by the selected "
-                "scaffold route plan."
-            ),
-        }
-        for page in _pages_not_in_routes(wizard_must_have, routes)
-    ]
+    default_reason = (
+        "Wizard must-have page is not emitted by the selected "
+        "scaffold route plan."
+    )
+    warnings: list[dict[str, str]] = []
+    for page in _pages_not_in_routes(wizard_must_have, routes):
+        warnings.append(
+            {
+                "page": page,
+                "expectedPath": _PAGE_TO_ROUTE_HINT[page],
+                "reason": _WIZARD_ROUTE_UNSUPPORTED_REASONS.get(
+                    page, default_reason
+                ),
+            }
+        )
+    return warnings
 
 
 def _selected_dossiers_payload(
@@ -1002,9 +1169,25 @@ def produce_site_plan(
     # B138: respect brief.pageCount when emitting routes. Trim runs for
     # both pinned and helper-chosen scaffolds; warning surfaces in the
     # site-plan so operator/Backoffice can see why the count diverged.
+    # The trim only touches scaffold defaults; wizard-driven extras
+    # below are operator-explicit choices and stay outside the trim so
+    # a low brief.pageCount cannot silently delete a must-have page.
     page_count_value = site_brief.get("pageCount")
     trimmed_route_plan, page_count_warning = _trim_route_plan(
         raw_route_plan, page_count_value
+    )
+    scaffold_default_paths = {
+        route["path"]
+        for route in trimmed_route_plan
+        if isinstance(route, dict) and isinstance(route.get("path"), str)
+    }
+    wizard_extra_routes = _wizard_extra_routes(
+        choice.scaffoldId,
+        wizard_must_have,
+        scaffold_default_paths,
+    )
+    full_route_plan = _insert_wizard_extras_before_contact(
+        trimmed_route_plan, wizard_extra_routes
     )
     site_plan = _assemble_site_plan(
         run_id=run_id,
@@ -1019,9 +1202,9 @@ def produce_site_plan(
         created_at=created_at,
         page_intent_warnings=_page_intent_warnings(
             wizard_must_have,
-            trimmed_route_plan,
+            full_route_plan,
         ),
-        route_plan=trimmed_route_plan,
+        route_plan=full_route_plan,
         page_count_warning=page_count_warning,
         intent_guard_warnings=intent_guard_warnings,
     )

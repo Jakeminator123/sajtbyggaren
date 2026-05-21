@@ -30,6 +30,65 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
+Last verified state: pending Builder-sprint commit (2026-05-21,
+**B132 follow-up: wizard-route emission för local-service-business
+ovanpå Backoffice diagnostik `0ff2a54`**) — lokal `main` ligger en
+Builder-commit framåt från `0ff2a54`
+(`docs(steward): record wizard diagnostics landing`). Sprinten tar
+`pageIntentWarnings`-spåret från "warning-only observability" till
+faktisk route-emission när `wizardMustHave` innehåller pages som
+kan byggas deterministiskt: `FAQ` → `/faq`, `Bildgalleri` →
+`/galleri`, `Karta / Hitta hit` → `/karta`, `Vårt team` → `/team`,
+`Priser och paket` → `/priser`, `Portfolio / Case` → `/portfolio`.
+Bara `local-service-business` är opt-in i v1 via
+`_WIZARD_ROUTE_SCAFFOLDS` i `packages/generation/planning/plan.py`;
+ecommerce-lite och framtida scaffolds får warnings tills deras
+renderer-set granskats. `Bokning online` håller warning-shape men
+får specifik `reason` ("requires a real booking integration; ...")
+så Backoffice/Run Details kan skilja "integration saknas" från
+"scaffold har ingen sådan yta". Render-helpers i `scripts/build_site.py`
+läser dossier-data (services, contact, location, gallery, team)
+och faller tillbaka på ärlig svensk copy när data saknas — ingen
+falsk booking-, betal-, auth- eller nyhetsbrev-integration emitteras.
+`_nav_items_from_scaffold` infogar wizard-extras före kontakt-routen
+i header/footer, `_extract_wizard_extra_routes` läser
+`site_plan["routePlan"]` så routePlan blir single source of truth
+för dispatch. `_trim_route_plan` rör inte wizard-extras (operatörens
+explicita val vinner över `brief.pageCount`-trim av scaffold-defaults).
+Mini-eval (CLI, mock-väg, `--skip-build`) på fyra cases:
+elektriker Malmö (`FAQ`, `Portfolio / Case` → 6 routes, 0 warnings),
+frisör Göteborg (`Bokning online`, `Priser och paket`, `Bildgalleri`,
+`Karta / Hitta hit` → 7 routes, 1 warning för `Bokning online`),
+naprapat Stockholm (`Vårt team`, `Bokning online`, `Karta / Hitta hit`,
+`FAQ` → 7 routes, 1 warning), sköldpaddssoppa (`FAQ` → 5 routes,
+0 warnings). Sköldpaddssoppa-spåret: B137 + B138 + Intent Guard
+oförändrade — `_trim_route_plan` + tagline-läckage-skydd + Intent
+Guard light fortsätter funka som tidigare (sköldpaddssoppa-routePlan
+i denna eval blev `[/, /tjanster, /om-oss, /faq, /kontakt]` eftersom
+mock-brief inte returnerade `pageCount: 2`; den live-LLM-vägen
+trimmar fortfarande korrekt när `pageCount` fångas). `backup-41`
+skapad från synkad `main`-`0ff2a54` + pushad till origin innan
+sprintarbetet. Tester/guards: `ruff check .` (0 findings),
+`governance_validate` (17 OK), `rules_sync --check` (sync),
+`check_term_coverage --strict` (inga okända efter allowlist-tillägg
+för `.cursor/tmp_*` operatör-lokala filer + 6 nya Next.js
+page-komponentnamn `FaqPage`/`GalleryPage`/`MapPage`/`PortfolioPage`/
+`PricingPage`/`TeamPage`), `pytest tests/ -q` (alla passerar; 3
+skippade E2E). 24 nya regression-tester (8 i `test_page_intent.py`
+uppdaterade + reformulerade kontrakt, 16 nya i
+`test_wizard_route_emission.py` som täcker plan-helpern,
+render-funktionerna, write_pages-dispatch och nav-utvidgningen).
+Bug-räkning oförändrad: **27 aktiva, 0 misplaced, 5 unknown, 104
+stängda** — sprinten introducerar ingen ny B-ID utan utvidgar
+B132-spåret från warning-only till faktisk route-emission. **Direkt
+nästa orkestrator-fokus:** kör Scout RO-review på diffen + ny mini-eval
+i Viewser-overlayflödet (sköldpaddssoppa + elektriker/frisör/naprapat)
+för att verifiera att de emitterade routes faktiskt landar i StackBlitz
+preview och att Backoffice Building Blocks-vyn (`650c518`) speglar de
+nya routes-emissionsvägarna korrekt. `Bokning online` är medvetet
+parkerad till framtida sprint med riktig booking-integration. Tidigare
+paragraf:
+
 Last verified state: `650c518` (2026-05-21, **Backoffice read-only
 wizardfält → generation-diagnostik ovanpå B144 + B143 + B141**) — lokal
 `main` och `origin/main` är synkade på `650c518`
@@ -99,11 +158,28 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `650c518` på origin och lokalt. B144, B143 och B141 är
+`main` är en Builder-commit framåt från `0ff2a54` lokalt; pushen är nästa
+steg när Scout-RO-review godkänner diffen. B132 follow-up-sprinten har
+landat wizard-route-emission för `local-service-business`: när
+wizardens `mustHave` säger `FAQ` / `Bildgalleri` / `Vårt team` /
+`Priser och paket` / `Portfolio / Case` / `Karta / Hitta hit` får
+operatören riktiga sidor (`/faq`, `/galleri`, `/team`, `/priser`,
+`/portfolio`, `/karta`) i stället för enbart `pageIntentWarnings`.
+`Bokning online`, `Blogg / Nyheter` och `Nyhetsbrev` håller
+warning-shape med specifika reason-strängar eftersom de kräver
+integration som inte finns i deterministiska Builder v1. Mini-eval
+över fyra cases visar 0→0 warnings för elektriker, 4→1 för frisör,
+4→1 för naprapat, 0→0 för sköldpaddssoppa, med korrekta route-filer
+under `app/<route>/page.tsx`. B144/B143/B141 och Backoffice
+Building Blocks-diagnostiken (`650c518`) är kvar oförändrade ovanpå
+sprinten. Inga öppna PRs. Bug-räkning oförändrad: **27 aktiva,
+0 misplaced, 5 unknown, 104 stängda**. Föregående stage snapshot:
+
+`main` var vid `650c518` på origin och lokalt. B144, B143 och B141 är
 stängda, och Backoffice har nu en read-only Kontrollplan-del för
 wizardfält → generation som diagnostiserar befintliga källor utan ny
 runtime-sanning. PR #51 är stängd utan merge, PR #53 och PR #52 är
-squash-mergade, och det finns inga öppna PRs. Nästa produktsteg är fortsatt
+squash-mergade, och det finns inga öppna PRs. Nästa produktsteg var
 en Viewser-overlay-mini-eval som verifierar att fixarna märks i
 operatörsflödet: varningar syns i Run Details, Intent Guard missar inte de
 engelska slug-fallen, codegenModel-prompten får faktisk Site Brief-data via
@@ -367,10 +443,12 @@ också kvar på origin men är fri att radera i nästa Steward-städ.
 
 ## Current active sprint
 
-Ingen pågående lokal produktimplementation efter Backoffice-diagnostiken i
-`650c518`. Aktivt orkestreringsläge: starta en ny Scout för post-merge
-Viewser-overlay-mini-eval. Scout ska vara read-only och mäta verkligt
-frontendflöde före nästa Builder-sprint.
+Pågående lokal Builder-sprint (B132 follow-up) väntar på Scout-RO-review
+innan push. Ändringarna ligger som en commit framåt från `0ff2a54`. Aktivt
+orkestreringsläge efter push: starta en ny Scout för Viewser-overlay-
+mini-eval som verifierar att de nya wizard-routes faktiskt renderas i
+StackBlitz-preview och att `pageIntentWarnings`-minskningen syns i Run
+Details.
 
 Tidigare klara sprintar: B121 discovery-integration (PR #34–#37, `e3fa67b`),
 starter dependency hardening (B108),
@@ -391,19 +469,39 @@ PR #28 demo-baseline-fix 1B + bug-sweep, demo-baseline-fix 1A-hotfix.
 
 ## Next action - direktiv till nästa agent
 
-Starta en ny **Viewser-overlay-mini-eval Scout** mot `main` = `650c518`.
-Målet är att avgöra om nästa Builder-sprint ska vara Project DNA /
-semantic follow-up eller en riktad bug-sweep.
+**Först:** Scout RO-review på Builder-sprint-diffen (B132 follow-up,
+wizard-route-emission för local-service-business). Diffen rör
+`packages/generation/planning/plan.py`, `scripts/build_site.py`,
+`scripts/check_term_coverage.py`, `tests/test_page_intent.py` och ny
+`tests/test_wizard_route_emission.py`. Scout ska verifiera (a) ingen
+falsk integration för booking/payments/auth/newsletter, (b)
+`Bokning online` håller warning med specifik reason, (c)
+`local-service-business` är opt-in via `_WIZARD_ROUTE_SCAFFOLDS` (inte
+ecommerce-lite), (d) tester täcker både emission och warning-only-spår,
+(e) Scout ger OK eller riktad bug-sweep innan push.
+
+**Efter push:** Starta en ny **Viewser-overlay-mini-eval Scout** mot
+post-push-`main`. Målet är att avgöra om nästa Builder-sprint ska vara
+Project DNA / semantic follow-up eller en riktad bug-sweep, och att
+verifiera att de nya wizard-routes faktiskt renderas i StackBlitz-preview.
 
 Minsta case-set:
 
 1. **sköldpaddssoppa conflict-case** - verifiera renderad output +
    `site-plan.json`: ingen tagline-läcka av `"2 sidor"`/`"gröna färger"`,
    route-trim till `/` + `/kontakt` när briefen fångar pageCount,
-   `intentGuardWarnings` syns i Run Details.
-2. **elektriker Malmö** - baseline utan Intent Guard false positive.
-3. **frisör Göteborg** - baseline för beauty/salon-spåret efter B143.
-4. **naprapat Stockholm** - vanlig tjänst med kontakt/adress.
+   `intentGuardWarnings` syns i Run Details, samt att `FAQ` i mustHave
+   nu landar som `/faq` istället för warning.
+2. **elektriker Malmö** - baseline utan Intent Guard false positive;
+   verifiera att `Portfolio / Case` i mustHave nu blir `/portfolio` med
+   svensk copy och kontakt-CTA.
+3. **frisör Göteborg** - baseline för beauty/salon-spåret efter B143;
+   verifiera att `Priser och paket` → `/priser`, `Bildgalleri` →
+   `/galleri`, `Karta / Hitta hit` → `/karta` faktiskt renderar och
+   att `Bokning online` ger warning med ny reason-sträng (inte route).
+4. **naprapat Stockholm** - vanlig tjänst med kontakt/adress;
+   verifiera `Vårt team` → `/team`, `Karta / Hitta hit` → `/karta`,
+   `FAQ` → `/faq`.
 
 Om tid finns: ett follow-up-case där v2 ska ge synlig ändring. Scout ska
 leverera per-case-poäng, blocker/risk/nice-to-have, samt beslutsregel:

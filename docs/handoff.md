@@ -1,5 +1,151 @@
 # Handoff – Sajtbyggaren
 
+**Datum:** 2026-05-21 (kvällen, **B132 follow-up Builder-sprint: wizard-
+route-emission för local-service-business ovanpå Backoffice-diagnostiken
+`0ff2a54`**). Lokal `main` ligger en Builder-commit framåt från
+`0ff2a54` (`docs(steward): record wizard diagnostics landing`); pushen är
+nästa steg när Scout-RO-review godkänner diffen. Inga öppna PRs.
+Bug-scope **oförändrat**: 27 aktiva, 0 misplaced, 5 unknown, 104 stängda
+— sprinten är en produktutvidgning av B132-spåret från "warning-only
+observability" till faktisk route-emission, inte en ny bug-fix.
+`backup-41` skapad från synkad `main`-`0ff2a54` + pushad till origin
+innan sprintarbetet. Lokalt finns fortfarande operatörsägda filer som
+inte ska stageas: `.cursor/plans/discovery_resolver_b121_3ec927a0.plan.md`
+(deleted), `sajtbyggaren.code-workspace`,
+`.cursor/tmp_known_issues_pr52.md`, `sni-2025.xlsx` och eval-arbetskatalog
+`eval-tmp/` (lokal mini-eval-output).
+
+**Det som nyss landade i Builder-sprinten:** Wizard `mustHave` som
+innehåller `FAQ`, `Bildgalleri`, `Karta / Hitta hit`, `Vårt team`,
+`Priser och paket` eller `Portfolio / Case` får nu riktiga routes
+(`/faq`, `/galleri`, `/karta`, `/team`, `/priser`, `/portfolio`) i
+stället för enbart `pageIntentWarnings` — under förutsättning att
+scaffolden är `local-service-business`. ecommerce-lite + framtida
+scaffolds får warnings tills deras renderer-set granskats explicit.
+`Bokning online`, `Blogg / Nyheter` och `Nyhetsbrev` håller
+warning-shape med specifika reason-strängar så Backoffice/Run Details
+kan skilja "integration saknas" från "scaffold har ingen sådan yta".
+Ingen falsk booking-, betal-, auth- eller nyhetsbrev-integration emitteras.
+
+**Filer som ändrats:**
+
+- `packages/generation/planning/plan.py` — nya helpers
+  `_wizard_extra_routes` + `_insert_wizard_extras_before_contact` plus
+  konstanter `_WIZARD_ROUTE_DEFINITIONS`, `_WIZARD_ROUTE_SCAFFOLDS`
+  (frozenset, `local-service-business` opt-in),
+  `_WIZARD_ROUTE_UNSUPPORTED_REASONS`. `_page_intent_warnings` får
+  specifika reason-strängar för unsupported pages. `produce_site_plan`
+  infogar wizard-extras i routePlan EFTER scaffold-trim men FÖRE
+  kontakt-routen (matchar nav-layouten). `_trim_route_plan` rör inte
+  wizard-extras (operatörens explicita val vinner över
+  `brief.pageCount`-trim).
+- `scripts/build_site.py` — nya render-helpers `render_faq`,
+  `render_gallery`, `render_team`, `render_pricing`, `render_portfolio`,
+  `render_map` + delade `_wizard_section_heading`,
+  `_wizard_contact_cta`, `_wizard_page_footer`, `_faq_pairs`,
+  `_gallery_images`, `_team_members`, `_url_quote`. Renderar ärlig
+  svensk copy med fallback ("Vi laddar upp bilder snart...", "Pris
+  efter offert", "Vägbeskrivning kommer...") när dossier-data saknas.
+  `write_pages` får ny `extra_routes`-parameter med dispatch via
+  `_WIZARD_ROUTE_RENDERERS`. `render_layout` + `_nav_items_from_scaffold`
+  får `extra_routes`-stöd som infogar wizard-extras före kontakt i nav.
+  Ny `_extract_wizard_extra_routes` läser `site_plan["routePlan"]` så
+  routePlan är single source of truth för dispatch. `build()` trådar
+  wizard-extras genom `routes_to_write` så Quality Gate route-scan
+  kollar både scaffold-defaults och wizard-routes.
+- `scripts/check_term_coverage.py` — `.cursor/tmp_*`-prefix exkluderas
+  (samma kategori som `.cursor/plans/` och `.cursor/rules/`); 6 nya
+  Next.js page-komponenter (`FaqPage`, `GalleryPage`, `MapPage`,
+  `PortfolioPage`, `PricingPage`, `TeamPage`) registrerade i
+  `COMMON_WORDS` som React-symboler.
+- `tests/test_page_intent.py` — omformulerade kontrakt: warning bara
+  för unsupported pages (booking + blogg), emission för supported
+  pages (FAQ + Bildgalleri etc.), ecommerce-lite får warning även för
+  supported pages, B138+B132-interaktion (trim rör inte wizard-extras),
+  end-to-end build-result-test som verifierar både `/galleri` +
+  `/karta` page.tsx-filer och bibehållen warning för booking.
+- `tests/test_wizard_route_emission.py` (NY, ~350 rader) — 16 nya
+  tester som täcker plan-helper, build-helper, enskilda
+  render-funktioner, `write_pages`-dispatch och nav-utvidgning.
+- `docs/current-focus.md` + `docs/handoff.md` (denna fil) — sprint-info
+  och nästa-steg-direktiv.
+
+**Mini-eval-resultat (CLI, mock-väg, `--skip-build`, 4 cases):**
+
+| Case | Wizard mustHave | Routes före | Routes efter | Warnings före | Warnings efter |
+|---|---|---|---|---|---|
+| elektriker Malmö | `Portfolio / Case`, `FAQ` | 4 | 6 (`/portfolio`, `/faq`) | 2 | 0 |
+| frisör Göteborg | `Bokning online`, `Priser och paket`, `Bildgalleri`, `Karta / Hitta hit` | 4 | 7 (`/priser`, `/galleri`, `/karta`) | 4 | 1 (booking, ärlig reason) |
+| naprapat Stockholm | `Vårt team`, `Bokning online`, `Karta / Hitta hit`, `FAQ` | 4 | 7 (`/team`, `/karta`, `/faq`) | 4 | 1 (booking, ärlig reason) |
+| sköldpaddssoppa | `FAQ` | 4 | 5 (`/faq`) | 1 | 0 |
+
+Alla fyra builds gröna med `status=skipped` (förväntat med `--skip-build`).
+Sköldpaddssoppa-spåret: B137 + B138 + Intent Guard light fortsätter
+fungera oförändrat (`_trim_route_plan` rör inte wizard-extras, tagline-
+läckage-skyddet ovanpå). I denna mock-baserade eval returnerade
+briefen inte `pageCount: 2` så B138-trim triggade inte live; det är ett
+pre-existing LLM-variations-fenomen, inte en regression från denna
+sprint.
+
+**Tester/guards efter sprinten:**
+
+- `python -m ruff check .` — 0 findings.
+- `python scripts/governance_validate.py` — 17 OK.
+- `python scripts/rules_sync.py --check` — OK.
+- `python scripts/check_term_coverage.py --strict` — OK (efter
+  allowlist-tillägg för `.cursor/tmp_*` + 6 Next.js page-symboler).
+- `python -m pytest tests/ -q` — alla passerar; 3 skippade E2E
+  (oförändrat).
+- Fokuserad: `tests/test_page_intent.py` (9 passerar),
+  `tests/test_wizard_route_emission.py` (16 passerar). Plus
+  `tests/test_builder_route_emission.py` (80 passerar, inga
+  regressioner), `tests/test_builder_hardening.py`,
+  `tests/test_planning.py`, `tests/test_intent_guard.py`.
+
+**Risker/öppna trådar:**
+
+- Sköldpaddssoppa-eval körde mock-brief som inte gissade
+  `businessTypeGuess: "restaurant"` — Intent Guard-warningen för
+  `fitness` + `mat` triggade därför inte i in-memory-evalen. Det är
+  pre-existing mock-output-variation; live-LLM-flödet bör fortsätta
+  emittera warningen som vanligt eftersom `_intent_guard_warnings`-
+  koden i `scripts/build_site.py:build_plan_artefakts` är oförändrad
+  av denna sprint.
+- `Bokning online`-warning är medvetet kvar — en framtida sprint som
+  inför riktig bookingUrl-integration (separat datakanal i
+  Project Input + render_booking-helper med external-link CTA) kan
+  flytta det från warning till route.
+- Render-helpers för wizard-routes använder `_jsx_safe_string` för all
+  customer-supplied data, så JSX-special-chars och B30-disciplinen
+  bevaras. Däremot är de svenska fallback-strängarna när dossier-data
+  saknas hårdkodade i Python ("Vi laddar upp bilder snart...", "Pris
+  efter offert", etc.) — engelska sajter (`language=en`) får svensk
+  fallback. Detta är en känd icke-blocker som passar en framtida
+  i18n-sprint.
+- Eval-output ligger i `eval-tmp/` lokalt; raderad innan commit
+  (operatör kan inspektera om hen vill köra mini-eval igen).
+- `scripts/verify_run.py` letar bara i `data/runs/` (inte i
+  `eval-tmp/runs`) — eval kördes mot eval-tmp så `verify_run.py`
+  användes inte direkt i denna sprint. Nästa Scout som kör mini-eval i
+  Viewser-overlayflödet får artefakter under `data/runs/` och kan
+  använda `verify_run.py --json` som vanligt.
+
+**Nästa agent ska göra:** starta en read-only Scout-RO-review på
+diffen (B132 follow-up). Scout ska verifiera (a) ingen falsk
+integration för booking/payments/auth/newsletter, (b) `Bokning online`
+håller warning med specifik reason, (c) `local-service-business` är
+opt-in via `_WIZARD_ROUTE_SCAFFOLDS` (inte ecommerce-lite), (d) tester
+täcker både emission och warning-only-spår, (e) Scout ger OK eller
+riktad bug-sweep innan push. Efter push: en ny Viewser-overlay-
+mini-eval Scout som verifierar att de emitterade routes faktiskt
+landar i StackBlitz preview och Backoffice Building Blocks-vyn speglar
+de nya routes-emissionsvägarna korrekt. Mini-eval-direktivet är
+oförändrat (sköldpaddssoppa, elektriker, frisör, naprapat) men med
+nya acceptanskriterier per case (se `docs/current-focus.md` → "Next
+action").
+
+Föregående datum-paragraf:
+
 **Datum:** 2026-05-21 (Backoffice wizardfält-diagnostik). Lokal `main` och
 `origin/main` är `650c518` (`feat(backoffice): add wizard propagation
 diagnostics`). Inga öppna PRs. Bug-scope är oförändrat: **27 aktiva, 0
