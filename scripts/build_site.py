@@ -2230,9 +2230,21 @@ def build_site_brief(run_id: str, dossier: dict, scaffold: dict) -> dict:
 # sker i separat sprint om Scout visar fler false-negative-case.
 
 _INTENT_GUARD_CONFLICTS: dict[str, tuple[str, ...]] = {
-    "fitness": ("mat", "restaurang", "café", "cafe", "bageri"),
-    "construction": ("mat", "hår", "naglar", "salong"),
-    "beauty": ("elektriker", "vvs", "tak", "bygg"),
+    "fitness": (
+        "mat", "restaurang", "café", "cafe", "bageri",
+        "restaurant", "bakery", "catering", "food-truck", "pizzeria", "bar",
+    ),
+    "construction": (
+        "mat", "hår", "naglar", "salong",
+        "hairdresser", "hair-salon", "barber", "nail-salon", "beauty-salon",
+        "spa", "massage", "skincare",
+        "restaurant", "bakery", "café", "cafe",
+    ),
+    "beauty": (
+        "elektriker", "vvs", "tak", "bygg",
+        "electrician", "plumber", "roofer", "carpenter", "hvac",
+        "locksmith", "flooring", "renovation", "builder",
+    ),
 }
 
 
