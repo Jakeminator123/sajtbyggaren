@@ -755,6 +755,58 @@ _WIZARD_ROUTE_UNSUPPORTED_REASONS: dict[str, str] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Read-only public accessors for Backoffice diagnostics
+# ---------------------------------------------------------------------------
+#
+# Backoffice diagnostics need to verify that every wizard ``mustHave``
+# option in ``apps/viewser/components/discovery-wizard/wizard-constants.ts``
+# has a known destination (wizard-extra route, scaffold default, warning
+# reason, or capability mapping). These helpers expose immutable copies of
+# the private mapping tables so the diagnostic does not import private
+# underscore-prefixed names. Runtime planning code keeps using the
+# private constants directly.
+
+
+def get_wizard_route_definitions() -> dict[str, dict[str, str]]:
+    """Read-only copy of wizard ``mustHave`` -> route definition mapping.
+
+    These are the wizard must-have labels that ``_wizard_extra_routes``
+    can emit as real routes (``id``/``path``/``purpose``) for scaffolds
+    listed in :func:`get_wizard_route_scaffolds`.
+    """
+    return {page: dict(definition) for page, definition in _WIZARD_ROUTE_DEFINITIONS.items()}
+
+
+def get_wizard_route_scaffolds() -> frozenset[str]:
+    """Read-only set of scaffold ids that opt in to wizard route emission.
+
+    Other scaffolds keep warning-shape via ``pageIntentWarnings`` for the
+    same wizard labels until their renderer set is reviewed.
+    """
+    return _WIZARD_ROUTE_SCAFFOLDS
+
+
+def get_wizard_route_unsupported_reasons() -> dict[str, str]:
+    """Read-only copy of wizard ``mustHave`` -> ``pageIntentWarnings`` reason map.
+
+    These wizard labels intentionally stay warning-only because emitting
+    a route would require a real integration layer (booking, CMS,
+    newsletter) the deterministic Builder does not have in v1.
+    """
+    return dict(_WIZARD_ROUTE_UNSUPPORTED_REASONS)
+
+
+def get_page_to_route_hint_mapping() -> dict[str, str]:
+    """Read-only copy of wizard ``mustHave`` -> expected route path hint.
+
+    Used by ``_page_intent_warnings`` to decide which scaffold-default
+    paths a wizard label is competing against, and by Backoffice
+    diagnostics to surface route hints next to the warning reason.
+    """
+    return dict(_PAGE_TO_ROUTE_HINT)
+
+
 def _insert_wizard_extras_before_contact(
     scaffold_routes: list[dict[str, str]],
     wizard_extras: list[dict[str, str]],

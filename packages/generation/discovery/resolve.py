@@ -1158,9 +1158,55 @@ def _slugify(text: str) -> str:
     return slug
 
 
+# ---------------------------------------------------------------------------
+# Read-only public accessors for Backoffice diagnostics
+# ---------------------------------------------------------------------------
+#
+# Backoffice diagnostics need to read the wizard label -> capability and
+# wizard label -> conversion goal mappings to verify that every wizard UI
+# value has a known destination. Importing the private underscore-prefixed
+# constants from another package couples Backoffice to implementation
+# details. These helpers expose immutable copies so a consumer can iterate
+# without mutating resolver state.
+
+
+def get_page_to_capability_mapping() -> dict[str, str]:
+    """Read-only copy of the wizard ``mustHave`` -> capability slug map.
+
+    Used by ``backoffice/discovery_wizard_diagnostics.py`` to know which
+    wizard must-have labels feed ``requestedCapabilities`` deterministically.
+    Returns a new dict so callers cannot mutate resolver internals.
+    """
+    return dict(_PAGE_TO_CAPABILITY)
+
+
+def get_cta_to_conversion_goal_mapping() -> dict[str, str]:
+    """Read-only copy of the wizard ``primaryCta`` -> conversion-goal map.
+
+    Used by ``backoffice/discovery_wizard_diagnostics.py`` to surface
+    wizard CTA values that lack a deterministic conversion-goal mapping
+    so they are not silently hidden.
+    """
+    return dict(_CTA_TO_CONVERSION_GOAL)
+
+
+def normalize_capability_slug(slug: str) -> str:
+    """Public wrapper for the resolver's capability alias normalisation.
+
+    The resolver folds known aliases (``newsletter``, ``online-booking``,
+    etc.) into canonical capability slugs before classifying them against
+    ``capability-map.v1.json``. Backoffice diagnostics rely on the same
+    folding so the classification matches what the resolver actually does.
+    """
+    return _normalize_capability_slug(slug)
+
+
 __all__ = [
     "apply_discovery_overrides",
     "resolve_discovery",
+    "get_page_to_capability_mapping",
+    "get_cta_to_conversion_goal_mapping",
+    "normalize_capability_slug",
     # Re-export för bakåtkompat när konsumenter vill ha taxonomy-loadern
     "load_discovery_taxonomy",
     "DEFAULT_TAXONOMY_PATH",
