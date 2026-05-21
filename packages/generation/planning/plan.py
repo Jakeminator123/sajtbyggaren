@@ -817,6 +817,7 @@ def _assemble_site_plan(
     page_intent_warnings: list[dict[str, str]],
     route_plan: list[dict[str, str]] | None = None,
     page_count_warning: dict[str, Any] | None = None,
+    intent_guard_warnings: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     if route_plan is None:
         route_plan = _route_plan_from_scaffold(scaffold)
@@ -841,6 +842,10 @@ def _assemble_site_plan(
     }
     if page_count_warning is not None:
         site_plan["pageCountWarning"] = page_count_warning
+    if intent_guard_warnings:
+        # Empty list intentionally omitted from the schema-required keys so
+        # legacy consumers do not need to treat "no warnings" as a new field.
+        site_plan["intentGuardWarnings"] = list(intent_guard_warnings)
     scaffold_version = (scaffold.get("scaffold") or {}).get("version")
     if isinstance(scaffold_version, str) and scaffold_version:
         site_plan["scaffoldVersion"] = scaffold_version
@@ -902,6 +907,7 @@ def produce_site_plan(
     project_id: str | None = None,
     verification_policy: str | None = None,
     preview_runtime: str = "local",
+    intent_guard_warnings: list[dict[str, str]] | None = None,
 ) -> PlanResult:
     """Phase 2 Plan entry point. Single source of truth for both scripts.
 
@@ -1017,6 +1023,7 @@ def produce_site_plan(
         ),
         route_plan=trimmed_route_plan,
         page_count_warning=page_count_warning,
+        intent_guard_warnings=intent_guard_warnings,
     )
     validate_site_plan(site_plan)
 

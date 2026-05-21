@@ -121,6 +121,37 @@
         }
       }
     },
+    "intentGuardWarnings": {
+      "type": "array",
+      "description": "Non-blocking warnings when wizard categoryId conflicts with the brief's businessTypeGuess or servicesMentioned. Emitted by scripts/build_site.py:_intent_guard_warnings and threaded through produce_site_plan into the Site Plan. Build is not stopped — Backoffice/Run Details surface the conflict to the operator. Intent Guard light, B137-/B138-sprint 2026-05-21.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["categoryId", "conflictingTerm", "reason"],
+        "properties": {
+          "categoryId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Wizard category id that triggered the conflict (e.g. 'fitness')."
+          },
+          "businessTypeGuess": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Brief's businessTypeGuess at the time of build, when set."
+          },
+          "conflictingTerm": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Concrete term that conflicts with the category (e.g. 'mat' for fitness vs restaurant)."
+          },
+          "reason": {
+            "type": "string",
+            "enum": ["category-vs-business-mismatch"],
+            "description": "Why the conflict was emitted. Single value in v1; new values arrive with the next Intent Guard expansion sprint."
+          }
+        }
+      }
+    },
     "pageCountWarning": {
       "type": "object",
       "additionalProperties": false,

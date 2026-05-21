@@ -2216,6 +2216,88 @@ def build_site_brief(run_id: str, dossier: dict, scaffold: dict) -> dict:
         )
 
 
+# ---------------------------------------------------------------------------
+# Intent Guard light (warning-only) — B137-/B138-sprint 2026-05-21
+# ---------------------------------------------------------------------------
+#
+# Wizardens kategori (``discoveryDecision.categoryIds``) och briefens
+# ``businessTypeGuess`` / ``servicesMentioned`` kan motsäga varandra när
+# operatören blandar fri prompt och wizardval. Scout case 4 (sköldpaddssoppa)
+# visade exemplet: operatören valde fitness i wizardens overlay men beskrev
+# mat-/restaurang-verksamhet i fri prompten — builden gick igenom utan att
+# någonstans flagga konflikten. Helpern emitterar warnings men stoppar
+# INTE generationen. Konflikt-tabellen är medvetet minimal i v1; utbyggnad
+# sker i separat sprint om Scout visar fler false-negative-case.
+
+_INTENT_GUARD_CONFLICTS: dict[str, tuple[str, ...]] = {
+    "fitness": ("mat", "restaurang", "café", "cafe", "bageri"),
+    "construction": ("mat", "hår", "naglar", "salong"),
+    "beauty": ("elektriker", "vvs", "tak", "bygg"),
+}
+
+
+def _intent_guard_warnings(
+    site_brief: dict[str, Any],
+    prompt_meta: dict[str, Any] | None,
+) -> list[dict[str, str]]:
+    """Detect wizard-vs-brief category mismatches (warning-only).
+
+    Returns a list of warning dicts shaped per
+    ``governance/schemas/site-plan.schema.json``'s ``intentGuardWarnings``
+    items. Empty list when no conflict exists or required signals are
+    missing. Builder never blocks on this; the warning surfaces in
+    ``site-plan.json`` for Backoffice/Run Details to display.
+    """
+    if not prompt_meta:
+        return []
+    decision = prompt_meta.get("discoveryDecision")
+    if not isinstance(decision, dict):
+        return []
+    category_ids_raw = decision.get("categoryIds")
+    if not isinstance(category_ids_raw, list):
+        return []
+    category_ids = [
+        cat for cat in category_ids_raw if isinstance(cat, str) and cat
+    ]
+    if not category_ids:
+        return []
+
+    business_raw = site_brief.get("businessTypeGuess")
+    business_type = (
+        business_raw.strip().lower() if isinstance(business_raw, str) else ""
+    )
+    services_raw = site_brief.get("servicesMentioned") or []
+    service_terms = [
+        s.strip().lower()
+        for s in services_raw
+        if isinstance(s, str) and s.strip()
+    ]
+    candidate_terms = ([business_type] if business_type else []) + service_terms
+
+    warnings: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for category_id in category_ids:
+        forbidden = _INTENT_GUARD_CONFLICTS.get(category_id)
+        if not forbidden:
+            continue
+        for blocked in forbidden:
+            if not any(blocked in term for term in candidate_terms):
+                continue
+            key = (category_id, blocked)
+            if key in seen:
+                continue
+            seen.add(key)
+            warning: dict[str, str] = {
+                "categoryId": category_id,
+                "conflictingTerm": blocked,
+                "reason": "category-vs-business-mismatch",
+            }
+            if business_type:
+                warning["businessTypeGuess"] = business_type
+            warnings.append(warning)
+    return warnings
+
+
 def build_plan_artefakts(
     run_id: str,
     dossier: dict,
@@ -2250,6 +2332,8 @@ def build_plan_artefakts(
     if isinstance(pinned_starter, str) and pinned_starter:
         pinned["starterId"] = pinned_starter
 
+    intent_warnings = _intent_guard_warnings(site_brief, prompt_meta)
+
     result = produce_site_plan(
         site_brief,
         run_id=run_id,
@@ -2259,6 +2343,7 @@ def build_plan_artefakts(
         project_id=_prompt_meta_project_id(prompt_meta),
         verification_policy="build-must-pass",
         preview_runtime="local",
+        intent_guard_warnings=intent_warnings,
     )
 
     site_plan = dict(result.site_plan)
