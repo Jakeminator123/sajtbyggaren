@@ -121,6 +121,34 @@
         }
       }
     },
+    "pageCountWarning": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Non-blocking warning emitted by produce_site_plan when site_brief.pageCount caused routePlan to be trimmed or clamped to the minimum runnable set. Absent when no trim occurred (B138).",
+      "required": ["requestedPageCount", "scaffoldDefaultCount", "emittedRouteCount", "reason"],
+      "properties": {
+        "requestedPageCount": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Page count the brief carried (operator's explicit number from the free prompt)."
+        },
+        "scaffoldDefaultCount": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of routes the selected scaffold's defaultRoutes would emit untrimmed."
+        },
+        "emittedRouteCount": {
+          "type": "integer",
+          "minimum": 2,
+          "description": "Number of routes actually emitted after trim/clamp. Always >= 2 (home + contact)."
+        },
+        "reason": {
+          "type": "string",
+          "enum": ["trimmed-to-brief-page-count", "below-minimum-keeping-default"],
+          "description": "Why the warning was emitted. trimmed-to-brief-page-count: brief.pageCount < scaffold defaults, route_plan trimmed. below-minimum-keeping-default: brief.pageCount < 2, clamped to minimum runnable set (home + contact)."
+        }
+      }
+    },
     "sourceModelRole": {
       "type": "string",
       "const": "planningModel",

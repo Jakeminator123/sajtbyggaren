@@ -567,6 +567,91 @@ def _route_plan_from_scaffold(scaffold: dict[str, Any]) -> list[dict[str, str]]:
     ]
 
 
+_MINIMUM_RUNNABLE_ROUTE_COUNT = 2
+_PAGE_COUNT_VALID_RANGE = range(1, 11)  # 1-10 inclusive
+
+
+def _trim_route_plan(
+    route_plan: list[dict[str, str]],
+    page_count: int | None,
+) -> tuple[list[dict[str, str]], dict[str, Any] | None]:
+    """Trim route_plan to honour ``brief.pageCount`` (B138).
+
+    Rules:
+      * ``page_count`` outside 1-10 (None, int below 1, int above 10) →
+        no trim, no warning. Defensive against briefModel halucinations.
+      * ``page_count`` >= scaffold defaults → no trim, no warning.
+      * ``home`` + ``contact`` routes are never dropped (identified by id;
+        falls back to first/last route if those ids are missing).
+      * Minimum runnable set is 2 (home + contact). ``page_count`` < 2 is
+        clamped to 2 with ``reason="below-minimum-keeping-default"``.
+      * Middle slots are filled in scaffold default order.
+
+    Returns ``(possibly_trimmed_route_plan, optional_warning_dict)``.
+    """
+    if not isinstance(page_count, int):
+        return route_plan, None
+    if isinstance(page_count, bool):
+        # bool is a subclass of int; reject defensively.
+        return route_plan, None
+    if page_count not in _PAGE_COUNT_VALID_RANGE:
+        return route_plan, None
+
+    default_count = len(route_plan)
+    if default_count == 0:
+        return route_plan, None
+    if page_count >= default_count:
+        return route_plan, None
+
+    home_idx = next(
+        (i for i, r in enumerate(route_plan) if r.get("id") == "home"),
+        None,
+    )
+    contact_idx = next(
+        (i for i, r in enumerate(route_plan) if r.get("id") == "contact"),
+        None,
+    )
+    # Defensive fallback: if scaffold lacks canonical home/contact IDs,
+    # treat first/last route as the anchor pair so trim still produces a
+    # sensible 2-route minimum.
+    if home_idx is None:
+        home_idx = 0
+    if contact_idx is None or contact_idx == home_idx:
+        contact_idx = default_count - 1 if default_count > 1 else None
+
+    effective_count = max(page_count, _MINIMUM_RUNNABLE_ROUTE_COUNT)
+    keep_idx: list[int] = [home_idx]
+    if contact_idx is not None and contact_idx != home_idx:
+        seats_for_middle = effective_count - 2
+        middle_candidates = [
+            i
+            for i in range(default_count)
+            if i != home_idx and i != contact_idx
+        ]
+        if seats_for_middle > 0:
+            keep_idx.extend(middle_candidates[:seats_for_middle])
+        keep_idx.append(contact_idx)
+    else:
+        # Single-route scaffold (rare). Nothing to trim further.
+        return route_plan, None
+
+    keep_idx_sorted = sorted(set(keep_idx))
+    trimmed = [route_plan[i] for i in keep_idx_sorted]
+
+    reason = (
+        "below-minimum-keeping-default"
+        if page_count < _MINIMUM_RUNNABLE_ROUTE_COUNT
+        else "trimmed-to-brief-page-count"
+    )
+    warning: dict[str, Any] = {
+        "requestedPageCount": page_count,
+        "scaffoldDefaultCount": default_count,
+        "emittedRouteCount": len(trimmed),
+        "reason": reason,
+    }
+    return trimmed, warning
+
+
 _PAGE_TO_ROUTE_HINT: dict[str, str] = {
     "Om oss / Om mig": "/om-oss",
     "Bokning online": "/bokning",
@@ -730,8 +815,11 @@ def _assemble_site_plan(
     preview_runtime: str,
     created_at: str,
     page_intent_warnings: list[dict[str, str]],
+    route_plan: list[dict[str, str]] | None = None,
+    page_count_warning: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    route_plan = _route_plan_from_scaffold(scaffold)
+    if route_plan is None:
+        route_plan = _route_plan_from_scaffold(scaffold)
     site_plan: dict[str, Any] = {
         "runId": run_id,
         "scaffoldId": choice.scaffoldId,
@@ -751,6 +839,8 @@ def _assemble_site_plan(
         "planError": plan_error,
         "createdAt": created_at,
     }
+    if page_count_warning is not None:
+        site_plan["pageCountWarning"] = page_count_warning
     scaffold_version = (scaffold.get("scaffold") or {}).get("version")
     if isinstance(scaffold_version, str) and scaffold_version:
         site_plan["scaffoldVersion"] = scaffold_version
@@ -902,7 +992,14 @@ def produce_site_plan(
         verification_policy = "build-must-pass" if pinned is not None else "fast"
 
     created_at = _utc_now_iso()
-    route_plan = _route_plan_from_scaffold(scaffold)
+    raw_route_plan = _route_plan_from_scaffold(scaffold)
+    # B138: respect brief.pageCount when emitting routes. Trim runs for
+    # both pinned and helper-chosen scaffolds; warning surfaces in the
+    # site-plan so operator/Backoffice can see why the count diverged.
+    page_count_value = site_brief.get("pageCount")
+    trimmed_route_plan, page_count_warning = _trim_route_plan(
+        raw_route_plan, page_count_value
+    )
     site_plan = _assemble_site_plan(
         run_id=run_id,
         choice=choice,
@@ -916,8 +1013,10 @@ def produce_site_plan(
         created_at=created_at,
         page_intent_warnings=_page_intent_warnings(
             wizard_must_have,
-            route_plan,
+            trimmed_route_plan,
         ),
+        route_plan=trimmed_route_plan,
+        page_count_warning=page_count_warning,
     )
     validate_site_plan(site_plan)
 
