@@ -30,11 +30,13 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `2e274ac` (2026-05-22, **SNI 2025 import +
-Discovery-map-diagnostik sidospår landat på main**) — produkt-/kodläget
-är `2e274ac` (`feat(governance): add SNI 2025 import + discovery map
-diagnostics`). `backup-42` skapades från synkad `main`-`1edb089` + pushad
-till origin innan sprintarbetet. Sprinten är en read-only/diagnostisk
+Last verified state: `f40564e` (2026-05-22, **SNI 2025 import +
+Discovery-map-diagnostik sidospår + PR #55-handoff-notis**) — produkt-/
+kodläget är `2e274ac` (`feat(governance): add SNI 2025 import + discovery
+map diagnostics`); efterföljande docs-bumpar `bf8d6c2` och `f40564e`
+registrerar landningen i Steward + PR #55-parallell-agent-spåret.
+`backup-42` skapades från synkad `main`-`1edb089` + pushad till origin
+innan sprintarbetet. Sprinten är en read-only/diagnostisk
 sidospår-leverans: ny extractor `scripts/extract_sni_2025.py` läser
 SCB:s SNI 2025-källfil (stdlib `zipfile` + `xml.etree`, ingen ny pip-
 dependency) och skriver deterministisk JSON-spegel till
