@@ -30,9 +30,38 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `f40564e` (2026-05-22, **SNI 2025 import +
+Last verified state: `e822a2c` (2026-05-22, **PR #55 mergad ovanpå
+SNI-sidospårets `7289732`**) — `origin/main` och lokal `main` är på
+`e822a2c` (`fix(viewser): stale run-following och artefakt-panel
+(#55)`). PR55-agenten stängde tre distinkta viewser-fixar (stale-closure
+i `applyRunsData`, `setBundle(null)`-cleanup i Run Details, ny
+`runSiteIdUnknown`-prop som blockerar follow-up vid `siteId === "unknown"`)
+i 6 filer (113 ins / 8 del). Reviewerns observation att den
+ApplyRunsContext-typ PR-bodyn nämnde aldrig blev en *named type* stämmer
+— mergens andra commit "avoid governance term for run context" gjorde
+ctx inline (`ctx?: { selectedRunId: string | null; selectedSiteId: string }`).
+3 nya regression-tester i `tests/test_viewser_files.py` låser fix-
+kontrakten via regex-/substring-match. Lokala operatör- och PR55-agent-
+tweaks (`.cursorignore`/`.cursorindexingignore`/`.gitignore` med tightare
+operatör-scratch-ignores + `data/taxonomies/**/*.xlsx` säkerhetsbälte +
+SNI JSON-indexering blockerad, `data/taxonomies/sni/README.md`,
+`scripts/lookup_sni.py` CLI med `--json`-stöd, `governance/rules/
+always-swedish.md`-tillägg om engelska debug-narration och unicode_escape,
+`sajtbyggaren.code-workspace` autoSave-toggle) väntar fortfarande på
+operatörens explicita beslut att stagea — flaggade i mid-session-
+handoffen från PR55-agenten. Bug-räkning oförändrad: **27 aktiva, 0
+misplaced, 5 unknown, 104 stängda**. **Direkt nästa orkestrator-fokus:**
+Project DNA / semantic follow-up med B71 som primärt ankare drivs av
+separat cloud agent (operatör-notis 2026-05-22). Lokal orchestrator
+håller main stabil tills cloud-agentens DNA-spår landar eller blockas
+av deras review. Inga SNI-runtime-taxonomi/Viewser-overlay-integration,
+embeddings, nya starters, variant-promotion eller B59/B125-preview-
+fallback ska startas parallellt med cloud-agentens spår. Tidigare
+paragraf:
+
+Föregående verified state: `f40564e` (2026-05-22, **SNI 2025 import +
 Discovery-map-diagnostik sidospår + PR #55-handoff-notis**) — produkt-/
-kodläget är `2e274ac` (`feat(governance): add SNI 2025 import + discovery
+kodläget var `2e274ac` (`feat(governance): add SNI 2025 import + discovery
 map diagnostics`); efterföljande docs-bumpar `bf8d6c2` och `f40564e`
 registrerar landningen i Steward + PR #55-parallell-agent-spåret.
 `backup-42` skapades från synkad `main`-`1edb089` + pushad till origin
@@ -244,7 +273,19 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `2e274ac` på origin och lokalt efter SNI-sidospår-pushen.
+`main` är vid `e822a2c` på origin och lokalt efter PR #55-mergen ovanpå
+SNI-sidospårets `7289732`. PR55-agenten levererade tre viewser-fixar
+för run-following och artefakt-panel-stale-state utan att röra någon
+del av SNI-spåret. Inga öppna PRs. SNI-stödtillägg (`scripts/
+lookup_sni.py` CLI, `data/taxonomies/sni/README.md` och relaterade
+`.cursorignore`/`.cursorindexingignore`/`.gitignore`-uppdateringar som
+PR55-agenten lämnade untracked) väntar fortfarande på operatörens beslut
+att stagea. Cloud agent jobbar separat på Project DNA / semantic follow-
+up; lokal orchestrator håller main stabil tills DNA-spåret återkommer.
+Bug-räkning oförändrad: **27 aktiva, 0 misplaced, 5 unknown, 104 stängda**.
+`backup-42` finns på origin från pre-SNI-läget. Föregående stage snapshot:
+
+`main` var vid `2e274ac` på origin och lokalt efter SNI-sidospår-pushen.
 SNI 2025-importen ger nu repo:t en deterministisk JSON-spegel under
 `data/taxonomies/sni/sni-2025.v1.json` (1882 SNI-poster över alla fem
 nivåer från avdelning till detaljgrupp). En ny handstyrd policy

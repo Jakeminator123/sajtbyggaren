@@ -1,8 +1,63 @@
 # Handoff – Sajtbyggaren
 
+**Datum:** 2026-05-22 (**PR #55 mergad ovanpå SNI-sidospåret; Project
+DNA / semantic follow-up drivs av separat cloud agent**). Senaste
+produkt-/kodläge är `e822a2c` (`fix(viewser): stale run-following och
+artefakt-panel (#55)`). Mina SNI-commits `2e274ac`, `bf8d6c2`,
+`f40564e`, `7289732` ligger kvar i historien direkt under PR #55.
+
+**PR #55-mergen (PR55-agentens spår, inte mitt):** Stängde tre distinkta
+viewser-fixar i 6 filer (113 ins / 8 del):
+
+1. Stale-closure i `applyRunsData` (apps/viewser/app/page.tsx)
+2. `setBundle(null)`-cleanup före refetch i `run-details-panel.tsx`
+3. Ny `runSiteIdUnknown`-prop genom `console-drawer.tsx` →
+   `project-input-picker.tsx` → `prompt-builder.tsx` som blockerar
+   follow-up när `siteId === "unknown"`
+
+3 nya regression-tester i `tests/test_viewser_files.py` låser fix-
+kontrakten via regex-/substring-match. Reviewerns observation om
+namnkonflikt med Discovery Resolver-konceptet stämde: PR-bodyn nämnde
+ett `ApplyRunsContext`-namn som aldrig blev en *named type*. Mergens
+andra commit "avoid governance term for run context" gjorde ctx inline
+(`ctx?: { selectedRunId: string | null; selectedSiteId: string }`).
+Squash-merge-commit `e822a2c`.
+
+**Untracked + lokalt-modifierade filer som PR55-agenten lämnade för
+operatör-/orchestrator-beslut:**
+
+| Fil | Tillhör | Innehåll |
+|---|---|---|
+| `data/taxonomies/sni/README.md` | SNI-followup | Komplett dokumentation av SNI-mappen + rebuild-flöde + lookup-CLI + konsumentlista |
+| `scripts/lookup_sni.py` | SNI-followup | Stdlib-only CLI med `code`/`text`/`section`/`level`/`stats`-subkommandon + `--json`. Lint-passerar; manuellt verifierat. |
+| `.cursorindexingignore` | SNI + tooling | Lägger till lockfile-kommentar, `.cursor/plans/`, `.cursor/tmp_*`, `eval-tmp/`, `data/embedding-index/`, `*.mp4` och blockerar `data/taxonomies/sni/sni-2025.v1.json` från Cursor-indexering (25 000 rader JSON-bloat undviks; Read funkar fortfarande på enskilda poster) |
+| `.cursorignore` | Operatör + tooling | Speglade ignores för agent Read (`embedding-index`, `.cursor/plans/`, `.cursor/tmp_*`, `eval-tmp/`, `*.mp4`) |
+| `.gitignore` | SNI + operatör | `.cursor/tmp_*`, `eval-tmp/` plus `data/taxonomies/**/*.xlsx` säkerhetsbälte mot framtida xlsx-commits |
+| `.cursor/rules/always-swedish.mdc` | Operatör (spegel) | Nya stycken om engelsk debug-narration och unicode_escape — speglad fil, ändras inte direkt |
+| `governance/rules/always-swedish.md` | Operatör (källa) | Två nya stycken: ingen engelsk intern-debug-narration; ingen unicode_escape-decoding av redan UTF-8 svensk text |
+| `sajtbyggaren.code-workspace` | Operatör | `files.autoSave: afterDelay` istället för `off` |
+
+PR55-agenten skrev explicit i sin slutrapport att "mina otrackade SNI-
+filer ... du bestämmer när de ska stageas". Operatören har 2026-05-22
+bekräftat att en separat **cloud agent jobbar med Project DNA-spåret**,
+så lokal orchestrator håller main stabil och rör inget DNA-relaterat
+(`scripts/prompt_to_project_input.py`, `packages/generation/discovery/
+resolve.py`, Project Input-versionering, tone/story/tagline/positionering)
+tills cloud-agentens spår återkommer för review eller blockas.
+
+**Föreslagen följd-Steward-pass när operatören ger OK:** commit:a
+SNI-followup-filerna (README + lookup_sni.py) + ignore-/gitignore-
+uppdateringarna som en samlad `docs(steward): SNI follow-up tooling +
+cursor/git ignore consolidation`. Operatör-lokala filer
+(`always-swedish.md` källa + spegel via `rules_sync.py`,
+`sajtbyggaren.code-workspace`) kan committas separat eller stayas där
+de är.
+
+**Föregående datum-paragraf:**
+
 **Datum:** 2026-05-22 (**SNI 2025 import + Discovery-map-diagnostik
 landat på main; Project DNA / semantic follow-up är fortsatt nästa
-huvudspår**). Senaste produkt-/kodläge är `2e274ac`
+huvudspår**). Senaste produkt-/kodläge var `2e274ac`
 (`feat(governance): add SNI 2025 import + discovery map diagnostics`).
 `backup-42` skapad från synkad `main`-`1edb089` + pushad till origin
 innan sprintarbetet. Inga öppna PRs. Bug-scope oförändrat: **27 aktiva,
