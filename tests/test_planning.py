@@ -461,6 +461,27 @@ def test_site_plan_and_generation_package_share_createdAt_within_run(monkeypatch
 
 
 @pytest.mark.tooling
+def test_generation_package_keeps_site_brief_by_ref_contract(monkeypatch):
+    """B141 fix chooses the existing by-reference contract.
+
+    Generation Package should keep pointing at the canonical Site Brief
+    artefact instead of duplicating the full brief inline.
+    """
+    monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
+    result = produce_site_plan(
+        _baseline_brief(
+            businessTypeGuess="electrician",
+            tone=["trustworthy", "local"],
+        ),
+        run_id="test-generation-package-brief-ref",
+    )
+
+    assert result.generation_package["siteBriefRef"] == "site-brief.json"
+    assert "siteBrief" not in result.generation_package
+    validate_generation_package(result.generation_package)
+
+
+@pytest.mark.tooling
 def test_merge_preserves_helper_rejected_when_operator_object_has_no_rejected():
     operator = {
         "required": ["interactive-game-loop"],
