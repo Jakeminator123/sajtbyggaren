@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 30 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 98 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 30 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 99 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -706,6 +706,32 @@ för follow-up eller ska städas.
   2026-05-19. Fix: open. Test: open.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B142` Låg-medel** (öppnad + stängd 2026-05-20, ProjectInputPicker
+  följer vald run) - operatörspanelens ProjectInputPicker synkade inte
+  med vald run i RunHistory: panelen kunde visa t.ex.
+  `painter-palma` medan vald run var `snus-ab`. Effekt: operatörens
+  översiktspanel visade fel runs DNA (Project Input-kort, scaffold,
+  variant) jämfört med vald run, vilket gjorde det otydligt vilken
+  konfiguration som faktiskt byggdes. Rörde inte renderad output på
+  publicerade sajter — bara operatörens översiktsyta i Viewser.
+  Källa: operatörs-observation i live-Viewser efter Pass 2,
+  2026-05-20. **Fix:** `apps/viewser/components/prompt-builder.tsx`
+  skickar `siteId` tillsammans med `runId` i `onBuildDone`-callbacken;
+  `apps/viewser/app/page.tsx` får ny `selectRunAndSyncSiteId()`-helper
+  som atomiskt uppdaterar `selectedRunId` + `selectedSiteId`, och
+  `applyRunsData` rör inte längre `selectedSiteId` när en run redan är
+  vald (annars fightade fallback-logiken sync:en). `console-drawer.tsx`
+  vidarebefordrar `runSiteId` till `project-input-picker.tsx` som visar
+  en "följer vald run"-badge när synkad och en amber-varning när
+  runens `siteId` saknas i `inputs`-listan på disk. Manuella picker-val
+  respekteras tills nästa run-byte. Fix: `f8d6a52`. Test: open —
+  manuell verifiering rekommenderas; dedikerad React-state-test för
+  run-following-syncen saknas i repo idag. Breda viewser-smoke-tester
+  (`tests/test_viewser_files.py` + `tests/test_viewser_prompt_primary.py`)
+  gröna lokalt per Builder-rapport. Nice-to-have i `docs/current-focus.md`
+  Queue: viewser React-state-test-setup för run-following + framtida
+  picker-syncs.
 
 - **`B134` Medel** (stängd 2026-05-19, wizardMustHave follow-up reset) -
   `scripts/prompt_to_project_input.py:generate_followup()` ärvde alltid
