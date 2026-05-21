@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 28 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 103 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 27 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 104 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -637,27 +637,6 @@ för follow-up eller ska städas.
   Källa: Scout-rapport PR #47, "Eventuella ytterligare fynd",
   2026-05-19. Fix: open. Test: open.
 
-- **`B141` Låg-medel** (öppen, codegen läser tone från död pipeline) -
-  `packages/generation/planning/plan.py:_assemble_generation_package()`
-  skriver bara `siteBriefRef`, INTE `siteBrief`-objektet, till
-  generation_package. Det betyder att
-  `packages/generation/codegen/codegen.py:_summarise_generation_package()`
-  kör `site_brief = generation_package.get("siteBrief") or {}` mot ett
-  alltid-tomt dict; `tone` / `businessType`-rationale från codegenModel
-  baseras därför aldrig på briefens data i prod-flödet. Effekt idag:
-  codegenModel får inget tone- eller businessType-underlag från
-  briefen att resonera om, vilket gör manifest/rationale-ytan tunnare
-  än vad pipelinen utlovar. Beslut behövs: antingen är
-  `siteBriefRef`-mönstret avsiktligt (cite-by-ref) och
-  `_summarise_generation_package` bör ladda briefen från ref:en, eller
-  så ska `_assemble_generation_package` skriva både `siteBrief` och
-  `siteBriefRef`. Fix-pekare:
-  `packages/generation/planning/plan.py:_assemble_generation_package`
-  + `packages/generation/codegen/codegen.py:_summarise_generation_package`.
-  Källa: Scout-rapport PR #47, "Eventuella ytterligare fynd",
-  2026-05-19. Fix: open. Test: open.
-
-
 ## Stängda - regression-test säkrar fixet
 
 - **`B143` Låg-medel** (öppnad + stängd 2026-05-21, Intent Guard light
@@ -685,6 +664,29 @@ för follow-up eller ska städas.
   runs utan fälten inte renderar ett tomt block och inte kraschar.
   Copyt förklarar att builden inte blockas. Fix: `aee67d7`. Test:
   `tests/test_viewser_files.py::test_run_details_panel_renders_site_plan_warnings`.
+
+- **`B141` Låg-medel** (stängd 2026-05-21, codegen läser Site Brief
+  via generation-package-ref) -
+  `packages/generation/planning/plan.py:_assemble_generation_package()`
+  skrev bara `siteBriefRef`, medan
+  `packages/generation/codegen/codegen.py:_summarise_generation_package()`
+  tidigare bara läste inline `siteBrief`. Effekt: codegenModel-
+  sammanfattningen fick `businessType: unknown` och `tone: -` i
+  canonical prod-flödet trots att `site-brief.json` redan innehöll
+  faktisk `businessTypeGuess` och `tone`. **Fix:** PR:n väljer
+  alternativ B och behåller befintligt by-reference-kontrakt:
+  `generation-package.json` fortsätter skriva `siteBriefRef` utan inline
+  `siteBrief`, och codegen laddar nu faktisk `site-brief.json` via
+  `data/runs/<runId>/<siteBriefRef>` när summaryn byggs. Helpern
+  använder `resolve()`, avvisar absolut `siteBriefRef` och avvisar
+  `../`-escape ut ur run-mappen. Inline `siteBrief` finns bara kvar som
+  bakåtkompatibel fallback för äldre handskrivna callers. Fix:
+  `c98b58f`. Test:
+  `tests/test_codegen.py::test_codegen_summary_loads_site_brief_from_ref`,
+  `tests/test_codegen.py::test_codegen_real_path_prompt_uses_site_brief_ref`,
+  `tests/test_codegen.py::test_codegen_summary_rejects_absolute_site_brief_ref`,
+  `tests/test_codegen.py::test_codegen_summary_rejects_traversal_site_brief_ref`,
+  `tests/test_planning.py::test_generation_package_keeps_site_brief_by_ref_contract`.
 
 - **`B137` Medel** (stängd 2026-05-21, wizard-overlay tagline-läckage av
   rå prompt-text) - Verifierat live i Scout case 4 (sköldpaddssoppa):
