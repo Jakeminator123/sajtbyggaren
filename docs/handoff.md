@@ -1,14 +1,15 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-22 (**PR #54 mergad + live Viewser-route-eval klar**).
-Senaste verifierade produkt-/kodläge är `9225244`
-(`fix(backoffice): make wizard diagnostic wizard-truth-driven (#54)`);
-efterföljande Steward-docs-bump låg på `e84d2fb`. Använd `git log -1`
-för faktisk lokal HEAD om ännu en docs-sync har landat efter denna
-notis. PR #54 är mergad; inga öppna PRs. Arbetskopian kan ha
-operatörsägda lokala filer som inte ska stageas, bland annat
-`.cursor/tmp_known_issues_pr52.md`, `sni-2025.xlsx` och eventuella
-regeländringar i `governance/rules/` + `.cursor/rules/`.
+**Datum:** 2026-05-22 (**B132/PR54-spåret avslutat; nästa spår Project
+DNA / semantic follow-up**). Senaste produkt-/kodläge som verifierats är
+`9225244` (`fix(backoffice): make wizard diagnostic wizard-truth-driven
+(#54)`). Efterföljande Steward-docs-bumpar ligger på `e84d2fb` och
+`2057241`; kör `git log -1` för faktisk lokal HEAD om ännu en docs-sync
+har landat efter denna notis. PR #54 är mergad; inga öppna PRs.
+Arbetskopian kan ha operatörsägda lokala filer som inte ska stageas,
+bland annat `.cursor/tmp_known_issues_pr52.md`, `data/taxonomies/sni/`,
+`sajtbyggaren.code-workspace` och eventuella regeländringar i
+`governance/rules/` + `.cursor/rules/`.
 
 **Det som nyss stängdes:** Backoffice-vyn "Wizardfält -> generation" är
 nu wizard-truth-driven. Alla 15 `MUST_HAVE_OPTIONS` och alla 8
@@ -29,16 +30,29 @@ de valdes.
 
 **Kvarvarande blocker:** StackBlitz-iframe visade `Unable to run
 Embedded Project` på alla live-runs, så Scout kunde inte visuellt klicka
-igenom previewn. Nästa spår bör därför vara en smal preview-
-stabiliserings-/B59/B125-beslutssprint före Project DNA. Icke-blockerande
-UI-risk: Run Details-panelen kan bli stale när operatören byter äldre run
-i listan; artefakterna var korrekta enligt verifieringsscriptet.
+igenom previewn. Det är känt B59/B125-previewspår och launch-blocker för
+extern kundyta, men inte blocker för nästa interna produktspår.
+Icke-blockerande UI-risk: Run Details-panelen kan bli stale när
+operatören byter äldre run i listan; artefakterna var korrekta enligt
+verifieringsscriptet.
 
-**Nästa agent ska göra:** read-only preview/Run Details Scout mot
-`origin/main` = `9225244`: reproducera StackBlitz-felet, avgränsa om det
-är miljö/browserversion eller repo-regression, koppla till B59/B125, och
-bekräfta eller avfärda Run Details stale-repron. Beslutsutfall ska vara
-`PREVIEW_BUG_SWEEP` eller `PROJECT_DNA_OK_TO_START`.
+**Handoff till ny orkestratoragent:** starta med
+`docs/current-focus.md`, `docs/handoff.md`, `docs/product-operating-context.md`
+och `docs/orchestrator-playbook.md`. Nästa huvudspår är Project DNA /
+semantic follow-up med B71 som primär buggankare: följdprompt ska kunna
+ändra tone/story/tagline/positionering synligt i v2 utan rå prompt-läckage
+och utan drift i oändrade fält. Börja read-only: kartlägg
+`scripts/prompt_to_project_input.py::merge_followup_project_input`,
+aktuella Project Input-versioner och vilka artefakter som ska visa
+skillnaden. Föreslå sedan en smal Builder-sprint med regressionstester
+och eventuell ADR om kontraktet behöver ändras. Starta inte embeddings,
+SNI-runtime-taxonomi, nya starters, variant-promotion eller B59/B125-
+preview-fallback i samma sprint.
+
+**SNI-notis:** operatören har flyttat SNI-underlaget till
+`data/taxonomies/sni/sni-2025.xlsx`. Det ska tills vidare behandlas som
+referensmaterial för senare bransch-/taxonomy-spår, inte som runtime-
+sanning.
 
 Föregående datum-paragraf:
 
