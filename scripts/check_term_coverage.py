@@ -504,6 +504,22 @@ COMMON_WORDS = {
     "Project DNA semantic merge",  # proposed sprint-namn (Queue #5)
     "Task",  # Cursor subagent-tool-namn
     "Visuell renderingsverifiering",  # gap-rubrik i 9/10-tabellen
+    # SNI import + Backoffice-diagnostik (SNI-sidospår 2026-05-22).
+    # Scriptets implementation-symboler för SNI 2025-extractor och
+    # Discovery-map-resolver är Python-klasser/-undantag i samma
+    # kategori som ``DiscoveryDecision`` / ``PlanningChoice`` ovan.
+    # SNI som domänbegrepp registreras inte i naming-dictionary.v1
+    # förrän senare sprint (operatör-OK 2026-05-22: V1 är read-only
+    # diagnostik, inte runtime-sanning).
+    "SniDiscoveryMap", "SniMapping", "SniMatch", "SniExtractionError",
+    # Python stdlib zip-/XML-symboler refererade i extractorn
+    # (samma kategori som ``ElementCreationOptions`` /
+    # ``ConnectionRefusedError`` ovan).
+    "ElementTree", "ZipFile", "IndexError",
+    # XML namespace-bokstavskoder i extractor + tester (``ContentType``
+    # är OOXML content-types-elementet; ``AB12`` är en sample-cellref
+    # i docstring). Tekniska tokens i prosa, inte domänbegrepp.
+    "ContentType", "AB12",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

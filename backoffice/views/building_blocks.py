@@ -23,6 +23,7 @@ from .. import (
     impact,
     loaders,
     selection_profiles,
+    sni_diagnostics,
 )
 from ..paths import REPO_ROOT
 from ._helpers import safe_render
@@ -378,6 +379,77 @@ def _render_wizard_generation_mapping() -> None:
         )
 
 
+def _render_sni_discovery_mapping() -> None:
+    st.subheader("SNI → Discovery category")
+    st.caption(
+        "Read-only diagnostik: SNI 2025-prefix (huvudgrupp/grupp) → "
+        "kandidat wizardCategoryId. Inget i runtime konsumerar SNI än."
+    )
+    for line in sni_diagnostics.WARNING_LINES_SV:
+        st.markdown(f"- {line}")
+
+    reference = sni_diagnostics.load_sni_reference()
+    ref_summary = sni_diagnostics.reference_summary(reference)
+    rows = sni_diagnostics.mapping_rows(reference=reference)
+    summary = sni_diagnostics.mapping_summary(rows)
+
+    metric_cols = st.columns(4)
+    metric_cols[0].metric("SNI-poster", ref_summary["total"])
+    metric_cols[1].metric("Huvudgrupp-mappningar", summary["divisionMappings"])
+    metric_cols[2].metric("Grupp-overrides", summary["groupOverrides"])
+    metric_cols[3].metric("Unika kategorier", summary["uniqueCategories"])
+
+    detail_cols = st.columns(5)
+    detail_cols[0].metric("Avdelningar", ref_summary["section"])
+    detail_cols[1].metric("Huvudgrupper", ref_summary["division"])
+    detail_cols[2].metric("Grupper", ref_summary["group"])
+    detail_cols[3].metric("Undergrupper", ref_summary["class"])
+    detail_cols[4].metric("Detaljgrupper", ref_summary["subclass"])
+
+    if summary["unknownCategories"]:
+        st.warning(
+            f"{summary['unknownCategories']} policyrad(er) pekar mot en "
+            "wizardCategoryId som inte finns i Discovery Taxonomy. Justera "
+            "policy eller taxonomy innan SNI används som signal."
+        )
+
+    category_options = ["Alla"] + sorted({str(row["wizardCategoryId"]) for row in rows})
+    selected_category = st.selectbox(
+        "wizardCategoryId",
+        category_options,
+        key="sni_mapping_category_filter",
+    )
+    filtered_rows = sni_diagnostics.filter_rows_by_category(rows, selected_category)
+    st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+
+    st.divider()
+    st.markdown("**Testa en SNI-kod**")
+    st.caption(
+        "Ange en 2- till 5-siffrig SNI-kod (med eller utan punkt). Diagnostiken "
+        "visar matchad prefix, kandidat-kategori och hur Discovery Taxonomy "
+        "skulle välja scaffold/variant/starter när kategorin når resolvern."
+    )
+    sni_input = st.text_input(
+        "SNI-kod",
+        key="sni_lookup_input",
+        placeholder="t.ex. 56, 56.10, 56100 eller 691",
+    )
+    if sni_input.strip():
+        lookup = sni_diagnostics.lookup_row(sni_input)
+        if lookup["matchedLevel"] == "unknown":
+            st.info(
+                "Ingen policymappning matchade. SNI är branschsignal — "
+                "okänd kod är ett tyst no-op, inte ett fel."
+            )
+        else:
+            st.json(lookup, expanded=False)
+            if not lookup["categoryKnown"]:
+                st.warning(
+                    "Mappningen pekar mot en wizardCategoryId som saknas i "
+                    "Discovery Taxonomy. Inga scaffold/variant/starter visas."
+                )
+
+
 def view_control_plane() -> None:
     st.title("Kontrollplan")
     st.caption(
@@ -405,6 +477,9 @@ def view_control_plane() -> None:
 
     st.divider()
     _render_wizard_generation_mapping()
+
+    st.divider()
+    _render_sni_discovery_mapping()
 
     st.divider()
     st.subheader("Konsekvensvy")
