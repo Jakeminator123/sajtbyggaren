@@ -1,5 +1,28 @@
 # Handoff – Sajtbyggaren
 
+**Datum:** 2026-05-21 (Backoffice wizardfält-diagnostik). Lokal `main` och
+`origin/main` är `650c518` (`feat(backoffice): add wizard propagation
+diagnostics`). Inga öppna PRs. Bug-scope är oförändrat: **27 aktiva, 0
+misplaced, 5 unknown, 104 stängda**. `backup-41` finns på origin från
+pre-sprint-läget. Lokalt finns fortfarande operatörsägda filer som inte
+ska stageas i nästa sprint: `.cursor/plans/discovery_resolver_b121_3ec927a0.plan.md`
+(deleted), `sajtbyggaren.code-workspace`, `.cursor/tmp_known_issues_pr52.md`
+och `sni-2025.xlsx`.
+
+**Det som nyss landade i `650c518`:** Building Blocks/Kontrollplan har en
+ny read-only del "Wizardfält → generation". Den visar kända wizardfält,
+destination, `status`, `propagationLevel`, source chain och source path.
+Vyn skiljer deterministiska mappings från prompt-signaler, Project
+Input-only/downstream-gap och diagnostic-only. Den läser befintlig
+Discovery Taxonomy, Capability Map, Dossier Selection och resolverns
+mapping-konstanter, men skriver inget och är inte ny runtime-sanning.
+Fokuserade tester finns i `tests/test_backoffice_discovery_wizard_diagnostics.py`.
+Guards gröna: ruff, governance, rules sync, term coverage, fokuserad
+backoffice/discovery-svit och full `pytest tests/ -q` efter att
+`/sajtbyggaren-output` fick write-permissions enligt AGENTS.md.
+
+Föregående datum-paragraf:
+
 **Datum:** 2026-05-21 (post-merge Steward-sync). Lokal `main` och
 `origin/main` är `5dfa2c7` (`fix(codegen): close B141 brief-ref summary
 contract (#52)`). Inga öppna PRs. Bug-scope är **27 aktiva, 0 misplaced,
@@ -25,17 +48,15 @@ Starta inte embeddings, ny Intent Guard v2, nya starters eller
 variant-promotion innan vi har mätt post-merge-flödet.
 
 **Nästa agent ska göra:** starta en read-only Scout för
-Viewser-overlay-mini-eval mot `5dfa2c7`. Kör minst sköldpaddssoppa
+Viewser-overlay-mini-eval mot `650c518`. Kör minst sköldpaddssoppa
 conflict-case, elektriker Malmö, frisör Göteborg och naprapat Stockholm.
 Verifiera renderad output, Run Details-varningar och relevanta
 `site-plan.json`-fält; använd `python scripts/verify_run.py --site-id <X>
 --json` där artefakter finns. Beslutsregel: snitt >= 7 och inget case
 under 6.5 -> Project DNA / semantic follow-up. Annars riktad Builder
 bug-sweep på sämsta case. Steward ska först verifiera att
-`docs/current-focus.md` pekar på `5dfa2c7` och att `python
+`docs/current-focus.md` pekar på `650c518` och att `python
 scripts/focus_check.py` inte längre varnar för stale focus.
-
-Föregående datum-paragraf:
 
 **Datum:** 2026-05-21 (B144 + PR #51-stop). Lokal `main` har `aee67d7` (`fix(viewser): close B144 - render site-plan warnings`) ovanpå `c2f0b0b`; en Steward-docs-sync följer som bump-tolerance-commit. `backup-40` finns på origin från pre-B144-läget. **B144 är klar:** Run Details renderar nu `pageCountWarning`, `intentGuardWarnings` och `pageIntentWarnings` från `site-plan.json` i amber-blocket `site-plan-warnings`; testlåset är `tests/test_viewser_files.py::test_run_details_panel_renders_site_plan_warnings`. Bug-scope efter B144: **29 aktiva, 0 misplaced, 5 unknown, 102 stängda**. **PR #51/B143 ska inte mergas:** Scout RO-review 2026-05-21 gav verdict stop eftersom branchen bygger på pre-Intent-Guard-main, skapar parallell `_intent_guard_warnings`/`_INTENT_GUARD_CONFLICTS`, ger dead code efter merge, får add/add-konflikt i `tests/test_intent_guard.py`, duplicerar B143 i `docs/known-issues.md` och byter warning-shape bort från schema/B144-UI-kontraktet. Nästa B143-arbete ska starta på current `main`, bevara warning-shape `{categoryId, conflictingTerm, reason, businessTypeGuess}`, och utöka befintlig Intent Guard med engelska slugs eller bucket-normalisering. **PR #52/B141** (`cursor/codegen-brief-data-ef0b`) är separat cloud-grind-spår; reviewa/mergea bara efter rebase mot current `main`, gröna checks och verifierat disjunkt scope från B143/B144. Tidigare datum-paragraf:
 

@@ -30,6 +30,24 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
+Last verified state: `650c518` (2026-05-21, **Backoffice read-only
+wizardfält → generation-diagnostik ovanpå B144 + B143 + B141**) — lokal
+`main` och `origin/main` är synkade på `650c518`
+(`feat(backoffice): add wizard propagation diagnostics`). Ny Building
+Blocks/Kontrollplan-del visar kända wizardfält, destination,
+`status` och `propagationLevel` utan att ändra runtime, policies eller
+schemas. Vyn skiljer deterministiska mappingar från prompt-signaler,
+Project Input-only/downstream-gap och diagnostic-only, och synliggör
+Capability Map-gap/unknowns samt taxonomy planned/fallback. `backup-41`
+finns på origin från pre-sprint-läget. Tester/guards: `ruff check .`,
+`governance_validate`, `rules_sync --check`, `check_term_coverage --strict`,
+fokuserad backoffice/discovery-svit och full `pytest tests/ -q` gröna
+efter att `/sajtbyggaren-output` fick write-permissions enligt AGENTS.md
+gotcha. Bug-räkning oförändrad: **27 aktiva, 0 misplaced, 5 unknown, 104
+stängda**. **Direkt nästa orkestrator-fokus kvarstår:** kör
+Viewser-overlay-mini-eval med verkligt UI-flöde och `scripts/verify_run.py`
+där artefakter behöver kontrolleras. Tidigare paragraf:
+
 Last verified state: `5dfa2c7` (2026-05-21, **post-merge Steward-sync efter
 B144 + B143 + B141**) — lokal `main` och `origin/main` är synkade på
 `5dfa2c7` (`fix(codegen): close B141 brief-ref summary contract (#52)`).
@@ -81,13 +99,17 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `5dfa2c7` på origin och lokalt. B144, B143 och B141 är
-stängda. PR #51 är stängd utan merge, PR #53 och PR #52 är squash-mergade,
-och det finns inga öppna PRs. Nästa produktsteg är inte fler byggblock utan
-en Viewser-overlay-mini-eval som verifierar att de tre fixarna märks i
+`main` är vid `650c518` på origin och lokalt. B144, B143 och B141 är
+stängda, och Backoffice har nu en read-only Kontrollplan-del för
+wizardfält → generation som diagnostiserar befintliga källor utan ny
+runtime-sanning. PR #51 är stängd utan merge, PR #53 och PR #52 är
+squash-mergade, och det finns inga öppna PRs. Nästa produktsteg är fortsatt
+en Viewser-overlay-mini-eval som verifierar att fixarna märks i
 operatörsflödet: varningar syns i Run Details, Intent Guard missar inte de
-engelska slug-fallen, och codegenModel-prompten får faktisk Site Brief-data
-via `siteBriefRef`. Föregående stage snapshot:
+engelska slug-fallen, codegenModel-prompten får faktisk Site Brief-data via
+`siteBriefRef`, och den nya Backoffice-diagnostiken kan användas som stöd
+för att se om wizard-svar överlever i generationen. Föregående stage
+snapshot:
 
 `main` är vid `da79056` (`feat(planning): add intentGuardWarnings light (warning-only)`) ovanpå 4 commits ut från `8ba2b20`. Builder-sprint 2026-05-21 har stängt **B137** (wizard-overlay tagline-läckage av UI-direktiv) och **B138** (`brief.pageCount` ignorerades i `produce_site_plan`) samt landat **Intent Guard light** (warning-only conflict-flagging mellan wizardens `categoryIds` och briefens `businessTypeGuess`/`servicesMentioned`). Scout case 4 (sköldpaddssoppa, 5.0/10) är därmed adresserad på alla tre fynd-vektorerna. **Direkt nästa steg:** ny **Viewser-overlay-E2E-Scout** på sköldpaddssoppa + minst ett konsistent baseline-case för att verifiera att tagline + routePlan + Intent Guard-warning beter sig korrekt live (in-memory-mätningarna är gröna men live-renderad output mot StackBlitz preview är ännu inte verifierad). Beslutsregeln (≥7 OCH inget <6.5 → Project DNA-sprint) återkommer när Scout har nytt snitt; om sköldpaddssoppa nu landar över 6.5 + övriga case fortsatt OK kan Project DNA-sprinten starta. Kvarvarande Case 4-spår-rester som ej rörs i denna pass: **B139** (tone-extraction propageras inte till brand-tokens, Låg-medel), **B140** (`brand.primaryColorHex` ignoreras av `variant_css`, Låg), **B141** (`_assemble_generation_package` skriver bara `siteBriefRef` inte inline `siteBrief`, Låg-medel) — alla öppna för separat sprint.
 
@@ -345,9 +367,10 @@ också kvar på origin men är fri att radera i nästa Steward-städ.
 
 ## Current active sprint
 
-Ingen pågående lokal produktimplementation. Aktivt orkestreringsläge:
-starta en ny Scout för post-merge Viewser-overlay-mini-eval. Scout ska vara
-read-only och mäta verkligt frontendflöde före nästa Builder-sprint.
+Ingen pågående lokal produktimplementation efter Backoffice-diagnostiken i
+`650c518`. Aktivt orkestreringsläge: starta en ny Scout för post-merge
+Viewser-overlay-mini-eval. Scout ska vara read-only och mäta verkligt
+frontendflöde före nästa Builder-sprint.
 
 Tidigare klara sprintar: B121 discovery-integration (PR #34–#37, `e3fa67b`),
 starter dependency hardening (B108),
@@ -368,7 +391,7 @@ PR #28 demo-baseline-fix 1B + bug-sweep, demo-baseline-fix 1A-hotfix.
 
 ## Next action - direktiv till nästa agent
 
-Starta en ny **Viewser-overlay-mini-eval Scout** mot `main` = `5dfa2c7`.
+Starta en ny **Viewser-overlay-mini-eval Scout** mot `main` = `650c518`.
 Målet är att avgöra om nästa Builder-sprint ska vara Project DNA /
 semantic follow-up eller en riktad bug-sweep.
 
