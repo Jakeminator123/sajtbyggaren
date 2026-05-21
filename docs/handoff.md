@@ -1,5 +1,42 @@
 # Handoff – Sajtbyggaren
 
+**Datum:** 2026-05-21 (post-merge Steward-sync). Lokal `main` och
+`origin/main` är `5dfa2c7` (`fix(codegen): close B141 brief-ref summary
+contract (#52)`). Inga öppna PRs. Bug-scope är **27 aktiva, 0 misplaced,
+5 unknown, 104 stängda**. Lokalt finns fortfarande operatörsägda filer som
+inte ska stageas i nästa sprint: `.cursor/plans/discovery_resolver_b121_3ec927a0.plan.md`
+(deleted), `sajtbyggaren.code-workspace`, `.cursor/tmp_known_issues_pr52.md`
+och `sni-2025.xlsx`.
+
+**Det som nyss landade:** B144 är inne på main sedan `aee67d7`: Run
+Details visar `pageCountWarning`, `intentGuardWarnings` och
+`pageIntentWarnings` från `site-plan.json` i UI:t. B143 är inne via
+`d3b77ff`/PR #53: befintlig Intent Guard-tabell utökades med engelska
+business-type-slugs och bevarar warning-shape `{categoryId,
+conflictingTerm, reason, businessTypeGuess}`. PR #51 var ett felspår och
+stängdes utan merge. B141 är inne via `5dfa2c7`/PR #52: codegen-summaryn
+laddar faktisk Site Brief via `siteBriefRef`, medan Generation Package
+fortsatt är by-reference och inte duplicerar inline `siteBrief`.
+
+**Viktig produktbedömning:** B144 är ett tydligt operatörslyft. B141
+stänger ett riktigt LLM-flödesglapp. B143 är däremot taktisk
+ord-/slugmatchning, inte embeddings eller governance-ägd branschtaxonomi.
+Starta inte embeddings, ny Intent Guard v2, nya starters eller
+variant-promotion innan vi har mätt post-merge-flödet.
+
+**Nästa agent ska göra:** starta en read-only Scout för
+Viewser-overlay-mini-eval mot `5dfa2c7`. Kör minst sköldpaddssoppa
+conflict-case, elektriker Malmö, frisör Göteborg och naprapat Stockholm.
+Verifiera renderad output, Run Details-varningar och relevanta
+`site-plan.json`-fält; använd `python scripts/verify_run.py --site-id <X>
+--json` där artefakter finns. Beslutsregel: snitt >= 7 och inget case
+under 6.5 -> Project DNA / semantic follow-up. Annars riktad Builder
+bug-sweep på sämsta case. Steward ska först verifiera att
+`docs/current-focus.md` pekar på `5dfa2c7` och att `python
+scripts/focus_check.py` inte längre varnar för stale focus.
+
+Föregående datum-paragraf:
+
 **Datum:** 2026-05-21 (B144 + PR #51-stop). Lokal `main` har `aee67d7` (`fix(viewser): close B144 - render site-plan warnings`) ovanpå `c2f0b0b`; en Steward-docs-sync följer som bump-tolerance-commit. `backup-40` finns på origin från pre-B144-läget. **B144 är klar:** Run Details renderar nu `pageCountWarning`, `intentGuardWarnings` och `pageIntentWarnings` från `site-plan.json` i amber-blocket `site-plan-warnings`; testlåset är `tests/test_viewser_files.py::test_run_details_panel_renders_site_plan_warnings`. Bug-scope efter B144: **29 aktiva, 0 misplaced, 5 unknown, 102 stängda**. **PR #51/B143 ska inte mergas:** Scout RO-review 2026-05-21 gav verdict stop eftersom branchen bygger på pre-Intent-Guard-main, skapar parallell `_intent_guard_warnings`/`_INTENT_GUARD_CONFLICTS`, ger dead code efter merge, får add/add-konflikt i `tests/test_intent_guard.py`, duplicerar B143 i `docs/known-issues.md` och byter warning-shape bort från schema/B144-UI-kontraktet. Nästa B143-arbete ska starta på current `main`, bevara warning-shape `{categoryId, conflictingTerm, reason, businessTypeGuess}`, och utöka befintlig Intent Guard med engelska slugs eller bucket-normalisering. **PR #52/B141** (`cursor/codegen-brief-data-ef0b`) är separat cloud-grind-spår; reviewa/mergea bara efter rebase mot current `main`, gröna checks och verifierat disjunkt scope från B143/B144. Tidigare datum-paragraf:
 
 **Tillägg 2026-05-21:** `origin/main` är nu `bb76c2a` efter B144 + Steward-sync. **PR #53** (`cursor/b143-intent-guard-en-slugs-5156`) ersätter PR #51 för B143 och verkar ha rätt kod-scope (befintlig `_INTENT_GUARD_CONFLICTS` utökas, warning-shape bevaras), men GitHub `governance` är röd på docs-format: B143-stängningsposten använder `öppnad + stängd` + em dash och matchar inte `list_open_bugs.py`-kontraktet. Fixa till `- **\`B143\` Medel** (stängd 2026-05-21, Intent Guard English slug matching) - ...` och summary `28 aktiva / 103 stängda`, kör om checks, sedan Scout-review. **PR #52** har gröna checks men `mergeStateStatus=dirty`; rebase krävs före merge och bug-scope-räkningen beror på om #53 landar först.

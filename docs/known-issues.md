@@ -639,13 +639,13 @@ för follow-up eller ska städas.
 
 ## Stängda - regression-test säkrar fixet
 
-- **`B143` Låg-medel** (öppnad + stängd 2026-05-21, Intent Guard light
-  missar rena engelska slug-fall) - konflikt-tabellen matchade enbart
+- **`B143` Medel** (stängd 2026-05-21, Intent Guard English slug
+  matching) - konflikt-tabellen matchade enbart
   svenska substrings (`mat`, `restaurang`, `hår`, `elektriker`) medan
   `site_brief.businessTypeGuess` ofta är engelska slugs (`restaurant`,
   `electrician`, `hairdresser`). Resultat: wizard-kategori kunde peka på
   en bransch (t.ex. fitness) medan briefModel returnerade en annan
-  bransch-slug (t.ex. restaurant) utan varning. Fix: utvidgad
+  bransch-slug (t.ex. restaurant) utan varning. Fix: `d3b77ff` utvidgade
   `_INTENT_GUARD_CONFLICTS`-tabell i `scripts/build_site.py` med
   engelska slugs så substring-matchningen även fångar rena
   businessTypeGuess-värden. Test: `tests/test_intent_guard.py` (7 nya
@@ -681,7 +681,7 @@ för follow-up eller ska städas.
   använder `resolve()`, avvisar absolut `siteBriefRef` och avvisar
   `../`-escape ut ur run-mappen. Inline `siteBrief` finns bara kvar som
   bakåtkompatibel fallback för äldre handskrivna callers. Fix:
-  `c98b58f`. Test:
+  `5dfa2c7`. Test:
   `tests/test_codegen.py::test_codegen_summary_loads_site_brief_from_ref`,
   `tests/test_codegen.py::test_codegen_real_path_prompt_uses_site_brief_ref`,
   `tests/test_codegen.py::test_codegen_summary_rejects_absolute_site_brief_ref`,

@@ -30,6 +30,26 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
+Last verified state: `5dfa2c7` (2026-05-21, **post-merge Steward-sync efter
+B144 + B143 + B141**) — lokal `main` och `origin/main` är synkade på
+`5dfa2c7` (`fix(codegen): close B141 brief-ref summary contract (#52)`).
+Sedan `bb76c2a` har två PR-spår mergats och ett dåligt spår stängts:
+`d3b77ff` (**PR #53 / B143**) utökar befintlig
+`_INTENT_GUARD_CONFLICTS` i `scripts/build_site.py` med engelska
+business-type-slugs utan ny parallell funktion och utan warning-shape-byte;
+`5dfa2c7` (**PR #52 / B141**) gör att codegen-summaryn laddar faktisk
+`site-brief.json` via `siteBriefRef` i generation-package-kontraktet.
+B144 var redan inne: Run Details renderar nu `pageCountWarning`,
+`intentGuardWarnings` och `pageIntentWarnings` från `site-plan.json`.
+PR #51 stängdes utan merge och ska inte återupplivas. Inga öppna PRs.
+Bug-räkning: **27 aktiva, 0 misplaced, 5 unknown, 104 stängda**. B143 är
+en taktisk ord-/slugmatchningsfix, inte embeddings eller ny taxonomi;
+framtida Intent Guard v2 bör ägas av governance/backoffice med tydliga
+bransch-buckets, men startas först efter ny mini-eval. **Direkt nästa
+orkestrator-fokus:** kör Viewser-overlay-mini-eval med verkligt UI-flöde
+och `scripts/verify_run.py` där artefakter behöver kontrolleras. Tidigare
+paragraf:
+
 Last verified state: `bb76c2a` (2026-05-21, **B144 push + PR #53/#52 status bump; Steward-docs-syncen är inom bump tolerance**) — `origin/main` har `bb76c2a` (`docs(steward): close B144 and stop PR51 path`) ovanpå `aee67d7` (`fix(viewser): close B144 - render site-plan warnings`). B144 är Scout-RO-godkänd och stängd: Run Details läser nu `sitePlan.pageCountWarning`, `sitePlan.intentGuardWarnings` och `sitePlan.pageIntentWarnings` från `site-plan.json` och renderar ett amber-block `data-testid="site-plan-warnings"` med svensk non-blocking-copy; source-locken `tests/test_viewser_files.py::test_run_details_panel_renders_site_plan_warnings` låser canonical källa + UI-yta. Bug-räkning efter B144: **29 aktiva, 0 misplaced, 5 unknown, 102 stängda**. **B143 är fortfarande öppen. PR #51 (`cursor/b143-intent-guard-slugs-5156`) ska inte mergas:** Scout RO-review 2026-05-21 gav verdict stop eftersom branchen bygger på pre-Intent-Guard-main, introducerar parallell `_intent_guard_warnings`/`_INTENT_GUARD_CONFLICTS`, får dead code efter merge, har add/add-konflikt i `tests/test_intent_guard.py`, duplicerar B143 i `docs/known-issues.md` och byter warning-shape bort från schema/B144-UI-kontraktet. **PR #53** (`cursor/b143-intent-guard-en-slugs-5156`) är det nya rätt-basade B143-spåret: kodscopet ser smalt ut (utökar befintlig konflikt-tabell, bevarar warning-shape), men GitHub `governance` är röd eftersom B143-stängningsposten i `docs/known-issues.md` har fel parserformat (`öppnad + stängd` + em dash i stället för `(stängd ...) - ...`) och bug-scope-räkningen måste vara 28 aktiva / 103 stängda när B143 stängs. Fixa #53-docsformatet och kör om checks innan Scout/merge. **PR #52** (`cursor/codegen-brief-data-ef0b`, B141) är separat cloud-grind-spår med gröna checks men `mergeStateStatus=dirty`; den behöver rebase mot aktuell `main` (och sannolikt mot #53 om B143 mergeas först) plus korrekt `docs/known-issues.md`-räkning. **Direkt nästa orkestrator-fokus:** fixa #53 CI-formatfelet, Scout-reviewa #53, mergea B143 om godkänd, därefter rebase/review #52. Kör mini-eval med `scripts/verify_run.py` efter B143/B141 innan Project DNA-beslut. Tidigare paragraf:
 
 Last verified state: `c2f0b0b` (2026-05-21, kvällen, **Post-sprint tooling + reviewer-feedback bump ovanpå Builder-sprint**) — aktuell `origin/main` är `c2f0b0b` (`chore(term-coverage): allowlist status-strängar (OK/FAIL/WARN/UNKNOWN/SKIP) för verify_run.py`). Sedan `da79056` (Builder-sprint slut): `432d2ab` (Builder-Steward-bump efter sprint), `cdb2063` (post-rebase chore — SHA-refs efter rebase ovanpå origin/main när PR #48 + #49 hunnit landa under sprinten), `5573bb9` (**PR #48 mergad** — `docs(adr): add 0026 — embeddings parkeras tills LLM contract propagation klar (Proposed)`, cloud-agent levererade ADR-skiss, 112 rader, 1 fil), `7288d3d` (**PR #49 mergad** — `docs(reports): inventory of Run Details warnings + Intent Guard placement skiss`, cloud-agent levererade RO-inventering av warning-fält och var Intent Guard bör renderas, 332 rader; **PR #50** stängdes som duplikat efter Composer-2.5 RO-review hittade felaktiga claims i den), `38f86da` (orchestrator-commit — `chore(tooling): add verify_run.py post-run smoke-checker + agent-integration docs` — nytt stand-alone verktyg under `scripts/verify_run.py` med 9 checks/`--checks`/`--json`/`--latest`; `docs/tools/verify_run.md` ger komplett agent-integrationsguide; `docs/agent-handbook.md` får ny "Post-build-verifiering utan preview"-sektion; verifierat live mot sköldpaddsoppa-ab-c39f01: B137 OK, Intent Guard OK, B138 SKIP pga briefen inte fångade `pageCount` i den körningen — Builder-fixen aktiv men ej triggad), `c2f0b0b` (denna term-coverage allowlist för status-strängar). **Live-verifiering bekräftad:** B137 + Intent Guard fungerar end-to-end på sköldpaddssoppa-payloaden — tagline `"Hjälp med sköldpaddssoppa"` (source: `"brief"`), 1 intentGuardWarning `{categoryId: "fitness", conflictingTerm: "mat"}`. B138 in-memory-bevisad av Builder men ej triggad live denna körning eftersom briefen råkade returnera `pageCount: None` (LLM-variation mellan körningar med olika prompt-formuleringar). **Extern reviewer-feedback (2026-05-21 kväll, ~7/10):** giltiga fynd; två nya buggar öppnade: **B143 (Medel)** — Intent Guard konflikt-tabell matchar svenska termer (`mat`/`hår`/`elektriker`) men briefens `businessTypeGuess` är engelska sluggar (`restaurant`/`electrician`/`hairdresser`); false-negative-risk i live-flödet. Fix-pekare: `scripts/build_site.py:_intent_guard_warnings` — utöka tabell med synonym-map svenska↔engelska. **B144 (Medel)** — `intentGuardWarnings` + `pageCountWarning` skrivs till `site-plan.json` men renderas inte i Run Details UI; PR #49-inventeringen ger placeringsskissen (target: amber-box i `apps/viewser/components/run-details-panel.tsx`-likvärdig komponent). Bug-räkning: **30 aktiva, 0 misplaced, 5 unknown, 101 stängda** (B143 + B144 nya; B137 + B138 stängda i sprinten). Inga öppna PRs, inga lokala feature-branches. `backup-37` (Builder-sprint pre-bas) + `backup-38` (denna tooling-pass pre-bas) finns på origin. **Direkt nästa orkestrator-fokus:** dagens reviewer-rekommendation pekar mot **B144 frontend-render-sprint** (Run Details ska visa intentGuardWarnings + pageCountWarning + ev. B132 pageIntentWarnings) som det enskilt mest värdefulla nästa steg eftersom det stänger gapet mellan sanning-i-artefakter och operatörens arbetsyta. **B143 Intent Guard slug-hardening** kan göras i samma sprint eller separat (1-1,5h Builder). **B139/B140/B141** står kvar öppna för separat sprint (brand/tone-propagation + codegen tone dead pipeline). Mini-eval på 4 baseline-prompter (elektriker / frisör / naprapat / sköldpaddssoppa) med `python scripts/verify_run.py --site-id <X> --json` per case är värd att köra innan eller efter B144 för regressions-bevis. Tidigare paragraf:
@@ -61,7 +81,13 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `bb76c2a` på origin med B144 stängd. B143 är fortsatt öppen: PR #51 är stoppad och ska stängas/abandonas; PR #53 ersätter den men behöver docs-formatfix innan CI blir grön. PR #52/B141 är separat men dirty mot nuvarande `main` och behöver rebase. Nästa produktsteg är #53-fix + Scout-review, sedan #52-rebase/review. Föregående stage snapshot:
+`main` är vid `5dfa2c7` på origin och lokalt. B144, B143 och B141 är
+stängda. PR #51 är stängd utan merge, PR #53 och PR #52 är squash-mergade,
+och det finns inga öppna PRs. Nästa produktsteg är inte fler byggblock utan
+en Viewser-overlay-mini-eval som verifierar att de tre fixarna märks i
+operatörsflödet: varningar syns i Run Details, Intent Guard missar inte de
+engelska slug-fallen, och codegenModel-prompten får faktisk Site Brief-data
+via `siteBriefRef`. Föregående stage snapshot:
 
 `main` är vid `da79056` (`feat(planning): add intentGuardWarnings light (warning-only)`) ovanpå 4 commits ut från `8ba2b20`. Builder-sprint 2026-05-21 har stängt **B137** (wizard-overlay tagline-läckage av UI-direktiv) och **B138** (`brief.pageCount` ignorerades i `produce_site_plan`) samt landat **Intent Guard light** (warning-only conflict-flagging mellan wizardens `categoryIds` och briefens `businessTypeGuess`/`servicesMentioned`). Scout case 4 (sköldpaddssoppa, 5.0/10) är därmed adresserad på alla tre fynd-vektorerna. **Direkt nästa steg:** ny **Viewser-overlay-E2E-Scout** på sköldpaddssoppa + minst ett konsistent baseline-case för att verifiera att tagline + routePlan + Intent Guard-warning beter sig korrekt live (in-memory-mätningarna är gröna men live-renderad output mot StackBlitz preview är ännu inte verifierad). Beslutsregeln (≥7 OCH inget <6.5 → Project DNA-sprint) återkommer när Scout har nytt snitt; om sköldpaddssoppa nu landar över 6.5 + övriga case fortsatt OK kan Project DNA-sprinten starta. Kvarvarande Case 4-spår-rester som ej rörs i denna pass: **B139** (tone-extraction propageras inte till brand-tokens, Låg-medel), **B140** (`brand.primaryColorHex` ignoreras av `variant_css`, Låg), **B141** (`_assemble_generation_package` skriver bara `siteBriefRef` inte inline `siteBrief`, Låg-medel) — alla öppna för separat sprint.
 
@@ -319,7 +345,9 @@ också kvar på origin men är fri att radera i nästa Steward-städ.
 
 ## Current active sprint
 
-Ingen pågående lokal produktimplementation efter B144. Aktivt orkestreringsläge: (1) stoppa/abandon PR #51, (2) fixa #53-docsformatet och få checks gröna, (3) Scout-reviewa #53 före merge, (4) rebase/reviewa PR #52 för B141 separat. Viewser-overlay-E2E-mini-eval körs efter B143/B141.
+Ingen pågående lokal produktimplementation. Aktivt orkestreringsläge:
+starta en ny Scout för post-merge Viewser-overlay-mini-eval. Scout ska vara
+read-only och mäta verkligt frontendflöde före nästa Builder-sprint.
 
 Tidigare klara sprintar: B121 discovery-integration (PR #34–#37, `e3fa67b`),
 starter dependency hardening (B108),
@@ -340,13 +368,27 @@ PR #28 demo-baseline-fix 1B + bug-sweep, demo-baseline-fix 1A-hotfix.
 
 ## Next action - direktiv till nästa agent
 
-**Stoppa PR #51 som B143-lösning.** Den ska stängas/abandonas, inte mergas. **PR #53 är nya B143-spåret**, men kräver en snabb docs-fix innan review: closed-entryn ska följa bug-scope-formatet `- **\`B143\` Medel** (stängd 2026-05-21, Intent Guard English slug matching) - ...`, inte `öppnad + stängd` och inte em dash. Summary-raden ska bli `28 aktiva, 0 misplaced, 5 unknown, 103 stängda` om bara B143 stängs ovanpå `bb76c2a`. Därefter kör `python scripts/list_open_bugs.py`, `python -m pytest tests/test_bug_scope_discipline.py tests/test_intent_guard.py -q`, `python scripts/review_check.py --quick`, och begär Scout-review.
+Starta en ny **Viewser-overlay-mini-eval Scout** mot `main` = `5dfa2c7`.
+Målet är att avgöra om nästa Builder-sprint ska vara Project DNA /
+semantic follow-up eller en riktad bug-sweep.
 
-**B144 är klar och ska inte byggas om.** Run Details-warningrenderingen är Scout-RO-godkänd; nästa Steward ska bara verifiera att `aee67d7` + docs-sync är pushade och att `docs/known-issues.md` visar B144 stängd.
+Minsta case-set:
 
-**PR #52/B141 får fortsätta parallellt** men är `dirty` mot current `main`. Rebase efter #53 eller mot `bb76c2a` om #52 ska tas först. Den får inte röra `scripts/build_site.py`, `tests/test_intent_guard.py`, B143-entries eller B144-UI-filer.
+1. **sköldpaddssoppa conflict-case** - verifiera renderad output +
+   `site-plan.json`: ingen tagline-läcka av `"2 sidor"`/`"gröna färger"`,
+   route-trim till `/` + `/kontakt` när briefen fångar pageCount,
+   `intentGuardWarnings` syns i Run Details.
+2. **elektriker Malmö** - baseline utan Intent Guard false positive.
+3. **frisör Göteborg** - baseline för beauty/salon-spåret efter B143.
+4. **naprapat Stockholm** - vanlig tjänst med kontakt/adress.
 
-Äldre Scout-direktiv nedan ligger kvar som eval-underlag efter B143/B141:
+Om tid finns: ett follow-up-case där v2 ska ge synlig ändring. Scout ska
+leverera per-case-poäng, blocker/risk/nice-to-have, samt beslutsregel:
+snitt >= 7 och inget case < 6.5 -> Project DNA-sprint; annars riktad
+bug-sweep på sämsta case. Använd `python scripts/verify_run.py --site-id
+<X> --json` som artefaktkontroll när en build finns.
+
+Äldre Scout-direktiv nedan ligger kvar som eval-underlag:
 
 **Re-run Viewser-overlay-E2E-Scout case 4 (sköldpaddssoppa) live mot
 post-sprint-`main` (`da79056`)** för att verifiera att Builder-sprint
@@ -494,14 +536,10 @@ Innan `git push origin main`:
 
 ## Blocked items
 
-PR #51 (`cursor/b143-intent-guard-slugs-5156`) är en blockerad B143-PR:
-Scout RO-review 2026-05-21 gav verdict stop. Merge inte. Stäng/abandon.
-PR #53 (`cursor/b143-intent-guard-en-slugs-5156`) är ersättaren men har
-röd `governance` tills `docs/known-issues.md`-formatet fixas. PR #52
-(`cursor/codegen-brief-data-ef0b`, B141) har gröna checks men är `dirty`
-och behöver rebase före merge. Övriga äldre PR-blockers är stängda/mergade:
-PR #38 mergades 2026-05-19 (merge-commit `48a6a22`, se B129), PR #25 är
-mergad i `c073d486`.
+Inga öppna PR-blockers just nu. PR #51 stängdes utan merge. PR #53/B143
+och PR #52/B141 är mergade. Äldre PR-blockers är stängda/mergade: PR #38
+mergades 2026-05-19 (merge-commit `48a6a22`, se B129), PR #25 är mergad i
+`c073d486`.
 
 ## Do not start yet
 
