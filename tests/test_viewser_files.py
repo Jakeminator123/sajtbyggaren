@@ -1227,6 +1227,61 @@ def test_run_history_uses_status_dot_colors() -> None:
 
 
 @pytest.mark.tooling
+def test_page_on_build_done_passes_apply_runs_context() -> None:
+    """Stale-closure guard: after onBuildDone sets selectedRunId, the
+    fetchRuns().then(applyRunsData) path must pass an explicit context
+    snapshot so applyRunsData does not read a pre-build selectedRunId
+    and reset selectedSiteId to the first Project Input.
+    """
+    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+    assert "type ApplyRunsContext" in text
+    pattern = re.compile(
+        r"fetchRuns\(\)[\s\S]{0,400}?applyRunsData\(\s*data\s*,\s*\{[\s\S]{0,200}?selectedRunId:\s*runId",
+        re.MULTILINE,
+    )
+    assert pattern.search(text), (
+        "page.tsx onBuildDone ska anropa applyRunsData med ctx.selectedRunId "
+        "= runId — annars vinner stale closure och run-following bryts."
+    )
+
+
+@pytest.mark.tooling
+def test_run_details_panel_clears_bundle_on_run_change() -> None:
+    """Stale-artefakt guard: when runId changes the effect must clear
+    bundle before fetching so the panel never shows the previous run's
+    build/quality cards under the new run badge.
+    """
+    text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+    pattern = re.compile(
+        r"setBundle\(null\)[\s\S]{0,120}?setLoading\(true\)",
+        re.MULTILINE,
+    )
+    assert pattern.search(text), (
+        "run-details-panel.tsx måste nollställa bundle innan ny fetch "
+        "vid runId-byte — annars visas gamla artefakter under laddning."
+    )
+
+
+@pytest.mark.tooling
+def test_prompt_builder_blocks_followup_when_run_siteid_unknown() -> None:
+    """Follow-up guard: when the selected run has siteId unknown the UI
+    must not fall back to selectedSiteId for targetSiteId (silent wrong
+    site). Source-lock runSiteIdUnknown + explicit submit error.
+    """
+    prompt_text = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "runSiteIdUnknown" in prompt_text
+    assert "follow-up kan inte" in prompt_text
+    picker_text = (
+        VIEWSER_DIR / "components" / "project-input-picker.tsx"
+    ).read_text(encoding="utf-8")
+    assert "project-input-run-siteid-unknown" in picker_text
+
+
+@pytest.mark.tooling
 def test_viewser_does_not_register_ui_components_in_naming_dictionary() -> None:
     """v9 tar bort chatPanel/viewerPanel/tokenMeter; viewser stannar kvar."""
     naming = json.loads(NAMING_PATH.read_text(encoding="utf-8"))

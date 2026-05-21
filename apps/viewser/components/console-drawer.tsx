@@ -31,6 +31,7 @@ type ConsoleDrawerProps = {
    * på disk.
    */
   runSiteId: string | null;
+  runSiteIdUnknown?: boolean;
   isBuilding: boolean;
   statusText: string;
 };
@@ -45,6 +46,7 @@ export function ConsoleDrawer({
   selectedRunId,
   onSelectRunId,
   runSiteId,
+  runSiteIdUnknown = false,
   isBuilding,
   statusText,
 }: ConsoleDrawerProps) {
@@ -78,6 +80,7 @@ export function ConsoleDrawer({
               selectedSiteId={selectedSiteId}
               onSelect={onSelectSiteId}
               runSiteId={runSiteId}
+              runSiteIdUnknown={runSiteIdUnknown}
             />
 
             <RunDetailsPanel runId={selectedRunId} />
