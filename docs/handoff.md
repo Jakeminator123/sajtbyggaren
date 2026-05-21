@@ -1,11 +1,14 @@
 # Handoff – Sajtbyggaren
 
 **Datum:** 2026-05-22 (**PR #54 mergad + live Viewser-route-eval klar**).
-Lokal `main` och `origin/main` är `9225244`
-(`fix(backoffice): make wizard diagnostic wizard-truth-driven (#54)`).
-PR #54 är mergad; inga öppna PRs. Arbetskopian har bara
-operatörsägda untracked filer kvar: `.cursor/tmp_known_issues_pr52.md`
-och `sni-2025.xlsx`.
+Senaste verifierade produkt-/kodläge är `9225244`
+(`fix(backoffice): make wizard diagnostic wizard-truth-driven (#54)`);
+efterföljande Steward-docs-bump låg på `e84d2fb`. Använd `git log -1`
+för faktisk lokal HEAD om ännu en docs-sync har landat efter denna
+notis. PR #54 är mergad; inga öppna PRs. Arbetskopian kan ha
+operatörsägda lokala filer som inte ska stageas, bland annat
+`.cursor/tmp_known_issues_pr52.md`, `sni-2025.xlsx` och eventuella
+regeländringar i `governance/rules/` + `.cursor/rules/`.
 
 **Det som nyss stängdes:** Backoffice-vyn "Wizardfält -> generation" är
 nu wizard-truth-driven. Alla 15 `MUST_HAVE_OPTIONS` och alla 8

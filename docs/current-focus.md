@@ -30,10 +30,12 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `9225244` (2026-05-22, **PR #54 Backoffice
-wizard-diagnostik sanningsfix mergad ovanpå B132 route-emission**) -
-lokal `main` och `origin/main` är synkade på `9225244`
-(`fix(backoffice): make wizard diagnostic wizard-truth-driven (#54)`).
+Last verified state: `e84d2fb` (2026-05-22, **Steward-docs efter PR #54
+Backoffice wizard-diagnostik sanningsfix ovanpå B132 route-emission**) -
+produkt-/kodläget som verifierades är `9225244`
+(`fix(backoffice): make wizard diagnostic wizard-truth-driven (#54)`);
+`e84d2fb` är efterföljande docs-bump som registrerar merge och
+preview-blocker.
 PR #54 gjorde Backoffice-vyn "Wizardfält -> generation" wizard-driven
 i stället för backend-map-driven: alla 15 `MUST_HAVE_OPTIONS` och alla
 8 `CTA_OPTIONS` får nu egna rader. `Priser och paket` visas som

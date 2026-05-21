@@ -11,6 +11,19 @@ Produktkompassen för agenter och operatör finns i
 Sajtbyggaren ska vinna genom bättre företagshemsidor för småföretagare, med
 kärnflödet `prompt -> företagshemsida -> preview -> följdprompt -> ny version`.
 
+## Aktuellt driftläge
+
+Repo:t har ett fungerande internt operatorflöde för wizard/prompt till
+artefakter och deterministiska builder-routes, men är inte launch-ready.
+Den inbäddade StackBlitz-previewn i Viewser är fortfarande ett känt
+preview-spår: live-körningar kan verifieras via Run Details och
+artefakter, men iframen har återkommande visat `Unable to run Embedded
+Project`. Det spåret är registrerat i B59/B125 och måste få en beslutad
+fallback-väg innan extern kundyta.
+
+Statusraderna längre ned ska därför läsas som intern MVP-/skelettstatus,
+inte som att hela produktloopen är färdig för kunder.
+
 ## Princip
 
 > Policies styr arkitekturen. Koden härleds. Allt annat är referens.
@@ -222,8 +235,8 @@ Detaljer: [`engine-run.v1.json`](governance/policies/engine-run.v1.json), [ADR 0
 | Sprint 6+ - Fler scaffolds, dossiers, evals | inte startad |
 | `apps/web` | inte startad |
 | Sajtmaskin-baseline-jämförelse | uppskjuten ([ADR 0008](governance/decisions/0008-defer-evals-until-flow-exists.md)) |
-| Builder MVP hardening (parallellspår) | klart |
-| Viewser MVP (parallellspår) | klart |
+| Builder MVP hardening (parallellspår) | internt klart; produktgap finns kvar i preview/follow-up-kö |
+| Viewser MVP (parallellspår) | intern operator-MVP; embedded preview är inte launch-ready förrän B59/B125-fallback är vald |
 | Vocabulary compression (parallellspår, [ADR 0012](governance/decisions/0012-vocabulary-compression.md)) | klart |
 
 Detaljer: [`docs/migration-plan.md`](docs/migration-plan.md).
