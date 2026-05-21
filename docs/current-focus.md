@@ -469,21 +469,26 @@ PR #28 demo-baseline-fix 1B + bug-sweep, demo-baseline-fix 1A-hotfix.
 
 ## Next action - direktiv till nästa agent
 
-**Först:** Scout RO-review på Builder-sprint-diffen (B132 follow-up,
-wizard-route-emission för local-service-business). Diffen rör
-`packages/generation/planning/plan.py`, `scripts/build_site.py`,
-`scripts/check_term_coverage.py`, `tests/test_page_intent.py` och ny
-`tests/test_wizard_route_emission.py`. Scout ska verifiera (a) ingen
-falsk integration för booking/payments/auth/newsletter, (b)
-`Bokning online` håller warning med specifik reason, (c)
-`local-service-business` är opt-in via `_WIZARD_ROUTE_SCAFFOLDS` (inte
-ecommerce-lite), (d) tester täcker både emission och warning-only-spår,
-(e) Scout ger OK eller riktad bug-sweep innan push.
+Scout RO-review på Builder-sprint-diffen (B132 follow-up) är **redan
+körd och godkänd** i sprintens egen session: verdict `OK_PUSH` med PASS
+på alla sex acceptanskriterier (ingen falsk booking-/payments-/auth-/
+newsletter-integration, `Bokning online` håller warning med specifik
+reason, `local-service-business` opt-in via `_WIZARD_ROUTE_SCAFFOLDS`,
+tester täcker både emission och warning-only-spår, `_intent_guard_warnings`
+byte-identisk mellan bas och sprint-commit, ingen ändring av
+`packages/generation/discovery/resolve.py`). Pushen är gjord på `63d7264`
+och Steward-bumpen ligger på `f178456`. Scout föreslog tre framtida
+regression-tester som **inte** är blockers: `test_page_intent_warns_nyhetsbrev_with_newsletter_reason`
+(spegel av booking/blogg), parametriserade mini-eval-fixtures som
+låser operatörens före/efter-tabell, och negativt test för okänt
+wizard-id i `routePlan` utan registrerad renderer.
 
-**Efter push:** Starta en ny **Viewser-overlay-mini-eval Scout** mot
-post-push-`main`. Målet är att avgöra om nästa Builder-sprint ska vara
-Project DNA / semantic follow-up eller en riktad bug-sweep, och att
-verifiera att de nya wizard-routes faktiskt renderas i StackBlitz-preview.
+**Direkt nästa steg:** Starta en ny **Viewser-overlay-mini-eval Scout**
+mot post-push-`main` = `f178456`. Målet är att avgöra om nästa
+Builder-sprint ska vara Project DNA / semantic follow-up eller en
+riktad bug-sweep, och att verifiera att de nya wizard-routes faktiskt
+renderas i StackBlitz-preview och att Backoffice Building Blocks-vyn
+(`650c518`) speglar de nya routes-emissionsvägarna korrekt.
 
 Minsta case-set:
 

@@ -129,19 +129,23 @@ sprint.
   Viewser-overlayflödet får artefakter under `data/runs/` och kan
   använda `verify_run.py --json` som vanligt.
 
-**Nästa agent ska göra:** starta en read-only Scout-RO-review på
-diffen (B132 follow-up). Scout ska verifiera (a) ingen falsk
-integration för booking/payments/auth/newsletter, (b) `Bokning online`
-håller warning med specifik reason, (c) `local-service-business` är
-opt-in via `_WIZARD_ROUTE_SCAFFOLDS` (inte ecommerce-lite), (d) tester
-täcker både emission och warning-only-spår, (e) Scout ger OK eller
-riktad bug-sweep innan push. Efter push: en ny Viewser-overlay-
-mini-eval Scout som verifierar att de emitterade routes faktiskt
-landar i StackBlitz preview och Backoffice Building Blocks-vyn speglar
-de nya routes-emissionsvägarna korrekt. Mini-eval-direktivet är
-oförändrat (sköldpaddssoppa, elektriker, frisör, naprapat) men med
-nya acceptanskriterier per case (se `docs/current-focus.md` → "Next
-action").
+**Scout RO-review redan körd:** verdict `OK_PUSH` med PASS på alla sex
+acceptanskriterier (scope, ingen falsk integration, opt-in scaffold,
+testtäckning, `_intent_guard_warnings` orörd, `packages/generation/discovery/resolve.py`
+orörd). Pushen är gjord på `63d7264`; Steward-bumpen ligger på
+`f178456`. Scout föreslog tre framtida regression-tester som **inte** är
+blockers: `test_page_intent_warns_nyhetsbrev_with_newsletter_reason`
+(spegel av booking/blogg), parametriserade mini-eval-fixtures som låser
+operatörens före/efter-tabell, och negativt test för okänt wizard-id i
+`routePlan` utan registrerad renderer.
+
+**Nästa agent ska göra:** starta en read-only Viewser-overlay-mini-eval
+Scout mot post-push-`main` = `f178456`. Scouten ska verifiera att de
+emitterade routes faktiskt landar i StackBlitz preview och att
+Backoffice Building Blocks-vyn speglar de nya routes-emissionsvägarna
+korrekt. Mini-eval-direktivet är oförändrat (sköldpaddssoppa,
+elektriker, frisör, naprapat) men med nya acceptanskriterier per case
+(se `docs/current-focus.md` → "Next action").
 
 Föregående datum-paragraf:
 
