@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 30 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 99 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 28 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 101 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -595,56 +595,8 @@ för follow-up eller ska städas.
   (parent-agent review efter operatör-override av coach-
   direktiv). Fix: open. Test: open.
 
-### Viewser-overlay-E2E Scout 2026-05-19 — Case 4 (sköldpaddssoppa / conflict)
-
-- **`B137` Medel** (öppen, tagline-läckage av rå prompt-text) -
-  Verifierat live i case 4 (sköldpaddssoppa): `app/page.tsx:9` på Hero
-  visar `"Hemsida om sköldpaddssoppa, mat, 2 sidor, gröna färger"` —
-  operatörens fri-prompt-text läcker publikt som tagline. Förväntat
-  beteende: kort marknadsföringsfras (8-15 ord), inte rå prompt eller
-  UI-direktiv (`"2 sidor"`, `"gröna färger"`-instruktioner etc.).
-  Effekt idag: sajter där wizardens `offer`-fält innehåller
-  instruktioner i stället för verksamhetsbeskrivning får dev-jargong
-  som hero-tagline. Källa: Viewser-overlay-E2E Scout case 4,
-  2026-05-19. Read av
-  `..\sajtbyggaren-output\.generated\skoldpaddssoppa-karlsson-099d5c\app\page.tsx`.
-  Fix: open. Kodväg per Scout-rapport (PR #47, mergad):
-  `packages/generation/discovery/resolve.py:_apply_company_fields`
-  (rad 609-628). Wizardens `answers.offer` ("Beskriv din verksamhet"-
-  fältet) skriver över briefens tagline EFTER att briefen producerats.
-  `offer` används redan som rådata till briefen via
-  `composeMasterPrompt()` i
-  `apps/viewser/components/discovery-wizard/wizard-payload.ts:168-170`,
-  så fixen är att i `_apply_company_fields` antingen (a) sanera
-  `offer` mot UI-direktiv (`"2 sidor"`, `"gröna färger"`,
-  instruktions-prefix) innan det blir tagline, eller (b) låta briefens
-  tagline vinna när `offer` ser ut som UI-direktiv. Befintlig
-  `_derive_tagline` i `scripts/prompt_to_project_input.py` kvarstår
-  som fri-prompt-fallback och ska INTE tas bort. Test:
-  `tests/test_discovery_resolver.py` (eller motsvarande) — case från
-  sköldpaddssoppa-run som låser att `company.tagline` aldrig
-  innehåller substrängarna `"2 sidor"`, `"3 sidor"`, `"gröna färger"`,
-  `"mörkt tema"` etc.
-
 ### Sköldpaddssoppa-run follow-up (orchestrator 2026-05-19, sen kväll)
 
-- **`B138` Medel** (öppen, pageCount-läckage från brief till routePlan) -
-  briefModel fångar operatörens explicita sidantal från fri-prompten
-  korrekt (`site-brief.json` har `"pageCount": 2` när operatören skrev
-  `"2 sidor"` i beskrivnings-fältet), men `produce_site_plan` ignorerar
-  `brief.pageCount` och emitterar scaffold-defaults oavsett. Verifierat
-  mot körningen `data/runs/20260519T190606.540Z-51cef6dd-skoldpaddssoppa-karlsson-099d5c/`:
-  `site-brief.json` har `pageCount=2`, `site-plan.json` emitterar
-  fyra routes (`/`, `/tjanster`, `/om-oss`, `/kontakt`) plus fyra
-  `pageIntentWarnings` för wizard-must-have-sidorna. Effekt idag:
-  operatörens explicita sidantal från fri-prompten respekteras inte
-  av planning, trots att briefen fångar det. Skiljt från B132 (warning-
-  only för wizard-must-have): B132 jämför `wizard.mustHave` mot
-  `routePlan` och varnar — B138 är `brief.pageCount` → `routePlan` och
-  ignoreras helt. Fix-pekare: `packages/generation/planning/`
-  (`produce_site_plan` eller nedströms route-emission). Källa: orchestrator
-  follow-up-verifiering av samma run som Scout case 4, 2026-05-19.
-  Fix: open. Test: open.
 
 - **`B139` Låg-medel** (öppen, tone-extraction propageras inte till
   brand-tokens) - briefModel extraherar tone-fältet från fri-prompten
@@ -706,6 +658,67 @@ för follow-up eller ska städas.
   2026-05-19. Fix: open. Test: open.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B137` Medel** (stängd 2026-05-21, wizard-overlay tagline-läckage av
+  rå prompt-text) - Verifierat live i Scout case 4 (sköldpaddssoppa):
+  `app/page.tsx:9` på Hero visade
+  `"Hemsida om sköldpaddssoppa, mat, 2 sidor, gröna färger"` —
+  operatörens fri-prompt-text läckte publikt som tagline. Förväntat
+  beteende: kort marknadsföringsfras (8-15 ord), inte rå prompt eller
+  UI-direktiv (`"2 sidor"`, `"gröna färger"`-instruktioner etc.).
+  Effekt: sajter där wizardens `offer`-fält innehöll instruktioner
+  istället för verksamhetsbeskrivning fick dev-jargong som hero-
+  tagline. Källa: Viewser-overlay-E2E Scout case 4, 2026-05-19.
+  **Fix:** ny `_offer_looks_like_ui_directive()`-helper i
+  `packages/generation/discovery/resolve.py:_apply_company_fields`
+  detekterar UI-direktiv via sidantals-regex `\b\d+\s+sidor?\b`,
+  färg-regex `\b(röd|grön|blå|gul|svart|vit|grå)a?\s+(färger|färg|tema)\b`,
+  instruktions-prefix `"hemsida om"`/`"bygg"`/`"skapa"`/`"gör en"`/
+  `"vill ha"`/`"behöver"` och längd-bounds <8 eller >120 tecken.
+  När `offer` matchar UI-direktiv föredrar resolvern brief-taglinen,
+  alternativt derived fallback via `_derived_fallback_tagline()`.
+  Ny `fieldSources`-värde `"derived"` (registrerad i
+  `FieldSourceLiteral` + `discovery-decision.schema.json`-enum).
+  Befintlig `_derive_tagline` i `scripts/prompt_to_project_input.py`
+  orörd. End-to-end-mätning på sköldpaddssoppa-payload: tagline gick
+  från `"Hemsida om sköldpaddssoppa, mat, 2 sidor, gröna färger"` till
+  `"Tydlig hjälp inom restaurant"` (source: `"brief"`). Acceptabel risk
+  för v1: ensamt färgord utan `färger`/`färg`/`tema`-suffix passerar
+  detektorn (dokumenterat i helper-docstring; eskaleras vid Scout-fynd
+  i verkligt case). Fix: `0b6b207`. Test:
+  `tests/test_discovery_resolver.py::test_offer_with_ui_directives_does_not_leak_to_tagline`
+  + 9 fler tester med modul-lokal `BLOCKED_TAGLINE_PHRASES`-fixture
+  för enkel utökning.
+
+- **`B138` Medel** (stängd 2026-05-21, pageCount-läckage från brief
+  till routePlan) - briefModel fångade operatörens explicita sidantal
+  från fri-prompten korrekt (`site-brief.json` hade `"pageCount": 2`
+  när operatören skrev `"2 sidor"` i beskrivnings-fältet), men
+  `produce_site_plan` ignorerade `brief.pageCount` och emitterade
+  scaffold-defaults oavsett. Verifierat mot körningen
+  `data/runs/20260519T190606.540Z-51cef6dd-skoldpaddssoppa-karlsson-099d5c/`:
+  `site-brief.json` hade `pageCount=2`, `site-plan.json` emitterade
+  fyra routes (`/`, `/tjanster`, `/om-oss`, `/kontakt`). Effekt:
+  operatörens explicita sidantal respekterades inte av planning. Skiljt
+  från B132 (warning-only för wizard-must-have): B132 jämför
+  `wizard.mustHave` mot `routePlan` och varnar — B138 är
+  `brief.pageCount` → `routePlan` och ignorerades helt. **Fix:** ny
+  `_trim_route_plan()`-helper i
+  `packages/generation/planning/plan.py` läser `site_brief["pageCount"]`,
+  trimmar enligt prioritetslista (`home` + `contact` aldrig borta,
+  mitten i scaffold-defaultordning), minsta körbara set = 2. Emit:
+  `pageCountWarning` i `site-plan.json` med
+  `{requestedPageCount, scaffoldDefaultCount, emittedRouteCount,
+  reason}` där `reason ∈ {"trimmed-to-brief-page-count",
+  "below-minimum-keeping-default"}`. Trim funkar både för pinned-vägen
+  (`scripts/build_site.py`) och planning-helper-vägen. Schema:
+  `governance/schemas/site-plan.schema.json` får ny optional
+  `pageCountWarning`-property. End-to-end-mätning på sköldpaddssoppa-
+  payload: routes gick från `[/, /tjanster, /om-oss, /kontakt]` (4)
+  till `[/, /kontakt]` (2) med warning emitterad. Fix: `79236a5`.
+  Test:
+  `tests/test_planning.py::test_page_count_2_trims_route_plan_to_home_and_contact`
+  + 6 fler tester (pageCount=2/3/6/1/null/42 + pinned-vägen).
 
 - **`B142` Låg-medel** (öppnad + stängd 2026-05-20, ProjectInputPicker
   följer vald run) - operatörspanelens ProjectInputPicker synkade inte

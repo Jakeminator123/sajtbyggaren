@@ -475,6 +475,9 @@ COMMON_WORDS = {
     "B134", "B135", "B136",  # öppnade + stängda i Scout-orchestrator-pass 2026-05-19
     "B137",  # öppnad i Viewser-overlay-E2E Scout case 4 2026-05-19 (tagline-läckage)
     "B137 fix",  # bolded phrase i current-focus narrative (Steward-prose)
+    "B138", "B139", "B140", "B141",  # öppnade post-case-4 (B138/B141 stängd 2026-05-21, B139/B140 öppna)
+    "IntentGuard",  # single-token-variant i handoff-prose (basord 'Intent Guard' redan allowlistat)
+    "Intent Guard light",  # bolded sprintnamn i handoff/current-focus (Builder-sprint 2026-05-21)
     "ADR 0025 implementation",  # bolded phrase i handoff.md next-steps-tabell
     "AppData",  # del av Windows-path $env:LOCALAPPDATA\Temp i handoff-prose
     "Backups",  # rubrik i handoff.md status-tabell
