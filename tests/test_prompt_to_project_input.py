@@ -40,6 +40,7 @@ from scripts.prompt_to_project_input import (  # noqa: E402
     _derive_tagline,
     _normalize_location_hint,
     _slugify_label,
+    classify_followup_intent,
     generate,
     generate_followup,
     merge_followup_project_input,
@@ -845,6 +846,7 @@ def test_generate_followup_bumps_version_and_reuses_project_id(
     assert meta["originalPrompt"] == initial_meta["originalPrompt"]
     assert meta["followUpPrompt"].startswith("Lägg till mer fokus")
     assert "latestPrompt" not in meta
+    assert meta["projectDna"] == initial_meta["projectDna"]
     assert project_input["company"]["name"] == initial_project_input["company"]["name"]
     assert project_input["contact"] == initial_project_input["contact"]
     assert project_input["scaffoldId"] == initial_project_input["scaffoldId"]
@@ -866,6 +868,7 @@ def test_generate_followup_bumps_version_and_reuses_project_id(
     )
     assert current_meta["version"] == 2
     assert current_meta["followUpPrompt"] == meta["followUpPrompt"]
+    assert current_meta["projectDna"] == initial_meta["projectDna"]
 
 
 def _wizard_discovery_payload(
@@ -1096,11 +1099,297 @@ def test_followup_does_not_inject_workflow_text_into_company_story(
 
 
 @pytest.mark.tooling
-def test_followup_merge_keeps_story_tagline_and_tone_byte_stable() -> None:
-    """B71: follow-up merge is conservative until Project DNA semantic
-    patching lands. Candidate story/tagline/tone must not replace v1
-    content even when the follow-up prompt asks for a tone shift.
-    """
+def test_followup_story_intent_does_not_leak_raw_prompt() -> None:
+    previous = _minimal_previous_project_input()
+    candidate = {
+        **previous,
+        "company": {
+            **previous["company"],
+            "story": "Lyft fram familjeföretag-storyn.",
+        },
+    }
+
+    merged = merge_followup_project_input(
+        previous,
+        candidate,
+        follow_up_prompt="Lyft fram familjeföretag-storyn.",
+    )
+
+    assert merged["company"]["story"] != previous["company"]["story"]
+    assert "Lyft fram familjeföretag-storyn" not in merged["company"]["story"]
+    assert "familjeföretagets närhet" in merged["company"]["story"]
+
+
+def _minimal_previous_project_input() -> dict[str, object]:
+    return {
+        "siteId": "stable-site",
+        "scaffoldId": "local-service-business",
+        "variantId": "nordic-trust",
+        "language": "sv",
+        "company": {
+            "name": "Volt & Co",
+            "businessType": "electrician",
+            "tagline": "Byte-stable tagline",
+            "story": "Byte-stable story",
+        },
+        "location": {
+            "city": "Malmö",
+            "country": "Sverige",
+            "serviceAreas": ["Malmö"],
+        },
+        "contact": {
+            "phone": "0701234567",
+            "email": "hej@voltco.se",
+            "addressLines": ["Storgatan 1"],
+            "openingHours": "Mån-Fre 09:00-17:00",
+        },
+        "tone": {"primary": "lugn", "secondary": ["lokal"], "avoid": []},
+        "services": [
+            {"id": "elservice", "label": "Elservice", "summary": "Elservice."}
+        ],
+        "conversionGoals": ["call"],
+        "requestedCapabilities": [],
+        "trustSignals": [],
+        "selectedDossiers": {"required": [], "recommended": [], "rationale": "x"},
+    }
+
+
+@pytest.mark.tooling
+def test_followup_merge_keeps_story_tagline_and_tone_byte_stable_when_intent_is_no_change() -> None:
+    """B71: additive follow-up prompts keep semantic fields byte-stable."""
+    previous = _minimal_previous_project_input()
+    candidate = {
+        **previous,
+        "company": {
+            "name": "Ny kandidat",
+            "businessType": "electrician",
+            "tagline": "Candidate tagline",
+            "story": "Candidate story",
+        },
+        "tone": {"primary": "premium", "secondary": ["varm"], "avoid": ["kall"]},
+        "services": [
+            {"id": "laddbox", "label": "Laddbox", "summary": "Laddbox."}
+        ],
+        "conversionGoals": ["quote-request"],
+    }
+
+    merged = merge_followup_project_input(
+        previous,
+        candidate,
+        follow_up_prompt="Lägg till laddboxar och offertförfrågan.",
+    )
+
+    assert merged["company"]["story"] == "Byte-stable story"
+    assert merged["company"]["tagline"] == "Byte-stable tagline"
+    assert merged["tone"] == previous["tone"]
+    assert {service["id"] for service in merged["services"]} == {
+        "elservice",
+        "laddbox",
+    }
+    assert merged["conversionGoals"] == ["call", "quote-request"]
+
+
+@pytest.mark.tooling
+def test_followup_merge_tone_shift_updates_tone_only() -> None:
+    previous = _minimal_previous_project_input()
+    candidate = {
+        **previous,
+        "company": {
+            **previous["company"],
+            "tagline": "Candidate tagline",
+            "story": "Candidate story",
+        },
+        "tone": {"primary": "premium", "secondary": [], "avoid": []},
+    }
+
+    merged = merge_followup_project_input(
+        previous,
+        candidate,
+        follow_up_prompt="Gör tonen mer premium, personlig och undvik kall ton.",
+    )
+
+    assert merged["company"]["story"] == previous["company"]["story"]
+    assert merged["company"]["tagline"] == previous["company"]["tagline"]
+    assert merged["tone"]["primary"] == "premium"
+    assert "personlig" in merged["tone"]["secondary"]
+    assert merged["tone"]["avoid"] == ["kall"]
+
+
+@pytest.mark.tooling
+def test_followup_merge_tagline_update_filters_ui_directive() -> None:
+    previous = _minimal_previous_project_input()
+    candidate = {
+        **previous,
+        "company": {
+            **previous["company"],
+            "tagline": "Hemsida om Volt, 2 sidor, gröna färger",
+        },
+    }
+
+    merged = merge_followup_project_input(
+        previous,
+        candidate,
+        follow_up_prompt="Gör taglinen mer personlig.",
+    )
+
+    assert merged["company"]["story"] == previous["company"]["story"]
+    assert merged["tone"] == previous["tone"]
+    assert merged["company"]["tagline"] == "Personlig hjälp med tydlig väg vidare"
+
+
+@pytest.mark.tooling
+def test_classify_followup_intent_matches_semantic_keywords() -> None:
+    assert (
+        classify_followup_intent("gör tonen mer premium", language="sv")
+        == "tone-shift"
+    )
+    assert (
+        classify_followup_intent("lyft familjeföretag-storyn", language="sv")
+        == "story-emphasize"
+    )
+    assert (
+        classify_followup_intent("gör taglinen mer personlig", language="sv")
+        == "tagline-update"
+    )
+    assert (
+        classify_followup_intent("positionera oss mer premium", language="sv")
+        == "positioning-shift"
+    )
+
+
+@pytest.mark.tooling
+def test_classify_followup_intent_defaults_to_safe_states() -> None:
+    assert (
+        classify_followup_intent("lägg till FAQ", language="sv")
+        == "no-semantic-change"
+    )
+    assert classify_followup_intent("", language="sv") == "clarify"
+    assert classify_followup_intent("ok", language="sv") == "clarify"
+
+
+@pytest.mark.tooling
+def test_generate_followup_tone_shift_updates_project_input_and_project_dna(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    initial_project_input, initial_meta, _, _ = generate(
+        "Skapa en hemsida för en elektriker i Malmö",
+        output_dir=tmp_path,
+        site_id="tone-dna-site",
+        project_id="stable-project-id",
+    )
+
+    project_input, meta, _, meta_path = generate_followup(
+        "Gör tonen mer premium, personlig och undvik kall ton.",
+        output_dir=tmp_path,
+        site_id="tone-dna-site",
+    )
+
+    assert project_input["company"]["story"] == initial_project_input["company"]["story"]
+    assert project_input["company"]["tagline"] == initial_project_input["company"]["tagline"]
+    assert project_input["tone"]["primary"] == "premium"
+    assert "personlig" in project_input["tone"]["secondary"]
+    assert project_input["tone"]["avoid"] == ["kall"]
+    assert meta["projectDna"]["createdAtVersion"] == 1
+    assert meta["projectDna"]["followUpIntent"]["id"] == "tone-shift"
+    assert meta["projectDna"]["tone"]["primary"] == {
+        "value": "premium",
+        "lastUpdatedVersion": 2,
+        "source": "followup",
+    }
+    assert meta["projectDna"]["story"] == initial_meta["projectDna"]["story"]
+    written_meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    assert written_meta["projectDna"] == meta["projectDna"]
+
+
+@pytest.mark.tooling
+def test_generate_followup_story_and_tagline_prompts_change_project_input(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    initial_project_input, _initial_meta, _, _ = generate(
+        "Skapa en hemsida för en elektriker i Malmö",
+        output_dir=tmp_path,
+        site_id="story-tagline-site",
+        project_id="stable-project-id",
+    )
+
+    story_input, story_meta, _, _ = generate_followup(
+        "Lyft familjeföretag-storyn.",
+        output_dir=tmp_path,
+        site_id="story-tagline-site",
+    )
+    tagline_input, tagline_meta, _, _ = generate_followup(
+        "Gör taglinen mer personlig.",
+        output_dir=tmp_path,
+        site_id="story-tagline-site",
+    )
+
+    assert story_input["company"]["story"] != initial_project_input["company"]["story"]
+    assert "Lyft familjeföretag" not in story_input["company"]["story"]
+    assert story_meta["projectDna"]["story"]["source"] == "followup"
+    assert tagline_input["company"]["tagline"] != story_input["company"]["tagline"]
+    assert tagline_input["company"]["tagline"] == "Personlig hjälp med tydlig väg vidare"
+    assert tagline_meta["projectDna"]["tagline"]["source"] == "followup"
+
+
+@pytest.mark.tooling
+def test_project_dna_sidecar_validates_against_snapshot_schema(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    _project_input, meta, _path, _meta_path = generate(
+        "Skapa en hemsida för en elektriker i Malmö",
+        output_dir=tmp_path,
+        site_id="schema-dna-site",
+    )
+    schema = json.loads(
+        (
+            REPO_ROOT
+            / "governance"
+            / "schemas"
+            / "project-dna-snapshot.schema.json"
+        ).read_text(encoding="utf-8")
+    )
+
+    jsonschema.Draft202012Validator(schema).validate(meta["projectDna"])
+
+
+@pytest.mark.tooling
+def test_followup_with_no_intent_keeps_project_dna_block_byte_stable(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    _initial_project_input, initial_meta, _, _ = generate(
+        "Skapa en hemsida för en elektriker i Malmö",
+        output_dir=tmp_path,
+        site_id="no-change-dna-site",
+    )
+
+    _project_input, meta, _, _ = generate_followup(
+        "Lägg till FAQ och mer fokus på offert.",
+        output_dir=tmp_path,
+        site_id="no-change-dna-site",
+    )
+
+    assert meta["projectDna"] == initial_meta["projectDna"]
+
+
+@pytest.mark.tooling
+def test_followup_merge_docstring_describes_semantic_patching() -> None:
+    doc = merge_followup_project_input.__doc__ or ""
+    assert "visible story note" not in doc
+    assert "Story, tagline and tone remain byte-stable" in doc
+    assert "Project DNA semantic patching" in doc
+
+
+@pytest.mark.tooling
+def test_followup_merge_keeps_legacy_additive_behaviour() -> None:
+    """Existing additive merge behaviour stays intact around semantic V1."""
     previous = {
         "siteId": "stable-site",
         "scaffoldId": "local-service-business",
@@ -1150,7 +1439,7 @@ def test_followup_merge_keeps_story_tagline_and_tone_byte_stable() -> None:
     merged = merge_followup_project_input(
         previous,
         candidate,
-        follow_up_prompt="Gör tonen varmare och lyft laddboxar.",
+        follow_up_prompt="Lägg till laddboxar och offertförfrågan.",
     )
 
     assert merged["company"]["story"] == "Byte-stable story"
@@ -1161,14 +1450,6 @@ def test_followup_merge_keeps_story_tagline_and_tone_byte_stable() -> None:
         "laddbox",
     }
     assert merged["conversionGoals"] == ["call", "quote-request"]
-
-
-@pytest.mark.tooling
-def test_followup_merge_docstring_describes_conservative_semantics() -> None:
-    doc = merge_followup_project_input.__doc__ or ""
-    assert "visible story note" not in doc
-    assert "story, tagline, tone" in doc
-    assert "semantic patching" in doc
 
 
 # ---------------------------------------------------------------------------
