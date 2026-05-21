@@ -144,3 +144,25 @@ varje delsteg har en tydlig ägare och en tydlig avlämningsyta.
 
 Om operatören uttryckligen väljer PR-flöde används pull request-mallen i
 [`.github/pull_request_template.md`](../.github/pull_request_template.md).
+
+## Post-build-verifiering utan preview
+
+`scripts/verify_run.py` är ett stand-alone verktyg som läser en runs
+artefakter (`data/runs/<runId>/`, sidecar-meta, generated output) och
+rapporterar grön/röd per check för LLM contract propagation (B137 tagline-
+läckage, B138 pageCount-trim, Intent Guard, route-konsistens, B107
+service-fallback, m.fl.). Använd det när StackBlitz/preview inte är
+tillgänglig eller när du vill verifiera kedjan utan att starta dev-server.
+
+Snabbstart från repo-rot:
+
+```powershell
+python scripts/verify_run.py --site-id <siteId>          # text-output
+python scripts/verify_run.py --latest --json             # JSON för agenter
+python scripts/verify_run.py --site-id <siteId> --checks b137,b138
+```
+
+Full guide + agent-integrationsdiscipline + mini-eval-flöde finns i
+[`docs/tools/verify_run.md`](tools/verify_run.md). Skriptet är read-only,
+har inga externa dependencies och kan köras parallellt med Builder, Scout,
+Steward eller cloud-grind utan låsningsrisk.
