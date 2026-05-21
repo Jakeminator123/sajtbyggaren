@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 29 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 102 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 28 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 103 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -657,27 +657,11 @@ för follow-up eller ska städas.
   Källa: Scout-rapport PR #47, "Eventuella ytterligare fynd",
   2026-05-19. Fix: open. Test: open.
 
-- **`B143` Medel** - Intent Guard light jämför i dag wizard-kategorier
-  mot en minimal konflikt-tabell med svenska term-substrings
-  (`mat`, `hår`, `elektriker`, med flera), medan briefens
-  `businessTypeGuess` ofta är en engelsk slug (`restaurant`,
-  `hairdresser`, `electrician`). Det fungerar i sköldpaddssoppa-
-  regressionen eftersom `servicesMentioned` innehåller `mat`, men ger
-  false-negative-risk när `servicesMentioned` är tomt, engelskt eller
-  för generiskt och bara `businessTypeGuess` bär signalen. Fix-pekare:
-  `scripts/build_site.py:_INTENT_GUARD_CONFLICTS` och
-  `_intent_guard_warnings()` bör normalisera både svenska termer och
-  engelska business-slugs till jämförbara intent-buckets, eller utöka
-  tabellen med engelska slug-/synonymtermer. Test: lägg fall som
-  `categoryIds=["fitness"]` + `businessTypeGuess="restaurant"` utan
-  `servicesMentioned`, samt false-positive-lås för konsistenta
-  `electrician`/business-case. Källa: reviewer-feedback 2026-05-21
-  efter Intent Guard light. Fix: open. Test: open.
 
 ## Stängda - regression-test säkrar fixet
 
 - **`B143` Låg-medel** (öppnad + stängd 2026-05-21, Intent Guard light
-  missar rena engelska slug-fall) — konflikt-tabellen matchade enbart
+  missar rena engelska slug-fall) - konflikt-tabellen matchade enbart
   svenska substrings (`mat`, `restaurang`, `hår`, `elektriker`) medan
   `site_brief.businessTypeGuess` ofta är engelska slugs (`restaurant`,
   `electrician`, `hairdresser`). Resultat: wizard-kategori kunde peka på
