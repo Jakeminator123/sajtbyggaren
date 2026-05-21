@@ -24,12 +24,6 @@ type FetchedRunsPayload = {
   nextInputs: ProjectInputOption[];
 };
 
-/** Snapshot of run-following state for applyRunsData (avoids stale closure). */
-type ApplyRunsContext = {
-  selectedRunId: string | null;
-  selectedSiteId: string;
-};
-
 function headerStatusForOutcome(
   runId: string,
   outcome: PromptBuildOutcome,
@@ -85,7 +79,10 @@ export default function Home() {
 
   function applyRunsData(
     { nextRuns, nextInputs }: FetchedRunsPayload,
-    ctx?: ApplyRunsContext,
+    ctx?: {
+      selectedRunId: string | null;
+      selectedSiteId: string;
+    },
   ) {
     const effectiveRunId = ctx?.selectedRunId ?? selectedRunId;
     const effectiveSiteId = ctx?.selectedSiteId ?? selectedSiteId;

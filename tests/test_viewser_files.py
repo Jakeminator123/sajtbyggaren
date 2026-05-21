@@ -1234,7 +1234,6 @@ def test_page_on_build_done_passes_apply_runs_context() -> None:
     and reset selectedSiteId to the first Project Input.
     """
     text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
-    assert "type ApplyRunsContext" in text
     pattern = re.compile(
         r"fetchRuns\(\)[\s\S]{0,400}?applyRunsData\(\s*data\s*,\s*\{[\s\S]{0,200}?selectedRunId:\s*runId",
         re.MULTILINE,
