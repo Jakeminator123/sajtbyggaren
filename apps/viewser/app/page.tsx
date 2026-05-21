@@ -72,8 +72,21 @@ export default function Home() {
     activeRun?.siteId && activeRun.siteId !== "unknown"
       ? activeRun.siteId
       : null;
+  const runSiteIdUnknown =
+    !!selectedRunId &&
+    !!activeRun &&
+    (!activeRun.siteId || activeRun.siteId === "unknown");
 
-  function applyRunsData({ nextRuns, nextInputs }: FetchedRunsPayload) {
+  function applyRunsData(
+    { nextRuns, nextInputs }: FetchedRunsPayload,
+    ctx?: {
+      selectedRunId: string | null;
+      selectedSiteId: string;
+    },
+  ) {
+    const effectiveRunId = ctx?.selectedRunId ?? selectedRunId;
+    const effectiveSiteId = ctx?.selectedSiteId ?? selectedSiteId;
+
     setRuns(nextRuns);
     setProjectInputs(nextInputs);
     // Auto-väljer INTE senaste run vid mount. Det orsakade att
@@ -86,10 +99,11 @@ export default function Home() {
     // Reset-fallbacken körs bara när ingen run är vald — annars äger
     // run-following (handler-sync i onBuildDone/onSelectRunIdAndSync)
     // selectedSiteId och vi får inte skriva över den med "första
-    // inputen i listan".
+    // inputen i listan". ctx skickas från onBuildDone så vi inte läser
+    // ett gammalt selectedRunId ur closure efter fetchRuns().then().
     if (
-      !selectedRunId &&
-      !nextInputs.find((item) => item.siteId === selectedSiteId) &&
+      !effectiveRunId &&
+      !nextInputs.find((item) => item.siteId === effectiveSiteId) &&
       nextInputs.length
     ) {
       setSelectedSiteId(nextInputs[0].siteId);
@@ -182,7 +196,12 @@ export default function Home() {
           // not look successful in the page status.
           setStatusText(headerStatusForOutcome(runId, outcome));
           void fetchRuns()
-            .then(applyRunsData)
+            .then((data) =>
+              applyRunsData(data, {
+                selectedRunId: runId,
+                selectedSiteId: siteId ?? selectedSiteId,
+              }),
+            )
             .catch((error) => {
               const message =
                 error instanceof Error
@@ -203,6 +222,7 @@ export default function Home() {
         selectedRunId={selectedRunId}
         onSelectRunId={selectRunAndSyncSiteId}
         runSiteId={runSiteId}
+        runSiteIdUnknown={runSiteIdUnknown}
         isBuilding={building}
         statusText={statusText}
       />

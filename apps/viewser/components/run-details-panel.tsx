@@ -719,6 +719,7 @@ export function RunDetailsPanel({ runId }: RunDetailsPanelProps) {
       }
 
       if (cancelled) return;
+      setBundle(null);
       setLoading(true);
       setError(null);
 
