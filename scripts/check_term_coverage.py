@@ -73,6 +73,8 @@ COMMON_WORDS = {
     "ArgumentParser", "ImportError", "SimpleNamespace", "UnicodeDecodeError", "Input", "Output",
     "AssertionError", "FileExistsError", "NotImplementedError",
     "Iterable", "Sequence", "Mapping", "Callable",
+    # Status-strängar (verify_run.py + andra tooling-checkers)
+    "OK", "FAIL", "WARN", "UNKNOWN", "SKIP",
     # Framework / lib
     "React", "Next", "NextJs", "NextJS", "Vite", "Tailwind", "TypeScript",
     "TURBOPACK", "Turbopack", "Webpack",
