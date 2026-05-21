@@ -685,7 +685,7 @@ för follow-up eller ska städas.
   `"Tydlig hjälp inom restaurant"` (source: `"brief"`). Acceptabel risk
   för v1: ensamt färgord utan `färger`/`färg`/`tema`-suffix passerar
   detektorn (dokumenterat i helper-docstring; eskaleras vid Scout-fynd
-  i verkligt case). Fix: `0b6b207`. Test:
+  i verkligt case). Fix: `1b5275d`. Test:
   `tests/test_discovery_resolver.py::test_offer_with_ui_directives_does_not_leak_to_tagline`
   + 9 fler tester med modul-lokal `BLOCKED_TAGLINE_PHRASES`-fixture
   för enkel utökning.
@@ -715,7 +715,7 @@ för follow-up eller ska städas.
   `governance/schemas/site-plan.schema.json` får ny optional
   `pageCountWarning`-property. End-to-end-mätning på sköldpaddssoppa-
   payload: routes gick från `[/, /tjanster, /om-oss, /kontakt]` (4)
-  till `[/, /kontakt]` (2) med warning emitterad. Fix: `79236a5`.
+  till `[/, /kontakt]` (2) med warning emitterad. Fix: `299257d`.
   Test:
   `tests/test_planning.py::test_page_count_2_trims_route_plan_to_home_and_contact`
   + 6 fler tester (pageCount=2/3/6/1/null/42 + pinned-vägen).
