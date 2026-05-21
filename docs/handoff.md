@@ -1,5 +1,113 @@
 # Handoff – Sajtbyggaren
 
+**Datum:** 2026-05-22 (**SNI 2025 import + Discovery-map-diagnostik
+landat på main; Project DNA / semantic follow-up är fortsatt nästa
+huvudspår**). Senaste produkt-/kodläge är `2e274ac`
+(`feat(governance): add SNI 2025 import + discovery map diagnostics`).
+`backup-42` skapad från synkad `main`-`1edb089` + pushad till origin
+innan sprintarbetet. Inga öppna PRs. Bug-scope oförändrat: **27 aktiva,
+0 misplaced, 5 unknown, 104 stängda** — SNI-sprinten introducerar ingen
+ny B-ID. Arbetskopian kan fortfarande ha operatörsägda lokala filer som
+inte ska stageas av nästa agent: `.cursor/tmp_known_issues_pr52.md`,
+`.cursor/rules/always-swedish.mdc`, `governance/rules/always-swedish.md`,
+`sajtbyggaren.code-workspace` och de `.gitignore`-tillägg
+(`.cursor/tmp_*`, `eval-tmp/`) som dök upp under parallell-agentarbete
+mitt i sessionen.
+
+**Det som nyss landade i SNI-sidospåret:**
+
+- `scripts/extract_sni_2025.py` — ny stdlib-only extractor som läser
+  SCB:s SNI 2025-Excel via `zipfile` + `xml.etree.ElementTree` och
+  skriver deterministisk JSON utan timestamps eller BOM. CLI har
+  `--source`/`--out`/`--check` där `--check` failar vid drift och
+  SKIP:ar tyst när källfilen inte ligger i repo:t (förväntat normalfall
+  eftersom Excel är operatörsinput, inte committad).
+- `data/taxonomies/sni/sni-2025.v1.json` — canonical referens: 1882
+  poster (22 avdelningar, 87 huvudgrupper, 287 grupper, 651 undergrupper,
+  835 detaljgrupper). UTF-8 utan BOM, trailing newline, sorterad på
+  (level, code).
+- `governance/schemas/sni-discovery-map.schema.json` — schema låser
+  `divisionMappings`/`groupOverrides`-shape, regex-validerar SNI-koder
+  (2 siffror division, 3 siffror group) och förbjuder explicit
+  `starterId`/`scaffoldId`/`variantId`/`dossierId`/`selectedDossiers`-
+  fält via `false`-schemas så SNI inte kan välja runtime-objekt direkt.
+- `governance/policies/sni-discovery-map.v1.json` — operatörens
+  handstyrda mappning (21 huvudgrupp + 18 grupp-overrides). Spänner
+  business/ecommerce/restaurant/portfolio/landing/blog/consulting/tech/
+  healthcare/realestate/salon/fitness/construction/event/legal/
+  accounting/auto/photo/hotel/travel/nonprofit-kategorier från
+  Discovery Taxonomy. Operatörens konfidensnivå (`high`/`medium`/`low`)
+  per rad så Backoffice kan visa när SNI-signal är stark vs grov.
+- `packages/generation/discovery/sni_map.py` — resolver-helper med
+  `normalize_sni_code()` (hanterar `56`, `56.1`, `56.10`, `56.100`,
+  `56100`, whitespace, section-bokstäver, None), `load_sni_discovery_map()`
+  och `resolve_sni_discovery_category()`. Algoritm: mest specifik först
+  (3-siffrig grupp-override innan 2-siffrig huvudgrupp); trasig eller
+  okänd kod returnerar `matchedLevel="unknown"` utan exception. Returnerar
+  aldrig `starterId`/`scaffoldId`/`variantId`/`dossierId`/`selectedDossiers`.
+- `backoffice/sni_diagnostics.py` — Backoffice-helper som bygger
+  read-only radlista (SNI labelSv + wizardCategoryId-kandidat + Discovery
+  Taxonomy-konsekvenser som `supportStatus`/scaffold/variant/starter/
+  capabilities/dossiers) och en operator-lookup. Tre svenska
+  varningsrader: "SNI är branschsignal, inte runtime-sanning.", "SNI
+  väljer inte starter, scaffold, variant eller Dossier direkt.",
+  "Discovery Taxonomy avgör fortsatt scaffold/variant/expectedStarterId/
+  requestedCapabilities."
+- `backoffice/views/building_blocks.py` — ny sektion "SNI → Discovery
+  category" under Kontrollplan med antals-metrics (SNI-poster per nivå +
+  mappning-räkningar), kategori-filter, datatabell och lookup-fält där
+  operatorn matar in en SNI-kod och ser hela kedjan med Discovery
+  Taxonomy-konsekvenser.
+- `scripts/check_term_coverage.py` — allowlist-tillägg för SNI-helper-
+  symboler (`SniDiscoveryMap`, `SniMapping`, `SniMatch`,
+  `SniExtractionError`) och stdlib-symboler (`ElementTree`, `ZipFile`,
+  `IndexError`, `ContentType`, `AB12`).
+- 81 nya regression-tester (`tests/test_sni_extraction.py`,
+  `tests/test_sni_discovery_map.py`, `tests/test_backoffice_sni_diagnostics.py`)
+  som låser extractor-determinism, `--check`-drift, schema-reject av
+  förbjudna direktvals-fält, resolverns testfall (alla externa-agent-
+  cases verifierade: 43/432/43210, 56/561/56100, 62/620/62010, 691, 692,
+  742, 931, 932, 953, 962, plus unknown/garbage-fallbacks utan exception)
+  och Backoffice-diagnostikens read-only-radbyggare.
+
+**Vad SNI inte gör i V1:** SNI får inte sätta `starterId`, `scaffoldId`,
+`variantId`, `dossierId` eller `selectedDossiers` direkt. SNI är en
+branschsignal som ska föreslå `wizardCategoryId`; Discovery Resolver +
+Discovery Taxonomy avgör fortsatt scaffold/variant/expectedStarterId/
+requestedCapabilities. Viewser-overlay, `apps/viewser/components/
+discovery-wizard/*`, `/api/prompt`, `packages/generation/discovery/
+resolve.py`, planning och codegen är oförändrade. Inget i runtime
+konsumerar SNI; sprinten är read-only diagnostik som förbereder V2
+(SNI-fält i Viewser overlay + sniCode i DiscoveryPayload + SNI-label
+i composeMasterPrompt + Discovery Resolver-konsumtion av sniCode) utan
+att aktivera den.
+
+**Mid-session-fenomen:** En parallell-agent skapade branchen
+`fix/viewser-followup-stale-state` med commit `042319c` mitt under min
+session och min shell-context växlade tillfälligt dit; jag växlade
+tillbaka till `main` utan att röra deras filer. `.gitignore` har sedan
+dess lokala operatör-tillägg som inte committades i SNI-sprinten (ägs
+av annat spår — sannolikt samma parallell-agent eller operatören
+manuellt). Branchen `fix/viewser-followup-stale-state` finns på origin
+och rörs inte av denna sprint.
+
+**Handoff till nästa orkestratoragent:** starta med
+`docs/current-focus.md`, `docs/handoff.md`, `docs/product-operating-context.md`
+och `docs/orchestrator-playbook.md`. Nästa huvudspår är fortsatt
+**Project DNA / semantic follow-up** med B71 som primärt ankare:
+följdprompt ska kunna ändra tone/story/tagline/positionering synligt i
+v2 utan rå prompt-läckage och utan drift i oändrade fält. Börja read-
+only: kartlägg `scripts/prompt_to_project_input.py::merge_followup_project_input`,
+aktuella Project Input-versioner och vilka artefakter som ska visa
+v2-skillnaden. Föreslå sedan en smal Builder-sprint med regressionstester
+och eventuell ADR om kontraktet behöver ändras. Starta inte embeddings,
+SNI-runtime-taxonomi (V2-spår), nya starters, variant-promotion eller
+B59/B125-preview-fallback i samma sprint. Den parallella branchen
+`fix/viewser-followup-stale-state` bör först stämmas av med operatören
+innan eventuell merge.
+
+Föregående datum-paragraf:
+
 **Datum:** 2026-05-22 (**B132/PR54-spåret avslutat; nästa spår Project
 DNA / semantic follow-up**). Senaste produkt-/kodläge som verifierats är
 `9225244` (`fix(backoffice): make wizard diagnostic wizard-truth-driven
