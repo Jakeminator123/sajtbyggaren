@@ -707,6 +707,19 @@ för follow-up eller ska städas.
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B143` Låg-medel** (öppnad + stängd 2026-05-21, Intent Guard light
+  missar rena slug-fall) - konflikt-tabellen matchade främst svenska
+  substrings medan `site_brief.businessTypeGuess` ofta är engelska
+  slugs (`restaurant`, `electrician`, `hairdresser`). Resultat: wizard-
+  kategori kunde peka på en bransch (t.ex. fitness) medan briefModel
+  returnerade en helt annan bransch (t.ex. restaurant) utan att
+  operatören fick varning. Fix: `_INTENT_GUARD_SLUG_BUCKETS` +
+  `_INTENT_GUARD_CONFLICTS` + `_intent_guard_warnings()` i
+  `scripts/build_site.py` normaliserar businessTypeGuess och
+  servicesMentioned till enkla intent-buckets och jämför mot wizardens
+  categoryIds. Warnings emitteras som `intentGuardWarnings` i
+  `build-result.json`. Test: `tests/test_intent_guard.py` (24 cases).
+
 - **`B142` Låg-medel** (öppnad + stängd 2026-05-20, ProjectInputPicker
   följer vald run) - operatörspanelens ProjectInputPicker synkade inte
   med vald run i RunHistory: panelen kunde visa t.ex.

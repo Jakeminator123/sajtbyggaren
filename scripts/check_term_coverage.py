@@ -491,6 +491,7 @@ COMMON_WORDS = {
     "PermissionError", "SubprocessError",  # Python builtin exception-namn
     "Project DNA semantic merge",  # proposed sprint-namn (Queue #5)
     "Task",  # Cursor subagent-tool-namn
+    "TestConflictCases", "TestConsistentCases", "TestEdgeCases",  # pytest class names (B143)
     "Visuell renderingsverifiering",  # gap-rubrik i 9/10-tabellen
 }
 

@@ -457,6 +457,137 @@ def _placeholder_contact_warning_message(fields: list[str]) -> str:
     )
 
 
+# ---------------------------------------------------------------------------
+# Intent Guard (B143) — slug-aware category-vs-businessTypeGuess mismatch
+# ---------------------------------------------------------------------------
+
+_INTENT_GUARD_SLUG_BUCKETS: dict[str, str] = {
+    "restaurant": "food",
+    "cafe": "food",
+    "bakery": "food",
+    "pizzeria": "food",
+    "food-truck": "food",
+    "catering": "food",
+    "bar": "food",
+    "electrician": "construction",
+    "plumber": "construction",
+    "painter": "construction",
+    "roofer": "construction",
+    "carpenter": "construction",
+    "builder": "construction",
+    "renovation": "construction",
+    "hvac": "construction",
+    "locksmith": "construction",
+    "flooring": "construction",
+    "hairdresser": "beauty",
+    "hair-salon": "beauty",
+    "barber": "beauty",
+    "nail-salon": "beauty",
+    "spa": "beauty",
+    "massage": "beauty",
+    "beauty-salon": "beauty",
+    "skincare": "beauty",
+    "personal-trainer": "fitness",
+    "gym": "fitness",
+    "yoga": "fitness",
+    "crossfit": "fitness",
+    "pilates": "fitness",
+    "martial-arts": "fitness",
+}
+
+_INTENT_GUARD_CATEGORY_TO_BUCKET: dict[str, str] = {
+    "fitness": "fitness",
+    "salon": "beauty",
+    "healthcare": "healthcare",
+    "construction": "construction",
+    "restaurant": "food",
+    "ecommerce": "ecommerce",
+}
+
+_INTENT_GUARD_CONFLICTS: dict[str, set[str]] = {
+    "fitness": {"food", "construction", "beauty", "ecommerce"},
+    "beauty": {"food", "construction", "fitness", "ecommerce"},
+    "construction": {"food", "beauty", "fitness", "ecommerce"},
+    "food": {"construction", "beauty", "fitness"},
+    "healthcare": {"food", "construction", "beauty", "fitness", "ecommerce"},
+    "ecommerce": {"construction", "beauty", "fitness", "food"},
+}
+
+
+def _intent_guard_warnings(
+    site_brief: dict[str, Any],
+    prompt_meta: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    """Return intent-guard warnings when category bucket conflicts with brief.
+
+    Compares the wizard's ``categoryIds`` (from discoveryDecision on the
+    prompt meta sidecar) against ``site_brief.businessTypeGuess`` and
+    ``site_brief.servicesMentioned``. Returns a list of warning dicts
+    (same shape as pageIntentWarnings) when the two signals point at
+    incompatible industries.
+
+    Silent when: no discoveryDecision, no businessTypeGuess, or the
+    bucket derived from businessTypeGuess is compatible with the category.
+    """
+    if not prompt_meta:
+        return []
+    decision = prompt_meta.get("discoveryDecision")
+    if not isinstance(decision, dict):
+        return []
+    category_ids = decision.get("categoryIds")
+    if not isinstance(category_ids, list) or not category_ids:
+        return []
+
+    business_type = site_brief.get("businessTypeGuess") or ""
+    if not isinstance(business_type, str):
+        return []
+    slug = business_type.strip().lower()
+    if not slug:
+        return []
+
+    services_mentioned: list[str] = site_brief.get("servicesMentioned") or []
+    if not isinstance(services_mentioned, list):
+        services_mentioned = []
+
+    slug_bucket = _INTENT_GUARD_SLUG_BUCKETS.get(slug)
+
+    all_slugs = [slug] + [
+        s.strip().lower() for s in services_mentioned if isinstance(s, str) and s.strip()
+    ]
+    if slug_bucket is None:
+        for s in all_slugs:
+            slug_bucket = _INTENT_GUARD_SLUG_BUCKETS.get(s)
+            if slug_bucket is not None:
+                break
+
+    if slug_bucket is None:
+        return []
+
+    warnings: list[dict[str, Any]] = []
+    for cat_id in category_ids:
+        if not isinstance(cat_id, str):
+            continue
+        cat_bucket = _INTENT_GUARD_CATEGORY_TO_BUCKET.get(cat_id.strip().lower())
+        if cat_bucket is None:
+            continue
+        conflicts = _INTENT_GUARD_CONFLICTS.get(cat_bucket)
+        if conflicts and slug_bucket in conflicts:
+            warnings.append({
+                "code": "intent-guard-mismatch",
+                "categoryId": cat_id,
+                "categoryBucket": cat_bucket,
+                "businessTypeGuess": business_type,
+                "slugBucket": slug_bucket,
+                "message": (
+                    f"Wizard category '{cat_id}' (bucket: {cat_bucket}) conflicts "
+                    f"with businessTypeGuess '{business_type}' (bucket: {slug_bucket}). "
+                    "The project input may describe a different industry than the "
+                    "wizard selection."
+                ),
+            })
+    return warnings
+
+
 def _prompt_meta_wizard_must_have(
     prompt_meta: dict[str, Any] | None,
 ) -> list[str]:
