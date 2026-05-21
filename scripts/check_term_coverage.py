@@ -478,6 +478,7 @@ COMMON_WORDS = {
     "B137",  # öppnad i Viewser-overlay-E2E Scout case 4 2026-05-19 (tagline-läckage)
     "B137 fix",  # bolded phrase i current-focus narrative (Steward-prose)
     "B138", "B139", "B140", "B141",  # öppnade post-case-4 (B138/B141 stängd 2026-05-21, B139/B140 öppna)
+    "B143", "B144",  # reviewer-feedback 2026-05-21 efter Intent Guard light + PR #49
     "IntentGuard",  # single-token-variant i handoff-prose (basord 'Intent Guard' redan allowlistat)
     "Intent Guard light",  # bolded sprintnamn i handoff/current-focus (Builder-sprint 2026-05-21)
     "ADR 0025 implementation",  # bolded phrase i handoff.md next-steps-tabell
