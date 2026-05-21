@@ -676,6 +676,18 @@ för follow-up eller ska städas.
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B143` Låg-medel** (öppnad + stängd 2026-05-21, Intent Guard light
+  missar rena engelska slug-fall) — konflikt-tabellen matchade enbart
+  svenska substrings (`mat`, `restaurang`, `hår`, `elektriker`) medan
+  `site_brief.businessTypeGuess` ofta är engelska slugs (`restaurant`,
+  `electrician`, `hairdresser`). Resultat: wizard-kategori kunde peka på
+  en bransch (t.ex. fitness) medan briefModel returnerade en annan
+  bransch-slug (t.ex. restaurant) utan varning. Fix: utvidgad
+  `_INTENT_GUARD_CONFLICTS`-tabell i `scripts/build_site.py` med
+  engelska slugs så substring-matchningen även fångar rena
+  businessTypeGuess-värden. Test: `tests/test_intent_guard.py` (7 nya
+  B143-regressionstester).
+
 - **`B144` Medel** (stängd 2026-05-21, Run Details renderar
   site-plan-varningar) - `pageCountWarning` och `intentGuardWarnings`
   skrevs till `site-plan.json`, men Run Details renderade dem inte

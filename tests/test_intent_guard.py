@@ -252,3 +252,103 @@ def test_produce_site_plan_works_without_intent_guard_warnings_param(
     brief = _brief()
     result = produce_site_plan(brief, run_id="intent-guard-legacy")
     assert "intentGuardWarnings" not in result.site_plan
+
+
+# ---------------------------------------------------------------------------
+# B143 regressions: English slug matching (pure businessTypeGuess, no
+# servicesMentioned) — Intent Guard must fire on English slugs that briefModel
+# returns as businessTypeGuess without relying on Swedish servicesMentioned.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_b143_fitness_vs_restaurant_slug_no_services() -> None:
+    """B143 core case: fitness category + businessTypeGuess='restaurant'
+    with empty servicesMentioned must produce a warning."""
+    brief = _brief(businessTypeGuess="restaurant", servicesMentioned=[])
+    warnings = _intent_guard_warnings(brief, _prompt_meta(["fitness"]))
+    assert warnings, (
+        "fitness + businessTypeGuess='restaurant' without servicesMentioned "
+        "must trigger intent guard warning (B143)."
+    )
+    assert warnings[0]["categoryId"] == "fitness"
+    assert warnings[0]["reason"] == "category-vs-business-mismatch"
+    assert warnings[0].get("businessTypeGuess") == "restaurant"
+
+
+@pytest.mark.tooling
+def test_b143_beauty_vs_electrician_slug_no_services() -> None:
+    """B143: salon/beauty category + businessTypeGuess='electrician'
+    with empty servicesMentioned must produce a warning."""
+    brief = _brief(businessTypeGuess="electrician", servicesMentioned=[])
+    warnings = _intent_guard_warnings(brief, _prompt_meta(["beauty"]))
+    assert warnings, (
+        "beauty + businessTypeGuess='electrician' without servicesMentioned "
+        "must trigger intent guard warning (B143)."
+    )
+    assert warnings[0]["categoryId"] == "beauty"
+    assert warnings[0]["conflictingTerm"] == "electrician"
+
+
+@pytest.mark.tooling
+def test_b143_construction_vs_hairdresser_slug_no_services() -> None:
+    """B143: construction category + businessTypeGuess='hairdresser'
+    with empty servicesMentioned must produce a warning."""
+    brief = _brief(businessTypeGuess="hairdresser", servicesMentioned=[])
+    warnings = _intent_guard_warnings(brief, _prompt_meta(["construction"]))
+    assert warnings, (
+        "construction + businessTypeGuess='hairdresser' without "
+        "servicesMentioned must trigger intent guard warning (B143)."
+    )
+    assert warnings[0]["categoryId"] == "construction"
+    assert warnings[0]["conflictingTerm"] == "hairdresser"
+
+
+@pytest.mark.tooling
+def test_b143_construction_vs_hair_salon_slug_no_services() -> None:
+    """B143: construction category + businessTypeGuess='hair-salon'
+    with empty servicesMentioned must produce a warning."""
+    brief = _brief(businessTypeGuess="hair-salon", servicesMentioned=[])
+    warnings = _intent_guard_warnings(brief, _prompt_meta(["construction"]))
+    assert warnings, (
+        "construction + businessTypeGuess='hair-salon' without "
+        "servicesMentioned must trigger intent guard warning (B143)."
+    )
+    assert warnings[0]["categoryId"] == "construction"
+    assert warnings[0]["conflictingTerm"] == "hair-salon"
+
+
+@pytest.mark.tooling
+def test_b143_consistent_business_electrician_silent() -> None:
+    """B143 negative: business + electrician is consistent, no warning."""
+    brief = _brief(businessTypeGuess="electrician", servicesMentioned=[])
+    warnings = _intent_guard_warnings(brief, _prompt_meta(["business"]))
+    assert warnings == [], (
+        "business + electrician is consistent and must not produce warnings."
+    )
+
+
+@pytest.mark.tooling
+def test_b143_consistent_construction_electrician_silent() -> None:
+    """B143 negative: construction + electrician slug is consistent."""
+    brief = _brief(businessTypeGuess="electrician", servicesMentioned=[])
+    warnings = _intent_guard_warnings(brief, _prompt_meta(["construction"]))
+    assert warnings == [], (
+        "construction + electrician is consistent and must not produce warnings."
+    )
+
+
+@pytest.mark.tooling
+def test_b143_existing_mat_case_still_warns() -> None:
+    """B143: the original sköldpaddssoppa/mat-case must still produce
+    a warning after the English slug expansion."""
+    brief = _brief(
+        businessTypeGuess="restaurant",
+        servicesMentioned=["sköldpaddssoppa", "mat"],
+    )
+    warnings = _intent_guard_warnings(brief, _prompt_meta(["fitness"]))
+    assert warnings, (
+        "fitness + restaurant + mat servicesMentioned must still warn."
+    )
+    mat_warnings = [w for w in warnings if w["conflictingTerm"] == "mat"]
+    assert mat_warnings, "The 'mat' term conflict must still trigger."
