@@ -504,6 +504,13 @@ COMMON_WORDS = {
     "Project DNA semantic merge",  # proposed sprint-namn (Queue #5)
     "Task",  # Cursor subagent-tool-namn
     "Visuell renderingsverifiering",  # gap-rubrik i 9/10-tabellen
+    # ApplyRunsContext är en viewser-lokal TS-typ som introducerades i
+    # parallell-agentens branch `fix/viewser-followup-stale-state`
+    # (commit 042319c, PR #55) och citeras i docs/current-focus.md som
+    # prose-referens till det öppna PR-spåret. Samma kategori som
+    # PromptStageIndicator/RunHistory ovan — viewser-implementation, inte
+    # canonical domain term.
+    "ApplyRunsContext",
     # SNI import + Backoffice-diagnostik (SNI-sidospår 2026-05-22).
     # Scriptets implementation-symboler för SNI 2025-extractor och
     # Discovery-map-resolver är Python-klasser/-undantag i samma

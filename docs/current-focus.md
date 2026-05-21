@@ -791,10 +791,19 @@ Innan `git push origin main`:
 
 ## Blocked items
 
-Inga öppna PR-blockers just nu. PR #51 stängdes utan merge. PR #53/B143
-och PR #52/B141 är mergade. Äldre PR-blockers är stängda/mergade: PR #38
-mergades 2026-05-19 (merge-commit `48a6a22`, se B129), PR #25 är mergad i
-`c073d486`.
+**PR #55** (`fix/viewser-followup-stale-state`, commit `042319c`,
+`fix(viewser): stale run-following och artefakt-panel vid run-byte`) är
+öppen men ägs av ett parallell-agent-spår, **inte** SNI-sidospåret.
+Branchen skapades mitt i SNI-sessionen 2026-05-22 av annan agent/operatör
+och ändrar `apps/viewser/app/page.tsx` + 5 andra viewser-filer +
+`tests/test_viewser_files.py` (117 insertions, 8 deletions). PR:n
+introducerar bl.a. `ApplyRunsContext`-symbolen som inte är allowlistad i
+`scripts/check_term_coverage.py` — nästa orkestrator bör stämma av med
+operatören innan eventuell merge eller term-allowlist-tillägg.
+
+PR #51 stängdes utan merge. PR #53/B143 och PR #52/B141 är mergade.
+Äldre PR-blockers är stängda/mergade: PR #38 mergades 2026-05-19
+(merge-commit `48a6a22`, se B129), PR #25 är mergad i `c073d486`.
 
 ## Do not start yet
 
