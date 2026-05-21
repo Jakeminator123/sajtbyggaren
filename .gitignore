@@ -53,6 +53,12 @@ Thumbs.db
 # credential file is excluded here.
 .cursor/mcp.json
 
+# Agent-/operator-lokala plan-filer som CreatePlan-tool genererar
+# (.cursor/plans/<name>_<hash>.plan.md). Snabbarbetsartefakter per
+# session; ska aldrig committas. Samma kategori som .cursor/mcp.json
+# ovan: per-machine state, inte shared editor-config.
+.cursor/plans/
+
 .tmp-*
 .tmp.*
 .commit-msg.tmp

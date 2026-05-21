@@ -634,6 +634,13 @@ def main() -> int:
             continue
         if rel.startswith(".cursor/rules/"):
             continue
+        # ``.cursor/plans/`` innehåller agent-/operator-lokala plan-filer
+        # som genereras av agentens plan-verktyg. Samma kategori som
+        # ``.cursor/rules/`` speglar: arbetsartefakter, inte produkt-docs.
+        # Skippas så interna feature-namn i en pågående plan inte
+        # felklassas som okända domänbegrepp.
+        if rel.startswith(".cursor/plans/"):
+            continue
         if rel.startswith("docs/agent-handbook.md") or rel.startswith("docs/PROJECT_BRIEF.md"):
             continue
         # known-issues.md är en bug-tracking-fil med interna IDs (B11, BO5)
