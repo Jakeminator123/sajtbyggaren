@@ -1,5 +1,44 @@
 # Handoff – Sajtbyggaren
 
+**Datum:** 2026-05-22 (**PR #54 mergad + live Viewser-route-eval klar**).
+Lokal `main` och `origin/main` är `9225244`
+(`fix(backoffice): make wizard diagnostic wizard-truth-driven (#54)`).
+PR #54 är mergad; inga öppna PRs. Arbetskopian har bara
+operatörsägda untracked filer kvar: `.cursor/tmp_known_issues_pr52.md`
+och `sni-2025.xlsx`.
+
+**Det som nyss stängdes:** Backoffice-vyn "Wizardfält -> generation" är
+nu wizard-truth-driven. Alla 15 `MUST_HAVE_OPTIONS` och alla 8
+`CTA_OPTIONS` får egna diagnostikrader. `Priser och paket` visas som
+aktiv route-emission till `/priser`; supported must-have-routes visas
+som deterministic för `local-service-business`; scaffold-defaults visas
+som basroutes; `Bokning online`, `Blogg / Nyheter`, `Nyhetsbrev` och
+CTA-valet `Läs mer` visas som ärliga gaps/deferred/no-known-destination
+i stället för att döljas. SCOUT54 gav `OK_TO_MERGE`, GitHub checks var
+gröna, och PR:n mergades via squash till `9225244`.
+
+**Live Viewser Scout-resultat:** B132 route-emission fungerar i live
+overlay-artefakter. Elektriker Malmö, frisör Göteborg, naprapat
+Stockholm och sköldpaddssoppa fick rätt supported routes i Run Details,
+`site-plan.json` och genererade app-routes. Supported routes gav inte
+längre `pageIntentWarnings`; booking/blogg/nyhetsbrev varnade ärligt när
+de valdes.
+
+**Kvarvarande blocker:** StackBlitz-iframe visade `Unable to run
+Embedded Project` på alla live-runs, så Scout kunde inte visuellt klicka
+igenom previewn. Nästa spår bör därför vara en smal preview-
+stabiliserings-/B59/B125-beslutssprint före Project DNA. Icke-blockerande
+UI-risk: Run Details-panelen kan bli stale när operatören byter äldre run
+i listan; artefakterna var korrekta enligt verifieringsscriptet.
+
+**Nästa agent ska göra:** read-only preview/Run Details Scout mot
+`origin/main` = `9225244`: reproducera StackBlitz-felet, avgränsa om det
+är miljö/browserversion eller repo-regression, koppla till B59/B125, och
+bekräfta eller avfärda Run Details stale-repron. Beslutsutfall ska vara
+`PREVIEW_BUG_SWEEP` eller `PROJECT_DNA_OK_TO_START`.
+
+Föregående datum-paragraf:
+
 **Datum:** 2026-05-21 (kvällen, **B132 follow-up Builder-sprint pushad
 ovanpå Backoffice-diagnostiken `0ff2a54`**). Lokal `main` och
 `origin/main` är `63d7264` (`feat(builder): emit wizard mustHave routes

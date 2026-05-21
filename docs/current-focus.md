@@ -30,6 +30,35 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
+Last verified state: `9225244` (2026-05-22, **PR #54 Backoffice
+wizard-diagnostik sanningsfix mergad ovanpå B132 route-emission**) -
+lokal `main` och `origin/main` är synkade på `9225244`
+(`fix(backoffice): make wizard diagnostic wizard-truth-driven (#54)`).
+PR #54 gjorde Backoffice-vyn "Wizardfält -> generation" wizard-driven
+i stället för backend-map-driven: alla 15 `MUST_HAVE_OPTIONS` och alla
+8 `CTA_OPTIONS` får nu egna rader. `Priser och paket` visas som
+deterministisk route-emission till `/priser`; `FAQ`, `Bildgalleri`,
+`Karta / Hitta hit`, `Vårt team` och `Portfolio / Case` visas som
+supported routes för `local-service-business`; `Startsida / Hero`,
+`Om oss / Om mig` och `Kontaktformulär` visas som scaffold-default/
+basroute; `Bokning online`, `Blogg / Nyheter` och `Nyhetsbrev` visas
+som ärliga warning-only/deferred gaps; CTA-valet `Läs mer` visas som
+`no-known-destination` i stället för att döljas. SCOUT54 gav
+`OK_TO_MERGE`, CI var grön och PR:n är mergad. Live Viewser-overlay
+Scout mot B132-route-emissionen bekräftade att alla valda supported
+must-have-routes hamnar i Run Details, `site-plan.json` och genererade
+app-routes för elektriker Malmö, frisör Göteborg, naprapat Stockholm
+och sköldpaddssoppa. **Viktig kvarvarande blocker:** StackBlitz-iframe
+visade `Unable to run Embedded Project` på alla live-runs, så Scout
+kunde inte visuellt klicka igenom previewn; verifieringen byggde därför
+på Run Details + artefakter + `scripts/verify_run.py --json`. Detta
+aktualiserar B59/B125-previewspåret innan Project DNA/follow-up
+semantic-sprint. Icke-blockerande UI-risk från Scout: Run Details-panelen
+kan bli stale när operatören byter äldre run i listan; verifieringsscriptet
+visade korrekt artefaktdata.
+
+Tidigare paragraf:
+
 Last verified state: `63d7264` (2026-05-21, **B132 follow-up:
 wizard-route emission för local-service-business ovanpå Backoffice
 diagnostik `0ff2a54`**) — lokal `main` och `origin/main` är synkade
@@ -444,11 +473,15 @@ också kvar på origin men är fri att radera i nästa Steward-städ.
 
 ## Current active sprint
 
-Ingen pågående lokal produktimplementation efter B132 follow-up i
-`63d7264` (Scout-RO-godkänd + pushad). Aktivt orkestreringsläge: starta
-en ny Scout för Viewser-overlay-mini-eval som verifierar att de nya
-wizard-routes faktiskt renderas i StackBlitz-preview och att
-`pageIntentWarnings`-minskningen syns i Run Details.
+Ingen pågående lokal produktimplementation efter PR #54-merge i
+`9225244`. B132 route-emission är verifierad via live Viewser-overlay
+artefakter och Backoffice-diagnostiken är korrigerad. Aktivt
+orkestreringsläge: välj nästa Builder-spår utifrån live-scoutens
+blocker. Rekommenderad prioritet är en smal preview-stabiliserings-/
+B59/B125-beslutssprint, eftersom StackBlitz-iframe fortfarande visar
+`Unable to run Embedded Project` i alla live-runs och därmed blockerar
+visuell preview i kärnloopen. Project DNA / semantic follow-up väntar
+tills preview-verifieringen är pålitlig.
 
 Tidigare klara sprintar: B121 discovery-integration (PR #34–#37, `e3fa67b`),
 starter dependency hardening (B108),
@@ -468,6 +501,30 @@ prompt versions (versionerade Project Input-snapshots, stabil
 PR #28 demo-baseline-fix 1B + bug-sweep, demo-baseline-fix 1A-hotfix.
 
 ## Next action - direktiv till nästa agent
+
+**Aktuellt direktiv efter PR #54 + live Viewser Scout (2026-05-22):**
+B132 route-emission är godkänd i live-overlay-artefakter och PR #54 är
+mergad. Starta inte Project DNA, embeddings, nya starters eller
+variant-promotion ännu. Nästa agent ska göra ett smalt read-only
+preview/Run Details Scout-pass mot `origin/main` = `9225244`:
+
+1. Reproducera StackBlitz-felet från live-scouten (`Unable to run
+   Embedded Project`) på minst en färsk Viewser-run och samla exakt
+   browser-/console-/network-symptom. Koppla fyndet till befintliga
+   B59/B125-poster; öppna inte ny B-ID om det är samma rotorsak.
+2. Kontrollera om felet är miljö-/browserbundet eller repo-regression:
+   Chromium/Edge, HTTPS-dev via `.\scripts\dev-viewser.ps1 -Https`,
+   aktuell `apps/viewser`-konfiguration och senast genererade
+   StackBlitz-payload.
+3. Verifiera Run Details stale-risken: byt mellan äldre runs och bekräfta
+   om panelen visar fel run-data medan artefakterna är korrekta. Om
+   reproducerbart, rapportera som separat UI-bugg med exakt fil/komponent
+   och minimal repro.
+4. Leverera beslut: `PREVIEW_BUG_SWEEP` om iframe/stale-felet reproduceras
+   och påverkar kärnloopen; annars `PROJECT_DNA_OK_TO_START`.
+
+Äldre Scout-direktiv nedan ligger kvar som historiskt eval-underlag men
+är inte längre första next action.
 
 Scout RO-review på Builder-sprint-diffen (B132 follow-up) är **redan
 körd och godkänd** i sprintens egen session: verdict `OK_PUSH` med PASS
@@ -683,26 +740,30 @@ mergades 2026-05-19 (merge-commit `48a6a22`, se B129), PR #25 är mergad i
 
 ## Queue
 
-1. **Viewser-overlay-E2E-Scout** - verklig frontend-kvalitetsmätning via
-   det faktiska overlayflödet (wizard → prompt → eventuell scrape/upload
-   → build → preview). 4-6 case inkl. keramik (verifierar B101/B102/B128
-   live), tjänsteföretag med adress, scrape, sköldpaddssoppa-conflict,
-   "2 sidor"-case och en follow-up. Se "Next action".
-2. **B119/B120 kontakt/adress-kvalitet** - om Scout visar fel kontaktdata:
+1. **Preview-stabilisering / B59-B125 decision sprint** - live
+   Viewser-overlay Scout 2026-05-22 bekräftade route-emission i
+   artefakter men StackBlitz-preview visade `Unable to run Embedded
+   Project` på alla runs. Nästa pass ska reproducera, avgränsa och välja
+   minimal fix/fallback-väg innan Project DNA.
+2. **Viewser-overlay-E2E-Scout follow-up** - återuppta verklig
+   frontend-kvalitetsmätning när previewn kan klickas igenom visuellt:
+   wizard → prompt → eventuell scrape/upload → build → preview. Se
+   historiskt case-set i "Next action".
+3. **B119/B120 kontakt/adress-kvalitet** - om Scout visar fel kontaktdata:
    prioritera `_pick_contact_route`-poängsättning och adress-till-stad-regex.
-3. **Intent Guard + Page Intent** (om Scout-fynd bekräftar) - prompt-mot-
+4. **Intent Guard + Page Intent** (om Scout-fynd bekräftar) - prompt-mot-
    wizard-mismatch-guard och pageIntent som faktiskt påverkar route-planen.
    Båda var parkerade post-B121 men aktualiseras om Scout visar att fri
    prompt och wizard fortfarande motsäger varandra.
-4. **Capability/dossier gaps** - booking, contact-form, payments, FAQ ska
+5. **Capability/dossier gaps** - booking, contact-form, payments, FAQ ska
    inte bara varna utan ha Dossier-implementation när taxonomy flaggar dem.
-5. **Project DNA / follow-up semantic merge** - om Viewser Overlay E2E
+6. **Project DNA / follow-up semantic merge** - om Viewser Overlay E2E
    Scout bekräftar ≥7/10 och inget case <6.5: gör `merge_followup_project_input`
    semantic så följdprompt mot tone/story/tagline ger synlig
    förändring i v2. Kan behöva egen ADR. B71 (PR #28-stängd, men
    markerad som unverified av re-Scout) bör verifieras i två-pass-
    test inom samma sprint.
-6. **Variant-promotion-sprint** - PR #38 `feat/eight-scaffold-variants`
+7. **Variant-promotion-sprint** - PR #38 `feat/eight-scaffold-variants`
    (commit `4cd1058` + `0511299`, åtta gpt-5.4-genererade scaffold-
    varianter) mergades 2026-05-19 (merge-commit `48a6a22`) trots
    coach-direktiv. Variants ligger på `main` men är **dead code** i
@@ -718,11 +779,11 @@ mergades 2026-05-19 (merge-commit `48a6a22`, se B129), PR #25 är mergad i
    kan väljas i prod-flödet. Branch `feat/eight-scaffold-variants`
    lämnad kvar på origin (delete-branch opt-out) tills sprinten
    avgör om den behövs för follow-up eller ska städas.
-7. **Bug-sweep round 3 (om Scout fortsatt under tröskel)** -
+8. **Bug-sweep round 3 (om Scout fortsatt under tröskel)** -
    prioritera B67, B80, B81, B82, B84, B85, B86, B87 + B89-B93
    (extern reviewer-triage) + B97/B98 (låg-impact-rester) eller
    riktad fix på det case som dröjer.
-8. **Live pipeline-matris i backoffice (operatörsförslag 2026-05-15
+9. **Live pipeline-matris i backoffice (operatörsförslag 2026-05-15
    sent på kvällen)** - visualisera `prompt → brief → plan → codegen
    → build → preview` som en live-uppdaterad matris i backoffice
    playground-vyn. Varje cell visar status (pending/running/ok/fail),
@@ -733,14 +794,14 @@ mergades 2026-05-19 (merge-commit `48a6a22`, se B129), PR #25 är mergad i
    till. Streamlit-realtidsuppdatering kräver `st.empty()`-pattern
    eller WebSocket-shim. Bästa demo-/granskningsverktyg vi kan bygga
    för dig (operatören). Egen sprint, ej blocker för re-Scout.
-9. B49 (medel): page-map-driven sidebar för `docs-base`-startern; måste vara klar innan `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`.
-10. **B59 follow-up** (parkerad - väntar på arkitekturbeslut): byte till lokal `next dev`-process som same-origin iframe på `localhost:NNNN` eller static StackBlitz-template. Ingen mer COOP/COEP-toggling. Bredare extern research om SDK-/Codeflow-/Teams-/MCP-ytan, kommersiell licens och browser-baseline ligger i [`docs/integrations/stackblitz-research.md`](integrations/stackblitz-research.md) som underlag inför arkitekturbeslutet.
-11. B53 (låg): `governance/schemas/routes.schema.json` för scaffold-routes-kontraktet.
-12. B47 (låg): commerce-base Shopify-handles dokumenteras eller får fallback.
-13. B13a arkitektur-flytt (egen sprint, kräver ADR).
-14. `write_pages` icon-bibliotek-agnostisk refactor.
-15. Cancellation-followup (låg): riktig cancellation/background-jobb i playground-vyn om operatören behöver avbryta redan startade körningar.
-16. **Viewser React-state-test-setup (nice-to-have, post-B142)** - dedikerad React-state-/komponent-test-setup för `apps/viewser/` saknas i repo idag. B142 stängdes utan regression-test (manuell verifiering + breda viewser-smoke-tester gröna). Liknande UI-sync-buggar (run-following, picker-syncs, console-drawer-state) skulle få bättre låsning om vi inför Vitest + React Testing Library i `apps/viewser/` med ett par mönstertester (page.tsx run-following, ProjectInputPicker badge-/varning-rendering). Egen mini-sprint; ej blocker.
+10. B49 (medel): page-map-driven sidebar för `docs-base`-startern; måste vara klar innan `course-education -> docs-base` aktiveras i `SCAFFOLD_TO_STARTER`.
+11. **B59 follow-up** (aktualiserad av live-scout 2026-05-22): byte till lokal `next dev`-process som same-origin iframe på `localhost:NNNN` eller static StackBlitz-template. Ingen mer COOP/COEP-toggling. Bredare extern research om SDK-/Codeflow-/Teams-/MCP-ytan, kommersiell licens och browser-baseline ligger i [`docs/integrations/stackblitz-research.md`](integrations/stackblitz-research.md) som underlag inför arkitekturbeslutet.
+12. B53 (låg): `governance/schemas/routes.schema.json` för scaffold-routes-kontraktet.
+13. B47 (låg): commerce-base Shopify-handles dokumenteras eller får fallback.
+14. B13a arkitektur-flytt (egen sprint, kräver ADR).
+15. `write_pages` icon-bibliotek-agnostisk refactor.
+16. Cancellation-followup (låg): riktig cancellation/background-jobb i playground-vyn om operatören behöver avbryta redan startade körningar.
+17. **Viewser React-state-test-setup (nice-to-have, post-B142)** - dedikerad React-state-/komponent-test-setup för `apps/viewser/` saknas i repo idag. B142 stängdes utan regression-test (manuell verifiering + breda viewser-smoke-tester gröna). Liknande UI-sync-buggar (run-following, picker-syncs, console-drawer-state) skulle få bättre låsning om vi inför Vitest + React Testing Library i `apps/viewser/` med ett par mönstertester (page.tsx run-following, ProjectInputPicker badge-/varning-rendering). Egen mini-sprint; ej blocker.
 
 **Vänta med ny/sista starter** tills minst följande är sant: marketing-base real codegen stabil, 4 demo-sajter kan byggas (minst 3/4), follow-up versions funkar, build-fail från fri prompt är förstådda, enkelt scorecard finns. Annars blir ny starter mer yta att felsöka utan att stärka kärnflödet.
 
