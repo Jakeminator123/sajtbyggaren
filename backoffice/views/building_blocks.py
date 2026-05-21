@@ -16,7 +16,14 @@ from scripts.generate_variant_candidate import (
     generate_variant_candidates,
 )
 
-from .. import asset_graph, discovery_control, impact, loaders, selection_profiles
+from .. import (
+    asset_graph,
+    discovery_control,
+    discovery_wizard_diagnostics,
+    impact,
+    loaders,
+    selection_profiles,
+)
 from ..paths import REPO_ROOT
 from ._helpers import safe_render
 
@@ -268,6 +275,109 @@ def _render_discovery_mapping() -> None:
             st.dataframe(findings, use_container_width=True, hide_index=True)
 
 
+def _filter_options(rows: list[dict], key: str) -> list[str]:
+    values = sorted({str(row.get(key) or "") for row in rows if row.get(key)})
+    return ["Alla"] + values
+
+
+def _render_wizard_generation_mapping() -> None:
+    st.subheader("Wizardfält → generation")
+    st.caption(
+        "Read-only diagnostik över kända wizardfält. Backoffice visar bara "
+        "befintliga källor och är inte en ny runtime-sanning."
+    )
+    st.info(
+        "Denna vy visar kända och dokumenterade wizardfält. Den är diagnostisk "
+        "och kan vara ofullständig om frontendtypen ändras utan att "
+        "diagnostikhelpern uppdateras."
+    )
+
+    rows = discovery_wizard_diagnostics.wizard_generation_rows()
+    summary = discovery_wizard_diagnostics.wizard_generation_summary(rows)
+
+    cols = st.columns(4)
+    cols[0].metric("Wizardfält", summary["total"])
+    cols[1].metric("Aktiva", summary["active"])
+    cols[2].metric("Fallback/planned", summary["fallback_or_planned"])
+    cols[3].metric(
+        "Gap/unknown/saknar destination",
+        summary["needs_attention"],
+    )
+    detail_cols = st.columns(3)
+    detail_cols[0].metric("Deterministiska", summary["deterministic"])
+    detail_cols[1].metric("Prompt-signaler", summary["prompt_signal"])
+    detail_cols[2].metric("Downstream-gap", summary["downstream_gap"])
+
+    filter_cols = st.columns(4)
+    selected_step = filter_cols[0].selectbox(
+        "Steg",
+        _filter_options(rows, "stepLabel"),
+        key="wizard_generation_step_filter",
+    )
+    selected_status = filter_cols[1].selectbox(
+        "Status",
+        _filter_options(rows, "status"),
+        key="wizard_generation_status_filter",
+    )
+    selected_propagation = filter_cols[2].selectbox(
+        "Signalnivå",
+        _filter_options(rows, "propagationLevel"),
+        key="wizard_generation_propagation_filter",
+    )
+    destination_query = filter_cols[3].text_input(
+        "Destination/källa",
+        key="wizard_generation_destination_filter",
+        placeholder="t.ex. brand, capability, taxonomy",
+    )
+
+    filtered_rows = rows
+    if selected_step != "Alla":
+        filtered_rows = [
+            row for row in filtered_rows if row["stepLabel"] == selected_step
+        ]
+    if selected_status != "Alla":
+        filtered_rows = [
+            row for row in filtered_rows if row["status"] == selected_status
+        ]
+    if selected_propagation != "Alla":
+        filtered_rows = [
+            row
+            for row in filtered_rows
+            if row["propagationLevel"] == selected_propagation
+        ]
+    if destination_query.strip():
+        needle = destination_query.strip().lower()
+        filtered_rows = [
+            row
+            for row in filtered_rows
+            if needle
+            in " ".join(
+                [
+                    row["answerPath"],
+                    row["destination"],
+                    row["sourceChain"],
+                    row["sourcePath"],
+                    row["explanation"],
+                ]
+            ).lower()
+        ]
+
+    st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+
+    with st.expander("Källa och avgränsning"):
+        st.markdown(
+            "- `status` visar om känd mapping är aktiv, planned/fallback, gap, "
+            "unknown eller saknar känd destination.\n"
+            "- `propagationLevel` visar hur långt signalen kan styrkas: "
+            "deterministisk destination, prompt-signal, Project Input-only, "
+            "downstream-gap eller diagnostic-only.\n"
+            "- Wizarden får inte sätta `starterId` direkt.\n"
+            "- Dossiers väljs inte direkt av wizardknappar; wizardens svar blir "
+            "capability-/taxonomisignaler och går vidare via Capability Map, "
+            "Dossier Selection och planning."
+        )
+
+
 def view_control_plane() -> None:
     st.title("Kontrollplan")
     st.caption(
@@ -292,6 +402,9 @@ def view_control_plane() -> None:
 
     st.divider()
     _render_discovery_mapping()
+
+    st.divider()
+    _render_wizard_generation_mapping()
 
     st.divider()
     st.subheader("Konsekvensvy")
