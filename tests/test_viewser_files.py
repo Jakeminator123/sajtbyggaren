@@ -757,6 +757,92 @@ def test_run_details_panel_renders_placeholder_contact_warning() -> None:
 
 
 @pytest.mark.tooling
+def test_run_details_panel_renders_site_plan_warnings() -> None:
+    """B144: när Builder-sprinten 2026-05-21 (B137 + B138 + Intent Guard
+    light) skrev ``pageCountWarning`` (route_plan trim på brief.pageCount)
+    och ``intentGuardWarnings`` (wizard categoryId vs brief
+    businessTypeGuess) till ``site-plan.json``, renderade Run Details
+    inte fälten. Operatören saknade synlig signal trots att artefakten
+    bar warnings — verifierat live mot sköldpaddssoppa-runen där
+    intentGuardWarnings flaggade ``categoryId='fitness'`` mot
+    ``conflictingTerm='mat'`` utan att Run Details visade det. Reviewer
+    2026-05-21 (~7/10) öppnade B144 (Medel) som följd, med PR #49-
+    inventeringen ``docs/reports/run-details-warnings-inventory-2026-05-21.md``
+    som placeringsskissen.
+
+    Mirror placeholderContactFields-mönstret i BuildSection
+    (``test_run_details_panel_renders_placeholder_contact_warning``):
+    amber-block, ``data-testid``, svensk operatörsrubrik. Den äldre
+    ``pageIntentWarnings`` (B132) tas med i samma block eftersom den
+    redan finns i schemat men aldrig fick en strukturerad rendering.
+
+    Locks:
+
+    1. ``site-plan.json`` är canonical källa — komponenten läser fälten
+       från sitePlan-objektet, inte build-result.json. Lock både
+       fältnamnen OCH att källan är sitePlan (inte build).
+    2. ``data-testid='site-plan-warnings'`` så framtida Playwright/Vitest
+       coverage kan targeta blocket utan DOM-scraping.
+    3. Amber tone (STATUS_TONE.warn) matchar placeholderContactFields-
+       blocket — ej röd/destructive, eftersom warnings är non-blocking.
+    4. Svensk rubrik ``Site Plan-varningar`` så operatören förstår
+       blockets ursprung utan att läsa JSON.
+    """
+    panel_text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    for field in ("pageCountWarning", "intentGuardWarnings", "pageIntentWarnings"):
+        assert field in panel_text, (
+            f"RunDetailsPanel måste läsa site-plan.json:{field} så "
+            f"operatören ser varningen i Site Plan-sektionen. Sprinten "
+            f"2026-05-21 landade fälten i artefakten utan att rendera dem."
+        )
+
+    assert "sitePlan.pageCountWarning" in panel_text, (
+        "Site Plan warning-blocket måste läsa pageCountWarning från "
+        "sitePlan-objektet — site-plan.json är canonical källa enligt "
+        "B144-skissen i docs/reports/run-details-warnings-inventory-"
+        "2026-05-21.md. Build-result.json bär en kopia av "
+        "pageIntentWarnings men plan-fältena (pageCountWarning + "
+        "intentGuardWarnings) lever bara i site-plan.json."
+    )
+    assert "sitePlan.intentGuardWarnings" in panel_text, (
+        "Site Plan warning-blocket måste läsa intentGuardWarnings från "
+        "sitePlan-objektet (Intent Guard light skriver bara till "
+        "site-plan.json, inte build-result.json — se B144-skissen)."
+    )
+
+    assert "site-plan-warnings" in panel_text, (
+        "Site Plan warning-blocket måste bära "
+        "data-testid='site-plan-warnings' så framtida Playwright/Vitest-"
+        "coverage kan targeta det utan DOM-scraping. Mirror "
+        "placeholder-contact-warning-mönstret från BuildSection."
+    )
+
+    assert "amber-500" in panel_text, (
+        "Site Plan warning-blocket måste använda amber-500 "
+        "(STATUS_TONE.warn), samma palett som placeholderContactFields-"
+        "blocket. Warnings är non-blocking; röd/destructive skulle "
+        "felaktigt signalera att builden stoppats."
+    )
+
+    assert "Site Plan-varningar" in panel_text, (
+        "Site Plan warning-blocket måste ha en svensk rubrik så "
+        "operatören förstår blockets innehåll utan att läsa JSON — "
+        "mirror 'Kontakt-fält är platshållare'-mönstret från "
+        "BuildSection. AGENTS.md kräver svenska operatörslabels."
+    )
+
+    assert "Build blockas inte" in panel_text, (
+        "Site Plan warning-blocket måste förklara att varningarna är "
+        "non-blocking så operatören inte tror att builden stoppats. "
+        "Quality Gate/Repair-sektionerna driver build-status; planner-"
+        "warnings är ren signalering."
+    )
+
+
+@pytest.mark.tooling
 def test_chat_panel_component_is_removed() -> None:
     """B46: legacy ChatPanel component is dead code as of audit-fix
     2026-05-14. PromptBuilder is the only operator-facing prompt
