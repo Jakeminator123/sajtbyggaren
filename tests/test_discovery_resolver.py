@@ -42,7 +42,10 @@ from packages.generation.discovery import (  # noqa: E402
     resolve_discovery,
 )
 from packages.generation.discovery.models import DiscoveryDecision  # noqa: E402
-from packages.generation.discovery.resolve import _apply_contact_fields  # noqa: E402
+from packages.generation.discovery.resolve import (  # noqa: E402
+    _apply_company_fields,
+    _apply_contact_fields,
+)
 
 
 @pytest.fixture(scope="module")
@@ -1325,4 +1328,250 @@ def test_inherited_decision_validates_against_schema(
     )
     jsonschema.Draft202012Validator(decision_schema).validate(
         v2_meta["discoveryDecision"]
+    )
+
+
+# ---------------------------------------------------------------------------
+# B137 - wizard-overlay tagline-sanering
+# ---------------------------------------------------------------------------
+#
+# Wizardens "Beskriv din verksamhet"-fält (``answers.offer``) hamnade tidigare
+# rakt som ``company.tagline``. När operatören skrev UI-direktiv där (sidantal,
+# färgval, "Hemsida om ..."-instruktioner) läckte den texten ut som publik
+# hero-tagline. Scout case 4 (sköldpaddssoppa) verifierade läckaget live.
+# Fixen i ``_apply_company_fields`` föredrar brief- eller derived-tagline när
+# offer matchar ett UI-direktiv-mönster.
+
+
+# Lista av fraser som ALDRIG får hamna i en renderad ``company.tagline``.
+# Lägg till nya mönster här när Scout hittar fler läckage-shapes.
+BLOCKED_TAGLINE_PHRASES: list[str] = [
+    "2 sidor",
+    "sidor",
+    "gröna färger",
+    "blå färg",
+    "Hemsida om",
+    "Bygg en",
+    "Skapa en",
+    "Gör en",
+    "Vill ha",
+    "Behöver",
+]
+
+
+def _assert_tagline_clean(tagline: str) -> None:
+    """Hjälpare: ingen blocked phrase får förekomma i taglinen."""
+    for phrase in BLOCKED_TAGLINE_PHRASES:
+        assert phrase.lower() not in tagline.lower(), (
+            f"Tagline läckte blockad fras {phrase!r}: {tagline!r}"
+        )
+
+
+@pytest.mark.tooling
+def test_offer_with_ui_directives_does_not_leak_to_tagline() -> None:
+    """Sköldpaddssoppa-fallet: full UI-direktiv-stång i offer.
+
+    Briefen har redan en tagline (``"Brief tagline"``), så när wizardens
+    offer matchar UI-direktiv ska brief-taglinen vinna — inte den råa
+    operatörstexten med sidantal och färgval.
+    """
+    payload = _payload(
+        "business",
+        offer="Hemsida om sköldpaddssoppa, mat, 2 sidor, gröna färger",
+    )
+    project_input, decision = resolve_discovery(
+        raw_prompt="Hemsida om sköldpaddssoppa, mat, 2 sidor, gröna färger",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    tagline = project_input["company"]["tagline"]
+    _assert_tagline_clean(tagline)
+    assert not tagline.lower().startswith("hemsida om"), (
+        f"Tagline börjar med UI-direktiv: {tagline!r}"
+    )
+    assert decision.fieldSources["company.tagline"] in {"brief", "derived"}, (
+        f"Field source ska reflektera fallback, fick: "
+        f"{decision.fieldSources['company.tagline']!r}"
+    )
+
+
+@pytest.mark.tooling
+def test_clean_offer_still_becomes_wizard_tagline() -> None:
+    """Positivt kontrollfall: ren verksamhetsbeskrivning ska behållas.
+
+    Bevarar nuvarande beteende när operatören skriver en faktisk
+    verksamhetsbeskrivning (utan sidantal, färger eller instruktions-
+    prefix) i offer-fältet.
+    """
+    clean_offer = "Vi gör skräddarsydda keramikvaser för svenska hem."
+    payload = _payload("business", offer=clean_offer)
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["company"]["tagline"] == clean_offer
+    assert decision.fieldSources["company.tagline"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_offer_with_only_page_count_falls_back_to_brief_tagline() -> None:
+    """Sidantal i offer-fältet räknas som UI-direktiv."""
+    payload = _payload("business", offer="2 sidor")
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    tagline = project_input["company"]["tagline"]
+    _assert_tagline_clean(tagline)
+    assert decision.fieldSources["company.tagline"] in {"brief", "derived"}
+
+
+@pytest.mark.tooling
+def test_offer_with_only_color_directive_falls_back_to_brief_tagline() -> None:
+    """Färg-direktiv i offer-fältet räknas som UI-direktiv."""
+    payload = _payload("business", offer="gröna färger och varmt tema")
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    tagline = project_input["company"]["tagline"]
+    _assert_tagline_clean(tagline)
+    assert decision.fieldSources["company.tagline"] in {"brief", "derived"}
+
+
+@pytest.mark.tooling
+def test_offer_with_instruction_prefix_falls_back_to_brief_tagline() -> None:
+    """Instruktions-prefix räknas som UI-direktiv även utan sidantal/färg."""
+    for offer in (
+        "Bygg en snygg sida",
+        "Skapa en presentationssida",
+        "Gör en enkel hemsida",
+        "vill ha något proffsigt",
+    ):
+        payload = _payload("business", offer=offer)
+        project_input, decision = resolve_discovery(
+            raw_prompt="test",
+            payload=payload,
+            project_input_candidate=_candidate_project_input(),
+        )
+        tagline = project_input["company"]["tagline"]
+        _assert_tagline_clean(tagline)
+        assert decision.fieldSources["company.tagline"] in {"brief", "derived"}, (
+            f"Offer {offer!r} skulle räknas som UI-direktiv, men gav source "
+            f"{decision.fieldSources['company.tagline']!r}"
+        )
+
+
+@pytest.mark.tooling
+def test_offer_above_maximum_length_falls_back_to_brief_tagline() -> None:
+    """Offer > 120 tecken räknas som UI-direktiv (oftast långa instruktioner)."""
+    long_offer = "Vi bygger sajter för småföretag " * 5  # ~155 tecken
+    assert len(long_offer) > 120
+    payload = _payload("business", offer=long_offer)
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["company"]["tagline"] != long_offer[:140]
+    assert decision.fieldSources["company.tagline"] in {"brief", "derived"}
+
+
+@pytest.mark.tooling
+def test_offer_below_minimum_length_falls_back_to_brief_tagline() -> None:
+    """Offer < 8 tecken räknas som spam-/skrot-input.
+
+    Tröskeln är satt så att korta riktiga verksamhetsbeskrivningar
+    ("Bagar bröd" = 10 tkn) inte felklassas — bara uppenbara spam-
+    inputs ("ja", "abc") faller hit.
+    """
+    payload = _payload("business", offer="abc")
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["company"]["tagline"] != "abc"
+    assert decision.fieldSources["company.tagline"] in {"brief", "derived"}
+
+
+@pytest.mark.tooling
+def test_short_legitimate_offer_is_kept_as_wizard_tagline() -> None:
+    """Korta riktiga verksamhetsbeskrivningar (>= 8 tkn) ska behållas.
+
+    Sänkningen från < 12 till < 8 tecken (per plan-OK 2026-05-21) släpper
+    igenom case som ``"Bagar bröd"`` (10 tkn) som annars hade fastnat.
+    """
+    short_offer = "Bagar bröd"  # 10 tecken, klart över tröskeln 8
+    payload = _payload("business", offer=short_offer)
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["company"]["tagline"] == short_offer
+    assert decision.fieldSources["company.tagline"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_apply_company_fields_uses_derived_when_brief_tagline_missing() -> None:
+    """Edge case: offer är UI-direktiv OCH brief saknar tagline.
+
+    I praktiken sällsynt eftersom briefModel alltid producerar en tagline,
+    men resolvern måste ändå hantera fallet utan att lämna ``tagline``
+    odefinierad (schemat kräver minLength=1).
+    """
+    candidate = _candidate_project_input()
+    candidate["company"].pop("tagline", None)
+    field_sources: dict[str, str] = {}
+    _apply_company_fields(
+        candidate,
+        answers={
+            "offer": "Hemsida om sköldpaddssoppa, 2 sidor, gröna färger",
+            "companyName": "Sköldpaddssoppa Karlsson",
+        },
+        field_sources=field_sources,
+    )
+    tagline = candidate["company"]["tagline"]
+    assert tagline, "Resolvern måste sätta en tagline även när brief saknar."
+    _assert_tagline_clean(tagline)
+    assert field_sources["company.tagline"] == "derived"
+
+
+@pytest.mark.tooling
+def test_apply_company_fields_keeps_brief_tagline_when_offer_directive() -> None:
+    """Granulärt: direkt anrop till _apply_company_fields.
+
+    Speglar enheten istället för full resolve_discovery-flöde så
+    regressionen lokaliseras direkt om någon framtida ändring tar
+    bort wizard-direktiv-detektorn.
+    """
+    candidate = _candidate_project_input()
+    candidate["company"]["tagline"] = "Skarp brief-tagline från briefModel"
+    field_sources: dict[str, str] = {}
+    _apply_company_fields(
+        candidate,
+        answers={"offer": "Hemsida om sköldpaddssoppa, 2 sidor, gröna färger"},
+        field_sources=field_sources,
+    )
+    assert candidate["company"]["tagline"] == "Skarp brief-tagline från briefModel"
+    assert field_sources["company.tagline"] == "brief"
+
+
+@pytest.mark.tooling
+def test_blocked_tagline_phrases_constant_lists_known_directives() -> None:
+    """Säkerhetsnät: håller BLOCKED_TAGLINE_PHRASES synkad med kända case.
+
+    Fixtuern är test-modul-lokal så test-utvidgning är trivial när Scout
+    hittar fler läckage-shapes — denna test misslyckas högt om en känd
+    fras tas bort av misstag.
+    """
+    must_block = {"2 sidor", "Hemsida om", "gröna färger"}
+    actual = set(BLOCKED_TAGLINE_PHRASES)
+    missing = must_block - actual
+    assert not missing, (
+        f"BLOCKED_TAGLINE_PHRASES tappade kända direktiv: {missing}"
     )
