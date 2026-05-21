@@ -1,10 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-21 (kvällen, **B132 follow-up Builder-sprint: wizard-
-route-emission för local-service-business ovanpå Backoffice-diagnostiken
-`0ff2a54`**). Lokal `main` ligger en Builder-commit framåt från
-`0ff2a54` (`docs(steward): record wizard diagnostics landing`); pushen är
-nästa steg när Scout-RO-review godkänner diffen. Inga öppna PRs.
+**Datum:** 2026-05-21 (kvällen, **B132 follow-up Builder-sprint pushad
+ovanpå Backoffice-diagnostiken `0ff2a54`**). Lokal `main` och
+`origin/main` är `63d7264` (`feat(builder): emit wizard mustHave routes
+for local-service-business`). Inga öppna PRs.
 Bug-scope **oförändrat**: 27 aktiva, 0 misplaced, 5 unknown, 104 stängda
 — sprinten är en produktutvidgning av B132-spåret från "warning-only
 observability" till faktisk route-emission, inte en ny bug-fix.

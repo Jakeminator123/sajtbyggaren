@@ -30,11 +30,11 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: pending Builder-sprint commit (2026-05-21,
-**B132 follow-up: wizard-route emission för local-service-business
-ovanpå Backoffice diagnostik `0ff2a54`**) — lokal `main` ligger en
-Builder-commit framåt från `0ff2a54`
-(`docs(steward): record wizard diagnostics landing`). Sprinten tar
+Last verified state: `63d7264` (2026-05-21, **B132 follow-up:
+wizard-route emission för local-service-business ovanpå Backoffice
+diagnostik `0ff2a54`**) — lokal `main` och `origin/main` är synkade
+på `63d7264` (`feat(builder): emit wizard mustHave routes for
+local-service-business`). Sprinten tar
 `pageIntentWarnings`-spåret från "warning-only observability" till
 faktisk route-emission när `wizardMustHave` innehåller pages som
 kan byggas deterministiskt: `FAQ` → `/faq`, `Bildgalleri` →
@@ -158,19 +158,20 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är en Builder-commit framåt från `0ff2a54` lokalt; pushen är nästa
-steg när Scout-RO-review godkänner diffen. B132 follow-up-sprinten har
-landat wizard-route-emission för `local-service-business`: när
-wizardens `mustHave` säger `FAQ` / `Bildgalleri` / `Vårt team` /
-`Priser och paket` / `Portfolio / Case` / `Karta / Hitta hit` får
-operatören riktiga sidor (`/faq`, `/galleri`, `/team`, `/priser`,
-`/portfolio`, `/karta`) i stället för enbart `pageIntentWarnings`.
-`Bokning online`, `Blogg / Nyheter` och `Nyhetsbrev` håller
-warning-shape med specifika reason-strängar eftersom de kräver
-integration som inte finns i deterministiska Builder v1. Mini-eval
-över fyra cases visar 0→0 warnings för elektriker, 4→1 för frisör,
-4→1 för naprapat, 0→0 för sköldpaddssoppa, med korrekta route-filer
-under `app/<route>/page.tsx`. B144/B143/B141 och Backoffice
+`main` är vid `63d7264` på origin och lokalt efter Scout-godkänd push.
+B132 follow-up-sprinten har landat wizard-route-emission för
+`local-service-business`: när wizardens `mustHave` säger `FAQ` /
+`Bildgalleri` / `Vårt team` / `Priser och paket` / `Portfolio / Case` /
+`Karta / Hitta hit` får operatören riktiga sidor (`/faq`, `/galleri`,
+`/team`, `/priser`, `/portfolio`, `/karta`) i stället för enbart
+`pageIntentWarnings`. `Bokning online`, `Blogg / Nyheter` och
+`Nyhetsbrev` håller warning-shape med specifika reason-strängar
+eftersom de kräver integration som inte finns i deterministiska
+Builder v1. Mini-eval över fyra cases (CLI mock-väg, `--skip-build`)
+visar 2→0 warnings för elektriker, 4→1 för frisör, 4→1 för naprapat,
+1→0 för sköldpaddssoppa, med korrekta route-filer under
+`app/<route>/page.tsx`. Scout-RO-review gav `OK_PUSH`-verdict med
+PASS på alla sex acceptanskriterier. B144/B143/B141 och Backoffice
 Building Blocks-diagnostiken (`650c518`) är kvar oförändrade ovanpå
 sprinten. Inga öppna PRs. Bug-räkning oförändrad: **27 aktiva,
 0 misplaced, 5 unknown, 104 stängda**. Föregående stage snapshot:
@@ -443,12 +444,11 @@ också kvar på origin men är fri att radera i nästa Steward-städ.
 
 ## Current active sprint
 
-Pågående lokal Builder-sprint (B132 follow-up) väntar på Scout-RO-review
-innan push. Ändringarna ligger som en commit framåt från `0ff2a54`. Aktivt
-orkestreringsläge efter push: starta en ny Scout för Viewser-overlay-
-mini-eval som verifierar att de nya wizard-routes faktiskt renderas i
-StackBlitz-preview och att `pageIntentWarnings`-minskningen syns i Run
-Details.
+Ingen pågående lokal produktimplementation efter B132 follow-up i
+`63d7264` (Scout-RO-godkänd + pushad). Aktivt orkestreringsläge: starta
+en ny Scout för Viewser-overlay-mini-eval som verifierar att de nya
+wizard-routes faktiskt renderas i StackBlitz-preview och att
+`pageIntentWarnings`-minskningen syns i Run Details.
 
 Tidigare klara sprintar: B121 discovery-integration (PR #34–#37, `e3fa67b`),
 starter dependency hardening (B108),
