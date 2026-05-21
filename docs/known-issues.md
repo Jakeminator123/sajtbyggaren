@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 30 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 101 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 29 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 102 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -674,21 +674,21 @@ för follow-up eller ska städas.
   `electrician`/business-case. Källa: reviewer-feedback 2026-05-21
   efter Intent Guard light. Fix: open. Test: open.
 
-- **`B144` Medel** - `pageCountWarning` och `intentGuardWarnings` skrivs
-  till `site-plan.json`, men Run Details renderar dem inte
-  strukturerat. Operatören måste läsa rå JSON/backoffice för att se
-  varför en run varnar, trots att varningen är tänkt som operator-yta.
-  PR #49-inventeringen (`docs/reports/run-details-warnings-inventory-2026-05-21.md`)
-  visar samma gap och rekommenderar att båda renderas i
-  `SitePlanSection` med samma amber-mönster som
-  `placeholderContactFields`. Fix-pekare:
-  `apps/viewser/components/run-details-panel.tsx:SitePlanSection`.
-  Test: source-lock eller framtida React-komponenttest som säkrar att
-  `pageCountWarning`, `intentGuardWarnings` och gärna
-  `pageIntentWarnings` visas i Run Details. Källa: PR #49-inventering
-  + reviewer-feedback 2026-05-21. Fix: open. Test: open.
-
 ## Stängda - regression-test säkrar fixet
+
+- **`B144` Medel** (stängd 2026-05-21, Run Details renderar
+  site-plan-varningar) - `pageCountWarning` och `intentGuardWarnings`
+  skrevs till `site-plan.json`, men Run Details renderade dem inte
+  strukturerat. Operatören behövde läsa rå JSON/backoffice för att se
+  varför en run varnade. **Fix:** `SitePlanSection` i
+  `apps/viewser/components/run-details-panel.tsx` läser nu
+  `sitePlan.pageCountWarning`, `sitePlan.intentGuardWarnings` och
+  `sitePlan.pageIntentWarnings` från `site-plan.json` som canonical
+  källa och visar dem i ett amber-block med
+  `data-testid="site-plan-warnings"`. Defensiva parsers gör att äldre
+  runs utan fälten inte renderar ett tomt block och inte kraschar.
+  Copyt förklarar att builden inte blockas. Fix: `aee67d7`. Test:
+  `tests/test_viewser_files.py::test_run_details_panel_renders_site_plan_warnings`.
 
 - **`B137` Medel** (stängd 2026-05-21, wizard-overlay tagline-läckage av
   rå prompt-text) - Verifierat live i Scout case 4 (sköldpaddssoppa):
