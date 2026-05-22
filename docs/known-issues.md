@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 26 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 105 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 24 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 107 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -585,46 +585,33 @@ för follow-up eller ska städas.
 ### Sköldpaddssoppa-run follow-up (orchestrator 2026-05-19, sen kväll)
 
 
-- **`B139` Låg-medel** (öppen, tone-extraction propageras inte till
-  brand-tokens) - briefModel extraherar tone-fältet från fri-prompten
-  korrekt (`site-brief.json` har `"tone": ["grön"]` och Project Input
-  har `tone.primary: "grön"`) men renderern använder bara
-  `var(--primary)` från `nordic-trust`-CSS-tokens utan koppling till
-  `tone.primary`. Verifierat i samma sköldpaddssoppa-run: generated
-  `app/page.tsx` läser inte tone-fältet alls. Effekt idag: tone-fältet
-  är dead data i renderern — operatörens explicita färgval propagerar
-  inte till brand-tokens. Hänger ihop med variant-promotion-sprinten
-  (Queue #6) men är inte samma fix; variant-promotion handlar om
-  scaffold-variant-selection, B139 handlar om att tone-extraktion ska
-  påverka brand-tokens oavsett vilken variant som väljs. Källa:
-  orchestrator follow-up-verifiering av samma run som Scout case 4,
-  2026-05-19. Fix: open. Kodväg per Scout-rapport (PR #47, mergad):
-  `scripts/build_site.py:variant_css()` (rad 701-737) och
-  `scripts/build_site.py:patch_globals_css()` (rad 2107-2136). Helpern
-  läser bara `variant["tokens"]`; `tone.primary` /
-  `brand.primaryColorHex` har ingen kanal in. Fix-skiss: utöka
-  signaturen att ta dossier eller token-override-objekt och mappa
-  `tone.primary` (eller B140 explicit hex) till `--primary`/relaterade
-  vars innan CSS skrivs. Test: open.
-
 ### Scout-rapport PR #47 — ytterligare fynd (2026-05-19, sen kväll)
 
-- **`B140` Låg** (öppen, brand.primaryColorHex ignoreras av variant_css)
-  - Även när discovery-resolvern skriver `brand.primaryColorHex` från
-  wizardens hex-fält (`packages/generation/discovery/resolve.py:_apply_brand_and_assets`)
-  tas det fältet aldrig in i CSS-token-skrivningen.
-  `scripts/build_site.py:variant_css()` läser bara `variant["tokens"]`.
-  Angränsande till B139 (samma helper, samma fix-yta) men spårar en
-  separat data-kanal: B139 är extraherad tone-keyword, B140 är
-  explicit operatörshex. Effekt idag: explicit primärfärg från
-  wizardens hex-fält propagerar inte till renderad CSS oavsett vilken
-  scaffold-variant som väljs. Fix-pekare:
-  `scripts/build_site.py:variant_css` / `patch_globals_css` (samma
-  utvidgning som B139 — token-override-objekt eller dossier-signatur).
-  Källa: Scout-rapport PR #47, "Eventuella ytterligare fynd",
-  2026-05-19. Fix: open. Test: open.
-
 ## Stängda - regression-test säkrar fixet
+
+- **`B139` Låg-medel** (stängd 2026-05-22, tone-primary till CSS-token) -
+  `tone.primary` kunde fyllas från brief/follow-up men renderern använde
+  bara variantens default-CSS-tokens. Fix: `B139B140_PENDING` lägger en
+  smal token-override-kanal i `scripts/build_site.py`: om explicit brand-
+  hex saknas kan whitelistade tone-signaler (`grön`/`green`, `blå`/`blue`,
+  `varm`/`warm`, `premium`) mappas till `--primary` och `--accent`.
+  Variantens default tokens bevaras exakt när ingen signal finns. Test:
+  `tests/test_builder_smoke.py::test_tone_primary_green_maps_to_stable_green_token_when_hex_missing`,
+  `tests/test_builder_smoke.py::test_variant_css_default_is_byte_stable_without_brand_or_tone`.
+
+- **`B140` Låg** (stängd 2026-05-22, brand-hex till CSS-token) -
+  `brand.primaryColorHex` och `brand.accentColorHex` skrevs till Project
+  Input men ignorerades av `variant_css()`. Fix: `B139B140_PENDING`
+  låter giltiga explicita hex-värden vinna över tone-keywords och skriva
+  `--primary`/`--accent`; ogiltiga hex-värden ignoreras med trace-warning
+  och variant-default bevaras utan crash. Test:
+  `tests/test_builder_smoke.py::test_brand_primary_color_hex_overrides_primary_css_token`,
+  `tests/test_builder_smoke.py::test_brand_accent_color_hex_overrides_accent_css_token`,
+  `tests/test_builder_smoke.py::test_explicit_brand_hex_wins_over_tone_keyword`,
+  `tests/test_builder_smoke.py::test_invalid_brand_hex_is_ignored_and_variant_default_is_preserved`,
+  `tests/test_builder_smoke.py::test_invalid_explicit_brand_hex_does_not_fall_through_to_tone_keyword`,
+  `tests/test_builder_smoke.py::test_build_writes_brand_token_overrides_to_generated_globals_css`,
+  `tests/test_builder_smoke.py::test_build_traces_invalid_brand_hex_and_keeps_variant_defaults`.
 
 - **`B71` Hög** (stängd 2026-05-22, Project DNA semantic follow-up V1) -
   `scripts/prompt_to_project_input.py:merge_followup_project_input`

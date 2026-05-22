@@ -70,6 +70,16 @@ _CURRENT_PROMPT_INPUT_RE = re.compile(
     r"^(?P<site_id>[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)"
     r"\.project-input\.json$"
 )
+_HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+_TONE_COLOR_TOKENS: dict[str, dict[str, str]] = {
+    "grön": {"primary": "#166534", "accent": "#dcfce7"},
+    "green": {"primary": "#166534", "accent": "#dcfce7"},
+    "blå": {"primary": "#1d4ed8", "accent": "#dbeafe"},
+    "blue": {"primary": "#1d4ed8", "accent": "#dbeafe"},
+    "varm": {"primary": "#9a3412", "accent": "#fed7aa"},
+    "warm": {"primary": "#9a3412", "accent": "#fed7aa"},
+    "premium": {"primary": "#312e81", "accent": "#ddd6fe"},
+}
 
 
 # ---------------------------------------------------------------------------
@@ -698,9 +708,61 @@ def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> in
     return copied
 
 
-def variant_css(variant: dict) -> str:
+def _normalise_hex_color(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    cleaned = value.strip()
+    if not _HEX_COLOR_RE.fullmatch(cleaned):
+        return None
+    return cleaned.lower()
+
+
+def _token_overrides_from_project_input(
+    project_input: dict[str, Any] | None,
+) -> tuple[dict[str, str], list[str]]:
+    """Return safe CSS token overrides derived from explicit brand/tone fields."""
+    if not isinstance(project_input, dict):
+        return {}, []
+
+    overrides: dict[str, str] = {}
+    warnings: list[str] = []
+    brand = project_input.get("brand") if isinstance(project_input.get("brand"), dict) else {}
+    primary_hex_provided = bool(brand.get("primaryColorHex"))
+    accent_hex_provided = bool(brand.get("accentColorHex"))
+    primary_hex = _normalise_hex_color(brand.get("primaryColorHex"))
+    accent_hex = _normalise_hex_color(brand.get("accentColorHex"))
+    if primary_hex_provided and primary_hex is None:
+        warnings.append("brand.primaryColorHex invalid; variant primary token kept")
+    if accent_hex_provided and accent_hex is None:
+        warnings.append("brand.accentColorHex invalid; variant accent token kept")
+
+    if primary_hex:
+        overrides["primary"] = primary_hex
+    if accent_hex:
+        overrides["accent"] = accent_hex
+
+    if "primary" not in overrides and not primary_hex_provided:
+        tone = project_input.get("tone") if isinstance(project_input.get("tone"), dict) else {}
+        tone_primary = tone.get("primary")
+        if isinstance(tone_primary, str):
+            tone_key = tone_primary.strip().lower()
+            tone_tokens = _TONE_COLOR_TOKENS.get(tone_key)
+            if tone_tokens:
+                overrides["primary"] = tone_tokens["primary"]
+                if "accent" not in overrides and not accent_hex_provided:
+                    overrides["accent"] = tone_tokens["accent"]
+
+    return overrides, warnings
+
+
+def variant_css(variant: dict, token_overrides: dict[str, str] | None = None) -> str:
     tokens = variant["tokens"]
-    color = tokens["color"]
+    color = dict(tokens["color"])
+    if token_overrides:
+        for token_name in ("primary", "accent"):
+            override = token_overrides.get(token_name)
+            if override:
+                color[token_name] = override
     radius = tokens["radius"]
     spacing = tokens["spacing"]
     return (
@@ -722,10 +784,15 @@ def variant_css(variant: dict) -> str:
     )
 
 
-def patch_globals_css(target: Path, variant: dict) -> None:
+def patch_globals_css(
+    target: Path,
+    variant: dict,
+    project_input: dict[str, Any] | None = None,
+) -> list[str]:
     css = target / "app" / "globals.css"
     original = css.read_text(encoding="utf-8")
-    block = variant_css(variant)
+    token_overrides, warnings = _token_overrides_from_project_input(project_input)
+    block = variant_css(variant, token_overrides)
     marker = "/* sajtbyggaren-variant-tokens:start */"
     end = "/* sajtbyggaren-variant-tokens:end */"
     if marker in original:
@@ -735,6 +802,7 @@ def patch_globals_css(target: Path, variant: dict) -> None:
     else:
         new_contents = f"{marker}\n{block}{end}\n\n{original}"
     write(css, new_contents)
+    return warnings
 
 
 def patch_package_json(target: Path, dossier: dict) -> None:
@@ -3372,7 +3440,9 @@ def build(
     patch_package_json(target, dossier)
 
     print("Injecting variant tokens into app/globals.css")
-    patch_globals_css(target, variant)
+    token_warnings = patch_globals_css(target, variant, dossier)
+    for warning in token_warnings:
+        trace.event("build", "variant_tokens.warning", "warning", warning)
 
     selected_dossiers = load_selected_dossier_manifests(dossier)
     copied_components = mount_dossier_components(target, selected_dossiers)

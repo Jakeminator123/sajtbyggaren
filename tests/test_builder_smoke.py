@@ -111,3 +111,202 @@ def test_builder_assertion_blocks_env_writes() -> None:
     write(safe, "# safe placeholder\n")
     assert safe.exists()
     safe.unlink()
+
+
+@pytest.fixture
+def nordic_trust_variant() -> dict:
+    variant_path = (
+        REPO_ROOT
+        / "packages"
+        / "generation"
+        / "orchestration"
+        / "scaffolds"
+        / "local-service-business"
+        / "variants"
+        / "nordic-trust.json"
+    )
+    return json.loads(variant_path.read_text(encoding="utf-8"))
+
+
+@pytest.mark.tooling
+def test_brand_primary_color_hex_overrides_primary_css_token(
+    nordic_trust_variant: dict,
+) -> None:
+    from scripts.build_site import _token_overrides_from_project_input, variant_css
+
+    overrides, warnings = _token_overrides_from_project_input(
+        {"brand": {"primaryColorHex": "#22AA44"}}
+    )
+    css = variant_css(nordic_trust_variant, overrides)
+
+    assert warnings == []
+    assert "  --primary: #22aa44;" in css
+    assert "  --accent: #cdb98a;" in css
+
+
+@pytest.mark.tooling
+def test_brand_accent_color_hex_overrides_accent_css_token(
+    nordic_trust_variant: dict,
+) -> None:
+    from scripts.build_site import _token_overrides_from_project_input, variant_css
+
+    overrides, warnings = _token_overrides_from_project_input(
+        {"brand": {"accentColorHex": "#CC7722"}}
+    )
+    css = variant_css(nordic_trust_variant, overrides)
+
+    assert warnings == []
+    assert "  --primary: #1f3b5b;" in css
+    assert "  --accent: #cc7722;" in css
+
+
+@pytest.mark.tooling
+def test_tone_primary_green_maps_to_stable_green_token_when_hex_missing(
+    nordic_trust_variant: dict,
+) -> None:
+    from scripts.build_site import _token_overrides_from_project_input, variant_css
+
+    overrides, warnings = _token_overrides_from_project_input(
+        {"tone": {"primary": "grön"}}
+    )
+    css = variant_css(nordic_trust_variant, overrides)
+
+    assert warnings == []
+    assert "  --primary: #166534;" in css
+    assert "  --accent: #dcfce7;" in css
+
+
+@pytest.mark.tooling
+def test_explicit_brand_hex_wins_over_tone_keyword(
+    nordic_trust_variant: dict,
+) -> None:
+    from scripts.build_site import _token_overrides_from_project_input, variant_css
+
+    overrides, warnings = _token_overrides_from_project_input(
+        {
+            "brand": {"primaryColorHex": "#445566"},
+            "tone": {"primary": "grön"},
+        }
+    )
+    css = variant_css(nordic_trust_variant, overrides)
+
+    assert warnings == []
+    assert "  --primary: #445566;" in css
+    assert "  --accent: #cdb98a;" in css
+
+
+@pytest.mark.tooling
+def test_invalid_brand_hex_is_ignored_and_variant_default_is_preserved(
+    nordic_trust_variant: dict,
+) -> None:
+    from scripts.build_site import _token_overrides_from_project_input, variant_css
+
+    overrides, warnings = _token_overrides_from_project_input(
+        {"brand": {"primaryColorHex": "not-a-color"}}
+    )
+    css = variant_css(nordic_trust_variant, overrides)
+
+    assert overrides == {}
+    assert warnings == ["brand.primaryColorHex invalid; variant primary token kept"]
+    assert "  --primary: #1f3b5b;" in css
+    assert "  --accent: #cdb98a;" in css
+
+
+@pytest.mark.tooling
+def test_invalid_explicit_brand_hex_does_not_fall_through_to_tone_keyword(
+    nordic_trust_variant: dict,
+) -> None:
+    from scripts.build_site import _token_overrides_from_project_input, variant_css
+
+    overrides, warnings = _token_overrides_from_project_input(
+        {
+            "brand": {"primaryColorHex": "green"},
+            "tone": {"primary": "grön"},
+        }
+    )
+    css = variant_css(nordic_trust_variant, overrides)
+
+    assert overrides == {}
+    assert warnings == ["brand.primaryColorHex invalid; variant primary token kept"]
+    assert "  --primary: #1f3b5b;" in css
+    assert "  --accent: #cdb98a;" in css
+
+
+@pytest.mark.tooling
+def test_variant_css_default_is_byte_stable_without_brand_or_tone(
+    nordic_trust_variant: dict,
+) -> None:
+    from scripts.build_site import variant_css
+
+    assert variant_css(nordic_trust_variant) == variant_css(nordic_trust_variant, {})
+
+
+@pytest.mark.tooling
+def test_build_writes_brand_token_overrides_to_generated_globals_css(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    from scripts.build_site import build
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    project_input = json.loads(
+        (REPO_ROOT / "examples" / "painter-palma.project-input.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    project_input["siteId"] = "brand-token-site"
+    project_input["brand"] = {
+        "primaryColorHex": "#224466",
+        "accentColorHex": "#ddaa33",
+    }
+    project_input_path = tmp_path / "brand-token-site.project-input.json"
+    project_input_path.write_text(
+        json.dumps(project_input, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    target, _run_dir = build(
+        project_input_path,
+        do_build=False,
+        runs_dir=tmp_path / "runs",
+        generated_dir=tmp_path / "generated",
+    )
+    css = (target / "app" / "globals.css").read_text(encoding="utf-8")
+
+    assert "  --primary: #224466;" in css
+    assert "  --accent: #ddaa33;" in css
+
+
+@pytest.mark.tooling
+def test_build_traces_invalid_brand_hex_and_keeps_variant_defaults(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    from scripts.build_site import build
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    project_input = json.loads(
+        (REPO_ROOT / "examples" / "painter-palma.project-input.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    project_input["siteId"] = "invalid-token-site"
+    project_input["brand"] = {"primaryColorHex": "green"}
+    project_input_path = tmp_path / "invalid-token-site.project-input.json"
+    project_input_path.write_text(
+        json.dumps(project_input, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    target, run_dir = build(
+        project_input_path,
+        do_build=False,
+        runs_dir=tmp_path / "runs",
+        generated_dir=tmp_path / "generated",
+    )
+    css = (target / "app" / "globals.css").read_text(encoding="utf-8")
+    trace_text = (run_dir / "trace.ndjson").read_text(encoding="utf-8")
+
+    assert "  --primary: #1f3b5b;" in css
+    assert "variant_tokens.warning" in trace_text
+    assert "brand.primaryColorHex invalid" in trace_text
