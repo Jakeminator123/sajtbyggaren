@@ -947,6 +947,46 @@ def test_blockers_take_precedence_over_integrations(tmp_path: Path) -> None:
     assert result.classification == "blocked"
 
 
+@pytest.mark.tooling
+@pytest.mark.parametrize("filename", ["huge.bin", "huge.tmp", "normal.txt"])
+def test_any_file_over_block_threshold_blocks_import(
+    tmp_path: Path, filename: str
+) -> None:
+    candidate = _ready_candidate(tmp_path / f"huge-{filename}")
+    huge_file = candidate / filename
+    with huge_file.open("wb") as fh:
+        fh.truncate(50 * 1024 * 1024)
+    result = audit_candidate(candidate)
+    assert result.classification == "blocked"
+    assert any(entry["path"] == filename for entry in result.large_assets)
+    assert any(filename in blocker for blocker in result.blockers)
+
+
+@pytest.mark.tooling
+def test_asset_over_warn_threshold_under_block_threshold_warns(tmp_path: Path) -> None:
+    candidate = _ready_candidate(tmp_path / "medium-asset")
+    asset = candidate / "hero.png"
+    with asset.open("wb") as fh:
+        fh.truncate(5 * 1024 * 1024)
+    result = audit_candidate(candidate)
+    assert result.classification == "needs-cleanup"
+    assert any(entry["path"] == "hero.png" for entry in result.large_assets)
+    assert any("hero.png" in warning for warning in result.warnings)
+
+
+@pytest.mark.tooling
+def test_unknown_file_under_block_threshold_does_not_warn(tmp_path: Path) -> None:
+    candidate = _ready_candidate(tmp_path / "medium-unknown")
+    unknown = candidate / "payload.tmp"
+    with unknown.open("wb") as fh:
+        fh.truncate(5 * 1024 * 1024)
+    result = audit_candidate(candidate)
+    assert result.classification == "starter-candidate-ready", (
+        f"unexpected warnings: {result.warnings}, blockers: {result.blockers}"
+    )
+    assert result.large_assets == []
+
+
 # ---------------------------------------------------------------------------
 # JSON output stability
 # ---------------------------------------------------------------------------

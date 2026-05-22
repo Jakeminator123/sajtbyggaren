@@ -770,7 +770,9 @@ def _audit_assets_and_text(root: Path, result: AuditResult) -> None:
             continue
         suffix = file_path.suffix.lower()
         rel = _relative_posix(file_path, root)
-        if suffix in ASSET_EXTENSIONS and stat.st_size >= LARGE_ASSET_WARN_BYTES:
+        if stat.st_size >= LARGE_ASSET_BLOCK_BYTES or (
+            suffix in ASSET_EXTENSIONS and stat.st_size >= LARGE_ASSET_WARN_BYTES
+        ):
             entry = {
                 "path": rel,
                 "sizeBytes": stat.st_size,
