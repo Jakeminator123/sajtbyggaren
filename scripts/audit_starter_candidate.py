@@ -278,7 +278,7 @@ class AuditResult:
             "filesDisallowed": sorted(self.files_disallowed),
             "largeAssets": sorted(self.large_assets, key=lambda item: item["path"]),
             "demoSignals": sorted(self.demo_signals),
-            "nextActions": list(self.next_actions),
+            "nextActions": sorted(self.next_actions),
         }
 
 

@@ -501,6 +501,12 @@ def test_json_lists_are_sorted_for_stability(tmp_path: Path) -> None:
     assert payload["warnings"] == sorted(payload["warnings"])
     assert payload["blockers"] == sorted(payload["blockers"])
     assert payload["filesDisallowed"] == sorted(payload["filesDisallowed"])
+    assert payload["scriptsPresent"] == sorted(payload["scriptsPresent"])
+    assert payload["scriptsMissing"] == sorted(payload["scriptsMissing"])
+    assert payload["scriptsNiceToHavePresent"] == sorted(payload["scriptsNiceToHavePresent"])
+    assert payload["filesPresent"] == sorted(payload["filesPresent"])
+    assert payload["demoSignals"] == sorted(payload["demoSignals"])
+    assert payload["nextActions"] == sorted(payload["nextActions"])
 
 
 # ---------------------------------------------------------------------------
