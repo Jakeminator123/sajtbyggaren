@@ -109,6 +109,41 @@ def test_rewrite_preserves_anchor_on_parent_relative_link() -> None:
 
 
 @pytest.mark.governance
+def test_rewrite_preserves_query_on_sibling_link() -> None:
+    """Query-only suffix (utan anchor) ska bevaras intakt."""
+    assert _rewrite_link_target("term-discipline.md?source=docs") == "term-discipline.mdc?source=docs"
+
+
+@pytest.mark.governance
+def test_rewrite_handles_sibling_link_with_both_query_and_anchor() -> None:
+    """Regression-lock för separator-order-buggen 2026-05-22.
+
+    Tidigare iterade splittern över ``("#", "?")`` med break på första
+    träff, vilket gjorde att ``file.md?foo=bar#anchor`` plockade ``#`` först,
+    lämnade ``file.md?foo=bar`` som path och missade ``.md`` -> ``.mdc``-
+    rewriten helt. Korrekt URL-ordning är path?query#fragment, så earliest-
+    index-fixen ska ta ``?`` när det dyker upp före ``#``.
+    """
+    assert _rewrite_link_target("file.md?foo=bar#anchor") == "file.mdc?foo=bar#anchor"
+
+
+@pytest.mark.governance
+def test_rewrite_handles_inverted_separator_order_too() -> None:
+    """Även om operatören skriver felordnat (``#`` före ``?``) ska path-delen
+    fortfarande extraheras korrekt och rewritas."""
+    assert _rewrite_link_target("file.md#anchor?late=oops") == "file.mdc#anchor?late=oops"
+
+
+@pytest.mark.governance
+def test_rewrite_handles_parent_link_with_both_query_and_anchor() -> None:
+    """Samma bugg drabbade parent-relative-grenen om path-delen råkat
+    matcha ``.md`` (osannolikt för policies/schemas men defensivt låst)."""
+    source = "../policies/x.json?q=1#sec"
+    expected = "../../governance/policies/x.json?q=1#sec"
+    assert _rewrite_link_target(source) == expected
+
+
+@pytest.mark.governance
 def test_rewrite_links_for_mirror_handles_full_paragraph() -> None:
     source = (
         "Se [`naming-dictionary.v1.json`](../policies/naming-dictionary.v1.json) "

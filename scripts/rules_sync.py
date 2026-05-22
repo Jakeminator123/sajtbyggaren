@@ -57,13 +57,22 @@ def _rewrite_link_target(target: str) -> str:
         return target
 
     # Separera path från ev. ?query/#anchor så vi bara skriver om path-delen.
+    # Tidigare iterade vi över ("#", "?") med break på första träff, vilket
+    # gjorde att ``file.md?foo=bar#anchor`` plockade ``#`` först — då blev
+    # ``cleaned`` ``file.md?foo=bar`` som inte slutar på ``.md`` och sibling-
+    # rewriten missade. Vi väljer nu den separator som dyker upp tidigast i
+    # strängen så path-delen alltid är ren.
     suffix = ""
+    earliest_idx = -1
     for separator in ("#", "?"):
         idx = cleaned.find(separator)
-        if idx != -1:
-            suffix = cleaned[idx:]
-            cleaned = cleaned[:idx]
-            break
+        if idx == -1:
+            continue
+        if earliest_idx == -1 or idx < earliest_idx:
+            earliest_idx = idx
+    if earliest_idx != -1:
+        suffix = cleaned[earliest_idx:]
+        cleaned = cleaned[:earliest_idx]
 
     if cleaned.startswith("../../"):
         rewritten = cleaned
