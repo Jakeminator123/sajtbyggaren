@@ -177,6 +177,13 @@ COMMON_WORDS = {
     # Backoffice maintenance implementation dataclasses. They are local UI
     # helper containers, not canonical domain terms.
     "CleanupItem", "CleanupPlan", "CleanupResult", "ToggleRow",
+    # Starter Candidate Auditor v1 implementation symbol
+    # (scripts/audit_starter_candidate.py). ``AuditResult`` is a local
+    # Python dataclass that holds the read-only audit output for an
+    # external starter candidate. Same treatment as ``CleanupResult`` /
+    # ``PruneReport`` / ``BugEntry`` above - tooling implementation,
+    # not a canonical domain term.
+    "AuditResult",
     # packages/generation/maintenance/auto_prune.py implementation symbol
     # (dataclass returned by auto_prune_all()). Same treatment as
     # PruneReport - implementation detail, not a domain term.
