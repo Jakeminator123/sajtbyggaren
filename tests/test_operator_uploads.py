@@ -178,6 +178,149 @@ def test_copy_operator_uploads_returns_zero_when_uploads_missing(
 
 
 @pytest.mark.tooling
+def test_copy_operator_uploads_fetches_from_source_url_when_disk_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """När disk-lookup inte hittar assetId men ``ref.sourceUrl`` pekar
+    på en allowlist:ad host, ska bytes hämtas via HTTP och skrivas till
+    ``public/uploads/<filename>``. Detta är gap #11 i backend-handoff.md
+    — Vercel-Blob-uppladdningar måste fungera även när dev-maskinen
+    inte har bytes på disk."""
+    import sys
+
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import build_site  # noqa: E402
+
+    ref = _valid_asset_ref(
+        assetId="01HBLOB000000000000000000",
+        filename="hero-from-blob.webp",
+        sourceUrl="https://abc123.public.blob.vercel-storage.com/uploads/01HBLOB.../optimized.webp",
+    )
+    pi = {"brand": {"heroImage": ref}}
+    target = tmp_path / "generated-site"
+    target.mkdir()
+
+    fake_bytes = b"webp\x00bytes-from-blob"
+    fetched_urls: list[str] = []
+
+    def fake_fetch(url: str) -> bytes | None:
+        fetched_urls.append(url)
+        return fake_bytes
+
+    monkeypatch.setattr(build_site, "_fetch_asset_bytes_from_url", fake_fetch)
+
+    copied = build_site.copy_operator_uploads("missing-on-disk", target, pi)
+
+    assert copied == 1
+    dest = target / "public" / "uploads" / "hero-from-blob.webp"
+    assert dest.exists()
+    assert dest.read_bytes() == fake_bytes
+    assert fetched_urls == [ref["sourceUrl"]]
+
+
+@pytest.mark.tooling
+def test_copy_operator_uploads_rejects_disallowed_source_url_host(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """SSRF-skydd: en ``sourceUrl`` mot en okänd host ska tystlåtet
+    hoppas över, INTE fetchas. Vi vill inte att build_site kan tvingas
+    GET-a vilken URL som helst som råkar smitas in i en project-input."""
+    import sys
+
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import build_site  # noqa: E402
+
+    ref = _valid_asset_ref(
+        assetId="01HEVIL00000000000000000",
+        filename="evil.webp",
+        sourceUrl="https://attacker.example.com/internal-metadata",
+    )
+    pi = {"brand": {"logo": ref}}
+    target = tmp_path / "generated-site"
+    target.mkdir()
+
+    def fail_fetch(_url: str) -> bytes | None:
+        raise AssertionError("Fetch ska aldrig anropas för en otillåten host")
+
+    monkeypatch.setattr(build_site, "_fetch_asset_bytes_from_url", fail_fetch)
+
+    copied = build_site.copy_operator_uploads("doesnotexist", target, pi)
+    assert copied == 0
+    assert not (target / "public" / "uploads" / "evil.webp").exists()
+
+
+@pytest.mark.tooling
+def test_copy_operator_uploads_prefers_disk_over_source_url(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """När bytes finns BÅDE på disk och som ``sourceUrl`` ska disk-
+    vägen vinna — den är snabbare, kräver inte nätverk och matchar
+    LocalAssetStore-flödet som CI använder."""
+    import sys
+
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import build_site  # noqa: E402
+
+    uploads_root = tmp_path / "uploads"
+    asset_id = "01HBOTH0000000000000000000"
+    asset_dir = uploads_root / "__draft" / asset_id
+    asset_dir.mkdir(parents=True)
+    disk_bytes = b"disk-bytes-should-win"
+    (asset_dir / "optimized.webp").write_bytes(disk_bytes)
+
+    monkeypatch.setattr(build_site, "UPLOADS_ROOT_DIR", uploads_root)
+
+    ref = _valid_asset_ref(
+        assetId=asset_id,
+        filename="both.webp",
+        sourceUrl="https://abc.public.blob.vercel-storage.com/should-not-be-called",
+    )
+    pi = {"brand": {"logo": ref}}
+    target = tmp_path / "generated-site"
+    target.mkdir()
+
+    def fail_fetch(_url: str) -> bytes | None:
+        raise AssertionError("Fetch ska aldrig anropas när disk hittade asset")
+
+    monkeypatch.setattr(build_site, "_fetch_asset_bytes_from_url", fail_fetch)
+
+    copied = build_site.copy_operator_uploads("anysite", target, pi)
+    assert copied == 1
+    dest = target / "public" / "uploads" / "both.webp"
+    assert dest.read_bytes() == disk_bytes
+
+
+@pytest.mark.tooling
+def test_is_allowed_asset_source_url_allowlist() -> None:
+    """Allowlist:en ska godkänna Vercel-Blob-subdomäner över HTTPS
+    och avvisa allt annat (HTTP, file://, relativa pathar, okända
+    hosts, IP-adresser)."""
+    import sys
+
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    from build_site import _is_allowed_asset_source_url  # noqa: E402
+
+    assert _is_allowed_asset_source_url(
+        "https://abc.public.blob.vercel-storage.com/x/optimized.webp"
+    )
+    assert _is_allowed_asset_source_url(
+        "https://nested.subdomain.public.blob.vercel-storage.com/y.webp"
+    )
+    # Fel scheme / okända hosts / lokala IP / file:
+    assert not _is_allowed_asset_source_url(
+        "http://abc.public.blob.vercel-storage.com/x.webp"
+    )
+    assert not _is_allowed_asset_source_url("https://attacker.example.com/x.webp")
+    assert not _is_allowed_asset_source_url("https://169.254.169.254/metadata")
+    assert not _is_allowed_asset_source_url("file:///etc/passwd")
+    assert not _is_allowed_asset_source_url("/uploads/local.webp")
+    assert not _is_allowed_asset_source_url("")
+
+
+@pytest.mark.tooling
 def test_apply_discovery_overrides_maps_assets_to_brand_and_gallery() -> None:
     import sys
 

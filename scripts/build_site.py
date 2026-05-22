@@ -44,6 +44,9 @@ import shutil
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -705,18 +708,115 @@ def iter_asset_refs(project_input: dict) -> list[dict]:
     return refs
 
 
-def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> int:
-    """Kopiera operatör-uppladdade assets från data/uploads/<siteId>/
-    (eller __draft för uppladdningar som gjordes innan siteId
-    bestämdes) till genererad sajts public/uploads/. Returnerar antal
-    filer som kopierats — 0 är giltigt (operatorn laddade inte upp
-    något, generated site kör med starter-defaults).
+# Vilka URL-värdar som tillåts när vi fetchar bytes från ``ref.sourceUrl``.
+# Vi vill INTE blint följa vilken URL som helst en project-input råkar
+# innehålla — det skulle göra build_site.py till en SSRF-vektor om
+# någon lyckas smuggla in en metadata-IP eller intern adress. Listan
+# matchar de hosts som ``VercelBlobAssetStore`` kan generera i dag
+# (``apps/viewser/lib/asset-store/vercel-blob.ts`` returnerar URL:er på
+# ``*.public.blob.vercel-storage.com``). Om en ny driver tillkommer
+# (S3, R2, …) ska den hosten läggas till här. Disk-pathen är fortsatt
+# tillåten utan host-check eftersom den inte går via HTTP.
+_ALLOWED_ASSET_FETCH_HOSTS: tuple[str, ...] = (
+    "public.blob.vercel-storage.com",
+)
 
-    Vi föredrar `optimized.webp` (≤200 KB efter sharp-pipelinen) och
-    faller tillbaka till `original.<ext>` om optimering inte gjordes
-    (SVG passerar orörd). Filename i public/ är den som finns i
-    AssetRef.filename så TSX-renderers kan referera den som
-    /uploads/<filename>.
+# Hur stora bytes-payloads vi accepterar från en remote sourceUrl.
+# 8 MB räcker långt över vår optimized.webp-budget (~200 KB) men
+# skyddar ändå mot en URL som råkar peka på en jätte-MP4. Disk-vägen
+# har ingen motsvarande gräns eftersom sharp-pipelinen redan kapat
+# bytes innan de hamnar på disk.
+_REMOTE_ASSET_MAX_BYTES = 8 * 1024 * 1024
+
+# Timeout per fetch. Build-jobbet ska aldrig fastna på ett dött
+# Vercel-Blob-svar — bättre att hoppa över assetet och låta render
+# falla tillbaka till alt-texten än att blockera hela bygget.
+_REMOTE_ASSET_TIMEOUT_SEC = 15
+
+
+def _is_allowed_asset_source_url(url: str) -> bool:
+    """Allowlist-check: ``ref.sourceUrl`` får bara peka på en känd
+    asset-host över HTTPS. Returnerar ``False`` för relativa pathar,
+    HTTP, file://-URL:er och okända domäner. Allt skickas till stdout
+    via anroparen — vi kastar inte här.
+    """
+    try:
+        parsed = urllib.parse.urlparse(url)
+    except ValueError:
+        return False
+    if parsed.scheme != "https":
+        return False
+    host = parsed.hostname or ""
+    if not host:
+        return False
+    return any(host == allowed or host.endswith(f".{allowed}") for allowed in _ALLOWED_ASSET_FETCH_HOSTS)
+
+
+def _fetch_asset_bytes_from_url(url: str) -> bytes | None:
+    """HTTP GET mot ``url``, returnera bytes vid framgång eller
+    ``None`` vid fel. Anroparen är ansvarig för att ha allowlist:at
+    URL:en innan denna funktion kallas. Allt fel-skribbleri går till
+    stdout så build-loggen visar varför ett asset hoppades över.
+
+    Read-cap på ``_REMOTE_ASSET_MAX_BYTES + 1`` så vi kan detektera
+    payloads som överskrider gränsen utan att läsa in dem helt först.
+    """
+    request = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "sajtbyggaren-build/1.0",
+            "Accept": "*/*",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=_REMOTE_ASSET_TIMEOUT_SEC) as response:
+            data = response.read(_REMOTE_ASSET_MAX_BYTES + 1)
+    except urllib.error.URLError as exc:
+        print(f"copy_operator_uploads: fetch misslyckades för {url}: {exc}")
+        return None
+    except TimeoutError:
+        print(
+            f"copy_operator_uploads: fetch timeout ({_REMOTE_ASSET_TIMEOUT_SEC}s) för {url}",
+        )
+        return None
+    except Exception as exc:  # noqa: BLE001 - vi vill aldrig krascha bygget pga ett asset
+        print(f"copy_operator_uploads: oväntat fetch-fel för {url}: {exc!r}")
+        return None
+    if len(data) > _REMOTE_ASSET_MAX_BYTES:
+        print(
+            f"copy_operator_uploads: payload större än {_REMOTE_ASSET_MAX_BYTES} bytes "
+            f"för {url}. Hoppar över.",
+        )
+        return None
+    return data
+
+
+def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> int:
+    """Kopiera operatör-uppladdade assets till sajtens public/uploads/.
+
+    Tvåvägs-strategi (i prioriterad ordning):
+
+    1. **Disk-lookup** under ``data/uploads/<siteId>/`` eller
+       ``data/uploads/__draft/`` — det historiska flödet när
+       ``LocalAssetStore`` är aktiv. Föredrar ``optimized.webp`` (≤200 KB
+       efter sharp-pipelinen) och faller tillbaka till
+       ``original.<ext>`` om optimering inte gjordes (SVG/video).
+
+    2. **HTTP-fetch** från ``ref.sourceUrl`` när disk-lookup misslyckas
+       OCH URL:en pekar på en allowlist:ad host (i dag bara
+       ``*.public.blob.vercel-storage.com``). Skrivs som-är till
+       ``public/uploads/<filename>`` — bytes:en är redan optimerade
+       när VercelBlobAssetStore satte sourceUrl. Detta stänger gap #11
+       i ``docs/backend-handoff.md`` så builds som körs på en annan
+       maskin än uppladdningen (typiskt fall: dev-maskin med
+       ``ASSET_STORE_DRIVER=vercel-blob``) får faktiska bilder i sajten
+       istället för broken ``<img>``-taggar.
+
+    Returnerar antal filer som hamnade på disk. 0 är giltigt (operatorn
+    laddade inte upp något, generated site kör med starter-defaults).
+    Vi kastar aldrig på enskilt asset — fel rapporteras till stdout
+    och vi går vidare till nästa, så ett ensamt dött blob-URL inte
+    kan blockera hela bygget.
     """
     refs = iter_asset_refs(project_input)
     if not refs:
@@ -730,41 +830,62 @@ def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> in
     for ref in refs:
         asset_id = ref["assetId"]
         filename = ref["filename"]
+
+        # Steg 1: leta lokalt först. Snabbast, ingen nätverk, det är
+        # det historiska flödet och fungerar fortfarande för
+        # LocalAssetStore-uppladdningar.
         source_dir: Path | None = None
         for candidate in candidate_dirs:
             if (candidate / asset_id).is_dir():
                 source_dir = candidate / asset_id
                 break
-        if source_dir is None:
-            print(
-                f"copy_operator_uploads: asset {asset_id} saknas på disk "
-                f"(letade i {candidate_dirs}). Hoppar över."
-            )
-            continue
 
-        # Föredra webp; annars första matchande original.<ext>. Video
-        # (mp4/webm) ligger alltid som original eftersom sharp inte
-        # opererar på video — vi kopierar dem oförändrade.
-        candidates = [
-            source_dir / "optimized.webp",
-            source_dir / "original.svg",
-            source_dir / "original.png",
-            source_dir / "original.jpg",
-            source_dir / "original.webp",
-            source_dir / "original.mp4",
-            source_dir / "original.webm",
-        ]
-        source_file: Path | None = next((c for c in candidates if c.exists()), None)
-        if source_file is None:
+        if source_dir is not None:
+            candidates = [
+                source_dir / "optimized.webp",
+                source_dir / "original.svg",
+                source_dir / "original.png",
+                source_dir / "original.jpg",
+                source_dir / "original.webp",
+                source_dir / "original.mp4",
+                source_dir / "original.webm",
+            ]
+            source_file: Path | None = next((c for c in candidates if c.exists()), None)
+            if source_file is not None:
+                dest = public_uploads / filename
+                shutil.copy2(source_file, dest)
+                copied += 1
+                continue
             print(
                 f"copy_operator_uploads: asset {asset_id} saknar variant-fil "
-                f"i {source_dir}. Hoppar över."
+                f"i {source_dir}. Försöker sourceUrl-fallback.",
             )
+
+        # Steg 2: disk-lookup gav inget. Försök ``sourceUrl`` om det
+        # finns och pekar på en allowlist:ad host.
+        source_url = ref.get("sourceUrl")
+        if isinstance(source_url, str) and source_url.strip():
+            if not _is_allowed_asset_source_url(source_url):
+                print(
+                    f"copy_operator_uploads: sourceUrl för asset {asset_id} "
+                    f"pekar inte på en tillåten host ({source_url!r}). Hoppar över.",
+                )
+                continue
+            data = _fetch_asset_bytes_from_url(source_url)
+            if data is None:
+                # _fetch_asset_bytes_from_url har redan loggat orsaken.
+                continue
+            dest = public_uploads / filename
+            dest.write_bytes(data)
+            copied += 1
             continue
 
-        dest = public_uploads / filename
-        shutil.copy2(source_file, dest)
-        copied += 1
+        # Inget hittat. Logga och gå vidare — render-vägen får falla
+        # tillbaka till alt-text på den brutna bilden.
+        print(
+            f"copy_operator_uploads: asset {asset_id} saknas både på disk "
+            f"(letade i {candidate_dirs}) och utan sourceUrl. Hoppar över.",
+        )
 
     return copied
 

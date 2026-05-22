@@ -259,6 +259,7 @@ COMMON_WORDS = {
     "ButtonPrimitive", "VariantProps", "ClassValue",
     "NextRequest", "NextResponse", "ComponentProps", "ReturnType",
     "CardAction", "CardContent", "CardDescription", "CardFooter", "CardHeader", "CardTitle",
+    "ChildProcess",
     "InputPrimitive",
     # Viewser implementation-symboler (lokala UI-identifierare, inte domänbegrepp).
     # Viewser-appen ligger på apps/viewser och dessa namn bor enbart där.
@@ -479,7 +480,9 @@ COMMON_WORDS = {
     "PointerEvent", "PostalAddress",
     "ProductImage", "ProductImageColumn",
     "PromptApiResponse",
+    "PreviewServerInfo",
     "QualityFinding", "QuickPromptCategory", "Quote",
+    "ServerEntry",
     "ReactChangeEvent", "ReactKeyboardEvent", "ReactPointerEvent",
     "RegExp", "RegExpMatchArray",
     "RepairAction", "RoleConfig", "RoutePlanItem",
