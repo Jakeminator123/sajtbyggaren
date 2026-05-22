@@ -1816,12 +1816,29 @@ def render_layout(
         # eftersom font-filerna serveras med CORS — utan attributet öppnar
         # browsern en ny anslutning för font-fetchen och preconnect-en gör
         # ingenting. Detta är samma mönster Google själv dokumenterar.
+        #
+        # Sprint 2.1 — JSON-LD LocalBusiness. Inline-script i <head>
+        # så Google + Bing + DuckDuckGo plockar upp markeringen direkt
+        # vid första crawl. dangerouslySetInnerHTML är säkert här
+        # eftersom innehållet är förseraliserad JSON med ``</`` →
+        # ``<\/``-escape (se _render_structured_data_jsonld).
         "      <head>\n"
         '        <link rel="preconnect" href="https://fonts.googleapis.com" />\n'
         '        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />\n'
         '        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />\n'
+        '        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '
+        + _js_string_literal(_render_structured_data_jsonld(dossier))
+        + " }} />\n"
         "      </head>\n"
         '      <body className="min-h-full flex flex-col bg-[color:var(--background)] text-[color:var(--foreground)]">\n'
+        # Sprint 2.5 — skip-link. Visuellt dolda tills den får fokus
+        # (tab från adressfältet) sen popup:ar den högst upp till
+        # vänster med stark kontrast. Detta är WCAG 2.1 SC 2.4.1
+        # ("Bypass Blocks") och en av de få a11y-features som även
+        # tangentbordsanvändare utan screen-reader använder dagligen.
+        # `focus:not-sr-only` är den standardiserade Tailwind-pattern
+        # för exakt detta beteende.
+        '        <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-[color:var(--primary)] focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-[color:var(--primary-foreground)] focus:shadow-lg focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[color:var(--primary)]">Hoppa till innehållet</a>\n'
         '        <header className="sticky top-0 z-40 border-b border-[color:var(--border)] bg-[color:var(--background)]/80 backdrop-blur supports-[backdrop-filter]:bg-[color:var(--background)]/60">\n'
         '          <div className="mx-auto flex w-[var(--container-width)] items-center justify-between gap-6 py-4">\n'
         '            <a href="/" className="flex items-center gap-2 text-base font-semibold">\n'
@@ -1834,7 +1851,16 @@ def render_layout(
         f'            <a href={contact_href} className="hidden md:inline-flex items-center gap-1 rounded-md bg-[color:var(--primary)] px-4 py-2 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">Kontakta oss</a>\n'
         "          </div>\n"
         "        </header>\n"
-        '        <div className="flex-1">{children}</div>\n'
+        # Sprint 2.4/2.5 — skip-link-mål.
+        # Varje page-renderer (render_home, render_services, …) har
+        # redan en egen ``<main>``-tag. Dubbla ``<main>``-element är
+        # ogiltig HTML och förvirrar screen-readers, så layout-
+        # wrappern stannar som ``<div>``. ``id="main-content"`` matchar
+        # skip-link:en ovan och ``tabIndex={-1}`` gör att fokus
+        # verkligen flyttas dit när användaren aktiverar länken
+        # (annars hoppar fokus tillbaka till body i Chromium-baserade
+        # browsers eftersom <div> inte är fokuserbar by default).
+        '        <div id="main-content" tabIndex={-1} className="flex-1 outline-none">{children}</div>\n'
         '        <footer className="border-t border-[color:var(--border)] bg-[color:var(--background)]">\n'
         '          <div className="mx-auto grid w-[var(--container-width)] gap-8 py-12 md:grid-cols-3">\n'
         '            <div className="flex flex-col gap-3">\n'
@@ -3601,6 +3627,156 @@ def _url_quote(value: str) -> str:
     return quote(value, safe="")
 
 
+def render_robots_txt() -> str:
+    """Return a minimal ``robots.txt`` body. Sprint 2.2.
+
+    Generated sites are intended to be publicly indexed by default —
+    Sajtbyggaren's whole point is to ship a site that operators can
+    point Google at. Therefore the policy is "allow all" plus a
+    sitemap-pointer.
+
+    We use a relative sitemap-URL (``/sitemap.xml``) instead of an
+    absolute one because the deployment domain isn't known at build
+    time. Google + Bing both honour relative URLs in robots.txt as
+    long as they're served from the same origin as the robots file.
+    Operatorer som vill blockera enskilda paths (t.ex. /admin) lägger
+    till regler i builder:n senare; default-statet är index-allt.
+    """
+    return (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "\n"
+        "Sitemap: /sitemap.xml\n"
+    )
+
+
+def render_sitemap_xml(written_paths: list[str]) -> str:
+    """Return a ``sitemap.xml`` body listing every route the builder
+    actually wrote. Sprint 2.3.
+
+    We use the XML 0.9 Sitemap Protocol (the universal one Google,
+    Bing, Yandex and DuckDuckGo all parse). Three notable choices:
+
+      * URLs är relativa (``loc>/tjanster</loc``) av samma anledning
+        som robots.txt — vi vet inte vilken domän operatorn
+        deployar på. Google klarar relativa URLs så länge sitemapen
+        serveras från samma host.
+      * ``priority`` skala 1.0 (startsida) → 0.7 (sekundära sidor).
+        Detta är heuristiskt — Google ignorerar det numera, men
+        Bing och flera SEO-verktyg använder det fortfarande.
+      * ``changefreq=weekly`` är en rimlig default för småföretags-
+        sajter. Inga av våra renderers genererar dynamiskt innehåll
+        som ändras dagligen.
+    """
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ]
+    # Avduplicera och normalisera så ``/`` och ``/`` inte räknas två
+    # gånger om någon scaffold råkar lägga in den dubbelt.
+    seen: set[str] = set()
+    for raw in written_paths:
+        if not isinstance(raw, str):
+            continue
+        path = raw if raw.startswith("/") else "/" + raw
+        if path in seen:
+            continue
+        seen.add(path)
+        priority = "1.0" if path == "/" else "0.7"
+        lines.append("  <url>")
+        lines.append(f"    <loc>{path}</loc>")
+        lines.append("    <changefreq>weekly</changefreq>")
+        lines.append(f"    <priority>{priority}</priority>")
+        lines.append("  </url>")
+    lines.append("</urlset>")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _render_structured_data_jsonld(dossier: dict) -> str:
+    """Return a JSON-LD ``LocalBusiness`` blob (string) suitable for
+    embedding in a ``<script type="application/ld+json">`` tag. Sprint 2.1.
+
+    Why LocalBusiness specifically: Sajtbyggaren targets svenska små-
+    företag (måleri, café, hantverk, restaurang, konsult etc.) — alla
+    matchar Schema.org/LocalBusiness exakt. För dem som har en fysisk
+    adress fungerar det dessutom direkt med Google Business Profile.
+    Mer specialiserade typer (Restaurant, Dentist, Cafe, etc.) finns,
+    men för MVP rendrar vi en generisk ``LocalBusiness`` så vi inte
+    behöver mappning per bransch här — operatorn kan byta till en
+    specifik subtyp senare via builder-prompts.
+
+    Vi inkluderar bara fält där dossier:n verkligen har data, så
+    Google Rich Results inte avvisar markeringen för ``null``-värden.
+    Tom telephone, address eller adress utan locality skulle förstöra
+    "Verified Business"-badge:n.
+
+    Returns the raw JSON-LD content (without script-tag wrapper) so
+    layout-byggaren kan bädda in det med korrekt JSX-escaping.
+    """
+    import json as _json_module
+
+    company = dossier["company"]
+    location = dossier.get("location") if isinstance(dossier.get("location"), dict) else {}
+    contact = dossier.get("contact") if isinstance(dossier.get("contact"), dict) else {}
+
+    payload: dict[str, Any] = {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": company.get("name") or "",
+    }
+    if company.get("tagline"):
+        payload["description"] = company["tagline"]
+    if contact.get("phone"):
+        payload["telephone"] = contact["phone"]
+    if contact.get("email"):
+        payload["email"] = contact["email"]
+
+    address_lines = contact.get("addressLines") if isinstance(contact, dict) else None
+    address_part: dict[str, Any] = {}
+    if isinstance(address_lines, list) and address_lines:
+        address_part["streetAddress"] = ", ".join(
+            line.strip() for line in address_lines if isinstance(line, str) and line.strip()
+        )
+    if location.get("city"):
+        address_part["addressLocality"] = location["city"]
+    if location.get("country"):
+        address_part["addressCountry"] = location["country"]
+    if address_part:
+        address_part["@type"] = "PostalAddress"
+        payload["address"] = address_part
+
+    service_areas = location.get("serviceAreas") if isinstance(location, dict) else None
+    if isinstance(service_areas, list):
+        clean_areas = [
+            area.strip()
+            for area in service_areas
+            if isinstance(area, str) and area.strip()
+        ]
+        if clean_areas:
+            payload["areaServed"] = clean_areas
+
+    if contact.get("openingHours"):
+        # OpeningHours-fältet i Schema.org förväntar ett strukturerat
+        # format (e.g. "Mo-Fr 09:00-17:00"). Dossier-värdet är fri
+        # svensk text ("Mån-Fre 09:00-17:00"). Vi rendrar den som
+        # ``openingHoursSpecification`` i ren string-form — Google
+        # accepterar både den och den strukturerade varianten.
+        payload["openingHours"] = contact["openingHours"]
+
+    # ``json.dumps`` skapar valid JSON; vi förlitar oss på Reacts
+    # inbyggda JSX-escaping för att skydda script-innehållet via
+    # ``dangerouslySetInnerHTML`` (det är godtagbart för JSON-LD —
+    # innehållet är data, inte exekverbar kod, och vi har redan
+    # serialiserat bort potentiella ``</script>``-strängar via
+    # ensure_ascii=False och en explicit re-escape nedan).
+    serialized = _json_module.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    # Skydd mot inbäddade ``</script>``-strängar i operator-input som
+    # annars skulle bryta sig ut ur scriptet. ``\u003c`` är giltig
+    # JSON och rendreras tillbaka som ``<`` i alla parsers.
+    return serialized.replace("</", "<\\/")
+
+
 def render_og_fallback_svg(dossier: dict) -> str:
     """Return an SVG (string) used as Open Graph fallback when the
     operator hasn't uploaded a custom og-image. Sprint 1.5.
@@ -3896,6 +4072,13 @@ def write_pages(
         target / "public" / "og-image-fallback.svg",
         render_og_fallback_svg(dossier),
     )
+    # Sprint 2.2/2.3 — robots.txt + sitemap.xml. Skrivs alltid så att
+    # genererade sajter är Google-indexerbara från första bygget.
+    # ``written`` innehåller alla scaffold-default routes plus wizard
+    # extra routes (galleri, team, pricing, portfolio osv.) — sitemapen
+    # speglar exakt det som faktiskt finns på disk.
+    write(target / "public" / "robots.txt", render_robots_txt())
+    write(target / "public" / "sitemap.xml", render_sitemap_xml(written))
     return written
 
 

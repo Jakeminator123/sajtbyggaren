@@ -24,12 +24,15 @@ if str(REPO_ROOT) not in sys.path:
 
 from scripts.build_site import (  # noqa: E402
     _is_valid_asset_ref,
+    _render_structured_data_jsonld,
     iter_asset_refs,
     render_global_error,
     render_home,
     render_layout,
     render_not_found,
     render_og_fallback_svg,
+    render_robots_txt,
+    render_sitemap_xml,
     resolve_media_asset,
 )
 
@@ -365,6 +368,135 @@ def test_og_fallback_picks_light_text_on_dark_background() -> None:
     dossier["brand"]["primaryColorHex"] = "#0c0a09"
     svg = render_og_fallback_svg(dossier)
     assert 'fill="#ffffff"' in svg
+
+
+# ── Sprint 2.1 — JSON-LD LocalBusiness ────────────────────────────────
+
+
+@pytest.mark.tooling
+def test_jsonld_emits_localbusiness_with_required_fields() -> None:
+    import json as _json
+
+    payload_str = _render_structured_data_jsonld(_minimal_dossier())
+    # Strängen innehåller ``<\/`` (escape mot </script>-injection).
+    # JSON.parse(`<\/`) ger "</" — verifiera att JSON är giltig efter
+    # un-escape.
+    payload = _json.loads(payload_str.replace("<\\/", "</"))
+    assert payload["@context"] == "https://schema.org"
+    assert payload["@type"] == "LocalBusiness"
+    assert payload["name"] == "Brief Company AB"
+    assert payload["telephone"] == "+46 8 000 00 00"
+    assert payload["email"] == "hej@example.se"
+    assert payload["description"] == "Hantverk på vita väggar"
+    assert payload["address"]["addressLocality"] == "Stockholm"
+    assert payload["address"]["addressCountry"] == "Sverige"
+
+
+@pytest.mark.tooling
+def test_jsonld_omits_empty_optional_fields() -> None:
+    """Google Rich Results avvisar markeringar med null/empty fält. Säkra
+    att vi inte rendrar ``email: ""`` när dossier inte har en email."""
+    import json as _json
+
+    dossier = _minimal_dossier()
+    dossier["contact"]["email"] = ""
+    dossier["contact"]["openingHours"] = ""
+    payload = _json.loads(
+        _render_structured_data_jsonld(dossier).replace("<\\/", "</")
+    )
+    assert "email" not in payload
+    assert "openingHours" not in payload
+
+
+@pytest.mark.tooling
+def test_jsonld_escapes_script_closing_tags() -> None:
+    """Operator-input som ``</script>`` i company.name skulle bryta sig
+    ut ur <script type=ld+json> och tillåta XSS. Verifiera att vi
+    escapar all ``</`` → ``<\\/``."""
+    dossier = _minimal_dossier()
+    dossier["company"]["name"] = "Foo </script><script>alert(1)</script>"
+    payload_str = _render_structured_data_jsonld(dossier)
+    assert "</script>" not in payload_str
+    assert "<\\/script>" in payload_str
+
+
+@pytest.mark.tooling
+def test_layout_inlines_jsonld_script() -> None:
+    layout = render_layout(_minimal_dossier(), dossier_routes=["/"])
+    assert '<script type="application/ld+json"' in layout
+    assert "dangerouslySetInnerHTML" in layout
+    assert "LocalBusiness" in layout
+
+
+# ── Sprint 2.2 — robots.txt ───────────────────────────────────────────
+
+
+@pytest.mark.tooling
+def test_robots_txt_allows_indexing_with_sitemap_pointer() -> None:
+    body = render_robots_txt()
+    assert "User-agent: *" in body
+    assert "Allow: /" in body
+    assert "Sitemap: /sitemap.xml" in body
+    # ``Disallow:`` ska INTE finnas — default är open-index så Google
+    # börjar crawla från första bygget.
+    assert "Disallow:" not in body
+
+
+# ── Sprint 2.3 — sitemap.xml ──────────────────────────────────────────
+
+
+@pytest.mark.tooling
+def test_sitemap_lists_all_written_paths() -> None:
+    xml = render_sitemap_xml(["/", "/tjanster", "/om-oss", "/kontakt"])
+    assert xml.startswith('<?xml version="1.0" encoding="UTF-8"?>')
+    assert 'xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"' in xml
+    for path in ("/", "/tjanster", "/om-oss", "/kontakt"):
+        assert f"<loc>{path}</loc>" in xml
+
+
+@pytest.mark.tooling
+def test_sitemap_assigns_higher_priority_to_home() -> None:
+    xml = render_sitemap_xml(["/", "/tjanster"])
+    home_block = xml.split("<url>")[1]
+    tjanster_block = xml.split("<url>")[2]
+    assert "<priority>1.0</priority>" in home_block
+    assert "<priority>0.7</priority>" in tjanster_block
+
+
+@pytest.mark.tooling
+def test_sitemap_dedupes_paths_and_normalises_leading_slash() -> None:
+    """Skydd mot scaffold-kombinationer som råkar lägga in samma path
+    två gånger eller utan inledande slash."""
+    xml = render_sitemap_xml(["/", "/", "tjanster", "/tjanster"])
+    assert xml.count("<loc>/</loc>") == 1
+    assert xml.count("<loc>/tjanster</loc>") == 1
+
+
+# ── Sprint 2.5 — skip-link + main-target ──────────────────────────────
+
+
+@pytest.mark.tooling
+def test_layout_includes_skip_link_pointing_at_main_content() -> None:
+    layout = render_layout(_minimal_dossier(), dossier_routes=["/"])
+    assert 'href="#main-content"' in layout
+    assert "Hoppa till innehållet" in layout
+    # Skip-link måste vara dolt tills fokus (sr-only-pattern).
+    assert "sr-only" in layout
+    assert "focus:not-sr-only" in layout
+    # Target-elementet (div, inte main, för att undvika dubbla <main>).
+    assert 'id="main-content"' in layout
+    assert "tabIndex={-1}" in layout
+
+
+@pytest.mark.tooling
+def test_layout_does_not_introduce_a_second_main_element() -> None:
+    """Page-renderers (render_home etc.) äger redan <main>. Layout får
+    INTE lägga till ytterligare en — dubbla <main> är ogiltig HTML
+    och förvirrar screen-readers (NVDA hoppar fel)."""
+    layout = render_layout(_minimal_dossier(), dossier_routes=["/"])
+    # Skip-link, header, footer, body är OK — men inget <main> i layout.
+    assert "<main " not in layout
+    assert "</main>" not in layout
 
 
 @pytest.mark.tooling
