@@ -30,20 +30,30 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `aef5825` (2026-05-22, **Project DNA semantic
-follow-up V1 mergad via PR #56**) — produkt-/kod-läget är `aef5825`
+Last verified state: `eb5a81d` (2026-05-22, **B139/B140 tone/brand token
+propagation V1 mergad via PR #57**) — produkt-/kod-läget är `eb5a81d`
+(`fix(builder): propagate brand and tone tokens`). B139/B140 är stängda:
+giltig `brand.primaryColorHex` / `brand.accentColorHex` skriver nu
+renderade CSS-token `--primary` / `--accent`, whitelistad `tone.primary`
+kan mappa till tokens när explicit hex saknas, ogiltig hex ger trace-
+warning, och foreground-tokens räknas om för kontrast. Bug-räkning efter
+merge: **24 aktiva, 0 misplaced, 5 unknown, 107 stängda**. **Direkt nästa
+fokus:** kör enkel mini-eval eller bygg Mini-eval runner v1 för fyra
+baseline-case och följdprompter innan embeddings, SNI-runtime,
+variant-promotion eller nya starters startas. Alternativt ta B125 preview-
+fallback som decision sprint om operatören vill minska launch-risk först.
+Föregående produkt-läge:
+
+Föregående verified state: `aef5825` (2026-05-22, **Project DNA semantic
+follow-up V1 mergad via PR #56**) — produkt-/kod-läget var `aef5825`
 (`feat(builder): add Project DNA semantic follow-up`). B71 är stängd
 med faktisk v1 → v2-effekt: tydliga följdprompter kan deterministiskt
 ändra `company.story`, `company.tagline` och `tone`, medan additiva/no-
 change-prompter håller semantiska fält byte-stabila. `projectDna` skrivs
 i befintlig prompt-input-meta-sidecar; full `data/projects/<projectId>/
 dna.json`-lagring är fortsatt V2-scope enligt ADR 0027. Bug-räkning efter
-merge: **26 aktiva, 0 misplaced, 5 unknown, 105 stängda**. **Direkt nästa
-Builder-fokus:** B139/B140 — smal renderer/token-sprint som låter
-`brand.primaryColorHex`, `brand.accentColorHex` och whitelistade
-`tone.primary`-signaler påverka renderade CSS-tokens utan SNI-runtime,
-nya starters, variant-promotion, embeddings, Backoffice-editor eller
-Project DNA V2. Föregående produkt-läge:
+merge: **26 aktiva, 0 misplaced, 5 unknown, 105 stängda**. Föregående
+produkt-läge:
 
 Föregående verified state: `465b8fa` (2026-05-22, **rules_sync separator-
 order-fix ovanpå link-rewrite-passet**) — produkt-/kod-läget var

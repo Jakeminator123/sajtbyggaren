@@ -591,7 +591,7 @@ för follow-up eller ska städas.
 
 - **`B139` Låg-medel** (stängd 2026-05-22, tone-primary till CSS-token) -
   `tone.primary` kunde fyllas från brief/follow-up men renderern använde
-  bara variantens default-CSS-tokens. Fix: `89da5c7` lägger en
+  bara variantens default-CSS-tokens. Fix: `eb5a81d` lägger en
   smal token-override-kanal i `scripts/build_site.py`: om explicit brand-
   hex saknas kan whitelistade tone-signaler (`grön`/`green`, `blå`/`blue`,
   `varm`/`warm`, `premium`) mappas till `--primary` och `--accent`.
@@ -601,7 +601,7 @@ för follow-up eller ska städas.
 
 - **`B140` Låg** (stängd 2026-05-22, brand-hex till CSS-token) -
   `brand.primaryColorHex` och `brand.accentColorHex` skrevs till Project
-  Input men ignorerades av `variant_css()`. Fix: `89da5c7`
+  Input men ignorerades av `variant_css()`. Fix: `eb5a81d`
   låter giltiga explicita hex-värden vinna över tone-keywords och skriva
   `--primary`/`--accent`; ogiltiga hex-värden ignoreras med trace-warning
   och variant-default bevaras utan crash. Test:

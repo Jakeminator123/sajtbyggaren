@@ -1,11 +1,12 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-22 (**Project DNA semantic follow-up V1 mergad via
-PR #56; nästa Builder-spår är B139/B140 token propagation v1**). Senaste
-produkt-/kod-läge är `aef5825` (`feat(builder): add Project DNA semantic
-follow-up`). PR #56 var först uppdaterad med review-fixcommit `f8be48e`
-och squash-mergades sedan till `aef5825`; B71 är stängd och
-bugg-scope är nu **26 aktiva, 0 misplaced, 5 unknown, 105 stängda**.
+**Datum:** 2026-05-22 (**B139/B140 tone/brand token propagation V1 mergad
+via PR #57 efter Project DNA PR #56**). Senaste produkt-/kod-läge är
+`eb5a81d` (`fix(builder): propagate brand and tone tokens`). PR #57
+squash-mergades efter att en P2-review om foreground-token-kontrast
+fixats i branchcommit `6ffc43f`; final fix-SHA för B139/B140 är
+`eb5a81d`. Bugg-scope är nu **24 aktiva, 0 misplaced, 5 unknown,
+107 stängda**.
 Föregående commits
 i sessionsordning från äldst till nyast: `2e274ac` (SNI core),
 `bf8d6c2`, `f40564e`, `7289732` (Steward-bumpar), `e822a2c` (PR #55-
@@ -15,7 +16,38 @@ bumpar), `f137f92` (SNI-followup-tooling), `1150424` (operator-rules
 SNI-diagnostik-utökning), `18b88c0` (Steward-bump), `919d564` (rules-
 sync link-rewrite för spegel-djup), `c20270f` (Steward-bump),
 `465b8fa` (separator-order-fix), `891fca0` (Steward-bump), `aef5825`
-(PR #56 squash-merge).
+(PR #56 squash-merge), `059b4ae` (Steward efter PR #56), `eb5a81d`
+(PR #57 squash-merge).
+
+**Det som nyss landade i B139/B140-spåret (`eb5a81d`):**
+
+- `scripts/build_site.py` har en smal token-override-kanal:
+  giltig `brand.primaryColorHex` skriver `--primary`, giltig
+  `brand.accentColorHex` skriver `--accent`.
+- Whitelistad `tone.primary` (`grön`/`green`, `blå`/`blue`,
+  `varm`/`warm`, `premium`) kan påverka tokens när explicit brand-hex
+  saknas.
+- Ogiltig hex ignoreras med `variant_tokens.warning` i trace och
+  variant-default bevaras utan crash. Ogiltig explicit hex faller inte
+  vidare till tone-keyword.
+- Foreground-tokens (`--primary-foreground`, `--accent-foreground`) räknas
+  om från hex-luminans/kontrast så ljusa overrides inte ger låg kontrast.
+- Backoffice Wizardfält → generation visar nu brand-color/tone-token-
+  kedjan som deterministisk i stället för downstream-gap.
+- Tester låser helpernivå, faktisk `build(..., do_build=False)` till
+  `globals.css`, invalid-hex-trace och Backoffice-diagnostiken.
+
+**Direkt nästa spår:**
+
+Kör enkel mini-eval eller bygg Mini-eval runner v1 för baseline-casen
+elektriker Malmö, frisör Göteborg, naprapat Stockholm och sköldpaddssoppa
+med följdprompter som "gör tonen mer premium", "gör den mer personlig"
+och "gör den lugnare och mer förtroendeingivande". Kontrollera att
+tone/story/tagline och CSS-tokens ändras där de ska, att rå prompt inte
+läcker, och att warnings är rimliga. Om operatören hellre vill minska
+launch-risk är B125 preview-fallback nästa decision sprint. Starta inte
+embeddings, SNI-runtime, många nya starters eller variant-promotion innan
+mini-evalen visar stabilare kvalitet.
 
 **Det som nyss landade i Project DNA-spåret (`aef5825`):**
 
@@ -35,16 +67,6 @@ sync link-rewrite för spegel-djup), `c20270f` (Steward-bump),
   tone-shift själva, och `projectDna.followUpIntent` speglar senaste
   follow-up även när inga semantiska fält ändras.
 - `docs/known-issues.md` flyttar B71 till stängda med fix-SHA `aef5825`.
-
-**Nästa Builder-spår:**
-
-B139/B140 — tone/brand token propagation v1. Gör en smal renderer/token-
-sprint i `scripts/build_site.py` så explicit `brand.primaryColorHex` och
-`brand.accentColorHex` vinner över tone-keyword, whitelistade
-`tone.primary`-signaler kan mappas till tokens när hex saknas, och
-variantens default tokens bevaras exakt när ingen signal finns. Rör inte
-SNI-runtime, nya starters, variant-promotion, embeddings, Backoffice-
-editor, Project DNA V2 eller Viewser overlay om det inte krävs för test.
 
 **Sessionens tidigare tre huvudleveranser:**
 
