@@ -243,20 +243,37 @@ och `docs/orchestrator-playbook.md`. Kör `python scripts/focus_check.py`
 som första steg — den ska säga `OK - repo matches docs/current-focus.md`
 (inom bump tolerance om Steward-bump är pågående).
 
-**Repo-tillstånd vid handover** (2026-05-22 02:40 CEST):
+**Repo-tillstånd vid handover** (2026-05-22 03:10 CEST):
 
-- `main` = `origin/main` = `465b8fa` + final Steward-bump (HEAD-commiten
-  som denna handoff dokumenteras i bör vara senaste).
-- Inga öppna PRs förutom DRAFT PR #56 från cloud-agenten på Project
-  DNA-spåret. Rör den inte.
+- `main` = `origin/main` = `891fca0` före denna lokala handover/docs-
+  uppdatering. `docs/current-focus.md` pekar fortfarande på `465b8fa`
+  inom bump-tolerance från efterföljande Steward-bumpen `891fca0`.
+- PR #56 är inte längre draft: head `4b78b6a`, `mergeStateStatus=CLEAN`,
+  GitHub checks gröna (`governance`, `builder-smoke`, `GitGuardian`).
+  PR:n innehåller merge från aktuell `main` + follow-up-fix för false
+  positives i Project DNA intentklassning (`lägg till premium produkt`,
+  `lägg till personalsida`, `lägg till premium tjänst`). Nästa steg:
+  slutreview/merge-beslut. Om PR:n squash-mergeas ska B71 Fix-SHA i
+  `docs/known-issues.md` uppdateras av Steward efter merge.
 - `backup-42` finns på origin från pre-SNI-läget som säkerhet.
 - `backup-bra-änä` finns både lokalt och på origin med åäö-namn som
   bryter mot `branch-discipline.md`. **Operatör-only-beslut**; nästa
   orchestrator ska inte radera utan explicit OK.
-- Working tree har en operatör-modifierad `.cursorignore` (kommenterar
-  ut `.cursor/plans/`-blocket för agent-Read men behåller den i
-  `.cursorindexingignore` för sökindex). Lämna orörd; det är operatör-
-  preferens.
+- Working tree har lokala ändringar i `.cursorignore`,
+  `.cursorindexingignore`, `governance/rules/workspace-discipline.md`,
+  `.cursor/rules/workspace-discipline.mdc`, `docs/handoff.md` och den
+  trackade `.cursor/plans/discovery_resolver_b121_3ec927a0.plan.md`
+  (bara radslut/CRLF-varning, ingen innehållsdiff). `.cursorignore`
+  har `.env`/`.env.*`/`!.env.example` kommenterade, så de är inte längre
+  aktiva hårda Read-blockers i den lokala arbetskopian.
+- `.env`-läget: `.gitignore` skyddar fortsatt `.env*` från commit.
+  `workspace-discipline` säger nu att agenter får läsa lokala `.env*`
+  inom workspacet när uppgiften kräver det eller operatören uttryckligen
+  ber om det, men aldrig skriva ut hemligheter eller committa dem.
+  `.cursorindexingignore` har `.env`/`.env.*` så indexet slipper dem,
+  medan explicit agentläsning kan fungera när operatören ber om det.
+  `.env` laddas inte automatiskt av PowerShell/Python; kommandon måste
+  få env via `$env:...` eller en medveten dotenv-loader i dev-script.
 - Alla guards gröna: `ruff check .` 0, `governance_validate` 18 OK,
   `rules_sync --check` OK, `check_term_coverage --strict` OK, full
   `pytest tests/ -q` grön (3 E2E skippade).

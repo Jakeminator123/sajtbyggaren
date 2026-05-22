@@ -3,6 +3,12 @@ package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
+# Lokala env-filer ska inte indexeras, men de ska kunna läsas explicit
+# när operatören ber om felsökning. Git skyddar fortsatt mot commit.
+.env
+.env.*
+!.env.example
+
 # Operatör-/agent-lokala scratch-filer. Redan i .gitignore; här hindrar
 # vi indexer-bloat. (Hård read-block ligger i .cursorignore.)
 .cursor/plans/
