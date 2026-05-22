@@ -10,6 +10,11 @@ alwaysApply: true
 Läs `docs/ownership-map.md` innan större ändringar som kan korsa frontend,
 backend, generation, governance eller shared contract.
 
+Följ alltid `governance/rules/branch-discipline.md` för branch- och PR-flöde.
+Det betyder normalt direkt-main med backup först. PR/branch används när
+operatören uttryckligen ber om det, vid Cloud/Grind-arbete, eller när en
+större/riskfylld ändring väljs till PR-flöde. Hitta inte på egna branch-prefix.
+
 ## Contract-first
 
 - Ändra inte shared contract tyst.

@@ -41,16 +41,14 @@ Frontend ska inte behöva vänta på att all backend är klar.
 
 ## Branchmodell
 
-Använd tydliga branch-prefix när operatören ber om PR- eller branchflöde:
+Standard är repo:ts branch-discipline: normalt direkt-main med numrerad
+backup-branch först. PR/branch används när operatören uttryckligen ber om det,
+vid Cloud/Grind-arbete, eller när en större/riskfylld ändring väljs till
+PR-flöde.
 
-- `backend/<kort-namn>`
-- `frontend/<kort-namn>`
-- `contract/<kort-namn>`
-- `docs/<kort-namn>`
-- `scout/<kort-namn>` eller `review/<kort-namn>`
-
-Repo:t kan fortfarande använda direkt-main-flöde när operatören uttryckligen
-väljer det. Större eller osäkra ändringar ska gå via branch/PR.
+När arbetsbranch ändå används ska repo-formatet följas:
+`cursor/<kort-syfte-pa-svenska-utan-aaoo>`. Ange arbetsområde i PR-titel/body
+i stället, till exempel backend, frontend, contract, docs eller review.
 
 ## Konfliktregel
 
@@ -62,9 +60,11 @@ väljer det. Större eller osäkra ändringar ska gå via branch/PR.
 
 ## PR-regel
 
-- Frontend feature -> PR.
-- Backend/generation logic -> PR.
-- Shared contract -> liten separat PR när möjligt.
+- Direct-main enligt `governance/rules/branch-discipline.md` gäller som
+  default.
+- PR används när operatören ber om PR/branch, vid Cloud/Grind-arbete, eller
+  när ändringen är stor/riskabel och operatören väljer PR-flöde.
+- Shared contract bör vara en liten separat PR när PR-flöde används.
 - Låg-risk docs kan gå snabbare, men ska fortfarande rapporteras tydligt.
 - PR ska säga vad som ändrades, vilka contracts som berörs och vilka ytor som
   uttryckligen inte rördes.

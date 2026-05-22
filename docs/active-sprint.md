@@ -53,8 +53,10 @@ Team Parallel Work v1.
 ## Test Commands
 
 ```powershell
+.\.venv\Scripts\python.exe scripts\governance_validate.py
 .\.venv\Scripts\python.exe scripts\rules_sync.py --check
 .\.venv\Scripts\python.exe scripts\check_term_coverage.py --strict
+.\.venv\Scripts\python.exe -m pytest -q
 ```
 
 ## Merge Order
