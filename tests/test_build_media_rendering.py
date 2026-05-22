@@ -507,3 +507,52 @@ def test_validator_rejects_partial_refs() -> None:
     assert _is_valid_asset_ref({"assetId": "x", "filename": "x.png"}) is True
     assert _is_valid_asset_ref("not a dict") is False
     assert _is_valid_asset_ref(None) is False
+
+
+@pytest.mark.tooling
+def test_validator_rejects_non_string_fields() -> None:
+    """Bug-fix: tidigare passerade ``filename: 123`` validation och
+    kraschade nedströms i ``"/uploads/" + str(...)``. Nu kräver vi
+    explicit ``str``-typ + non-empty efter strip()."""
+    assert _is_valid_asset_ref({"assetId": "x", "filename": 123}) is False
+    assert _is_valid_asset_ref({"assetId": 123, "filename": "x.png"}) is False
+    assert _is_valid_asset_ref({"assetId": "x", "filename": ""}) is False
+    assert _is_valid_asset_ref({"assetId": "  ", "filename": "x.png"}) is False
+    assert _is_valid_asset_ref({"assetId": None, "filename": "x.png"}) is False
+    assert _is_valid_asset_ref({"assetId": "x", "filename": "   "}) is False
+
+
+@pytest.mark.tooling
+def test_sitemap_xml_escapes_special_characters_in_paths() -> None:
+    """Bug-fix: defensivt skydd mot framtida scaffold-paths som
+    innehåller XML-special-chars. Utan escape blir sitemapen ogiltig
+    XML och Google avvisar hela filen (inte bara den problematiska
+    raden)."""
+    xml = render_sitemap_xml(["/artiklar?id=1&kategori=hem", "/<test>"])
+    assert "&amp;" in xml
+    assert "&lt;" in xml
+    assert "&gt;" in xml
+    # Säkra att vi inte dubbelt-escapar (``&amp;amp;``) som skulle vara
+    # lika trasigt som ingen escape alls.
+    assert "&amp;amp;" not in xml
+
+
+@pytest.mark.tooling
+def test_og_fallback_truncates_long_company_names() -> None:
+    """Bug-fix: namn över 52 tecken ellipseras så de inte renderas
+    utanför 1200px-canvasen."""
+    dossier = _minimal_dossier()
+    dossier["company"]["name"] = "Aktiebolaget Storindustrins Konsulttjänster Sverige Norden"
+    svg = render_og_fallback_svg(dossier)
+    assert "…" in svg
+    # Hela det fullständiga namnet får INTE finnas — då har trim:en
+    # misslyckats och bilden overflowar i social-preview.
+    assert "Aktiebolaget Storindustrins Konsulttjänster Sverige Norden" not in svg
+
+
+@pytest.mark.tooling
+def test_og_fallback_keeps_short_company_names_unchanged() -> None:
+    dossier = _minimal_dossier()
+    svg = render_og_fallback_svg(dossier)
+    assert "…" not in svg
+    assert "Brief Company AB" in svg

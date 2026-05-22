@@ -629,11 +629,24 @@ UPLOADS_ROOT_DIR = Path(__file__).resolve().parent.parent / "data" / "uploads"
 
 
 def _is_valid_asset_ref(value: Any) -> bool:
-    return (
-        isinstance(value, dict)
-        and bool(value.get("assetId"))
-        and bool(value.get("filename"))
-    )
+    """True if ``value`` har de minst fält builder:n behöver för att
+    rendera + kopiera asset:n.
+
+    Bug-fix: tidigare checkade vi bara ``bool(value.get(...))`` vilket
+    accepterade fel typer (``filename: 123`` passerade) och sedan
+    kraschade nedströms när vi gjorde ``"/uploads/" + str(...)``.
+    Vi kräver nu explicit ``str``-typ + non-empty efter strip på
+    båda kritiska fälten.
+    """
+    if not isinstance(value, dict):
+        return False
+    asset_id = value.get("assetId")
+    filename = value.get("filename")
+    if not isinstance(asset_id, str) or not asset_id.strip():
+        return False
+    if not isinstance(filename, str) or not filename.strip():
+        return False
+    return True
 
 
 def resolve_media_asset(project_input: dict, role: str) -> dict | None:
@@ -3668,6 +3681,8 @@ def render_sitemap_xml(written_paths: list[str]) -> str:
         sajter. Inga av våra renderers genererar dynamiskt innehåll
         som ändras dagligen.
     """
+    import html as _html_module
+
     lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
@@ -3683,8 +3698,13 @@ def render_sitemap_xml(written_paths: list[str]) -> str:
             continue
         seen.add(path)
         priority = "1.0" if path == "/" else "0.7"
+        # Bug-fix: XML-escape path (defensivt mot framtida scaffold-paths
+        # som innehåller ``&`` eller ``<`` — t.ex. /artiklar?id=...).
+        # ``quote=False`` håller ``"`` orörd eftersom vi inte är i ett
+        # attribut-värde. Standard-paths som ``/tjanster`` är oförändrade.
+        safe_path = _html_module.escape(path, quote=False)
         lines.append("  <url>")
-        lines.append(f"    <loc>{path}</loc>")
+        lines.append(f"    <loc>{safe_path}</loc>")
         lines.append("    <changefreq>weekly</changefreq>")
         lines.append(f"    <priority>{priority}</priority>")
         lines.append("  </url>")
@@ -3804,7 +3824,12 @@ def render_og_fallback_svg(dossier: dict) -> str:
     primary_hex_raw = brand.get("primaryColorHex") if isinstance(brand, dict) else None
     primary_hex = _normalise_hex_color(primary_hex_raw) or "#0f172a"
     # Tagline kan vara None/empty; visa då bara namnet centrerat.
+    # Bug-fix: trim långa namn så de inte overflowar 1200px-canvasen.
+    # ~52 tecken @ 56px font-size får plats med ~100px vänster-gutter
+    # och 50px höger-marginal. Längre namn ellips:as.
     raw_name = (company.get("name") or "").strip() or "Sajten"
+    if len(raw_name) > 52:
+        raw_name = raw_name[:49].rstrip() + "…"
     raw_tagline = (company.get("tagline") or "").strip()
     # XML-escapa för att skydda mot " < > & ' i operator-input. SVG är
     # XML — vi får INTE skicka rå text in i <text>-noder.

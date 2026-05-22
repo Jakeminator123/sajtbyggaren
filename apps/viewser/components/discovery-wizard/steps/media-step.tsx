@@ -5,13 +5,15 @@ import {
   Image as ImageIcon,
   ImagePlus,
   Mountain,
+  Sparkles,
   Square,
   Video,
 } from "lucide-react";
 import { useState } from "react";
 
+import { AIImageGeneratorDialog } from "@/components/discovery-wizard/ai-image-generator-dialog";
 import { AssetDropzone } from "@/components/discovery-wizard/asset-dropzone";
-import type { AssetRef } from "@/lib/asset-store/types";
+import type { AssetRef, AssetRole } from "@/lib/asset-store/types";
 
 import type { WizardAnswers, WizardAssets, WizardMedia } from "../wizard-types";
 import { AssetsStep } from "./assets-step";
@@ -41,12 +43,18 @@ export function MediaStep({
     onChange({ media: mutator(answers.media) });
   };
 
+  // En enda dialog-state för alla roller — vi öppnar den med rätt role
+  // baserat på vilken AICTA-knapp som klickades. Detta håller komponent-
+  // trädet platt och slipper rendera 5 separata dialog-instanser.
+  const [aiDialogRole, setAiDialogRole] = useState<AssetRole | null>(null);
+
   return (
     <FieldStack>
       <div>
         <HelperText>
           Alla bilder är valfria — om du hoppar över får sajten ett
-          monogram-logo och text-baserade hero-sektioner.
+          monogram-logo och text-baserade hero-sektioner. Du kan också
+          generera bilder med AI (GPT Image 1.5) om du saknar egna.
         </HelperText>
       </div>
 
@@ -57,6 +65,25 @@ export function MediaStep({
         description="Huvudtillgångarna som syns på sajten. AI:n föreslår alt-text och placering."
       >
         <AssetsStepInline answers={answers} onChange={onChange} />
+        {/* AI-knapprad för rollerna inne i AssetsStep — vi modifierar
+            INTE AssetsStep (delas med Pass 1 och har egna tester),
+            utan exponerar AI-shortcut här ovanför som ett komplement. */}
+        <div className="border-border/60 mt-4 flex flex-wrap items-center gap-2 border-t pt-3">
+          <span className="text-muted-foreground mr-1 text-[10.5px] tracking-wider uppercase">
+            generera med ai:
+          </span>
+          {(["logo", "hero", "gallery"] as const).map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setAiDialogRole(r)}
+              className="border-border/60 hover:border-foreground/40 hover:bg-foreground/[0.03] inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors"
+            >
+              <Sparkles className="h-3 w-3" />
+              {r === "logo" ? "Logotyp" : r === "hero" ? "Hero" : "Galleribild"}
+            </button>
+          ))}
+        </div>
       </AssetCard>
 
       {/* 2. Favicon. */}
@@ -72,16 +99,20 @@ export function MediaStep({
             onRemove={() => updateMedia((m) => ({ ...m, favicon: null }))}
           />
         ) : (
-          <AssetDropzone
-            role="favicon"
-            mode="single"
-            emptyLabel="Släpp favicon här"
-            hintLabel="Kvadratisk PNG eller SVG, minst 256×256 px."
-            onUploaded={(refs) => {
-              const next = refs[0];
-              if (next) updateMedia((m) => ({ ...m, favicon: next }));
-            }}
-          />
+          <UploadOrGenerate
+            onGenerate={() => setAiDialogRole("favicon")}
+          >
+            <AssetDropzone
+              role="favicon"
+              mode="single"
+              emptyLabel="Släpp favicon här"
+              hintLabel="Kvadratisk PNG eller SVG, minst 256×256 px."
+              onUploaded={(refs) => {
+                const next = refs[0];
+                if (next) updateMedia((m) => ({ ...m, favicon: next }));
+              }}
+            />
+          </UploadOrGenerate>
         )}
       </AssetCard>
 
@@ -99,16 +130,20 @@ export function MediaStep({
             onRemove={() => updateMedia((m) => ({ ...m, ogImage: null }))}
           />
         ) : (
-          <AssetDropzone
-            role="ogImage"
-            mode="single"
-            emptyLabel="Släpp social-image här"
-            hintLabel="Liggande bild — vi croppar till 1200×630."
-            onUploaded={(refs) => {
-              const next = refs[0];
-              if (next) updateMedia((m) => ({ ...m, ogImage: next }));
-            }}
-          />
+          <UploadOrGenerate
+            onGenerate={() => setAiDialogRole("ogImage")}
+          >
+            <AssetDropzone
+              role="ogImage"
+              mode="single"
+              emptyLabel="Släpp social-image här"
+              hintLabel="Liggande bild — vi croppar till 1200×630."
+              onUploaded={(refs) => {
+                const next = refs[0];
+                if (next) updateMedia((m) => ({ ...m, ogImage: next }));
+              }}
+            />
+          </UploadOrGenerate>
         )}
       </AssetCard>
 
@@ -139,7 +174,77 @@ export function MediaStep({
           />
         )}
       </AssetCard>
+
+      {/* Singleton AI-image-dialog — öppnas med rätt role.
+          `key` baserat på role gör att dialogen remountas vid byte,
+          vilket nollställer prompt/style/preview-state utan att vi
+          behöver setState-i-effect (förbjudet av React 19 lint). */}
+      <AIImageGeneratorDialog
+        key={aiDialogRole ?? "closed"}
+        open={aiDialogRole !== null}
+        role={aiDialogRole ?? "hero"}
+        companyName={answers.companyName}
+        brandColorHex={answers.brand?.primaryColorHex || undefined}
+        onClose={() => setAiDialogRole(null)}
+        onAccept={(ref) => {
+          // Mappa AssetRef till rätt slot i WizardMedia/WizardAssets
+          // baserat på role. Logo/hero/gallery hamnar i answers.assets
+          // (legacy struktur), nya media-fält i answers.media.
+          if (!aiDialogRole) return;
+          if (aiDialogRole === "favicon") {
+            updateMedia((m) => ({ ...m, favicon: ref }));
+          } else if (aiDialogRole === "ogImage") {
+            updateMedia((m) => ({ ...m, ogImage: ref }));
+          } else if (aiDialogRole === "logo") {
+            onChange({ assets: { ...answers.assets, logo: ref } });
+          } else if (aiDialogRole === "hero") {
+            onChange({ assets: { ...answers.assets, heroImage: ref } });
+          } else if (aiDialogRole === "gallery") {
+            onChange({
+              assets: {
+                ...answers.assets,
+                gallery: [...(answers.assets.gallery ?? []), ref],
+              },
+            });
+          }
+        }}
+      />
     </FieldStack>
+  );
+}
+
+/**
+ * UploadOrGenerate — wrappar en dropzone med en "Generera med AI"-
+ * knapp ovanför. Ger operatören valet utan att tränga ihop båda
+ * action:s i samma yta (vilket skulle skapa kollision mellan
+ * drag-target och click-target).
+ */
+function UploadOrGenerate({
+  children,
+  onGenerate,
+}: {
+  children: React.ReactNode;
+  onGenerate: () => void;
+}) {
+  return (
+    <div className="space-y-2">
+      {children}
+      <div className="flex items-center gap-2">
+        <div className="bg-border/60 h-px flex-1" />
+        <span className="text-muted-foreground text-[10.5px] tracking-wider uppercase">
+          eller
+        </span>
+        <div className="bg-border/60 h-px flex-1" />
+      </div>
+      <button
+        type="button"
+        onClick={onGenerate}
+        className="border-border/60 hover:border-foreground/40 hover:bg-foreground/[0.03] inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed px-3 py-2 text-[12px] font-medium transition-colors"
+      >
+        <Sparkles className="h-3.5 w-3.5" />
+        Generera med AI
+      </button>
+    </div>
   );
 }
 
