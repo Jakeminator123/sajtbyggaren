@@ -30,9 +30,24 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `5114fb2` (2026-05-22, **Backoffice SNI-diagnostik
+Last verified state: `919d564` (2026-05-22, **rules_sync skriver om
+relativa länkar för .cursor/rules-speglarna ovanpå Backoffice SNI-
+diagnostik-utökningen**) — produkt-/kod-läget är `919d564`
+(`fix(rules-sync): rewrite relative links so .cursor/rules mirrors
+resolve`). `scripts/rules_sync.py` skriver nu automatiskt om
+``../policies/``/``../schemas/``/``../decisions/``-länkar till
+``../../governance/...``-form och sibling ``.md``-extensioner till
+``.mdc`` när speglarna genereras. Sju spegelfiler regenererades; ingen
+ändring i `governance/rules/`-källan. 16 nya regression-tester i
+`tests/test_rules_sync.py` (inkl. en scanner som faljar om någon ny
+``(../policies/`` smyger in i mirror-filerna). Operator-rapporterad
+markdown-linter-varning (`link.no-such-file` på
+`.cursor/rules/always-swedish.mdc:37`) är därmed löst för alla
+mirror-filer, inte bara den specifika raden. Föregående produkt-läge:
+
+Föregående verified state: `5114fb2` (2026-05-22, **Backoffice SNI-diagnostik
 utökad med coverage gaps + confidence-breakdown + parent-chain ovanpå
-SNI-followup-tooling**) — produkt-/kod-läget är `5114fb2`
+SNI-followup-tooling**) — produkt-/kod-läget var `5114fb2`
 (`feat(backoffice): expand SNI diagnostics with coverage gaps and parent
 chain`). Föregående följdcommits 2026-05-22: `1150424` operator-finalized
 rules + workspace, `f137f92` SNI-followup-tooling, `b75b664`/`369ed48`/
@@ -305,15 +320,17 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `5114fb2` på origin och lokalt efter att Backoffice-
-diagnostiken för SNI fick coverage-gaps, confidence-breakdown och
-parent-chain ovanpå SNI-followup-tooling. Operatör 2026-05-22 OK:ade
-alla följdcommits. PR55-agentens worktree är städad. Öppen DRAFT-PR #56
-från cloud-agenten driver Project DNA-spåret och rörs inte av lokal
-orchestrator. Bug-räkning oförändrad: **27 aktiva, 0 misplaced, 5 unknown,
-104 stängda** — ingen sprintspår sedan SNI introducerade en ny B-ID.
-`backup-42` finns på origin från pre-SNI-läget. Inga öppna PRs förutom
-PR #56 (cloud-agent-DRAFT). Föregående stage snapshot:
+`main` är vid `919d564` på origin och lokalt efter att rules_sync nu
+skriver om relativa länkar för spegelfilerna under `.cursor/rules/`.
+Operatör-rapporterad markdown-linter-varning (`link.no-such-file` på
+`.cursor/rules/always-swedish.mdc:37` som pekade på den icke-existerande
+`.cursor/policies/naming-dictionary.v1.json`-pathen) är löst för alla
+sju spegelfiler via systematisk path-rewrite. Inga ändringar i
+`governance/rules/`-källan. PR55-agentens worktree är fortsatt städad.
+Öppen DRAFT-PR #56 från cloud-agenten driver Project DNA-spåret och
+rörs inte av lokal orchestrator. Bug-räkning oförändrad: **27 aktiva,
+0 misplaced, 5 unknown, 104 stängda**. `backup-42` finns på origin från
+pre-SNI-läget. Inga öppna PRs förutom PR #56 (cloud-agent-DRAFT). Föregående stage snapshot:
 
 `main` var vid `2e274ac` på origin och lokalt efter SNI-sidospår-pushen.
 SNI 2025-importen ger nu repo:t en deterministisk JSON-spegel under
