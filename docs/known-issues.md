@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 27 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 104 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 26 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 105 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -103,17 +103,6 @@ Tre read-only subagents granskade (1) brief + prompt-helper pipeline,
 (2) builder renderers + scaffolds + Quality Gate, (3) Viewser app +
 run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
 
-- **`B71` Hög** - Follow-up merge fryser `company.story`,
-  `company.tagline`, `tone` i strid med egen docstring.
-  `scripts/prompt_to_project_input.py:merge_followup_project_input`
-  docstring säger att kandidat bidrar med "additive signals (new
-  services, capabilities, conversion goals and a visible story note)",
-  men koden tar aldrig `story` från kandidat, och `tone` lämnas orörd
-  när det redan är ett dict. Källa: brief-pipeline-bug-sweep
-  2026-05-15. Två val: (a) uppdatera docstring + test att matcha
-  faktisk byte-stabil semantic, eller (b) semantic patching nu
-  (kräver ADR, hör hemma i Project DNA-sprinten). Fix: open. Test:
-  open.
 - **`B72` Medel** - `apps/viewser/lib/runs.ts:40-84` `listRuns` läser
   `build-result.json` för alla run-kataloger trots att svaret bara
   behåller `limit` poster. O(N) disk-läsningar per `GET /api/runs`,
@@ -638,6 +627,26 @@ för follow-up eller ska städas.
   2026-05-19. Fix: open. Test: open.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B71` Hög** (stängd 2026-05-22, Project DNA semantic follow-up V1) -
+  `scripts/prompt_to_project_input.py:merge_followup_project_input`
+  frös `company.story`, `company.tagline` och `tone` även när
+  följdprompten tydligt bad om semantic ändring. Fix: `d791b0c`
+  aktiverar deterministisk FollowUp Intent-klassning för
+  `tone-shift`, `story-emphasize`, `tagline-update`,
+  `positioning-shift`, `no-semantic-change` och `clarify`.
+  Tydliga semantic intents patchar exakt tillåtet Project Input-fält,
+  medan additiva/no-change-prompter behåller byte-stabilitet. V1
+  skriver `projectDna` i befintlig meta-sidecar
+  (`data/prompt-inputs/<siteId>.meta.json`); full
+  `data/projects/<projectId>/dna.json`-lagring är V2 enligt ADR 0027.
+  Rå följdprompt filtreras fortsatt bort från kundcopy. Test:
+  `tests/test_prompt_to_project_input.py::test_followup_merge_keeps_story_tagline_and_tone_byte_stable_when_intent_is_no_change`,
+  `tests/test_prompt_to_project_input.py::test_followup_merge_tone_shift_updates_tone_only`,
+  `tests/test_prompt_to_project_input.py::test_followup_story_intent_does_not_leak_raw_prompt`,
+  `tests/test_prompt_to_project_input.py::test_generate_followup_tone_shift_updates_project_input_and_project_dna`,
+  `tests/test_prompt_to_project_input.py::test_generate_followup_story_and_tagline_prompts_change_project_input`,
+  `tests/test_prompt_to_project_input.py::test_project_dna_sidecar_validates_against_snapshot_schema`.
 
 - **`B143` Medel** (stängd 2026-05-21, Intent Guard English slug
   matching) - konflikt-tabellen matchade enbart
