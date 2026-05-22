@@ -30,10 +30,12 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `e822a2c` (2026-05-22, **PR #55 mergad ovanpå
-SNI-sidospårets `7289732`**) — `origin/main` och lokal `main` är på
-`e822a2c` (`fix(viewser): stale run-following och artefakt-panel
-(#55)`). PR55-agenten stängde tre distinkta viewser-fixar (stale-closure
+Last verified state: `369ed48` (2026-05-22, **Steward-bump efter PR #55-
+merge + PR #56 cloud-agent-spår-flagging ovanpå `e822a2c`**) — produkt-/
+kodläget är `e822a2c` (`fix(viewser): stale run-following och artefakt-
+panel (#55)`); efterföljande Steward-docs-bumpar `06cdc51` och `369ed48`
+registrerar PR #55-merget och flagningen av cloud-agentens öppna draft-
+PR #56. PR55-agenten stängde tre distinkta viewser-fixar (stale-closure
 i `applyRunsData`, `setBundle(null)`-cleanup i Run Details, ny
 `runSiteIdUnknown`-prop som blockerar follow-up vid `siteId === "unknown"`)
 i 6 filer (113 ins / 8 del). Reviewerns observation att den
