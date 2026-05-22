@@ -30,12 +30,22 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `369ed48` (2026-05-22, **Steward-bump efter PR #55-
-merge + PR #56 cloud-agent-spår-flagging ovanpå `e822a2c`**) — produkt-/
-kodläget är `e822a2c` (`fix(viewser): stale run-following och artefakt-
-panel (#55)`); efterföljande Steward-docs-bumpar `06cdc51` och `369ed48`
-registrerar PR #55-merget och flagningen av cloud-agentens öppna draft-
-PR #56. PR55-agenten stängde tre distinkta viewser-fixar (stale-closure
+Last verified state: `1150424` (2026-05-22, **SNI-followup tooling +
+operator-finalized rule additions committade ovanpå PR #55-mergen**) —
+produkt-/kod-/rule-läget är `1150424` (`chore(rules): finalize always-
+swedish additions and workspace autosave`). Föregående commits i samma
+pass: `e822a2c` (PR #55 merge: viewser run-following + artefakt-panel),
+`06cdc51` (Steward-bump till `e822a2c`), `369ed48` (PR #56 cloud-agent-
+spår-flagging), `b75b664` (Steward-tail-bump), `f137f92` (`feat(taxonomy):
+SNI follow-up tooling + cursor/git ignore consolidation` — 5 filer / +446:
+`scripts/lookup_sni.py` CLI med code/text/section/level/stats-
+subkommandon + `--json`, `data/taxonomies/sni/README.md` med rebuild-
+flöde + konsumentlista, `.cursorindexingignore` blockerar SNI JSON-
+indexering, `.cursorignore` speglar Read-blockeringar, `.gitignore`
++ `data/taxonomies/**/*.xlsx` säkerhetsbälte plus `.cursor/tmp_*` +
+`eval-tmp/`-konsolidering), `1150424` (operator-finalized rules: två
+nya stycken i `governance/rules/always-swedish.md` om engelsk debug-
+narration och unicode_escape + workspace `files.autoSave: afterDelay`). PR55-agenten stängde tre distinkta viewser-fixar (stale-closure
 i `applyRunsData`, `setBundle(null)`-cleanup i Run Details, ny
 `runSiteIdUnknown`-prop som blockerar follow-up vid `siteId === "unknown"`)
 i 6 filer (113 ins / 8 del). Reviewerns observation att den
@@ -275,17 +285,15 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `e822a2c` på origin och lokalt efter PR #55-mergen ovanpå
-SNI-sidospårets `7289732`. PR55-agenten levererade tre viewser-fixar
-för run-following och artefakt-panel-stale-state utan att röra någon
-del av SNI-spåret. Inga öppna PRs. SNI-stödtillägg (`scripts/
-lookup_sni.py` CLI, `data/taxonomies/sni/README.md` och relaterade
-`.cursorignore`/`.cursorindexingignore`/`.gitignore`-uppdateringar som
-PR55-agenten lämnade untracked) väntar fortfarande på operatörens beslut
-att stagea. Cloud agent jobbar separat på Project DNA / semantic follow-
-up; lokal orchestrator håller main stabil tills DNA-spåret återkommer.
-Bug-räkning oförändrad: **27 aktiva, 0 misplaced, 5 unknown, 104 stängda**.
-`backup-42` finns på origin från pre-SNI-läget. Föregående stage snapshot:
+`main` är vid `1150424` på origin och lokalt efter två følgd-commits
+ovanpå PR #55-mergen `e822a2c`: SNI-followup-tooling (`f137f92`) och
+operator-finalized rule-tillägg (`1150424`). Operatör 2026-05-22 OK:ade
+båda. Inga otrackade följdfiler kvar i working tree. Öppen DRAFT-PR #56
+från cloud-agenten driver Project DNA-spåret och rörs inte av lokal
+orchestrator. Bug-räkning oförändrad: **27 aktiva, 0 misplaced, 5 unknown,
+104 stängda** — varken PR #55 eller följdfilerna introducerade nya B-IDs.
+`backup-42` finns på origin från pre-SNI-läget. Inga öppna PRs förutom
+PR #56 (cloud-agent-DRAFT). Föregående stage snapshot:
 
 `main` var vid `2e274ac` på origin och lokalt efter SNI-sidospår-pushen.
 SNI 2025-importen ger nu repo:t en deterministisk JSON-spegel under

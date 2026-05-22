@@ -1,10 +1,43 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-22 (**PR #55 mergad ovanpå SNI-sidospåret; Project
-DNA / semantic follow-up drivs av separat cloud agent**). Senaste
-produkt-/kodläge är `e822a2c` (`fix(viewser): stale run-following och
-artefakt-panel (#55)`). Mina SNI-commits `2e274ac`, `bf8d6c2`,
-`f40564e`, `7289732` ligger kvar i historien direkt under PR #55.
+**Datum:** 2026-05-22 (**SNI-followup-tooling + operator-finalized rule-
+tillägg committade ovanpå PR #55-mergen; Project DNA-spåret drivs av
+separat cloud agent (DRAFT PR #56)**). Senaste produkt-/kod-/rule-läge
+är `1150424` (`chore(rules): finalize always-swedish additions and
+workspace autosave`). Direkt under: `f137f92` SNI-followup, `e822a2c`
+PR #55-merge, mina SNI-commits `2e274ac`, `bf8d6c2`, `f40564e`,
+`7289732`.
+
+**Vad som följt-committades 2026-05-22 efter PR #55-mergen:**
+
+- `f137f92` `feat(taxonomy): SNI follow-up tooling + cursor/git ignore
+  consolidation` — 5 filer +446 rader. PR55-agentens untracked SNI-
+  stödfiler stageade efter operatör-OK: `scripts/lookup_sni.py` stdlib-
+  only CLI (subkommandon `code`/`text`/`section`/`level`/`stats` med
+  `--json`-stöd, lint-clean, manuellt verifierat via `code 56110` ->
+  full parent-chain, `text frisör` -> 9621/96210, `stats` -> 1882 items),
+  `data/taxonomies/sni/README.md` dokumenterar rebuild-flödet (SCB xlsx
+  -> extractor -> JSON-spegel -> radera xlsx) plus konsumentlistan,
+  `.cursorindexingignore` exkluderar SNI JSON från Cursor-sökindex
+  (25 000 rader bloat), `.cursorignore` speglar Read-blockeringen,
+  `.gitignore` får `data/taxonomies/**/*.xlsx` säkerhetsbälte plus
+  `.cursor/tmp_*` och `eval-tmp/`-konsolidering.
+- `1150424` `chore(rules): finalize always-swedish additions and
+  workspace autosave` — 3 filer +15/-1. Operatör-finaliserade tillägg
+  som suttit unstaged genom flera sessioner: `governance/rules/always-
+  swedish.md` får två nya stycken (ingen engelsk intern-debug-narration
+  i chatten; ingen `unicode_escape` på redan UTF-8 svensk text utom
+  för tekniska id som slug/filename/route), `.cursor/rules/always-
+  swedish.mdc` är spegeln (redan synkad), `sajtbyggaren.code-workspace`
+  byter `files.autoSave` från `off` till `afterDelay`.
+
+**Cloud-agentens DNA-spår (PR #56, DRAFT):** Skapad 2026-05-22 23:59
+UTC, branch `cursor/project-dna-followup-cdad`, titel `feat(builder):
+add Project DNA semantic follow-up`, 5 filer +1152/-19. Lokal
+orchestrator startar inga DNA-ändringar och rör inte `scripts/
+prompt_to_project_input.py`, `packages/generation/discovery/resolve.py`,
+Project Input-versionering eller tone/story/tagline-spåret tills cloud-
+agenten flaggar PR:n ready-for-review.
 
 **PR #55-mergen (PR55-agentens spår, inte mitt):** Stängde tre distinkta
 viewser-fixar i 6 filer (113 ins / 8 del):
