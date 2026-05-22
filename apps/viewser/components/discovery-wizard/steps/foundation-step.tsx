@@ -31,7 +31,11 @@ import {
  * BusinessFamily-väljaren som driver scaffold/starter-valet.
  *
  * Innehållsordning (UI-mening "av-stort-till-litet"):
- *   1. URL-skrape (snabbväg för befintliga sajter)
+ *   1. URL-skrape — ALLTID HÖGST UPP. Snabbväg för befintliga sajter
+ *      som auto-fyller företagsnamn, offer, kontaktuppgifter m.m.
+ *      Detta är den vanligaste "lyxvägen" — operatören klistrar in
+ *      URL → wizarden fylls automatiskt. Den får inte gömmas i en
+ *      disclosure eftersom det halverar upptäckbarheten.
  *   2. Företagsnamn + offer (identitet)
  *   3. Verksamhetsfamilj (8 kort → primärt scaffold-val)
  *   4. Sub-specialisering (chips filtrerade efter vald family)
@@ -174,11 +178,11 @@ export function FoundationStep({
     [answers.siteType, onChange],
   );
 
-  // Räkna ifyllda advanced-fält så disclosure-badge visar "(3 ifyllda)"
-  // när operatören redan har stoppat in värden. Räknar URL+specialisering
-  // som 1 vardera och kontakt som antal ifyllda kontaktfält.
+  // Räkna ifyllda advanced-fält så disclosure-badge visar "(N ifyllda)"
+  // när operatören redan har stoppat in värden. URL-skrape räknas inte
+  // här eftersom den ligger ovanför disclosure. Räknar specialisering
+  // som 1 och kontakt som antal ifyllda kontaktfält.
   const advancedFilled =
-    (answers.existingSite.trim() ? 1 : 0) +
     (answers.siteType.length > 0 ? 1 : 0) +
     (answers.contact.phone.trim() ? 1 : 0) +
     (answers.contact.email.trim() ? 1 : 0) +
@@ -187,12 +191,71 @@ export function FoundationStep({
 
   return (
     <FieldStack>
+      {/* URL-SKRAPE — alltid högst upp. Snabbväg som auto-fyller
+          företagsnamn, offer, kontakt och mer från en befintlig sajt.
+          Får inte gömmas i disclosure (halverar upptäckbarheten). */}
+      <div>
+        <FieldLabel optional>Har ni redan en hemsida?</FieldLabel>
+        <HelperText>
+          Klistra in URL:en så fyller vi i företagsnamn, vad ni gör,
+          kontaktuppgifter och resten automatiskt. Du kan granska och
+          justera allt nedan efteråt.
+        </HelperText>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+          <input
+            type="url"
+            value={answers.existingSite}
+            onChange={(event) =>
+              onChange({ existingSite: event.target.value })
+            }
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void handleScrape();
+              }
+            }}
+            placeholder="www.dinhemsida.se"
+            className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/30 flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-[13px] shadow-xs transition-colors outline-none focus-visible:ring-2"
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={handleScrape}
+            disabled={
+              scrapeStatus === "loading" || !answers.existingSite.trim()
+            }
+            className="h-9 shrink-0"
+          >
+            {scrapeStatus === "loading" ? "Hämtar…" : "Hämta & fyll i"}
+          </Button>
+        </div>
+        {scrapeMessage ? (
+          <p
+            className={`mt-1.5 text-[11px] ${
+              scrapeStatus === "error"
+                ? "text-destructive"
+                : scrapeStatus === "ok"
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : "text-muted-foreground"
+            }`}
+          >
+            {scrapeMessage}
+          </p>
+        ) : null}
+      </div>
+
       {/* ESSENTIALS — alltid synliga: identitet + family. */}
       <TextField
         label="Företagsnamn *"
         value={answers.companyName}
         onChange={(value) => onChange({ companyName: value })}
         placeholder="t.ex. Ateljé Bird"
+        helper={
+          answers.existingSite.trim() && scrapeStatus !== "ok"
+            ? "Fylls i automatiskt när du klickar Hämta ovan."
+            : undefined
+        }
       />
       <TextareaField
         label="Vad gör ni? *"
@@ -237,64 +300,15 @@ export function FoundationStep({
         </div>
       </div>
 
-      {/* ADVANCED — i disclosure: URL-skrape + specialisering + kontakt. */}
+      {/* ADVANCED — i disclosure: specialisering + kontakt. URL-skrape
+          ligger numera ovanför FieldStack (alltid synlig). */}
       <AdvancedDisclosure
         id="foundation-advanced"
-        label="Importera, specialisering & kontakt"
-        hint="Snabbväg från befintlig sajt, sub-kategori för bättre copy/SEO, och kontaktuppgifter som visas på kontaktsidan."
-        count={3}
+        label="Specialisering & kontakt"
+        hint="Sub-kategori för bättre copy/SEO, och kontaktuppgifter som visas på kontaktsidan."
+        count={2}
         activeCount={advancedFilled}
       >
-        {/* Importera från befintlig hemsida. */}
-        <div>
-          <FieldLabel optional>Befintlig hemsida</FieldLabel>
-          <HelperText>
-            Klistra in din nuvarande hemsida så fyller vi i fält automatiskt.
-          </HelperText>
-          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-            <input
-              type="url"
-              value={answers.existingSite}
-              onChange={(event) =>
-                onChange({ existingSite: event.target.value })
-              }
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  void handleScrape();
-                }
-              }}
-              placeholder="www.dinhemsida.se"
-              className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/30 flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-[13px] shadow-xs transition-colors outline-none focus-visible:ring-2"
-            />
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={handleScrape}
-              disabled={
-                scrapeStatus === "loading" || !answers.existingSite.trim()
-              }
-              className="h-9 shrink-0"
-            >
-              {scrapeStatus === "loading" ? "Hämtar…" : "Hämta"}
-            </Button>
-          </div>
-          {scrapeMessage ? (
-            <p
-              className={`mt-1.5 text-[11px] ${
-                scrapeStatus === "error"
-                  ? "text-destructive"
-                  : scrapeStatus === "ok"
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-muted-foreground"
-              }`}
-            >
-              {scrapeMessage}
-            </p>
-          ) : null}
-        </div>
-
         {/* Sub-specialisering — filtrerade chips för vald family. */}
         {selectedFamily && subCategoryOptions.length > 0 ? (
           <div>
