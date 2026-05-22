@@ -628,6 +628,96 @@ def test_typography_overlay_supports_swedish_aliases() -> None:
 
 
 @pytest.mark.tooling
+def test_normalize_tone_key_maps_wizard_strings_to_semantic_keys() -> None:
+    """``_normalize_tone_key`` är single source of truth — wizard-strängar
+    (svenska multi-word) ska mappas till semantiska keys deterministiskt.
+
+    Skydd mot regressionen "Sprint A:s overlay funkar inte för svenska
+    operatörer" som motiverade Sprint B/1.
+    """
+    from scripts.build_site import _normalize_tone_key
+
+    # Wizard ``TONE_OPTIONS`` (svenska) → semantiska keys
+    assert _normalize_tone_key("Lekfull") == "playful"
+    assert _normalize_tone_key("LEKFULL") == "playful"  # case-insensitive
+    assert _normalize_tone_key("  Lekfull  ") == "playful"  # strip
+    assert _normalize_tone_key("Varm och personlig") == "warm"
+    assert _normalize_tone_key("Exklusiv / lyxig") == "luxury"
+    assert _normalize_tone_key("Lugn och förtroendeingivande") == "calm"
+    assert _normalize_tone_key("Modern och teknisk") == "tech"
+    assert _normalize_tone_key("Rak och enkel") == "modern"
+    assert _normalize_tone_key("Professionell") == "modern"
+
+    # Engelska semantiska keys passerar igenom oförändrade
+    assert _normalize_tone_key("calm") == "calm"
+    assert _normalize_tone_key("bold") == "bold"
+
+    # Okänd sträng passerar igenom oförändrad (graceful fallback)
+    assert _normalize_tone_key("okänd-ton") == "okänd-ton"
+
+
+@pytest.mark.tooling
+def test_typography_overlay_triggers_for_all_wizard_tone_options() -> None:
+    """Varje sträng i ``TONE_OPTIONS`` (wizard-constants.ts) ska trigga
+    en overlay. Säkerhetsnät mot att lägga till ett nytt ton-alternativ
+    i wizarden utan att registrera alias i ``_TONE_KEY_ALIASES``.
+
+    När du lägger till ett nytt ton-chip i wizarden:
+      1. Lägg till strängen i wizard-constants.ts (TONE_OPTIONS)
+      2. Lägg till alias i scripts/build_site.py (_TONE_KEY_ALIASES)
+      3. Lägg till strängen nedan
+    """
+    from scripts.build_site import _typography_overlay_for_tone
+
+    wizard_tone_options = [
+        "Professionell",
+        "Varm och personlig",
+        "Lekfull",
+        "Exklusiv / lyxig",
+        "Rak och enkel",
+        "Modern och teknisk",
+        "Lugn och förtroendeingivande",
+    ]
+
+    missing: list[str] = []
+    for tone in wizard_tone_options:
+        overlay = _typography_overlay_for_tone({"tone": {"primary": tone}})
+        if overlay is None:
+            missing.append(tone)
+
+    assert not missing, (
+        f"Wizard-tags utan typografi-overlay: {missing}. "
+        "Lägg till alias i _TONE_KEY_ALIASES i scripts/build_site.py."
+    )
+
+
+@pytest.mark.tooling
+def test_typography_overlay_different_wizard_tags_yield_different_palettes() -> None:
+    """Lekfull och Exklusiv/lyxig måste ge OLIKA paletter, annars är hela
+    Sprint A.2 + B.1-kedjan meningslös ("alla sajter ser likadana ut").
+
+    Tre kategorier-par testas för att säkerställa att vi täcker hela
+    palett-spektrumet (playful vs luxury vs calm).
+    """
+    from scripts.build_site import _typography_overlay_for_tone
+
+    playful = _typography_overlay_for_tone({"tone": {"primary": "Lekfull"}})
+    luxury = _typography_overlay_for_tone(
+        {"tone": {"primary": "Exklusiv / lyxig"}}
+    )
+    calm = _typography_overlay_for_tone(
+        {"tone": {"primary": "Lugn och förtroendeingivande"}}
+    )
+
+    assert playful is not None
+    assert luxury is not None
+    assert calm is not None
+    assert playful["display"] != luxury["display"]
+    assert playful["display"] != calm["display"]
+    assert luxury["display"] != calm["display"]
+
+
+@pytest.mark.tooling
 def test_variant_css_uses_typography_overlay_when_provided(
     nordic_trust_variant: dict,
 ) -> None:

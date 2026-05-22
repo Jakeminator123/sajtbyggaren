@@ -1209,6 +1209,46 @@ _TYPOGRAPHY_FALLBACK: dict[str, str] = {
 # Nyckeln matchas case-insensitive efter ``.strip().lower()``. Svenska
 # och engelska former listas separat så vi inte hash-collision:ar med
 # fel mapping.
+# Wizard-strängar (``TONE_OPTIONS`` i
+# ``apps/viewser/components/discovery-wizard/wizard-constants.ts``) är
+# på svenska och kan vara multi-word ("Lugn och förtroendeingivande").
+# ``_TONE_TYPOGRAPHY`` använder semantiska engelska single-word-keys
+# ("calm", "playful"). Utan översättning matchar wizard-tags aldrig
+# → Sprint A.2:s typografi-overlay triggas inte för svenska operatörer.
+#
+# Den här tabellen är översättningslagret. Keys är ``.strip().lower()``-
+# normaliserade wizard-strängar; values är semantiska keys i
+# ``_TONE_TYPOGRAPHY``. Att hålla dessa separata (istället för att
+# duplicera font-paletten 7 gånger) gör att framtida paletter-tweaks
+# bara behöver göras på ett ställe.
+#
+# Synkronisera den här tabellen med ``TONE_OPTIONS`` i wizard-
+# constants när nya ton-alternativ läggs till. ``tests/test_builder_smoke``
+# har en täckningskoll som garanterar att varje wizard-tag mappar till
+# en känd ``_TONE_TYPOGRAPHY``-key.
+_TONE_KEY_ALIASES: dict[str, str] = {
+    # Wizard ``TONE_OPTIONS`` (svenska multi-word) → semantiska keys.
+    "professionell": "modern",
+    "varm och personlig": "warm",
+    "lekfull": "playful",
+    "exklusiv / lyxig": "luxury",
+    "rak och enkel": "modern",
+    "modern och teknisk": "tech",
+    "lugn och förtroendeingivande": "calm",
+    # Vanliga briefModel-output på engelska som tydligt mappar mot en
+    # specifik palett. ``professional`` och ``trustworthy`` lämnas
+    # MEDVETET bort — de är generiska och får bättre resultat med
+    # variant-defaulten (befintlig kontrakt-test i test_builder_smoke).
+    "calm and trustworthy": "calm",
+    "warm and personal": "warm",
+    "playful and energetic": "playful",
+    "exclusive": "luxury",
+    "luxurious": "luxury",
+    "clean and simple": "modern",
+    "modern and technical": "tech",
+}
+
+
 _TONE_TYPOGRAPHY: dict[str, dict[str, str]] = {
     # CALM / WELLNESS — elegant serif för rubriker, neutral sans för
     # body. Passar hudvård, spa, terapi, yoga, mindfulness.
@@ -1339,6 +1379,25 @@ def _typography_for_variant(variant: dict) -> dict[str, str]:
     return _VARIANT_TYPOGRAPHY.get(variant.get("id", ""), _TYPOGRAPHY_FALLBACK)
 
 
+def _normalize_tone_key(raw: str) -> str:
+    """Normalisera en tone-sträng till en semantisk ``_TONE_TYPOGRAPHY``-key.
+
+    Pipelinen är:
+      1. ``.strip().lower()`` så case/whitespace inte spelar roll
+      2. Slå upp i ``_TONE_KEY_ALIASES`` (wizard-strängar → semantiska
+         keys, t.ex. ``"lekfull"`` → ``"playful"``)
+      3. Returnera resultatet — om ingen alias matchar returneras den
+         normaliserade strängen oförändrad (så engelska keys som redan
+         är semantiska, t.ex. ``"calm"``, fortsatt fungerar direkt)
+
+    Den här funktionen är single source of truth för "är denna tone-
+    sträng matchbar?" — använd den i alla nya konsumenter (Sprint B/3
+    hero-routing m.fl.) istället för att duplicera alias-tabellen.
+    """
+    key = raw.strip().lower()
+    return _TONE_KEY_ALIASES.get(key, key)
+
+
 def _typography_overlay_for_tone(
     project_input: dict[str, Any] | None,
 ) -> dict[str, str] | None:
@@ -1351,9 +1410,10 @@ def _typography_overlay_for_tone(
     opt-in: existerande projekt utan tone.primary får exakt samma
     output som idag.
 
-    Matchning är case-insensitive efter ``.strip().lower()`` så
-    operatorer kan skriva "Calm", "calm" eller " calm " och få samma
-    resultat. Svenska och engelska former båda är registrerade.
+    Wizard-strängar (svenska multi-word, t.ex. "Lugn och
+    förtroendeingivande") normaliseras via ``_TONE_KEY_ALIASES`` så
+    Sprint A.2:s overlay triggas även när operatören väljer ton via
+    chips istället för att skriva engelska keys manuellt.
     """
     if not isinstance(project_input, dict):
         return None
@@ -1363,7 +1423,7 @@ def _typography_overlay_for_tone(
     primary = tone.get("primary")
     if not isinstance(primary, str):
         return None
-    key = primary.strip().lower()
+    key = _normalize_tone_key(primary)
     return _TONE_TYPOGRAPHY.get(key)
 
 
