@@ -56,10 +56,12 @@ additiva `lägg till ... historia/story`-prompter patchar inte längre
 `company.story`, och `clarify` stoppar versionering i stället för att
 skapa ny run. Blandade multi-intent-prompter är fortsatt V2-/kvalitets-
 scope. Ny full mini-eval efter naprapat-fixen är **4/4 grön**:
-`C:\Users\jakem\Desktop\sajtbyggaren-output\.evals\20260522T024927Z-mini-eval\mini-eval-report.md`.
+`C:\Users\jakem\Desktop\sajtbyggaren-output\.evals\20260522T030947Z-mini-eval\mini-eval-report.md`.
 Naprapat v2 ändrar nu `tone.primary` till `lugn` och `tone.secondary`
 till `["förtroendeingivande"]` utan story/tagline- eller CSS-token-
-ändring. **Direkt nästa fokus:** använd den gröna eval-rapporten för att
+ändring. Blandade prompts får bara släppa igenom additiv + tone när det
+finns explicit tone-scope (`ton`, `tone`, `känsla`, etc.); `lägg till en
+lugnare sida om vår historia` är fortsatt konservativ. **Direkt nästa fokus:** använd den gröna eval-rapporten för att
 välja mellan B125 preview-fallback och nästa produktspår; vänta fortsatt
 med embeddings, SNI-runtime, variant-promotion och nya starters.
 Öppen parallell PR #58 (`cursor/b125-preview-fallback-64e2`,

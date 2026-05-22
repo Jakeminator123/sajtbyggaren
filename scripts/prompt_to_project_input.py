@@ -1822,7 +1822,14 @@ def classify_followup_intent(
     if not text or len(text) < 4:
         return "clarify"
 
-    if _contains_any(text, _FOLLOWUP_ADD_ONLY_KEYWORDS):
+    has_additive_keyword = _contains_any(text, _FOLLOWUP_ADD_ONLY_KEYWORDS)
+    if (
+        has_additive_keyword
+        and _contains_any_word(text, _FOLLOWUP_TONE_SCOPE_KEYWORDS)
+        and _has_tone_shift_signal(text)
+    ):
+        return "tone-shift"
+    if has_additive_keyword:
         return "no-semantic-change"
     if _contains_any(text, _FOLLOWUP_TAGLINE_KEYWORDS):
         return "tagline-update"

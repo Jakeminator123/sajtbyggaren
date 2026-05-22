@@ -33,9 +33,11 @@ hardening), `991f152` (naprapat tone-sweep).
   `tone.primary="lugn"` + `tone.secondary=["förtroendeingivande"]`.
 - Guardrails: story/tagline bevaras byte-stabilt för rena tone-prompter;
   additiva prompts med `lägg till ... historia` fortsätter vara
-  `no-semantic-change`; CSS-token-effekt är inte del av denna V1-fix.
+  `no-semantic-change`; blandade additiv + tone-prompts kräver explicit
+  tone-scope (`ton`, `tone`, `känsla`, etc.) för att tone-delen ska vinna;
+  CSS-token-effekt är inte del av denna V1-fix.
 - Ny full mini-eval är **4/4 grön**:
-  `C:\Users\jakem\Desktop\sajtbyggaren-output\.evals\20260522T024927Z-mini-eval\mini-eval-report.md`.
+  `C:\Users\jakem\Desktop\sajtbyggaren-output\.evals\20260522T030947Z-mini-eval\mini-eval-report.md`.
   Naprapat-case passerar utan raw prompt-läckage; placeholder-contact-
   warnings är fortsatt väntade i mock/brief-vägen.
 - Parallell PR #58 (`cursor/b125-preview-fallback-64e2`,

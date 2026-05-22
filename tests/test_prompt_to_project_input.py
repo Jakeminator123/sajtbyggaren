@@ -1299,6 +1299,36 @@ def test_followup_merge_additive_prompts_with_tone_words_keep_semantics_stable(
 
 
 @pytest.mark.tooling
+def test_followup_mixed_additive_and_tone_prompt_preserves_additive_merge_and_updates_tone() -> None:
+    previous = _minimal_previous_project_input()
+    candidate = {
+        **previous,
+        "company": {
+            **previous["company"],
+            "tagline": "Candidate tagline",
+            "story": "Candidate story",
+        },
+        "tone": {"primary": "premium", "secondary": [], "avoid": []},
+        "services": [
+            {"id": "faq", "label": "FAQ", "summary": "Vanliga frågor."}
+        ],
+    }
+
+    prompt = "Lägg till FAQ och gör tonen mer premium."
+    merged = merge_followup_project_input(
+        previous,
+        candidate,
+        follow_up_prompt=prompt,
+    )
+
+    assert classify_followup_intent(prompt, language="sv") == "tone-shift"
+    assert merged["company"]["story"] == previous["company"]["story"]
+    assert merged["company"]["tagline"] == previous["company"]["tagline"]
+    assert merged["tone"]["primary"] == "premium"
+    assert {service["id"] for service in merged["services"]} == {"elservice", "faq"}
+
+
+@pytest.mark.tooling
 def test_followup_add_page_about_history_does_not_patch_story() -> None:
     """Additive page prompts containing story/history words stay conservative."""
     previous = _minimal_previous_project_input()
