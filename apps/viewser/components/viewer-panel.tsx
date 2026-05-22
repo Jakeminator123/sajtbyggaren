@@ -613,13 +613,21 @@ export function ViewerPanel({
         i Safari/Firefox utan credentialless-fallback, och same-machine-
         iframe kan ta emot postMessage från Site Inspector för
         Sprint 5:s live token-editor.
+
+        Positionering: ``absolute inset-0`` så iframen fyller HELA
+        canvasen oavsett vad andra flex-syskon (containerRef-divet,
+        hero-text-wrappern) gör i layouten. Utan absolute hamnar
+        iframen i flex-flödet och delar bredden med osynliga syskon,
+        vilket gör previewen halvbred. z-index ligger under
+        BuildProgressCard (z-20), error-pre (z-20), unavailable/
+        fallback (z-10) men över hero-bakgrunden.
       */}
       {localPreviewUrl && !unavailable && !showEmpty && !isBuilding && !isFinalizing ? (
         <iframe
           ref={iframeRef}
           src={localPreviewUrl}
           title="Lokal sajt-preview"
-          className="h-full w-full border-0"
+          className="absolute inset-0 z-[5] h-full w-full border-0 bg-white"
           // Tillåt scripts (Next.js client-side hydration) och
           // same-origin (vi äger localhost:<port> som vi själva
           // spawnat) men inte top-navigation eller popups från
