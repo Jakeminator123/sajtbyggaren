@@ -717,6 +717,27 @@ def _normalise_hex_color(value: Any) -> str | None:
     return cleaned.lower()
 
 
+def _foreground_for_background(hex_color: str) -> str:
+    """Return a high-contrast foreground token for a validated #RRGGBB color."""
+    red = int(hex_color[1:3], 16) / 255
+    green = int(hex_color[3:5], 16) / 255
+    blue = int(hex_color[5:7], 16) / 255
+
+    def linearise(channel: float) -> float:
+        if channel <= 0.03928:
+            return channel / 12.92
+        return ((channel + 0.055) / 1.055) ** 2.4
+
+    luminance = (
+        0.2126 * linearise(red)
+        + 0.7152 * linearise(green)
+        + 0.0722 * linearise(blue)
+    )
+    dark_contrast = (luminance + 0.05) / 0.05
+    light_contrast = 1.05 / (luminance + 0.05)
+    return "#1c1c1a" if dark_contrast >= light_contrast else "#fafaf9"
+
+
 def _token_overrides_from_project_input(
     project_input: dict[str, Any] | None,
 ) -> tuple[dict[str, str], list[str]]:
@@ -738,8 +759,10 @@ def _token_overrides_from_project_input(
 
     if primary_hex:
         overrides["primary"] = primary_hex
+        overrides["primaryForeground"] = _foreground_for_background(primary_hex)
     if accent_hex:
         overrides["accent"] = accent_hex
+        overrides["accentForeground"] = _foreground_for_background(accent_hex)
 
     if "primary" not in overrides and not primary_hex_provided:
         tone = project_input.get("tone") if isinstance(project_input.get("tone"), dict) else {}
@@ -749,8 +772,14 @@ def _token_overrides_from_project_input(
             tone_tokens = _TONE_COLOR_TOKENS.get(tone_key)
             if tone_tokens:
                 overrides["primary"] = tone_tokens["primary"]
+                overrides["primaryForeground"] = _foreground_for_background(
+                    tone_tokens["primary"]
+                )
                 if "accent" not in overrides and not accent_hex_provided:
                     overrides["accent"] = tone_tokens["accent"]
+                    overrides["accentForeground"] = _foreground_for_background(
+                        tone_tokens["accent"]
+                    )
 
     return overrides, warnings
 
@@ -759,7 +788,12 @@ def variant_css(variant: dict, token_overrides: dict[str, str] | None = None) ->
     tokens = variant["tokens"]
     color = dict(tokens["color"])
     if token_overrides:
-        for token_name in ("primary", "accent"):
+        for token_name in (
+            "primary",
+            "primaryForeground",
+            "accent",
+            "accentForeground",
+        ):
             override = token_overrides.get(token_name)
             if override:
                 color[token_name] = override

@@ -141,6 +141,7 @@ def test_brand_primary_color_hex_overrides_primary_css_token(
 
     assert warnings == []
     assert "  --primary: #22aa44;" in css
+    assert "  --primary-foreground: #1c1c1a;" in css
     assert "  --accent: #cdb98a;" in css
 
 
@@ -158,6 +159,7 @@ def test_brand_accent_color_hex_overrides_accent_css_token(
     assert warnings == []
     assert "  --primary: #1f3b5b;" in css
     assert "  --accent: #cc7722;" in css
+    assert "  --accent-foreground: #1c1c1a;" in css
 
 
 @pytest.mark.tooling
@@ -173,7 +175,9 @@ def test_tone_primary_green_maps_to_stable_green_token_when_hex_missing(
 
     assert warnings == []
     assert "  --primary: #166534;" in css
+    assert "  --primary-foreground: #fafaf9;" in css
     assert "  --accent: #dcfce7;" in css
+    assert "  --accent-foreground: #1c1c1a;" in css
 
 
 @pytest.mark.tooling
@@ -192,7 +196,24 @@ def test_explicit_brand_hex_wins_over_tone_keyword(
 
     assert warnings == []
     assert "  --primary: #445566;" in css
+    assert "  --primary-foreground: #fafaf9;" in css
     assert "  --accent: #cdb98a;" in css
+
+
+@pytest.mark.tooling
+def test_light_brand_primary_hex_gets_dark_foreground_token(
+    nordic_trust_variant: dict,
+) -> None:
+    from scripts.build_site import _token_overrides_from_project_input, variant_css
+
+    overrides, warnings = _token_overrides_from_project_input(
+        {"brand": {"primaryColorHex": "#fef3c7"}}
+    )
+    css = variant_css(nordic_trust_variant, overrides)
+
+    assert warnings == []
+    assert "  --primary: #fef3c7;" in css
+    assert "  --primary-foreground: #1c1c1a;" in css
 
 
 @pytest.mark.tooling
@@ -209,6 +230,7 @@ def test_invalid_brand_hex_is_ignored_and_variant_default_is_preserved(
     assert overrides == {}
     assert warnings == ["brand.primaryColorHex invalid; variant primary token kept"]
     assert "  --primary: #1f3b5b;" in css
+    assert "  --primary-foreground: #fafaf9;" in css
     assert "  --accent: #cdb98a;" in css
 
 
@@ -229,6 +251,7 @@ def test_invalid_explicit_brand_hex_does_not_fall_through_to_tone_keyword(
     assert overrides == {}
     assert warnings == ["brand.primaryColorHex invalid; variant primary token kept"]
     assert "  --primary: #1f3b5b;" in css
+    assert "  --primary-foreground: #fafaf9;" in css
     assert "  --accent: #cdb98a;" in css
 
 
@@ -274,7 +297,9 @@ def test_build_writes_brand_token_overrides_to_generated_globals_css(
     css = (target / "app" / "globals.css").read_text(encoding="utf-8")
 
     assert "  --primary: #224466;" in css
+    assert "  --primary-foreground: #fafaf9;" in css
     assert "  --accent: #ddaa33;" in css
+    assert "  --accent-foreground: #1c1c1a;" in css
 
 
 @pytest.mark.tooling
