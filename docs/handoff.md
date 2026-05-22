@@ -1,10 +1,12 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-22 (**Slutlig handover efter SNI-sidospår, PR #55-
-merge, rules_sync link-rewrite + separator-order-fix; Project DNA-
-spåret drivs av separat cloud agent via DRAFT PR #56**). Senaste
-produkt-/kod-läge är `465b8fa` (`fix(rules-sync): pick earliest
-separator when splitting path from query/anchor`). Föregående commits
+**Datum:** 2026-05-22 (**Project DNA semantic follow-up V1 mergad via
+PR #56; nästa Builder-spår är B139/B140 token propagation v1**). Senaste
+produkt-/kod-läge är `aef5825` (`feat(builder): add Project DNA semantic
+follow-up`). PR #56 var först uppdaterad med review-fixcommit `f8be48e`
+och squash-mergades sedan till `aef5825`; B71 är stängd och
+bugg-scope är nu **26 aktiva, 0 misplaced, 5 unknown, 105 stängda**.
+Föregående commits
 i sessionsordning från äldst till nyast: `2e274ac` (SNI core),
 `bf8d6c2`, `f40564e`, `7289732` (Steward-bumpar), `e822a2c` (PR #55-
 merge av annan agent), `06cdc51`, `369ed48`, `b75b664` (Steward-
@@ -12,9 +14,39 @@ bumpar), `f137f92` (SNI-followup-tooling), `1150424` (operator-rules
 + workspace autosave), `f6f4f30` (Steward-bump), `5114fb2` (Backoffice
 SNI-diagnostik-utökning), `18b88c0` (Steward-bump), `919d564` (rules-
 sync link-rewrite för spegel-djup), `c20270f` (Steward-bump),
-`465b8fa` (separator-order-fix).
+`465b8fa` (separator-order-fix), `891fca0` (Steward-bump), `aef5825`
+(PR #56 squash-merge).
 
-**Sessionens tre huvudleveranser:**
+**Det som nyss landade i Project DNA-spåret (`aef5825`):**
+
+- `scripts/prompt_to_project_input.py` har deterministisk FollowUp
+  Intent-klassning för `tone-shift`, `story-emphasize`,
+  `tagline-update`, `positioning-shift`, `no-semantic-change` och
+  `clarify`.
+- Tydliga följdprompter kan patcha exakt tillåtet Project Input-fält:
+  `tone.*`, `company.story` eller `company.tagline`. Additiva/no-change-
+  prompts behåller story/tagline/tone byte-stabila.
+- `projectDna` skrivs i befintlig prompt-input-meta-sidecar. Full
+  `data/projects/<projectId>/dna.json`-lagring är V2-scope enligt
+  `governance/decisions/0027-semantic-followup-merge.md`.
+- Review-fixcommitten innan squashen adresserade PR-kommentarerna:
+  explicit tagline/story-copy efter `till`/`to` kan användas när den är
+  publik-safe, breda content-ord som `texten`/`copy` triggar inte längre
+  tone-shift själva, och `projectDna.followUpIntent` speglar senaste
+  follow-up även när inga semantiska fält ändras.
+- `docs/known-issues.md` flyttar B71 till stängda med fix-SHA `aef5825`.
+
+**Nästa Builder-spår:**
+
+B139/B140 — tone/brand token propagation v1. Gör en smal renderer/token-
+sprint i `scripts/build_site.py` så explicit `brand.primaryColorHex` och
+`brand.accentColorHex` vinner över tone-keyword, whitelistade
+`tone.primary`-signaler kan mappas till tokens när hex saknas, och
+variantens default tokens bevaras exakt när ingen signal finns. Rör inte
+SNI-runtime, nya starters, variant-promotion, embeddings, Backoffice-
+editor, Project DNA V2 eller Viewser overlay om det inte krävs för test.
+
+**Sessionens tidigare tre huvudleveranser:**
 
 1. **SNI 2025-import + Discovery-map-diagnostik** (`2e274ac` +
    `f137f92` + `5114fb2`) — stdlib-only extractor, 1882-poster
