@@ -692,6 +692,88 @@ def test_typography_overlay_triggers_for_all_wizard_tone_options() -> None:
 
 
 @pytest.mark.tooling
+def test_hero_style_layout_hint_wins_over_variant_and_tone() -> None:
+    """``directives.layoutHint`` är operatörens explicit override och måste
+    vinna över både variant-mapping och Sprint B/3:s tone-fallback.
+
+    Skydd mot regression där en framtida ändring i precedence
+    skulle göra layoutHint meningslös.
+    """
+    from scripts.build_site import _hero_style_for
+
+    dossier = {
+        "directives": {"layoutHint": "centered"},
+        "tone": {"primary": "Lekfull"},
+    }
+    assert _hero_style_for(dossier, "midnight-counsel") == "centered"
+
+
+@pytest.mark.tooling
+def test_hero_style_variant_mapping_wins_over_tone() -> None:
+    """När variantId finns i ``_HERO_STYLE_BY_VARIANT`` ska vibe-valet
+    vinna över tone — operatören valde explicit vibe, det är en
+    starkare signal än tone-chip.
+    """
+    from scripts.build_site import _hero_style_for
+
+    # midnight-counsel default = split
+    dossier = {"tone": {"primary": "Lekfull"}}  # playful → centered
+    assert _hero_style_for(dossier, "midnight-counsel") == "split"
+
+
+@pytest.mark.tooling
+def test_hero_style_falls_back_to_tone_when_variant_unknown() -> None:
+    """När variantId saknas eller pekar på okänd variant ska tone-
+    fallbacken aktiveras (Sprint B/3). Säkerhetsnät för framtida
+    experimentella variants som inte registrerats i
+    ``_HERO_STYLE_BY_VARIANT``.
+    """
+    from scripts.build_site import _hero_style_for
+
+    # Okänd variant + playful tone → centered (per _HERO_STYLE_BY_TONE)
+    dossier_unknown = {"tone": {"primary": "Lekfull"}}
+    assert _hero_style_for(dossier_unknown, "experimental-future") == "centered"
+
+    # variantId=None + premium tone → split
+    dossier_premium = {"tone": {"primary": "Exklusiv / lyxig"}}
+    assert _hero_style_for(dossier_premium, None) == "split"
+
+
+@pytest.mark.tooling
+def test_hero_style_tone_fallback_supports_swedish_wizard_tags() -> None:
+    """Alla 7 wizard ``TONE_OPTIONS`` ska ge en specifik hero-stil när
+    variant saknas. Inget tone-val får vara en "tom signal".
+    """
+    from scripts.build_site import _hero_style_for
+
+    expected = {
+        "Lekfull": "centered",
+        "Varm och personlig": "centered",
+        "Lugn och förtroendeingivande": "split",
+        "Exklusiv / lyxig": "split",
+        "Professionell": "split",  # → modern → split
+        "Modern och teknisk": "split",  # → tech → split
+        "Rak och enkel": "split",  # → modern → split
+    }
+    for tone, want in expected.items():
+        dossier = {"tone": {"primary": tone}}
+        got = _hero_style_for(dossier, None)
+        assert got == want, f"tone={tone!r}: expected {want}, got {got}"
+
+
+@pytest.mark.tooling
+def test_hero_style_universal_fallback_when_nothing_provided() -> None:
+    """Tom dossier + ingen variant → "gradient" (bevarat pre-Sprint-B
+    beteende för byte-stabilitet i befintliga snapshots/tester).
+    """
+    from scripts.build_site import _hero_style_for
+
+    assert _hero_style_for({}, None) == "gradient"
+    assert _hero_style_for({"tone": {}}, None) == "gradient"
+    assert _hero_style_for({"tone": {"primary": "okänd-ton"}}, None) == "gradient"
+
+
+@pytest.mark.tooling
 def test_typography_overlay_different_wizard_tags_yield_different_palettes() -> None:
     """Lekfull och Exklusiv/lyxig måste ge OLIKA paletter, annars är hela
     Sprint A.2 + B.1-kedjan meningslös ("alla sajter ser likadana ut").

@@ -3344,6 +3344,28 @@ _HERO_STYLE_BY_VARIANT: dict[str, str] = {
     "street-vivid": "gradient",
 }
 
+# Tone-driven fallback för hero-stil när layoutHint saknas OCH varianten
+# inte har en mapping i ``_HERO_STYLE_BY_VARIANT`` (sannolikt en framtida
+# experimentell variant). Mappar mot semantiska tone-keys (post-
+# normalisering via ``_normalize_tone_key``), så svenska wizard-tags
+# som "Lekfull" / "Exklusiv / lyxig" automatiskt får rätt stil utan
+# explicit konfiguration.
+#
+# Sprint B/3 (2026-05-22): säkerhetsnät så ingen tone-väljare blir
+# helt utan effekt på above-the-fold-upplevelsen ens om operatören
+# hoppar över vibe-steget eller en framtida variant inte registrerats.
+_HERO_STYLE_BY_TONE: dict[str, str] = {
+    "calm": "split",
+    "playful": "centered",
+    "warm": "centered",
+    "premium": "split",
+    "luxury": "split",
+    "editorial": "split",
+    "bold": "gradient",
+    "modern": "split",
+    "tech": "split",
+}
+
 _VALID_HERO_STYLES: frozenset[str] = frozenset({"gradient", "centered", "split"})
 
 
@@ -3418,7 +3440,14 @@ def _hero_style_for(dossier: dict, variant_id: str | None) -> str:
     2. ``_HERO_STYLE_BY_VARIANT[variant_id]`` — vibe-aware default. A
        warm-craft variant gets a centered hero by default, a noir-
        editorial gets a split hero, etc.
-    3. ``"gradient"`` — universal fallback. Matches the pre-#2 behavior
+    3. ``_HERO_STYLE_BY_TONE[normalized_tone]`` — tone-aware fallback
+       (Sprint B/3). Triggas när varianten saknar mapping (framtida
+       experimentella variants) ELLER när variantId helt saknas men
+       tone är satt. Svenska wizard-tags ("Lekfull", "Lugn och
+       förtroendeingivande") normaliseras via ``_normalize_tone_key``
+       så samma mapping fungerar oavsett om operatören valde tone
+       via chips eller skrev en engelsk semantisk key.
+    4. ``"gradient"`` — universal fallback. Matches the pre-#2 behavior
        so tests that call ``render_home`` with no variant_id keep the
        same JSX shape they used to.
     """
@@ -3429,6 +3458,13 @@ def _hero_style_for(dossier: dict, variant_id: str | None) -> str:
             return hint
     if variant_id and variant_id in _HERO_STYLE_BY_VARIANT:
         return _HERO_STYLE_BY_VARIANT[variant_id]
+    tone = dossier.get("tone")
+    if isinstance(tone, dict):
+        primary = tone.get("primary")
+        if isinstance(primary, str) and primary.strip():
+            normalized = _normalize_tone_key(primary)
+            if normalized in _HERO_STYLE_BY_TONE:
+                return _HERO_STYLE_BY_TONE[normalized]
     return "gradient"
 
 
