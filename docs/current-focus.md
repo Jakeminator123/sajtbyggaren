@@ -30,29 +30,23 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `10ae8bf` (2026-05-22, PR #59 mergad:
-Backoffice asset graph lens v1) — produkt-/kodläget innehåller en
-read-only Asset Graph-vy i Building Blocks/Kontrollplan. PR #59 ändrade
-endast `backoffice/asset_graph.py`,
-`backoffice/views/building_blocks.py` och
-`tests/test_backoffice_asset_graph.py`. Verifiering på ren worktree mot
-`origin/main`: `ruff check .` grön och
-`pytest tests/test_backoffice_asset_graph.py -q` grön. Full PR-verifiering
-före merge körde även governance, rules-sync, term coverage, relaterade
-Backoffice-tester och hela `tests/` grönt. PR #60 är fortsatt öppen och
-orörd; inga runtime mappings, policies, starters, scaffolds eller Dossiers
-ändrades. Lokal operator-planfil i repo-roten är otrackad och ingår inte i
-detta läge.
+Last verified state: `c0b59fbe53a4e081cc8f09f22173a7050cb35b66`
+(2026-05-22, PR #60 Starter Candidate Auditor v1 mergad ovanpå PR #59
+Backoffice Asset Graph) — `main` är grön efter post-merge-kontroll.
+PR #60 tillförde endast den read-only Starter Candidate Auditorn
+(`scripts/audit_starter_candidate.py`), dess tester och term-coverage-
+uppdateringen. Intern starter-guard mot `data/starters/marketing-base`
+gav `classification=blocked`. PR #59:s read-only Asset Graph finns i
+Backoffice efter Discovery/SNI och före Konsekvensvy. Inga runtime
+mappings, policies, starters, scaffolds, Dossiers, planning/codegen-ytor
+eller B125-filer ändrades.
 
-**Direkt nästa fokus:** läs
-`governance/decisions/0025-browser-fallback-preview.md` och
-`docs/reports/b125-preview-fallback-decision-2026-05-22.md`. Välj sedan
-mellan B125 preview-fallback-implementation eller annat smalt
-produktspår innan kod startas. Vänta fortsatt med embeddings,
-SNI-runtime, variant-promotion, många nya starters och Project DNA V2
-tills en sprint är formellt vald. Öppen PR: #60
-(`tooling/starter-candidate-auditor-v1`); rör den inte om nästa uppgift
-inte uttryckligen gäller PR #60.
+**Direkt nästa fokus:** vänta på operatörens nästa sprintval. Om B125 väljs
+ska ADR 0025 och B125-rapporten läsas först; annars välj ett annat smalt
+produktspår innan kod startas. Vänta fortsatt med embeddings, SNI-runtime,
+variant-promotion, många nya starters, starter-importer, runtime-aktivering
+och Project DNA V2 tills en sprint är formellt vald. Inga öppna PRs är
+aktuella för nästa agent.
 
 Startprompt för nya agenter:
 [`docs/agent-prompts/morning-fresh-start.md`](agent-prompts/morning-fresh-start.md).

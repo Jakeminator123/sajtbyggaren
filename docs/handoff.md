@@ -1,12 +1,16 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-22 morgon (**fräsch start efter Dev Artifact Cleanup
-körd ovanpå Eval Retention v1**). Senaste produkt-/kod-commit är
-`78baaa1` (`chore(tooling): add dev artifact cleanup`); senaste
-Steward-commit är `686ab06` (`docs(steward): sync after dev artifact
-cleanup`) plus dagens morgon-handoff. Repo är rent, synkat med
-`origin/main`, full mini-eval **4/4 grön** och bugg-scope **24 aktiva,
-0 misplaced, 5 unknown, 107 stängda**. Inga öppna PRs.
+**Datum:** 2026-05-22 eftermiddag (**post-merge Steward-sync efter PR #60
+Starter Candidate Auditor och PR #59 Backoffice Asset Graph**). Verifierad
+`main` är `c0b59fbe53a4e081cc8f09f22173a7050cb35b66`
+(`tooling: Starter Candidate Auditor v1 (read-only) (#60)`). Main health är
+grön: ruff, governance, rules-sync, strict term coverage, auditorns test,
+Asset Graph-testet och hela `tests/` passerar; 4 skips är väntade totalt.
+PR #60 tillförde bara read-only auditorn, dess test och term-coverage-
+uppdateringen. PR #59:s read-only Asset Graph finns i Backoffice efter
+Discovery/SNI och före Konsekvensvy. Inga skyddade ytor ändrades:
+planning/codegen, governance policies, `data/starters`, runtime/preview/B125,
+starter-importer eller runtime-aktivering.
 
 **Nattens cleanup-runda (ingen ny commit, bara lokal disk):**
 
@@ -28,8 +32,9 @@ cleanup`) plus dagens morgon-handoff. Repo är rent, synkat med
    bug-sweep mot låg-prio B-IDs (B97/B98/B110/...) eller någon yta
    kring Project Input/builder som mini-evalen pekade på.
 
-Vänta fortsatt med embeddings, SNI-runtime, variant-promotion, många
-nya starters och Project DNA V2 tills sprinten är formellt vald.
+Vänta fortsatt med embeddings, SNI-runtime, variant-promotion, många nya
+starters, starter-importer, runtime-aktivering och Project DNA V2 tills
+sprinten är formellt vald. Rör inte B125 om det inte uttryckligen väljs.
 
 **Startprompt för ny agent:**
 
@@ -39,6 +44,10 @@ gränser för vad agenten får göra utan att fråga.
 
 **Senaste landade spår, nyast först:**
 
+- `c0b59fb` PR #60 / Starter Candidate Auditor v1, read-only
+  (`tooling: Starter Candidate Auditor v1 (read-only) (#60)`).
+- `10ae8bf` PR #59 / Backoffice Asset Graph lens v1
+  (`feat(backoffice): add asset graph lens (#59)`).
 - `78baaa1` Dev Artifact Cleanup / Eval Retention v1
   (`chore(tooling): add dev artifact cleanup`).
 - `a54e06f` mixed follow-up tone guard
