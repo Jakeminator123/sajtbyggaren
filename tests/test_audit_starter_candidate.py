@@ -221,6 +221,60 @@ def test_env_secret_blocks_import(tmp_path: Path) -> None:
 
 
 @pytest.mark.tooling
+def test_nested_env_local_blocks_import(tmp_path: Path) -> None:
+    """Regression: ``.env*``-files buried below top level must block.
+    Pre-fix the auditor only inspected ``root.iterdir()`` and would
+    classify a candidate with ``apps/web/.env.local`` as
+    ``starter-candidate-ready``, a real false-negative.
+    """
+    candidate = _ready_candidate(tmp_path / "nested-env")
+    (candidate / "apps" / "web").mkdir(parents=True)
+    (candidate / "apps" / "web" / ".env.local").write_text(
+        "DATABASE_URL=postgres://user:pass@host/db\n", encoding="utf-8"
+    )
+    result = audit_candidate(candidate)
+    assert result.classification == "blocked"
+    assert "apps/web/.env.local" in result.files_disallowed
+    assert any(
+        "apps/web/.env.local" in blocker and "nested secret leak" in blocker
+        for blocker in result.blockers
+    )
+
+
+@pytest.mark.tooling
+def test_nested_env_example_does_not_block(tmp_path: Path) -> None:
+    """``.env.example`` and friends are explicitly safe even when nested.
+    Without the allowlist exception, the nested walk would block them
+    and create false positives for valid documentation conventions.
+    """
+    candidate = _ready_candidate(tmp_path / "nested-env-example")
+    (candidate / "apps" / "web").mkdir(parents=True)
+    (candidate / "apps" / "web" / ".env.example").write_text(
+        "# example only, no secrets\n", encoding="utf-8"
+    )
+    result = audit_candidate(candidate)
+    assert result.classification == "starter-candidate-ready", (
+        f"unexpected: warnings={result.warnings}, blockers={result.blockers}"
+    )
+    assert "apps/web/.env.example" not in result.files_disallowed
+
+
+@pytest.mark.tooling
+def test_nested_env_production_blocks_import(tmp_path: Path) -> None:
+    """Less common .env-shapes (.env.production, .env.staging) must
+    still be detected as nested secrets.
+    """
+    candidate = _ready_candidate(tmp_path / "nested-env-prod")
+    (candidate / "packages" / "api").mkdir(parents=True)
+    (candidate / "packages" / "api" / ".env.production").write_text(
+        "API_KEY=real-prod-key\n", encoding="utf-8"
+    )
+    result = audit_candidate(candidate)
+    assert result.classification == "blocked"
+    assert "packages/api/.env.production" in result.files_disallowed
+
+
+@pytest.mark.tooling
 def test_auth_dependency_marks_too_integrated(tmp_path: Path) -> None:
     candidate = _ready_candidate(tmp_path / "auth")
 

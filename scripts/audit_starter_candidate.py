@@ -378,6 +378,7 @@ def audit_candidate(path: Path | str) -> AuditResult:
         return result
 
     _audit_top_level_files(root, result)
+    _audit_nested_env_files(root, result)
     _audit_package_json(root, result)
     _audit_tsconfig(root, result)
     _audit_components_json(root, result)
@@ -441,6 +442,38 @@ def _audit_top_level_files(root: Path, result: AuditResult) -> None:
             f"tracked {artefact}/ directory present; "
             "delete and add to .gitignore before import"
         )
+
+
+def _audit_nested_env_files(root: Path, result: AuditResult) -> None:
+    """Detect ``.env*`` secret files buried below the top level.
+
+    Top-level ``.env``, ``.env.local``, ``.env.production`` etc. are
+    handled in :func:`_audit_top_level_files`. This walk catches the
+    false-negative case where a candidate hides ``apps/web/.env.local``
+    (or similar) inside a sub-directory and would otherwise pass the
+    audit. Any file whose name starts with ``.env`` is treated as a
+    potential secret leak unless it is one of the explicitly allowed
+    example shapes (``.env.example``, ``.env.template``,
+    ``.env.sample``).
+    """
+    resolved_root = root.resolve()
+    for current, dirs, files in os.walk(root):
+        dirs[:] = [name for name in dirs if name not in WALK_SKIP_DIRS]
+        rel = Path(current).resolve().relative_to(resolved_root)
+        if rel == Path("."):
+            continue
+        for filename in files:
+            if filename in ENV_EXAMPLE_FILES:
+                continue
+            if filename != ".env" and not filename.startswith(".env."):
+                continue
+            entry = (rel / filename).as_posix()
+            if entry not in result.files_disallowed:
+                result.files_disallowed.append(entry)
+                result.blockers.append(
+                    f"{entry} present below top level; remove before any "
+                    "import (nested secret leak)"
+                )
 
 
 def _audit_package_json(root: Path, result: AuditResult) -> None:
