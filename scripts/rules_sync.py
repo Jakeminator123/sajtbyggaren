@@ -8,11 +8,19 @@ Körs från repo-roten:
 
 Filer som ligger i .cursor/rules/ men saknar källa i governance/rules/ varnas men tas inte bort
 automatiskt - operatören måste avgöra om de är legacy som ska migreras eller raderas.
+
+Relativa markdown-länkar skrivs om automatiskt så att de funkar från
+``.cursor/rules/``-djupet:
+
+* ``[X](../policies/y.json)`` -> ``[X](../../governance/policies/y.json)`` (samma för ``../schemas/`` och ``../decisions/``).
+* ``[X](sibling.md)`` -> ``[X](sibling.mdc)`` eftersom speglarna ligger som ``.mdc`` bredvid varandra.
+* Absoluta URL:er (``http(s)://``, ``mailto:``), ankare (``#...``) och repo-root-paths (``/...``) lämnas orörda.
 """
 
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -25,9 +33,63 @@ MIRROR_HEADER = (
     "Run: python scripts/rules_sync.py -->\n"
 )
 
+_MD_LINK_RE = re.compile(r"(?<!\!)\[([^\]]*)\]\(([^)]+)\)")
+"""Match standard inline markdown-länkar. Negativ lookbehind hoppar över bild-länkar (``![alt](src)``)."""
+
+
+def _rewrite_link_target(target: str) -> str:
+    """Skriv om en länk-target så att den funkar från ``.cursor/rules/<name>.mdc``.
+
+    Hanterar:
+
+    * Parent-relativa länkar mot syster-mappar under ``governance/`` (``../policies/...``,
+      ``../schemas/...``, ``../decisions/...``).
+    * Sibling-länkar till andra regler (``term-discipline.md`` -> ``term-discipline.mdc``).
+    * Bevarar query-/anchor-suffix (``file.md#section``) intakt.
+
+    Lämnar orörda: absoluta URL:er, ``mailto:``, repo-root-paths som börjar med ``/``,
+    djupare relativa paths som redan har ``../../`` eller liknande prefix.
+    """
+    cleaned = target.strip()
+    if not cleaned:
+        return target
+    if cleaned.startswith(("http://", "https://", "mailto:", "tel:", "#", "/")):
+        return target
+
+    # Separera path från ev. ?query/#anchor så vi bara skriver om path-delen.
+    suffix = ""
+    for separator in ("#", "?"):
+        idx = cleaned.find(separator)
+        if idx != -1:
+            suffix = cleaned[idx:]
+            cleaned = cleaned[:idx]
+            break
+
+    if cleaned.startswith("../../"):
+        rewritten = cleaned
+    elif cleaned.startswith("../"):
+        rewritten = "../../governance/" + cleaned[len("../"):]
+    elif "/" not in cleaned and cleaned.endswith(".md"):
+        rewritten = cleaned[: -len(".md")] + ".mdc"
+    else:
+        rewritten = cleaned
+
+    return rewritten + suffix
+
+
+def rewrite_links_for_mirror(source_text: str) -> str:
+    """Returnera ``source_text`` med alla länk-targets normaliserade för spegeln."""
+
+    def _sub(match: re.Match[str]) -> str:
+        label = match.group(1)
+        target = match.group(2)
+        return f"[{label}]({_rewrite_link_target(target)})"
+
+    return _MD_LINK_RE.sub(_sub, source_text)
+
 
 def expected_mirror_text(name: str, source_text: str) -> str:
-    return MIRROR_HEADER.format(name=name) + source_text
+    return MIRROR_HEADER.format(name=name) + rewrite_links_for_mirror(source_text)
 
 
 def sync(check_only: bool = False) -> int:

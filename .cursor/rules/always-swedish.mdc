@@ -34,4 +34,4 @@ alwaysApply: true
 ## Format-konsekvens
 
 - Inom ett dokument får inte två stavningar av samma ord användas (`för` och `for` blandat).
-- Inom hela projektet ska samma terminologi gälla; se [`governance/policies/naming-dictionary.v1.json`](../policies/naming-dictionary.v1.json) som sanningskälla.
+- Inom hela projektet ska samma terminologi gälla; se [`governance/policies/naming-dictionary.v1.json`](../../governance/policies/naming-dictionary.v1.json) som sanningskälla.
