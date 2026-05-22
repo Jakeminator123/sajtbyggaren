@@ -1221,11 +1221,55 @@ def test_followup_merge_tone_shift_updates_tone_only() -> None:
 
 @pytest.mark.tooling
 @pytest.mark.parametrize(
+    ("follow_up_prompt", "expected_primary", "expected_secondary"),
+    [
+        (
+            "gör den lugnare och mer förtroendeingivande",
+            "lugn",
+            "förtroendeingivande",
+        ),
+        ("gör tonen lugnare", "lugn", None),
+        ("gör sidan mer förtroendeingivande", "förtroendeingivande", None),
+    ],
+)
+def test_followup_merge_trust_and_calm_prompts_update_tone_only(
+    follow_up_prompt: str,
+    expected_primary: str,
+    expected_secondary: str | None,
+) -> None:
+    previous = _minimal_previous_project_input()
+    candidate = {
+        **previous,
+        "company": {
+            **previous["company"],
+            "tagline": "Candidate tagline",
+            "story": "Candidate story",
+        },
+        "tone": {"primary": "trustworthy", "secondary": [], "avoid": []},
+    }
+
+    merged = merge_followup_project_input(
+        previous,
+        candidate,
+        follow_up_prompt=follow_up_prompt,
+    )
+
+    assert classify_followup_intent(follow_up_prompt, language="sv") == "tone-shift"
+    assert merged["company"]["story"] == previous["company"]["story"]
+    assert merged["company"]["tagline"] == previous["company"]["tagline"]
+    assert merged["tone"]["primary"] == expected_primary
+    if expected_secondary:
+        assert expected_secondary in merged["tone"]["secondary"]
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
     "follow_up_prompt",
     [
         "lägg till premium produkt",
         "lägg till personalsida",
         "lägg till premium tjänst",
+        "lägg till en lugnare sida om vår historia",
     ],
 )
 def test_followup_merge_additive_prompts_with_tone_words_keep_semantics_stable(
