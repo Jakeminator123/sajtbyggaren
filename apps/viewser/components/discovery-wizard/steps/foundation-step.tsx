@@ -102,7 +102,9 @@ export function FoundationStep({
         Array.isArray(patch.siteType) &&
         patch.siteType.length > 0
       ) {
-        const inferred = familyForCategory(patch.siteType[0] as WizardCategoryId);
+        const inferred = familyForCategory(
+          patch.siteType[0] as WizardCategoryId,
+        );
         if (inferred) {
           patch.businessFamily = inferred.id;
         }
@@ -241,8 +243,8 @@ export function FoundationStep({
       <div>
         <SectionHeader>Verksamhetsfamilj *</SectionHeader>
         <HelperText>
-          Välj den familj som passar bäst — den bestämmer vilken typ av sajt
-          vi bygger. Du kan finjustera med sub-kategori nedanför.
+          Styr scaffold + starter — vilken Next.js-mall backend bygger på. Välj
+          den som passar bäst; sub-kategorin nedanför finjusterar copy och SEO.
         </HelperText>
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {BUSINESS_FAMILIES.map((option) => {

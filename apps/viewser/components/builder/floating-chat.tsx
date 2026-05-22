@@ -136,9 +136,7 @@ function readStoredMinimized(): boolean {
 function readStoredQuickPromptsOpen(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    return (
-      window.localStorage.getItem(STORAGE_KEY_QUICK_PROMPTS) === "true"
-    );
+    return window.localStorage.getItem(STORAGE_KEY_QUICK_PROMPTS) === "true";
   } catch {
     return false;
   }
@@ -584,6 +582,19 @@ export function FloatingChat({
       if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
         void sendFollowupPrompt(input);
+        return;
+      }
+      // Esc inom textarea: om input är icke-tom, rensa den; annars
+      // minimera panelen. Två steg så operatören inte råkar minimera
+      // mitt i en lång prompt-redigering.
+      if (event.key === "Escape") {
+        if (input.trim().length > 0) {
+          event.preventDefault();
+          setInput("");
+        } else {
+          event.preventDefault();
+          setIsMinimized(true);
+        }
       }
     },
     [input, sendFollowupPrompt],
@@ -736,9 +747,7 @@ export function FloatingChat({
               onClick={() => setQuickPromptsOpen((prev) => !prev)}
               aria-expanded={quickPromptsOpen}
               aria-controls="floating-chat-quick-prompts"
-              aria-label={
-                quickPromptsOpen ? "Dölj förslag" : "Visa förslag"
-              }
+              aria-label={quickPromptsOpen ? "Dölj förslag" : "Visa förslag"}
               title={quickPromptsOpen ? "Dölj förslag" : "Visa förslag"}
               className={cn(
                 "text-muted-foreground/70 hover:text-foreground hover:bg-muted/50",
@@ -855,7 +864,7 @@ export function FloatingChat({
                 )}
               </button>
               <span className="text-muted-foreground text-[10px]">
-                ⌘/Ctrl + Enter
+                ⌘↵ skicka · esc minimera
               </span>
             </div>
             <button

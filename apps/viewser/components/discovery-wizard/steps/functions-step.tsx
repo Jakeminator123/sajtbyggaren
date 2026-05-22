@@ -93,7 +93,9 @@ export function FunctionsStep({
       if (!family) return;
       const ids = RECOMMENDED_FUNCTIONS_BY_FAMILY[family] ?? [];
       const baseFns =
-        mode === "reset" ? new Set<string>() : new Set(answers.selectedFunctions);
+        mode === "reset"
+          ? new Set<string>()
+          : new Set(answers.selectedFunctions);
       const basePages =
         mode === "reset" ? new Set<string>() : new Set(answers.mustHave);
       for (const id of ids) {
@@ -182,8 +184,8 @@ export function FunctionsStep({
       {!family ? (
         <div className="border-border/70 bg-card/50 rounded-xl border p-4">
           <p className="text-muted-foreground text-[12px]">
-            Välj verksamhetsfamilj i steg 1 för att se relevanta funktioner.
-            Vi visar bara de funktionsgrupper som passar din typ av sajt.
+            Välj verksamhetsfamilj i steg 1 för att se relevanta funktioner. Vi
+            visar bara de funktionsgrupper som passar din typ av sajt.
           </p>
         </div>
       ) : null}
@@ -249,7 +251,8 @@ export function FunctionsStep({
       <div>
         <FieldLabel>Primär CTA</FieldLabel>
         <HelperText>
-          Vad ska besökaren göra? Välj en eller skriv egen.
+          Vad ska besökaren göra? Backend keyword-mappar texten till conversion
+          goals (boka, ring, offert, köp, kontakt). Välj en eller skriv egen.
         </HelperText>
         <div className="mt-2">
           <ChipRow>
@@ -328,8 +331,9 @@ function FunctionGroupCard({
   onToggle: (choice: FunctionChoice) => void;
 }) {
   const Icon = ICON_MAP[group.iconKey];
-  const selectedCount = group.choices.filter((c) => selected.includes(c.id))
-    .length;
+  const selectedCount = group.choices.filter((c) =>
+    selected.includes(c.id),
+  ).length;
   return (
     <div className="border-border/70 bg-card/40 rounded-xl border p-4">
       <div className="mb-3 flex items-start gap-3">

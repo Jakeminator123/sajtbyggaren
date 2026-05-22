@@ -58,9 +58,7 @@ export function VisualStep({
 }) {
   // Bestäm scaffold-hint från family (om vald) eller fall tillbaka till
   // local-service-business som default.
-  const family = BUSINESS_FAMILIES.find(
-    (f) => f.id === answers.businessFamily,
-  );
+  const family = BUSINESS_FAMILIES.find((f) => f.id === answers.businessFamily);
   const scaffoldHint = family?.scaffoldHint ?? "local-service-business";
   const vibes = useMemo(() => vibesForScaffold(scaffoldHint), [scaffoldHint]);
 
@@ -82,7 +80,8 @@ export function VisualStep({
       vibe: {
         ...answers.vibe,
         vibeId: defaultVibe.id,
-        typographyFeel: answers.vibe.typographyFeel || defaultVibe.defaultTypographyFeel,
+        typographyFeel:
+          answers.vibe.typographyFeel || defaultVibe.defaultTypographyFeel,
       },
     });
     // Vi vill bara köra denna effekt en gång per mount. Family/vibe-id
@@ -136,9 +135,7 @@ export function VisualStep({
 
   const removeMoodImage = (assetId: string) => {
     onChange({
-      moodImages: answers.moodImages.filter(
-        (img) => img.assetId !== assetId,
-      ),
+      moodImages: answers.moodImages.filter((img) => img.assetId !== assetId),
     });
   };
 
@@ -213,7 +210,9 @@ export function VisualStep({
                 : "border-border/70 hover:border-foreground/40",
             ].join(" ")}
           >
-            <span className="text-foreground font-medium">Välj egna färger</span>
+            <span className="text-foreground font-medium">
+              Välj egna färger
+            </span>
             <span className="text-muted-foreground ml-1 text-[11px]">
               (skriver över vibens)
             </span>
@@ -277,7 +276,7 @@ export function VisualStep({
                 />
               </div>
             </div>
-            <p className="text-muted-foreground sm:col-span-2 text-[11px]">
+            <p className="text-muted-foreground text-[11px] sm:col-span-2">
               Tips: dina hex-värden skrivs in i Project Input men kräver
               backend-stöd (Gap 1 i <code>docs/backend-handoff.md</code>) för
               att faktiskt skriva över vibens defaultfärger.
@@ -290,8 +289,8 @@ export function VisualStep({
       <div>
         <SectionHeader>Typografi-känsla</SectionHeader>
         <HelperText>
-          Avgör om typsnittet ska kännas tidlöst, klassiskt, geometriskt
-          eller organiskt.
+          Avgör om typsnittet ska kännas tidlöst, klassiskt, geometriskt eller
+          organiskt.
         </HelperText>
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {TYPOGRAPHY_FEEL_OPTIONS.map((option) => {
@@ -371,7 +370,57 @@ export function VisualStep({
         </ChipRow>
       </div>
 
-      {/* 5. Referenser. */}
+      {/* 5. Hero-layout (operator-override, valfritt). */}
+      <div>
+        <SectionHeader>Hero-layout (valfritt)</SectionHeader>
+        <HelperText>
+          Vill du överstyra automat-valet? Annars härleder vi layouten från
+          din vibe (varma vibes blir centrerade, editorial blir split, etc).
+          Skickas som <code>directives.layoutHint</code> till backend.
+        </HelperText>
+        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {[
+            { id: "" as const, label: "Auto", description: "Härled från vibe" },
+            { id: "gradient" as const, label: "Gradient", description: "Klassisk, vänsterstaplad" },
+            { id: "centered" as const, label: "Centrerat", description: "Lugnt, editorialt" },
+            { id: "split" as const, label: "Split", description: "Text + bild eller blob" },
+          ].map((option) => {
+            const isSelected = answers.vibe.layoutHint === option.id;
+            return (
+              <button
+                key={option.id || "auto"}
+                type="button"
+                onClick={() =>
+                  onChange({
+                    vibe: { ...answers.vibe, layoutHint: option.id },
+                  })
+                }
+                aria-pressed={isSelected}
+                className={[
+                  "flex flex-col gap-2 rounded-lg border p-3 text-left transition-colors",
+                  isSelected
+                    ? "border-foreground bg-foreground/[0.04]"
+                    : "border-border/70 hover:border-foreground/40",
+                ].join(" ")}
+              >
+                <span aria-hidden className="block">
+                  <HeroLayoutGlyph variant={option.id} />
+                </span>
+                <span className="flex flex-col leading-tight">
+                  <span className="text-foreground text-[12.5px] font-medium tracking-tight">
+                    {option.label}
+                  </span>
+                  <span className="text-muted-foreground mt-0.5 text-[11px] leading-snug">
+                    {option.description}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 6. Referenser. */}
       <TextField
         label="Referenser ('tänk lite som…')"
         optional
@@ -393,15 +442,16 @@ export function VisualStep({
         }
         placeholder="t.ex. 'världsbäst', 'revolutionerande', branschjargong vi tycker är slitet"
         rows={2}
+        helper="Komma-separerad lista. Skickas till copy-modellen som tone.avoid[] så den undviker dessa formuleringar i all text."
       />
 
       {/* 7. Mood-bilder. */}
       <div>
         <SectionHeader>Mood-bilder (valfritt)</SectionHeader>
         <HelperText>
-          1–5 referensbilder för stämning/färg. Används som inspiration —
-          syns inte på sajten. Spara filer du gillar från Pinterest, andra
-          sajter, eller egna foton.
+          1–5 referensbilder för stämning/färg. Används som inspiration — syns
+          inte på sajten. Spara filer du gillar från Pinterest, andra sajter,
+          eller egna foton.
         </HelperText>
         {answers.moodImages.length > 0 ? (
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -430,6 +480,80 @@ export function VisualStep({
   );
 }
 
+/**
+ * Mini-SVG-glyf för hero-layout-väljarna (sektion 5 ovan). Visar en
+ * skiss av layouten i en 80×40-box så operatorn ser visuellt vad
+ * gradient/centered/split innebär utan att behöva klicka för preview.
+ */
+function HeroLayoutGlyph({
+  variant,
+}: {
+  variant: "" | "gradient" | "centered" | "split";
+}) {
+  if (variant === "centered") {
+    return (
+      <svg
+        viewBox="0 0 80 40"
+        className="text-muted-foreground/60 h-10 w-full"
+        fill="currentColor"
+      >
+        <rect x="0" y="0" width="80" height="40" rx="3" className="fill-current opacity-10" />
+        <rect x="22" y="9" width="36" height="3" rx="1.5" />
+        <rect x="28" y="16" width="24" height="2" rx="1" className="opacity-50" />
+        <rect x="30" y="22" width="20" height="4" rx="2" className="text-foreground fill-current" />
+      </svg>
+    );
+  }
+  if (variant === "split") {
+    return (
+      <svg
+        viewBox="0 0 80 40"
+        className="text-muted-foreground/60 h-10 w-full"
+        fill="currentColor"
+      >
+        <rect x="0" y="0" width="80" height="40" rx="3" className="fill-current opacity-10" />
+        <rect x="6" y="10" width="22" height="3" rx="1.5" />
+        <rect x="6" y="16" width="28" height="2" rx="1" className="opacity-50" />
+        <rect x="6" y="22" width="16" height="4" rx="2" className="text-foreground fill-current" />
+        <rect x="44" y="6" width="30" height="28" rx="3" className="opacity-30" />
+      </svg>
+    );
+  }
+  if (variant === "gradient") {
+    return (
+      <svg
+        viewBox="0 0 80 40"
+        className="text-muted-foreground/60 h-10 w-full"
+        fill="currentColor"
+      >
+        <defs>
+          <linearGradient id="heroGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="currentColor" stopOpacity="0.05" />
+            <stop offset="100%" stopColor="currentColor" stopOpacity="0.25" />
+          </linearGradient>
+        </defs>
+        <rect x="0" y="0" width="80" height="40" rx="3" fill="url(#heroGradient)" />
+        <rect x="6" y="12" width="32" height="3" rx="1.5" />
+        <rect x="6" y="18" width="44" height="2" rx="1" className="opacity-50" />
+        <rect x="6" y="24" width="18" height="4" rx="2" className="text-foreground fill-current" />
+      </svg>
+    );
+  }
+  // "" / "Auto" — three little dots indicating "we decide".
+  return (
+    <svg
+      viewBox="0 0 80 40"
+      className="text-muted-foreground/60 h-10 w-full"
+      fill="currentColor"
+    >
+      <rect x="0" y="0" width="80" height="40" rx="3" className="fill-current opacity-10" />
+      <circle cx="30" cy="20" r="3" />
+      <circle cx="40" cy="20" r="3" className="opacity-60" />
+      <circle cx="50" cy="20" r="3" className="opacity-30" />
+    </svg>
+  );
+}
+
 function VibeCard({
   vibe,
   selected,
@@ -447,7 +571,7 @@ function VibeCard({
       className={[
         "group relative overflow-hidden rounded-xl border text-left transition-all",
         selected
-          ? "border-foreground shadow-md ring-foreground/10 ring-2"
+          ? "border-foreground ring-foreground/10 shadow-md ring-2"
           : "border-border/70 hover:border-foreground/40 hover:shadow-sm",
       ].join(" ")}
     >

@@ -134,11 +134,22 @@ export type WizardBrand = {
  * `brand.accentColorHex` (kräver att Gap 1 stängs av backend; se
  * `docs/backend-handoff.md`).
  */
+/**
+ * Hero-layout-preferens för startsidan. Tom sträng betyder "automatisk"
+ * — då härleder backend layout från vald `vibeId` (warm-craft → centered,
+ * midnight-counsel → split, nordic-trust → gradient, etc.). När operator
+ * vill överstyra valet skickas värdet vidare via
+ * `directives.layoutHint` och konsumeras av build_site.py:_hero_style_for.
+ */
+export type HeroLayoutHint = "" | "gradient" | "centered" | "split";
+
 export type WizardVibe = {
   vibeId: string;
   useCustomColors: boolean;
   typographyFeel: TypographyFeelId | "";
   references: string;
+  /** Operator-override av hero-layout. Tom = automatic från vibe. */
+  layoutHint: HeroLayoutHint;
 };
 
 /**
@@ -237,6 +248,7 @@ export function emptyWizardAnswers(): WizardAnswers {
       useCustomColors: false,
       typographyFeel: "",
       references: "",
+      layoutHint: "",
     },
     brand: {
       toneTags: [],

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { DEMO_PROFILES } from "./demo-answers";
+import { DirectivesPreview } from "./directives-preview";
 import { ContentOrchestratorStep } from "./steps/content-orchestrator";
 import { FoundationStep, type ScrapeState } from "./steps/foundation-step";
 import { FunctionsStep } from "./steps/functions-step";
@@ -214,6 +215,34 @@ export function DiscoveryWizard({
   const isFirst = stepIndex === 0;
   const isLast = stepIndex === WIZARD_STEP_ORDER.length - 1;
   const canSkip = SKIPPABLE_STEPS.has(step);
+
+  /**
+   * Globala wizard-keyboard-shortcuts. Aktiveras bara när wizardin är
+   * öppen. esc stängs automatiskt av Radix Dialog så vi hanterar bara
+   * primär-actionen här:
+   *   - ⌘↵ / Ctrl+↵ ⇒ goNext (eller finish när sista steget)
+   *
+   * Capture-fasen undviks så textarea/input-fält som har lokala
+   * cmd+enter-handlers (t.ex. för newline-insert) får företräde. Vi
+   * lyssnar på bubble-fasen och kollar att event inte redan är
+   * defaultPrevented av en lokal handler.
+   */
+  useEffect(() => {
+    if (!open) return;
+    const handler = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      if (event.key !== "Enter") return;
+      if (!event.metaKey && !event.ctrlKey) return;
+      event.preventDefault();
+      if (isLast) {
+        finish();
+      } else {
+        goNext();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, isLast, goNext, finish]);
 
   const meta = STEP_META[step];
   const isScraping = scrapeState?.status === "loading";
@@ -434,7 +463,17 @@ export function DiscoveryWizard({
                 />
               ) : null}
               {step === "media" ? (
-                <MediaStep answers={answers} onChange={updateAnswers} />
+                <>
+                  <MediaStep answers={answers} onChange={updateAnswers} />
+                  {/* Sista-steget transparens-block: visar exakt vilka
+                      directives backend kommer att läsa baserat på alla
+                      svar. Hjälper operatören förstå om något fält
+                      "fattas" innan de klickar Skapa sajt. */}
+                  <DirectivesPreview
+                    answers={answers}
+                    rawPrompt={initialPrompt}
+                  />
+                </>
               ) : null}
             </div>
           </div>
@@ -511,6 +550,7 @@ export function DiscoveryWizard({
                   onClick={finish}
                   disabled={!!validationError}
                   className="bg-foreground text-background hover:bg-foreground/90 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm disabled:opacity-40"
+                  title="⌘↵ för att skapa sajten"
                 >
                   Skapa sajt →
                 </Button>
@@ -521,10 +561,14 @@ export function DiscoveryWizard({
                   onClick={goNext}
                   disabled={!!validationError}
                   className="bg-foreground text-background hover:bg-foreground/90 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm disabled:opacity-40"
+                  title="⌘↵ för att fortsätta"
                 >
                   Fortsätt →
                 </Button>
               )}
+              <span className="text-muted-foreground hidden text-[10px] sm:inline">
+                ⌘↵
+              </span>
             </div>
           </div>
         </section>

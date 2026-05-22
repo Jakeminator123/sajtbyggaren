@@ -12,6 +12,14 @@
  *      kan använda som fallback om vissa fält saknas — det följer
  *      mönstret i `prompt-builder.tsx` där originalprompten alltid
  *      bevaras som `rawPrompt`.
+ *
+ * **schemaVersion 2 (2026-05-22):** Lägger till ett `directives`-block med
+ * direkt strukturerad data (scaffoldHint, variantHint, pageCount,
+ * requestedCapabilities, conversionGoals, tone, brand, notesForPlanner)
+ * så backend kan hoppa över `briefModel`-extraktion när data redan finns.
+ * Specificerat i `docs/contracts/wizard-discovery.v2.md`. Bakåtkompatibelt:
+ * `directives` är optionellt, backend faller tillbaka till v1-flödet
+ * (LLM-extraktion på `rawPrompt` + `composeMasterPrompt`-text) när det saknas.
  */
 
 import {
@@ -28,14 +36,70 @@ import {
 } from "./wizard-constants";
 import type { WizardAnswers } from "./wizard-types";
 
+/**
+ * Direkt strukturerad data som backend kan använda utan LLM-extraktion.
+ * Speglar `WizardDirectives` i `docs/contracts/wizard-discovery.v2.md`.
+ *
+ * Alla fält utöver `language` är optional eftersom strippEmpty rensar
+ * tomma listor och strängar — backend behandlar `undefined` som "fanns inte
+ * i wizardin, gör som du gjorde i v1".
+ */
+export type WizardDirectives = {
+  language: "sv" | "en";
+  scaffoldHint: string;
+  variantHint?: string;
+  /**
+   * Hero-layout-override för startsidan. När satt skickas det till
+   * `build_site.py:_hero_style_for` (via dossier.directives) och vinner
+   * över både vibe-default och variant.id-mapping. Tre tillåtna värden:
+   *
+   * - `gradient`: full-width gradient-panel med vänsterstaplade
+   *   element (klassisk minimal-look)
+   * - `centered`: text-centrerat med generös vertikal rytm (lugnt och
+   *   editorialt)
+   * - `split`: två-kolumns layout med hero-bild eller färgblock
+   *   (editorialt, produktfokus)
+   */
+  layoutHint?: "gradient" | "centered" | "split";
+  pageCount?: number;
+  businessType?: string;
+  requestedCapabilities?: string[];
+  conversionGoals?: string[];
+  tone?: {
+    primary?: string;
+    secondary?: string[];
+    avoid?: string[];
+  };
+  brand?: {
+    primaryColorHex?: string;
+    accentColorHex?: string;
+    designStyle?: string;
+  };
+  /**
+   * Strukturerad lista över unika säljpunkter. Speglar fri-text-versionen
+   * som finns i `notesForPlanner` men ger backend en deterministisk källa
+   * för att rendera USP-chips i hero (`build_site.py:_render_hero_block`
+   * i en kommande pass) utan att parsea text. Max 4 punkter — fler
+   * skulle göra hero-blocket otydligt visuellt.
+   */
+  uniqueSellingPoints?: string[];
+  notesForPlanner?: string;
+};
+
 export type DiscoveryPayload = {
   /**
    * Schema-version så backend kan utveckla kontraktet utan att bryta
    * klienten. Heter `schemaVersion` (inte `version`) — `test_viewser_files`
    * förbjuder client-payload med `version: z` på prompt-routen eftersom
    * det fältet tillhör Project Input-meta-sidecar (`*.meta.json`).
+   *
+   * `1` = legacy (ingen `directives`). `2` = inkluderar `directives`-block.
+   * Frontend bumpar alltid till `2` när `buildDiscoveryPayload` används
+   * eftersom helpern alltid härleder directives — men backend måste
+   * tolerera att `directives` är `undefined` om någon framtida caller
+   * skulle skicka bara `rawPrompt + answers` direkt.
    */
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   /** Free-form pitch som operatorn skrev i prompt-builder-input:en. */
   rawPrompt: string;
   /** Computed branch from governance options; backend double-checks it. */
@@ -44,6 +108,11 @@ export type DiscoveryPayload = {
   scaffoldHint: string;
   /** Trimmed copy of all wizard answers — tomma fält strippade. */
   answers: WizardAnswers;
+  /**
+   * v2-direktivblock. Optional för bakåtkompatibilitet — om det saknas
+   * faller backend tillbaka till LLM-extraktion via `briefModel`.
+   */
+  directives?: WizardDirectives;
 };
 
 /** Tar bort tomma strängar, tomma arrays och tomma objekt rekursivt. */
@@ -54,7 +123,8 @@ function stripEmpty<T>(value: T): T {
       .filter((item) => {
         if (item === null || item === undefined) return false;
         if (typeof item === "string") return item.trim().length > 0;
-        if (typeof item === "object" && Object.keys(item).length === 0) return false;
+        if (typeof item === "object" && Object.keys(item).length === 0)
+          return false;
         return true;
       });
     return next as unknown as T;
@@ -80,6 +150,281 @@ function stripEmpty<T>(value: T): T {
   return value;
 }
 
+/**
+ * Speglar `detect_language` från `packages/generation/brief/extract.py` —
+ * cascade: svenska stop-ord → engelska stop-ord → å/ä/ö-detektion → "sv".
+ * Algoritmen matchar inte byte-för-byte (Python äger source of truth),
+ * men ger backend ett deterministiskt språkförslag som den kan validera
+ * eller skriva över utan att behöva köra LLM-extraktion bara för språk.
+ */
+const SWEDISH_HINTS = new Set([
+  "skapa",
+  "för",
+  "hemsida",
+  "sajt",
+  "och",
+  "att",
+  "med",
+  "på",
+  "elektriker",
+  "rörmokare",
+  "tandläkare",
+  "restaurang",
+  "i",
+  "av",
+  "ett",
+  "en",
+  "kontakt",
+  "tjänster",
+  "om",
+  "oss",
+]);
+const ENGLISH_HINTS = new Set([
+  "the",
+  "a",
+  "an",
+  "and",
+  "or",
+  "but",
+  "in",
+  "on",
+  "at",
+  "for",
+  "of",
+  "with",
+  "to",
+  "from",
+  "is",
+  "are",
+  "was",
+  "were",
+  "be",
+  "been",
+  "create",
+  "build",
+  "make",
+  "need",
+  "want",
+  "website",
+  "site",
+  "page",
+  "store",
+  "shop",
+  "my",
+  "our",
+  "your",
+]);
+const SWEDISH_CHARS = /[åäöÅÄÖ]/;
+
+function detectLanguage(prompt: string): "sv" | "en" {
+  const tokens = new Set(
+    prompt
+      .split(/\s+/)
+      .map((t) => t.toLowerCase().replace(/[,.!?:;]/g, ""))
+      .filter(Boolean),
+  );
+  for (const t of tokens) {
+    if (SWEDISH_HINTS.has(t)) return "sv";
+  }
+  for (const t of tokens) {
+    if (ENGLISH_HINTS.has(t)) return "en";
+  }
+  if (SWEDISH_CHARS.test(prompt)) return "sv";
+  return "sv";
+}
+
+/**
+ * Mappar fri CTA-text till backend-slugs (`conversion_goals`-enum i `SiteBrief`).
+ * Multipla CTA:s i samma sträng (t.ex. "Boka eller ring oss") ger flera slugs.
+ * Returnerar en deduplicerad lista. Tom array om inget matchar — backend
+ * faller tillbaka till sin egen extraktion.
+ */
+const CTA_KEYWORD_MAP: ReadonlyArray<{
+  slug: string;
+  keywords: readonly string[];
+}> = [
+  { slug: "booking", keywords: ["bok", "book", "reserv"] },
+  { slug: "call", keywords: ["ring", "call", "tel ", "telefon"] },
+  {
+    slug: "quote-request",
+    keywords: ["offert", "quote", "rfp", "prisförfrågan", "begär"],
+  },
+  {
+    slug: "newsletter-signup",
+    keywords: ["nyhetsbrev", "newsletter", "prenumer", "subscribe"],
+  },
+  { slug: "purchase", keywords: ["köp", "buy", "shop", "beställ", "order"] },
+  {
+    slug: "contact",
+    keywords: ["kontakt", "contact", "hör av", "skriv", "mejla", "email"],
+  },
+];
+
+function mapCtaToConversionGoals(cta: string): string[] {
+  const lower = cta.toLowerCase();
+  const found: string[] = [];
+  for (const { slug, keywords } of CTA_KEYWORD_MAP) {
+    if (keywords.some((kw) => lower.includes(kw))) {
+      if (!found.includes(slug)) found.push(slug);
+    }
+  }
+  return found;
+}
+
+/**
+ * Härleder ett `WizardDirectives`-block från färdig-ifylld `WizardAnswers`.
+ *
+ * Returnerar alltid ett objekt med minst `language` och `scaffoldHint`.
+ * Övriga fält inkluderas bara när wizardin har ett tydligt värde — det är
+ * skillnaden mot att skicka "tomsträng" som skulle få backend att tro
+ * att operatören explicit valde tomt. `stripEmpty`-pipeline:n rensar bort
+ * resultat:et till slut så vi inte skickar tomma listor/objekt.
+ */
+export function deriveWizardDirectives(
+  rawPrompt: string,
+  answers: WizardAnswers,
+  scaffoldHint: string,
+): WizardDirectives {
+  const directives: WizardDirectives = {
+    language: detectLanguage(rawPrompt),
+    scaffoldHint,
+  };
+
+  // variantHint — när operatorn valt en vibe. Tomsträng = "default per
+  // family", och backend ska INTE få den som directive (annars kan den
+  // misslyckas att hitta variant-mapping).
+  if (answers.vibe.vibeId.trim()) {
+    directives.variantHint = answers.vibe.vibeId.trim();
+  }
+
+  // pageCount — `mustHave[]` listar sidor UTÖVER startsidan (Start är
+  // alltid med). En naiv ansats: pageCount = mustHave.length + 1.
+  // Backend respekterar redan brief.pageCount (B138-fixen) så det här
+  // sätter en explicit övre gräns på route-emission.
+  if (answers.mustHave.length > 0) {
+    directives.pageCount = answers.mustHave.length + 1;
+  }
+
+  // businessType — använd familje-id som slug. Backend kan vidareöversätta
+  // till en mer specifik slug ("painter", "dental-clinic") via heuristik
+  // på `rawPrompt` om de vill, men familje-id räcker för scaffold-val.
+  if (answers.businessFamily) {
+    directives.businessType = answers.businessFamily;
+  }
+
+  // requestedCapabilities — slå upp capability per selectedFunction.
+  // Tomma och okända IDs hoppas över; dedupe sker via accumulator.
+  if (answers.selectedFunctions.length > 0) {
+    const capabilities: string[] = [];
+    for (const fnId of answers.selectedFunctions) {
+      const choice = findFunctionChoice(fnId);
+      if (choice?.capability && !capabilities.includes(choice.capability)) {
+        capabilities.push(choice.capability);
+      }
+    }
+    if (capabilities.length > 0) {
+      directives.requestedCapabilities = capabilities;
+    }
+  }
+
+  // conversionGoals — keyword-mappa primaryCta. Tom om inget matchar.
+  if (answers.primaryCta.trim()) {
+    const goals = mapCtaToConversionGoals(answers.primaryCta);
+    if (goals.length > 0) {
+      directives.conversionGoals = goals;
+    }
+  }
+
+  // tone — första toneTag som primary, resten som secondary, wordsToAvoid
+  // split:as på komma till tone.avoid[]. Backend kan vidare merge:a med
+  // briefModel-output om de har en extra tone-keyword som inte fanns i wizardin.
+  const tone: NonNullable<WizardDirectives["tone"]> = {};
+  if (answers.brand.toneTags.length > 0) {
+    tone.primary = answers.brand.toneTags[0];
+    if (answers.brand.toneTags.length > 1) {
+      tone.secondary = answers.brand.toneTags.slice(1);
+    }
+  }
+  if (answers.brand.wordsToAvoid.trim()) {
+    const avoid = answers.brand.wordsToAvoid
+      .split(/[,;]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (avoid.length > 0) {
+      tone.avoid = avoid;
+    }
+  }
+  if (Object.keys(tone).length > 0) {
+    directives.tone = tone;
+  }
+
+  // brand — färgerna skickas alltid när de är non-empty. `useCustomColors`
+  // är ett UI-flagg som styr om operatorn AVSIKTLIGT valde att skriva över
+  // variantens default; här inkluderar vi färgerna i directives utan att
+  // bry oss om flaggan (backend ser dem och kan välja policy själv).
+  const brand: NonNullable<WizardDirectives["brand"]> = {};
+  if (answers.brand.primaryColorHex.trim()) {
+    brand.primaryColorHex = answers.brand.primaryColorHex.trim();
+  }
+  if (answers.brand.accentColorHex.trim()) {
+    brand.accentColorHex = answers.brand.accentColorHex.trim();
+  }
+  if (answers.brand.designStyle.trim()) {
+    brand.designStyle = answers.brand.designStyle.trim();
+  }
+  if (Object.keys(brand).length > 0) {
+    directives.brand = brand;
+  }
+
+  // layoutHint — operator-override av hero-layout. Värdet kommer från
+  // visual-step (WizardVibe.layoutHint). Tom sträng = "automatic" och
+  // skickas inte vidare; backend härleder då layout från vibe + variant.
+  if (
+    answers.vibe.layoutHint === "gradient" ||
+    answers.vibe.layoutHint === "centered" ||
+    answers.vibe.layoutHint === "split"
+  ) {
+    directives.layoutHint = answers.vibe.layoutHint;
+  }
+
+  // uniqueSellingPoints — strukturerad lista. Speglar samma data som
+  // går in i notesForPlanner-texten nedan, men i strukturerad form så
+  // backend kan rendera dem som hero-chips utan att parsea text.
+  // Trimmar och tar bort tomma; kapar vid 4 så hero-layouten inte
+  // svämmar över.
+  if (answers.uniqueSellingPoints.length > 0) {
+    const structuredUsps = answers.uniqueSellingPoints
+      .map((u) => u.trim())
+      .filter(Boolean)
+      .slice(0, 4);
+    if (structuredUsps.length > 0) {
+      directives.uniqueSellingPoints = structuredUsps;
+    }
+  }
+
+  // notesForPlanner — concat:ar specialRequests + uniqueSellingPoints
+  // som fritext. Behålls även när directives.uniqueSellingPoints satt
+  // ovan så v1-konsumenter (backend som ännu inte läser den strukturerade
+  // listan) fortfarande får informationen.
+  const notesParts: string[] = [];
+  if (answers.specialRequests.trim()) {
+    notesParts.push(answers.specialRequests.trim());
+  }
+  if (answers.uniqueSellingPoints.length > 0) {
+    const usps = answers.uniqueSellingPoints
+      .map((u) => u.trim())
+      .filter(Boolean);
+    if (usps.length > 0) {
+      notesParts.push(`USP: ${usps.join(", ")}`);
+    }
+  }
+  if (notesParts.length > 0) {
+    directives.notesForPlanner = notesParts.join(" — ");
+  }
+
+  return directives;
+}
+
 export function buildDiscoveryPayload(
   rawPrompt: string,
   answers: WizardAnswers,
@@ -88,7 +433,10 @@ export function buildDiscoveryPayload(
   if (!validateDiscoveryCategoryIds(answers.siteType, discoveryOptions)) {
     throw new Error("Okänd kategori i discovery-svaren.");
   }
-  const branch = resolveContentBranchFromOptions(answers.siteType, discoveryOptions);
+  const branch = resolveContentBranchFromOptions(
+    answers.siteType,
+    discoveryOptions,
+  );
 
   // Scaffold hint — använd businessFamily som primär källa när den finns,
   // annars fall tillbaka till siteType-baserade resolvern. Detta gör att
@@ -99,12 +447,29 @@ export function buildDiscoveryPayload(
     ? family.scaffoldHint
     : resolveScaffoldHintFromOptions(answers.siteType, discoveryOptions);
 
+  const directives = deriveWizardDirectives(rawPrompt, answers, scaffoldHint);
+
+  // Strippa tomma fält i directives så payloaden förblir liten. `stripEmpty`
+  // tar bort tomma arrays/objekt rekursivt; det matchar v1-strategin för
+  // `answers`-blocket. Resultatet kan vara ett directives-objekt med bara
+  // `language` + `scaffoldHint` om operatorn knappt fyllde i något.
+  const cleanedDirectives = stripEmpty(directives);
+
+  // schemaVersion förblir `1` tills backend (`scripts/prompt_to_project_input.py`
+  // `_load_discovery_file`) bumpar sin acceptans till 2. Backend ignorerar
+  // idag extra fält som `directives` (Python dict.get bryr sig inte), så
+  // detta är en ren additiv ändring — payload-shape är bakåtkompatibel.
+  // När backend implementerar v2-pathen (se docs/contracts/wizard-discovery.v2.md
+  // sektion "Backend-konsumtion") bumpar vi version i en koordinerad PR
+  // tillsammans med backend och uppdaterar `_load_discovery_file` att tillåta
+  // `schemaVersion in {1, 2}`.
   return {
     schemaVersion: 1,
     rawPrompt: rawPrompt.trim(),
     contentBranch: branch,
     scaffoldHint,
     answers: stripEmpty(answers),
+    directives: cleanedDirectives,
   };
 }
 
@@ -138,13 +503,20 @@ function listSection(title: string, items: string[]): string | null {
 }
 
 function bulletSection(title: string, lines: string[]): string | null {
-  const cleaned = lines.map((line) => line.trim()).filter((line) => line.length > 0);
+  const cleaned = lines
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
   if (cleaned.length === 0) return null;
   const bullets = cleaned.map((line) => `  - ${line}`).join("\n");
   return `${title}:\n${bullets}`;
 }
 
-function formatService(item: { name: string; price?: string; description?: string; durationMinutes?: number }): string {
+function formatService(item: {
+  name: string;
+  price?: string;
+  description?: string;
+  durationMinutes?: number;
+}): string {
   const parts: string[] = [item.name.trim()];
   if (item.price?.trim()) parts.push(`(${item.price.trim()})`);
   if (typeof item.durationMinutes === "number" && item.durationMinutes > 0) {
@@ -161,7 +533,10 @@ export function composeMasterPrompt(
   discoveryOptions: readonly discoveryOption[] = fallbackDiscoveryOptions(),
 ): string {
   const sections: string[] = [];
-  const branch = resolveContentBranchFromOptions(answers.siteType, discoveryOptions);
+  const branch = resolveContentBranchFromOptions(
+    answers.siteType,
+    discoveryOptions,
+  );
   const categoryLabels = answers.siteType
     .map((id) => discoveryOptions.find((c) => c.id === id)?.label ?? id)
     .filter(Boolean);
@@ -177,13 +552,20 @@ export function composeMasterPrompt(
   // 2. Företag / kontakt — formateras så LLM kan extrahera
   // companyName, contactPhone, contactEmail, contactAddress, locationHint.
   const companyLines: string[] = [];
-  if (answers.companyName.trim()) companyLines.push(`Namn: ${answers.companyName.trim()}`);
-  if (answers.offer.trim()) companyLines.push(`Vad vi gör: ${answers.offer.trim()}`);
-  if (answers.existingSite.trim()) companyLines.push(`Befintlig hemsida: ${answers.existingSite.trim()}`);
-  if (answers.contact.phone.trim()) companyLines.push(`Telefon: ${answers.contact.phone.trim()}`);
-  if (answers.contact.email.trim()) companyLines.push(`E-post: ${answers.contact.email.trim()}`);
-  if (answers.contact.address.trim()) companyLines.push(`Adress: ${answers.contact.address.trim()}`);
-  if (answers.contact.openingHours.trim()) companyLines.push(`Öppettider: ${answers.contact.openingHours.trim()}`);
+  if (answers.companyName.trim())
+    companyLines.push(`Namn: ${answers.companyName.trim()}`);
+  if (answers.offer.trim())
+    companyLines.push(`Vad vi gör: ${answers.offer.trim()}`);
+  if (answers.existingSite.trim())
+    companyLines.push(`Befintlig hemsida: ${answers.existingSite.trim()}`);
+  if (answers.contact.phone.trim())
+    companyLines.push(`Telefon: ${answers.contact.phone.trim()}`);
+  if (answers.contact.email.trim())
+    companyLines.push(`E-post: ${answers.contact.email.trim()}`);
+  if (answers.contact.address.trim())
+    companyLines.push(`Adress: ${answers.contact.address.trim()}`);
+  if (answers.contact.openingHours.trim())
+    companyLines.push(`Öppettider: ${answers.contact.openingHours.trim()}`);
   if (companyLines.length > 0) {
     sections.push(`[Företag och kontakt]\n${companyLines.join("\n")}`);
   }
@@ -229,7 +611,8 @@ export function composeMasterPrompt(
     const projects = answers.projects.map((project) => {
       const parts: string[] = [project.name.trim()];
       if (project.client?.trim()) parts.push(`(${project.client.trim()})`);
-      if (project.description?.trim()) parts.push(`— ${project.description.trim()}`);
+      if (project.description?.trim())
+        parts.push(`— ${project.description.trim()}`);
       return parts.join(" ");
     });
     const bullet = bulletSection("Projekt och case", projects);
@@ -249,9 +632,14 @@ export function composeMasterPrompt(
   if (cuisine) contentLines.push(cuisine);
   const dietary = listSection("Kostalternativ", [...answers.dietaryTags]);
   if (dietary) contentLines.push(dietary);
-  if (answers.priceTier.trim()) contentLines.push(`Prisnivå: ${answers.priceTier.trim()}.`);
-  if (answers.bookingUrl.trim()) contentLines.push(`Bokningslänk: ${answers.bookingUrl.trim()}.`);
-  const usps = listSection("Unika säljpunkter (USP)", answers.uniqueSellingPoints);
+  if (answers.priceTier.trim())
+    contentLines.push(`Prisnivå: ${answers.priceTier.trim()}.`);
+  if (answers.bookingUrl.trim())
+    contentLines.push(`Bokningslänk: ${answers.bookingUrl.trim()}.`);
+  const usps = listSection(
+    "Unika säljpunkter (USP)",
+    answers.uniqueSellingPoints,
+  );
   if (usps) contentLines.push(usps);
   if (contentLines.length > 0) {
     sections.push(`[Innehåll]\n${contentLines.join("\n")}`);
@@ -260,10 +648,14 @@ export function composeMasterPrompt(
   // 5. Story — `company.story` / `/om-oss`-copy hämtas härifrån, men
   // vision och history hjälper LLM att forma notesForPlanner.
   const storyLines: string[] = [];
-  if (answers.aboutText.trim()) storyLines.push(`Om oss: ${answers.aboutText.trim()}`);
-  if (answers.historyText.trim()) storyLines.push(`Historia: ${answers.historyText.trim()}`);
-  if (answers.visionText.trim()) storyLines.push(`Vision och mission: ${answers.visionText.trim()}`);
-  if (answers.contactIntroText.trim()) storyLines.push(`Kontaktsidans intro: ${answers.contactIntroText.trim()}`);
+  if (answers.aboutText.trim())
+    storyLines.push(`Om oss: ${answers.aboutText.trim()}`);
+  if (answers.historyText.trim())
+    storyLines.push(`Historia: ${answers.historyText.trim()}`);
+  if (answers.visionText.trim())
+    storyLines.push(`Vision och mission: ${answers.visionText.trim()}`);
+  if (answers.contactIntroText.trim())
+    storyLines.push(`Kontaktsidans intro: ${answers.contactIntroText.trim()}`);
   if (storyLines.length > 0) {
     sections.push(`[Story]\n${storyLines.join("\n\n")}`);
   }
@@ -302,7 +694,9 @@ export function composeMasterPrompt(
 
   // 7. Ton / brand / visuell stil — driver tone[] och planner-input.
   const brandLines: string[] = [];
-  const vibeMeta = answers.vibe.vibeId ? findVibe(answers.vibe.vibeId) : undefined;
+  const vibeMeta = answers.vibe.vibeId
+    ? findVibe(answers.vibe.vibeId)
+    : undefined;
   if (vibeMeta) {
     brandLines.push(`Vald vibe: ${vibeMeta.label} — ${vibeMeta.description}`);
   }
@@ -320,14 +714,20 @@ export function composeMasterPrompt(
   }
   if (answers.brand.primaryColorHex.trim()) {
     const note = answers.vibe.useCustomColors ? " (operator-override)" : "";
-    brandLines.push(`Primärfärg: ${answers.brand.primaryColorHex.trim()}${note}.`);
+    brandLines.push(
+      `Primärfärg: ${answers.brand.primaryColorHex.trim()}${note}.`,
+    );
   }
   if (answers.brand.accentColorHex.trim()) {
     const note = answers.vibe.useCustomColors ? " (operator-override)" : "";
-    brandLines.push(`Accentfärg: ${answers.brand.accentColorHex.trim()}${note}.`);
+    brandLines.push(
+      `Accentfärg: ${answers.brand.accentColorHex.trim()}${note}.`,
+    );
   }
   if (answers.brand.wordsToAvoid.trim()) {
-    brandLines.push(`Undvik dessa ord och uttryck: ${answers.brand.wordsToAvoid.trim()}.`);
+    brandLines.push(
+      `Undvik dessa ord och uttryck: ${answers.brand.wordsToAvoid.trim()}.`,
+    );
   }
   if (brandLines.length > 0) {
     sections.push(`[Ton och visuellt språk]\n${brandLines.join("\n")}`);
@@ -360,7 +760,9 @@ export function composeMasterPrompt(
   if (answers.assets.heroImage) {
     const hero = answers.assets.heroImage;
     const altText = hero.alt.trim() || "Hero-bild";
-    const subjectNote = hero.visionSubject ? ` — visar ${hero.visionSubject}` : "";
+    const subjectNote = hero.visionSubject
+      ? ` — visar ${hero.visionSubject}`
+      : "";
     assetLines.push(`Hero-bild på startsidan: "${altText}"${subjectNote}.`);
   }
   if (answers.assets.gallery.length > 0) {
@@ -369,7 +771,9 @@ export function composeMasterPrompt(
       const altText = item.alt.trim() || "Foto";
       const placement = item.placement ?? "gallery";
       const subjectNote = item.visionSubject ? ` — ${item.visionSubject}` : "";
-      assetLines.push(`  - "${altText}" (placering: ${placement})${subjectNote}`);
+      assetLines.push(
+        `  - "${altText}" (placering: ${placement})${subjectNote}`,
+      );
     }
   }
   if (assetLines.length > 0) {
@@ -422,6 +826,9 @@ export function composeMasterPrompt(
  * från och med denna ändring, men gamla tester och plan-skisser kan
  * fortfarande importera den enklare varianten. Returnerar samma text.
  */
-export function composeEnrichedPrompt(rawPrompt: string, answers: WizardAnswers): string {
+export function composeEnrichedPrompt(
+  rawPrompt: string,
+  answers: WizardAnswers,
+): string {
   return composeMasterPrompt(rawPrompt, answers);
 }

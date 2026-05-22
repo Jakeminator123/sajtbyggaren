@@ -52,6 +52,7 @@ function genbergPainter(): WizardAnswers {
       useCustomColors: true,
       typographyFeel: "classic-serif",
       references: "byggcompaniet.se, klipporna.se",
+      layoutHint: "",
     },
     brand: {
       toneTags: ["Professionell", "Varm och personlig"],
@@ -182,6 +183,7 @@ function lillaBageriet(): WizardAnswers {
       useCustomColors: true,
       typographyFeel: "classic-serif",
       references: "saturday-bakeries.com, fabrique.com",
+      layoutHint: "",
     },
     brand: {
       toneTags: ["Varm och personlig", "Lugn och förtroendeingivande"],
@@ -299,6 +301,7 @@ function norrlandsCbd(): WizardAnswers {
       useCustomColors: true,
       typographyFeel: "organic",
       references: "loveandsage.se, the-ordinary.com",
+      layoutHint: "",
     },
     brand: {
       toneTags: ["Lugn och förtroendeingivande", "Professionell"],
