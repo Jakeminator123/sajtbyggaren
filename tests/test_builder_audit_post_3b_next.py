@@ -212,6 +212,40 @@ def test_contact_requires_all_four_fields() -> None:
 
 
 @pytest.mark.governance
+def test_project_input_schema_allows_wizard_directives_and_usps() -> None:
+    """Wizard v2 fields are optional, additive Project Input data."""
+    schema = _load_schema()
+    payload = {
+        "siteId": "minimal",
+        "scaffoldId": "local-service-business",
+        "variantId": "nordic-trust",
+        "language": "sv",
+        "company": {
+            "name": "Test",
+            "businessType": "test",
+            "tagline": "Tagline",
+            "story": "Story",
+        },
+        "location": {"city": "x", "country": "y", "serviceAreas": ["z"]},
+        "services": [{"id": "s", "label": "S", "summary": "summary"}],
+        "tone": {},
+        "trustSignals": [],
+        "conversionGoals": [],
+        "requestedCapabilities": [],
+        "directives": {"layoutHint": "split"},
+        "uniqueSellingPoints": ["25 års erfarenhet", "Lokala hantverkare"],
+        "contact": {
+            "phone": "+46",
+            "email": "x@y.z",
+            "addressLines": ["a"],
+            "openingHours": "9-17",
+        },
+        "selectedDossiers": [],
+    }
+    jsonschema.Draft202012Validator(schema).validate(payload)
+
+
+@pytest.mark.governance
 def test_schema_rejects_payload_missing_company_tagline() -> None:
     """B29 negative: a payload that satisfies the OLD permissive schema
     (company.required = [name, businessType] only) must now fail

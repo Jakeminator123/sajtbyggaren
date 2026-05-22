@@ -343,3 +343,46 @@ def test_build_traces_invalid_brand_hex_and_keeps_variant_defaults(
     assert "  --primary: #1f3b5b;" in css
     assert "variant_tokens.warning" in trace_text
     assert "brand.primaryColorHex invalid" in trace_text
+
+
+@pytest.mark.tooling
+def test_build_renders_directive_hero_layout_and_usps(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    from scripts.build_site import build
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    project_input = json.loads(
+        (REPO_ROOT / "examples" / "painter-palma.project-input.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    project_input["siteId"] = "directive-hero-site"
+    project_input["directives"] = {"layoutHint": "centered"}
+    project_input["uniqueSellingPoints"] = [
+        "25 års erfarenhet",
+        "Lokala hantverkare",
+        "Tecken < och { escapade",
+    ]
+    project_input_path = tmp_path / "directive-hero-site.project-input.json"
+    project_input_path.write_text(
+        json.dumps(project_input, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    target, _run_dir = build(
+        project_input_path,
+        do_build=False,
+        runs_dir=tmp_path / "runs",
+        generated_dir=tmp_path / "generated",
+    )
+
+    page = (target / "app" / "page.tsx").read_text(encoding="utf-8")
+    hero = page.split("</section>", 1)[0]
+    assert "text-center" in hero
+    assert "justify-center" in hero
+    assert "<Check" in hero
+    assert '{"25 års erfarenhet"}' in hero
+    assert '{"Lokala hantverkare"}' in hero
+    assert '{"Tecken < och { escapade"}' in hero

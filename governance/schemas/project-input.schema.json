@@ -128,6 +128,24 @@
       "items": {"type": "string"},
       "description": "Capability slugs from governance/policies/capability-map.v1.json. Empty list is valid (no extra capabilities requested)."
     },
+    "directives": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Additiva wizard-direktiv som buildern kan konsumera deterministiskt utan att ändra scaffold- eller variant-scheman.",
+      "properties": {
+        "layoutHint": {
+          "type": "string",
+          "enum": ["gradient", "centered", "split"],
+          "description": "Operatorns hero-layout-override från discovery-wizardens visual-step."
+        }
+      }
+    },
+    "uniqueSellingPoints": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "maxItems": 4,
+      "description": "Korta säljpunkter som rendras som chips i hero. Max 4 för att hålla layouten ren."
+    },
     "contact": {
       "type": "object",
       "additionalProperties": false,

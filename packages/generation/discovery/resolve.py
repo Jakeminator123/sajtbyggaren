@@ -188,6 +188,8 @@ def _classify_capability(
 _DEFAULT_SCAFFOLD_ID = "local-service-business"
 _DEFAULT_VARIANT_ID = "nordic-trust"
 _DEFAULT_STARTER_ID = "marketing-base"
+_VALID_LAYOUT_HINTS = {"gradient", "centered", "split"}
+_MAX_UNIQUE_SELLING_POINTS = 4
 
 # Postnummer-extraktion från svensk adress (samma regex som tidigare).
 _SWEDISH_POSTCODE_RE = re.compile(r"\b\d{3}\s?\d{2}\s+([A-Za-zÅÄÖåäö\-]+)")
@@ -437,6 +439,7 @@ def resolve_discovery(
     _apply_services_field(project_input, answers, field_sources)
     _apply_brand_and_assets(project_input, answers, field_sources)
     _apply_tone_field(project_input, answers, field_sources)
+    _apply_directives_fields(project_input, payload, field_sources)
     _apply_location_from_address(project_input)
 
     # ------------------------------------------------------------------
@@ -926,6 +929,49 @@ def _apply_tone_field(
             tone_block = project_input.setdefault("tone", {})
             tone_block["avoid"] = tokens[:10]
             field_sources["tone.avoid"] = "wizard"
+
+
+def _apply_directives_fields(
+    project_input: dict[str, Any],
+    payload: dict[str, Any] | None,
+    field_sources: dict[str, FieldSourceLiteral],
+) -> None:
+    """Persist safe v2 wizard directives into Project Input.
+
+    ``layoutHint`` is intentionally kept under ``directives`` because the
+    builder treats it as an operator rendering override. ``uniqueSellingPoints``
+    is promoted top-level so it validates and feeds hero chips directly.
+    """
+    if not isinstance(payload, dict):
+        return
+    directives = payload.get("directives")
+    if not isinstance(directives, dict):
+        return
+
+    layout_hint = directives.get("layoutHint")
+    if isinstance(layout_hint, str):
+        clean_layout = layout_hint.strip()
+        if clean_layout in _VALID_LAYOUT_HINTS:
+            project_input["directives"] = {"layoutHint": clean_layout}
+            field_sources["directives.layoutHint"] = "wizard"
+
+    raw_usps = directives.get("uniqueSellingPoints")
+    if isinstance(raw_usps, list):
+        usps: list[str] = []
+        seen: set[str] = set()
+        for item in raw_usps:
+            if not isinstance(item, str):
+                continue
+            clean = item.strip()
+            if not clean or clean in seen:
+                continue
+            usps.append(clean)
+            seen.add(clean)
+            if len(usps) >= _MAX_UNIQUE_SELLING_POINTS:
+                break
+        if usps:
+            project_input["uniqueSellingPoints"] = usps
+            field_sources["uniqueSellingPoints"] = "wizard"
 
 
 def _apply_location_from_address(project_input: dict[str, Any]) -> None:

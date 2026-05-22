@@ -2465,8 +2465,8 @@ def _load_discovery_file(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise SystemExit("--discovery filen måste vara ett JSON-objekt.")
     schema_version = payload.get("schemaVersion")
-    if schema_version != 1:
-        raise SystemExit("--discovery payload måste ha schemaVersion=1.")
+    if schema_version not in (1, 2):
+        raise SystemExit("--discovery payload måste ha schemaVersion 1 eller 2.")
     return payload
 
 
