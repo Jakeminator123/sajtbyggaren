@@ -834,15 +834,22 @@ Innan `git push origin main`:
 
 ## Blocked items
 
-**PR #55** (`fix/viewser-followup-stale-state`, commit `042319c`,
-`fix(viewser): stale run-following och artefakt-panel vid run-byte`) är
-öppen men ägs av ett parallell-agent-spår, **inte** SNI-sidospåret.
-Branchen skapades mitt i SNI-sessionen 2026-05-22 av annan agent/operatör
-och ändrar `apps/viewser/app/page.tsx` + 5 andra viewser-filer +
-`tests/test_viewser_files.py` (117 insertions, 8 deletions). PR:n
-introducerar bl.a. `ApplyRunsContext`-symbolen som inte är allowlistad i
-`scripts/check_term_coverage.py` — nästa orkestrator bör stämma av med
-operatören innan eventuell merge eller term-allowlist-tillägg.
+**PR #56** (`cursor/project-dna-followup-cdad`, **DRAFT**,
+`feat(builder): add Project DNA semantic follow-up`, 5 filer +1152
+/-19, skapad 2026-05-22 23:59 UTC av cloud agent) är **det aktiva
+DNA-spåret**. Lokal orchestrator ska inte starta egna DNA-ändringar
+och inte review:a/merge:a PR:n förrän cloud-agenten flaggar den som
+ready-for-review (då görs Scout RO-review innan eventuell merge). Det
+här är operatörens uttryckliga arbetsdelning 2026-05-22: cloud agent
+äger DNA-spåret tills annat sägs.
+
+**PR #55** är mergad i `e822a2c` (2026-05-22 23:50 UTC). Tre viewser-
+fixar: stale-closure i `applyRunsData`, `setBundle(null)`-cleanup i Run
+Details och ny `runSiteIdUnknown`-prop. Reviewerns observation om att
+PR-bodyn felaktigt nämnde ett `ApplyRunsContext`-named-typ stämmer —
+mergens andra commit gjorde ctx inline. Branchen `fix/viewser-followup-
+stale-state` raderad från origin; lokal kopia kan finnas kvar i
+operatörens separata worktree `../sajtbyggaren-pr55/`.
 
 PR #51 stängdes utan merge. PR #53/B143 och PR #52/B141 är mergade.
 Äldre PR-blockers är stängda/mergade: PR #38 mergades 2026-05-19
