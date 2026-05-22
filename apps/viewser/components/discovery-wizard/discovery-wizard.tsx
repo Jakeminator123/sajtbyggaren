@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Loader2, Sparkles, X } from "lucide-react";
+import { Check, Keyboard, Loader2, Sparkles, X } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -75,6 +75,27 @@ type discoveryOptionsState = {
  * Stilen efterliknar Apple / Linear / Vercel onboarding: tunn typografi,
  * generös whitespace, monokrom palett.
  */
+/**
+ * Source-of-truth för hjälp-overlayens lista. Håll i synk med
+ * keyboard-handlern i useEffect — om du lägger till en ny shortcut
+ * där, lägg till en rad här också, annars upptäcker operatören den
+ * aldrig via UI.
+ *
+ * `keys` är display-strängar (visas i `<kbd>`-element), inte event-
+ * matchningar. ⌘ visas för operatörer; handlern matchar både
+ * `metaKey` och `ctrlKey` så Windows/Linux fungerar med samma listing.
+ */
+const KEYBOARD_SHORTCUTS: ReadonlyArray<{
+  label: string;
+  keys: ReadonlyArray<string>;
+}> = [
+  { label: "Fortsätt till nästa steg", keys: ["⌘↵", "⌘→"] },
+  { label: "Gå tillbaka", keys: ["⌘←"] },
+  { label: "Hoppa till steg 1–5", keys: ["⌘1", "⌘2", "⌘3", "⌘4", "⌘5"] },
+  { label: "Visa/dölj denna lista", keys: ["?", "⌘/"] },
+  { label: "Stäng wizarden", keys: ["esc"] },
+];
+
 const STEP_META: Record<
   WizardStepId,
   { eyebrow: string; description: string }
@@ -173,6 +194,22 @@ export function DiscoveryWizard({
     setStepIndex((idx) => Math.min(WIZARD_STEP_ORDER.length - 1, idx + 1));
   }, []);
 
+  // Hopp direkt till specifikt steg via tangentbordsgenväg eller
+  // sidebar-klick. Negativa eller out-of-range index normaliseras
+  // tyst — vi vill aldrig att en stale shortcut kraschar wizarden.
+  const goToStep = useCallback((targetIdx: number) => {
+    setStepIndex(
+      Math.min(
+        WIZARD_STEP_ORDER.length - 1,
+        Math.max(0, Math.floor(targetIdx)),
+      ),
+    );
+  }, []);
+
+  // Hjälp-overlay som listar alla tillgängliga genvägar. Toggle:as
+  // av "?" eller Cmd+/ — operatören kan stänga med Esc eller klick.
+  const [helpOpen, setHelpOpen] = useState(false);
+
   /**
    * Fyll wizarden med nästa demo-profil i rotationen. Tre profiler
    * täcker våra två fungerande scaffolds (local-service-business +
@@ -217,35 +254,109 @@ export function DiscoveryWizard({
   const canSkip = SKIPPABLE_STEPS.has(step);
 
   /**
-   * Globala wizard-keyboard-shortcuts. Aktiveras bara när wizardin är
+   * Globala wizard-keyboard-shortcuts. Aktiveras bara när wizarden är
    * öppen. esc stängs automatiskt av Radix Dialog så vi hanterar bara
-   * primär-actionen här:
-   *   - ⌘↵ / Ctrl+↵ ⇒ goNext (eller finish när sista steget)
+   * de aktiva genvägarna här:
+   *
+   *   - ⌘↵ / Ctrl+↵        ⇒ goNext (eller finish på sista steget)
+   *   - ⌘→ / Ctrl+→        ⇒ goNext
+   *   - ⌘← / Ctrl+←        ⇒ goBack
+   *   - ⌘1..⌘5 / Ctrl+1..5 ⇒ hoppa direkt till steget
+   *   - ⌘/ / Ctrl+/ / ?    ⇒ toggla hjälp-overlayen
    *
    * Capture-fasen undviks så textarea/input-fält som har lokala
-   * cmd+enter-handlers (t.ex. för newline-insert) får företräde. Vi
-   * lyssnar på bubble-fasen och kollar att event inte redan är
+   * handlers (t.ex. cmd+enter för newline) får företräde. Vi lyssnar
+   * på bubble-fasen och kollar att event inte redan är
    * defaultPrevented av en lokal handler.
+   *
+   * Numeric-shortcut:s blockeras när operatören skriver i ett input
+   * eller textarea — annars skulle ⌘1 i ett namn-fält oavsiktligt
+   * hoppa till första steget och förstöra hens text.
    */
   useEffect(() => {
     if (!open) return;
     const handler = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
-      if (event.key !== "Enter") return;
-      if (!event.metaKey && !event.ctrlKey) return;
-      event.preventDefault();
-      if (isLast) {
-        finish();
-      } else {
-        goNext();
+      const isMod = event.metaKey || event.ctrlKey;
+      const target = event.target as HTMLElement | null;
+      const inEditable =
+        !!target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
+
+      // ⌘↵ / ⌘→ — fortsätt
+      if (isMod && (event.key === "Enter" || event.key === "ArrowRight")) {
+        event.preventDefault();
+        if (isLast) finish();
+        else goNext();
+        return;
+      }
+      // ⌘← — tillbaka
+      if (isMod && event.key === "ArrowLeft") {
+        event.preventDefault();
+        goBack();
+        return;
+      }
+      // ⌘1..⌘5 — hoppa till steg (blockerad i editable fält)
+      if (isMod && /^[1-9]$/.test(event.key) && !inEditable) {
+        const num = parseInt(event.key, 10);
+        if (num >= 1 && num <= WIZARD_STEP_ORDER.length) {
+          event.preventDefault();
+          goToStep(num - 1);
+          return;
+        }
+      }
+      // ? eller ⌘/ — toggla hjälp-overlay
+      if ((isMod && event.key === "/") || (event.key === "?" && !inEditable)) {
+        event.preventDefault();
+        setHelpOpen((prev) => !prev);
+        return;
+      }
+      // Esc inom hjälp-overlay stänger den (Radix Dialog hanterar
+      // huvud-dialogen). Vi prioriterar att stänga overlay först om
+      // den är öppen så Esc inte stänger hela wizarden.
+      if (event.key === "Escape" && helpOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+        setHelpOpen(false);
+        return;
       }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [open, isLast, goNext, finish]);
+  }, [open, isLast, goNext, goBack, finish, goToStep, helpOpen]);
 
   const meta = STEP_META[step];
   const isScraping = scrapeState?.status === "loading";
+
+  // Auto-focus på första interaktiva element i nytt steg så operatören
+  // direkt kan börja skriva utan att klicka. Sker bara på desktop —
+  // mobile skulle annars få keyboard-popup vid varje stegbyte vilket
+  // är distraherande. requestAnimationFrame säkerställer att DOM:en
+  // för det nya steget har renderats innan vi söker.
+  const contentRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    if (typeof window === "undefined") return;
+    // Hoppa över på små viewports — undvik keyboard-popup på mobil.
+    if (window.innerWidth < 768) return;
+    const raf = requestAnimationFrame(() => {
+      const root = contentRef.current;
+      if (!root) return;
+      const candidate = root.querySelector<HTMLElement>(
+        'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), [role="button"]:not([disabled]), button:not([disabled])',
+      );
+      // Säkerställ att vi inte stjäl fokus från ett element som
+      // redan har det (t.ex. om operatören precis klickat på en
+      // sidebar-länk).
+      if (candidate && document.activeElement === document.body) {
+        candidate.focus({ preventScroll: true });
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [open, stepIndex]);
 
   useEffect(() => {
     if (!open) return;
@@ -438,7 +549,7 @@ export function DiscoveryWizard({
 
           <div className="bg-border/50 h-px w-full" aria-hidden />
 
-          <div className="flex-1 overflow-y-auto px-10 py-8">
+          <div ref={contentRef} className="flex-1 overflow-y-auto px-10 py-8">
             <div className="mx-auto max-w-2xl">
               {step === "foundation" ? (
                 <FoundationStep
@@ -566,11 +677,91 @@ export function DiscoveryWizard({
                   Fortsätt →
                 </Button>
               )}
+              <button
+                type="button"
+                onClick={() => setHelpOpen((prev) => !prev)}
+                aria-label="Visa tangentbordsgenvägar"
+                title="Tangentbordsgenvägar (?)"
+                className="text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] focus-visible:ring-ring/40 hidden h-7 w-7 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none sm:inline-flex"
+              >
+                <Keyboard className="h-3.5 w-3.5" aria-hidden />
+              </button>
               <span className="text-muted-foreground hidden text-[10px] sm:inline">
                 ⌘↵
               </span>
             </div>
           </div>
+
+          {/* Keyboard shortcuts hjälp-overlay. Toggle:as via ? eller
+              ⌘/. Light backdrop + centrerad kort. Behåller fokus
+              inom overlayen så Tab cyklar mellan stäng-knappen och
+              ev. action-element. */}
+          {helpOpen ? (
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Tangentbordsgenvägar"
+              className="bg-background/85 absolute inset-0 z-40 flex items-center justify-center p-6 backdrop-blur-sm sm:rounded-3xl"
+              onClick={(event) => {
+                if (event.target === event.currentTarget) {
+                  setHelpOpen(false);
+                }
+              }}
+            >
+              <div className="bg-card border-border/70 w-full max-w-md overflow-hidden rounded-2xl border shadow-2xl">
+                <div className="border-border/60 flex items-center justify-between border-b px-5 py-3">
+                  <div className="flex items-center gap-2">
+                    <Keyboard className="text-foreground/70 h-4 w-4" />
+                    <h3 className="text-foreground text-[14px] font-semibold tracking-tight">
+                      Tangentbordsgenvägar
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setHelpOpen(false)}
+                    aria-label="Stäng"
+                    className="text-muted-foreground hover:text-foreground rounded-md p-1 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <dl className="divide-border/40 flex flex-col divide-y">
+                  {KEYBOARD_SHORTCUTS.map((shortcut) => (
+                    <div
+                      key={shortcut.label}
+                      className="flex items-center justify-between gap-4 px-5 py-2.5"
+                    >
+                      <dt className="text-foreground/85 text-[12.5px]">
+                        {shortcut.label}
+                      </dt>
+                      <dd className="flex shrink-0 items-center gap-1">
+                        {shortcut.keys.map((key, idx) => (
+                          <span key={`${shortcut.label}-${idx}`} className="contents">
+                            {idx > 0 ? (
+                              <span className="text-muted-foreground text-[10px]">
+                                eller
+                              </span>
+                            ) : null}
+                            <kbd className="border-border/60 bg-background text-foreground/80 inline-flex h-5 min-w-5 items-center justify-center rounded border px-1.5 font-mono text-[10.5px]">
+                              {key}
+                            </kbd>
+                          </span>
+                        ))}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+                <div className="border-border/60 bg-muted/20 border-t px-5 py-2.5">
+                  <p className="text-muted-foreground text-[11px]">
+                    Tryck <kbd className="border-border/60 bg-background mx-0.5 inline-flex h-4 items-center justify-center rounded border px-1 font-mono text-[10px]">?</kbd>{" "}
+                    eller{" "}
+                    <kbd className="border-border/60 bg-background mx-0.5 inline-flex h-4 items-center justify-center rounded border px-1 font-mono text-[10px]">⌘/</kbd>{" "}
+                    när som helst för att öppna/stänga denna lista.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </section>
 
         {/* Scrape-overlay — täcker hela popupen så operatören tydligt

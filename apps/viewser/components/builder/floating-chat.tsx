@@ -1,12 +1,19 @@
 "use client";
 
 import {
+  AlertTriangle,
   ChevronUp,
+  Clock,
   ImagePlus,
   Loader2,
   MessageSquare,
   Minus,
+  RotateCcw,
   Send,
+  ServerCrash,
+  ShieldAlert,
+  Sparkles,
+  WifiOff,
   X,
 } from "lucide-react";
 import {
@@ -26,6 +33,11 @@ import {
 } from "@/components/prompt-builder";
 import { Textarea } from "@/components/ui/textarea";
 import type { AssetRef } from "@/lib/asset-store/types";
+import {
+  CATEGORY_LABEL,
+  summarizeChangesFromPrompt,
+  type BuildChange,
+} from "@/lib/build-changes";
 import { cn } from "@/lib/utils";
 
 /**
@@ -47,6 +59,23 @@ import { cn } from "@/lib/utils";
  * (`right-6 bottom-6`) tills mount-effekten kör.
  */
 
+/**
+ * Klassificering av error-meddelanden för rikare visuell + actionable
+ * presentation. Mappar 1:1 mot ikon-paletten i ``ErrorBubble``.
+ *
+ * Klassificeringen sker en gång i ``classifyFollowupError`` när
+ * meddelandet skapas, så MessageBubble kan vara dum presentations-
+ * komponent utan att veta hur klassificering fungerar.
+ */
+type ErrorKind =
+  | "rate-limit"
+  | "timeout"
+  | "schema"
+  | "auth"
+  | "quality"
+  | "network"
+  | "generic";
+
 type ChatMessage = {
   id: string;
   role: "user" | "assistant" | "system";
@@ -55,6 +84,24 @@ type ChatMessage = {
   variant?: "info" | "success" | "warning" | "error";
   /** Antal bilagor som skickades tillsammans med användarens prompt. */
   attachmentCount?: number;
+  /**
+   * För error-meddelanden: kort tip-text (visad mindre under huvud-
+   * meddelandet) + den fulla error-strängen från servern (expanderbar
+   * "Visa detaljer") + den ursprungliga prompten som operatören kan
+   * retry:a med ett klick.
+   */
+  errorKind?: ErrorKind;
+  errorTip?: string;
+  errorDetails?: string;
+  retryPrompt?: string;
+  /**
+   * För success-meddelanden: en kort lista över ändringar som
+   * troligen gjordes baserat på operatörens prompt. Heuristik från
+   * `summarizeChangesFromPrompt` — backend exponerar ingen exakt
+   * diff än, men detta ger operatören en känsla av vad som hänt
+   * utan att öppna Inspectorn.
+   */
+  changes?: BuildChange[];
 };
 
 /**
@@ -152,18 +199,21 @@ const FOLLOWUP_BUILD_STEPS: ReadonlyArray<{
  * generic-tip som ändå är bättre än "okänt fel".
  */
 function classifyFollowupError(rawError: string): {
+  kind: ErrorKind;
   message: string;
   tip: string;
 } {
   const text = rawError.toLowerCase();
   if (text.includes("rate limit") || text.includes("429")) {
     return {
+      kind: "rate-limit",
       message: "AI-tjänsten är överbelastad just nu.",
       tip: "Vänta 10–20 sekunder och försök igen.",
     };
   }
   if (text.includes("timeout") || text.includes("timed out")) {
     return {
+      kind: "timeout",
       message: "Bygget tog för lång tid.",
       tip: "Prova en mindre, mer specifik ändring.",
     };
@@ -174,33 +224,54 @@ function classifyFollowupError(rawError: string): {
     text.includes("invalid")
   ) {
     return {
+      kind: "schema",
       message: "Sajtens struktur kunde inte uppdateras automatiskt.",
       tip: "Beskriv ändringen mer konkret (vilken sektion, vad ska ändras).",
     };
   }
   if (text.includes("openai") || text.includes("anthropic") || text.includes("api key")) {
     return {
+      kind: "auth",
       message: "AI-tjänsten är otillgänglig.",
       tip: "Kontrollera att .env.local har giltig OPENAI_API_KEY.",
     };
   }
   if (text.includes("quality") || text.includes("typecheck") || text.includes("build failed")) {
     return {
+      kind: "quality",
       message: "Den nya versionen klarade inte Quality Gate.",
       tip: "Pipelinen avbröt automatiskt — sajten är oförändrad. Prova en mer specifik instruktion.",
     };
   }
   if (text.includes("network") || text.includes("fetch") || text.includes("econnreset")) {
     return {
+      kind: "network",
       message: "Nätverket avbröts.",
       tip: "Kontrollera anslutningen och försök igen.",
     };
   }
   return {
+    kind: "generic",
     message: rawError.length > 200 ? rawError.slice(0, 200) + "…" : rawError,
     tip: "Prova en mer specifik instruktion eller dela upp ändringen i flera steg.",
   };
 }
+
+/**
+ * Returnera en ikon (lucide-react-komponent) per error-kind. Hålls
+ * separat från `classifyFollowupError` så klassificeringen kan testas
+ * utan React-bundlare och bubblan kan lägga till nya ikoner utan att
+ * röra klassificeringen.
+ */
+const ERROR_ICONS: Record<ErrorKind, typeof AlertTriangle> = {
+  "rate-limit": Clock,
+  timeout: Clock,
+  schema: AlertTriangle,
+  auth: ShieldAlert,
+  quality: ServerCrash,
+  network: WifiOff,
+  generic: AlertTriangle,
+};
 
 const ALLOWED_UPLOAD_MIMES = new Set([
   "image/png",
@@ -307,15 +378,19 @@ function defaultPosition(width: number, height: number): Position {
 function summarizeBuildResult(
   payload: PromptApiResponse,
   outcome: PromptBuildOutcome,
-): { content: string; variant: ChatMessage["variant"] } {
+  userPrompt: string,
+): {
+  content: string;
+  variant: ChatMessage["variant"];
+  changes?: BuildChange[];
+} {
   // B3 — version-progression i success-meddelandet. När payload.version
   // är t.ex. 3 visar vi "v2 → v3" så operatören får en känsla av
   // historiken utan att Inspectorn behöver öppnas. För v1 (första
   // bygget) visar vi bara "v1" eftersom det inte finns någon "från"-
-  // version. När backend exponerar en riktig diff-summary (vilka
-  // sektioner/filer som ändrades) kan vi byta ut detta mot strukturerad
-  // info; idag är version-progression det starkaste signalvärdet
-  // operatören kan få utan extra backend-arbete.
+  // version. Plus Sprint 6: paraphraserad changes-list baserat på
+  // operatörens prompt — heuristisk tills backend exponerar en riktig
+  // diff.
   if (outcome === "ok") {
     let versionText = "";
     if (typeof payload.version === "number") {
@@ -325,9 +400,11 @@ function summarizeBuildResult(
         versionText = ` Version 1 publicerad.`;
       }
     }
+    const changes = summarizeChangesFromPrompt(userPrompt);
     return {
       content: `Klart!${versionText} Previewen laddas om automatiskt.`,
       variant: "success",
+      changes: changes.length > 0 ? changes : undefined,
     };
   }
   if (outcome === "degraded") {
@@ -385,6 +462,12 @@ export function FloatingChat({
   // för att hålla composern minimalistisk. State persisteras så
   // operatörens preference (kollapsad/öppen) lever över reloads.
   const [quickPromptsOpen, setQuickPromptsOpen] = useState(false);
+  // Progress-bar 0-100% under build körs. Driver bredden på den
+  // tunna stapeln längst ner i panelen så operatören får en visuell
+  // känsla av tidsåtgången utöver step-label:n i pending-bubblan.
+  // Ramper deterministiskt till 95% över ~86s (sum av FOLLOWUP_BUILD_STEPS.durationMs)
+  // och hoppar till 100% när response kommer (i finally:n).
+  const [buildProgress, setBuildProgress] = useState(0);
   // Steg-timer för pending-bubblan. Uppdaterar message.content med
   // nästa step-label tills response kommer eller cleanup avbryter.
   // Vi använder bara en ref (inte useState) eftersom progressen
@@ -671,6 +754,7 @@ export function FloatingChat({
       setInput("");
       setAttachments([]);
       setUploadError(null);
+      setBuildProgress(0);
       setIsSending(true);
       onBuildStart();
 
@@ -721,14 +805,21 @@ export function FloatingChat({
               .concat({
                 id: `error-${Date.now()}`,
                 role: "assistant",
-                content: `${classified.message} ${classified.tip}`,
+                content: classified.message,
                 variant: "error",
+                errorKind: classified.kind,
+                errorTip: classified.tip,
+                errorDetails: errorText,
+                // Spara endast text-delen som retry-prompt — bilagorna
+                // har redan tömts från attachments-state och kan inte
+                // återställas utan att operatören laddar upp dem igen.
+                retryPrompt: trimmed || undefined,
               }),
           );
           return;
         }
         const outcome = classifyBuildStatus(payload.buildStatus);
-        const summary = summarizeBuildResult(payload, outcome);
+        const summary = summarizeBuildResult(payload, outcome, trimmed);
         setMessages((prev) =>
           prev
             .filter((m) => m.id !== pendingMessageId)
@@ -737,6 +828,7 @@ export function FloatingChat({
               role: "assistant",
               content: summary.content,
               variant: summary.variant,
+              changes: summary.changes,
             }),
         );
         onBuildDone(payload.runId, outcome);
@@ -750,8 +842,12 @@ export function FloatingChat({
             .concat({
               id: `error-${Date.now()}`,
               role: "assistant",
-              content: `${classified.message} ${classified.tip}`,
+              content: classified.message,
               variant: "error",
+              errorKind: classified.kind,
+              errorTip: classified.tip,
+              errorDetails: errorText,
+              retryPrompt: trimmed || undefined,
             }),
         );
       } finally {
@@ -763,6 +859,10 @@ export function FloatingChat({
           clearTimeout(buildStepTimerRef.current);
           buildStepTimerRef.current = null;
         }
+        // Hoppar till 100% först — UI:t visar progress-baren animera
+        // till slutet under fade-out (200ms). Reset till 0 sker
+        // automatiskt när nästa build startar.
+        setBuildProgress(100);
         setIsSending(false);
         onBuildEnd();
       }
@@ -778,6 +878,40 @@ export function FloatingChat({
       onBuildDone,
     ],
   );
+
+  // Progress-bar ramp: under build körs ökar vi `buildProgress`
+  // smooth från 0% → 95% över ~85s (summan av FOLLOWUP_BUILD_STEPS
+  // durationMs). Vi använder requestAnimationFrame så den följer
+  // browserns frame-rate och fade:as ut snyggt vid reduced-motion
+  // (där transition:en på baren själv är 0ms).
+  useEffect(() => {
+    if (!isSending && !isBuilding) return;
+    if (buildProgress >= 95) return;
+    const TOTAL_DURATION_MS = FOLLOWUP_BUILD_STEPS.reduce(
+      (sum, step) => sum + step.durationMs,
+      0,
+    );
+    const start = Date.now();
+    const startProgress = buildProgress;
+    let rafId = 0;
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      // Easeout — snabbt först, saktar mot slutet, klampar vid 95.
+      const linear = Math.min(1, elapsed / TOTAL_DURATION_MS);
+      const eased = 1 - Math.pow(1 - linear, 1.4);
+      const target = startProgress + (95 - startProgress) * eased;
+      setBuildProgress(target);
+      if (target < 95 && (isSending || isBuilding)) {
+        rafId = requestAnimationFrame(tick);
+      }
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+    // Lint: buildProgress får INTE vara dep — annars triggas effecten
+    // efter varje frame och vi får oändlig loop. Vi tar bara den
+    // initiala värdet via closure och låter den driva fram.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSending, isBuilding]);
 
   const handleKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
@@ -929,11 +1063,45 @@ export function FloatingChat({
         <ol className="flex flex-col gap-2">
           {messages.map((message) => (
             <li key={message.id} className="flex flex-col">
-              <MessageBubble message={message} />
+              <MessageBubble
+                message={message}
+                onRetry={(prompt) => {
+                  // Sätt input + skicka — operatören kan välja att
+                  // ändra prompten först om hen vill, eller bara
+                  // klicka skicka direkt. Vi rensar inte input om
+                  // operatören redan börjat skriva på något nytt.
+                  if (input.trim().length === 0) {
+                    setInput(prompt);
+                    // Auto-skicka när input var tom — annars är det
+                    // sannolikt operatören håller på med en ny prompt
+                    // och hen får trycka skicka själv.
+                    void sendFollowupPrompt(prompt);
+                  } else {
+                    setInput(prompt);
+                  }
+                }}
+              />
             </li>
           ))}
         </ol>
       </div>
+
+      {/* Build progress-bar — visas under build körs. Determinerade
+          steg är 4 (brief/plan/codegen/quality); progress drivs av
+          ``buildProgress``-state som ramper från 0 → 95% över
+          förväntad total-duration. Stannar vid 95% tills response,
+          sedan hoppar till 100% och fade:as ut via onAnimationEnd. */}
+      {(isSending || isBuilding) && (
+        <div className="border-border/40 bg-card/80 shrink-0 border-t">
+          <div className="bg-border/40 relative h-[2px] w-full overflow-hidden">
+            <div
+              className="bg-foreground/80 motion-safe:transition-[width] motion-safe:duration-500 absolute inset-y-0 left-0"
+              style={{ width: `${buildProgress}%` }}
+              aria-hidden
+            />
+          </div>
+        </div>
+      )}
 
       <div className="border-border/60 bg-card/90 shrink-0 border-t p-2">
         {/* Snabbförslag ligger bakom en collapsed "Förslag"-toggle.
@@ -1103,7 +1271,13 @@ export function FloatingChat({
               ) : (
                 <Send className="h-3 w-3" />
               )}
-              {isSending || isBuilding ? "Bygger" : "Skicka"}
+              {isSending || isBuilding
+                ? buildProgress < 15
+                  ? "Skickar"
+                  : buildProgress < 95
+                    ? "Bygger"
+                    : "Sparar"
+                : "Skicka"}
             </button>
           </div>
         </div>
@@ -1123,14 +1297,29 @@ export function FloatingChat({
   );
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageBubble({
+  message,
+  onRetry,
+}: {
+  message: ChatMessage;
+  onRetry: (prompt: string) => void;
+}) {
   const isUser = message.role === "user";
+  const isError = message.variant === "error";
+  const isSuccess = message.variant === "success";
   const variantClass = (() => {
     if (message.variant === "success") return "border-emerald-500/40";
     if (message.variant === "warning") return "border-amber-500/40";
     if (message.variant === "error") return "border-destructive/50";
     return "border-border/60";
   })();
+
+  if (isError) {
+    return (
+      <ErrorBubble message={message} onRetry={onRetry} />
+    );
+  }
+
   return (
     <div
       className={cn(
@@ -1156,6 +1345,33 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           message.content
         )}
       </span>
+      {/* Success-change-list — visas under success-bubblan med en
+          kort vänster-border per ändring. Heuristik från
+          summarizeChangesFromPrompt, tas bort den dag backend
+          exponerar en strukturerad diff (då används payload-data
+          istället för operatörens prompt). */}
+      {isSuccess && message.changes && message.changes.length > 0 ? (
+        <div className="border-emerald-500/30 mt-1.5 ml-1 flex flex-col gap-1 border-l-2 pl-2.5">
+          <span className="text-muted-foreground/70 font-mono text-[9.5px] tracking-[0.18em] uppercase">
+            Troligen ändrat
+          </span>
+          {message.changes.map((change, idx) => (
+            <span
+              key={`${change.category}-${idx}`}
+              className="text-foreground/85 inline-flex items-center gap-1.5 text-[11.5px]"
+            >
+              <Sparkles
+                className="text-emerald-600 dark:text-emerald-400 h-2.5 w-2.5 shrink-0"
+                aria-hidden
+              />
+              <span className="text-muted-foreground/80 font-medium">
+                {CATEGORY_LABEL[change.category]}:
+              </span>
+              <span>{change.label}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
       {message.attachmentCount && message.attachmentCount > 0 ? (
         <span
           className={cn(
@@ -1169,6 +1385,89 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             : `${message.attachmentCount} bilagor`}
         </span>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * ErrorBubble — rik error-presentation med kategori-ikon, tip-text,
+ * expanderbar tekniska detaljer och retry-knapp.
+ *
+ * Designval: en separat komponent istället för att svälla MessageBubble
+ * med fler conditionals. Egen state för detail-expand (öppnar inte
+ * automatiskt vid mount för att hålla bubblan kompakt).
+ */
+function ErrorBubble({
+  message,
+  onRetry,
+}: {
+  message: ChatMessage;
+  onRetry: (prompt: string) => void;
+}) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const Icon = message.errorKind ? ERROR_ICONS[message.errorKind] : AlertTriangle;
+  const canRetry =
+    typeof message.retryPrompt === "string" && message.retryPrompt.length > 0;
+  const hasDetails =
+    typeof message.errorDetails === "string" &&
+    message.errorDetails.length > 0 &&
+    message.errorDetails !== message.content;
+  return (
+    <div className="flex max-w-full flex-col items-start gap-0.5">
+      <div className="border-destructive/40 bg-destructive/[0.04] text-foreground flex flex-col gap-1.5 rounded-xl border px-3 py-2 text-[12.5px] leading-relaxed">
+        <div className="flex items-start gap-2">
+          <Icon
+            className="text-destructive mt-0.5 h-3.5 w-3.5 shrink-0"
+            aria-hidden
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-foreground font-medium">{message.content}</p>
+            {message.errorTip ? (
+              <p className="text-muted-foreground mt-0.5 text-[11.5px] leading-snug">
+                {message.errorTip}
+              </p>
+            ) : null}
+          </div>
+        </div>
+        {(canRetry || hasDetails) && (
+          <div className="border-destructive/20 mt-0.5 flex flex-wrap items-center gap-2 border-t pt-1.5">
+            {canRetry ? (
+              <button
+                type="button"
+                onClick={() => onRetry(message.retryPrompt as string)}
+                className={cn(
+                  "text-foreground/85 hover:text-foreground border-border/60 hover:border-foreground/40 hover:bg-muted/60",
+                  "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
+                  "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors",
+                )}
+                title="Skicka samma instruktion igen"
+              >
+                <RotateCcw className="h-3 w-3" aria-hidden />
+                Försök igen
+              </button>
+            ) : null}
+            {hasDetails ? (
+              <button
+                type="button"
+                onClick={() => setDetailsOpen((prev) => !prev)}
+                aria-expanded={detailsOpen}
+                className={cn(
+                  "text-muted-foreground hover:text-foreground",
+                  "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
+                  "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium transition-colors",
+                )}
+              >
+                {detailsOpen ? "Dölj detaljer" : "Visa detaljer"}
+              </button>
+            ) : null}
+          </div>
+        )}
+        {detailsOpen && hasDetails ? (
+          <pre className="bg-background/60 border-border/50 text-muted-foreground mt-1 max-h-32 overflow-auto rounded border px-2 py-1.5 font-mono text-[10.5px] whitespace-pre-wrap">
+            {message.errorDetails}
+          </pre>
+        ) : null}
+      </div>
     </div>
   );
 }
