@@ -386,6 +386,101 @@ def test_typescript_strict_false_triggers_warning(tmp_path: Path) -> None:
 
 
 @pytest.mark.tooling
+def test_dependencies_as_list_does_not_crash(tmp_path: Path) -> None:
+    """Regression: ``dependencies`` as a list (instead of an object)
+    must yield a structured ``blocked`` result, not a Python
+    ``TypeError`` from ``{**[...]}``-spread.
+    """
+    candidate = _ready_candidate(tmp_path / "deps-list")
+    pkg_path = candidate / "package.json"
+    pkg = json.loads(pkg_path.read_text(encoding="utf-8"))
+    pkg["dependencies"] = ["next", "react"]
+    _write_json(pkg_path, pkg)
+    result = audit_candidate(candidate)
+    assert result.classification == "blocked"
+    assert any(
+        "dependencies has wrong shape" in blocker for blocker in result.blockers
+    )
+
+
+@pytest.mark.tooling
+def test_dev_dependencies_as_list_does_not_crash(tmp_path: Path) -> None:
+    """Same robustness contract for ``devDependencies``."""
+    candidate = _ready_candidate(tmp_path / "dev-deps-list")
+    pkg_path = candidate / "package.json"
+    pkg = json.loads(pkg_path.read_text(encoding="utf-8"))
+    pkg["devDependencies"] = ["typescript"]
+    _write_json(pkg_path, pkg)
+    result = audit_candidate(candidate)
+    assert result.classification == "blocked"
+    assert any(
+        "devDependencies has wrong shape" in blocker for blocker in result.blockers
+    )
+
+
+@pytest.mark.tooling
+def test_non_string_version_does_not_crash(tmp_path: Path) -> None:
+    """Regression: a non-string version value (e.g. ``"next": 16``)
+    must not crash ``_major_from_range``. The auditor should treat
+    the version as unparseable and continue.
+    """
+    candidate = _ready_candidate(tmp_path / "version-int")
+    pkg_path = candidate / "package.json"
+    pkg = json.loads(pkg_path.read_text(encoding="utf-8"))
+    pkg["dependencies"]["next"] = 16
+    _write_json(pkg_path, pkg)
+    result = audit_candidate(candidate)
+    assert result.blockers == [], (
+        f"audit must not crash; got blockers: {result.blockers}"
+    )
+    next_stack = result.detected_stack.get("next", {})
+    assert next_stack.get("major") is None
+    assert next_stack.get("range") == 16
+
+
+@pytest.mark.tooling
+def test_non_dict_compiler_options_does_not_crash(tmp_path: Path) -> None:
+    """Regression: ``compilerOptions`` as a string (truthy non-dict)
+    must not raise ``AttributeError`` from ``.get("strict")``. The
+    auditor should treat strict mode as unknown and add a warning.
+    """
+    candidate = _ready_candidate(tmp_path / "compiler-string")
+    tsconfig_path = candidate / "tsconfig.json"
+    tsconfig_path.write_text(
+        json.dumps({"compilerOptions": "strict"}, indent=2),
+        encoding="utf-8",
+    )
+    result = audit_candidate(candidate)
+    assert result.classification == "needs-cleanup"
+    assert any("strict missing" in warning for warning in result.warnings)
+
+
+@pytest.mark.tooling
+def test_minimal_partial_repo_does_not_crash(tmp_path: Path) -> None:
+    """Regression: a candidate with only a well-formed ``package.json``
+    and nothing else (no tsconfig.json, no app/, no components.json,
+    no lockfile) must produce a structured ``needs-cleanup`` result
+    instead of crashing. Locks the behaviour for partial extractions
+    from .zip archives in operator-local input folders.
+    """
+    candidate = tmp_path / "minimal"
+    candidate.mkdir()
+    _write_json(candidate / "package.json", _BASELINE_PACKAGE_JSON)
+    result = audit_candidate(candidate)
+    assert result.classification == "needs-cleanup", (
+        f"expected needs-cleanup, got {result.classification} "
+        f"with blockers={result.blockers}"
+    )
+    assert result.blockers == []
+    assert any(
+        "components.json missing" in warning for warning in result.warnings
+    )
+    assert any(
+        "tsconfig.json missing" in warning for warning in result.warnings
+    )
+
+
+@pytest.mark.tooling
 def test_missing_required_script_triggers_warning(tmp_path: Path) -> None:
     candidate = _ready_candidate(tmp_path / "no-build")
 

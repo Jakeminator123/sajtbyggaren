@@ -314,13 +314,16 @@ def _read_json(path: Path) -> tuple[dict[str, Any] | None, str | None]:
     return data, None
 
 
-def _major_from_range(value: str | None) -> int | None:
+def _major_from_range(value: object) -> int | None:
     """Extract the major version from an npm range string.
 
     Handles the common shapes ``^16.0.0``, ``~15.4.2``, ``>=14``,
-    ``16.x``, and ``next@16``. Returns ``None`` if no integer can be
-    extracted.
+    ``16.x``, and ``next@16``. Returns ``None`` if ``value`` is not a
+    string (e.g. ``"next": 16`` in a malformed external candidate)
+    or if no integer can be extracted.
     """
+    if not isinstance(value, str):
+        return None
     if not value:
         return None
     match = re.search(r"(\d+)", value)
@@ -485,10 +488,19 @@ def _audit_package_json(root: Path, result: AuditResult) -> None:
         result.blockers.append(error or "package.json could not be parsed")
         return
 
-    deps = {**(pkg.get("dependencies") or {}), **(pkg.get("devDependencies") or {})}
-    if not isinstance(deps, dict):
-        result.blockers.append("package.json dependencies have wrong shape")
+    raw_deps = pkg.get("dependencies", {})
+    raw_dev_deps = pkg.get("devDependencies", {})
+    if not isinstance(raw_deps, dict):
+        result.blockers.append(
+            "package.json dependencies has wrong shape; expected an object"
+        )
         return
+    if not isinstance(raw_dev_deps, dict):
+        result.blockers.append(
+            "package.json devDependencies has wrong shape; expected an object"
+        )
+        return
+    deps = {**raw_deps, **raw_dev_deps}
 
     next_range = deps.get("next")
     next_major = _major_from_range(next_range)
@@ -589,7 +601,8 @@ def _audit_tsconfig(root: Path, result: AuditResult) -> None:
         )
         result.detected_stack["tsconfig"] = stack_entry
         return
-    compiler_options = data.get("compilerOptions") or {}
+    raw_compiler_options = data.get("compilerOptions")
+    compiler_options = raw_compiler_options if isinstance(raw_compiler_options, dict) else {}
     strict = compiler_options.get("strict")
     stack_entry["strict"] = bool(strict) if strict is not None else None
     if strict is True:
