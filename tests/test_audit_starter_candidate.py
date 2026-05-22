@@ -613,6 +613,57 @@ def test_missing_required_script_triggers_warning(tmp_path: Path) -> None:
 
 
 @pytest.mark.tooling
+def test_required_scripts_present_when_non_empty_strings(tmp_path: Path) -> None:
+    candidate = _ready_candidate(tmp_path / "valid-scripts")
+    result = audit_candidate(candidate)
+    assert {"dev", "build", "start"}.issubset(set(result.scripts_present))
+    assert result.scripts_missing == []
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize("script_value", ["", None, {}, "   "])
+def test_required_script_value_must_be_non_empty_string(
+    tmp_path: Path, script_value: object
+) -> None:
+    candidate = _ready_candidate(tmp_path / f"bad-script-{type(script_value).__name__}")
+
+    def set_bad_dev(pkg: dict[str, Any]) -> None:
+        pkg["scripts"]["dev"] = script_value
+
+    _modify_package_json(candidate, set_bad_dev)
+    result = audit_candidate(candidate)
+    assert result.classification == "needs-cleanup"
+    assert "dev" in result.scripts_missing
+    assert "dev" not in result.scripts_present
+    assert any("missing required npm script: dev" in w for w in result.warnings)
+
+
+@pytest.mark.tooling
+def test_scripts_as_list_blocks_without_masking_shape(tmp_path: Path) -> None:
+    candidate = _ready_candidate(tmp_path / "scripts-list")
+    pkg_path = candidate / "package.json"
+    pkg = json.loads(pkg_path.read_text(encoding="utf-8"))
+    pkg["scripts"] = []
+    _write_json(pkg_path, pkg)
+    result = audit_candidate(candidate)
+    assert result.classification == "blocked"
+    assert any("scripts have wrong shape" in b for b in result.blockers)
+
+
+@pytest.mark.tooling
+def test_scripts_null_is_treated_as_missing_scripts(tmp_path: Path) -> None:
+    candidate = _ready_candidate(tmp_path / "scripts-null")
+    pkg_path = candidate / "package.json"
+    pkg = json.loads(pkg_path.read_text(encoding="utf-8"))
+    pkg["scripts"] = None
+    _write_json(pkg_path, pkg)
+    result = audit_candidate(candidate)
+    assert result.classification == "needs-cleanup"
+    assert result.blockers == []
+    assert set(result.scripts_missing) == {"dev", "build", "start"}
+
+
+@pytest.mark.tooling
 def test_demo_markers_classify_as_reference_only(tmp_path: Path) -> None:
     candidate = _ready_candidate(tmp_path / "demo")
     (candidate / "README.md").write_text(

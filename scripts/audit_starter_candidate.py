@@ -410,6 +410,11 @@ def _is_internal_starter_path(candidate_root: Path) -> bool:
     return True
 
 
+def _has_valid_script(scripts: dict[str, Any], name: str) -> bool:
+    value = scripts.get(name)
+    return isinstance(value, str) and bool(value.strip())
+
+
 # ---------------------------------------------------------------------------
 # Audit logic
 # ---------------------------------------------------------------------------
@@ -624,18 +629,19 @@ def _audit_package_json(root: Path, result: AuditResult) -> None:
             "lucide-react missing; required for shadcn-aligned starters"
         )
 
-    scripts = pkg.get("scripts") or {}
+    raw_scripts = pkg.get("scripts", {})
+    scripts = {} if raw_scripts is None else raw_scripts
     if not isinstance(scripts, dict):
         result.blockers.append("package.json scripts have wrong shape")
         scripts = {}
     for required in REQUIRED_SCRIPTS:
-        if required in scripts:
+        if _has_valid_script(scripts, required):
             result.scripts_present.append(required)
         else:
             result.scripts_missing.append(required)
             result.warnings.append(f"missing required npm script: {required}")
     for nice in NICE_TO_HAVE_SCRIPTS:
-        if nice in scripts:
+        if _has_valid_script(scripts, nice):
             result.scripts_nice_to_have_present.append(nice)
 
     integrations: dict[str, list[str]] = {}
