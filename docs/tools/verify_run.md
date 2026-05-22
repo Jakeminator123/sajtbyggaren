@@ -131,6 +131,42 @@ till operatör eller orchestrator.
 
 ## Mini-eval-flöde (4 baseline-prompter)
 
+För automatiserad lokal mini-eval efter B139/B140 finns nu
+`scripts/mini_eval.py`. Den är byggd för att kunna köras i separat terminal
+vid sidan av Cursor-agentens huvudflöde:
+
+```powershell
+# Snabb eval utan npm-build (default). Skriver till ../sajtbyggaren-output/.evals/
+python scripts/mini_eval.py
+
+# Välj eval-root explicit, t.ex. på snabb disk eller i en separat workspace-mapp
+$env:SAJTBYGGAREN_EVALS_DIR = "../sajtbyggaren-output/.evals"
+python scripts/mini_eval.py --eval-id local-smoke-001
+
+# Kör bara ett case medan annat arbete pågår
+python scripts/mini_eval.py --case electrician-malmo
+
+# Låt även npm-build köra (långsammare, när du vill ha starkare bevis)
+python scripts/mini_eval.py --run-build
+```
+
+Output per eval:
+
+- `prompt-inputs/` — isolerade Project Input-versioner och meta-sidecars
+- `runs/` — isolerade Engine Run-artefakter
+- `generated/` — isolerad genererad Next.js-output
+- `mini-eval-report.json` — maskinläsbar jämförelse
+- `mini-eval-report.md` — operatörsrapport + scorecard-mall
+
+Default-casen är elektriker Malmö, frisör Göteborg, naprapat Stockholm och
+sköldpaddssoppa. Runnern gör init + follow-up per case, jämför
+story/tagline/tone, CSS-token-diff (`--primary`, `--accent` och foreground-
+tokens), raw prompt-läckage och warnings. Den skriver inte till canonical
+`data/runs/` eller `data/prompt-inputs/`, så den är säker att köra parallellt
+med Builder/Steward/Scout-arbete.
+
+### Manuell variant med `verify_run.py`
+
 Standardflödet efter en kedje-propagation-sprint (B137/B138/B139/etc):
 
 1. Operatören kör 4 prompter via Viewser-overlay:

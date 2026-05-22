@@ -12,6 +12,7 @@ writes:
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -20,6 +21,11 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
+
+
+def _last_css_token(css: str, token_name: str) -> str | None:
+    matches = re.findall(rf"--{re.escape(token_name)}:\s*([^;]+);", css)
+    return matches[-1].strip() if matches else None
 
 
 @pytest.mark.tooling
@@ -300,6 +306,8 @@ def test_build_writes_brand_token_overrides_to_generated_globals_css(
     assert "  --primary-foreground: #fafaf9;" in css
     assert "  --accent: #ddaa33;" in css
     assert "  --accent-foreground: #1c1c1a;" in css
+    assert _last_css_token(css, "primary") == "#224466"
+    assert _last_css_token(css, "accent") == "#ddaa33"
 
 
 @pytest.mark.tooling

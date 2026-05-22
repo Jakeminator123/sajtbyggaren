@@ -832,9 +832,11 @@ def patch_globals_css(
     if marker in original:
         before, _, rest = original.partition(marker)
         _, _, after = rest.partition(end)
-        new_contents = f"{before}{marker}\n{block}{end}{after}"
+        base_contents = f"{before}{after}".rstrip()
     else:
-        new_contents = f"{marker}\n{block}{end}\n\n{original}"
+        base_contents = original.rstrip()
+    # Append last so starter defaults earlier in globals.css cannot win the cascade.
+    new_contents = f"{base_contents}\n\n{marker}\n{block}{end}\n"
     write(css, new_contents)
     return warnings
 

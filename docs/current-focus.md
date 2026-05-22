@@ -37,12 +37,15 @@ giltig `brand.primaryColorHex` / `brand.accentColorHex` skriver nu
 renderade CSS-token `--primary` / `--accent`, whitelistad `tone.primary`
 kan mappa till tokens när explicit hex saknas, ogiltig hex ger trace-
 warning, och foreground-tokens räknas om för kontrast. Bug-räkning efter
-merge: **24 aktiva, 0 misplaced, 5 unknown, 107 stängda**. **Direkt nästa
-fokus:** kör enkel mini-eval eller bygg Mini-eval runner v1 för fyra
-baseline-case och följdprompter innan embeddings, SNI-runtime,
-variant-promotion eller nya starters startas. Alternativt ta B125 preview-
-fallback som decision sprint om operatören vill minska launch-risk först.
-Föregående produkt-läge:
+merge: **24 aktiva, 0 misplaced, 5 unknown, 107 stängda**. Efterföljande
+dev-tooling-spår lägger `scripts/mini_eval.py`, en isolerad Mini-eval
+runner v1 som kan köras i separat terminal mot
+`SAJTBYGGAREN_EVALS_DIR`/`../sajtbyggaren-output/.evals` utan att skriva
+till canonical `data/runs/`. **Direkt nästa fokus:** kör mini-evalen över
+alla fyra baseline-case och använd rapporten för att välja mellan B125
+preview-fallback eller nästa produktspår. Vänta fortsatt med embeddings,
+SNI-runtime, variant-promotion och nya starters tills mini-evalen visar
+stabilare kvalitet. Föregående produkt-läge:
 
 Föregående verified state: `aef5825` (2026-05-22, **Project DNA semantic
 follow-up V1 mergad via PR #56**) — produkt-/kod-läget var `aef5825`

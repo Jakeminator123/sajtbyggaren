@@ -39,15 +39,20 @@ sync link-rewrite för spegel-djup), `c20270f` (Steward-bump),
 
 **Direkt nästa spår:**
 
-Kör enkel mini-eval eller bygg Mini-eval runner v1 för baseline-casen
-elektriker Malmö, frisör Göteborg, naprapat Stockholm och sköldpaddssoppa
-med följdprompter som "gör tonen mer premium", "gör den mer personlig"
-och "gör den lugnare och mer förtroendeingivande". Kontrollera att
-tone/story/tagline och CSS-tokens ändras där de ska, att rå prompt inte
-läcker, och att warnings är rimliga. Om operatören hellre vill minska
-launch-risk är B125 preview-fallback nästa decision sprint. Starta inte
-embeddings, SNI-runtime, många nya starters eller variant-promotion innan
-mini-evalen visar stabilare kvalitet.
+`scripts/mini_eval.py` finns nu som Mini-eval runner v1. Kör den gärna i
+separat terminal medan annat Cursor-arbete fortsätter:
+`python scripts/mini_eval.py` skriver en isolerad eval under
+`SAJTBYGGAREN_EVALS_DIR` eller `../sajtbyggaren-output/.evals` med egna
+`prompt-inputs/`, `runs/`, `generated/`, `mini-eval-report.json` och
+`mini-eval-report.md`. Default-casen är elektriker Malmö, frisör Göteborg,
+naprapat Stockholm och sköldpaddssoppa, med init + follow-up per case.
+Runnern jämför tone/story/tagline, CSS-token-diff, raw prompt-läckage och
+warnings utan att skriva till canonical `data/runs/`.
+
+Nästa agent bör köra full mini-eval och använda rapporten för att välja
+mellan B125 preview-fallback och nästa produktspår. Starta inte embeddings,
+SNI-runtime, många nya starters eller variant-promotion innan mini-evalen
+visar stabilare kvalitet.
 
 **Det som nyss landade i Project DNA-spåret (`aef5825`):**
 
