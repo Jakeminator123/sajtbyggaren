@@ -356,11 +356,13 @@ def audit_candidate(path: Path | str) -> AuditResult:
         result.blockers.append(f"path does not exist: {root}")
         result.classification = "blocked"
         result.summary = "Candidate path does not exist."
+        result.next_actions = _build_next_actions(result)
         return result
     if not root.is_dir():
         result.blockers.append(f"path is not a directory: {root}")
         result.classification = "blocked"
         result.summary = "Candidate path is not a directory."
+        result.next_actions = _build_next_actions(result)
         return result
 
     _audit_top_level_files(root, result)

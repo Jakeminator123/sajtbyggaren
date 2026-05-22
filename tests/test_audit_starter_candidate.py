@@ -145,6 +145,12 @@ def test_audit_returns_blocked_for_missing_path(tmp_path: Path) -> None:
     result = audit_candidate(missing)
     assert result.classification == "blocked"
     assert any("does not exist" in blocker for blocker in result.blockers)
+    assert result.next_actions, (
+        "blocked early-return path must still populate next_actions so the "
+        "operator gets the same guidance as a normal blocked classification"
+    )
+    assert any("Fix every blocker" in action for action in result.next_actions)
+    assert any("Never run this script" in action for action in result.next_actions)
 
 
 @pytest.mark.tooling
@@ -154,6 +160,11 @@ def test_audit_returns_blocked_for_file_path(tmp_path: Path) -> None:
     result = audit_candidate(candidate)
     assert result.classification == "blocked"
     assert any("not a directory" in blocker for blocker in result.blockers)
+    assert result.next_actions, (
+        "not-a-directory early-return path must still populate next_actions"
+    )
+    assert any("Fix every blocker" in action for action in result.next_actions)
+    assert any("Never run this script" in action for action in result.next_actions)
 
 
 # ---------------------------------------------------------------------------
