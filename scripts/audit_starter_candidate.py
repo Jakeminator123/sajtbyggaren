@@ -99,6 +99,11 @@ WALK_SKIP_DIRS = {
     "coverage",
 }
 
+# Env detection intentionally descends into build artefact directories:
+# generated output can accidentally contain operator secrets. Git and
+# dependencies are skipped to avoid false positives from internals/fixtures.
+ENV_WALK_SKIP_DIRS = {".git", "node_modules"}
+
 # Text file extensions we are willing to scan for demo signals and
 # customer-copy heuristics. Keeping this list narrow keeps the audit
 # fast on candidate repos with large code bases.
@@ -519,7 +524,7 @@ def _audit_nested_env_files(root: Path, result: AuditResult) -> None:
     """
     resolved_root = root.resolve()
     for current, dirs, files in os.walk(root):
-        dirs[:] = [name for name in dirs if name not in WALK_SKIP_DIRS]
+        dirs[:] = [name for name in dirs if name not in ENV_WALK_SKIP_DIRS]
         rel = Path(current).resolve().relative_to(resolved_root)
         if rel == Path("."):
             continue

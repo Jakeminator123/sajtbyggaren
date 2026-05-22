@@ -340,6 +340,38 @@ def test_nested_env_production_blocks_import(tmp_path: Path) -> None:
 
 
 @pytest.mark.tooling
+@pytest.mark.parametrize(
+    ("directory", "filename", "expected_entry"),
+    [
+        ("build", ".env.local", "build/.env.local"),
+        ("dist", ".env.production", "dist/.env.production"),
+        (".next", ".env", ".next/.env"),
+    ],
+)
+def test_env_files_inside_build_skip_dirs_block_import(
+    tmp_path: Path, directory: str, filename: str, expected_entry: str
+) -> None:
+    candidate = _ready_candidate(tmp_path / f"env-in-{directory.strip('.')}")
+    leak_dir = candidate / directory
+    leak_dir.mkdir()
+    (leak_dir / filename).write_text("SECRET=value\n", encoding="utf-8")
+    result = audit_candidate(candidate)
+    assert result.classification == "blocked"
+    assert expected_entry in result.files_disallowed
+
+
+@pytest.mark.tooling
+def test_env_files_inside_node_modules_are_ignored(tmp_path: Path) -> None:
+    candidate = _ready_candidate(tmp_path / "env-in-node-modules")
+    package_dir = candidate / "node_modules" / "fixture"
+    package_dir.mkdir(parents=True)
+    (package_dir / ".env").write_text("PACKAGE_FIXTURE=value\n", encoding="utf-8")
+    result = audit_candidate(candidate)
+    assert "node_modules/fixture/.env" not in result.files_disallowed
+    assert all("node_modules/fixture/.env" not in b for b in result.blockers)
+
+
+@pytest.mark.tooling
 def test_auth_dependency_marks_too_integrated(tmp_path: Path) -> None:
     candidate = _ready_candidate(tmp_path / "auth")
 
