@@ -185,10 +185,8 @@ def _edge(source: str, target: str, relation: str, details: str = "") -> dict[st
 
 def _runtime_mapping() -> dict[str, str]:
     """Return the runtime Scaffold to Starter mapping."""
-    try:
-        from packages.generation.planning.plan import SCAFFOLD_TO_STARTER
-    except ImportError:
-        return {}
+    from packages.generation.planning.plan import SCAFFOLD_TO_STARTER
+
     return dict(SCAFFOLD_TO_STARTER)
 
 
@@ -779,7 +777,7 @@ def asset_graph_summary() -> dict[str, int]:
     scaffold_rows = asset_graph_scaffold_rows()
     starter_rows = asset_graph_starter_rows()
     capability_rows = asset_graph_capability_rows()
-    attention_rows = [*scaffold_rows, *starter_rows, *capability_rows]
+    attention_rows = [*category_rows, *scaffold_rows, *starter_rows, *capability_rows]
     return {
         "categories": len(category_rows),
         "scaffolds": len(scaffold_rows),

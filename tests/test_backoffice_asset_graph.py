@@ -485,9 +485,50 @@ def test_asset_graph_summary_counts_match_rows() -> None:
     )
     assert summary["gapsOrphansMissing"] == sum(
         1
-        for row in [*scaffold_rows, *starter_rows, *capability_rows]
+        for row in [*category_rows, *scaffold_rows, *starter_rows, *capability_rows]
         if row["gapOrOrphan"] is True or row["status"] in attention_statuses
     )
+
+
+def test_asset_graph_summary_counts_category_attention() -> None:
+    category_rows = asset_graph.asset_graph_category_rows()
+    category_attention = sum(1 for row in category_rows if row["gapOrOrphan"] is True)
+    assert category_attention > 0
+
+    summary = asset_graph.asset_graph_summary()
+
+    assert summary["gapsOrphansMissing"] >= category_attention
+
+
+def test_asset_graph_runtime_mapping_import_error_is_not_silent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_import() -> None:
+        raise ImportError("planning import failed")
+
+    monkeypatch.setattr(asset_graph, "_runtime_mapping", fail_import)
+
+    with pytest.raises(ImportError, match="planning import failed"):
+        asset_graph.asset_graph_scaffold_rows()
+
+
+def test_asset_graph_view_reports_runtime_mapping_import_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    errors: list[str] = []
+
+    monkeypatch.setattr(
+        building_blocks.asset_graph,
+        "asset_graph_summary",
+        lambda: (_ for _ in ()).throw(ImportError("planning import failed")),
+    )
+    monkeypatch.setattr(building_blocks.st, "error", errors.append)
+
+    building_blocks._render_asset_graph()
+
+    assert errors
+    assert "runtime-mappningen" in errors[0]
+    assert "planning import failed" in errors[0]
 
 
 def test_asset_graph_helpers_are_read_only(monkeypatch: pytest.MonkeyPatch) -> None:

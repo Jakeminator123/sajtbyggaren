@@ -328,7 +328,19 @@ def _render_asset_graph() -> None:
         "starters, ändrar inte mappings och är inte runtime-sanning."
     )
 
-    summary = asset_graph.asset_graph_summary()
+    try:
+        summary = asset_graph.asset_graph_summary()
+        category_rows = asset_graph.asset_graph_category_rows()
+        scaffold_rows = asset_graph.asset_graph_scaffold_rows()
+        starter_rows = asset_graph.asset_graph_starter_rows()
+        capability_rows = asset_graph.asset_graph_capability_rows()
+    except ImportError as exc:
+        st.error(
+            "Asset Graph kan inte läsa runtime-mappningen från planning. "
+            f"Diagnostiken stoppas så den inte visar fel status: {exc}"
+        )
+        return
+
     metric_cols = st.columns(6)
     metric_cols[0].metric("categories", summary["categories"])
     metric_cols[1].metric("scaffolds", summary["scaffolds"])
@@ -342,11 +354,6 @@ def _render_asset_graph() -> None:
         summary["availableNotMappedStarters"],
     )
     metric_cols[5].metric("gaps/orphans/missing", summary["gapsOrphansMissing"])
-
-    category_rows = asset_graph.asset_graph_category_rows()
-    scaffold_rows = asset_graph.asset_graph_scaffold_rows()
-    starter_rows = asset_graph.asset_graph_starter_rows()
-    capability_rows = asset_graph.asset_graph_capability_rows()
 
     category_tab, scaffold_tab, starter_tab, capability_tab = st.tabs(
         ["Categories", "Scaffolds", "Starters", "Capabilities"]
