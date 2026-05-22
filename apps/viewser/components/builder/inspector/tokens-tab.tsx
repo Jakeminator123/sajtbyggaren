@@ -1,11 +1,12 @@
 "use client";
 
-import { Palette, RotateCcw, Sparkles, Wand2 } from "lucide-react";
+import { CircleCheck, Palette, RotateCcw, Sparkles, Wand2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   broadcastTokenChange,
   buildTokenCommitPrompt,
+  isTokenAckMessage,
   TOKEN_DEFAULTS,
   TOKEN_META,
   type TokenId,
@@ -15,6 +16,12 @@ import { cn } from "@/lib/utils";
 
 const HEX_PATTERN = /^#[0-9a-f]{6}$/i;
 const STORAGE_KEY = "sajtbyggaren:tokens-tab:overrides";
+// Hur länge "Live i preview ✓"-badgen visas efter senaste ack:en. När
+// timern går ut faller vi tillbaka till "väntar"-state — en frisk ack
+// kommer in vid nästa token-ändring så badgen flyttar fram. Tre sekunder
+// är tillräckligt för att operatören ska hinna läsa men kort nog att
+// gamla ack:s inte fastnar synliga efter att preview-servern dött.
+const LIVE_BADGE_TTL_MS = 3000;
 
 /**
  * TokensTab — Site Inspectors färg-editor (Sprint 5).
@@ -95,6 +102,16 @@ export function TokensTab({ isBuilding, pendingPrompt, onPrompt }: TokensTabProp
     () => readStoredTokens() ?? { ...TOKEN_DEFAULTS },
   );
 
+  // ``isLive`` styr om "Live i preview ✓"-badgen visas. Den sätts till
+  // ``true`` så fort en ack kommer in från preview-iframens runtime-
+  // listener, och resettas av en setTimeout efter LIVE_BADGE_TTL_MS så
+  // gamla ack:s inte fastnar synliga efter att preview-servern dött.
+  // Vi använder en separat ``ackVersion``-räknare för att restarta
+  // TTL-timern vid varje ny ack — useEffect:en på [ackVersion] startar
+  // en frisk timer som rensar isLive när den löper ut.
+  const [isLive, setIsLive] = useState(false);
+  const [ackVersion, setAckVersion] = useState(0);
+
   // Persistera + broadcast vid varje ändring. Vi gör detta i en
   // effect istället för i setTokens-callern så vi inte glömmer det
   // vid en framtida code-path som råkar uppdatera state.
@@ -110,6 +127,31 @@ export function TokensTab({ isBuilding, pendingPrompt, onPrompt }: TokensTabProp
       }
     }
   }, [tokens]);
+
+  // Lyssna på ack-meddelanden från preview-iframens runtime-listener.
+  // Detta är det enda sättet vi kan veta om broadcast-en faktiskt
+  // nådde fram — postMessage är fire-and-forget utan returvärde. När
+  // vi får en ack tänder vi badgen och bumpar ackVersion så TTL-
+  // effekten startar om en ny släck-timer.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    function onMessage(event: MessageEvent) {
+      if (!isTokenAckMessage(event.data)) return;
+      setIsLive(true);
+      setAckVersion((value) => value + 1);
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+  // Auto-släck Live-badgen efter TTL från senaste ack:en. Triggas
+  // varje gång ackVersion bumpas — om en ny ack kommer in innan TTL
+  // löper ut clearTimeout:en den gamla timern och en frisk schemaläggs.
+  useEffect(() => {
+    if (ackVersion === 0) return;
+    const handle = window.setTimeout(() => setIsLive(false), LIVE_BADGE_TTL_MS);
+    return () => window.clearTimeout(handle);
+  }, [ackVersion]);
 
   const handleTokenChange = useCallback((id: TokenId, raw: string) => {
     const value = raw.trim().toLowerCase();
@@ -144,11 +186,23 @@ export function TokensTab({ isBuilding, pendingPrompt, onPrompt }: TokensTabProp
     <div className="flex flex-col gap-5">
       <div className="border-border/40 bg-foreground/[0.02] flex items-start gap-2.5 rounded-lg border p-3">
         <Palette className="text-foreground/70 mt-0.5 h-3.5 w-3.5 shrink-0" />
-        <div className="text-foreground/85 text-[12px] leading-relaxed">
+        <div className="text-foreground/85 flex-1 text-[12px] leading-relaxed">
           Experimentera med färgerna här. Mini-preview:n nedan uppdateras
           direkt. Klicka <strong>Använd dessa färger</strong> för att
           committa till sajten via ett nytt bygge.
         </div>
+        {/* Live-badge: tänds när vi får ett ack från preview-iframens
+            runtime-listener. Med lokal preview-server (same-machine
+            iframe) flippar denna omedelbart vid första token-ändringen.
+            För StackBlitz cross-origin förblir den släckt — UX:n
+            degraderar tystlåtet: mini-preview:n + commit-knappen
+            fungerar fortfarande. */}
+        {isLive ? (
+          <span className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700 inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium dark:text-emerald-400">
+            <CircleCheck className="h-2.5 w-2.5" />
+            Live i preview
+          </span>
+        ) : null}
       </div>
 
       <div className="flex flex-col gap-3">

@@ -473,6 +473,29 @@ def test_runtime_token_listener_does_not_leak_operator_data() -> None:
     ) == _RUNTIME_TOKEN_LISTENER_JS.count("}")
 
 
+@pytest.mark.tooling
+def test_runtime_token_listener_acknowledges_back_to_parent() -> None:
+    """Listenern måste skicka tillbaka ett ``sajtbyggaren:token-applied``
+    meddelande till parent-fönstret efter varje försök att applicera en
+    token. Site Inspector använder detta för att visa "Live i preview"-
+    badgen — utan ack:en kan operatören inte veta om iframen faktiskt
+    fick meddelandet eller om något (StackBlitz cross-origin, killed
+    preview-server, sandbox-flagga) blockerade det.
+
+    Vi assertar både att ack-strängen finns och att den postas via
+    ``window.parent.postMessage``.
+    """
+    from scripts.build_site import _RUNTIME_TOKEN_LISTENER_JS
+
+    assert "sajtbyggaren:token-applied" in _RUNTIME_TOKEN_LISTENER_JS
+    assert "window.parent.postMessage" in _RUNTIME_TOKEN_LISTENER_JS
+    # Ack-hjälpfunktionen ska kalla parent.postMessage med target-
+    # origin ``"*"`` så den når både dev (localhost:3000) och framtida
+    # tunnel-URL:er. Ack:en innehåller ingen sensitiv data, bara
+    # token-namn + hex-värde + boolean applied.
+    assert "'*'" in _RUNTIME_TOKEN_LISTENER_JS
+
+
 # ── Sprint 2.2 — robots.txt ───────────────────────────────────────────
 
 

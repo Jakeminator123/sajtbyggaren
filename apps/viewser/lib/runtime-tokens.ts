@@ -81,11 +81,47 @@ export const TOKEN_META: Record<TokenId, { label: string; description: string }>
  */
 export const TOKEN_MESSAGE_TYPE = "sajtbyggaren:set-token";
 
+/**
+ * Ack-event som builder:s runtime-script POSTAR TILLBAKA till parent
+ * efter varje försök att applicera en token. Site Inspector lyssnar
+ * på detta för att visa "Live i preview"-badgen — utan ack:en kan
+ * vi inte veta om iframen faktiskt fick meddelandet eller om något
+ * (cross-origin, sandbox-flagga, kraschad preview-server) blockerade
+ * det. Strängen är låst i tests/test_build_media_rendering.py så
+ * frontend och Python-output stannar synkade.
+ */
+export const TOKEN_ACK_MESSAGE_TYPE = "sajtbyggaren:token-applied";
+
 export interface TokenMessage {
   type: typeof TOKEN_MESSAGE_TYPE;
   token: TokenId;
   /** Hex-färg ``#RRGGBB`` eller ``"reset"`` för att återställa till canonical. */
   value: string;
+}
+
+export interface TokenAckMessage {
+  type: typeof TOKEN_ACK_MESSAGE_TYPE;
+  token: TokenId;
+  value: string;
+  /** ``true`` om listenern accepterade och applicerade värdet, ``false`` om det avvisades (okänd token eller ogiltigt hex). */
+  applied: boolean;
+}
+
+/**
+ * Type-guard för inkommande message-event:s data. Vi accepterar bara
+ * payload:er som ser ut som äkta ack-meddelanden så TokensTab inte
+ * råkar tolka något annat postMessage-trafik (HMR, dev-tools,
+ * extensions) som ett ack.
+ */
+export function isTokenAckMessage(value: unknown): value is TokenAckMessage {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<TokenAckMessage>;
+  return (
+    candidate.type === TOKEN_ACK_MESSAGE_TYPE &&
+    typeof candidate.token === "string" &&
+    typeof candidate.value === "string" &&
+    typeof candidate.applied === "boolean"
+  );
 }
 
 /**

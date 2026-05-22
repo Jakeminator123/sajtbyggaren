@@ -1742,16 +1742,31 @@ _RUNTIME_TOKEN_LISTENER_JS = (
     "(function(){"
     "var ALLOWED={primary:1,accent:1,background:1,foreground:1};"
     "var HEX=/^#[0-9a-fA-F]{6}$/;"
+    # Hjälpare som postar ett ack-meddelande till parent-fönstret (Site
+    # Inspectorn) så TokensTab vet att listenern faktiskt lever och
+    # accepterar set-token. target-origin "*" eftersom parent-origin
+    # kan vara antingen ``http://localhost:3000`` (viewser:s dev-server)
+    # eller en framtida tunnel-URL — vi skickar bara ett token-namn,
+    # ingen sensitiv data. Ack är harmless: parent ignorerar typen om
+    # den inte känner igen den.
+    "function ack(token,value,applied){"
+    "if(!window.parent||window.parent===window)return;"
+    "try{window.parent.postMessage({type:'sajtbyggaren:token-applied',token:token,value:value,applied:applied},'*');}"
+    "catch(_){}"
+    "}"
     "window.addEventListener('message',function(e){"
     "var d=e&&e.data;"
     "if(!d||typeof d!=='object'||d.type!=='sajtbyggaren:set-token')return;"
-    "if(!ALLOWED[d.token])return;"
+    "if(!ALLOWED[d.token]){ack(d.token,d.value,false);return;}"
     "var root=document.documentElement;"
     "var prop='--'+d.token;"
-    "if(d.value==='reset'){root.style.removeProperty(prop);return;}"
+    "if(d.value==='reset'){root.style.removeProperty(prop);ack(d.token,'reset',true);return;}"
     "if(typeof d.value==='string'&&HEX.test(d.value)){"
     "root.style.setProperty(prop,d.value);"
+    "ack(d.token,d.value,true);"
+    "return;"
     "}"
+    "ack(d.token,d.value,false);"
     "});"
     "})();"
 )
