@@ -42,7 +42,7 @@ import unicodedata
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -58,6 +58,9 @@ from packages.generation.discovery import (  # noqa: E402
     DiscoveryDecision,
     apply_discovery_overrides,
     resolve_discovery,
+)
+from packages.generation.discovery.resolve import (  # noqa: E402
+    _offer_looks_like_ui_directive,
 )
 
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "data" / "prompt-inputs"
@@ -361,6 +364,188 @@ _PLANNER_IMPERATIVE_PHRASES: tuple[str, ...] = (
 
 _SCAFFOLD_LOCAL_SERVICE = ("local-service-business", "nordic-trust")
 _SCAFFOLD_ECOMMERCE = ("ecommerce-lite", "clean-store")
+
+FollowupIntent = Literal[
+    "tone-shift",
+    "story-emphasize",
+    "tagline-update",
+    "positioning-shift",
+    "no-semantic-change",
+    "clarify",
+]
+
+_FOLLOWUP_INTENT_VALUES: set[str] = {
+    "tone-shift",
+    "story-emphasize",
+    "tagline-update",
+    "positioning-shift",
+    "no-semantic-change",
+    "clarify",
+}
+
+_FOLLOWUP_ADD_ONLY_KEYWORDS = (
+    "lägg till",
+    "lagg till",
+    "add ",
+    "new service",
+    "new product",
+    "ny produkt",
+    "nytt produkt",
+    "ny tjänst",
+    "ny tjanst",
+    "ny sida",
+    "skapa sida",
+    "personalsida",
+    "faq",
+    "pris",
+    "priser",
+    "price",
+    "gallery",
+    "galleri",
+    "sida",
+    "page",
+)
+
+_FOLLOWUP_TAGLINE_KEYWORDS = (
+    "tagline",
+    "taglinen",
+    "slogan",
+    "rubrik",
+    "underrubrik",
+    "hero-text",
+    "hero text",
+    "herotext",
+    "headline",
+)
+
+_FOLLOWUP_STORY_KEYWORDS = (
+    "story",
+    "storyn",
+    "berättelse",
+    "berattelse",
+    "historia",
+    "historien",
+    "familjeföretag",
+    "familjeforetag",
+    "familjär",
+    "familjar",
+    "grundare",
+    "grundaren",
+    "tradition",
+    "hantverk",
+    "erfarenhet",
+)
+
+_FOLLOWUP_POSITIONING_KEYWORDS = (
+    "positionering",
+    "positionera",
+    "positioning",
+    "marknadsposition",
+    "nisch",
+    "niche",
+)
+
+_FOLLOWUP_TONE_SCOPE_KEYWORDS = (
+    "ton",
+    "tonen",
+    "tone",
+    "röst",
+    "rösten",
+    "rost",
+    "rosten",
+    "voice",
+    "känsla",
+    "känslan",
+    "kansla",
+    "kanslan",
+    "uttryck",
+    "uttrycket",
+    "stil",
+    "stilen",
+    "style",
+)
+
+_FOLLOWUP_CONTENT_SCOPE_KEYWORDS = (
+    "text",
+    "texten",
+    "copy",
+    "sidtext",
+    "page text",
+    "page copy",
+    "innehåll",
+    "innehall",
+    "content",
+    "språk",
+    "sprak",
+)
+
+_FOLLOWUP_TONE_DESCRIPTOR_KEYWORDS = (
+    "premium",
+    "varmare",
+    "warm",
+    "personligare",
+    "personlig",
+    "professionell",
+    "professional",
+    "lekfull",
+    "playful",
+    "lugn",
+    "calm",
+    "modern",
+)
+
+_FOLLOWUP_TONE_PHRASES = (
+    "mer premium",
+    "more premium",
+    "mer personlig",
+    "more personal",
+    "mer professionell",
+    "more professional",
+    "mer lekfull",
+    "more playful",
+    "mer modern",
+    "more modern",
+    "varmare",
+    "warmer",
+)
+
+_FOLLOWUP_TONE_KEYWORDS = (
+    *_FOLLOWUP_TONE_SCOPE_KEYWORDS,
+    *_FOLLOWUP_TONE_DESCRIPTOR_KEYWORDS,
+)
+
+_TONE_KEYWORD_MAP_SV: tuple[tuple[str, str], ...] = (
+    ("premium", "premium"),
+    ("professionell", "professionell"),
+    ("professional", "professionell"),
+    ("personligare", "personlig"),
+    ("personlig", "personlig"),
+    ("varmare", "varm"),
+    ("varm", "varm"),
+    ("warm", "varm"),
+    ("lekfull", "lekfull"),
+    ("playful", "lekfull"),
+    ("lugn", "lugn"),
+    ("calm", "lugn"),
+    ("modern", "modern"),
+)
+
+_TONE_KEYWORD_MAP_EN: tuple[tuple[str, str], ...] = (
+    ("premium", "premium"),
+    ("professional", "professional"),
+    ("professionell", "professional"),
+    ("personal", "personal"),
+    ("personligare", "personal"),
+    ("personlig", "personal"),
+    ("warm", "warm"),
+    ("varmare", "warm"),
+    ("varm", "warm"),
+    ("playful", "playful"),
+    ("lekfull", "playful"),
+    ("calm", "calm"),
+    ("lugn", "calm"),
+    ("modern", "modern"),
+)
 
 # Tokens that flip the default scaffold to ecommerce-lite. Kept tiny on
 # purpose: real Scaffold Selector logic belongs in
@@ -1541,6 +1726,592 @@ def _merge_services(
     )
 
 
+def _normalise_followup_text(text: str) -> str:
+    """Collapse operator formatting before deterministic intent matching."""
+    normalised = unicodedata.normalize("NFKC", text or "").lower()
+    normalised = re.sub(r"[\[\]()`*_\"'“”‘’]+", " ", normalised)
+    normalised = re.sub(r"\s+", " ", normalised)
+    return normalised.strip()
+
+
+def _contains_any(text: str, keywords: tuple[str, ...]) -> bool:
+    return any(keyword in text for keyword in keywords)
+
+
+def _contains_word(text: str, keyword: str) -> bool:
+    pattern = rf"(?<![a-zåäöéü0-9]){re.escape(keyword)}(?![a-zåäöéü0-9])"
+    return bool(re.search(pattern, text))
+
+
+def _contains_any_word(text: str, keywords: tuple[str, ...]) -> bool:
+    return any(_contains_word(text, keyword) for keyword in keywords)
+
+
+def _has_tone_shift_signal(text: str) -> bool:
+    has_scope = _contains_any_word(text, _FOLLOWUP_TONE_SCOPE_KEYWORDS)
+    has_phrase = _contains_any(text, _FOLLOWUP_TONE_PHRASES)
+    has_content_scope = _contains_any(text, _FOLLOWUP_CONTENT_SCOPE_KEYWORDS)
+    if has_content_scope and not has_scope:
+        return False
+    if _contains_any(text, _FOLLOWUP_ADD_ONLY_KEYWORDS) and not has_scope and not has_phrase:
+        return False
+    return has_scope or has_phrase
+
+
+def classify_followup_intent(
+    follow_up_prompt: str,
+    *,
+    language: str,
+) -> FollowupIntent:
+    """Classify semantic follow-up scope without an LLM call.
+
+    V1 keeps the table intentionally small and whitelist-based. Unknown
+    prompts remain additive/conservative so B60's no-leak guarantees stay
+    stronger than the desire to infer every possible operator phrasing.
+    """
+    _ = language
+    text = _normalise_followup_text(follow_up_prompt)
+    if not text or len(text) < 4:
+        return "clarify"
+
+    has_semantic_keyword = (
+        _contains_any(text, _FOLLOWUP_TAGLINE_KEYWORDS)
+        or _contains_any(text, _FOLLOWUP_STORY_KEYWORDS)
+        or _contains_any(text, _FOLLOWUP_POSITIONING_KEYWORDS)
+        or _has_tone_shift_signal(text)
+    )
+    if not has_semantic_keyword and _contains_any(text, _FOLLOWUP_ADD_ONLY_KEYWORDS):
+        return "no-semantic-change"
+    if _contains_any(text, _FOLLOWUP_TAGLINE_KEYWORDS):
+        return "tagline-update"
+    if _contains_any(text, _FOLLOWUP_STORY_KEYWORDS):
+        return "story-emphasize"
+    if _contains_any(text, _FOLLOWUP_POSITIONING_KEYWORDS):
+        return "positioning-shift"
+    if _has_tone_shift_signal(text):
+        return "tone-shift"
+    return "no-semantic-change"
+
+
+def _string_value(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    cleaned = " ".join(value.split())
+    return cleaned or None
+
+
+def _looks_like_raw_followup_prompt(text: str, follow_up_prompt: str) -> bool:
+    """Return True when candidate copy is just the operator instruction."""
+    candidate = _normalise_followup_text(text)
+    prompt = _normalise_followup_text(follow_up_prompt)
+    if not candidate or not prompt:
+        return False
+    if candidate == prompt or candidate in prompt or prompt in candidate:
+        return True
+    prompt_words = [word for word in re.findall(r"[a-zåäöéü0-9]+", prompt)]
+    if len(prompt_words) < 4:
+        return False
+    first_clause = " ".join(prompt_words[:4])
+    return first_clause in candidate
+
+
+def _safe_semantic_text(
+    value: Any,
+    *,
+    follow_up_prompt: str,
+    max_length: int,
+    reject_ui_directive: bool = False,
+) -> str | None:
+    """Filter candidate semantic copy through the existing public-copy guards."""
+    cleaned = _string_value(value)
+    if not cleaned:
+        return None
+    if reject_ui_directive and _offer_looks_like_ui_directive(cleaned):
+        return None
+    safe = _customer_safe_planner_note(cleaned)
+    if not safe:
+        return None
+    if _looks_like_raw_followup_prompt(safe, follow_up_prompt):
+        return None
+    safe = safe.removesuffix(".") if max_length <= 140 else safe
+    return safe[:max_length]
+
+
+def _explicit_semantic_copy_from_prompt(
+    follow_up_prompt: str,
+    *,
+    max_length: int,
+    reject_ui_directive: bool = False,
+) -> str | None:
+    """Allow explicit public copy after a narrow ``till``/``to`` marker."""
+    match = re.search(
+        r"(?:\btill\b|\bto\b)\s*[:：]?\s*(.+)$",
+        follow_up_prompt.strip(),
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    if not match:
+        return None
+    candidate = match.group(1).strip().strip("\"'“”‘’")
+    if not candidate:
+        return None
+    if reject_ui_directive and _offer_looks_like_ui_directive(candidate):
+        return None
+    safe = _customer_safe_planner_note(candidate)
+    if not safe:
+        return None
+    safe = safe.removesuffix(".") if max_length <= 140 else safe
+    return safe[:max_length]
+
+
+def _tone_keyword_pairs(language: str) -> tuple[tuple[str, str], ...]:
+    return _TONE_KEYWORD_MAP_EN if language == "en" else _TONE_KEYWORD_MAP_SV
+
+
+def _tone_words_from_prompt(
+    follow_up_prompt: str,
+    *,
+    language: str,
+) -> list[str]:
+    text = _normalise_followup_text(follow_up_prompt)
+    words: list[str] = []
+    for keyword, tone_word in _tone_keyword_pairs(language):
+        if _contains_word(text, keyword) and tone_word not in words:
+            words.append(tone_word)
+    return words
+
+
+def _avoid_words_from_prompt(
+    follow_up_prompt: str,
+    *,
+    language: str,
+) -> list[str]:
+    text = _normalise_followup_text(follow_up_prompt)
+    candidates = (
+        ("kall", "kall"),
+        ("stel", "stel"),
+        ("krånglig", "krånglig"),
+        ("kranglig", "krånglig"),
+        ("opersonlig", "opersonlig"),
+        ("säljig", "säljig"),
+        ("saljig", "säljig"),
+        ("cold", "cold"),
+        ("stiff", "stiff"),
+        ("complicated", "complicated"),
+        ("impersonal", "impersonal"),
+        ("salesy", "salesy"),
+    )
+    avoid_markers = (
+        "undvik",
+        "inte ",
+        "mindre ",
+        "utan ",
+        "avoid",
+        "not ",
+        "less ",
+        "without ",
+    )
+    if not any(marker in text for marker in avoid_markers):
+        return []
+    words: list[str] = []
+    for keyword, value in candidates:
+        if keyword in text and value not in words:
+            words.append(value)
+    if language == "en":
+        return [
+            {
+                "kall": "cold",
+                "stel": "stiff",
+                "krånglig": "complicated",
+                "opersonlig": "impersonal",
+                "säljig": "salesy",
+            }.get(word, word)
+            for word in words
+        ]
+    return [
+        {
+            "cold": "kall",
+            "stiff": "stel",
+            "complicated": "krånglig",
+            "impersonal": "opersonlig",
+            "salesy": "säljig",
+        }.get(word, word)
+        for word in words
+    ]
+
+
+def _fallback_tagline_for_prompt(
+    follow_up_prompt: str,
+    *,
+    language: str,
+) -> str:
+    text = _normalise_followup_text(follow_up_prompt)
+    if language == "en":
+        if "premium" in text:
+            return "Premium feel with dependable help"
+        if "famil" in text:
+            return "Personal help with a family feel"
+        if "person" in text:
+            return "Personal help with a clear next step"
+        if "warm" in text:
+            return "Warm guidance and a clear next step"
+        return "Clear help with a personal touch"
+    if "premium" in text:
+        return "Premiumkänsla med trygg hjälp"
+    if "famil" in text:
+        return "Personlig hjälp med familjär känsla"
+    if "person" in text:
+        return "Personlig hjälp med tydlig väg vidare"
+    if "varm" in text:
+        return "Varm vägledning och tydlig hjälp"
+    return "Tydlig hjälp med personlig känsla"
+
+
+def _story_sentence_for_prompt(
+    follow_up_prompt: str,
+    *,
+    language: str,
+) -> str:
+    text = _normalise_followup_text(follow_up_prompt)
+    if language == "en":
+        if "famil" in text:
+            return (
+                "The story highlights the family-business feel: close "
+                "relationships, responsibility and long-term trust."
+            )
+        if "tradition" in text or "craft" in text:
+            return (
+                "The story highlights craft, continuity and care in every "
+                "customer relationship."
+            )
+        return (
+            "The story gives the business a clearer human context and makes "
+            "the promise feel more concrete."
+        )
+    if "famil" in text:
+        return (
+            "Berättelsen lyfter fram familjeföretagets närhet, ansvar och "
+            "långsiktiga relationer."
+        )
+    if "tradition" in text or "hantverk" in text:
+        return (
+            "Berättelsen lyfter fram hantverk, kontinuitet och omsorg i "
+            "varje kundrelation."
+        )
+    return (
+        "Berättelsen ger företaget en tydligare mänsklig kontext och gör "
+        "löftet mer konkret."
+    )
+
+
+def _append_story_sentence(previous_story: str, sentence: str) -> str:
+    if sentence in previous_story:
+        return previous_story[:1200]
+    separator = " " if previous_story.endswith((".", "!", "?")) else ". "
+    return f"{previous_story}{separator}{sentence}"[:1200]
+
+
+def _positioning_for_prompt(
+    follow_up_prompt: str,
+    *,
+    language: str,
+) -> str:
+    text = _normalise_followup_text(follow_up_prompt)
+    if language == "en":
+        if "premium" in text:
+            return "Positioned as a premium, dependable local choice."
+        if "niche" in text:
+            return "Positioned around a clearer niche and sharper customer promise."
+        return "Positioned with a clearer promise for the intended customer."
+    if "premium" in text:
+        return "Positioneras som ett premiumval med trygg lokal förankring."
+    if "nisch" in text:
+        return "Positioneras kring en tydligare nisch och ett skarpare kundlöfte."
+    return "Positioneras med ett tydligare löfte till rätt kund."
+
+
+def _semantic_source_entry(
+    *,
+    value: Any,
+    last_updated_version: int,
+    source: str,
+) -> dict[str, Any]:
+    return {
+        "value": copy.deepcopy(value),
+        "lastUpdatedVersion": last_updated_version,
+        "source": source,
+    }
+
+
+def _apply_semantic_patch(
+    merged: dict[str, Any],
+    candidate: dict[str, Any],
+    *,
+    intent: FollowupIntent,
+    follow_up_prompt: str,
+) -> None:
+    """Apply the smallest semantic Project Input patch allowed by intent."""
+    if intent in {"no-semantic-change", "clarify"}:
+        return
+
+    language = merged.get("language") if isinstance(merged.get("language"), str) else "sv"
+    company = merged.setdefault("company", {})
+    candidate_company = candidate.get("company") if isinstance(candidate.get("company"), dict) else {}
+
+    if intent == "tagline-update":
+        explicit_tagline = _explicit_semantic_copy_from_prompt(
+            follow_up_prompt,
+            max_length=140,
+            reject_ui_directive=True,
+        )
+        candidate_tagline = _safe_semantic_text(
+            candidate_company.get("tagline"),
+            follow_up_prompt=follow_up_prompt,
+            max_length=140,
+            reject_ui_directive=True,
+        )
+        # The mock brief path cannot infer a new tagline from the follow-up.
+        # Prefer a controlled prompt-derived line so V1 changes the Project
+        # Input deterministically without leaking the raw instruction.
+        fallback_tagline = _fallback_tagline_for_prompt(
+            follow_up_prompt,
+            language=language,
+        )
+        prompt_tone_words = _tone_words_from_prompt(
+            follow_up_prompt,
+            language=language,
+        )
+        candidate_lower = _normalise_followup_text(candidate_tagline or "")
+        if explicit_tagline:
+            company["tagline"] = explicit_tagline
+        elif candidate_tagline and any(word in candidate_lower for word in prompt_tone_words):
+            company["tagline"] = candidate_tagline
+        elif candidate_tagline:
+            company["tagline"] = fallback_tagline
+        else:
+            company["tagline"] = fallback_tagline
+        return
+
+    if intent == "story-emphasize":
+        previous_story = _string_value(company.get("story")) or ""
+        explicit_story = _explicit_semantic_copy_from_prompt(
+            follow_up_prompt,
+            max_length=1200,
+        )
+        candidate_story = _safe_semantic_text(
+            candidate_company.get("story"),
+            follow_up_prompt=follow_up_prompt,
+            max_length=1200,
+        )
+        if explicit_story and explicit_story != previous_story:
+            company["story"] = explicit_story
+        elif candidate_story and candidate_story != previous_story:
+            company["story"] = candidate_story
+        else:
+            company["story"] = _append_story_sentence(
+                previous_story,
+                _story_sentence_for_prompt(follow_up_prompt, language=language),
+            )
+        return
+
+    if intent == "tone-shift":
+        previous_tone = merged.get("tone") if isinstance(merged.get("tone"), dict) else {}
+        candidate_tone = candidate.get("tone") if isinstance(candidate.get("tone"), dict) else {}
+        prompt_tones = _tone_words_from_prompt(follow_up_prompt, language=language)
+        primary = prompt_tones[0] if prompt_tones else _string_value(candidate_tone.get("primary"))
+        if not primary:
+            primary = _string_value(previous_tone.get("primary")) or "trustworthy"
+        secondary = prompt_tones[1:5]
+        if not secondary:
+            candidate_secondary = candidate_tone.get("secondary")
+            if isinstance(candidate_secondary, list):
+                secondary = [
+                    item.strip()
+                    for item in candidate_secondary
+                    if isinstance(item, str) and item.strip()
+                ][:4]
+        if not secondary and primary == "premium":
+            secondary = (
+                ["professional", "dependable"]
+                if language == "en"
+                else ["professionell", "förtroendeingivande"]
+            )
+        avoid = _avoid_words_from_prompt(follow_up_prompt, language=language)
+        if not avoid:
+            candidate_avoid = candidate_tone.get("avoid")
+            if isinstance(candidate_avoid, list):
+                avoid = [
+                    item.strip()
+                    for item in candidate_avoid
+                    if isinstance(item, str) and item.strip()
+                ][:4]
+        merged["tone"] = {
+            "primary": primary[:80],
+            "secondary": secondary[:4],
+            "avoid": avoid[:4],
+        }
+        return
+
+    if intent == "positioning-shift":
+        # Project Input has no positioning field in V1. The meta-sidecar
+        # snapshot records this intent; runtime projection is V2 scope.
+        return
+
+
+def _field_entry_from_previous(
+    previous_entry: Any,
+    *,
+    fallback_value: Any,
+    fallback_version: int,
+    fallback_source: str,
+) -> dict[str, Any]:
+    if isinstance(previous_entry, dict) and {
+        "value",
+        "lastUpdatedVersion",
+        "source",
+    } <= set(previous_entry):
+        return copy.deepcopy(previous_entry)
+    return _semantic_source_entry(
+        value=fallback_value,
+        last_updated_version=fallback_version,
+        source=fallback_source,
+    )
+
+
+def _build_project_dna_snapshot(
+    project_input: dict[str, Any],
+    *,
+    previous_project_input: dict[str, Any] | None,
+    previous_project_dna: dict[str, Any] | None,
+    version: int,
+    mode: str,
+    follow_up_prompt: str | None,
+) -> dict[str, Any]:
+    """Build the V1 Project DNA snapshot stored in the meta sidecar."""
+    language = project_input.get("language") if isinstance(project_input.get("language"), str) else "sv"
+    intent: FollowupIntent = "no-semantic-change"
+    if mode == "followup":
+        intent = classify_followup_intent(follow_up_prompt or "", language=language)
+        if intent in {"no-semantic-change", "clarify"} and isinstance(previous_project_dna, dict):
+            snapshot = copy.deepcopy(previous_project_dna)
+            snapshot["followUpIntent"] = {
+                "id": intent,
+                "confidence": "medium",
+                "rationale": "No semantic Project DNA field changed in this follow-up.",
+            }
+            return snapshot
+
+    company = project_input.get("company") if isinstance(project_input.get("company"), dict) else {}
+    previous_company = (
+        previous_project_input.get("company")
+        if isinstance(previous_project_input, dict)
+        and isinstance(previous_project_input.get("company"), dict)
+        else {}
+    )
+    tone = project_input.get("tone") if isinstance(project_input.get("tone"), dict) else {}
+    previous_tone = (
+        previous_project_input.get("tone")
+        if isinstance(previous_project_input, dict)
+        and isinstance(previous_project_input.get("tone"), dict)
+        else {}
+    )
+    previous_dna = previous_project_dna if isinstance(previous_project_dna, dict) else {}
+    previous_dna_tone = (
+        previous_dna.get("tone")
+        if isinstance(previous_dna.get("tone"), dict)
+        else {}
+    )
+    created_at_version = previous_dna.get("createdAtVersion")
+    if not isinstance(created_at_version, int):
+        created_at_version = 1 if mode == "init" else version
+
+    def field(
+        key: str,
+        *,
+        current_value: Any,
+        previous_value: Any,
+        previous_entry: Any,
+        affected_intents: set[FollowupIntent],
+    ) -> dict[str, Any]:
+        entry = _field_entry_from_previous(
+            previous_entry,
+            fallback_value=previous_value if previous_value is not None else current_value,
+            fallback_version=created_at_version,
+            fallback_source="brief",
+        )
+        if mode == "followup" and intent in affected_intents and current_value != previous_value:
+            return _semantic_source_entry(
+                value=current_value,
+                last_updated_version=version,
+                source="followup",
+            )
+        if key not in previous_dna:
+            entry["value"] = copy.deepcopy(current_value)
+        return entry
+
+    snapshot = {
+        "schemaVersion": 1,
+        "createdAtVersion": created_at_version,
+        "story": field(
+            "story",
+            current_value=company.get("story"),
+            previous_value=previous_company.get("story"),
+            previous_entry=previous_dna.get("story"),
+            affected_intents={"story-emphasize"},
+        ),
+        "tagline": field(
+            "tagline",
+            current_value=company.get("tagline"),
+            previous_value=previous_company.get("tagline"),
+            previous_entry=previous_dna.get("tagline"),
+            affected_intents={"tagline-update"},
+        ),
+        "tone": {
+            "primary": field(
+                "primary",
+                current_value=tone.get("primary"),
+                previous_value=previous_tone.get("primary"),
+                previous_entry=previous_dna_tone.get("primary"),
+                affected_intents={"tone-shift"},
+            ),
+            "secondary": field(
+                "secondary",
+                current_value=tone.get("secondary", []),
+                previous_value=previous_tone.get("secondary", []),
+                previous_entry=previous_dna_tone.get("secondary"),
+                affected_intents={"tone-shift"},
+            ),
+            "avoid": field(
+                "avoid",
+                current_value=tone.get("avoid", []),
+                previous_value=previous_tone.get("avoid", []),
+                previous_entry=previous_dna_tone.get("avoid"),
+                affected_intents={"tone-shift"},
+            ),
+        },
+        "positioning": previous_dna.get("positioning")
+        if "positioning" in previous_dna
+        else None,
+        "followUpIntent": {
+            "id": intent,
+            "confidence": "medium" if mode == "followup" else "high",
+            "rationale": (
+                "Deterministic keyword match in follow-up prompt."
+                if mode == "followup"
+                else "Initial Project DNA snapshot."
+            ),
+        },
+    }
+
+    if mode == "followup" and intent == "positioning-shift":
+        snapshot["positioning"] = _semantic_source_entry(
+            value=_positioning_for_prompt(follow_up_prompt or "", language=language),
+            last_updated_version=version,
+            source="followup",
+        )
+
+    return snapshot
+
+
 def merge_followup_project_input(
     previous: dict[str, Any],
     candidate: dict[str, Any],
@@ -1549,13 +2320,12 @@ def merge_followup_project_input(
 ) -> dict[str, Any]:
     """Preserve prior site context while applying a follow-up prompt.
 
-    This is deliberately conservative: follow-up mode is a new version
-    of the same prompt-generated site track, not a fresh init. The
-    generated candidate contributes additive signals (new services,
-    capabilities and conversion goals) while the identity, scaffold,
-    variant, language, location, contact data, story, tagline, tone and
-    existing content survive byte-stably unless a later Project DNA
-    sprint introduces semantic patching.
+    Follow-up mode is a new version of the same prompt-generated site
+    track, not a fresh init. The generated candidate contributes
+    additive signals (new services, capabilities and conversion goals).
+    Story, tagline and tone remain byte-stable for unclear/additive
+    prompts, but Project DNA semantic patching may update exactly the
+    field targeted by a known follow-up intent.
     """
     merged = copy.deepcopy(previous)
     merged["siteId"] = previous["siteId"]
@@ -1584,7 +2354,6 @@ def merge_followup_project_input(
     # copy stays clean and Viewser can still surface the operator's
     # latest prompt from the sidecar.
     merged["company"] = company
-    _ = follow_up_prompt  # kept on the API for future semantic-patch hooks
 
     merged["services"] = _merge_services(
         list(previous.get("services") or []),
@@ -1602,6 +2371,16 @@ def merge_followup_project_input(
         merged["tone"] = copy.deepcopy(candidate.get("tone", {}))
     if "trustSignals" not in merged:
         merged["trustSignals"] = copy.deepcopy(candidate.get("trustSignals", []))
+    intent = classify_followup_intent(
+        follow_up_prompt,
+        language=merged.get("language", "sv"),
+    )
+    _apply_semantic_patch(
+        merged,
+        candidate,
+        intent=intent,
+        follow_up_prompt=follow_up_prompt,
+    )
     return merged
 
 
@@ -1719,6 +2498,7 @@ def generate(
     version: int = 1,
     mode: str = "init",
     base_project_input: dict[str, Any] | None = None,
+    previous_project_dna: dict[str, Any] | None = None,
     meta_overrides: dict[str, Any] | None = None,
     discovery: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], Path, Path]:
@@ -1884,6 +2664,14 @@ def generate(
         "modelUsed": brief_artifact.get("modelUsed"),
         "createdAt": now,
     }
+    meta["projectDna"] = _build_project_dna_snapshot(
+        project_input,
+        previous_project_input=base_project_input,
+        previous_project_dna=previous_project_dna,
+        version=version,
+        mode=mode,
+        follow_up_prompt=prompt if mode == "followup" else None,
+    )
     if discovery_decision is not None:
         meta["discoveryDecision"] = discovery_decision.to_dict()
     # B133: surfaces only when there is actually a placeholder field —
@@ -1968,6 +2756,9 @@ def generate_followup(
         version=previous_version + 1,
         mode="followup",
         base_project_input=previous_project_input,
+        previous_project_dna=existing_meta.get("projectDna")
+        if isinstance(existing_meta.get("projectDna"), dict)
+        else None,
         meta_overrides=meta_overrides,
         discovery=discovery,
     )

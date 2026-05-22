@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 27 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 104 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 26 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 105 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -103,17 +103,6 @@ Tre read-only subagents granskade (1) brief + prompt-helper pipeline,
 (2) builder renderers + scaffolds + Quality Gate, (3) Viewser app +
 run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
 
-- **`B71` Hög** - Follow-up merge fryser `company.story`,
-  `company.tagline`, `tone` i strid med egen docstring.
-  `scripts/prompt_to_project_input.py:merge_followup_project_input`
-  docstring säger att kandidat bidrar med "additive signals (new
-  services, capabilities, conversion goals and a visible story note)",
-  men koden tar aldrig `story` från kandidat, och `tone` lämnas orörd
-  när det redan är ett dict. Källa: brief-pipeline-bug-sweep
-  2026-05-15. Två val: (a) uppdatera docstring + test att matcha
-  faktisk byte-stabil semantic, eller (b) semantic patching nu
-  (kräver ADR, hör hemma i Project DNA-sprinten). Fix: open. Test:
-  open.
 - **`B72` Medel** - `apps/viewser/lib/runs.ts:40-84` `listRuns` läser
   `build-result.json` för alla run-kataloger trots att svaret bara
   behåller `limit` poster. O(N) disk-läsningar per `GET /api/runs`,
@@ -207,13 +196,11 @@ CTA "Begär offert" hardcoded i `render_home` oavsett bransch
   när scaffold = `ecommerce-lite`. Källa: re-Verifierings-Scout
   2026-05-15. Fix: open. Test: open.
 
-**B71-not (PR #28 stängde, men markerad som unverified av re-Scout):**
-Re-Verifierings-Scout flaggade att follow-up byte-stabilitet inte
-kan verifieras i ett första-generations-pass (kräver v1 → v2-test).
-B71-stängningen i Grind hänger på kod-/docstring-spårning i
-`tests/test_prompt_to_project_input.py`; ingen kritik mot lock-tester,
-bara att Scout inte själv kunde verifiera invarianten. Två-pass-test
-bör naturligt köras nästa gång någon ändå provkör follow-up-flödet.
+**Historisk B71-not:** Re-Verifierings-Scout kunde före Project DNA-
+fixen inte verifiera follow-up-byte-stabilitet i ett första-
+generationspass. B71 stängs först i Project DNA semantic follow-up
+V1 nedan, där v1 → v2-tester låser både semantiska ändringar och
+byte-stabila no-change-fall.
 
 ### Re-Verifierings-Scout 3 2026-05-18 (post-1C mot `b5ee710`/`6eaf222`)
 
@@ -519,7 +506,7 @@ arkitekturändring, inte en bugg.
 
 ### Demo-baseline-fix 1B closure note (2026-05-15)
 
-PR #28 / `885431b` stängde 15 buggar (alla flyttade till "Stängda" 2026-05-18 i en separat Steward-städning): B64, B65, B66, B69, B70, B73, B74, B76, B77, B78, B79, B80, B81, B82 och B84. Kvar öppna (medvetet eller deferred) från bug-sweep-listan: B67, B71 (markerad unverified av re-Scout), B72, B75, B83, B85, B86 och B87.
+PR #28 / `885431b` stängde 15 buggar (alla flyttade till "Stängda" 2026-05-18 i en separat Steward-städning): B64, B65, B66, B69, B70, B73, B74, B76, B77, B78, B79, B80, B81, B82 och B84. Efter Project DNA semantic follow-up V1 är B71 också stängd. Kvar öppna (medvetet eller deferred) från bug-sweep-listan: B67, B72, B75, B83, B85, B86 och B87.
 
 ### Demo-baseline-fix 1C closure note (2026-05-18)
 
@@ -638,6 +625,26 @@ för follow-up eller ska städas.
   2026-05-19. Fix: open. Test: open.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B71` Hög** (stängd 2026-05-22, Project DNA semantic follow-up V1) -
+  `scripts/prompt_to_project_input.py:merge_followup_project_input`
+  frös `company.story`, `company.tagline` och `tone` även när
+  följdprompten tydligt bad om semantic ändring. Fix: `d791b0c`
+  aktiverar deterministisk FollowUp Intent-klassning för
+  `tone-shift`, `story-emphasize`, `tagline-update`,
+  `positioning-shift`, `no-semantic-change` och `clarify`.
+  Tydliga semantic intents patchar exakt tillåtet Project Input-fält,
+  medan additiva/no-change-prompter behåller byte-stabilitet. V1
+  skriver `projectDna` i befintlig meta-sidecar
+  (`data/prompt-inputs/<siteId>.meta.json`); full
+  `data/projects/<projectId>/dna.json`-lagring är V2 enligt ADR 0027.
+  Rå följdprompt filtreras fortsatt bort från kundcopy. Test:
+  `tests/test_prompt_to_project_input.py::test_followup_merge_keeps_story_tagline_and_tone_byte_stable_when_intent_is_no_change`,
+  `tests/test_prompt_to_project_input.py::test_followup_merge_tone_shift_updates_tone_only`,
+  `tests/test_prompt_to_project_input.py::test_followup_story_intent_does_not_leak_raw_prompt`,
+  `tests/test_prompt_to_project_input.py::test_generate_followup_tone_shift_updates_project_input_and_project_dna`,
+  `tests/test_prompt_to_project_input.py::test_generate_followup_story_and_tagline_prompts_change_project_input`,
+  `tests/test_prompt_to_project_input.py::test_project_dna_sidecar_validates_against_snapshot_schema`.
 
 - **`B143` Medel** (stängd 2026-05-21, Intent Guard English slug
   matching) - konflikt-tabellen matchade enbart

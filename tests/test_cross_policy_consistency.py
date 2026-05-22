@@ -154,6 +154,34 @@ def test_globally_forbidden_not_canonical(naming_dictionary: dict):
 
 
 @pytest.mark.governance
+def test_project_dna_snapshot_schema_covers_sidecar_fields(schemas: dict[str, dict]):
+    schema = schemas["project-dna-snapshot.schema.json"]
+    assert schema["properties"]["schemaVersion"]["const"] == 1
+    assert set(schema["required"]) == {
+        "schemaVersion",
+        "createdAtVersion",
+        "story",
+        "tagline",
+        "tone",
+        "positioning",
+        "followUpIntent",
+    }
+    assert set(schema["properties"]["tone"]["required"]) == {
+        "primary",
+        "secondary",
+        "avoid",
+    }
+    assert set(schema["properties"]["followUpIntent"]["properties"]["id"]["enum"]) == {
+        "tone-shift",
+        "story-emphasize",
+        "tagline-update",
+        "positioning-shift",
+        "no-semantic-change",
+        "clarify",
+    }
+
+
+@pytest.mark.governance
 def test_repo_boundaries_paths_are_unique(repo_boundaries: dict):
     paths = [o["path"] for o in repo_boundaries["ownership"]]
     duplicates = {p for p in paths if paths.count(p) > 1}
