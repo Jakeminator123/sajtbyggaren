@@ -1,8 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-22 (**mixed follow-up tone guard efter naprapat mini-
-eval bug-sweep**). Senaste produkt-/kod-läge är `a54e06f`
-(`fix(builder): preserve tone intent in mixed follow-ups`) ovanpå
+**Datum:** 2026-05-22 (**Dev Artifact Cleanup / Eval Retention v1 efter
+mixed follow-up tone guard**). Senaste produkt-/kod-läge är `78baaa1`
+(`chore(tooling): add dev artifact cleanup`) ovanpå `a54e06f`
+(`fix(builder): preserve tone intent in mixed follow-ups`),
 naprapat-fixen `991f152`, `25a435d` (`fix(builder): harden follow-up
 intent handling`), Mini-eval-runnern `defd196` och PR #57 squash-SHA
 `eb5a81d` (`fix(builder): propagate brand and tone tokens`). PR #57 squash-
@@ -22,7 +23,8 @@ sync link-rewrite för spegel-djup), `c20270f` (Steward-bump),
 (PR #57 squash-merge), `b93ed50` (Steward efter PR #57), `defd196`
 (Mini-eval runner + CSS-kaskadfix), `25a435d` (follow-up intent-
 hardening), `991f152` (naprapat tone-sweep), `3418cdb` (PR #58 B125
-decision merge), `a54e06f` (mixed additiv + tone guard).
+decision merge), `a54e06f` (mixed additiv + tone guard), `78baaa1`
+(Dev Artifact Cleanup / Eval Retention v1).
 
 **Mixed follow-up guard (`a54e06f`):**
 

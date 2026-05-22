@@ -30,7 +30,13 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `a54e06f` (2026-05-22, **mixed follow-up tone guard
+Last verified state: `78baaa1` (2026-05-22, **Dev Artifact Cleanup /
+Eval Retention v1 efter mixed follow-up tone guard**) — produkt-/kodläget
+innehåller `a54e06f` plus `scripts/cleanup_dev_artifacts.py`, en samlad
+dry-run-first cleanup för lokala mini-evals, generated previews och
+Python-cache. Föregående produkt-läge:
+
+Föregående verified state: `a54e06f` (2026-05-22, **mixed follow-up tone guard
 efter naprapat mini-eval bug-sweep**) — produkt-/kodläget innehåller
 naprapat-fixen plus `a54e06f` som låter `Lägg till FAQ och gör tonen mer
 premium` behålla additiv merge samtidigt som den patchar `tone`, men
