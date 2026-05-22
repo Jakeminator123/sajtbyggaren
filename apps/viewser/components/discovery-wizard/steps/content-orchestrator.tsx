@@ -1,29 +1,27 @@
 "use client";
 
-import { BookText, Layers, Target as TargetIcon } from "lucide-react";
+import { BookText, Layers } from "lucide-react";
 
 import type { ContentBranch } from "../wizard-constants";
 import type { WizardAnswers } from "../wizard-types";
 import { ContentStep } from "./content-step";
 import {
+  AdvancedDisclosure,
   FieldStack,
   HelperText,
   TextareaField,
 } from "./step-primitives";
-import { StoryStep } from "./story-step";
+import { StoryEssentialsFields, StoryExtrasFields } from "./story-step";
 
 /**
- * ContentOrchestratorStep — wizardens steg 4 (Pass 4: rik sektion-layout).
+ * ContentOrchestratorStep — wizardens steg 4.
  *
- * Wrapper som samlar alla copy/innehåll-fält i en tydlig ordning:
- *   1. Branch-specifika listor (tjänster/produkter/meny/projekt/team)
- *      — återanvänder `ContentStep`-grenar.
- *   2. Företagets identitet (om-oss, historia, vision, intro)
- *      — återanvänder `StoryStep`.
- *   3. Målgrupp (separat sektion så det inte tappas bort).
- *
- * Varje sektion har en kort header med ikon för visuell rytm och så
- * operatören enkelt kan scanna sig till rätt block.
+ * Tre rader, från viktigast till valfri:
+ *   1. Erbjudande/innehåll (branch-specifik ContentStep).
+ *   2. Företagets identitet — bara "Om oss" är synlig; historia,
+ *      vision, kontaktintro och målgrupp ligger i en disclosure.
+ *      Om-oss är det enda fält som verkligen driver hero/intro-copy;
+ *      resten är "fluff" som operatörer ofta hoppar.
  */
 export function ContentOrchestratorStep({
   answers,
@@ -34,6 +32,12 @@ export function ContentOrchestratorStep({
   onChange: (next: Partial<WizardAnswers>) => void;
   branch: ContentBranch;
 }) {
+  const storyAdvancedFilled =
+    (answers.historyText.trim() ? 1 : 0) +
+    (answers.visionText.trim() ? 1 : 0) +
+    (answers.contactIntroText.trim() ? 1 : 0) +
+    (answers.targetAudience.trim() ? 1 : 0);
+
   return (
     <FieldStack>
       <SectionCard
@@ -47,24 +51,29 @@ export function ContentOrchestratorStep({
       <SectionCard
         icon={<BookText className="h-3.5 w-3.5" />}
         title="Företagets identitet"
-        description="Bakgrund, vision och hur vi skriver om er. AI:n använder det för Om-oss, hero och intro-texter."
+        description="Om-oss är vad AI:n bygger hero + intro-texter från. Mer detaljer (historia, vision, målgrupp) ligger i disclosure nedan."
       >
-        <StoryStep answers={answers} onChange={onChange} />
-      </SectionCard>
-
-      <SectionCard
-        icon={<TargetIcon className="h-3.5 w-3.5" />}
-        title="Målgrupp"
-        description="Vilka är dina kunder? Driver tone of voice + copy-personalisering."
-      >
-        <TextareaField
-          label="Beskriv målgruppen"
-          optional
-          value={answers.targetAudience}
-          onChange={(value) => onChange({ targetAudience: value })}
-          placeholder="Ålder, bransch, behov, plats, vad är typiskt för dem?"
-          rows={2}
-        />
+        <FieldStack>
+          <StoryEssentialsFields answers={answers} onChange={onChange} />
+          <AdvancedDisclosure
+            id="content-identity-advanced"
+            label="Historia, vision, kontaktintro & målgrupp"
+            hint="Helt valfritt. Om du lämnar tomt skriver AI:n det från Om-oss + tone of voice."
+            count={4}
+            activeCount={storyAdvancedFilled}
+          >
+            <StoryExtrasFields answers={answers} onChange={onChange} />
+            <TextareaField
+              label="Beskriv målgruppen"
+              optional
+              value={answers.targetAudience}
+              onChange={(value) => onChange({ targetAudience: value })}
+              placeholder="Ålder, bransch, behov, plats, vad är typiskt för dem?"
+              rows={2}
+              helper="Driver tone of voice och copy-personalisering."
+            />
+          </AdvancedDisclosure>
+        </FieldStack>
       </SectionCard>
     </FieldStack>
   );

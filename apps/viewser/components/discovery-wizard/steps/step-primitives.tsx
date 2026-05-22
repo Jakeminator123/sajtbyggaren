@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback } from "react";
+import { ChevronDown } from "lucide-react";
+import { useCallback, useState } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 /**
  * Återanvändbara UI-primitiver för wizard-stegen. Hålls i en egen fil
@@ -203,6 +205,100 @@ export function TextareaField({
         className="text-[13px]"
       />
       {helper ? <HelperText>{helper}</HelperText> : null}
+    </div>
+  );
+}
+
+/**
+ * Progressive-disclosure-block för "advanced" wizard-val.
+ *
+ * Mönster (efter `DirectivesPreview`): kollapsbar knapp med chevron +
+ * räknare-badge så operatören ser HUR MÅNGA dolda val som finns
+ * innan hen klickar. Default kollapsad så essentials-flödet är
+ * minimalt; power-users öppnar för fine-tuning.
+ *
+ * UX-regler:
+ *   - Knappen ska beskriva vad som finns DÄRINNE ("Fler designval",
+ *     inte bara "Visa fler"). Default-label är "Visa fler val".
+ *   - ``count`` används som badge så operatören ser om något är dolt
+ *     överhuvudtaget (count=0 → ingen badge). När count > 0 visas
+ *     "(N val)" diskret bredvid labeln.
+ *   - ``activeCount`` är antal val DÄRINNE som faktiskt är ifyllda
+ *     — t.ex. när operatören har satt en hex-färg eller laddat upp
+ *     en favicon. Då visar vi "(N val · M ifyllda)" så hen vet att
+ *     gå tillbaka och granska.
+ *   - Hela blocket har samma rundade kort-look som
+ *     ``DirectivesPreview`` så det inte sticker ut i stegen.
+ *
+ * Tillgänglighet: ``aria-expanded`` + ``aria-controls`` pekar mot
+ * panelen. Panelen får ``role="region"`` så skärmläsare anmäler
+ * den när den öppnas.
+ */
+export function AdvancedDisclosure({
+  label = "Visa fler val",
+  hint,
+  count,
+  activeCount,
+  defaultOpen = false,
+  children,
+  id,
+}: {
+  label?: string;
+  hint?: string;
+  count?: number;
+  activeCount?: number;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+  id?: string;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const panelId = id ?? "advanced-disclosure-panel";
+  const showActiveBadge =
+    typeof activeCount === "number" && activeCount > 0;
+  return (
+    <div className="border-border/40 bg-muted/10 rounded-2xl border">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className="hover:bg-muted/30 flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-2.5 text-left transition-colors"
+        aria-expanded={open}
+        aria-controls={panelId}
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="text-[12px] font-medium text-foreground/85">{label}</span>
+          {typeof count === "number" && count > 0 ? (
+            <span className="text-muted-foreground text-[11px]">
+              {showActiveBadge
+                ? `(${count} val · ${activeCount} ifyllda)`
+                : `(${count} val)`}
+            </span>
+          ) : null}
+          {showActiveBadge && (typeof count !== "number" || count === 0) ? (
+            <span className="rounded-full bg-foreground/10 px-1.5 py-0.5 text-[10px] font-medium text-foreground">
+              {activeCount} ifyllda
+            </span>
+          ) : null}
+        </div>
+        <ChevronDown
+          className={cn(
+            "text-muted-foreground h-4 w-4 transition-transform",
+            open && "rotate-180",
+          )}
+          aria-hidden
+        />
+      </button>
+      {open ? (
+        <div
+          id={panelId}
+          role="region"
+          className="border-border/40 space-y-4 border-t px-4 pt-4 pb-4"
+        >
+          {hint ? (
+            <p className="text-muted-foreground text-[11px]">{hint}</p>
+          ) : null}
+          {children}
+        </div>
+      ) : null}
     </div>
   );
 }

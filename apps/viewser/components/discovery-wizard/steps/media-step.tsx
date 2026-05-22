@@ -17,7 +17,7 @@ import type { AssetRef, AssetRole } from "@/lib/asset-store/types";
 
 import type { WizardAnswers, WizardAssets, WizardMedia } from "../wizard-types";
 import { AssetsStep } from "./assets-step";
-import { FieldStack, HelperText } from "./step-primitives";
+import { AdvancedDisclosure, FieldStack, HelperText } from "./step-primitives";
 
 /**
  * MediaStep — wizardens steg 5 (Pass 5: rik kort-layout per asset).
@@ -86,94 +86,102 @@ export function MediaStep({
         </div>
       </AssetCard>
 
-      {/* 2. Favicon. */}
-      <AssetCard
-        icon={<Square className="h-4 w-4" />}
-        title="Favicon"
-        description="Ikonen i browser-fliken och bokmärken."
+      {/* ADVANCED — favicon, OG, video. Sällsynta tillgångar som
+       *   default-faller tillbaka till brand-genererad SVG (OG) eller
+       *   monogram (favicon). Hero-bilden räcker som video-fallback. */}
+      <AdvancedDisclosure
+        id="media-advanced"
+        label="Favicon, social-image & bakgrundsvideo"
+        hint="Om du lämnar tomma genererar vi favicon från monogrammet och OG-image från brand-färgen. Bakgrundsvideo är ren bonus."
+        count={3}
+        activeCount={
+          (answers.media.favicon ? 1 : 0) +
+          (answers.media.ogImage ? 1 : 0) +
+          (answers.media.backgroundVideo ? 1 : 0)
+        }
       >
-        {answers.media.favicon ? (
-          <FaviconPreview
-            asset={answers.media.favicon}
-            companyName={answers.companyName}
-            onRemove={() => updateMedia((m) => ({ ...m, favicon: null }))}
-          />
-        ) : (
-          <UploadOrGenerate
-            onGenerate={() => setAiDialogRole("favicon")}
-          >
+        <AssetCard
+          icon={<Square className="h-4 w-4" />}
+          title="Favicon"
+          description="Ikonen i browser-fliken och bokmärken."
+        >
+          {answers.media.favicon ? (
+            <FaviconPreview
+              asset={answers.media.favicon}
+              companyName={answers.companyName}
+              onRemove={() => updateMedia((m) => ({ ...m, favicon: null }))}
+            />
+          ) : (
+            <UploadOrGenerate onGenerate={() => setAiDialogRole("favicon")}>
+              <AssetDropzone
+                role="favicon"
+                mode="single"
+                emptyLabel="Släpp favicon här"
+                hintLabel="Kvadratisk PNG eller SVG, minst 256×256 px."
+                onUploaded={(refs) => {
+                  const next = refs[0];
+                  if (next) updateMedia((m) => ({ ...m, favicon: next }));
+                }}
+              />
+            </UploadOrGenerate>
+          )}
+        </AssetCard>
+
+        <AssetCard
+          icon={<Globe className="h-4 w-4" />}
+          title="OG-image"
+          description="Förhandsvisning på Facebook, LinkedIn, Slack och SMS."
+        >
+          {answers.media.ogImage ? (
+            <OgImagePreview
+              asset={answers.media.ogImage}
+              companyName={answers.companyName}
+              offer={answers.offer}
+              onRemove={() => updateMedia((m) => ({ ...m, ogImage: null }))}
+            />
+          ) : (
+            <UploadOrGenerate onGenerate={() => setAiDialogRole("ogImage")}>
+              <AssetDropzone
+                role="ogImage"
+                mode="single"
+                emptyLabel="Släpp social-image här"
+                hintLabel="Liggande bild — vi croppar till 1200×630."
+                onUploaded={(refs) => {
+                  const next = refs[0];
+                  if (next) updateMedia((m) => ({ ...m, ogImage: next }));
+                }}
+              />
+            </UploadOrGenerate>
+          )}
+        </AssetCard>
+
+        <AssetCard
+          icon={<Video className="h-4 w-4" />}
+          title="Bakgrundsvideo"
+          description="Loop bakom hero-texten — tyst, kort, ger sajten liv."
+        >
+          {answers.media.backgroundVideo ? (
+            <VideoPreview
+              asset={answers.media.backgroundVideo}
+              onRemove={() =>
+                updateMedia((m) => ({ ...m, backgroundVideo: null }))
+              }
+            />
+          ) : (
             <AssetDropzone
-              role="favicon"
+              role="backgroundVideo"
               mode="single"
-              emptyLabel="Släpp favicon här"
-              hintLabel="Kvadratisk PNG eller SVG, minst 256×256 px."
+              emptyLabel="Släpp video här (.mp4 / .webm)"
+              hintLabel="5-15 sekunder, max ~50 MB. Hero-bilden visas som fallback."
               onUploaded={(refs) => {
                 const next = refs[0];
-                if (next) updateMedia((m) => ({ ...m, favicon: next }));
+                if (next)
+                  updateMedia((m) => ({ ...m, backgroundVideo: next }));
               }}
             />
-          </UploadOrGenerate>
-        )}
-      </AssetCard>
-
-      {/* 3. OG-image. */}
-      <AssetCard
-        icon={<Globe className="h-4 w-4" />}
-        title="OG-image"
-        description="Förhandsvisning på Facebook, LinkedIn, Slack och SMS."
-      >
-        {answers.media.ogImage ? (
-          <OgImagePreview
-            asset={answers.media.ogImage}
-            companyName={answers.companyName}
-            offer={answers.offer}
-            onRemove={() => updateMedia((m) => ({ ...m, ogImage: null }))}
-          />
-        ) : (
-          <UploadOrGenerate
-            onGenerate={() => setAiDialogRole("ogImage")}
-          >
-            <AssetDropzone
-              role="ogImage"
-              mode="single"
-              emptyLabel="Släpp social-image här"
-              hintLabel="Liggande bild — vi croppar till 1200×630."
-              onUploaded={(refs) => {
-                const next = refs[0];
-                if (next) updateMedia((m) => ({ ...m, ogImage: next }));
-              }}
-            />
-          </UploadOrGenerate>
-        )}
-      </AssetCard>
-
-      {/* 4. Bakgrundsvideo. */}
-      <AssetCard
-        icon={<Video className="h-4 w-4" />}
-        title="Bakgrundsvideo"
-        description="Loop bakom hero-texten — tyst, kort, ger sajten liv."
-      >
-        {answers.media.backgroundVideo ? (
-          <VideoPreview
-            asset={answers.media.backgroundVideo}
-            onRemove={() =>
-              updateMedia((m) => ({ ...m, backgroundVideo: null }))
-            }
-          />
-        ) : (
-          <AssetDropzone
-            role="backgroundVideo"
-            mode="single"
-            emptyLabel="Släpp video här (.mp4 / .webm)"
-            hintLabel="5-15 sekunder, max ~50 MB. Hero-bilden visas som fallback."
-            onUploaded={(refs) => {
-              const next = refs[0];
-              if (next)
-                updateMedia((m) => ({ ...m, backgroundVideo: next }));
-            }}
-          />
-        )}
-      </AssetCard>
+          )}
+        </AssetCard>
+      </AdvancedDisclosure>
 
       {/* Singleton AI-image-dialog — öppnas med rätt role.
           `key` baserat på role gör att dialogen remountas vid byte,

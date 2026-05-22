@@ -18,6 +18,7 @@ import {
 } from "../wizard-constants";
 import type { WizardAnswers } from "../wizard-types";
 import {
+  AdvancedDisclosure,
   Chip,
   ChipRow,
   FieldLabel,
@@ -145,9 +146,19 @@ export function VisualStep({
     onChange({ moodImages: merged });
   };
 
+  // Räkna ifyllda advanced-fält så badge:n visar progress.
+  const advancedFilled =
+    (answers.vibe.useCustomColors ? 1 : 0) +
+    (answers.vibe.typographyFeel ? 1 : 0) +
+    (answers.brand.designStyle ? 1 : 0) +
+    (answers.vibe.layoutHint ? 1 : 0) +
+    (answers.vibe.references.trim() ? 1 : 0) +
+    (answers.brand.wordsToAvoid.trim() ? 1 : 0) +
+    (answers.moodImages.length > 0 ? 1 : 0);
+
   return (
     <FieldStack>
-      {/* 1. Vibe-kort. */}
+      {/* ESSENTIALS — vibe + tonarter ger 90% av personlighet. */}
       <div>
         <SectionHeader>Vibe</SectionHeader>
         <HelperText>
@@ -173,7 +184,36 @@ export function VisualStep({
         ) : null}
       </div>
 
-      {/* 2. Färgvalsläge. */}
+      <div>
+        <SectionHeader>Tonarter</SectionHeader>
+        <HelperText>
+          Hur ska texten på sajten kännas? Välj en eller flera.
+        </HelperText>
+        <div className="mt-2">
+          <ChipRow>
+            {TONE_OPTIONS.map((tone) => (
+              <Chip
+                key={tone}
+                label={tone}
+                selected={answers.brand.toneTags.includes(tone)}
+                onToggle={() => toggleTone(tone)}
+              />
+            ))}
+          </ChipRow>
+        </div>
+      </div>
+
+      {/* ADVANCED — färger, typografi, designstil, hero-layout, referenser,
+       *   ord att undvika, mood-bilder. Vibe sätter intelligenta defaults
+       *   för allt nedanför så de flesta operatörer behöver aldrig öppna. */}
+      <AdvancedDisclosure
+        id="visual-advanced"
+        label="Designdetaljer"
+        hint="Vibe sätter rimliga defaults. Öppna bara om du vill överstyra färger, typografi-känsla, hero-layout eller lägga in referenser/mood-bilder."
+        count={7}
+        activeCount={advancedFilled}
+      >
+      {/* Färgvalsläge. */}
       <div>
         <SectionHeader>Färger</SectionHeader>
         <HelperText>
@@ -337,25 +377,7 @@ export function VisualStep({
         </div>
       </div>
 
-      {/* 4. Tonarter + designstil. */}
-      <div>
-        <SectionHeader>Tonarter</SectionHeader>
-        <HelperText>
-          Hur ska texten på sajten kännas? Välj en eller flera.
-        </HelperText>
-        <div className="mt-2">
-          <ChipRow>
-            {TONE_OPTIONS.map((tone) => (
-              <Chip
-                key={tone}
-                label={tone}
-                selected={answers.brand.toneTags.includes(tone)}
-                onToggle={() => toggleTone(tone)}
-              />
-            ))}
-          </ChipRow>
-        </div>
-      </div>
+      {/* Designstil (fallback om vibe ej valts). */}
       <div>
         <SectionHeader>Designstil (fallback om vibe ej valts)</SectionHeader>
         <ChipRow>
@@ -476,6 +498,7 @@ export function VisualStep({
           </div>
         ) : null}
       </div>
+      </AdvancedDisclosure>
     </FieldStack>
   );
 }

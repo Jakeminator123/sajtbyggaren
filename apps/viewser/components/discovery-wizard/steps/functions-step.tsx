@@ -25,6 +25,7 @@ import {
 } from "../wizard-constants";
 import type { WizardAnswers } from "../wizard-types";
 import {
+  AdvancedDisclosure,
   Chip,
   ChipRow,
   FieldLabel,
@@ -225,34 +226,12 @@ export function FunctionsStep({
         />
       ))}
 
-      {/* 4. Extra sidor. */}
-      {extraPages.length > 0 ? (
-        <div>
-          <SectionHeader>Extra sidor</SectionHeader>
-          <HelperText>
-            Lägg till sidor som inte triggas av en funktion ovan.
-          </HelperText>
-          <div className="mt-2">
-            <ChipRow>
-              {extraPages.map((page) => (
-                <Chip
-                  key={page}
-                  label={page}
-                  selected={answers.mustHave.includes(page)}
-                  onToggle={() => togglePage(page)}
-                />
-              ))}
-            </ChipRow>
-          </div>
-        </div>
-      ) : null}
-
       {/* 5. CTA. */}
       <div>
         <FieldLabel>Primär CTA</FieldLabel>
         <HelperText>
           Vad ska besökaren göra? Backend keyword-mappar texten till conversion
-          goals (boka, ring, offert, köp, kontakt). Välj en eller skriv egen.
+          goals (boka, ring, offert, köp, kontakt). Välj en av chipsen.
         </HelperText>
         <div className="mt-2">
           <ChipRow>
@@ -266,7 +245,26 @@ export function FunctionsStep({
             ))}
           </ChipRow>
         </div>
-        <div className="mt-2">
+      </div>
+
+      {/* ADVANCED — extra sidor + egen CTA-fritext + specialönskemål. */}
+      {family ? (
+        <AdvancedDisclosure
+          id="functions-advanced"
+          label="Mer finjustering"
+          hint="Egen CTA-text, extra sidor som inte triggas av funktioner ovan, och specialönskemål till backend."
+          count={3}
+          activeCount={
+            (answers.primaryCta &&
+            !CTA_OPTIONS.includes(
+              answers.primaryCta as (typeof CTA_OPTIONS)[number],
+            )
+              ? 1
+              : 0) +
+            (extraPages.some((page) => answers.mustHave.includes(page)) ? 1 : 0) +
+            (answers.specialRequests.trim() ? 1 : 0)
+          }
+        >
           <TextField
             label="Egen CTA"
             optional
@@ -280,20 +278,41 @@ export function FunctionsStep({
             }
             onChange={(value) => onChange({ primaryCta: value })}
             placeholder="t.ex. Få en gratis offert"
+            helper="Skriver över valt CTA-chip ovan. Tom = använd chip-valet."
           />
-        </div>
-      </div>
 
-      {/* 6. Specialönskemål. */}
-      <TextareaField
-        label="Specialönskemål"
-        optional
-        value={answers.specialRequests}
-        onChange={(value) => onChange({ specialRequests: value })}
-        placeholder="Skriv om det är någon specifik funktion vi inte täckt ovan."
-        rows={2}
-        helper="Hamnar i planner-prompten som notesForPlanner — bra för specifika UI-önskemål."
-      />
+          {extraPages.length > 0 ? (
+            <div>
+              <SectionHeader>Extra sidor</SectionHeader>
+              <HelperText>
+                Lägg till sidor som inte triggas av en funktion ovan.
+              </HelperText>
+              <div className="mt-2">
+                <ChipRow>
+                  {extraPages.map((page) => (
+                    <Chip
+                      key={page}
+                      label={page}
+                      selected={answers.mustHave.includes(page)}
+                      onToggle={() => togglePage(page)}
+                    />
+                  ))}
+                </ChipRow>
+              </div>
+            </div>
+          ) : null}
+
+          <TextareaField
+            label="Specialönskemål"
+            optional
+            value={answers.specialRequests}
+            onChange={(value) => onChange({ specialRequests: value })}
+            placeholder="Skriv om det är någon specifik funktion vi inte täckt ovan."
+            rows={2}
+            helper="Hamnar i planner-prompten som notesForPlanner — bra för specifika UI-önskemål."
+          />
+        </AdvancedDisclosure>
+      ) : null}
 
       {/* 7. Sammanfattning. */}
       {answers.selectedFunctions.length > 0 ? (

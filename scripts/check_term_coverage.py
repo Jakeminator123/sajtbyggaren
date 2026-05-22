@@ -256,6 +256,7 @@ COMMON_WORDS = {
     "ProductsPage",
     # React / Next / shadcn-typer som dyker upp i runtime-kod
     "ReactNode", "RootLayout", "NextConfig",
+    "AdvancedDisclosure",
     "ButtonPrimitive", "VariantProps", "ClassValue",
     "NextRequest", "NextResponse", "ComponentProps", "ReturnType",
     "CardAction", "CardContent", "CardDescription", "CardFooter", "CardHeader", "CardTitle",
@@ -356,6 +357,7 @@ COMMON_WORDS = {
     "DiscoveryWizard", "DiscoveryWizardProps", "DiscoveryPayload",
     "DiscoveryPayloadSchema",
     "CompanyStep", "SiteTypeStep", "ContentStep", "StoryStep",
+    "StoryEssentialsFields", "StoryExtrasFields",
     "PagesStep", "BrandStep",
     "SiteType", "MustHaveOption", "ScrapeState", "BuildProgressCard",
     "EcommerceContent", "RestaurantContent", "SalonContent",

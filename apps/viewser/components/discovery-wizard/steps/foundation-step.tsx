@@ -13,6 +13,7 @@ import {
 } from "../wizard-constants";
 import type { WizardAnswers } from "../wizard-types";
 import {
+  AdvancedDisclosure,
   Chip,
   ChipRow,
   FieldLabel,
@@ -173,57 +174,20 @@ export function FoundationStep({
     [answers.siteType, onChange],
   );
 
+  // Räkna ifyllda advanced-fält så disclosure-badge visar "(3 ifyllda)"
+  // när operatören redan har stoppat in värden. Räknar URL+specialisering
+  // som 1 vardera och kontakt som antal ifyllda kontaktfält.
+  const advancedFilled =
+    (answers.existingSite.trim() ? 1 : 0) +
+    (answers.siteType.length > 0 ? 1 : 0) +
+    (answers.contact.phone.trim() ? 1 : 0) +
+    (answers.contact.email.trim() ? 1 : 0) +
+    (answers.contact.address.trim() ? 1 : 0) +
+    (answers.contact.openingHours.trim() ? 1 : 0);
+
   return (
     <FieldStack>
-      {/* 1. URL-skrape — snabbväg när det finns en befintlig sajt. */}
-      <div>
-        <FieldLabel optional>Befintlig hemsida</FieldLabel>
-        <HelperText>
-          Klistra in din nuvarande hemsida så fyller vi i fält automatiskt.
-        </HelperText>
-        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-          <input
-            type="url"
-            value={answers.existingSite}
-            onChange={(event) => onChange({ existingSite: event.target.value })}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                void handleScrape();
-              }
-            }}
-            placeholder="www.dinhemsida.se"
-            className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/30 flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-[13px] shadow-xs transition-colors outline-none focus-visible:ring-2"
-          />
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={handleScrape}
-            disabled={
-              scrapeStatus === "loading" || !answers.existingSite.trim()
-            }
-            className="h-9 shrink-0"
-          >
-            {scrapeStatus === "loading" ? "Hämtar…" : "Hämta"}
-          </Button>
-        </div>
-        {scrapeMessage ? (
-          <p
-            className={`mt-1.5 text-[11px] ${
-              scrapeStatus === "error"
-                ? "text-destructive"
-                : scrapeStatus === "ok"
-                  ? "text-emerald-600 dark:text-emerald-400"
-                  : "text-muted-foreground"
-            }`}
-          >
-            {scrapeMessage}
-          </p>
-        ) : null}
-      </div>
-
-      {/* 2. Identitet — namn + offer. */}
+      {/* ESSENTIALS — alltid synliga: identitet + family. */}
       <TextField
         label="Företagsnamn *"
         value={answers.companyName}
@@ -239,12 +203,11 @@ export function FoundationStep({
         helper="1–2 meningar räcker — vi använder den för att fylla i resten."
       />
 
-      {/* 3. Verksamhetsfamilj — primärt scaffold-val (8 kort). */}
       <div>
         <SectionHeader>Verksamhetsfamilj *</SectionHeader>
         <HelperText>
           Styr scaffold + starter — vilken Next.js-mall backend bygger på. Välj
-          den som passar bäst; sub-kategorin nedanför finjusterar copy och SEO.
+          den som passar bäst.
         </HelperText>
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {BUSINESS_FAMILIES.map((option) => {
@@ -274,75 +237,136 @@ export function FoundationStep({
         </div>
       </div>
 
-      {/* 4. Sub-specialisering — filtrerade chips för vald family. */}
-      {selectedFamily && subCategoryOptions.length > 0 ? (
+      {/* ADVANCED — i disclosure: URL-skrape + specialisering + kontakt. */}
+      <AdvancedDisclosure
+        id="foundation-advanced"
+        label="Importera, specialisering & kontakt"
+        hint="Snabbväg från befintlig sajt, sub-kategori för bättre copy/SEO, och kontaktuppgifter som visas på kontaktsidan."
+        count={3}
+        activeCount={advancedFilled}
+      >
+        {/* Importera från befintlig hemsida. */}
         <div>
-          <SectionHeader>Specialisering (valfri)</SectionHeader>
+          <FieldLabel optional>Befintlig hemsida</FieldLabel>
           <HelperText>
-            En eller flera sub-kategorier för bättre copy och SEO.
-            {source === "fallback"
-              ? " (Visar lokal UI-cache tills governance-listan laddats.)"
-              : ""}
+            Klistra in din nuvarande hemsida så fyller vi i fält automatiskt.
           </HelperText>
-          <div className="mt-2">
-            <ChipRow>
-              {subCategoryOptions.map((category) => (
-                <Chip
-                  key={category.id}
-                  label={category.label}
-                  selected={answers.siteType.includes(category.id)}
-                  onToggle={() => toggleSubCategory(category.id)}
-                />
-              ))}
-            </ChipRow>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+            <input
+              type="url"
+              value={answers.existingSite}
+              onChange={(event) =>
+                onChange({ existingSite: event.target.value })
+              }
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void handleScrape();
+                }
+              }}
+              placeholder="www.dinhemsida.se"
+              className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/30 flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-[13px] shadow-xs transition-colors outline-none focus-visible:ring-2"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={handleScrape}
+              disabled={
+                scrapeStatus === "loading" || !answers.existingSite.trim()
+              }
+              className="h-9 shrink-0"
+            >
+              {scrapeStatus === "loading" ? "Hämtar…" : "Hämta"}
+            </Button>
+          </div>
+          {scrapeMessage ? (
+            <p
+              className={`mt-1.5 text-[11px] ${
+                scrapeStatus === "error"
+                  ? "text-destructive"
+                  : scrapeStatus === "ok"
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-muted-foreground"
+              }`}
+            >
+              {scrapeMessage}
+            </p>
+          ) : null}
+        </div>
+
+        {/* Sub-specialisering — filtrerade chips för vald family. */}
+        {selectedFamily && subCategoryOptions.length > 0 ? (
+          <div>
+            <SectionHeader>Specialisering</SectionHeader>
+            <HelperText>
+              En eller flera sub-kategorier för bättre copy och SEO.
+              {source === "fallback"
+                ? " (Visar lokal UI-cache tills governance-listan laddats.)"
+                : ""}
+            </HelperText>
+            <div className="mt-2">
+              <ChipRow>
+                {subCategoryOptions.map((category) => (
+                  <Chip
+                    key={category.id}
+                    label={category.label}
+                    selected={answers.siteType.includes(category.id)}
+                    onToggle={() => toggleSubCategory(category.id)}
+                  />
+                ))}
+              </ChipRow>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Kontakt. */}
+        <div>
+          <SectionHeader>Kontakt</SectionHeader>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <TextField
+              label="Telefon"
+              type="tel"
+              optional
+              value={answers.contact.phone}
+              onChange={(value) =>
+                onChange({ contact: { ...answers.contact, phone: value } })
+              }
+              placeholder="08-123 45 67"
+            />
+            <TextField
+              label="E-post"
+              type="email"
+              optional
+              value={answers.contact.email}
+              onChange={(value) =>
+                onChange({ contact: { ...answers.contact, email: value } })
+              }
+              placeholder="hej@dittforetag.se"
+            />
+            <TextField
+              label="Adress"
+              optional
+              value={answers.contact.address}
+              onChange={(value) =>
+                onChange({ contact: { ...answers.contact, address: value } })
+              }
+              placeholder="Storgatan 1, 111 22 Stockholm"
+            />
+            <TextField
+              label="Öppettider"
+              optional
+              value={answers.contact.openingHours}
+              onChange={(value) =>
+                onChange({
+                  contact: { ...answers.contact, openingHours: value },
+                })
+              }
+              placeholder="Mån–Fre 09–17"
+            />
           </div>
         </div>
-      ) : null}
-
-      {/* 5. Kontakt. */}
-      <div>
-        <SectionHeader>Kontakt</SectionHeader>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <TextField
-            label="Telefon"
-            type="tel"
-            optional
-            value={answers.contact.phone}
-            onChange={(value) =>
-              onChange({ contact: { ...answers.contact, phone: value } })
-            }
-            placeholder="08-123 45 67"
-          />
-          <TextField
-            label="E-post"
-            type="email"
-            optional
-            value={answers.contact.email}
-            onChange={(value) =>
-              onChange({ contact: { ...answers.contact, email: value } })
-            }
-            placeholder="hej@dittforetag.se"
-          />
-          <TextField
-            label="Adress"
-            optional
-            value={answers.contact.address}
-            onChange={(value) =>
-              onChange({ contact: { ...answers.contact, address: value } })
-            }
-            placeholder="Storgatan 1, 111 22 Stockholm"
-          />
-          <TextField
-            label="Öppettider"
-            optional
-            value={answers.contact.openingHours}
-            onChange={(value) =>
-              onChange({ contact: { ...answers.contact, openingHours: value } })
-            }
-            placeholder="Mån–Fre 09–17"
-          />
-        </div>
-      </div>
+      </AdvancedDisclosure>
     </FieldStack>
   );
 }
