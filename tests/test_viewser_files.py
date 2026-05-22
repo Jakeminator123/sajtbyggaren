@@ -1118,24 +1118,31 @@ def test_viewer_panel_guards_cancelled_after_dynamic_import_and_embed() -> None:
         encoding="utf-8"
     )
 
-    # Isolate the success-path block from the dynamic import to the
-    # final setStatus call.
+    # Status-pillen ("Förhandsvisning aktiv för {runId}") togs medvetet
+    # bort i christopher-ui refactor:n (krockade visuellt med
+    # SiteHeader-logon). Det ursprungliga B43-testet använde
+    # ``setStatus(\`Förhandsvisning aktiv``-strängen som slutpunkt för
+    # success-blocket; den finns inte längre. Vi ankrar nu på
+    # ``setLoading(false)`` direkt efter iframe-höjd/bredd-setningen,
+    # vilket är den nya success-path-terminatorn.
     block = re.search(
-        r"const sdk = \(await import\(\"@stackblitz/sdk\"\)\)[\s\S]*?setStatus\(`Förhandsvisning aktiv",
+        r"const sdk = \(await import\(\"@stackblitz/sdk\"\)\)[\s\S]*?setLoading\(false\);\s*\n\s*\}\s*catch",
         text,
     )
     assert block, (
         "viewer-panel.tsx: kunde inte hitta success-path-blocket från "
-        "StackBlitz-import till final setStatus. Refactor utan ekvivalent "
-        "kommunikation av runId-success bryter detta test."
+        "StackBlitz-import till setLoading(false)-terminatorn före catch. "
+        "Refactor utan ekvivalent kommunikation av runId-success bryter "
+        "detta test."
     )
     cancelled_checks = re.findall(r"\bcancelled\b", block.group(0))
     assert len(cancelled_checks) >= 2, (
         "viewer-panel.tsx success-path saknar tillräcklig cancelled-guard-"
-        "täthet mellan StackBlitz-import och setStatus. Förväntat minst 2 "
-        "cancelled-referenser (en efter import, en efter embedProject) - "
-        f"hittade {len(cancelled_checks)}. B43-fyndet: stale embed kan "
-        "mountas i ref-divden om operatör byter runId mid-flight."
+        "täthet mellan StackBlitz-import och setLoading(false). Förväntat "
+        "minst 2 cancelled-referenser (en efter import, en efter "
+        f"embedProject) - hittade {len(cancelled_checks)}. B43-fyndet: "
+        "stale embed kan mountas i ref-divden om operatör byter runId "
+        "mid-flight."
     )
 
     # Verify the node-cleanup on stale embed exists (otherwise we'd

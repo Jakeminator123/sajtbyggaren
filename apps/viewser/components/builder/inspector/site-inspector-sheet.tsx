@@ -7,6 +7,7 @@ import { BriefTab } from "@/components/builder/inspector/brief-tab";
 import { DossiersTab } from "@/components/builder/inspector/dossiers-tab";
 import { PagesTab } from "@/components/builder/inspector/pages-tab";
 import { QualityTab } from "@/components/builder/inspector/quality-tab";
+import { TokensTab } from "@/components/builder/inspector/tokens-tab";
 import { useRunArtefacts } from "@/components/builder/inspector/use-run-artefacts";
 import { useFollowupBuild } from "@/components/builder/use-followup-build";
 import type { PromptBuildOutcome } from "@/components/prompt-builder";
@@ -164,6 +165,7 @@ export function SiteInspectorSheet({
               >
                 <TabsTrigger value="pages">Sidor</TabsTrigger>
                 <TabsTrigger value="brief">Brief &amp; Plan</TabsTrigger>
+                <TabsTrigger value="tokens">Färger</TabsTrigger>
                 <TabsTrigger value="dossiers">Dossiers</TabsTrigger>
                 <TabsTrigger value="quality">Kvalitet</TabsTrigger>
               </TabsList>
@@ -173,6 +175,9 @@ export function SiteInspectorSheet({
                 </TabsContent>
                 <TabsContent value="brief">
                   <BriefTab bundle={state.bundle} {...sharedTabProps} />
+                </TabsContent>
+                <TabsContent value="tokens">
+                  <TokensTab {...sharedTabProps} />
                 </TabsContent>
                 <TabsContent value="dossiers">
                   <DossiersTab bundle={state.bundle} {...sharedTabProps} />

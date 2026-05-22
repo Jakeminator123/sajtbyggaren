@@ -428,6 +428,51 @@ def test_layout_inlines_jsonld_script() -> None:
     assert "LocalBusiness" in layout
 
 
+# ── Sprint 5 — runtime token-listener ─────────────────────────────────
+
+
+@pytest.mark.tooling
+def test_layout_emits_runtime_token_listener() -> None:
+    """Site Inspectors TokensTab postMessage:ar tokens-overrides till
+    preview-iframen. Layout MÅSTE bära lyssnaren — utan den händer
+    ingenting när operatören drar i color-pickern. Vi assertar
+    påföljande implementationsdetaljer:
+
+        * Event-type-strängen är exakt ``sajtbyggaren:set-token``.
+        * Hex-validering finns (skydd mot CSS-injection).
+        * Whitelist:en innehåller alla fyra tokens (primary/accent/
+          background/foreground).
+        * ``reset``-vägen anropar ``removeProperty`` istället för
+          ``setProperty`` — annars stannar overrides när operatören
+          klickar "Återställ".
+    """
+    layout = render_layout(_minimal_dossier(), dossier_routes=["/"])
+    assert "sajtbyggaren:set-token" in layout
+    assert "#[0-9a-fA-F]{6}" in layout
+    for token in ("primary", "accent", "background", "foreground"):
+        assert f"{token}:1" in layout, f"token {token!r} missing from listener whitelist"
+    assert "removeProperty" in layout
+    assert "setProperty" in layout
+
+
+@pytest.mark.tooling
+def test_runtime_token_listener_does_not_leak_operator_data() -> None:
+    """Listenern måste vara en konstant. Om någon framtida refactor
+    råkar interpolera operator-data i strängen öppnar vi för XSS via
+    ``dangerouslySetInnerHTML``. Detta test låser konstanten.
+    """
+    from scripts.build_site import _RUNTIME_TOKEN_LISTENER_JS
+
+    assert isinstance(_RUNTIME_TOKEN_LISTENER_JS, str)
+    assert _RUNTIME_TOKEN_LISTENER_JS.startswith("(function()")
+    # Listenern får INTE innehålla format-platshållare som skulle kunna
+    # användas för att smyga in operator-data.
+    assert "%s" not in _RUNTIME_TOKEN_LISTENER_JS
+    assert "{" not in _RUNTIME_TOKEN_LISTENER_JS or _RUNTIME_TOKEN_LISTENER_JS.count(
+        "{"
+    ) == _RUNTIME_TOKEN_LISTENER_JS.count("}")
+
+
 # ── Sprint 2.2 — robots.txt ───────────────────────────────────────────
 
 

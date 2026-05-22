@@ -38,6 +38,11 @@ import {
   summarizeChangesFromPrompt,
   type BuildChange,
 } from "@/lib/build-changes";
+import {
+  CHIP_INTERACTIONS,
+  PRIMARY_INTERACTIONS,
+  SECONDARY_INTERACTIONS,
+} from "@/lib/ui-tokens";
 import { cn } from "@/lib/utils";
 
 /**
@@ -1162,6 +1167,7 @@ export function FloatingChat({
                             "hover:border-border hover:bg-card hover:text-foreground",
                             "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
                             "rounded-full border px-2 py-0.5 text-[10.5px] transition-colors",
+                            CHIP_INTERACTIONS,
                           )}
                         >
                           {suggestion}
@@ -1264,6 +1270,7 @@ export function FloatingChat({
                 "bg-foreground text-background inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[11.5px] font-medium",
                 "hover:bg-foreground/90 disabled:opacity-40",
                 "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
+                PRIMARY_INTERACTIONS,
               )}
             >
               {isSending || isBuilding ? (
@@ -1439,6 +1446,7 @@ function ErrorBubble({
                   "text-foreground/85 hover:text-foreground border-border/60 hover:border-foreground/40 hover:bg-muted/60",
                   "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
                   "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors",
+                  SECONDARY_INTERACTIONS,
                 )}
                 title="Skicka samma instruktion igen"
               >

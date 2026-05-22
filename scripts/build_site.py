@@ -1612,6 +1612,30 @@ def _collect_icons_for_pages(services: list[dict], dossier_routes: list[str]) ->
     return sorted(used)
 
 
+# Sprint 5 — postMessage-lyssnare som Sajtbyggarens Site Inspector
+# (TokensTab) skickar till för att uppdatera CSS-tokens i preview-
+# iframen utan en ny build. Se kommentaren vid <script>-injektionen
+# i render_layout för säkerhetsmodellen. Hålls som modulkonstant så
+# tester kan asserta exakt innehåll utan att duplicera strängen.
+_RUNTIME_TOKEN_LISTENER_JS = (
+    "(function(){"
+    "var ALLOWED={primary:1,accent:1,background:1,foreground:1};"
+    "var HEX=/^#[0-9a-fA-F]{6}$/;"
+    "window.addEventListener('message',function(e){"
+    "var d=e&&e.data;"
+    "if(!d||typeof d!=='object'||d.type!=='sajtbyggaren:set-token')return;"
+    "if(!ALLOWED[d.token])return;"
+    "var root=document.documentElement;"
+    "var prop='--'+d.token;"
+    "if(d.value==='reset'){root.style.removeProperty(prop);return;}"
+    "if(typeof d.value==='string'&&HEX.test(d.value)){"
+    "root.style.setProperty(prop,d.value);"
+    "}"
+    "});"
+    "})();"
+)
+
+
 def render_layout(
     dossier: dict,
     dossier_routes: list[str],
@@ -1841,6 +1865,31 @@ def render_layout(
         '        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />\n'
         '        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '
         + _js_string_literal(_render_structured_data_jsonld(dossier))
+        + " }} />\n"
+        # Sprint 5 — runtime CSS-token-listener. Tar emot postMessage
+        # från Sajtbyggarens Site Inspector (TokensTab) och uppdaterar
+        # CSS custom properties direkt på <html>-elementet, vilket
+        # låter operatören se färgändringar utan en ny build.
+        #
+        # Säkerhetsmodell:
+        #   * Strikt event-type-filter (``"sajtbyggaren:set-token"``).
+        #     Vi accepterar inte vilket meddelande som helst — bara
+        #     vårt eget namespace, så random extensions och tredje
+        #     parts iframes kan inte påverka sajten.
+        #   * Värdet valideras med en exakt ``#RRGGBB`` regex
+        #     (hex-färg). Övriga payloads ignoreras tyst.
+        #   * Token-namnet whitelist:as (primary/accent/background/
+        #     foreground) så ingen kan injicera arbiträra CSS-vars
+        #     som ``--font-family-system`` eller liknande.
+        #   * Värsta-fall vid missbruk: sajten ser tillfälligt ful
+        #     ut i den browser där meddelandet skickades. Ingen
+        #     XSS, ingen exfiltration, ingen persistence — page
+        #     reload återställer canonical.
+        #
+        # Scriptet är hårdkodad konstant — innehåller ingen operator-
+        # data — så ``dangerouslySetInnerHTML`` är säkert.
+        "        <script dangerouslySetInnerHTML={{ __html: "
+        + _js_string_literal(_RUNTIME_TOKEN_LISTENER_JS)
         + " }} />\n"
         "      </head>\n"
         '      <body className="min-h-full flex flex-col bg-[color:var(--background)] text-[color:var(--foreground)]">\n'

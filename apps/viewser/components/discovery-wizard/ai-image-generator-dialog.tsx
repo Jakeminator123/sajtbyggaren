@@ -4,6 +4,7 @@ import { Loader2, Sparkles, X } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import type { AssetRef, AssetRole } from "@/lib/asset-store/types";
+import { CHIP_INTERACTIONS, PRIMARY_INTERACTIONS } from "@/lib/ui-tokens";
 
 /**
  * AIImageGeneratorDialog — wizardens AI-bildgenerator.
@@ -290,10 +291,11 @@ export function AIImageGeneratorDialog({
                     onClick={() => setStyle(option.id)}
                     disabled={generating}
                     className={[
-                      "rounded-md border px-3 py-2 text-left text-[12px] transition-colors disabled:opacity-50",
+                      "rounded-md border px-3 py-2 text-left text-[12px] transition-all disabled:opacity-50",
                       selected
                         ? "border-foreground/60 bg-foreground/[0.04]"
                         : "border-border/60 hover:border-foreground/30",
+                      CHIP_INTERACTIONS,
                     ].join(" ")}
                   >
                     <div className="text-foreground font-medium">
@@ -362,7 +364,11 @@ export function AIImageGeneratorDialog({
                 <button
                   type="button"
                   onClick={handleAccept}
-                  className="bg-foreground text-background hover:bg-foreground/90 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors"
+                  className={[
+                    "bg-foreground text-background hover:bg-foreground/90",
+                    "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors",
+                    PRIMARY_INTERACTIONS,
+                  ].join(" ")}
                 >
                   Använd den här
                 </button>
@@ -392,7 +398,11 @@ export function AIImageGeneratorDialog({
                       void handleGenerate();
                     }
                   }}
-                  className="bg-foreground text-background hover:bg-foreground/90 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors disabled:opacity-40"
+                  className={[
+                    "bg-foreground text-background hover:bg-foreground/90",
+                    "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors disabled:opacity-40",
+                    PRIMARY_INTERACTIONS,
+                  ].join(" ")}
                 >
                   {generating ? (
                     <>

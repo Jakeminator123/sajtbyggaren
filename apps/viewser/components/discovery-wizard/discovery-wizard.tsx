@@ -13,6 +13,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { PRIMARY_INTERACTIONS } from "@/lib/ui-tokens";
+
 import { DEMO_PROFILES } from "./demo-answers";
 import { DirectivesPreview } from "./directives-preview";
 import { ContentOrchestratorStep } from "./steps/content-orchestrator";
@@ -210,6 +212,13 @@ export function DiscoveryWizard({
   // av "?" eller Cmd+/ — operatören kan stänga med Esc eller klick.
   const [helpOpen, setHelpOpen] = useState(false);
 
+  // Submit-flow state. När operatören klickar "Skapa sajt" visar vi
+  // en kort success-overlay (~700ms) innan vi anropar onComplete så
+  // operatören ser tydligt att klicket registrerats innan wizarden
+  // försvinner. Utan delay:n stänger wizarden direkt och bygget tar
+  // tid att starta — operatören kan undra om något hänt.
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   /**
    * Fyll wizarden med nästa demo-profil i rotationen. Tre profiler
    * täcker våra två fungerande scaffolds (local-service-business +
@@ -245,9 +254,17 @@ export function DiscoveryWizard({
   }, []);
 
   const finish = useCallback(() => {
-    if (validationError) return;
-    onComplete(answers, discoveryOptions);
-  }, [answers, discoveryOptions, onComplete, validationError]);
+    if (validationError || isSubmitting) return;
+    setIsSubmitting(true);
+    // Kort delay innan vi callbackar parent så success-overlay hinner
+    // rendras + ge operatören visuell bekräftelse. ``onComplete`` är
+    // synkron — parent börjar bygget direkt, så overlayen kvarstår
+    // bara mellan vår timeout och att parent stänger wizarden via
+    // ``onOpenChange(false)`` när bygget tagit över UI:t.
+    window.setTimeout(() => {
+      onComplete(answers, discoveryOptions);
+    }, 700);
+  }, [answers, discoveryOptions, isSubmitting, onComplete, validationError]);
 
   const isFirst = stepIndex === 0;
   const isLast = stepIndex === WIZARD_STEP_ORDER.length - 1;
@@ -659,11 +676,21 @@ export function DiscoveryWizard({
                   type="button"
                   size="sm"
                   onClick={finish}
-                  disabled={!!validationError}
-                  className="bg-foreground text-background hover:bg-foreground/90 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm disabled:opacity-40"
+                  disabled={!!validationError || isSubmitting}
+                  className={[
+                    "bg-foreground text-background hover:bg-foreground/90 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm disabled:opacity-40",
+                    PRIMARY_INTERACTIONS,
+                  ].join(" ")}
                   title="⌘↵ för att skapa sajten"
                 >
-                  Skapa sajt →
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Påbörjar bygge…
+                    </>
+                  ) : (
+                    "Skapa sajt →"
+                  )}
                 </Button>
               ) : (
                 <Button
@@ -671,7 +698,10 @@ export function DiscoveryWizard({
                   size="sm"
                   onClick={goNext}
                   disabled={!!validationError}
-                  className="bg-foreground text-background hover:bg-foreground/90 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm disabled:opacity-40"
+                  className={[
+                    "bg-foreground text-background hover:bg-foreground/90 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm disabled:opacity-40",
+                    PRIMARY_INTERACTIONS,
+                  ].join(" ")}
                   title="⌘↵ för att fortsätta"
                 >
                   Fortsätt →
@@ -763,6 +793,45 @@ export function DiscoveryWizard({
             </div>
           ) : null}
         </section>
+
+        {/* Submit-overlay — visas ~700ms efter klick på "Skapa sajt"
+            innan onComplete kallar parent. Ger operatören tydlig
+            visuell bekräftelse att klicket registrerats och bygget
+            är på väg innan wizarden stängs. */}
+        {isSubmitting ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="bg-background/85 absolute inset-0 z-50 flex items-center justify-center backdrop-blur-sm sm:rounded-3xl"
+          >
+            <div className="flex max-w-sm flex-col items-center gap-5 px-8 text-center">
+              <div className="relative inline-flex h-14 w-14 items-center justify-center">
+                <span
+                  className="border-emerald-500/40 absolute inset-0 rounded-full border-2 motion-safe:animate-ping"
+                  aria-hidden
+                />
+                <span className="bg-emerald-500/15 absolute inset-2 rounded-full" aria-hidden />
+                <Check
+                  className="relative h-6 w-6 text-emerald-600 dark:text-emerald-400"
+                  strokeWidth={3}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-muted-foreground font-mono text-[10px] tracking-[0.22em] uppercase">
+                  Klar att bygga
+                </p>
+                <p className="text-foreground text-[16px] leading-tight font-semibold tracking-tight">
+                  Påbörjar bygge av din sajt…
+                </p>
+                <p className="text-muted-foreground text-[12px]">
+                  Pipelinen kör Discovery → Plan → Codegen → Quality
+                  Gate i bakgrunden. Du ser progress i preview-fönstret
+                  om en stund.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {/* Scrape-overlay — täcker hela popupen så operatören tydligt
             ser att wizardens fält håller på att fyllas i automatiskt
