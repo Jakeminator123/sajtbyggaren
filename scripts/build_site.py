@@ -784,6 +784,178 @@ def _token_overrides_from_project_input(
     return overrides, warnings
 
 
+"""Typography palette per variant.
+
+Maps ``variant.id`` to a (display-font, body-font, google-fonts-query)
+tuple. Each variant gets a distinct visual character beyond color alone:
+warm serif for craft, tight editorial for noir, geometric sans for fit,
+classic Georgia-style for trust, etc.
+
+Fallback: when variant.id is not in the table, both fonts fall back to
+``Inter`` which matches the starter's pre-typography baseline (Geist
+replacement) without breaking the cascade.
+
+`google_query` is the path part after ``css2?`` in the Google Fonts URL
+(`family=Fraunces:wght@400;600;700&display=swap`). We assemble the full
+URL at emit time so the value remains URL-safe and reviewable in
+governance diffs.
+"""
+_VARIANT_TYPOGRAPHY: dict[str, dict[str, str]] = {
+    # local-service-business variants
+    "nordic-trust": {
+        "display": "'Inter', system-ui, -apple-system, sans-serif",
+        "body": "'Inter', system-ui, -apple-system, sans-serif",
+        "google_query": "family=Inter:wght@400;500;600;700&display=swap",
+        "display_tracking": "-0.02em",
+    },
+    "warm-craft": {
+        "display": "'Fraunces', Georgia, serif",
+        "body": "'Inter', system-ui, sans-serif",
+        "google_query": (
+            "family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700"
+            "&family=Inter:wght@400;500&display=swap"
+        ),
+        "display_tracking": "-0.015em",
+    },
+    "clinical-calm": {
+        "display": "'Source Sans 3', system-ui, sans-serif",
+        "body": "'Source Sans 3', system-ui, sans-serif",
+        "google_query": (
+            "family=Source+Sans+3:wght@400;500;600;700&display=swap"
+        ),
+        "display_tracking": "-0.01em",
+    },
+    "midnight-counsel": {
+        "display": "'Playfair Display', Georgia, serif",
+        "body": "'Inter', system-ui, sans-serif",
+        "google_query": (
+            "family=Playfair+Display:wght@500;600;700"
+            "&family=Inter:wght@400;500&display=swap"
+        ),
+        "display_tracking": "-0.025em",
+    },
+    "pulse-fit": {
+        "display": "'Manrope', system-ui, sans-serif",
+        "body": "'Manrope', system-ui, sans-serif",
+        "google_query": "family=Manrope:wght@400;500;700;800&display=swap",
+        "display_tracking": "-0.03em",
+    },
+    # ecommerce-lite variants
+    "clean-store": {
+        "display": "'Inter', system-ui, sans-serif",
+        "body": "'Inter', system-ui, sans-serif",
+        "google_query": "family=Inter:wght@400;500;600;700&display=swap",
+        "display_tracking": "-0.02em",
+    },
+    "earth-wellness": {
+        "display": "'Cormorant Garamond', Georgia, serif",
+        "body": "'Inter', system-ui, sans-serif",
+        "google_query": (
+            "family=Cormorant+Garamond:wght@400;500;600;700"
+            "&family=Inter:wght@400;500&display=swap"
+        ),
+        "display_tracking": "-0.01em",
+    },
+    "mono-tech": {
+        "display": "'JetBrains Mono', ui-monospace, monospace",
+        "body": "'Inter', system-ui, sans-serif",
+        "google_query": (
+            "family=JetBrains+Mono:wght@500;700"
+            "&family=Inter:wght@400;500&display=swap"
+        ),
+        "display_tracking": "-0.04em",
+    },
+    "noir-editorial": {
+        "display": "'Bodoni Moda', Georgia, serif",
+        "body": "'Inter', system-ui, sans-serif",
+        "google_query": (
+            "family=Bodoni+Moda:opsz,wght@6..96,500;6..96,700"
+            "&family=Inter:wght@400;500&display=swap"
+        ),
+        "display_tracking": "-0.025em",
+    },
+    "street-vivid": {
+        "display": "'Space Grotesk', system-ui, sans-serif",
+        "body": "'Inter', system-ui, sans-serif",
+        "google_query": (
+            "family=Space+Grotesk:wght@500;600;700"
+            "&family=Inter:wght@400;500&display=swap"
+        ),
+        "display_tracking": "-0.035em",
+    },
+}
+
+_TYPOGRAPHY_FALLBACK: dict[str, str] = {
+    "display": "'Inter', system-ui, sans-serif",
+    "body": "'Inter', system-ui, sans-serif",
+    "google_query": "family=Inter:wght@400;500;600;700&display=swap",
+    "display_tracking": "-0.02em",
+}
+
+
+def _typography_for_variant(variant: dict) -> dict[str, str]:
+    """Return the typography palette for a variant, with a safe fallback.
+
+    Unknown variant IDs degrade gracefully to Inter so an experimental
+    variant added without a typography entry still renders, just without
+    the bespoke font pairing.
+    """
+    return _VARIANT_TYPOGRAPHY.get(variant.get("id", ""), _TYPOGRAPHY_FALLBACK)
+
+
+def _motion_css_block(level: str) -> str:
+    """Return a CSS block that applies subtle entry animations on the
+    first paint of every ``<section>``. The block is empty for
+    ``level == "none"``.
+
+    All animations are gated behind ``prefers-reduced-motion: no-preference``
+    so operators on reduced-motion settings see a static page. The
+    stagger uses ``nth-of-type`` so the sequence reads top-to-bottom
+    without any JavaScript or scroll-observer.
+
+    Levels:
+
+    - ``none``     : no animations emitted
+    - ``subtle``   : 600ms fade-in only, 80ms stagger across the first
+                     six sections. Reads as "polished but quiet" — fits
+                     trust, clinical, calm vibes.
+    - ``expressive``: 700ms fade-up + 12px translate, 120ms stagger.
+                     Suits warm-craft, pulse-fit, noir, street vibes
+                     where a hint of motion reinforces the brand.
+    """
+    if level == "none":
+        return ""
+
+    if level == "expressive":
+        duration_ms = 700
+        translate_y = "12px"
+        stagger_ms = 120
+    else:
+        # default to subtle for unknown values (e.g. "normal" from older
+        # variants) so we never crash on unexpected enum values.
+        duration_ms = 600
+        translate_y = "0"
+        stagger_ms = 80
+
+    stagger_rules = "\n".join(
+        f"  main > section:nth-of-type({i}) {{ animation-delay: {stagger_ms * (i - 1)}ms; }}"
+        for i in range(1, 7)
+    )
+
+    return (
+        "@media (prefers-reduced-motion: no-preference) {\n"
+        "  @keyframes sajtbyggaren-section-enter {\n"
+        f"    from {{ opacity: 0; transform: translateY({translate_y}); }}\n"
+        "    to { opacity: 1; transform: translateY(0); }\n"
+        "  }\n"
+        "  main > section {\n"
+        f"    animation: sajtbyggaren-section-enter {duration_ms}ms cubic-bezier(0.16, 1, 0.3, 1) both;\n"
+        "  }\n"
+        f"{stagger_rules}\n"
+        "}\n"
+    )
+
+
 def variant_css(variant: dict, token_overrides: dict[str, str] | None = None) -> str:
     tokens = variant["tokens"]
     color = dict(tokens["color"])
@@ -799,8 +971,24 @@ def variant_css(variant: dict, token_overrides: dict[str, str] | None = None) ->
                 color[token_name] = override
     radius = tokens["radius"]
     spacing = tokens["spacing"]
+    typography = _typography_for_variant(variant)
+    # Google Fonts import — placed in @import at the top of the variant
+    # block. `&display=swap` ensures the page renders with fallback fonts
+    # while the webfont loads, avoiding FOIT. We use Google's HTTPS CDN
+    # which is reliable enough for the MVP; a future iteration may swap
+    # to `next/font/google` for self-hosting + zero FOUC.
+    font_import = (
+        f"@import url('https://fonts.googleapis.com/css2?{typography['google_query']}');\n"
+    )
+    motion_level = (
+        tokens.get("motion", {}).get("level", "subtle")
+        if isinstance(tokens.get("motion"), dict)
+        else "subtle"
+    )
+    motion_block = _motion_css_block(motion_level)
     return (
-        ":root {\n"
+        font_import
+        + ":root {\n"
         f"  --background: {color['background']};\n"
         f"  --foreground: {color['foreground']};\n"
         f"  --muted: {color['muted']};\n"
@@ -814,7 +1002,25 @@ def variant_css(variant: dict, token_overrides: dict[str, str] | None = None) ->
         f"  --radius-lg: {radius['lg']};\n"
         f"  --section-spacing: {spacing['section']};\n"
         f"  --container-width: {spacing['container']};\n"
+        f"  --font-display: {typography['display']};\n"
+        f"  --font-body: {typography['body']};\n"
+        f"  --display-tracking: {typography['display_tracking']};\n"
         "}\n"
+        # Apply font families at the element level so existing render_*
+        # functions don't need a className change — body inherits the
+        # body font; headings inherit the display font with bespoke
+        # letter-spacing per variant. font-feature-settings enable
+        # contextual ligatures + tabular numerals where the typeface
+        # supports them, which is most modern Google webfonts.
+        "body {\n"
+        "  font-family: var(--font-body);\n"
+        "  font-feature-settings: \"cv02\", \"cv03\", \"cv04\", \"cv11\";\n"
+        "}\n"
+        "h1, h2, h3, h4 {\n"
+        "  font-family: var(--font-display);\n"
+        "  letter-spacing: var(--display-tracking);\n"
+        "}\n"
+        + motion_block
     )
 
 
@@ -1412,6 +1618,7 @@ def render_home(
     *,
     listing_route: dict | None = None,
     contact_path: str = "/kontakt",
+    variant_id: str | None = None,
 ) -> str:
     """Home page renderer.
 
@@ -1435,6 +1642,13 @@ def render_home(
     trust = dossier["trustSignals"]
     contact = dossier["contact"]
     icons_used = _collect_icons_for_pages(services, dossier_routes)
+    # USPs propagate either from dossier.uniqueSellingPoints (when the
+    # backend has been updated to pass it through) or from
+    # dossier.directives.uniqueSellingPoints (when the v2 directives
+    # block lives on dossier). Empty list = no chips rendered.
+    usp_list = _extract_usps(dossier)
+    if usp_list and "Check" not in icons_used:
+        icons_used = sorted({*icons_used, "Check"})
     icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
     services_grid = "\n".join(
         f'            <li key={_jsx_safe_string(svc["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--card,var(--background))] p-6 transition-all hover:border-[color:var(--primary)] hover:shadow-sm">\n'
@@ -1519,25 +1733,36 @@ def render_home(
             "\n"
         )
 
+    # Visual proof block placed between services and trust: shows the
+    # operator's uploaded gallery images so the home page does not lean
+    # only on textual trust signals. Returns "" when no gallery items
+    # exist so the section never leaks placeholder copy.
+    gallery_section = _render_home_gallery_section(dossier)
+
+    # Variant-aware hero layout. Resolves to one of three layouts
+    # (gradient/centered/split) based on directives.layoutHint or
+    # variant_id; falls back to gradient when neither is set, which
+    # matches the pre-#2 baseline so legacy callers (tests without a
+    # variant_id) keep their expected JSX shape.
+    hero_block_jsx = _render_hero_block(
+        _hero_style_for(dossier, variant_id),
+        company=company,
+        location_tag=location_tag,
+        hero_cta_label=hero_cta_label,
+        hero_cta_href=hero_cta_href,
+        contact_phone=contact["phone"],
+        spel_cta=spel_cta,
+        hero_asset=hero_asset,
+        usps=usp_list,
+    )
+
     return (
         icon_import + "\n"
         "export default function Home() {\n"
         "  return (\n"
         '    <main className="flex flex-1 flex-col">\n'
         f"{hero_section_jsx}"
-        '      <section className="relative overflow-hidden bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/30">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
-        f"{location_tag}"
-        f'          <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl">{_jsx_safe_string(company["name"])}</h1>\n'
-        f'          <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed md:text-xl">{_jsx_safe_string(company["tagline"])}</p>\n'
-        '          <div className="flex flex-wrap gap-3">\n'
-        f'            <a href={hero_cta_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{hero_cta_label}<ArrowRight className="size-4" /></a>\n'
-        f'            <a href={_jsx_safe_string("tel:" + _phone_href(contact["phone"]))} className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />Ring {_jsx_safe_string(contact["phone"])}</a>\n'
-        f"{spel_cta}"
-        "          </div>\n"
-        "        </div>\n"
-        "      </section>\n"
-        "\n"
+        f"{hero_block_jsx}"
         '      <section className="border-t border-[color:var(--border)]">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         '          <div className="flex flex-col gap-3">\n'
@@ -1551,6 +1776,7 @@ def render_home(
         "        </div>\n"
         "      </section>\n"
         "\n"
+        f"{gallery_section}"
         f"{trust_section}"
         '      <section className="border-t border-[color:var(--border)] bg-[color:var(--primary)] text-[color:var(--primary-foreground)]">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-4 py-[var(--section-spacing)]">\n'
@@ -1980,6 +2206,272 @@ def _gallery_images(dossier: dict) -> list[dict]:
     return selected
 
 
+_HOME_GALLERY_MAX_ITEMS = 6
+
+
+_HERO_STYLE_BY_VARIANT: dict[str, str] = {
+    # local-service-business
+    "nordic-trust": "gradient",
+    "warm-craft": "centered",
+    "clinical-calm": "centered",
+    "midnight-counsel": "split",
+    "pulse-fit": "gradient",
+    # ecommerce-lite
+    "clean-store": "split",
+    "earth-wellness": "centered",
+    "mono-tech": "split",
+    "noir-editorial": "split",
+    "street-vivid": "gradient",
+}
+
+_VALID_HERO_STYLES: frozenset[str] = frozenset({"gradient", "centered", "split"})
+
+
+_HERO_USP_MAX = 4
+
+
+def _extract_usps(dossier: dict) -> list[str]:
+    """Return up to ``_HERO_USP_MAX`` unique selling points for the hero
+    chip row. Reads from two locations in priority order:
+
+    1. ``dossier["uniqueSellingPoints"]`` — once the operator's USPs are
+       propagated into Project Input by ``prompt_to_project_input.py``
+       (currently blocked by ``project-input.schema.json``
+       ``additionalProperties: false``; tracked as backend gap).
+    2. ``dossier["directives"]["uniqueSellingPoints"]`` — the structured
+       v2 directives block that lives on ``dossier`` when the brief
+       persister chooses to pass it through.
+
+    Returns ``[]`` when neither source has a non-empty list. Each item
+    is trimmed and falsy values are dropped so the renderer can rely on
+    every item being a printable string. The cap of four keeps the
+    chip row visually balanced regardless of variant.
+    """
+    candidates: list[str] | None = None
+    raw = dossier.get("uniqueSellingPoints")
+    if isinstance(raw, list):
+        candidates = [str(item).strip() for item in raw if isinstance(item, str)]
+    if not candidates:
+        directives = dossier.get("directives")
+        if isinstance(directives, dict):
+            raw = directives.get("uniqueSellingPoints")
+            if isinstance(raw, list):
+                candidates = [
+                    str(item).strip() for item in raw if isinstance(item, str)
+                ]
+    if not candidates:
+        return []
+    return [item for item in candidates if item][:_HERO_USP_MAX]
+
+
+def _render_hero_usp_chips(usps: list[str], *, centered: bool = False) -> str:
+    """Render a ``<ul>`` of USP chips. Empty list collapses to ``""`` so
+    the chip row is not emitted at all when the operator has no USPs.
+
+    Each chip uses the variant's ``--accent`` background with a
+    ``Check`` glyph from lucide-react so the visual weight matches the
+    surrounding hero buttons without competing for attention.
+    """
+    if not usps:
+        return ""
+    align_class = "justify-center" if centered else ""
+    items = "\n".join(
+        f'            <li key={_jsx_safe_string("usp-" + str(i))} className="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--accent)]/40 px-3 py-1 text-xs font-medium text-[color:var(--accent-foreground)]"><Check className="size-3" />{_jsx_safe_string(item)}</li>'
+        for i, item in enumerate(usps)
+    )
+    return (
+        f'          <ul className="flex flex-wrap gap-2 {align_class}">\n'
+        f"{items}\n"
+        "          </ul>\n"
+    )
+
+
+def _hero_style_for(dossier: dict, variant_id: str | None) -> str:
+    """Resolve which hero layout to render for the home page.
+
+    Precedence:
+
+    1. ``dossier["directives"]["layoutHint"]`` — operator override
+       coming from the wizard's visual step. Frontend may set
+       ``"gradient" | "centered" | "split"``; anything else is ignored
+       so we never trust unknown strings.
+    2. ``_HERO_STYLE_BY_VARIANT[variant_id]`` — vibe-aware default. A
+       warm-craft variant gets a centered hero by default, a noir-
+       editorial gets a split hero, etc.
+    3. ``"gradient"`` — universal fallback. Matches the pre-#2 behavior
+       so tests that call ``render_home`` with no variant_id keep the
+       same JSX shape they used to.
+    """
+    directives = dossier.get("directives")
+    if isinstance(directives, dict):
+        hint = directives.get("layoutHint")
+        if isinstance(hint, str) and hint in _VALID_HERO_STYLES:
+            return hint
+    if variant_id and variant_id in _HERO_STYLE_BY_VARIANT:
+        return _HERO_STYLE_BY_VARIANT[variant_id]
+    return "gradient"
+
+
+def _render_hero_block(
+    style: str,
+    *,
+    company: dict,
+    location_tag: str,
+    hero_cta_label: str,
+    hero_cta_href: str,
+    contact_phone: str,
+    spel_cta: str,
+    hero_asset: dict | None,
+    usps: list[str] | None = None,
+) -> str:
+    """Render the hero <section> for the home page in one of three
+    layouts. Customer-text (company.name, company.tagline) is always
+    wrapped via ``_jsx_safe_string`` so the JSX-escape tests (B30)
+    pass for every variant.
+
+    Layouts:
+
+    - ``gradient``: full-width gradient panel, location tag + h1 +
+       tagline stacked left-aligned. The pre-#2 baseline.
+    - ``centered``: text-aligned center, no gradient, generous vertical
+       rhythm. Suits calm/serif/editorial vibes (warm-craft, clinical-
+       calm, earth-wellness).
+    - ``split``: two-column on md+: text left, hero image right. When
+       the operator has uploaded a hero image we render it; otherwise
+       a soft accent-tinted block sits in the right column so the
+       layout reads correctly even with no asset. Suits editorial and
+       commerce vibes (midnight-counsel, noir-editorial, clean-store).
+    """
+    safe_name = _jsx_safe_string(company["name"])
+    safe_tagline = _jsx_safe_string(company["tagline"])
+    usp_list = usps or []
+    usp_chips_left = _render_hero_usp_chips(usp_list, centered=False)
+    usp_chips_centered = _render_hero_usp_chips(usp_list, centered=True)
+    cta_buttons = (
+        '          <div className="flex flex-wrap gap-3">\n'
+        f'            <a href={hero_cta_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{hero_cta_label}<ArrowRight className="size-4" /></a>\n'
+        f'            <a href={_jsx_safe_string("tel:" + _phone_href(contact_phone))} className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />Ring {_jsx_safe_string(contact_phone)}</a>\n'
+        f"{spel_cta}"
+        "          </div>\n"
+    )
+
+    if style == "centered":
+        # location_tag in the centered layout sits as an eyebrow above
+        # the title and is text-centered alongside it. We translate the
+        # left-aligned default to a centered one inline rather than
+        # branching upstream.
+        centered_location = (
+            location_tag.replace("flex items-center gap-2", "flex items-center gap-2 justify-center")
+            if location_tag
+            else ""
+        )
+        return (
+            '      <section className="bg-[color:var(--background)]">\n'
+            '        <div className="mx-auto flex w-[var(--container-width)] flex-col items-center gap-8 py-[calc(var(--section-spacing)*1.25)] text-center">\n'
+            f"{centered_location}"
+            f'          <h1 className="max-w-3xl text-4xl font-semibold leading-[1.05] tracking-tight md:text-6xl lg:text-7xl">{safe_name}</h1>\n'
+            f'          <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed md:text-xl">{safe_tagline}</p>\n'
+            f"{usp_chips_centered}"
+            '          <div className="flex flex-wrap items-center justify-center gap-3">\n'
+            f'            <a href={hero_cta_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{hero_cta_label}<ArrowRight className="size-4" /></a>\n'
+            f'            <a href={_jsx_safe_string("tel:" + _phone_href(contact_phone))} className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />Ring {_jsx_safe_string(contact_phone)}</a>\n'
+            f"{spel_cta}"
+            "          </div>\n"
+            "        </div>\n"
+            "      </section>\n"
+            "\n"
+        )
+
+    if style == "split":
+        if isinstance(hero_asset, dict) and hero_asset.get("filename"):
+            hero_filename = hero_asset["filename"]
+            hero_alt = hero_asset.get("alt") or company["tagline"]
+            right_column = (
+                '          <div className="relative aspect-square w-full overflow-hidden rounded-2xl md:aspect-[4/5]">\n'
+                f'            <img src={_jsx_safe_string("/uploads/" + hero_filename)} alt={_js_string_literal(hero_alt)} className="h-full w-full object-cover" />\n'
+                "          </div>\n"
+            )
+        else:
+            # No hero image: render a soft accent-tinted shape so the
+            # split layout still reads correctly. Pure CSS, no asset.
+            right_column = (
+                '          <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-gradient-to-br from-[color:var(--accent)] to-[color:var(--primary)]/40 md:aspect-[4/5]">\n'
+                '            <div className="absolute inset-12 rounded-full bg-[color:var(--background)]/30 blur-3xl"></div>\n'
+                "          </div>\n"
+            )
+        return (
+            '      <section className="bg-[color:var(--background)]">\n'
+            '        <div className="mx-auto grid w-[var(--container-width)] gap-10 py-[var(--section-spacing)] md:grid-cols-2 md:items-center md:gap-16">\n'
+            '          <div className="flex flex-col gap-8">\n'
+            f"{location_tag}"
+            f'            <h1 className="max-w-2xl text-4xl font-semibold leading-[1.05] tracking-tight md:text-6xl">{safe_name}</h1>\n'
+            f'            <p className="max-w-xl text-lg text-[color:var(--muted)] leading-relaxed md:text-xl">{safe_tagline}</p>\n'
+            "            "
+            + cta_buttons.lstrip()
+            + f"{usp_chips_left}"
+            + "          </div>\n"
+            + right_column
+            + "        </div>\n"
+            "      </section>\n"
+            "\n"
+        )
+
+    # Default — gradient (pre-#2 baseline).
+    return (
+        '      <section className="relative overflow-hidden bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/30">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        f"{location_tag}"
+        f'          <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl">{safe_name}</h1>\n'
+        f'          <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed md:text-xl">{safe_tagline}</p>\n'
+        f"{usp_chips_left}"
+        + cta_buttons
+        + "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+def _render_home_gallery_section(dossier: dict) -> str:
+    """Render an optional gallery section on the home page.
+
+    Re-uses ``dossier["gallery"]`` (the same source as ``render_gallery``
+    for the dedicated ``/galleri`` route). Renders up to
+    ``_HOME_GALLERY_MAX_ITEMS`` figures in a responsive 1/2/3-column
+    grid; a full /galleri route still exists for the long tail.
+
+    Returns ``""`` when the operator has not uploaded any gallery
+    images, so the section never leaks empty placeholder copy onto the
+    home page. The empty string short-circuits the whole `<section>`
+    block in ``render_home`` so other sections rendered after it
+    (trust, contact CTA) keep their `border-t` divider.
+    """
+    images = _gallery_images(dossier)
+    if not images:
+        return ""
+    company = dossier.get("company") or {}
+    selected = images[:_HOME_GALLERY_MAX_ITEMS]
+    figures = "\n".join(
+        f'            <figure key={_jsx_safe_string(item.get("assetId") or item["filename"])} className="overflow-hidden rounded-xl border border-[color:var(--border)] bg-[color:var(--background)]">\n'
+        f'              <img src={_jsx_safe_string("/uploads/" + item["filename"])} alt={_js_string_literal(item.get("alt") or company.get("name") or "Bild")} loading="lazy" className="aspect-[4/3] w-full object-cover transition-transform duration-700 ease-out hover:scale-105" />\n'
+        "            </figure>"
+        for item in selected
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        '          <div className="flex flex-col gap-3">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Vårt arbete</p>\n'
+        '            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">Ett urval från projekten</h2>\n'
+        "          </div>\n"
+        '          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">\n'
+        f"{figures}\n"
+        "          </div>\n"
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
 def render_gallery(dossier: dict, *, contact_path: str = "/kontakt") -> str:
     """Render the wizard-driven /galleri route.
 
@@ -2317,6 +2809,7 @@ def write_pages(
     scaffold_routes: dict,
     dossier_routes: list[str],
     extra_routes: list[dict] | None = None,
+    variant_id: str | None = None,
 ) -> list[str]:
     """Write every page declared in ``scaffold_routes["defaultRoutes"]``.
 
@@ -2348,6 +2841,7 @@ def write_pages(
                 dossier_routes,
                 listing_route=listing_route,
                 contact_path=contact_route["path"],
+                variant_id=variant_id,
             )
         elif route_id == "services":
             content = render_services(dossier, contact_path=contact_route["path"])
@@ -3512,6 +4006,7 @@ def build(
         scaffold_routes,
         dossier_routes,
         extra_routes=wizard_extra_routes or None,
+        variant_id=variant.get("id") if isinstance(variant, dict) else None,
     )
     if paths_written != routes_to_write:
         raise SystemExit(
