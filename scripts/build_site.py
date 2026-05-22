@@ -1193,6 +1193,142 @@ _TYPOGRAPHY_FALLBACK: dict[str, str] = {
 }
 
 
+# Fas 4 — tone-driven typography overlay.
+#
+# Mappar ``tone.primary`` (en fri sträng från Site Brief / project-input)
+# till en typografi-palett som överrider variantens default. Detta är
+# additivt och OPT-IN: när ``tone.primary`` saknas eller inte matchar
+# någon nyckel här används variantens egen typografi exakt som idag.
+#
+# Designprincip — vi mappar bara på TONE-NYCKLAR som är tydligt
+# kopplade till en visuell karaktär. Generiska ord som "professional"
+# eller "trustworthy" lämnar vi orörda — de skulle göra mappningen
+# luddig (snart sagt varje sajt kallar sig professional) och variant-
+# defaultsen är redan tunade för "trustworthy" som baseline.
+#
+# Nyckeln matchas case-insensitive efter ``.strip().lower()``. Svenska
+# och engelska former listas separat så vi inte hash-collision:ar med
+# fel mapping.
+_TONE_TYPOGRAPHY: dict[str, dict[str, str]] = {
+    # CALM / WELLNESS — elegant serif för rubriker, neutral sans för
+    # body. Passar hudvård, spa, terapi, yoga, mindfulness.
+    "calm": {
+        "display": "'Cormorant Garamond', Georgia, serif",
+        "body": "'Inter', system-ui, sans-serif",
+        "google_query": (
+            "family=Cormorant+Garamond:wght@400;500;600;700"
+            "&family=Inter:wght@400;500&display=swap"
+        ),
+        "display_tracking": "-0.01em",
+    },
+    "lugn": {
+        "display": "'Cormorant Garamond', Georgia, serif",
+        "body": "'Inter', system-ui, sans-serif",
+        "google_query": (
+            "family=Cormorant+Garamond:wght@400;500;600;700"
+            "&family=Inter:wght@400;500&display=swap"
+        ),
+        "display_tracking": "-0.01em",
+    },
+    "wellness": {
+        "display": "'Cormorant Garamond', Georgia, serif",
+        "body": "'Inter', system-ui, sans-serif",
+        "google_query": (
+            "family=Cormorant+Garamond:wght@400;500;600;700"
+            "&family=Inter:wght@400;500&display=swap"
+        ),
+        "display_tracking": "-0.01em",
+    },
+    # BOLD / TECH — geometrisk sans med tight tracking. Passar SaaS,
+    # konsult, byggteknik, modern e-handel.
+    "bold": {
+        "display": "'Space Grotesk', system-ui, sans-serif",
+        "body": "'Inter', system-ui, sans-serif",
+        "google_query": (
+            "family=Space+Grotesk:wght@500;600;700"
+            "&family=Inter:wght@400;500&display=swap"
+        ),
+        "display_tracking": "-0.035em",
+    },
+    "modern": {
+        "display": "'Space Grotesk', system-ui, sans-serif",
+        "body": "'Inter', system-ui, sans-serif",
+        "google_query": (
+            "family=Space+Grotesk:wght@500;600;700"
+            "&family=Inter:wght@400;500&display=swap"
+        ),
+        "display_tracking": "-0.035em",
+    },
+    "tech": {
+        "display": "'Space Grotesk', system-ui, sans-serif",
+        "body": "'Inter', system-ui, sans-serif",
+        "google_query": (
+            "family=Space+Grotesk:wght@500;600;700"
+            "&family=Inter:wght@400;500&display=swap"
+        ),
+        "display_tracking": "-0.035em",
+    },
+    # PLAYFUL / WARM — rundad sans + mjukare body. Passar barn-
+    # verksamhet, café, kreativa småföretag.
+    "playful": {
+        "display": "'Quicksand', system-ui, sans-serif",
+        "body": "'Nunito', system-ui, sans-serif",
+        "google_query": (
+            "family=Quicksand:wght@500;600;700"
+            "&family=Nunito:wght@400;500;600&display=swap"
+        ),
+        "display_tracking": "-0.01em",
+    },
+    "warm": {
+        "display": "'Quicksand', system-ui, sans-serif",
+        "body": "'Nunito', system-ui, sans-serif",
+        "google_query": (
+            "family=Quicksand:wght@500;600;700"
+            "&family=Nunito:wght@400;500;600&display=swap"
+        ),
+        "display_tracking": "-0.01em",
+    },
+    "friendly": {
+        "display": "'Quicksand', system-ui, sans-serif",
+        "body": "'Nunito', system-ui, sans-serif",
+        "google_query": (
+            "family=Quicksand:wght@500;600;700"
+            "&family=Nunito:wght@400;500;600&display=swap"
+        ),
+        "display_tracking": "-0.01em",
+    },
+    # PREMIUM / EDITORIAL — high-contrast display serif. Passar lyx,
+    # arkitektur, gallerier, fine dining.
+    "premium": {
+        "display": "'Playfair Display', Georgia, serif",
+        "body": "'Inter', system-ui, sans-serif",
+        "google_query": (
+            "family=Playfair+Display:wght@500;600;700"
+            "&family=Inter:wght@400;500&display=swap"
+        ),
+        "display_tracking": "-0.025em",
+    },
+    "editorial": {
+        "display": "'Playfair Display', Georgia, serif",
+        "body": "'Inter', system-ui, sans-serif",
+        "google_query": (
+            "family=Playfair+Display:wght@500;600;700"
+            "&family=Inter:wght@400;500&display=swap"
+        ),
+        "display_tracking": "-0.025em",
+    },
+    "luxury": {
+        "display": "'Playfair Display', Georgia, serif",
+        "body": "'Inter', system-ui, sans-serif",
+        "google_query": (
+            "family=Playfair+Display:wght@500;600;700"
+            "&family=Inter:wght@400;500&display=swap"
+        ),
+        "display_tracking": "-0.025em",
+    },
+}
+
+
 def _typography_for_variant(variant: dict) -> dict[str, str]:
     """Return the typography palette for a variant, with a safe fallback.
 
@@ -1201,6 +1337,34 @@ def _typography_for_variant(variant: dict) -> dict[str, str]:
     the bespoke font pairing.
     """
     return _VARIANT_TYPOGRAPHY.get(variant.get("id", ""), _TYPOGRAPHY_FALLBACK)
+
+
+def _typography_overlay_for_tone(
+    project_input: dict[str, Any] | None,
+) -> dict[str, str] | None:
+    """Returnera en typografi-palett baserad på ``tone.primary`` om den
+    matchar en känd nyckel i ``_TONE_TYPOGRAPHY``, annars ``None``.
+
+    När ``None`` returneras använder ``variant_css`` variant-defaulten
+    från ``_VARIANT_TYPOGRAPHY`` — så vi lägger ALDRIG på en font-
+    override när vi inte har en stark anledning. Detta gör Sprint A.2
+    opt-in: existerande projekt utan tone.primary får exakt samma
+    output som idag.
+
+    Matchning är case-insensitive efter ``.strip().lower()`` så
+    operatorer kan skriva "Calm", "calm" eller " calm " och få samma
+    resultat. Svenska och engelska former båda är registrerade.
+    """
+    if not isinstance(project_input, dict):
+        return None
+    tone = project_input.get("tone")
+    if not isinstance(tone, dict):
+        return None
+    primary = tone.get("primary")
+    if not isinstance(primary, str):
+        return None
+    key = primary.strip().lower()
+    return _TONE_TYPOGRAPHY.get(key)
 
 
 def _motion_css_block(level: str) -> str:
@@ -1282,7 +1446,12 @@ def _motion_css_block(level: str) -> str:
     )
 
 
-def variant_css(variant: dict, token_overrides: dict[str, str] | None = None) -> str:
+def variant_css(
+    variant: dict,
+    token_overrides: dict[str, str] | None = None,
+    *,
+    typography_overlay: dict[str, str] | None = None,
+) -> str:
     tokens = variant["tokens"]
     color = dict(tokens["color"])
     if token_overrides:
@@ -1297,7 +1466,13 @@ def variant_css(variant: dict, token_overrides: dict[str, str] | None = None) ->
                 color[token_name] = override
     radius = tokens["radius"]
     spacing = tokens["spacing"]
-    typography = _typography_for_variant(variant)
+    # Fas 4 — tone-driven typography overlay. När anroparen har
+    # extraherat en känd ``tone.primary`` via ``_typography_overlay_
+    # for_tone`` ersätter vi variantens default-typografi med den.
+    # Annars (vanligaste fallet, inkl. alla befintliga tester) faller
+    # vi tillbaka till ``_typography_for_variant`` och CSS-outputen
+    # blir byte-identisk med innan denna kwarg infördes.
+    typography = typography_overlay if typography_overlay else _typography_for_variant(variant)
     # Google Fonts import — placed in @import at the top of the variant
     # block. `&display=swap` ensures the page renders with fallback fonts
     # while the webfont loads, avoiding FOIT. We use Google's HTTPS CDN
@@ -1463,7 +1638,12 @@ def patch_globals_css(
     css = target / "app" / "globals.css"
     original = css.read_text(encoding="utf-8")
     token_overrides, warnings = _token_overrides_from_project_input(project_input)
-    block = variant_css(variant, token_overrides)
+    typography_overlay = _typography_overlay_for_tone(project_input)
+    block = variant_css(
+        variant,
+        token_overrides,
+        typography_overlay=typography_overlay,
+    )
     marker = "/* sajtbyggaren-variant-tokens:start */"
     end = "/* sajtbyggaren-variant-tokens:end */"
     if marker in original:

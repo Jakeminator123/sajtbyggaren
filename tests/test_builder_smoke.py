@@ -570,3 +570,119 @@ def test_brand_override_propagates_into_color_scale(
         assert f"  --primary-{step}: {value};\n" in css, (
             f"--primary-{step} ska vara {value!r} i CSS"
         )
+
+
+# ─── Fas 4: tone-driven typography overlay ──────────────────────────────
+
+
+@pytest.mark.tooling
+def test_typography_overlay_returns_none_when_tone_missing() -> None:
+    """Utan tone.primary ska overlay vara None så variant-defaulten
+    används — exakt samma beteende som före Sprint A.2."""
+    from scripts.build_site import _typography_overlay_for_tone
+
+    assert _typography_overlay_for_tone(None) is None
+    assert _typography_overlay_for_tone({}) is None
+    assert _typography_overlay_for_tone({"tone": {}}) is None
+    assert _typography_overlay_for_tone({"tone": {"primary": None}}) is None
+
+
+@pytest.mark.tooling
+def test_typography_overlay_returns_none_for_unmapped_tone() -> None:
+    """Tone-strängar som inte är registrerade ska INTE få en fallback-
+    mapping — vi vill bara override:a när vi har ett starkt designval."""
+    from scripts.build_site import _typography_overlay_for_tone
+
+    assert _typography_overlay_for_tone({"tone": {"primary": "professional"}}) is None
+    assert _typography_overlay_for_tone({"tone": {"primary": "trustworthy"}}) is None
+    assert _typography_overlay_for_tone({"tone": {"primary": "okänd-ton"}}) is None
+
+
+@pytest.mark.tooling
+def test_typography_overlay_matches_known_tones_case_insensitively() -> None:
+    """De fyra grundtonerna (calm, bold, playful, premium) ska ge
+    distinkta font-par och vara case-insensitive."""
+    from scripts.build_site import _typography_overlay_for_tone
+
+    calm = _typography_overlay_for_tone({"tone": {"primary": "Calm"}})
+    bold = _typography_overlay_for_tone({"tone": {"primary": "BOLD"}})
+    playful = _typography_overlay_for_tone({"tone": {"primary": " playful "}})
+    premium = _typography_overlay_for_tone({"tone": {"primary": "premium"}})
+
+    assert calm is not None and "Cormorant Garamond" in calm["display"]
+    assert bold is not None and "Space Grotesk" in bold["display"]
+    assert playful is not None and "Quicksand" in playful["display"]
+    assert premium is not None and "Playfair Display" in premium["display"]
+
+
+@pytest.mark.tooling
+def test_typography_overlay_supports_swedish_aliases() -> None:
+    """Operatörer skriver på svenska — `lugn` ska mappa likt `calm`."""
+    from scripts.build_site import _typography_overlay_for_tone
+
+    sv = _typography_overlay_for_tone({"tone": {"primary": "lugn"}})
+    en = _typography_overlay_for_tone({"tone": {"primary": "calm"}})
+
+    assert sv is not None and en is not None
+    assert sv == en
+
+
+@pytest.mark.tooling
+def test_variant_css_uses_typography_overlay_when_provided(
+    nordic_trust_variant: dict,
+) -> None:
+    """När typography_overlay-kwargen ges ska font-import + body+heading-
+    regler reflektera overlay, inte variant-defaulten."""
+    from scripts.build_site import _typography_overlay_for_tone, variant_css
+
+    overlay = _typography_overlay_for_tone({"tone": {"primary": "bold"}})
+    assert overlay is not None
+    css = variant_css(nordic_trust_variant, typography_overlay=overlay)
+
+    assert "Space+Grotesk" in css
+    assert "--font-display: 'Space Grotesk'" in css
+
+
+@pytest.mark.tooling
+def test_variant_css_without_overlay_is_byte_stable(
+    nordic_trust_variant: dict,
+) -> None:
+    """Sprint A.2 är opt-in: variant_css utan typography_overlay
+    måste producera EXAKT samma bytes som med en explicit None-overlay."""
+    from scripts.build_site import variant_css
+
+    assert variant_css(nordic_trust_variant) == variant_css(
+        nordic_trust_variant, typography_overlay=None
+    )
+
+
+@pytest.mark.tooling
+def test_patch_globals_css_applies_tone_typography_overlay(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """End-to-end: build med tone.primary='playful' ska emittera
+    Quicksand+Nunito-fonts i den genererade globals.css."""
+    from scripts.build_site import build
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    project_input = json.loads(
+        (REPO_ROOT / "examples" / "painter-palma.project-input.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    project_input["siteId"] = "tone-typography-site"
+    project_input["tone"] = {"primary": "playful", "secondary": [], "avoid": []}
+    project_input_path = tmp_path / "project-input.json"
+    project_input_path.write_text(json.dumps(project_input), encoding="utf-8")
+
+    target, _run_dir = build(
+        project_input_path,
+        do_build=False,
+        runs_dir=tmp_path / "runs",
+        generated_dir=tmp_path / "generated",
+    )
+
+    globals_css = (target / "app" / "globals.css").read_text(encoding="utf-8")
+    assert "Quicksand" in globals_css
+    assert "Nunito" in globals_css
+    assert "--font-display: 'Quicksand'" in globals_css
