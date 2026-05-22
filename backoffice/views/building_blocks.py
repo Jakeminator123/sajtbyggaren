@@ -281,6 +281,249 @@ def _filter_options(rows: list[dict], key: str) -> list[str]:
     return ["Alla"] + values
 
 
+def _split_cell_values(value: object) -> list[str]:
+    if not value:
+        return []
+    return [item.strip() for item in str(value).split(",") if item.strip()]
+
+
+def _multi_filter_options(rows: list[dict], keys: list[str]) -> list[str]:
+    values: set[str] = set()
+    for row in rows:
+        for key in keys:
+            values.update(_split_cell_values(row.get(key)))
+    return ["Alla"] + sorted(values)
+
+
+def _filter_asset_graph_rows(
+    rows: list[dict],
+    *,
+    exact_filters: dict[str, str],
+    multi_filters: dict[str, tuple[str, list[str]]],
+    attention_filter: str,
+) -> list[dict]:
+    filtered = rows
+    for key, selected in exact_filters.items():
+        if selected != "Alla":
+            filtered = [row for row in filtered if str(row.get(key) or "") == selected]
+    for selected, keys in multi_filters.values():
+        if selected == "Alla":
+            continue
+        filtered = [
+            row
+            for row in filtered
+            if any(selected in _split_cell_values(row.get(key)) for key in keys)
+        ]
+    if attention_filter == "Endast gap/orphan/missing":
+        filtered = [row for row in filtered if row.get("gapOrOrphan") is True]
+    elif attention_filter == "Utan gap/orphan/missing":
+        filtered = [row for row in filtered if row.get("gapOrOrphan") is not True]
+    return filtered
+
+
+def _render_asset_graph() -> None:
+    st.subheader("Asset Graph: category → scaffold → starter → variant → dossier")
+    st.caption(
+        "Denna vy är read-only och visar befintliga källor. Den aktiverar inte "
+        "starters, ändrar inte mappings och är inte runtime-sanning."
+    )
+
+    summary = asset_graph.asset_graph_summary()
+    metric_cols = st.columns(6)
+    metric_cols[0].metric("categories", summary["categories"])
+    metric_cols[1].metric("scaffolds", summary["scaffolds"])
+    metric_cols[2].metric("starters", summary["starters"])
+    metric_cols[3].metric(
+        "runtime-mapped starters",
+        summary["runtimeMappedStarters"],
+    )
+    metric_cols[4].metric(
+        "available-not-mapped starters",
+        summary["availableNotMappedStarters"],
+    )
+    metric_cols[5].metric("gaps/orphans/missing", summary["gapsOrphansMissing"])
+
+    category_rows = asset_graph.asset_graph_category_rows()
+    scaffold_rows = asset_graph.asset_graph_scaffold_rows()
+    starter_rows = asset_graph.asset_graph_starter_rows()
+    capability_rows = asset_graph.asset_graph_capability_rows()
+
+    category_tab, scaffold_tab, starter_tab, capability_tab = st.tabs(
+        ["Categories", "Scaffolds", "Starters", "Capabilities"]
+    )
+    attention_options = [
+        "Alla",
+        "Endast gap/orphan/missing",
+        "Utan gap/orphan/missing",
+    ]
+
+    with category_tab:
+        filter_cols = st.columns(4)
+        selected_category = filter_cols[0].selectbox(
+            "Category",
+            _filter_options(category_rows, "categoryId"),
+            key="asset_graph_category_filter",
+        )
+        selected_status = filter_cols[1].selectbox(
+            "Status",
+            _filter_options(category_rows, "status"),
+            key="asset_graph_category_status_filter",
+        )
+        selected_scaffold = filter_cols[2].selectbox(
+            "Scaffold",
+            _multi_filter_options(
+                category_rows,
+                ["targetScaffoldId", "activeScaffoldId", "fallbackScaffoldId"],
+            ),
+            key="asset_graph_category_scaffold_filter",
+        )
+        selected_attention = filter_cols[3].selectbox(
+            "Gap/orphan",
+            attention_options,
+            key="asset_graph_category_attention_filter",
+        )
+        filtered_rows = _filter_asset_graph_rows(
+            category_rows,
+            exact_filters={
+                "categoryId": selected_category,
+                "status": selected_status,
+            },
+            multi_filters={
+                "scaffold": (
+                    selected_scaffold,
+                    ["targetScaffoldId", "activeScaffoldId", "fallbackScaffoldId"],
+                )
+            },
+            attention_filter=selected_attention,
+        )
+        st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+        with st.expander("Category-detaljer"):
+            st.write(
+                "Category-raderna delegerar supportStatus/mappingState till "
+                "`category_mapping_rows()` och visar capability-gaps från "
+                "Capability Map."
+            )
+
+    with scaffold_tab:
+        filter_cols = st.columns(4)
+        selected_scaffold = filter_cols[0].selectbox(
+            "Scaffold",
+            _filter_options(scaffold_rows, "scaffoldId"),
+            key="asset_graph_scaffold_filter",
+        )
+        selected_status = filter_cols[1].selectbox(
+            "Status",
+            _filter_options(scaffold_rows, "status"),
+            key="asset_graph_scaffold_status_filter",
+        )
+        selected_starter = filter_cols[2].selectbox(
+            "Starter",
+            _filter_options(scaffold_rows, "runtimeStarterId"),
+            key="asset_graph_scaffold_starter_filter",
+        )
+        selected_attention = filter_cols[3].selectbox(
+            "Gap/orphan",
+            attention_options,
+            key="asset_graph_scaffold_attention_filter",
+        )
+        filtered_rows = _filter_asset_graph_rows(
+            scaffold_rows,
+            exact_filters={
+                "scaffoldId": selected_scaffold,
+                "status": selected_status,
+                "runtimeStarterId": selected_starter,
+            },
+            multi_filters={},
+            attention_filter=selected_attention,
+        )
+        st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+        with st.expander("Scaffold-detaljer"):
+            st.write(
+                "Scaffold-status kombinerar scaffold-contract registry, filer "
+                "på disk och runtime-mappningen från planning."
+            )
+
+    with starter_tab:
+        filter_cols = st.columns(4)
+        selected_starter = filter_cols[0].selectbox(
+            "Starter",
+            _filter_options(starter_rows, "starterId"),
+            key="asset_graph_starter_filter",
+        )
+        selected_status = filter_cols[1].selectbox(
+            "Status",
+            _filter_options(starter_rows, "status"),
+            key="asset_graph_starter_status_filter",
+        )
+        selected_scaffold = filter_cols[2].selectbox(
+            "Scaffold",
+            _multi_filter_options(starter_rows, ["runtimeMappedScaffolds"]),
+            key="asset_graph_starter_scaffold_filter",
+        )
+        selected_attention = filter_cols[3].selectbox(
+            "Gap/orphan",
+            attention_options,
+            key="asset_graph_starter_attention_filter",
+        )
+        filtered_rows = _filter_asset_graph_rows(
+            starter_rows,
+            exact_filters={
+                "starterId": selected_starter,
+                "status": selected_status,
+            },
+            multi_filters={
+                "scaffold": (selected_scaffold, ["runtimeMappedScaffolds"])
+            },
+            attention_filter=selected_attention,
+        )
+        st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+        with st.expander("Starter-detaljer"):
+            st.write(
+                "Runtime-mappade starters kommer från `SCAFFOLD_TO_STARTER`; "
+                "available-not-mapped och placeholder kommer från Starter Registry."
+            )
+
+    with capability_tab:
+        filter_cols = st.columns(4)
+        selected_capability = filter_cols[0].selectbox(
+            "Capability",
+            _filter_options(capability_rows, "capabilityId"),
+            key="asset_graph_capability_filter",
+        )
+        selected_status = filter_cols[1].selectbox(
+            "Status",
+            _filter_options(capability_rows, "status"),
+            key="asset_graph_capability_status_filter",
+        )
+        selected_category = filter_cols[2].selectbox(
+            "Category",
+            _multi_filter_options(capability_rows, ["referencedByCategories"]),
+            key="asset_graph_capability_category_filter",
+        )
+        selected_attention = filter_cols[3].selectbox(
+            "Gap/orphan",
+            attention_options,
+            key="asset_graph_capability_attention_filter",
+        )
+        filtered_rows = _filter_asset_graph_rows(
+            capability_rows,
+            exact_filters={
+                "capabilityId": selected_capability,
+                "status": selected_status,
+            },
+            multi_filters={
+                "category": (selected_category, ["referencedByCategories"])
+            },
+            attention_filter=selected_attention,
+        )
+        st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+        with st.expander("Capability-detaljer"):
+            st.write(
+                "Capabilities med tom `dossiers`-lista markeras som gap; "
+                "referenser som saknas i Capability Map markeras som unknown."
+            )
+
+
 def _render_wizard_generation_mapping() -> None:
     st.subheader("Wizardfält → generation")
     st.caption(
@@ -514,6 +757,9 @@ def view_control_plane() -> None:
 
     st.divider()
     _render_sni_discovery_mapping()
+
+    st.divider()
+    _render_asset_graph()
 
     st.divider()
     st.subheader("Konsekvensvy")

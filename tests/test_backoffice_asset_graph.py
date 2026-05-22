@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -366,6 +367,163 @@ def test_asset_graph_lists_dossier_candidates(
     assert ("dossier-candidate", "soft/faq-accordion") in {
         (node["type"], node["id"]) for node in graph["nodes"]
     }
+
+
+def test_asset_graph_starter_rows_match_runtime_mapping() -> None:
+    from packages.generation.planning.plan import SCAFFOLD_TO_STARTER
+
+    starter_rows = asset_graph.asset_graph_starter_rows()
+    scaffold_rows = asset_graph.asset_graph_scaffold_rows()
+    by_starter = {row["starterId"]: row for row in starter_rows}
+    by_scaffold = {row["scaffoldId"]: row for row in scaffold_rows}
+
+    expected_by_starter: dict[str, set[str]] = {}
+    for scaffold_id, starter_id in SCAFFOLD_TO_STARTER.items():
+        expected_by_starter.setdefault(starter_id, set()).add(scaffold_id)
+        assert by_scaffold[scaffold_id]["runtimeStarterId"] == starter_id
+
+    for starter_id, scaffold_ids in expected_by_starter.items():
+        actual = {
+            item.strip()
+            for item in by_starter[starter_id]["runtimeMappedScaffolds"].split(",")
+            if item.strip()
+        }
+        assert actual == scaffold_ids
+        assert by_starter[starter_id]["runtimeMappedScaffoldCount"] == len(scaffold_ids)
+
+
+def test_asset_graph_runtime_and_available_starter_statuses() -> None:
+    rows = asset_graph.asset_graph_starter_rows()
+    by_id = {row["starterId"]: row for row in rows}
+
+    for starter_id in ("marketing-base", "commerce-base"):
+        assert by_id[starter_id]["status"] == "active-runtime"
+        assert by_id[starter_id]["runtimeMappedScaffoldCount"] > 0
+
+    for starter_id in ("portfolio-base", "docs-base"):
+        assert by_id[starter_id]["status"] == "available-not-mapped"
+        assert by_id[starter_id]["runtimeMappedScaffoldCount"] == 0
+
+
+def test_asset_graph_category_rows_include_support_and_expected_starter() -> None:
+    rows = asset_graph.asset_graph_category_rows()
+    by_id = {row["categoryId"]: row for row in rows}
+
+    assert {"supportStatus", "expectedStarterId"} <= set(by_id["business"])
+    assert by_id["business"]["supportStatus"] == "active"
+    assert by_id["business"]["expectedStarterId"] == "marketing-base"
+    assert by_id["ecommerce"]["supportStatus"] == "active"
+    assert by_id["ecommerce"]["expectedStarterId"] == "commerce-base"
+
+
+def test_asset_graph_capability_empty_dossiers_are_gap() -> None:
+    rows = asset_graph.asset_graph_capability_rows()
+    by_id = {row["capabilityId"]: row for row in rows}
+
+    assert by_id["contact-form"]["status"] == "gap"
+    assert by_id["contact-form"]["dossierCount"] == 0
+    assert by_id["contact-form"]["gapOrOrphan"] is True
+
+
+def test_asset_graph_capability_unknown_when_referenced_but_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_load_policy = asset_graph.load_policy
+    taxonomy = json.loads(
+        json.dumps(original_load_policy("discovery-taxonomy.v1.json"))
+    )
+    taxonomy["categories"][0]["requestedCapabilities"] = [
+        "contact-form",
+        "not-a-capability",
+    ]
+
+    def fake_load_policy(filename: str) -> dict[str, Any]:
+        if filename == "discovery-taxonomy.v1.json":
+            return taxonomy
+        return original_load_policy(filename)
+
+    monkeypatch.setattr(asset_graph, "load_policy", fake_load_policy)
+
+    rows = asset_graph.asset_graph_capability_rows()
+    by_id = {row["capabilityId"]: row for row in rows}
+
+    assert by_id["not-a-capability"]["status"] == "unknown"
+    assert by_id["not-a-capability"]["referencedByCategories"] == "business"
+
+
+def test_asset_graph_scaffold_missing_on_disk_can_be_flagged(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    scaffolds_dir = tmp_path / "empty-scaffolds"
+    scaffolds_dir.mkdir()
+    monkeypatch.setattr(asset_graph, "SCAFFOLDS_DIR", scaffolds_dir)
+
+    rows = asset_graph.asset_graph_scaffold_rows()
+    by_id = {row["scaffoldId"]: row for row in rows}
+
+    assert by_id["local-service-business"]["status"] == "missing-on-disk"
+    assert by_id["local-service-business"]["onDisk"] is False
+
+
+def test_asset_graph_summary_counts_match_rows() -> None:
+    category_rows = asset_graph.asset_graph_category_rows()
+    scaffold_rows = asset_graph.asset_graph_scaffold_rows()
+    starter_rows = asset_graph.asset_graph_starter_rows()
+    capability_rows = asset_graph.asset_graph_capability_rows()
+    summary = asset_graph.asset_graph_summary()
+    attention_statuses = {"gap", "orphan", "missing-on-disk", "unknown"}
+
+    assert summary["categories"] == len(category_rows)
+    assert summary["scaffolds"] == len(scaffold_rows)
+    assert summary["starters"] == len(starter_rows)
+    assert summary["runtimeMappedStarters"] == sum(
+        1 for row in starter_rows if row["runtimeMappedScaffoldCount"] > 0
+    )
+    assert summary["availableNotMappedStarters"] == sum(
+        1 for row in starter_rows if row["status"] == "available-not-mapped"
+    )
+    assert summary["gapsOrphansMissing"] == sum(
+        1
+        for row in [*scaffold_rows, *starter_rows, *capability_rows]
+        if row["gapOrOrphan"] is True or row["status"] in attention_statuses
+    )
+
+
+def test_asset_graph_helpers_are_read_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail_write(*_args: Any, **_kwargs: Any) -> int:
+        raise AssertionError("Asset Graph helpers must not write files")
+
+    def fail_mkdir(*_args: Any, **_kwargs: Any) -> None:
+        raise AssertionError("Asset Graph helpers must not create directories")
+
+    monkeypatch.setattr(Path, "write_text", fail_write)
+    monkeypatch.setattr(Path, "mkdir", fail_mkdir)
+
+    assert asset_graph.asset_graph_category_rows()
+    assert asset_graph.asset_graph_scaffold_rows()
+    assert asset_graph.asset_graph_starter_rows()
+    assert asset_graph.asset_graph_capability_rows()
+    assert asset_graph.asset_graph_summary()["categories"] > 0
+
+
+def test_asset_graph_view_is_rendered_before_impact_view() -> None:
+    source = inspect.getsource(building_blocks.view_control_plane)
+
+    assert hasattr(building_blocks, "_render_asset_graph")
+    assert "Asset Graph: category → scaffold → starter → variant → dossier" in inspect.getsource(
+        building_blocks._render_asset_graph
+    )
+    assert (
+        "Denna vy är read-only och visar befintliga källor. Den aktiverar inte"
+        in inspect.getsource(building_blocks._render_asset_graph)
+    )
+    assert source.index("_render_sni_discovery_mapping()") < source.index(
+        "_render_asset_graph()"
+    )
+    assert source.index("_render_asset_graph()") < source.index(
+        'st.subheader("Konsekvensvy")'
+    )
 
 
 def test_variant_candidate_ui_helper_writes_only_candidate_dir(
