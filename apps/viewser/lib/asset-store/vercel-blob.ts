@@ -35,6 +35,7 @@ import { head, list, put } from "@vercel/blob";
 
 import { optimizeImage } from "./sharp-pipeline";
 import type {
+  AssetMimeType,
   AssetRef,
   AssetStore,
   SaveAssetInput,
@@ -43,7 +44,7 @@ import type {
 import { generateAssetId, slugifyFilename } from "./utils";
 import { classifyAsset } from "./vision";
 
-function mimeExtension(mime: AssetRef["mimeType"]): string {
+function mimeExtension(mime: AssetMimeType): string {
   switch (mime) {
     case "image/png":
       return "png";
@@ -53,7 +54,15 @@ function mimeExtension(mime: AssetRef["mimeType"]): string {
       return "webp";
     case "image/svg+xml":
       return "svg";
+    case "video/mp4":
+      return "mp4";
+    case "video/webm":
+      return "webm";
   }
+}
+
+function isVideoMime(mime: AssetMimeType): boolean {
+  return mime === "video/mp4" || mime === "video/webm";
 }
 
 function requireToken(): string {
@@ -86,7 +95,7 @@ export class VercelBlobAssetStore implements AssetStore {
     const assetId = generateAssetId();
 
     const originalExt = mimeExtension(input.mimeType);
-    await put(
+    const originalPut = await put(
       this.pathFor(input.siteId, assetId, `original.${originalExt}`),
       input.buffer,
       {
@@ -98,27 +107,62 @@ export class VercelBlobAssetStore implements AssetStore {
       },
     );
 
-    // SVG passerar orörd — vektor är redan billig och webp-konvertering
-    // skulle förlora skalbarheten. Övriga format går genom sharp.
+    // Tre branches (samma som LocalAssetStore.save):
+    //  - SVG     : ingen optimering, sourceUrl pekar mot original.svg
+    //  - Image   : sharp → optimized.webp, sourceUrl mot optimized
+    //  - Video   : ingen optimering, sourceUrl mot original.<mp4|webm>
     let optimizedBytes: number;
     let width: number | null;
     let height: number | null;
-    let publicMime: AssetRef["mimeType"];
+    let publicMime: AssetMimeType;
     let publicExt: string;
     let optimizedUrl: string;
-    if (input.mimeType === "image/svg+xml") {
+    let altText: string;
+    let visionSubject: string | undefined;
+    let visionConfidence: AssetRef["visionConfidence"];
+    let placement: AssetRef["placement"];
+
+    if (isVideoMime(input.mimeType)) {
+      optimizedBytes = input.buffer.byteLength;
+      width = null;
+      height = null;
+      publicMime = input.mimeType;
+      publicExt = originalExt;
+      // ``head()`` skulle räcka, men ``put()`` returnerar redan URL:n
+      // för originalets blob, så vi använder den för att slippa en
+      // extra round-trip till Vercel API.
+      optimizedUrl = originalPut.url;
+      altText = "Bakgrundsvideo";
+      visionSubject = undefined;
+      visionConfidence = undefined;
+      placement = "home";
+    } else if (input.mimeType === "image/svg+xml") {
       optimizedBytes = input.buffer.byteLength;
       width = null;
       height = null;
       publicMime = "image/svg+xml";
       publicExt = "svg";
-      // SVG har ingen separat optimized-fil. Vi pekar sourceUrl mot
-      // original.svg som redan är public.
+      // SVG har ingen separat optimized-fil. ``head()`` ger oss den
+      // canoniska URL:n inklusive Vercel:s store-prefix.
       const originalBlob = await head(
         this.pathFor(input.siteId, assetId, `original.${originalExt}`),
         { token },
       );
       optimizedUrl = originalBlob.url;
+      const vision = await classifyAsset({
+        buffer: input.buffer,
+        mimeType: input.mimeType,
+        role: input.role,
+      });
+      altText = vision.suggestedAltText;
+      visionSubject = vision.subject;
+      visionConfidence = vision.confidence;
+      placement =
+        input.role === "logo"
+          ? undefined
+          : input.role === "hero"
+            ? "home"
+            : vision.recommendedPlacement;
     } else {
       const optimized = await optimizeImage(input.buffer);
       const optimizedPut = await put(
@@ -138,19 +182,24 @@ export class VercelBlobAssetStore implements AssetStore {
       publicMime = "image/webp";
       publicExt = "webp";
       optimizedUrl = optimizedPut.url;
+      const vision = await classifyAsset({
+        buffer: input.buffer,
+        mimeType: input.mimeType,
+        role: input.role,
+      });
+      altText = vision.suggestedAltText;
+      visionSubject = vision.subject;
+      visionConfidence = vision.confidence;
+      placement =
+        input.role === "logo"
+          ? undefined
+          : input.role === "hero"
+            ? "home"
+            : vision.recommendedPlacement;
     }
 
     const stem = slugifyFilename(input.originalName);
     const publicFilename = `${stem}-${assetId.slice(0, 8).toLowerCase()}.${publicExt}`;
-
-    // Vision-klassificering körs på samma buffer som operatorn laddade
-    // upp (inte den webp-komprimerade) för att modellen ska se högsta
-    // kvalitet vid analys. SVG → deterministisk mock (vision.ts hanterar).
-    const vision = await classifyAsset({
-      buffer: input.buffer,
-      mimeType: input.mimeType,
-      role: input.role,
-    });
 
     const ref: AssetRef = {
       assetId,
@@ -159,16 +208,11 @@ export class VercelBlobAssetStore implements AssetStore {
       sizeBytes: optimizedBytes,
       width,
       height,
-      alt: vision.suggestedAltText,
+      alt: altText,
       role: input.role,
-      ...(input.role === "logo"
-        ? {}
-        : {
-            placement:
-              input.role === "hero" ? "home" : vision.recommendedPlacement,
-          }),
-      visionSubject: vision.subject,
-      visionConfidence: vision.confidence,
+      ...(placement ? { placement } : {}),
+      ...(visionSubject ? { visionSubject } : {}),
+      ...(visionConfidence ? { visionConfidence } : {}),
       sourceUrl: optimizedUrl,
     };
 

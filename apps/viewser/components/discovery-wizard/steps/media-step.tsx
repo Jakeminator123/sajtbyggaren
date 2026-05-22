@@ -5,7 +5,6 @@ import {
   Image as ImageIcon,
   ImagePlus,
   Mountain,
-  Sparkles,
   Square,
   Video,
 } from "lucide-react";
@@ -65,7 +64,6 @@ export function MediaStep({
         icon={<Square className="h-4 w-4" />}
         title="Favicon"
         description="Ikonen i browser-fliken och bokmärken."
-        needsBackend
       >
         {answers.media.favicon ? (
           <FaviconPreview
@@ -75,7 +73,7 @@ export function MediaStep({
           />
         ) : (
           <AssetDropzone
-            role="logo"
+            role="favicon"
             mode="single"
             emptyLabel="Släpp favicon här"
             hintLabel="Kvadratisk PNG eller SVG, minst 256×256 px."
@@ -92,7 +90,6 @@ export function MediaStep({
         icon={<Globe className="h-4 w-4" />}
         title="OG-image"
         description="Förhandsvisning på Facebook, LinkedIn, Slack och SMS."
-        needsBackend
       >
         {answers.media.ogImage ? (
           <OgImagePreview
@@ -103,7 +100,7 @@ export function MediaStep({
           />
         ) : (
           <AssetDropzone
-            role="gallery"
+            role="ogImage"
             mode="single"
             emptyLabel="Släpp social-image här"
             hintLabel="Liggande bild — vi croppar till 1200×630."
@@ -120,7 +117,6 @@ export function MediaStep({
         icon={<Video className="h-4 w-4" />}
         title="Bakgrundsvideo"
         description="Loop bakom hero-texten — tyst, kort, ger sajten liv."
-        needsBackend
       >
         {answers.media.backgroundVideo ? (
           <VideoPreview
@@ -131,10 +127,10 @@ export function MediaStep({
           />
         ) : (
           <AssetDropzone
-            role="gallery"
+            role="backgroundVideo"
             mode="single"
             emptyLabel="Släpp video här (.mp4 / .webm)"
-            hintLabel="5-15 sekunder, max ~5 MB. Hero-bilden visas som fallback."
+            hintLabel="5-15 sekunder, max ~50 MB. Hero-bilden visas som fallback."
             onUploaded={(refs) => {
               const next = refs[0];
               if (next)
@@ -172,13 +168,11 @@ function AssetCard({
   icon,
   title,
   description,
-  needsBackend,
   children,
 }: {
   icon: React.ReactNode;
   title: string;
   description: string;
-  needsBackend?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -188,20 +182,9 @@ function AssetCard({
           {icon}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-foreground text-[13.5px] font-semibold tracking-tight">
-              {title}
-            </span>
-            {needsBackend ? (
-              <span
-                title="Kräver backend-stöd för full funktionalitet — se docs/backend-handoff.md"
-                className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[9.5px] font-medium text-amber-700 dark:bg-amber-400/10 dark:text-amber-300"
-              >
-                <Sparkles className="h-2.5 w-2.5" />
-                Kräver backend-stöd
-              </span>
-            ) : null}
-          </div>
+          <span className="text-foreground text-[13.5px] font-semibold tracking-tight">
+            {title}
+          </span>
           <p className="text-muted-foreground mt-0.5 text-[11.5px] leading-snug">
             {description}
           </p>
@@ -319,30 +302,49 @@ function VideoPreview({
   asset: AssetRef;
   onRemove: () => void;
 }) {
-  // Vi använder samma asset-preview-endpoint som thumbnails — för riktiga
-  // video-bytes behöver vi en separat /api/asset-stream-endpoint (kommer
-  // i backend-handoff). Tills dess visar vi filnamnet + mimetype.
+  // VercelBlobAssetStore sätter `sourceUrl` på AssetRef:n vilket pekar
+  // mot den publika blob:en. Då kan vi spela upp direkt utan att gå
+  // genom /api/asset-stream. LocalAssetStore sätter ingen sourceUrl —
+  // då går vi via /api/asset-preview som redirectar till disk-bytes
+  // (eller blob-bytes om båda kombineras).
+  const playbackUrl =
+    asset.sourceUrl ??
+    `/api/asset-preview?assetId=${asset.assetId}&siteId=__draft`;
+  const sizeMb = (asset.sizeBytes / 1024 / 1024).toFixed(1);
   return (
-    <div className="border-border/60 bg-background flex items-center gap-3 rounded-lg border p-3">
-      <div className="bg-foreground/5 flex h-12 w-12 shrink-0 items-center justify-center rounded-md">
-        <Video className="text-foreground/70 h-5 w-5" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-foreground truncate text-[12.5px] font-medium">
-          {asset.filename}
+    <div className="space-y-2">
+      <div className="border-border/60 bg-background overflow-hidden rounded-lg border">
+        <div className="bg-foreground/[0.04] relative aspect-video w-full overflow-hidden">
+          <video
+            src={playbackUrl}
+            className="h-full w-full object-cover"
+            autoPlay
+            loop
+            muted
+            playsInline
+          />
         </div>
-        <div className="text-muted-foreground text-[10.5px]">
-          {asset.mimeType} · uppspelning kräver backend-stöd för
-          <code className="ml-1">video/*</code>-mimes.
+        <div className="border-border/60 flex items-center gap-2 border-t px-3 py-2">
+          <Video className="text-foreground/70 h-3.5 w-3.5 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="text-foreground truncate text-[12px] font-medium">
+              {asset.filename}
+            </div>
+            <div className="text-muted-foreground text-[10px]">
+              {asset.mimeType} · {sizeMb} MB
+            </div>
+          </div>
         </div>
       </div>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="text-muted-foreground hover:text-foreground shrink-0 text-[11px]"
-      >
-        Ta bort
-      </button>
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-muted-foreground hover:text-foreground text-[11px]"
+        >
+          Ta bort
+        </button>
+      </div>
     </div>
   );
 }

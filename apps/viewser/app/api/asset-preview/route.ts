@@ -36,6 +36,8 @@ const MIME_BY_EXT: Record<string, string> = {
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
 };
 
 export async function GET(request: NextRequest) {

@@ -4,7 +4,20 @@
  * kan acceptera samma form rakt av.
  */
 
-export type AssetRole = "logo" | "hero" | "gallery";
+export type AssetRole =
+  | "logo"
+  | "hero"
+  | "gallery"
+  // Fas 1.2 — extra-roles för wizardens steg 5. Backend renderar:
+  //   favicon         → <link rel="icon"> + <link rel="apple-touch-icon">
+  //   ogImage         → <meta property="og:image"> + Twitter Card
+  //   backgroundVideo → <video autoPlay loop muted playsInline> i hero
+  // Roles persisteras till `dossier.media[<role>]` (efter Jakob M2).
+  // Tills dess används de av wizard-payload som strukturerad referens
+  // i `answers.media` så framtida persistering bara behöver mappa fält.
+  | "favicon"
+  | "ogImage"
+  | "backgroundVideo";
 
 export type AssetPlacement =
   | "home"
@@ -16,10 +29,31 @@ export type AssetPlacement =
 
 export type VisionConfidence = "low" | "medium" | "high";
 
+/**
+ * Image MIMEs som sharp-pipelinen kan optimera till webp. Video och andra
+ * binary-typer ligger utanför detta union eftersom de bypass:ar
+ * sharp + vision-klassificeringen.
+ */
+export type ImageMimeType =
+  | "image/png"
+  | "image/jpeg"
+  | "image/webp"
+  | "image/svg+xml";
+
+/**
+ * Video MIMEs som backgroundVideo-rollen stödjer. Sharp opererar inte
+ * på video; uploads passerar orörda till disk/Blob. <video>-elementet
+ * i browser hanterar containerformat & codec själv så vi behöver inte
+ * transkoda.
+ */
+export type VideoMimeType = "video/mp4" | "video/webm";
+
+export type AssetMimeType = ImageMimeType | VideoMimeType;
+
 export interface AssetRef {
   assetId: string;
   filename: string;
-  mimeType: "image/png" | "image/jpeg" | "image/webp" | "image/svg+xml";
+  mimeType: AssetMimeType;
   sizeBytes: number;
   width: number | null;
   height: number | null;
@@ -47,7 +81,7 @@ export interface SaveAssetInput {
   siteId: string;
   buffer: Buffer;
   originalName: string;
-  mimeType: AssetRef["mimeType"];
+  mimeType: AssetMimeType;
   role: AssetRole;
 }
 

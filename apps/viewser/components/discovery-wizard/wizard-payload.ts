@@ -22,6 +22,8 @@
  * (LLM-extraktion på `rawPrompt` + `composeMasterPrompt`-text) när det saknas.
  */
 
+import type { AssetRef } from "@/lib/asset-store/types";
+
 import {
   fallbackDiscoveryOptions,
   resolveContentBranchFromOptions,
@@ -83,6 +85,31 @@ export type WizardDirectives = {
    * skulle göra hero-blocket otydligt visuellt.
    */
   uniqueSellingPoints?: string[];
+  /**
+   * Extra media-assets utöver logo/hero/gallery (de tre primära går
+   * fortfarande via `answers.assets`). Backend renderar varje fält i en
+   * specifik HTML-position — se `docs/contracts/wizard-discovery.v2.md`
+   * sektionen "Media-fält → render-target" för exakt mapping:
+   *
+   *   - `favicon`         → `<link rel="icon">` + `<link rel="apple-touch-icon">`
+   *   - `ogImage`         → `<meta property="og:image">` + Twitter Card
+   *   - `backgroundVideo` → `<video autoPlay loop muted playsInline>`
+   *                         i hero-sektionen (poster=hero-bild som fallback)
+   *
+   * Värdet är en `AssetRef` (samma form som `answers.assets.logo` osv.).
+   * Asset-bytes ligger redan i AssetStore (lokal disk eller Vercel Blob);
+   * `sourceUrl`-fältet pekar mot publik URL när VercelBlobAssetStore
+   * är aktiv. Backend ska föredra `sourceUrl` framför disk-lookup.
+   *
+   * Backend (Jakob M2): persistera till `dossier.media.<role>` så
+   * build_site.py kan läsa det vid render. Schema-tillägg krävs i
+   * `governance/schemas/project-input.schema.json`.
+   */
+  media?: {
+    favicon?: AssetRef;
+    ogImage?: AssetRef;
+    backgroundVideo?: AssetRef;
+  };
   notesForPlanner?: string;
 };
 
@@ -420,6 +447,20 @@ export function deriveWizardDirectives(
   }
   if (notesParts.length > 0) {
     directives.notesForPlanner = notesParts.join(" — ");
+  }
+
+  // Extra media — favicon / ogImage / backgroundVideo. Vi exponerar dem
+  // även i `directives.media` (utöver `answers.media`) så Jakob bara
+  // behöver titta i `directives` för all strukturerad render-data.
+  // ``stripEmpty`` rensar fältet om alla tre är null.
+  const media: NonNullable<WizardDirectives["media"]> = {};
+  if (answers.media.favicon) media.favicon = answers.media.favicon;
+  if (answers.media.ogImage) media.ogImage = answers.media.ogImage;
+  if (answers.media.backgroundVideo) {
+    media.backgroundVideo = answers.media.backgroundVideo;
+  }
+  if (Object.keys(media).length > 0) {
+    directives.media = media as WizardDirectives["media"];
   }
 
   return directives;

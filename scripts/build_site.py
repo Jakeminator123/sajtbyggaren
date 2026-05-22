@@ -628,23 +628,71 @@ def copy_starter(starter_id: str, target: Path) -> None:
 UPLOADS_ROOT_DIR = Path(__file__).resolve().parent.parent / "data" / "uploads"
 
 
+def _is_valid_asset_ref(value: Any) -> bool:
+    return (
+        isinstance(value, dict)
+        and bool(value.get("assetId"))
+        and bool(value.get("filename"))
+    )
+
+
+def resolve_media_asset(project_input: dict, role: str) -> dict | None:
+    """Hitta en `media.<role>` AssetRef över alla kända persisterings-
+    platser. Returnerar None om inte hittas. Söker i prioritetsordning:
+
+      1. `project_input.media[<role>]` (om backend M2 persisterar dit)
+      2. `project_input.directives.media[<role>]` (v2-payload, direkt
+         från wizard innan backend mappat in)
+      3. `project_input.discoveryAnswers.media[<role>]` (oprocessad
+         wizard-payload, om backend inte transformerade alls)
+
+    Detta gör build_site.py robust mot olika persisterings-strategier
+    så vi inte behöver vänta på exakt schema-konvention från backend.
+    """
+    media = project_input.get("media")
+    if isinstance(media, dict):
+        candidate = media.get(role)
+        if _is_valid_asset_ref(candidate):
+            return candidate
+    directives = project_input.get("directives")
+    if isinstance(directives, dict):
+        directives_media = directives.get("media")
+        if isinstance(directives_media, dict):
+            candidate = directives_media.get(role)
+            if _is_valid_asset_ref(candidate):
+                return candidate
+    discovery_answers = project_input.get("discoveryAnswers")
+    if isinstance(discovery_answers, dict):
+        answers_media = discovery_answers.get("media")
+        if isinstance(answers_media, dict):
+            candidate = answers_media.get(role)
+            if _is_valid_asset_ref(candidate):
+                return candidate
+    return None
+
+
 def iter_asset_refs(project_input: dict) -> list[dict]:
     """Returnera alla AssetRef-objekt som finns i Project Input
-    (`brand.logo`, `brand.heroImage`, varje item i `gallery`). Tar bara
-    med refs där alla fält schemat kräver finns; trasiga refs hoppas
-    över så build:en inte kraschar på en korrupt manifest.json."""
+    (`brand.logo`, `brand.heroImage`, varje item i `gallery`, samt
+    `media.favicon` / `media.ogImage` / `media.backgroundVideo`). Tar
+    bara med refs där alla fält schemat kräver finns; trasiga refs
+    hoppas över så build:en inte kraschar på en korrupt manifest.json."""
     refs: list[dict] = []
     brand = project_input.get("brand") or {}
     if isinstance(brand, dict):
         for key in ("logo", "heroImage"):
             ref = brand.get(key)
-            if isinstance(ref, dict) and ref.get("assetId") and ref.get("filename"):
+            if _is_valid_asset_ref(ref):
                 refs.append(ref)
     gallery = project_input.get("gallery") or []
     if isinstance(gallery, list):
         for item in gallery:
-            if isinstance(item, dict) and item.get("assetId") and item.get("filename"):
+            if _is_valid_asset_ref(item):
                 refs.append(item)
+    for role in ("favicon", "ogImage", "backgroundVideo"):
+        ref = resolve_media_asset(project_input, role)
+        if ref is not None:
+            refs.append(ref)
     return refs
 
 
@@ -685,13 +733,17 @@ def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> in
             )
             continue
 
-        # Föredra webp; annars första matchande original.<ext>.
+        # Föredra webp; annars första matchande original.<ext>. Video
+        # (mp4/webm) ligger alltid som original eftersom sharp inte
+        # opererar på video — vi kopierar dem oförändrade.
         candidates = [
             source_dir / "optimized.webp",
             source_dir / "original.svg",
             source_dir / "original.png",
             source_dir / "original.jpg",
             source_dir / "original.webp",
+            source_dir / "original.mp4",
+            source_dir / "original.webm",
         ]
         source_file: Path | None = next((c for c in candidates if c.exists()), None)
         if source_file is None:
@@ -942,6 +994,31 @@ def _motion_css_block(level: str) -> str:
         for i in range(1, 7)
     )
 
+    # Fas 2.2 — utöka motion-blocket med scroll-driven animations. När
+    # browser:n stödjer ``animation-timeline: view()`` (Chrome/Edge 115+,
+    # Opera 101+) får varje sektion utöver de första sex en mjuk fade-in
+    # vid scroll, utan JavaScript. Safari + Firefox ignorerar @supports-
+    # block och visar sektionerna direkt — degraderar snyggt.
+    #
+    # ``view()``-axeln binder animationen till element-positionen i
+    # viewporten: 0% = ovan viewport, 100% = nedanför. Vi spelar bara
+    # animationen i första 30%-fönstret (entering bottom) så sektionen
+    # är fullt synlig innan animationen är klar.
+    scroll_translate = translate_y if translate_y != "0" else "8px"
+    scroll_block = (
+        "  @supports (animation-timeline: view()) {\n"
+        "    @keyframes sajtbyggaren-section-scroll-enter {\n"
+        f"      from {{ opacity: 0; transform: translateY({scroll_translate}); }}\n"
+        "      to { opacity: 1; transform: translateY(0); }\n"
+        "    }\n"
+        "    main > section:nth-of-type(n+7) {\n"
+        "      animation: sajtbyggaren-section-scroll-enter linear both;\n"
+        "      animation-timeline: view();\n"
+        "      animation-range: entry 0% entry 30%;\n"
+        "    }\n"
+        "  }\n"
+    )
+
     return (
         "@media (prefers-reduced-motion: no-preference) {\n"
         "  @keyframes sajtbyggaren-section-enter {\n"
@@ -952,6 +1029,7 @@ def _motion_css_block(level: str) -> str:
         f"    animation: sajtbyggaren-section-enter {duration_ms}ms cubic-bezier(0.16, 1, 0.3, 1) both;\n"
         "  }\n"
         f"{stagger_rules}\n"
+        f"{scroll_block}"
         "}\n"
     )
 
@@ -1009,16 +1087,60 @@ def variant_css(variant: dict, token_overrides: dict[str, str] | None = None) ->
         # Apply font families at the element level so existing render_*
         # functions don't need a className change — body inherits the
         # body font; headings inherit the display font with bespoke
-        # letter-spacing per variant. font-feature-settings enable
-        # contextual ligatures + tabular numerals where the typeface
-        # supports them, which is most modern Google webfonts.
+        # letter-spacing per variant.
+        #
+        # Fas 3.1 — typografiska OpenType-features per kontext:
+        #   * body  : ``ss01`` (stylistic set 1 — Inter:s grotesque-alts),
+        #             ``cv02`` ``cv03`` ``cv11`` (open digit + bättre kolon),
+        #             ``cv05`` ``cv10`` (alternativa l/L),
+        #             ``ss03`` (curl-alternativ), ``calt`` (contextual
+        #             alternates för auto-ligature i webfonts).
+        #   * h1-h4 : ``ss02`` (display-orienterad stylistic-set när
+        #             tillgänglig), ``cv11``. Headlines håller
+        #             tab-alignment med rubrik-siffror så "2026" och
+        #             "1 999 kr" radas snyggt.
+        #   * pris/data: ``.font-tabular`` utility-class (tabular-nums +
+        #             lining-nums) som render_*-helpers kan applicera
+        #             på pristext, statistik, datum.
+        #
+        # Browsers som inte stödjer en feature ignorerar den tyst.
+        # Google Fonts levererar alla features ovan för Inter, DM Sans,
+        # Manrope och Plus Jakarta Sans (våra defaults).
         "body {\n"
         "  font-family: var(--font-body);\n"
-        "  font-feature-settings: \"cv02\", \"cv03\", \"cv04\", \"cv11\";\n"
+        "  font-feature-settings: \"ss01\", \"ss03\", \"cv02\", \"cv03\", \"cv05\", \"cv10\", \"cv11\", \"calt\";\n"
+        "  font-variant-ligatures: common-ligatures contextual;\n"
         "}\n"
         "h1, h2, h3, h4 {\n"
         "  font-family: var(--font-display);\n"
         "  letter-spacing: var(--display-tracking);\n"
+        "  font-feature-settings: \"ss02\", \"cv11\";\n"
+        "  font-variant-numeric: lining-nums;\n"
+        "}\n"
+        ".font-tabular {\n"
+        "  font-variant-numeric: tabular-nums lining-nums;\n"
+        "  font-feature-settings: \"tnum\", \"lnum\";\n"
+        "}\n"
+        # Fas 3.3 — CSS-only parallax. Bilden zoomas 1.0 → 1.08 över
+        # hero-exit-fönstret när browser:n stödjer animation-timeline.
+        # ``contain``-fönstret startar när bilden börjar lämna viewporten
+        # (cover 50%) och slutar när den lämnar helt (cover 100%).
+        # Detta gör att zoomen sker när användaren scrollar förbi hero
+        # — exakt som Apple och Stripe-sajter, men utan JavaScript.
+        # Safari + Firefox ignorerar @supports och visar statisk bild.
+        "@supports (animation-timeline: view()) {\n"
+        "  @media (prefers-reduced-motion: no-preference) {\n"
+        "    @keyframes sajtbyggaren-hero-parallax {\n"
+        "      from { transform: scale(1.0); }\n"
+        "      to { transform: scale(1.08); }\n"
+        "    }\n"
+        "    .parallax-hero {\n"
+        "      animation: sajtbyggaren-hero-parallax linear both;\n"
+        "      animation-timeline: view();\n"
+        "      animation-range: cover 0% cover 100%;\n"
+        "      will-change: transform;\n"
+        "    }\n"
+        "  }\n"
         "}\n"
         + motion_block
     )
@@ -1529,13 +1651,85 @@ def render_layout(
             f' alt={_js_string_literal(logo_alt)} className="h-10 w-auto object-contain mb-1"{dims} />'
         )
     else:
+        # Fas 2.5 — snyggare default-monogram. Två-tons gradient som
+        # förgrund (primary → accent) och en mjuk shadow-ring så symbolen
+        # står ut även mot ljusa bakgrunder. tracking-wider gör att två
+        # bokstäver inte trycks ihop. samma gradient används i footer:n
+        # för konsistens.
+        monogram_text = _jsx_safe_string(company["name"][:2])
         header_logo_jsx = (
-            f'              <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-[color:var(--primary)] text-[color:var(--primary-foreground)] text-xs font-bold uppercase">{_jsx_safe_string(company["name"][:2])}</span>'
+            '              <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-[color:var(--primary)] to-[color:var(--accent)] text-[color:var(--primary-foreground)] text-[11px] font-bold uppercase tracking-wider shadow-sm ring-1 ring-[color:var(--primary)]/20">'
+            f"{monogram_text}</span>"
         )
-        footer_logo_jsx = ""
+        footer_logo_jsx = (
+            '              <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[color:var(--primary)] to-[color:var(--accent)] text-[color:var(--primary-foreground)] text-xs font-bold uppercase tracking-wider shadow-sm mb-2">'
+            f"{monogram_text}</span>"
+        )
+
+    # Fas 1.6 — favicon + Open Graph + Apple touch-icon. Vi använder
+    # Next.js Metadata API:s `icons` och `openGraph.images` så headern
+    # genereras automatiskt utan att vi behöver injicera <link>/<meta>
+    # i body:n. Saknas asset:n hoppas fältet — Next.js default-favicon
+    # (eller den som ligger i ``public/favicon.ico``) tar över.
+    favicon_asset = resolve_media_asset(dossier, "favicon")
+    og_image_asset = resolve_media_asset(dossier, "ogImage")
+    metadata_extras: list[str] = []
+    if isinstance(favicon_asset, dict) and favicon_asset.get("filename"):
+        favicon_url = "/uploads/" + str(favicon_asset["filename"])
+        # ``apple-touch-icon`` ska helst vara 180×180 PNG. Vi använder
+        # samma asset eftersom operatör-uppladdade favicons normalt har
+        # högre upplösning än 32×32. Browsern resize:ar utan tappad kvalitet.
+        metadata_extras.append(
+            "  icons: {\n"
+            f"    icon: {_js_string_literal(favicon_url)},\n"
+            f"    apple: {_js_string_literal(favicon_url)},\n"
+            "  },\n"
+        )
+    if isinstance(og_image_asset, dict) and og_image_asset.get("filename"):
+        og_url = "/uploads/" + str(og_image_asset["filename"])
+        og_alt = og_image_asset.get("alt") or company["tagline"] or company["name"]
+        metadata_extras.append(
+            "  openGraph: {\n"
+            f"    title: {_js_string_literal(company['name'])},\n"
+            f"    description: {_js_string_literal(company['tagline'])},\n"
+            "    images: [\n"
+            "      {\n"
+            f"        url: {_js_string_literal(og_url)},\n"
+            f"        alt: {_js_string_literal(og_alt)},\n"
+            "        width: 1200,\n"
+            "        height: 630,\n"
+            "      },\n"
+            "    ],\n"
+            "  },\n"
+            "  twitter: {\n"
+            '    card: "summary_large_image",\n'
+            f"    title: {_js_string_literal(company['name'])},\n"
+            f"    description: {_js_string_literal(company['tagline'])},\n"
+            f"    images: [{_js_string_literal(og_url)}],\n"
+            "  },\n"
+        )
+    metadata_extras_block = "".join(metadata_extras)
+
+    # Fas 2.4 — themeColor + viewport. ``theme-color`` påverkar mobil
+    # adress-fält och Android task-switcher; vi använder brand.primaryColorHex
+    # när den finns och faller tillbaka till ett neutralt ljust värde
+    # som matchar default --background. Detta gör att mobilen visuellt
+    # ankrar mot sajtens identitet redan innan första paint.
+    brand = dossier.get("brand") or {}
+    primary_hex_raw = (
+        brand.get("primaryColorHex") if isinstance(brand, dict) else None
+    )
+    theme_color_hex = _normalise_hex_color(primary_hex_raw) or "#ffffff"
+    viewport_block = (
+        "\n"
+        "export const viewport: Viewport = {\n"
+        f"  themeColor: {_js_string_literal(theme_color_hex)},\n"
+        "};\n"
+        "\n"
+    )
 
     return (
-        'import type { Metadata } from "next";\n'
+        'import type { Metadata, Viewport } from "next";\n'
         'import { Geist, Geist_Mono } from "next/font/google";\n'
         'import { Mail, MapPin, Phone } from "lucide-react";\n'
         'import "./globals.css";\n'
@@ -1553,8 +1747,9 @@ def render_layout(
         "export const metadata: Metadata = {\n"
         f"  title: {_js_string_literal(company['name'])},\n"
         f"  description: {_js_string_literal(company['tagline'])},\n"
+        f"{metadata_extras_block}"
         "};\n"
-        "\n"
+        f"{viewport_block}"
         "export default function RootLayout({\n"
         "  children,\n"
         "}: Readonly<{\n"
@@ -1666,9 +1861,11 @@ def render_home(
     if needs_quote_icon and "Quote" not in icons_used:
         icons_used = sorted({*icons_used, "Quote"})
     icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
+    # Fas 2.3 — hover-effekt med translate-y och förbättrad shadow.
+    # Ikonen lyfts samtidigt för en sammanhängande Apple-känsla.
     services_grid = "\n".join(
-        f'            <li key={_jsx_safe_string(svc["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--card,var(--background))] p-6 transition-all hover:border-[color:var(--primary)] hover:shadow-sm">\n'
-        f'              <span className="mb-4 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(svc["id"])} className="size-5" /></span>\n'
+        f'            <li key={_jsx_safe_string(svc["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--card,var(--background))] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
+        f'              <span className="mb-4 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)] transition-transform group-hover:scale-105"><{_icon_for_service(svc["id"])} className="size-5" /></span>\n'
         f'              <h3 className="text-lg font-semibold">{_jsx_safe_string(svc["label"])}</h3>\n'
         f'              <p className="mt-2 text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
         "            </li>"
@@ -1798,6 +1995,11 @@ def render_home(
     # när business-typ saknar en kuraterad photo-ID i mappningen, vilket
     # behåller den befintliga accent-tinted-fallbacken.
     unsplash_fallback_url = _unsplash_hero_url(dossier)
+    # Fas 1.6 — background_video är optional. Operatören laddar upp en
+    # mp4/webm i wizardens MediaStep; build_site.py renderar den som
+    # absolut-positionerat ``<video>`` bakom hero-texten med poster
+    # fallback mot hero-bilden. Saknas videon renderas hero som vanligt.
+    hero_video_asset = resolve_media_asset(dossier, "backgroundVideo")
     hero_block_jsx = _render_hero_block(
         _hero_style_for(dossier, variant_id),
         company=company,
@@ -1809,6 +2011,7 @@ def render_home(
         hero_asset=hero_asset,
         usps=usp_list,
         unsplash_fallback_url=unsplash_fallback_url,
+        background_video=hero_video_asset,
     )
 
     return (
@@ -1859,7 +2062,7 @@ def render_services(
     icons_used = sorted({_icon_for_service(svc["id"]) for svc in services} | {"ArrowRight"})
     icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
     items = "\n".join(
-        f'          <article key={_jsx_safe_string(svc["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all hover:border-[color:var(--primary)] hover:shadow-sm">\n'
+        f'          <article key={_jsx_safe_string(svc["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
         f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(svc["id"])} className="size-6" /></span>\n'
         f'            <h2 className="text-xl font-semibold">{_jsx_safe_string(svc["label"])}</h2>\n'
         f'            <p className="mt-3 text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
@@ -2063,7 +2266,7 @@ def render_products(
     )
     icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
     items = "\n".join(
-        f'          <article key={_jsx_safe_string(item["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all hover:border-[color:var(--primary)] hover:shadow-sm">\n'
+        f'          <article key={_jsx_safe_string(item["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
         f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(item["id"])} className="size-6" /></span>\n'
         f'            <h2 className="text-xl font-semibold">{_jsx_safe_string(item["label"])}</h2>\n'
         f'            <p className="mt-3 text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(item["summary"])}</p>\n'
@@ -2551,6 +2754,44 @@ def _hero_style_for(dossier: dict, variant_id: str | None) -> str:
     return "gradient"
 
 
+def _render_hero_background_video(
+    background_video: dict | None, hero_asset: dict | None
+) -> str:
+    """Render a tyst loopande bakgrundsvideo bakom hero-textinnehållet.
+
+    Avgör layout: <video> ligger som ``absolute inset-0`` i en wrapper
+    så texten kan staplas ovanpå. ``poster`` pekar mot hero-bilden om
+    den finns — då ser första frame snyggt ut även om autoplay blockas
+    (Safari low-power mode, prefers-reduced-motion-användare).
+
+    En semi-transparent overlay (``bg-background/40``) lägger sig över
+    videon så texten håller WCAG AA-kontrast oavsett vad operatorn
+    laddade upp. Marknadsledande mönster (Apple, Stripe, Linear).
+
+    Returnerar tom sträng om ingen video — då renderas hero som vanligt
+    utan video-wrapper.
+    """
+    if not isinstance(background_video, dict):
+        return ""
+    filename = background_video.get("filename")
+    if not isinstance(filename, str) or not filename:
+        return ""
+    mime = background_video.get("mimeType")
+    if mime not in ("video/mp4", "video/webm"):
+        return ""
+    poster_attr = ""
+    if isinstance(hero_asset, dict) and hero_asset.get("filename"):
+        poster_path = "/uploads/" + str(hero_asset["filename"])
+        poster_attr = f" poster={_jsx_safe_string(poster_path)}"
+    video_src = "/uploads/" + filename
+    return (
+        '        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">\n'
+        f'          <video src={_jsx_safe_string(video_src)}{poster_attr} autoPlay loop muted playsInline aria-hidden className="h-full w-full object-cover" />\n'
+        '          <div className="absolute inset-0 bg-[color:var(--background)]/60 backdrop-blur-[2px]"></div>\n'
+        "        </div>\n"
+    )
+
+
 def _render_hero_block(
     style: str,
     *,
@@ -2563,6 +2804,7 @@ def _render_hero_block(
     hero_asset: dict | None,
     usps: list[str] | None = None,
     unsplash_fallback_url: str | None = None,
+    background_video: dict | None = None,
 ) -> str:
     """Render the hero <section> for the home page in one of three
     layouts. Customer-text (company.name, company.tagline) is always
@@ -2587,6 +2829,8 @@ def _render_hero_block(
     usp_list = usps or []
     usp_chips_left = _render_hero_usp_chips(usp_list, centered=False)
     usp_chips_centered = _render_hero_usp_chips(usp_list, centered=True)
+    video_layer = _render_hero_background_video(background_video, hero_asset)
+    has_video = bool(video_layer)
     cta_buttons = (
         '          <div className="flex flex-wrap gap-3">\n'
         f'            <a href={hero_cta_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{hero_cta_label}<ArrowRight className="size-4" /></a>\n'
@@ -2605,9 +2849,15 @@ def _render_hero_block(
             if location_tag
             else ""
         )
+        section_classes = (
+            "relative overflow-hidden bg-[color:var(--background)]"
+            if has_video
+            else "bg-[color:var(--background)]"
+        )
         return (
-            '      <section className="bg-[color:var(--background)]">\n'
-            '        <div className="mx-auto flex w-[var(--container-width)] flex-col items-center gap-8 py-[calc(var(--section-spacing)*1.25)] text-center">\n'
+            f'      <section className="{section_classes}">\n'
+            f"{video_layer}"
+            '        <div className="relative mx-auto flex w-[var(--container-width)] flex-col items-center gap-8 py-[calc(var(--section-spacing)*1.25)] text-center">\n'
             f"{centered_location}"
             f'          <h1 className="max-w-3xl text-4xl font-semibold leading-[1.05] tracking-tight md:text-6xl lg:text-7xl">{safe_name}</h1>\n'
             f'          <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed md:text-xl">{safe_tagline}</p>\n'
@@ -2626,9 +2876,14 @@ def _render_hero_block(
         if isinstance(hero_asset, dict) and hero_asset.get("filename"):
             hero_filename = hero_asset["filename"]
             hero_alt = hero_asset.get("alt") or company["tagline"]
+            # Fas 3.3 — CSS-only parallax via scroll-driven animations.
+            # ``parallax-hero``-klassen definieras i variant_css och
+            # zoomar bilden 1.0 → 1.08 över hela hero-exit-fönstret när
+            # browsern stödjer animation-timeline (Chrome/Edge 115+).
+            # Safari + Firefox ignorerar utility:n och visar bilden statiskt.
             right_column = (
-                '          <div className="relative aspect-square w-full overflow-hidden rounded-2xl md:aspect-[4/5]">\n'
-                f'            <img src={_jsx_safe_string("/uploads/" + hero_filename)} alt={_js_string_literal(hero_alt)} className="h-full w-full object-cover" />\n'
+                '          <div className="relative aspect-square w-full overflow-hidden rounded-2xl ring-1 ring-[color:var(--border)] shadow-sm md:aspect-[4/5]">\n'
+                f'            <img src={_jsx_safe_string("/uploads/" + hero_filename)} alt={_js_string_literal(hero_alt)} className="parallax-hero h-full w-full object-cover" />\n'
                 "          </div>\n"
             )
         elif unsplash_fallback_url:
@@ -2641,8 +2896,8 @@ def _render_hero_block(
             # filer under ``/uploads/``.
             fallback_alt = company.get("tagline") or company.get("name") or "Hero-bild"
             right_column = (
-                '          <div className="relative aspect-square w-full overflow-hidden rounded-2xl md:aspect-[4/5]">\n'
-                f'            <img src={_jsx_safe_string(unsplash_fallback_url)} alt={_js_string_literal(fallback_alt)} loading="lazy" className="h-full w-full object-cover" />\n'
+                '          <div className="relative aspect-square w-full overflow-hidden rounded-2xl ring-1 ring-[color:var(--border)] shadow-sm md:aspect-[4/5]">\n'
+                f'            <img src={_jsx_safe_string(unsplash_fallback_url)} alt={_js_string_literal(fallback_alt)} loading="lazy" className="parallax-hero h-full w-full object-cover" />\n'
                 "          </div>\n"
             )
         else:
@@ -2654,9 +2909,15 @@ def _render_hero_block(
                 '            <div className="absolute inset-12 rounded-full bg-[color:var(--background)]/30 blur-3xl"></div>\n'
                 "          </div>\n"
             )
+        split_section_classes = (
+            "relative overflow-hidden bg-[color:var(--background)]"
+            if has_video
+            else "bg-[color:var(--background)]"
+        )
         return (
-            '      <section className="bg-[color:var(--background)]">\n'
-            '        <div className="mx-auto grid w-[var(--container-width)] gap-10 py-[var(--section-spacing)] md:grid-cols-2 md:items-center md:gap-16">\n'
+            f'      <section className="{split_section_classes}">\n'
+            f"{video_layer}"
+            '        <div className="relative mx-auto grid w-[var(--container-width)] gap-10 py-[var(--section-spacing)] md:grid-cols-2 md:items-center md:gap-16">\n'
             '          <div className="flex flex-col gap-8">\n'
             f"{location_tag}"
             f'            <h1 className="max-w-2xl text-4xl font-semibold leading-[1.05] tracking-tight md:text-6xl">{safe_name}</h1>\n'
@@ -2671,10 +2932,13 @@ def _render_hero_block(
             "\n"
         )
 
-    # Default — gradient (pre-#2 baseline).
+    # Default — gradient (pre-#2 baseline). Gradient sektionen har
+    # redan ``relative overflow-hidden`` så video-lagret blandar sig
+    # snyggt med den befintliga gradient-bakgrunden.
     return (
         '      <section className="relative overflow-hidden bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/30">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        f"{video_layer}"
+        '        <div className="relative mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         f"{location_tag}"
         f'          <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl">{safe_name}</h1>\n'
         f'          <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed md:text-xl">{safe_tagline}</p>\n'
@@ -2699,15 +2963,32 @@ def _render_home_gallery_section(dossier: dict) -> str:
     home page. The empty string short-circuits the whole `<section>`
     block in ``render_home`` so other sections rendered after it
     (trust, contact CTA) keep their `border-t` divider.
+
+    Fas 2.1 — om story-sektionen körs (``company.story`` finns) så
+    konsumerar den första gallery-bilden i en two-column layout. Vi
+    hoppar över första bilden här så samma foto inte syns dubbelt på
+    startsidan. Bilden finns kvar i /galleri-routen via ``render_gallery``
+    så den fortfarande är synlig på sajten.
     """
     images = _gallery_images(dossier)
     if not images:
         return ""
     company = dossier.get("company") or {}
+    story_text = company.get("story")
+    story_consumed = isinstance(story_text, str) and bool(story_text.strip())
+    if story_consumed and len(images) >= 2:
+        images = images[1:]
+    elif story_consumed and len(images) == 1:
+        # Single image was already lifted into the story-section.
+        # Suppress the gallery to avoid rendering an empty section.
+        return ""
     selected = images[:_HOME_GALLERY_MAX_ITEMS]
+    # Fas 3.2 — smarta bildramar. ``ring-1`` ger en hairline-kant som
+    # tar över när hover-state lyfter shadow:n. ``shadow-sm`` på vila
+    # och ``shadow-md`` på hover ger en mjuk floating-känsla.
     figures = "\n".join(
-        f'            <figure key={_jsx_safe_string(item.get("assetId") or item["filename"])} className="overflow-hidden rounded-xl border border-[color:var(--border)] bg-[color:var(--background)]">\n'
-        f'              <img src={_jsx_safe_string("/uploads/" + item["filename"])} alt={_js_string_literal(item.get("alt") or company.get("name") or "Bild")} loading="lazy" className="aspect-[4/3] w-full object-cover transition-transform duration-700 ease-out hover:scale-105" />\n'
+        f'            <figure key={_jsx_safe_string(item.get("assetId") or item["filename"])} className="group overflow-hidden rounded-xl ring-1 ring-[color:var(--border)] bg-[color:var(--background)] shadow-sm transition-all duration-300 hover:shadow-md">\n'
+        f'              <img src={_jsx_safe_string("/uploads/" + item["filename"])} alt={_js_string_literal(item.get("alt") or company.get("name") or "Bild")} loading="lazy" className="aspect-[4/3] w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]" />\n'
         "            </figure>"
         for item in selected
     )
@@ -2753,16 +3034,51 @@ def _render_home_story_section(dossier: dict) -> str:
     if not isinstance(story, str) or not story.strip():
         return ""
     safe_story = _jsx_safe_string(story.strip())
+
+    # Fas 2.1 — om gallery har minst en bild lyfter vi den första
+    # bredvid story-kortet i en two-column layout. Detta ger startsidan
+    # ett ankrat foto bredvid berättelsen istället för att alla bilder
+    # försvinner ner i gallery-sektionen. Story-bilden konsumeras
+    # fortfarande av render_gallery (/galleri-routen renderar hela
+    # listan), och _render_home_gallery_section slipper visa den första
+    # bilden igen via en offset (se motsvarande fix där).
+    images = _gallery_images(dossier)
+    story_image: dict | None = images[0] if images else None
+
+    if story_image is None:
+        return (
+            '      <section className="border-t border-[color:var(--border)] bg-[color:var(--accent)]/10">\n'
+            '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[var(--section-spacing)]">\n'
+            '          <div className="flex flex-col gap-3">\n'
+            '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Vår historia</p>\n'
+            '            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">Det här är vi</h2>\n'
+            "          </div>\n"
+            '          <div className="relative max-w-3xl rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 md:p-8">\n'
+            '            <Quote className="absolute -top-3 -left-3 size-8 text-[color:var(--primary)]/25" />\n'
+            f'            <p className="text-lg text-[color:var(--foreground)] leading-relaxed">{safe_story}</p>\n'
+            "          </div>\n"
+            "        </div>\n"
+            "      </section>\n"
+            "\n"
+        )
+
+    story_alt = story_image.get("alt") or company.get("name") or "Story-bild"
+    story_filename = story_image["filename"]
     return (
         '      <section className="border-t border-[color:var(--border)] bg-[color:var(--accent)]/10">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[var(--section-spacing)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         '          <div className="flex flex-col gap-3">\n'
         '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Vår historia</p>\n'
         '            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">Det här är vi</h2>\n'
         "          </div>\n"
-        '          <div className="relative max-w-3xl rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 md:p-8">\n'
-        '            <Quote className="absolute -top-3 -left-3 size-8 text-[color:var(--primary)]/25" />\n'
-        f'            <p className="text-lg text-[color:var(--foreground)] leading-relaxed">{safe_story}</p>\n'
+        '          <div className="grid gap-8 md:grid-cols-[1.1fr_1fr] md:items-center md:gap-12">\n'
+        '            <div className="relative rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 md:p-8">\n'
+        '              <Quote className="absolute -top-3 -left-3 size-8 text-[color:var(--primary)]/25" />\n'
+        f'              <p className="text-lg text-[color:var(--foreground)] leading-relaxed">{safe_story}</p>\n'
+        "            </div>\n"
+        '            <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl ring-1 ring-[color:var(--border)] shadow-sm">\n'
+        f'              <img src={_jsx_safe_string("/uploads/" + story_filename)} alt={_js_string_literal(story_alt)} className="h-full w-full object-cover" />\n'
+        "            </div>\n"
         "          </div>\n"
         "        </div>\n"
         "      </section>\n"
@@ -2800,9 +3116,13 @@ def _render_home_testimonials_section(dossier: dict) -> str:
     ]
     if len(items) < _HOME_TESTIMONIAL_MIN_ITEMS:
         return ""
+    # Fas 2.3 — hover-effekter på testimonial-cards. Identisk timing
+    # och easing som services-cards så hover-känslan är konsistent
+    # över startsidan. ``-translate-y-0.5`` ger en lätt lyft-effekt
+    # som Apple/Stripe använder för dwell-tid på cards.
     cards = "\n".join(
-        f'            <figure key={_jsx_safe_string(f"trust-card-{i}")} className="relative flex h-full flex-col gap-4 rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6">\n'
-        f'              <Quote className="size-6 text-[color:var(--primary)]/30" />\n'
+        f'            <figure key={_jsx_safe_string(f"trust-card-{i}")} className="group relative flex h-full flex-col gap-4 rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
+        f'              <Quote className="size-6 text-[color:var(--primary)]/30 transition-colors group-hover:text-[color:var(--primary)]/60" />\n'
         f'              <blockquote className="text-base text-[color:var(--foreground)] leading-relaxed">{_jsx_safe_string(item)}</blockquote>\n'
         f'              <figcaption className="mt-auto text-xs uppercase tracking-widest text-[color:var(--muted)]">Sagt om oss</figcaption>\n'
         "            </figure>"
