@@ -209,6 +209,71 @@ def test_yarn_lock_triggers_cleanup_warning(tmp_path: Path) -> None:
 
 
 @pytest.mark.tooling
+def test_top_level_env_dev_blocks_import(tmp_path: Path) -> None:
+    """Regression: top-level ``.env.dev`` must block. Pre-fix, the
+    top-level pass only matched a hard-coded set of four well-known
+    shapes (``.env``, ``.env.local``, ``.env.production``,
+    ``.env.development``); ``.env.dev`` slipped through silently when
+    a sub-package was audited as its own root. The shared
+    ``_is_env_secret_filename`` predicate now mirrors the nested walk.
+    """
+    candidate = _ready_candidate(tmp_path / "env-dev")
+    (candidate / ".env.dev").write_text(
+        "API_KEY=secret-dev-token\n", encoding="utf-8"
+    )
+    result = audit_candidate(candidate)
+    assert result.classification == "blocked"
+    assert ".env.dev" in result.files_disallowed
+    assert any(
+        ".env.dev" in blocker and "potential secret leak" in blocker
+        for blocker in result.blockers
+    )
+
+
+@pytest.mark.tooling
+def test_top_level_env_test_blocks_import(tmp_path: Path) -> None:
+    """Same contract for ``.env.test`` (real-world finding from the
+    blitzjs framework-boilerplate during the post-fix Scout sweep).
+    """
+    candidate = _ready_candidate(tmp_path / "env-test")
+    (candidate / ".env.test").write_text(
+        "DATABASE_URL=postgres://test\n", encoding="utf-8"
+    )
+    result = audit_candidate(candidate)
+    assert result.classification == "blocked"
+    assert ".env.test" in result.files_disallowed
+
+
+@pytest.mark.tooling
+def test_top_level_env_defaults_blocks_import(tmp_path: Path) -> None:
+    """``.env.defaults`` is another shape that appeared in the Scout
+    sweep. Any ``.env.<suffix>`` not in the example allowlist must
+    block.
+    """
+    candidate = _ready_candidate(tmp_path / "env-defaults")
+    (candidate / ".env.defaults").write_text("FLAG=value\n", encoding="utf-8")
+    result = audit_candidate(candidate)
+    assert result.classification == "blocked"
+    assert ".env.defaults" in result.files_disallowed
+
+
+@pytest.mark.tooling
+def test_top_level_env_example_does_not_block(tmp_path: Path) -> None:
+    """Sanity: the example allowlist still works at top level.
+    Without the explicit allowlist the broader predicate would
+    also flag ``.env.example`` and break documentation conventions.
+    """
+    candidate = _ready_candidate(tmp_path / "env-example-only")
+    # _ready_candidate already writes a top-level .env.example; just
+    # assert the audit stays clean.
+    result = audit_candidate(candidate)
+    assert result.classification == "starter-candidate-ready", (
+        f"unexpected: warnings={result.warnings}, blockers={result.blockers}"
+    )
+    assert ".env.example" not in result.files_disallowed
+
+
+@pytest.mark.tooling
 def test_env_secret_blocks_import(tmp_path: Path) -> None:
     candidate = _ready_candidate(tmp_path / "leaky")
     (candidate / ".env").write_text(

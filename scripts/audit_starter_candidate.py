@@ -48,7 +48,6 @@ SCHEMA_VERSION = 1
 DESIRED_NEXT_MAJOR = 16
 DESIRED_TAILWIND_MAJOR = 4
 
-ENV_LEAK_FILES = {".env", ".env.local", ".env.production", ".env.development"}
 ENV_EXAMPLE_FILES = {".env.example", ".env.template", ".env.sample"}
 DISALLOWED_LOCKFILES = {"pnpm-lock.yaml", "yarn.lock"}
 REQUIRED_LOCKFILE = "package-lock.json"
@@ -366,6 +365,27 @@ def _relative_posix(path: Path, root: Path) -> str:
         return path.as_posix()
 
 
+def _is_env_secret_filename(filename: str) -> bool:
+    """Return True if ``filename`` is a ``.env*`` secret file.
+
+    A real secret matches ``.env`` exactly or any ``.env.<suffix>``
+    shape (``.env.local``, ``.env.production``, ``.env.dev``,
+    ``.env.test``, ``.env.defaults`` etc). Documentation conventions
+    listed in :data:`ENV_EXAMPLE_FILES` (``.env.example``,
+    ``.env.template``, ``.env.sample``) are explicitly NOT secrets.
+
+    The shared predicate is used by both :func:`_audit_top_level_files`
+    and :func:`_audit_nested_env_files` so the two passes stay in sync.
+    Without this helper the top-level pass missed less common shapes
+    like ``.env.dev`` while the nested walk caught them, creating a
+    false-negative when an operator pointed ``--path`` at a sub-package
+    that itself contained an ``.env.dev`` at its own root.
+    """
+    if filename in ENV_EXAMPLE_FILES:
+        return False
+    return filename == ".env" or filename.startswith(".env.")
+
+
 def _is_internal_starter_path(candidate_root: Path) -> bool:
     """Return True if ``candidate_root`` is the same directory as
     ``INTERNAL_STARTERS_DIR`` or any descendant of it. Both paths are
@@ -455,7 +475,7 @@ def _audit_top_level_files(root: Path, result: AuditResult) -> None:
             f"{disallowed} present; convert to npm and commit {REQUIRED_LOCKFILE}"
         )
 
-    for env_leak in sorted(ENV_LEAK_FILES & files):
+    for env_leak in sorted(name for name in files if _is_env_secret_filename(name)):
         result.files_disallowed.append(env_leak)
         result.blockers.append(
             f"{env_leak} present; remove before any import (potential secret leak)"
@@ -504,9 +524,7 @@ def _audit_nested_env_files(root: Path, result: AuditResult) -> None:
         if rel == Path("."):
             continue
         for filename in files:
-            if filename in ENV_EXAMPLE_FILES:
-                continue
-            if filename != ".env" and not filename.startswith(".env."):
+            if not _is_env_secret_filename(filename):
                 continue
             entry = (rel / filename).as_posix()
             if entry not in result.files_disallowed:
