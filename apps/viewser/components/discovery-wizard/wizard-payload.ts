@@ -455,16 +455,18 @@ export function buildDiscoveryPayload(
   // `language` + `scaffoldHint` om operatorn knappt fyllde i något.
   const cleanedDirectives = stripEmpty(directives);
 
-  // schemaVersion förblir `1` tills backend (`scripts/prompt_to_project_input.py`
-  // `_load_discovery_file`) bumpar sin acceptans till 2. Backend ignorerar
-  // idag extra fält som `directives` (Python dict.get bryr sig inte), så
-  // detta är en ren additiv ändring — payload-shape är bakåtkompatibel.
-  // När backend implementerar v2-pathen (se docs/contracts/wizard-discovery.v2.md
-  // sektion "Backend-konsumtion") bumpar vi version i en koordinerad PR
-  // tillsammans med backend och uppdaterar `_load_discovery_file` att tillåta
-  // `schemaVersion in {1, 2}`.
+  // schemaVersion = 2 nu när backend accepterar både 1 och 2
+  // (`scripts/prompt_to_project_input.py:_load_discovery_file`,
+  // commit 0a7e49f). Backend persisterar `directives.layoutHint` och
+  // `uniqueSellingPoints` deterministiskt till Project Input enligt
+  // kontraktet i `docs/contracts/wizard-discovery.v2.md`.
+  //
+  // Rollout-status: pass 1 = backend accepterar v2 (klart), pass 2 =
+  // frontend skickar v2 (denna ändring), pass 3 = backend kan börja
+  // konsumera fler `directives`-fält (tone, variantHint, brand,
+  // requestedCapabilities) — koordineras separat.
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     rawPrompt: rawPrompt.trim(),
     contentBranch: branch,
     scaffoldHint,
