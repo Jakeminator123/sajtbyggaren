@@ -256,7 +256,7 @@ COMMON_WORDS = {
     "ProductsPage",
     # React / Next / shadcn-typer som dyker upp i runtime-kod
     "ReactNode", "RootLayout", "NextConfig",
-    "AdvancedDisclosure",
+    "AdvancedDisclosure", "FunctionsSummary",
     "ButtonPrimitive", "VariantProps", "ClassValue",
     "NextRequest", "NextResponse", "ComponentProps", "ReturnType",
     "ReadonlySet",
