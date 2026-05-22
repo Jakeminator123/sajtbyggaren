@@ -1774,13 +1774,7 @@ def classify_followup_intent(
     if not text or len(text) < 4:
         return "clarify"
 
-    has_semantic_keyword = (
-        _contains_any(text, _FOLLOWUP_TAGLINE_KEYWORDS)
-        or _contains_any(text, _FOLLOWUP_STORY_KEYWORDS)
-        or _contains_any(text, _FOLLOWUP_POSITIONING_KEYWORDS)
-        or _has_tone_shift_signal(text)
-    )
-    if not has_semantic_keyword and _contains_any(text, _FOLLOWUP_ADD_ONLY_KEYWORDS):
+    if _contains_any(text, _FOLLOWUP_ADD_ONLY_KEYWORDS):
         return "no-semantic-change"
     if _contains_any(text, _FOLLOWUP_TAGLINE_KEYWORDS):
         return "tagline-update"
@@ -1845,7 +1839,7 @@ def _explicit_semantic_copy_from_prompt(
 ) -> str | None:
     """Allow explicit public copy after a narrow ``till``/``to`` marker."""
     match = re.search(
-        r"(?:\btill\b|\bto\b)\s*[:：]?\s*(.+)$",
+        r"(?:\btill\b|\bto\b)\s*[:：]\s*(.+)$",
         follow_up_prompt.strip(),
         flags=re.IGNORECASE | re.DOTALL,
     )
@@ -2715,6 +2709,12 @@ def generate_followup(
     Backoffice/Doctor synlighet för categoryIds, fieldSources och
     fallbackWarnings i den aktuella versionen.
     """
+    language = detect_language(prompt)
+    if classify_followup_intent(prompt, language=language) == "clarify":
+        raise SystemExit(
+            "Follow-up prompt is too unclear to create a new version. "
+            "Please clarify what should change."
+        )
     existing_meta = read_existing_meta(site_id, output_dir=output_dir)
     previous_project_input = read_existing_project_input(
         site_id, output_dir=output_dir

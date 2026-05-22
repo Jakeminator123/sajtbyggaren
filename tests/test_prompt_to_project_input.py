@@ -1255,6 +1255,29 @@ def test_followup_merge_additive_prompts_with_tone_words_keep_semantics_stable(
 
 
 @pytest.mark.tooling
+def test_followup_add_page_about_history_does_not_patch_story() -> None:
+    """Additive page prompts containing story/history words stay conservative."""
+    previous = _minimal_previous_project_input()
+    candidate = {
+        **previous,
+        "company": {
+            **previous["company"],
+            "story": "Candidate story from new brief",
+        },
+    }
+
+    prompt = "Lägg till en sida om vår historia."
+    merged = merge_followup_project_input(
+        previous,
+        candidate,
+        follow_up_prompt=prompt,
+    )
+
+    assert classify_followup_intent(prompt, language="sv") == "no-semantic-change"
+    assert merged["company"]["story"] == previous["company"]["story"]
+
+
+@pytest.mark.tooling
 def test_followup_merge_tagline_update_filters_ui_directive() -> None:
     previous = _minimal_previous_project_input()
     candidate = {
@@ -1290,7 +1313,7 @@ def test_followup_merge_tagline_update_uses_safe_candidate_copy() -> None:
     merged = merge_followup_project_input(
         previous,
         candidate,
-        follow_up_prompt="Uppdatera taglinen till Alltid nära hjälp",
+        follow_up_prompt="Uppdatera taglinen till: Alltid nära hjälp",
     )
 
     assert merged["company"]["tagline"] == "Alltid nära hjälp"
@@ -1314,6 +1337,26 @@ def test_followup_merge_story_update_allows_explicit_public_copy() -> None:
     )
 
     assert merged["company"]["story"] == "Vi är ett familjeföretag sedan 1995."
+
+
+@pytest.mark.tooling
+def test_followup_story_update_requires_colon_for_explicit_copy() -> None:
+    previous = _minimal_previous_project_input()
+    candidate = {
+        **previous,
+        "company": {
+            **previous["company"],
+            "story": "Candidate story",
+        },
+    }
+
+    merged = merge_followup_project_input(
+        previous,
+        candidate,
+        follow_up_prompt="Lyft storyn till en mer varm känsla.",
+    )
+
+    assert merged["company"]["story"] == "Candidate story."
 
 
 @pytest.mark.tooling
@@ -1352,6 +1395,28 @@ def test_classify_followup_intent_defaults_to_safe_states() -> None:
     )
     assert classify_followup_intent("", language="sv") == "clarify"
     assert classify_followup_intent("ok", language="sv") == "clarify"
+
+
+@pytest.mark.tooling
+def test_generate_followup_clarify_prompt_does_not_create_new_version(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    _project_input, _meta, _path, _meta_path = generate(
+        "Skapa en hemsida för en elektriker i Malmö",
+        output_dir=tmp_path,
+        site_id="clarify-block-site",
+    )
+
+    with pytest.raises(SystemExit, match="too unclear"):
+        generate_followup(
+            "ok",
+            output_dir=tmp_path,
+            site_id="clarify-block-site",
+        )
+
+    assert not (tmp_path / "clarify-block-site.v2.project-input.json").exists()
 
 
 @pytest.mark.tooling

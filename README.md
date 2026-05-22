@@ -89,6 +89,7 @@ python scripts/governance_validate.py    # validerar policies mot schemas
 python scripts/rules_sync.py --check     # verifierar att .cursor/rules är speglad
 python scripts/check_term_coverage.py    # hittar nya termer som saknar registrering
 python -m pytest tests/                  # pytest-svit för cross-policy-konsistens
+python scripts/mini_eval.py              # isolerad fyra-case mini-eval under ../sajtbyggaren-output/.evals
 
 streamlit run backoffice.py              # backoffice för att se/redigera governance
 ```

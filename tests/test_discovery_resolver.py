@@ -1322,7 +1322,7 @@ def test_inherited_decision_validates_against_schema(
         },
     )
     _, v2_meta, _, _ = generate_followup(
-        "v2",
+        "Lägg till FAQ.",
         output_dir=tmp_path,
         site_id="schema-test",
     )
