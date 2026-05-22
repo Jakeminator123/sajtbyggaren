@@ -30,9 +30,10 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `eb5a81d` (2026-05-22, **B139/B140 tone/brand token
-propagation V1 mergad via PR #57**) — produkt-/kod-läget är `eb5a81d`
-(`fix(builder): propagate brand and tone tokens`). B139/B140 är stängda:
+Last verified state: `defd196` (2026-05-22, **isolerad Mini-eval runner
+v1 efter B139/B140**) — produkt-/kodläget innehåller `eb5a81d`
+(`fix(builder): propagate brand and tone tokens`) plus `defd196`
+(`chore(eval): add isolated mini eval runner`). B139/B140 är stängda:
 giltig `brand.primaryColorHex` / `brand.accentColorHex` skriver nu
 renderade CSS-token `--primary` / `--accent`, whitelistad `tone.primary`
 kan mappa till tokens när explicit hex saknas, ogiltig hex ger trace-
@@ -41,11 +42,18 @@ merge: **24 aktiva, 0 misplaced, 5 unknown, 107 stängda**. Efterföljande
 dev-tooling-spår lägger `scripts/mini_eval.py`, en isolerad Mini-eval
 runner v1 som kan köras i separat terminal mot
 `SAJTBYGGAREN_EVALS_DIR`/`../sajtbyggaren-output/.evals` utan att skriva
-till canonical `data/runs/`. **Direkt nästa fokus:** kör mini-evalen över
+till canonical `data/runs/`. Under smoke av runnern hittades och fixades
+även en CSS-kaskadregression: Sajtbyggarens token-block appendas nu sist i
+`globals.css` så starter-defaults inte kan vinna över overrides. **Direkt nästa fokus:** kör mini-evalen över
 alla fyra baseline-case och använd rapporten för att välja mellan B125
 preview-fallback eller nästa produktspår. Vänta fortsatt med embeddings,
 SNI-runtime, variant-promotion och nya starters tills mini-evalen visar
 stabilare kvalitet. Föregående produkt-läge:
+
+Föregående verified state: `eb5a81d` (2026-05-22, **B139/B140 tone/brand
+token propagation V1 mergad via PR #57**) — produkt-/kod-läget var
+`eb5a81d` (`fix(builder): propagate brand and tone tokens`). Föregående
+produkt-läge:
 
 Föregående verified state: `aef5825` (2026-05-22, **Project DNA semantic
 follow-up V1 mergad via PR #56**) — produkt-/kod-läget var `aef5825`

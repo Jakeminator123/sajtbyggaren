@@ -1,12 +1,12 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-22 (**B139/B140 tone/brand token propagation V1 mergad
-via PR #57 efter Project DNA PR #56**). Senaste produkt-/kod-läge är
-`eb5a81d` (`fix(builder): propagate brand and tone tokens`). PR #57
-squash-mergades efter att en P2-review om foreground-token-kontrast
-fixats i branchcommit `6ffc43f`; final fix-SHA för B139/B140 är
-`eb5a81d`. Bugg-scope är nu **24 aktiva, 0 misplaced, 5 unknown,
-107 stängda**.
+**Datum:** 2026-05-22 (**Mini-eval runner v1 landad efter B139/B140 och
+Project DNA**). Senaste produkt-/kod-läge är `defd196` (`chore(eval):
+add isolated mini eval runner`) ovanpå PR #57 squash-SHA `eb5a81d`
+(`fix(builder): propagate brand and tone tokens`). PR #57 squash-
+mergades efter att en P2-review om foreground-token-kontrast fixats i
+branchcommit `6ffc43f`; final fix-SHA för B139/B140 är `eb5a81d`.
+Bugg-scope är nu **24 aktiva, 0 misplaced, 5 unknown, 107 stängda**.
 Föregående commits
 i sessionsordning från äldst till nyast: `2e274ac` (SNI core),
 `bf8d6c2`, `f40564e`, `7289732` (Steward-bumpar), `e822a2c` (PR #55-
@@ -17,7 +17,8 @@ SNI-diagnostik-utökning), `18b88c0` (Steward-bump), `919d564` (rules-
 sync link-rewrite för spegel-djup), `c20270f` (Steward-bump),
 `465b8fa` (separator-order-fix), `891fca0` (Steward-bump), `aef5825`
 (PR #56 squash-merge), `059b4ae` (Steward efter PR #56), `eb5a81d`
-(PR #57 squash-merge).
+(PR #57 squash-merge), `b93ed50` (Steward efter PR #57), `defd196`
+(Mini-eval runner + CSS-kaskadfix).
 
 **Det som nyss landade i B139/B140-spåret (`eb5a81d`):**
 
@@ -48,6 +49,13 @@ separat terminal medan annat Cursor-arbete fortsätter:
 naprapat Stockholm och sköldpaddssoppa, med init + follow-up per case.
 Runnern jämför tone/story/tagline, CSS-token-diff, raw prompt-läckage och
 warnings utan att skriva till canonical `data/runs/`.
+
+Viktigt fynd från runner-smoken: PR #57-tokenblocket låg före starter-
+default-tokens i `globals.css`, så CSS-kaskaden kunde göra B139/B140-
+overrides osynliga i faktisk output. `defd196` fixar detta genom att
+append:a Sajtbyggarens token-block sist och låser sista token-värde i
+`tests/test_builder_smoke.py`. Single-case smoke (`electrician-malmo`) är
+grön och visar v2 `tone.primary=premium` + ändrade `--primary`/`--accent`.
 
 Nästa agent bör köra full mini-eval och använda rapporten för att välja
 mellan B125 preview-fallback och nästa produktspår. Starta inte embeddings,
