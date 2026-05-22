@@ -386,6 +386,32 @@ def test_nested_tracked_artefact_uses_trailing_slash_consistently(tmp_path: Path
 
 
 @pytest.mark.tooling
+def test_nested_artefact_walk_handles_unresolved_root(tmp_path: Path) -> None:
+    """Regression: ``_audit_disallowed_artefacts`` must resolve ``root``
+    before calling ``relative_to``. Path.relative_to is a lexical
+    operation, so passing a root that contains ``..`` segments would
+    fail to match a resolved ``current`` and raise ``ValueError``. The
+    helper at ``_relative_posix`` already resolves both sides; this
+    function must do the same.
+    """
+    from scripts.audit_starter_candidate import (
+        AuditResult,
+        _audit_disallowed_artefacts,
+    )
+
+    candidate = _ready_candidate(tmp_path / "unresolved")
+    (candidate / "packages" / "a" / "node_modules").mkdir(parents=True)
+
+    unresolved_root = tmp_path / "unresolved" / ".." / "unresolved"
+    assert ".." in unresolved_root.parts
+
+    result = AuditResult(candidate_path=candidate.resolve())
+    _audit_disallowed_artefacts(unresolved_root, result)
+
+    assert "packages/a/node_modules/" in result.files_disallowed
+
+
+@pytest.mark.tooling
 def test_nested_artefact_dedup_survives_repeated_invocation(tmp_path: Path) -> None:
     """Regression: ``_audit_disallowed_artefacts`` must deduplicate using the
     exact string shape it appends. The previous implementation compared

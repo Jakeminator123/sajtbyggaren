@@ -578,8 +578,9 @@ def _audit_disallowed_artefacts(root: Path, result: AuditResult) -> None:
     pattern of a tracked ``node_modules`` (or similar) inside a
     sub-package such as ``packages/web/node_modules``.
     """
+    resolved_root = root.resolve()
     for current, dirs, _files in os.walk(root):
-        rel = Path(current).resolve().relative_to(root)
+        rel = Path(current).resolve().relative_to(resolved_root)
         if rel == Path("."):
             for skip in WALK_SKIP_DIRS:
                 if skip in dirs:
