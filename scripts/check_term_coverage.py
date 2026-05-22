@@ -70,6 +70,7 @@ COMMON_WORDS = {
     "MagicMock",
     "Path", "List", "Dict", "Tuple", "Optional", "Any", "Union", "Type",
     "TypeError", "ValueError", "RuntimeError", "Exception", "Iterator",
+    "AttributeError",
     "ArgumentParser", "ImportError", "SimpleNamespace", "UnicodeDecodeError", "Input", "Output",
     "AssertionError", "FileExistsError", "NotImplementedError",
     "Iterable", "Sequence", "Mapping", "Callable",
