@@ -34,6 +34,19 @@ decision merge), `a54e06f` (mixed additiv + tone guard).
 - Ny full mini-eval är fortsatt **4/4 grön**:
   `C:\Users\jakem\Desktop\sajtbyggaren-output\.evals\20260522T030947Z-mini-eval\mini-eval-report.md`.
 
+**Dev Artifact Cleanup / Eval Retention v1:**
+
+- `scripts/cleanup_dev_artifacts.py` finns som samlad dry-run-first
+  cleanup för lokala artefakter.
+- Mini-eval-runs rensas från `SAJTBYGGAREN_EVALS_DIR` eller default
+  `../sajtbyggaren-output/.evals` med `--evals --keep N`; radering kräver
+  `--apply`.
+- Generated previews rensas separat med `--generated --keep N`; `--evals`
+  rör aldrig `.generated`.
+- Python-cache-cleanup (`--python-cache`) raderar bara `__pycache__` och
+  `.pytest_cache` under tillåtna rötter.
+- `--summary` och `--json` finns för rapportering utan radering.
+
 **Naprapat mini-eval bug-sweep (`991f152`):**
 
 - Root cause: `gör den lugnare och mer förtroendeingivande` matchade

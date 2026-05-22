@@ -40,7 +40,12 @@ Ny full mini-eval är **4/4 grön**:
 PR #58/B125 decision-spår är mergat i `3418cdb`; nästa faktiska steg är
 att läsa B125-ADR/rapporten och välja om preview-fallback ska bli nästa
 implementation, eller om den gröna mini-evalen motiverar annat
-produktspår. Föregående produkt-läge:
+produktspår. Dev Artifact Cleanup / Eval Retention v1 finns nu via
+`scripts/cleanup_dev_artifacts.py` (dry-run default, `--apply` krävs);
+mini-eval-runs under `SAJTBYGGAREN_EVALS_DIR` eller
+`../sajtbyggaren-output/.evals` kan rensas säkert med
+`python scripts/cleanup_dev_artifacts.py --evals --keep 10 --apply`.
+Föregående produkt-läge:
 
 Föregående verified state: `991f152` (2026-05-22, **naprapat mini-eval
 bug-sweep efter Mini-eval runner v1**) — produkt-/kodläget innehåller
