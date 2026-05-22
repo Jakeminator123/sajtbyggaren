@@ -489,6 +489,146 @@ def test_brand_colors_and_logo_pass_through_to_project_input() -> None:
 
 
 # ---------------------------------------------------------------------------
+# variantHint-routing — vibe-valet i wizarden styr variantId
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_variant_hint_overrides_taxonomy_default_when_known() -> None:
+    """Wizard skickar ``directives.variantHint`` = vibeId. Om det är en
+    känd variant ska ``project_input.variantId`` sättas till det,
+    oavsett vad taxonomy-defaulten säger.
+
+    Sprint B/2 (2026-05-22): utan detta block landar ~95% av trafiken
+    på ``nordic-trust`` via taxonomy oavsett vilken vibe operatören
+    valt → alla sajter ser likadana ut.
+    """
+    payload = _payload("business")  # taxonomy → nordic-trust
+    payload["directives"] = {"variantHint": "warm-craft"}
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["variantId"] == "warm-craft", (
+        "variantHint från wizarden måste override:a taxonomy-defaulten"
+    )
+    assert decision.fieldSources["variantId"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_variant_hint_rejected_when_unknown() -> None:
+    """Ogiltig variantHint från en UI-bugg ska INTE korrumpera builden.
+
+    Whitelist-validering mot disk-baserad ``_known_variant_ids``
+    skyddar mot att en framtida wizard-bug skickar t.ex.
+    ``"experimental-x"`` som ingen variant finns för — då faller vi
+    tillbaka på taxonomy-defaulten.
+    """
+    payload = _payload("business")
+    payload["directives"] = {"variantHint": "does-not-exist"}
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["variantId"] == "nordic-trust", (
+        "okänd variantHint får inte över skriva taxonomy-defaulten"
+    )
+    assert decision.fieldSources["variantId"] == "taxonomy"
+
+
+@pytest.mark.tooling
+def test_variant_hint_missing_keeps_taxonomy_default() -> None:
+    """När ``directives.variantHint`` saknas helt → taxonomy gäller."""
+    payload = _payload("business")
+    payload["directives"] = {}
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["variantId"] == "nordic-trust"
+    assert decision.fieldSources["variantId"] == "taxonomy"
+
+
+@pytest.mark.tooling
+def test_variant_hint_supports_all_local_service_business_variants() -> None:
+    """Alla 5 local-service-business-variants måste vara routebara.
+
+    Säkerhetsnät: när vi lägger en ny variant JSON på disk ska den
+    automatiskt plockas upp av ``_known_variant_ids()``-cachen och
+    bli giltig som variantHint. Detta test fångar regressioner där
+    cachen tappar variants eller scannar fel mapp.
+    """
+    from packages.generation.discovery.resolve import _known_variant_ids
+
+    known = _known_variant_ids()
+    expected = {
+        "nordic-trust",
+        "warm-craft",
+        "clinical-calm",
+        "midnight-counsel",
+        "pulse-fit",
+    }
+    missing = expected - known
+    assert not missing, (
+        f"local-service-business variants saknas i whitelist: {missing}"
+    )
+
+
+@pytest.mark.tooling
+def test_variant_hint_supports_all_ecommerce_lite_variants() -> None:
+    """Alla 5 ecommerce-lite-variants måste vara routebara.
+
+    Speglar test ovan för andra scaffold-familjen.
+    """
+    from packages.generation.discovery.resolve import _known_variant_ids
+
+    known = _known_variant_ids()
+    expected = {
+        "clean-store",
+        "earth-wellness",
+        "mono-tech",
+        "noir-editorial",
+        "street-vivid",
+    }
+    missing = expected - known
+    assert not missing, (
+        f"ecommerce-lite variants saknas i whitelist: {missing}"
+    )
+
+
+@pytest.mark.tooling
+def test_variant_hint_works_for_distinct_vibes() -> None:
+    """5 olika vibe-val ska ge 5 olika variantIds — annars är hela
+    Sprint B/2 meningslös ("alla sajter ser likadana ut").
+
+    Mappar wizardens VIBE_OPTIONS-id:n 1:1 mot variantId i project_input.
+    """
+    vibes_to_test = [
+        "warm-craft",
+        "clinical-calm",
+        "midnight-counsel",
+        "pulse-fit",
+        "nordic-trust",
+    ]
+    results: dict[str, str] = {}
+    for vibe in vibes_to_test:
+        payload = _payload("business")
+        payload["directives"] = {"variantHint": vibe}
+        project_input, _decision = resolve_discovery(
+            raw_prompt="test",
+            payload=payload,
+            project_input_candidate=_candidate_project_input(),
+        )
+        results[vibe] = project_input["variantId"]
+    assert results == {vibe: vibe for vibe in vibes_to_test}, (
+        f"varje vibe måste mappas 1:1 till variantId, fick: {results}"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Asset-tombstones — borttagna bilder rensas från Project Input
 # ---------------------------------------------------------------------------
 

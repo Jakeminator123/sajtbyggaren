@@ -47,6 +47,7 @@ import copy
 import json
 import re
 from collections.abc import Iterable
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -191,6 +192,45 @@ _DEFAULT_STARTER_ID = "marketing-base"
 _VALID_LAYOUT_HINTS = {"gradient", "centered", "split"}
 _MAX_UNIQUE_SELLING_POINTS = 4
 _MEDIA_DIRECTIVE_ROLES = ("favicon", "ogImage", "backgroundVideo")
+
+# Rot för scaffold-paket på disk. Varje scaffold har en ``variants/``-
+# mapp där varje ``*.json`` är en variant-definition. Sökvägen är
+# repo-relativ och fungerar oavsett från vilken CWD pytest/CLI körs.
+# ``parents[1]`` = ``packages/generation/`` (denna fil ligger i
+# ``packages/generation/discovery/resolve.py``).
+_SCAFFOLDS_ROOT = (
+    Path(__file__).resolve().parents[1] / "orchestration" / "scaffolds"
+)
+
+
+@lru_cache(maxsize=1)
+def _known_variant_ids() -> frozenset[str]:
+    """Returnerar samtliga giltiga variantIds genom att skanna disk.
+
+    Cachas en gång per process (variants ändras inte mid-run). Används
+    för whitelist-validering av ``directives.variantHint`` från
+    wizarden — vi sätter aldrig ``project_input.variantId`` till en
+    okänd sträng som operatören (eller en framtida UI-bug) råkar skicka.
+
+    Lägga till en ny variant kräver bara en ny JSON-fil under
+    ``packages/generation/orchestration/scaffolds/<scaffold>/variants/``;
+    den här funktionen plockar upp den automatiskt utan kod-ändring.
+    """
+    if not _SCAFFOLDS_ROOT.is_dir():
+        return frozenset()
+    ids: set[str] = set()
+    for variants_dir in _SCAFFOLDS_ROOT.glob("*/variants"):
+        if not variants_dir.is_dir():
+            continue
+        for path in variants_dir.glob("*.json"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            variant_id = data.get("id") if isinstance(data, dict) else None
+            if isinstance(variant_id, str) and variant_id.strip():
+                ids.add(variant_id.strip())
+    return frozenset(ids)
 
 # Postnummer-extraktion från svensk adress (samma regex som tidigare).
 _SWEDISH_POSTCODE_RE = re.compile(r"\b\d{3}\s?\d{2}\s+([A-Za-zÅÄÖåäö\-]+)")
@@ -990,6 +1030,25 @@ def _apply_directives_fields(
         if clean_layout in _VALID_LAYOUT_HINTS:
             project_input["directives"] = {"layoutHint": clean_layout}
             field_sources["directives.layoutHint"] = "wizard"
+
+    # variantHint: när operatören valt en vibe i steg 2 skickar wizarden
+    # vibeId direkt (``VIBE_OPTIONS.id`` i wizard-constants speglar
+    # variant-filnamn 1:1 — t.ex. ``"warm-craft"``, ``"pulse-fit"``).
+    # Vi validerar mot disk-baserad whitelist (``_known_variant_ids``)
+    # så en ogiltig hint från en bugg i UI:t inte kan korrumpera builds.
+    #
+    # Sprint B/2: utan detta block landar ~95% av trafiken på
+    # ``nordic-trust``/``clean-store`` via taxonomy-defaults oavsett
+    # vilken vibe operatören valt. Nu får vibe-valet faktisk effekt:
+    # variantId blir t.ex. ``"midnight-counsel"`` för advokatbyråer
+    # och ``"pulse-fit"`` för gym, vilket aktiverar andra
+    # color tokens, typografi, motion-nivå och hero-defaults.
+    variant_hint = directives.get("variantHint")
+    if isinstance(variant_hint, str):
+        clean_variant = variant_hint.strip()
+        if clean_variant and clean_variant in _known_variant_ids():
+            project_input["variantId"] = clean_variant
+            field_sources["variantId"] = "wizard"
 
     raw_usps = directives.get("uniqueSellingPoints")
     if isinstance(raw_usps, list):
