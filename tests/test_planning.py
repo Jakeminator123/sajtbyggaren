@@ -461,6 +461,27 @@ def test_site_plan_and_generation_package_share_createdAt_within_run(monkeypatch
 
 
 @pytest.mark.tooling
+def test_generation_package_keeps_site_brief_by_ref_contract(monkeypatch):
+    """B141 fix chooses the existing by-reference contract.
+
+    Generation Package should keep pointing at the canonical Site Brief
+    artefact instead of duplicating the full brief inline.
+    """
+    monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
+    result = produce_site_plan(
+        _baseline_brief(
+            businessTypeGuess="electrician",
+            tone=["trustworthy", "local"],
+        ),
+        run_id="test-generation-package-brief-ref",
+    )
+
+    assert result.generation_package["siteBriefRef"] == "site-brief.json"
+    assert "siteBrief" not in result.generation_package
+    validate_generation_package(result.generation_package)
+
+
+@pytest.mark.tooling
 def test_merge_preserves_helper_rejected_when_operator_object_has_no_rejected():
     operator = {
         "required": ["interactive-game-loop"],
@@ -654,3 +675,182 @@ def test_b23_build_site_revalidates_site_plan_after_operator_merge():
         "validation runs against the pre-merge plan and the merge can "
         "smuggle in a payload that violates site-plan.schema.json."
     )
+
+
+# ---------------------------------------------------------------------------
+# B138 - brief.pageCount must be respected when emitting routePlan
+# ---------------------------------------------------------------------------
+#
+# Operatörens explicita sidantal i fri-prompten ("2 sidor") fångades av
+# briefModel som ``site_brief.pageCount`` men ignorerades sedan i
+# ``produce_site_plan`` — route_plan emitterades alltid med scaffold-
+# defaults oavsett. Verifierat i sköldpaddssoppa-runen.
+# Fixen: ``_trim_route_plan`` skär ner route_plan till brief.pageCount
+# med prioritetslistan (home + contact aldrig borta), minsta körbara
+# set = 2 routes, och ``pageCountWarning`` emittas när trim eller
+# minimum-klamp händer.
+
+
+@pytest.mark.tooling
+def test_page_count_2_trims_route_plan_to_home_and_contact(monkeypatch):
+    """sköldpaddssoppa-case: pageCount=2 + local-service-business (4 defaults)
+    → 2 routes (home + contact) + warning ``trimmed-to-brief-page-count``."""
+    monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
+    brief = _baseline_brief(pageCount=2)
+    result = produce_site_plan(brief, run_id="test-page-count-2")
+    site_plan = result.site_plan
+    validate_site_plan(site_plan)
+
+    route_plan = site_plan["routePlan"]
+    assert len(route_plan) == 2, (
+        f"pageCount=2 ska ge 2 routes, fick {len(route_plan)}: {route_plan}"
+    )
+    route_ids = {r["id"] for r in route_plan}
+    assert route_ids == {"home", "contact"}, (
+        f"pageCount=2 ska behålla home+contact, fick {route_ids}"
+    )
+
+    warning = site_plan.get("pageCountWarning")
+    assert warning is not None, "pageCountWarning ska emittas när trim sker."
+    assert warning["requestedPageCount"] == 2
+    assert warning["scaffoldDefaultCount"] == 4
+    assert warning["emittedRouteCount"] == 2
+    assert warning["reason"] == "trimmed-to-brief-page-count"
+
+
+@pytest.mark.tooling
+def test_page_count_6_keeps_default_route_plan_without_warning(monkeypatch):
+    """pageCount=6 > scaffold-defaults (4): ingen trim, ingen warning.
+
+    Bekräftar att operatörens "stora siffror" inte uppfinner extra
+    routes; vi har bara scaffoldens defaults att emittera.
+    """
+    monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
+    brief = _baseline_brief(pageCount=6)
+    result = produce_site_plan(brief, run_id="test-page-count-6")
+    site_plan = result.site_plan
+    validate_site_plan(site_plan)
+
+    assert len(site_plan["routePlan"]) == 4, (
+        "pageCount=6 ska behålla alla 4 scaffold-defaults oförändrat."
+    )
+    assert "pageCountWarning" not in site_plan, (
+        "Ingen warning när pageCount >= scaffold-defaults."
+    )
+
+
+@pytest.mark.tooling
+def test_page_count_1_clamps_to_minimum_with_below_minimum_warning(monkeypatch):
+    """pageCount=1 är under körbart minimum (home+contact = 2). Klampas
+    till 2 + emit warning ``below-minimum-keeping-default``."""
+    monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
+    brief = _baseline_brief(pageCount=1)
+    result = produce_site_plan(brief, run_id="test-page-count-1")
+    site_plan = result.site_plan
+    validate_site_plan(site_plan)
+
+    route_plan = site_plan["routePlan"]
+    assert len(route_plan) == 2, (
+        "pageCount=1 ska klampas till minsta körbara set (2 routes)."
+    )
+    route_ids = {r["id"] for r in route_plan}
+    assert route_ids == {"home", "contact"}
+
+    warning = site_plan.get("pageCountWarning")
+    assert warning is not None
+    assert warning["requestedPageCount"] == 1
+    assert warning["emittedRouteCount"] == 2
+    assert warning["reason"] == "below-minimum-keeping-default"
+
+
+@pytest.mark.tooling
+def test_page_count_null_keeps_default_route_plan_without_warning(monkeypatch):
+    """pageCount=None (defaultläget): scaffold-defaults oförändrat,
+    ingen warning. Garanterar att helpern inte är intrusive när briefen
+    inte hade information om sidantal."""
+    monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
+    brief = _baseline_brief(pageCount=None)
+    result = produce_site_plan(brief, run_id="test-page-count-null")
+    site_plan = result.site_plan
+    validate_site_plan(site_plan)
+
+    assert len(site_plan["routePlan"]) == 4, (
+        "pageCount=None ska inte röra route_plan alls."
+    )
+    assert "pageCountWarning" not in site_plan
+
+
+@pytest.mark.tooling
+def test_page_count_3_fills_middle_in_scaffold_default_order(monkeypatch):
+    """pageCount=3: home + contact + 1 mitt-route i scaffold-defaultordning.
+
+    Lokal-tjänsteföretagets default-ordning är home, services, about,
+    contact. Vid trim till 3 ska services vinna mitt-platsen (kommer
+    före about i defaultordningen).
+    """
+    monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
+    brief = _baseline_brief(pageCount=3)
+    result = produce_site_plan(brief, run_id="test-page-count-3")
+    site_plan = result.site_plan
+    validate_site_plan(site_plan)
+
+    route_plan = site_plan["routePlan"]
+    assert len(route_plan) == 3
+    ids_in_order = [r["id"] for r in route_plan]
+    assert ids_in_order == ["home", "services", "contact"], (
+        f"pageCount=3 ska ge [home, services, contact] i den ordningen, "
+        f"fick {ids_in_order}."
+    )
+
+    warning = site_plan["pageCountWarning"]
+    assert warning["requestedPageCount"] == 3
+    assert warning["emittedRouteCount"] == 3
+    assert warning["reason"] == "trimmed-to-brief-page-count"
+
+
+@pytest.mark.tooling
+def test_page_count_trim_works_for_pinned_path(monkeypatch):
+    """B138 ska gälla även pinned-flödet (build_site.py-vägen).
+
+    ``build_plan_artefakts`` går alltid pinned-grenen eftersom operatören
+    har valt scaffold+variant i Project Input. Trim-helpern måste
+    fungera oavsett vilken plan-källa som vann.
+    """
+    monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
+    brief = _baseline_brief(pageCount=2)
+    pinned = {
+        "scaffoldId": "local-service-business",
+        "variantId": "nordic-trust",
+        "starterId": "marketing-base",
+    }
+    result = produce_site_plan(
+        brief,
+        run_id="test-page-count-pinned",
+        pinned=pinned,
+    )
+    site_plan = result.site_plan
+    validate_site_plan(site_plan)
+
+    assert result.source == "pinned"
+    assert len(site_plan["routePlan"]) == 2
+    warning = site_plan.get("pageCountWarning")
+    assert warning is not None
+    assert warning["reason"] == "trimmed-to-brief-page-count"
+
+
+@pytest.mark.tooling
+def test_page_count_out_of_range_does_not_trim(monkeypatch):
+    """pageCount > 10 räknas inte som operatör-uttryck i fri prompt.
+
+    Helpern lämnar route_plan orörd för pageCount utanför 1-10 så att
+    framtida briefModel-buggar (t.ex. pageCount=42 från en LLM-
+    halucination) inte kraschar trim-vägen.
+    """
+    monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
+    brief = _baseline_brief(pageCount=42)
+    result = produce_site_plan(brief, run_id="test-page-count-oor")
+    site_plan = result.site_plan
+    validate_site_plan(site_plan)
+
+    assert len(site_plan["routePlan"]) == 4
+    assert "pageCountWarning" not in site_plan

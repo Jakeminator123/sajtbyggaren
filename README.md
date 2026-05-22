@@ -11,6 +11,19 @@ Produktkompassen för agenter och operatör finns i
 Sajtbyggaren ska vinna genom bättre företagshemsidor för småföretagare, med
 kärnflödet `prompt -> företagshemsida -> preview -> följdprompt -> ny version`.
 
+## Aktuellt driftläge
+
+Repo:t har ett fungerande internt operatorflöde för wizard/prompt till
+artefakter och deterministiska builder-routes, men är inte launch-ready.
+Den inbäddade StackBlitz-previewn i Viewser är fortfarande ett känt
+preview-spår: live-körningar kan verifieras via Run Details och
+artefakter, men iframen har återkommande visat `Unable to run Embedded
+Project`. Det spåret är registrerat i B59/B125 och måste få en beslutad
+fallback-väg innan extern kundyta.
+
+Statusraderna längre ned ska därför läsas som intern MVP-/skelettstatus,
+inte som att hela produktloopen är färdig för kunder.
+
 ## Princip
 
 > Policies styr arkitekturen. Koden härleds. Allt annat är referens.
@@ -76,6 +89,7 @@ python scripts/governance_validate.py    # validerar policies mot schemas
 python scripts/rules_sync.py --check     # verifierar att .cursor/rules är speglad
 python scripts/check_term_coverage.py    # hittar nya termer som saknar registrering
 python -m pytest tests/                  # pytest-svit för cross-policy-konsistens
+python scripts/mini_eval.py              # isolerad fyra-case mini-eval under ../sajtbyggaren-output/.evals
 
 streamlit run backoffice.py              # backoffice för att se/redigera governance
 ```
@@ -107,13 +121,24 @@ scripts/dev-viewser.ps1                  # viewser-prototyp på :3000
 scripts/dev-viewser.ps1 -Port 3200       # parallell-kör med builder genom att flytta porten
 scripts/clean-runs.ps1                   # rensar gamla data/runs/<runId>/-mappar (default behåller 5 senaste)
 scripts/clean-runs.ps1 -Keep 0 -DryRun   # förhandsvisa total rensning
+python scripts/cleanup_dev_artifacts.py --summary
+python scripts/cleanup_dev_artifacts.py --evals --keep 10
+python scripts/cleanup_dev_artifacts.py --evals --keep 10 --apply
+python scripts/cleanup_dev_artifacts.py --generated --keep 5
+python scripts/cleanup_dev_artifacts.py --python-cache
 ```
 
 `dev-builder.ps1` simulerar operatörsflödet: läser ett Project Input, kör hela [`scripts/build_site.py`](scripts/build_site.py)-pipen och öppnar resultatet (inklusive `/spel`-routen från `interactive-game-loop`-dossiern). `dev-viewser.ps1` är den localhost-only operator-prototypen med PromptBuilder, run history och preview av senaste run; den kan starta ny sajt från fri prompt och fortsätta på befintligt sajtspår med follow-up prompt versions. `dev-builder` och `dev-viewser` försöker båda :3000 om inte `-Port` anges, så vid parallell-körning sätter du en port på en av dem.
 
 Preview-output skrivs som standard till `../sajtbyggaren-output/.generated/<siteId>/` (utanför repo-roten) för att minska file-watcher-load i Cursor. Du kan override:a målet per körning med `--generated-dir` (`build_site.py`) eller PowerShell-flaggan `-generateddir` (`dev-builder.ps1`), eller globalt med env-varn `SAJTBYGGAREN_GENERATED_DIR`.
 
-`clean-runs.ps1` är en bekvämlighetsrensare. Tester skriver inte längre till `data/runs/` (de använder `tmp_path`), men varje `dev-builder.ps1`-körning lägger till en katalog där eftersom runs är canonical historik enligt [`engine-run.v1.json`](governance/policies/engine-run.v1.json).
+`clean-runs.ps1` är en bekvämlighetsrensare för canonical `data/runs/`.
+`cleanup_dev_artifacts.py` är den säkrare samlade dev-cleanupen: dry-run
+som default, `--apply` krävs för radering. Den kan sammanfatta/rensa
+mini-evals under `SAJTBYGGAREN_EVALS_DIR` eller
+`../sajtbyggaren-output/.evals`, generated previews under
+`SAJTBYGGAREN_GENERATED_DIR` eller `../sajtbyggaren-output/.generated`, och
+Python-cache (`__pycache__`, `.pytest_cache`) inom tillåtna rötter.
 
 ## Var vad bor
 
@@ -222,8 +247,8 @@ Detaljer: [`engine-run.v1.json`](governance/policies/engine-run.v1.json), [ADR 0
 | Sprint 6+ - Fler scaffolds, dossiers, evals | inte startad |
 | `apps/web` | inte startad |
 | Sajtmaskin-baseline-jämförelse | uppskjuten ([ADR 0008](governance/decisions/0008-defer-evals-until-flow-exists.md)) |
-| Builder MVP hardening (parallellspår) | klart |
-| Viewser MVP (parallellspår) | klart |
+| Builder MVP hardening (parallellspår) | internt klart; produktgap finns kvar i preview/follow-up-kö |
+| Viewser MVP (parallellspår) | intern operator-MVP; embedded preview är inte launch-ready förrän B59/B125-fallback är vald |
 | Vocabulary compression (parallellspår, [ADR 0012](governance/decisions/0012-vocabulary-compression.md)) | klart |
 
 Detaljer: [`docs/migration-plan.md`](docs/migration-plan.md).

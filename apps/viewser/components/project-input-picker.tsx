@@ -25,6 +25,8 @@ type ProjectInputPickerProps = {
    * gamla runs där prompt-input-snapshoten städats).
    */
   runSiteId: string | null;
+  /** Vald run finns men siteId är "unknown" / saknas — follow-up är osäker. */
+  runSiteIdUnknown?: boolean;
 };
 
 export function ProjectInputPicker({
@@ -32,6 +34,7 @@ export function ProjectInputPicker({
   selectedSiteId,
   onSelect,
   runSiteId,
+  runSiteIdUnknown = false,
 }: ProjectInputPickerProps) {
   const selected = inputs.find((input) => input.siteId === selectedSiteId);
   const followsRun = !!runSiteId && runSiteId === selectedSiteId;
@@ -74,6 +77,17 @@ export function ProjectInputPicker({
             </option>
           ))}
         </select>
+
+        {runSiteIdUnknown ? (
+          <p
+            data-testid="project-input-run-siteid-unknown"
+            className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-2 text-[11px] text-amber-900 dark:text-amber-200"
+          >
+            Vald run saknar ett känt siteId (unknown). Follow-up kan inte
+            följa runen säkert — välj en annan run eller starta en ny via
+            prompten.
+          </p>
+        ) : null}
 
         {runMissing ? (
           <p

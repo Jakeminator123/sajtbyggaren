@@ -70,6 +70,16 @@ _CURRENT_PROMPT_INPUT_RE = re.compile(
     r"^(?P<site_id>[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)"
     r"\.project-input\.json$"
 )
+_HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+_TONE_COLOR_TOKENS: dict[str, dict[str, str]] = {
+    "grön": {"primary": "#166534", "accent": "#dcfce7"},
+    "green": {"primary": "#166534", "accent": "#dcfce7"},
+    "blå": {"primary": "#1d4ed8", "accent": "#dbeafe"},
+    "blue": {"primary": "#1d4ed8", "accent": "#dbeafe"},
+    "varm": {"primary": "#9a3412", "accent": "#fed7aa"},
+    "warm": {"primary": "#9a3412", "accent": "#fed7aa"},
+    "premium": {"primary": "#312e81", "accent": "#ddd6fe"},
+}
 
 
 # ---------------------------------------------------------------------------
@@ -698,155 +708,107 @@ def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> in
     return copied
 
 
-# Svensk tone-keyword → hex mapping för B139. Operatorn skriver fri text
-# i prompten ("vill ha grön och trygg känsla") och briefModel extraherar
-# tone-keywords till site-brief.tone[] / project-input tone.primary.
-# Innan B139-fixen läste variant_css() bara variant.tokens; nu mappar vi
-# explicita färgkeywords till hex så CSS faktiskt reflekterar valet.
-# Sammansatta fraser ("grön och trygg") matchas på första färg-ordet.
-# Lista hålls medvetet liten — bara robusta svenska färgord. Engelska
-# och hex-koder hanteras av B140 via brand.primaryColorHex.
-_TONE_KEYWORD_TO_HEX: dict[str, str] = {
-    "grön": "#16a34a",
-    "gron": "#16a34a",
-    "blå": "#2563eb",
-    "bla": "#2563eb",
-    "röd": "#dc2626",
-    "rod": "#dc2626",
-    "gul": "#eab308",
-    "orange": "#ea580c",
-    "lila": "#9333ea",
-    "rosa": "#ec4899",
-    "svart": "#0f0f0f",
-    "vit": "#fafafa",
-    "grå": "#71717a",
-    "gra": "#71717a",
-    "brun": "#92400e",
-    "turkos": "#0d9488",
-    "magenta": "#c026d3",
-    "guld": "#ca8a04",
-    "silver": "#a1a1aa",
-}
-
-
-def _tone_keyword_to_hex(tone_primary: str | None) -> str | None:
-    """Mappa en tone-keyword till hex om den innehåller ett känt färgord.
-
-    Returnerar None när ingen färg hittas så caller kan falla tillbaka
-    till variant-tokens. Matchningen är case-insensitive och tar första
-    träffen i ordet — så "grön och trygg" → grön → #16a34a.
-    """
-    if not isinstance(tone_primary, str):
+def _normalise_hex_color(value: Any) -> str | None:
+    if not isinstance(value, str):
         return None
-    lower = tone_primary.strip().lower()
-    if not lower:
+    cleaned = value.strip()
+    if not _HEX_COLOR_RE.fullmatch(cleaned):
         return None
-    # Direct match first (faster + deterministic when operator writes
-    # just one keyword)
-    if lower in _TONE_KEYWORD_TO_HEX:
-        return _TONE_KEYWORD_TO_HEX[lower]
-    # Word-by-word scan for first known color in compound phrase
-    for word in lower.replace(",", " ").split():
-        cleaned = word.strip(".!?;:")
-        if cleaned in _TONE_KEYWORD_TO_HEX:
-            return _TONE_KEYWORD_TO_HEX[cleaned]
-    return None
+    return cleaned.lower()
 
 
-def _hex_foreground_for(hex_color: str) -> str:
-    """Välj svart/vit foreground beroende på primärfärgens luminans.
+def _foreground_for_background(hex_color: str) -> str:
+    """Return a high-contrast foreground token for a validated #RRGGBB color."""
+    red = int(hex_color[1:3], 16) / 255
+    green = int(hex_color[3:5], 16) / 255
+    blue = int(hex_color[5:7], 16) / 255
 
-    Använder WCAG-relativ luminans-formel (sRGB → linear → Y) och
-    klipper på 0.5 så ljusa färger får mörk text och vice versa.
-    Detta är samma heuristik shadcn använder vid theme-generering.
-    """
-    h = hex_color.lstrip("#")
-    if len(h) == 3:
-        h = "".join(c * 2 for c in h)
-    if len(h) != 6:
-        return "#fafafa"
-    try:
-        r = int(h[0:2], 16) / 255.0
-        g = int(h[2:4], 16) / 255.0
-        b = int(h[4:6], 16) / 255.0
-    except ValueError:
-        return "#fafafa"
+    def linearise(channel: float) -> float:
+        if channel <= 0.03928:
+            return channel / 12.92
+        return ((channel + 0.055) / 1.055) ** 2.4
 
-    def _linear(c: float) -> float:
-        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
-
-    luminance = 0.2126 * _linear(r) + 0.7152 * _linear(g) + 0.0722 * _linear(b)
-    return "#0f0f0f" if luminance > 0.5 else "#fafafa"
+    luminance = (
+        0.2126 * linearise(red)
+        + 0.7152 * linearise(green)
+        + 0.0722 * linearise(blue)
+    )
+    dark_contrast = (luminance + 0.05) / 0.05
+    light_contrast = 1.05 / (luminance + 0.05)
+    return "#1c1c1a" if dark_contrast >= light_contrast else "#fafaf9"
 
 
-def _resolve_color_overrides(dossier: dict | None) -> dict[str, str]:
-    """Bygg ihop override-färger från operator-input (B139 + B140).
+def _token_overrides_from_project_input(
+    project_input: dict[str, Any] | None,
+) -> tuple[dict[str, str], list[str]]:
+    """Return safe CSS token overrides derived from explicit brand/tone fields."""
+    if not isinstance(project_input, dict):
+        return {}, []
 
-    Prioritet per fält:
-      1. brand.primaryColorHex (B140 — explicit hex från wizardens vibe-step)
-      2. tone-keyword mappad till hex (B139 — extraherat från fri-prompt)
-      3. None → caller behåller variant.tokens.color
-
-    accent följer samma prioritet via brand.accentColorHex. primaryForeground
-    härleds från primary om primary är overridead, annars lämnas oförändrat.
-    """
     overrides: dict[str, str] = {}
-    if not isinstance(dossier, dict):
-        return overrides
+    warnings: list[str] = []
+    brand = project_input.get("brand") if isinstance(project_input.get("brand"), dict) else {}
+    primary_hex_provided = bool(brand.get("primaryColorHex"))
+    accent_hex_provided = bool(brand.get("accentColorHex"))
+    primary_hex = _normalise_hex_color(brand.get("primaryColorHex"))
+    accent_hex = _normalise_hex_color(brand.get("accentColorHex"))
+    if primary_hex_provided and primary_hex is None:
+        warnings.append("brand.primaryColorHex invalid; variant primary token kept")
+    if accent_hex_provided and accent_hex is None:
+        warnings.append("brand.accentColorHex invalid; variant accent token kept")
 
-    brand = dossier.get("brand") if isinstance(dossier.get("brand"), dict) else {}
-    tone = dossier.get("tone") if isinstance(dossier.get("tone"), dict) else {}
+    if primary_hex:
+        overrides["primary"] = primary_hex
+        overrides["primaryForeground"] = _foreground_for_background(primary_hex)
+    if accent_hex:
+        overrides["accent"] = accent_hex
+        overrides["accentForeground"] = _foreground_for_background(accent_hex)
 
-    explicit_primary = brand.get("primaryColorHex") if isinstance(brand, dict) else None
-    if isinstance(explicit_primary, str) and explicit_primary.startswith("#"):
-        overrides["primary"] = explicit_primary
-    else:
-        tone_primary = tone.get("primary") if isinstance(tone, dict) else None
-        mapped = _tone_keyword_to_hex(tone_primary)
-        if mapped:
-            overrides["primary"] = mapped
+    if "primary" not in overrides and not primary_hex_provided:
+        tone = project_input.get("tone") if isinstance(project_input.get("tone"), dict) else {}
+        tone_primary = tone.get("primary")
+        if isinstance(tone_primary, str):
+            tone_key = tone_primary.strip().lower()
+            tone_tokens = _TONE_COLOR_TOKENS.get(tone_key)
+            if tone_tokens:
+                overrides["primary"] = tone_tokens["primary"]
+                overrides["primaryForeground"] = _foreground_for_background(
+                    tone_tokens["primary"]
+                )
+                if "accent" not in overrides and not accent_hex_provided:
+                    overrides["accent"] = tone_tokens["accent"]
+                    overrides["accentForeground"] = _foreground_for_background(
+                        tone_tokens["accent"]
+                    )
 
-    if "primary" in overrides:
-        overrides["primaryForeground"] = _hex_foreground_for(overrides["primary"])
-
-    explicit_accent = brand.get("accentColorHex") if isinstance(brand, dict) else None
-    if isinstance(explicit_accent, str) and explicit_accent.startswith("#"):
-        overrides["accent"] = explicit_accent
-        overrides["accentForeground"] = _hex_foreground_for(explicit_accent)
-
-    return overrides
+    return overrides, warnings
 
 
-def variant_css(variant: dict, dossier: dict | None = None) -> str:
-    """Genererar :root CSS-block med variant-tokens, ev. färg-overrides.
-
-    Sedan B139/B140-fixen accepterar funktionen ett valfritt `dossier`-
-    argument. När det finns appliceras färg-overrides från
-    brand.primaryColorHex (B140 — explicit operatörshex) eller
-    tone.primary (B139 — keyword som "grön" → #16a34a) ovanpå
-    variant.tokens.color. Övriga tokens (radius, spacing, foreground,
-    background, muted, border) följer alltid variant-defaulten.
-    """
+def variant_css(variant: dict, token_overrides: dict[str, str] | None = None) -> str:
     tokens = variant["tokens"]
-    color = tokens["color"]
+    color = dict(tokens["color"])
+    if token_overrides:
+        for token_name in (
+            "primary",
+            "primaryForeground",
+            "accent",
+            "accentForeground",
+        ):
+            override = token_overrides.get(token_name)
+            if override:
+                color[token_name] = override
     radius = tokens["radius"]
     spacing = tokens["spacing"]
-    overrides = _resolve_color_overrides(dossier)
-    # Override:s vinner per fält; saknas override behålls variant-färgen.
-    primary = overrides.get("primary", color["primary"])
-    primary_fg = overrides.get("primaryForeground", color["primaryForeground"])
-    accent = overrides.get("accent", color["accent"])
-    accent_fg = overrides.get("accentForeground", color["accentForeground"])
     return (
         ":root {\n"
         f"  --background: {color['background']};\n"
         f"  --foreground: {color['foreground']};\n"
         f"  --muted: {color['muted']};\n"
         f"  --border: {color['border']};\n"
-        f"  --primary: {primary};\n"
-        f"  --primary-foreground: {primary_fg};\n"
-        f"  --accent: {accent};\n"
-        f"  --accent-foreground: {accent_fg};\n"
+        f"  --primary: {color['primary']};\n"
+        f"  --primary-foreground: {color['primaryForeground']};\n"
+        f"  --accent: {color['accent']};\n"
+        f"  --accent-foreground: {color['accentForeground']};\n"
         f"  --radius-sm: {radius['sm']};\n"
         f"  --radius-md: {radius['md']};\n"
         f"  --radius-lg: {radius['lg']};\n"
@@ -857,26 +819,26 @@ def variant_css(variant: dict, dossier: dict | None = None) -> str:
 
 
 def patch_globals_css(
-    target: Path, variant: dict, dossier: dict | None = None
-) -> None:
-    """Skriver variant-tokens i app/globals.css.
-
-    `dossier` är optional men rekommenderat — utan det propagerar
-    operatörens färgval (tone.primary / brand.primaryColorHex) inte
-    till renderad CSS, vilket är vad B139/B140 öppnades för.
-    """
+    target: Path,
+    variant: dict,
+    project_input: dict[str, Any] | None = None,
+) -> list[str]:
     css = target / "app" / "globals.css"
     original = css.read_text(encoding="utf-8")
-    block = variant_css(variant, dossier=dossier)
+    token_overrides, warnings = _token_overrides_from_project_input(project_input)
+    block = variant_css(variant, token_overrides)
     marker = "/* sajtbyggaren-variant-tokens:start */"
     end = "/* sajtbyggaren-variant-tokens:end */"
     if marker in original:
         before, _, rest = original.partition(marker)
         _, _, after = rest.partition(end)
-        new_contents = f"{before}{marker}\n{block}{end}{after}"
+        base_contents = f"{before}{after}".rstrip()
     else:
-        new_contents = f"{marker}\n{block}{end}\n\n{original}"
+        base_contents = original.rstrip()
+    # Append last so starter defaults earlier in globals.css cannot win the cascade.
+    new_contents = f"{base_contents}\n\n{marker}\n{block}{end}\n"
     write(css, new_contents)
+    return warnings
 
 
 def patch_package_json(target: Path, dossier: dict) -> None:
@@ -929,6 +891,17 @@ _NAV_LABEL_BY_ROUTE_ID: dict[str, str] = {
     "products": "Produkter",
     "about": "Om oss",
     "contact": "Kontakt",
+    # B132 follow-up sprint 2026-05-21: wizardMustHave-driven extras
+    # land as real routes for local-service-business via the new
+    # _wizard_extra_routes helper in packages/generation/planning/plan.py.
+    # Labels here keep the nav copy operator-facing in Swedish without
+    # forcing each renderer to repeat the same string.
+    "faq": "Vanliga frågor",
+    "gallery": "Galleri",
+    "map": "Hitta hit",
+    "team": "Team",
+    "pricing": "Priser",
+    "portfolio": "Portfolio",
 }
 
 
@@ -1156,6 +1129,7 @@ def _nav_label_for_route(route_id: str) -> str:
 def _nav_items_from_scaffold(
     scaffold_default_routes: list[dict],
     dossier_routes: list[str],
+    extra_routes: list[dict] | None = None,
 ) -> list[tuple[str, str]]:
     """Build the (href, label) nav items for header + footer.
 
@@ -1170,13 +1144,40 @@ def _nav_items_from_scaffold(
     the entry rendered twice (B52). Scaffold order is preserved; the
     Dossier-injected route lands at the end, after the scaffold's own
     nav structure.
+
+    ``extra_routes`` carries wizard-driven routes (B132 follow-up
+    sprint 2026-05-21): they land after scaffold defaults but before
+    the contact CTA in the nav order. Same dedupe rule as for
+    dossier routes — a path already declared by the scaffold or by a
+    dossier wins, so emitting a wizard extra cannot duplicate the
+    visible nav item.
     """
     items: list[tuple[str, str]] = [
         (route["path"], _nav_label_for_route(route["id"])) for route in scaffold_default_routes
     ]
     existing_paths = {href for href, _ in items}
+    if extra_routes:
+        contact_idx = next(
+            (i for i, (href, _label) in enumerate(items) if href == "/kontakt"),
+            None,
+        )
+        for route in extra_routes:
+            if not isinstance(route, dict):
+                continue
+            path = route.get("path")
+            route_id = route.get("id") or ""
+            if not isinstance(path, str) or not path or path in existing_paths:
+                continue
+            entry = (path, _nav_label_for_route(route_id))
+            if contact_idx is not None:
+                items.insert(contact_idx, entry)
+                contact_idx += 1
+            else:
+                items.append(entry)
+            existing_paths.add(path)
     if "/spel" in dossier_routes and "/spel" not in existing_paths:
         items.append(("/spel", "Spel"))
+        existing_paths.add("/spel")
     return items
 
 
@@ -1244,6 +1245,7 @@ def render_layout(
     *,
     scaffold_default_routes: list[dict] | None = None,
     contact_path: str | None = None,
+    extra_routes: list[dict] | None = None,
 ) -> str:
     """Whole-file layout.tsx with sticky header and footer.
 
@@ -1265,7 +1267,11 @@ def render_layout(
             {"id": "about", "path": "/om-oss"},
             {"id": "contact", "path": "/kontakt"},
         ]
-    nav_items = _nav_items_from_scaffold(scaffold_default_routes, dossier_routes)
+    nav_items = _nav_items_from_scaffold(
+        scaffold_default_routes,
+        dossier_routes,
+        extra_routes,
+    )
     if contact_path is None:
         contact_path = str(_pick_contact_route(scaffold_default_routes)["path"])
     contact_href = _route_href(contact_path)
@@ -1810,11 +1816,507 @@ def render_products(
     )
 
 
+# ---------------------------------------------------------------------------
+# Wizard-driven extra routes (B132 follow-up sprint 2026-05-21)
+#
+# The new routes share a few small helpers: every renderer ends in a
+# contact CTA that uses the scaffold's threaded contact_path, a section
+# heading uses the same eyebrow/h1 idiom as the existing service/about
+# pages, and every customer-supplied string goes through
+# _jsx_safe_string so JSX-special characters cannot break the build.
+#
+# The renderers stay deterministic and integration-free: no booking
+# layer, no payments, no editorial CMS. They read what is already in
+# the Project Input dossier (services, contact, location, gallery,
+# team, trustSignals) and rely on Swedish "vi har inget att visa här
+# ännu, hör av dig"-fallbacks when the dossier does not have data.
+# That keeps the operator promise honest: a route exists, the visitor
+# does not hit a 404, and the page never invents customer-specific
+# content the operator did not authorise.
+# ---------------------------------------------------------------------------
+
+
+def _wizard_section_heading(
+    eyebrow: str,
+    heading: str,
+    intro: str | None = None,
+) -> str:
+    """Reusable hero-style header for the wizard-route renderers.
+
+    Matches the eyebrow + h1 idiom of the existing about/services
+    pages so the new routes feel consistent with the rest of the
+    generated site. ``intro`` renders as a muted lead paragraph and
+    is dropped when empty.
+    """
+    intro_jsx = ""
+    if intro:
+        intro_jsx = (
+            '            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">'
+            f"{_jsx_safe_string(intro)}</p>\n"
+        )
+    return (
+        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        '          <header className="flex flex-col gap-3">\n'
+        f'            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(eyebrow)}</p>\n'
+        f'            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">{_jsx_safe_string(heading)}</h1>\n'
+        f"{intro_jsx}"
+        "          </header>\n"
+    )
+
+
+def _wizard_contact_cta(dossier: dict, contact_path: str) -> str:
+    """Trailing contact CTA used by every wizard-route renderer.
+
+    Re-uses ``_hero_cta_label`` so booking-driven businesses say
+    "Boka tid" instead of "Begär offert" on /priser and /portfolio,
+    matching the home/services pages. Mirrors the route-href guard
+    discipline from B50 (path goes through ``_route_href``).
+    """
+    cta_href = _route_href(contact_path)
+    cta_label = _hero_cta_label(dossier)
+    return (
+        '          <div>\n'
+        f'            <a href={cta_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{cta_label}<ArrowRight className="size-4" /></a>\n'
+        "          </div>\n"
+    )
+
+
+def _wizard_page_footer() -> str:
+    """Closing tags shared by every wizard-route renderer."""
+    return (
+        "        </div>\n"
+        "      </section>\n"
+        "    </main>\n"
+        "  );\n"
+        "}\n"
+    )
+
+
+_FAQ_DEFAULT_SV: list[tuple[str, str]] = [
+    (
+        "Hur snabbt får jag svar?",
+        "Vi återkommer normalt inom en arbetsdag på telefon och e-post.",
+    ),
+    (
+        "Kostar det något att höra av sig?",
+        "Nej, vi tar inte betalt för en första kontakt eller en kostnadsfri offert.",
+    ),
+    (
+        "Vilka områden täcker ni?",
+        "Vi jobbar i {areas}. Kontakta oss om du är osäker på om vi täcker just din adress.",
+    ),
+]
+
+
+def _faq_pairs(dossier: dict) -> list[tuple[str, str]]:
+    """Compose FAQ items from the dossier without inventing facts."""
+    location = dossier.get("location") or {}
+    area_values = location.get("serviceAreas") if isinstance(location, dict) else None
+    if isinstance(area_values, list) and area_values:
+        areas = ", ".join(str(area) for area in area_values if isinstance(area, str))
+    else:
+        city = location.get("city") if isinstance(location, dict) else None
+        country = location.get("country") if isinstance(location, dict) else None
+        areas = str(city or country or "ditt närområde")
+    pairs: list[tuple[str, str]] = []
+    for question, answer_template in _FAQ_DEFAULT_SV:
+        pairs.append((question, answer_template.format(areas=areas)))
+    contact = dossier.get("contact") or {}
+    opening = contact.get("openingHours") if isinstance(contact, dict) else None
+    if isinstance(opening, str) and opening.strip():
+        pairs.append(
+            (
+                "När har ni öppet?",
+                f"Vi har öppet {opening.strip()}.",
+            )
+        )
+    return pairs
+
+
+def render_faq(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+    """Render the wizard-driven /faq route.
+
+    Deterministic FAQ built from the dossier: three default questions
+    plus an opening-hours question when ``contact.openingHours`` is
+    set. No invented service prices or warranties — operator-specific
+    answers belong on the operator's wishlist, not in v1 codegen.
+    """
+    pairs = _faq_pairs(dossier)
+    items = "\n".join(
+        f'            <article key={_jsx_safe_string(f"faq-{i}")} className="rounded-xl border border-[color:var(--border)] p-6">\n'
+        f'              <h2 className="text-lg font-semibold">{_jsx_safe_string(question)}</h2>\n'
+        f'              <p className="mt-2 text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(answer)}</p>\n'
+        "            </article>"
+        for i, (question, answer) in enumerate(pairs)
+    )
+    return (
+        'import { ArrowRight } from "lucide-react";\n'
+        "\n"
+        "export default function FaqPage() {\n"
+        "  return (\n"
+        '    <main className="flex flex-1 flex-col">\n'
+        + _wizard_section_heading(
+            "Vanliga frågor",
+            "Det vi får höra ofta",
+            "Korta svar på de frågor våra kunder ställer oftast. "
+            "Saknas något du undrar över? Hör av dig så svarar vi.",
+        )
+        + '          <div className="grid gap-3 md:grid-cols-2">\n'
+        + items
+        + "\n          </div>\n"
+        + _wizard_contact_cta(dossier, contact_path)
+        + _wizard_page_footer()
+    )
+
+
+def _gallery_images(dossier: dict) -> list[dict]:
+    items = dossier.get("gallery") or []
+    selected: list[dict] = []
+    if isinstance(items, list):
+        for item in items:
+            if isinstance(item, dict) and item.get("filename"):
+                selected.append(item)
+    return selected
+
+
+def render_gallery(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+    """Render the wizard-driven /galleri route.
+
+    Uses ``dossier["gallery"]`` images that ``copy_operator_uploads``
+    already placed under ``public/uploads/``. An empty gallery falls
+    back to honest copy ("Vi laddar upp bilder snart...") rather than
+    rendering generic stock placeholders.
+    """
+    company = dossier.get("company") or {}
+    images = _gallery_images(dossier)
+    body: str
+    if images:
+        figures = "\n".join(
+            f'            <figure key={_jsx_safe_string(item.get("assetId") or item["filename"])} className="overflow-hidden rounded-xl border border-[color:var(--border)] bg-[color:var(--background)]">\n'
+            f'              <img src={_jsx_safe_string("/uploads/" + item["filename"])} alt={_js_string_literal(item.get("alt") or company.get("name") or "Bild")} className="aspect-[4/3] w-full object-cover" />\n'
+            "            </figure>"
+            for item in images
+        )
+        body = (
+            '          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">\n'
+            + figures
+            + "\n          </div>\n"
+        )
+    else:
+        body = (
+            '          <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--background)] p-6 text-[color:var(--muted)]">\n'
+            '            <p className="text-base leading-relaxed">Bilder från våra senaste uppdrag publiceras här löpande. Vill du se exempel direkt? Hör av dig så delar vi referensbilder via mejl.</p>\n'
+            "          </div>\n"
+        )
+    return (
+        'import { ArrowRight } from "lucide-react";\n'
+        "\n"
+        "export default function GalleryPage() {\n"
+        "  return (\n"
+        '    <main className="flex flex-1 flex-col">\n'
+        + _wizard_section_heading(
+            "Galleri",
+            "Bilder från våra uppdrag",
+            "Ett urval av jobb vi har gjort. Bilderna laddas upp av "
+            "oss i takt med att nya projekt blir klara.",
+        )
+        + body
+        + _wizard_contact_cta(dossier, contact_path)
+        + _wizard_page_footer()
+    )
+
+
+def _team_members(dossier: dict) -> list[dict]:
+    company = dossier.get("company") or {}
+    team = company.get("team") if isinstance(company, dict) else None
+    if not isinstance(team, list):
+        return []
+    return [member for member in team if isinstance(member, dict) and member.get("name")]
+
+
+def render_team(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+    """Render the wizard-driven /team route.
+
+    Reads ``company.team`` (same source as render_about) and renders
+    one card per member. Empty teams fall back to honest copy instead
+    of inventing roles or photos.
+    """
+    members = _team_members(dossier)
+    if members:
+        cards = "\n".join(
+            f'            <li key={_jsx_safe_string(member["name"])} className="rounded-xl border border-[color:var(--border)] p-6">\n'
+            f'              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-full bg-[color:var(--accent)] text-[color:var(--accent-foreground)] text-sm font-semibold uppercase">{_jsx_safe_string(_member_initials(member["name"]))}</span>\n'
+            f'              <p className="text-base font-semibold">{_jsx_safe_string(member["name"])}</p>\n'
+            f'              <p className="mt-1 text-sm text-[color:var(--muted)]">{_jsx_safe_string(member.get("role") or "")}</p>\n'
+            "            </li>"
+            for member in members
+        )
+        body = (
+            '          <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">\n'
+            + cards
+            + "\n          </ul>\n"
+        )
+    else:
+        body = (
+            '          <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--background)] p-6 text-[color:var(--muted)]">\n'
+            '            <p className="text-base leading-relaxed">Vi presenterar teamet här när vi hunnit fylla på med bilder och roller. Vill du veta vem du kommer prata med? Hör av dig så berättar vi gärna.</p>\n'
+            "          </div>\n"
+        )
+    return (
+        'import { ArrowRight } from "lucide-react";\n'
+        "\n"
+        "export default function TeamPage() {\n"
+        "  return (\n"
+        '    <main className="flex flex-1 flex-col">\n'
+        + _wizard_section_heading(
+            "Team",
+            "Människorna bakom",
+            "Här ser du vilka du kommer i kontakt med när du anlitar oss.",
+        )
+        + body
+        + _wizard_contact_cta(dossier, contact_path)
+        + _wizard_page_footer()
+    )
+
+
+def render_pricing(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+    """Render the wizard-driven /priser route.
+
+    Lists the dossier's ``services`` array as price-quote cards with
+    honest "Pris efter offert"-copy. No invented price points: a
+    fake hourly rate or fixed price could mislead customers and is
+    out of scope for the deterministic Builder.
+    """
+    services = dossier.get("services") or []
+    if isinstance(services, list) and services:
+        cards = "\n".join(
+            f'            <article key={_jsx_safe_string(svc["id"])} className="rounded-xl border border-[color:var(--border)] p-6">\n'
+            f'              <h2 className="text-xl font-semibold">{_jsx_safe_string(svc["label"])}</h2>\n'
+            f'              <p className="mt-2 text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc.get("summary") or "")}</p>\n'
+            '              <p className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-[color:var(--primary)]">Pris efter offert</p>\n'
+            "            </article>"
+            for svc in services
+            if isinstance(svc, dict) and svc.get("id") and svc.get("label")
+        )
+        body = (
+            '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
+            + cards
+            + "\n          </div>\n"
+        )
+    else:
+        body = (
+            '          <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--background)] p-6 text-[color:var(--muted)]">\n'
+            '            <p className="text-base leading-relaxed">Vi lägger upp en aktuell prislista här inom kort. Vill du ha pris på ett specifikt uppdrag direkt? Hör av dig så återkommer vi med offert.</p>\n'
+            "          </div>\n"
+        )
+    return (
+        'import { ArrowRight } from "lucide-react";\n'
+        "\n"
+        "export default function PricingPage() {\n"
+        "  return (\n"
+        '    <main className="flex flex-1 flex-col">\n'
+        + _wizard_section_heading(
+            "Priser",
+            "Vad kostar det?",
+            "Priserna beror på uppdragets omfattning. Begär en "
+            "kostnadsfri offert så får du ett tydligt pris innan vi "
+            "startar.",
+        )
+        + body
+        + _wizard_contact_cta(dossier, contact_path)
+        + _wizard_page_footer()
+    )
+
+
+def render_portfolio(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+    """Render the wizard-driven /portfolio route.
+
+    Combines uploaded gallery images with the services list as
+    case-style cards. Empty input falls back to a friendly "vi
+    bygger på portföljen"-message.
+    """
+    images = _gallery_images(dossier)
+    services = dossier.get("services") or []
+    blocks: list[str] = []
+    if images:
+        figures = "\n".join(
+            f'            <figure key={_jsx_safe_string(item.get("assetId") or item["filename"])} className="overflow-hidden rounded-xl border border-[color:var(--border)] bg-[color:var(--background)]">\n'
+            f'              <img src={_jsx_safe_string("/uploads/" + item["filename"])} alt={_js_string_literal(item.get("alt") or "Case-bild")} className="aspect-[4/3] w-full object-cover" />\n'
+            f'              <figcaption className="px-4 py-3 text-sm text-[color:var(--muted)]">{_jsx_safe_string(item.get("alt") or "Genomfört uppdrag")}</figcaption>\n'
+            "            </figure>"
+            for item in images
+        )
+        blocks.append(
+            '          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">\n'
+            + figures
+            + "\n          </div>\n"
+        )
+    if isinstance(services, list) and services:
+        cards = "\n".join(
+            f'            <article key={_jsx_safe_string(svc["id"])} className="rounded-xl border border-[color:var(--border)] p-6">\n'
+            f'              <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Exempel på uppdrag</p>\n'
+            f'              <h2 className="mt-2 text-xl font-semibold">{_jsx_safe_string(svc["label"])}</h2>\n'
+            f'              <p className="mt-2 text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc.get("summary") or "")}</p>\n'
+            "            </article>"
+            for svc in services
+            if isinstance(svc, dict) and svc.get("id") and svc.get("label")
+        )
+        blocks.append(
+            '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
+            + cards
+            + "\n          </div>\n"
+        )
+    if not blocks:
+        blocks.append(
+            '          <div className="rounded-xl border border-dashed border-[color:var(--border)] bg-[color:var(--background)] p-6 text-[color:var(--muted)]">\n'
+            '            <p className="text-base leading-relaxed">Vi bygger på portföljen löpande. Vill du höra om liknande uppdrag vi har gjort? Hör av dig så delar vi referenser.</p>\n'
+            "          </div>\n"
+        )
+    return (
+        'import { ArrowRight } from "lucide-react";\n'
+        "\n"
+        "export default function PortfolioPage() {\n"
+        "  return (\n"
+        '    <main className="flex flex-1 flex-col">\n'
+        + _wizard_section_heading(
+            "Portfolio",
+            "Tidigare uppdrag",
+            "Ett urval av jobb och case som visar hur vi arbetar.",
+        )
+        + "".join(blocks)
+        + _wizard_contact_cta(dossier, contact_path)
+        + _wizard_page_footer()
+    )
+
+
+def render_map(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+    """Render the wizard-driven /karta route.
+
+    Shows the contact address, service areas and a Google Maps query
+    link based on the dossier address. Avoids embedded map iframes
+    because they require an API key and would shift the runtime
+    contract. The link is opt-in for the visitor and clearly labelled.
+    """
+    location = dossier.get("location") or {}
+    contact = dossier.get("contact") or {}
+    address_lines: list[str] = []
+    if isinstance(contact, dict):
+        raw_lines = contact.get("addressLines")
+        if isinstance(raw_lines, list):
+            for line in raw_lines:
+                if isinstance(line, str) and line.strip():
+                    address_lines.append(line.strip())
+    if not address_lines:
+        city = location.get("city") if isinstance(location, dict) else None
+        if isinstance(city, str) and city.strip():
+            address_lines.append(city.strip())
+    address_jsx = "\n".join(
+        f'                <span className="block">{_jsx_safe_string(line)}</span>'
+        for line in address_lines
+    )
+    address_block: str
+    if address_lines:
+        address_block = (
+            '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
+            '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><MapPin className="size-5" /></span>\n'
+            '              <h2 className="text-base font-semibold">Adress</h2>\n'
+            '              <address className="mt-2 not-italic">\n'
+            f"{address_jsx}\n"
+            "              </address>\n"
+            "            </article>\n"
+        )
+    else:
+        address_block = (
+            '            <article className="rounded-xl border border-[color:var(--border)] p-6 text-[color:var(--muted)]">\n'
+            '              <p className="text-base leading-relaxed">Vi lägger upp adressen så fort den är bekräftad. Ring eller mejla oss om du vill ha vägbeskrivning direkt.</p>\n'
+            "            </article>\n"
+        )
+    service_areas: list[str] = []
+    if isinstance(location, dict):
+        raw_areas = location.get("serviceAreas")
+        if isinstance(raw_areas, list):
+            for area in raw_areas:
+                if isinstance(area, str) and area.strip():
+                    service_areas.append(area.strip())
+    if service_areas:
+        areas_block = (
+            '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
+            '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><MapPin className="size-5" /></span>\n'
+            '              <h2 className="text-base font-semibold">Områden vi arbetar i</h2>\n'
+            f'              <p className="mt-2 text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(", ".join(service_areas))}</p>\n'
+            "            </article>\n"
+        )
+    else:
+        areas_block = ""
+    query_source = ", ".join(address_lines) if address_lines else (
+        (location.get("city") if isinstance(location, dict) else None) or ""
+    )
+    map_block: str
+    if isinstance(query_source, str) and query_source.strip():
+        maps_url = (
+            "https://www.google.com/maps/search/?api=1&query="
+            + _url_quote(query_source.strip())
+        )
+        map_block = (
+            '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
+            '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><MapPin className="size-5" /></span>\n'
+            '              <h2 className="text-base font-semibold">Hitta hit</h2>\n'
+            '              <p className="mt-2 text-sm text-[color:var(--muted)]">Öppna platsen i Google Maps för vägbeskrivning.</p>\n'
+            f'              <a href={_js_string_literal(maps_url)} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 rounded-md border border-[color:var(--border)] px-4 py-2 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors">Visa på karta<ArrowRight className="size-4" /></a>\n'
+            "            </article>\n"
+        )
+    else:
+        map_block = ""
+    return (
+        'import { ArrowRight, MapPin } from "lucide-react";\n'
+        "\n"
+        "export default function MapPage() {\n"
+        "  return (\n"
+        '    <main className="flex flex-1 flex-col">\n'
+        + _wizard_section_heading(
+            "Hitta hit",
+            "Vägbeskrivning och områden",
+            "Här hittar du adressen och vilka områden vi arbetar i. "
+            "Vill du ha hjälp med vägbeskrivning är det bara att ringa.",
+        )
+        + '          <div className="grid gap-4 md:grid-cols-2">\n'
+        + address_block
+        + areas_block
+        + map_block
+        + "          </div>\n"
+        + _wizard_contact_cta(dossier, contact_path)
+        + _wizard_page_footer()
+    )
+
+
+_WIZARD_ROUTE_RENDERERS: dict[str, Any] = {
+    "faq": render_faq,
+    "gallery": render_gallery,
+    "team": render_team,
+    "pricing": render_pricing,
+    "portfolio": render_portfolio,
+    "map": render_map,
+}
+
+
+def _url_quote(value: str) -> str:
+    """Small wrapper around urllib's quoting for Maps query strings.
+
+    Local import keeps the module-level imports clean; the helper only
+    runs on the wizard-driven /karta path.
+    """
+    from urllib.parse import quote
+
+    return quote(value, safe="")
+
+
 def write_pages(
     target: Path,
     dossier: dict,
     scaffold_routes: dict,
     dossier_routes: list[str],
+    extra_routes: list[dict] | None = None,
 ) -> list[str]:
     """Write every page declared in ``scaffold_routes["defaultRoutes"]``.
 
@@ -1866,6 +2368,34 @@ def write_pages(
             )
         write(route_to_page_path(target, path), content)
         written.append(path)
+    sanitized_extras: list[dict] = []
+    if extra_routes:
+        default_paths = {route["path"] for route in default_routes}
+        seen_extra_paths: set[str] = set()
+        for route in extra_routes:
+            if not isinstance(route, dict):
+                continue
+            route_id = route.get("id")
+            path = route.get("path")
+            if not isinstance(route_id, str) or not isinstance(path, str):
+                continue
+            if path in default_paths or path in seen_extra_paths:
+                continue
+            renderer = _WIZARD_ROUTE_RENDERERS.get(route_id)
+            if renderer is None:
+                raise SystemExit(
+                    "Builder failed: wizard extra route id "
+                    f"{route_id!r} (path={path!r}) has no registered "
+                    "renderer in scripts/build_site.py. Register it in "
+                    "_WIZARD_ROUTE_RENDERERS or remove it from the "
+                    "wizard extra route list in "
+                    "packages/generation/planning/plan.py."
+                )
+            content = renderer(dossier, contact_path=contact_route["path"])
+            write(route_to_page_path(target, path), content)
+            written.append(path)
+            seen_extra_paths.add(path)
+            sanitized_extras.append({"id": route_id, "path": path})
     write(
         target / "app" / "layout.tsx",
         render_layout(
@@ -1873,6 +2403,7 @@ def write_pages(
             dossier_routes,
             scaffold_default_routes=default_routes,
             contact_path=contact_route["path"],
+            extra_routes=sanitized_extras or None,
         ),
     )
     return written
@@ -2358,6 +2889,100 @@ def build_site_brief(run_id: str, dossier: dict, scaffold: dict) -> dict:
         )
 
 
+# ---------------------------------------------------------------------------
+# Intent Guard light (warning-only) — B137-/B138-sprint 2026-05-21
+# ---------------------------------------------------------------------------
+#
+# Wizardens kategori (``discoveryDecision.categoryIds``) och briefens
+# ``businessTypeGuess`` / ``servicesMentioned`` kan motsäga varandra när
+# operatören blandar fri prompt och wizardval. Scout case 4 (sköldpaddssoppa)
+# visade exemplet: operatören valde fitness i wizardens overlay men beskrev
+# mat-/restaurang-verksamhet i fri prompten — builden gick igenom utan att
+# någonstans flagga konflikten. Helpern emitterar warnings men stoppar
+# INTE generationen. Konflikt-tabellen är medvetet minimal i v1; utbyggnad
+# sker i separat sprint om Scout visar fler false-negative-case.
+
+_INTENT_GUARD_CONFLICTS: dict[str, tuple[str, ...]] = {
+    "fitness": (
+        "mat", "restaurang", "café", "cafe", "bageri",
+        "restaurant", "bakery", "catering", "food-truck", "pizzeria", "bar",
+    ),
+    "construction": (
+        "mat", "hår", "naglar", "salong",
+        "hairdresser", "hair-salon", "barber", "nail-salon", "beauty-salon",
+        "spa", "massage", "skincare",
+        "restaurant", "bakery", "café", "cafe",
+    ),
+    "beauty": (
+        "elektriker", "vvs", "tak", "bygg",
+        "electrician", "plumber", "roofer", "carpenter", "hvac",
+        "locksmith", "flooring", "renovation", "builder",
+    ),
+}
+
+
+def _intent_guard_warnings(
+    site_brief: dict[str, Any],
+    prompt_meta: dict[str, Any] | None,
+) -> list[dict[str, str]]:
+    """Detect wizard-vs-brief category mismatches (warning-only).
+
+    Returns a list of warning dicts shaped per
+    ``governance/schemas/site-plan.schema.json``'s ``intentGuardWarnings``
+    items. Empty list when no conflict exists or required signals are
+    missing. Builder never blocks on this; the warning surfaces in
+    ``site-plan.json`` for Backoffice/Run Details to display.
+    """
+    if not prompt_meta:
+        return []
+    decision = prompt_meta.get("discoveryDecision")
+    if not isinstance(decision, dict):
+        return []
+    category_ids_raw = decision.get("categoryIds")
+    if not isinstance(category_ids_raw, list):
+        return []
+    category_ids = [
+        cat for cat in category_ids_raw if isinstance(cat, str) and cat
+    ]
+    if not category_ids:
+        return []
+
+    business_raw = site_brief.get("businessTypeGuess")
+    business_type = (
+        business_raw.strip().lower() if isinstance(business_raw, str) else ""
+    )
+    services_raw = site_brief.get("servicesMentioned") or []
+    service_terms = [
+        s.strip().lower()
+        for s in services_raw
+        if isinstance(s, str) and s.strip()
+    ]
+    candidate_terms = ([business_type] if business_type else []) + service_terms
+
+    warnings: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for category_id in category_ids:
+        forbidden = _INTENT_GUARD_CONFLICTS.get(category_id)
+        if not forbidden:
+            continue
+        for blocked in forbidden:
+            if not any(blocked in term for term in candidate_terms):
+                continue
+            key = (category_id, blocked)
+            if key in seen:
+                continue
+            seen.add(key)
+            warning: dict[str, str] = {
+                "categoryId": category_id,
+                "conflictingTerm": blocked,
+                "reason": "category-vs-business-mismatch",
+            }
+            if business_type:
+                warning["businessTypeGuess"] = business_type
+            warnings.append(warning)
+    return warnings
+
+
 def build_plan_artefakts(
     run_id: str,
     dossier: dict,
@@ -2392,6 +3017,8 @@ def build_plan_artefakts(
     if isinstance(pinned_starter, str) and pinned_starter:
         pinned["starterId"] = pinned_starter
 
+    intent_warnings = _intent_guard_warnings(site_brief, prompt_meta)
+
     result = produce_site_plan(
         site_brief,
         run_id=run_id,
@@ -2401,6 +3028,7 @@ def build_plan_artefakts(
         project_id=_prompt_meta_project_id(prompt_meta),
         verification_policy="build-must-pass",
         preview_runtime="local",
+        intent_guard_warnings=intent_warnings,
     )
 
     site_plan = dict(result.site_plan)
@@ -2719,6 +3347,43 @@ def write_build_result(
 # ---------------------------------------------------------------------------
 
 
+def _extract_wizard_extra_routes(
+    site_plan: dict,
+    scaffold_routes: dict,
+) -> list[dict[str, str]]:
+    """Return wizard-driven extras present on site_plan.routePlan.
+
+    The Plan helper (``packages.generation.planning.plan``) appends
+    wizard mustHave routes after the scaffold defaults so the routePlan
+    is the single source of truth. This helper extracts the subset whose
+    paths are NOT in the scaffold's ``routes.json`` so write_pages knows
+    which renderers to dispatch via ``_WIZARD_ROUTE_RENDERERS``. The
+    list preserves the routePlan order so nav and on-disk paths stay
+    consistent.
+    """
+    default_paths = {
+        route["path"]
+        for route in scaffold_routes.get("defaultRoutes") or []
+        if isinstance(route, dict) and isinstance(route.get("path"), str)
+    }
+    extras: list[dict[str, str]] = []
+    seen_paths: set[str] = set()
+    for route in site_plan.get("routePlan") or []:
+        if not isinstance(route, dict):
+            continue
+        route_id = route.get("id")
+        path = route.get("path")
+        if not isinstance(route_id, str) or not isinstance(path, str):
+            continue
+        if path in default_paths or path in seen_paths:
+            continue
+        if route_id not in _WIZARD_ROUTE_RENDERERS:
+            continue
+        extras.append({"id": route_id, "path": path})
+        seen_paths.add(path)
+    return extras
+
+
 def build(
     dossier_path: Path,
     do_build: bool = True,
@@ -2811,11 +3476,9 @@ def build(
     patch_package_json(target, dossier)
 
     print("Injecting variant tokens into app/globals.css")
-    # Skicka dossier:n så B139/B140-overrides får effekt: tone.primary
-    # (keyword som "grön") och brand.primaryColorHex (explicit hex)
-    # vinner över variant-tokenes default-färger. Saknas båda används
-    # variant.tokens.color (status quo före B139/B140-fixen).
-    patch_globals_css(target, variant, dossier=dossier)
+    token_warnings = patch_globals_css(target, variant, dossier)
+    for warning in token_warnings:
+        trace.event("build", "variant_tokens.warning", "warning", warning)
 
     selected_dossiers = load_selected_dossier_manifests(dossier)
     copied_components = mount_dossier_components(target, selected_dossiers)
@@ -2830,19 +3493,36 @@ def build(
     # waiting for write_pages' return value, then verify the
     # return matches so a silent dispatch mismatch cannot drift
     # the announcement.
-    routes_to_write = all_default_routes(scaffold_routes)
+    #
+    # B132 follow-up sprint 2026-05-21: wizardMustHave-driven routes
+    # land via plan.py's ``_wizard_extra_routes`` and arrive on
+    # ``site_plan["routePlan"]``. They are not in the scaffold's
+    # routes.json, so we extract them here and thread them through
+    # write_pages. The dispatch announcement covers both lists so
+    # operators still see exactly which paths are about to be
+    # written if the next step raises.
+    wizard_extra_routes = _extract_wizard_extra_routes(site_plan, scaffold_routes)
+    routes_to_write = all_default_routes(scaffold_routes) + [
+        route["path"] for route in wizard_extra_routes
+    ]
     print("Writing pages: " + ", ".join(routes_to_write) + " and layout")
-    paths_written = write_pages(target, dossier, scaffold_routes, dossier_routes)
+    paths_written = write_pages(
+        target,
+        dossier,
+        scaffold_routes,
+        dossier_routes,
+        extra_routes=wizard_extra_routes or None,
+    )
     if paths_written != routes_to_write:
         raise SystemExit(
             "Builder failed: write_pages returned "
-            f"{paths_written!r} but scaffold declared "
+            f"{paths_written!r} but scaffold + wizard declared "
             f"{routes_to_write!r}. The dispatch table and the "
             "scaffold registry have drifted; reconcile them "
             "before retrying."
         )
 
-    routes_all = all_default_routes(scaffold_routes)
+    routes_all = list(routes_to_write)
     routes_all_with_dossiers = sorted(set(routes_all + dossier_routes))
     # Sprint 3A note: the previous hard guard ``assert_routes_present`` ran
     # here and crashed the build via SystemExit on missing routes or absent

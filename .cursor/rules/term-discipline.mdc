@@ -16,7 +16,7 @@ Om du som agent eller utvecklare ska:
 - **återanvända** ett befintligt domänbegrepp i ett nytt område
 - skapa en ny **policy**, ett nytt **schema**, ett nytt **paket**
 
-så måste begreppet finnas i [`governance/policies/naming-dictionary.v1.json`](../policies/naming-dictionary.v1.json) **innan** det skrivs någon annanstans.
+så måste begreppet finnas i [`governance/policies/naming-dictionary.v1.json`](../../governance/policies/naming-dictionary.v1.json) **innan** det skrivs någon annanstans.
 
 Saknas det? Stoppa. Lägg till termen i naming-dictionary i samma PR/förändring. Sen får den användas.
 
@@ -46,7 +46,7 @@ Räknas **inte**:
    - `id` (camelCase),
    - `canonical` (mänskligt läsbart),
    - `definition` (1-3 meningar; konkret, inte cirkulär),
-   - `ownerPackage` (var begreppet bor; måste matcha [`repo-boundaries.v1.json`](../policies/repo-boundaries.v1.json)),
+   - `ownerPackage` (var begreppet bor; måste matcha [`repo-boundaries.v1.json`](../../governance/policies/repo-boundaries.v1.json)),
    - `aliasesAllowed` och `aliasesForbidden` (oftast tomma listor).
 2. Bump `version` i namning-dictionary om förändringen är substantiell.
 3. Kör `python scripts/governance_validate.py` så att det inte krockar med globally-forbidden.

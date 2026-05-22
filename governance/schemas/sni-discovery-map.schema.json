@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sni-discovery-map.schema.json",
+  "title": "SNI Discovery Map",
+  "description": "Schema för governance/policies/sni-discovery-map.v1.json. Policyn är operatörens handstyrda översättning från SNI 2025-prefix (huvudgrupp / grupp) till en kandidat wizardCategoryId i discovery-taxonomy.v1.json. SNI är en branschsignal — den får aldrig välja scaffold, variant, starter eller Dossier direkt; Discovery Resolver + Discovery Taxonomy avgör det i nästa steg.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policyId",
+    "version",
+    "status",
+    "purpose",
+    "divisionMappings"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "policyId": {
+      "type": "string",
+      "pattern": "^sni-discovery-map\\.v[0-9]+$"
+    },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": {
+      "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"]
+    },
+    "purpose": { "type": "string", "minLength": 1 },
+    "principles": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "referenceTaxonomy": {
+      "type": "string",
+      "description": "Relativ path till SNI 2025-referensen som policyn bygger på (data/taxonomies/sni/sni-2025.v1.json). Diagnostik kan korsrefera labelSv via referensen utan att duplicera SNI-hierarkin i policyn."
+    },
+    "divisionMappings": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/divisionMapping" }
+    },
+    "groupOverrides": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/groupMapping" }
+    }
+  },
+  "$defs": {
+    "divisionMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sniCode",
+        "wizardCategoryId",
+        "confidence"
+      ],
+      "properties": {
+        "sniCode": {
+          "type": "string",
+          "pattern": "^[0-9]{2}$",
+          "description": "SNI-huvudgrupp i tvåsiffrig digit-only form."
+        },
+        "wizardCategoryId": { "$ref": "#/$defs/wizardCategoryId" },
+        "labelSv": { "$ref": "#/$defs/labelSv" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "notesSv": { "$ref": "#/$defs/notesSv" },
+        "starterId": false,
+        "scaffoldId": false,
+        "variantId": false,
+        "dossierId": false,
+        "selectedDossiers": false
+      }
+    },
+    "groupMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sniCode",
+        "wizardCategoryId",
+        "confidence"
+      ],
+      "properties": {
+        "sniCode": {
+          "type": "string",
+          "pattern": "^[0-9]{3}$",
+          "description": "SNI-grupp i tresiffrig digit-only form. Mer specifik än huvudgrupp."
+        },
+        "wizardCategoryId": { "$ref": "#/$defs/wizardCategoryId" },
+        "labelSv": { "$ref": "#/$defs/labelSv" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "notesSv": { "$ref": "#/$defs/notesSv" },
+        "starterId": false,
+        "scaffoldId": false,
+        "variantId": false,
+        "dossierId": false,
+        "selectedDossiers": false
+      }
+    },
+    "wizardCategoryId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Måste finnas som id i discovery-taxonomy.v1.json/categories. Diagnostiken flaggar policy-rader som pekar mot okänd kategori."
+    },
+    "labelSv": {
+      "type": "string",
+      "description": "Operatörens etikett för raden, primärt för Backoffice-läsbarhet. Behöver inte exakt matcha SNI-labeln; faktisk SNI labelSv läses från sni-2025.v1.json vid behov."
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "Operatörens egen säkerhet på mappningen. 'high' = enskild SNI-grupp/division som bara kan vara denna kategori; 'medium' = sannolik men kräver wizard-bekräftelse; 'low' = grov branschsignal."
+    },
+    "notesSv": {
+      "type": "string",
+      "description": "Optional fri operatörsanteckning. Ska inte innehålla direktiv om scaffold/starter/Dossier."
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 30 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 98 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 24 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 107 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -103,17 +103,6 @@ Tre read-only subagents granskade (1) brief + prompt-helper pipeline,
 (2) builder renderers + scaffolds + Quality Gate, (3) Viewser app +
 run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
 
-- **`B71` Hög** - Follow-up merge fryser `company.story`,
-  `company.tagline`, `tone` i strid med egen docstring.
-  `scripts/prompt_to_project_input.py:merge_followup_project_input`
-  docstring säger att kandidat bidrar med "additive signals (new
-  services, capabilities, conversion goals and a visible story note)",
-  men koden tar aldrig `story` från kandidat, och `tone` lämnas orörd
-  när det redan är ett dict. Källa: brief-pipeline-bug-sweep
-  2026-05-15. Två val: (a) uppdatera docstring + test att matcha
-  faktisk byte-stabil semantic, eller (b) semantic patching nu
-  (kräver ADR, hör hemma i Project DNA-sprinten). Fix: open. Test:
-  open.
 - **`B72` Medel** - `apps/viewser/lib/runs.ts:40-84` `listRuns` läser
   `build-result.json` för alla run-kataloger trots att svaret bara
   behåller `limit` poster. O(N) disk-läsningar per `GET /api/runs`,
@@ -207,13 +196,11 @@ CTA "Begär offert" hardcoded i `render_home` oavsett bransch
   när scaffold = `ecommerce-lite`. Källa: re-Verifierings-Scout
   2026-05-15. Fix: open. Test: open.
 
-**B71-not (PR #28 stängde, men markerad som unverified av re-Scout):**
-Re-Verifierings-Scout flaggade att follow-up byte-stabilitet inte
-kan verifieras i ett första-generations-pass (kräver v1 → v2-test).
-B71-stängningen i Grind hänger på kod-/docstring-spårning i
-`tests/test_prompt_to_project_input.py`; ingen kritik mot lock-tester,
-bara att Scout inte själv kunde verifiera invarianten. Två-pass-test
-bör naturligt köras nästa gång någon ändå provkör follow-up-flödet.
+**Historisk B71-not:** Re-Verifierings-Scout kunde före Project DNA-
+fixen inte verifiera follow-up-byte-stabilitet i ett första-
+generationspass. B71 stängs först i Project DNA semantic follow-up
+V1 nedan, där v1 → v2-tester låser både semantiska ändringar och
+byte-stabila no-change-fall.
 
 ### Re-Verifierings-Scout 3 2026-05-18 (post-1C mot `b5ee710`/`6eaf222`)
 
@@ -519,7 +506,7 @@ arkitekturändring, inte en bugg.
 
 ### Demo-baseline-fix 1B closure note (2026-05-15)
 
-PR #28 / `885431b` stängde 15 buggar (alla flyttade till "Stängda" 2026-05-18 i en separat Steward-städning): B64, B65, B66, B69, B70, B73, B74, B76, B77, B78, B79, B80, B81, B82 och B84. Kvar öppna (medvetet eller deferred) från bug-sweep-listan: B67, B71 (markerad unverified av re-Scout), B72, B75, B83, B85, B86 och B87.
+PR #28 / `885431b` stängde 15 buggar (alla flyttade till "Stängda" 2026-05-18 i en separat Steward-städning): B64, B65, B66, B69, B70, B73, B74, B76, B77, B78, B79, B80, B81, B82 och B84. Efter Project DNA semantic follow-up V1 är B71 också stängd. Kvar öppna (medvetet eller deferred) från bug-sweep-listan: B67, B72, B75, B83, B85, B86 och B87.
 
 ### Demo-baseline-fix 1C closure note (2026-05-18)
 
@@ -595,117 +582,192 @@ för follow-up eller ska städas.
   (parent-agent review efter operatör-override av coach-
   direktiv). Fix: open. Test: open.
 
-### Viewser-overlay-E2E Scout 2026-05-19 — Case 4 (sköldpaddssoppa / conflict)
-
-- **`B137` Medel** (öppen, tagline-läckage av rå prompt-text) -
-  Verifierat live i case 4 (sköldpaddssoppa): `app/page.tsx:9` på Hero
-  visar `"Hemsida om sköldpaddssoppa, mat, 2 sidor, gröna färger"` —
-  operatörens fri-prompt-text läcker publikt som tagline. Förväntat
-  beteende: kort marknadsföringsfras (8-15 ord), inte rå prompt eller
-  UI-direktiv (`"2 sidor"`, `"gröna färger"`-instruktioner etc.).
-  Effekt idag: sajter där wizardens `offer`-fält innehåller
-  instruktioner i stället för verksamhetsbeskrivning får dev-jargong
-  som hero-tagline. Källa: Viewser-overlay-E2E Scout case 4,
-  2026-05-19. Read av
-  `..\sajtbyggaren-output\.generated\skoldpaddssoppa-karlsson-099d5c\app\page.tsx`.
-  Fix: open. Kodväg per Scout-rapport (PR #47, mergad):
-  `packages/generation/discovery/resolve.py:_apply_company_fields`
-  (rad 609-628). Wizardens `answers.offer` ("Beskriv din verksamhet"-
-  fältet) skriver över briefens tagline EFTER att briefen producerats.
-  `offer` används redan som rådata till briefen via
-  `composeMasterPrompt()` i
-  `apps/viewser/components/discovery-wizard/wizard-payload.ts:168-170`,
-  så fixen är att i `_apply_company_fields` antingen (a) sanera
-  `offer` mot UI-direktiv (`"2 sidor"`, `"gröna färger"`,
-  instruktions-prefix) innan det blir tagline, eller (b) låta briefens
-  tagline vinna när `offer` ser ut som UI-direktiv. Befintlig
-  `_derive_tagline` i `scripts/prompt_to_project_input.py` kvarstår
-  som fri-prompt-fallback och ska INTE tas bort. Test:
-  `tests/test_discovery_resolver.py` (eller motsvarande) — case från
-  sköldpaddssoppa-run som låser att `company.tagline` aldrig
-  innehåller substrängarna `"2 sidor"`, `"3 sidor"`, `"gröna färger"`,
-  `"mörkt tema"` etc.
-
 ### Sköldpaddssoppa-run follow-up (orchestrator 2026-05-19, sen kväll)
 
-- **`B138` Medel** (öppen, pageCount-läckage från brief till routePlan) -
-  briefModel fångar operatörens explicita sidantal från fri-prompten
-  korrekt (`site-brief.json` har `"pageCount": 2` när operatören skrev
-  `"2 sidor"` i beskrivnings-fältet), men `produce_site_plan` ignorerar
-  `brief.pageCount` och emitterar scaffold-defaults oavsett. Verifierat
-  mot körningen `data/runs/20260519T190606.540Z-51cef6dd-skoldpaddssoppa-karlsson-099d5c/`:
-  `site-brief.json` har `pageCount=2`, `site-plan.json` emitterar
-  fyra routes (`/`, `/tjanster`, `/om-oss`, `/kontakt`) plus fyra
-  `pageIntentWarnings` för wizard-must-have-sidorna. Effekt idag:
-  operatörens explicita sidantal från fri-prompten respekteras inte
-  av planning, trots att briefen fångar det. Skiljt från B132 (warning-
-  only för wizard-must-have): B132 jämför `wizard.mustHave` mot
-  `routePlan` och varnar — B138 är `brief.pageCount` → `routePlan` och
-  ignoreras helt. Fix-pekare: `packages/generation/planning/`
-  (`produce_site_plan` eller nedströms route-emission). Källa: orchestrator
-  follow-up-verifiering av samma run som Scout case 4, 2026-05-19.
-  Fix: open. Test: open.
-
-- **`B139` Låg-medel** (öppen, tone-extraction propageras inte till
-  brand-tokens) - briefModel extraherar tone-fältet från fri-prompten
-  korrekt (`site-brief.json` har `"tone": ["grön"]` och Project Input
-  har `tone.primary: "grön"`) men renderern använder bara
-  `var(--primary)` från `nordic-trust`-CSS-tokens utan koppling till
-  `tone.primary`. Verifierat i samma sköldpaddssoppa-run: generated
-  `app/page.tsx` läser inte tone-fältet alls. Effekt idag: tone-fältet
-  är dead data i renderern — operatörens explicita färgval propagerar
-  inte till brand-tokens. Hänger ihop med variant-promotion-sprinten
-  (Queue #6) men är inte samma fix; variant-promotion handlar om
-  scaffold-variant-selection, B139 handlar om att tone-extraktion ska
-  påverka brand-tokens oavsett vilken variant som väljs. Källa:
-  orchestrator follow-up-verifiering av samma run som Scout case 4,
-  2026-05-19. Fix: open. Kodväg per Scout-rapport (PR #47, mergad):
-  `scripts/build_site.py:variant_css()` (rad 701-737) och
-  `scripts/build_site.py:patch_globals_css()` (rad 2107-2136). Helpern
-  läser bara `variant["tokens"]`; `tone.primary` /
-  `brand.primaryColorHex` har ingen kanal in. Fix-skiss: utöka
-  signaturen att ta dossier eller token-override-objekt och mappa
-  `tone.primary` (eller B140 explicit hex) till `--primary`/relaterade
-  vars innan CSS skrivs. Test: open.
 
 ### Scout-rapport PR #47 — ytterligare fynd (2026-05-19, sen kväll)
 
-- **`B140` Låg** (öppen, brand.primaryColorHex ignoreras av variant_css)
-  - Även när discovery-resolvern skriver `brand.primaryColorHex` från
-  wizardens hex-fält (`packages/generation/discovery/resolve.py:_apply_brand_and_assets`)
-  tas det fältet aldrig in i CSS-token-skrivningen.
-  `scripts/build_site.py:variant_css()` läser bara `variant["tokens"]`.
-  Angränsande till B139 (samma helper, samma fix-yta) men spårar en
-  separat data-kanal: B139 är extraherad tone-keyword, B140 är
-  explicit operatörshex. Effekt idag: explicit primärfärg från
-  wizardens hex-fält propagerar inte till renderad CSS oavsett vilken
-  scaffold-variant som väljs. Fix-pekare:
-  `scripts/build_site.py:variant_css` / `patch_globals_css` (samma
-  utvidgning som B139 — token-override-objekt eller dossier-signatur).
-  Källa: Scout-rapport PR #47, "Eventuella ytterligare fynd",
-  2026-05-19. Fix: open. Test: open.
-
-- **`B141` Låg-medel** (öppen, codegen läser tone från död pipeline) -
-  `packages/generation/planning/plan.py:_assemble_generation_package()`
-  skriver bara `siteBriefRef`, INTE `siteBrief`-objektet, till
-  generation_package. Det betyder att
-  `packages/generation/codegen/codegen.py:_summarise_generation_package()`
-  kör `site_brief = generation_package.get("siteBrief") or {}` mot ett
-  alltid-tomt dict; `tone` / `businessType`-rationale från codegenModel
-  baseras därför aldrig på briefens data i prod-flödet. Effekt idag:
-  codegenModel får inget tone- eller businessType-underlag från
-  briefen att resonera om, vilket gör manifest/rationale-ytan tunnare
-  än vad pipelinen utlovar. Beslut behövs: antingen är
-  `siteBriefRef`-mönstret avsiktligt (cite-by-ref) och
-  `_summarise_generation_package` bör ladda briefen från ref:en, eller
-  så ska `_assemble_generation_package` skriva både `siteBrief` och
-  `siteBriefRef`. Fix-pekare:
-  `packages/generation/planning/plan.py:_assemble_generation_package`
-  + `packages/generation/codegen/codegen.py:_summarise_generation_package`.
-  Källa: Scout-rapport PR #47, "Eventuella ytterligare fynd",
-  2026-05-19. Fix: open. Test: open.
-
 ## Stängda - regression-test säkrar fixet
+
+- **`B139` Låg-medel** (stängd 2026-05-22, tone-primary till CSS-token) -
+  `tone.primary` kunde fyllas från brief/follow-up men renderern använde
+  bara variantens default-CSS-tokens. Fix: `eb5a81d` lägger en
+  smal token-override-kanal i `scripts/build_site.py`: om explicit brand-
+  hex saknas kan whitelistade tone-signaler (`grön`/`green`, `blå`/`blue`,
+  `varm`/`warm`, `premium`) mappas till `--primary` och `--accent`.
+  Variantens default tokens bevaras exakt när ingen signal finns. Test:
+  `tests/test_builder_smoke.py::test_tone_primary_green_maps_to_stable_green_token_when_hex_missing`,
+  `tests/test_builder_smoke.py::test_variant_css_default_is_byte_stable_without_brand_or_tone`.
+
+- **`B140` Låg** (stängd 2026-05-22, brand-hex till CSS-token) -
+  `brand.primaryColorHex` och `brand.accentColorHex` skrevs till Project
+  Input men ignorerades av `variant_css()`. Fix: `eb5a81d`
+  låter giltiga explicita hex-värden vinna över tone-keywords och skriva
+  `--primary`/`--accent`; ogiltiga hex-värden ignoreras med trace-warning
+  och variant-default bevaras utan crash. Test:
+  `tests/test_builder_smoke.py::test_brand_primary_color_hex_overrides_primary_css_token`,
+  `tests/test_builder_smoke.py::test_brand_accent_color_hex_overrides_accent_css_token`,
+  `tests/test_builder_smoke.py::test_explicit_brand_hex_wins_over_tone_keyword`,
+  `tests/test_builder_smoke.py::test_invalid_brand_hex_is_ignored_and_variant_default_is_preserved`,
+  `tests/test_builder_smoke.py::test_invalid_explicit_brand_hex_does_not_fall_through_to_tone_keyword`,
+  `tests/test_builder_smoke.py::test_build_writes_brand_token_overrides_to_generated_globals_css`,
+  `tests/test_builder_smoke.py::test_build_traces_invalid_brand_hex_and_keeps_variant_defaults`.
+
+- **`B71` Hög** (stängd 2026-05-22, Project DNA semantic follow-up V1) -
+  `scripts/prompt_to_project_input.py:merge_followup_project_input`
+  frös `company.story`, `company.tagline` och `tone` även när
+  följdprompten tydligt bad om semantic ändring. Fix: `aef5825`
+  aktiverar deterministisk FollowUp Intent-klassning för
+  `tone-shift`, `story-emphasize`, `tagline-update`,
+  `positioning-shift`, `no-semantic-change` och `clarify`.
+  Tydliga semantic intents patchar exakt tillåtet Project Input-fält,
+  medan additiva/no-change-prompter behåller byte-stabilitet. V1
+  skriver `projectDna` i befintlig meta-sidecar
+  (`data/prompt-inputs/<siteId>.meta.json`); full
+  `data/projects/<projectId>/dna.json`-lagring är V2 enligt ADR 0027.
+  Rå följdprompt filtreras fortsatt bort från kundcopy. Test:
+  `tests/test_prompt_to_project_input.py::test_followup_merge_keeps_story_tagline_and_tone_byte_stable_when_intent_is_no_change`,
+  `tests/test_prompt_to_project_input.py::test_followup_merge_tone_shift_updates_tone_only`,
+  `tests/test_prompt_to_project_input.py::test_followup_story_intent_does_not_leak_raw_prompt`,
+  `tests/test_prompt_to_project_input.py::test_generate_followup_tone_shift_updates_project_input_and_project_dna`,
+  `tests/test_prompt_to_project_input.py::test_generate_followup_story_and_tagline_prompts_change_project_input`,
+  `tests/test_prompt_to_project_input.py::test_project_dna_sidecar_validates_against_snapshot_schema`.
+
+- **`B143` Medel** (stängd 2026-05-21, Intent Guard English slug
+  matching) - konflikt-tabellen matchade enbart
+  svenska substrings (`mat`, `restaurang`, `hår`, `elektriker`) medan
+  `site_brief.businessTypeGuess` ofta är engelska slugs (`restaurant`,
+  `electrician`, `hairdresser`). Resultat: wizard-kategori kunde peka på
+  en bransch (t.ex. fitness) medan briefModel returnerade en annan
+  bransch-slug (t.ex. restaurant) utan varning. Fix: `d3b77ff` utvidgade
+  `_INTENT_GUARD_CONFLICTS`-tabell i `scripts/build_site.py` med
+  engelska slugs så substring-matchningen även fångar rena
+  businessTypeGuess-värden. Test: `tests/test_intent_guard.py` (7 nya
+  B143-regressionstester).
+
+- **`B144` Medel** (stängd 2026-05-21, Run Details renderar
+  site-plan-varningar) - `pageCountWarning` och `intentGuardWarnings`
+  skrevs till `site-plan.json`, men Run Details renderade dem inte
+  strukturerat. Operatören behövde läsa rå JSON/backoffice för att se
+  varför en run varnade. **Fix:** `SitePlanSection` i
+  `apps/viewser/components/run-details-panel.tsx` läser nu
+  `sitePlan.pageCountWarning`, `sitePlan.intentGuardWarnings` och
+  `sitePlan.pageIntentWarnings` från `site-plan.json` som canonical
+  källa och visar dem i ett amber-block med
+  `data-testid="site-plan-warnings"`. Defensiva parsers gör att äldre
+  runs utan fälten inte renderar ett tomt block och inte kraschar.
+  Copyt förklarar att builden inte blockas. Fix: `aee67d7`. Test:
+  `tests/test_viewser_files.py::test_run_details_panel_renders_site_plan_warnings`.
+
+- **`B141` Låg-medel** (stängd 2026-05-21, codegen läser Site Brief
+  via generation-package-ref) -
+  `packages/generation/planning/plan.py:_assemble_generation_package()`
+  skrev bara `siteBriefRef`, medan
+  `packages/generation/codegen/codegen.py:_summarise_generation_package()`
+  tidigare bara läste inline `siteBrief`. Effekt: codegenModel-
+  sammanfattningen fick `businessType: unknown` och `tone: -` i
+  canonical prod-flödet trots att `site-brief.json` redan innehöll
+  faktisk `businessTypeGuess` och `tone`. **Fix:** PR:n väljer
+  alternativ B och behåller befintligt by-reference-kontrakt:
+  `generation-package.json` fortsätter skriva `siteBriefRef` utan inline
+  `siteBrief`, och codegen laddar nu faktisk `site-brief.json` via
+  `data/runs/<runId>/<siteBriefRef>` när summaryn byggs. Helpern
+  använder `resolve()`, avvisar absolut `siteBriefRef` och avvisar
+  `../`-escape ut ur run-mappen. Inline `siteBrief` finns bara kvar som
+  bakåtkompatibel fallback för äldre handskrivna callers. Fix:
+  `5dfa2c7`. Test:
+  `tests/test_codegen.py::test_codegen_summary_loads_site_brief_from_ref`,
+  `tests/test_codegen.py::test_codegen_real_path_prompt_uses_site_brief_ref`,
+  `tests/test_codegen.py::test_codegen_summary_rejects_absolute_site_brief_ref`,
+  `tests/test_codegen.py::test_codegen_summary_rejects_traversal_site_brief_ref`,
+  `tests/test_planning.py::test_generation_package_keeps_site_brief_by_ref_contract`.
+
+- **`B137` Medel** (stängd 2026-05-21, wizard-overlay tagline-läckage av
+  rå prompt-text) - Verifierat live i Scout case 4 (sköldpaddssoppa):
+  `app/page.tsx:9` på Hero visade
+  `"Hemsida om sköldpaddssoppa, mat, 2 sidor, gröna färger"` —
+  operatörens fri-prompt-text läckte publikt som tagline. Förväntat
+  beteende: kort marknadsföringsfras (8-15 ord), inte rå prompt eller
+  UI-direktiv (`"2 sidor"`, `"gröna färger"`-instruktioner etc.).
+  Effekt: sajter där wizardens `offer`-fält innehöll instruktioner
+  istället för verksamhetsbeskrivning fick dev-jargong som hero-
+  tagline. Källa: Viewser-overlay-E2E Scout case 4, 2026-05-19.
+  **Fix:** ny `_offer_looks_like_ui_directive()`-helper i
+  `packages/generation/discovery/resolve.py:_apply_company_fields`
+  detekterar UI-direktiv via sidantals-regex `\b\d+\s+sidor?\b`,
+  färg-regex `\b(röd|grön|blå|gul|svart|vit|grå)a?\s+(färger|färg|tema)\b`,
+  instruktions-prefix `"hemsida om"`/`"bygg"`/`"skapa"`/`"gör en"`/
+  `"vill ha"`/`"behöver"` och längd-bounds <8 eller >120 tecken.
+  När `offer` matchar UI-direktiv föredrar resolvern brief-taglinen,
+  alternativt derived fallback via `_derived_fallback_tagline()`.
+  Ny `fieldSources`-värde `"derived"` (registrerad i
+  `FieldSourceLiteral` + `discovery-decision.schema.json`-enum).
+  Befintlig `_derive_tagline` i `scripts/prompt_to_project_input.py`
+  orörd. End-to-end-mätning på sköldpaddssoppa-payload: tagline gick
+  från `"Hemsida om sköldpaddssoppa, mat, 2 sidor, gröna färger"` till
+  `"Tydlig hjälp inom restaurant"` (source: `"brief"`). Acceptabel risk
+  för v1: ensamt färgord utan `färger`/`färg`/`tema`-suffix passerar
+  detektorn (dokumenterat i helper-docstring; eskaleras vid Scout-fynd
+  i verkligt case). Fix: `1b5275d`. Test:
+  `tests/test_discovery_resolver.py::test_offer_with_ui_directives_does_not_leak_to_tagline`
+  + 9 fler tester med modul-lokal `BLOCKED_TAGLINE_PHRASES`-fixture
+  för enkel utökning.
+
+- **`B138` Medel** (stängd 2026-05-21, pageCount-läckage från brief
+  till routePlan) - briefModel fångade operatörens explicita sidantal
+  från fri-prompten korrekt (`site-brief.json` hade `"pageCount": 2`
+  när operatören skrev `"2 sidor"` i beskrivnings-fältet), men
+  `produce_site_plan` ignorerade `brief.pageCount` och emitterade
+  scaffold-defaults oavsett. Verifierat mot körningen
+  `data/runs/20260519T190606.540Z-51cef6dd-skoldpaddssoppa-karlsson-099d5c/`:
+  `site-brief.json` hade `pageCount=2`, `site-plan.json` emitterade
+  fyra routes (`/`, `/tjanster`, `/om-oss`, `/kontakt`). Effekt:
+  operatörens explicita sidantal respekterades inte av planning. Skiljt
+  från B132 (warning-only för wizard-must-have): B132 jämför
+  `wizard.mustHave` mot `routePlan` och varnar — B138 är
+  `brief.pageCount` → `routePlan` och ignorerades helt. **Fix:** ny
+  `_trim_route_plan()`-helper i
+  `packages/generation/planning/plan.py` läser `site_brief["pageCount"]`,
+  trimmar enligt prioritetslista (`home` + `contact` aldrig borta,
+  mitten i scaffold-defaultordning), minsta körbara set = 2. Emit:
+  `pageCountWarning` i `site-plan.json` med
+  `{requestedPageCount, scaffoldDefaultCount, emittedRouteCount,
+  reason}` där `reason ∈ {"trimmed-to-brief-page-count",
+  "below-minimum-keeping-default"}`. Trim funkar både för pinned-vägen
+  (`scripts/build_site.py`) och planning-helper-vägen. Schema:
+  `governance/schemas/site-plan.schema.json` får ny optional
+  `pageCountWarning`-property. End-to-end-mätning på sköldpaddssoppa-
+  payload: routes gick från `[/, /tjanster, /om-oss, /kontakt]` (4)
+  till `[/, /kontakt]` (2) med warning emitterad. Fix: `299257d`.
+  Test:
+  `tests/test_planning.py::test_page_count_2_trims_route_plan_to_home_and_contact`
+  + 6 fler tester (pageCount=2/3/6/1/null/42 + pinned-vägen).
+
+- **`B142` Låg-medel** (öppnad + stängd 2026-05-20, ProjectInputPicker
+  följer vald run) - operatörspanelens ProjectInputPicker synkade inte
+  med vald run i RunHistory: panelen kunde visa t.ex.
+  `painter-palma` medan vald run var `snus-ab`. Effekt: operatörens
+  översiktspanel visade fel runs DNA (Project Input-kort, scaffold,
+  variant) jämfört med vald run, vilket gjorde det otydligt vilken
+  konfiguration som faktiskt byggdes. Rörde inte renderad output på
+  publicerade sajter — bara operatörens översiktsyta i Viewser.
+  Källa: operatörs-observation i live-Viewser efter Pass 2,
+  2026-05-20. **Fix:** `apps/viewser/components/prompt-builder.tsx`
+  skickar `siteId` tillsammans med `runId` i `onBuildDone`-callbacken;
+  `apps/viewser/app/page.tsx` får ny `selectRunAndSyncSiteId()`-helper
+  som atomiskt uppdaterar `selectedRunId` + `selectedSiteId`, och
+  `applyRunsData` rör inte längre `selectedSiteId` när en run redan är
+  vald (annars fightade fallback-logiken sync:en). `console-drawer.tsx`
+  vidarebefordrar `runSiteId` till `project-input-picker.tsx` som visar
+  en "följer vald run"-badge när synkad och en amber-varning när
+  runens `siteId` saknas i `inputs`-listan på disk. Manuella picker-val
+  respekteras tills nästa run-byte. Fix: `f8d6a52`. Test: open —
+  manuell verifiering rekommenderas; dedikerad React-state-test för
+  run-following-syncen saknas i repo idag. Breda viewser-smoke-tester
+  (`tests/test_viewser_files.py` + `tests/test_viewser_prompt_primary.py`)
+  gröna lokalt per Builder-rapport. Nice-to-have i `docs/current-focus.md`
+  Queue: viewser React-state-test-setup för run-following + framtida
+  picker-syncs.
 
 - **`B134` Medel** (stängd 2026-05-19, wizardMustHave follow-up reset) -
   `scripts/prompt_to_project_input.py:generate_followup()` ärvde alltid

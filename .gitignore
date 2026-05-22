@@ -57,11 +57,28 @@ Thumbs.db
 # credential file is excluded here.
 .cursor/mcp.json
 
+# Agent-/operator-lokala plan-filer som CreatePlan-tool genererar
+# (.cursor/plans/<name>_<hash>.plan.md). Snabbarbetsartefakter per
+# session; ska aldrig committas. Samma kategori som .cursor/mcp.json
+# ovan: per-machine state, inte shared editor-config.
+.cursor/plans/
+
+# Operatör-/agent-lokala temp-noteringar med .cursor/tmp_-prefix
+# (t.ex. tmp_known_issues_pr52.md). Samma kategori som .cursor/plans/
+# ovan: per-session scratch som scripts/check_term_coverage.py redan
+# skippar (rad 656-661).
+.cursor/tmp_*
+
 .tmp-*
 .tmp.*
 .commit-msg.tmp
 konversation.txt
 .review-*/
+
+# Lokal mini-eval-output (verify_run/eval-runners skriver hit). Stora
+# artefakter per körning, samma kategori som data/runs/ men för
+# operatör-iterationer utanför canonical history.
+eval-tmp/
 
 # Operator-only reference workspace - copies/forks of MIN_IDE-style examples.
 # Files in MIN_IDE/ are read-only inspiration and never get committed.
@@ -74,6 +91,14 @@ MIN_IDE/
 # unzips and ports it.
 data/starters/**/*.zip
 data/starters/**/*.tar.gz
+
+# Taxonomy-källfiler (Excel/CSV som extraheras till committad JSON-spegel).
+# Workflow för SNI 2025: operatören laddar ner SCB:s xlsx, kör
+# scripts/extract_sni_2025.py -> sni-2025.v1.json, och raderar sedan
+# xlsx:en lokalt. JSON:en är canonical. Defensivt mönster så ett
+# framtida re-extract inte råkar committa xlsx-källan.
+data/taxonomies/**/*.xlsx
+data/taxonomies/**/*.csv
 
 övrigt/
 

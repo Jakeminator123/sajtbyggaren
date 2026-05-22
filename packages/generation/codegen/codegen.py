@@ -30,8 +30,10 @@ Files are produced deterministically in all four code paths:
 
 from __future__ import annotations
 
+import json
 import logging
 import sys
+from pathlib import Path
 from typing import Any
 
 from packages.generation.brief import has_openai_api_key
@@ -45,6 +47,8 @@ from .models import (
 )
 
 logger = logging.getLogger("sajtbyggaren.codegen")
+REPO_ROOT = Path(__file__).resolve().parents[3]
+RUNS_DIR = REPO_ROOT / "data" / "runs"
 
 # Sprint 3B-next is intentionally limited to marketing-base.
 # data/starters/commerce-base is unharmonised (B20); other starters
@@ -148,6 +152,60 @@ _SYSTEM_INSTRUCTIONS = (
 )
 
 
+def _load_site_brief_from_ref(
+    generation_package: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Load the canonical Site Brief artefact referenced by the package.
+
+    Generation Package intentionally stores ``siteBriefRef`` instead of
+    inlining the full brief. Resolve the reference under
+    ``data/runs/<runId>/`` only; absolute paths and ``..`` escapes must
+    never influence the codegen prompt.
+    """
+    run_id = generation_package.get("runId")
+    site_brief_ref = generation_package.get("siteBriefRef")
+    if not isinstance(run_id, str) or not isinstance(site_brief_ref, str):
+        return None
+
+    ref_path = Path(site_brief_ref)
+    if ref_path.is_absolute():
+        return None
+
+    try:
+        runs_dir = RUNS_DIR.resolve()
+        run_dir = (runs_dir / run_id).resolve()
+        run_dir.relative_to(runs_dir)
+        brief_path = (run_dir / ref_path).resolve()
+        brief_path.relative_to(run_dir)
+    except (OSError, RuntimeError, ValueError):
+        return None
+
+    try:
+        payload = json.loads(brief_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    return payload
+
+
+def _site_brief_for_summary(generation_package: dict[str, Any]) -> dict[str, Any]:
+    """Return Site Brief data for codegen summary generation.
+
+    Prefer the canonical by-reference artefact. Inline ``siteBrief`` is
+    retained as a compatibility fallback for older unit tests and
+    hand-authored callers that do not have a run directory on disk.
+    """
+    site_brief_from_ref = _load_site_brief_from_ref(generation_package)
+    if site_brief_from_ref is not None:
+        return site_brief_from_ref
+
+    inline_site_brief = generation_package.get("siteBrief")
+    if isinstance(inline_site_brief, dict):
+        return inline_site_brief
+    return {}
+
+
 def _summarise_generation_package(
     generation_package: dict[str, Any],
     routes_written: list[str],
@@ -161,7 +219,7 @@ def _summarise_generation_package(
     3B-next we feed only the fields the rationale actually depends on
     so token cost stays bounded.
     """
-    site_brief = generation_package.get("siteBrief") or {}
+    site_brief = _site_brief_for_summary(generation_package)
     scaffold = generation_package.get("scaffoldId", "?")
     variant = generation_package.get("variantId", "?")
     business_type = site_brief.get("businessTypeGuess")

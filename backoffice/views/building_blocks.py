@@ -16,7 +16,15 @@ from scripts.generate_variant_candidate import (
     generate_variant_candidates,
 )
 
-from .. import asset_graph, discovery_control, impact, loaders, selection_profiles
+from .. import (
+    asset_graph,
+    discovery_control,
+    discovery_wizard_diagnostics,
+    impact,
+    loaders,
+    selection_profiles,
+    sni_diagnostics,
+)
 from ..paths import REPO_ROOT
 from ._helpers import safe_render
 
@@ -268,6 +276,464 @@ def _render_discovery_mapping() -> None:
             st.dataframe(findings, use_container_width=True, hide_index=True)
 
 
+def _filter_options(rows: list[dict], key: str) -> list[str]:
+    values = sorted({str(row.get(key) or "") for row in rows if row.get(key)})
+    return ["Alla"] + values
+
+
+def _split_cell_values(value: object) -> list[str]:
+    if not value:
+        return []
+    return [item.strip() for item in str(value).split(",") if item.strip()]
+
+
+def _multi_filter_options(rows: list[dict], keys: list[str]) -> list[str]:
+    values: set[str] = set()
+    for row in rows:
+        for key in keys:
+            values.update(_split_cell_values(row.get(key)))
+    return ["Alla"] + sorted(values)
+
+
+def _filter_asset_graph_rows(
+    rows: list[dict],
+    *,
+    exact_filters: dict[str, str],
+    multi_filters: dict[str, tuple[str, list[str]]],
+    attention_filter: str,
+) -> list[dict]:
+    filtered = rows
+    for key, selected in exact_filters.items():
+        if selected != "Alla":
+            filtered = [row for row in filtered if str(row.get(key) or "") == selected]
+    for selected, keys in multi_filters.values():
+        if selected == "Alla":
+            continue
+        filtered = [
+            row
+            for row in filtered
+            if any(selected in _split_cell_values(row.get(key)) for key in keys)
+        ]
+    if attention_filter == "Endast gap/orphan/missing":
+        filtered = [row for row in filtered if row.get("gapOrOrphan") is True]
+    elif attention_filter == "Utan gap/orphan/missing":
+        filtered = [row for row in filtered if row.get("gapOrOrphan") is not True]
+    return filtered
+
+
+def _render_asset_graph() -> None:
+    st.subheader("Asset Graph: category → scaffold → starter → variant → dossier")
+    st.caption(
+        "Denna vy är read-only och visar befintliga källor. Den aktiverar inte "
+        "starters, ändrar inte mappings och är inte runtime-sanning."
+    )
+
+    try:
+        summary = asset_graph.asset_graph_summary()
+        category_rows = asset_graph.asset_graph_category_rows()
+        scaffold_rows = asset_graph.asset_graph_scaffold_rows()
+        starter_rows = asset_graph.asset_graph_starter_rows()
+        capability_rows = asset_graph.asset_graph_capability_rows()
+    except ImportError as exc:
+        st.error(
+            "Asset Graph kan inte läsa runtime-mappningen från planning. "
+            f"Diagnostiken stoppas så den inte visar fel status: {exc}"
+        )
+        return
+
+    metric_cols = st.columns(6)
+    metric_cols[0].metric("categories", summary["categories"])
+    metric_cols[1].metric("scaffolds", summary["scaffolds"])
+    metric_cols[2].metric("starters", summary["starters"])
+    metric_cols[3].metric(
+        "runtime-mapped starters",
+        summary["runtimeMappedStarters"],
+    )
+    metric_cols[4].metric(
+        "available-not-mapped starters",
+        summary["availableNotMappedStarters"],
+    )
+    metric_cols[5].metric("gaps/orphans/missing", summary["gapsOrphansMissing"])
+
+    category_tab, scaffold_tab, starter_tab, capability_tab = st.tabs(
+        ["Categories", "Scaffolds", "Starters", "Capabilities"]
+    )
+    attention_options = [
+        "Alla",
+        "Endast gap/orphan/missing",
+        "Utan gap/orphan/missing",
+    ]
+
+    with category_tab:
+        filter_cols = st.columns(4)
+        selected_category = filter_cols[0].selectbox(
+            "Category",
+            _filter_options(category_rows, "categoryId"),
+            key="asset_graph_category_filter",
+        )
+        selected_status = filter_cols[1].selectbox(
+            "Status",
+            _filter_options(category_rows, "status"),
+            key="asset_graph_category_status_filter",
+        )
+        selected_scaffold = filter_cols[2].selectbox(
+            "Scaffold",
+            _multi_filter_options(
+                category_rows,
+                ["targetScaffoldId", "activeScaffoldId", "fallbackScaffoldId"],
+            ),
+            key="asset_graph_category_scaffold_filter",
+        )
+        selected_attention = filter_cols[3].selectbox(
+            "Gap/orphan",
+            attention_options,
+            key="asset_graph_category_attention_filter",
+        )
+        filtered_rows = _filter_asset_graph_rows(
+            category_rows,
+            exact_filters={
+                "categoryId": selected_category,
+                "status": selected_status,
+            },
+            multi_filters={
+                "scaffold": (
+                    selected_scaffold,
+                    ["targetScaffoldId", "activeScaffoldId", "fallbackScaffoldId"],
+                )
+            },
+            attention_filter=selected_attention,
+        )
+        st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+        with st.expander("Category-detaljer"):
+            st.write(
+                "Category-raderna delegerar supportStatus/mappingState till "
+                "`category_mapping_rows()` och visar capability-gaps från "
+                "Capability Map."
+            )
+
+    with scaffold_tab:
+        filter_cols = st.columns(4)
+        selected_scaffold = filter_cols[0].selectbox(
+            "Scaffold",
+            _filter_options(scaffold_rows, "scaffoldId"),
+            key="asset_graph_scaffold_filter",
+        )
+        selected_status = filter_cols[1].selectbox(
+            "Status",
+            _filter_options(scaffold_rows, "status"),
+            key="asset_graph_scaffold_status_filter",
+        )
+        selected_starter = filter_cols[2].selectbox(
+            "Starter",
+            _filter_options(scaffold_rows, "runtimeStarterId"),
+            key="asset_graph_scaffold_starter_filter",
+        )
+        selected_attention = filter_cols[3].selectbox(
+            "Gap/orphan",
+            attention_options,
+            key="asset_graph_scaffold_attention_filter",
+        )
+        filtered_rows = _filter_asset_graph_rows(
+            scaffold_rows,
+            exact_filters={
+                "scaffoldId": selected_scaffold,
+                "status": selected_status,
+                "runtimeStarterId": selected_starter,
+            },
+            multi_filters={},
+            attention_filter=selected_attention,
+        )
+        st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+        with st.expander("Scaffold-detaljer"):
+            st.write(
+                "Scaffold-status kombinerar scaffold-contract registry, filer "
+                "på disk och runtime-mappningen från planning."
+            )
+
+    with starter_tab:
+        filter_cols = st.columns(4)
+        selected_starter = filter_cols[0].selectbox(
+            "Starter",
+            _filter_options(starter_rows, "starterId"),
+            key="asset_graph_starter_filter",
+        )
+        selected_status = filter_cols[1].selectbox(
+            "Status",
+            _filter_options(starter_rows, "status"),
+            key="asset_graph_starter_status_filter",
+        )
+        selected_scaffold = filter_cols[2].selectbox(
+            "Scaffold",
+            _multi_filter_options(starter_rows, ["runtimeMappedScaffolds"]),
+            key="asset_graph_starter_scaffold_filter",
+        )
+        selected_attention = filter_cols[3].selectbox(
+            "Gap/orphan",
+            attention_options,
+            key="asset_graph_starter_attention_filter",
+        )
+        filtered_rows = _filter_asset_graph_rows(
+            starter_rows,
+            exact_filters={
+                "starterId": selected_starter,
+                "status": selected_status,
+            },
+            multi_filters={
+                "scaffold": (selected_scaffold, ["runtimeMappedScaffolds"])
+            },
+            attention_filter=selected_attention,
+        )
+        st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+        with st.expander("Starter-detaljer"):
+            st.write(
+                "Runtime-mappade starters kommer från `SCAFFOLD_TO_STARTER`; "
+                "available-not-mapped och placeholder kommer från Starter Registry."
+            )
+
+    with capability_tab:
+        filter_cols = st.columns(4)
+        selected_capability = filter_cols[0].selectbox(
+            "Capability",
+            _filter_options(capability_rows, "capabilityId"),
+            key="asset_graph_capability_filter",
+        )
+        selected_status = filter_cols[1].selectbox(
+            "Status",
+            _filter_options(capability_rows, "status"),
+            key="asset_graph_capability_status_filter",
+        )
+        selected_category = filter_cols[2].selectbox(
+            "Category",
+            _multi_filter_options(capability_rows, ["referencedByCategories"]),
+            key="asset_graph_capability_category_filter",
+        )
+        selected_attention = filter_cols[3].selectbox(
+            "Gap/orphan",
+            attention_options,
+            key="asset_graph_capability_attention_filter",
+        )
+        filtered_rows = _filter_asset_graph_rows(
+            capability_rows,
+            exact_filters={
+                "capabilityId": selected_capability,
+                "status": selected_status,
+            },
+            multi_filters={
+                "category": (selected_category, ["referencedByCategories"])
+            },
+            attention_filter=selected_attention,
+        )
+        st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+        with st.expander("Capability-detaljer"):
+            st.write(
+                "Capabilities med tom `dossiers`-lista markeras som gap; "
+                "referenser som saknas i Capability Map markeras som unknown."
+            )
+
+
+def _render_wizard_generation_mapping() -> None:
+    st.subheader("Wizardfält → generation")
+    st.caption(
+        "Read-only diagnostik över kända wizardfält. Backoffice visar bara "
+        "befintliga källor och är inte en ny runtime-sanning."
+    )
+    st.info(
+        "Denna vy visar kända och dokumenterade wizardfält. Den är diagnostisk "
+        "och kan vara ofullständig om frontendtypen ändras utan att "
+        "diagnostikhelpern uppdateras."
+    )
+
+    rows = discovery_wizard_diagnostics.wizard_generation_rows()
+    summary = discovery_wizard_diagnostics.wizard_generation_summary(rows)
+
+    cols = st.columns(4)
+    cols[0].metric("Wizardfält", summary["total"])
+    cols[1].metric("Aktiva", summary["active"])
+    cols[2].metric("Fallback/planned", summary["fallback_or_planned"])
+    cols[3].metric(
+        "Gap/unknown/saknar destination",
+        summary["needs_attention"],
+    )
+    detail_cols = st.columns(3)
+    detail_cols[0].metric("Deterministiska", summary["deterministic"])
+    detail_cols[1].metric("Prompt-signaler", summary["prompt_signal"])
+    detail_cols[2].metric("Downstream-gap", summary["downstream_gap"])
+
+    filter_cols = st.columns(4)
+    selected_step = filter_cols[0].selectbox(
+        "Steg",
+        _filter_options(rows, "stepLabel"),
+        key="wizard_generation_step_filter",
+    )
+    selected_status = filter_cols[1].selectbox(
+        "Status",
+        _filter_options(rows, "status"),
+        key="wizard_generation_status_filter",
+    )
+    selected_propagation = filter_cols[2].selectbox(
+        "Signalnivå",
+        _filter_options(rows, "propagationLevel"),
+        key="wizard_generation_propagation_filter",
+    )
+    destination_query = filter_cols[3].text_input(
+        "Destination/källa",
+        key="wizard_generation_destination_filter",
+        placeholder="t.ex. brand, capability, taxonomy",
+    )
+
+    filtered_rows = rows
+    if selected_step != "Alla":
+        filtered_rows = [
+            row for row in filtered_rows if row["stepLabel"] == selected_step
+        ]
+    if selected_status != "Alla":
+        filtered_rows = [
+            row for row in filtered_rows if row["status"] == selected_status
+        ]
+    if selected_propagation != "Alla":
+        filtered_rows = [
+            row
+            for row in filtered_rows
+            if row["propagationLevel"] == selected_propagation
+        ]
+    if destination_query.strip():
+        needle = destination_query.strip().lower()
+        filtered_rows = [
+            row
+            for row in filtered_rows
+            if needle
+            in " ".join(
+                [
+                    row["answerPath"],
+                    row["destination"],
+                    row["sourceChain"],
+                    row["sourcePath"],
+                    row["explanation"],
+                ]
+            ).lower()
+        ]
+
+    st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+
+    with st.expander("Källa och avgränsning"):
+        st.markdown(
+            "- `status` visar om känd mapping är aktiv, planned/fallback, gap, "
+            "unknown eller saknar känd destination.\n"
+            "- `propagationLevel` visar hur långt signalen kan styrkas: "
+            "deterministisk destination, prompt-signal, Project Input-only, "
+            "downstream-gap eller diagnostic-only.\n"
+            "- Wizarden får inte sätta `starterId` direkt.\n"
+            "- Dossiers väljs inte direkt av wizardknappar; wizardens svar blir "
+            "capability-/taxonomisignaler och går vidare via Capability Map, "
+            "Dossier Selection och planning."
+        )
+
+
+def _render_sni_discovery_mapping() -> None:
+    st.subheader("SNI → Discovery category")
+    st.caption(
+        "Read-only diagnostik: SNI 2025-prefix (huvudgrupp/grupp) → "
+        "kandidat wizardCategoryId. Inget i runtime konsumerar SNI än."
+    )
+    for line in sni_diagnostics.WARNING_LINES_SV:
+        st.markdown(f"- {line}")
+
+    reference = sni_diagnostics.load_sni_reference()
+    ref_summary = sni_diagnostics.reference_summary(reference)
+    rows = sni_diagnostics.mapping_rows(reference=reference)
+    summary = sni_diagnostics.mapping_summary(rows)
+
+    metric_cols = st.columns(4)
+    metric_cols[0].metric("SNI-poster", ref_summary["total"])
+    metric_cols[1].metric("Huvudgrupp-mappningar", summary["divisionMappings"])
+    metric_cols[2].metric("Grupp-overrides", summary["groupOverrides"])
+    metric_cols[3].metric("Unika kategorier", summary["uniqueCategories"])
+
+    detail_cols = st.columns(5)
+    detail_cols[0].metric("Avdelningar", ref_summary["section"])
+    detail_cols[1].metric("Huvudgrupper", ref_summary["division"])
+    detail_cols[2].metric("Grupper", ref_summary["group"])
+    detail_cols[3].metric("Undergrupper", ref_summary["class"])
+    detail_cols[4].metric("Detaljgrupper", ref_summary["subclass"])
+
+    confidence = sni_diagnostics.confidence_breakdown(rows)
+    conf_cols = st.columns(4)
+    conf_cols[0].metric("Confidence high", confidence["high"])
+    conf_cols[1].metric("Confidence medium", confidence["medium"])
+    conf_cols[2].metric("Confidence low", confidence["low"])
+    conf_cols[3].metric("Confidence övrigt", confidence["other"])
+
+    if summary["unknownCategories"]:
+        st.warning(
+            f"{summary['unknownCategories']} policyrad(er) pekar mot en "
+            "wizardCategoryId som inte finns i Discovery Taxonomy. Justera "
+            "policy eller taxonomy innan SNI används som signal."
+        )
+
+    coverage_gaps = sni_diagnostics.taxonomy_coverage_gaps(rows=rows)
+    with st.expander(
+        f"Discovery Taxonomy-kategorier utan SNI-mappning ({len(coverage_gaps)})"
+    ):
+        if coverage_gaps:
+            st.caption(
+                "Kategorier som finns i Discovery Taxonomy men inte har en "
+                "enda policyrad i SNI Discovery Map. Inte ett fel — bara en "
+                "indikator på var policyn kan breddas i en framtida sprint."
+            )
+            st.dataframe(coverage_gaps, use_container_width=True, hide_index=True)
+        else:
+            st.success("Alla Discovery Taxonomy-kategorier har minst en SNI-mappning.")
+
+    category_options = ["Alla"] + sorted({str(row["wizardCategoryId"]) for row in rows})
+    selected_category = st.selectbox(
+        "wizardCategoryId",
+        category_options,
+        key="sni_mapping_category_filter",
+    )
+    filtered_rows = sni_diagnostics.filter_rows_by_category(rows, selected_category)
+    st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+
+    st.divider()
+    st.markdown("**Testa en SNI-kod**")
+    st.caption(
+        "Ange en 2- till 5-siffrig SNI-kod (med eller utan punkt). Diagnostiken "
+        "visar matchad prefix, kandidat-kategori, parent-chain från avdelning "
+        "ner till själva koden och hur Discovery Taxonomy skulle välja "
+        "scaffold/variant/starter när kategorin når resolvern."
+    )
+    sni_input = st.text_input(
+        "SNI-kod",
+        key="sni_lookup_input",
+        placeholder="t.ex. 56, 56.10, 56100 eller 691",
+    )
+    if sni_input.strip():
+        lookup = sni_diagnostics.lookup_row(sni_input)
+        parent_chain = sni_diagnostics.lookup_parent_chain(sni_input, reference=reference)
+        if lookup["matchedLevel"] == "unknown" and not parent_chain:
+            st.info(
+                "Ingen policymappning matchade och koden finns inte i SNI-"
+                "referensen. SNI är branschsignal — okänd kod är ett tyst "
+                "no-op, inte ett fel."
+            )
+        else:
+            if parent_chain:
+                st.markdown("**Parent-chain i SNI 2025-referensen**")
+                st.dataframe(parent_chain, use_container_width=True, hide_index=True)
+            if lookup["matchedLevel"] == "unknown":
+                st.info(
+                    "Koden finns i SNI-referensen men ingen policymappning "
+                    "täcker prefixet. Inte ett fel — bara en täckningslucka."
+                )
+            else:
+                st.json(lookup, expanded=False)
+                if not lookup["categoryKnown"]:
+                    st.warning(
+                        "Mappningen pekar mot en wizardCategoryId som saknas "
+                        "i Discovery Taxonomy. Inga scaffold/variant/starter "
+                        "visas."
+                    )
+
+
 def view_control_plane() -> None:
     st.title("Kontrollplan")
     st.caption(
@@ -292,6 +758,15 @@ def view_control_plane() -> None:
 
     st.divider()
     _render_discovery_mapping()
+
+    st.divider()
+    _render_wizard_generation_mapping()
+
+    st.divider()
+    _render_sni_discovery_mapping()
+
+    st.divider()
+    _render_asset_graph()
 
     st.divider()
     st.subheader("Konsekvensvy")

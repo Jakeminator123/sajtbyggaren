@@ -11,10 +11,12 @@ from .paths import DATA_DIR, POLICIES_DIR, REPO_ROOT
 
 SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
 DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
+STARTERS_DIR = DATA_DIR / "starters"
 VARIANT_CANDIDATES_DIR = DATA_DIR / "variant-candidates"
 DOSSIER_CANDIDATES_DIR = DATA_DIR / "dossier-candidates"
 EMBEDDING_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "embedding"
 PLACEHOLDER_MARKER = "placeholder, fill per scaffold-contract"
+ATTENTION_STATUSES = {"gap", "orphan", "missing-on-disk", "unknown"}
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -181,6 +183,189 @@ def _edge(source: str, target: str, relation: str, details: str = "") -> dict[st
     return {"from": source, "to": target, "relation": relation, "details": details}
 
 
+def _runtime_mapping() -> dict[str, str]:
+    """Return the runtime Scaffold to Starter mapping."""
+    from packages.generation.planning.plan import SCAFFOLD_TO_STARTER
+
+    return dict(SCAFFOLD_TO_STARTER)
+
+
+def _scaffold_registry_by_id(
+    contract: dict[str, Any] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Return scaffold-contract registry entries keyed by Scaffold id."""
+    payload = contract if contract is not None else load_policy("scaffold-contract.v1.json")
+    return {
+        str(entry["id"]): entry
+        for entry in payload.get("primaryScaffoldRegistry", [])
+        if isinstance(entry, dict) and isinstance(entry.get("id"), str)
+    }
+
+
+def _starter_registry_by_id(
+    registry: dict[str, Any] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Return starter-registry entries keyed by Starter id."""
+    payload = registry if registry is not None else load_policy("starter-registry.v1.json")
+    return {
+        str(entry["id"]): entry
+        for entry in payload.get("starters", [])
+        if isinstance(entry, dict) and isinstance(entry.get("id"), str)
+    }
+
+
+def _capability_entries(
+    policy: dict[str, Any] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Return capability-map entries keyed by Capability id."""
+    payload = policy if policy is not None else load_policy("capability-map.v1.json")
+    capabilities = payload.get("capabilities", {})
+    if not isinstance(capabilities, dict):
+        return {}
+    return {
+        str(capability_id): entry
+        for capability_id, entry in capabilities.items()
+        if isinstance(entry, dict)
+    }
+
+
+def _status_needs_attention(status: str) -> bool:
+    """Return whether a row status represents a gap, orphan, missing or unknown asset."""
+    return status in ATTENTION_STATUSES
+
+
+def _comma_join(values: list[str] | tuple[str, ...] | set[str]) -> str:
+    """Return stable comma-separated display text for dataframe cells."""
+    return ", ".join(sorted(str(value) for value in values if str(value)))
+
+
+def _truthy_gap(value: Any) -> bool:
+    """Return True when a dataframe row gap flag is truthy."""
+    return value is True or str(value).lower() in {"ja", "true", "1"}
+
+
+def _categories_by_capability(
+    taxonomy: dict[str, Any],
+) -> dict[str, list[str]]:
+    """Return Discovery category ids grouped by requested Capability."""
+    by_capability: dict[str, list[str]] = {}
+    for category in taxonomy.get("categories", []) or []:
+        if not isinstance(category, dict) or not isinstance(category.get("id"), str):
+            continue
+        category_id = str(category["id"])
+        for capability_id in category.get("requestedCapabilities", []) or []:
+            if isinstance(capability_id, str) and capability_id:
+                by_capability.setdefault(capability_id, []).append(category_id)
+    return by_capability
+
+
+def _categories_by_scaffold(
+    taxonomy: dict[str, Any],
+) -> dict[str, list[str]]:
+    """Return Discovery category ids grouped by any scaffold reference."""
+    by_scaffold: dict[str, list[str]] = {}
+    for category in taxonomy.get("categories", []) or []:
+        if not isinstance(category, dict) or not isinstance(category.get("id"), str):
+            continue
+        category_id = str(category["id"])
+        scaffold_ids = {
+            str(category.get(field_name) or "")
+            for field_name in (
+                "targetScaffoldId",
+                "activeScaffoldId",
+                "fallbackScaffoldId",
+            )
+        }
+        for scaffold_id in sorted(scaffold_ids):
+            if scaffold_id:
+                by_scaffold.setdefault(scaffold_id, []).append(category_id)
+    return by_scaffold
+
+
+def _scaffold_id_and_label(scaffold_dir: Path) -> tuple[str, str]:
+    """Return the Scaffold id and label declared by a directory."""
+    scaffold_json = scaffold_dir / "scaffold.json"
+    if scaffold_json.exists() and not is_placeholder_file(scaffold_json):
+        try:
+            payload = read_json(scaffold_json)
+        except (OSError, ValueError, json.JSONDecodeError):
+            return scaffold_dir.name, ""
+        return (
+            str(payload.get("id") or scaffold_dir.name),
+            str(payload.get("label") or ""),
+        )
+    return scaffold_dir.name, ""
+
+
+def _variant_ids_for_scaffold(scaffold_dir: Path) -> list[str]:
+    """Return canonical Variant ids found under one Scaffold directory."""
+    variants_dir = scaffold_dir / "variants"
+    if not variants_dir.exists():
+        return []
+    variant_ids: list[str] = []
+    for variant_path in sorted(variants_dir.glob("*.json")):
+        try:
+            payload = read_json(variant_path)
+            variant_ids.append(str(payload.get("id") or variant_path.stem))
+        except (OSError, ValueError, json.JSONDecodeError):
+            variant_ids.append(variant_path.stem)
+    return variant_ids
+
+
+def _starter_path(starter: dict[str, Any] | None, starter_id: str) -> Path:
+    """Return the expected on-disk path for one Starter."""
+    if starter and isinstance(starter.get("path"), str) and starter["path"]:
+        return REPO_ROOT / starter["path"]
+    return STARTERS_DIR / starter_id
+
+
+def _starter_status(
+    *,
+    starter_id: str,
+    registry_entry: dict[str, Any] | None,
+    on_disk: bool,
+    runtime_scaffolds: list[str],
+) -> str:
+    """Return the Asset Graph row status for one Starter."""
+    registry_status = str(registry_entry.get("status", "")) if registry_entry else ""
+    enabled = _enabled(registry_entry or {})
+    if registry_entry is None and on_disk:
+        return "orphan"
+    if enabled is False:
+        return "disabled"
+    if not on_disk:
+        return "missing-on-disk"
+    if runtime_scaffolds:
+        return "active-runtime"
+    if registry_status in {
+        "active",
+        "fallback",
+        "planned",
+        "disabled",
+        "active-runtime",
+        "available-not-mapped",
+        "placeholder",
+    }:
+        return registry_status
+    return "unknown"
+
+
+def _capability_status(
+    *,
+    entry: dict[str, Any] | None,
+    dossier_ids: list[str],
+    missing_dossier_ids: list[str],
+) -> str:
+    """Return the Asset Graph row status for one Capability."""
+    if entry is None:
+        return "unknown"
+    if missing_dossier_ids:
+        return "unknown"
+    if not dossier_ids:
+        return "gap"
+    return "active"
+
+
 def _compatible_dossier_id(entry: Any) -> str | None:
     """Return a Dossier id from a compatible-dossiers entry."""
     if isinstance(entry, str) and entry.strip():
@@ -343,6 +528,275 @@ def _candidate_dossier_nodes() -> list[dict[str, Any]]:
                 )
             )
     return nodes
+
+
+def asset_graph_category_rows() -> list[dict[str, Any]]:
+    """Return read-only Asset Graph rows for Discovery categories."""
+    from . import discovery_control
+
+    taxonomy = load_policy("discovery-taxonomy.v1.json")
+    capability_entries = _capability_entries()
+    mapping_rows = discovery_control.category_mapping_rows(taxonomy)
+    rows: list[dict[str, Any]] = []
+    for mapping_row in mapping_rows:
+        category_id = str(mapping_row.get("categoryId") or "")
+        category = next(
+            (
+                item
+                for item in taxonomy.get("categories", [])
+                if isinstance(item, dict) and item.get("id") == category_id
+            ),
+            {},
+        )
+        requested = [
+            str(capability_id)
+            for capability_id in category.get("requestedCapabilities", []) or []
+            if isinstance(capability_id, str)
+        ]
+        capability_gaps = [
+            capability_id
+            for capability_id in requested
+            if capability_id in capability_entries
+            and not (capability_entries[capability_id].get("dossiers") or [])
+        ]
+        unknown_capabilities = [
+            capability_id
+            for capability_id in requested
+            if capability_id not in capability_entries
+        ]
+        support_status = str(mapping_row.get("supportStatus") or "unknown")
+        status = (
+            support_status
+            if support_status in {"active", "fallback", "planned", "disabled"}
+            else "unknown"
+        )
+        mapping_state = str(mapping_row.get("mappingState") or "")
+        gap_or_orphan = bool(
+            capability_gaps
+            or unknown_capabilities
+            or mapping_state in {"orphan", "unknown"}
+        )
+        rows.append(
+            {
+                "categoryId": category_id,
+                "label": str(mapping_row.get("label") or ""),
+                "status": status,
+                "supportStatus": support_status,
+                "mappingState": mapping_state,
+                "targetScaffoldId": str(mapping_row.get("targetScaffoldId") or ""),
+                "activeScaffoldId": str(mapping_row.get("activeScaffoldId") or ""),
+                "fallbackScaffoldId": str(mapping_row.get("fallbackScaffoldId") or ""),
+                "defaultVariantId": str(mapping_row.get("defaultVariantId") or ""),
+                "expectedStarterId": str(mapping_row.get("expectedStarterId") or ""),
+                "requestedCapabilities": _comma_join(requested),
+                "candidateDossiers": str(mapping_row.get("candidateDossiers") or ""),
+                "capabilityGaps": _comma_join(capability_gaps),
+                "unknownCapabilities": _comma_join(unknown_capabilities),
+                "gapOrOrphan": gap_or_orphan,
+                "fallbackWarnings": str(mapping_row.get("fallbackWarnings") or ""),
+                "rationale": str(mapping_row.get("rationale") or ""),
+            }
+        )
+    return rows
+
+
+def asset_graph_scaffold_rows() -> list[dict[str, Any]]:
+    """Return read-only Asset Graph rows for Scaffolds."""
+    contract = load_policy("scaffold-contract.v1.json")
+    starter_registry = _starter_registry_by_id()
+    taxonomy = load_policy("discovery-taxonomy.v1.json")
+    runtime_map = _runtime_mapping()
+    required_files = scaffold_required_files(contract)
+    registry = _scaffold_registry_by_id(contract)
+    category_refs = _categories_by_scaffold(taxonomy)
+    on_disk_dirs: dict[str, Path] = {}
+    on_disk_labels: dict[str, str] = {}
+    for scaffold_dir in list_scaffold_dirs():
+        scaffold_id, label = _scaffold_id_and_label(scaffold_dir)
+        on_disk_dirs[scaffold_id] = scaffold_dir
+        on_disk_labels[scaffold_id] = label
+
+    all_scaffold_ids = sorted(set(registry) | set(on_disk_dirs) | set(runtime_map))
+    rows: list[dict[str, Any]] = []
+    for scaffold_id in all_scaffold_ids:
+        registry_entry = registry.get(scaffold_id)
+        scaffold_dir = on_disk_dirs.get(scaffold_id)
+        on_disk = scaffold_dir is not None
+        path = scaffold_dir if scaffold_dir is not None else SCAFFOLDS_DIR / scaffold_id
+        enabled = _enabled(registry_entry or {})
+        if scaffold_dir is not None:
+            file_state = scaffold_file_state(scaffold_dir, required_files)
+            variant_ids = _variant_ids_for_scaffold(scaffold_dir)
+        else:
+            file_state = {
+                "status": "missing",
+                "missing": list(required_files),
+                "placeholders": [],
+            }
+            variant_ids = []
+
+        runtime_starter = runtime_map.get(scaffold_id, "")
+        if registry_entry is None and on_disk:
+            status = "orphan"
+        elif enabled is False:
+            status = "disabled"
+        elif not on_disk:
+            status = "missing-on-disk"
+        elif file_state["status"] == "placeholder":
+            status = "placeholder"
+        elif file_state["status"] != "implemented":
+            status = "missing-on-disk"
+        elif runtime_starter:
+            status = "active-runtime"
+        elif registry_entry is not None:
+            status = "planned"
+        else:
+            status = "unknown"
+
+        starter_status = ""
+        if runtime_starter:
+            starter_status = str(
+                starter_registry.get(runtime_starter, {}).get("status") or "unknown"
+            )
+        rows.append(
+            {
+                "scaffoldId": scaffold_id,
+                "label": str(
+                    (registry_entry or {}).get("label")
+                    or on_disk_labels.get(scaffold_id)
+                    or ""
+                ),
+                "status": status,
+                "enabled": enabled,
+                "onDisk": on_disk,
+                "path": repo_relative(path),
+                "fileState": str(file_state["status"]),
+                "missingFiles": _comma_join(file_state.get("missing", [])),
+                "placeholderFiles": _comma_join(file_state.get("placeholders", [])),
+                "variantIds": _comma_join(variant_ids),
+                "runtimeStarterId": runtime_starter,
+                "starterStatus": starter_status,
+                "referencedByCategories": _comma_join(category_refs.get(scaffold_id, [])),
+                "gapOrOrphan": _status_needs_attention(status),
+            }
+        )
+    return rows
+
+
+def asset_graph_starter_rows() -> list[dict[str, Any]]:
+    """Return read-only Asset Graph rows for Starters."""
+    registry = _starter_registry_by_id()
+    runtime_map = _runtime_mapping()
+    runtime_scaffolds_by_starter: dict[str, list[str]] = {}
+    for scaffold_id, starter_id in runtime_map.items():
+        runtime_scaffolds_by_starter.setdefault(starter_id, []).append(scaffold_id)
+
+    on_disk_ids: set[str] = set()
+    if STARTERS_DIR.exists():
+        on_disk_ids = {
+            path.name for path in STARTERS_DIR.iterdir() if path.is_dir()
+        }
+    all_starter_ids = sorted(
+        set(registry) | set(runtime_scaffolds_by_starter) | on_disk_ids
+    )
+    rows: list[dict[str, Any]] = []
+    for starter_id in all_starter_ids:
+        registry_entry = registry.get(starter_id)
+        path = _starter_path(registry_entry, starter_id)
+        on_disk = path.exists()
+        runtime_scaffolds = sorted(runtime_scaffolds_by_starter.get(starter_id, []))
+        status = _starter_status(
+            starter_id=starter_id,
+            registry_entry=registry_entry,
+            on_disk=on_disk,
+            runtime_scaffolds=runtime_scaffolds,
+        )
+        rows.append(
+            {
+                "starterId": starter_id,
+                "label": str((registry_entry or {}).get("label") or ""),
+                "status": status,
+                "enabled": _enabled(registry_entry or {}),
+                "onDisk": on_disk,
+                "path": repo_relative(path),
+                "registryStatus": str((registry_entry or {}).get("status") or ""),
+                "runtimeMappedScaffolds": _comma_join(runtime_scaffolds),
+                "runtimeMappedScaffoldCount": len(runtime_scaffolds),
+                "gapOrOrphan": _status_needs_attention(status),
+                "rationale": str((registry_entry or {}).get("rationale") or ""),
+            }
+        )
+    return rows
+
+
+def asset_graph_capability_rows() -> list[dict[str, Any]]:
+    """Return read-only Asset Graph rows for Capabilities and their Dossiers."""
+    capability_entries = _capability_entries()
+    taxonomy = load_policy("discovery-taxonomy.v1.json")
+    category_refs = _categories_by_capability(taxonomy)
+    classes = dossier_classes()
+    dossier_manifests = _dossier_manifests_by_id(classes=classes)
+    all_capability_ids = sorted(set(capability_entries) | set(category_refs))
+    rows: list[dict[str, Any]] = []
+    for capability_id in all_capability_ids:
+        entry = capability_entries.get(capability_id)
+        dossier_ids = [
+            str(dossier_id)
+            for dossier_id in (entry or {}).get("dossiers", []) or []
+            if isinstance(dossier_id, str) and dossier_id
+        ]
+        missing_dossier_ids = [
+            dossier_id for dossier_id in dossier_ids if dossier_id not in dossier_manifests
+        ]
+        status = _capability_status(
+            entry=entry,
+            dossier_ids=dossier_ids,
+            missing_dossier_ids=missing_dossier_ids,
+        )
+        referenced_by = sorted(category_refs.get(capability_id, []))
+        rows.append(
+            {
+                "capabilityId": capability_id,
+                "status": status,
+                "dossierIds": _comma_join(dossier_ids),
+                "defaultDossierId": str((entry or {}).get("default") or ""),
+                "dossierCount": len(dossier_ids),
+                "missingDossierIds": _comma_join(missing_dossier_ids),
+                "referencedByCategories": _comma_join(referenced_by),
+                "categoryCount": len(referenced_by),
+                "comment": str((entry or {}).get("comment") or ""),
+                "gapOrOrphan": _status_needs_attention(status),
+            }
+        )
+    return rows
+
+
+def asset_graph_summary() -> dict[str, int]:
+    """Return summary counts for the Backoffice Asset Graph lens."""
+    category_rows = asset_graph_category_rows()
+    scaffold_rows = asset_graph_scaffold_rows()
+    starter_rows = asset_graph_starter_rows()
+    capability_rows = asset_graph_capability_rows()
+    attention_rows = [*category_rows, *scaffold_rows, *starter_rows, *capability_rows]
+    return {
+        "categories": len(category_rows),
+        "scaffolds": len(scaffold_rows),
+        "starters": len(starter_rows),
+        "runtimeMappedStarters": sum(
+            1
+            for row in starter_rows
+            if int(row.get("runtimeMappedScaffoldCount") or 0) > 0
+        ),
+        "availableNotMappedStarters": sum(
+            1 for row in starter_rows if row.get("status") == "available-not-mapped"
+        ),
+        "gapsOrphansMissing": sum(
+            1
+            for row in attention_rows
+            if _truthy_gap(row.get("gapOrOrphan"))
+            or _status_needs_attention(str(row.get("status") or ""))
+        ),
+    }
 
 
 def build_graph() -> dict[str, list[dict[str, Any]]]:

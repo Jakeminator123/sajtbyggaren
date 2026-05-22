@@ -27,6 +27,7 @@ FieldSourceLiteral = Literal[
     "default",
     "operator",
     "pinned",
+    "derived",
 ]
 """Tillåtna värden i ``DiscoveryDecision.fieldSources``-mappen."""
 

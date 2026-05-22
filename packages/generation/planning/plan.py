@@ -567,92 +567,89 @@ def _route_plan_from_scaffold(scaffold: dict[str, Any]) -> list[dict[str, str]]:
     ]
 
 
-# B138: Wizardens pageCount-fält var dead data — _route_plan_from_scaffold
-# returnerade alltid scaffold-defaults oavsett operatörens önskade
-# sidantal. Vi trimmar nu route_plan när pageCount är lägre än default-
-# antalet, prioriterar '/' (home) och wizard-must-have-routes så de
-# viktigaste sidorna alltid överlever. Operator får en warning så
-# beteendet inte är magiskt.
-_HOME_PATH = "/"
+_MINIMUM_RUNNABLE_ROUTE_COUNT = 2
+_PAGE_COUNT_VALID_RANGE = range(1, 11)  # 1-10 inclusive
 
 
-def _trim_route_plan_to_page_count(
+def _trim_route_plan(
     route_plan: list[dict[str, str]],
     page_count: int | None,
-    wizard_must_have: list[str] | None,
-) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
-    """Trimma route-planen till operatörens önskade pageCount.
+) -> tuple[list[dict[str, str]], dict[str, Any] | None]:
+    """Trim route_plan to honour ``brief.pageCount`` (B138).
 
-    Returnerar ``(trimmed_routes, page_count_warnings)``. Warnings är
-    samma format som ``_page_intent_warnings`` så de kan slås ihop
-    direkt utan extra packing.
+    Rules:
+      * ``page_count`` outside 1-10 (None, int below 1, int above 10) →
+        no trim, no warning. Defensive against briefModel halucinations.
+      * ``page_count`` >= scaffold defaults → no trim, no warning.
+      * ``home`` + ``contact`` routes are never dropped (identified by id;
+        falls back to first/last route if those ids are missing).
+      * Minimum runnable set is 2 (home + contact). ``page_count`` < 2 is
+        clamped to 2 with ``reason="below-minimum-keeping-default"``.
+      * Middle slots are filled in scaffold default order.
 
-    Prioritetsordning för att behålla en route:
-        1. ``/`` (home) — utan home är sajten inte navigerbar.
-        2. Routes som matchar en wizard-must-have-page-hint.
-        3. Övriga scaffold-routes i deklarations-ordning.
-
-    När ``page_count`` är None, mindre än 1, eller >= len(route_plan)
-    görs ingen trimning och inga warnings genereras (caller behöver
-    inte särfalla på det).
+    Returns ``(possibly_trimmed_route_plan, optional_warning_dict)``.
     """
-    if not isinstance(page_count, int) or page_count < 1:
-        return route_plan, []
-    if page_count >= len(route_plan):
-        return route_plan, []
+    if not isinstance(page_count, int):
+        return route_plan, None
+    if isinstance(page_count, bool):
+        # bool is a subclass of int; reject defensively.
+        return route_plan, None
+    if page_count not in _PAGE_COUNT_VALID_RANGE:
+        return route_plan, None
 
-    must_have_paths: set[str] = set()
-    if wizard_must_have:
-        for page in wizard_must_have:
-            hint = _PAGE_TO_ROUTE_HINT.get(page)
-            if isinstance(hint, str):
-                must_have_paths.add(hint)
+    default_count = len(route_plan)
+    if default_count == 0:
+        return route_plan, None
+    if page_count >= default_count:
+        return route_plan, None
 
-    home = next(
-        (r for r in route_plan if r.get("path") == _HOME_PATH),
+    home_idx = next(
+        (i for i, r in enumerate(route_plan) if r.get("id") == "home"),
         None,
     )
-    must_have_routes = [
-        r
-        for r in route_plan
-        if r.get("path") in must_have_paths and r.get("path") != _HOME_PATH
-    ]
-    other_routes = [
-        r
-        for r in route_plan
-        if r.get("path") != _HOME_PATH and r.get("path") not in must_have_paths
-    ]
+    contact_idx = next(
+        (i for i, r in enumerate(route_plan) if r.get("id") == "contact"),
+        None,
+    )
+    # Defensive fallback: if scaffold lacks canonical home/contact IDs,
+    # treat first/last route as the anchor pair so trim still produces a
+    # sensible 2-route minimum.
+    if home_idx is None:
+        home_idx = 0
+    if contact_idx is None or contact_idx == home_idx:
+        contact_idx = default_count - 1 if default_count > 1 else None
 
-    kept: list[dict[str, str]] = []
-    if home is not None:
-        kept.append(home)
-    for route in must_have_routes:
-        if len(kept) >= page_count:
-            break
-        kept.append(route)
-    for route in other_routes:
-        if len(kept) >= page_count:
-            break
-        kept.append(route)
+    effective_count = max(page_count, _MINIMUM_RUNNABLE_ROUTE_COUNT)
+    keep_idx: list[int] = [home_idx]
+    if contact_idx is not None and contact_idx != home_idx:
+        seats_for_middle = effective_count - 2
+        middle_candidates = [
+            i
+            for i in range(default_count)
+            if i != home_idx and i != contact_idx
+        ]
+        if seats_for_middle > 0:
+            keep_idx.extend(middle_candidates[:seats_for_middle])
+        keep_idx.append(contact_idx)
+    else:
+        # Single-route scaffold (rare). Nothing to trim further.
+        return route_plan, None
 
-    dropped = [r for r in route_plan if r not in kept]
-    warnings: list[dict[str, str]] = []
-    if dropped:
-        warnings.append(
-            {
-                "page": "pageCount",
-                "expectedPath": "(trimmed scaffold defaults)",
-                "reason": (
-                    f"site_brief.pageCount={page_count} requested; scaffold "
-                    f"defaults had {len(route_plan)} routes. Trimmed "
-                    f"to {len(kept)}; dropped: "
-                    + ", ".join(
-                        r.get("path", "?") for r in dropped if isinstance(r, dict)
-                    )
-                ),
-            }
-        )
-    return kept, warnings
+    keep_idx_sorted = sorted(set(keep_idx))
+    trimmed = [route_plan[i] for i in keep_idx_sorted]
+
+    reason = (
+        "below-minimum-keeping-default"
+        if page_count < _MINIMUM_RUNNABLE_ROUTE_COUNT
+        else "trimmed-to-brief-page-count"
+    )
+    warning: dict[str, Any] = {
+        "requestedPageCount": page_count,
+        "scaffoldDefaultCount": default_count,
+        "emittedRouteCount": len(trimmed),
+        "reason": reason,
+    }
+    return trimmed, warning
 
 
 _PAGE_TO_ROUTE_HINT: dict[str, str] = {
@@ -669,11 +666,218 @@ _PAGE_TO_ROUTE_HINT: dict[str, str] = {
 }
 
 
+# Wizard pages that the deterministic Builder can emit as real routes
+# without introducing new integration layers (no booking, payments,
+# auth, newsletter). Each entry maps a wizard mustHave label to a route
+# definition that ``write_pages`` knows how to render. Restricted to a
+# small set of scaffolds today (only ``local-service-business``) so the
+# expansion lands incrementally; ecommerce-lite and future scaffolds
+# need their own renderer review before opting in.
+_WIZARD_ROUTE_DEFINITIONS: dict[str, dict[str, str]] = {
+    "FAQ": {
+        "id": "faq",
+        "path": "/faq",
+        "purpose": (
+            "Answer recurring customer questions in a single readable "
+            "page so visitors do not need to call to clarify basics."
+        ),
+    },
+    "Bildgalleri": {
+        "id": "gallery",
+        "path": "/galleri",
+        "purpose": (
+            "Showcase project photos uploaded by the operator so "
+            "visitors can see real work before contacting."
+        ),
+    },
+    "Karta / Hitta hit": {
+        "id": "map",
+        "path": "/karta",
+        "purpose": (
+            "Show address, service area and a static map link so "
+            "local visitors can find or navigate to the business."
+        ),
+    },
+    "Vårt team": {
+        "id": "team",
+        "path": "/team",
+        "purpose": (
+            "Introduce the team members and their roles to build "
+            "trust before the visitor takes the contact step."
+        ),
+    },
+    "Priser och paket": {
+        "id": "pricing",
+        "path": "/priser",
+        "purpose": (
+            "List packages, price ranges or hourly rates so visitors "
+            "know what to expect before requesting a quote."
+        ),
+    },
+    "Portfolio / Case": {
+        "id": "portfolio",
+        "path": "/portfolio",
+        "purpose": (
+            "Showcase completed work as named cases so visitors can "
+            "judge quality and relevance to their own need."
+        ),
+    },
+}
+
+
+# Scaffolds whose renderer set in ``scripts/build_site.py`` can mount
+# the wizard-driven extras above. New scaffolds opt in explicitly when
+# the corresponding render_* helpers exist.
+_WIZARD_ROUTE_SCAFFOLDS: frozenset[str] = frozenset({"local-service-business"})
+
+
+# Wizard pages that intentionally stay warning-only because emitting
+# a route would require a real integration layer that the deterministic
+# Builder does not have today. Each entry carries the reason text shown
+# in ``pageIntentWarnings``; the path hint in ``_PAGE_TO_ROUTE_HINT`` is
+# what an operator would expect a future integration to land at.
+_WIZARD_ROUTE_UNSUPPORTED_REASONS: dict[str, str] = {
+    "Bokning online": (
+        "Wizard must-have page Bokning online requires a real "
+        "booking integration; deterministic Builder emits no fake "
+        "booking surface in v1."
+    ),
+    "Blogg / Nyheter": (
+        "Wizard must-have page Blogg / Nyheter requires editorial "
+        "tooling (CMS or markdown ingest); not in deterministic "
+        "Builder v1."
+    ),
+    "Nyhetsbrev": (
+        "Wizard must-have page Nyhetsbrev requires a newsletter "
+        "integration (signup + provider); not in deterministic "
+        "Builder v1."
+    ),
+}
+
+
+# ---------------------------------------------------------------------------
+# Read-only public accessors for Backoffice diagnostics
+# ---------------------------------------------------------------------------
+#
+# Backoffice diagnostics need to verify that every wizard ``mustHave``
+# option in ``apps/viewser/components/discovery-wizard/wizard-constants.ts``
+# has a known destination (wizard-extra route, scaffold default, warning
+# reason, or capability mapping). These helpers expose immutable copies of
+# the private mapping tables so the diagnostic does not import private
+# underscore-prefixed names. Runtime planning code keeps using the
+# private constants directly.
+
+
+def get_wizard_route_definitions() -> dict[str, dict[str, str]]:
+    """Read-only copy of wizard ``mustHave`` -> route definition mapping.
+
+    These are the wizard must-have labels that ``_wizard_extra_routes``
+    can emit as real routes (``id``/``path``/``purpose``) for scaffolds
+    listed in :func:`get_wizard_route_scaffolds`.
+    """
+    return {page: dict(definition) for page, definition in _WIZARD_ROUTE_DEFINITIONS.items()}
+
+
+def get_wizard_route_scaffolds() -> frozenset[str]:
+    """Read-only set of scaffold ids that opt in to wizard route emission.
+
+    Other scaffolds keep warning-shape via ``pageIntentWarnings`` for the
+    same wizard labels until their renderer set is reviewed.
+    """
+    return _WIZARD_ROUTE_SCAFFOLDS
+
+
+def get_wizard_route_unsupported_reasons() -> dict[str, str]:
+    """Read-only copy of wizard ``mustHave`` -> ``pageIntentWarnings`` reason map.
+
+    These wizard labels intentionally stay warning-only because emitting
+    a route would require a real integration layer (booking, CMS,
+    newsletter) the deterministic Builder does not have in v1.
+    """
+    return dict(_WIZARD_ROUTE_UNSUPPORTED_REASONS)
+
+
+def get_page_to_route_hint_mapping() -> dict[str, str]:
+    """Read-only copy of wizard ``mustHave`` -> expected route path hint.
+
+    Used by ``_page_intent_warnings`` to decide which scaffold-default
+    paths a wizard label is competing against, and by Backoffice
+    diagnostics to surface route hints next to the warning reason.
+    """
+    return dict(_PAGE_TO_ROUTE_HINT)
+
+
+def _insert_wizard_extras_before_contact(
+    scaffold_routes: list[dict[str, str]],
+    wizard_extras: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    """Compose the final routePlan with wizard extras sitting before
+    the contact route.
+
+    Keeping ``/kontakt`` (or whatever path the scaffold maps the
+    contact id to) at the end of the routePlan matches both visitor
+    intuition and the nav layout produced by
+    ``scripts.build_site._nav_items_from_scaffold``. When no contact
+    route is present the extras are appended at the tail so the
+    function never silently drops them.
+    """
+    if not wizard_extras:
+        return list(scaffold_routes)
+    contact_idx = next(
+        (i for i, route in enumerate(scaffold_routes) if route.get("id") == "contact"),
+        None,
+    )
+    if contact_idx is None:
+        return list(scaffold_routes) + list(wizard_extras)
+    return (
+        list(scaffold_routes[:contact_idx])
+        + list(wizard_extras)
+        + list(scaffold_routes[contact_idx:])
+    )
+
+
+def _wizard_extra_routes(
+    scaffold_id: str | None,
+    wizard_must_have: list[str] | None,
+    scaffold_default_paths: set[str],
+) -> list[dict[str, str]]:
+    """Return wizard-driven route entries to append to the routePlan.
+
+    The deterministic Builder only emits these for scaffolds in
+    ``_WIZARD_ROUTE_SCAFFOLDS``. Routes whose path already exists in
+    the scaffold defaults are skipped silently so trimming
+    ``brief.pageCount`` cannot accidentally collide with a wizard
+    extra. Order follows the operator's mustHave order so the route
+    list reflects the wizard intent rather than a hash-sorted set.
+    """
+    if not wizard_must_have or scaffold_id not in _WIZARD_ROUTE_SCAFFOLDS:
+        return []
+    seen_paths: set[str] = set()
+    extras: list[dict[str, str]] = []
+    for page in wizard_must_have:
+        route_def = _WIZARD_ROUTE_DEFINITIONS.get(page)
+        if route_def is None:
+            continue
+        path = route_def["path"]
+        if path in scaffold_default_paths or path in seen_paths:
+            continue
+        extras.append(dict(route_def))
+        seen_paths.add(path)
+    return extras
+
+
 def _pages_not_in_routes(
     wizard_must_have: list[str],
     routes: list[dict[str, Any]],
 ) -> list[str]:
-    """Return route-bearing wizard pages missing from the scaffold routes."""
+    """Return route-bearing wizard pages missing from the route plan.
+
+    A page is "missing" when the wizard mustHave entry maps to a path
+    in ``_PAGE_TO_ROUTE_HINT`` that does not appear in the supplied
+    ``routes`` (scaffold defaults + wizard extras combined). Wizard
+    extras that ``_wizard_extra_routes`` emitted as real routes are
+    therefore filtered out here automatically.
+    """
     route_paths = {
         route.get("path")
         for route in routes
@@ -694,20 +898,32 @@ def _page_intent_warnings(
     wizard_must_have: list[str] | None,
     routes: list[dict[str, Any]],
 ) -> list[dict[str, str]]:
-    """Render non-blocking warnings for wizard page intent route gaps."""
+    """Render non-blocking warnings for wizard page intent route gaps.
+
+    Pages that ``_wizard_extra_routes`` emitted as real routes are
+    filtered out via ``_pages_not_in_routes``. Pages in
+    ``_WIZARD_ROUTE_UNSUPPORTED_REASONS`` keep their specific reason
+    string so the operator can tell "no integration yet" apart from
+    "scaffold simply does not have this surface".
+    """
     if not wizard_must_have:
         return []
-    return [
-        {
-            "page": page,
-            "expectedPath": _PAGE_TO_ROUTE_HINT[page],
-            "reason": (
-                "Wizard must-have page is not emitted by the selected "
-                "scaffold route plan."
-            ),
-        }
-        for page in _pages_not_in_routes(wizard_must_have, routes)
-    ]
+    default_reason = (
+        "Wizard must-have page is not emitted by the selected "
+        "scaffold route plan."
+    )
+    warnings: list[dict[str, str]] = []
+    for page in _pages_not_in_routes(wizard_must_have, routes):
+        warnings.append(
+            {
+                "page": page,
+                "expectedPath": _PAGE_TO_ROUTE_HINT[page],
+                "reason": _WIZARD_ROUTE_UNSUPPORTED_REASONS.get(
+                    page, default_reason
+                ),
+            }
+        )
+    return warnings
 
 
 def _selected_dossiers_payload(
@@ -819,11 +1035,9 @@ def _assemble_site_plan(
     created_at: str,
     page_intent_warnings: list[dict[str, str]],
     route_plan: list[dict[str, str]] | None = None,
+    page_count_warning: dict[str, Any] | None = None,
+    intent_guard_warnings: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
-    # B138: pageCount-trimning sker i produce_site_plan() innan denna
-    # helper kallas så vi tar en redan-trimmad route_plan in.
-    # Fallback till scaffold-defaults gör tester och äldre callers
-    # bakåtkompatibla med den gamla signaturen.
     if route_plan is None:
         route_plan = _route_plan_from_scaffold(scaffold)
     site_plan: dict[str, Any] = {
@@ -845,6 +1059,12 @@ def _assemble_site_plan(
         "planError": plan_error,
         "createdAt": created_at,
     }
+    if page_count_warning is not None:
+        site_plan["pageCountWarning"] = page_count_warning
+    if intent_guard_warnings:
+        # Empty list intentionally omitted from the schema-required keys so
+        # legacy consumers do not need to treat "no warnings" as a new field.
+        site_plan["intentGuardWarnings"] = list(intent_guard_warnings)
     scaffold_version = (scaffold.get("scaffold") or {}).get("version")
     if isinstance(scaffold_version, str) and scaffold_version:
         site_plan["scaffoldVersion"] = scaffold_version
@@ -906,6 +1126,7 @@ def produce_site_plan(
     project_id: str | None = None,
     verification_policy: str | None = None,
     preview_runtime: str = "local",
+    intent_guard_warnings: list[dict[str, str]] | None = None,
 ) -> PlanResult:
     """Phase 2 Plan entry point. Single source of truth for both scripts.
 
@@ -996,18 +1217,30 @@ def produce_site_plan(
         verification_policy = "build-must-pass" if pinned is not None else "fast"
 
     created_at = _utc_now_iso()
-    full_route_plan = _route_plan_from_scaffold(scaffold)
-    # B138: Honora site_brief.pageCount genom att trimma route-planen
-    # innan _page_intent_warnings körs (warnings ska reflektera den
-    # faktiska, trimmade planen — annars varnar vi om "saknade" routes
-    # som vi själva precis tog bort).
-    requested_page_count = site_brief.get("pageCount")
-    route_plan, page_count_warnings = _trim_route_plan_to_page_count(
-        full_route_plan,
-        requested_page_count if isinstance(requested_page_count, int) else None,
-        wizard_must_have,
+    raw_route_plan = _route_plan_from_scaffold(scaffold)
+    # B138: respect brief.pageCount when emitting routes. Trim runs for
+    # both pinned and helper-chosen scaffolds; warning surfaces in the
+    # site-plan so operator/Backoffice can see why the count diverged.
+    # The trim only touches scaffold defaults; wizard-driven extras
+    # below are operator-explicit choices and stay outside the trim so
+    # a low brief.pageCount cannot silently delete a must-have page.
+    page_count_value = site_brief.get("pageCount")
+    trimmed_route_plan, page_count_warning = _trim_route_plan(
+        raw_route_plan, page_count_value
     )
-    intent_warnings = _page_intent_warnings(wizard_must_have, route_plan)
+    scaffold_default_paths = {
+        route["path"]
+        for route in trimmed_route_plan
+        if isinstance(route, dict) and isinstance(route.get("path"), str)
+    }
+    wizard_extra_routes = _wizard_extra_routes(
+        choice.scaffoldId,
+        wizard_must_have,
+        scaffold_default_paths,
+    )
+    full_route_plan = _insert_wizard_extras_before_contact(
+        trimmed_route_plan, wizard_extra_routes
+    )
     site_plan = _assemble_site_plan(
         run_id=run_id,
         choice=choice,
@@ -1019,8 +1252,13 @@ def produce_site_plan(
         verification_policy=verification_policy,
         preview_runtime=preview_runtime,
         created_at=created_at,
-        page_intent_warnings=page_count_warnings + intent_warnings,
-        route_plan=route_plan,
+        page_intent_warnings=_page_intent_warnings(
+            wizard_must_have,
+            full_route_plan,
+        ),
+        route_plan=full_route_plan,
+        page_count_warning=page_count_warning,
+        intent_guard_warnings=intent_guard_warnings,
     )
     validate_site_plan(site_plan)
 

@@ -1,0 +1,261 @@
+{
+  "$schema": "../schemas/sni-discovery-map.schema.json",
+  "policyId": "sni-discovery-map.v1",
+  "version": 1,
+  "status": "draft-but-authoritative",
+  "purpose": "Operatörens handstyrda översättning från SNI 2025-prefix (huvudgrupp / grupp) till en kandidat wizardCategoryId i discovery-taxonomy.v1.json. SNI är en branschsignal i V1 — Backoffice diagnostiserar mappningen read-only; ingen runtime-konsumtion av SNI sker än.",
+  "principles": [
+    "SNI 2025 är branschsignal, inte runtime-sanning.",
+    "SNI får aldrig välja starterId, scaffoldId, variantId eller Dossier direkt.",
+    "Discovery Taxonomy avgör fortsatt scaffold/variant/expectedStarterId/requestedCapabilities efter att resolvern fått en kategori.",
+    "Tresiffer-overrides används bara där tvåsiffernivån är för grov (t.ex. SNI 69 splittas i 691 legal och 692 accounting).",
+    "Operatören kan trimma en mappning genom att uppdatera denna policy + bumpa version; SNI 2025-källan (sni-2025.v1.json) rörs då inte."
+  ],
+  "referenceTaxonomy": "data/taxonomies/sni/sni-2025.v1.json",
+  "divisionMappings": [
+    {
+      "sniCode": "41",
+      "labelSv": "Byggande av bostadshus och andra byggnader",
+      "wizardCategoryId": "construction",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "42",
+      "labelSv": "Anläggningsarbeten",
+      "wizardCategoryId": "construction",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "43",
+      "labelSv": "Specialiserad bygg- och anläggningsverksamhet",
+      "wizardCategoryId": "construction",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "47",
+      "labelSv": "Detaljhandel",
+      "wizardCategoryId": "ecommerce",
+      "confidence": "medium",
+      "notesSv": "Detaljhandel kan vara fysisk butik utan webshop; wizardens svar avgör om e-handel faktiskt är aktuell."
+    },
+    {
+      "sniCode": "55",
+      "labelSv": "Hotell- och logiverksamhet",
+      "wizardCategoryId": "hotel",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "56",
+      "labelSv": "Restaurang-, catering- och barverksamhet",
+      "wizardCategoryId": "restaurant",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "62",
+      "labelSv": "Dataprogrammering, datakonsultverksamhet o.d.",
+      "wizardCategoryId": "tech",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "63",
+      "labelSv": "Datainfrastruktur, databehandling, hosting och annan informationsverksamhet",
+      "wizardCategoryId": "tech",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "68",
+      "labelSv": "Fastighetsverksamhet",
+      "wizardCategoryId": "realestate",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "70",
+      "labelSv": "Verksamheter som utövas av huvudkontor samt konsultverksamhet avseende företag",
+      "wizardCategoryId": "consulting",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "71",
+      "labelSv": "Arkitekt- och teknisk konsultverksamhet; teknisk provning och analys",
+      "wizardCategoryId": "consulting",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "73",
+      "labelSv": "Reklamverksamhet, marknadsundersökningar och PR",
+      "wizardCategoryId": "consulting",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "79",
+      "labelSv": "Resebyrå- och researrangörsverksamhet samt annan boknings- och reserelaterad verksamhet",
+      "wizardCategoryId": "travel",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "85",
+      "labelSv": "Utbildning",
+      "wizardCategoryId": "education",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "86",
+      "labelSv": "Hälso- och sjukvård",
+      "wizardCategoryId": "healthcare",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "87",
+      "labelSv": "Vård och omsorg med boende",
+      "wizardCategoryId": "healthcare",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "88",
+      "labelSv": "Öppna sociala insatser",
+      "wizardCategoryId": "nonprofit",
+      "confidence": "medium",
+      "notesSv": "Öppna sociala insatser kan vara både privat omsorg (healthcare) och ideell verksamhet (nonprofit). Wizardens svar avgör."
+    },
+    {
+      "sniCode": "90",
+      "labelSv": "Konstnärligt skapande och scenkonst",
+      "wizardCategoryId": "portfolio",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "93",
+      "labelSv": "Sport-, fritids- och nöjesverksamhet",
+      "wizardCategoryId": "fitness",
+      "confidence": "medium",
+      "notesSv": "Brett spann (sport, fritid, nöjesfält). Tresiffer-overrides 931 fitness och 932 event särskiljer."
+    },
+    {
+      "sniCode": "94",
+      "labelSv": "Intressebevakning",
+      "wizardCategoryId": "nonprofit",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "96",
+      "labelSv": "Konsumenttjänster",
+      "wizardCategoryId": "salon",
+      "confidence": "medium",
+      "notesSv": "Huvudgrupp 96 spänner över hår-/skönhetsvård, tvätteri och andra konsumenttjänster. 962 salon override är mer specifik."
+    }
+  ],
+  "groupOverrides": [
+    {
+      "sniCode": "432",
+      "labelSv": "Elinstallationer, VVS-arbeten och andra bygginstallationer",
+      "wizardCategoryId": "construction",
+      "confidence": "high",
+      "notesSv": "Specifik bygginstallation; matchar samma kategori som huvudgrupp 43 men låser confidence."
+    },
+    {
+      "sniCode": "478",
+      "labelSv": "Detaljhandel med motorfordon och motorcyklar inklusive reservdelar och tillbehör",
+      "wizardCategoryId": "auto",
+      "confidence": "high",
+      "notesSv": "Bil-/MC-handel klassas under detaljhandel i SNI 2025; auto-kategorin passar bättre än ecommerce-default."
+    },
+    {
+      "sniCode": "561",
+      "labelSv": "Restaurangverksamhet och mobil restaurangverksamhet",
+      "wizardCategoryId": "restaurant",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "681",
+      "labelSv": "Fastighetsverksamhet med egna fastigheter och utformning av byggprojekt",
+      "wizardCategoryId": "realestate",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "691",
+      "labelSv": "Juridisk verksamhet",
+      "wizardCategoryId": "legal",
+      "confidence": "high",
+      "notesSv": "SNI 69 splittas i juridik (691) och redovisning (692); ingen tvåsiffer-mappning för 69."
+    },
+    {
+      "sniCode": "692",
+      "labelSv": "Redovisning och bokföring, revision; skatterådgivning",
+      "wizardCategoryId": "accounting",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "731",
+      "labelSv": "Reklamverksamhet",
+      "wizardCategoryId": "consulting",
+      "confidence": "high",
+      "notesSv": "Konkretisering av huvudgrupp 73; samma kategori men låser confidence till high."
+    },
+    {
+      "sniCode": "742",
+      "labelSv": "Fotoverksamhet",
+      "wizardCategoryId": "photo",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "750",
+      "labelSv": "Veterinärverksamhet",
+      "wizardCategoryId": "healthcare",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "855",
+      "labelSv": "Vuxenutbildning och övrig utbildning",
+      "wizardCategoryId": "education",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "861",
+      "labelSv": "Sluten sjukvård",
+      "wizardCategoryId": "healthcare",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "862",
+      "labelSv": "Öppen hälso- och sjukvård, tandvård",
+      "wizardCategoryId": "healthcare",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "869",
+      "labelSv": "Annan hälso- och sjukvård",
+      "wizardCategoryId": "healthcare",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "900",
+      "labelSv": "Konstnärligt skapande, scenkonst och biblioteksverksamhet",
+      "wizardCategoryId": "portfolio",
+      "confidence": "medium"
+    },
+    {
+      "sniCode": "931",
+      "labelSv": "Sportverksamhet",
+      "wizardCategoryId": "fitness",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "932",
+      "labelSv": "Fritids- och nöjesverksamhet",
+      "wizardCategoryId": "event",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "953",
+      "labelSv": "Reparation och underhåll av motorfordon och motorcyklar",
+      "wizardCategoryId": "auto",
+      "confidence": "high"
+    },
+    {
+      "sniCode": "962",
+      "labelSv": "Hår- och skönhetsvård, dagspa o.d.",
+      "wizardCategoryId": "salon",
+      "confidence": "high"
+    }
+  ]
+}

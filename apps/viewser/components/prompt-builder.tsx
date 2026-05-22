@@ -129,14 +129,21 @@ export function PromptBuilder({
   const localBusy = stage === "thinking" || stage === "building";
   const disabled = isBusy || localBusy;
   const selectedRun = runs.find((run) => run.runId === selectedRunId);
+  const runSiteIdUnknown =
+    !!selectedRunId &&
+    !!selectedRun &&
+    (!selectedRun.siteId || selectedRun.siteId === "unknown");
   const targetSiteId =
-    selectedRun?.siteId && selectedRun.siteId !== "unknown"
-      ? selectedRun.siteId
-      : selectedSiteId;
+    runSiteIdUnknown
+      ? ""
+      : selectedRun?.siteId && selectedRun.siteId !== "unknown"
+        ? selectedRun.siteId
+        : selectedSiteId;
   const targetInput = projectInputs.find(
     (input) => input.siteId === targetSiteId,
   );
   const followupReady =
+    !runSiteIdUnknown &&
     targetSiteId.trim().length > 0 &&
     targetSiteId !== "unknown" &&
     targetInput?.source === "prompt-inputs";
@@ -239,6 +246,12 @@ export function PromptBuilder({
     const cleaned = prompt.trim();
     if (!cleaned || disabled) return;
     if (mode === "followup") {
+      if (runSiteIdUnknown) {
+        setError(
+          "Vald run saknar siteId — follow-up kan inte skickas till rätt sajt.",
+        );
+        return;
+      }
       if (!followupReady) {
         setError("Välj en prompt-genererad run eller siteId först.");
         return;

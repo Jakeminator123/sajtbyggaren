@@ -113,7 +113,7 @@
       "description": "Map från Project Input-fältsökväg (dotted path, t.ex. 'company.name') till källan som vann. Tom map tillåts på degraded paths.",
       "additionalProperties": {
         "type": "string",
-        "enum": ["wizard", "scrape", "brief", "taxonomy", "default", "operator", "pinned"]
+        "enum": ["wizard", "scrape", "brief", "taxonomy", "default", "operator", "pinned", "derived"]
       }
     },
     "selectionSource": {

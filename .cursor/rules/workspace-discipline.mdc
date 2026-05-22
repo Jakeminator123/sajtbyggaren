@@ -28,6 +28,9 @@ Allt som **inte** ligger under `c:\Users\jakem\Desktop\sajtbyggaren\`. Konkreta 
 - Hämta publika webbresurser via `WebFetch`/`WebSearch` (men dokumentera vad och varför)
 - Använda Cursor-skills som finns i agentens skill-lista (de cachas av Cursor utanför workspace, men exponeras av agenten)
 - **Exekvera** tools (`git`, `python`, `node`, `npm`, etc.) som råkar ligga utanför workspace - exekvering är hela poängen, så länge arbetsmappen är `cwd` inom workspace
+- Läsa lokala `.env*` inom workspacet när uppgiften kräver det eller
+  operatören uttryckligen ber om det. Agenten får aldrig skriva ut
+  hemligheter i chatten och får aldrig committa `.env*`.
 
 ## Vad agenten inte får göra utan att fråga
 

@@ -70,9 +70,12 @@ COMMON_WORDS = {
     "MagicMock",
     "Path", "List", "Dict", "Tuple", "Optional", "Any", "Union", "Type",
     "TypeError", "ValueError", "RuntimeError", "Exception", "Iterator",
+    "AttributeError",
     "ArgumentParser", "ImportError", "SimpleNamespace", "UnicodeDecodeError", "Input", "Output",
     "AssertionError", "FileExistsError", "NotImplementedError",
     "Iterable", "Sequence", "Mapping", "Callable",
+    # Status-strängar (verify_run.py + andra tooling-checkers)
+    "OK", "FAIL", "WARN", "UNKNOWN", "SKIP",
     # Framework / lib
     "React", "Next", "NextJs", "NextJS", "Vite", "Tailwind", "TypeScript",
     "TURBOPACK", "Turbopack", "Webpack",
@@ -101,7 +104,7 @@ COMMON_WORDS = {
     # domänbegrepp). Mirrors how "SharedArrayBuffer is not defined"
     # is registered as a quoted error-string further up.
     "Cursor Bugbot",
-    "SUCCESS", "FAILURE", "COMPLETED", "NEUTRAL",
+    "SUCCESS", "FAILURE", "COMPLETED", "NEUTRAL", "DRAFT",
     "Module not found",
     # Generic word fragments som dyker upp i text
     "ADR", "PR", "CI", "ID", "UUID", "MD", "LLM", "PascalCase", "Backup",
@@ -175,6 +178,13 @@ COMMON_WORDS = {
     # Backoffice maintenance implementation dataclasses. They are local UI
     # helper containers, not canonical domain terms.
     "CleanupItem", "CleanupPlan", "CleanupResult", "ToggleRow",
+    # Starter Candidate Auditor v1 implementation symbol
+    # (scripts/audit_starter_candidate.py). ``AuditResult`` is a local
+    # Python dataclass that holds the read-only audit output for an
+    # external starter candidate. Same treatment as ``CleanupResult`` /
+    # ``PruneReport`` / ``BugEntry`` above - tooling implementation,
+    # not a canonical domain term.
+    "AuditResult",
     # packages/generation/maintenance/auto_prune.py implementation symbol
     # (dataclass returned by auto_prune_all()). Same treatment as
     # PruneReport - implementation detail, not a domain term.
@@ -353,6 +363,12 @@ COMMON_WORDS = {
     "WizardBrand", "WizardContact", "ScaffoldHint", "ContentBranch",
     "FieldConfidence", "ProductItem", "MenuItem", "ServiceItem",
     "TeamMember", "ProjectItem",
+    # Next.js page-komponenter för wizard-driven extra routes
+    # (B132 follow-up sprint 2026-05-21). Samma kategori som
+    # PortfolioContent/TeamMember ovan: React/Next-symboler, inte
+    # canonical domain terms.
+    "FaqPage", "GalleryPage", "MapPage", "PortfolioPage",
+    "PricingPage", "TeamPage",
     "FieldLabel", "FieldStack", "HelperText", "SectionHeader",
     "TagListInput", "TagListInputProps", "TextField", "TextareaField",
     "Chip", "ChipRow", "ChipProps", "StepDots",
@@ -456,7 +472,7 @@ COMMON_WORDS = {
     # canonical domain terms.
     "Atelje Vit Lera", "Vas i seladon",  # case-specifika varumärken/produkter
     "Klippning Dam",  # case-specifik service-label
-    "Befintlig hemsida", "Bildgalleri", "Bokning online",  # DiscoveryWizard labels
+    "Befintlig hemsida", "Bildgalleri", "Bokning online", "Nyhetsbrev",  # DiscoveryWizard labels
     "Build klar", "Build misslyckades",  # PromptBuilder status-strängar
     "DiscoveryWizarden",  # bestämd-form i prosa (basordet redan allowlistat)
     "Intent Guard", "Page Intent",  # proposed produktkoncept i Scout-rapporten
@@ -475,6 +491,10 @@ COMMON_WORDS = {
     "B134", "B135", "B136",  # öppnade + stängda i Scout-orchestrator-pass 2026-05-19
     "B137",  # öppnad i Viewser-overlay-E2E Scout case 4 2026-05-19 (tagline-läckage)
     "B137 fix",  # bolded phrase i current-focus narrative (Steward-prose)
+    "B138", "B139", "B140", "B141",  # öppnade post-case-4 (B138/B141 stängd 2026-05-21, B139/B140 öppna)
+    "B143", "B144",  # reviewer-feedback 2026-05-21 efter Intent Guard light + PR #49
+    "IntentGuard",  # single-token-variant i handoff-prose (basord 'Intent Guard' redan allowlistat)
+    "Intent Guard light",  # bolded sprintnamn i handoff/current-focus (Builder-sprint 2026-05-21)
     "ADR 0025 implementation",  # bolded phrase i handoff.md next-steps-tabell
     "AppData",  # del av Windows-path $env:LOCALAPPDATA\Temp i handoff-prose
     "Backups",  # rubrik i handoff.md status-tabell
@@ -492,6 +512,29 @@ COMMON_WORDS = {
     "Project DNA semantic merge",  # proposed sprint-namn (Queue #5)
     "Task",  # Cursor subagent-tool-namn
     "Visuell renderingsverifiering",  # gap-rubrik i 9/10-tabellen
+    # ApplyRunsContext är en viewser-lokal TS-typ som introducerades i
+    # parallell-agentens branch `fix/viewser-followup-stale-state`
+    # (commit 042319c, PR #55) och citeras i docs/current-focus.md som
+    # prose-referens till det öppna PR-spåret. Samma kategori som
+    # PromptStageIndicator/RunHistory ovan — viewser-implementation, inte
+    # canonical domain term.
+    "ApplyRunsContext",
+    # SNI import + Backoffice-diagnostik (SNI-sidospår 2026-05-22).
+    # Scriptets implementation-symboler för SNI 2025-extractor och
+    # Discovery-map-resolver är Python-klasser/-undantag i samma
+    # kategori som ``DiscoveryDecision`` / ``PlanningChoice`` ovan.
+    # SNI som domänbegrepp registreras inte i naming-dictionary.v1
+    # förrän senare sprint (operatör-OK 2026-05-22: V1 är read-only
+    # diagnostik, inte runtime-sanning).
+    "SniDiscoveryMap", "SniMapping", "SniMatch", "SniExtractionError",
+    # Python stdlib zip-/XML-symboler refererade i extractorn
+    # (samma kategori som ``ElementCreationOptions`` /
+    # ``ConnectionRefusedError`` ovan).
+    "ElementTree", "ZipFile", "IndexError",
+    # XML namespace-bokstavskoder i extractor + tester (``ContentType``
+    # är OOXML content-types-elementet; ``AB12`` är en sample-cellref
+    # i docstring). Tekniska tokens i prosa, inte domänbegrepp.
+    "ContentType", "AB12",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
@@ -633,6 +676,20 @@ def main() -> int:
         if rel.startswith("governance/policies/") or rel.startswith("governance/schemas/") or rel.startswith("governance/rules/"):
             continue
         if rel.startswith(".cursor/rules/"):
+            continue
+        # ``.cursor/plans/`` innehåller agent-/operator-lokala plan-filer
+        # som genereras av agentens plan-verktyg. Samma kategori som
+        # ``.cursor/rules/`` speglar: arbetsartefakter, inte produkt-docs.
+        # Skippas så interna feature-namn i en pågående plan inte
+        # felklassas som okända domänbegrepp.
+        if rel.startswith(".cursor/plans/"):
+            continue
+        # Operatör-/agent-lokala temp-noteringar (t.ex. ``tmp_known_issues_pr52.md``)
+        # bor under ``.cursor/`` toppnivå med ``tmp_``-prefix och innehåller
+        # bug-tracking-IDs som inte är canonical domain terms. Samma motivering
+        # som för ``docs/known-issues.md``-undantaget nedan: en intern B-ID-tabell
+        # ska inte tvinga in B-IDs som domänbegrepp.
+        if rel.startswith(".cursor/tmp_"):
             continue
         if rel.startswith("docs/agent-handbook.md") or rel.startswith("docs/PROJECT_BRIEF.md"):
             continue

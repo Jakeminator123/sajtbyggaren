@@ -8,7 +8,7 @@ alwaysApply: true
 
 ## Regel
 
-- Varje koncept i Sajtbyggaren får ha exakt **ett** kanoniskt namn enligt [`naming-dictionary.v1.json`](../policies/naming-dictionary.v1.json).
+- Varje koncept i Sajtbyggaren får ha exakt **ett** kanoniskt namn enligt [`naming-dictionary.v1.json`](../../governance/policies/naming-dictionary.v1.json).
 - Varje koncept har exakt **en** ägarmapp enligt `ownerPackage` i samma policy.
 - Inga "namnskuggor" tillåts: ord som betyder olika saker i olika kontexter ska byta till olika kanoniska termer.
 

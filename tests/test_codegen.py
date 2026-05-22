@@ -16,6 +16,8 @@ the only one that exercises the real LLM call.
 from __future__ import annotations
 
 import json
+import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -29,7 +31,10 @@ from packages.generation.codegen import (
     produce_codegen_artefakt,
     resolve_codegen_model,
 )
-from packages.generation.codegen.codegen import _route_to_page_path
+from packages.generation.codegen.codegen import (
+    _route_to_page_path,
+    _summarise_generation_package,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LLM_MODELS_POLICY = REPO_ROOT / "governance" / "policies" / "llm-models.v1.json"
@@ -43,6 +48,47 @@ def _disable_real_codegen(monkeypatch):
     dedicated gated test in tests/test_real_codegen_model.py.
     """
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+
+def _write_site_brief(
+    runs_dir: Path,
+    run_id: str,
+    *,
+    business_type: str = "electrician",
+    tone: list[str] | None = None,
+) -> None:
+    run_dir = runs_dir / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    site_brief = {
+        "runId": run_id,
+        "language": "sv",
+        "rawPrompt": "Skapa hemsida för en elektriker i Malmö",
+        "businessTypeGuess": business_type,
+        "tone": tone if tone is not None else ["trustworthy", "local"],
+        "targetAudience": ["villaägare"],
+        "requestedCapabilities": [],
+        "conversionGoals": ["call"],
+        "servicesMentioned": ["laddbox-installation"],
+        "sourceModelRole": "briefModel",
+        "modelUsed": "mock",
+        "briefSource": "mock-no-key",
+        "createdAt": "2026-05-08T12:00:00+00:00",
+    }
+    (run_dir / "site-brief.json").write_text(
+        json.dumps(site_brief),
+        encoding="utf-8",
+    )
+
+
+def _generation_package_by_ref(run_id: str) -> dict[str, object]:
+    return {
+        "runId": run_id,
+        "siteBriefRef": "site-brief.json",
+        "scaffoldId": "local-service-business",
+        "variantId": "nordic-trust",
+        "starterId": "marketing-base",
+        "selectedDossiers": [],
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -65,6 +111,158 @@ def test_codegen_result_has_truth_fields_for_marketing_base_no_key():
     assert result.source == "mock-no-key"
     assert result.modelUsed == "mock"
     assert result.error is None
+
+
+@pytest.mark.tooling
+def test_codegen_summary_loads_site_brief_from_ref(
+    monkeypatch,
+    tmp_path: Path,
+):
+    """B141: prod Generation Package stores siteBriefRef, not inline
+    siteBrief. The codegen summary must dereference the actual Site Brief
+    artefact so businessType and tone reach codegenModel.
+    """
+    import packages.generation.codegen.codegen as codegen_module
+
+    runs_dir = tmp_path / "runs"
+    run_id = "run-with-brief-ref"
+    _write_site_brief(runs_dir, run_id)
+    monkeypatch.setattr(codegen_module, "RUNS_DIR", runs_dir)
+
+    summary = _summarise_generation_package(
+        _generation_package_by_ref(run_id),
+        routes_written=["/", "/kontakt"],
+        dossier_components=[],
+        starter_id="marketing-base",
+    )
+
+    assert "- businessType: electrician" in summary
+    assert "- tone: trustworthy, local" in summary
+    assert "- conversionGoals: call" in summary
+    assert "- servicesMentioned: laddbox-installation" in summary
+
+
+@pytest.mark.tooling
+def test_codegen_summary_rejects_absolute_site_brief_ref(
+    monkeypatch,
+    tmp_path: Path,
+):
+    """B141 path safety: an absolute siteBriefRef must never be read."""
+    import packages.generation.codegen.codegen as codegen_module
+
+    runs_dir = tmp_path / "runs"
+    run_id = "run-with-absolute-ref"
+    (runs_dir / run_id).mkdir(parents=True, exist_ok=True)
+    outside_brief = tmp_path / "outside-site-brief.json"
+    outside_brief.write_text(
+        json.dumps({"businessTypeGuess": "unsafe-absolute", "tone": ["leaked"]}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(codegen_module, "RUNS_DIR", runs_dir)
+
+    package = _generation_package_by_ref(run_id)
+    package["siteBriefRef"] = str(outside_brief)
+    summary = _summarise_generation_package(
+        package,
+        routes_written=["/"],
+        dossier_components=[],
+        starter_id="marketing-base",
+    )
+
+    assert "unsafe-absolute" not in summary
+    assert "- businessType: unknown" in summary
+    assert "- tone: -" in summary
+
+
+@pytest.mark.tooling
+def test_codegen_summary_rejects_traversal_site_brief_ref(
+    monkeypatch,
+    tmp_path: Path,
+):
+    """B141 path safety: siteBriefRef may not escape its run directory."""
+    import packages.generation.codegen.codegen as codegen_module
+
+    runs_dir = tmp_path / "runs"
+    run_id = "run-with-traversal-ref"
+    (runs_dir / run_id).mkdir(parents=True, exist_ok=True)
+    (runs_dir / "outside-site-brief.json").write_text(
+        json.dumps({"businessTypeGuess": "unsafe-traversal", "tone": ["leaked"]}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(codegen_module, "RUNS_DIR", runs_dir)
+
+    package = _generation_package_by_ref(run_id)
+    package["siteBriefRef"] = "../outside-site-brief.json"
+    summary = _summarise_generation_package(
+        package,
+        routes_written=["/"],
+        dossier_components=[],
+        starter_id="marketing-base",
+    )
+
+    assert "unsafe-traversal" not in summary
+    assert "- businessType: unknown" in summary
+    assert "- tone: -" in summary
+
+
+@pytest.mark.tooling
+def test_codegen_real_path_prompt_uses_site_brief_ref(
+    monkeypatch,
+    tmp_path: Path,
+):
+    """B141: public codegen path feeds tone/businessType from the real
+    Site Brief artefact into the codegenModel prompt.
+    """
+    import packages.generation.codegen.codegen as codegen_module
+
+    runs_dir = tmp_path / "runs"
+    run_id = "run-real-prompt-ref"
+    _write_site_brief(runs_dir, run_id)
+    captured: dict[str, str] = {}
+
+    class _FakeResponses:
+        def parse(self, *, input, **_kwargs):  # noqa: A002
+            captured["user_message"] = input[1]["content"]
+            return types.SimpleNamespace(
+                output_parsed=CodegenLLMResponse(
+                    rationale=(
+                        "Electrician brief tone reached the codegen prompt."
+                    ),
+                    riskNotes=[],
+                ),
+                usage=types.SimpleNamespace(input_tokens=42, output_tokens=7),
+            )
+
+    class _FakeOpenAI:
+        def __init__(self):
+            self.responses = _FakeResponses()
+
+    monkeypatch.setattr(codegen_module, "RUNS_DIR", runs_dir)
+    monkeypatch.setenv("OPENAI_API_KEY", "test-fake-key")
+    monkeypatch.setattr(
+        codegen_module,
+        "resolve_codegen_model",
+        lambda: "gpt-fake-model",
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "openai",
+        types.SimpleNamespace(OpenAI=_FakeOpenAI),
+    )
+
+    result = produce_codegen_artefakt(
+        _generation_package_by_ref(run_id),
+        routes_written=["/", "/kontakt"],
+        dossier_components=[],
+        starter_id="marketing-base",
+    )
+
+    assert result.source == "real"
+    assert result.rationale == "Electrician brief tone reached the codegen prompt."
+    assert "- businessType: electrician" in captured["user_message"]
+    assert "- tone: trustworthy, local" in captured["user_message"]
+    assert result.usage.promptTokens == 42
+    assert result.usage.completionTokens == 7
 
 
 @pytest.mark.tooling

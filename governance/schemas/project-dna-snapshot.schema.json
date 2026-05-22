@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project-dna-snapshot.schema.json",
+  "title": "Project DNA sidecar snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "createdAtVersion",
+    "story",
+    "tagline",
+    "tone",
+    "positioning",
+    "followUpIntent"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "createdAtVersion": { "type": "integer", "minimum": 1 },
+    "story": { "$ref": "#/$defs/sourceTrackedString" },
+    "tagline": { "$ref": "#/$defs/sourceTrackedString" },
+    "tone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary", "secondary", "avoid"],
+      "properties": {
+        "primary": { "$ref": "#/$defs/sourceTrackedString" },
+        "secondary": { "$ref": "#/$defs/sourceTrackedStringArray" },
+        "avoid": { "$ref": "#/$defs/sourceTrackedStringArray" }
+      }
+    },
+    "positioning": {
+      "anyOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/sourceTrackedString" }
+      ]
+    },
+    "followUpIntent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "enum": [
+            "tone-shift",
+            "story-emphasize",
+            "tagline-update",
+            "positioning-shift",
+            "no-semantic-change",
+            "clarify"
+          ]
+        },
+        "confidence": { "enum": ["low", "medium", "high"] },
+        "rationale": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "source": { "enum": ["brief", "wizard", "followup", "default"] },
+    "sourceTrackedString": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "lastUpdatedVersion", "source"],
+      "properties": {
+        "value": { "type": "string" },
+        "lastUpdatedVersion": { "type": "integer", "minimum": 1 },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+    "sourceTrackedStringArray": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "lastUpdatedVersion", "source"],
+      "properties": {
+        "value": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "lastUpdatedVersion": { "type": "integer", "minimum": 1 },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    }
+  }
+}

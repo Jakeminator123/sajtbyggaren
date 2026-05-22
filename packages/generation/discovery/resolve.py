@@ -36,6 +36,9 @@ Field-source-regel (vinstordning per fält):
 5. ``default`` — placeholder från ``site_brief_to_project_input`` (sista utvägen).
 6. ``operator`` / ``pinned`` — reserverade för framtida Backoffice-pin /
    Project Input ``starterId``-pin (används inte av resolvern idag).
+7. ``derived`` — resolvern härledde fältet ur andra signaler när varken
+   wizard, scrape eller brief gav ett brukbart värde (B137: tagline-
+   fallback när wizardens offer var UI-direktiv och brief saknade tagline).
 """
 
 from __future__ import annotations
@@ -606,74 +609,94 @@ def _scaffold_hint_from_payload(
     return _RUNTIME_SCAFFOLD_HINTS.get(hint.strip())
 
 
-# B137: Operatörer som glider in builder-instruktioner ("vill ha 4 sidor och
-# grön färg, sälja keramik") i wizardens offer-fält ska INTE få den texten
-# rakt in i company.tagline. Förr trunkerades hela första meningen till 140
-# tecken vilket gav taglines som "Vi vill ha 4 sidor och grön färg på vår
-# nya hemsida". Nu filtrerar vi bort uppenbara meta-instruktioner och
-# faller tillbaka till briefModel:s tagline när offer ser ut att vara en
-# beställning snarare än en beskrivning.
-_TAGLINE_META_KEYWORDS: tuple[str, ...] = (
-    "sidor",
-    "sida",
-    "färg",
-    "farg",
-    "färgschema",
-    "färgtema",
-    "tema",
+# ---------------------------------------------------------------------------
+# B137 - wizard-overlay tagline-sanering
+# ---------------------------------------------------------------------------
+#
+# Wizardens "Beskriv din verksamhet"-fält (``answers.offer``) skickas både
+# till briefModel som rådata OCH till discovery-payloaden. När operatören
+# skriver UI-direktiv där ("Hemsida om X, 2 sidor, gröna färger") hamnade
+# texten tidigare rakt som ``company.tagline`` och läckte ut som publik
+# hero-tagline. Helpern ``_offer_looks_like_ui_directive`` detekterar de
+# vanligaste läckage-mönstren så att brief-taglinen (eller en derived
+# fallback) får företräde i ``_apply_company_fields``.
+
+_OFFER_PAGE_COUNT_RE = re.compile(r"\b\d+\s+sidor?\b", re.IGNORECASE)
+_OFFER_COLOR_DIRECTIVE_RE = re.compile(
+    r"\b(röd|grön|blå|gul|svart|vit|grå)a?\s+(färger|färg|tema)\b",
+    re.IGNORECASE,
+)
+_OFFER_INSTRUCTION_PREFIXES: tuple[str, ...] = (
+    "hemsida om",
+    "bygg ",
+    "skapa ",
+    "gör en",
     "vill ha",
     "behöver",
-    "scaffold",
-    "variant",
-    "vibe",
-    "primary",
-    "skapa en",
-    "skapa min",
-    "bygga en",
-    "bygga min",
-    "ladda upp",
-    "hemsida",  # operator beskriver vad de vill bygga, inte vad de gör
-    "webbsida",
-    "ny sajt",
 )
+# Tröskel sänkt från < 12 till < 8 tecken per operatör-OK 2026-05-21:
+# korta riktiga verksamhetsbeskrivningar ("Bagar bröd" = 10 tkn) ska
+# inte felklassas som UI-direktiv. Endast uppenbar spam-input fångas.
+_OFFER_MIN_LENGTH = 8
+_OFFER_MAX_LENGTH = 120
 
 
-def _derive_smart_tagline(offer: str) -> str | None:
-    """Bygg en kort, presentabel tagline från wizardens offer-fält.
+def _strip_offer_markup(offer: str) -> str:
+    """Strippa markdown- och listprefix från offer innan prefix-match."""
+    text = offer.strip()
+    text = re.sub(r"^[\s*#>\-•·]+", "", text)
+    text = re.sub(r"^\d+[.)]\s+", "", text)
+    return text.lstrip()
 
-    Returnerar None när texten ser ut att innehålla meta-instruktioner
-    (sidantal, färgval, "vill ha …") så caller faller tillbaka till
-    briefModel:s tagline. Annars:
 
-    * Korta texter (≤80 tecken) returneras oförändrade.
-    * Längre texter klipps vid första punkten om den ger en mening ≤100
-      tecken, annars vid sista mellanslag före 100 tecken med "…".
+def _offer_looks_like_ui_directive(offer: str) -> bool:
+    """True när wizardens offer-fält är operatörs-direktiv, inte verksamhet.
 
-    Trim-tröskeln 80/100 valdes deterministiskt: shadcn-baserade hero-
-    layouts på marketing-base börjar bryta på ~120 tecken, så 100 ger
-    marginal till h1-radhöjd och 80 ger en pre-truncation som operator
-    sällan behöver redigera.
+    Returnerar True när texten ser ut att vara en instruktion till
+    sajtbyggaren (sidantal, färgval, "bygg en ..."-prefix etc.) snarare
+    än en faktisk verksamhetsbeskrivning. Används i
+    ``_apply_company_fields`` så ``company.tagline`` inte läcker UI-text.
+
+    OBS: ensamt färgord utan ``färger``/``färg``/``tema``-suffix passerar
+    fortfarande detektorn (acceptabel risk för v1 — Scout-uppföljning
+    eskalerar om det syns i ett verkligt case).
     """
     text = offer.strip()
     if not text:
-        return None
-    lower = text.lower()
-    if any(kw in lower for kw in _TAGLINE_META_KEYWORDS):
-        return None
-    if len(text) <= 80:
-        return text
-    # Försök bryta på första naturliga meningsslut
-    first_sentence = text.split(".")[0].strip()
-    if first_sentence and len(first_sentence) <= 100:
-        return first_sentence
-    # Mjuk trunkering: skär vid sista mellanslag inom 100 tecken så vi
-    # inte halverar ett ord, lägg till ellipsis så operator ser att det
-    # är trimmat och kan justera i wizardens följdsteg.
-    truncated = text[:100]
-    last_space = truncated.rfind(" ")
-    if last_space > 50:
-        truncated = truncated[:last_space]
-    return truncated.rstrip(" ,;:") + "…"
+        return False
+    if len(text) < _OFFER_MIN_LENGTH or len(text) > _OFFER_MAX_LENGTH:
+        return True
+    if _OFFER_PAGE_COUNT_RE.search(text):
+        return True
+    if _OFFER_COLOR_DIRECTIVE_RE.search(text):
+        return True
+    stripped = _strip_offer_markup(text).lower()
+    for prefix in _OFFER_INSTRUCTION_PREFIXES:
+        if stripped.startswith(prefix):
+            return True
+    return False
+
+
+def _derived_fallback_tagline(
+    company: dict[str, Any], language: str
+) -> str:
+    """Tagline-fallback när offer är UI-direktiv OCH brief tagline saknas.
+
+    Sällsynt edge case (briefModel producerar normalt alltid en tagline),
+    men resolvern måste leverera en schema-valid sträng (minLength=1,
+    maxLength=140). Helpern är medvetet minimal — för rikare derivation
+    se ``scripts/prompt_to_project_input._derive_tagline`` (lyft till
+    paketmodul vid behov i framtida sprint).
+    """
+    business_type = (company.get("businessType") or "").strip().lower()
+    business_label = business_type.replace("-", " ").replace("_", " ").strip()
+    if language == "en":
+        if business_label:
+            return f"Clear help with {business_label}"[:140]
+        return "Welcome"
+    if business_label:
+        return f"Tydlig hjälp inom {business_label}"[:140]
+    return "Välkommen"
 
 
 def _apply_company_fields(
@@ -691,17 +714,22 @@ def _apply_company_fields(
 
     offer = answers.get("offer")
     if isinstance(offer, str) and offer.strip():
-        smart_tagline = _derive_smart_tagline(offer)
-        if smart_tagline:
-            company["tagline"] = smart_tagline
+        if _offer_looks_like_ui_directive(offer):
+            # B137: behåll brief-tagline framför UI-direktiv. När brief
+            # saknar tagline producerar vi en kort derived fallback så
+            # schemat fortfarande accepterar Project Input.
+            if company.get("tagline"):
+                field_sources["company.tagline"] = "brief"
+            else:
+                language = (
+                    project_input.get("language", "sv") or "sv"
+                ).strip().lower()
+                company["tagline"] = _derived_fallback_tagline(company, language)
+                field_sources["company.tagline"] = "derived"
+        else:
+            first_sentence = offer.strip().split(". ")[0][:140]
+            company["tagline"] = first_sentence
             field_sources["company.tagline"] = "wizard"
-        elif company.get("tagline"):
-            # B137: offer-fältet innehåller meta-instruktioner (sidantal,
-            # färgval, etc.) — operator har glidit in builder-instruktioner
-            # i offer-rutan istället för en ren verksamhetsbeskrivning.
-            # Behåll briefModel:s tagline; offer fortsätter användas som
-            # rådata för story/services via övriga grenar.
-            field_sources["company.tagline"] = "brief"
     elif company.get("tagline"):
         field_sources["company.tagline"] = "brief"
 
@@ -1130,9 +1158,55 @@ def _slugify(text: str) -> str:
     return slug
 
 
+# ---------------------------------------------------------------------------
+# Read-only public accessors for Backoffice diagnostics
+# ---------------------------------------------------------------------------
+#
+# Backoffice diagnostics need to read the wizard label -> capability and
+# wizard label -> conversion goal mappings to verify that every wizard UI
+# value has a known destination. Importing the private underscore-prefixed
+# constants from another package couples Backoffice to implementation
+# details. These helpers expose immutable copies so a consumer can iterate
+# without mutating resolver state.
+
+
+def get_page_to_capability_mapping() -> dict[str, str]:
+    """Read-only copy of the wizard ``mustHave`` -> capability slug map.
+
+    Used by ``backoffice/discovery_wizard_diagnostics.py`` to know which
+    wizard must-have labels feed ``requestedCapabilities`` deterministically.
+    Returns a new dict so callers cannot mutate resolver internals.
+    """
+    return dict(_PAGE_TO_CAPABILITY)
+
+
+def get_cta_to_conversion_goal_mapping() -> dict[str, str]:
+    """Read-only copy of the wizard ``primaryCta`` -> conversion-goal map.
+
+    Used by ``backoffice/discovery_wizard_diagnostics.py`` to surface
+    wizard CTA values that lack a deterministic conversion-goal mapping
+    so they are not silently hidden.
+    """
+    return dict(_CTA_TO_CONVERSION_GOAL)
+
+
+def normalize_capability_slug(slug: str) -> str:
+    """Public wrapper for the resolver's capability alias normalisation.
+
+    The resolver folds known aliases (``newsletter``, ``online-booking``,
+    etc.) into canonical capability slugs before classifying them against
+    ``capability-map.v1.json``. Backoffice diagnostics rely on the same
+    folding so the classification matches what the resolver actually does.
+    """
+    return _normalize_capability_slug(slug)
+
+
 __all__ = [
     "apply_discovery_overrides",
     "resolve_discovery",
+    "get_page_to_capability_mapping",
+    "get_cta_to_conversion_goal_mapping",
+    "normalize_capability_slug",
     # Re-export för bakåtkompat när konsumenter vill ha taxonomy-loadern
     "load_discovery_taxonomy",
     "DEFAULT_TAXONOMY_PATH",

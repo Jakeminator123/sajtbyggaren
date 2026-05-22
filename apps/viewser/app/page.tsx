@@ -73,8 +73,21 @@ export default function Home() {
     activeRun?.siteId && activeRun.siteId !== "unknown"
       ? activeRun.siteId
       : null;
+  const runSiteIdUnknown =
+    !!selectedRunId &&
+    !!activeRun &&
+    (!activeRun.siteId || activeRun.siteId === "unknown");
 
-  function applyRunsData({ nextRuns, nextInputs }: FetchedRunsPayload) {
+  function applyRunsData(
+    { nextRuns, nextInputs }: FetchedRunsPayload,
+    ctx?: {
+      selectedRunId: string | null;
+      selectedSiteId: string;
+    },
+  ) {
+    const effectiveRunId = ctx?.selectedRunId ?? selectedRunId;
+    const effectiveSiteId = ctx?.selectedSiteId ?? selectedSiteId;
+
     setRuns(nextRuns);
     setProjectInputs(nextInputs);
     // Auto-väljer INTE senaste run vid mount. Det orsakade att
@@ -87,10 +100,11 @@ export default function Home() {
     // Reset-fallbacken körs bara när ingen run är vald — annars äger
     // run-following (handler-sync i onBuildDone/onSelectRunIdAndSync)
     // selectedSiteId och vi får inte skriva över den med "första
-    // inputen i listan".
+    // inputen i listan". ctx skickas från onBuildDone så vi inte läser
+    // ett gammalt selectedRunId ur closure efter fetchRuns().then().
     if (
-      !selectedRunId &&
-      !nextInputs.find((item) => item.siteId === selectedSiteId) &&
+      !effectiveRunId &&
+      !nextInputs.find((item) => item.siteId === effectiveSiteId) &&
       nextInputs.length
     ) {
       setSelectedSiteId(nextInputs[0].siteId);
@@ -174,6 +188,8 @@ export default function Home() {
     // selectRunAndSyncSiteId() här eftersom den nya run:en ännu inte
     // hunnit landa i `runs`-listan (fetchRuns körs först nedan), och
     // det är just den nya run:en vars siteId vi vill följa.
+    const effectiveSiteId =
+      siteId && siteId !== "unknown" ? siteId : selectedSiteId;
     if (siteId && siteId !== "unknown") {
       setSelectedSiteId(siteId);
     }
@@ -182,8 +198,17 @@ export default function Home() {
     // från build-result.json:status; header-copyn reflekterar
     // resultatet så ett misslyckat bygge aldrig ser grönt ut.
     setStatusText(headerStatusForOutcome(runId, outcome));
+    // Skicka ctx till applyRunsData så reset-fallbacken läser den
+    // FRÄSCHA run-id/site-id-paret istället för closure-state från
+    // innan setSelectedRunId/setSelectedSiteId. Mönstret kom från
+    // origin/main:s inline-callback (PR #55, stale run-following fix).
     void fetchRuns()
-      .then(applyRunsData)
+      .then((data) =>
+        applyRunsData(data, {
+          selectedRunId: runId,
+          selectedSiteId: effectiveSiteId,
+        }),
+      )
       .catch((error) => {
         const message =
           error instanceof Error ? error.message : "Kunde inte uppdatera runs.";
@@ -263,6 +288,7 @@ export default function Home() {
         selectedRunId={selectedRunId}
         onSelectRunId={selectRunAndSyncSiteId}
         runSiteId={runSiteId}
+        runSiteIdUnknown={runSiteIdUnknown}
         isBuilding={building}
         statusText={statusText}
       />

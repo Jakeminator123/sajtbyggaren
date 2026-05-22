@@ -11,6 +11,8 @@ import sys
 
 import pytest
 
+from scripts.rules_sync import _rewrite_link_target, rewrite_links_for_mirror
+
 from .conftest import CURSOR_RULES_DIR, REPO_ROOT, RULES_DIR, SCRIPTS_DIR
 
 
@@ -41,3 +43,136 @@ def test_every_rule_has_a_mirror():
         "Mirror files in .cursor/rules without source in governance/rules: "
         f"{sorted(extra)}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Link rewriting (governance/rules/ depth -> .cursor/rules/ depth)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.governance
+@pytest.mark.parametrize(
+    "source,expected",
+    [
+        ("../policies/naming-dictionary.v1.json", "../../governance/policies/naming-dictionary.v1.json"),
+        ("../schemas/discovery-taxonomy.schema.json", "../../governance/schemas/discovery-taxonomy.schema.json"),
+        ("../decisions/0025-browser-fallback-preview.md", "../../governance/decisions/0025-browser-fallback-preview.md"),
+        ("../policies/", "../../governance/policies/"),
+    ],
+)
+def test_rewrite_parent_relative_links_point_into_governance(
+    source: str, expected: str
+) -> None:
+    assert _rewrite_link_target(source) == expected
+
+
+@pytest.mark.governance
+@pytest.mark.parametrize(
+    "source,expected",
+    [
+        ("term-discipline.md", "term-discipline.mdc"),
+        ("always-swedish.md", "always-swedish.mdc"),
+        ("term-discipline.md#headline", "term-discipline.mdc#headline"),
+    ],
+)
+def test_rewrite_sibling_md_links_use_mdc_extension(
+    source: str, expected: str
+) -> None:
+    assert _rewrite_link_target(source) == expected
+
+
+@pytest.mark.governance
+@pytest.mark.parametrize(
+    "untouched",
+    [
+        "https://example.com/path",
+        "http://localhost:3000",
+        "mailto:operator@example.com",
+        "tel:+46123",
+        "#section-anchor",
+        "/governance/policies/file.json",
+        "../../already-deep/file.md",
+        "sibling-without-md-extension",
+    ],
+)
+def test_rewrite_leaves_absolute_and_already_deep_links_untouched(
+    untouched: str,
+) -> None:
+    assert _rewrite_link_target(untouched) == untouched
+
+
+@pytest.mark.governance
+def test_rewrite_preserves_anchor_on_parent_relative_link() -> None:
+    source = "../policies/naming-dictionary.v1.json#term-discovery-taxonomy"
+    expected = "../../governance/policies/naming-dictionary.v1.json#term-discovery-taxonomy"
+    assert _rewrite_link_target(source) == expected
+
+
+@pytest.mark.governance
+def test_rewrite_preserves_query_on_sibling_link() -> None:
+    """Query-only suffix (utan anchor) ska bevaras intakt."""
+    assert _rewrite_link_target("term-discipline.md?source=docs") == "term-discipline.mdc?source=docs"
+
+
+@pytest.mark.governance
+def test_rewrite_handles_sibling_link_with_both_query_and_anchor() -> None:
+    """Regression-lock för separator-order-buggen 2026-05-22.
+
+    Tidigare iterade splittern över ``("#", "?")`` med break på första
+    träff, vilket gjorde att ``file.md?foo=bar#anchor`` plockade ``#`` först,
+    lämnade ``file.md?foo=bar`` som path och missade ``.md`` -> ``.mdc``-
+    rewriten helt. Korrekt URL-ordning är path?query#fragment, så earliest-
+    index-fixen ska ta ``?`` när det dyker upp före ``#``.
+    """
+    assert _rewrite_link_target("file.md?foo=bar#anchor") == "file.mdc?foo=bar#anchor"
+
+
+@pytest.mark.governance
+def test_rewrite_handles_inverted_separator_order_too() -> None:
+    """Även om operatören skriver felordnat (``#`` före ``?``) ska path-delen
+    fortfarande extraheras korrekt och rewritas."""
+    assert _rewrite_link_target("file.md#anchor?late=oops") == "file.mdc#anchor?late=oops"
+
+
+@pytest.mark.governance
+def test_rewrite_handles_parent_link_with_both_query_and_anchor() -> None:
+    """Samma bugg drabbade parent-relative-grenen om path-delen råkat
+    matcha ``.md`` (osannolikt för policies/schemas men defensivt låst)."""
+    source = "../policies/x.json?q=1#sec"
+    expected = "../../governance/policies/x.json?q=1#sec"
+    assert _rewrite_link_target(source) == expected
+
+
+@pytest.mark.governance
+def test_rewrite_links_for_mirror_handles_full_paragraph() -> None:
+    source = (
+        "Se [`naming-dictionary.v1.json`](../policies/naming-dictionary.v1.json) "
+        "och [`term-discipline.md`](term-discipline.md) för canonical termer. "
+        "Bilder: ![alt](logo.png) ska inte röras."
+    )
+    rewritten = rewrite_links_for_mirror(source)
+
+    assert "(../../governance/policies/naming-dictionary.v1.json)" in rewritten
+    assert "(term-discipline.mdc)" in rewritten
+    assert "![alt](logo.png)" in rewritten  # bild-länkar ska inte röras
+
+
+@pytest.mark.governance
+def test_mirror_does_not_contain_broken_parent_dot_dot_policies_link() -> None:
+    """Regression-lock för operator-rapporterad lint-varning 2026-05-22.
+
+    Det fula mönstret var att källans ``../policies/...`` syntes ordagrant
+    i ``.cursor/rules/*.mdc``, vilket resolverade till ``.cursor/policies/``
+    och triggade markdown-link-validatorn. Efter rewriten ska inget ``mdc``-
+    file innehålla en bare ``(../policies/`` eller ``(../schemas/`` eller
+    ``(../decisions/`` referens.
+    """
+    bad_prefixes = ("(../policies/", "(../schemas/", "(../decisions/")
+    for mirror_path in CURSOR_RULES_DIR.glob("*.mdc"):
+        text = mirror_path.read_text(encoding="utf-8")
+        for prefix in bad_prefixes:
+            assert prefix not in text, (
+                f"{mirror_path.relative_to(REPO_ROOT)} innehåller fortfarande "
+                f"{prefix!r}. Kör 'python scripts/rules_sync.py' så skriver "
+                "rewritern om länken automatiskt."
+            )

@@ -1,17 +1,3 @@
-# Cursor indexing rules. Mirrors the spirit of `.gitignore` but is
-# scoped to "do not let Cursor's indexer chew on this", not "do not
-# commit this". Per-machine creds (.env, .cursor/mcp.json) live in
-# `.gitignore`; this file is about keeping the agent + search index
-# fast and focused on canonical sources.
-
-# ---------------------------------------------------------------------------
-# Dependency installs (node + python)
-# ---------------------------------------------------------------------------
-
-# `node_modules` without slash matches at any depth, so this covers
-# both `node_modules/` at the repo root and inside every starter +
-# app under `apps/`, `data/starters/<id>/`, etc. Locally these can hit
-# tens of thousands of files per starter once `npm install` runs.
 node_modules
 .venv/
 __pycache__/
@@ -68,15 +54,16 @@ pnpm-lock.yaml
 data/runs/
 data/versions/
 data/prompt-inputs/
+data/embedding-index/
 .generated/
 
 # ---------------------------------------------------------------------------
 # Env-filer (alla varianter); .env.example forblir lasbar
 # ---------------------------------------------------------------------------
 
-.env
-.env.*
-!.env.example
+#.env
+#.env.*
+#!.env.example
 
 # ---------------------------------------------------------------------------
 # Starter-public binary assets
@@ -115,6 +102,11 @@ konversation.txt
 .review-*/
 .streamlit/secrets.toml
 .cursor/mcp.json
+# Agent-/operator-lokala plan-filer och temp-noteringar (.cursor/tmp_*).
+# Redan gitignored; här blockerar vi även agentens Read + sökindex så
+# scratch inte förorenar codebase-sök. Samma kategori som .cursor/mcp.json.
+.cursor/plans/
+.cursor/tmp_*
 .vscode/*.local.json
 
 # `referens/` is a copy/fork workspace for external references. Even
@@ -132,6 +124,8 @@ referens/
 .tmp-*
 .tmp.*
 .commit-msg.tmp
+# Lokal mini-eval-output (samma kategori som data/runs/ men operatör-lokal).
+eval-tmp/
 
 # Global binary payloads should never be indexed
 *.png
@@ -153,5 +147,6 @@ referens/
 *.tgz
 *.7z
 *.pdf
+*.mp4
 
 övrigt/

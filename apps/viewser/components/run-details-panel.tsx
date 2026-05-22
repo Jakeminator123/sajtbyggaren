@@ -94,6 +94,94 @@ type RoutePlanEntry = {
   purpose?: string;
 };
 
+// B144 (2026-05-21): defensive parsing of site-plan.json warning fields.
+// pageCountWarning + intentGuardWarnings + pageIntentWarnings are written
+// by produce_site_plan() and scripts/build_site.py:_intent_guard_warnings
+// (Builder-sprint 2026-05-21, sköldpaddssoppa case). Older runs (pre-
+// B138 / pre-Intent-Guard-light) lack the fields entirely; the parsers
+// return null/[] so SitePlanSection skips the amber block rather than
+// crashing on missing/malformed data. Inline return-type literals keep
+// these helpers from registering new canonical type names while still
+// giving the renderer narrow shapes to read from.
+function parsePageCountWarning(value: unknown): {
+  requestedPageCount: number | null;
+  scaffoldDefaultCount: number | null;
+  emittedRouteCount: number | null;
+  reason: string;
+} | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const obj = value as Record<string, unknown>;
+  const reason = typeof obj.reason === "string" ? obj.reason : null;
+  if (!reason) {
+    return null;
+  }
+  return {
+    requestedPageCount:
+      typeof obj.requestedPageCount === "number" ? obj.requestedPageCount : null,
+    scaffoldDefaultCount:
+      typeof obj.scaffoldDefaultCount === "number" ? obj.scaffoldDefaultCount : null,
+    emittedRouteCount:
+      typeof obj.emittedRouteCount === "number" ? obj.emittedRouteCount : null,
+    reason,
+  };
+}
+
+function parseIntentGuardWarnings(value: unknown): Array<{
+  categoryId: string;
+  conflictingTerm: string;
+  reason: string;
+  businessTypeGuess: string | null;
+}> {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const out: Array<{
+    categoryId: string;
+    conflictingTerm: string;
+    reason: string;
+    businessTypeGuess: string | null;
+  }> = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const obj = item as Record<string, unknown>;
+    const categoryId = typeof obj.categoryId === "string" ? obj.categoryId : null;
+    const conflictingTerm =
+      typeof obj.conflictingTerm === "string" ? obj.conflictingTerm : null;
+    const reason = typeof obj.reason === "string" ? obj.reason : null;
+    if (!categoryId || !conflictingTerm || !reason) continue;
+    const businessTypeGuess =
+      typeof obj.businessTypeGuess === "string" && obj.businessTypeGuess.length > 0
+        ? obj.businessTypeGuess
+        : null;
+    out.push({ categoryId, conflictingTerm, reason, businessTypeGuess });
+  }
+  return out;
+}
+
+function parsePageIntentWarnings(value: unknown): Array<{
+  page: string;
+  expectedPath: string;
+  reason: string;
+}> {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const out: Array<{ page: string; expectedPath: string; reason: string }> = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const obj = item as Record<string, unknown>;
+    const page = typeof obj.page === "string" ? obj.page : null;
+    const expectedPath =
+      typeof obj.expectedPath === "string" ? obj.expectedPath : null;
+    const reason = typeof obj.reason === "string" ? obj.reason : null;
+    if (!page || !expectedPath || !reason) continue;
+    out.push({ page, expectedPath, reason });
+  }
+  return out;
+}
+
 function BuildSection({ build }: { build: Record<string, unknown> | null }) {
   if (!build) {
     return (
@@ -234,6 +322,25 @@ function SitePlanSection({ sitePlan }: { sitePlan: Record<string, unknown> | nul
     ? (sitePlan.routePlan as RoutePlanEntry[])
     : [];
 
+  // B144 (2026-05-21): site-plan.json är canonical källa för
+  // pageCountWarning (B138 — brief.pageCount trim) + intentGuardWarnings
+  // (Intent Guard light — wizard categoryId vs brief businessTypeGuess /
+  // servicesMentioned) + pageIntentWarnings (B132 — wizard mustHave
+  // saknar scaffold-route). Builder skrev fälten i sprinten 2026-05-21
+  // men Run Details renderade dem inte; operatören saknade synlig signal
+  // efter Reviewer 2026-05-21 (~7/10) — verifierat live mot sköldpaddssoppa
+  // där intentGuardWarnings flaggade categoryId='fitness' vs
+  // conflictingTerm='mat'. Mirror placeholderContactFields-amber-blocket
+  // i BuildSection. Äldre runs som saknar fälten faller naturligt ur
+  // defensive parsing och visar inte blocket.
+  const pageCountWarning = parsePageCountWarning(sitePlan.pageCountWarning);
+  const intentGuardWarnings = parseIntentGuardWarnings(sitePlan.intentGuardWarnings);
+  const pageIntentWarnings = parsePageIntentWarnings(sitePlan.pageIntentWarnings);
+  const hasSitePlanWarnings =
+    pageCountWarning !== null ||
+    intentGuardWarnings.length > 0 ||
+    pageIntentWarnings.length > 0;
+
   return (
     <Card size="sm">
       <CardHeader className="border-b">
@@ -245,6 +352,48 @@ function SitePlanSection({ sitePlan }: { sitePlan: Record<string, unknown> | nul
           {" · "}variant: <span className="font-mono">{variantId}</span>
           {" · "}starter: <span className="font-mono">{starterId}</span>
         </p>
+        {hasSitePlanWarnings ? (
+          <div
+            data-testid="site-plan-warnings"
+            className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-2 text-amber-900 dark:text-amber-200"
+          >
+            <p className="font-medium">{"\u26A0 Site Plan-varningar"}</p>
+            <ul className="mt-1 ml-4 list-disc space-y-1 text-[11px] text-amber-900/80 dark:text-amber-200/80">
+              {pageCountWarning ? (
+                <li>
+                  <span className="font-mono">page-count:</span>{" "}
+                  {`prompt bad om ${
+                    pageCountWarning.requestedPageCount ?? "?"
+                  } sidor, scaffold-default ${
+                    pageCountWarning.scaffoldDefaultCount ?? "?"
+                  }, route plan emitterar ${
+                    pageCountWarning.emittedRouteCount ?? "?"
+                  } (${pageCountWarning.reason}).`}
+                </li>
+              ) : null}
+              {intentGuardWarnings.map((warning, index) => (
+                <li key={`intent-guard-${index}`}>
+                  <span className="font-mono">intent-guard:</span>{" "}
+                  {`kategori ${warning.categoryId} krockar med termen ${warning.conflictingTerm}`}
+                  {warning.businessTypeGuess
+                    ? ` (briefens businessTypeGuess: ${warning.businessTypeGuess})`
+                    : ""}
+                  {` — ${warning.reason}.`}
+                </li>
+              ))}
+              {pageIntentWarnings.map((warning, index) => (
+                <li key={`page-intent-${index}`}>
+                  <span className="font-mono">page-intent:</span>{" "}
+                  {`wizard-sidan ${warning.page} förväntade route ${warning.expectedPath} — ${warning.reason}.`}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-[11px] text-amber-900/80 dark:text-amber-200/80">
+              Build blockas inte; planner och Intent Guard signalerar att
+              site-plan.json fångade en konflikt eller trim.
+            </p>
+          </div>
+        ) : null}
         {routePlan.length > 0 ? (
           <div>
             <p className="text-muted-foreground">routePlan:</p>
@@ -570,6 +719,7 @@ export function RunDetailsPanel({ runId }: RunDetailsPanelProps) {
       }
 
       if (cancelled) return;
+      setBundle(null);
       setLoading(true);
       setError(null);
 
