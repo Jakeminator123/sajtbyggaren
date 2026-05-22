@@ -1649,6 +1649,22 @@ def render_home(
     usp_list = _extract_usps(dossier)
     if usp_list and "Check" not in icons_used:
         icons_used = sorted({*icons_used, "Check"})
+    # Story + testimonials home-sections both use the ``Quote`` glyph.
+    # We whitelist it whenever either section is going to render, so
+    # the icon-import line stays in sync with the JSX below. The
+    # corresponding short-circuit helpers (_render_home_story_section,
+    # _render_home_testimonials_section) themselves return "" when
+    # their inputs are empty, so this whitelist is harmless if the
+    # dossier ends up with no story and no testimonials.
+    story_text = (dossier.get("company") or {}).get("story") or ""
+    trust_count = sum(
+        1
+        for item in (dossier.get("trustSignals") or [])
+        if isinstance(item, str) and item.strip()
+    )
+    needs_quote_icon = bool(str(story_text).strip()) or trust_count >= _HOME_TESTIMONIAL_MIN_ITEMS
+    if needs_quote_icon and "Quote" not in icons_used:
+        icons_used = sorted({*icons_used, "Quote"})
     icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
     services_grid = "\n".join(
         f'            <li key={_jsx_safe_string(svc["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--card,var(--background))] p-6 transition-all hover:border-[color:var(--primary)] hover:shadow-sm">\n'
@@ -1684,12 +1700,24 @@ def render_home(
         else ""
     )
     contact_href = _route_href(contact_path)
+    # Branch-specifik listing-copy: när dossiern har en businessType som
+    # finns i ``_BRANCH_LISTING_COPY`` använder vi den (t.ex. "Menyn" /
+    # "Det vi serverar" för restaurang) istället för den generiska
+    # route-id-baserade copy:n. Faller tillbaka till routebaserad copy
+    # för okända branscher så befintliga tester och dossiers utan
+    # businessType fortsätter funka.
     listing_copy = _LISTING_COPY_BY_ROUTE_ID["services"]
-    listing_link = ""
+    branch_copy = _branch_listing_copy(dossier)
     if listing_route is not None:
         listing_copy = _LISTING_COPY_BY_ROUTE_ID.get(
             listing_route["id"], _LISTING_COPY_BY_ROUTE_ID["services"]
         )
+    if branch_copy:
+        # Branch-copy vinner över route-baserad copy — branschen är
+        # närmare operatörens verklighet än scaffold-typen.
+        listing_copy = {**listing_copy, **branch_copy}
+    listing_link = ""
+    if listing_route is not None:
         listing_href = _route_href(listing_route["path"])
         listing_link = f'          <a href={listing_href} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">{listing_copy["cta"]}<ArrowRight className="size-4" /></a>\n'
     # Demo-baseline-fix 1C (B95): suppress the hero ortstag when the
@@ -1739,11 +1767,37 @@ def render_home(
     # exist so the section never leaks placeholder copy.
     gallery_section = _render_home_gallery_section(dossier)
 
+    # A1 — Story-sektion: enkel quote-card med ``company.story``.
+    # Returnerar "" när story saknas, vilket är det normala för dossiers
+    # där mockBrief inte fyllt i något.
+    story_section = _render_home_story_section(dossier)
+
+    # A2 — Testimonials-sektion: render trustSignals som riktiga kort
+    # när det finns ≥ ``_HOME_TESTIMONIAL_MIN_ITEMS`` items. Annars ""
+    # och vi behåller den klassiska ``trust_section`` (bullet-listan
+    # ovan) som fallback.
+    testimonials_section = _render_home_testimonials_section(dossier)
+    # När testimonials har renderats, dropp:a den klassiska
+    # ``trust_section`` för att inte visa samma info två gånger.
+    if testimonials_section:
+        trust_section = ""
+
+    # A3 — FAQ-sektion: deterministisk render från ``_faq_pairs``.
+    # När /faq-routen är aktiverad i ``dossier_routes`` renderar vi en
+    # "Se alla frågor"-CTA, annars bara griden.
+    has_faq_route = "/faq" in dossier_routes
+    faq_section = _render_home_faq_section(dossier, has_faq_route=has_faq_route)
+
     # Variant-aware hero layout. Resolves to one of three layouts
     # (gradient/centered/split) based on directives.layoutHint or
     # variant_id; falls back to gradient when neither is set, which
     # matches the pre-#2 baseline so legacy callers (tests without a
     # variant_id) keep their expected JSX shape.
+    # C1 — Unsplash-fallback för split-layouten. Pre-resolved här så
+    # ``_render_hero_block`` slipper röra dossiern. Returnerar ``None``
+    # när business-typ saknar en kuraterad photo-ID i mappningen, vilket
+    # behåller den befintliga accent-tinted-fallbacken.
+    unsplash_fallback_url = _unsplash_hero_url(dossier)
     hero_block_jsx = _render_hero_block(
         _hero_style_for(dossier, variant_id),
         company=company,
@@ -1754,6 +1808,7 @@ def render_home(
         spel_cta=spel_cta,
         hero_asset=hero_asset,
         usps=usp_list,
+        unsplash_fallback_url=unsplash_fallback_url,
     )
 
     return (
@@ -1776,8 +1831,11 @@ def render_home(
         "        </div>\n"
         "      </section>\n"
         "\n"
+        f"{story_section}"
         f"{gallery_section}"
+        f"{testimonials_section}"
         f"{trust_section}"
+        f"{faq_section}"
         '      <section className="border-t border-[color:var(--border)] bg-[color:var(--primary)] text-[color:var(--primary-foreground)]">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-4 py-[var(--section-spacing)]">\n'
         '          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Hör av dig idag</h2>\n'
@@ -2208,6 +2266,187 @@ def _gallery_images(dossier: dict) -> list[dict]:
 
 _HOME_GALLERY_MAX_ITEMS = 6
 
+# Antal FAQ-frågor som visas i den kompakta home-sektionen. Tre matchar
+# 2/3-kolumns-griden och håller sektionen visuellt snäv; resterande
+# frågor (när /faq-routen aktiveras) lever på dedikerade sidan så
+# operatören inte tappar information.
+_HOME_FAQ_MAX_ITEMS = 4
+
+# Minsta antal trustSignals för att rendra dem som riktiga testimonial-
+# kort istället för bullet-list. Under detta tröskelvärde faller vi
+# tillbaka på den befintliga ``trust_section`` i ``render_home`` (en
+# enkel checkbox-lista) eftersom 1–2 punkter inte fyller ett 3-kolumns-
+# grid och kort skulle se underbefolkat ut.
+_HOME_TESTIMONIAL_MIN_ITEMS = 3
+
+
+# Branch/business-type-specifik listing-copy. När operatören har en
+# typisk restaurant/retail/service/medical-typ vill vi att rubriken
+# på home-sidans listing-sektion (services-grid) känns relevant för
+# branschen istället för den generiska "Vad vi tar oss an". Mappningen
+# läses i ``_branch_listing_copy``; om business-typ saknas eller inte
+# matchar någon nyckel faller vi tillbaka på ``_LISTING_COPY_BY_ROUTE_ID``
+# (route-id-baserade copy). Värdena är medvetet mjuka och beskrivande,
+# inte säljiga, för att inte krocka med variant-tonen.
+_BRANCH_LISTING_COPY: dict[str, dict[str, str]] = {
+    "restaurant": {
+        "eyebrow": "Menyn",
+        "heading": "Det vi serverar",
+        "cta": "Se hela menyn",
+    },
+    "cafe": {
+        "eyebrow": "Menyn",
+        "heading": "Smaker från oss",
+        "cta": "Se hela menyn",
+    },
+    "bakery": {
+        "eyebrow": "Sortimentet",
+        "heading": "Det vi bakar",
+        "cta": "Se hela sortimentet",
+    },
+    "retail": {
+        "eyebrow": "Sortimentet",
+        "heading": "Det vi säljer",
+        "cta": "Se hela sortimentet",
+    },
+    "e-commerce": {
+        "eyebrow": "Sortimentet",
+        "heading": "Vårt sortiment",
+        "cta": "Se alla produkter",
+    },
+    "salon": {
+        "eyebrow": "Behandlingar",
+        "heading": "Det vi gör",
+        "cta": "Se alla behandlingar",
+    },
+    "barbershop": {
+        "eyebrow": "Behandlingar",
+        "heading": "Det vi gör",
+        "cta": "Se alla behandlingar",
+    },
+    "medical": {
+        "eyebrow": "Vården",
+        "heading": "Det vi hjälper med",
+        "cta": "Se hela vårdutbudet",
+    },
+    "clinic": {
+        "eyebrow": "Vården",
+        "heading": "Det vi hjälper med",
+        "cta": "Se hela vårdutbudet",
+    },
+    "consulting": {
+        "eyebrow": "Erbjudandet",
+        "heading": "Det vi hjälper med",
+        "cta": "Se hela erbjudandet",
+    },
+    "agency": {
+        "eyebrow": "Erbjudandet",
+        "heading": "Det vi gör",
+        "cta": "Se hela erbjudandet",
+    },
+    "fitness": {
+        "eyebrow": "Träningen",
+        "heading": "Det vi erbjuder",
+        "cta": "Se hela utbudet",
+    },
+    "gym": {
+        "eyebrow": "Träningen",
+        "heading": "Det vi erbjuder",
+        "cta": "Se hela utbudet",
+    },
+    "education": {
+        "eyebrow": "Utbildningarna",
+        "heading": "Det vi lär ut",
+        "cta": "Se hela utbudet",
+    },
+    "hotel": {
+        "eyebrow": "Boende",
+        "heading": "Det vi erbjuder",
+        "cta": "Se alla rum",
+    },
+    "real-estate": {
+        "eyebrow": "Tjänster",
+        "heading": "Det vi förmedlar",
+        "cta": "Se hela utbudet",
+    },
+}
+
+
+# Unsplash-fallback per business-type när operatören inte laddat upp
+# en egen hero-bild i split-layouten. Vi väljer kuraterade query-strings
+# (inte slumpmässiga Unsplash-bilder) så generated sites får en bild
+# som åtminstone matchar branschen. Värdena är Unsplash-photo-IDn så
+# vi får deterministisk rendering — random query skulle annars
+# producera olika bilder mellan builds och sabotera test-snapshots.
+#
+# Photo-ID:n är hämtade från Unsplash Editorial collection och har
+# fria-användning-licens. När operatören har laddat upp en hero-bild
+# används den istället; denna fallback aktiveras bara när hero_asset
+# saknas OCH variant-style är ``split`` (där en bild krävs för att
+# layouten ska läsa rätt).
+_UNSPLASH_HERO_BY_BRANCH: dict[str, str] = {
+    "restaurant": "1414235077428-338989a2e8c0",
+    "cafe": "1554118811-1e0d58224f24",
+    "bakery": "1517433670267-08bbd4be890f",
+    "retail": "1441986300917-64674bd600d8",
+    "e-commerce": "1556909114-f6e7ad7d3136",
+    "salon": "1560066984-138dadb4c035",
+    "barbershop": "1503951914875-452162b0f3f1",
+    "medical": "1576091160399-112ba8d25d1d",
+    "clinic": "1581595220892-b0739db3ba8c",
+    "consulting": "1497366216548-37526070297c",
+    "agency": "1497366754035-f200968a6e72",
+    "fitness": "1517836357463-d25dfeac3438",
+    "gym": "1534438327276-14e5300c3a48",
+    "education": "1503676260728-1c00da094a0b",
+    "hotel": "1566073771259-6a8506099945",
+    "real-estate": "1564013799919-ab600027ffc6",
+    "construction": "1503387762-cbe48e8fc7d3",
+    "automotive": "1502877338535-766e1452684a",
+}
+
+
+def _branch_listing_copy(dossier: dict) -> dict[str, str]:
+    """Resolve branch-specific listing copy (eyebrow + heading + CTA)
+    from the dossier's ``businessType``. Returns the matching
+    ``_BRANCH_LISTING_COPY`` entry when business-type maps cleanly,
+    otherwise ``None`` so the caller falls back on the existing
+    route-id-based ``_LISTING_COPY_BY_ROUTE_ID`` lookup.
+
+    Branch matching is case-insensitive and tolerates the
+    ``"local-service-business"`` placeholder by treating it as
+    "no specific branch" (returning ``None``) so the generic copy
+    keeps applying.
+    """
+    company = dossier.get("company") or {}
+    business_type = _normalize_business_type(company.get("businessType"))
+    if not business_type:
+        return {}
+    return _BRANCH_LISTING_COPY.get(business_type, {})
+
+
+def _unsplash_hero_url(dossier: dict, *, width: int = 1200, height: int = 1500) -> str | None:
+    """Return a deterministic Unsplash CDN URL for the dossier's
+    business-type, or ``None`` when no matching photo-ID exists. Used
+    by ``_render_hero_block`` (split-layout) as a fallback when the
+    operator has not uploaded their own hero image.
+
+    The URL is built with explicit ``w=``/``h=``/``fit=crop`` params
+    so Next.js can serve the right size without an Image-loader
+    config, matching how operator-uploaded ``/uploads/*.webp`` files
+    are rendered. ``auto=format`` lets Unsplash pick WebP/AVIF based
+    on the visitor's browser headers.
+    """
+    company = dossier.get("company") or {}
+    business_type = _normalize_business_type(company.get("businessType"))
+    photo_id = _UNSPLASH_HERO_BY_BRANCH.get(business_type)
+    if not photo_id:
+        return None
+    return (
+        f"https://images.unsplash.com/photo-{photo_id}"
+        f"?w={width}&h={height}&fit=crop&auto=format&q=80"
+    )
+
 
 _HERO_STYLE_BY_VARIANT: dict[str, str] = {
     # local-service-business
@@ -2323,6 +2562,7 @@ def _render_hero_block(
     spel_cta: str,
     hero_asset: dict | None,
     usps: list[str] | None = None,
+    unsplash_fallback_url: str | None = None,
 ) -> str:
     """Render the hero <section> for the home page in one of three
     layouts. Customer-text (company.name, company.tagline) is always
@@ -2391,9 +2631,24 @@ def _render_hero_block(
                 f'            <img src={_jsx_safe_string("/uploads/" + hero_filename)} alt={_js_string_literal(hero_alt)} className="h-full w-full object-cover" />\n'
                 "          </div>\n"
             )
+        elif unsplash_fallback_url:
+            # C1 — branch-baserad Unsplash-fallback. Operatören har inte
+            # laddat upp en hero-bild men vi har en branschmatchande
+            # bild från Unsplash editorial collection. Vi använder en
+            # raw ``<img>`` med ``loading="lazy"`` och en explicit alt
+            # som refererar till företagets tagline, så bilden får
+            # samma a11y-och-prestanda-behandling som operatör-uppladdade
+            # filer under ``/uploads/``.
+            fallback_alt = company.get("tagline") or company.get("name") or "Hero-bild"
+            right_column = (
+                '          <div className="relative aspect-square w-full overflow-hidden rounded-2xl md:aspect-[4/5]">\n'
+                f'            <img src={_jsx_safe_string(unsplash_fallback_url)} alt={_js_string_literal(fallback_alt)} loading="lazy" className="h-full w-full object-cover" />\n'
+                "          </div>\n"
+            )
         else:
-            # No hero image: render a soft accent-tinted shape so the
-            # split layout still reads correctly. Pure CSS, no asset.
+            # No hero image and no branch-fallback: render a soft
+            # accent-tinted shape so the split layout still reads
+            # correctly. Pure CSS, no asset.
             right_column = (
                 '          <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-gradient-to-br from-[color:var(--accent)] to-[color:var(--primary)]/40 md:aspect-[4/5]">\n'
                 '            <div className="absolute inset-12 rounded-full bg-[color:var(--background)]/30 blur-3xl"></div>\n'
@@ -2466,6 +2721,156 @@ def _render_home_gallery_section(dossier: dict) -> str:
         '          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">\n'
         f"{figures}\n"
         "          </div>\n"
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+def _render_home_story_section(dossier: dict) -> str:
+    """Render a compact story section on the home page when the
+    operator has a non-empty ``company.story``. The section reuses
+    the ``Quote``-flanked card pattern from ``render_about`` so the
+    visual language is consistent between home and the dedicated
+    /om-oss route.
+
+    Returns ``""`` when ``company.story`` is missing or blank so the
+    section never leaks generic filler onto the home page. Tests in
+    ``test_builder_audit_post_3b_next.py`` exercise ``render_home``
+    directly with various dossier shapes; the empty-story short-
+    circuit is what keeps those tests passing without forcing every
+    operator to supply a story.
+
+    Icon dependency: this helper consumes ``Quote`` from lucide-react.
+    The caller (``render_home``) is responsible for including
+    ``Quote`` in its icon-import line; ``_collect_icons_for_pages``
+    cannot detect this dependency from ``services`` alone, so
+    ``render_home`` whitelists ``Quote`` whenever this section is
+    emitted (mirrors the ``Check`` whitelist for USP chips).
+    """
+    company = dossier.get("company") or {}
+    story = company.get("story")
+    if not isinstance(story, str) or not story.strip():
+        return ""
+    safe_story = _jsx_safe_string(story.strip())
+    return (
+        '      <section className="border-t border-[color:var(--border)] bg-[color:var(--accent)]/10">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[var(--section-spacing)]">\n'
+        '          <div className="flex flex-col gap-3">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Vår historia</p>\n'
+        '            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">Det här är vi</h2>\n'
+        "          </div>\n"
+        '          <div className="relative max-w-3xl rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 md:p-8">\n'
+        '            <Quote className="absolute -top-3 -left-3 size-8 text-[color:var(--primary)]/25" />\n'
+        f'            <p className="text-lg text-[color:var(--foreground)] leading-relaxed">{safe_story}</p>\n'
+        "          </div>\n"
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+def _render_home_testimonials_section(dossier: dict) -> str:
+    """Render a testimonials-style section on the home page when the
+    dossier has at least ``_HOME_TESTIMONIAL_MIN_ITEMS`` trustSignals.
+
+    The threshold is intentional: with only 1–2 trustSignals, a
+    3-column card grid looks underpopulated. The caller falls back to
+    the existing ``trust_section`` (bullet list with ``ShieldCheck``
+    icons) below this threshold. With 3+ items we render each
+    trustSignal as a card with a ``Quote``-glyph and bold attribution
+    ("Sagt om oss") so the visual feel matches real customer
+    testimonials, even though the source is operator-authored copy.
+
+    Returns ``""`` when fewer than the minimum number of items exist,
+    so the caller can decide whether to render its bullet-list
+    fallback or skip the section entirely.
+
+    Icon dependency: ``Quote`` (caller whitelists this when the
+    section is emitted; ``_collect_icons_for_pages`` doesn't see
+    trustSignals).
+    """
+    trust = dossier.get("trustSignals") or []
+    if not isinstance(trust, list):
+        return ""
+    items: list[str] = [
+        str(item).strip()
+        for item in trust
+        if isinstance(item, str) and item.strip()
+    ]
+    if len(items) < _HOME_TESTIMONIAL_MIN_ITEMS:
+        return ""
+    cards = "\n".join(
+        f'            <figure key={_jsx_safe_string(f"trust-card-{i}")} className="relative flex h-full flex-col gap-4 rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6">\n'
+        f'              <Quote className="size-6 text-[color:var(--primary)]/30" />\n'
+        f'              <blockquote className="text-base text-[color:var(--foreground)] leading-relaxed">{_jsx_safe_string(item)}</blockquote>\n'
+        f'              <figcaption className="mt-auto text-xs uppercase tracking-widest text-[color:var(--muted)]">Sagt om oss</figcaption>\n'
+        "            </figure>"
+        for i, item in enumerate(items)
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)] bg-[color:var(--accent)]/20">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        '          <div className="flex flex-col gap-3">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Förtroende</p>\n'
+        '            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">Det här uppskattar våra kunder</h2>\n'
+        "          </div>\n"
+        '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
+        f"{cards}\n"
+        "          </div>\n"
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+def _render_home_faq_section(dossier: dict, *, has_faq_route: bool) -> str:
+    """Render a compact FAQ section on the home page using the
+    deterministic ``_faq_pairs`` helper that ``render_faq`` already
+    uses for the dedicated /faq route. Shows up to
+    ``_HOME_FAQ_MAX_ITEMS`` pairs in a 2-column grid; when the dossier
+    has a /faq route the section ends with a "Se alla frågor"-CTA
+    that links to it, otherwise the CTA is omitted to avoid ghost
+    routes.
+
+    ``_faq_pairs`` returns 3–4 deterministic pairs (three defaults
+    plus an opening-hours pair when ``contact.openingHours`` is set),
+    so this section always renders when called — there's no
+    operator-data dependency that could short-circuit it to ``""``.
+    Callers that want to suppress FAQs entirely should skip calling
+    this helper.
+
+    Icon dependency: ``ArrowRight`` (already in render_home's icon-
+    set whenever ``listing_link`` is rendered, so the caller doesn't
+    need additional whitelisting; we still soft-import via the icon
+    collector to be explicit).
+    """
+    pairs = _faq_pairs(dossier)
+    if not pairs:
+        return ""
+    items = "\n".join(
+        f'            <article key={_jsx_safe_string(f"home-faq-{i}")} className="rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6">\n'
+        f'              <h3 className="text-base font-semibold leading-snug">{_jsx_safe_string(question)}</h3>\n'
+        f'              <p className="mt-2 text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(answer)}</p>\n'
+        "            </article>"
+        for i, (question, answer) in enumerate(pairs[:_HOME_FAQ_MAX_ITEMS])
+    )
+    faq_link = ""
+    if has_faq_route:
+        faq_link = (
+            '          <a href="/faq" className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Se alla frågor<ArrowRight className="size-4" /></a>\n'
+        )
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        '          <div className="flex flex-col gap-3">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Vanliga frågor</p>\n'
+        '            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">Det vi får höra ofta</h2>\n'
+        "          </div>\n"
+        '          <div className="grid gap-3 md:grid-cols-2">\n'
+        f"{items}\n"
+        "          </div>\n"
+        f"{faq_link}"
         "        </div>\n"
         "      </section>\n"
         "\n"
