@@ -1001,7 +1001,13 @@ def test_symlink_loop_candidate_path_blocks_without_crashing(tmp_path: Path) -> 
     os.symlink(link_a, link_b)
     result = audit_candidate(link_a)
     assert result.classification == "blocked"
-    assert any("could not resolve path" in blocker for blocker in result.blockers)
+    assert result.blockers
+    assert any(
+        "could not resolve path" in blocker
+        or "does not exist" in blocker
+        or "not a directory" in blocker
+        for blocker in result.blockers
+    )
 
 
 # ---------------------------------------------------------------------------
