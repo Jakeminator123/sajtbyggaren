@@ -846,7 +846,11 @@ def test_generate_followup_bumps_version_and_reuses_project_id(
     assert meta["originalPrompt"] == initial_meta["originalPrompt"]
     assert meta["followUpPrompt"].startswith("Lägg till mer fokus")
     assert "latestPrompt" not in meta
-    assert meta["projectDna"] == initial_meta["projectDna"]
+    assert meta["projectDna"]["story"] == initial_meta["projectDna"]["story"]
+    assert meta["projectDna"]["tagline"] == initial_meta["projectDna"]["tagline"]
+    assert meta["projectDna"]["tone"] == initial_meta["projectDna"]["tone"]
+    assert meta["projectDna"]["positioning"] == initial_meta["projectDna"]["positioning"]
+    assert meta["projectDna"]["followUpIntent"]["id"] == "no-semantic-change"
     assert project_input["company"]["name"] == initial_project_input["company"]["name"]
     assert project_input["contact"] == initial_project_input["contact"]
     assert project_input["scaffoldId"] == initial_project_input["scaffoldId"]
@@ -868,7 +872,7 @@ def test_generate_followup_bumps_version_and_reuses_project_id(
     )
     assert current_meta["version"] == 2
     assert current_meta["followUpPrompt"] == meta["followUpPrompt"]
-    assert current_meta["projectDna"] == initial_meta["projectDna"]
+    assert current_meta["projectDna"] == meta["projectDna"]
 
 
 def _wizard_discovery_payload(
@@ -1273,6 +1277,46 @@ def test_followup_merge_tagline_update_filters_ui_directive() -> None:
 
 
 @pytest.mark.tooling
+def test_followup_merge_tagline_update_uses_safe_candidate_copy() -> None:
+    previous = _minimal_previous_project_input()
+    candidate = {
+        **previous,
+        "company": {
+            **previous["company"],
+            "tagline": "Alltid nära hjälp",
+        },
+    }
+
+    merged = merge_followup_project_input(
+        previous,
+        candidate,
+        follow_up_prompt="Uppdatera taglinen till Alltid nära hjälp",
+    )
+
+    assert merged["company"]["tagline"] == "Alltid nära hjälp"
+
+
+@pytest.mark.tooling
+def test_followup_merge_story_update_allows_explicit_public_copy() -> None:
+    previous = _minimal_previous_project_input()
+    candidate = {
+        **previous,
+        "company": {
+            **previous["company"],
+            "story": "Lyft storyn till: Vi är ett familjeföretag sedan 1995.",
+        },
+    }
+
+    merged = merge_followup_project_input(
+        previous,
+        candidate,
+        follow_up_prompt="Lyft storyn till: Vi är ett familjeföretag sedan 1995.",
+    )
+
+    assert merged["company"]["story"] == "Vi är ett familjeföretag sedan 1995."
+
+
+@pytest.mark.tooling
 def test_classify_followup_intent_matches_semantic_keywords() -> None:
     assert (
         classify_followup_intent("gör tonen mer premium", language="sv")
@@ -1280,10 +1324,6 @@ def test_classify_followup_intent_matches_semantic_keywords() -> None:
     )
     assert (
         classify_followup_intent("gör känslan mer personlig", language="sv")
-        == "tone-shift"
-    )
-    assert (
-        classify_followup_intent("gör texten mer personlig", language="sv")
         == "tone-shift"
     )
     assert (
@@ -1304,6 +1344,10 @@ def test_classify_followup_intent_matches_semantic_keywords() -> None:
 def test_classify_followup_intent_defaults_to_safe_states() -> None:
     assert (
         classify_followup_intent("lägg till FAQ", language="sv")
+        == "no-semantic-change"
+    )
+    assert (
+        classify_followup_intent("gör texten mer personlig", language="sv")
         == "no-semantic-change"
     )
     assert classify_followup_intent("", language="sv") == "clarify"
@@ -1402,7 +1446,7 @@ def test_project_dna_sidecar_validates_against_snapshot_schema(
 
 
 @pytest.mark.tooling
-def test_followup_with_no_intent_keeps_project_dna_block_byte_stable(
+def test_followup_with_no_intent_keeps_project_dna_fields_byte_stable(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -1419,7 +1463,38 @@ def test_followup_with_no_intent_keeps_project_dna_block_byte_stable(
         site_id="no-change-dna-site",
     )
 
-    assert meta["projectDna"] == initial_meta["projectDna"]
+    assert meta["projectDna"]["story"] == initial_meta["projectDna"]["story"]
+    assert meta["projectDna"]["tagline"] == initial_meta["projectDna"]["tagline"]
+    assert meta["projectDna"]["tone"] == initial_meta["projectDna"]["tone"]
+    assert meta["projectDna"]["positioning"] == initial_meta["projectDna"]["positioning"]
+    assert meta["projectDna"]["followUpIntent"]["id"] == "no-semantic-change"
+
+
+@pytest.mark.tooling
+def test_followup_project_dna_refreshes_intent_after_prior_semantic_change(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    generate(
+        "Skapa en hemsida för en elektriker i Malmö",
+        output_dir=tmp_path,
+        site_id="refresh-dna-intent-site",
+    )
+    _tone_input, tone_meta, _, _ = generate_followup(
+        "Gör tonen mer premium.",
+        output_dir=tmp_path,
+        site_id="refresh-dna-intent-site",
+    )
+    _additive_input, additive_meta, _, _ = generate_followup(
+        "Lägg till FAQ.",
+        output_dir=tmp_path,
+        site_id="refresh-dna-intent-site",
+    )
+
+    assert tone_meta["projectDna"]["followUpIntent"]["id"] == "tone-shift"
+    assert additive_meta["projectDna"]["tone"] == tone_meta["projectDna"]["tone"]
+    assert additive_meta["projectDna"]["followUpIntent"]["id"] == "no-semantic-change"
 
 
 @pytest.mark.tooling

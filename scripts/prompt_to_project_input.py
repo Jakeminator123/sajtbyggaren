@@ -463,8 +463,18 @@ _FOLLOWUP_TONE_SCOPE_KEYWORDS = (
     "stil",
     "stilen",
     "style",
+)
+
+_FOLLOWUP_CONTENT_SCOPE_KEYWORDS = (
+    "text",
     "texten",
     "copy",
+    "sidtext",
+    "page text",
+    "page copy",
+    "innehåll",
+    "innehall",
+    "content",
     "språk",
     "sprak",
 )
@@ -1740,6 +1750,9 @@ def _contains_any_word(text: str, keywords: tuple[str, ...]) -> bool:
 def _has_tone_shift_signal(text: str) -> bool:
     has_scope = _contains_any_word(text, _FOLLOWUP_TONE_SCOPE_KEYWORDS)
     has_phrase = _contains_any(text, _FOLLOWUP_TONE_PHRASES)
+    has_content_scope = _contains_any(text, _FOLLOWUP_CONTENT_SCOPE_KEYWORDS)
+    if has_content_scope and not has_scope:
+        return False
     if _contains_any(text, _FOLLOWUP_ADD_ONLY_KEYWORDS) and not has_scope and not has_phrase:
         return False
     return has_scope or has_phrase
@@ -1820,6 +1833,33 @@ def _safe_semantic_text(
         return None
     if _looks_like_raw_followup_prompt(safe, follow_up_prompt):
         return None
+    safe = safe.removesuffix(".") if max_length <= 140 else safe
+    return safe[:max_length]
+
+
+def _explicit_semantic_copy_from_prompt(
+    follow_up_prompt: str,
+    *,
+    max_length: int,
+    reject_ui_directive: bool = False,
+) -> str | None:
+    """Allow explicit public copy after a narrow ``till``/``to`` marker."""
+    match = re.search(
+        r"(?:\btill\b|\bto\b)\s*[:：]?\s*(.+)$",
+        follow_up_prompt.strip(),
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    if not match:
+        return None
+    candidate = match.group(1).strip().strip("\"'“”‘’")
+    if not candidate:
+        return None
+    if reject_ui_directive and _offer_looks_like_ui_directive(candidate):
+        return None
+    safe = _customer_safe_planner_note(candidate)
+    if not safe:
+        return None
+    safe = safe.removesuffix(".") if max_length <= 140 else safe
     return safe[:max_length]
 
 
@@ -2018,6 +2058,11 @@ def _apply_semantic_patch(
     candidate_company = candidate.get("company") if isinstance(candidate.get("company"), dict) else {}
 
     if intent == "tagline-update":
+        explicit_tagline = _explicit_semantic_copy_from_prompt(
+            follow_up_prompt,
+            max_length=140,
+            reject_ui_directive=True,
+        )
         candidate_tagline = _safe_semantic_text(
             candidate_company.get("tagline"),
             follow_up_prompt=follow_up_prompt,
@@ -2036,20 +2081,30 @@ def _apply_semantic_patch(
             language=language,
         )
         candidate_lower = _normalise_followup_text(candidate_tagline or "")
-        if candidate_tagline and any(word in candidate_lower for word in prompt_tone_words):
+        if explicit_tagline:
+            company["tagline"] = explicit_tagline
+        elif candidate_tagline and any(word in candidate_lower for word in prompt_tone_words):
             company["tagline"] = candidate_tagline
+        elif candidate_tagline:
+            company["tagline"] = fallback_tagline
         else:
             company["tagline"] = fallback_tagline
         return
 
     if intent == "story-emphasize":
         previous_story = _string_value(company.get("story")) or ""
+        explicit_story = _explicit_semantic_copy_from_prompt(
+            follow_up_prompt,
+            max_length=1200,
+        )
         candidate_story = _safe_semantic_text(
             candidate_company.get("story"),
             follow_up_prompt=follow_up_prompt,
             max_length=1200,
         )
-        if candidate_story and candidate_story != previous_story:
+        if explicit_story and explicit_story != previous_story:
+            company["story"] = explicit_story
+        elif candidate_story and candidate_story != previous_story:
             company["story"] = candidate_story
         else:
             company["story"] = _append_story_sentence(
@@ -2137,7 +2192,13 @@ def _build_project_dna_snapshot(
     if mode == "followup":
         intent = classify_followup_intent(follow_up_prompt or "", language=language)
         if intent in {"no-semantic-change", "clarify"} and isinstance(previous_project_dna, dict):
-            return copy.deepcopy(previous_project_dna)
+            snapshot = copy.deepcopy(previous_project_dna)
+            snapshot["followUpIntent"] = {
+                "id": intent,
+                "confidence": "medium",
+                "rationale": "No semantic Project DNA field changed in this follow-up.",
+            }
+            return snapshot
 
     company = project_input.get("company") if isinstance(project_input.get("company"), dict) else {}
     previous_company = (
