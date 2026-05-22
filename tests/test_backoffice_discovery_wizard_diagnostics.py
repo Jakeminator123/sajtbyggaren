@@ -340,13 +340,13 @@ def test_prompt_signal_fields_are_not_marked_as_missing_destination() -> None:
     assert diagnostic["propagationLevel"] == "diagnostic-only"
 
 
-def test_brand_color_rows_show_downstream_gap_without_losing_active_mapping() -> None:
+def test_brand_color_rows_show_deterministic_token_mapping() -> None:
     row = _rows_by_answer_path()["answers.brand.primaryColorHex"]
 
     assert row["status"] == "active"
-    assert row["propagationLevel"] == "downstream-gap"
+    assert row["propagationLevel"] == "deterministic"
     assert "brand.primaryColorHex" in row["destination"]
-    assert "B140" in row["explanation"]
+    assert "CSS-tokenoverride" in row["explanation"]
 
 
 def test_diagnostics_helper_does_not_expose_write_api_or_modify_policies() -> None:

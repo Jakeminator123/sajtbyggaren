@@ -1062,13 +1062,13 @@ def _brand_rows() -> list[dict[str, str]]:
         _row(
             step="brand",
             answer_path="answers.brand.toneTags",
-            destination="tone.primary; tone.secondary",
-            source_chain="Discovery Resolver → Project Input tone",
+            destination="tone.primary; tone.secondary → build_site.py CSS token override",
+            source_chain="Discovery Resolver → Project Input tone → build_site.py",
             status="active",
-            propagation_level="downstream-gap",
+            propagation_level="deterministic",
             explanation=(
-                "Tone når Project Input, men slutlig style/codegen-propagation "
-                "är känd svaghet i B139/B141-spåret."
+                "Whitelistade tone.primary-signaler kan nu påverka CSS-tokens "
+                "när explicit brand-hex saknas."
             ),
             source_path=source,
         ),
@@ -1088,26 +1088,26 @@ def _brand_rows() -> list[dict[str, str]]:
         _row(
             step="brand",
             answer_path="answers.brand.primaryColorHex",
-            destination="brand.primaryColorHex",
-            source_chain="Discovery Resolver → Project Input brand",
+            destination="brand.primaryColorHex → build_site.py CSS --primary",
+            source_chain="Discovery Resolver → Project Input brand → build_site.py",
             status="active",
-            propagation_level="downstream-gap",
+            propagation_level="deterministic",
             explanation=(
-                "Primärfärgen når Project Input, men CSS/output använder inte "
-                "säkert värdet i dag (B140)."
+                "Primärfärgen används som säker CSS-tokenoverride när värdet "
+                "är giltig hex."
             ),
             source_path=source,
         ),
         _row(
             step="brand",
             answer_path="answers.brand.accentColorHex",
-            destination="brand.accentColorHex",
-            source_chain="Discovery Resolver → Project Input brand",
+            destination="brand.accentColorHex → build_site.py CSS --accent",
+            source_chain="Discovery Resolver → Project Input brand → build_site.py",
             status="active",
-            propagation_level="downstream-gap",
+            propagation_level="deterministic",
             explanation=(
-                "Accentfärgen når Project Input, men CSS/output använder inte "
-                "säkert värdet i dag (B140)."
+                "Accentfärgen används som säker CSS-tokenoverride när värdet "
+                "är giltig hex."
             ),
             source_path=source,
         ),
