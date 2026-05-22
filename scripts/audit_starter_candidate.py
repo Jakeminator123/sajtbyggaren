@@ -618,12 +618,16 @@ def _audit_components_json(root: Path, result: AuditResult) -> None:
 
 
 def _audit_disallowed_artefacts(root: Path, result: AuditResult) -> None:
-    """Report tracked build/cache artefacts buried below top-level too.
+    """Report tracked build/cache artefacts and nested ``.git/``-repos
+    buried below top-level too.
 
     Top-level cases are already handled in
-    :func:`_audit_top_level_files`. This walk only catches the rarer
+    :func:`_audit_top_level_files`. This walk catches the rarer
     pattern of a tracked ``node_modules`` (or similar) inside a
-    sub-package such as ``packages/web/node_modules``.
+    sub-package such as ``packages/web/node_modules``, plus nested
+    ``.git/``-repos like ``packages/site/.git/``. The nested ``.git``-
+    check must run **before** ``WALK_SKIP_DIRS`` filters the directory
+    out — otherwise the walk silently skips it without reporting.
     """
     resolved_root = root.resolve()
     for current, dirs, _files in os.walk(root):
@@ -633,6 +637,14 @@ def _audit_disallowed_artefacts(root: Path, result: AuditResult) -> None:
                 if skip in dirs:
                     dirs.remove(skip)
             continue
+        if ".git" in dirs:
+            git_entry = (rel / ".git").as_posix() + "/"
+            if git_entry not in result.files_disallowed:
+                result.files_disallowed.append(git_entry)
+                result.blockers.append(
+                    f"{git_entry} present below top level; nested git "
+                    "repository must be removed before any import"
+                )
         for artefact in TRACKED_BUILD_ARTEFACTS:
             if artefact in dirs:
                 entry = (rel / artefact).as_posix() + "/"

@@ -425,6 +425,47 @@ def test_nested_git_blocks_import(tmp_path: Path) -> None:
 
 
 @pytest.mark.tooling
+def test_non_root_nested_git_blocks_import(tmp_path: Path) -> None:
+    """Regression: a ``.git/``-directory below the top level must
+    block. Pre-fix, ``WALK_SKIP_DIRS`` filtered it out before the loop
+    body could see it, so a candidate with ``packages/site/.git/`` was
+    silently classified as ``starter-candidate-ready``.
+    """
+    candidate = _ready_candidate(tmp_path / "non-root-git")
+    (candidate / "packages" / "site" / ".git").mkdir(parents=True)
+    (candidate / "packages" / "site" / ".git" / "HEAD").write_text(
+        "ref: refs/heads/main\n", encoding="utf-8"
+    )
+    result = audit_candidate(candidate)
+    assert result.classification == "blocked"
+    assert "packages/site/.git/" in result.files_disallowed
+    assert any(
+        "packages/site/.git/" in blocker and "nested git repository" in blocker
+        for blocker in result.blockers
+    )
+
+
+@pytest.mark.tooling
+def test_non_root_nested_git_does_not_descend(tmp_path: Path) -> None:
+    """A nested ``.git/`` should be reported once and the walk should
+    not descend into it. If the walk recursed into ``.git/`` we would
+    risk re-reporting and potentially pick up the parent repo's git
+    objects on a real candidate.
+    """
+    candidate = _ready_candidate(tmp_path / "non-root-git-deep")
+    git_dir = candidate / "packages" / "site" / ".git"
+    git_dir.mkdir(parents=True)
+    (git_dir / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+    (git_dir / "objects").mkdir()
+    (git_dir / "objects" / "deadbeef").write_text("x", encoding="utf-8")
+    result = audit_candidate(candidate)
+    nested_git_entries = [
+        entry for entry in result.files_disallowed if entry.endswith(".git/")
+    ]
+    assert nested_git_entries == ["packages/site/.git/"]
+
+
+@pytest.mark.tooling
 def test_tracked_node_modules_triggers_cleanup(tmp_path: Path) -> None:
     candidate = _ready_candidate(tmp_path / "tracked-nm")
     (candidate / "node_modules").mkdir()
