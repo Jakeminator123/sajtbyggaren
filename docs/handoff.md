@@ -1,8 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-22 (**naprapat mini-eval bug-sweep efter follow-up
-intent hardening + Mini-eval runner v1**). Senaste produkt-/kod-läge är
-`991f152` ovanpå `25a435d` (`fix(builder): harden follow-up
+**Datum:** 2026-05-22 (**mixed follow-up tone guard efter naprapat mini-
+eval bug-sweep**). Senaste produkt-/kod-läge är `a54e06f`
+(`fix(builder): preserve tone intent in mixed follow-ups`) ovanpå
+naprapat-fixen `991f152`, `25a435d` (`fix(builder): harden follow-up
 intent handling`), Mini-eval-runnern `defd196` och PR #57 squash-SHA
 `eb5a81d` (`fix(builder): propagate brand and tone tokens`). PR #57 squash-
 mergades efter att en P2-review om foreground-token-kontrast fixats i
@@ -20,7 +21,18 @@ sync link-rewrite för spegel-djup), `c20270f` (Steward-bump),
 (PR #56 squash-merge), `059b4ae` (Steward efter PR #56), `eb5a81d`
 (PR #57 squash-merge), `b93ed50` (Steward efter PR #57), `defd196`
 (Mini-eval runner + CSS-kaskadfix), `25a435d` (follow-up intent-
-hardening), `991f152` (naprapat tone-sweep).
+hardening), `991f152` (naprapat tone-sweep), `3418cdb` (PR #58 B125
+decision merge), `a54e06f` (mixed additiv + tone guard).
+
+**Mixed follow-up guard (`a54e06f`):**
+
+- `Lägg till FAQ och gör tonen mer premium` klassas nu som `tone-shift`,
+  behåller additiv service/page-merge och patchar `tone`.
+- `Lägg till en lugnare sida om vår historia` är fortsatt konservativ:
+  additivt page/story-scope får inte oavsiktligt patcha global tone eller
+  `company.story`.
+- Ny full mini-eval är fortsatt **4/4 grön**:
+  `C:\Users\jakem\Desktop\sajtbyggaren-output\.evals\20260522T030947Z-mini-eval\mini-eval-report.md`.
 
 **Naprapat mini-eval bug-sweep (`991f152`):**
 
@@ -40,10 +52,9 @@ hardening), `991f152` (naprapat tone-sweep).
   `C:\Users\jakem\Desktop\sajtbyggaren-output\.evals\20260522T030947Z-mini-eval\mini-eval-report.md`.
   Naprapat-case passerar utan raw prompt-läckage; placeholder-contact-
   warnings är fortsatt väntade i mock/brief-vägen.
-- Parallell PR #58 (`cursor/b125-preview-fallback-64e2`,
-  `docs(adr): update B125 preview fallback decision`) är öppen för B125-
-  decision-spåret. Den ingår inte i naprapat-fixen och ska reviewas/mergeas
-  separat.
+- PR #58/B125 decision-spår är mergat i `3418cdb`. Nästa agent bör läsa
+  ADR 0025 + B125-rapporten innan eventuell preview-fallback-
+  implementation startas.
 
 **Follow-up-reviewfynd som nyss fixades (`25a435d`):**
 

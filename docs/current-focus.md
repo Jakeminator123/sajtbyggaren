@@ -30,7 +30,19 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `991f152` (2026-05-22, **naprapat mini-eval
+Last verified state: `a54e06f` (2026-05-22, **mixed follow-up tone guard
+efter naprapat mini-eval bug-sweep**) — produkt-/kodläget innehåller
+naprapat-fixen plus `a54e06f` som låter `Lägg till FAQ och gör tonen mer
+premium` behålla additiv merge samtidigt som den patchar `tone`, men
+fortsatt håller `lägg till en lugnare sida om vår historia` konservativ.
+Ny full mini-eval är **4/4 grön**:
+`C:\Users\jakem\Desktop\sajtbyggaren-output\.evals\20260522T030947Z-mini-eval\mini-eval-report.md`.
+PR #58/B125 decision-spår är mergat i `3418cdb`; nästa faktiska steg är
+att läsa B125-ADR/rapporten och välja om preview-fallback ska bli nästa
+implementation, eller om den gröna mini-evalen motiverar annat
+produktspår. Föregående produkt-läge:
+
+Föregående verified state: `991f152` (2026-05-22, **naprapat mini-eval
 bug-sweep efter Mini-eval runner v1**) — produkt-/kodläget innehåller
 `eb5a81d` (`fix(builder): propagate brand and tone tokens`), `defd196`
 (`chore(eval): add isolated mini eval runner`), `25a435d`
@@ -64,10 +76,6 @@ finns explicit tone-scope (`ton`, `tone`, `känsla`, etc.); `lägg till en
 lugnare sida om vår historia` är fortsatt konservativ. **Direkt nästa fokus:** använd den gröna eval-rapporten för att
 välja mellan B125 preview-fallback och nästa produktspår; vänta fortsatt
 med embeddings, SNI-runtime, variant-promotion och nya starters.
-Öppen parallell PR #58 (`cursor/b125-preview-fallback-64e2`,
-`docs(adr): update B125 preview fallback decision`) finns för B125-
-decision-spåret; rör den inte från naprapat-/mini-eval-spåret utan
-separat review/merge-beslut.
 Föregående produkt-läge:
 
 Föregående verified state: `25a435d` (2026-05-22, **follow-up intent
