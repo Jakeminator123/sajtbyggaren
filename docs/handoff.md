@@ -1,12 +1,45 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-22 (**SNI-followup-tooling + operator-finalized rule-
-tillägg committade ovanpå PR #55-mergen; Project DNA-spåret drivs av
-separat cloud agent (DRAFT PR #56)**). Senaste produkt-/kod-/rule-läge
-är `1150424` (`chore(rules): finalize always-swedish additions and
-workspace autosave`). Direkt under: `f137f92` SNI-followup, `e822a2c`
-PR #55-merge, mina SNI-commits `2e274ac`, `bf8d6c2`, `f40564e`,
-`7289732`.
+**Datum:** 2026-05-22 (**Backoffice SNI-diagnostik utökad +
+worktree/branch-cleanup; Project DNA-spåret drivs av separat cloud
+agent (DRAFT PR #56)**). Senaste produkt-/kod-läge är `5114fb2`
+(`feat(backoffice): expand SNI diagnostics with coverage gaps and parent
+chain`). Direkt under: `1150424` operator-rules + workspace, `f137f92`
+SNI-followup-tooling, `e822a2c` PR #55-merge, mina SNI-commits
+`2e274ac`, `bf8d6c2`, `f40564e`, `7289732`.
+
+**Det som nyss landade i Backoffice-polishen (`5114fb2`):**
+
+- `backoffice/sni_diagnostics.py` får tre nya helpers:
+  - `confidence_breakdown(rows)` returnerar `{high, medium, low, other}`
+    räknat per policyrad. Aktuell policy: 30 high, 9 medium, 0 low,
+    0 other.
+  - `taxonomy_coverage_gaps(rows=None, taxonomy=None)` returnerar
+    Discovery Taxonomy-kategorier som saknar varje SNI-policymappning.
+    V1 har 6 gaps (landing/other/blog/business/food/music) — inte ett
+    fel, bara en indikator på var policyn kan breddas i framtida sprint.
+  - `lookup_parent_chain(value, reference=None)` ger samma avdelning →
+    huvudgrupp → grupp → undergrupp → detaljgrupp-kedja som
+    `scripts/lookup_sni.py code <CODE>` ger på CLI. Trunkerar syntetisk
+    prefix-form (`56100`) till närmaste verkliga kod (`561`) så
+    operatör-vänlig input fungerar.
+- `backoffice/views/building_blocks.py` får tre nya UI-sektioner under
+  "SNI → Discovery category": confidence-metric-rad (high/medium/low/
+  other), expander för taxonomy-coverage-gaps, och parent-chain-tabell
+  ovanför operator-lookup-resultatet.
+- `tests/test_backoffice_sni_diagnostics.py` får 19 nya regression-
+  tester som låser shape och kontrakt för alla tre helpers.
+
+**Cleanup i samma pass:**
+
+- `../sajtbyggaren-pr55/` worktree borttagen via `git worktree remove`
+  (per PR55-agentens slut-handover 2026-05-22).
+- Lokal branch `fix/viewser-followup-stale-state` raderad via
+  `git branch -d` (PR55 mergad squash, origin-branch togs bort av
+  PR55-agenten).
+- `backup-bra-änä` är kvar både lokalt och på origin. Namnet bryter mot
+  `branch-discipline.md` (åäö är förbjudet i branchnamn) men backup-
+  branches får bara operatören radera. Flaggad för operatörsbeslut.
 
 **Vad som följt-committades 2026-05-22 efter PR #55-mergen:**
 
@@ -181,18 +214,50 @@ och rörs inte av denna sprint.
 
 **Handoff till nästa orkestratoragent:** starta med
 `docs/current-focus.md`, `docs/handoff.md`, `docs/product-operating-context.md`
-och `docs/orchestrator-playbook.md`. Nästa huvudspår är fortsatt
-**Project DNA / semantic follow-up** med B71 som primärt ankare:
-följdprompt ska kunna ändra tone/story/tagline/positionering synligt i
-v2 utan rå prompt-läckage och utan drift i oändrade fält. Börja read-
-only: kartlägg `scripts/prompt_to_project_input.py::merge_followup_project_input`,
-aktuella Project Input-versioner och vilka artefakter som ska visa
-v2-skillnaden. Föreslå sedan en smal Builder-sprint med regressionstester
-och eventuell ADR om kontraktet behöver ändras. Starta inte embeddings,
-SNI-runtime-taxonomi (V2-spår), nya starters, variant-promotion eller
-B59/B125-preview-fallback i samma sprint. Den parallella branchen
-`fix/viewser-followup-stale-state` bör först stämmas av med operatören
-innan eventuell merge.
+och `docs/orchestrator-playbook.md`. Kör `python scripts/focus_check.py`
+som första steg — den ska säga `OK - repo matches docs/current-focus.md`.
+
+**Arbetsdelning 2026-05-22:** En **separat cloud agent** äger Project
+DNA / semantic follow-up-spåret end-to-end via DRAFT PR #56 (branch
+`cursor/project-dna-followup-cdad`). Lokal orchestrator ska **inte**
+starta egna DNA-ändringar (`scripts/prompt_to_project_input.py`,
+`packages/generation/discovery/resolve.py`, follow-up-versionering,
+tone/story/tagline-spåret) eller review:a/merge:a PR #56 förrän
+cloud-agenten flaggar den ready-for-review.
+
+**Föreslagna lokala spår (välj ett, inte alla):**
+
+1. **Viewser-overlay-E2E mini-eval** (Scout RO-pass) — kör
+   live overlay-flödet på de fyra baseline-prompterna (elektriker
+   Malmö, frisör Göteborg, naprapat Stockholm, sköldpaddssoppa) +
+   `scripts/verify_run.py --json` per case. Sannolikt scout-snitt
+   över 6.5/10 nu efter B132/B137/B138/B141/B143/B144 + PR #54-fixarna.
+   Värdefullt produktbevis utan att röra DNA-spårets filer. Inga
+   write-operationer i Builder utan Scout-OK.
+2. **Preview-stabilisering / B59-B125 decision sprint** —
+   landa ADR ovanpå `governance/decisions/0025-browser-fallback-preview.md`
+   (status Proposed) om vilken fallback-väg (server-byggd statisk
+   preview, lokal `next dev`-park, "Öppna i StackBlitz"-fallback,
+   eller Vercel preview-deployments) som blir V1. Detta är launch-
+   blocker för Safari/Firefox-användare. Hela ADR-passet kan göras
+   utan att röra DNA-spårets kod.
+3. **SNI policy v2-bredding** (om operatör vill) — utöka
+   `governance/policies/sni-discovery-map.v1.json` med fler grupp-
+   overrides där täckningsluckor finns (Backoffice visar nu 6
+   wizardCategoryIds utan SNI-mappning: blog/business/food/landing/
+   music/other; en del kan medvetet lämnas tomma, andra kan kopplas
+   till specifika SNI 58/59/63/etc.). Liten policy-only-sprint utan
+   runtime-ändring.
+
+**Starta INTE i samma sprint:** embeddings, SNI-runtime-taxonomi (V2-
+spår som väntar tills DNA + preview-stabilisering är klara), nya
+starters utöver befintliga fyra, variant-promotion, eller
+`apps/viewser`-ändringar som riskerar konflikt med PR55-spårets fixar.
+
+**Operatör-flaggad branch som väntar på beslut:** `backup-bra-änä`
+finns både lokalt och på origin med ett åäö-namn som bryter mot
+`branch-discipline.md`. Backup-branches får bara operatören radera;
+nästa orchestrator ska inte röra branchen utan explicit OK.
 
 Föregående datum-paragraf:
 

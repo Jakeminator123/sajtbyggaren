@@ -30,9 +30,29 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `1150424` (2026-05-22, **SNI-followup tooling +
+Last verified state: `5114fb2` (2026-05-22, **Backoffice SNI-diagnostik
+utökad med coverage gaps + confidence-breakdown + parent-chain ovanpå
+SNI-followup-tooling**) — produkt-/kod-läget är `5114fb2`
+(`feat(backoffice): expand SNI diagnostics with coverage gaps and parent
+chain`). Föregående följdcommits 2026-05-22: `1150424` operator-finalized
+rules + workspace, `f137f92` SNI-followup-tooling, `b75b664`/`369ed48`/
+`06cdc51` Steward-bumpar, `e822a2c` PR #55-merge. Nya backoffice-helpers:
+`confidence_breakdown` (high/medium/low/other-räkning per policyrad),
+`taxonomy_coverage_gaps` (Discovery Taxonomy-kategorier utan SNI-
+mappning — landing/other/blog/business/food/music i V1), och
+`lookup_parent_chain` (avdelning → huvudgrupp → grupp → undergrupp →
+detaljgrupp; syntetiska prefix som `56100` trunkeras till närmaste
+verkliga kod `561`). Backoffice-vyn under Building Blocks/Kontrollplan
+visar nu confidence-metrics, en expander med taxonomy-täckningsluckor
+och parent-chain ovanför operator-lookup-resultatet. 19 nya regression-
+tester. Cleanup: `../sajtbyggaren-pr55/` worktree borttagen, lokal
+`fix/viewser-followup-stale-state`-branch raderad. `backup-bra-änä` är
+kvar (åäö-namnet bryter mot `branch-discipline.md` men backup-branches
+får bara operatören radera). Föregående produktlägespunkt:
+
+Föregående verified state: `1150424` (2026-05-22, **SNI-followup tooling +
 operator-finalized rule additions committade ovanpå PR #55-mergen**) —
-produkt-/kod-/rule-läget är `1150424` (`chore(rules): finalize always-
+produkt-/kod-/rule-läget var `1150424` (`chore(rules): finalize always-
 swedish additions and workspace autosave`). Föregående commits i samma
 pass: `e822a2c` (PR #55 merge: viewser run-following + artefakt-panel),
 `06cdc51` (Steward-bump till `e822a2c`), `369ed48` (PR #56 cloud-agent-
@@ -285,13 +305,13 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `1150424` på origin och lokalt efter två følgd-commits
-ovanpå PR #55-mergen `e822a2c`: SNI-followup-tooling (`f137f92`) och
-operator-finalized rule-tillägg (`1150424`). Operatör 2026-05-22 OK:ade
-båda. Inga otrackade följdfiler kvar i working tree. Öppen DRAFT-PR #56
+`main` är vid `5114fb2` på origin och lokalt efter att Backoffice-
+diagnostiken för SNI fick coverage-gaps, confidence-breakdown och
+parent-chain ovanpå SNI-followup-tooling. Operatör 2026-05-22 OK:ade
+alla följdcommits. PR55-agentens worktree är städad. Öppen DRAFT-PR #56
 från cloud-agenten driver Project DNA-spåret och rörs inte av lokal
 orchestrator. Bug-räkning oförändrad: **27 aktiva, 0 misplaced, 5 unknown,
-104 stängda** — varken PR #55 eller följdfilerna introducerade nya B-IDs.
+104 stängda** — ingen sprintspår sedan SNI introducerade en ny B-ID.
 `backup-42` finns på origin från pre-SNI-läget. Inga öppna PRs förutom
 PR #56 (cloud-agent-DRAFT). Föregående stage snapshot:
 
