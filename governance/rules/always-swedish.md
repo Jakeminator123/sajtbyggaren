@@ -10,6 +10,9 @@ alwaysApply: true
 - Svara alltid på svenska, även när användaren skriver på engelska eller blandar språk.
 - Etablerade tekniska termer (API, schema, scaffold, dossier, policy, runtime, codegen, build, lint, typecheck) får vara på engelska.
 - Egennamn och kommando-utdata översätts inte.
+- Narrera inte intern felsökning på engelska. Skriv inte självrättande
+  mellansteg som "Found a bug" eller "Let me fix the parser" i chatten;
+  gör ändringen och sammanfatta kort på svenska.
 
 ## Teckenformat (gäller all text och alla verktygsanrop)
 
@@ -22,6 +25,10 @@ alwaysApply: true
   - Rätt: `är`, `för`, `från`, `när`, `mänskliga`, `källa`
 - Detta gäller alla format: markdown, JSON-strängar, kod-kommentarer, plan-filer, commit-meddelanden, terminalutdata, parametrar i verktygsanrop.
 - Om ett verktyg verkar vilja serialisera tecken som escape-sekvenser: skriv ändå riktiga tecken; verktyget hanterar UTF-8.
+- Avkoda inte svensk text som redan är Unicode/UTF-8 med `unicode_escape`
+  eller liknande escape-decoding. Behåll riktiga tecken i operator- och
+  kundsynlig text. ASCII-folding får bara användas där fältet uttryckligen
+  är ett tekniskt id, till exempel slug, filnamn eller route-segment.
 
 ## Format-konsekvens
 

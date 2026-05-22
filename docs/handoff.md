@@ -1,8 +1,154 @@
 # Handoff – Sajtbyggaren
 
+**Datum:** 2026-05-22 (**Slutlig handover efter SNI-sidospår, PR #55-
+merge, rules_sync link-rewrite + separator-order-fix; Project DNA-
+spåret drivs av separat cloud agent via DRAFT PR #56**). Senaste
+produkt-/kod-läge är `465b8fa` (`fix(rules-sync): pick earliest
+separator when splitting path from query/anchor`). Föregående commits
+i sessionsordning från äldst till nyast: `2e274ac` (SNI core),
+`bf8d6c2`, `f40564e`, `7289732` (Steward-bumpar), `e822a2c` (PR #55-
+merge av annan agent), `06cdc51`, `369ed48`, `b75b664` (Steward-
+bumpar), `f137f92` (SNI-followup-tooling), `1150424` (operator-rules
++ workspace autosave), `f6f4f30` (Steward-bump), `5114fb2` (Backoffice
+SNI-diagnostik-utökning), `18b88c0` (Steward-bump), `919d564` (rules-
+sync link-rewrite för spegel-djup), `c20270f` (Steward-bump),
+`465b8fa` (separator-order-fix).
+
+**Sessionens tre huvudleveranser:**
+
+1. **SNI 2025-import + Discovery-map-diagnostik** (`2e274ac` +
+   `f137f92` + `5114fb2`) — stdlib-only extractor, 1882-poster
+   JSON-spegel, handstyrd policy (21 huvudgrupp + 18 grupp-overrides),
+   resolver-helper, lookup-CLI, Backoffice read-only diagnostik med
+   coverage-gaps, confidence-breakdown och parent-chain. V1 är
+   diagnostiskt; ingen runtime-konsumtion av SNI sker än.
+2. **rules_sync link-rewrite** (`919d564` + `465b8fa`) — relativa
+   länkar i `governance/rules/*.md` skrivs nu automatiskt om för
+   `.cursor/rules/*.mdc`-speglarna så markdown-linter inte längre
+   varnar om brutna paths. Hanterar parent-relative (`../policies/`),
+   sibling (`*.md` → `*.mdc`), anchor- och query-suffix samt edge
+   case när båda finns. 20 nya regression-tester.
+3. **Operatör-finaliserade rules + workspace** (`1150424`) — två nya
+   stycken i `governance/rules/always-swedish.md` om engelsk debug-
+   narration och unicode_escape, plus `files.autoSave: afterDelay` i
+   workspace.
+
+**Det som nyss landade i Backoffice-polishen (`5114fb2`):**
+
+- `backoffice/sni_diagnostics.py` får tre nya helpers:
+  - `confidence_breakdown(rows)` returnerar `{high, medium, low, other}`
+    räknat per policyrad. Aktuell policy: 30 high, 9 medium, 0 low,
+    0 other.
+  - `taxonomy_coverage_gaps(rows=None, taxonomy=None)` returnerar
+    Discovery Taxonomy-kategorier som saknar varje SNI-policymappning.
+    V1 har 6 gaps (landing/other/blog/business/food/music) — inte ett
+    fel, bara en indikator på var policyn kan breddas i framtida sprint.
+  - `lookup_parent_chain(value, reference=None)` ger samma avdelning →
+    huvudgrupp → grupp → undergrupp → detaljgrupp-kedja som
+    `scripts/lookup_sni.py code <CODE>` ger på CLI. Trunkerar syntetisk
+    prefix-form (`56100`) till närmaste verkliga kod (`561`) så
+    operatör-vänlig input fungerar.
+- `backoffice/views/building_blocks.py` får tre nya UI-sektioner under
+  "SNI → Discovery category": confidence-metric-rad (high/medium/low/
+  other), expander för taxonomy-coverage-gaps, och parent-chain-tabell
+  ovanför operator-lookup-resultatet.
+- `tests/test_backoffice_sni_diagnostics.py` får 19 nya regression-
+  tester som låser shape och kontrakt för alla tre helpers.
+
+**Cleanup i samma pass:**
+
+- `../sajtbyggaren-pr55/` worktree borttagen via `git worktree remove`
+  (per PR55-agentens slut-handover 2026-05-22).
+- Lokal branch `fix/viewser-followup-stale-state` raderad via
+  `git branch -d` (PR55 mergad squash, origin-branch togs bort av
+  PR55-agenten).
+- `backup-bra-änä` är kvar både lokalt och på origin. Namnet bryter mot
+  `branch-discipline.md` (åäö är förbjudet i branchnamn) men backup-
+  branches får bara operatören radera. Flaggad för operatörsbeslut.
+
+**Vad som följt-committades 2026-05-22 efter PR #55-mergen:**
+
+- `f137f92` `feat(taxonomy): SNI follow-up tooling + cursor/git ignore
+  consolidation` — 5 filer +446 rader. PR55-agentens untracked SNI-
+  stödfiler stageade efter operatör-OK: `scripts/lookup_sni.py` stdlib-
+  only CLI (subkommandon `code`/`text`/`section`/`level`/`stats` med
+  `--json`-stöd, lint-clean, manuellt verifierat via `code 56110` ->
+  full parent-chain, `text frisör` -> 9621/96210, `stats` -> 1882 items),
+  `data/taxonomies/sni/README.md` dokumenterar rebuild-flödet (SCB xlsx
+  -> extractor -> JSON-spegel -> radera xlsx) plus konsumentlistan,
+  `.cursorindexingignore` exkluderar SNI JSON från Cursor-sökindex
+  (25 000 rader bloat), `.cursorignore` speglar Read-blockeringen,
+  `.gitignore` får `data/taxonomies/**/*.xlsx` säkerhetsbälte plus
+  `.cursor/tmp_*` och `eval-tmp/`-konsolidering.
+- `1150424` `chore(rules): finalize always-swedish additions and
+  workspace autosave` — 3 filer +15/-1. Operatör-finaliserade tillägg
+  som suttit unstaged genom flera sessioner: `governance/rules/always-
+  swedish.md` får två nya stycken (ingen engelsk intern-debug-narration
+  i chatten; ingen `unicode_escape` på redan UTF-8 svensk text utom
+  för tekniska id som slug/filename/route), `.cursor/rules/always-
+  swedish.mdc` är spegeln (redan synkad), `sajtbyggaren.code-workspace`
+  byter `files.autoSave` från `off` till `afterDelay`.
+
+**Cloud-agentens DNA-spår (PR #56, DRAFT):** Skapad 2026-05-22 23:59
+UTC, branch `cursor/project-dna-followup-cdad`, titel `feat(builder):
+add Project DNA semantic follow-up`, 5 filer +1152/-19. Lokal
+orchestrator startar inga DNA-ändringar och rör inte `scripts/
+prompt_to_project_input.py`, `packages/generation/discovery/resolve.py`,
+Project Input-versionering eller tone/story/tagline-spåret tills cloud-
+agenten flaggar PR:n ready-for-review.
+
+**PR #55-mergen (PR55-agentens spår, inte mitt):** Stängde tre distinkta
+viewser-fixar i 6 filer (113 ins / 8 del):
+
+1. Stale-closure i `applyRunsData` (apps/viewser/app/page.tsx)
+2. `setBundle(null)`-cleanup före refetch i `run-details-panel.tsx`
+3. Ny `runSiteIdUnknown`-prop genom `console-drawer.tsx` →
+   `project-input-picker.tsx` → `prompt-builder.tsx` som blockerar
+   follow-up när `siteId === "unknown"`
+
+3 nya regression-tester i `tests/test_viewser_files.py` låser fix-
+kontrakten via regex-/substring-match. Reviewerns observation om
+namnkonflikt med Discovery Resolver-konceptet stämde: PR-bodyn nämnde
+ett `ApplyRunsContext`-namn som aldrig blev en *named type*. Mergens
+andra commit "avoid governance term for run context" gjorde ctx inline
+(`ctx?: { selectedRunId: string | null; selectedSiteId: string }`).
+Squash-merge-commit `e822a2c`.
+
+**Untracked + lokalt-modifierade filer som PR55-agenten lämnade för
+operatör-/orchestrator-beslut:**
+
+| Fil | Tillhör | Innehåll |
+|---|---|---|
+| `data/taxonomies/sni/README.md` | SNI-followup | Komplett dokumentation av SNI-mappen + rebuild-flöde + lookup-CLI + konsumentlista |
+| `scripts/lookup_sni.py` | SNI-followup | Stdlib-only CLI med `code`/`text`/`section`/`level`/`stats`-subkommandon + `--json`. Lint-passerar; manuellt verifierat. |
+| `.cursorindexingignore` | SNI + tooling | Lägger till lockfile-kommentar, `.cursor/plans/`, `.cursor/tmp_*`, `eval-tmp/`, `data/embedding-index/`, `*.mp4` och blockerar `data/taxonomies/sni/sni-2025.v1.json` från Cursor-indexering (25 000 rader JSON-bloat undviks; Read funkar fortfarande på enskilda poster) |
+| `.cursorignore` | Operatör + tooling | Speglade ignores för agent Read (`embedding-index`, `.cursor/plans/`, `.cursor/tmp_*`, `eval-tmp/`, `*.mp4`) |
+| `.gitignore` | SNI + operatör | `.cursor/tmp_*`, `eval-tmp/` plus `data/taxonomies/**/*.xlsx` säkerhetsbälte mot framtida xlsx-commits |
+| `.cursor/rules/always-swedish.mdc` | Operatör (spegel) | Nya stycken om engelsk debug-narration och unicode_escape — speglad fil, ändras inte direkt |
+| `governance/rules/always-swedish.md` | Operatör (källa) | Två nya stycken: ingen engelsk intern-debug-narration; ingen unicode_escape-decoding av redan UTF-8 svensk text |
+| `sajtbyggaren.code-workspace` | Operatör | `files.autoSave: afterDelay` istället för `off` |
+
+PR55-agenten skrev explicit i sin slutrapport att "mina otrackade SNI-
+filer ... du bestämmer när de ska stageas". Operatören har 2026-05-22
+bekräftat att en separat **cloud agent jobbar med Project DNA-spåret**,
+så lokal orchestrator håller main stabil och rör inget DNA-relaterat
+(`scripts/prompt_to_project_input.py`, `packages/generation/discovery/
+resolve.py`, Project Input-versionering, tone/story/tagline/positionering)
+tills cloud-agentens spår återkommer för review eller blockas.
+
+**Föreslagen följd-Steward-pass när operatören ger OK:** commit:a
+SNI-followup-filerna (README + lookup_sni.py) + ignore-/gitignore-
+uppdateringarna som en samlad `docs(steward): SNI follow-up tooling +
+cursor/git ignore consolidation`. Operatör-lokala filer
+(`always-swedish.md` källa + spegel via `rules_sync.py`,
+`sajtbyggaren.code-workspace`) kan committas separat eller stayas där
+de är.
+
+**Föregående datum-paragraf:**
+
 **Datum:** 2026-05-22 (**SNI 2025 import + Discovery-map-diagnostik
 landat på main; Project DNA / semantic follow-up är fortsatt nästa
-huvudspår**). Senaste produkt-/kodläge är `2e274ac`
+huvudspår**). Senaste produkt-/kodläge var `2e274ac`
 (`feat(governance): add SNI 2025 import + discovery map diagnostics`).
 `backup-42` skapad från synkad `main`-`1edb089` + pushad till origin
 innan sprintarbetet. Inga öppna PRs. Bug-scope oförändrat: **27 aktiva,
@@ -93,18 +239,71 @@ och rörs inte av denna sprint.
 
 **Handoff till nästa orkestratoragent:** starta med
 `docs/current-focus.md`, `docs/handoff.md`, `docs/product-operating-context.md`
-och `docs/orchestrator-playbook.md`. Nästa huvudspår är fortsatt
-**Project DNA / semantic follow-up** med B71 som primärt ankare:
-följdprompt ska kunna ändra tone/story/tagline/positionering synligt i
-v2 utan rå prompt-läckage och utan drift i oändrade fält. Börja read-
-only: kartlägg `scripts/prompt_to_project_input.py::merge_followup_project_input`,
-aktuella Project Input-versioner och vilka artefakter som ska visa
-v2-skillnaden. Föreslå sedan en smal Builder-sprint med regressionstester
-och eventuell ADR om kontraktet behöver ändras. Starta inte embeddings,
-SNI-runtime-taxonomi (V2-spår), nya starters, variant-promotion eller
-B59/B125-preview-fallback i samma sprint. Den parallella branchen
-`fix/viewser-followup-stale-state` bör först stämmas av med operatören
-innan eventuell merge.
+och `docs/orchestrator-playbook.md`. Kör `python scripts/focus_check.py`
+som första steg — den ska säga `OK - repo matches docs/current-focus.md`
+(inom bump tolerance om Steward-bump är pågående).
+
+**Repo-tillstånd vid handover** (2026-05-22 02:40 CEST):
+
+- `main` = `origin/main` = `465b8fa` + final Steward-bump (HEAD-commiten
+  som denna handoff dokumenteras i bör vara senaste).
+- Inga öppna PRs förutom DRAFT PR #56 från cloud-agenten på Project
+  DNA-spåret. Rör den inte.
+- `backup-42` finns på origin från pre-SNI-läget som säkerhet.
+- `backup-bra-änä` finns både lokalt och på origin med åäö-namn som
+  bryter mot `branch-discipline.md`. **Operatör-only-beslut**; nästa
+  orchestrator ska inte radera utan explicit OK.
+- Working tree har en operatör-modifierad `.cursorignore` (kommenterar
+  ut `.cursor/plans/`-blocket för agent-Read men behåller den i
+  `.cursorindexingignore` för sökindex). Lämna orörd; det är operatör-
+  preferens.
+- Alla guards gröna: `ruff check .` 0, `governance_validate` 18 OK,
+  `rules_sync --check` OK, `check_term_coverage --strict` OK, full
+  `pytest tests/ -q` grön (3 E2E skippade).
+- Bug-räkning oförändrad: **27 aktiva, 0 misplaced, 5 unknown, 104
+  stängda**. Sessionen introducerade inga nya B-IDs.
+
+**Arbetsdelning 2026-05-22:** En **separat cloud agent** äger Project
+DNA / semantic follow-up-spåret end-to-end via DRAFT PR #56 (branch
+`cursor/project-dna-followup-cdad`). Lokal orchestrator ska **inte**
+starta egna DNA-ändringar (`scripts/prompt_to_project_input.py`,
+`packages/generation/discovery/resolve.py`, follow-up-versionering,
+tone/story/tagline-spåret) eller review:a/merge:a PR #56 förrän
+cloud-agenten flaggar den ready-for-review.
+
+**Föreslagna lokala spår (välj ett, inte alla):**
+
+1. **Viewser-overlay-E2E mini-eval** (Scout RO-pass) — kör
+   live overlay-flödet på de fyra baseline-prompterna (elektriker
+   Malmö, frisör Göteborg, naprapat Stockholm, sköldpaddssoppa) +
+   `scripts/verify_run.py --json` per case. Sannolikt scout-snitt
+   över 6.5/10 nu efter B132/B137/B138/B141/B143/B144 + PR #54-fixarna.
+   Värdefullt produktbevis utan att röra DNA-spårets filer. Inga
+   write-operationer i Builder utan Scout-OK.
+2. **Preview-stabilisering / B59-B125 decision sprint** —
+   landa ADR ovanpå `governance/decisions/0025-browser-fallback-preview.md`
+   (status Proposed) om vilken fallback-väg (server-byggd statisk
+   preview, lokal `next dev`-park, "Öppna i StackBlitz"-fallback,
+   eller Vercel preview-deployments) som blir V1. Detta är launch-
+   blocker för Safari/Firefox-användare. Hela ADR-passet kan göras
+   utan att röra DNA-spårets kod.
+3. **SNI policy v2-bredding** (om operatör vill) — utöka
+   `governance/policies/sni-discovery-map.v1.json` med fler grupp-
+   overrides där täckningsluckor finns (Backoffice visar nu 6
+   wizardCategoryIds utan SNI-mappning: blog/business/food/landing/
+   music/other; en del kan medvetet lämnas tomma, andra kan kopplas
+   till specifika SNI 58/59/63/etc.). Liten policy-only-sprint utan
+   runtime-ändring.
+
+**Starta INTE i samma sprint:** embeddings, SNI-runtime-taxonomi (V2-
+spår som väntar tills DNA + preview-stabilisering är klara), nya
+starters utöver befintliga fyra, variant-promotion, eller
+`apps/viewser`-ändringar som riskerar konflikt med PR55-spårets fixar.
+
+**Operatör-flaggad branch som väntar på beslut:** `backup-bra-änä`
+finns både lokalt och på origin med ett åäö-namn som bryter mot
+`branch-discipline.md`. Backup-branches får bara operatören radera;
+nästa orchestrator ska inte röra branchen utan explicit OK.
 
 Föregående datum-paragraf:
 

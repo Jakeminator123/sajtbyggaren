@@ -68,6 +68,7 @@ pnpm-lock.yaml
 data/runs/
 data/versions/
 data/prompt-inputs/
+data/embedding-index/
 .generated/
 
 # ---------------------------------------------------------------------------
@@ -115,6 +116,11 @@ konversation.txt
 .review-*/
 .streamlit/secrets.toml
 .cursor/mcp.json
+# Agent-/operator-lokala plan-filer och temp-noteringar (.cursor/tmp_*).
+# Redan gitignored; här blockerar vi även agentens Read + sökindex så
+# scratch inte förorenar codebase-sök. Samma kategori som .cursor/mcp.json.
+.cursor/plans/
+.cursor/tmp_*
 .vscode/*.local.json
 
 # `referens/` is a copy/fork workspace for external references. Even
@@ -132,6 +138,8 @@ referens/
 .tmp-*
 .tmp.*
 .commit-msg.tmp
+# Lokal mini-eval-output (samma kategori som data/runs/ men operatör-lokal).
+eval-tmp/
 
 # Global binary payloads should never be indexed
 *.png
@@ -153,5 +161,6 @@ referens/
 *.tgz
 *.7z
 *.pdf
+*.mp4
 
 övrigt/

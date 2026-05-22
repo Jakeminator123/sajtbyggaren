@@ -103,7 +103,7 @@ COMMON_WORDS = {
     # domänbegrepp). Mirrors how "SharedArrayBuffer is not defined"
     # is registered as a quoted error-string further up.
     "Cursor Bugbot",
-    "SUCCESS", "FAILURE", "COMPLETED", "NEUTRAL",
+    "SUCCESS", "FAILURE", "COMPLETED", "NEUTRAL", "DRAFT",
     "Module not found",
     # Generic word fragments som dyker upp i text
     "ADR", "PR", "CI", "ID", "UUID", "MD", "LLM", "PascalCase", "Backup",

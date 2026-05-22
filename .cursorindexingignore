@@ -1,3 +1,27 @@
+# Lockfiles - committade men ger inget för code-search i indexet.
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+
+# Operatör-/agent-lokala scratch-filer. Redan i .gitignore; här hindrar
+# vi indexer-bloat. (Hård read-block ligger i .cursorignore.)
+.cursor/plans/
+.cursor/tmp_*
+eval-tmp/
+
+# Embedding-index-cache (policy låst, implementation kommer).
+# Redan i .gitignore; här ser vi till att Cursor inte börjar indexera
+# tiotusentals vektor-/cache-filer när index byggs i kommande sprint.
+data/embedding-index/
+
+# Stora binära media-filer som agenten inte kan tolka meningsfullt.
+# Trackade i git (produktassets) men onödiga att indexera.
+*.mp4
+
+# SNI 2025-taxonomispegel: 1882 items / ~25k rader JSON. Canonical
+# referens som committas (sni_map.py + Backoffice-diagnostiken
+# konsumerar policyn, inte JSON:en direkt). Sök via
+# scripts/lookup_sni.py istället för att låta indexer-bloata med
+# repetitiv branschstruktur. Read funkar fortfarande om en agent
+# explicit behöver en enskild post (samma mönster som lockfiles).
+data/taxonomies/sni/sni-2025.v1.json

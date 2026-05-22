@@ -158,6 +158,54 @@ def mapping_summary(rows: list[dict[str, Any]]) -> dict[str, int]:
     }
 
 
+def confidence_breakdown(rows: list[dict[str, Any]]) -> dict[str, int]:
+    """Antal mappningar per confidence-nivå (high/medium/low/other)."""
+    counts: Counter[str] = Counter()
+    for row in rows:
+        level = str(row.get("confidence") or "").strip().lower() or "other"
+        counts[level] += 1
+    return {
+        "high": counts.get("high", 0),
+        "medium": counts.get("medium", 0),
+        "low": counts.get("low", 0),
+        "other": sum(value for key, value in counts.items() if key not in {"high", "medium", "low"}),
+    }
+
+
+def taxonomy_coverage_gaps(
+    *,
+    rows: list[dict[str, Any]] | None = None,
+    taxonomy: DiscoveryTaxonomy | None = None,
+    policy_path: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Returnera Discovery Taxonomy-kategorier som *saknar* SNI-mappning.
+
+    Den här diagnostiken hjälper operatören se var policyn behöver
+    breddas. Resultatet listar bara taxonomy-kategorier som inte har en
+    enda matchande policyrad (division eller group-override); kategorier
+    med ofullständig SNI-bredd men minst en rad räknas som täckta.
+    """
+    resolved_taxonomy = taxonomy if taxonomy is not None else load_discovery_taxonomy()
+    resolved_rows = rows if rows is not None else mapping_rows(policy_path=policy_path)
+    covered = {row["wizardCategoryId"] for row in resolved_rows if row["wizardCategoryId"]}
+    gaps: list[dict[str, Any]] = []
+    for category_id in sorted(resolved_taxonomy.known_category_ids()):
+        if category_id in covered:
+            continue
+        category = resolved_taxonomy.get(category_id)
+        if category is None:
+            continue
+        gaps.append(
+            {
+                "wizardCategoryId": category_id,
+                "labelSv": category.labelSv,
+                "supportStatus": category.supportStatus,
+                "rationale": category.rationale,
+            }
+        )
+    return gaps
+
+
 def reference_summary(reference: dict[str, Any]) -> dict[str, int]:
     """Antal SNI-poster per nivå i den committade referensen."""
     items = reference.get("items") or []
@@ -224,6 +272,70 @@ def lookup_row(
     }
     row.update(chain)
     return row
+
+
+def lookup_parent_chain(
+    value: str | None,
+    *,
+    reference: dict[str, Any] | None = None,
+    reference_path: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Returnera parent-chain från avdelning ner till själva SNI-koden.
+
+    Helpern letar i ``sni-2025.v1.json`` på normaliserad kod-form
+    (``56.100`` -> ``56100``) och returnerar de items vars koder
+    förekommer i target-itemets ``path`` (inklusive itemet själv som
+    sista rad). Returnerar tom lista när koden inte hittas i referensen.
+
+    Backoffice-vyn använder detta för att ge samma översikt som
+    ``scripts/lookup_sni.py code <CODE>`` ger på CLI:
+    *avdelning → huvudgrupp → grupp → undergrupp → detaljgrupp*.
+    """
+    if not value or not str(value).strip():
+        return []
+    resolved_reference = reference if reference is not None else load_sni_reference(reference_path)
+    items = resolved_reference.get("items") or []
+    if not items:
+        return []
+
+    code_index: dict[str, dict[str, Any]] = {}
+    for entry in items:
+        if not isinstance(entry, dict):
+            continue
+        code = str(entry.get("code") or "").upper()
+        if code:
+            code_index[code] = entry
+
+    from packages.generation.discovery.sni_map import normalize_sni_code
+
+    needle = normalize_sni_code(value).upper()
+    if not needle:
+        return []
+
+    target: dict[str, Any] | None = code_index.get(needle)
+    # När operatören skriver en kod som inte är en faktisk SNI-post (t.ex.
+    # ``56100`` istället för canonical ``56110``) trunkerar vi från höger
+    # tills en faktisk kod hittas — då får parent-chain ändå rätt SNI-
+    # struktur från avdelning ner till djupaste verkliga match.
+    while target is None and len(needle) > 1:
+        needle = needle[:-1]
+        target = code_index.get(needle)
+    if target is None:
+        return []
+
+    chain: list[dict[str, Any]] = []
+    for code in target.get("path", []) or []:
+        match = code_index.get(str(code).upper())
+        if match is None:
+            continue
+        chain.append(
+            {
+                "code": match.get("code"),
+                "level": match.get("level"),
+                "labelSv": match.get("labelSv"),
+            }
+        )
+    return chain
 
 
 def filter_rows_by_category(
