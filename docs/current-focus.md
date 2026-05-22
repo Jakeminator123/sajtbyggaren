@@ -30,8 +30,23 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `465b8fa` (2026-05-22, **rules_sync separator-
-order-fix ovanpå link-rewrite-passet**) — produkt-/kod-läget är
+Last verified state: `aef5825` (2026-05-22, **Project DNA semantic
+follow-up V1 mergad via PR #56**) — produkt-/kod-läget är `aef5825`
+(`feat(builder): add Project DNA semantic follow-up`). B71 är stängd
+med faktisk v1 → v2-effekt: tydliga följdprompter kan deterministiskt
+ändra `company.story`, `company.tagline` och `tone`, medan additiva/no-
+change-prompter håller semantiska fält byte-stabila. `projectDna` skrivs
+i befintlig prompt-input-meta-sidecar; full `data/projects/<projectId>/
+dna.json`-lagring är fortsatt V2-scope enligt ADR 0027. Bug-räkning efter
+merge: **26 aktiva, 0 misplaced, 5 unknown, 105 stängda**. **Direkt nästa
+Builder-fokus:** B139/B140 — smal renderer/token-sprint som låter
+`brand.primaryColorHex`, `brand.accentColorHex` och whitelistade
+`tone.primary`-signaler påverka renderade CSS-tokens utan SNI-runtime,
+nya starters, variant-promotion, embeddings, Backoffice-editor eller
+Project DNA V2. Föregående produkt-läge:
+
+Föregående verified state: `465b8fa` (2026-05-22, **rules_sync separator-
+order-fix ovanpå link-rewrite-passet**) — produkt-/kod-läget var
 `465b8fa` (`fix(rules-sync): pick earliest separator when splitting
 path from query/anchor`). External reviewer-feedback om separator-
 iterationsordningen i `_rewrite_link_target` bekräftad: `file.md?foo=

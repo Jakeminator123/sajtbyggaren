@@ -629,7 +629,7 @@ för follow-up eller ska städas.
 - **`B71` Hög** (stängd 2026-05-22, Project DNA semantic follow-up V1) -
   `scripts/prompt_to_project_input.py:merge_followup_project_input`
   frös `company.story`, `company.tagline` och `tone` även när
-  följdprompten tydligt bad om semantic ändring. Fix: `d791b0c`
+  följdprompten tydligt bad om semantic ändring. Fix: `aef5825`
   aktiverar deterministisk FollowUp Intent-klassning för
   `tone-shift`, `story-emphasize`, `tagline-update`,
   `positioning-shift`, `no-semantic-change` och `clarify`.
