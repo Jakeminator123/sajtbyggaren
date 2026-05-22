@@ -920,6 +920,124 @@ def _foreground_for_background(hex_color: str) -> str:
     return "#1c1c1a" if dark_contrast >= light_contrast else "#fafaf9"
 
 
+def _hex_to_hsl(hex_color: str) -> tuple[float, float, float]:
+    """Konvertera ``#RRGGBB`` till HSL.
+
+    Returnerar ``(h, s, l)`` där ``h ∈ [0, 360]`` och ``s, l ∈ [0, 100]``.
+    Anropare ska redan ha validerat ``hex_color`` mot ``_HEX_COLOR_RE``.
+
+    Implementationen följer standard HSL-formeln (samma som CSS
+    ``hsl()``-funktionen och Tailwinds palette-generator). Vi använder
+    den för att bygga skalor (``_build_color_scale``) där vi bevarar
+    hue + saturation och justerar lightness.
+    """
+    red = int(hex_color[1:3], 16) / 255
+    green = int(hex_color[3:5], 16) / 255
+    blue = int(hex_color[5:7], 16) / 255
+
+    cmax = max(red, green, blue)
+    cmin = min(red, green, blue)
+    delta = cmax - cmin
+    lightness = (cmax + cmin) / 2
+
+    if delta == 0:
+        hue = 0.0
+        saturation = 0.0
+    else:
+        if lightness in (0.0, 1.0):
+            saturation = 0.0
+        else:
+            saturation = delta / (1 - abs(2 * lightness - 1))
+        if cmax == red:
+            hue = ((green - blue) / delta) % 6
+        elif cmax == green:
+            hue = (blue - red) / delta + 2
+        else:
+            hue = (red - green) / delta + 4
+        hue *= 60
+
+    return (hue, saturation * 100, lightness * 100)
+
+
+def _hsl_to_hex(hue: float, saturation: float, lightness: float) -> str:
+    """Konvertera ``(h, s, l)`` till ``#rrggbb``-sträng.
+
+    ``hue ∈ [0, 360]``, ``saturation, lightness ∈ [0, 100]``. Inverterar
+    ``_hex_to_hsl`` med tolerans för flyttalsavrundning (alla tre
+    värden klampas innan multiplikation till 0-255).
+    """
+    s = max(0.0, min(100.0, saturation)) / 100
+    lum = max(0.0, min(100.0, lightness)) / 100
+    h = hue % 360
+
+    c = (1 - abs(2 * lum - 1)) * s
+    x = c * (1 - abs((h / 60) % 2 - 1))
+    m = lum - c / 2
+
+    if h < 60:
+        r, g, b = c, x, 0.0
+    elif h < 120:
+        r, g, b = x, c, 0.0
+    elif h < 180:
+        r, g, b = 0.0, c, x
+    elif h < 240:
+        r, g, b = 0.0, x, c
+    elif h < 300:
+        r, g, b = x, 0.0, c
+    else:
+        r, g, b = c, 0.0, x
+
+    red = max(0, min(255, round((r + m) * 255)))
+    green = max(0, min(255, round((g + m) * 255)))
+    blue = max(0, min(255, round((b + m) * 255)))
+    return f"#{red:02x}{green:02x}{blue:02x}"
+
+
+# Tailwind-liknande lightness-skala. Värdena valda så att 500-bandet
+# ligger nära Tailwind v3:s default-palette (där t.ex. blue-500 har
+# L≈53%, slate-500 har L≈48%). 50/100 är extremt ljusa (subtila
+# bakgrundstinter), 800/900 är mörka nog för text på ljus bakgrund.
+# Saturation-cap används så att hög-mättade input (#ff0000) inte
+# producerar neon-aktig 500-band i CTAs — vi vill ha "brand-aware"
+# palettes, inte "screaming"-palettes.
+_BRAND_SCALE_LIGHTNESS: tuple[tuple[str, float], ...] = (
+    ("50", 97.0),
+    ("100", 94.0),
+    ("200", 86.0),
+    ("300", 76.0),
+    ("400", 66.0),
+    ("500", 56.0),
+    ("600", 48.0),
+    ("700", 38.0),
+    ("800", 28.0),
+    ("900", 18.0),
+)
+_BRAND_SCALE_MAX_SATURATION = 85.0
+
+
+def _build_color_scale(hex_color: str) -> dict[str, str]:
+    """Bygg en 10-stegs Tailwind-liknande palett från en bas-färg.
+
+    Bevarar ``hue`` och ``saturation`` (cap:ad vid 85% för att undvika
+    neon-känsla på fullt mättade input som ``#ff0000``), ersätter
+    lightness med ``_BRAND_SCALE_LIGHTNESS``. Returnerar en dict
+    ``{ "50": "#...", "100": "#...", ..., "900": "#..." }`` som
+    ``variant_css`` emitterar som ``--primary-50`` .. ``--primary-900``
+    CSS-tokens. Generated render-funktioner kan sedan referera dem
+    för subtila bakgrunder (50/100), borders (200/300), accenter
+    (500/600) och text på ljus bg (800/900) — utan att hårdkoda hex
+    i varje sektion.
+
+    Anropare måste ha validerat ``hex_color`` mot ``_HEX_COLOR_RE``.
+    """
+    hue, saturation, _lightness = _hex_to_hsl(hex_color)
+    capped_saturation = min(saturation, _BRAND_SCALE_MAX_SATURATION)
+    return {
+        step: _hsl_to_hex(hue, capped_saturation, lightness)
+        for step, lightness in _BRAND_SCALE_LIGHTNESS
+    }
+
+
 def _token_overrides_from_project_input(
     project_input: dict[str, Any] | None,
 ) -> tuple[dict[str, str], list[str]]:
@@ -1194,6 +1312,30 @@ def variant_css(variant: dict, token_overrides: dict[str, str] | None = None) ->
         else "subtle"
     )
     motion_block = _motion_css_block(motion_level)
+    # Fas 4 — brand color scales (Tailwind-liknande 10-stegs palettes
+    # genererade från primary/accent). Vi emitterar dem som CSS-tokens
+    # så render_*-funktionerna kan referera ``var(--primary-50)`` för
+    # subtila sektion-bakgrunder, ``var(--primary-100)`` för card-
+    # hovers, ``var(--primary-600)`` för CTAs och ``var(--primary-900)``
+    # för text — istället för att hårdkoda en enda mid-tone "primary"
+    # överallt och få "alla sajter ser ut likadana"-effekten oavsett
+    # brand. Skalan tar hue + (cap:ad) saturation från base-färgen och
+    # varierar bara lightness deterministiskt. Generated css-output är
+    # additiv: existerande ``--primary`` / ``--accent`` ligger kvar
+    # exakt som idag så render-funktioner som inte uppgraderats än
+    # fortsätter rendera identiskt.
+    primary_scale = _build_color_scale(color["primary"]) if _HEX_COLOR_RE.fullmatch(color["primary"]) else None
+    accent_scale = _build_color_scale(color["accent"]) if _HEX_COLOR_RE.fullmatch(color["accent"]) else None
+    scale_block = ""
+    if primary_scale:
+        scale_block += "".join(
+            f"  --primary-{step}: {value};\n" for step, value in primary_scale.items()
+        )
+    if accent_scale:
+        scale_block += "".join(
+            f"  --accent-{step}: {value};\n" for step, value in accent_scale.items()
+        )
+
     return (
         font_import
         + ":root {\n"
@@ -1205,7 +1347,8 @@ def variant_css(variant: dict, token_overrides: dict[str, str] | None = None) ->
         f"  --primary-foreground: {color['primaryForeground']};\n"
         f"  --accent: {color['accent']};\n"
         f"  --accent-foreground: {color['accentForeground']};\n"
-        f"  --radius-sm: {radius['sm']};\n"
+        + scale_block
+        + f"  --radius-sm: {radius['sm']};\n"
         f"  --radius-md: {radius['md']};\n"
         f"  --radius-lg: {radius['lg']};\n"
         f"  --section-spacing: {spacing['section']};\n"

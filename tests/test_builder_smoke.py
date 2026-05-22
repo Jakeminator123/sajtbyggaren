@@ -451,3 +451,122 @@ def test_build_renders_media_metadata_and_background_video(
     assert "<video" in page
     assert 'src={"/uploads/hero-loop.mp4"}' in page
     assert "autoPlay loop muted playsInline" in page
+
+
+# ─── Fas 4: brand color scales ──────────────────────────────────────────
+
+
+@pytest.mark.tooling
+def test_hex_to_hsl_round_trips_through_hsl_to_hex() -> None:
+    """Hex→HSL→hex ska ge tillbaka (i princip) samma hex. Round-trip
+    säkerställer att vi inte tappar precision vid skalbygget — om en
+    färg ändras mer än ±1 enhet per kanal är HSL-matematiken trasig."""
+    from scripts.build_site import _hex_to_hsl, _hsl_to_hex
+
+    samples = [
+        "#1f3b5b",  # variant primary (nordic-trust)
+        "#cdb98a",  # variant accent
+        "#22aa44",  # mid green
+        "#ff0000",  # full saturation red
+        "#0066ff",  # token-defaults accent
+        "#f5e6d3",  # warm light
+        "#000000",  # black
+        "#ffffff",  # white
+    ]
+    for hex_in in samples:
+        h, s, ell = _hex_to_hsl(hex_in)
+        hex_out = _hsl_to_hex(h, s, ell)
+        # Tillåt 1-step avvikelse per channel pga flyttalsavrundning.
+        for i in (1, 3, 5):
+            in_val = int(hex_in[i : i + 2], 16)
+            out_val = int(hex_out[i : i + 2], 16)
+            assert abs(in_val - out_val) <= 1, (
+                f"round-trip för {hex_in!r} gav {hex_out!r} (skillnad i kanal {i})"
+            )
+
+
+@pytest.mark.tooling
+def test_build_color_scale_preserves_hue_and_returns_ten_stops() -> None:
+    """Skalan ska ha exakt 10 nycklar (50-900) och alla stops ska ha
+    samma (eller mycket nära) hue som input. Lightness ska monotont
+    minska från 50 till 900 så palette:n går från ljus till mörk."""
+    from scripts.build_site import _build_color_scale, _hex_to_hsl
+
+    scale = _build_color_scale("#1f3b5b")
+    expected_steps = ("50", "100", "200", "300", "400", "500", "600", "700", "800", "900")
+    assert tuple(scale.keys()) == expected_steps
+
+    base_hue, _, _ = _hex_to_hsl("#1f3b5b")
+    prev_l = 101.0
+    for step in expected_steps:
+        value = scale[step]
+        assert value.startswith("#") and len(value) == 7, value
+        hue, _, lightness = _hex_to_hsl(value)
+        # Hue kan avvika med ±2° pga grayscale-stop (lightness 97% kan
+        # exempelvis tappa hue helt). Vi accepterar det för ytter-
+        # stops men kräver bevarad hue för mid-range.
+        if step in ("300", "400", "500", "600", "700"):
+            assert abs(hue - base_hue) <= 2, (
+                f"hue för steg {step} drev (förv. {base_hue}, fick {hue})"
+            )
+        assert lightness < prev_l + 0.5, (
+            f"lightness ska monotont minska, men steg {step} ({lightness}) >= förra ({prev_l})"
+        )
+        prev_l = lightness
+
+
+@pytest.mark.tooling
+def test_build_color_scale_caps_saturation_for_neon_inputs() -> None:
+    """Fullt mättade input som #ff0000 ska ge en mer dämpad 500-band
+    (saturation cap:as vid 85%) så CTA-knappar inte ser neon-aktiga
+    ut. Detta är skillnaden mellan "branded" och "screaming"."""
+    from scripts.build_site import _build_color_scale, _hex_to_hsl
+
+    scale = _build_color_scale("#ff0000")
+    _, saturation_500, _ = _hex_to_hsl(scale["500"])
+    assert saturation_500 <= 86, (
+        f"500-bandet ska ha cap:ad saturation, fick {saturation_500}"
+    )
+
+
+@pytest.mark.tooling
+def test_variant_css_emits_primary_and_accent_color_scales(
+    nordic_trust_variant: dict,
+) -> None:
+    """variant_css ska emittera --primary-50..900 och --accent-50..900
+    som CSS-tokens. Generated render-funktioner kan sedan referera
+    var(--primary-50) för subtila bakgrunder utan att hårdkoda hex."""
+    from scripts.build_site import variant_css
+
+    css = variant_css(nordic_trust_variant)
+    for step in ("50", "100", "200", "300", "400", "500", "600", "700", "800", "900"):
+        assert f"--primary-{step}:" in css, f"missing --primary-{step}"
+        assert f"--accent-{step}:" in css, f"missing --accent-{step}"
+    # Befintliga tokens ska kvarstå exakt som idag.
+    assert "  --primary: #1f3b5b;" in css
+    assert "  --accent: #cdb98a;" in css
+
+
+@pytest.mark.tooling
+def test_brand_override_propagates_into_color_scale(
+    nordic_trust_variant: dict,
+) -> None:
+    """När operatören anger brand.primaryColorHex ska skalan baseras
+    på den färgen, inte variant-defaulten. Annars är hela poängen
+    med palette:n förlorad."""
+    from scripts.build_site import (
+        _build_color_scale,
+        _token_overrides_from_project_input,
+        variant_css,
+    )
+
+    overrides, _ = _token_overrides_from_project_input(
+        {"brand": {"primaryColorHex": "#22AA44"}}
+    )
+    css = variant_css(nordic_trust_variant, overrides)
+
+    expected = _build_color_scale("#22aa44")
+    for step, value in expected.items():
+        assert f"  --primary-{step}: {value};\n" in css, (
+            f"--primary-{step} ska vara {value!r} i CSS"
+        )
