@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `NAPRAPAT_PENDING` (2026-05-22, **naprapat mini-eval
+Last verified state: `991f152` (2026-05-22, **naprapat mini-eval
 bug-sweep efter Mini-eval runner v1**) — produkt-/kodläget innehåller
 `eb5a81d` (`fix(builder): propagate brand and tone tokens`), `defd196`
 (`chore(eval): add isolated mini eval runner`), `25a435d`
@@ -62,6 +62,10 @@ till `["förtroendeingivande"]` utan story/tagline- eller CSS-token-
 ändring. **Direkt nästa fokus:** använd den gröna eval-rapporten för att
 välja mellan B125 preview-fallback och nästa produktspår; vänta fortsatt
 med embeddings, SNI-runtime, variant-promotion och nya starters.
+Öppen parallell PR #58 (`cursor/b125-preview-fallback-64e2`,
+`docs(adr): update B125 preview fallback decision`) finns för B125-
+decision-spåret; rör den inte från naprapat-/mini-eval-spåret utan
+separat review/merge-beslut.
 Föregående produkt-läge:
 
 Föregående verified state: `25a435d` (2026-05-22, **follow-up intent

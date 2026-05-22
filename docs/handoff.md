@@ -2,7 +2,7 @@
 
 **Datum:** 2026-05-22 (**naprapat mini-eval bug-sweep efter follow-up
 intent hardening + Mini-eval runner v1**). Senaste produkt-/kod-läge är
-`NAPRAPAT_PENDING` ovanpå `25a435d` (`fix(builder): harden follow-up
+`991f152` ovanpå `25a435d` (`fix(builder): harden follow-up
 intent handling`), Mini-eval-runnern `defd196` och PR #57 squash-SHA
 `eb5a81d` (`fix(builder): propagate brand and tone tokens`). PR #57 squash-
 mergades efter att en P2-review om foreground-token-kontrast fixats i
@@ -20,9 +20,9 @@ sync link-rewrite för spegel-djup), `c20270f` (Steward-bump),
 (PR #56 squash-merge), `059b4ae` (Steward efter PR #56), `eb5a81d`
 (PR #57 squash-merge), `b93ed50` (Steward efter PR #57), `defd196`
 (Mini-eval runner + CSS-kaskadfix), `25a435d` (follow-up intent-
-hardening), `NAPRAPAT_PENDING` (naprapat tone-sweep).
+hardening), `991f152` (naprapat tone-sweep).
 
-**Naprapat mini-eval bug-sweep (`NAPRAPAT_PENDING`):**
+**Naprapat mini-eval bug-sweep (`991f152`):**
 
 - Root cause: `gör den lugnare och mer förtroendeingivande` matchade
   varken tone-scope/phrase-whitelist eller tone-word-map; `lugnare` och
@@ -38,6 +38,10 @@ hardening), `NAPRAPAT_PENDING` (naprapat tone-sweep).
   `C:\Users\jakem\Desktop\sajtbyggaren-output\.evals\20260522T024927Z-mini-eval\mini-eval-report.md`.
   Naprapat-case passerar utan raw prompt-läckage; placeholder-contact-
   warnings är fortsatt väntade i mock/brief-vägen.
+- Parallell PR #58 (`cursor/b125-preview-fallback-64e2`,
+  `docs(adr): update B125 preview fallback decision`) är öppen för B125-
+  decision-spåret. Den ingår inte i naprapat-fixen och ska reviewas/mergeas
+  separat.
 
 **Follow-up-reviewfynd som nyss fixades (`25a435d`):**
 
