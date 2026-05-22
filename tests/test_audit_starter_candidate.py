@@ -370,6 +370,49 @@ def test_tracked_node_modules_triggers_cleanup(tmp_path: Path) -> None:
 
 
 @pytest.mark.tooling
+def test_nested_tracked_artefact_uses_trailing_slash_consistently(tmp_path: Path) -> None:
+    """Nested tracked artefacts must be stored with the same trailing-slash
+    convention as top-level entries so the dedup check inside
+    ``_audit_disallowed_artefacts`` can actually compare them.
+    """
+    candidate = _ready_candidate(tmp_path / "nested-nm")
+    (candidate / "packages" / "a" / "node_modules").mkdir(parents=True)
+    (candidate / "packages" / "a" / "node_modules" / "marker").write_text(
+        "x", encoding="utf-8"
+    )
+    result = audit_candidate(candidate)
+    assert "packages/a/node_modules/" in result.files_disallowed
+    assert result.files_disallowed.count("packages/a/node_modules/") == 1
+
+
+@pytest.mark.tooling
+def test_nested_artefact_dedup_survives_repeated_invocation(tmp_path: Path) -> None:
+    """Regression: ``_audit_disallowed_artefacts`` must deduplicate using the
+    exact string shape it appends. The previous implementation compared
+    ``rel_path`` (no trailing slash) against entries that were appended with
+    a trailing slash, so calling the helper twice would double-add both the
+    ``files_disallowed`` entry and the matching warning. This guard fails
+    the moment that broken shape is reintroduced.
+    """
+    from scripts.audit_starter_candidate import (
+        AuditResult,
+        _audit_disallowed_artefacts,
+    )
+
+    candidate = _ready_candidate(tmp_path / "dedup")
+    (candidate / "packages" / "a" / "node_modules").mkdir(parents=True)
+    candidate_root = candidate.resolve()
+    result = AuditResult(candidate_path=candidate_root)
+
+    _audit_disallowed_artefacts(candidate_root, result)
+    _audit_disallowed_artefacts(candidate_root, result)
+
+    nested = "packages/a/node_modules/"
+    assert result.files_disallowed.count(nested) == 1
+    assert sum(1 for warning in result.warnings if nested in warning) == 1
+
+
+@pytest.mark.tooling
 def test_blockers_take_precedence_over_integrations(tmp_path: Path) -> None:
     """An auth dep plus a leaked .env must classify as blocked, not too-integrated."""
     candidate = _ready_candidate(tmp_path / "auth-and-env")

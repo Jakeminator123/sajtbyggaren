@@ -587,11 +587,11 @@ def _audit_disallowed_artefacts(root: Path, result: AuditResult) -> None:
             continue
         for artefact in TRACKED_BUILD_ARTEFACTS:
             if artefact in dirs:
-                rel_path = (rel / artefact).as_posix()
-                if rel_path not in result.files_disallowed:
-                    result.files_disallowed.append(rel_path + "/")
+                entry = (rel / artefact).as_posix() + "/"
+                if entry not in result.files_disallowed:
+                    result.files_disallowed.append(entry)
                     result.warnings.append(
-                        f"tracked {rel_path}/ present below top level; "
+                        f"tracked {entry} present below top level; "
                         "delete before import"
                     )
         for skip in WALK_SKIP_DIRS:
