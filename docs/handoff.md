@@ -1,12 +1,37 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-22 (**Backoffice SNI-diagnostik utökad +
-worktree/branch-cleanup; Project DNA-spåret drivs av separat cloud
-agent (DRAFT PR #56)**). Senaste produkt-/kod-läge är `5114fb2`
-(`feat(backoffice): expand SNI diagnostics with coverage gaps and parent
-chain`). Direkt under: `1150424` operator-rules + workspace, `f137f92`
-SNI-followup-tooling, `e822a2c` PR #55-merge, mina SNI-commits
-`2e274ac`, `bf8d6c2`, `f40564e`, `7289732`.
+**Datum:** 2026-05-22 (**Slutlig handover efter SNI-sidospår, PR #55-
+merge, rules_sync link-rewrite + separator-order-fix; Project DNA-
+spåret drivs av separat cloud agent via DRAFT PR #56**). Senaste
+produkt-/kod-läge är `465b8fa` (`fix(rules-sync): pick earliest
+separator when splitting path from query/anchor`). Föregående commits
+i sessionsordning från äldst till nyast: `2e274ac` (SNI core),
+`bf8d6c2`, `f40564e`, `7289732` (Steward-bumpar), `e822a2c` (PR #55-
+merge av annan agent), `06cdc51`, `369ed48`, `b75b664` (Steward-
+bumpar), `f137f92` (SNI-followup-tooling), `1150424` (operator-rules
++ workspace autosave), `f6f4f30` (Steward-bump), `5114fb2` (Backoffice
+SNI-diagnostik-utökning), `18b88c0` (Steward-bump), `919d564` (rules-
+sync link-rewrite för spegel-djup), `c20270f` (Steward-bump),
+`465b8fa` (separator-order-fix).
+
+**Sessionens tre huvudleveranser:**
+
+1. **SNI 2025-import + Discovery-map-diagnostik** (`2e274ac` +
+   `f137f92` + `5114fb2`) — stdlib-only extractor, 1882-poster
+   JSON-spegel, handstyrd policy (21 huvudgrupp + 18 grupp-overrides),
+   resolver-helper, lookup-CLI, Backoffice read-only diagnostik med
+   coverage-gaps, confidence-breakdown och parent-chain. V1 är
+   diagnostiskt; ingen runtime-konsumtion av SNI sker än.
+2. **rules_sync link-rewrite** (`919d564` + `465b8fa`) — relativa
+   länkar i `governance/rules/*.md` skrivs nu automatiskt om för
+   `.cursor/rules/*.mdc`-speglarna så markdown-linter inte längre
+   varnar om brutna paths. Hanterar parent-relative (`../policies/`),
+   sibling (`*.md` → `*.mdc`), anchor- och query-suffix samt edge
+   case när båda finns. 20 nya regression-tester.
+3. **Operatör-finaliserade rules + workspace** (`1150424`) — två nya
+   stycken i `governance/rules/always-swedish.md` om engelsk debug-
+   narration och unicode_escape, plus `files.autoSave: afterDelay` i
+   workspace.
 
 **Det som nyss landade i Backoffice-polishen (`5114fb2`):**
 
@@ -215,7 +240,28 @@ och rörs inte av denna sprint.
 **Handoff till nästa orkestratoragent:** starta med
 `docs/current-focus.md`, `docs/handoff.md`, `docs/product-operating-context.md`
 och `docs/orchestrator-playbook.md`. Kör `python scripts/focus_check.py`
-som första steg — den ska säga `OK - repo matches docs/current-focus.md`.
+som första steg — den ska säga `OK - repo matches docs/current-focus.md`
+(inom bump tolerance om Steward-bump är pågående).
+
+**Repo-tillstånd vid handover** (2026-05-22 02:40 CEST):
+
+- `main` = `origin/main` = `465b8fa` + final Steward-bump (HEAD-commiten
+  som denna handoff dokumenteras i bör vara senaste).
+- Inga öppna PRs förutom DRAFT PR #56 från cloud-agenten på Project
+  DNA-spåret. Rör den inte.
+- `backup-42` finns på origin från pre-SNI-läget som säkerhet.
+- `backup-bra-änä` finns både lokalt och på origin med åäö-namn som
+  bryter mot `branch-discipline.md`. **Operatör-only-beslut**; nästa
+  orchestrator ska inte radera utan explicit OK.
+- Working tree har en operatör-modifierad `.cursorignore` (kommenterar
+  ut `.cursor/plans/`-blocket för agent-Read men behåller den i
+  `.cursorindexingignore` för sökindex). Lämna orörd; det är operatör-
+  preferens.
+- Alla guards gröna: `ruff check .` 0, `governance_validate` 18 OK,
+  `rules_sync --check` OK, `check_term_coverage --strict` OK, full
+  `pytest tests/ -q` grön (3 E2E skippade).
+- Bug-räkning oförändrad: **27 aktiva, 0 misplaced, 5 unknown, 104
+  stängda**. Sessionen introducerade inga nya B-IDs.
 
 **Arbetsdelning 2026-05-22:** En **separat cloud agent** äger Project
 DNA / semantic follow-up-spåret end-to-end via DRAFT PR #56 (branch

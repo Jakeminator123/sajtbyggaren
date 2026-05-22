@@ -30,9 +30,19 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `919d564` (2026-05-22, **rules_sync skriver om
+Last verified state: `465b8fa` (2026-05-22, **rules_sync separator-
+order-fix ovanpå link-rewrite-passet**) — produkt-/kod-läget är
+`465b8fa` (`fix(rules-sync): pick earliest separator when splitting
+path from query/anchor`). External reviewer-feedback om separator-
+iterationsordningen i `_rewrite_link_target` bekräftad: `file.md?foo=
+bar#anchor` plockade `#` först och missade `.md`-rewriten. Bytte till
+earliest-index-sökning + 4 nya regression-tester. Ingen källfil använder
+mönstret idag så rules_sync är fortsatt i synk och ingen mirror
+regenererades. Föregående produkt-läge:
+
+Föregående verified state: `919d564` (2026-05-22, **rules_sync skriver om
 relativa länkar för .cursor/rules-speglarna ovanpå Backoffice SNI-
-diagnostik-utökningen**) — produkt-/kod-läget är `919d564`
+diagnostik-utökningen**) — produkt-/kod-läget var `919d564`
 (`fix(rules-sync): rewrite relative links so .cursor/rules mirrors
 resolve`). `scripts/rules_sync.py` skriver nu automatiskt om
 ``../policies/``/``../schemas/``/``../decisions/``-länkar till
@@ -320,17 +330,18 @@ PRs, etcetera).
 
 ## Current stage
 
-`main` är vid `919d564` på origin och lokalt efter att rules_sync nu
-skriver om relativa länkar för spegelfilerna under `.cursor/rules/`.
-Operatör-rapporterad markdown-linter-varning (`link.no-such-file` på
-`.cursor/rules/always-swedish.mdc:37` som pekade på den icke-existerande
-`.cursor/policies/naming-dictionary.v1.json`-pathen) är löst för alla
-sju spegelfiler via systematisk path-rewrite. Inga ändringar i
-`governance/rules/`-källan. PR55-agentens worktree är fortsatt städad.
-Öppen DRAFT-PR #56 från cloud-agenten driver Project DNA-spåret och
-rörs inte av lokal orchestrator. Bug-räkning oförändrad: **27 aktiva,
-0 misplaced, 5 unknown, 104 stängda**. `backup-42` finns på origin från
-pre-SNI-läget. Inga öppna PRs förutom PR #56 (cloud-agent-DRAFT). Föregående stage snapshot:
+`main` är vid `465b8fa` på origin och lokalt efter en defensiv separator-
+order-fix i `scripts/rules_sync.py`. Den föregående link-rewrite-fixen
+(`919d564`) hade en kantfallsbug där sibling-länkar med både `?query`
+och `#anchor` aldrig fick `.md` → `.mdc`-konverteringen. Båda länk-
+rewriterna är nu kompletta. Markdown-linter-varningen som operatören
+rapporterade på `.cursor/rules/always-swedish.mdc:37` är borta för alla
+sju spegelfiler. Inga ändringar i `governance/rules/`-källan. PR55-
+agentens worktree är fortsatt städad. Öppen DRAFT-PR #56 från cloud-
+agenten driver Project DNA-spåret och rörs inte av lokal orchestrator.
+Bug-räkning oförändrad: **27 aktiva, 0 misplaced, 5 unknown, 104
+stängda**. `backup-42` finns på origin från pre-SNI-läget. Inga öppna
+PRs förutom PR #56 (cloud-agent-DRAFT). Föregående stage snapshot:
 
 `main` var vid `2e274ac` på origin och lokalt efter SNI-sidospår-pushen.
 SNI 2025-importen ger nu repo:t en deterministisk JSON-spegel under
