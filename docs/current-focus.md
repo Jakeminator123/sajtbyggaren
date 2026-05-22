@@ -30,11 +30,13 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `25a435d` (2026-05-22, **follow-up intent hardening
-efter Mini-eval runner v1**) — produkt-/kodläget innehåller `eb5a81d`
-(`fix(builder): propagate brand and tone tokens`), `defd196`
-(`chore(eval): add isolated mini eval runner`) och `25a435d`
-(`fix(builder): harden follow-up intent handling`). B139/B140 är stängda:
+Last verified state: `991f152` (2026-05-22, **naprapat mini-eval
+bug-sweep efter Mini-eval runner v1**) — produkt-/kodläget innehåller
+`eb5a81d` (`fix(builder): propagate brand and tone tokens`), `defd196`
+(`chore(eval): add isolated mini eval runner`), `25a435d`
+(`fix(builder): harden follow-up intent handling`) och naprapat-fixen
+som lär follow-up-intent att förstå `lugnare`/`förtroendeingivande`.
+B139/B140 är stängda:
 giltig `brand.primaryColorHex` / `brand.accentColorHex` skriver nu
 renderade CSS-token `--primary` / `--accent`, whitelistad `tone.primary`
 kan mappa till tokens när explicit hex saknas, ogiltig hex ger trace-
@@ -53,7 +55,22 @@ stabilare kvalitet. Reviewfynd efter PR #56 är delvis åtgärdade:
 additiva `lägg till ... historia/story`-prompter patchar inte längre
 `company.story`, och `clarify` stoppar versionering i stället för att
 skapa ny run. Blandade multi-intent-prompter är fortsatt V2-/kvalitets-
-scope. Föregående produkt-läge:
+scope. Ny full mini-eval efter naprapat-fixen är **4/4 grön**:
+`C:\Users\jakem\Desktop\sajtbyggaren-output\.evals\20260522T024927Z-mini-eval\mini-eval-report.md`.
+Naprapat v2 ändrar nu `tone.primary` till `lugn` och `tone.secondary`
+till `["förtroendeingivande"]` utan story/tagline- eller CSS-token-
+ändring. **Direkt nästa fokus:** använd den gröna eval-rapporten för att
+välja mellan B125 preview-fallback och nästa produktspår; vänta fortsatt
+med embeddings, SNI-runtime, variant-promotion och nya starters.
+Öppen parallell PR #58 (`cursor/b125-preview-fallback-64e2`,
+`docs(adr): update B125 preview fallback decision`) finns för B125-
+decision-spåret; rör den inte från naprapat-/mini-eval-spåret utan
+separat review/merge-beslut.
+Föregående produkt-läge:
+
+Föregående verified state: `25a435d` (2026-05-22, **follow-up intent
+hardening efter Mini-eval runner v1**) — produkt-/kodläget var `25a435d`
+(`fix(builder): harden follow-up intent handling`). Föregående produkt-läge:
 
 Föregående verified state: `defd196` (2026-05-22, **isolerad Mini-eval
 runner v1 efter B139/B140**) — produkt-/kod-läget var `defd196`

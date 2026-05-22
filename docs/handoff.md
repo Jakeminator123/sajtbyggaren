@@ -1,10 +1,10 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-22 (**follow-up intent hardening + Mini-eval runner v1
-efter B139/B140 och Project DNA**). Senaste produkt-/kod-läge är
-`25a435d` (`fix(builder): harden follow-up intent handling`) ovanpå
-Mini-eval-runnern `defd196` och PR #57 squash-SHA `eb5a81d`
-(`fix(builder): propagate brand and tone tokens`). PR #57 squash-
+**Datum:** 2026-05-22 (**naprapat mini-eval bug-sweep efter follow-up
+intent hardening + Mini-eval runner v1**). Senaste produkt-/kod-läge är
+`991f152` ovanpå `25a435d` (`fix(builder): harden follow-up
+intent handling`), Mini-eval-runnern `defd196` och PR #57 squash-SHA
+`eb5a81d` (`fix(builder): propagate brand and tone tokens`). PR #57 squash-
 mergades efter att en P2-review om foreground-token-kontrast fixats i
 branchcommit `6ffc43f`; final fix-SHA för B139/B140 är `eb5a81d`.
 Bugg-scope är nu **24 aktiva, 0 misplaced, 5 unknown, 107 stängda**.
@@ -20,7 +20,28 @@ sync link-rewrite för spegel-djup), `c20270f` (Steward-bump),
 (PR #56 squash-merge), `059b4ae` (Steward efter PR #56), `eb5a81d`
 (PR #57 squash-merge), `b93ed50` (Steward efter PR #57), `defd196`
 (Mini-eval runner + CSS-kaskadfix), `25a435d` (follow-up intent-
-hardening).
+hardening), `991f152` (naprapat tone-sweep).
+
+**Naprapat mini-eval bug-sweep (`991f152`):**
+
+- Root cause: `gör den lugnare och mer förtroendeingivande` matchade
+  varken tone-scope/phrase-whitelist eller tone-word-map; `lugnare` och
+  `förtroendeingivande` gav därför `no-semantic-change`.
+- Fix: utökar den lilla follow-up tone-whitelisten med
+  `lugnare`/`calmer` och `förtroendeingivande`/`trustworthy`/`tryggare`
+  så prompten blir `tone-shift` och Project Input v2 får
+  `tone.primary="lugn"` + `tone.secondary=["förtroendeingivande"]`.
+- Guardrails: story/tagline bevaras byte-stabilt för rena tone-prompter;
+  additiva prompts med `lägg till ... historia` fortsätter vara
+  `no-semantic-change`; CSS-token-effekt är inte del av denna V1-fix.
+- Ny full mini-eval är **4/4 grön**:
+  `C:\Users\jakem\Desktop\sajtbyggaren-output\.evals\20260522T024927Z-mini-eval\mini-eval-report.md`.
+  Naprapat-case passerar utan raw prompt-läckage; placeholder-contact-
+  warnings är fortsatt väntade i mock/brief-vägen.
+- Parallell PR #58 (`cursor/b125-preview-fallback-64e2`,
+  `docs(adr): update B125 preview fallback decision`) är öppen för B125-
+  decision-spåret. Den ingår inte i naprapat-fixen och ska reviewas/mergeas
+  separat.
 
 **Follow-up-reviewfynd som nyss fixades (`25a435d`):**
 

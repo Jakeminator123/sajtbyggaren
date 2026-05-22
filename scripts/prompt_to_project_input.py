@@ -402,8 +402,6 @@ _FOLLOWUP_ADD_ONLY_KEYWORDS = (
     "price",
     "gallery",
     "galleri",
-    "sida",
-    "page",
 )
 
 _FOLLOWUP_TAGLINE_KEYWORDS = (
@@ -489,9 +487,32 @@ _FOLLOWUP_TONE_DESCRIPTOR_KEYWORDS = (
     "professional",
     "lekfull",
     "playful",
+    "lugnare",
     "lugn",
+    "calmer",
     "calm",
+    "förtroendeingivande",
+    "fortroendeingivande",
+    "förtroende",
+    "fortroende",
+    "tryggare",
+    "trygg",
+    "trustworthy",
     "modern",
+)
+
+_FOLLOWUP_STRONG_TONE_DESCRIPTOR_KEYWORDS = (
+    "lugnare",
+    "lugn",
+    "calmer",
+    "calm",
+    "förtroendeingivande",
+    "fortroendeingivande",
+    "förtroende",
+    "fortroende",
+    "tryggare",
+    "trygg",
+    "trustworthy",
 )
 
 _FOLLOWUP_TONE_PHRASES = (
@@ -507,6 +528,15 @@ _FOLLOWUP_TONE_PHRASES = (
     "more modern",
     "varmare",
     "warmer",
+    "lugnare",
+    "mer lugn",
+    "calmer",
+    "more calm",
+    "mer förtroendeingivande",
+    "mer fortroendeingivande",
+    "more trustworthy",
+    "tryggare",
+    "mer trygg",
 )
 
 _FOLLOWUP_TONE_KEYWORDS = (
@@ -525,8 +555,17 @@ _TONE_KEYWORD_MAP_SV: tuple[tuple[str, str], ...] = (
     ("warm", "varm"),
     ("lekfull", "lekfull"),
     ("playful", "lekfull"),
+    ("lugnare", "lugn"),
     ("lugn", "lugn"),
+    ("calmer", "lugn"),
     ("calm", "lugn"),
+    ("förtroendeingivande", "förtroendeingivande"),
+    ("fortroendeingivande", "förtroendeingivande"),
+    ("förtroende", "förtroendeingivande"),
+    ("fortroende", "förtroendeingivande"),
+    ("tryggare", "förtroendeingivande"),
+    ("trygg", "förtroendeingivande"),
+    ("trustworthy", "förtroendeingivande"),
     ("modern", "modern"),
 )
 
@@ -542,8 +581,15 @@ _TONE_KEYWORD_MAP_EN: tuple[tuple[str, str], ...] = (
     ("varm", "warm"),
     ("playful", "playful"),
     ("lekfull", "playful"),
+    ("calmer", "calm"),
     ("calm", "calm"),
+    ("lugnare", "calm"),
     ("lugn", "calm"),
+    ("trustworthy", "trustworthy"),
+    ("förtroendeingivande", "trustworthy"),
+    ("fortroendeingivande", "trustworthy"),
+    ("tryggare", "trustworthy"),
+    ("trygg", "trustworthy"),
     ("modern", "modern"),
 )
 
@@ -1749,13 +1795,15 @@ def _contains_any_word(text: str, keywords: tuple[str, ...]) -> bool:
 
 def _has_tone_shift_signal(text: str) -> bool:
     has_scope = _contains_any_word(text, _FOLLOWUP_TONE_SCOPE_KEYWORDS)
+    has_descriptor = _contains_any_word(text, _FOLLOWUP_TONE_DESCRIPTOR_KEYWORDS)
+    has_strong_descriptor = _contains_any_word(text, _FOLLOWUP_STRONG_TONE_DESCRIPTOR_KEYWORDS)
     has_phrase = _contains_any(text, _FOLLOWUP_TONE_PHRASES)
     has_content_scope = _contains_any(text, _FOLLOWUP_CONTENT_SCOPE_KEYWORDS)
-    if has_content_scope and not has_scope:
+    if has_content_scope and not has_scope and not has_strong_descriptor:
         return False
     if _contains_any(text, _FOLLOWUP_ADD_ONLY_KEYWORDS) and not has_scope and not has_phrase:
         return False
-    return has_scope or has_phrase
+    return has_scope or has_descriptor or has_phrase
 
 
 def classify_followup_intent(
