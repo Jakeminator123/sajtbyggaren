@@ -617,6 +617,16 @@ def test_nested_git_blocks_import(tmp_path: Path) -> None:
 
 
 @pytest.mark.tooling
+def test_top_level_git_file_blocks_import(tmp_path: Path) -> None:
+    candidate = _ready_candidate(tmp_path / "git-file")
+    (candidate / ".git").write_text("gitdir: /abs/path\n", encoding="utf-8")
+    result = audit_candidate(candidate)
+    assert result.classification == "blocked"
+    assert ".git" in result.files_disallowed
+    assert any("git" in blocker and "file" in blocker for blocker in result.blockers)
+
+
+@pytest.mark.tooling
 def test_internal_starters_path_is_blocked(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -698,6 +708,21 @@ def test_non_root_nested_git_blocks_import(tmp_path: Path) -> None:
     assert "packages/site/.git/" in result.files_disallowed
     assert any(
         "packages/site/.git/" in blocker and "nested git repository" in blocker
+        for blocker in result.blockers
+    )
+
+
+@pytest.mark.tooling
+def test_non_root_nested_git_file_blocks_import(tmp_path: Path) -> None:
+    candidate = _ready_candidate(tmp_path / "non-root-git-file")
+    git_file = candidate / "packages" / "site" / ".git"
+    git_file.parent.mkdir(parents=True)
+    git_file.write_text("gitdir: /abs/path\n", encoding="utf-8")
+    result = audit_candidate(candidate)
+    assert result.classification == "blocked"
+    assert "packages/site/.git" in result.files_disallowed
+    assert any(
+        "packages/site/.git" in blocker and "git pointer file" in blocker
         for blocker in result.blockers
     )
 

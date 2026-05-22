@@ -501,6 +501,11 @@ def _audit_top_level_files(root: Path, result: AuditResult) -> None:
             "nested .git directory present; remove before any import"
         )
         result.files_disallowed.append(".git/")
+    if ".git" in files:
+        result.blockers.append(
+            ".git file present; remove worktree/submodule pointer before any import"
+        )
+        result.files_disallowed.append(".git")
 
     for artefact in sorted(TRACKED_BUILD_ARTEFACTS & dirs):
         result.files_disallowed.append(f"{artefact}/")
@@ -704,7 +709,7 @@ def _audit_disallowed_artefacts(root: Path, result: AuditResult) -> None:
     out — otherwise the walk silently skips it without reporting.
     """
     resolved_root = root.resolve()
-    for current, dirs, _files in os.walk(root):
+    for current, dirs, files in os.walk(root):
         rel = Path(current).resolve().relative_to(resolved_root)
         if rel == Path("."):
             for skip in WALK_SKIP_DIRS:
@@ -718,6 +723,14 @@ def _audit_disallowed_artefacts(root: Path, result: AuditResult) -> None:
                 result.blockers.append(
                     f"{git_entry} present below top level; nested git "
                     "repository must be removed before any import"
+                )
+        if ".git" in files:
+            git_entry = (rel / ".git").as_posix()
+            if git_entry not in result.files_disallowed:
+                result.files_disallowed.append(git_entry)
+                result.blockers.append(
+                    f"{git_entry} present below top level; git pointer file "
+                    "must be removed before any import"
                 )
         for artefact in TRACKED_BUILD_ARTEFACTS:
             if artefact in dirs:
