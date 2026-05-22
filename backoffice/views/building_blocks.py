@@ -406,12 +406,33 @@ def _render_sni_discovery_mapping() -> None:
     detail_cols[3].metric("Undergrupper", ref_summary["class"])
     detail_cols[4].metric("Detaljgrupper", ref_summary["subclass"])
 
+    confidence = sni_diagnostics.confidence_breakdown(rows)
+    conf_cols = st.columns(4)
+    conf_cols[0].metric("Confidence high", confidence["high"])
+    conf_cols[1].metric("Confidence medium", confidence["medium"])
+    conf_cols[2].metric("Confidence low", confidence["low"])
+    conf_cols[3].metric("Confidence övrigt", confidence["other"])
+
     if summary["unknownCategories"]:
         st.warning(
             f"{summary['unknownCategories']} policyrad(er) pekar mot en "
             "wizardCategoryId som inte finns i Discovery Taxonomy. Justera "
             "policy eller taxonomy innan SNI används som signal."
         )
+
+    coverage_gaps = sni_diagnostics.taxonomy_coverage_gaps(rows=rows)
+    with st.expander(
+        f"Discovery Taxonomy-kategorier utan SNI-mappning ({len(coverage_gaps)})"
+    ):
+        if coverage_gaps:
+            st.caption(
+                "Kategorier som finns i Discovery Taxonomy men inte har en "
+                "enda policyrad i SNI Discovery Map. Inte ett fel — bara en "
+                "indikator på var policyn kan breddas i en framtida sprint."
+            )
+            st.dataframe(coverage_gaps, use_container_width=True, hide_index=True)
+        else:
+            st.success("Alla Discovery Taxonomy-kategorier har minst en SNI-mappning.")
 
     category_options = ["Alla"] + sorted({str(row["wizardCategoryId"]) for row in rows})
     selected_category = st.selectbox(
@@ -426,8 +447,9 @@ def _render_sni_discovery_mapping() -> None:
     st.markdown("**Testa en SNI-kod**")
     st.caption(
         "Ange en 2- till 5-siffrig SNI-kod (med eller utan punkt). Diagnostiken "
-        "visar matchad prefix, kandidat-kategori och hur Discovery Taxonomy "
-        "skulle välja scaffold/variant/starter när kategorin når resolvern."
+        "visar matchad prefix, kandidat-kategori, parent-chain från avdelning "
+        "ner till själva koden och hur Discovery Taxonomy skulle välja "
+        "scaffold/variant/starter när kategorin når resolvern."
     )
     sni_input = st.text_input(
         "SNI-kod",
@@ -436,18 +458,30 @@ def _render_sni_discovery_mapping() -> None:
     )
     if sni_input.strip():
         lookup = sni_diagnostics.lookup_row(sni_input)
-        if lookup["matchedLevel"] == "unknown":
+        parent_chain = sni_diagnostics.lookup_parent_chain(sni_input, reference=reference)
+        if lookup["matchedLevel"] == "unknown" and not parent_chain:
             st.info(
-                "Ingen policymappning matchade. SNI är branschsignal — "
-                "okänd kod är ett tyst no-op, inte ett fel."
+                "Ingen policymappning matchade och koden finns inte i SNI-"
+                "referensen. SNI är branschsignal — okänd kod är ett tyst "
+                "no-op, inte ett fel."
             )
         else:
-            st.json(lookup, expanded=False)
-            if not lookup["categoryKnown"]:
-                st.warning(
-                    "Mappningen pekar mot en wizardCategoryId som saknas i "
-                    "Discovery Taxonomy. Inga scaffold/variant/starter visas."
+            if parent_chain:
+                st.markdown("**Parent-chain i SNI 2025-referensen**")
+                st.dataframe(parent_chain, use_container_width=True, hide_index=True)
+            if lookup["matchedLevel"] == "unknown":
+                st.info(
+                    "Koden finns i SNI-referensen men ingen policymappning "
+                    "täcker prefixet. Inte ett fel — bara en täckningslucka."
                 )
+            else:
+                st.json(lookup, expanded=False)
+                if not lookup["categoryKnown"]:
+                    st.warning(
+                        "Mappningen pekar mot en wizardCategoryId som saknas "
+                        "i Discovery Taxonomy. Inga scaffold/variant/starter "
+                        "visas."
+                    )
 
 
 def view_control_plane() -> None:
