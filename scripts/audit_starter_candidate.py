@@ -422,7 +422,15 @@ def _has_valid_script(scripts: dict[str, Any], name: str) -> bool:
 
 def audit_candidate(path: Path | str) -> AuditResult:
     """Run the full read-only audit and return the structured result."""
-    root = Path(path).expanduser().resolve()
+    try:
+        root = Path(path).expanduser().resolve()
+    except OSError as exc:
+        result = AuditResult(candidate_path=Path(path))
+        result.blockers.append(f"could not resolve path {path}: {exc}")
+        result.classification = "blocked"
+        result.summary = "Candidate path could not be resolved (symlink loop?)."
+        result.next_actions = _build_next_actions(result)
+        return result
     result = AuditResult(candidate_path=root)
     if not root.exists():
         result.blockers.append(f"path does not exist: {root}")

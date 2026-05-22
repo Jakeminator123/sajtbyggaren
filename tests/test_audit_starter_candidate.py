@@ -8,7 +8,9 @@ pointing at any real ``data/starters/`` directory.
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -985,6 +987,21 @@ def test_unknown_file_under_block_threshold_does_not_warn(tmp_path: Path) -> Non
         f"unexpected warnings: {result.warnings}, blockers: {result.blockers}"
     )
     assert result.large_assets == []
+
+
+@pytest.mark.tooling
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Windows symlink creation often requires elevated privileges",
+)
+def test_symlink_loop_candidate_path_blocks_without_crashing(tmp_path: Path) -> None:
+    link_a = tmp_path / "a"
+    link_b = tmp_path / "b"
+    os.symlink(link_b, link_a)
+    os.symlink(link_a, link_b)
+    result = audit_candidate(link_a)
+    assert result.classification == "blocked"
+    assert any("could not resolve path" in blocker for blocker in result.blockers)
 
 
 # ---------------------------------------------------------------------------
