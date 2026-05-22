@@ -30,10 +30,11 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `defd196` (2026-05-22, **isolerad Mini-eval runner
-v1 efter B139/B140**) — produkt-/kodläget innehåller `eb5a81d`
-(`fix(builder): propagate brand and tone tokens`) plus `defd196`
-(`chore(eval): add isolated mini eval runner`). B139/B140 är stängda:
+Last verified state: `25a435d` (2026-05-22, **follow-up intent hardening
+efter Mini-eval runner v1**) — produkt-/kodläget innehåller `eb5a81d`
+(`fix(builder): propagate brand and tone tokens`), `defd196`
+(`chore(eval): add isolated mini eval runner`) och `25a435d`
+(`fix(builder): harden follow-up intent handling`). B139/B140 är stängda:
 giltig `brand.primaryColorHex` / `brand.accentColorHex` skriver nu
 renderade CSS-token `--primary` / `--accent`, whitelistad `tone.primary`
 kan mappa till tokens när explicit hex saknas, ogiltig hex ger trace-
@@ -48,7 +49,15 @@ till canonical `data/runs/`. Under smoke av runnern hittades och fixades
 alla fyra baseline-case och använd rapporten för att välja mellan B125
 preview-fallback eller nästa produktspår. Vänta fortsatt med embeddings,
 SNI-runtime, variant-promotion och nya starters tills mini-evalen visar
-stabilare kvalitet. Föregående produkt-läge:
+stabilare kvalitet. Reviewfynd efter PR #56 är delvis åtgärdade:
+additiva `lägg till ... historia/story`-prompter patchar inte längre
+`company.story`, och `clarify` stoppar versionering i stället för att
+skapa ny run. Blandade multi-intent-prompter är fortsatt V2-/kvalitets-
+scope. Föregående produkt-läge:
+
+Föregående verified state: `defd196` (2026-05-22, **isolerad Mini-eval
+runner v1 efter B139/B140**) — produkt-/kod-läget var `defd196`
+(`chore(eval): add isolated mini eval runner`). Föregående produkt-läge:
 
 Föregående verified state: `eb5a81d` (2026-05-22, **B139/B140 tone/brand
 token propagation V1 mergad via PR #57**) — produkt-/kod-läget var

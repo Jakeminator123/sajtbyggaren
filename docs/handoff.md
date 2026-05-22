@@ -1,8 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-22 (**Mini-eval runner v1 landad efter B139/B140 och
-Project DNA**). Senaste produkt-/kod-läge är `defd196` (`chore(eval):
-add isolated mini eval runner`) ovanpå PR #57 squash-SHA `eb5a81d`
+**Datum:** 2026-05-22 (**follow-up intent hardening + Mini-eval runner v1
+efter B139/B140 och Project DNA**). Senaste produkt-/kod-läge är
+`25a435d` (`fix(builder): harden follow-up intent handling`) ovanpå
+Mini-eval-runnern `defd196` och PR #57 squash-SHA `eb5a81d`
 (`fix(builder): propagate brand and tone tokens`). PR #57 squash-
 mergades efter att en P2-review om foreground-token-kontrast fixats i
 branchcommit `6ffc43f`; final fix-SHA för B139/B140 är `eb5a81d`.
@@ -18,7 +19,21 @@ sync link-rewrite för spegel-djup), `c20270f` (Steward-bump),
 `465b8fa` (separator-order-fix), `891fca0` (Steward-bump), `aef5825`
 (PR #56 squash-merge), `059b4ae` (Steward efter PR #56), `eb5a81d`
 (PR #57 squash-merge), `b93ed50` (Steward efter PR #57), `defd196`
-(Mini-eval runner + CSS-kaskadfix).
+(Mini-eval runner + CSS-kaskadfix), `25a435d` (follow-up intent-
+hardening).
+
+**Follow-up-reviewfynd som nyss fixades (`25a435d`):**
+
+- Additiva prompts som `Lägg till en sida om vår historia` klassas nu som
+  `no-semantic-change` i stället för `story-emphasize`, så de kan inte
+  skriva över `company.story` via ordet `historia`.
+- Explicit story/tagline-copy kräver nu kolon (`till:`/`to:`), så
+  frasen `lägg till` fångas inte längre som explicit public copy.
+- `clarify` stoppar `generate_followup()` innan ny version skrivs, i linje
+  med Project DNA-policyns "ingen Engine Run startas"-riktning.
+- Blandade prompts som ber om flera semantiska ändringar samtidigt är
+  fortfarande V1-kvalitetsglapp/multi-intent-scope, inte fixat i denna
+  smala patch.
 
 **Det som nyss landade i B139/B140-spåret (`eb5a81d`):**
 
