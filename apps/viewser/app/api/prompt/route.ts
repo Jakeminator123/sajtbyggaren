@@ -28,11 +28,30 @@ const DiscoveryPayloadSchema = z
     // som client-payload — de tillhör Project Input-meta, inte API-
     // kontraktet. Discovery har sin egen schema-version som lever
     // oberoende av PI-schemat.
-    schemaVersion: z.literal(1),
+    //
+    // Accepterar v1 (legacy, utan ``directives``-block) OCH v2
+    // (2026-05-22, med strukturerade directives för att hoppa över
+    // briefModel-extraktion när data finns). Frontend bumpar till v2
+    // i ``buildDiscoveryPayload`` — backend (Python) tolererar båda
+    // versioner via ``_apply_discovery_overrides``-stratifieringen.
+    // Före detta union avvisade route:n v2-payloads med kryptiska
+    // "Invalid input: expected 1" som operatören inte kunde tolka.
+    schemaVersion: z.union([z.literal(1), z.literal(2)]),
     rawPrompt: z.string().trim().max(8000),
     contentBranch: z.string().trim().max(40).optional(),
     scaffoldHint: z.string().trim().max(60).optional(),
     answers: z.record(z.string(), z.unknown()),
+    // Strukturerade wizard-directives introducerade i v2
+    // (2026-05-22, se docs/contracts/wizard-discovery.v2.md). Vi
+    // validerar bara att det är ett objekt — djupare schema-koll
+    // ligger på Python-sidan (``_apply_discovery_overrides`` /
+    // ``_normalise_wizard_directives``) eftersom directives är ett
+    // växande kontrakt mellan rollout-passar (pass 1: backend
+    // accepterar, pass 2: frontend skickar — där vi är nu, pass 3:
+    // backend konsumerar fler fält). Att låsa schemat hårt här
+    // skulle tvinga koordinerade deploys per pass — onödigt strikt
+    // för ett internt API på localhost.
+    directives: z.record(z.string(), z.unknown()).optional(),
   })
   .strict()
   .superRefine((payload, context) => {
@@ -160,7 +179,18 @@ export async function POST(request: NextRequest) {
       // Client-side validation errors must surface as 400, not 500.
       // Returning 500 for "missing field" / "too long" muddies the
       // API contract and makes operator-side debugging harder.
-      const message = error.issues[0]?.message ?? "Ogiltig prompt-payload.";
+      //
+      // Inkludera ``path`` i meddelandet så operatören ser vilket
+      // fält som failade. Zod 4:s default-message-rendering ger
+      // texter som ``"Invalid input: expected 1"`` utan att nämna
+      // fältet — vilket är obegripligt när felet kommer från en
+      // nästad payload (t.ex. ``discovery.schemaVersion``). Med
+      // path-prefix blir det ``"discovery.schemaVersion: Invalid
+      // input: expected 1"`` vilket är åtgärdsbart.
+      const issue = error.issues[0];
+      const message = issue
+        ? `${issue.path.length > 0 ? `${issue.path.join(".")}: ` : ""}${issue.message}`
+        : "Ogiltig prompt-payload.";
       return NextResponse.json({ error: message }, { status: 400 });
     }
     const message =

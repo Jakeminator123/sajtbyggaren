@@ -222,6 +222,7 @@ export default function Home() {
 
       <ViewerPanel
         runId={selectedRunId}
+        siteId={selectedSiteId}
         isBuilding={building}
         buildStage={buildStage}
       />

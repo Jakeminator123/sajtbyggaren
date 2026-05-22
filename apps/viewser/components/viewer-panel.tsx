@@ -10,6 +10,13 @@ import type { PromptStage } from "@/components/prompt-builder";
 type ViewerPanelProps = {
   runId: string | null;
   /**
+   * Aktivt siteId från page.tsx. Behövs för lokal preview-server-
+   * pathen ``POST /api/preview/<siteId>`` — det är siteId (inte
+   * runId) som matchar mappen ``.generated/<siteId>/`` där den
+   * byggda Next.js-appen ligger redo att ``next start``.
+   */
+  siteId?: string | null;
+  /**
    * Sätts till true av page.tsx under hela request-cykeln mot
    * /api/prompt. Triggar BuildProgressCard i mitten av canvasen i
    * stället för hero-texten så operatören ser en dedikerad bygg-vy.
@@ -20,6 +27,14 @@ type ViewerPanelProps = {
    * aktiv i BuildProgressCard-stegmarkören.
    */
   buildStage?: PromptStage;
+};
+
+type PreviewServerInfo = {
+  siteId: string;
+  port: number;
+  url: string;
+  status: "starting" | "ready";
+  uptimeMs: number;
 };
 
 type FilesPayload = {
@@ -89,13 +104,21 @@ function formatViewerError(caught: unknown): string {
 
 export function ViewerPanel({
   runId,
+  siteId,
   isBuilding = false,
   buildStage = "idle",
 }: ViewerPanelProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Lokal preview-server-URL. När den är satt renderar vi en simpel
+  // iframe direkt mot ``http://localhost:<port>`` istället för att gå
+  // genom StackBlitz. Snabbare (~1s vs ~60s), funkar i Safari/Firefox,
+  // och same-machine-iframen tar emot postMessage från Site Inspector
+  // för Sprint 5:s live token-editor.
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   // När browsern inte stödjer embed sparar vi hämtade filer + den
   // detekterade browser-kinden i ett gemensamt state-objekt.
   // Knappen anropar `sdk.openProject()` med samma payload (utan att
@@ -157,10 +180,40 @@ export function ViewerPanel({
     setError(null);
     setUnavailable(false);
     setFallback(null);
+    setLocalPreviewUrl(null);
     setLoading(true);
     node.replaceChildren();
 
     void (async () => {
+      // Steg 1: försök starta en lokal preview-server. Mycket snabbare
+      // än StackBlitz (~1s vs ~60s första gången), funkar i alla
+      // browsers, och same-machine-iframen tar emot postMessage från
+      // Site Inspector för Sprint 5:s live token-editor. Om något
+      // går fel (siteId saknas, .generated/<siteId>/ inte byggd,
+      // port-pool full) faller vi tillbaka till StackBlitz-flödet
+      // nedan — operatören tappar inte previewen, bara hastigheten.
+      if (siteId) {
+        try {
+          const previewResponse = await fetch(`/api/preview/${siteId}`, {
+            method: "POST",
+          });
+          if (previewResponse.ok) {
+            const info = (await previewResponse.json()) as PreviewServerInfo;
+            if (cancelled) return;
+            setLocalPreviewUrl(info.url);
+            setLoading(false);
+            return;
+          }
+          // Non-OK → tystlåtet fall tillbaka till StackBlitz-vägen.
+          // Vi loggar inte här eftersom 404/500 från preview-routen
+          // är förväntat när bygget inte är klart eller siteId är
+          // för en mock-run från dev_generate.
+        } catch {
+          // Network-error → samma resonemang, fortsätt med StackBlitz.
+        }
+      }
+
+      // Steg 2: gammal StackBlitz-väg som fallback.
       try {
         const response = await fetch(`/api/runs/${runId}/files`);
         const payload = (await response.json()) as FilesPayload;
@@ -334,7 +387,7 @@ export function ViewerPanel({
       cancelled = true;
       if (node) node.replaceChildren();
     };
-  }, [runId]);
+  }, [runId, siteId]);
 
   const showEmpty = !runId;
   const showUnavailable = unavailable && !!runId;
@@ -552,9 +605,43 @@ export function ViewerPanel({
         inte om vid unavailable-flip). Hidden via Tailwind när
         empty/unavailable äger ytan.
       */}
+      {/*
+        Lokal preview-iframe. Renderas bara när /api/preview/<siteId>
+        returnerat en URL. Denna väg används före StackBlitz när vi
+        kunnat boota en lokal ``next start`` på den genererade sajten.
+        Stora vinster: ~1s init istället för StackBlitz 60+s, funkar
+        i Safari/Firefox utan credentialless-fallback, och same-machine-
+        iframe kan ta emot postMessage från Site Inspector för
+        Sprint 5:s live token-editor.
+      */}
+      {localPreviewUrl && !unavailable && !showEmpty && !isBuilding && !isFinalizing ? (
+        <iframe
+          ref={iframeRef}
+          src={localPreviewUrl}
+          title="Lokal sajt-preview"
+          className="h-full w-full border-0"
+          // Tillåt scripts (Next.js client-side hydration) och
+          // same-origin (vi äger localhost:<port> som vi själva
+          // spawnat) men inte top-navigation eller popups från
+          // sajten — extra defensivt även om vi själva byggt den.
+          sandbox="allow-scripts allow-same-origin allow-forms"
+        />
+      ) : null}
+
+      {/*
+        containerRef-div hålls mounted oavsett `unavailable` så
+        containerRef.current är bunden över transitions. Tidigare
+        satt den i else-grenen av en `unavailable ? tips : <div ref>`
+        ternary, vilket avmonterade ref när 404 satte
+        unavailable=true - det låste UI:t i stuck state när nästa
+        runId valdes (effekten har bara `[runId]` som dep och kör
+        inte om vid unavailable-flip). Hidden via Tailwind när
+        empty/unavailable äger ytan ELLER när lokal preview tagit
+        över canvasen.
+      */}
       <div
         ref={containerRef}
-        className={`h-full w-full ${unavailable || showEmpty || isBuilding || isFinalizing || showFallback ? "invisible" : ""}`}
+        className={`h-full w-full ${unavailable || showEmpty || isBuilding || isFinalizing || showFallback || localPreviewUrl ? "invisible" : ""}`}
       />
     </div>
   );
