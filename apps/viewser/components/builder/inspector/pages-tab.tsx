@@ -1,6 +1,7 @@
 "use client";
 
-import { AlertTriangle, FileText, FileWarning } from "lucide-react";
+import { AlertTriangle, ChevronDown, FileText, FileWarning, Layers } from "lucide-react";
+import { useState } from "react";
 
 import { QuickPromptButton } from "@/components/builder/inspector/quick-prompt-button";
 import type { RunArtefactBundle } from "@/components/builder/inspector/use-run-artefacts";
@@ -12,7 +13,97 @@ import { cn } from "@/lib/utils";
  * får tre snabbprompts: skriv om innehållet, lägg till sektion, ta
  * bort sidan. Varje pageIntentWarning får en knapp som ber engine:n
  * att försöka inkludera sidan ändå.
+ *
+ * Spår D — per-sektion-edit för home-routen:
+ * Home-routen får en expanderbar "Sektioner"-grupp där operatören kan
+ * rikta in sig på en specifik sektion (hero, story, gallery, FAQ etc)
+ * istället för att skriva om hela sidan. Sektionerna matchar vad
+ * ``render_home`` i build_site.py producerar: hero, services-grid,
+ * story, gallery, testimonials, FAQ, contact-CTA. Listan är statisk —
+ * vi har ingen runtime-introspektion av exakt vilka sektioner som
+ * faktiskt renderades, men eftersom render_home alltid emitterar
+ * hero + services + CTA och de andra är opt-in baserat på dossier-
+ * innehåll, är det rimligt att alltid visa hela menyn (operatören
+ * får bara ett build-fel om de ber om att redigera en sektion som
+ * inte finns, vilket pipelinen hanterar med "sektion saknas, ska den
+ * läggas till?"-flöde).
  */
+
+/**
+ * Per-sektion-prompts för home-routens "Sektioner"-grupp. Varje
+ * sektion får två snabbval: "Anpassa innehåll" (textuell ändring som
+ * brief-modellen kan hantera) och "Ändra design" (visuell ändring
+ * som triggar variant/typography/layout-direktiv).
+ *
+ * Sektionsnamnen matchar vad render_home producerar (line 1615+ i
+ * scripts/build_site.py). När backend i framtiden exponerar en
+ * faktisk sektion-introspektion via sitePlan kan denna lista bytas
+ * mot data, men för v1 räcker statisk lista eftersom alla home-
+ * sektioner är deterministiska.
+ */
+const HOME_SECTIONS: ReadonlyArray<{
+  id: string;
+  label: string;
+  contentPrompt: string;
+  designPrompt: string;
+}> = [
+  {
+    id: "hero",
+    label: "Hero",
+    contentPrompt:
+      'Skriv om hero-sektionen på startsidan. Behåll företagets namn men gör rubriken mer säljande och tagline:n mer specifik.',
+    designPrompt:
+      'Ändra hero-sektionens design: prova en annan layout (centered/split/gradient) eller en mer dramatisk färg.',
+  },
+  {
+    id: "services",
+    label: "Tjänster / Sortiment",
+    contentPrompt:
+      'Skriv om tjänsteblocken på startsidan så texterna blir mer specifika och konkreta — varje tjänst ska säga exakt vad kunden får.',
+    designPrompt:
+      'Ändra designen på tjänsteblocken: lägg in ikoner som passar branschen bättre, eller byt grid-uppställning.',
+  },
+  {
+    id: "story",
+    label: "Historia",
+    contentPrompt:
+      'Skriv om "Vår historia"-sektionen på startsidan så berättelsen känns mer personlig och förankrad i företagets verklighet.',
+    designPrompt:
+      'Ändra hur "Vår historia"-sektionen presenteras visuellt — mer luftig typografi eller en mer dramatisk bakgrund.',
+  },
+  {
+    id: "gallery",
+    label: "Galleri",
+    contentPrompt:
+      'Lägg till galleri-sektionen på startsidan med kuraterade exempel — om inga bilder finns uppladdade, använd branschmatchande Unsplash-bilder.',
+    designPrompt:
+      'Ändra galleri-sektionens layout: prova ett större format, en karusell, eller fler kolumner.',
+  },
+  {
+    id: "testimonials",
+    label: "Recensioner",
+    contentPrompt:
+      'Skriv om recensions-sektionen på startsidan så citaten känns mer specifika och trovärdiga.',
+    designPrompt:
+      'Ändra recensions-sektionens design — prova en mer minimalistisk stil, eller större typografi.',
+  },
+  {
+    id: "faq",
+    label: "Vanliga frågor",
+    contentPrompt:
+      'Skriv om FAQ-sektionen på startsidan med frågor som faktiskt är relevanta för vår bransch och våra kunder.',
+    designPrompt:
+      'Ändra FAQ-sektionens layout — prova en accordeon-stil, eller en mer kompakt grid.',
+  },
+  {
+    id: "cta",
+    label: "Slutlig CTA",
+    contentPrompt:
+      'Skriv om CTA-sektionen längst ner på startsidan så texten är mer specifik för vår bransch och kund.',
+    designPrompt:
+      'Ändra CTA-sektionens design — prova en mer dramatisk bakgrund, eller en mindre central knapp.',
+  },
+];
 
 type RoutePlanItem = {
   id: string;
@@ -81,6 +172,24 @@ export function PagesTab({
 }: PagesTabProps) {
   const routes = asRoutePlan(bundle.sitePlan);
   const warnings = asPageWarnings(bundle.sitePlan);
+  // Vilka route-id:n som har sin "Sektioner"-grupp expanderad.
+  // Default-set:en är tom så listan är kompakt vid första öppning;
+  // operatören kan klicka home-routen för att se per-sektion-knapparna.
+  // För närvarande stödjer vi bara sektion-edit för home-routen
+  // eftersom övriga routes (services, about, contact, faq) är enklare
+  // och rewrite-prompten räcker. Lägg till fler i HOME_SECTIONS för
+  // framtida utbyggnad.
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    new Set(),
+  );
+  const toggleSections = (routeId: string) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(routeId)) next.delete(routeId);
+      else next.add(routeId);
+      return next;
+    });
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -140,7 +249,77 @@ export function PagesTab({
                       onSelect={onPrompt}
                       className="text-destructive hover:text-destructive"
                     />
+                    {/* Spår D — sektion-toggle endast för home-routen.
+                        Andra routes har en enklare sektionsstruktur så
+                        de allmänna prompt-knapparna räcker. Toggle:n
+                        ligger sist så de tre vanliga knapparna ovan
+                        behåller sin position; det är en utveckling, inte
+                        en omdesign. */}
+                    {route.id === "home" ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleSections(route.id)}
+                        aria-expanded={expandedSections.has(route.id)}
+                        aria-controls={`pages-tab-sections-${route.id}`}
+                        className={cn(
+                          "text-muted-foreground hover:text-foreground hover:bg-muted/40",
+                          "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
+                          "inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11.5px] font-medium tracking-tight transition-colors",
+                        )}
+                        title="Visa per-sektion-edits"
+                      >
+                        <Layers className="h-3 w-3" aria-hidden />
+                        Sektioner
+                        <ChevronDown
+                          className={cn(
+                            "h-3 w-3 transition-transform duration-150",
+                            expandedSections.has(route.id) && "rotate-180",
+                          )}
+                          aria-hidden
+                        />
+                      </button>
+                    ) : null}
                   </div>
+                  {/* Per-sektion-edit-panel. Visas bara när home-routen
+                      är expanderad. Varje sektion får två kompakta knappar
+                      (innehåll + design) som båda går genom samma
+                      `onPrompt`-pipeline som de större knapparna ovan. */}
+                  {route.id === "home" && expandedSections.has(route.id) ? (
+                    <div
+                      id={`pages-tab-sections-${route.id}`}
+                      className="border-border/40 mt-3 flex flex-col gap-2 border-t pt-3"
+                    >
+                      <p className="text-muted-foreground mb-0.5 text-[10.5px] font-medium tracking-[0.16em] uppercase">
+                        Redigera en sektion
+                      </p>
+                      {HOME_SECTIONS.map((section) => (
+                        <div
+                          key={section.id}
+                          className="flex flex-col gap-1.5"
+                        >
+                          <div className="text-foreground/80 text-[11.5px] font-medium">
+                            {section.label}
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            <QuickPromptButton
+                              label="Anpassa innehåll"
+                              prompt={section.contentPrompt}
+                              isBuilding={isBuilding}
+                              isPending={pendingPrompt === section.contentPrompt}
+                              onSelect={onPrompt}
+                            />
+                            <QuickPromptButton
+                              label="Ändra design"
+                              prompt={section.designPrompt}
+                              isBuilding={isBuilding}
+                              isPending={pendingPrompt === section.designPrompt}
+                              onSelect={onPrompt}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </li>
               );
             })}

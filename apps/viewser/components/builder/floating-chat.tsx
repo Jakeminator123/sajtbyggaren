@@ -58,19 +58,149 @@ type ChatMessage = {
 };
 
 /**
- * Snabbförslag-chips. Visas ovanför textarean när input är tomt och
- * inga bilagor är pending — tanken är att operatören får tydliga,
- * vanliga "ändra-en-byggd-sajt"-avsikter inom räckhåll utan att
- * behöva tänka från noll. Klick fyller textarean (operatören kan
- * finslipa innan skicka).
+ * Snabbförslag-chips, kategoriserade. Visas under en collapsed
+ * "Förslag"-toggle ovanför textarean när input är tomt och inga
+ * bilagor är pending.
+ *
+ * Designprinciper för formuleringen av prompts:
+ * - Konkreta verb ("Centrera", "Lägg till", "Byt") — inte vaga
+ *   substantiv ("Färgschema").
+ * - Adresserar features som faktiskt finns i build_site.py
+ *   (gradient/centered/split hero, gallery-sektion, FAQ-sektion,
+ *   USP-chips, story-sektion). Operatören får inte föreslagna
+ *   ändringar som pipelinen inte kan utföra deterministiskt.
+ * - Kort nog att rymmas i panelens 360px-bredd som chip, men
+ *   tillräckligt specifika för att brief-modellen ska kunna
+ *   producera bra dossier-deltas.
+ * - Tre kategorier: Design (visuell stil), Innehåll (nya/ändrade
+ *   sektioner), Layout (struktur). Kategori-labels är medvetet
+ *   svenska för att matcha hela operatör-UI:t.
  */
-const QUICK_PROMPTS: ReadonlyArray<string> = [
-  "Ändra färgschemat",
-  "Lägg till en sida",
-  "Byt hero-bild",
-  "Mer innehåll på startsidan",
-  "Starkare CTA",
+type QuickPromptCategory = {
+  id: "design" | "content" | "layout";
+  label: string;
+  prompts: ReadonlyArray<string>;
+};
+
+const QUICK_PROMPT_CATEGORIES: ReadonlyArray<QuickPromptCategory> = [
+  {
+    id: "design",
+    label: "Design",
+    prompts: [
+      "Använd en varmare färgpalett",
+      "Mer luftig typografi och vitytor",
+      "Mörkare bakgrund med ljusare accenter",
+    ],
+  },
+  {
+    id: "content",
+    label: "Innehåll",
+    prompts: [
+      "Skriv om hero-rubriken så den är mer säljande",
+      "Lägg till en sektion om vårt team",
+      "Mer specifika beskrivningar i tjänsteblocken",
+    ],
+  },
+  {
+    id: "layout",
+    label: "Layout",
+    prompts: [
+      "Centrera hero-sektionen",
+      "Hero med bild bredvid (split-layout)",
+      "Lägg till en gallery-sektion på startsidan",
+    ],
+  },
 ];
+
+/**
+ * Stegen visas i pending-bubblan medan en followup-build körs. Vi har
+ * inte streaming från `/api/prompt` så stegen är tidsbaserade
+ * simuleringar som matchar pipelinens 4 faser (brief → plan → codegen
+ * → quality gate). Tiderna är hämtade från typiska kör-tider i
+ * `data/runs/`: brief ~3-5s, plan ~5-8s, codegen ~10-15s, quality
+ * gate ~3-5s, total ~25-30s mot OpenAI. Mock-fallback (no key) går
+ * mycket snabbare, men det är OK att stegen scrollar förbi för det
+ * fallet — operatören får då bara "Klart" snabbt.
+ *
+ * Sista steget förblir aktivt tills response kommer, så vi aldrig
+ * "fastnar" på ett mellansteg om bygget tar längre tid än förväntat.
+ * Om backend börjar svara på SSE eller WebSocket i framtiden kan vi
+ * byta till riktiga events utan att UI:t behöver bytas ut.
+ */
+const FOLLOWUP_BUILD_STEPS: ReadonlyArray<{
+  id: string;
+  label: string;
+  /** Hur länge steget förblir aktivt innan vi rullar till nästa (ms). */
+  durationMs: number;
+}> = [
+  { id: "brief", label: "Förstår din instruktion", durationMs: 5_000 },
+  { id: "plan", label: "Planerar ändringarna", durationMs: 7_000 },
+  { id: "codegen", label: "Bygger om sajten", durationMs: 14_000 },
+  { id: "quality", label: "Kvalitetskollar", durationMs: 60_000 }, // håller kvar tills response
+];
+
+/**
+ * Tolka ett backend-felmeddelande och returnera en kort, åtgärdsbar
+ * text + ett "tips" för operatören. Vi ser specifika fel oftast
+ * (OpenAI/Anthropic rate-limits, schema-valideringar, timeout) och
+ * vill ge användaren något konkret att göra istället för bara
+ * generic "Bygget misslyckades".
+ *
+ * Mappningen bygger på faktiska error-strängar från
+ * `apps/viewser/lib/build-runner.ts` och `scripts/build_site.py`.
+ * När en sträng inte matchar någon känd kategori returneras en
+ * generic-tip som ändå är bättre än "okänt fel".
+ */
+function classifyFollowupError(rawError: string): {
+  message: string;
+  tip: string;
+} {
+  const text = rawError.toLowerCase();
+  if (text.includes("rate limit") || text.includes("429")) {
+    return {
+      message: "AI-tjänsten är överbelastad just nu.",
+      tip: "Vänta 10–20 sekunder och försök igen.",
+    };
+  }
+  if (text.includes("timeout") || text.includes("timed out")) {
+    return {
+      message: "Bygget tog för lång tid.",
+      tip: "Prova en mindre, mer specifik ändring.",
+    };
+  }
+  if (
+    text.includes("schema") ||
+    text.includes("validation") ||
+    text.includes("invalid")
+  ) {
+    return {
+      message: "Sajtens struktur kunde inte uppdateras automatiskt.",
+      tip: "Beskriv ändringen mer konkret (vilken sektion, vad ska ändras).",
+    };
+  }
+  if (text.includes("openai") || text.includes("anthropic") || text.includes("api key")) {
+    return {
+      message: "AI-tjänsten är otillgänglig.",
+      tip: "Kontrollera att .env.local har giltig OPENAI_API_KEY.",
+    };
+  }
+  if (text.includes("quality") || text.includes("typecheck") || text.includes("build failed")) {
+    return {
+      message: "Den nya versionen klarade inte Quality Gate.",
+      tip: "Pipelinen avbröt automatiskt — sajten är oförändrad. Prova en mer specifik instruktion.",
+    };
+  }
+  if (text.includes("network") || text.includes("fetch") || text.includes("econnreset")) {
+    return {
+      message: "Nätverket avbröts.",
+      tip: "Kontrollera anslutningen och försök igen.",
+    };
+  }
+  return {
+    message: rawError.length > 200 ? rawError.slice(0, 200) + "…" : rawError,
+    tip: "Prova en mer specifik instruktion eller dela upp ändringen i flera steg.",
+  };
+}
 
 const ALLOWED_UPLOAD_MIMES = new Set([
   "image/png",
@@ -178,29 +308,44 @@ function summarizeBuildResult(
   payload: PromptApiResponse,
   outcome: PromptBuildOutcome,
 ): { content: string; variant: ChatMessage["variant"] } {
+  // B3 — version-progression i success-meddelandet. När payload.version
+  // är t.ex. 3 visar vi "v2 → v3" så operatören får en känsla av
+  // historiken utan att Inspectorn behöver öppnas. För v1 (första
+  // bygget) visar vi bara "v1" eftersom det inte finns någon "från"-
+  // version. När backend exponerar en riktig diff-summary (vilka
+  // sektioner/filer som ändrades) kan vi byta ut detta mot strukturerad
+  // info; idag är version-progression det starkaste signalvärdet
+  // operatören kan få utan extra backend-arbete.
   if (outcome === "ok") {
-    const versionText =
-      typeof payload.version === "number" ? ` (v${payload.version})` : "";
+    let versionText = "";
+    if (typeof payload.version === "number") {
+      if (payload.version >= 2) {
+        versionText = ` Sajten gick från v${payload.version - 1} → v${payload.version}.`;
+      } else {
+        versionText = ` Version 1 publicerad.`;
+      }
+    }
     return {
-      content: `Klart${versionText}. Previewen uppdateras automatiskt.`,
+      content: `Klart!${versionText} Previewen laddas om automatiskt.`,
       variant: "success",
     };
   }
   if (outcome === "degraded") {
     return {
       content:
-        "Sajten byggdes, men något beteende avvek från Quality Gate. Kolla konsolen för detaljer.",
+        "Sajten byggdes, men Quality Gate flaggade något (typecheck, route-scan eller policy). Sajten har ändå publicerats — se Inspector för detaljer.",
       variant: "warning",
     };
   }
   if (outcome === "failed") {
     return {
-      content: "Bygget misslyckades. Prova en mer specifik instruktion.",
+      content:
+        "Bygget misslyckades och föregående version behölls. Prova en mer specifik instruktion eller dela upp ändringen.",
       variant: "error",
     };
   }
   return {
-    content: "Bygget returnerade okänd status. Kontrollera konsolen.",
+    content: "Bygget returnerade okänd status. Kontrollera Inspector → Quality Gate.",
     variant: "warning",
   };
 }
@@ -240,6 +385,12 @@ export function FloatingChat({
   // för att hålla composern minimalistisk. State persisteras så
   // operatörens preference (kollapsad/öppen) lever över reloads.
   const [quickPromptsOpen, setQuickPromptsOpen] = useState(false);
+  // Steg-timer för pending-bubblan. Uppdaterar message.content med
+  // nästa step-label tills response kommer eller cleanup avbryter.
+  // Vi använder bara en ref (inte useState) eftersom progressen
+  // bara visas i message-content via setMessages-uppdateringar —
+  // ingen annan UI-yta behöver re-rendra på step-byten.
+  const buildStepTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragStartRef = useRef<{
     pointerX: number;
     pointerY: number;
@@ -337,6 +488,21 @@ export function FloatingChat({
     if (!node) return;
     node.scrollTop = node.scrollHeight;
   }, [messages]);
+
+  // Städa upp pending step-timer på unmount. Förhindrar att en
+  // setTimeout som tickar färdigt efter att komponenten avmonterats
+  // försöker setState (vilket skulle ge "Can't perform a React state
+  // update on an unmounted component"-varning i dev). Refen är
+  // mutabel — vi behöver inte deps-array här eftersom vi bara läser
+  // den vid cleanup.
+  useEffect(() => {
+    return () => {
+      if (buildStepTimerRef.current) {
+        clearTimeout(buildStepTimerRef.current);
+        buildStepTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -493,10 +659,11 @@ export function FloatingChat({
         content: trimmed || "(Bifogade bilder utan extra instruktion)",
         attachmentCount: sentAttachments.length || undefined,
       };
+      const pendingMessageId = `pending-${Date.now()}`;
       const pendingMessage: ChatMessage = {
-        id: `pending-${Date.now()}`,
+        id: pendingMessageId,
         role: "assistant",
-        content: "Bygger om sajten…",
+        content: FOLLOWUP_BUILD_STEPS[0]?.label ?? "Bygger om sajten…",
         isPending: true,
         variant: "info",
       };
@@ -506,6 +673,31 @@ export function FloatingChat({
       setUploadError(null);
       setIsSending(true);
       onBuildStart();
+
+      // Starta steg-progression. Varje setTimeout schemalägger
+      // nästa steg; om response kommer innan vi nått sista steget
+      // (eller om bygget misslyckas) avbryter cleanupen i finally:n
+      // hela kedjan via buildStepTimerRef. Sista steget håller kvar
+      // sig själv (durationMs = 60s) tills response anländer eller
+      // operatören manuellt minimerar/skickar nytt.
+      const scheduleNextStep = (currentIndex: number) => {
+        const nextIndex = currentIndex + 1;
+        if (nextIndex >= FOLLOWUP_BUILD_STEPS.length) return;
+        const stepDuration =
+          FOLLOWUP_BUILD_STEPS[currentIndex]?.durationMs ?? 5_000;
+        buildStepTimerRef.current = setTimeout(() => {
+          const nextLabel = FOLLOWUP_BUILD_STEPS[nextIndex]?.label;
+          if (nextLabel) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === pendingMessageId ? { ...m, content: nextLabel } : m,
+              ),
+            );
+          }
+          scheduleNextStep(nextIndex);
+        }, stepDuration);
+      };
+      scheduleNextStep(0);
 
       try {
         const response = await fetch("/api/prompt", {
@@ -522,13 +714,14 @@ export function FloatingChat({
           const errorText =
             payload.error ??
             `Prompt-anropet misslyckades (HTTP ${response.status})`;
+          const classified = classifyFollowupError(errorText);
           setMessages((prev) =>
             prev
-              .filter((m) => m.id !== pendingMessage.id)
+              .filter((m) => m.id !== pendingMessageId)
               .concat({
                 id: `error-${Date.now()}`,
                 role: "assistant",
-                content: errorText,
+                content: `${classified.message} ${classified.tip}`,
                 variant: "error",
               }),
           );
@@ -538,7 +731,7 @@ export function FloatingChat({
         const summary = summarizeBuildResult(payload, outcome);
         setMessages((prev) =>
           prev
-            .filter((m) => m.id !== pendingMessage.id)
+            .filter((m) => m.id !== pendingMessageId)
             .concat({
               id: `done-${Date.now()}`,
               role: "assistant",
@@ -550,17 +743,26 @@ export function FloatingChat({
       } catch (caught) {
         const errorText =
           caught instanceof Error ? caught.message : "Okänt fel.";
+        const classified = classifyFollowupError(errorText);
         setMessages((prev) =>
           prev
-            .filter((m) => m.id !== pendingMessage.id)
+            .filter((m) => m.id !== pendingMessageId)
             .concat({
               id: `error-${Date.now()}`,
               role: "assistant",
-              content: errorText,
+              content: `${classified.message} ${classified.tip}`,
               variant: "error",
             }),
         );
       } finally {
+        // Avbryt steg-progression så pending-bubblan inte fortsätter
+        // uppdatera efter response. ``isBuilding`` triggas via
+        // onBuildEnd() längre ner och styr själv header-pulsen +
+        // footer-knappen tillbaka till idle-state.
+        if (buildStepTimerRef.current) {
+          clearTimeout(buildStepTimerRef.current);
+          buildStepTimerRef.current = null;
+        }
         setIsSending(false);
         onBuildEnd();
       }
@@ -767,25 +969,38 @@ export function FloatingChat({
             {quickPromptsOpen ? (
               <div
                 id="floating-chat-quick-prompts"
-                className="mt-1.5 flex w-full flex-wrap justify-center gap-1"
+                className="mt-1.5 flex w-full flex-col gap-1.5"
               >
-                {QUICK_PROMPTS.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    onClick={() => {
-                      setInput(suggestion);
-                      setQuickPromptsOpen(false);
-                    }}
-                    className={cn(
-                      "border-border/60 bg-background/80 text-foreground/80",
-                      "hover:border-border hover:bg-card hover:text-foreground",
-                      "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
-                      "rounded-full border px-2 py-0.5 text-[10.5px] transition-colors",
-                    )}
-                  >
-                    {suggestion}
-                  </button>
+                {QUICK_PROMPT_CATEGORIES.map((category) => (
+                  <div key={category.id} className="flex flex-col gap-1">
+                    <span
+                      className="text-muted-foreground/60 px-0.5 text-[9.5px] font-medium uppercase tracking-widest"
+                      aria-hidden
+                    >
+                      {category.label}
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {category.prompts.map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => {
+                            setInput(suggestion);
+                            setQuickPromptsOpen(false);
+                          }}
+                          title={suggestion}
+                          className={cn(
+                            "border-border/60 bg-background/80 text-foreground/80",
+                            "hover:border-border hover:bg-card hover:text-foreground",
+                            "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
+                            "rounded-full border px-2 py-0.5 text-[10.5px] transition-colors",
+                          )}
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : null}
