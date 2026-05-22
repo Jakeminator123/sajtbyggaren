@@ -1,15 +1,64 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-22 (**Dev Artifact Cleanup / Eval Retention v1 efter
-mixed follow-up tone guard**). Senaste produkt-/kod-läge är `78baaa1`
-(`chore(tooling): add dev artifact cleanup`) ovanpå `a54e06f`
-(`fix(builder): preserve tone intent in mixed follow-ups`),
-naprapat-fixen `991f152`, `25a435d` (`fix(builder): harden follow-up
-intent handling`), Mini-eval-runnern `defd196` och PR #57 squash-SHA
-`eb5a81d` (`fix(builder): propagate brand and tone tokens`). PR #57 squash-
-mergades efter att en P2-review om foreground-token-kontrast fixats i
-branchcommit `6ffc43f`; final fix-SHA för B139/B140 är `eb5a81d`.
-Bugg-scope är nu **24 aktiva, 0 misplaced, 5 unknown, 107 stängda**.
+**Datum:** 2026-05-22 morgon (**fräsch start efter Dev Artifact Cleanup
+körd ovanpå Eval Retention v1**). Senaste produkt-/kod-commit är
+`78baaa1` (`chore(tooling): add dev artifact cleanup`); senaste
+Steward-commit är `686ab06` (`docs(steward): sync after dev artifact
+cleanup`) plus dagens morgon-handoff. Repo är rent, synkat med
+`origin/main`, full mini-eval **4/4 grön** och bugg-scope **24 aktiva,
+0 misplaced, 5 unknown, 107 stängda**. Inga öppna PRs.
+
+**Nattens cleanup-runda (ingen ny commit, bara lokal disk):**
+
+- `--evals --keep 2 --apply`: 5 → 2 mini-eval-mappar.
+- `--generated --keep 5 --apply`: 16 → 5 generated previews.
+- `--python-cache --apply`: 14 → 0 cache-kataloger.
+- Frigjort utrymme: ca 1.25 GB.
+- `data/runs/` och `data/prompt-inputs/` rördes inte.
+- Ingen kodändring och ingen commit gjordes; cleanup ändrar bara
+  lokal disk under `../sajtbyggaren-output/` och repo-cache.
+
+**Direkt nästa spår — vänta tills operatör väljer:**
+
+1. **B125 preview-fallback-implementation** ovanpå mergat
+   decision-spår (`3418cdb`, PR #58). Läs
+   `governance/decisions/0025-browser-fallback-preview.md` och
+   `docs/reports/b125-preview-fallback-decision-2026-05-22.md` först.
+2. **Annat smalt produktspår** om operatör vill växla, t.ex. en
+   bug-sweep mot låg-prio B-IDs (B97/B98/B110/...) eller någon yta
+   kring Project Input/builder som mini-evalen pekade på.
+
+Vänta fortsatt med embeddings, SNI-runtime, variant-promotion, många
+nya starters och Project DNA V2 tills sprinten är formellt vald.
+
+**Startprompt för ny agent:**
+
+[`docs/agent-prompts/morning-fresh-start.md`](agent-prompts/morning-fresh-start.md)
+har en färdig första prompt med läs-ordning, sanity-kommandon, och
+gränser för vad agenten får göra utan att fråga.
+
+**Senaste landade spår, nyast först:**
+
+- `78baaa1` Dev Artifact Cleanup / Eval Retention v1
+  (`chore(tooling): add dev artifact cleanup`).
+- `a54e06f` mixed follow-up tone guard
+  (`fix(builder): preserve tone intent in mixed follow-ups`).
+- `991f152` naprapat tone-sweep
+  (`fix(builder): handle calm trust follow-ups`).
+- `25a435d` follow-up intent hardening
+  (`fix(builder): harden follow-up intent handling`).
+- `defd196` Mini-eval runner v1 + CSS-kaskadfix
+  (`chore(eval): add isolated mini eval runner`).
+- `eb5a81d` PR #57 / B139/B140 brand+tone token propagation
+  (`fix(builder): propagate brand and tone tokens`).
+- `aef5825` PR #56 / B71 Project DNA semantic follow-up V1
+  (`feat(builder): add Project DNA semantic follow-up`).
+- `3418cdb` PR #58 / B125 preview fallback decision merge
+  (`docs(adr): update B125 preview fallback decision`).
+
+PR #57 squash-mergades efter att en P2-review om foreground-token-
+kontrast fixats i branchcommit `6ffc43f`; final fix-SHA för B139/B140
+är `eb5a81d`.
 Föregående commits
 i sessionsordning från äldst till nyast: `2e274ac` (SNI core),
 `bf8d6c2`, `f40564e`, `7289732` (Steward-bumpar), `e822a2c` (PR #55-

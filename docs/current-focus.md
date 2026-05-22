@@ -30,7 +30,31 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `78baaa1` (2026-05-22, **Dev Artifact Cleanup /
+Last verified state: `686ab06` (2026-05-22 morgon, **fräsch start efter
+Dev Artifact Cleanup-runda ovanpå Eval Retention v1**) — senaste
+produkt-/kod-commit är fortsatt `78baaa1` (`chore(tooling): add dev
+artifact cleanup`); senaste Steward-commit är `686ab06`. Cleanup kördes
+i natt med `--evals --keep 2 --apply`, `--generated --keep 5 --apply`
+och `--python-cache --apply`: evals 5 → 2, generated 16 → 5,
+python-cache 14 → 0, ca 1.25 GB frigjort. `data/runs/` och
+`data/prompt-inputs/` rördes inte och ingen kod ändrades. Repo är rent
+och synkat med `origin/main`. Bug-räkning: **24 aktiva, 0 misplaced,
+5 unknown, 107 stängda**. Mini-eval 4/4 grön; senaste rapport ligger
+under `../sajtbyggaren-output/.evals/20260522T030947Z-mini-eval/`.
+
+**Direkt nästa fokus:** läs
+`governance/decisions/0025-browser-fallback-preview.md` och
+`docs/reports/b125-preview-fallback-decision-2026-05-22.md`. Välj sedan
+mellan B125 preview-fallback-implementation eller annat smalt
+produktspår innan kod startas. Vänta fortsatt med embeddings,
+SNI-runtime, variant-promotion, många nya starters och Project DNA V2
+tills en sprint är formellt vald. Inga öppna PRs.
+
+Startprompt för nya agenter:
+[`docs/agent-prompts/morning-fresh-start.md`](agent-prompts/morning-fresh-start.md).
+Föregående produkt-läge:
+
+Föregående verified state: `78baaa1` (2026-05-22, **Dev Artifact Cleanup /
 Eval Retention v1 efter mixed follow-up tone guard**) — produkt-/kodläget
 innehåller `a54e06f` plus `scripts/cleanup_dev_artifacts.py`, en samlad
 dry-run-first cleanup för lokala mini-evals, generated previews och
