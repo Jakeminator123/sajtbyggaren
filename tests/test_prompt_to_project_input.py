@@ -1216,6 +1216,41 @@ def test_followup_merge_tone_shift_updates_tone_only() -> None:
 
 
 @pytest.mark.tooling
+@pytest.mark.parametrize(
+    "follow_up_prompt",
+    [
+        "lägg till premium produkt",
+        "lägg till personalsida",
+        "lägg till premium tjänst",
+    ],
+)
+def test_followup_merge_additive_prompts_with_tone_words_keep_semantics_stable(
+    follow_up_prompt: str,
+) -> None:
+    previous = _minimal_previous_project_input()
+    candidate = {
+        **previous,
+        "company": {
+            **previous["company"],
+            "tagline": "Candidate tagline",
+            "story": "Candidate story",
+        },
+        "tone": {"primary": "premium", "secondary": ["personlig"], "avoid": []},
+    }
+
+    merged = merge_followup_project_input(
+        previous,
+        candidate,
+        follow_up_prompt=follow_up_prompt,
+    )
+
+    assert classify_followup_intent(follow_up_prompt, language="sv") == "no-semantic-change"
+    assert merged["company"]["story"] == previous["company"]["story"]
+    assert merged["company"]["tagline"] == previous["company"]["tagline"]
+    assert merged["tone"] == previous["tone"]
+
+
+@pytest.mark.tooling
 def test_followup_merge_tagline_update_filters_ui_directive() -> None:
     previous = _minimal_previous_project_input()
     candidate = {
@@ -1241,6 +1276,14 @@ def test_followup_merge_tagline_update_filters_ui_directive() -> None:
 def test_classify_followup_intent_matches_semantic_keywords() -> None:
     assert (
         classify_followup_intent("gör tonen mer premium", language="sv")
+        == "tone-shift"
+    )
+    assert (
+        classify_followup_intent("gör känslan mer personlig", language="sv")
+        == "tone-shift"
+    )
+    assert (
+        classify_followup_intent("gör texten mer personlig", language="sv")
         == "tone-shift"
     )
     assert (

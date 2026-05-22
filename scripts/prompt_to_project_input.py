@@ -388,8 +388,14 @@ _FOLLOWUP_ADD_ONLY_KEYWORDS = (
     "lagg till",
     "add ",
     "new service",
+    "new product",
+    "ny produkt",
+    "nytt produkt",
     "ny tjänst",
     "ny tjanst",
+    "ny sida",
+    "skapa sida",
+    "personalsida",
     "faq",
     "pris",
     "priser",
@@ -439,18 +445,36 @@ _FOLLOWUP_POSITIONING_KEYWORDS = (
     "niche",
 )
 
-_FOLLOWUP_TONE_KEYWORDS = (
+_FOLLOWUP_TONE_SCOPE_KEYWORDS = (
     "ton",
+    "tonen",
     "tone",
     "röst",
+    "rösten",
     "rost",
+    "rosten",
     "voice",
+    "känsla",
+    "känslan",
+    "kansla",
+    "kanslan",
+    "uttryck",
+    "uttrycket",
+    "stil",
+    "stilen",
+    "style",
+    "texten",
+    "copy",
+    "språk",
+    "sprak",
+)
+
+_FOLLOWUP_TONE_DESCRIPTOR_KEYWORDS = (
     "premium",
     "varmare",
     "warm",
     "personligare",
     "personlig",
-    "personal",
     "professionell",
     "professional",
     "lekfull",
@@ -460,13 +484,32 @@ _FOLLOWUP_TONE_KEYWORDS = (
     "modern",
 )
 
+_FOLLOWUP_TONE_PHRASES = (
+    "mer premium",
+    "more premium",
+    "mer personlig",
+    "more personal",
+    "mer professionell",
+    "more professional",
+    "mer lekfull",
+    "more playful",
+    "mer modern",
+    "more modern",
+    "varmare",
+    "warmer",
+)
+
+_FOLLOWUP_TONE_KEYWORDS = (
+    *_FOLLOWUP_TONE_SCOPE_KEYWORDS,
+    *_FOLLOWUP_TONE_DESCRIPTOR_KEYWORDS,
+)
+
 _TONE_KEYWORD_MAP_SV: tuple[tuple[str, str], ...] = (
     ("premium", "premium"),
     ("professionell", "professionell"),
     ("professional", "professionell"),
     ("personligare", "personlig"),
     ("personlig", "personlig"),
-    ("personal", "personlig"),
     ("varmare", "varm"),
     ("varm", "varm"),
     ("warm", "varm"),
@@ -1685,6 +1728,23 @@ def _contains_any(text: str, keywords: tuple[str, ...]) -> bool:
     return any(keyword in text for keyword in keywords)
 
 
+def _contains_word(text: str, keyword: str) -> bool:
+    pattern = rf"(?<![a-zåäöéü0-9]){re.escape(keyword)}(?![a-zåäöéü0-9])"
+    return bool(re.search(pattern, text))
+
+
+def _contains_any_word(text: str, keywords: tuple[str, ...]) -> bool:
+    return any(_contains_word(text, keyword) for keyword in keywords)
+
+
+def _has_tone_shift_signal(text: str) -> bool:
+    has_scope = _contains_any_word(text, _FOLLOWUP_TONE_SCOPE_KEYWORDS)
+    has_phrase = _contains_any(text, _FOLLOWUP_TONE_PHRASES)
+    if _contains_any(text, _FOLLOWUP_ADD_ONLY_KEYWORDS) and not has_scope and not has_phrase:
+        return False
+    return has_scope or has_phrase
+
+
 def classify_followup_intent(
     follow_up_prompt: str,
     *,
@@ -1705,7 +1765,7 @@ def classify_followup_intent(
         _contains_any(text, _FOLLOWUP_TAGLINE_KEYWORDS)
         or _contains_any(text, _FOLLOWUP_STORY_KEYWORDS)
         or _contains_any(text, _FOLLOWUP_POSITIONING_KEYWORDS)
-        or _contains_any(text, _FOLLOWUP_TONE_KEYWORDS)
+        or _has_tone_shift_signal(text)
     )
     if not has_semantic_keyword and _contains_any(text, _FOLLOWUP_ADD_ONLY_KEYWORDS):
         return "no-semantic-change"
@@ -1715,7 +1775,7 @@ def classify_followup_intent(
         return "story-emphasize"
     if _contains_any(text, _FOLLOWUP_POSITIONING_KEYWORDS):
         return "positioning-shift"
-    if _contains_any(text, _FOLLOWUP_TONE_KEYWORDS):
+    if _has_tone_shift_signal(text):
         return "tone-shift"
     return "no-semantic-change"
 
@@ -1775,7 +1835,7 @@ def _tone_words_from_prompt(
     text = _normalise_followup_text(follow_up_prompt)
     words: list[str] = []
     for keyword, tone_word in _tone_keyword_pairs(language):
-        if keyword in text and tone_word not in words:
+        if _contains_word(text, keyword) and tone_word not in words:
             words.append(tone_word)
     return words
 

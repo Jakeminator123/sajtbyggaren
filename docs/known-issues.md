@@ -196,13 +196,11 @@ CTA "Begär offert" hardcoded i `render_home` oavsett bransch
   när scaffold = `ecommerce-lite`. Källa: re-Verifierings-Scout
   2026-05-15. Fix: open. Test: open.
 
-**B71-not (PR #28 stängde, men markerad som unverified av re-Scout):**
-Re-Verifierings-Scout flaggade att follow-up byte-stabilitet inte
-kan verifieras i ett första-generations-pass (kräver v1 → v2-test).
-B71-stängningen i Grind hänger på kod-/docstring-spårning i
-`tests/test_prompt_to_project_input.py`; ingen kritik mot lock-tester,
-bara att Scout inte själv kunde verifiera invarianten. Två-pass-test
-bör naturligt köras nästa gång någon ändå provkör follow-up-flödet.
+**Historisk B71-not:** Re-Verifierings-Scout kunde före Project DNA-
+fixen inte verifiera follow-up-byte-stabilitet i ett första-
+generationspass. B71 stängs först i Project DNA semantic follow-up
+V1 nedan, där v1 → v2-tester låser både semantiska ändringar och
+byte-stabila no-change-fall.
 
 ### Re-Verifierings-Scout 3 2026-05-18 (post-1C mot `b5ee710`/`6eaf222`)
 
@@ -508,7 +506,7 @@ arkitekturändring, inte en bugg.
 
 ### Demo-baseline-fix 1B closure note (2026-05-15)
 
-PR #28 / `885431b` stängde 15 buggar (alla flyttade till "Stängda" 2026-05-18 i en separat Steward-städning): B64, B65, B66, B69, B70, B73, B74, B76, B77, B78, B79, B80, B81, B82 och B84. Kvar öppna (medvetet eller deferred) från bug-sweep-listan: B67, B71 (markerad unverified av re-Scout), B72, B75, B83, B85, B86 och B87.
+PR #28 / `885431b` stängde 15 buggar (alla flyttade till "Stängda" 2026-05-18 i en separat Steward-städning): B64, B65, B66, B69, B70, B73, B74, B76, B77, B78, B79, B80, B81, B82 och B84. Efter Project DNA semantic follow-up V1 är B71 också stängd. Kvar öppna (medvetet eller deferred) från bug-sweep-listan: B67, B72, B75, B83, B85, B86 och B87.
 
 ### Demo-baseline-fix 1C closure note (2026-05-18)
 
