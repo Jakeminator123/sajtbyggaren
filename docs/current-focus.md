@@ -30,17 +30,19 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `686ab06` (2026-05-22 morgon, **fräsch start efter
-Dev Artifact Cleanup-runda ovanpå Eval Retention v1**) — senaste
-produkt-/kod-commit är fortsatt `78baaa1` (`chore(tooling): add dev
-artifact cleanup`); senaste Steward-commit är `686ab06`. Cleanup kördes
-i natt med `--evals --keep 2 --apply`, `--generated --keep 5 --apply`
-och `--python-cache --apply`: evals 5 → 2, generated 16 → 5,
-python-cache 14 → 0, ca 1.25 GB frigjort. `data/runs/` och
-`data/prompt-inputs/` rördes inte och ingen kod ändrades. Repo är rent
-och synkat med `origin/main`. Bug-räkning: **24 aktiva, 0 misplaced,
-5 unknown, 107 stängda**. Mini-eval 4/4 grön; senaste rapport ligger
-under `../sajtbyggaren-output/.evals/20260522T030947Z-mini-eval/`.
+Last verified state: `10ae8bf` (2026-05-22, PR #59 mergad:
+Backoffice asset graph lens v1) — produkt-/kodläget innehåller en
+read-only Asset Graph-vy i Building Blocks/Kontrollplan. PR #59 ändrade
+endast `backoffice/asset_graph.py`,
+`backoffice/views/building_blocks.py` och
+`tests/test_backoffice_asset_graph.py`. Verifiering på ren worktree mot
+`origin/main`: `ruff check .` grön och
+`pytest tests/test_backoffice_asset_graph.py -q` grön. Full PR-verifiering
+före merge körde även governance, rules-sync, term coverage, relaterade
+Backoffice-tester och hela `tests/` grönt. PR #60 är fortsatt öppen och
+orörd; inga runtime mappings, policies, starters, scaffolds eller Dossiers
+ändrades. Lokal operator-planfil i repo-roten är otrackad och ingår inte i
+detta läge.
 
 **Direkt nästa fokus:** läs
 `governance/decisions/0025-browser-fallback-preview.md` och
@@ -48,7 +50,9 @@ under `../sajtbyggaren-output/.evals/20260522T030947Z-mini-eval/`.
 mellan B125 preview-fallback-implementation eller annat smalt
 produktspår innan kod startas. Vänta fortsatt med embeddings,
 SNI-runtime, variant-promotion, många nya starters och Project DNA V2
-tills en sprint är formellt vald. Inga öppna PRs.
+tills en sprint är formellt vald. Öppen PR: #60
+(`tooling/starter-candidate-auditor-v1`); rör den inte om nästa uppgift
+inte uttryckligen gäller PR #60.
 
 Startprompt för nya agenter:
 [`docs/agent-prompts/morning-fresh-start.md`](agent-prompts/morning-fresh-start.md).
