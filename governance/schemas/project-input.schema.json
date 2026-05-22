@@ -146,6 +146,16 @@
       "maxItems": 4,
       "description": "Korta säljpunkter som rendras som chips i hero. Max 4 för att hålla layouten ren."
     },
+    "media": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Extra operator-uppladdade media-assets som renderas i metadata och hero.",
+      "properties": {
+        "favicon": {"$ref": "#/$defs/assetRef"},
+        "ogImage": {"$ref": "#/$defs/assetRef"},
+        "backgroundVideo": {"$ref": "#/$defs/assetRef"}
+      }
+    },
     "contact": {
       "type": "object",
       "additionalProperties": false,
@@ -232,7 +242,14 @@
         "filename": {"type": "string", "minLength": 1},
         "mimeType": {
           "type": "string",
-          "enum": ["image/png", "image/jpeg", "image/webp", "image/svg+xml"]
+          "enum": [
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+            "image/svg+xml",
+            "video/mp4",
+            "video/webm"
+          ]
         },
         "sizeBytes": {"type": "integer", "minimum": 1},
         "width": {"type": ["integer", "null"], "minimum": 1},
@@ -240,7 +257,7 @@
         "alt": {"type": "string"},
         "role": {
           "type": "string",
-          "enum": ["logo", "hero", "gallery"]
+          "enum": ["logo", "hero", "gallery", "favicon", "ogImage", "backgroundVideo"]
         },
         "placement": {
           "type": "string",
@@ -250,7 +267,8 @@
         "visionConfidence": {
           "type": "string",
           "enum": ["low", "medium", "high"]
-        }
+        },
+        "sourceUrl": {"type": "string", "minLength": 1}
       }
     }
   }

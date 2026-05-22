@@ -100,7 +100,25 @@ def test_load_discovery_accepts_schema_version_1_with_additive_directives(
 @pytest.mark.tooling
 def test_load_discovery_accepts_schema_version_2(tmp_path: Path) -> None:
     payload = _base_payload(schema_version=2)
+    payload["directives"] = {"language": "sv", "scaffoldHint": "local-service-business"}
     assert _load_discovery_file(_write_payload(tmp_path, payload)) == payload
+
+
+@pytest.mark.tooling
+def test_load_discovery_rejects_future_schema_version(tmp_path: Path) -> None:
+    payload = _base_payload(schema_version=3)
+    with pytest.raises(SystemExit, match="schemaVersion 1 eller 2"):
+        _load_discovery_file(_write_payload(tmp_path, payload))
+
+
+@pytest.mark.tooling
+def test_load_discovery_requires_language_for_schema_version_2(
+    tmp_path: Path,
+) -> None:
+    payload = _base_payload(schema_version=2)
+    payload["directives"] = {"scaffoldHint": "local-service-business"}
+    with pytest.raises(SystemExit, match="directives.language"):
+        _load_discovery_file(_write_payload(tmp_path, payload))
 
 
 @pytest.mark.tooling
@@ -110,6 +128,7 @@ def test_resolver_persists_supported_directives(
     payload = _base_payload(schema_version=2)
     payload["directives"] = {
         "layoutHint": "centered",
+        "language": "sv",
         "uniqueSellingPoints": [
             "25 års erfarenhet",
             "Lokala hantverkare",
@@ -140,11 +159,62 @@ def test_resolver_persists_supported_directives(
 
 
 @pytest.mark.tooling
+def test_resolver_persists_directives_media(
+    project_input_schema: dict[str, Any],
+) -> None:
+    payload = _base_payload(schema_version=2)
+    payload["directives"] = {
+        "language": "sv",
+        "media": {
+            "favicon": {
+                "assetId": "01JXXX1234567890ABCDEFGHIJK",
+                "filename": "logo-test.webp",
+                "mimeType": "image/webp",
+                "sizeBytes": 4096,
+                "width": 256,
+                "height": 256,
+                "alt": "Företagslogotyp",
+                "role": "favicon",
+                "sourceUrl": "https://blob.example/logo-test.webp",
+            },
+            "backgroundVideo": {
+                "assetId": "01JYYY9876543210ZYXWVUTSRQP",
+                "filename": "hero-loop.mp4",
+                "mimeType": "video/mp4",
+                "sizeBytes": 2_400_000,
+                "width": None,
+                "height": None,
+                "alt": "Bakgrundsvideo",
+                "role": "backgroundVideo",
+                "placement": "home",
+            },
+            "ogImage": {"assetId": "missing-required-fields"},
+        },
+    }
+
+    project_input, decision = resolve_discovery(
+        raw_prompt=payload["rawPrompt"],
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+
+    jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
+    assert project_input["media"]["favicon"]["role"] == "favicon"
+    assert project_input["media"]["favicon"]["sourceUrl"] == (
+        "https://blob.example/logo-test.webp"
+    )
+    assert project_input["media"]["backgroundVideo"]["mimeType"] == "video/mp4"
+    assert "ogImage" not in project_input["media"]
+    assert decision.fieldSources["media"] == "wizard"
+
+
+@pytest.mark.tooling
 def test_resolver_ignores_unknown_directive_values(
     project_input_schema: dict[str, Any],
 ) -> None:
     payload = _base_payload(schema_version=2)
     payload["directives"] = {
+        "language": "sv",
         "layoutHint": "diagonal",
         "uniqueSellingPoints": [123, "", None],
     }

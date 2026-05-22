@@ -386,3 +386,68 @@ def test_build_renders_directive_hero_layout_and_usps(
     assert '{"25 års erfarenhet"}' in hero
     assert '{"Lokala hantverkare"}' in hero
     assert '{"Tecken < och { escapade"}' in hero
+
+
+@pytest.mark.tooling
+def test_build_renders_media_metadata_and_background_video(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    from scripts.build_site import build
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    project_input = json.loads(
+        (REPO_ROOT / "examples" / "painter-palma.project-input.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    project_input["siteId"] = "media-render-site"
+    project_input["media"] = {
+        "favicon": {
+            "assetId": "favicon-1",
+            "filename": "favicon.webp",
+            "mimeType": "image/webp",
+            "sizeBytes": 4096,
+            "role": "favicon",
+        },
+        "ogImage": {
+            "assetId": "og-1",
+            "filename": "og.webp",
+            "mimeType": "image/webp",
+            "sizeBytes": 120000,
+            "role": "ogImage",
+            "alt": "Delningsbild",
+        },
+        "backgroundVideo": {
+            "assetId": "video-1",
+            "filename": "hero-loop.mp4",
+            "mimeType": "video/mp4",
+            "sizeBytes": 2400000,
+            "role": "backgroundVideo",
+            "placement": "home",
+        },
+    }
+    project_input_path = tmp_path / "media-render-site.project-input.json"
+    project_input_path.write_text(
+        json.dumps(project_input, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    target, _run_dir = build(
+        project_input_path,
+        do_build=False,
+        runs_dir=tmp_path / "runs",
+        generated_dir=tmp_path / "generated",
+    )
+
+    layout = (target / "app" / "layout.tsx").read_text(encoding="utf-8")
+    page = (target / "app" / "page.tsx").read_text(encoding="utf-8")
+    assert "icons: {" in layout
+    assert 'icon: "/uploads/favicon.webp"' in layout
+    assert 'apple: "/uploads/favicon.webp"' in layout
+    assert "openGraph: {" in layout
+    assert 'url: "/uploads/og.webp"' in layout
+    assert 'images: ["/uploads/og.webp"]' in layout
+    assert "<video" in page
+    assert 'src={"/uploads/hero-loop.mp4"}' in page
+    assert "autoPlay loop muted playsInline" in page

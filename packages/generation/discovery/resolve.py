@@ -190,6 +190,7 @@ _DEFAULT_VARIANT_ID = "nordic-trust"
 _DEFAULT_STARTER_ID = "marketing-base"
 _VALID_LAYOUT_HINTS = {"gradient", "centered", "split"}
 _MAX_UNIQUE_SELLING_POINTS = 4
+_MEDIA_DIRECTIVE_ROLES = ("favicon", "ogImage", "backgroundVideo")
 
 # Postnummer-extraktion från svensk adress (samma regex som tidigare).
 _SWEDISH_POSTCODE_RE = re.compile(r"\b\d{3}\s?\d{2}\s+([A-Za-zÅÄÖåäö\-]+)")
@@ -973,6 +974,17 @@ def _apply_directives_fields(
             project_input["uniqueSellingPoints"] = usps
             field_sources["uniqueSellingPoints"] = "wizard"
 
+    raw_media = directives.get("media")
+    if isinstance(raw_media, dict):
+        media_block: dict[str, Any] = {}
+        for role in _MEDIA_DIRECTIVE_ROLES:
+            ref = _sanitize_asset_ref(raw_media.get(role) or {}, role)
+            if ref is not None:
+                media_block[role] = ref
+        if media_block:
+            project_input["media"] = media_block
+            field_sources["media"] = "wizard"
+
 
 def _apply_location_from_address(project_input: dict[str, Any]) -> None:
     contact = project_input.get("contact") or {}
@@ -1183,6 +1195,9 @@ def _sanitize_asset_ref(
     confidence = ref.get("visionConfidence")
     if isinstance(confidence, str) and confidence in {"low", "medium", "high"}:
         clean["visionConfidence"] = confidence
+    source_url = ref.get("sourceUrl")
+    if isinstance(source_url, str) and source_url.strip():
+        clean["sourceUrl"] = source_url.strip()
     return clean
 
 
