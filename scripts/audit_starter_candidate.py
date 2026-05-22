@@ -239,8 +239,20 @@ PROGRAM_NAME = "audit_starter_candidate"
 class AuditResult:
     """Structured result of one audit run.
 
-    Lists are kept sorted by the public API so the JSON shape is stable
-    across runs on the same candidate.
+    Most lists in the JSON output (``blockers``, ``warnings``,
+    ``filesDisallowed``, ``filesPresent``, ``scriptsPresent``,
+    ``scriptsMissing``, ``scriptsNiceToHavePresent``, ``demoSignals``,
+    ``largeAssets`` (by ``path``) and the inner lists of
+    ``integrations``) are alphabetically sorted in :meth:`to_dict` so
+    the JSON shape is stable across runs on the same candidate.
+
+    ``nextActions`` is the deliberate exception: it preserves the
+    priority order produced by :func:`_build_next_actions` so the
+    classification-specific action appears first and the universal
+    "Never run this script on a path..." trailer appears last when
+    :func:`render_text` prints the report. The shape is still byte-
+    stable across runs because the construction logic itself is
+    deterministic.
     """
 
     candidate_path: Path
@@ -278,7 +290,7 @@ class AuditResult:
             "filesDisallowed": sorted(self.files_disallowed),
             "largeAssets": sorted(self.large_assets, key=lambda item: item["path"]),
             "demoSignals": sorted(self.demo_signals),
-            "nextActions": sorted(self.next_actions),
+            "nextActions": list(self.next_actions),
         }
 
 

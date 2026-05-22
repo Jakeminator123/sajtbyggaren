@@ -517,7 +517,28 @@ def test_json_lists_are_sorted_for_stability(tmp_path: Path) -> None:
     assert payload["scriptsNiceToHavePresent"] == sorted(payload["scriptsNiceToHavePresent"])
     assert payload["filesPresent"] == sorted(payload["filesPresent"])
     assert payload["demoSignals"] == sorted(payload["demoSignals"])
-    assert payload["nextActions"] == sorted(payload["nextActions"])
+
+
+@pytest.mark.tooling
+def test_next_actions_preserves_priority_order(tmp_path: Path) -> None:
+    """Regression: nextActions must keep the priority order from
+    _build_next_actions (classification-specific action first, the
+    "Never run this script on a path..." trailer last). Sorting
+    alphabetically would move the trailer ahead of the actual
+    recommendation for some classifications and degrade operator UX
+    in render_text() output. Determinism across runs is preserved
+    because the construction logic itself is deterministic.
+    """
+    candidate = _ready_candidate(tmp_path / "priority")
+    payload = audit_candidate(candidate).to_dict()
+    actions = payload["nextActions"]
+    assert len(actions) >= 2
+    assert "Operator may now propose a Starter import" in actions[0], (
+        "starter-candidate-ready must surface the ADR/registry guidance first"
+    )
+    assert "Never run this script" in actions[-1], (
+        "the universal trailer must always be the last entry in nextActions"
+    )
 
 
 # ---------------------------------------------------------------------------
