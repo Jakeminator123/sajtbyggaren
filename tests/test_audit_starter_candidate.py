@@ -516,6 +516,27 @@ def test_dev_dependencies_as_list_does_not_crash(tmp_path: Path) -> None:
 
 
 @pytest.mark.tooling
+def test_package_json_with_invalid_utf8_blocks_without_crashing(tmp_path: Path) -> None:
+    candidate = _ready_candidate(tmp_path / "package-invalid-utf8")
+    (candidate / "package.json").write_bytes(b'{"x": "\xe9"}')
+    result = audit_candidate(candidate)
+    assert result.classification == "blocked"
+    assert any("package.json is not valid UTF-8" in b for b in result.blockers)
+
+
+@pytest.mark.tooling
+def test_tsconfig_with_invalid_utf8_warns_without_crashing(tmp_path: Path) -> None:
+    candidate = _ready_candidate(tmp_path / "tsconfig-invalid-utf8")
+    (candidate / "tsconfig.json").write_bytes(b'{"compilerOptions": "\xe9"}')
+    result = audit_candidate(candidate)
+    assert result.classification == "needs-cleanup"
+    assert any(
+        "tsconfig.json could not be parsed" in warning for warning in result.warnings
+    )
+    assert result.detected_stack["tsconfig"]["strict"] is None
+
+
+@pytest.mark.tooling
 def test_non_string_version_does_not_crash(tmp_path: Path) -> None:
     """Regression: a non-string version value (e.g. ``"next": 16``)
     must not crash ``_major_from_range``. The auditor should treat

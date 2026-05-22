@@ -317,6 +317,8 @@ def _read_json(path: Path) -> tuple[dict[str, Any] | None, str | None]:
         text = path.read_text(encoding="utf-8")
     except OSError as exc:
         return None, f"could not read {path.name}: {exc}"
+    except UnicodeDecodeError as exc:
+        return None, f"{path.name} is not valid UTF-8: {exc}"
     try:
         data = json.loads(text)
     except json.JSONDecodeError as exc:
