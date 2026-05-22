@@ -488,6 +488,188 @@ def test_brand_colors_and_logo_pass_through_to_project_input() -> None:
     assert decision.fieldSources["brand.primaryColorHex"] == "wizard"
 
 
+# ---------------------------------------------------------------------------
+# Asset-tombstones — borttagna bilder rensas från Project Input
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_explicit_null_logo_clears_existing_brand_logo() -> None:
+    """Operatören tar bort logo i wizarden → ``project_input.brand.logo`` rensas.
+
+    Reproducerar bugen där borttagna bilder dykte upp igen vid rebuild
+    (2026-05-22). Wizard skickar ``assets.logo = None`` som tombstone;
+    resolvern måste pop:a logo från brand-blocket.
+    """
+    candidate = _candidate_project_input()
+    candidate["brand"] = {
+        "primaryColorHex": "#111111",
+        "logo": {
+            "assetId": "01HOLDLOGO000000000000000",
+            "filename": "old-logo.webp",
+            "mimeType": "image/webp",
+            "sizeBytes": 999,
+            "role": "logo",
+        },
+    }
+    payload = _payload("business", assets={"logo": None})
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+    assert "logo" not in project_input.get("brand", {}), (
+        "borttagen logo måste rensas — annars kopierar build_site.py "
+        "med den gamla bilden vid rebuild (ghost asset-buggen)"
+    )
+    assert project_input["brand"]["primaryColorHex"] == "#111111", (
+        "andra brand-fält ska inte påverkas av logo-tombstone"
+    )
+    assert decision.fieldSources["brand.logo"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_explicit_null_hero_clears_existing_brand_hero() -> None:
+    """``assets.heroImage = None`` rensar ``project_input.brand.heroImage``."""
+    candidate = _candidate_project_input()
+    candidate["brand"] = {
+        "heroImage": {
+            "assetId": "01HOLDHERO000000000000000",
+            "filename": "old-hero.webp",
+            "mimeType": "image/webp",
+            "sizeBytes": 999,
+            "role": "hero",
+        },
+    }
+    payload = _payload("business", assets={"heroImage": None})
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+    assert "heroImage" not in project_input.get("brand", {})
+    assert decision.fieldSources["brand.heroImage"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_empty_gallery_clears_existing_gallery() -> None:
+    """``assets.gallery = []`` rensar ``project_input.gallery`` helt."""
+    candidate = _candidate_project_input()
+    candidate["gallery"] = [
+        {
+            "assetId": "01HOLDGAL0000000000000000",
+            "filename": "old1.webp",
+            "mimeType": "image/webp",
+            "sizeBytes": 999,
+            "role": "gallery",
+        },
+    ]
+    payload = _payload("business", assets={"gallery": []})
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+    assert "gallery" not in project_input, (
+        "tom gallery-lista måste rensa project_input.gallery — annars "
+        "kopierar build_site.py med borttagna galleribilder"
+    )
+    assert decision.fieldSources["gallery"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_missing_assets_key_leaves_existing_brand_untouched() -> None:
+    """När wizard inte rör assets alls (key saknas) ska existing logo bevaras.
+
+    Detta är skillnaden mellan "operatören rörde inte fältet" (key
+    saknas → no-op) och "operatören tog bort bilden" (key=None →
+    tombstone, rensa). Skydd mot regression där bara key-check skulle
+    triggas av tom payload.
+    """
+    candidate = _candidate_project_input()
+    candidate["brand"] = {
+        "logo": {
+            "assetId": "01HKEEPLOGO00000000000000",
+            "filename": "keep.webp",
+            "mimeType": "image/webp",
+            "sizeBytes": 999,
+            "role": "logo",
+        },
+    }
+    payload = _payload("business")
+    project_input, _decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+    assert project_input["brand"]["logo"]["assetId"] == "01HKEEPLOGO00000000000000"
+
+
+@pytest.mark.tooling
+def test_explicit_null_media_favicon_clears_existing_media() -> None:
+    """``directives.media.favicon = None`` rensar ``project_input.media.favicon``."""
+    candidate = _candidate_project_input()
+    candidate["media"] = {
+        "favicon": {
+            "assetId": "01HOLDFAV0000000000000000",
+            "filename": "old-fav.png",
+            "mimeType": "image/png",
+            "sizeBytes": 999,
+            "role": "favicon",
+        },
+        "ogImage": {
+            "assetId": "01HKEEPOG0000000000000000",
+            "filename": "keep-og.png",
+            "mimeType": "image/png",
+            "sizeBytes": 999,
+            "role": "ogImage",
+        },
+    }
+    payload = _payload("business")
+    payload["directives"] = {"media": {"favicon": None}}
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+    media = project_input.get("media", {})
+    assert "favicon" not in media, (
+        "favicon-tombstone måste rensa project_input.media.favicon"
+    )
+    assert media.get("ogImage", {}).get("assetId") == "01HKEEPOG0000000000000000", (
+        "ogImage rörs inte av wizarden → ska bevaras"
+    )
+    assert decision.fieldSources["media"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_all_media_roles_null_pops_media_block_entirely() -> None:
+    """När alla media-roller är None ska hela ``media``-blocket försvinna."""
+    candidate = _candidate_project_input()
+    candidate["media"] = {
+        "favicon": {
+            "assetId": "01HFAV00000000000000000000",
+            "filename": "f.png",
+            "mimeType": "image/png",
+            "sizeBytes": 999,
+            "role": "favicon",
+        },
+    }
+    payload = _payload("business")
+    payload["directives"] = {
+        "media": {"favicon": None, "ogImage": None, "backgroundVideo": None}
+    }
+    project_input, _decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+    assert "media" not in project_input, (
+        "tomt media-block ska poppas helt så build_site.py inte ser "
+        "ett vilseledande tomt objekt"
+    )
+
+
 @pytest.mark.tooling
 def test_apply_discovery_overrides_wrapper_keeps_backward_compat_shape() -> None:
     """Pre-B121-shape: empty Project Input + assets-only payload."""

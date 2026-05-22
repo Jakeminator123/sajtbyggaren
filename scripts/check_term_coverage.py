@@ -259,6 +259,7 @@ COMMON_WORDS = {
     "AdvancedDisclosure",
     "ButtonPrimitive", "VariantProps", "ClassValue",
     "NextRequest", "NextResponse", "ComponentProps", "ReturnType",
+    "ReadonlySet",
     "CardAction", "CardContent", "CardDescription", "CardFooter", "CardHeader", "CardTitle",
     "ChildProcess", "CircleCheck",
     "InputPrimitive",

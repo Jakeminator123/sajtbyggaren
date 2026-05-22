@@ -881,30 +881,65 @@ def _apply_brand_and_assets(
     assets_raw = answers.get("assets")
     assets: dict[str, Any] = assets_raw if isinstance(assets_raw, dict) else {}
 
-    logo_ref = _sanitize_asset_ref(assets.get("logo") or {}, "logo")
-    if logo_ref:
-        brand_block = project_input.setdefault("brand", {})
-        brand_block["logo"] = logo_ref
-        field_sources["brand.logo"] = "wizard"
+    # Tombstone-semantik: när wizard skickar en explicit ``None`` (eller
+    # tom dict) för en single-asset-roll betyder det att operatören har
+    # tagit bort en tidigare uppladdad bild i UI:t. Vi MÅSTE då rensa
+    # motsvarande fält i ``project_input.brand`` så att build_site.py
+    # inte kopierar med den gamla bilden vid nästa rebuild. Utan denna
+    # rensning dyker "borttagna" logos/hero-bilder upp igen — den
+    # klassiska "ghost asset"-buggen som operatören rapporterade
+    # (2026-05-22).
+    #
+    # ``isinstance(... , dict)`` skiljer "fältet finns inte alls"
+    # (operatören har inte rört det) från "fältet är dict/None"
+    # (operatören har explicit interagerat). Vi behandlar därför bara
+    # tombstones när nyckeln faktiskt finns i payloaden.
+    if "logo" in assets:
+        logo_ref = _sanitize_asset_ref(assets.get("logo") or {}, "logo")
+        if logo_ref:
+            brand_block = project_input.setdefault("brand", {})
+            brand_block["logo"] = logo_ref
+            field_sources["brand.logo"] = "wizard"
+        else:
+            brand_block = project_input.get("brand")
+            if isinstance(brand_block, dict):
+                brand_block.pop("logo", None)
+            field_sources["brand.logo"] = "wizard"
 
-    hero_ref = _sanitize_asset_ref(assets.get("heroImage") or {}, "hero")
-    if hero_ref:
-        brand_block = project_input.setdefault("brand", {})
-        brand_block["heroImage"] = hero_ref
-        field_sources["brand.heroImage"] = "wizard"
+    if "heroImage" in assets:
+        hero_ref = _sanitize_asset_ref(assets.get("heroImage") or {}, "hero")
+        if hero_ref:
+            brand_block = project_input.setdefault("brand", {})
+            brand_block["heroImage"] = hero_ref
+            field_sources["brand.heroImage"] = "wizard"
+        else:
+            brand_block = project_input.get("brand")
+            if isinstance(brand_block, dict):
+                brand_block.pop("heroImage", None)
+            field_sources["brand.heroImage"] = "wizard"
 
-    gallery_raw = assets.get("gallery")
-    raw_gallery: list[Any] = gallery_raw if isinstance(gallery_raw, list) else []
-    gallery_refs: list[dict[str, Any]] = []
-    for item in raw_gallery:
-        if not isinstance(item, dict):
-            continue
-        ref = _sanitize_asset_ref(item, "gallery")
-        if ref is not None:
-            gallery_refs.append(ref)
-    if gallery_refs:
-        project_input["gallery"] = gallery_refs
-        field_sources["gallery"] = "wizard"
+    # Gallery: tom lista ``[]`` är tombstone (operatören har rensat
+    # alla galleri-bilder). Nyckeln finns men listan är tom → rensa
+    # ``project_input.gallery``. Frontend skickar alltid en lista när
+    # operatören har rört galleriet (även tom efter borttagning).
+    if "gallery" in assets:
+        gallery_raw = assets.get("gallery")
+        raw_gallery: list[Any] = (
+            gallery_raw if isinstance(gallery_raw, list) else []
+        )
+        gallery_refs: list[dict[str, Any]] = []
+        for item in raw_gallery:
+            if not isinstance(item, dict):
+                continue
+            ref = _sanitize_asset_ref(item, "gallery")
+            if ref is not None:
+                gallery_refs.append(ref)
+        if gallery_refs:
+            project_input["gallery"] = gallery_refs
+            field_sources["gallery"] = "wizard"
+        else:
+            project_input.pop("gallery", None)
+            field_sources["gallery"] = "wizard"
 
 
 def _apply_tone_field(
@@ -974,16 +1009,32 @@ def _apply_directives_fields(
             project_input["uniqueSellingPoints"] = usps
             field_sources["uniqueSellingPoints"] = "wizard"
 
+    # Media: per-roll-tombstone-semantik. När wizarden skickar
+    # ``directives.media.<role> = None`` betyder det att operatören
+    # tagit bort en tidigare uppladdad asset i den rollen — vi måste
+    # rensa motsvarande ``project_input.media.<role>`` så build_site.py
+    # inte återanvänder en gammal favicon/ogImage/backgroundVideo vid
+    # rebuild. Roller som inte finns i payload alls lämnas orörda.
     raw_media = directives.get("media")
     if isinstance(raw_media, dict):
-        media_block: dict[str, Any] = {}
+        media_block = project_input.setdefault("media", {})
+        if not isinstance(media_block, dict):
+            media_block = {}
+            project_input["media"] = media_block
+        any_touched = False
         for role in _MEDIA_DIRECTIVE_ROLES:
+            if role not in raw_media:
+                continue
+            any_touched = True
             ref = _sanitize_asset_ref(raw_media.get(role) or {}, role)
             if ref is not None:
                 media_block[role] = ref
-        if media_block:
-            project_input["media"] = media_block
+            else:
+                media_block.pop(role, None)
+        if any_touched:
             field_sources["media"] = "wizard"
+            if not media_block:
+                project_input.pop("media", None)
 
 
 def _apply_location_from_address(project_input: dict[str, Any]) -> None:

@@ -105,10 +105,16 @@ export type WizardDirectives = {
    * build_site.py kan läsa det vid render. Schema-tillägg krävs i
    * `governance/schemas/project-input.schema.json`.
    */
+  /**
+   * ``null`` är en **tombstone** som signalerar att operatören har
+   * tagit bort en tidigare uppladdad asset i rollen. Backend måste
+   * rensa motsvarande fält i ``project_input.media`` när tombstone
+   * skickas (annars dyker borttagna bilder upp igen vid rebuild).
+   */
   media?: {
-    favicon?: AssetRef;
-    ogImage?: AssetRef;
-    backgroundVideo?: AssetRef;
+    favicon?: AssetRef | null;
+    ogImage?: AssetRef | null;
+    backgroundVideo?: AssetRef | null;
   };
   notesForPlanner?: string;
 };
@@ -142,7 +148,31 @@ export type DiscoveryPayload = {
   directives?: WizardDirectives;
 };
 
-/** Tar bort tomma strängar, tomma arrays och tomma objekt rekursivt. */
+/**
+ * Tar bort tomma strängar, tomma arrays och tomma objekt rekursivt.
+ *
+ * UNDANTAG: ``preserveEmpty``-listan med nyckelnamn behåller sina
+ * tomma värden. Detta används för borttagnings-tombstones i
+ * ``assets.*`` och ``media.*`` — när operatören tar bort en uppladdad
+ * bild (logo, hero, favicon, OG, video) blir state ``null``, och vi
+ * MÅSTE skicka ``null`` till backend så den vet att rensa
+ * ``project_input.brand.logo`` osv. Strippas ``null`` bort tror
+ * backend att operatören "inte angav något" och behåller en eventuell
+ * tidigare logo — vilket är den klassiska "borttagen bild dyker upp
+ * igen"-buggen.
+ *
+ * Gallery (lista) behandlas likadant: tom array ``[]`` ska skickas
+ * som ``[]`` så backend rensar ``project_input.gallery``.
+ */
+const PRESERVE_EMPTY_KEYS: ReadonlySet<string> = new Set([
+  "logo",
+  "heroImage",
+  "gallery",
+  "favicon",
+  "ogImage",
+  "backgroundVideo",
+]);
+
 function stripEmpty<T>(value: T): T {
   if (Array.isArray(value)) {
     const next = value
@@ -160,14 +190,33 @@ function stripEmpty<T>(value: T): T {
     const next: Record<string, unknown> = {};
     for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
       const cleaned = stripEmpty(raw);
-      if (cleaned === null || cleaned === undefined) continue;
-      if (typeof cleaned === "string" && cleaned.trim().length === 0) continue;
-      if (Array.isArray(cleaned) && cleaned.length === 0) continue;
+      const preserve = PRESERVE_EMPTY_KEYS.has(key);
+      if (cleaned === null || cleaned === undefined) {
+        if (preserve) {
+          next[key] = null;
+        }
+        continue;
+      }
+      if (typeof cleaned === "string" && cleaned.trim().length === 0) {
+        if (preserve) {
+          next[key] = cleaned;
+        }
+        continue;
+      }
+      if (Array.isArray(cleaned) && cleaned.length === 0) {
+        if (preserve) {
+          next[key] = cleaned;
+        }
+        continue;
+      }
       if (
         typeof cleaned === "object" &&
         !Array.isArray(cleaned) &&
         Object.keys(cleaned).length === 0
       ) {
+        if (preserve) {
+          next[key] = cleaned;
+        }
         continue;
       }
       next[key] = cleaned;
@@ -452,16 +501,21 @@ export function deriveWizardDirectives(
   // Extra media — favicon / ogImage / backgroundVideo. Vi exponerar dem
   // även i `directives.media` (utöver `answers.media`) så Jakob bara
   // behöver titta i `directives` för all strukturerad render-data.
-  // ``stripEmpty`` rensar fältet om alla tre är null.
-  const media: NonNullable<WizardDirectives["media"]> = {};
-  if (answers.media.favicon) media.favicon = answers.media.favicon;
-  if (answers.media.ogImage) media.ogImage = answers.media.ogImage;
-  if (answers.media.backgroundVideo) {
-    media.backgroundVideo = answers.media.backgroundVideo;
-  }
-  if (Object.keys(media).length > 0) {
-    directives.media = media as WizardDirectives["media"];
-  }
+  //
+  // VIKTIGT: vi skickar alltid alla tre fälten — med ``null`` som
+  // explicit tombstone när operatören har tagit bort en bild.
+  // ``stripEmpty`` är konfigurerad att bevara ``null`` för dessa
+  // roller (se ``PRESERVE_EMPTY_KEYS``), så backend kan särskilja
+  // "inte angiven" (fältet saknas helt) från "explicit borttagen"
+  // (fältet är ``null``). Utan detta dyker en borttagen favicon upp
+  // igen vid nästa rebuild eftersom backend behåller en eventuell
+  // tidigare lagrad ref.
+  const media: NonNullable<WizardDirectives["media"]> = {
+    favicon: answers.media.favicon ?? null,
+    ogImage: answers.media.ogImage ?? null,
+    backgroundVideo: answers.media.backgroundVideo ?? null,
+  };
+  directives.media = media;
 
   return directives;
 }
