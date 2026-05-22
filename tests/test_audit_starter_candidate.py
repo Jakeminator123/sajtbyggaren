@@ -480,6 +480,41 @@ def test_typescript_strict_false_triggers_warning(tmp_path: Path) -> None:
     result = audit_candidate(candidate)
     assert result.classification == "needs-cleanup"
     assert any("strict is false" in warning for warning in result.warnings)
+    assert result.detected_stack["tsconfig"]["strict"] is False
+
+
+@pytest.mark.tooling
+def test_typescript_strict_true_is_reported_as_true(tmp_path: Path) -> None:
+    candidate = _ready_candidate(tmp_path / "strict-ts")
+    result = audit_candidate(candidate)
+    assert result.detected_stack["tsconfig"]["strict"] is True
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize("strict_value", ["false", "true", 1])
+def test_typescript_strict_wrong_type_is_unknown(
+    tmp_path: Path, strict_value: object
+) -> None:
+    candidate = _ready_candidate(tmp_path / f"strict-wrong-{strict_value}")
+    tsconfig = json.loads((candidate / "tsconfig.json").read_text(encoding="utf-8"))
+    tsconfig["compilerOptions"]["strict"] = strict_value
+    _write_json(candidate / "tsconfig.json", tsconfig)
+    result = audit_candidate(candidate)
+    assert result.classification == "needs-cleanup"
+    assert result.detected_stack["tsconfig"]["strict"] is None
+    assert any("strict has wrong type" in warning for warning in result.warnings)
+
+
+@pytest.mark.tooling
+def test_typescript_strict_missing_is_unknown(tmp_path: Path) -> None:
+    candidate = _ready_candidate(tmp_path / "strict-missing")
+    tsconfig = json.loads((candidate / "tsconfig.json").read_text(encoding="utf-8"))
+    del tsconfig["compilerOptions"]["strict"]
+    _write_json(candidate / "tsconfig.json", tsconfig)
+    result = audit_candidate(candidate)
+    assert result.classification == "needs-cleanup"
+    assert result.detected_stack["tsconfig"]["strict"] is None
+    assert any("strict missing" in warning for warning in result.warnings)
 
 
 @pytest.mark.tooling

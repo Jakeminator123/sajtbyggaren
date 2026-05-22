@@ -677,13 +677,20 @@ def _audit_tsconfig(root: Path, result: AuditResult) -> None:
         return
     raw_compiler_options = data.get("compilerOptions")
     compiler_options = raw_compiler_options if isinstance(raw_compiler_options, dict) else {}
-    strict = compiler_options.get("strict")
-    stack_entry["strict"] = bool(strict) if strict is not None else None
-    if strict is True:
+    raw_strict = compiler_options.get("strict")
+    if isinstance(raw_strict, bool):
+        stack_entry["strict"] = raw_strict
+    else:
+        stack_entry["strict"] = None
+    if raw_strict is True:
         pass
-    elif strict is False:
+    elif raw_strict is False:
         result.warnings.append(
             "tsconfig.json compilerOptions.strict is false; must be true"
+        )
+    elif raw_strict is not None:
+        result.warnings.append(
+            "tsconfig.json compilerOptions.strict has wrong type; expected boolean"
         )
     else:
         result.warnings.append(
