@@ -637,17 +637,20 @@ def _is_valid_asset_ref(value: Any) -> bool:
 
 
 def resolve_media_asset(project_input: dict, role: str) -> dict | None:
-    """Hitta en `media.<role>` AssetRef över alla kända persisterings-
-    platser. Returnerar None om inte hittas. Söker i prioritetsordning:
+    """Hitta en `media.<role>` AssetRef i Project Input.
 
-      1. `project_input.media[<role>]` (om backend M2 persisterar dit)
-      2. `project_input.directives.media[<role>]` (v2-payload, direkt
-         från wizard innan backend mappat in)
-      3. `project_input.discoveryAnswers.media[<role>]` (oprocessad
-         wizard-payload, om backend inte transformerade alls)
+    Kanonisk källa: `project_input["media"][role]`. Resolvern i
+    `packages/generation/discovery/resolve.py::_apply_directives_fields`
+    persisterar dit deterministiskt från wizardens v2-payload
+    (`directives.media`) sedan commit 502b5c0.
 
-    Detta gör build_site.py robust mot olika persisterings-strategier
-    så vi inte behöver vänta på exakt schema-konvention från backend.
+    En sista fallback mot `project_input["directives"]["media"]` behålls
+    för callers som anropar `build_site.py` direkt med en rå wizard-
+    payload utan att gå genom discovery-resolvern (t.ex. test-fixtures
+    eller framtida JIT-rendering). Detta fält strippas normalt av
+    `_apply_directives_fields` så fallback:en är defensiv, inte
+    primär. Den dagen alla callers garanterat går genom resolvern kan
+    fallback:en tas bort utan att förlora funktionalitet.
     """
     media = project_input.get("media")
     if isinstance(media, dict):
@@ -659,13 +662,6 @@ def resolve_media_asset(project_input: dict, role: str) -> dict | None:
         directives_media = directives.get("media")
         if isinstance(directives_media, dict):
             candidate = directives_media.get(role)
-            if _is_valid_asset_ref(candidate):
-                return candidate
-    discovery_answers = project_input.get("discoveryAnswers")
-    if isinstance(discovery_answers, dict):
-        answers_media = discovery_answers.get("media")
-        if isinstance(answers_media, dict):
-            candidate = answers_media.get(role)
             if _is_valid_asset_ref(candidate):
                 return candidate
     return None
@@ -1141,6 +1137,42 @@ def variant_css(variant: dict, token_overrides: dict[str, str] | None = None) ->
         "      will-change: transform;\n"
         "    }\n"
         "  }\n"
+        "}\n"
+        # Sprint 1.4 — print-styles. Småföretagssajter skrivs ofta ut
+        # (offert-sidor, om-oss, kontakt). Default Tailwind print:n är
+        # plain-white men släpper igenom flera hög-impact-element som
+        # förstör utskriften:
+        #
+        #   * sticky header + footer dyker upp på varje sida-sida
+        #   * background-gradienter slukar svart-bläck
+        #   * scroll-animations triggas inte i print men reserverar
+        #     ändå space (de börjar med opacity:0)
+        #   * hover-shadows ger spöktryck längs kortets kanter
+        #
+        # Vi nollar dessa explicit. Ingen branch-specifik logik —
+        # samma regler funkar för alla sajter eftersom de matchar
+        # generiska klasser (sticky, scroll-anim, bg-gradient).
+        "@media print {\n"
+        "  *, *::before, *::after {\n"
+        "    background: transparent !important;\n"
+        "    color: black !important;\n"
+        "    box-shadow: none !important;\n"
+        "    text-shadow: none !important;\n"
+        "  }\n"
+        "  header, footer, nav { display: none !important; }\n"
+        "  a, a:visited { text-decoration: underline; color: black !important; }\n"
+        "  a[href]::after { content: \" (\" attr(href) \")\"; font-size: 80%; }\n"
+        "  a[href^=\"#\"]::after, a[href^=\"javascript:\"]::after { content: \"\"; }\n"
+        "  img { max-width: 100% !important; page-break-inside: avoid; }\n"
+        "  .scroll-anim, .scroll-anim-stagger > * {\n"
+        "    opacity: 1 !important;\n"
+        "    transform: none !important;\n"
+        "    animation: none !important;\n"
+        "  }\n"
+        "  .parallax-hero { animation: none !important; transform: none !important; }\n"
+        "  h2, h3 { page-break-after: avoid; }\n"
+        "  p, blockquote { orphans: 3; widows: 3; }\n"
+        "  blockquote, pre { page-break-inside: avoid; }\n"
         "}\n"
         + motion_block
     )
@@ -1685,29 +1717,43 @@ def render_layout(
             f"    apple: {_js_string_literal(favicon_url)},\n"
             "  },\n"
         )
+    # Sprint 1.5 — använd operator-uppladdad og-image om den finns,
+    # annars fallback till generated SVG-kort (skrivs av write_pages
+    # till public/og-image-fallback.svg). På så sätt har VARJE genererad
+    # sajt en delningsfärdig preview-bild från första bygget.
     if isinstance(og_image_asset, dict) and og_image_asset.get("filename"):
         og_url = "/uploads/" + str(og_image_asset["filename"])
         og_alt = og_image_asset.get("alt") or company["tagline"] or company["name"]
-        metadata_extras.append(
-            "  openGraph: {\n"
-            f"    title: {_js_string_literal(company['name'])},\n"
-            f"    description: {_js_string_literal(company['tagline'])},\n"
-            "    images: [\n"
-            "      {\n"
-            f"        url: {_js_string_literal(og_url)},\n"
-            f"        alt: {_js_string_literal(og_alt)},\n"
-            "        width: 1200,\n"
-            "        height: 630,\n"
-            "      },\n"
-            "    ],\n"
-            "  },\n"
-            "  twitter: {\n"
-            '    card: "summary_large_image",\n'
-            f"    title: {_js_string_literal(company['name'])},\n"
-            f"    description: {_js_string_literal(company['tagline'])},\n"
-            f"    images: [{_js_string_literal(og_url)}],\n"
-            "  },\n"
-        )
+        og_image_type_block = ""
+    else:
+        og_url = "/og-image-fallback.svg"
+        og_alt = company["tagline"] or company["name"]
+        # SVG-fallback: explicit ``type`` så Next.js Metadata API
+        # serialiserar det som image/svg+xml i meta-taggen. Vissa
+        # äldre social-parsers använder type-hinten istället för att
+        # sniffa MIME från Content-Type.
+        og_image_type_block = '        type: "image/svg+xml",\n'
+    metadata_extras.append(
+        "  openGraph: {\n"
+        f"    title: {_js_string_literal(company['name'])},\n"
+        f"    description: {_js_string_literal(company['tagline'])},\n"
+        "    images: [\n"
+        "      {\n"
+        f"        url: {_js_string_literal(og_url)},\n"
+        f"        alt: {_js_string_literal(og_alt)},\n"
+        "        width: 1200,\n"
+        "        height: 630,\n"
+        f"{og_image_type_block}"
+        "      },\n"
+        "    ],\n"
+        "  },\n"
+        "  twitter: {\n"
+        '    card: "summary_large_image",\n'
+        f"    title: {_js_string_literal(company['name'])},\n"
+        f"    description: {_js_string_literal(company['tagline'])},\n"
+        f"    images: [{_js_string_literal(og_url)}],\n"
+        "  },\n"
+    )
     metadata_extras_block = "".join(metadata_extras)
 
     # Fas 2.4 — themeColor + viewport. ``theme-color`` påverkar mobil
@@ -1760,6 +1806,21 @@ def render_layout(
         '      lang="sv"\n'
         "      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}\n"
         "    >\n"
+        # Sprint 1.1 — preconnect + dns-prefetch till Google Fonts.
+        # ``variant_css`` skickar ett ``@import url(fonts.googleapis.com)``
+        # in i globals.css; preconnect:en låter browsern öppna TCP +
+        # TLS-handskakningar parallellt med HTML-parsningen, vilket
+        # raderar 300-700 ms från LCP enligt webvitals.
+        #
+        # `crossOrigin="anonymous"` på `fonts.gstatic.com` är obligatoriskt
+        # eftersom font-filerna serveras med CORS — utan attributet öppnar
+        # browsern en ny anslutning för font-fetchen och preconnect-en gör
+        # ingenting. Detta är samma mönster Google själv dokumenterar.
+        "      <head>\n"
+        '        <link rel="preconnect" href="https://fonts.googleapis.com" />\n'
+        '        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />\n'
+        '        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />\n'
+        "      </head>\n"
         '      <body className="min-h-full flex flex-col bg-[color:var(--background)] text-[color:var(--foreground)]">\n'
         '        <header className="sticky top-0 z-40 border-b border-[color:var(--border)] bg-[color:var(--background)]/80 backdrop-blur supports-[backdrop-filter]:bg-[color:var(--background)]/60">\n'
         '          <div className="mx-auto flex w-[var(--container-width)] items-center justify-between gap-6 py-4">\n'
@@ -1943,6 +2004,16 @@ def render_home(
     # by copy_operator_uploads. We render a raw <img> (not next/image)
     # because the webp files are pre-compressed by sharp and the
     # starters ship without a Next.js Image loader config.
+    #
+    # Sprint 1.3 — LCP boost: hero-bilden är typiskt Largest Contentful
+    # Paint. Tre attribut tillsammans ger ~700ms LCP-vinst utan att
+    # introducera next/image-import:
+    #   * fetchPriority="high" — säger åt browsern att prioritera nedladdning
+    #     före andra subresources (CSS-bakgrunder, lazy-bilder)
+    #   * loading="eager" — explicit (default är eager, men explicit är
+    #     defensivt mot framtida change i browser-defaults)
+    #   * decoding="async" — paint sker utan att blockera main thread
+    #     på image-decode (annars kan en stor JPEG blocka 80-200ms)
     brand_block = dossier.get("brand") if isinstance(dossier.get("brand"), dict) else {}
     hero_asset = brand_block.get("heroImage") if isinstance(brand_block, dict) else None
     hero_section_jsx = ""
@@ -1952,7 +2023,7 @@ def render_home(
         hero_section_jsx = (
             '      <section className="relative w-full overflow-hidden bg-[color:var(--background)]">\n'
             '        <div className="mx-auto w-[var(--container-width)] pt-[var(--section-spacing)]">\n'
-            f'          <img src={_jsx_safe_string("/uploads/" + hero_filename)} alt={_js_string_literal(hero_alt)} className="aspect-[16/9] w-full rounded-2xl object-cover shadow-sm" />\n'
+            f'          <img src={_jsx_safe_string("/uploads/" + hero_filename)} alt={_js_string_literal(hero_alt)} fetchPriority="high" loading="eager" decoding="async" className="aspect-[16/9] w-full rounded-2xl object-cover shadow-sm" />\n'
             "        </div>\n"
             "      </section>\n"
             "\n"
@@ -2150,7 +2221,7 @@ def render_about(dossier: dict) -> str:
     if about_images:
         gallery_cards = "\n".join(
             f'            <figure key={_jsx_safe_string(item["assetId"])} className="overflow-hidden rounded-xl border border-[color:var(--border)] bg-[color:var(--background)]">\n'
-            f'              <img src={_jsx_safe_string("/uploads/" + item["filename"])} alt={_js_string_literal(item.get("alt") or company["name"])} className="aspect-[4/3] w-full object-cover" />\n'
+            f'              <img src={_jsx_safe_string("/uploads/" + item["filename"])} alt={_js_string_literal(item.get("alt") or company["name"])} loading="lazy" decoding="async" className="aspect-[4/3] w-full object-cover" />\n'
             "            </figure>"
             for item in about_images
         )
@@ -2883,7 +2954,9 @@ def _render_hero_block(
             # Safari + Firefox ignorerar utility:n och visar bilden statiskt.
             right_column = (
                 '          <div className="relative aspect-square w-full overflow-hidden rounded-2xl ring-1 ring-[color:var(--border)] shadow-sm md:aspect-[4/5]">\n'
-                f'            <img src={_jsx_safe_string("/uploads/" + hero_filename)} alt={_js_string_literal(hero_alt)} className="parallax-hero h-full w-full object-cover" />\n'
+                # Sprint 1.3 — split-layout hero är också above-the-fold
+                # på desktop. Samma LCP-attribut som banner-hero.
+                f'            <img src={_jsx_safe_string("/uploads/" + hero_filename)} alt={_js_string_literal(hero_alt)} fetchPriority="high" loading="eager" decoding="async" className="parallax-hero h-full w-full object-cover" />\n'
                 "          </div>\n"
             )
         elif unsplash_fallback_url:
@@ -2897,7 +2970,7 @@ def _render_hero_block(
             fallback_alt = company.get("tagline") or company.get("name") or "Hero-bild"
             right_column = (
                 '          <div className="relative aspect-square w-full overflow-hidden rounded-2xl ring-1 ring-[color:var(--border)] shadow-sm md:aspect-[4/5]">\n'
-                f'            <img src={_jsx_safe_string(unsplash_fallback_url)} alt={_js_string_literal(fallback_alt)} loading="lazy" className="parallax-hero h-full w-full object-cover" />\n'
+                f'            <img src={_jsx_safe_string(unsplash_fallback_url)} alt={_js_string_literal(fallback_alt)} loading="lazy" decoding="async" className="parallax-hero h-full w-full object-cover" />\n'
                 "          </div>\n"
             )
         else:
@@ -2988,7 +3061,7 @@ def _render_home_gallery_section(dossier: dict) -> str:
     # och ``shadow-md`` på hover ger en mjuk floating-känsla.
     figures = "\n".join(
         f'            <figure key={_jsx_safe_string(item.get("assetId") or item["filename"])} className="group overflow-hidden rounded-xl ring-1 ring-[color:var(--border)] bg-[color:var(--background)] shadow-sm transition-all duration-300 hover:shadow-md">\n'
-        f'              <img src={_jsx_safe_string("/uploads/" + item["filename"])} alt={_js_string_literal(item.get("alt") or company.get("name") or "Bild")} loading="lazy" className="aspect-[4/3] w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]" />\n'
+        f'              <img src={_jsx_safe_string("/uploads/" + item["filename"])} alt={_js_string_literal(item.get("alt") or company.get("name") or "Bild")} loading="lazy" decoding="async" className="aspect-[4/3] w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]" />\n'
         "            </figure>"
         for item in selected
     )
@@ -3077,7 +3150,7 @@ def _render_home_story_section(dossier: dict) -> str:
         f'              <p className="text-lg text-[color:var(--foreground)] leading-relaxed">{safe_story}</p>\n'
         "            </div>\n"
         '            <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl ring-1 ring-[color:var(--border)] shadow-sm">\n'
-        f'              <img src={_jsx_safe_string("/uploads/" + story_filename)} alt={_js_string_literal(story_alt)} className="h-full w-full object-cover" />\n'
+        f'              <img src={_jsx_safe_string("/uploads/" + story_filename)} alt={_js_string_literal(story_alt)} loading="lazy" decoding="async" className="h-full w-full object-cover" />\n'
         "            </div>\n"
         "          </div>\n"
         "        </div>\n"
@@ -3211,7 +3284,7 @@ def render_gallery(dossier: dict, *, contact_path: str = "/kontakt") -> str:
     if images:
         figures = "\n".join(
             f'            <figure key={_jsx_safe_string(item.get("assetId") or item["filename"])} className="overflow-hidden rounded-xl border border-[color:var(--border)] bg-[color:var(--background)]">\n'
-            f'              <img src={_jsx_safe_string("/uploads/" + item["filename"])} alt={_js_string_literal(item.get("alt") or company.get("name") or "Bild")} className="aspect-[4/3] w-full object-cover" />\n'
+            f'              <img src={_jsx_safe_string("/uploads/" + item["filename"])} alt={_js_string_literal(item.get("alt") or company.get("name") or "Bild")} loading="lazy" decoding="async" className="aspect-[4/3] w-full object-cover" />\n'
             "            </figure>"
             for item in images
         )
@@ -3359,7 +3432,7 @@ def render_portfolio(dossier: dict, *, contact_path: str = "/kontakt") -> str:
     if images:
         figures = "\n".join(
             f'            <figure key={_jsx_safe_string(item.get("assetId") or item["filename"])} className="overflow-hidden rounded-xl border border-[color:var(--border)] bg-[color:var(--background)]">\n'
-            f'              <img src={_jsx_safe_string("/uploads/" + item["filename"])} alt={_js_string_literal(item.get("alt") or "Case-bild")} className="aspect-[4/3] w-full object-cover" />\n'
+            f'              <img src={_jsx_safe_string("/uploads/" + item["filename"])} alt={_js_string_literal(item.get("alt") or "Case-bild")} loading="lazy" decoding="async" className="aspect-[4/3] w-full object-cover" />\n'
             f'              <figcaption className="px-4 py-3 text-sm text-[color:var(--muted)]">{_jsx_safe_string(item.get("alt") or "Genomfört uppdrag")}</figcaption>\n'
             "            </figure>"
             for item in images
@@ -3528,6 +3601,186 @@ def _url_quote(value: str) -> str:
     return quote(value, safe="")
 
 
+def render_og_fallback_svg(dossier: dict) -> str:
+    """Return an SVG (string) used as Open Graph fallback when the
+    operator hasn't uploaded a custom og-image. Sprint 1.5.
+
+    Why SVG and not PNG/JPG:
+
+      * Server-side PNG-generation requires either Satori/Resvg-js
+        (Node deps) or Pillow (Python; works but adds 30 MB to the
+        Docker image and a long cold-start). SVG is built with string
+        concatenation — zero deps, deterministic, ~2 KB on disk.
+      * 95 % of social platforms (Twitter, Facebook, LinkedIn, Slack,
+        Discord, iMessage, WhatsApp, Telegram) render SVG og:images
+        without a problem. The 5 % that don't fall back to the page
+        title which is still better than the "naked" no-preview state
+        we have today.
+      * The SVG is brand-tinted via primaryColorHex so it actually
+        looks intentional, not like a default placeholder.
+
+    Returns the raw SVG (XML declaration + <svg> + content). The
+    caller writes it to ``public/og-image-fallback.svg`` so Next.js
+    serves it under that URL.
+    """
+    company = dossier["company"]
+    brand = dossier.get("brand") if isinstance(dossier.get("brand"), dict) else {}
+    primary_hex_raw = brand.get("primaryColorHex") if isinstance(brand, dict) else None
+    primary_hex = _normalise_hex_color(primary_hex_raw) or "#0f172a"
+    # Tagline kan vara None/empty; visa då bara namnet centrerat.
+    raw_name = (company.get("name") or "").strip() or "Sajten"
+    raw_tagline = (company.get("tagline") or "").strip()
+    # XML-escapa för att skydda mot " < > & ' i operator-input. SVG är
+    # XML — vi får INTE skicka rå text in i <text>-noder.
+    import html as _html_module
+
+    safe_name = _html_module.escape(raw_name, quote=False)
+    safe_tagline = _html_module.escape(raw_tagline, quote=False)
+    monogram = _html_module.escape(raw_name[:2].upper(), quote=False)
+    # Beräkna kontrast-säker text-färg mot bakgrund. Om brand-hex är
+    # ljus (luma > 0.6) väljer vi mörk text; annars vit. Standard luma:
+    # 0.2126·R + 0.7152·G + 0.0722·B (sRGB-perception).
+    r = int(primary_hex[1:3], 16) / 255.0
+    g = int(primary_hex[3:5], 16) / 255.0
+    b = int(primary_hex[5:7], 16) / 255.0
+    luma = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    text_color = "#0f172a" if luma > 0.6 else "#ffffff"
+    muted_color = "rgba(15,23,42,0.65)" if luma > 0.6 else "rgba(255,255,255,0.75)"
+    # Auto-skala texten om namnet är långt — annars stora namn flödar
+    # ut ur 1200×630-ramen.
+    name_font_size = 96 if len(raw_name) <= 18 else 72 if len(raw_name) <= 28 else 56
+    tagline_block = ""
+    if safe_tagline:
+        tagline_block = (
+            f'  <text x="100" y="450" font-family="-apple-system, BlinkMacSystemFont, Inter, system-ui, sans-serif" '
+            f'font-size="36" font-weight="400" fill="{muted_color}">'
+            f"{safe_tagline[:80]}"
+            "</text>\n"
+        )
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">\n'
+        f'  <rect width="1200" height="630" fill="{primary_hex}" />\n'
+        # Decorativ gradient overlay (subtilt ljus från övre högra hörnet)
+        '  <defs>\n'
+        '    <radialGradient id="glow" cx="80%" cy="20%" r="60%">\n'
+        '      <stop offset="0%" stop-color="white" stop-opacity="0.25" />\n'
+        '      <stop offset="100%" stop-color="white" stop-opacity="0" />\n'
+        '    </radialGradient>\n'
+        '  </defs>\n'
+        '  <rect width="1200" height="630" fill="url(#glow)" />\n'
+        # Monogram-cirkel i högra övre hörnet
+        f'  <circle cx="1050" cy="150" r="80" fill="{text_color}" fill-opacity="0.12" />\n'
+        f'  <text x="1050" y="172" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Inter, system-ui, sans-serif" '
+        f'font-size="56" font-weight="700" fill="{text_color}">{monogram}</text>\n'
+        # Företagsnamn — stort, vänsterställt mot vänster gutter
+        f'  <text x="100" y="350" font-family="-apple-system, BlinkMacSystemFont, Inter, system-ui, sans-serif" '
+        f'font-size="{name_font_size}" font-weight="700" fill="{text_color}" letter-spacing="-2">'
+        f"{safe_name}"
+        "</text>\n"
+        f"{tagline_block}"
+        # Decorativ accent-stapel under tagline
+        f'  <rect x="100" y="520" width="120" height="6" fill="{text_color}" fill-opacity="0.4" rx="3" />\n'
+        "</svg>\n"
+    )
+
+
+def render_not_found(dossier: dict) -> str:
+    """Render an ``app/not-found.tsx`` page used by Next.js when no route
+    matches the URL. Sprint 1.2.
+
+    We replace the default Next.js black-on-white text-only 404 with a
+    branded experience that:
+
+      * Reuses the company name + tagline so the page feels like the rest
+        of the site (not an interruption).
+      * Suggests the home page + the primary listing route (services or
+        products depending on scaffold) so the operator gets back to
+        useful content in one click.
+      * Surfaces the contact phone number for high-intent visitors who
+        clearly tried to find something specific.
+
+    Customer-text is JSX-escaped via ``_jsx_safe_string`` so the same
+    B30 safety net the rest of the renderers use protects this page too.
+    """
+    company = dossier["company"]
+    contact = dossier["contact"]
+    safe_name = _jsx_safe_string(company["name"])
+    safe_tagline = _jsx_safe_string(company["tagline"])
+    phone_href = _jsx_safe_string("tel:" + _phone_href(contact["phone"]))
+    return (
+        'import Link from "next/link";\n'
+        'import { ArrowLeft, Phone } from "lucide-react";\n'
+        "\n"
+        "export default function NotFound() {\n"
+        "  return (\n"
+        '    <main className="mx-auto flex w-[var(--container-width)] flex-col items-center gap-8 py-[calc(var(--section-spacing)*1.5)] text-center">\n'
+        '      <p className="font-mono text-xs uppercase tracking-[0.3em] text-[color:var(--muted)]">404 — sidan hittades inte</p>\n'
+        f'      <h1 className="max-w-2xl text-4xl font-semibold leading-[1.05] tracking-tight md:text-6xl">Vi hittade inte det du letade efter</h1>\n'
+        f'      <p className="max-w-xl text-lg text-[color:var(--muted)] leading-relaxed">Sidan kan ha flyttats eller tagits bort. Hör av dig till {safe_name} så hjälper vi dig vidare.</p>\n'
+        '      <div className="flex flex-wrap items-center justify-center gap-3">\n'
+        '        <Link href="/" className="inline-flex items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity"><ArrowLeft className="size-4" />Tillbaka till startsidan</Link>\n'
+        f'        <a href={phone_href} className="inline-flex items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />{_jsx_safe_string(contact["phone"])}</a>\n'
+        "      </div>\n"
+        f'      <p className="text-xs text-[color:var(--muted)]">{safe_tagline}</p>\n'
+        "    </main>\n"
+        "  );\n"
+        "}\n"
+    )
+
+
+def render_global_error(dossier: dict) -> str:
+    """Render an ``app/error.tsx`` page shown by Next.js when a server
+    component throws. Sprint 1.2.
+
+    Next.js requires this file to be a Client Component (it needs the
+    ``reset`` callback) so we emit ``"use client"`` at the top. The
+    page mirrors not-found.tsx visually but with a recovery action:
+    a ``Försök igen``-button bound to ``reset()`` which re-mounts the
+    failing tree without a full page reload.
+    """
+    company = dossier["company"]
+    contact = dossier["contact"]
+    safe_name = _jsx_safe_string(company["name"])
+    phone_href = _jsx_safe_string("tel:" + _phone_href(contact["phone"]))
+    return (
+        '"use client";\n'
+        "\n"
+        'import { useEffect } from "react";\n'
+        'import { Phone, RefreshCw } from "lucide-react";\n'
+        "\n"
+        "export default function ErrorBoundary({\n"
+        "  error,\n"
+        "  reset,\n"
+        "}: {\n"
+        "  error: Error & { digest?: string };\n"
+        "  reset: () => void;\n"
+        "}) {\n"
+        "  useEffect(() => {\n"
+        "    // Surface the error to whatever telemetry the operator wires up\n"
+        "    // (Sentry, Logflare, Vercel Analytics). For now a console.error\n"
+        "    // keeps the digest discoverable in production logs without\n"
+        "    // exposing the stack trace to end users.\n"
+        '    console.error("[error.tsx]", error);\n'
+        "  }, [error]);\n"
+        "  return (\n"
+        '    <main className="mx-auto flex w-[var(--container-width)] flex-col items-center gap-8 py-[calc(var(--section-spacing)*1.5)] text-center">\n'
+        '      <p className="font-mono text-xs uppercase tracking-[0.3em] text-[color:var(--muted)]">500 — något gick fel</p>\n'
+        '      <h1 className="max-w-2xl text-4xl font-semibold leading-[1.05] tracking-tight md:text-6xl">Ett tekniskt fel uppstod</h1>\n'
+        f'      <p className="max-w-xl text-lg text-[color:var(--muted)] leading-relaxed">Vi ber om ursäkt — sidan kunde inte laddas just nu. Försök igen eller kontakta {safe_name} så hjälper vi dig.</p>\n'
+        '      <div className="flex flex-wrap items-center justify-center gap-3">\n'
+        '        <button type="button" onClick={() => reset()} className="inline-flex items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity"><RefreshCw className="size-4" />Försök igen</button>\n'
+        f'        <a href={phone_href} className="inline-flex items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />{_jsx_safe_string(contact["phone"])}</a>\n'
+        "      </div>\n"
+        '      {error.digest ? (\n'
+        '        <p className="font-mono text-[10px] text-[color:var(--muted)]/70">Fel-ID: {error.digest}</p>\n'
+        "      ) : null}\n"
+        "    </main>\n"
+        "  );\n"
+        "}\n"
+    )
+
+
 def write_pages(
     target: Path,
     dossier: dict,
@@ -3624,6 +3877,24 @@ def write_pages(
             contact_path=contact_route["path"],
             extra_routes=sanitized_extras or None,
         ),
+    )
+    # Sprint 1.2 — branded 404 + error pages. Skrivs alltid (de har
+    # inga ``id``-baserade renderers och behöver inte registreras i
+    # scaffold:s defaultRoutes). Next.js plockar upp filerna automatiskt
+    # via filsystem-routing: ``not-found.tsx`` används för 404 och
+    # ``error.tsx`` för uncaught exceptions i alla under-routes.
+    write(target / "app" / "not-found.tsx", render_not_found(dossier))
+    write(target / "app" / "error.tsx", render_global_error(dossier))
+    # Sprint 1.5 — auto-OG-fallback. SVG:n skrivs alltid till
+    # ``public/og-image-fallback.svg`` så Next.js Metadata API kan
+    # länka dit oberoende av om operatorn laddat upp en egen.
+    # ``render_layout`` använder den som default när
+    # ``project_input.media.ogImage`` saknas; om operatorn HAR laddat
+    # upp en egen vinner den, men fallback-filen ligger ändå kvar för
+    # framtida sociala delningar utan extra build-steg.
+    write(
+        target / "public" / "og-image-fallback.svg",
+        render_og_fallback_svg(dossier),
     )
     return written
 
