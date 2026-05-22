@@ -520,6 +520,71 @@ def test_nested_git_blocks_import(tmp_path: Path) -> None:
 
 
 @pytest.mark.tooling
+def test_internal_starters_path_is_blocked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: pointing the auditor at a path inside the repo's own
+    ``data/starters/`` must be hard-blocked, not silently audited as if
+    it were an external candidate. The docstring and PR body both
+    promise this; pre-fix it was only a text warning in next_actions
+    with no actual path-guard.
+    """
+    fake_starters_root = tmp_path / "fake-data-starters"
+    fake_starters_root.mkdir()
+    candidate = _ready_candidate(fake_starters_root / "marketing-base")
+    monkeypatch.setattr(
+        "scripts.audit_starter_candidate.INTERNAL_STARTERS_DIR",
+        fake_starters_root,
+    )
+    result = audit_candidate(candidate)
+    assert result.classification == "blocked"
+    assert any(
+        "data/starters/" in blocker and "external candidates" in blocker
+        for blocker in result.blockers
+    )
+
+
+@pytest.mark.tooling
+def test_internal_starters_root_itself_is_blocked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The guard must also fire when the operator points exactly at the
+    starters root, not just at a sub-directory under it.
+    """
+    fake_starters_root = tmp_path / "starters-root"
+    _ready_candidate(fake_starters_root)
+    monkeypatch.setattr(
+        "scripts.audit_starter_candidate.INTERNAL_STARTERS_DIR",
+        fake_starters_root,
+    )
+    result = audit_candidate(fake_starters_root)
+    assert result.classification == "blocked"
+    assert any(
+        "external candidates" in blocker for blocker in result.blockers
+    )
+
+
+@pytest.mark.tooling
+def test_external_path_is_not_blocked_by_internal_guard(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Sanity: a candidate that lies *outside* the configured internal
+    starters root must be unaffected by the new guard.
+    """
+    fake_starters_root = tmp_path / "internal-only"
+    fake_starters_root.mkdir()
+    external_candidate = _ready_candidate(tmp_path / "external")
+    monkeypatch.setattr(
+        "scripts.audit_starter_candidate.INTERNAL_STARTERS_DIR",
+        fake_starters_root,
+    )
+    result = audit_candidate(external_candidate)
+    assert result.classification == "starter-candidate-ready", (
+        f"external path was wrongly blocked: {result.blockers}"
+    )
+
+
+@pytest.mark.tooling
 def test_non_root_nested_git_blocks_import(tmp_path: Path) -> None:
     """Regression: a ``.git/``-directory below the top level must
     block. Pre-fix, ``WALK_SKIP_DIRS`` filtered it out before the loop

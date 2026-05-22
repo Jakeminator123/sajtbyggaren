@@ -229,6 +229,14 @@ VALID_CLASSIFICATIONS = (
 # Scripts allowed to interact with this auditor.
 PROGRAM_NAME = "audit_starter_candidate"
 
+# Internal starters live at ``<repo-root>/data/starters/``. The auditor
+# is for *external* candidates only; pointing it at an internal starter
+# would silently bless our own assets as if they were freshly imported
+# external code, which the docstring and PR body explicitly forbid.
+# This constant is module-level so tests can monkeypatch it onto a
+# temporary directory without touching the real ``data/starters/``.
+INTERNAL_STARTERS_DIR: Path = Path(__file__).resolve().parents[1] / "data" / "starters"
+
 
 # ---------------------------------------------------------------------------
 # Result type
@@ -358,6 +366,23 @@ def _relative_posix(path: Path, root: Path) -> str:
         return path.as_posix()
 
 
+def _is_internal_starter_path(candidate_root: Path) -> bool:
+    """Return True if ``candidate_root`` is the same directory as
+    ``INTERNAL_STARTERS_DIR`` or any descendant of it. Both paths are
+    resolved before comparison so symlinks and relative ``..``-segments
+    cannot bypass the guard.
+    """
+    try:
+        resolved_internal = INTERNAL_STARTERS_DIR.resolve()
+    except OSError:
+        return False
+    try:
+        candidate_root.resolve().relative_to(resolved_internal)
+    except ValueError:
+        return False
+    return True
+
+
 # ---------------------------------------------------------------------------
 # Audit logic
 # ---------------------------------------------------------------------------
@@ -377,6 +402,19 @@ def audit_candidate(path: Path | str) -> AuditResult:
         result.blockers.append(f"path is not a directory: {root}")
         result.classification = "blocked"
         result.summary = "Candidate path is not a directory."
+        result.next_actions = _build_next_actions(result)
+        return result
+
+    if _is_internal_starter_path(root):
+        result.blockers.append(
+            f"candidate path {root} lies under this repo's data/starters/; "
+            "the auditor only inspects external candidates"
+        )
+        result.classification = "blocked"
+        result.summary = (
+            "Candidate path lies under this repo's internal data/starters/. "
+            "Audit external candidate repos only."
+        )
         result.next_actions = _build_next_actions(result)
         return result
 
