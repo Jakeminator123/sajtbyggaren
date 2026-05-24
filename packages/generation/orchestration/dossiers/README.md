@@ -60,8 +60,8 @@ ovan är optional och fylls när hard Dossiers importeras i Sprint 3+.
 
 ## Status
 
-Åtta (8) soft Dossiers är implementerade idag (alla instructions-only, inga
-verbatim TSX-filer):
+Elva (11) soft Dossiers är implementerade idag (alla instructions-only,
+inga verbatim TSX-filer):
 
 **Pre-Week-1 (basbygglock):**
 
@@ -84,28 +84,44 @@ verbatim TSX-filer):
 
 **Week 1 batch 2 (universella brick-and-mortar-byggstenar, 2026-05-24):**
 
-- [`soft/image-gallery/`](soft/image-gallery/) — capability `image-gallery`,
+- [`soft/image-gallery/`](soft/image-gallery/) — capability `gallery`,
   `defaultForCapability=true`. Responsiv CSS-grid med semantisk alt, lazy
   loading och aspect-ratio-reservation. Återanvänds av restaurant +
   framtida portfolio/clinic/real-estate-scaffolds.
-- [`soft/opening-hours/`](soft/opening-hours/) — capability `opening-hours`,
+- [`soft/opening-hours/`](soft/opening-hours/) — capability `hours`,
   `defaultForCapability=true`. Semantisk definition-list med closed-day,
   split-shift och schema.org OpeningHoursSpecification JSON-LD.
-- [`soft/reviews-display/`](soft/reviews-display/) — capability
-  `reviews-display`, `defaultForCapability=true`. Customer review-cards med
-  source-provenance, optional star-rating och schema.org Review JSON-LD
-  som ger rich SERP-snippets.
-- [`soft/map-embed/`](soft/map-embed/) — capability `map-embed`,
+- [`soft/reviews-display/`](soft/reviews-display/) — capability `reviews`,
+  `defaultForCapability=true`. Customer review-cards med source-provenance,
+  optional star-rating och schema.org Review JSON-LD som ger rich
+  SERP-snippets.
+- [`soft/map-embed/`](soft/map-embed/) — capability `location`,
   `defaultForCapability=true`. OpenStreetMap-iframe (no API-key, GDPR-vänlig)
   med semantiskt address-block och native-app directions-deeplinks.
 
+**Week 1 batch 3 (universella conversion-byggstenar, 2026-05-24):**
+
+- [`soft/pricing-table/`](soft/pricing-table/) — capability `pricing`,
+  `defaultForCapability=true`. 2-4 tier-cards med feature-checklist,
+  optional 'mest populärt'-badge och en CTA per tier. Server-rendered,
+  ingen klient-toggle (årlig/månadsbil reserverad för planerad hard
+  pricing-table-toggle-dossier).
+- [`soft/faq-accordion/`](soft/faq-accordion/) — capability `faq-section`,
+  `defaultForCapability=true`. Native HTML `<details>`/`<summary>` (zero JS,
+  full keyboard a11y, Google-indexerbart) plus schema.org FAQPage JSON-LD
+  för rich SERP-snippets. Stänger den tidigare faq-section-gap.
+- [`soft/video-hero/`](soft/video-hero/) — capability `hero-video`,
+  `defaultForCapability=true`. Native `<video>` med poster-fallback,
+  preload=metadata, prefers-reduced-motion-hantering och text-overlay
+  med kontrast-gradient. Ingen YouTube/Vimeo-embed.
+
 Övriga capability-slugs i [`governance/policies/capability-map.v1.json`](../../../../governance/policies/capability-map.v1.json)
-har tomma `dossiers`-listor och är dokumenterade gap (`empty list = gap, not
-feature`): `newsletter-subscribe`, `payments`, `auth`, `analytics`, `ai-chat`,
-`error-tracking`, `faq-section`, `carousel`, `marquee`, `command-search`. De
-väntar på MIN_IDE-import i kommande sprintar. Ingen hard Dossier
-(stripe-checkout, supabase-auth, clerk-auth, shopify-cart, resend-contact-form)
-är implementerad än.
+har fortfarande tomma `dossiers`-listor och är dokumenterade gap
+(`empty list = gap, not feature`): `newsletter-subscribe`, `payments`,
+`auth`, `analytics`, `ai-chat`, `error-tracking`, `carousel`, `marquee`,
+`command-search`. De väntar på MIN_IDE-import i kommande sprintar.
+Ingen hard Dossier (stripe-checkout, supabase-auth, clerk-auth,
+shopify-cart, resend-contact-form) är implementerad än.
 
 Builder MVP läser primärt ett `Project Input` under
 `examples/<siteId>.project-input.json` (t.ex. `painter-palma`) och patchar

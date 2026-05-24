@@ -52,6 +52,16 @@
       "default": "map-embed",
       "comment": "map-embed is a soft instructions-only Dossier rendering an OpenStreetMap iframe (no API key, GDPR-friendly) next to a semantic address block with native-app directions deep-links. No Google Maps JS SDK. Hard alternatives (google-maps-react, mapbox-gl) are planned imports for sites needing custom markers, routing or multi-location store locators."
     },
+    "pricing": {
+      "dossiers": ["pricing-table"],
+      "default": "pricing-table",
+      "comment": "pricing-table is a soft instructions-only Dossier rendering 2-4 tier cards with feature checklists, optional 'most popular' badge and one CTA per tier (tel:/mailto:/external booking — same pattern as booking-cta). Server-rendered, no client toggle. Hard alternatives (stripe-pricing-table, paddle-checkout) are planned imports for sites needing card-on-file conversion."
+    },
+    "hero-video": {
+      "dossiers": ["video-hero"],
+      "default": "video-hero",
+      "comment": "video-hero is a soft instructions-only Dossier rendering an autoplay-muted-loop background video using the native <video> element with poster fallback, preload=metadata, prefers-reduced-motion handling and a foreground text overlay. NO YouTube/Vimeo embed (those ship 600KB trackers). Hard alternatives (mux-player-react, vimeo-player) are planned imports for sites needing adaptive bitrate or playback analytics."
+    },
     "newsletter-subscribe": {
       "dossiers": [],
       "comment": "No Dossier in repo yet. MIN_IDE has mailchimp-newsletter (hard) as the planned import."
@@ -77,8 +87,9 @@
       "comment": "No Dossier in repo yet. MIN_IDE has sentry-error-tracking (hard) as the planned import."
     },
     "faq-section": {
-      "dossiers": [],
-      "comment": "No Dossier in repo yet. MIN_IDE has faq-accordion (soft) as the planned import."
+      "dossiers": ["faq-accordion"],
+      "default": "faq-accordion",
+      "comment": "faq-accordion is a soft instructions-only Dossier using native HTML <details>/<summary> (zero JS, full keyboard accessibility, indexable by Google) plus schema.org FAQPage JSON-LD for rich SERP snippets. Closes the Week 1 batch 3 (2026-05-24) gap — previously marked as planned MIN_IDE import."
     },
     "carousel": {
       "dossiers": [],

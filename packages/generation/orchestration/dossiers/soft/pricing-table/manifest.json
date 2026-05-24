@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../../../governance/schemas/dossier.schema.json",
+  "id": "pricing-table",
+  "enabled": true,
+  "label": "Pricing Table",
+  "capability": "pricing",
+  "class": "soft",
+  "codeFidelity": "rewritable",
+  "complexity": "low",
+  "defaultForCapability": true,
+  "summary": "Instructions-only soft dossier for rendering a service/package pricing table with 2-4 tiers, per-tier feature checkmarks, optional 'most popular' badge and a clear CTA per tier. Server-rendered, semantic table-or-grid structure, no Stripe integration (the CTA is a tel:/mailto:/external booking link — same pattern as booking-cta). Hard alternatives (stripe-pricing-table, paddle-checkout) are planned imports for sites that need real card-on-file conversion.",
+  "envVars": [],
+  "dependencies": [],
+  "files": [],
+  "exposes": ["PricingTable", "PricingTier", "PricingFeature"],
+  "lastVerified": "2026-05-24"
+}

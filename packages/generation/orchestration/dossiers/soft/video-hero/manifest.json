@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../../../governance/schemas/dossier.schema.json",
+  "id": "video-hero",
+  "enabled": true,
+  "label": "Video Hero",
+  "capability": "hero-video",
+  "class": "soft",
+  "codeFidelity": "rewritable",
+  "complexity": "low",
+  "defaultForCapability": true,
+  "summary": "Instructions-only soft dossier for a hero section with an autoplay-muted-loop background video, a poster image fallback for visitors with reduced-data or reduced-motion preferences, and a foreground headline + CTA overlay. Server-rendered HTML with a single <video> element using preload='metadata' and a native poster — no JS library, no YouTube embed (which would ship a 600KB tracker). Hard alternatives (mux-player-react, vimeo-player) are planned imports for sites that need adaptive bitrate or analytics.",
+  "envVars": [],
+  "dependencies": [],
+  "files": [],
+  "exposes": ["VideoHero", "VideoHeroSource", "VideoHeroOverlay"],
+  "lastVerified": "2026-05-24"
+}
