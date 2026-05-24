@@ -26,3 +26,21 @@ fortsätta parallellt mot samma överenskomna shape.
 
 Uppdatera kartan när en ny delad yta skapas, när Viewser börjar konsumera en ny
 backend-shape, eller när en ny ägare faktiskt tar över ett område.
+
+## Branch-konventioner
+
+`branch-discipline.md` säger att standardflödet är arbete direkt på `main`. När
+operatören uttryckligen begär parallellt teamarbete (PR-flöde, feature-branch)
+gäller följande namnkonventioner. De signalerar ägarskap och triggar rätt
+agent-rules (se `governance/rules/branch-scope-ui-ux.md`).
+
+| Område | Branch-mönster | Exempel |
+| --- | --- | --- |
+| Backend / governance / scripts | `jakob/*`, `backend/*`, `jakob-be` | `jakob-be`, `jakob/wizard-gap-4`, `backend/quality-gate-v2` |
+| Frontend / UI / UX | `christopher-*`, `frontend/*`, `ui/*`, `ux/*` | `christopher-ui-2`, `frontend/asset-store-v2` |
+| Docs / agent-workflow | `cursor/*` | `cursor/branch-conventions`, `cursor/marketing-base` |
+| Tooling / CI | `tooling/*`, `ci/*` | `tooling/ruff-update` |
+
+`main` är sanningen. Pushas aldrig direkt med `--force`. Efter squash-merge är
+feature-branchen "konsumerad" — starta en ny branch från nya `main` för nästa
+arbete, pulla aldrig en redan squash-mergad branch.
