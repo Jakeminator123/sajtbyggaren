@@ -47,6 +47,7 @@ import copy
 import json
 import re
 from collections.abc import Iterable
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -188,6 +189,76 @@ def _classify_capability(
 _DEFAULT_SCAFFOLD_ID = "local-service-business"
 _DEFAULT_VARIANT_ID = "nordic-trust"
 _DEFAULT_STARTER_ID = "marketing-base"
+_VALID_LAYOUT_HINTS = {"gradient", "centered", "split"}
+_MAX_UNIQUE_SELLING_POINTS = 4
+_MEDIA_DIRECTIVE_ROLES = ("favicon", "ogImage", "backgroundVideo")
+
+# Rot för scaffold-paket på disk. Varje scaffold har en ``variants/``-
+# mapp där varje ``*.json`` är en variant-definition. Sökvägen är
+# repo-relativ och fungerar oavsett från vilken CWD pytest/CLI körs.
+# ``parents[1]`` = ``packages/generation/`` (denna fil ligger i
+# ``packages/generation/discovery/resolve.py``).
+_SCAFFOLDS_ROOT = (
+    Path(__file__).resolve().parents[1] / "orchestration" / "scaffolds"
+)
+
+
+@lru_cache(maxsize=1)
+def _known_variant_ids() -> frozenset[str]:
+    """Returnerar samtliga giltiga variantIds genom att skanna disk.
+
+    Cachas en gång per process (variants ändras inte mid-run). Används
+    för whitelist-validering av ``directives.variantHint`` från
+    wizarden — vi sätter aldrig ``project_input.variantId`` till en
+    okänd sträng som operatören (eller en framtida UI-bug) råkar skicka.
+
+    Lägga till en ny variant kräver bara en ny JSON-fil under
+    ``packages/generation/orchestration/scaffolds/<scaffold>/variants/``;
+    den här funktionen plockar upp den automatiskt utan kod-ändring.
+    """
+    if not _SCAFFOLDS_ROOT.is_dir():
+        return frozenset()
+    ids: set[str] = set()
+    for variants_dir in _SCAFFOLDS_ROOT.glob("*/variants"):
+        if not variants_dir.is_dir():
+            continue
+        for path in variants_dir.glob("*.json"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            variant_id = data.get("id") if isinstance(data, dict) else None
+            if isinstance(variant_id, str) and variant_id.strip():
+                ids.add(variant_id.strip())
+    return frozenset(ids)
+
+
+@lru_cache(maxsize=8)
+def _variants_for_scaffold(scaffold_id: str) -> frozenset[str]:
+    """Returnerar giltiga variantIds för en given scaffold.
+
+    Används för att blockera cross-scaffold ``variantHint``-läckage —
+    t.ex. ``"clean-store"`` (som hör till ``ecommerce-lite``) får inte
+    sättas som ``variantId`` på en ``local-service-business``-scaffold,
+    eftersom ``build_site.py`` då försöker ladda en JSON-fil som inte
+    finns och kraschar med ``FileNotFoundError`` (B2 i scout-review
+    2026-05-24).
+    """
+    if not scaffold_id or not scaffold_id.strip():
+        return frozenset()
+    variants_dir = _SCAFFOLDS_ROOT / scaffold_id.strip() / "variants"
+    if not variants_dir.is_dir():
+        return frozenset()
+    ids: set[str] = set()
+    for path in variants_dir.glob("*.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        variant_id = data.get("id") if isinstance(data, dict) else None
+        if isinstance(variant_id, str) and variant_id.strip():
+            ids.add(variant_id.strip())
+    return frozenset(ids)
 
 # Postnummer-extraktion från svensk adress (samma regex som tidigare).
 _SWEDISH_POSTCODE_RE = re.compile(r"\b\d{3}\s?\d{2}\s+([A-Za-zÅÄÖåäö\-]+)")
@@ -437,6 +508,7 @@ def resolve_discovery(
     _apply_services_field(project_input, answers, field_sources)
     _apply_brand_and_assets(project_input, answers, field_sources)
     _apply_tone_field(project_input, answers, field_sources)
+    _apply_directives_fields(project_input, payload, field_sources)
     _apply_location_from_address(project_input)
 
     # ------------------------------------------------------------------
@@ -877,30 +949,65 @@ def _apply_brand_and_assets(
     assets_raw = answers.get("assets")
     assets: dict[str, Any] = assets_raw if isinstance(assets_raw, dict) else {}
 
-    logo_ref = _sanitize_asset_ref(assets.get("logo") or {}, "logo")
-    if logo_ref:
-        brand_block = project_input.setdefault("brand", {})
-        brand_block["logo"] = logo_ref
-        field_sources["brand.logo"] = "wizard"
+    # Tombstone-semantik: när wizard skickar en explicit ``None`` (eller
+    # tom dict) för en single-asset-roll betyder det att operatören har
+    # tagit bort en tidigare uppladdad bild i UI:t. Vi MÅSTE då rensa
+    # motsvarande fält i ``project_input.brand`` så att build_site.py
+    # inte kopierar med den gamla bilden vid nästa rebuild. Utan denna
+    # rensning dyker "borttagna" logos/hero-bilder upp igen — den
+    # klassiska "ghost asset"-buggen som operatören rapporterade
+    # (2026-05-22).
+    #
+    # ``isinstance(... , dict)`` skiljer "fältet finns inte alls"
+    # (operatören har inte rört det) från "fältet är dict/None"
+    # (operatören har explicit interagerat). Vi behandlar därför bara
+    # tombstones när nyckeln faktiskt finns i payloaden.
+    if "logo" in assets:
+        logo_ref = _sanitize_asset_ref(assets.get("logo") or {}, "logo")
+        if logo_ref:
+            brand_block = project_input.setdefault("brand", {})
+            brand_block["logo"] = logo_ref
+            field_sources["brand.logo"] = "wizard"
+        else:
+            brand_block = project_input.get("brand")
+            if isinstance(brand_block, dict):
+                brand_block.pop("logo", None)
+            field_sources["brand.logo"] = "wizard"
 
-    hero_ref = _sanitize_asset_ref(assets.get("heroImage") or {}, "hero")
-    if hero_ref:
-        brand_block = project_input.setdefault("brand", {})
-        brand_block["heroImage"] = hero_ref
-        field_sources["brand.heroImage"] = "wizard"
+    if "heroImage" in assets:
+        hero_ref = _sanitize_asset_ref(assets.get("heroImage") or {}, "hero")
+        if hero_ref:
+            brand_block = project_input.setdefault("brand", {})
+            brand_block["heroImage"] = hero_ref
+            field_sources["brand.heroImage"] = "wizard"
+        else:
+            brand_block = project_input.get("brand")
+            if isinstance(brand_block, dict):
+                brand_block.pop("heroImage", None)
+            field_sources["brand.heroImage"] = "wizard"
 
-    gallery_raw = assets.get("gallery")
-    raw_gallery: list[Any] = gallery_raw if isinstance(gallery_raw, list) else []
-    gallery_refs: list[dict[str, Any]] = []
-    for item in raw_gallery:
-        if not isinstance(item, dict):
-            continue
-        ref = _sanitize_asset_ref(item, "gallery")
-        if ref is not None:
-            gallery_refs.append(ref)
-    if gallery_refs:
-        project_input["gallery"] = gallery_refs
-        field_sources["gallery"] = "wizard"
+    # Gallery: tom lista ``[]`` är tombstone (operatören har rensat
+    # alla galleri-bilder). Nyckeln finns men listan är tom → rensa
+    # ``project_input.gallery``. Frontend skickar alltid en lista när
+    # operatören har rört galleriet (även tom efter borttagning).
+    if "gallery" in assets:
+        gallery_raw = assets.get("gallery")
+        raw_gallery: list[Any] = (
+            gallery_raw if isinstance(gallery_raw, list) else []
+        )
+        gallery_refs: list[dict[str, Any]] = []
+        for item in raw_gallery:
+            if not isinstance(item, dict):
+                continue
+            ref = _sanitize_asset_ref(item, "gallery")
+            if ref is not None:
+                gallery_refs.append(ref)
+        if gallery_refs:
+            project_input["gallery"] = gallery_refs
+            field_sources["gallery"] = "wizard"
+        else:
+            project_input.pop("gallery", None)
+            field_sources["gallery"] = "wizard"
 
 
 def _apply_tone_field(
@@ -926,6 +1033,107 @@ def _apply_tone_field(
             tone_block = project_input.setdefault("tone", {})
             tone_block["avoid"] = tokens[:10]
             field_sources["tone.avoid"] = "wizard"
+
+
+def _apply_directives_fields(
+    project_input: dict[str, Any],
+    payload: dict[str, Any] | None,
+    field_sources: dict[str, FieldSourceLiteral],
+) -> None:
+    """Persist safe v2 wizard directives into Project Input.
+
+    ``layoutHint`` is intentionally kept under ``directives`` because the
+    builder treats it as an operator rendering override. ``uniqueSellingPoints``
+    is promoted top-level so it validates and feeds hero chips directly.
+    """
+    if not isinstance(payload, dict):
+        return
+    directives = payload.get("directives")
+    if not isinstance(directives, dict):
+        return
+
+    layout_hint = directives.get("layoutHint")
+    if isinstance(layout_hint, str):
+        clean_layout = layout_hint.strip()
+        if clean_layout in _VALID_LAYOUT_HINTS:
+            project_input["directives"] = {"layoutHint": clean_layout}
+            field_sources["directives.layoutHint"] = "wizard"
+
+    # variantHint: när operatören valt en vibe i steg 2 skickar wizarden
+    # vibeId direkt (``VIBE_OPTIONS.id`` i wizard-constants speglar
+    # variant-filnamn 1:1 — t.ex. ``"warm-craft"``, ``"pulse-fit"``).
+    # Vi validerar mot disk-baserad whitelist (``_known_variant_ids``)
+    # så en ogiltig hint från en bugg i UI:t inte kan korrumpera builds.
+    #
+    # Sprint B/2: utan detta block landar ~95% av trafiken på
+    # ``nordic-trust``/``clean-store`` via taxonomy-defaults oavsett
+    # vilken vibe operatören valt. Nu får vibe-valet faktisk effekt:
+    # variantId blir t.ex. ``"midnight-counsel"`` för advokatbyråer
+    # och ``"pulse-fit"`` för gym, vilket aktiverar andra
+    # color tokens, typografi, motion-nivå och hero-defaults.
+    variant_hint = directives.get("variantHint")
+    if isinstance(variant_hint, str):
+        clean_variant = variant_hint.strip()
+        if clean_variant and clean_variant in _known_variant_ids():
+            # B2 i scout-review 2026-05-24: ``clean-store`` finns globalt
+            # (under ``ecommerce-lite``) men får inte sättas som
+            # ``variantId`` på en ``local-service-business``-scaffold.
+            # build_site.py laddar varianten via
+            # ``scaffolds/<scaffoldId>/variants/<variantId>.json`` och
+            # skulle kasta ``FileNotFoundError`` på mismatch.
+            current_scaffold = project_input.get("scaffoldId")
+            scaffold_ok = True
+            if isinstance(current_scaffold, str) and current_scaffold:
+                if clean_variant not in _variants_for_scaffold(current_scaffold):
+                    scaffold_ok = False
+            if scaffold_ok:
+                project_input["variantId"] = clean_variant
+                field_sources["variantId"] = "wizard"
+
+    raw_usps = directives.get("uniqueSellingPoints")
+    if isinstance(raw_usps, list):
+        usps: list[str] = []
+        seen: set[str] = set()
+        for item in raw_usps:
+            if not isinstance(item, str):
+                continue
+            clean = item.strip()
+            if not clean or clean in seen:
+                continue
+            usps.append(clean)
+            seen.add(clean)
+            if len(usps) >= _MAX_UNIQUE_SELLING_POINTS:
+                break
+        if usps:
+            project_input["uniqueSellingPoints"] = usps
+            field_sources["uniqueSellingPoints"] = "wizard"
+
+    # Media: per-roll-tombstone-semantik. När wizarden skickar
+    # ``directives.media.<role> = None`` betyder det att operatören
+    # tagit bort en tidigare uppladdad asset i den rollen — vi måste
+    # rensa motsvarande ``project_input.media.<role>`` så build_site.py
+    # inte återanvänder en gammal favicon/ogImage/backgroundVideo vid
+    # rebuild. Roller som inte finns i payload alls lämnas orörda.
+    raw_media = directives.get("media")
+    if isinstance(raw_media, dict):
+        media_block = project_input.setdefault("media", {})
+        if not isinstance(media_block, dict):
+            media_block = {}
+            project_input["media"] = media_block
+        any_touched = False
+        for role in _MEDIA_DIRECTIVE_ROLES:
+            if role not in raw_media:
+                continue
+            any_touched = True
+            ref = _sanitize_asset_ref(raw_media.get(role) or {}, role)
+            if ref is not None:
+                media_block[role] = ref
+            else:
+                media_block.pop(role, None)
+        if any_touched:
+            field_sources["media"] = "wizard"
+            if not media_block:
+                project_input.pop("media", None)
 
 
 def _apply_location_from_address(project_input: dict[str, Any]) -> None:
@@ -1114,17 +1322,31 @@ def _sanitize_asset_ref(
     required = {"assetId", "filename", "mimeType", "sizeBytes"}
     if not required.issubset(ref.keys()):
         return None
+    # W8 i scout-review 2026-05-24: omslut int()-castar med try/except
+    # så en payload med ``sizeBytes: null`` eller ``"abc"`` returnerar
+    # None i stället för att kasta TypeError/ValueError upp ur
+    # resolve_discovery och aborta hela prompt_to_project_input.
+    try:
+        size_bytes = int(ref["sizeBytes"])
+    except (TypeError, ValueError):
+        return None
     clean: dict[str, Any] = {
         "assetId": str(ref["assetId"]),
         "filename": str(ref["filename"]),
         "mimeType": str(ref["mimeType"]),
-        "sizeBytes": int(ref["sizeBytes"]),
+        "sizeBytes": size_bytes,
         "role": str(ref.get("role") or default_role),
     }
     if ref.get("width") is not None:
-        clean["width"] = int(ref["width"])
+        try:
+            clean["width"] = int(ref["width"])
+        except (TypeError, ValueError):
+            pass
     if ref.get("height") is not None:
-        clean["height"] = int(ref["height"])
+        try:
+            clean["height"] = int(ref["height"])
+        except (TypeError, ValueError):
+            pass
     alt = ref.get("alt")
     if isinstance(alt, str) and alt.strip():
         clean["alt"] = alt.strip()
@@ -1137,6 +1359,9 @@ def _sanitize_asset_ref(
     confidence = ref.get("visionConfidence")
     if isinstance(confidence, str) and confidence in {"low", "medium", "high"}:
         clean["visionConfidence"] = confidence
+    source_url = ref.get("sourceUrl")
+    if isinstance(source_url, str) and source_url.strip():
+        clean["sourceUrl"] = source_url.strip()
     return clean
 
 

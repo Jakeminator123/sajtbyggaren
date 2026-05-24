@@ -30,6 +30,10 @@ data/runs/
 data/versions/
 data/prompt-inputs/
 data/embedding-index/
+# Operatöruppladdade assets — bytes finns endast lokalt (LocalAssetStore)
+# eller i Vercel Blob (VercelBlobAssetStore). Manifest + originals/optimized
+# regenereras vid behov; ingen anledning att versionera 2 MB+ per upload.
+data/uploads/
 .generated/
 *.log
 

@@ -1,0 +1,341 @@
+"use client";
+
+import {
+  Globe,
+  History,
+  ImagePlus,
+  MessageCircleQuestion,
+  Palette,
+  Plus,
+  RefreshCw,
+  ScanSearch,
+  Settings2,
+  Sparkles,
+  Terminal,
+  X,
+} from "lucide-react";
+import { Fragment } from "react";
+import {
+  KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+import { cn } from "@/lib/utils";
+
+/**
+ * Minimal "häftiga-ändringar"-meny. En liten pulserande pill nere
+ * till vänster (motpol till FloatingChat som default sitter nere
+ * till höger). Click → expanderar till en vertikal lista av icon-
+ * actions. Pulserar mjukt när bygget jobbar så operatören vet att
+ * något händer även om chatten är minimerad.
+ *
+ * Alla actions är light-weight wrappers över befintliga funktioner
+ * — den här komponenten introducerar inga nya backend-anrop. Den
+ * är medvetet liten: bara 4 standard-handlingar idag. Lägg in
+ * framtida features genom att skicka in dem som extra `actions`-
+ * props senare.
+ */
+
+export type BuilderActionIcon =
+  | "history"
+  | "console"
+  | "new-site"
+  | "design"
+  | "settings"
+  | "palette"
+  | "image"
+  | "globe"
+  | "rebuild"
+  | "ask"
+  | "inspect";
+
+export type BuilderAction = {
+  id: string;
+  label: string;
+  description?: string;
+  icon: BuilderActionIcon;
+  onSelect: () => void;
+  isDestructive?: boolean;
+  /**
+   * Valfri grupp-etikett. Actions med samma `group` renderas under
+   * en gemensam sektion-header i menyn. Actions utan `group` visas
+   * först (ogrupperat). Renderordning inom en grupp följer ordningen
+   * i actions-arrayen.
+   */
+  group?: string;
+  /** Inaktiverar action-knappen (t.ex. "Bygg om" medan ett bygge pågår). */
+  disabled?: boolean;
+};
+
+type BuilderActionsProps = {
+  /** Actions att visa i menyn. Renderas i den ordning de skickas in. */
+  actions: BuilderAction[];
+  /** Pulserar pillen mjukt när bygget jobbar. */
+  pulsing?: boolean;
+  /** Override för pill-position. Default: bottom-left. */
+  side?: "left" | "right";
+};
+
+const STORAGE_KEY_OPEN = "sajtbyggaren:builder-actions:open";
+
+function readStoredOpen(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(STORAGE_KEY_OPEN) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function iconComponent(kind: BuilderActionIcon) {
+  switch (kind) {
+    case "history":
+      return History;
+    case "console":
+      return Terminal;
+    case "new-site":
+      return Plus;
+    case "design":
+      return Sparkles;
+    case "settings":
+      return Settings2;
+    case "palette":
+      return Palette;
+    case "image":
+      return ImagePlus;
+    case "globe":
+      return Globe;
+    case "rebuild":
+      return RefreshCw;
+    case "ask":
+      return MessageCircleQuestion;
+    case "inspect":
+      return ScanSearch;
+    default:
+      return Settings2;
+  }
+}
+
+export function BuilderActions({
+  actions,
+  pulsing = false,
+  side = "left",
+}: BuilderActionsProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Hydrera open-state efter mount (SSR-säkert).
+  //
+  // setState körs efter `await` via async IIFE — samma mönster som
+  // viewer-panel.tsx + run-details-panel.tsx + floating-chat.tsx
+  // använder för att inte trigga React 19:s
+  // `react-hooks/set-state-in-effect`-rule.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      setIsOpen(readStoredOpen());
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY_OPEN, String(isOpen));
+    } catch {
+      // Tyst.
+    }
+  }, [isOpen]);
+
+  // Stäng på klick utanför (men inte på själva pillen).
+  useEffect(() => {
+    if (!isOpen) return;
+    function onPointerDown(event: PointerEvent) {
+      const node = containerRef.current;
+      if (!node) return;
+      if (event.target instanceof Node && node.contains(event.target)) return;
+      setIsOpen(false);
+    }
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => window.removeEventListener("pointerdown", onPointerDown);
+  }, [isOpen]);
+
+  // Stäng på Escape.
+  useEffect(() => {
+    if (!isOpen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen]);
+
+  const handleSelect = useCallback((action: BuilderAction) => {
+    if (action.disabled) return;
+    setIsOpen(false);
+    // Mikropaus så menyn hinner stängas innan ev. dialog öppnas.
+    queueMicrotask(() => action.onSelect());
+  }, []);
+
+  // Gruppera actions i samma ordning som de skickas in. Actions utan
+  // grupp läggs i en separat "_ungrouped"-bucket som renderas först
+  // (utan header). Vi använder en Map så insättningsordningen bevaras.
+  const groupedActions = useMemo(() => {
+    const groups = new Map<string, BuilderAction[]>();
+    for (const action of actions) {
+      const key = action.group ?? "_ungrouped";
+      const bucket = groups.get(key);
+      if (bucket) {
+        bucket.push(action);
+      } else {
+        groups.set(key, [action]);
+      }
+    }
+    return groups;
+  }, [actions]);
+
+  const handleMenuKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      event.preventDefault();
+      const node = containerRef.current;
+      if (!node) return;
+      const buttons = Array.from(
+        node.querySelectorAll<HTMLButtonElement>("[data-action-button]"),
+      );
+      if (buttons.length === 0) return;
+      const currentIndex = buttons.findIndex(
+        (button) => button === document.activeElement,
+      );
+      const nextIndex =
+        event.key === "ArrowDown"
+          ? (currentIndex + 1) % buttons.length
+          : (currentIndex - 1 + buttons.length) % buttons.length;
+      buttons[nextIndex]?.focus();
+    },
+    [],
+  );
+
+  return (
+    <div
+      ref={containerRef}
+      onKeyDown={handleMenuKeyDown}
+      className={cn(
+        "pointer-events-none fixed bottom-6 z-40 flex flex-col items-start gap-2",
+        side === "left" ? "left-6 items-start" : "right-6 items-end",
+      )}
+    >
+      {isOpen ? (
+        <div
+          role="menu"
+          aria-label="Builder-verktyg"
+          className={cn(
+            "border-border/60 bg-card/95 pointer-events-auto flex w-[230px] flex-col gap-0.5 rounded-xl border p-1 shadow-2xl backdrop-blur-xl",
+            "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 origin-bottom motion-safe:duration-150",
+          )}
+        >
+          {Array.from(groupedActions.entries()).map(
+            ([groupKey, groupActions], groupIdx) => (
+              <Fragment key={groupKey}>
+                {groupKey !== "_ungrouped" ? (
+                  <div
+                    className={cn(
+                      "text-muted-foreground/80 px-2.5 pt-2 pb-0.5 font-mono text-[9px] tracking-[0.18em] uppercase",
+                      // Lite extra mellanrum mellan grupper, men inte
+                      // ovanför första gruppen.
+                      groupIdx > 0 && "border-border/40 mt-1 border-t pt-2",
+                    )}
+                  >
+                    {groupKey}
+                  </div>
+                ) : null}
+                {groupActions.map((action) => {
+                  const Icon = iconComponent(action.icon);
+                  return (
+                    <button
+                      type="button"
+                      key={action.id}
+                      role="menuitem"
+                      data-action-button
+                      disabled={action.disabled}
+                      onClick={() => handleSelect(action)}
+                      className={cn(
+                        "group flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left",
+                        "hover:bg-muted/60 focus-visible:bg-muted focus-visible:outline-none",
+                        "disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent",
+                        action.isDestructive
+                          ? "text-destructive hover:text-destructive"
+                          : "text-foreground",
+                      )}
+                    >
+                      <Icon
+                        className={cn(
+                          "mt-0.5 h-3.5 w-3.5 shrink-0",
+                          action.isDestructive
+                            ? "text-destructive"
+                            : "text-muted-foreground group-hover:text-foreground",
+                        )}
+                        aria-hidden
+                      />
+                      <span className="flex flex-1 flex-col leading-tight">
+                        <span className="text-[12px] font-medium tracking-tight">
+                          {action.label}
+                        </span>
+                        {action.description ? (
+                          <span className="text-muted-foreground text-[10.5px]">
+                            {action.description}
+                          </span>
+                        ) : null}
+                      </span>
+                    </button>
+                  );
+                })}
+              </Fragment>
+            ),
+          )}
+        </div>
+      ) : null}
+
+      <button
+        type="button"
+        aria-label={isOpen ? "Stäng verktygsmeny" : "Öppna verktygsmeny"}
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((prev) => !prev)}
+        className={cn(
+          "group border-border/60 bg-card/95 text-muted-foreground pointer-events-auto flex h-10 items-center gap-2 rounded-full border px-3 text-[11px] font-medium shadow-lg backdrop-blur-xl",
+          "hover:bg-card hover:text-foreground transition-colors",
+          "focus-visible:ring-ring/50 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+        )}
+      >
+        <span className="relative flex h-2 w-2 items-center justify-center">
+          <span
+            className={cn(
+              "absolute inline-flex h-full w-full rounded-full",
+              isOpen ? "bg-foreground/70" : "bg-muted-foreground/60",
+              pulsing && !isOpen && "motion-safe:animate-ping",
+            )}
+            aria-hidden
+          />
+          <span
+            className={cn(
+              "relative inline-flex h-2 w-2 rounded-full",
+              isOpen ? "bg-foreground" : "bg-muted-foreground",
+            )}
+            aria-hidden
+          />
+        </span>
+        <span>Verktyg</span>
+        {isOpen ? <X className="h-3.5 w-3.5" aria-hidden /> : null}
+      </button>
+    </div>
+  );
+}

@@ -4,7 +4,20 @@
  * kan acceptera samma form rakt av.
  */
 
-export type AssetRole = "logo" | "hero" | "gallery";
+export type AssetRole =
+  | "logo"
+  | "hero"
+  | "gallery"
+  // Fas 1.2 — extra-roles för wizardens steg 5. Backend renderar:
+  //   favicon         → <link rel="icon"> + <link rel="apple-touch-icon">
+  //   ogImage         → <meta property="og:image"> + Twitter Card
+  //   backgroundVideo → <video autoPlay loop muted playsInline> i hero
+  // Roles persisteras till `dossier.media[<role>]` (efter Jakob M2).
+  // Tills dess används de av wizard-payload som strukturerad referens
+  // i `answers.media` så framtida persistering bara behöver mappa fält.
+  | "favicon"
+  | "ogImage"
+  | "backgroundVideo";
 
 export type AssetPlacement =
   | "home"
@@ -16,10 +29,31 @@ export type AssetPlacement =
 
 export type VisionConfidence = "low" | "medium" | "high";
 
+/**
+ * Image MIMEs som sharp-pipelinen kan optimera till webp. Video och andra
+ * binary-typer ligger utanför detta union eftersom de bypass:ar
+ * sharp + vision-klassificeringen.
+ */
+export type ImageMimeType =
+  | "image/png"
+  | "image/jpeg"
+  | "image/webp"
+  | "image/svg+xml";
+
+/**
+ * Video MIMEs som backgroundVideo-rollen stödjer. Sharp opererar inte
+ * på video; uploads passerar orörda till disk/Blob. <video>-elementet
+ * i browser hanterar containerformat & codec själv så vi behöver inte
+ * transkoda.
+ */
+export type VideoMimeType = "video/mp4" | "video/webm";
+
+export type AssetMimeType = ImageMimeType | VideoMimeType;
+
 export interface AssetRef {
   assetId: string;
   filename: string;
-  mimeType: "image/png" | "image/jpeg" | "image/webp" | "image/svg+xml";
+  mimeType: AssetMimeType;
   sizeBytes: number;
   width: number | null;
   height: number | null;
@@ -28,13 +62,26 @@ export interface AssetRef {
   placement?: AssetPlacement;
   visionSubject?: string;
   visionConfidence?: VisionConfidence;
+  /**
+   * Publik URL där den optimerade bytes:n kan hämtas (HTTPS, ingen auth).
+   *
+   * Satt av `VercelBlobAssetStore` när ASSET_STORE_DRIVER=vercel-blob, då
+   * raderna ovan inte räcker — filen ligger inte på disk utan i en remote
+   * blob-store. `LocalAssetStore` lämnar fältet `undefined` (filen finns
+   * under `data/uploads/<siteId>/<assetId>/optimized.webp`).
+   *
+   * `scripts/build_site.py copy_operator_uploads` ska föredra `sourceUrl`
+   * framför disk-lookup när fältet finns (HTTP-fetch → skriv till
+   * `public/uploads/<filename>`). Se `docs/backend-handoff.md` gap #11.
+   */
+  sourceUrl?: string;
 }
 
 export interface SaveAssetInput {
   siteId: string;
   buffer: Buffer;
   originalName: string;
-  mimeType: AssetRef["mimeType"];
+  mimeType: AssetMimeType;
   role: AssetRole;
 }
 
@@ -62,8 +109,8 @@ export interface AssetStore {
   /** Läs manifest.json för en tidigare sparad asset. Returnerar null om saknas. */
   load(siteId: string, assetId: string): Promise<AssetRef | null>;
 
-  /** Absolut sökväg på disk för optimerad/orginalfil — används av Python copy-step. */
-  resolveOptimizedPath(siteId: string, assetId: string): string;
+  /** Absolut sökväg på disk för optimerad/orginalfil — endast LocalAssetStore. */
+  resolveOptimizedPath?(siteId: string, assetId: string): string;
 
   /** Public URL som genererad sajt kommer rendera (/uploads/<filename>). */
   publicUrl(ref: AssetRef): string;

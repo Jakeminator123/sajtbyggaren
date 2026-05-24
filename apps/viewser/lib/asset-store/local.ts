@@ -21,6 +21,7 @@ import { generateAssetId, slugifyFilename } from "./utils";
 import { optimizeImage } from "./sharp-pipeline";
 import { classifyAsset } from "./vision";
 import type {
+  AssetMimeType,
   AssetRef,
   AssetStore,
   SaveAssetInput,
@@ -29,7 +30,7 @@ import type {
 
 const UPLOADS_ROOT = path.resolve(process.cwd(), "..", "..", "data", "uploads");
 
-function mimeExtension(mime: AssetRef["mimeType"]): string {
+function mimeExtension(mime: AssetMimeType): string {
   switch (mime) {
     case "image/png":
       return "png";
@@ -39,7 +40,15 @@ function mimeExtension(mime: AssetRef["mimeType"]): string {
       return "webp";
     case "image/svg+xml":
       return "svg";
+    case "video/mp4":
+      return "mp4";
+    case "video/webm":
+      return "webm";
   }
+}
+
+function isVideoMime(mime: AssetMimeType): boolean {
+  return mime === "video/mp4" || mime === "video/webm";
 }
 
 export class LocalAssetStore implements AssetStore {
@@ -60,19 +69,60 @@ export class LocalAssetStore implements AssetStore {
     const originalPath = path.join(dir, `original.${originalExt}`);
     await writeFile(originalPath, input.buffer);
 
-    // SVG passerar orörd — vektor är redan billig och webp-konvertering
-    // skulle förlora skalbarheten. Övriga format går genom sharp.
+    // Tre branches på mime-typ:
+    //  - SVG       : passerar orörd (vektor, ingen webp-konvertering)
+    //  - Image     : sharp → optimized.webp + GPT Vision-klassificering
+    //  - Video     : passerar orörd, ingen sharp/vision (Fas 1.4)
+    //
+    // För video sätter vi alt-text deterministiskt från role ("Bakgrundsvideo")
+    // eftersom vi inte vill anropa Vision-modellen för en frame som inte
+    // representerar slut-uppspelningen. Ratio (width/height) lämnas null
+    // — backend kan läsa det från video-fil-headern vid render om det
+    // behövs (HTML5 <video>-elementet hanterar själv aspect-ratio).
     let optimizedBytes: number;
     let width: number | null;
     let height: number | null;
-    let publicMime: AssetRef["mimeType"];
+    let publicMime: AssetMimeType;
     let publicExt: string;
-    if (input.mimeType === "image/svg+xml") {
+    let altText: string;
+    let visionSubject: string | undefined;
+    let visionConfidence: AssetRef["visionConfidence"];
+    let placement: AssetRef["placement"];
+
+    if (isVideoMime(input.mimeType)) {
+      // Video — direkt-skrivning, ingen optimering. <video>-elementet i
+      // browsern hanterar codec/container. Filen ligger redan på disk
+      // som original.<ext> (skrev ovan); vi sätter optimizedBytes lika
+      // med originalets storlek så ref-metadatan är konsistent.
+      optimizedBytes = input.buffer.byteLength;
+      width = null;
+      height = null;
+      publicMime = input.mimeType;
+      publicExt = originalExt;
+      altText = "Bakgrundsvideo";
+      visionSubject = undefined;
+      visionConfidence = undefined;
+      placement = "home";
+    } else if (input.mimeType === "image/svg+xml") {
       optimizedBytes = input.buffer.byteLength;
       width = null;
       height = null;
       publicMime = "image/svg+xml";
       publicExt = "svg";
+      const vision = await classifyAsset({
+        buffer: input.buffer,
+        mimeType: input.mimeType,
+        role: input.role,
+      });
+      altText = vision.suggestedAltText;
+      visionSubject = vision.subject;
+      visionConfidence = vision.confidence;
+      placement =
+        input.role === "logo"
+          ? undefined
+          : input.role === "hero"
+            ? "home"
+            : vision.recommendedPlacement;
     } else {
       const optimized = await optimizeImage(input.buffer);
       await writeFile(path.join(dir, "optimized.webp"), optimized.buffer);
@@ -81,19 +131,24 @@ export class LocalAssetStore implements AssetStore {
       height = optimized.height;
       publicMime = "image/webp";
       publicExt = "webp";
+      const vision = await classifyAsset({
+        buffer: input.buffer,
+        mimeType: input.mimeType,
+        role: input.role,
+      });
+      altText = vision.suggestedAltText;
+      visionSubject = vision.subject;
+      visionConfidence = vision.confidence;
+      placement =
+        input.role === "logo"
+          ? undefined
+          : input.role === "hero"
+            ? "home"
+            : vision.recommendedPlacement;
     }
 
     const stem = slugifyFilename(input.originalName);
     const publicFilename = `${stem}-${assetId.slice(0, 8).toLowerCase()}.${publicExt}`;
-
-    // Vision-klassificering körs på samma buffer som operatorn laddade
-    // upp (inte den webp-komprimerade) för att modellen ska se högsta
-    // kvalitet vid analys. SVG → deterministisk mock (vision.ts hanterar).
-    const vision = await classifyAsset({
-      buffer: input.buffer,
-      mimeType: input.mimeType,
-      role: input.role,
-    });
 
     const ref: AssetRef = {
       assetId,
@@ -102,18 +157,11 @@ export class LocalAssetStore implements AssetStore {
       sizeBytes: optimizedBytes,
       width,
       height,
-      alt: vision.suggestedAltText,
+      alt: altText,
       role: input.role,
-      // Logo har ingen placement (renderar i header/footer) — bara
-      // hero och gallery skickar tillbaka recommendedPlacement.
-      ...(input.role === "logo"
-        ? {}
-        : {
-            placement:
-              input.role === "hero" ? "home" : vision.recommendedPlacement,
-          }),
-      visionSubject: vision.subject,
-      visionConfidence: vision.confidence,
+      ...(placement ? { placement } : {}),
+      ...(visionSubject ? { visionSubject } : {}),
+      ...(visionConfidence ? { visionConfidence } : {}),
     };
 
     const manifestPath = path.join(dir, "manifest.json");
@@ -136,8 +184,10 @@ export class LocalAssetStore implements AssetStore {
     const dir = this.assetDir(siteId, assetId);
     const webp = path.join(dir, "optimized.webp");
     if (existsSync(webp)) return webp;
-    // SVG-original (eller pre-optimized fallback)
-    for (const ext of ["svg", "png", "jpg", "webp"]) {
+    // Original-format fallback. ``mp4``/``webm`` läggs sist eftersom de
+    // är största/sällsynta filtyperna — den vanliga vägen hittar webp/
+    // svg/png/jpg först.
+    for (const ext of ["svg", "png", "jpg", "webp", "mp4", "webm"]) {
       const candidate = path.join(dir, `original.${ext}`);
       if (existsSync(candidate)) return candidate;
     }

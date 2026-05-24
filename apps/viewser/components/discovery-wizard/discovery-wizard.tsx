@@ -1,8 +1,8 @@
 "use client";
 
-import { Check, Loader2, X } from "lucide-react";
+import { Check, Keyboard, Loader2, Sparkles, X } from "lucide-react";
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,23 +13,27 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-import { AssetsStep } from "./steps/assets-step";
-import { BrandStep } from "./steps/brand-step";
-import { CompanyStep, type ScrapeState } from "./steps/company-step";
-import { ContentStep } from "./steps/content-step";
-import { PagesStep } from "./steps/pages-step";
-import { SiteTypeStep } from "./steps/site-type-step";
-import { StoryStep } from "./steps/story-step";
+import { PRIMARY_INTERACTIONS } from "@/lib/ui-tokens";
+
+import { DEMO_PROFILES } from "./demo-answers";
+import { DirectivesPreview } from "./directives-preview";
+import { ContentOrchestratorStep } from "./steps/content-orchestrator";
+import { FoundationStep, type ScrapeState } from "./steps/foundation-step";
+import { FunctionsStep } from "./steps/functions-step";
+import { MediaStep } from "./steps/media-step";
+import { VisualStep } from "./steps/visual-step";
 import {
   fallbackDiscoveryOptions,
   resolveContentBranchFromOptions,
 } from "./discovery-options";
 import type { discoveryOption } from "./discovery-options";
+import { branchForFamily } from "./wizard-constants";
 import type { WizardAnswers, WizardStepId } from "./wizard-types";
 import {
   emptyWizardAnswers,
   validateWizardStep,
   WIZARD_STEP_ORDER,
+  WIZARD_STEP_PIPELINE_BADGE,
   WIZARD_STEP_TITLES,
   wizardCompletionPercent,
 } from "./wizard-types";
@@ -56,12 +60,11 @@ export type DiscoveryWizardProps = {
   ) => void;
 };
 
-const SKIPPABLE_STEPS = new Set<WizardStepId>([
-  "content",
-  "story",
-  "assets",
-  "brand",
-]);
+/**
+ * Steg som operatören får hoppa över utan att fylla i något. Foundation
+ * + functions har minimi-validering och är därför inte hoppbara.
+ */
+const SKIPPABLE_STEPS = new Set<WizardStepId>(["visual", "content", "media"]);
 
 type discoveryOptionsState = {
   options: discoveryOption[];
@@ -75,44 +78,55 @@ type discoveryOptionsState = {
  * Stilen efterliknar Apple / Linear / Vercel onboarding: tunn typografi,
  * generös whitespace, monokrom palett.
  */
+/**
+ * Source-of-truth för hjälp-overlayens lista. Håll i synk med
+ * keyboard-handlern i useEffect — om du lägger till en ny shortcut
+ * där, lägg till en rad här också, annars upptäcker operatören den
+ * aldrig via UI.
+ *
+ * `keys` är display-strängar (visas i `<kbd>`-element), inte event-
+ * matchningar. ⌘ visas för operatörer; handlern matchar både
+ * `metaKey` och `ctrlKey` så Windows/Linux fungerar med samma listing.
+ */
+const KEYBOARD_SHORTCUTS: ReadonlyArray<{
+  label: string;
+  keys: ReadonlyArray<string>;
+}> = [
+  { label: "Fortsätt till nästa steg", keys: ["⌘↵", "⌘→"] },
+  { label: "Gå tillbaka", keys: ["⌘←"] },
+  { label: "Hoppa till steg 1–5", keys: ["⌘1", "⌘2", "⌘3", "⌘4", "⌘5"] },
+  { label: "Visa/dölj denna lista", keys: ["?", "⌘/"] },
+  { label: "Stäng wizarden", keys: ["esc"] },
+];
+
 const STEP_META: Record<
   WizardStepId,
   { eyebrow: string; description: string }
 > = {
-  company: {
-    eyebrow: "Identitet",
+  foundation: {
+    eyebrow: "Sidor",
     description:
-      "Vem ni är och hur vi når er. Klistra in en befintlig URL så hämtar vi resten automatiskt.",
+      "Vem ni är och vilken typ av verksamhet. Styr scaffold + starter (vilken Next.js-mall vi använder).",
   },
-  siteType: {
-    eyebrow: "Kategori",
+  visual: {
+    eyebrow: "Visuellt",
     description:
-      "Välj vilken typ av sajt vi bygger. Det styr scaffold, sidor och vilka frågor du får härnäst.",
+      "Vibe, färger och typografi. Styr variant (CSS-tokens) — färgerna kan skriva över vibens defaults.",
+  },
+  functions: {
+    eyebrow: "Funktioner",
+    description:
+      "Vad ska sajten kunna göra? Funktionerna styr Dossier-val och sid-routes på en gång.",
   },
   content: {
     eyebrow: "Innehåll",
     description:
-      "Tjänster, produkter, menyer eller projekt — det konkreta innehållet som ska synas på sajten.",
+      "Tjänster, produkter, story, ton och målgrupp — allt som matar copy och planner.",
   },
-  story: {
-    eyebrow: "Berättelse",
+  media: {
+    eyebrow: "Media",
     description:
-      "Bakgrund, vision och tonen i texten. Det vi inte hittar här hittar vi inte alls.",
-  },
-  pages: {
-    eyebrow: "Sidor",
-    description:
-      "Vilka sidor sajten ska ha, vilken målgrupp ni vänder er till och vad ni vill att besökarna gör.",
-  },
-  assets: {
-    eyebrow: "Visuellt",
-    description:
-      "Logotyp, hero-bild och galleri. AI:n föreslår placering — du har sista ordet.",
-  },
-  brand: {
-    eyebrow: "Stil",
-    description:
-      "Tonarter, färger och ord vi ska undvika. Här finjusterar du sajtens röst.",
+      "Logotyp, hero, galleri, favicon, OG-image och bakgrundsvideo. Sjsta steget innan vi bygger.",
   },
 };
 
@@ -143,11 +157,28 @@ export function DiscoveryWizard({
   // hela popupen medan /api/scrape-site körs.
   const [scrapeState, setScrapeState] = useState<ScrapeState | null>(null);
 
+  // Roterande demo-profil-cursor. Klick på "Fyll demo" laddar
+  // profil[demoCursor], visar profilnamnet kort i footern och flyttar
+  // cursorn till nästa profil. Modulo över DEMO_PROFILES.length så
+  // operatören kan testa varje profil utan att stänga wizarden.
+  const demoCursorRef = useRef(0);
+  const [demoNotice, setDemoNotice] = useState<string | null>(null);
+  const demoNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const step = WIZARD_STEP_ORDER[stepIndex];
   const discoveryOptions = discoveryOptionsState.options;
   const branch = useMemo(
-    () => resolveContentBranchFromOptions(answers.siteType, discoveryOptions),
-    [answers.siteType, discoveryOptions],
+    () =>
+      resolveContentBranchFromOptions(
+        answers.siteType,
+        discoveryOptions,
+        // W2 i scout-review 2026-05-24: fallback till familj-branch när
+        // operatören valt familj men inte sub-kategori. Annars landar
+        // t.ex. ecommerce-familjen i "business"-branchen och content-
+        // steget visar fel fält.
+        answers.businessFamily ? branchForFamily(answers.businessFamily) : undefined,
+      ),
+    [answers.siteType, answers.businessFamily, discoveryOptions],
   );
   const validationError = useMemo(
     () => validateWizardStep(step, answers, branch),
@@ -175,17 +206,205 @@ export function DiscoveryWizard({
     setStepIndex((idx) => Math.min(WIZARD_STEP_ORDER.length - 1, idx + 1));
   }, []);
 
+  // Hopp direkt till specifikt steg via tangentbordsgenväg eller
+  // sidebar-klick. Negativa eller out-of-range index normaliseras
+  // tyst — vi vill aldrig att en stale shortcut kraschar wizarden.
+  const goToStep = useCallback((targetIdx: number) => {
+    setStepIndex(
+      Math.min(
+        WIZARD_STEP_ORDER.length - 1,
+        Math.max(0, Math.floor(targetIdx)),
+      ),
+    );
+  }, []);
+
+  // Hjälp-overlay som listar alla tillgängliga genvägar. Toggle:as
+  // av "?" eller Cmd+/ — operatören kan stänga med Esc eller klick.
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  // Submit-flow state. När operatören klickar "Skapa sajt" visar vi
+  // en kort success-overlay (~700ms) innan vi anropar onComplete så
+  // operatören ser tydligt att klicket registrerats innan wizarden
+  // försvinner. Utan delay:n stänger wizarden direkt och bygget tar
+  // tid att starta — operatören kan undra om något hänt.
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Ref-baserad submit-guard så två snabba ⌘↵-events i samma tick
+  // inte kan passera ``if (isSubmitting)`` båda två innan React
+  // hunnit rendera om (W1 i scout-review 2026-05-24).
+  const submittingRef = useRef(false);
+
+  /**
+   * Fyll wizarden med nästa demo-profil i rotationen. Tre profiler
+   * täcker våra två fungerande scaffolds (local-service-business +
+   * ecommerce-lite) och tre olika content-branches (construction,
+   * restaurant, ecommerce) så operatören kan testa varje gren utan
+   * att skriva igenom 7 stegen manuellt.
+   *
+   * Vi byter inte automatiskt steg — operatören kan klicka igenom
+   * stegen för att granska data, eller hoppa direkt till sista steget
+   * via sidebar-navigeringen och klicka "Skapa sajt".
+   */
+  const fillDemo = useCallback(() => {
+    if (DEMO_PROFILES.length === 0) return;
+    const profile = DEMO_PROFILES[demoCursorRef.current % DEMO_PROFILES.length];
+    demoCursorRef.current = (demoCursorRef.current + 1) % DEMO_PROFILES.length;
+    setAnswers(profile.build());
+    setDemoNotice(`Demo inläst: ${profile.label}`);
+    if (demoNoticeTimerRef.current) {
+      clearTimeout(demoNoticeTimerRef.current);
+    }
+    demoNoticeTimerRef.current = setTimeout(() => {
+      setDemoNotice(null);
+      demoNoticeTimerRef.current = null;
+    }, 2500);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (demoNoticeTimerRef.current) {
+        clearTimeout(demoNoticeTimerRef.current);
+      }
+    };
+  }, []);
+
+  // B3+B4 i scout-review 2026-05-24: reset av wizard-state mellan
+  // sessioner hanteras via ``key={wizardSession}`` i prompt-builder.
+  // Komponenten remountas då naturligt och useState-initiering kör om,
+  // istället för att vi triggar setState i en effect (vilket React 19:s
+  // ``react-hooks/set-state-in-effect`` blockerar).
+
   const finish = useCallback(() => {
-    if (validationError) return;
-    onComplete(answers, discoveryOptions);
-  }, [answers, discoveryOptions, onComplete, validationError]);
+    if (submittingRef.current || isSubmitting) return;
+    // Validera ALLA steg, inte bara aktiva — sidebar/keyboard kan
+    // hoppa till sista steget och därmed kringgå required fields i
+    // foundation/functions (B5 i scout-review 2026-05-24).
+    for (const stepId of WIZARD_STEP_ORDER) {
+      const err = validateWizardStep(stepId, answers, branch);
+      if (err) {
+        const idx = WIZARD_STEP_ORDER.indexOf(stepId);
+        if (idx !== -1) setStepIndex(idx);
+        return;
+      }
+    }
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    window.setTimeout(() => {
+      onComplete(answers, discoveryOptions);
+    }, 700);
+  }, [answers, branch, discoveryOptions, isSubmitting, onComplete]);
 
   const isFirst = stepIndex === 0;
   const isLast = stepIndex === WIZARD_STEP_ORDER.length - 1;
   const canSkip = SKIPPABLE_STEPS.has(step);
 
+  /**
+   * Globala wizard-keyboard-shortcuts. Aktiveras bara när wizarden är
+   * öppen. esc stängs automatiskt av Radix Dialog så vi hanterar bara
+   * de aktiva genvägarna här:
+   *
+   *   - ⌘↵ / Ctrl+↵        ⇒ goNext (eller finish på sista steget)
+   *   - ⌘→ / Ctrl+→        ⇒ goNext
+   *   - ⌘← / Ctrl+←        ⇒ goBack
+   *   - ⌘1..⌘5 / Ctrl+1..5 ⇒ hoppa direkt till steget
+   *   - ⌘/ / Ctrl+/ / ?    ⇒ toggla hjälp-overlayen
+   *
+   * Capture-fasen undviks så textarea/input-fält som har lokala
+   * handlers (t.ex. cmd+enter för newline) får företräde. Vi lyssnar
+   * på bubble-fasen och kollar att event inte redan är
+   * defaultPrevented av en lokal handler.
+   *
+   * Numeric-shortcut:s blockeras när operatören skriver i ett input
+   * eller textarea — annars skulle ⌘1 i ett namn-fält oavsiktligt
+   * hoppa till första steget och förstöra hens text.
+   */
+  useEffect(() => {
+    if (!open) return;
+    const handler = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      const isMod = event.metaKey || event.ctrlKey;
+      const target = event.target as HTMLElement | null;
+      const inEditable =
+        !!target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
+
+      // ⌘↵ / ⌘→ — fortsätt. Hoppa över när operatören skriver i en
+      // textarea eller input så ⌘↵ kan användas för newline / lokala
+      // submit-handlers (W4 i scout-review 2026-05-24).
+      if (isMod && (event.key === "Enter" || event.key === "ArrowRight")) {
+        if (inEditable) return;
+        event.preventDefault();
+        if (isLast) finish();
+        else goNext();
+        return;
+      }
+      // ⌘← — tillbaka (blockerad i editable så markörnavigering fungerar)
+      if (isMod && event.key === "ArrowLeft") {
+        if (inEditable) return;
+        event.preventDefault();
+        goBack();
+        return;
+      }
+      // ⌘1..⌘5 — hoppa till steg (blockerad i editable fält)
+      if (isMod && /^[1-9]$/.test(event.key) && !inEditable) {
+        const num = parseInt(event.key, 10);
+        if (num >= 1 && num <= WIZARD_STEP_ORDER.length) {
+          event.preventDefault();
+          goToStep(num - 1);
+          return;
+        }
+      }
+      // ? eller ⌘/ — toggla hjälp-overlay
+      if ((isMod && event.key === "/") || (event.key === "?" && !inEditable)) {
+        event.preventDefault();
+        setHelpOpen((prev) => !prev);
+        return;
+      }
+      // Esc inom hjälp-overlay stänger den (Radix Dialog hanterar
+      // huvud-dialogen). Vi prioriterar att stänga overlay först om
+      // den är öppen så Esc inte stänger hela wizarden.
+      if (event.key === "Escape" && helpOpen) {
+        event.preventDefault();
+        event.stopPropagation();
+        setHelpOpen(false);
+        return;
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, isLast, goNext, goBack, finish, goToStep, helpOpen]);
+
   const meta = STEP_META[step];
   const isScraping = scrapeState?.status === "loading";
+
+  // Auto-focus på första interaktiva element i nytt steg så operatören
+  // direkt kan börja skriva utan att klicka. Sker bara på desktop —
+  // mobile skulle annars få keyboard-popup vid varje stegbyte vilket
+  // är distraherande. requestAnimationFrame säkerställer att DOM:en
+  // för det nya steget har renderats innan vi söker.
+  const contentRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    if (typeof window === "undefined") return;
+    // Hoppa över på små viewports — undvik keyboard-popup på mobil.
+    if (window.innerWidth < 768) return;
+    const raf = requestAnimationFrame(() => {
+      const root = contentRef.current;
+      if (!root) return;
+      const candidate = root.querySelector<HTMLElement>(
+        'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), [role="button"]:not([disabled]), button:not([disabled])',
+      );
+      // Säkerställ att vi inte stjäl fokus från ett element som
+      // redan har det (t.ex. om operatören precis klickat på en
+      // sidebar-länk).
+      if (candidate && document.activeElement === document.body) {
+        candidate.focus({ preventScroll: true });
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [open, stepIndex]);
 
   useEffect(() => {
     if (!open) return;
@@ -196,7 +415,9 @@ export function DiscoveryWizard({
           cache: "no-store",
         });
         if (!response.ok) return;
-        const payload = (await response.json()) as { options?: discoveryOption[] };
+        const payload = (await response.json()) as {
+          options?: discoveryOption[];
+        };
         if (!Array.isArray(payload.options) || payload.options.length === 0) {
           return;
         }
@@ -220,12 +441,12 @@ export function DiscoveryWizard({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="!w-[min(100vw-2rem,1180px)] !max-w-[min(100vw-2rem,1180px)] grid h-[min(100dvh-2rem,780px)] grid-cols-1 gap-0 overflow-hidden border border-border/60 bg-background p-0 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.25)] sm:!max-w-[min(100vw-2rem,1180px)] sm:rounded-3xl md:grid-cols-[280px_1fr] md:grid-rows-1"
+        className="border-border/60 bg-background grid h-[min(100dvh-2rem,780px)] !w-[min(100vw-2rem,1180px)] !max-w-[min(100vw-2rem,1180px)] grid-cols-1 gap-0 overflow-hidden border p-0 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.25)] sm:!max-w-[min(100vw-2rem,1180px)] sm:rounded-3xl md:grid-cols-[280px_1fr] md:grid-rows-1"
         showCloseButton={false}
       >
         {/* Sidebar — ljus minimalistisk panel. Tunn höger-border ger
             visuell separation utan att skapa kontrast-brus. */}
-        <aside className="hidden flex-col border-r border-border/50 bg-muted/30 px-6 py-7 md:flex">
+        <aside className="border-border/50 bg-muted/30 hidden flex-col border-r px-6 py-7 md:flex">
           <div className="mb-9 flex items-center gap-2.5">
             <Image
               src="/LOGO_SM2.0.png"
@@ -236,10 +457,10 @@ export function DiscoveryWizard({
               className="size-7 rounded-md object-contain"
             />
             <div className="flex flex-col leading-tight">
-              <span className="text-[13px] font-semibold tracking-tight text-foreground">
+              <span className="text-foreground text-[13px] font-semibold tracking-tight">
                 Sajtbyggaren
               </span>
-              <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-muted-foreground">
+              <span className="text-muted-foreground font-mono text-[9.5px] tracking-[0.22em] uppercase">
                 Discovery
               </span>
             </div>
@@ -269,7 +490,7 @@ export function DiscoveryWizard({
                         ? "bg-foreground text-background"
                         : isPast
                           ? "bg-foreground/85 text-background"
-                          : "border border-border/70 bg-background text-muted-foreground/70",
+                          : "border-border/70 bg-background text-muted-foreground/70 border",
                     ].join(" ")}
                   >
                     {isPast ? (
@@ -289,13 +510,13 @@ export function DiscoveryWizard({
           </nav>
 
           <div className="mt-auto pt-6">
-            <div className="mb-2 flex items-center justify-between font-mono text-[9.5px] uppercase tracking-[0.22em] text-muted-foreground">
+            <div className="text-muted-foreground mb-2 flex items-center justify-between font-mono text-[9.5px] tracking-[0.22em] uppercase">
               <span>Framsteg</span>
               <span className="text-foreground">{completion}%</span>
             </div>
-            <div className="h-[3px] w-full overflow-hidden rounded-full bg-border/50">
+            <div className="bg-border/50 h-[3px] w-full overflow-hidden rounded-full">
               <div
-                className="h-full rounded-full bg-foreground transition-[width] duration-300 ease-out"
+                className="bg-foreground h-full rounded-full transition-[width] duration-300 ease-out"
                 style={{ width: `${completion}%` }}
               />
             </div>
@@ -303,7 +524,7 @@ export function DiscoveryWizard({
         </aside>
 
         {/* Mobil-fallback för sidebar: branding + chip-rad. */}
-        <div className="flex items-center justify-between gap-4 border-b border-border/50 bg-muted/30 px-5 py-3 md:hidden">
+        <div className="border-border/50 bg-muted/30 flex items-center justify-between gap-4 border-b px-5 py-3 md:hidden">
           <div className="flex items-center gap-2.5">
             <Image
               src="/LOGO_SM2.0.png"
@@ -330,7 +551,7 @@ export function DiscoveryWizard({
                     "inline-flex h-5 w-5 items-center justify-center rounded-full font-mono text-[9.5px] transition-colors",
                     isActive || isPast
                       ? "bg-foreground text-background"
-                      : "bg-transparent text-muted-foreground ring-1 ring-border/70",
+                      : "text-muted-foreground ring-border/70 bg-transparent ring-1",
                   ].join(" ")}
                   aria-label={`Steg ${idx + 1}`}
                 >
@@ -342,83 +563,120 @@ export function DiscoveryWizard({
         </div>
 
         {/* Höger spalt — eyebrow, rubrik, beskrivning, formulär. */}
-        <section className="relative flex min-h-0 flex-col bg-background">
+        <section className="bg-background relative flex min-h-0 flex-col">
           {/* Egen close-knapp i ljus content area så den inte krockar
               med den mörka sidebarn. */}
           <button
             type="button"
             onClick={() => onOpenChange(false)}
             aria-label="Stäng"
-            className="absolute top-4 right-4 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
+            className="text-muted-foreground hover:bg-foreground/5 hover:text-foreground absolute top-4 right-4 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
 
           <DialogHeader className="space-y-3 px-10 pt-10 pb-7 text-left">
-            <span className="inline-flex w-fit items-center gap-2 rounded-full bg-foreground/[0.04] px-2.5 py-1 font-mono text-[9.5px] font-medium uppercase tracking-[0.2em] text-foreground/70">
-              {meta.eyebrow}
-            </span>
-            <DialogTitle className="text-[28px] font-semibold leading-[1.15] tracking-tight text-foreground">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="bg-foreground/[0.04] text-foreground/70 inline-flex items-center gap-2 rounded-full px-2.5 py-1 font-mono text-[9.5px] font-medium tracking-[0.2em] uppercase">
+                {meta.eyebrow}
+              </span>
+              <span
+                title="Pipeline-del som detta steg primärt styr"
+                className="bg-foreground text-background inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[9px] font-semibold tracking-[0.18em] uppercase"
+              >
+                {WIZARD_STEP_PIPELINE_BADGE[step]}
+              </span>
+            </div>
+            <DialogTitle className="text-foreground text-[28px] leading-[1.15] font-semibold tracking-tight">
               {WIZARD_STEP_TITLES[step]}
             </DialogTitle>
-            <DialogDescription className="max-w-xl text-[13.5px] leading-relaxed text-muted-foreground">
+            <DialogDescription className="text-muted-foreground max-w-xl text-[13.5px] leading-relaxed">
               {meta.description}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="h-px w-full bg-border/50" aria-hidden />
+          <div className="bg-border/50 h-px w-full" aria-hidden />
 
-          <div className="flex-1 overflow-y-auto px-10 py-8">
+          <div ref={contentRef} className="flex-1 overflow-y-auto px-10 py-8">
             <div className="mx-auto max-w-2xl">
-              {step === "company" ? (
-                <CompanyStep
-                  answers={answers}
-                  onChange={updateAnswers}
-                  onScrapeStateChange={setScrapeState}
-                />
-              ) : null}
-              {step === "siteType" ? (
-                <SiteTypeStep
+              {step === "foundation" ? (
+                <FoundationStep
                   answers={answers}
                   onChange={updateAnswers}
                   options={discoveryOptions}
                   source={discoveryOptionsState.source}
+                  onScrapeStateChange={setScrapeState}
                 />
               ) : null}
+              {step === "visual" ? (
+                <VisualStep answers={answers} onChange={updateAnswers} />
+              ) : null}
+              {step === "functions" ? (
+                <FunctionsStep answers={answers} onChange={updateAnswers} />
+              ) : null}
               {step === "content" ? (
-                <ContentStep
+                <ContentOrchestratorStep
                   answers={answers}
                   onChange={updateAnswers}
                   branch={branch}
                 />
               ) : null}
-              {step === "story" ? (
-                <StoryStep answers={answers} onChange={updateAnswers} />
-              ) : null}
-              {step === "pages" ? (
-                <PagesStep answers={answers} onChange={updateAnswers} />
-              ) : null}
-              {step === "assets" ? (
-                <AssetsStep answers={answers} onChange={updateAnswers} />
-              ) : null}
-              {step === "brand" ? (
-                <BrandStep answers={answers} onChange={updateAnswers} />
+              {step === "media" ? (
+                <>
+                  <MediaStep answers={answers} onChange={updateAnswers} />
+                  {/* Sista-steget transparens-block: visar exakt vilka
+                      directives backend kommer att läsa baserat på alla
+                      svar. Hjälper operatören förstå om något fält
+                      "fattas" innan de klickar Skapa sajt. */}
+                  <DirectivesPreview
+                    answers={answers}
+                    rawPrompt={initialPrompt}
+                  />
+                </>
               ) : null}
             </div>
           </div>
 
           {/* Footer — strikt, hög kontrast på primärknappen. */}
-          <div className="flex items-center justify-between gap-3 border-t border-border/60 bg-background/95 px-6 py-4">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={isFirst}
-              onClick={goBack}
-              className="h-9 px-3 text-[12.5px] font-medium text-muted-foreground hover:text-foreground"
-            >
-              ← Tillbaka
-            </Button>
+          <div className="border-border/60 bg-background/95 flex items-center justify-between gap-3 border-t px-6 py-4">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={isFirst}
+                onClick={goBack}
+                className="text-muted-foreground hover:text-foreground h-9 px-3 text-[12.5px] font-medium"
+              >
+                ← Tillbaka
+              </Button>
+              {/* Demo-knapp för utveckling. Roterar genom DEMO_PROFILES
+                  så operatören kan testa varje content-branch utan att
+                  skriva igenom alla 7 stegen. Dämpad ghost-stil med
+                  Sparkles-ikon — utan att konkurrera visuellt med
+                  primärknappen "Skapa sajt". */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={fillDemo}
+                className="text-muted-foreground hover:text-foreground h-9 gap-1.5 px-2.5 text-[12px] font-medium"
+                title="Fyll wizarden med en demo-profil för snabb testning"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Fyll demo
+              </Button>
+              {demoNotice ? (
+                <span
+                  role="status"
+                  aria-live="polite"
+                  className="hidden items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-700 sm:inline-flex dark:bg-emerald-400/10 dark:text-emerald-300"
+                >
+                  <Check className="h-3 w-3" strokeWidth={2.5} />
+                  {demoNotice}
+                </span>
+              ) : null}
+            </div>
 
             <div className="flex flex-1 items-center justify-end gap-2.5">
               {validationError ? (
@@ -439,7 +697,7 @@ export function DiscoveryWizard({
                   variant="ghost"
                   size="sm"
                   onClick={skipStep}
-                  className="h-9 px-3 text-[12.5px] font-medium text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground h-9 px-3 text-[12.5px] font-medium"
                 >
                   Hoppa över
                 </Button>
@@ -449,10 +707,21 @@ export function DiscoveryWizard({
                   type="button"
                   size="sm"
                   onClick={finish}
-                  disabled={!!validationError}
-                  className="h-9 rounded-full bg-foreground px-5 text-[12.5px] font-medium text-background shadow-sm hover:bg-foreground/90 disabled:opacity-40"
+                  disabled={!!validationError || isSubmitting}
+                  className={[
+                    "bg-foreground text-background hover:bg-foreground/90 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm disabled:opacity-40",
+                    PRIMARY_INTERACTIONS,
+                  ].join(" ")}
+                  title="⌘↵ för att skapa sajten"
                 >
-                  Skapa sajt →
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Påbörjar bygge…
+                    </>
+                  ) : (
+                    "Skapa sajt →"
+                  )}
                 </Button>
               ) : (
                 <Button
@@ -460,14 +729,140 @@ export function DiscoveryWizard({
                   size="sm"
                   onClick={goNext}
                   disabled={!!validationError}
-                  className="h-9 rounded-full bg-foreground px-5 text-[12.5px] font-medium text-background shadow-sm hover:bg-foreground/90 disabled:opacity-40"
+                  className={[
+                    "bg-foreground text-background hover:bg-foreground/90 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm disabled:opacity-40",
+                    PRIMARY_INTERACTIONS,
+                  ].join(" ")}
+                  title="⌘↵ för att fortsätta"
                 >
                   Fortsätt →
                 </Button>
               )}
+              <button
+                type="button"
+                onClick={() => setHelpOpen((prev) => !prev)}
+                aria-label="Visa tangentbordsgenvägar"
+                title="Tangentbordsgenvägar (?)"
+                className="text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] focus-visible:ring-ring/40 hidden h-7 w-7 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none sm:inline-flex"
+              >
+                <Keyboard className="h-3.5 w-3.5" aria-hidden />
+              </button>
+              <span className="text-muted-foreground hidden text-[10px] sm:inline">
+                ⌘↵
+              </span>
             </div>
           </div>
+
+          {/* Keyboard shortcuts hjälp-overlay. Toggle:as via ? eller
+              ⌘/. Light backdrop + centrerad kort. Behåller fokus
+              inom overlayen så Tab cyklar mellan stäng-knappen och
+              ev. action-element. */}
+          {helpOpen ? (
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Tangentbordsgenvägar"
+              className="bg-background/85 absolute inset-0 z-40 flex items-center justify-center p-6 backdrop-blur-sm sm:rounded-3xl"
+              onClick={(event) => {
+                if (event.target === event.currentTarget) {
+                  setHelpOpen(false);
+                }
+              }}
+            >
+              <div className="bg-card border-border/70 w-full max-w-md overflow-hidden rounded-2xl border shadow-2xl">
+                <div className="border-border/60 flex items-center justify-between border-b px-5 py-3">
+                  <div className="flex items-center gap-2">
+                    <Keyboard className="text-foreground/70 h-4 w-4" />
+                    <h3 className="text-foreground text-[14px] font-semibold tracking-tight">
+                      Tangentbordsgenvägar
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setHelpOpen(false)}
+                    aria-label="Stäng"
+                    className="text-muted-foreground hover:text-foreground rounded-md p-1 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <dl className="divide-border/40 flex flex-col divide-y">
+                  {KEYBOARD_SHORTCUTS.map((shortcut) => (
+                    <div
+                      key={shortcut.label}
+                      className="flex items-center justify-between gap-4 px-5 py-2.5"
+                    >
+                      <dt className="text-foreground/85 text-[12.5px]">
+                        {shortcut.label}
+                      </dt>
+                      <dd className="flex shrink-0 items-center gap-1">
+                        {shortcut.keys.map((key, idx) => (
+                          <span key={`${shortcut.label}-${idx}`} className="contents">
+                            {idx > 0 ? (
+                              <span className="text-muted-foreground text-[10px]">
+                                eller
+                              </span>
+                            ) : null}
+                            <kbd className="border-border/60 bg-background text-foreground/80 inline-flex h-5 min-w-5 items-center justify-center rounded border px-1.5 font-mono text-[10.5px]">
+                              {key}
+                            </kbd>
+                          </span>
+                        ))}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+                <div className="border-border/60 bg-muted/20 border-t px-5 py-2.5">
+                  <p className="text-muted-foreground text-[11px]">
+                    Tryck <kbd className="border-border/60 bg-background mx-0.5 inline-flex h-4 items-center justify-center rounded border px-1 font-mono text-[10px]">?</kbd>{" "}
+                    eller{" "}
+                    <kbd className="border-border/60 bg-background mx-0.5 inline-flex h-4 items-center justify-center rounded border px-1 font-mono text-[10px]">⌘/</kbd>{" "}
+                    när som helst för att öppna/stänga denna lista.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </section>
+
+        {/* Submit-overlay — visas ~700ms efter klick på "Skapa sajt"
+            innan onComplete kallar parent. Ger operatören tydlig
+            visuell bekräftelse att klicket registrerats och bygget
+            är på väg innan wizarden stängs. */}
+        {isSubmitting ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="bg-background/85 absolute inset-0 z-50 flex items-center justify-center backdrop-blur-sm sm:rounded-3xl"
+          >
+            <div className="flex max-w-sm flex-col items-center gap-5 px-8 text-center">
+              <div className="relative inline-flex h-14 w-14 items-center justify-center">
+                <span
+                  className="border-emerald-500/40 absolute inset-0 rounded-full border-2 motion-safe:animate-ping"
+                  aria-hidden
+                />
+                <span className="bg-emerald-500/15 absolute inset-2 rounded-full" aria-hidden />
+                <Check
+                  className="relative h-6 w-6 text-emerald-600 dark:text-emerald-400"
+                  strokeWidth={3}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-muted-foreground font-mono text-[10px] tracking-[0.22em] uppercase">
+                  Klar att bygga
+                </p>
+                <p className="text-foreground text-[16px] leading-tight font-semibold tracking-tight">
+                  Påbörjar bygge av din sajt…
+                </p>
+                <p className="text-muted-foreground text-[12px]">
+                  Pipelinen kör Discovery → Plan → Codegen → Quality
+                  Gate i bakgrunden. Du ser progress i preview-fönstret
+                  om en stund.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {/* Scrape-overlay — täcker hela popupen så operatören tydligt
             ser att wizardens fält håller på att fyllas i automatiskt
@@ -478,28 +873,28 @@ export function DiscoveryWizard({
           <div
             role="status"
             aria-live="polite"
-            className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm sm:rounded-3xl"
+            className="bg-background/80 absolute inset-0 z-50 flex items-center justify-center backdrop-blur-sm sm:rounded-3xl"
           >
             <div className="flex max-w-sm flex-col items-center gap-5 px-8 text-center">
               <div className="relative inline-flex h-14 w-14 items-center justify-center">
                 <span
-                  className="absolute inset-0 rounded-full border border-border/40"
+                  className="border-border/40 absolute inset-0 rounded-full border"
                   aria-hidden
                 />
                 <span
-                  className="absolute inset-0 animate-ping rounded-full bg-foreground/5"
+                  className="bg-foreground/5 absolute inset-0 animate-ping rounded-full"
                   aria-hidden
                 />
-                <Loader2 className="relative h-6 w-6 animate-spin text-foreground" />
+                <Loader2 className="text-foreground relative h-6 w-6 animate-spin" />
               </div>
               <div className="space-y-1.5">
-                <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                <p className="text-muted-foreground font-mono text-[10px] tracking-[0.22em] uppercase">
                   Hämtar din hemsida
                 </p>
-                <p className="text-[15px] font-medium leading-tight tracking-tight text-foreground">
+                <p className="text-foreground text-[15px] leading-tight font-medium tracking-tight">
                   {scrapeState?.url ?? "Läser innehåll…"}
                 </p>
-                <p className="text-[12px] text-muted-foreground">
+                <p className="text-muted-foreground text-[12px]">
                   Vi läser sidan och fyller i fält automatiskt. Detta tar
                   vanligtvis 15–60 sekunder beroende på sajtens storlek.
                 </p>

@@ -256,9 +256,12 @@ COMMON_WORDS = {
     "ProductsPage",
     # React / Next / shadcn-typer som dyker upp i runtime-kod
     "ReactNode", "RootLayout", "NextConfig",
+    "AdvancedDisclosure", "FunctionsSummary",
     "ButtonPrimitive", "VariantProps", "ClassValue",
     "NextRequest", "NextResponse", "ComponentProps", "ReturnType",
+    "ReadonlySet",
     "CardAction", "CardContent", "CardDescription", "CardFooter", "CardHeader", "CardTitle",
+    "ChildProcess", "CircleCheck",
     "InputPrimitive",
     # Viewser implementation-symboler (lokala UI-identifierare, inte domänbegrepp).
     # Viewser-appen ligger på apps/viewser och dessa namn bor enbart där.
@@ -355,6 +358,7 @@ COMMON_WORDS = {
     "DiscoveryWizard", "DiscoveryWizardProps", "DiscoveryPayload",
     "DiscoveryPayloadSchema",
     "CompanyStep", "SiteTypeStep", "ContentStep", "StoryStep",
+    "StoryEssentialsFields", "StoryExtrasFields",
     "PagesStep", "BrandStep",
     "SiteType", "MustHaveOption", "ScrapeState", "BuildProgressCard",
     "EcommerceContent", "RestaurantContent", "SalonContent",
@@ -392,6 +396,112 @@ COMMON_WORDS = {
     "BASE32_ALPHABET", "VISION_MODEL",
     "MIME_BY_EXT", "SYSTEM_INSTRUCTIONS",
     "UPLOADS_ROOT_DIR",
+    # Sprint 4/5/6 — viewser UI-implementation som inte är canonical
+    # domain terms. Samma behandling som DiscoveryWizard,
+    # PromptStageIndicator m.fl. ovan: lokala TS/React-symboler i
+    # apps/viewser/components/* respektive apps/viewser/lib/*.
+    #
+    # FloatingChat-uppgraderingar (errors, progress, diff):
+    # ChatMessage finns redan listad ovan (viewser ChatMessageSchema-grupp).
+    "ErrorBubble", "ErrorKind", "MessageBubble",
+    "BuildChange", "BuildChangeCategory", "CategoryLabel",
+    "KeywordRule", "ChevronUp", "ChevronDown",
+    # DiscoveryWizard-uppgraderingar (keyboard-shortcuts + submit-overlay):
+    "KeyboardShortcut", "KeyboardShortcutGroup", "KEYBOARD_SHORTCUTS",
+    # MediaStep + AI image-generator (GPT image 1.5):
+    "AIImageGeneratorDialog", "AIImageGeneratorDialogProps",
+    "AIImageGenRequest", "AIImageGenResponse", "AIImageStyle",
+    "UploadOrGenerate", "GenerateOption",
+    # Site Inspector tab + run-artefacts:
+    "BriefTab", "BriefTabProps", "PagesTab", "PagesTabProps",
+    "QualityTab", "QualityTabProps", "DossiersTab", "DossiersTabProps",
+    "DossierEntry", "DossierGroup",
+    "RunArtefactsState", "RunArtefactsBundle",
+    "FollowupBuildState", "FollowupBuildResult",
+    "QuickPromptButton", "QuickPromptButtonProps",
+    # Sprint 5 — Live token-editor i Site Inspector:
+    "TokensTab", "TokensTabProps", "TokenRow", "TokenPreview",
+    "TokenId", "TokenMessage", "TokenStateSetter",
+    "TOKEN_DEFAULTS", "TOKEN_META", "TOKEN_MESSAGE_TYPE", "TOKEN_ORDER",
+    # ui-tokens shared interaction constants:
+    "FOCUS_RING", "PRIMARY_INTERACTIONS", "SECONDARY_INTERACTIONS",
+    "CHIP_INTERACTIONS",
+    # Builder dialogs (Nivå 2 verktyg-menyn):
+    "AskAiDialog", "AskAiDialogProps", "ChatRole", "ChatTurn",
+    "ColorPickerDialog", "ColorPickerDialogProps",
+    "ScrapeUrlDialog", "ScrapeUrlDialogProps",
+    "VariantPickerDialog", "VariantPickerDialogProps",
+    "AssetUploaderDialog", "AssetUploaderDialogProps",
+    "RebuildDialog", "RebuildDialogProps",
+    "DiscoveryOption", "DiscoveryOptionsResponse",
+    "DialogId",
+    # Wizard content orchestrator + demo profiles:
+    "ContentOrchestratorStep", "DemoProfile", "DirectivesPreview",
+    # Misc viewser implementation symbols:
+    "ExternalLink", "CheckCircle2", "ErrorBoundary",
+    # Lucide icons utöver de redan listade (MapPin/ShieldCheck/PartyPopper/
+    # ShoppingBag): multi-cap icon-namn som matchar PASCAL_RE från
+    # build_site.py renderers eller wizard-stegen.
+    "RefreshCw", "ScanSearch", "RotateCcw",
+    "DuckDuckGo",
+    # Pre-existing typo i Sajtmaskin-kommentar (DiscoveryWizards i plural):
+    "DiscoveryWizards",
+    # Sprint 4/5/6 + christopher-ui regression-tail. Implementation-
+    # symboler (TS-interfaces, React-komponenter), font-namn, schema.org-
+    # typer och a11y-shorthand som inte är canonical Sajtbyggaren-
+    # vokabulär. Samma motivering som ovanstående blocks: hela listan är
+    # inom apps/viewser/components, apps/viewser/lib, build_site.py
+    # rendering och docs/.
+    "A11y", "AlertCircle", "AlertTriangle",
+    "AssetMimeType", "AssetsStepInline",
+    "BlinkMacSystemFont",
+    "BookText", "BrowserKind",
+    "BuildApiResponse", "BuildIcon",
+    "BuilderAction", "BuilderActionIcon", "BuilderActions",
+    "BuilderActionsProps", "BuilderShell", "BuilderShellProps",
+    "BusinessFamily", "BusinessFamilyId",
+    "ChatApiResponse",
+    "Check", "Fallback",
+    "FaviconPreview", "FetchState",
+    "FileJson", "FileText", "FileWarning",
+    "FloatingChat", "FloatingChatProps",
+    "FollowupBuildOptions",
+    "FoundationStep",
+    "FunctionChoice", "FunctionGroup", "FunctionGroupCard",
+    "FunctionGroupIconKey", "FunctionGroupId", "FunctionsStep",
+    "GenerateRequest",
+    "HeroLayoutGlyph", "HeroLayoutHint",
+    "IconButton",
+    "ImageIcon", "ImageMimeType", "ImagePlus", "ImagesResponse",
+    "Inter", "JetBrains",
+    "LocalBusiness",
+    "MediaStep", "MessageCircleQuestion", "MessageEvent",
+    "MessageSquare", "Metadata", "MinusCircle",
+    "MoodThumbnail", "NonNullable", "NotFound",
+    "OgImagePreview", "OpenType", "OpeningHours",
+    "PageIntentWarning", "PipelinePart",
+    "PointerEvent", "PostalAddress",
+    "ProductImage", "ProductImageColumn",
+    "PromptApiResponse",
+    "PreviewServerInfo",
+    "QualityFinding", "QuickPromptCategory", "Quote",
+    "ServerEntry",
+    "TokenAckMessage",
+    "ReactChangeEvent", "ReactKeyboardEvent", "ReactPointerEvent",
+    "RegExp", "RegExpMatchArray",
+    "RepairAction", "RoleConfig", "RoutePlanItem",
+    "RunFollowupResult",
+    "ScrapePreviewField", "SectionCard", "ServerCrash",
+    "SetStateAction", "ShieldAlert",
+    "SiteInspectorSheet", "SiteInspectorSheetProps",
+    "StylePreset", "TargetIcon", "Tester",
+    "TypographyFeelId",
+    "UseRunArtefactsResult",
+    "VercelBlobAssetStore", "VibeCard",
+    "VideoMimeType", "VideoPreview",
+    "VisualStep", "WebKit", "WhatsApp",
+    "WifiOff",
+    "WizardDirectives", "WizardMedia", "WizardVibe",
     # shadcn dialog + progress primitives (installerade via npx shadcn add)
     "DialogClose", "DialogContent", "DialogDescription", "DialogFooter",
     "DialogHeader", "DialogOverlay", "DialogPortal", "DialogPrimitive",
@@ -416,6 +526,11 @@ COMMON_WORDS = {
     "VariantHints", "VariantThemeTokenHints", "ScaffoldVariantThemeTokens",
     # Migrationsplanens prosa-rubriker för parallellspår (inte domänbegrepp)
     "Builder MVP hardening", "Viewser MVP", "Vocabulary compression",
+    # Backend handoff-prosa (docs/backend-handoff*.md) — referenser till
+    # tekniska komponenter, inte canonical termer.
+    "GPT Vision", "Project Input mapping",
+    # docs/contracts/wizard-discovery.v2.md överskrift på diff-tabell.
+    "Nytt kanal",
     # docs-base starter (PR #24): React/Nextra-symboler refererade i docs
     # men bara använda inuti `data/starters/docs-base/`. ThemeToggle är
     # lokal React-komponent; Layout är Nextra-theme-docs-symbolen som
@@ -506,6 +621,8 @@ COMMON_WORDS = {
     "Mat",  # service-namn citerat från sköldpaddssoppa-build TSX (case 4)
     "Cloud Agents",  # cursor.com-koncept som scoutorkestratorn pratar om
     "ForEach",  # PowerShell-verb i exempelkommandon
+    "AbortSignal",  # browser/Node API i local-preview-server JSDoc-prose
+    "SUPERSEDED",  # docs-banner i backend-handoff.md (versaliserat statusord)
     "Konkret content",  # gap-rubrik i 9/10-tabellen
     "Page Intent Variant B",  # proposed produktkoncept (B132-uppföljning)
     "PermissionError", "SubprocessError",  # Python builtin exception-namn

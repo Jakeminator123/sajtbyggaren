@@ -488,6 +488,328 @@ def test_brand_colors_and_logo_pass_through_to_project_input() -> None:
     assert decision.fieldSources["brand.primaryColorHex"] == "wizard"
 
 
+# ---------------------------------------------------------------------------
+# variantHint-routing — vibe-valet i wizarden styr variantId
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_variant_hint_overrides_taxonomy_default_when_known() -> None:
+    """Wizard skickar ``directives.variantHint`` = vibeId. Om det är en
+    känd variant ska ``project_input.variantId`` sättas till det,
+    oavsett vad taxonomy-defaulten säger.
+
+    Sprint B/2 (2026-05-22): utan detta block landar ~95% av trafiken
+    på ``nordic-trust`` via taxonomy oavsett vilken vibe operatören
+    valt → alla sajter ser likadana ut.
+    """
+    payload = _payload("business")  # taxonomy → nordic-trust
+    payload["directives"] = {"variantHint": "warm-craft"}
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["variantId"] == "warm-craft", (
+        "variantHint från wizarden måste override:a taxonomy-defaulten"
+    )
+    assert decision.fieldSources["variantId"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_variant_hint_rejected_when_unknown() -> None:
+    """Ogiltig variantHint från en UI-bugg ska INTE korrumpera builden.
+
+    Whitelist-validering mot disk-baserad ``_known_variant_ids``
+    skyddar mot att en framtida wizard-bug skickar t.ex.
+    ``"experimental-x"`` som ingen variant finns för — då faller vi
+    tillbaka på taxonomy-defaulten.
+    """
+    payload = _payload("business")
+    payload["directives"] = {"variantHint": "does-not-exist"}
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["variantId"] == "nordic-trust", (
+        "okänd variantHint får inte över skriva taxonomy-defaulten"
+    )
+    assert decision.fieldSources["variantId"] == "taxonomy"
+
+
+@pytest.mark.tooling
+def test_variant_hint_missing_keeps_taxonomy_default() -> None:
+    """När ``directives.variantHint`` saknas helt → taxonomy gäller."""
+    payload = _payload("business")
+    payload["directives"] = {}
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["variantId"] == "nordic-trust"
+    assert decision.fieldSources["variantId"] == "taxonomy"
+
+
+@pytest.mark.tooling
+def test_variant_hint_supports_all_local_service_business_variants() -> None:
+    """Alla 5 local-service-business-variants måste vara routebara.
+
+    Säkerhetsnät: när vi lägger en ny variant JSON på disk ska den
+    automatiskt plockas upp av ``_known_variant_ids()``-cachen och
+    bli giltig som variantHint. Detta test fångar regressioner där
+    cachen tappar variants eller scannar fel mapp.
+    """
+    from packages.generation.discovery.resolve import _known_variant_ids
+
+    known = _known_variant_ids()
+    expected = {
+        "nordic-trust",
+        "warm-craft",
+        "clinical-calm",
+        "midnight-counsel",
+        "pulse-fit",
+    }
+    missing = expected - known
+    assert not missing, (
+        f"local-service-business variants saknas i whitelist: {missing}"
+    )
+
+
+@pytest.mark.tooling
+def test_variant_hint_supports_all_ecommerce_lite_variants() -> None:
+    """Alla 5 ecommerce-lite-variants måste vara routebara.
+
+    Speglar test ovan för andra scaffold-familjen.
+    """
+    from packages.generation.discovery.resolve import _known_variant_ids
+
+    known = _known_variant_ids()
+    expected = {
+        "clean-store",
+        "earth-wellness",
+        "mono-tech",
+        "noir-editorial",
+        "street-vivid",
+    }
+    missing = expected - known
+    assert not missing, (
+        f"ecommerce-lite variants saknas i whitelist: {missing}"
+    )
+
+
+@pytest.mark.tooling
+def test_variant_hint_works_for_distinct_vibes() -> None:
+    """5 olika vibe-val ska ge 5 olika variantIds — annars är hela
+    Sprint B/2 meningslös ("alla sajter ser likadana ut").
+
+    Mappar wizardens VIBE_OPTIONS-id:n 1:1 mot variantId i project_input.
+    """
+    vibes_to_test = [
+        "warm-craft",
+        "clinical-calm",
+        "midnight-counsel",
+        "pulse-fit",
+        "nordic-trust",
+    ]
+    results: dict[str, str] = {}
+    for vibe in vibes_to_test:
+        payload = _payload("business")
+        payload["directives"] = {"variantHint": vibe}
+        project_input, _decision = resolve_discovery(
+            raw_prompt="test",
+            payload=payload,
+            project_input_candidate=_candidate_project_input(),
+        )
+        results[vibe] = project_input["variantId"]
+    assert results == {vibe: vibe for vibe in vibes_to_test}, (
+        f"varje vibe måste mappas 1:1 till variantId, fick: {results}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Asset-tombstones — borttagna bilder rensas från Project Input
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_explicit_null_logo_clears_existing_brand_logo() -> None:
+    """Operatören tar bort logo i wizarden → ``project_input.brand.logo`` rensas.
+
+    Reproducerar bugen där borttagna bilder dykte upp igen vid rebuild
+    (2026-05-22). Wizard skickar ``assets.logo = None`` som tombstone;
+    resolvern måste pop:a logo från brand-blocket.
+    """
+    candidate = _candidate_project_input()
+    candidate["brand"] = {
+        "primaryColorHex": "#111111",
+        "logo": {
+            "assetId": "01HOLDLOGO000000000000000",
+            "filename": "old-logo.webp",
+            "mimeType": "image/webp",
+            "sizeBytes": 999,
+            "role": "logo",
+        },
+    }
+    payload = _payload("business", assets={"logo": None})
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+    assert "logo" not in project_input.get("brand", {}), (
+        "borttagen logo måste rensas — annars kopierar build_site.py "
+        "med den gamla bilden vid rebuild (ghost asset-buggen)"
+    )
+    assert project_input["brand"]["primaryColorHex"] == "#111111", (
+        "andra brand-fält ska inte påverkas av logo-tombstone"
+    )
+    assert decision.fieldSources["brand.logo"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_explicit_null_hero_clears_existing_brand_hero() -> None:
+    """``assets.heroImage = None`` rensar ``project_input.brand.heroImage``."""
+    candidate = _candidate_project_input()
+    candidate["brand"] = {
+        "heroImage": {
+            "assetId": "01HOLDHERO000000000000000",
+            "filename": "old-hero.webp",
+            "mimeType": "image/webp",
+            "sizeBytes": 999,
+            "role": "hero",
+        },
+    }
+    payload = _payload("business", assets={"heroImage": None})
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+    assert "heroImage" not in project_input.get("brand", {})
+    assert decision.fieldSources["brand.heroImage"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_empty_gallery_clears_existing_gallery() -> None:
+    """``assets.gallery = []`` rensar ``project_input.gallery`` helt."""
+    candidate = _candidate_project_input()
+    candidate["gallery"] = [
+        {
+            "assetId": "01HOLDGAL0000000000000000",
+            "filename": "old1.webp",
+            "mimeType": "image/webp",
+            "sizeBytes": 999,
+            "role": "gallery",
+        },
+    ]
+    payload = _payload("business", assets={"gallery": []})
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+    assert "gallery" not in project_input, (
+        "tom gallery-lista måste rensa project_input.gallery — annars "
+        "kopierar build_site.py med borttagna galleribilder"
+    )
+    assert decision.fieldSources["gallery"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_missing_assets_key_leaves_existing_brand_untouched() -> None:
+    """När wizard inte rör assets alls (key saknas) ska existing logo bevaras.
+
+    Detta är skillnaden mellan "operatören rörde inte fältet" (key
+    saknas → no-op) och "operatören tog bort bilden" (key=None →
+    tombstone, rensa). Skydd mot regression där bara key-check skulle
+    triggas av tom payload.
+    """
+    candidate = _candidate_project_input()
+    candidate["brand"] = {
+        "logo": {
+            "assetId": "01HKEEPLOGO00000000000000",
+            "filename": "keep.webp",
+            "mimeType": "image/webp",
+            "sizeBytes": 999,
+            "role": "logo",
+        },
+    }
+    payload = _payload("business")
+    project_input, _decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+    assert project_input["brand"]["logo"]["assetId"] == "01HKEEPLOGO00000000000000"
+
+
+@pytest.mark.tooling
+def test_explicit_null_media_favicon_clears_existing_media() -> None:
+    """``directives.media.favicon = None`` rensar ``project_input.media.favicon``."""
+    candidate = _candidate_project_input()
+    candidate["media"] = {
+        "favicon": {
+            "assetId": "01HOLDFAV0000000000000000",
+            "filename": "old-fav.png",
+            "mimeType": "image/png",
+            "sizeBytes": 999,
+            "role": "favicon",
+        },
+        "ogImage": {
+            "assetId": "01HKEEPOG0000000000000000",
+            "filename": "keep-og.png",
+            "mimeType": "image/png",
+            "sizeBytes": 999,
+            "role": "ogImage",
+        },
+    }
+    payload = _payload("business")
+    payload["directives"] = {"media": {"favicon": None}}
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+    media = project_input.get("media", {})
+    assert "favicon" not in media, (
+        "favicon-tombstone måste rensa project_input.media.favicon"
+    )
+    assert media.get("ogImage", {}).get("assetId") == "01HKEEPOG0000000000000000", (
+        "ogImage rörs inte av wizarden → ska bevaras"
+    )
+    assert decision.fieldSources["media"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_all_media_roles_null_pops_media_block_entirely() -> None:
+    """När alla media-roller är None ska hela ``media``-blocket försvinna."""
+    candidate = _candidate_project_input()
+    candidate["media"] = {
+        "favicon": {
+            "assetId": "01HFAV00000000000000000000",
+            "filename": "f.png",
+            "mimeType": "image/png",
+            "sizeBytes": 999,
+            "role": "favicon",
+        },
+    }
+    payload = _payload("business")
+    payload["directives"] = {
+        "media": {"favicon": None, "ogImage": None, "backgroundVideo": None}
+    }
+    project_input, _decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+    assert "media" not in project_input, (
+        "tomt media-block ska poppas helt så build_site.py inte ser "
+        "ett vilseledande tomt objekt"
+    )
+
+
 @pytest.mark.tooling
 def test_apply_discovery_overrides_wrapper_keeps_backward_compat_shape() -> None:
     """Pre-B121-shape: empty Project Input + assets-only payload."""

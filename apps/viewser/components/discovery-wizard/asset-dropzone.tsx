@@ -20,7 +20,16 @@ import type { AssetRef, AssetRole } from "@/lib/asset-store/types";
  * Stylen är minimalistisk för att inte konkurrera med övriga wizardsteg.
  */
 
-const ACCEPT_ATTR = "image/png,image/jpeg,image/webp,image/svg+xml";
+const IMAGE_ACCEPT_ATTR = "image/png,image/jpeg,image/webp,image/svg+xml";
+const VIDEO_ACCEPT_ATTR = "video/mp4,video/webm";
+
+/**
+ * Roles som accepterar video-uploads. Vid render avgör vi om
+ * <input accept> ska peka mot image- eller video-mimes så browser:s
+ * native file-picker pre-filtrerar rätt. Drag-and-drop-flödet använder
+ * samma whitelist för att inte krascha sharp downstream.
+ */
+const VIDEO_ROLES = new Set<AssetRole>(["backgroundVideo"]);
 
 export type AssetDropzoneProps = {
   role: AssetRole;
@@ -47,6 +56,8 @@ export function AssetDropzone({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const acceptVideo = VIDEO_ROLES.has(role);
+  const acceptAttr = acceptVideo ? VIDEO_ACCEPT_ATTR : IMAGE_ACCEPT_ATTR;
 
   const uploadFiles = useCallback(
     async (files: File[]) => {
@@ -101,13 +112,14 @@ export function AssetDropzone({
     (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
       setDragging(false);
+      const prefix = acceptVideo ? "video/" : "image/";
       const files = Array.from(event.dataTransfer.files).filter((f) =>
-        f.type.startsWith("image/"),
+        f.type.startsWith(prefix),
       );
       const limited = mode === "single" ? files.slice(0, 1) : files;
       void uploadFiles(limited);
     },
-    [mode, uploadFiles],
+    [acceptVideo, mode, uploadFiles],
   );
 
   return (
@@ -139,7 +151,7 @@ export function AssetDropzone({
         <input
           ref={inputRef}
           type="file"
-          accept={ACCEPT_ATTR}
+          accept={acceptAttr}
           multiple={mode === "multi"}
           onChange={onInputChange}
           className="sr-only"

@@ -123,6 +123,11 @@ export function PromptBuilder({
    */
   const [wizardOpen, setWizardOpen] = useState(false);
   const [pendingPrompt, setPendingPrompt] = useState("");
+  // Wizard session key — bumpas varje gång operatören öppnar wizarden
+  // så ``DiscoveryWizard`` remountas med fresh state (answers, stepIndex,
+  // isSubmitting). Etablerat mönster i kodbasen istället för set-state-
+  // in-effect (B3+B4 i scout-review 2026-05-24).
+  const [wizardSession, setWizardSession] = useState(0);
   const stageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -261,6 +266,7 @@ export function PromptBuilder({
     }
     setPendingPrompt(cleaned);
     setError(null);
+    setWizardSession((n) => n + 1);
     setWizardOpen(true);
   }
 
@@ -308,6 +314,7 @@ export function PromptBuilder({
   return (
     <>
       <DiscoveryWizard
+        key={wizardSession}
         open={wizardOpen}
         onOpenChange={setWizardOpen}
         initialPrompt={pendingPrompt}
