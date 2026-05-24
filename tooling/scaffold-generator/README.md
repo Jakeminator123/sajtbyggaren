@@ -14,7 +14,21 @@ python tooling/scaffold-generator/generate.py restaurant-hospitality
 # Exit code 0 = all files written and valid
 ```
 
-Re-running with the same spec is **idempotent** — files are overwritten in place. This is intentional so iteration on a spec rewrites the scaffold deterministically.
+Re-running with the same spec **overwrites every generated file in place** (idempotent for unchanged specs, destructive for handedited scaffolds). See the next section for the source-of-truth contract.
+
+## Source-of-truth contract
+
+A spec is a **bootstrap seed**, not a live source of truth. The intended lifecycle is:
+
+1. Author a spec under `spec/<id>.json`.
+2. Run `generate.py <id>` once to produce the initial scaffold skeleton under `packages/generation/orchestration/scaffolds/<id>/`.
+3. Hand-edit the generated files during PR review and follow-up batches — section IDs may be renamed, `compatible-dossiers.recommended` may be expanded as new dossiers land, variants may be added.
+4. **After step 3, the on-disk scaffold files are authoritative**; the spec is a historical record of the initial seed.
+
+> [!WARNING]
+> The generator has **no drift detection or three-way merge**. Re-running `generate.py <id>` on a hand-edited scaffold will silently overwrite handedits with stale spec content and leave new variant files orphaned (they are never deleted by the generator). Update the spec to match the new disk state *before* re-running, or do not re-run at all.
+
+Empirically, the `restaurant-hospitality` spec was already out of sync with its scaffold after the Week 1 batch 2 + batch 3 follow-ups (section `opening-hours` was renamed to `hours-block`, `compatible-dossiers.recommended` grew from 1 → 5 dossiers, a 4th `midnight-bar` variant was added). The spec has been re-synced to the post-batch-3 disk state as a one-shot defensive update so that an accidental `generate.py restaurant-hospitality` run does not regress those decisions, but the long-term contract above still applies.
 
 ## Spec format
 
@@ -73,6 +87,8 @@ python tooling/scaffold-generator/generate.py --check restaurant-hospitality
 ```
 
 `--check` runs the generator in dry-run mode: it builds the files in memory, validates against schemas, but does NOT write to disk. Exit code 0 = spec is valid and would produce schema-valid output.
+
+`--check` does NOT verify that the generated output matches the existing files on disk — it only validates the spec against schemas. A drift-detection mode (compare generated output vs. disk, exit non-zero on any difference) would be useful for teams that want to keep spec = disk strictly aligned (Strategy A); it is intentionally not built today because the project follows Strategy B per the source-of-truth contract above.
 
 ## Why JSON spec instead of YAML
 
