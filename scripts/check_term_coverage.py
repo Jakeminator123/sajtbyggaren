@@ -679,6 +679,46 @@ COMMON_WORDS = {
     # / ``Calendly``-equivalents already used — third-party SaaS names,
     # not internal domain terms.
     "Bokadirekt", "BookEden", "Calendly", "Caspeco", "Resmio", "SendGrid",
+    # Week 1 batch 2 (2026-05-24) — four new soft Dossiers under
+    # packages/generation/orchestration/dossiers/soft/:
+    # image-gallery, opening-hours, reviews-display, map-embed. The names
+    # below are local TypeScript implementation symbols inside dossier
+    # instructions.md code skeletons (all Server Components, no client
+    # JS). Same treatment as the menu-display/booking-cta family above —
+    # React component / interface identifiers shown in code examples, not
+    # canonical domain terms. Canonical capability slugs live in
+    # governance/policies/capability-map.v1.json.
+    "ImageGallery", "ImageGalleryProps", "GalleryImage",
+    "OpeningHoursDay", "OpeningHoursSpan", "OpeningHoursProps",
+    "ReviewsDisplay", "ReviewsDisplayProps", "ReviewCard",
+    "ReviewItem", "ReviewSource",
+    "MapEmbed", "MapEmbedProps", "MapAddress", "DirectionsLink",
+    # Swedish weekday full-form labels used inside the opening-hours
+    # dossier as the WEEKDAY_LABELS_SV record values. Not domain terms;
+    # they are localised UI strings rendered to visitors. "Måndag",
+    # "Onsdag", "Torsdag", "Fredag", "Lördag", "Söndag" are all already
+    # COMMON_WORDS via existing wizard copy; "Tisdag" and the
+    # abbreviation "Tis" used in the anti-pattern example are added
+    # here for the same reason.
+    "Tisdag", "Tis",
+    # schema.org type names referenced verbatim in opening-hours and
+    # reviews-display instructions because they show up in JSON-LD
+    # payloads ("@type": "OpeningHoursSpecification" etc.). External
+    # ontology identifiers, mirrors the existing schema.org "Recipe",
+    # "Article", "LocalBusiness" treatment elsewhere.
+    "OpeningHoursSpecification", "AggregateRating", "Review",
+    # External review platforms referenced as examples of valid
+    # ``source`` values in reviews-display instructions. Same SaaS-name
+    # category as Bokadirekt/Calendly above.
+    "TripAdvisor",
+    # OpenStreetMap is the default no-key map provider used by the
+    # map-embed dossier; mirrors OpenAI / Stripe / Calendly external
+    # service names already in the allowlist.
+    "OpenStreetMap",
+    # English form-state words that show up in opening-hours examples
+    # (anti-pattern: "Closed" as a bare word). Common UI vocabulary,
+    # not a domain term.
+    "Closed",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
