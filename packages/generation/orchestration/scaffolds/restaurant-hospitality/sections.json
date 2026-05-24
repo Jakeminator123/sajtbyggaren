@@ -71,7 +71,7 @@
   "contact": {
     "requiredSections": [
       "address-and-map",
-      "opening-hours",
+      "hours-block",
       "contact-info"
     ],
     "optionalSections": [

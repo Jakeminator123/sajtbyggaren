@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../../../../governance/schemas/variant.schema.json",
+  "id": "midnight-bar",
+  "enabled": true,
+  "label": "Midnight Bar",
+  "description": "Late-night, low-lit visual direction for cocktail bars, wine bars, speakeasies and dinner-only venues that open after dark. Near-black backgrounds with brushed-brass accents, tight letter-spacing on the display face and minimal radii evoke marble counters, amber bottles and a candle on every table. Intentionally restrained motion so the dimness reads as confidence rather than as a missing-asset glitch.",
+  "tokens": {
+    "color": {
+      "background": "#0e0b0a",
+      "foreground": "#f1e7d3",
+      "muted": "#867362",
+      "border": "#2a2220",
+      "primary": "#c39247",
+      "primaryForeground": "#0e0b0a",
+      "accent": "#7a1f24",
+      "accentForeground": "#f1e7d3"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.333
+    },
+    "radius": {
+      "sm": "0.125rem",
+      "md": "0.25rem",
+      "lg": "0.5rem"
+    },
+    "spacing": {
+      "section": "6rem",
+      "container": "min(68rem, 92vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "moody",
+      "intimate",
+      "after-dark",
+      "refined",
+      "candlelit",
+      "grown-up"
+    ]
+  }
+}
