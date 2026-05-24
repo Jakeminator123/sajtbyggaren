@@ -11,10 +11,15 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.ai_bug_review import (  # noqa: E402
     COMMENT_MARKER,
+    GITHUB_ACTIONS_BOT_LOGIN,
     MAX_DIFF_CHARS,
     Finding,
+    collect_diff,
     extract_json_array,
+    github_api_get_paginated,
+    is_actions_bot_comment,
     normalize_findings,
+    post_pr_comment,
     render_markdown,
     run_openai_review,
     truncate_diff,
@@ -123,3 +128,117 @@ def test_run_openai_review_uses_configured_model(
     assert raw == "[]"
     assert calls[0] == {"api_key": "test-key"}
     assert calls[1]["model"] == "gpt-test-review"
+
+
+def test_collect_diff_uses_full_push_range(monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_ref_exists(ref: str) -> bool:
+        return ref == "before-sha"
+
+    def fake_run_git(args: list[str]) -> str:
+        calls.append(args)
+        return "diff"
+
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "push")
+    monkeypatch.setattr("scripts.ai_bug_review.git_ref_exists", fake_ref_exists)
+    monkeypatch.setattr("scripts.ai_bug_review.run_git", fake_run_git)
+
+    diff = collect_diff({"before": "before-sha", "after": "after-sha"})
+
+    assert diff == "diff"
+    assert calls == [["diff", "before-sha..after-sha"]]
+
+
+def test_collect_diff_falls_back_when_before_sha_is_missing(monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_ref_exists(ref: str) -> bool:
+        return ref == "after-sha^"
+
+    def fake_run_git(args: list[str]) -> str:
+        calls.append(args)
+        return "fallback diff"
+
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "push")
+    monkeypatch.setattr("scripts.ai_bug_review.git_ref_exists", fake_ref_exists)
+    monkeypatch.setattr("scripts.ai_bug_review.run_git", fake_run_git)
+
+    diff = collect_diff({"before": "missing-before", "after": "after-sha"})
+
+    assert diff == "fallback diff"
+    assert calls == [["diff", "after-sha^..after-sha"]]
+
+
+def test_github_api_get_paginated_reads_all_pages(monkeypatch) -> None:
+    urls: list[str] = []
+
+    def fake_request(method: str, url: str, token: str, payload=None):
+        urls.append(url)
+        if url.endswith("page=1"):
+            return [{"id": index} for index in range(100)]
+        if url.endswith("page=2"):
+            return [{"id": 100}]
+        return []
+
+    monkeypatch.setattr(
+        "scripts.ai_bug_review.github_api_request",
+        fake_request,
+    )
+
+    comments = github_api_get_paginated("https://api.example/comments", "token")
+
+    assert len(comments) == 101
+    assert urls == [
+        "https://api.example/comments?per_page=100&page=1",
+        "https://api.example/comments?per_page=100&page=2",
+    ]
+
+
+def test_is_actions_bot_comment_requires_actions_bot_user() -> None:
+    assert is_actions_bot_comment(
+        {"user": {"login": GITHUB_ACTIONS_BOT_LOGIN}}
+    )
+    assert not is_actions_bot_comment({"user": {"login": "jakob"}})
+
+
+def test_post_pr_comment_does_not_update_human_marker_comment(monkeypatch) -> None:
+    calls: list[tuple[str, str, dict[str, object] | None]] = []
+    event = {"pull_request": {"number": 67}}
+    human_comment = {
+        "body": COMMENT_MARKER,
+        "url": "https://api.example/comments/1",
+        "user": {"login": "jakob"},
+    }
+
+    def fake_paginated(url: str, token: str):
+        return [human_comment]
+
+    def fake_request(
+        method: str,
+        url: str,
+        token: str,
+        payload: dict[str, object] | None = None,
+    ):
+        calls.append((method, url, payload))
+        return None
+
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
+    monkeypatch.setenv("GITHUB_TOKEN", "token")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_API_URL", "https://api.example")
+    monkeypatch.setattr(
+        "scripts.ai_bug_review.github_api_get_paginated",
+        fake_paginated,
+    )
+    monkeypatch.setattr("scripts.ai_bug_review.github_api_request", fake_request)
+
+    post_pr_comment(event, "review body")
+
+    assert calls == [
+        (
+            "POST",
+            "https://api.example/repos/owner/repo/issues/67/comments",
+            {"body": "review body"},
+        )
+    ]

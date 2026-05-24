@@ -25,6 +25,7 @@ from urllib.request import Request, urlopen
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 COMMENT_MARKER = "<!-- sajtbyggaren-ai-bug-review -->"
+GITHUB_ACTIONS_BOT_LOGIN = "github-actions[bot]"
 MAX_DIFF_CHARS = 120_000
 
 
@@ -48,6 +49,16 @@ def run_git(args: list[str]) -> str:
     return result.stdout
 
 
+def git_ref_exists(ref: str) -> bool:
+    result = subprocess.run(
+        ["git", "cat-file", "-e", f"{ref}^{{commit}}"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0
+
+
 def load_event() -> dict[str, Any]:
     event_path = os.environ.get("GITHUB_EVENT_PATH")
     if not event_path:
@@ -68,10 +79,20 @@ def collect_diff(event: dict[str, Any]) -> str:
 
     before = event.get("before")
     after = event.get("after") or os.environ.get("GITHUB_SHA", "HEAD")
-    if before and not before.startswith("0000000"):
-        return run_git(["diff", before, after])
+    if before and not before.startswith("0000000") and git_ref_exists(before):
+        return run_git(["diff", f"{before}..{after}"])
 
-    return run_git(["diff", "HEAD~1", "HEAD"])
+    if git_ref_exists(f"{after}^"):
+        return run_git(["diff", f"{after}^..{after}"])
+
+    if git_ref_exists("origin/main"):
+        return run_git(["diff", f"origin/main...{after}"])
+
+    raise subprocess.CalledProcessError(
+        returncode=1,
+        cmd=["git", "diff", "<fallback>", after],
+        stderr="could not resolve a safe diff base",
+    )
 
 
 def truncate_diff(diff: str) -> tuple[str, bool]:
@@ -245,7 +266,9 @@ def append_step_summary(markdown: str) -> None:
         handle.write("\n")
 
 
-def github_api_request(method: str, url: str, token: str, payload: dict[str, Any] | None = None) -> Any:
+def github_api_request(
+    method: str, url: str, token: str, payload: dict[str, Any] | None = None
+) -> Any:
     body = json.dumps(payload).encode("utf-8") if payload is not None else None
     request = Request(
         url,
@@ -263,6 +286,28 @@ def github_api_request(method: str, url: str, token: str, payload: dict[str, Any
     return json.loads(response_body) if response_body else None
 
 
+def github_api_get_paginated(url: str, token: str) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    separator = "&" if "?" in url else "?"
+    page = 1
+    while True:
+        page_url = f"{url}{separator}per_page=100&page={page}"
+        page_items = github_api_request("GET", page_url, token)
+        if not isinstance(page_items, list) or not page_items:
+            return items
+        items.extend(
+            item for item in page_items if isinstance(item, dict)
+        )
+        if len(page_items) < 100:
+            return items
+        page += 1
+
+
+def is_actions_bot_comment(comment: dict[str, Any]) -> bool:
+    user = comment.get("user")
+    return isinstance(user, dict) and user.get("login") == GITHUB_ACTIONS_BOT_LOGIN
+
+
 def post_pr_comment(event: dict[str, Any], markdown: str) -> None:
     if github_event_name() != "pull_request":
         return
@@ -278,10 +323,10 @@ def post_pr_comment(event: dict[str, Any], markdown: str) -> None:
     comments_url = f"{api_url}/repos/{repo}/issues/{issue_number}/comments"
 
     try:
-        comments = github_api_request("GET", comments_url, token)
+        comments = github_api_get_paginated(comments_url, token)
         for comment in comments:
             body = comment.get("body", "")
-            if COMMENT_MARKER in body:
+            if COMMENT_MARKER in body and is_actions_bot_comment(comment):
                 github_api_request("PATCH", comment["url"], token, {"body": markdown})
                 return
         github_api_request("POST", comments_url, token, {"body": markdown})
