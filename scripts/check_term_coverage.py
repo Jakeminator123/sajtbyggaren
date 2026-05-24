@@ -431,6 +431,12 @@ COMMON_WORDS = {
     # GAP-viewser-variant-live-preview — Variants-tab i Site Inspector:
     "VariantsTab", "VariantsTabProps", "VariantCard", "VariantSummary",
     "EmptyState",
+    # GAP-viewser-wizard-first-impression — rikare foundation+visual UI:
+    "FamilyCard", "FoundationSummary", "SummaryRow",
+    "PayloadAlignmentPopover", "ContextChips", "ContextChip",
+    "VibeMicroPreview", "VibeSwatchRow",
+    # Lucide-icon-namn använda i samma komponenter:
+    "PaintBucket",
     # ui-tokens shared interaction constants:
     "FOCUS_RING", "PRIMARY_INTERACTIONS", "SECONDARY_INTERACTIONS",
     "CHIP_INTERACTIONS",
