@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -178,6 +179,19 @@ def test_candidate_actions_use_candidate_directories(
     assert captured_dossier["output_dir"] == building_blocks.DOSSIER_CANDIDATES_DIR
     assert "packages/generation/orchestration" not in str(captured_variant["output_dir"])
     assert "packages/generation/orchestration" not in str(captured_dossier["output_dir"])
+
+
+def test_backoffice_control_plane_renders_industry_coverage_before_asset_graph() -> None:
+    source = inspect.getsource(building_blocks.view_control_plane)
+
+    assert hasattr(building_blocks, "_render_industry_coverage")
+    assert "Branschtäckning" in inspect.getsource(building_blocks._render_industry_coverage)
+    assert source.index("_render_sni_discovery_mapping()") < source.index(
+        "_render_industry_coverage()"
+    )
+    assert source.index("_render_industry_coverage()") < source.index(
+        "_render_asset_graph()"
+    )
 
 
 def test_industry_coverage_helpers_are_read_only(
