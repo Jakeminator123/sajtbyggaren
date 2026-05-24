@@ -55,9 +55,30 @@ No new backend dependencies introduced by batch 3 — `faq-accordion`, `pricing-
 
 ## What is NOT yet wired (the runtime gap this doc exists for)
 
-Three hardcoded lock-ins in the codegen layer prevent the new scaffold from rendering. None of them are bugs introduced by this PR — they are existing assumptions baked in when the runtime supported exactly 2 scaffolds. Now we want 6, so they need to be relaxed.
+Three hardcoded lock-ins in the codegen layer prevented the new scaffold from rendering when this doc was first written. None of them were bugs introduced by this PR — they were existing assumptions baked in when the runtime supported exactly 2 scaffolds.
+
+### Status after PR #68 post-review fixes (2026-05-25)
+
+In response to reviewer feedback on PR #68, two of the three lock-ins below have been closed inside this PR as explicit `[scope-leak]` commits with operator approval:
+
+| Gap | Status | Closed by |
+|---|---|---|
+| #2 `SCAFFOLD_TO_STARTER` + `_DEFAULT_VARIANT_BY_SCAFFOLD` | resolved | `plan.py` 1+1 entries for `restaurant-hospitality` |
+| Wiring touch in `_PAGE_TO_CAPABILITY` + `_CAPABILITY_ALIASES` | resolved | `resolve.py` 3 dict updates + 3 alias entries (`faq`→`faq-section`, `map`→`location`, `testimonials`→`reviews`) |
+| #1 `_RUNTIME_SCAFFOLD_HINTS` whitelist | intentionally deferred | not added — see note below |
+| #3 `write_pages` route-id dispatch (Path B section-driven renderer) | still open | Jakob runtime PR |
+
+**Why `_RUNTIME_SCAFFOLD_HINTS` is intentionally deferred:** Adding `restaurant-hospitality` to that whitelist would route operator scaffold-hints (and Backoffice discovery target-mappings) at restaurant, but `write_pages` cannot yet render `/meny` or `/bokning` routes. Adding the hint without #3 would convert today's clean planner-side `RuntimeError` into a noisier "first route id has no renderer" `SystemExit` at build time without delivering any user value. The hint should land in the same PR as the section-renderer registry so the wizard, planner and builder all flip green together.
+
+**Why we did close #2 + the wiring touch:** Both are pure dispatch-table additions with no runtime-side dependency on the renderer work. `SCAFFOLD_TO_STARTER` was the actual blocker the reviewer flagged — `restaurant-hospitality` being `enabled: true` in `scaffold-contract.v1.json` while missing from the starter map could crash `produce_site_plan()` if any pinned-scaffold or real-LLM call selected it. Same logic for the `_PAGE_TO_CAPABILITY` mismatch — `faq-section` / `location` / `reviews` were registered in `capability-map.v1.json` but the wizard label → capability lookup still emitted the unregistered legacy slugs, so the dossier-activation path was effectively gated behind a broken map.
+
+### Original gap description
+
+Each lock-in is still documented below for context, even where it has now been closed; the renderer section (#3) is the live work item for Jakob's runtime PR.
 
 ### 1. `_RUNTIME_SCAFFOLD_HINTS` whitelist
+
+> Status: intentionally deferred to Jakob runtime PR — see the status table above for rationale.
 
 Currently in `packages/generation/discovery/resolve.py:654`:
 
@@ -85,6 +106,8 @@ _RUNTIME_SCAFFOLD_HINTS: dict[str, tuple[str, str, str]] = {
 Default variant choice (`warm-bistro`) matches what feels most universally on-brand for an unspecified restaurant brief. Test `tests/test_discovery_resolver.py` will need a new fixture for the scaffold hint.
 
 ### 2. `SCAFFOLD_TO_STARTER` map
+
+> Status: resolved in PR #68 post-review commits (2026-05-25) — entry added to both `SCAFFOLD_TO_STARTER` and `_DEFAULT_VARIANT_BY_SCAFFOLD` as `[scope-leak]`.
 
 Currently in `packages/generation/planning/plan.py:64`:
 
@@ -291,7 +314,9 @@ Before merging the runtime extension, please confirm:
 
 ## Small wiring touch in `_PAGE_TO_CAPABILITY` (resolve.py)
 
-Week 1 batch 2 added four new capability slugs (`gallery`, `hours`, `reviews`, `location`) with real dossiers. The existing wizard-page-label → capability mapping in `packages/generation/discovery/resolve.py:88` (`_PAGE_TO_CAPABILITY`) already maps `"Bildgalleri" → "gallery"` and `"Meny / Matsedel" → "menu"` — so those wizard pages now auto-route to a real dossier without further changes. Two existing entries are misaligned with the new clean capability names and would benefit from an update in the same PR that adds the whitelist entries:
+> Status: resolved in PR #68 post-review commits (2026-05-25) — both `_PAGE_TO_CAPABILITY` and `_CAPABILITY_ALIASES` updated as `[scope-leak]`. `faq`/`map`/`testimonials` remain as legacy aliases pointing to the new canonical slugs so older briefModel/Project-Input payloads still route correctly.
+
+Week 1 batch 2 added four new capability slugs (`gallery`, `hours`, `reviews`, `location`) with real dossiers. The existing wizard-page-label → capability mapping in `packages/generation/discovery/resolve.py:88` (`_PAGE_TO_CAPABILITY`) already maps `"Bildgalleri" → "gallery"` and `"Meny / Matsedel" → "menu"` — so those wizard pages now auto-route to a real dossier without further changes. Two existing entries were misaligned with the new clean capability names and have now been updated:
 
 | Wizard page label | Currently maps to | Should map to | Reason |
 |---|---|---|---|
