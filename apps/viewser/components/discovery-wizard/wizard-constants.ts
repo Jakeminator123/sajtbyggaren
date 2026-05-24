@@ -11,7 +11,7 @@
  *   - `WIZARD_CATEGORIES` (25 st) → behålls för sub-specialisering
  *     (chip-rad under familje-valet) + governance-fallback i
  *     `discovery-options.ts`.
- *   - `VIBE_OPTIONS` (10 st) → driver Variant. Steg 2 visar bara de
+ *   - `VIBE_OPTIONS` (14 st) → driver Variant. Steg 2 visar bara de
  *     5 vibes som är kompatibla med vald scaffold.
  *   - `FUNCTION_GROUPS` (5 grupper × N chips) → driver Dossier-
  *     kapabiliteter + sid-routes. Ersätter den platta `MUST_HAVE_OPTIONS`-
@@ -252,10 +252,14 @@ export function branchForFamily(family: BusinessFamilyId): ContentBranch {
 }
 
 /**
- * 10 vibes — de faktiska Variants som finns på disk i
+ * 14 vibes — de faktiska Variants som finns på disk i
  * `packages/generation/orchestration/scaffolds/<id>/variants/`. Varje vibe
  * tillhör ett scaffold och har en preview-färg + ord som beskriver känslan.
- * Wizardens steg 2 visar bara de 5 som tillhör det valda scaffoldet.
+ * Wizardens steg 2 visar bara de som tillhör det valda scaffoldet (7 för
+ * local-service-business, 7 för ecommerce-lite efter Week 1 batch 3
+ * 2026-05-24 utbyggnaden). Restaurant-hospitality-varianter exponeras
+ * först när scaffolden runtime-aktiveras (se docs/scaffold-runtime-
+ * extension-needed.md).
  */
 export type Vibe = {
   id: string;
@@ -368,6 +372,46 @@ export const VIBE_OPTIONS: Vibe[] = [
     accentSwatch: "#facc15",
     background: "#fff7ed",
     defaultTypographyFeel: "geometric",
+  },
+  {
+    id: "sunrise-startup",
+    scaffoldHint: "local-service-business",
+    label: "Sunrise Startup",
+    description: "Ljust, optimistiskt och modernt — som en ny byrå med stora planer.",
+    primarySwatch: "#f06b48",
+    accentSwatch: "#16a89a",
+    background: "#fefaf2",
+    defaultTypographyFeel: "modern-sans",
+  },
+  {
+    id: "family-warmth",
+    scaffoldHint: "local-service-business",
+    label: "Family Warmth",
+    description: "Mjukt, varmt och familjevänligt — som en förskola eller barnaktivitet.",
+    primarySwatch: "#e3899c",
+    accentSwatch: "#9bb59a",
+    background: "#fdf4ee",
+    defaultTypographyFeel: "modern-sans",
+  },
+  {
+    id: "artisan-market",
+    scaffoldHint: "ecommerce-lite",
+    label: "Artisan Market",
+    description: "Hantverk, småskaligt och äkta — som en marknad i ett gammalt lagerhus.",
+    primarySwatch: "#4f5926",
+    accentSwatch: "#b04428",
+    background: "#f7f1e3",
+    defaultTypographyFeel: "classic-serif",
+  },
+  {
+    id: "vintage-curio",
+    scaffoldHint: "ecommerce-lite",
+    label: "Vintage Curio",
+    description: "Patina, läderbunden och samlat — som en antikbutik med karaktär.",
+    primarySwatch: "#6a1a20",
+    accentSwatch: "#a87f3e",
+    background: "#f4ecd8",
+    defaultTypographyFeel: "classic-serif",
   },
 ];
 

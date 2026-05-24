@@ -1,0 +1,46 @@
+{
+  "id": "artisan-market",
+  "enabled": true,
+  "label": "Artisan Market",
+  "description": "Handmade, craft-fair and Etsy-adjacent expression for makers, small ceramic studios, woodworking shops, candle brands, soap-makers and other one-person-with-a-workbench operations. Cream paper background, deep olive primary and a brick-red accent feel like a Sunday market in a converted warehouse. Slightly serif display face gives the unique-each-item feel; subtle motion respects that the product itself is the spectacle.",
+  "tokens": {
+    "color": {
+      "background": "#f7f1e3",
+      "foreground": "#231a10",
+      "muted": "#7c6a52",
+      "border": "#e0d4ba",
+      "primary": "#4f5926",
+      "primaryForeground": "#f7f1e3",
+      "accent": "#b04428",
+      "accentForeground": "#f7f1e3"
+    },
+    "typography": {
+      "fontFamilyDisplay": "Georgia, 'Times New Roman', serif",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.26
+    },
+    "radius": {
+      "sm": "0.25rem",
+      "md": "0.5rem",
+      "lg": "0.75rem"
+    },
+    "spacing": {
+      "section": "5rem",
+      "container": "min(74rem, 92vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "handmade",
+      "artisan",
+      "craft-fair",
+      "earthy",
+      "small-batch",
+      "considered"
+    ]
+  }
+}
