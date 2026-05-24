@@ -719,6 +719,25 @@ COMMON_WORDS = {
     # (anti-pattern: "Closed" as a bare word). Common UI vocabulary,
     # not a domain term.
     "Closed",
+    # Week 1 batch 3 (2026-05-24) — three new soft Dossiers:
+    # pricing-table, faq-accordion, video-hero. Same treatment as
+    # batch-1/batch-2 dossier symbols above: TypeScript interface and
+    # React component identifiers in instructions.md skeletons, not
+    # canonical domain terms. Canonical capability slugs (pricing,
+    # faq-section, hero-video) live in capability-map.v1.json.
+    "PricingTable", "PricingTableProps", "PricingTier", "PricingFeature",
+    "FaqAccordion", "FaqAccordionProps", "FaqGroup", "FaqItem",
+    "VideoHero", "VideoHeroProps", "VideoHeroSource", "VideoHeroOverlay",
+    # schema.org type names emitted verbatim in faq-accordion's JSON-LD
+    # payload ("@type": "FAQPage" / "Question" / "Answer"). External
+    # ontology identifiers, mirrors the existing schema.org "Review" /
+    # "OpeningHoursSpecification" / "AggregateRating" treatment.
+    "FAQPage", "Question", "Answer",
+    # External video platforms referenced as anti-pattern examples in
+    # video-hero instructions ("NEVER embed YouTube/Vimeo iframe").
+    # Same SaaS-name category as Bokadirekt / OpenStreetMap / TripAdvisor
+    # above.
+    "YouTube",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

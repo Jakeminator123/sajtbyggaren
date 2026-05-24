@@ -59,18 +59,25 @@ def test_generate_soft_candidate_without_key_writes_disabled_manifest(
 ) -> None:
     monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
 
+    # Tidigare användes ``faq-accordion`` som exempel-candidate här,
+    # men Week 1 batch 3 av "fantastic sites"-roadmappen (2026-05-24)
+    # implementerade faq-accordion på riktigt under packages/.../soft/.
+    # Generatorns kollisionsdetektion hittade då dossier:n och la till
+    # ``-2``-suffix vilket bröt id-assertionen. Byter till
+    # ``carousel-embla`` (MIN_IDE-planerad slug för carousel-capability-
+    # gapet i capability-map.v1.json) som inte är implementerad än.
     result = generate_dossier_candidate(
-        brief="Reusable FAQ accordion for service pages.",
-        candidate_id="faq-accordion",
-        capability="faq-section",
+        brief="Reusable embla-based carousel for product hero strips.",
+        candidate_id="carousel-embla",
+        capability="carousel",
         output_dir=tmp_path,
         use_llm=True,
     )
 
     assert result.source == "mock-no-key"
     assert result.model_used == "mock"
-    assert result.candidate_dir == tmp_path / "soft" / "faq-accordion"
-    assert result.manifest["id"] == "faq-accordion"
+    assert result.candidate_dir == tmp_path / "soft" / "carousel-embla"
+    assert result.manifest["id"] == "carousel-embla"
     assert result.manifest["class"] == "soft"
     assert result.manifest["enabled"] is False
     assert result.manifest["envVars"] == []
