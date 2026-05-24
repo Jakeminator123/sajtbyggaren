@@ -5,6 +5,13 @@ import { useEffect, useMemo, useRef } from "react";
 import { AssetDropzone } from "@/components/discovery-wizard/asset-dropzone";
 import type { AssetRef } from "@/lib/asset-store/types";
 
+import { PayloadAlignmentPopover } from "../payload-alignment-popover";
+import {
+  HeroLayoutGlyph,
+  typographyPreviewFamily,
+  VibeMicroPreview,
+  VibeSwatchRow,
+} from "../visual-preview-card";
 import {
   BUSINESS_FAMILIES,
   branchForFamily,
@@ -62,6 +69,22 @@ export function VisualStep({
   const family = BUSINESS_FAMILIES.find((f) => f.id === answers.businessFamily);
   const scaffoldHint = family?.scaffoldHint ?? "local-service-business";
   const vibes = useMemo(() => vibesForScaffold(scaffoldHint), [scaffoldHint]);
+  const selectedVibe = useMemo(
+    () => (answers.vibe.vibeId ? findVibe(answers.vibe.vibeId) : undefined),
+    [answers.vibe.vibeId],
+  );
+  // Preview-rubrik = företagsnamn om ifyllt, annars vibens label —
+  // ger operatören en personlig "så här ser det ut för MIN sajt"-känsla
+  // när hen har skrivit företagsnamn i foundation.
+  const previewHeading = answers.companyName.trim() || undefined;
+
+  // Approximerad rawPrompt för PayloadAlignmentPopover. Vi använder
+  // `offer` (= operatörens beskrivning av vad de gör) som proxy för
+  // den ursprungliga prompten — det är vad backend själva matar in
+  // som första källtext via composeMasterPrompt. Detta gör popoverns
+  // language-detection och directives-output realistisk även när den
+  // ursprungliga rawPrompt-prop:en inte är tillgänglig i VisualStep.
+  const popoverRawPrompt = answers.offer;
 
   // Auto-defaulta vibe + typography när family väljs men vibe ej satt.
   // Effekten körs en gång per komponent-mount; om operatören aktivt
@@ -158,15 +181,35 @@ export function VisualStep({
 
   return (
     <FieldStack>
+      {/* CONTEXT-CHIPS — visar vad foundation har lett till (family →
+          scaffold → default-vibe). Operatören ser direkt vilka steg-1-
+          beslut som styr vad hen ser här. */}
+      {family ? (
+        <ContextChips
+          familyLabel={family.label}
+          scaffoldHint={family.scaffoldHint}
+          defaultVibe={findVibe(family.defaultVariantId)?.label ?? family.defaultVariantId}
+          selectedVibeLabel={selectedVibe?.label}
+        />
+      ) : null}
+
       {/* ESSENTIALS — vibe + tonarter ger 90% av personlighet. */}
       <div>
-        <SectionHeader>Vibe</SectionHeader>
-        <HelperText>
-          Välj den känsla som passar bäst — vibe styr färger, typografi och
-          spacing automatiskt. Listan filtreras efter din verksamhetsfamilj
-          {family ? ` (${family.label})` : ""} och branch
-          {family ? ` (${branchForFamily(family.id)})` : ""}.
-        </HelperText>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <SectionHeader>Vibe</SectionHeader>
+            <HelperText>
+              Välj den känsla som passar bäst — vibe styr färger, typografi och
+              spacing automatiskt. Listan filtreras efter din verksamhetsfamilj
+              {family ? ` (${family.label})` : ""} och branch
+              {family ? ` (${branchForFamily(family.id)})` : ""}.
+            </HelperText>
+          </div>
+          <PayloadAlignmentPopover
+            answers={answers}
+            rawPrompt={popoverRawPrompt}
+          />
+        </div>
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {vibes.map((vibe) => (
             <VibeCard
@@ -174,6 +217,7 @@ export function VisualStep({
               vibe={vibe}
               selected={answers.vibe.vibeId === vibe.id}
               onSelect={() => selectVibe(vibe.id)}
+              previewHeading={previewHeading}
             />
           ))}
         </div>
@@ -504,87 +548,27 @@ export function VisualStep({
 }
 
 /**
- * Mini-SVG-glyf för hero-layout-väljarna (sektion 5 ovan). Visar en
- * skiss av layouten i en 80×40-box så operatorn ser visuellt vad
- * gradient/centered/split innebär utan att behöva klicka för preview.
+ * VibeCard — rikt vibe-val-kort med micro-sajt-preview i Front 2.
+ *
+ * Visar (a) en VibeMicroPreview-mock med hero-rubrik + chips + Aa-glyph
+ * (b) en swatch-rad med primary/accent/background, (c) vibens beskrivning.
+ * Större (~140px) än det gamla text-band-kortet (~70px) så operatören
+ * direkt ser känslan istället för att läsa en text-beskrivning.
+ *
+ * `previewHeading` används istället för vibens label om operatören har
+ * skrivit ett företagsnamn i foundation-steget — vilket gör preview:n
+ * personlig ("Ateljé Bird" istället för "Warm Craft").
  */
-function HeroLayoutGlyph({
-  variant,
-}: {
-  variant: "" | "gradient" | "centered" | "split";
-}) {
-  if (variant === "centered") {
-    return (
-      <svg
-        viewBox="0 0 80 40"
-        className="text-muted-foreground/60 h-10 w-full"
-        fill="currentColor"
-      >
-        <rect x="0" y="0" width="80" height="40" rx="3" className="fill-current opacity-10" />
-        <rect x="22" y="9" width="36" height="3" rx="1.5" />
-        <rect x="28" y="16" width="24" height="2" rx="1" className="opacity-50" />
-        <rect x="30" y="22" width="20" height="4" rx="2" className="text-foreground fill-current" />
-      </svg>
-    );
-  }
-  if (variant === "split") {
-    return (
-      <svg
-        viewBox="0 0 80 40"
-        className="text-muted-foreground/60 h-10 w-full"
-        fill="currentColor"
-      >
-        <rect x="0" y="0" width="80" height="40" rx="3" className="fill-current opacity-10" />
-        <rect x="6" y="10" width="22" height="3" rx="1.5" />
-        <rect x="6" y="16" width="28" height="2" rx="1" className="opacity-50" />
-        <rect x="6" y="22" width="16" height="4" rx="2" className="text-foreground fill-current" />
-        <rect x="44" y="6" width="30" height="28" rx="3" className="opacity-30" />
-      </svg>
-    );
-  }
-  if (variant === "gradient") {
-    return (
-      <svg
-        viewBox="0 0 80 40"
-        className="text-muted-foreground/60 h-10 w-full"
-        fill="currentColor"
-      >
-        <defs>
-          <linearGradient id="heroGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="currentColor" stopOpacity="0.05" />
-            <stop offset="100%" stopColor="currentColor" stopOpacity="0.25" />
-          </linearGradient>
-        </defs>
-        <rect x="0" y="0" width="80" height="40" rx="3" fill="url(#heroGradient)" />
-        <rect x="6" y="12" width="32" height="3" rx="1.5" />
-        <rect x="6" y="18" width="44" height="2" rx="1" className="opacity-50" />
-        <rect x="6" y="24" width="18" height="4" rx="2" className="text-foreground fill-current" />
-      </svg>
-    );
-  }
-  // "" / "Auto" — three little dots indicating "we decide".
-  return (
-    <svg
-      viewBox="0 0 80 40"
-      className="text-muted-foreground/60 h-10 w-full"
-      fill="currentColor"
-    >
-      <rect x="0" y="0" width="80" height="40" rx="3" className="fill-current opacity-10" />
-      <circle cx="30" cy="20" r="3" />
-      <circle cx="40" cy="20" r="3" className="opacity-60" />
-      <circle cx="50" cy="20" r="3" className="opacity-30" />
-    </svg>
-  );
-}
-
 function VibeCard({
   vibe,
   selected,
   onSelect,
+  previewHeading,
 }: {
   vibe: Vibe;
   selected: boolean;
   onSelect: () => void;
+  previewHeading?: string;
 }) {
   return (
     <button
@@ -598,42 +582,96 @@ function VibeCard({
           : "border-border/70 hover:border-foreground/40 hover:shadow-sm",
       ].join(" ")}
     >
-      {/* Live preview-band längst upp. */}
-      <div
-        className="flex h-14 items-center justify-between px-3"
-        style={{
-          background: vibe.background,
-          color: contrastingTextColor(vibe.background),
-        }}
-      >
-        <span
-          className="text-[14px] font-semibold tracking-tight"
-          style={{
-            fontFamily: typographyPreviewFamily(vibe.defaultTypographyFeel),
-            color: vibe.primarySwatch,
-          }}
-        >
-          {vibe.label}
-        </span>
-        <div className="flex items-center gap-1">
-          <span
-            className="h-5 w-5 rounded-md border border-black/10"
-            style={{ background: vibe.primarySwatch }}
-            aria-hidden
-          />
-          <span
-            className="h-5 w-5 rounded-md border border-black/10"
-            style={{ background: vibe.accentSwatch }}
-            aria-hidden
+      <VibeMicroPreview vibe={vibe} heading={previewHeading} />
+      <div className="bg-card flex flex-col gap-1.5 px-3 py-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-foreground text-[12.5px] font-semibold tracking-tight">
+            {vibe.label}
+          </span>
+          <VibeSwatchRow
+            primary={vibe.primarySwatch}
+            accent={vibe.accentSwatch}
+            background={vibe.background}
+            size={10}
           />
         </div>
-      </div>
-      <div className="bg-card px-3 py-2.5">
-        <p className="text-muted-foreground text-[11.5px] leading-snug">
+        <p className="text-muted-foreground line-clamp-2 text-[11px] leading-snug">
           {vibe.description}
         </p>
       </div>
     </button>
+  );
+}
+
+/**
+ * ContextChips — visas högst upp i visual-steget. Berättar för
+ * operatören vilka foundation-beslut som styr vibe-listan, scaffold-
+ * mapping och default-vibe. Den enda "klickbara" effekten i denna
+ * iteration är hover-tooltip — själva navigeringen tillbaka till
+ * foundation sker via sidebar i wizardens chrome. Här fokuserar vi
+ * på TRANSPARENS, inte navigation, så operatören INSTANT förstår
+ * varför just dessa vibes visas.
+ */
+function ContextChips({
+  familyLabel,
+  scaffoldHint,
+  defaultVibe,
+  selectedVibeLabel,
+}: {
+  familyLabel: string;
+  scaffoldHint: string;
+  defaultVibe: string;
+  selectedVibeLabel?: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <ContextChip label="Family" value={familyLabel} />
+      <span className="text-muted-foreground/60 text-[10px]">→</span>
+      <ContextChip label="Scaffold" value={scaffoldHint} mono />
+      <span className="text-muted-foreground/60 text-[10px]">→</span>
+      <ContextChip
+        label={selectedVibeLabel ? "Vibe" : "Default-vibe"}
+        value={selectedVibeLabel ?? defaultVibe}
+        emphasis={!!selectedVibeLabel}
+      />
+    </div>
+  );
+}
+
+function ContextChip({
+  label,
+  value,
+  mono,
+  emphasis,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  emphasis?: boolean;
+}) {
+  return (
+    <span
+      className={[
+        "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10.5px]",
+        emphasis
+          ? "border-foreground/40 bg-foreground/[0.04] text-foreground"
+          : "border-border/60 bg-muted/40 text-muted-foreground",
+      ].join(" ")}
+      title={`${label}: ${value}`}
+    >
+      <span className="font-mono text-[9px] tracking-[0.18em] uppercase opacity-70">
+        {label}
+      </span>
+      <span
+        className={
+          mono
+            ? "text-foreground font-mono text-[10.5px]"
+            : "text-foreground font-medium"
+        }
+      >
+        {value}
+      </span>
+    </span>
   );
 }
 
@@ -662,33 +700,4 @@ function MoodThumbnail({
       </button>
     </div>
   );
-}
-
-/** Plocka en sane font-stack per typografi-känsla. Används bara för
- * preview-rendering i kort — riktiga typsnitt sätts av variant CSS. */
-function typographyPreviewFamily(feel: TypographyFeelId | ""): string {
-  switch (feel) {
-    case "classic-serif":
-      return "Georgia, 'Times New Roman', serif";
-    case "geometric":
-      return "'Futura', 'Trebuchet MS', sans-serif";
-    case "organic":
-      return "'Brush Script MT', 'Snell Roundhand', cursive";
-    case "modern-sans":
-    case "":
-    default:
-      return "'Inter', system-ui, -apple-system, sans-serif";
-  }
-}
-
-/** Returnerar svart eller vitt baserat på bakgrundens upplevda
- * luminance — så texten alltid är läsbar mot vibe-bakgrunden. */
-function contrastingTextColor(hex: string): string {
-  const cleaned = hex.replace("#", "");
-  if (cleaned.length !== 6) return "#0f172a";
-  const r = parseInt(cleaned.slice(0, 2), 16);
-  const g = parseInt(cleaned.slice(2, 4), 16);
-  const b = parseInt(cleaned.slice(4, 6), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.55 ? "#0f172a" : "#fafafa";
 }

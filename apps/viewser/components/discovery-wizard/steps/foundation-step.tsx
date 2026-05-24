@@ -5,10 +5,17 @@ import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 import type { discoveryOption } from "../discovery-options";
+import { FoundationSummary } from "../foundation-summary";
+import {
+  HeroLayoutGlyph,
+  VibeSwatchRow,
+} from "../visual-preview-card";
 import {
   BUSINESS_FAMILIES,
+  type BusinessFamily,
   type BusinessFamilyId,
   familyForCategory,
+  findVibe,
   type WizardCategoryId,
 } from "../wizard-constants";
 import type { WizardAnswers } from "../wizard-types";
@@ -269,36 +276,29 @@ export function FoundationStep({
       <div>
         <SectionHeader>Verksamhetsfamilj *</SectionHeader>
         <HelperText>
-          Styr scaffold + starter — vilken Next.js-mall backend bygger på. Välj
-          den som passar bäst.
+          Styr scaffold + starter — vilken Next.js-mall backend bygger på. Färg
+          och layout-skiss visar default-vibens känsla (du kan ändra i steg 2).
         </HelperText>
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {BUSINESS_FAMILIES.map((option) => {
-            const isSelected = selectedFamily === option.id;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => selectFamily(option.id)}
-                aria-pressed={isSelected}
-                className={[
-                  "rounded-xl border p-3 text-left transition-colors",
-                  isSelected
-                    ? "border-foreground bg-foreground/[0.04] shadow-sm"
-                    : "border-border/70 bg-card hover:border-foreground/40 hover:bg-foreground/[0.02]",
-                ].join(" ")}
-              >
-                <div className="text-foreground text-[13px] font-semibold tracking-tight">
-                  {option.label}
-                </div>
-                <div className="text-muted-foreground mt-1 text-[11.5px] leading-snug">
-                  {option.description}
-                </div>
-              </button>
-            );
-          })}
+          {BUSINESS_FAMILIES.map((option) => (
+            <FamilyCard
+              key={option.id}
+              family={option}
+              selected={selectedFamily === option.id}
+              onSelect={() => selectFamily(option.id)}
+            />
+          ))}
         </div>
       </div>
+
+      {/* Live transparens — visas direkt när family + offer är ifyllda så
+          operatören ser EXAKT vilka beslut backend kommer att fatta
+          (scaffold, default-vibe, branch, förvalda funktioner). */}
+      <FoundationSummary
+        businessFamily={answers.businessFamily}
+        companyName={answers.companyName}
+        offer={answers.offer}
+      />
 
       {/* ADVANCED — i disclosure: specialisering + kontakt. URL-skrape
           ligger numera ovanför FieldStack (alltid synlig). */}
@@ -382,5 +382,66 @@ export function FoundationStep({
         </div>
       </AdvancedDisclosure>
     </FieldStack>
+  );
+}
+
+/**
+ * FamilyCard — verksamhets­familje-kort i steg 1. Berikat (Front 2) med
+ * en default-vibens swatch-rad + mini hero-layout-glyph så operatören
+ * direkt ser visuell signal innan hen klickat på family. All data
+ * härleds från BUSINESS_FAMILIES.defaultVariantId → findVibe(), så
+ * korten är alltid synkade med vad backend faktiskt får skickat sig.
+ */
+function FamilyCard({
+  family,
+  selected,
+  onSelect,
+}: {
+  family: BusinessFamily;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const defaultVibe = findVibe(family.defaultVariantId);
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={[
+        "group flex w-full items-stretch gap-3 overflow-hidden rounded-xl border text-left transition-all",
+        selected
+          ? "border-foreground bg-foreground/[0.04] shadow-sm"
+          : "border-border/70 bg-card hover:border-foreground/40 hover:bg-foreground/[0.02] hover:shadow-sm",
+      ].join(" ")}
+    >
+      {/* Visuell preview-kolumn till vänster — speglar default-vibens
+          färger och hero-känsla. Aria-hidden eftersom den är dekorativ;
+          texten till höger har all meningsbärande info. */}
+      <div
+        aria-hidden
+        className="relative flex w-[68px] shrink-0 flex-col items-stretch justify-between p-1.5"
+        style={{ background: defaultVibe?.background ?? "var(--muted)" }}
+      >
+        <div className="flex justify-end">
+          <VibeSwatchRow
+            primary={defaultVibe?.primarySwatch ?? "#0f172a"}
+            accent={defaultVibe?.accentSwatch ?? "#94a3b8"}
+            size={9}
+          />
+        </div>
+        <HeroLayoutGlyph
+          variant=""
+          className="text-foreground/40 h-7 w-full"
+        />
+      </div>
+      <div className="flex flex-1 flex-col justify-center px-2 py-3">
+        <div className="text-foreground text-[13px] font-semibold tracking-tight">
+          {family.label}
+        </div>
+        <div className="text-muted-foreground mt-1 line-clamp-2 text-[11.5px] leading-snug">
+          {family.description}
+        </div>
+      </div>
+    </button>
   );
 }

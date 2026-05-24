@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-25T01:38:00Z",
+  "updatedAt": "2026-05-25T01:47:00Z",
   "updatedBy": "christopher",
   "people": {
     "jakob": {
@@ -69,10 +69,68 @@
         "apps/viewser/app/api/discovery-options/route.ts"
       ],
       "reason": "Variant Live-Preview tab — additive extension of lib/runtime-tokens.ts and discovery-options route (yellow per gaps/README.md)"
+    },
+    {
+      "owner": "christopher",
+      "gapId": "GAP-viewser-wizard-first-impression",
+      "paths": [
+        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/visual-step.tsx",
+        "apps/viewser/components/discovery-wizard/visual-preview-card.tsx",
+        "apps/viewser/components/discovery-wizard/foundation-summary.tsx",
+        "apps/viewser/components/discovery-wizard/payload-alignment-popover.tsx"
+      ],
+      "reason": "Wizard första intryck — visuell uplift av foundation+visual steps utan att röra alignment-kritiska wizard-payload/types/constants"
     }
   ],
   "queuedGaps": [],
   "activeGaps": [
+    {
+      "id": "GAP-viewser-wizard-first-impression",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Wizard första intryck — foundation + visual step som säljer 'fantastisk sajt' på 5 sekunder",
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "active",
+      "file": "docs/gaps/GAP-viewser-wizard-first-impression.md",
+      "startedAt": "2026-05-25T01:47:00Z",
+      "paths": [
+        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/visual-step.tsx",
+        "apps/viewser/components/discovery-wizard/visual-preview-card.tsx",
+        "apps/viewser/components/discovery-wizard/foundation-summary.tsx",
+        "apps/viewser/components/discovery-wizard/payload-alignment-popover.tsx"
+      ],
+      "doNotTouch": [
+        "apps/viewser/components/discovery-wizard/wizard-payload.ts",
+        "apps/viewser/components/discovery-wizard/wizard-types.ts",
+        "apps/viewser/components/discovery-wizard/wizard-constants.ts",
+        "packages/generation/**",
+        "governance/policies/**",
+        "scripts/**",
+        "tests/test_*.py"
+      ],
+      "acceptanceCriteria": [
+        "Foundation FamilyCard visar default-vibens swatches + hero-layout-glyph utöver text.",
+        "Foundation visar FoundationSummary-panel med scaffold/vibe/typografi/branch/förvalda-funktioner när family+offer är ifyllda.",
+        "Visual VibeCard växer från text-band till mini-sajt-preview med hero-mock + swatches + typografi-Aa.",
+        "Visual visar ContextChips-rad med family→scaffold→default-vibe.",
+        "Visual exponerar PayloadAlignmentPopover som live visar deriveWizardDirectives()-output.",
+        "Inga ändringar i wizard-payload.ts, wizard-types.ts eller wizard-constants.ts shape — alignment garanteras by-construction.",
+        "Befintliga pytest-tester för composeMasterPrompt + deriveWizardDirectives förblir gröna utan ändring."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint"
+      ]
+    },
     {
       "id": "GAP-viewser-variant-live-preview",
       "type": "Gap/UI",
