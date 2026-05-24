@@ -13,8 +13,8 @@ eller bättre för småföretagaren.
 
 ## Riktning
 
-- Lovable/v0 är kvalitetsribba för enkelhet, iteration och finish, inte
-  arkitekturmall.
+- Lovable och liknande AI-appbyggare är kvalitetsribba för enkelhet,
+  iteration och finish, inte arkitekturmall.
 - Gamla Sajtmaskin är referens och baslinje, inte kodbas att återinföra.
 - Governance ska skydda riktningen, inte kväva bygget.
 - Välj liten sammanhängande kärna före bred plattformsbredd.
