@@ -933,8 +933,27 @@ def _apply_brand_and_assets(
 ) -> None:
     brand_raw = answers.get("brand")
     wizard_brand: dict[str, Any] = brand_raw if isinstance(brand_raw, dict) else {}
-    primary = wizard_brand.get("primaryColorHex")
-    accent = wizard_brand.get("accentColorHex")
+
+    # Gap 1: respektera operatörens explicit val i wizardens steg 2 om
+    # variantens default-färger ska behållas. När operatören togglar
+    # "Använd variantens default-färger" sätts ``vibe.useCustomColors``
+    # till ``False`` i UI:t men hex-värdena ligger ofta kvar i state
+    # från ett tidigare explicit val. Wizarden skickar dem ändå
+    # eftersom kontraktet säger att backend äger policyn
+    # (se ``wizard-payload.ts`` rad 438-441).
+    #
+    # Här tolkar vi flaggan: ``False`` (explicit boolean) blockerar
+    # persistens även om hex-värdena är non-empty. ``True`` eller
+    # saknad flagga (v1 bakåtkompat) följer status quo (persistera om
+    # non-empty). Detta gör att operatörens val i UI:t — där hex-
+    # fälten gömts när toggle:n är av — speglas exakt i den genererade
+    # sajten.
+    vibe_raw = answers.get("vibe")
+    vibe: dict[str, Any] = vibe_raw if isinstance(vibe_raw, dict) else {}
+    honor_custom_colors = vibe.get("useCustomColors") is not False
+
+    primary = wizard_brand.get("primaryColorHex") if honor_custom_colors else None
+    accent = wizard_brand.get("accentColorHex") if honor_custom_colors else None
     if (isinstance(primary, str) and primary.strip()) or (
         isinstance(accent, str) and accent.strip()
     ):
@@ -1058,6 +1077,45 @@ def _apply_directives_fields(
         if clean_layout in _VALID_LAYOUT_HINTS:
             project_input["directives"] = {"layoutHint": clean_layout}
             field_sources["directives.layoutHint"] = "wizard"
+
+    # Gap 3: scaffoldHint från operatörens ``businessFamily``-val ska
+    # vinna över taxonomy-mappningen. Wizardens steg 1 låter operatören
+    # välja "Hantverkare / Webshop / Vård / …" som är den HÖGSTA mental-
+    # modellen för vad sajten ska göra. Wizarden skickar ``directives.
+    # scaffoldHint`` från ``BUSINESS_FAMILIES.find(id).scaffoldHint`` —
+    # men resolvern har historiskt bara använt hint:en som fallback när
+    # ``siteType`` är tom. När operator klickat sub-kategori-chips i
+    # steg 3 vinner taxonomy-mappningen, vilket gör att family-valet
+    # tappar effekt om sub-kategorin pekar mot en annan scaffold än
+    # familjen.
+    #
+    # Här lägger vi en operator-override: när ``directives.scaffoldHint``
+    # är en runtime-aktiv scaffold (i ``_RUNTIME_SCAFFOLD_HINTS``) och
+    # skiljer sig från current ``scaffoldId`` (från taxonomy/brief),
+    # override:ar vi scaffolden. variantId re-evalueras mot nya
+    # scaffolden — current variant behålls om kompatibel, annars byts
+    # till scaffolds default. ``variantHint``-blocket nedan kör efter
+    # och kan fortfarande peka mot en specifik variant inom nya
+    # scaffolden.
+    #
+    # Säkerhet: bara runtime-aktiva scaffolds får override:a (samma
+    # whitelist som pre-B121 ``_scaffold_hint_from_payload``). Planned
+    # scaffolds (``restaurant-hospitality`` m.fl.) tillåts inte eftersom
+    # build_site.py inte kan rendera dem ännu.
+    scaffold_hint = directives.get("scaffoldHint")
+    if isinstance(scaffold_hint, str):
+        clean_scaffold = scaffold_hint.strip()
+        runtime_hint = _RUNTIME_SCAFFOLD_HINTS.get(clean_scaffold)
+        current_scaffold = project_input.get("scaffoldId")
+        if runtime_hint is not None and clean_scaffold != current_scaffold:
+            new_scaffold_id, default_variant_id, _ = runtime_hint
+            project_input["scaffoldId"] = new_scaffold_id
+            field_sources["scaffoldId"] = "wizard"
+            current_variant = project_input.get("variantId")
+            scaffold_variants = _variants_for_scaffold(new_scaffold_id)
+            if not isinstance(current_variant, str) or current_variant not in scaffold_variants:
+                project_input["variantId"] = default_variant_id
+                field_sources["variantId"] = "wizard"
 
     # variantHint: när operatören valt en vibe i steg 2 skickar wizarden
     # vibeId direkt (``VIBE_OPTIONS.id`` i wizard-constants speglar

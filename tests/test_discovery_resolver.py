@@ -489,6 +489,117 @@ def test_brand_colors_and_logo_pass_through_to_project_input() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Gap 1 — vibe.useCustomColors styr om custom colors persisteras
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_use_custom_colors_true_persists_brand_hex() -> None:
+    """Gap 1: explicit ``useCustomColors=True`` + non-empty hex → persisteras.
+
+    Operatorens explicit val i wizardens steg 2 ("Egna färger" toggle på)
+    måste landa i ``project_input.brand`` så att buildern overrider
+    variantens default-färger.
+    """
+    payload = _payload(
+        "business",
+        vibe={"vibeId": "warm-craft", "useCustomColors": True},
+        brand={"primaryColorHex": "#16a34a", "accentColorHex": "#cdb98a"},
+    )
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["brand"]["primaryColorHex"] == "#16a34a"
+    assert project_input["brand"]["accentColorHex"] == "#cdb98a"
+    assert decision.fieldSources["brand.primaryColorHex"] == "wizard"
+    assert decision.fieldSources["brand.accentColorHex"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_use_custom_colors_false_blocks_brand_hex_persistence() -> None:
+    """Gap 1: ``useCustomColors=False`` blockerar persistens även om hex är non-empty.
+
+    När operatören togglar tillbaka till "Använd variantens default-färger"
+    ligger hex-värdena ofta kvar i UI-state från ett tidigare explicit val.
+    Wizarden skickar dem ändå — backend måste respektera flaggan och
+    INTE persistera dem, så buildern faller tillbaka till variant-default.
+    """
+    payload = _payload(
+        "business",
+        vibe={"vibeId": "warm-craft", "useCustomColors": False},
+        brand={"primaryColorHex": "#16a34a", "accentColorHex": "#cdb98a"},
+    )
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    brand_block = project_input.get("brand", {})
+    assert "primaryColorHex" not in brand_block, (
+        "useCustomColors=False ska blockera primaryColorHex-persistens"
+    )
+    assert "accentColorHex" not in brand_block, (
+        "useCustomColors=False ska blockera accentColorHex-persistens"
+    )
+    assert "brand.primaryColorHex" not in decision.fieldSources
+    assert "brand.accentColorHex" not in decision.fieldSources
+
+
+@pytest.mark.tooling
+def test_use_custom_colors_missing_falls_back_to_v1_behavior() -> None:
+    """Gap 1: saknad ``useCustomColors``-flagga → v1 backward-compat.
+
+    Legacy payloads (eller payloads där vibe-objektet saknas helt) ska
+    behålla det historiska beteendet: persistera om non-empty. Detta
+    skyddar mot bakåtkompatibilitetsproblem för payloads som testas
+    från CLI eller äldre integrationer som inte sätter useCustomColors.
+    """
+    payload = _payload(
+        "business",
+        brand={"primaryColorHex": "#16a34a"},
+    )
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["brand"]["primaryColorHex"] == "#16a34a"
+    assert decision.fieldSources["brand.primaryColorHex"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_use_custom_colors_false_still_persists_logo_and_other_assets() -> None:
+    """Gap 1: flaggan ska BARA gälla färger — assets persisteras oavsett.
+
+    Operator kan ha valt att INTE override:a variantens färger men ändå
+    laddat upp en logotyp. Logon ska persisteras precis som vanligt.
+    """
+    asset_ref = {
+        "assetId": "01HXYZ1234567890ABCDEFGHJK",
+        "filename": "logo.webp",
+        "mimeType": "image/webp",
+        "sizeBytes": 1234,
+        "role": "logo",
+    }
+    payload = _payload(
+        "business",
+        vibe={"vibeId": "warm-craft", "useCustomColors": False},
+        brand={"primaryColorHex": "#16a34a"},
+        assets={"logo": asset_ref},
+    )
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert "primaryColorHex" not in project_input.get("brand", {})
+    assert project_input["brand"]["logo"]["assetId"] == asset_ref["assetId"]
+    assert decision.fieldSources["brand.logo"] == "wizard"
+
+
+# ---------------------------------------------------------------------------
 # variantHint-routing — vibe-valet i wizarden styr variantId
 # ---------------------------------------------------------------------------
 
@@ -626,6 +737,161 @@ def test_variant_hint_works_for_distinct_vibes() -> None:
     assert results == {vibe: vibe for vibe in vibes_to_test}, (
         f"varje vibe måste mappas 1:1 till variantId, fick: {results}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Gap 3 — directives.scaffoldHint (från businessFamily) override:ar taxonomy
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_scaffold_hint_overrides_taxonomy_when_runtime_active() -> None:
+    """Gap 3: ``directives.scaffoldHint`` ska vinna över taxonomy-mappningen.
+
+    Taxonomy mappar siteType="business" → local-service-business. Men om
+    operator valt businessFamily="webshop" i steg 1 (wizarden skickar
+    ``directives.scaffoldHint="ecommerce-lite"``) ska den vinna och
+    scaffoldId byta till ``ecommerce-lite`` + default variant ``clean-store``.
+    """
+    payload = _payload("business")  # taxonomy → local-service-business + nordic-trust
+    payload["directives"] = {"scaffoldHint": "ecommerce-lite"}
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["scaffoldId"] == "ecommerce-lite", (
+        "scaffoldHint från wizardens businessFamily måste override:a taxonomy"
+    )
+    assert project_input["variantId"] == "clean-store", (
+        "variantId måste re-evalueras till scaffolds default när scaffold byts"
+    )
+    assert decision.fieldSources["scaffoldId"] == "wizard"
+    assert decision.fieldSources["variantId"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_scaffold_hint_no_op_when_matching_current_scaffold() -> None:
+    """Gap 3: när scaffoldHint matchar redan resolved scaffold → no-op.
+
+    Det vanliga fallet: businessFamily och siteType pekar samma håll.
+    Resolvern ska inte ändra något då.
+    """
+    payload = _payload("business")  # taxonomy → local-service-business + nordic-trust
+    payload["directives"] = {"scaffoldHint": "local-service-business"}
+    project_input, _decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["scaffoldId"] == "local-service-business"
+    assert project_input["variantId"] == "nordic-trust", (
+        "no-op fall ska inte byta variant"
+    )
+
+
+@pytest.mark.tooling
+def test_scaffold_hint_ignored_when_unknown_or_planned() -> None:
+    """Gap 3: en hint som pekar på en inte-runtime-aktiv scaffold ska ignoreras.
+
+    ``restaurant-hospitality`` finns i taxonomy som ``planned`` men build_site.py
+    kan inte rendera den. Ett UI-fel som skickade hint mot en sådan scaffold får
+    INTE override:a — taxonomy-defaulten är säkrare.
+    """
+    payload = _payload("business")
+    payload["directives"] = {"scaffoldHint": "restaurant-hospitality"}
+    project_input, _decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["scaffoldId"] == "local-service-business", (
+        "planned scaffold ska inte override:a runtime-default"
+    )
+
+
+@pytest.mark.tooling
+def test_scaffold_hint_preserves_compatible_variant_hint() -> None:
+    """Gap 3: när scaffoldHint byter scaffold och variantHint passar nya scaffolden,
+    ska variantHint respekteras (operator-pin > scaffolds default).
+
+    Exempel: operator väljer businessFamily=webshop (→ ecommerce-lite) OCH
+    vibe=midnight-counsel-store (en ecommerce-variant). Båda directives
+    ska samverka: scaffold = ecommerce-lite, variant = midnight-counsel-store.
+
+    Kontroll: ``_variants_for_scaffold("ecommerce-lite")`` måste innehålla
+    target-varianten, annars är detta test inkonsekvent med disk-layout.
+    """
+    from packages.generation.discovery.resolve import _variants_for_scaffold
+
+    ecom_variants = _variants_for_scaffold("ecommerce-lite")
+    target_variant = next(
+        (v for v in ecom_variants if v != "clean-store"), None
+    )
+    if target_variant is None:
+        pytest.skip("ecommerce-lite har bara en variant — kan inte testa override")
+
+    payload = _payload("business")  # taxonomy → local-service-business + nordic-trust
+    payload["directives"] = {
+        "scaffoldHint": "ecommerce-lite",
+        "variantHint": target_variant,
+    }
+    project_input, _decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["scaffoldId"] == "ecommerce-lite"
+    assert project_input["variantId"] == target_variant, (
+        f"variantHint ska behållas när kompatibel med ny scaffold, fick "
+        f"{project_input['variantId']!r}"
+    )
+
+
+@pytest.mark.tooling
+def test_scaffold_hint_drops_incompatible_variant_hint() -> None:
+    """Gap 3 + scaffold-safety: variantHint som inte tillhör nya scaffolden
+    måste droppas (annars FileNotFoundError i build_site.py).
+
+    Exempel: operator har sub-katselected="business" (→ nordic-trust), men
+    family=webshop (→ ecommerce-lite). Om operator också tidigare valt
+    vibe=warm-craft (local-service-business-variant) → ny scaffold är
+    ecommerce-lite, warm-craft existerar inte där → fall tillbaka till
+    clean-store (scaffolds default).
+    """
+    payload = _payload("business")
+    payload["directives"] = {
+        "scaffoldHint": "ecommerce-lite",
+        "variantHint": "warm-craft",  # tillhör local-service-business
+    }
+    project_input, _decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["scaffoldId"] == "ecommerce-lite"
+    assert project_input["variantId"] == "clean-store", (
+        "inkompatibel variantHint måste droppas till scaffolds default — "
+        f"fick {project_input['variantId']!r}"
+    )
+
+
+@pytest.mark.tooling
+def test_scaffold_hint_missing_keeps_taxonomy_default() -> None:
+    """Gap 3: utan ``directives.scaffoldHint`` ska taxonomy fortsätta styra.
+
+    Säkerhetsnät så att operatörer som inte väljer businessFamily explicit
+    (eller använder legacy CLI-payloads) får exakt samma scaffold-routning
+    som idag.
+    """
+    payload = _payload("business")  # ingen directives
+    project_input, _decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["scaffoldId"] == "local-service-business"
+    assert project_input["variantId"] == "nordic-trust"
 
 
 # ---------------------------------------------------------------------------
