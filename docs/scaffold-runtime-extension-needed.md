@@ -35,6 +35,24 @@ All four guards (`governance_validate`, `rules_sync --check`, `check_term_covera
 
 **Dossier-count: 4 → 8.** Capability-map went from 1 → 7 capabilities with real dossier bindings. All 5 new dossiers are reusable across future scaffolds (portfolio-creator, clinic-healthcare, real-estate, professional-services) without modification — same instructions, different recommended-list per scaffold.
 
+### Batch 3 follow-up (2026-05-24, same day)
+
+After batch 2 we kept building declaratively. Batch 3 adds 3 more universal soft-dossiers and 4 more variants:
+
+| Artefact | Path | Status |
+|---|---|---|
+| `pricing-table` dossier | `packages/generation/orchestration/dossiers/soft/pricing-table/` | ✅ Manifest + instructions (capability: `pricing`) |
+| `faq-accordion` dossier | `packages/generation/orchestration/dossiers/soft/faq-accordion/` | ✅ Manifest + instructions (capability: `faq-section`, closes existing gap) |
+| `video-hero` dossier | `packages/generation/orchestration/dossiers/soft/video-hero/` | ✅ Manifest + instructions (capability: `hero-video`) |
+| 2 new LSB variants | `…/local-service-business/variants/{sunrise-startup,family-warmth}.json` | ✅ Schema-valid — fills startup-modern + family-friendly vibe gaps |
+| 2 new ecommerce-lite variants | `…/ecommerce-lite/variants/{artisan-market,vintage-curio}.json` | ✅ Schema-valid — fills handmade + collector vibe gaps |
+| `wizard-constants.ts` VIBE_OPTIONS | `apps/viewser/components/discovery-wizard/wizard-constants.ts` | ✅ 10 → 14 vibes (4 new variants exposed via wizard step 2) |
+| `capability-map.v1.json` | `governance/policies/` | ✅ 2 new (`pricing`, `hero-video`) + `faq-section` gap closed |
+
+**Totals after batch 3:** 11 soft dossiers (was 4 before batch 1), 14 variants for runtime-active scaffolds (was 10), 1 gap closed (`faq-section`). The 3 new dossiers are reusable across every existing and future scaffold — pricing-table for any service business with tiered packages, faq-accordion universally, video-hero for media-heavy verticals.
+
+No new backend dependencies introduced by batch 3 — `faq-accordion`, `pricing-table` and `video-hero` use the same `selectedDossiers` pipeline that codegen already plans to consume in Sprint 3+. Wizard step-2 now exposes the 4 new variants automatically via `vibesForScaffold()`.
+
 ## What is NOT yet wired (the runtime gap this doc exists for)
 
 Three hardcoded lock-ins in the codegen layer prevent the new scaffold from rendering. None of them are bugs introduced by this PR — they are existing assumptions baked in when the runtime supported exactly 2 scaffolds. Now we want 6, so they need to be relaxed.
