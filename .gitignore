@@ -28,6 +28,8 @@ out/
 
 data/runs/
 data/versions/
+
+audits/
 data/prompt-inputs/
 data/embedding-index/
 # Operatöruppladdade assets — bytes finns endast lokalt (LocalAssetStore)
