@@ -428,6 +428,9 @@ COMMON_WORDS = {
     "TokensTab", "TokensTabProps", "TokenRow", "TokenPreview",
     "TokenId", "TokenMessage", "TokenStateSetter",
     "TOKEN_DEFAULTS", "TOKEN_META", "TOKEN_MESSAGE_TYPE", "TOKEN_ORDER",
+    # GAP-viewser-variant-live-preview — Variants-tab i Site Inspector:
+    "VariantsTab", "VariantsTabProps", "VariantCard", "VariantSummary",
+    "EmptyState",
     # ui-tokens shared interaction constants:
     "FOCUS_RING", "PRIMARY_INTERACTIONS", "SECONDARY_INTERACTIONS",
     "CHIP_INTERACTIONS",
