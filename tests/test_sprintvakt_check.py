@@ -12,6 +12,7 @@ from tooling.sprintvakt_mcp.core import (
     create_gap,
     detect_collisions,
     generate_agent_prompt,
+    paths_overlap,
     post_merge_sync_instructions,
     reserve_paths,
     validate_workboard,
@@ -123,6 +124,29 @@ def test_two_active_gaps_with_same_path_block(tmp_path: Path) -> None:
 
 
 @pytest.mark.tooling
+def test_two_active_gaps_with_different_literal_docs_do_not_block(tmp_path: Path) -> None:
+    workboard = _base_workboard()
+    workboard["activeGaps"] = [
+        _gap("GAP-one", paths=["docs/a.md"]),
+        _gap("GAP-two", paths=["docs/b.md"]),
+    ]
+    workboard_path = _write_workboard(tmp_path, workboard)
+
+    result = validate_workboard(workboard_path=workboard_path)
+
+    assert result["ok"] is True
+    assert result["errors"] == []
+
+
+@pytest.mark.tooling
+def test_paths_overlap_distinguishes_literals_and_globs() -> None:
+    assert paths_overlap("docs/workboard.json", "docs/sprintvakt-mcp.md") is False
+    assert paths_overlap("docs/workboard.json", "docs/workboard.json") is True
+    assert paths_overlap("docs/gaps/**", "docs/gaps/GAP-docs.md") is True
+    assert paths_overlap("docs/gaps/", "docs/gaps/GAP-docs.md") is True
+
+
+@pytest.mark.tooling
 def test_christopher_generation_gap_blocks(tmp_path: Path) -> None:
     workboard = _base_workboard()
     workboard["activeGaps"] = [
@@ -167,6 +191,28 @@ def test_create_gap_without_confirm_when_writing_fails(tmp_path: Path) -> None:
 
     with pytest.raises(SprintvaktError, match="requires confirm:true"):
         create_gap(_create_payload(dry_run=False, confirm=False), workboard_path=workboard_path)
+
+
+@pytest.mark.tooling
+def test_create_gap_allows_empty_do_not_touch(tmp_path: Path) -> None:
+    workboard_path = _write_workboard(tmp_path)
+    payload = _create_payload(dry_run=True)
+    payload["doNotTouch"] = []
+
+    result = create_gap(payload, workboard_path=workboard_path)
+
+    assert result["gap"]["doNotTouch"] == []
+
+
+@pytest.mark.tooling
+def test_create_gap_defaults_missing_do_not_touch_to_empty(tmp_path: Path) -> None:
+    workboard_path = _write_workboard(tmp_path)
+    payload = _create_payload(dry_run=True)
+    del payload["doNotTouch"]
+
+    result = create_gap(payload, workboard_path=workboard_path)
+
+    assert result["gap"]["doNotTouch"] == []
 
 
 @pytest.mark.tooling

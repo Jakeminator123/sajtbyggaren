@@ -109,14 +109,21 @@ def sanitize_repo_path(value: str) -> str:
     parts = [part for part in raw.split("/") if part not in {"", "."}]
     if any(part == ".." for part in parts):
         raise SprintvaktError(f"Parent traversal is not allowed: {value}")
-    return "/".join(parts)
+    normalized = "/".join(parts)
+    if raw.endswith("/") and normalized:
+        return f"{normalized}/"
+    return normalized
 
 
-def sanitize_paths(values: list[str] | tuple[str, ...]) -> list[str]:
+def sanitize_paths(
+    values: list[str] | tuple[str, ...],
+    *,
+    allow_empty: bool = False,
+) -> list[str]:
     if not isinstance(values, list | tuple):
         raise SprintvaktError("paths must be a list.")
     paths = [sanitize_repo_path(value) for value in values]
-    if not paths:
+    if not paths and not allow_empty:
         raise SprintvaktError("paths must contain at least one path.")
     return paths
 
@@ -136,8 +143,28 @@ def paths_overlap(left: str, right: str) -> bool:
     right = sanitize_repo_path(right)
     if left == right:
         return True
+
+    left_is_directory = left.endswith("/")
+    right_is_directory = right.endswith("/")
+    if left_is_directory or right_is_directory:
+        return (
+            left_is_directory
+            and right.startswith(left)
+            or right_is_directory
+            and left.startswith(right)
+        )
+
+    left_is_glob = _is_glob(left)
+    right_is_glob = _is_glob(right)
+    if not left_is_glob and not right_is_glob:
+        return False
+
     if _matches(left, right) or _matches(right, left):
         return True
+
+    if not left_is_glob or not right_is_glob:
+        return False
+
     left_base = _literal_prefix(left)
     right_base = _literal_prefix(right)
     if not left_base or not right_base:
@@ -148,10 +175,6 @@ def paths_overlap(left: str, right: str) -> bool:
 def _literal_prefix(pattern: str) -> str:
     wildcard_positions = [pattern.find(char) for char in "*?[" if char in pattern]
     if not wildcard_positions:
-        if pattern.endswith("/"):
-            return pattern
-        if "/" in pattern:
-            return pattern.rsplit("/", 1)[0] + "/"
         return pattern
     prefix = pattern[: min(wildcard_positions)]
     if "/" in prefix:
@@ -561,7 +584,7 @@ def _gap_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "title": title,
         "whyNow": why_now,
         "paths": sanitize_paths(payload.get("paths", [])),
-        "doNotTouch": sanitize_paths(payload.get("doNotTouch", [])),
+        "doNotTouch": sanitize_paths(payload.get("doNotTouch", []), allow_empty=True),
         "acceptanceCriteria": acceptance,
         "checks": checks,
         "collisionRisk": "green",
