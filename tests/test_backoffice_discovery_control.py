@@ -75,7 +75,13 @@ def test_discovery_doctor_treats_fallback_target_without_runtime_as_warning() ->
     payload = copy.deepcopy(_policy())
     category = _category(payload)
     category["supportStatus"] = "fallback"
-    category["targetScaffoldId"] = "restaurant-hospitality"
+    # ``portfolio-creator`` is enabled in scaffold-contract.v1.json but has
+    # not yet been wired into SCAFFOLD_TO_STARTER in plan.py; it is the
+    # canonical example of a "registered but not runtime" target. The
+    # previous example, ``restaurant-hospitality``, became runtime in PR #68
+    # follow-up after the planner starter-mapping was wired alongside the
+    # scaffold landing, so it no longer triggers this warning path.
+    category["targetScaffoldId"] = "portfolio-creator"
     category.pop("activeScaffoldId", None)
     category["fallbackScaffoldId"] = "local-service-business"
     category["defaultVariantId"] = "nordic-trust"
@@ -232,10 +238,18 @@ def test_category_mapping_rows_surface_real_doctor_warnings() -> None:
     rows = discovery_control.category_mapping_rows()
     by_id = {row["categoryId"]: row for row in rows}
 
-    restaurant = by_id["restaurant"]
-    assert restaurant["mappingState"] == "planned-fallback"
-    assert restaurant["operatorReviewRequired"] == "ja"
-    assert "discovery-target-runtime" in restaurant["fallbackWarnings"]
+    # ``portfolio`` is the canonical "planned, target not runtime" category
+    # since PR #68 follow-up wired ``restaurant-hospitality`` into
+    # SCAFFOLD_TO_STARTER (planner mapping) — the restaurant category is
+    # now runtime-resolved for the planner even though
+    # ``write_pages`` still lacks ``menu``/``booking`` renderers (see
+    # docs/scaffold-runtime-extension-needed.md). When a future PR wires
+    # ``portfolio-creator`` into SCAFFOLD_TO_STARTER, swap to another
+    # genuinely-planned category (``event``, ``nonprofit``, …) here.
+    portfolio = by_id["portfolio"]
+    assert portfolio["mappingState"] == "planned-fallback"
+    assert portfolio["operatorReviewRequired"] == "ja"
+    assert "discovery-target-runtime" in portfolio["fallbackWarnings"]
 
 
 def test_discovery_edit_validation_rejects_required_dossier_promotion() -> None:
