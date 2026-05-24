@@ -489,6 +489,117 @@ def test_brand_colors_and_logo_pass_through_to_project_input() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Gap 1 — vibe.useCustomColors styr om custom colors persisteras
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_use_custom_colors_true_persists_brand_hex() -> None:
+    """Gap 1: explicit ``useCustomColors=True`` + non-empty hex → persisteras.
+
+    Operatorens explicit val i wizardens steg 2 ("Egna färger" toggle på)
+    måste landa i ``project_input.brand`` så att buildern overrider
+    variantens default-färger.
+    """
+    payload = _payload(
+        "business",
+        vibe={"vibeId": "warm-craft", "useCustomColors": True},
+        brand={"primaryColorHex": "#16a34a", "accentColorHex": "#cdb98a"},
+    )
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["brand"]["primaryColorHex"] == "#16a34a"
+    assert project_input["brand"]["accentColorHex"] == "#cdb98a"
+    assert decision.fieldSources["brand.primaryColorHex"] == "wizard"
+    assert decision.fieldSources["brand.accentColorHex"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_use_custom_colors_false_blocks_brand_hex_persistence() -> None:
+    """Gap 1: ``useCustomColors=False`` blockerar persistens även om hex är non-empty.
+
+    När operatören togglar tillbaka till "Använd variantens default-färger"
+    ligger hex-värdena ofta kvar i UI-state från ett tidigare explicit val.
+    Wizarden skickar dem ändå — backend måste respektera flaggan och
+    INTE persistera dem, så buildern faller tillbaka till variant-default.
+    """
+    payload = _payload(
+        "business",
+        vibe={"vibeId": "warm-craft", "useCustomColors": False},
+        brand={"primaryColorHex": "#16a34a", "accentColorHex": "#cdb98a"},
+    )
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    brand_block = project_input.get("brand", {})
+    assert "primaryColorHex" not in brand_block, (
+        "useCustomColors=False ska blockera primaryColorHex-persistens"
+    )
+    assert "accentColorHex" not in brand_block, (
+        "useCustomColors=False ska blockera accentColorHex-persistens"
+    )
+    assert "brand.primaryColorHex" not in decision.fieldSources
+    assert "brand.accentColorHex" not in decision.fieldSources
+
+
+@pytest.mark.tooling
+def test_use_custom_colors_missing_falls_back_to_v1_behavior() -> None:
+    """Gap 1: saknad ``useCustomColors``-flagga → v1 backward-compat.
+
+    Legacy payloads (eller payloads där vibe-objektet saknas helt) ska
+    behålla det historiska beteendet: persistera om non-empty. Detta
+    skyddar mot bakåtkompatibilitetsproblem för payloads som testas
+    från CLI eller äldre integrationer som inte sätter useCustomColors.
+    """
+    payload = _payload(
+        "business",
+        brand={"primaryColorHex": "#16a34a"},
+    )
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert project_input["brand"]["primaryColorHex"] == "#16a34a"
+    assert decision.fieldSources["brand.primaryColorHex"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_use_custom_colors_false_still_persists_logo_and_other_assets() -> None:
+    """Gap 1: flaggan ska BARA gälla färger — assets persisteras oavsett.
+
+    Operator kan ha valt att INTE override:a variantens färger men ändå
+    laddat upp en logotyp. Logon ska persisteras precis som vanligt.
+    """
+    asset_ref = {
+        "assetId": "01HXYZ1234567890ABCDEFGHJK",
+        "filename": "logo.webp",
+        "mimeType": "image/webp",
+        "sizeBytes": 1234,
+        "role": "logo",
+    }
+    payload = _payload(
+        "business",
+        vibe={"vibeId": "warm-craft", "useCustomColors": False},
+        brand={"primaryColorHex": "#16a34a"},
+        assets={"logo": asset_ref},
+    )
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+    assert "primaryColorHex" not in project_input.get("brand", {})
+    assert project_input["brand"]["logo"]["assetId"] == asset_ref["assetId"]
+    assert decision.fieldSources["brand.logo"] == "wizard"
+
+
+# ---------------------------------------------------------------------------
 # variantHint-routing — vibe-valet i wizarden styr variantId
 # ---------------------------------------------------------------------------
 

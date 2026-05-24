@@ -933,8 +933,27 @@ def _apply_brand_and_assets(
 ) -> None:
     brand_raw = answers.get("brand")
     wizard_brand: dict[str, Any] = brand_raw if isinstance(brand_raw, dict) else {}
-    primary = wizard_brand.get("primaryColorHex")
-    accent = wizard_brand.get("accentColorHex")
+
+    # Gap 1: respektera operatörens explicit val i wizardens steg 2 om
+    # variantens default-färger ska behållas. När operatören togglar
+    # "Använd variantens default-färger" sätts ``vibe.useCustomColors``
+    # till ``False`` i UI:t men hex-värdena ligger ofta kvar i state
+    # från ett tidigare explicit val. Wizarden skickar dem ändå
+    # eftersom kontraktet säger att backend äger policyn
+    # (se ``wizard-payload.ts`` rad 438-441).
+    #
+    # Här tolkar vi flaggan: ``False`` (explicit boolean) blockerar
+    # persistens även om hex-värdena är non-empty. ``True`` eller
+    # saknad flagga (v1 bakåtkompat) följer status quo (persistera om
+    # non-empty). Detta gör att operatörens val i UI:t — där hex-
+    # fälten gömts när toggle:n är av — speglas exakt i den genererade
+    # sajten.
+    vibe_raw = answers.get("vibe")
+    vibe: dict[str, Any] = vibe_raw if isinstance(vibe_raw, dict) else {}
+    honor_custom_colors = vibe.get("useCustomColors") is not False
+
+    primary = wizard_brand.get("primaryColorHex") if honor_custom_colors else None
+    accent = wizard_brand.get("accentColorHex") if honor_custom_colors else None
     if (isinstance(primary, str) and primary.strip()) or (
         isinstance(accent, str) and accent.strip()
     ):
