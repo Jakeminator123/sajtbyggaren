@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-24T00:00:00Z",
-  "updatedBy": "sprintvakt-v1",
+  "updatedAt": "2026-05-24T23:52:13Z",
+  "updatedBy": "sprintvakt-mcp",
   "people": {
     "jakob": {
       "allocation": 0.75,
@@ -59,7 +59,40 @@
       "reason": "UI/frontend ownership"
     }
   ],
-  "queuedGaps": [],
+  "queuedGaps": [
+    {
+      "id": "GAP-sprintvakt-v1-1-bug-followups",
+      "type": "Gap/Guard",
+      "owner": "jakob",
+      "title": "Sprintvakt V1.1 follow-up: file-only gaps, dupe reservations, sys.path",
+      "whyNow": "Three AI bug review findings from PR #70 that do not block V1 coordination but should land before V2.",
+      "paths": [
+        "tooling/sprintvakt_mcp/core.py",
+        "scripts/sprintvakt_check.py",
+        "tests/test_sprintvakt_check.py"
+      ],
+      "doNotTouch": [
+        "scripts/build_site.py",
+        "packages/generation/**",
+        "apps/viewser/**"
+      ],
+      "acceptanceCriteria": [
+        "generate_agent_prompt resolves file-only gaps in docs/gaps/*.md",
+        "reserve_paths replaces rather than appends entries for the same gapId",
+        "scripts/sprintvakt_check.py imports tooling.sprintvakt_mcp via real package install or PYTHONPATH instead of sys.path mutation"
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python -m pytest tests/test_sprintvakt_check.py -q"
+      ],
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "queued",
+      "createdAt": "2026-05-24T23:52:13Z",
+      "updatedAt": "2026-05-24T23:52:13Z",
+      "notes": []
+    }
+  ],
   "activeGaps": [],
   "completedGaps": [],
   "decisions": [
