@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../../../../governance/schemas/variant.schema.json",
+  "id": "warm-bistro",
+  "enabled": true,
+  "label": "Warm Bistro",
+  "description": "Earthy, candle-lit visual direction for neighbourhood bistros, brasseries and traditional restaurants. Deep terracotta and roasted-amber palette with soft cream backgrounds, generous radii and a slightly warmer typographic feel evoke pressed linen, copper cookware and seasonal produce.",
+  "tokens": {
+    "color": {
+      "background": "#fbf6ee",
+      "foreground": "#2a1a13",
+      "muted": "#7a6457",
+      "border": "#e7d6c0",
+      "primary": "#8a3a20",
+      "primaryForeground": "#fdf8f2",
+      "accent": "#c98c4a",
+      "accentForeground": "#2a1a13"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.25
+    },
+    "radius": {
+      "sm": "0.375rem",
+      "md": "0.625rem",
+      "lg": "1rem"
+    },
+    "spacing": {
+      "section": "5rem",
+      "container": "min(70rem, 92vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "warm",
+      "neighbourhood",
+      "rustic",
+      "seasonal",
+      "inviting",
+      "traditional"
+    ]
+  }
+}

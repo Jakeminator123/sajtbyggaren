@@ -1,0 +1,37 @@
+{
+  "id": "restaurant-hospitality",
+  "embeddingText": "A restaurant or hospitality website for restaurants, cafés, bistros, brasseries, fine-dining venues, neighbourhood eateries, breakfast spots, brunch places, lunch restaurants, food trucks with a permanent address, gastropubs, wine bars, cocktail bars, hotel restaurants, boutique hotels, bed and breakfasts and catering kitchens. The site centres on atmosphere photography, menu legibility, table reservations, opening hours, location, dietary markers and the moment a hungry visitor decides whether to book.",
+  "semanticSignals": [
+    "menu",
+    "table reservation",
+    "opening hours",
+    "cuisine",
+    "chef",
+    "atmosphere photography",
+    "wine list",
+    "lunch rotation",
+    "brunch",
+    "dietary markers",
+    "neighbourhood eatery",
+    "fine dining",
+    "boutique hotel",
+    "bistro",
+    "café"
+  ],
+  "negativeSignals": [
+    "software product",
+    "dashboard application",
+    "ecommerce checkout for physical goods shipping",
+    "online course",
+    "consulting firm",
+    "SaaS billing",
+    "marketplace with multiple independent merchants"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold when the primary visitor goal is to look at a menu and book a table or walk in for a meal or drink.",
+    "Choose this scaffold for a hotel only when the hotel's primary online conversion is dining or stays at the venue itself, not a meta-search hotel directory.",
+    "Do not choose this scaffold for a catering company whose business model is shipping prepared food boxes nationally; that is ecommerce-lite."
+  ],
+  "minConfidence": 0.72,
+  "requiresTieBreakWhenWithin": 0.08
+}

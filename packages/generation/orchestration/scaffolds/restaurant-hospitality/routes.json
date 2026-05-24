@@ -1,0 +1,51 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Establish atmosphere, cuisine and the most important conversion (book a table or see the menu) within the first scroll."
+    },
+    {
+      "id": "menu",
+      "path": "/meny",
+      "required": true,
+      "purpose": "Show the actual menu items grouped by course or category, with prices and dietary markers. The single most-visited page after the home."
+    },
+    {
+      "id": "booking",
+      "path": "/bokning",
+      "required": true,
+      "purpose": "Convert the visitor to a confirmed reservation via form or third-party booking embed, with opening hours visible."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Tell the story behind the chef, the family, the produce — what makes this place not interchangeable."
+    },
+    {
+      "id": "contact",
+      "path": "/hitta-hit",
+      "required": true,
+      "purpose": "Address, map, phone, opening hours, parking — the practical info that turns intent into a visit."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "events",
+      "path": "/event",
+      "when": "the venue actively hosts private events, weddings or seasonal happenings"
+    },
+    {
+      "id": "gallery",
+      "path": "/galleri",
+      "when": "atmosphere photography is a primary sales asset (fine dining, ambient cafés, hotel restaurants)"
+    },
+    {
+      "id": "lunch",
+      "path": "/lunch",
+      "when": "lunch menu rotates weekly and warrants a dedicated, frequently-updated page"
+    }
+  ]
+}

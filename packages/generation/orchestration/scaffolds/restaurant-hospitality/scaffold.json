@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../../../governance/schemas/scaffold.schema.json",
+  "id": "restaurant-hospitality",
+  "version": "1.0.0",
+  "label": "Restaurant & Hospitality",
+  "description": "Atmosphere-led site for restaurants, cafés, bistros, bars and small hotels. Focus on visual appetite, menu visibility, reservation conversion, location/opening hours and reviews. Built for the moment a hungry visitor decides whether to book a table or walk in.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "convey atmosphere and cuisine",
+    "show the menu without friction",
+    "drive table reservations",
+    "make opening hours and location unmissable"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

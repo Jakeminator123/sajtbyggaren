@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "atmosphere_fit": 1.3,
+    "menu_clarity": 1.2,
+    "booking_clarity": 1.2,
+    "trust_signals": 1.0,
+    "content_specificity": 1.1,
+    "visual_hierarchy": 1.1,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Hero copy includes cuisine type and city, not generic restaurant language.",
+    "Menu page lists at least one real dish with a price; no lorem ipsum placeholders.",
+    "Booking conversion path is reachable from every page (header or sticky CTA on mobile).",
+    "Opening hours are present on contact, booking and home pages.",
+    "Address, phone and email are real values, not sample data.",
+    "All routes from routes.json are present.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Stock business or office imagery; only food, room or location photography belongs here.",
+    "Generic 'passion for food' copy without a chef name, source or year.",
+    "Hiding the menu behind a download or external link when the operator gave dish data inline.",
+    "Random color choices not derived from variant tokens.",
+    "Forms that fail at build because of missing booking-provider env."
+  ]
+}
