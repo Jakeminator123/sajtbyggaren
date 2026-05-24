@@ -14,7 +14,8 @@ Guards:
 5. ``_apply_discovery_overrides`` mappar discovery.assets → brand.logo /
    brand.heroImage / gallery i Project Input.
 
-Ingen extern I/O — vi mockar disk genom temporära mappar.
+Ingen extern nätverks-I/O — vi mockar disk genom temporära mappar och
+remote fetch genom monkeypatchad ``requests.get``.
 """
 
 from __future__ import annotations
@@ -65,6 +66,33 @@ def _valid_asset_ref(**overrides) -> dict:
     return base
 
 
+class _FakeRemoteAssetResponse:
+    def __init__(
+        self,
+        data: bytes = b"",
+        *,
+        status_code: int = 200,
+        headers: dict[str, str] | None = None,
+        chunks: list[bytes] | None = None,
+    ) -> None:
+        self.data = data
+        self.status_code = status_code
+        self.headers = headers or {}
+        self.chunks = chunks
+        self.closed = False
+
+    def iter_content(self, chunk_size: int) -> list[bytes]:
+        if self.chunks is not None:
+            return self.chunks
+        return [
+            self.data[index : index + chunk_size]
+            for index in range(0, len(self.data), chunk_size)
+        ]
+
+    def close(self) -> None:
+        self.closed = True
+
+
 @pytest.mark.governance
 def test_schema_accepts_brand_logo_hero_and_gallery(
     schema: dict, base_project_input: dict
@@ -91,6 +119,112 @@ def test_schema_accepts_brand_logo_hero_and_gallery(
     validator = jsonschema.Draft202012Validator(schema)
     errors = list(validator.iter_errors(payload))
     assert not errors, [error.message for error in errors]
+
+
+@pytest.mark.governance
+def test_schema_declares_source_url_as_optional_uri(schema: dict) -> None:
+    asset_ref_schema = schema["$defs"]["assetRef"]
+    source_url_schema = asset_ref_schema["properties"]["sourceUrl"]
+
+    assert source_url_schema["type"] == "string"
+    assert source_url_schema["format"] == "uri"
+    assert "sourceUrl" not in asset_ref_schema["required"]
+    assert asset_ref_schema["additionalProperties"] is False
+
+
+@pytest.mark.tooling
+def test_copy_operator_uploads_handles_stream_interruption_gracefully(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reviewer-fynd (Hög, 2026-05-24): ``_fetch_asset_bytes_from_url``
+    fångade tidigare bara fel runt ``requests.get(...)``, inte fel som
+    uppstår senare under ``response.iter_content(...)``. Om blob-svaret
+    bröts mitt i streamen kunde en ``ChunkedEncodingError`` bubbla ut
+    från ``copy_operator_uploads`` och krascha hela bygget — trots att
+    funktionen uttryckligen lovar att tystlåtet hoppa över trasiga assets.
+
+    Det här testet låser den inre ``try/except requests.RequestException``
+    som nu omger ``iter_content``-loopen. Förlorar streamen efter första
+    chunken: funktionen returnerar ``None`` (skippas) i stället för att
+    kasta. Resten av bygget fortsätter.
+    """
+    import sys
+
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import build_site  # noqa: E402
+
+    class _BrokenStreamResponse:
+        status_code = 200
+        headers: dict[str, str] = {}
+        closed = False
+
+        def iter_content(self, chunk_size: int):  # noqa: ARG002
+            yield b"webp\x00first-chunk-ok"
+            raise build_site.requests.exceptions.ChunkedEncodingError(
+                "Connection broken: stream interrupted mid-read"
+            )
+
+        def close(self) -> None:
+            self.closed = True
+
+    response = _BrokenStreamResponse()
+    monkeypatch.setattr(build_site.requests, "get", lambda *_a, **_kw: response)
+
+    ref = _valid_asset_ref(
+        assetId="01HSTREAM0000000000000000",
+        filename="broken.webp",
+        sourceUrl="https://abc.public.blob.vercel-storage.com/broken.webp",
+    )
+    target = tmp_path / "generated-site"
+    target.mkdir()
+
+    copied = build_site.copy_operator_uploads(
+        "missing-on-disk", target, {"brand": {"logo": ref}}
+    )
+
+    captured = capsys.readouterr()
+    assert copied == 0, "Broken stream ska skippas, inte krascha builden"
+    assert "stream interrupted" in captured.out, (
+        f"Expected stream-fel-log i stdout, fick: {captured.out!r}"
+    )
+    assert response.closed is True, "response.close() måste köras även på fel"
+    assert not (target / "public" / "uploads" / "broken.webp").exists()
+
+
+@pytest.mark.tooling
+def test_runtime_gatekeeper_rejects_malformed_sourceurl_strings() -> None:
+    """Reviewer-fynd (Låg, 2026-05-24): schema deklarerar ``format: "uri"``
+    men JSON Schema gör format-enforcement opt-in (kräver rfc3987 e.dyl.) —
+    värdena ALDRIG stoppas av schemat ensamt. Den faktiska gatekeepern är
+    ``_is_allowed_asset_source_url`` i build_site.py som kallas innan
+    ``_fetch_asset_bytes_from_url``. Detta test låser att gatekeepern
+    avvisar alla rimliga "string men inte HTTPS-blob-URL"-fall, inte bara
+    de uppenbara (HTTP, file:, okänd host) som redan testas i
+    ``test_is_allowed_asset_source_url_allowlist``.
+    """
+    import sys
+
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    from build_site import _is_allowed_asset_source_url  # noqa: E402
+
+    malformed = [
+        "not a url at all",
+        "   ",
+        "javascript:alert(1)",
+        "data:text/html,<script>alert(1)</script>",
+        "//public.blob.vercel-storage.com/x.webp",
+        "https://",
+        "https:///x.webp",
+        "blob:https://public.blob.vercel-storage.com/x.webp",
+        "ftp://public.blob.vercel-storage.com/x.webp",
+        "ssh://public.blob.vercel-storage.com/x.webp",
+    ]
+    for candidate in malformed:
+        assert not _is_allowed_asset_source_url(candidate), (
+            f"Gatekeepern måste avvisa malformed sourceUrl {candidate!r}"
+        )
 
 
 @pytest.mark.governance
@@ -182,11 +316,7 @@ def test_copy_operator_uploads_fetches_from_source_url_when_disk_missing(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """När disk-lookup inte hittar assetId men ``ref.sourceUrl`` pekar
-    på en allowlist:ad host, ska bytes hämtas via HTTP och skrivas till
-    ``public/uploads/<filename>``. Detta är gap #11 i backend-handoff.md
-    — Vercel-Blob-uppladdningar måste fungera även när dev-maskinen
-    inte har bytes på disk."""
+    """Remote Vercel Blob bytes are fetched and copied without real network I/O."""
     import sys
 
     sys.path.insert(0, str(REPO_ROOT / "scripts"))
@@ -202,13 +332,14 @@ def test_copy_operator_uploads_fetches_from_source_url_when_disk_missing(
     target.mkdir()
 
     fake_bytes = b"webp\x00bytes-from-blob"
-    fetched_urls: list[str] = []
+    response = _FakeRemoteAssetResponse(fake_bytes)
+    fetch_calls: list[tuple[str, dict]] = []
 
-    def fake_fetch(url: str) -> bytes | None:
-        fetched_urls.append(url)
-        return fake_bytes
+    def fake_get(url: str, **kwargs) -> _FakeRemoteAssetResponse:
+        fetch_calls.append((url, kwargs))
+        return response
 
-    monkeypatch.setattr(build_site, "_fetch_asset_bytes_from_url", fake_fetch)
+    monkeypatch.setattr(build_site.requests, "get", fake_get)
 
     copied = build_site.copy_operator_uploads("missing-on-disk", target, pi)
 
@@ -216,7 +347,57 @@ def test_copy_operator_uploads_fetches_from_source_url_when_disk_missing(
     dest = target / "public" / "uploads" / "hero-from-blob.webp"
     assert dest.exists()
     assert dest.read_bytes() == fake_bytes
-    assert fetched_urls == [ref["sourceUrl"]]
+    assert response.closed is True
+    assert fetch_calls == [
+        (
+            ref["sourceUrl"],
+            {
+                "headers": {
+                    "User-Agent": "sajtbyggaren-build/1.0",
+                    "Accept": "*/*",
+                },
+                "timeout": 15,
+                "stream": True,
+                "allow_redirects": False,
+            },
+        )
+    ]
+
+
+@pytest.mark.tooling
+def test_copy_operator_uploads_uses_local_disk_when_source_url_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """LocalAssetStore disk lookup remains unchanged when sourceUrl is absent."""
+    import sys
+
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import build_site  # noqa: E402
+
+    uploads_root = tmp_path / "uploads"
+    asset_id = "01HLOCAL000000000000000000"
+    asset_dir = uploads_root / "__draft" / asset_id
+    asset_dir.mkdir(parents=True)
+    disk_bytes = b"local-optimized-webp"
+    (asset_dir / "optimized.webp").write_bytes(disk_bytes)
+
+    monkeypatch.setattr(build_site, "UPLOADS_ROOT_DIR", uploads_root)
+
+    ref = _valid_asset_ref(assetId=asset_id, filename="local.webp")
+    pi = {"brand": {"logo": ref}}
+    target = tmp_path / "generated-site"
+    target.mkdir()
+
+    def fail_get(*_args, **_kwargs):
+        raise AssertionError("No remote fetch should run when sourceUrl is absent")
+
+    monkeypatch.setattr(build_site.requests, "get", fail_get)
+
+    copied = build_site.copy_operator_uploads("anysite", target, pi)
+
+    assert copied == 1
+    assert (target / "public" / "uploads" / "local.webp").read_bytes() == disk_bytes
 
 
 @pytest.mark.tooling
@@ -241,10 +422,10 @@ def test_copy_operator_uploads_rejects_disallowed_source_url_host(
     target = tmp_path / "generated-site"
     target.mkdir()
 
-    def fail_fetch(_url: str) -> bytes | None:
+    def fail_get(*_args, **_kwargs):
         raise AssertionError("Fetch ska aldrig anropas för en otillåten host")
 
-    monkeypatch.setattr(build_site, "_fetch_asset_bytes_from_url", fail_fetch)
+    monkeypatch.setattr(build_site.requests, "get", fail_get)
 
     copied = build_site.copy_operator_uploads("doesnotexist", target, pi)
     assert copied == 0
@@ -252,13 +433,51 @@ def test_copy_operator_uploads_rejects_disallowed_source_url_host(
 
 
 @pytest.mark.tooling
-def test_copy_operator_uploads_prefers_disk_over_source_url(
+def test_copy_operator_uploads_rejects_http_source_url(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """När bytes finns BÅDE på disk och som ``sourceUrl`` ska disk-
-    vägen vinna — den är snabbare, kräver inte nätverk och matchar
-    LocalAssetStore-flödet som CI använder."""
+    """HTTPS is required even for an otherwise allowed blob host."""
+    import sys
+
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import build_site  # noqa: E402
+
+    ref = _valid_asset_ref(
+        assetId="01HHTTP000000000000000000",
+        filename="http.webp",
+        sourceUrl="http://abc.public.blob.vercel-storage.com/x.webp",
+    )
+    target = tmp_path / "generated-site"
+    target.mkdir()
+
+    def fail_get(*_args, **_kwargs):
+        raise AssertionError("Fetch ska aldrig anropas för http:// sourceUrl")
+
+    monkeypatch.setattr(build_site.requests, "get", fail_get)
+
+    copied = build_site.copy_operator_uploads("doesnotexist", target, {"brand": {"logo": ref}})
+
+    assert copied == 0
+    assert not (target / "public" / "uploads" / "http.webp").exists()
+
+
+@pytest.mark.tooling
+def test_copy_operator_uploads_prefers_disk_when_both_disk_and_source_url_exist(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reviewer-fynd (Medium, 2026-05-24): tidigare PR #65-implementation
+    behandlade ``sourceUrl`` som auktoritativ när present och skippade hela
+    assetet vid fetch-fel även om bra lokala bytes fanns. Det gjorde en
+    transient blob-outage till saknade bilder.
+
+    Disk-first/remote-fallback är robustare och matchar Christophers
+    ursprungliga 706a88a-implementation samt naming-dictionary-texten:
+    "föredrar disk men faller tillbaka till sourceUrl-fetch". Detta test
+    låser den disciplinen — när både disk och sourceUrl finns vinner disk
+    och remote-fetchen ska aldrig anropas.
+    """
     import sys
 
     sys.path.insert(0, str(REPO_ROOT / "scripts"))
@@ -282,15 +501,116 @@ def test_copy_operator_uploads_prefers_disk_over_source_url(
     target = tmp_path / "generated-site"
     target.mkdir()
 
-    def fail_fetch(_url: str) -> bytes | None:
-        raise AssertionError("Fetch ska aldrig anropas när disk hittade asset")
+    def fake_get(_url: str, **_kwargs):
+        raise AssertionError(
+            "Remote fetch ska aldrig anropas när disk har bytes — "
+            "disk-first ska vinna över sourceUrl."
+        )
 
-    monkeypatch.setattr(build_site, "_fetch_asset_bytes_from_url", fail_fetch)
+    monkeypatch.setattr(build_site.requests, "get", fake_get)
 
     copied = build_site.copy_operator_uploads("anysite", target, pi)
     assert copied == 1
     dest = target / "public" / "uploads" / "both.webp"
-    assert dest.read_bytes() == disk_bytes
+    assert dest.read_bytes() == disk_bytes, (
+        "Disk-bytes ska vinna över remote eftersom disk-lookup körs först. "
+        f"Fick: {dest.read_bytes()!r}"
+    )
+
+
+@pytest.mark.tooling
+def test_copy_operator_uploads_falls_back_to_source_url_when_disk_dir_lacks_variant(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Regression-skydd för en subtil del av disk-first/remote-fallback-
+    semantiken: när asset-katalogen FINNS på disk men saknar variant-fil
+    (``optimized.webp`` / ``original.*``) ska sourceUrl-fetchen ändå
+    triggas, inte slugen-skip:as. Detta täcker fallet där en
+    LocalAssetStore-katalog är delvis korrupt eller ofullständig och
+    operator har en remote-version som backup.
+    """
+    import sys
+
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import build_site  # noqa: E402
+
+    uploads_root = tmp_path / "uploads"
+    asset_id = "01HEMPTYDIR000000000000000"
+    asset_dir = uploads_root / "anysite" / asset_id
+    asset_dir.mkdir(parents=True)
+    # Katalogen finns men saknar bytes — simulerar en korrupt/halvskriven
+    # LocalAssetStore-state.
+
+    monkeypatch.setattr(build_site, "UPLOADS_ROOT_DIR", uploads_root)
+
+    remote_bytes = b"remote-fallback-bytes"
+    response = _FakeRemoteAssetResponse(remote_bytes)
+
+    def fake_get(_url: str, **_kwargs) -> _FakeRemoteAssetResponse:
+        return response
+
+    monkeypatch.setattr(build_site.requests, "get", fake_get)
+
+    ref = _valid_asset_ref(
+        assetId=asset_id,
+        filename="recovered.webp",
+        sourceUrl="https://abc.public.blob.vercel-storage.com/recovered.webp",
+    )
+    target = tmp_path / "generated-site"
+    target.mkdir()
+
+    copied = build_site.copy_operator_uploads("anysite", target, {"brand": {"logo": ref}})
+
+    captured = capsys.readouterr()
+    assert copied == 1, (
+        f"sourceUrl-fallback ska trigga när disk-katalog saknar variant. "
+        f"Captured stdout: {captured.out!r}"
+    )
+    dest = target / "public" / "uploads" / "recovered.webp"
+    assert dest.read_bytes() == remote_bytes
+    assert "Försöker sourceUrl-fallback" in captured.out
+
+
+@pytest.mark.tooling
+def test_copy_operator_uploads_skips_too_large_source_url_response(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    import sys
+
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import build_site  # noqa: E402
+
+    monkeypatch.setattr(build_site, "_REMOTE_ASSET_MAX_BYTES", 8)
+    response = _FakeRemoteAssetResponse(
+        b"",
+        headers={"Content-Length": "9"},
+    )
+
+    def fake_get(_url: str, **_kwargs) -> _FakeRemoteAssetResponse:
+        return response
+
+    monkeypatch.setattr(build_site.requests, "get", fake_get)
+
+    ref = _valid_asset_ref(
+        assetId="01HLARGE00000000000000000",
+        filename="large.webp",
+        sourceUrl="https://abc.public.blob.vercel-storage.com/large.webp",
+    )
+    target = tmp_path / "generated-site"
+    target.mkdir()
+
+    copied = build_site.copy_operator_uploads("doesnotexist", target, {"brand": {"logo": ref}})
+
+    captured = capsys.readouterr()
+    assert copied == 0
+    assert "payload larger than 8 bytes" in captured.out
+    assert "Skipping asset" in captured.out
+    assert response.closed is True
+    assert not (target / "public" / "uploads" / "large.webp").exists()
 
 
 @pytest.mark.tooling

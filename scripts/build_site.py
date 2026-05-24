@@ -44,13 +44,13 @@ import shutil
 import subprocess
 import sys
 import time
-import urllib.error
 import urllib.parse
-import urllib.request
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+import requests
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -708,38 +708,27 @@ def iter_asset_refs(project_input: dict) -> list[dict]:
     return refs
 
 
-# Vilka URL-värdar som tillåts när vi fetchar bytes från ``ref.sourceUrl``.
-# Vi vill INTE blint följa vilken URL som helst en project-input råkar
-# innehålla — det skulle göra build_site.py till en SSRF-vektor om
-# någon lyckas smuggla in en metadata-IP eller intern adress. Listan
-# matchar de hosts som ``VercelBlobAssetStore`` kan generera i dag
-# (``apps/viewser/lib/asset-store/vercel-blob.ts`` returnerar URL:er på
-# ``*.public.blob.vercel-storage.com``). Om en ny driver tillkommer
-# (S3, R2, …) ska den hosten läggas till här. Disk-pathen är fortsatt
-# tillåten utan host-check eftersom den inte går via HTTP.
+# Hosts allowed when fetching bytes from ``ref.sourceUrl``. The builder
+# must not turn arbitrary Project Input data into an SSRF primitive; only
+# the public Vercel Blob host shape emitted by VercelBlobAssetStore is
+# valid here. If another remote AssetStore driver is added, add its public
+# read host explicitly instead of widening this check.
 _ALLOWED_ASSET_FETCH_HOSTS: tuple[str, ...] = (
     "public.blob.vercel-storage.com",
 )
 
-# Hur stora bytes-payloads vi accepterar från en remote sourceUrl.
-# 8 MB räcker långt över vår optimized.webp-budget (~200 KB) men
-# skyddar ändå mot en URL som råkar peka på en jätte-MP4. Disk-vägen
-# har ingen motsvarande gräns eftersom sharp-pipelinen redan kapat
-# bytes innan de hamnar på disk.
+# Remote sourceUrl bytes cap. 8 MB is well above the optimized.webp
+# budget, but prevents a build from reading an accidentally huge asset.
 _REMOTE_ASSET_MAX_BYTES = 8 * 1024 * 1024
 
-# Timeout per fetch. Build-jobbet ska aldrig fastna på ett dött
-# Vercel-Blob-svar — bättre att hoppa över assetet och låta render
-# falla tillbaka till alt-texten än att blockera hela bygget.
+# Per-request timeout. A dead blob URL should skip one asset, not block
+# the whole build.
 _REMOTE_ASSET_TIMEOUT_SEC = 15
+_REMOTE_ASSET_CHUNK_BYTES = 64 * 1024
 
 
 def _is_allowed_asset_source_url(url: str) -> bool:
-    """Allowlist-check: ``ref.sourceUrl`` får bara peka på en känd
-    asset-host över HTTPS. Returnerar ``False`` för relativa pathar,
-    HTTP, file://-URL:er och okända domäner. Allt skickas till stdout
-    via anroparen — vi kastar inte här.
-    """
+    """Return True only for HTTPS URLs on an explicitly allowed asset host."""
     try:
         parsed = urllib.parse.urlparse(url)
     except ValueError:
@@ -749,74 +738,126 @@ def _is_allowed_asset_source_url(url: str) -> bool:
     host = parsed.hostname or ""
     if not host:
         return False
+    try:
+        port = parsed.port
+    except ValueError:
+        return False
+    if port not in (None, 443):
+        return False
     return any(host == allowed or host.endswith(f".{allowed}") for allowed in _ALLOWED_ASSET_FETCH_HOSTS)
 
 
 def _fetch_asset_bytes_from_url(url: str) -> bytes | None:
-    """HTTP GET mot ``url``, returnera bytes vid framgång eller
-    ``None`` vid fel. Anroparen är ansvarig för att ha allowlist:at
-    URL:en innan denna funktion kallas. Allt fel-skribbleri går till
-    stdout så build-loggen visar varför ett asset hoppades över.
+    """Fetch bytes from an already-allowlisted remote asset URL.
 
-    Read-cap på ``_REMOTE_ASSET_MAX_BYTES + 1`` så vi kan detektera
-    payloads som överskrider gränsen utan att läsa in dem helt först.
+    Redirects are deliberately disabled: a public blob URL must not be
+    allowed to hop to loopback, link-local metadata endpoints, or any
+    other non-allowlisted host after the initial validation.
     """
-    request = urllib.request.Request(
-        url,
-        headers={
-            "User-Agent": "sajtbyggaren-build/1.0",
-            "Accept": "*/*",
-        },
-    )
     try:
-        with urllib.request.urlopen(request, timeout=_REMOTE_ASSET_TIMEOUT_SEC) as response:
-            data = response.read(_REMOTE_ASSET_MAX_BYTES + 1)
-    except urllib.error.URLError as exc:
-        print(f"copy_operator_uploads: fetch misslyckades för {url}: {exc}")
-        return None
-    except TimeoutError:
-        print(
-            f"copy_operator_uploads: fetch timeout ({_REMOTE_ASSET_TIMEOUT_SEC}s) för {url}",
+        response = requests.get(
+            url,
+            headers={
+                "User-Agent": "sajtbyggaren-build/1.0",
+                "Accept": "*/*",
+            },
+            timeout=_REMOTE_ASSET_TIMEOUT_SEC,
+            stream=True,
+            allow_redirects=False,
         )
+    except requests.RequestException as exc:
+        print(f"copy_operator_uploads: fetch failed for {url}: {exc}")
         return None
-    except Exception as exc:  # noqa: BLE001 - vi vill aldrig krascha bygget pga ett asset
-        print(f"copy_operator_uploads: oväntat fetch-fel för {url}: {exc!r}")
-        return None
-    if len(data) > _REMOTE_ASSET_MAX_BYTES:
-        print(
-            f"copy_operator_uploads: payload större än {_REMOTE_ASSET_MAX_BYTES} bytes "
-            f"för {url}. Hoppar över.",
-        )
-        return None
-    return data
+
+    try:
+        status_code = response.status_code
+        if 300 <= status_code < 400:
+            print(
+                f"copy_operator_uploads: sourceUrl redirect blocked for {url}. "
+                "Skipping asset.",
+            )
+            return None
+        if status_code >= 400:
+            print(
+                f"copy_operator_uploads: sourceUrl returned HTTP {status_code} "
+                f"for {url}. Skipping asset.",
+            )
+            return None
+
+        content_length = response.headers.get("Content-Length")
+        if content_length:
+            try:
+                declared_size = int(content_length)
+            except ValueError:
+                declared_size = None
+            if declared_size is not None and declared_size > _REMOTE_ASSET_MAX_BYTES:
+                print(
+                    f"copy_operator_uploads: payload larger than {_REMOTE_ASSET_MAX_BYTES} "
+                    f"bytes for {url}. Skipping asset.",
+                )
+                return None
+
+        # Streaming-fel (ChunkedEncodingError, ConnectionError, Timeout
+        # mid-read) bubblar inte ut till copy_operator_uploads. Reviewer-
+        # fynd: utan denna inre except kraschade hela bygget vid en bruten
+        # blob-stream trots att funktionen lovar att tysta hoppa över ett
+        # trasigt asset. requests.RequestException täcker både stream- och
+        # decoding-fel som kan uppstå efter att headers redan tagits emot.
+        try:
+            chunks: list[bytes] = []
+            total = 0
+            for chunk in response.iter_content(chunk_size=_REMOTE_ASSET_CHUNK_BYTES):
+                if not chunk:
+                    continue
+                total += len(chunk)
+                if total > _REMOTE_ASSET_MAX_BYTES:
+                    print(
+                        f"copy_operator_uploads: payload larger than {_REMOTE_ASSET_MAX_BYTES} "
+                        f"bytes for {url}. Skipping asset.",
+                    )
+                    return None
+                chunks.append(chunk)
+            return b"".join(chunks)
+        except requests.RequestException as exc:
+            print(
+                f"copy_operator_uploads: stream interrupted for {url}: {exc}. "
+                "Skipping asset.",
+            )
+            return None
+    finally:
+        response.close()
 
 
 def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> int:
-    """Kopiera operatör-uppladdade assets till sajtens public/uploads/.
+    """Copy operator-uploaded assets to the generated site's public/uploads/.
 
-    Tvåvägs-strategi (i prioriterad ordning):
+    Disk-first med remote-fallback. För varje ``AssetRef``:
 
-    1. **Disk-lookup** under ``data/uploads/<siteId>/`` eller
-       ``data/uploads/__draft/`` — det historiska flödet när
-       ``LocalAssetStore`` är aktiv. Föredrar ``optimized.webp`` (≤200 KB
-       efter sharp-pipelinen) och faller tillbaka till
-       ``original.<ext>`` om optimering inte gjordes (SVG/video).
+    1. **Disk-lookup först.** Letar i ``data/uploads/<siteId>/<assetId>/``
+       och ``data/uploads/__draft/<assetId>/``. Föredrar ``optimized.webp``
+       och faller tillbaka till ``original.<ext>`` (SVG/video). Om bytes
+       finns på disk kopieras de — buildern behöver inte fråga remote.
 
-    2. **HTTP-fetch** från ``ref.sourceUrl`` när disk-lookup misslyckas
-       OCH URL:en pekar på en allowlist:ad host (i dag bara
-       ``*.public.blob.vercel-storage.com``). Skrivs som-är till
-       ``public/uploads/<filename>`` — bytes:en är redan optimerade
-       när VercelBlobAssetStore satte sourceUrl. Detta stänger gap #11
-       i ``docs/backend-handoff.md`` så builds som körs på en annan
-       maskin än uppladdningen (typiskt fall: dev-maskin med
-       ``ASSET_STORE_DRIVER=vercel-blob``) får faktiska bilder i sajten
-       istället för broken ``<img>``-taggar.
+    2. **Remote-fallback från ``ref.sourceUrl``.** Om disk-lookup
+       misslyckas och ``sourceUrl`` finns + pekar på en allowlist:ad
+       HTTPS-host, HTTP-fetchas bytes och skrivs till
+       ``public/uploads/<filename>``. Vid fetch-fel (URL/status/size/
+       stream interrupt) skippas assetet — render faller tillbaka till
+       alt-text.
 
-    Returnerar antal filer som hamnade på disk. 0 är giltigt (operatorn
-    laddade inte upp något, generated site kör med starter-defaults).
-    Vi kastar aldrig på enskilt asset — fel rapporteras till stdout
-    och vi går vidare till nästa, så ett ensamt dött blob-URL inte
-    kan blockera hela bygget.
+    3. **Båda saknas → skippa med log.**
+
+    Reviewer-fynd (Medium, 2026-05-24): Tidigare ``remote-authoritative``-
+    semantik (sourceUrl vann ALLTID när present) gjorde en transient
+    blob-outage till saknade bilder även om bra lokala bytes fanns på
+    disk. Disk-first är robustare och matchar Christophers ursprungliga
+    ``706a88a``-implementation samt naming-dictionary-definitionen.
+    Stale-state-risken (disk har gamla bytes men blob har nyare) är
+    acceptabel i operator-prototype: alla uppdateringar går via samma
+    AssetStore-driver, så disk och blob är inte i divergens normalt.
+
+    Returns the number of files written. A single bad asset never aborts
+    the build; the renderer can still fall back to alt text / defaults.
     """
     refs = iter_asset_refs(project_input)
     if not refs:
@@ -831,9 +872,7 @@ def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> in
         asset_id = ref["assetId"]
         filename = ref["filename"]
 
-        # Steg 1: leta lokalt först. Snabbast, ingen nätverk, det är
-        # det historiska flödet och fungerar fortfarande för
-        # LocalAssetStore-uppladdningar.
+        # 1. Disk-lookup först — Local disk har företräde när bytes finns.
         source_dir: Path | None = None
         for candidate in candidate_dirs:
             if (candidate / asset_id).is_dir():
@@ -856,35 +895,36 @@ def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> in
                 shutil.copy2(source_file, dest)
                 copied += 1
                 continue
+            # Source-dir finns men ingen variant-fil — fortsätt till
+            # sourceUrl-fallback istället för att skippa direkt.
             print(
                 f"copy_operator_uploads: asset {asset_id} saknar variant-fil "
                 f"i {source_dir}. Försöker sourceUrl-fallback.",
             )
 
-        # Steg 2: disk-lookup gav inget. Försök ``sourceUrl`` om det
-        # finns och pekar på en allowlist:ad host.
+        # 2. Remote-fallback från sourceUrl när disk saknas.
         source_url = ref.get("sourceUrl")
         if isinstance(source_url, str) and source_url.strip():
-            if not _is_allowed_asset_source_url(source_url):
+            cleaned_source_url = source_url.strip()
+            if not _is_allowed_asset_source_url(cleaned_source_url):
                 print(
-                    f"copy_operator_uploads: sourceUrl för asset {asset_id} "
-                    f"pekar inte på en tillåten host ({source_url!r}). Hoppar över.",
+                    f"copy_operator_uploads: sourceUrl for asset {asset_id} "
+                    f"is not an allowed HTTPS Vercel Blob URL ({cleaned_source_url!r}). "
+                    "Skipping asset.",
                 )
                 continue
-            data = _fetch_asset_bytes_from_url(source_url)
+            data = _fetch_asset_bytes_from_url(cleaned_source_url)
             if data is None:
-                # _fetch_asset_bytes_from_url har redan loggat orsaken.
                 continue
             dest = public_uploads / filename
             dest.write_bytes(data)
             copied += 1
             continue
 
-        # Inget hittat. Logga och gå vidare — render-vägen får falla
-        # tillbaka till alt-text på den brutna bilden.
+        # 3. Båda saknas — logga och hoppa över.
         print(
             f"copy_operator_uploads: asset {asset_id} saknas både på disk "
-            f"(letade i {candidate_dirs}) och utan sourceUrl. Hoppar över.",
+            f"(letade i {candidate_dirs}) och saknar sourceUrl. Hoppar över.",
         )
 
     return copied

@@ -268,7 +268,12 @@
           "type": "string",
           "enum": ["low", "medium", "high"]
         },
-        "sourceUrl": {"type": "string", "minLength": 1}
+        "sourceUrl": {
+          "type": "string",
+          "format": "uri",
+          "minLength": 1,
+          "description": "Optional public HTTPS URL for optimized asset bytes. When present, build_site.py fetches this URL into public/uploads/<filename> instead of using local data/uploads disk lookup."
+        }
       }
     }
   }
