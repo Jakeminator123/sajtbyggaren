@@ -73,6 +73,7 @@ COMMON_WORDS = {
     "AttributeError",
     "ArgumentParser", "ImportError", "SimpleNamespace", "UnicodeDecodeError", "Input", "Output",
     "AssertionError", "FileExistsError", "NotImplementedError",
+    "CalledProcessError", "ModuleNotFoundError",
     "Iterable", "Sequence", "Mapping", "Callable",
     # Status-strängar (verify_run.py + andra tooling-checkers)
     "OK", "FAIL", "WARN", "UNKNOWN", "SKIP",
