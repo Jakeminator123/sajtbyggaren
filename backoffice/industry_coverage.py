@@ -17,8 +17,6 @@ from packages.generation.discovery.taxonomy import TaxonomyCategory, load_discov
 
 from . import asset_graph, sni_diagnostics
 
-CoverageRow = dict[str, Any]
-
 COVERAGE_STATUSES = (
     "active_native",
     "active_fallback",
@@ -323,7 +321,7 @@ def _attention_reasons(
 
 def _recommended_actions(
     *,
-    row: CoverageRow,
+    row: dict[str, Any],
     capability_state: dict[str, Any],
 ) -> list[str]:
     actions: list[str] = []
@@ -353,7 +351,7 @@ def _recommended_actions(
     return _ordered_unique(actions)
 
 
-def industry_coverage_rows() -> list[CoverageRow]:
+def industry_coverage_rows() -> list[dict[str, Any]]:
     """Return one read-only coverage row per Discovery Taxonomy category."""
     taxonomy = load_discovery_taxonomy()
     sni_by_category = _sni_rows_by_category()
@@ -362,7 +360,7 @@ def industry_coverage_rows() -> list[CoverageRow]:
     canonical_by_capability = _canonical_dossier_ids_by_capability()
     candidates_by_capability = _dossier_candidate_counts_by_capability()
 
-    rows: list[CoverageRow] = []
+    rows: list[dict[str, Any]] = []
     for category_id in sorted(taxonomy.categories):
         category = taxonomy.categories[category_id]
         sni_summary = _sni_summary(sni_by_category.get(category.id, []))
@@ -407,7 +405,7 @@ def industry_coverage_rows() -> list[CoverageRow]:
             target_is_runtime=target_is_runtime,
         )
 
-        row: CoverageRow = {
+        row: dict[str, Any] = {
             "contentBranch": category.contentBranch,
             "wizardCategoryId": category.id,
             "labelSv": category.labelSv,
@@ -462,9 +460,9 @@ def industry_coverage_rows() -> list[CoverageRow]:
     return rows
 
 
-def content_branch_summary(rows: list[CoverageRow]) -> list[dict[str, Any]]:
+def content_branch_summary(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Return aggregate coverage counters per contentBranch."""
-    grouped: dict[str, list[CoverageRow]] = defaultdict(list)
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         grouped[str(row.get("contentBranch") or "")].append(row)
 
@@ -489,7 +487,7 @@ def content_branch_summary(rows: list[CoverageRow]) -> list[dict[str, Any]]:
     return summary
 
 
-def recommended_action_rows(rows: list[CoverageRow]) -> list[dict[str, Any]]:
+def recommended_action_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Flatten category recommended actions into a table-friendly list."""
     out: list[dict[str, Any]] = []
     for row in rows:
@@ -516,7 +514,7 @@ def _bullet_list(values: list[str]) -> str:
     return "\n".join(f"- {value}" for value in values)
 
 
-def build_variant_candidate_brief(row: CoverageRow) -> str:
+def build_variant_candidate_brief(row: dict[str, Any]) -> str:
     """Build a safe operator brief for a category-specific Variant candidate."""
     return f"""Create a disabled Scaffold Variant candidate for Sajtbyggaren.
 
@@ -558,7 +556,7 @@ Hard rules:
 
 
 def build_dossier_candidate_brief(
-    row: CoverageRow,
+    row: dict[str, Any],
     capability_id: str | None = None,
 ) -> str:
     """Build a safe operator brief for a soft Dossier candidate."""
@@ -604,7 +602,7 @@ Hard rules:
 """
 
 
-def table_rows(rows: list[CoverageRow]) -> list[dict[str, Any]]:
+def table_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Return rows with list fields flattened for Streamlit dataframes."""
     flattened: list[dict[str, Any]] = []
     list_fields = {
