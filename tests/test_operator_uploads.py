@@ -463,11 +463,21 @@ def test_copy_operator_uploads_rejects_http_source_url(
 
 
 @pytest.mark.tooling
-def test_copy_operator_uploads_source_url_is_authoritative_over_disk(
+def test_copy_operator_uploads_prefers_disk_when_both_disk_and_source_url_exist(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """When sourceUrl exists it is authoritative, even if stale local bytes exist."""
+    """Reviewer-fynd (Medium, 2026-05-24): tidigare PR #65-implementation
+    behandlade ``sourceUrl`` som auktoritativ när present och skippade hela
+    assetet vid fetch-fel även om bra lokala bytes fanns. Det gjorde en
+    transient blob-outage till saknade bilder.
+
+    Disk-first/remote-fallback är robustare och matchar Christophers
+    ursprungliga 706a88a-implementation samt naming-dictionary-texten:
+    "föredrar disk men faller tillbaka till sourceUrl-fetch". Detta test
+    låser den disciplinen — när både disk och sourceUrl finns vinner disk
+    och remote-fetchen ska aldrig anropas.
+    """
     import sys
 
     sys.path.insert(0, str(REPO_ROOT / "scripts"))
@@ -482,25 +492,85 @@ def test_copy_operator_uploads_source_url_is_authoritative_over_disk(
 
     monkeypatch.setattr(build_site, "UPLOADS_ROOT_DIR", uploads_root)
 
-    remote_bytes = b"remote-bytes-should-win"
     ref = _valid_asset_ref(
         assetId=asset_id,
         filename="both.webp",
-        sourceUrl="https://abc.public.blob.vercel-storage.com/should-be-called",
+        sourceUrl="https://abc.public.blob.vercel-storage.com/should-not-be-called",
     )
     pi = {"brand": {"logo": ref}}
     target = tmp_path / "generated-site"
     target.mkdir()
 
-    def fake_get(_url: str, **_kwargs) -> _FakeRemoteAssetResponse:
-        return _FakeRemoteAssetResponse(remote_bytes)
+    def fake_get(_url: str, **_kwargs):
+        raise AssertionError(
+            "Remote fetch ska aldrig anropas när disk har bytes — "
+            "disk-first ska vinna över sourceUrl."
+        )
 
     monkeypatch.setattr(build_site.requests, "get", fake_get)
 
     copied = build_site.copy_operator_uploads("anysite", target, pi)
     assert copied == 1
     dest = target / "public" / "uploads" / "both.webp"
+    assert dest.read_bytes() == disk_bytes, (
+        "Disk-bytes ska vinna över remote eftersom disk-lookup körs först. "
+        f"Fick: {dest.read_bytes()!r}"
+    )
+
+
+@pytest.mark.tooling
+def test_copy_operator_uploads_falls_back_to_source_url_when_disk_dir_lacks_variant(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Regression-skydd för en subtil del av disk-first/remote-fallback-
+    semantiken: när asset-katalogen FINNS på disk men saknar variant-fil
+    (``optimized.webp`` / ``original.*``) ska sourceUrl-fetchen ändå
+    triggas, inte slugen-skip:as. Detta täcker fallet där en
+    LocalAssetStore-katalog är delvis korrupt eller ofullständig och
+    operator har en remote-version som backup.
+    """
+    import sys
+
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import build_site  # noqa: E402
+
+    uploads_root = tmp_path / "uploads"
+    asset_id = "01HEMPTYDIR000000000000000"
+    asset_dir = uploads_root / "anysite" / asset_id
+    asset_dir.mkdir(parents=True)
+    # Katalogen finns men saknar bytes — simulerar en korrupt/halvskriven
+    # LocalAssetStore-state.
+
+    monkeypatch.setattr(build_site, "UPLOADS_ROOT_DIR", uploads_root)
+
+    remote_bytes = b"remote-fallback-bytes"
+    response = _FakeRemoteAssetResponse(remote_bytes)
+
+    def fake_get(_url: str, **_kwargs) -> _FakeRemoteAssetResponse:
+        return response
+
+    monkeypatch.setattr(build_site.requests, "get", fake_get)
+
+    ref = _valid_asset_ref(
+        assetId=asset_id,
+        filename="recovered.webp",
+        sourceUrl="https://abc.public.blob.vercel-storage.com/recovered.webp",
+    )
+    target = tmp_path / "generated-site"
+    target.mkdir()
+
+    copied = build_site.copy_operator_uploads("anysite", target, {"brand": {"logo": ref}})
+
+    captured = capsys.readouterr()
+    assert copied == 1, (
+        f"sourceUrl-fallback ska trigga när disk-katalog saknar variant. "
+        f"Captured stdout: {captured.out!r}"
+    )
+    dest = target / "public" / "uploads" / "recovered.webp"
     assert dest.read_bytes() == remote_bytes
+    assert "Försöker sourceUrl-fallback" in captured.out
 
 
 @pytest.mark.tooling

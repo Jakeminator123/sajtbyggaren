@@ -831,19 +831,30 @@ def _fetch_asset_bytes_from_url(url: str) -> bytes | None:
 def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> int:
     """Copy operator-uploaded assets to the generated site's public/uploads/.
 
-    Two source paths are supported:
+    Disk-first med remote-fallback. För varje ``AssetRef``:
 
-    1. ``ref.sourceUrl`` is authoritative when present. The builder
-       fetches bytes from the remote HTTPS allowlist and writes them to
-       ``public/uploads/<filename>``. If URL validation, fetch, status, or
-       size checks fail, the asset is skipped with a clear warning. It does
-       not silently fall back to disk because that would hide blob-store
-       regressions.
+    1. **Disk-lookup först.** Letar i ``data/uploads/<siteId>/<assetId>/``
+       och ``data/uploads/__draft/<assetId>/``. Föredrar ``optimized.webp``
+       och faller tillbaka till ``original.<ext>`` (SVG/video). Om bytes
+       finns på disk kopieras de — buildern behöver inte fråga remote.
 
-    2. When ``sourceUrl`` is absent, the historical LocalAssetStore disk
-       lookup remains unchanged: prefer ``optimized.webp`` under
-       ``data/uploads/<siteId>/<assetId>/`` or ``data/uploads/__draft/``,
-       then fall back to supported original files.
+    2. **Remote-fallback från ``ref.sourceUrl``.** Om disk-lookup
+       misslyckas och ``sourceUrl`` finns + pekar på en allowlist:ad
+       HTTPS-host, HTTP-fetchas bytes och skrivs till
+       ``public/uploads/<filename>``. Vid fetch-fel (URL/status/size/
+       stream interrupt) skippas assetet — render faller tillbaka till
+       alt-text.
+
+    3. **Båda saknas → skippa med log.**
+
+    Reviewer-fynd (Medium, 2026-05-24): Tidigare ``remote-authoritative``-
+    semantik (sourceUrl vann ALLTID när present) gjorde en transient
+    blob-outage till saknade bilder även om bra lokala bytes fanns på
+    disk. Disk-first är robustare och matchar Christophers ursprungliga
+    ``706a88a``-implementation samt naming-dictionary-definitionen.
+    Stale-state-risken (disk har gamla bytes men blob har nyare) är
+    acceptabel i operator-prototype: alla uppdateringar går via samma
+    AssetStore-driver, så disk och blob är inte i divergens normalt.
 
     Returns the number of files written. A single bad asset never aborts
     the build; the renderer can still fall back to alt text / defaults.
@@ -860,25 +871,8 @@ def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> in
     for ref in refs:
         asset_id = ref["assetId"]
         filename = ref["filename"]
-        source_url = ref.get("sourceUrl")
-        if isinstance(source_url, str) and source_url.strip():
-            cleaned_source_url = source_url.strip()
-            if not _is_allowed_asset_source_url(cleaned_source_url):
-                print(
-                    f"copy_operator_uploads: sourceUrl for asset {asset_id} "
-                    f"is not an allowed HTTPS Vercel Blob URL ({cleaned_source_url!r}). "
-                    "Skipping asset.",
-                )
-                continue
-            data = _fetch_asset_bytes_from_url(cleaned_source_url)
-            if data is None:
-                continue
-            dest = public_uploads / filename
-            dest.write_bytes(data)
-            copied += 1
-            continue
 
-        # Local disk flow is used only when sourceUrl is absent.
+        # 1. Disk-lookup först — Local disk har företräde när bytes finns.
         source_dir: Path | None = None
         for candidate in candidate_dirs:
             if (candidate / asset_id).is_dir():
@@ -901,14 +895,33 @@ def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> in
                 shutil.copy2(source_file, dest)
                 copied += 1
                 continue
+            # Source-dir finns men ingen variant-fil — fortsätt till
+            # sourceUrl-fallback istället för att skippa direkt.
             print(
                 f"copy_operator_uploads: asset {asset_id} saknar variant-fil "
-                f"i {source_dir}. Hoppar över.",
+                f"i {source_dir}. Försöker sourceUrl-fallback.",
             )
+
+        # 2. Remote-fallback från sourceUrl när disk saknas.
+        source_url = ref.get("sourceUrl")
+        if isinstance(source_url, str) and source_url.strip():
+            cleaned_source_url = source_url.strip()
+            if not _is_allowed_asset_source_url(cleaned_source_url):
+                print(
+                    f"copy_operator_uploads: sourceUrl for asset {asset_id} "
+                    f"is not an allowed HTTPS Vercel Blob URL ({cleaned_source_url!r}). "
+                    "Skipping asset.",
+                )
+                continue
+            data = _fetch_asset_bytes_from_url(cleaned_source_url)
+            if data is None:
+                continue
+            dest = public_uploads / filename
+            dest.write_bytes(data)
+            copied += 1
             continue
 
-        # Inget hittat. Logga och gå vidare — render-vägen får falla
-        # tillbaka till alt-text på den brutna bilden.
+        # 3. Båda saknas — logga och hoppa över.
         print(
             f"copy_operator_uploads: asset {asset_id} saknas både på disk "
             f"(letade i {candidate_dirs}) och saknar sourceUrl. Hoppar över.",
