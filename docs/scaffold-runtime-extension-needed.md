@@ -19,14 +19,21 @@ Christopher's PR adds, **declaratively**, the inputs the existing pipeline expec
 | Artefact | Path | Status |
 |---|---|---|
 | `restaurant-hospitality` scaffold | `packages/generation/orchestration/scaffolds/restaurant-hospitality/` | ✅ All 6 contract files |
-| 3 restaurant variants | `…/restaurant-hospitality/variants/{warm-bistro,nordic-fine-dining,casual-cafe}.json` | ✅ Schema-valid |
+| 4 restaurant variants | `…/restaurant-hospitality/variants/{warm-bistro,nordic-fine-dining,casual-cafe,midnight-bar}.json` | ✅ Schema-valid (matches W1-06 4-variant target) |
 | `menu-display` dossier | `packages/generation/orchestration/dossiers/soft/menu-display/` | ✅ Manifest + instructions |
 | `booking-cta` dossier | `packages/generation/orchestration/dossiers/soft/booking-cta/` | ✅ Manifest + instructions |
 | `mailto-contact-form` dossier | `packages/generation/orchestration/dossiers/soft/mailto-contact-form/` | ✅ Manifest + instructions |
-| `capability-map.v1.json` | `governance/policies/` | ✅ `menu`, `booking`, `contact-form` now point to real dossiers |
+| `image-gallery` dossier | `packages/generation/orchestration/dossiers/soft/image-gallery/` | ✅ Manifest + instructions (universal brick-and-mortar block) |
+| `opening-hours` dossier | `packages/generation/orchestration/dossiers/soft/opening-hours/` | ✅ Manifest + instructions (with OpeningHoursSpecification JSON-LD) |
+| `reviews-display` dossier | `packages/generation/orchestration/dossiers/soft/reviews-display/` | ✅ Manifest + instructions (with Review/AggregateRating JSON-LD) |
+| `map-embed` dossier | `packages/generation/orchestration/dossiers/soft/map-embed/` | ✅ Manifest + instructions (OpenStreetMap, no API key) |
+| `capability-map.v1.json` | `governance/policies/` | ✅ 7 new capabilities (`menu`, `booking`, `contact-form`, `gallery`, `hours`, `reviews`, `location`) now point to real dossiers |
+| `restaurant-hospitality/compatible-dossiers.json` | scaffold dir | ✅ `recommended` expanded to 5 dossiers covering hours/map/gallery/reviews/contact |
 | `tooling/scaffold-generator/` | `tooling/scaffold-generator/` | ✅ CLI that generates the same shape declaratively from a spec.yaml — see "Scaling" below |
 
-All four guards (`governance_validate`, `rules_sync --check`, `check_term_coverage --strict`, `ruff`) pass.
+All four guards (`governance_validate`, `rules_sync --check`, `check_term_coverage --strict`, `ruff`) pass plus 220 pytest-tester.
+
+**Dossier-count: 4 → 8.** Capability-map went from 1 → 7 capabilities with real dossier bindings. All 5 new dossiers are reusable across future scaffolds (portfolio-creator, clinic-healthcare, real-estate, professional-services) without modification — same instructions, different recommended-list per scaffold.
 
 ## What is NOT yet wired (the runtime gap this doc exists for)
 
@@ -263,6 +270,18 @@ Before merging the runtime extension, please confirm:
 
 - `examples/restaurant-bistro.project-input.json` — a realistic restaurant brief with a menu (3 courses, 9 items), opening hours, phone, address. I can produce this once Path B lands.
 - `examples/restaurant-cafe.project-input.json` — same shape but smaller-scope café (no booking, just walk-in + opening hours + lunch menu).
+
+## Small wiring touch in `_PAGE_TO_CAPABILITY` (resolve.py)
+
+Week 1 batch 2 added four new capability slugs (`gallery`, `hours`, `reviews`, `location`) with real dossiers. The existing wizard-page-label → capability mapping in `packages/generation/discovery/resolve.py:88` (`_PAGE_TO_CAPABILITY`) already maps `"Bildgalleri" → "gallery"` and `"Meny / Matsedel" → "menu"` — so those wizard pages now auto-route to a real dossier without further changes. Two existing entries are misaligned with the new clean capability names and would benefit from an update in the same PR that adds the whitelist entries:
+
+| Wizard page label | Currently maps to | Should map to | Reason |
+|---|---|---|---|
+| `"Kundrecensioner"` | `"testimonials"` (unknown) | `"reviews"` (now registered) | `reviews-display` dossier covers this exact wizard page |
+| `"Karta / Hitta hit"` | `"map"` (unknown) | `"location"` (now registered) | `map-embed` dossier covers this exact wizard page |
+| `"Vårt team"` | `"team"` (unknown) | `"team"` (still unknown until team-display lands) | Keep as `capability-unknown` warning — no dossier yet |
+
+Alternative: add aliases to `_CAPABILITY_ALIASES` so existing wizard payloads route to the new canonical capability without breaking any URL the wizard team has already shipped. Either approach closes the wizard → resolver → planner wire for these four restaurant-relevant pages.
 
 ## What happens if we DON'T do Path B
 
