@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-05-24T00:00:00Z",
+  "updatedBy": "sprintvakt-v1",
+  "people": {
+    "jakob": {
+      "allocation": 0.75,
+      "lanes": [
+        "backend",
+        "generation",
+        "governance",
+        "scripts",
+        "runtime",
+        "merge-review"
+      ],
+      "defaultBranch": "jakob-be"
+    },
+    "christopher": {
+      "allocation": 0.25,
+      "lanes": [
+        "ui",
+        "frontend",
+        "viewser",
+        "visual-polish"
+      ],
+      "defaultBranch": "christopher-ui"
+    }
+  },
+  "rules": [
+    "Christopher får endast UI/frontend-gaps som default.",
+    "Jakob äger backend/generation/governance/scripts/runtime.",
+    "Allt som rör API-shape, run-shape, preview-runtime eller generator-contract är Jakob-owned.",
+    "Ingen får reservera path scopes som redan är aktiva utan explicit handoff.",
+    "Ett gap måste ha owner, title, paths, doNotTouch, acceptance och checks.",
+    "Muterande MCP-tools ska stödja dryRun.",
+    "Muterande MCP-tools ska kräva confirm:true."
+  ],
+  "reservedPaths": [
+    {
+      "owner": "jakob",
+      "paths": [
+        "scripts/build_site.py",
+        "packages/generation/**",
+        "packages/generation/discovery/**",
+        "packages/generation/planning/**",
+        "governance/policies/**",
+        "tests/test_*.py"
+      ],
+      "reason": "backend/generation/governance ownership"
+    },
+    {
+      "owner": "christopher",
+      "paths": [
+        "apps/viewser/components/**",
+        "apps/viewser/app/**/*.tsx",
+        "apps/viewser/app/**/*.css",
+        "apps/viewser/public/**"
+      ],
+      "reason": "UI/frontend ownership"
+    }
+  ],
+  "queuedGaps": [],
+  "activeGaps": [],
+  "completedGaps": [],
+  "decisions": [
+    {
+      "id": "DEC-PR68",
+      "title": "restaurant-hospitality declarative expansion merged",
+      "status": "accepted",
+      "note": "Runtime activation remains Jakob-owned; Christopher's future work returns to UI/frontend lane unless explicit override exists."
+    }
+  ]
+}
