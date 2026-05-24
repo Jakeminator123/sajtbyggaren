@@ -109,8 +109,8 @@ export interface AssetStore {
   /** Läs manifest.json för en tidigare sparad asset. Returnerar null om saknas. */
   load(siteId: string, assetId: string): Promise<AssetRef | null>;
 
-  /** Absolut sökväg på disk för optimerad/orginalfil — används av Python copy-step. */
-  resolveOptimizedPath(siteId: string, assetId: string): string;
+  /** Absolut sökväg på disk för optimerad/orginalfil — endast LocalAssetStore. */
+  resolveOptimizedPath?(siteId: string, assetId: string): string;
 
   /** Public URL som genererad sajt kommer rendera (/uploads/<filename>). */
   publicUrl(ref: AssetRef): string;

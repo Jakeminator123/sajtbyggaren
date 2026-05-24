@@ -163,6 +163,12 @@ export default function Home() {
   const builderTarget = useMemo(() => {
     if (!selectedRunId) return null;
     const selectedRun = runs.find((run) => run.runId === selectedRunId);
+    if (
+      selectedRun &&
+      (!selectedRun.siteId || selectedRun.siteId === "unknown")
+    ) {
+      return null;
+    }
     const targetSiteId =
       selectedRun?.siteId && selectedRun.siteId !== "unknown"
         ? selectedRun.siteId

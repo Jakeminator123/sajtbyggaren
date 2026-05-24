@@ -256,14 +256,6 @@ export class VercelBlobAssetStore implements AssetStore {
     }
   }
 
-  resolveOptimizedPath(_siteId: string, assetId: string): string {
-    throw new Error(
-      `VercelBlobAssetStore.resolveOptimizedPath() är inte stödd — bytes ligger ` +
-        `i Vercel Blob, inte på disk. Använd ref.sourceUrl istället ` +
-        `(asset ${assetId}). /api/asset-preview redirectar dit automatiskt.`,
-    );
-  }
-
   publicUrl(ref: AssetRef): string {
     // Den GENERERADE sajten serverar bilden lokalt från public/uploads/
     // — copy_operator_uploads i backend fetchar ref.sourceUrl vid build

@@ -84,6 +84,12 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  if (!store.resolveOptimizedPath) {
+    return NextResponse.json(
+      { error: "Store stödjer inte disk-lookup." },
+      { status: 501 },
+    );
+  }
   let resolvedPath: string;
   try {
     resolvedPath = store.resolveOptimizedPath(siteId, assetId);

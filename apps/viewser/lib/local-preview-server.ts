@@ -25,9 +25,9 @@
  *     prövas nästa lediga port.
  *   - Cleanup: process-handlern lyssnar på SIGTERM/SIGINT och dödar
  *     alla preview-servrar innan viewser stänger.
- *   - Health-check: server räknas som klar när TCP-anslutning till
- *     porten lyckas (max 15 retries × 200ms = 3s timeout). Servern
- *     själv tar ~1s att starta på redan-byggd app.
+ *   - Health-check: server räknas som klar när en HTTP HEAD-request
+ *     mot porten får svar (max 30 retries × 200ms = 6s timeout).
+ *     Servern själv tar ~1-2s att starta på redan-byggd app.
  *
  * Säkerhet:
  *   - ``next start`` använder bara filerna i den specifika
@@ -38,6 +38,7 @@
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
+import { existsSync } from "node:fs";
 import { createConnection } from "node:net";
 import path from "node:path";
 
@@ -74,19 +75,41 @@ interface ServerEntry {
   startedAt: number;
   /** Promise som löses när health-check passerat. Återanvänds av samtidiga callers. */
   ready: Promise<void>;
+  /** Sätts till ``true`` efter att ``ready``-promiset har resolvats. */
+  resolvedReady: boolean;
 }
 
 const servers = new Map<string, ServerEntry>();
 let cleanupHandlerInstalled = false;
 
 /**
+ * Probe om en port är ledig på OS-nivå via TCP-connect. Returnerar
+ * ``true`` om inget lyssnar (connection refused), ``false`` om något
+ * svarar. Används av ``allocatePort`` för att undvika portkrockar
+ * med processer utanför vår ``servers``-map.
+ */
+function isPortFree(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = createConnection({ host: "127.0.0.1", port });
+    socket.once("connect", () => {
+      socket.end();
+      resolve(false);
+    });
+    socket.once("error", () => {
+      socket.destroy();
+      resolve(true);
+    });
+  });
+}
+
+/**
  * Deterministisk port-allokering: hash siteId → port i pool. Samma
  * siteId får alltid samma port vilket gör browser-cache och dev-flow
  * konsekvent (operatören kan bokmärka http://localhost:4137 för en
  * specifik sajt). Vid kollision (samma port redan upptagen av annan
- * siteId) prövas nästa port i sekvens.
+ * siteId eller extern process) prövas nästa port i sekvens.
  */
-function allocatePort(siteId: string): number {
+async function allocatePort(siteId: string): Promise<number> {
   let hash = 0;
   for (let i = 0; i < siteId.length; i += 1) {
     hash = (hash * 31 + siteId.charCodeAt(i)) >>> 0;
@@ -97,7 +120,8 @@ function allocatePort(siteId: string): number {
   );
   for (let i = 0; i < PORT_RANGE; i += 1) {
     const candidate = PORT_BASE + ((baseOffset + i) % PORT_RANGE);
-    if (!usedPorts.has(candidate)) return candidate;
+    if (usedPorts.has(candidate)) continue;
+    if (await isPortFree(candidate)) return candidate;
   }
   throw new Error(
     `Inga lediga preview-portar i ${PORT_BASE}-${PORT_BASE + PORT_RANGE - 1}. ` +
@@ -106,33 +130,39 @@ function allocatePort(siteId: string): number {
 }
 
 /**
- * Lättviktig TCP-health-check: försök ansluta till porten och returnera
- * när handshake lyckas. Mycket snabbare än HTTP-fetch eftersom vi
- * bara vill veta att servern accepterar anslutningar, inte att en
- * specifik sida renderar.
+ * HTTP-health-check: försök göra en HEAD-request mot porten och
+ * returnera när Next.js svarar med valfri HTTP-status (200, 404 etc.).
+ * Skiljer sig från en ren TCP-check genom att vi vet att det faktiskt
+ * är en HTTP-server som svarar, inte en annan process som råkar
+ * lyssna på porten.
  */
-function waitForPort(port: number): Promise<void> {
+function waitForReady(port: number): Promise<void> {
   return new Promise((resolve, reject) => {
     let attempts = 0;
     const tryConnect = () => {
-      const socket = createConnection({ host: "127.0.0.1", port });
-      socket.once("connect", () => {
-        socket.end();
-        resolve();
-      });
-      socket.once("error", () => {
-        socket.destroy();
-        attempts += 1;
-        if (attempts >= HEALTH_RETRIES) {
-          reject(
-            new Error(
-              `Preview-servern på port ${port} svarade inte inom ${HEALTH_RETRIES * HEALTH_INTERVAL_MS}ms.`,
-            ),
-          );
-          return;
-        }
-        setTimeout(tryConnect, HEALTH_INTERVAL_MS);
-      });
+      attempts += 1;
+      fetch(`http://127.0.0.1:${port}/`, {
+        method: "HEAD",
+        signal: AbortSignal.timeout(1000),
+      })
+        .then((res) => {
+          if (res.ok || res.status === 404) {
+            resolve();
+          } else {
+            throw new Error(`Unexpected status ${res.status}`);
+          }
+        })
+        .catch(() => {
+          if (attempts >= HEALTH_RETRIES) {
+            reject(
+              new Error(
+                `Preview-servern på port ${port} svarade inte inom ${HEALTH_RETRIES * HEALTH_INTERVAL_MS}ms.`,
+              ),
+            );
+            return;
+          }
+          setTimeout(tryConnect, HEALTH_INTERVAL_MS);
+        });
     };
     tryConnect();
   });
@@ -166,7 +196,7 @@ export interface PreviewServerInfo {
   siteId: string;
   port: number;
   url: string;
-  /** ``"starting"`` medan health-check pågår, ``"ready"`` när TCP svarar. */
+  /** ``"starting"`` medan health-check pågår, ``"ready"`` när HTTP-server svarar. */
   status: "starting" | "ready";
   /** ms sedan servern spawnades. */
   uptimeMs: number;
@@ -184,7 +214,7 @@ export function getPreviewServer(siteId: string): PreviewServerInfo | null {
     siteId,
     port: entry.port,
     url: `http://localhost:${entry.port}`,
-    status: "ready",
+    status: entry.resolvedReady ? "ready" : "starting",
     uptimeMs: Date.now() - entry.startedAt,
   };
 }
@@ -236,7 +266,17 @@ export async function startPreviewServer(
   }
 
   const siteDir = path.join(resolveGeneratedDir(), siteId);
-  const port = allocatePort(siteId);
+  if (!existsSync(siteDir)) {
+    throw new Error(
+      `Genererad sajt saknas: ${siteDir} — kör build_site.py först.`,
+    );
+  }
+  if (!existsSync(path.join(siteDir, ".next"))) {
+    throw new Error(
+      `Build-artefakter saknas: ${siteDir}/.next/ — kör npm run build i sajtkatalogen.`,
+    );
+  }
+  const port = await allocatePort(siteId);
 
   // ``next start`` lyfter porten från ``-p``-flaggan. Vi använder
   // ``npx next start`` snarare än ``npm start`` eftersom det undviker
@@ -276,7 +316,7 @@ export async function startPreviewServer(
     }
   });
 
-  const ready = waitForPort(port).catch((error) => {
+  const ready = waitForReady(port).catch((error) => {
     // Health-check timeout → döda processen och kasta uppåt så
     // API-routen kan returnera 500 med stderr som kontext.
     try {
@@ -296,10 +336,12 @@ export async function startPreviewServer(
     process: child,
     startedAt: Date.now(),
     ready,
+    resolvedReady: false,
   };
   servers.set(siteId, entry);
 
   await ready;
+  entry.resolvedReady = true;
 
   return {
     siteId,
@@ -319,7 +361,7 @@ export function listPreviewServers(): PreviewServerInfo[] {
     siteId,
     port: entry.port,
     url: `http://localhost:${entry.port}`,
-    status: "ready" as const,
+    status: (entry.resolvedReady ? "ready" : "starting") as "starting" | "ready",
     uptimeMs: Date.now() - entry.startedAt,
   }));
 }

@@ -1,3 +1,7 @@
+> **SUPERSEDED** — detta dokument täcker wizardens 5-stegsomstrukturering
+> från 2026-05-19. För aktuell status inklusive builder-shell, floating-chat,
+> local-preview och Sprint A/B, se `docs/backend-handoff-2026-05-22.md`.
+
 # Backend handoff — Discovery Wizard 5-stegs-omstrukturering
 
 Skapad: 2026-05-19 (Pass 6 av wizardens omdesign på `christopher-ui`).
