@@ -1,0 +1,314 @@
+{
+  "id": "restaurant-hospitality",
+  "label": "Restaurant & Hospitality",
+  "description": "Atmosphere-led site for restaurants, cafés, bistros, bars and small hotels. Focus on visual appetite, menu visibility, reservation conversion, location/opening hours and reviews. Built for the moment a hungry visitor decides whether to book a table or walk in.",
+  "scaffoldVersion": "1.0.0",
+
+  "buildIntent": ["website"],
+  "primaryJobs": [
+    "convey atmosphere and cuisine",
+    "show the menu without friction",
+    "drive table reservations",
+    "make opening hours and location unmissable"
+  ],
+  "defaultPageCount": 5,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false,
+
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Establish atmosphere, cuisine and the most important conversion (book a table or see the menu) within the first scroll."
+    },
+    {
+      "id": "menu",
+      "path": "/meny",
+      "required": true,
+      "purpose": "Show the actual menu items grouped by course or category, with prices and dietary markers. The single most-visited page after the home."
+    },
+    {
+      "id": "booking",
+      "path": "/bokning",
+      "required": true,
+      "purpose": "Convert the visitor to a confirmed reservation via form or third-party booking embed, with opening hours visible."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Tell the story behind the chef, the family, the produce — what makes this place not interchangeable."
+    },
+    {
+      "id": "contact",
+      "path": "/hitta-hit",
+      "required": true,
+      "purpose": "Address, map, phone, opening hours, parking — the practical info that turns intent into a visit."
+    },
+    {
+      "id": "events",
+      "path": "/event",
+      "optional": true,
+      "when": "the venue actively hosts private events, weddings or seasonal happenings"
+    },
+    {
+      "id": "gallery",
+      "path": "/galleri",
+      "optional": true,
+      "when": "atmosphere photography is a primary sales asset (fine dining, ambient cafés, hotel restaurants)"
+    },
+    {
+      "id": "lunch",
+      "path": "/lunch",
+      "optional": true,
+      "when": "lunch menu rotates weekly and warrants a dedicated, frequently-updated page"
+    }
+  ],
+
+  "sectionsPerRoute": {
+    "home": {
+      "requiredSections": ["hero", "menu-preview", "atmosphere-strip", "book-table-cta", "hours-location"],
+      "optionalSections": ["chef-story", "reviews", "press-mentions", "signature-dish"],
+      "sectionOrderRules": [
+        "Hero must show food or room photography, not stock-business imagery, and must include cuisine type and city.",
+        "The book-table-cta section must appear at least twice on the home (once near the fold and once near the bottom) so the booking-cta dossier runs in two visible spots.",
+        "Opening hours must be readable without scrolling on mobile when the visitor lands on the page during opening time."
+      ]
+    },
+    "menu": {
+      "requiredSections": ["menu-intro", "menu-list", "dietary-key"],
+      "optionalSections": ["wine-pairings", "lunch-rotation-note", "menu-download-cta"],
+      "sectionOrderRules": [
+        "Menu list must be grouped by course or category and include prices.",
+        "Dietary key (vegan, gluten-free, allergen markers) must be visible when any item references a marker.",
+        "Do not flatten the menu into a single price-list table without categories."
+      ]
+    },
+    "booking": {
+      "requiredSections": ["booking-intro", "booking-form-or-embed", "hours-summary", "fallback-phone"],
+      "optionalSections": ["large-party-note", "cancellation-policy"],
+      "sectionOrderRules": [
+        "Booking widget must be above the fold on desktop and below a short intro on mobile.",
+        "A phone fallback for groups that exceed the widget's capacity must always be visible.",
+        "Opening hours summary must be present on this page; do not assume visitor already saw the home."
+      ]
+    },
+    "about": {
+      "requiredSections": ["about-story", "team-or-chef", "values-or-sourcing"],
+      "optionalSections": ["press-mentions", "history-timeline"],
+      "sectionOrderRules": [
+        "Story must be specific (chef's name, year founded, source of produce), not 'we are passionate about food'.",
+        "Team or chef must include at least one real name and ideally a photograph."
+      ]
+    },
+    "contact": {
+      "requiredSections": ["address-and-map", "opening-hours", "contact-info"],
+      "optionalSections": ["parking-and-transit", "accessibility-note"],
+      "sectionOrderRules": [
+        "Map must be present and linkable to native maps app on mobile.",
+        "Opening hours must list every day and mark closed days unambiguously.",
+        "Phone number must be a tel: link, email a mailto: link."
+      ]
+    }
+  },
+
+  "qualityContract": {
+    "scorecardWeights": {
+      "atmosphere_fit": 1.3,
+      "menu_clarity": 1.2,
+      "booking_clarity": 1.2,
+      "trust_signals": 1.0,
+      "content_specificity": 1.1,
+      "visual_hierarchy": 1.1,
+      "technical_correctness": 1.0
+    },
+    "mustPass": [
+      "Hero copy includes cuisine type and city, not generic restaurant language.",
+      "Menu page lists at least one real dish with a price; no lorem ipsum placeholders.",
+      "Booking conversion path is reachable from every page (header or sticky CTA on mobile).",
+      "Opening hours are present on contact, booking and home pages.",
+      "Address, phone and email are real values, not sample data.",
+      "All routes from routes.json are present.",
+      "Generated code typechecks and the project builds."
+    ],
+    "avoid": [
+      "Stock business or office imagery; only food, room or location photography belongs here.",
+      "Generic 'passion for food' copy without a chef name, source or year.",
+      "Hiding the menu behind a download or external link when the operator gave dish data inline.",
+      "Random color choices not derived from variant tokens.",
+      "Forms that fail at build because of missing booking-provider env."
+    ]
+  },
+
+  "compatibleDossiers": {
+    "comment": "Real Dossier IDs only. 'menu-display' and 'booking-cta' are soft Dossiers introduced together with this Scaffold. 'mailto-contact-form' is the soft fallback for the contact capability when the operator has not wired a third-party form provider. Sections like 'hero', 'menu-preview', 'hours-location' are declared in sections.json and must not appear here. See ADR 0012 for the Dossier vs Section distinction.",
+    "required": ["menu-display", "booking-cta"],
+    "recommended": ["mailto-contact-form"],
+    "conditional": [
+      {
+        "id": "interactive-game-loop",
+        "when": "the venue explicitly wants a playable game element (kids' area, retro arcade theme)"
+      }
+    ],
+    "disallowedByDefault": ["pricing-table-saas", "dashboard-shell", "auth-flow", "checkout"]
+  },
+
+  "selectionProfile": {
+    "embeddingText": "A restaurant or hospitality website for restaurants, cafés, bistros, brasseries, fine-dining venues, neighbourhood eateries, breakfast spots, brunch places, lunch restaurants, food trucks with a permanent address, gastropubs, wine bars, cocktail bars, hotel restaurants, boutique hotels, bed and breakfasts and catering kitchens. The site centres on atmosphere photography, menu legibility, table reservations, opening hours, location, dietary markers and the moment a hungry visitor decides whether to book.",
+    "semanticSignals": [
+      "menu",
+      "table reservation",
+      "opening hours",
+      "cuisine",
+      "chef",
+      "atmosphere photography",
+      "wine list",
+      "lunch rotation",
+      "brunch",
+      "dietary markers",
+      "neighbourhood eatery",
+      "fine dining",
+      "boutique hotel",
+      "bistro",
+      "café"
+    ],
+    "negativeSignals": [
+      "software product",
+      "dashboard application",
+      "ecommerce checkout for physical goods shipping",
+      "online course",
+      "consulting firm",
+      "SaaS billing",
+      "marketplace with multiple independent merchants"
+    ],
+    "llmClassificationHints": [
+      "Choose this scaffold when the primary visitor goal is to look at a menu and book a table or walk in for a meal or drink.",
+      "Choose this scaffold for a hotel only when the hotel's primary online conversion is dining or stays at the venue itself, not a meta-search hotel directory.",
+      "Do not choose this scaffold for a catering company whose business model is shipping prepared food boxes nationally; that is ecommerce-lite."
+    ],
+    "minConfidence": 0.72,
+    "requiresTieBreakWhenWithin": 0.08
+  },
+
+  "variants": [
+    {
+      "id": "warm-bistro",
+      "enabled": true,
+      "label": "Warm Bistro",
+      "description": "Earthy, candle-lit visual direction for neighbourhood bistros, brasseries and traditional restaurants. Deep terracotta and roasted-amber palette with soft cream backgrounds, generous radii and a slightly warmer typographic feel evoke pressed linen, copper cookware and seasonal produce.",
+      "tokens": {
+        "color": {
+          "background": "#fbf6ee",
+          "foreground": "#2a1a13",
+          "muted": "#7a6457",
+          "border": "#e7d6c0",
+          "primary": "#8a3a20",
+          "primaryForeground": "#fdf8f2",
+          "accent": "#c98c4a",
+          "accentForeground": "#2a1a13"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.25
+        },
+        "radius": {
+          "sm": "0.375rem",
+          "md": "0.625rem",
+          "lg": "1rem"
+        },
+        "spacing": {
+          "section": "5rem",
+          "container": "min(70rem, 92vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": ["warm", "neighbourhood", "rustic", "seasonal", "inviting", "traditional"]
+      }
+    },
+    {
+      "id": "nordic-fine-dining",
+      "enabled": true,
+      "label": "Nordic Fine Dining",
+      "description": "Restrained, almost gallery-quiet expression for fine-dining venues, tasting-menu kitchens and chef-led restaurants where every dish is a deliberate composition. Off-white canvas, charcoal text, deep moss accent and minimal radii let the food photography do all the talking.",
+      "tokens": {
+        "color": {
+          "background": "#f9f8f4",
+          "foreground": "#1a1a17",
+          "muted": "#666660",
+          "border": "#e3e1d8",
+          "primary": "#2a3a2c",
+          "primaryForeground": "#f9f8f4",
+          "accent": "#a39167",
+          "accentForeground": "#1a1a17"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.18
+        },
+        "radius": {
+          "sm": "0.125rem",
+          "md": "0.25rem",
+          "lg": "0.375rem"
+        },
+        "spacing": {
+          "section": "7rem",
+          "container": "min(64rem, 88vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": ["minimal", "editorial", "considered", "quiet", "premium", "chef-led"]
+      }
+    },
+    {
+      "id": "casual-cafe",
+      "enabled": true,
+      "label": "Casual Café",
+      "description": "Bright, friendly daytime expression for cafés, bakeries, brunch spots and breakfast restaurants. Soft cream backgrounds, sunny peach accents, rounded corners and a slightly playful typographic feel suggest morning light, freshly-pulled espresso and an unpretentious welcome.",
+      "tokens": {
+        "color": {
+          "background": "#fff8ef",
+          "foreground": "#2d231b",
+          "muted": "#8a7a6e",
+          "border": "#f1e3cf",
+          "primary": "#d97842",
+          "primaryForeground": "#fff8ef",
+          "accent": "#f4c773",
+          "accentForeground": "#2d231b"
+        },
+        "typography": {
+          "fontFamilyDisplay": "var(--font-geist-sans)",
+          "fontFamilyBody": "var(--font-geist-sans)",
+          "fontFamilyMono": "var(--font-geist-mono)",
+          "scaleRatio": 1.22
+        },
+        "radius": {
+          "sm": "0.5rem",
+          "md": "0.875rem",
+          "lg": "1.5rem"
+        },
+        "spacing": {
+          "section": "4.5rem",
+          "container": "min(72rem, 94vw)"
+        },
+        "motion": {
+          "level": "subtle"
+        }
+      },
+      "tone": {
+        "vibe": ["friendly", "bright", "welcoming", "daytime", "approachable", "playful"]
+      }
+    }
+  ]
+}
