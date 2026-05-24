@@ -325,13 +325,19 @@ def test_taxonomy_capabilities_merge_with_wizard_must_have() -> None:
 
     Efter fix-passet (R2 P1 + R3 #2) skiljer resolvern på:
 
-    - ``contact-form`` finns i capability-map men har tom dossiers-lista
-      → ``capability-gap``.
+    - ``payments`` finns i capability-map men har tom dossiers-lista
+      → ``capability-gap``. (Tidigare användes ``contact-form`` här,
+      men Week 1 av "fantastic sites"-roadmappen 2026-05-24 stängde
+      det gap:et när ``mailto-contact-form`` registrerades i
+      ``capability-map.v1.json``.)
     - ``gallery`` finns inte alls i capability-map → ``capability-unknown``.
+
+    ``ecommerce``-payloaden har ``payments`` i sin taxonomy så vi
+    behöver inte trycka in det via wizard.
     """
     payload = _payload(
-        "business",
-        mustHave=["Kontaktformulär", "Bildgalleri"],
+        "ecommerce",
+        mustHave=["Bildgalleri"],
     )
     candidate = _candidate_project_input()
     project_input, decision = resolve_discovery(
@@ -340,16 +346,16 @@ def test_taxonomy_capabilities_merge_with_wizard_must_have() -> None:
         project_input_candidate=candidate,
     )
     caps = project_input["requestedCapabilities"]
-    assert "contact-form" in caps  # från både wizard mustHave och taxonomy
+    assert "payments" in caps  # från ecommerce-taxonomin
     assert "gallery" in caps  # från wizard mustHave
     codes = {warning.code for warning in decision.fallbackWarnings}
     assert "capability-unknown" in codes  # gallery saknar i capability-map
-    assert "capability-gap" in codes  # contact-form har tom dossiers-lista
+    assert "capability-gap" in codes  # payments har tom dossiers-lista
     by_code: dict[str, set[str]] = {}
     for warning in decision.fallbackWarnings:
         if warning.capabilityId:
             by_code.setdefault(warning.code, set()).add(warning.capabilityId)
-    assert "contact-form" in by_code.get("capability-gap", set())
+    assert "payments" in by_code.get("capability-gap", set())
     assert "gallery" in by_code.get("capability-unknown", set())
 
 
@@ -1373,10 +1379,16 @@ def test_multi_select_picks_restaurant_over_portfolio() -> None:
 
 @pytest.mark.tooling
 def test_capability_gap_flagged_as_warning_but_not_review_trigger() -> None:
-    """R2 P1 + R3 #2 (round 2): ``payments`` / ``contact-form`` finns i
-    capability-map men har tom dossier-lista — det är en **gap**, inte
-    unknown. Resolvern lägger en ``capability-gap``-warning så Backoffice
-    ser planerade Dossier-importer.
+    """R2 P1 + R3 #2 (round 2): ``payments`` finns i capability-map men
+    har tom dossier-lista — det är en **gap**, inte unknown. Resolvern
+    lägger en ``capability-gap``-warning så Backoffice ser planerade
+    Dossier-importer.
+
+    Week 1 av "fantastic sites"-roadmappen (2026-05-24) stängde
+    ``contact-form``-gap:et genom att registrera ``mailto-contact-form``
+    i capability-map. Tidigare versioner av detta test asserterade både
+    ``payments`` och ``contact-form`` som gap — nu är bara ``payments``
+    kvar tills ``stripe-checkout`` (hard) importeras från MIN_IDE.
 
     R1 #1 + huvudreviewer #4 (round 3): gap triggar dock INTE
     ``operatorReviewRequired``. Gap är samma signal för alla runs av
@@ -1398,7 +1410,9 @@ def test_capability_gap_flagged_as_warning_but_not_review_trigger() -> None:
     }
     assert "capability-gap" in gap_codes
     assert "payments" in gap_capabilities
-    assert "contact-form" in gap_capabilities
+    # contact-form har nu en registrerad dossier (mailto-contact-form),
+    # så den ska INTE längre generera capability-gap.
+    assert "contact-form" not in gap_capabilities
     # ecommerce är active och taxonomy-capabilities är bara gap, inte
     # unknown — review krävs inte. (R1 #1 round 3.)
     assert decision.operatorReviewRequired is False
@@ -1407,12 +1421,17 @@ def test_capability_gap_flagged_as_warning_but_not_review_trigger() -> None:
 @pytest.mark.tooling
 def test_capability_unknown_separate_from_gap() -> None:
     """``gallery`` finns inte i capability-map → capability-unknown.
-    ``contact-form`` finns men har inga dossiers → capability-gap.
+    ``payments`` finns men har inga dossiers → capability-gap.
     Båda måste flaggas, var och en med sin kod.
+
+    Tidigare användes ``contact-form`` som gap-exempel här, men Week 1
+    av "fantastic sites"-roadmappen (2026-05-24) stängde det gap:et
+    genom att registrera ``mailto-contact-form`` i capability-map.
+    ``payments`` är kvar tills ``stripe-checkout`` importeras.
     """
     payload = _payload(
-        "business",
-        mustHave=["Kontaktformulär", "Bildgalleri"],
+        "ecommerce",
+        mustHave=["Bildgalleri"],
     )
     _, decision = resolve_discovery(
         raw_prompt="test",
@@ -1423,7 +1442,7 @@ def test_capability_unknown_separate_from_gap() -> None:
     for warning in decision.fallbackWarnings:
         if warning.capabilityId:
             by_code.setdefault(warning.code, set()).add(warning.capabilityId)
-    assert "contact-form" in by_code.get("capability-gap", set())
+    assert "payments" in by_code.get("capability-gap", set())
     assert "gallery" in by_code.get("capability-unknown", set())
 
 

@@ -417,12 +417,18 @@ def test_asset_graph_category_rows_include_support_and_expected_starter() -> Non
 
 
 def test_asset_graph_capability_empty_dossiers_are_gap() -> None:
+    """Tidigare användes ``contact-form`` som gap-exempel här, men Week 1
+    av "fantastic sites"-roadmappen (2026-05-24) stängde det gap:et
+    genom att registrera ``mailto-contact-form`` i capability-map.
+    ``payments`` (stripe-checkout planerad) är kvar tills hard Dossier
+    importeras från MIN_IDE.
+    """
     rows = asset_graph.asset_graph_capability_rows()
     by_id = {row["capabilityId"]: row for row in rows}
 
-    assert by_id["contact-form"]["status"] == "gap"
-    assert by_id["contact-form"]["dossierCount"] == 0
-    assert by_id["contact-form"]["gapOrOrphan"] is True
+    assert by_id["payments"]["status"] == "gap"
+    assert by_id["payments"]["dossierCount"] == 0
+    assert by_id["payments"]["gapOrOrphan"] is True
 
 
 def test_asset_graph_capability_unknown_when_referenced_but_missing(

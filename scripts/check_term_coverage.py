@@ -652,6 +652,33 @@ COMMON_WORDS = {
     # är OOXML content-types-elementet; ``AB12`` är en sample-cellref
     # i docstring). Tekniska tokens i prosa, inte domänbegrepp.
     "ContentType", "AB12",
+    # Restaurant-hospitality scaffold (Week 1 of "fantastic sites" roadmap)
+    # introduces three new soft Dossiers under
+    # packages/generation/orchestration/dossiers/soft/. The names below
+    # are local TypeScript implementation symbols inside dossier
+    # instructions.md code skeletons (Server Components and one Client
+    # Component for mailto-contact-form). Same treatment as the existing
+    # ``MenuItem`` / ``PacmanGame`` / ``MailtoContactForm`` family of
+    # dossier-local component types above — these are React component
+    # identifiers shown in code examples, not canonical domain terms.
+    # The canonical capabilities (menu, booking, contact-form) live in
+    # governance/policies/capability-map.v1.json. ``MenuItem`` is already
+    # allowlisted further up as a wizard-derived content type, so it is
+    # NOT repeated here.
+    "MenuSection", "MenuDisplay", "MenuDisplayProps",
+    "BookingCta", "BookingCtaProps", "BookingDestination", "BookingHours",
+    "MailtoContactForm", "MailtoContactFormProps",
+    # React stdlib type imported by mailto-contact-form's onSubmit handler.
+    # Mirrors ``KeyboardEvent`` / ``ReactNode`` / ``NextRequest`` above —
+    # external framework symbol referenced in a dossier code skeleton.
+    "FormEvent",
+    # External booking and email-delivery providers referenced as
+    # examples in booking-cta and mailto-contact-form instructions.md
+    # (operator-supplied destinations the dossier renders into a tel:,
+    # https:// or mailto: link). Same category as ``OpenAI`` / ``Stripe``
+    # / ``Calendly``-equivalents already used — third-party SaaS names,
+    # not internal domain terms.
+    "Bokadirekt", "BookEden", "Calendly", "Caspeco", "Resmio", "SendGrid",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
