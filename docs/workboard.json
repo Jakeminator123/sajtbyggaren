@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-24T00:00:00Z",
-  "updatedBy": "sprintvakt-v1",
+  "updatedAt": "2026-05-25T01:38:00Z",
+  "updatedBy": "christopher",
   "people": {
     "jakob": {
       "allocation": 0.75,
@@ -57,10 +57,70 @@
         "apps/viewser/public/**"
       ],
       "reason": "UI/frontend ownership"
+    },
+    {
+      "owner": "christopher",
+      "gapId": "GAP-viewser-variant-live-preview",
+      "paths": [
+        "apps/viewser/components/builder/inspector/variants-tab.tsx",
+        "apps/viewser/components/builder/inspector/index.ts",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/lib/runtime-tokens.ts",
+        "apps/viewser/app/api/discovery-options/route.ts"
+      ],
+      "reason": "Variant Live-Preview tab — additive extension of lib/runtime-tokens.ts and discovery-options route (yellow per gaps/README.md)"
     }
   ],
   "queuedGaps": [],
-  "activeGaps": [],
+  "activeGaps": [
+    {
+      "id": "GAP-viewser-variant-live-preview",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Live-preview switcher för scaffold-variants utan rebuild",
+      "collisionRisk": "yellow",
+      "reviewer": "jakob",
+      "status": "active",
+      "file": "docs/gaps/GAP-viewser-variant-live-preview.md",
+      "startedAt": "2026-05-25T01:38:00Z",
+      "paths": [
+        "apps/viewser/components/builder/inspector/variants-tab.tsx",
+        "apps/viewser/components/builder/inspector/index.ts",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/lib/runtime-tokens.ts",
+        "apps/viewser/app/api/discovery-options/route.ts"
+      ],
+      "doNotTouch": [
+        "packages/generation/**",
+        "governance/policies/**",
+        "scripts/**",
+        "tests/test_*.py",
+        "apps/viewser/components/discovery-wizard/**",
+        "apps/viewser/components/builder/dialogs/variant-picker-dialog.tsx",
+        "apps/viewser/lib/build-runner.ts",
+        "apps/viewser/lib/prompt-runner.ts",
+        "apps/viewser/lib/asset-store/**"
+      ],
+      "acceptanceCriteria": [
+        "Ny Variants-tab i Site Inspector som listar alla compatible variants per aktuell sajts scaffold.",
+        "Hover/klick på en variant skickar postMessage-broadcast med variantens 4 färgtokens till preview-iframe (live switch utan rebuild).",
+        "Använd-knapp committar via follow-up-prompt så briefModel uppdaterar Project Input och nästa rebuild lockar in valet.",
+        "/api/discovery-options returnerar availableVariants additivt utan att bryta befintlig response shape.",
+        "lib/runtime-tokens.ts exporterar broadcastTokenBundle och broadcastTokenReset additivt.",
+        "Mobil + tablet-responsivt och tom-state om scaffolden har < 2 variants."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint"
+      ]
+    }
+  ],
   "completedGaps": [],
   "decisions": [
     {

@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { NextRequest, NextResponse } from "next/server";
@@ -30,6 +30,119 @@ type scaffoldRegistryEntry = {
 type scaffoldContractPolicy = {
   primaryScaffoldRegistry: scaffoldRegistryEntry[];
 };
+
+/**
+ * Variant summary returned to the Site Inspector so its Variants-tab can
+ * render live-switchable preview cards without an extra fetch per variant.
+ * We expose only the four canonical colour tokens (matching ``TokenId`` in
+ * ``lib/runtime-tokens.ts``) plus tone.vibe; rich token data (typography,
+ * radius, spacing, motion) stays on disk and is only read by the codegen
+ * pipeline at build time.
+ */
+type variantSummary = {
+  id: string;
+  label: string;
+  description: string;
+  tokens: {
+    primary: string;
+    accent: string;
+    background: string;
+    foreground: string;
+  };
+  tone: {
+    vibe: string[];
+  };
+};
+
+type variantFile = {
+  id?: unknown;
+  enabled?: unknown;
+  label?: unknown;
+  description?: unknown;
+  tokens?: {
+    color?: {
+      primary?: unknown;
+      accent?: unknown;
+      background?: unknown;
+      foreground?: unknown;
+    };
+  };
+  tone?: {
+    vibe?: unknown;
+  };
+};
+
+function asString(value: unknown, fallback: string): string {
+  return typeof value === "string" && value.length > 0 ? value : fallback;
+}
+
+function asHexColor(value: unknown, fallback: string): string {
+  if (typeof value !== "string") return fallback;
+  return /^#[0-9a-fA-F]{6}$/.test(value) ? value.toLowerCase() : fallback;
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is string => typeof entry === "string");
+}
+
+/**
+ * Reads every enabled variant JSON file under
+ * ``packages/generation/orchestration/scaffolds/<scaffoldId>/variants/`` and
+ * returns the canonical four-colour summary the Site Inspector needs. We
+ * silently skip variants that are disabled or that fail to parse so a
+ * single bad file cannot crash the whole discovery-options response.
+ */
+async function readScaffoldVariants(
+  scaffoldId: string,
+): Promise<variantSummary[]> {
+  const variantsDir = path.join(
+    repoRoot(),
+    "packages",
+    "generation",
+    "orchestration",
+    "scaffolds",
+    scaffoldId,
+    "variants",
+  );
+  if (!existsSync(variantsDir)) return [];
+  let entries: string[];
+  try {
+    entries = await readdir(variantsDir);
+  } catch {
+    return [];
+  }
+  const jsonFiles = entries.filter(
+    (name) => name.endsWith(".json") && !name.startsWith("_"),
+  );
+  const summaries: variantSummary[] = [];
+  for (const filename of jsonFiles) {
+    try {
+      const raw = await readFile(path.join(variantsDir, filename), "utf-8");
+      const parsed = JSON.parse(raw) as variantFile;
+      if (parsed.enabled === false) continue;
+      const id = asString(parsed.id, filename.replace(/\.json$/, ""));
+      const colour = parsed.tokens?.color ?? {};
+      summaries.push({
+        id,
+        label: asString(parsed.label, id),
+        description: asString(parsed.description, ""),
+        tokens: {
+          primary: asHexColor(colour.primary, "#1a1a1a"),
+          accent: asHexColor(colour.accent, "#0066ff"),
+          background: asHexColor(colour.background, "#ffffff"),
+          foreground: asHexColor(colour.foreground, "#0a0a0a"),
+        },
+        tone: {
+          vibe: asStringArray(parsed.tone?.vibe),
+        },
+      });
+    } catch {
+      continue;
+    }
+  }
+  return summaries.sort((a, b) => a.label.localeCompare(b.label, "sv"));
+}
 
 function repoRoot(): string {
   const candidates = [
@@ -96,24 +209,29 @@ export async function GET(request: NextRequest) {
       ]),
     );
     const includeOperatorNotes = isOperatorRequest(request);
-    const options = taxonomy.categories.map((category) => {
-      const runtimeScaffoldId = categoryRuntimeScaffoldId(category);
-      return {
-        id: category.id,
-        label: category.labelSv,
-        contentBranch: category.contentBranch,
-        supportStatus: category.supportStatus,
-        defaultVariantId: category.defaultVariantId,
-        targetScaffoldLabel:
-          scaffoldLabels.get(category.targetScaffoldId) ??
-          category.targetScaffoldId,
-        fallbackLabel:
-          runtimeScaffoldId !== category.targetScaffoldId
-            ? (scaffoldLabels.get(runtimeScaffoldId) ?? runtimeScaffoldId)
-            : undefined,
-        operatorNotes: includeOperatorNotes ? category.operatorNotes : undefined,
-      };
-    });
+    const options = await Promise.all(
+      taxonomy.categories.map(async (category) => {
+        const runtimeScaffoldId = categoryRuntimeScaffoldId(category);
+        const availableVariants = await readScaffoldVariants(runtimeScaffoldId);
+        return {
+          id: category.id,
+          label: category.labelSv,
+          contentBranch: category.contentBranch,
+          supportStatus: category.supportStatus,
+          defaultVariantId: category.defaultVariantId,
+          targetScaffoldLabel:
+            scaffoldLabels.get(category.targetScaffoldId) ??
+            category.targetScaffoldId,
+          fallbackLabel:
+            runtimeScaffoldId !== category.targetScaffoldId
+              ? (scaffoldLabels.get(runtimeScaffoldId) ?? runtimeScaffoldId)
+              : undefined,
+          runtimeScaffoldId,
+          availableVariants,
+          operatorNotes: includeOperatorNotes ? category.operatorNotes : undefined,
+        };
+      }),
+    );
 
     return NextResponse.json({ options });
   } catch (error) {

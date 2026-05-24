@@ -9,6 +9,7 @@ import { PagesTab } from "@/components/builder/inspector/pages-tab";
 import { QualityTab } from "@/components/builder/inspector/quality-tab";
 import { TokensTab } from "@/components/builder/inspector/tokens-tab";
 import { useRunArtefacts } from "@/components/builder/inspector/use-run-artefacts";
+import { VariantsTab } from "@/components/builder/inspector/variants-tab";
 import { useFollowupBuild } from "@/components/builder/use-followup-build";
 import type { PromptBuildOutcome } from "@/components/prompt-builder";
 import { Button } from "@/components/ui/button";
@@ -29,12 +30,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
  * follow-up-bygg-pipeline som FloatingChat och Nivå 2-dialogerna
  * använder.
  *
- * Inspectorn renderar fyra tabs:
+ * Inspectorn renderar sex tabs:
  *
  *   1. Sidor       — routePlan + pageIntentWarnings
  *   2. Brief & Plan — företag, ton, tjänster, scaffold/variant
- *   3. Dossiers    — required/recommended/conditional/rejected
- *   4. Kvalitet    — buildResult + qualityResult + repairResult
+ *   3. Variants    — live-switch mellan registrerade scaffold-variants
+ *   4. Färger      — runtime token-overrides + commit-flow
+ *   5. Dossiers    — required/recommended/conditional/rejected
+ *   6. Kvalitet    — buildResult + qualityResult + repairResult
  *
  * All data kommer från `/api/runs/[runId]/artifacts`. Vi har inget
  * polling — operatören får en refresh-knapp i headern och inspectorn
@@ -165,6 +168,7 @@ export function SiteInspectorSheet({
               >
                 <TabsTrigger value="pages">Sidor</TabsTrigger>
                 <TabsTrigger value="brief">Brief &amp; Plan</TabsTrigger>
+                <TabsTrigger value="variants">Variants</TabsTrigger>
                 <TabsTrigger value="tokens">Färger</TabsTrigger>
                 <TabsTrigger value="dossiers">Dossiers</TabsTrigger>
                 <TabsTrigger value="quality">Kvalitet</TabsTrigger>
@@ -175,6 +179,9 @@ export function SiteInspectorSheet({
                 </TabsContent>
                 <TabsContent value="brief">
                   <BriefTab bundle={state.bundle} {...sharedTabProps} />
+                </TabsContent>
+                <TabsContent value="variants">
+                  <VariantsTab bundle={state.bundle} {...sharedTabProps} />
                 </TabsContent>
                 <TabsContent value="tokens">
                   <TokensTab {...sharedTabProps} />

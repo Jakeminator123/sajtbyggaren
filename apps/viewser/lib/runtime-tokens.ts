@@ -153,6 +153,43 @@ export function broadcastTokenChange(token: TokenId, value: string): void {
 }
 
 /**
+ * Bredcast en bundle av token-overrides på en gång — wrappar
+ * ``broadcastTokenChange`` för varje fält i bundeln. Används av Site
+ * Inspectors Variants-tab när operatören hovrar/klickar på en variant
+ * för att förhandsvisa hela variantens färgschema i en enda batch
+ * (samma postMessage-kontrakt, fyra meddelanden i följd istället för
+ * separata kall-platser).
+ *
+ * Tysta no-op om en token saknas i bundeln (defensiv mot framtida
+ * partial-bundles där vi t.ex. bara vill byta primary+accent).
+ */
+export function broadcastTokenBundle(
+  bundle: Partial<Record<TokenId, string>>,
+): void {
+  if (typeof window === "undefined") return;
+  const order: TokenId[] = ["primary", "accent", "background", "foreground"];
+  for (const id of order) {
+    const value = bundle[id];
+    if (typeof value !== "string") continue;
+    broadcastTokenChange(id, value);
+  }
+}
+
+/**
+ * Bredcast "reset" för alla fyra canonical tokens i en enda batch.
+ * Används av Variants-tabbens "Återställ till nuvarande variant"-knapp
+ * så preview-iframen återgår till sajtens canonical färgschema utan
+ * att en ny build behöver triggas.
+ */
+export function broadcastTokenReset(): void {
+  if (typeof window === "undefined") return;
+  const order: TokenId[] = ["primary", "accent", "background", "foreground"];
+  for (const id of order) {
+    broadcastTokenChange(id, "reset");
+  }
+}
+
+/**
  * Bygg en quick-prompt-text som FloatingChat kan skicka direkt till
  * /api/prompt för att faktiskt committa token-overrides i nästa
  * build. Vi inkluderar bara tokens som skiljer sig från canonical
