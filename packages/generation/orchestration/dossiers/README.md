@@ -60,15 +60,31 @@ ovan är optional och fylls när hard Dossiers importeras i Sprint 3+.
 
 ## Status
 
-En (1) soft Dossier är implementerad idag: [`soft/interactive-game-loop/`](soft/interactive-game-loop/)
-(capability `interactive-game`, defaultForCapability=true). Den är instructions-
-only (inga verbatim filer) och definierar state/loop/controls/collision/score/
-restart-kontraktet för spelbara mini-spel.
+Fyra (4) soft Dossiers är implementerade idag (alla instructions-only, inga
+verbatim TSX-filer):
 
-Övriga 11 capability-slugs i [`governance/policies/capability-map.v1.json`](../../../../governance/policies/capability-map.v1.json)
+- [`soft/interactive-game-loop/`](soft/interactive-game-loop/) — capability
+  `interactive-game`, `defaultForCapability=true`. Definierar state/loop/
+  controls/collision/score/restart-kontraktet för spelbara mini-spel.
+- [`soft/menu-display/`](soft/menu-display/) — capability `menu`,
+  `defaultForCapability=true`. Course-grouping + per-item price + dietary
+  markers för restaurang/café-menyer. Tillkom i Week 1 av "fantastic sites"-
+  roadmappen (2026-05-24) tillsammans med restaurant-hospitality-scaffolden.
+- [`soft/booking-cta/`](soft/booking-cta/) — capability `booking`,
+  `defaultForCapability=true`. Phone/external/mailto-CTA med adjacent
+  hours, för restaurang/klinik/frisör-bokning. Tillkom i Week 1.
+- [`soft/mailto-contact-form/`](soft/mailto-contact-form/) — capability
+  `contact-form`, `defaultForCapability=true`. Mailto-baserat kontaktformulär
+  (zero env, zero backend) som default tills den planerade hard
+  `resend-contact-form` importeras från MIN_IDE. Tillkom i Week 1.
+
+Övriga capability-slugs i [`governance/policies/capability-map.v1.json`](../../../../governance/policies/capability-map.v1.json)
 har tomma `dossiers`-listor och är dokumenterade gap (`empty list = gap, not
-feature`). De väntar på MIN_IDE-import i Sprint 3+. Ingen hard Dossier
-(stripe-checkout, supabase-auth, clerk-auth, shopify-cart) är implementerad än.
+feature`): `newsletter-subscribe`, `payments`, `auth`, `analytics`, `ai-chat`,
+`error-tracking`, `faq-section`, `carousel`, `marquee`, `command-search`. De
+väntar på MIN_IDE-import i kommande sprintar. Ingen hard Dossier
+(stripe-checkout, supabase-auth, clerk-auth, shopify-cart, resend-contact-form)
+är implementerad än.
 
 Builder MVP läser primärt ett `Project Input` under
 `examples/<siteId>.project-input.json` (t.ex. `painter-palma`) och patchar

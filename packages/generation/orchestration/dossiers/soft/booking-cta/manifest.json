@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../../../governance/schemas/dossier.schema.json",
+  "id": "booking-cta",
+  "enabled": true,
+  "label": "Booking Call-to-Action",
+  "capability": "booking",
+  "class": "soft",
+  "codeFidelity": "rewritable",
+  "complexity": "low",
+  "defaultForCapability": true,
+  "summary": "Instructions-only soft dossier for a clear booking conversion path (table reservation, clinic appointment, hair-salon slot). Renders a prominent CTA that either opens a phone tel: link, an external booking provider URL (Caspeco, Bokadirekt, Resmio, BookEden, Calendly) or a mailto: fallback. NO third-party API integration — this is presentational only; the operator pastes their booking URL in project-input. Hard booking dossiers (Caspeco-api, Bokadirekt-api) are planned imports for a future sprint.",
+  "envVars": [],
+  "dependencies": [],
+  "files": [],
+  "exposes": ["BookingCta", "BookingHours"],
+  "lastVerified": "2026-05-24"
+}

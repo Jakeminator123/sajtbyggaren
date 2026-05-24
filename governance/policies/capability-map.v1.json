@@ -18,8 +18,19 @@
       "comment": "Pacman-style soft Dossier; verified mounted by tests/test_dossier_mounting.py."
     },
     "contact-form": {
-      "dossiers": [],
-      "comment": "No Dossier in repo yet. MIN_IDE has resend-contact-form (hard) which is the planned import for Sprint 3."
+      "dossiers": ["mailto-contact-form"],
+      "default": "mailto-contact-form",
+      "comment": "mailto-contact-form is the safe default (soft, zero env, ships at build time). resend-contact-form (hard, server-side delivery via Resend API) is the planned import from MIN_IDE for sites that outgrow the mailto fallback."
+    },
+    "menu": {
+      "dossiers": ["menu-display"],
+      "default": "menu-display",
+      "comment": "menu-display is a soft instructions-only Dossier for restaurant/café menus grouped by course with per-item price and dietary markers. No external API; menu data is supplied via project-input or starter content."
+    },
+    "booking": {
+      "dossiers": ["booking-cta"],
+      "default": "booking-cta",
+      "comment": "booking-cta is a soft instructions-only Dossier rendering a phone/external/mailto CTA with adjacent hours. Hard alternatives (caspeco-api, bokadirekt-api, calendly-embed) are planned imports for sites needing real availability."
     },
     "newsletter-subscribe": {
       "dossiers": [],
