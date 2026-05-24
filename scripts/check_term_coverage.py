@@ -73,6 +73,7 @@ COMMON_WORDS = {
     "AttributeError",
     "ArgumentParser", "ImportError", "SimpleNamespace", "UnicodeDecodeError", "Input", "Output",
     "AssertionError", "FileExistsError", "NotImplementedError",
+    "CalledProcessError", "ModuleNotFoundError",
     "Iterable", "Sequence", "Mapping", "Callable",
     # Status-strängar (verify_run.py + andra tooling-checkers)
     "OK", "FAIL", "WARN", "UNKNOWN", "SKIP",
@@ -508,8 +509,8 @@ COMMON_WORDS = {
     "DialogTitle", "DialogTrigger",
     "ProgressIndicator", "ProgressLabel", "ProgressPrimitive",
     "ProgressTrack", "ProgressValue",
-    # Python stdlib + tredjepart-symboler i scrape_site.py
-    "BeautifulSoup", "RequestException",
+    # Python stdlib + tredjepart-symboler i scrape_site.py och build_site.py
+    "BeautifulSoup", "RequestException", "ChunkedEncodingError", "ConnectionError",
     # Node typings
     "ProcessEnv",
     # Intake-flödets historiska namn (refererat i Sajtmaskin-port-kommentarer)

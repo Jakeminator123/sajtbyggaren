@@ -2,16 +2,26 @@ name: Governance
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]
   pull_request:
-    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
 
 jobs:
   governance:
     runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -35,6 +45,13 @@ jobs:
 
       - name: Run pytest
         run: python -m pytest tests/ -v
+
+      - name: Run AI bug review
+        if: always()
+        run: python scripts/ai_bug_review.py
+        env:
+          OPENAI_REVIEW_MODEL: ${{ vars.OPENAI_REVIEW_MODEL || 'gpt-5.4' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   builder-smoke:
     runs-on: ubuntu-latest

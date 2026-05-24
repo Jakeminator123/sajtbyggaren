@@ -26,3 +26,55 @@ fortsätta parallellt mot samma överenskomna shape.
 
 Uppdatera kartan när en ny delad yta skapas, när Viewser börjar konsumera en ny
 backend-shape, eller när en ny ägare faktiskt tar över ett område.
+
+## Branch-konventioner
+
+`branch-discipline.md` beskriver standardflödet "jobba direkt på `main`". När
+operatören uttryckligen begär parallellt team-arbete (PR-flöde) gäller följande
+namn- och livscykel-konventioner.
+
+### Permanenta team-branches (always-on, en per teammedlem)
+
+Varje teammedlem har en stabil branch namngiven efter sin domän. Den är inte en
+feature-branch utan en **arbets-branch** — ett dagligt utgångsläge mellan main-
+synkar. PR:ar från arbets-branchen till `main` när "sanningen" ska uppdateras.
+
+| Teammedlem | Domän | Branch | Cursor-rule som matchar |
+| --- | --- | --- | --- |
+| Jakob | Backend, governance, scripts, codegen | `jakob-be` | `branch-scope-ui-ux.md` matchar **inte** — Jakob får röra all backend |
+| Christopher | Frontend, viewser, UI/UX | `christopher-ui` | `branch-scope-ui-ux.md` (off-limits för backend) |
+
+### Livscykel för arbets-branchen
+
+1. **Skapa en gång:** `git switch main && git switch -c <branch> && git push -u origin <branch>`. Arbets-branchen lever ovanpå main.
+2. **Commit + push** dina ändringar på arbets-branchen löpande. Två commits per logiskt steg är OK, men håll ofta små.
+3. **PR till main när du vill släppa något:** `gh pr create --base main --head <branch>`. Squash-merge i regel.
+4. **Efter merge:** synka arbets-branchen mot main innan nästa commit:
+
+   ```
+   git switch <branch>
+   git fetch origin
+   git reset --hard origin/main
+   git push --force-with-lease origin <branch>
+   ```
+
+   `--force-with-lease` är OK eftersom arbets-branchen är solo-ägd (regeln i `branch-scope-ui-ux.md` tillåter det explicit).
+
+5. **Pulla aldrig en redan squash-mergad branch** med `git pull` — det skapar en merge-commit + konflikter mot squash-en på main. Reset eller skapa om från main.
+
+### Tillfälliga feature-branches (när uppgiften är stor eller delas)
+
+| Område | Branch-mönster | Exempel |
+| --- | --- | --- |
+| Backend-feature | `jakob/<feature>`, `backend/<feature>` | `jakob/wizard-gap-4`, `backend/quality-gate-v2` |
+| Frontend-feature | `frontend/<feature>`, `ui/<feature>`, `ux/<feature>` | `frontend/asset-store-v2` |
+| Docs / agent-workflow | `cursor/<syfte>` | `cursor/branch-conventions`, `cursor/marketing-base` |
+| Tooling / CI | `tooling/*`, `ci/*` | `tooling/ruff-update` |
+
+Tillfälliga branches startas från `main` (eller arbets-branchen om de bygger på
+oppushat arbete), PR:as till main, raderas efter merge.
+
+### Main
+
+`main` är sanningen. Pushas aldrig med `--force`. Inga direkta pushes från
+teammedlemmar utan operator-OK — allt går via PR.

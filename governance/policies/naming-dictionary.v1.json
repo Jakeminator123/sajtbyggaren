@@ -103,7 +103,7 @@
     {
       "id": "assetRef",
       "canonical": "AssetRef",
-      "definition": "Referens till en operatör-uppladdad bild som lagras i AssetStore. Schema-form definierat i governance/schemas/project-input.schema.json $defs/assetRef. Bär assetId, filename (det /uploads/-namn genererad sajt refererar), mimeType, sizeBytes, role (logo|hero|gallery), valfri placement (home|about|services|projects|products|gallery), alt-text och GPT Vision-output (visionSubject, visionConfidence).",
+      "definition": "Referens till en operatör-uppladdad bild eller video som lagras i AssetStore. Schema-form definierat i governance/schemas/project-input.schema.json $defs/assetRef. Bär assetId, filename (det /uploads/-namn genererad sajt refererar), mimeType (image/png|jpeg|webp|svg+xml eller video/mp4|webm), sizeBytes, role (logo|hero|gallery|favicon|ogImage|backgroundVideo), valfri placement (home|about|services|projects|products|gallery), alt-text, GPT Vision-output (visionSubject, visionConfidence) och valfri sourceUrl (HTTPS-URI till blob-store-bytes när VercelBlobAssetStore är aktiv; build_site.py copy_operator_uploads föredrar disk men faller tillbaka till sourceUrl-fetch när bytes inte ligger lokalt).",
       "ownerPackage": "apps/viewser/lib/asset-store",
       "aliasesAllowed": [],
       "aliasesForbidden": ["uploadRef", "imageRef", "operatorAsset"]
@@ -119,7 +119,7 @@
     {
       "id": "operatorUpload",
       "canonical": "operator upload",
-      "definition": "En bild eller logotyp som operatorn har laddat upp via discovery-wizardens AssetsStep till /api/upload-asset. Resulterar i en AssetRef som följer med genom DiscoveryPayload → Project Input → build_site.py copy_operator_uploads och hamnar i genererad sajts public/uploads/.",
+      "definition": "En bild, logotyp eller video som operatorn har laddat upp via discovery-wizardens AssetsStep (eller MediaStep) till /api/upload-asset. Bytes:en lagras antingen lokalt under data/uploads/<siteId>/ (LocalAssetStore) eller i en Vercel Blob-store (VercelBlobAssetStore — sätter AssetRef.sourceUrl). AssetRef:en följer med genom DiscoveryPayload → Project Input → build_site.py copy_operator_uploads, som föredrar disk-lookup men HTTP-fetchar bytes från sourceUrl när disk-vägen inte hittar filen (allowlist:ad host, HTTPS only, redirects blockerade, 8 MB cap, 15s timeout). Filerna hamnar i genererad sajts public/uploads/<filename>.",
       "ownerPackage": "apps/viewser",
       "aliasesAllowed": [],
       "aliasesForbidden": ["userUpload", "customerUpload", "clientImage"]
