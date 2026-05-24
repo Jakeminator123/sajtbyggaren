@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../../../governance/schemas/dossier.schema.json",
+  "id": "map-embed",
+  "enabled": true,
+  "label": "Map Embed",
+  "capability": "location",
+  "class": "soft",
+  "codeFidelity": "rewritable",
+  "complexity": "low",
+  "defaultForCapability": true,
+  "summary": "Instructions-only soft dossier for embedding a location map next to an address block. Default implementation is an OpenStreetMap iframe (no API key, no tracker, GDPR-friendly) with a static fallback image and a 'directions' link that deep-links into the visitor's native maps app (geo: URL on Android, maps:// on iOS, Google Maps URL on web). NO Google Maps JS SDK — that requires a billed API key and ships a 200KB+ tracker. Hard alternatives (google-maps-react, mapbox-gl) are planned imports for sites needing custom markers or routing.",
+  "envVars": [],
+  "dependencies": [],
+  "files": [],
+  "exposes": ["MapEmbed", "MapAddress", "DirectionsLink"],
+  "lastVerified": "2026-05-24"
+}

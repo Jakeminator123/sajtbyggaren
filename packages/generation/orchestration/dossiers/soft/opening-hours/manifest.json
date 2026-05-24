@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../../../governance/schemas/dossier.schema.json",
+  "id": "opening-hours",
+  "enabled": true,
+  "label": "Opening Hours",
+  "capability": "hours",
+  "class": "soft",
+  "codeFidelity": "rewritable",
+  "complexity": "low",
+  "defaultForCapability": true,
+  "summary": "Instructions-only soft dossier for a structured opening-hours block: weekday → open/close pairs with sane handling of closed days, split shifts (lunch + dinner) and holiday exceptions. Renders semantically as a definition list so screen readers announce day/time pairs correctly, plus an inline microformat that emits schema.org OpeningHoursSpecification JSON-LD for SEO. No clock, no live 'open now' indicator (would require client-side time + timezone handling) — that is reserved for a future hard dossier (real-time-status).",
+  "envVars": [],
+  "dependencies": [],
+  "files": [],
+  "exposes": ["OpeningHours", "OpeningHoursDay", "OpeningHoursSpan"],
+  "lastVerified": "2026-05-24"
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../../../governance/schemas/dossier.schema.json",
+  "id": "reviews-display",
+  "enabled": true,
+  "label": "Reviews Display",
+  "capability": "reviews",
+  "class": "soft",
+  "codeFidelity": "rewritable",
+  "complexity": "low",
+  "defaultForCapability": true,
+  "summary": "Instructions-only soft dossier for rendering customer reviews/testimonials as a server-rendered card grid with author name, optional avatar, star rating and verified-source attribution (Google, TripAdvisor, Yelp, own site). Renders schema.org Review JSON-LD for rich SERP snippets. Reviews data is static content in project-input — no live Google/Yelp scraping. Hard alternatives (google-places-reviews, trustpilot-widget) are planned imports for sites that need real-time review pulls.",
+  "envVars": [],
+  "dependencies": [],
+  "files": [],
+  "exposes": ["ReviewsDisplay", "ReviewCard", "ReviewItem"],
+  "lastVerified": "2026-05-24"
+}

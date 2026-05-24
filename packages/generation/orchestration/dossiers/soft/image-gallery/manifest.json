@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../../../governance/schemas/dossier.schema.json",
+  "id": "image-gallery",
+  "enabled": true,
+  "label": "Image Gallery",
+  "capability": "gallery",
+  "class": "soft",
+  "codeFidelity": "rewritable",
+  "complexity": "low",
+  "defaultForCapability": true,
+  "summary": "Instructions-only soft dossier for a server-rendered image gallery: a responsive grid of atmosphere/portfolio/product photos with semantic alt text and progressive loading. Renders 6-24 images in a CSS grid that re-flows from 1-column on phones to 3-4 columns on desktop. No lightbox JS, no carousel, no fetch — purely presentational over the asset list provided by the brief. Hard alternatives (yet-another-react-lightbox, photoswipe-react) are planned imports for sites that need fullscreen viewers.",
+  "envVars": [],
+  "dependencies": [],
+  "files": [],
+  "exposes": ["ImageGallery", "GalleryImage"],
+  "lastVerified": "2026-05-24"
+}

@@ -60,23 +60,44 @@ ovan är optional och fylls när hard Dossiers importeras i Sprint 3+.
 
 ## Status
 
-Fyra (4) soft Dossiers är implementerade idag (alla instructions-only, inga
+Åtta (8) soft Dossiers är implementerade idag (alla instructions-only, inga
 verbatim TSX-filer):
+
+**Pre-Week-1 (basbygglock):**
 
 - [`soft/interactive-game-loop/`](soft/interactive-game-loop/) — capability
   `interactive-game`, `defaultForCapability=true`. Definierar state/loop/
   controls/collision/score/restart-kontraktet för spelbara mini-spel.
+
+**Week 1 batch 1 (restaurant-grundpaket, 2026-05-24):**
+
 - [`soft/menu-display/`](soft/menu-display/) — capability `menu`,
   `defaultForCapability=true`. Course-grouping + per-item price + dietary
-  markers för restaurang/café-menyer. Tillkom i Week 1 av "fantastic sites"-
-  roadmappen (2026-05-24) tillsammans med restaurant-hospitality-scaffolden.
+  markers för restaurang/café-menyer.
 - [`soft/booking-cta/`](soft/booking-cta/) — capability `booking`,
   `defaultForCapability=true`. Phone/external/mailto-CTA med adjacent
-  hours, för restaurang/klinik/frisör-bokning. Tillkom i Week 1.
+  hours, för restaurang/klinik/frisör-bokning.
 - [`soft/mailto-contact-form/`](soft/mailto-contact-form/) — capability
   `contact-form`, `defaultForCapability=true`. Mailto-baserat kontaktformulär
   (zero env, zero backend) som default tills den planerade hard
-  `resend-contact-form` importeras från MIN_IDE. Tillkom i Week 1.
+  `resend-contact-form` importeras från MIN_IDE.
+
+**Week 1 batch 2 (universella brick-and-mortar-byggstenar, 2026-05-24):**
+
+- [`soft/image-gallery/`](soft/image-gallery/) — capability `image-gallery`,
+  `defaultForCapability=true`. Responsiv CSS-grid med semantisk alt, lazy
+  loading och aspect-ratio-reservation. Återanvänds av restaurant +
+  framtida portfolio/clinic/real-estate-scaffolds.
+- [`soft/opening-hours/`](soft/opening-hours/) — capability `opening-hours`,
+  `defaultForCapability=true`. Semantisk definition-list med closed-day,
+  split-shift och schema.org OpeningHoursSpecification JSON-LD.
+- [`soft/reviews-display/`](soft/reviews-display/) — capability
+  `reviews-display`, `defaultForCapability=true`. Customer review-cards med
+  source-provenance, optional star-rating och schema.org Review JSON-LD
+  som ger rich SERP-snippets.
+- [`soft/map-embed/`](soft/map-embed/) — capability `map-embed`,
+  `defaultForCapability=true`. OpenStreetMap-iframe (no API-key, GDPR-vänlig)
+  med semantiskt address-block och native-app directions-deeplinks.
 
 Övriga capability-slugs i [`governance/policies/capability-map.v1.json`](../../../../governance/policies/capability-map.v1.json)
 har tomma `dossiers`-listor och är dokumenterade gap (`empty list = gap, not
