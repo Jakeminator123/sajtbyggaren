@@ -60,15 +60,68 @@ ovan är optional och fylls när hard Dossiers importeras i Sprint 3+.
 
 ## Status
 
-En (1) soft Dossier är implementerad idag: [`soft/interactive-game-loop/`](soft/interactive-game-loop/)
-(capability `interactive-game`, defaultForCapability=true). Den är instructions-
-only (inga verbatim filer) och definierar state/loop/controls/collision/score/
-restart-kontraktet för spelbara mini-spel.
+Elva (11) soft Dossiers är implementerade idag (alla instructions-only,
+inga verbatim TSX-filer):
 
-Övriga 11 capability-slugs i [`governance/policies/capability-map.v1.json`](../../../../governance/policies/capability-map.v1.json)
-har tomma `dossiers`-listor och är dokumenterade gap (`empty list = gap, not
-feature`). De väntar på MIN_IDE-import i Sprint 3+. Ingen hard Dossier
-(stripe-checkout, supabase-auth, clerk-auth, shopify-cart) är implementerad än.
+**Pre-Week-1 (basbygglock):**
+
+- [`soft/interactive-game-loop/`](soft/interactive-game-loop/) — capability
+  `interactive-game`, `defaultForCapability=true`. Definierar state/loop/
+  controls/collision/score/restart-kontraktet för spelbara mini-spel.
+
+**Week 1 batch 1 (restaurant-grundpaket, 2026-05-24):**
+
+- [`soft/menu-display/`](soft/menu-display/) — capability `menu`,
+  `defaultForCapability=true`. Course-grouping + per-item price + dietary
+  markers för restaurang/café-menyer.
+- [`soft/booking-cta/`](soft/booking-cta/) — capability `booking`,
+  `defaultForCapability=true`. Phone/external/mailto-CTA med adjacent
+  hours, för restaurang/klinik/frisör-bokning.
+- [`soft/mailto-contact-form/`](soft/mailto-contact-form/) — capability
+  `contact-form`, `defaultForCapability=true`. Mailto-baserat kontaktformulär
+  (zero env, zero backend) som default tills den planerade hard
+  `resend-contact-form` importeras från MIN_IDE.
+
+**Week 1 batch 2 (universella brick-and-mortar-byggstenar, 2026-05-24):**
+
+- [`soft/image-gallery/`](soft/image-gallery/) — capability `gallery`,
+  `defaultForCapability=true`. Responsiv CSS-grid med semantisk alt, lazy
+  loading och aspect-ratio-reservation. Återanvänds av restaurant +
+  framtida portfolio/clinic/real-estate-scaffolds.
+- [`soft/opening-hours/`](soft/opening-hours/) — capability `hours`,
+  `defaultForCapability=true`. Semantisk definition-list med closed-day,
+  split-shift och schema.org OpeningHoursSpecification JSON-LD.
+- [`soft/reviews-display/`](soft/reviews-display/) — capability `reviews`,
+  `defaultForCapability=true`. Customer review-cards med source-provenance,
+  optional star-rating och schema.org Review JSON-LD som ger rich
+  SERP-snippets.
+- [`soft/map-embed/`](soft/map-embed/) — capability `location`,
+  `defaultForCapability=true`. OpenStreetMap-iframe (no API-key, GDPR-vänlig)
+  med semantiskt address-block och native-app directions-deeplinks.
+
+**Week 1 batch 3 (universella conversion-byggstenar, 2026-05-24):**
+
+- [`soft/pricing-table/`](soft/pricing-table/) — capability `pricing`,
+  `defaultForCapability=true`. 2-4 tier-cards med feature-checklist,
+  optional 'mest populärt'-badge och en CTA per tier. Server-rendered,
+  ingen klient-toggle (årlig/månadsbil reserverad för planerad hard
+  pricing-table-toggle-dossier).
+- [`soft/faq-accordion/`](soft/faq-accordion/) — capability `faq-section`,
+  `defaultForCapability=true`. Native HTML `<details>`/`<summary>` (zero JS,
+  full keyboard a11y, Google-indexerbart) plus schema.org FAQPage JSON-LD
+  för rich SERP-snippets. Stänger den tidigare faq-section-gap.
+- [`soft/video-hero/`](soft/video-hero/) — capability `hero-video`,
+  `defaultForCapability=true`. Native `<video>` med poster-fallback,
+  preload=metadata, prefers-reduced-motion-hantering och text-overlay
+  med kontrast-gradient. Ingen YouTube/Vimeo-embed.
+
+Övriga capability-slugs i [`governance/policies/capability-map.v1.json`](../../../../governance/policies/capability-map.v1.json)
+har fortfarande tomma `dossiers`-listor och är dokumenterade gap
+(`empty list = gap, not feature`): `newsletter-subscribe`, `payments`,
+`auth`, `analytics`, `ai-chat`, `error-tracking`, `carousel`, `marquee`,
+`command-search`. De väntar på MIN_IDE-import i kommande sprintar.
+Ingen hard Dossier (stripe-checkout, supabase-auth, clerk-auth,
+shopify-cart, resend-contact-form) är implementerad än.
 
 Builder MVP läser primärt ett `Project Input` under
 `examples/<siteId>.project-input.json` (t.ex. `painter-palma`) och patchar

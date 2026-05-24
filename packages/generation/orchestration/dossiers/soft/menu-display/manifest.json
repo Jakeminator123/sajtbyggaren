@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../../../governance/schemas/dossier.schema.json",
+  "id": "menu-display",
+  "enabled": true,
+  "label": "Menu Display",
+  "capability": "menu",
+  "class": "soft",
+  "codeFidelity": "rewritable",
+  "complexity": "low",
+  "defaultForCapability": true,
+  "summary": "Instructions-only soft dossier for showing a restaurant or café menu grouped by course or category. Enforces course-grouping, per-item price and dietary markers so output is a real menu rather than a flat price-list table. No external API; menu data lives in the project's content layer (project-input.json or starter content).",
+  "envVars": [],
+  "dependencies": [],
+  "files": [],
+  "exposes": ["MenuSection", "MenuItem"],
+  "lastVerified": "2026-05-24"
+}

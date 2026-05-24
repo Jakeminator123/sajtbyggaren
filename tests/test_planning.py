@@ -172,17 +172,22 @@ def test_filter_capabilities_passes_through_implemented_capabilities():
 
 @pytest.mark.tooling
 def test_filter_capabilities_rejects_capabilities_with_empty_dossier_list():
-    """contact-form, payments, auth etc. are registered as gaps in the real
+    """auth, payments etc. are registered as gaps in the real
     capability-map.v1.json. Asking for them must surface them in rejected[]
     rather than silently including a non-existent Dossier.
+
+    Note: contact-form was previously the example here, but the Week 1
+    "fantastic sites" roadmap (2026-05-24) closed that gap by registering
+    mailto-contact-form. auth + payments remain canonical gap examples
+    until clerk-auth / stripe-checkout are imported from MIN_IDE.
     """
     cap_map = load_capability_map()
     selected, rejected = filter_capabilities(
-        ["contact-form", "payments"], cap_map
+        ["auth", "payments"], cap_map
     )
     assert selected == []
     rejected_ids = {entry.id for entry in rejected}
-    assert {"contact-form", "payments"} <= rejected_ids
+    assert {"auth", "payments"} <= rejected_ids
     for entry in rejected:
         assert entry.reason, "Every rejected entry must carry a reason"
 
@@ -203,11 +208,11 @@ def test_filter_capabilities_rejects_unknown_capability():
 def test_filter_capabilities_dedupes_input():
     cap_map = load_capability_map()
     selected, rejected = filter_capabilities(
-        ["contact-form", "contact-form", "contact-form"], cap_map
+        ["auth", "auth", "auth"], cap_map
     )
     assert selected == []
     assert len(rejected) == 1
-    assert rejected[0].id == "contact-form"
+    assert rejected[0].id == "auth"
 
 
 @pytest.mark.tooling
@@ -274,7 +279,7 @@ def test_produce_site_plan_records_rejected_capabilities_in_object_form(monkeypa
     object form so rationale + rejected[] survive into the artefakt.
     """
     monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
-    brief = _baseline_brief(requestedCapabilities=["contact-form", "payments"])
+    brief = _baseline_brief(requestedCapabilities=["auth", "payments"])
     result = produce_site_plan(brief, run_id="test-run-3")
 
     selected = result.site_plan["selectedDossiers"]
@@ -284,7 +289,7 @@ def test_produce_site_plan_records_rejected_capabilities_in_object_form(monkeypa
     )
     assert selected["recommended"] == []
     rejected_ids = {entry["id"] for entry in selected["rejected"]}
-    assert {"contact-form", "payments"} <= rejected_ids
+    assert {"auth", "payments"} <= rejected_ids
     assert "Mock plan" in selected["rationale"]
 
 

@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../../../governance/schemas/dossier.schema.json",
+  "id": "faq-accordion",
+  "enabled": true,
+  "label": "FAQ Accordion",
+  "capability": "faq-section",
+  "class": "soft",
+  "codeFidelity": "rewritable",
+  "complexity": "low",
+  "defaultForCapability": true,
+  "summary": "Instructions-only soft dossier for a frequently-asked-questions section using the native HTML <details>/<summary> pattern (zero JS, full keyboard accessibility, works without hydration). Emits schema.org FAQPage JSON-LD for rich SERP snippets. Renders 5-15 Q&A pairs grouped by optional category headings. The MIN_IDE-planned hard alternative is unchanged — this is the no-JS soft default that closes the existing capability-map gap for faq-section.",
+  "envVars": [],
+  "dependencies": [],
+  "files": [],
+  "exposes": ["FaqAccordion", "FaqItem", "FaqGroup"],
+  "lastVerified": "2026-05-24"
+}

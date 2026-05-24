@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../../../../governance/schemas/variant.schema.json",
+  "id": "nordic-fine-dining",
+  "enabled": true,
+  "label": "Nordic Fine Dining",
+  "description": "Restrained, almost gallery-quiet expression for fine-dining venues, tasting-menu kitchens and chef-led restaurants where every dish is a deliberate composition. Off-white canvas, charcoal text, deep moss accent and minimal radii let the food photography do all the talking.",
+  "tokens": {
+    "color": {
+      "background": "#f9f8f4",
+      "foreground": "#1a1a17",
+      "muted": "#666660",
+      "border": "#e3e1d8",
+      "primary": "#2a3a2c",
+      "primaryForeground": "#f9f8f4",
+      "accent": "#a39167",
+      "accentForeground": "#1a1a17"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.18
+    },
+    "radius": {
+      "sm": "0.125rem",
+      "md": "0.25rem",
+      "lg": "0.375rem"
+    },
+    "spacing": {
+      "section": "7rem",
+      "container": "min(64rem, 88vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "minimal",
+      "editorial",
+      "considered",
+      "quiet",
+      "premium",
+      "chef-led"
+    ]
+  }
+}

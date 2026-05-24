@@ -18,8 +18,49 @@
       "comment": "Pacman-style soft Dossier; verified mounted by tests/test_dossier_mounting.py."
     },
     "contact-form": {
-      "dossiers": [],
-      "comment": "No Dossier in repo yet. MIN_IDE has resend-contact-form (hard) which is the planned import for Sprint 3."
+      "dossiers": ["mailto-contact-form"],
+      "default": "mailto-contact-form",
+      "comment": "mailto-contact-form is the safe default (soft, zero env, ships at build time). resend-contact-form (hard, server-side delivery via Resend API) is the planned import from MIN_IDE for sites that outgrow the mailto fallback."
+    },
+    "menu": {
+      "dossiers": ["menu-display"],
+      "default": "menu-display",
+      "comment": "menu-display is a soft instructions-only Dossier for restaurant/café menus grouped by course with per-item price and dietary markers. No external API; menu data is supplied via project-input or starter content."
+    },
+    "booking": {
+      "dossiers": ["booking-cta"],
+      "default": "booking-cta",
+      "comment": "booking-cta is a soft instructions-only Dossier rendering a phone/external/mailto CTA with adjacent hours. Hard alternatives (caspeco-api, bokadirekt-api, calendly-embed) are planned imports for sites needing real availability."
+    },
+    "gallery": {
+      "dossiers": ["image-gallery"],
+      "default": "image-gallery",
+      "comment": "image-gallery is a soft instructions-only Dossier rendering a responsive CSS-grid of atmosphere/portfolio photos with semantic alt, lazy loading and aspect-ratio reservation. No JS lightbox. Hard alternatives (yet-another-react-lightbox, photoswipe-react) are planned imports for sites needing fullscreen viewers."
+    },
+    "hours": {
+      "dossiers": ["opening-hours"],
+      "default": "opening-hours",
+      "comment": "opening-hours is a soft instructions-only Dossier rendering a semantic definition list of weekday hours with closed-day handling, split-shift support and schema.org OpeningHoursSpecification JSON-LD. Live 'open now' status is reserved for the planned real-time-status hard dossier."
+    },
+    "reviews": {
+      "dossiers": ["reviews-display"],
+      "default": "reviews-display",
+      "comment": "reviews-display is a soft instructions-only Dossier rendering customer reviews/testimonials as a card grid with author, source provenance, optional star rating and schema.org Review JSON-LD. Reviews are static project-input content. Hard alternatives (google-places-reviews, trustpilot-widget) are planned imports for sites needing live review pulls."
+    },
+    "location": {
+      "dossiers": ["map-embed"],
+      "default": "map-embed",
+      "comment": "map-embed is a soft instructions-only Dossier rendering an OpenStreetMap iframe (no API key, GDPR-friendly) next to a semantic address block with native-app directions deep-links. No Google Maps JS SDK. Hard alternatives (google-maps-react, mapbox-gl) are planned imports for sites needing custom markers, routing or multi-location store locators."
+    },
+    "pricing": {
+      "dossiers": ["pricing-table"],
+      "default": "pricing-table",
+      "comment": "pricing-table is a soft instructions-only Dossier rendering 2-4 tier cards with feature checklists, optional 'most popular' badge and one CTA per tier (tel:/mailto:/external booking — same pattern as booking-cta). Server-rendered, no client toggle. Hard alternatives (stripe-pricing-table, paddle-checkout) are planned imports for sites needing card-on-file conversion."
+    },
+    "hero-video": {
+      "dossiers": ["video-hero"],
+      "default": "video-hero",
+      "comment": "video-hero is a soft instructions-only Dossier rendering an autoplay-muted-loop background video using the native <video> element with poster fallback, preload=metadata, prefers-reduced-motion handling and a foreground text overlay. NO YouTube/Vimeo embed (those ship 600KB trackers). Hard alternatives (mux-player-react, vimeo-player) are planned imports for sites needing adaptive bitrate or playback analytics."
     },
     "newsletter-subscribe": {
       "dossiers": [],
@@ -46,8 +87,9 @@
       "comment": "No Dossier in repo yet. MIN_IDE has sentry-error-tracking (hard) as the planned import."
     },
     "faq-section": {
-      "dossiers": [],
-      "comment": "No Dossier in repo yet. MIN_IDE has faq-accordion (soft) as the planned import."
+      "dossiers": ["faq-accordion"],
+      "default": "faq-accordion",
+      "comment": "faq-accordion is a soft instructions-only Dossier using native HTML <details>/<summary> (zero JS, full keyboard accessibility, indexable by Google) plus schema.org FAQPage JSON-LD for rich SERP snippets. Closes the Week 1 batch 3 (2026-05-24) gap — previously marked as planned MIN_IDE import."
     },
     "carousel": {
       "dossiers": [],

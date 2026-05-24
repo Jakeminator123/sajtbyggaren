@@ -1,0 +1,46 @@
+{
+  "id": "sunrise-startup",
+  "enabled": true,
+  "label": "Sunrise Startup",
+  "description": "Bright, optimistic and modern expression for newer service businesses that want to feel ambitious and tech-aware without going full SaaS. Sun-bleached cream backgrounds, a warm coral primary and a saturated turquoise accent feel like the first day of a launch. Suits modern accountants, marketing agencies, design studios, doulas, life coaches and anyone whose pitch is 'a better way to do this'.",
+  "tokens": {
+    "color": {
+      "background": "#fefaf2",
+      "foreground": "#1a1a2e",
+      "muted": "#6c6c83",
+      "border": "#ede2cf",
+      "primary": "#f06b48",
+      "primaryForeground": "#fefaf2",
+      "accent": "#16a89a",
+      "accentForeground": "#fefaf2"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.28
+    },
+    "radius": {
+      "sm": "0.5rem",
+      "md": "0.875rem",
+      "lg": "1.25rem"
+    },
+    "spacing": {
+      "section": "5.5rem",
+      "container": "min(72rem, 92vw)"
+    },
+    "motion": {
+      "level": "expressive"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "optimistic",
+      "modern",
+      "ambitious",
+      "warm-bright",
+      "startup-energy",
+      "approachable"
+    ]
+  }
+}

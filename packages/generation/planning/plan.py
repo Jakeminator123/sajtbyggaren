@@ -64,6 +64,18 @@ DEFAULT_SCAFFOLD_ID = "local-service-business"
 SCAFFOLD_TO_STARTER: dict[str, str] = {
     "local-service-business": "marketing-base",
     "ecommerce-lite": "commerce-base",
+    # Restaurant-hospitality is enabled in scaffold-contract.v1.json and
+    # therefore appears in load_scaffold_registry(); without a starter
+    # mapping here, produce_site_plan() raises in _resolve_starter_id when
+    # the planner (real LLM or a pinned scaffoldId) picks it. The route
+    # renderers for ``menu`` and ``booking`` are not yet wired in
+    # write_pages (see docs/scaffold-runtime-extension-needed.md, Path B),
+    # so an end-to-end build for this scaffold currently exits with a
+    # well-formed "no registered renderer" SystemExit instead of a planner
+    # crash. ``marketing-base`` is the documented mapping in
+    # data/starters/README.md line 34 and matches the long-running test
+    # tests/test_starter_scaffold_mapping.py.
+    "restaurant-hospitality": "marketing-base",
 }
 
 # Heuristic keywords used by the deterministic mock planner to pick
@@ -364,6 +376,12 @@ def _pick_scaffold_from_brief(
 _DEFAULT_VARIANT_BY_SCAFFOLD: dict[str, str] = {
     "local-service-business": "nordic-trust",
     "ecommerce-lite": "clean-store",
+    # ``warm-bistro`` is the safest restaurant default — warm, neighbourhood,
+    # works for bistros, brasseries and traditional restaurants without
+    # overcommitting to fine-dining (nordic-fine-dining), café-only daytime
+    # (casual-cafe) or bar-only after-dark (midnight-bar) signals. Picked by
+    # _pick_variant() when the planner has no stronger vibe signal.
+    "restaurant-hospitality": "warm-bistro",
 }
 
 

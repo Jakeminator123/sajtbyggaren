@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../../../governance/schemas/dossier.schema.json",
+  "id": "mailto-contact-form",
+  "enabled": true,
+  "label": "Mailto Contact Form",
+  "capability": "contact-form",
+  "class": "soft",
+  "codeFidelity": "rewritable",
+  "complexity": "low",
+  "defaultForCapability": true,
+  "summary": "Instructions-only soft dossier for a contact form that submits via a pre-filled mailto: link rather than a server endpoint. Zero env, zero backend, zero third-party service. Validates client-side and opens the visitor's mail client with subject + body populated from the form fields. The hard alternative — resend-contact-form (server-side delivery via Resend API) — is planned for a future sprint but requires env secrets; this soft dossier is the safe default that works at build time without configuration.",
+  "envVars": [],
+  "dependencies": [],
+  "files": [],
+  "exposes": ["MailtoContactForm"],
+  "lastVerified": "2026-05-24"
+}

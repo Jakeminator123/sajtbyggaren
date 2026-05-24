@@ -1,0 +1,46 @@
+{
+  "id": "family-warmth",
+  "enabled": true,
+  "label": "Family Warmth",
+  "description": "Soft, friendly and family-safe expression for daycares, kids' activity studios, family therapists, baby-music classes, child-photographers and parent-coaches. A peach-cream base, a soft rose primary and a milky-sage accent feel like a children's-book illustration without being childish. Larger radii and generous spacing read as gentle and patient — the opposite of corporate.",
+  "tokens": {
+    "color": {
+      "background": "#fdf4ee",
+      "foreground": "#2e2018",
+      "muted": "#7a6a5a",
+      "border": "#f0dccd",
+      "primary": "#e3899c",
+      "primaryForeground": "#2e2018",
+      "accent": "#9bb59a",
+      "accentForeground": "#2e2018"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.22
+    },
+    "radius": {
+      "sm": "0.625rem",
+      "md": "1rem",
+      "lg": "1.5rem"
+    },
+    "spacing": {
+      "section": "5rem",
+      "container": "min(68rem, 92vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "soft",
+      "family-friendly",
+      "gentle",
+      "warm-pastel",
+      "patient",
+      "nurturing"
+    ]
+  }
+}

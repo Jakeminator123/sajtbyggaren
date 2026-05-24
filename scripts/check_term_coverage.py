@@ -653,6 +653,92 @@ COMMON_WORDS = {
     # är OOXML content-types-elementet; ``AB12`` är en sample-cellref
     # i docstring). Tekniska tokens i prosa, inte domänbegrepp.
     "ContentType", "AB12",
+    # Restaurant-hospitality scaffold (Week 1 of "fantastic sites" roadmap)
+    # introduces three new soft Dossiers under
+    # packages/generation/orchestration/dossiers/soft/. The names below
+    # are local TypeScript implementation symbols inside dossier
+    # instructions.md code skeletons (Server Components and one Client
+    # Component for mailto-contact-form). Same treatment as the existing
+    # ``MenuItem`` / ``PacmanGame`` / ``MailtoContactForm`` family of
+    # dossier-local component types above — these are React component
+    # identifiers shown in code examples, not canonical domain terms.
+    # The canonical capabilities (menu, booking, contact-form) live in
+    # governance/policies/capability-map.v1.json. ``MenuItem`` is already
+    # allowlisted further up as a wizard-derived content type, so it is
+    # NOT repeated here.
+    "MenuSection", "MenuDisplay", "MenuDisplayProps",
+    "BookingCta", "BookingCtaProps", "BookingDestination", "BookingHours",
+    "MailtoContactForm", "MailtoContactFormProps",
+    # React stdlib type imported by mailto-contact-form's onSubmit handler.
+    # Mirrors ``KeyboardEvent`` / ``ReactNode`` / ``NextRequest`` above —
+    # external framework symbol referenced in a dossier code skeleton.
+    "FormEvent",
+    # External booking and email-delivery providers referenced as
+    # examples in booking-cta and mailto-contact-form instructions.md
+    # (operator-supplied destinations the dossier renders into a tel:,
+    # https:// or mailto: link). Same category as ``OpenAI`` / ``Stripe``
+    # / ``Calendly``-equivalents already used — third-party SaaS names,
+    # not internal domain terms.
+    "Bokadirekt", "BookEden", "Calendly", "Caspeco", "Resmio", "SendGrid",
+    # Week 1 batch 2 (2026-05-24) — four new soft Dossiers under
+    # packages/generation/orchestration/dossiers/soft/:
+    # image-gallery, opening-hours, reviews-display, map-embed. The names
+    # below are local TypeScript implementation symbols inside dossier
+    # instructions.md code skeletons (all Server Components, no client
+    # JS). Same treatment as the menu-display/booking-cta family above —
+    # React component / interface identifiers shown in code examples, not
+    # canonical domain terms. Canonical capability slugs live in
+    # governance/policies/capability-map.v1.json.
+    "ImageGallery", "ImageGalleryProps", "GalleryImage",
+    "OpeningHoursDay", "OpeningHoursSpan", "OpeningHoursProps",
+    "ReviewsDisplay", "ReviewsDisplayProps", "ReviewCard",
+    "ReviewItem", "ReviewSource",
+    "MapEmbed", "MapEmbedProps", "MapAddress", "DirectionsLink",
+    # Swedish weekday full-form labels used inside the opening-hours
+    # dossier as the WEEKDAY_LABELS_SV record values. Not domain terms;
+    # they are localised UI strings rendered to visitors. "Måndag",
+    # "Onsdag", "Torsdag", "Fredag", "Lördag", "Söndag" are all already
+    # COMMON_WORDS via existing wizard copy; "Tisdag" and the
+    # abbreviation "Tis" used in the anti-pattern example are added
+    # here for the same reason.
+    "Tisdag", "Tis",
+    # schema.org type names referenced verbatim in opening-hours and
+    # reviews-display instructions because they show up in JSON-LD
+    # payloads ("@type": "OpeningHoursSpecification" etc.). External
+    # ontology identifiers, mirrors the existing schema.org "Recipe",
+    # "Article", "LocalBusiness" treatment elsewhere.
+    "OpeningHoursSpecification", "AggregateRating", "Review",
+    # External review platforms referenced as examples of valid
+    # ``source`` values in reviews-display instructions. Same SaaS-name
+    # category as Bokadirekt/Calendly above.
+    "TripAdvisor",
+    # OpenStreetMap is the default no-key map provider used by the
+    # map-embed dossier; mirrors OpenAI / Stripe / Calendly external
+    # service names already in the allowlist.
+    "OpenStreetMap",
+    # English form-state words that show up in opening-hours examples
+    # (anti-pattern: "Closed" as a bare word). Common UI vocabulary,
+    # not a domain term.
+    "Closed",
+    # Week 1 batch 3 (2026-05-24) — three new soft Dossiers:
+    # pricing-table, faq-accordion, video-hero. Same treatment as
+    # batch-1/batch-2 dossier symbols above: TypeScript interface and
+    # React component identifiers in instructions.md skeletons, not
+    # canonical domain terms. Canonical capability slugs (pricing,
+    # faq-section, hero-video) live in capability-map.v1.json.
+    "PricingTable", "PricingTableProps", "PricingTier", "PricingFeature",
+    "FaqAccordion", "FaqAccordionProps", "FaqGroup", "FaqItem",
+    "VideoHero", "VideoHeroProps", "VideoHeroSource", "VideoHeroOverlay",
+    # schema.org type names emitted verbatim in faq-accordion's JSON-LD
+    # payload ("@type": "FAQPage" / "Question" / "Answer"). External
+    # ontology identifiers, mirrors the existing schema.org "Review" /
+    # "OpeningHoursSpecification" / "AggregateRating" treatment.
+    "FAQPage", "Question", "Answer",
+    # External video platforms referenced as anti-pattern examples in
+    # video-hero instructions ("NEVER embed YouTube/Vimeo iframe").
+    # Same SaaS-name category as Bokadirekt / OpenStreetMap / TripAdvisor
+    # above.
+    "YouTube",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../../../../governance/schemas/variant.schema.json",
+  "id": "casual-cafe",
+  "enabled": true,
+  "label": "Casual Café",
+  "description": "Bright, friendly daytime expression for cafés, bakeries, brunch spots and breakfast restaurants. Soft cream backgrounds, sunny peach accents, rounded corners and a slightly playful typographic feel suggest morning light, freshly-pulled espresso and an unpretentious welcome.",
+  "tokens": {
+    "color": {
+      "background": "#fff8ef",
+      "foreground": "#2d231b",
+      "muted": "#8a7a6e",
+      "border": "#f1e3cf",
+      "primary": "#d97842",
+      "primaryForeground": "#fff8ef",
+      "accent": "#f4c773",
+      "accentForeground": "#2d231b"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.22
+    },
+    "radius": {
+      "sm": "0.5rem",
+      "md": "0.875rem",
+      "lg": "1.5rem"
+    },
+    "spacing": {
+      "section": "4.5rem",
+      "container": "min(72rem, 94vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "friendly",
+      "bright",
+      "welcoming",
+      "daytime",
+      "approachable",
+      "playful"
+    ]
+  }
+}

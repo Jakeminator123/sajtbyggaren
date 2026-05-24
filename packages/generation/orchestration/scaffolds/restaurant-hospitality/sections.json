@@ -1,0 +1,87 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "menu-preview",
+      "atmosphere-strip",
+      "book-table-cta",
+      "hours-location"
+    ],
+    "optionalSections": [
+      "chef-story",
+      "reviews",
+      "press-mentions",
+      "signature-dish"
+    ],
+    "sectionOrderRules": [
+      "Hero must show food or room photography, not stock-business imagery, and must include cuisine type and city.",
+      "The book-table-cta section must appear at least twice on the home (once near the fold and once near the bottom) so the booking-cta dossier runs in two visible spots.",
+      "Opening hours must be readable without scrolling on mobile when the visitor lands on the page during opening time."
+    ]
+  },
+  "menu": {
+    "requiredSections": [
+      "menu-intro",
+      "menu-list",
+      "dietary-key"
+    ],
+    "optionalSections": [
+      "wine-pairings",
+      "lunch-rotation-note",
+      "menu-download-cta"
+    ],
+    "sectionOrderRules": [
+      "Menu list must be grouped by course or category and include prices.",
+      "Dietary key (vegan, gluten-free, allergen markers) must be visible when any item references a marker.",
+      "Do not flatten the menu into a single price-list table without categories."
+    ]
+  },
+  "booking": {
+    "requiredSections": [
+      "booking-intro",
+      "booking-form-or-embed",
+      "hours-summary",
+      "fallback-phone"
+    ],
+    "optionalSections": [
+      "large-party-note",
+      "cancellation-policy"
+    ],
+    "sectionOrderRules": [
+      "Booking widget must be above the fold on desktop and below a short intro on mobile.",
+      "A phone fallback for groups that exceed the widget's capacity must always be visible.",
+      "Opening hours summary must be present on this page; do not assume visitor already saw the home."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team-or-chef",
+      "values-or-sourcing"
+    ],
+    "optionalSections": [
+      "press-mentions",
+      "history-timeline"
+    ],
+    "sectionOrderRules": [
+      "Story must be specific (chef's name, year founded, source of produce), not 'we are passionate about food'.",
+      "Team or chef must include at least one real name and ideally a photograph."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "address-and-map",
+      "hours-block",
+      "contact-info"
+    ],
+    "optionalSections": [
+      "parking-and-transit",
+      "accessibility-note"
+    ],
+    "sectionOrderRules": [
+      "Map must be present and linkable to native maps app on mobile.",
+      "Opening hours must list every day and mark closed days unambiguously.",
+      "Phone number must be a tel: link, email a mailto: link."
+    ]
+  }
+}

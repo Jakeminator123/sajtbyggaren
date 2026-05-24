@@ -81,34 +81,50 @@ och kunde inte triggas av ``capability-gap``-warnings).
 # Static mappings (behållna 1:1 från scripts/prompt_to_project_input.py)
 # ---------------------------------------------------------------------------
 
-# Wizardens "Sidor att bygga" → capability-slugs. Vissa slugs (t.ex.
-# ``booking``, ``team``, ``gallery``) finns ännu inte i
-# ``capability-map.v1.json``; resolvern lägger då en ``capability-unknown``
-# fallbackWarning så Backoffice ser gap:et utan att vi tappar information.
+# Wizardens "Sidor att bygga" → capability-slugs. Sluggarna måste matcha
+# nycklarna i ``capability-map.v1.json`` (canonical capability namespace)
+# — annars klassificerar resolvern wizard-sidan som ``capability-unknown``
+# och dossier-aktivering går aldrig genom planner. PR #68 (Week 1 batch 2)
+# lade till ``faq-section``, ``location`` och ``reviews`` som canonical
+# capability-slugs i policy:n; denna dict uppdaterades samtidigt så att
+# "FAQ", "Karta / Hitta hit" och "Kundrecensioner" pekar på rätt slug
+# (tidigare ``faq``, ``map``, ``testimonials`` — ingen träff i policy).
+# Slugs som ``blog``, ``portfolio``, ``team`` och ``ecommerce`` har
+# avsiktligt INGEN motsvarighet i capability-map: de representerar
+# scaffold-level concerns eller framtida dossier-gap som
+# Backoffice ska se via ``capability-unknown``-warningen.
 _PAGE_TO_CAPABILITY: dict[str, str] = {
     "Kontaktformulär": "contact-form",
     "Bokning online": "booking",
     "Bildgalleri": "gallery",
     "Blogg / Nyheter": "blog",
-    "Kundrecensioner": "testimonials",
-    "FAQ": "faq",
+    "Kundrecensioner": "reviews",
+    "FAQ": "faq-section",
     "Portfolio / Case": "portfolio",
     "Vårt team": "team",
-    "Karta / Hitta hit": "map",
+    "Karta / Hitta hit": "location",
     "Nyhetsbrev": "newsletter",
     "Webshop / Produkter": "ecommerce",
     "Meny / Matsedel": "menu",
 }
 
-# Aliaserna mappar mot resolverns lokala canonical
-# (_PAGE_TO_CAPABILITY-output) tills capability-map.v1.json fått en
-# aliases-array i en framtida governance-sprint.
+# Aliaserna mappar legacy capability-sluggar som kan komma in via
+# briefModel-output, äldre Project Input-payloads eller andra
+# wizard-paths, mot resolverns lokala canonical (samma namespace som
+# _PAGE_TO_CAPABILITY-output och capability-map.v1.json-keys). Detta
+# håller plan→build robust även när uppströms-systemen ännu inte
+# rensat ut äldre sluggar. ``faq``/``map``/``testimonials`` är de tre
+# legacy-sluggar som tidigare emitterades av wizardens
+# _PAGE_TO_CAPABILITY innan PR #68:s capability-map-modernisering.
 _CAPABILITY_ALIASES: dict[str, str] = {
     "online-booking": "booking",
     "webshop": "ecommerce",
     "online-shop": "ecommerce",
     "newsletter": "newsletter-subscribe",
     "contact": "contact-form",
+    "faq": "faq-section",
+    "map": "location",
+    "testimonials": "reviews",
 }
 
 
