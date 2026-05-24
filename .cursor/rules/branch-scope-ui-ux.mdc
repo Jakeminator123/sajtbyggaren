@@ -1,6 +1,6 @@
 <!-- AUTO-GENERATED FROM governance/rules/branch-scope-ui-ux.md. Do not edit directly. Run: python scripts/rules_sync.py -->
 ---
-description: På branchen `christopher-ui` äger agenten UI/UX i viewser-appen och designsystemet för genererade sajter. Backend-motorn (API-routes, server-lib, scripts, codegen, runtime-policies, schemas, infra) är off-limits utan operatörens OK. Kollegan äger backend på `main`.
+description: På scoped frontend-branches (`christopher-*`, `frontend/*`, `ui/*`, `ux/*`) äger agenten UI/UX i viewser-appen och designsystemet för genererade sajter. Backend-motorn (API-routes, server-lib, scripts, codegen, runtime-policies, schemas, infra) är off-limits utan operatörens OK. Backend ägs separat på `main`.
 alwaysApply: true
 ---
 
@@ -8,10 +8,12 @@ alwaysApply: true
 
 ## När gäller regeln
 
-Aktiv när `git branch --show-current` returnerar någon av:
+Aktiv när `git branch --show-current` matchar något av följande mönster:
 
-- `christopher-ui`
-- branch-namn som matchar `christopher-*`, `frontend/*`, `ui/*`, `ux/*`
+- `christopher-*`
+- `frontend/*`
+- `ui/*`
+- `ux/*`
 
 På `main` och andra branches gäller `branch-discipline.md` som vanligt
 och denna regel träder ur kraft.
@@ -82,16 +84,17 @@ stoppa och fråga operatören. Det är gränssnitt mellan zonerna.
 
 ## Pull-first-disciplin
 
-Kollegan pushar ofta direkt till `main`. För att slippa merge-konflikter:
+Backend-kollegan pushar ofta direkt till `main`. För att slippa merge-konflikter:
 
 1. **Vid sessionsstart:** `git fetch origin` och kolla
    `git rev-list --count HEAD..origin/main`. Om > 0: dra in före nytt arbete.
-2. **Om inga lokala commits finns:** `git reset --hard origin/main` är
-   snabbast och säkrast (förstör inget eftersom remote `christopher-ui`
-   ofta raderas efter att kollegan portat in UI-arbetet).
-3. **Om lokala commits finns:** `git merge origin/main` och lös konflikter
+2. **Om lokala commits finns:** `git merge origin/main` och lös konflikter
    med scope-regeln - off-limits-filer tar `--theirs` (main vinner),
    in-scope-filer behåller `--ours`.
+3. **Om inga lokala commits finns och din scoped-branch är en tillfällig
+   integrationsbranch som operatören bekräftat:** `git reset --hard origin/main`
+   är snabbast. Stoppa och fråga om du är osäker — `reset --hard` förstör
+   outpushat arbete och kan inte ångras.
 4. **Före push:** kör `git fetch origin && git status` igen så remote inte
    rört sig mellan steg.
 
@@ -120,14 +123,15 @@ påverka tester:
 
 Alla ska vara gröna. Aldrig commit + push på rött.
 
-## Push-disciplin på `christopher-ui`
+## Push-disciplin
 
 - `git fetch origin && git status` direkt före push.
-- `git push --force-with-lease` är OK på `christopher-ui` om kollegan
-  raderat remote-branchen mellan dina pushar; vid "stale info"-fel kör
-  `git fetch --prune` och sen `git push -u origin christopher-ui` som ny
-  branch.
-- Aldrig `--force` på `main`.
+- `git push --force-with-lease` är OK på din egen scoped frontend-branch
+  endast om operatören uttryckligen bekräftat att branchen är solo-ägd och
+  tillfällig. Vid "stale info"-fel kör `git fetch --prune` och sen
+  `git push -u origin <branch>` som ny branch.
+- Aldrig `--force` eller `--force-with-lease` på `main`, `develop` eller
+  någon delad branch.
 
 ## Vad regeln inte gör
 
