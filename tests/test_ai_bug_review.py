@@ -11,9 +11,11 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.ai_bug_review import (  # noqa: E402
     COMMENT_MARKER,
+    DEFAULT_OPENAI_REVIEW_MODEL,
     GITHUB_ACTIONS_BOT_LOGIN,
     MAX_DIFF_CHARS,
     Finding,
+    build_prompt,
     collect_diff,
     extract_json_array,
     github_api_get_paginated,
@@ -128,6 +130,47 @@ def test_run_openai_review_uses_configured_model(
     assert raw == "[]"
     assert calls[0] == {"api_key": "test-key"}
     assert calls[1]["model"] == "gpt-test-review"
+
+
+def test_run_openai_review_defaults_to_gpt_5_4(monkeypatch) -> None:
+    calls: list[dict[str, object]] = []
+
+    def fake_create(**kwargs):
+        calls.append(kwargs)
+        message = types.SimpleNamespace(content="[]")
+        choice = types.SimpleNamespace(message=message)
+        return types.SimpleNamespace(choices=[choice])
+
+    def fake_openai(*, api_key: str):
+        return types.SimpleNamespace(
+            chat=types.SimpleNamespace(
+                completions=types.SimpleNamespace(create=fake_create)
+            )
+        )
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.delenv("OPENAI_REVIEW_MODEL", raising=False)
+    monkeypatch.setitem(
+        sys.modules,
+        "openai",
+        types.SimpleNamespace(OpenAI=fake_openai),
+    )
+
+    run_openai_review("review this diff")
+
+    assert DEFAULT_OPENAI_REVIEW_MODEL == "gpt-5.4"
+    assert calls[0]["model"] == "gpt-5.4"
+
+
+def test_build_prompt_includes_repo_specific_review_rules() -> None:
+    prompt = build_prompt("diff --git a/x b/x", truncated=False)
+    normalized_prompt = " ".join(prompt.split())
+
+    assert "prompt -> small-business website" in normalized_prompt
+    assert "direct edits to .cursor/rules instead of governance/rules" in normalized_prompt
+    assert "scaffold/dossier/variant/route mapping drift" in normalized_prompt
+    assert "preview/build behavior" in normalized_prompt
+    assert "Prefer no findings over speculative findings" in normalized_prompt
 
 
 def test_collect_diff_uses_full_push_range(monkeypatch) -> None:

@@ -27,6 +27,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 COMMENT_MARKER = "<!-- sajtbyggaren-ai-bug-review -->"
 GITHUB_ACTIONS_BOT_LOGIN = "github-actions[bot]"
 MAX_DIFF_CHARS = 120_000
+DEFAULT_OPENAI_REVIEW_MODEL = "gpt-5.4"
 
 
 @dataclass(frozen=True)
@@ -111,10 +112,35 @@ def build_prompt(diff: str, *, truncated: bool) -> str:
         f"""
         You are Sajtbyggaren's AI bug review bot.
 
-        Review only the changed code in the git diff below. Find likely bugs,
-        regressions, unsafe assumptions, broken contracts, governance-rule risks,
-        or production-impacting mistakes. Do not report style issues, generic
+        Product context:
+        - Sajtbyggaren's core loop is prompt -> small-business website ->
+          preview -> follow-up prompt -> new version.
+        - The Python layer owns governance, orchestration, planning, codegen,
+          quality gates, repair, and deterministic builder tooling.
+        - The generated output is a Next.js project; generated sites and run
+          artifacts must not leak into normal source changes.
+
+        Review only the changed code in the git diff below. Prioritize concrete
+        bugs and regressions that can break the product loop, generated output,
+        CI/governance, or PR safety. Do not report style issues, generic
         suggestions, or findings with weak evidence.
+
+        Repo-specific risks to look for:
+        - secrets, .env files, generated artifacts, node_modules, .next,
+          .generated, or data/runs accidentally entering tracked changes
+        - direct edits to .cursor/rules instead of governance/rules
+        - scaffold/dossier/variant/route mapping drift that can send the builder
+          to the wrong starter, route set, section set, or quality contract
+        - hardcoded customer copy or hardcoded routes where scaffold data should
+          drive generated output
+        - changes that bypass schema validation, term coverage, rules sync,
+          quality gates, build status, or repair-pipeline contracts
+        - preview/build behavior that can report ready/success for the wrong
+          site, wrong run, wrong port, missing asset, or stale artifact
+        - GitHub Actions changes that create duplicate noise, unsafe permissions,
+          skipped review paths, or branch/PR event drift
+        - test changes that hide failures instead of preserving the shipped
+          behavior and governance invariants
 
         Return only a JSON array. Each item must have exactly:
         - title: short English title
@@ -123,8 +149,9 @@ def build_prompt(diff: str, *, truncated: bool) -> str:
         - impact_score: integer 1-10
         - comment: one short sentence explaining the risk
 
-        Use probability_percent >= 70 unless the issue is exceptional. If there
-        are no high-signal findings, return [].
+        Use probability_percent >= 70 unless the issue is exceptional. Prefer no
+        findings over speculative findings. If there are no high-signal findings,
+        return [].
         {truncation_note}
 
         Diff:
@@ -148,11 +175,14 @@ def run_openai_review(prompt: str) -> str:
     client = openai.OpenAI(api_key=api_key)
     try:
         response = client.chat.completions.create(
-            model=os.environ.get("OPENAI_REVIEW_MODEL", "gpt-4o-mini"),
+            model=os.environ.get("OPENAI_REVIEW_MODEL", DEFAULT_OPENAI_REVIEW_MODEL),
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a concise code-review bot. Return only JSON.",
+                    "content": (
+                        "You are a repo-aware bug review bot for Sajtbyggaren. "
+                        "Return only JSON."
+                    ),
                 },
                 {"role": "user", "content": prompt},
             ],
