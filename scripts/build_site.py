@@ -797,20 +797,33 @@ def _fetch_asset_bytes_from_url(url: str) -> bytes | None:
                 )
                 return None
 
-        chunks: list[bytes] = []
-        total = 0
-        for chunk in response.iter_content(chunk_size=_REMOTE_ASSET_CHUNK_BYTES):
-            if not chunk:
-                continue
-            total += len(chunk)
-            if total > _REMOTE_ASSET_MAX_BYTES:
-                print(
-                    f"copy_operator_uploads: payload larger than {_REMOTE_ASSET_MAX_BYTES} "
-                    f"bytes for {url}. Skipping asset.",
-                )
-                return None
-            chunks.append(chunk)
-        return b"".join(chunks)
+        # Streaming-fel (ChunkedEncodingError, ConnectionError, Timeout
+        # mid-read) bubblar inte ut till copy_operator_uploads. Reviewer-
+        # fynd: utan denna inre except kraschade hela bygget vid en bruten
+        # blob-stream trots att funktionen lovar att tysta hoppa över ett
+        # trasigt asset. requests.RequestException täcker både stream- och
+        # decoding-fel som kan uppstå efter att headers redan tagits emot.
+        try:
+            chunks: list[bytes] = []
+            total = 0
+            for chunk in response.iter_content(chunk_size=_REMOTE_ASSET_CHUNK_BYTES):
+                if not chunk:
+                    continue
+                total += len(chunk)
+                if total > _REMOTE_ASSET_MAX_BYTES:
+                    print(
+                        f"copy_operator_uploads: payload larger than {_REMOTE_ASSET_MAX_BYTES} "
+                        f"bytes for {url}. Skipping asset.",
+                    )
+                    return None
+                chunks.append(chunk)
+            return b"".join(chunks)
+        except requests.RequestException as exc:
+            print(
+                f"copy_operator_uploads: stream interrupted for {url}: {exc}. "
+                "Skipping asset.",
+            )
+            return None
     finally:
         response.close()
 

@@ -132,6 +132,101 @@ def test_schema_declares_source_url_as_optional_uri(schema: dict) -> None:
     assert asset_ref_schema["additionalProperties"] is False
 
 
+@pytest.mark.tooling
+def test_copy_operator_uploads_handles_stream_interruption_gracefully(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Reviewer-fynd (Hög, 2026-05-24): ``_fetch_asset_bytes_from_url``
+    fångade tidigare bara fel runt ``requests.get(...)``, inte fel som
+    uppstår senare under ``response.iter_content(...)``. Om blob-svaret
+    bröts mitt i streamen kunde en ``ChunkedEncodingError`` bubbla ut
+    från ``copy_operator_uploads`` och krascha hela bygget — trots att
+    funktionen uttryckligen lovar att tystlåtet hoppa över trasiga assets.
+
+    Det här testet låser den inre ``try/except requests.RequestException``
+    som nu omger ``iter_content``-loopen. Förlorar streamen efter första
+    chunken: funktionen returnerar ``None`` (skippas) i stället för att
+    kasta. Resten av bygget fortsätter.
+    """
+    import sys
+
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import build_site  # noqa: E402
+
+    class _BrokenStreamResponse:
+        status_code = 200
+        headers: dict[str, str] = {}
+        closed = False
+
+        def iter_content(self, chunk_size: int):  # noqa: ARG002
+            yield b"webp\x00first-chunk-ok"
+            raise build_site.requests.exceptions.ChunkedEncodingError(
+                "Connection broken: stream interrupted mid-read"
+            )
+
+        def close(self) -> None:
+            self.closed = True
+
+    response = _BrokenStreamResponse()
+    monkeypatch.setattr(build_site.requests, "get", lambda *_a, **_kw: response)
+
+    ref = _valid_asset_ref(
+        assetId="01HSTREAM0000000000000000",
+        filename="broken.webp",
+        sourceUrl="https://abc.public.blob.vercel-storage.com/broken.webp",
+    )
+    target = tmp_path / "generated-site"
+    target.mkdir()
+
+    copied = build_site.copy_operator_uploads(
+        "missing-on-disk", target, {"brand": {"logo": ref}}
+    )
+
+    captured = capsys.readouterr()
+    assert copied == 0, "Broken stream ska skippas, inte krascha builden"
+    assert "stream interrupted" in captured.out, (
+        f"Expected stream-fel-log i stdout, fick: {captured.out!r}"
+    )
+    assert response.closed is True, "response.close() måste köras även på fel"
+    assert not (target / "public" / "uploads" / "broken.webp").exists()
+
+
+@pytest.mark.tooling
+def test_runtime_gatekeeper_rejects_malformed_sourceurl_strings() -> None:
+    """Reviewer-fynd (Låg, 2026-05-24): schema deklarerar ``format: "uri"``
+    men JSON Schema gör format-enforcement opt-in (kräver rfc3987 e.dyl.) —
+    värdena ALDRIG stoppas av schemat ensamt. Den faktiska gatekeepern är
+    ``_is_allowed_asset_source_url`` i build_site.py som kallas innan
+    ``_fetch_asset_bytes_from_url``. Detta test låser att gatekeepern
+    avvisar alla rimliga "string men inte HTTPS-blob-URL"-fall, inte bara
+    de uppenbara (HTTP, file:, okänd host) som redan testas i
+    ``test_is_allowed_asset_source_url_allowlist``.
+    """
+    import sys
+
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    from build_site import _is_allowed_asset_source_url  # noqa: E402
+
+    malformed = [
+        "not a url at all",
+        "   ",
+        "javascript:alert(1)",
+        "data:text/html,<script>alert(1)</script>",
+        "//public.blob.vercel-storage.com/x.webp",
+        "https://",
+        "https:///x.webp",
+        "blob:https://public.blob.vercel-storage.com/x.webp",
+        "ftp://public.blob.vercel-storage.com/x.webp",
+        "ssh://public.blob.vercel-storage.com/x.webp",
+    ]
+    for candidate in malformed:
+        assert not _is_allowed_asset_source_url(candidate), (
+            f"Gatekeepern måste avvisa malformed sourceUrl {candidate!r}"
+        )
+
+
 @pytest.mark.governance
 def test_schema_still_validates_existing_examples_without_brand(
     schema: dict,
