@@ -30,26 +30,62 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `c0b59fbe53a4e081cc8f09f22173a7050cb35b66`
-(2026-05-22, PR #60 Starter Candidate Auditor v1 mergad ovanpå PR #59
-Backoffice Asset Graph) — `main` är grön efter post-merge-kontroll.
-PR #60 tillförde endast den read-only Starter Candidate Auditorn
-(`scripts/audit_starter_candidate.py`), dess tester och term-coverage-
-uppdateringen. Intern starter-guard mot `data/starters/marketing-base`
-gav `classification=blocked`. PR #59:s read-only Asset Graph finns i
-Backoffice efter Discovery/SNI och före Konsekvensvy. Inga runtime
-mappings, policies, starters, scaffolds, Dossiers, planning/codegen-ytor
-eller B125-filer ändrades.
+Last verified state: `cb5c837548125bd94740f19e3b4a7acfa89b44cf`
+(2026-05-25, **PR #70 Sprintvakt V1 koordineringsserver mergad ovanpå
+parallell-team-uppsättning och restaurant-hospitality Week 1**) — `main`
+är grön efter squash-merge. Sprintvakt V1 ger lokal filbaserad workboard
+(`docs/workboard.json`), gap-modell (`docs/gaps/`), collision-checker
+(`scripts/sprintvakt_check.py`) och dependency-free MCP-server
+(`tooling/sprintvakt_mcp/`) så Jakob (backend, `jakob-be`) och Christopher
+(UI/frontend, `christopher-ui`) kan reservera path scopes utan att två
+agenter ändrar samma fil. `python scripts/sprintvakt_check.py` ger
+`Sprintvakt check: OK` och 14 sprintvakt-tester är gröna.
 
-**Direkt nästa fokus:** vänta på operatörens nästa sprintval. Om B125 väljs
-ska ADR 0025 och B125-rapporten läsas först; annars välj ett annat smalt
-produktspår innan kod startas. Vänta fortsatt med embeddings, SNI-runtime,
-variant-promotion, många nya starters, starter-importer, runtime-aktivering
-och Project DNA V2 tills en sprint är formellt vald. Inga öppna PRs är
-aktuella för nästa agent.
+Sedan c0b59fbe (PR #60) har följande mergats till `main`, i ordning:
+
+- `a32152d` PR #61 — team parallel workflow + ownership map (parallell-team-flödets grund).
+- `7240fcd` PR #62 — viewser/christopher-ui builder-workflow-integration.
+- `f9312ec` PR #63 — wizard-directives `useCustomColors` + `scaffoldHint` (backend-Gap 1 + 3 stängda).
+- `89f14a1` PR #64 — branch-naming-konventioner för parallellt teamarbete (permanenta arbets-branches `jakob-be` + `christopher-ui` dokumenterade i `docs/ownership-map.md`).
+- `d709864` PR #66 — `sourceUrl`-asset-uploads med stream-safe fetch (PR #65 stängd och supersededad).
+- `7e900d2` PR #67 — AI bug review-workflow-steg i CI (`gpt-5.4` + repo-specifik prompt).
+- `839d0c8` PR #68 — restaurant-hospitality scaffold + 11 soft dossiers + 14 variants (Week 1 declarative expansion). Inkluderade två `[scope-leak]`-commits från Christopher i `plan.py` (`SCAFFOLD_TO_STARTER` + `_DEFAULT_VARIANT_BY_SCAFFOLD`) och `resolve.py` (`_PAGE_TO_CAPABILITY` + `_CAPABILITY_ALIASES`) — accepterade som operator-approved engångsundantag, inte permanent norm.
+- `cb5c837` PR #70 — Sprintvakt V1 koordineringsserver + lokal MCP-server (path-overlap-bug i `paths_overlap` verifierad fixad i fix-commit `419d3f1` innan merge).
+
+Pågående parallellt: PR #69 (`docs: add product north star runtime ladder`)
+är fortfarande öppen draft mot `main` med grön CI — docs-only, väntar på
+operatörens grönt ljus.
+
+**Direkt nästa fokus:** Sprintvakten är nu användbar för path-reservation
+och gap-koordination. Vänta på operatörens nästa sprintval, men möjliga
+riktningar:
+
+- **Path B (section-driven renderer i `scripts/build_site.py:write_pages`)** är dokumenterad i `docs/scaffold-runtime-extension-needed.md` och är nästa stora backend-jobb (~20-26h). Den låser upp `restaurant-hospitality` fullt + ger nollkostnad för 4 framtida scaffolds. Kräver explicit operator-OK innan start eftersom estimatet är stort och bör vara dedikerad session.
+- **Backend-Gap 4 + 5** från `docs/backend-handoff-2026-05-22.md` är öppna men ej akuta.
+- **Sprintvakt V1.1 follow-up**: tre AI-bug-review-fynd från PR #70 (`generate_agent_prompt` för file-only gaps, `reserve_paths` dupe-stale-entries, `sys.path`-hack i CLI) — inte blockerande för V1-koordination men bör landa innan en V2-utbyggnad.
+
+Vänta fortsatt med embeddings, SNI-runtime, variant-promotion, många nya
+starters, starter-importer, ny scaffold-runtime-aktivering och Project
+DNA V2 tills en sprint är formellt vald.
 
 Startprompt för nya agenter:
 [`docs/agent-prompts/morning-fresh-start.md`](agent-prompts/morning-fresh-start.md).
+Föregående produkt-läge:
+
+Föregående verified state: `c0b59fbe53a4e081cc8f09f22173a7050cb35b66`
+(2026-05-22, PR #60 Starter Candidate Auditor v1 mergad ovanpå PR #59
+Backoffice Asset Graph) — produkt-/kodläget innehöll bara den read-only
+Starter Candidate Auditorn (`scripts/audit_starter_candidate.py`), dess
+tester och term-coverage-uppdateringen. Intern starter-guard mot
+`data/starters/marketing-base` gav `classification=blocked`. PR #59:s
+read-only Asset Graph fanns i Backoffice efter Discovery/SNI och före
+Konsekvensvy. Inga runtime mappings, policies, starters, scaffolds,
+Dossiers, planning/codegen-ytor eller B125-filer ändrades. **Direkt nästa
+fokus** vid bumpen var att vänta på operatörens nästa sprintval (B125
+preview-fallback eller annat smalt produktspår) — istället landade
+parallell-team-uppsättningen (PR #61, #64), Viewser-integration (PR #62),
+wizard-directives + restaurant-hospitality (PR #63, #68), AI-bug-review
+(PR #67) och Sprintvakt V1 (PR #70) som backend-spår.
 Föregående produkt-läge:
 
 Föregående verified state: `78baaa1` (2026-05-22, **Dev Artifact Cleanup /

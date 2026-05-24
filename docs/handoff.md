@@ -1,49 +1,119 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-22 eftermiddag (**post-merge Steward-sync efter PR #60
-Starter Candidate Auditor och PR #59 Backoffice Asset Graph**). Verifierad
-`main` är `c0b59fbe53a4e081cc8f09f22173a7050cb35b66`
-(`tooling: Starter Candidate Auditor v1 (read-only) (#60)`). Main health är
-grön: ruff, governance, rules-sync, strict term coverage, auditorns test,
-Asset Graph-testet och hela `tests/` passerar; 4 skips är väntade totalt.
-PR #60 tillförde bara read-only auditorn, dess test och term-coverage-
-uppdateringen. PR #59:s read-only Asset Graph finns i Backoffice efter
-Discovery/SNI och före Konsekvensvy. Inga skyddade ytor ändrades:
-planning/codegen, governance policies, `data/starters`, runtime/preview/B125,
-starter-importer eller runtime-aktivering.
-
-**Nattens cleanup-runda (ingen ny commit, bara lokal disk):**
-
-- `--evals --keep 2 --apply`: 5 → 2 mini-eval-mappar.
-- `--generated --keep 5 --apply`: 16 → 5 generated previews.
-- `--python-cache --apply`: 14 → 0 cache-kataloger.
-- Frigjort utrymme: ca 1.25 GB.
-- `data/runs/` och `data/prompt-inputs/` rördes inte.
-- Ingen kodändring och ingen commit gjordes; cleanup ändrar bara
-  lokal disk under `../sajtbyggaren-output/` och repo-cache.
+**Datum:** 2026-05-25 natt (**post-merge sync efter PR #70 Sprintvakt V1
+koordineringsserver, ovanpå parallell-team-uppsättningen (PR #61, #64),
+Viewser/christopher-ui-integration (PR #62), wizard-directives + Gap 1+3
+(PR #63), sourceUrl-assets (PR #66), AI bug review-CI (PR #67) och
+restaurant-hospitality Week 1 (PR #68)**). Verifierad `main` är
+`cb5c837548125bd94740f19e3b4a7acfa89b44cf`
+(`feat(tooling): add Sprintvakt V1 coordination guard (#70)`). Main health
+är grön: governance, rules-sync, strict term coverage, builder-smoke och
+sprintvakt-suiten (14 passerar) körda på fix-commit `419d3f1` innan merge.
+`python scripts/sprintvakt_check.py` ger `Sprintvakt check: OK` på en synkad
+`jakob-be`. PR #70 tillförde lokal filbaserad workboard
+(`docs/workboard.json`), gap-modell (`docs/gaps/`), collision-checker
+(`scripts/sprintvakt_check.py`), dependency-free MCP-kompatibel stdio-server
+(`tooling/sprintvakt_mcp/`), tester och agent-prompt — inga ändringar i
+`scripts/build_site.py`, `packages/generation/**`, `apps/viewser/**` eller
+`governance/policies/**`. Path-overlap-buggen i `paths_overlap` som Bugbot
+flaggade som HIGH är fixad och täckt av en explicit regression-test
+(`test_paths_overlap_distinguishes_literals_and_globs` —
+`paths_overlap("docs/workboard.json", "docs/sprintvakt-mcp.md") is False`).
 
 **Direkt nästa spår — vänta tills operatör väljer:**
 
-1. **B125 preview-fallback-implementation** ovanpå mergat
-   decision-spår (`3418cdb`, PR #58). Läs
-   `governance/decisions/0025-browser-fallback-preview.md` och
-   `docs/reports/b125-preview-fallback-decision-2026-05-22.md` först.
-2. **Annat smalt produktspår** om operatör vill växla, t.ex. en
-   bug-sweep mot låg-prio B-IDs (B97/B98/B110/...) eller någon yta
-   kring Project Input/builder som mini-evalen pekade på.
+1. **Path B / section-driven renderer i `scripts/build_site.py:write_pages`**
+   är dokumenterad i `docs/scaffold-runtime-extension-needed.md`. Den är
+   nästa stora backend-jobb (~20-26h, dedikerad session). Den låser upp
+   `restaurant-hospitality` fullt + ger nollkostnad för 4 framtida scaffolds
+   (clinic-healthcare, portfolio-creator, real-estate, professional-services).
+   Kräver explicit operator-OK innan start eftersom estimatet är stort.
+2. **Backend-Gap 4 + 5** från `docs/backend-handoff-2026-05-22.md` är öppna
+   men inte akuta — kan tas som mindre sessioner.
+3. **Sprintvakt V1.1 follow-up**: tre AI-bug-review-fynd från PR #70:
+   - HIGH (92%, 8/10): `generate_agent_prompt` hanterar inte file-only
+     queued gaps i `docs/gaps/*.md` — bara `workboard.json.activeGaps`.
+   - MEDIUM (84%, 7/10): `reserve_paths` appendar utan att ersätta
+     tidigare reservationer för samma `gapId` — risk för falska röda
+     collisions vid upprepade anrop.
+   - LOW (74%, 6/10): `scripts/sprintvakt_check.py` muterar `sys.path` för
+     att importera `tooling.sprintvakt_mcp` — funkar från repo-rot men
+     skört i andra import-kontexter.
+   Inte blockerande för V1-koordinationen; bör landa innan en V2-utbyggnad.
+4. **Annat smalt produktspår** om operatör vill växla — bug-sweep mot
+   låg-prio B-IDs, eller någon yta kring Project Input/builder som
+   mini-evalen pekade på.
 
 Vänta fortsatt med embeddings, SNI-runtime, variant-promotion, många nya
-starters, starter-importer, runtime-aktivering och Project DNA V2 tills
-sprinten är formellt vald. Rör inte B125 om det inte uttryckligen väljs.
+starters, starter-importer, ny scaffold-runtime-aktivering och Project DNA
+V2 tills sprinten är formellt vald. Rör inte B125 om det inte uttryckligen
+väljs.
+
+**Filosofi B (parallellt arbete) är nu fullt operativ:**
+
+- `jakob-be` är **permanent arbets-branch** för backend/generation/
+  governance/scripts/runtime/merge-review. Solo-ägd, `--force-with-lease`
+  efter varje main-merge är OK enligt `governance/rules/branch-scope-ui-ux.md`.
+- `christopher-ui` är **permanent arbets-branch** för UI/frontend/viewser/
+  visual-polish. Reserverade paths: `apps/viewser/components/**`,
+  `apps/viewser/app/**/*.tsx`, `apps/viewser/app/**/*.css`,
+  `apps/viewser/public/**`.
+- PR går alltid mot `main`, aldrig mot motpartens arbets-branch. Efter
+  squash-merge synkar respektive ägare med `git reset --hard origin/main`
+  + `git push --force-with-lease`. Pulla aldrig en redan squash-mergad
+  branch — gör `reset --hard origin/main` i stället.
+- Workboard (`docs/workboard.json`) säger vem som äger vad.
+  `python scripts/sprintvakt_check.py` ska vara grönt innan nytt arbete
+  startar.
+
+**Pågående parallellt:**
+
+- PR #69 (`docs: add product north star runtime ladder`) — docs-only,
+  öppen draft, grön CI, väntar operator-OK.
+
+**Öppna gaps på workboarden:** inga aktiva eller queuade gaps just nu.
+Workboarden är ren och redo att ta första riktiga gapen via
+`create_gap` med `dryRun:true` → `confirm:true`-flödet.
+
+**Christopher-scope-leak-precedent från PR #68:** två backend-commits
+(`acc6265` planner-fix i `plan.py`, `a44740a` resolver-fix i `resolve.py`)
+togs på `christopher-ui` med `[scope-leak] Approved by operator`-tag
+eftersom de var rena dispatch-tabell-tillägg utan runtime-beroende. Detta
+är **operator-approved engångsundantag, inte permanent norm**. Framtida
+backend-kontrakt-ändringar ska gå via separat backend-PR på `jakob-be`,
+om inte operatören explicit godkänner ett scope-leak i förväg.
 
 **Startprompt för ny agent:**
 
 [`docs/agent-prompts/morning-fresh-start.md`](agent-prompts/morning-fresh-start.md)
 har en färdig första prompt med läs-ordning, sanity-kommandon, och
-gränser för vad agenten får göra utan att fråga.
+gränser för vad agenten får göra utan att fråga. För Sprintvakt-agent
+finns separat prompt i [`docs/agent-prompts/sprintvakt.md`](agent-prompts/sprintvakt.md).
 
-**Senaste landade spår, nyast först:**
+**Senaste landade spår sedan c0b59fbe (PR #60), nyast först:**
 
+- `cb5c837` PR #70 / Sprintvakt V1 koordineringsserver + MCP
+  (`feat(tooling): add Sprintvakt V1 coordination guard`). Path-overlap-fix
+  i `419d3f1` ovanpå initial `b72fb6f`. 14 sprintvakt-tester gröna.
+- `839d0c8` PR #68 / restaurant-hospitality Week 1 declarative expansion
+  (`feat(week1): restaurant-hospitality scaffold + 11 soft dossiers + 14 variants`).
+  Inkluderar Christophers två `[scope-leak]`-commits i `plan.py` + `resolve.py`.
+- `7e900d2` PR #67 / AI bug review-workflow-steg i CI
+  (`ci: add AI bug review workflow step`). gpt-5.4 + repo-specifik prompt.
+- `d709864` PR #66 / sourceUrl-asset-uploads med stream-safe fetch
+  (`fix(assets): sourceUrl uploads with stream-safe fetch`). Supersededar
+  stängd PR #65.
+- `89f14a1` PR #64 / branch-naming-konventioner för parallellt teamarbete
+  (`docs(ownership): add branch-naming conventions for parallel team work`).
+  Permanenta arbets-branches `jakob-be` + `christopher-ui` formaliserade.
+- `f9312ec` PR #63 / wizard-directives `useCustomColors` + `scaffoldHint`
+  (`feat(discovery): respect wizard directives`). Backend-Gap 1 + 3 stängda.
+- `7240fcd` PR #62 / viewser-christopher-ui builder-workflow-integration
+  (`feat(viewser): integrate christopher-ui builder workflow`).
+- `a32152d` PR #61 / team parallel workflow + ownership map
+  (`docs: add team parallel workflow and ownership map`).
+- `0252820` Steward-sync efter PR #60
+  (`docs(steward): sync after starter auditor merge`).
 - `c0b59fb` PR #60 / Starter Candidate Auditor v1, read-only
   (`tooling: Starter Candidate Auditor v1 (read-only) (#60)`).
 - `10ae8bf` PR #59 / Backoffice Asset Graph lens v1
