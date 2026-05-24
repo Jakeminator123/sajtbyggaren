@@ -232,6 +232,34 @@ def _known_variant_ids() -> frozenset[str]:
                 ids.add(variant_id.strip())
     return frozenset(ids)
 
+
+@lru_cache(maxsize=8)
+def _variants_for_scaffold(scaffold_id: str) -> frozenset[str]:
+    """Returnerar giltiga variantIds för en given scaffold.
+
+    Används för att blockera cross-scaffold ``variantHint``-läckage —
+    t.ex. ``"clean-store"`` (som hör till ``ecommerce-lite``) får inte
+    sättas som ``variantId`` på en ``local-service-business``-scaffold,
+    eftersom ``build_site.py`` då försöker ladda en JSON-fil som inte
+    finns och kraschar med ``FileNotFoundError`` (B2 i scout-review
+    2026-05-24).
+    """
+    if not scaffold_id or not scaffold_id.strip():
+        return frozenset()
+    variants_dir = _SCAFFOLDS_ROOT / scaffold_id.strip() / "variants"
+    if not variants_dir.is_dir():
+        return frozenset()
+    ids: set[str] = set()
+    for path in variants_dir.glob("*.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        variant_id = data.get("id") if isinstance(data, dict) else None
+        if isinstance(variant_id, str) and variant_id.strip():
+            ids.add(variant_id.strip())
+    return frozenset(ids)
+
 # Postnummer-extraktion från svensk adress (samma regex som tidigare).
 _SWEDISH_POSTCODE_RE = re.compile(r"\b\d{3}\s?\d{2}\s+([A-Za-zÅÄÖåäö\-]+)")
 
@@ -1047,8 +1075,20 @@ def _apply_directives_fields(
     if isinstance(variant_hint, str):
         clean_variant = variant_hint.strip()
         if clean_variant and clean_variant in _known_variant_ids():
-            project_input["variantId"] = clean_variant
-            field_sources["variantId"] = "wizard"
+            # B2 i scout-review 2026-05-24: ``clean-store`` finns globalt
+            # (under ``ecommerce-lite``) men får inte sättas som
+            # ``variantId`` på en ``local-service-business``-scaffold.
+            # build_site.py laddar varianten via
+            # ``scaffolds/<scaffoldId>/variants/<variantId>.json`` och
+            # skulle kasta ``FileNotFoundError`` på mismatch.
+            current_scaffold = project_input.get("scaffoldId")
+            scaffold_ok = True
+            if isinstance(current_scaffold, str) and current_scaffold:
+                if clean_variant not in _variants_for_scaffold(current_scaffold):
+                    scaffold_ok = False
+            if scaffold_ok:
+                project_input["variantId"] = clean_variant
+                field_sources["variantId"] = "wizard"
 
     raw_usps = directives.get("uniqueSellingPoints")
     if isinstance(raw_usps, list):
@@ -1282,17 +1322,31 @@ def _sanitize_asset_ref(
     required = {"assetId", "filename", "mimeType", "sizeBytes"}
     if not required.issubset(ref.keys()):
         return None
+    # W8 i scout-review 2026-05-24: omslut int()-castar med try/except
+    # så en payload med ``sizeBytes: null`` eller ``"abc"`` returnerar
+    # None i stället för att kasta TypeError/ValueError upp ur
+    # resolve_discovery och aborta hela prompt_to_project_input.
+    try:
+        size_bytes = int(ref["sizeBytes"])
+    except (TypeError, ValueError):
+        return None
     clean: dict[str, Any] = {
         "assetId": str(ref["assetId"]),
         "filename": str(ref["filename"]),
         "mimeType": str(ref["mimeType"]),
-        "sizeBytes": int(ref["sizeBytes"]),
+        "sizeBytes": size_bytes,
         "role": str(ref.get("role") or default_role),
     }
     if ref.get("width") is not None:
-        clean["width"] = int(ref["width"])
+        try:
+            clean["width"] = int(ref["width"])
+        except (TypeError, ValueError):
+            pass
     if ref.get("height") is not None:
-        clean["height"] = int(ref["height"])
+        try:
+            clean["height"] = int(ref["height"])
+        except (TypeError, ValueError):
+            pass
     alt = ref.get("alt")
     if isinstance(alt, str) and alt.strip():
         clean["alt"] = alt.strip()

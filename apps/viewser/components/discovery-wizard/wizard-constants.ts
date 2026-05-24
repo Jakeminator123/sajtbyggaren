@@ -154,7 +154,11 @@ export const BUSINESS_FAMILIES: BusinessFamily[] = [
     label: "Portfolio / Kreativ",
     description: "Visa projekt, case, fotografi eller eget skapande.",
     scaffoldHint: "local-service-business",
-    defaultVariantId: "noir-editorial",
+    // W3 i scout-review 2026-05-24: ``noir-editorial`` ligger under
+    // ecommerce-lite-scaffolden. Creative family använder local-service-
+    // business, så vi måste välja en variant som faktiskt finns där.
+    // ``midnight-counsel`` ger samma premium-dark-känsla.
+    defaultVariantId: "midnight-counsel",
     subCategories: ["portfolio", "photo"],
   },
   {

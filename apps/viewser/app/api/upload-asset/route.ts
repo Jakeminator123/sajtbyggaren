@@ -42,6 +42,13 @@ const ALLOWED_VIDEO_MIMES = new Set<VideoMimeType>(["video/mp4", "video/webm"]);
 // att inte tynga LCP på den genererade sajten.
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+// W7 i scout-review 2026-05-24: build_site.py:s ``copy_operator_uploads``
+// fetchar blob-hostade videos via ``ref.sourceUrl`` med en hard cap på
+// 8 MB (``_REMOTE_ASSET_MAX_BYTES``). Videos mellan 8-50 MB skulle
+// laddas upp framgångsrikt men sedan tyst skippas vid build — den
+// genererade sajten får en trasig eller saknad hero-video. När
+// driver är blob klampar vi därför video-gränsen till samma 8 MB.
+const MAX_VIDEO_BYTES_BLOB = 8 * 1024 * 1024;
 const ALLOWED_ROLES = new Set<AssetRole>([
   "logo",
   "hero",
@@ -138,10 +145,22 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+  // W7: när blob är aktiv driver är effektiv video-gräns 8 MB
+  // eftersom build:en fetchar via ref.sourceUrl och har den capen.
+  // Vi vill inte att operatören laddar upp 30 MB video som sedan
+  // tyst skippas — bättre att blockera direkt med tydligt felmeddelande.
+  const driver = (process.env.ASSET_STORE_DRIVER || "local").toLowerCase();
+  const effectiveVideoMax =
+    driver === "vercel-blob" ? MAX_VIDEO_BYTES_BLOB : MAX_VIDEO_BYTES;
+  const maxBytes = isVideo ? effectiveVideoMax : MAX_IMAGE_BYTES;
   if (file.size > maxBytes) {
+    const kind = isVideo ? "video" : "bild";
+    const note =
+      isVideo && driver === "vercel-blob"
+        ? " (8 MB-cap på blob-driver — build:en fetchar via sourceUrl)"
+        : "";
     return badRequest(
-      `Filen är ${(file.size / 1024 / 1024).toFixed(1)} MB; max är ${(maxBytes / 1024 / 1024).toFixed(0)} MB för ${isVideo ? "video" : "bild"}.`,
+      `Filen är ${(file.size / 1024 / 1024).toFixed(1)} MB; max är ${(maxBytes / 1024 / 1024).toFixed(0)} MB för ${kind}${note}.`,
     );
   }
 

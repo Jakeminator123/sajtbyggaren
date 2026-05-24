@@ -36,6 +36,7 @@ export function discoveryOptionsMap(
 export function resolveContentBranchFromOptions(
   siteType: readonly WizardCategoryId[],
   options: readonly discoveryOption[],
+  businessFamilyBranch?: ContentBranch,
 ): ContentBranch {
   const byId = discoveryOptionsMap(options);
   const orderedBranches = siteType
@@ -56,6 +57,11 @@ export function resolveContentBranchFromOptions(
   if (orderedBranches.includes("consulting")) return "consulting";
   if (orderedBranches.includes("business")) return "business";
   if (orderedBranches.includes("minimal")) return "minimal";
+  // W2 i scout-review 2026-05-24: när siteType är tom (operatören
+  // har valt familj men ännu inte sub-kategori), respektera familj-
+  // valets branch så content-stegets UI matchar familj-scaffolden
+  // (t.ex. ecommerce visar produktfält, inte general business).
+  if (businessFamilyBranch) return businessFamilyBranch;
   return "business";
 }
 

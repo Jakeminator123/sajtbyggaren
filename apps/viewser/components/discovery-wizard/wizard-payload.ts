@@ -32,6 +32,7 @@ import {
 } from "./discovery-options";
 import type { discoveryOption } from "./discovery-options";
 import {
+  branchForFamily,
   BUSINESS_FAMILIES,
   findFunctionChoice,
   findVibe,
@@ -528,9 +529,12 @@ export function buildDiscoveryPayload(
   if (!validateDiscoveryCategoryIds(answers.siteType, discoveryOptions)) {
     throw new Error("Okänd kategori i discovery-svaren.");
   }
+  // W2: fall tillbaka till businessFamily-branch om operatören valt
+  // familj men inte sub-kategori, så backend ser samma branch som UI:t.
   const branch = resolveContentBranchFromOptions(
     answers.siteType,
     discoveryOptions,
+    answers.businessFamily ? branchForFamily(answers.businessFamily) : undefined,
   );
 
   // Scaffold hint — använd businessFamily som primär källa när den finns,
@@ -633,6 +637,7 @@ export function composeMasterPrompt(
   const branch = resolveContentBranchFromOptions(
     answers.siteType,
     discoveryOptions,
+    answers.businessFamily ? branchForFamily(answers.businessFamily) : undefined,
   );
   const categoryLabels = answers.siteType
     .map((id) => discoveryOptions.find((c) => c.id === id)?.label ?? id)

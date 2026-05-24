@@ -80,6 +80,13 @@ interface ServerEntry {
 }
 
 const servers = new Map<string, ServerEntry>();
+/**
+ * In-flight ``startPreviewServer``-anrop per siteId. Två samtidiga
+ * POST /api/preview/<siteId> (eller dubbelklick i UI:t) ska dela
+ * samma spawn istället för att race:a och skapa två ``next start``-
+ * processer där den första blir orphan. W1 i scout-review 2026-05-24.
+ */
+const startInFlight = new Map<string, Promise<PreviewServerInfo>>();
 let cleanupHandlerInstalled = false;
 
 /**
@@ -91,11 +98,22 @@ let cleanupHandlerInstalled = false;
 function isPortFree(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = createConnection({ host: "127.0.0.1", port });
+    // Timeout-skydd så ``allocatePort`` aldrig hänger om TCP-connecten
+    // varken ``connect``ar eller ``error``ar inom rimlig tid (ovanligt
+    // men möjligt vid t.ex. firewall-blockerad probe). Vi behandlar
+    // timeout som "porten ej fri" — säkrare default eftersom vi då
+    // bara hoppar vidare till nästa port istället för att låsa starten.
+    const timer = setTimeout(() => {
+      socket.destroy();
+      resolve(false);
+    }, 500);
     socket.once("connect", () => {
+      clearTimeout(timer);
       socket.end();
       resolve(false);
     });
     socket.once("error", () => {
+      clearTimeout(timer);
       socket.destroy();
       resolve(true);
     });
@@ -247,7 +265,23 @@ export function stopPreviewServer(siteId: string): boolean {
  *   - ingen ledig port i poolen
  *   - health-check timeout (next start kraschar oftast med stdout)
  */
-export async function startPreviewServer(
+export function startPreviewServer(
+  siteId: string,
+): Promise<PreviewServerInfo> {
+  // W1: per-siteId in-flight mutex. Två samtidiga startups för samma
+  // siteId delar samma spawn-promise. Mutexen släpps automatiskt när
+  // spawn:en klart resolvar (success eller fel).
+  const existingFlight = startInFlight.get(siteId);
+  if (existingFlight) return existingFlight;
+
+  const flight = doStartPreviewServer(siteId).finally(() => {
+    startInFlight.delete(siteId);
+  });
+  startInFlight.set(siteId, flight);
+  return flight;
+}
+
+async function doStartPreviewServer(
   siteId: string,
 ): Promise<PreviewServerInfo> {
   installCleanupHandler();

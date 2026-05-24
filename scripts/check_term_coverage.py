@@ -621,6 +621,8 @@ COMMON_WORDS = {
     "Mat",  # service-namn citerat från sköldpaddssoppa-build TSX (case 4)
     "Cloud Agents",  # cursor.com-koncept som scoutorkestratorn pratar om
     "ForEach",  # PowerShell-verb i exempelkommandon
+    "AbortSignal",  # browser/Node API i local-preview-server JSDoc-prose
+    "SUPERSEDED",  # docs-banner i backend-handoff.md (versaliserat statusord)
     "Konkret content",  # gap-rubrik i 9/10-tabellen
     "Page Intent Variant B",  # proposed produktkoncept (B132-uppföljning)
     "PermissionError", "SubprocessError",  # Python builtin exception-namn

@@ -27,6 +27,7 @@ import {
   resolveContentBranchFromOptions,
 } from "./discovery-options";
 import type { discoveryOption } from "./discovery-options";
+import { branchForFamily } from "./wizard-constants";
 import type { WizardAnswers, WizardStepId } from "./wizard-types";
 import {
   emptyWizardAnswers,
@@ -167,8 +168,17 @@ export function DiscoveryWizard({
   const step = WIZARD_STEP_ORDER[stepIndex];
   const discoveryOptions = discoveryOptionsState.options;
   const branch = useMemo(
-    () => resolveContentBranchFromOptions(answers.siteType, discoveryOptions),
-    [answers.siteType, discoveryOptions],
+    () =>
+      resolveContentBranchFromOptions(
+        answers.siteType,
+        discoveryOptions,
+        // W2 i scout-review 2026-05-24: fallback till familj-branch när
+        // operatören valt familj men inte sub-kategori. Annars landar
+        // t.ex. ecommerce-familjen i "business"-branchen och content-
+        // steget visar fel fält.
+        answers.businessFamily ? branchForFamily(answers.businessFamily) : undefined,
+      ),
+    [answers.siteType, answers.businessFamily, discoveryOptions],
   );
   const validationError = useMemo(
     () => validateWizardStep(step, answers, branch),
@@ -218,6 +228,10 @@ export function DiscoveryWizard({
   // försvinner. Utan delay:n stänger wizarden direkt och bygget tar
   // tid att starta — operatören kan undra om något hänt.
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Ref-baserad submit-guard så två snabba ⌘↵-events i samma tick
+  // inte kan passera ``if (isSubmitting)`` båda två innan React
+  // hunnit rendera om (W1 i scout-review 2026-05-24).
+  const submittingRef = useRef(false);
 
   /**
    * Fyll wizarden med nästa demo-profil i rotationen. Tre profiler
@@ -253,18 +267,31 @@ export function DiscoveryWizard({
     };
   }, []);
 
+  // B3+B4 i scout-review 2026-05-24: reset av wizard-state mellan
+  // sessioner hanteras via ``key={wizardSession}`` i prompt-builder.
+  // Komponenten remountas då naturligt och useState-initiering kör om,
+  // istället för att vi triggar setState i en effect (vilket React 19:s
+  // ``react-hooks/set-state-in-effect`` blockerar).
+
   const finish = useCallback(() => {
-    if (validationError || isSubmitting) return;
+    if (submittingRef.current || isSubmitting) return;
+    // Validera ALLA steg, inte bara aktiva — sidebar/keyboard kan
+    // hoppa till sista steget och därmed kringgå required fields i
+    // foundation/functions (B5 i scout-review 2026-05-24).
+    for (const stepId of WIZARD_STEP_ORDER) {
+      const err = validateWizardStep(stepId, answers, branch);
+      if (err) {
+        const idx = WIZARD_STEP_ORDER.indexOf(stepId);
+        if (idx !== -1) setStepIndex(idx);
+        return;
+      }
+    }
+    submittingRef.current = true;
     setIsSubmitting(true);
-    // Kort delay innan vi callbackar parent så success-overlay hinner
-    // rendras + ge operatören visuell bekräftelse. ``onComplete`` är
-    // synkron — parent börjar bygget direkt, så overlayen kvarstår
-    // bara mellan vår timeout och att parent stänger wizarden via
-    // ``onOpenChange(false)`` när bygget tagit över UI:t.
     window.setTimeout(() => {
       onComplete(answers, discoveryOptions);
     }, 700);
-  }, [answers, discoveryOptions, isSubmitting, onComplete, validationError]);
+  }, [answers, branch, discoveryOptions, isSubmitting, onComplete]);
 
   const isFirst = stepIndex === 0;
   const isLast = stepIndex === WIZARD_STEP_ORDER.length - 1;
@@ -303,15 +330,19 @@ export function DiscoveryWizard({
           target.tagName === "SELECT" ||
           target.isContentEditable);
 
-      // ⌘↵ / ⌘→ — fortsätt
+      // ⌘↵ / ⌘→ — fortsätt. Hoppa över när operatören skriver i en
+      // textarea eller input så ⌘↵ kan användas för newline / lokala
+      // submit-handlers (W4 i scout-review 2026-05-24).
       if (isMod && (event.key === "Enter" || event.key === "ArrowRight")) {
+        if (inEditable) return;
         event.preventDefault();
         if (isLast) finish();
         else goNext();
         return;
       }
-      // ⌘← — tillbaka
+      // ⌘← — tillbaka (blockerad i editable så markörnavigering fungerar)
       if (isMod && event.key === "ArrowLeft") {
+        if (inEditable) return;
         event.preventDefault();
         goBack();
         return;

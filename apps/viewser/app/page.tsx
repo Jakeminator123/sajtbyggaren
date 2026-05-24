@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BuilderShell } from "@/components/builder/builder-shell";
 import { ConsoleDrawer } from "@/components/console-drawer";
@@ -64,6 +64,14 @@ export default function Home() {
   const [buildStage, setBuildStage] = useState<PromptStage>("idle");
   const [consoleOpen, setConsoleOpen] = useState(false);
 
+  // Sätts till true om operatören aktivt lämnar den pågående buildens
+  // mål-vy (klick på "Ny sajt", val av annan run i ConsoleDrawer). När
+  // handleBuildDone landar efteråt får den inte rycka tillbaka
+  // selectedRunId/selectedSiteId — den ska bara uppdatera history-
+  // listan så den färdiga runen finns där om operatören vill gå
+  // tillbaka. B6 i scout-review 2026-05-24.
+  const userNavigatedAwayRef = useRef(false);
+
   // siteId som är "aktivt" via vald run (om någon). Används för att
   // visa "Följer vald run"-hint i ProjectInputPicker så operatören ser
   // att panelen automatiskt följer runens DNA istället för det
@@ -118,6 +126,9 @@ export default function Home() {
   // klar uppdaterar vi selectedRunId OCH selectedSiteId atomiskt så
   // ProjectInputPicker aldrig visar fel run:s DNA.
   function selectRunAndSyncSiteId(runId: string) {
+    // Markera att operatören aktivt navigerar bort om ett bygge pågår —
+    // den färdig-payloaden får inte rycka tillbaka selectedRunId.
+    if (building) userNavigatedAwayRef.current = true;
     setSelectedRunId(runId);
     const run = runs.find((item) => item.runId === runId);
     if (run && run.siteId && run.siteId !== "unknown") {
@@ -188,26 +199,37 @@ export default function Home() {
     outcome: PromptBuildOutcome,
     siteId?: string,
   ) {
+    // B6: om operatören aktivt lämnat den här buildens mål-vy mellan
+    // start och completion (Ny sajt eller annan run vald) får vi inte
+    // rycka tillbaka selectedRunId/selectedSiteId. Vi uppdaterar bara
+    // history-listan så den färdiga runen finns i ConsoleDrawer.
+    if (userNavigatedAwayRef.current) {
+      userNavigatedAwayRef.current = false;
+      setStatusText(headerStatusForOutcome(runId, outcome));
+      void fetchRuns()
+        .then((data) =>
+          applyRunsData(data, {
+            selectedRunId,
+            selectedSiteId,
+          }),
+        )
+        .catch((error) => {
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Kunde inte uppdatera runs.";
+          setStatusText(message);
+        });
+      return;
+    }
+
     setSelectedRunId(runId);
-    // Run-following: bygget gav oss både runId och siteId i payloaden, så
-    // vi syncar selectedSiteId direkt. Det går inte att gå via
-    // selectRunAndSyncSiteId() här eftersom den nya run:en ännu inte
-    // hunnit landa i `runs`-listan (fetchRuns körs först nedan), och
-    // det är just den nya run:en vars siteId vi vill följa.
     const effectiveSiteId =
       siteId && siteId !== "unknown" ? siteId : selectedSiteId;
     if (siteId && siteId !== "unknown") {
       setSelectedSiteId(siteId);
     }
-    // B44: never claim "Build klar" for a structured failure or
-    // an unknown status. PromptBuilder/FloatingChat klassar outcome
-    // från build-result.json:status; header-copyn reflekterar
-    // resultatet så ett misslyckat bygge aldrig ser grönt ut.
     setStatusText(headerStatusForOutcome(runId, outcome));
-    // Skicka ctx till applyRunsData så reset-fallbacken läser den
-    // FRÄSCHA run-id/site-id-paret istället för closure-state från
-    // innan setSelectedRunId/setSelectedSiteId. Mönstret kom från
-    // origin/main:s inline-callback (PR #55, stale run-following fix).
     void fetchRuns()
       .then((data) =>
         applyRunsData(data, {
@@ -238,25 +260,26 @@ export default function Home() {
           FloatingChat över follow-up-flödet). Vi får ABSOLUT inte
           unmounta komponenten under bygget — den äger fetch-promise:n
           mot /api/prompt och setTimeout som flyttar stage `thinking`→
-          `building`. Om vi unmountar mid-build tappar vi alla stage-
-          rapporter och cardet fastnar på första steget. Därför skickar
-          vi `hidden` istället för att conditional renda. När builder-
-          mode är aktivt och inget initial-bygge pågår är det säkert
-          att unmounta — då tar FloatingChat över helt. */}
-      {builderActive && !building ? null : (
-        <PromptBuilder
-          isBusy={building}
-          runs={runs}
-          projectInputs={projectInputs}
-          selectedRunId={selectedRunId}
-          selectedSiteId={selectedSiteId}
-          onBuildStart={() => setBuilding(true)}
-          onBuildEnd={() => setBuilding(false)}
-          onStageChange={setBuildStage}
-          hidden={building || builderActive}
-          onBuildDone={handleBuildDone}
-        />
-      )}
+          `building`. B7 i scout-review 2026-05-24: komponenten hålls
+          nu alltid mountad även när builder-mode är aktivt. Tidigare
+          conditional unmount → remount under follow-up återställde
+          stage till "idle" och kraschade build-progress-cardet. */}
+      <PromptBuilder
+        isBusy={building}
+        runs={runs}
+        projectInputs={projectInputs}
+        selectedRunId={selectedRunId}
+        selectedSiteId={selectedSiteId}
+        onBuildStart={() => setBuilding(true)}
+        onBuildEnd={() => setBuilding(false)}
+        // Rapportera stage endast när PromptBuilder är "owner" av
+        // bygget. I builder-mode driver FloatingChat follow-ups så
+        // PromptBuilder:s interna stage-effekt får inte skriva över
+        // buildStage med "idle" eller en stale tidigare success.
+        onStageChange={builderActive ? undefined : setBuildStage}
+        hidden={building || builderActive}
+        onBuildDone={handleBuildDone}
+      />
 
       {/* Builder-shell: floating draggable chat + dolt verktygsmeny.
           Visas så snart vi har en prompt-genererad run vald. Pre-build
@@ -276,6 +299,9 @@ export default function Home() {
           onNewSite={() => {
             // Återgår till pre-build-läget: rensar både selectedRunId
             // och buildStage så hero + DiscoveryWizard tar över igen.
+            // Markera att operatören navigerat bort om ett bygge pågår
+            // så handleBuildDone inte rycker tillbaka selectedRunId.
+            if (building) userNavigatedAwayRef.current = true;
             setSelectedRunId(null);
             setBuildStage("idle");
             setStatusText("Beskriv en ny sajt nedan så bygger vi den åt dig.");
