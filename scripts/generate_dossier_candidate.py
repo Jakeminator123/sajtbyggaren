@@ -28,8 +28,16 @@ from packages.generation.brief.models import (  # noqa: E402
     OPENAI_API_KEY_ENV,
     has_openai_api_key,
 )
+from scripts.candidate_generation_metadata import (  # noqa: E402
+    brief_fingerprint,
+    created_at,
+    guard_candidate_output_dir,
+    repo_or_output_relative,
+)
 
 DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
+SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
+ORCHESTRATION_DIR = REPO_ROOT / "packages" / "generation" / "orchestration"
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "data" / "dossier-candidates"
 DEFAULT_POLICY_PATH = REPO_ROOT / "governance" / "policies" / "llm-models.v1.json"
 DOSSIER_ROLE_ID = "dossierModel"
@@ -82,10 +90,22 @@ class DossierGenerationResult:
     candidate_dir: Path
     manifest_path: Path
     instructions_path: Path
+    meta_path: Path
     manifest: dict[str, Any]
     instructions: str
+    metadata: dict[str, Any]
     source: str
     model_used: str
+
+
+def _guard_dossier_output_dir(output_dir: Path) -> None:
+    """Thin wrapper that pins the Dossier-specific guard arguments."""
+    guard_candidate_output_dir(
+        output_dir,
+        forbidden_roots=(ORCHESTRATION_DIR, SCAFFOLDS_DIR, DOSSIERS_DIR),
+        error_cls=DossierGenerationError,
+        kind="Dossier",
+    )
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -304,8 +324,12 @@ def _write_candidate(
     dossier_id: str,
     manifest: dict[str, Any],
     instructions: str,
+    source: str,
+    model_used: str,
+    operator_brief: str,
     force: bool,
-) -> tuple[Path, Path, Path]:
+) -> tuple[Path, Path, Path, Path, dict[str, Any]]:
+    _guard_dossier_output_dir(output_dir)
     candidate_dir = output_dir / "soft" / dossier_id
     if candidate_dir.exists() and not force:
         raise DossierGenerationError(
@@ -316,12 +340,36 @@ def _write_candidate(
     components_dir.mkdir(exist_ok=True)
     manifest_path = candidate_dir / "manifest.json"
     instructions_path = candidate_dir / "instructions.md"
+    meta_path = candidate_dir / "meta.json"
     manifest_path.write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
     instructions_path.write_text(instructions, encoding="utf-8")
-    return candidate_dir, manifest_path, instructions_path
+    metadata = {
+        "schemaVersion": 1,
+        "candidateType": "dossier",
+        "candidateId": manifest["id"],
+        "capability": manifest["capability"],
+        "source": source,
+        "modelUsed": model_used,
+        "modelRole": DOSSIER_ROLE_ID,
+        "generator": "scripts.generate_dossier_candidate",
+        "createdAt": created_at(),
+        "enabled": manifest["enabled"],
+        "outputPath": repo_or_output_relative(
+            manifest_path, repo_root=REPO_ROOT, output_dir=output_dir
+        ),
+        "instructionsPath": repo_or_output_relative(
+            instructions_path, repo_root=REPO_ROOT, output_dir=output_dir
+        ),
+        "operatorBriefHash": brief_fingerprint(operator_brief),
+    }
+    meta_path.write_text(
+        json.dumps(metadata, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return candidate_dir, manifest_path, instructions_path, meta_path, metadata
 
 
 def generate_dossier_candidate(
@@ -336,6 +384,7 @@ def generate_dossier_candidate(
     """Generate and write one soft Dossier candidate folder."""
     if not brief.strip():
         raise DossierGenerationError("brief must not be empty")
+    _guard_dossier_output_dir(output_dir)
     reserved = _existing_dossier_ids()
     dossier_id = _unique_dossier_id(candidate_id or brief, output_dir, reserved)
     capability_id = slugify_dossier_id(capability or dossier_id)
@@ -373,19 +422,24 @@ def generate_dossier_candidate(
         dossier_id=dossier_id,
         capability=capability_id,
     )
-    candidate_dir, manifest_path, instructions_path = _write_candidate(
+    candidate_dir, manifest_path, instructions_path, meta_path, metadata = _write_candidate(
         output_dir=output_dir,
         dossier_id=dossier_id,
         manifest=manifest,
         instructions=instructions,
+        source=source,
+        model_used=model_used,
+        operator_brief=brief,
         force=force,
     )
     return DossierGenerationResult(
         candidate_dir=candidate_dir,
         manifest_path=manifest_path,
         instructions_path=instructions_path,
+        meta_path=meta_path,
         manifest=manifest,
         instructions=instructions,
+        metadata=metadata,
         source=source,
         model_used=model_used,
     )

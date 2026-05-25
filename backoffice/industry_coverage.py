@@ -275,7 +275,7 @@ def _coverage_status(
     sni_mapping_count: int,
     target_is_runtime: bool,
 ) -> str:
-    if sni_mapping_count == 0:
+    if sni_mapping_count == 0 and category.id not in SNI_CATCH_ALL_CATEGORIES:
         return "missing_mapping"
     if selected_runtime_scaffold_id is None:
         if category.supportStatus == "planned":

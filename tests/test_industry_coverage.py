@@ -40,11 +40,75 @@ def test_sni_mapped_categories_get_mapping_counts(category_id: str) -> None:
     assert row["mappedSniDivisions"] or row["mappedSniGroups"]
 
 
-def test_unmapped_categories_are_flagged_not_fatal() -> None:
+def test_unmapped_non_catch_all_categories_are_flagged_not_fatal() -> None:
+    category = TaxonomyCategory(
+        id="specific-demo",
+        labelSv="Specifik demo",
+        contentBranch="business",
+        supportStatus="active",
+        targetScaffoldId="local-service-business",
+        activeScaffoldId="local-service-business",
+        defaultVariantId="nordic-trust",
+        expectedStarterId="marketing-base",
+        requestedCapabilities=["contact-form"],
+        candidateDossiers=[],
+        recommendedPages=["Startsida"],
+        rationale="Regression fixture.",
+    )
+
+    status = industry_coverage._coverage_status(
+        category=category,
+        selected_runtime_scaffold_id="local-service-business",
+        sni_mapping_count=0,
+        target_is_runtime=True,
+    )
+
+    assert status == "missing_mapping"
+
+
+@pytest.mark.parametrize("category_id", ["business", "landing", "other"])
+def test_unmapped_catch_all_categories_keep_runtime_or_taxonomy_status(
+    category_id: str,
+) -> None:
+    row = _rows_by_category()[category_id]
+
+    assert row["sniMappingCount"] == 0
+    assert row["coverageStatus"] != "missing_mapping"
+    assert "missing_sni_mapping" not in row["attentionReasons"]
+    assert "add_sni_mapping" not in row["recommendedActions"]
+
+
+def test_unmapped_minimal_catch_all_category_does_not_force_missing_mapping() -> None:
+    category = TaxonomyCategory(
+        id="minimal",
+        labelSv="Minimal",
+        contentBranch="minimal",
+        supportStatus="fallback",
+        targetScaffoldId="local-service-business",
+        fallbackScaffoldId="local-service-business",
+        defaultVariantId="nordic-trust",
+        expectedStarterId="marketing-base",
+        requestedCapabilities=["contact-form"],
+        candidateDossiers=[],
+        recommendedPages=["Startsida"],
+        rationale="Regression fixture.",
+    )
+
+    status = industry_coverage._coverage_status(
+        category=category,
+        selected_runtime_scaffold_id="local-service-business",
+        sni_mapping_count=0,
+        target_is_runtime=True,
+    )
+
+    assert status == "fallback_only"
+
+
+def test_unmapped_catch_all_landing_is_planned_not_missing_mapping() -> None:
     row = _rows_by_category()["landing"]
 
     assert row["sniMappingCount"] == 0
-    assert row["coverageStatus"] == "missing_mapping"
+    assert row["coverageStatus"] == "planned"
     assert isinstance(row["recommendedActions"], list)
 
 

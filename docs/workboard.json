@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-25T03:40:00Z",
-  "updatedBy": "jakob-orchestrator-closing-2026-05-25",
+  "updatedAt": "2026-05-25T07:30:00Z",
+  "updatedBy": "jakob-orchestrator-sprintvag-1+2-closed-2026-05-25-morning",
   "people": {
     "jakob": {
       "allocation": 0.75,
@@ -110,7 +110,7 @@
         "python -m pytest tests/ -q",
         "cd apps/viewser && npx tsc --noEmit"
       ],
-      "note": "UI-skriven backend-spec. Blockerar Live Build Sync A (real pipeline-status) och D (iterera från version N med riktig PI-snapshot). UI har workaround idag (prompt-prefix) som automatiskt uppgraderas till baseRunId så fort backend stödjer det."
+      "note": "UI-skriven backend-spec. Blockerar Live Build Sync A (real pipeline-status) och D (iterera från version N med riktig PI-snapshot). UI har workaround idag (prompt-prefix) som automatiskt uppgraderas till baseRunId så fort backend stödjer det. 2026-05-25 04:24: Christopher implementerade hela gapet under operator-OK scope-leak (`origin/christopher-ui` commit `74a355b`) — 3 endpoints + bug-hunt + tester. Owner kvar 'jakob' i workboard så Sprintvakt-lane-policy passerar (samma precedent som plan.py-fix i PR #68). PR från `christopher-ui` mot `main` väntar — Jakob är reviewer."
     }
   ],
   "activeGaps": [

@@ -336,6 +336,16 @@ def test_list_variant_candidates_reports_validation_and_collision(
         json.dumps(_variant_payload("base")),
         encoding="utf-8",
     )
+    (candidate_dir / "base.meta.json").write_text(
+        json.dumps(
+            {
+                "source": "deterministic-v1",
+                "modelUsed": "deterministic",
+                "createdAt": "2026-05-25T00:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
     (candidate_dir / "broken.json").write_text("{", encoding="utf-8")
 
     monkeypatch.setattr(asset_graph, "SCAFFOLDS_DIR", scaffolds_dir)
@@ -346,7 +356,13 @@ def test_list_variant_candidates_reports_validation_and_collision(
 
     assert by_candidate["base"]["status"] == "valid"
     assert by_candidate["base"]["collidesWithCanonical"] is True
+    assert by_candidate["base"]["source"] == "deterministic-v1"
+    assert by_candidate["base"]["modelUsed"] == "deterministic"
+    assert by_candidate["base"]["createdAt"] == "2026-05-25T00:00:00Z"
+    assert by_candidate["base"]["metaPath"].endswith("base.meta.json")
     assert by_candidate["broken"]["status"] == "invalid"
+    assert by_candidate["broken"]["source"] == "unknown-existing"
+    assert "base.meta" not in by_candidate
 
 
 def test_asset_graph_lists_dossier_candidates(
@@ -360,13 +376,40 @@ def test_asset_graph_lists_dossier_candidates(
         json.dumps({"id": "faq-accordion", "enabled": False, "capability": "faq-section"}),
         encoding="utf-8",
     )
+    (manifest.parent / "meta.json").write_text(
+        json.dumps(
+            {
+                "source": "mock-no-key",
+                "modelUsed": "mock",
+                "createdAt": "2026-05-25T00:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
     monkeypatch.setattr(asset_graph, "DOSSIER_CANDIDATES_DIR", candidates_dir)
 
     graph = asset_graph.build_graph()
 
-    assert ("dossier-candidate", "soft/faq-accordion") in {
-        (node["type"], node["id"]) for node in graph["nodes"]
-    }
+    dossier_node = next(
+        node
+        for node in graph["nodes"]
+        if (node["type"], node["id"]) == ("dossier-candidate", "soft/faq-accordion")
+    )
+    assert dossier_node["source"] == "mock-no-key"
+    assert dossier_node["modelUsed"] == "mock"
+    assert dossier_node["createdAt"] == "2026-05-25T00:00:00Z"
+
+
+def test_dedicated_candidate_views_default_to_no_llm() -> None:
+    variant_source = inspect.getsource(building_blocks.view_variant_candidates)
+    dossier_source = inspect.getsource(building_blocks.view_dossier_candidates)
+
+    assert 'st.checkbox("Använd variantModel om OPENAI_API_KEY finns", value=False)' in (
+        variant_source
+    )
+    assert 'st.checkbox("Använd dossierModel om OPENAI_API_KEY finns", value=False)' in (
+        dossier_source
+    )
 
 
 def test_asset_graph_starter_rows_match_runtime_mapping() -> None:
