@@ -489,6 +489,118 @@ def test_build_runner_whitelists_dossier_path_overrides() -> None:
 
 
 @pytest.mark.tooling
+def test_viewer_panel_skips_local_preview_in_strict_stackblitz_mode() -> None:
+    """Reviewer-fynd post-PR #101: configens namn (``stackblitz``) var
+    inte sann end-to-end — flödet provade alltid
+    ``POST /api/preview/<siteId>`` först, oavsett mode. Om sajten råkade
+    ha en lokal ``.next/`` hamnade operatören på lokal preview ändå
+    (designglapp, inte krasch).
+
+    Fix: i strikt ``stackblitz``-mode hoppa Steg 1 (lokal preview-
+    server) helt — gå direkt till Steg 2 (StackBlitz Steg 2 / files-
+    fetch). ``auto``-mode behåller "try local first, fall back to
+    StackBlitz"-beteendet eftersom det är vad ``auto`` betyder.
+    ``local-next``-mode visar pedagogiskt fel vid lokal miss (oförändrat
+    från PR #97).
+
+    Tre lås:
+      1. ``IS_STACKBLITZ_MODE``-konstant exporterad från samma plats
+         som ``IS_LOCAL_NEXT_MODE``.
+      2. Steg 1 (``if (siteId)``-blocket med
+         ``await fetch("/api/preview/${siteId}")``) gated med
+         ``!IS_STACKBLITZ_MODE``.
+      3. Den interna ``IS_LOCAL_NEXT_MODE``-pedagogiska gren strukturen
+         INTE förändrad (404-guards + cancelled-guards fortsatt
+         source-lockade av separata tester).
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    # Lock 1: konstanten finns och har rätt definition
+    pattern_const = re.compile(
+        r'const\s+IS_STACKBLITZ_MODE\s*=\s*VIEWSER_PREVIEW_MODE\s*===\s*["\']stackblitz["\']',
+        re.MULTILINE,
+    )
+    assert pattern_const.search(text), (
+        "viewer-panel.tsx saknar ``const IS_STACKBLITZ_MODE = "
+        "VIEWSER_PREVIEW_MODE === 'stackblitz'``. Krävs för att gate:a "
+        "Steg 1 (lokal preview-server) i strikt stackblitz-mode."
+    )
+
+    # Lock 2: Steg 1-blocket gated på !IS_STACKBLITZ_MODE
+    pattern_gate = re.compile(
+        r'if\s*\(\s*!\s*IS_STACKBLITZ_MODE\s*&&\s*siteId\s*\)\s*\{',
+        re.MULTILINE,
+    )
+    assert pattern_gate.search(text), (
+        "viewer-panel.tsx: Steg 1 (lokal preview-server) måste vara "
+        "gated på ``if (!IS_STACKBLITZ_MODE && siteId)`` så strikt "
+        "stackblitz-mode hoppar lokal-preview helt och går direkt till "
+        "Steg 2. Annars är configens namn (``stackblitz``) inte "
+        "auktoritativt."
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_progress_card_hint_is_mode_aware() -> None:
+    """Reviewer-fynd post-PR #101: BuildProgressCard:s preview-steg
+    visade fortfarande ``"Förbereder StackBlitz-iframen."`` även i
+    ``local-next``-mode där flödet faktiskt startar en lokal
+    ``next start``-server. Felaktig mental modell för operatören.
+
+    Fix: ``PREVIEW_PREP_HINT``-konstant väljer text baserat på
+    ``IS_LOCAL_NEXT_MODE`` så hint:en matchar faktisk preview-väg.
+    BUILD_STEPS-listan refererar konstanten istället för
+    hårdkodad sträng.
+
+    Två lås:
+      1. ``PREVIEW_PREP_HINT``-konstant finns med mode-conditional.
+      2. BUILD_STEPS preview-steg använder ``hint: PREVIEW_PREP_HINT``
+         istället för en hårdkodad sträng.
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    # Lock 1: konstanten finns med mode-conditional
+    pattern_const = re.compile(
+        r"const\s+PREVIEW_PREP_HINT\s*=\s*IS_LOCAL_NEXT_MODE\s*\?",
+        re.MULTILINE,
+    )
+    assert pattern_const.search(text), (
+        "viewer-panel.tsx saknar ``const PREVIEW_PREP_HINT = "
+        "IS_LOCAL_NEXT_MODE ? ... : ...``. Krävs för att "
+        "BuildProgressCard:s preview-steg ska visa rätt copy per mode."
+    )
+
+    # Lock 2: BUILD_STEPS refererar konstanten istället för hårdkodad sträng
+    pattern_usage = re.compile(
+        r'id:\s*["\']preview["\'][\s\S]{0,200}?hint:\s*PREVIEW_PREP_HINT',
+        re.MULTILINE,
+    )
+    assert pattern_usage.search(text), (
+        "viewer-panel.tsx: BUILD_STEPS preview-steget måste använda "
+        "``hint: PREVIEW_PREP_HINT`` så texten är mode-aware. "
+        "Hårdkodad ``\"Förbereder StackBlitz-iframen.\"`` gav fel "
+        "mental modell i local-next-mode (reviewer-fynd post-PR #101)."
+    )
+
+    # Negativt: den hårdkodade strängen får inte återinföras i
+    # BUILD_STEPS preview-stegets hint-fält.
+    pattern_forbidden = re.compile(
+        r'id:\s*["\']preview["\'][\s\S]{0,200}?hint:\s*["\']Förbereder StackBlitz',
+        re.MULTILINE,
+    )
+    assert not pattern_forbidden.search(text), (
+        "viewer-panel.tsx: BUILD_STEPS preview-steget får inte "
+        "hårdkoda ``hint: \"Förbereder StackBlitz-iframen.\"`` igen. "
+        "Använd PREVIEW_PREP_HINT-konstanten så local-next-mode får "
+        "korrekt text."
+    )
+
+
+@pytest.mark.tooling
 def test_viewer_panel_sets_cross_origin_isolated_on_stackblitz_embed() -> None:
     """B125/B145: StackBlitz-embedden behöver Permissions Policy-delegering
     av cross-origin-isolation för att ``window.crossOriginIsolated`` ska
