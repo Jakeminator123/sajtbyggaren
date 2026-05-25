@@ -477,6 +477,12 @@ COMMON_WORDS = {
     # use-pending-build.ts. Samma kategori som FollowupBuildState ovan
     # — lokala UI-implementation-symboler för Live Build Sync.
     "PendingBuildState", "PendingBuildBegin", "PendingRunRow",
+    # GAP-backend-build-trace-endpoint — TS-types exporterade från
+    # apps/viewser/lib/runs.ts (RunStatus, TraceEvent, RunTraceResponse)
+    # och pending-baseRunId-state-tilläg från use-pending-build.ts
+    # (PendingBaseRunIdState). Lokala API-shape-symboler för Live
+    # Build Sync A+D, inte domain terms.
+    "RunStatus", "TraceEvent", "RunTraceResponse", "PendingBaseRunIdState",
     # CopyFeedback är intern TS-type i versions-tab.tsx för
     # clipboard-feedback-state (M1 från bug-hunt).
     "CopyFeedback",

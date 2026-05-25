@@ -67,7 +67,18 @@ export default function Home() {
   // Live Build Sync: pending-build-state delas mellan BuilderShell
   // (som äger FloatingChat + dialogerna) och Versions-tab. Sätts
   // av onBuildStart-callbacks, rensas av onBuildEnd.
-  const { pendingBuild, beginPending, clearPending } = usePendingBuild();
+  //
+  // pendingBaseRunId: när operatören klickar "Iterera från denna" i
+  // Versions-tab plockas runId upp här så FloatingChat kan skicka
+  // ``baseRunId`` i nästa /api/prompt-fetch. Rensas på onBuildEnd
+  // (eller TTL i hooken om operatören aldrig submittade).
+  const {
+    pendingBuild,
+    beginPending,
+    clearPending,
+    pendingBaseRunId,
+    setPendingBaseRunId,
+  } = usePendingBuild();
 
   // Sätts till true om operatören aktivt lämnar den pågående buildens
   // mål-vy (klick på "Ny sajt", val av annan run i ConsoleDrawer). När
@@ -301,6 +312,8 @@ export default function Home() {
           pendingBuild={pendingBuild}
           onPendingBuildBegin={beginPending}
           onPendingBuildClear={clearPending}
+          pendingBaseRunId={pendingBaseRunId}
+          onSetPendingBaseRunId={setPendingBaseRunId}
           onBuildStart={() => setBuilding(true)}
           onBuildEnd={() => {
             setBuilding(false);
@@ -308,8 +321,23 @@ export default function Home() {
             // (t.ex. dialog som glömde rensa pending) tar vi bort den
             // här så vi aldrig får orphan-pending-rader.
             clearPending();
+            // OBS: pendingBaseRunId rensas INTE här. onBuildEnd kallas
+            // även när bygget misslyckas, och en operatör som klickar
+            // "Försök igen" på error-bubblan vill iterera från samma
+            // base-version — inte fall tillbaka till latest. Vi rensar
+            // istället i handleBuildDone (success-path), via TTL-guarden
+            // i usePendingBuild (5 min) och via "Iterera"-toggle.
           }}
-          onBuildDone={handleBuildDone}
+          onBuildDone={(runId, outcome) => {
+            // Bygget lyckades (eller hamnade i mock/degraded — alla
+            // outcomes utom hård exception). Operatörens iteration
+            // konsumerades och ska inte oavsiktligt återanvändas av
+            // nästa fri-text-prompt. Signaturen i BuilderShell skickar
+            // inte siteId vidare; det löser handleBuildDone själv via
+            // runs-listan när den re-fetchar.
+            setPendingBaseRunId(null);
+            handleBuildDone(runId, outcome);
+          }}
           onNewSite={() => {
             // Återgår till pre-build-läget: rensar både selectedRunId
             // och buildStage så hero + DiscoveryWizard tar över igen.

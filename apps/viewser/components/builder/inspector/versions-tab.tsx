@@ -21,7 +21,10 @@ import {
   type RunDiff,
 } from "@/components/builder/inspector/run-diff";
 import type { RunArtefactBundle } from "@/components/builder/inspector/use-run-artefacts";
-import type { PendingBuildState } from "@/components/builder/use-pending-build";
+import type {
+  PendingBaseRunIdState,
+  PendingBuildState,
+} from "@/components/builder/use-pending-build";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SECONDARY_INTERACTIONS } from "@/lib/ui-tokens";
@@ -110,6 +113,28 @@ export interface VersionsTabProps {
    * rätt sajt. null = ingen build pågår (eller bygger en annan sajt).
    */
   pendingBuild?: PendingBuildState | null;
+  /**
+   * Operator-vald baseRunId. Highlight:ar motsvarande rad så
+   * operatören ser vilken version "Iterera från denna" är aktiv på.
+   */
+  pendingBaseRunId?: PendingBaseRunIdState | null;
+  /**
+   * Sätt baseRunId från en versions-rad. När angiven aktiverar UI
+   * direkt-iterate (FloatingChat skickar baseRunId i fetch). När
+   * undefined faller vi tillbaka till clipboard-workaround så
+   * Versions-tab kan användas både i denna PR och vid eventuell
+   * future split.
+   */
+  onSetPendingBaseRunId?: (
+    runId: string | null,
+    version?: number | null,
+  ) => void;
+  /**
+   * Stänger Site Inspector så operatören får synlig FloatingChat
+   * efter klick på "Iterera från denna". Inspectorn täcker annars
+   * chat-rutan på smal viewport.
+   */
+  onCloseInspector?: () => void;
 }
 
 export function VersionsTab({
@@ -118,6 +143,9 @@ export function VersionsTab({
   currentRunId,
   isBuilding,
   pendingBuild,
+  pendingBaseRunId,
+  onSetPendingBaseRunId,
+  onCloseInspector,
 }: VersionsTabProps) {
   const [allRuns, setAllRuns] = useState<RunMeta[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -135,7 +163,13 @@ export function VersionsTab({
       setAllRuns(null);
       setLoadError(null);
       try {
-        const response = await fetch("/api/runs");
+        // Site-scoped fetch: server filtrerar och expanderar slice-fönstret
+        // (limit*4) för rätt site så att äldre versioner inte tappas bort
+        // när andra sajter dominerar de senaste 20 globala runsen
+        // (GAP-backend-build-trace-endpoint, server-filter i lib/runs.ts).
+        const response = await fetch(
+          `/api/runs?siteId=${encodeURIComponent(siteId)}`,
+        );
         const payload = (await response.json()) as RunsApiResponse;
         if (cancelled) return;
         if (!response.ok || !payload.runs) {
@@ -152,7 +186,7 @@ export function VersionsTab({
     return () => {
       cancelled = true;
     };
-  }, [reloadToken]);
+  }, [reloadToken, siteId]);
 
   const refresh = useCallback(() => {
     setReloadToken((prev) => prev + 1);
@@ -246,16 +280,12 @@ export function VersionsTab({
     };
   }, [siteRuns]);
 
-  // Copy-to-clipboard fallback för "Iterera från denna"-knappen. Vi
-  // rör inte floating-chat.tsx (1481 rader, högrisk) — istället
-  // kopierar vi prompt-prefix till clipboard och visar en kort
-  // bekräftelse. Operatören klistrar in i chat-rutan manuellt. När
-  // backend stödjer baseRunId (se GAP-backend-build-trace-endpoint)
-  // kan vi byta detta mot ett direkt anrop.
-  //
-  // Feedbacken speglar clipboard-resultatet: lyckas = "Prefix
-  // kopierat", misslyckas = "Skriv: 'Utgå från version N:'" så vi
-  // aldrig ljuger för operatören (M1 från bug-hunt).
+  // "Iterera från denna" — primär väg är att sätta baseRunId så
+  // FloatingChat skickar det i nästa /api/prompt-fetch
+  // (GAP-backend-build-trace-endpoint). Vi behåller en clipboard-
+  // fallback för säkerhets skull (om callback saknas eller direkt-
+  // läge inte är aktivt) — det skadar inte ens när direct-mode är
+  // aktivt eftersom feedback bara visas vid clipboard-fall.
   const [copyFeedback, setCopyFeedback] = useState<{
     runId: string;
     kind: "success" | "failure";
@@ -264,6 +294,22 @@ export function VersionsTab({
   const copyFeedbackTimerRef = useRef<number | null>(null);
   const handleIterateFrom = useCallback(
     async (runId: string, version: number | null | undefined) => {
+      // Direct mode (PR scope): sätt baseRunId, stäng Inspectorn så
+      // FloatingChat blir synlig, klart. Ingen clipboard-skrivning.
+      if (onSetPendingBaseRunId) {
+        // Toggle: klick på samma rad avmarkerar.
+        if (pendingBaseRunId?.baseRunId === runId) {
+          onSetPendingBaseRunId(null);
+          return;
+        }
+        onSetPendingBaseRunId(runId, version ?? null);
+        onCloseInspector?.();
+        return;
+      }
+
+      // Fallback (om denna komponent används utan callback): kopiera
+      // prompt-prefix till clipboard och visa en bekräftelse. Operatören
+      // klistrar in i chat-rutan manuellt.
       const versionLabel = version ?? "?";
       const prefix = `Utgå från version ${versionLabel}: `;
       let kind: "success" | "failure" = "failure";
@@ -284,7 +330,7 @@ export function VersionsTab({
         copyFeedbackTimerRef.current = null;
       }, 4_000);
     },
-    [],
+    [onSetPendingBaseRunId, onCloseInspector, pendingBaseRunId?.baseRunId],
   );
   // Cleanup vid unmount så stale setState inte triggas efter att
   // tabben stängts.
@@ -295,6 +341,9 @@ export function VersionsTab({
       }
     };
   }, []);
+
+  const activeBaseRunId =
+    pendingBaseRunId && !pendingBuild ? pendingBaseRunId.baseRunId : null;
 
   // Mutual-exclusion-handlers — när en run väljs som A:
   //   * Om den redan är A → toggle av (null).
@@ -425,8 +474,10 @@ export function VersionsTab({
         onSelectB={handleSelectB}
         pending={pendingForThisSite}
         recentlyAddedRunId={recentlyAddedRunId}
+        activeBaseRunId={activeBaseRunId}
         copyFeedback={copyFeedback}
         onIterateFrom={handleIterateFrom}
+        isBuilding={isBuilding}
       />
 
       {compareA && compareB && compareA !== compareB ? (
@@ -603,8 +654,10 @@ function RunList({
   onSelectB,
   pending,
   recentlyAddedRunId,
+  activeBaseRunId,
   copyFeedback,
   onIterateFrom,
+  isBuilding,
 }: {
   runs: RunMeta[];
   currentRunId: string | null;
@@ -615,8 +668,10 @@ function RunList({
   onSelectB: (runId: string) => void;
   pending: PendingBuildState | null;
   recentlyAddedRunId: string | null;
+  activeBaseRunId: string | null;
   copyFeedback: CopyFeedback;
   onIterateFrom: (runId: string, version: number | null | undefined) => void;
+  isBuilding: boolean;
 }) {
   return (
     <ul className="border-border/60 divide-y divide-border/40 overflow-hidden rounded-lg border bg-card">
@@ -639,7 +694,9 @@ function RunList({
             isA={compareA === run.runId}
             isB={compareB === run.runId}
             isRecentlyAdded={recentlyAddedRunId === run.runId}
+            isActiveBase={activeBaseRunId === run.runId}
             copyFeedback={feedbackForRow}
+            isBuilding={isBuilding}
             onSelectA={() => onSelectA(run.runId)}
             onSelectB={() => onSelectB(run.runId)}
             onIterateFrom={() => onIterateFrom(run.runId, run.version)}
@@ -728,7 +785,9 @@ function RunRow({
   isA,
   isB,
   isRecentlyAdded,
+  isActiveBase,
   copyFeedback,
+  isBuilding,
   onSelectA,
   onSelectB,
   onIterateFrom,
@@ -739,13 +798,20 @@ function RunRow({
   isA: boolean;
   isB: boolean;
   isRecentlyAdded: boolean;
+  isActiveBase: boolean;
   copyFeedback: CopyFeedback;
+  isBuilding: boolean;
   onSelectA: () => void;
   onSelectB: () => void;
   onIterateFrom: () => void;
 }) {
   const dotClass = STATUS_DOT_COLORS[run.status] ?? "bg-muted-foreground/40";
-  const iterateDisabled = isCurrent;
+  // Spärra "Iterera" under pågående bygge: pendingBaseRunId rensas av
+  // page.tsx när bygget är klart, så ett klick mitt i bygget skulle
+  // sättas och sedan tystas. Bättre att hindra interaktionen helt än
+  // att låta operatören tro att deras val konsumerades. (H3 i bug-hunt
+  // 2026-05-25 för GAP-backend-build-trace-endpoint.)
+  const iterateDisabled = isCurrent || isBuilding;
   return (
     <li
       // data-just-built triggar en kort fade-in highlight via inline
@@ -758,6 +824,9 @@ function RunRow({
         isCurrent ? "bg-foreground/[0.03]" : "hover:bg-muted/30",
         isRecentlyAdded
           ? "bg-emerald-500/[0.10] dark:bg-emerald-400/[0.08]"
+          : "",
+        isActiveBase
+          ? "ring-1 ring-inset ring-sky-500/40 bg-sky-500/[0.08]"
           : "",
       )}
     >
@@ -774,6 +843,12 @@ function RunRow({
             <span className="border-foreground/40 text-foreground/80 inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 font-mono text-[9px] tracking-wider uppercase">
               <CircleCheck aria-hidden className="h-2.5 w-2.5" />
               Aktiv
+            </span>
+          ) : null}
+          {isActiveBase ? (
+            <span className="border-sky-500/50 text-sky-700 dark:text-sky-300 bg-sky-500/[0.10] inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 font-mono text-[9px] tracking-wider uppercase">
+              <GitBranch aria-hidden className="h-2.5 w-2.5" />
+              Iterera
             </span>
           ) : null}
         </div>
@@ -812,21 +887,30 @@ function RunRow({
           onClick={onIterateFrom}
           disabled={iterateDisabled}
           title={
-            iterateDisabled
+            isCurrent
               ? "Senaste versionen — chatten utgår alltid härifrån"
-              : `Iterera från version ${run.version ?? "?"} (kopierar prompt-prefix)`
+              : isBuilding
+                ? "Vänta tills nuvarande bygge är klart"
+                : isActiveBase
+                  ? "Aktiv som bas för nästa följdprompt — klicka igen för att avmarkera"
+                  : `Iterera från version ${run.version ?? "?"}`
           }
           aria-label={
-            iterateDisabled
+            isCurrent
               ? `Senaste versionen ${shortRunId(run.runId)}`
-              : `Iterera från version ${run.version ?? "?"}`
+              : isBuilding
+                ? `Iterera från version ${run.version ?? "?"} (inaktiverad under bygge)`
+                : `Iterera från version ${run.version ?? "?"}`
           }
+          aria-pressed={isActiveBase}
           className={cn(
             "flex w-9 items-center justify-center transition-colors",
             "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
             iterateDisabled
               ? "text-muted-foreground/40 cursor-not-allowed"
-              : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+              : isActiveBase
+                ? "text-sky-700 dark:text-sky-300 bg-sky-500/[0.12] hover:bg-sky-500/[0.18]"
+                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
           )}
         >
           <GitBranch aria-hidden className="h-3 w-3" />

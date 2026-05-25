@@ -64,6 +64,7 @@ from packages.generation.discovery.resolve import (  # noqa: E402
 )
 
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "data" / "prompt-inputs"
+DEFAULT_RUNS_DIR = REPO_ROOT / "data" / "runs"
 SCHEMA_PATH = REPO_ROOT / "governance" / "schemas" / "project-input.schema.json"
 
 # Mirrors apps/viewser/lib/project-inputs.ts SITE_ID_PATTERN. Lower-case
@@ -71,6 +72,10 @@ SCHEMA_PATH = REPO_ROOT / "governance" / "schemas" / "project-input.schema.json"
 # Centralising the pattern in two languages is a known duplication; a
 # future sprint can hoist it into a shared policy if more tools need it.
 _SITE_ID_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
+# Mirrors RUN_ID_PATTERN in apps/viewser/lib/runs.ts so a baseRunId
+# value cannot path-escape data/runs. The CLI argument always passes
+# through this guard before being used as a directory name.
+_RUN_ID_PATTERN = re.compile(r"^[a-zA-Z0-9._-]+$")
 _SLUG_CLEAN = re.compile(r"[^a-z0-9-]+")
 _SLUG_DASHES = re.compile(r"-{2,}")
 _MASTER_PROMPT_OPERATOR_HEADER = "[Operatörens beskrivning]"
@@ -1732,6 +1737,99 @@ def read_existing_project_input(site_id: str, *, output_dir: Path) -> dict[str, 
     return project_input
 
 
+def read_base_run_snapshot(
+    site_id: str,
+    base_run_id: str,
+    *,
+    output_dir: Path,
+    runs_dir: Path = DEFAULT_RUNS_DIR,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Read the versioned PI + meta that anchors a baseRunId follow-up.
+
+    Maps `data/runs/<runId>/input.json:version` → the immutable
+    `data/prompt-inputs/<siteId>.v<N>.{project-input,meta}.json` snapshot
+    so an operator can iterate from a historical version regardless of
+    where the rolling pointer currently points. Defense-in-depth path
+    validation: regex on baseRunId + pattern check on siteId, then
+    `Path.resolve(strict=True)` to prevent symlink escapes.
+    """
+    # fullmatch (inte match): Python's `$` matchar före ett avslutande \n
+    # vilket skulle släppt igenom "valid-id\n". Zod's .trim() på TS-sidan
+    # rensar normalt detta men vi vill ha defense-in-depth här.
+    if not _RUN_ID_PATTERN.fullmatch(base_run_id):
+        raise SystemExit(
+            f"--base-run-id {base_run_id!r} matches inte run-id-mönstret."
+        )
+    if not _SITE_ID_PATTERN.fullmatch(site_id):
+        raise SystemExit(
+            f"Follow-up siteId {site_id!r} matches inte site-id-mönstret."
+        )
+
+    run_dir = (runs_dir / base_run_id).resolve()
+    runs_root = runs_dir.resolve()
+    try:
+        run_dir.relative_to(runs_root)
+    except ValueError as exc:
+        raise SystemExit(
+            f"baseRunId pekar utanför runs-katalogen: {base_run_id!r}"
+        ) from exc
+    if not run_dir.is_dir():
+        raise SystemExit(
+            f"baseRunId saknar katalog: {run_dir}. Har runen rensats?"
+        )
+
+    input_path = run_dir / "input.json"
+    try:
+        run_input = json.loads(input_path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise SystemExit(
+            f"baseRunId saknar input.json: {input_path}"
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise SystemExit(
+            f"baseRunId input.json är inte giltig JSON: {input_path}"
+        ) from exc
+
+    base_version = run_input.get("version")
+    if not isinstance(base_version, int) or base_version < 1:
+        raise SystemExit(
+            f"baseRunId input.json har ogiltig version: {input_path}"
+        )
+
+    base_pi_path = _versioned_project_input_path(output_dir, site_id, base_version)
+    base_meta_path = _versioned_meta_path(output_dir, site_id, base_version)
+    try:
+        base_pi = json.loads(base_pi_path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise SystemExit(
+            f"baseRunId Project Input-snapshot saknas: {base_pi_path}. "
+            "Snapshots städas eventuellt; kan inte iterera från denna version."
+        ) from exc
+    try:
+        base_meta = json.loads(base_meta_path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise SystemExit(
+            f"baseRunId meta-snapshot saknas: {base_meta_path}."
+        ) from exc
+
+    if base_pi.get("siteId") != site_id:
+        raise SystemExit(
+            "baseRunId siteId mismatch: "
+            f"path={site_id!r}, snapshot={base_pi.get('siteId')!r}"
+        )
+    if base_meta.get("siteId") not in (None, site_id):
+        raise SystemExit(
+            "baseRunId meta siteId mismatch: "
+            f"expected={site_id!r}, snapshot={base_meta.get('siteId')!r}"
+        )
+    if base_meta.get("version") != base_version:
+        raise SystemExit(
+            "baseRunId version mismatch mellan input.json och meta-snapshot: "
+            f"input.json={base_version!r}, meta={base_meta.get('version')!r}"
+        )
+    return base_pi, base_meta
+
+
 def _unique_strings(*values: list[Any]) -> list[str]:
     """Return a stable union of non-empty string values."""
     seen: set[str] = set()
@@ -2764,6 +2862,8 @@ def generate_followup(
     output_dir: Path = DEFAULT_OUTPUT_DIR,
     discovery: dict[str, Any] | None = None,
     reset_wizard_must_have: bool = False,
+    base_run_id: str | None = None,
+    runs_dir: Path = DEFAULT_RUNS_DIR,
 ) -> tuple[dict[str, Any], dict[str, Any], Path, Path]:
     """Generate a new Project Input version from an existing meta sidecar.
 
@@ -2772,6 +2872,11 @@ def generate_followup(
     om resolvern inte också persisterar decisionen vidare till v2 förlorar
     Backoffice/Doctor synlighet för categoryIds, fieldSources och
     fallbackWarnings i den aktuella versionen.
+
+    När ``base_run_id`` är angivet läser vi PI-snapshotet från den runen
+    istället för senaste, så operatören kan iterera från valfri historisk
+    version. Versionsräkningen blir ``max(latest, base) + 1`` för att
+    undvika kollisioner med existerande snapshots.
     """
     language = detect_language(prompt)
     if classify_followup_intent(prompt, language=language) == "clarify":
@@ -2780,10 +2885,23 @@ def generate_followup(
             "Please clarify what should change."
         )
     existing_meta = read_existing_meta(site_id, output_dir=output_dir)
-    previous_project_input = read_existing_project_input(
-        site_id, output_dir=output_dir
-    )
-    previous_version = existing_meta["version"]
+    latest_version = existing_meta["version"]
+    if base_run_id is not None:
+        base_pi, base_meta = read_base_run_snapshot(
+            site_id, base_run_id, output_dir=output_dir, runs_dir=runs_dir
+        )
+        previous_project_input = base_pi
+        previous_meta_for_dna = base_meta
+        base_version = base_meta["version"]
+        previous_version = base_version
+        next_version = max(latest_version, base_version) + 1
+    else:
+        previous_project_input = read_existing_project_input(
+            site_id, output_dir=output_dir
+        )
+        previous_meta_for_dna = existing_meta
+        previous_version = latest_version
+        next_version = latest_version + 1
     now = datetime.now(UTC).isoformat(timespec="seconds")
     meta_overrides: dict[str, Any] = {
         "originalPrompt": existing_meta.get("originalPrompt", prompt),
@@ -2792,12 +2910,14 @@ def generate_followup(
         "createdAt": existing_meta.get("createdAt", now),
         "updatedAt": now,
     }
+    if base_run_id is not None:
+        meta_overrides["baseRunId"] = base_run_id
     # Ärv discoveryDecision från föregående version så Backoffice/Doctor
     # kan visa categoryIds + fieldSources + fallbackWarnings även för v2+.
     # R1 #5 på PR #34 (round 3): markera ärvda decisioner med
     # ``inheritedFromVersion`` så Backoffice kan skilja på initial
     # discovery decision och aktuell provenance för v2+-fält.
-    inherited_decision = existing_meta.get("discoveryDecision")
+    inherited_decision = previous_meta_for_dna.get("discoveryDecision")
     if discovery is None and isinstance(inherited_decision, dict):
         inherited_copy = copy.deepcopy(inherited_decision)
         # Bevara den ursprungliga inheritedFromVersion om den redan finns
@@ -2808,7 +2928,7 @@ def generate_followup(
         meta_overrides["discoveryDecision"] = inherited_copy
     if discovery is None and not reset_wizard_must_have:
         wizard_must_have = _clean_wizard_must_have(
-            existing_meta.get("wizardMustHave")
+            previous_meta_for_dna.get("wizardMustHave")
         )
         if wizard_must_have:
             meta_overrides["wizardMustHave"] = wizard_must_have
@@ -2817,11 +2937,11 @@ def generate_followup(
         output_dir=output_dir,
         site_id=site_id,
         project_id=existing_meta["projectId"],
-        version=previous_version + 1,
+        version=next_version,
         mode="followup",
         base_project_input=previous_project_input,
-        previous_project_dna=existing_meta.get("projectDna")
-        if isinstance(existing_meta.get("projectDna"), dict)
+        previous_project_dna=previous_meta_for_dna.get("projectDna")
+        if isinstance(previous_meta_for_dna.get("projectDna"), dict)
         else None,
         meta_overrides=meta_overrides,
         discovery=discovery,
@@ -2867,6 +2987,17 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--base-run-id",
+        default=None,
+        help=(
+            "Iterate from the Project Input snapshot of a specific historical "
+            "run instead of the latest. Reads data/runs/<runId>/input.json "
+            "to resolve the version, then loads "
+            "data/prompt-inputs/<siteId>.v<N>.* . Only valid with "
+            "--followup-site-id. Version becomes max(latest, base) + 1."
+        ),
+    )
+    parser.add_argument(
         "--discovery",
         default=None,
         help=(
@@ -2883,6 +3014,11 @@ def main() -> int:
             "Discovery payloads only apply to initial Project Input "
             "generation; follow-up runs inherit discovery state from "
             "the previous version."
+        )
+    if args.base_run_id and not args.followup_site_id:
+        raise SystemExit(
+            "--base-run-id requires --followup-site-id. Iterating from a "
+            "specific historical run only makes sense as a follow-up."
         )
 
     discovery_payload: dict[str, Any] | None = None
@@ -2907,6 +3043,7 @@ def main() -> int:
             args.prompt,
             output_dir=output_dir,
             site_id=args.followup_site_id,
+            base_run_id=args.base_run_id,
         )
     else:
         project_input, meta, project_input_path, meta_path = generate(

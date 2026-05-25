@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   ChevronUp,
   Clock,
+  GitBranch,
   ImagePlus,
   Loader2,
   MessageSquare,
@@ -295,6 +296,15 @@ type FloatingChatProps = {
   isBuilding: boolean;
   onBuildStart: () => void;
   onBuildEnd: () => void;
+  /**
+   * "Iterera från denna" — när satt skickar nästa /api/prompt-fetch med
+   * `baseRunId` så backend laddar PI-snapshotet från den runen istället
+   * för senaste. Operatören sätter via Versions-tab. Rensas via
+   * `onClearBaseRunId` direkt efter en lyckad submit eller när operatören
+   * klickar "Avbryt iterera"-pilllen i composern.
+   */
+  pendingBaseRunId?: { baseRunId: string; baseVersion: number | null } | null;
+  onClearBaseRunId?: () => void;
 };
 
 type PromptApiResponse = {
@@ -438,6 +448,8 @@ export function FloatingChat({
   isBuilding,
   onBuildStart,
   onBuildEnd,
+  pendingBaseRunId,
+  onClearBaseRunId,
 }: FloatingChatProps) {
   const [position, setPosition] = useState<Position | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -796,6 +808,14 @@ export function FloatingChat({
             prompt: promptText,
             mode: "followup",
             siteId,
+            // baseRunId opt-in: om operatören klickat "Iterera från denna"
+            // i Versions-tab plockar vi upp runId här. Backend
+            // (scripts/prompt_to_project_input.py --base-run-id) laddar
+            // PI-snapshotet från den runen istället för senaste, så
+            // versionsräkningen blir max(latest, base) + 1.
+            ...(pendingBaseRunId
+              ? { baseRunId: pendingBaseRunId.baseRunId }
+              : {}),
           }),
         });
         const payload = (await response.json()) as PromptApiResponse;
@@ -881,6 +901,7 @@ export function FloatingChat({
       onBuildStart,
       onBuildEnd,
       onBuildDone,
+      pendingBaseRunId,
     ],
   );
 
@@ -1109,6 +1130,39 @@ export function FloatingChat({
       )}
 
       <div className="border-border/60 bg-card/90 shrink-0 border-t p-2">
+        {/* "Iterera från denna"-pill: visas så fort operatören valt
+            en historisk version i Versions-tab. Nästa submit skickar
+            baseRunId i fetch-bodyn så backend laddar PI-snapshotet
+            från den runen istället för senaste. X:et avmarkerar
+            utan att skicka. */}
+        {pendingBaseRunId ? (
+          <div
+            role="status"
+            className="mb-2 flex items-center gap-2 rounded-md border border-sky-500/40 bg-sky-500/[0.08] px-2 py-1.5 text-[11px] text-sky-700 dark:text-sky-300"
+          >
+            <GitBranch className="h-3 w-3 shrink-0" aria-hidden />
+            <span className="flex-1 truncate">
+              Iterera från{" "}
+              {pendingBaseRunId.baseVersion !== null
+                ? `version ${pendingBaseRunId.baseVersion}`
+                : "vald version"}
+            </span>
+            {onClearBaseRunId ? (
+              <button
+                type="button"
+                onClick={onClearBaseRunId}
+                aria-label="Avbryt iterera-läge"
+                title="Avbryt iterera-läge"
+                className={cn(
+                  "hover:bg-sky-500/15 inline-flex h-5 w-5 items-center justify-center rounded-full",
+                  "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
+                )}
+              >
+                <X className="h-3 w-3" aria-hidden />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         {/* Snabbförslag ligger bakom en collapsed "Förslag"-toggle.
             Klick på en chip fyller textarean (utan att skicka) så
             operatören kan finslipa innan submit. Toggle-läget

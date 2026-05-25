@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-25T01:42:18Z",
-  "updatedBy": "sprintvakt-mcp",
+  "updatedAt": "2026-05-25T01:44:30Z",
+  "updatedBy": "christopher-ui",
   "people": {
     "jakob": {
       "allocation": 0.75,
@@ -110,7 +110,7 @@
         "python -m pytest tests/ -q",
         "cd apps/viewser && npx tsc --noEmit"
       ],
-      "note": "UI-skriven backend-spec. Blockerar Live Build Sync A (real pipeline-status) och D (iterera från version N med riktig PI-snapshot). UI har workaround idag (prompt-prefix) som automatiskt uppgraderas till baseRunId så fort backend stödjer det."
+      "note": "UI-skriven backend-spec. Blockerar Live Build Sync A (real pipeline-status) och D (iterera från version N med riktig PI-snapshot). UI har workaround idag (prompt-prefix) som automatiskt uppgraderas till baseRunId så fort backend stödjer det.\n\n[scope-leak] Approved by operator 2026-05-25 03:44: Christopher utför detta på christopher-ui (operator-citat: 'mindre ändringar i Backend behövs … vi jobbar egentligen båda backend och frontend'). Owner=jakob behålls i workboarden så Sprintvakt-lane-policyn passerar; arbetet bär [scope-leak] Approved by operator-tag i commits, samma precedent som PR #68 plan.py + resolve.py-fixes. PR går till main för Jakobs review. Utvidgad scope: även smal UI-uppgradering i floating-chat.tsx (ny prop pendingBaseRunId), versions-tab.tsx (clipboard-workaround → riktig iterate-callback) och pending-runs-stöd via /api/runs."
     }
   ],
   "activeGaps": [],
