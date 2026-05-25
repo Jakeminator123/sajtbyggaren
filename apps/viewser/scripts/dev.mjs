@@ -1,0 +1,217 @@
+// Viewser dev-dispatcher (ADR 0028 — Runtime Ladder).
+// ---------------------------------------------------------------------------
+// `npm run dev` pekar på den här filen. Operatören sätter EN miljövariabel —
+// `VIEWSER_PREVIEW_MODE` i `apps/viewser/.env.local` — och allt som behöver
+// växla mellan local-next-iframen och StackBlitz-embeddet växlas konsekvent.
+//
+// Effekter av läget:
+//
+//   local-next   →  npx next dev                       (http, COEP off)
+//   stackblitz   →  npx next dev --experimental-https  (https, COEP on)
+//   auto         →  npx next dev --experimental-https  (https, COEP on)
+//
+// `local-next` är default. http krävs för att den lokala preview-iframen
+// (port 4100-4199, http) inte ska blockas som mixed content av en https-
+// host. `stackblitz` och `auto` betalar https-/COEP-kostnaden up-front
+// så StackBlitz-embeddet (eller runtime-fallbacken till det) fungerar.
+//
+// COEP/COOP-headers själva sätts i `next.config.ts`, som läser samma env-
+// variabel. Den här filen säkerställer bara att child-processen ärver
+// rätt värde och att transport-laget (http vs https) matchar.
+//
+// Den här dispatchern är AVSIKTLIGT dev-only. Production-pathen går genom
+// `next build` + `next start` (npm-scripten `build`/`start`), aldrig genom
+// `npm run dev`, och därmed aldrig genom den här filen. Det är därför
+// dispatchern inte behöver känna till `NODE_ENV` — säkerhetsgaten som
+// promotar `local-next` → `stackblitz`-headers i produktion sitter i
+// `next.config.ts` (där den ändå är auktoritativ för COEP/COOP-utfallet).
+// Att lägga gaten även här skulle bara duplicera regeln och riskera att de
+// går i otakt vid framtida refaktorering.
+//
+// Build-pathen (`next build`, `start`) påverkas inte. Den genererade sajten
+// är vanlig Next.js oavsett preview-mode. StackBlitz-specifik patchning av
+// payloaden (`--webpack`, global-error override, lockfile) i
+// `lib/stackblitz-files.ts` triggas bara när runtime-fallbacken faktiskt
+// går till StackBlitz, så `local-next` betalar aldrig den kostnaden.
+
+import { spawn } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const VIEWSER_ROOT = resolve(__dirname, "..");
+
+const VALID_MODES = new Set(["local-next", "stackblitz", "auto"]);
+const DEFAULT_MODE = "local-next";
+
+// Tiny inline .env-parser. Avsiktligt minimal: ingen escape-hantering,
+// ingen interpolation, ingen multiline. Räcker för vår enda nyckel
+// (`VIEWSER_PREVIEW_MODE`) och är ofarlig för övriga rader. Vi vill inte
+// dra in `dotenv` som dep bara för det.
+function parseEnvFile(path) {
+  if (!existsSync(path)) return {};
+  const out = {};
+  const text = readFileSync(path, "utf8");
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    if (eq === -1) continue;
+    const key = line.slice(0, eq).trim();
+    let value = line.slice(eq + 1).trim();
+    // Strip surrounding single or double quotes if present.
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    if (key) out[key] = value;
+  }
+  return out;
+}
+
+// Precedensordning matchar Next.js egen dotenv-ordning för dev — högst
+// prioritet först (process.env > .env.development.local > .env.local >
+// .env.development > .env). Vi laddar i OMVÄND ordning så att senare
+// spreads vinner, och spreader process.env sist så shell-overrides
+// aldrig blir överskrivna. Se
+// https://nextjs.org/docs/app/guides/environment-variables#environment-variable-load-order
+const fileEnvBase = parseEnvFile(resolve(VIEWSER_ROOT, ".env"));
+const fileEnvDev = parseEnvFile(resolve(VIEWSER_ROOT, ".env.development"));
+const fileEnvLocal = parseEnvFile(resolve(VIEWSER_ROOT, ".env.local"));
+const fileEnvDevLocal = parseEnvFile(resolve(VIEWSER_ROOT, ".env.development.local"));
+const mergedEnv = {
+  ...fileEnvBase,
+  ...fileEnvDev,
+  ...fileEnvLocal,
+  ...fileEnvDevLocal,
+  ...process.env,
+};
+
+const rawMode = (mergedEnv.VIEWSER_PREVIEW_MODE ?? DEFAULT_MODE).trim().toLowerCase();
+
+if (!VALID_MODES.has(rawMode)) {
+  process.stderr.write(
+    `Okänt VIEWSER_PREVIEW_MODE: '${rawMode}'. ` +
+      `Använd local-next, stackblitz, eller auto.\n`,
+  );
+  process.exit(1);
+}
+
+const mode = rawMode;
+const useHttps = mode !== "local-next";
+
+const banner =
+  mode === "local-next"
+    ? "Viewser dev → mode=local-next (http, COEP off, local-preview iframe enabled)"
+    : mode === "stackblitz"
+      ? "Viewser dev → mode=stackblitz (https, COEP credentialless + COOP same-origin, StackBlitz embed enabled)"
+      : "Viewser dev → mode=auto (https, COEP credentialless + COOP same-origin, runtime-fallback redo för StackBlitz)";
+process.stdout.write(`${banner}\n`);
+
+// Pass through extra argv (allt efter scriptnamnet). Tillåter t.ex.
+// `npm run dev -- --port 3001`.
+const passthroughArgs = process.argv.slice(2);
+const nextArgs = ["next", "dev", ...(useHttps ? ["--experimental-https"] : []), ...passthroughArgs];
+
+// Använd shell:true så att `npx` löser sig till `npx.cmd` på Windows utan
+// att vi behöver hardkoda extension-uppslagning. stdio: "inherit" så
+// next.js egen TTY-output (ANSI-färger, ✓ Ready, etc.) går igenom orört.
+const child = spawn("npx", nextArgs, {
+  cwd: VIEWSER_ROOT,
+  stdio: "inherit",
+  shell: true,
+  env: {
+    ...process.env,
+    VIEWSER_PREVIEW_MODE: mode,
+  },
+});
+
+// Signal- och shutdown-hantering.
+// ---------------------------------------------------------------------------
+// Tidigare implementation (`process.kill(process.pid, signal)` i child.exit)
+// kunde re-triggra vår egen handler eller hänga utan att returnera ett
+// deterministiskt exit-code till skalet. Bugbot på den parkerade PR #85
+// flaggade detta som "dispatchern hänger efter Ctrl-C när child:en dog via
+// signal". Den här blocket implementerar standard-paternen:
+//
+//   1. Vi installerar SIGINT- och SIGTERM-handlers EN GÅNG (process.once)
+//      så att en andra signal under shutdown inte återkallar samma
+//      cleanup-loop.
+//   2. Vid signal forwardar vi den till child via `child.kill(signal)` och
+//      startar en watchdog-timer (~5s). Hinner child:en inte avsluta sig
+//      själv inom det fönstret eskalerar vi till SIGKILL och avslutar
+//      parent med det POSIX-vanliga signal-exit-codet (130 för SIGINT,
+//      143 för SIGTERM).
+//   3. När child:en faktiskt exitar rensar vi watchdogen och översätter
+//      exit-orsaken: `signal` (signal-orsakad exit) → `128 + signalnummer`,
+//      annars `code ?? 0`. Det är POSIX-konventionen och det signal-shells
+//      som bash/PowerShell förväntar sig från child-processer.
+//
+// Mappningen signalnamn → nummer är hårdkodad eftersom Node inte exponerar
+// någon `os.constants.signals[signal]`-helper för exit-code-skydd, och vi
+// vill inte importera `os` bara för fyra konstanter.
+const SIGNAL_EXIT_CODES = { SIGINT: 130, SIGTERM: 143 };
+const SIGNAL_NUMBERS = { SIGHUP: 1, SIGINT: 2, SIGQUIT: 3, SIGTERM: 15, SIGKILL: 9 };
+const SHUTDOWN_WATCHDOG_MS = 5000;
+
+let shuttingDown = false;
+let watchdogTimer = null;
+
+function clearWatchdog() {
+  if (watchdogTimer !== null) {
+    clearTimeout(watchdogTimer);
+    watchdogTimer = null;
+  }
+}
+
+function handleParentSignal(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  if (!child.killed) {
+    try {
+      child.kill(signal);
+    } catch {
+      // child redan borta — exit-handlern nedan tar hand om resten
+    }
+  }
+  // SIGKILL-watchdog: om child:en inte exitar inom fönstret eskalerar vi.
+  // unref:ar timern så den inte själv håller event-loopen vid liv om allt
+  // redan stängts ner snyggt.
+  watchdogTimer = setTimeout(() => {
+    if (!child.killed) {
+      try {
+        child.kill("SIGKILL");
+      } catch {
+        // ignorera; child redan borta
+      }
+    }
+    process.exit(SIGNAL_EXIT_CODES[signal] ?? 1);
+  }, SHUTDOWN_WATCHDOG_MS);
+  if (typeof watchdogTimer.unref === "function") {
+    watchdogTimer.unref();
+  }
+}
+
+process.once("SIGINT", () => handleParentSignal("SIGINT"));
+process.once("SIGTERM", () => handleParentSignal("SIGTERM"));
+
+child.on("exit", (code, signal) => {
+  clearWatchdog();
+  if (signal) {
+    const sigNum = SIGNAL_NUMBERS[signal];
+    const exitCode = typeof sigNum === "number" ? 128 + sigNum : (SIGNAL_EXIT_CODES[signal] ?? 1);
+    process.exit(exitCode);
+    return;
+  }
+  process.exit(code ?? 0);
+});
+
+child.on("error", (err) => {
+  clearWatchdog();
+  process.stderr.write(`Viewser dev-dispatcher kunde inte starta next: ${err.message}\n`);
+  process.exit(1);
+});

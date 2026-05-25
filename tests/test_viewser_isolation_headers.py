@@ -87,6 +87,45 @@ def test_next_config_headers_apply_to_all_routes() -> None:
     )
 
 
+def test_next_config_branches_headers_on_preview_mode() -> None:
+    """The headers() function must mode-gate on VIEWSER_PREVIEW_MODE.
+
+    Rationale (ADR 0028, Runtime Ladder): the StackBlitz embed needs
+    `Cross-Origin-Embedder-Policy: credentialless` + `Cross-Origin-Opener-
+    Policy: same-origin` so SharedArrayBuffer is available inside the
+    WebContainer. The LocalRuntime rung (rung 1 of the ladder), in
+    contrast, embeds `localhost:<4100-4199>` as a plain cross-origin
+    iframe — and that iframe is BLOCKED by the same headers because it
+    does not carry the `credentialless` HTML attribute.
+
+    The fix is to read `VIEWSER_PREVIEW_MODE` from the environment and
+    return an empty header list when it equals `local-next`, keeping
+    the COEP/COOP block for `stackblitz`/`auto`/unset. This source-lock
+    ensures a future refactor cannot accidentally re-block LocalRuntime
+    by removing the mode branch, and cannot accidentally drop the
+    StackBlitz headers by collapsing the branch the wrong way.
+    """
+    source = _load_config_source()
+    assert "VIEWSER_PREVIEW_MODE" in source, (
+        "next.config.ts must read VIEWSER_PREVIEW_MODE from the environment "
+        "so the LocalRuntime rung can opt out of cross-origin isolation "
+        "headers (which would otherwise block the cross-origin localhost "
+        "preview iframe). See ADR 0028 — Runtime Ladder."
+    )
+    assert "local-next" in source, (
+        "next.config.ts must reference the `local-next` mode literal so the "
+        "LocalRuntime branch in headers() can match it. Renaming this mode "
+        "requires updating apps/viewser/.env.example, docs/adr/0028-*, and "
+        "this lock in lockstep."
+    )
+    assert "return []" in source, (
+        "headers() must have a branch that returns an empty list (no COEP/"
+        "COOP) when VIEWSER_PREVIEW_MODE === 'local-next'. Without this the "
+        "cross-origin localhost:<4100-4199> preview iframe is blocked by "
+        "credentialless + same-origin on the Viewser host."
+    )
+
+
 # --------------------------------------------------------------------------
 # Source-locks for the iframe-credentialless attribute injection (B124).
 #
@@ -142,4 +181,91 @@ def test_viewer_panel_only_tags_iframe_elements() -> None:
         "'iframe' so only the StackBlitz iframe gets the credentialless "
         "attribute. Tagging arbitrary elements is incorrect (the attribute "
         "is iframe-specific) and obscures the intent of the patch."
+    )
+
+
+# --------------------------------------------------------------------------
+# Source-locks for the production safety gate (Fix 2 on the preview-mode
+# branch).
+#
+# `local-next` deliberately turns cross-origin isolation OFF so a plain
+# cross-origin localhost:<4100-4199> iframe can render. That is correct
+# in dev but unsafe in production:
+#
+#   - The hosted StackBlitz fallback silently loses SharedArrayBuffer and
+#     renders "Unable to run Embedded Project" instead of a clear 4xx.
+#   - Any future feature that depends on cross-origin isolation (OPFS,
+#     high-resolution perf counters, certain wasm paths) regresses in the
+#     exact environment where we least notice it.
+#
+# The gate in `next.config.ts` therefore promotes
+# `local-next` → `stackblitz` (for headers() evaluation) when
+# `NODE_ENV === "production"`, unless the operator explicitly opts out
+# via `VIEWSER_ALLOW_NO_ISOLATION=1`. The override variable is
+# intentionally noisy (its name says what it costs) so it cannot be set
+# by accident in CI config.
+#
+# These tests source-lock the gate so a future refactor cannot quietly
+# drop the production safety net by removing the NODE_ENV branch or by
+# returning to the raw `PREVIEW_MODE` constant in headers().
+# --------------------------------------------------------------------------
+
+
+def test_next_config_has_production_node_env_gate() -> None:
+    """next.config.ts must check NODE_ENV === 'production' for header safety."""
+    source = _load_config_source()
+    assert 'NODE_ENV === "production"' in source or "NODE_ENV === 'production'" in source, (
+        "next.config.ts must read process.env.NODE_ENV and compare it to "
+        "'production'. Without this check, a hosted deploy that forgot to "
+        "set VIEWSER_PREVIEW_MODE=stackblitz would silently lose COEP/COOP "
+        "headers (the local-next default does not emit them), regressing "
+        "the StackBlitz embed and any cross-origin-isolation-dependent "
+        "feature in production."
+    )
+    assert "IS_PRODUCTION" in source, (
+        "next.config.ts must materialize the NODE_ENV check as an "
+        "IS_PRODUCTION constant so the production-gate is greppable and "
+        "self-documenting at the call site."
+    )
+
+
+def test_next_config_exposes_no_isolation_override() -> None:
+    """The production gate must have a noisily-named opt-out variable."""
+    source = _load_config_source()
+    assert "VIEWSER_ALLOW_NO_ISOLATION" in source, (
+        "next.config.ts must support VIEWSER_ALLOW_NO_ISOLATION=1 as an "
+        "explicit operator opt-out of the production safety gate. The "
+        "variable name is intentionally verbose so it cannot be set by "
+        "accident — renaming it to something more innocuous re-opens the "
+        "exact silent-regression failure mode the gate exists to prevent."
+    )
+    assert 'VIEWSER_ALLOW_NO_ISOLATION === "1"' in source, (
+        "The override must compare to the literal string '1' so the "
+        "default (unset, '0', 'true', 'yes', etc.) all fall through to "
+        "the safe path. Loosening the check would let truthy-by-accident "
+        "values disable the gate."
+    )
+
+
+def test_next_config_uses_effective_mode_in_headers() -> None:
+    """`headers()` must read the gated mode, not the raw env var."""
+    source = _load_config_source()
+    assert "effectiveMode" in source, (
+        "next.config.ts must compute an `effectiveMode` constant that "
+        "applies the NODE_ENV gate and the VIEWSER_ALLOW_NO_ISOLATION "
+        "override on top of the raw PREVIEW_MODE. The name is the lock-"
+        "point future refactors will collide with."
+    )
+    assert 'effectiveMode === "local-next"' in source, (
+        "headers() must branch on `effectiveMode`, not on raw "
+        "`PREVIEW_MODE`. If a refactor reverts to PREVIEW_MODE the "
+        "production gate becomes dead code and local-next silently "
+        "wins in production, dropping COEP/COOP."
+    )
+    assert "NEXT_PUBLIC_VIEWSER_PREVIEW_MODE: effectiveMode" in source, (
+        "The NEXT_PUBLIC mirror must also use `effectiveMode` so the "
+        "client sees the same value that drove headers(). Otherwise "
+        "ViewerPanel would spawn a LocalRuntime client in production "
+        "while the server already promoted to StackBlitz-headers, and "
+        "the iframe would be blocked anyway."
     )
