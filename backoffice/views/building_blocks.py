@@ -1577,7 +1577,7 @@ def view_dossier_candidates() -> None:
 
     intake_report = st.session_state.get("dossier_candidate_intake_report")
     if isinstance(intake_report, dict):
-        st.markdown("**Senaste intake report**")
+        st.markdown("**senaste intake report**")
         metric_cols = st.columns(4)
         metric_cols[0].metric("Rekommendation", str(intake_report["recommendedClass"]))
         metric_cols[1].metric("Filer", int(intake_report.get("fileCount") or 0))
