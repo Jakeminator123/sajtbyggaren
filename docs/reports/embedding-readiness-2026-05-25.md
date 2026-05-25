@@ -121,7 +121,7 @@ kan ADR-0026 omklassas Accepted→Superseded och embeddings-sprinten startas.
 | B5 | `DiscoveryDecision`-schema saknar plats för embedding-score | Öppen | Schema-bump i `governance/schemas/discovery-decision.schema.json` (se §4). |
 | B6 | `embeddingText` saknas på dossier-manifesten | Öppen | Antingen schema-bumpa `dossier.schema.json` med valfritt `embeddingText`, eller acceptera `summary` som källfält och dokumentera valet i embedding-policy v2. |
 | B7 | Operator-frågor i ADR-0026 §"Öppna frågor" obesvarade | Öppen | Modellval (se §5), cache-strategi (se §4), backoffice-/Doctor-yta. Behöver operatörsbeslut innan första prod-commit. |
-| B8 | ADR-0026 status `Proposed`, inte `Accepted` | Öppen | Operatör godkänner och bumpar till `Accepted` (eller `Superseded` om ny ADR skrivs). |
+| B8 | ADR-0026 status `Proposed`, inte status `accepted` | Öppen | Operatör godkänner och bumpar till status `accepted` (eller status `superseded` om ny ADR skrivs). |
 
 B1-B3 är hårda blockers för Go. B4-B8 är schemabumpar/beslut som måste
 in i samma sprint som första implementations-PR men kan beredas parallellt.
@@ -309,7 +309,7 @@ Optional sjätte test (rekommenderad innan första prod-PR):
 - Förslag på `embeddingText`-fält i `dossier.schema.json` v2 + curera
   texterna i alla 11 soft-dossier-manifest. Pure-docs PR, ingen kod
   använder fältet än.
-- `governance/decisions/0026`-uppdatering: flytta status `Proposed → Accepted`
+- `governance/decisions/0026`-uppdatering: flytta status `Proposed → accepted`
   efter operatörsbeslut, eller skriv `ADR-0030 embeddings-implementation-go`
   som superseder med konkreta Go-kriterier (denna rapport som bilaga).
 - Skiss i `docs/architecture/embedding-retriever.md` — read-only design-doc
