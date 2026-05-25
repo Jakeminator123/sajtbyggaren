@@ -9,13 +9,11 @@ promotion to a canonical Variant remains an operator decision.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import sys
 import unicodedata
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +31,12 @@ from packages.generation.artifacts import (  # noqa: E402
 from packages.generation.brief.models import (  # noqa: E402
     OPENAI_API_KEY_ENV,
     has_openai_api_key,
+)
+from scripts.candidate_generation_metadata import (  # noqa: E402
+    brief_fingerprint,
+    created_at,
+    guard_candidate_output_dir,
+    repo_or_output_relative,
 )
 
 SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
@@ -177,36 +181,14 @@ class VariantGenerationResult:
     model_used: str
 
 
-def _repo_or_output_relative(path: Path, output_dir: Path) -> str:
-    """Return a non-absolute path for metadata sidecars."""
-    resolved = path.resolve(strict=False)
-    for root in (REPO_ROOT.resolve(strict=False), output_dir.resolve(strict=False)):
-        try:
-            return resolved.relative_to(root).as_posix()
-        except ValueError:
-            continue
-    return path.name
-
-
-def _brief_fingerprint(brief: str) -> str:
-    digest = hashlib.sha256(brief.strip().encode("utf-8")).hexdigest()
-    return f"sha256:{digest}"
-
-
-def _created_at() -> str:
-    return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
-
-
-def _guard_candidate_output_dir(output_dir: Path) -> None:
-    """Reject candidate output paths inside canonical orchestration folders."""
-    resolved_output = output_dir.resolve(strict=False)
-    for forbidden_root in (ORCHESTRATION_DIR, SCAFFOLDS_DIR, DOSSIERS_DIR):
-        resolved_forbidden = forbidden_root.resolve(strict=False)
-        if resolved_output == resolved_forbidden or resolved_forbidden in resolved_output.parents:
-            raise VariantGenerationError(
-                "Refusing to write Variant candidate output under canonical "
-                f"orchestration path: {resolved_output}"
-            )
+def _guard_variant_output_dir(output_dir: Path) -> None:
+    """Thin wrapper that pins the Variant-specific guard arguments."""
+    guard_candidate_output_dir(
+        output_dir,
+        forbidden_roots=(ORCHESTRATION_DIR, SCAFFOLDS_DIR, DOSSIERS_DIR),
+        error_cls=VariantGenerationError,
+        kind="Variant",
+    )
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -505,7 +487,7 @@ def _write_candidate(
     operator_brief: str,
     force: bool,
 ) -> tuple[Path, Path, dict[str, Any]]:
-    _guard_candidate_output_dir(output_dir)
+    _guard_variant_output_dir(output_dir)
     target_dir = output_dir / scaffold_id
     target_dir.mkdir(parents=True, exist_ok=True)
     target_path = target_dir / f"{payload['id']}.json"
@@ -527,10 +509,12 @@ def _write_candidate(
         "modelUsed": model_used,
         "modelRole": VARIANT_ROLE_ID,
         "generator": "scripts.generate_variant_candidate",
-        "createdAt": _created_at(),
+        "createdAt": created_at(),
         "enabled": payload["enabled"],
-        "outputPath": _repo_or_output_relative(target_path, output_dir),
-        "operatorBriefHash": _brief_fingerprint(operator_brief),
+        "outputPath": repo_or_output_relative(
+            target_path, repo_root=REPO_ROOT, output_dir=output_dir
+        ),
+        "operatorBriefHash": brief_fingerprint(operator_brief),
     }
     meta_path.write_text(
         json.dumps(metadata, indent=2, ensure_ascii=False) + "\n",
@@ -555,7 +539,7 @@ def generate_variant_candidates(
         raise VariantGenerationError("count must be at least 1")
     if not brief.strip():
         raise VariantGenerationError("brief must not be empty")
-    _guard_candidate_output_dir(output_dir)
+    _guard_variant_output_dir(output_dir)
 
     context = load_variant_context(scaffold_id)
     reserved_ids = set(context.existing_variant_ids)

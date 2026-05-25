@@ -8,7 +8,6 @@ promotion remains an operator decision.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import sys
@@ -28,6 +27,12 @@ from packages.generation.artifacts import validate_dossier  # noqa: E402
 from packages.generation.brief.models import (  # noqa: E402
     OPENAI_API_KEY_ENV,
     has_openai_api_key,
+)
+from scripts.candidate_generation_metadata import (  # noqa: E402
+    brief_fingerprint,
+    created_at,
+    guard_candidate_output_dir,
+    repo_or_output_relative,
 )
 
 DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
@@ -93,36 +98,14 @@ class DossierGenerationResult:
     model_used: str
 
 
-def _repo_or_output_relative(path: Path, output_dir: Path) -> str:
-    """Return a non-absolute path for metadata sidecars."""
-    resolved = path.resolve(strict=False)
-    for root in (REPO_ROOT.resolve(strict=False), output_dir.resolve(strict=False)):
-        try:
-            return resolved.relative_to(root).as_posix()
-        except ValueError:
-            continue
-    return path.name
-
-
-def _brief_fingerprint(brief: str) -> str:
-    digest = hashlib.sha256(brief.strip().encode("utf-8")).hexdigest()
-    return f"sha256:{digest}"
-
-
-def _created_at() -> str:
-    return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
-
-
-def _guard_candidate_output_dir(output_dir: Path) -> None:
-    """Reject candidate output paths inside canonical orchestration folders."""
-    resolved_output = output_dir.resolve(strict=False)
-    for forbidden_root in (ORCHESTRATION_DIR, SCAFFOLDS_DIR, DOSSIERS_DIR):
-        resolved_forbidden = forbidden_root.resolve(strict=False)
-        if resolved_output == resolved_forbidden or resolved_forbidden in resolved_output.parents:
-            raise DossierGenerationError(
-                "Refusing to write Dossier candidate output under canonical "
-                f"orchestration path: {resolved_output}"
-            )
+def _guard_dossier_output_dir(output_dir: Path) -> None:
+    """Thin wrapper that pins the Dossier-specific guard arguments."""
+    guard_candidate_output_dir(
+        output_dir,
+        forbidden_roots=(ORCHESTRATION_DIR, SCAFFOLDS_DIR, DOSSIERS_DIR),
+        error_cls=DossierGenerationError,
+        kind="Dossier",
+    )
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -346,7 +329,7 @@ def _write_candidate(
     operator_brief: str,
     force: bool,
 ) -> tuple[Path, Path, Path, Path, dict[str, Any]]:
-    _guard_candidate_output_dir(output_dir)
+    _guard_dossier_output_dir(output_dir)
     candidate_dir = output_dir / "soft" / dossier_id
     if candidate_dir.exists() and not force:
         raise DossierGenerationError(
@@ -372,11 +355,15 @@ def _write_candidate(
         "modelUsed": model_used,
         "modelRole": DOSSIER_ROLE_ID,
         "generator": "scripts.generate_dossier_candidate",
-        "createdAt": _created_at(),
+        "createdAt": created_at(),
         "enabled": manifest["enabled"],
-        "outputPath": _repo_or_output_relative(manifest_path, output_dir),
-        "instructionsPath": _repo_or_output_relative(instructions_path, output_dir),
-        "operatorBriefHash": _brief_fingerprint(operator_brief),
+        "outputPath": repo_or_output_relative(
+            manifest_path, repo_root=REPO_ROOT, output_dir=output_dir
+        ),
+        "instructionsPath": repo_or_output_relative(
+            instructions_path, repo_root=REPO_ROOT, output_dir=output_dir
+        ),
+        "operatorBriefHash": brief_fingerprint(operator_brief),
     }
     meta_path.write_text(
         json.dumps(metadata, indent=2, ensure_ascii=False) + "\n",
@@ -397,7 +384,7 @@ def generate_dossier_candidate(
     """Generate and write one soft Dossier candidate folder."""
     if not brief.strip():
         raise DossierGenerationError("brief must not be empty")
-    _guard_candidate_output_dir(output_dir)
+    _guard_dossier_output_dir(output_dir)
     reserved = _existing_dossier_ids()
     dossier_id = _unique_dossier_id(candidate_id or brief, output_dir, reserved)
     capability_id = slugify_dossier_id(capability or dossier_id)
