@@ -355,6 +355,44 @@ def test_run_one_case_records_generated_dir(tmp_path: Path) -> None:
     assert case["error"] and "dossier not found" in case["error"]
 
 
+def test_full_cases_covers_all_on_disk_scaffolds() -> None:
+    """FULL_CASES must cover one example per on-disk scaffold.
+
+    Without this regression net the full eval suite drifts back to only
+    painter-palma + atelje-bird the next time someone adds a fixture to
+    QUICK_CASES, leaving restaurant-hospitality (Issue #90 / PR #93)
+    verified only via targeted full builds. The set comparison stays
+    valid when new on-disk scaffolds + their fixtures are added because
+    the assert is direction "expected ⊆ FULL_CASES" rather than equality.
+    """
+
+    from scripts.run_eval_suite import FULL_CASES
+
+    expected_minimum = {"painter-palma", "atelje-bird", "cafe-bistro"}
+    missing = expected_minimum - set(FULL_CASES)
+    assert not missing, (
+        f"FULL_CASES is missing required on-disk-scaffold coverage: {sorted(missing)}; "
+        f"current FULL_CASES = {FULL_CASES}"
+    )
+
+
+def test_quick_cases_includes_cafe_bistro() -> None:
+    """QUICK_CASES must include the restaurant-hospitality fixture.
+
+    Pairs with the FULL_CASES assertion above: cafe-bistro is the
+    canonical smoke + full-build fixture for restaurant-hospitality
+    since the menu+booking renderers landed in PR #93. Dropping it from
+    QUICK_CASES would silently regress smoke coverage too.
+    """
+
+    from scripts.run_eval_suite import QUICK_CASES
+
+    assert "cafe-bistro" in QUICK_CASES, (
+        f"QUICK_CASES must include cafe-bistro (restaurant-hospitality fixture); "
+        f"current QUICK_CASES = {QUICK_CASES}"
+    )
+
+
 def test_utc_now_iso_single_clock_read() -> None:
     """utc_now_iso reads the clock once to avoid a torn timestamp.
 

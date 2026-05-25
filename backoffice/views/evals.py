@@ -26,6 +26,8 @@ from typing import Any
 
 import streamlit as st
 
+from scripts.run_eval_suite import FULL_CASES, QUICK_CASES
+
 from ..paths import EVAL_RUNS_DIR, MANUAL_SCORECARDS_DIR, REPO_ROOT, SCRIPTS_DIR
 from ._helpers import safe_render
 
@@ -364,7 +366,7 @@ def view_evals() -> None:
     st.subheader("Kör eval-suite")
     cols = st.columns(2)
     if cols[0].button(
-        "Snabb regression (4x skip-build)",
+        f"Snabb regression ({len(QUICK_CASES)}x skip-build)",
         use_container_width=True,
         type="primary",
         key="eval-quick",
@@ -381,7 +383,7 @@ def view_evals() -> None:
             st.error(f"Suite failade med exit code {result['exit_code']}.")
 
     if cols[1].button(
-        "Full build (painter-palma + atelje-bird)",
+        f"Full build ({' + '.join(FULL_CASES)})",
         use_container_width=True,
         key="eval-full",
         help=(
