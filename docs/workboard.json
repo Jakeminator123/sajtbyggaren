@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-24T23:52:13Z",
-  "updatedBy": "sprintvakt-mcp",
+  "updatedAt": "2026-05-25T00:25:00Z",
+  "updatedBy": "jakob-orchestrator",
   "people": {
     "jakob": {
       "allocation": 0.75,
@@ -59,7 +59,9 @@
       "reason": "UI/frontend ownership"
     }
   ],
-  "queuedGaps": [
+  "queuedGaps": [],
+  "activeGaps": [],
+  "completedGaps": [
     {
       "id": "GAP-sprintvakt-v1-1-bug-followups",
       "type": "Gap/Guard",
@@ -87,14 +89,20 @@
       ],
       "collisionRisk": "green",
       "reviewer": "jakob",
-      "status": "queued",
+      "status": "completed",
       "createdAt": "2026-05-24T23:52:13Z",
-      "updatedAt": "2026-05-24T23:52:13Z",
-      "notes": []
+      "updatedAt": "2026-05-25T00:25:00Z",
+      "completedAt": "2026-05-25T00:25:00Z",
+      "fixCommits": [
+        "593735f",
+        "db0b565",
+        "90df708"
+      ],
+      "notes": [
+        "All three acceptance criteria met. Tests 14 -> 18 passed. ruff clean. sprintvakt_check OK."
+      ]
     }
   ],
-  "activeGaps": [],
-  "completedGaps": [],
   "decisions": [
     {
       "id": "DEC-PR68",
