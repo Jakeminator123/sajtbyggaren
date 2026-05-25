@@ -11,6 +11,17 @@ dossiers rakt in i canonical runtime.
 
 ## 1. Inventering
 
+> **Verifierbarhets-disclaimer:** `MIN_IDE/` är operator-lokal och
+> gitignored - originalmaterialet (manifest.json + instructions.md +
+> components/*.tsx per paket) finns inte i GitHub-repot och kan inte
+> verifieras från en standard-clone ensam. För att denna inventerings-
+> tabell ändå ska vara reproducerbart granskbar är en frusen snapshot
+> av slugs + class + capability + status committad som
+> `docs/dossiers/sajtmaskin-inventory.snapshot.json` (snapshotDate
+> 2026-05-25). Tabellen nedan är härledd från den snapshoten. Om zippen
+> uppdateras med nya eller ändrade paket bumpas snapshoten i en
+> separat PR; gamla snapshots blir historisk record.
+
 Materialet innehåller 13 dossier-paket (5 soft + 8 hard):
 
 | Dossier | Klass | Capability | Status mot nytt repo |
@@ -105,6 +116,9 @@ referensmaterial, inget annat.
 
 ## Referenser
 
+- `docs/dossiers/sajtmaskin-inventory.snapshot.json` - frusen snapshot av
+  inventeringen som gör tabellen i avsnitt 1 verifierbar utan tillgång
+  till operator-lokal `MIN_IDE/`.
 - `governance/decisions/0012-vocabulary-compression.md` - ADR som
   komprimerade dossier-klasserna till soft/hard.
 - `governance/policies/dossier-contract.v1.json` - aktuella kontraktet.
