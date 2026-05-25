@@ -464,7 +464,14 @@ def test_renderers_use_jsx_safe_string_for_customer_text() -> None:
     for fn_name in (
         "render_layout",
         "render_home",
-        "render_services",
+        # Path B step 2: the actual JSX-escaping for the /tjanster
+        # route now lives in ``render_section_service_list``;
+        # ``render_services`` is a thin shim that composes the section
+        # into the ServicesPage shell and interpolates no customer
+        # text itself, so it is correctly absent from this list.
+        "render_section_hero",
+        "render_section_services_summary",
+        "render_section_service_list",
         "render_about",
         "render_contact",
     ):

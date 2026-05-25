@@ -2664,6 +2664,69 @@ def render_section_hero(
     return hero_section_jsx + hero_block_jsx
 
 
+def render_section_services_summary(
+    dossier: dict,
+    *,
+    listing_route: dict | None,
+) -> str:
+    """Render the home-page services-summary section.
+
+    Produces the service-grid block (3-column on lg, 2-column on md)
+    with branch-aware listing copy (e.g. "Menyn" for restaurants,
+    "Sortimentet" for ecommerce) and an optional listing-link CTA
+    that points at ``listing_route`` when set.
+
+    Path B step 2 (GAP-backend-path-b-section-renderer): second
+    per-section renderer extracted from ``render_home``. Output is
+    byte-identical to the pre-extraction inline implementation,
+    verified against LSB / commerce / restaurant snapshots.
+    """
+    services = dossier["services"]
+    services_grid = "\n".join(
+        f'            <li key={_jsx_safe_string(svc["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--card,var(--background))] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
+        f'              <span className="mb-4 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)] transition-transform group-hover:scale-105"><{_icon_for_service(svc["id"])} className="size-5" /></span>\n'
+        f'              <h3 className="text-lg font-semibold">{_jsx_safe_string(svc["label"])}</h3>\n'
+        f'              <p className="mt-2 text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
+        "            </li>"
+        for svc in services
+    )
+    # Branch-specifik listing-copy: när dossiern har en businessType som
+    # finns i ``_BRANCH_LISTING_COPY`` använder vi den (t.ex. "Menyn" /
+    # "Det vi serverar" för restaurang) istället för den generiska
+    # route-id-baserade copy:n. Faller tillbaka till routebaserad copy
+    # för okända branscher så befintliga tester och dossiers utan
+    # businessType fortsätter funka.
+    listing_copy = _LISTING_COPY_BY_ROUTE_ID["services"]
+    branch_copy = _branch_listing_copy(dossier)
+    if listing_route is not None:
+        listing_copy = _LISTING_COPY_BY_ROUTE_ID.get(
+            listing_route["id"], _LISTING_COPY_BY_ROUTE_ID["services"]
+        )
+    if branch_copy:
+        # Branch-copy vinner över route-baserad copy — branschen är
+        # närmare operatörens verklighet än scaffold-typen.
+        listing_copy = {**listing_copy, **branch_copy}
+    listing_link = ""
+    if listing_route is not None:
+        listing_href = _route_href(listing_route["path"])
+        listing_link = f'          <a href={listing_href} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">{listing_copy["cta"]}<ArrowRight className="size-4" /></a>\n'
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        '          <div className="flex flex-col gap-3">\n'
+        f'            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">{listing_copy["eyebrow"]}</p>\n'
+        f'            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">{listing_copy["heading"]}</h2>\n'
+        "          </div>\n"
+        '          <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
+        f"{services_grid}\n"
+        "          </ul>\n"
+        f"{listing_link}"
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
 def render_home(
     dossier: dict,
     dossier_routes: list[str],
@@ -2715,15 +2778,13 @@ def render_home(
     if needs_quote_icon and "Quote" not in icons_used:
         icons_used = sorted({*icons_used, "Quote"})
     icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
-    # Fas 2.3 — hover-effekt med translate-y och förbättrad shadow.
-    # Ikonen lyfts samtidigt för en sammanhängande Apple-känsla.
-    services_grid = "\n".join(
-        f'            <li key={_jsx_safe_string(svc["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--card,var(--background))] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
-        f'              <span className="mb-4 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)] transition-transform group-hover:scale-105"><{_icon_for_service(svc["id"])} className="size-5" /></span>\n'
-        f'              <h3 className="text-lg font-semibold">{_jsx_safe_string(svc["label"])}</h3>\n'
-        f'              <p className="mt-2 text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
-        "            </li>"
-        for svc in services
+    # Path B step 2 — services-summary section (service-grid + branch-
+    # aware listing copy + optional listing-link) is now produced by
+    # ``render_section_services_summary``. Output is byte-identical
+    # to the inline implementation it replaces.
+    services_summary_section = render_section_services_summary(
+        dossier,
+        listing_route=listing_route,
     )
     trust_items = "\n".join(
         f'            <li key="trust-{i}" className="flex items-start gap-3">\n'
@@ -2746,26 +2807,6 @@ def render_home(
             "\n"
         )
     contact_href = _route_href(contact_path)
-    # Branch-specifik listing-copy: när dossiern har en businessType som
-    # finns i ``_BRANCH_LISTING_COPY`` använder vi den (t.ex. "Menyn" /
-    # "Det vi serverar" för restaurang) istället för den generiska
-    # route-id-baserade copy:n. Faller tillbaka till routebaserad copy
-    # för okända branscher så befintliga tester och dossiers utan
-    # businessType fortsätter funka.
-    listing_copy = _LISTING_COPY_BY_ROUTE_ID["services"]
-    branch_copy = _branch_listing_copy(dossier)
-    if listing_route is not None:
-        listing_copy = _LISTING_COPY_BY_ROUTE_ID.get(
-            listing_route["id"], _LISTING_COPY_BY_ROUTE_ID["services"]
-        )
-    if branch_copy:
-        # Branch-copy vinner över route-baserad copy — branschen är
-        # närmare operatörens verklighet än scaffold-typen.
-        listing_copy = {**listing_copy, **branch_copy}
-    listing_link = ""
-    if listing_route is not None:
-        listing_href = _route_href(listing_route["path"])
-        listing_link = f'          <a href={listing_href} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">{listing_copy["cta"]}<ArrowRight className="size-4" /></a>\n'
 
     # Visual proof block placed between services and trust: shows the
     # operator's uploaded gallery images so the home page does not lean
@@ -2812,19 +2853,7 @@ def render_home(
         "  return (\n"
         '    <main className="flex flex-1 flex-col">\n'
         f"{hero_jsx}"
-        '      <section className="border-t border-[color:var(--border)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
-        '          <div className="flex flex-col gap-3">\n'
-        f'            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">{listing_copy["eyebrow"]}</p>\n'
-        f'            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">{listing_copy["heading"]}</h2>\n'
-        "          </div>\n"
-        '          <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
-        f"{services_grid}\n"
-        "          </ul>\n"
-        f"{listing_link}"
-        "        </div>\n"
-        "      </section>\n"
-        "\n"
+        f"{services_summary_section}"
         f"{story_section}"
         f"{gallery_section}"
         f"{testimonials_section}"
@@ -2843,15 +2872,23 @@ def render_home(
     )
 
 
-def render_services(
+def render_section_service_list(
     dossier: dict,
     *,
-    contact_path: str = "/kontakt",
+    contact_path: str,
 ) -> str:
+    """Render the service-list section for the /tjanster route.
+
+    Produces the gradient-headered services page section with article
+    cards (one per service) and a bottom-of-page CTA whose verb
+    follows the dossier's hero CTA family (shop / booking / quote).
+
+    Path B step 2 (GAP-backend-path-b-section-renderer): second
+    per-section renderer extracted from ``render_services``. Output
+    is byte-identical to the inline implementation it replaces.
+    """
     services = dossier["services"]
     contact_href = _route_href(contact_path)
-    icons_used = sorted({_icon_for_service(svc["id"]) for svc in services} | {"ArrowRight"})
-    icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
     items = "\n".join(
         f'          <article key={_jsx_safe_string(svc["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
         f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(svc["id"])} className="size-6" /></span>\n'
@@ -2865,10 +2902,6 @@ def render_services(
     # service business (e.g. frisör) reads "Boka tid" everywhere.
     cta_label = _hero_cta_label(dossier)
     return (
-        icon_import + "\n"
-        "export default function ServicesPage() {\n"
-        "  return (\n"
-        '    <main className="flex flex-1 flex-col">\n'
         '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         '          <header className="flex flex-col gap-3">\n'
@@ -2882,6 +2915,30 @@ def render_services(
         f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{cta_label}<ArrowRight className="size-4" /></a>\n'
         "        </div>\n"
         "      </section>\n"
+    )
+
+
+def render_services(
+    dossier: dict,
+    *,
+    contact_path: str = "/kontakt",
+) -> str:
+    services = dossier["services"]
+    icons_used = sorted({_icon_for_service(svc["id"]) for svc in services} | {"ArrowRight"})
+    icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
+    # Path B step 2 — service-list section now produced by
+    # ``render_section_service_list``. Output is byte-identical to
+    # the pre-extraction inline implementation.
+    service_list_section = render_section_service_list(
+        dossier,
+        contact_path=contact_path,
+    )
+    return (
+        icon_import + "\n"
+        "export default function ServicesPage() {\n"
+        "  return (\n"
+        '    <main className="flex flex-1 flex-col">\n'
+        f"{service_list_section}"
         "    </main>\n"
         "  );\n"
         "}\n"
