@@ -486,6 +486,11 @@ COMMON_WORDS = {
     # CopyFeedback är intern TS-type i versions-tab.tsx för
     # clipboard-feedback-state (M1 från bug-hunt).
     "CopyFeedback",
+    # GAP-viewser-side-by-side-preview — interna TS-symboler i
+    # apps/viewser/components/builder/inspector/compare-preview-modal.tsx.
+    # Lokala UI-komponentnamn och prop-typer, inte domain terms.
+    "ComparePreviewModal", "ComparePreviewModalProps",
+    "ModalHeader", "PaneOverlay", "PaneStatus", "PreviewPane",
     # Lucide-icon-namn använda i Live Build Sync (versions-tab):
     "GitBranch",
     # ui-tokens shared interaction constants:

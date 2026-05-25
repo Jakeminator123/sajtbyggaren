@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-25T01:44:30Z",
+  "updatedAt": "2026-05-25T04:50:00Z",
   "updatedBy": "christopher-ui",
   "people": {
     "jakob": {
@@ -69,9 +69,66 @@
         "apps/viewser/components/builder/use-pending-build.ts"
       ],
       "reason": "Live Build Sync — optimistisk pending-version + bättre koordination mellan FloatingChat och Versions-tab (pure UI, läser befintliga API:er och callbacks)"
+    },
+    {
+      "owner": "christopher",
+      "gapId": "GAP-viewser-side-by-side-preview",
+      "paths": [
+        "apps/viewser/components/builder/inspector/versions-tab.tsx",
+        "apps/viewser/components/builder/inspector/compare-preview-modal.tsx",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/components/builder/inspector/index.ts"
+      ],
+      "reason": "Sida-vid-sida-preview av två genererade versioner i Versions-tab (pure UI, återanvänder /api/runs/[runId]/files via StackBlitz embed)"
     }
   ],
   "queuedGaps": [
+    {
+      "id": "GAP-backend-path-b-section-renderer",
+      "type": "Gap/Runtime",
+      "owner": "jakob",
+      "title": "Section-driven renderer + scaffold runtime expansion (Path B)",
+      "collisionRisk": "red",
+      "reviewer": "christopher",
+      "status": "queued",
+      "file": "docs/gaps/GAP-backend-path-b-section-renderer.md",
+      "createdAt": "2026-05-25T04:50:00Z",
+      "paths": [
+        "scripts/build_site.py",
+        "packages/generation/discovery/resolve.py",
+        "packages/generation/planning/plan.py",
+        "packages/generation/orchestration/scaffolds/restaurant-hospitality/**",
+        "tests/test_builder_*.py",
+        "tests/test_discovery_resolver.py",
+        "tests/test_starter_scaffold_mapping.py",
+        "tests/test_builder_route_emission.py",
+        "examples/restaurant-bistro.project-input.json"
+      ],
+      "doNotTouch": [
+        "apps/viewser/**",
+        "governance/policies/scaffold-contract.v1.json"
+      ],
+      "acceptanceCriteria": [
+        "write_pages bytt till section-driven dispatcher (_SECTION_RENDERERS + render_route_generic).",
+        "LSB- och commerce-snapshots byte-identiska före/efter (snapshot-diff = 0 bytes).",
+        "_RUNTIME_SCAFFOLD_HINTS utökat med restaurant-hospitality.",
+        "build_site.py producerar /meny + /bokning för restaurant-hospitality utan SystemExit.",
+        "10 nya restaurant-section-renderers landade.",
+        "Backward-compat shims behåller render_home/services/about/contact/products som tunna delegationer."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q -x"
+      ],
+      "note": "Detalj-design i docs/scaffold-runtime-extension-needed.md. ~20-26h backend som låser upp 12 av 14 scaffolds. Efter detta kostar varje framtida scaffold ~30 min (whitelist + ev. nya section-types) i stället för 6-8h. Strategiskt val: aktiveringsordning av de 12 inaktiva scaffolds (förslag: restaurant först, sedan clinic + professional + real-estate parallellt) — se GAP-dokumentet för full prioritetslista.",
+      "blocks": [
+        "Aktivering av de 12 inaktiva scaffold-IDn (restaurant-hospitality, clinic-healthcare, professional-services, real-estate, agency-studio, consultant-expert, nonprofit-community, event-campaign, app-landing, course-education, portfolio-creator, saas-product)."
+      ]
+    },
     {
       "id": "GAP-backend-build-trace-endpoint",
       "type": "Gap/Runtime",
@@ -113,7 +170,51 @@
       "note": "UI-skriven backend-spec. Blockerar Live Build Sync A (real pipeline-status) och D (iterera från version N med riktig PI-snapshot). UI har workaround idag (prompt-prefix) som automatiskt uppgraderas till baseRunId så fort backend stödjer det.\n\n[scope-leak] Approved by operator 2026-05-25 03:44: Christopher utför detta på christopher-ui (operator-citat: 'mindre ändringar i Backend behövs … vi jobbar egentligen båda backend och frontend'). Owner=jakob behålls i workboarden så Sprintvakt-lane-policyn passerar; arbetet bär [scope-leak] Approved by operator-tag i commits, samma precedent som PR #68 plan.py + resolve.py-fixes. PR går till main för Jakobs review. Utvidgad scope: även smal UI-uppgradering i floating-chat.tsx (ny prop pendingBaseRunId), versions-tab.tsx (clipboard-workaround → riktig iterate-callback) och pending-runs-stöd via /api/runs."
     }
   ],
-  "activeGaps": [],
+  "activeGaps": [
+    {
+      "id": "GAP-viewser-side-by-side-preview",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Sida-vid-sida-preview av två genererade versioner i Versions-tab",
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "active",
+      "file": "docs/gaps/GAP-viewser-side-by-side-preview.md",
+      "createdAt": "2026-05-25T04:50:00Z",
+      "startedAt": "2026-05-25T04:50:00Z",
+      "paths": [
+        "apps/viewser/components/builder/inspector/versions-tab.tsx",
+        "apps/viewser/components/builder/inspector/compare-preview-modal.tsx",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/components/builder/inspector/index.ts"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/runs/**",
+        "apps/viewser/app/api/preview/**",
+        "apps/viewser/components/viewer-panel.tsx",
+        "apps/viewser/lib/runs.ts",
+        "packages/generation/**",
+        "scripts/build_site.py"
+      ],
+      "acceptanceCriteria": [
+        "Versions-tab har en 'Visuell jämförelse'-knapp som aktiveras när både A och B är valda och pekar på olika runIds.",
+        "Klick öppnar full-screen modal med två StackBlitz-iframer sida vid sida (50/50 desktop, stackat på mobil).",
+        "Browser-detection: Safari/Firefox visar fallback med 'Öppna båda i nya fönster' i stället för embeddade iframer.",
+        "ESC eller stängningsknapp avmonterar båda iframerna utan stale DOM.",
+        "Inga ändringar i existerande viewer-panel.tsx eller backend-endpoints."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint"
+      ],
+      "note": "UI-only feature byggd ovanpå existerande /api/runs/[runId]/files. Två StackBlitz-instanser kostar bara klient-resurser, ingen backend-last. Path B (GAP-backend-path-b-section-renderer) ökar värdet av denna feature kraftigt eftersom strukturellt olika scaffolds då blir möjliga att jämföra."
+    }
+  ],
   "completedGaps": [
     {
       "id": "GAP-viewser-wizard-minimalism",

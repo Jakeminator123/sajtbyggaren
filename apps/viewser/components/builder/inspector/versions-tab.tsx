@@ -5,6 +5,7 @@ import {
   CircleCheck,
   Clock,
   Copy,
+  Eye,
   GitBranch,
   GitCompare,
   Layers,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { ComparePreviewModal } from "@/components/builder/inspector/compare-preview-modal";
 import {
   computeRunDiff,
   formatDiffSummary,
@@ -152,6 +154,11 @@ export function VersionsTab({
   const [reloadToken, setReloadToken] = useState(0);
   const [compareA, setCompareA] = useState<string | null>(null);
   const [compareB, setCompareB] = useState<string | null>(null);
+  // Sida-vid-sida visuell preview-modal. Aktiveras när operatören klickar
+  // "Visuell jämförelse"-knappen i CompareControls och båda A+B är valda.
+  // Modal-state lever lokalt här eftersom det är en peer-yta till diff-
+  // panelen — inte en globalt delad state. (GAP-viewser-side-by-side-preview.)
+  const [comparePreviewOpen, setComparePreviewOpen] = useState(false);
 
   // Fetch /api/runs vid mount + manuell refresh. Cancel-flagga skyddar
   // mot setState efter unmount (samma mönster som use-run-artefacts).
@@ -452,6 +459,21 @@ export function VersionsTab({
     );
   }
 
+  // Slå upp version-tal för A/B från siteRuns så modalen kan visa
+  // "v3 vs v5" i stället för rena runIds. Saknas runId i listan
+  // (osannolikt — A/B kan bara väljas från siteRuns) faller version
+  // tillbaka till null och modalen visar "v?".
+  const versionForA =
+    compareA != null
+      ? (siteRuns.find((run) => run.runId === compareA)?.version ?? null)
+      : null;
+  const versionForB =
+    compareB != null
+      ? (siteRuns.find((run) => run.runId === compareB)?.version ?? null)
+      : null;
+  const canOpenComparePreview =
+    compareA !== null && compareB !== null && compareA !== compareB;
+
   return (
     <div className="flex flex-col gap-5">
       <HeaderBar
@@ -467,6 +489,8 @@ export function VersionsTab({
         onReset={handleResetCompare}
         onCompareLatestTwo={handleCompareLatestTwo}
         canCompareLatestTwo={canCompareLatestTwo}
+        canOpenComparePreview={canOpenComparePreview}
+        onOpenComparePreview={() => setComparePreviewOpen(true)}
       />
 
       <RunList
@@ -498,6 +522,17 @@ export function VersionsTab({
           hasB={compareB !== null}
         />
       )}
+
+      {canOpenComparePreview && compareA && compareB ? (
+        <ComparePreviewModal
+          open={comparePreviewOpen}
+          onOpenChange={setComparePreviewOpen}
+          runIdA={compareA}
+          runIdB={compareB}
+          versionA={versionForA}
+          versionB={versionForB}
+        />
+      ) : null}
     </div>
   );
 }
@@ -558,15 +593,19 @@ function CompareControls({
   onReset,
   onCompareLatestTwo,
   canCompareLatestTwo,
+  canOpenComparePreview,
+  onOpenComparePreview,
 }: {
   compareA: string | null;
   compareB: string | null;
   onReset: () => void;
   onCompareLatestTwo: () => void;
   canCompareLatestTwo: boolean;
+  canOpenComparePreview: boolean;
+  onOpenComparePreview: () => void;
 }) {
   return (
-    <div className="border-border/60 flex items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2">
+    <div className="border-border/60 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2">
       <div className="flex min-w-0 flex-1 items-center gap-2 text-[11.5px]">
         <CompareBadge label="A" value={compareA} tone="rose" />
         <ArrowRight
@@ -575,7 +614,26 @@ function CompareControls({
         />
         <CompareBadge label="B" value={compareB} tone="emerald" />
       </div>
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="flex shrink-0 flex-wrap items-center gap-1">
+        <button
+          type="button"
+          onClick={onOpenComparePreview}
+          disabled={!canOpenComparePreview}
+          title={
+            canOpenComparePreview
+              ? "Öppna sida-vid-sida visuell jämförelse"
+              : "Välj A och B först"
+          }
+          className={cn(
+            "text-foreground/80 hover:text-foreground border-foreground/30 hover:border-foreground/60 hover:bg-foreground/5",
+            "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
+            "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors disabled:opacity-40",
+            SECONDARY_INTERACTIONS,
+          )}
+        >
+          <Eye aria-hidden className="h-3 w-3" />
+          Visuell jämförelse
+        </button>
         <button
           type="button"
           onClick={onCompareLatestTwo}
