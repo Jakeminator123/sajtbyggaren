@@ -91,6 +91,14 @@ COMMON_WORDS = {
     # docs (e.g., docs/path-b-backend-scout.md risk register). They are
     # standard Swedish prose, not domain terms.
     "Hög", "Medel", "Låg",
+    # Scout/orchestrator narrative labels used in docs/path-b-backend-scout.md
+    # and docs/agent-prompts/morning-fresh-start.md. "Path B" is the operator
+    # nickname for the section-driven renderer extension (Christopher coined it
+    # in scaffold-runtime-extension-needed.md). "Christopher coordination" is a
+    # section heading in the orchestrator startprompt that explains how the
+    # orchestrator agent bridges between operator and Christopher's parallel
+    # agent. Neither is a runtime/code term.
+    "Path B", "Christopher coordination",
     "Python", "Streamlit", "FastAPI", "Pydantic", "Flask", "Django",
     "JsonSchema", "Draft202012Validator",
     # Web standards / native browser APIs

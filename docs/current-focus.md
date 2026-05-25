@@ -30,16 +30,17 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `cb5c837548125bd94740f19e3b4a7acfa89b44cf`
-(2026-05-25, **PR #70 Sprintvakt V1 koordineringsserver mergad ovanpå
-parallell-team-uppsättning och restaurant-hospitality Week 1**) — `main`
-är grön efter squash-merge. Sprintvakt V1 ger lokal filbaserad workboard
-(`docs/workboard.json`), gap-modell (`docs/gaps/`), collision-checker
-(`scripts/sprintvakt_check.py`) och dependency-free MCP-server
-(`tooling/sprintvakt_mcp/`) så Jakob (backend, `jakob-be`) och Christopher
-(UI/frontend, `christopher-ui`) kan reservera path scopes utan att två
-agenter ändrar samma fil. `python scripts/sprintvakt_check.py` ger
-`Sprintvakt check: OK` och 14 sprintvakt-tester är gröna.
+Last verified state: `84bf9dde512ce171abc27ff982b13e43ff8511a1`
+(2026-05-25 natt, **PR #75 Sprintvakt V1.1+V1.2+V1.2.1 + CI-hardening +
+Backoffice industry coverage + docs sync** mergad ovanpå Christophers PR
+#71 Front 1-4 + wizard minimalism) — `main` är grön efter squash-merge.
+Hela post-PR70-batchen är nu på main: tre V1.1-fixar för PR #70:s
+AI-bug-review-fynd, två nya MCP-tools (`activate_gap`/`complete_gap`),
+status-enum + collision-recheck-härdning, CI-grindad sprintvakt-check,
+Backoffice industry coverage control plane, Path B preflight scout report,
+ADR 0029 (editable install för tooling-paketet), och slimad `handoff.md`
+(1086 → ~270 rader). `python scripts/sprintvakt_check.py --strict` ger
+`Sprintvakt check: OK` och 25 sprintvakt-tester är gröna.
 
 Sedan c0b59fbe (PR #60) har följande mergats till `main`, i ordning:
 
@@ -49,25 +50,27 @@ Sedan c0b59fbe (PR #60) har följande mergats till `main`, i ordning:
 - `89f14a1` PR #64 — branch-naming-konventioner för parallellt teamarbete (permanenta arbets-branches `jakob-be` + `christopher-ui` dokumenterade i `docs/ownership-map.md`).
 - `d709864` PR #66 — `sourceUrl`-asset-uploads med stream-safe fetch (PR #65 stängd och supersededad).
 - `7e900d2` PR #67 — AI bug review-workflow-steg i CI (`gpt-5.4` + repo-specifik prompt).
-- `839d0c8` PR #68 — restaurant-hospitality scaffold + 11 soft dossiers + 14 variants (Week 1 declarative expansion). Inkluderade två `[scope-leak]`-commits från Christopher i `plan.py` (`SCAFFOLD_TO_STARTER` + `_DEFAULT_VARIANT_BY_SCAFFOLD`) och `resolve.py` (`_PAGE_TO_CAPABILITY` + `_CAPABILITY_ALIASES`) — accepterade som operator-approved engångsundantag, inte permanent norm.
-- `cb5c837` PR #70 — Sprintvakt V1 koordineringsserver + lokal MCP-server (path-overlap-bug i `paths_overlap` verifierad fixad i fix-commit `419d3f1` innan merge).
+- `839d0c8` PR #68 — restaurant-hospitality scaffold + 11 soft dossiers + 14 variants (Week 1 declarative expansion). Inkluderade två `[scope-leak]`-commits från Christopher i `plan.py` + `resolve.py` — accepterade som operator-approved engångsundantag.
+- `cb5c837` PR #70 — Sprintvakt V1 koordineringsserver + lokal MCP-server (path-overlap-bug i `paths_overlap` verifierad fixad i fix-commit `419d3f1`).
+- `7e21b49` PR #71 — Christophers Front 1-4 + wizard minimalism (5 nya UI-gaps: 4 in-review/completed + 1 aktivt + 1 queued backend-spec).
+- `84bf9dd` PR #75 — Sprintvakt V1.1+V1.2+V1.2.1 + CI-hardening + Backoffice industry coverage + Path B scout + ADR 0029 + docs sync (16 commits squashade till en).
 
-Pågående parallellt: PR #69 (`docs: add product north star runtime ladder`)
-är fortfarande öppen draft mot `main` med grön CI — docs-only, väntar på
-operatörens grönt ljus.
+Pågående parallellt: två cursor-branches på origin med oincheckade
+test-tillägg från andra cloud-agenter — `cursor/jakob-be-contact-route-regression`
+(2 commits, kontaktrout-regression-tester) och
+`cursor/jakob-be-followup-versioning-regression-5fb4` (3 commits, follow-up
+versionerings-tester). Inte PR:ade än. Operatören bestämmer om/när de ska
+PR:as.
 
-**Direkt nästa fokus:** Sprintvakten är nu användbar för path-reservation
-och gap-koordination. Vänta på operatörens nästa sprintval, men möjliga
-riktningar:
+**Direkt nästa fokus:** Allt från kvällens batch är på main. Workboarden
+har ETT queued gap för Jakob och ETT aktivt för Christopher. Vänta på
+operatörens nästa sprintval. Möjliga riktningar:
 
-- **Path B (section-driven renderer i `scripts/build_site.py:write_pages`)** är dokumenterad i `docs/scaffold-runtime-extension-needed.md` och är nästa stora backend-jobb (~20-26h). Den låser upp `restaurant-hospitality` fullt + ger nollkostnad för 4 framtida scaffolds. Kräver explicit operator-OK innan start eftersom estimatet är stort och bör vara dedikerad session.
+- **`GAP-backend-build-trace-endpoint`** (queued, jakob) — Christophers backend-spec för Live Build Sync. Tre endpoints: `GET /api/runs/[runId]/trace`, `GET /api/runs` med `pending`-status, `POST /api/prompt` med valfri `baseRunId`. Full spec i `docs/gaps/GAP-backend-build-trace-endpoint.md`. ~3-5h Builder-arbete. **Nästa naturliga backend-spår.**
+- **`GAP-viewser-live-build-sync`** (active, christopher) — pågår på `christopher-ui`. Inget Jakob ska röra.
+- **Path B (section-driven renderer i `scripts/build_site.py:write_pages`)** är dokumenterad i `docs/scaffold-runtime-extension-needed.md` och `docs/path-b-backend-scout.md`. 9 commits, ~22-28h över 3 sessioner. Låser upp `restaurant-hospitality` fullt + ger nollkostnad för 4 framtida scaffolds. Kräver explicit operator-OK eftersom estimatet är stort.
 - **Backend-Gap 4 + 5** från `docs/backend-handoff-2026-05-22.md` är öppna men ej akuta.
-- **Sprintvakt V1.1 follow-up:** klart på `jakob-be` (`593735f` Fynd 2 reservedPaths dedupe, `db0b565` Fynd 1 file-only gap support, `90df708` Fynd 3 editable install). 14 → 18 sprintvakt-tester gröna; `pip install -e .` registrerar `tooling`-paketet via ADR 0029. Väntar på samlad PR från `jakob-be` → `main` när operatören är klar med kvällens batch.
-- **CI-integration av `scripts/sprintvakt_check.py`** — klart i `e0af0bd` + `1ed702b` (push-trigger split, AI-bug-review-jobb isolerat, `tests/test_github_workflow.py` regression-test). Collision-checken är nu merge-grindad i GitHub Actions.
-- **`activate_gap` + `complete_gap` MCP-tools (Sprintvakt V1.2)** — klart i `bd8fc03`. Workboard-state-transitions går nu genom MCP med samma dryRun/confirm-säkerhet som `create_gap`.
-- **Sprintvakt V1.2.1 (PR #75-review-svar)** — status-enum-validering (`queued`/`active`/`in-review`/`completed`) + collision-recheck i `activate_gap` så ett queued gap inte kan aktiveras om paths har fått nya röda krockar sedan det köades. 22 → 25 sprintvakt-tester.
-- **PR #75 (`jakob-be` → `main`)** öppen med hela kvällens batch. Squash-merge när operatören är redo. Christopher har redan mergat PR #71 (Front 1-4 + wizard minimalism) ovanpå main; #75 mergeas ovanpå det.
-- **`GAP-backend-build-trace-endpoint`** queued av Christopher i workboarden — backend-spec för Live Build Sync: `GET /api/runs/[runId]/trace`, `GET /api/runs` med pending, `POST /api/prompt` med `baseRunId`. Min nästa backend-runda efter PR #75-merge.
+- **Sprintvakt V1.3 (potential)** — tvåvägs-sync mellan `docs/workboard.json` och `docs/gaps/<id>.md` så gap-filer inte blir stale efter `activate_gap`/`complete_gap`. Flaggat i `docs/sprintvakt-mcp.md` "Källa till sanning"-sektionen.
 
 Vänta fortsatt med embeddings, SNI-runtime, variant-promotion, många nya
 starters, starter-importer, ny scaffold-runtime-aktivering och Project
@@ -75,6 +78,14 @@ DNA V2 tills en sprint är formellt vald.
 
 Startprompt för nya agenter:
 [`docs/agent-prompts/morning-fresh-start.md`](agent-prompts/morning-fresh-start.md).
+Föregående produkt-läge:
+
+Föregående verified state: `cb5c837548125bd94740f19e3b4a7acfa89b44cf`
+(2026-05-25, **PR #70 Sprintvakt V1 koordineringsserver mergad ovanpå
+parallell-team-uppsättning och restaurant-hospitality Week 1**) —
+introducerade Sprintvakt-systemet (workboard, MCP-server, collision-
+checker, gap-modell). Den runtiden var hela utgångspunkten för PR
+#71 + #75 som sedan landade ovanpå.
 Föregående produkt-läge:
 
 Föregående verified state: `c0b59fbe53a4e081cc8f09f22173a7050cb35b66`
