@@ -41,6 +41,16 @@ ALLOWED_STATUSES = {"queued", "active", "in-review", "completed"}
 ALLOWED_RISKS = {"green", "yellow", "red"}
 VALID_GAP_ID_RE = re.compile(r"^GAP-[A-Za-z0-9][A-Za-z0-9_.-]*$")
 
+# Markdown-spec escapable punctuation used by :func:`_load_gap_from_file`
+# to undo backslash-escapes that gap-file authors add to keep the markdown
+# linter quiet around tokens that otherwise look like reference-link syntax
+# (for example Next.js dynamic route segments such as ``\[runId\]``).
+# Without this the escapes leak into ``paths`` / ``acceptanceCriteria``
+# and corrupt every downstream consumer (``sanitize_repo_path`` mangles
+# ``\[runId\]`` into ``[runId/]`` and ``generate_agent_prompt`` shows
+# literal backslashes to Builder agents).
+_MARKDOWN_ESCAPE_RE = re.compile(r"\\([\\`*_{}\[\]()#+\-.!|<>~])")
+
 CHRISTOPHER_RED_PATHS = (
     "scripts/**",
     "scripts/build_site.py",
@@ -871,7 +881,7 @@ def _load_gap_from_file(
             item = stripped[2:].strip()
             if strip_backticks and item.startswith("`") and item.endswith("`"):
                 item = item[1:-1]
-            items.append(item)
+            items.append(_MARKDOWN_ESCAPE_RE.sub(r"\1", item))
         return items
 
     return {
