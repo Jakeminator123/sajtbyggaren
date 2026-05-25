@@ -119,6 +119,13 @@ COMMON_WORDS = {
     "Sajtbyggaren", "Sajtmaskin", "Jakeminator123", "Jakemiantor123",
     "Lovable", "GitHub", "GitGuardian", "Cursor", "Vercel", "StackBlitz",
     "WebContainer", "WebContainers", "Fly", "Stripe", "OpenAI", "Anthropic",
+    # Adapter-naming i ADR 0030 (preview-provider-portability) — illustrativa
+    # PascalCase-tagg för framtida pluggable adapters bakom PreviewRuntime
+    # ("VercelRuntime" som ekvivalent till befintliga "LocalRuntime"/
+    # "StackBlitzRuntime"/"FlyRuntime"). Inte produktbegrepp, bara
+    # konventionellt adapter-suffix; allowlistat så ADR-text kan referera
+    # dem utan att triggra term-coverage-strict.
+    "VercelRuntime",
     # Externa StackBlitz-/web-produktnamn och protokollnamn som citeras i
     # docs/integrations/stackblitz-research.md. De är bibliotekstermer
     # (samma kategori som StackBlitz/WebContainer/OpenAI ovan), inte
@@ -695,6 +702,7 @@ COMMON_WORDS = {
     "B137 fix",  # bolded phrase i current-focus narrative (Steward-prose)
     "B138", "B139", "B140", "B141",  # öppnade post-case-4 (B138/B141 stängd 2026-05-21, B139/B140 öppna)
     "B143", "B144",  # reviewer-feedback 2026-05-21 efter Intent Guard light + PR #49
+    "B125",  # Safari/Firefox preview fallback (referenced in ADR 0030 + product-operating-context)
     "IntentGuard",  # single-token-variant i handoff-prose (basord 'Intent Guard' redan allowlistat)
     "Intent Guard light",  # bolded sprintnamn i handoff/current-focus (Builder-sprint 2026-05-21)
     "ADR 0025 implementation",  # bolded phrase i handoff.md next-steps-tabell
