@@ -62,7 +62,9 @@ riktningar:
 
 - **Path B (section-driven renderer i `scripts/build_site.py:write_pages`)** är dokumenterad i `docs/scaffold-runtime-extension-needed.md` och är nästa stora backend-jobb (~20-26h). Den låser upp `restaurant-hospitality` fullt + ger nollkostnad för 4 framtida scaffolds. Kräver explicit operator-OK innan start eftersom estimatet är stort och bör vara dedikerad session.
 - **Backend-Gap 4 + 5** från `docs/backend-handoff-2026-05-22.md` är öppna men ej akuta.
-- **Sprintvakt V1.1 follow-up**: tre AI-bug-review-fynd från PR #70 (`generate_agent_prompt` för file-only gaps, `reserve_paths` dupe-stale-entries, `sys.path`-hack i CLI) — inte blockerande för V1-koordination men bör landa innan en V2-utbyggnad.
+- **Sprintvakt V1.1 follow-up:** klart på `jakob-be` (`593735f` Fynd 2 reservedPaths dedupe, `db0b565` Fynd 1 file-only gap support, `90df708` Fynd 3 editable install). 14 → 18 sprintvakt-tester gröna; `pip install -e .` registrerar `tooling`-paketet via ADR 0029. Väntar på samlad PR från `jakob-be` → `main` när operatören är klar med kvällens batch.
+- **CI-integration av `scripts/sprintvakt_check.py`** som GitHub Actions-steg så collision-checken blir merge-grindad. Inte påbörjad än; lämplig nästa Builder-uppgift.
+- **`activate_gap` + `complete_gap` MCP-tools** för Sprintvakt V1.2 — slipper handredigera `docs/workboard.json` vid status-transitions. Nästa Builder-uppgift efter CI-integrationen.
 
 Vänta fortsatt med embeddings, SNI-runtime, variant-promotion, många nya
 starters, starter-importer, ny scaffold-runtime-aktivering och Project
