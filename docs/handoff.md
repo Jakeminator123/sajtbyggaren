@@ -1,15 +1,15 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-25 morgon (**post-merge av PR #77 Sprintvakt agent
-inbox + PR #78 candidate provenance + grind-fix `b12c164` av
-markdown-escape-bugg i gap-parsern**). Verifierad `jakob-be` är
-`b12c164e69c499cd6cb1b577f37175a9bcf0e007`. `main` ligger 5 commits
-bakom på `6649b51` (closing-round docs-sync efter PR #75); allt ovanpå
-sitter just nu bara på `jakob-be` och följer med när `jakob-be` nästa
-gång PR:as mot `main` (väntar tills Christopher-spåret är beslutat).
+**Datum:** 2026-05-25 morgon (**Sprintvåg 1 stängd — fyra PRs landade
+på 90 min**: PR #81 B83 service slug + PR #82 Lane 3 embeddings audit
++ PR #80 B85 stdout contract + PR #79 B87 model fallback warning).
+Verifierad `jakob-be` är `7654573`. `main` ligger 9 commits bakom på
+`6649b51`; allt ovanpå sitter på `jakob-be` och följer med när
+`jakob-be` nästa gång PR:as mot `main` (väntar tills Lane 2 + Lane 4
+är mergade och Christopher-spåret beslutat).
 `christopher-ui` är på `9f63f15` (Christophers scope-leak-implementation
 av `GAP-backend-build-trace-endpoint` plus en versions-tab-fix, ej PR:ad
-än, se nedan).
+än, se nedan). Bug-räkning post-sprintvåg-1: **21 aktiva / 110 stängda**.
 
 Health på `jakob-be` är grön: governance (18 policies), rules-sync,
 strict term coverage, sprintvakt-check `--strict`, ruff 0 findings,
@@ -98,6 +98,11 @@ finns separat prompt i [`docs/agent-prompts/sprintvakt.md`](agent-prompts/sprint
 
 **Senaste landade spår sedan c0b59fbe (PR #60), nyast först:**
 
+- `7654573` PR #79 / `fix(grind): close B87 model fallback warning`. `resolve_brief_model`-fallback loggar nu högt på stderr per B87 fix-direktivet (`known-issues.md:138-139`). Cloud-grind round 3, rebasad och pushad efter #80-merge med uppdaterad bugräkning 22→21 aktiva.
+- `4d4a27b` PR #80 / `fix(grind): close B85 stdout contract drift`. Source-lock-test `test_prompt_helper_docstring_matches_stdout_contract` låser `scripts/prompt_to_project_input.py`-docstringen mot stdout-nycklar. Cloud-grind round 2.
+- `0ea3f3d` PR #82 / `docs(scout): embedding readiness audit 2026-05-25`. Lane 3 Scout-rapport (No-Go-dom, modellval, Go-villkor, B-IDer för schema-bumpar, 386 rader docs).
+- `86c01fa` PR #81 / `fix(grind): close B83 service slug collision`. Status-only-stängning från Cloud-grind round 1.
+- `74e74f2` docs(steward) / parallell-sprint-plan committad, last verified state bumpad till `b12c164`, mcp tools 11→14, lane-strukturen dokumenterad.
 - `b12c164` post-merge grind / `_load_gap_from_file` unescapes markdown backslash-escapes så `sanitize_repo_path` inte producerar korrupta paths. 80 rader, ny regression-test, ren cloud-grind-fix mot `jakob-be`.
 - `a0b06b5` docs-fix / escape `[runId]` i gap-frontmatter så markdown-linter inte klagar (matchar `_MARKDOWN_ESCAPE_RE`-konvention i `core.py`).
 - `e2574af` PR #78 / candidate generation provenance + helpers (`scripts/candidate_generation_metadata.py`) + sidecar `.meta.json` per kandidat + Backoffice-default `use_llm=False`. 9 filer, ~562 additions.

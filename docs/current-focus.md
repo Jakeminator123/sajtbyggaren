@@ -30,13 +30,13 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `b12c164e69c499cd6cb1b577f37175a9bcf0e007`
-(2026-05-25 morgon, **PR #77 Sprintvakt agent inbox + PR #78 candidate
-provenance + post-merge grind-fix av markdown-escape-bugg i gap-parsern**
-alla landade på `jakob-be`). `origin/main` ligger fortfarande på
-`6649b51` (closing-round docs-sync efter PR #75) och ligger nu 5 commits
-bakom `jakob-be` (#76 recovery → `dc1d53f` steward-sync → #77 inbox →
-#78 provenance → `a0b06b5` lint-fix → `b12c164` grind-fix).
+Last verified state: `7654573` (2026-05-25 morgon, **Sprintvåg 1: fyra
+PRs landade på `jakob-be` inom 90 minuter** — PR #81 B83 service slug,
+PR #82 Lane 3 Embeddings readiness audit, PR #80 B85 stdout contract,
+PR #79 B87 model fallback warning). `origin/main` ligger fortfarande
+på `6649b51` (closing-round docs-sync efter PR #75) och ligger nu 9
+commits bakom `jakob-be` (recovery → steward-sync → #77 → #78 →
+`a0b06b5` → `b12c164` → `74e74f2` → #81 → #82 → #80 → #79).
 `origin/christopher-ui` är på `9f63f15` med Christophers
 scope-leak-implementation av `GAP-backend-build-trace-endpoint` plus en
 versions-tab-fix (ej PR:ad än).
@@ -73,10 +73,14 @@ Sedan c0b59fbe (PR #60) har följande mergats till `main`, i ordning:
 - `e2574af` PR #78 — candidate generation provenance + helpers (`scripts/candidate_generation_metadata.py`) + sidecar `.meta.json` per kandidat + Backoffice-default `use_llm=False`. 9 filer, ~562 additions. Mergad till `jakob-be`, inte till `main` än.
 - `a0b06b5` docs-fix — escape `[runId]` i trace-endpoint-gap så markdown-linter inte klagar (matchar `_MARKDOWN_ESCAPE_RE`-konvention i `core.py`).
 - `b12c164` grind-fix — `_load_gap_from_file` unescapes nu markdown backslash-escapes så `sanitize_repo_path` inte producerar korrupta paths. 80 rader, ny regression-test, ren cloud-grind-fix mot `jakob-be`.
+- `74e74f2` docs(steward) — parallell-sprint-plan committad, last verified state bumpad till `b12c164`, mcp tools 11→14, lane-strukturen dokumenterad.
+- `86c01fa` PR #81 — `fix(grind): close B83 service slug collision`. Status-only-stängning (test fanns redan), cloud-grindens första PR.
+- `0ea3f3d` PR #82 — `docs(scout): embedding readiness audit 2026-05-25`. Lane 3 Scout-rapport: No-Go-dom med konkreta Go-villkor (lane 2 mergad + golden-path eval ≥7/10), 386 rader, modellval-jämförelse, B-IDer för schema-bumpar.
+- `4d4a27b` PR #80 — `fix(grind): close B85 stdout contract drift`. Source-lock-test för `scripts/prompt_to_project_input.py`-docstring vs stdout-nycklar. Cloud-grind round 2.
+- `7654573` PR #79 — `fix(grind): close B87 model fallback warning`. `resolve_brief_model`-fallback loggar nu högt på stderr per B87-fix-direktivet. Cloud-grind round 3.
 
-**Pågående/öppna PR:s just nu:** Inga. PR #77 och #78 är båda mergade
-till `jakob-be`. Christophers backend-trace-PR från `christopher-ui` mot
-`main` är fortfarande ej öppnad.
+**Pågående/öppna PR:s just nu:** Inga öppna PRs mot `jakob-be` eller
+`main`. Cloud-grindens nästa runda väntar på nästa coordination-prompt.
 
 **Christophers `origin/christopher-ui` (`9f63f15`)** — Christopher har
 under operator-OK scope-leak implementerat hela
@@ -87,32 +91,31 @@ tester. Plus en versions-tab-fix på `9f63f15`. Ej PR:ad mot `main`;
 Jakob är reviewer. Workboardens `owner` är medvetet kvar på `jakob`
 så Sprintvakt-lane-policyn passerar (precedent från PR #68).
 
-Pågående parallellt: tre gamla cursor-branches kvarstår på origin men
-deras innehåll är redan inne i `jakob-be`:
+Pågående parallellt: alla redundanta cursor-branches städade. Kvar på
+origin är endast två lane-WIP-branches:
 
-- `cursor/jakob-be-contact-route-regression` (2 commits, innehåll inne via #76)
-- `cursor/jakob-be-followup-versioning-regression-5fb4` (3 commits, innehåll inne via #76)
-- `cursor/candidate-generation-safety-provenance` (1 commit `07aca96`, sibling-PR-branch till #78 som inte städades vid merge)
+- `cursor/jakob-be-llm-contract-propagation` (`7847e5c`) — Lane 2 WIP-rescue efter bg-subagent-error. Behind med 4 commits. Behöver ny agent som rebasar mot `7654573` och fortsätter regression-test-suiten.
+- `cursor/jakob-be-golden-path-eval` (`3bee355`) — Lane 4 WIP-rescue efter delad-worktree-röra. Behind med 4 commits. Väntar på lokala agent att resuma. 
 
-Alla tre kan raderas på operatörens OK (`git push origin --delete <branch>`).
-Rör dem inte utan instruktion.
+Orchestrator-worktree är isolerad till
+`C:\Users\jakem\Desktop\sajtbyggaren-orchestrator` för att slippa
+branch-byten i delad mapp.
 
-**Direkt nästa fokus:** Parallell sprint i 4 lanes pågår från 2026-05-25
-morgon (orchestrator-koordinerad, lane-disciplin per
-`docs/orchestrator-playbook.md` + Cursor multitask-läge för lokala lanes):
+**Direkt nästa fokus:** Sprintvåg 1 är stängd (4 PRs in på 90 min). Nästa
+vågor:
 
-1. Lane 1: Grind-Builder i Cursor Cloud — tar små buggar + GAP-status en åt gången, PRs mot `jakob-be`, max 200 rader produktionskod per PR. `b12c164` är referensfallet (markdown-escape-bugg → regression-test → push).
-2. Lane 2: LLM contract propagation — fixar signal-läckor brief→render (B137-B141: tagline, pageCount, tone, brand.primaryColorHex, siteBrief-ref). Ensam ägare av `scripts/build_site.py` under sprinten.
-3. Lane 3: Embeddings readiness audit (Scout, read-only) — rapport till `docs/reports/embedding-readiness-2026-05-25.md`. Förbereder Go-villkor för embeddings-implementation efter lane 2-fixar.
-4. Lane 4: Golden Path eval baseline — deterministic scorecard över fyra ground-truth-prompter (elektriker/frisör/naprapat/keramik). Disjunkt scope i `tests/evals/**` + nytt `scripts/run_golden_path_eval.py`.
+1. **Lane 1 Cloud-grind round 4** — väntar på nästa coordination-prompt. Nästa lågriskitems: status-only-stängningar i `docs/known-issues.md`, isolerade test-refaktorer som inte rör scripts/prompt_to_project_input.py (fortfarande pausat tills Lane 2 är mergad), docs/typo-fixar.
+2. **Lane 2 LLM contract propagation** — `cursor/jakob-be-llm-contract-propagation` (`7847e5c`) WIP-rescue. Behöver ny agent (bg-subagent eller lokal Cursor i isolerad worktree) som rebasar mot `7654573` och kör grindar + ev. fortsätter regressionstesterna. B137-B141 är scope (tagline, pageCount, tone, brand.primaryColorHex, siteBrief-ref).
+3. **Lane 4 Golden Path eval baseline** — `cursor/jakob-be-golden-path-eval` (`3bee355`) WIP-rescue. Lokala agent kan resuma genom `git pull --rebase origin jakob-be`, fortsätta sprintarbetet, öppna PR mot jakob-be när klar.
+4. **Stackblitz-agent (parallellt)** — operatör driver separat agent på preview-fallback-spår. Scope förmodligen `apps/viewser/lib/local-preview-server.ts` eller `apps/viewser/lib/stackblitz-files.ts` (B125-territory — kräver operator-OK för sprint).
 
 **Parkerade lanes (väntar trigger):**
 
-- Path B / section-driven renderer — kräver lane 2 mergad först (delar `scripts/build_site.py`).
+- Path B / section-driven renderer — kräver Lane 2 mergad först (delar `scripts/build_site.py`).
 - Christophers `GAP-backend-build-trace-endpoint`-PR — Jakob är reviewer när Christopher öppnar PR från `christopher-ui` mot `main`.
-- Sync `jakob-be → main` — väntar tills nuvarande sprint konvergerat och Christopher-spåret är beslutat. Main ligger nu 5 commits efter.
+- Sync `jakob-be → main` — väntar tills Lane 2 + Lane 4 är mergade och Christopher-spåret är beslutat. Main ligger nu 9 commits efter.
 - Sajtmaskin inspiration Scout — lokalt-only (kräver `sajtmaskin.rar` på operatörens maskin).
-- Backend-Gap 4 + 5, Sprintvakt V1.3, B125 preview-fallback — öppna men ej akuta.
+- Backend-Gap 4 + 5, Sprintvakt V1.3, B125 preview-fallback (om Stackblitz-agenten inte plockar upp det) — öppna men ej akuta.
 
 Vänta fortsatt med embeddings, SNI-runtime, variant-promotion, många nya
 starters, starter-importer, ny scaffold-runtime-aktivering och Project
