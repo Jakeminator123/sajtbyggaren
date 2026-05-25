@@ -14,7 +14,6 @@ import pytest
 
 from scripts.prompt_to_project_input import generate, generate_followup
 
-
 INITIAL_PROMPT = "Skapa en hemsida för en elektriker i Malmö."
 FOLLOWUP_PROMPT = "Gör tonen mer premium och lägg mer fokus på snabb offert."
 SITE_ID = "electrician-malmo"
