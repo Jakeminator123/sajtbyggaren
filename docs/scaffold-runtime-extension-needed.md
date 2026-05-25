@@ -66,7 +66,7 @@ In response to reviewer feedback on PR #68, two of the three lock-ins below have
 | #2 `SCAFFOLD_TO_STARTER` + `_DEFAULT_VARIANT_BY_SCAFFOLD` | resolved | `plan.py` 1+1 entries for `restaurant-hospitality` |
 | Wiring touch in `_PAGE_TO_CAPABILITY` + `_CAPABILITY_ALIASES` | resolved | `resolve.py` 3 dict updates + 3 alias entries (`faq`→`faq-section`, `map`→`location`, `testimonials`→`reviews`) |
 | #1 `_RUNTIME_SCAFFOLD_HINTS` whitelist | intentionally deferred | not added — see note below |
-| #3 `write_pages` route-id dispatch (Path B section-driven renderer) | still open | Jakob runtime PR |
+| #3 `write_pages` route-id dispatch | resolved via Path A (Issue #90) | `scripts/build_site.py` `render_menu` + `render_booking` + two new `elif` arms in `write_pages`. Path B (section-driven generic dispatcher) is still the long-term direction; Path A keeps the surface area small while only one new restaurant-flavoured scaffold needs to build. |
 
 **Why `_RUNTIME_SCAFFOLD_HINTS` is intentionally deferred:** Adding `restaurant-hospitality` to that whitelist would route operator scaffold-hints (and Backoffice discovery target-mappings) at restaurant, but `write_pages` cannot yet render `/meny` or `/bokning` routes. Adding the hint without #3 would convert today's clean planner-side `RuntimeError` into a noisier "first route id has no renderer" `SystemExit` at build time without delivering any user value. The hint should land in the same PR as the section-renderer registry so the wizard, planner and builder all flip green together.
 

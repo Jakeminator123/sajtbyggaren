@@ -52,6 +52,10 @@ QUICK_CASES: tuple[str, ...] = (
     "painter-palma",
     "foto-ram",
     "arcade-hall",
+    # restaurant-hospitality regression fixture, Issue #90. Pinned to the
+    # warm-bistro variant + marketing-base starter; covers the menu and
+    # booking renderers added in scripts/build_site.py write_pages.
+    "cafe-bistro",
 )
 
 FULL_CASES: tuple[str, ...] = (

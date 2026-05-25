@@ -67,12 +67,17 @@ SCAFFOLD_TO_STARTER: dict[str, str] = {
     # Restaurant-hospitality is enabled in scaffold-contract.v1.json and
     # therefore appears in load_scaffold_registry(); without a starter
     # mapping here, produce_site_plan() raises in _resolve_starter_id when
-    # the planner (real LLM or a pinned scaffoldId) picks it. The route
-    # renderers for ``menu`` and ``booking`` are not yet wired in
-    # write_pages (see docs/scaffold-runtime-extension-needed.md, Path B),
-    # so an end-to-end build for this scaffold currently exits with a
-    # well-formed "no registered renderer" SystemExit instead of a planner
-    # crash. ``marketing-base`` is the documented mapping in
+    # the planner (real LLM or a pinned scaffoldId) picks it.
+    #
+    # As of Issue #90 the route renderers for ``menu`` and ``booking``
+    # are wired in scripts/build_site.py:write_pages (Path A — per-route
+    # if/elif), so a full restaurant build now produces a complete
+    # Next.js project. Path B (section-driven generic dispatcher from
+    # docs/scaffold-runtime-extension-needed.md) is still the longer-
+    # term direction; Path A keeps the surface area small until more
+    # scaffolds land on disk.
+    #
+    # ``marketing-base`` is the documented mapping in
     # data/starters/README.md line 34 and matches the long-running test
     # tests/test_starter_scaffold_mapping.py.
     "restaurant-hospitality": "marketing-base",
