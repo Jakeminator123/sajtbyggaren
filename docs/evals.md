@@ -46,6 +46,10 @@ på disk; placeholder-scaffolds (som idag faller tillbaka till
 (`python scripts/run_eval_suite.py --help`) listar de aktuella cases
 dynamiskt så denna tabell ska aldrig vara source of truth.
 
+Den aktuella case-listan har sin kodkälla i `QUICK_CASES` och
+`FULL_CASES` i `scripts/run_eval_suite.py`. Backoffice-knappar och
+CLI-hjälptext läser samma listor så antal och namn inte driver isär.
+
 ### Output
 
 För varje suite-körning skrivs en summary till

@@ -8,8 +8,9 @@ Two modes:
 * ``full`` — runs the ``FULL_CASES`` fixtures without ``--skip-build`` so
   ``npm install`` + ``npm run build`` are exercised against each scaffold
   that has a real on-disk implementation. Case counts are reported in
-  the CLI ``--help`` text dynamically from the tuple lengths so they
-  stay in sync if new fixtures land.
+  the CLI ``--help`` text dynamically via ``format_case_list()`` so they
+  stay in sync if new fixtures land. Backoffice button labels read the
+  same helpers (``get_quick_case_ids`` / ``get_full_case_ids``).
 
 For each case the runner reads the canonical artefakter under
 ``data/runs/<runId>/`` and writes a summary to
@@ -78,6 +79,28 @@ FULL_CASES: tuple[str, ...] = (
 # the repo (dev_generate.py + playground.py) use `runId=<id>`; accept both
 # so this runner stays robust if the print format is ever harmonised.
 _RUN_ID_RE = re.compile(r"runId[:=]\s*(?P<run_id>[A-Za-z0-9._-]+)")
+
+
+def get_quick_case_ids() -> tuple[str, ...]:
+    """Return the canonical quick-suite case IDs.
+
+    This small accessor keeps CLI help text and Backoffice labels tied to
+    the same source of truth without importing or running any suite work.
+    """
+
+    return QUICK_CASES
+
+
+def get_full_case_ids() -> tuple[str, ...]:
+    """Return the canonical full-suite case IDs."""
+
+    return FULL_CASES
+
+
+def format_case_list(case_ids: tuple[str, ...], *, separator: str = ", ") -> str:
+    """Format case IDs for human-facing CLI/UI text."""
+
+    return separator.join(case_ids)
 
 
 def utc_now_iso() -> str:
@@ -409,6 +432,8 @@ def _has_openai_key() -> bool:
 
 
 def main() -> int:
+    quick_cases = get_quick_case_ids()
+    full_cases = get_full_case_ids()
     parser = argparse.ArgumentParser(
         description=(
             "Run a canonical eval suite over examples/*.project-input.json "
@@ -419,10 +444,11 @@ def main() -> int:
         "mode",
         choices=("quick", "full"),
         help=(
-            f"quick: {len(QUICK_CASES)} examples with --skip-build "
-            f"({', '.join(QUICK_CASES)}). "
-            f"full: {len(FULL_CASES)} examples without --skip-build "
-            f"({', '.join(FULL_CASES)}) — real npm install + npm run build."
+            f"quick: {len(quick_cases)} examples "
+            f"({format_case_list(quick_cases)}) with --skip-build. "
+            f"full: {len(full_cases)} examples "
+            f"({format_case_list(full_cases)}) without --skip-build "
+            "(real npm install + npm run build)."
         ),
     )
     parser.add_argument(
