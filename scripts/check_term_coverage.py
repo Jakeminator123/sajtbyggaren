@@ -460,6 +460,9 @@ COMMON_WORDS = {
     "ErrorBubble", "ErrorKind", "MessageBubble",
     "BuildChange", "BuildChangeCategory", "CategoryLabel",
     "KeywordRule", "ChevronUp", "ChevronDown", "ChevronLeft",
+    # Live Build Sync polling-hook (GAP-viewser-pipeline-status-polling):
+    "BuildPhase", "BuildTraceState",
+    "AbortController", "AbortError",
     # DiscoveryWizard-uppgraderingar (keyboard-shortcuts + submit-overlay):
     "KeyboardShortcut", "KeyboardShortcutGroup", "KEYBOARD_SHORTCUTS",
     # MediaStep + AI image-generator (GPT image 1.5):

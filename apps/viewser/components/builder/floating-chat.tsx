@@ -29,6 +29,7 @@ import {
   useState,
 } from "react";
 
+import { useBuildTracePolling } from "@/components/builder/use-build-trace-polling";
 import {
   classifyBuildStatus,
   type PromptBuildOutcome,
@@ -167,31 +168,21 @@ const QUICK_PROMPT_CATEGORIES: ReadonlyArray<QuickPromptCategory> = [
 ];
 
 /**
- * Stegen visas i pending-bubblan medan en followup-build körs. Vi har
- * inte streaming från `/api/prompt` så stegen är tidsbaserade
- * simuleringar som matchar pipelinens 4 faser (brief → plan → codegen
- * → quality gate). Tiderna är hämtade från typiska kör-tider i
- * `data/runs/`: brief ~3-5s, plan ~5-8s, codegen ~10-15s, quality
- * gate ~3-5s, total ~25-30s mot OpenAI. Mock-fallback (no key) går
- * mycket snabbare, men det är OK att stegen scrollar förbi för det
- * fallet — operatören får då bara "Klart" snabbt.
+ * Pending-bubblans label drivs nu av `useBuildTracePolling`-hooken
+ * (GAP-viewser-pipeline-status-polling). Hooken pollar
+ * /api/runs?siteId=X för att hitta pending-runen och switchar sedan
+ * till /api/runs/[runId]/trace?since= för incrementala events. Phase
+ * från trace.ndjson ("understand"/"plan"/"build") översätts till svenska
+ * labels så operatören ser exakt vad pipen gör — inte en simulerad
+ * tidskedja.
  *
- * Sista steget förblir aktivt tills response kommer, så vi aldrig
- * "fastnar" på ett mellansteg om bygget tar längre tid än förväntat.
- * Om backend börjar svara på SSE eller WebSocket i framtiden kan vi
- * byta till riktiga events utan att UI:t behöver bytas ut.
+ * Total-duration är hårdkodad till 30 s för progress-barens easing-ramp
+ * (95 % på ~30 s, hopp till 100 % när /api/prompt-fetchen returnerar).
+ * Det är bara en visuell ledtråd — den verkliga progress-signalen är
+ * `tracePolling.currentPhase`-uppdateringen i pending-bubblan.
  */
-const FOLLOWUP_BUILD_STEPS: ReadonlyArray<{
-  id: string;
-  label: string;
-  /** Hur länge steget förblir aktivt innan vi rullar till nästa (ms). */
-  durationMs: number;
-}> = [
-  { id: "brief", label: "Förstår din instruktion", durationMs: 5_000 },
-  { id: "plan", label: "Planerar ändringarna", durationMs: 7_000 },
-  { id: "codegen", label: "Bygger om sajten", durationMs: 14_000 },
-  { id: "quality", label: "Kvalitetskollar", durationMs: 60_000 }, // håller kvar tills response
-];
+const PROGRESS_RAMP_DURATION_MS = 30_000;
+const INITIAL_BUILD_LABEL = "Bygger om sajten…";
 
 /**
  * Tolka ett backend-felmeddelande och returnera en kort, åtgärdsbar
@@ -486,12 +477,11 @@ export function FloatingChat({
   // Ramper deterministiskt till 95% över ~86s (sum av FOLLOWUP_BUILD_STEPS.durationMs)
   // och hoppar till 100% när response kommer (i finally:n).
   const [buildProgress, setBuildProgress] = useState(0);
-  // Steg-timer för pending-bubblan. Uppdaterar message.content med
-  // nästa step-label tills response kommer eller cleanup avbryter.
-  // Vi använder bara en ref (inte useState) eftersom progressen
-  // bara visas i message-content via setMessages-uppdateringar —
-  // ingen annan UI-yta behöver re-rendra på step-byten.
-  const buildStepTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Pending-meddelandets id sparas i en ref så useEffect kan uppdatera
+  // bubblans content när tracePolling-hooken levererar nya phase-
+  // labels. setState i en useEffect-callback hade triggat re-renders
+  // och stale closures — refen är synkron och stale-fri.
+  const pendingMessageIdRef = useRef<string | null>(null);
   const dragStartRef = useRef<{
     pointerX: number;
     pointerY: number;
@@ -590,20 +580,10 @@ export function FloatingChat({
     node.scrollTop = node.scrollHeight;
   }, [messages]);
 
-  // Städa upp pending step-timer på unmount. Förhindrar att en
-  // setTimeout som tickar färdigt efter att komponenten avmonterats
-  // försöker setState (vilket skulle ge "Can't perform a React state
-  // update on an unmounted component"-varning i dev). Refen är
-  // mutabel — vi behöver inte deps-array här eftersom vi bara läser
-  // den vid cleanup.
-  useEffect(() => {
-    return () => {
-      if (buildStepTimerRef.current) {
-        clearTimeout(buildStepTimerRef.current);
-        buildStepTimerRef.current = null;
-      }
-    };
-  }, []);
+  // (tidigare unmount-cleanup för buildStepTimerRef togs bort i samma
+  // commit som FOLLOWUP_BUILD_STEPS — useBuildTracePolling-hooken har
+  // egen AbortController + cleanup som täcker både unmount och
+  // enabled=false-fallet, så ingen separat cleanup behövs här.)
 
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -761,10 +741,11 @@ export function FloatingChat({
         attachmentCount: sentAttachments.length || undefined,
       };
       const pendingMessageId = `pending-${Date.now()}`;
+      pendingMessageIdRef.current = pendingMessageId;
       const pendingMessage: ChatMessage = {
         id: pendingMessageId,
         role: "assistant",
-        content: FOLLOWUP_BUILD_STEPS[0]?.label ?? "Bygger om sajten…",
+        content: INITIAL_BUILD_LABEL,
         isPending: true,
         variant: "info",
       };
@@ -776,30 +757,10 @@ export function FloatingChat({
       setIsSending(true);
       onBuildStart();
 
-      // Starta steg-progression. Varje setTimeout schemalägger
-      // nästa steg; om response kommer innan vi nått sista steget
-      // (eller om bygget misslyckas) avbryter cleanupen i finally:n
-      // hela kedjan via buildStepTimerRef. Sista steget håller kvar
-      // sig själv (durationMs = 60s) tills response anländer eller
-      // operatören manuellt minimerar/skickar nytt.
-      const scheduleNextStep = (currentIndex: number) => {
-        const nextIndex = currentIndex + 1;
-        if (nextIndex >= FOLLOWUP_BUILD_STEPS.length) return;
-        const stepDuration =
-          FOLLOWUP_BUILD_STEPS[currentIndex]?.durationMs ?? 5_000;
-        buildStepTimerRef.current = setTimeout(() => {
-          const nextLabel = FOLLOWUP_BUILD_STEPS[nextIndex]?.label;
-          if (nextLabel) {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === pendingMessageId ? { ...m, content: nextLabel } : m,
-              ),
-            );
-          }
-          scheduleNextStep(nextIndex);
-        }, stepDuration);
-      };
-      scheduleNextStep(0);
+      // Pending-bubblans label drivs av useBuildTracePolling-hooken
+      // (lägre ner i komponenten) som sätts enabled när isSending=true.
+      // Den uppdaterar pending-meddelandets content via en useEffect
+      // som lyssnar på tracePolling.label-ändringar.
 
       try {
         const response = await fetch("/api/prompt", {
@@ -877,17 +838,13 @@ export function FloatingChat({
             }),
         );
       } finally {
-        // Avbryt steg-progression så pending-bubblan inte fortsätter
-        // uppdatera efter response. ``isBuilding`` triggas via
-        // onBuildEnd() längre ner och styr själv header-pulsen +
-        // footer-knappen tillbaka till idle-state.
-        if (buildStepTimerRef.current) {
-          clearTimeout(buildStepTimerRef.current);
-          buildStepTimerRef.current = null;
-        }
-        // Hoppar till 100% först — UI:t visar progress-baren animera
-        // till slutet under fade-out (200ms). Reset till 0 sker
+        // Pending-bubblan slutar uppdatera automatiskt via tracePolling-
+        // hooken: när isSending blir false flippas hookens enabled-flagga
+        // och poll-loopen rensas (AbortController + setState(emptyState)).
+        // Hoppar till 100 % först — UI:t visar progress-baren animera
+        // till slutet under fade-out (200 ms). Reset till 0 sker
         // automatiskt när nästa build startar.
+        pendingMessageIdRef.current = null;
         setBuildProgress(100);
         setIsSending(false);
         onBuildEnd();
@@ -907,24 +864,19 @@ export function FloatingChat({
   );
 
   // Progress-bar ramp: under build körs ökar vi `buildProgress`
-  // smooth från 0% → 95% över ~85s (summan av FOLLOWUP_BUILD_STEPS
-  // durationMs). Vi använder requestAnimationFrame så den följer
-  // browserns frame-rate och fade:as ut snyggt vid reduced-motion
-  // (där transition:en på baren själv är 0ms).
+  // smooth från 0% → 95% över ~30s. Vi använder requestAnimationFrame
+  // så den följer browserns frame-rate och fade:as ut snyggt vid
+  // reduced-motion (där transition:en på baren själv är 0ms).
   useEffect(() => {
     if (!isSending && !isBuilding) return;
     if (buildProgress >= 95) return;
-    const TOTAL_DURATION_MS = FOLLOWUP_BUILD_STEPS.reduce(
-      (sum, step) => sum + step.durationMs,
-      0,
-    );
     const start = Date.now();
     const startProgress = buildProgress;
     let rafId = 0;
     const tick = () => {
       const elapsed = Date.now() - start;
       // Easeout — snabbt först, saktar mot slutet, klampar vid 95.
-      const linear = Math.min(1, elapsed / TOTAL_DURATION_MS);
+      const linear = Math.min(1, elapsed / PROGRESS_RAMP_DURATION_MS);
       const eased = 1 - Math.pow(1 - linear, 1.4);
       const target = startProgress + (95 - startProgress) * eased;
       setBuildProgress(target);
@@ -939,6 +891,23 @@ export function FloatingChat({
     // initiala värdet via closure och låter den driva fram.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSending, isBuilding]);
+
+  // Live Build Sync — pending-bubblans label drivs av riktig pipeline-
+  // status från trace.ndjson via useBuildTracePolling. Hooken aktiveras
+  // när isSending=true (en /api/prompt-fetch är pågående) och pollar
+  // /api/runs?siteId=X tills pending-runen syns, sedan
+  // /api/runs/[runId]/trace?since= för incrementala events. När
+  // hookens label byts uppdaterar useEffect pending-meddelandets
+  // content. Cleanup sker via enabled=false när isSending blir false.
+  const tracePolling = useBuildTracePolling(siteId, { enabled: isSending });
+  useEffect(() => {
+    const id = pendingMessageIdRef.current;
+    if (!id) return;
+    if (!tracePolling.isPending && tracePolling.runStatus === null) return;
+    setMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, content: tracePolling.label } : m)),
+    );
+  }, [tracePolling.label, tracePolling.isPending, tracePolling.runStatus]);
 
   const handleKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
