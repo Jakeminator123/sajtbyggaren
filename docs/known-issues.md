@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 21 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 110 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 19 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 112 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -103,23 +103,6 @@ Tre read-only subagents granskade (1) brief + prompt-helper pipeline,
 (2) builder renderers + scaffolds + Quality Gate, (3) Viewser app +
 run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
 
-- **`B72` Medel** - `apps/viewser/lib/runs.ts:40-84` `listRuns` läser
-  `build-result.json` för alla run-kataloger trots att svaret bara
-  behåller `limit` poster. O(N) disk-läsningar per `GET /api/runs`,
-  skalar obegränsat när `data/runs/` fylls. Källa: viewser-app-bug-
-  sweep 2026-05-15. Fix: stat alla först, sortera på mtime descending,
-  slice till limit, läs `build-result.json` bara för survivors. Fix:
-  open. Test: open.
-- **`B75` Medel** - `governance/schemas/project-input.schema.json`
-  saknar `additionalProperties: false` på root och underobjekt
-  (`company`, `contact`, `location`, `services`-items, `tone`,
-  `selectedDossiers`). En felstavad/extra nyckel passerar
-  `jsonschema`-valideringen tyst och kan ge `KeyError` nedströms.
-  Jämför `site-brief.schema.json` som låser
-  `additionalProperties: false`. Källa: brief-pipeline-bug-sweep
-  2026-05-15. Fix: lägg till `additionalProperties: false`; kör full
-  test-suite (kan exponera latenta extra-fält). Fix: open. Test:
-  open.
 - **`B86` Låg** - `scripts/build_site.py:1387-1388` hårdkodar
   `NPM_INSTALL_TIMEOUT_SECONDS = 600` och `NPM_BUILD_TIMEOUT_SECONDS
   = 300`. Långsamma Cloud Agent VMs överskrider regelbundet, ger
@@ -593,6 +576,28 @@ för follow-up eller ska städas.
   `885431b` lägger deterministiska suffix (`-2`, `-3`, ...) så alla
   kolliderande tjänster överlever. Test:
   `tests/test_prompt_to_project_input.py::test_service_slug_collisions_get_deterministic_suffixes`.
+
+- **`B72` Medel** (stängd 2026-05-25, grind round 4 status-sync) -
+  `apps/viewser/lib/runs.ts:listRuns` läste tidigare `build-result.json`
+  för alla run-kataloger trots att svaret bara behöll `limit` poster, vilket
+  gjorde `GET /api/runs` O(N) i disk-läsningar och skalade obegränsat
+  när `data/runs/` växte. Fix: `885431b` stat:ar alla run-kataloger
+  först, sorterar på `mtimeMs` descending, slice:ar till `limit` och
+  läser `build-result.json` enbart för survivors. Test:
+  `tests/test_viewser_security_1b.py::test_list_runs_slices_before_reading_build_results`.
+
+- **`B75` Medel** (stängd 2026-05-25, grind round 4 status-sync) -
+  `governance/schemas/project-input.schema.json` saknade tidigare
+  `additionalProperties: false` på root och load-bearing underobjekt
+  (`company`, `contact`, `location`, `services`-items, `tone`,
+  `selectedDossiers`), vilket lät felstavade/extra nycklar passera
+  `jsonschema`-valideringen tyst och kunde ge `KeyError` nedströms.
+  Fix: `885431b` låser schemat med `additionalProperties: false` på
+  root och alla load-bearing nested objects (samma mönster som
+  `site-brief.schema.json` redan följde). Test:
+  `tests/test_project_input_schema.py::test_project_input_schema_rejects_unknown_fields`
+  (parametriserad över root, company, contact, services-items, tone,
+  selectedDossiers).
 
 - **`B139` Låg-medel** (stängd 2026-05-22, tone-primary till CSS-token) -
   `tone.primary` kunde fyllas från brief/follow-up men renderern använde
