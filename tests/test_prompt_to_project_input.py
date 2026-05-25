@@ -764,6 +764,35 @@ def test_generate_falls_back_when_extract_site_brief_raises(
 
 
 @pytest.mark.tooling
+def test_generate_warns_when_brief_model_resolution_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """B87: model policy resolution failures must be visible on stderr."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    def raise_policy_error() -> str:
+        raise RuntimeError("briefModel role missing")
+
+    monkeypatch.setattr(
+        "scripts.prompt_to_project_input.resolve_brief_model",
+        raise_policy_error,
+    )
+
+    _project_input, meta, _project_input_path, _meta_path = generate(
+        "Skapa en hemsida för en elektriker i Malmö",
+        output_dir=tmp_path,
+        site_id="b87-model-warning",
+    )
+
+    captured = capsys.readouterr()
+    assert "briefModel resolution failed; using fallback model gpt-5.4" in captured.err
+    assert "briefModel role missing" in captured.err
+    assert meta["briefSource"] == "mock-no-key"
+
+
+@pytest.mark.tooling
 def test_generate_falls_back_when_site_brief_to_artifact_raises(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
