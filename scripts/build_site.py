@@ -5137,6 +5137,90 @@ _SECTION_RENDERERS.update(
 )
 
 
+# ---------------------------------------------------------------------------
+# Path B step 9 — LSB home-page alias renderers.
+#
+# render_home today emits four extra sections beyond the four declared
+# in local-service-business/sections.json: story, gallery, testimonials
+# and faq. The implementations live in private ``_render_home_*``
+# helpers because they were extracted before the section dispatcher
+# existed. To complete Path B for LSB we expose them under stable
+# ``render_section_*`` names and register them in the dispatcher so a
+# scaffold's sections.json can reference them by id. The aliases are
+# 1-1 wrappers — output stays byte-identical with the inline calls in
+# render_home.
+#
+# render_section_faq accepts a ``dossier_routes`` kwarg so the
+# dispatcher can pass the same list render_home computes today; when
+# the list contains "/faq" the section appends a "Se alla frågor"-CTA
+# pointing at the dedicated /faq route, otherwise the CTA is dropped
+# so the section never emits a ghost link.
+# ---------------------------------------------------------------------------
+
+
+def render_section_story(dossier: dict) -> str:
+    """LSB home-page story section.
+
+    Thin alias for ``_render_home_story_section``. Returns "" when
+    the dossier has no ``company.story`` content so a scaffold can
+    list ``story`` in optionalSections without forcing an empty
+    section onto every site.
+    """
+    return _render_home_story_section(dossier)
+
+
+def render_section_gallery(dossier: dict) -> str:
+    """LSB home-page gallery section.
+
+    Thin alias for ``_render_home_gallery_section``. Renders up to
+    ``_HOME_GALLERY_MAX_ITEMS`` operator-uploaded gallery images;
+    returns "" when no gallery is set or the story section already
+    consumed the only available image.
+    """
+    return _render_home_gallery_section(dossier)
+
+
+def render_section_testimonials(dossier: dict) -> str:
+    """LSB home-page testimonials section.
+
+    Thin alias for ``_render_home_testimonials_section``. Renders
+    real cards when ``trustSignals`` has at least
+    ``_HOME_TESTIMONIAL_MIN_ITEMS`` entries, otherwise returns "" so
+    the classic ``trust-proof`` bullet section stays as fallback.
+    Cross-section coordination (suppressing trust-proof when
+    testimonials are visible) is the caller's responsibility.
+    """
+    return _render_home_testimonials_section(dossier)
+
+
+def render_section_faq(
+    dossier: dict,
+    *,
+    dossier_routes: list[str] | None = None,
+) -> str:
+    """LSB home-page FAQ section.
+
+    Thin alias for ``_render_home_faq_section`` that derives the
+    ``has_faq_route`` flag from ``dossier_routes`` so the dispatcher
+    can pass the same list ``render_home`` already computes. When
+    /faq is in the route list the section ends with a "Se alla
+    frågor"-CTA pointing at the dedicated route, otherwise the CTA
+    is omitted to avoid a ghost link.
+    """
+    has_faq_route = "/faq" in (dossier_routes or [])
+    return _render_home_faq_section(dossier, has_faq_route=has_faq_route)
+
+
+_SECTION_RENDERERS.update(
+    {
+        "story": render_section_story,
+        "gallery": render_section_gallery,
+        "testimonials": render_section_testimonials,
+        "faq": render_section_faq,
+    }
+)
+
+
 _RESTAURANT_SCAFFOLD_DIR = (
     REPO_ROOT
     / "packages"
