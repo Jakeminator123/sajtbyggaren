@@ -3408,6 +3408,67 @@ def _call_section_renderer(
     return renderer(dossier, **filtered)
 
 
+# Section design-treatments — variant-driven visual variation inside a
+# single section id. See docs/section-design-treatments-scout.md for
+# the three-tier resolution order (operator-pin → variant → section
+# default). Phase 1 only wires the variant tier; future phases layer
+# operator-pin (``dossier.directives.sectionTreatments``) and an
+# LLM-pick step in front of this map without changing the helper
+# signature, so callers (the section renderers themselves) do not
+# have to be touched again.
+#
+# Renderers that opt in declare ``variant_id: str | None = None`` in
+# their signature and call ``_treatment_for_section`` to pick the
+# treatment id; ``_call_section_renderer`` already threads
+# ``variant_id`` through the dispatcher (Path B native scaffolds
+# pass it from ``_render_dispatched_route``).
+_SECTION_TREATMENTS_BY_VARIANT: dict[str, dict[str, str]] = {
+    # agency-studio (Phase 1 pilot)
+    #
+    # ``studio-monochrome`` swaps the home selected-work-preview from
+    # the editorial-stack baseline to an asymmetric-grid where every
+    # other card is offset vertically. Same data, deliberately broken
+    # rhythm — gives the monochrome studio a visually distinct front
+    # page from the warm and electric agency variants without changing
+    # any sections.json.
+    "studio-monochrome": {"selected-work-preview": "asymmetric-grid"},
+    # ``editorial-warm`` and ``bold-electric`` inherit the section
+    # default in pilot. Phase 2 introduces ``marquee-row`` as a third
+    # treatment for ``selected-work-preview`` and maps it to
+    # bold-electric.
+}
+
+
+def _treatment_for_section(
+    variant_id: str | None,
+    section_id: str,
+    *,
+    default: str,
+) -> str:
+    """Resolve which design treatment a section should render.
+
+    Mirrors the ``_hero_style_for`` resolution order for hero-block
+    style picks: the variant's explicit treatment registration in
+    ``_SECTION_TREATMENTS_BY_VARIANT`` wins; otherwise the section's
+    own default treatment is used. Phases 2/3 will layer operator-pin
+    and LLM-pick in front of the variant lookup without changing this
+    helper's signature.
+
+    Returns ``default`` for an unknown variant or for a variant that
+    does not register the requested section, so a section that opts
+    into treatment dispatch never has to know which variants exist.
+    """
+    if not variant_id:
+        return default
+    bucket = _SECTION_TREATMENTS_BY_VARIANT.get(variant_id)
+    if not bucket:
+        return default
+    treatment = bucket.get(section_id)
+    if not treatment:
+        return default
+    return treatment
+
+
 def render_route_generic(
     dossier: dict,
     *,
@@ -5789,27 +5850,59 @@ _SECTION_RENDERERS.update(
 )
 
 
+_SELECTED_WORK_PREVIEW_TREATMENT_DEFAULT = "editorial-stack"
+
+
 def render_section_selected_work_preview(
     dossier: dict,
     *,
     contact_path: str = "/kontakta-oss",  # noqa: ARG001 — included for kwarg-call symmetry; preview uses /arbeten as the explicit follow link
+    variant_id: str | None = None,
 ) -> str:
     """Render the home-page Selected Work preview for agency-studio.
 
-    Picks the first four entries from ``dossier.services`` (which an
-    agency uses as its case-studies array) and renders them as a
-    2-column wide-card grid: project label, summary, and a discreet
-    "Se case"-link pointing at the /arbeten route. Visually distinct
-    from the LSB / clinic / PS service-grid blocks — wide cards,
-    big type, almost no chrome — so the home reads "this studio
-    leads with work, not service descriptions".
+    Section design-treatments pilot (sprint 2026-05-25): the section
+    now resolves a treatment id via ``_treatment_for_section`` and
+    routes the same dossier data through one of two private
+    renderers:
+
+    * ``editorial-stack`` — the byte-identical default that preserves
+      pre-pilot snapshots. Vertical 2-col grid, every card sits on
+      the same baseline with a thin top border and a "Case 01"
+      eyebrow.
+    * ``asymmetric-grid`` — offset 2-col grid where every other card
+      is vertically translated by ``md:translate-y-12`` and rendered
+      as an enclosed surface card with a "Studio nº 01" eyebrow.
+      Same services, deliberately broken rhythm.
+
+    The variant-to-treatment mapping lives in
+    ``_SECTION_TREATMENTS_BY_VARIANT`` so the section renderer itself
+    does not have to know about variants — only about treatments.
 
     Returns "" when no work is declared so the dispatcher does not
-    emit an empty grid.
+    emit an empty grid regardless of treatment.
     """
     services = dossier.get("services") or []
     if not services:
         return ""
+    treatment = _treatment_for_section(
+        variant_id,
+        "selected-work-preview",
+        default=_SELECTED_WORK_PREVIEW_TREATMENT_DEFAULT,
+    )
+    if treatment == "asymmetric-grid":
+        return _render_selected_work_preview_asymmetric_grid(services)
+    return _render_selected_work_preview_editorial_stack(services)
+
+
+def _render_selected_work_preview_editorial_stack(services: list[dict]) -> str:
+    """Vertical 2-col grid where every card sits on a shared baseline.
+
+    The default treatment for ``selected-work-preview``. Kept
+    byte-identical to the pre-pilot output of the section renderer
+    so existing snapshots (editorial-warm, bold-electric) are not
+    invalidated by the introduction of treatment dispatch.
+    """
     cards = "\n".join(
         f'            <article key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-4 border-t border-[color:var(--border)] pt-8">\n'
         f'              <p className="text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(f"Case {idx:02d}")}</p>\n'
@@ -5827,6 +5920,50 @@ def render_section_selected_work_preview(
         '            <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">Senaste arbeten</h2>\n'
         "          </div>\n"
         '          <div className="grid gap-12 md:grid-cols-2">\n'
+        f"{cards}\n"
+        "          </div>\n"
+        '          <a href={"/arbeten"} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Hela arbets-arkivet<ArrowRight className="size-4" /></a>\n'
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+def _render_selected_work_preview_asymmetric_grid(services: list[dict]) -> str:
+    """Offset 2-col grid where every other card is vertically translated.
+
+    Visually breaks the editorial baseline by pushing every odd-
+    indexed card down with ``md:translate-y-12`` and rendering each
+    card as a self-contained surface (``bg-[color:var(--card)]`` +
+    ``rounded-[var(--radius-lg)]`` + generous padding) instead of
+    the flat top-border card used in ``editorial-stack``. The
+    eyebrow is reframed as "Studio nº NN" so the visual identity
+    reads as a curated studio index rather than a project log.
+
+    Same data as ``editorial-stack``; only the spatial rhythm and
+    surface treatment differ.
+    """
+    cards = "\n".join(
+        (
+            f'            <article key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-[color:var(--border)] bg-[color:var(--card)] p-8 md:p-10'
+            + (' md:translate-y-12' if idx % 2 == 0 else '')
+            + '">\n'
+            f'              <p className="text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(f"Studio nº {idx:02d}")}</p>\n'
+            f'              <h3 className="text-2xl font-semibold tracking-tight md:text-4xl">{_jsx_safe_string(svc["label"])}</h3>\n'
+            f'              <p className="text-base text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
+            '              <a href={"/arbeten"} className="mt-auto inline-flex items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Se case<ArrowRight className="size-4" /></a>\n'
+            "            </article>"
+        )
+        for idx, svc in enumerate(services[:4], start=1)
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-16 py-[var(--section-spacing)]">\n'
+        '          <div className="flex flex-col gap-3 max-w-2xl">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Selected work</p>\n'
+        '            <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">Senaste arbeten</h2>\n'
+        "          </div>\n"
+        '          <div className="grid gap-x-10 gap-y-12 md:grid-cols-2 md:gap-x-16 md:pb-16">\n'
         f"{cards}\n"
         "          </div>\n"
         '          <a href={"/arbeten"} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Hela arbets-arkivet<ArrowRight className="size-4" /></a>\n'

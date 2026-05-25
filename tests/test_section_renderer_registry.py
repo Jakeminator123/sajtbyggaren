@@ -390,3 +390,176 @@ def test_fallback_phone_returns_empty_without_phone_or_email() -> None:
     """Section is skipped silently when neither channel is configured."""
     assert bs.render_section_fallback_phone({"contact": {}}) == ""
     assert bs.render_section_fallback_phone({}) == ""
+
+
+# ---------------------------------------------------------------------------
+# Section design-treatments — Phase 1 pilot (sprint 2026-05-25).
+#
+# The first treatment-aware section is selected-work-preview on
+# agency-studio /home. The dispatcher must:
+#
+# - resolve to ``editorial-stack`` (default) for any unknown variant
+#   so future variants always have a defined visual state,
+# - resolve to ``asymmetric-grid`` for ``studio-monochrome`` so the
+#   variant→treatment map in build_site stays the single source of
+#   truth,
+# - keep ``editorial-stack`` byte-identical to the pre-pilot output
+#   so existing snapshots and other agency-studio variants are not
+#   silently changed by introducing the dispatch layer.
+# ---------------------------------------------------------------------------
+
+
+_AGENCY_STUDIO_FIXTURE_DOSSIER: dict = {
+    "services": [
+        {"id": "case-1", "label": "Case 1", "summary": "Summary 1."},
+        {"id": "case-2", "label": "Case 2", "summary": "Summary 2."},
+        {"id": "case-3", "label": "Case 3", "summary": "Summary 3."},
+        {"id": "case-4", "label": "Case 4", "summary": "Summary 4."},
+        {"id": "case-5", "label": "Case 5", "summary": "Summary 5."},
+    ]
+}
+
+
+def test_treatment_for_section_returns_default_when_variant_id_missing() -> None:
+    """No variant -> default treatment.
+
+    A renderer that opts into treatment dispatch must always have a
+    safe fallback when called outside of a Path B native scaffold or
+    before the dispatcher has resolved a variant id.
+    """
+    assert (
+        bs._treatment_for_section(
+            None,
+            "selected-work-preview",
+            default="editorial-stack",
+        )
+        == "editorial-stack"
+    )
+
+
+def test_treatment_for_section_returns_default_for_unknown_variant() -> None:
+    """Unknown variant -> default treatment.
+
+    Future variants should not have to register every section in the
+    treatment map up front; an unmapped variant simply inherits the
+    section's default until an operator or LLM-pick overrides it.
+    """
+    assert (
+        bs._treatment_for_section(
+            "experimental-variant-not-yet-registered",
+            "selected-work-preview",
+            default="editorial-stack",
+        )
+        == "editorial-stack"
+    )
+
+
+def test_treatment_for_section_returns_default_for_unmapped_section() -> None:
+    """Variant that registers other sections -> default for this one.
+
+    A variant might register a treatment for one section but not for
+    another; the helper must return the requested section's default
+    rather than leaking the wrong treatment id.
+    """
+    assert (
+        bs._treatment_for_section(
+            "studio-monochrome",
+            "section-not-in-map",
+            default="some-default",
+        )
+        == "some-default"
+    )
+
+
+def test_treatment_for_section_resolves_studio_monochrome_pilot_pin() -> None:
+    """Pilot mapping: studio-monochrome -> asymmetric-grid for selected-work-preview."""
+    assert (
+        bs._treatment_for_section(
+            "studio-monochrome",
+            "selected-work-preview",
+            default="editorial-stack",
+        )
+        == "asymmetric-grid"
+    )
+
+
+def test_selected_work_preview_default_treatment_is_editorial_stack() -> None:
+    """No variant -> editorial-stack output (the pre-pilot baseline).
+
+    Locks the byte-identical guarantee: introducing treatment
+    dispatch must not change the output for variants that inherit
+    the default treatment. The presence of "Case 01" + the absence
+    of the asymmetric-grid surface tokens (translate-y / card surface)
+    are how we recognize the editorial-stack treatment.
+    """
+    body = bs.render_section_selected_work_preview(_AGENCY_STUDIO_FIXTURE_DOSSIER)
+    assert "Case 01" in body
+    assert "Studio nº" not in body
+    assert "md:translate-y-12" not in body
+    assert "bg-[color:var(--card)]" not in body
+
+
+def test_selected_work_preview_editorial_warm_keeps_default_treatment() -> None:
+    """editorial-warm + bold-electric inherit editorial-stack in pilot.
+
+    Phase 1 only swaps studio-monochrome; the other two agency-studio
+    variants must remain on the byte-identical default treatment so
+    pre-pilot snapshots are not silently invalidated.
+    """
+    for variant in ("editorial-warm", "bold-electric"):
+        body = bs.render_section_selected_work_preview(
+            _AGENCY_STUDIO_FIXTURE_DOSSIER,
+            variant_id=variant,
+        )
+        assert "Case 01" in body, (
+            f"variant {variant!r} must inherit editorial-stack "
+            "in pilot"
+        )
+        assert "Studio nº" not in body
+        assert "md:translate-y-12" not in body
+
+
+def test_selected_work_preview_studio_monochrome_uses_asymmetric_grid() -> None:
+    """studio-monochrome -> asymmetric-grid output.
+
+    The pilot demo case: same fixture, different variant id, visibly
+    different DOM. The asymmetric-grid markers we lock are:
+
+    - "Studio nº NN" eyebrow (vs the editorial-stack "Case NN"),
+    - per-card card surface (``bg-[color:var(--card)]``) with
+      ``rounded-[var(--radius-lg)]`` + generous padding,
+    - ``md:translate-y-12`` on every other card so the grid breaks
+      its own baseline.
+    """
+    body = bs.render_section_selected_work_preview(
+        _AGENCY_STUDIO_FIXTURE_DOSSIER,
+        variant_id="studio-monochrome",
+    )
+    assert "Studio nº 01" in body
+    assert "Studio nº 02" in body
+    assert "Case 01" not in body
+    assert "bg-[color:var(--card)]" in body
+    assert "rounded-[var(--radius-lg)]" in body
+    assert "md:translate-y-12" in body
+
+
+def test_selected_work_preview_returns_empty_when_services_missing() -> None:
+    """No services -> empty string regardless of treatment.
+
+    The dispatcher relies on this so a scaffold can declare the
+    section in sections.json without forcing the operator to pre-
+    populate case studies. Both treatments must agree on the empty
+    fallback or future variant flips will surface an empty card grid.
+    """
+    for variant in (None, "studio-monochrome", "editorial-warm"):
+        assert (
+            bs.render_section_selected_work_preview({}, variant_id=variant)
+            == ""
+        )
+        assert (
+            bs.render_section_selected_work_preview(
+                {"services": []},
+                variant_id=variant,
+            )
+            == ""
+        )
