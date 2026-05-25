@@ -8,6 +8,7 @@ promotion remains an operator decision.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -30,6 +31,8 @@ from packages.generation.brief.models import (  # noqa: E402
 )
 
 DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
+SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
+ORCHESTRATION_DIR = REPO_ROOT / "packages" / "generation" / "orchestration"
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "data" / "dossier-candidates"
 DEFAULT_POLICY_PATH = REPO_ROOT / "governance" / "policies" / "llm-models.v1.json"
 DOSSIER_ROLE_ID = "dossierModel"
@@ -82,10 +85,44 @@ class DossierGenerationResult:
     candidate_dir: Path
     manifest_path: Path
     instructions_path: Path
+    meta_path: Path
     manifest: dict[str, Any]
     instructions: str
+    metadata: dict[str, Any]
     source: str
     model_used: str
+
+
+def _repo_or_output_relative(path: Path, output_dir: Path) -> str:
+    """Return a non-absolute path for metadata sidecars."""
+    resolved = path.resolve(strict=False)
+    for root in (REPO_ROOT.resolve(strict=False), output_dir.resolve(strict=False)):
+        try:
+            return resolved.relative_to(root).as_posix()
+        except ValueError:
+            continue
+    return path.name
+
+
+def _brief_fingerprint(brief: str) -> str:
+    digest = hashlib.sha256(brief.strip().encode("utf-8")).hexdigest()
+    return f"sha256:{digest}"
+
+
+def _created_at() -> str:
+    return datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def _guard_candidate_output_dir(output_dir: Path) -> None:
+    """Reject candidate output paths inside canonical orchestration folders."""
+    resolved_output = output_dir.resolve(strict=False)
+    for forbidden_root in (ORCHESTRATION_DIR, SCAFFOLDS_DIR, DOSSIERS_DIR):
+        resolved_forbidden = forbidden_root.resolve(strict=False)
+        if resolved_output == resolved_forbidden or resolved_forbidden in resolved_output.parents:
+            raise DossierGenerationError(
+                "Refusing to write Dossier candidate output under canonical "
+                f"orchestration path: {resolved_output}"
+            )
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -304,8 +341,12 @@ def _write_candidate(
     dossier_id: str,
     manifest: dict[str, Any],
     instructions: str,
+    source: str,
+    model_used: str,
+    operator_brief: str,
     force: bool,
-) -> tuple[Path, Path, Path]:
+) -> tuple[Path, Path, Path, Path, dict[str, Any]]:
+    _guard_candidate_output_dir(output_dir)
     candidate_dir = output_dir / "soft" / dossier_id
     if candidate_dir.exists() and not force:
         raise DossierGenerationError(
@@ -316,12 +357,32 @@ def _write_candidate(
     components_dir.mkdir(exist_ok=True)
     manifest_path = candidate_dir / "manifest.json"
     instructions_path = candidate_dir / "instructions.md"
+    meta_path = candidate_dir / "meta.json"
     manifest_path.write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
     instructions_path.write_text(instructions, encoding="utf-8")
-    return candidate_dir, manifest_path, instructions_path
+    metadata = {
+        "schemaVersion": 1,
+        "candidateType": "dossier",
+        "candidateId": manifest["id"],
+        "capability": manifest["capability"],
+        "source": source,
+        "modelUsed": model_used,
+        "modelRole": DOSSIER_ROLE_ID,
+        "generator": "scripts.generate_dossier_candidate",
+        "createdAt": _created_at(),
+        "enabled": manifest["enabled"],
+        "outputPath": _repo_or_output_relative(manifest_path, output_dir),
+        "instructionsPath": _repo_or_output_relative(instructions_path, output_dir),
+        "operatorBriefHash": _brief_fingerprint(operator_brief),
+    }
+    meta_path.write_text(
+        json.dumps(metadata, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return candidate_dir, manifest_path, instructions_path, meta_path, metadata
 
 
 def generate_dossier_candidate(
@@ -336,6 +397,7 @@ def generate_dossier_candidate(
     """Generate and write one soft Dossier candidate folder."""
     if not brief.strip():
         raise DossierGenerationError("brief must not be empty")
+    _guard_candidate_output_dir(output_dir)
     reserved = _existing_dossier_ids()
     dossier_id = _unique_dossier_id(candidate_id or brief, output_dir, reserved)
     capability_id = slugify_dossier_id(capability or dossier_id)
@@ -373,19 +435,24 @@ def generate_dossier_candidate(
         dossier_id=dossier_id,
         capability=capability_id,
     )
-    candidate_dir, manifest_path, instructions_path = _write_candidate(
+    candidate_dir, manifest_path, instructions_path, meta_path, metadata = _write_candidate(
         output_dir=output_dir,
         dossier_id=dossier_id,
         manifest=manifest,
         instructions=instructions,
+        source=source,
+        model_used=model_used,
+        operator_brief=brief,
         force=force,
     )
     return DossierGenerationResult(
         candidate_dir=candidate_dir,
         manifest_path=manifest_path,
         instructions_path=instructions_path,
+        meta_path=meta_path,
         manifest=manifest,
         instructions=instructions,
+        metadata=metadata,
         source=source,
         model_used=model_used,
     )

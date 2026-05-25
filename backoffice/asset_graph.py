@@ -17,6 +17,7 @@ DOSSIER_CANDIDATES_DIR = DATA_DIR / "dossier-candidates"
 EMBEDDING_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "embedding"
 PLACEHOLDER_MARKER = "placeholder, fill per scaffold-contract"
 ATTENTION_STATUSES = {"gap", "orphan", "missing-on-disk", "unknown"}
+UNKNOWN_CANDIDATE_SOURCE = "unknown-existing"
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -25,6 +26,40 @@ def read_json(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"{path} must contain a JSON object")
     return payload
+
+
+def _read_candidate_metadata(path: Path) -> dict[str, Any]:
+    """Read candidate sidecar metadata without blocking legacy candidates."""
+    if not path.exists():
+        return {}
+    try:
+        return read_json(path)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return {}
+
+
+def _metadata_string(
+    metadata: dict[str, Any],
+    key: str,
+    default: str = "",
+) -> str:
+    value = metadata.get(key)
+    return value if isinstance(value, str) and value else default
+
+
+def _candidate_provenance(meta_path: Path) -> dict[str, Any]:
+    metadata = _read_candidate_metadata(meta_path)
+    provenance = {
+        "source": _metadata_string(
+            metadata,
+            "source",
+            UNKNOWN_CANDIDATE_SOURCE,
+        ),
+        "modelUsed": _metadata_string(metadata, "modelUsed"),
+        "createdAt": _metadata_string(metadata, "createdAt"),
+        "metaPath": repo_relative(meta_path) if metadata else "",
+    }
+    return provenance
 
 
 def repo_relative(path: Path) -> str:
@@ -452,6 +487,11 @@ def _candidate_variant_nodes(scaffold_id: str) -> tuple[list[dict[str, Any]], li
     if not candidates_dir.exists():
         return nodes, edges
     for candidate_path in sorted(candidates_dir.glob("*.json")):
+        if candidate_path.name.endswith(".meta.json"):
+            continue
+        provenance = _candidate_provenance(
+            candidate_path.with_name(f"{candidate_path.stem}.meta.json")
+        )
         try:
             payload = read_json(candidate_path)
             status = "candidate"
@@ -475,6 +515,7 @@ def _candidate_variant_nodes(scaffold_id: str) -> tuple[list[dict[str, Any]], li
                 details=details,
             )
         )
+        nodes[-1].update(provenance)
         edges.append(
             _edge(
                 f"scaffold:{scaffold_id}",
@@ -493,6 +534,7 @@ def _candidate_dossier_nodes() -> list[dict[str, Any]]:
         dossier_class = candidate_class_dir.name
         for candidate_dir in sorted(path for path in candidate_class_dir.iterdir() if path.is_dir()):
             manifest_path = candidate_dir / "manifest.json"
+            provenance = _candidate_provenance(candidate_dir / "meta.json")
             if not manifest_path.exists():
                 nodes.append(
                     _node(
@@ -504,6 +546,7 @@ def _candidate_dossier_nodes() -> list[dict[str, Any]]:
                         details="manifest.json saknas",
                     )
                 )
+                nodes[-1].update(provenance)
                 continue
             try:
                 payload = read_json(manifest_path)
@@ -527,6 +570,7 @@ def _candidate_dossier_nodes() -> list[dict[str, Any]]:
                     details=details,
                 )
             )
+            nodes[-1].update(provenance)
     return nodes
 
 
@@ -1171,6 +1215,10 @@ def list_variant_candidates(scaffold_id: str | None = None) -> list[dict[str, An
             if variant.get("id")
         }
         for candidate_path in sorted(candidate_dir.glob("*.json")):
+            if candidate_path.name.endswith(".meta.json"):
+                continue
+            meta_path = candidate_path.with_name(f"{candidate_path.stem}.meta.json")
+            provenance = _candidate_provenance(meta_path)
             try:
                 payload = read_json(candidate_path)
                 candidate_id = str(payload.get("id") or candidate_path.stem)
@@ -1191,12 +1239,15 @@ def list_variant_candidates(scaffold_id: str | None = None) -> list[dict[str, An
                 {
                     "scaffold": current_scaffold_id,
                     "candidate": candidate_id,
-                    "source": "unknown-existing",
+                    "source": provenance["source"],
+                    "modelUsed": provenance["modelUsed"],
+                    "createdAt": provenance["createdAt"],
                     "enabled": enabled,
                     "status": status,
                     "collidesWithCanonical": candidate_id in canonical_ids,
                     "modifiedAt": modified,
                     "path": repo_relative(candidate_path),
+                    "metaPath": provenance["metaPath"],
                     "details": details,
                 }
             )

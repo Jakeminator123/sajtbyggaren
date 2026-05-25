@@ -14,6 +14,7 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 from generate_dossier_candidate import (  # noqa: E402
+    DossierGenerationError,
     DossierModelResolutionError,
     generate_dossier_candidate,
     resolve_dossier_model,
@@ -85,6 +86,23 @@ def test_generate_soft_candidate_without_key_writes_disabled_manifest(
     validate_dossier(result.manifest)
     assert (result.candidate_dir / "components").is_dir()
     assert result.instructions_path.read_text(encoding="utf-8") == result.instructions
+    metadata = json.loads(result.meta_path.read_text(encoding="utf-8"))
+    assert metadata == result.metadata
+    assert metadata["schemaVersion"] == 1
+    assert metadata["candidateType"] == "dossier"
+    assert metadata["candidateId"] == "carousel-embla"
+    assert metadata["capability"] == "carousel"
+    assert metadata["source"] == "mock-no-key"
+    assert metadata["modelUsed"] == "mock"
+    assert metadata["modelRole"] == "dossierModel"
+    assert metadata["generator"] == "scripts.generate_dossier_candidate"
+    assert metadata["enabled"] is False
+    assert metadata["outputPath"] == "soft/carousel-embla/manifest.json"
+    assert metadata["instructionsPath"] == "soft/carousel-embla/instructions.md"
+    assert not Path(metadata["outputPath"]).is_absolute()
+    assert not Path(metadata["instructionsPath"]).is_absolute()
+    assert metadata["operatorBriefHash"].startswith("sha256:")
+    assert "Reusable embla" not in json.dumps(metadata)
 
 
 def test_generate_candidate_uses_dossier_model_when_key_is_present(
@@ -135,6 +153,8 @@ def test_generate_candidate_uses_dossier_model_when_key_is_present(
     assert result.manifest["envVars"] == []
     assert result.manifest["dependencies"] == []
     assert captured["model"] == "gpt-dossier-test"
+    assert result.metadata["source"] == "real"
+    assert result.metadata["modelUsed"] == "gpt-dossier-test"
 
 
 def test_candidate_id_avoids_existing_candidate_dir(
@@ -152,3 +172,13 @@ def test_candidate_id_avoids_existing_candidate_dir(
     )
 
     assert result.manifest["id"] == "faq-accordion-2"
+
+
+def test_generate_dossier_rejects_canonical_output_dir() -> None:
+    with pytest.raises(DossierGenerationError, match="canonical orchestration path"):
+        generate_dossier_candidate(
+            brief="Reusable FAQ accordion.",
+            candidate_id="faq-accordion",
+            output_dir=REPO_ROOT / "packages" / "generation" / "orchestration",
+            use_llm=False,
+        )
