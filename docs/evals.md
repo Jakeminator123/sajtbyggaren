@@ -97,11 +97,79 @@ suite-körningens summary + ett scorecard-formulär per case. Scriptet är
 också körbart direkt från terminal — backoffice är ett tunt UI-lager
 ovanpå.
 
+## Scaffold selection probe
+
+`scripts/run_scaffold_selection_probe.py` är en separat liten observability-
+loop som svarar på en specifik fråga: **vilka scaffolds väljer planern
+faktiskt när man pekar verkliga prompts på den?** Det är ortogonalt mot
+eval-suiten ovan — den proben kör `scripts/dev_generate.py` (inte
+`scripts/build_site.py`) så `planSource` blir `real` istället för
+`pinned`.
+
+### Vad den testar
+
+För varje scaffold som listas i
+`governance/policies/scaffold-contract.v1.json` (`primaryScaffoldRegistry`)
+finns ett kort representativt prompt. Proben:
+
+1. Kör `dev_generate.py "<prompt>" --phase all` (mock-build, ingen npm).
+2. Läser `data/runs/<runId>/site-brief.json` och `site-plan.json`.
+3. Registrerar `scaffoldId`, `variantId`, `starterId`,
+   `selectedDossiers`, `rejectedCapabilities`, `briefSource`,
+   `planSource`, samt om scaffolden faktiskt har en katalog på disk
+   under `packages/generation/orchestration/scaffolds/<id>/`.
+4. Skriver en summary till
+   `data/evals/scaffold-probe/<probeId>.json` och en parallell markdown-
+   rapport `<probeId>.md`.
+
+Syftet är att synliggöra skillnaden mellan **scaffolds som finns i
+registry** (14 i nuläget) och **scaffolds som planern kan välja**
+(de med `scaffold.json` på disk — `load_scaffold_registry` skippar
+placeholders). Placeholder-fall faller idag tillbaka till
+`local-service-business`; proben gör det matningsmässigt synligt.
+
+### Hur man kör
+
+```
+python scripts/run_scaffold_selection_probe.py
+```
+
+Förutsättning: `OPENAI_API_KEY` måste vara satt — annars kör `briefModel`
+och `planningModel` mock och proben mäter inte LLM-val. Total körtid
+är ungefär 14 × 15 s = 3-4 minuter.
+
+Användbara flaggor:
+
+- `--runs-dir <path>` — override för var enskilda runs hamnar.
+- `--evals-dir <path>` — override för var summary-/rapportfilerna hamnar.
+- `--report <path>` — explicit markdown-rapport-sökväg.
+- `--quiet` — bara skriv ut `probeId=<id>` på stdout.
+
+### Output
+
+Per case loggas:
+
+- `promptId`, `prompt`
+- `expectedScaffold` + `expectedHasDirectory` / `expectedHasScaffoldJson`
+  / `expectedHasStarterMapping`
+- `runId`
+- `briefSource`, `planSource`
+- `scaffoldId`, `variantId`, `starterId`
+- `selectedDossiers`, `rejectedCapabilities`
+- `selectedMatchesExpected` (boolean)
+- `comment` — kort kategorisering ("planner picked the intended
+  scaffold" / "registry-placeholder (no directory on disk)" / etc.)
+
+Outputs ligger under `data/evals/scaffold-probe/` och är gitignorerade
+på samma sätt som övriga eval-artefakter — mappen behålls via
+`.gitkeep`.
+
 ## Avgränsningar
 
 - Ingen `quality-result.json`-ändring. Numerisk score blandas inte in i
   Quality Gate.
 - Ingen ändring i `scripts/build_site.py` eller i
-  `packages/generation/`. Eval-suite är en read-only iakttagare.
-- Ingen CI-integration i V1. Suiten körs manuellt när operatören vill
-  se om kedjan lever.
+  `packages/generation/`. Eval-suite och scaffold-proben är read-only
+  iakttagare.
+- Ingen CI-integration i V1. Suiten och proben körs manuellt när
+  operatören vill se om kedjan lever.
