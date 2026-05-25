@@ -85,6 +85,10 @@ COMMON_WORDS = {
     "IssueRef", "IssueStatus",
     "PreviewApiError", "PreviewErrorBody", "PreviewErrorCode",
     "UnavailableInfo",
+    # Externa SDK-typer + tech-narrative (StackBlitz EmbedOptions interface,
+    # WebContainer-runtime som referreras i kommentarer/tester för
+    # stackblitz-permissions-policy-fix). Inte canonical domain terms.
+    "EmbedOptions", "WebContainern",
     # Status-strängar (verify_run.py + andra tooling-checkers)
     "OK", "FAIL", "WARN", "UNKNOWN", "SKIP",
     # Framework / lib
@@ -988,6 +992,16 @@ def main() -> int:
         # som för ``docs/known-issues.md``-undantaget nedan: en intern B-ID-tabell
         # ska inte tvinga in B-IDs som domänbegrepp.
         if rel.startswith(".cursor/tmp_"):
+            continue
+        # Agent-till-agent handover-filer (t.ex. ``handover-stackblitz-2026-05-25.md``)
+        # bor på repo-toppnivå med ``handover-``-prefix och innehåller
+        # session-lokala browser/SDK/feature-namn (StackBlitz, WebContainer,
+        # crossOriginIsolated, etc.) som är legitima refererande termer i
+        # narrative-handover men inte canonical domain terms. Samma kategori
+        # som ``.cursor/tmp_``-undantaget ovan: transient session-state, inte
+        # produkt-docs. Per .gitignore-policy committas filerna aldrig — men
+        # operatören kan ha dem på disk under sessionen.
+        if rel.startswith("handover-") and rel.endswith(".md"):
             continue
         if rel.startswith("docs/agent-handbook.md") or rel.startswith("docs/PROJECT_BRIEF.md"):
             continue

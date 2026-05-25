@@ -145,7 +145,8 @@ function unavailableForPreviewError(
       title: "Lokal preview-server kraschade",
       message: errMsg ?? "next start startade inte korrekt.",
       hint:
-        errHint ?? "Kontrollera viewser-loggen för stderr-tail från next start.",
+        errHint ??
+        "Kontrollera viewser-loggen för stderr-tail från next start.",
     };
   }
   return {
@@ -452,6 +453,28 @@ export function ViewerPanel({
         // the credentialless-iframe model and why parent COEP alone
         // is insufficient.
         //
+        // CRITICAL — credentialless ALONE is INTE tillräckligt. För
+        // att `window.crossOriginIsolated` ska bli `true` inuti
+        // iframen (och därmed `SharedArrayBuffer` exponeras till
+        // WebContainern) krävs OCKSÅ att iframen taggas med
+        // `allow="cross-origin-isolated"` (Permissions Policy-
+        // delegering från parent). Annars visar StackBlitz "Unable
+        // to run Embedded Project — Looks like this project is being
+        // embedded without proper isolation headers" trots att vår
+        // COEP/COOP-headers är korrekt levererade.
+        //
+        // Den delen sköts via SDK:ns `crossOriginIsolated: true`-flagga
+        // i embedProject-options nedan — den lägger till
+        // `cross-origin-isolated` i iframens `allow`-lista via
+        // `setFrameAllowList` (se sdk.m.js:132-140). Dokumenterad i
+        // EmbedOptions-typen och refererad i
+        // https://blog.stackblitz.com/posts/cross-browser-with-coop-coep/
+        // som den officiella vägen för cross-origin-isolated embed.
+        //
+        // Båda behövs: `credentialless`-attributet löser COEP-kravet,
+        // `allow="cross-origin-isolated"` löser Permissions Policy-
+        // delegeringen. Saknar man någondera fallerar embedden.
+        //
         // The patch is scoped via try/finally so we never leave the
         // global API mutated past the SDK's internal iframe creation.
         const originalCreateElement = document.createElement.bind(document);
@@ -505,6 +528,19 @@ export function ViewerPanel({
               hideDevTools: true,
               clickToLoad: false,
               height: 1200,
+              // Säg åt SDK:n att lägga till `cross-origin-isolated` i
+              // iframens `allow`-lista. Krävs för att Permissions Policy
+              // ska delegera cross-origin-isolation till stackblitz.com-
+              // origin:en — utan det blir `window.crossOriginIsolated`
+              // alltid `false` inuti iframen oavsett vad host:en
+              // skickar för COEP/COOP-headers, och WebContainern
+              // bootar inte (visar "Unable to run Embedded Project").
+              // Tillsammans med `credentialless`-attributet ovan
+              // (createElement-patchen) ger detta full cross-origin
+              // isolation åt embedden. Se EmbedOptions i
+              // @stackblitz/sdk/types/interfaces.d.ts och
+              // https://blog.stackblitz.com/posts/cross-browser-with-coop-coep/.
+              crossOriginIsolated: true,
             },
           );
         } finally {
@@ -758,8 +794,10 @@ export function ViewerPanel({
                 2. Byt browser → endast om operatören är fast i StackBlitz-
                    mode och inte kan bygga lokalt. Mindre prioriterat. */}
             <p className="text-muted-foreground mt-3 text-[11.5px] leading-relaxed">
-              Tips: kör <code className="font-mono">python scripts/build_site.py</code>{" "}
-              och sätt <code className="font-mono">VIEWSER_PREVIEW_MODE=local-next</code>{" "}
+              Tips: kör{" "}
+              <code className="font-mono">python scripts/build_site.py</code>{" "}
+              och sätt{" "}
+              <code className="font-mono">VIEWSER_PREVIEW_MODE=local-next</code>{" "}
               för en inbäddad preview som fungerar i alla browsers — eller öppna
               Sajtbyggaren i Chrome/Edge/Brave om du vill stanna i
               StackBlitz-läget.
@@ -802,7 +840,11 @@ export function ViewerPanel({
         BuildProgressCard (z-20), error-pre (z-20), unavailable/
         fallback (z-10) men över hero-bakgrunden.
       */}
-      {localPreviewUrl && !unavailable && !showEmpty && !isBuilding && !isFinalizing ? (
+      {localPreviewUrl &&
+      !unavailable &&
+      !showEmpty &&
+      !isBuilding &&
+      !isFinalizing ? (
         <iframe
           ref={iframeRef}
           src={localPreviewUrl}

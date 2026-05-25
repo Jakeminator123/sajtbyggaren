@@ -203,6 +203,14 @@ const child = spawn("npx", nextArgs, {
   env: {
     ...process.env,
     VIEWSER_PREVIEW_MODE: mode,
+    // Speglar `useHttps` så `next.config.ts` kan verifiera att
+    // dispatchern valt rätt transport utan att gissa via
+    // `process.argv.includes("--experimental-https")` — den check:en
+    // ger false-positiva varningar i Turbopack-workers vars argv inte
+    // ärver parent-processens flaggor. Env-variabeln är auktoritativ
+    // signal "dispatchern har redan satt rätt transport" och tystar
+    // varningen utan att försvaga själva mode→headers-rail:en.
+    VIEWSER_DISPATCHER_HTTPS: useHttps ? "1" : "0",
   },
 });
 

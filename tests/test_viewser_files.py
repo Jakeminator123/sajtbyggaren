@@ -489,6 +489,101 @@ def test_build_runner_whitelists_dossier_path_overrides() -> None:
 
 
 @pytest.mark.tooling
+def test_viewer_panel_sets_cross_origin_isolated_on_stackblitz_embed() -> None:
+    """B125/B145: StackBlitz-embedden behöver Permissions Policy-delegering
+    av cross-origin-isolation för att ``window.crossOriginIsolated`` ska
+    bli ``true`` inuti iframen — annars kan WebContainern inte boota
+    SharedArrayBuffer och visar "Unable to run Embedded Project — Looks
+    like this project is being embedded without proper isolation headers"
+    trots korrekt levererade COEP/COOP-headers på host:en.
+
+    StackBlitz SDK exponerar detta via ``crossOriginIsolated: true``-
+    flaggan i ``EmbedOptions`` (dokumenterad i
+    ``@stackblitz/sdk/types/interfaces.d.ts``). SDK:n applicerar den
+    genom ``setFrameAllowList`` som lägger till ``cross-origin-isolated``
+    i iframens ``allow``-attribut (Permissions Policy-delegering).
+
+    Båda lager behövs:
+      1. ``credentialless``-attributet på iframen (löser COEP-kravet —
+         redan source-lockat via test_viewer_panel_keeps_containerref...).
+      2. ``crossOriginIsolated: true`` i embedOptions (löser Permissions
+         Policy-delegeringen — denna lock).
+
+    Tas raden bort fallerar embedden tyst inuti StackBlitz med kryptiskt
+    "Unable to run Embedded Project" och operatören har ingen ledtråd
+    om att host-headers faktiskt är korrekta.
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+    pattern = re.compile(
+        r"crossOriginIsolated\s*:\s*true",
+        re.MULTILINE,
+    )
+    assert pattern.search(text), (
+        "viewer-panel.tsx: ``crossOriginIsolated: true`` saknas i "
+        "``sdk.embedProject``-options. Krävs för Permissions Policy-"
+        "delegering till stackblitz.com — utan den boota:r WebContainern "
+        "inte och visar 'Unable to run Embedded Project'. Se "
+        "EmbedOptions i @stackblitz/sdk/types/interfaces.d.ts och "
+        "https://blog.stackblitz.com/posts/cross-browser-with-coop-coep/."
+    )
+
+
+@pytest.mark.tooling
+def test_next_config_trusts_dispatcher_env_over_argv_for_https_check() -> None:
+    """B145: ``process.argv`` är opålitlig under Turbopack — config laddas
+    i worker-processer vars argv inte ärver parent-processens flaggor.
+    Det gav falsk ``--experimental-https saknas``-varning i transport-
+    mismatch-checken trots att dispatchern startat ``next dev`` med
+    flaggan.
+
+    Fix: ``next.config.ts`` konsulterar primärt
+    ``process.env.VIEWSER_DISPATCHER_HTTPS === "1"`` (env-var som
+    ``scripts/dev.mjs`` sätter när dispatchern valt https-grenen) och
+    faller tillbaka till argv-checken för operatörer som kör
+    ``next dev --experimental-https`` direkt utan dispatchern.
+
+    Den dispatcher-managed env-varianten är auktoritativ signal — argv
+    fungerar bara som fallback för manuell körning.
+    """
+    text = (VIEWSER_DIR / "next.config.ts").read_text(encoding="utf-8")
+    pattern = re.compile(
+        r"process\s*\.\s*env\s*\.\s*VIEWSER_DISPATCHER_HTTPS\s*===\s*[\"']1[\"']",
+        re.MULTILINE,
+    )
+    assert pattern.search(text), (
+        "next.config.ts: HTTPS-checken måste läsa "
+        "``process.env.VIEWSER_DISPATCHER_HTTPS === \"1\"`` primärt — "
+        "``process.argv``-grenen ger false-positiva varningar i "
+        "Turbopack-workers vars argv inte ärver parent-processens "
+        "flaggor (B145)."
+    )
+
+
+@pytest.mark.tooling
+def test_dev_dispatcher_exports_https_signal_to_child() -> None:
+    """Spegelfix till next.config.ts:s VIEWSER_DISPATCHER_HTTPS-check.
+    ``scripts/dev.mjs`` MÅSTE exportera ``VIEWSER_DISPATCHER_HTTPS``
+    baserat på ``useHttps`` så next.config.ts ser auktoritativ signal
+    om dispatchern valt https-transport. Utan denna export ger
+    transport-mismatch-checken false-positiva varningar i Turbopack-
+    workers även när allt är korrekt konfigurerat.
+    """
+    text = (VIEWSER_DIR / "scripts" / "dev.mjs").read_text(encoding="utf-8")
+    pattern = re.compile(
+        r"VIEWSER_DISPATCHER_HTTPS\s*:\s*useHttps\s*\?\s*[\"']1[\"']\s*:\s*[\"']0[\"']",
+        re.MULTILINE,
+    )
+    assert pattern.search(text), (
+        "scripts/dev.mjs: child-env måste sätta "
+        "``VIEWSER_DISPATCHER_HTTPS: useHttps ? \"1\" : \"0\"`` så "
+        "next.config.ts kan verifiera transport-valet utan argv-"
+        "gissning. Speglar den nya check:en i next.config.ts (B145)."
+    )
+
+
+@pytest.mark.tooling
 def test_build_runner_uses_per_site_mutex_not_global_inflight() -> None:
     """Reviewer-fynd 2026-05-25 (Round 2 #5): den tidigare implementationen
     hade en enda global ``let inFlight: Promise | null = null`` som
