@@ -235,6 +235,8 @@ def test_run_suite_writes_summary_with_missing_dossiers(tmp_path: Path) -> None:
     evals_dir = tmp_path / "evals"
     runs_dir = tmp_path / "runs"
 
+    from scripts.run_eval_suite import QUICK_CASES
+
     summary = run_suite(
         "quick",
         evals_dir=evals_dir,
@@ -244,7 +246,10 @@ def test_run_suite_writes_summary_with_missing_dossiers(tmp_path: Path) -> None:
     )
 
     assert summary["mode"] == "quick"
-    assert len(summary["cases"]) == 4
+    # Cases follow the canonical QUICK_CASES tuple; using set equality
+    # below keeps the assertion working when new fixtures are added to
+    # the suite (e.g. cafe-bistro from Issue #90).
+    assert len(summary["cases"]) == len(QUICK_CASES)
     assert all(case["error"] for case in summary["cases"])
 
     summary_path = evals_dir / "eval-runs" / f"{summary['evalRunId']}.json"
@@ -252,12 +257,7 @@ def test_run_suite_writes_summary_with_missing_dossiers(tmp_path: Path) -> None:
     on_disk = json.loads(summary_path.read_text(encoding="utf-8"))
     assert on_disk["evalRunId"] == summary["evalRunId"]
     assert on_disk["mode"] == "quick"
-    assert {case["siteId"] for case in on_disk["cases"]} == {
-        "atelje-bird",
-        "painter-palma",
-        "foto-ram",
-        "arcade-hall",
-    }
+    assert {case["siteId"] for case in on_disk["cases"]} == set(QUICK_CASES)
 
 
 def test_run_suite_rejects_unknown_mode(tmp_path: Path) -> None:

@@ -401,6 +401,11 @@ COMMON_WORDS = {
     # canonical domain terms.
     "FaqPage", "GalleryPage", "MapPage", "PortfolioPage",
     "PricingPage", "TeamPage",
+    # Next.js page-komponenter för restaurant-hospitality scaffold
+    # (Issue #90). Samma kategori som FaqPage/GalleryPage ovan: React-
+    # komponentnamn renderade av build_site.py:render_menu och
+    # render_booking, inte canonical domain terms.
+    "MenuPage", "BookingPage",
     "FieldLabel", "FieldStack", "HelperText", "SectionHeader",
     "TagListInput", "TagListInputProps", "TextField", "TextareaField",
     "Chip", "ChipRow", "ChipProps", "StepDots",
