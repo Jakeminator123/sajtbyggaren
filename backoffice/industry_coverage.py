@@ -277,6 +277,10 @@ def _coverage_status(
 ) -> str:
     if sni_mapping_count == 0:
         return "missing_mapping"
+    if selected_runtime_scaffold_id is None:
+        if category.supportStatus == "planned":
+            return "planned"
+        return "fallback_only" if category.supportStatus == "fallback" else "active_fallback"
     if category.supportStatus == "planned":
         return "planned"
     if selected_runtime_scaffold_id and selected_runtime_scaffold_id != category.targetScaffoldId:
@@ -314,7 +318,11 @@ def _attention_reasons(
         reasons.append("capability_gap")
     if category.supportStatus in {"planned", "fallback"} and target_is_runtime:
         reasons.append("policy_asset_divergence")
-    if category.supportStatus == "active" and selected_runtime_scaffold_id != category.targetScaffoldId:
+    if (
+        category.supportStatus == "active"
+        and selected_runtime_scaffold_id is not None
+        and selected_runtime_scaffold_id != category.targetScaffoldId
+    ):
         reasons.append("policy_asset_divergence")
     return _ordered_unique(reasons)
 

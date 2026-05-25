@@ -11,7 +11,10 @@ import pytest
 
 from backoffice import industry_coverage
 from backoffice.views import building_blocks
-from packages.generation.discovery.taxonomy import load_discovery_taxonomy
+from packages.generation.discovery.taxonomy import (
+    TaxonomyCategory,
+    load_discovery_taxonomy,
+)
 
 
 def _rows_by_category() -> dict[str, dict[str, Any]]:
@@ -100,6 +103,49 @@ def test_existing_restaurant_asset_and_taxonomy_status_are_separate() -> None:
     assert row["coverageStatus"] == "planned"
     if row["targetScaffoldStatus"] == "active-runtime":
         assert "policy_asset_divergence" in row["attentionReasons"]
+
+
+def test_active_category_without_selected_runtime_is_not_native_or_taxonomy_drift() -> None:
+    category = TaxonomyCategory(
+        id="active-demo",
+        labelSv="Aktiv demo",
+        contentBranch="business",
+        supportStatus="active",
+        targetScaffoldId="local-service-business",
+        activeScaffoldId="local-service-business",
+        defaultVariantId="nordic-trust",
+        expectedStarterId="marketing-base",
+        requestedCapabilities=["contact-form"],
+        candidateDossiers=[],
+        recommendedPages=["Startsida"],
+        rationale="Regression fixture.",
+    )
+    capability_state = {
+        "unknownCapabilities": [],
+        "capabilityGaps": [],
+    }
+
+    status = industry_coverage._coverage_status(
+        category=category,
+        selected_runtime_scaffold_id=None,
+        sni_mapping_count=1,
+        target_is_runtime=True,
+    )
+    reasons = industry_coverage._attention_reasons(
+        category=category,
+        selected_runtime_scaffold_id=None,
+        default_variant_id="nordic-trust",
+        has_default_variant=False,
+        runtime_starter_id="",
+        target_is_runtime=True,
+        capability_state=capability_state,
+        sni_mapping_count=1,
+    )
+
+    assert status == "active_fallback"
+    assert status != "active_native"
+    assert "missing_runtime_scaffold" in reasons
+    assert "policy_asset_divergence" not in reasons
 
 
 def test_candidate_briefs_include_category_context() -> None:
