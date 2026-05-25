@@ -30,7 +30,14 @@ ALLOWED_GAP_TYPES = {
     "Gap/Runtime",
 }
 ALLOWED_REVIEWERS = {"jakob", "christopher", "both"}
-ALLOWED_STATUSES = {"queued", "active", "completed"}
+# Gap lifecycle:
+#   queued     -> gap created, no work started
+#   active     -> someone is working on it (activate_gap moves here)
+#   in-review  -> work done locally, awaiting PR review/merge (used by
+#                 Christopher's UI-shipped gaps that live in completedGaps
+#                 between local "done" and main "merged")
+#   completed  -> PR merged to main (complete_gap moves here)
+ALLOWED_STATUSES = {"queued", "active", "in-review", "completed"}
 ALLOWED_RISKS = {"green", "yellow", "red"}
 VALID_GAP_ID_RE = re.compile(r"^GAP-[A-Za-z0-9][A-Za-z0-9_.-]*$")
 
@@ -413,6 +420,10 @@ def validate_workboard(*, workboard_path: Path | None = None) -> dict[str, Any]:
         owner = str(gap.get("owner", ""))
         if owner not in ALLOWED_OWNERS:
             errors.append(f"{gap_id}: invalid owner {owner!r}")
+        if status not in ALLOWED_STATUSES:
+            errors.append(
+                f"{gap_id}: invalid status {status!r}; must be one of {sorted(ALLOWED_STATUSES)}"
+            )
         if not gap.get("title"):
             errors.append(f"{gap_id}: missing title")
         paths = gap.get("paths", [])
@@ -567,6 +578,26 @@ def activate_gap(
     source_index = _find_gap_index(planned_workboard["queuedGaps"], gap_id)
     if source_index is None:
         raise SprintvaktError(f"Gap not found in queuedGaps: {gap_id}")
+
+    candidate_gap = planned_workboard["queuedGaps"][source_index]
+    candidate_owner = str(candidate_gap.get("owner") or "")
+    candidate_paths = candidate_gap.get("paths") or []
+    if candidate_paths:
+        collision_result = detect_collisions(
+            {
+                "owner": candidate_owner if candidate_owner in PEOPLE_OWNERS else "all",
+                "paths": candidate_paths,
+                "includeExistingGaps": True,
+            },
+            workboard_path=workboard_path,
+        )
+        if collision_result["collisionRisk"] == "red":
+            raise SprintvaktError(
+                f"activate_gap blocked: {gap_id} has red collisions in the current "
+                f"workboard state since it was queued. Re-evaluate via detect_collisions, "
+                f"change owner, or split the gap before activating. "
+                f"Details: {collision_result['collisions']}"
+            )
 
     now = utc_now()
     gap = deepcopy(planned_workboard["queuedGaps"].pop(source_index))

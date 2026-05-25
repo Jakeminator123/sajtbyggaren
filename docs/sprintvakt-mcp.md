@@ -186,6 +186,30 @@ collisions.
 
 Returnerar sync-kommandon för arbetsbranches efter merge till `main`.
 
+## Källa till sanning: workboard vinner över gap-filer
+
+`docs/workboard.json` är den **levande staten**. `docs/gaps/<id>.md` är
+en **snapshot tagen vid `create_gap`**. När `activate_gap` eller
+`complete_gap` flyttar ett gap mellan listor uppdateras bara workboarden;
+gap-filens metadata-rader (`status`, `updatedAt`, etc.) blir då stale.
+
+Det är medvetet:
+
+- Gap-filen fungerar som ett ankare för file-only gaps (när någon skapar
+  ett gap manuellt på disk innan workboarden uppdateras) och som en
+  läsbar markdown-spec.
+- `_find_gap` (anropad av `generate_agent_prompt`) prioriterar
+  workboardens version och faller tillbaka till gap-filen bara när
+  gapet inte finns i workboarden alls.
+- `validate_workboard` kontrollerar bara workboarden; gap-filer
+  kontrolleras inte schema-mässigt.
+
+V1.3 kan lägga till tvåvägs-sync (workboard-state skrivs tillbaka till
+gap-filens metadata-block efter varje transition) om operatörsfeedback
+visar att stale gap-filer förvirrar i praktiken. Tills dess: **antag att
+workboarden är sanningen** när status/timestamps inte stämmer mellan
+filerna.
+
 ## Dagligt flöde
 
 1. Läs workboarden.

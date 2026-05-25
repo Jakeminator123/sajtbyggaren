@@ -476,6 +476,74 @@ def test_reserve_paths_replaces_existing_gap_id(tmp_path: Path) -> None:
 
 
 @pytest.mark.tooling
+def test_validate_workboard_rejects_unknown_status(tmp_path: Path) -> None:
+    """V1.2.1 regression: validate_workboard now enforces the gap status enum.
+    Before this guard, an arbitrary status string like 'bogus-state' or
+    Christopher's in-flight 'in-review' could land in the workboard without
+    sprintvakt_check noticing, letting the state model silently drift.
+    """
+    workboard = _base_workboard()
+    invalid_gap = _gap("GAP-bad-status", paths=["docs/some-file.md"], status="queued")
+    invalid_gap["status"] = "bogus-state"
+    workboard["queuedGaps"] = [invalid_gap]
+    workboard_path = _write_workboard(tmp_path, workboard)
+
+    result = validate_workboard(workboard_path=workboard_path)
+
+    assert result["ok"] is False
+    assert any(
+        "invalid status 'bogus-state'" in error for error in result["errors"]
+    ), f"errors={result['errors']}"
+
+
+@pytest.mark.tooling
+def test_validate_workboard_accepts_in_review_status(tmp_path: Path) -> None:
+    """V1.2.1: 'in-review' is a legitimate status used by Christopher's gaps
+    that have shipped UI code locally but are still waiting for PR review and
+    merge to main. The validator must accept it alongside queued/active/completed.
+    """
+    workboard = _base_workboard()
+    in_review_gap = _gap("GAP-in-review", paths=["docs/example.md"], status="completed")
+    in_review_gap["status"] = "in-review"
+    workboard["completedGaps"] = [in_review_gap]
+    workboard_path = _write_workboard(tmp_path, workboard)
+
+    result = validate_workboard(workboard_path=workboard_path)
+
+    assert result["ok"] is True
+    assert result["errors"] == []
+
+
+@pytest.mark.tooling
+def test_activate_gap_blocked_by_red_collision_at_activation_time(tmp_path: Path) -> None:
+    """V1.2.1: activate_gap now re-runs detect_collisions before flipping
+    queued -> active. If another active gap or reservation has taken the same
+    paths since this gap was queued, the activation must fail loudly rather
+    than silently push two active gaps onto the same files.
+    """
+    workboard = _base_workboard()
+    workboard["queuedGaps"] = [
+        _gap("GAP-late-arrival", paths=["docs/contested.md"], status="queued"),
+    ]
+    workboard["activeGaps"] = [
+        _gap("GAP-already-active", paths=["docs/contested.md"], status="active"),
+    ]
+    workboard_path = _write_workboard(tmp_path, workboard)
+
+    with pytest.raises(SprintvaktError, match="activate_gap blocked"):
+        activate_gap(
+            {"gapId": "GAP-late-arrival", "dryRun": False, "confirm": True},
+            workboard_path=workboard_path,
+        )
+
+    persisted = json.loads(workboard_path.read_text(encoding="utf-8"))
+    assert len(persisted["queuedGaps"]) == 1
+    assert persisted["queuedGaps"][0]["id"] == "GAP-late-arrival"
+    assert len(persisted["activeGaps"]) == 1
+    assert persisted["activeGaps"][0]["id"] == "GAP-already-active"
+
+
+@pytest.mark.tooling
 def test_sprintvakt_check_script_has_no_sys_path_hack() -> None:
     """The sprintvakt_check CLI must not mutate sys.path. Editable install
     (`pip install -e .`, see docs/sprintvakt-mcp.md) is the documented way to
