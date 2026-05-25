@@ -194,3 +194,226 @@ def test_project_input_schema_rejects_unknown_fields(
         or "is not valid under any of the given schemas" in error.message
         for error in errors
     )
+
+
+# ----------------------------------------------------------------------
+# ADR 0031 — directives.sectionTreatments enum guards
+# ----------------------------------------------------------------------
+#
+# Phase 3 introduces directives.sectionTreatments as the operator-pin
+# tier in front of variant-default in _treatment_for_section. The schema
+# carries a closed enum table per section-id so a typo is caught by
+# validation before the build starts. The tests below pin both the
+# positive and negative paths and the cross-source-of-truth drift between
+# the schema's enum table and the Python catalogue in build_site.py.
+
+_SECTION_TREATMENTS_ENUMS_SCHEMA = {
+    "selected-work-preview": ["editorial-stack", "asymmetric-grid", "marquee-row"],
+    "treatment-list": ["minimal-rows", "split-cards", "numbered-stack"],
+    "practice-grid": ["dense-grid", "tabular", "grouped"],
+    "expertise-areas": ["numbered-2col", "tag-cluster"],
+    "service-list": ["card-grid", "alternating-rows", "icon-strip", "tabular"],
+}
+
+
+@pytest.mark.governance
+def test_section_treatments_property_present_under_directives(schema: dict) -> None:
+    """The Phase 3 schema-bump must expose directives.sectionTreatments
+    so brief/planning prompts and the wizard can discover the closed
+    enum table without hard-coding it.
+    """
+    directives = schema["properties"]["directives"]
+    assert directives.get("additionalProperties") is False, (
+        "directives must keep additionalProperties=false so a typo in "
+        "the directive name fails closed"
+    )
+    section_treatments = directives["properties"].get("sectionTreatments")
+    assert section_treatments is not None, (
+        "directives.sectionTreatments missing — Phase 3 schema-bump "
+        "(ADR 0031) requires the property to land under directives"
+    )
+    assert section_treatments.get("type") == "object"
+    assert section_treatments.get("additionalProperties") is False, (
+        "sectionTreatments must fail closed for unknown section-ids"
+    )
+
+
+@pytest.mark.governance
+@pytest.mark.parametrize(
+    ("section_id", "expected_enum"),
+    sorted(_SECTION_TREATMENTS_ENUMS_SCHEMA.items()),
+)
+def test_section_treatments_enum_matches_phase_1_2_catalogue(
+    schema: dict,
+    section_id: str,
+    expected_enum: list[str],
+) -> None:
+    """Every section that participated in Phase 1+2 (5 sections × 14
+    treatments) must be representable as an operator-pin in the schema.
+
+    The expected enum here is the ground truth for the schema; a separate
+    test below cross-checks it against the runtime catalogue in
+    scripts/build_site.py so the schema and Python tabellen never drift.
+    """
+    section_treatments = schema["properties"]["directives"]["properties"][
+        "sectionTreatments"
+    ]
+    section_schema = section_treatments["properties"].get(section_id)
+    assert section_schema is not None, (
+        f"sectionTreatments.{section_id} missing from schema — every "
+        f"Phase 1+2 section must be pinnable"
+    )
+    actual_enum = section_schema.get("enum")
+    assert isinstance(actual_enum, list), (
+        f"sectionTreatments.{section_id}.enum must be a list"
+    )
+    assert sorted(actual_enum) == sorted(expected_enum), (
+        f"sectionTreatments.{section_id}.enum drifted from the Phase 1+2 "
+        f"catalogue. Schema={sorted(actual_enum)}, "
+        f"expected={sorted(expected_enum)}. Update both schema and "
+        f"_SECTION_TREATMENTS_BY_VARIANT in the same commit."
+    )
+
+
+@pytest.mark.governance
+def test_section_treatments_enum_includes_every_runtime_treatment() -> None:
+    """Cross-source-of-truth guard: every treatment id that the Phase 1+2
+    runtime catalogue (_SECTION_TREATMENTS_BY_VARIANT in
+    scripts/build_site.py) registers MUST appear in the schema enum for
+    the matching section.
+
+    This is the inverse of the previous test: it walks the runtime
+    table and asserts every (section_id, treatment_id) pair is
+    representable in the schema. If a future commit registers a new
+    treatment in Python without bumping the schema, this test fails on
+    CI before the operator-pin path can silently reject it.
+    """
+    from scripts.build_site import _SECTION_TREATMENTS_BY_VARIANT
+
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    schema_section_treatments = schema["properties"]["directives"][
+        "properties"
+    ]["sectionTreatments"]["properties"]
+
+    runtime_pairs: set[tuple[str, str]] = set()
+    for variant_bucket in _SECTION_TREATMENTS_BY_VARIANT.values():
+        for section_id, treatment_id in variant_bucket.items():
+            runtime_pairs.add((section_id, treatment_id))
+
+    missing: list[str] = []
+    for section_id, treatment_id in sorted(runtime_pairs):
+        section_schema = schema_section_treatments.get(section_id)
+        if section_schema is None:
+            missing.append(
+                f"section {section_id!r} not in schema enum table"
+            )
+            continue
+        if treatment_id not in section_schema.get("enum", []):
+            missing.append(
+                f"section {section_id!r} treatment {treatment_id!r} "
+                f"not in schema enum {section_schema.get('enum')}"
+            )
+
+    assert not missing, (
+        "Schema enum table is missing runtime treatments:\n  - "
+        + "\n  - ".join(missing)
+    )
+
+
+@pytest.mark.governance
+def test_section_treatments_accepts_valid_pin(schema: dict) -> None:
+    """Operator can pin one treatment per section and the payload must
+    pass schema validation. Empty directives.sectionTreatments={} is
+    also accepted (every section falls back to variant or section
+    default).
+    """
+    payload = copy.deepcopy(_valid_project_input_example())
+    payload.setdefault("directives", {})
+    payload["directives"]["sectionTreatments"] = {
+        "selected-work-preview": "asymmetric-grid",
+        "service-list": "tabular",
+    }
+    validator = jsonschema.Draft202012Validator(schema)
+    errors = sorted(validator.iter_errors(payload), key=lambda e: e.path)
+    assert not errors, (
+        "Valid sectionTreatments pin should validate; got errors: "
+        + "; ".join(e.message for e in errors)
+    )
+
+
+@pytest.mark.governance
+@pytest.mark.parametrize(
+    ("section_id", "bad_treatment"),
+    [
+        ("selected-work-preview", "tabbular-typo"),
+        ("treatment-list", "card-grid"),
+        ("practice-grid", "minimal-rows"),
+        ("expertise-areas", "split-cards"),
+        ("service-list", "asymmetric-grid"),
+    ],
+)
+def test_section_treatments_rejects_invalid_treatment(
+    schema: dict,
+    section_id: str,
+    bad_treatment: str,
+) -> None:
+    """A typo or a treatment id that belongs to a different section must
+    be caught by schema validation before the build starts. The bad
+    pairs here mix valid treatment ids with the wrong section so the
+    test also pins that the enum is per-section, not a flat global list.
+    """
+    payload = copy.deepcopy(_valid_project_input_example())
+    payload.setdefault("directives", {})
+    payload["directives"]["sectionTreatments"] = {section_id: bad_treatment}
+
+    validator = jsonschema.Draft202012Validator(schema)
+    errors = sorted(validator.iter_errors(payload), key=lambda e: e.path)
+    assert errors, (
+        f"Expected schema validation error for "
+        f"sectionTreatments.{section_id}={bad_treatment!r}"
+    )
+    assert any(
+        "is not one of" in error.message
+        or "is not valid under any of the given schemas" in error.message
+        for error in errors
+    ), f"Unexpected error shape: {[e.message for e in errors]}"
+
+
+@pytest.mark.governance
+def test_section_treatments_rejects_unknown_section(schema: dict) -> None:
+    """An unknown section id under sectionTreatments must be rejected
+    so a typo (e.g. 'service-lst') is caught instead of silently
+    falling through to variant/section defaults.
+    """
+    payload = copy.deepcopy(_valid_project_input_example())
+    payload.setdefault("directives", {})
+    payload["directives"]["sectionTreatments"] = {
+        "service-lst": "card-grid",
+    }
+    validator = jsonschema.Draft202012Validator(schema)
+    errors = sorted(validator.iter_errors(payload), key=lambda e: e.path)
+    assert errors, (
+        "Expected schema validation error for unknown section "
+        "'service-lst' under sectionTreatments"
+    )
+    assert any(
+        "Additional properties are not allowed" in error.message
+        for error in errors
+    ), f"Unexpected error shape: {[e.message for e in errors]}"
+
+
+@pytest.mark.governance
+def test_section_treatments_optional(schema: dict) -> None:
+    """Existing PI payloads without directives.sectionTreatments must
+    still validate. ADR 0031 promises additive bump that keeps Phase
+    1+2 snapshots intact.
+    """
+    payload = copy.deepcopy(_valid_project_input_example())
+    if "directives" in payload and "sectionTreatments" in payload["directives"]:
+        del payload["directives"]["sectionTreatments"]
+    validator = jsonschema.Draft202012Validator(schema)
+    errors = sorted(validator.iter_errors(payload), key=lambda e: e.path)
+    assert not errors, (
+        "Empty/missing sectionTreatments must validate so existing "
+        "Project Inputs are not invalidated by the Phase 3 schema-bump"
+    )

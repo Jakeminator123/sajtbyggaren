@@ -1131,8 +1131,34 @@ def _apply_directives_fields(
     if isinstance(layout_hint, str):
         clean_layout = layout_hint.strip()
         if clean_layout in _VALID_LAYOUT_HINTS:
-            project_input["directives"] = {"layoutHint": clean_layout}
+            existing_directives = project_input.get("directives")
+            if isinstance(existing_directives, dict):
+                existing_directives["layoutHint"] = clean_layout
+            else:
+                project_input["directives"] = {"layoutHint": clean_layout}
             field_sources["directives.layoutHint"] = "wizard"
+
+    raw_section_treatments = directives.get("sectionTreatments")
+    if isinstance(raw_section_treatments, dict):
+        pinned_treatments: dict[str, str] = {}
+        for section_id, treatment_id in raw_section_treatments.items():
+            if not isinstance(section_id, str):
+                continue
+            if not isinstance(treatment_id, str):
+                continue
+            clean_section = section_id.strip()
+            clean_treatment = treatment_id.strip()
+            if clean_section and clean_treatment:
+                pinned_treatments[clean_section] = clean_treatment
+        if pinned_treatments:
+            existing_directives = project_input.get("directives")
+            if isinstance(existing_directives, dict):
+                existing_directives["sectionTreatments"] = pinned_treatments
+            else:
+                project_input["directives"] = {
+                    "sectionTreatments": pinned_treatments,
+                }
+            field_sources["directives.sectionTreatments"] = "wizard"
 
     # Gap 3: scaffoldHint från operatörens ``businessFamily``-val ska
     # vinna över taxonomy-mappningen. Wizardens steg 1 låter operatören

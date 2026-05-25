@@ -216,6 +216,50 @@ export function familyForCategory(
   );
 }
 
+/**
+ * Härleder den faktiska scaffold-hint som UI:t och payloaden ska
+ * använda. Steg-1-familyen är den primära signalen, men när operatören
+ * också valt en sub-kategori vars `scaffoldHint` skiljer sig från
+ * familyens (t.ex. "service"-family + "legal"-sub-cat → professional-
+ * services i stället för LSB) vinner sub-kategorin. Detta är ren
+ * UI-mapping; backend kör fortfarande sin egen Discovery Resolver mot
+ * `discoveryTaxonomyId` och behandlar scaffoldHint bara som ett hint.
+ *
+ * Returnerar en deterministisk default när varken family eller sub-cat
+ * är vald (LSB) så vibe-griden alltid har något att visa.
+ *
+ * Konsekvens av denna helper: Phase 3 section-treatments-disclosure
+ * når också `agency-studio`/`clinic-healthcare`/`professional-services`
+ * när operatören använder en sub-cat som mappar dit, även om
+ * BUSINESS_FAMILIES-listan ännu inte har en egen entry för scaffolden.
+ */
+export function deriveEffectiveScaffoldHint(
+  family: BusinessFamily | undefined,
+  siteType: readonly WizardCategoryId[],
+): ScaffoldHint {
+  if (!family) {
+    for (const categoryId of siteType) {
+      const wizardCategory = WIZARD_CATEGORIES.find(
+        (entry) => entry.id === categoryId,
+      );
+      if (wizardCategory) return wizardCategory.scaffoldHint;
+    }
+    return "local-service-business";
+  }
+
+  for (const categoryId of siteType) {
+    if (!family.subCategories.includes(categoryId)) continue;
+    const wizardCategory = WIZARD_CATEGORIES.find(
+      (entry) => entry.id === categoryId,
+    );
+    if (wizardCategory && wizardCategory.scaffoldHint !== family.scaffoldHint) {
+      return wizardCategory.scaffoldHint;
+    }
+  }
+
+  return family.scaffoldHint;
+}
+
 /** Content branches control which content fields are shown in step 3. */
 export type ContentBranch =
   | "ecommerce"
@@ -272,14 +316,27 @@ export function branchForFamily(family: BusinessFamilyId): ContentBranch {
 }
 
 /**
- * 14 vibes — de faktiska Variants som finns på disk i
+ * Vibes — de faktiska Variants som finns på disk i
  * `packages/generation/orchestration/scaffolds/<id>/variants/`. Varje vibe
  * tillhör ett scaffold och har en preview-färg + ord som beskriver känslan.
- * Wizardens steg 2 visar bara de som tillhör det valda scaffoldet (7 för
- * local-service-business, 7 för ecommerce-lite efter Week 1 batch 3
- * 2026-05-24 utbyggnaden). Restaurant-hospitality-varianter exponeras
- * först när scaffolden runtime-aktiveras (se docs/scaffold-runtime-
- * extension-needed.md).
+ * Wizardens steg 2 visar bara de som tillhör det valda scaffoldet.
+ *
+ * Aktuell fördelning (post-Path-B + Phase 3 polish 2026-05-25):
+ *   - local-service-business: 7 (nordic-trust, warm-craft, clinical-calm,
+ *     midnight-counsel, pulse-fit, sunrise-startup, family-warmth)
+ *   - ecommerce-lite: 7 (clean-store, earth-wellness, mono-tech,
+ *     noir-editorial, street-vivid, artisan-market, vintage-curio)
+ *   - restaurant-hospitality: 4 (warm-bistro, casual-cafe, midnight-bar,
+ *     nordic-fine-dining) — exponerade efter Path A runtime-aktivering
+ *   - clinic-healthcare: 3 (clinic-calm, warm-care, modern-precision)
+ *   - professional-services: 3 (legal-classic, consulting-modern,
+ *     accounting-trust)
+ *   - agency-studio: 3 (studio-monochrome, editorial-warm, bold-electric)
+ *
+ * Totalsumman måste matcha antalet `enabled: true`-variants på disk.
+ * `tests/test_starter_scaffold_mapping.py` och liknande backend-tester
+ * fångar drift mellan disk och dessa labels indirekt; UI:t kraschar inte
+ * om en label saknas men operatören får inte se en vy för varianten.
  */
 export type Vibe = {
   id: string;
@@ -462,6 +519,50 @@ export const VIBE_OPTIONS: Vibe[] = [
     accentSwatch: "#a87f3e",
     background: "#f4ecd8",
     defaultTypographyFeel: "classic-serif",
+  },
+  {
+    id: "warm-bistro",
+    scaffoldHint: "restaurant-hospitality",
+    label: "Warm Bistro",
+    description:
+      "Terrakotta och rostat bärnstensljus — som en kvartersbistro med pressad linne och kopparkastruller.",
+    primarySwatch: "#8a3a20",
+    accentSwatch: "#c98c4a",
+    background: "#fbf6ee",
+    defaultTypographyFeel: "modern-sans",
+  },
+  {
+    id: "casual-cafe",
+    scaffoldHint: "restaurant-hospitality",
+    label: "Casual Café",
+    description:
+      "Soligt persika och gräddvit — som ett dagligt café med nybryggt espresso och rundade former.",
+    primarySwatch: "#d97842",
+    accentSwatch: "#f4c773",
+    background: "#fff8ef",
+    defaultTypographyFeel: "modern-sans",
+  },
+  {
+    id: "midnight-bar",
+    scaffoldHint: "restaurant-hospitality",
+    label: "Midnight Bar",
+    description:
+      "Nattmörkt med borstad mässing och vinrött — som en cocktailbar där dimheten är medveten elegans.",
+    primarySwatch: "#c39247",
+    accentSwatch: "#7a1f24",
+    background: "#0e0b0a",
+    defaultTypographyFeel: "classic-serif",
+  },
+  {
+    id: "nordic-fine-dining",
+    scaffoldHint: "restaurant-hospitality",
+    label: "Nordic Fine Dining",
+    description:
+      "Galleritystnad i off-white och mossgrönt — för smakmenyer där maten själv är dramaturgin.",
+    primarySwatch: "#2a3a2c",
+    accentSwatch: "#a39167",
+    background: "#f9f8f4",
+    defaultTypographyFeel: "modern-sans",
   },
   {
     id: "legal-classic",

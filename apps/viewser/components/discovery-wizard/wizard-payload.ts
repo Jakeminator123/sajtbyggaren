@@ -31,9 +31,11 @@ import {
   validateDiscoveryCategoryIds,
 } from "./discovery-options";
 import type { discoveryOption } from "./discovery-options";
+import { sectionTreatmentSpecsForScaffold } from "./treatment-options";
 import {
   branchForFamily,
   BUSINESS_FAMILIES,
+  deriveEffectiveScaffoldHint,
   findFunctionChoice,
   findVibe,
 } from "./wizard-constants";
@@ -117,6 +119,18 @@ export type WizardDirectives = {
     ogImage?: AssetRef | null;
     backgroundVideo?: AssetRef | null;
   };
+  /**
+   * Operator-pin per section för design-treatments (Phase 3, ADR
+   * 0031). Speglar `directives.sectionTreatments` i Project
+   * Input.schema.json. Tom = inga overrides; varje section kör sin
+   * variant- eller section-default.
+   *
+   * Resolve-ordning (backend): operator-pin (denna map) >
+   * variant-default (`_SECTION_TREATMENTS_BY_VARIANT`) >
+   * section-default. Wizardens `treatment-options.ts` exponerar
+   * exakt samma katalog som schemats enum.
+   */
+  sectionTreatments?: Record<string, string>;
   notesForPlanner?: string;
 };
 
@@ -518,6 +532,34 @@ export function deriveWizardDirectives(
   };
   directives.media = media;
 
+  // sectionTreatments — operator-pin per section. Tomt = ingen
+  // override; backend resolve-ordning faller då tillbaka på
+  // variant-default och section-default. Vi normaliserar (trim) OCH
+  // filtrerar bort pins för sections som inte hör till aktiv scaffold
+  // — annars kan ett scaffold-byte i wizardin lämna kvar "ghost-pins"
+  // som schemat avvisar (per-section enum) eller som backend skickar
+  // vidare till en renderer som aldrig mountas.
+  const allowedSectionIds = new Set<string>(
+    sectionTreatmentSpecsForScaffold(scaffoldHint).map((spec) => spec.id),
+  );
+  const sectionPins: Record<string, string> = {};
+  for (const [sectionId, treatmentId] of Object.entries(
+    answers.vibe.sectionTreatments ?? {},
+  )) {
+    const trimmedSection = sectionId.trim();
+    const trimmedTreatment = treatmentId.trim();
+    if (
+      trimmedSection &&
+      trimmedTreatment &&
+      allowedSectionIds.has(trimmedSection)
+    ) {
+      sectionPins[trimmedSection] = trimmedTreatment;
+    }
+  }
+  if (Object.keys(sectionPins).length > 0) {
+    directives.sectionTreatments = sectionPins;
+  }
+
   return directives;
 }
 
@@ -537,14 +579,17 @@ export function buildDiscoveryPayload(
     answers.businessFamily ? branchForFamily(answers.businessFamily) : undefined,
   );
 
-  // Scaffold hint — använd businessFamily som primär källa när den finns,
-  // annars fall tillbaka till siteType-baserade resolvern. Detta gör att
-  // operatorens family-val styr scaffold deterministiskt även om sub-
-  // kategori-chips inte är ifyllda.
+  // Scaffold hint — `deriveEffectiveScaffoldHint` använder family som
+  // primär signal men låter sub-kategorin uppgradera scaffolden när den
+  // pekar mot en mer specifik runtime-scaffold (t.ex. "service"-family
+  // + "legal"-sub-cat → professional-services). När varken family eller
+  // sub-cat är vald faller vi tillbaka till governance-resolvern så
+  // backend kan se vad UI:t faktiskt visar för varje sub-cat-list.
   const family = BUSINESS_FAMILIES.find((f) => f.id === answers.businessFamily);
-  const scaffoldHint = family
-    ? family.scaffoldHint
-    : resolveScaffoldHintFromOptions(answers.siteType, discoveryOptions);
+  const scaffoldHint =
+    family || answers.siteType.length > 0
+      ? deriveEffectiveScaffoldHint(family, answers.siteType)
+      : resolveScaffoldHintFromOptions(answers.siteType, discoveryOptions);
 
   const directives = deriveWizardDirectives(rawPrompt, answers, scaffoldHint);
 
@@ -554,16 +599,14 @@ export function buildDiscoveryPayload(
   // `language` + `scaffoldHint` om operatorn knappt fyllde i något.
   const cleanedDirectives = stripEmpty(directives);
 
-  // schemaVersion = 2 nu när backend accepterar både 1 och 2
-  // (`scripts/prompt_to_project_input.py:_load_discovery_file`,
-  // commit 0a7e49f). Backend persisterar `directives.layoutHint` och
-  // `uniqueSellingPoints` deterministiskt till Project Input enligt
-  // kontraktet i `docs/contracts/wizard-discovery.v2.md`.
-  //
-  // Rollout-status: pass 1 = backend accepterar v2 (klart), pass 2 =
-  // frontend skickar v2 (denna ändring), pass 3 = backend kan börja
-  // konsumera fler `directives`-fält (tone, variantHint, brand,
-  // requestedCapabilities) — koordineras separat.
+  // schemaVersion = 2. Backend persisterar deterministiskt
+  // `directives.layoutHint`, `uniqueSellingPoints`, `media` och
+  // (Phase 3, ADR 0031) `sectionTreatments` till Project Input enligt
+  // kontraktet i `docs/contracts/wizard-discovery.v2.md`. Återstående
+  // directive-fält (tone, variantHint, brand, requestedCapabilities)
+  // är fortfarande primärt LLM-kompletterat via briefModel; backend
+  // tolererar dem i payloaden men använder dem ännu inte
+  // deterministiskt.
   return {
     schemaVersion: 2,
     rawPrompt: rawPrompt.trim(),

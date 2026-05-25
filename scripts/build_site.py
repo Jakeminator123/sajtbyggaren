@@ -3129,6 +3129,7 @@ def render_section_service_list(
         variant_id,
         "service-list",
         default=_SERVICE_LIST_TREATMENT_DEFAULT,
+        operator_pin=_operator_pin_for_section(dossier, "service-list"),
     )
     if treatment == "alternating-rows":
         return _render_service_list_alternating_rows(dossier, contact_path)
@@ -3598,11 +3599,13 @@ def _call_section_renderer(
 # Section design-treatments — variant-driven visual variation inside a
 # single section id. See docs/section-design-treatments-scout.md for
 # the three-tier resolution order (operator-pin → variant → section
-# default). Phase 1 only wires the variant tier; future phases layer
-# operator-pin (``dossier.directives.sectionTreatments``) and an
-# LLM-pick step in front of this map without changing the helper
-# signature, so callers (the section renderers themselves) do not
-# have to be touched again.
+# default). Phase 1+2 registered the variant tier across five sections;
+# Phase 3 (ADR 0031, 2026-05-25) layered operator-pin
+# (``dossier.directives.sectionTreatments``) on top via
+# ``_treatment_for_section(operator_pin=...)`` without changing the
+# section-renderer signatures. A future Phase 4 will add an LLM-pick
+# step in front of operator-pin; the helper signature is designed to
+# absorb that without touching renderers.
 #
 # Renderers that opt in declare ``variant_id: str | None = None`` in
 # their signature and call ``_treatment_for_section`` to pick the
@@ -3705,25 +3708,81 @@ _SECTION_TREATMENTS_BY_VARIANT: dict[str, dict[str, str]] = {
 }
 
 
+def _operator_pin_for_section(dossier: dict, section_id: str) -> str | None:
+    """Read the operator's section-treatment pin for ``section_id``.
+
+    Phase 3 (ADR 0031): the wizard's visual-step writes operator pins
+    to ``directives.sectionTreatments`` in Project Input. Because
+    ``dossier`` is loaded directly from Project Input by ``main()``,
+    the same key is available here unchanged.
+
+    Returns ``None`` for an absent or empty pin so callers can keep
+    using the simple ``operator_pin or fallback``-style guard.
+
+    The lookup is intentionally lenient: it does NOT validate the
+    treatment id against ``_SECTION_TREATMENTS_BY_VARIANT`` because
+    the schema enum in ``project-input.schema.json`` already rejects
+    typos before the dossier reaches this code path. Defensive
+    re-validation here would just duplicate that logic and risk
+    drifting out of sync with the schema. ``_treatment_for_section``
+    still passes the value through ``operator_pin`` only when it is
+    a non-empty string, so a malformed dossier (e.g. a hand-edited
+    file that bypassed the schema) cannot crash the renderer; the
+    section renderer's own ``if treatment == ...`` chain falls
+    through to the section default in that case.
+    """
+    if not isinstance(dossier, dict):
+        return None
+    directives = dossier.get("directives")
+    if not isinstance(directives, dict):
+        return None
+    pins = directives.get("sectionTreatments")
+    if not isinstance(pins, dict):
+        return None
+    pin = pins.get(section_id)
+    if not isinstance(pin, str):
+        return None
+    pin = pin.strip()
+    return pin or None
+
+
 def _treatment_for_section(
     variant_id: str | None,
     section_id: str,
     *,
     default: str,
+    operator_pin: str | None = None,
 ) -> str:
     """Resolve which design treatment a section should render.
 
-    Mirrors the ``_hero_style_for`` resolution order for hero-block
-    style picks: the variant's explicit treatment registration in
-    ``_SECTION_TREATMENTS_BY_VARIANT`` wins; otherwise the section's
-    own default treatment is used. Phases 2/3 will layer operator-pin
-    and LLM-pick in front of the variant lookup without changing this
-    helper's signature.
+    Resolution order (Phase 3, ADR 0031):
 
-    Returns ``default`` for an unknown variant or for a variant that
-    does not register the requested section, so a section that opts
-    into treatment dispatch never has to know which variants exist.
+    1. ``operator_pin`` — explicit per-section treatment pinned by
+       the operator in the wizard's visual step
+       (``directives.sectionTreatments[section_id]``). Wins over
+       everything because the operator has expressed intent.
+    2. ``_SECTION_TREATMENTS_BY_VARIANT[variant_id][section_id]`` —
+       the variant's curated default. Phase 2 baseline.
+    3. ``default`` — the section's own fall-back treatment. Used
+       when neither the operator nor the variant has an opinion, or
+       when a future variant is introduced before its treatments
+       are registered.
+
+    The same ``default`` is returned for an unknown variant or for a
+    variant that does not register the requested section so a
+    section that opts into treatment dispatch never has to know
+    which variants exist.
+
+    The operator pin is treated as opaque here: validation is done
+    by ``project-input.schema.json`` before the dossier loads. A pin
+    coming from a hand-edited dossier that bypassed the schema may
+    therefore route to an unknown treatment id, but that is the
+    section renderer's contract to handle (treat unknown ids as the
+    section default). We deliberately keep this helper trivial so
+    the resolution order stays auditable at a glance.
     """
+    if operator_pin:
+        return operator_pin
     if not variant_id:
         return default
     bucket = _SECTION_TREATMENTS_BY_VARIANT.get(variant_id)
@@ -5850,6 +5909,7 @@ def render_section_treatment_list(
         variant_id,
         "treatment-list",
         default=_TREATMENT_LIST_TREATMENT_DEFAULT,
+        operator_pin=_operator_pin_for_section(dossier, "treatment-list"),
     )
     if treatment == "split-cards":
         return _render_treatment_list_split_cards(services, contact_path)
@@ -5862,9 +5922,9 @@ def _treatment_list_header() -> str:
     """Shared header markup for every treatment-list treatment.
 
     Kept as a single source so the eyebrow + h1 + supporting copy
-    stay in lockstep across all three treatments. A future operator-
-    pin tier (Phase 3) can override the copy via dossier directives
-    without touching the per-treatment renderers.
+    stay in lockstep across all three treatments. The Phase 3
+    operator-pin tier (ADR 0031) only changes which treatment
+    renderer dispatches; it does not (yet) override the header copy.
     """
     return (
         '          <header className="flex flex-col gap-3">\n'
@@ -6069,6 +6129,7 @@ def render_section_expertise_areas(
         variant_id,
         "expertise-areas",
         default=_EXPERTISE_AREAS_TREATMENT_DEFAULT,
+        operator_pin=_operator_pin_for_section(dossier, "expertise-areas"),
     )
     if treatment == "tag-cluster":
         return _render_expertise_areas_tag_cluster(services, contact_path)
@@ -6190,6 +6251,7 @@ def render_section_practice_grid(
         variant_id,
         "practice-grid",
         default=_PRACTICE_GRID_TREATMENT_DEFAULT,
+        operator_pin=_operator_pin_for_section(dossier, "practice-grid"),
     )
     if treatment == "tabular":
         return _render_practice_grid_tabular(services, contact_path)
@@ -6202,9 +6264,9 @@ def _practice_grid_header() -> str:
     """Shared header markup for every practice-grid treatment.
 
     Locks the eyebrow + h1 + supporting copy across all three
-    treatments so a future Phase 3 operator-pin can override the
-    copy via dossier directives without touching per-treatment
-    renderers.
+    treatments. The Phase 3 operator-pin tier (ADR 0031) only
+    swaps the treatment renderer; copy overrides via dossier
+    directives are out of scope and left for a future iteration.
     """
     return (
         '          <header className="flex flex-col gap-3 max-w-2xl">\n'
@@ -6477,6 +6539,9 @@ def render_section_selected_work_preview(
         variant_id,
         "selected-work-preview",
         default=_SELECTED_WORK_PREVIEW_TREATMENT_DEFAULT,
+        operator_pin=_operator_pin_for_section(
+            dossier, "selected-work-preview"
+        ),
     )
     if treatment == "asymmetric-grid":
         return _render_selected_work_preview_asymmetric_grid(services)
