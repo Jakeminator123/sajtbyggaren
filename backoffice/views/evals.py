@@ -26,6 +26,8 @@ from typing import Any
 
 import streamlit as st
 
+from scripts.run_eval_suite import format_case_list, get_full_case_ids, get_quick_case_ids
+
 from ..paths import EVAL_RUNS_DIR, MANUAL_SCORECARDS_DIR, REPO_ROOT, SCRIPTS_DIR
 from ._helpers import safe_render
 
@@ -40,6 +42,8 @@ SCORE_DIMENSIONS: tuple[tuple[str, str], ...] = (
 
 QUICK_TIMEOUT_SECONDS = 600
 FULL_TIMEOUT_SECONDS = 1800
+TERMINATE_GRACE_SECONDS = 5.0
+KILL_GRACE_SECONDS = 2.0
 LOG_EXCERPT_LINES = 80
 
 
@@ -101,13 +105,30 @@ def _spawn_subprocess_group(cmd: list[str], *, cwd: str, env: dict[str, str]) ->
     return subprocess.Popen(cmd, **popen_kwargs)
 
 
-def _terminate_process_tree(proc: subprocess.Popen[str]) -> None:
-    """Kill ``proc`` and every descendant.
+def _quick_button_label() -> str:
+    """Return the quick-suite button label from the canonical case list."""
+
+    return f"Snabb regression ({len(get_quick_case_ids())}x skip-build)"
+
+
+def _full_button_label() -> str:
+    """Return the full-suite button label from the canonical case list."""
+
+    return f"Full build ({format_case_list(get_full_case_ids(), separator=' + ')})"
+
+
+def _signal_process_tree(proc: subprocess.Popen[str], *, force: bool) -> None:
+    """Signal ``proc`` and every descendant.
 
     Without this, ``proc.kill()`` only signals the top-level Python
     process; spawned grandchildren (``build_site.py``, ``npm``, ``node``)
     keep running and consume resources while the UI already reports a
     timeout (Codex P2 review on PR #87).
+
+    POSIX gets a soft ``SIGTERM`` first, then a hard ``SIGKILL`` if the
+    bounded grace wait expires. Windows uses ``taskkill /F /T`` for both
+    paths because Python does not expose a portable soft process-tree
+    termination primitive there.
     """
 
     if proc.poll() is not None:
@@ -123,12 +144,45 @@ def _terminate_process_tree(proc: subprocess.Popen[str]) -> None:
             import os as _os
             import signal as _signal
 
+            sig = _signal.SIGKILL if force else _signal.SIGTERM
             try:
-                _os.killpg(_os.getpgid(proc.pid), _signal.SIGTERM)
+                _os.killpg(_os.getpgid(proc.pid), sig)
             except ProcessLookupError:
                 pass
     except (OSError, subprocess.SubprocessError):
-        proc.kill()
+        if force:
+            proc.kill()
+        else:
+            proc.terminate()
+
+
+def _wait_for_process_exit(
+    proc: subprocess.Popen[str],
+    *,
+    timeout_seconds: float,
+) -> int | None:
+    """Return the process exit code, or ``None`` when the bounded wait expires."""
+
+    try:
+        return proc.wait(timeout=timeout_seconds)
+    except subprocess.TimeoutExpired:
+        return None
+
+
+def _stop_process_tree_after_timeout(proc: subprocess.Popen[str]) -> int:
+    """Stop a timed-out eval subprocess without ever waiting indefinitely."""
+
+    _signal_process_tree(proc, force=False)
+    exit_code = _wait_for_process_exit(proc, timeout_seconds=TERMINATE_GRACE_SECONDS)
+    if exit_code is not None:
+        return exit_code
+
+    _signal_process_tree(proc, force=True)
+    exit_code = _wait_for_process_exit(proc, timeout_seconds=KILL_GRACE_SECONDS)
+    if exit_code is not None:
+        return exit_code
+
+    return 1
 
 
 def _run_eval_suite(mode: str, status_slot: Any | None) -> dict[str, Any]:
@@ -174,11 +228,14 @@ def _run_eval_suite(mode: str, status_slot: Any | None) -> dict[str, Any]:
         if elapsed > timeout:
             timed_out = True
             lines.append(f"\nTimeout efter {timeout}s\n")
-            _terminate_process_tree(proc)
+            _stop_process_tree_after_timeout(proc)
             break
         time.sleep(0.2)
 
-    exit_code = proc.wait()
+    if timed_out:
+        exit_code = 1
+    else:
+        exit_code = proc.wait()
     if reader_thread is not None:
         reader_thread.join(timeout=1)
     _drain()
@@ -364,7 +421,7 @@ def view_evals() -> None:
     st.subheader("Kör eval-suite")
     cols = st.columns(2)
     if cols[0].button(
-        "Snabb regression (4x skip-build)",
+        _quick_button_label(),
         use_container_width=True,
         type="primary",
         key="eval-quick",
@@ -381,11 +438,12 @@ def view_evals() -> None:
             st.error(f"Suite failade med exit code {result['exit_code']}.")
 
     if cols[1].button(
-        "Full build (painter-palma + atelje-bird)",
+        _full_button_label(),
         use_container_width=True,
         key="eval-full",
         help=(
-            "Kör npm install + npm run build per case. Tar flera minuter; "
+            "Kör npm install + npm run build per case: "
+            f"{format_case_list(get_full_case_ids())}. Tar flera minuter; "
             "Streamlit-UI blockeras tills suite är klar."
         ),
     ):

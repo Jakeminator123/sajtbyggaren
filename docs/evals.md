@@ -26,11 +26,15 @@ python scripts/run_eval_suite.py full
 
 | Mode | Cases | Build |
 | ---- | ----- | ----- |
-| `quick` | `atelje-bird`, `painter-palma`, `foto-ram`, `arcade-hall` | `--skip-build` (filer skrivs, npm hoppas över) |
-| `full` | `painter-palma`, `atelje-bird` | Inget `--skip-build` (`npm install` + `npm run build`) |
+| `quick` | `atelje-bird`, `painter-palma`, `foto-ram`, `arcade-hall`, `cafe-bistro` | `--skip-build` (filer skrivs, npm hoppas över) |
+| `full` | `painter-palma`, `atelje-bird`, `cafe-bistro` | Inget `--skip-build` (`npm install` + `npm run build`) |
 
 `quick` tar i regel under en minut. `full` kan ta flera minuter per case
 eftersom npm körs på riktigt.
+
+Den aktuella case-listan har sin kodkälla i `QUICK_CASES` och
+`FULL_CASES` i `scripts/run_eval_suite.py`. Backoffice-knappar och
+CLI-hjälptext läser samma listor så antal och namn inte driver isär.
 
 ### Output
 

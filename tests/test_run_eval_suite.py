@@ -23,9 +23,14 @@ from scripts.run_eval_suite import (
     compute_exit_code,
     extract_rejected_capabilities,
     extract_selected_dossiers,
+    format_case_list,
+    get_full_case_ids,
+    get_quick_case_ids,
     make_eval_run_id,
     parse_case_artifacts,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_extract_selected_dossiers_array_form() -> None:
@@ -87,6 +92,38 @@ def test_extract_rejected_capabilities_handles_missing_or_malformed() -> None:
     assert extract_rejected_capabilities(None) == []
     plan = {"selectedDossiers": {"rejected": [{"id": "ok", "reason": "x"}, "garbage", {}]}}
     assert extract_rejected_capabilities(plan) == [{"id": "ok", "reason": "x"}]
+
+
+def test_eval_case_lists_are_the_cli_source_of_truth() -> None:
+    assert get_quick_case_ids() == (
+        "atelje-bird",
+        "painter-palma",
+        "foto-ram",
+        "arcade-hall",
+        "cafe-bistro",
+    )
+    assert get_full_case_ids() == (
+        "painter-palma",
+        "atelje-bird",
+        "cafe-bistro",
+    )
+    assert format_case_list(get_full_case_ids(), separator=" + ") == (
+        "painter-palma + atelje-bird + cafe-bistro"
+    )
+
+
+def test_full_suite_covers_local_ecommerce_and_restaurant_scaffolds() -> None:
+    scaffolds: set[str] = set()
+    for case_id in get_full_case_ids():
+        path = REPO_ROOT / "examples" / f"{case_id}.project-input.json"
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        scaffolds.add(payload["scaffoldId"])
+
+    assert scaffolds == {
+        "local-service-business",
+        "ecommerce-lite",
+        "restaurant-hospitality",
+    }
 
 
 def _write_run_dir(

@@ -3,10 +3,11 @@
 
 Two modes:
 
-* ``quick`` — runs all four ``examples/*.project-input.json`` fixtures with
+* ``quick`` — runs five ``examples/*.project-input.json`` fixtures with
   ``--skip-build`` for a fast regression smoke check (no npm).
-* ``full`` — runs ``painter-palma`` and ``atelje-bird`` without
-  ``--skip-build`` so ``npm install`` + ``npm run build`` are exercised.
+* ``full`` — runs ``painter-palma``, ``atelje-bird`` and ``cafe-bistro``
+  without ``--skip-build`` so ``npm install`` + ``npm run build`` are
+  exercised across local-service, ecommerce and restaurant scaffolds.
 
 For each case the runner reads the canonical artefakter under
 ``data/runs/<runId>/`` and writes a summary to
@@ -61,12 +62,35 @@ QUICK_CASES: tuple[str, ...] = (
 FULL_CASES: tuple[str, ...] = (
     "painter-palma",
     "atelje-bird",
+    "cafe-bistro",
 )
 
 # `scripts/build_site.py` prints `runId: <id>` on stdout. Other tools in
 # the repo (dev_generate.py + playground.py) use `runId=<id>`; accept both
 # so this runner stays robust if the print format is ever harmonised.
 _RUN_ID_RE = re.compile(r"runId[:=]\s*(?P<run_id>[A-Za-z0-9._-]+)")
+
+
+def get_quick_case_ids() -> tuple[str, ...]:
+    """Return the canonical quick-suite case IDs.
+
+    This small accessor keeps CLI help text and Backoffice labels tied to
+    the same source of truth without importing or running any suite work.
+    """
+
+    return QUICK_CASES
+
+
+def get_full_case_ids() -> tuple[str, ...]:
+    """Return the canonical full-suite case IDs."""
+
+    return FULL_CASES
+
+
+def format_case_list(case_ids: tuple[str, ...], *, separator: str = ", ") -> str:
+    """Format case IDs for human-facing CLI/UI text."""
+
+    return separator.join(case_ids)
 
 
 def utc_now_iso() -> str:
@@ -398,6 +422,8 @@ def _has_openai_key() -> bool:
 
 
 def main() -> int:
+    quick_cases = get_quick_case_ids()
+    full_cases = get_full_case_ids()
     parser = argparse.ArgumentParser(
         description=(
             "Run a canonical eval suite over examples/*.project-input.json "
@@ -408,8 +434,10 @@ def main() -> int:
         "mode",
         choices=("quick", "full"),
         help=(
-            "quick: 4 examples with --skip-build. "
-            "full: painter-palma + atelje-bird without --skip-build (npm build)."
+            f"quick: {len(quick_cases)} examples ({format_case_list(quick_cases)}) "
+            "with --skip-build. "
+            f"full: {len(full_cases)} examples ({format_case_list(full_cases)}) "
+            "without --skip-build (npm build)."
         ),
     )
     parser.add_argument(
