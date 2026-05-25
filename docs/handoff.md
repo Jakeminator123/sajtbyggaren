@@ -1,15 +1,28 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-25 morgon (**Sprintvåg 1+2 stängd — fem grind/scout-PRs
-landade på 2 timmar**: PR #81 B83 + PR #82 Lane 3 embeddings audit + PR #80 B85
-+ PR #79 B87 + PR #83 B72+B75 status-sync). Verifierad `jakob-be` är
-`2a5d2e5`. `main` ligger 11 commits bakom på `6649b51`. Allt ovanpå
-sitter på `jakob-be` och följer med när `jakob-be` nästa gång PR:as mot
-`main` (väntar tills Lane 2 + Lane 4 är mergade och Christopher-spåret
-beslutat). `christopher-ui` är på `9f63f15` (Christophers
+**Datum:** 2026-05-25 morgon (**Sprintvåg 1+2 stängd — fem PRs landade
+på `jakob-be` på 2 timmar**: #81 + #82 + #80 + #79 + #83). Verifierad
+`jakob-be` är `2a5d2e5` (eller `590284b` om denna handoff-commit räknas
+med). `main` ligger 12 commits bakom på `6649b51`. Bug-räkning på
+`jakob-be`: **19 aktiva / 112 stängda** (-5 sedan morgon).
+
+**ÄRLIG BEDÖMNING (extern reviewer + orchestrator-self-audit):** Av
+dagens fem PRs är endast **#79 en substantiell produktkodsförändring**
+(stderr-warning vid `briefModel`-fallback). #80 = docstring-source-lock-
+test (intern kvalitet, ingen runtime-effekt). #81 + #83 = docs-
+flyttar av redan-fixed B-IDer i `known-issues.md`. #82 = read-only
+scout-rapport för embeddings-readiness. Dagens energi gick åt
+**koordinationslager** (Sprintvakt-inbox, lane-disciplin, worktree-
+isolering, multitask-räddningsoperation) snarare än till kärnflödet
+`prompt → brief → plan/build → preview → följdprompt`. Verklig
+produktlyft denna session: minimal. `main` rör sig inte alls. Detta
+är acceptabelt OM nästa session prioriterar Lane 2 LLM contract
+propagation (B137-B141) och `jakob-be → main`-sync.
+
+`origin/christopher-ui` är på `9f63f15` med Christophers
 scope-leak-implementation av `GAP-backend-build-trace-endpoint` plus en
-versions-tab-fix, ej PR:ad än). Bug-räkning: **19 aktiva / 112 stängda**
-(-5 sedan morgon).
+versions-tab-fix, ej PR:ad än. Hon är hård blocker för `jakob-be → main`-
+sync eftersom hennes branch behöver hanteras innan main rör sig.
 
 Health på `jakob-be` är grön: governance (18 policies), rules-sync,
 strict term coverage, sprintvakt-check `--strict`, ruff 0 findings,
