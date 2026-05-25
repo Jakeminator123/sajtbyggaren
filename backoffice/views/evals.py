@@ -76,6 +76,61 @@ def _render_status(slot: Any, *, mode: str, state: str, elapsed: float, lines: l
     )
 
 
+def _spawn_subprocess_group(cmd: list[str], *, cwd: str, env: dict[str, str]) -> subprocess.Popen[str]:
+    """Spawn ``cmd`` so the whole process tree can be terminated together.
+
+    On Windows the child runs in a new process group via
+    ``CREATE_NEW_PROCESS_GROUP`` so a later ``taskkill /T`` recursively
+    reaches grandchildren (``build_site.py`` -> ``npm`` -> ``node``). On
+    POSIX we use ``start_new_session=True`` so the same tree shares a
+    process group we can signal with ``os.killpg``.
+    """
+
+    popen_kwargs: dict[str, Any] = {
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.STDOUT,
+        "text": True,
+        "cwd": cwd,
+        "env": env,
+    }
+    if sys.platform == "win32":
+        creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+        popen_kwargs["creationflags"] = creationflags
+    else:
+        popen_kwargs["start_new_session"] = True
+    return subprocess.Popen(cmd, **popen_kwargs)
+
+
+def _terminate_process_tree(proc: subprocess.Popen[str]) -> None:
+    """Kill ``proc`` and every descendant.
+
+    Without this, ``proc.kill()`` only signals the top-level Python
+    process; spawned grandchildren (``build_site.py``, ``npm``, ``node``)
+    keep running and consume resources while the UI already reports a
+    timeout (Codex P2 review on PR #87).
+    """
+
+    if proc.poll() is not None:
+        return
+    try:
+        if sys.platform == "win32":
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                capture_output=True,
+                check=False,
+            )
+        else:
+            import os as _os
+            import signal as _signal
+
+            try:
+                _os.killpg(_os.getpgid(proc.pid), _signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+    except (OSError, subprocess.SubprocessError):
+        proc.kill()
+
+
 def _run_eval_suite(mode: str, status_slot: Any | None) -> dict[str, Any]:
     timeout = QUICK_TIMEOUT_SECONDS if mode == "quick" else FULL_TIMEOUT_SECONDS
     cmd = [sys.executable, str(SCRIPTS_DIR / "run_eval_suite.py"), mode]
@@ -100,14 +155,7 @@ def _run_eval_suite(mode: str, status_slot: Any | None) -> dict[str, Any]:
                 break
 
     try:
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            cwd=str(REPO_ROOT),
-            env=env,
-        )
+        proc = _spawn_subprocess_group(cmd, cwd=str(REPO_ROOT), env=env)
     except FileNotFoundError as exc:
         return {"exit_code": 1, "output": f"run_eval_suite.py kunde inte startas: {exc}", "timed_out": False, "elapsed": 0.0}
 
@@ -126,7 +174,7 @@ def _run_eval_suite(mode: str, status_slot: Any | None) -> dict[str, Any]:
         if elapsed > timeout:
             timed_out = True
             lines.append(f"\nTimeout efter {timeout}s\n")
-            proc.kill()
+            _terminate_process_tree(proc)
             break
         time.sleep(0.2)
 

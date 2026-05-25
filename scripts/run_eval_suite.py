@@ -66,9 +66,8 @@ _RUN_ID_RE = re.compile(r"runId[:=]\s*(?P<run_id>[A-Za-z0-9._-]+)")
 
 
 def utc_now_iso() -> str:
-    return datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%S.") + (
-        f"{datetime.now(tz=UTC).microsecond // 1000:03d}Z"
-    )
+    now = datetime.now(tz=UTC)
+    return now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now.microsecond // 1000:03d}Z"
 
 
 def make_eval_run_id() -> str:
@@ -185,6 +184,7 @@ def run_one_case(
     skip_build: bool,
     runs_dir: Path,
     examples_dir: Path,
+    generated_dir: Path | None = None,
     verbose: bool = True,
 ) -> dict[str, Any]:
     """Invoke ``scripts/build_site.py`` for one dossier and parse artefakter.
@@ -192,6 +192,11 @@ def run_one_case(
     Returns a case dict that the caller appends to the suite summary.
     Subprocess failures are captured as ``error`` strings; the runner
     never re-raises so the rest of the suite can still finish.
+
+    ``generated_dir`` is passed through to ``build_site.py --generated-dir``.
+    Full builds receive a per-case directory so each run validates a clean
+    ``npm install`` instead of reusing a cached ``node_modules`` from an
+    earlier suite invocation (Codex P2 review on PR #87).
     """
 
     dossier_path = examples_dir / f"{site_id}.project-input.json"
@@ -203,6 +208,7 @@ def run_one_case(
         "siteId": site_id,
         "dossierPath": dossier_display,
         "skipBuild": skip_build,
+        "generatedDir": str(generated_dir) if generated_dir is not None else None,
         "runId": None,
         "briefSource": None,
         "planSource": None,
@@ -233,6 +239,8 @@ def run_one_case(
     ]
     if skip_build:
         cmd.append("--skip-build")
+    if generated_dir is not None:
+        cmd.extend(["--generated-dir", str(generated_dir)])
 
     started = time.monotonic()
     if verbose:
@@ -313,12 +321,22 @@ def run_suite(
     if verbose:
         print(f"eval-suite {mode} start (evalRunId={eval_run_id})", flush=True)
 
+    # Full builds get a per-case generated directory so each case runs
+    # a clean ``npm install`` instead of reusing the default
+    # ``../sajtbyggaren-output/.generated/<siteId>`` target (which would
+    # let ``copy_starter`` preserve a stale ``node_modules`` and make
+    # the suite blind to dependency regressions). Skip-build keeps the
+    # default target — there is no npm step to isolate.
+    generated_root = evals_dir / "generated" / eval_run_id
+
     for site_id in site_ids:
+        case_generated_dir = None if skip_build else generated_root / site_id
         case = run_one_case(
             site_id,
             skip_build=skip_build,
             runs_dir=runs_dir,
             examples_dir=examples_dir,
+            generated_dir=case_generated_dir,
             verbose=verbose,
         )
         summary["cases"].append(case)
@@ -340,6 +358,24 @@ def run_suite(
         print(f"evalRunId={eval_run_id}", flush=True)
 
     return summary
+
+
+def compute_exit_code(summary: dict[str, Any]) -> int:
+    """Return 0 when every case is clean, 1 when any case has an error.
+
+    The exit code is how the backoffice subprocess and any future CI
+    integration tell "kedjan lever" from "kedjan failade". Returning 0
+    on a partial failure would render a green ``klar`` state in the
+    UI even when one or more dossiers blew up, defeating the
+    smoke/regression signal these runs exist to provide (Codex P1
+    review on PR #87).
+    """
+
+    cases = summary.get("cases", [])
+    for case in cases:
+        if case.get("error"):
+            return 1
+    return 0
 
 
 def _has_openai_key() -> bool:
@@ -409,7 +445,7 @@ def main() -> int:
     )
     if args.quiet:
         print(f"evalRunId={summary['evalRunId']}")
-    return 0
+    return compute_exit_code(summary)
 
 
 if __name__ == "__main__":

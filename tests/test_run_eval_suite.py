@@ -20,6 +20,7 @@ from pathlib import Path
 import pytest
 
 from scripts.run_eval_suite import (
+    compute_exit_code,
     extract_rejected_capabilities,
     extract_selected_dossiers,
     make_eval_run_id,
@@ -270,3 +271,105 @@ def test_run_suite_rejects_unknown_mode(tmp_path: Path) -> None:
             examples_dir=tmp_path / "examples",
             verbose=False,
         )
+
+
+def test_compute_exit_code_clean_suite_returns_zero() -> None:
+    summary = {
+        "cases": [
+            {"siteId": "a", "error": None},
+            {"siteId": "b", "error": ""},
+        ],
+    }
+    assert compute_exit_code(summary) == 0
+
+
+def test_compute_exit_code_any_failure_returns_one() -> None:
+    summary = {
+        "cases": [
+            {"siteId": "a", "error": None},
+            {"siteId": "b", "error": "dossier not found: ..."},
+            {"siteId": "c", "error": None},
+        ],
+    }
+    assert compute_exit_code(summary) == 1
+
+
+def test_compute_exit_code_empty_summary_returns_zero() -> None:
+    """A summary with no cases at all should not signal failure here.
+
+    Empty case lists only happen in tests that exercise unknown modes
+    via ``run_suite`` (which raises before populating ``cases``). The
+    real CLI always produces at least one case, so degrading exit codes
+    on emptiness would surprise the operator without surfacing a
+    concrete failure.
+    """
+
+    assert compute_exit_code({"cases": []}) == 0
+    assert compute_exit_code({}) == 0
+
+
+def test_run_suite_with_missing_dossiers_drives_exit_one(tmp_path: Path) -> None:
+    """When every case errors, compute_exit_code must signal failure.
+
+    Pairs with test_run_suite_writes_summary_with_missing_dossiers
+    above — the same scenario, but checking the new
+    ``compute_exit_code`` contract introduced in response to the
+    Codex P1 review on PR #87.
+    """
+
+    from scripts.run_eval_suite import run_suite
+
+    empty_examples = tmp_path / "examples"
+    empty_examples.mkdir()
+    summary = run_suite(
+        "quick",
+        evals_dir=tmp_path / "evals",
+        runs_dir=tmp_path / "runs",
+        examples_dir=empty_examples,
+        verbose=False,
+    )
+    assert compute_exit_code(summary) == 1
+
+
+def test_run_one_case_records_generated_dir(tmp_path: Path) -> None:
+    """Full-mode cases pass --generated-dir to build_site.py.
+
+    We do not actually invoke build_site.py here — the dossier is
+    missing on purpose so the case errors fast — but we verify that
+    ``generatedDir`` lands in the case dict so summary readers can
+    confirm each full-mode run had an isolated target directory.
+    """
+
+    from scripts.run_eval_suite import run_one_case
+
+    case_generated = tmp_path / "evals" / "generated" / "evalX" / "site-a"
+    case = run_one_case(
+        "site-a",
+        skip_build=False,
+        runs_dir=tmp_path / "runs",
+        examples_dir=tmp_path / "examples",
+        generated_dir=case_generated,
+        verbose=False,
+    )
+    assert case["generatedDir"] == str(case_generated)
+    assert case["error"] and "dossier not found" in case["error"]
+
+
+def test_utc_now_iso_single_clock_read() -> None:
+    """utc_now_iso reads the clock once to avoid a torn timestamp.
+
+    Bugbot LOW finding on PR #87: previously the function called
+    ``datetime.now`` twice — once for the strftime prefix and once
+    for the millisecond suffix — which could produce a timestamp where
+    the seconds and milliseconds came from different instants if the
+    second boundary was crossed between the two reads. We assert the
+    format here; the single-read property is enforced by the
+    implementation containing exactly one ``datetime.now`` call.
+    """
+
+    import re as _re
+
+    from scripts.run_eval_suite import utc_now_iso
+
+    stamp = utc_now_iso()
+    assert _re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z", stamp)

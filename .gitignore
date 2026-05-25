@@ -33,8 +33,11 @@ data/versions/
 # eval-knapparna). Per-suite summary och manuella scorecards genereras
 # på operatörens maskin och versionsas inte. Mapparna behålls i git via
 # .gitkeep så backoffice-vyn alltid har en plats att skriva till.
+# data/evals/generated/<evalRunId>/<siteId>/ är per-case Next.js-output
+# som full-mode-bygget skapar för att tvinga ren npm install.
 data/evals/eval-runs/*.json
 data/evals/manual-scorecards/*.json
+data/evals/generated/
 
 audits/
 data/prompt-inputs/
