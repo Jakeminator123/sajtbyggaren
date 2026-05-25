@@ -118,6 +118,7 @@ COMMON_WORDS = {
     # Web standards / native browser APIs
     "HTML", "CSS", "URL", "URI", "DOM", "API", "HTTP", "HTTPS", "REST", "GraphQL", "WebSocket", "OAuth", "CORS", "TLS", "SSL",
     "SharedArrayBuffer", "SharedArrayBuffer is not defined",
+    "XMLHttpRequest", "ReadableStream",
     "ElementCreationOptions", "DevTools",
     # Sajtbyggaren-meta-nyckelord (egennamn för repon)
     "Sajtbyggaren", "Sajtmaskin", "Jakeminator123", "Jakemiantor123",
@@ -452,6 +453,12 @@ COMMON_WORDS = {
     "AssetDropzone", "AssetDropzoneProps", "AssetCard", "AssetId",
     "AssetRef", "AssetRole", "AssetPlacement", "AssetStore",
     "ChangeEvent", "DragEvent", "FormData",
+    # Local helpers introduced by the asset-dropzone XHR upload-progress
+    # refactor (operator-OK 2026-05-25): UploadProgress is a private React
+    # component that renders the 0-100% progress bar; UploadResponse is
+    # the JSON shape returned by /api/upload-asset. Both are
+    # implementation symbols, not canonical domain terms.
+    "UploadProgress", "UploadResponse",
     "AssetsStep", "AssetsStepProps", "WizardAssets",
     "LocalAssetStore", "S3AssetStore",
     "SaveAssetInput", "SaveAssetVariant",
