@@ -58,6 +58,7 @@ type WizardDirectives = {
   language: "sv" | "en";
   scaffoldHint: string;            // exempel: "local-service-business"
   variantHint?: string;            // exempel: "warm-craft" (från VIBE_OPTIONS)
+  layoutHint?: "gradient" | "centered" | "split"; // hero-layout-override (ADR 0027)
   pageCount?: number;              // 1..12, derived från mustHave.length + 1 (start)
   businessType?: string;           // kebab-case slug, från businessFamily.id
   requestedCapabilities?: string[]; // slugs, från selectedFunctions[].capability
@@ -72,6 +73,22 @@ type WizardDirectives = {
     accentColorHex?: string;
     designStyle?: string;
   };
+  uniqueSellingPoints?: string[];  // strukturerad lista (max 4)
+  media?: {                        // tombstones för borttagna assets (null = clear)
+    favicon?: AssetRef | null;
+    ogImage?: AssetRef | null;
+    backgroundVideo?: AssetRef | null;
+  };
+  /**
+   * Phase 3 (ADR 0031): operator-pin per section för design-treatments.
+   * Map<sectionId, treatmentId> där varje sectionId är registrerad i
+   * `_SECTION_RENDERERS` och varje treatmentId finns i schema-enum för
+   * den sectionen. Backend resolve-ordning: operator-pin (denna map) >
+   * variant-default (`_SECTION_TREATMENTS_BY_VARIANT`) > section-default.
+   * UI:t filtrerar bort pins för sections som inte hör till aktiv
+   * scaffold; tomt = inga overrides.
+   */
+  sectionTreatments?: Record<string, string>;
   notesForPlanner?: string;        // specialRequests + uniqueSellingPoints concat:ade
 };
 ```
@@ -84,6 +101,10 @@ type WizardDirectives = {
 | `businessFamily` (id) | `scaffoldHint` | `BUSINESS_FAMILIES.find(id).scaffoldHint` |
 | `businessFamily` (id) | `businessType` | Samma id — backend slug-mappar internt |
 | `vibe.vibeId` | `variantHint` | **Nytt kanal** — deterministisk variant-routning |
+| `vibe.layoutHint` | `layoutHint` | Hero-layout-override (ADR 0027). Tom sträng = "auto" hopps över. |
+| `vibe.sectionTreatments` | `sectionTreatments` | Phase 3 / ADR 0031. Filtreras per scaffold + trim:as innan emit. |
+| `uniqueSellingPoints[]` | `uniqueSellingPoints` | Max 4 — fler skulle göra hero-blocket otydligt. |
+| `media.{favicon,ogImage,backgroundVideo}` | `media.*` | Tombstone `null` = explicit borttaget; `stripEmpty` bevarar `null` för dessa nycklar. |
 | `mustHave.length + 1` | `pageCount` | Inkluderar startsida som inte ligger i `mustHave` |
 | `selectedFunctions[]` | `requestedCapabilities` | Via `FUNCTION_CHOICE.capability`-lookup; tomma hopps över |
 | `primaryCta` (free text) | `conversionGoals` | Mapas till slugs via simpel keyword-matchning ("boka" → `"booking"`, "ring" → `"call"`, "offert" → `"quote-request"`) |

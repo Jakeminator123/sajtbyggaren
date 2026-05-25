@@ -56,10 +56,20 @@ Tre lokationsalternativ stod på bordet:
 3. Tomt objekt eller saknad property faller tillbaka till variant- och
    section-defaults. Existerande examples slipper schema-bump i samma commit.
 4. `_treatment_for_section` får i Phase 3-implementation en ny
-   resolve-ordning operator-pin > variant-default > section-default. Helper-
-   signaturen utökas med en `operator_treatments: dict[str, str] | None`-
-   parameter som tråds genom `_call_section_renderer` precis som
-   `variant_id` redan är.
+   resolve-ordning operator-pin > variant-default > section-default.
+   Helper-signaturen utökas med en `operator_pin: str | None = None`
+   keyword-parameter (per-section pin, inte hela mappen) och en
+   sidekick-helper `_operator_pin_for_section(dossier, section_id)`
+   som slår upp pin:en i `dossier.directives.sectionTreatments` per
+   callsite. Tråden in i `_call_section_renderer` övervägdes (för
+   symmetri med `variant_id`), men avfärdades: det skulle krävt att
+   alla 50+ section-renderers tog emot operator-pin som kwarg, även
+   sektioner som inte har treatment-dispatch. Per-callsite-uppslagning
+   håller resolve-ordningen lokal, lättauditerad och invasionen
+   begränsad till de 5 sections som faktiskt opt:ar in i
+   treatment-dispatch. Resultatet är samma observable beteende som
+   det hela-dict-trådade alternativet — `tests/test_section_-
+   treatments_resolve.py` täcker alla tre tier:s i resolve-ordningen.
 5. `briefModel`-prompten rörs **inte** av Phase 3. Brief producerar ett
    `SiteBrief` (pre-Project Input) som inte har något `directives`-fält;
    section-treatments är ett operator-pin som lever på

@@ -20,6 +20,7 @@ import {
 import {
   BUSINESS_FAMILIES,
   branchForFamily,
+  deriveEffectiveScaffoldHint,
   DESIGN_STYLE_OPTIONS,
   findVibe,
   TONE_OPTIONS,
@@ -70,10 +71,16 @@ export function VisualStep({
   answers: WizardAnswers;
   onChange: (next: Partial<WizardAnswers>) => void;
 }) {
-  // Bestäm scaffold-hint från family (om vald) eller fall tillbaka till
-  // local-service-business som default.
+  // Bestäm scaffold-hint från family + sub-kategori. När operatören har
+  // valt en sub-cat vars scaffoldHint skiljer sig från familyens vinner
+  // sub-kategorin (samma helper används av wizard-payload så UI:t och
+  // backend-payloaden alltid är konsistenta). Defaultar till LSB när
+  // varken family eller sub-cat är vald så vibe-griden inte är tom.
   const family = BUSINESS_FAMILIES.find((f) => f.id === answers.businessFamily);
-  const scaffoldHint = family?.scaffoldHint ?? "local-service-business";
+  const scaffoldHint = useMemo(
+    () => deriveEffectiveScaffoldHint(family, answers.siteType),
+    [family, answers.siteType],
+  );
   const vibes = useMemo(() => vibesForScaffold(scaffoldHint), [scaffoldHint]);
   const selectedVibe = useMemo(
     () => (answers.vibe.vibeId ? findVibe(answers.vibe.vibeId) : undefined),
@@ -192,9 +199,18 @@ export function VisualStep({
     onChange({ moodImages: merged });
   };
 
-  const sectionPinCount = Object.keys(
-    answers.vibe.sectionTreatments ?? {},
-  ).length;
+  // Räkna ENBART pins som faktiskt visas i UI:t för aktuell scaffold.
+  // Pins kvar i state efter ett scaffold-byte ska inte räknas in i
+  // "ifyllda fält"-räknaren, annars visar disclosure-knappen "1
+  // ifyllda" utan att en motsvarande sektion är synlig.
+  const sectionPinCount = useMemo(() => {
+    const pins = answers.vibe.sectionTreatments ?? {};
+    let count = 0;
+    for (const spec of applicableTreatmentSpecs) {
+      if ((pins[spec.id] ?? "").trim().length > 0) count += 1;
+    }
+    return count;
+  }, [answers.vibe.sectionTreatments, applicableTreatmentSpecs]);
   const showSectionTreatments = applicableTreatmentSpecs.length > 0;
 
   const advancedFilled =

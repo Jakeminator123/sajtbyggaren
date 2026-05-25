@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-25T18:30:00Z",
-  "updatedBy": "christopher-phase-3-full-unblock-ui-and-backend-implementation",
+  "updatedAt": "2026-05-25T19:45:00Z",
+  "updatedBy": "christopher-phase-3-merge-polish-scout-pass",
   "people": {
     "jakob": {
       "allocation": 0.75,
@@ -447,6 +447,57 @@
       ],
       "completionNote": "Phase 3 UI closed 2026-05-25T18:30:00Z med operatör-OK. Levererat: treatment-options.ts (UI-mirror av schema-enum + _SECTION_TREATMENTS_BY_VARIANT med per-spec defaults), WizardSectionTreatments-typ + sectionTreatments-fält på WizardVibe, deriveWizardDirectives mappar wizardens pins till directives.sectionTreatments, ny SectionTreatmentRow-disclosure i visual-step (visas bara när scaffolden har relevanta sektioner; Auto-knappen labelas med variant-default så operatören förstår fall-back), demo-answers.ts uppdaterade med tom sectionTreatments-default. scripts/check_term_coverage.py allowlist-utökning för nya implementation symbols (SectionTreatmentSpec etc.).",
       "pairedWith": "GAP-section-design-treatments-phase-3-backend"
+    },
+    {
+      "id": "GAP-phase-3-merge-polish",
+      "type": "Gap/Maintenance",
+      "owner": "christopher",
+      "title": "Phase 3 polish — scout-driven bug-fix-pass innan merge mot main",
+      "collisionRisk": "yellow",
+      "reviewer": "jakob",
+      "status": "completed",
+      "file": "docs/section-design-treatments-scout.md",
+      "createdAt": "2026-05-25T19:00:00Z",
+      "startedAt": "2026-05-25T19:00:00Z",
+      "completedAt": "2026-05-25T19:45:00Z",
+      "paths": [
+        "apps/viewser/components/discovery-wizard/wizard-constants.ts",
+        "apps/viewser/components/discovery-wizard/steps/visual-step.tsx",
+        "apps/viewser/components/discovery-wizard/wizard-payload.ts",
+        "apps/viewser/components/discovery-wizard/treatment-options.ts",
+        "apps/viewser/components/discovery-wizard/demo-answers.ts",
+        "scripts/build_site.py",
+        "packages/generation/planning/plan.py",
+        "tests/test_section_treatments_resolve.py",
+        "docs/section-design-treatments-scout.md",
+        "docs/gaps/GAP-section-design-treatments.md",
+        "docs/contracts/wizard-discovery.v2.md"
+      ],
+      "doNotTouch": [
+        "governance/schemas/**",
+        "governance/decisions/**"
+      ],
+      "acceptanceCriteria": [
+        "Restaurant-hospitality vibes (warm-bistro, casual-cafe, midnight-bar, nordic-fine-dining) finns i VIBE_OPTIONS — `vibesForScaffold('restaurant-hospitality')` returnerar nu 4 vibes (innan: 0).",
+        "deriveEffectiveScaffoldHint(family, siteType) härleder scaffoldHint från sub-kategori när den pekar mot en mer specifik runtime-scaffold (consulting → agency-studio, legal → professional-services osv); UI och payload använder samma helper.",
+        "deriveWizardDirectives filtrerar sectionTreatments-pins per aktiv scaffold så scaffold-byte inte lämnar 'ghost-pins' i payloaden.",
+        "advancedFilled räknar bara pins för sections som faktiskt visas i UI:t.",
+        "Stale Phase 1 / future Phase 3-kommentarer uppdaterade i scripts/build_site.py, treatment-options.ts, plan.py.",
+        "Doc-drift fixad: docs/section-design-treatments-scout.md, docs/gaps/GAP-section-design-treatments.md, docs/contracts/wizard-discovery.v2.md uppdaterade till post-Phase-3-status (3a + 3d completed; 3b + 3c planned).",
+        "TS narrowing: SectionTreatmentId och WizardSectionId snäva unioner i treatment-options.ts.",
+        "Demo-answers.ts: Lilla Bageriet använder warm-bistro (matchar restaurant-hospitality family-default)."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py --strict",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint"
+      ],
+      "completionNote": "Scout-driven polish-pass 2026-05-25T19:45:00Z med operatör-OK. Sex parallella scouts (composer-2.5-fast) granskade end-to-end-flow, schema/drift, backend, wizard-UI, tests och code-quality/governance efter Phase 3-leveransen. Inga P0; sju P1 fixades: (1) restaurant-hospitality saknade vibes i UI, (2) Phase 3 UI var i praktiken unreachable för 4 av 5 sections eftersom BUSINESS_FAMILIES inte mappar till agency-studio/clinic-healthcare/professional-services — löst via deriveEffectiveScaffoldHint som låter sub-kategori uppgradera scaffold-hint, (3) sectionTreatments-pins kvarstod i payload efter scaffold-byte — filtreras nu vid emit, (4) advancedFilled-counter ljög när pins inte var synliga, (5) flera stale Phase 1-kommentarer i Python + TS, (6) doc-drift i scout/GAP/contract sade fortfarande Phase 3 blocked, (7) demo-answers använde warm-craft för restaurant family. Polish: TS narrowing för SectionTreatmentId/WizardSectionId. Christopher körde detta som [scope-leak] under operatör-OK eftersom GAP-section-design-treatments-phase-3-backend var stängd och förbättringarna spände över både UI och backend-kommentarer/docs."
     },
     {
       "id": "GAP-backend-restaurant-activation",

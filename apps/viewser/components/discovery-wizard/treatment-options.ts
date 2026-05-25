@@ -12,26 +12,65 @@
  * Mirror-strategin är medveten:
  * - Behovet att läsa katalogen i klienten utan ett extra API-anrop till
  *   `governance/schemas/...` motiverar en konstant.
- * - Drift mellan denna fil och Python-källan fångas av två tester:
+ * - Schema ↔ Python-drift fångas av två tester:
  *     * `tests/test_project_input_schema.py` — schema-enum vs
  *       runtime-tabellen.
  *     * `tests/test_section_treatments_prompts.py` — planning-prompt
  *       vs runtime-tabellen.
  *   En framtida commit som lägger till en ny treatment i Python utan
- *   att uppdatera schemat fångas där. UI:t blir då bara strikt
- *   subset, vilket är säkert (operatören kan inte pinna en treatment
- *   som schemat avvisar).
+ *   att uppdatera schemat fångas där.
+ * - Schema ↔ TS-drift (denna fil) fångas av
+ *     * `tests/test_treatment_options_ts_mirror.py` — parsar
+ *       `SECTION_TREATMENT_SPECS` och jämför med schemat och
+ *       `_SECTION_TREATMENTS_BY_VARIANT`.
+ *   UI:t kommer fortsätta vara en strikt subset av schemat även om
+ *   TS-mirror skulle släpa, vilket gör operator-pinningen säker
+ *   (operatören kan inte välja en treatment som schemat avvisar).
  *
  * ADR 0031 förklarar resolve-ordningen: operator-pin (denna fil) >
- * variant-default (Python-runtime) > section-default. UI:t pinar
- * INTE en treatment som matchar variantens default — då blir
- * operator-pin redundant. Visual-step renderar därför bara en
- * disclosure när det FINNS minst en variant-default som operatören
- * skulle kunna avvika ifrån.
+ * variant-default (Python-runtime) > section-default. Visual-step
+ * renderar disclosure:n så fort scaffolden har minst en section som
+ * är registrerad här — operatören kan då alltid välja "Auto" för att
+ * köra variant- eller section-default deterministiskt utan pin.
  */
 
-export type SectionTreatmentId = string;
-export type WizardSectionId = string;
+/**
+ * Snäv union över de section-id:n som har en treatment-katalog. Speglar
+ * Python `_SECTION_RENDERERS`-nycklarna som har en treatment-dispatch
+ * och schema-enums i `directives.sectionTreatments`. Om en ny section
+ * läggs till på Python-sidan måste även denna typ utökas — TypeScript
+ * fångar då alla call-sites som behöver uppdateras.
+ */
+export type WizardSectionId =
+  | "selected-work-preview"
+  | "treatment-list"
+  | "practice-grid"
+  | "expertise-areas"
+  | "service-list";
+
+/**
+ * Snäv union över alla treatment-id:n som finns i schema-enum för
+ * Phase 1+2. Drift mot schema/Python fångas av
+ * `tests/test_project_input_schema.py` och `tests/test_section_-
+ * treatments_prompts.py`; typen här ger dessutom compile-time-skydd
+ * för UI-koden så en typo som ``"editor-stack"`` inte lyckas
+ * passera till backend.
+ */
+export type SectionTreatmentId =
+  | "editorial-stack"
+  | "asymmetric-grid"
+  | "marquee-row"
+  | "minimal-rows"
+  | "split-cards"
+  | "numbered-stack"
+  | "dense-grid"
+  | "tabular"
+  | "grouped"
+  | "numbered-2col"
+  | "tag-cluster"
+  | "card-grid"
+  | "alternating-rows"
+  | "icon-strip";
 
 export type SectionTreatmentOption = {
   /** Treatment-id som matchar Python `_SECTION_TREATMENTS_BY_VARIANT`. */

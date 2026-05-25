@@ -104,13 +104,13 @@ SCAFFOLD_TO_STARTER: dict[str, str] = {
 
 # Phase 3 (ADR 0031): catalogue of registered section design treatments
 # per section-id. Mirrors governance/schemas/project-input.schema.json
-# directives.sectionTreatments enums and the runtime tabellen
+# directives.sectionTreatments enums and the runtime table
 # scripts/build_site.py::_SECTION_TREATMENTS_BY_VARIANT. Used by the
 # planning prompt so planningModel can reason about visual structure
 # when it picks a scaffold/variant.
 #
 # This catalogue is an LLM-prompt aid, not a source of truth. The
-# schema enums and the Python runtime tabellen are the canonical
+# schema enums and the Python runtime table are the canonical
 # sources; tests/test_section_treatments_prompts.py guards against
 # drift between this list and the runtime catalogue (so a new
 # treatment registered in build_site.py without bumping this list

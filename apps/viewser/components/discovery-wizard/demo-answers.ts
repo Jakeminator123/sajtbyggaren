@@ -8,8 +8,9 @@
  *
  *   1. Måleri & Bygg Genberg — `construction` → local-service-business
  *      scaffold med portfolio + team + USP:er.
- *   2. Lilla Bageriet Sigtuna — `restaurant` → local-service-business
- *      scaffold med restaurant-branch (meny, kök, kostalternativ).
+ *   2. Lilla Bageriet Sigtuna — `restaurant` → restaurant-hospitality
+ *      scaffold (Path A active) med meny, kök, kostalternativ och
+ *      `warm-bistro`-vibe.
  *   3. Norrlands CBD — `ecommerce` → ecommerce-lite scaffold med
  *      produkter, prisnivå och webshop-CTA.
  *
@@ -180,7 +181,7 @@ function lillaBageriet(): WizardAnswers {
     businessFamily: "restaurant",
     siteType: ["restaurant"],
     vibe: {
-      vibeId: "warm-craft",
+      vibeId: "warm-bistro",
       useCustomColors: true,
       typographyFeel: "classic-serif",
       references: "saturday-bakeries.com, fabrique.com",

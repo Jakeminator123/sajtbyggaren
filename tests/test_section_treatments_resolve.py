@@ -25,7 +25,7 @@ Drift guards:
 
 * The propagation path ``payload.directives.sectionTreatments →
   project_input.directives.sectionTreatments`` is verified separately
-  in ``tests/test_section_treatments_propagation.py`` (this file).
+  in ``tests/test_section_treatments_propagation.py``.
 """
 
 from __future__ import annotations
@@ -189,12 +189,14 @@ def test_resolve_returns_section_default_for_unknown_variant(build_site) -> None
 def test_resolve_returns_section_default_when_variant_does_not_register_section(
     build_site,
 ) -> None:
-    """Variant exists but doesn't pin this section → section-default.
+    """Variant exists in product, but isn't in ``_SECTION_TREATMENTS_BY_VARIANT``
+    → section-default.
 
-    ``midnight-counsel`` is registered in
-    ``_SECTION_TREATMENTS_BY_VARIANT`` for its ``selected-work-preview``
-    treatment, NOT for ``service-list``. Asking for ``service-list``
-    should fall through to the section default.
+    ``midnight-counsel`` exists as a runtime variant (registered in
+    ``_VARIANT_HERO_LAYOUTS`` and consumed by hero-layout) but does
+    NOT appear in ``_SECTION_TREATMENTS_BY_VARIANT``. Asking the
+    helper to resolve a treatment for it must fall through to the
+    section default rather than raise or return ``None``.
     """
     assert (
         build_site._treatment_for_section(

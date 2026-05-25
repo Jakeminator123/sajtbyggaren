@@ -3599,11 +3599,13 @@ def _call_section_renderer(
 # Section design-treatments — variant-driven visual variation inside a
 # single section id. See docs/section-design-treatments-scout.md for
 # the three-tier resolution order (operator-pin → variant → section
-# default). Phase 1 only wires the variant tier; future phases layer
-# operator-pin (``dossier.directives.sectionTreatments``) and an
-# LLM-pick step in front of this map without changing the helper
-# signature, so callers (the section renderers themselves) do not
-# have to be touched again.
+# default). Phase 1+2 registered the variant tier across five sections;
+# Phase 3 (ADR 0031, 2026-05-25) layered operator-pin
+# (``dossier.directives.sectionTreatments``) on top via
+# ``_treatment_for_section(operator_pin=...)`` without changing the
+# section-renderer signatures. A future Phase 4 will add an LLM-pick
+# step in front of operator-pin; the helper signature is designed to
+# absorb that without touching renderers.
 #
 # Renderers that opt in declare ``variant_id: str | None = None`` in
 # their signature and call ``_treatment_for_section`` to pick the
@@ -3723,10 +3725,11 @@ def _operator_pin_for_section(dossier: dict, section_id: str) -> str | None:
     typos before the dossier reaches this code path. Defensive
     re-validation here would just duplicate that logic and risk
     drifting out of sync with the schema. ``_treatment_for_section``
-    still passes the value through ``operator_pin`` only when it is a
-    non-empty string, so a malformed dossier (e.g. a hand-edited
-    file that bypassed the schema) cannot crash the renderer; it
-    just silently falls through to the variant default.
+    still passes the value through ``operator_pin`` only when it is
+    a non-empty string, so a malformed dossier (e.g. a hand-edited
+    file that bypassed the schema) cannot crash the renderer; the
+    section renderer's own ``if treatment == ...`` chain falls
+    through to the section default in that case.
     """
     if not isinstance(dossier, dict):
         return None
@@ -5919,9 +5922,9 @@ def _treatment_list_header() -> str:
     """Shared header markup for every treatment-list treatment.
 
     Kept as a single source so the eyebrow + h1 + supporting copy
-    stay in lockstep across all three treatments. A future operator-
-    pin tier (Phase 3) can override the copy via dossier directives
-    without touching the per-treatment renderers.
+    stay in lockstep across all three treatments. The Phase 3
+    operator-pin tier (ADR 0031) only changes which treatment
+    renderer dispatches; it does not (yet) override the header copy.
     """
     return (
         '          <header className="flex flex-col gap-3">\n'
@@ -6261,9 +6264,9 @@ def _practice_grid_header() -> str:
     """Shared header markup for every practice-grid treatment.
 
     Locks the eyebrow + h1 + supporting copy across all three
-    treatments so a future Phase 3 operator-pin can override the
-    copy via dossier directives without touching per-treatment
-    renderers.
+    treatments. The Phase 3 operator-pin tier (ADR 0031) only
+    swaps the treatment renderer; copy overrides via dossier
+    directives are out of scope and left for a future iteration.
     """
     return (
         '          <header className="flex flex-col gap-3 max-w-2xl">\n'
