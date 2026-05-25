@@ -641,6 +641,87 @@ def render_gap_markdown(gap: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _load_gap_from_file(
+    gap_id: str,
+    workboard_path: Path | None,
+) -> dict[str, Any]:
+    """Parse ``docs/gaps/<gap_id>.md`` into a gap dict.
+
+    Mirrors the format produced by :func:`render_gap_markdown` so that
+    file-only gaps (which never made it into the workboard) can still be
+    resolved by tools like :func:`generate_agent_prompt`.
+    """
+    if not VALID_GAP_ID_RE.match(gap_id):
+        raise SprintvaktError("gapId must match GAP-<letters-numbers-dots-dashes>.")
+    repo_root = _repo_root_for(workboard_path)
+    gap_path = repo_root / "docs" / "gaps" / f"{gap_id}.md"
+    if not gap_path.is_file():
+        raise SprintvaktError(f"Gap not found: {gap_id}")
+
+    text = gap_path.read_text(encoding="utf-8")
+    title = ""
+    metadata: dict[str, str] = {}
+    section_buckets: dict[str, list[str]] = {
+        "why now": [],
+        "paths": [],
+        "do not touch": [],
+        "acceptance criteria": [],
+        "checks": [],
+        "notes": [],
+    }
+
+    current_section: str | None = None
+    for raw_line in text.splitlines():
+        line = raw_line.rstrip()
+        if line.startswith("## "):
+            current_section = line[3:].strip().lower()
+            continue
+        if line.startswith("# "):
+            _, sep, after = line[2:].partition(" — ")
+            if sep:
+                title = after.strip()
+            current_section = None
+            continue
+        if current_section is None:
+            metadata_match = re.match(r"^-\s+([A-Za-z]+):\s*`([^`]*)`\s*$", line)
+            if metadata_match:
+                metadata[metadata_match.group(1)] = metadata_match.group(2)
+            continue
+        if current_section in section_buckets:
+            section_buckets[current_section].append(line)
+
+    def _bullets(name: str, *, strip_backticks: bool) -> list[str]:
+        items: list[str] = []
+        for entry in section_buckets[name]:
+            stripped = entry.strip()
+            if not stripped.startswith("- "):
+                continue
+            item = stripped[2:].strip()
+            if strip_backticks and item.startswith("`") and item.endswith("`"):
+                item = item[1:-1]
+            items.append(item)
+        return items
+
+    return {
+        "id": gap_id,
+        "title": title,
+        "type": metadata.get("type", ""),
+        "owner": metadata.get("owner", ""),
+        "reviewer": metadata.get("reviewer", "jakob"),
+        "status": metadata.get("status", "queued"),
+        "collisionRisk": metadata.get("collisionRisk", "green"),
+        "createdAt": metadata.get("createdAt", ""),
+        "updatedAt": metadata.get("updatedAt", ""),
+        "whyNow": "\n".join(section_buckets["why now"]).strip(),
+        "paths": _bullets("paths", strip_backticks=True),
+        "doNotTouch": _bullets("do not touch", strip_backticks=True),
+        "acceptanceCriteria": _bullets("acceptance criteria", strip_backticks=False),
+        "checks": _bullets("checks", strip_backticks=True),
+        "notes": _bullets("notes", strip_backticks=False),
+        "source": f"file:docs/gaps/{gap_id}.md",
+    }
+
+
 def reserve_paths(
     payload: dict[str, Any],
     *,
@@ -831,7 +912,7 @@ def _find_gap(gap_id: str, workboard_path: Path | None) -> dict[str, Any]:
     for _list_name, gap in _iter_gap_lists(workboard):
         if gap.get("id") == gap_id:
             return gap
-    raise SprintvaktError(f"Gap not found in workboard: {gap_id}")
+    return _load_gap_from_file(gap_id, workboard_path)
 
 
 def _bullet_list(values: list[str]) -> str:

@@ -14,6 +14,7 @@ from tooling.sprintvakt_mcp.core import (
     generate_agent_prompt,
     paths_overlap,
     post_merge_sync_instructions,
+    render_gap_markdown,
     reserve_paths,
     validate_workboard,
 )
@@ -231,6 +232,53 @@ def test_generate_agent_prompt_contains_scope_fields(tmp_path: Path) -> None:
     assert "packages/generation/**" in prompt
     assert "python scripts/sprintvakt_check.py" in prompt
     assert "Accepted when checked." in prompt
+
+
+@pytest.mark.tooling
+def test_generate_agent_prompt_resolves_file_only_gap(tmp_path: Path) -> None:
+    workboard_path = _write_workboard(tmp_path)
+    gap_dict = _gap("GAP-fileonly", paths=["docs/file-only-scope.md"], status="queued")
+    gap_dict["title"] = "File-only gap"
+    gap_dict["whyNow"] = "Test the disk fallback."
+    gap_dict["acceptanceCriteria"] = ["File-only gap is resolved."]
+    gap_path = tmp_path / "docs" / "gaps" / "GAP-fileonly.md"
+    gap_path.write_text(render_gap_markdown(gap_dict), encoding="utf-8")
+
+    result = generate_agent_prompt(
+        {"gapId": "GAP-fileonly", "agentRole": "Builder", "owner": "jakob"},
+        workboard_path=workboard_path,
+    )
+
+    prompt = result["prompt"]
+    assert "GAP-fileonly — File-only gap" in prompt
+    assert "docs/file-only-scope.md" in prompt
+    assert "File-only gap is resolved." in prompt
+
+
+@pytest.mark.tooling
+def test_find_gap_prefers_workboard_over_file(tmp_path: Path) -> None:
+    workboard = _base_workboard()
+    workboard_gap = _gap("GAP-shared", paths=["docs/from-workboard.md"], status="queued")
+    workboard_gap["title"] = "Workboard wins"
+    workboard["queuedGaps"] = [workboard_gap]
+    workboard_path = _write_workboard(tmp_path, workboard)
+
+    file_gap = _gap("GAP-shared", paths=["docs/from-file.md"], status="queued")
+    file_gap["title"] = "File loses"
+    (tmp_path / "docs" / "gaps" / "GAP-shared.md").write_text(
+        render_gap_markdown(file_gap), encoding="utf-8"
+    )
+
+    result = generate_agent_prompt(
+        {"gapId": "GAP-shared", "agentRole": "Builder", "owner": "jakob"},
+        workboard_path=workboard_path,
+    )
+
+    prompt = result["prompt"]
+    assert "Workboard wins" in prompt
+    assert "File loses" not in prompt
+    assert "docs/from-workboard.md" in prompt
+    assert "docs/from-file.md" not in prompt
 
 
 @pytest.mark.tooling
