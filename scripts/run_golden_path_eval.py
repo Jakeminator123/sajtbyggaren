@@ -194,11 +194,12 @@ def list_generated_routes(run_dir: Path) -> list[str]:
     if not app_dir.is_dir():
         return []
     routes: list[str] = []
-    if (app_dir / "page.tsx").is_file():
-        routes.append("/")
-    for entry in sorted(app_dir.iterdir()):
-        if entry.is_dir() and (entry / "page.tsx").is_file():
-            routes.append("/" + entry.name)
+    for page_file in sorted(app_dir.rglob("page.tsx")):
+        if page_file.parent == app_dir:
+            routes.append("/")
+            continue
+        route = "/" + "/".join(page_file.parent.relative_to(app_dir).parts)
+        routes.append(route)
     return routes
 
 

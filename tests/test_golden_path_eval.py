@@ -15,6 +15,21 @@ if str(REPO_ROOT) not in sys.path:
 
 
 @pytest.mark.tooling
+def test_list_generated_routes_detects_nested_next_routes(tmp_path: Path) -> None:
+    from scripts.run_golden_path_eval import list_generated_routes
+
+    app = tmp_path / "run" / "generated-files" / "app"
+    root_page = app / "page.tsx"
+    root_page.parent.mkdir(parents=True, exist_ok=True)
+    root_page.write_text("export default function Page() {}", encoding="utf-8")
+    nested = app / "tjanster" / "akut" / "page.tsx"
+    nested.parent.mkdir(parents=True)
+    nested.write_text("export default function Page() {}", encoding="utf-8")
+
+    assert list_generated_routes(tmp_path / "run") == ["/", "/tjanster/akut"]
+
+
+@pytest.mark.tooling
 def test_golden_path_eval_writes_all_four_cases_without_llm_key(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
