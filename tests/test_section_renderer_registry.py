@@ -500,23 +500,24 @@ def test_selected_work_preview_default_treatment_is_editorial_stack() -> None:
 
 
 def test_selected_work_preview_editorial_warm_keeps_default_treatment() -> None:
-    """editorial-warm + bold-electric inherit editorial-stack in pilot.
+    """editorial-warm inherits editorial-stack (the section default).
 
-    Phase 1 only swaps studio-monochrome; the other two agency-studio
-    variants must remain on the byte-identical default treatment so
-    pre-pilot snapshots are not silently invalidated.
+    Phase 1 swapped only studio-monochrome to asymmetric-grid; Phase 2
+    swaps bold-electric to marquee-row. editorial-warm remains on
+    editorial-stack so the warm agency keeps reading as a calm
+    magazine spread rather than competing with the other two agency
+    variants. The byte-identical guarantee against pre-pilot snapshots
+    is preserved for this variant specifically.
     """
-    for variant in ("editorial-warm", "bold-electric"):
-        body = bs.render_section_selected_work_preview(
-            _AGENCY_STUDIO_FIXTURE_DOSSIER,
-            variant_id=variant,
-        )
-        assert "Case 01" in body, (
-            f"variant {variant!r} must inherit editorial-stack "
-            "in pilot"
-        )
-        assert "Studio nº" not in body
-        assert "md:translate-y-12" not in body
+    body = bs.render_section_selected_work_preview(
+        _AGENCY_STUDIO_FIXTURE_DOSSIER,
+        variant_id="editorial-warm",
+    )
+    assert "Case 01" in body
+    assert "Studio nº" not in body
+    assert "Studio reel" not in body
+    assert "md:translate-y-12" not in body
+    assert "snap-x snap-mandatory" not in body
 
 
 def test_selected_work_preview_studio_monochrome_uses_asymmetric_grid() -> None:
@@ -538,9 +539,578 @@ def test_selected_work_preview_studio_monochrome_uses_asymmetric_grid() -> None:
     assert "Studio nº 01" in body
     assert "Studio nº 02" in body
     assert "Case 01" not in body
+    assert "Studio reel" not in body
     assert "bg-[color:var(--card)]" in body
     assert "rounded-[var(--radius-lg)]" in body
     assert "md:translate-y-12" in body
+
+
+def test_selected_work_preview_bold_electric_uses_marquee_row() -> None:
+    """bold-electric -> marquee-row output (Phase 2).
+
+    Phase 2 expansion: bold-electric flips from the editorial-stack
+    default it inherited in Phase 1 to a horizontal scroll-snap
+    rail. The markers we lock are:
+
+    - "Studio reel · NN" eyebrow (distinct from editorial's "Case NN"
+      and asymmetric-grid's "Studio nº NN"),
+    - ``snap-x snap-mandatory`` on the rail so cards snap into
+      view instead of free-scrolling,
+    - rendered card count is 6 (vs 4 in the other treatments),
+      verified by checking that "Studio reel · 06" is present and
+      "Studio reel · 07" is not. The fixture has 5 services so
+      the slice ``services[:6]`` produces exactly 5 cards in
+      practice; this test still locks the 6-card cap so a future
+      treatment edit does not silently change the rail length.
+    """
+    body = bs.render_section_selected_work_preview(
+        _AGENCY_STUDIO_FIXTURE_DOSSIER,
+        variant_id="bold-electric",
+    )
+    assert "Studio reel" in body
+    assert "Studio reel · 01" in body
+    assert "snap-x snap-mandatory" in body
+    assert "overflow-x-auto" in body
+    assert "Case 01" not in body
+    assert "md:translate-y-12" not in body
+
+
+def test_selected_work_preview_marquee_caps_at_six_cards() -> None:
+    """marquee-row treatment caps at 6 cards regardless of fixture size.
+
+    Locks the contract that the rail keeps a sensible upper bound so
+    a dossier with 20 case studies does not produce an unwieldy
+    rail. The 5-service fixture exercises the under-cap path; a
+    7-service synthetic dossier exercises the cap.
+    """
+    seven_services = {
+        "services": [
+            {"id": f"case-{i}", "label": f"Case {i}", "summary": f"Summary {i}."}
+            for i in range(1, 8)
+        ]
+    }
+    body = bs.render_section_selected_work_preview(
+        seven_services,
+        variant_id="bold-electric",
+    )
+    assert "Studio reel · 06" in body
+    assert "Studio reel · 07" not in body
+
+
+# ---------------------------------------------------------------------------
+# treatment-list (clinic-healthcare) — Phase 2
+#
+# Three treatments mapped 1:1 against clinic variants:
+#   clinic-calm        -> minimal-rows  (default, byte-identical)
+#   warm-care          -> split-cards   (2-col, accent-tinted rail)
+#   modern-precision   -> numbered-stack (mono numerals, thin separators)
+# ---------------------------------------------------------------------------
+
+
+_CLINIC_FIXTURE_DOSSIER: dict = {
+    "services": [
+        {"id": "tx-1", "label": "Behandling 1", "summary": "Beskrivning 1."},
+        {"id": "tx-2", "label": "Behandling 2", "summary": "Beskrivning 2."},
+        {"id": "tx-3", "label": "Behandling 3", "summary": "Beskrivning 3."},
+    ]
+}
+
+
+def test_treatment_list_default_is_minimal_rows() -> None:
+    """No variant -> minimal-rows (byte-identical pre-Phase-2 default).
+
+    Locks the contract that introducing treatment dispatch on
+    treatment-list does not change the output for callers that do
+    not pin a variant. The presence of the rounded-2xl border-card
+    rail and the absence of split-cards / numbered-stack markers is
+    how we recognize the minimal-rows treatment.
+    """
+    body = bs.render_section_treatment_list(_CLINIC_FIXTURE_DOSSIER)
+    assert (
+        "rounded-2xl border border-[color:var(--border)] "
+        "bg-[color:var(--background)] p-8"
+    ) in body
+    assert "border-l-[color:var(--accent)]" not in body
+    assert "font-mono text-3xl tracking-tight" not in body
+
+
+def test_treatment_list_clinic_calm_keeps_default_treatment() -> None:
+    """clinic-calm inherits the section default minimal-rows.
+
+    Phase 2 deliberately does NOT register clinic-calm in
+    _SECTION_TREATMENTS_BY_VARIANT so the calm clinic keeps the
+    pre-Phase-2 menu feel. This test catches a future map edit that
+    would silently flip the calm clinic to a different treatment.
+    """
+    body = bs.render_section_treatment_list(
+        _CLINIC_FIXTURE_DOSSIER,
+        variant_id="clinic-calm",
+    )
+    assert (
+        "rounded-2xl border border-[color:var(--border)] "
+        "bg-[color:var(--background)] p-8"
+    ) in body
+    assert "border-l-[color:var(--accent)]" not in body
+    assert "font-mono text-3xl tracking-tight" not in body
+
+
+def test_treatment_list_warm_care_uses_split_cards() -> None:
+    """warm-care -> split-cards.
+
+    The split-cards markers we lock are:
+    - ``md:grid-cols-2`` 2-col layout for the list,
+    - the accent-tinted left rail (``border-l-[color:var(--accent)]``)
+      that is unique to the split-cards treatment,
+    - the warmer ``bg-[color:var(--card)]`` card surface vs the flat
+      ``--background`` panel used by minimal-rows.
+    """
+    body = bs.render_section_treatment_list(
+        _CLINIC_FIXTURE_DOSSIER,
+        variant_id="warm-care",
+    )
+    assert "md:grid-cols-2" in body
+    assert "border-l-[color:var(--accent)]" in body
+    assert "bg-[color:var(--card)]" in body
+    assert "font-mono text-3xl tracking-tight" not in body
+
+
+def test_treatment_list_modern_precision_uses_numbered_stack() -> None:
+    """modern-precision -> numbered-stack.
+
+    The numbered-stack markers we lock are:
+    - large monospaced numeral (``font-mono text-3xl tracking-tight``),
+    - the 6rem-wide left column reserved for the numeral
+      (``md:grid-cols-[6rem_1fr]``),
+    - per-row ``border-b`` separator instead of card chrome,
+    - first row is "01", third row is "03" (sequence is 01-indexed).
+    """
+    body = bs.render_section_treatment_list(
+        _CLINIC_FIXTURE_DOSSIER,
+        variant_id="modern-precision",
+    )
+    assert "font-mono text-3xl tracking-tight" in body
+    assert "md:grid-cols-[6rem_1fr]" in body
+    assert ">{\"01\"}<" in body
+    assert ">{\"03\"}<" in body
+    assert "rounded-2xl border" not in body
+
+
+def test_treatment_list_returns_empty_when_services_missing() -> None:
+    """No services -> empty string regardless of treatment.
+
+    The dispatcher relies on every treatment agreeing on the empty
+    fallback so a clinic without published services does not surface
+    an empty list scaffold under any variant.
+    """
+    for variant in (None, "clinic-calm", "warm-care", "modern-precision"):
+        assert (
+            bs.render_section_treatment_list({}, variant_id=variant) == ""
+        )
+        assert (
+            bs.render_section_treatment_list(
+                {"services": []},
+                variant_id=variant,
+            )
+            == ""
+        )
+
+
+# ---------------------------------------------------------------------------
+# practice-grid (professional-services) — Phase 2
+#
+# Three treatments mapped 1:1 against PS variants:
+#   consulting-modern  -> dense-grid (default, byte-identical)
+#   legal-classic      -> tabular (no card chrome, thin separators)
+#   accounting-trust   -> grouped (2-col, numbered eyebrows)
+# ---------------------------------------------------------------------------
+
+
+_PS_FIXTURE_DOSSIER: dict = {
+    "services": [
+        {"id": "p-1", "label": "Praktik 1", "summary": "Omfång 1."},
+        {"id": "p-2", "label": "Praktik 2", "summary": "Omfång 2."},
+        {"id": "p-3", "label": "Praktik 3", "summary": "Omfång 3."},
+    ]
+}
+
+
+def test_practice_grid_default_is_dense_grid() -> None:
+    """No variant -> dense-grid (byte-identical pre-Phase-2 default).
+
+    Locks the contract that introducing treatment dispatch on
+    practice-grid does not change the output for callers that do
+    not pin a variant. The 3-col card surface (`p-7` cards on flat
+    background) is the dense-grid signature; tabular and grouped
+    must be absent.
+    """
+    body = bs.render_section_practice_grid(_PS_FIXTURE_DOSSIER)
+    assert (
+        "rounded-lg border border-[color:var(--border)] "
+        "bg-[color:var(--background)] p-7"
+    ) in body
+    assert "md:grid-cols-[14rem_1fr_auto]" not in body
+    assert "Område 01" not in body
+
+
+def test_practice_grid_consulting_modern_keeps_default_treatment() -> None:
+    """consulting-modern inherits dense-grid (the section default)."""
+    body = bs.render_section_practice_grid(
+        _PS_FIXTURE_DOSSIER,
+        variant_id="consulting-modern",
+    )
+    assert (
+        "rounded-lg border border-[color:var(--border)] "
+        "bg-[color:var(--background)] p-7"
+    ) in body
+    assert "md:grid-cols-[14rem_1fr_auto]" not in body
+
+
+def test_practice_grid_legal_classic_uses_tabular() -> None:
+    """legal-classic -> tabular.
+
+    The tabular markers we lock are:
+    - the column-header strip (``Praktikområde / Omfång / Kontakt``),
+    - the 14rem-wide name column ``md:grid-cols-[14rem_1fr_auto]``,
+    - per-row ``border-b`` separators with no card chrome
+      (``rounded-lg`` + ``p-7`` must be absent on rows).
+    """
+    body = bs.render_section_practice_grid(
+        _PS_FIXTURE_DOSSIER,
+        variant_id="legal-classic",
+    )
+    assert "Praktikområde" in body
+    assert "Omfång" in body
+    assert "md:grid-cols-[14rem_1fr_auto]" in body
+    assert (
+        "rounded-lg border border-[color:var(--border)] "
+        "bg-[color:var(--background)] p-7"
+    ) not in body
+
+
+def test_practice_grid_accounting_trust_uses_grouped() -> None:
+    """accounting-trust -> grouped.
+
+    The grouped markers we lock are:
+    - the numbered ``Område NN`` eyebrow with accent colour
+      (``text-[color:var(--accent)]``),
+    - the 2-col layout (``md:grid-cols-2`` — vs dense-grid's
+      3-col ``lg:grid-cols-3``),
+    - card surface ``bg-[color:var(--card)]`` instead of dense-
+      grid's flat ``--background``,
+    - the eyebrow sequence is 01-indexed and increments.
+    """
+    body = bs.render_section_practice_grid(
+        _PS_FIXTURE_DOSSIER,
+        variant_id="accounting-trust",
+    )
+    assert "Område 01" in body
+    assert "Område 02" in body
+    assert "Område 03" in body
+    assert "md:grid-cols-2" in body
+    assert "lg:grid-cols-3" not in body
+    assert "bg-[color:var(--card)]" in body
+
+
+def test_practice_grid_returns_empty_when_services_missing() -> None:
+    """No services -> empty string regardless of treatment."""
+    for variant in (
+        None,
+        "consulting-modern",
+        "legal-classic",
+        "accounting-trust",
+    ):
+        assert (
+            bs.render_section_practice_grid({}, variant_id=variant) == ""
+        )
+        assert (
+            bs.render_section_practice_grid(
+                {"services": []},
+                variant_id=variant,
+            )
+            == ""
+        )
+
+
+# ---------------------------------------------------------------------------
+# expertise-areas (professional-services /home) — Phase 2
+#
+# Two treatments:
+#   numbered-2col (default)  -> legal-classic, accounting-trust (default-keep)
+#   tag-cluster              -> consulting-modern
+# ---------------------------------------------------------------------------
+
+
+def test_expertise_areas_default_is_numbered_2col() -> None:
+    """No variant -> numbered-2col (byte-identical pre-Phase-2 default).
+
+    Locks the contract that introducing treatment dispatch on
+    expertise-areas does not change the output for callers that do
+    not pin a variant. The left-rail border on each card and the
+    numeric eyebrow are how we recognize numbered-2col; the
+    tag-cluster pill markers must be absent.
+    """
+    body = bs.render_section_expertise_areas(_PS_FIXTURE_DOSSIER)
+    assert "border-l border-[color:var(--border)] pl-6" in body
+    assert (
+        "rounded-full border border-[color:var(--border)] "
+        "bg-[color:var(--card)] px-5 py-2"
+    ) not in body
+
+
+def test_expertise_areas_legal_classic_keeps_default_treatment() -> None:
+    """legal-classic inherits numbered-2col (the section default).
+
+    The classic law-firm variant pins its variation on /expertis
+    (practice-grid -> tabular); the home expertise-areas section
+    keeps the numbered-2col baseline so the home reads
+    consistently with the rest of the legal scaffold.
+    """
+    body = bs.render_section_expertise_areas(
+        _PS_FIXTURE_DOSSIER,
+        variant_id="legal-classic",
+    )
+    assert "border-l border-[color:var(--border)] pl-6" in body
+    assert (
+        "rounded-full border border-[color:var(--border)] "
+        "bg-[color:var(--card)] px-5 py-2"
+    ) not in body
+
+
+def test_expertise_areas_accounting_trust_keeps_default_treatment() -> None:
+    """accounting-trust inherits numbered-2col (the section default).
+
+    The audit / advisory variant pins its variation on /expertis
+    (practice-grid -> grouped); the home expertise-areas section
+    keeps numbered-2col so the home reads as a consistent
+    "thoroughness" statement.
+    """
+    body = bs.render_section_expertise_areas(
+        _PS_FIXTURE_DOSSIER,
+        variant_id="accounting-trust",
+    )
+    assert "border-l border-[color:var(--border)] pl-6" in body
+    assert (
+        "rounded-full border border-[color:var(--border)] "
+        "bg-[color:var(--card)] px-5 py-2"
+    ) not in body
+
+
+def test_expertise_areas_consulting_modern_uses_tag_cluster() -> None:
+    """consulting-modern -> tag-cluster.
+
+    The tag-cluster markers we lock are:
+    - the rounded-full pill (each practice area is a single-line
+      pill carrying its label),
+    - the wrapping ``flex flex-wrap`` cluster container instead of
+      a fixed grid,
+    - the joined summary line beneath the cluster (joined with
+      "·" middots) — exactly one summary block, not one per
+      practice area.
+    """
+    body = bs.render_section_expertise_areas(
+        _PS_FIXTURE_DOSSIER,
+        variant_id="consulting-modern",
+    )
+    assert (
+        "rounded-full border border-[color:var(--border)] "
+        "bg-[color:var(--card)] px-5 py-2"
+    ) in body
+    assert "flex flex-wrap" in body
+    assert "border-l border-[color:var(--border)] pl-6" not in body
+    assert " · " in body
+
+
+def test_expertise_areas_returns_empty_when_services_missing() -> None:
+    """No services -> empty string regardless of treatment."""
+    for variant in (
+        None,
+        "consulting-modern",
+        "legal-classic",
+        "accounting-trust",
+    ):
+        assert (
+            bs.render_section_expertise_areas({}, variant_id=variant) == ""
+        )
+        assert (
+            bs.render_section_expertise_areas(
+                {"services": []},
+                variant_id=variant,
+            )
+            == ""
+        )
+
+
+# ---------------------------------------------------------------------------
+# service-list (local-service-business) — Phase 2
+#
+# Four treatments mapped against LSB variants:
+#   nordic-trust       -> tabular           (formal service catalogue)
+#   warm-craft         -> alternating-rows  (left/right rhythm)
+#   clinical-calm      -> icon-strip        (compact contents bar)
+#   midnight-counsel   -> card-grid (default-keep)
+#   pulse-fit          -> card-grid (default-keep)
+# ---------------------------------------------------------------------------
+
+
+_LSB_FIXTURE_DOSSIER: dict = {
+    "services": [
+        {"id": "snickeri", "label": "Snickeri", "summary": "Snickeri-jobb."},
+        {"id": "renovering", "label": "Renovering", "summary": "Renovering."},
+        {"id": "trädgård", "label": "Trädgård", "summary": "Trädgårdsskötsel."},
+        {"id": "platta", "label": "Platta", "summary": "Plattläggning."},
+    ]
+}
+
+
+def test_service_list_default_is_card_grid() -> None:
+    """No variant -> card-grid (byte-identical pre-Phase-2 default).
+
+    Locks the contract that introducing treatment dispatch on
+    service-list does not change the output for callers that do
+    not pin a variant. The 3-col gradient-headered card grid with
+    hover-lift transitions is the card-grid signature; the other
+    three treatments must be absent.
+    """
+    body = bs.render_section_service_list(
+        _LSB_FIXTURE_DOSSIER,
+        contact_path="/kontakt",
+    )
+    assert "lg:grid-cols-3" in body
+    assert (
+        "rounded-xl border border-[color:var(--border)] "
+        "bg-[color:var(--background)] p-6 transition-all"
+    ) in body
+    assert "md:flex-row-reverse" not in body
+    assert "md:grid-cols-[3rem_14rem_1fr]" not in body
+
+
+def test_service_list_midnight_counsel_keeps_default_treatment() -> None:
+    """midnight-counsel inherits card-grid (the section default)."""
+    body = bs.render_section_service_list(
+        _LSB_FIXTURE_DOSSIER,
+        contact_path="/kontakt",
+        variant_id="midnight-counsel",
+    )
+    assert "lg:grid-cols-3" in body
+    assert "md:flex-row-reverse" not in body
+
+
+def test_service_list_pulse_fit_keeps_default_treatment() -> None:
+    """pulse-fit inherits card-grid (the section default).
+
+    Phase 2 deliberately keeps pulse-fit on the default; the
+    energetic gym variant gets its motion from the hero block,
+    not from the service-list. Phase 3 may flip it to
+    ``alternating-rows`` based on operator feedback.
+    """
+    body = bs.render_section_service_list(
+        _LSB_FIXTURE_DOSSIER,
+        contact_path="/kontakt",
+        variant_id="pulse-fit",
+    )
+    assert "lg:grid-cols-3" in body
+    assert "md:flex-row-reverse" not in body
+
+
+def test_service_list_nordic_trust_uses_tabular() -> None:
+    """nordic-trust -> tabular.
+
+    Markers we lock for the tabular treatment:
+    - the 3-col grid-template ``md:grid-cols-[3rem_14rem_1fr]``
+      (icon / label / summary columns),
+    - the swedish column header strings (the service name and
+      description labels) with mono / uppercase / tracking-widest
+      styling,
+    - per-row ``border-b`` separator instead of card chrome.
+    """
+    body = bs.render_section_service_list(
+        _LSB_FIXTURE_DOSSIER,
+        contact_path="/kontakt",
+        variant_id="nordic-trust",
+    )
+    assert "md:grid-cols-[3rem_14rem_1fr]" in body
+    assert "Tjänst" in body
+    assert "Beskrivning" in body
+    assert (
+        "rounded-xl border border-[color:var(--border)] "
+        "bg-[color:var(--background)] p-6 transition-all"
+    ) not in body
+
+
+def test_service_list_warm_craft_uses_alternating_rows() -> None:
+    """warm-craft -> alternating-rows.
+
+    Markers we lock for the alternating-rows treatment:
+    - ``md:flex-row-reverse`` is applied to even-indexed rows so
+      the layout flips back-and-forth (a 4-service fixture
+      produces exactly two flipped rows: cards 2 and 4),
+    - the larger ``size-16`` icon tile (vs the ``size-12`` used
+      by card-grid),
+    - rows are list items inside a ``flex flex-col gap-6`` ``ul``,
+      not a CSS grid.
+    """
+    body = bs.render_section_service_list(
+        _LSB_FIXTURE_DOSSIER,
+        contact_path="/kontakt",
+        variant_id="warm-craft",
+    )
+    assert body.count("md:flex-row-reverse") == 2
+    assert "size-16 shrink-0 items-center justify-center rounded-2xl" in body
+    assert "lg:grid-cols-3" not in body
+
+
+def test_service_list_clinical_calm_uses_icon_strip() -> None:
+    """clinical-calm -> icon-strip.
+
+    Markers we lock for the icon-strip treatment:
+    - the rounded-full pill container (4-service fixture produces
+      exactly 4 pills with the icon-pill class signature),
+    - the wrapping ``flex flex-wrap`` for the strip itself,
+    - the summaries grid below (``border-t pt-6`` cards).
+    """
+    body = bs.render_section_service_list(
+        _LSB_FIXTURE_DOSSIER,
+        contact_path="/kontakt",
+        variant_id="clinical-calm",
+    )
+    assert (
+        body.count(
+            "rounded-full border border-[color:var(--border)] "
+            "bg-[color:var(--background)] px-4 py-2"
+        )
+        == 4
+    )
+    assert "flex flex-wrap" in body
+    assert "border-t border-[color:var(--border)] pt-6" in body
+    assert "md:flex-row-reverse" not in body
+
+
+def test_service_list_returns_empty_when_services_missing() -> None:
+    """No services -> empty string regardless of treatment."""
+    for variant in (
+        None,
+        "nordic-trust",
+        "warm-craft",
+        "clinical-calm",
+        "midnight-counsel",
+        "pulse-fit",
+    ):
+        assert (
+            bs.render_section_service_list(
+                {},
+                contact_path="/kontakt",
+                variant_id=variant,
+            )
+            == ""
+        )
+        assert (
+            bs.render_section_service_list(
+                {"services": []},
+                contact_path="/kontakt",
+                variant_id=variant,
+            )
+            == ""
+        )
 
 
 def test_selected_work_preview_returns_empty_when_services_missing() -> None:

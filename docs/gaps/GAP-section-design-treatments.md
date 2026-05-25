@@ -84,33 +84,62 @@ acceptanceCriteria:
 phases:
   - id: phase-1
     title: Pilot — selected-work-preview + studio-monochrome (Phase 1)
-    status: in-flight
+    status: completed
     note: |
-      Pilot landar i sprint 2026-05-25 och inkluderar treatment-helper,
-      två treatments för selected-work-preview, variant-mappning och
-      tester. När Phase 1 mergas flyttas GAP:en till completedGaps
-      och Phase 2 öppnar.
+      Pilot landade i sprint 2026-05-25 (commit 303eb33) och
+      inkluderade treatment-helper, två treatments för
+      selected-work-preview, variant-mappning och tester. PR #105
+      öppen som Draft mot main.
   - id: phase-2
-    title: Bredd — fyra section-typer × tre treatments
-    status: planned
+    title: Bredd — fem section-typer × fjorton treatments
+    status: completed
     note: |
-      selected-work-preview får marquee-row.
-      treatment-list får minimal-rows / split-cards / numbered-stack.
-      practice-grid får dense-grid / tabular / grouped.
-      expertise-areas får numbered-2col / tag-cluster.
-      service-list (LSB) får card-grid / alternating-rows /
-      icon-strip / tabular.
-      Variant-mappningar utökas så varje aktiv scaffold får tre
-      visuellt distinkta varianter.
+      Levererades i samma sprint 2026-05-25 som Phase 1.
+        * selected-work-preview fick tredje treatment marquee-row
+          (horisontellt scroll-snap-rail). Mappning: bold-electric.
+        * treatment-list (clinic) fick split-cards (warm-care) +
+          numbered-stack (modern-precision). minimal-rows behålls
+          som default för clinic-calm.
+        * practice-grid (PS) fick tabular (legal-classic) + grouped
+          (accounting-trust). dense-grid behålls som default för
+          consulting-modern.
+        * expertise-areas (PS home) fick tag-cluster
+          (consulting-modern). numbered-2col behålls som default
+          för legal-classic + accounting-trust.
+        * service-list (LSB) fick alternating-rows (warm-craft) +
+          icon-strip (clinical-calm) + tabular (nordic-trust).
+          card-grid behålls som default för midnight-counsel +
+          pulse-fit.
+      Tests: 49 nya assertions i tests/test_section_renderer_-
+      registry.py. test_renderers_use_jsx_safe_string_for_-
+      customer_text uppdaterades med fyra nya service-list-
+      treatment-helpers så B30-skyddet hänger med.
   - id: phase-3
     title: Operator-pin + LLM-pick
-    status: planned
+    status: blocked
     note: |
-      project-input.schema.json får
-      dossier.directives.sectionTreatments. briefModel +
-      planningModel pickar treatment per tone +
-      selectedDossiers. discovery-payload exporterar treatment-
-      registry.
+      Blockers innan start:
+        1. PR #105 (Phase 1 + Phase 2) måste mergas till main så
+           Phase 3 bygger på en clean baseline.
+        2. GAP-backend-path-b-section-renderer måste flyttas till
+           completedGaps (Phase 1 + 2 landade som [scope-leak] under
+           Path B; Phase 3 är för bred för samma manöver).
+        3. governance/schemas/project-input.schema.json får
+           dossier.directives.sectionTreatments som valfritt objekt.
+           Backward-compat verifieras mot alla 8 fixturer.
+        4. briefModel + planningModel uppdateras för att picka
+           treatment per tone + selectedDossiers. Mock-fallback +
+           OPENAI_API_KEY-pathen verifieras båda.
+        5. Wizard-UI för operator-pin per scaffold-relevant sektion
+           designas (Christopher-lane).
+
+      Delsteg när blockers är lösta:
+        * 3a — schema-utökning + operator-pin
+          (dossier.directives.sectionTreatments). Treatment-pin tar
+          precedens över variant-default.
+        * 3b — LLM-pick i planningModel.
+        * 3c — treatment-registry export till discovery-payload.
+        * 3d — wizard-UI för operator-pin.
 
 reservedPaths:
   - scripts/build_site.py

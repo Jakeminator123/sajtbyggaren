@@ -471,7 +471,15 @@ def test_renderers_use_jsx_safe_string_for_customer_text() -> None:
         # and interpolate no customer text themselves.
         "render_section_hero",
         "render_section_services_summary",
-        "render_section_service_list",
+        # Section design-treatments (Phase 2) — render_section_service_list
+        # is now a thin treatment-dispatcher; the actual JSX-escaping
+        # lives in the four private treatment helpers below. Each helper
+        # is asserted on its own so a future refactor that drops the
+        # helper from one treatment is caught immediately.
+        "_render_service_list_card_grid",
+        "_render_service_list_alternating_rows",
+        "_render_service_list_icon_strip",
+        "_render_service_list_tabular",
         "render_section_about_story",
         "render_section_team",
         "render_section_trust_proof",

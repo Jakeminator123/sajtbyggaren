@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-25T15:48:00Z",
-  "updatedBy": "christopher-ui-section-design-treatments-phase-1",
+  "updatedAt": "2026-05-25T16:30:00Z",
+  "updatedBy": "christopher-ui-section-design-treatments-phase-2",
   "people": {
     "jakob": {
       "allocation": 0.75,
@@ -215,7 +215,11 @@
         "render_section_selected_work_preview dispatchar via treatment och accepterar variant_id-kwarg.",
         "studio-monochrome mappas mot asymmetric-grid; editorial-warm + bold-electric ärver editorial-stack (default).",
         "8 nya tester i tests/test_section_renderer_registry.py låser dispatcher-kontraktet.",
-        "Phase 2-roadmap dokumenterad i docs/section-design-treatments-scout.md."
+        "Phase 2-roadmap dokumenterad i docs/section-design-treatments-scout.md.",
+        "Phase 2 (denna sprint): selected-work-preview, treatment-list, practice-grid, expertise-areas, service-list får treatments. Total 14 treatments fördelade över 5 sektioner.",
+        "Phase 2 — variant-mappningar: bold-electric→marquee-row, warm-care→split-cards, modern-precision→numbered-stack, legal-classic→tabular, accounting-trust→grouped, consulting-modern→tag-cluster (på home), nordic-trust→tabular, warm-craft→alternating-rows, clinical-calm→icon-strip.",
+        "Phase 2 — 49 totala assertions i tests/test_section_renderer_registry.py låser alla treatment-dispatchers.",
+        "Phase 2 — test_renderers_use_jsx_safe_string_for_customer_text uppdaterad med fyra service-list-treatment-helpers så B30-skyddet följer med."
       ],
       "checks": [
         "python scripts/sprintvakt_check.py",
@@ -223,9 +227,11 @@
         "python scripts/rules_sync.py --check",
         "python scripts/check_term_coverage.py --strict",
         "python -m ruff check .",
-        "python -m pytest tests/test_section_renderer_registry.py -q"
+        "python -m pytest tests/test_section_renderer_registry.py -q",
+        "python -m pytest tests/test_builder_audit_post_3b_next.py::test_renderers_use_jsx_safe_string_for_customer_text -q",
+        "python -m pytest tests/ -q"
       ],
-      "note": "Phase 1 pilot landar inom Path B:s pågående script-refactor: scripts/build_site.py-mutationerna (treatment-helper + per-section dispatch) ligger under GAP-backend-path-b-section-renderer:s ägarskap för att undvika dubbel-ägar-overlap; denna GAP äger bara tester + docs som är specifika för treatment-mekaniken. När Path B flyttas till completedGaps öppnas Phase 2 där denna GAP tar över ägarskap av scripts/build_site.py för treatment-utökningarna. Christopher tar denna som [scope-leak] under operatör-OK (samma precedent som Path B). Phase 2 (treatment-list/practice-grid/expertise-areas/service-list + marquee-row) öppnar när Phase 1 mergas. Phase 3 (operator-pin via dossier.directives.sectionTreatments + LLM-pick) kräver schema-utökning och planneringsfas-uppdatering."
+      "note": "Phase 1 + Phase 2 levererade 2026-05-25 inom Path B:s pågående script-refactor: scripts/build_site.py-mutationerna (treatment-helper + per-section dispatch + 14 treatment-renderers över 5 sektioner) ligger under GAP-backend-path-b-section-renderer:s ägarskap för att undvika dubbel-ägar-overlap; denna GAP äger bara tester + docs som är specifika för treatment-mekaniken. tests/test_builder_audit_post_3b_next.py modifierades också (Phase 2 — utökad med fyra service-list-treatment-helpers för B30-locket); den filen ägs av jakob-lane men är test-only och rör samma feature. Christopher tar Phase 2 som [scope-leak] under operatör-OK (samma precedent som Phase 1 + Path B). Phase 3 (operator-pin via dossier.directives.sectionTreatments + LLM-pick) BLOCKED — kräver: (1) PR #105 mergas till main; (2) Path B flyttas till completedGaps; (3) schema-utökning av project-input.schema.json; (4) brief/planning-prompts uppdateras; (5) wizard-UI för operator-pin designas. Detaljer i docs/section-design-treatments-scout.md ## Phase 3-roadmap (planned, blocked)."
     },
     {
       "id": "GAP-viewser-restaurant-wizard-hint",

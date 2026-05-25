@@ -3085,20 +3085,77 @@ def render_home(
     )
 
 
+_SERVICE_LIST_TREATMENT_DEFAULT = "card-grid"
+
+
 def render_section_service_list(
     dossier: dict,
     *,
     contact_path: str,
+    variant_id: str | None = None,
 ) -> str:
     """Render the service-list section for the /tjanster route.
 
-    Produces the gradient-headered services page section with article
-    cards (one per service) and a bottom-of-page CTA whose verb
-    follows the dossier's hero CTA family (shop / booking / quote).
-
     Path B step 2 (GAP-backend-path-b-section-renderer): second
-    per-section renderer extracted from ``render_services``. Output
-    is byte-identical to the inline implementation it replaces.
+    per-section renderer extracted from ``render_services``.
+
+    Section design-treatments (Phase 2): the section now resolves a
+    treatment id via ``_treatment_for_section`` and routes the same
+    services array through one of four private renderers:
+
+    * ``card-grid`` — the byte-identical default. 3-col gradient-
+      headered grid with icon-bubble + label + summary. Mapped
+      implicitly to ``midnight-counsel`` and ``pulse-fit``
+      (default-keep) so the LSB look most operators expect stays
+      stable.
+    * ``alternating-rows`` — vertical sequence where odd rows put
+      the icon on the left and the copy on the right, even rows
+      flip the layout. Reads as a "we and you, together" rhythm.
+      Mapped to ``warm-craft``.
+    * ``icon-strip`` — compact horizontal strip with small icon-
+      label pills, summaries underneath the strip. Reads as a
+      minimalist contents bar. Mapped to ``clinical-calm``.
+    * ``tabular`` — formal row listing without card chrome, thin
+      ``border-b`` separators and a column header. Reads as a
+      service catalogue. Mapped to ``nordic-trust``.
+
+    Returns "" through every treatment when no services are
+    declared so the dispatcher does not emit an empty list scaffold.
+    """
+    services = dossier.get("services") or []
+    if not services:
+        return ""
+    treatment = _treatment_for_section(
+        variant_id,
+        "service-list",
+        default=_SERVICE_LIST_TREATMENT_DEFAULT,
+    )
+    if treatment == "alternating-rows":
+        return _render_service_list_alternating_rows(dossier, contact_path)
+    if treatment == "icon-strip":
+        return _render_service_list_icon_strip(dossier, contact_path)
+    if treatment == "tabular":
+        return _render_service_list_tabular(dossier, contact_path)
+    return _render_service_list_card_grid(dossier, contact_path)
+
+
+def _service_list_header() -> str:
+    """Shared eyebrow + h1 + lede markup for every service-list treatment."""
+    return (
+        '          <header className="flex flex-col gap-3">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Tjänster</p>\n'
+        '            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Vad vi gör</h1>\n'
+        '            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">Allt vi erbjuder, samlat på ett ställe. Klicka på en tjänst eller hör av dig direkt.</p>\n'
+        "          </header>\n"
+    )
+
+
+def _render_service_list_card_grid(dossier: dict, contact_path: str) -> str:
+    """3-col gradient-headered card grid (the default treatment).
+
+    Kept byte-identical to the pre-Phase-2 output of
+    ``render_section_service_list`` so existing snapshots are not
+    invalidated by introducing treatment dispatch.
     """
     services = dossier["services"]
     contact_href = _route_href(contact_path)
@@ -3117,17 +3174,142 @@ def render_section_service_list(
     return (
         '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
-        '          <header className="flex flex-col gap-3">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Tjänster</p>\n'
-        '            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Vad vi gör</h1>\n'
-        '            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">Allt vi erbjuder, samlat på ett ställe. Klicka på en tjänst eller hör av dig direkt.</p>\n'
-        "          </header>\n"
-        '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
-        f"{items}\n"
-        "          </div>\n"
-        f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{cta_label}<ArrowRight className="size-4" /></a>\n'
-        "        </div>\n"
-        "      </section>\n"
+        + _service_list_header()
+        + '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
+        + f"{items}\n"
+        + "          </div>\n"
+        + f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{cta_label}<ArrowRight className="size-4" /></a>\n'
+        + "        </div>\n"
+        + "      </section>\n"
+    )
+
+
+def _render_service_list_alternating_rows(
+    dossier: dict, contact_path: str
+) -> str:
+    """Vertical sequence of left-/right-flipped icon+copy rows.
+
+    Each service is its own row spanning the full container width;
+    odd rows put the icon-tile on the left and copy on the right,
+    even rows flip the layout via ``md:flex-row-reverse``. Reads
+    as a back-and-forth conversation rather than a uniform card
+    grid. Mapped to ``warm-craft``.
+    """
+    services = dossier["services"]
+    contact_href = _route_href(contact_path)
+    items = "\n".join(
+        (
+            f'          <li key={_jsx_safe_string(svc["id"])} className="flex flex-col items-start gap-6 rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 md:flex-row md:items-center md:gap-10 md:p-10'
+            + (' md:flex-row-reverse' if idx % 2 == 0 else '')
+            + '">\n'
+            f'            <span className="inline-flex size-16 shrink-0 items-center justify-center rounded-2xl bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(svc["id"])} className="size-7" /></span>\n'
+            f'            <div className="flex flex-col gap-2">\n'
+            f'              <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">{_jsx_safe_string(svc["label"])}</h2>\n'
+            f'              <p className="text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
+            "            </div>\n"
+            "          </li>"
+        )
+        for idx, svc in enumerate(services, start=1)
+    )
+    cta_label = _hero_cta_label(dossier)
+    return (
+        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
+        + _service_list_header()
+        + '          <ul className="flex flex-col gap-6">\n'
+        + f"{items}\n"
+        + "          </ul>\n"
+        + f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{cta_label}<ArrowRight className="size-4" /></a>\n'
+        + "        </div>\n"
+        + "      </section>\n"
+    )
+
+
+def _render_service_list_icon_strip(
+    dossier: dict, contact_path: str
+) -> str:
+    """Compact horizontal icon-label strip with summaries underneath.
+
+    The strip is a single row of small icon-label pills (each
+    service rendered as a short pill); the summaries follow on a
+    quieter grid beneath. Reads as a minimalist "what we do at a
+    glance" bar. Mapped to ``clinical-calm``.
+    """
+    services = dossier["services"]
+    contact_href = _route_href(contact_path)
+    pills = "\n".join(
+        (
+            f'              <li key={_jsx_safe_string(svc["id"])} className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-2 text-sm font-medium tracking-tight">\n'
+            f'                <{_icon_for_service(svc["id"])} className="size-4 text-[color:var(--accent)]" />\n'
+            f'                <span>{_jsx_safe_string(svc["label"])}</span>\n'
+            "              </li>"
+        )
+        for svc in services
+    )
+    cards = "\n".join(
+        (
+            f'              <article key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-2 border-t border-[color:var(--border)] pt-6">\n'
+            f'                <h2 className="text-lg font-semibold tracking-tight">{_jsx_safe_string(svc["label"])}</h2>\n'
+            f'                <p className="text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
+            "              </article>"
+        )
+        for svc in services
+    )
+    cta_label = _hero_cta_label(dossier)
+    return (
+        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
+        + _service_list_header()
+        + '          <ul className="flex flex-wrap gap-2">\n'
+        + f"{pills}\n"
+        + "          </ul>\n"
+        + '          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">\n'
+        + f"{cards}\n"
+        + "          </div>\n"
+        + f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{cta_label}<ArrowRight className="size-4" /></a>\n'
+        + "        </div>\n"
+        + "      </section>\n"
+    )
+
+
+def _render_service_list_tabular(dossier: dict, contact_path: str) -> str:
+    """Formal row listing with thin separators and a column header.
+
+    No card chrome — each service is a row spanning the full
+    container width with icon / label / summary columns and a
+    thin ``border-b``. Reads as a service catalogue rather than
+    a marketing grid. Mapped to ``nordic-trust``.
+    """
+    services = dossier["services"]
+    contact_href = _route_href(contact_path)
+    rows = "\n".join(
+        (
+            f'              <li key={_jsx_safe_string(svc["id"])} className="grid items-center gap-4 border-b border-[color:var(--border)] py-6 md:grid-cols-[3rem_14rem_1fr] md:gap-8">\n'
+            f'                <span className="inline-flex size-10 items-center justify-center rounded-md bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(svc["id"])} className="size-5" /></span>\n'
+            f'                <h2 className="text-base font-semibold tracking-tight md:text-lg">{_jsx_safe_string(svc["label"])}</h2>\n'
+            f'                <p className="text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
+            "              </li>"
+        )
+        for svc in services
+    )
+    cta_label = _hero_cta_label(dossier)
+    return (
+        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
+        + _service_list_header()
+        + '          <div className="flex flex-col">\n'
+        + '            <div className="grid gap-4 border-b border-[color:var(--border)] pb-3 text-xs font-mono uppercase tracking-widest text-[color:var(--muted)] md:grid-cols-[3rem_14rem_1fr] md:gap-8">\n'
+        + '              <span aria-hidden />\n'
+        + "              <span>Tjänst</span>\n"
+        + "              <span>Beskrivning</span>\n"
+        + "            </div>\n"
+        + '            <ul className="flex flex-col">\n'
+        + f"{rows}\n"
+        + "            </ul>\n"
+        + "          </div>\n"
+        + f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{cta_label}<ArrowRight className="size-4" /></a>\n'
+        + "        </div>\n"
+        + "      </section>\n"
     )
 
 
@@ -3140,11 +3322,16 @@ def render_services(
     icons_used = sorted({_icon_for_service(svc["id"]) for svc in services} | {"ArrowRight"})
     icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
     # Path B step 2 — service-list section now produced by
-    # ``render_section_service_list``. Output is byte-identical to
-    # the pre-extraction inline implementation.
+    # ``render_section_service_list``. Section design-treatments
+    # Phase 2: forward the dossier's variantId so the section can
+    # pick a treatment (card-grid / alternating-rows / icon-strip /
+    # tabular). Path B native scaffolds get variant_id threaded
+    # through render_route_generic; LSB still goes through this
+    # shim so the variant lookup happens here instead.
     service_list_section = render_section_service_list(
         dossier,
         contact_path=contact_path,
+        variant_id=dossier.get("variantId"),
     )
     return (
         icon_import + "\n"
@@ -3423,7 +3610,7 @@ def _call_section_renderer(
 # ``variant_id`` through the dispatcher (Path B native scaffolds
 # pass it from ``_render_dispatched_route``).
 _SECTION_TREATMENTS_BY_VARIANT: dict[str, dict[str, str]] = {
-    # agency-studio (Phase 1 pilot)
+    # agency-studio (Phase 1 pilot + Phase 2 expansion)
     #
     # ``studio-monochrome`` swaps the home selected-work-preview from
     # the editorial-stack baseline to an asymmetric-grid where every
@@ -3432,10 +3619,89 @@ _SECTION_TREATMENTS_BY_VARIANT: dict[str, dict[str, str]] = {
     # page from the warm and electric agency variants without changing
     # any sections.json.
     "studio-monochrome": {"selected-work-preview": "asymmetric-grid"},
-    # ``editorial-warm`` and ``bold-electric`` inherit the section
-    # default in pilot. Phase 2 introduces ``marquee-row`` as a third
-    # treatment for ``selected-work-preview`` and maps it to
-    # bold-electric.
+    # ``editorial-warm`` inherits ``editorial-stack`` (the section
+    # default) so the warm agency reads as a calm magazine spread
+    # rather than competing for attention with the other two
+    # variants.
+    #
+    # ``bold-electric`` swaps to ``marquee-row`` (Phase 2): a
+    # horizontal scroll-snap rail with six tight cards instead of
+    # four wide ones. Reads as a motion-led studio reel; the
+    # auto-animation is intentionally left out of Phase 2 so a
+    # reduced-motion user gets the same scroll-able rail without
+    # any movement. Phase 3 may layer scroll-snap auto-rotation
+    # behind ``prefers-reduced-motion: no-preference`` if operator
+    # feedback wants it.
+    "bold-electric": {"selected-work-preview": "marquee-row"},
+    # clinic-healthcare (Phase 2) — treatment-list × 3 treatments
+    #
+    # ``clinic-calm`` keeps the byte-identical default
+    # (``minimal-rows``); not registered in the map so the
+    # section's own default kicks in. Calm clinics keep the
+    # pre-Phase-2 rounded-card menu.
+    #
+    # ``warm-care`` swaps to ``split-cards``: a 2-col grid of
+    # warmer cards with an accent-tinted left rail. Reads as a
+    # warmer brochure rather than a clinical menu.
+    "warm-care": {"treatment-list": "split-cards"},
+    # ``modern-precision`` swaps to ``numbered-stack``: large mono
+    # numerals + thin separators. Reads as a clinical sequence
+    # appropriate for a precision-focused practice.
+    "modern-precision": {"treatment-list": "numbered-stack"},
+    # professional-services (Phase 2) — practice-grid × 3 treatments
+    #
+    # ``consulting-modern`` keeps the byte-identical ``dense-grid``
+    # default (3-col compact card grid). Not registered in the map
+    # so the section default kicks in.
+    #
+    # ``legal-classic`` swaps to ``tabular``: formal row listing
+    # without card chrome, thin ``border-b`` separators, column
+    # header. Reads as a court-filing index rather than a
+    # marketing brochure.
+    "legal-classic": {"practice-grid": "tabular"},
+    # ``accounting-trust`` swaps to ``grouped``: 2-col feature
+    # columns with numbered eyebrows. Reads as "this is how we
+    # organise our practice" rather than a dense menu.
+    "accounting-trust": {"practice-grid": "grouped"},
+    # consulting-modern (Phase 2) — expertise-areas treatment.
+    #
+    # The /expertis route already has consulting-modern on
+    # ``dense-grid`` (the section default) for practice-grid; the
+    # home page expertise-areas section flips to ``tag-cluster``
+    # so the modern consulting variant reads as an associative
+    # "what we do"-cloud rather than a numbered list.
+    #
+    # Note: variant-key already exists in the map for selected-
+    # work-preview... but consulting-modern is a PS variant, not
+    # an agency variant. Each scaffold has its own variants, so
+    # the same variant-id never serves two scaffolds.
+    "consulting-modern": {"expertise-areas": "tag-cluster"},
+    # legal-classic and accounting-trust inherit ``numbered-2col``
+    # (the section default) for expertise-areas so the home page
+    # eyebrows stay calmly numbered. The PS variation lives on
+    # /expertis (practice-grid) instead.
+    # local-service-business (Phase 2) — service-list × 4 treatments
+    #
+    # ``nordic-trust`` swaps to ``tabular``: a formal service
+    # catalogue with a column header and thin ``border-b``
+    # separators. Matches the calm Scandinavian-formality the
+    # variant leans into.
+    "nordic-trust": {"service-list": "tabular"},
+    # ``warm-craft`` swaps to ``alternating-rows``: vertical
+    # sequence where odd rows put the icon on the left and even
+    # rows flip via ``md:flex-row-reverse``. Reads as a
+    # back-and-forth rhythm appropriate for a craft-led service
+    # business.
+    "warm-craft": {"service-list": "alternating-rows"},
+    # ``clinical-calm`` swaps to ``icon-strip``: compact horizontal
+    # pill row with summaries on a quiet grid underneath. Reads as
+    # a minimalist contents bar.
+    "clinical-calm": {"service-list": "icon-strip"},
+    # ``midnight-counsel`` and ``pulse-fit`` inherit ``card-grid``
+    # (the section default) so the LSB look most operators expect
+    # stays stable in pilot. Phase 3 may flip pulse-fit to
+    # ``alternating-rows`` if the energetic gym variant wants more
+    # movement.
 }
 
 
@@ -5547,26 +5813,78 @@ def render_section_treatment_summary(
     )
 
 
+_TREATMENT_LIST_TREATMENT_DEFAULT = "minimal-rows"
+
+
 def render_section_treatment_list(
     dossier: dict,
     *,
     contact_path: str = "/kontakta-oss",
+    variant_id: str | None = None,
 ) -> str:
     """Render the full treatment list for the clinic /behandlingar route.
 
-    Iterates the entire services array (each entry represents a
-    treatment) into a vertical detailed list — name, plain-language
-    description and a "Boka tid"-CTA at the bottom. Calmer cadence
-    than the LSB service-list (no leading icon glyphs, fewer chrome
-    cues) so the page reads as a clinical menu rather than a
-    marketing pitch.
+    Section design-treatments (Phase 2): the section now resolves a
+    treatment id via ``_treatment_for_section`` and routes the same
+    services array through one of three private renderers:
+
+    * ``minimal-rows`` — the byte-identical default. Vertical list
+      of rounded-2xl border-cards with a quiet typographic header.
+      Mapped to ``clinic-calm`` so the calm clinic keeps the
+      pre-Phase-2 menu feel.
+    * ``split-cards`` — two-column grid of warmer cards where each
+      treatment card carries a soft accent-tinted left rail and
+      slightly bigger label typography. Mapped to ``warm-care``.
+    * ``numbered-stack`` — sequence with large monospaced
+      "01 / 02 / 03"-numerals and thin horizontal separators
+      between rows. Reads as a clinical sequence rather than a
+      menu of options. Mapped to ``modern-precision``.
 
     Returns "" when no services are declared so the dispatcher
-    does not emit an empty list scaffold.
+    does not emit an empty list scaffold regardless of treatment.
     """
     services = dossier.get("services") or []
     if not services:
         return ""
+    treatment = _treatment_for_section(
+        variant_id,
+        "treatment-list",
+        default=_TREATMENT_LIST_TREATMENT_DEFAULT,
+    )
+    if treatment == "split-cards":
+        return _render_treatment_list_split_cards(services, contact_path)
+    if treatment == "numbered-stack":
+        return _render_treatment_list_numbered_stack(services, contact_path)
+    return _render_treatment_list_minimal_rows(services, contact_path)
+
+
+def _treatment_list_header() -> str:
+    """Shared header markup for every treatment-list treatment.
+
+    Kept as a single source so the eyebrow + h1 + supporting copy
+    stay in lockstep across all three treatments. A future operator-
+    pin tier (Phase 3) can override the copy via dossier directives
+    without touching the per-treatment renderers.
+    """
+    return (
+        '          <header className="flex flex-col gap-3">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Behandlingar</p>\n'
+        '            <h1 className="max-w-2xl text-4xl font-semibold tracking-tight md:text-5xl">Det här hjälper vi dig med</h1>\n'
+        '            <p className="max-w-2xl text-base text-[color:var(--muted)] leading-relaxed">Beskrivningarna är skrivna i klarspråk. Är du osäker på vilken behandling som passar — ring eller skicka ett mejl så hjälper vi dig.</p>\n'
+        "          </header>\n"
+    )
+
+
+def _render_treatment_list_minimal_rows(
+    services: list[dict],
+    contact_path: str,
+) -> str:
+    """Vertical list of rounded border-cards (the default treatment).
+
+    Kept byte-identical to the pre-Phase-2 output so existing
+    snapshots and any clinic build that did not pin a variant in
+    Phase 1 are not invalidated by introducing treatment dispatch.
+    """
     items = "\n".join(
         f'            <li key={_jsx_safe_string(svc["id"])} className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--background)] p-8">\n'
         f'              <h2 className="text-xl font-semibold tracking-tight md:text-2xl">{_jsx_safe_string(svc["label"])}</h2>\n'
@@ -5577,18 +5895,84 @@ def render_section_treatment_list(
     return (
         '      <section className="border-b border-[color:var(--border)]">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
-        '          <header className="flex flex-col gap-3">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Behandlingar</p>\n'
-        '            <h1 className="max-w-2xl text-4xl font-semibold tracking-tight md:text-5xl">Det här hjälper vi dig med</h1>\n'
-        '            <p className="max-w-2xl text-base text-[color:var(--muted)] leading-relaxed">Beskrivningarna är skrivna i klarspråk. Är du osäker på vilken behandling som passar — ring eller skicka ett mejl så hjälper vi dig.</p>\n'
-        "          </header>\n"
-        '          <ul className="flex flex-col gap-4">\n'
-        f"{items}\n"
-        "          </ul>\n"
-        f'          <a href={_jsx_safe_string(contact_path)} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Boka tid<ArrowRight className="size-4" /></a>\n'
-        "        </div>\n"
-        "      </section>\n"
-        "\n"
+        + _treatment_list_header()
+        + '          <ul className="flex flex-col gap-4">\n'
+        + f"{items}\n"
+        + "          </ul>\n"
+        + f'          <a href={_jsx_safe_string(contact_path)} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Boka tid<ArrowRight className="size-4" /></a>\n'
+        + "        </div>\n"
+        + "      </section>\n"
+        + "\n"
+    )
+
+
+def _render_treatment_list_split_cards(
+    services: list[dict],
+    contact_path: str,
+) -> str:
+    """Two-column grid of warm cards with an accent-tinted left rail.
+
+    Reads as a warmer brochure than ``minimal-rows`` — slightly
+    larger label typography, a soft accent-coloured left rail
+    (``border-l-4 border-[color:var(--accent)]``) and card-surface
+    background instead of a flat panel. Mapped to ``warm-care``.
+    """
+    items = "\n".join(
+        f'            <li key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-3 rounded-2xl border border-[color:var(--border)] border-l-4 border-l-[color:var(--accent)] bg-[color:var(--card)] p-8">\n'
+        f'              <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">{_jsx_safe_string(svc["label"])}</h2>\n'
+        f'              <p className="text-base text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
+        "            </li>"
+        for svc in services
+    )
+    return (
+        '      <section className="border-b border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
+        + _treatment_list_header()
+        + '          <ul className="grid gap-6 md:grid-cols-2">\n'
+        + f"{items}\n"
+        + "          </ul>\n"
+        + f'          <a href={_jsx_safe_string(contact_path)} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Boka tid<ArrowRight className="size-4" /></a>\n'
+        + "        </div>\n"
+        + "      </section>\n"
+        + "\n"
+    )
+
+
+def _render_treatment_list_numbered_stack(
+    services: list[dict],
+    contact_path: str,
+) -> str:
+    """Sequence with monospaced numerals and thin horizontal separators.
+
+    Reads as a clinical sequence: a large mono "01 / 02 / 03"
+    numeral on the left, the treatment name and description on the
+    right, and a thin ``border-b`` separator between rows. No card
+    chrome — the eye runs straight down the numeral column. Mapped
+    to ``modern-precision``.
+    """
+    items = "\n".join(
+        (
+            f'            <li key={_jsx_safe_string(svc["id"])} className="grid gap-6 border-b border-[color:var(--border)] py-8 md:grid-cols-[6rem_1fr]">\n'
+            f'              <p className="font-mono text-3xl tracking-tight text-[color:var(--muted)] md:text-4xl">{_jsx_safe_string(f"{idx:02d}")}</p>\n'
+            "              <div className=\"flex flex-col gap-3\">\n"
+            f'                <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">{_jsx_safe_string(svc["label"])}</h2>\n'
+            f'                <p className="text-base text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
+            "              </div>\n"
+            "            </li>"
+        )
+        for idx, svc in enumerate(services, start=1)
+    )
+    return (
+        '      <section className="border-b border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
+        + _treatment_list_header()
+        + '          <ul className="flex flex-col border-t border-[color:var(--border)]">\n'
+        + f"{items}\n"
+        + "          </ul>\n"
+        + f'          <a href={_jsx_safe_string(contact_path)} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Boka tid<ArrowRight className="size-4" /></a>\n'
+        + "        </div>\n"
+        + "      </section>\n"
+        + "\n"
     )
 
 
@@ -5648,20 +6032,30 @@ _SECTION_RENDERERS.update(
 )
 
 
+_EXPERTISE_AREAS_TREATMENT_DEFAULT = "numbered-2col"
+
+
 def render_section_expertise_areas(
     dossier: dict,
     *,
     contact_path: str = "/kontakta-oss",
+    variant_id: str | None = None,
 ) -> str:
     """Render a structured expertise-area grid for professional-services home.
 
-    A 2-column grid of practice-area cards prefixed with a numeric
-    eyebrow (``01`` ... ``06``). Each card surfaces a label and a
-    one-sentence scope so a buying-side counsel can self-qualify
-    into the right practice within the first scroll. Visually
-    cooler than the LSB services-summary block — restrained
-    chrome, no hover-lift, ample whitespace — to match the
-    authoritative tone professional-services scaffolds want.
+    Section design-treatments (Phase 2): the section now resolves a
+    treatment id via ``_treatment_for_section`` and routes the same
+    services array through one of two private renderers:
+
+    * ``numbered-2col`` — the byte-identical default. 2-col grid with
+      numeric eyebrows (``01``..``06``) and a left-rail border on
+      each card. Calm, court-filing-style restraint. Mapped to
+      ``legal-classic`` and ``accounting-trust`` (default-keep).
+    * ``tag-cluster`` — pill cloud where each practice area is a
+      compact rounded pill with the label inside and the scope
+      revealed on the row directly below. Reads as an associative
+      "what we do"-cloud rather than a numbered index. Mapped to
+      ``consulting-modern``.
 
     Returns "" when the dossier carries no services so the
     dispatcher does not emit an empty grid. Caps at six entries
@@ -5671,6 +6065,36 @@ def render_section_expertise_areas(
     services = dossier.get("services") or []
     if not services:
         return ""
+    treatment = _treatment_for_section(
+        variant_id,
+        "expertise-areas",
+        default=_EXPERTISE_AREAS_TREATMENT_DEFAULT,
+    )
+    if treatment == "tag-cluster":
+        return _render_expertise_areas_tag_cluster(services, contact_path)
+    return _render_expertise_areas_numbered_2col(services, contact_path)
+
+
+def _expertise_areas_header() -> str:
+    """Shared header markup for every expertise-areas treatment."""
+    return (
+        '          <div className="flex flex-col gap-3 max-w-2xl">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Verksamhetsområden</p>\n'
+        '            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Vår expertis</h2>\n'
+        "          </div>\n"
+    )
+
+
+def _render_expertise_areas_numbered_2col(
+    services: list[dict],
+    contact_path: str,
+) -> str:
+    """2-col grid with numbered eyebrows and left-rail borders.
+
+    Kept byte-identical to the pre-Phase-2 output so existing
+    snapshots and any PS build that did not pin a variant in Phase 1
+    are not invalidated by introducing treatment dispatch.
+    """
     cards = "\n".join(
         f'            <article key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-3 border-l border-[color:var(--border)] pl-6">\n'
         f'              <span className="text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(f"{idx:02d}")}</span>\n'
@@ -5682,41 +6106,125 @@ def render_section_expertise_areas(
     return (
         '      <section className="border-t border-[color:var(--border)]">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
-        '          <div className="flex flex-col gap-3 max-w-2xl">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Verksamhetsområden</p>\n'
-        '            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Vår expertis</h2>\n'
-        "          </div>\n"
-        '          <div className="grid gap-10 md:grid-cols-2">\n'
-        f"{cards}\n"
-        "          </div>\n"
-        f'          <a href={_jsx_safe_string(contact_path)} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Boka introduktionssamtal<ArrowRight className="size-4" /></a>\n'
-        "        </div>\n"
-        "      </section>\n"
-        "\n"
+        + _expertise_areas_header()
+        + '          <div className="grid gap-10 md:grid-cols-2">\n'
+        + f"{cards}\n"
+        + "          </div>\n"
+        + f'          <a href={_jsx_safe_string(contact_path)} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Boka introduktionssamtal<ArrowRight className="size-4" /></a>\n'
+        + "        </div>\n"
+        + "      </section>\n"
+        + "\n"
     )
+
+
+def _render_expertise_areas_tag_cluster(
+    services: list[dict],
+    contact_path: str,
+) -> str:
+    """Pill cloud where practice areas read as an associative tag cluster.
+
+    Each practice area renders as a compact rounded pill carrying
+    its label; the scope follows on a separate row beneath the
+    cluster as a single line of running text joined by middots.
+    The shape — pills + summary line — reads as "what we do" rather
+    than a numbered index, which suits the modern consulting tone.
+    Mapped to ``consulting-modern``.
+    """
+    pills = "\n".join(
+        f'              <li key={_jsx_safe_string(svc["id"])} className="rounded-full border border-[color:var(--border)] bg-[color:var(--card)] px-5 py-2 text-sm font-medium tracking-tight">{_jsx_safe_string(svc["label"])}</li>'
+        for svc in services[:6]
+    )
+    summary_line = " · ".join(
+        str(svc.get("summary", "")).strip()
+        for svc in services[:6]
+        if isinstance(svc.get("summary"), str) and svc.get("summary", "").strip()
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
+        + _expertise_areas_header()
+        + '          <ul className="flex flex-wrap gap-3">\n'
+        + f"{pills}\n"
+        + "          </ul>\n"
+        + f'          <p className="max-w-3xl text-base text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(summary_line)}</p>\n'
+        + f'          <a href={_jsx_safe_string(contact_path)} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Boka introduktionssamtal<ArrowRight className="size-4" /></a>\n'
+        + "        </div>\n"
+        + "      </section>\n"
+        + "\n"
+    )
+
+
+_PRACTICE_GRID_TREATMENT_DEFAULT = "dense-grid"
 
 
 def render_section_practice_grid(
     dossier: dict,
     *,
     contact_path: str = "/kontakta-oss",
+    variant_id: str | None = None,
 ) -> str:
     """Render the full practice-area catalogue for professional-services /expertis.
 
-    Emits a 3-column dense grid where each card carries a
-    practice-area label and a one-paragraph scope — formal copy,
-    restrained chrome, no marketing flourish. Visually distinct
-    from the LSB ``service-list`` (vertical, icon-led, with USP
-    bullets) and the clinic ``treatment-list`` (single-column,
-    plain-language) so the scaffold reads like a counsel-facing
-    expertise menu rather than a services brochure.
+    Section design-treatments (Phase 2): the section now resolves a
+    treatment id via ``_treatment_for_section`` and routes the same
+    services array through one of three private renderers:
+
+    * ``dense-grid`` — the byte-identical default. 3-col compact
+      grid of small cards with formal restraint. Mapped to
+      ``consulting-modern`` so the modern consulting variant keeps
+      the pre-Phase-2 expertise menu.
+    * ``tabular`` — formal row listing (no card chrome) with thin
+      ``border-b`` separators between rows and a column header.
+      Reads as a court-filing index. Mapped to ``legal-classic``.
+    * ``grouped`` — 2-col feature columns with large numbered
+      eyebrows (``Område 01`` / ``Område 02``…) and richer
+      typography. Mapped to ``accounting-trust``.
 
     Returns "" when no services are declared so the dispatcher
-    does not emit an empty grid scaffold.
+    does not emit an empty grid scaffold regardless of treatment.
     """
     services = dossier.get("services") or []
     if not services:
         return ""
+    treatment = _treatment_for_section(
+        variant_id,
+        "practice-grid",
+        default=_PRACTICE_GRID_TREATMENT_DEFAULT,
+    )
+    if treatment == "tabular":
+        return _render_practice_grid_tabular(services, contact_path)
+    if treatment == "grouped":
+        return _render_practice_grid_grouped(services, contact_path)
+    return _render_practice_grid_dense_grid(services, contact_path)
+
+
+def _practice_grid_header() -> str:
+    """Shared header markup for every practice-grid treatment.
+
+    Locks the eyebrow + h1 + supporting copy across all three
+    treatments so a future Phase 3 operator-pin can override the
+    copy via dossier directives without touching per-treatment
+    renderers.
+    """
+    return (
+        '          <header className="flex flex-col gap-3 max-w-2xl">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Verksamhetsområden</p>\n'
+        '            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Praktikgrupper</h1>\n'
+        '            <p className="text-base text-[color:var(--muted)] leading-relaxed">Vår verksamhet är organiserad i specialiserade praktikgrupper. Välj det område som ligger närmast ert ärende — vi kopplar in den partner som har relevant precedent.</p>\n'
+        "          </header>\n"
+    )
+
+
+def _render_practice_grid_dense_grid(
+    services: list[dict],
+    contact_path: str,
+) -> str:
+    """3-col compact card grid (the default treatment).
+
+    Kept byte-identical to the pre-Phase-2 output so existing
+    snapshots and any PS build that did not pin a variant in Phase 1
+    are not invalidated by introducing treatment dispatch.
+    """
     cards = "\n".join(
         f'            <article key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-4 rounded-lg border border-[color:var(--border)] bg-[color:var(--background)] p-7">\n'
         f'              <h2 className="text-lg font-semibold tracking-tight">{_jsx_safe_string(svc["label"])}</h2>\n'
@@ -5728,17 +6236,93 @@ def render_section_practice_grid(
     return (
         '      <section className="border-b border-[color:var(--border)]">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
-        '          <header className="flex flex-col gap-3 max-w-2xl">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Verksamhetsområden</p>\n'
-        '            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Praktikgrupper</h1>\n'
-        '            <p className="text-base text-[color:var(--muted)] leading-relaxed">Vår verksamhet är organiserad i specialiserade praktikgrupper. Välj det område som ligger närmast ert ärende — vi kopplar in den partner som har relevant precedent.</p>\n'
-        "          </header>\n"
-        '          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">\n'
-        f"{cards}\n"
-        "          </div>\n"
-        "        </div>\n"
-        "      </section>\n"
-        "\n"
+        + _practice_grid_header()
+        + '          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">\n'
+        + f"{cards}\n"
+        + "          </div>\n"
+        + "        </div>\n"
+        + "      </section>\n"
+        + "\n"
+    )
+
+
+def _render_practice_grid_tabular(
+    services: list[dict],
+    contact_path: str,
+) -> str:
+    """Formal row listing with thin separators (no card chrome).
+
+    Reads as a court-filing index: a header row labels the columns,
+    each practice area is a single row with a label / scope / link
+    layout and a thin ``border-b`` separator. No surface chrome —
+    the eye runs straight down the column. Mapped to
+    ``legal-classic`` so the classic law firm reads as a structured
+    filing index rather than a marketing brochure.
+    """
+    rows = "\n".join(
+        (
+            f'              <li key={_jsx_safe_string(svc["id"])} className="grid items-baseline gap-4 border-b border-[color:var(--border)] py-6 md:grid-cols-[14rem_1fr_auto] md:gap-8">\n'
+            f'                <h2 className="text-base font-semibold tracking-tight md:text-lg">{_jsx_safe_string(svc["label"])}</h2>\n'
+            f'                <p className="text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
+            f'                <a href={_jsx_safe_string(contact_path)} className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-widest underline-offset-4 hover:underline">Diskutera ärende<ArrowRight className="size-3" /></a>\n'
+            "              </li>"
+        )
+        for svc in services
+    )
+    return (
+        '      <section className="border-b border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
+        + _practice_grid_header()
+        + '          <div className="flex flex-col">\n'
+        + '            <div className="grid gap-4 border-b border-[color:var(--border)] pb-3 text-xs font-mono uppercase tracking-widest text-[color:var(--muted)] md:grid-cols-[14rem_1fr_auto] md:gap-8">\n'
+        + "              <span>Praktikområde</span>\n"
+        + "              <span>Omfång</span>\n"
+        + '              <span className="hidden md:inline">Kontakt</span>\n'
+        + "            </div>\n"
+        + '            <ul className="flex flex-col">\n'
+        + f"{rows}\n"
+        + "            </ul>\n"
+        + "          </div>\n"
+        + "        </div>\n"
+        + "      </section>\n"
+        + "\n"
+    )
+
+
+def _render_practice_grid_grouped(
+    services: list[dict],
+    contact_path: str,
+) -> str:
+    """2-col feature columns with numbered eyebrows.
+
+    Each practice area becomes a richer feature card with a large
+    monospace ``Område NN`` eyebrow, slightly bigger heading
+    typography and more vertical breathing room. Mapped to
+    ``accounting-trust`` so the audit / advisory variant reads as a
+    structured "this is how we organise our practice" rather than a
+    dense menu.
+    """
+    cards = "\n".join(
+        (
+            f'            <article key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-3 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] p-8">\n'
+            f'              <p className="text-xs font-mono uppercase tracking-widest text-[color:var(--accent)]">{_jsx_safe_string(f"Område {idx:02d}")}</p>\n'
+            f'              <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">{_jsx_safe_string(svc["label"])}</h2>\n'
+            f'              <p className="text-base text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
+            f'              <a href={_jsx_safe_string(contact_path)} className="mt-auto inline-flex items-center gap-2 text-xs font-medium uppercase tracking-widest underline-offset-4 hover:underline">Diskutera ärende<ArrowRight className="size-3" /></a>\n'
+            "            </article>"
+        )
+        for idx, svc in enumerate(services, start=1)
+    )
+    return (
+        '      <section className="border-b border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
+        + _practice_grid_header()
+        + '          <div className="grid gap-6 md:grid-cols-2">\n'
+        + f"{cards}\n"
+        + "          </div>\n"
+        + "        </div>\n"
+        + "      </section>\n"
+        + "\n"
     )
 
 
@@ -5861,10 +6445,10 @@ def render_section_selected_work_preview(
 ) -> str:
     """Render the home-page Selected Work preview for agency-studio.
 
-    Section design-treatments pilot (sprint 2026-05-25): the section
-    now resolves a treatment id via ``_treatment_for_section`` and
-    routes the same dossier data through one of two private
-    renderers:
+    Section design-treatments (Phase 1 pilot + Phase 2 expansion):
+    the section resolves a treatment id via
+    ``_treatment_for_section`` and routes the same dossier data
+    through one of three private renderers:
 
     * ``editorial-stack`` — the byte-identical default that preserves
       pre-pilot snapshots. Vertical 2-col grid, every card sits on
@@ -5874,6 +6458,10 @@ def render_section_selected_work_preview(
       is vertically translated by ``md:translate-y-12`` and rendered
       as an enclosed surface card with a "Studio nº 01" eyebrow.
       Same services, deliberately broken rhythm.
+    * ``marquee-row`` — horizontal scroll-snap rail with six tight
+      cards, "Studio reel"-eyebrow and a gradient fade hint on the
+      right edge. No auto-animation in Phase 2; reduced-motion users
+      get the same browseable rail. Mapped to ``bold-electric``.
 
     The variant-to-treatment mapping lives in
     ``_SECTION_TREATMENTS_BY_VARIANT`` so the section renderer itself
@@ -5892,6 +6480,8 @@ def render_section_selected_work_preview(
     )
     if treatment == "asymmetric-grid":
         return _render_selected_work_preview_asymmetric_grid(services)
+    if treatment == "marquee-row":
+        return _render_selected_work_preview_marquee_row(services)
     return _render_selected_work_preview_editorial_stack(services)
 
 
@@ -5965,6 +6555,54 @@ def _render_selected_work_preview_asymmetric_grid(services: list[dict]) -> str:
         "          </div>\n"
         '          <div className="grid gap-x-10 gap-y-12 md:grid-cols-2 md:gap-x-16 md:pb-16">\n'
         f"{cards}\n"
+        "          </div>\n"
+        '          <a href={"/arbeten"} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Hela arbets-arkivet<ArrowRight className="size-4" /></a>\n'
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+def _render_selected_work_preview_marquee_row(services: list[dict]) -> str:
+    """Horizontal scroll-snap rail with up to six tight cards.
+
+    Reads as a "studio reel" — six cards (vs four in editorial-stack
+    and asymmetric-grid) packed into a horizontal scroll container
+    with ``snap-x snap-mandatory`` so each card snaps into view.
+    Cards have a fixed minimum width so they do not collapse on
+    narrow viewports, and the right edge has a gradient mask
+    suggesting "more to scroll". The eyebrow becomes "Studio reel"
+    to telegraph the motion-led identity bold-electric leans into.
+
+    Phase 2 deliberately does NOT auto-animate the rail. Reduced-
+    motion users get the same browseable scroll-snap experience as
+    everyone else; only the user's own scroll input drives the row.
+    Phase 3 may add a ``prefers-reduced-motion: no-preference``-
+    gated CSS animation if operator feedback wants it.
+    """
+    cards = "\n".join(
+        (
+            f'              <article key={_jsx_safe_string(svc["id"])} className="flex w-[18rem] shrink-0 snap-start flex-col gap-3 rounded-[var(--radius-lg)] border border-[color:var(--border)] bg-[color:var(--card)] p-6 md:w-[22rem] md:p-8">\n'
+            f'                <p className="text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(f"Studio reel · {idx:02d}")}</p>\n'
+            f'                <h3 className="text-xl font-semibold tracking-tight md:text-2xl">{_jsx_safe_string(svc["label"])}</h3>\n'
+            f'                <p className="text-sm text-[color:var(--muted)] leading-relaxed line-clamp-4">{_jsx_safe_string(svc["summary"])}</p>\n'
+            '                <a href={"/arbeten"} className="mt-auto inline-flex items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Se case<ArrowRight className="size-4" /></a>\n'
+            "              </article>"
+        )
+        for idx, svc in enumerate(services[:6], start=1)
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-12 py-[var(--section-spacing)]">\n'
+        '          <div className="flex flex-col gap-3 max-w-2xl">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Studio reel</p>\n'
+        '            <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">Senaste arbeten</h2>\n'
+        "          </div>\n"
+        '          <div className="relative -mr-[max(0px,calc((100vw-var(--container-width))/2))]">\n'
+        '            <div className="flex snap-x snap-mandatory gap-6 overflow-x-auto pb-6 pr-[max(2rem,calc((100vw-var(--container-width))/2))] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">\n'
+        f"{cards}\n"
+        "            </div>\n"
+        '            <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[color:var(--background)] to-transparent" />\n'
         "          </div>\n"
         '          <a href={"/arbeten"} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Hela arbets-arkivet<ArrowRight className="size-4" /></a>\n'
         "        </div>\n"
