@@ -43,6 +43,10 @@ data/evals/generated/
 # observability per körning, inte arkiverat i git. .gitkeep behåller mappen.
 data/evals/scaffold-probe/*.json
 data/evals/scaffold-probe/*.md
+# scripts/run_golden_path_eval.py output. Summary JSON/Markdown plus
+# isolated prompt-inputs/runs/generated work dirs are per-run artefacts.
+data/evals/golden-path/*
+!data/evals/golden-path/.gitkeep
 
 audits/
 data/prompt-inputs/
