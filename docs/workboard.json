@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-25T02:11:00Z",
+  "updatedAt": "2026-05-25T02:35:00Z",
   "updatedBy": "christopher",
   "people": {
     "jakob": {
@@ -60,116 +60,101 @@
     },
     {
       "owner": "christopher",
-      "gapId": "GAP-viewser-iteration-compare",
+      "gapId": "GAP-viewser-live-build-sync",
       "paths": [
+        "apps/viewser/app/page.tsx",
+        "apps/viewser/components/builder/builder-shell.tsx",
         "apps/viewser/components/builder/inspector/versions-tab.tsx",
-        "apps/viewser/components/builder/inspector/run-diff.ts",
         "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
-        "apps/viewser/components/builder/inspector/index.ts"
+        "apps/viewser/components/builder/use-pending-build.ts"
       ],
-      "reason": "Iteration & Compare — site-scoped versionshistorik + diff-vy i Site Inspector (pure UI, läser befintliga API:er)"
-    },
-    {
-      "owner": "christopher",
-      "gapId": "GAP-viewser-wizard-minimalism",
-      "paths": [
-        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
-        "apps/viewser/components/discovery-wizard/steps/step-primitives.tsx",
-        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/visual-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/functions-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/content-orchestrator.tsx",
-        "apps/viewser/components/discovery-wizard/steps/content-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/media-step.tsx",
-        "apps/viewser/components/discovery-wizard/foundation-summary.tsx"
-      ],
-      "reason": "Wizard minimalism — progressive disclosure av all sekundär text, metadata och fallback-fält (UI-only, inga ändringar i wizard-kontrakten)"
+      "reason": "Live Build Sync — optimistisk pending-version + bättre koordination mellan FloatingChat och Versions-tab (pure UI, läser befintliga API:er och callbacks)"
     }
   ],
-  "queuedGaps": [],
-  "activeGaps": [
+  "queuedGaps": [
     {
-      "id": "GAP-viewser-wizard-minimalism",
-      "type": "Gap/UI",
-      "owner": "christopher",
-      "title": "Wizard minimalism — progressive disclosure av all sekundär text, metadata och fallback-fält",
-      "collisionRisk": "green",
-      "reviewer": "jakob",
-      "status": "active",
-      "file": "docs/gaps/GAP-viewser-wizard-minimalism.md",
-      "startedAt": "2026-05-25T02:11:00Z",
+      "id": "GAP-backend-build-trace-endpoint",
+      "type": "Gap/Runtime",
+      "owner": "jakob",
+      "title": "Build-trace endpoint + baseRunId i /api/prompt — unlocks Live Build Sync A+D",
+      "collisionRisk": "yellow",
+      "reviewer": "christopher",
+      "status": "queued",
+      "file": "docs/gaps/GAP-backend-build-trace-endpoint.md",
+      "createdAt": "2026-05-25T02:35:00Z",
       "paths": [
-        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
-        "apps/viewser/components/discovery-wizard/steps/step-primitives.tsx",
-        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/visual-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/functions-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/content-orchestrator.tsx",
-        "apps/viewser/components/discovery-wizard/steps/content-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/media-step.tsx",
-        "apps/viewser/components/discovery-wizard/foundation-summary.tsx"
+        "apps/viewser/app/api/runs/[runId]/trace/route.ts",
+        "apps/viewser/app/api/prompt/route.ts",
+        "apps/viewser/lib/runs.ts",
+        "scripts/prompt_to_project_input.py",
+        "scripts/build_site.py",
+        "packages/generation/build/**",
+        "tests/test_runs_api.py",
+        "tests/test_prompt_route.py"
       ],
       "doNotTouch": [
-        "apps/viewser/components/discovery-wizard/wizard-payload.ts",
-        "apps/viewser/components/discovery-wizard/wizard-types.ts",
-        "apps/viewser/components/discovery-wizard/wizard-constants.ts",
-        "packages/generation/**",
-        "governance/policies/**",
-        "scripts/**",
-        "tests/test_*.py"
+        "apps/viewser/components/builder/floating-chat.tsx",
+        "apps/viewser/components/builder/inspector/versions-tab.tsx",
+        "apps/viewser/components/discovery-wizard/**"
       ],
       "acceptanceCriteria": [
-        "Wizard-header visar bara en badge per steg (pipeline-badge tas bort till förmån för eyebrow).",
-        "Step-description i header är max en mening (kort, action-orienterad). Längre prosa bakom info-ikon.",
-        "Per fält: HelperText bakom en CollapsibleHelp-primitiv. Default bara label + fält syns.",
-        "FoundationSummary och ContextChips wrappas i en collapsible MetadataPanel (default kollapsad).",
-        "'Designstil (fallback om vibe ej valts)' renderas BARA när vibe.vibeId === ''.",
-        "Demo-knappen dämpas så den inte konkurrerar med primärknappen.",
-        "Inga ändringar i wizard-payload.ts, wizard-types.ts, wizard-constants.ts — alignment garanteras by-construction.",
-        "Befintliga pytest-tester för composeMasterPrompt + deriveWizardDirectives förblir gröna."
+        "GET /api/runs/[runId]/trace returnerar tail av trace.ndjson som JSON med runStatus + events.",
+        "GET /api/runs returnerar både färdiga och pågående runs (pending status för in-flight).",
+        "POST /api/prompt accepterar baseRunId så UI kan iterera från valfri historisk version.",
+        "Backward compatible: utan baseRunId fungerar follow-up som idag."
       ],
       "checks": [
         "python scripts/sprintvakt_check.py",
         "python scripts/governance_validate.py",
-        "python scripts/rules_sync.py --check",
-        "python scripts/check_term_coverage.py --strict",
         "python -m ruff check .",
         "python -m pytest tests/ -q",
-        "cd apps/viewser && npx tsc --noEmit",
-        "cd apps/viewser && npm run lint"
-      ]
-    },
+        "cd apps/viewser && npx tsc --noEmit"
+      ],
+      "note": "UI-skriven backend-spec. Blockerar Live Build Sync A (real pipeline-status) och D (iterera från version N med riktig PI-snapshot). UI har workaround idag (prompt-prefix) som automatiskt uppgraderas till baseRunId så fort backend stödjer det."
+    }
+  ],
+  "activeGaps": [
     {
-      "id": "GAP-viewser-iteration-compare",
+      "id": "GAP-viewser-live-build-sync",
       "type": "Gap/UI",
       "owner": "christopher",
-      "title": "Iteration & Compare — site-scoped versionshistorik + diff-vy i Site Inspector",
+      "title": "Live Build Sync — optimistisk pending-version + bättre koordination mellan FloatingChat och Versions-tab",
       "collisionRisk": "green",
       "reviewer": "jakob",
       "status": "active",
-      "file": "docs/gaps/GAP-viewser-iteration-compare.md",
-      "startedAt": "2026-05-25T01:57:00Z",
+      "file": "docs/gaps/GAP-viewser-live-build-sync.md",
+      "startedAt": "2026-05-25T02:35:00Z",
       "paths": [
+        "apps/viewser/app/page.tsx",
+        "apps/viewser/components/builder/builder-shell.tsx",
         "apps/viewser/components/builder/inspector/versions-tab.tsx",
-        "apps/viewser/components/builder/inspector/run-diff.ts",
         "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
-        "apps/viewser/components/builder/inspector/index.ts"
+        "apps/viewser/components/builder/use-pending-build.ts"
       ],
       "doNotTouch": [
-        "packages/generation/**",
-        "governance/policies/**",
-        "scripts/**",
-        "tests/test_*.py",
         "apps/viewser/app/api/runs/route.ts",
         "apps/viewser/app/api/runs/[runId]/artifacts/route.ts",
-        "apps/viewser/lib/runs.ts"
+        "apps/viewser/app/api/prompt/route.ts",
+        "apps/viewser/lib/runs.ts",
+        "apps/viewser/lib/build-runner.ts",
+        "apps/viewser/lib/prompt-runner.ts",
+        "apps/viewser/components/builder/floating-chat.tsx",
+        "apps/viewser/components/discovery-wizard/**",
+        "packages/generation/**",
+        "governance/policies/**",
+        "scripts/build_site.py",
+        "scripts/prompt_to_project_input.py",
+        "scripts/sprintvakt_check.py",
+        "tests/test_*.py"
       ],
       "acceptanceCriteria": [
-        "Site Inspector har en Versioner-tab som visar runs filtrerade på aktuell siteId.",
-        "Varje run-rad har timestamp, version, status-dot, rationale-excerpt och 'Aktiv'-badge för current run.",
-        "Operatören kan markera två runs (A/B) för att se diff av scaffold/variant/starter/routes/tone-tags/capabilities/quality.",
-        "Diff-logik lever i pure run-diff.ts utan React-dependencies.",
-        "Inga ändringar i backend-API, lib/runs.ts eller schema. Pure UI-konsumtion av befintliga endpoints."
+        "Optimistisk pending-rad i Versions-tab inom 100 ms efter follow-up klickas.",
+        "Pending-raden byts atomärt mot den riktiga runId-raden när bygget är klart.",
+        "isBuilding + pendingBuild-state lyfts till page.tsx och delas mellan FloatingChat och VersionsTab.",
+        "Build-fail tar bort pending-raden snyggt utan att lämna orphan-state.",
+        "Varje run-rad har en 'Iterera från denna'-knapp som öppnar FloatingChat med prompt-prefix.",
+        "Inga ändringar i /api/prompt-, /api/runs- eller artifacts-API-shape.",
+        "Inga ändringar i floating-chat.tsx interna logik."
       ],
       "checks": [
         "python scripts/sprintvakt_check.py",
@@ -184,6 +169,59 @@
     }
   ],
   "completedGaps": [
+    {
+      "id": "GAP-viewser-wizard-minimalism",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Wizard minimalism — progressive disclosure av all sekundär text, metadata och fallback-fält",
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "in-review",
+      "file": "docs/gaps/GAP-viewser-wizard-minimalism.md",
+      "completedAt": "2026-05-25T02:35:00Z",
+      "paths": [
+        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
+        "apps/viewser/components/discovery-wizard/steps/step-primitives.tsx",
+        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/visual-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/functions-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/content-orchestrator.tsx",
+        "apps/viewser/components/discovery-wizard/steps/content-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/media-step.tsx",
+        "apps/viewser/components/discovery-wizard/foundation-summary.tsx"
+      ],
+      "acceptanceCriteria": [
+        "Progressive disclosure av all sekundär text/metadata; alignment-säkert (inga ändringar i wizard-kontrakten)."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py"
+      ],
+      "note": "Committed + pushed (4fd5cf8) i PR #71. Bug-hunt-fynd från composer-2.5-fast åtgärdade (ogiltig <button> i <p>, URL-skrape-helper, aria-controls, dubbel Info-import)."
+    },
+    {
+      "id": "GAP-viewser-iteration-compare",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Iteration & Compare — site-scoped versionshistorik + diff-vy i Site Inspector",
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "in-review",
+      "file": "docs/gaps/GAP-viewser-iteration-compare.md",
+      "completedAt": "2026-05-25T02:35:00Z",
+      "paths": [
+        "apps/viewser/components/builder/inspector/versions-tab.tsx",
+        "apps/viewser/components/builder/inspector/run-diff.ts",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/components/builder/inspector/index.ts"
+      ],
+      "acceptanceCriteria": [
+        "Versioner-tab + A/B-diff av scaffold/variant/starter/routes/tone-tags/capabilities/quality."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py"
+      ],
+      "note": "Committed + pushed (eef0d8c) i PR #71. Flyttad från activeGaps så live-build-sync kan röra versions-tab.tsx utan sprintvakt-overlap."
+    },
     {
       "id": "GAP-viewser-wizard-first-impression",
       "type": "Gap/UI",
@@ -207,7 +245,7 @@
       "checks": [
         "python scripts/sprintvakt_check.py"
       ],
-      "note": "Committed lokalt; väntar på push/merge. Flyttad från activeGaps så minimalism-gap kan röra samma filer utan sprintvakt-overlap."
+      "note": "Committed + pushed (30243c6) i PR #71."
     },
     {
       "id": "GAP-viewser-variant-live-preview",

@@ -12,6 +12,7 @@ import { useRunArtefacts } from "@/components/builder/inspector/use-run-artefact
 import { VariantsTab } from "@/components/builder/inspector/variants-tab";
 import { VersionsTab } from "@/components/builder/inspector/versions-tab";
 import { useFollowupBuild } from "@/components/builder/use-followup-build";
+import type { PendingBuildState } from "@/components/builder/use-pending-build";
 import type { PromptBuildOutcome } from "@/components/prompt-builder";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,6 +54,12 @@ type SiteInspectorSheetProps = {
   siteId: string;
   runId: string | null;
   isBuilding: boolean;
+  /**
+   * Pending build-state från Live Build Sync. Skickas vidare till
+   * Versions-tab så den kan rendera en optimistisk "Bygger…"-rad
+   * högst upp i listan medan build pågår.
+   */
+  pendingBuild?: PendingBuildState | null;
   onBuildStart: () => void;
   onBuildEnd: () => void;
   onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
@@ -64,6 +71,7 @@ export function SiteInspectorSheet({
   siteId,
   runId,
   isBuilding,
+  pendingBuild,
   onBuildStart,
   onBuildEnd,
   onBuildDone,
@@ -196,6 +204,7 @@ export function SiteInspectorSheet({
                     siteId={siteId}
                     currentRunId={runId}
                     isBuilding={isBuilding}
+                    pendingBuild={pendingBuild ?? null}
                   />
                 </TabsContent>
                 <TabsContent value="tokens">

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BuilderShell } from "@/components/builder/builder-shell";
+import { usePendingBuild } from "@/components/builder/use-pending-build";
 import { ConsoleDrawer } from "@/components/console-drawer";
 import { SiteHeader } from "@/components/layout/site-header";
 import type { ProjectInputOption } from "@/components/project-input-picker";
@@ -63,6 +64,10 @@ export default function Home() {
   const [building, setBuilding] = useState(false);
   const [buildStage, setBuildStage] = useState<PromptStage>("idle");
   const [consoleOpen, setConsoleOpen] = useState(false);
+  // Live Build Sync: pending-build-state delas mellan BuilderShell
+  // (som äger FloatingChat + dialogerna) och Versions-tab. Sätts
+  // av onBuildStart-callbacks, rensas av onBuildEnd.
+  const { pendingBuild, beginPending, clearPending } = usePendingBuild();
 
   // Sätts till true om operatören aktivt lämnar den pågående buildens
   // mål-vy (klick på "Ny sajt", val av annan run i ConsoleDrawer). När
@@ -293,8 +298,17 @@ export default function Home() {
           siteId={builderTarget.siteId}
           runId={selectedRunId}
           isBuilding={building}
+          pendingBuild={pendingBuild}
+          onPendingBuildBegin={beginPending}
+          onPendingBuildClear={clearPending}
           onBuildStart={() => setBuilding(true)}
-          onBuildEnd={() => setBuilding(false)}
+          onBuildEnd={() => {
+            setBuilding(false);
+            // Säkerhetsnet: om onPendingBuildClear inte hann kallas
+            // (t.ex. dialog som glömde rensa pending) tar vi bort den
+            // här så vi aldrig får orphan-pending-rader.
+            clearPending();
+          }}
           onBuildDone={handleBuildDone}
           onNewSite={() => {
             // Återgår till pre-build-läget: rensar både selectedRunId

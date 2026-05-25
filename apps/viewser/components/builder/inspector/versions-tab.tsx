@@ -4,6 +4,8 @@ import {
   ArrowRight,
   CircleCheck,
   Clock,
+  Copy,
+  GitBranch,
   GitCompare,
   Layers,
   Loader2,
@@ -19,6 +21,7 @@ import {
   type RunDiff,
 } from "@/components/builder/inspector/run-diff";
 import type { RunArtefactBundle } from "@/components/builder/inspector/use-run-artefacts";
+import type { PendingBuildState } from "@/components/builder/use-pending-build";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SECONDARY_INTERACTIONS } from "@/lib/ui-tokens";
@@ -100,6 +103,13 @@ export interface VersionsTabProps {
   siteId: string;
   currentRunId: string | null;
   isBuilding: boolean;
+  /**
+   * Live Build Sync: optimistisk pending-build-state. Sätts av
+   * page.tsx via usePendingBuild när en follow-up triggas och
+   * matchas mot siteId här så vi bara renderar pending-raden för
+   * rätt sajt. null = ingen build pågår (eller bygger en annan sajt).
+   */
+  pendingBuild?: PendingBuildState | null;
 }
 
 export function VersionsTab({
@@ -107,6 +117,7 @@ export function VersionsTab({
   siteId,
   currentRunId,
   isBuilding,
+  pendingBuild,
 }: VersionsTabProps) {
   const [allRuns, setAllRuns] = useState<RunMeta[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -172,6 +183,118 @@ export function VersionsTab({
     if (!allRuns) return [];
     return allRuns.filter((run) => run.siteId === siteId);
   }, [allRuns, siteId]);
+
+  // Pending-build matchar denna sajt? Då renderar vi en optimistisk
+  // "Bygger…"-rad högst upp i listan. Backend exponerar inte runId
+  // förrän bygget är klart, så vi visar bara en placeholder utan
+  // klickbarhet och utan radio-knappar.
+  //
+  // estimatedVersion: föräldern (BuilderShell/page.tsx) skickar inte
+  // nödvändigtvis in en estimerad version eftersom FloatingChat-
+  // flödet bara anropar onBuildStart() utan args. Som fallback
+  // beräknar vi senaste kända version i siteRuns + 1 så pending-
+  // raden visar "Bygger v3…" istället för bara "Bygger ny version…"
+  // (H2 från bug-hunt).
+  const fallbackEstimatedVersion = useMemo<number | null>(() => {
+    const known = siteRuns
+      .map((run) => run.version)
+      .filter((value): value is number => typeof value === "number");
+    if (known.length === 0) return null;
+    return Math.max(...known) + 1;
+  }, [siteRuns]);
+  const pendingForThisSite = useMemo<PendingBuildState | null>(() => {
+    if (!pendingBuild || pendingBuild.siteId !== siteId) return null;
+    if (pendingBuild.estimatedVersion !== null) return pendingBuild;
+    return {
+      ...pendingBuild,
+      estimatedVersion: fallbackEstimatedVersion,
+    };
+  }, [pendingBuild, siteId, fallbackEstimatedVersion]);
+
+  // Auto-highlight: spåra tidigare run-id-set så vi kan upptäcka när
+  // en ny run tillkommer (efter en build) och flagga den för en kort
+  // fade-in-highlight. Vi använder en ref för "föregående set" så
+  // jämförelsen sker utanför render, och en useState för current
+  // highlight-id så vi kan rensa den efter 1.8s. setState körs via
+  // Promise.resolve() för att respektera React 19:s
+  // set-state-in-effect-rule (samma mönster som isBuilding-watchern).
+  const previousRunIdsRef = useRef<Set<string>>(new Set());
+  const [recentlyAddedRunId, setRecentlyAddedRunId] = useState<string | null>(
+    null,
+  );
+  useEffect(() => {
+    const previous = previousRunIdsRef.current;
+    const next = new Set(siteRuns.map((run) => run.runId));
+    previousRunIdsRef.current = next;
+    if (previous.size === 0) return;
+    const added = siteRuns.find((run) => !previous.has(run.runId));
+    if (!added) return;
+    let cancelled = false;
+    let timer: number | null = null;
+    void (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      setRecentlyAddedRunId(added.runId);
+      timer = window.setTimeout(() => {
+        if (cancelled) return;
+        setRecentlyAddedRunId(null);
+      }, 1_800);
+    })();
+    return () => {
+      cancelled = true;
+      if (timer !== null) window.clearTimeout(timer);
+    };
+  }, [siteRuns]);
+
+  // Copy-to-clipboard fallback för "Iterera från denna"-knappen. Vi
+  // rör inte floating-chat.tsx (1481 rader, högrisk) — istället
+  // kopierar vi prompt-prefix till clipboard och visar en kort
+  // bekräftelse. Operatören klistrar in i chat-rutan manuellt. När
+  // backend stödjer baseRunId (se GAP-backend-build-trace-endpoint)
+  // kan vi byta detta mot ett direkt anrop.
+  //
+  // Feedbacken speglar clipboard-resultatet: lyckas = "Prefix
+  // kopierat", misslyckas = "Skriv: 'Utgå från version N:'" så vi
+  // aldrig ljuger för operatören (M1 från bug-hunt).
+  const [copyFeedback, setCopyFeedback] = useState<{
+    runId: string;
+    kind: "success" | "failure";
+    prefix: string;
+  } | null>(null);
+  const copyFeedbackTimerRef = useRef<number | null>(null);
+  const handleIterateFrom = useCallback(
+    async (runId: string, version: number | null | undefined) => {
+      const versionLabel = version ?? "?";
+      const prefix = `Utgå från version ${versionLabel}: `;
+      let kind: "success" | "failure" = "failure";
+      try {
+        if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(prefix);
+          kind = "success";
+        }
+      } catch {
+        kind = "failure";
+      }
+      if (copyFeedbackTimerRef.current !== null) {
+        window.clearTimeout(copyFeedbackTimerRef.current);
+      }
+      setCopyFeedback({ runId, kind, prefix });
+      copyFeedbackTimerRef.current = window.setTimeout(() => {
+        setCopyFeedback(null);
+        copyFeedbackTimerRef.current = null;
+      }, 4_000);
+    },
+    [],
+  );
+  // Cleanup vid unmount så stale setState inte triggas efter att
+  // tabben stängts.
+  useEffect(() => {
+    return () => {
+      if (copyFeedbackTimerRef.current !== null) {
+        window.clearTimeout(copyFeedbackTimerRef.current);
+      }
+    };
+  }, []);
 
   // Mutual-exclusion-handlers — när en run väljs som A:
   //   * Om den redan är A → toggle av (null).
@@ -249,6 +372,24 @@ export function VersionsTab({
   }
 
   if (siteRuns.length === 0) {
+    // Specialfall: ingen historik men en pending-build pågår. Visa
+    // pending-raden ensam så operatören får visuell bekräftelse på
+    // att första bygget är igång.
+    if (pendingForThisSite) {
+      return (
+        <div className="flex flex-col gap-5">
+          <HeaderBar
+            siteId={siteId}
+            runCount={0}
+            isBuilding={isBuilding}
+            onRefresh={refresh}
+          />
+          <ul className="border-border/60 overflow-hidden rounded-lg border bg-card">
+            <PendingRunRow pending={pendingForThisSite} />
+          </ul>
+        </div>
+      );
+    }
     return (
       <EmptyState
         title="Inga versioner ännu"
@@ -282,6 +423,10 @@ export function VersionsTab({
         compareB={compareB}
         onSelectA={handleSelectA}
         onSelectB={handleSelectB}
+        pending={pendingForThisSite}
+        recentlyAddedRunId={recentlyAddedRunId}
+        copyFeedback={copyFeedback}
+        onIterateFrom={handleIterateFrom}
       />
 
       {compareA && compareB && compareA !== compareB ? (
@@ -442,6 +587,12 @@ function CompareBadge({
 
 /* ── Lista med run-kort + radio-knappar för A/B ──────────────────── */
 
+type CopyFeedback = {
+  runId: string;
+  kind: "success" | "failure";
+  prefix: string;
+} | null;
+
 function RunList({
   runs,
   currentRunId,
@@ -450,6 +601,10 @@ function RunList({
   compareB,
   onSelectA,
   onSelectB,
+  pending,
+  recentlyAddedRunId,
+  copyFeedback,
+  onIterateFrom,
 }: {
   runs: RunMeta[];
   currentRunId: string | null;
@@ -458,14 +613,23 @@ function RunList({
   compareB: string | null;
   onSelectA: (runId: string) => void;
   onSelectB: (runId: string) => void;
+  pending: PendingBuildState | null;
+  recentlyAddedRunId: string | null;
+  copyFeedback: CopyFeedback;
+  onIterateFrom: (runId: string, version: number | null | undefined) => void;
 }) {
   return (
     <ul className="border-border/60 divide-y divide-border/40 overflow-hidden rounded-lg border bg-card">
+      {pending ? <PendingRunRow pending={pending} /> : null}
       {runs.map((run) => {
         const isCurrent = run.runId === currentRunId;
         const rationale = isCurrent
           ? rationaleExcerpt(extractCodegenRationale(currentBundle))
           : null;
+        const feedbackForRow =
+          copyFeedback && copyFeedback.runId === run.runId
+            ? copyFeedback
+            : null;
         return (
           <RunRow
             key={run.runId}
@@ -474,12 +638,78 @@ function RunList({
             rationale={rationale}
             isA={compareA === run.runId}
             isB={compareB === run.runId}
+            isRecentlyAdded={recentlyAddedRunId === run.runId}
+            copyFeedback={feedbackForRow}
             onSelectA={() => onSelectA(run.runId)}
             onSelectB={() => onSelectB(run.runId)}
+            onIterateFrom={() => onIterateFrom(run.runId, run.version)}
           />
         );
       })}
     </ul>
+  );
+}
+
+/**
+ * Optimistisk pending-rad. Renderas så fort en follow-up triggas
+ * och innan backend hunnit returnera ett runId. Tar inte emot klick
+ * (ingen radio-button, ingen iteration) eftersom det inte finns
+ * något runId att binda mot ännu. Backend exponerar inte trace-
+ * status under pågående build (GAP-backend-build-trace-endpoint),
+ * så vi visar bara prompt-snippet + relativ tid.
+ */
+function PendingRunRow({ pending }: { pending: PendingBuildState }) {
+  // Live relativ-tid: tickar var 5:e sekund så "för 5s sedan" inte
+  // står kvar i två minuter. useState + setInterval i en effect är
+  // safe här eftersom intervallet aldrig sätter samma värde två
+  // gånger i rad (Date.now() är monotont stigande).
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const handle = window.setInterval(() => {
+      setNow(Date.now());
+    }, 5_000);
+    return () => window.clearInterval(handle);
+  }, []);
+  const elapsedSeconds = Math.max(1, Math.round((now - pending.startedAt) / 1000));
+  const elapsedLabel =
+    elapsedSeconds < 60
+      ? `${elapsedSeconds}s sedan`
+      : `${Math.round(elapsedSeconds / 60)}m sedan`;
+  const versionLabel =
+    pending.estimatedVersion !== null
+      ? `Bygger v${pending.estimatedVersion}…`
+      : "Bygger ny version…";
+  return (
+    <li
+      aria-live="polite"
+      aria-busy="true"
+      className="border-amber-400/30 bg-amber-500/[0.06] flex items-stretch gap-0 border-b border-dashed last:border-b-0"
+    >
+      <div className="min-w-0 flex-1 px-3 py-2.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            aria-hidden
+            className="bg-amber-500 inline-block h-2 w-2 shrink-0 animate-pulse rounded-full"
+          />
+          <span className="text-foreground/85 text-[12px] font-medium">
+            {versionLabel}
+          </span>
+          <Loader2
+            aria-hidden
+            className="text-amber-600 dark:text-amber-400 h-3 w-3 shrink-0 animate-spin"
+          />
+          <span className="text-muted-foreground ml-auto inline-flex items-center gap-1 text-[11px]">
+            <Clock aria-hidden className="h-3 w-3" />
+            {elapsedLabel}
+          </span>
+        </div>
+        {pending.promptSnippet ? (
+          <p className="text-muted-foreground mt-1 line-clamp-1 text-[11.5px] italic">
+            “{pending.promptSnippet}”
+          </p>
+        ) : null}
+      </div>
+    </li>
   );
 }
 
@@ -497,23 +727,38 @@ function RunRow({
   rationale,
   isA,
   isB,
+  isRecentlyAdded,
+  copyFeedback,
   onSelectA,
   onSelectB,
+  onIterateFrom,
 }: {
   run: RunMeta;
   isCurrent: boolean;
   rationale: string | null;
   isA: boolean;
   isB: boolean;
+  isRecentlyAdded: boolean;
+  copyFeedback: CopyFeedback;
   onSelectA: () => void;
   onSelectB: () => void;
+  onIterateFrom: () => void;
 }) {
   const dotClass = STATUS_DOT_COLORS[run.status] ?? "bg-muted-foreground/40";
+  const iterateDisabled = isCurrent;
   return (
     <li
+      // data-just-built triggar en kort fade-in highlight via inline
+      // style nedan (eftersom Tailwind inte hanterar tids-fade i
+      // arbiträra attribut). Cleanup sker när recentlyAddedRunId
+      // nollställs i föräldern efter 1.8s.
+      data-just-built={isRecentlyAdded ? "true" : undefined}
       className={cn(
-        "flex items-stretch gap-0 transition-colors",
+        "flex items-stretch gap-0 transition-colors duration-700",
         isCurrent ? "bg-foreground/[0.03]" : "hover:bg-muted/30",
+        isRecentlyAdded
+          ? "bg-emerald-500/[0.10] dark:bg-emerald-400/[0.08]"
+          : "",
       )}
     >
       <div className="min-w-0 flex-1 px-3 py-2.5">
@@ -543,8 +788,50 @@ function RunRow({
             {rationale}
           </p>
         ) : null}
+        {copyFeedback ? (
+          <p
+            role="status"
+            aria-live="polite"
+            className={cn(
+              "mt-1 inline-flex items-center gap-1 pl-4 text-[10.5px] font-medium",
+              copyFeedback.kind === "success"
+                ? "text-emerald-700 dark:text-emerald-400"
+                : "text-amber-700 dark:text-amber-400",
+            )}
+          >
+            <Copy aria-hidden className="h-2.5 w-2.5" />
+            {copyFeedback.kind === "success"
+              ? "Prefix kopierat — klistra in i chatten"
+              : `Klistra in manuellt: "${copyFeedback.prefix}"`}
+          </p>
+        ) : null}
       </div>
       <div className="border-border/40 flex shrink-0 items-stretch border-l">
+        <button
+          type="button"
+          onClick={onIterateFrom}
+          disabled={iterateDisabled}
+          title={
+            iterateDisabled
+              ? "Senaste versionen — chatten utgår alltid härifrån"
+              : `Iterera från version ${run.version ?? "?"} (kopierar prompt-prefix)`
+          }
+          aria-label={
+            iterateDisabled
+              ? `Senaste versionen ${shortRunId(run.runId)}`
+              : `Iterera från version ${run.version ?? "?"}`
+          }
+          className={cn(
+            "flex w-9 items-center justify-center transition-colors",
+            "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
+            iterateDisabled
+              ? "text-muted-foreground/40 cursor-not-allowed"
+              : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+          )}
+        >
+          <GitBranch aria-hidden className="h-3 w-3" />
+        </button>
+        <div className="bg-border/40 w-px" aria-hidden />
         <RadioButton
           label="A"
           tone="rose"
