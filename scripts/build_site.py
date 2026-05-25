@@ -2664,6 +2664,92 @@ def render_section_hero(
     return hero_section_jsx + hero_block_jsx
 
 
+def render_section_contact_cta(
+    dossier: dict,
+    *,
+    contact_path: str,
+) -> str:
+    """Render the home-page closing contact-CTA section.
+
+    Produces the primary-coloured full-bleed "Hör av dig idag" banner
+    with a single ArrowRight CTA pointing at ``contact_path``. Always
+    rendered (no suppression branch) because the home shell has
+    historically always closed with a contact prompt; future scaffolds
+    that want a different closing section should compose a different
+    section list in their sections.json instead.
+
+    Path B step 4 (GAP-backend-path-b-section-renderer): extracted
+    from ``render_home``. ``dossier`` is currently unused (the static
+    Swedish copy is hard-coded) but the signature matches the future
+    section-renderer protocol so the registry in commit 6 can call
+    every renderer with the same shape.
+    """
+    del dossier  # reserved for future branch-aware copy
+    contact_href = _route_href(contact_path)
+    return (
+        '      <section className="border-t border-[color:var(--border)] bg-[color:var(--primary)] text-[color:var(--primary-foreground)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-4 py-[var(--section-spacing)]">\n'
+        '          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Hör av dig idag</h2>\n'
+        '          <p className="max-w-2xl text-base opacity-90 md:text-lg">Beskriv kort vad du behöver så återkommer vi inom en arbetsdag.</p>\n'
+        f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary-foreground)] px-5 py-3 text-sm font-medium text-[color:var(--primary)] hover:opacity-90 transition-opacity">Kontakta oss<ArrowRight className="size-4" /></a>\n'
+        "        </div>\n"
+        "      </section>\n"
+    )
+
+
+def render_section_contact_info(dossier: dict) -> str:
+    """Render the contact-page Phone / Mail / Address card section.
+
+    Produces the gradient-headed /kontakt section with three articles
+    (telephone with opening hours, email, multi-line address). The
+    address is rendered as ``<address>`` with one ``<span>`` per line
+    so the markup degrades gracefully when ``addressLines`` only has
+    one entry.
+
+    Path B step 4: extracted from ``render_contact``. Output is
+    byte-identical to the inline implementation it replaces.
+    """
+    contact = dossier["contact"]
+    address_lines = "\n".join(
+        f'                <span className="block">{_jsx_safe_string(line)}</span>'
+        for line in contact["addressLines"]
+    )
+    return (
+        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        '          <header className="flex flex-col gap-3">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Kontakt</p>\n'
+        '            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Hör av dig</h1>\n'
+        '            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">Beskriv jobbet kort så återkommer vi inom en arbetsdag med tider och offert.</p>\n'
+        "          </header>\n"
+        '          <div className="grid gap-4 md:grid-cols-2">\n'
+        '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
+        '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><Phone className="size-5" /></span>\n'
+        '              <h2 className="text-base font-semibold">Telefon</h2>\n'
+        f'              <a href={_jsx_safe_string("tel:" + _phone_href(contact["phone"]))} className="mt-2 block text-lg font-medium hover:underline">{_jsx_safe_string(contact["phone"])}</a>\n'
+        '              <p className="mt-2 inline-flex items-center gap-2 text-sm text-[color:var(--muted)]">\n'
+        '                <Clock className="size-4" />\n'
+        f"                <span>{_jsx_safe_string(contact['openingHours'])}</span>\n"
+        "              </p>\n"
+        "            </article>\n"
+        '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
+        '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><Mail className="size-5" /></span>\n'
+        '              <h2 className="text-base font-semibold">E-post</h2>\n'
+        f'              <a href={_jsx_safe_string("mailto:" + contact["email"])} className="mt-2 block text-lg font-medium hover:underline">{_jsx_safe_string(contact["email"])}</a>\n'
+        "            </article>\n"
+        '            <article className="rounded-xl border border-[color:var(--border)] p-6 md:col-span-2">\n'
+        '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><MapPin className="size-5" /></span>\n'
+        '              <h2 className="text-base font-semibold">Adress</h2>\n'
+        '              <address className="mt-2 not-italic">\n'
+        f"{address_lines}\n"
+        "              </address>\n"
+        "            </article>\n"
+        "          </div>\n"
+        "        </div>\n"
+        "      </section>\n"
+    )
+
+
 def render_section_trust_proof(dossier: dict) -> str:
     """Render the home-page "Varför oss" trust-proof bullet section.
 
@@ -2886,7 +2972,12 @@ def render_home(
     # rendering, see below) stays here until the section-dispatcher
     # lands in commit 6.
     trust_section = render_section_trust_proof(dossier)
-    contact_href = _route_href(contact_path)
+    # Path B step 4 — closing contact-CTA banner is produced by
+    # ``render_section_contact_cta``. Always rendered (no suppression).
+    contact_cta_section = render_section_contact_cta(
+        dossier,
+        contact_path=contact_path,
+    )
 
     # Visual proof block placed between services and trust: shows the
     # operator's uploaded gallery images so the home page does not lean
@@ -2939,13 +3030,7 @@ def render_home(
         f"{testimonials_section}"
         f"{trust_section}"
         f"{faq_section}"
-        '      <section className="border-t border-[color:var(--border)] bg-[color:var(--primary)] text-[color:var(--primary-foreground)]">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-4 py-[var(--section-spacing)]">\n'
-        '          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Hör av dig idag</h2>\n'
-        '          <p className="max-w-2xl text-base opacity-90 md:text-lg">Beskriv kort vad du behöver så återkommer vi inom en arbetsdag.</p>\n'
-        f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary-foreground)] px-5 py-3 text-sm font-medium text-[color:var(--primary)] hover:opacity-90 transition-opacity">Kontakta oss<ArrowRight className="size-4" /></a>\n'
-        "        </div>\n"
-        "      </section>\n"
+        f"{contact_cta_section}"
         "    </main>\n"
         "  );\n"
         "}\n"
@@ -3091,49 +3176,17 @@ def render_about(dossier: dict) -> str:
 
 
 def render_contact(dossier: dict) -> str:
-    contact = dossier["contact"]
-    address_lines = "\n".join(
-        f'                <span className="block">{_jsx_safe_string(line)}</span>'
-        for line in contact["addressLines"]
-    )
+    # Path B step 4 — contact-info card grid (Phone / Mail / Address)
+    # is produced by ``render_section_contact_info``. Output is
+    # byte-identical to the inline implementation.
+    contact_info_section = render_section_contact_info(dossier)
     return (
         'import { Clock, Mail, MapPin, Phone } from "lucide-react";\n'
         "\n"
         "export default function ContactPage() {\n"
         "  return (\n"
         '    <main className="flex flex-1 flex-col">\n'
-        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
-        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
-        '          <header className="flex flex-col gap-3">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Kontakt</p>\n'
-        '            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Hör av dig</h1>\n'
-        '            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">Beskriv jobbet kort så återkommer vi inom en arbetsdag med tider och offert.</p>\n'
-        "          </header>\n"
-        '          <div className="grid gap-4 md:grid-cols-2">\n'
-        '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
-        '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><Phone className="size-5" /></span>\n'
-        '              <h2 className="text-base font-semibold">Telefon</h2>\n'
-        f'              <a href={_jsx_safe_string("tel:" + _phone_href(contact["phone"]))} className="mt-2 block text-lg font-medium hover:underline">{_jsx_safe_string(contact["phone"])}</a>\n'
-        '              <p className="mt-2 inline-flex items-center gap-2 text-sm text-[color:var(--muted)]">\n'
-        '                <Clock className="size-4" />\n'
-        f"                <span>{_jsx_safe_string(contact['openingHours'])}</span>\n"
-        "              </p>\n"
-        "            </article>\n"
-        '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
-        '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><Mail className="size-5" /></span>\n'
-        '              <h2 className="text-base font-semibold">E-post</h2>\n'
-        f'              <a href={_jsx_safe_string("mailto:" + contact["email"])} className="mt-2 block text-lg font-medium hover:underline">{_jsx_safe_string(contact["email"])}</a>\n'
-        "            </article>\n"
-        '            <article className="rounded-xl border border-[color:var(--border)] p-6 md:col-span-2">\n'
-        '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><MapPin className="size-5" /></span>\n'
-        '              <h2 className="text-base font-semibold">Adress</h2>\n'
-        '              <address className="mt-2 not-italic">\n'
-        f"{address_lines}\n"
-        "              </address>\n"
-        "            </article>\n"
-        "          </div>\n"
-        "        </div>\n"
-        "      </section>\n"
+        f"{contact_info_section}"
         "    </main>\n"
         "  );\n"
         "}\n"

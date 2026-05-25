@@ -463,18 +463,24 @@ def test_renderers_use_jsx_safe_string_for_customer_text() -> None:
 
     for fn_name in (
         "render_layout",
-        # Path B step 1-3: the actual JSX-escaping for /, /tjanster
-        # and /om-oss routes now lives in the section-renderers below.
-        # ``render_home``, ``render_services`` and ``render_about``
-        # are thin shims that compose sections into their page shells
-        # and interpolate no customer text themselves.
+        # Path B step 1-4: the actual JSX-escaping for /, /tjanster,
+        # /om-oss and /kontakt routes now lives in the section-renderers
+        # below. ``render_home``, ``render_services``, ``render_about``
+        # and ``render_contact`` are thin shims that compose sections
+        # into their page shells and interpolate no customer text
+        # themselves.
         "render_section_hero",
         "render_section_services_summary",
         "render_section_service_list",
         "render_section_about_story",
         "render_section_team",
         "render_section_trust_proof",
-        "render_contact",
+        "render_section_contact_info",
+        # ``render_section_contact_cta`` is intentionally absent: the
+        # closing home-page CTA banner has no customer text today
+        # (the copy is hard-coded Swedish "Hör av dig idag" /
+        # "Kontakta oss"). It will pick up dossier interpolation in a
+        # later commit when branch-aware CTA copy is wired in.
     ):
         fn = getattr(build_site, fn_name)
         source = inspect.getsource(fn)
