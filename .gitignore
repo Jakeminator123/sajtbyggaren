@@ -27,6 +27,7 @@ out/
 !.env.example
 
 data/runs/
+data/output/
 data/versions/
 
 # Lokal eval-suite output (scripts/run_eval_suite.py + backoffice

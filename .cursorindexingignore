@@ -19,6 +19,7 @@ eval-tmp/
 # Redan i .gitignore; här ser vi till att Cursor inte börjar indexera
 # tiotusentals vektor-/cache-filer när index byggs i kommande sprint.
 data/embedding-index/
+data/output/
 
 # Stora binära media-filer som agenten inte kan tolka meningsfullt.
 # Trackade i git (produktassets) men onödiga att indexera.
