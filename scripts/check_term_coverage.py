@@ -459,6 +459,16 @@ COMMON_WORDS = {
     # the JSON shape returned by /api/upload-asset. Both are
     # implementation symbols, not canonical domain terms.
     "UploadProgress", "UploadResponse",
+    # Section design-treatments Phase 3 UI (ADR 0031, operator-OK
+    # 2026-05-25): SectionTreatmentSpec/Option/Id and the matching
+    # WizardSectionTreatments alias mirror the schema enum into TS so
+    # the wizard can render operator-pin disclosures without a server
+    # roundtrip. SectionTreatmentRow is the private React component
+    # that renders one section row in visual-step. WizardSectionId is
+    # an alias reused inside treatment-options.ts. None of these are
+    # canonical domain terms.
+    "SectionTreatmentId", "SectionTreatmentOption", "SectionTreatmentRow",
+    "SectionTreatmentSpec", "WizardSectionId", "WizardSectionTreatments",
     "AssetsStep", "AssetsStepProps", "WizardAssets",
     "LocalAssetStore", "S3AssetStore",
     "SaveAssetInput", "SaveAssetVariant",

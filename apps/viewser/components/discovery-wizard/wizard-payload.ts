@@ -117,6 +117,18 @@ export type WizardDirectives = {
     ogImage?: AssetRef | null;
     backgroundVideo?: AssetRef | null;
   };
+  /**
+   * Operator-pin per section för design-treatments (Phase 3, ADR
+   * 0031). Speglar `directives.sectionTreatments` i Project
+   * Input.schema.json. Tom = inga overrides; varje section kör sin
+   * variant- eller section-default.
+   *
+   * Resolve-ordning (backend): operator-pin (denna map) >
+   * variant-default (`_SECTION_TREATMENTS_BY_VARIANT`) >
+   * section-default. Wizardens `treatment-options.ts` exponerar
+   * exakt samma katalog som schemats enum.
+   */
+  sectionTreatments?: Record<string, string>;
   notesForPlanner?: string;
 };
 
@@ -517,6 +529,25 @@ export function deriveWizardDirectives(
     backgroundVideo: answers.media.backgroundVideo ?? null,
   };
   directives.media = media;
+
+  // sectionTreatments — operator-pin per section. Tomt = ingen
+  // override; backend resolve-ordning faller då tillbaka på
+  // variant-default och section-default. Vi normaliserar values
+  // (trim) och hoppar över tomma värden så payloaden inte innehåller
+  // skräp som schemat skulle avvisa.
+  const sectionPins: Record<string, string> = {};
+  for (const [sectionId, treatmentId] of Object.entries(
+    answers.vibe.sectionTreatments ?? {},
+  )) {
+    const trimmedSection = sectionId.trim();
+    const trimmedTreatment = treatmentId.trim();
+    if (trimmedSection && trimmedTreatment) {
+      sectionPins[trimmedSection] = trimmedTreatment;
+    }
+  }
+  if (Object.keys(sectionPins).length > 0) {
+    directives.sectionTreatments = sectionPins;
+  }
 
   return directives;
 }

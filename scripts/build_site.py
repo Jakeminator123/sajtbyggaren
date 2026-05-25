@@ -3129,6 +3129,7 @@ def render_section_service_list(
         variant_id,
         "service-list",
         default=_SERVICE_LIST_TREATMENT_DEFAULT,
+        operator_pin=_operator_pin_for_section(dossier, "service-list"),
     )
     if treatment == "alternating-rows":
         return _render_service_list_alternating_rows(dossier, contact_path)
@@ -3705,25 +3706,80 @@ _SECTION_TREATMENTS_BY_VARIANT: dict[str, dict[str, str]] = {
 }
 
 
+def _operator_pin_for_section(dossier: dict, section_id: str) -> str | None:
+    """Read the operator's section-treatment pin for ``section_id``.
+
+    Phase 3 (ADR 0031): the wizard's visual-step writes operator pins
+    to ``directives.sectionTreatments`` in Project Input. Because
+    ``dossier`` is loaded directly from Project Input by ``main()``,
+    the same key is available here unchanged.
+
+    Returns ``None`` for an absent or empty pin so callers can keep
+    using the simple ``operator_pin or fallback``-style guard.
+
+    The lookup is intentionally lenient: it does NOT validate the
+    treatment id against ``_SECTION_TREATMENTS_BY_VARIANT`` because
+    the schema enum in ``project-input.schema.json`` already rejects
+    typos before the dossier reaches this code path. Defensive
+    re-validation here would just duplicate that logic and risk
+    drifting out of sync with the schema. ``_treatment_for_section``
+    still passes the value through ``operator_pin`` only when it is a
+    non-empty string, so a malformed dossier (e.g. a hand-edited
+    file that bypassed the schema) cannot crash the renderer; it
+    just silently falls through to the variant default.
+    """
+    if not isinstance(dossier, dict):
+        return None
+    directives = dossier.get("directives")
+    if not isinstance(directives, dict):
+        return None
+    pins = directives.get("sectionTreatments")
+    if not isinstance(pins, dict):
+        return None
+    pin = pins.get(section_id)
+    if not isinstance(pin, str):
+        return None
+    pin = pin.strip()
+    return pin or None
+
+
 def _treatment_for_section(
     variant_id: str | None,
     section_id: str,
     *,
     default: str,
+    operator_pin: str | None = None,
 ) -> str:
     """Resolve which design treatment a section should render.
 
-    Mirrors the ``_hero_style_for`` resolution order for hero-block
-    style picks: the variant's explicit treatment registration in
-    ``_SECTION_TREATMENTS_BY_VARIANT`` wins; otherwise the section's
-    own default treatment is used. Phases 2/3 will layer operator-pin
-    and LLM-pick in front of the variant lookup without changing this
-    helper's signature.
+    Resolution order (Phase 3, ADR 0031):
 
-    Returns ``default`` for an unknown variant or for a variant that
-    does not register the requested section, so a section that opts
-    into treatment dispatch never has to know which variants exist.
+    1. ``operator_pin`` — explicit per-section treatment pinned by
+       the operator in the wizard's visual step
+       (``directives.sectionTreatments[section_id]``). Wins over
+       everything because the operator has expressed intent.
+    2. ``_SECTION_TREATMENTS_BY_VARIANT[variant_id][section_id]`` —
+       the variant's curated default. Phase 2 baseline.
+    3. ``default`` — the section's own fall-back treatment. Used
+       when neither the operator nor the variant has an opinion, or
+       when a future variant is introduced before its treatments
+       are registered.
+
+    The same ``default`` is returned for an unknown variant or for a
+    variant that does not register the requested section so a
+    section that opts into treatment dispatch never has to know
+    which variants exist.
+
+    The operator pin is treated as opaque here: validation is done
+    by ``project-input.schema.json`` before the dossier loads. A pin
+    coming from a hand-edited dossier that bypassed the schema may
+    therefore route to an unknown treatment id, but that is the
+    section renderer's contract to handle (treat unknown ids as the
+    section default). We deliberately keep this helper trivial so
+    the resolution order stays auditable at a glance.
     """
+    if operator_pin:
+        return operator_pin
     if not variant_id:
         return default
     bucket = _SECTION_TREATMENTS_BY_VARIANT.get(variant_id)
@@ -5850,6 +5906,7 @@ def render_section_treatment_list(
         variant_id,
         "treatment-list",
         default=_TREATMENT_LIST_TREATMENT_DEFAULT,
+        operator_pin=_operator_pin_for_section(dossier, "treatment-list"),
     )
     if treatment == "split-cards":
         return _render_treatment_list_split_cards(services, contact_path)
@@ -6069,6 +6126,7 @@ def render_section_expertise_areas(
         variant_id,
         "expertise-areas",
         default=_EXPERTISE_AREAS_TREATMENT_DEFAULT,
+        operator_pin=_operator_pin_for_section(dossier, "expertise-areas"),
     )
     if treatment == "tag-cluster":
         return _render_expertise_areas_tag_cluster(services, contact_path)
@@ -6190,6 +6248,7 @@ def render_section_practice_grid(
         variant_id,
         "practice-grid",
         default=_PRACTICE_GRID_TREATMENT_DEFAULT,
+        operator_pin=_operator_pin_for_section(dossier, "practice-grid"),
     )
     if treatment == "tabular":
         return _render_practice_grid_tabular(services, contact_path)
@@ -6477,6 +6536,9 @@ def render_section_selected_work_preview(
         variant_id,
         "selected-work-preview",
         default=_SELECTED_WORK_PREVIEW_TREATMENT_DEFAULT,
+        operator_pin=_operator_pin_for_section(
+            dossier, "selected-work-preview"
+        ),
     )
     if treatment == "asymmetric-grid":
         return _render_selected_work_preview_asymmetric_grid(services)
