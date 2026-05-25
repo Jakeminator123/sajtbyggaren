@@ -95,20 +95,20 @@ Tillåtet:
 | -------- | ----------- |
 | Vercel-MCP-server för operatörens egna debugging | Operator-only; körs inte i kärnflödet |
 | `apps/viewser/`-deploy till Vercel | Endast Sajtbyggarens eget admin-UI, inte genererad output |
-| `@vercel/blob` i starter-deps | Måste graceful degrade utan token (se Regel 1 + ADR 0014) |
+| `@vercel/blob` i starter-deps | Måste graceful degrade utan token (se Regel 1; framtida asset-store-driver-ADR kvalificerar portabilitet bortom local+vercel-blob) |
 | Hosted preview-deploys via Vercel | Som adapter, inte default; måste ha en non-Vercel fallback i `PreviewRuntime`-listan |
 
-## Vad ADR 0029 INTE beslutar
+## Vad ADR 0030 INTE beslutar
 
-- Vilka konkreta adapters som faktiskt ska implementeras härnäst. ADR 0029 säger
-  bara att Vercel inte får vara enda vägen; vilken adapter som blir nästa
-  byggmål bestäms i en separat sprint-prio (sannolikt `local-next` är redan
-  primär, sedan B125-fallback).
+- Vilka konkreta adapters som faktiskt ska implementeras härnäst. ADR 0030
+  säger bara att Vercel inte får vara enda vägen; vilken adapter som blir
+  nästa byggmål bestäms i en separat sprint-prio (sannolikt `local-next` är
+  redan primär, sedan B125-fallback).
 - Den exakta implementationen av en eventuell `VercelRuntime`-adapter. Det är
   egen ADR när det blir aktuellt.
 - Hur `@vercel/blob` ska bytas mot en provider-agnostisk asset-store-driver.
-  ADR 0014 (asset-store-driver-pattern) hanterar redan grunden; portabilitet
-  utöver "local + vercel-blob" är framtida arbete.
+  Det är framtida arbete som kräver en egen ADR; ingen existerande ADR
+  täcker asset-store-portabilitet idag.
 - Om Sajtbyggaren själv ska deployas på Vercel. Det är en separat operatörs-
   driftsfråga, inte en runtime-arkitekturfråga.
 
@@ -153,7 +153,7 @@ Innan en ny adapter mergas måste följande vara uppfyllt:
    `governance/policies/`.
 5. Genererad output kan startas lokalt utan adaptern.
 6. ENV-vars som adaptern kräver är opt-in, inte krav för normal lokal build.
-7. ADR-referens i PR-beskrivningen som länkar tillbaka till ADR 0029 + ev.
+7. ADR-referens i PR-beskrivningen som länkar tillbaka till ADR 0030 + ev.
    nyare ADR som kvalificerar adaptern.
 
 ## Mot parallella agenter (operator-direktiv)
@@ -178,12 +178,10 @@ i review-rollen) innan merge.
 
 ## Referenser
 
-- [ADR 0003](../../struktur/ADRs/ADR-0003-preview-runtime-stackblitz-first.md)
-  (om ADR-numreringen ligger i `struktur/`-arkivet) eller motsvarande aktiv
-  ADR-fil i `governance/decisions/` när indexeringen synkroniseras
+- [ADR 0003 — Preview Runtime StackBlitz First](0003-preview-runtime-stackblitz-first.md)
+  (etablerar `PreviewRuntime`-abstraktionen som denna ADR bygger vidare på)
+- [ADR 0025 — Browser-fallback preview](0025-browser-fallback-preview.md)
 - [ADR 0028 — Runtime Ladder](0028-runtime-ladder.md)
-- [ADR 0014 — asset-store-driver-pattern](0014-asset-store-driver-pattern.md)
-  (om/när den existerar; principen följer samma mönster)
 - [ADR 0021 — StackBlitz preview payload-workarounds](0021-stackblitz-preview-payload-workarounds.md)
 - [`docs/product-operating-context.md`](../../docs/product-operating-context.md)
 - [`docs/known-issues.md` — B125](../../docs/known-issues.md)
