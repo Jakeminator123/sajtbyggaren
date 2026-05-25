@@ -85,6 +85,9 @@ render_pricing = _renderer_exports.render_pricing
 render_products = _renderer_exports.render_products
 render_services = _renderer_exports.render_services
 render_team = _renderer_exports.render_team
+render_treatments = _renderer_exports.render_treatments
+render_expertise = _renderer_exports.render_expertise
+render_work = _renderer_exports.render_work
 write_pages = _renderer_exports.write_pages
 
 # Static asset renderers.
@@ -1925,6 +1928,11 @@ _NAV_LABEL_BY_ROUTE_ID: dict[str, str] = {
     # ``contact`` so it picks up the same label as LSB/commerce.
     "menu": "Meny",
     "booking": "Boka bord",
+    # Runtime-active Path B scaffolds (clinic-healthcare,
+    # professional-services, agency-studio) use these route ids.
+    "treatments": "Behandlingar",
+    "expertise": "Expertis",
+    "work": "Arbeten",
 }
 
 
@@ -1941,6 +1949,21 @@ _LISTING_COPY_BY_ROUTE_ID: dict[str, dict[str, str]] = {
         "eyebrow": "Produkter",
         "heading": "Vårt sortiment",
         "cta": "Se alla produkter",
+    },
+    "treatments": {
+        "eyebrow": "Behandlingar",
+        "heading": "Det vi hjälper med",
+        "cta": "Se alla behandlingar",
+    },
+    "expertise": {
+        "eyebrow": "Expertis",
+        "heading": "Våra expertisområden",
+        "cta": "Se all expertis",
+    },
+    "work": {
+        "eyebrow": "Arbeten",
+        "heading": "Utvalda arbeten",
+        "cta": "Se våra arbeten",
     },
 }
 
@@ -2238,7 +2261,7 @@ def _pick_listing_route(
     instead of inventing a path that has no matching route).
     """
     by_id = {r["id"]: r for r in scaffold_default_routes}
-    for candidate in ("services", "products"):
+    for candidate in ("services", "products", "treatments", "expertise", "work"):
         if candidate in by_id:
             return by_id[candidate]
     return None
