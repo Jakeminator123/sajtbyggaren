@@ -85,32 +85,6 @@ render_og_fallback_svg = _static_asset_exports.render_og_fallback_svg
 render_robots_txt = _static_asset_exports.render_robots_txt
 render_sitemap_xml = _static_asset_exports.render_sitemap_xml
 
-__all__ = (
-    "_WIZARD_ROUTE_RENDERERS",
-    "_hero_style_for",
-    "_render_structured_data_jsonld",
-    "render_about",
-    "render_booking",
-    "render_contact",
-    "render_faq",
-    "render_gallery",
-    "render_global_error",
-    "render_home",
-    "render_layout",
-    "render_map",
-    "render_menu",
-    "render_not_found",
-    "render_og_fallback_svg",
-    "render_portfolio",
-    "render_pricing",
-    "render_products",
-    "render_robots_txt",
-    "render_services",
-    "render_sitemap_xml",
-    "render_team",
-    "write_pages",
-)
-
 STARTERS_DIR = REPO_ROOT / "data" / "starters"
 SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
 DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
