@@ -18,6 +18,7 @@ Locks the prompt-driven Project Input loop:
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 import sys
@@ -107,6 +108,20 @@ def test_slugify_site_id_strips_master_prompt_header_when_no_company_name() -> N
     )
     assert site_id == "frisorsalongen-tussilago-abcdef"
     assert not site_id.startswith("operatorens-beskrivning")
+
+
+@pytest.mark.tooling
+def test_prompt_helper_docstring_matches_stdout_contract() -> None:
+    """B85: module docs must list the same stdout keys as ``main()`` emits."""
+    helper_path = REPO_ROOT / "scripts" / "prompt_to_project_input.py"
+    helper_text = helper_path.read_text(encoding="utf-8")
+    module = ast.parse(helper_text)
+    module_docstring = ast.get_docstring(module) or ""
+
+    documented_keys = re.findall(r"``([A-Za-z][A-Za-z0-9]*):", module_docstring)
+    emitted_keys = re.findall(r'print\(f"([A-Za-z][A-Za-z0-9]*):', helper_text)
+
+    assert documented_keys == emitted_keys
 
 
 @pytest.mark.tooling

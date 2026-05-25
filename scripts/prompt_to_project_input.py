@@ -18,9 +18,11 @@ Why this lives in scripts/ and not packages/generation/brief/:
 
 Output contract (for callers like apps/viewser/app/api/prompt/route.ts):
 
-- Prints ``siteId: <id>`` and ``dossierPath: <abs-path>`` on stdout, one
-  per line. Mirrors the ``runId: <id>`` contract that build_site.py uses
-  so the same regex-based parser pattern works in build-runner.ts.
+- Prints these stdout keys, one per line, for Viewser's regex-based parser:
+  ``siteId: <id>``, ``projectId: <id>``, ``dossierPath: <abs-path>``,
+  ``metaPath: <abs-path>``, ``version: <number>``, and
+  ``briefSource: <source>``. Mirrors build_site.py's run id contract so the
+  same parser pattern works in build-runner.ts.
 - Writes ``data/prompt-inputs/<siteId>.project-input.json`` (validates
   against governance/schemas/project-input.schema.json before writing).
 - Writes ``data/prompt-inputs/<siteId>.meta.json`` with projectId,
