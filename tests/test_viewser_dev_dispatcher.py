@@ -469,3 +469,132 @@ def test_dispatcher_env_parser_strips_trailing_comments() -> None:
         "protects URL fragments and other legitimate `#` uses inside "
         "values from being mangled."
     )
+
+
+# --------------------------------------------------------------------------
+# Source-locks for the second review-fix round on top of PR #88
+# (post-merge follow-up — Cursor Bugbot Medium + Codex P2 edge cases on the
+# custom .env-parser).
+#
+#   1. The quote-grenen must accept an optional trailing `# comment` AFTER
+#      the closing quote so a canonical dotenv pattern like
+#      `VIEWSER_PREVIEW_MODE="local-next" # note` no longer false-rejects
+#      against the mode validator. The previous two-branch shape required
+#      `value.startsWith('"') && value.endsWith('"')`, which fails on this
+#      input (`"local-next" # note` ends with `e`, not `"`), and the
+#      else-branch's `\s+#`-stripping left `"local-next"` with the quotes
+#      retained — `next dev` itself (via @next/env) parses this form
+#      correctly, so the dispatcher's stricter shape was a regression.
+#
+#   2. The dispatcher must dotenv-expand `$VAR` / `${VAR}` references in
+#      the resolved VIEWSER_PREVIEW_MODE before validation. dotenv-expand
+#      (used internally by @next/env) supports both bare and braced
+#      references, so a `.env*` file with
+#      `VIEWSER_PREVIEW_MODE=$PREVIEW_DEFAULT` is valid for `next dev` —
+#      rejecting it in the dispatcher with `Okänt VIEWSER_PREVIEW_MODE:
+#      '$PREVIEW_DEFAULT'` is a false-reject.
+# --------------------------------------------------------------------------
+
+
+def test_dispatcher_env_parser_handles_quoted_with_trailing_comment() -> None:
+    """The .env parser must accept `VAR="value" # comment` (quoted + comment).
+
+    Cursor Bugbot Medium on PR #88: the previous quote-detection required
+    the value to BOTH start and end with the same quote character. For a
+    canonical dotenv literal like `VIEWSER_PREVIEW_MODE="local-next" # note`
+    the raw value is `"local-next" # note` — starts with `"` but ends with
+    `e`. It therefore fell through to the unquoted-comment-strip branch,
+    which produced `"local-next"` (with quotes retained), failing the mode
+    validator with `Okänt VIEWSER_PREVIEW_MODE: '"local-next"'` even though
+    `next dev` itself parses the line correctly.
+
+    The fix uses a single anchored regex
+    `^(['"])((?:[^\\\\]|\\\\.)*?)\\1\\s*(?:#.*)?$` that captures the inner
+    value via a non-greedy match against the same opening quote, then
+    tolerates optional trailing whitespace + `# comment` AFTER the closing
+    quote. This subsumes the previous `slice(1, -1)` quote-strip and the
+    separate trailing-comment-strip, so both
+    `VAR="local-next"`, `VAR='local-next'`, and
+    `VAR="local-next" # note` reach the same code path.
+
+    This lock pins the trailing-comment-after-closing-quote tolerance so a
+    refactor cannot quietly drop it and reopen the false-reject regression.
+    """
+    source = _load_dispatcher_source()
+    assert "(?:#.*)?$" in source, (
+        "dev.mjs parseEnvFile must accept an optional trailing `# comment` "
+        "AFTER the closing quote of a quoted value. Reverting to the "
+        "two-branch shape (`startsWith && endsWith`-quote-strip followed by "
+        "a separate comment-strip in the else-branch) re-introduces the "
+        "false-reject regression for `VAR=\"value\" # comment` — Cursor "
+        "Bugbot Medium on PR #88."
+    )
+    # The quoted-grenen must capture the inner value via a back-reference to
+    # the opening quote so single- and double-quote lines share one path.
+    # Without `\\1`, the parser would have to enumerate quote-pairs by hand
+    # and risk drift between the single- and double-quote handling.
+    assert "(['\"])" in source, (
+        "dev.mjs parseEnvFile must use a character-class `(['\"])` to "
+        "capture the opening quote. Splitting into separate single-quote "
+        "and double-quote regexes invites drift between the two paths "
+        "(one fix, two callsites — easy to miss one)."
+    )
+
+
+def test_dispatcher_env_parser_expands_variable_references() -> None:
+    """The dispatcher must dotenv-expand `$VAR` / `${VAR}` in the resolved mode.
+
+    Codex P2 on PR #88: a `.env*` file containing
+    `VIEWSER_PREVIEW_MODE=$PREVIEW_DEFAULT` was passed through verbatim,
+    failing the mode validator with `Okänt VIEWSER_PREVIEW_MODE:
+    '$PREVIEW_DEFAULT'` and exiting the dispatcher — even though `next dev`
+    itself (via @next/env's dotenv-expand) would have resolved the
+    reference and accepted the value. That is a regression vs. running
+    `next dev` directly, exactly the failure class the dispatcher was
+    rebuilt to avoid.
+
+    The fix is an `expandEnvRefs(value, env)` helper that runs at use-site
+    on the resolved VIEWSER_PREVIEW_MODE value. Scope is intentionally
+    narrow — the dispatcher only consumes one variable, and a general-
+    purpose pre-merge expander would expand its own scope without need.
+
+    The expander mirrors dotenv-expand semantics:
+      - both `$VAR` (bare) and `${VAR}` (braced) supported,
+      - `\\$` (escaped dollar) → literal `$`,
+      - unknown references → empty string (safer than leaving a literal
+        `$VAR` that would then false-reject against the mode validator).
+
+    This lock pins both the helper's existence and the dual-form support.
+    """
+    source = _load_dispatcher_source()
+    assert "expandEnvRefs" in source, (
+        "dev.mjs must define and call an `expandEnvRefs(value, env)` "
+        "helper that dotenv-expands `$VAR` / `${VAR}` references on the "
+        "resolved VIEWSER_PREVIEW_MODE before validation. The helper name "
+        "is the lock-point future refactors will collide with — renaming "
+        "it requires updating this source-lock in lockstep."
+    )
+    # The dispatcher must call the expander on VIEWSER_PREVIEW_MODE; without
+    # it the helper exists but isn't wired in, which is a silent regression.
+    assert "expandEnvRefs(mergedEnv.VIEWSER_PREVIEW_MODE" in source, (
+        "dev.mjs must invoke `expandEnvRefs(mergedEnv.VIEWSER_PREVIEW_MODE, "
+        "mergedEnv)` at the use-site that feeds the mode validator. "
+        "Defining the helper without wiring it in re-opens the same "
+        "false-reject regression the helper exists to close."
+    )
+    # Both braced ${VAR} and bare $VAR forms must be supported. The regex
+    # literal in the source is the canonical place to lock this — character
+    # class `[A-Za-z_]` for the var-name + `\\$\\{...\\}` for the braced
+    # alternative.
+    assert "\\$\\{" in source, (
+        "expandEnvRefs must support the `${VAR}` braced form. dotenv-"
+        "expand supports both bare and braced; supporting only one creates "
+        "a behavior mismatch with what `next dev` sees in the same .env "
+        "file. Look for `\\$\\{` in the regex literal."
+    )
+    assert "[A-Za-z_]" in source, (
+        "expandEnvRefs must restrict variable names to "
+        "`[A-Za-z_][A-Za-z0-9_]*` (POSIX shell convention). Without the "
+        "character-class anchor, a value like `$1.50` could be treated as "
+        "a reference to `$1` and silently mangled."
+    )
