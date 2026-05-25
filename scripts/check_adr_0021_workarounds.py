@@ -33,12 +33,18 @@ Usage:
 
 Exit codes:
 
-    0 - all referenced issues are still open (workarounds remain
-        justified; no action required)
-    0 - one or more issues are closed (action recommended; we still
-        exit 0 because this is an informational nudge, not a CI gate)
-    1 - failed to fetch issue state (network error, GitHub rate-limit,
-        or unrecognised reference format)
+    0 - all referenced issues were fetched successfully and either:
+        - all are still open (workarounds remain justified), OR
+        - one or more are closed (action recommended; this is an
+          informational nudge, not a CI gate)
+    1 - one or more issue lookups failed (state="unknown" from
+        HTTP error, network failure, GitHub rate-limit, JSON decode
+        error, or unrecognised reference format). A partial failure
+        is treated as a failure because automation/cron jobs would
+        otherwise classify an incomplete check as healthy and miss
+        that the ADR 0021 re-evaluation signal is unreliable for
+        that run. Re-run the script once the underlying transport
+        issue is resolved.
 
 The script intentionally does NOT require auth or third-party deps; it
 uses ``urllib`` against the public GitHub REST API. Unauthenticated
@@ -231,12 +237,17 @@ def render_human(statuses: list[IssueStatus]) -> str:
             "fortfarande funkar, ta bort patchen i en dedikerad PR per "
             "ADR 0021:s 'Omprövning'-sektion."
         )
-    elif unknown:
+    if unknown:
+        # Visa unknown-varningen även när closed också finns; en partial
+        # unknown ger nu exit 1 (se main()) och operatören ska se varför
+        # bredvid eventuell closed-åtgärd, inte överskuggas av den.
         lines.append(
-            "INFO: minst ett issue kunde inte hämtas (rate-limit eller "
-            "nätverksfel). Kör om scriptet senare eller kolla manuellt."
+            "VARNING: minst ett issue kunde inte hämtas (rate-limit, "
+            "nätverksfel, eller okänt format) — exit-kod 1. Kör om "
+            "scriptet senare eller kolla manuellt; statusen för "
+            "berörda issues är opålitlig för denna körning."
         )
-    else:
+    if not closed and not unknown:
         lines.append(
             "Alla issues är fortfarande öppna — workarounds förblir "
             "berättigade. Inga åtgärder krävs."
@@ -279,9 +290,13 @@ def main() -> int:
     else:
         print(render_human(statuses))
 
-    # Returnera 1 BARA om vi inte kunde hämta något alls (annars är
-    # closed/open ett informational-utfall, inte ett fel).
-    if all(s.state == "unknown" for s in statuses):
+    # Returnera 1 om NÅGON lookup blev unknown (HTTP-fel, rate-limit,
+    # nätverksfel, JSON-decode, eller okänt format). En partiell
+    # failure måste signaleras som failure — annars skulle automation/
+    # cron-jobb klassa en ofullständig check som healthy och missa att
+    # ADR 0021-omprövningssignalen är opålitlig för denna körning.
+    # Closed/open är fortsatt informational (exit 0).
+    if any(s.state == "unknown" for s in statuses):
         return 1
     return 0
 
