@@ -12,11 +12,18 @@ import argparse
 import json
 import os
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+# Shared walk-up helper so REPO_ROOT and the path-resolution helpers
+# agree with scripts/build_site.py and apps/viewser regardless of cwd.
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+from _repo_root import REPO_ROOT, resolve_path_setting  # noqa: E402
+
 OUTPUT_ROOT = REPO_ROOT.parent / "sajtbyggaren-output"
 DEFAULT_EVALS_DIR = OUTPUT_ROOT / ".evals"
 DEFAULT_GENERATED_DIR = OUTPUT_ROOT / ".generated"
@@ -54,13 +61,15 @@ def _env_int(name: str, default: int) -> int:
 
 
 def resolve_evals_dir(value: str | None = None) -> Path:
-    raw = value or os.environ.get(EVALS_DIR_ENV)
-    return Path(raw).expanduser().resolve() if raw else DEFAULT_EVALS_DIR.resolve()
+    """Resolve the evals root with repo-root anchoring for relative paths."""
+    candidate = value if value is not None else os.environ.get(EVALS_DIR_ENV)
+    return resolve_path_setting(candidate, default=DEFAULT_EVALS_DIR)
 
 
 def resolve_generated_dir(value: str | None = None) -> Path:
-    raw = value or os.environ.get(GENERATED_DIR_ENV)
-    return Path(raw).expanduser().resolve() if raw else DEFAULT_GENERATED_DIR.resolve()
+    """Resolve the generated-previews root with repo-root anchoring."""
+    candidate = value if value is not None else os.environ.get(GENERATED_DIR_ENV)
+    return resolve_path_setting(candidate, default=DEFAULT_GENERATED_DIR)
 
 
 def _is_relative_to(path: Path, root: Path) -> bool:

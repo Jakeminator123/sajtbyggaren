@@ -19,7 +19,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+# Shared walk-up helper so REPO_ROOT and ``resolve_evals_dir`` stay
+# stable regardless of cwd (worktree / apps/viewser / sub-script call).
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+from _repo_root import REPO_ROOT, resolve_path_setting  # noqa: E402
+
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
@@ -85,8 +91,9 @@ def _utc_stamp() -> str:
 
 
 def resolve_evals_dir(value: str | None = None) -> Path:
-    raw = value or os.environ.get("SAJTBYGGAREN_EVALS_DIR")
-    return Path(raw).expanduser().resolve() if raw else DEFAULT_EVALS_DIR.resolve()
+    """Resolve the evals root with repo-root anchoring for relative paths."""
+    candidate = value if value is not None else os.environ.get("SAJTBYGGAREN_EVALS_DIR")
+    return resolve_path_setting(candidate, default=DEFAULT_EVALS_DIR)
 
 
 def _read_json(path: Path) -> dict[str, Any]:

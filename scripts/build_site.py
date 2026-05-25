@@ -52,7 +52,17 @@ from typing import Any
 
 import requests
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+# Bootstrap the shared repo-root helper. ``scripts/`` is on sys.path
+# whenever this file is the entry point; the explicit insert keeps the
+# import working when ``build_site`` is loaded via tests
+# (``from scripts.build_site import ...``) or any other indirect path.
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+from _repo_root import REPO_ROOT, resolve_path_setting  # noqa: E402
+
+# Existing ``from packages.* import ...`` callsites in this file
+# expect the repo root on sys.path too.
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 STARTERS_DIR = REPO_ROOT / "data" / "starters"
@@ -162,19 +172,15 @@ def resolve_generated_dir(override: str | Path | None = None) -> Path:
     1) explicit ``override`` (CLI/tests),
     2) ``SAJTBYGGAREN_GENERATED_DIR`` env var,
     3) ``DEFAULT_GENERATED_DIR`` (outside the repo root to reduce watcher load).
-    """
-    candidate = override
-    if candidate is None:
-        env_value = os.environ.get("SAJTBYGGAREN_GENERATED_DIR")
-        if env_value:
-            candidate = env_value
-        else:
-            candidate = DEFAULT_GENERATED_DIR
 
-    resolved = Path(candidate).expanduser()
-    if not resolved.is_absolute():
-        resolved = (REPO_ROOT / resolved).resolve()
-    return resolved
+    Relative paths in the override and env-var resolve against
+    :data:`REPO_ROOT` via :func:`scripts._repo_root.resolve_path_setting`
+    so the same value lands in the same directory regardless of cwd.
+    """
+    candidate: str | Path | None = override
+    if candidate is None:
+        candidate = os.environ.get("SAJTBYGGAREN_GENERATED_DIR")
+    return resolve_path_setting(candidate, default=DEFAULT_GENERATED_DIR)
 
 
 def _coerce_subprocess_text(stream: object) -> str:

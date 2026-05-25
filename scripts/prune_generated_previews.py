@@ -54,12 +54,19 @@ import os
 import re
 import shutil
 import socket
+import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+# Shared walk-up helper so REPO_ROOT and ``resolve_generated_dir``
+# stay in lockstep with scripts/build_site.py and apps/viewser.
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+from _repo_root import REPO_ROOT, resolve_path_setting  # noqa: E402
+
 DEFAULT_GENERATED_DIR = REPO_ROOT.parent / "sajtbyggaren-output" / ".generated"
 PROMPT_INPUTS_DIR = REPO_ROOT / "data" / "prompt-inputs"
 RUNS_DIR = REPO_ROOT / "data" / "runs"
@@ -155,20 +162,14 @@ def resolve_generated_dir(override: str | Path | None = None) -> Path:
     Mirrors ``scripts/build_site.py:resolve_generated_dir`` so the prune
     target follows the same env/default chain that the builder writes
     to: explicit override > ``SAJTBYGGAREN_GENERATED_DIR`` env > the
-    default sibling ``../sajtbyggaren-output/.generated/``.
+    default sibling ``../sajtbyggaren-output/.generated/``. Relative
+    paths resolve against :data:`REPO_ROOT` (not cwd) via the shared
+    :func:`scripts._repo_root.resolve_path_setting` helper.
     """
     candidate: str | Path | None = override
     if candidate is None:
-        env_value = os.environ.get(GENERATED_DIR_ENV_VAR)
-        if env_value:
-            candidate = env_value
-        else:
-            candidate = DEFAULT_GENERATED_DIR
-
-    resolved = Path(candidate).expanduser()
-    if not resolved.is_absolute():
-        resolved = (REPO_ROOT / resolved).resolve()
-    return resolved
+        candidate = os.environ.get(GENERATED_DIR_ENV_VAR)
+    return resolve_path_setting(candidate, default=DEFAULT_GENERATED_DIR)
 
 
 def collect_protected_site_ids(

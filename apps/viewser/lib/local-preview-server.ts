@@ -41,11 +41,50 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync } from "node:fs";
 import { createConnection } from "node:net";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const PORT_BASE = 4100;
 const PORT_RANGE = 100;
 const HEALTH_RETRIES = 30;
 const HEALTH_INTERVAL_MS = 200;
+
+const REPO_ROOT_MARKER = "pyproject.toml";
+const REPO_ROOT_MAX_WALK = 8;
+
+let cachedRepoRoot: string | null = null;
+
+/**
+ * Walk upward from this module's own file location until a directory
+ * containing ``pyproject.toml`` (the canonical repo-root marker) is
+ * found, and cache the result so we only do the walk once per process.
+ *
+ * Anchoring on ``import.meta.url`` instead of ``process.cwd()`` makes
+ * the resolver immune to where viewser was launched from: a Cursor
+ * worktree, a subdirectory, or a parent shell with a stale cwd all
+ * resolve to the same root. The ``REPO_ROOT_MAX_WALK`` cap is a
+ * defensive bail-out so a misplaced build artefact does not walk all
+ * the way to the filesystem root.
+ */
+function findRepoRoot(): string {
+  if (cachedRepoRoot !== null) return cachedRepoRoot;
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+  let current = moduleDir;
+  for (let depth = 0; depth <= REPO_ROOT_MAX_WALK; depth += 1) {
+    if (existsSync(path.join(current, REPO_ROOT_MARKER))) {
+      cachedRepoRoot = current;
+      return current;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  throw new Error(
+    `Kunde inte hitta repo-roten (ingen ${REPO_ROOT_MARKER} hittad inom ` +
+      `${REPO_ROOT_MAX_WALK} nivåer uppåt från ${moduleDir}). ` +
+      "Resolverar SAJTBYGGAREN_GENERATED_DIR mot repo-roten kräver att " +
+      "modulen ligger inuti sajtbyggaren-checkouten.",
+  );
+}
 
 /**
  * Resolverar var ``build_site.py`` skrivit den genererade Next.js-
@@ -53,17 +92,25 @@ const HEALTH_INTERVAL_MS = 200;
  * ``../sajtbyggaren-output/.generated/<siteId>/``, kan overridas med
  * env ``SAJTBYGGAREN_GENERATED_DIR``"). På Cloud Agent VM:n resolveras
  * default-pathen till ``/sajtbyggaren-output/.generated/``.
+ *
+ * Relativa env-värden resolveras mot repo-roten (via
+ * :func:`findRepoRoot`), inte cwd. Det skyddar mot att viewser startas
+ * från en Cursor-worktree, en subdirectory eller ett parent-skal med
+ * "fel" cwd: båda ändar av pipelinen (Python builder + Node viewser)
+ * landar då på samma katalog. Absoluta pathar passerar oförändrade så
+ * en operatör kan peka mot t.ex. ``D:\\stuff\\.generated`` när hen vill.
  */
 function resolveGeneratedDir(): string {
   const envOverride = process.env.SAJTBYGGAREN_GENERATED_DIR;
+  const repoRoot = findRepoRoot();
   if (envOverride && envOverride.trim()) {
-    return path.resolve(envOverride.trim());
+    const trimmed = envOverride.trim();
+    if (path.isAbsolute(trimmed)) {
+      return trimmed;
+    }
+    return path.resolve(repoRoot, trimmed);
   }
-  // Default: ../sajtbyggaren-output/.generated/ relativt repo-roten.
-  // Viewser körs från apps/viewser/ så vi behöver kliva upp två steg
-  // till repo-roten + ut och in i sajtbyggaren-output.
-  const repoRoot = path.resolve(process.cwd(), "..", "..");
-  return path.join(repoRoot, "..", "sajtbyggaren-output", ".generated");
+  return path.resolve(repoRoot, "..", "sajtbyggaren-output", ".generated");
 }
 
 interface ServerEntry {

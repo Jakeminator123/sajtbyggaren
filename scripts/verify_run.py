@@ -48,7 +48,14 @@ import sys
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+# Shared walk-up helper so ``find_generated_dir`` lands on the same
+# directory that build_site.py wrote to, regardless of cwd.
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+from _repo_root import REPO_ROOT, resolve_path_setting  # noqa: E402
+
+_DEFAULT_GENERATED_DIR = REPO_ROOT.parent / "sajtbyggaren-output" / ".generated"
 
 
 # UI-direktiv-fraser som B137 ska blockera från att läcka till tagline.
@@ -147,11 +154,14 @@ def find_generated_dir(site_id: str) -> Path:
 
     Speglar scripts/build_site.py-konventionen:
     prioritet env SAJTBYGGAREN_GENERATED_DIR > default (../sajtbyggaren-output/.generated/).
+    Relativa env-värden resolveras mot repo-roten via
+    :func:`scripts._repo_root.resolve_path_setting`, inte mot cwd.
     """
-    env = os.environ.get("SAJTBYGGAREN_GENERATED_DIR")
-    if env:
-        return Path(env) / site_id
-    return REPO_ROOT.parent / "sajtbyggaren-output" / ".generated" / site_id
+    root = resolve_path_setting(
+        os.environ.get("SAJTBYGGAREN_GENERATED_DIR"),
+        default=_DEFAULT_GENERATED_DIR,
+    )
+    return root / site_id
 
 
 def find_meta_sidecar(site_id: str) -> Path | None:
