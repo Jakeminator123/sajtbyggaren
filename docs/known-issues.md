@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 19 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 113 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 20 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 113 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -286,6 +286,24 @@ integrate christopher-ui discovery and asset workflow`, merge
   som monterar den. Källa: extern reviewer 2026-05-18. Fix: open.
   Test: open.
 ### Övriga öppna
+
+- **`B146` Hög** (process-blocker) - PR #105 (Christopher, mergad direkt
+  till main 2026-05-25 18:41) ändrar scripts/build_site.py med
+  +4078/-1570 rader: split av render_home i render_section_hero +
+  dispatcher-pattern. Konflikterar strukturellt med jakob-be:s PR #107
+  som flyttat samma renderers till packages/generation/build/renderers.py.
+  Auto-merge omöjlig; manuell port av Christopher's section-dispatchers
+  till nya paket-strukturen kräver 4-8 timmars careful merge (två
+  arkitektur-direktioner att förlika). Process-leak också: PR #105 gick
+  direkt till main istället för via jakob-be som workflow:n kräver.
+  Två inbox-meddelanden postade till christopher-ui:
+  msg-0007-ae0ac0 (rebase-info) och msg-0008-096fd1 (scope-+
+  process-direktiv). Status: jakob-be och main är medvetet divergerade
+  tills antingen Christopher portar sina render-ändringar till nya
+  paket-strukturen, eller vi planerar dedikerad merge-sprint. Vercel-
+  länkning sker mot jakob-be initialt (operatör-beslut 2026-05-25).
+  Källa: orchestrator-session 2026-05-25 19:45. Fix: open. Test: open.
+
 
 - **`B125` Hög** (produktblocker innan launch) - Embedded
   StackBlitz/WebContainer-preview i Viewser stöds officiellt bara i
