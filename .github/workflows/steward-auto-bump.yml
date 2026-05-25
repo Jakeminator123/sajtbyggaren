@@ -1,0 +1,85 @@
+name: Steward auto-bump
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  bump:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Detect trivial docs-only PR
+        id: trivial
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh pr diff "$PR_NUMBER" --name-only > "$RUNNER_TEMP/steward-auto-files.txt"
+          additions="$(gh pr view "$PR_NUMBER" --json additions,deletions --jq '.additions')"
+          deletions="$(gh pr view "$PR_NUMBER" --json additions,deletions --jq '.deletions')"
+
+          if python scripts/steward_auto_bump.py is-trivial \
+            --additions "$additions" \
+            --deletions "$deletions" \
+            --paths-file "$RUNNER_TEMP/steward-auto-files.txt"; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Trivial docs-only PR; steward auto-bump skipped."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Bump Steward docs
+        if: steps.trivial.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+          previous_sha="$(python scripts/steward_auto_bump.py previous-sha)"
+          python scripts/steward_auto_bump.py collect-prs \
+            --previous-sha "$previous_sha" \
+            --head-sha "$MERGE_SHA" \
+            --fallback-pr-number "$PR_NUMBER" \
+            --fallback-pr-title "$PR_TITLE" \
+            > "$RUNNER_TEMP/steward-auto-prs.json"
+
+          python scripts/steward_auto_bump.py bump \
+            --sha "$MERGE_SHA" \
+            --pr-number "$PR_NUMBER" \
+            --pr-title "$PR_TITLE" \
+            --pr-list-json "$RUNNER_TEMP/steward-auto-prs.json"
+
+          if git diff --quiet -- docs/current-focus.md docs/handoff.md; then
+            echo "Steward docs already verified for $MERGE_SHA; no commit needed."
+            exit 0
+          fi
+
+          commit_title="$(python scripts/steward_auto_bump.py commit-title \
+            --sha "$MERGE_SHA" \
+            --pr-number "$PR_NUMBER" \
+            --pr-title "$PR_TITLE")"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/current-focus.md docs/handoff.md
+          git commit -m "$commit_title"
+          git push origin HEAD:main

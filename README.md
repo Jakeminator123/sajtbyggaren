@@ -195,6 +195,7 @@ Korta motiveringar i [`governance/decisions/`](governance/decisions/):
 - [0026](governance/decisions/0026-embeddings-postponed-until-contract.md) - Embeddings pausas tills kontraktet är klart.
 - [0027](governance/decisions/0027-semantic-followup-merge.md) - Semantic follow-up merge i Project DNA V1.
 - [0028](governance/decisions/0028-runtime-ladder.md) - Runtime ladder för PreviewRuntime.
+- [0031](governance/decisions/0031-steward-auto-bump.md) - Steward auto-bump vid PR-merge.
 
 ## Engine Run
 

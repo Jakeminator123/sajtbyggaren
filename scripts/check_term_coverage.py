@@ -230,6 +230,10 @@ COMMON_WORDS = {
     # ``PruneReport`` / ``BugEntry`` above - tooling implementation,
     # not a canonical domain term.
     "AuditResult",
+    # scripts/steward_auto_bump.py local result/container dataclasses.
+    # Same treatment as PruneReport / AuditResult - implementation
+    # details for a tooling helper, not canonical domain terms.
+    "BumpResult", "PullRequestSummary",
     # Sprintvakt V1 local tooling implementation symbols. Sprintvakt is
     # an operator workflow/tooling label, while these names are Python
     # exception/type-alias identifiers inside tooling/sprintvakt_mcp.
