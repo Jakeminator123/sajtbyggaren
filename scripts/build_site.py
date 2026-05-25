@@ -4774,6 +4774,315 @@ def _menu_items(dossier: dict) -> list[dict]:
     ]
 
 
+# ---------------------------------------------------------------------------
+# Path B step 7 — restaurant-hospitality section renderers.
+#
+# Each helper renders a single section from the restaurant scaffold's
+# sections.json. They are deliberately self-contained ``<section>``
+# blocks so render_route_generic can compose them in any order (for
+# example: hero + menu-preview + book-table-cta on home, then
+# menu-intro + menu-list + dietary-key on /menu). All customer text is
+# routed through ``_jsx_safe_string`` so JSX-special characters in
+# operator-supplied copy never break ``next build``.
+#
+# Optional sections (large-party-note, cancellation-policy) return an
+# empty string when the dossier has no content for them so a scaffold
+# can list them in optionalSections without forcing every site to
+# render an empty card.
+# ---------------------------------------------------------------------------
+
+
+def render_section_menu_intro(dossier: dict) -> str:
+    """Header section for the restaurant /meny route.
+
+    Eyebrow + heading + lead paragraph using the wizard idiom so the
+    section visually matches the existing about/services pages.
+    Customer text from the dossier is not interpolated here yet — the
+    copy is deterministic and operator-safe per the restaurant
+    scaffold contract.
+    """
+    eyebrow = _jsx_safe_string("Meny")
+    heading = _jsx_safe_string("Vad vi serverar just nu")
+    intro = _jsx_safe_string(
+        "Menyn växlar med säsongen och tillgången på råvaror. "
+        "Be gärna personalen om dagens rekommendation eller hör av dig "
+        "i förväg om du har önskemål eller allergier."
+    )
+    return (
+        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        '          <header className="flex flex-col gap-3">\n'
+        f'            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">{eyebrow}</p>\n'
+        f'            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">{heading}</h1>\n'
+        f'            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">{intro}</p>\n'
+        "          </header>\n"
+        "        </div>\n"
+        "      </section>\n"
+    )
+
+
+def render_section_menu_list(dossier: dict) -> str:
+    """Card grid of menu items for the restaurant /meny route.
+
+    Reads ``services`` from the dossier via ``_menu_items`` (project
+    input schema reuses the services array for menu items). Each card
+    shows the item label and an optional summary. Empty dossiers fall
+    back to a "Dagens rätt" placeholder via ``_menu_items`` so the
+    page never renders an empty grid.
+    """
+    items = _menu_items(dossier)
+    card_fragments: list[str] = []
+    for item in items:
+        key_attr = _jsx_safe_string("menu-" + str(item["id"]))
+        label_attr = _jsx_safe_string(str(item["label"]))
+        summary_value = item.get("summary")
+        summary_fragment = ""
+        if isinstance(summary_value, str) and summary_value.strip():
+            summary_attr = _jsx_safe_string(summary_value)
+            summary_fragment = (
+                '              <p className="mt-2 text-sm '
+                'text-[color:var(--muted)] leading-relaxed">'
+                f"{summary_attr}</p>\n"
+            )
+        card_fragments.append(
+            f"            <article key={key_attr} "
+            'className="rounded-xl border border-[color:var(--border)] '
+            "bg-[color:var(--card,var(--background))] p-6 transition-all "
+            "duration-300 hover:-translate-y-0.5 "
+            'hover:border-[color:var(--primary)] hover:shadow-md">\n'
+            f'              <h2 className="text-lg font-semibold">{label_attr}</h2>\n'
+            f"{summary_fragment}"
+            "            </article>"
+        )
+    cards = "\n".join(card_fragments)
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        '          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">\n'
+        f"{cards}\n"
+        "          </div>\n"
+        "        </div>\n"
+        "      </section>\n"
+    )
+
+
+def render_section_dietary_key(dossier: dict) -> str:
+    """Optional dietary-marker key for the /meny route.
+
+    Renders a small panel listing common Swedish dietary markers
+    (vegetariskt, veganskt, glutenfritt, laktosfritt) so visitors can
+    scan the menu legend at a glance. Empty when no menu item refers
+    to a marker; the dispatcher includes the section because the
+    restaurant scaffold's sections.json marks it as required, but the
+    panel itself stays minimal so it does not dominate the page.
+    """
+    markers: list[tuple[str, str]] = [
+        ("V", "Vegetariskt"),
+        ("VG", "Veganskt"),
+        ("GF", "Glutenfritt"),
+        ("LF", "Laktosfritt"),
+    ]
+    rows = "\n".join(
+        '            <li className="inline-flex items-center gap-2 rounded-full '
+        'border border-[color:var(--border)] px-3 py-1 text-xs '
+        'text-[color:var(--muted)]">'
+        f'<span className="font-semibold text-[color:var(--foreground)]">{_jsx_safe_string(short)}</span>'
+        f'<span>{_jsx_safe_string(label)}</span>'
+        "</li>"
+        for short, label in markers
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-3 py-8">\n'
+        '          <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Kostmarkeringar</p>\n'
+        '          <ul className="flex flex-wrap gap-2">\n'
+        f"{rows}\n"
+        "          </ul>\n"
+        "        </div>\n"
+        "      </section>\n"
+    )
+
+
+def render_section_booking_intro(dossier: dict) -> str:
+    """Header section for the restaurant /bokning route.
+
+    Mirrors render_section_menu_intro's structure with reservation-
+    flavoured copy. Per Issue #90 we do NOT embed a third-party
+    booking provider — the operator's preferred provider lands via the
+    ``booking-cta`` dossier in a separate compositional pass — so this
+    intro frames the contact-driven booking flow.
+    """
+    eyebrow = _jsx_safe_string("Boka bord")
+    heading = _jsx_safe_string("Boka en plats hos oss")
+    intro = _jsx_safe_string(
+        "Just nu tar vi bokningar via telefon och e-post. Ring eller "
+        "skriv så bekräftar vi tid och antal personer. För större "
+        "sällskap, hör av dig minst två dagar i förväg."
+    )
+    return (
+        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        '          <header className="flex flex-col gap-3">\n'
+        f'            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">{eyebrow}</p>\n'
+        f'            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">{heading}</h1>\n'
+        f'            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">{intro}</p>\n'
+        "          </header>\n"
+        "        </div>\n"
+        "      </section>\n"
+    )
+
+
+def render_section_booking_form_or_embed(dossier: dict) -> str:
+    """Booking-form placeholder card for the /bokning route.
+
+    The MVP intentionally has no embedded reservation widget so the
+    section renders a copy block explaining that the operator handles
+    bookings via phone or email. A future scaffold variant can swap
+    this renderer for a Resoo / Tablefy / Quandoo embed without
+    touching the dispatcher.
+    """
+    body = _jsx_safe_string(
+        "Vi tar bokningar manuellt så att vi kan stämma av specialönskemål, "
+        "allergier och större sällskap. Använd kontaktuppgifterna nedan "
+        "eller hör av dig på sociala medier."
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-4 py-[var(--section-spacing)]">\n'
+        '          <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Bokningsförfrågan</p>\n'
+        f'          <p className="max-w-2xl text-base text-[color:var(--foreground)] leading-relaxed">{body}</p>\n'
+        "        </div>\n"
+        "      </section>\n"
+    )
+
+
+def render_section_hours_summary(dossier: dict) -> str:
+    """Opening-hours summary card for /bokning and /hitta-hit.
+
+    Reads ``contact.openingHours`` from the dossier and renders a
+    single card. Returns an empty string when no hours are set so the
+    section is invisible rather than rendering an empty placeholder.
+    """
+    contact = dossier.get("contact") or {}
+    opening = contact.get("openingHours") if isinstance(contact, dict) else None
+    if not isinstance(opening, str) or not opening.strip():
+        return ""
+    safe_hours = _jsx_safe_string(opening.strip())
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-4 py-8">\n'
+        '          <div className="rounded-xl border border-[color:var(--border)] p-6">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Öppettider</p>\n'
+        f'            <p className="mt-2 text-base">{safe_hours}</p>\n'
+        "          </div>\n"
+        "        </div>\n"
+        "      </section>\n"
+    )
+
+
+def render_section_fallback_phone(dossier: dict) -> str:
+    """Phone + email fallback cards for /bokning.
+
+    Reads ``contact.phone`` and ``contact.email``. Renders cards only
+    for the channels the operator actually staffs so the visitor does
+    not see "Boka via e-post" links pointing nowhere. Returns empty
+    when neither channel is configured.
+    """
+    contact = dossier.get("contact") or {}
+    phone = contact.get("phone") if isinstance(contact, dict) else None
+    email = contact.get("email") if isinstance(contact, dict) else None
+    cards: list[str] = []
+    if isinstance(phone, str) and phone.strip():
+        cards.append(
+            '            <div className="rounded-xl border border-[color:var(--border)] p-6">\n'
+            '              <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Boka via telefon</p>\n'
+            f'              <a href={_jsx_safe_string("tel:" + _phone_href(phone))} '
+            f'className="mt-2 inline-flex items-center gap-2 text-base hover:underline">{_jsx_safe_string(phone)}</a>\n'
+            "            </div>"
+        )
+    if isinstance(email, str) and email.strip():
+        cards.append(
+            '            <div className="rounded-xl border border-[color:var(--border)] p-6">\n'
+            '              <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Boka via e-post</p>\n'
+            f'              <a href={_jsx_safe_string("mailto:" + email.strip())} '
+            f'className="mt-2 inline-flex items-center gap-2 text-base hover:underline">{_jsx_safe_string(email.strip())}</a>\n'
+            "            </div>"
+        )
+    if not cards:
+        return ""
+    grid = "\n".join(cards)
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-4 py-8">\n'
+        '          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">\n'
+        f"{grid}\n"
+        "          </div>\n"
+        "        </div>\n"
+        "      </section>\n"
+    )
+
+
+def render_section_large_party_note(dossier: dict) -> str:
+    """Optional 'larger party' guidance for /bokning.
+
+    Static text encouraging visitors with bigger groups to call ahead.
+    The MVP keeps the copy generic; a future scaffold variant can
+    wire this to a per-restaurant max-party-size from the dossier.
+    """
+    body = _jsx_safe_string(
+        "För sällskap över sex personer ber vi dig kontakta oss direkt så "
+        "vi kan reservera plats och förbereda menyn. Boka helst minst "
+        "två dagar i förväg."
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-3 py-8">\n'
+        '          <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Större sällskap</p>\n'
+        f'          <p className="max-w-2xl text-base text-[color:var(--foreground)] leading-relaxed">{body}</p>\n'
+        "        </div>\n"
+        "      </section>\n"
+    )
+
+
+def render_section_cancellation_policy(dossier: dict) -> str:
+    """Optional cancellation-policy block for /bokning.
+
+    Static placeholder text matching the MVP's manual-booking flow.
+    A scaffold variant or operator override can replace this with the
+    operator's actual policy via a future dossier field.
+    """
+    body = _jsx_safe_string(
+        "Behöver du avboka eller ändra antalet personer? Hör av dig så "
+        "snart du kan, så hjälper vi nästa gäst som står på väntelistan."
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-3 py-8">\n'
+        '          <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Avbokning</p>\n'
+        f'          <p className="max-w-2xl text-base text-[color:var(--foreground)] leading-relaxed">{body}</p>\n'
+        "        </div>\n"
+        "      </section>\n"
+    )
+
+
+# Restaurant section renderers register here so render_route_generic
+# can dispatch on the section ids declared in
+# packages/generation/orchestration/scaffolds/restaurant-hospitality/sections.json.
+_SECTION_RENDERERS.update(
+    {
+        "menu-intro": render_section_menu_intro,
+        "menu-list": render_section_menu_list,
+        "dietary-key": render_section_dietary_key,
+        "booking-intro": render_section_booking_intro,
+        "booking-form-or-embed": render_section_booking_form_or_embed,
+        "hours-summary": render_section_hours_summary,
+        "fallback-phone": render_section_fallback_phone,
+        "large-party-note": render_section_large_party_note,
+        "cancellation-policy": render_section_cancellation_policy,
+    }
+)
+
+
 def render_menu(dossier: dict, *, contact_path: str = "/hitta-hit") -> str:
     """Render the restaurant /meny route.
 

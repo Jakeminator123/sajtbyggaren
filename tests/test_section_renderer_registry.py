@@ -268,3 +268,105 @@ def test_load_scaffold_sections_returns_empty_for_missing_file(
     bs._SCAFFOLD_SECTIONS_CACHE.pop(tmp_path, None)
     result = bs._load_scaffold_sections(tmp_path)
     assert result == {}
+
+
+# ---------------------------------------------------------------------------
+# Path B step 7 — restaurant-hospitality section renderers.
+# ---------------------------------------------------------------------------
+
+
+def _read_restaurant_sections() -> dict:
+    sections_path = (
+        REPO_ROOT
+        / "packages"
+        / "generation"
+        / "orchestration"
+        / "scaffolds"
+        / "restaurant-hospitality"
+        / "sections.json"
+    )
+    return json.loads(sections_path.read_text(encoding="utf-8"))
+
+
+def test_section_registry_covers_restaurant_menu_route() -> None:
+    """Every required + optional section on /menu has a renderer."""
+    restaurant_sections = _read_restaurant_sections()
+    menu_block = restaurant_sections["menu"]
+    referenced = set(menu_block.get("requiredSections", []))
+    referenced.update(menu_block.get("optionalSections", []))
+
+    optional_not_yet_extracted = {"wine-pairings", "menu-download-cta", "lunch-rotation-note"}
+    candidates = referenced - optional_not_yet_extracted
+
+    missing = sorted(candidates - bs._SECTION_RENDERERS.keys())
+    assert missing == [], (
+        "_SECTION_RENDERERS must cover restaurant /menu sections that "
+        "are not on the not-yet-extracted allowlist. Missing: "
+        + ", ".join(missing)
+    )
+
+
+def test_section_registry_covers_restaurant_booking_route() -> None:
+    """Every required + optional section on /booking has a renderer."""
+    restaurant_sections = _read_restaurant_sections()
+    booking_block = restaurant_sections["booking"]
+    referenced = set(booking_block.get("requiredSections", []))
+    referenced.update(booking_block.get("optionalSections", []))
+
+    missing = sorted(referenced - bs._SECTION_RENDERERS.keys())
+    assert missing == [], (
+        "_SECTION_RENDERERS must cover every section on the restaurant "
+        "/booking route. Missing: " + ", ".join(missing)
+    )
+
+
+def test_render_route_generic_emits_restaurant_menu_route() -> None:
+    """Composing /menu via dispatcher produces non-empty JSX with intro + list."""
+    body = bs.render_route_generic(
+        {"services": [{"id": "house-wine", "label": "Husets vin", "summary": "30 cl glas."}]},
+        route_id="menu",
+        scaffold_sections={
+            "menu": {
+                "requiredSections": ["menu-intro", "menu-list", "dietary-key"],
+                "optionalSections": [],
+            }
+        },
+    )
+    assert "Vad vi serverar just nu" in body
+    assert "Husets vin" in body
+    assert "Kostmarkeringar" in body
+
+
+def test_render_route_generic_emits_restaurant_booking_route() -> None:
+    """Composing /booking via dispatcher includes intro + phone fallback."""
+    body = bs.render_route_generic(
+        {"contact": {"phone": "08-123 45 67", "email": "boka@example.se", "openingHours": "Tis-Sön 17-22"}},
+        route_id="booking",
+        scaffold_sections={
+            "booking": {
+                "requiredSections": [
+                    "booking-intro",
+                    "booking-form-or-embed",
+                    "hours-summary",
+                    "fallback-phone",
+                ],
+                "optionalSections": [],
+            }
+        },
+    )
+    assert "Boka en plats hos oss" in body
+    assert "08-123 45 67" in body
+    assert "boka@example.se" in body
+    assert "Tis-Sön 17-22" in body
+
+
+def test_hours_summary_returns_empty_when_no_dossier_hours() -> None:
+    """Section is skipped silently when the operator has not set hours."""
+    assert bs.render_section_hours_summary({"contact": {}}) == ""
+    assert bs.render_section_hours_summary({}) == ""
+
+
+def test_fallback_phone_returns_empty_without_phone_or_email() -> None:
+    """Section is skipped silently when neither channel is configured."""
+    assert bs.render_section_fallback_phone({"contact": {}}) == ""
+    assert bs.render_section_fallback_phone({}) == ""
