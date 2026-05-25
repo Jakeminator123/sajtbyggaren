@@ -28,7 +28,6 @@ This module centralises three things so every call site agrees:
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 __all__ = ["REPO_ROOT", "find_repo_root", "resolve_path_setting"]
@@ -38,7 +37,7 @@ _REPO_ROOT_MARKER = "pyproject.toml"
 _MAX_WALK_DEPTH = 8
 
 
-def find_repo_root(start: str | os.PathLike[str]) -> Path:
+def find_repo_root(start: str | Path) -> Path:
     """Walk upward from ``start`` until ``pyproject.toml`` is found.
 
     ``start`` may be a file or a directory. Files are normalised to
@@ -71,9 +70,9 @@ REPO_ROOT = find_repo_root(Path(__file__))
 
 
 def resolve_path_setting(
-    value: str | os.PathLike[str] | None,
+    value: str | Path | None,
     *,
-    default: str | os.PathLike[str],
+    default: str | Path,
 ) -> Path:
     """Resolve an operator-supplied path setting against the repo root.
 
@@ -92,7 +91,7 @@ def resolve_path_setting(
 
     All return paths are absolute and normalised. ``~`` is expanded.
     """
-    candidate: str | os.PathLike[str] | None = value
+    candidate: str | Path | None = value
     if isinstance(candidate, str):
         candidate = candidate.strip() or None
     if candidate is None:
