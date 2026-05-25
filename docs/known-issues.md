@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 24 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 107 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 23 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 108 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -120,12 +120,6 @@ run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
   2026-05-15. Fix: lägg till `additionalProperties: false`; kör full
   test-suite (kan exponera latenta extra-fält). Fix: open. Test:
   open.
-- **`B83` Låg** - `scripts/prompt_to_project_input.py:_build_services`
-  släpper tysta dubblet-tjänster när två brief-items slugifierar till
-  samma ASCII-key. Kundsidans tjänstegrid blir kortare än briefen
-  anger utan spår. Källa: brief-pipeline-bug-sweep 2026-05-15. Fix:
-  disambiguerande suffix på slug-id eller stderr-warning. Fix: open.
-  Test: open.
 - **`B85` Låg** - `scripts/prompt_to_project_input.py` modul-
   docstring säger att stdout-kontraktet är `siteId:` + `dossierPath:`,
   men `main()` skriver sex nycklar. Drift mellan spec och
@@ -588,6 +582,13 @@ för follow-up eller ska städas.
 ### Scout-rapport PR #47 — ytterligare fynd (2026-05-19, sen kväll)
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B83` Låg** (stängd 2026-05-25, grind B83 status-sync) -
+  `scripts/prompt_to_project_input.py:_build_services` kunde tidigare tappa
+  tjänster när flera brief-items slugifierade till samma ASCII-key. Fix:
+  `885431b` lägger deterministiska suffix (`-2`, `-3`, ...) så alla
+  kolliderande tjänster överlever. Test:
+  `tests/test_prompt_to_project_input.py::test_service_slug_collisions_get_deterministic_suffixes`.
 
 - **`B139` Låg-medel** (stängd 2026-05-22, tone-primary till CSS-token) -
   `tone.primary` kunde fyllas från brief/follow-up men renderern använde
