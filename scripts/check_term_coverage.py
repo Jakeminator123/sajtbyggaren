@@ -459,6 +459,19 @@ COMMON_WORDS = {
     # implementation-symboler, inte canonical domain terms.
     "CollapsibleHelp", "InlineHelpButton", "MetadataPanel",
     "MinimalSectionHeader", "StepDescriptionMoreButton",
+    # GAP-viewser-live-build-sync — pending-build-state delad mellan
+    # FloatingChat och Versions-tab. usePendingBuild lever i
+    # apps/viewser/components/builder/use-pending-build.ts, PendingRunRow
+    # är en intern presentation-komponent i versions-tab.tsx, och
+    # PendingBuildState/PendingBuildBegin är TS-types exporterade från
+    # use-pending-build.ts. Samma kategori som FollowupBuildState ovan
+    # — lokala UI-implementation-symboler för Live Build Sync.
+    "PendingBuildState", "PendingBuildBegin", "PendingRunRow",
+    # CopyFeedback är intern TS-type i versions-tab.tsx för
+    # clipboard-feedback-state (M1 från bug-hunt).
+    "CopyFeedback",
+    # Lucide-icon-namn använda i Live Build Sync (versions-tab):
+    "GitBranch",
     # ui-tokens shared interaction constants:
     "FOCUS_RING", "PRIMARY_INTERACTIONS", "SECONDARY_INTERACTIONS",
     "CHIP_INTERACTIONS",
