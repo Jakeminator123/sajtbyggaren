@@ -14,7 +14,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
-HREF_RE = re.compile(r'href=(".*?")')
+HREF_RE = re.compile(r'href=\{?(".*?")\}?')
 
 
 def _minimal_dossier() -> dict:
