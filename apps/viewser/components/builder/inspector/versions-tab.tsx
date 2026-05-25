@@ -342,8 +342,13 @@ export function VersionsTab({
     };
   }, []);
 
+  // Highlighten ska bara döljas medan bygget för DENNA sajt pågår — om
+  // operatören har en pågående build för en annan sajt (t.ex. byter
+  // mellan sajter i ConsoleDrawer) ska iterations-indikatorn för den
+  // här sajten fortfarande synas. `pendingForThisSite` gör redan
+  // siteId-jämförelsen ovan så vi återanvänder den.
   const activeBaseRunId =
-    pendingBaseRunId && !pendingBuild ? pendingBaseRunId.baseRunId : null;
+    pendingBaseRunId && !pendingForThisSite ? pendingBaseRunId.baseRunId : null;
 
   // Mutual-exclusion-handlers — när en run väljs som A:
   //   * Om den redan är A → toggle av (null).
