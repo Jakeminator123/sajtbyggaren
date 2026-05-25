@@ -55,7 +55,9 @@ import type { NextConfig } from "next";
 // preview. Hosted/CI-deploys promotas automatiskt till StackBlitz-
 // headerläget av production-gaten nedan — så defaulten är säker även
 // om operatören glömt att sätta variabeln i en hosted miljö.
-const PREVIEW_MODE = (process.env.VIEWSER_PREVIEW_MODE ?? "local-next").toLowerCase();
+const PREVIEW_MODE = (
+  process.env.VIEWSER_PREVIEW_MODE ?? "local-next"
+).toLowerCase();
 
 // Production safety gate.
 // ------------------------------------------------------------------
@@ -88,6 +90,58 @@ const effectiveMode =
   IS_PRODUCTION && PREVIEW_MODE === "local-next" && !ALLOW_NO_ISOLATION
     ? "stackblitz"
     : PREVIEW_MODE;
+
+// Transport ↔ mode mismatch warning (soft, dev-only).
+// ------------------------------------------------------------------
+// `stackblitz` / `auto`-läget kräver att Viewser körs över HTTPS för
+// att StackBlitz-embeddet ska få cross-origin isolation (COEP
+// credentialless + COOP same-origin är meningslöst utan secure
+// context — Chrome kräver båda för att SharedArrayBuffer ska
+// exponeras inuti den embeddade WebContainer).
+//
+// `scripts/dev.mjs`-dispatchern hanterar det automatiskt genom att
+// passa `--experimental-https` till `next dev` när mode != local-next.
+// Men `npm run dev:http` och `npm run dev:https` finns kvar som
+// "manuella escape hatchar" (se .env.example) och DE går runt
+// dispatchern. Om operatören kör `dev:http` med
+// `VIEWSER_PREVIEW_MODE=stackblitz` i .env.local får de "CORS"-fel
+// i Chrome som ser ut precis som det LocalRuntime-misslyckande som
+// fix-fallback-headers fixar — men rotorsaken är helt annan, och
+// utan en explicit guard maskeras det och sänker debuggability.
+//
+// Soft warning (inte process.exit) eftersom next.config.ts läses även
+// vid `next build` och `next start`. NODE_ENV=production-gaten skyddar
+// teoretiskt, men en hard-fail som krasch-loopar build:en vid en
+// felkonfigurerad shell-env är värre än en ignored warning. Operatören
+// får istället en tydlig stderr-rad vid dev-startup som länkar till
+// det riktiga fixet, och viewer-panel.tsx ger pedagogiskt felmeddelande
+// in-browser om embeddet faktiskt blockas.
+const HAS_EXPERIMENTAL_HTTPS = process.argv.includes("--experimental-https");
+const ALLOW_TRANSPORT_MISMATCH =
+  process.env.VIEWSER_ALLOW_TRANSPORT_MISMATCH === "1";
+const STACKBLITZ_MODE_REQUIRES_HTTPS =
+  effectiveMode === "stackblitz" || effectiveMode === "auto";
+if (
+  !IS_PRODUCTION &&
+  STACKBLITZ_MODE_REQUIRES_HTTPS &&
+  !HAS_EXPERIMENTAL_HTTPS &&
+  !ALLOW_TRANSPORT_MISMATCH
+) {
+  process.stderr.write(
+    `\n[viewser/next.config] VARNING: VIEWSER_PREVIEW_MODE=${PREVIEW_MODE}` +
+      ` förväntar HTTPS men --experimental-https saknas i process.argv.\n` +
+      `StackBlitz-embeddet kräver cross-origin isolation och kommer\n` +
+      `troligen blockas av Chrome med "Specify a Cross-Origin Embedder Policy".\n\n` +
+      `Fix:\n` +
+      `  1. Använd \`npm run dev\` (dispatchern i scripts/dev.mjs väljer\n` +
+      `     rätt transport baserat på VIEWSER_PREVIEW_MODE), eller\n` +
+      `  2. Kör \`npm run dev:https\` istället för \`dev:http\`, eller\n` +
+      `  3. Sätt VIEWSER_PREVIEW_MODE=local-next i .env.local om du inte\n` +
+      `     behöver StackBlitz-fallback (default-vägen för operator-bygda\n` +
+      `     sajter).\n\n` +
+      `Tysta varningen (medveten override): VIEWSER_ALLOW_TRANSPORT_MISMATCH=1.\n`,
+  );
+}
 
 const nextConfig: NextConfig = {
   // Spegla läget till klienten så ViewerPanel kan ta beslut baserat
