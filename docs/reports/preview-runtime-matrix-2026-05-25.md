@@ -72,7 +72,9 @@ Rapporten kompletterar inte ersätter `docs/reports/b125-preview-fallback-decisi
 ## Nästa steg
 
 1. Operatör + Christopher diskuterar matrisen.
-2. Beslut låses i ny ADR 0031 (Preview-Runtime Hybrid Default).
+2. Beslut låses i ny ADR 0033 (Preview-Runtime Hybrid Default).
+   (Spekulerat 0031 är upptaget av Steward auto-bump; spekulerat 0032
+   av section-treatments efter B146-port — nästa lediga är 0033.)
 3. Implementations-PR mot jakob-be (sannolikt cloud-grind-agent
    eftersom ren mekanisk implementation).
 

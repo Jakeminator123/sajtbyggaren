@@ -146,3 +146,4 @@ data/taxonomies/**/*.csv
 # Pattern matchar tree_v2.py / tree_v3.py-stil men INTE scripts/tree_view.py
 # (som är den committade delade utility-versionen).
 tree_v[0-9]*.py
+.vercel

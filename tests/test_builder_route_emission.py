@@ -1249,11 +1249,17 @@ def test_non_required_about_route_is_scanned_for_default_export(
     ``required=false``. A missing default export must therefore surface
     in the route-scan findings.
     """
+    from packages.generation.build import renderers as build_renderers
     from scripts import build_site
 
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    # B146 port (2026-05-25): render_about now lives in
+    # ``packages.generation.build.renderers``. ``write_pages`` (also moved
+    # there) calls it by local name, so monkeypatching
+    # ``scripts.build_site.render_about`` no longer affects the build
+    # output. We patch the canonical module instead.
     monkeypatch.setattr(
-        build_site,
+        build_renderers,
         "render_about",
         lambda _dossier: "export function AboutPage() { return null; }\n",
     )

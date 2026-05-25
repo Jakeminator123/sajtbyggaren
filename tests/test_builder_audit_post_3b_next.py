@@ -463,10 +463,34 @@ def test_renderers_use_jsx_safe_string_for_customer_text() -> None:
 
     for fn_name in (
         "render_layout",
-        "render_home",
-        "render_services",
-        "render_about",
-        "render_contact",
+        # Path B step 1-5: the actual JSX-escaping for /, /tjanster,
+        # /om-oss, /kontakt and /produkter routes now lives in the
+        # section-renderers below. ``render_home``, ``render_services``,
+        # ``render_about``, ``render_contact`` and ``render_products``
+        # are thin shims that compose sections into their page shells
+        # and interpolate no customer text themselves.
+        "render_section_hero",
+        "render_section_services_summary",
+        # Section design-treatments (Phase 2) — render_section_service_list
+        # is now a thin treatment-dispatcher; the actual JSX-escaping
+        # lives in the four private treatment helpers below. Each helper
+        # is asserted on its own so a future refactor that drops the
+        # helper from one treatment is caught immediately.
+        "_render_service_list_card_grid",
+        "_render_service_list_alternating_rows",
+        "_render_service_list_icon_strip",
+        "_render_service_list_tabular",
+        "render_section_about_story",
+        "render_section_team",
+        "render_section_trust_proof",
+        "render_section_contact_info",
+        "render_section_product_grid",
+        # ``render_section_contact_cta`` and
+        # ``render_section_products_intro`` are intentionally absent:
+        # both interpolate only static Swedish copy today (the
+        # ``dossier`` parameter is reserved for future branch-aware
+        # text). They will move into this list in the same commit
+        # that wires up the dossier-driven copy.
     ):
         fn = getattr(build_site, fn_name)
         source = inspect.getsource(fn)

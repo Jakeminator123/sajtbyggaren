@@ -102,6 +102,31 @@ SCAFFOLD_TO_STARTER: dict[str, str] = {
     "restaurant-hospitality": "marketing-base",
 }
 
+# Phase 3 (ADR 0032, originally landed as ADR 0031 on origin/main pre-port;
+# renumbered during the B146 port to avoid colliding with jakob-be:s
+# ADR 0031 — Steward auto-bump): catalogue of registered section design
+# treatments per section-id. Mirrors
+# governance/schemas/project-input.schema.json
+# directives.sectionTreatments enums and the runtime table
+# packages/generation/build/dispatcher.py::_SECTION_TREATMENTS_BY_VARIANT.
+# Used by the planning prompt so planningModel can reason about visual
+# structure when it picks a scaffold/variant.
+#
+# This catalogue is an LLM-prompt aid, not a source of truth. The
+# schema enums and the Python runtime table are the canonical
+# sources; tests/test_section_treatments_prompts.py guards against
+# drift between this list and the runtime catalogue (so a new
+# treatment registered in dispatcher.py without bumping this list
+# fails CI before the planning prompt can silently mislead the LLM).
+_SECTION_TREATMENTS_CATALOGUE: dict[str, list[str]] = {
+    "selected-work-preview": ["editorial-stack", "asymmetric-grid", "marquee-row"],
+    "treatment-list": ["minimal-rows", "split-cards", "numbered-stack"],
+    "practice-grid": ["dense-grid", "tabular", "grouped"],
+    "expertise-areas": ["numbered-2col", "tag-cluster"],
+    "service-list": ["card-grid", "alternating-rows", "icon-strip", "tabular"],
+}
+
+
 # Heuristic keywords used by the deterministic mock planner to pick
 # ecommerce-lite over the default scaffold. Real planningModel does its
 # own classification; these signals only fire on the no-key fallback.
@@ -494,7 +519,16 @@ _PLANNING_SYSTEM_INSTRUCTIONS = (
     "    in rejectedCapabilities with a short reason - the operator will decide "
     "    whether to drop the capability or wait for the Dossier to be imported. "
     "(5) Be conservative: if the brief is ambiguous, pick the safest scaffold "
-    "    and explain in rationale."
+    "    and explain in rationale. "
+    # ADR 0032 — section design treatments (Phase 3) awareness
+    "(6) directives.sectionTreatments on the Project Input is operator-authoritative. "
+    "    If the brief or context indicates the operator has pinned per-section "
+    "    treatments, treat them as a fixed visual contract: do not propose a "
+    "    scaffold/variant whose registered treatments would conflict with the "
+    "    pinned ids, and do not include sectionTreatments in your output - the "
+    "    PlanningChoice schema does not carry that field on purpose. The "
+    "    Section Design Treatments Catalogue listed in the user message tells "
+    "    you which treatments exist per section. Do not invent treatment ids."
 )
 
 
@@ -532,6 +566,17 @@ def _build_planning_prompt(
             f"- {slug}: {status}; dossiers={dossiers}; comment={entry.get('comment', '')}"
         )
 
+    # Phase 3 (ADR 0032): tell the LLM which section design treatments
+    # exist per section so it can reason about visual structure when
+    # picking a scaffold/variant. The LLM does not produce this field —
+    # PlanningChoice has no sectionTreatments slot — but it must avoid
+    # routing a brief that pinned a specific treatment to a variant
+    # whose registered default would silently override it.
+    treatment_lines = [
+        f"- {section_id}: {sorted(treatment_ids)}"
+        for section_id, treatment_ids in sorted(_SECTION_TREATMENTS_CATALOGUE.items())
+    ]
+
     return (
         "Site Brief (JSON):\n"
         f"{json.dumps(site_brief, ensure_ascii=False, indent=2)}\n\n"
@@ -539,6 +584,11 @@ def _build_planning_prompt(
         + "\n".join(scaffold_lines)
         + "\n\nCapability Map (capability-map.v1):\n"
         + "\n".join(cap_lines)
+        + "\n\nSection Design Treatments Catalogue (ADR 0032 — read-only):\n"
+        + "\n".join(treatment_lines)
+        + "\n\nReminder: directives.sectionTreatments on the Project Input is "
+        "operator-pin only. Treatments above are the registered ids per "
+        "section; never invent new ones."
     )
 
 
