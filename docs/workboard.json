@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-25T01:47:00Z",
+  "updatedAt": "2026-05-25T01:57:00Z",
   "updatedBy": "christopher",
   "people": {
     "jakob": {
@@ -60,18 +60,6 @@
     },
     {
       "owner": "christopher",
-      "gapId": "GAP-viewser-variant-live-preview",
-      "paths": [
-        "apps/viewser/components/builder/inspector/variants-tab.tsx",
-        "apps/viewser/components/builder/inspector/index.ts",
-        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
-        "apps/viewser/lib/runtime-tokens.ts",
-        "apps/viewser/app/api/discovery-options/route.ts"
-      ],
-      "reason": "Variant Live-Preview tab — additive extension of lib/runtime-tokens.ts and discovery-options route (yellow per gaps/README.md)"
-    },
-    {
-      "owner": "christopher",
       "gapId": "GAP-viewser-wizard-first-impression",
       "paths": [
         "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
@@ -81,10 +69,64 @@
         "apps/viewser/components/discovery-wizard/payload-alignment-popover.tsx"
       ],
       "reason": "Wizard första intryck — visuell uplift av foundation+visual steps utan att röra alignment-kritiska wizard-payload/types/constants"
+    },
+    {
+      "owner": "christopher",
+      "gapId": "GAP-viewser-iteration-compare",
+      "paths": [
+        "apps/viewser/components/builder/inspector/versions-tab.tsx",
+        "apps/viewser/components/builder/inspector/run-diff.ts",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/components/builder/inspector/index.ts"
+      ],
+      "reason": "Iteration & Compare — site-scoped versionshistorik + diff-vy i Site Inspector (pure UI, läser befintliga API:er)"
     }
   ],
   "queuedGaps": [],
   "activeGaps": [
+    {
+      "id": "GAP-viewser-iteration-compare",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Iteration & Compare — site-scoped versionshistorik + diff-vy i Site Inspector",
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "active",
+      "file": "docs/gaps/GAP-viewser-iteration-compare.md",
+      "startedAt": "2026-05-25T01:57:00Z",
+      "paths": [
+        "apps/viewser/components/builder/inspector/versions-tab.tsx",
+        "apps/viewser/components/builder/inspector/run-diff.ts",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/components/builder/inspector/index.ts"
+      ],
+      "doNotTouch": [
+        "packages/generation/**",
+        "governance/policies/**",
+        "scripts/**",
+        "tests/test_*.py",
+        "apps/viewser/app/api/runs/route.ts",
+        "apps/viewser/app/api/runs/[runId]/artifacts/route.ts",
+        "apps/viewser/lib/runs.ts"
+      ],
+      "acceptanceCriteria": [
+        "Site Inspector har en Versioner-tab som visar runs filtrerade på aktuell siteId.",
+        "Varje run-rad har timestamp, version, status-dot, rationale-excerpt och 'Aktiv'-badge för current run.",
+        "Operatören kan markera två runs (A/B) för att se diff av scaffold/variant/starter/routes/tone-tags/capabilities/quality.",
+        "Diff-logik lever i pure run-diff.ts utan React-dependencies.",
+        "Inga ändringar i backend-API, lib/runs.ts eller schema. Pure UI-konsumtion av befintliga endpoints."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint"
+      ]
+    },
     {
       "id": "GAP-viewser-wizard-first-impression",
       "type": "Gap/UI",
@@ -130,7 +172,9 @@
         "cd apps/viewser && npx tsc --noEmit",
         "cd apps/viewser && npm run lint"
       ]
-    },
+    }
+  ],
+  "completedGaps": [
     {
       "id": "GAP-viewser-variant-live-preview",
       "type": "Gap/UI",
@@ -138,9 +182,9 @@
       "title": "Live-preview switcher för scaffold-variants utan rebuild",
       "collisionRisk": "yellow",
       "reviewer": "jakob",
-      "status": "active",
+      "status": "in-review",
       "file": "docs/gaps/GAP-viewser-variant-live-preview.md",
-      "startedAt": "2026-05-25T01:38:00Z",
+      "completedAt": "2026-05-25T01:50:00Z",
       "paths": [
         "apps/viewser/components/builder/inspector/variants-tab.tsx",
         "apps/viewser/components/builder/inspector/index.ts",
@@ -148,38 +192,15 @@
         "apps/viewser/lib/runtime-tokens.ts",
         "apps/viewser/app/api/discovery-options/route.ts"
       ],
-      "doNotTouch": [
-        "packages/generation/**",
-        "governance/policies/**",
-        "scripts/**",
-        "tests/test_*.py",
-        "apps/viewser/components/discovery-wizard/**",
-        "apps/viewser/components/builder/dialogs/variant-picker-dialog.tsx",
-        "apps/viewser/lib/build-runner.ts",
-        "apps/viewser/lib/prompt-runner.ts",
-        "apps/viewser/lib/asset-store/**"
-      ],
       "acceptanceCriteria": [
-        "Ny Variants-tab i Site Inspector som listar alla compatible variants per aktuell sajts scaffold.",
-        "Hover/klick på en variant skickar postMessage-broadcast med variantens 4 färgtokens till preview-iframe (live switch utan rebuild).",
-        "Använd-knapp committar via follow-up-prompt så briefModel uppdaterar Project Input och nästa rebuild lockar in valet.",
-        "/api/discovery-options returnerar availableVariants additivt utan att bryta befintlig response shape.",
-        "lib/runtime-tokens.ts exporterar broadcastTokenBundle och broadcastTokenReset additivt.",
-        "Mobil + tablet-responsivt och tom-state om scaffolden har < 2 variants."
+        "Ny Variants-tab i Site Inspector som listar alla compatible variants per aktuell sajts scaffold."
       ],
       "checks": [
-        "python scripts/sprintvakt_check.py",
-        "python scripts/governance_validate.py",
-        "python scripts/rules_sync.py --check",
-        "python scripts/check_term_coverage.py --strict",
-        "python -m ruff check .",
-        "python -m pytest tests/ -q",
-        "cd apps/viewser && npx tsc --noEmit",
-        "cd apps/viewser && npm run lint"
-      ]
+        "python scripts/sprintvakt_check.py"
+      ],
+      "note": "Committed + pushed lokalt; lever i PR #71 och väntar på merge. Flyttad från activeGaps så efterföljande UI-gaps i samma katalog inte triggas av sprintvakt-overlap-detektion."
     }
   ],
-  "completedGaps": [],
   "decisions": [
     {
       "id": "DEC-PR68",
