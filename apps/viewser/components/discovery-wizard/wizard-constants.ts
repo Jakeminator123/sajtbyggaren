@@ -77,7 +77,16 @@ export type WizardCategory = {
 export const WIZARD_CATEGORIES: WizardCategory[] = [
   { id: "business", label: "Företag / Tjänster", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "ecommerce", label: "Webshop / E-handel", scaffoldHint: "ecommerce-lite", defaultVariantId: "clean-store" },
-  { id: "restaurant", label: "Restaurang / Café", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
+  // Restaurang/Café pekar mot restaurant-hospitality (Path A active
+  // sedan 2026-05-25 — discovery-taxonomy.v1.json id="restaurant"
+  // har activeScaffoldId: restaurant-hospitality). Måste matcha
+  // BUSINESS_FAMILIES[restaurant] så att fallback-discovery-options
+  // (FALLBACK_DISCOVERY_OPTIONS i discovery-options.ts) producerar
+  // samma scaffold + variant som familje-grenen. Tidigare stod här
+  // local-service-business / nordic-trust, vilket missades i den
+  // ursprungliga GAP-viewser-restaurant-wizard-hint-PR:en — fixen
+  // landar nu under samma GAP.
+  { id: "restaurant", label: "Restaurang / Café", scaffoldHint: "restaurant-hospitality", defaultVariantId: "warm-bistro" },
   { id: "portfolio", label: "Portfolio / CV", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "landing", label: "Landningssida", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "blog", label: "Blogg / Magasin", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },

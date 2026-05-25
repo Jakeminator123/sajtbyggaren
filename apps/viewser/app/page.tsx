@@ -262,7 +262,15 @@ export default function Home() {
 
   return (
     <main className="bg-background relative h-[100dvh] w-full overflow-hidden">
-      <SiteHeader onOpenConsole={() => setConsoleOpen(true)} />
+      <SiteHeader
+        onOpenConsole={() => setConsoleOpen(true)}
+        // Dölj brand-bubblan i builder-läget — den ligger ovanpå
+        // preview-iframens vänsterkant och stör operatörens
+        // granskning av designen. Konsol-knappen i höger hörn
+        // behålls så snabb-access till run-historik fortfarande
+        // är ett enkelt klick.
+        hideBrand={builderActive}
+      />
 
       <ViewerPanel
         runId={selectedRunId}

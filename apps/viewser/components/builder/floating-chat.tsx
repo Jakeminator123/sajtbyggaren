@@ -590,6 +590,16 @@ export function FloatingChat({
       if (isMinimized) return;
       if (event.button !== 0) return;
       if (!position) return;
+      // Bail om pointer-down skedde på (eller inuti) en interaktiv
+      // kontroll i headern. Annars sätter setPointerCapture + det
+      // efterföljande event.preventDefault() stopp för click-eventet
+      // på minimera/stäng-knapparna och de blir oanvändbara — exakt
+      // den buggen som operatören rapporterade ("går inte att klicka
+      // på _-knappen bredvid krysset"). closest("button") täcker
+      // även framtida ikon-knappar utan att vi behöver underhålla
+      // en hårdkodad whitelist.
+      const eventTarget = event.target as HTMLElement | null;
+      if (eventTarget?.closest("button")) return;
       const target = event.currentTarget;
       target.setPointerCapture(event.pointerId);
       dragStartRef.current = {
