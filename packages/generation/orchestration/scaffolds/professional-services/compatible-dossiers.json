@@ -1,0 +1,25 @@
+{
+  "_comment": "Real Dossier IDs only. 'mailto-contact-form' is required because a professional services firm without a formal enquiry path fails the basic 'serious buyer needs to reach the right partner' test. Sections like 'hero', 'expertise-areas', 'practice-grid', 'partners-grid', 'industries-served' and 'credentials' are declared in sections.json and must not appear here. See ADR 0012 for the Dossier vs Section distinction.",
+  "required": [
+    "mailto-contact-form"
+  ],
+  "recommended": [
+    "faq-accordion",
+    "map-embed"
+  ],
+  "conditional": [
+    {
+      "id": "image-gallery",
+      "when": "the firm has photographic identity material (office portraits, partner photos, event photography) it wants to lead with"
+    }
+  ],
+  "disallowedByDefault": [
+    "booking-cta",
+    "pricing-table-saas",
+    "dashboard-shell",
+    "auth-flow",
+    "checkout",
+    "interactive-game-loop",
+    "opening-hours"
+  ]
+}

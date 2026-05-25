@@ -69,6 +69,13 @@ SCAFFOLD_TO_STARTER: dict[str, str] = {
     # not by extending the starter. Added 2026-05-25 alongside the
     # ``_DISPATCHED_SCAFFOLDS`` entry in scripts/build_site.py.
     "clinic-healthcare": "marketing-base",
+    # professional-services is the second Path B native scaffold (step 13,
+    # 2026-05-25). It also runs on ``marketing-base`` because the four
+    # default routes (home / expertise / about / contact) are pure
+    # informational pages — no checkout, no booking surface — and the
+    # scaffold-distinct character lives entirely in the section
+    # composition (expertise-areas / practice-grid / partners-grid).
+    "professional-services": "marketing-base",
     # Restaurant-hospitality is enabled in scaffold-contract.v1.json and
     # therefore appears in load_scaffold_registry(); without a starter
     # mapping here, produce_site_plan() raises in _resolve_starter_id when
@@ -397,6 +404,12 @@ _DEFAULT_VARIANT_BY_SCAFFOLD: dict[str, str] = {
     # warm-care suits chiropractor / naprapath / holistic; modern-precision
     # suits specialist / fertility / aesthetic medicine.
     "clinic-healthcare": "clinic-calm",
+    # ``legal-classic`` is the safest professional-services default —
+    # restrained, institutional, works for advokatbyråer, audit firms
+    # and traditional advisory practices without overcommitting to the
+    # minimalist consulting language (consulting-modern) or the warm
+    # accounting language (accounting-trust).
+    "professional-services": "legal-classic",
 }
 
 

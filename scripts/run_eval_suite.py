@@ -66,6 +66,12 @@ QUICK_CASES: tuple[str, ...] = (
     # section renderers and the ``_DISPATCHED_SCAFFOLDS`` write_pages arm
     # so the section-driven dispatcher can be smoke-checked daily.
     "clinic-tandvard",
+    # professional-services regression fixture, Path B step 13 (2026-05-25).
+    # Pinned to the legal-classic variant + marketing-base starter; covers
+    # the new ``expertise-areas`` / ``practice-grid`` / ``industries-served``
+    # / ``partners-grid`` section renderers and the second
+    # ``_DISPATCHED_SCAFFOLDS`` arm so PS regressions are caught daily.
+    "advokatbyra-novum",
 )
 
 FULL_CASES: tuple[str, ...] = (
@@ -85,6 +91,11 @@ FULL_CASES: tuple[str, ...] = (
     # ``_DISPATCHED_SCAFFOLDS`` dispatch arm is only verified via the
     # quick suite and targeted full builds.
     "clinic-tandvard",
+    # professional-services (legal-classic variant, marketing-base starter).
+    # Added 2026-05-25 alongside Path B step 13 so the full suite covers
+    # all five on-disk scaffolds and exercises both
+    # ``_DISPATCHED_SCAFFOLDS`` arms (clinic + professional-services).
+    "advokatbyra-novum",
 )
 
 # `scripts/build_site.py` prints `runId: <id>` on stdout. Other tools in

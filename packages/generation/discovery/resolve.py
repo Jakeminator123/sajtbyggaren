@@ -692,6 +692,16 @@ _RUNTIME_SCAFFOLD_HINTS: dict[str, tuple[str, str, str]] = {
         "clinic-calm",
         "marketing-base",
     ),
+    # professional-services lades till 2026-05-25 via Path B step 13.
+    # Samma native-dispatcher-princip: alla 4 default-routes (home /
+    # expertise / about / contact) renderas via section-driven
+    # dispatcher med expertise-areas / practice-grid / industries-served
+    # / partners-grid som scaffold-distinkta sektioner.
+    "professional-services": (
+        "professional-services",
+        "legal-classic",
+        "marketing-base",
+    ),
 }
 
 

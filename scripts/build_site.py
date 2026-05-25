@@ -3831,6 +3831,10 @@ _HERO_STYLE_BY_VARIANT: dict[str, str] = {
     "clinic-calm": "split",
     "warm-care": "centered",
     "modern-precision": "split",
+    # professional-services (Path B native — _DISPATCHED_SCAFFOLDS)
+    "legal-classic": "split",
+    "consulting-modern": "split",
+    "accounting-trust": "centered",
 }
 
 # Tone-driven fallback för hero-stil när layoutHint saknas OCH varianten
@@ -5579,6 +5583,208 @@ _SECTION_RENDERERS.update(
 )
 
 
+def render_section_expertise_areas(
+    dossier: dict,
+    *,
+    contact_path: str = "/kontakta-oss",
+) -> str:
+    """Render a structured expertise-area grid for professional-services home.
+
+    A 2-column grid of practice-area cards prefixed with a numeric
+    eyebrow (``01`` ... ``06``). Each card surfaces a label and a
+    one-sentence scope so a buying-side counsel can self-qualify
+    into the right practice within the first scroll. Visually
+    cooler than the LSB services-summary block — restrained
+    chrome, no hover-lift, ample whitespace — to match the
+    authoritative tone professional-services scaffolds want.
+
+    Returns "" when the dossier carries no services so the
+    dispatcher does not emit an empty grid. Caps at six entries
+    on the home; the full list belongs on the practice-grid
+    section that runs the /expertis route.
+    """
+    services = dossier.get("services") or []
+    if not services:
+        return ""
+    cards = "\n".join(
+        f'            <article key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-3 border-l border-[color:var(--border)] pl-6">\n'
+        f'              <span className="text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(f"{idx:02d}")}</span>\n'
+        f'              <h3 className="text-xl font-semibold tracking-tight">{_jsx_safe_string(svc["label"])}</h3>\n'
+        f'              <p className="text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
+        "            </article>"
+        for idx, svc in enumerate(services[:6], start=1)
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
+        '          <div className="flex flex-col gap-3 max-w-2xl">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Verksamhetsområden</p>\n'
+        '            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Vår expertis</h2>\n'
+        "          </div>\n"
+        '          <div className="grid gap-10 md:grid-cols-2">\n'
+        f"{cards}\n"
+        "          </div>\n"
+        f'          <a href={_jsx_safe_string(contact_path)} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Boka introduktionssamtal<ArrowRight className="size-4" /></a>\n'
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+def render_section_practice_grid(
+    dossier: dict,
+    *,
+    contact_path: str = "/kontakta-oss",
+) -> str:
+    """Render the full practice-area catalogue for professional-services /expertis.
+
+    Emits a 3-column dense grid where each card carries a
+    practice-area label and a one-paragraph scope — formal copy,
+    restrained chrome, no marketing flourish. Visually distinct
+    from the LSB ``service-list`` (vertical, icon-led, with USP
+    bullets) and the clinic ``treatment-list`` (single-column,
+    plain-language) so the scaffold reads like a counsel-facing
+    expertise menu rather than a services brochure.
+
+    Returns "" when no services are declared so the dispatcher
+    does not emit an empty grid scaffold.
+    """
+    services = dossier.get("services") or []
+    if not services:
+        return ""
+    cards = "\n".join(
+        f'            <article key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-4 rounded-lg border border-[color:var(--border)] bg-[color:var(--background)] p-7">\n'
+        f'              <h2 className="text-lg font-semibold tracking-tight">{_jsx_safe_string(svc["label"])}</h2>\n'
+        f'              <p className="text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
+        f'              <a href={_jsx_safe_string(contact_path)} className="mt-auto inline-flex items-center gap-2 text-xs font-medium uppercase tracking-widest underline-offset-4 hover:underline">Diskutera ärende<ArrowRight className="size-3" /></a>\n'
+        "            </article>"
+        for svc in services
+    )
+    return (
+        '      <section className="border-b border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
+        '          <header className="flex flex-col gap-3 max-w-2xl">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Verksamhetsområden</p>\n'
+        '            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Praktikgrupper</h1>\n'
+        '            <p className="text-base text-[color:var(--muted)] leading-relaxed">Vår verksamhet är organiserad i specialiserade praktikgrupper. Välj det område som ligger närmast ert ärende — vi kopplar in den partner som har relevant precedent.</p>\n'
+        "          </header>\n"
+        '          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">\n'
+        f"{cards}\n"
+        "          </div>\n"
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+def render_section_industries_served(dossier: dict) -> str:
+    """Render an industries-served row for professional-services scaffolds.
+
+    Reads ``location.serviceAreas`` (which for a professional-
+    services firm is the natural place to declare served markets
+    or industries — a multi-office advokatbyrå already uses this
+    field for its office cities or covered regions, an audit firm
+    might list industries served) and emits a compact pill row
+    under a "Branscher och marknader vi arbetar inom" eyebrow.
+    Visually identifiable as PS — uppercase eyebrow, monospace
+    pill labels, no icons — and structurally separate from the
+    LSB service-area block which renders the same field as a
+    travel-distance trust message.
+
+    Returns "" when the field is empty so the dispatcher does
+    not emit an empty pill row.
+    """
+    location = dossier.get("location") or {}
+    areas = location.get("serviceAreas") or []
+    cleaned: list[str] = [item.strip() for item in areas if isinstance(item, str) and item.strip()]
+    if not cleaned:
+        return ""
+    pills = "\n".join(
+        f'            <li key={_jsx_safe_string(area)} className="rounded-sm border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-2 text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(area)}</li>'
+        for area in cleaned
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)] bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/10">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[calc(var(--section-spacing)*0.7)]">\n'
+        '          <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Branscher och marknader vi arbetar inom</p>\n'
+        '          <ul className="flex flex-wrap gap-2">\n'
+        f"{pills}\n"
+        "          </ul>\n"
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+def render_section_partners_grid(dossier: dict) -> str:
+    """Render a formal partners grid for professional-services scaffolds.
+
+    Reads ``company.team`` and presents each named member as a
+    formal partner card with their role on a separate eyebrow
+    line — the visual convention of an advokatbyrå or
+    revisionsbyrå roster. Bigger cards than the clinic
+    ``team-block``, more typographic restraint than the LSB
+    team renderer; the layout is designed so that bar
+    admissions, audit registrations or "delägare sedan ÅÅÅÅ"
+    dates read as the primary attribute.
+
+    Returns "" when no team is declared so the dispatcher does
+    not emit a hollow grid.
+    """
+    company = dossier.get("company") or {}
+    team = company.get("team") or []
+    members: list[dict] = [m for m in team if isinstance(m, dict) and m.get("name") and m.get("role")]
+    if not members:
+        return ""
+    cards = "\n".join(
+        f'            <article key={_jsx_safe_string(member["name"])} className="flex flex-col gap-2 border-t border-[color:var(--border)] pt-6">\n'
+        f'              <p className="text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(member["role"])}</p>\n'
+        f'              <h3 className="text-2xl font-semibold tracking-tight">{_jsx_safe_string(member["name"])}</h3>\n'
+        "            </article>"
+        for member in members
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
+        '          <header className="flex flex-col gap-3 max-w-2xl">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Partners och rådgivare</p>\n'
+        '            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Vårt team</h2>\n'
+        "          </header>\n"
+        '          <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">\n'
+        f"{cards}\n"
+        "          </div>\n"
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+def render_section_insights_list(dossier: dict) -> str:  # noqa: ARG001 — dossier reserved for future insights schema
+    """Render an insights / publications row for professional-services.
+
+    The current project-input schema does not carry a structured
+    ``insights`` collection, so this renderer is intentionally a
+    no-op — it returns ``""`` until a future schema extension lets
+    a dossier declare publications. Registering it now means PS
+    sections.json can list ``insights-list`` as an optional
+    section without crashing the dispatcher; once the schema
+    grows the renderer can be filled in without touching the
+    contract.
+    """
+    return ""
+
+
+_SECTION_RENDERERS.update(
+    {
+        "expertise-areas": render_section_expertise_areas,
+        "practice-grid": render_section_practice_grid,
+        "industries-served": render_section_industries_served,
+        "partners-grid": render_section_partners_grid,
+        "insights-list": render_section_insights_list,
+    }
+)
+
+
 _CLINIC_SCAFFOLD_DIR = (
     REPO_ROOT
     / "packages"
@@ -5588,9 +5794,19 @@ _CLINIC_SCAFFOLD_DIR = (
     / "clinic-healthcare"
 )
 
+_PROFESSIONAL_SERVICES_SCAFFOLD_DIR = (
+    REPO_ROOT
+    / "packages"
+    / "generation"
+    / "orchestration"
+    / "scaffolds"
+    / "professional-services"
+)
+
 
 _DISPATCHED_SCAFFOLDS: dict[str, Path] = {
     "clinic-healthcare": _CLINIC_SCAFFOLD_DIR,
+    "professional-services": _PROFESSIONAL_SERVICES_SCAFFOLD_DIR,
 }
 
 
@@ -5602,6 +5818,9 @@ _DISPATCHED_PAGE_FUNCTION_NAMES: dict[str, str] = {
     "team": "TeamPage",
     "faq": "FaqPage",
     "pricing": "PricingPage",
+    "expertise": "ExpertisePage",
+    "industries": "IndustriesPage",
+    "insights": "InsightsPage",
 }
 
 

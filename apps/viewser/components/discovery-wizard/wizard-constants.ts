@@ -58,7 +58,8 @@ export type ScaffoldHint =
   | "local-service-business"
   | "ecommerce-lite"
   | "restaurant-hospitality"
-  | "clinic-healthcare";
+  | "clinic-healthcare"
+  | "professional-services";
 
 export type WizardCategory = {
   id: WizardCategoryId;
@@ -91,8 +92,8 @@ export const WIZARD_CATEGORIES: WizardCategory[] = [
   { id: "nonprofit", label: "Förening / Ideell", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "music", label: "Musik / Artist", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "hotel", label: "Hotell / Boende", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
-  { id: "legal", label: "Juridik / Advokat", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
-  { id: "accounting", label: "Ekonomi / Redovisning", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
+  { id: "legal", label: "Juridik / Advokat", scaffoldHint: "professional-services", defaultVariantId: "legal-classic" },
+  { id: "accounting", label: "Ekonomi / Redovisning", scaffoldHint: "professional-services", defaultVariantId: "accounting-trust" },
   { id: "auto", label: "Bil / Motor", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "travel", label: "Resa / Turism", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "food", label: "Mat / Catering", scaffoldHint: "ecommerce-lite", defaultVariantId: "clean-store" },
@@ -451,6 +452,36 @@ export const VIBE_OPTIONS: Vibe[] = [
     accentSwatch: "#a87f3e",
     background: "#f4ecd8",
     defaultTypographyFeel: "classic-serif",
+  },
+  {
+    id: "legal-classic",
+    scaffoldHint: "professional-services",
+    label: "Legal Classic",
+    description: "Mörk navy och elfenben — som en traditionsrik advokatbyrå.",
+    primarySwatch: "#0d1c2c",
+    accentSwatch: "#9b7a3b",
+    background: "#fbf8f1",
+    defaultTypographyFeel: "modern-sans",
+  },
+  {
+    id: "consulting-modern",
+    scaffoldHint: "professional-services",
+    label: "Consulting Modern",
+    description: "Vitt, grafit och kyligt — som en strategikonsult med skarpt språk.",
+    primarySwatch: "#101418",
+    accentSwatch: "#0e7c86",
+    background: "#ffffff",
+    defaultTypographyFeel: "modern-sans",
+  },
+  {
+    id: "accounting-trust",
+    scaffoldHint: "professional-services",
+    label: "Accounting Trust",
+    description: "Varmt grönt och pergament — som en revisionsbyrå med hand om småföretag.",
+    primarySwatch: "#1f4d3a",
+    accentSwatch: "#c9a55a",
+    background: "#f7f4ec",
+    defaultTypographyFeel: "modern-sans",
   },
 ];
 

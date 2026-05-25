@@ -420,10 +420,11 @@
       "labelSv": "Juridik / Advokat",
       "labelEn": "Legal",
       "contentBranch": "legal",
-      "supportStatus": "planned",
+      "supportStatus": "active",
       "targetScaffoldId": "professional-services",
+      "activeScaffoldId": "professional-services",
       "fallbackScaffoldId": "local-service-business",
-      "defaultVariantId": "nordic-trust",
+      "defaultVariantId": "legal-classic",
       "expectedStarterId": "marketing-base",
       "requestedCapabilities": ["contact-form", "faq-section"],
       "candidateDossiers": [],
@@ -434,17 +435,19 @@
         "FAQ",
         "Kontaktformulär"
       ],
-      "rationale": "Juridik/advokat pekar mot professional-services. Fallback till local-service-business."
+      "rationale": "Juridik/advokat pekar mot professional-services. Fallback till local-service-business.",
+      "operatorNotes": "2026-05-25: promoted to active via Path B step 13 (_DISPATCHED_SCAFFOLDS). defaultVariantId switched from nordic-trust (LSB fallback) to legal-classic (PS-native). The fallback chain stays for safety until the active route has a few real-build datapoints."
     },
     {
       "id": "accounting",
       "labelSv": "Ekonomi / Redovisning",
       "labelEn": "Accounting",
       "contentBranch": "legal",
-      "supportStatus": "planned",
+      "supportStatus": "active",
       "targetScaffoldId": "professional-services",
+      "activeScaffoldId": "professional-services",
       "fallbackScaffoldId": "local-service-business",
-      "defaultVariantId": "nordic-trust",
+      "defaultVariantId": "accounting-trust",
       "expectedStarterId": "marketing-base",
       "requestedCapabilities": ["contact-form", "faq-section"],
       "candidateDossiers": [],
@@ -455,7 +458,8 @@
         "FAQ",
         "Kontaktformulär"
       ],
-      "rationale": "Ekonomi/redovisning delar mönster med juridik (professional-services). Fallback till local-service-business."
+      "rationale": "Ekonomi/redovisning delar mönster med juridik (professional-services). Fallback till local-service-business.",
+      "operatorNotes": "2026-05-25: promoted to active via Path B step 13. defaultVariantId switched from nordic-trust to accounting-trust (PS-native, warm green-and-parchment). Same fallback safety net as the legal category."
     },
     {
       "id": "auto",

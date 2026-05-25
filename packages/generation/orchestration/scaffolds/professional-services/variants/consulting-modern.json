@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../../../../governance/schemas/variant.schema.json",
+  "id": "consulting-modern",
+  "enabled": true,
+  "label": "Consulting Modern",
+  "description": "Minimalist white-and-graphite visual direction for management consultancies, strategy firms and modern advisory practices. Disciplined grid, restrained accent of cool teal and uncluttered hierarchy signal sharp thinking and contemporary professionalism without resorting to stock-business clichés.",
+  "tokens": {
+    "color": {
+      "background": "#ffffff",
+      "foreground": "#101418",
+      "muted": "#5a6470",
+      "border": "#e4e7eb",
+      "primary": "#101418",
+      "primaryForeground": "#ffffff",
+      "accent": "#0e7c86",
+      "accentForeground": "#ffffff"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.18
+    },
+    "radius": {
+      "sm": "0.375rem",
+      "md": "0.625rem",
+      "lg": "1rem"
+    },
+    "spacing": {
+      "section": "5.5rem",
+      "container": "min(74rem, 92vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "minimal",
+      "sharp",
+      "modern",
+      "disciplined",
+      "professional",
+      "confident"
+    ]
+  }
+}

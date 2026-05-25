@@ -1,0 +1,39 @@
+{
+  "id": "professional-services",
+  "embeddingText": "A professional services website for law firms, advokatbyråer, attorneys, solicitors, barristers, notaries, accounting firms, redovisningsbyråer, auditors, revisionsbyråer, audit firms, certified public accountants, tax advisors, skatterådgivare, financial advisors, wealth management offices, management consultancies, strategy consultants, corporate consultants, due-diligence firms, transaction advisory firms, valuation firms, expert witness practices and small to mid-size professional service partnerships. The site centres on practice areas, named partners, served industries, formal credentials and a measured path from a serious prospect to the right partner or office.",
+  "semanticSignals": [
+    "law firm",
+    "advokatbyrå",
+    "accounting firm",
+    "redovisningsbyrå",
+    "audit",
+    "tax advisory",
+    "financial advisor",
+    "wealth management",
+    "management consulting",
+    "strategy consulting",
+    "due diligence",
+    "transaction advisory",
+    "named partners",
+    "practice areas",
+    "industry specialisation",
+    "professional credentials"
+  ],
+  "negativeSignals": [
+    "physical retail store",
+    "restaurant",
+    "clinic with patient bookings",
+    "ecommerce checkout",
+    "software product",
+    "creative agency portfolio",
+    "individual freelancer with no firm structure"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold when the primary visitor goal is to evaluate a firm's expertise depth and route to the right partner — typical of law, audit, tax, finance and high-end management consulting.",
+    "Choose this scaffold when the firm leads with named partners and credentialed expertise rather than a general 'about us' team page.",
+    "Do not choose this scaffold for a creative agency or design studio whose conversion is portfolio-led; that is agency-studio.",
+    "Do not choose this scaffold for an independent consultant or coach without a firm structure; consultant-expert (planned) or local-service-business is more appropriate."
+  ],
+  "minConfidence": 0.7,
+  "requiresTieBreakWhenWithin": 0.08
+}

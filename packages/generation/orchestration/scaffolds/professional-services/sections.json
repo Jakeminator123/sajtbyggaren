@@ -1,0 +1,68 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "expertise-areas",
+      "credentials",
+      "industries-served",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "partners-grid",
+      "trust-proof",
+      "insights-list"
+    ],
+    "sectionOrderRules": [
+      "Hero must signal authority and reserve, not enthusiasm — confident headline, no exclamation marks, restrained imagery.",
+      "Expertise areas must be presented as a taxonomy (groups of practice areas), not a flat services list, so the visitor self-qualifies into the right partner.",
+      "Credentials must list bar admissions, professional bodies or audit registrations the firm holds, with the issuing authority named.",
+      "Contact CTA should read as 'Boka introduktionssamtal' or similar measured language, never 'Skicka iväg!'."
+    ]
+  },
+  "expertise": {
+    "requiredSections": [
+      "practice-grid",
+      "industries-served",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "credentials",
+      "partners-grid",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Practice grid must group practice areas under recognisable headings (e.g. Bolagsrätt, Skatt, Tvistelösning) and give each area a one-sentence scope description that a buying-side counsel can quote internally.",
+      "Industries served acts as a second axis that lets specialised buyers (banking, life sciences, real estate) recognise relevant precedent."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story-block",
+      "partners-grid",
+      "credentials",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "story",
+      "industries-served"
+    ],
+    "sectionOrderRules": [
+      "Story must be specific to the firm — founding year, lead partners, professional positioning — not generic 'we believe in client value' filler.",
+      "Partners grid must list at least one named partner with credential and a direct contact line so a serious enquiry can land in the correct inbox."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "credentials",
+      "partners-grid"
+    ],
+    "sectionOrderRules": [
+      "Direct phone numbers and email addresses must be tel:/mailto: links so a senior buyer can act in two clicks.",
+      "Multi-office firms should list each office address as its own readable block so a prospect can choose the relevant location."
+    ]
+  }
+}

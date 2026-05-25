@@ -102,15 +102,18 @@ def test_eval_case_lists_are_the_cli_source_of_truth() -> None:
         "arcade-hall",
         "cafe-bistro",
         "clinic-tandvard",
+        "advokatbyra-novum",
     )
     assert get_full_case_ids() == (
         "painter-palma",
         "atelje-bird",
         "cafe-bistro",
         "clinic-tandvard",
+        "advokatbyra-novum",
     )
     assert format_case_list(get_full_case_ids(), separator=" + ") == (
         "painter-palma + atelje-bird + cafe-bistro + clinic-tandvard"
+        " + advokatbyra-novum"
     )
 
 
@@ -126,6 +129,7 @@ def test_full_suite_covers_all_runtime_scaffolds() -> None:
         "ecommerce-lite",
         "restaurant-hospitality",
         "clinic-healthcare",
+        "professional-services",
     }
 
 
