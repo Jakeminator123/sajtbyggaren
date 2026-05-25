@@ -27,7 +27,6 @@ import {
   ChipRow,
   FieldLabel,
   FieldStack,
-  HelperText,
   SectionHeader,
   TagListInput,
   TextField,
@@ -92,11 +91,9 @@ export function ContentStep({
 
       {/* USP — alltid synlig oavsett branch. */}
       <div>
-        <FieldLabel optional>Unika säljpunkter (USP:er)</FieldLabel>
-        <HelperText>
-          3–6 korta saker som gör er bättre eller annorlunda. Används som
-          highlight-rad på startsidan.
-        </HelperText>
+        <FieldLabel optional help="3–6 korta saker som gör er bättre eller annorlunda. Används som highlight-rad på startsidan.">
+          Unika säljpunkter (USP:er)
+        </FieldLabel>
         <div className="mt-2">
           <TagListInput
             values={answers.uniqueSellingPoints}
@@ -137,11 +134,9 @@ function EcommerceContent({
   return (
     <>
       <div>
-        <SectionHeader>Produkter</SectionHeader>
-        <HelperText>
-          Lista 3–6 nyckelprodukter med bild. Använd korta namn — full text
-          kommer i sajtens butik.
-        </HelperText>
+        <SectionHeader help="Lista 3–6 nyckelprodukter med bild. Använd korta namn — full text kommer i sajtens butik.">
+          Produkter
+        </SectionHeader>
         <div className="mt-3 flex flex-col gap-3">
           {answers.products.map((product) => (
             <ProductRow
@@ -387,10 +382,9 @@ function RestaurantContent({
       />
 
       <div>
-        <SectionHeader>Meny</SectionHeader>
-        <HelperText>
-          Några nyckelrätter — full meny kan läggas till senare.
-        </HelperText>
+        <SectionHeader help="Några nyckelrätter — full meny kan läggas till senare.">
+          Meny
+        </SectionHeader>
         <div className="mt-3 flex flex-col gap-3">
           {answers.menuItems.map((item) => (
             <div
@@ -642,10 +636,9 @@ function PortfolioContent({
 
   return (
     <>
-      <SectionHeader>Projekt och case</SectionHeader>
-      <HelperText>
-        3–6 starka projekt. Beskriv vad du löste och för vem.
-      </HelperText>
+      <SectionHeader help="3–6 starka projekt. Beskriv vad du löste och för vem.">
+        Projekt och case
+      </SectionHeader>
       <div className="mt-3 flex flex-col gap-3">
         {answers.projects.map((project) => (
           <div

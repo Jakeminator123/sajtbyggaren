@@ -9,7 +9,10 @@ import { PagesTab } from "@/components/builder/inspector/pages-tab";
 import { QualityTab } from "@/components/builder/inspector/quality-tab";
 import { TokensTab } from "@/components/builder/inspector/tokens-tab";
 import { useRunArtefacts } from "@/components/builder/inspector/use-run-artefacts";
+import { VariantsTab } from "@/components/builder/inspector/variants-tab";
+import { VersionsTab } from "@/components/builder/inspector/versions-tab";
 import { useFollowupBuild } from "@/components/builder/use-followup-build";
+import type { PendingBuildState } from "@/components/builder/use-pending-build";
 import type { PromptBuildOutcome } from "@/components/prompt-builder";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,12 +32,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
  * follow-up-bygg-pipeline som FloatingChat och Nivå 2-dialogerna
  * använder.
  *
- * Inspectorn renderar fyra tabs:
+ * Inspectorn renderar sju tabs:
  *
  *   1. Sidor       — routePlan + pageIntentWarnings
  *   2. Brief & Plan — företag, ton, tjänster, scaffold/variant
- *   3. Dossiers    — required/recommended/conditional/rejected
- *   4. Kvalitet    — buildResult + qualityResult + repairResult
+ *   3. Variants    — live-switch mellan registrerade scaffold-variants
+ *   4. Versioner   — site-scoped versionshistorik + A/B-diff mellan runs
+ *   5. Färger      — runtime token-overrides + commit-flow
+ *   6. Dossiers    — required/recommended/conditional/rejected
+ *   7. Kvalitet    — buildResult + qualityResult + repairResult
  *
  * All data kommer från `/api/runs/[runId]/artifacts`. Vi har inget
  * polling — operatören får en refresh-knapp i headern och inspectorn
@@ -48,6 +54,12 @@ type SiteInspectorSheetProps = {
   siteId: string;
   runId: string | null;
   isBuilding: boolean;
+  /**
+   * Pending build-state från Live Build Sync. Skickas vidare till
+   * Versions-tab så den kan rendera en optimistisk "Bygger…"-rad
+   * högst upp i listan medan build pågår.
+   */
+  pendingBuild?: PendingBuildState | null;
   onBuildStart: () => void;
   onBuildEnd: () => void;
   onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
@@ -59,6 +71,7 @@ export function SiteInspectorSheet({
   siteId,
   runId,
   isBuilding,
+  pendingBuild,
   onBuildStart,
   onBuildEnd,
   onBuildDone,
@@ -165,6 +178,8 @@ export function SiteInspectorSheet({
               >
                 <TabsTrigger value="pages">Sidor</TabsTrigger>
                 <TabsTrigger value="brief">Brief &amp; Plan</TabsTrigger>
+                <TabsTrigger value="variants">Variants</TabsTrigger>
+                <TabsTrigger value="versions">Versioner</TabsTrigger>
                 <TabsTrigger value="tokens">Färger</TabsTrigger>
                 <TabsTrigger value="dossiers">Dossiers</TabsTrigger>
                 <TabsTrigger value="quality">Kvalitet</TabsTrigger>
@@ -175,6 +190,22 @@ export function SiteInspectorSheet({
                 </TabsContent>
                 <TabsContent value="brief">
                   <BriefTab bundle={state.bundle} {...sharedTabProps} />
+                </TabsContent>
+                <TabsContent value="variants">
+                  <VariantsTab bundle={state.bundle} {...sharedTabProps} />
+                </TabsContent>
+                <TabsContent value="versions">
+                  {/* key={siteId} re-mountar VersionsTab när operatören
+                      byter aktiv sajt så A/B-compareval inte spiller
+                      över till en annan sajts runs. */}
+                  <VersionsTab
+                    key={siteId}
+                    bundle={state.bundle}
+                    siteId={siteId}
+                    currentRunId={runId}
+                    isBuilding={isBuilding}
+                    pendingBuild={pendingBuild ?? null}
+                  />
                 </TabsContent>
                 <TabsContent value="tokens">
                   <TokensTab {...sharedTabProps} />

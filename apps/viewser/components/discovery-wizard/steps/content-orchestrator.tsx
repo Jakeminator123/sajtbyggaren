@@ -1,6 +1,7 @@
 "use client";
 
-import { BookText, Layers } from "lucide-react";
+import { BookText, Info, Layers } from "lucide-react";
+import { useId, useState } from "react";
 
 import type { ContentBranch } from "../wizard-constants";
 import type { WizardAnswers } from "../wizard-types";
@@ -43,7 +44,8 @@ export function ContentOrchestratorStep({
       <SectionCard
         icon={<Layers className="h-3.5 w-3.5" />}
         title="Erbjudande och innehåll"
-        description={branchDescription(branch)}
+        description={branchDescriptionShort(branch)}
+        descriptionLong={branchDescription(branch)}
       >
         <ContentStep answers={answers} onChange={onChange} branch={branch} />
       </SectionCard>
@@ -51,7 +53,8 @@ export function ContentOrchestratorStep({
       <SectionCard
         icon={<BookText className="h-3.5 w-3.5" />}
         title="Företagets identitet"
-        description="Om-oss är vad AI:n bygger hero + intro-texter från. Mer detaljer (historia, vision, målgrupp) ligger i disclosure nedan."
+        description="Om-oss matar hero + intro-texter."
+        descriptionLong="Mer detaljer (historia, vision, målgrupp) ligger i disclosure nedan. AI:n fyller i det som saknas från tone of voice."
       >
         <FieldStack>
           <StoryEssentialsFields answers={answers} onChange={onChange} />
@@ -82,18 +85,26 @@ export function ContentOrchestratorStep({
 /**
  * SectionCard — gemensam "kort"-wrapper för stora sektioner i steg 4.
  * Visar en ikon-pill + titel + kort beskrivning, sedan barnens innehåll.
+ *
+ * Minimalism v2: `description` är max en mening. `descriptionLong`
+ * (valfritt) ligger bakom en info-ikon i `SectionHeader`-mönstret
+ * så längre prosa inte tar default-yta.
  */
 function SectionCard({
   icon,
   title,
   description,
+  descriptionLong,
   children,
 }: {
   icon: React.ReactNode;
   title: string;
   description: string;
+  descriptionLong?: string;
   children: React.ReactNode;
 }) {
+  const [helpOpen, setHelpOpen] = useState(false);
+  const helpPanelId = useId();
   return (
     <div className="border-border/70 bg-card/40 rounded-xl border p-4">
       <div className="mb-3 flex items-start gap-3">
@@ -101,10 +112,37 @@ function SectionCard({
           {icon}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-foreground text-[13.5px] font-semibold tracking-tight">
-            {title}
+          <div className="flex items-center gap-1.5">
+            <span className="text-foreground text-[13.5px] font-semibold tracking-tight">
+              {title}
+            </span>
+            {descriptionLong ? (
+              <button
+                type="button"
+                onClick={() => setHelpOpen((prev) => !prev)}
+                aria-expanded={helpOpen}
+                aria-controls={helpPanelId}
+                aria-label={helpOpen ? "Dölj förklaring" : "Visa förklaring"}
+                className="text-muted-foreground/60 hover:text-foreground/80 focus-visible:ring-ring/40 inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              >
+                <Info className="h-3 w-3" aria-hidden />
+              </button>
+            ) : null}
           </div>
           <HelperText>{description}</HelperText>
+          {descriptionLong ? (
+            // Panelen mountas alltid (hidden när stängd) så aria-controls
+            // alltid pekar på ett element i DOM — bättre AT-stöd än
+            // conditional rendering.
+            <p
+              id={helpPanelId}
+              role="note"
+              hidden={!helpOpen}
+              className="text-muted-foreground/80 mt-1 text-[11px] leading-snug"
+            >
+              {descriptionLong}
+            </p>
+          ) : null}
         </div>
       </div>
       {children}
@@ -112,6 +150,27 @@ function SectionCard({
   );
 }
 
+/** En-mening default för SectionCard (minimalism v2). */
+function branchDescriptionShort(branch: ContentBranch): string {
+  switch (branch) {
+    case "ecommerce":
+      return "Produkter, prisnivå och USP:er.";
+    case "restaurant":
+      return "Meny, kök och kostalternativ.";
+    case "salon":
+      return "Behandlingar, team och bokning.";
+    case "portfolio":
+      return "Projekt, case och kunder.";
+    case "construction":
+      return "Tjänsteområden och referenser.";
+    case "consulting":
+      return "Tjänsteområden och kompetenser.";
+    default:
+      return "Konkret innehåll som ska finnas på sajten.";
+  }
+}
+
+/** Längre prosa bakom info-ikon i SectionCard. */
 function branchDescription(branch: ContentBranch): string {
   switch (branch) {
     case "ecommerce":

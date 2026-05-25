@@ -30,7 +30,6 @@ import {
   ChipRow,
   FieldLabel,
   FieldStack,
-  HelperText,
   SectionHeader,
   TextField,
   TextareaField,
@@ -222,13 +221,12 @@ export function FunctionsStep({
             onResetToRecommended={() => applyRecommendations("reset")}
           />
 
-          {/* CTA — operatorens viktigaste konverteringssignal. */}
+          {/* CTA — operatorens viktigaste konverteringssignal.
+              Minimalism v2: helper bakom info-ikon i FieldLabel. */}
           <div>
-            <FieldLabel>Primär CTA</FieldLabel>
-            <HelperText>
-              Vad ska besökaren göra? Styr knapp-text och conversion goals
-              (boka, ring, offert, köp, kontakt).
-            </HelperText>
+            <FieldLabel help="Vad ska besökaren göra? Styr knapp-text och conversion goals (boka, ring, offert, köp, kontakt).">
+              Primär CTA
+            </FieldLabel>
             <div className="mt-2">
               <ChipRow>
                 {CTA_OPTIONS.map((option) => (
@@ -312,10 +310,9 @@ export function FunctionsStep({
 
             {extraPages.length > 0 ? (
               <div>
-                <SectionHeader>Extra sidor</SectionHeader>
-                <HelperText>
-                  Lägg till sidor som inte triggas av en funktion ovan.
-                </HelperText>
+                <SectionHeader help="Lägg till sidor som inte triggas av en funktion ovan.">
+                  Extra sidor
+                </SectionHeader>
                 <div className="mt-2">
                   <ChipRow>
                     {extraPages.map((page) => (

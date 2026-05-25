@@ -16,6 +16,10 @@ import {
 } from "@/components/builder/dialogs";
 import { FloatingChat } from "@/components/builder/floating-chat";
 import { SiteInspectorSheet } from "@/components/builder/inspector";
+import type {
+  PendingBuildBegin,
+  PendingBuildState,
+} from "@/components/builder/use-pending-build";
 import type { PromptBuildOutcome } from "@/components/prompt-builder";
 
 /**
@@ -48,6 +52,16 @@ type BuilderShellProps = {
   /** Aktiv run-id, används för pulsering + framtida actions. */
   runId: string | null;
   isBuilding: boolean;
+  /**
+   * Pending build-state (Live Build Sync). Sätts av föräldern via
+   * onPendingBuildBegin när en follow-up triggas, rensas via
+   * onPendingBuildClear när bygget är klart eller misslyckas.
+   * Versions-tab läser pendingBuild för att rendera optimistisk
+   * "Bygger…"-rad högst upp i listan.
+   */
+  pendingBuild: PendingBuildState | null;
+  onPendingBuildBegin: (init: PendingBuildBegin) => void;
+  onPendingBuildClear: () => void;
   onBuildStart: () => void;
   onBuildEnd: () => void;
   onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
@@ -72,6 +86,9 @@ export function BuilderShell({
   siteId,
   runId,
   isBuilding,
+  pendingBuild,
+  onPendingBuildBegin,
+  onPendingBuildClear,
   onBuildStart,
   onBuildEnd,
   onBuildDone,
@@ -79,6 +96,30 @@ export function BuilderShell({
   onOpenConsole,
   onOpenHistory,
 }: BuilderShellProps) {
+  // Wrappar onBuildStart så den även registrerar pending-build-state
+  // åt Versions-tab. Föräldern (page.tsx) får en utvidgad signatur som
+  // innehåller siteId + ev. prompt-snippet. Befintliga dialoger som
+  // bara vill säga "ett bygge startade" passerar tom snippet.
+  const handleBuildStart = useCallback(
+    (init?: { promptSnippet?: string; estimatedVersion?: number | null }) => {
+      onBuildStart();
+      onPendingBuildBegin({
+        siteId,
+        promptSnippet: init?.promptSnippet,
+        estimatedVersion: init?.estimatedVersion ?? null,
+      });
+    },
+    [onBuildStart, onPendingBuildBegin, siteId],
+  );
+
+  // Wrappar onBuildEnd så vi alltid rensar pending-state samtidigt
+  // som föräldern markeras klar. Om bygget misslyckas hamnar vi
+  // också här eftersom useFollowupBuild/FloatingChat alltid anropar
+  // onBuildEnd i finally.
+  const handleBuildEnd = useCallback(() => {
+    onPendingBuildClear();
+    onBuildEnd();
+  }, [onBuildEnd, onPendingBuildClear]);
   const [openDialog, setOpenDialog] = useState<DialogId | null>(null);
 
   const openDialogFactory = useCallback(
@@ -206,8 +247,8 @@ export function BuilderShell({
         key={siteId}
         siteId={siteId}
         isBuilding={isBuilding}
-        onBuildStart={onBuildStart}
-        onBuildEnd={onBuildEnd}
+        onBuildStart={handleBuildStart}
+        onBuildEnd={handleBuildEnd}
         onBuildDone={onBuildDone}
       />
       <BuilderActions actions={actions} pulsing={isBuilding} side="left" />
@@ -216,40 +257,40 @@ export function BuilderShell({
         open={openDialog === "variant"}
         onOpenChange={closeDialog}
         siteId={siteId}
-        onBuildStart={onBuildStart}
-        onBuildEnd={onBuildEnd}
+        onBuildStart={handleBuildStart}
+        onBuildEnd={handleBuildEnd}
         onBuildDone={onBuildDone}
       />
       <ColorPickerDialog
         open={openDialog === "color"}
         onOpenChange={closeDialog}
         siteId={siteId}
-        onBuildStart={onBuildStart}
-        onBuildEnd={onBuildEnd}
+        onBuildStart={handleBuildStart}
+        onBuildEnd={handleBuildEnd}
         onBuildDone={onBuildDone}
       />
       <AssetUploaderDialog
         open={openDialog === "asset"}
         onOpenChange={closeDialog}
         siteId={siteId}
-        onBuildStart={onBuildStart}
-        onBuildEnd={onBuildEnd}
+        onBuildStart={handleBuildStart}
+        onBuildEnd={handleBuildEnd}
         onBuildDone={onBuildDone}
       />
       <ScrapeUrlDialog
         open={openDialog === "scrape"}
         onOpenChange={closeDialog}
         siteId={siteId}
-        onBuildStart={onBuildStart}
-        onBuildEnd={onBuildEnd}
+        onBuildStart={handleBuildStart}
+        onBuildEnd={handleBuildEnd}
         onBuildDone={onBuildDone}
       />
       <RebuildDialog
         open={openDialog === "rebuild"}
         onOpenChange={closeDialog}
         siteId={siteId}
-        onBuildStart={onBuildStart}
-        onBuildEnd={onBuildEnd}
+        onBuildStart={handleBuildStart}
+        onBuildEnd={handleBuildEnd}
         onBuildDone={onBuildDone}
       />
       <AskAiDialog
@@ -263,8 +304,9 @@ export function BuilderShell({
         siteId={siteId}
         runId={runId}
         isBuilding={isBuilding}
-        onBuildStart={onBuildStart}
-        onBuildEnd={onBuildEnd}
+        pendingBuild={pendingBuild}
+        onBuildStart={handleBuildStart}
+        onBuildEnd={handleBuildEnd}
         onBuildDone={onBuildDone}
       />
     </>

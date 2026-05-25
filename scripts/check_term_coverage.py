@@ -428,6 +428,50 @@ COMMON_WORDS = {
     "TokensTab", "TokensTabProps", "TokenRow", "TokenPreview",
     "TokenId", "TokenMessage", "TokenStateSetter",
     "TOKEN_DEFAULTS", "TOKEN_META", "TOKEN_MESSAGE_TYPE", "TOKEN_ORDER",
+    # GAP-viewser-variant-live-preview — Variants-tab i Site Inspector:
+    "VariantsTab", "VariantsTabProps", "VariantCard", "VariantSummary",
+    "EmptyState",
+    # GAP-viewser-wizard-first-impression — rikare foundation+visual UI:
+    "FamilyCard", "FoundationSummary", "SummaryRow",
+    "PayloadAlignmentPopover", "ContextChips", "ContextChip",
+    "VibeMicroPreview", "VibeSwatchRow",
+    # Lucide-icon-namn använda i samma komponenter:
+    "PaintBucket",
+    # GAP-viewser-iteration-compare — Versions-tab + diff-vy:
+    "VersionsTab", "VersionsTabProps",
+    "RunList", "RunRow", "RadioButton",
+    "CompareControls", "CompareBadge", "CompareSection",
+    "CompareEmptyHint", "CompareFetchState",
+    "HeaderBar", "DiffView", "ScalarChangeRow", "ValueChip",
+    "ChipDiffRow", "ChangeChip",
+    "RunDiff", "ScalarChange", "RunArtefactBundleLike", "RunsApiResponse",
+    # Lucide-icon-namn använda i versions-tab:
+    "GitCompare",
+    # GAP-viewser-wizard-minimalism — nya wizard-UI primitiver.
+    # CollapsibleHelp + MetadataPanel exporteras från step-primitives
+    # och används konsekvent i alla 5 stegen. MinimalSectionHeader
+    # nämns bara i gap-prosa (vi valde att utöka SectionHeader istället
+    # för att skapa en ny primitiv). InlineHelpButton är en intern
+    # helper inom step-primitives (inte exporterad). Den info-ikon-
+    # baserade wizard-chrome-helpern (info-knapp next to step-titeln)
+    # bor i discovery-wizard.tsx. Samma kategori som FieldLabel /
+    # AdvancedDisclosure / VariantsTab ovan — viewser-lokala UI-
+    # implementation-symboler, inte canonical domain terms.
+    "CollapsibleHelp", "InlineHelpButton", "MetadataPanel",
+    "MinimalSectionHeader", "StepDescriptionMoreButton",
+    # GAP-viewser-live-build-sync — pending-build-state delad mellan
+    # FloatingChat och Versions-tab. usePendingBuild lever i
+    # apps/viewser/components/builder/use-pending-build.ts, PendingRunRow
+    # är en intern presentation-komponent i versions-tab.tsx, och
+    # PendingBuildState/PendingBuildBegin är TS-types exporterade från
+    # use-pending-build.ts. Samma kategori som FollowupBuildState ovan
+    # — lokala UI-implementation-symboler för Live Build Sync.
+    "PendingBuildState", "PendingBuildBegin", "PendingRunRow",
+    # CopyFeedback är intern TS-type i versions-tab.tsx för
+    # clipboard-feedback-state (M1 från bug-hunt).
+    "CopyFeedback",
+    # Lucide-icon-namn använda i Live Build Sync (versions-tab):
+    "GitBranch",
     # ui-tokens shared interaction constants:
     "FOCUS_RING", "PRIMARY_INTERACTIONS", "SECONDARY_INTERACTIONS",
     "CHIP_INTERACTIONS",
