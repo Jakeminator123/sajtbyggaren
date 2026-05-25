@@ -1,10 +1,19 @@
 {
   "home": {
     "requiredSections": ["hero", "service-summary", "trust-proof", "contact-cta"],
-    "optionalSections": ["service-area", "reviews", "faq", "certifications"],
+    "optionalSections": [
+      "story",
+      "gallery",
+      "testimonials",
+      "faq",
+      "service-area",
+      "reviews",
+      "certifications"
+    ],
     "sectionOrderRules": [
       "Hero must include business type, location if known and a primary CTA.",
-      "Trust proof must appear before the final CTA.",
+      "Story, gallery and testimonials may render between services-summary and trust-proof when the dossier supplies the data.",
+      "Trust proof must appear before the final CTA, and is suppressed by the renderer when testimonials cards are visible to avoid showing the same proof twice.",
       "Sections should not repeat the same value proposition."
     ]
   },

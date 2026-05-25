@@ -112,7 +112,6 @@ def test_lsb_sections_json_referenced_sections_are_known() -> None:
         "services-intro",
         "service-area",
         "reviews",
-        "faq",
         "certifications",
     }
     candidates = referenced - not_yet_extracted
@@ -121,6 +120,27 @@ def test_lsb_sections_json_referenced_sections_are_known() -> None:
     assert missing == [], (
         "Either register a renderer for these LSB sections or add them "
         "to the not-yet-extracted allowlist: " + ", ".join(missing)
+    )
+
+
+def test_lsb_sections_json_declares_home_optional_extensions() -> None:
+    """LSB home must list story, gallery, testimonials and faq as optionals.
+
+    Path B step 10 extended LSB's sections.json so a future caller
+    swap (write_pages → render_route_generic) can pick the four
+    home-page extras up from the scaffold contract instead of from
+    the inline calls in render_home. Locking the entries prevents a
+    future scaffold edit from quietly dropping one of them.
+    """
+    lsb_sections = _read_lsb_sections()
+    home_optional = lsb_sections["home"].get("optionalSections", [])
+    expected = {"story", "gallery", "testimonials", "faq"}
+    missing = sorted(expected - set(home_optional))
+    assert missing == [], (
+        "LSB home.optionalSections must declare story, gallery, "
+        "testimonials and faq so render_route_generic can compose "
+        "the home page from the scaffold contract. Missing: "
+        + ", ".join(missing)
     )
 
 
