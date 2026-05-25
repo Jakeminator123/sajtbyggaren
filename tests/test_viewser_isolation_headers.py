@@ -87,6 +87,45 @@ def test_next_config_headers_apply_to_all_routes() -> None:
     )
 
 
+def test_next_config_branches_headers_on_preview_mode() -> None:
+    """The headers() function must mode-gate on VIEWSER_PREVIEW_MODE.
+
+    Rationale (ADR 0028, Runtime Ladder): the StackBlitz embed needs
+    `Cross-Origin-Embedder-Policy: credentialless` + `Cross-Origin-Opener-
+    Policy: same-origin` so SharedArrayBuffer is available inside the
+    WebContainer. The LocalRuntime rung (rung 1 of the ladder), in
+    contrast, embeds `localhost:<4100-4199>` as a plain cross-origin
+    iframe — and that iframe is BLOCKED by the same headers because it
+    does not carry the `credentialless` HTML attribute.
+
+    The fix is to read `VIEWSER_PREVIEW_MODE` from the environment and
+    return an empty header list when it equals `local-next`, keeping
+    the COEP/COOP block for `stackblitz`/`auto`/unset. This source-lock
+    ensures a future refactor cannot accidentally re-block LocalRuntime
+    by removing the mode branch, and cannot accidentally drop the
+    StackBlitz headers by collapsing the branch the wrong way.
+    """
+    source = _load_config_source()
+    assert "VIEWSER_PREVIEW_MODE" in source, (
+        "next.config.ts must read VIEWSER_PREVIEW_MODE from the environment "
+        "so the LocalRuntime rung can opt out of cross-origin isolation "
+        "headers (which would otherwise block the cross-origin localhost "
+        "preview iframe). See ADR 0028 — Runtime Ladder."
+    )
+    assert "local-next" in source, (
+        "next.config.ts must reference the `local-next` mode literal so the "
+        "LocalRuntime branch in headers() can match it. Renaming this mode "
+        "requires updating apps/viewser/.env.example, docs/adr/0028-*, and "
+        "this lock in lockstep."
+    )
+    assert "return []" in source, (
+        "headers() must have a branch that returns an empty list (no COEP/"
+        "COOP) when VIEWSER_PREVIEW_MODE === 'local-next'. Without this the "
+        "cross-origin localhost:<4100-4199> preview iframe is blocked by "
+        "credentialless + same-origin on the Viewser host."
+    )
+
+
 # --------------------------------------------------------------------------
 # Source-locks for the iframe-credentialless attribute injection (B124).
 #
