@@ -36,6 +36,14 @@ data/embedding-index/
 # eller i Vercel Blob (VercelBlobAssetStore). Manifest + originals/optimized
 # regenereras vid behov; ingen anledning att versionera 2 MB+ per upload.
 data/uploads/
+# Backoffice + script-genererade soft dossier-kandidater. Skapas av
+# scripts/generate_dossier_candidate.py och Backoffice "create soft
+# dossier candidate"-flödet under operator-review. Samma kategori som
+# data/runs/ + data/uploads/: per-operatör scratch-yta. Promotade
+# kandidater hamnar i packages/generation/orchestration/dossiers/<id>/
+# via en separat promotion-flow och committas där. Om en specifik
+# kandidat ska delas i repo:t läggs den till med `git add -f`.
+data/dossier-candidates/
 .generated/
 *.log
 

@@ -1,7 +1,7 @@
-# Morgonstart för ny agent (2026-05-25)
+# Morgonstart för ny agent (2026-05-25 sen natt / morgon)
 
-Denna fil är en färdig copy-paste-prompt för en agent som startar en
-ren session efter kvällsbatchen 2026-05-24/25. Operatören har en typisk
+Denna fil är en färdig copy-paste-prompt för en agent som startar en ren
+session efter nattens städ-runda 2026-05-25. Operatören har en typisk
 session där agenten fungerar som **orchestrator** — gör läs-arbete och
 docs-/governance-/steward-arbete själv, men spawnar Builder-/Scout-arbete
 som **separata Cursor-chattfönster** (nya chattflikar) med self-contained
@@ -29,40 +29,57 @@ Läs först (i denna ordning):
 - docs/gaps/ (skumma — minst GAP-backend-build-trace-endpoint)
 - AGENTS.md
 - .cursor/BUGBOT.md
-- docs/sprintvakt-mcp.md (om du planerar att kalla MCP-tools)
+- docs/sprintvakt-mcp.md (om du planerar att kalla MCP-tools — agent
+  inbox-tools (post_message/list_messages/ack_message) är i PR #77 just
+  nu, så de är på origin/jakob-be först när #77 mergats)
 
-Repo-läge att förvänta efter PR #75-mergen 2026-05-25:
-- HEAD på main: 84bf9dd (`feat: Sprintvakt V1.1+V1.2 + CI hardening + industry coverage + docs sync (post-PR70 batch) (#75)`)
-- HEAD på jakob-be: 84bf9dd (synked mot main)
-- HEAD på christopher-ui: SANNOLIKT FORTFARANDE PRE-MERGE (Christopher har inte synkat sin reset än vid sessionsstart — det är hans sak att göra)
-- Inga öppna PRs.
-- Sprintvakt MCP-server fungerar via .cursor/mcp.json (`PYTHONPATH`-fix + `pip install -e .` engångs).
+Repo-läge att förvänta efter recovery #76 + agent-inbox-PR #77:
+- HEAD på main: 6649b51 (closing-round docs-sync efter PR #75; main ligger
+  1-2 commits efter jakob-be).
+- HEAD på jakob-be: 92df12c (`fix(backoffice): recover regression coverage (#76)`).
+  Plus eventuellt agent-inbox-mergecommit ovanpå om PR #77 hunnit mergas
+  under natten.
+- HEAD på christopher-ui: 74a355b (`feat(viewser): GAP-backend-build-trace-endpoint
+  — full Live Build Sync`). Christophers scope-leak-implementation av
+  backend-gapet, ej PR:ad än vid skrivande stund. Jakob är reviewer.
+- Öppna PRs: möjligen #77 (agent inbox) om Cursor Bugbot inte var grön i
+  natt, plus eventuell PR från christopher-ui mot main.
+- Sprintvakt MCP-server fungerar via .cursor/mcp.json (`PYTHONPATH`-fix
+  + `pip install -e .` engångs).
 - `python scripts/sprintvakt_check.py --strict` ska ge "Sprintvakt check: OK".
-- Workboarden har ETT queued backend-gap för Jakob (GAP-backend-build-trace-endpoint) och ETT aktivt UI-gap för Christopher (GAP-viewser-live-build-sync).
+- Workboarden har ETT queued gap (GAP-backend-build-trace-endpoint, owner=jakob
+  i workboarden — implementerat av Christopher på christopher-ui under
+  operator-OK scope-leak), inga aktiva gaps.
 
-Två cursor-branches på origin med oincheckat test-arbete från andra
-cloud-agenter — operatören har INTE bestämt vad de ska bli:
-- cursor/jakob-be-contact-route-regression (2 commits, kontaktrout-tests)
-- cursor/jakob-be-followup-versioning-regression-5fb4 (3 commits, follow-up-tests)
+Två gamla cursor-branches kvarstår på origin men är TEKNISKT REDUNDANTA
+efter recovery #76 (deras testfiler ligger nu i jakob-be):
+- cursor/jakob-be-contact-route-regression (2 commits)
+- cursor/jakob-be-followup-versioning-regression-5fb4 (3 commits)
+Operatören kan välja att radera dem (`git push origin --delete <name>`).
 Rör dem inte utan instruktion.
 
 Sanity-kommandon innan något annat:
-- git status (jakob-be ska vara clean, synked mot origin/main)
+- git status (jakob-be ska vara clean — data/dossier-candidates/ är
+  gitignored sedan natten 25/5; om något annat är untracked: fråga
+  operatören).
 - git log --oneline -8
-- python scripts/focus_check.py (om scriptet finns)
+- gh pr list --state open --json number,title,headRefName,baseRefName
 - python scripts/sprintvakt_check.py --strict
 
 Det du får göra utan att fråga:
 - Sanity-kommandon ovan.
 - Läsa filer i repo:t.
-- Anropa MCP-tools deterministisk-läge (get_workboard, list_gaps,
-  detect_collisions, suggest_next_gaps, validate_workboard, generate_agent_prompt).
+- Anropa MCP-tools i deterministisk läge (get_workboard, list_gaps,
+  detect_collisions, suggest_next_gaps, validate_workboard,
+  generate_agent_prompt, list_messages, post_merge_sync_instructions).
 - Anropa muterande MCP-tools (create_gap, activate_gap, complete_gap,
-  reserve_paths) ENDAST med dryRun:true för preview.
+  reserve_paths, post_message, ack_message) ENDAST med dryRun:true för
+  preview.
 - Skriva docs-uppdateringar (docs/current-focus.md, docs/handoff.md,
   docs/workboard.json statusuppdateringar) som steward-arbete och pusha
-  direkt till main per branch-discipline.md "Mainline-steward"-sektion.
-- Cleanup av mergade tillfälliga branches på origin (cursor/* som har PR-status MERGED).
+  direkt till jakob-be per branch-discipline.md "Mainline-steward"-sektion.
+- Cleanup av mergade tillfälliga branches på origin (cursor/* som har
+  PR-status MERGED) efter operator-bekräftelse.
 
 Det du inte får göra utan operatörens OK:
 - Auto-spawna writing-subagents via Task-verktyget. Operatörens uttryckliga
@@ -72,11 +89,10 @@ Det du inte får göra utan operatörens OK:
   subagent_type=explore är OK för planerings-/läs-arbete.)
 - Mutationer mot workboard.json med confirm:true utan operatörens explicita
   godkännande för det specifika gapet.
-- Starta GAP-backend-build-trace-endpoint-implementation utan att operatören
-  har sagt "kör det". Det är queued och redo, men inte automatiskt nästa.
-- Path B / section-driven renderer i scripts/build_site.py:write_pages.
-  Estimat ~22-28h över 3 sessioner enligt docs/path-b-backend-scout.md.
-  Kräver explicit operator-OK eftersom det är stort.
+- Mergea PR #77 eller Christophers kommande backend-trace-PR utan att
+  operatören sagt "merge".
+- Starta Path B / section-driven renderer utan operator-OK (estimat
+  ~22-28h över 3 sessioner enligt docs/path-b-backend-scout.md).
 - Embeddings, SNI-runtime, variant-promotion, nya starters, starter-importer,
   Project DNA V2, B125 preview-fallback (utan operator-OK).
 - Radera något under data/runs/, data/prompt-inputs/, data/starters/.
@@ -84,62 +100,68 @@ Det du inte får göra utan operatörens OK:
   scripts/rules_sync.py speglar).
 - Röra apps/viewser/components/**, apps/viewser/app/**/*.tsx,
   apps/viewser/app/**/*.css, apps/viewser/public/** (Christopher-scope).
-- Röra cursor/jakob-be-*-regression branches utan instruktion.
+- Röra cursor/jakob-be-*-regression-brancherna utan instruktion.
 - Auto-merge PRs mot main. Operatören beslutar squash-merge själv när redo.
 
 Första svar tillbaka till operatören:
 
-"Repo är synkat på main=84bf9dd och jakob-be=84bf9dd. Inga öppna PRs.
-Queued nästa backend: GAP-backend-build-trace-endpoint (3 endpoints för
-Live Build Sync, ~3-5h). Aktivt UI: GAP-viewser-live-build-sync (Christopher
-på christopher-ui). Två cursor/* branches med oincheckat testarbete på
-origin — väntar på din instruktion. Vad är nästa drag?"
+"Repo synkat. jakob-be=<SHA> (recovery #76 inne). main=6649b51 (1-2
+commits efter jakob-be — sync-PR kvar att göra). christopher-ui=74a355b
+med Christophers scope-leak-implementation av GAP-backend-build-trace-endpoint
+(ej PR:ad än, jag är reviewer). PR #77 (agent inbox) <status>. Vad är
+nästa drag?"
 
 Avsluta varje svar med säkerhet i %.
 ```
 
 ## Beslut som ska tas före kod
 
-1. **`GAP-backend-build-trace-endpoint`** är det självklara nästa
-   backend-jobbet. Operatören kan säga "kör det" så börjar du:
-   a. `activate_gap` via MCP (med confirm:true efter dryRun-preview).
-   b. Skriv self-contained Builder-prompt för operatören att spawna i
-      nytt fönster, ELLER implementera själv som orchestrator-direct
-      om scope är litet nog (3 API-endpoints + tester är gränsfall —
-      ca 3-5h, vanligen klart i en session med en Builder).
-   c. Efter merge: `complete_gap` med fixCommits-trail.
+1. **PR #77 (agent inbox)** — om Cursor Bugbot blev grön under natten
+   och operatören vill ha inboxen i jakob-be: squash-merge nu. Annars
+   vänta och eventuellt poke Bugbot.
 
-2. **Path B** (section-driven renderer) är största spåret. 9 commits
+2. **Christophers `GAP-backend-build-trace-endpoint`-PR** — så fort
+   Christopher öppnar PR från `christopher-ui` mot `main` ska Jakob
+   agera reviewer. Granska scope-leaken (medvetet brutet jakob-lane),
+   kontrollera att workboard.json `owner` är kvar på `jakob` (precedent
+   från PR #68), kör guards/pytest om något känns osäkert, sedan
+   rekommendation till operatören om merge.
+
+3. **Sync `jakob-be → main`** — `main` ligger nu 1-2 commits efter
+   `jakob-be` (#76 + ev #77). En liten PR från `jakob-be` mot `main`
+   lyfter hela batchen in i `main` och låter `christopher-ui` reseta
+   sin branch. Gör efter att Christopher-PR:n och #77 är hanterade.
+
+4. **Cursor/* regression-branches** — fråga operatören om de ska raderas
+   nu när innehållet är inne via #76. De är tekniskt redundanta.
+
+5. **Path B** (section-driven renderer) är största spåret. 9 commits
    över 3 Builder-sessioner enligt scout-rapporten. Vänta tills
-   operatören explicit säger "kör Path B". Innan dess: bara läsa /
-   förbereda restaurant-bistro-fixture (operator skissar den i 10 min).
+   operatören explicit säger "kör Path B".
 
-3. **Cursor/* regression-branches** — fråga operatören om de ska PR:as,
-   raderas eller integreras separat. Rör inte utan instruktion.
-
-4. **Christopher coordination** — om Christopher inte har synkat sin
-   `christopher-ui` mot main ännu, det är hans grej; orchestrator pingar
-   honom via operatören om något kräver hans input men du driver inte
-   hans schema.
-
-5. **Annat smalt spår** — om operatören väljer något annat (B125
-   preview-fallback, Backend-Gap 4+5, V1.3 sprintvakt-sync, mini-eval-pass),
-   följ samma orchestrator-pattern: läs först, planera, skriv prompts.
-   Vänta tills operatören väljer innan kod startas.
+6. **Annat smalt spår** — om operatören väljer något annat (B125
+   preview-fallback, Backend-Gap 4+5, V1.3 sprintvakt-sync, mini-eval-pass,
+   nya dossiers/scaffolds), följ samma orchestrator-pattern: läs först,
+   planera, skriv prompts. Vänta tills operatören väljer innan kod startas.
 
 ## Christopher coordination
 
 Christopher kör en parallell agent på `christopher-ui`. Vid sessionsstart
-kan du anta att Christopher-agenten:
-- Inte har synkat sin `christopher-ui` mot nya main (= `84bf9dd`) ännu —
-  det är hans Filosofi B-flöde att göra (`git reset --hard origin/main`
-  + `--force-with-lease`).
-- Har Sprintvakt MCP-server konfigurerad i sin `.cursor/mcp.json` på Mac
-  (operatören skickade Mac-setup-meddelande). Behöver `pip install -e .`
-  engångs.
-- Har sett texten om PR #75-mergen från operatören (om operatören skickade
-  den efter mergen).
+2026-05-25 morgon:
+
+- Christopher har just postat commit `74a355b` med
+  `GAP-backend-build-trace-endpoint`-implementation under scope-leak.
+  Hans agent har inte PR:at det än vid stängningstid; det förväntas tidigt
+  på morgonen.
+- När Christopher synkar sin `christopher-ui` mot uppdaterat `main` ska
+  det ske via Filosofi B-flödet (`git reset --hard origin/main`
+  + `--force-with-lease`). Han bör vänta tills `jakob-be → main`-syncen
+  är gjord så han inte tappar sin scope-leak-commit. Operatören är
+  bryggan här.
+- Han har Sprintvakt MCP-server konfigurerad i sin `.cursor/mcp.json` på
+  Mac. Agent-inbox-tools (`post_message`/`list_messages`/`ack_message`)
+  blir tillgängliga för honom när PR #77 är mergad och han pullat.
 
 Operatören är bryggan: du skriver text åt operatören att vidarebefordra
-till Christopher när något behöver koordineras. Du pratar inte direkt med
-Christopher-agenten.
+till Christopher när något behöver koordineras. Du pratar inte direkt
+med Christopher-agenten.
