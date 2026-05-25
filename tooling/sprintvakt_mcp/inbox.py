@@ -19,11 +19,19 @@ The reader (:func:`list_messages`) folds both into a per-message view with
 Design choices:
 
 - Append-only: no in-place mutation, no re-serialisation of the whole file.
-- Deterministic message ids so dryRun previews match the eventual write.
+- Deterministic message ids so dryRun previews match the eventual write:
+  the id is derived from ``sender|subject|ordinal`` (no wall-clock input),
+  so a dryRun preview and the subsequent confirm-write share the same id
+  as long as the inbox state did not grow between the two calls.
 - Strict participant-id sanitation so the inbox cannot accumulate
   free-form garbage.
-- All writes go through :func:`core._assert_allowed_write`; the inbox file
-  is on the Sprintvakt whitelist.
+- Writes are double-gated: when the inbox path lives inside ``REPO_ROOT``
+  the shared :func:`core._assert_allowed_write` enforces the Sprintvakt
+  write whitelist (resolving symlinks), and an inbox-local guard refuses
+  symlinked inbox files / ``docs/`` parents even when the test sandbox
+  points outside ``REPO_ROOT``.
+- ``ack_message`` is idempotent for the same (messageId, by) pair: a
+  duplicate confirm-call sets ``alreadyAcked: true`` and writes nothing.
 """
 
 from __future__ import annotations
@@ -31,6 +39,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -145,21 +154,39 @@ def _deterministic_message_id(
     *,
     sender: str,
     subject: str,
-    created_at: str,
     ordinal: int,
 ) -> str:
-    fingerprint_source = f"{sender}|{subject}|{created_at}|{ordinal}".encode()
+    """Return the canonical id for a message.
+
+    The id intentionally excludes wall-clock input so a dryRun preview and
+    the subsequent confirm-write produce the same id as long as the inbox
+    state did not change between the two calls. The ordinal is zero-padded
+    to at least four digits and grows organically beyond that
+    (``msg-9999-...`` -> ``msg-10000-...``); :func:`_message_id_pattern`
+    accepts any width >= 4.
+    """
+    fingerprint_source = f"{sender}|{subject}|{ordinal}".encode()
     short_hash = hashlib.sha1(fingerprint_source).hexdigest()[:6]
     return f"msg-{ordinal:04d}-{short_hash}"
 
 
 def _assert_allowed_inbox_write(path: Path) -> None:
-    """Restrict writes to a file literally named ``docs/agent-inbox.jsonl``.
+    """Reject anything that isn't a canonical ``docs/agent-inbox.jsonl`` write.
 
-    The check intentionally does not require absolute repo-root parity so
-    tests can point the inbox at ``tmp_path / "docs" / "agent-inbox.jsonl"``
-    without ``core._assert_allowed_write`` rejecting them. It still refuses
-    any other filename or any other parent directory name.
+    Three layers of defence:
+
+    1. Literal name guards: the path must end in ``docs/agent-inbox.jsonl``
+       regardless of where on disk it lives.
+    2. Symlink resistance (always on): the inbox file itself must not be a
+       symlink, and the ``docs/`` parent directory must not be a symlink.
+       This blocks "redirect appends elsewhere" attacks where someone swaps
+       in a symlink pointing outside the repo.
+    3. Repo-root whitelist (production path only): when the resolved path
+       lives inside ``core.REPO_ROOT``, defer to the shared
+       :func:`core._assert_allowed_write` whitelist which fully resolves
+       symlinks in the ancestor chain and rejects any path that isn't on
+       the Sprintvakt write whitelist. Test sandboxes (``tmp_path``) live
+       outside ``REPO_ROOT`` and fall back to the literal + symlink guards.
     """
     if path.name != "agent-inbox.jsonl":
         raise core.SprintvaktError(
@@ -169,6 +196,29 @@ def _assert_allowed_inbox_write(path: Path) -> None:
         raise core.SprintvaktError(
             f"Refusing to write inbox outside a docs/ directory: {path}"
         )
+
+    if path.is_symlink():
+        raise core.SprintvaktError(
+            f"Refusing to write inbox via symlinked file: {path}"
+        )
+    parent = path.parent
+    if parent.exists() and parent.is_symlink():
+        raise core.SprintvaktError(
+            f"Refusing to write inbox via symlinked docs/ directory: {parent}"
+        )
+
+    try:
+        resolved = path.resolve(strict=False)
+    except OSError as exc:
+        raise core.SprintvaktError(
+            f"Refusing to write inbox to unresolvable path: {path}"
+        ) from exc
+    repo_root_resolved = core.REPO_ROOT.resolve()
+    try:
+        resolved.relative_to(repo_root_resolved)
+    except ValueError:
+        return
+    core._assert_allowed_write(path, None)
 
 
 def _append_event(event: dict[str, Any], path: Path | None = None) -> None:
@@ -181,7 +231,29 @@ def _append_event(event: dict[str, Any], path: Path | None = None) -> None:
 
 
 def _message_id_pattern() -> re.Pattern[str]:
-    return re.compile(r"^msg-\d{4}-[0-9a-f]{6}$")
+    return re.compile(r"^msg-\d{4,}-[0-9a-f]{6}$")
+
+
+def _parse_iso8601(value: str, *, field: str) -> datetime:
+    """Parse an ISO-8601 timestamp into a timezone-aware datetime.
+
+    Accepts the ``Z`` suffix (canonical for :func:`core.utc_now`) as well
+    as explicit ``+HH:MM`` offsets. Naive timestamps are interpreted as
+    UTC so they compare correctly against UTC-aware timestamps elsewhere
+    in the inbox.
+    """
+    text = value.strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError as exc:
+        raise core.SprintvaktError(
+            f"{field} must be an ISO-8601 timestamp: {value!r}"
+        ) from exc
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed
 
 
 def post_message(
@@ -215,7 +287,6 @@ def post_message(
     message_id = _deterministic_message_id(
         sender=sender,
         subject=subject,
-        created_at=created_at,
         ordinal=ordinal,
     )
     message_event: dict[str, Any] = {
@@ -264,9 +335,13 @@ def list_messages(
         if payload.get("topic") not in (None, "")
         else None
     )
-    since = payload.get("since")
-    if since is not None and not isinstance(since, str):
-        raise core.SprintvaktError("since must be an ISO-8601 string.")
+    raw_since = payload.get("since")
+    since_dt: datetime | None = None
+    if raw_since is not None:
+        if not isinstance(raw_since, str):
+            raise core.SprintvaktError("since must be an ISO-8601 string.")
+        if raw_since.strip():
+            since_dt = _parse_iso8601(raw_since, field="since")
     unread_for = payload.get("unreadFor")
     if unread_for not in (None, ""):
         unread_for = _sanitize_participant(unread_for, "unreadFor")
@@ -313,8 +388,16 @@ def list_messages(
             continue
         if topic_filter and message.get("topic") != topic_filter:
             continue
-        if since and str(message.get("createdAt", "")) < since:
-            continue
+        if since_dt is not None:
+            raw_created = message.get("createdAt")
+            if not isinstance(raw_created, str) or not raw_created.strip():
+                continue
+            try:
+                created_dt = _parse_iso8601(raw_created, field="createdAt")
+            except core.SprintvaktError:
+                continue
+            if created_dt < since_dt:
+                continue
         if unread_for:
             acked_by = {ack.get("by") for ack in message.get("acks", [])}
             if unread_for in acked_by:
@@ -391,6 +474,9 @@ def ack_message(
     }
     if dry_run:
         return result
+
+    if already_acked:
+        return result | {"written": False}
 
     _append_event(ack_event, inbox_path)
     return result | {"written": True}

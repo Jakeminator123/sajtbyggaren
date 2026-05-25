@@ -231,8 +231,16 @@ Input:
 `from`/`to`-värden saneras till `[a-z0-9][a-z0-9._-]{0,39}`. `topic` är
 valfritt men följer `[A-Za-z0-9][A-Za-z0-9._/-]{0,79}`. `subject` får
 max 140 tecken, `body` max 4000 tecken. Skrivning kräver `dryRun:false`
-och `confirm:true`. Message-id är deterministiskt
-(`msg-<ordinal>-<6-char-hash>`).
+och `confirm:true`.
+
+Message-id är deterministiskt: `msg-<ordinal>-<6-char-hash>`. Hashen
+beräknas på `sender|subject|ordinal` utan klocktidsbidrag, så en
+`dryRun:true`-preview och den efterföljande `dryRun:false`+`confirm:true`
+ger samma id så länge inboxens state inte växt mellan anropen. Det
+betyder att agenter tryggt kan cacha id:t från preview-svaret och
+referera till det i en ack eller cross-agent-länk. Ordinalet är minst
+fyra siffror men växer organiskt utan tak (`msg-9999-...` följs av
+`msg-10000-...`), så `ack_message` accepterar `\d{4,}` i id-mönstret.
 
 ### `list_messages`
 
@@ -244,9 +252,11 @@ Input:
 {"to": "christopher-orchestrator", "unreadFor": "christopher-orchestrator", "limit": 20}
 ```
 
-Alla filter är valfria: `to`, `from`, `topic`, `since` (ISO-tid),
-`unreadFor` (filtrera bort meddelanden den deltagaren redan acked) och
-`limit` (1-500, default 50). Svar:
+Alla filter är valfria: `to`, `from`, `topic`, `since` (ISO-8601
+timestamp som parsas till ett UTC-medvetet datetime-värde, så `Z` och
+`+00:00` är ekvivalenta och offsets jämförs som instants i stället för
+strängar), `unreadFor` (filtrera bort meddelanden den deltagaren redan
+acked) och `limit` (1-500, default 50). Svar:
 
 ```json
 {
@@ -273,7 +283,16 @@ Alla filter är valfria: `to`, `from`, `topic`, `since` (ISO-tid),
 Append en read/processed-ack. Bara mottagare som finns i `to`-listan får
 acka. Skrivning kräver `dryRun:false` och `confirm:true`. Svaret
 inkluderar `alreadyAcked: true/false` så agenter slipper logga
-dubbla-acks även om de råkar köra två gånger.
+dubbla-acks även om de råkar köra två gånger. När `alreadyAcked` är
+`true` skriver toolen ingen ny rad (acken är idempotent för samma
+`(messageId, by)`-par) och svaret innehåller `written: false`.
+
+Skrivvägen är dessutom symlink-resistent: `docs/agent-inbox.jsonl` får
+inte vara en symlänk och `docs/`-katalogen får inte heller vara en
+symlänk, så ingen kan omdirigera append-strömmen utanför
+Sprintvakts write-whitelist. När inboxen ligger inuti repo-roten går
+skrivvägen dessutom genom `core._assert_allowed_write`, samma
+whitelist-check som workboard- och gap-skrivningar använder.
 
 Input:
 

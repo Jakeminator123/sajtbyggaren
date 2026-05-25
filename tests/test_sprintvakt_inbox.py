@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -403,3 +405,348 @@ def test_corrupt_jsonl_line_raises_clear_error(tmp_path: Path) -> None:
 
     with pytest.raises(SprintvaktError, match="line 1 is not valid JSON"):
         inbox.list_messages({}, inbox_path=inbox_path)
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for PR #77 review findings
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_dry_run_message_id_matches_eventual_confirm_write(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Regression: dryRun preview and confirm-write must produce the same id.
+
+    The previous implementation hashed ``core.utc_now()`` into the id, so a
+    dryRun preview at T0 and a confirm-write at T1 returned different ids
+    despite the documented "deterministic id" contract.
+    """
+    inbox_path = _inbox_path(tmp_path)
+
+    timestamps = iter(
+        ["2026-05-25T03:00:00Z", "2026-05-25T03:00:05Z"]
+    )
+    monkeypatch.setattr(inbox.core, "utc_now", lambda: next(timestamps))
+
+    preview = inbox.post_message(
+        {
+            "from": "jakob",
+            "to": ["christopher"],
+            "subject": "Same content",
+            "body": "Same body",
+            "dryRun": True,
+        },
+        inbox_path=inbox_path,
+    )
+    written = inbox.post_message(
+        {
+            "from": "jakob",
+            "to": ["christopher"],
+            "subject": "Same content",
+            "body": "Same body",
+            "dryRun": False,
+            "confirm": True,
+        },
+        inbox_path=inbox_path,
+    )
+
+    assert preview["message"]["id"] == written["message"]["id"]
+    assert preview["message"]["createdAt"] != written["message"]["createdAt"]
+    assert written.get("written") is True
+
+
+@pytest.mark.tooling
+def test_duplicate_ack_does_not_append_when_already_acked(tmp_path: Path) -> None:
+    """Regression: ack_message must be idempotent for the same (id, by) pair.
+
+    Previously a second confirm-call still appended a duplicate ack event
+    even though ``alreadyAcked`` was reported as ``true``, contradicting the
+    documented idempotent contract and inflating the append-only log.
+    """
+    inbox_path = _inbox_path(tmp_path)
+    posted = _post(inbox_path, recipients=["christopher"])
+    message_id = posted["message"]["id"]
+
+    first = inbox.ack_message(
+        {
+            "messageId": message_id,
+            "by": "christopher",
+            "dryRun": False,
+            "confirm": True,
+        },
+        inbox_path=inbox_path,
+    )
+    second = inbox.ack_message(
+        {
+            "messageId": message_id,
+            "by": "christopher",
+            "dryRun": False,
+            "confirm": True,
+        },
+        inbox_path=inbox_path,
+    )
+
+    assert first["alreadyAcked"] is False
+    assert first["written"] is True
+    assert second["alreadyAcked"] is True
+    assert second["written"] is False
+
+    ack_lines = [
+        json.loads(line)
+        for line in inbox_path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and json.loads(line).get("type") == "ack"
+    ]
+    assert len(ack_lines) == 1
+
+    listed = inbox.list_messages({}, inbox_path=inbox_path)
+    assert len(listed["messages"]) == 1
+    assert len(listed["messages"][0]["acks"]) == 1
+
+
+@pytest.mark.tooling
+def test_message_id_pattern_accepts_ordinals_above_9999(tmp_path: Path) -> None:
+    """Regression: ack_message must accept ids with 5+ digit ordinals.
+
+    The ordinal grows organically (``msg-0001-...``, ``msg-9999-...``,
+    ``msg-10000-...``); previously the regex hard-coded ``\\d{4}`` so any
+    message past 9,999 became permanently unackable.
+    """
+    inbox_path = _inbox_path(tmp_path)
+
+    seed_events = []
+    for ordinal in range(1, 10000):
+        seed_events.append(
+            json.dumps(
+                {
+                    "type": "message",
+                    "id": f"msg-{ordinal:04d}-aaaaaa",
+                    "from": "jakob",
+                    "to": ["christopher"],
+                    "subject": f"S{ordinal}",
+                    "body": "x",
+                    "createdAt": "2026-05-25T00:00:00Z",
+                },
+                sort_keys=True,
+            )
+        )
+    inbox_path.write_text("\n".join(seed_events) + "\n", encoding="utf-8")
+
+    posted = inbox.post_message(
+        {
+            "from": "jakob",
+            "to": ["christopher"],
+            "subject": "Tenth-thousand",
+            "body": "After the boundary",
+            "dryRun": False,
+            "confirm": True,
+        },
+        inbox_path=inbox_path,
+    )
+    message_id = posted["message"]["id"]
+
+    assert message_id.startswith("msg-10000-")
+    assert inbox._message_id_pattern().match(message_id)
+
+    acked = inbox.ack_message(
+        {
+            "messageId": message_id,
+            "by": "christopher",
+            "dryRun": False,
+            "confirm": True,
+        },
+        inbox_path=inbox_path,
+    )
+    assert acked["alreadyAcked"] is False
+    assert acked["written"] is True
+
+
+@pytest.mark.tooling
+def test_since_filter_compares_timestamps_as_datetimes(tmp_path: Path) -> None:
+    """Regression: ``since`` must compare ISO-8601 instants, not raw strings.
+
+    Lexicographic comparison breaks for equivalent encodings like ``Z`` vs
+    ``+00:00``; the filter must treat them as the same instant and order
+    timezone-shifted timestamps numerically.
+    """
+    inbox_path = _inbox_path(tmp_path)
+    inbox_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "type": "message",
+                        "id": "msg-0001-aaaaaa",
+                        "from": "jakob",
+                        "to": ["christopher"],
+                        "subject": "z-boundary",
+                        "body": "Same instant as since, using Z.",
+                        "createdAt": "2026-05-25T03:00:00Z",
+                    },
+                    sort_keys=True,
+                ),
+                json.dumps(
+                    {
+                        "type": "message",
+                        "id": "msg-0002-bbbbbb",
+                        "from": "jakob",
+                        "to": ["christopher"],
+                        "subject": "offset-boundary",
+                        "body": "Same instant as since, using +00:00.",
+                        "createdAt": "2026-05-25T03:00:00+00:00",
+                    },
+                    sort_keys=True,
+                ),
+                json.dumps(
+                    {
+                        "type": "message",
+                        "id": "msg-0003-cccccc",
+                        "from": "jakob",
+                        "to": ["christopher"],
+                        "subject": "earlier-utc",
+                        "body": "02:30Z is BEFORE 03:00Z but lexically AFTER '03:00:00+00:00'.",
+                        "createdAt": "2026-05-25T02:30:00Z",
+                    },
+                    sort_keys=True,
+                ),
+                json.dumps(
+                    {
+                        "type": "message",
+                        "id": "msg-0004-dddddd",
+                        "from": "jakob",
+                        "to": ["christopher"],
+                        "subject": "shifted-offset",
+                        "body": "04:00+01:00 is the same instant as 03:00Z.",
+                        "createdAt": "2026-05-25T04:00:00+01:00",
+                    },
+                    sort_keys=True,
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    listed = inbox.list_messages(
+        {"since": "2026-05-25T03:00:00+00:00"}, inbox_path=inbox_path
+    )
+    subjects = {message["subject"] for message in listed["messages"]}
+
+    assert "earlier-utc" not in subjects
+    assert {"z-boundary", "offset-boundary", "shifted-offset"} <= subjects
+
+
+@pytest.mark.tooling
+def test_since_filter_rejects_invalid_iso8601(tmp_path: Path) -> None:
+    inbox_path = _inbox_path(tmp_path)
+    _post(inbox_path)
+
+    with pytest.raises(SprintvaktError, match="since must be an ISO-8601 timestamp"):
+        inbox.list_messages({"since": "yesterday"}, inbox_path=inbox_path)
+
+
+@pytest.mark.tooling
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Windows symlink creation often requires elevated privileges",
+)
+def test_inbox_refuses_symlinked_file_redirecting_outside(tmp_path: Path) -> None:
+    """Regression: a symlinked inbox file must not redirect writes elsewhere.
+
+    Without this guard a malicious or accidental symlink at
+    ``docs/agent-inbox.jsonl`` could let ``post_message``/``ack_message``
+    append to arbitrary files outside the Sprintvakt write whitelist.
+    """
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir(parents=True)
+    target = tmp_path / "escape.txt"
+    target.write_text("", encoding="utf-8")
+    inbox_path = docs_dir / "agent-inbox.jsonl"
+    os.symlink(target, inbox_path)
+
+    with pytest.raises(SprintvaktError, match="symlinked file"):
+        inbox.post_message(
+            {
+                "from": "jakob",
+                "to": ["christopher"],
+                "subject": "Should not write",
+                "body": "Should not write",
+                "dryRun": False,
+                "confirm": True,
+            },
+            inbox_path=inbox_path,
+        )
+
+    assert target.read_text(encoding="utf-8") == ""
+
+
+@pytest.mark.tooling
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Windows symlink creation often requires elevated privileges",
+)
+def test_inbox_refuses_symlinked_docs_parent(tmp_path: Path) -> None:
+    """Regression: a symlinked ``docs/`` parent dir must not redirect writes."""
+    real_docs = tmp_path / "real_docs"
+    real_docs.mkdir(parents=True)
+    docs_link = tmp_path / "docs"
+    os.symlink(real_docs, docs_link, target_is_directory=True)
+    inbox_path = docs_link / "agent-inbox.jsonl"
+
+    with pytest.raises(SprintvaktError, match="symlinked docs/"):
+        inbox.post_message(
+            {
+                "from": "jakob",
+                "to": ["christopher"],
+                "subject": "Should not write",
+                "body": "Should not write",
+                "dryRun": False,
+                "confirm": True,
+            },
+            inbox_path=inbox_path,
+        )
+
+    assert not (real_docs / "agent-inbox.jsonl").exists()
+
+
+@pytest.mark.tooling
+def test_inbox_in_repo_routes_through_core_write_whitelist(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Regression: in-repo inbox writes must defer to core._assert_allowed_write.
+
+    Pinning ``core.REPO_ROOT`` and ``DEFAULT_INBOX`` at ``tmp_path`` lets us
+    verify that the production path (``path.resolve()`` inside REPO_ROOT)
+    calls the shared write whitelist instead of silently falling back to the
+    test-friendly literal check.
+    """
+    fake_repo = tmp_path / "repo"
+    fake_repo.mkdir()
+    docs_dir = fake_repo / "docs"
+    docs_dir.mkdir()
+    inbox_path = docs_dir / "agent-inbox.jsonl"
+
+    monkeypatch.setattr(inbox.core, "REPO_ROOT", fake_repo)
+    monkeypatch.setattr(inbox, "DEFAULT_INBOX", inbox_path)
+
+    calls: list[Path] = []
+
+    def fake_assert_allowed_write(path: Path, workboard_path: Path | None) -> None:
+        calls.append(path)
+
+    monkeypatch.setattr(inbox.core, "_assert_allowed_write", fake_assert_allowed_write)
+
+    inbox.post_message(
+        {
+            "from": "jakob",
+            "to": ["christopher"],
+            "subject": "In repo",
+            "body": "In repo body",
+            "dryRun": False,
+            "confirm": True,
+        },
+        inbox_path=inbox_path,
+    )
+
+    assert calls, "Expected core._assert_allowed_write to be invoked for in-repo writes"
+    assert calls[-1] == inbox_path
