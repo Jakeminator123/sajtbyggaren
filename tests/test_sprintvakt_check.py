@@ -9,6 +9,8 @@ import pytest
 
 from tooling.sprintvakt_mcp.core import (
     SprintvaktError,
+    activate_gap,
+    complete_gap,
     create_gap,
     detect_collisions,
     generate_agent_prompt,
@@ -214,6 +216,108 @@ def test_create_gap_defaults_missing_do_not_touch_to_empty(tmp_path: Path) -> No
     result = create_gap(payload, workboard_path=workboard_path)
 
     assert result["gap"]["doNotTouch"] == []
+
+
+@pytest.mark.tooling
+def test_activate_gap_moves_queued_to_active(tmp_path: Path) -> None:
+    workboard = _base_workboard()
+    workboard["queuedGaps"] = [_gap("GAP-activate", status="queued")]
+    workboard_path = _write_workboard(tmp_path, workboard)
+
+    result = activate_gap(
+        {"gapId": "GAP-activate", "dryRun": False, "confirm": True},
+        workboard_path=workboard_path,
+    )
+
+    assert result.get("written") is True
+    assert result["dryRun"] is False
+    assert result["plannedFiles"] == ["docs/workboard.json"]
+    assert result["workboardDiff"]["moveFrom"] == "queuedGaps"
+    assert result["workboardDiff"]["moveTo"] == "activeGaps"
+    assert result["gap"]["status"] == "active"
+    assert "activatedAt" in result["gap"]
+
+    persisted = json.loads(workboard_path.read_text(encoding="utf-8"))
+    assert persisted["queuedGaps"] == []
+    assert len(persisted["activeGaps"]) == 1
+    assert persisted["activeGaps"][0]["id"] == "GAP-activate"
+    assert persisted["activeGaps"][0]["status"] == "active"
+    assert "activatedAt" in persisted["activeGaps"][0]
+    assert persisted["updatedBy"] == "sprintvakt-mcp"
+
+
+@pytest.mark.tooling
+def test_activate_gap_unknown_id_fails(tmp_path: Path) -> None:
+    workboard_path = _write_workboard(tmp_path)
+
+    with pytest.raises(SprintvaktError, match="Gap not found in queuedGaps"):
+        activate_gap(
+            {"gapId": "GAP-missing", "dryRun": False, "confirm": True},
+            workboard_path=workboard_path,
+        )
+
+
+@pytest.mark.tooling
+def test_complete_gap_moves_active_to_completed_with_fix_commits(tmp_path: Path) -> None:
+    workboard = _base_workboard()
+    workboard["activeGaps"] = [_gap("GAP-complete", status="active")]
+    workboard_path = _write_workboard(tmp_path, workboard)
+
+    result = complete_gap(
+        {
+            "gapId": "GAP-complete",
+            "fixCommits": ["301ca99", "ba08ddd"],
+            "notes": ["Shipped the guarded transition."],
+            "dryRun": False,
+            "confirm": True,
+        },
+        workboard_path=workboard_path,
+    )
+
+    assert result.get("written") is True
+    assert result["plannedFiles"] == ["docs/workboard.json"]
+    assert result["workboardDiff"]["moveFrom"] == "activeGaps"
+    assert result["workboardDiff"]["moveTo"] == "completedGaps"
+    assert result["gap"]["status"] == "completed"
+    assert result["gap"]["fixCommits"] == ["301ca99", "ba08ddd"]
+    assert result["gap"]["notes"] == ["Shipped the guarded transition."]
+    assert "completedAt" in result["gap"]
+
+    persisted = json.loads(workboard_path.read_text(encoding="utf-8"))
+    assert persisted["activeGaps"] == []
+    assert len(persisted["completedGaps"]) == 1
+    completed_gap = persisted["completedGaps"][0]
+    assert completed_gap["id"] == "GAP-complete"
+    assert completed_gap["status"] == "completed"
+    assert completed_gap["fixCommits"] == ["301ca99", "ba08ddd"]
+    assert completed_gap["notes"] == ["Shipped the guarded transition."]
+    assert "completedAt" in completed_gap
+    assert persisted["updatedBy"] == "sprintvakt-mcp"
+
+
+@pytest.mark.tooling
+def test_complete_gap_dry_run_writes_nothing(tmp_path: Path) -> None:
+    workboard = _base_workboard()
+    workboard["queuedGaps"] = [_gap("GAP-dry-run-complete", status="queued")]
+    workboard_path = _write_workboard(tmp_path, workboard)
+    original_text = workboard_path.read_text(encoding="utf-8")
+
+    result = complete_gap(
+        {
+            "gapId": "GAP-dry-run-complete",
+            "fixCommits": ["301ca99"],
+            "notes": ["Would complete without activation."],
+            "dryRun": True,
+            "confirm": False,
+        },
+        workboard_path=workboard_path,
+    )
+
+    assert result["dryRun"] is True
+    assert result["workboardDiff"]["moveFrom"] == "queuedGaps"
+    assert result["workboardDiff"]["moveTo"] == "completedGaps"
+    assert result["gap"]["status"] == "completed"
+    assert workboard_path.read_text(encoding="utf-8") == original_text
 
 
 @pytest.mark.tooling

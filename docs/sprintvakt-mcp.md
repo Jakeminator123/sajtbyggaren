@@ -12,6 +12,7 @@ eller GitHub-state.
 - Läser `docs/workboard.json`.
 - Listar gaps från workboarden och `docs/gaps/`.
 - Skapar gap-filer med `dryRun` som första steg.
+- Aktiverar queued gaps och markerar gaps som completed.
 - Reserverar path scopes.
 - Upptäcker green/yellow/red collisions.
 - Föreslår nästa säkra gaps med deterministiska heuristiker.
@@ -110,6 +111,45 @@ Skrivning kräver:
 {"dryRun": false, "confirm": true}
 ```
 
+### `activate_gap`
+
+Flyttar ett gap från `queuedGaps` till `activeGaps`, sätter `status:"active"`,
+`activatedAt`, gapets `updatedAt` samt workboardens `updatedAt` och
+`updatedBy`.
+
+Input:
+
+```json
+{"gapId": "GAP-example", "dryRun": true}
+```
+
+Skrivning kräver:
+
+```json
+{"gapId": "GAP-example", "dryRun": false, "confirm": true}
+```
+
+### `complete_gap`
+
+Flyttar ett gap från `activeGaps` till `completedGaps`. Om gapet fortfarande
+ligger i `queuedGaps` kan toolen hoppa över aktivering och slutföra direkt.
+Den sätter `status:"completed"`, `completedAt`, gapets `updatedAt`,
+`fixCommits`, `notes` samt workboardens `updatedAt` och `updatedBy`.
+
+Input:
+
+```json
+{
+  "gapId": "GAP-example",
+  "fixCommits": ["301ca99"],
+  "notes": ["Verified locally."],
+  "dryRun": true
+}
+```
+
+`fixCommits` och `notes` är valfria listor och defaultar till tomma listor.
+Skrivning kräver `dryRun:false` och `confirm:true`.
+
 ### `reserve_paths`
 
 Reserverar paths för ett gap och returnerar collisionRisk. Skrivning kräver
@@ -152,10 +192,11 @@ Returnerar sync-kommandon för arbetsbranches efter merge till `main`.
 2. Kör `detect_collisions` för tänkt gap.
 3. Skapa gap med `dryRun:true`.
 4. Bekräfta gap med `dryRun:false` och `confirm:true`.
-5. Generera agentprompt.
-6. Agenten jobbar i rätt lane.
-7. Efter merge: kör `post_merge_sync_instructions`.
-8. Uppdatera workboarden.
+5. Aktivera gapet med `activate_gap`.
+6. Generera agentprompt.
+7. Agenten jobbar i rätt lane.
+8. Markera gapet klart med `complete_gap`.
+9. Efter merge: kör `post_merge_sync_instructions`.
 
 ## Varför PR går mot main
 

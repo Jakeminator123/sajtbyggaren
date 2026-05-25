@@ -548,6 +548,147 @@ def create_gap(
     return result | {"written": True}
 
 
+def activate_gap(
+    payload: dict[str, Any],
+    *,
+    workboard_path: Path | None = None,
+) -> dict[str, Any]:
+    dry_run = bool(payload.get("dryRun", True))
+    confirm = bool(payload.get("confirm", False))
+    if not dry_run and not confirm:
+        raise SprintvaktError("activate_gap with dryRun:false requires confirm:true.")
+
+    gap_id = _gap_id_from_payload(payload)
+    workboard = load_workboard(workboard_path)
+    planned_workboard = deepcopy(workboard)
+    for list_name in ("queuedGaps", "activeGaps", "completedGaps"):
+        planned_workboard.setdefault(list_name, [])
+
+    source_index = _find_gap_index(planned_workboard["queuedGaps"], gap_id)
+    if source_index is None:
+        raise SprintvaktError(f"Gap not found in queuedGaps: {gap_id}")
+
+    now = utc_now()
+    gap = deepcopy(planned_workboard["queuedGaps"].pop(source_index))
+    gap["status"] = "active"
+    gap["activatedAt"] = now
+    gap["updatedAt"] = now
+    planned_workboard["activeGaps"].append(gap)
+    planned_workboard["updatedAt"] = now
+    planned_workboard["updatedBy"] = "sprintvakt-mcp"
+
+    result = _transition_result(
+        dry_run=dry_run,
+        gap=gap,
+        workboard_path=workboard_path,
+        move_from="queuedGaps",
+        move_to="activeGaps",
+        updated_at=now,
+    )
+    if dry_run:
+        return result
+
+    write_workboard(planned_workboard, workboard_path)
+    return result | {"written": True}
+
+
+def complete_gap(
+    payload: dict[str, Any],
+    *,
+    workboard_path: Path | None = None,
+) -> dict[str, Any]:
+    dry_run = bool(payload.get("dryRun", True))
+    confirm = bool(payload.get("confirm", False))
+    if not dry_run and not confirm:
+        raise SprintvaktError("complete_gap with dryRun:false requires confirm:true.")
+
+    gap_id = _gap_id_from_payload(payload)
+    fix_commits = _sha_list(payload.get("fixCommits", []), "fixCommits")
+    notes = _string_list(payload.get("notes", []), "notes", required=False)
+    workboard = load_workboard(workboard_path)
+    planned_workboard = deepcopy(workboard)
+    for list_name in ("queuedGaps", "activeGaps", "completedGaps"):
+        planned_workboard.setdefault(list_name, [])
+
+    source_list = "activeGaps"
+    source_index = _find_gap_index(planned_workboard[source_list], gap_id)
+    if source_index is None:
+        source_list = "queuedGaps"
+        source_index = _find_gap_index(planned_workboard[source_list], gap_id)
+    if source_index is None:
+        raise SprintvaktError(f"Gap not found in activeGaps or queuedGaps: {gap_id}")
+
+    now = utc_now()
+    gap = deepcopy(planned_workboard[source_list].pop(source_index))
+    gap["status"] = "completed"
+    gap["completedAt"] = now
+    gap["fixCommits"] = fix_commits
+    gap["notes"] = notes
+    gap["updatedAt"] = now
+    planned_workboard["completedGaps"].append(gap)
+    planned_workboard["updatedAt"] = now
+    planned_workboard["updatedBy"] = "sprintvakt-mcp"
+
+    result = _transition_result(
+        dry_run=dry_run,
+        gap=gap,
+        workboard_path=workboard_path,
+        move_from=source_list,
+        move_to="completedGaps",
+        updated_at=now,
+    )
+    if dry_run:
+        return result
+
+    write_workboard(planned_workboard, workboard_path)
+    return result | {"written": True}
+
+
+def _transition_result(
+    *,
+    dry_run: bool,
+    gap: dict[str, Any],
+    workboard_path: Path | None,
+    move_from: str,
+    move_to: str,
+    updated_at: str,
+) -> dict[str, Any]:
+    repo_root = _repo_root_for(workboard_path)
+    return {
+        "dryRun": dry_run,
+        "gap": gap,
+        "plannedFiles": [_workboard_path(workboard_path).relative_to(repo_root).as_posix()],
+        "workboardDiff": {
+            "moveFrom": move_from,
+            "moveTo": move_to,
+            "updatedAt": updated_at,
+            "updatedBy": "sprintvakt-mcp",
+        },
+    }
+
+
+def _gap_id_from_payload(payload: dict[str, Any]) -> str:
+    gap_id = str(payload.get("gapId", "")).strip()
+    if not VALID_GAP_ID_RE.match(gap_id):
+        raise SprintvaktError("gapId must match GAP-<letters-numbers-dots-dashes>.")
+    return gap_id
+
+
+def _find_gap_index(gaps: list[Any], gap_id: str) -> int | None:
+    for index, gap in enumerate(gaps):
+        if isinstance(gap, dict) and gap.get("id") == gap_id:
+            return index
+    return None
+
+
+def _sha_list(value: Any, field: str) -> list[str]:
+    commits = _string_list(value, field, required=False)
+    for commit in commits:
+        if not re.fullmatch(r"[0-9a-fA-F]{7,40}", commit):
+            raise SprintvaktError(f"{field} must contain SHA strings.")
+    return commits
+
+
 def _gap_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
     gap_id = str(payload.get("id", "")).strip()
     if not VALID_GAP_ID_RE.match(gap_id):

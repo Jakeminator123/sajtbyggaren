@@ -45,6 +45,36 @@ TOOLS: dict[str, tuple[str, dict[str, Any], ToolHandler]] = {
         {"type": "object", "additionalProperties": True},
         core.create_gap,
     ),
+    "activate_gap": (
+        "Move a queued gap to activeGaps. dryRun defaults to true; writes require confirm:true.",
+        {
+            "type": "object",
+            "properties": {
+                "gapId": {"type": "string"},
+                "dryRun": {"type": "boolean"},
+                "confirm": {"type": "boolean"},
+            },
+            "required": ["gapId"],
+            "additionalProperties": False,
+        },
+        core.activate_gap,
+    ),
+    "complete_gap": (
+        "Move an active or queued gap to completedGaps. dryRun defaults to true; writes require confirm:true.",
+        {
+            "type": "object",
+            "properties": {
+                "gapId": {"type": "string"},
+                "fixCommits": {"type": "array", "items": {"type": "string"}},
+                "notes": {"type": "array", "items": {"type": "string"}},
+                "dryRun": {"type": "boolean"},
+                "confirm": {"type": "boolean"},
+            },
+            "required": ["gapId"],
+            "additionalProperties": False,
+        },
+        core.complete_gap,
+    ),
     "reserve_paths": (
         "Reserve paths for a gap. dryRun defaults to true; writes require confirm:true.",
         {"type": "object", "additionalProperties": True},
