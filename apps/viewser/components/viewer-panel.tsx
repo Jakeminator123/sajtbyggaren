@@ -323,6 +323,11 @@ export function ViewerPanel({
             const errPayload = (await previewResponse
               .json()
               .catch(() => null)) as PreviewApiError | null;
+            // Re-check cancelled AFTER the JSON-parse await: a runId
+            // switch during the parse must not write stale state.
+            // Mirror of the success-branch guard above and the 404
+            // guard on the StackBlitz fallback below (Codex P2, PR #97).
+            if (cancelled) return;
             setUnavailable(unavailableForPreviewError(errPayload));
             setLoading(false);
             return;

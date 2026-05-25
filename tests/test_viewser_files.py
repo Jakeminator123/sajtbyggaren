@@ -1256,8 +1256,12 @@ def test_viewer_panel_local_next_failure_branches_guard_cancelled() -> None:
         encoding="utf-8"
     )
 
+    # Limits är frikostiga (800/600) så regex tål både kompakta varianter
+    # och de pedagogiska inline-kommentarer som dokumenterar varför
+    # cancelled-guarden behövs i respektive gren. Testets syfte är att
+    # låsa ATT guarden finns — inte att tvinga fram en kompakt stil.
     pattern = re.compile(
-        r"IS_LOCAL_NEXT_MODE[\s\S]{0,300}?if\s*\(\s*cancelled\s*\)\s*return\s*;[\s\S]{0,200}?setUnavailable\([\s\S]+?\)",
+        r"IS_LOCAL_NEXT_MODE[\s\S]{0,800}?if\s*\(\s*cancelled\s*\)\s*return\s*;[\s\S]{0,600}?setUnavailable\([\s\S]+?\)",
         re.MULTILINE,
     )
     matches = pattern.findall(text)
@@ -1269,6 +1273,60 @@ def test_viewer_panel_local_next_failure_branches_guard_cancelled() -> None:
         f"runId finns. Alla tre måste skydda mot stale runId-switch "
         f"så att en sen async-respons inte skriver över state för en "
         f"nyladdad run."
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_local_next_non_ok_branch_reguards_after_json_parse() -> None:
+    """Codex P2 (PR #97 review): i ``IS_LOCAL_NEXT_MODE``-grenen för
+    non-OK response från ``POST /api/preview/<siteId>`` kollas
+    ``cancelled`` FÖRE ``await previewResponse.json()`` men inte
+    EFTER. Om operatören byter run under JSON-parsen kan den stale
+    requesten fortfarande anropa ``setUnavailable(...)`` /
+    ``setLoading(false)`` och skriva över state för den nyvalda runen
+    — exakt samma race-condition som den ursprungliga 404-fixen
+    redan stoppat på StackBlitz-vägen.
+
+    Lås mönstret: mellan ``await previewResponse.json()`` (som ger
+    ``errPayload``) och ``setUnavailable(unavailableForPreviewError``
+    måste det finnas en ``if (cancelled) return;``. Source-lock så
+    framtida refactor inte tar bort den.
+
+    Implementationsdetalj: vi hittar errPayload-deklarationen (unik
+    lokal variabel som bara existerar i denna gren), söker fram till
+    ``setUnavailable(unavailableForPreviewError``, och verifierar att
+    en ``if (cancelled) return;`` sitter mellan dem. Mer robust än
+    en ren one-shot regex eftersom det inte bryts av inline-kommentarer
+    eller indenterings-refactors.
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    err_payload_idx = text.find("errPayload = (await previewResponse")
+    assert err_payload_idx != -1, (
+        "viewer-panel.tsx saknar `errPayload = (await previewResponse...` "
+        "i IS_LOCAL_NEXT_MODE non-OK-grenen. Annars test kan inte ankra "
+        "mellan parsen och state-skrivningen."
+    )
+    setunavail_idx = text.find(
+        "setUnavailable(unavailableForPreviewError", err_payload_idx
+    )
+    assert setunavail_idx != -1, (
+        "viewer-panel.tsx saknar `setUnavailable(unavailableForPreviewError(...))` "
+        "efter errPayload-deklarationen — non-OK-grenen måste rendera "
+        "strukturerad felinfo via unavailableForPreviewError."
+    )
+    between = text[err_payload_idx:setunavail_idx]
+    assert re.search(r"if\s*\(\s*cancelled\s*\)\s*return\s*;", between), (
+        "viewer-panel.tsx IS_LOCAL_NEXT_MODE non-OK-grenen saknar "
+        "`if (cancelled) return;` mellan `await previewResponse.json()` "
+        "och `setUnavailable(unavailableForPreviewError(...))`. Utan "
+        "denna re-check kan en stale request som passerar den pre-await "
+        "cancelled-checken fortfarande skriva över UI-state för en "
+        "nyvald run (Codex P2 fynd, PR #97 review). Mirror samma mönster "
+        "som success-grenen redan har efter `await previewResponse.json() "
+        "as PreviewServerInfo`."
     )
 
 
