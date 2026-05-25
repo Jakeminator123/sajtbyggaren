@@ -1320,6 +1320,100 @@ def render_services(
     )
 
 
+def _render_collection_page(
+    dossier: dict,
+    *,
+    contact_path: str,
+    component_name: str,
+    eyebrow: str,
+    heading: str,
+    intro: str,
+    cta_label: str | None = None,
+) -> str:
+    items_source = dossier["services"]
+    contact_href = _route_href(contact_path)
+    icons_used = sorted(
+        {_icon_for_service(item["id"]) for item in items_source} | {"ArrowRight"}
+    )
+    icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
+    items = "\n".join(
+        f'          <article key={_jsx_safe_string(item["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
+        f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(item["id"])} className="size-6" /></span>\n'
+        f'            <h2 className="text-xl font-semibold">{_jsx_safe_string(item["label"])}</h2>\n'
+        f'            <p className="mt-3 text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(item["summary"])}</p>\n'
+        "          </article>"
+        for item in items_source
+    )
+    label = cta_label or _hero_cta_label(dossier)
+    return (
+        icon_import + "\n"
+        f"export default function {component_name}() {{\n"
+        "  return (\n"
+        '    <main className="flex flex-1 flex-col">\n'
+        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        '          <header className="flex flex-col gap-3">\n'
+        f'            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">{eyebrow}</p>\n'
+        f'            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">{heading}</h1>\n'
+        f'            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">{intro}</p>\n'
+        "          </header>\n"
+        '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
+        f"{items}\n"
+        "          </div>\n"
+        f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{label}<ArrowRight className="size-4" /></a>\n'
+        "        </div>\n"
+        "      </section>\n"
+        "    </main>\n"
+        "  );\n"
+        "}\n"
+    )
+
+
+def render_treatments(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+    return _render_collection_page(
+        dossier,
+        contact_path=contact_path,
+        component_name="TreatmentsPage",
+        eyebrow="Behandlingar",
+        heading="Behandlingar och vård",
+        intro=(
+            "Här är behandlingarna samlade med tydliga beskrivningar så "
+            "besökaren snabbt hittar rätt nästa steg."
+        ),
+        cta_label="Kontakta kliniken",
+    )
+
+
+def render_expertise(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+    return _render_collection_page(
+        dossier,
+        contact_path=contact_path,
+        component_name="ExpertisePage",
+        eyebrow="Expertis",
+        heading="Våra expertisområden",
+        intro=(
+            "En strukturerad överblick över de områden där teamet hjälper "
+            "kunder från första fråga till genomförande."
+        ),
+        cta_label="Boka ett samtal",
+    )
+
+
+def render_work(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+    return _render_collection_page(
+        dossier,
+        contact_path=contact_path,
+        component_name="WorkPage",
+        eyebrow="Arbeten",
+        heading="Utvalda arbeten",
+        intro=(
+            "Projekt, case och uppdrag presenteras som konkreta bevis på "
+            "studions riktning och hantverk."
+        ),
+        cta_label="Prata om ett projekt",
+    )
+
+
 def render_about(dossier: dict) -> str:
     company = dossier["company"]
     location = dossier["location"]
