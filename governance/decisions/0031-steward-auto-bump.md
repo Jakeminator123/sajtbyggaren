@@ -38,6 +38,12 @@ Inför en server-side GitHub Action som körs på `pull_request.closed` när PR:
 Helpern ska vara idempotent: om ny SHA redan står som verifierad state gör den
 ingen filändring och returnerar exit-kod 0.
 
+Scope:t är avsiktligt `main`-only. `jakob-be` kan vara aktiv review- eller
+integrationsbranch, men Steward auto-bump ska registrera den kanoniska
+produktionsliknande HEAD som nästa agent normalt utgår från efter merge till
+`main`. Om `jakob-be` i framtiden byter roll till canonical base krävs en ny
+regeländring som uttryckligen lägger till den branchen.
+
 ## Alternativ som övervägdes
 
 | Alternativ | Bedömning |
@@ -61,6 +67,8 @@ Positiva:
 Negativa:
 
 - `main` får en extra bot-commit efter icke-triviala PR-merges.
+- PR-merges till `jakob-be` bumpas inte automatiskt; när de senare lyfts till
+  `main` sker bumpen i den PR-merge som faktiskt ändrar `main`.
 - Om toppblockens markdown-format ändras utan att helpern uppdateras kommer
   actionen faila i stället för att gissa.
 - PR-listan blir kortfattad och mekanisk; den ersätter inte riktig handoff-

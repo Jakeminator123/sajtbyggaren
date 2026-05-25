@@ -10,6 +10,8 @@ permissions:
 
 jobs:
   bump:
+    # ADR 0031 is intentionally main-only: jakob-be remains a review/integration
+    # branch, while Steward auto-bump records the canonical production main HEAD.
     if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
     steps:
@@ -22,7 +24,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.12"
 
       - name: Detect trivial docs-only PR
         id: trivial
