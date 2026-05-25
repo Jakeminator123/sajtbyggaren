@@ -214,11 +214,11 @@ def test_followup_build_links_new_run_to_same_project_version_track(
     assert package_v2["projectId"] == PROJECT_ID
 
     assert site_brief_v2["runId"] == run_dir_v2.name
-    assert site_brief_v2["siteId"] == SITE_ID
+    assert SITE_ID in site_brief_v2["notesForPlanner"]
     assert site_brief_v2["businessTypeGuess"]
     assert site_plan_v2["runId"] == run_dir_v2.name
     assert site_plan_v2["scaffoldId"] == "local-service-business"
-    assert site_plan_v2["routes"]
+    assert site_plan_v2["routePlan"]
 
 
 @pytest.mark.tooling
