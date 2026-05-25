@@ -1106,20 +1106,37 @@ def _token_overrides_from_project_input(
 
     if "primary" not in overrides and not primary_hex_provided:
         tone = project_input.get("tone") if isinstance(project_input.get("tone"), dict) else {}
+        tone_tokens: dict[str, str] | None = None
         tone_primary = tone.get("primary")
         if isinstance(tone_primary, str):
-            tone_key = tone_primary.strip().lower()
-            tone_tokens = _TONE_COLOR_TOKENS.get(tone_key)
-            if tone_tokens:
-                overrides["primary"] = tone_tokens["primary"]
-                overrides["primaryForeground"] = _foreground_for_background(
-                    tone_tokens["primary"]
+            tone_tokens = _TONE_COLOR_TOKENS.get(tone_primary.strip().lower())
+        # B139 fallback: när tone.primary saknar color-signal (t.ex.
+        # generiska wizard-tags som "professionell" / "lugn och
+        # förtroendeingivande") får tone.secondary fungera som
+        # color-token-källa. Annars läcker en färgsignal som operatören
+        # angett i sekundär-position tyst på vägen till variant_css.
+        # Primary vinner alltid när den har en signal — secondary
+        # fungerar bara som fallback, aldrig som override.
+        if tone_tokens is None:
+            secondary = tone.get("secondary")
+            if isinstance(secondary, list):
+                for entry in secondary:
+                    if not isinstance(entry, str):
+                        continue
+                    candidate = _TONE_COLOR_TOKENS.get(entry.strip().lower())
+                    if candidate is not None:
+                        tone_tokens = candidate
+                        break
+        if tone_tokens is not None:
+            overrides["primary"] = tone_tokens["primary"]
+            overrides["primaryForeground"] = _foreground_for_background(
+                tone_tokens["primary"]
+            )
+            if "accent" not in overrides and not accent_hex_provided:
+                overrides["accent"] = tone_tokens["accent"]
+                overrides["accentForeground"] = _foreground_for_background(
+                    tone_tokens["accent"]
                 )
-                if "accent" not in overrides and not accent_hex_provided:
-                    overrides["accent"] = tone_tokens["accent"]
-                    overrides["accentForeground"] = _foreground_for_background(
-                        tone_tokens["accent"]
-                    )
 
     return overrides, warnings
 

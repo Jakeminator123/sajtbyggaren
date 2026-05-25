@@ -599,15 +599,24 @@ för follow-up eller ska städas.
   (parametriserad över root, company, contact, services-items, tone,
   selectedDossiers).
 
-- **`B139` Låg-medel** (stängd 2026-05-22, tone-primary till CSS-token) -
+- **`B139` Låg-medel** (stängd 2026-05-22, tone-primary till CSS-token;
+  cross-lock 2026-05-25 utvidgar fallbacken till tone-secondary) -
   `tone.primary` kunde fyllas från brief/follow-up men renderern använde
   bara variantens default-CSS-tokens. Fix: `eb5a81d` lägger en
   smal token-override-kanal i `scripts/build_site.py`: om explicit brand-
   hex saknas kan whitelistade tone-signaler (`grön`/`green`, `blå`/`blue`,
   `varm`/`warm`, `premium`) mappas till `--primary` och `--accent`.
-  Variantens default tokens bevaras exakt när ingen signal finns. Test:
+  Variantens default tokens bevaras exakt när ingen signal finns.
+  Cross-lock-extension 2026-05-25: när `tone.primary` är en generisk
+  wizard-tag utan färgsignal (t.ex. `professionell`) faller helpern nu
+  igenom till `tone.secondary` och plockar första matchande color-keyword
+  där. Primary vinner alltid när den har en signal — secondary fungerar
+  bara som fallback, aldrig som override. Test:
   `tests/test_builder_smoke.py::test_tone_primary_green_maps_to_stable_green_token_when_hex_missing`,
-  `tests/test_builder_smoke.py::test_variant_css_default_is_byte_stable_without_brand_or_tone`.
+  `tests/test_builder_smoke.py::test_variant_css_default_is_byte_stable_without_brand_or_tone`,
+  `tests/test_llm_contract_propagation.py::test_b139_tone_primary_color_keyword_reaches_variant_css_primary_token`,
+  `tests/test_llm_contract_propagation.py::test_b139_tone_secondary_color_keyword_falls_through_when_primary_lacks_signal`,
+  `tests/test_llm_contract_propagation.py::test_b139_tone_primary_color_keyword_wins_over_secondary`.
 
 - **`B140` Låg** (stängd 2026-05-22, brand-hex till CSS-token) -
   `brand.primaryColorHex` och `brand.accentColorHex` skrevs till Project
@@ -622,6 +631,9 @@ för follow-up eller ska städas.
   `tests/test_builder_smoke.py::test_invalid_explicit_brand_hex_does_not_fall_through_to_tone_keyword`,
   `tests/test_builder_smoke.py::test_build_writes_brand_token_overrides_to_generated_globals_css`,
   `tests/test_builder_smoke.py::test_build_traces_invalid_brand_hex_and_keeps_variant_defaults`.
+  Cross-lock (kontraktslager):
+  `tests/test_llm_contract_propagation.py::test_b140_valid_brand_primary_color_hex_overrides_variant_css_token`,
+  `tests/test_llm_contract_propagation.py::test_b140_invalid_brand_primary_color_hex_does_not_break_emit`.
 
 - **`B71` Hög** (stängd 2026-05-22, Project DNA semantic follow-up V1) -
   `scripts/prompt_to_project_input.py:merge_followup_project_input`
@@ -691,6 +703,9 @@ för follow-up eller ska städas.
   `tests/test_codegen.py::test_codegen_summary_rejects_absolute_site_brief_ref`,
   `tests/test_codegen.py::test_codegen_summary_rejects_traversal_site_brief_ref`,
   `tests/test_planning.py::test_generation_package_keeps_site_brief_by_ref_contract`.
+  Cross-lock (kontraktslager):
+  `tests/test_llm_contract_propagation.py::test_b141_generation_package_emits_site_brief_ref_not_inline_copy`,
+  `tests/test_llm_contract_propagation.py::test_b141_codegen_summary_loads_site_brief_via_live_ref_not_stale_inline`.
 
 - **`B137` Medel** (stängd 2026-05-21, wizard-overlay tagline-läckage av
   rå prompt-text) - Verifierat live i Scout case 4 (sköldpaddssoppa):
@@ -721,7 +736,8 @@ för follow-up eller ska städas.
   i verkligt case). Fix: `1b5275d`. Test:
   `tests/test_discovery_resolver.py::test_offer_with_ui_directives_does_not_leak_to_tagline`
   + 9 fler tester med modul-lokal `BLOCKED_TAGLINE_PHRASES`-fixture
-  för enkel utökning.
+  för enkel utökning. Cross-lock (kontraktslager): `tests/test_llm_contract_propagation.py::test_b137_offer_with_ui_directives_does_not_leak_to_company_tagline`,
+  `tests/test_llm_contract_propagation.py::test_b137_clean_offer_still_reaches_tagline_when_brief_lacks_one`.
 
 - **`B138` Medel** (stängd 2026-05-21, pageCount-läckage från brief
   till routePlan) - briefModel fångade operatörens explicita sidantal
@@ -751,7 +767,9 @@ för follow-up eller ska städas.
   till `[/, /kontakt]` (2) med warning emitterad. Fix: `299257d`.
   Test:
   `tests/test_planning.py::test_page_count_2_trims_route_plan_to_home_and_contact`
-  + 6 fler tester (pageCount=2/3/6/1/null/42 + pinned-vägen).
+  + 6 fler tester (pageCount=2/3/6/1/null/42 + pinned-vägen). Cross-lock
+  (kontraktslager): `tests/test_llm_contract_propagation.py::test_b138_brief_page_count_propagates_into_route_plan_with_warning`,
+  `tests/test_llm_contract_propagation.py::test_b138_page_count_high_value_keeps_defaults_without_silent_drop`.
 
 - **`B142` Låg-medel** (öppnad + stängd 2026-05-20, ProjectInputPicker
   följer vald run) - operatörspanelens ProjectInputPicker synkade inte
