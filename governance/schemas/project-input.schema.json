@@ -137,6 +137,38 @@
           "type": "string",
           "enum": ["gradient", "centered", "split"],
           "description": "Operatorns hero-layout-override från discovery-wizardens visual-step."
+        },
+        "sectionTreatments": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Operator-pin för section design treatments (Phase 3). Resolve-ordning vid render: operator-pin (denna map) > variant-default (_SECTION_TREATMENTS_BY_VARIANT i scripts/build_site.py) > section-default. Tomt objekt eller saknad property = falla tillbaka till variant/section-defaults. ADR 0031 förklarar valet av additiv direktiv-utbyggnad och varför fältet inte bryter befintliga PI-snapshots. Treatment-IDs per section är medvetet en sluten enum-lista här så schemavalideringen fångar typos innan bygget startar.",
+          "properties": {
+            "selected-work-preview": {
+              "type": "string",
+              "enum": ["editorial-stack", "asymmetric-grid", "marquee-row"],
+              "description": "selected-work-preview — render_section_selected_work_preview. editorial-stack = section default; asymmetric-grid mappas mot studio-monochrome; marquee-row mappas mot bold-electric."
+            },
+            "treatment-list": {
+              "type": "string",
+              "enum": ["minimal-rows", "split-cards", "numbered-stack"],
+              "description": "treatment-list — render_section_treatment_list (clinic-healthcare). minimal-rows = section default; split-cards mappas mot warm-care; numbered-stack mappas mot modern-precision."
+            },
+            "practice-grid": {
+              "type": "string",
+              "enum": ["dense-grid", "tabular", "grouped"],
+              "description": "practice-grid — render_section_practice_grid (professional-services). dense-grid = section default; tabular mappas mot legal-classic; grouped mappas mot accounting-trust."
+            },
+            "expertise-areas": {
+              "type": "string",
+              "enum": ["numbered-2col", "tag-cluster"],
+              "description": "expertise-areas — render_section_expertise_areas (professional-services home). numbered-2col = section default; tag-cluster mappas mot consulting-modern."
+            },
+            "service-list": {
+              "type": "string",
+              "enum": ["card-grid", "alternating-rows", "icon-strip", "tabular"],
+              "description": "service-list — render_section_service_list (LSB). card-grid = section default; alternating-rows mappas mot warm-craft; icon-strip mappas mot clinical-calm; tabular mappas mot nordic-trust."
+            }
+          }
         }
       }
     },
