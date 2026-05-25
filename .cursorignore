@@ -101,7 +101,7 @@ MIN_IDE/
 konversation.txt
 .review-*/
 .streamlit/secrets.toml
-.cursor/mcp.json
+#.cursor/mcp.json
 # Agent-/operator-lokala plan-filer och temp-noteringar (.cursor/tmp_*).
 # Redan gitignored; här blockerar vi även agentens Read + sökindex så
 # scratch inte förorenar codebase-sök. Samma kategori som .cursor/mcp.json.

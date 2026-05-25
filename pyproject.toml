@@ -18,8 +18,9 @@ dev = [
   "ruff>=0.6",
 ]
 
-[tool.setuptools]
-py-modules = ["backend"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tooling*"]
 
 [tool.ruff]
 line-length = 100

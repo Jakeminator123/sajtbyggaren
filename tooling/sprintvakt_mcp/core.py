@@ -30,7 +30,14 @@ ALLOWED_GAP_TYPES = {
     "Gap/Runtime",
 }
 ALLOWED_REVIEWERS = {"jakob", "christopher", "both"}
-ALLOWED_STATUSES = {"queued", "active", "completed"}
+# Gap lifecycle:
+#   queued     -> gap created, no work started
+#   active     -> someone is working on it (activate_gap moves here)
+#   in-review  -> work done locally, awaiting PR review/merge (used by
+#                 Christopher's UI-shipped gaps that live in completedGaps
+#                 between local "done" and main "merged")
+#   completed  -> PR merged to main (complete_gap moves here)
+ALLOWED_STATUSES = {"queued", "active", "in-review", "completed"}
 ALLOWED_RISKS = {"green", "yellow", "red"}
 VALID_GAP_ID_RE = re.compile(r"^GAP-[A-Za-z0-9][A-Za-z0-9_.-]*$")
 
@@ -413,6 +420,10 @@ def validate_workboard(*, workboard_path: Path | None = None) -> dict[str, Any]:
         owner = str(gap.get("owner", ""))
         if owner not in ALLOWED_OWNERS:
             errors.append(f"{gap_id}: invalid owner {owner!r}")
+        if status not in ALLOWED_STATUSES:
+            errors.append(
+                f"{gap_id}: invalid status {status!r}; must be one of {sorted(ALLOWED_STATUSES)}"
+            )
         if not gap.get("title"):
             errors.append(f"{gap_id}: missing title")
         paths = gap.get("paths", [])
@@ -548,6 +559,167 @@ def create_gap(
     return result | {"written": True}
 
 
+def activate_gap(
+    payload: dict[str, Any],
+    *,
+    workboard_path: Path | None = None,
+) -> dict[str, Any]:
+    dry_run = bool(payload.get("dryRun", True))
+    confirm = bool(payload.get("confirm", False))
+    if not dry_run and not confirm:
+        raise SprintvaktError("activate_gap with dryRun:false requires confirm:true.")
+
+    gap_id = _gap_id_from_payload(payload)
+    workboard = load_workboard(workboard_path)
+    planned_workboard = deepcopy(workboard)
+    for list_name in ("queuedGaps", "activeGaps", "completedGaps"):
+        planned_workboard.setdefault(list_name, [])
+
+    source_index = _find_gap_index(planned_workboard["queuedGaps"], gap_id)
+    if source_index is None:
+        raise SprintvaktError(f"Gap not found in queuedGaps: {gap_id}")
+
+    candidate_gap = planned_workboard["queuedGaps"][source_index]
+    candidate_owner = str(candidate_gap.get("owner") or "")
+    candidate_paths = candidate_gap.get("paths") or []
+    if candidate_paths:
+        collision_result = detect_collisions(
+            {
+                "owner": candidate_owner if candidate_owner in PEOPLE_OWNERS else "all",
+                "paths": candidate_paths,
+                "includeExistingGaps": True,
+            },
+            workboard_path=workboard_path,
+        )
+        if collision_result["collisionRisk"] == "red":
+            raise SprintvaktError(
+                f"activate_gap blocked: {gap_id} has red collisions in the current "
+                f"workboard state since it was queued. Re-evaluate via detect_collisions, "
+                f"change owner, or split the gap before activating. "
+                f"Details: {collision_result['collisions']}"
+            )
+
+    now = utc_now()
+    gap = deepcopy(planned_workboard["queuedGaps"].pop(source_index))
+    gap["status"] = "active"
+    gap["activatedAt"] = now
+    gap["updatedAt"] = now
+    planned_workboard["activeGaps"].append(gap)
+    planned_workboard["updatedAt"] = now
+    planned_workboard["updatedBy"] = "sprintvakt-mcp"
+
+    result = _transition_result(
+        dry_run=dry_run,
+        gap=gap,
+        workboard_path=workboard_path,
+        move_from="queuedGaps",
+        move_to="activeGaps",
+        updated_at=now,
+    )
+    if dry_run:
+        return result
+
+    write_workboard(planned_workboard, workboard_path)
+    return result | {"written": True}
+
+
+def complete_gap(
+    payload: dict[str, Any],
+    *,
+    workboard_path: Path | None = None,
+) -> dict[str, Any]:
+    dry_run = bool(payload.get("dryRun", True))
+    confirm = bool(payload.get("confirm", False))
+    if not dry_run and not confirm:
+        raise SprintvaktError("complete_gap with dryRun:false requires confirm:true.")
+
+    gap_id = _gap_id_from_payload(payload)
+    fix_commits = _sha_list(payload.get("fixCommits", []), "fixCommits")
+    notes = _string_list(payload.get("notes", []), "notes", required=False)
+    workboard = load_workboard(workboard_path)
+    planned_workboard = deepcopy(workboard)
+    for list_name in ("queuedGaps", "activeGaps", "completedGaps"):
+        planned_workboard.setdefault(list_name, [])
+
+    source_list = "activeGaps"
+    source_index = _find_gap_index(planned_workboard[source_list], gap_id)
+    if source_index is None:
+        source_list = "queuedGaps"
+        source_index = _find_gap_index(planned_workboard[source_list], gap_id)
+    if source_index is None:
+        raise SprintvaktError(f"Gap not found in activeGaps or queuedGaps: {gap_id}")
+
+    now = utc_now()
+    gap = deepcopy(planned_workboard[source_list].pop(source_index))
+    gap["status"] = "completed"
+    gap["completedAt"] = now
+    gap["fixCommits"] = fix_commits
+    gap["notes"] = notes
+    gap["updatedAt"] = now
+    planned_workboard["completedGaps"].append(gap)
+    planned_workboard["updatedAt"] = now
+    planned_workboard["updatedBy"] = "sprintvakt-mcp"
+
+    result = _transition_result(
+        dry_run=dry_run,
+        gap=gap,
+        workboard_path=workboard_path,
+        move_from=source_list,
+        move_to="completedGaps",
+        updated_at=now,
+    )
+    if dry_run:
+        return result
+
+    write_workboard(planned_workboard, workboard_path)
+    return result | {"written": True}
+
+
+def _transition_result(
+    *,
+    dry_run: bool,
+    gap: dict[str, Any],
+    workboard_path: Path | None,
+    move_from: str,
+    move_to: str,
+    updated_at: str,
+) -> dict[str, Any]:
+    repo_root = _repo_root_for(workboard_path)
+    return {
+        "dryRun": dry_run,
+        "gap": gap,
+        "plannedFiles": [_workboard_path(workboard_path).relative_to(repo_root).as_posix()],
+        "workboardDiff": {
+            "moveFrom": move_from,
+            "moveTo": move_to,
+            "updatedAt": updated_at,
+            "updatedBy": "sprintvakt-mcp",
+        },
+    }
+
+
+def _gap_id_from_payload(payload: dict[str, Any]) -> str:
+    gap_id = str(payload.get("gapId", "")).strip()
+    if not VALID_GAP_ID_RE.match(gap_id):
+        raise SprintvaktError("gapId must match GAP-<letters-numbers-dots-dashes>.")
+    return gap_id
+
+
+def _find_gap_index(gaps: list[Any], gap_id: str) -> int | None:
+    for index, gap in enumerate(gaps):
+        if isinstance(gap, dict) and gap.get("id") == gap_id:
+            return index
+    return None
+
+
+def _sha_list(value: Any, field: str) -> list[str]:
+    commits = _string_list(value, field, required=False)
+    for commit in commits:
+        if not re.fullmatch(r"[0-9a-fA-F]{7,40}", commit):
+            raise SprintvaktError(f"{field} must contain SHA strings.")
+    return commits
+
+
 def _gap_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
     gap_id = str(payload.get("id", "")).strip()
     if not VALID_GAP_ID_RE.match(gap_id):
@@ -641,6 +813,87 @@ def render_gap_markdown(gap: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _load_gap_from_file(
+    gap_id: str,
+    workboard_path: Path | None,
+) -> dict[str, Any]:
+    """Parse ``docs/gaps/<gap_id>.md`` into a gap dict.
+
+    Mirrors the format produced by :func:`render_gap_markdown` so that
+    file-only gaps (which never made it into the workboard) can still be
+    resolved by tools like :func:`generate_agent_prompt`.
+    """
+    if not VALID_GAP_ID_RE.match(gap_id):
+        raise SprintvaktError("gapId must match GAP-<letters-numbers-dots-dashes>.")
+    repo_root = _repo_root_for(workboard_path)
+    gap_path = repo_root / "docs" / "gaps" / f"{gap_id}.md"
+    if not gap_path.is_file():
+        raise SprintvaktError(f"Gap not found: {gap_id}")
+
+    text = gap_path.read_text(encoding="utf-8")
+    title = ""
+    metadata: dict[str, str] = {}
+    section_buckets: dict[str, list[str]] = {
+        "why now": [],
+        "paths": [],
+        "do not touch": [],
+        "acceptance criteria": [],
+        "checks": [],
+        "notes": [],
+    }
+
+    current_section: str | None = None
+    for raw_line in text.splitlines():
+        line = raw_line.rstrip()
+        if line.startswith("## "):
+            current_section = line[3:].strip().lower()
+            continue
+        if line.startswith("# "):
+            _, sep, after = line[2:].partition(" — ")
+            if sep:
+                title = after.strip()
+            current_section = None
+            continue
+        if current_section is None:
+            metadata_match = re.match(r"^-\s+([A-Za-z]+):\s*`([^`]*)`\s*$", line)
+            if metadata_match:
+                metadata[metadata_match.group(1)] = metadata_match.group(2)
+            continue
+        if current_section in section_buckets:
+            section_buckets[current_section].append(line)
+
+    def _bullets(name: str, *, strip_backticks: bool) -> list[str]:
+        items: list[str] = []
+        for entry in section_buckets[name]:
+            stripped = entry.strip()
+            if not stripped.startswith("- "):
+                continue
+            item = stripped[2:].strip()
+            if strip_backticks and item.startswith("`") and item.endswith("`"):
+                item = item[1:-1]
+            items.append(item)
+        return items
+
+    return {
+        "id": gap_id,
+        "title": title,
+        "type": metadata.get("type", ""),
+        "owner": metadata.get("owner", ""),
+        "reviewer": metadata.get("reviewer", "jakob"),
+        "status": metadata.get("status", "queued"),
+        "collisionRisk": metadata.get("collisionRisk", "green"),
+        "createdAt": metadata.get("createdAt", ""),
+        "updatedAt": metadata.get("updatedAt", ""),
+        "whyNow": "\n".join(section_buckets["why now"]).strip(),
+        "paths": _bullets("paths", strip_backticks=True),
+        "doNotTouch": _bullets("do not touch", strip_backticks=True),
+        "acceptanceCriteria": _bullets("acceptance criteria", strip_backticks=False),
+        "checks": _bullets("checks", strip_backticks=True),
+        "notes": _bullets("notes", strip_backticks=False),
+        "source": f"file:docs/gaps/{gap_id}.md",
+    }
+
+
 def reserve_paths(
     payload: dict[str, Any],
     *,
@@ -684,7 +937,11 @@ def reserve_paths(
         return result
 
     workboard = load_workboard(workboard_path)
-    workboard.setdefault("reservedPaths", []).append(reservation)
+    existing = workboard.setdefault("reservedPaths", [])
+    workboard["reservedPaths"] = [
+        entry for entry in existing if str(entry.get("gapId", "")) != gap_id
+    ]
+    workboard["reservedPaths"].append(reservation)
     workboard["updatedAt"] = utc_now()
     workboard["updatedBy"] = "sprintvakt-mcp"
     write_workboard(workboard, workboard_path)
@@ -827,7 +1084,7 @@ def _find_gap(gap_id: str, workboard_path: Path | None) -> dict[str, Any]:
     for _list_name, gap in _iter_gap_lists(workboard):
         if gap.get("id") == gap_id:
             return gap
-    raise SprintvaktError(f"Gap not found in workboard: {gap_id}")
+    return _load_gap_from_file(gap_id, workboard_path)
 
 
 def _bullet_list(values: list[str]) -> str:

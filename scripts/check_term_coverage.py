@@ -81,6 +81,16 @@ COMMON_WORDS = {
     "React", "Next", "NextJs", "NextJS", "Vite", "Tailwind", "TypeScript",
     "TURBOPACK", "Turbopack", "Webpack",
     "SIGTERM", "SIGKILL",
+    # Standard environment variable names referenced in tooling docs +
+    # .cursor/mcp.json. PYTHONPATH is a Python interpreter convention,
+    # SAJTBYGGAREN_EVALS_DIR is documented in AGENTS.md cleanup script
+    # paths but tooling-specific; LOCALAPPDATA is a Windows env-var
+    # referenced by branch-discipline.md PowerShell commit guidance.
+    "PYTHONPATH",
+    # Swedish risk-level words used in Scout reports and architecture
+    # docs (e.g., docs/path-b-backend-scout.md risk register). They are
+    # standard Swedish prose, not domain terms.
+    "Hög", "Medel", "Låg",
     "Python", "Streamlit", "FastAPI", "Pydantic", "Flask", "Django",
     "JsonSchema", "Draft202012Validator",
     # Web standards / native browser APIs
