@@ -1,10 +1,32 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-25 morgon (**Sprintvåg 1+2 stängd — fem PRs landade
-på `jakob-be` på 2 timmar**: #81 + #82 + #80 + #79 + #83). Verifierad
-`jakob-be` är `2a5d2e5` (eller `590284b` om denna handoff-commit räknas
-med). `main` ligger 12 commits bakom på `6649b51`. Bug-räkning på
-`jakob-be`: **19 aktiva / 112 stängda** (-5 sedan morgon).
+**Datum:** 2026-05-25 eftermiddag. Verifierad `jakob-be` är `41db367`
+(merge-commit som drar in main:s sync-PR #103). `main` HEAD är
+`7b7263a`. `jakob-be` och `main` är **innehållsmässigt identiska**
+efter dagens sync-cykel. **Inga öppna PRs.** Bug-räkning på `jakob-be`:
+**20 aktiva / 5 unknown / 112 stängda** (B116 bör flyttas till stängda —
+Fix `51c1d19` via PR #100).
+
+**Eftermiddags-fönstret (4 produkt-PRs + sync-PR till main):**
+
+- PR #97 — pedagogiskt preview-fel i local-next mode (404/missing_artifacts mapping)
+- PR #100 — per-siteId build mutex (Map ersätter global inFlight) → stänger B116
+- PR #101 — StackBlitz embed unblocker (cross-origin-isolated permissions policy)
+- PR #104 — honor preview mode end-to-end + mode-aware progress copy
+- PR #103 — sync-merge `jakob-be → main` (16 commits totalt: 6 produkt + 6 härdning + 2 docs + 2 sync)
+
+**Christopher-koord:** `origin/christopher-ui` är `399cf39` (idag) och
+ligger **21 commits framför `origin/main`** — har inte pullat sync-PR
+#103. Senaste commit `[scope-leak]`-taggad av honom själv (gick in i
+`scripts/build_site.py:render_home`-territoriet, utanför hans branch-scope).
+Meddelande postat till hans Sprintvakt-inbox 2026-05-25
+(`msg-0007-ae0ac0`) om rebase-behov. PR mot main blockerad tills han
+har merge:at + löst konflikter i `apps/viewser/components/viewer-panel.tsx`.
+
+**Föregående checkpoint samma dag (morgon):** Sprintvåg 1+2 stängd — fem
+PRs landade på `jakob-be` på 2 timmar (#81 + #82 + #80 + #79 + #83).
+Verifierad `jakob-be` var då `2a5d2e5`, `main` på `6649b51`,
+bug-räkning 19/112.
 
 **ÄRLIG BEDÖMNING (extern reviewer + orchestrator-self-audit):** Av
 dagens fem PRs är endast **#79 en substantiell produktkodsförändring**

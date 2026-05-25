@@ -30,15 +30,34 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `2a5d2e5` (2026-05-25 morgon, **Sprintvåg 1+2:
-fem grind/scout-PRs landade på `jakob-be` inom 2 timmar** — #81 B83
+Last verified state: `41db367` (2026-05-25 **eftermiddag**, merge-commit
+som drar in main:s sync-PR #103 till `jakob-be`). `main` HEAD är
+`7b7263a` — `jakob-be` och `main` är innehållsmässigt identiska efter
+dagens sync-cykel. **Inga öppna PRs.** Bug-räkning: **20 aktiva /
+5 unknown / 112 stängda** (B116 bör flyttas till stängda — Fix
+`51c1d19` via PR #100, ej gjort i denna bump).
+
+**Dagens fönster (eftermiddag) — 4 PRs landade i `jakob-be` + sync-PR
+#103 till main:**
+- PR #97 — pedagogiskt preview-fel i local-next mode (404/missing_artifacts mapping)
+- PR #100 — per-siteId build mutex (Map ersätter global inFlight) → stänger B116
+- PR #101 — StackBlitz embed unblocker (cross-origin-isolated permissions policy)
+- PR #104 — honor preview mode end-to-end + mode-aware progress copy
+- PR #103 — sync-merge `jakob-be → main` (16 commits totalt)
+
+Christopher-koordination: `origin/christopher-ui` är `399cf39` och
+ligger **21 commits framför `origin/main`** (har inte pullat sync-PR
+#103). Senaste commit `[scope-leak]`-taggad. Meddelande postat till
+hans Sprintvakt-inbox 2026-05-25 (`msg-0007-ae0ac0`) om
+rebase-behov. PR mot main blockerad tills han har merge:at + löst
+konflikter i `apps/viewser/components/viewer-panel.tsx`.
+
+**Föregående checkpoint (samma dag):** `2a5d2e5` (morgon, Sprintvåg 1+2:
+fem grind/scout-PRs landade på `jakob-be` inom 2 timmar — #81 B83
 service slug, #82 Lane 3 Embeddings readiness audit, #80 B85 stdout
 contract, #79 B87 model fallback warning, #83 B72+B75 status-sync).
-`origin/main` ligger fortfarande på `6649b51` och ligger nu 11 commits
-bakom `jakob-be`. `origin/christopher-ui` är på `9f63f15` med
-Christophers scope-leak-implementation av
-`GAP-backend-build-trace-endpoint` plus en versions-tab-fix (ej PR:ad
-än). Bug-räkning: **19 aktiva / 112 stängda** (-5 sedan morgon).
+`origin/main` låg då på `6649b51`. Bug-räkning vid det
+tillfället: 19 aktiva / 112 stängda.
 
 PR #77 (agent inbox) mergades med 5 reviewfynd-fixar i samma squash
 (symlink-resistens, deterministic id, idempotent ack, ordinal > 9999,

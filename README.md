@@ -195,6 +195,8 @@ Korta motiveringar i [`governance/decisions/`](governance/decisions/):
 - [0026](governance/decisions/0026-embeddings-postponed-until-contract.md) - Embeddings pausas tills kontraktet är klart.
 - [0027](governance/decisions/0027-semantic-followup-merge.md) - Semantic follow-up merge i Project DNA V1.
 - [0028](governance/decisions/0028-runtime-ladder.md) - Runtime ladder för PreviewRuntime.
+- [0029](governance/decisions/0029-tooling-editable-install.md) - Editable install av `tooling`-paketet i venv för MCP-server.
+- [0030](governance/decisions/0030-preview-provider-portability.md) - Preview/deploy-providers är adapters, inte canonical runtime.
 - [0031](governance/decisions/0031-steward-auto-bump.md) - Steward auto-bump vid PR-merge.
 
 ## Engine Run
