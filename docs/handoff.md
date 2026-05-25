@@ -1,85 +1,51 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-25 kväll. Verifierad feature-branch
-`b146-port-section-dispatcher` (B146 stängd: Christophers PR #105 + #108
-section-arkitektur portad ovanpå PR #107-splitten). `jakob-be` HEAD är
-`ee2a91e`; `main` HEAD är `84bf842`. **Öppen PR:** feature →
-`jakob-be` följt av sync-PR `jakob-be → main`. Bug-räkning på
-feature-branchen: **19 aktiva / 5 unknown / 114 stängda** (B146 +
-B116 båda stängda).
+**Datum:** 2026-05-25 UTC, steward-auto efter PR #113 — sync(jakob-be -> main): B146 reconciliation + runtime smoke-lock + golden-path eval (#112, #109, #110). Verifierad `main` är `ee31eb1`.
 
-**Kvällens fönster (B146 + Phase 3 port):**
-
-- Ny fil `packages/generation/build/dispatcher.py` (~370 rader) med
-  section-id registry, treatment-resolution-helpers, `render_route_generic`.
-- `packages/generation/build/renderers.py` växte från 2357 → ~4710 rader
-  med ~30 nya `render_section_*` + uppdaterade page renderers från
-  Christophers main-versioner. Initial sektion-registrering vid filslut.
-- `scripts/build_site.py` ~3162 → ~3650 rader: utökade re-exports +
-  `__getattr__`-shim som proxar okända namn till
-  renderers/dispatcher/static_assets. `from scripts.build_site import
-  render_section_X` fortsätter fungera.
-- ADR 0031 (section-treatments från main:PR #108) renumrerad till **0032**
-  eftersom jakob-be:s 0031 (Steward auto-bump, PR #106) var äldre.
-  Renumber-not överst i ADR + uppdaterade referenser i alla
-  source-/test-/doc-filer.
-- Phase 3 backend: `_apply_directives_fields` additivt-mergar
-  `directives.sectionTreatments` i resolve.py; `_SECTION_TREATMENTS_CATALOGUE`
-  + planning-prompt-update i plan.py; schema-bump i project-input.schema.json.
-- Wizard-UI: `treatment-options.ts` (ny), `wizard-types.ts`/
-  `wizard-payload.ts`/`steps/visual-step.tsx`/`demo-answers.ts` uppdaterade,
-  `wizard-constants.ts` fick 113 nya rader (deriveEffectiveScaffoldHint +
-  4 restaurant-vibes).
-- Tester: 5 nya/uppdaterade testfiler portade,
-  `tests/test_section_treatments_{prompts,propagation,resolve}.py` +
-  `test_section_renderer_registry.py` + `test_project_input_schema.py` (utökat).
-  126 nya cases passerar. `test_builder_audit_post_3b_next.py` fick utökad
-  JSX-escaping-lista (sätter `render_section_hero`, treatment-helpers etc.).
-
-**Eftermiddags-fönstret (4 produkt-PRs + sync-PR till main):**
-
-- PR #97 — pedagogiskt preview-fel i local-next mode (404/missing_artifacts mapping)
-- PR #100 — per-siteId build mutex (Map ersätter global inFlight) → stänger B116
-- PR #101 — StackBlitz embed unblocker (cross-origin-isolated permissions policy)
-- PR #104 — honor preview mode end-to-end + mode-aware progress copy
-- PR #103 — sync-merge `jakob-be → main` (16 commits totalt: 6 produkt + 6 härdning + 2 docs + 2 sync)
-
-**Christopher-koord:** `origin/christopher-ui` är `399cf39` (idag) och
-ligger **21 commits framför `origin/main`** — har inte pullat sync-PR
-#103. Senaste commit `[scope-leak]`-taggad av honom själv (gick in i
-`scripts/build_site.py:render_home`-territoriet, utanför hans branch-scope).
-Meddelande postat till hans Sprintvakt-inbox 2026-05-25
-(`msg-0007-ae0ac0`) om rebase-behov. PR mot main blockerad tills han
-har merge:at + löst konflikter i `apps/viewser/components/viewer-panel.tsx`.
-
-**Föregående checkpoint samma dag (morgon):** Sprintvåg 1+2 stängd — fem
-PRs landade på `jakob-be` på 2 timmar (#81 + #82 + #80 + #79 + #83).
-Verifierad `jakob-be` var då `2a5d2e5`, `main` på `6649b51`,
-bug-räkning 19/112.
-
-**ÄRLIG BEDÖMNING (extern reviewer + orchestrator-self-audit):** Av
-dagens fem PRs är endast **#79 en substantiell produktkodsförändring**
-(stderr-warning vid `briefModel`-fallback). #80 = docstring-source-lock-
-test (intern kvalitet, ingen runtime-effekt). #81 + #83 = docs-
-flyttar av redan-fixed B-IDer i `known-issues.md`. #82 = read-only
-scout-rapport för embeddings-readiness. Dagens energi gick åt
-**koordinationslager** (Sprintvakt-inbox, lane-disciplin, worktree-
-isolering, multitask-räddningsoperation) snarare än till kärnflödet
-`prompt → brief → plan/build → preview → följdprompt`. Verklig
-produktlyft denna session: minimal. `main` rör sig inte alls. Detta
-är acceptabelt OM nästa session prioriterar Lane 2 LLM contract
-propagation (B137-B141) och `jakob-be → main`-sync.
-
-`origin/christopher-ui` är på `9f63f15` med Christophers
-scope-leak-implementation av `GAP-backend-build-trace-endpoint` plus en
-versions-tab-fix, ej PR:ad än. Hon är hård blocker för `jakob-be → main`-
-sync eftersom hennes branch behöver hanteras innan main rör sig.
-
-Health på `jakob-be` är grön: governance (18 policies), rules-sync,
-strict term coverage, sprintvakt-check `--strict`, ruff 0 findings,
-hela pytest-suiten (25 sprintvakt-tester + 14 industry-coverage + 2
-workflow-regression + 30+ övriga + nya #76-recovery-tester körda lokalt
-i ren worktree från `origin/jakob-be` innan PR).
+Nya PRs sedan föregående checkpoint: PR #55 — fix(viewser): stale run-following och
+artefakt-panel; PR #59 — feat(backoffice): add read-only asset graph lens; PR #60 —
+tooling: Starter Candidate Auditor v1 (read-only); PR #61 — docs: add team parallel
+workflow and ownership map; PR #62 — feat(viewser): integrate christopher-ui builder
+workflow; PR #63 — feat(discovery): respect wizard directives — useCustomColors +
+scaffoldHint (Gap 1 + 3); PR #64 — docs(ownership): add branch-naming conventions for
+parallel team work; PR #66 — fix(assets): sourceUrl uploads with stream-safe fetch
+(supersedes #65); PR #67 — ci: add AI bug review workflow step; PR #68 — feat(week1):
+restaurant-hospitality scaffold + 11 soft dossiers + 14 variants (fantastic sites W1);
+PR #70 — feat(tooling): add Sprintvakt V1 coordination guard; PR #71 — feat(viewser):
+Front 1-3 + wizard minimalism — preview, iteration & polish; PR #75 — feat: Sprintvakt
+V1.1+V1.2 + CI hardening + industry coverage + docs sync (post-PR70 batch); PR #76 —
+fix(backoffice): recover regression tests and catch-all coverage status; PR #77 —
+feat(tooling): add Sprintvakt agent inbox (post/list/ack); PR #78 — fix(backoffice):
+harden candidate generation provenance and defaults; PR #81 — fix(grind): close B83
+service slug collision; PR #82 — docs(scout): embedding readiness audit 2026-05-25; PR
+#80 — fix(grind): close B85 stdout contract drift; PR #79 — fix(grind): close B87 model
+fallback warning; PR #83 — docs(grind): close B72 + B75 status-sync to Stängda; PR #84 —
+test(generation): contract regression net for B137-B141 + extend B139 tone fallback; PR
+#87 — feat(backoffice): add one-click eval smoke runs; PR #89 — feat(eval-probe): add
+scaffold-selection probe + docs; PR #88 — fix(viewser): make preview mode drive local
+iframe headers; PR #92 — fix(viewser): handle quoted-with-comment + $VAR expansion in
+dev-dispatcher .env-parser; PR #93 — feat(builder): wire menu+booking renderers so
+restaurant-hospitality builds; PR #94 — docs(dossiers): import-readiness scope-doc for
+Sajtmaskin material; PR #95 — feat(evals): add cafe-bistro to FULL_CASES so full suite
+covers all 3 on-disk scaffolds; PR #97 — fix(viewser): pedagogical preview-error in
+local-next mode + soft transport-mismatch warning; PR #99 — docs(adr): 0030
+preview/deploy-providers are adapters, not canonical runtime; PR #98 — chore(tooling):
+lucide-react cross-policy lock + ADR 0021 upstream-issue recheck + B145 entry; PR #100 —
+fix(viewser): per-siteId build mutex so unrelated sites can build in parallel; PR #101 —
+fix(viewser): cross-origin-isolated permissions policy + dispatcher https signal; PR
+#102 — fix(evals): cherry-pick timeout-hardening + helper API from #96; PR #104 —
+fix(viewser): honor preview mode end-to-end + mode-aware progress copy; PR #103 —
+sync(jakob-be -> main): 5 produkt + 6 härdning + 2 docs (13 commits); PR #105 — Live
+Build Sync + Restaurant Path A + Wizard polish + Side-by-side preview; PR #106 —
+feat(steward): auto-bump current-focus + handoff on PR merge to main (ADR 0031); PR #107
+— refactor(builder): extract page renderers from build_site.py to
+packages/generation/build (B13a step C); PR #108 — Phase 3 — section-treatments
+operator-pin + scout-driven polish; PR #112 — feat(b146): port Christopher's
+section-arkitektur ovanpå PR #107-splitten; PR #109 — test(builder): lock runtime
+scaffold smoke coverage on jakob-be; PR #110 — feat(evals): add deterministic golden
+path scorecard and embeddings gate; PR #111 — fix(agents): correct python3-venv package
+name for Ubuntu Noble; PR #113 — sync(jakob-be -> main): B146 reconciliation + runtime
+smoke-lock + golden-path eval (#112, #109, #110).
 
 **MCP-server-status:** Sprintvakt-servern exponerar 14 tools efter
 PR #77 (`get_workboard`, `list_gaps`, `create_gap`, `activate_gap`,
@@ -335,3 +301,88 @@ Källor för bakgrund:
 - [`docs/current-focus.md`](current-focus.md) "Föregående produkt-läge"-block för verified-state-progression.
 - [`docs/known-issues.md`](known-issues.md) för B-ID-historik (aktiva, misplaced, unknown, stängda).
 - [`governance/decisions/`](../governance/decisions/) för ADR-spår.
+
+## Föregående checkpoint
+
+### 2026-05-25 UTC — handoff.md före `2057241`
+
+**Datum:** 2026-05-25 kväll. Verifierad feature-branch
+`b146-port-section-dispatcher` (B146 stängd: Christophers PR #105 + #108
+section-arkitektur portad ovanpå PR #107-splitten). `jakob-be` HEAD är
+`ee2a91e`; `main` HEAD är `84bf842`. **Öppen PR:** feature →
+`jakob-be` följt av sync-PR `jakob-be → main`. Bug-räkning på
+feature-branchen: **19 aktiva / 5 unknown / 114 stängda** (B146 +
+B116 båda stängda).
+
+**Kvällens fönster (B146 + Phase 3 port):**
+
+- Ny fil `packages/generation/build/dispatcher.py` (~370 rader) med
+  section-id registry, treatment-resolution-helpers, `render_route_generic`.
+- `packages/generation/build/renderers.py` växte från 2357 → ~4710 rader
+  med ~30 nya `render_section_*` + uppdaterade page renderers från
+  Christophers main-versioner. Initial sektion-registrering vid filslut.
+- `scripts/build_site.py` ~3162 → ~3650 rader: utökade re-exports +
+  `__getattr__`-shim som proxar okända namn till
+  renderers/dispatcher/static_assets. `from scripts.build_site import
+  render_section_X` fortsätter fungera.
+- ADR 0031 (section-treatments från main:PR #108) renumrerad till **0032**
+  eftersom jakob-be:s 0031 (Steward auto-bump, PR #106) var äldre.
+  Renumber-not överst i ADR + uppdaterade referenser i alla
+  source-/test-/doc-filer.
+- Phase 3 backend: `_apply_directives_fields` additivt-mergar
+  `directives.sectionTreatments` i resolve.py; `_SECTION_TREATMENTS_CATALOGUE`
+  + planning-prompt-update i plan.py; schema-bump i project-input.schema.json.
+- Wizard-UI: `treatment-options.ts` (ny), `wizard-types.ts`/
+  `wizard-payload.ts`/`steps/visual-step.tsx`/`demo-answers.ts` uppdaterade,
+  `wizard-constants.ts` fick 113 nya rader (deriveEffectiveScaffoldHint +
+  4 restaurant-vibes).
+- Tester: 5 nya/uppdaterade testfiler portade,
+  `tests/test_section_treatments_{prompts,propagation,resolve}.py` +
+  `test_section_renderer_registry.py` + `test_project_input_schema.py` (utökat).
+  126 nya cases passerar. `test_builder_audit_post_3b_next.py` fick utökad
+  JSX-escaping-lista (sätter `render_section_hero`, treatment-helpers etc.).
+
+**Eftermiddags-fönstret (4 produkt-PRs + sync-PR till main):**
+
+- PR #97 — pedagogiskt preview-fel i local-next mode (404/missing_artifacts mapping)
+- PR #100 — per-siteId build mutex (Map ersätter global inFlight) → stänger B116
+- PR #101 — StackBlitz embed unblocker (cross-origin-isolated permissions policy)
+- PR #104 — honor preview mode end-to-end + mode-aware progress copy
+- PR #103 — sync-merge `jakob-be → main` (16 commits totalt: 6 produkt + 6 härdning + 2 docs + 2 sync)
+
+**Christopher-koord:** `origin/christopher-ui` är `399cf39` (idag) och
+ligger **21 commits framför `origin/main`** — har inte pullat sync-PR
+#103. Senaste commit `[scope-leak]`-taggad av honom själv (gick in i
+`scripts/build_site.py:render_home`-territoriet, utanför hans branch-scope).
+Meddelande postat till hans Sprintvakt-inbox 2026-05-25
+(`msg-0007-ae0ac0`) om rebase-behov. PR mot main blockerad tills han
+har merge:at + löst konflikter i `apps/viewser/components/viewer-panel.tsx`.
+
+**Föregående checkpoint samma dag (morgon):** Sprintvåg 1+2 stängd — fem
+PRs landade på `jakob-be` på 2 timmar (#81 + #82 + #80 + #79 + #83).
+Verifierad `jakob-be` var då `2a5d2e5`, `main` på `6649b51`,
+bug-räkning 19/112.
+
+**ÄRLIG BEDÖMNING (extern reviewer + orchestrator-self-audit):** Av
+dagens fem PRs är endast **#79 en substantiell produktkodsförändring**
+(stderr-warning vid `briefModel`-fallback). #80 = docstring-source-lock-
+test (intern kvalitet, ingen runtime-effekt). #81 + #83 = docs-
+flyttar av redan-fixed B-IDer i `known-issues.md`. #82 = read-only
+scout-rapport för embeddings-readiness. Dagens energi gick åt
+**koordinationslager** (Sprintvakt-inbox, lane-disciplin, worktree-
+isolering, multitask-räddningsoperation) snarare än till kärnflödet
+`prompt → brief → plan/build → preview → följdprompt`. Verklig
+produktlyft denna session: minimal. `main` rör sig inte alls. Detta
+är acceptabelt OM nästa session prioriterar Lane 2 LLM contract
+propagation (B137-B141) och `jakob-be → main`-sync.
+
+`origin/christopher-ui` är på `9f63f15` med Christophers
+scope-leak-implementation av `GAP-backend-build-trace-endpoint` plus en
+versions-tab-fix, ej PR:ad än. Hon är hård blocker för `jakob-be → main`-
+sync eftersom hennes branch behöver hanteras innan main rör sig.
+
+Health på `jakob-be` är grön: governance (18 policies), rules-sync,
+strict term coverage, sprintvakt-check `--strict`, ruff 0 findings,
+hela pytest-suiten (25 sprintvakt-tester + 14 industry-coverage + 2
+workflow-regression + 30+ övriga + nya #76-recovery-tester körda lokalt
+i ren worktree från `origin/jakob-be` innan PR).

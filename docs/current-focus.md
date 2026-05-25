@@ -30,76 +30,51 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: feature-branch `b146-port-section-dispatcher`
-(2026-05-25 **kväll**, B146-port: Christophers PR #105 + #108
-section-arkitektur portad ovanpå jakob-be:s PR #107 split). `main`
-HEAD är `84bf842`; `jakob-be` HEAD är `ee2a91e`. PR mot `jakob-be`
-öppnas härnäst, följt av en sync-PR `jakob-be → main` när feature
-PR:n mergat. Bug-räkning: **19 aktiva / 5 unknown / 114 stängda**
-(B146 stängd via denna port).
-
-**Kvällens fönster — B146 + Phase 3 port:**
-- `packages/generation/build/dispatcher.py` (ny, ~370 rader): section-id
-  registry, `_SECTION_TREATMENTS_BY_VARIANT`, `_treatment_for_section`,
-  `_operator_pin_for_section`, `_load_scaffold_sections`,
-  `_section_renderer_kwargs`, `_call_section_renderer`,
-  `render_route_generic`.
-- `packages/generation/build/renderers.py`: utvidgat från 2357 → ~4700
-  rader. Alla ~30 nya `render_section_*` + uppdaterade page renderers
-  (`render_home` etc.) från Christophers main-versioner. Initial
-  registrering av basic sections vid modul-slut.
-- `scripts/build_site.py`: utökade re-exports + `__getattr__`-shim så
-  `from scripts.build_site import render_section_X` fortsätter fungera
-  utan att vi listar alla 46 namn manuellt.
-- Phase 3 backend: `_apply_directives_fields` i resolve.py additivt-mergar
-  `directives.sectionTreatments`; `plan.py` får `_SECTION_TREATMENTS_CATALOGUE`
-  och prompt-update; schema-bump i `governance/schemas/project-input.schema.json`.
-- ADR 0031 från main (PR #108 section-treatments) renumrerad till
-  **0032** eftersom jakob-be:s 0031 (Steward auto-bump, PR #106) var
-  äldre. Renumber-not i ADR-toppen + uppdaterade referenser i alla
-  source-/test-/doc-filer som pekade på 0031:section-treatments.
-- Wizard-UI: `treatment-options.ts`, `wizard-types.ts`,
-  `wizard-payload.ts`, `steps/visual-step.tsx`, `demo-answers.ts`,
-  `wizard-constants.ts` (113 rader Phase 3-additioner ovanpå PR #105:s
-  cherry-pickade 126), `docs/contracts/wizard-discovery.v2.md`.
-- Tester: `test_section_treatments_{prompts,propagation,resolve}.py`,
-  `test_section_renderer_registry.py`, `test_project_input_schema.py`
-  (utökat). 126 nya cases passerar.
-
-**Dagens fönster (eftermiddag) — 4 PRs landade i `jakob-be` + sync-PR
-#103 till main:**
-- PR #97 — pedagogiskt preview-fel i local-next mode (404/missing_artifacts mapping)
-- PR #100 — per-siteId build mutex (Map ersätter global inFlight) → stänger B116
-- PR #101 — StackBlitz embed unblocker (cross-origin-isolated permissions policy)
-- PR #104 — honor preview mode end-to-end + mode-aware progress copy
-- PR #103 — sync-merge `jakob-be → main` (16 commits totalt)
-
-Christopher-koordination: `origin/christopher-ui` är `399cf39` och
-ligger **21 commits framför `origin/main`** (har inte pullat sync-PR
-#103). Senaste commit `[scope-leak]`-taggad. Meddelande postat till
-hans Sprintvakt-inbox 2026-05-25 (`msg-0007-ae0ac0`) om
-rebase-behov. PR mot main blockerad tills han har merge:at + löst
-konflikter i `apps/viewser/components/viewer-panel.tsx`.
-
-**Föregående checkpoint (samma dag):** `2a5d2e5` (morgon, Sprintvåg 1+2:
-fem grind/scout-PRs landade på `jakob-be` inom 2 timmar — #81 B83
-service slug, #82 Lane 3 Embeddings readiness audit, #80 B85 stdout
-contract, #79 B87 model fallback warning, #83 B72+B75 status-sync).
-`origin/main` låg då på `6649b51`. Bug-räkning vid det
-tillfället: 19 aktiva / 112 stängda.
-
-PR #77 (agent inbox) mergades med 5 reviewfynd-fixar i samma squash
-(symlink-resistens, deterministic id, idempotent ack, ordinal > 9999,
-UTC-aware since-filter). PR #78 (candidate provenance) lyfte fyra
-helpers till `scripts/candidate_generation_metadata.py`, lade
-provenance-sidecar `.meta.json` per kandidat, och defaultade
-Backoffice-checkbox för LLM-call till `False` (operatören väljer aktivt
-att kalla LLM). `b12c164` fixade en latent bugg i `_load_gap_from_file`:
-gap-parsern returnerade backslashes från `\[runId\]`-escape vidare till
-`sanitize_repo_path`, vilket gav korrupta paths (`[runId/]`) i
-`paths_overlap` + `generate_agent_prompt`. Hela pytest-suiten är grön;
-ruff 0 findings; `python scripts/sprintvakt_check.py --strict` ger
-`Sprintvakt check: OK`.
+Last verified state: `ee31eb1` (2026-05-25 UTC, steward-auto efter PR #113 — sync(jakob-be -> main): B146 reconciliation + runtime smoke-lock + golden-path eval (#112, #109, #110)).
+Nya PRs sedan föregående checkpoint: PR #55 — fix(viewser): stale run-following och
+artefakt-panel; PR #59 — feat(backoffice): add read-only asset graph lens; PR #60 —
+tooling: Starter Candidate Auditor v1 (read-only); PR #61 — docs: add team parallel
+workflow and ownership map; PR #62 — feat(viewser): integrate christopher-ui builder
+workflow; PR #63 — feat(discovery): respect wizard directives — useCustomColors +
+scaffoldHint (Gap 1 + 3); PR #64 — docs(ownership): add branch-naming conventions for
+parallel team work; PR #66 — fix(assets): sourceUrl uploads with stream-safe fetch
+(supersedes #65); PR #67 — ci: add AI bug review workflow step; PR #68 — feat(week1):
+restaurant-hospitality scaffold + 11 soft dossiers + 14 variants (fantastic sites W1);
+PR #70 — feat(tooling): add Sprintvakt V1 coordination guard; PR #71 — feat(viewser):
+Front 1-3 + wizard minimalism — preview, iteration & polish; PR #75 — feat: Sprintvakt
+V1.1+V1.2 + CI hardening + industry coverage + docs sync (post-PR70 batch); PR #76 —
+fix(backoffice): recover regression tests and catch-all coverage status; PR #77 —
+feat(tooling): add Sprintvakt agent inbox (post/list/ack); PR #78 — fix(backoffice):
+harden candidate generation provenance and defaults; PR #81 — fix(grind): close B83
+service slug collision; PR #82 — docs(scout): embedding readiness audit 2026-05-25; PR
+#80 — fix(grind): close B85 stdout contract drift; PR #79 — fix(grind): close B87 model
+fallback warning; PR #83 — docs(grind): close B72 + B75 status-sync to Stängda; PR #84 —
+test(generation): contract regression net for B137-B141 + extend B139 tone fallback; PR
+#87 — feat(backoffice): add one-click eval smoke runs; PR #89 — feat(eval-probe): add
+scaffold-selection probe + docs; PR #88 — fix(viewser): make preview mode drive local
+iframe headers; PR #92 — fix(viewser): handle quoted-with-comment + $VAR expansion in
+dev-dispatcher .env-parser; PR #93 — feat(builder): wire menu+booking renderers so
+restaurant-hospitality builds; PR #94 — docs(dossiers): import-readiness scope-doc for
+Sajtmaskin material; PR #95 — feat(evals): add cafe-bistro to FULL_CASES so full suite
+covers all 3 on-disk scaffolds; PR #97 — fix(viewser): pedagogical preview-error in
+local-next mode + soft transport-mismatch warning; PR #99 — docs(adr): 0030
+preview/deploy-providers are adapters, not canonical runtime; PR #98 — chore(tooling):
+lucide-react cross-policy lock + ADR 0021 upstream-issue recheck + B145 entry; PR #100 —
+fix(viewser): per-siteId build mutex so unrelated sites can build in parallel; PR #101 —
+fix(viewser): cross-origin-isolated permissions policy + dispatcher https signal; PR
+#102 — fix(evals): cherry-pick timeout-hardening + helper API from #96; PR #104 —
+fix(viewser): honor preview mode end-to-end + mode-aware progress copy; PR #103 —
+sync(jakob-be -> main): 5 produkt + 6 härdning + 2 docs (13 commits); PR #105 — Live
+Build Sync + Restaurant Path A + Wizard polish + Side-by-side preview; PR #106 —
+feat(steward): auto-bump current-focus + handoff on PR merge to main (ADR 0031); PR #107
+— refactor(builder): extract page renderers from build_site.py to
+packages/generation/build (B13a step C); PR #108 — Phase 3 — section-treatments
+operator-pin + scout-driven polish; PR #112 — feat(b146): port Christopher's
+section-arkitektur ovanpå PR #107-splitten; PR #109 — test(builder): lock runtime
+scaffold smoke coverage on jakob-be; PR #110 — feat(evals): add deterministic golden
+path scorecard and embeddings gate; PR #111 — fix(agents): correct python3-venv package
+name for Ubuntu Noble; PR #113 — sync(jakob-be -> main): B146 reconciliation + runtime
+smoke-lock + golden-path eval (#112, #109, #110).
 
 Sedan c0b59fbe (PR #60) har följande mergats till `main`, i ordning:
 
@@ -1276,3 +1251,78 @@ Operatörspreferens (2026-05-13): svara kort och koncist på svenska,
 förklara dev-uttryck med korta parenteser första gången per
 konversation. Mönstret är formaliserat i
 [`governance/rules/reply-style.md`](../governance/rules/reply-style.md).
+
+## Föregående checkpoint
+
+### 2026-05-25 UTC — current-focus.md före `2057241`
+
+Last verified state: feature-branch `b146-port-section-dispatcher`
+(2026-05-25 **kväll**, B146-port: Christophers PR #105 + #108
+section-arkitektur portad ovanpå jakob-be:s PR #107 split). `main`
+HEAD är `84bf842`; `jakob-be` HEAD är `ee2a91e`. PR mot `jakob-be`
+öppnas härnäst, följt av en sync-PR `jakob-be → main` när feature
+PR:n mergat. Bug-räkning: **19 aktiva / 5 unknown / 114 stängda**
+(B146 stängd via denna port).
+
+**Kvällens fönster — B146 + Phase 3 port:**
+- `packages/generation/build/dispatcher.py` (ny, ~370 rader): section-id
+  registry, `_SECTION_TREATMENTS_BY_VARIANT`, `_treatment_for_section`,
+  `_operator_pin_for_section`, `_load_scaffold_sections`,
+  `_section_renderer_kwargs`, `_call_section_renderer`,
+  `render_route_generic`.
+- `packages/generation/build/renderers.py`: utvidgat från 2357 → ~4700
+  rader. Alla ~30 nya `render_section_*` + uppdaterade page renderers
+  (`render_home` etc.) från Christophers main-versioner. Initial
+  registrering av basic sections vid modul-slut.
+- `scripts/build_site.py`: utökade re-exports + `__getattr__`-shim så
+  `from scripts.build_site import render_section_X` fortsätter fungera
+  utan att vi listar alla 46 namn manuellt.
+- Phase 3 backend: `_apply_directives_fields` i resolve.py additivt-mergar
+  `directives.sectionTreatments`; `plan.py` får `_SECTION_TREATMENTS_CATALOGUE`
+  och prompt-update; schema-bump i `governance/schemas/project-input.schema.json`.
+- ADR 0031 från main (PR #108 section-treatments) renumrerad till
+  **0032** eftersom jakob-be:s 0031 (Steward auto-bump, PR #106) var
+  äldre. Renumber-not i ADR-toppen + uppdaterade referenser i alla
+  source-/test-/doc-filer som pekade på 0031:section-treatments.
+- Wizard-UI: `treatment-options.ts`, `wizard-types.ts`,
+  `wizard-payload.ts`, `steps/visual-step.tsx`, `demo-answers.ts`,
+  `wizard-constants.ts` (113 rader Phase 3-additioner ovanpå PR #105:s
+  cherry-pickade 126), `docs/contracts/wizard-discovery.v2.md`.
+- Tester: `test_section_treatments_{prompts,propagation,resolve}.py`,
+  `test_section_renderer_registry.py`, `test_project_input_schema.py`
+  (utökat). 126 nya cases passerar.
+
+**Dagens fönster (eftermiddag) — 4 PRs landade i `jakob-be` + sync-PR
+#103 till main:**
+- PR #97 — pedagogiskt preview-fel i local-next mode (404/missing_artifacts mapping)
+- PR #100 — per-siteId build mutex (Map ersätter global inFlight) → stänger B116
+- PR #101 — StackBlitz embed unblocker (cross-origin-isolated permissions policy)
+- PR #104 — honor preview mode end-to-end + mode-aware progress copy
+- PR #103 — sync-merge `jakob-be → main` (16 commits totalt)
+
+Christopher-koordination: `origin/christopher-ui` är `399cf39` och
+ligger **21 commits framför `origin/main`** (har inte pullat sync-PR
+#103). Senaste commit `[scope-leak]`-taggad. Meddelande postat till
+hans Sprintvakt-inbox 2026-05-25 (`msg-0007-ae0ac0`) om
+rebase-behov. PR mot main blockerad tills han har merge:at + löst
+konflikter i `apps/viewser/components/viewer-panel.tsx`.
+
+**Föregående checkpoint (samma dag):** `2a5d2e5` (morgon, Sprintvåg 1+2:
+fem grind/scout-PRs landade på `jakob-be` inom 2 timmar — #81 B83
+service slug, #82 Lane 3 Embeddings readiness audit, #80 B85 stdout
+contract, #79 B87 model fallback warning, #83 B72+B75 status-sync).
+`origin/main` låg då på `6649b51`. Bug-räkning vid det
+tillfället: 19 aktiva / 112 stängda.
+
+PR #77 (agent inbox) mergades med 5 reviewfynd-fixar i samma squash
+(symlink-resistens, deterministic id, idempotent ack, ordinal > 9999,
+UTC-aware since-filter). PR #78 (candidate provenance) lyfte fyra
+helpers till `scripts/candidate_generation_metadata.py`, lade
+provenance-sidecar `.meta.json` per kandidat, och defaultade
+Backoffice-checkbox för LLM-call till `False` (operatören väljer aktivt
+att kalla LLM). `b12c164` fixade en latent bugg i `_load_gap_from_file`:
+gap-parsern returnerade backslashes från `\[runId\]`-escape vidare till
+`sanitize_repo_path`, vilket gav korrupta paths (`[runId/]`) i
+`paths_overlap` + `generate_agent_prompt`. Hela pytest-suiten är grön;
+ruff 0 findings; `python scripts/sprintvakt_check.py --strict` ger
+`Sprintvakt check: OK`.
