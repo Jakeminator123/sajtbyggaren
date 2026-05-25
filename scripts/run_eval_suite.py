@@ -3,10 +3,13 @@
 
 Two modes:
 
-* ``quick`` — runs all four ``examples/*.project-input.json`` fixtures with
-  ``--skip-build`` for a fast regression smoke check (no npm).
-* ``full`` — runs ``painter-palma`` and ``atelje-bird`` without
-  ``--skip-build`` so ``npm install`` + ``npm run build`` are exercised.
+* ``quick`` — runs the ``QUICK_CASES`` fixtures with ``--skip-build`` for
+  a fast regression smoke check (no npm).
+* ``full`` — runs the ``FULL_CASES`` fixtures without ``--skip-build`` so
+  ``npm install`` + ``npm run build`` are exercised against each scaffold
+  that has a real on-disk implementation. Case counts are reported in
+  the CLI ``--help`` text dynamically from the tuple lengths so they
+  stay in sync if new fixtures land.
 
 For each case the runner reads the canonical artefakter under
 ``data/runs/<runId>/`` and writes a summary to
@@ -61,6 +64,14 @@ QUICK_CASES: tuple[str, ...] = (
 FULL_CASES: tuple[str, ...] = (
     "painter-palma",
     "atelje-bird",
+    # restaurant-hospitality (warm-bistro variant, marketing-base starter).
+    # Added in eval-hardening so the full suite covers all three on-disk
+    # scaffolds (local-service-business via painter-palma, ecommerce-lite
+    # via atelje-bird, restaurant-hospitality via cafe-bistro) and not
+    # just the first two. Without this entry the menu+booking renderers
+    # added in Issue #90 (PR #93) are only verified via targeted full
+    # builds, never via the canonical full-suite regression signal.
+    "cafe-bistro",
 )
 
 # `scripts/build_site.py` prints `runId: <id>` on stdout. Other tools in
@@ -408,8 +419,10 @@ def main() -> int:
         "mode",
         choices=("quick", "full"),
         help=(
-            "quick: 4 examples with --skip-build. "
-            "full: painter-palma + atelje-bird without --skip-build (npm build)."
+            f"quick: {len(QUICK_CASES)} examples with --skip-build "
+            f"({', '.join(QUICK_CASES)}). "
+            f"full: {len(FULL_CASES)} examples without --skip-build "
+            f"({', '.join(FULL_CASES)}) — real npm install + npm run build."
         ),
     )
     parser.add_argument(
