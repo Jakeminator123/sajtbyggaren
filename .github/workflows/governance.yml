@@ -2,20 +2,18 @@ name: Governance
 
 on:
   push:
-    branches: ["**"]
+    branches:
+      - main
+      - jakob-be
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
-  issues: write
-  pull-requests: write
 
 jobs:
   governance:
     runs-on: ubuntu-latest
-    env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,13 +49,6 @@ jobs:
       - name: Run pytest
         run: python -m pytest tests/ -v
 
-      - name: Run AI bug review
-        if: always()
-        run: python scripts/ai_bug_review.py
-        env:
-          OPENAI_REVIEW_MODEL: ${{ vars.OPENAI_REVIEW_MODEL || 'gpt-5.4' }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   builder-smoke:
     runs-on: ubuntu-latest
     steps:
@@ -85,3 +76,35 @@ jobs:
       - name: Build smoke site end-to-end
         run: |
           python scripts/build_site.py --dossier examples/painter-palma.project-input.json --generated-dir "$RUNNER_TEMP/sajtbyggaren-output/.generated"
+
+  ai-bug-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run AI bug review
+        run: python scripts/ai_bug_review.py
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_REVIEW_MODEL: ${{ vars.OPENAI_REVIEW_MODEL || 'gpt-5.4' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -55,7 +55,7 @@ python -m pytest tests/ -m governance -q
 
 ## Lager 5: GitHub Actions
 
-[`.github/workflows/governance.yml`](../.github/workflows/governance.yml) kör alla skript och hela pytest-sviten på varje push och PR. Samma workflow kör också `scripts/ai_bug_review.py`, som gör en AI-buggreview av diffen när `OPENAI_API_KEY` finns konfigurerad och annars hoppar över AI-delen med en workflow summary. Status syns på commit-listan i GitHub.
+[`.github/workflows/governance.yml`](../.github/workflows/governance.yml) kör governance-jobbet och builder-smoke på PR:er och långlivade push-branches. PR:er får dessutom en separat `ai-bug-review`-check som kör `scripts/ai_bug_review.py`, gör en AI-buggreview av diffen när `OPENAI_API_KEY` finns konfigurerad och annars hoppar över AI-delen med en workflow summary.
 
 ## Vad som händer när något fallerar
 
