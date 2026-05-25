@@ -684,7 +684,11 @@ def reserve_paths(
         return result
 
     workboard = load_workboard(workboard_path)
-    workboard.setdefault("reservedPaths", []).append(reservation)
+    existing = workboard.setdefault("reservedPaths", [])
+    workboard["reservedPaths"] = [
+        entry for entry in existing if str(entry.get("gapId", "")) != gap_id
+    ]
+    workboard["reservedPaths"].append(reservation)
     workboard["updatedAt"] = utc_now()
     workboard["updatedBy"] = "sprintvakt-mcp"
     write_workboard(workboard, workboard_path)

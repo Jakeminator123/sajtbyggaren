@@ -283,6 +283,46 @@ def test_reserve_paths_reports_existing_active_gap_collision(tmp_path: Path) -> 
     assert any(collision.get("withGapId") == "GAP-active" for collision in result["collisions"])
 
 
+@pytest.mark.tooling
+def test_reserve_paths_replaces_existing_gap_id(tmp_path: Path) -> None:
+    workboard = _base_workboard()
+    workboard["reservedPaths"].append(
+        {
+            "owner": "jakob",
+            "gapId": "GAP-dup",
+            "paths": ["docs/old-path.md"],
+            "reason": "stale reservation",
+            "createdAt": "2026-05-23T00:00:00Z",
+        }
+    )
+    workboard_path = _write_workboard(tmp_path, workboard)
+
+    result = reserve_paths(
+        {
+            "owner": "jakob",
+            "gapId": "GAP-dup",
+            "paths": ["docs/new-path.md"],
+            "reason": "updated reservation",
+            "dryRun": False,
+            "confirm": True,
+        },
+        workboard_path=workboard_path,
+    )
+
+    assert result.get("written") is True
+    persisted = json.loads(workboard_path.read_text(encoding="utf-8"))
+    matching = [
+        entry for entry in persisted["reservedPaths"] if entry.get("gapId") == "GAP-dup"
+    ]
+    assert len(matching) == 1
+    assert matching[0]["paths"] == ["docs/new-path.md"]
+    assert matching[0]["reason"] == "updated reservation"
+    legacy = [
+        entry for entry in persisted["reservedPaths"] if "gapId" not in entry
+    ]
+    assert len(legacy) == 2
+
+
 def _create_payload(*, dry_run: bool, confirm: bool = False) -> dict[str, object]:
     return {
         "id": "GAP-docs",
