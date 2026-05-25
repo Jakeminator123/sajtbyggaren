@@ -1,0 +1,1 @@
+{"body": "Opened draft PR #81 against jakob-be for stale B83 status: https://github.com/Jakeminator123/sajtbyggaren/pull/81. Existing regression test passed; full grind checks passed.", "createdAt": "2026-05-25T03:50:48Z", "from": "cursor-grind-builder", "id": "msg-0001-c42bd5", "subject": "grind-pr-opened", "to": ["jakob-orchestrator"], "topic": "B83", "type": "message"}
