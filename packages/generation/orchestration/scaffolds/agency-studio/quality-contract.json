@@ -1,0 +1,27 @@
+{
+  "scorecardWeights": {
+    "work_visibility": 1.4,
+    "voice_distinctiveness": 1.3,
+    "capability_clarity": 1.2,
+    "client_recognition": 1.1,
+    "typographic_posture": 1.1,
+    "content_specificity": 1.1,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Selected work appears within the first scroll on the home page.",
+    "Hero copy reads as the studio's voice, not a generic 'We help brands grow'.",
+    "At least one capability discipline (Brand identity, Web design, Motion, etc.) is named.",
+    "At least one client or project is named on the home page (text-only roster is fine).",
+    "Manifesto block contains a non-generic statement of the studio's point of view.",
+    "All routes from routes.json are present.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Stock photography of 'team brainstorming with sticky notes' or generic Slack-screenshots.",
+    "Generic 'We are a passionate team that loves design' filler — the manifesto must say something specific.",
+    "Hiding the work catalogue behind a click — selected work must be visible without navigation on the home page.",
+    "Service-list copy that reads like an LSB ('We offer logo design from 2,500 SEK') — agencies sell on point of view, not unit pricing.",
+    "Forms or contact paths that fail at build because of missing third-party env vars."
+  ]
+}

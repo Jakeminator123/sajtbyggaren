@@ -101,18 +101,25 @@ def test_eval_case_lists_are_the_cli_source_of_truth() -> None:
         "foto-ram",
         "arcade-hall",
         "cafe-bistro",
+        "clinic-tandvard",
+        "advokatbyra-novum",
+        "studio-bjork",
     )
     assert get_full_case_ids() == (
         "painter-palma",
         "atelje-bird",
         "cafe-bistro",
+        "clinic-tandvard",
+        "advokatbyra-novum",
+        "studio-bjork",
     )
     assert format_case_list(get_full_case_ids(), separator=" + ") == (
-        "painter-palma + atelje-bird + cafe-bistro"
+        "painter-palma + atelje-bird + cafe-bistro + clinic-tandvard"
+        " + advokatbyra-novum + studio-bjork"
     )
 
 
-def test_full_suite_covers_local_ecommerce_and_restaurant_scaffolds() -> None:
+def test_full_suite_covers_all_runtime_scaffolds() -> None:
     scaffolds: set[str] = set()
     for case_id in get_full_case_ids():
         path = REPO_ROOT / "examples" / f"{case_id}.project-input.json"
@@ -123,6 +130,9 @@ def test_full_suite_covers_local_ecommerce_and_restaurant_scaffolds() -> None:
         "local-service-business",
         "ecommerce-lite",
         "restaurant-hospitality",
+        "clinic-healthcare",
+        "professional-services",
+        "agency-studio",
     }
 
 

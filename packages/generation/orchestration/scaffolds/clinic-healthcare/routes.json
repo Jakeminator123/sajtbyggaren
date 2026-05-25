@@ -1,0 +1,45 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Establish clinical trust, give a treatment overview, surface credentials and route the visitor towards an appointment within the first scroll."
+    },
+    {
+      "id": "treatments",
+      "path": "/behandlingar",
+      "required": true,
+      "purpose": "List the treatments the clinic offers with plain-language descriptions, indicative duration and price ranges where appropriate. The page that turns 'I have a problem' into 'I should book this appointment'."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": false,
+      "purpose": "Tell the story behind the clinic — founders, philosophy, length of practice, room and team — so the visitor recognises a competent, human caregiver, not a faceless brand."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakta-oss",
+      "required": true,
+      "purpose": "Phone, email, opening hours, address and a clear path to booking. Doubles as the practical-info page so a visitor in pain can find it without scrolling."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "team",
+      "path": "/team",
+      "when": "the clinic has more than three named clinicians whose individual credentials carry conversion weight"
+    },
+    {
+      "id": "faq",
+      "path": "/faq",
+      "when": "the clinic answers the same handful of patient questions repeatedly (insurance, referrals, what to bring, anaesthesia)"
+    },
+    {
+      "id": "pricing",
+      "path": "/priser",
+      "when": "the clinic publishes transparent prices per treatment as a deliberate trust signal"
+    }
+  ]
+}

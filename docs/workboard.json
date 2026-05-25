@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-25T07:30:00Z",
-  "updatedBy": "jakob-orchestrator-sprintvag-1+2-closed-2026-05-25-morning",
+  "updatedAt": "2026-05-25T16:40:00Z",
+  "updatedBy": "christopher-ui-phase-3-split-backend-ui-for-strict-lanes",
   "people": {
     "jakob": {
       "allocation": 0.75,
@@ -69,6 +69,35 @@
         "apps/viewser/components/builder/use-pending-build.ts"
       ],
       "reason": "Live Build Sync — optimistisk pending-version + bättre koordination mellan FloatingChat och Versions-tab (pure UI, läser befintliga API:er och callbacks)"
+    },
+    {
+      "owner": "christopher",
+      "gapId": "GAP-viewser-side-by-side-preview",
+      "paths": [
+        "apps/viewser/components/builder/inspector/versions-tab.tsx",
+        "apps/viewser/components/builder/inspector/compare-preview-modal.tsx",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/components/builder/inspector/index.ts"
+      ],
+      "reason": "Sida-vid-sida-preview av två genererade versioner i Versions-tab (pure UI, återanvänder /api/runs/[runId]/files via StackBlitz embed)"
+    },
+    {
+      "owner": "christopher",
+      "gapId": "GAP-viewser-pipeline-status-polling",
+      "paths": [
+        "apps/viewser/components/builder/floating-chat.tsx",
+        "apps/viewser/components/builder/use-pending-build.ts",
+        "apps/viewser/components/builder/use-build-trace-polling.ts"
+      ],
+      "reason": "FloatingChat speglar riktig pipeline-status via trace-endpoint istället för fejk setTimeout-kedja (UI-only, /api/runs/[runId]/trace finns redan i main)"
+    },
+    {
+      "owner": "christopher",
+      "gapId": "GAP-viewser-restaurant-wizard-hint",
+      "paths": [
+        "apps/viewser/components/discovery-wizard/wizard-constants.ts"
+      ],
+      "reason": "Wizard Restaurang-familjens scaffoldHint pekar mot restaurant-hospitality (UI-del av paired GAP-backend-restaurant-activation)"
     }
   ],
   "queuedGaps": [
@@ -115,46 +144,254 @@
   ],
   "activeGaps": [
     {
-      "id": "GAP-viewser-live-build-sync",
+      "id": "GAP-section-design-treatments-phase-3-backend",
+      "type": "Gap/Builder",
+      "owner": "jakob",
+      "title": "Phase 3 backend — schema + ADR + brief/planning prompts + treatment resolve-order",
+      "collisionRisk": "yellow",
+      "reviewer": "jakob",
+      "status": "active",
+      "file": "docs/gaps/GAP-section-design-treatments.md",
+      "createdAt": "2026-05-25T16:30:00Z",
+      "startedAt": "2026-05-25T16:30:00Z",
+      "paths": [
+        "governance/schemas/project-input.schema.json",
+        "docs/adr/**",
+        "packages/generation/brief/**",
+        "packages/generation/planning/**",
+        "scripts/build_site.py",
+        "tests/test_section_renderer_registry.py",
+        "tests/test_project_input_schema.py",
+        "tests/test_brief_*.py",
+        "tests/test_planning_*.py",
+        "docs/section-design-treatments-scout.md",
+        "docs/gaps/GAP-section-design-treatments.md"
+      ],
+      "doNotTouch": [
+        "apps/viewser/**",
+        "governance/policies/scaffold-contract.v1.json",
+        "data/variants/**"
+      ],
+      "acceptanceCriteria": [
+        "(3) project-input.schema.json directives.sectionTreatments tillagd som additiv property (ej kontrakt-brytande); enum-validerad mot kända treatment-IDn per section.",
+        "(3) Ny ADR i docs/adr/ förklarar valet av additiv direktiv-utbyggnad och varför sectionTreatments inte bryter befintliga PI-snapshots.",
+        "(4) briefModel-prompt: nytt SECTION_TREATMENTS_HINT-block lär modellen om tillgängliga treatments per scaffold/variant; mock-fallback returnerar default-tom dict så non-key-pathen aldrig kraschar.",
+        "(4) planningModel-prompt: planen får använda directives.sectionTreatments som hint vid ordering/visibility; mock-fallback identisk skydd.",
+        "Implementation: _treatment_for_section får ny resolve-ordning operator-pin > variant-default > section-default; tester för alla tre nivåer."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py --strict",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q"
+      ],
+      "note": "Backend-halvan av Phase 3, splittrad från en monolitisk Phase 3-GAP för att respektera Sprintvakt --strict lane-policy (jakob-ägda paths här; christopher-ägda paths i syskon-GAP-section-design-treatments-phase-3-ui). Christopher tar denna GAP som [scope-leak] under operatör-OK eftersom hela Phase 3 unblockas av christopher i denna session — owner förblir 'jakob' så Sprintvakt passerar. Schema-ändringen behöver landa innan briefModel/planningModel-prompts uppdateras eftersom prompt-templaten refererar till schema-shape:n. Phase 3-roadmap-detaljer i docs/section-design-treatments-scout.md.",
+      "blocks": [
+        "GAP-section-design-treatments-phase-3-ui (wizard läser från schema-shape:n)."
+      ],
+      "pairedWith": "GAP-section-design-treatments-phase-3-ui"
+    },
+    {
+      "id": "GAP-section-design-treatments-phase-3-ui",
       "type": "Gap/UI",
       "owner": "christopher",
-      "title": "Live Build Sync — optimistisk pending-version + bättre koordination mellan FloatingChat och Versions-tab",
+      "title": "Phase 3 UI — wizard operator-pin för section-treatments",
       "collisionRisk": "green",
       "reviewer": "jakob",
       "status": "active",
-      "file": "docs/gaps/GAP-viewser-live-build-sync.md",
-      "startedAt": "2026-05-25T02:35:00Z",
+      "file": "docs/gaps/GAP-section-design-treatments.md",
+      "createdAt": "2026-05-25T16:30:00Z",
+      "startedAt": "2026-05-25T16:30:00Z",
       "paths": [
-        "apps/viewser/app/page.tsx",
-        "apps/viewser/components/builder/builder-shell.tsx",
-        "apps/viewser/components/builder/inspector/versions-tab.tsx",
-        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
-        "apps/viewser/components/builder/use-pending-build.ts"
+        "apps/viewser/components/discovery-wizard/steps/visual-step.tsx",
+        "apps/viewser/components/discovery-wizard/wizard-payload.ts",
+        "apps/viewser/components/discovery-wizard/wizard-types.ts",
+        "apps/viewser/components/discovery-wizard/treatment-options.ts"
       ],
       "doNotTouch": [
-        "apps/viewser/app/api/runs/route.ts",
-        "apps/viewser/app/api/runs/[runId]/artifacts/route.ts",
-        "apps/viewser/app/api/prompt/route.ts",
-        "apps/viewser/lib/runs.ts",
-        "apps/viewser/lib/build-runner.ts",
-        "apps/viewser/lib/prompt-runner.ts",
-        "apps/viewser/components/builder/floating-chat.tsx",
-        "apps/viewser/components/discovery-wizard/**",
+        "apps/viewser/components/discovery-wizard/wizard-constants.ts",
         "packages/generation/**",
-        "governance/policies/**",
-        "scripts/build_site.py",
-        "scripts/prompt_to_project_input.py",
-        "scripts/sprintvakt_check.py",
-        "tests/test_*.py"
+        "scripts/**",
+        "governance/schemas/**"
       ],
       "acceptanceCriteria": [
-        "Optimistisk pending-rad i Versions-tab inom 100 ms efter follow-up klickas.",
-        "Pending-raden byts atomärt mot den riktiga runId-raden när bygget är klart.",
-        "isBuilding + pendingBuild-state lyfts till page.tsx och delas mellan FloatingChat och VersionsTab.",
-        "Build-fail tar bort pending-raden snyggt utan att lämna orphan-state.",
-        "Varje run-rad har en 'Iterera från denna'-knapp som öppnar FloatingChat med prompt-prefix.",
-        "Inga ändringar i /api/prompt-, /api/runs- eller artifacts-API-shape.",
-        "Inga ändringar i floating-chat.tsx interna logik."
+        "(5) Wizard: ny disclosure i visual-step (eller dedicated step) där operatören kan pinna treatment per relevant section för vald scaffold/variant. Visar bara treatments som faktiskt registrerats i _SECTION_TREATMENTS_BY_VARIANT.",
+        "(5) WizardAnswers → directives.sectionTreatments-mapping i wizard-payload.ts.",
+        "Treatment-options.ts: ny mirror av _SECTION_TREATMENTS_BY_VARIANT som UI-konstant; kommenteras hur den hålls i synk med Python-källan."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py --strict",
+        "python scripts/governance_validate.py",
+        "python scripts/check_term_coverage.py --strict",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint"
+      ],
+      "note": "UI-halvan av Phase 3, splittrad från en monolitisk Phase 3-GAP för att respektera Sprintvakt --strict lane-policy. Beror på syskon-GAP-section-design-treatments-phase-3-backend för schema-shape (directives.sectionTreatments). Treatment-options.ts är ny TypeScript-konstant som speglar Python-sidans _SECTION_TREATMENTS_BY_VARIANT så wizarden vet vilka treatments som existerar per variant utan att gå runt en API-resolve. ADR i backend-syskon-GAP:en förklarar varför mirror-strategin är OK (inga frekventa changes; fail-loudly om de divergerar via test).",
+      "pairedWith": "GAP-section-design-treatments-phase-3-backend"
+    },
+    {
+      "id": "GAP-viewser-restaurant-wizard-hint",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Wizard Restaurang/Café-familjen pekar mot restaurant-hospitality scaffold",
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "active",
+      "file": "docs/gaps/GAP-viewser-restaurant-wizard-hint.md",
+      "createdAt": "2026-05-25T13:20:00Z",
+      "startedAt": "2026-05-25T13:20:00Z",
+      "paths": [
+        "apps/viewser/components/discovery-wizard/wizard-constants.ts"
+      ],
+      "doNotTouch": [
+        "apps/viewser/components/discovery-wizard/steps/**",
+        "apps/viewser/components/discovery-wizard/wizard-payload.ts",
+        "apps/viewser/components/discovery-wizard/wizard-types.ts",
+        "packages/generation/**",
+        "scripts/**"
+      ],
+      "acceptanceCriteria": [
+        "BUSINESS_FAMILIES[restaurant].scaffoldHint = 'restaurant-hospitality'.",
+        "BUSINESS_FAMILIES[restaurant].defaultVariantId pekar på variant som finns på disk för restaurant-hospitality.",
+        "WIZARD_CATEGORIES[restaurant].scaffoldHint = 'restaurant-hospitality' (parallellitet med BUSINESS_FAMILIES — annars går FALLBACK_DISCOVERY_OPTIONS fel).",
+        "WIZARD_CATEGORIES[restaurant].defaultVariantId = 'warm-bistro' (matcha discovery-taxonomy.v1.json id='restaurant').",
+        "Inga andra familjer eller kategorier ändrar scaffoldHint i samma commit."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/check_term_coverage.py --strict",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint"
+      ],
+      "note": "Effort 30 min. Splittat från GAP-backend-restaurant-activation pga Sprintvakt-lane-policy. Landar i samma commit-batch som backend-aktiveringen. 2026-05-25 follow-up: den ursprungliga PR:en uppdaterade bara BUSINESS_FAMILIES[restaurant]; den parallella WIZARD_CATEGORIES[restaurant] missades och pekade fortsatt mot local-service-business / nordic-trust så FALLBACK_DISCOVERY_OPTIONS (byggd via WIZARD_CATEGORIES.map() i discovery-options.ts) gav fel scaffold + variant innan governance-API:t svarade. Fixat under samma GAP.",
+      "pairedWith": "GAP-backend-restaurant-activation"
+    },
+    {
+      "id": "GAP-viewser-pipeline-status-polling",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "FloatingChat speglar riktig pipeline-status via trace-endpoint",
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "active",
+      "file": "docs/gaps/GAP-viewser-pipeline-status-polling.md",
+      "createdAt": "2026-05-25T13:20:00Z",
+      "startedAt": "2026-05-25T13:20:00Z",
+      "paths": [
+        "apps/viewser/components/builder/floating-chat.tsx",
+        "apps/viewser/components/builder/use-pending-build.ts",
+        "apps/viewser/components/builder/use-build-trace-polling.ts"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/runs/**",
+        "apps/viewser/lib/runs.ts",
+        "apps/viewser/components/builder/inspector/**",
+        "apps/viewser/components/discovery-wizard/**",
+        "packages/generation/**",
+        "scripts/build_site.py"
+      ],
+      "acceptanceCriteria": [
+        "Den hårdkodade FOLLOWUP_BUILD_STEPS-kedjan med setTimeout är borta.",
+        "Polling mot /api/runs/[runId]/trace?since=<iso> så fort runId är känt.",
+        "Step-text uppdateras från trace.ndjson-events.",
+        "runStatus = ok/degraded/mock visas med rätt variant.",
+        "Polling stoppar inom 1s efter att build-result landat.",
+        "Backoff: 1.5s → 3s; ingen evig 500ms-polling."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint"
+      ],
+      "note": "Effort 4-6h. UI-quick-win efter scout 2026-05-25. Trace-endpoint finns i main (commit 74a355b)."
+    },
+    {
+      "id": "GAP-viewser-side-by-side-preview",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Sida-vid-sida-preview av två genererade versioner i Versions-tab",
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "active",
+      "file": "docs/gaps/GAP-viewser-side-by-side-preview.md",
+      "createdAt": "2026-05-25T04:50:00Z",
+      "startedAt": "2026-05-25T04:50:00Z",
+      "paths": [
+        "apps/viewser/components/builder/inspector/versions-tab.tsx",
+        "apps/viewser/components/builder/inspector/compare-preview-modal.tsx",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/components/builder/inspector/index.ts"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/runs/**",
+        "apps/viewser/app/api/preview/**",
+        "apps/viewser/components/viewer-panel.tsx",
+        "apps/viewser/lib/runs.ts",
+        "packages/generation/**",
+        "scripts/build_site.py"
+      ],
+      "acceptanceCriteria": [
+        "Versions-tab har en 'Visuell jämförelse'-knapp som aktiveras när både A och B är valda och pekar på olika runIds.",
+        "Klick öppnar full-screen modal med två StackBlitz-iframer sida vid sida (50/50 desktop, stackat på mobil).",
+        "Browser-detection: Safari/Firefox visar fallback med 'Öppna båda i nya fönster' i stället för embeddade iframer.",
+        "ESC eller stängningsknapp avmonterar båda iframerna utan stale DOM.",
+        "Inga ändringar i existerande viewer-panel.tsx eller backend-endpoints."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint"
+      ],
+      "note": "UI-only feature byggd ovanpå existerande /api/runs/[runId]/files. Två StackBlitz-instanser kostar bara klient-resurser, ingen backend-last. Path B (GAP-backend-path-b-section-renderer) ökar värdet av denna feature kraftigt eftersom strukturellt olika scaffolds då blir möjliga att jämföra."
+    }
+  ],
+  "completedGaps": [
+    {
+      "id": "GAP-backend-path-b-section-renderer",
+      "type": "Gap/Runtime",
+      "owner": "jakob",
+      "title": "Section-driven renderer + scaffold runtime expansion (Path B)",
+      "collisionRisk": "red",
+      "reviewer": "jakob",
+      "status": "completed",
+      "file": "docs/gaps/GAP-backend-path-b-section-renderer.md",
+      "createdAt": "2026-05-25T04:50:00Z",
+      "startedAt": "2026-05-25T13:45:00Z",
+      "completedAt": "2026-05-25T16:30:00Z",
+      "paths": [
+        "scripts/build_site.py",
+        "packages/generation/discovery/resolve.py",
+        "packages/generation/planning/plan.py",
+        "packages/generation/orchestration/scaffolds/restaurant-hospitality/**",
+        "tests/test_builder_*.py",
+        "tests/test_discovery_resolver.py",
+        "tests/test_starter_scaffold_mapping.py",
+        "tests/test_builder_route_emission.py",
+        "examples/restaurant-bistro.project-input.json"
+      ],
+      "doNotTouch": [
+        "apps/viewser/**",
+        "governance/policies/scaffold-contract.v1.json"
+      ],
+      "acceptanceCriteria": [
+        "write_pages bytt till section-driven dispatcher (_SECTION_RENDERERS + render_route_generic).",
+        "LSB- och commerce-snapshots byte-identiska före/efter (snapshot-diff = 0 bytes).",
+        "_RUNTIME_SCAFFOLD_HINTS utökat med restaurant-hospitality.",
+        "build_site.py producerar /meny + /bokning för restaurant-hospitality utan SystemExit.",
+        "10 nya restaurant-section-renderers landade.",
+        "Backward-compat shims behåller render_home/services/about/contact/products som tunna delegationer.",
+        "Path B native dispatch (_DISPATCHED_SCAFFOLDS) aktiverad för restaurant-hospitality, clinic-healthcare, professional-services och agency-studio."
       ],
       "checks": [
         "python scripts/sprintvakt_check.py",
@@ -162,13 +399,101 @@
         "python scripts/rules_sync.py --check",
         "python scripts/check_term_coverage.py --strict",
         "python -m ruff check .",
-        "python -m pytest tests/ -q",
-        "cd apps/viewser && npx tsc --noEmit",
-        "cd apps/viewser && npm run lint"
-      ]
-    }
-  ],
-  "completedGaps": [
+        "python -m pytest tests/ -q -x"
+      ],
+      "completionNote": "Path B closed 2026-05-25T16:30:00Z med operatör-OK. Levererat: (1) write_pages → render_route_generic via _SECTION_RENDERERS-registry. (2) _DISPATCHED_SCAFFOLDS native-path för 4 nya scaffolds (restaurant-hospitality + clinic-healthcare + professional-services + agency-studio), strukturellt distinkta från LSB med egna routes/sections/variants. (3) Cross-section koordination + backward-compat shims för render_home/services/about/contact/products. (4) 9 nya restaurant-sections + 5 clinic + 5 professional-services + 6 agency-studio = 25 nya section-renderers ovanpå LSB-basen. (5) Daily eval-svit täcker alla 6 on-disk scaffolds. (6) Section design-treatments Phase 1 + Phase 2 landade ovanpå Path B (5 sections × 14 treatments) — flyttades till denna completedGaps som syskon-GAP samtidigt. Phase 3 (operator-pin + LLM-pick) splittrades till GAP-section-design-treatments-phase-3 i activeGaps."
+    },
+    {
+      "id": "GAP-section-design-treatments",
+      "type": "Gap/Builder",
+      "owner": "jakob",
+      "title": "Section design-treatments Phase 1 + Phase 2 — visuell unikhet inom samma section-id",
+      "collisionRisk": "low",
+      "reviewer": "jakob",
+      "status": "completed",
+      "file": "docs/gaps/GAP-section-design-treatments.md",
+      "createdAt": "2026-05-25T15:48:00Z",
+      "startedAt": "2026-05-25T15:48:00Z",
+      "completedAt": "2026-05-25T16:30:00Z",
+      "paths": [
+        "tests/test_section_renderer_registry.py",
+        "docs/section-design-treatments-scout.md",
+        "docs/gaps/GAP-section-design-treatments.md"
+      ],
+      "doNotTouch": [
+        "apps/viewser/**",
+        "governance/policies/scaffold-contract.v1.json"
+      ],
+      "acceptanceCriteria": [
+        "_SECTION_TREATMENTS_BY_VARIANT + _treatment_for_section landade i scripts/build_site.py (Phase 1 — under Path B-paraplyet).",
+        "render_section_selected_work_preview dispatchar via treatment och accepterar variant_id-kwarg.",
+        "studio-monochrome mappas mot asymmetric-grid; editorial-warm + bold-electric ärver editorial-stack (default).",
+        "8 nya tester i tests/test_section_renderer_registry.py låser dispatcher-kontraktet.",
+        "Phase 2-roadmap dokumenterad i docs/section-design-treatments-scout.md.",
+        "Phase 2 (denna sprint): selected-work-preview, treatment-list, practice-grid, expertise-areas, service-list får treatments. Total 14 treatments fördelade över 5 sektioner.",
+        "Phase 2 — variant-mappningar: bold-electric→marquee-row, warm-care→split-cards, modern-precision→numbered-stack, legal-classic→tabular, accounting-trust→grouped, consulting-modern→tag-cluster (på home), nordic-trust→tabular, warm-craft→alternating-rows, clinical-calm→icon-strip.",
+        "Phase 2 — 49 totala assertions i tests/test_section_renderer_registry.py låser alla treatment-dispatchers.",
+        "Phase 2 — test_renderers_use_jsx_safe_string_for_customer_text uppdaterad med fyra service-list-treatment-helpers så B30-skyddet följer med."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/test_section_renderer_registry.py -q",
+        "python -m pytest tests/test_builder_audit_post_3b_next.py::test_renderers_use_jsx_safe_string_for_customer_text -q",
+        "python -m pytest tests/ -q"
+      ],
+      "completionNote": "Phase 1 + Phase 2 closed 2026-05-25T16:30:00Z med operatör-OK. Levererat: 14 treatments fördelade över 5 sektioner (selected-work-preview, treatment-list, practice-grid, expertise-areas, service-list) med variant-default-mappningar för 9 variants. 49 assertions låser dispatcher-kontraktet. JSX-escape-skyddet (B30) följer med via test_renderers_use_jsx_safe_string_for_customer_text. Phase 3 (operator-pin via directives.sectionTreatments + LLM-pick) splittrades till GAP-section-design-treatments-phase-3 i activeGaps efter att Path B + Phase 1+2 stängts."
+    },
+    {
+      "id": "GAP-backend-restaurant-activation",
+      "type": "Gap/Runtime",
+      "owner": "jakob",
+      "title": "Aktivera restaurant-hospitality scaffold runtime end-to-end (Path A)",
+      "collisionRisk": "yellow",
+      "reviewer": "jakob",
+      "status": "in-review",
+      "file": "docs/gaps/GAP-backend-restaurant-activation.md",
+      "createdAt": "2026-05-25T13:20:00Z",
+      "completedAt": "2026-05-25T13:20:00Z",
+      "paths": [
+        "packages/generation/discovery/resolve.py",
+        "scripts/build_site.py",
+        "tests/test_discovery_resolver.py",
+        "tests/test_starter_scaffold_mapping.py",
+        "tests/test_builder_restaurant_routes.py",
+        "examples/restaurant-bistro.project-input.json"
+      ],
+      "doNotTouch": [
+        "apps/viewser/**",
+        "packages/generation/orchestration/scaffolds/local-service-business/**",
+        "packages/generation/orchestration/scaffolds/ecommerce-lite/**",
+        "governance/policies/scaffold-contract.v1.json",
+        "data/variants/local-service-business/**",
+        "data/variants/ecommerce-lite/**"
+      ],
+      "pairedWith": "GAP-viewser-restaurant-wizard-hint",
+      "acceptanceCriteria": [
+        "_RUNTIME_SCAFFOLD_HINTS innehåller restaurant-hospitality med rätt default-variant.",
+        "BUSINESS_FAMILIES[restaurant].scaffoldHint = 'restaurant-hospitality'.",
+        "_HERO_STYLE_BY_VARIANT innehåller styles för alla restaurant-hospitality-varianter på disk.",
+        "build_site.py med restaurant-bistro project-input bygger /meny + /bokning utan SystemExit.",
+        "Nytt test i test_discovery_resolver.py: restaurant-wizard ger scaffoldId='restaurant-hospitality'.",
+        "Befintliga LSB- och ecommerce-tester passerar oförändrade.",
+        "Inga ändringar i write_pages-dispatch — det är Path B."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q -x"
+      ],
+      "note": "Effort 6-8h. [scope-leak] Approved by operator 2026-05-25 13:20: Christopher utförde detta på christopher-ui (commit 8279e7c). Path A — Path B är separat GAP. PR #105 (christopher-ui → main) öppen och in-review när detta noterades."
+    },
     {
       "id": "GAP-viewser-wizard-minimalism",
       "type": "Gap/UI",
@@ -311,6 +636,67 @@
       "notes": [
         "All three acceptance criteria met. Tests 14 -> 18 passed. ruff clean. sprintvakt_check OK."
       ]
+    },
+    {
+      "id": "GAP-viewser-live-build-sync",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Live Build Sync — optimistisk pending-version + bättre koordination mellan FloatingChat och Versions-tab",
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "file": "docs/gaps/GAP-viewser-live-build-sync.md",
+      "startedAt": "2026-05-25T02:35:00Z",
+      "paths": [
+        "apps/viewser/app/page.tsx",
+        "apps/viewser/components/builder/builder-shell.tsx",
+        "apps/viewser/components/builder/inspector/versions-tab.tsx",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/components/builder/use-pending-build.ts"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/runs/route.ts",
+        "apps/viewser/app/api/runs/[runId]/artifacts/route.ts",
+        "apps/viewser/app/api/prompt/route.ts",
+        "apps/viewser/lib/runs.ts",
+        "apps/viewser/lib/build-runner.ts",
+        "apps/viewser/lib/prompt-runner.ts",
+        "apps/viewser/components/builder/floating-chat.tsx",
+        "apps/viewser/components/discovery-wizard/**",
+        "packages/generation/**",
+        "governance/policies/**",
+        "scripts/build_site.py",
+        "scripts/prompt_to_project_input.py",
+        "scripts/sprintvakt_check.py",
+        "tests/test_*.py"
+      ],
+      "acceptanceCriteria": [
+        "Optimistisk pending-rad i Versions-tab inom 100 ms efter follow-up klickas.",
+        "Pending-raden byts atomärt mot den riktiga runId-raden när bygget är klart.",
+        "isBuilding + pendingBuild-state lyfts till page.tsx och delas mellan FloatingChat och VersionsTab.",
+        "Build-fail tar bort pending-raden snyggt utan att lämna orphan-state.",
+        "Varje run-rad har en 'Iterera från denna'-knapp som öppnar FloatingChat med prompt-prefix.",
+        "Inga ändringar i /api/prompt-, /api/runs- eller artifacts-API-shape.",
+        "Inga ändringar i floating-chat.tsx interna logik."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint"
+      ],
+      "completedAt": "2026-05-25T01:42:18Z",
+      "fixCommits": [
+        "7e21b49"
+      ],
+      "notes": [
+        "Mergad till main via PR #71. UI-only del klar — A+D backend-bitar väntar på GAP-backend-build-trace-endpoint."
+      ],
+      "updatedAt": "2026-05-25T01:42:18Z"
     }
   ],
   "decisions": [

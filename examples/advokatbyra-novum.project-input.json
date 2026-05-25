@@ -1,0 +1,82 @@
+{
+  "$schema": "../governance/schemas/project-input.schema.json",
+  "siteId": "advokatbyra-novum",
+  "scaffoldId": "professional-services",
+  "variantId": "legal-classic",
+  "language": "sv",
+  "company": {
+    "name": "Novum Advokatbyrå",
+    "businessType": "legal",
+    "tagline": "Affärsjuridisk rådgivning för svenska tillväxtbolag",
+    "story": "Novum grundades 2017 av advokaterna Karin Holm och Erik Lindberg som en specialiserad affärsjuridisk byrå för tillväxtbolag i Sverige. Vi har vuxit till tolv jurister i Stockholm och Göteborg och är fortsatt partnerskapsägd — våra klienter pratar med samma jurister från första kontakten till stängd transaktion.",
+    "founded": 2017,
+    "team": [
+      { "name": "Karin Holm", "role": "Advokat och delägare, leg. 2009" },
+      { "name": "Erik Lindberg", "role": "Advokat och delägare, leg. 2011" },
+      { "name": "Anna Sjöberg", "role": "Advokat, M&A och bolagsrätt" },
+      { "name": "Mikael Bergqvist", "role": "Senior associate, skatterätt" }
+    ]
+  },
+  "location": {
+    "city": "Stockholm",
+    "region": "Norrmalm",
+    "country": "Sverige",
+    "serviceAreas": ["Bank och finans", "Life sciences", "Fastighet", "Teknologi och SaaS", "Energi"]
+  },
+  "services": [
+    {
+      "id": "ma-transactions",
+      "label": "M&A och transaktioner",
+      "summary": "Företagsförvärv, fusioner och avyttringar — vi företräder köpare och säljare i medelstora svenska transaktioner och hanterar hela processen från term sheet till closing."
+    },
+    {
+      "id": "corporate",
+      "label": "Bolagsrätt och bolagsstyrning",
+      "summary": "Bolagsbildning, aktieägaravtal, optionsprogram och styrelsearbete för bolag som växer från startup till noterad eller exit."
+    },
+    {
+      "id": "tax",
+      "label": "Skatterätt",
+      "summary": "Bolagsbeskattning, omstruktureringar och internationell skatt. Vi arbetar tätt ihop med revisorer och Skatteverket så att rådgivningen är förankrad innan den implementeras."
+    },
+    {
+      "id": "disputes",
+      "label": "Tvistelösning",
+      "summary": "Kommersiella tvister, skiljeförfaranden och processföring. Pragmatisk inriktning — vi förlikar när det går, processar när det ger värde."
+    },
+    {
+      "id": "data-privacy",
+      "label": "Dataskydd och GDPR",
+      "summary": "Personuppgiftshantering, dataöverföringar, DPA-granskning och incidenthantering för bolag som växer in i regulatoriskt komplexa marknader."
+    },
+    {
+      "id": "employment",
+      "label": "Arbetsrätt",
+      "summary": "Anställningsavtal, ledningskontrakt, omorganisationer och arbetsrättsliga tvister. Stöd till HR-funktioner och styrelser i kritiska personalfrågor."
+    }
+  ],
+  "tone": {
+    "primary": "authoritative",
+    "secondary": ["discreet", "measured", "experienced"],
+    "avoid": ["casual", "playful", "exclamation-marks"]
+  },
+  "trustSignals": [
+    "Medlemmar i Sveriges advokatsamfund — alla våra advokater är registrerade",
+    "Anslutna till International Bar Association",
+    "Rankade av Chambers Europe inom M&A och bolagsrätt 2023 och 2024",
+    "Två kontor — Stockholm och Göteborg — med svenska och engelska som arbetsspråk"
+  ],
+  "conversionGoals": ["enquiry_form", "phone"],
+  "requestedCapabilities": ["contact-form", "faq-section"],
+  "contact": {
+    "phone": "+46 8 600 12 00",
+    "email": "kontakt@novumadvokat.se",
+    "addressLines": ["Birger Jarlsgatan 12", "111 45 Stockholm"],
+    "openingHours": "Mån–Tor 08:30–18:00, Fre 08:30–17:00"
+  },
+  "selectedDossiers": {
+    "required": ["mailto-contact-form"],
+    "recommended": ["faq-accordion", "map-embed"],
+    "rationale": "Professional-services scaffold's compatible-dossiers.json names mailto-contact-form as the only required dossier — a serious buyer needs a formal enquiry path. faq-accordion and map-embed are recommended for predictable-questions and multi-office wayfinding. Sections like hero / expertise-areas / practice-grid / partners-grid / industries-served / credentials live in sections.json and must not appear here as Dossier IDs (ADR 0012)."
+  }
+}

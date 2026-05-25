@@ -1,0 +1,81 @@
+{
+  "$schema": "../governance/schemas/project-input.schema.json",
+  "siteId": "clinic-tandvard",
+  "scaffoldId": "clinic-healthcare",
+  "variantId": "clinic-calm",
+  "language": "sv",
+  "company": {
+    "name": "Tandvård Linnégatan",
+    "businessType": "healthcare",
+    "tagline": "Allmäntandvård och estetisk tandvård i centrala Göteborg",
+    "story": "Vi är en familjeägd tandvårdsklinik som grundades 2014 av tandläkarna Anna och Ola Lindqvist. Vi tar emot både privatpatienter och Försäkringskassan-anslutna patienter, och vi tror på att förklara behandlingar i klarspråk innan vi börjar.",
+    "founded": 2014,
+    "team": [
+      { "name": "Anna Lindqvist", "role": "Tandläkare och delägare, leg. 2008" },
+      { "name": "Ola Lindqvist", "role": "Tandläkare och delägare, leg. 2010" },
+      { "name": "Maja Bergström", "role": "Tandhygienist, leg. 2018" }
+    ]
+  },
+  "location": {
+    "city": "Göteborg",
+    "region": "Linnéstaden",
+    "country": "Sverige",
+    "serviceAreas": ["Linnéstaden", "Majorna", "Vasastaden"]
+  },
+  "services": [
+    {
+      "id": "checkup",
+      "label": "Undersökning och röntgen",
+      "summary": "En grundlig årlig kontroll med digital röntgen, mjukvävnadskontroll och förebyggande råd. Avgift enligt Försäkringskassans referenspriser."
+    },
+    {
+      "id": "hygienist",
+      "label": "Tandhygienistbesök",
+      "summary": "Avlägsnande av tandsten och beläggningar samt instruktion i hemvårdsteknik. Rekommenderas en gång om året eller efter individuell plan."
+    },
+    {
+      "id": "filling",
+      "label": "Lagningar i tandfärgad komposit",
+      "summary": "Tandfärgade lagningar som matchar omgivande tand. Vi använder modern adhesiv teknik och bedövar lokalt — du ska inte behöva känna obehag."
+    },
+    {
+      "id": "implant",
+      "label": "Tandimplantat",
+      "summary": "En permanent ersättning för en saknad tand. Vi går igenom hela behandlingsförloppet i ett första gratisbesök så du vet vad som gäller innan du bestämmer dig."
+    },
+    {
+      "id": "whitening",
+      "label": "Tandblekning i klinik",
+      "summary": "Säker blekning som utförs av legitimerad tandläkare. Vi kontrollerar tändernas hälsa innan så du får ett resultat som håller."
+    },
+    {
+      "id": "emergency",
+      "label": "Akut tandvård",
+      "summary": "Drabbas du av tandvärk på en vardag ringer du oss innan kl 10 så bokar vi in dig samma dag. Helger hänvisar vi till Folktandvårdens jour."
+    }
+  ],
+  "tone": {
+    "primary": "calm",
+    "secondary": ["professionell", "trygg", "klarspråk"],
+    "avoid": ["medicinsk-jargong", "skrämselretorik", "billighetsutrop"]
+  },
+  "trustSignals": [
+    "Legitimerade hos Socialstyrelsen sedan 2008 respektive 2010",
+    "Anslutna till Försäkringskassan — det statliga tandvårdsstödet räknas av direkt",
+    "Medlemmar i Sveriges Tandläkarförbund och Privattandläkarna",
+    "Egen tandtekniker — vi gör kronor och proteser i samma hus"
+  ],
+  "conversionGoals": ["booking_request", "call"],
+  "requestedCapabilities": ["contact-form", "faq-section"],
+  "contact": {
+    "phone": "+46 31 12 34 56",
+    "email": "boka@tandvardlinnegatan.se",
+    "addressLines": ["Linnégatan 18", "413 04 Göteborg"],
+    "openingHours": "Mån–Tor 08:00–17:00, Fre 08:00–14:00, Lör–Sön stängt"
+  },
+  "selectedDossiers": {
+    "required": ["mailto-contact-form", "opening-hours"],
+    "recommended": ["faq-accordion", "reviews-display", "map-embed", "pricing-table"],
+    "rationale": "Clinic-healthcare scaffold's compatible-dossiers.json names mailto-contact-form and opening-hours as required because a clinic without a contact path or visible opening hours fails the basic 'patient in pain on a Sunday' test. The recommended block lifts patient social proof (reviews-display), predictable answers (faq-accordion), transparent pricing (pricing-table) and walk-in directions (map-embed). Sections like hero / treatment-summary / treatment-list / credentials live in sections.json and must not appear here as Dossier IDs (ADR 0012)."
+  }
+}

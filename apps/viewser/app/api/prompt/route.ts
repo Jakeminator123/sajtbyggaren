@@ -64,6 +64,10 @@ const DiscoveryPayloadSchema = z
     }
   });
 
+// Run-id-mönstret matchar `RUN_ID_PATTERN` i `lib/runs.ts` så vi avvisar
+// path-traversal och whitespace-injektion redan vid 400-validering.
+const RUN_ID_PATTERN = /^[a-zA-Z0-9._-]+$/;
+
 const PromptPayloadSchema = z.object({
   // Master-prompten från discovery-wizarden kan bli flera kilobyte
   // (operatörens originaltext + 8 sektioner med kategori, kontakt,
@@ -81,6 +85,16 @@ const PromptPayloadSchema = z.object({
     .trim()
     .regex(SITE_ID_PATTERN, "Ogiltigt siteId för följdprompt.")
     .optional(),
+  // Iterera från en specifik historisk run istället för senaste. UI
+  // sätter denna när operatören klickar "Iterera från denna" på en
+  // versions-rad (se GAP-backend-build-trace-endpoint.md). Bakåt-
+  // kompatibel: utan baseRunId fungerar follow-up exakt som idag
+  // (prompt_to_project_input.py läser senaste PI-snapshotet för siteId).
+  baseRunId: z
+    .string()
+    .trim()
+    .regex(RUN_ID_PATTERN, "Ogiltigt baseRunId.")
+    .optional(),
   discovery: DiscoveryPayloadSchema.optional(),
 }).superRefine((payload, context) => {
   if (payload.mode === "followup" && !payload.siteId) {
@@ -95,6 +109,13 @@ const PromptPayloadSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ["discovery"],
       message: "Discovery-wizarden används bara i init-läge.",
+    });
+  }
+  if (payload.baseRunId && payload.mode !== "followup") {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["baseRunId"],
+      message: "baseRunId kan bara anges i follow-up-läge.",
     });
   }
 });
@@ -119,6 +140,7 @@ async function runPromptBuildOnce(
   const helper = await runPromptToProjectInput(payload.prompt, {
     mode: payload.mode,
     siteId: payload.siteId,
+    baseRunId: payload.baseRunId,
     discovery: payload.discovery,
   });
 

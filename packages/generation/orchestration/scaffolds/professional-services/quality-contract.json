@@ -1,0 +1,28 @@
+{
+  "scorecardWeights": {
+    "expertise_clarity": 1.3,
+    "credential_clarity": 1.3,
+    "practice_taxonomy_quality": 1.2,
+    "industry_specialisation": 1.1,
+    "partner_visibility": 1.1,
+    "content_specificity": 1.1,
+    "tone_authority": 1.1,
+    "technical_correctness": 1.0
+  },
+  "mustPass": [
+    "Hero copy names the firm's principal specialism (e.g. corporate law, audit, M&A advisory) and the city or jurisdiction served, not generic 'world-class advisors' filler.",
+    "Practice areas are presented in groups, not as a flat services list.",
+    "At least one named partner with a credential (advokat, auktoriserad revisor, CFA, etc.) is visible.",
+    "Bar admission, professional body registration or audit registration is named on the home page.",
+    "Per-office address, direct phone and email are real values, not sample data.",
+    "All routes from routes.json are present.",
+    "Generated code typechecks and the project builds."
+  ],
+  "avoid": [
+    "Casual or playful tone (no exclamation marks, no emojis, no 'team awesomeness' copy).",
+    "Generic 'passionate about delivering value'-style filler without a named specialism, partner or precedent.",
+    "Stock photography of generic handshakes or skyscrapers used as the hero.",
+    "Hiding credentials behind a click — bar admissions and registrations must be visible without navigation.",
+    "Forms or contact paths that fail at build because of missing third-party env vars."
+  ]
+}

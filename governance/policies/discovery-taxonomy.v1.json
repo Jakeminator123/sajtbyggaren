@@ -75,10 +75,11 @@
       "labelSv": "Restaurang / Café",
       "labelEn": "Restaurant / Cafe",
       "contentBranch": "restaurant",
-      "supportStatus": "planned",
+      "supportStatus": "active",
       "targetScaffoldId": "restaurant-hospitality",
+      "activeScaffoldId": "restaurant-hospitality",
       "fallbackScaffoldId": "local-service-business",
-      "defaultVariantId": "nordic-trust",
+      "defaultVariantId": "warm-bistro",
       "expectedStarterId": "marketing-base",
       "requestedCapabilities": ["contact-form", "faq-section"],
       "candidateDossiers": [],
@@ -90,8 +91,8 @@
         "Karta / Hitta hit",
         "Om oss / Om mig"
       ],
-      "rationale": "Restaurang är en planerad scaffold (restaurant-hospitality). Tills runtime-mapping finns används local-service-business som fallback.",
-      "operatorNotes": "Promotera till active när restaurant-hospitality/scaffold.json + variants + SCAFFOLD_TO_STARTER finns."
+      "rationale": "Restaurang mappas mot restaurant-hospitality + marketing-base. Aktiv runtime via Path A (render_menu + render_booking i build_site.py). fallbackScaffoldId behålls som säkerhetsnät om scaffold-mappingen tillfälligt skulle haverera.",
+      "operatorNotes": "Promoterad till active 2026-05-25 via GAP-backend-restaurant-activation. Path B (section-driven renderer) löser ut renderer-utbredningen för övriga 11 scaffolds."
     },
     {
       "id": "portfolio",
@@ -158,22 +159,24 @@
       "labelSv": "Konsult / Byrå",
       "labelEn": "Consulting / Agency",
       "contentBranch": "consulting",
-      "supportStatus": "planned",
-      "targetScaffoldId": "consultant-expert",
+      "supportStatus": "active",
+      "targetScaffoldId": "agency-studio",
+      "activeScaffoldId": "agency-studio",
       "fallbackScaffoldId": "local-service-business",
-      "defaultVariantId": "nordic-trust",
+      "defaultVariantId": "studio-monochrome",
       "expectedStarterId": "marketing-base",
       "requestedCapabilities": ["contact-form", "faq-section"],
       "candidateDossiers": [],
       "recommendedPages": [
         "Startsida / Hero",
+        "Selected work",
         "Om oss / Om mig",
         "Vårt team",
-        "Priser och paket",
-        "Kundrecensioner",
+        "Process",
         "Kontaktformulär"
       ],
-      "rationale": "Konsult/byrå pekar mot consultant-expert eller agency-studio. Båda är planned; fallback till local-service-business."
+      "rationale": "Konsult/byrå pekar mot agency-studio (kreativa byråer, designstudios, produktionsbolag). Strategikonsulter (management consulting med named partners) är fortsatt PS via legal/accounting-kategorierna; consultant-expert (planned) tar enmansbyråer när scaffolden landar.",
+      "operatorNotes": "2026-05-25: promoted to active via Path B step 14 (_DISPATCHED_SCAFFOLDS). targetScaffoldId switched from consultant-expert (planned) to agency-studio (active); defaultVariantId from nordic-trust to studio-monochrome (PS-native). Fallback chain stays as a safety net."
     },
     {
       "id": "tech",
@@ -201,10 +204,11 @@
       "labelSv": "Vård / Klinik",
       "labelEn": "Healthcare / Clinic",
       "contentBranch": "salon",
-      "supportStatus": "planned",
+      "supportStatus": "active",
       "targetScaffoldId": "clinic-healthcare",
+      "activeScaffoldId": "clinic-healthcare",
       "fallbackScaffoldId": "local-service-business",
-      "defaultVariantId": "nordic-trust",
+      "defaultVariantId": "clinic-calm",
       "expectedStarterId": "marketing-base",
       "requestedCapabilities": ["contact-form", "faq-section"],
       "candidateDossiers": [],
@@ -216,7 +220,8 @@
         "FAQ",
         "Kontaktformulär"
       ],
-      "rationale": "Klinik mappas mot clinic-healthcare. Tills scaffolden får runtime används local-service-business."
+      "rationale": "Klinik mappas mot clinic-healthcare. Aktiv runtime via Path B step 12 (section-driven dispatcher i scripts/build_site.py + _DISPATCHED_SCAFFOLDS). fallbackScaffoldId behålls som säkerhetsnät om scaffold-mappingen tillfälligt skulle haverera.",
+      "operatorNotes": "Promoterad till active 2026-05-25 via aktivering av clinic-healthcare scaffold. Path B native dispatch unlock:ar fullt strukturellt distinkta routes (/behandlingar) utan per-route render-funktioner i write_pages."
     },
     {
       "id": "realestate",
@@ -417,10 +422,11 @@
       "labelSv": "Juridik / Advokat",
       "labelEn": "Legal",
       "contentBranch": "legal",
-      "supportStatus": "planned",
+      "supportStatus": "active",
       "targetScaffoldId": "professional-services",
+      "activeScaffoldId": "professional-services",
       "fallbackScaffoldId": "local-service-business",
-      "defaultVariantId": "nordic-trust",
+      "defaultVariantId": "legal-classic",
       "expectedStarterId": "marketing-base",
       "requestedCapabilities": ["contact-form", "faq-section"],
       "candidateDossiers": [],
@@ -431,17 +437,19 @@
         "FAQ",
         "Kontaktformulär"
       ],
-      "rationale": "Juridik/advokat pekar mot professional-services. Fallback till local-service-business."
+      "rationale": "Juridik/advokat pekar mot professional-services. Fallback till local-service-business.",
+      "operatorNotes": "2026-05-25: promoted to active via Path B step 13 (_DISPATCHED_SCAFFOLDS). defaultVariantId switched from nordic-trust (LSB fallback) to legal-classic (PS-native). The fallback chain stays for safety until the active route has a few real-build datapoints."
     },
     {
       "id": "accounting",
       "labelSv": "Ekonomi / Redovisning",
       "labelEn": "Accounting",
       "contentBranch": "legal",
-      "supportStatus": "planned",
+      "supportStatus": "active",
       "targetScaffoldId": "professional-services",
+      "activeScaffoldId": "professional-services",
       "fallbackScaffoldId": "local-service-business",
-      "defaultVariantId": "nordic-trust",
+      "defaultVariantId": "accounting-trust",
       "expectedStarterId": "marketing-base",
       "requestedCapabilities": ["contact-form", "faq-section"],
       "candidateDossiers": [],
@@ -452,7 +460,8 @@
         "FAQ",
         "Kontaktformulär"
       ],
-      "rationale": "Ekonomi/redovisning delar mönster med juridik (professional-services). Fallback till local-service-business."
+      "rationale": "Ekonomi/redovisning delar mönster med juridik (professional-services). Fallback till local-service-business.",
+      "operatorNotes": "2026-05-25: promoted to active via Path B step 13. defaultVariantId switched from nordic-trust to accounting-trust (PS-native, warm green-and-parchment). Same fallback safety net as the legal category."
     },
     {
       "id": "auto",

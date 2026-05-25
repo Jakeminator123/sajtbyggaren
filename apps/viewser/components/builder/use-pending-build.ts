@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 /**
  * use-pending-build — delad pending-build-state mellan FloatingChat
@@ -65,10 +65,31 @@ function truncateSnippet(text: string | undefined): string {
   return `${trimmed.slice(0, MAX_SNIPPET_LENGTH - 1).trimEnd()}…`;
 }
 
+/**
+ * Operator-vald baseRunId från "Iterera från denna"-knappen i
+ * Versions-tab. Vi lyfter den till samma scope som pending-build-state
+ * eftersom den följer en likadan livscykel: sätts när operatören
+ * väljer en historisk version, skickas till FloatingChat som prop, och
+ * rensas när bygget är klart eller operatören avbryter.
+ *
+ * `clearAt` är en best-effort-vakt mot stale-state: om operatören sätter
+ * baseRunId men aldrig submitterar, släpps den efter 5 minuter så nästa
+ * follow-up inte oavsiktligt iterar från en gammal version.
+ */
+export type PendingBaseRunIdState = {
+  baseRunId: string;
+  baseVersion: number | null;
+  setAt: number;
+};
+
+const PENDING_BASE_RUN_TTL_MS = 5 * 60 * 1000;
+
 export function usePendingBuild() {
   const [pendingBuild, setPendingBuild] = useState<PendingBuildState | null>(
     null,
   );
+  const [pendingBaseRunId, setPendingBaseRunIdState] =
+    useState<PendingBaseRunIdState | null>(null);
 
   const beginPending = useCallback((init: PendingBuildBegin) => {
     setPendingBuild({
@@ -83,5 +104,44 @@ export function usePendingBuild() {
     setPendingBuild(null);
   }, []);
 
-  return { pendingBuild, beginPending, clearPending };
+  const setPendingBaseRunId = useCallback(
+    (runId: string | null, version: number | null = null) => {
+      if (runId === null) {
+        setPendingBaseRunIdState(null);
+        return;
+      }
+      setPendingBaseRunIdState({
+        baseRunId: runId,
+        baseVersion: version,
+        setAt: Date.now(),
+      });
+    },
+    [],
+  );
+
+  // Stale-vakt: släpp baseRunId om operatören aldrig hann skicka in.
+  // Vi schemalägger alltid via setTimeout (även när TTL redan har
+  // passerat — då sätter vi delay = 0) så React 19:s
+  // set-state-in-effect-rule är nöjd. setState körs i timer-callbacken
+  // som körs efter render, inte synkront i effect-bodyn.
+  useEffect(() => {
+    if (!pendingBaseRunId) return;
+    const elapsed = Date.now() - pendingBaseRunId.setAt;
+    const remaining = Math.max(0, PENDING_BASE_RUN_TTL_MS - elapsed);
+    const setAtSnapshot = pendingBaseRunId.setAt;
+    const timer = window.setTimeout(() => {
+      setPendingBaseRunIdState((prev) =>
+        prev && prev.setAt === setAtSnapshot ? null : prev,
+      );
+    }, remaining);
+    return () => window.clearTimeout(timer);
+  }, [pendingBaseRunId]);
+
+  return {
+    pendingBuild,
+    beginPending,
+    clearPending,
+    pendingBaseRunId,
+    setPendingBaseRunId,
+  };
 }

@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../../../../governance/schemas/variant.schema.json",
+  "id": "accounting-trust",
+  "enabled": true,
+  "label": "Accounting Trust",
+  "description": "Warm deep-green and parchment visual direction for accounting firms, audit firms, redovisningsbyråer and tax advisory practices. Moderately spaced layout, professional sans-serif and a steady accent of forest-green communicate competence, durability and an approachable but unmistakably professional posture.",
+  "tokens": {
+    "color": {
+      "background": "#f7f4ec",
+      "foreground": "#1d2a23",
+      "muted": "#5a6660",
+      "border": "#d6d2c1",
+      "primary": "#1f4d3a",
+      "primaryForeground": "#f7f4ec",
+      "accent": "#c9a55a",
+      "accentForeground": "#1d2a23"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.2
+    },
+    "radius": {
+      "sm": "0.375rem",
+      "md": "0.625rem",
+      "lg": "1rem"
+    },
+    "spacing": {
+      "section": "5.5rem",
+      "container": "min(72rem, 92vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "warm",
+      "trustworthy",
+      "competent",
+      "approachable",
+      "professional",
+      "steady"
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Establish authority within the first scroll: a confident hero, the firm's expertise areas in a structured grid, named partners or trust markers (clients, awards, accreditations) and a measured CTA towards a discovery conversation."
+    },
+    {
+      "id": "expertise",
+      "path": "/expertis",
+      "required": true,
+      "purpose": "Spell out the practice areas the firm serves — corporate law, M&A, tax, dispute resolution, audit, advisory — in groups so a prospect can self-qualify. Replaces a flat 'services' list with a structured taxonomy a buying-side counsel actually reads."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Tell the firm's story — founding partners, professional philosophy, ethical posture, history — so a serious client recognises a known counterparty rather than a faceless brand."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakta-oss",
+      "required": true,
+      "purpose": "Per-office address, direct lines and a formal enquiry form. Treats contact as a respect signal: the firm is reachable, in named offices, with named people."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "team",
+      "path": "/team",
+      "when": "the firm leads with named partners and counsels whose individual credentials, bar admissions or specialisations carry conversion weight"
+    },
+    {
+      "id": "industries",
+      "path": "/branscher",
+      "when": "the firm differentiates by served industries (banking, life sciences, energy, real estate, technology) and wants prospects to recognise relevant precedent"
+    },
+    {
+      "id": "insights",
+      "path": "/insikter",
+      "when": "the firm publishes commentary, white papers or case notes as part of its business-development engine"
+    }
+  ]
+}

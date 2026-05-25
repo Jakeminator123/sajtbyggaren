@@ -17,7 +17,7 @@ Rapporten kompletterar inte ersätter `docs/reports/b125-preview-fallback-decisi
 | C | Lokal `next dev`-process per kund (Sajtmaskin-VM-modellen) | Ej implementerat |
 | D | Vercel Preview Deployments | Ej implementerat. ADR 0030 säger "adapter, inte beroende". |
 | E | "Öppna i StackBlitz"-knapp (top-level navigation, ej embed) | Ej implementerat |
-| F | Vercel Sandbox (V0-stil, Firecracker microVMs) | Ej implementerat |
+| F | Vercel Sandbox (Vercels AI-sitebuilder-stil, Firecracker microVMs) | Ej implementerat |
 
 ## Matris
 
@@ -57,7 +57,7 @@ Rapporten kompletterar inte ersätter `docs/reports/b125-preview-fallback-decisi
 - D (Vercel Preview): ADR 0030 låser Vercel som adapter, inte beroende.
   Vid 200 kunder ungefär 1200 dollar/mån — vi betalar Vercel för att
   vara mellanhand.
-- F (Vercel Sandbox): snyggt tekniskt, dyrast. V0:s modell kräver
+- F (Vercel Sandbox): snyggt tekniskt, dyrast. Vercels AI-sitebuilder kräver
   premium-pricing som inte matchar svenska SMB-segmentet.
 
 ## Vad detta INTE löser

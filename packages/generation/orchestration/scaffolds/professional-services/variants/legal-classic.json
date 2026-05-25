@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../../../../governance/schemas/variant.schema.json",
+  "id": "legal-classic",
+  "enabled": true,
+  "label": "Legal Classic",
+  "description": "Authoritative dark-navy, ivory and brass visual direction for traditional law firms, advokatbyråer and audit firms with long heritage. Restrained typography, generous whitespace and quiet contrast communicate gravity, discretion and institutional trust without leaning corporate.",
+  "tokens": {
+    "color": {
+      "background": "#fbf8f1",
+      "foreground": "#0d1c2c",
+      "muted": "#5a6678",
+      "border": "#dccfb6",
+      "primary": "#0d1c2c",
+      "primaryForeground": "#fbf8f1",
+      "accent": "#9b7a3b",
+      "accentForeground": "#0d1c2c"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.2
+    },
+    "radius": {
+      "sm": "0.25rem",
+      "md": "0.5rem",
+      "lg": "0.75rem"
+    },
+    "spacing": {
+      "section": "6rem",
+      "container": "min(72rem, 92vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "authoritative",
+      "discreet",
+      "institutional",
+      "traditional",
+      "professional",
+      "measured"
+    ]
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "$schema": "../governance/schemas/project-input.schema.json",
+  "siteId": "studio-bjork",
+  "scaffoldId": "agency-studio",
+  "variantId": "studio-monochrome",
+  "language": "sv",
+  "company": {
+    "name": "Studio Björk",
+    "businessType": "creative",
+    "tagline": "Vi gör varumärken som klarar verkligheten — inte bara presentationen.",
+    "story": "Studio Björk är en oberoende designstudio i Stockholm grundad 2019 av Hanna Björk och Marcus Lind. Vi arbetar med visuell identitet, förpackning och webbdesign för svenska och nordiska företag som tar sin form på allvar. Studion är liten med flit — fyra personer i samma rum så att varje projekt får riktigt arbete, inte processdiagram.",
+    "founded": 2019,
+    "team": [
+      { "name": "Hanna Björk", "role": "Creative Director" },
+      { "name": "Marcus Lind", "role": "Design Director" },
+      { "name": "Lova Strand", "role": "Designer" },
+      { "name": "Erik Hagberg", "role": "Designer och utvecklare" }
+    ]
+  },
+  "location": {
+    "city": "Stockholm",
+    "region": "Södermalm",
+    "country": "Sverige",
+    "serviceAreas": ["Stockholm", "Göteborg", "Norden", "Internationellt"]
+  },
+  "services": [
+    {
+      "id": "brand-identity-norra",
+      "label": "Norra — Visuell identitet",
+      "summary": "Komplett identitetssystem för en ny nordisk hudvårdsserie. Logotyp, typografi, förpackningssystem och tonalitet utvecklade från ett enda ord — kallhus."
+    },
+    {
+      "id": "rebrand-axel",
+      "label": "Axel & Vinge — Rebrand",
+      "summary": "Rebrand av en sextio år gammal båttillbehörstillverkare. Vi behöll hjärtat, drog ner volymen och byggde ett system som fungerar både i butik och i digital handel."
+    },
+    {
+      "id": "packaging-uggla",
+      "label": "Uggla Bryggeri — Förpackning",
+      "summary": "Etiketter och förpackningssystem för ett mikrobryggeri som ville sluta se ut som alla andra. Vi gick från traditionellt hantverk till stillsam disciplin."
+    },
+    {
+      "id": "web-eldsten",
+      "label": "Eldsten — Webbplats",
+      "summary": "Site för en arkitektbyrå i Göteborg. Editorial layout, byggd från grunden, optimerad för läsning på en bärbar dator klockan halv elva på kvällen."
+    },
+    {
+      "id": "campaign-skär",
+      "label": "Skär — Kampanj",
+      "summary": "Lansering av ett nytt fartygsmäklarmärke. Vi tog hand om allt från positionering till annonsbildernas typografi."
+    }
+  ],
+  "tone": {
+    "primary": "confident",
+    "secondary": ["Brand identity", "Packaging", "Web design", "Editorial", "Art direction"],
+    "avoid": ["fluffigt", "konsult-språk", "passion-marketing"]
+  },
+  "trustSignals": [
+    "Norra Skincare",
+    "Axel & Vinge",
+    "Uggla Bryggeri",
+    "Eldsten Arkitekter",
+    "Skär Shipping",
+    "Sveriges Radio Kultur"
+  ],
+  "conversionGoals": ["enquiry_form"],
+  "requestedCapabilities": ["contact-form"],
+  "contact": {
+    "phone": "+46 8 519 88 00",
+    "email": "hej@studiobjork.se",
+    "addressLines": ["Bondegatan 21", "116 33 Stockholm"],
+    "openingHours": "Studion är öppen mån–fre 09:00–17:00. Mejla först."
+  },
+  "selectedDossiers": {
+    "required": ["mailto-contact-form"],
+    "recommended": ["image-gallery", "video-hero"],
+    "rationale": "Agency-studio scaffold's compatible-dossiers.json names mailto-contact-form as required because a creative studio without a contact path fails the basic 'brand lead reaches out' test. image-gallery and video-hero are recommended because work-led studios benefit from richer visuals when actual imagery is supplied. Sections like hero / selected-work-preview / selected-work-grid / capabilities-row / manifesto-block / process-steps / client-roster live in sections.json and must not appear here as Dossier IDs (ADR 0012)."
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../../../governance/schemas/scaffold.schema.json",
+  "id": "agency-studio",
+  "version": "1.0.0",
+  "label": "Agency & Studio",
+  "description": "Portfolio-led site for creative agencies, design studios, brand studios, motion shops, content production houses, web studios and small post-production houses. The site itself is the showcase: bold typographic posture, a Selected Work section that dominates the home, capability disciplines surfaced as a single horizontal row, and a manifesto-style statement that distinguishes the studio from a generic services-business.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "lead with selected work, not service descriptions",
+    "communicate creative point of view through typography and copy",
+    "show capability disciplines so prospects know what we make",
+    "name notable clients without listing every project",
+    "convert curious art directors and brand leads into a real conversation"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

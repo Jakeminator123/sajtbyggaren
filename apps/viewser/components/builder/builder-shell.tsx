@@ -17,6 +17,7 @@ import {
 import { FloatingChat } from "@/components/builder/floating-chat";
 import { SiteInspectorSheet } from "@/components/builder/inspector";
 import type {
+  PendingBaseRunIdState,
   PendingBuildBegin,
   PendingBuildState,
 } from "@/components/builder/use-pending-build";
@@ -62,6 +63,16 @@ type BuilderShellProps = {
   pendingBuild: PendingBuildState | null;
   onPendingBuildBegin: (init: PendingBuildBegin) => void;
   onPendingBuildClear: () => void;
+  /**
+   * "Iterera från denna"-tillstånd. När operatören klickar på en
+   * versions-rad sätter Versions-tab denna; FloatingChat plockar
+   * upp `baseRunId` och skickar i nästa /api/prompt-fetch.
+   */
+  pendingBaseRunId: PendingBaseRunIdState | null;
+  onSetPendingBaseRunId: (
+    runId: string | null,
+    version?: number | null,
+  ) => void;
   onBuildStart: () => void;
   onBuildEnd: () => void;
   onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
@@ -89,6 +100,8 @@ export function BuilderShell({
   pendingBuild,
   onPendingBuildBegin,
   onPendingBuildClear,
+  pendingBaseRunId,
+  onSetPendingBaseRunId,
   onBuildStart,
   onBuildEnd,
   onBuildDone,
@@ -247,6 +260,8 @@ export function BuilderShell({
         key={siteId}
         siteId={siteId}
         isBuilding={isBuilding}
+        pendingBaseRunId={pendingBaseRunId}
+        onClearBaseRunId={() => onSetPendingBaseRunId(null)}
         onBuildStart={handleBuildStart}
         onBuildEnd={handleBuildEnd}
         onBuildDone={onBuildDone}
@@ -305,6 +320,8 @@ export function BuilderShell({
         runId={runId}
         isBuilding={isBuilding}
         pendingBuild={pendingBuild}
+        pendingBaseRunId={pendingBaseRunId}
+        onSetPendingBaseRunId={onSetPendingBaseRunId}
         onBuildStart={handleBuildStart}
         onBuildEnd={handleBuildEnd}
         onBuildDone={onBuildDone}

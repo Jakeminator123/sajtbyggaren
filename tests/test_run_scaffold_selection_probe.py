@@ -99,7 +99,11 @@ def test_scaffold_dir_status_real_scaffold_on_disk() -> None:
 
 
 def test_scaffold_dir_status_registry_placeholder() -> None:
-    status = _scaffold_dir_status("professional-services")
+    # ``saas-product`` is still a planned registry placeholder (no on-disk
+    # scaffold directory). ``professional-services`` and ``clinic-healthcare``
+    # both moved to active in Path B steps 12 and 13 (2026-05-25), so they
+    # can no longer represent the placeholder case here.
+    status = _scaffold_dir_status("saas-product")
     assert status["directoryExists"] is False
     assert status["scaffoldJsonExists"] is False
 
@@ -123,8 +127,11 @@ def test_classify_runtime_readiness_real_match() -> None:
 
 
 def test_classify_runtime_readiness_placeholder() -> None:
+    # See ``test_scaffold_dir_status_registry_placeholder`` — we switched
+    # the placeholder probe to ``saas-product`` after professional-services
+    # graduated to active in Path B step 13.
     text = _classify_runtime_readiness(
-        "professional-services",
+        "saas-product",
         "local-service-business",
         {"local-service-business": "marketing-base"},
         {"directoryExists": False, "scaffoldJsonExists": False},

@@ -1,0 +1,40 @@
+{
+  "defaultRoutes": [
+    {
+      "id": "home",
+      "path": "/",
+      "required": true,
+      "purpose": "Strong typographic hero, a Selected Work preview that lets a visiting art director scroll the studio's voice in seconds, a capabilities row, a manifesto statement and a measured CTA. The home replaces the LSB pattern of services-then-trust with work-then-voice — the conversion path is recognition, not pricing."
+    },
+    {
+      "id": "work",
+      "path": "/arbeten",
+      "required": true,
+      "purpose": "The full selected-work catalogue. One card per project with a label, scope and a representative client name. Replaces the LSB /tjanster page entirely — agencies sell on case work, not service bullet points."
+    },
+    {
+      "id": "about",
+      "path": "/om-oss",
+      "required": true,
+      "purpose": "Manifesto plus origin story plus team. A creative studio's about page is rarely a corporate biography — it is the studio's point of view in long form, framed by a manifesto-block and the team that makes the work."
+    },
+    {
+      "id": "contact",
+      "path": "/kontakta-oss",
+      "required": true,
+      "purpose": "A direct path to the studio. Email, phone, address — informal in copy ('Säg hej') but precise in data so a brand lead can act in two clicks."
+    }
+  ],
+  "optionalRoutes": [
+    {
+      "id": "process",
+      "path": "/process",
+      "when": "the studio leads with how it works (Discovery → Design → Build → Launch) as a sales tool, particularly common with brand studios and digital agencies"
+    },
+    {
+      "id": "journal",
+      "path": "/journal",
+      "when": "the studio runs a content engine — case write-ups, opinion pieces, behind-the-scenes — and wants editorial space outside the work catalogue"
+    }
+  ]
+}

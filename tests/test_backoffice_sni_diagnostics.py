@@ -38,7 +38,10 @@ def test_mapping_rows_include_discovery_taxonomy_chain_for_known_category() -> N
     assert row["categoryKnown"] is True
     assert row["discoveryTargetScaffoldId"] == "restaurant-hospitality"
     assert row["discoveryFallbackScaffoldId"] == "local-service-business"
-    assert row["discoveryDefaultVariantId"] == "nordic-trust"
+    # Promotades till warm-bistro 2026-05-25 när restaurant-kategorin
+    # flippades till supportStatus=active via GAP-backend-restaurant-
+    # activation. Speglar plan.py:_DEFAULT_VARIANT_BY_SCAFFOLD.
+    assert row["discoveryDefaultVariantId"] == "warm-bistro"
     assert row["discoveryExpectedStarterId"] == "marketing-base"
 
 

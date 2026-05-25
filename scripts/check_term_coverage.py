@@ -118,6 +118,7 @@ COMMON_WORDS = {
     # Web standards / native browser APIs
     "HTML", "CSS", "URL", "URI", "DOM", "API", "HTTP", "HTTPS", "REST", "GraphQL", "WebSocket", "OAuth", "CORS", "TLS", "SSL",
     "SharedArrayBuffer", "SharedArrayBuffer is not defined",
+    "XMLHttpRequest", "ReadableStream",
     "ElementCreationOptions", "DevTools",
     # Sajtbyggaren-meta-nyckelord (egennamn för repon)
     "Sajtbyggaren", "Sajtmaskin", "Jakeminator123", "Jakemiantor123",
@@ -431,6 +432,20 @@ COMMON_WORDS = {
     # komponentnamn renderade av build_site.py:render_menu och
     # render_booking, inte canonical domain terms.
     "MenuPage", "BookingPage",
+    # Path B native dispatch (Path B step 12 + 13 + 14) härleder
+    # page-komponentnamn från route-id via
+    # ``_dispatched_page_function_name``. CamelCase är en docstring-
+    # referens till härledningsstrategin (route-id => CamelCase + Page);
+    # HomePage/TreatmentsPage är de konkreta namnen för clinic-healthcare's
+    # home och treatments routes (TeamPage, FaqPage och PricingPage är
+    # redan listade ovan via PR #93). ExpertisePage / IndustriesPage /
+    # InsightsPage tillkom 2026-05-25 med professional-services scaffolden
+    # (Path B step 13). WorkPage / ProcessPage / JournalPage tillkom samma
+    # datum med agency-studio scaffolden (Path B step 14).
+    "CamelCase",
+    "HomePage", "TreatmentsPage",
+    "ExpertisePage", "IndustriesPage", "InsightsPage",
+    "WorkPage", "ProcessPage", "JournalPage",
     "FieldLabel", "FieldStack", "HelperText", "SectionHeader",
     "TagListInput", "TagListInputProps", "TextField", "TextareaField",
     "Chip", "ChipRow", "ChipProps", "StepDots",
@@ -442,6 +457,12 @@ COMMON_WORDS = {
     "AssetDropzone", "AssetDropzoneProps", "AssetCard", "AssetId",
     "AssetRef", "AssetRole", "AssetPlacement", "AssetStore",
     "ChangeEvent", "DragEvent", "FormData",
+    # Local helpers introduced by the asset-dropzone XHR upload-progress
+    # refactor (operator-OK 2026-05-25): UploadProgress is a private React
+    # component that renders the 0-100% progress bar; UploadResponse is
+    # the JSON shape returned by /api/upload-asset. Both are
+    # implementation symbols, not canonical domain terms.
+    "UploadProgress", "UploadResponse",
     "AssetsStep", "AssetsStepProps", "WizardAssets",
     "LocalAssetStore", "S3AssetStore",
     "SaveAssetInput", "SaveAssetVariant",
@@ -463,7 +484,10 @@ COMMON_WORDS = {
     # ChatMessage finns redan listad ovan (viewser ChatMessageSchema-grupp).
     "ErrorBubble", "ErrorKind", "MessageBubble",
     "BuildChange", "BuildChangeCategory", "CategoryLabel",
-    "KeywordRule", "ChevronUp", "ChevronDown",
+    "KeywordRule", "ChevronUp", "ChevronDown", "ChevronLeft",
+    # Live Build Sync polling-hook (GAP-viewser-pipeline-status-polling):
+    "BuildPhase", "BuildTraceState",
+    "AbortController", "AbortError",
     # DiscoveryWizard-uppgraderingar (keyboard-shortcuts + submit-overlay):
     "KeyboardShortcut", "KeyboardShortcutGroup", "KEYBOARD_SHORTCUTS",
     # MediaStep + AI image-generator (GPT image 1.5):
@@ -520,9 +544,20 @@ COMMON_WORDS = {
     # use-pending-build.ts. Samma kategori som FollowupBuildState ovan
     # — lokala UI-implementation-symboler för Live Build Sync.
     "PendingBuildState", "PendingBuildBegin", "PendingRunRow",
+    # GAP-backend-build-trace-endpoint — TS-types exporterade från
+    # apps/viewser/lib/runs.ts (RunStatus, TraceEvent, RunTraceResponse)
+    # och pending-baseRunId-state-tilläg från use-pending-build.ts
+    # (PendingBaseRunIdState). Lokala API-shape-symboler för Live
+    # Build Sync A+D, inte domain terms.
+    "RunStatus", "TraceEvent", "RunTraceResponse", "PendingBaseRunIdState",
     # CopyFeedback är intern TS-type i versions-tab.tsx för
     # clipboard-feedback-state (M1 från bug-hunt).
     "CopyFeedback",
+    # GAP-viewser-side-by-side-preview — interna TS-symboler i
+    # apps/viewser/components/builder/inspector/compare-preview-modal.tsx.
+    # Lokala UI-komponentnamn och prop-typer, inte domain terms.
+    "ComparePreviewModal", "ComparePreviewModalProps",
+    "ModalHeader", "PaneOverlay", "PaneStatus", "PreviewPane",
     # Lucide-icon-namn använda i Live Build Sync (versions-tab):
     "GitBranch",
     # ui-tokens shared interaction constants:
