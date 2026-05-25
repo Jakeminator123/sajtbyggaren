@@ -116,7 +116,16 @@ const effectiveMode =
 // får istället en tydlig stderr-rad vid dev-startup som länkar till
 // det riktiga fixet, och viewer-panel.tsx ger pedagogiskt felmeddelande
 // in-browser om embeddet faktiskt blockas.
-const HAS_EXPERIMENTAL_HTTPS = process.argv.includes("--experimental-https");
+// `process.argv` är inte tillförlitlig under Turbopack: nästans config
+// laddas i worker-processer vars argv inte ärver parent-processens
+// flaggor, så `--experimental-https` syns inte ens när Next-CLI:n
+// startades med den. Vi konsulterar därför primärt `VIEWSER_DISPATCHER_HTTPS`
+// — env-variabeln som `scripts/dev.mjs` sätter när dispatchern valt
+// https-grenen — och faller tillbaka till argv-checken för operatörer
+// som kör `next dev --experimental-https` direkt (utan dispatchern).
+const HAS_EXPERIMENTAL_HTTPS =
+  process.env.VIEWSER_DISPATCHER_HTTPS === "1" ||
+  process.argv.includes("--experimental-https");
 const ALLOW_TRANSPORT_MISMATCH =
   process.env.VIEWSER_ALLOW_TRANSPORT_MISMATCH === "1";
 const STACKBLITZ_MODE_REQUIRES_HTTPS =

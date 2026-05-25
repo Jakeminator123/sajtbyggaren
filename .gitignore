@@ -99,6 +99,16 @@ Thumbs.db
 konversation.txt
 .review-*/
 
+# Agent-till-agent handover-noteringar på repo-toppnivå
+# (t.ex. handover-stackblitz-2026-05-25.md). Transient session-state
+# mellan parallella agenter / sessioner — innehåller browser/SDK-
+# specifika feature-namn och pågående debug-spår som inte hör hemma
+# i versionshistoriken. Samma kategori som mer_info.txt-mönstret:
+# operatören kan ha filen lokalt, men den committas aldrig.
+# scripts/check_term_coverage.py har spegelfix som skipar filerna
+# så agent-narrative inte felklassas som okända domänbegrepp.
+handover-*.md
+
 # Lokal mini-eval-output (verify_run/eval-runners skriver hit). Stora
 # artefakter per körning, samma kategori som data/runs/ men för
 # operatör-iterationer utanför canonical history.
