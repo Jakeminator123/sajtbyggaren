@@ -463,12 +463,12 @@ def test_renderers_use_jsx_safe_string_for_customer_text() -> None:
 
     for fn_name in (
         "render_layout",
-        # Path B step 1-4: the actual JSX-escaping for /, /tjanster,
-        # /om-oss and /kontakt routes now lives in the section-renderers
-        # below. ``render_home``, ``render_services``, ``render_about``
-        # and ``render_contact`` are thin shims that compose sections
-        # into their page shells and interpolate no customer text
-        # themselves.
+        # Path B step 1-5: the actual JSX-escaping for /, /tjanster,
+        # /om-oss, /kontakt and /produkter routes now lives in the
+        # section-renderers below. ``render_home``, ``render_services``,
+        # ``render_about``, ``render_contact`` and ``render_products``
+        # are thin shims that compose sections into their page shells
+        # and interpolate no customer text themselves.
         "render_section_hero",
         "render_section_services_summary",
         "render_section_service_list",
@@ -476,11 +476,13 @@ def test_renderers_use_jsx_safe_string_for_customer_text() -> None:
         "render_section_team",
         "render_section_trust_proof",
         "render_section_contact_info",
-        # ``render_section_contact_cta`` is intentionally absent: the
-        # closing home-page CTA banner has no customer text today
-        # (the copy is hard-coded Swedish "Hör av dig idag" /
-        # "Kontakta oss"). It will pick up dossier interpolation in a
-        # later commit when branch-aware CTA copy is wired in.
+        "render_section_product_grid",
+        # ``render_section_contact_cta`` and
+        # ``render_section_products_intro`` are intentionally absent:
+        # both interpolate only static Swedish copy today (the
+        # ``dossier`` parameter is reserved for future branch-aware
+        # text). They will move into this list in the same commit
+        # that wires up the dossier-driven copy.
     ):
         fn = getattr(build_site, fn_name)
         source = inspect.getsource(fn)

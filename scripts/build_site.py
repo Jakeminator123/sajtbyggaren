@@ -2664,6 +2664,59 @@ def render_section_hero(
     return hero_section_jsx + hero_block_jsx
 
 
+def render_section_products_intro(dossier: dict) -> str:
+    """Render the /produkter route header block (eyebrow + h1 + lead).
+
+    Static Swedish copy today ("Produkter" / "Vårt sortiment" /
+    "Här är våra produkter…") — ``dossier`` is reserved for a future
+    branch-aware copy switch (e.g. "Smyckessortimentet" / "Klädkollektionen")
+    when ecommerce niches get their own copy table.
+
+    Path B step 5 (GAP-backend-path-b-section-renderer): extracted
+    from ``render_products`` as a block fragment (no ``<section>``
+    wrapper) so it can sit alongside ``render_section_product_grid``
+    and the bottom shop-CTA inside the same gradient page section.
+    """
+    del dossier  # reserved for branch-aware copy
+    return (
+        '          <header className="flex flex-col gap-3">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Produkter</p>\n'
+        '            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Vårt sortiment</h1>\n'
+        '            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">Här är våra produkter. Hör av dig om du undrar något så hjälper vi dig hela vägen till beställning.</p>\n'
+        "          </header>\n"
+    )
+
+
+def render_section_product_grid(dossier: dict) -> str:
+    """Render the /produkter product-grid block.
+
+    Iterates ``dossier.services`` (the ecommerce-lite scaffold reuses
+    the services array for products until SCAFFOLD_TO_STARTER flips
+    to ``commerce-base``; see B13). Produces a 3-column responsive
+    grid of article cards with icon + label + summary.
+
+    Path B step 5: extracted from ``render_products``. Returned as a
+    block fragment (no ``<section>`` wrapper) so the route-renderer
+    can compose it with the products-intro header and shop-CTA inside
+    a single gradient page section. Output is byte-identical to the
+    inline implementation it replaces.
+    """
+    products = dossier["services"]
+    items = "\n".join(
+        f'          <article key={_jsx_safe_string(item["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
+        f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(item["id"])} className="size-6" /></span>\n'
+        f'            <h2 className="text-xl font-semibold">{_jsx_safe_string(item["label"])}</h2>\n'
+        f'            <p className="mt-3 text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(item["summary"])}</p>\n'
+        "          </article>"
+        for item in products
+    )
+    return (
+        '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
+        f"{items}\n"
+        "          </div>\n"
+    )
+
+
 def render_section_contact_cta(
     dossier: dict,
     *,
@@ -3219,14 +3272,11 @@ def render_products(
         {_icon_for_service(item["id"]) for item in products} | {"ArrowRight", "ShoppingBag"}
     )
     icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
-    items = "\n".join(
-        f'          <article key={_jsx_safe_string(item["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
-        f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(item["id"])} className="size-6" /></span>\n'
-        f'            <h2 className="text-xl font-semibold">{_jsx_safe_string(item["label"])}</h2>\n'
-        f'            <p className="mt-3 text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(item["summary"])}</p>\n'
-        "          </article>"
-        for item in products
-    )
+    # Path B step 5 — products-intro header and product-grid blocks
+    # are now produced by ``render_section_products_intro`` and
+    # ``render_section_product_grid``. Output is byte-identical.
+    products_intro_block = render_section_products_intro(dossier)
+    product_grid_block = render_section_product_grid(dossier)
     # B102 (re-Verifierings-Scout 3 2026-05-18): shop-flavoured bottom-CTA.
     # Länken mot kontakt-routen behålls eftersom builder MVP inte har
     # checkout, men verbet ("Hör av dig för att beställa") matchar
@@ -3240,14 +3290,8 @@ def render_products(
         '    <main className="flex flex-1 flex-col">\n'
         '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
-        '          <header className="flex flex-col gap-3">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Produkter</p>\n'
-        '            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Vårt sortiment</h1>\n'
-        '            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">Här är våra produkter. Hör av dig om du undrar något så hjälper vi dig hela vägen till beställning.</p>\n'
-        "          </header>\n"
-        '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
-        f"{items}\n"
-        "          </div>\n"
+        f"{products_intro_block}"
+        f"{product_grid_block}"
         f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity"><ShoppingBag className="size-4" />{bottom_cta_label}<ArrowRight className="size-4" /></a>\n'
         "        </div>\n"
         "      </section>\n"
