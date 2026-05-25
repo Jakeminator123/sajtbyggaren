@@ -420,7 +420,7 @@ COMMON_WORDS = {
     # ChatMessage finns redan listad ovan (viewser ChatMessageSchema-grupp).
     "ErrorBubble", "ErrorKind", "MessageBubble",
     "BuildChange", "BuildChangeCategory", "CategoryLabel",
-    "KeywordRule", "ChevronUp", "ChevronDown",
+    "KeywordRule", "ChevronUp", "ChevronDown", "ChevronLeft",
     # DiscoveryWizard-uppgraderingar (keyboard-shortcuts + submit-overlay):
     "KeyboardShortcut", "KeyboardShortcutGroup", "KEYBOARD_SHORTCUTS",
     # MediaStep + AI image-generator (GPT image 1.5):

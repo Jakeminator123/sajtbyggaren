@@ -320,6 +320,32 @@
     100% { transform: translateX(400%); }
   }
 
+  /* Soft edge-pulse — used by the FloatingChat side-tab when the chat
+     is minimized. A faint shadow expands outward from the right edge
+     and fades away, drawing the eye without distracting from the
+     preview behind. Calm enough to loop forever without nagging. */
+  @keyframes fc-edge-pulse {
+    0% {
+      box-shadow:
+        0 0 0 0 oklch(from var(--foreground) l c h / 0.18),
+        0 8px 24px -8px oklch(0 0 0 / 0.18);
+    }
+    70% {
+      box-shadow:
+        0 0 0 14px oklch(from var(--foreground) l c h / 0),
+        0 8px 24px -8px oklch(0 0 0 / 0.18);
+    }
+    100% {
+      box-shadow:
+        0 0 0 0 oklch(from var(--foreground) l c h / 0),
+        0 8px 24px -8px oklch(0 0 0 / 0.18);
+    }
+  }
+
+  .animate-fc-edge-pulse {
+    animation: fc-edge-pulse 2.6s ease-out infinite;
+  }
+
   .animate-shimmer {
     background: linear-gradient(
       90deg,

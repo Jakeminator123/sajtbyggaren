@@ -2,6 +2,7 @@
 
 import {
   AlertTriangle,
+  ChevronLeft,
   ChevronUp,
   Clock,
   GitBranch,
@@ -984,31 +985,58 @@ export function FloatingChat({
   }
 
   if (isMinimized) {
+    // Sido-tab på höger kant. Fast position oavsett var paneeln stod
+    // när operatören klickade Minimera — bubblan följde tidigare
+    // panel-position och kunde hamna mitt på sidan eller dolt bakom
+    // andra UI-lager. Här är den alltid synlig och alltid på samma
+    // ställe, vilket gör interaktionen förutsägbar.
+    //
+    // Pulsen är subtil (motion-safe + 2.6s) så den lockar ögat utan
+    // att nagga. Hover/focus expanderar till en bredare pill med
+    // text och ChevronLeft-ikon — call-to-action är "vi finns här,
+    // klicka för att öppna". Vid återöppning återställs paneeln till
+    // den sparade positionen (samma som innan minimering) eftersom
+    // `position`-state är orört.
     return (
       <button
         type="button"
         onClick={() => setIsMinimized(false)}
-        aria-label="Återställ chatten"
+        aria-label="Öppna Sajtmaskin-chatten"
+        title="Öppna chatten"
         className={cn(
-          "border-border/60 bg-card/95 text-foreground pointer-events-auto fixed z-40 flex h-11 items-center gap-2 rounded-full border px-3.5 text-[12px] font-medium shadow-2xl backdrop-blur-xl",
-          "hover:bg-card focus-visible:ring-ring/50 transition-colors focus-visible:ring-2 focus-visible:outline-none",
+          "group pointer-events-auto fixed top-1/2 right-0 z-40 -translate-y-1/2",
+          "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
         )}
-        style={{
-          left: position.x,
-          top: position.y + PANEL_HEIGHT - 44,
-        }}
       >
         <span
           className={cn(
-            "h-2 w-2 rounded-full",
-            isBuilding
-              ? "bg-amber-500 motion-safe:animate-pulse"
-              : "bg-emerald-500",
+            "border-border/60 bg-card/95 text-foreground flex h-14 items-center gap-2 rounded-l-2xl border border-r-0 pl-2.5 pr-3 backdrop-blur-xl",
+            "motion-safe:animate-fc-edge-pulse",
+            "transition-[padding,gap] duration-200 ease-out",
+            "group-hover:gap-2.5 group-hover:pr-4 group-focus-visible:gap-2.5 group-focus-visible:pr-4",
           )}
-          aria-hidden
-        />
-        <MessageSquare className="text-muted-foreground h-3.5 w-3.5" />
-        Sajtmaskin
+        >
+          <ChevronLeft
+            aria-hidden
+            className={cn(
+              "text-muted-foreground h-4 w-4 transition-transform duration-200",
+              "group-hover:text-foreground group-hover:-translate-x-0.5",
+              "group-focus-visible:text-foreground group-focus-visible:-translate-x-0.5",
+            )}
+          />
+          <span
+            aria-hidden
+            className={cn(
+              "h-2 w-2 rounded-full",
+              isBuilding
+                ? "bg-amber-500 motion-safe:animate-pulse"
+                : "bg-emerald-500",
+            )}
+          />
+          <span className="text-[12px] font-medium tracking-tight whitespace-nowrap">
+            Sajtmaskin
+          </span>
+        </span>
       </button>
     );
   }
