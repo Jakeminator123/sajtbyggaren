@@ -30,51 +30,10 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `ee31eb1` (2026-05-25 UTC, steward-auto efter PR #113 — sync(jakob-be -> main): B146 reconciliation + runtime smoke-lock + golden-path eval (#112, #109, #110)).
-Nya PRs sedan föregående checkpoint: PR #55 — fix(viewser): stale run-following och
-artefakt-panel; PR #59 — feat(backoffice): add read-only asset graph lens; PR #60 —
-tooling: Starter Candidate Auditor v1 (read-only); PR #61 — docs: add team parallel
-workflow and ownership map; PR #62 — feat(viewser): integrate christopher-ui builder
-workflow; PR #63 — feat(discovery): respect wizard directives — useCustomColors +
-scaffoldHint (Gap 1 + 3); PR #64 — docs(ownership): add branch-naming conventions for
-parallel team work; PR #66 — fix(assets): sourceUrl uploads with stream-safe fetch
-(supersedes #65); PR #67 — ci: add AI bug review workflow step; PR #68 — feat(week1):
-restaurant-hospitality scaffold + 11 soft dossiers + 14 variants (fantastic sites W1);
-PR #70 — feat(tooling): add Sprintvakt V1 coordination guard; PR #71 — feat(viewser):
-Front 1-3 + wizard minimalism — preview, iteration & polish; PR #75 — feat: Sprintvakt
-V1.1+V1.2 + CI hardening + industry coverage + docs sync (post-PR70 batch); PR #76 —
-fix(backoffice): recover regression tests and catch-all coverage status; PR #77 —
-feat(tooling): add Sprintvakt agent inbox (post/list/ack); PR #78 — fix(backoffice):
-harden candidate generation provenance and defaults; PR #81 — fix(grind): close B83
-service slug collision; PR #82 — docs(scout): embedding readiness audit 2026-05-25; PR
-#80 — fix(grind): close B85 stdout contract drift; PR #79 — fix(grind): close B87 model
-fallback warning; PR #83 — docs(grind): close B72 + B75 status-sync to Stängda; PR #84 —
-test(generation): contract regression net for B137-B141 + extend B139 tone fallback; PR
-#87 — feat(backoffice): add one-click eval smoke runs; PR #89 — feat(eval-probe): add
-scaffold-selection probe + docs; PR #88 — fix(viewser): make preview mode drive local
-iframe headers; PR #92 — fix(viewser): handle quoted-with-comment + $VAR expansion in
-dev-dispatcher .env-parser; PR #93 — feat(builder): wire menu+booking renderers so
-restaurant-hospitality builds; PR #94 — docs(dossiers): import-readiness scope-doc for
-Sajtmaskin material; PR #95 — feat(evals): add cafe-bistro to FULL_CASES so full suite
-covers all 3 on-disk scaffolds; PR #97 — fix(viewser): pedagogical preview-error in
-local-next mode + soft transport-mismatch warning; PR #99 — docs(adr): 0030
-preview/deploy-providers are adapters, not canonical runtime; PR #98 — chore(tooling):
-lucide-react cross-policy lock + ADR 0021 upstream-issue recheck + B145 entry; PR #100 —
-fix(viewser): per-siteId build mutex so unrelated sites can build in parallel; PR #101 —
-fix(viewser): cross-origin-isolated permissions policy + dispatcher https signal; PR
-#102 — fix(evals): cherry-pick timeout-hardening + helper API from #96; PR #104 —
-fix(viewser): honor preview mode end-to-end + mode-aware progress copy; PR #103 —
-sync(jakob-be -> main): 5 produkt + 6 härdning + 2 docs (13 commits); PR #105 — Live
-Build Sync + Restaurant Path A + Wizard polish + Side-by-side preview; PR #106 —
-feat(steward): auto-bump current-focus + handoff on PR merge to main (ADR 0031); PR #107
-— refactor(builder): extract page renderers from build_site.py to
-packages/generation/build (B13a step C); PR #108 — Phase 3 — section-treatments
-operator-pin + scout-driven polish; PR #112 — feat(b146): port Christopher's
-section-arkitektur ovanpå PR #107-splitten; PR #109 — test(builder): lock runtime
-scaffold smoke coverage on jakob-be; PR #110 — feat(evals): add deterministic golden
-path scorecard and embeddings gate; PR #111 — fix(agents): correct python3-venv package
-name for Ubuntu Noble; PR #113 — sync(jakob-be -> main): B146 reconciliation + runtime
-smoke-lock + golden-path eval (#112, #109, #110).
+Last verified state: `50217e3` (2026-05-25 UTC, steward-auto efter PR #115 — sync(jakob-be -> main): #114 gitignore hygiene (post-#113 cleanup)).
+Nya PRs sedan föregående checkpoint: PR #114 — chore(gitignore): re-ignore __pycache__/
+under packages/generation/build/ (B146 fallout); PR #115 — sync(jakob-be -> main): #114
+gitignore hygiene (post-#113 cleanup).
 
 Sedan c0b59fbe (PR #60) har följande mergats till `main`, i ordning:
 
@@ -1326,3 +1285,51 @@ gap-parsern returnerade backslashes från `\[runId\]`-escape vidare till
 `paths_overlap` + `generate_agent_prompt`. Hela pytest-suiten är grön;
 ruff 0 findings; `python scripts/sprintvakt_check.py --strict` ger
 `Sprintvakt check: OK`.
+
+### 2026-05-25 UTC — current-focus.md före `ee31eb1`
+
+Last verified state: `ee31eb1` (2026-05-25 UTC, steward-auto efter PR #113 — sync(jakob-be -> main): B146 reconciliation + runtime smoke-lock + golden-path eval (#112, #109, #110)).
+Nya PRs sedan föregående checkpoint: PR #55 — fix(viewser): stale run-following och
+artefakt-panel; PR #59 — feat(backoffice): add read-only asset graph lens; PR #60 —
+tooling: Starter Candidate Auditor v1 (read-only); PR #61 — docs: add team parallel
+workflow and ownership map; PR #62 — feat(viewser): integrate christopher-ui builder
+workflow; PR #63 — feat(discovery): respect wizard directives — useCustomColors +
+scaffoldHint (Gap 1 + 3); PR #64 — docs(ownership): add branch-naming conventions for
+parallel team work; PR #66 — fix(assets): sourceUrl uploads with stream-safe fetch
+(supersedes #65); PR #67 — ci: add AI bug review workflow step; PR #68 — feat(week1):
+restaurant-hospitality scaffold + 11 soft dossiers + 14 variants (fantastic sites W1);
+PR #70 — feat(tooling): add Sprintvakt V1 coordination guard; PR #71 — feat(viewser):
+Front 1-3 + wizard minimalism — preview, iteration & polish; PR #75 — feat: Sprintvakt
+V1.1+V1.2 + CI hardening + industry coverage + docs sync (post-PR70 batch); PR #76 —
+fix(backoffice): recover regression tests and catch-all coverage status; PR #77 —
+feat(tooling): add Sprintvakt agent inbox (post/list/ack); PR #78 — fix(backoffice):
+harden candidate generation provenance and defaults; PR #81 — fix(grind): close B83
+service slug collision; PR #82 — docs(scout): embedding readiness audit 2026-05-25; PR
+#80 — fix(grind): close B85 stdout contract drift; PR #79 — fix(grind): close B87 model
+fallback warning; PR #83 — docs(grind): close B72 + B75 status-sync to Stängda; PR #84 —
+test(generation): contract regression net for B137-B141 + extend B139 tone fallback; PR
+#87 — feat(backoffice): add one-click eval smoke runs; PR #89 — feat(eval-probe): add
+scaffold-selection probe + docs; PR #88 — fix(viewser): make preview mode drive local
+iframe headers; PR #92 — fix(viewser): handle quoted-with-comment + $VAR expansion in
+dev-dispatcher .env-parser; PR #93 — feat(builder): wire menu+booking renderers so
+restaurant-hospitality builds; PR #94 — docs(dossiers): import-readiness scope-doc for
+Sajtmaskin material; PR #95 — feat(evals): add cafe-bistro to FULL_CASES so full suite
+covers all 3 on-disk scaffolds; PR #97 — fix(viewser): pedagogical preview-error in
+local-next mode + soft transport-mismatch warning; PR #99 — docs(adr): 0030
+preview/deploy-providers are adapters, not canonical runtime; PR #98 — chore(tooling):
+lucide-react cross-policy lock + ADR 0021 upstream-issue recheck + B145 entry; PR #100 —
+fix(viewser): per-siteId build mutex so unrelated sites can build in parallel; PR #101 —
+fix(viewser): cross-origin-isolated permissions policy + dispatcher https signal; PR
+#102 — fix(evals): cherry-pick timeout-hardening + helper API from #96; PR #104 —
+fix(viewser): honor preview mode end-to-end + mode-aware progress copy; PR #103 —
+sync(jakob-be -> main): 5 produkt + 6 härdning + 2 docs (13 commits); PR #105 — Live
+Build Sync + Restaurant Path A + Wizard polish + Side-by-side preview; PR #106 —
+feat(steward): auto-bump current-focus + handoff on PR merge to main (ADR 0031); PR #107
+— refactor(builder): extract page renderers from build_site.py to
+packages/generation/build (B13a step C); PR #108 — Phase 3 — section-treatments
+operator-pin + scout-driven polish; PR #112 — feat(b146): port Christopher's
+section-arkitektur ovanpå PR #107-splitten; PR #109 — test(builder): lock runtime
+scaffold smoke coverage on jakob-be; PR #110 — feat(evals): add deterministic golden
+path scorecard and embeddings gate; PR #111 — fix(agents): correct python3-venv package
+name for Ubuntu Noble; PR #113 — sync(jakob-be -> main): B146 reconciliation + runtime
+smoke-lock + golden-path eval (#112, #109, #110).
