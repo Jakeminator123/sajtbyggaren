@@ -371,6 +371,25 @@ def test_reserve_paths_replaces_existing_gap_id(tmp_path: Path) -> None:
     assert len(legacy) == 2
 
 
+@pytest.mark.tooling
+def test_sprintvakt_check_script_has_no_sys_path_hack() -> None:
+    """The sprintvakt_check CLI must not mutate sys.path. Editable install
+    (`pip install -e .`, see docs/sprintvakt-mcp.md) is the documented way to
+    expose the tooling package to the script.
+
+    Regression guard for the V1.1 follow-up: an earlier version of the script
+    did `sys.path.insert(0, REPO_ROOT)` so the relative import would work when
+    run from arbitrary working directories. That hack was brittle in CI and
+    other import contexts; the editable install replaces it cleanly.
+    """
+    script = Path(__file__).resolve().parent.parent / "scripts" / "sprintvakt_check.py"
+    text = script.read_text(encoding="utf-8")
+    assert "sys.path.insert" not in text, (
+        "scripts/sprintvakt_check.py must not mutate sys.path. Use "
+        "`pip install -e .` to register the tooling package instead."
+    )
+
+
 def _create_payload(*, dry_run: bool, confirm: bool = False) -> dict[str, object]:
     return {
         "id": "GAP-docs",

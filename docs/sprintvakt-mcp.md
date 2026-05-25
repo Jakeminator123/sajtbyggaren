@@ -45,6 +45,12 @@ eller GitHub-state.
 
 ## CLI
 
+Engångsregistrering av `tooling`-paketet i venv (annars `ModuleNotFoundError`):
+
+```bash
+pip install -e .
+```
+
 Kör workboard- och collision-check:
 
 ```bash
