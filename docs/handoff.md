@@ -1,14 +1,15 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-25 sen natt / tidig morgon (**post-merge sync efter
-recovery-PR #76 (tappade #73/#74-tester återlagda + Industry Coverage
-catch-all-fix) ovanpå PR #75-batchen**). Verifierad `jakob-be` är
-`92df12c932a9d51937a9138e6e7bb91c08b9b470` (`fix(backoffice): recover
-regression coverage (#76)`). `main` ligger 1 commit bakom på `6649b51`
-(closing-round docs-sync efter PR #75); recovery-#76 sitter just nu bara
-på `jakob-be` och följer med när jakob-be nästa gång PR:as mot `main`.
-`christopher-ui` är på `74a355b` (Christophers scope-leak-implementation
-av `GAP-backend-build-trace-endpoint`, se nedan).
+**Datum:** 2026-05-25 morgon (**post-merge av PR #77 Sprintvakt agent
+inbox + PR #78 candidate provenance + grind-fix `b12c164` av
+markdown-escape-bugg i gap-parsern**). Verifierad `jakob-be` är
+`b12c164e69c499cd6cb1b577f37175a9bcf0e007`. `main` ligger 5 commits
+bakom på `6649b51` (closing-round docs-sync efter PR #75); allt ovanpå
+sitter just nu bara på `jakob-be` och följer med när `jakob-be` nästa
+gång PR:as mot `main` (väntar tills Christopher-spåret är beslutat).
+`christopher-ui` är på `9f63f15` (Christophers scope-leak-implementation
+av `GAP-backend-build-trace-endpoint` plus en versions-tab-fix, ej PR:ad
+än, se nedan).
 
 Health på `jakob-be` är grön: governance (18 policies), rules-sync,
 strict term coverage, sprintvakt-check `--strict`, ruff 0 findings,
@@ -16,25 +17,31 @@ hela pytest-suiten (25 sprintvakt-tester + 14 industry-coverage + 2
 workflow-regression + 30+ övriga + nya #76-recovery-tester körda lokalt
 i ren worktree från `origin/jakob-be` innan PR).
 
-**MCP-server-status:** Sprintvakt-servern exponerar 11 tools idag
-(`get_workboard`, `list_gaps`, `create_gap`, `activate_gap`,
+**MCP-server-status:** Sprintvakt-servern exponerar 14 tools efter
+PR #77 (`get_workboard`, `list_gaps`, `create_gap`, `activate_gap`,
 `complete_gap`, `reserve_paths`, `detect_collisions`, `suggest_next_gaps`,
-`generate_agent_prompt`, `validate_workboard`, `post_merge_sync_instructions`).
-PR #77 lägger till tre till — agent inbox (`post_message`,
-`list_messages`, `ack_message`) bakad av append-only
-`docs/agent-inbox.jsonl`. Operatörens `.cursor/mcp.json` är konfigurerad
-med `PYTHONPATH` så `python -m tooling.sprintvakt_mcp.server` startar
-utan ModuleNotFoundError. Editable install (`pip install -e .`) krävs
-en gång per venv enligt ADR 0029.
+`generate_agent_prompt`, `validate_workboard`, `post_merge_sync_instructions`,
+`post_message`, `list_messages`, `ack_message`). Agent-inbox-tools är
+bakade av append-only `docs/agent-inbox.jsonl` med deterministisk
+message-id + idempotent ack. Operatörens `.cursor/mcp.json` är
+konfigurerad med `PYTHONPATH` så `python -m tooling.sprintvakt_mcp.server`
+startar utan ModuleNotFoundError. Editable install (`pip install -e .`)
+krävs en gång per venv enligt ADR 0029.
 
-**Direkt nästa spår — vänta tills operatör väljer:**
+**Direkt nästa spår — parallell sprint i 4 lanes pågår:**
 
-1. **PR #77 (Sprintvakt agent inbox)** — `cursor/agent-inbox-mcp → jakob-be`. Tre nya MCP-tools (`post_message`, `list_messages`, `ack_message`) + `docs/agent-inbox.jsonl`. Governance/builder-smoke/ai-bug-review/GitGuardian SUCCESS, Cursor Bugbot var pending vid stängningstid. När Bugbot är klar och grön: squash-merge till `jakob-be` (samma pattern som #76).
-2. **Christophers `GAP-backend-build-trace-endpoint`-PR (kommer)** — `origin/christopher-ui` commit `74a355b` implementerar hela gapet under operator-OK scope-leak (`[scope-leak] Approved by operator 2026-05-25 03:44`). 16 filer, 981 nya rader, alla 3 endpoints + 5 bug-hunt-fixes + nya tester. Christopher kör guards lokalt med allt grönt enligt commit-message men har inte PR:at än. Jakob är reviewer. När PR öppnas: granska scope-leaken (det är medvetet brutet jakob-lane), kontrollera att workboard.json `owner` är kvar på `jakob` (precedent från PR #68), och merge mot `main` när nöjd.
-3. **Sync `jakob-be → main`** — `main` ligger nu 1-2 commits efter `jakob-be` (#76 inne; #77 om mergad). En liten PR från `jakob-be` mot `main` lyfter hela batchen och låter `christopher-ui` reset:as mot uppdaterat `main`. Gör efter att #77 är mergad eller medvetet exkluderad.
-4. **Path B / section-driven renderer i `scripts/build_site.py:write_pages`** — dokumenterad i `docs/scaffold-runtime-extension-needed.md` (Christophers plan) + `docs/path-b-backend-scout.md` (Jakobs backend-Scout med 9-commit revision, ~22-28h över 3 sessioner). Låser upp restaurant-hospitality fullt + ger nollkostnad för 4 framtida scaffolds. Kräver explicit operator-OK innan start.
-5. **Backend-Gap 4 + 5** från `docs/backend-handoff-2026-05-22.md` är öppna men ej akuta.
-6. **Sprintvakt V1.3 (potential)** — tvåvägs-sync mellan workboard.json och gap-filer så `activate_gap`/`complete_gap` även uppdaterar `docs/gaps/<id>.md`. Flaggat som follow-up i `docs/sprintvakt-mcp.md` "Källa till sanning"-sektionen.
+1. **Lane 1: Grind-Builder i Cursor Cloud** — tar små buggar + GAP-status en åt gången, PRs mot `jakob-be`, max 200 rader produktionskod per PR. `b12c164` är referensfallet (markdown-escape-bugg → regression-test → push, 80 rader).
+2. **Lane 2: LLM contract propagation** — fixar signal-läckor brief→render (B137-B141). Ensam ägare av `scripts/build_site.py` under sprinten.
+3. **Lane 3: Embeddings readiness audit (Scout, read-only)** — rapport till `docs/reports/embedding-readiness-2026-05-25.md`. Förbereder Go-villkor för embeddings-implementation efter lane 2-fixar.
+4. **Lane 4: Golden Path eval baseline** — deterministic scorecard över fyra ground-truth-prompter (elektriker/frisör/naprapat/keramik). Disjunkt scope i `tests/evals/**`.
+
+**Parkerade lanes (väntar trigger):**
+
+- **Path B / section-driven renderer** — dokumenterad i `docs/scaffold-runtime-extension-needed.md` + `docs/path-b-backend-scout.md` (~22-28h). Kräver lane 2 mergad först (delar `scripts/build_site.py`).
+- **Christophers `GAP-backend-build-trace-endpoint`-PR** — `origin/christopher-ui` commit `9f63f15` implementerar hela gapet under operator-OK scope-leak. 16 filer, 981 nya rader. Christopher har inte PR:at än. Jakob är reviewer. När PR öppnas: granska scope-leaken (medvetet brutet jakob-lane), kontrollera att workboard.json `owner` är kvar på `jakob` (precedent från PR #68), merge mot `main` när nöjd.
+- **Sync `jakob-be → main`** — `main` ligger nu 5 commits efter `jakob-be` (#76 + steward-sync + #77 + #78 + `a0b06b5` + `b12c164`). Liten PR från `jakob-be` mot `main` lyfter hela batchen och låter `christopher-ui` reset:as mot uppdaterat `main`. Gör efter att Christopher-PR:n är beslutad.
+- **Backend-Gap 4 + 5** från `docs/backend-handoff-2026-05-22.md` — öppna men ej akuta.
+- **Sprintvakt V1.3 (potential)** — tvåvägs-sync workboard.json ↔ gap-filer. Flaggat som follow-up i `docs/sprintvakt-mcp.md`.
 
 Vänta fortsatt med embeddings, SNI-runtime, variant-promotion, många nya
 starters, starter-importer, ny scaffold-runtime-aktivering och Project DNA
@@ -43,13 +50,10 @@ väljs.
 
 **Andra cloud-agenters obesegrade arbete (operatörens uppmärksamhet):**
 
-- `origin/cursor/jakob-be-contact-route-regression` — 2 commits med
-  kontaktrout-regression-tester. Tekniskt redundant efter recovery
-  #76: filen återlades i `jakob-be` därifrån.
-- `origin/cursor/jakob-be-followup-versioning-regression-5fb4` — 3 commits
-  med follow-up-versionerings-regression-tester. Tekniskt redundant
-  efter recovery #76: filen återlades i `jakob-be` därifrån.
-- Båda brancherna kan raderas på operatörens OK (`git push origin --delete <branch>`). Nästa Jakob-agent ska inte röra dem utan instruktion.
+- `origin/cursor/jakob-be-contact-route-regression` — 2 commits. Innehåll inne via recovery #76.
+- `origin/cursor/jakob-be-followup-versioning-regression-5fb4` — 3 commits. Innehåll inne via recovery #76.
+- `origin/cursor/candidate-generation-safety-provenance` — 1 commit `07aca96`. Sibling-PR-branch till #78 som inte städades vid merge. Innehåll inne via #78.
+- Alla tre kan raderas på operatörens OK (`git push origin --delete <branch>`). Nästa Jakob-agent ska inte röra dem utan instruktion.
 
 **Filosofi B (parallellt arbete) är nu fullt operativ:**
 
@@ -94,6 +98,11 @@ finns separat prompt i [`docs/agent-prompts/sprintvakt.md`](agent-prompts/sprint
 
 **Senaste landade spår sedan c0b59fbe (PR #60), nyast först:**
 
+- `b12c164` post-merge grind / `_load_gap_from_file` unescapes markdown backslash-escapes så `sanitize_repo_path` inte producerar korrupta paths. 80 rader, ny regression-test, ren cloud-grind-fix mot `jakob-be`.
+- `a0b06b5` docs-fix / escape `[runId]` i gap-frontmatter så markdown-linter inte klagar (matchar `_MARKDOWN_ESCAPE_RE`-konvention i `core.py`).
+- `e2574af` PR #78 / candidate generation provenance + helpers (`scripts/candidate_generation_metadata.py`) + sidecar `.meta.json` per kandidat + Backoffice-default `use_llm=False`. 9 filer, ~562 additions.
+- `d3f51ee` PR #77 / Sprintvakt agent inbox (post/list/ack) + 5 reviewfynd-fixar i samma squash (symlink-resistens, deterministic id, idempotent ack, ordinal > 9999, UTC-aware since-filter). 5 filer, ~1399 additions (varav 752 är tester).
+- `dc1d53f` docs(steward) / closing-round sync 2026-05-25 04:30 efter recovery #76 — post-merge docs-bump utan kod.
 - `92df12c` PR #76 / recovery av tappade #73/#74-regressionstester + Industry Coverage catch-all-fix. Mergad till `jakob-be` (inte `main` än). 4 filer, 531 additions / 3 deletions.
 - `6649b51` docs(steward) / closing-round sync på `jakob-be` efter PR #75 (post-merge docs-bump utan kod-ändringar).
 - `84bf9dd` PR #75 / Sprintvakt V1.1+V1.2+V1.2.1 + CI hardening + Backoffice industry coverage + Path B scout + ADR 0029 + docs sync (16 commits squashade till en). Tackled fyra legitima external review-fynd före merge (status-enum-validering, collision-recheck i `activate_gap`, gap-md vs workboard "workboard wins"-dokumentation, stale "next"-claim-cleanup).
