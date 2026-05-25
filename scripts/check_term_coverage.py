@@ -437,6 +437,16 @@ COMMON_WORDS = {
     "VibeMicroPreview", "VibeSwatchRow",
     # Lucide-icon-namn använda i samma komponenter:
     "PaintBucket",
+    # GAP-viewser-iteration-compare — Versions-tab + diff-vy:
+    "VersionsTab", "VersionsTabProps",
+    "RunList", "RunRow", "RadioButton",
+    "CompareControls", "CompareBadge", "CompareSection",
+    "CompareEmptyHint", "CompareFetchState",
+    "HeaderBar", "DiffView", "ScalarChangeRow", "ValueChip",
+    "ChipDiffRow", "ChangeChip",
+    "RunDiff", "ScalarChange", "RunArtefactBundleLike", "RunsApiResponse",
+    # Lucide-icon-namn använda i versions-tab:
+    "GitCompare",
     # ui-tokens shared interaction constants:
     "FOCUS_RING", "PRIMARY_INTERACTIONS", "SECONDARY_INTERACTIONS",
     "CHIP_INTERACTIONS",
