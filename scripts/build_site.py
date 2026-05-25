@@ -1106,20 +1106,37 @@ def _token_overrides_from_project_input(
 
     if "primary" not in overrides and not primary_hex_provided:
         tone = project_input.get("tone") if isinstance(project_input.get("tone"), dict) else {}
+        tone_tokens: dict[str, str] | None = None
         tone_primary = tone.get("primary")
         if isinstance(tone_primary, str):
-            tone_key = tone_primary.strip().lower()
-            tone_tokens = _TONE_COLOR_TOKENS.get(tone_key)
-            if tone_tokens:
-                overrides["primary"] = tone_tokens["primary"]
-                overrides["primaryForeground"] = _foreground_for_background(
-                    tone_tokens["primary"]
+            tone_tokens = _TONE_COLOR_TOKENS.get(tone_primary.strip().lower())
+        # B139 fallback: när tone.primary saknar color-signal (t.ex.
+        # generiska wizard-tags som "professionell" / "lugn och
+        # förtroendeingivande") får tone.secondary fungera som
+        # color-token-källa. Annars läcker en färgsignal som operatören
+        # angett i sekundär-position tyst på vägen till variant_css.
+        # Primary vinner alltid när den har en signal — secondary
+        # fungerar bara som fallback, aldrig som override.
+        if tone_tokens is None:
+            secondary = tone.get("secondary")
+            if isinstance(secondary, list):
+                for entry in secondary:
+                    if not isinstance(entry, str):
+                        continue
+                    candidate = _TONE_COLOR_TOKENS.get(entry.strip().lower())
+                    if candidate is not None:
+                        tone_tokens = candidate
+                        break
+        if tone_tokens is not None:
+            overrides["primary"] = tone_tokens["primary"]
+            overrides["primaryForeground"] = _foreground_for_background(
+                tone_tokens["primary"]
+            )
+            if "accent" not in overrides and not accent_hex_provided:
+                overrides["accent"] = tone_tokens["accent"]
+                overrides["accentForeground"] = _foreground_for_background(
+                    tone_tokens["accent"]
                 )
-                if "accent" not in overrides and not accent_hex_provided:
-                    overrides["accent"] = tone_tokens["accent"]
-                    overrides["accentForeground"] = _foreground_for_background(
-                        tone_tokens["accent"]
-                    )
 
     return overrides, warnings
 
@@ -1819,6 +1836,15 @@ _NAV_LABEL_BY_ROUTE_ID: dict[str, str] = {
     "team": "Team",
     "pricing": "Priser",
     "portfolio": "Portfolio",
+    # restaurant-hospitality scaffold routes — Issue #90. The scaffold's
+    # routes.json declares Swedish slugs ``/meny`` and ``/bokning``; the
+    # nav must use restaurant-flavoured labels rather than fall through
+    # to ``_nav_label_for_route``'s slug-to-title-case fallback. We also
+    # override the "contact" label for restaurants by relying on the
+    # generic "Kontakt" entry above — the scaffold uses route id
+    # ``contact`` so it picks up the same label as LSB/commerce.
+    "menu": "Meny",
+    "booking": "Boka bord",
 }
 
 
@@ -4263,6 +4289,196 @@ def render_map(dossier: dict, *, contact_path: str = "/kontakt") -> str:
     )
 
 
+# ---------------------------------------------------------------------------
+# Restaurant-hospitality default-route renderers (Issue #90).
+#
+# These two functions wire the ``menu`` and ``booking`` route ids declared
+# by ``packages/generation/orchestration/scaffolds/restaurant-hospitality/
+# routes.json`` so a full build of a restaurant Project Input no longer
+# exits with a SystemExit from ``write_pages``. They are scaffold-default
+# renderers (registered as ``elif`` arms below), not wizard-extras, so
+# they do NOT live in ``_WIZARD_ROUTE_RENDERERS``.
+#
+# Scope per Issue #90: static markup only. No third-party booking
+# integration, no payment flow, no real-time availability — the
+# scaffold's compatible-dossiers.json declares ``menu-display`` and
+# ``booking-cta`` as required dossiers and the dossier-mounting layer
+# adds any dynamic UI on top during a separate compositional pass.
+#
+# Path B (section-driven renderer registry from
+# docs/scaffold-runtime-extension-needed.md) is deliberately deferred
+# to a future sprint; for Issue #90 we follow Path A (per-route
+# functions in the existing if/elif chain) to keep the change small
+# and reviewable.
+# ---------------------------------------------------------------------------
+
+
+def _menu_items(dossier: dict) -> list[dict]:
+    """Return menu items for a restaurant project input.
+
+    The project-input schema's ``services[]`` is structurally identical
+    to a menu item (``id`` + ``label`` + ``summary``), and the schema's
+    top-level ``additionalProperties: false`` forbids adding a separate
+    ``menu`` field. Restaurant operators therefore put menu items in
+    the ``services`` array; ``render_menu`` reads them back here.
+
+    The fallback returns a short sample so the page still has visible
+    content for projects that pin restaurant-hospitality without
+    supplying any items — that is rare in production but useful when
+    the planner picks the scaffold from a thin prompt.
+    """
+    items = dossier.get("services") or []
+    cleaned: list[dict] = []
+    if isinstance(items, list):
+        for item in items:
+            if isinstance(item, dict) and item.get("id") and item.get("label"):
+                cleaned.append(item)
+    if cleaned:
+        return cleaned
+    return [
+        {
+            "id": "house-special",
+            "label": "Dagens rätt",
+            "summary": (
+                "Vår kock väljer en huvudrätt utifrån säsongens råvaror. "
+                "Fråga personalen vad som serveras idag."
+            ),
+        },
+    ]
+
+
+def render_menu(dossier: dict, *, contact_path: str = "/hitta-hit") -> str:
+    """Render the restaurant /meny route.
+
+    Composes ``services``-as-menu-items into a card grid with the
+    wizard-route eyebrow + heading idiom, followed by a trailing CTA
+    to the contact route so a hungry visitor lands on opening hours
+    and phone instead of dead-ending on the menu. The booking page
+    is intentionally not the CTA target here: the scaffold's
+    ``booking-cta`` dossier is mounted separately by the
+    dossier-mounting layer and handles the visible book-a-table
+    affordance in compliance with sections.json's order rule that
+    the booking CTA must appear at least twice on the home page.
+
+    ``contact_path`` defaults to ``/hitta-hit`` to match the
+    scaffold's ``contact`` route slug; callers that pass a different
+    contact route will see the CTA point there instead.
+    """
+    items = _menu_items(dossier)
+    card_fragments: list[str] = []
+    for item in items:
+        key_attr = _jsx_safe_string("menu-" + str(item["id"]))
+        label_attr = _jsx_safe_string(str(item["label"]))
+        summary_value = item.get("summary")
+        summary_fragment = ""
+        if isinstance(summary_value, str) and summary_value.strip():
+            summary_attr = _jsx_safe_string(summary_value)
+            summary_fragment = (
+                '              <p className="mt-2 text-sm '
+                'text-[color:var(--muted)] leading-relaxed">'
+                f"{summary_attr}</p>\n"
+            )
+        card_fragments.append(
+            f"            <article key={key_attr} "
+            'className="rounded-xl border border-[color:var(--border)] '
+            "bg-[color:var(--card,var(--background))] p-6 transition-all "
+            "duration-300 hover:-translate-y-0.5 "
+            'hover:border-[color:var(--primary)] hover:shadow-md">\n'
+            f'              <h2 className="text-lg font-semibold">{label_attr}</h2>\n'
+            f"{summary_fragment}"
+            "            </article>"
+        )
+    cards = "\n".join(card_fragments)
+    return (
+        'import { ArrowRight } from "lucide-react";\n'
+        "\n"
+        "export default function MenuPage() {\n"
+        "  return (\n"
+        '    <main className="flex flex-1 flex-col">\n'
+        + _wizard_section_heading(
+            "Meny",
+            "Vad vi serverar just nu",
+            "Menyn växlar med säsongen och tillgången på råvaror. "
+            "Be gärna personalen om dagens rekommendation eller hör av dig "
+            "i förväg om du har önskemål eller allergier.",
+        )
+        + '          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">\n'
+        + cards
+        + "\n          </div>\n"
+        + _wizard_contact_cta(dossier, contact_path)
+        + _wizard_page_footer()
+    )
+
+
+def render_booking(dossier: dict, *, contact_path: str = "/hitta-hit") -> str:
+    """Render the restaurant /bokning route.
+
+    Static reservation page: opening hours summary plus a fallback
+    phone (tel:) link and email (mailto:) link so the visitor can
+    book even when no third-party widget is wired. Per Issue #90 we
+    do NOT embed a booking provider here — the operator's preferred
+    provider lands via the ``booking-cta`` dossier in a separate
+    compositional pass.
+
+    Mirrors render_menu's signature so the dispatcher in write_pages
+    can call both with the same contact_path argument.
+    """
+    contact = dossier.get("contact") or {}
+    phone = contact.get("phone") if isinstance(contact, dict) else None
+    email = contact.get("email") if isinstance(contact, dict) else None
+    opening = contact.get("openingHours") if isinstance(contact, dict) else None
+
+    rows: list[str] = []
+    if isinstance(opening, str) and opening.strip():
+        rows.append(
+            '            <div className="rounded-xl border border-[color:var(--border)] p-6">\n'
+            '              <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Öppettider</p>\n'
+            f'              <p className="mt-2 text-base">{_jsx_safe_string(opening.strip())}</p>\n'
+            "            </div>"
+        )
+    if isinstance(phone, str) and phone.strip():
+        rows.append(
+            '            <div className="rounded-xl border border-[color:var(--border)] p-6">\n'
+            '              <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Boka via telefon</p>\n'
+            f'              <a href={_jsx_safe_string("tel:" + _phone_href(phone))} '
+            f'className="mt-2 inline-flex items-center gap-2 text-base hover:underline">{_jsx_safe_string(phone)}</a>\n'
+            "            </div>"
+        )
+    if isinstance(email, str) and email.strip():
+        rows.append(
+            '            <div className="rounded-xl border border-[color:var(--border)] p-6">\n'
+            '              <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Boka via e-post</p>\n'
+            f'              <a href={_jsx_safe_string("mailto:" + email.strip())} '
+            f'className="mt-2 inline-flex items-center gap-2 text-base hover:underline">{_jsx_safe_string(email.strip())}</a>\n'
+            "            </div>"
+        )
+    rows_block = "\n".join(rows) if rows else (
+        '            <p className="text-base text-[color:var(--muted)]">'
+        "Boka bord genom att kontakta oss — kontaktuppgifter finns på "
+        "sidan Hitta hit.</p>"
+    )
+
+    return (
+        'import { ArrowRight } from "lucide-react";\n'
+        "\n"
+        "export default function BookingPage() {\n"
+        "  return (\n"
+        '    <main className="flex flex-1 flex-col">\n'
+        + _wizard_section_heading(
+            "Boka bord",
+            "Boka en plats hos oss",
+            "Just nu tar vi bokningar via telefon och e-post. Ring eller "
+            "skriv så bekräftar vi tid och antal personer. För större "
+            "sällskap, hör av dig minst två dagar i förväg.",
+        )
+        + '          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">\n'
+        + rows_block
+        + "\n          </div>\n"
+        + _wizard_contact_cta(dossier, contact_path)
+        + _wizard_page_footer()
+    )
+
+
 _WIZARD_ROUTE_RENDERERS: dict[str, Any] = {
     "faq": render_faq,
     "gallery": render_gallery,
@@ -4670,6 +4886,10 @@ def write_pages(
             content = render_services(dossier, contact_path=contact_route["path"])
         elif route_id == "products":
             content = render_products(dossier, contact_path=contact_route["path"])
+        elif route_id == "menu":
+            content = render_menu(dossier, contact_path=contact_route["path"])
+        elif route_id == "booking":
+            content = render_booking(dossier, contact_path=contact_route["path"])
         elif route_id == "about":
             content = render_about(dossier)
         elif route_id == "contact":

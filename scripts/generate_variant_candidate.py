@@ -32,8 +32,16 @@ from packages.generation.brief.models import (  # noqa: E402
     OPENAI_API_KEY_ENV,
     has_openai_api_key,
 )
+from scripts.candidate_generation_metadata import (  # noqa: E402
+    brief_fingerprint,
+    created_at,
+    guard_candidate_output_dir,
+    repo_or_output_relative,
+)
 
 SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
+DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
+ORCHESTRATION_DIR = REPO_ROOT / "packages" / "generation" / "orchestration"
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "data" / "variant-candidates"
 DEFAULT_POLICY_PATH = REPO_ROOT / "governance" / "policies" / "llm-models.v1.json"
 SCAFFOLD_CONTRACT_PATH = REPO_ROOT / "governance" / "policies" / "scaffold-contract.v1.json"
@@ -166,9 +174,21 @@ class VariantGenerationResult:
     """Result metadata for one written candidate file."""
 
     path: Path
+    meta_path: Path
     payload: dict[str, Any]
+    metadata: dict[str, Any]
     source: str
     model_used: str
+
+
+def _guard_variant_output_dir(output_dir: Path) -> None:
+    """Thin wrapper that pins the Variant-specific guard arguments."""
+    guard_candidate_output_dir(
+        output_dir,
+        forbidden_roots=(ORCHESTRATION_DIR, SCAFFOLDS_DIR, DOSSIERS_DIR),
+        error_cls=VariantGenerationError,
+        kind="Variant",
+    )
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -462,11 +482,16 @@ def _write_candidate(
     *,
     scaffold_id: str,
     output_dir: Path,
+    source: str,
+    model_used: str,
+    operator_brief: str,
     force: bool,
-) -> Path:
+) -> tuple[Path, Path, dict[str, Any]]:
+    _guard_variant_output_dir(output_dir)
     target_dir = output_dir / scaffold_id
     target_dir.mkdir(parents=True, exist_ok=True)
     target_path = target_dir / f"{payload['id']}.json"
+    meta_path = target_dir / f"{payload['id']}.meta.json"
     if target_path.exists() and not force:
         raise VariantGenerationError(
             f"Candidate already exists: {target_path}. Pass --force to overwrite."
@@ -475,7 +500,27 @@ def _write_candidate(
         json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-    return target_path
+    metadata = {
+        "schemaVersion": 1,
+        "candidateType": "variant",
+        "candidateId": payload["id"],
+        "scaffoldId": scaffold_id,
+        "source": source,
+        "modelUsed": model_used,
+        "modelRole": VARIANT_ROLE_ID,
+        "generator": "scripts.generate_variant_candidate",
+        "createdAt": created_at(),
+        "enabled": payload["enabled"],
+        "outputPath": repo_or_output_relative(
+            target_path, repo_root=REPO_ROOT, output_dir=output_dir
+        ),
+        "operatorBriefHash": brief_fingerprint(operator_brief),
+    }
+    meta_path.write_text(
+        json.dumps(metadata, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return target_path, meta_path, metadata
 
 
 def generate_variant_candidates(
@@ -494,6 +539,7 @@ def generate_variant_candidates(
         raise VariantGenerationError("count must be at least 1")
     if not brief.strip():
         raise VariantGenerationError("brief must not be empty")
+    _guard_variant_output_dir(output_dir)
 
     context = load_variant_context(scaffold_id)
     reserved_ids = set(context.existing_variant_ids)
@@ -543,16 +589,21 @@ def generate_variant_candidates(
             requested_variant_id=candidate_id,
             enabled=enabled,
         )
-        path = _write_candidate(
+        path, meta_path, metadata = _write_candidate(
             payload,
             scaffold_id=scaffold_id,
             output_dir=output_dir,
+            source=source,
+            model_used=model_used,
+            operator_brief=brief,
             force=force,
         )
         results.append(
             VariantGenerationResult(
                 path=path,
+                meta_path=meta_path,
                 payload=payload,
+                metadata=metadata,
                 source=source,
                 model_used=model_used,
             )

@@ -18,6 +18,7 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 from generate_variant_candidate import (  # noqa: E402
+    VariantGenerationError,
     VariantModelResolutionError,
     build_variant_prompt_payload,
     generate_variant_candidates,
@@ -176,6 +177,21 @@ def test_generate_candidate_without_key_writes_disabled_variant(
 
     written = json.loads(result.path.read_text(encoding="utf-8"))
     assert written == result.payload
+    metadata = json.loads(result.meta_path.read_text(encoding="utf-8"))
+    assert metadata == result.metadata
+    assert metadata["schemaVersion"] == 1
+    assert metadata["candidateType"] == "variant"
+    assert metadata["candidateId"] == "warm-human"
+    assert metadata["scaffoldId"] == "local-service-business"
+    assert metadata["source"] == "mock-no-key"
+    assert metadata["modelUsed"] == "mock"
+    assert metadata["modelRole"] == "variantModel"
+    assert metadata["generator"] == "scripts.generate_variant_candidate"
+    assert metadata["enabled"] is False
+    assert metadata["outputPath"] == "local-service-business/warm-human.json"
+    assert not Path(metadata["outputPath"]).is_absolute()
+    assert metadata["operatorBriefHash"].startswith("sha256:")
+    assert "Warm, human" not in json.dumps(metadata)
 
 
 @pytest.mark.tooling
@@ -209,6 +225,8 @@ def test_generate_candidate_uses_variant_model_when_key_is_present(
     assert result.payload["enabled"] is False
     assert captured["model"] == "gpt-variant-test"
     assert captured["requested_variant_id"] == "crisp-clinic"
+    assert result.metadata["source"] == "real"
+    assert result.metadata["modelUsed"] == "gpt-variant-test"
 
 
 @pytest.mark.tooling
@@ -232,3 +250,15 @@ def test_generate_multiple_candidates_get_unique_ids(
     ]
     assert {result.source for result in results} == {"deterministic-v1"}
     assert all(result.path.exists() for result in results)
+    assert all(result.meta_path.exists() for result in results)
+
+
+@pytest.mark.tooling
+def test_generate_variant_rejects_canonical_output_dir() -> None:
+    with pytest.raises(VariantGenerationError, match="canonical orchestration path"):
+        generate_variant_candidates(
+            scaffold_id="local-service-business",
+            brief="Warm local trust",
+            output_dir=REPO_ROOT / "packages" / "generation" / "orchestration",
+            use_llm=False,
+        )

@@ -18,6 +18,7 @@ Locks the prompt-driven Project Input loop:
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 import sys
@@ -107,6 +108,20 @@ def test_slugify_site_id_strips_master_prompt_header_when_no_company_name() -> N
     )
     assert site_id == "frisorsalongen-tussilago-abcdef"
     assert not site_id.startswith("operatorens-beskrivning")
+
+
+@pytest.mark.tooling
+def test_prompt_helper_docstring_matches_stdout_contract() -> None:
+    """B85: module docs must list the same stdout keys as ``main()`` emits."""
+    helper_path = REPO_ROOT / "scripts" / "prompt_to_project_input.py"
+    helper_text = helper_path.read_text(encoding="utf-8")
+    module = ast.parse(helper_text)
+    module_docstring = ast.get_docstring(module) or ""
+
+    documented_keys = re.findall(r"``([A-Za-z][A-Za-z0-9]*):", module_docstring)
+    emitted_keys = re.findall(r'print\(f"([A-Za-z][A-Za-z0-9]*):', helper_text)
+
+    assert documented_keys == emitted_keys
 
 
 @pytest.mark.tooling
@@ -746,6 +761,35 @@ def test_generate_falls_back_when_extract_site_brief_raises(
     assert meta["briefSource"] == "mock-llm-error"
     assert "RuntimeError" in meta["briefError"]
     assert "network timeout" in meta["briefError"]
+
+
+@pytest.mark.tooling
+def test_generate_warns_when_brief_model_resolution_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """B87: model policy resolution failures must be visible on stderr."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    def raise_policy_error() -> str:
+        raise RuntimeError("briefModel role missing")
+
+    monkeypatch.setattr(
+        "scripts.prompt_to_project_input.resolve_brief_model",
+        raise_policy_error,
+    )
+
+    _project_input, meta, _project_input_path, _meta_path = generate(
+        "Skapa en hemsida för en elektriker i Malmö",
+        output_dir=tmp_path,
+        site_id="b87-model-warning",
+    )
+
+    captured = capsys.readouterr()
+    assert "briefModel resolution failed; using fallback model gpt-5.4" in captured.err
+    assert "briefModel role missing" in captured.err
+    assert meta["briefSource"] == "mock-no-key"
 
 
 @pytest.mark.tooling

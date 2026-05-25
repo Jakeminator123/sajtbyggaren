@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 24 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 107 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 20 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 112 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -103,46 +103,12 @@ Tre read-only subagents granskade (1) brief + prompt-helper pipeline,
 (2) builder renderers + scaffolds + Quality Gate, (3) Viewser app +
 run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
 
-- **`B72` Medel** - `apps/viewser/lib/runs.ts:40-84` `listRuns` läser
-  `build-result.json` för alla run-kataloger trots att svaret bara
-  behåller `limit` poster. O(N) disk-läsningar per `GET /api/runs`,
-  skalar obegränsat när `data/runs/` fylls. Källa: viewser-app-bug-
-  sweep 2026-05-15. Fix: stat alla först, sortera på mtime descending,
-  slice till limit, läs `build-result.json` bara för survivors. Fix:
-  open. Test: open.
-- **`B75` Medel** - `governance/schemas/project-input.schema.json`
-  saknar `additionalProperties: false` på root och underobjekt
-  (`company`, `contact`, `location`, `services`-items, `tone`,
-  `selectedDossiers`). En felstavad/extra nyckel passerar
-  `jsonschema`-valideringen tyst och kan ge `KeyError` nedströms.
-  Jämför `site-brief.schema.json` som låser
-  `additionalProperties: false`. Källa: brief-pipeline-bug-sweep
-  2026-05-15. Fix: lägg till `additionalProperties: false`; kör full
-  test-suite (kan exponera latenta extra-fält). Fix: open. Test:
-  open.
-- **`B83` Låg** - `scripts/prompt_to_project_input.py:_build_services`
-  släpper tysta dubblet-tjänster när två brief-items slugifierar till
-  samma ASCII-key. Kundsidans tjänstegrid blir kortare än briefen
-  anger utan spår. Källa: brief-pipeline-bug-sweep 2026-05-15. Fix:
-  disambiguerande suffix på slug-id eller stderr-warning. Fix: open.
-  Test: open.
-- **`B85` Låg** - `scripts/prompt_to_project_input.py` modul-
-  docstring säger att stdout-kontraktet är `siteId:` + `dossierPath:`,
-  men `main()` skriver sex nycklar. Drift mellan spec och
-  implementation. Källa: brief-pipeline-bug-sweep 2026-05-15. Fix:
-  uppdatera docstring eller lås nycklar med source-lock-test.
-  Fix: open. Test: open.
 - **`B86` Låg** - `scripts/build_site.py:1387-1388` hårdkodar
   `NPM_INSTALL_TIMEOUT_SECONDS = 600` och `NPM_BUILD_TIMEOUT_SECONDS
   = 300`. Långsamma Cloud Agent VMs överskrider regelbundet, ger
   flaky failures orelaterade till site-correctness. Källa: builder-
   renderer-bug-sweep 2026-05-15. Fix: CLI-flagga eller env-knapp.
   Fix: open. Test: open.
-- **`B87` Låg** - `scripts/prompt_to_project_input.py:1091-1096`
-  fallbackar tyst till `model = "gpt-5.4"` när `resolve_brief_model()`
-  misslyckas. Operatör märker inte att policy-konfigurationen är
-  trasig. Källa: brief-pipeline-bug-sweep 2026-05-15. Fix: logga
-  högt på stderr vid resolution failure. Fix: open. Test: open.
 
 ### Extern reviewer-triage 2026-05-15 (mot `d99f8ba` + `c273b1a`)
 
@@ -587,17 +553,121 @@ för follow-up eller ska städas.
 
 ### Scout-rapport PR #47 — ytterligare fynd (2026-05-19, sen kväll)
 
+### Vercel MCP cross-repo signal 2026-05-25 (sajtmaskin → sajtbyggaren)
+
+Plug-in-driven scan av Vercel-projektet `sajtmaskin`
+(`prj_AK7FqC8NwKorjoxGpkXi6nKGUsoe` under `team_j7KE5zKTm5rdg7zfWzOZhJ89`,
+predecessor som migreras till detta repo) visar att 9 av de 10 senaste
+deployerna är `state: ERROR`. Senaste production-deps-bumpen
+(`dpl_hpugHL6h1DfCDspZ5MYvJwJNPd2C`, branch
+`dependabot/npm_and_yarn/production-dependencies-44424f4526`,
+commit `a8800bd`) faller i preflight-gate och loggar
+`Error: Command "npm run build" exited with 1` direkt efter
+`check-lucide-icons` FAIL. En preexisting bug i ett systerrepo, men
+samma kodmönster lever vidare här — därav posten:
+
+- **`B145` Låg-Medel** - Vercel-build-loggar för
+  `dpl_hpugHL6h1DfCDspZ5MYvJwJNPd2C` (sajtmaskin) failar i
+  `scripts/dev/check-lucide-icons.mjs` med
+  "36 icon(s) in LUCIDE_ICONS are not exported by installed lucide-react"
+  — alla brand-ikoner (Github, Slack, Twitter, Youtube, Facebook,
+  Instagram, Figma, Framer, Twitch, Linkedin, Pocket, Trello, Codepen,
+  Codesandbox, Dribbble, RailSymbol, Chrome, plus deras `Lucide*`-
+  aliaser). lucide-react har tagit bort brand-ikonerna i en senare
+  version än `^1.14.0`-baseline:n som sajtmaskin och sajtbyggaren
+  delar. Relevans för **detta** repo: ADR 0020 dokumenterar redan
+  att `scripts/build_site.py:write_pages` (`render_home`/`render_about`/
+  `render_contact`/`render_layout`/`render_products`) hardkodar
+  `import { ... } from "lucide-react"`, och att den underliggande
+  arkitekturskulden (icon-bibliotek-agnostisk codegen, "väg B" i
+  ADR 0020) är öppen. Fem `package.json`-filer pinnar
+  `"lucide-react": "^1.14.0"` med caret (`apps/viewser/package.json`,
+  `data/starters/marketing-base/package.json`,
+  `data/starters/commerce-base/package.json`,
+  `data/starters/portfolio-base/package.json`,
+  `data/starters/docs-base/package.json`). Så fort dependabot bumpar
+  en av dessa starters förbi den version som tar bort brand-ikonerna,
+  kommer varje genererad kund-sajt som använder `render_home`/
+  `render_layout` att få samma `Module not found`/`Cannot find name`-
+  fel som sajtmaskin fastnat på sedan ~april 2026. Sajtmaskins
+  fail-state är alltså en levande early-warning för sajtbyggarens
+  nästa generation. Fix-skiss i fallande prioritet: (1) pinna
+  lucide-react exakt utan caret i alla fem package.json plus en
+  cross-policy-test som verifierar samma version över starters +
+  apps/viewser (köper tid), (2) realisera ADR 0020 "väg B" — gör
+  `write_pages` icon-bibliotek-agnostisk via starter-config eller
+  inline-SVG (permanent, egen ADR-sprint), (3) migrera brand-ikoner
+  i `render_*`-helpers till dedicerat brand-icon-paket
+  (`simple-icons`/`react-icons`) eftersom brand-ikoner inte längre är
+  lucide-react:s domän. Källa: Vercel MCP scan 2026-05-25
+  (deployment build log limit=80). Cross-ref: ADR 0020,
+  `B13a` (architectural debt i `scripts/build_site.py`). Fix: open.
+  Test: open.
+
 ## Stängda - regression-test säkrar fixet
 
-- **`B139` Låg-medel** (stängd 2026-05-22, tone-primary till CSS-token) -
+- **`B87` Låg** (stängd 2026-05-25, grind B87) -
+  `scripts/prompt_to_project_input.py` fallbackade tyst till
+  `model = "gpt-5.4"` när `resolve_brief_model()` misslyckades. Fix:
+  `8ab0e43` loggar en tydlig stderr-varning med exception-typ och
+  message innan fallback-modellen används. Test:
+  `tests/test_prompt_to_project_input.py::test_generate_warns_when_brief_model_resolution_fails`.
+
+- **`B85` Låg** (stängd 2026-05-25, grind B85) -
+  `scripts/prompt_to_project_input.py` moduldocstring beskrev bara
+  `siteId:` och `dossierPath:` trots att `main()` skriver sex stdout-
+  nycklar. Fix: `b2a60bd` uppdaterar kontraktstexten och lägger ett
+  source-lock-test som jämför dokumenterade nycklar med faktiska
+  `print(f"...:")`-nycklar. Test:
+  `tests/test_prompt_to_project_input.py::test_prompt_helper_docstring_matches_stdout_contract`.
+
+- **`B83` Låg** (stängd 2026-05-25, grind B83 status-sync) -
+  `scripts/prompt_to_project_input.py:_build_services` kunde tidigare tappa
+  tjänster när flera brief-items slugifierade till samma ASCII-key. Fix:
+  `885431b` lägger deterministiska suffix (`-2`, `-3`, ...) så alla
+  kolliderande tjänster överlever. Test:
+  `tests/test_prompt_to_project_input.py::test_service_slug_collisions_get_deterministic_suffixes`.
+
+- **`B72` Medel** (stängd 2026-05-25, grind round 4 status-sync) -
+  `apps/viewser/lib/runs.ts:listRuns` läste tidigare `build-result.json`
+  för alla run-kataloger trots att svaret bara behöll `limit` poster, vilket
+  gjorde `GET /api/runs` O(N) i disk-läsningar och skalade obegränsat
+  när `data/runs/` växte. Fix: `885431b` stat:ar alla run-kataloger
+  först, sorterar på `mtimeMs` descending, slice:ar till `limit` och
+  läser `build-result.json` enbart för survivors. Test:
+  `tests/test_viewser_security_1b.py::test_list_runs_slices_before_reading_build_results`.
+
+- **`B75` Medel** (stängd 2026-05-25, grind round 4 status-sync) -
+  `governance/schemas/project-input.schema.json` saknade tidigare
+  `additionalProperties: false` på root och load-bearing underobjekt
+  (`company`, `contact`, `location`, `services`-items, `tone`,
+  `selectedDossiers`), vilket lät felstavade/extra nycklar passera
+  `jsonschema`-valideringen tyst och kunde ge `KeyError` nedströms.
+  Fix: `885431b` låser schemat med `additionalProperties: false` på
+  root och alla load-bearing nested objects (samma mönster som
+  `site-brief.schema.json` redan följde). Test:
+  `tests/test_project_input_schema.py::test_project_input_schema_rejects_unknown_fields`
+  (parametriserad över root, company, contact, services-items, tone,
+  selectedDossiers).
+
+- **`B139` Låg-medel** (stängd 2026-05-22, tone-primary till CSS-token;
+  cross-lock 2026-05-25 utvidgar fallbacken till tone-secondary) -
   `tone.primary` kunde fyllas från brief/follow-up men renderern använde
   bara variantens default-CSS-tokens. Fix: `eb5a81d` lägger en
   smal token-override-kanal i `scripts/build_site.py`: om explicit brand-
   hex saknas kan whitelistade tone-signaler (`grön`/`green`, `blå`/`blue`,
   `varm`/`warm`, `premium`) mappas till `--primary` och `--accent`.
-  Variantens default tokens bevaras exakt när ingen signal finns. Test:
+  Variantens default tokens bevaras exakt när ingen signal finns.
+  Cross-lock-extension 2026-05-25: när `tone.primary` är en generisk
+  wizard-tag utan färgsignal (t.ex. `professionell`) faller helpern nu
+  igenom till `tone.secondary` och plockar första matchande color-keyword
+  där. Primary vinner alltid när den har en signal — secondary fungerar
+  bara som fallback, aldrig som override. Test:
   `tests/test_builder_smoke.py::test_tone_primary_green_maps_to_stable_green_token_when_hex_missing`,
-  `tests/test_builder_smoke.py::test_variant_css_default_is_byte_stable_without_brand_or_tone`.
+  `tests/test_builder_smoke.py::test_variant_css_default_is_byte_stable_without_brand_or_tone`,
+  `tests/test_llm_contract_propagation.py::test_b139_tone_primary_color_keyword_reaches_variant_css_primary_token`,
+  `tests/test_llm_contract_propagation.py::test_b139_tone_secondary_color_keyword_falls_through_when_primary_lacks_signal`,
+  `tests/test_llm_contract_propagation.py::test_b139_tone_primary_color_keyword_wins_over_secondary`.
 
 - **`B140` Låg** (stängd 2026-05-22, brand-hex till CSS-token) -
   `brand.primaryColorHex` och `brand.accentColorHex` skrevs till Project
@@ -612,6 +682,9 @@ för follow-up eller ska städas.
   `tests/test_builder_smoke.py::test_invalid_explicit_brand_hex_does_not_fall_through_to_tone_keyword`,
   `tests/test_builder_smoke.py::test_build_writes_brand_token_overrides_to_generated_globals_css`,
   `tests/test_builder_smoke.py::test_build_traces_invalid_brand_hex_and_keeps_variant_defaults`.
+  Cross-lock (kontraktslager):
+  `tests/test_llm_contract_propagation.py::test_b140_valid_brand_primary_color_hex_overrides_variant_css_token`,
+  `tests/test_llm_contract_propagation.py::test_b140_invalid_brand_primary_color_hex_does_not_break_emit`.
 
 - **`B71` Hög** (stängd 2026-05-22, Project DNA semantic follow-up V1) -
   `scripts/prompt_to_project_input.py:merge_followup_project_input`
@@ -681,6 +754,9 @@ för follow-up eller ska städas.
   `tests/test_codegen.py::test_codegen_summary_rejects_absolute_site_brief_ref`,
   `tests/test_codegen.py::test_codegen_summary_rejects_traversal_site_brief_ref`,
   `tests/test_planning.py::test_generation_package_keeps_site_brief_by_ref_contract`.
+  Cross-lock (kontraktslager):
+  `tests/test_llm_contract_propagation.py::test_b141_generation_package_emits_site_brief_ref_not_inline_copy`,
+  `tests/test_llm_contract_propagation.py::test_b141_codegen_summary_loads_site_brief_via_live_ref_not_stale_inline`.
 
 - **`B137` Medel** (stängd 2026-05-21, wizard-overlay tagline-läckage av
   rå prompt-text) - Verifierat live i Scout case 4 (sköldpaddssoppa):
@@ -711,7 +787,8 @@ för follow-up eller ska städas.
   i verkligt case). Fix: `1b5275d`. Test:
   `tests/test_discovery_resolver.py::test_offer_with_ui_directives_does_not_leak_to_tagline`
   + 9 fler tester med modul-lokal `BLOCKED_TAGLINE_PHRASES`-fixture
-  för enkel utökning.
+  för enkel utökning. Cross-lock (kontraktslager): `tests/test_llm_contract_propagation.py::test_b137_offer_with_ui_directives_does_not_leak_to_company_tagline`,
+  `tests/test_llm_contract_propagation.py::test_b137_clean_offer_still_reaches_tagline_when_brief_lacks_one`.
 
 - **`B138` Medel** (stängd 2026-05-21, pageCount-läckage från brief
   till routePlan) - briefModel fångade operatörens explicita sidantal
@@ -741,7 +818,9 @@ för follow-up eller ska städas.
   till `[/, /kontakt]` (2) med warning emitterad. Fix: `299257d`.
   Test:
   `tests/test_planning.py::test_page_count_2_trims_route_plan_to_home_and_contact`
-  + 6 fler tester (pageCount=2/3/6/1/null/42 + pinned-vägen).
+  + 6 fler tester (pageCount=2/3/6/1/null/42 + pinned-vägen). Cross-lock
+  (kontraktslager): `tests/test_llm_contract_propagation.py::test_b138_brief_page_count_propagates_into_route_plan_with_warning`,
+  `tests/test_llm_contract_propagation.py::test_b138_page_count_high_value_keeps_defaults_without_silent_drop`.
 
 - **`B142` Låg-medel** (öppnad + stängd 2026-05-20, ProjectInputPicker
   följer vald run) - operatörspanelens ProjectInputPicker synkade inte

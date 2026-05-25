@@ -9,6 +9,7 @@ import pytest
 
 from tooling.sprintvakt_mcp.core import (
     SprintvaktError,
+    _load_gap_from_file,
     activate_gap,
     complete_gap,
     create_gap,
@@ -18,6 +19,7 @@ from tooling.sprintvakt_mcp.core import (
     post_merge_sync_instructions,
     render_gap_markdown,
     reserve_paths,
+    sanitize_repo_path,
     validate_workboard,
 )
 
@@ -357,6 +359,73 @@ def test_generate_agent_prompt_resolves_file_only_gap(tmp_path: Path) -> None:
     assert "GAP-fileonly — File-only gap" in prompt
     assert "docs/file-only-scope.md" in prompt
     assert "File-only gap is resolved." in prompt
+
+
+@pytest.mark.tooling
+def test_load_gap_from_file_unescapes_markdown_backslash_escapes(
+    tmp_path: Path,
+) -> None:
+    """Regression: gap-file parser must undo backslash-escaped markdown
+    punctuation in bullet items.
+
+    Gap authors escape brackets (``\\[runId\\]``) to silence the markdown
+    linter on tokens that otherwise look like reference-link syntax
+    (Next.js dynamic route segments, etc.). Without unescape the literal
+    backslashes leak into ``paths`` / ``acceptanceCriteria`` /
+    ``doNotTouch`` / ``checks`` and corrupt every downstream consumer:
+    ``sanitize_repo_path`` mangles ``\\[runId\\]`` into ``[runId/]`` because
+    it replaces ``\\`` with ``/``, and ``generate_agent_prompt`` renders
+    literal backslashes into the Builder-agent prompt.
+    """
+    workboard_path = _write_workboard(tmp_path)
+    gap_dict = _gap(
+        "GAP-escape",
+        paths=[
+            "apps/viewser/app/api/runs/[runId]/trace/route.ts",
+            "apps/viewser/lib/runs.ts",
+        ],
+        status="queued",
+    )
+    gap_dict["title"] = "Escape test"
+    gap_dict["whyNow"] = "Ensure markdown escapes round-trip cleanly."
+    gap_dict["acceptanceCriteria"] = [
+        "GET /api/runs/[runId]/trace returns trace events.",
+    ]
+    gap_dict["doNotTouch"] = ["apps/viewser/components/builder/floating-chat.tsx"]
+    gap_dict["checks"] = ["python -m pytest tests/test_runs_api.py -q"]
+    gap_path = tmp_path / "docs" / "gaps" / "GAP-escape.md"
+    rendered = render_gap_markdown(gap_dict)
+    # Force the on-disk gap-file representation to use backslash-escaped
+    # brackets the way the markdown linter wants us to write them. This
+    # exactly mirrors the manual escape pattern we apply in real gap
+    # files such as docs/gaps/GAP-backend-build-trace-endpoint.md.
+    rendered = rendered.replace("[runId]", "\\[runId\\]")
+    gap_path.write_text(rendered, encoding="utf-8")
+
+    parsed = _load_gap_from_file("GAP-escape", workboard_path)
+
+    assert parsed["paths"] == [
+        "apps/viewser/app/api/runs/[runId]/trace/route.ts",
+        "apps/viewser/lib/runs.ts",
+    ]
+    assert parsed["acceptanceCriteria"] == [
+        "GET /api/runs/[runId]/trace returns trace events.",
+    ]
+    # Round-trip through sanitize_repo_path: must not introduce stray
+    # slashes or other corruption from leftover backslashes.
+    assert (
+        sanitize_repo_path(parsed["paths"][0])
+        == "apps/viewser/app/api/runs/[runId]/trace/route.ts"
+    )
+
+    result = generate_agent_prompt(
+        {"gapId": "GAP-escape", "agentRole": "Builder", "owner": "jakob"},
+        workboard_path=workboard_path,
+    )
+    prompt = result["prompt"]
+    assert "apps/viewser/app/api/runs/[runId]/trace/route.ts" in prompt
+    assert "\\[runId\\]" not in prompt
+    assert "\\" not in prompt.split("Scope paths:")[1].split("\n\n")[0]
 
 
 @pytest.mark.tooling

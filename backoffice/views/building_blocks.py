@@ -125,6 +125,31 @@ def _csv_to_list(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def _render_candidate_source_help() -> None:
+    st.info(
+        "`real` = skapad via policyregistrerad modellroll. "
+        "`deterministic-v1` = lokal deterministisk fallback. "
+        "`mock-no-key` = ingen API-nyckel fanns. "
+        "`mock-llm-error` = modellfel, fallback användes. "
+        "Candidates är inte canonical och promoteras aldrig automatiskt."
+    )
+
+
+def _warn_non_real_sources(rows: list[dict]) -> None:
+    sources = sorted(
+        {
+            str(row.get("source") or "")
+            for row in rows
+            if str(row.get("source") or "") not in {"", "real"}
+        }
+    )
+    if sources:
+        st.warning(
+            "Minst en kandidat är inte verifierat skapad av en riktig modellcall: "
+            + ", ".join(f"`{source}`" for source in sources)
+        )
+
+
 def _render_discovery_mapping() -> None:
     st.subheader("Discovery Mapping")
     st.caption(
@@ -1360,6 +1385,7 @@ def view_variant_candidates() -> None:
         "Skapar draftade Variant JSON-filer under `data/variant-candidates/`. "
         "Det här promoterar aldrig till canonical `variants/`."
     )
+    _render_candidate_source_help()
 
     scaffold_ids = _scaffold_options()
     if not scaffold_ids:
@@ -1370,7 +1396,7 @@ def view_variant_candidates() -> None:
         scaffold_id = st.selectbox("Scaffold", scaffold_ids)
         variant_id = st.text_input("Variant id (valfritt)")
         brief = st.text_area("Variant-brief", height=120)
-        use_llm = st.checkbox("Använd variantModel om OPENAI_API_KEY finns", value=True)
+        use_llm = st.checkbox("Använd variantModel om OPENAI_API_KEY finns", value=False)
         force = st.checkbox("Skriv över befintlig kandidat med samma id", value=False)
         submitted = st.form_submit_button("Skapa kandidat")
 
@@ -1390,6 +1416,11 @@ def view_variant_candidates() -> None:
         st.success(f"Skapade `{result.path.relative_to(REPO_ROOT)}`")
         st.write(f"**Source:** `{result.source}`")
         st.write(f"**Model:** `{result.model_used}`")
+        if result.source != "real":
+            st.warning(
+                "Kandidaten kommer från fallback eller okänd källa. "
+                "Granska den manuellt före promotion."
+            )
         st.json(result.payload)
 
         existing = asset_graph.load_existing_variants(scaffold_id)
@@ -1414,6 +1445,7 @@ def view_variant_candidates() -> None:
         st.info("Inga variantkandidater finns ännu.")
         return
 
+    _warn_non_real_sources(candidate_rows)
     st.dataframe(candidate_rows, use_container_width=True, hide_index=True)
     candidate_options = [
         f"{row['scaffold']}:{row['candidate']}" for row in candidate_rows
@@ -1493,12 +1525,13 @@ def view_dossier_candidates() -> None:
         "Skapar candidate-only Soft Dossier-mappar under `data/dossier-candidates/`. "
         "Det här promoterar aldrig till canonical Dossier-mappar."
     )
+    _render_candidate_source_help()
 
     with st.form("dossier_candidate_form"):
         candidate_id = st.text_input("Dossier id (valfritt)")
         capability = st.text_input("Capability (valfritt)")
         brief = st.text_area("Capability-brief", height=120)
-        use_llm = st.checkbox("Använd dossierModel om OPENAI_API_KEY finns", value=True)
+        use_llm = st.checkbox("Använd dossierModel om OPENAI_API_KEY finns", value=False)
         force = st.checkbox("Skriv över befintlig kandidat med samma id", value=False)
         submitted = st.form_submit_button("Skapa Soft Dossier-kandidat")
 
@@ -1518,6 +1551,11 @@ def view_dossier_candidates() -> None:
         st.success(f"Skapade `{result.candidate_dir.relative_to(REPO_ROOT)}`")
         st.write(f"**Source:** `{result.source}`")
         st.write(f"**Model:** `{result.model_used}`")
+        if result.source != "real":
+            st.warning(
+                "Kandidaten kommer från fallback eller okänd källa. "
+                "Granska den manuellt före promotion."
+            )
         st.subheader("manifest.json")
         st.json(result.manifest, expanded=False)
         st.subheader("instructions.md")
@@ -1533,6 +1571,7 @@ def view_dossier_candidates() -> None:
     if not candidate_nodes:
         st.info("Inga Dossier-kandidater finns ännu.")
         return
+    _warn_non_real_sources(candidate_nodes)
     st.dataframe(candidate_nodes, use_container_width=True, hide_index=True)
 
 

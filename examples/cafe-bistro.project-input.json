@@ -1,0 +1,84 @@
+{
+  "$schema": "../governance/schemas/project-input.schema.json",
+  "siteId": "cafe-bistro",
+  "scaffoldId": "restaurant-hospitality",
+  "variantId": "warm-bistro",
+  "language": "sv",
+  "company": {
+    "name": "Bistro Linnea",
+    "businessType": "restaurant",
+    "tagline": "Säsongsmat och naturvin på Södermalm",
+    "story": "En liten kvarterskrog som öppnade 2019. Vi lagar mat på det vi handlar samma vecka, dricker det vi själva tycker är gott, och håller menyn kort så råvarorna räcker hela kvällen.",
+    "founded": 2019,
+    "team": [
+      { "name": "Linnea Ahlström", "role": "Kock och delägare" },
+      { "name": "Jakob Vidén", "role": "Sommelier och delägare" }
+    ]
+  },
+  "location": {
+    "city": "Stockholm",
+    "region": "Södermalm",
+    "country": "Sverige",
+    "serviceAreas": ["Södermalm", "Gamla stan", "Mariatorget"]
+  },
+  "services": [
+    {
+      "id": "starter-burrata",
+      "label": "Burrata med rostade plommon",
+      "summary": "Krämig burrata, ugnsrostade plommon, basilika och en skvätt olivolja från Puglia."
+    },
+    {
+      "id": "starter-tartar",
+      "label": "Råbiff på högrev",
+      "summary": "Handskuren råbiff från svensk högrev, kapris, schalottenlök och knäcke på surdeg."
+    },
+    {
+      "id": "main-fisk",
+      "label": "Dagens fisk",
+      "summary": "Råvaran växlar med fångsten — fråga personalen vad som serveras ikväll. Serveras med rotsaker och beurre blanc."
+    },
+    {
+      "id": "main-paj",
+      "label": "Lökpaj med västerbottensost",
+      "summary": "Långkokta gula lökar, krämig västerbottensost och en sallad på bitterblad. Vår vegetariska klassiker."
+    },
+    {
+      "id": "main-anka",
+      "label": "Ankbröst med svartvinbärssås",
+      "summary": "Rosastekt ankbröst från Skåne, svartvinbärssås, potatisrösti och blanchad grönkål."
+    },
+    {
+      "id": "dessert-creme",
+      "label": "Crème brûlée",
+      "summary": "Krämig vaniljkräm med karamelliserat socker. Serveras med säsongens bär."
+    },
+    {
+      "id": "dessert-ost",
+      "label": "Ostbricka",
+      "summary": "Tre svenska ostar från Almnäs och Wrångebäck, hembakat knäcke och kvittenmarmelad."
+    }
+  ],
+  "tone": {
+    "primary": "varm",
+    "secondary": ["personlig", "kvartersnära", "säsong"],
+    "avoid": ["lyxsvada", "michelin-överdrifter", "happy-hour-jakt"]
+  },
+  "trustSignals": [
+    "Öppnade 2019 — samma kock och sommelier sedan dag ett",
+    "Allt kött kommer från svenska gårdar inom 200 km",
+    "Naturvin från småskaliga producenter, urval byts varje månad"
+  ],
+  "conversionGoals": ["booking_request"],
+  "requestedCapabilities": ["menu", "booking"],
+  "contact": {
+    "phone": "+46 8 12 34 56",
+    "email": "boka@bistrolinnea.se",
+    "addressLines": ["Hornsgatan 47", "118 49 Stockholm"],
+    "openingHours": "Tis–Tor 17:00–22:00, Fre–Lör 17:00–23:00, Sön–Mån stängt"
+  },
+  "selectedDossiers": {
+    "required": ["menu-display", "booking-cta"],
+    "recommended": ["opening-hours", "map-embed", "image-gallery", "reviews-display"],
+    "rationale": "Restaurant-hospitality scaffold's compatible-dossiers.json names menu-display and booking-cta as required. The recommended block lifts the four universal restaurant signals (hours, map, atmosphere photography, reviews) that the scaffold's own compatible-dossiers.json highlights. Sections like hero / menu-preview / hours-location live in sections.json and must not appear here as Dossier IDs (ADR 0012)."
+  }
+}

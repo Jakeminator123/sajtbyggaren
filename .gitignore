@@ -29,6 +29,20 @@ out/
 data/runs/
 data/versions/
 
+# Lokal eval-suite output (scripts/run_eval_suite.py + backoffice
+# eval-knapparna). Per-suite summary och manuella scorecards genereras
+# på operatörens maskin och versionsas inte. Mapparna behålls i git via
+# .gitkeep så backoffice-vyn alltid har en plats att skriva till.
+# data/evals/generated/<evalRunId>/<siteId>/ är per-case Next.js-output
+# som full-mode-bygget skapar för att tvinga ren npm install.
+data/evals/eval-runs/*.json
+data/evals/manual-scorecards/*.json
+data/evals/generated/
+# scripts/run_scaffold_selection_probe.py output. Same kategori: lokal
+# observability per körning, inte arkiverat i git. .gitkeep behåller mappen.
+data/evals/scaffold-probe/*.json
+data/evals/scaffold-probe/*.md
+
 audits/
 data/prompt-inputs/
 data/embedding-index/
@@ -36,6 +50,14 @@ data/embedding-index/
 # eller i Vercel Blob (VercelBlobAssetStore). Manifest + originals/optimized
 # regenereras vid behov; ingen anledning att versionera 2 MB+ per upload.
 data/uploads/
+# Backoffice + script-genererade soft dossier-kandidater. Skapas av
+# scripts/generate_dossier_candidate.py och Backoffice "create soft
+# dossier candidate"-flödet under operator-review. Samma kategori som
+# data/runs/ + data/uploads/: per-operatör scratch-yta. Promotade
+# kandidater hamnar i packages/generation/orchestration/dossiers/<id>/
+# via en separat promotion-flow och committas där. Om en specifik
+# kandidat ska delas i repo:t läggs den till med `git add -f`.
+data/dossier-candidates/
 .generated/
 *.log
 
@@ -76,6 +98,16 @@ Thumbs.db
 .commit-msg.tmp
 konversation.txt
 .review-*/
+
+# Agent-till-agent handover-noteringar på repo-toppnivå
+# (t.ex. handover-stackblitz-2026-05-25.md). Transient session-state
+# mellan parallella agenter / sessioner — innehåller browser/SDK-
+# specifika feature-namn och pågående debug-spår som inte hör hemma
+# i versionshistoriken. Samma kategori som mer_info.txt-mönstret:
+# operatören kan ha filen lokalt, men den committas aldrig.
+# scripts/check_term_coverage.py har spegelfix som skipar filerna
+# så agent-narrative inte felklassas som okända domänbegrepp.
+handover-*.md
 
 # Lokal mini-eval-output (verify_run/eval-runners skriver hit). Stora
 # artefakter per körning, samma kategori som data/runs/ men för

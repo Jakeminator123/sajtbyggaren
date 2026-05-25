@@ -48,7 +48,7 @@ whyNow: |
 
 paths:
   # Förslag — Jakob bestämmer slutgiltig placering:
-  - apps/viewser/app/api/runs/[runId]/trace/route.ts  # NY
+  - apps/viewser/app/api/runs/\[runId\]/trace/route.ts  # NY
   - apps/viewser/app/api/prompt/route.ts              # baseRunId-stöd
   - apps/viewser/lib/runs.ts                          # listRuns inkluderar in-progress
   - scripts/prompt_to_project_input.py                # baseRunId
@@ -65,7 +65,7 @@ doNotTouch:
 
 acceptanceCriteria:
   # A) Trace-endpoint:
-  - "GET /api/runs/[runId]/trace returnerar de senaste N (default 50)
+  - "GET /api/runs/\[runId\]/trace returnerar de senaste N (default 50)
     trace-events från data/runs/<runId>/trace.ndjson som JSON-array.
     Stöd för ?since=<timestamp> så UI kan polla incrementally."
   - "Responsen inkluderar `runId`, `events` (array av trace-event), och
@@ -115,7 +115,7 @@ checks:
   - cd apps/viewser && npx tsc --noEmit
   - cd apps/viewser && npm run lint
   - "Manuell: en pågående follow-up syns i /api/runs med
-    status='pending' och kan följas via /api/runs/[runId]/trace."
+    status='pending' och kan följas via /api/runs/\[runId\]/trace."
 
 collisionRisk: yellow
 reviewer: christopher
