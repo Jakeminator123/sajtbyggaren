@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 19 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 112 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 20 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 112 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -552,6 +552,57 @@ för follow-up eller ska städas.
 
 
 ### Scout-rapport PR #47 — ytterligare fynd (2026-05-19, sen kväll)
+
+### Vercel MCP cross-repo signal 2026-05-25 (sajtmaskin → sajtbyggaren)
+
+Plug-in-driven scan av Vercel-projektet `sajtmaskin`
+(`prj_AK7FqC8NwKorjoxGpkXi6nKGUsoe` under `team_j7KE5zKTm5rdg7zfWzOZhJ89`,
+predecessor som migreras till detta repo) visar att 9 av de 10 senaste
+deployerna är `state: ERROR`. Senaste production-deps-bumpen
+(`dpl_hpugHL6h1DfCDspZ5MYvJwJNPd2C`, branch
+`dependabot/npm_and_yarn/production-dependencies-44424f4526`,
+commit `a8800bd`) faller i preflight-gate och loggar
+`Error: Command "npm run build" exited with 1` direkt efter
+`check-lucide-icons` FAIL. En preexisting bug i ett systerrepo, men
+samma kodmönster lever vidare här — därav posten:
+
+- **`B145` Låg-Medel** - Vercel-build-loggar för
+  `dpl_hpugHL6h1DfCDspZ5MYvJwJNPd2C` (sajtmaskin) failar i
+  `scripts/dev/check-lucide-icons.mjs` med
+  "36 icon(s) in LUCIDE_ICONS are not exported by installed lucide-react"
+  — alla brand-ikoner (Github, Slack, Twitter, Youtube, Facebook,
+  Instagram, Figma, Framer, Twitch, Linkedin, Pocket, Trello, Codepen,
+  Codesandbox, Dribbble, RailSymbol, Chrome, plus deras `Lucide*`-
+  aliaser). lucide-react har tagit bort brand-ikonerna i en senare
+  version än `^1.14.0`-baseline:n som sajtmaskin och sajtbyggaren
+  delar. Relevans för **detta** repo: ADR 0020 dokumenterar redan
+  att `scripts/build_site.py:write_pages` (`render_home`/`render_about`/
+  `render_contact`/`render_layout`/`render_products`) hardkodar
+  `import { ... } from "lucide-react"`, och att den underliggande
+  arkitekturskulden (icon-bibliotek-agnostisk codegen, "väg B" i
+  ADR 0020) är öppen. Fem `package.json`-filer pinnar
+  `"lucide-react": "^1.14.0"` med caret (`apps/viewser/package.json`,
+  `data/starters/marketing-base/package.json`,
+  `data/starters/commerce-base/package.json`,
+  `data/starters/portfolio-base/package.json`,
+  `data/starters/docs-base/package.json`). Så fort dependabot bumpar
+  en av dessa starters förbi den version som tar bort brand-ikonerna,
+  kommer varje genererad kund-sajt som använder `render_home`/
+  `render_layout` att få samma `Module not found`/`Cannot find name`-
+  fel som sajtmaskin fastnat på sedan ~april 2026. Sajtmaskins
+  fail-state är alltså en levande early-warning för sajtbyggarens
+  nästa generation. Fix-skiss i fallande prioritet: (1) pinna
+  lucide-react exakt utan caret i alla fem package.json plus en
+  cross-policy-test som verifierar samma version över starters +
+  apps/viewser (köper tid), (2) realisera ADR 0020 "väg B" — gör
+  `write_pages` icon-bibliotek-agnostisk via starter-config eller
+  inline-SVG (permanent, egen ADR-sprint), (3) migrera brand-ikoner
+  i `render_*`-helpers till dedicerat brand-icon-paket
+  (`simple-icons`/`react-icons`) eftersom brand-ikoner inte längre är
+  lucide-react:s domän. Källa: Vercel MCP scan 2026-05-25
+  (deployment build log limit=80). Cross-ref: ADR 0020,
+  `B13a` (architectural debt i `scripts/build_site.py`). Fix: open.
+  Test: open.
 
 ## Stängda - regression-test säkrar fixet
 
