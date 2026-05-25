@@ -21,6 +21,7 @@ from .. import (
     discovery_control,
     discovery_wizard_diagnostics,
     impact,
+    industry_coverage,
     loaders,
     selection_profiles,
     sni_diagnostics,
@@ -734,6 +735,341 @@ def _render_sni_discovery_mapping() -> None:
                     )
 
 
+def _industry_filter_options(rows: list[dict], key: str) -> list[str]:
+    values = sorted({str(row.get(key) or "") for row in rows if row.get(key)})
+    return ["Alla"] + values
+
+
+def _industry_scaffold_options(rows: list[dict]) -> list[str]:
+    values: set[str] = set()
+    for row in rows:
+        for key in ("targetScaffoldId", "selectedRuntimeScaffoldId", "fallbackScaffoldId"):
+            value = row.get(key)
+            if value:
+                values.add(str(value))
+    return ["Alla"] + sorted(values)
+
+
+def _filter_industry_rows(
+    rows: list[dict],
+    *,
+    content_branch: str,
+    support_status: str,
+    coverage_status: str,
+    scaffold: str,
+    only_attention: bool,
+) -> list[dict]:
+    filtered = rows
+    if content_branch != "Alla":
+        filtered = [row for row in filtered if row.get("contentBranch") == content_branch]
+    if support_status != "Alla":
+        filtered = [row for row in filtered if row.get("supportStatus") == support_status]
+    if coverage_status != "Alla":
+        filtered = [row for row in filtered if row.get("coverageStatus") == coverage_status]
+    if scaffold != "Alla":
+        filtered = [
+            row
+            for row in filtered
+            if scaffold
+            in {
+                str(row.get("targetScaffoldId") or ""),
+                str(row.get("selectedRuntimeScaffoldId") or ""),
+                str(row.get("fallbackScaffoldId") or ""),
+            }
+        ]
+    if only_attention:
+        filtered = [row for row in filtered if row.get("needsAttention") is True]
+    return filtered
+
+
+def _render_industry_candidate_panel(rows: list[dict]) -> None:
+    with st.expander("Candidate-actions för vald kategori"):
+        st.caption(
+            "Åtgärderna kräver operatortryck och skriver bara till candidate-mappar. "
+            "Scaffold-actions är read-only i denna version."
+        )
+        category_options = sorted(str(row["wizardCategoryId"]) for row in rows)
+        if not category_options:
+            st.info("Inga kategorier finns att välja.")
+            return
+        selected_category = st.selectbox(
+            "Kategori",
+            category_options,
+            key="industry_coverage_candidate_category",
+        )
+        row = next(item for item in rows if item["wizardCategoryId"] == selected_category)
+        actions = list(row.get("recommendedActions") or [])
+        if not actions:
+            st.success("Den valda kategorin har inga recommended actions just nu.")
+            return
+        selected_action = st.selectbox(
+            "Åtgärd",
+            actions,
+            key="industry_coverage_candidate_action",
+        )
+        st.write(f"**coverageStatus:** `{row['coverageStatus']}`")
+        st.write(
+            "**attentionReasons:** "
+            + (", ".join(row.get("attentionReasons") or []) or "inga")
+        )
+
+        if selected_action == "create_variant_candidate":
+            scaffold_id = row.get("selectedRuntimeScaffoldId")
+            if not scaffold_id:
+                st.info(
+                    "Ingen runtimebar selectedRuntimeScaffoldId finns. Variant-kandidat "
+                    "kan inte skapas säkert för denna kategori."
+                )
+                return
+            default_brief = industry_coverage.build_variant_candidate_brief(row)
+            with st.form("industry_variant_candidate_form"):
+                variant_id = st.text_input(
+                    "Variant id (valfritt)",
+                    value=f"{row['wizardCategoryId']}-coverage",
+                )
+                brief = st.text_area("Variant-brief", value=default_brief, height=260)
+                use_llm = st.checkbox(
+                    "Använd variantModel om OPENAI_API_KEY finns",
+                    value=False,
+                )
+                force = st.checkbox("Skriv över befintlig kandidat med samma id", value=False)
+                submitted = st.form_submit_button("Skapa Variant-kandidat")
+            if submitted:
+                try:
+                    [result] = create_variant_candidate_from_ui(
+                        scaffold_id=str(scaffold_id),
+                        brief=brief,
+                        variant_id=variant_id.strip() or None,
+                        use_llm=use_llm,
+                        force=force,
+                    )
+                except (VariantGenerationError, ValueError, RuntimeError) as exc:
+                    st.error(f"Kunde inte skapa Variant-kandidat: {exc}")
+                    return
+                st.success(f"Skapade `{result.path.relative_to(REPO_ROOT)}`")
+                st.write(f"**Source:** `{result.source}`")
+                st.write(f"**Model:** `{result.model_used}`")
+                st.json(result.payload, expanded=False)
+            return
+
+        if selected_action == "create_soft_dossier_candidate":
+            capabilities = list(row.get("safeSoftCapabilityGaps") or [])
+            if not capabilities:
+                st.info(
+                    "Den valda kategorin har ingen safe soft capability-gap. "
+                    "Visa recommended action som review i stället."
+                )
+                return
+            capability = st.selectbox(
+                "Capability",
+                capabilities,
+                key="industry_dossier_candidate_capability",
+            )
+            default_brief = industry_coverage.build_dossier_candidate_brief(
+                row,
+                capability_id=capability,
+            )
+            with st.form("industry_dossier_candidate_form"):
+                candidate_id = st.text_input(
+                    "Dossier id (valfritt)",
+                    value=f"{capability}-{row['wizardCategoryId']}",
+                )
+                brief = st.text_area("Capability-brief", value=default_brief, height=260)
+                use_llm = st.checkbox(
+                    "Använd dossierModel om OPENAI_API_KEY finns",
+                    value=False,
+                )
+                force = st.checkbox("Skriv över befintlig kandidat med samma id", value=False)
+                submitted = st.form_submit_button("Skapa Soft Dossier-kandidat")
+            if submitted:
+                try:
+                    result = create_dossier_candidate_from_ui(
+                        brief=brief,
+                        candidate_id=candidate_id.strip() or None,
+                        capability=capability,
+                        use_llm=use_llm,
+                        force=force,
+                    )
+                except (DossierGenerationError, ValueError, RuntimeError) as exc:
+                    st.error(f"Kunde inte skapa Dossier-kandidat: {exc}")
+                    return
+                st.success(f"Skapade `{result.candidate_dir.relative_to(REPO_ROOT)}`")
+                st.write(f"**Source:** `{result.source}`")
+                st.write(f"**Model:** `{result.model_used}`")
+                st.subheader("manifest.json")
+                st.json(result.manifest, expanded=False)
+                st.subheader("instructions.md")
+                st.code(result.instructions, language="markdown")
+            return
+
+        if selected_action == "create_scaffold_candidate":
+            st.info(
+                "Scaffold-candidate skrivs inte i denna version. Åtgärden är en "
+                "read-only gap-signal tills repo:t har en explicit scaffold-"
+                "candidate-konvention."
+            )
+            return
+
+        st.info(
+            "Den här åtgärden är en review-signal. Ändra inte policy eller runtime "
+            "härifrån; använd ansvarig governance-/mapping-yta."
+        )
+
+
+def _render_industry_coverage() -> None:
+    st.subheader("Branschtäckning")
+    st.caption(
+        "Read-only översikt över SNI → Discovery category → contentBranch → "
+        "scaffold/variant/starter → capability/Dossier. Candidate-actions "
+        "kräver operatortryck och skriver bara till candidate-mappar."
+    )
+    st.markdown("- SNI är branschsignal, inte runtime-sanning.")
+    st.markdown("- Discovery Taxonomy styr downstream-valen.")
+    st.markdown("- Inga candidates promoteras automatiskt.")
+
+    rows = industry_coverage.industry_coverage_rows()
+    table_rows = industry_coverage.table_rows(rows)
+    summary_rows = industry_coverage.content_branch_summary(rows)
+    action_rows = industry_coverage.recommended_action_rows(rows)
+
+    status_counts: dict[str, int] = {}
+    for row in rows:
+        status = str(row.get("coverageStatus") or "")
+        status_counts[status] = status_counts.get(status, 0) + 1
+
+    metric_cols = st.columns(7)
+    metric_cols[0].metric("contentBranches", len({row["contentBranch"] for row in rows}))
+    metric_cols[1].metric("categories", len(rows))
+    metric_cols[2].metric("active_native", status_counts.get("active_native", 0))
+    metric_cols[3].metric(
+        "planned/fallback",
+        status_counts.get("planned", 0) + status_counts.get("fallback_only", 0),
+    )
+    metric_cols[4].metric(
+        "med SNI",
+        sum(1 for row in rows if int(row.get("sniMappingCount") or 0) > 0),
+    )
+    metric_cols[5].metric(
+        "utan SNI",
+        sum(1 for row in rows if int(row.get("sniMappingCount") or 0) == 0),
+    )
+    metric_cols[6].metric(
+        "needsAttention",
+        sum(1 for row in rows if row.get("needsAttention") is True),
+    )
+
+    branch_tab, category_tab, sni_tab, action_tab = st.tabs(
+        [
+            "Per contentBranch",
+            "Per kategori",
+            "SNI-täckning",
+            "Rekommenderade åtgärder",
+        ]
+    )
+
+    with branch_tab:
+        selected_branch = st.selectbox(
+            "contentBranch",
+            _industry_filter_options(summary_rows, "contentBranch"),
+            key="industry_branch_summary_filter",
+        )
+        filtered_summary = (
+            summary_rows
+            if selected_branch == "Alla"
+            else [row for row in summary_rows if row["contentBranch"] == selected_branch]
+        )
+        st.dataframe(filtered_summary, use_container_width=True, hide_index=True)
+
+    with category_tab:
+        filter_cols = st.columns(5)
+        selected_branch = filter_cols[0].selectbox(
+            "contentBranch",
+            _industry_filter_options(rows, "contentBranch"),
+            key="industry_category_branch_filter",
+        )
+        selected_support = filter_cols[1].selectbox(
+            "supportStatus",
+            _industry_filter_options(rows, "supportStatus"),
+            key="industry_category_support_filter",
+        )
+        selected_coverage = filter_cols[2].selectbox(
+            "coverageStatus",
+            _industry_filter_options(rows, "coverageStatus"),
+            key="industry_category_coverage_filter",
+        )
+        selected_scaffold = filter_cols[3].selectbox(
+            "Scaffold",
+            _industry_scaffold_options(rows),
+            key="industry_category_scaffold_filter",
+        )
+        only_attention = filter_cols[4].checkbox(
+            "Endast needsAttention",
+            value=False,
+            key="industry_category_attention_filter",
+        )
+        filtered_rows = _filter_industry_rows(
+            table_rows,
+            content_branch=selected_branch,
+            support_status=selected_support,
+            coverage_status=selected_coverage,
+            scaffold=selected_scaffold,
+            only_attention=only_attention,
+        )
+        st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+
+    with sni_tab:
+        sni_rows = [
+            {
+                "wizardCategoryId": row["wizardCategoryId"],
+                "labelSv": row["labelSv"],
+                "contentBranch": row["contentBranch"],
+                "mappedSniDivisions": row["mappedSniDivisions"],
+                "mappedSniGroups": row["mappedSniGroups"],
+                "sniMappingCount": row["sniMappingCount"],
+                "sniConfidenceHigh": row["sniConfidenceHigh"],
+                "sniConfidenceMedium": row["sniConfidenceMedium"],
+                "sniConfidenceLow": row["sniConfidenceLow"],
+                "coverageStatus": row["coverageStatus"],
+            }
+            for row in table_rows
+        ]
+        st.dataframe(sni_rows, use_container_width=True, hide_index=True)
+        missing_sni = [row for row in sni_rows if int(row["sniMappingCount"]) == 0]
+        with st.expander(f"Kategorier utan SNI-mappning ({len(missing_sni)})"):
+            if missing_sni:
+                st.dataframe(missing_sni, use_container_width=True, hide_index=True)
+            else:
+                st.success("Alla kategorier har minst en SNI-mappning.")
+
+    with action_tab:
+        selected_action = st.selectbox(
+            "Action type",
+            ["Alla"] + sorted({str(row["action"]) for row in action_rows}),
+            key="industry_action_filter",
+        )
+        filtered_actions = (
+            action_rows
+            if selected_action == "Alla"
+            else [row for row in action_rows if row["action"] == selected_action]
+        )
+        st.dataframe(filtered_actions, use_container_width=True, hide_index=True)
+        if filtered_actions:
+            selected_category = st.selectbox(
+                "Visa category-kontext",
+                sorted({str(row["wizardCategoryId"]) for row in filtered_actions}),
+                key="industry_action_context_category",
+            )
+            selected_row = next(row for row in rows if row["wizardCategoryId"] == selected_category)
+            st.write(f"**Rationale:** {selected_row['rationale']}")
+            if selected_row.get("operatorNotes"):
+                st.write(f"**operatorNotes:** {selected_row['operatorNotes']}")
+            st.write(
+                "**recommendedPages:** "
+                + (", ".join(selected_row.get("recommendedPages") or []) or "inga")
+            )
+        _render_industry_candidate_panel(rows)
+
+
 def view_control_plane() -> None:
     st.title("Kontrollplan")
     st.caption(
@@ -764,6 +1100,9 @@ def view_control_plane() -> None:
 
     st.divider()
     _render_sni_discovery_mapping()
+
+    st.divider()
+    _render_industry_coverage()
 
     st.divider()
     _render_asset_graph()

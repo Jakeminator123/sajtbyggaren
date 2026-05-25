@@ -424,7 +424,7 @@ def audit_candidate(path: Path | str) -> AuditResult:
     """Run the full read-only audit and return the structured result."""
     try:
         root = Path(path).expanduser().resolve()
-    except OSError as exc:
+    except (OSError, RuntimeError) as exc:
         result = AuditResult(candidate_path=Path(path))
         result.blockers.append(f"could not resolve path {path}: {exc}")
         result.classification = "blocked"
