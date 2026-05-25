@@ -47,12 +47,20 @@ const IS_WINDOWS = process.platform === "win32";
 const VALID_MODES = new Set(["local-next", "stackblitz", "auto"]);
 const DEFAULT_MODE = "local-next";
 
-// Tiny inline .env-parser. Avsiktligt minimal: ingen interpolation, ingen
-// multiline. Hanterar dock de vanliga POSIX-shell / dotenv-formerna som
-// `next dev` självt accepterar, så dispatchern inte rejectar en rad som
-// next.js skulle ha läst utan problem (Codex P2-fynd på parkerade
-// PR #85: `export VAR=val` och trailing `# comment` rejectades tidigare
-// som "Okänt VIEWSER_PREVIEW_MODE").
+// Tiny inline .env-parser. Avsiktligt minimal: ingen multiline. Hanterar
+// dock de vanliga POSIX-shell / dotenv-formerna som `next dev` självt
+// accepterar, så dispatchern inte rejectar en rad som next.js skulle ha
+// läst utan problem (Codex P2-fynd på parkerade PR #85: `export VAR=val`
+// och trailing `# comment` rejectades tidigare som "Okänt
+// VIEWSER_PREVIEW_MODE"; Bugbot Medium på PR #88: en literal som
+// `VAR="local-next" # note` matchade tidigare varken quoted-grenen
+// (kräver att värdet både börjar OCH slutar med citat — men `e` ≠ `"`)
+// eller unquoted-comment-strippningen, vilket gav `"local-next"` med
+// citat kvar och därmed false-reject mot mode-validatorn).
+//
+// Dotenv-expansion av `$VAR` / `${VAR}`-referenser sker INTE här utan
+// vid use-site i `expandEnvRefs` nedan — vi expanderar bara den enda
+// variabel dispatchern faktiskt konsumerar, inte hela env-mappen.
 function parseEnvFile(path) {
   if (!existsSync(path)) return {};
   const out = {};
@@ -68,13 +76,17 @@ function parseEnvFile(path) {
     if (eq === -1) continue;
     const key = line.slice(0, eq).trim();
     let value = line.slice(eq + 1).trim();
-    // Strip surrounding single or double quotes if present.
-    if (
-      value.length >= 2 &&
-      ((value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'")))
-    ) {
-      value = value.slice(1, -1);
+    // Quoted-grenen: matcha första citat, tolerera optional trailing
+    // whitespace + `# comment` EFTER stängande citat. Non-greedy `*?`
+    // så `"a"x"b"` stoppar vid första matchande quote (matchar dotenv-
+    // beteende — escapes hanteras inte, men en escapad `\\"` räknas som
+    // litteralt par i pattern och bryter inte den naive matchningen).
+    // Whitespace-kravet före `#` är medvetet utelämnat efter stängande
+    // citat eftersom citaten redan terminerar värdet, så `"v"#x` är
+    // entydigt en kommentar.
+    const quotedMatch = value.match(/^(['"])((?:[^\\]|\\.)*?)\1\s*(?:#.*)?$/);
+    if (quotedMatch) {
+      value = quotedMatch[2];
     } else {
       // Oquoterat värde: strippa trailing inline-kommentar (` # ...`).
       // Vi kräver whitespace före `#` så URL-fragments som
@@ -88,6 +100,36 @@ function parseEnvFile(path) {
     if (key) out[key] = value;
   }
   return out;
+}
+
+// expandEnvRefs: enkel dotenv-expand-replikering för `$VAR` och `${VAR}`-
+// referenser i ETT värde mot en redan-mergad env-map. Avsiktligt enkel:
+//
+//   - Single-pass (ingen rekursiv resolve). Räcker för dispatcherns
+//     enda konsument (VIEWSER_PREVIEW_MODE) och undviker risken för
+//     kedje-loops på uttryck som `A=$B` / `B=$A`.
+//   - Stödjer både `${VAR}` (braced) och `$VAR` (bare). dotenv-expand
+//     stödjer båda; att stödja bara en av dem skapar ett
+//     beteendeglapp mot vad `next dev` ser i samma .env-fil.
+//   - `\\$` (escapad dollar) → litteralt `$`. Matchar dotenv-expand.
+//   - Okända referenser → tom sträng. Matchar dotenv-expand och är
+//     säkrare än att lämna kvar `$VAR` som en literal som sedan
+//     reggar fel mot mode-validatorn.
+//
+// Codex P2 på PR #88 motiverar detta: en `.env*`-fil med
+// `VIEWSER_PREVIEW_MODE=$PREVIEW_DEFAULT` skulle utan expansion
+// gått igenom verbatim och failat validatorn med "Okänt VIEWSER_PREVIEW_MODE:
+// '$PREVIEW_DEFAULT'", även om next dev självt (via @next/env's
+// dotenv-expand) skulle ha löst referensen och accepterat värdet.
+function expandEnvRefs(value, env) {
+  return value.replace(
+    /\\\$|\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)/g,
+    (match, braced, bare) => {
+      if (match === "\\$") return "$";
+      const name = braced ?? bare;
+      return env[name] ?? "";
+    },
+  );
 }
 
 // Precedensordning matchar Next.js egen dotenv-ordning för dev — högst
@@ -108,7 +150,13 @@ const mergedEnv = {
   ...process.env,
 };
 
-const rawMode = (mergedEnv.VIEWSER_PREVIEW_MODE ?? DEFAULT_MODE).trim().toLowerCase();
+// Expandera `$VAR` / `${VAR}`-referenser i den hämtade rå-strängen
+// (`VIEWSER_PREVIEW_MODE=$PREVIEW_DEFAULT` är giltig dotenv-form). Vi
+// kör expansionen mot `mergedEnv` (samma env som validatorn ser) så
+// referenser från process.env och dotenv-filer båda är synliga.
+const rawMode = expandEnvRefs(mergedEnv.VIEWSER_PREVIEW_MODE ?? DEFAULT_MODE, mergedEnv)
+  .trim()
+  .toLowerCase();
 
 if (!VALID_MODES.has(rawMode)) {
   process.stderr.write(
