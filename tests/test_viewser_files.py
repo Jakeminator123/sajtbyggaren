@@ -489,6 +489,86 @@ def test_build_runner_whitelists_dossier_path_overrides() -> None:
 
 
 @pytest.mark.tooling
+def test_build_runner_uses_per_site_mutex_not_global_inflight() -> None:
+    """Reviewer-fynd 2026-05-25 (Round 2 #5): den tidigare implementationen
+    hade en enda global ``let inFlight: Promise | null = null`` som
+    serialiserade ALLA byggen i Viewser-processen. Ett segt eller
+    hängande bygge på t.ex. ``cafe-bistro`` blockerade då en helt
+    orelaterad ``painter-palma``-build i samma process. Per-siteId-
+    låsen är nödvändig (två build_site.py-processer som samtidigt
+    skriver till ``.generated/<siteId>/`` ger korrupta artefakter),
+    men den ska INTE vara global.
+
+    Fix: ``Map<string, Promise<...>>`` keyat på siteId.
+    ``runBuild(siteId)`` queue:ar bara mot SAMMA siteId — olika
+    siteIds kan köra parallellt.
+
+    Source-lock-mönstret:
+      1. NEGATIVT: ingen ``let inFlight: Promise<...> | null`` (skalär).
+      2. POSITIVT: ``const inFlight = new Map<string, Promise<...>>()``.
+      3. POSITIVT: ``runBuild(siteId)``-loop:en kollar
+         ``inFlight.has(siteId)`` (siteId-keyat) snarare än ``inFlight``
+         (truthy global).
+      4. POSITIVT: rensning sker via ``inFlight.delete(siteId)`` med
+         identity-guard så en samtidig follow-up build inte nukas av
+         misstag.
+    """
+    text = (VIEWSER_DIR / "lib" / "build-runner.ts").read_text(encoding="utf-8")
+
+    # Negativt: gamla globala scalar-formen får inte återinföras.
+    forbidden_global = re.compile(
+        r"let\s+inFlight\s*:\s*Promise\s*<[^>]*>\s*\|\s*null",
+        re.MULTILINE,
+    )
+    assert not forbidden_global.search(text), (
+        "build-runner.ts: ``let inFlight: Promise<...> | null`` är "
+        "den gamla globala mutex:en som blockerade orelaterade siteIds. "
+        "Använd ``const inFlight = new Map<string, Promise<...>>()`` "
+        "istället (Reviewer Round 2 #5)."
+    )
+
+    # Positivt: Map-deklaration med siteId-key + Promise-value.
+    map_decl = re.compile(
+        r"const\s+inFlight\s*=\s*new\s+Map\s*<\s*string\s*,\s*Promise\s*<[^>]*>\s*>\s*\(\s*\)",
+        re.MULTILINE,
+    )
+    assert map_decl.search(text), (
+        "build-runner.ts saknar ``const inFlight = new Map<string, "
+        "Promise<...>>()``. Per-siteId-mutex kräver Map keyat på siteId "
+        "så olika sajter kan bygga parallellt."
+    )
+
+    # Positivt: while-loop:en måste kolla per-siteId, inte den globala
+    # Map-instansens truthy:hood.
+    while_check = re.compile(
+        r"while\s*\(\s*inFlight\s*\.\s*has\s*\(\s*siteId\s*\)\s*\)",
+        re.MULTILINE,
+    )
+    assert while_check.search(text), (
+        "build-runner.ts: ``while (inFlight.has(siteId))`` saknas. "
+        "Tidigare ``while (inFlight)`` blockerade alla siteIds — den "
+        "nya per-siteId-mutex:en måste kolla pending build för EXAKT "
+        "den siteId callern frågar om."
+    )
+
+    # Positivt: rensningen ska gå via Map.delete med identity-guard så
+    # en samtidig follow-up build (som hunnit skriva ny entry) inte
+    # nukas av misstag.
+    delete_with_guard = re.compile(
+        r"if\s*\(\s*inFlight\s*\.\s*get\s*\(\s*siteId\s*\)\s*===\s*promise\s*\)\s*\{\s*"
+        r"inFlight\s*\.\s*delete\s*\(\s*siteId\s*\)",
+        re.MULTILINE,
+    )
+    assert delete_with_guard.search(text), (
+        "build-runner.ts: rensningen i ``finally``-grenen ska göra "
+        "``if (inFlight.get(siteId) === promise) inFlight.delete(siteId)`` "
+        "så en samtidig follow-up build (som hunnit skriva ny entry för "
+        "samma siteId) inte oavsiktligt nukas. Speglar samma identity-"
+        "guard som den tidigare globala ``if (inFlight === promise)``."
+    )
+
+
+@pytest.mark.tooling
 def test_prompt_route_returns_400_for_zod_validation_errors() -> None:
     """Audit fynd 1: ogiltig payload (tom prompt, för lång prompt, fel
     typ) är ett klient-/valideringsfel, inte serverfel. Före fixen

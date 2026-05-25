@@ -53,11 +53,29 @@ def test_viewser_python_runners_prefer_repo_venv() -> None:
 
 @pytest.mark.tooling
 def test_serialized_prompt_and_build_runners_clear_inflight_promises() -> None:
+    """Lås att både prompt- och build-runners använder try/finally-mönstret
+    (await + cleanup), INTE ``.finally(() => ...)``-callback som lätt
+    skapar unhandled rejection.
+
+    NB: sentinel för build-runner.ts uppdaterades 2026-05-25 från
+    ``inFlight = promise;`` (gammal global mutex) till
+    ``inFlight.set(siteId, promise);`` (ny per-siteId Map-mutex).
+    Reviewer-fynd Round 2 #5 — den globala varianten blockerade
+    orelaterade siteIds. Det dedikerade testet
+    ``test_build_runner_uses_per_site_mutex_not_global_inflight``
+    i ``test_viewser_files.py`` låser den fullständiga Map-strukturen;
+    här bekräftar vi bara att rensningen sker via try/finally med en
+    ``await``-ad promise.
+    """
     for relative, sentinel in (
         ("app/api/prompt/route.ts", "promptInFlight = promise;"),
-        ("lib/build-runner.ts", "inFlight = promise;"),
+        ("lib/build-runner.ts", "inFlight.set(siteId, promise);"),
     ):
         text = (VIEWSER_DIR / relative).read_text(encoding="utf-8")
-        assert sentinel in text
+        assert sentinel in text, (
+            f"{relative} saknar ``{sentinel}``-sentinel. Sett:promise-"
+            "registreringen ska ske INNAN ``return await promise`` så "
+            "cleanup-grenen kan identitets-jämföra mot rätt instans."
+        )
         assert "return await promise;" in text
         assert ".finally(() =>" not in text

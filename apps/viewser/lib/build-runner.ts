@@ -15,7 +15,24 @@ import { readBuildResult, runDirFromId, runsDir } from "@/lib/runs";
 const BUILD_TIMEOUT_MS = 600_000;
 const RUN_ID_PATTERN = /runId:\s*([a-zA-Z0-9._-]+)/;
 
-let inFlight: Promise<unknown> | null = null;
+// Per-siteId mutex för att serialisera byggen mot SAMMA sajt utan att
+// blockera byggen mot ANDRA sajter. Tidigare implementation hade en
+// enda global ``inFlight: Promise | null`` som tvingade alla byggen
+// att vänta på varandra — ett segt/hängande bygge på ``cafe-bistro``
+// blockerade en helt orelaterad ``painter-palma``-build i samma
+// Viewser-process. Reviewer-fynd 2026-05-25 (Round 2 #5).
+//
+// Map<siteId, Promise> queue:ar byggen per sajt. ``runBuild(siteId)``
+// väntar bara på pending build för EXAKT samma siteId; två siteIds
+// kan köra parallellt. ``finally``-grenen rensar entry:t bara om
+// promise:n fortfarande är den aktiva — så en följdbygge som hunnit
+// skriva en ny entry inte oavsiktligt nukas.
+//
+// Den per-siteId-låsen är fortsatt nödvändig för att inte få två
+// build_site.py-processer som samtidigt skriver till
+// ``.generated/<siteId>/``-mappen + ``data/runs/<runId>/``-snapshot.
+// Det skulle ge halvskrivna artefakter och korrupta run-snapshots.
+const inFlight = new Map<string, Promise<unknown>>();
 
 function repoRoot(): string {
   return path.resolve(process.cwd(), "..", "..");
@@ -235,21 +252,30 @@ export async function runBuild(
   buildResult: Record<string, unknown>;
   stderr: string;
 }> {
-  while (inFlight) {
+  // Vänta på pending build för EXAKT denna siteId — andra siteIds
+  // får köra parallellt. Loop:en hanterar fallet att en följdbygge
+  // skrivit en ny entry medan vi väntade på den föregående: vi
+  // måste läsa Map:en igen efter varje await för att inte missa
+  // den nya pending.
+  while (inFlight.has(siteId)) {
     try {
-      await inFlight;
+      await inFlight.get(siteId);
     } catch {
       // previous build failed; that's fine, fall through and start a new one
     }
   }
 
   const promise = runBuildOnce(siteId, dossierPathOverride);
-  inFlight = promise;
+  inFlight.set(siteId, promise);
   try {
     return await promise;
   } finally {
-    if (inFlight === promise) {
-      inFlight = null;
+    // Rensa entry:t bara om promise:n FORTFARANDE är den aktiva.
+    // Om en samtidig caller redan skrivit en ny pending nukar vi
+    // inte hennes. Speglar samma försiktiga rensning som den
+    // tidigare globala ``if (inFlight === promise)``-grenen.
+    if (inFlight.get(siteId) === promise) {
+      inFlight.delete(siteId);
     }
   }
 }
