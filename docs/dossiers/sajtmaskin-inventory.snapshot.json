@@ -1,0 +1,24 @@
+{
+  "$comment": "Frozen inventory snapshot of the Sajtmaskin dossier zip the operator extracted to MIN_IDE/dossier-inspection/ (operator-local, gitignored). This snapshot exists so the inventory table in docs/dossiers/sajtmaskin-import-readiness.md is reproducibly verifiable from the GitHub repo alone, without requiring the operator to re-share the original zip. THIS IS NOT A CANONICAL ARTEFACT: full manifests, instructions.md, and components/*.tsx files live operator-side only and only become canonical via the candidate -> reviewed -> verified -> enabled pipeline described in the readiness doc.",
+  "snapshotDate": "2026-05-25",
+  "source": "MIN_IDE/dossier-inspection/ (operator-local, gitignored, extracted from dossiers_sajtmaskin.zip)",
+  "totalDossiers": 13,
+  "softCount": 5,
+  "hardCount": 8,
+  "dossiers": [
+    { "id": "cmdk-command-palette", "class": "soft", "capability": "command-search", "statusVsNewRepo": "candidate-capability-map-gap" },
+    { "id": "embla-carousel", "class": "soft", "capability": "carousel", "statusVsNewRepo": "candidate-capability-map-gap" },
+    { "id": "faq-accordion", "class": "soft", "capability": "faq-section", "statusVsNewRepo": "superseded-by-soft-faq-accordion" },
+    { "id": "interactive-game-loop", "class": "soft", "capability": "interactive-game", "statusVsNewRepo": "superseded-by-soft-interactive-game-loop" },
+    { "id": "marquee-scroller", "class": "soft", "capability": "marquee", "statusVsNewRepo": "candidate-capability-map-gap" },
+    { "id": "clerk-auth", "class": "hard", "capability": "auth", "statusVsNewRepo": "candidate-capability-map-gap" },
+    { "id": "mailchimp-newsletter", "class": "hard", "capability": "newsletter-subscribe", "statusVsNewRepo": "candidate-capability-map-gap" },
+    { "id": "openai-chat", "class": "hard", "capability": "ai-chat", "statusVsNewRepo": "candidate-capability-map-gap" },
+    { "id": "plausible-analytics", "class": "hard", "capability": "analytics", "statusVsNewRepo": "candidate-capability-map-gap" },
+    { "id": "resend-contact-form", "class": "hard", "capability": "contact-form", "statusVsNewRepo": "candidate-soft-mailto-fallback-exists" },
+    { "id": "sentry-error-tracking", "class": "hard", "capability": "error-tracking", "statusVsNewRepo": "candidate-capability-map-gap" },
+    { "id": "stripe-checkout", "class": "hard", "capability": "payments", "statusVsNewRepo": "candidate-capability-map-gap" },
+    { "id": "vercel-analytics", "class": "hard", "capability": "analytics", "statusVsNewRepo": "candidate-alternative-to-plausible" }
+  ],
+  "refreshProtocol": "If the operator updates the zip with new or changed dossiers, replace this file in a new PR with snapshotDate bumped. Old snapshots become historical record. This file is intentionally a flat list of slugs+class+capability+status only - full manifest data must not be embedded here (that is the verified-step's job, not the snapshot's)."
+}
