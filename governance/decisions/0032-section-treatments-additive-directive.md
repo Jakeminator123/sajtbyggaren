@@ -1,4 +1,12 @@
-# ADR 0031 — section-treatments som additiv directive (Phase 3 schema-bump)
+# ADR 0032 — section-treatments som additiv directive (Phase 3 schema-bump)
+
+> **Numreringsnotis (post-port 2026-05-25):** Mergades ursprungligen som
+> ADR 0031 på `main` (PR #108), men numret var redan upptaget på `jakob-be`
+> av ADR 0031 — Steward auto-bump (PR #106). Vid portering av Phase 3 till
+> `jakob-be`:s splittade arkitektur (B146) gavs denna ADR det näst lediga
+> numret (0032). Alla källfilsreferenser till "ADR 0031" som syftar på
+> section-treatments uppdaterades samtidigt. Innehåll och beslut är
+> oförändrade från PR #108.
 
 **Status:** Accepted
 **Datum:** 2026-05-25

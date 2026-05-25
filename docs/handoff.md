@@ -1,10 +1,61 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-25 morgon (**Sprintvåg 1+2 stängd — fem PRs landade
-på `jakob-be` på 2 timmar**: #81 + #82 + #80 + #79 + #83). Verifierad
-`jakob-be` är `2a5d2e5` (eller `590284b` om denna handoff-commit räknas
-med). `main` ligger 12 commits bakom på `6649b51`. Bug-räkning på
-`jakob-be`: **19 aktiva / 112 stängda** (-5 sedan morgon).
+**Datum:** 2026-05-25 kväll. Verifierad feature-branch
+`b146-port-section-dispatcher` (B146 stängd: Christophers PR #105 + #108
+section-arkitektur portad ovanpå PR #107-splitten). `jakob-be` HEAD är
+`ee2a91e`; `main` HEAD är `84bf842`. **Öppen PR:** feature →
+`jakob-be` följt av sync-PR `jakob-be → main`. Bug-räkning på
+feature-branchen: **19 aktiva / 5 unknown / 114 stängda** (B146 +
+B116 båda stängda).
+
+**Kvällens fönster (B146 + Phase 3 port):**
+
+- Ny fil `packages/generation/build/dispatcher.py` (~370 rader) med
+  section-id registry, treatment-resolution-helpers, `render_route_generic`.
+- `packages/generation/build/renderers.py` växte från 2357 → ~4710 rader
+  med ~30 nya `render_section_*` + uppdaterade page renderers från
+  Christophers main-versioner. Initial sektion-registrering vid filslut.
+- `scripts/build_site.py` ~3162 → ~3650 rader: utökade re-exports +
+  `__getattr__`-shim som proxar okända namn till
+  renderers/dispatcher/static_assets. `from scripts.build_site import
+  render_section_X` fortsätter fungera.
+- ADR 0031 (section-treatments från main:PR #108) renumrerad till **0032**
+  eftersom jakob-be:s 0031 (Steward auto-bump, PR #106) var äldre.
+  Renumber-not överst i ADR + uppdaterade referenser i alla
+  source-/test-/doc-filer.
+- Phase 3 backend: `_apply_directives_fields` additivt-mergar
+  `directives.sectionTreatments` i resolve.py; `_SECTION_TREATMENTS_CATALOGUE`
+  + planning-prompt-update i plan.py; schema-bump i project-input.schema.json.
+- Wizard-UI: `treatment-options.ts` (ny), `wizard-types.ts`/
+  `wizard-payload.ts`/`steps/visual-step.tsx`/`demo-answers.ts` uppdaterade,
+  `wizard-constants.ts` fick 113 nya rader (deriveEffectiveScaffoldHint +
+  4 restaurant-vibes).
+- Tester: 5 nya/uppdaterade testfiler portade,
+  `tests/test_section_treatments_{prompts,propagation,resolve}.py` +
+  `test_section_renderer_registry.py` + `test_project_input_schema.py` (utökat).
+  126 nya cases passerar. `test_builder_audit_post_3b_next.py` fick utökad
+  JSX-escaping-lista (sätter `render_section_hero`, treatment-helpers etc.).
+
+**Eftermiddags-fönstret (4 produkt-PRs + sync-PR till main):**
+
+- PR #97 — pedagogiskt preview-fel i local-next mode (404/missing_artifacts mapping)
+- PR #100 — per-siteId build mutex (Map ersätter global inFlight) → stänger B116
+- PR #101 — StackBlitz embed unblocker (cross-origin-isolated permissions policy)
+- PR #104 — honor preview mode end-to-end + mode-aware progress copy
+- PR #103 — sync-merge `jakob-be → main` (16 commits totalt: 6 produkt + 6 härdning + 2 docs + 2 sync)
+
+**Christopher-koord:** `origin/christopher-ui` är `399cf39` (idag) och
+ligger **21 commits framför `origin/main`** — har inte pullat sync-PR
+#103. Senaste commit `[scope-leak]`-taggad av honom själv (gick in i
+`scripts/build_site.py:render_home`-territoriet, utanför hans branch-scope).
+Meddelande postat till hans Sprintvakt-inbox 2026-05-25
+(`msg-0007-ae0ac0`) om rebase-behov. PR mot main blockerad tills han
+har merge:at + löst konflikter i `apps/viewser/components/viewer-panel.tsx`.
+
+**Föregående checkpoint samma dag (morgon):** Sprintvåg 1+2 stängd — fem
+PRs landade på `jakob-be` på 2 timmar (#81 + #82 + #80 + #79 + #83).
+Verifierad `jakob-be` var då `2a5d2e5`, `main` på `6649b51`,
+bug-räkning 19/112.
 
 **ÄRLIG BEDÖMNING (extern reviewer + orchestrator-self-audit):** Av
 dagens fem PRs är endast **#79 en substantiell produktkodsförändring**

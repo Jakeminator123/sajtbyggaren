@@ -1,4 +1,4 @@
-"""Phase 3 (ADR 0031) — section-treatments awareness in LLM prompts.
+"""Phase 3 (ADR 0032) — section-treatments awareness in LLM prompts.
 
 These tests pin the Phase 3 prompt-side acceptance for
 GAP-section-design-treatments-phase-3-backend:
@@ -23,7 +23,7 @@ GAP-section-design-treatments-phase-3-backend:
    never gains a sectionTreatments field — operator-pin lives on
    Project Input.directives, not on the plan output.
 
-The brief layer is intentionally not exercised here. ADR 0031 explains
+The brief layer is intentionally not exercised here. ADR 0032 explains
 why: SiteBrief is pre-Project Input and has no directives slot, so
 brief-side awareness would be a no-op that risks LLM hallucination of
 treatment strings into notes_for_planner.
@@ -141,7 +141,7 @@ def test_planning_catalogue_covers_runtime_pairs() -> None:
 
 
 def test_planning_system_prompt_mentions_section_treatments() -> None:
-    """ADR 0031 mandates that planningModel knows directives.sectionTreatments
+    """ADR 0032 mandates that planningModel knows directives.sectionTreatments
     is operator-authoritative. If a future prompt-cleanup removes the
     awareness clause the LLM may start to mutate the field.
     """

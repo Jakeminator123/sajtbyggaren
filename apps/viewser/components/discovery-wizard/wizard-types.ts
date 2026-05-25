@@ -144,7 +144,7 @@ export type WizardBrand = {
 export type HeroLayoutHint = "" | "gradient" | "centered" | "split";
 
 /**
- * Operator-pin för section design treatments (Phase 3, ADR 0031).
+ * Operator-pin för section design treatments (Phase 3, ADR 0032).
  *
  * Nyckeln är section-id (matchar Python `_SECTION_RENDERERS` och
  * schemats `directives.sectionTreatments.properties`-keys), värdet
@@ -168,7 +168,7 @@ export type WizardVibe = {
    * Operator-pin per section. Speglar
    * `directives.sectionTreatments` i Project Input.schema.json. Tom
    * map = inga overrides; varje section kör sin variant- eller
-   * section-default. ADR 0031.
+   * section-default. ADR 0032.
    */
   sectionTreatments: WizardSectionTreatments;
 };

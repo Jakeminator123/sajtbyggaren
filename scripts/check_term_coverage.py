@@ -231,6 +231,10 @@ COMMON_WORDS = {
     # ``PruneReport`` / ``BugEntry`` above - tooling implementation,
     # not a canonical domain term.
     "AuditResult",
+    # scripts/steward_auto_bump.py local result/container dataclasses.
+    # Same treatment as PruneReport / AuditResult - implementation
+    # details for a tooling helper, not canonical domain terms.
+    "BumpResult", "PullRequestSummary",
     # Sprintvakt V1 local tooling implementation symbols. Sprintvakt is
     # an operator workflow/tooling label, while these names are Python
     # exception/type-alias identifiers inside tooling/sprintvakt_mcp.
@@ -459,8 +463,9 @@ COMMON_WORDS = {
     # the JSON shape returned by /api/upload-asset. Both are
     # implementation symbols, not canonical domain terms.
     "UploadProgress", "UploadResponse",
-    # Section design-treatments Phase 3 UI (ADR 0031, operator-OK
-    # 2026-05-25): SectionTreatmentSpec/Option/Id and the matching
+    # Section design-treatments Phase 3 UI (ADR 0032, operator-OK
+    # 2026-05-25; originally ADR 0031 on origin/main, renumbered during
+    # the B146 port): SectionTreatmentSpec/Option/Id and the matching
     # WizardSectionTreatments alias mirror the schema enum into TS so
     # the wizard can render operator-pin disclosures without a server
     # roundtrip. SectionTreatmentRow is the private React component

@@ -27,7 +27,7 @@
  *   TS-mirror skulle släpa, vilket gör operator-pinningen säker
  *   (operatören kan inte välja en treatment som schemat avvisar).
  *
- * ADR 0031 förklarar resolve-ordningen: operator-pin (denna fil) >
+ * ADR 0032 förklarar resolve-ordningen: operator-pin (denna fil) >
  * variant-default (Python-runtime) > section-default. Visual-step
  * renderar disclosure:n så fort scaffolden har minst en section som
  * är registrerad här — operatören kan då alltid välja "Auto" för att

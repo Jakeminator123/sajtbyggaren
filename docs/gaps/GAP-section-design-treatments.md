@@ -125,7 +125,7 @@ phases:
           enum, additionalProperties:false). Backward-compat
           verifierad — directives är optional, gamla fixturer
           fortsätter validera.
-        * ADR 0031 i governance/decisions/ förklarar resolve-ordning
+        * ADR 0032 i governance/decisions/ förklarar resolve-ordning
           (operator-pin > variant-default > section-default) och
           varför briefModel hålls utanför scope.
         * Backend: scripts/build_site.py får

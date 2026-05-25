@@ -197,7 +197,7 @@ def test_project_input_schema_rejects_unknown_fields(
 
 
 # ----------------------------------------------------------------------
-# ADR 0031 — directives.sectionTreatments enum guards
+# ADR 0032 — directives.sectionTreatments enum guards
 # ----------------------------------------------------------------------
 #
 # Phase 3 introduces directives.sectionTreatments as the operator-pin
@@ -230,7 +230,7 @@ def test_section_treatments_property_present_under_directives(schema: dict) -> N
     section_treatments = directives["properties"].get("sectionTreatments")
     assert section_treatments is not None, (
         "directives.sectionTreatments missing — Phase 3 schema-bump "
-        "(ADR 0031) requires the property to land under directives"
+        "(ADR 0032) requires the property to land under directives"
     )
     assert section_treatments.get("type") == "object"
     assert section_treatments.get("additionalProperties") is False, (
@@ -405,7 +405,7 @@ def test_section_treatments_rejects_unknown_section(schema: dict) -> None:
 @pytest.mark.governance
 def test_section_treatments_optional(schema: dict) -> None:
     """Existing PI payloads without directives.sectionTreatments must
-    still validate. ADR 0031 promises additive bump that keeps Phase
+    still validate. ADR 0032 promises additive bump that keeps Phase
     1+2 snapshots intact.
     """
     payload = copy.deepcopy(_valid_project_input_example())

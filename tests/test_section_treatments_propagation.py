@@ -1,4 +1,4 @@
-"""Phase 3 (ADR 0031) — operator-pin propagation through the resolver.
+"""Phase 3 (ADR 0032) — operator-pin propagation through the resolver.
 
 These tests pin the propagation path
 ``payload.directives.sectionTreatments → project_input.directives.sectionTreatments``
@@ -121,7 +121,7 @@ def test_resolver_coexists_layout_hint_and_section_treatments(
 ) -> None:
     """layoutHint + sectionTreatments must both land on directives.
 
-    ADR 0031 requires the directives slot to be additive, not
+    ADR 0032 requires the directives slot to be additive, not
     destructive. Before Phase 3, ``_apply_directives_fields`` set
     ``project_input["directives"] = {"layoutHint": ...}`` which would
     have wiped any previous entry. The new code merges instead.

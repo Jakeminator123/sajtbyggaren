@@ -52,3 +52,11 @@ större/riskfylld ändring väljs till PR-flöde. Hitta inte på egna branch-pre
 Auth, billing, runtime deploy, starter activation, starter import och B125
 kräver explicit beslut. Dokumentation ska hjälpa bygget, inte bli ett
 självändamål.
+
+## Steward-loop steg 8
+
+Vid PR-merge till `main` bumpas HEAD-pekaren i `docs/current-focus.md` och
+`docs/handoff.md` automatiskt av `steward-auto-bump` enligt
+ADR 0031. Manuell Steward-uppdatering behövs fortfarande vid direktpush, arbete
+utanför `main`, eller när active sprint, next action, risk/blocker, workboard
+eller längre handoff-text faktiskt ändras.

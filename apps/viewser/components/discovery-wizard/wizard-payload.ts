@@ -601,7 +601,7 @@ export function buildDiscoveryPayload(
 
   // schemaVersion = 2. Backend persisterar deterministiskt
   // `directives.layoutHint`, `uniqueSellingPoints`, `media` och
-  // (Phase 3, ADR 0031) `sectionTreatments` till Project Input enligt
+  // (Phase 3, ADR 0032) `sectionTreatments` till Project Input enligt
   // kontraktet i `docs/contracts/wizard-discovery.v2.md`. Återstående
   // directive-fält (tone, variantHint, brand, requestedCapabilities)
   // är fortfarande primärt LLM-kompletterat via briefModel; backend

@@ -67,6 +67,64 @@ Dessa nio spårfält är de operatören tittar på för att avgöra om en run
 använde riktig `briefModel`, mock-fallback, pinned plan eller
 deterministisk build.
 
+## Golden path scorecard
+
+`scripts/run_golden_path_eval.py` är det deterministiska grind-lagret för
+de fyra baseline-prompter som produktkompassen listar. Defaultläget är
+offline: scriptet kräver ingen `OPENAI_API_KEY`, kör ingen npm-build och
+bygger inga embeddings.
+
+Körning:
+
+```bash
+python scripts/run_golden_path_eval.py --mode deterministic
+```
+
+Output skrivs under `data/evals/golden-path/`:
+
+- `<evalId>.json` — maskinläsbar summary med alla fyra case.
+- `<evalId>.md` — operatörsrapport med scorecard, embeddings-status och
+  starter-/dossier-status.
+- `<evalId>/` — isolerad arbetsmapp med `prompt-inputs/`, `runs/`,
+  `generated/` och per-case JSON.
+
+Baseline-prompter:
+
+1. "Skapa en hemsida för en elektriker i Malmö."
+2. "Skapa en hemsida för en frisörsalong i Göteborg."
+3. "Skapa en hemsida för en naprapatklinik i Stockholm."
+4. "Skapa en hemsida för en liten e-handel som säljer keramik."
+
+Score-dimensioner:
+
+| Dimension | Vad den fångar |
+| --- | --- |
+| `clarity` | Förstår man direkt vad företaget gör? |
+| `cta` | Finns tydlig nästa handling? |
+| `trust` | Känns företaget legitimt och trovärdigt? |
+| `industryFit` | Passar struktur och route-val branschen? |
+| `copySpecificity` | Undviker generisk AI-copy och placeholder-känsla? |
+| `mobileFirstFirstImpression` | Finns rimligt hero/section-flöde för första skärm? |
+| `contactPath` | Fungerar kontaktvägen och är den branschanpassad? |
+| `scaffoldFit` | Är vald scaffold, variant och starter rimliga? |
+
+Gate-regel för embeddings enligt ADR 0026:
+
+- snitt över fyra case måste vara minst 7.0/10
+- inget enskilt case får vara under 6.5/10
+- annars sätts `embeddingsReadiness` och `nextGate` till `no-go`
+
+Rapporten innehåller också read-only inventory:
+
+- vilka scaffolds, starters och dossiers som finns på disk
+- vilka scaffolds/starters som är runtime-aktiva via befintlig mapping
+- vilka starters/scaffolds som bara finns på disk
+- vilka baseline-case som först behöver bättre signal/copy/render i stället
+  för embeddings eller starter-importer
+
+`--mode real-llm` finns som explicit opt-in för framtida jämförelse och
+kräver `OPENAI_API_KEY`. Defaultläget ska vara det som grind-agenter kör.
+
 ## Manuella scorecards
 
 Manuella 1-10-poäng sparas separat, en fil per suite-körning, under

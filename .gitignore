@@ -27,6 +27,7 @@ out/
 !.env.example
 
 data/runs/
+data/output/
 data/versions/
 
 # Lokal eval-suite output (scripts/run_eval_suite.py + backoffice
@@ -42,6 +43,10 @@ data/evals/generated/
 # observability per körning, inte arkiverat i git. .gitkeep behåller mappen.
 data/evals/scaffold-probe/*.json
 data/evals/scaffold-probe/*.md
+# scripts/run_golden_path_eval.py output. Summary JSON/Markdown plus
+# isolated prompt-inputs/runs/generated work dirs are per-run artefacts.
+data/evals/golden-path/*
+!data/evals/golden-path/.gitkeep
 
 audits/
 data/prompt-inputs/
@@ -145,3 +150,4 @@ data/taxonomies/**/*.csv
 # Pattern matchar tree_v2.py / tree_v3.py-stil men INTE scripts/tree_view.py
 # (som är den committade delade utility-versionen).
 tree_v[0-9]*.py
+.vercel

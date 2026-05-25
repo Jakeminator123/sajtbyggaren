@@ -1,4 +1,4 @@
-"""Phase 3 (ADR 0031) — operator-pin resolve order for section treatments.
+"""Phase 3 (ADR 0032) — operator-pin resolve order for section treatments.
 
 These tests pin the Phase 3 implementation acceptance for
 ``GAP-section-design-treatments-phase-3-backend``: the new resolve
@@ -226,7 +226,7 @@ def test_resolve_returns_variant_default_when_registered(build_site) -> None:
 
 
 def test_resolve_operator_pin_overrides_variant_default(build_site) -> None:
-    """Layer 1: operator-pin wins over variant-default (the core ADR 0031 rule).
+    """Layer 1: operator-pin wins over variant-default (the core ADR 0032 rule).
 
     ``warm-craft`` would normally produce ``alternating-rows`` for
     service-list. An operator who pins ``tabular`` must override that.

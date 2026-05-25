@@ -80,7 +80,7 @@ type WizardDirectives = {
     backgroundVideo?: AssetRef | null;
   };
   /**
-   * Phase 3 (ADR 0031): operator-pin per section för design-treatments.
+   * Phase 3 (ADR 0032): operator-pin per section för design-treatments.
    * Map<sectionId, treatmentId> där varje sectionId är registrerad i
    * `_SECTION_RENDERERS` och varje treatmentId finns i schema-enum för
    * den sectionen. Backend resolve-ordning: operator-pin (denna map) >
@@ -102,7 +102,7 @@ type WizardDirectives = {
 | `businessFamily` (id) | `businessType` | Samma id — backend slug-mappar internt |
 | `vibe.vibeId` | `variantHint` | **Nytt kanal** — deterministisk variant-routning |
 | `vibe.layoutHint` | `layoutHint` | Hero-layout-override (ADR 0027). Tom sträng = "auto" hopps över. |
-| `vibe.sectionTreatments` | `sectionTreatments` | Phase 3 / ADR 0031. Filtreras per scaffold + trim:as innan emit. |
+| `vibe.sectionTreatments` | `sectionTreatments` | Phase 3 / ADR 0032. Filtreras per scaffold + trim:as innan emit. |
 | `uniqueSellingPoints[]` | `uniqueSellingPoints` | Max 4 — fler skulle göra hero-blocket otydligt. |
 | `media.{favicon,ogImage,backgroundVideo}` | `media.*` | Tombstone `null` = explicit borttaget; `stripEmpty` bevarar `null` för dessa nycklar. |
 | `mustHave.length + 1` | `pageCount` | Inkluderar startsida som inte ligger i `mustHave` |

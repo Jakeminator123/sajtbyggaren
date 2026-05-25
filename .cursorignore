@@ -150,3 +150,5 @@ eval-tmp/
 *.mp4
 
 övrigt/
+
+data/output/

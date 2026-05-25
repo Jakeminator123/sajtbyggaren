@@ -1,6 +1,6 @@
 # Section Design Treatments — Scout
 
-Status: **Phase 1 + Phase 2 + Phase 3a implemented (ADR 0031)**
+Status: **Phase 1 + Phase 2 + Phase 3a implemented (ADR 0032)**
 — operator-pin, schema, planning-prompt och wizard-UI shipped
 2026-05-25. Återstår: Phase 4 (LLM-pick) och en eventuell Phase 3c
 (treatment-registry export i `_treatment_registry.json`).
@@ -134,7 +134,7 @@ hårdkodad variant-mappning.
 2. ✅ `GAP-backend-path-b-section-renderer` (Path B-paraplyet)
    flyttades till `completedGaps`. Phase 3-arbetet körs som ny
    GAP-`GAP-section-design-treatments-phase-3-backend` (closed
-   2026-05-25 efter ADR 0031).
+   2026-05-25 efter ADR 0032).
 3. ✅ Schema-utökning: `directives.sectionTreatments`-block med
    per-section `additionalProperties: false`-enum landade i
    `governance/schemas/project-input.schema.json` (commit
@@ -144,7 +144,7 @@ hårdkodad variant-mappning.
    instructions clause i `packages/generation/planning/plan.py`
    (commit `2364b17`). Mock-fallback bevarad — pinned/mock
    plan-paths lämnar payloaden orörd (per `test_section_-
-   treatments_prompts.py`). `briefModel` rörs inte (ADR 0031
+   treatments_prompts.py`). `briefModel` rörs inte (ADR 0032
    §5: brief har ingen `directives`-slot).
 5. ✅ Wizard-UI: section-treatments-disclosure i visual-step
    med Auto/per-treatment-knappar (commit `f9f26a4`).

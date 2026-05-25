@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 20 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 112 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 19 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 114 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -285,20 +285,6 @@ integrate christopher-ui discovery and asset workflow`, merge
   faktiskt använda; `/public/` på repo-roten har inget Next.js-app
   som monterar den. Källa: extern reviewer 2026-05-18. Fix: open.
   Test: open.
-- **`B116` Låg** - `apps/viewser/lib/build-runner.ts` har en modul-
-  global `let inFlight: Promise<unknown> | null = null;` som
-  serialiserar alla bygg-anrop globalt. Kombinerat med
-  `BUILD_TIMEOUT_MS = 600_000` (10 min, höjt från 3 min i PR #31 för
-  att kalla `.generated/<siteId>/`-byggen ska hinna med `npm install`
-  + Next 16 webpack-build) innebär det att en hängd build blockerar
-  alla nya prompter i upp till 10 minuter. Inte säkerhets- eller
-  korrekthets-bugg, men UX-risk: operatör som triggar ett hängande
-  bygge ser sin nästa prompt rejection:as som 409 conflict i upp till
-  10 minuter utan tydlig återkoppling. Lösningar är icke-triviala
-  (cancel-knapp, progress-baserad early-detection, eller per-projekt
-  i stället för global mutex). Källa: extern reviewer 2026-05-18.
-  Fix: open. Test: open.
-
 ### Övriga öppna
 
 - **`B125` Hög** (produktblocker innan launch) - Embedded
@@ -605,6 +591,41 @@ samma kodmönster lever vidare här — därav posten:
   Test: open.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B146` Hög** (stängd 2026-05-25 kväll, B146-port mot jakob-be) -
+  Christopher's PR #105 (Live Build Sync + Restaurant Path A + Wizard
+  polish + Side-by-side preview) och PR #108 (Phase 3 section-treatments
+  operator-pin) landade direkt på main och förgrenade strukturellt mot
+  jakob-be:s PR #107 (renderers-split till packages/generation/build/).
+  Cherry-picken `f500d45` lyfte UI/scaffolds/tester men SKIPPADE
+  `scripts/build_site.py`-delen medvetet. Den här porten gör resterande:
+  ~30 nya `render_section_*` + dispatcher (`_call_section_renderer`,
+  `_treatment_for_section`, `_operator_pin_for_section`,
+  `_SECTION_TREATMENTS_BY_VARIANT`, `render_route_generic`) flyttades
+  till `packages/generation/build/dispatcher.py` (nytt) och
+  `packages/generation/build/renderers.py` (utvidgat med Christophers
+  uppdaterade page renderers). ADR 0031 från PR #108 fick numret 0032
+  eftersom jakob-be redan hade 0031 (Steward auto-bump, PR #106).
+  Phase 3 schema-bumpen, `_SECTION_TREATMENTS_CATALOGUE` i `plan.py`,
+  resolver-additive merge och wizard-UI:t porterades samtidigt. Tester
+  `test_section_treatments_{prompts,propagation,resolve}.py` +
+  `test_section_renderer_registry.py` + `test_project_input_schema.py`
+  porterades och passerar. `scripts/build_site.py` slimmas från 3162
+  rader (jakob-be HEAD) → ~3650 rader (post-port med utökade re-exports
+  + `__getattr__`-shim) i stället för att svälla till main:s 7950.
+  Fix: B146-port PR (jakob-be feature-branch
+  `b146-port-section-dispatcher`). Test: alla 5 nya testfiler + befintliga.
+
+- **`B116` Låg** (stängd 2026-05-25, PR #100 — per-siteId build mutex) -
+  `apps/viewser/lib/build-runner.ts` hade tidigare en modul-global
+  `let inFlight: Promise<unknown> | null = null;` som serialiserade alla
+  bygg-anrop globalt. Kombinerat med `BUILD_TIMEOUT_MS = 600_000`
+  (10 min) innebar det att en hängd build blockerade alla nya prompter
+  i upp till 10 minuter med 409 conflict. Fix: `51c1d19` ersätter
+  global inFlight med `const inFlight = new Map<string, Promise<unknown>>()`
+  så bygg-mutex:en är per-siteId — olika sajter kan byggas parallellt,
+  en hängd build för siteId A blockerar inte siteId B. Test:
+  `tests/test_viewser_files.py::test_build_runner_uses_per_site_mutex_not_global_inflight`.
 
 - **`B87` Låg** (stängd 2026-05-25, grind B87) -
   `scripts/prompt_to_project_input.py` fallbackade tyst till

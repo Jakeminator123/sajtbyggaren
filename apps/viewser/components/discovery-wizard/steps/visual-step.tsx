@@ -553,7 +553,7 @@ export function VisualStep({
         </div>
       </div>
 
-      {/* Section design-treatments (operator-pin, ADR 0031).
+      {/* Section design-treatments (operator-pin, ADR 0032).
        *   Visas bara när scaffolden har sektioner med
        *   variant-/section-defaults registrerade — annars är
        *   override:n meningslös.

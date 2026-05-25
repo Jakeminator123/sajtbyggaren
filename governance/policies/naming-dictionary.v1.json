@@ -702,7 +702,6 @@
     }
   ],
   "globallyForbidden": [
-    "v0",
     "vercel-sandbox",
     "preview-host",
     "AI_GATEWAY",
