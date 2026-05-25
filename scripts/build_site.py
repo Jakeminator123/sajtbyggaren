@@ -2541,6 +2541,129 @@ def render_layout(
     )
 
 
+def render_section_hero(
+    dossier: dict,
+    *,
+    dossier_routes: list[str],
+    listing_route: dict | None,
+    contact_path: str,
+    variant_id: str | None,
+) -> str:
+    """Render the hero section for the home route.
+
+    Combines two visual elements that always appear at the top of the
+    home page:
+
+      1. Optional operator-uploaded hero image banner (rendered when
+         ``dossier.brand.heroImage.filename`` is set).
+      2. Variant-aware hero block with CTA, location tag, USPs and
+         optional background video, dispatched through
+         ``_render_hero_block`` based on ``_hero_style_for`` (which
+         consults ``directives.layoutHint`` first, then
+         ``_HERO_STYLE_BY_VARIANT`` and finally
+         ``_HERO_STYLE_BY_TONE``).
+
+    Path B step 1 (GAP-backend-path-b-section-renderer): this function
+    is the first per-section renderer extracted from ``render_home``.
+    It must produce byte-identical output to the inline implementation
+    it replaces — verified against the LSB / commerce / restaurant
+    snapshots taken before the extraction. ``render_home`` still owns
+    icon-collection (``_collect_icons_for_pages`` + ``Check`` /
+    ``Quote`` cross-section additions) and the page-shell wrapper;
+    those move into a shared ``render_route_generic`` dispatcher in
+    commit 6.
+    """
+    company = dossier["company"]
+    location = dossier["location"]
+    contact = dossier["contact"]
+    usp_list = _extract_usps(dossier)
+    spel_cta = (
+        '          <a href="/spel" className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Gamepad2 className="size-4" />Spela direkt</a>\n'
+        if "/spel" in dossier_routes
+        else ""
+    )
+    # Demo-baseline-fix 1C (B95): suppress the hero ortstag when the
+    # location is country-only (no real city, see _placeholder_location).
+    location_tag = ""
+    if not _location_is_country_only(location):
+        location_tag = (
+            '          <div className="flex items-center gap-2 text-sm uppercase tracking-widest text-[color:var(--muted)]">\n'
+            '            <MapPin className="size-4" />\n'
+            f"            <span>{_jsx_safe_string(location['city'])}</span>\n"
+            "          </div>\n"
+        )
+    # Demo-baseline-fix 1C (B96): hero CTA label is scaffold-aware
+    # (shop / booking / quote) so e-commerce projects do not get a
+    # service-business "Begär offert" verb in the hero.
+    hero_cta_label = _hero_cta_label(dossier)
+    # B101 (re-Verifierings-Scout 3 2026-05-18): when CTA is shop the
+    # primary hero button must link to the products listing, not the
+    # contact route. Booking and quote variants keep contact as target.
+    hero_cta_href = _route_href(
+        _hero_cta_target_path(dossier, listing_route, contact_path)
+    )
+
+    # Operator-uploaded hero image (if present) renders as a banner
+    # above the gradient section. The asset is placed in public/uploads/
+    # by copy_operator_uploads. We render a raw <img> (not next/image)
+    # because the webp files are pre-compressed by sharp and the
+    # starters ship without a Next.js Image loader config.
+    #
+    # Sprint 1.3 — LCP boost: hero-bilden är typiskt Largest Contentful
+    # Paint. Tre attribut tillsammans ger ~700ms LCP-vinst utan att
+    # introducera next/image-import:
+    #   * fetchPriority="high" — säger åt browsern att prioritera nedladdning
+    #     före andra subresources (CSS-bakgrunder, lazy-bilder)
+    #   * loading="eager" — explicit (default är eager, men explicit är
+    #     defensivt mot framtida change i browser-defaults)
+    #   * decoding="async" — paint sker utan att blockera main thread
+    #     på image-decode (annars kan en stor JPEG blocka 80-200ms)
+    brand_block = dossier.get("brand") if isinstance(dossier.get("brand"), dict) else {}
+    hero_asset = brand_block.get("heroImage") if isinstance(brand_block, dict) else None
+    hero_section_jsx = ""
+    if isinstance(hero_asset, dict) and hero_asset.get("filename"):
+        hero_filename = hero_asset["filename"]
+        hero_alt = hero_asset.get("alt") or company["tagline"]
+        hero_section_jsx = (
+            '      <section className="relative w-full overflow-hidden bg-[color:var(--background)]">\n'
+            '        <div className="mx-auto w-[var(--container-width)] pt-[var(--section-spacing)]">\n'
+            f'          <img src={_jsx_safe_string("/uploads/" + hero_filename)} alt={_js_string_literal(hero_alt)} fetchPriority="high" loading="eager" decoding="async" className="aspect-[16/9] w-full rounded-2xl object-cover shadow-sm" />\n'
+            "        </div>\n"
+            "      </section>\n"
+            "\n"
+        )
+
+    # Variant-aware hero layout. Resolves to one of three layouts
+    # (gradient/centered/split) based on directives.layoutHint or
+    # variant_id; falls back to gradient when neither is set, which
+    # matches the pre-#2 baseline so legacy callers (tests without a
+    # variant_id) keep their expected JSX shape.
+    # C1 — Unsplash-fallback för split-layouten. Pre-resolved här så
+    # ``_render_hero_block`` slipper röra dossiern. Returnerar ``None``
+    # när business-typ saknar en kuraterad photo-ID i mappningen, vilket
+    # behåller den befintliga accent-tinted-fallbacken.
+    unsplash_fallback_url = _unsplash_hero_url(dossier)
+    # Fas 1.6 — background_video är optional. Operatören laddar upp en
+    # mp4/webm i wizardens MediaStep; build_site.py renderar den som
+    # absolut-positionerat ``<video>`` bakom hero-texten med poster
+    # fallback mot hero-bilden. Saknas videon renderas hero som vanligt.
+    hero_video_asset = resolve_media_asset(dossier, "backgroundVideo")
+    hero_block_jsx = _render_hero_block(
+        _hero_style_for(dossier, variant_id),
+        company=company,
+        location_tag=location_tag,
+        hero_cta_label=hero_cta_label,
+        hero_cta_href=hero_cta_href,
+        contact_phone=contact["phone"],
+        spel_cta=spel_cta,
+        hero_asset=hero_asset,
+        usps=usp_list,
+        unsplash_fallback_url=unsplash_fallback_url,
+        background_video=hero_video_asset,
+    )
+    return hero_section_jsx + hero_block_jsx
+
+
 def render_home(
     dossier: dict,
     dossier_routes: list[str],
@@ -2565,11 +2688,8 @@ def render_home(
     Keeping the section but dropping the CTA preserves those tests
     without creating a ghost route.
     """
-    company = dossier["company"]
-    location = dossier["location"]
     services = dossier["services"]
     trust = dossier["trustSignals"]
-    contact = dossier["contact"]
     icons_used = _collect_icons_for_pages(services, dossier_routes)
     # USPs propagate either from dossier.uniqueSellingPoints (when the
     # backend has been updated to pass it through) or from
@@ -2625,11 +2745,6 @@ def render_home(
             "      </section>\n"
             "\n"
         )
-    spel_cta = (
-        '          <a href="/spel" className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Gamepad2 className="size-4" />Spela direkt</a>\n'
-        if "/spel" in dossier_routes
-        else ""
-    )
     contact_href = _route_href(contact_path)
     # Branch-specifik listing-copy: när dossiern har en businessType som
     # finns i ``_BRANCH_LISTING_COPY`` använder vi den (t.ex. "Menyn" /
@@ -2651,56 +2766,6 @@ def render_home(
     if listing_route is not None:
         listing_href = _route_href(listing_route["path"])
         listing_link = f'          <a href={listing_href} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">{listing_copy["cta"]}<ArrowRight className="size-4" /></a>\n'
-    # Demo-baseline-fix 1C (B95): suppress the hero ortstag when the
-    # location is country-only (no real city, see _placeholder_location).
-    location_tag = ""
-    if not _location_is_country_only(location):
-        location_tag = (
-            '          <div className="flex items-center gap-2 text-sm uppercase tracking-widest text-[color:var(--muted)]">\n'
-            '            <MapPin className="size-4" />\n'
-            f"            <span>{_jsx_safe_string(location['city'])}</span>\n"
-            "          </div>\n"
-        )
-    # Demo-baseline-fix 1C (B96): hero CTA label is scaffold-aware
-    # (shop / booking / quote) so e-commerce projects do not get a
-    # service-business "Begär offert" verb in the hero.
-    hero_cta_label = _hero_cta_label(dossier)
-    # B101 (re-Verifierings-Scout 3 2026-05-18): when CTA is shop the
-    # primary hero button must link to the products listing, not the
-    # contact route. Booking and quote variants keep contact as target.
-    hero_cta_href = _route_href(
-        _hero_cta_target_path(dossier, listing_route, contact_path)
-    )
-
-    # Operator-uploaded hero image (if present) renders as a banner
-    # above the gradient section. The asset is placed in public/uploads/
-    # by copy_operator_uploads. We render a raw <img> (not next/image)
-    # because the webp files are pre-compressed by sharp and the
-    # starters ship without a Next.js Image loader config.
-    #
-    # Sprint 1.3 — LCP boost: hero-bilden är typiskt Largest Contentful
-    # Paint. Tre attribut tillsammans ger ~700ms LCP-vinst utan att
-    # introducera next/image-import:
-    #   * fetchPriority="high" — säger åt browsern att prioritera nedladdning
-    #     före andra subresources (CSS-bakgrunder, lazy-bilder)
-    #   * loading="eager" — explicit (default är eager, men explicit är
-    #     defensivt mot framtida change i browser-defaults)
-    #   * decoding="async" — paint sker utan att blockera main thread
-    #     på image-decode (annars kan en stor JPEG blocka 80-200ms)
-    brand_block = dossier.get("brand") if isinstance(dossier.get("brand"), dict) else {}
-    hero_asset = brand_block.get("heroImage") if isinstance(brand_block, dict) else None
-    hero_section_jsx = ""
-    if isinstance(hero_asset, dict) and hero_asset.get("filename"):
-        hero_filename = hero_asset["filename"]
-        hero_alt = hero_asset.get("alt") or company["tagline"]
-        hero_section_jsx = (
-            '      <section className="relative w-full overflow-hidden bg-[color:var(--background)]">\n'
-            '        <div className="mx-auto w-[var(--container-width)] pt-[var(--section-spacing)]">\n'
-            f'          <img src={_jsx_safe_string("/uploads/" + hero_filename)} alt={_js_string_literal(hero_alt)} fetchPriority="high" loading="eager" decoding="async" className="aspect-[16/9] w-full rounded-2xl object-cover shadow-sm" />\n'
-            "        </div>\n"
-            "      </section>\n"
-            "\n"
-        )
 
     # Visual proof block placed between services and trust: shows the
     # operator's uploaded gallery images so the home page does not lean
@@ -2729,33 +2794,16 @@ def render_home(
     has_faq_route = "/faq" in dossier_routes
     faq_section = _render_home_faq_section(dossier, has_faq_route=has_faq_route)
 
-    # Variant-aware hero layout. Resolves to one of three layouts
-    # (gradient/centered/split) based on directives.layoutHint or
-    # variant_id; falls back to gradient when neither is set, which
-    # matches the pre-#2 baseline so legacy callers (tests without a
-    # variant_id) keep their expected JSX shape.
-    # C1 — Unsplash-fallback för split-layouten. Pre-resolved här så
-    # ``_render_hero_block`` slipper röra dossiern. Returnerar ``None``
-    # när business-typ saknar en kuraterad photo-ID i mappningen, vilket
-    # behåller den befintliga accent-tinted-fallbacken.
-    unsplash_fallback_url = _unsplash_hero_url(dossier)
-    # Fas 1.6 — background_video är optional. Operatören laddar upp en
-    # mp4/webm i wizardens MediaStep; build_site.py renderar den som
-    # absolut-positionerat ``<video>`` bakom hero-texten med poster
-    # fallback mot hero-bilden. Saknas videon renderas hero som vanligt.
-    hero_video_asset = resolve_media_asset(dossier, "backgroundVideo")
-    hero_block_jsx = _render_hero_block(
-        _hero_style_for(dossier, variant_id),
-        company=company,
-        location_tag=location_tag,
-        hero_cta_label=hero_cta_label,
-        hero_cta_href=hero_cta_href,
-        contact_phone=contact["phone"],
-        spel_cta=spel_cta,
-        hero_asset=hero_asset,
-        usps=usp_list,
-        unsplash_fallback_url=unsplash_fallback_url,
-        background_video=hero_video_asset,
+    # Path B step 1 — hero (operator-uploaded banner + variant-aware
+    # hero block) is now produced by ``render_section_hero``. Output
+    # is byte-identical to the pre-extraction inline implementation,
+    # verified against LSB / commerce / restaurant snapshots.
+    hero_jsx = render_section_hero(
+        dossier,
+        dossier_routes=dossier_routes,
+        listing_route=listing_route,
+        contact_path=contact_path,
+        variant_id=variant_id,
     )
 
     return (
@@ -2763,8 +2811,7 @@ def render_home(
         "export default function Home() {\n"
         "  return (\n"
         '    <main className="flex flex-1 flex-col">\n'
-        f"{hero_section_jsx}"
-        f"{hero_block_jsx}"
+        f"{hero_jsx}"
         '      <section className="border-t border-[color:var(--border)]">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         '          <div className="flex flex-col gap-3">\n'

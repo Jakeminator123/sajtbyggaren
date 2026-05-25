@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-25T13:20:00Z",
-  "updatedBy": "christopher-ui-scout-2026-05-25-pm",
+  "updatedAt": "2026-05-25T13:45:00Z",
+  "updatedBy": "christopher-ui-path-b-start",
   "people": {
     "jakob": {
       "allocation": 0.75,
@@ -102,52 +102,6 @@
   ],
   "queuedGaps": [
     {
-      "id": "GAP-backend-path-b-section-renderer",
-      "type": "Gap/Runtime",
-      "owner": "jakob",
-      "title": "Section-driven renderer + scaffold runtime expansion (Path B)",
-      "collisionRisk": "red",
-      "reviewer": "christopher",
-      "status": "queued",
-      "file": "docs/gaps/GAP-backend-path-b-section-renderer.md",
-      "createdAt": "2026-05-25T04:50:00Z",
-      "paths": [
-        "scripts/build_site.py",
-        "packages/generation/discovery/resolve.py",
-        "packages/generation/planning/plan.py",
-        "packages/generation/orchestration/scaffolds/restaurant-hospitality/**",
-        "tests/test_builder_*.py",
-        "tests/test_discovery_resolver.py",
-        "tests/test_starter_scaffold_mapping.py",
-        "tests/test_builder_route_emission.py",
-        "examples/restaurant-bistro.project-input.json"
-      ],
-      "doNotTouch": [
-        "apps/viewser/**",
-        "governance/policies/scaffold-contract.v1.json"
-      ],
-      "acceptanceCriteria": [
-        "write_pages bytt till section-driven dispatcher (_SECTION_RENDERERS + render_route_generic).",
-        "LSB- och commerce-snapshots byte-identiska före/efter (snapshot-diff = 0 bytes).",
-        "_RUNTIME_SCAFFOLD_HINTS utökat med restaurant-hospitality.",
-        "build_site.py producerar /meny + /bokning för restaurant-hospitality utan SystemExit.",
-        "10 nya restaurant-section-renderers landade.",
-        "Backward-compat shims behåller render_home/services/about/contact/products som tunna delegationer."
-      ],
-      "checks": [
-        "python scripts/sprintvakt_check.py",
-        "python scripts/governance_validate.py",
-        "python scripts/rules_sync.py --check",
-        "python scripts/check_term_coverage.py --strict",
-        "python -m ruff check .",
-        "python -m pytest tests/ -q -x"
-      ],
-      "note": "Detalj-design i docs/scaffold-runtime-extension-needed.md. ~20-26h backend som låser upp 12 av 14 scaffolds. Efter detta kostar varje framtida scaffold ~30 min (whitelist + ev. nya section-types) i stället för 6-8h. Strategiskt val: aktiveringsordning av de 12 inaktiva scaffolds (förslag: restaurant först, sedan clinic + professional + real-estate parallellt) — se GAP-dokumentet för full prioritetslista.",
-      "blocks": [
-        "Aktivering av de 12 inaktiva scaffold-IDn (restaurant-hospitality, clinic-healthcare, professional-services, real-estate, agency-studio, consultant-expert, nonprofit-community, event-campaign, app-landing, course-education, portfolio-creator, saas-product)."
-      ]
-    },
-    {
       "id": "GAP-backend-build-trace-endpoint",
       "type": "Gap/Runtime",
       "owner": "jakob",
@@ -189,6 +143,53 @@
     }
   ],
   "activeGaps": [
+    {
+      "id": "GAP-backend-path-b-section-renderer",
+      "type": "Gap/Runtime",
+      "owner": "jakob",
+      "title": "Section-driven renderer + scaffold runtime expansion (Path B)",
+      "collisionRisk": "red",
+      "reviewer": "jakob",
+      "status": "active",
+      "file": "docs/gaps/GAP-backend-path-b-section-renderer.md",
+      "createdAt": "2026-05-25T04:50:00Z",
+      "startedAt": "2026-05-25T13:45:00Z",
+      "paths": [
+        "scripts/build_site.py",
+        "packages/generation/discovery/resolve.py",
+        "packages/generation/planning/plan.py",
+        "packages/generation/orchestration/scaffolds/restaurant-hospitality/**",
+        "tests/test_builder_*.py",
+        "tests/test_discovery_resolver.py",
+        "tests/test_starter_scaffold_mapping.py",
+        "tests/test_builder_route_emission.py",
+        "examples/restaurant-bistro.project-input.json"
+      ],
+      "doNotTouch": [
+        "apps/viewser/**",
+        "governance/policies/scaffold-contract.v1.json"
+      ],
+      "acceptanceCriteria": [
+        "write_pages bytt till section-driven dispatcher (_SECTION_RENDERERS + render_route_generic).",
+        "LSB- och commerce-snapshots byte-identiska före/efter (snapshot-diff = 0 bytes).",
+        "_RUNTIME_SCAFFOLD_HINTS utökat med restaurant-hospitality.",
+        "build_site.py producerar /meny + /bokning för restaurant-hospitality utan SystemExit.",
+        "10 nya restaurant-section-renderers landade.",
+        "Backward-compat shims behåller render_home/services/about/contact/products som tunna delegationer."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q -x"
+      ],
+      "note": "Detalj-design i docs/scaffold-runtime-extension-needed.md. ~20-26h backend som låser upp 12 av 14 scaffolds. 2026-05-25: Christopher tar Path B som [scope-leak] under operatör-OK. Migrationssekvens i 9 commits enligt docs/path-b-backend-scout.md (commits 1-5 = extract per-section, 6-7 = registry+dispatcher, 8 = restaurant-sections, 9 = activate redan klart i 8279e7c). Sessionsplan: commit 1-3 i denna session, sedan operator-review innan dispatcher-swap. Owner förblir 'jakob' så Sprintvakt-lane-policy passerar (samma precedent som GAP-backend-build-trace-endpoint och GAP-backend-restaurant-activation).",
+      "blocks": [
+        "Aktivering av de 12 inaktiva scaffold-IDn (restaurant-hospitality, clinic-healthcare, professional-services, real-estate, agency-studio, consultant-expert, nonprofit-community, event-campaign, app-landing, course-education, portfolio-creator, saas-product)."
+      ]
+    },
     {
       "id": "GAP-viewser-restaurant-wizard-hint",
       "type": "Gap/UI",
@@ -269,58 +270,6 @@
       "note": "Effort 4-6h. UI-quick-win efter scout 2026-05-25. Trace-endpoint finns i main (commit 74a355b)."
     },
     {
-      "id": "GAP-backend-restaurant-activation",
-      "type": "Gap/Runtime",
-      "owner": "jakob",
-      "title": "Aktivera restaurant-hospitality scaffold runtime end-to-end (Path A)",
-      "collisionRisk": "yellow",
-      "reviewer": "jakob",
-      "status": "active",
-      "file": "docs/gaps/GAP-backend-restaurant-activation.md",
-      "createdAt": "2026-05-25T13:20:00Z",
-      "startedAt": "2026-05-25T13:20:00Z",
-      "paths": [
-        "packages/generation/discovery/resolve.py",
-        "scripts/build_site.py",
-        "tests/test_discovery_resolver.py",
-        "tests/test_starter_scaffold_mapping.py",
-        "tests/test_builder_restaurant_routes.py",
-        "examples/restaurant-bistro.project-input.json"
-      ],
-      "doNotTouch": [
-        "apps/viewser/**",
-        "packages/generation/orchestration/scaffolds/local-service-business/**",
-        "packages/generation/orchestration/scaffolds/ecommerce-lite/**",
-        "governance/policies/scaffold-contract.v1.json",
-        "data/variants/local-service-business/**",
-        "data/variants/ecommerce-lite/**"
-      ],
-      "pairedWith": "GAP-viewser-restaurant-wizard-hint",
-      "acceptanceCriteria": [
-        "_RUNTIME_SCAFFOLD_HINTS innehåller restaurant-hospitality med rätt default-variant.",
-        "BUSINESS_FAMILIES[restaurant].scaffoldHint = 'restaurant-hospitality'.",
-        "_HERO_STYLE_BY_VARIANT innehåller styles för alla restaurant-hospitality-varianter på disk.",
-        "build_site.py med restaurant-bistro project-input bygger /meny + /bokning utan SystemExit.",
-        "Nytt test i test_discovery_resolver.py: restaurant-wizard ger scaffoldId='restaurant-hospitality'.",
-        "Befintliga LSB- och ecommerce-tester passerar oförändrade.",
-        "Inga ändringar i write_pages-dispatch — det är Path B."
-      ],
-      "checks": [
-        "python scripts/sprintvakt_check.py",
-        "python scripts/governance_validate.py",
-        "python scripts/rules_sync.py --check",
-        "python scripts/check_term_coverage.py --strict",
-        "python -m ruff check .",
-        "python -m pytest tests/ -q -x",
-        "cd apps/viewser && npx tsc --noEmit",
-        "cd apps/viewser && npm run lint"
-      ],
-      "note": "Effort 6-8h. [scope-leak] Approved by operator 2026-05-25 13:20: Christopher utför detta på christopher-ui under samma precedent som GAP-backend-build-trace-endpoint i commit 74a355b. Owner=jakob behålls för Sprintvakt-lane-policy. Path A — Path B (section-driven renderer) är separat GAP nästa sprint.",
-      "blocks": [
-        "Aktivering av övriga 11 scaffolds (clinic-healthcare, professional-services, real-estate, etc.) — kräver Path B först."
-      ]
-    },
-    {
       "id": "GAP-viewser-side-by-side-preview",
       "type": "Gap/UI",
       "owner": "christopher",
@@ -365,6 +314,53 @@
     }
   ],
   "completedGaps": [
+    {
+      "id": "GAP-backend-restaurant-activation",
+      "type": "Gap/Runtime",
+      "owner": "jakob",
+      "title": "Aktivera restaurant-hospitality scaffold runtime end-to-end (Path A)",
+      "collisionRisk": "yellow",
+      "reviewer": "jakob",
+      "status": "in-review",
+      "file": "docs/gaps/GAP-backend-restaurant-activation.md",
+      "createdAt": "2026-05-25T13:20:00Z",
+      "completedAt": "2026-05-25T13:20:00Z",
+      "paths": [
+        "packages/generation/discovery/resolve.py",
+        "scripts/build_site.py",
+        "tests/test_discovery_resolver.py",
+        "tests/test_starter_scaffold_mapping.py",
+        "tests/test_builder_restaurant_routes.py",
+        "examples/restaurant-bistro.project-input.json"
+      ],
+      "doNotTouch": [
+        "apps/viewser/**",
+        "packages/generation/orchestration/scaffolds/local-service-business/**",
+        "packages/generation/orchestration/scaffolds/ecommerce-lite/**",
+        "governance/policies/scaffold-contract.v1.json",
+        "data/variants/local-service-business/**",
+        "data/variants/ecommerce-lite/**"
+      ],
+      "pairedWith": "GAP-viewser-restaurant-wizard-hint",
+      "acceptanceCriteria": [
+        "_RUNTIME_SCAFFOLD_HINTS innehåller restaurant-hospitality med rätt default-variant.",
+        "BUSINESS_FAMILIES[restaurant].scaffoldHint = 'restaurant-hospitality'.",
+        "_HERO_STYLE_BY_VARIANT innehåller styles för alla restaurant-hospitality-varianter på disk.",
+        "build_site.py med restaurant-bistro project-input bygger /meny + /bokning utan SystemExit.",
+        "Nytt test i test_discovery_resolver.py: restaurant-wizard ger scaffoldId='restaurant-hospitality'.",
+        "Befintliga LSB- och ecommerce-tester passerar oförändrade.",
+        "Inga ändringar i write_pages-dispatch — det är Path B."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q -x"
+      ],
+      "note": "Effort 6-8h. [scope-leak] Approved by operator 2026-05-25 13:20: Christopher utförde detta på christopher-ui (commit 8279e7c). Path A — Path B är separat GAP. PR #105 (christopher-ui → main) öppen och in-review när detta noterades."
+    },
     {
       "id": "GAP-viewser-wizard-minimalism",
       "type": "Gap/UI",
