@@ -2571,10 +2571,15 @@ def generate(
     language = detect_language(prompt)
     try:
         model = resolve_brief_model()
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
         # Mirror dev_generate.py's tolerance: a misconfigured llm-models
         # policy must not block the prompt-driven loop entirely.
         model = "gpt-5.4"
+        print(
+            "briefModel resolution failed; using fallback model "
+            f"{model}: {type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
 
     try:
         brief_result = extract_site_brief(

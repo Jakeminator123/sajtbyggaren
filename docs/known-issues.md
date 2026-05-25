@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 22 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 109 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 21 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 110 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -126,11 +126,6 @@ run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
   flaky failures orelaterade till site-correctness. Källa: builder-
   renderer-bug-sweep 2026-05-15. Fix: CLI-flagga eller env-knapp.
   Fix: open. Test: open.
-- **`B87` Låg** - `scripts/prompt_to_project_input.py:1091-1096`
-  fallbackar tyst till `model = "gpt-5.4"` när `resolve_brief_model()`
-  misslyckas. Operatör märker inte att policy-konfigurationen är
-  trasig. Källa: brief-pipeline-bug-sweep 2026-05-15. Fix: logga
-  högt på stderr vid resolution failure. Fix: open. Test: open.
 
 ### Extern reviewer-triage 2026-05-15 (mot `d99f8ba` + `c273b1a`)
 
@@ -576,6 +571,13 @@ för follow-up eller ska städas.
 ### Scout-rapport PR #47 — ytterligare fynd (2026-05-19, sen kväll)
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B87` Låg** (stängd 2026-05-25, grind B87) -
+  `scripts/prompt_to_project_input.py` fallbackade tyst till
+  `model = "gpt-5.4"` när `resolve_brief_model()` misslyckades. Fix:
+  `8ab0e43` loggar en tydlig stderr-varning med exception-typ och
+  message innan fallback-modellen används. Test:
+  `tests/test_prompt_to_project_input.py::test_generate_warns_when_brief_model_resolution_fails`.
 
 - **`B85` Låg** (stängd 2026-05-25, grind B85) -
   `scripts/prompt_to_project_input.py` moduldocstring beskrev bara
