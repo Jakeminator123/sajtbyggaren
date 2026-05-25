@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../../../../governance/schemas/variant.schema.json",
+  "id": "warm-care",
+  "enabled": true,
+  "label": "Warm Care",
+  "description": "Warm cream, soft terracotta and moss-green palette for naprapaths, chiropractors, holistic-care practices, midwifery and physiotherapy clinics. Generous radii and a textured, hand-touched feel signal patient-led, human-scale care rather than hospital-grade clinical distance.",
+  "tokens": {
+    "color": {
+      "background": "#faf6f0",
+      "foreground": "#2c241d",
+      "muted": "#7a6a5a",
+      "border": "#e8dfd2",
+      "primary": "#6f7a4a",
+      "primaryForeground": "#faf6f0",
+      "accent": "#cf997b",
+      "accentForeground": "#2c241d"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.25
+    },
+    "radius": {
+      "sm": "0.625rem",
+      "md": "1rem",
+      "lg": "1.5rem"
+    },
+    "spacing": {
+      "section": "5rem",
+      "container": "min(70rem, 92vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "warm",
+      "human",
+      "holistic",
+      "caring",
+      "grounded",
+      "patient-led"
+    ]
+  }
+}

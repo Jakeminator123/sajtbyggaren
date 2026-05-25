@@ -1,0 +1,20 @@
+{
+  "$schema": "../../../../../governance/schemas/scaffold.schema.json",
+  "id": "clinic-healthcare",
+  "version": "1.0.0",
+  "label": "Clinic & Healthcare",
+  "description": "Trust-led site for dental clinics, physiotherapists, chiropractors, naprapaths, optometrists, psychology practices, specialist clinics and small healthcare businesses. Focus on credentialed personnel, calm visual hierarchy, treatment clarity, opening hours, and a frictionless path to booking the first appointment.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "convey credentials and clinical trust",
+    "explain treatments without medical jargon",
+    "drive appointment booking",
+    "make opening hours and location unmissable"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

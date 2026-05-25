@@ -57,7 +57,8 @@ export type WizardCategoryId =
 export type ScaffoldHint =
   | "local-service-business"
   | "ecommerce-lite"
-  | "restaurant-hospitality";
+  | "restaurant-hospitality"
+  | "clinic-healthcare";
 
 export type WizardCategory = {
   id: WizardCategoryId;
@@ -80,7 +81,7 @@ export const WIZARD_CATEGORIES: WizardCategory[] = [
   { id: "blog", label: "Blogg / Magasin", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "consulting", label: "Konsult / Byrå", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "tech", label: "Tech / Startup", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
-  { id: "healthcare", label: "Vård / Klinik", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
+  { id: "healthcare", label: "Vård / Klinik", scaffoldHint: "clinic-healthcare", defaultVariantId: "clinic-calm" },
   { id: "realestate", label: "Fastighet / Mäklare", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "salon", label: "Salong / Skönhet", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "fitness", label: "Gym / Tränare", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
@@ -410,6 +411,36 @@ export const VIBE_OPTIONS: Vibe[] = [
     accentSwatch: "#b04428",
     background: "#f7f1e3",
     defaultTypographyFeel: "classic-serif",
+  },
+  {
+    id: "clinic-calm",
+    scaffoldHint: "clinic-healthcare",
+    label: "Clinic Calm",
+    description: "Ljust, lugnt och vårdande — som en privatklinik.",
+    primarySwatch: "#1f6f8b",
+    accentSwatch: "#a8d8c5",
+    background: "#fbfdfe",
+    defaultTypographyFeel: "modern-sans",
+  },
+  {
+    id: "warm-care",
+    scaffoldHint: "clinic-healthcare",
+    label: "Warm Care",
+    description: "Varmt, mänskligt och hands-on — som en naprapat eller barnmorska.",
+    primarySwatch: "#6f7a4a",
+    accentSwatch: "#cf997b",
+    background: "#faf6f0",
+    defaultTypographyFeel: "modern-sans",
+  },
+  {
+    id: "modern-precision",
+    scaffoldHint: "clinic-healthcare",
+    label: "Modern Precision",
+    description: "Skarpt, tekniskt och precist — som en specialistklinik.",
+    primarySwatch: "#1c2e4a",
+    accentSwatch: "#c7cfdb",
+    background: "#ffffff",
+    defaultTypographyFeel: "modern-sans",
   },
   {
     id: "vintage-curio",

@@ -3827,6 +3827,10 @@ _HERO_STYLE_BY_VARIANT: dict[str, str] = {
     "nordic-fine-dining": "split",
     "casual-cafe": "gradient",
     "midnight-bar": "split",
+    # clinic-healthcare (Path B native — _DISPATCHED_SCAFFOLDS)
+    "clinic-calm": "split",
+    "warm-care": "centered",
+    "modern-precision": "split",
 }
 
 # Tone-driven fallback för hero-stil när layoutHint saknas OCH varianten
@@ -5370,6 +5374,333 @@ def render_booking(dossier: dict, *, contact_path: str = "/hitta-hit") -> str:
     )
 
 
+# ---------------------------------------------------------------------------
+# Path B step 12 — clinic-healthcare runtime activation
+# (and generic Path B native dispatch infrastructure for future scaffolds)
+#
+# Restaurant-hospitality (above) keeps render_menu / render_booking as
+# specialised entry points so write_pages can call them directly while
+# the home / about / contact routes flow through the LSB shims. A new
+# scaffold whose routes do NOT line up with the existing if/elif arms
+# (for example clinic-healthcare's ``treatments`` route) needs another
+# path: the scaffold registers itself in ``_DISPATCHED_SCAFFOLDS`` and
+# write_pages routes every one of its routes through the section
+# dispatcher. Future scaffolds (professional-services, agency-studio,
+# portfolio-creator, ...) can join the table without touching
+# write_pages.
+# ---------------------------------------------------------------------------
+
+
+def render_section_about_story_block(dossier: dict) -> str:
+    """Render about-story as a self-contained <section> block.
+
+    The base ``render_section_about_story`` returns a fragment that
+    is meant to be embedded inside ``render_about``'s page-level
+    <main> wrapper (header + story-card with no surrounding
+    section). Path B native scaffolds compose at the section level
+    via the dispatcher, so this wrapper exposes the same content
+    as a standalone block they can list in their sections.json
+    under the id ``about-story-block``.
+    """
+    fragment = render_section_about_story(dossier)
+    return (
+        '      <section className="bg-[color:var(--background)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        + fragment
+        + "        </div>\n"
+        "      </section>\n"
+    )
+
+
+def render_section_team_block(dossier: dict) -> str:
+    """Render the team grid as a self-contained <section> block.
+
+    Wraps ``render_section_team`` in a standalone section so non-LSB
+    scaffolds can list ``team-block`` in their sections.json. Returns
+    "" when the underlying team is empty so the dispatcher never
+    emits a hollow heading + empty grid.
+    """
+    fragment = render_section_team(dossier)
+    if not fragment.strip():
+        return ""
+    return (
+        '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/15">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        + fragment
+        + "        </div>\n"
+        "      </section>\n"
+    )
+
+
+def render_section_treatment_summary(
+    dossier: dict,
+    *,
+    contact_path: str = "/kontakta-oss",
+) -> str:
+    """Render a compact home-page treatments preview for clinic-healthcare.
+
+    Picks the first three services from the dossier (clinics use
+    the services array as their treatment catalogue), renders each
+    as a plain card with the treatment name and a short
+    plain-language summary, and ends with a "Boka tid"-CTA pointing
+    at the contact route. Visually calmer than the LSB
+    services-summary block (no hover-lift, softer borders) so it
+    sits well next to the credentials section a clinic home depends
+    on for trust.
+
+    Returns "" when the dossier carries no services so a generic
+    landing page does not emit an empty grid.
+    """
+    services = dossier.get("services") or []
+    if not services:
+        return ""
+    cards = "\n".join(
+        f'            <li key={_jsx_safe_string(svc["id"])} className="rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6">\n'
+        f'              <h3 className="text-lg font-semibold">{_jsx_safe_string(svc["label"])}</h3>\n'
+        f'              <p className="mt-2 text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
+        "            </li>"
+        for svc in services[:3]
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
+        '          <div className="flex flex-col gap-3">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Vård vi erbjuder</p>\n'
+        '            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight md:text-4xl">Våra behandlingar</h2>\n'
+        "          </div>\n"
+        '          <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
+        f"{cards}\n"
+        "          </ul>\n"
+        f'          <a href={_jsx_safe_string(contact_path)} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Boka tid<ArrowRight className="size-4" /></a>\n'
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+def render_section_treatment_list(
+    dossier: dict,
+    *,
+    contact_path: str = "/kontakta-oss",
+) -> str:
+    """Render the full treatment list for the clinic /behandlingar route.
+
+    Iterates the entire services array (each entry represents a
+    treatment) into a vertical detailed list — name, plain-language
+    description and a "Boka tid"-CTA at the bottom. Calmer cadence
+    than the LSB service-list (no leading icon glyphs, fewer chrome
+    cues) so the page reads as a clinical menu rather than a
+    marketing pitch.
+
+    Returns "" when no services are declared so the dispatcher
+    does not emit an empty list scaffold.
+    """
+    services = dossier.get("services") or []
+    if not services:
+        return ""
+    items = "\n".join(
+        f'            <li key={_jsx_safe_string(svc["id"])} className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--background)] p-8">\n'
+        f'              <h2 className="text-xl font-semibold tracking-tight md:text-2xl">{_jsx_safe_string(svc["label"])}</h2>\n'
+        f'              <p className="mt-3 text-base text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
+        "            </li>"
+        for svc in services
+    )
+    return (
+        '      <section className="border-b border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
+        '          <header className="flex flex-col gap-3">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Behandlingar</p>\n'
+        '            <h1 className="max-w-2xl text-4xl font-semibold tracking-tight md:text-5xl">Det här hjälper vi dig med</h1>\n'
+        '            <p className="max-w-2xl text-base text-[color:var(--muted)] leading-relaxed">Beskrivningarna är skrivna i klarspråk. Är du osäker på vilken behandling som passar — ring eller skicka ett mejl så hjälper vi dig.</p>\n'
+        "          </header>\n"
+        '          <ul className="flex flex-col gap-4">\n'
+        f"{items}\n"
+        "          </ul>\n"
+        f'          <a href={_jsx_safe_string(contact_path)} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Boka tid<ArrowRight className="size-4" /></a>\n'
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+def render_section_credentials(dossier: dict) -> str:
+    """Render a credentials / certifications row for clinic-healthcare.
+
+    Reads ``dossier.trustSignals`` (the same array LSB uses for
+    trust bullets) and renders it as a compact inline row of badge-
+    cards under a "Legitimerade och certifierade"-eyebrow. This is
+    what surfaces a clinic's regulated status (Sveriges Tand-
+    läkarförbund, Vårdgivarregistret, etc.) on the home and
+    treatments pages where a patient is deciding whether the
+    practitioner is real.
+
+    Returns "" when the dossier has no trust signals so the
+    dispatcher does not emit a hollow section.
+    """
+    trust_raw = dossier.get("trustSignals") or []
+    trust: list[str] = []
+    for item in trust_raw:
+        if isinstance(item, str) and item.strip():
+            trust.append(item.strip())
+        elif isinstance(item, dict):
+            label = item.get("label")
+            if isinstance(label, str) and label.strip():
+                trust.append(label.strip())
+    if not trust:
+        return ""
+    badges = "\n".join(
+        f'            <li key={_jsx_safe_string(label)} className="flex items-center gap-3 rounded-full border border-[color:var(--border)] bg-[color:var(--background)] px-5 py-2 text-sm font-medium">\n'
+        '              <Check className="size-4 text-[color:var(--primary)]" />\n'
+        f'              <span>{_jsx_safe_string(label)}</span>\n'
+        "            </li>"
+        for label in trust
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[calc(var(--section-spacing)*0.7)]">\n'
+        '          <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Legitimerade och certifierade</p>\n'
+        '          <ul className="flex flex-wrap gap-3">\n'
+        f"{badges}\n"
+        "          </ul>\n"
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+_SECTION_RENDERERS.update(
+    {
+        "about-story-block": render_section_about_story_block,
+        "team-block": render_section_team_block,
+        "treatment-summary": render_section_treatment_summary,
+        "treatment-list": render_section_treatment_list,
+        "credentials": render_section_credentials,
+    }
+)
+
+
+_CLINIC_SCAFFOLD_DIR = (
+    REPO_ROOT
+    / "packages"
+    / "generation"
+    / "orchestration"
+    / "scaffolds"
+    / "clinic-healthcare"
+)
+
+
+_DISPATCHED_SCAFFOLDS: dict[str, Path] = {
+    "clinic-healthcare": _CLINIC_SCAFFOLD_DIR,
+}
+
+
+_DISPATCHED_PAGE_FUNCTION_NAMES: dict[str, str] = {
+    "home": "HomePage",
+    "about": "AboutPage",
+    "contact": "ContactPage",
+    "treatments": "TreatmentsPage",
+    "team": "TeamPage",
+    "faq": "FaqPage",
+    "pricing": "PricingPage",
+}
+
+
+def _dispatched_page_function_name(route_id: str) -> str:
+    """Return the React component name for a Path B native route.
+
+    Uses ``_DISPATCHED_PAGE_FUNCTION_NAMES`` when an explicit name
+    is registered, otherwise derives a CamelCase-then-Page name
+    from the route id. A scaffold can introduce a new route id
+    without first updating the table; the derived name keeps the
+    builder green while a more semantic mapping is added.
+    """
+    explicit = _DISPATCHED_PAGE_FUNCTION_NAMES.get(route_id)
+    if explicit is not None:
+        return explicit
+    parts = [piece for piece in route_id.split("-") if piece]
+    return "".join(piece.capitalize() for piece in parts) + "Page"
+
+
+_DISPATCHED_ICON_PATTERN = re.compile(r"<([A-Z][a-zA-Z0-9]*)\s")
+
+
+def _collect_dispatched_icons(body: str) -> list[str]:
+    """Extract lucide-react icon names from a dispatched route body.
+
+    Path B native page bodies are concatenated section fragments;
+    each fragment may reference a different subset of lucide icons
+    (Check on credentials, ArrowRight on the treatments CTA,
+    Sparkles + Quote on the hero, ...). Rather than pre-declaring
+    every icon a section might emit, we scan the assembled body
+    for ``<PascalCase ...`` patterns and collect the names — our
+    JSX uses PascalCase exclusively for lucide icons in section
+    bodies, never for custom React components, so the regex is a
+    safe proxy.
+
+    Returns a sorted unique list. Always includes ``ArrowRight``
+    so the page-shell's trailing contact CTA stays compilable
+    even if a route happens not to emit any icon-bearing section.
+    """
+    matches = set(_DISPATCHED_ICON_PATTERN.findall(body))
+    matches.add("ArrowRight")
+    return sorted(matches)
+
+
+def _render_dispatched_route(
+    *,
+    scaffold_id: str,
+    route_id: str,
+    dossier: dict,
+    dossier_routes: list[str] | None = None,
+    listing_route: dict | None = None,
+    contact_path: str,
+    variant_id: str | None = None,
+) -> str:
+    """Compose a route end-to-end via the section dispatcher.
+
+    Path B native scaffolds (those listed in
+    ``_DISPATCHED_SCAFFOLDS``) use this helper for every route in
+    their routes.json instead of bespoke ``render_home`` /
+    ``render_services`` shims. The helper:
+
+    * loads the scaffold's sections.json,
+    * dispatches each section id through ``render_route_generic``,
+    * collects the lucide icons referenced in the resulting JSX,
+    * wraps the body in the standard page shell.
+
+    Future scaffolds register themselves in
+    ``_DISPATCHED_SCAFFOLDS`` and immediately get a complete
+    builder route — no new ``elif`` branch in ``write_pages`` is
+    required as long as every section id used in the scaffold's
+    sections.json is registered in ``_SECTION_RENDERERS``.
+    """
+    scaffold_dir = _DISPATCHED_SCAFFOLDS[scaffold_id]
+    sections = _load_scaffold_sections(scaffold_dir)
+    page_function_name = _dispatched_page_function_name(route_id)
+    body = render_route_generic(
+        dossier,
+        route_id=route_id,
+        scaffold_sections=sections,
+        contact_path=contact_path,
+        dossier_routes=dossier_routes,
+        listing_route=listing_route,
+        variant_id=variant_id,
+    )
+    icons = _collect_dispatched_icons(body)
+    icon_import = "import { " + ", ".join(icons) + ' } from "lucide-react";\n'
+    return (
+        icon_import
+        + "\n"
+        + f"export default function {page_function_name}() {{\n"
+        + "  return (\n"
+        + '    <main className="flex flex-1 flex-col">\n'
+        + body
+        + "    </main>\n"
+        + "  );\n"
+        + "}\n"
+    )
+
+
 _WIZARD_ROUTE_RENDERERS: dict[str, Any] = {
     "faq": render_faq,
     "gallery": render_gallery,
@@ -5761,11 +6092,22 @@ def write_pages(
     default_routes = scaffold_routes["defaultRoutes"]
     listing_route = _pick_listing_route(default_routes)
     contact_route = _pick_contact_route(default_routes)
+    scaffold_id = (dossier.get("scaffoldId") or "").strip()
     written: list[str] = []
     for route in default_routes:
         route_id = route["id"]
         path = route["path"]
-        if route_id == "home":
+        if scaffold_id in _DISPATCHED_SCAFFOLDS:
+            content = _render_dispatched_route(
+                scaffold_id=scaffold_id,
+                route_id=route_id,
+                dossier=dossier,
+                dossier_routes=dossier_routes,
+                listing_route=listing_route,
+                contact_path=contact_route["path"],
+                variant_id=variant_id,
+            )
+        elif route_id == "home":
             content = render_home(
                 dossier,
                 dossier_routes,

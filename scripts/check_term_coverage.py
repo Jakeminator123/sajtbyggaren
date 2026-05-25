@@ -427,6 +427,14 @@ COMMON_WORDS = {
     # komponentnamn renderade av build_site.py:render_menu och
     # render_booking, inte canonical domain terms.
     "MenuPage", "BookingPage",
+    # Path B native dispatch (Path B step 12) härleder page-komponentnamn
+    # från route-id via ``_dispatched_page_function_name``. CamelCase
+    # är en docstring-referens till härledningsstrategin (route-id =>
+    # CamelCase + Page); HomePage/TreatmentsPage är de konkreta namnen
+    # för clinic-healthcare's home och treatments routes (TeamPage,
+    # FaqPage och PricingPage är redan listade ovan via PR #93).
+    "CamelCase",
+    "HomePage", "TreatmentsPage",
     "FieldLabel", "FieldStack", "HelperText", "SectionHeader",
     "TagListInput", "TagListInputProps", "TextField", "TextareaField",
     "Chip", "ChipRow", "ChipProps", "StepDots",

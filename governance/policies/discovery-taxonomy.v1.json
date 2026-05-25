@@ -202,10 +202,11 @@
       "labelSv": "Vård / Klinik",
       "labelEn": "Healthcare / Clinic",
       "contentBranch": "salon",
-      "supportStatus": "planned",
+      "supportStatus": "active",
       "targetScaffoldId": "clinic-healthcare",
+      "activeScaffoldId": "clinic-healthcare",
       "fallbackScaffoldId": "local-service-business",
-      "defaultVariantId": "nordic-trust",
+      "defaultVariantId": "clinic-calm",
       "expectedStarterId": "marketing-base",
       "requestedCapabilities": ["contact-form", "faq-section"],
       "candidateDossiers": [],
@@ -217,7 +218,8 @@
         "FAQ",
         "Kontaktformulär"
       ],
-      "rationale": "Klinik mappas mot clinic-healthcare. Tills scaffolden får runtime används local-service-business."
+      "rationale": "Klinik mappas mot clinic-healthcare. Aktiv runtime via Path B step 12 (section-driven dispatcher i scripts/build_site.py + _DISPATCHED_SCAFFOLDS). fallbackScaffoldId behålls som säkerhetsnät om scaffold-mappingen tillfälligt skulle haverera.",
+      "operatorNotes": "Promoterad till active 2026-05-25 via aktivering av clinic-healthcare scaffold. Path B native dispatch unlock:ar fullt strukturellt distinkta routes (/behandlingar) utan per-route render-funktioner i write_pages."
     },
     {
       "id": "realestate",

@@ -682,6 +682,16 @@ _RUNTIME_SCAFFOLD_HINTS: dict[str, tuple[str, str, str]] = {
         "warm-bistro",
         "marketing-base",
     ),
+    # clinic-healthcare lades till 2026-05-25 via Path B step 12 (native
+    # dispatcher i write_pages). Scaffolden använder ``_DISPATCHED_SCAFFOLDS``
+    # i scripts/build_site.py så alla 4 routes (home / treatments /
+    # about / contact) renderas via section-driven dispatcher utan
+    # per-route ``elif``-armar.
+    "clinic-healthcare": (
+        "clinic-healthcare",
+        "clinic-calm",
+        "marketing-base",
+    ),
 }
 
 
