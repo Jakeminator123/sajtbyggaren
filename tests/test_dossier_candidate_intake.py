@@ -46,6 +46,19 @@ def test_intake_directory_with_manifest_and_instructions(tmp_path: Path) -> None
     assert report["reportHash"].startswith("sha256:")
 
 
+def test_real_soft_dossier_with_no_api_language_stays_soft() -> None:
+    from scripts.dossier_candidate_intake import REPO_ROOT
+
+    source = REPO_ROOT / "packages/generation/orchestration/dossiers/soft/faq-accordion"
+
+    report = analyze_dossier_source(source, allowed_roots=(REPO_ROOT,))
+
+    assert report["candidateSignals"]["hasManifest"] is True
+    assert report["candidateSignals"]["hasInstructions"] is True
+    assert report["recommendedClass"] == "soft"
+    assert "hard-signal" not in report["riskFlags"]
+
+
 def test_intake_directory_with_tsx_and_asset_is_soft_candidate(tmp_path: Path) -> None:
     source = tmp_path / "before-after-slider"
     (source / "components").mkdir(parents=True)

@@ -70,14 +70,18 @@ SECRET_NAME_PATTERNS = (
     "*token*",
     "*credential*",
 )
-HARD_SIGNAL_RE = re.compile(
-    r"\b(api|auth|backend|database|db|env|oauth|payment|secret|server|stripe|"
-    r"supabase|token|webhook|openai|process\.env|api_key)\b",
+HARD_PATH_SIGNAL_RE = re.compile(
+    r"(^|/)(api|auth|backend|server|webhook)(/|[-_.])|"
+    r"\b(env-contract|integration-contract|stripe|supabase|clerk|shopify|openai)\b",
+    re.IGNORECASE,
+)
+HARD_TEXT_SIGNAL_RE = re.compile(
+    r"\b(process\.env|api[_ -]?key|secret[_ -]?key|access[_ -]?token|bearer|"
+    r"stripe|supabase|clerk|shopify|oauth|webhook|database)\b",
     re.IGNORECASE,
 )
 CUSTOMER_SIGNAL_RE = re.compile(
-    r"\b(company|customer|kund|logo|logga|team|vårt team|our team|lineage|"
-    r"brand manual|varumärke)\b",
+    r"\b(kundspecifik|logo|logga|vårt team|our team|lineage|brand manual|varumärke)\b",
     re.IGNORECASE,
 )
 SLUG_CLEAN = re.compile(r"[^a-z0-9-]+")
@@ -352,7 +356,7 @@ def _update_signals_from_content(
         signals["hasComponents"] = True
     if path.suffix.lower() in ASSET_EXTENSIONS:
         signals["hasAssets"] = True
-    if HARD_SIGNAL_RE.search(lowered_path) or HARD_SIGNAL_RE.search(text):
+    if HARD_PATH_SIGNAL_RE.search(lowered_path) or HARD_TEXT_SIGNAL_RE.search(text):
         signals["hasHardSignals"] = True
         _add_unique(report["riskFlags"], "hard-signal")
     if CUSTOMER_SIGNAL_RE.search(lowered_path) or CUSTOMER_SIGNAL_RE.search(text):
