@@ -2964,6 +2964,33 @@ def render_section_services_summary(
     )
 
 
+def _collect_home_icons(dossier: dict, dossier_routes: list[str]) -> list[str]:
+    """Compose the icon-import set for the LSB home page.
+
+    Mirrors the pre-shim render_home logic: starts with
+    ``_collect_icons_for_pages``, adds ``Check`` when any USP chips
+    will render, and adds ``Quote`` when either the story-section or
+    a testimonials-cards section will render. Lifted into its own
+    helper so the render_home shim can reuse it.
+    """
+    services = dossier["services"]
+    icons_used = _collect_icons_for_pages(services, dossier_routes)
+    if _extract_usps(dossier) and "Check" not in icons_used:
+        icons_used = sorted({*icons_used, "Check"})
+    story_text = (dossier.get("company") or {}).get("story") or ""
+    trust_count = sum(
+        1
+        for item in (dossier.get("trustSignals") or [])
+        if isinstance(item, str) and item.strip()
+    )
+    needs_quote_icon = (
+        bool(str(story_text).strip()) or trust_count >= _HOME_TESTIMONIAL_MIN_ITEMS
+    )
+    if needs_quote_icon and "Quote" not in icons_used:
+        icons_used = sorted({*icons_used, "Quote"})
+    return icons_used
+
+
 def render_home(
     dossier: dict,
     dossier_routes: list[str],
@@ -2972,7 +2999,23 @@ def render_home(
     contact_path: str = "/kontakt",
     variant_id: str | None = None,
 ) -> str:
-    """Home page renderer.
+    """Home page renderer — Path B step 11 dispatcher shim.
+
+    The actual section composition lives in ``render_section_*``
+    helpers and is dispatched through ``render_route_generic`` from
+    the section list declared in
+    ``local-service-business/sections.json``. The shim still owns
+    two cross-section concerns that the dispatcher cannot infer
+    from the scaffold contract alone:
+
+    1. Icon-import line — composed deterministically from the
+       services list, USP chips and story/testimonials presence
+       (see ``_collect_home_icons``).
+    2. Testimonials suppress trust-proof — when the dossier carries
+       enough ``trustSignals`` for the testimonials cards section
+       to render, the classic trust-proof bullet list is removed
+       from the effective section list so the same proof never
+       renders twice.
 
     ``listing_route`` is the scaffold's primary listing surface
     (``{"id": "services", "path": "/tjanster"}`` for
@@ -2988,86 +3031,42 @@ def render_home(
     Keeping the section but dropping the CTA preserves those tests
     without creating a ghost route.
     """
-    services = dossier["services"]
-    icons_used = _collect_icons_for_pages(services, dossier_routes)
-    # USPs propagate either from dossier.uniqueSellingPoints (when the
-    # backend has been updated to pass it through) or from
-    # dossier.directives.uniqueSellingPoints (when the v2 directives
-    # block lives on dossier). Empty list = no chips rendered.
-    usp_list = _extract_usps(dossier)
-    if usp_list and "Check" not in icons_used:
-        icons_used = sorted({*icons_used, "Check"})
-    # Story + testimonials home-sections both use the ``Quote`` glyph.
-    # We whitelist it whenever either section is going to render, so
-    # the icon-import line stays in sync with the JSX below. The
-    # corresponding short-circuit helpers (_render_home_story_section,
-    # _render_home_testimonials_section) themselves return "" when
-    # their inputs are empty, so this whitelist is harmless if the
-    # dossier ends up with no story and no testimonials.
-    story_text = (dossier.get("company") or {}).get("story") or ""
-    trust_count = sum(
-        1
-        for item in (dossier.get("trustSignals") or [])
-        if isinstance(item, str) and item.strip()
-    )
-    needs_quote_icon = bool(str(story_text).strip()) or trust_count >= _HOME_TESTIMONIAL_MIN_ITEMS
-    if needs_quote_icon and "Quote" not in icons_used:
-        icons_used = sorted({*icons_used, "Quote"})
+    icons_used = _collect_home_icons(dossier, dossier_routes)
     icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
-    # Path B step 2 — services-summary section (service-grid + branch-
-    # aware listing copy + optional listing-link) is now produced by
-    # ``render_section_services_summary``. Output is byte-identical
-    # to the inline implementation it replaces.
-    services_summary_section = render_section_services_summary(
+
+    # Cross-section coordination: testimonials cards (when they
+    # render at all) suppress the classic trust-proof bullet list
+    # so the same proof is not shown twice. We pre-compute the
+    # testimonials body so the home-page section order can drop
+    # trust-proof before render_route_generic walks the list.
+    testimonials_will_render = bool(_render_home_testimonials_section(dossier))
+
+    # The home-page section order is owned by the renderer (not
+    # the scaffold contract) because LSB interleaves required and
+    # optional sections — story / gallery / testimonials sit
+    # between services-summary and trust-proof, and faq sits
+    # between trust-proof and the closing contact-cta. sections.
+    # json declares which sections exist; the shim arranges them.
+    section_order: list[str] = [
+        "hero",
+        "service-summary",
+        "story",
+        "gallery",
+        "testimonials",
+    ]
+    if not testimonials_will_render:
+        section_order.append("trust-proof")
+    section_order.append("faq")
+    section_order.append("contact-cta")
+
+    effective_sections = {
+        "home": {"requiredSections": section_order, "optionalSections": []}
+    }
+
+    body = render_route_generic(
         dossier,
-        listing_route=listing_route,
-    )
-    # Path B step 3 — trust-proof "Varför oss" bullet section is now
-    # produced by ``render_section_trust_proof``. The home-page-only
-    # suppression (replace with "" when the testimonials-section is
-    # rendering, see below) stays here until the section-dispatcher
-    # lands in commit 6.
-    trust_section = render_section_trust_proof(dossier)
-    # Path B step 4 — closing contact-CTA banner is produced by
-    # ``render_section_contact_cta``. Always rendered (no suppression).
-    contact_cta_section = render_section_contact_cta(
-        dossier,
-        contact_path=contact_path,
-    )
-
-    # Visual proof block placed between services and trust: shows the
-    # operator's uploaded gallery images so the home page does not lean
-    # only on textual trust signals. Returns "" when no gallery items
-    # exist so the section never leaks placeholder copy.
-    gallery_section = _render_home_gallery_section(dossier)
-
-    # A1 — Story-sektion: enkel quote-card med ``company.story``.
-    # Returnerar "" när story saknas, vilket är det normala för dossiers
-    # där mockBrief inte fyllt i något.
-    story_section = _render_home_story_section(dossier)
-
-    # A2 — Testimonials-sektion: render trustSignals som riktiga kort
-    # när det finns ≥ ``_HOME_TESTIMONIAL_MIN_ITEMS`` items. Annars ""
-    # och vi behåller den klassiska ``trust_section`` (bullet-listan
-    # ovan) som fallback.
-    testimonials_section = _render_home_testimonials_section(dossier)
-    # När testimonials har renderats, dropp:a den klassiska
-    # ``trust_section`` för att inte visa samma info två gånger.
-    if testimonials_section:
-        trust_section = ""
-
-    # A3 — FAQ-sektion: deterministisk render från ``_faq_pairs``.
-    # När /faq-routen är aktiverad i ``dossier_routes`` renderar vi en
-    # "Se alla frågor"-CTA, annars bara griden.
-    has_faq_route = "/faq" in dossier_routes
-    faq_section = _render_home_faq_section(dossier, has_faq_route=has_faq_route)
-
-    # Path B step 1 — hero (operator-uploaded banner + variant-aware
-    # hero block) is now produced by ``render_section_hero``. Output
-    # is byte-identical to the pre-extraction inline implementation,
-    # verified against LSB / commerce / restaurant snapshots.
-    hero_jsx = render_section_hero(
-        dossier,
+        route_id="home",
+        scaffold_sections=effective_sections,
         dossier_routes=dossier_routes,
         listing_route=listing_route,
         contact_path=contact_path,
@@ -3079,15 +3078,8 @@ def render_home(
         "export default function Home() {\n"
         "  return (\n"
         '    <main className="flex flex-1 flex-col">\n'
-        f"{hero_jsx}"
-        f"{services_summary_section}"
-        f"{story_section}"
-        f"{gallery_section}"
-        f"{testimonials_section}"
-        f"{trust_section}"
-        f"{faq_section}"
-        f"{contact_cta_section}"
-        "    </main>\n"
+        + body
+        + "    </main>\n"
         "  );\n"
         "}\n"
     )
@@ -5211,13 +5203,62 @@ def render_section_faq(
     return _render_home_faq_section(dossier, has_faq_route=has_faq_route)
 
 
+def render_section_service_area(dossier: dict) -> str:
+    """LSB optional service-area section — MVP stub.
+
+    LSB's sections.json lists ``service-area`` as an optional home
+    section so a future renderer can surface a "vi täcker dessa
+    områden"-block without a structural change. The MVP stub returns
+    "" so the page stays slim until that renderer lands; the
+    location-aware copy already lives on /om-oss via render_about's
+    inline location-section.
+    """
+    return ""
+
+
+def render_section_reviews(dossier: dict) -> str:
+    """LSB optional reviews section — MVP stub.
+
+    Reserved slot for an external-review widget (Google reviews,
+    Reco, etc.) once the operator-side integration lands. Returns
+    "" so the dispatcher can include the section without forcing
+    every site to render an empty placeholder.
+    """
+    return ""
+
+
+def render_section_certifications(dossier: dict) -> str:
+    """LSB optional certifications section — MVP stub.
+
+    Reserved slot for a row of certification logos / badges once
+    the project-input schema models them. Today the dossier carries
+    free-form trust signals only, which the trust-proof section
+    already surfaces. Returns "" until structured certifications
+    are wired.
+    """
+    return ""
+
+
 _SECTION_RENDERERS.update(
     {
         "story": render_section_story,
         "gallery": render_section_gallery,
         "testimonials": render_section_testimonials,
         "faq": render_section_faq,
+        "service-area": render_section_service_area,
+        "reviews": render_section_reviews,
+        "certifications": render_section_certifications,
     }
+)
+
+
+_LSB_SCAFFOLD_DIR = (
+    REPO_ROOT
+    / "packages"
+    / "generation"
+    / "orchestration"
+    / "scaffolds"
+    / "local-service-business"
 )
 
 
