@@ -60,14 +60,24 @@ Tre lokationsalternativ stod på bordet:
    signaturen utökas med en `operator_treatments: dict[str, str] | None`-
    parameter som tråds genom `_call_section_renderer` precis som
    `variant_id` redan är.
-5. `briefModel`-prompten lär sig nya fältet via en `SECTION_TREATMENTS_HINT`-
-   block som listar tillgängliga treatments per scaffold/variant. Mock-
-   fallback returnerar tom dict så non-key-pathen aldrig kraschar och
-   fortsatt matchar pre-Phase-3-snapshots.
-6. `planningModel`-prompten får använda `directives.sectionTreatments` som
-   hint vid section-ordering/visibility men får inte mutera fältet (Phase 3
-   räknar med att operatören är auktoritativ; LLM-pick är en separat tier
-   som beslutas i Phase 4).
+5. `briefModel`-prompten rörs **inte** av Phase 3. Brief producerar ett
+   `SiteBrief` (pre-Project Input) som inte har något `directives`-fält;
+   section-treatments är ett operator-pin som lever på
+   `Project Input.directives` och mappas dit av
+   `packages/generation/discovery/resolve.py::_apply_directives_fields`.
+   Att tvinga brief att "veta om" treatments skulle vara ett no-op och
+   öka risken för LLM-hallucinerade treatment-strängar i
+   `notes_for_planner`. Phase 4 (LLM-pick) får motivera en bredare
+   prompt-utbyggnad.
+6. `planningModel`-prompten får ett nytt `SECTION_TREATMENTS_CATALOGUE`-
+   block i `_build_planning_prompt` som listar tillgängliga treatments
+   per section. `_PLANNING_SYSTEM_INSTRUCTIONS` utökas med en regel som
+   säger att `directives.sectionTreatments` är operator-authoritative
+   och inte får muteras. `PlanningChoice`-shape:n bumpas inte —
+   modellen producerar inte fältet, den bara läser det. Mock-fallback
+   (`_mock_plan_choice`, `_resolve_pinned_choice`) bevarar fältet
+   orört vid pass-through så non-key-pathen och pinned-pathen aldrig
+   kraschar.
 7. UI-pinnar mappar wizard-svar till `directives.sectionTreatments`-shape:n
    i `apps/viewser/components/discovery-wizard/wizard-payload.ts`. UI:t
    speglar enum-tabellen i `treatment-options.ts` (ny fil).
