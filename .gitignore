@@ -29,6 +29,13 @@ out/
 data/runs/
 data/versions/
 
+# Lokal eval-suite output (scripts/run_eval_suite.py + backoffice
+# eval-knapparna). Per-suite summary och manuella scorecards genereras
+# på operatörens maskin och versionsas inte. Mapparna behålls i git via
+# .gitkeep så backoffice-vyn alltid har en plats att skriva till.
+data/evals/eval-runs/*.json
+data/evals/manual-scorecards/*.json
+
 audits/
 data/prompt-inputs/
 data/embedding-index/
