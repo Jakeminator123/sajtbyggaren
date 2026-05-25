@@ -81,6 +81,124 @@ function supportsStackBlitzEmbed(kind: BrowserKind): boolean {
   return kind === "chromium";
 }
 
+/**
+ * Strukturerad info-shape som banner-renderaren kan visa istället för
+ * den tidigare hårdkodade "Mock-runs skriver inte..."-strängen. Tillåter
+ * att olika misslyckanden (sajten inte byggd, port-pool full, mock-run
+ * utan files, etc.) får specifik copy med titel, beskrivning och en
+ * actionable hint istället för en gemensam grå text.
+ */
+type UnavailableInfo = {
+  title?: string;
+  message: string;
+  hint?: string;
+};
+
+/**
+ * Felshape som ``/api/preview/<siteId>`` returnerar (4xx/5xx). Synkad
+ * mot ``apps/viewser/app/api/preview/[siteId]/route.ts:PreviewErrorBody``.
+ * Vi kopierar typen istället för att importera den eftersom denna
+ * komponent kör i klienten och importera från en server-route-fil
+ * skulle dra in onödiga server-bara beroenden.
+ */
+type PreviewApiError = {
+  error: string;
+  code?:
+    | "validation_error"
+    | "not_built"
+    | "missing_artifacts"
+    | "port_pool_full"
+    | "spawn_failed"
+    | "not_running"
+    | "unknown";
+  hint?: string;
+};
+
+function unavailableForPreviewError(
+  payload: PreviewApiError | null,
+): UnavailableInfo {
+  const code = payload?.code ?? "unknown";
+  const errMsg = payload?.error;
+  const errHint = payload?.hint;
+  if (code === "not_built" || code === "missing_artifacts") {
+    return {
+      title: "Sajten är inte byggd än",
+      message:
+        errMsg ??
+        "Lokal preview-server kunde inte starta — den genererade sajten finns inte på disk.",
+      hint:
+        errHint ??
+        "Kör python scripts/build_site.py för att bygga sajten först.",
+    };
+  }
+  if (code === "port_pool_full") {
+    return {
+      title: "Inga lediga preview-portar",
+      message: errMsg ?? "Port-poolen 4100-4199 är full.",
+      hint:
+        errHint ??
+        "Stäng några äldre preview-servrar via DELETE /api/preview/<siteId>.",
+    };
+  }
+  if (code === "spawn_failed") {
+    return {
+      title: "Lokal preview-server kraschade",
+      message: errMsg ?? "next start startade inte korrekt.",
+      hint:
+        errHint ??
+        "Kontrollera viewser-loggen för stderr-tail från next start.",
+    };
+  }
+  return {
+    title: "Lokal preview-server kunde inte starta",
+    message: errMsg ?? "Okänt fel från /api/preview/<siteId>.",
+    hint: errHint,
+  };
+}
+
+/**
+ * Operatörens uttryckta preview-runtime-läge, läst från den
+ * ``NEXT_PUBLIC_VIEWSER_PREVIEW_MODE``-spegel som ``next.config.ts``
+ * exponerar (raw ``VIEWSER_PREVIEW_MODE``, inte production-gate-utfallet).
+ * Värdet bakas in i bundlen vid build-time så det är konstant per session.
+ *
+ * Används för att avgöra om StackBlitz-fallback överhuvudtaget är ett
+ * giltigt nästa steg när LocalRuntime failar:
+ *
+ *   - ``local-next``  → COEP är OFF på host, så StackBlitz-embeds skulle
+ *                       blockas av Chrome med "Specify a Cross-Origin
+ *                       Embedder Policy". Bättre att visa pedagogiskt
+ *                       fel direkt än att tyst fall till en path som
+ *                       inte kan fungera.
+ *   - ``stackblitz``  → COEP är ON, StackBlitz-fallback är legit nästa
+ *                       steg om LocalRuntime är ouppnåelig.
+ *   - ``auto``        → Som ``stackblitz`` på header-nivå idag.
+ */
+const VIEWSER_PREVIEW_MODE = (
+  process.env.NEXT_PUBLIC_VIEWSER_PREVIEW_MODE ?? "local-next"
+).toLowerCase();
+const IS_LOCAL_NEXT_MODE = VIEWSER_PREVIEW_MODE === "local-next";
+// Reviewer-fynd (post-PR #101): tidigare provades alltid
+// ``POST /api/preview/<siteId>`` först, även i ``stackblitz``-mode.
+// Det betydde att configen namn (``stackblitz``) inte var sann end-to-
+// end — om sajten råkade ha en lokal ``.next/`` hamnade operatören på
+// lokal preview ändå. ``IS_STACKBLITZ_MODE`` låter Steg 1 (lokal
+// preview-server) hoppas helt i strikt stackblitz-läge, så
+// VIEWSER_PREVIEW_MODE=stackblitz blir auktoritativ:
+//   - ``local-next``  → prova lokal, pedagogiskt fel vid miss
+//   - ``stackblitz``  → hoppa Steg 1, gå direkt till StackBlitz Steg 2
+//   - ``auto``        → prova lokal, fall till StackBlitz vid miss
+//                       (oförändrat — det är vad ``auto`` betyder)
+const IS_STACKBLITZ_MODE = VIEWSER_PREVIEW_MODE === "stackblitz";
+
+// Mode-aware UI-copy för BuildProgressCard-preview-steget. Tidigare
+// hårdkodat "Förbereder StackBlitz-iframen." även i local-next-mode
+// där flödet faktiskt startar en lokal ``next start``-server. Liten
+// drift men ger fel mental modell. Reviewer-fynd post-PR #101.
+const PREVIEW_PREP_HINT = IS_LOCAL_NEXT_MODE
+  ? "Startar lokal preview-server (next start) på en ledig port 4100–4199."
+  : "Förbereder StackBlitz-iframen.";
+
 function formatViewerError(caught: unknown): string {
   if (caught instanceof Error) {
     const details = [
@@ -111,7 +229,12 @@ export function ViewerPanel({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [unavailable, setUnavailable] = useState(false);
+  // Tidigare en ren boolean. Utvidgad till strukturerad info-shape så
+  // banner-rendraren kan visa specifik copy per failure-läge (sajten
+  // inte byggd, port-pool full, mock-run utan files, ...) istället för
+  // en gemensam "Mock-runs..."-text. ``null`` = inget fel; ``object`` =
+  // visa banner med dessa fält.
+  const [unavailable, setUnavailable] = useState<UnavailableInfo | null>(null);
   const [loading, setLoading] = useState(false);
   // Lokal preview-server-URL. När den är satt renderar vi en simpel
   // iframe direkt mot ``http://localhost:<port>`` istället för att gå
@@ -169,7 +292,7 @@ export function ViewerPanel({
     // attached the ref (effect runs after commit, but we still keep
     // the guard for defense in depth).
     if (!runId || !containerRef.current) {
-      setUnavailable(false);
+      setUnavailable(null);
       setLoading(false);
       setFallback(null);
       return;
@@ -178,7 +301,7 @@ export function ViewerPanel({
     const node = containerRef.current;
     let cancelled = false;
     setError(null);
-    setUnavailable(false);
+    setUnavailable(null);
     setFallback(null);
     setLocalPreviewUrl(null);
     setLoading(true);
@@ -188,11 +311,33 @@ export function ViewerPanel({
       // Steg 1: försök starta en lokal preview-server. Mycket snabbare
       // än StackBlitz (~1s vs ~60s första gången), funkar i alla
       // browsers, och same-machine-iframen tar emot postMessage från
-      // Site Inspector för Sprint 5:s live token-editor. Om något
-      // går fel (siteId saknas, .generated/<siteId>/ inte byggd,
-      // port-pool full) faller vi tillbaka till StackBlitz-flödet
-      // nedan — operatören tappar inte previewen, bara hastigheten.
-      if (siteId) {
+      // Site Inspector för Sprint 5:s live token-editor.
+      //
+      // Vad vi gör vid misslyckande beror på ``VIEWSER_PREVIEW_MODE``:
+      //
+      //   - ``local-next``  → visa pedagogiskt fel direkt. Försök INTE
+      //                       StackBlitz; host saknar COEP-headers och
+      //                       Chrome skulle bara svara med "Specify a
+      //                       Cross-Origin Embedder Policy", vilket
+      //                       maskerar det riktiga problemet (sajten
+      //                       inte byggd, port-pool full, etc.). Det
+      //                       här är fixet för "CORS-tjafset" som
+      //                       drabbar nya prompts där siteId ännu inte
+      //                       hunnits byggas.
+      //   - ``stackblitz``  → hoppa Steg 1 HELT (configens namn är
+      //                       auktoritativ — vi vill se WebContainer-
+      //                       flödet, inte lokal preview). Fall genom
+      //                       till Steg 2 nedan med tom files-fetch.
+      //   - ``auto``        → prova lokal, fall till StackBlitz vid
+      //                       miss (befintlig auto-semantik). COEP är
+      //                       då ON och embedded WebContainer kan
+      //                       rendera.
+      //
+      // ``IS_STACKBLITZ_MODE``-grinden ovanför Steg 1 stänger reviewerns
+      // ärlighetsglapp där configens namn antydde "use StackBlitz" men
+      // flödet i praktiken var "try local first, fall back to
+      // StackBlitz" — oavsett mode.
+      if (!IS_STACKBLITZ_MODE && siteId) {
         try {
           const previewResponse = await fetch(`/api/preview/${siteId}`, {
             method: "POST",
@@ -204,16 +349,56 @@ export function ViewerPanel({
             setLoading(false);
             return;
           }
-          // Non-OK → tystlåtet fall tillbaka till StackBlitz-vägen.
-          // Vi loggar inte här eftersom 404/500 från preview-routen
-          // är förväntat när bygget inte är klart eller siteId är
-          // för en mock-run från dev_generate.
+          if (IS_LOCAL_NEXT_MODE) {
+            if (cancelled) return;
+            const errPayload = (await previewResponse
+              .json()
+              .catch(() => null)) as PreviewApiError | null;
+            // Re-check cancelled AFTER the JSON-parse await: a runId
+            // switch during the parse must not write stale state.
+            // Mirror of the success-branch guard above and the 404
+            // guard on the StackBlitz fallback below (Codex P2, PR #97).
+            if (cancelled) return;
+            setUnavailable(unavailableForPreviewError(errPayload));
+            setLoading(false);
+            return;
+          }
+          // I stackblitz/auto-mode: fall genom till StackBlitz nedan.
+          // 404/500 från preview-routen är då förväntat eftersom
+          // build_site.py kan ha skippats medvetet och vi har files
+          // tillgängliga via /api/runs/<runId>/files istället.
         } catch {
-          // Network-error → samma resonemang, fortsätt med StackBlitz.
+          if (IS_LOCAL_NEXT_MODE) {
+            if (cancelled) return;
+            setUnavailable({
+              title: "Lokal preview-server kunde inte nås",
+              message: "Nätverksfel mot /api/preview/<siteId>.",
+              hint: "Är viewser-dev-servern igång? Starta om med npm run dev.",
+            });
+            setLoading(false);
+            return;
+          }
+          // Stackblitz-mode: fortsätt med StackBlitz-fallback.
         }
+      } else if (IS_LOCAL_NEXT_MODE) {
+        // siteId saknas men runId finns — t.ex. en mock-run från
+        // dev_generate.py. I local-next-mode kan vi inte bygga preview
+        // utan siteId, så visa pedagogiskt fel istället för att tyst
+        // försöka StackBlitz (vilket ändå skulle blockas av Chrome).
+        if (cancelled) return;
+        setUnavailable({
+          title: "Saknar siteId för lokal preview",
+          message:
+            "Den valda runen har inget siteId i build-result.json. Lokal preview kräver en byggd .generated/<siteId>/-mapp.",
+          hint: "Kör en ny prompt för att skapa en builder-run, eller byt till VIEWSER_PREVIEW_MODE=stackblitz för fil-baserad preview.",
+        });
+        setLoading(false);
+        return;
       }
 
-      // Steg 2: gammal StackBlitz-väg som fallback.
+      // Steg 2: gammal StackBlitz-väg som fallback (endast i
+      // stackblitz/auto-mode — local-next-grenen ovan returnerar
+      // tidigare med strukturerat fel).
       try {
         const response = await fetch(`/api/runs/${runId}/files`);
         const payload = (await response.json()) as FilesPayload;
@@ -228,7 +413,12 @@ export function ViewerPanel({
             // the in-flight fetch resolves). Mirrors the guard on the
             // success / catch paths below.
             if (cancelled) return;
-            setUnavailable(true);
+            setUnavailable({
+              title: "Mock-run utan generated-files",
+              message:
+                "Förhandsvisning saknas för denna run. Mock-runs skriver inte en faktisk Next.js-app.",
+              hint: "Skicka en prompt i chat-rutan för att köra en riktig builder-run.",
+            });
             setLoading(false);
             return;
           }
@@ -293,6 +483,28 @@ export function ViewerPanel({
         // the credentialless-iframe model and why parent COEP alone
         // is insufficient.
         //
+        // CRITICAL — credentialless ALONE is INTE tillräckligt. För
+        // att `window.crossOriginIsolated` ska bli `true` inuti
+        // iframen (och därmed `SharedArrayBuffer` exponeras till
+        // WebContainern) krävs OCKSÅ att iframen taggas med
+        // `allow="cross-origin-isolated"` (Permissions Policy-
+        // delegering från parent). Annars visar StackBlitz "Unable
+        // to run Embedded Project — Looks like this project is being
+        // embedded without proper isolation headers" trots att vår
+        // COEP/COOP-headers är korrekt levererade.
+        //
+        // Den delen sköts via SDK:ns `crossOriginIsolated: true`-flagga
+        // i embedProject-options nedan — den lägger till
+        // `cross-origin-isolated` i iframens `allow`-lista via
+        // `setFrameAllowList` (se sdk.m.js:132-140). Dokumenterad i
+        // EmbedOptions-typen och refererad i
+        // https://blog.stackblitz.com/posts/cross-browser-with-coop-coep/
+        // som den officiella vägen för cross-origin-isolated embed.
+        //
+        // Båda behövs: `credentialless`-attributet löser COEP-kravet,
+        // `allow="cross-origin-isolated"` löser Permissions Policy-
+        // delegeringen. Saknar man någondera fallerar embedden.
+        //
         // The patch is scoped via try/finally so we never leave the
         // global API mutated past the SDK's internal iframe creation.
         const originalCreateElement = document.createElement.bind(document);
@@ -346,6 +558,19 @@ export function ViewerPanel({
               hideDevTools: true,
               clickToLoad: false,
               height: 1200,
+              // Säg åt SDK:n att lägga till `cross-origin-isolated` i
+              // iframens `allow`-lista. Krävs för att Permissions Policy
+              // ska delegera cross-origin-isolation till stackblitz.com-
+              // origin:en — utan det blir `window.crossOriginIsolated`
+              // alltid `false` inuti iframen oavsett vad host:en
+              // skickar för COEP/COOP-headers, och WebContainern
+              // bootar inte (visar "Unable to run Embedded Project").
+              // Tillsammans med `credentialless`-attributet ovan
+              // (createElement-patchen) ger detta full cross-origin
+              // isolation åt embedden. Se EmbedOptions i
+              // @stackblitz/sdk/types/interfaces.d.ts och
+              // https://blog.stackblitz.com/posts/cross-browser-with-coop-coep/.
+              crossOriginIsolated: true,
             },
           );
         } finally {
@@ -514,13 +739,23 @@ export function ViewerPanel({
           (showLoading-stripen) räcker för att signalera arbete.
           Hela status-state togs bort när pillan gick. */}
 
-      {/* Unavailable banner. */}
-      {showUnavailable ? (
+      {/* Unavailable banner. Renderar strukturerad info per failure-läge:
+          mock-run utan files, sajten inte byggd än, port-pool full, etc.
+          ``unavailable`` är ``UnavailableInfo | null`` — när satt visas
+          banner med titel/message/hint istället för den tidigare hårdkodade
+          mock-run-strängen. */}
+      {showUnavailable && unavailable ? (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-6">
           <div className="max-w-md rounded-xl border border-amber-500/40 bg-amber-500/10 px-5 py-4 text-sm text-amber-800 dark:text-amber-300">
-            Förhandsvisning saknas för denna run. Mock-runs skriver inte en
-            faktisk Next.js-app — skicka en prompt i chat-rutan för att köra en
-            riktig builder-run.
+            {unavailable.title ? (
+              <div className="mb-1 font-medium">{unavailable.title}</div>
+            ) : null}
+            <div>{unavailable.message}</div>
+            {unavailable.hint ? (
+              <div className="mt-2 text-[12px] text-amber-700/80 dark:text-amber-300/80">
+                {unavailable.hint}
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -580,9 +815,22 @@ export function ViewerPanel({
               )}
             </Button>
 
+            {/* Två tips, prioriterade efter ROI för operatören:
+                1. Bygg lokalt → LocalRuntime-iframen (port 4100-4199) är
+                   en plain http-iframe utan credentialless-krav och funkar
+                   i alla browsers inklusive Safari/Firefox/iOS. Det är
+                   den DEFAULT-rekommenderade vägen för operator-bygda
+                   sajter (se VIEWSER_PREVIEW_MODE=local-next i .env.example).
+                2. Byt browser → endast om operatören är fast i StackBlitz-
+                   mode och inte kan bygga lokalt. Mindre prioriterat. */}
             <p className="text-muted-foreground mt-3 text-[11.5px] leading-relaxed">
-              Tips: öppna Sajtbyggaren i Chrome, Edge eller Brave för inbäddad
-              live-preview direkt i denna vy.
+              Tips: kör{" "}
+              <code className="font-mono">python scripts/build_site.py</code>{" "}
+              och sätt{" "}
+              <code className="font-mono">VIEWSER_PREVIEW_MODE=local-next</code>{" "}
+              för en inbäddad preview som fungerar i alla browsers — eller öppna
+              Sajtbyggaren i Chrome/Edge/Brave om du vill stanna i
+              StackBlitz-läget.
             </p>
           </div>
         </div>
@@ -622,7 +870,11 @@ export function ViewerPanel({
         BuildProgressCard (z-20), error-pre (z-20), unavailable/
         fallback (z-10) men över hero-bakgrunden.
       */}
-      {localPreviewUrl && !unavailable && !showEmpty && !isBuilding && !isFinalizing ? (
+      {localPreviewUrl &&
+      !unavailable &&
+      !showEmpty &&
+      !isBuilding &&
+      !isFinalizing ? (
         <iframe
           ref={iframeRef}
           src={localPreviewUrl}
@@ -690,7 +942,7 @@ const BUILD_STEPS: ReadonlyArray<{
   {
     id: "preview",
     title: "Startar preview",
-    hint: "Förbereder StackBlitz-iframen.",
+    hint: PREVIEW_PREP_HINT,
   },
 ];
 

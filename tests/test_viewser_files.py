@@ -489,6 +489,293 @@ def test_build_runner_whitelists_dossier_path_overrides() -> None:
 
 
 @pytest.mark.tooling
+def test_viewer_panel_skips_local_preview_in_strict_stackblitz_mode() -> None:
+    """Reviewer-fynd post-PR #101: configens namn (``stackblitz``) var
+    inte sann end-to-end — flödet provade alltid
+    ``POST /api/preview/<siteId>`` först, oavsett mode. Om sajten råkade
+    ha en lokal ``.next/`` hamnade operatören på lokal preview ändå
+    (designglapp, inte krasch).
+
+    Fix: i strikt ``stackblitz``-mode hoppa Steg 1 (lokal preview-
+    server) helt — gå direkt till Steg 2 (StackBlitz Steg 2 / files-
+    fetch). ``auto``-mode behåller "try local first, fall back to
+    StackBlitz"-beteendet eftersom det är vad ``auto`` betyder.
+    ``local-next``-mode visar pedagogiskt fel vid lokal miss (oförändrat
+    från PR #97).
+
+    Tre lås:
+      1. ``IS_STACKBLITZ_MODE``-konstant exporterad från samma plats
+         som ``IS_LOCAL_NEXT_MODE``.
+      2. Steg 1 (``if (siteId)``-blocket med
+         ``await fetch("/api/preview/${siteId}")``) gated med
+         ``!IS_STACKBLITZ_MODE``.
+      3. Den interna ``IS_LOCAL_NEXT_MODE``-pedagogiska gren strukturen
+         INTE förändrad (404-guards + cancelled-guards fortsatt
+         source-lockade av separata tester).
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    # Lock 1: konstanten finns och har rätt definition
+    pattern_const = re.compile(
+        r'const\s+IS_STACKBLITZ_MODE\s*=\s*VIEWSER_PREVIEW_MODE\s*===\s*["\']stackblitz["\']',
+        re.MULTILINE,
+    )
+    assert pattern_const.search(text), (
+        "viewer-panel.tsx saknar ``const IS_STACKBLITZ_MODE = "
+        "VIEWSER_PREVIEW_MODE === 'stackblitz'``. Krävs för att gate:a "
+        "Steg 1 (lokal preview-server) i strikt stackblitz-mode."
+    )
+
+    # Lock 2: Steg 1-blocket gated på !IS_STACKBLITZ_MODE
+    pattern_gate = re.compile(
+        r'if\s*\(\s*!\s*IS_STACKBLITZ_MODE\s*&&\s*siteId\s*\)\s*\{',
+        re.MULTILINE,
+    )
+    assert pattern_gate.search(text), (
+        "viewer-panel.tsx: Steg 1 (lokal preview-server) måste vara "
+        "gated på ``if (!IS_STACKBLITZ_MODE && siteId)`` så strikt "
+        "stackblitz-mode hoppar lokal-preview helt och går direkt till "
+        "Steg 2. Annars är configens namn (``stackblitz``) inte "
+        "auktoritativt."
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_progress_card_hint_is_mode_aware() -> None:
+    """Reviewer-fynd post-PR #101: BuildProgressCard:s preview-steg
+    visade fortfarande ``"Förbereder StackBlitz-iframen."`` även i
+    ``local-next``-mode där flödet faktiskt startar en lokal
+    ``next start``-server. Felaktig mental modell för operatören.
+
+    Fix: ``PREVIEW_PREP_HINT``-konstant väljer text baserat på
+    ``IS_LOCAL_NEXT_MODE`` så hint:en matchar faktisk preview-väg.
+    BUILD_STEPS-listan refererar konstanten istället för
+    hårdkodad sträng.
+
+    Två lås:
+      1. ``PREVIEW_PREP_HINT``-konstant finns med mode-conditional.
+      2. BUILD_STEPS preview-steg använder ``hint: PREVIEW_PREP_HINT``
+         istället för en hårdkodad sträng.
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    # Lock 1: konstanten finns med mode-conditional
+    pattern_const = re.compile(
+        r"const\s+PREVIEW_PREP_HINT\s*=\s*IS_LOCAL_NEXT_MODE\s*\?",
+        re.MULTILINE,
+    )
+    assert pattern_const.search(text), (
+        "viewer-panel.tsx saknar ``const PREVIEW_PREP_HINT = "
+        "IS_LOCAL_NEXT_MODE ? ... : ...``. Krävs för att "
+        "BuildProgressCard:s preview-steg ska visa rätt copy per mode."
+    )
+
+    # Lock 2: BUILD_STEPS refererar konstanten istället för hårdkodad sträng
+    pattern_usage = re.compile(
+        r'id:\s*["\']preview["\'][\s\S]{0,200}?hint:\s*PREVIEW_PREP_HINT',
+        re.MULTILINE,
+    )
+    assert pattern_usage.search(text), (
+        "viewer-panel.tsx: BUILD_STEPS preview-steget måste använda "
+        "``hint: PREVIEW_PREP_HINT`` så texten är mode-aware. "
+        "Hårdkodad ``\"Förbereder StackBlitz-iframen.\"`` gav fel "
+        "mental modell i local-next-mode (reviewer-fynd post-PR #101)."
+    )
+
+    # Negativt: den hårdkodade strängen får inte återinföras i
+    # BUILD_STEPS preview-stegets hint-fält.
+    pattern_forbidden = re.compile(
+        r'id:\s*["\']preview["\'][\s\S]{0,200}?hint:\s*["\']Förbereder StackBlitz',
+        re.MULTILINE,
+    )
+    assert not pattern_forbidden.search(text), (
+        "viewer-panel.tsx: BUILD_STEPS preview-steget får inte "
+        "hårdkoda ``hint: \"Förbereder StackBlitz-iframen.\"`` igen. "
+        "Använd PREVIEW_PREP_HINT-konstanten så local-next-mode får "
+        "korrekt text."
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_sets_cross_origin_isolated_on_stackblitz_embed() -> None:
+    """B125/B145: StackBlitz-embedden behöver Permissions Policy-delegering
+    av cross-origin-isolation för att ``window.crossOriginIsolated`` ska
+    bli ``true`` inuti iframen — annars kan WebContainern inte boota
+    SharedArrayBuffer och visar "Unable to run Embedded Project — Looks
+    like this project is being embedded without proper isolation headers"
+    trots korrekt levererade COEP/COOP-headers på host:en.
+
+    StackBlitz SDK exponerar detta via ``crossOriginIsolated: true``-
+    flaggan i ``EmbedOptions`` (dokumenterad i
+    ``@stackblitz/sdk/types/interfaces.d.ts``). SDK:n applicerar den
+    genom ``setFrameAllowList`` som lägger till ``cross-origin-isolated``
+    i iframens ``allow``-attribut (Permissions Policy-delegering).
+
+    Båda lager behövs:
+      1. ``credentialless``-attributet på iframen (löser COEP-kravet —
+         redan source-lockat via test_viewer_panel_keeps_containerref...).
+      2. ``crossOriginIsolated: true`` i embedOptions (löser Permissions
+         Policy-delegeringen — denna lock).
+
+    Tas raden bort fallerar embedden tyst inuti StackBlitz med kryptiskt
+    "Unable to run Embedded Project" och operatören har ingen ledtråd
+    om att host-headers faktiskt är korrekta.
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+    pattern = re.compile(
+        r"crossOriginIsolated\s*:\s*true",
+        re.MULTILINE,
+    )
+    assert pattern.search(text), (
+        "viewer-panel.tsx: ``crossOriginIsolated: true`` saknas i "
+        "``sdk.embedProject``-options. Krävs för Permissions Policy-"
+        "delegering till stackblitz.com — utan den boota:r WebContainern "
+        "inte och visar 'Unable to run Embedded Project'. Se "
+        "EmbedOptions i @stackblitz/sdk/types/interfaces.d.ts och "
+        "https://blog.stackblitz.com/posts/cross-browser-with-coop-coep/."
+    )
+
+
+@pytest.mark.tooling
+def test_next_config_trusts_dispatcher_env_over_argv_for_https_check() -> None:
+    """B145: ``process.argv`` är opålitlig under Turbopack — config laddas
+    i worker-processer vars argv inte ärver parent-processens flaggor.
+    Det gav falsk ``--experimental-https saknas``-varning i transport-
+    mismatch-checken trots att dispatchern startat ``next dev`` med
+    flaggan.
+
+    Fix: ``next.config.ts`` konsulterar primärt
+    ``process.env.VIEWSER_DISPATCHER_HTTPS === "1"`` (env-var som
+    ``scripts/dev.mjs`` sätter när dispatchern valt https-grenen) och
+    faller tillbaka till argv-checken för operatörer som kör
+    ``next dev --experimental-https`` direkt utan dispatchern.
+
+    Den dispatcher-managed env-varianten är auktoritativ signal — argv
+    fungerar bara som fallback för manuell körning.
+    """
+    text = (VIEWSER_DIR / "next.config.ts").read_text(encoding="utf-8")
+    pattern = re.compile(
+        r"process\s*\.\s*env\s*\.\s*VIEWSER_DISPATCHER_HTTPS\s*===\s*[\"']1[\"']",
+        re.MULTILINE,
+    )
+    assert pattern.search(text), (
+        "next.config.ts: HTTPS-checken måste läsa "
+        "``process.env.VIEWSER_DISPATCHER_HTTPS === \"1\"`` primärt — "
+        "``process.argv``-grenen ger false-positiva varningar i "
+        "Turbopack-workers vars argv inte ärver parent-processens "
+        "flaggor (B145)."
+    )
+
+
+@pytest.mark.tooling
+def test_dev_dispatcher_exports_https_signal_to_child() -> None:
+    """Spegelfix till next.config.ts:s VIEWSER_DISPATCHER_HTTPS-check.
+    ``scripts/dev.mjs`` MÅSTE exportera ``VIEWSER_DISPATCHER_HTTPS``
+    baserat på ``useHttps`` så next.config.ts ser auktoritativ signal
+    om dispatchern valt https-transport. Utan denna export ger
+    transport-mismatch-checken false-positiva varningar i Turbopack-
+    workers även när allt är korrekt konfigurerat.
+    """
+    text = (VIEWSER_DIR / "scripts" / "dev.mjs").read_text(encoding="utf-8")
+    pattern = re.compile(
+        r"VIEWSER_DISPATCHER_HTTPS\s*:\s*useHttps\s*\?\s*[\"']1[\"']\s*:\s*[\"']0[\"']",
+        re.MULTILINE,
+    )
+    assert pattern.search(text), (
+        "scripts/dev.mjs: child-env måste sätta "
+        "``VIEWSER_DISPATCHER_HTTPS: useHttps ? \"1\" : \"0\"`` så "
+        "next.config.ts kan verifiera transport-valet utan argv-"
+        "gissning. Speglar den nya check:en i next.config.ts (B145)."
+    )
+
+
+@pytest.mark.tooling
+def test_build_runner_uses_per_site_mutex_not_global_inflight() -> None:
+    """Reviewer-fynd 2026-05-25 (Round 2 #5): den tidigare implementationen
+    hade en enda global ``let inFlight: Promise | null = null`` som
+    serialiserade ALLA byggen i Viewser-processen. Ett segt eller
+    hängande bygge på t.ex. ``cafe-bistro`` blockerade då en helt
+    orelaterad ``painter-palma``-build i samma process. Per-siteId-
+    låsen är nödvändig (två build_site.py-processer som samtidigt
+    skriver till ``.generated/<siteId>/`` ger korrupta artefakter),
+    men den ska INTE vara global.
+
+    Fix: ``Map<string, Promise<...>>`` keyat på siteId.
+    ``runBuild(siteId)`` queue:ar bara mot SAMMA siteId — olika
+    siteIds kan köra parallellt.
+
+    Source-lock-mönstret:
+      1. NEGATIVT: ingen ``let inFlight: Promise<...> | null`` (skalär).
+      2. POSITIVT: ``const inFlight = new Map<string, Promise<...>>()``.
+      3. POSITIVT: ``runBuild(siteId)``-loop:en kollar
+         ``inFlight.has(siteId)`` (siteId-keyat) snarare än ``inFlight``
+         (truthy global).
+      4. POSITIVT: rensning sker via ``inFlight.delete(siteId)`` med
+         identity-guard så en samtidig follow-up build inte nukas av
+         misstag.
+    """
+    text = (VIEWSER_DIR / "lib" / "build-runner.ts").read_text(encoding="utf-8")
+
+    # Negativt: gamla globala scalar-formen får inte återinföras.
+    forbidden_global = re.compile(
+        r"let\s+inFlight\s*:\s*Promise\s*<[^>]*>\s*\|\s*null",
+        re.MULTILINE,
+    )
+    assert not forbidden_global.search(text), (
+        "build-runner.ts: ``let inFlight: Promise<...> | null`` är "
+        "den gamla globala mutex:en som blockerade orelaterade siteIds. "
+        "Använd ``const inFlight = new Map<string, Promise<...>>()`` "
+        "istället (Reviewer Round 2 #5)."
+    )
+
+    # Positivt: Map-deklaration med siteId-key + Promise-value.
+    map_decl = re.compile(
+        r"const\s+inFlight\s*=\s*new\s+Map\s*<\s*string\s*,\s*Promise\s*<[^>]*>\s*>\s*\(\s*\)",
+        re.MULTILINE,
+    )
+    assert map_decl.search(text), (
+        "build-runner.ts saknar ``const inFlight = new Map<string, "
+        "Promise<...>>()``. Per-siteId-mutex kräver Map keyat på siteId "
+        "så olika sajter kan bygga parallellt."
+    )
+
+    # Positivt: while-loop:en måste kolla per-siteId, inte den globala
+    # Map-instansens truthy:hood.
+    while_check = re.compile(
+        r"while\s*\(\s*inFlight\s*\.\s*has\s*\(\s*siteId\s*\)\s*\)",
+        re.MULTILINE,
+    )
+    assert while_check.search(text), (
+        "build-runner.ts: ``while (inFlight.has(siteId))`` saknas. "
+        "Tidigare ``while (inFlight)`` blockerade alla siteIds — den "
+        "nya per-siteId-mutex:en måste kolla pending build för EXAKT "
+        "den siteId callern frågar om."
+    )
+
+    # Positivt: rensningen ska gå via Map.delete med identity-guard så
+    # en samtidig follow-up build (som hunnit skriva ny entry) inte
+    # nukas av misstag.
+    delete_with_guard = re.compile(
+        r"if\s*\(\s*inFlight\s*\.\s*get\s*\(\s*siteId\s*\)\s*===\s*promise\s*\)\s*\{\s*"
+        r"inFlight\s*\.\s*delete\s*\(\s*siteId\s*\)",
+        re.MULTILINE,
+    )
+    assert delete_with_guard.search(text), (
+        "build-runner.ts: rensningen i ``finally``-grenen ska göra "
+        "``if (inFlight.get(siteId) === promise) inFlight.delete(siteId)`` "
+        "så en samtidig follow-up build (som hunnit skriva ny entry för "
+        "samma siteId) inte oavsiktligt nukas. Speglar samma identity-"
+        "guard som den tidigare globala ``if (inFlight === promise)``."
+    )
+
+
+@pytest.mark.tooling
 def test_prompt_route_returns_400_for_zod_validation_errors() -> None:
     """Audit fynd 1: ogiltig payload (tom prompt, för lång prompt, fel
     typ) är ett klient-/valideringsfel, inte serverfel. Före fixen
@@ -1202,10 +1489,21 @@ def test_viewer_panel_404_branch_guards_cancelled_before_setstate() -> None:
     )
 
     # Find the 404 branch and verify a `cancelled` guard sits between
-    # the `response.status === 404` check and `setUnavailable(true)`.
+    # the `response.status === 404` check and the call to setUnavailable.
     # Multi-line regex is more robust than substring tricks here.
+    #
+    # Argument-shape till setUnavailable är medvetet permissivt
+    # (``setUnavailable\([\s\S]+?\)``) så testet förblir grönt över både
+    # den ursprungliga ``setUnavailable(true)``-formen och den utvidgade
+    # ``setUnavailable({title, message, hint})``-formen som
+    # fix-fallback-headers introducerade. ``[\s\S]+?`` (med ``+``, INTE
+    # ``*``) kräver minst ett tecken inuti parenteserna så ett tomt
+    # ``setUnavailable()``-anrop INTE matchar — det vore en regression
+    # som skulle dölja 404-fallet i UI:t. Race-condition-låsen är
+    # ``if (cancelled) return;`` MELLAN 404-checken och setUnavailable;
+    # argumentets exakta form är inte poängen.
     pattern = re.compile(
-        r"response\.status\s*===\s*404[\s\S]{0,400}?if\s*\(\s*cancelled\s*\)\s*return\s*;[\s\S]{0,200}?setUnavailable\(true\)",
+        r"response\.status\s*===\s*404[\s\S]{0,400}?if\s*\(\s*cancelled\s*\)\s*return\s*;[\s\S]{0,400}?setUnavailable\([\s\S]+?\)",
         re.MULTILINE,
     )
     assert pattern.search(text), (
@@ -1213,6 +1511,109 @@ def test_viewer_panel_404_branch_guards_cancelled_before_setstate() -> None:
         "setUnavailable / setStatus. Det skapar race-condition mellan "
         "snabba runId-byten där en stale 404 skriver över state för en "
         "nyladdad run."
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_local_next_failure_branches_guard_cancelled() -> None:
+    """Same race-condition guard som test_viewer_panel_404_branch_guards_
+    cancelled_before_setstate, fast för de TRE nya local-next-failure-
+    grenarna som fix-fallback-headers introducerade:
+
+      1. POST /api/preview/<siteId> returnerar non-OK i local-next-mode
+         → setUnavailable med strukturerad info från
+           unavailableForPreviewError(errPayload).
+      2. POST /api/preview/<siteId> kastar (network error) i
+         local-next-mode → setUnavailable("Lokal preview-server kunde
+         inte nås").
+      3. siteId saknas men runId finns i local-next-mode →
+         setUnavailable("Saknar siteId för lokal preview").
+
+    Alla tre måste guarda mot stale runId-switch via ``cancelled``
+    INNAN de skriver UI-state. Utan denna lock kan en framtida
+    refactor släppa guarden och åter introducera samma race som
+    den ursprungliga 404-fixen redan stoppat.
+
+    Vi söker efter mönstret ``IS_LOCAL_NEXT_MODE`` följt inom 300 chars
+    av ``if (cancelled) return;`` följt inom 200 chars av
+    ``setUnavailable(``. Förväntar minst 3 sådana matchningar (en per
+    failure-gren).
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    # Limits är frikostiga (800/600) så regex tål både kompakta varianter
+    # och de pedagogiska inline-kommentarer som dokumenterar varför
+    # cancelled-guarden behövs i respektive gren. Testets syfte är att
+    # låsa ATT guarden finns — inte att tvinga fram en kompakt stil.
+    pattern = re.compile(
+        r"IS_LOCAL_NEXT_MODE[\s\S]{0,800}?if\s*\(\s*cancelled\s*\)\s*return\s*;[\s\S]{0,600}?setUnavailable\([\s\S]+?\)",
+        re.MULTILINE,
+    )
+    matches = pattern.findall(text)
+    assert len(matches) >= 3, (
+        f"Förväntade ≥3 IS_LOCAL_NEXT_MODE-grenar med cancelled-guard "
+        f"före setUnavailable, hittade {len(matches)}. "
+        f"De tre grenarna är: (a) non-OK från POST /api/preview/<siteId>, "
+        f"(b) network-error från samma fetch, (c) siteId saknas men "
+        f"runId finns. Alla tre måste skydda mot stale runId-switch "
+        f"så att en sen async-respons inte skriver över state för en "
+        f"nyladdad run."
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_local_next_non_ok_branch_reguards_after_json_parse() -> None:
+    """Codex P2 (PR #97 review): i ``IS_LOCAL_NEXT_MODE``-grenen för
+    non-OK response från ``POST /api/preview/<siteId>`` kollas
+    ``cancelled`` FÖRE ``await previewResponse.json()`` men inte
+    EFTER. Om operatören byter run under JSON-parsen kan den stale
+    requesten fortfarande anropa ``setUnavailable(...)`` /
+    ``setLoading(false)`` och skriva över state för den nyvalda runen
+    — exakt samma race-condition som den ursprungliga 404-fixen
+    redan stoppat på StackBlitz-vägen.
+
+    Lås mönstret: mellan ``await previewResponse.json()`` (som ger
+    ``errPayload``) och ``setUnavailable(unavailableForPreviewError``
+    måste det finnas en ``if (cancelled) return;``. Source-lock så
+    framtida refactor inte tar bort den.
+
+    Implementationsdetalj: vi hittar errPayload-deklarationen (unik
+    lokal variabel som bara existerar i denna gren), söker fram till
+    ``setUnavailable(unavailableForPreviewError``, och verifierar att
+    en ``if (cancelled) return;`` sitter mellan dem. Mer robust än
+    en ren one-shot regex eftersom det inte bryts av inline-kommentarer
+    eller indenterings-refactors.
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    err_payload_idx = text.find("errPayload = (await previewResponse")
+    assert err_payload_idx != -1, (
+        "viewer-panel.tsx saknar `errPayload = (await previewResponse...` "
+        "i IS_LOCAL_NEXT_MODE non-OK-grenen. Annars test kan inte ankra "
+        "mellan parsen och state-skrivningen."
+    )
+    setunavail_idx = text.find(
+        "setUnavailable(unavailableForPreviewError", err_payload_idx
+    )
+    assert setunavail_idx != -1, (
+        "viewer-panel.tsx saknar `setUnavailable(unavailableForPreviewError(...))` "
+        "efter errPayload-deklarationen — non-OK-grenen måste rendera "
+        "strukturerad felinfo via unavailableForPreviewError."
+    )
+    between = text[err_payload_idx:setunavail_idx]
+    assert re.search(r"if\s*\(\s*cancelled\s*\)\s*return\s*;", between), (
+        "viewer-panel.tsx IS_LOCAL_NEXT_MODE non-OK-grenen saknar "
+        "`if (cancelled) return;` mellan `await previewResponse.json()` "
+        "och `setUnavailable(unavailableForPreviewError(...))`. Utan "
+        "denna re-check kan en stale request som passerar den pre-await "
+        "cancelled-checken fortfarande skriva över UI-state för en "
+        "nyvald run (Codex P2 fynd, PR #97 review). Mirror samma mönster "
+        "som success-grenen redan har efter `await previewResponse.json() "
+        "as PreviewServerInfo`."
     )
 
 

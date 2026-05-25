@@ -75,6 +75,20 @@ COMMON_WORDS = {
     "AssertionError", "FileExistsError", "NotImplementedError",
     "CalledProcessError", "ModuleNotFoundError",
     "Iterable", "Sequence", "Mapping", "Callable",
+    # Lokala kod-typer i preview-runtime-spåret (apps/viewser/components/
+    # viewer-panel.tsx + apps/viewser/app/api/preview/[siteId]/route.ts +
+    # scripts/check_adr_0021_workarounds.py). PascalCase-identifierare
+    # introducerade i samband med fix för "CORS"/embedding-felet
+    # (preview-error-shape + fix-fallback-headers + adr-0021-recheck).
+    # Inte domänbegrepp — bara internt kod-shape — men matchar PASCAL_RE
+    # och behöver allowlistas på samma sätt som ArgumentParser ovan.
+    "IssueRef", "IssueStatus",
+    "PreviewApiError", "PreviewErrorBody", "PreviewErrorCode",
+    "UnavailableInfo",
+    # Externa SDK-typer + tech-narrative (StackBlitz EmbedOptions interface,
+    # WebContainer-runtime som referreras i kommentarer/tester för
+    # stackblitz-permissions-policy-fix). Inte canonical domain terms.
+    "EmbedOptions", "WebContainern",
     # Status-strängar (verify_run.py + andra tooling-checkers)
     "OK", "FAIL", "WARN", "UNKNOWN", "SKIP",
     # Framework / lib
@@ -109,6 +123,13 @@ COMMON_WORDS = {
     "Sajtbyggaren", "Sajtmaskin", "Jakeminator123", "Jakemiantor123",
     "Lovable", "GitHub", "GitGuardian", "Cursor", "Vercel", "StackBlitz",
     "WebContainer", "WebContainers", "Fly", "Stripe", "OpenAI", "Anthropic",
+    # Adapter-naming i ADR 0030 (preview-provider-portability) — illustrativa
+    # PascalCase-tagg för framtida pluggable adapters bakom PreviewRuntime
+    # ("VercelRuntime" som ekvivalent till befintliga "LocalRuntime"/
+    # "StackBlitzRuntime"/"FlyRuntime"). Inte produktbegrepp, bara
+    # konventionellt adapter-suffix; allowlistat så ADR-text kan referera
+    # dem utan att triggra term-coverage-strict.
+    "VercelRuntime",
     # Externa StackBlitz-/web-produktnamn och protokollnamn som citeras i
     # docs/integrations/stackblitz-research.md. De är bibliotekstermer
     # (samma kategori som StackBlitz/WebContainer/OpenAI ovan), inte
@@ -187,6 +208,11 @@ COMMON_WORDS = {
     # in scripts/prune_generated_previews.py. Same treatment as KeyError /
     # FileNotFoundError / SystemExit above.
     "ConnectionRefusedError", "TimeoutError",
+    # Python built-in exception caught by backoffice/views/evals.py's
+    # _terminate_process_tree helper on POSIX when ``os.killpg`` races
+    # the subprocess exiting. Same treatment as the other Python builtin
+    # exception names in this skiplist.
+    "ProcessLookupError",
     # pytest stdlib type used as type annotation in tests. Same treatment
     # as MonkeyPatch above.
     "CaptureFixture",
@@ -396,6 +422,11 @@ COMMON_WORDS = {
     # canonical domain terms.
     "FaqPage", "GalleryPage", "MapPage", "PortfolioPage",
     "PricingPage", "TeamPage",
+    # Next.js page-komponenter för restaurant-hospitality scaffold
+    # (Issue #90). Samma kategori som FaqPage/GalleryPage ovan: React-
+    # komponentnamn renderade av build_site.py:render_menu och
+    # render_booking, inte canonical domain terms.
+    "MenuPage", "BookingPage",
     "FieldLabel", "FieldStack", "HelperText", "SectionHeader",
     "TagListInput", "TagListInputProps", "TextField", "TextareaField",
     "Chip", "ChipRow", "ChipProps", "StepDots",
@@ -675,6 +706,7 @@ COMMON_WORDS = {
     "B137 fix",  # bolded phrase i current-focus narrative (Steward-prose)
     "B138", "B139", "B140", "B141",  # öppnade post-case-4 (B138/B141 stängd 2026-05-21, B139/B140 öppna)
     "B143", "B144",  # reviewer-feedback 2026-05-21 efter Intent Guard light + PR #49
+    "B125",  # Safari/Firefox preview fallback (referenced in ADR 0030 + product-operating-context)
     "IntentGuard",  # single-token-variant i handoff-prose (basord 'Intent Guard' redan allowlistat)
     "Intent Guard light",  # bolded sprintnamn i handoff/current-focus (Builder-sprint 2026-05-21)
     "ADR 0025 implementation",  # bolded phrase i handoff.md next-steps-tabell
@@ -960,6 +992,16 @@ def main() -> int:
         # som för ``docs/known-issues.md``-undantaget nedan: en intern B-ID-tabell
         # ska inte tvinga in B-IDs som domänbegrepp.
         if rel.startswith(".cursor/tmp_"):
+            continue
+        # Agent-till-agent handover-filer (t.ex. ``handover-stackblitz-2026-05-25.md``)
+        # bor på repo-toppnivå med ``handover-``-prefix och innehåller
+        # session-lokala browser/SDK/feature-namn (StackBlitz, WebContainer,
+        # crossOriginIsolated, etc.) som är legitima refererande termer i
+        # narrative-handover men inte canonical domain terms. Samma kategori
+        # som ``.cursor/tmp_``-undantaget ovan: transient session-state, inte
+        # produkt-docs. Per .gitignore-policy committas filerna aldrig — men
+        # operatören kan ha dem på disk under sessionen.
+        if rel.startswith("handover-") and rel.endswith(".md"):
             continue
         if rel.startswith("docs/agent-handbook.md") or rel.startswith("docs/PROJECT_BRIEF.md"):
             continue
