@@ -21,6 +21,14 @@ out/
 # the trap is gone before anyone hits it.
 !packages/generation/build/
 !packages/generation/build/**
+# The `!**` re-include above is broad enough to also un-ignore Python
+# bytecode caches under the package, which annulled the global
+# `__pycache__/` rule from line 2 for this single subtree (B146 port
+# fallout). Re-ignore them explicitly so generated `.pyc` files never
+# show up as untracked in operator/agent SCM views.
+packages/generation/build/__pycache__/
+packages/generation/build/**/__pycache__/
+packages/generation/build/**/*.py[cod]
 
 .env
 .env.*
