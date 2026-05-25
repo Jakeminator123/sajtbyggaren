@@ -168,3 +168,35 @@ def test_build_site_delegates_moved_renderers_to_build_package() -> None:
         "write_pages",
     ):
         assert f"def {moved_function}(" not in build_site_source
+
+
+@pytest.mark.tooling
+def test_build_site_re_exports_dispatcher_architecture() -> None:
+    """Lock the B146 dispatcher architecture surface.
+
+    After PR #112, section-renderer source-of-truth lives in
+    ``packages.generation.build.dispatcher``. ``scripts.build_site`` must
+    re-export ``_SECTION_RENDERERS`` and ``render_route_generic`` plus
+    provide a ``__getattr__`` shim so legacy
+    ``from scripts.build_site import render_section_X`` callsites continue
+    to resolve without enumerating every renderer manually.
+    """
+    import packages.generation.build.dispatcher as dispatcher
+    import scripts.build_site as build_site
+
+    assert isinstance(dispatcher._SECTION_RENDERERS, dict)
+    assert dispatcher._SECTION_RENDERERS, "_SECTION_RENDERERS should not be empty"
+    assert callable(dispatcher.render_route_generic)
+
+    assert build_site._SECTION_RENDERERS is dispatcher._SECTION_RENDERERS
+    assert build_site.render_route_generic is dispatcher.render_route_generic
+
+    build_site_source = inspect.getsource(build_site)
+    assert 'importlib.import_module("packages.generation.build.dispatcher")' in build_site_source
+    assert "def __getattr__(name: str)" in build_site_source
+
+    for section_id, renderer in dispatcher._SECTION_RENDERERS.items():
+        assert callable(renderer), f"renderer for {section_id!r} must be callable"
+
+    sample_renderer = dispatcher._SECTION_RENDERERS["hero"]
+    assert build_site.render_section_hero is sample_renderer
