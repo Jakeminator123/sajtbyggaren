@@ -93,11 +93,20 @@ const nextConfig: NextConfig = {
   // Spegla läget till klienten så ViewerPanel kan ta beslut baserat
   // på det (t.ex. skippa StackBlitz-fallbacken när vi vet att vi kör
   // LocalRuntime). NEXT_PUBLIC_-prefixet är vad Next.js kräver för att
-  // exponera variabler i browserbundlen. Vi exponerar `effectiveMode`,
-  // inte `PREVIEW_MODE`, så klienten ser samma värde som headers()
-  // utvärderade — annars skulle production-gaten gå i otakt med UI:t.
+  // exponera variabler i browserbundlen.
+  //
+  // Vi exponerar RAW `PREVIEW_MODE` (operatörens uttryckta intent),
+  // INTE `effectiveMode` (server-headers-utfallet efter production-
+  // gaten). Skälet: gaten är medvetet en server-side säkerhets-rail
+  // för cross-origin isolation, inte en omtolkning av operatörens
+  // runtime-val. Att smitta klient-runtime-besluten med gate-utfallet
+  // skulle göra production-läget oförutsägbart för en operator som
+  // explicit valt local-next (AI Bug Review-fynd 84% på PR #88). En
+  // framtida ViewerPanel-konsument kan självständigt välja att
+  // korsreferera mot fetch:ade headers om den behöver veta vad servern
+  // ACT settle:ade på.
   env: {
-    NEXT_PUBLIC_VIEWSER_PREVIEW_MODE: effectiveMode,
+    NEXT_PUBLIC_VIEWSER_PREVIEW_MODE: PREVIEW_MODE,
   },
   async headers() {
     // LocalRuntime-grenen: tom header-lista. COEP credentialless +

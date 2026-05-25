@@ -34,7 +34,7 @@
 // `lib/stackblitz-files.ts` triggas bara när runtime-fallbacken faktiskt
 // går till StackBlitz, så `local-next` betalar aldrig den kostnaden.
 
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,31 +42,48 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const VIEWSER_ROOT = resolve(__dirname, "..");
+const IS_WINDOWS = process.platform === "win32";
 
 const VALID_MODES = new Set(["local-next", "stackblitz", "auto"]);
 const DEFAULT_MODE = "local-next";
 
-// Tiny inline .env-parser. Avsiktligt minimal: ingen escape-hantering,
-// ingen interpolation, ingen multiline. Räcker för vår enda nyckel
-// (`VIEWSER_PREVIEW_MODE`) och är ofarlig för övriga rader. Vi vill inte
-// dra in `dotenv` som dep bara för det.
+// Tiny inline .env-parser. Avsiktligt minimal: ingen interpolation, ingen
+// multiline. Hanterar dock de vanliga POSIX-shell / dotenv-formerna som
+// `next dev` självt accepterar, så dispatchern inte rejectar en rad som
+// next.js skulle ha läst utan problem (Codex P2-fynd på parkerade
+// PR #85: `export VAR=val` och trailing `# comment` rejectades tidigare
+// som "Okänt VIEWSER_PREVIEW_MODE").
 function parseEnvFile(path) {
   if (!existsSync(path)) return {};
   const out = {};
   const text = readFileSync(path, "utf8");
   for (const rawLine of text.split(/\r?\n/)) {
-    const line = rawLine.trim();
+    let line = rawLine.trim();
     if (!line || line.startsWith("#")) continue;
+    // Strip optional POSIX-shell `export ` prefix (dotenv accepterar det).
+    if (line.startsWith("export ")) {
+      line = line.slice(7).trimStart();
+    }
     const eq = line.indexOf("=");
     if (eq === -1) continue;
     const key = line.slice(0, eq).trim();
     let value = line.slice(eq + 1).trim();
     // Strip surrounding single or double quotes if present.
     if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
+      value.length >= 2 &&
+      ((value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'")))
     ) {
       value = value.slice(1, -1);
+    } else {
+      // Oquoterat värde: strippa trailing inline-kommentar (` # ...`).
+      // Vi kräver whitespace före `#` så URL-fragments som
+      // `https://x.com#frag` inte mangslås — bara dotenv-stil
+      // `VAR=val # note` triggar strippningen.
+      const commentMatch = value.match(/\s+#.*$/);
+      if (commentMatch) {
+        value = value.slice(0, commentMatch.index).trimEnd();
+      }
     }
     if (key) out[key] = value;
   }
@@ -120,15 +137,64 @@ const nextArgs = ["next", "dev", ...(useHttps ? ["--experimental-https"] : []), 
 // Använd shell:true så att `npx` löser sig till `npx.cmd` på Windows utan
 // att vi behöver hardkoda extension-uppslagning. stdio: "inherit" så
 // next.js egen TTY-output (ANSI-färger, ✓ Ready, etc.) går igenom orört.
+//
+// `detached: !IS_WINDOWS` gör child:en till en egen process group leader
+// på Unix så vi vid shutdown kan signala HELA trädet (shell + npx + next-
+// dev) via `process.kill(-pid, signal)` istället för bara shell-wrappern.
+// På Windows hanteras tree-kill via `taskkill /T /F` i `killTree()`
+// nedan (detached på Windows skapar bara en ny process group, vilket
+// inte räcker — vi behöver det dedikerade tree-kill-anropet).
+// Utan detta dör shell:et men `next dev`-processen lever vidare och
+// håller port 3000 låst, vilket bryter nästa `npm run dev` — exakt
+// det Codex P1-fyndet på parkerade PR #85 beskrev.
 const child = spawn("npx", nextArgs, {
   cwd: VIEWSER_ROOT,
   stdio: "inherit",
   shell: true,
+  detached: !IS_WINDOWS,
   env: {
     ...process.env,
     VIEWSER_PREVIEW_MODE: mode,
   },
 });
+
+// killTree: skicka signal till hela process-trädet under `child`, inte
+// bara shell-wrappern. Plattforms-specifik:
+//
+//   - Windows: `taskkill /pid <child.pid> /T /F` (T = tree, F = force).
+//     Vi kör synkront via spawnSync så vi blockerar tills children är
+//     döda innan watchdogen process.exit:ar.
+//   - Unix: `process.kill(-child.pid, signal)`. Negativ PID = PGID, så
+//     hela process-gruppen får signalen (möjligt tack vare
+//     `detached: true` ovan).
+//
+// Båda branscherna fall-tillbakar tyst till `child.kill(signal)` om
+// tree-kill failar (t.ex. process redan död), så vi aldrig kastar
+// uppåt och hänger event-loopen.
+function killTree(signal) {
+  if (IS_WINDOWS) {
+    try {
+      spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], {
+        stdio: "ignore",
+      });
+      return;
+    } catch {
+      // Faller igenom till plain child.kill nedan
+    }
+  } else {
+    try {
+      process.kill(-child.pid, signal);
+      return;
+    } catch {
+      // Faller igenom till plain child.kill nedan
+    }
+  }
+  try {
+    child.kill(signal);
+  } catch {
+    // child redan borta — ingen åtgärd
+  }
+}
 
 // Signal- och shutdown-hantering.
 // ---------------------------------------------------------------------------
@@ -171,20 +237,22 @@ function clearWatchdog() {
 function handleParentSignal(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
-  if (!child.killed) {
-    try {
-      child.kill(signal);
-    } catch {
-      // child redan borta — exit-handlern nedan tar hand om resten
-    }
+  if (child.exitCode === null && child.signalCode === null) {
+    killTree(signal);
   }
   // SIGKILL-watchdog: om child:en inte exitar inom fönstret eskalerar vi.
   // unref:ar timern så den inte själv håller event-loopen vid liv om allt
-  // redan stängts ner snyggt.
+  // redan stängts ner snyggt. OBS: vi kontrollerar `exitCode === null &&
+  // signalCode === null` istället för `!child.killed` här. `child.killed`
+  // sätts av Node DIREKT efter att signalen SKICKATS (inte när processen
+  // dött), så vid den här tidpunkten är den alltid true och en naiv
+  // `!child.killed`-check gör SIGKILL-grenen till dead code — exakt det
+  // hängar-scenariot watchdogen finns för att skydda mot (Bugbot/Codex
+  // P1 på parkerade PR #85).
   watchdogTimer = setTimeout(() => {
-    if (!child.killed) {
+    if (child.exitCode === null && child.signalCode === null) {
       try {
-        child.kill("SIGKILL");
+        killTree("SIGKILL");
       } catch {
         // ignorera; child redan borta
       }

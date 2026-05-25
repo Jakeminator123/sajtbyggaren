@@ -262,10 +262,44 @@ def test_next_config_uses_effective_mode_in_headers() -> None:
         "production gate becomes dead code and local-next silently "
         "wins in production, dropping COEP/COOP."
     )
-    assert "NEXT_PUBLIC_VIEWSER_PREVIEW_MODE: effectiveMode" in source, (
-        "The NEXT_PUBLIC mirror must also use `effectiveMode` so the "
-        "client sees the same value that drove headers(). Otherwise "
-        "ViewerPanel would spawn a LocalRuntime client in production "
-        "while the server already promoted to StackBlitz-headers, and "
-        "the iframe would be blocked anyway."
+
+
+def test_next_config_mirrors_raw_preview_mode_to_client() -> None:
+    """The NEXT_PUBLIC mirror must expose raw PREVIEW_MODE, not effectiveMode.
+
+    Rationale (AI Bug Review finding 84% on PR #88): the production gate is
+    deliberately a server-side header safety rail — it ensures COEP/COOP
+    cannot be silently dropped in production. It should NOT also rewrite
+    the operator's expressed runtime intent for the client.
+
+    Earlier iteration mirrored `effectiveMode`, which meant a production
+    deploy with `VIEWSER_PREVIEW_MODE=local-next` exposed `"stackblitz"`
+    to the client. That made ViewerPanel pick the StackBlitz runtime
+    path even when the operator explicitly chose LocalRuntime — a
+    runtime-selection side effect that lived outside the gate's stated
+    "headers-only" scope.
+
+    The fix: mirror the raw operator intent (`PREVIEW_MODE`) to the
+    client. A future ViewerPanel consumer can cross-reference against
+    fetched headers if it needs to know what the server actually
+    settled on. The server-side gate keeps its sole responsibility:
+    guarantee correct headers. Operator intent stays intact in the
+    client.
+
+    This lock prevents a regression back to mirroring `effectiveMode`.
+    """
+    source = _load_config_source()
+    assert "NEXT_PUBLIC_VIEWSER_PREVIEW_MODE: PREVIEW_MODE" in source, (
+        "The NEXT_PUBLIC mirror must expose raw `PREVIEW_MODE` (operator "
+        "intent), not `effectiveMode` (gate-applied server header value). "
+        "Otherwise the production gate leaks beyond its stated headers-"
+        "only scope and silently rewrites the client's runtime selection "
+        "in a way the operator did not request."
+    )
+    assert "NEXT_PUBLIC_VIEWSER_PREVIEW_MODE: effectiveMode" not in source, (
+        "The NEXT_PUBLIC mirror must NOT use `effectiveMode`. See "
+        "test_next_config_mirrors_raw_preview_mode_to_client for the full "
+        "rationale (AI Bug Review finding on PR #88). Reverting to "
+        "`effectiveMode` re-introduces the runtime-selection regression "
+        "this lock prevents."
     )

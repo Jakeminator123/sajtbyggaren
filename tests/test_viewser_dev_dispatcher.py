@@ -315,3 +315,157 @@ def test_dispatcher_documents_dev_only_scope() -> None:
         "authoritative for COEP/COOP. Duplicating the rule here would "
         "risk the two sides drifting."
     )
+
+
+# --------------------------------------------------------------------------
+# Source-locks for the PR #88 review-fix round (post-Bugbot/Codex).
+#
+# These tests lock the specific behaviors the reviewers flagged on the
+# initial preview-mode commit so they cannot quietly regress:
+#
+#   1. Watchdog must use `exitCode === null && signalCode === null` instead
+#      of `!child.killed` to detect a still-alive child (Bugbot Medium +
+#      Codex P1: `child.killed` flips to true the moment kill() is sent,
+#      not when the process exits — making the original `!child.killed`
+#      guard always-false dead code).
+#
+#   2. Shutdown must kill the entire subprocess tree, not just the shell
+#      wrapper that `shell: true` spawns (Codex P1: on Windows `cmd.exe`
+#      does not forward signals to its child `next dev`; on Unix the
+#      shell may also not propagate cleanly).
+#
+#   3. The .env parser must accept `export VAR=val` and trailing
+#      `# comment` (Codex P2: Next.js' own dotenv parsing accepts these
+#      forms, so rejecting them in the dispatcher creates a false-positive
+#      "Okänt VIEWSER_PREVIEW_MODE" failure for env files that next dev
+#      would parse correctly).
+# --------------------------------------------------------------------------
+
+
+def test_dispatcher_watchdog_checks_exit_state_not_killed_flag() -> None:
+    """The SIGKILL watchdog must use process-state checks, not `child.killed`.
+
+    Bugbot Medium + Codex P1 on PR #88: Node sets `child.killed = true`
+    IMMEDIATELY after a successful `child.kill(signal)` call — it means
+    the signal was *sent*, not that the process *terminated*. So by the
+    time the watchdog timer fires (5s later), `child.killed` is already
+    true, and a naive `if (!child.killed) { kill SIGKILL }` guard makes
+    the SIGKILL branch unreachable. That defeats the entire point of the
+    watchdog: a hung child that ignores SIGINT/SIGTERM would never get
+    the SIGKILL escalation, exactly the failure mode the watchdog exists
+    to cover.
+
+    The fix is to inspect process state (`exitCode === null` AND
+    `signalCode === null`) — both become non-null only when the OS
+    confirms the process actually exited.
+
+    This lock prevents a regression back to `!child.killed`.
+    """
+    source = _load_dispatcher_source()
+    assert "child.exitCode === null" in source, (
+        "dev.mjs watchdog must check `child.exitCode === null` to detect "
+        "a still-alive child. Using `!child.killed` is dead code because "
+        "Node sets `killed` on signal-sent, not on process-exit. See "
+        "Bugbot Medium + Codex P1 on PR #88."
+    )
+    assert "child.signalCode === null" in source, (
+        "dev.mjs watchdog must also check `child.signalCode === null` "
+        "alongside `exitCode === null`. Both must be null for the child "
+        "to be confirmed alive — exitCode covers normal exit, signalCode "
+        "covers signal-caused exit. Checking only one misses the other "
+        "path."
+    )
+
+
+def test_dispatcher_kills_entire_subprocess_tree() -> None:
+    """Shutdown must kill the whole tree (shell + npx + next dev), not just shell.
+
+    Codex P1 on PR #88: spawning `npx next dev` with `shell: true` means
+    the actual child is `cmd.exe /c "npx next dev"` (Windows) or
+    `sh -c "npx next dev"` (Unix). `child.kill(signal)` kills the shell
+    wrapper, but per Node docs the command the shell launched can survive
+    — so after Ctrl-C the `next dev` process may keep port 3000 bound,
+    breaking subsequent `npm run dev` starts and leaving orphan processes
+    in local/CI environments.
+
+    The fix is platform-specific tree-kill:
+      - Windows: `taskkill /pid <pid> /T /F` (T = tree, F = force).
+      - Unix: `process.kill(-child.pid, signal)` — negative PID = PGID,
+        requires `detached: true` on spawn so the child becomes its own
+        process group leader.
+
+    This lock pins both halves so a refactor can't quietly drop one and
+    re-introduce the orphan-process regression on the affected platform.
+    """
+    source = _load_dispatcher_source()
+    assert "killTree" in source, (
+        "dev.mjs must define and use a `killTree(signal)` helper that "
+        "handles platform-specific tree-kill. Inlining the logic at each "
+        "callsite makes drift between handleParentSignal and the watchdog "
+        "almost certain."
+    )
+    assert "taskkill" in source, (
+        "dev.mjs must call `taskkill /pid <pid> /T /F` on Windows so the "
+        "entire process tree under the shell wrapper is killed. Without "
+        "/T, only the shell dies and `next dev` survives — keeping port "
+        "3000 bound and breaking the next `npm run dev`."
+    )
+    assert "process.kill(-child.pid" in source, (
+        "dev.mjs must call `process.kill(-child.pid, signal)` on Unix to "
+        "signal the whole process group. The negative PID is the POSIX "
+        "convention for 'send to PGID'. Without it the shell dies but "
+        "the npx + next dev subprocesses survive."
+    )
+    assert "detached: !IS_WINDOWS" in source or "detached: !isWindows" in source, (
+        "dev.mjs must spawn with `detached: !IS_WINDOWS` so the Unix "
+        "child becomes its own process group leader, which is required "
+        "for `process.kill(-pid)` to work. Without detached, the child "
+        "shares the parent's pgid and `kill(-pid)` would signal the "
+        "parent itself."
+    )
+
+
+def test_dispatcher_env_parser_handles_export_prefix() -> None:
+    """The .env parser must strip POSIX-shell `export ` prefixes.
+
+    Codex P2 on PR #88: dotenv files often contain `export VAR=val`
+    (it's valid POSIX shell and Next.js' own dotenv parser accepts it).
+    The previous custom parser only handled bare `VAR=val`, so a line
+    like `export VIEWSER_PREVIEW_MODE=stackblitz` parsed as a key of
+    `"export VIEWSER_PREVIEW_MODE"` and a value of `"stackblitz"` —
+    failing the mode-validation check and exiting the dispatcher with
+    "Okänt VIEWSER_PREVIEW_MODE" even though next dev itself would have
+    loaded the value correctly.
+
+    This lock pins the export-prefix stripping in the parser.
+    """
+    source = _load_dispatcher_source()
+    assert 'line.startsWith("export ")' in source, (
+        "dev.mjs parseEnvFile must detect lines starting with `export ` "
+        "and strip the prefix before splitting on `=`. Skipping this "
+        "step re-introduces the false-reject regression on dotenv files "
+        "that next dev itself parses correctly."
+    )
+
+
+def test_dispatcher_env_parser_strips_trailing_comments() -> None:
+    """The .env parser must strip trailing `# comment` from unquoted values.
+
+    Codex P2 on PR #88: a line like `VIEWSER_PREVIEW_MODE=local-next # foo`
+    parsed as `local-next # foo` under the previous custom parser, failing
+    the mode validator. Next.js' own dotenv parser strips the inline
+    comment cleanly.
+
+    The fix requires whitespace before `#` (so URL fragments like
+    `https://x.com#frag` are not mangled) and only applies to unquoted
+    values (quoted values may legitimately contain `#`).
+
+    This lock pins the regex used for trailing-comment stripping.
+    """
+    source = _load_dispatcher_source()
+    assert "\\s+#" in source, (
+        "dev.mjs parseEnvFile must strip trailing inline comments where "
+        "the `#` is preceded by whitespace. The whitespace requirement "
+        "protects URL fragments and other legitimate `#` uses inside "
+        "values from being mangled."
+    )
