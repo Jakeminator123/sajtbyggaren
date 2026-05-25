@@ -43,6 +43,11 @@ jobs:
       - name: Check term coverage (strict)
         run: python scripts/check_term_coverage.py --strict
 
+      - name: Sprintvakt check
+        run: |
+          pip install -e .
+          python scripts/sprintvakt_check.py --strict
+
       - name: Run pytest
         run: python -m pytest tests/ -v
 
