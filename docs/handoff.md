@@ -1,15 +1,15 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-25 morgon (**Sprintvåg 1 stängd — fyra PRs landade
-på 90 min**: PR #81 B83 service slug + PR #82 Lane 3 embeddings audit
-+ PR #80 B85 stdout contract + PR #79 B87 model fallback warning).
-Verifierad `jakob-be` är `7654573`. `main` ligger 9 commits bakom på
-`6649b51`; allt ovanpå sitter på `jakob-be` och följer med när
-`jakob-be` nästa gång PR:as mot `main` (väntar tills Lane 2 + Lane 4
-är mergade och Christopher-spåret beslutat).
-`christopher-ui` är på `9f63f15` (Christophers scope-leak-implementation
-av `GAP-backend-build-trace-endpoint` plus en versions-tab-fix, ej PR:ad
-än, se nedan). Bug-räkning post-sprintvåg-1: **21 aktiva / 110 stängda**.
+**Datum:** 2026-05-25 morgon (**Sprintvåg 1+2 stängd — fem grind/scout-PRs
+landade på 2 timmar**: PR #81 B83 + PR #82 Lane 3 embeddings audit + PR #80 B85
++ PR #79 B87 + PR #83 B72+B75 status-sync). Verifierad `jakob-be` är
+`2a5d2e5`. `main` ligger 11 commits bakom på `6649b51`. Allt ovanpå
+sitter på `jakob-be` och följer med när `jakob-be` nästa gång PR:as mot
+`main` (väntar tills Lane 2 + Lane 4 är mergade och Christopher-spåret
+beslutat). `christopher-ui` är på `9f63f15` (Christophers
+scope-leak-implementation av `GAP-backend-build-trace-endpoint` plus en
+versions-tab-fix, ej PR:ad än). Bug-räkning: **19 aktiva / 112 stängda**
+(-5 sedan morgon).
 
 Health på `jakob-be` är grön: governance (18 policies), rules-sync,
 strict term coverage, sprintvakt-check `--strict`, ruff 0 findings,
@@ -98,6 +98,8 @@ finns separat prompt i [`docs/agent-prompts/sprintvakt.md`](agent-prompts/sprint
 
 **Senaste landade spår sedan c0b59fbe (PR #60), nyast först:**
 
+- `2a5d2e5` PR #83 / `docs(grind): close B72 + B75 status-sync to Stängda`. Båda buggarna var fixade i `885431b` (PR #28) men entries glömdes kvar i Öppna under Steward-städning 2026-05-18. Cloud-grind round 4 verifierade båda regression-tester passar mot HEAD (`tests/test_viewser_security_1b.py` + `tests/test_project_input_schema.py`), uppdaterade summary-rad till 19/112 aktiva.
+- `2821e5f` docs(steward) / Sprintvåg 1 stängd, bumpade verified state till `7654573` med fyra PRs dokumenterade.
 - `7654573` PR #79 / `fix(grind): close B87 model fallback warning`. `resolve_brief_model`-fallback loggar nu högt på stderr per B87 fix-direktivet (`known-issues.md:138-139`). Cloud-grind round 3, rebasad och pushad efter #80-merge med uppdaterad bugräkning 22→21 aktiva.
 - `4d4a27b` PR #80 / `fix(grind): close B85 stdout contract drift`. Source-lock-test `test_prompt_helper_docstring_matches_stdout_contract` låser `scripts/prompt_to_project_input.py`-docstringen mot stdout-nycklar. Cloud-grind round 2.
 - `0ea3f3d` PR #82 / `docs(scout): embedding readiness audit 2026-05-25`. Lane 3 Scout-rapport (No-Go-dom, modellval, Go-villkor, B-IDer för schema-bumpar, 386 rader docs).

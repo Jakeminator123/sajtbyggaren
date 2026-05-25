@@ -30,16 +30,15 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `7654573` (2026-05-25 morgon, **Sprintvåg 1: fyra
-PRs landade på `jakob-be` inom 90 minuter** — PR #81 B83 service slug,
-PR #82 Lane 3 Embeddings readiness audit, PR #80 B85 stdout contract,
-PR #79 B87 model fallback warning). `origin/main` ligger fortfarande
-på `6649b51` (closing-round docs-sync efter PR #75) och ligger nu 9
-commits bakom `jakob-be` (recovery → steward-sync → #77 → #78 →
-`a0b06b5` → `b12c164` → `74e74f2` → #81 → #82 → #80 → #79).
-`origin/christopher-ui` är på `9f63f15` med Christophers
-scope-leak-implementation av `GAP-backend-build-trace-endpoint` plus en
-versions-tab-fix (ej PR:ad än).
+Last verified state: `2a5d2e5` (2026-05-25 morgon, **Sprintvåg 1+2:
+fem grind/scout-PRs landade på `jakob-be` inom 2 timmar** — #81 B83
+service slug, #82 Lane 3 Embeddings readiness audit, #80 B85 stdout
+contract, #79 B87 model fallback warning, #83 B72+B75 status-sync).
+`origin/main` ligger fortfarande på `6649b51` och ligger nu 11 commits
+bakom `jakob-be`. `origin/christopher-ui` är på `9f63f15` med
+Christophers scope-leak-implementation av
+`GAP-backend-build-trace-endpoint` plus en versions-tab-fix (ej PR:ad
+än). Bug-räkning: **19 aktiva / 112 stängda** (-5 sedan morgon).
 
 PR #77 (agent inbox) mergades med 5 reviewfynd-fixar i samma squash
 (symlink-resistens, deterministic id, idempotent ack, ordinal > 9999,
@@ -78,9 +77,12 @@ Sedan c0b59fbe (PR #60) har följande mergats till `main`, i ordning:
 - `0ea3f3d` PR #82 — `docs(scout): embedding readiness audit 2026-05-25`. Lane 3 Scout-rapport: No-Go-dom med konkreta Go-villkor (lane 2 mergad + golden-path eval ≥7/10), 386 rader, modellval-jämförelse, B-IDer för schema-bumpar.
 - `4d4a27b` PR #80 — `fix(grind): close B85 stdout contract drift`. Source-lock-test för `scripts/prompt_to_project_input.py`-docstring vs stdout-nycklar. Cloud-grind round 2.
 - `7654573` PR #79 — `fix(grind): close B87 model fallback warning`. `resolve_brief_model`-fallback loggar nu högt på stderr per B87-fix-direktivet. Cloud-grind round 3.
+- `2821e5f` docs(steward) — Sprintvåg 1 stängd, bumpade verified state till `7654573`, dokumenterade alla fyra PRs i landade-spår-listan.
+- `2a5d2e5` PR #83 — `docs(grind): close B72 + B75 status-sync to Stängda`. Båda buggarna fixed i `885431b` (PR #28), regression-tester passar mot HEAD, bara docs-position låg fel. Cloud-grind round 4.
 
 **Pågående/öppna PR:s just nu:** Inga öppna PRs mot `jakob-be` eller
-`main`. Cloud-grindens nästa runda väntar på nästa coordination-prompt.
+`main`. Cloud-grind-sessionen är klar för sin runda — kan stängas eller
+plockas för ny coordination-prompt vid nästa pass.
 
 **Christophers `origin/christopher-ui` (`9f63f15`)** — Christopher har
 under operator-OK scope-leak implementerat hela
@@ -105,8 +107,8 @@ branch-byten i delad mapp.
 vågor:
 
 1. **Lane 1 Cloud-grind round 4** — väntar på nästa coordination-prompt. Nästa lågriskitems: status-only-stängningar i `docs/known-issues.md`, isolerade test-refaktorer som inte rör scripts/prompt_to_project_input.py (fortfarande pausat tills Lane 2 är mergad), docs/typo-fixar.
-2. **Lane 2 LLM contract propagation** — `cursor/jakob-be-llm-contract-propagation` (`7847e5c`) WIP-rescue. Behöver ny agent (bg-subagent eller lokal Cursor i isolerad worktree) som rebasar mot `7654573` och kör grindar + ev. fortsätter regressionstesterna. B137-B141 är scope (tagline, pageCount, tone, brand.primaryColorHex, siteBrief-ref).
-3. **Lane 4 Golden Path eval baseline** — `cursor/jakob-be-golden-path-eval` (`3bee355`) WIP-rescue. Lokala agent kan resuma genom `git pull --rebase origin jakob-be`, fortsätta sprintarbetet, öppna PR mot jakob-be när klar.
+2. **Lane 2 LLM contract propagation** (parkerad WIP) — `cursor/jakob-be-llm-contract-propagation` (`7847e5c`). Behind med 6 commits. Behöver ny agent som rebasar mot `2a5d2e5` och kör grindar + ev. fortsätter regressionstesterna. B137-B141 är scope (tagline, pageCount, tone, brand.primaryColorHex, siteBrief-ref). Operatörsbeslut: starta om i isolerad worktree (rekommenderat) eller vänta.
+3. **Lane 4 Golden Path eval baseline** (parkerad WIP) — `cursor/jakob-be-golden-path-eval` (`3bee355`). Behind med 6 commits. Innehåller deterministic scorecard-runner + 8 nya filer / 1478 rader (packages/generation/eval/, scripts/run_golden_path_eval.py, tests/test_golden_path_eval.py, docs/golden-path-baseline.md). Värdefull infrastruktur eftersom Lane 3 Embeddings audit listar "Golden Path snitt ≥7/10" som Go-villkor för embeddings-implementation. **Rekommendation: bevara branchen, resumas av framtida agent** via `git checkout cursor/jakob-be-golden-path-eval && git pull --rebase origin jakob-be`. Inte värt att kasta även om operatör vill paus.
 4. **Stackblitz-agent (parallellt)** — operatör driver separat agent på preview-fallback-spår. Scope förmodligen `apps/viewser/lib/local-preview-server.ts` eller `apps/viewser/lib/stackblitz-files.ts` (B125-territory — kräver operator-OK för sprint).
 
 **Parkerade lanes (väntar trigger):**
