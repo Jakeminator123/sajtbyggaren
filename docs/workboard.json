@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-25T03:10:00Z",
-  "updatedBy": "jakob-orchestrator",
+  "updatedAt": "2026-05-25T01:42:18Z",
+  "updatedBy": "sprintvakt-mcp",
   "people": {
     "jakob": {
       "allocation": 0.75,
@@ -113,61 +113,7 @@
       "note": "UI-skriven backend-spec. Blockerar Live Build Sync A (real pipeline-status) och D (iterera från version N med riktig PI-snapshot). UI har workaround idag (prompt-prefix) som automatiskt uppgraderas till baseRunId så fort backend stödjer det."
     }
   ],
-  "activeGaps": [
-    {
-      "id": "GAP-viewser-live-build-sync",
-      "type": "Gap/UI",
-      "owner": "christopher",
-      "title": "Live Build Sync — optimistisk pending-version + bättre koordination mellan FloatingChat och Versions-tab",
-      "collisionRisk": "green",
-      "reviewer": "jakob",
-      "status": "active",
-      "file": "docs/gaps/GAP-viewser-live-build-sync.md",
-      "startedAt": "2026-05-25T02:35:00Z",
-      "paths": [
-        "apps/viewser/app/page.tsx",
-        "apps/viewser/components/builder/builder-shell.tsx",
-        "apps/viewser/components/builder/inspector/versions-tab.tsx",
-        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
-        "apps/viewser/components/builder/use-pending-build.ts"
-      ],
-      "doNotTouch": [
-        "apps/viewser/app/api/runs/route.ts",
-        "apps/viewser/app/api/runs/[runId]/artifacts/route.ts",
-        "apps/viewser/app/api/prompt/route.ts",
-        "apps/viewser/lib/runs.ts",
-        "apps/viewser/lib/build-runner.ts",
-        "apps/viewser/lib/prompt-runner.ts",
-        "apps/viewser/components/builder/floating-chat.tsx",
-        "apps/viewser/components/discovery-wizard/**",
-        "packages/generation/**",
-        "governance/policies/**",
-        "scripts/build_site.py",
-        "scripts/prompt_to_project_input.py",
-        "scripts/sprintvakt_check.py",
-        "tests/test_*.py"
-      ],
-      "acceptanceCriteria": [
-        "Optimistisk pending-rad i Versions-tab inom 100 ms efter follow-up klickas.",
-        "Pending-raden byts atomärt mot den riktiga runId-raden när bygget är klart.",
-        "isBuilding + pendingBuild-state lyfts till page.tsx och delas mellan FloatingChat och VersionsTab.",
-        "Build-fail tar bort pending-raden snyggt utan att lämna orphan-state.",
-        "Varje run-rad har en 'Iterera från denna'-knapp som öppnar FloatingChat med prompt-prefix.",
-        "Inga ändringar i /api/prompt-, /api/runs- eller artifacts-API-shape.",
-        "Inga ändringar i floating-chat.tsx interna logik."
-      ],
-      "checks": [
-        "python scripts/sprintvakt_check.py",
-        "python scripts/governance_validate.py",
-        "python scripts/rules_sync.py --check",
-        "python scripts/check_term_coverage.py --strict",
-        "python -m ruff check .",
-        "python -m pytest tests/ -q",
-        "cd apps/viewser && npx tsc --noEmit",
-        "cd apps/viewser && npm run lint"
-      ]
-    }
-  ],
+  "activeGaps": [],
   "completedGaps": [
     {
       "id": "GAP-viewser-wizard-minimalism",
@@ -311,6 +257,67 @@
       "notes": [
         "All three acceptance criteria met. Tests 14 -> 18 passed. ruff clean. sprintvakt_check OK."
       ]
+    },
+    {
+      "id": "GAP-viewser-live-build-sync",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Live Build Sync — optimistisk pending-version + bättre koordination mellan FloatingChat och Versions-tab",
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "file": "docs/gaps/GAP-viewser-live-build-sync.md",
+      "startedAt": "2026-05-25T02:35:00Z",
+      "paths": [
+        "apps/viewser/app/page.tsx",
+        "apps/viewser/components/builder/builder-shell.tsx",
+        "apps/viewser/components/builder/inspector/versions-tab.tsx",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/components/builder/use-pending-build.ts"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/runs/route.ts",
+        "apps/viewser/app/api/runs/[runId]/artifacts/route.ts",
+        "apps/viewser/app/api/prompt/route.ts",
+        "apps/viewser/lib/runs.ts",
+        "apps/viewser/lib/build-runner.ts",
+        "apps/viewser/lib/prompt-runner.ts",
+        "apps/viewser/components/builder/floating-chat.tsx",
+        "apps/viewser/components/discovery-wizard/**",
+        "packages/generation/**",
+        "governance/policies/**",
+        "scripts/build_site.py",
+        "scripts/prompt_to_project_input.py",
+        "scripts/sprintvakt_check.py",
+        "tests/test_*.py"
+      ],
+      "acceptanceCriteria": [
+        "Optimistisk pending-rad i Versions-tab inom 100 ms efter follow-up klickas.",
+        "Pending-raden byts atomärt mot den riktiga runId-raden när bygget är klart.",
+        "isBuilding + pendingBuild-state lyfts till page.tsx och delas mellan FloatingChat och VersionsTab.",
+        "Build-fail tar bort pending-raden snyggt utan att lämna orphan-state.",
+        "Varje run-rad har en 'Iterera från denna'-knapp som öppnar FloatingChat med prompt-prefix.",
+        "Inga ändringar i /api/prompt-, /api/runs- eller artifacts-API-shape.",
+        "Inga ändringar i floating-chat.tsx interna logik."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint"
+      ],
+      "completedAt": "2026-05-25T01:42:18Z",
+      "fixCommits": [
+        "7e21b49"
+      ],
+      "notes": [
+        "Mergad till main via PR #71. UI-only del klar — A+D backend-bitar väntar på GAP-backend-build-trace-endpoint."
+      ],
+      "updatedAt": "2026-05-25T01:42:18Z"
     }
   ],
   "decisions": [
