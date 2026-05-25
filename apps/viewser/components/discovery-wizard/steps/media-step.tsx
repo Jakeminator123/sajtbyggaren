@@ -4,12 +4,13 @@ import {
   Globe,
   Image as ImageIcon,
   ImagePlus,
+  Info,
   Mountain,
   Sparkles,
   Square,
   Video,
 } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { AIImageGeneratorDialog } from "@/components/discovery-wizard/ai-image-generator-dialog";
 import { AssetDropzone } from "@/components/discovery-wizard/asset-dropzone";
@@ -17,7 +18,7 @@ import type { AssetRef, AssetRole } from "@/lib/asset-store/types";
 
 import type { WizardAnswers, WizardAssets, WizardMedia } from "../wizard-types";
 import { AssetsStep } from "./assets-step";
-import { AdvancedDisclosure, FieldStack, HelperText } from "./step-primitives";
+import { AdvancedDisclosure, FieldStack } from "./step-primitives";
 
 /**
  * MediaStep — wizardens steg 5 (Pass 5: rik kort-layout per asset).
@@ -50,19 +51,15 @@ export function MediaStep({
 
   return (
     <FieldStack>
-      <div>
-        <HelperText>
-          Alla bilder är valfria — om du hoppar över får sajten ett
-          monogram-logo och text-baserade hero-sektioner. Du kan också
-          generera bilder med AI (GPT Image 1.5) om du saknar egna.
-        </HelperText>
-      </div>
-
-      {/* 1. Logo + Hero + Galleri (befintlig AssetsStep i en kort). */}
+      {/* 1. Logo + Hero + Galleri (befintlig AssetsStep i en kort).
+          Minimalism v2: tidigare top-helper-blocket ("Alla bilder är
+          valfria…") tas bort eftersom AssetsStep internt visar samma
+          info, och 1-mening på AssetCard:en räcker som intro. */}
       <AssetCard
         icon={<ImagePlus className="h-4 w-4" />}
         title="Logotyp, hero och galleri"
-        description="Huvudtillgångarna som syns på sajten. AI:n föreslår alt-text och placering."
+        description="Huvudtillgångarna som syns på sajten."
+        descriptionLong="AI:n föreslår alt-text och placering. Lämna fält tomma och vi genererar fallbacks (monogram, text-hero, brand-OG)."
       >
         <AssetsStepInline answers={answers} onChange={onChange} />
         {/* AI-knapprad för rollerna inne i AssetsStep — vi modifierar
@@ -103,7 +100,7 @@ export function MediaStep({
         <AssetCard
           icon={<Square className="h-4 w-4" />}
           title="Favicon"
-          description="Ikonen i browser-fliken och bokmärken."
+          description="Ikonen i browser-fliken."
         >
           {answers.media.favicon ? (
             <FaviconPreview
@@ -130,7 +127,8 @@ export function MediaStep({
         <AssetCard
           icon={<Globe className="h-4 w-4" />}
           title="OG-image"
-          description="Förhandsvisning på Facebook, LinkedIn, Slack och SMS."
+          description="Social förhandsvisning."
+          descriptionLong="Visas på Facebook, LinkedIn, Slack och SMS. Lämnar du tom genererar vi en bild från brand-färgen och titeln."
         >
           {answers.media.ogImage ? (
             <OgImagePreview
@@ -158,7 +156,8 @@ export function MediaStep({
         <AssetCard
           icon={<Video className="h-4 w-4" />}
           title="Bakgrundsvideo"
-          description="Loop bakom hero-texten — tyst, kort, ger sajten liv."
+          description="Loop bakom hero-texten."
+          descriptionLong="Tyst, kort, ger sajten liv. Hero-bilden visas som fallback om videon inte stöds."
         >
           {answers.media.backgroundVideo ? (
             <VideoPreview
@@ -281,13 +280,19 @@ function AssetCard({
   icon,
   title,
   description,
+  descriptionLong,
   children,
 }: {
   icon: React.ReactNode;
   title: string;
   description: string;
+  /** Optional secondary prose flytted behind an info-icon next to
+   *  the title so default rendering stays minimal. */
+  descriptionLong?: string;
   children: React.ReactNode;
 }) {
+  const [helpOpen, setHelpOpen] = useState(false);
+  const helpPanelId = useId();
   return (
     <div className="border-border/70 bg-card/40 rounded-xl border p-4">
       <div className="mb-3 flex items-start gap-3">
@@ -295,12 +300,38 @@ function AssetCard({
           {icon}
         </span>
         <div className="min-w-0 flex-1">
-          <span className="text-foreground text-[13.5px] font-semibold tracking-tight">
-            {title}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-foreground text-[13.5px] font-semibold tracking-tight">
+              {title}
+            </span>
+            {descriptionLong ? (
+              <button
+                type="button"
+                onClick={() => setHelpOpen((prev) => !prev)}
+                aria-expanded={helpOpen}
+                aria-controls={helpPanelId}
+                aria-label={helpOpen ? "Dölj förklaring" : "Visa förklaring"}
+                className="text-muted-foreground/60 hover:text-foreground/80 focus-visible:ring-ring/40 inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              >
+                <Info className="h-3 w-3" aria-hidden />
+              </button>
+            ) : null}
+          </div>
           <p className="text-muted-foreground mt-0.5 text-[11.5px] leading-snug">
             {description}
           </p>
+          {descriptionLong ? (
+            // Panelen mountas alltid (hidden när stängd) så aria-controls
+            // alltid pekar på ett element i DOM.
+            <p
+              id={helpPanelId}
+              role="note"
+              hidden={!helpOpen}
+              className="text-muted-foreground/80 mt-1 text-[11px] leading-snug"
+            >
+              {descriptionLong}
+            </p>
+          ) : null}
         </div>
       </div>
       {children}

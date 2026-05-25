@@ -5,10 +5,17 @@ import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 import type { discoveryOption } from "../discovery-options";
+import { FoundationSummary } from "../foundation-summary";
+import {
+  HeroLayoutGlyph,
+  VibeSwatchRow,
+} from "../visual-preview-card";
 import {
   BUSINESS_FAMILIES,
+  type BusinessFamily,
   type BusinessFamilyId,
   familyForCategory,
+  findVibe,
   type WizardCategoryId,
 } from "../wizard-constants";
 import type { WizardAnswers } from "../wizard-types";
@@ -19,6 +26,7 @@ import {
   FieldLabel,
   FieldStack,
   HelperText,
+  MetadataPanel,
   SectionHeader,
   TextField,
   TextareaField,
@@ -193,14 +201,22 @@ export function FoundationStep({
     <FieldStack>
       {/* URL-SKRAPE — alltid högst upp. Snabbväg som auto-fyller
           företagsnamn, offer, kontakt och mer från en befintlig sajt.
-          Får inte gömmas i disclosure (halverar upptäckbarheten). */}
+          Får inte gömmas i disclosure (halverar upptäckbarheten).
+          Minimalism v2: en kort synlig ledtext säljer "lyxvägen" så
+          operatören upptäcker den utan klick, längre förklaring
+          ligger bakom info-ikonen. Status-meddelandet (scrapeMessage)
+          syns kvar inline eftersom det är ett action-resultat
+          operatören måste se utan klick. */}
       <div>
-        <FieldLabel optional>Har ni redan en hemsida?</FieldLabel>
-        <HelperText>
-          Klistra in URL:en så fyller vi i företagsnamn, vad ni gör,
-          kontaktuppgifter och resten automatiskt. Du kan granska och
-          justera allt nedan efteråt.
-        </HelperText>
+        <FieldLabel
+          optional
+          help="Vi läser publika sidor, om-oss, tjänster, kontakt och OG-bilder. Du kan granska och justera allt nedan efteråt."
+        >
+          Har ni redan en hemsida?
+        </FieldLabel>
+        <p className="text-muted-foreground/85 mt-1 text-[12px] leading-snug">
+          Klistra in URL:en så fyller vi i resten automatiskt.
+        </p>
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
           <input
             type="url"
@@ -245,7 +261,10 @@ export function FoundationStep({
         ) : null}
       </div>
 
-      {/* ESSENTIALS — alltid synliga: identitet + family. */}
+      {/* ESSENTIALS — alltid synliga: identitet + family. Hjälptexter
+          ligger nu bakom info-ikon i FieldLabel (TextField/TextareaField
+          dirigerar `helper`-prop:en bakom CollapsibleHelp by default
+          efter minimalism-pass v2). */}
       <TextField
         label="Företagsnamn *"
         value={answers.companyName}
@@ -255,6 +274,12 @@ export function FoundationStep({
           answers.existingSite.trim() && scrapeStatus !== "ok"
             ? "Fylls i automatiskt när du klickar Hämta ovan."
             : undefined
+        }
+        // Scrape-statusen är viktig att se direkt utan klick — annars
+        // ren info-ikon. Vi använder inline-läge när scrape väntar,
+        // annars går helpern bakom info-ikonen.
+        helperInline={
+          !!(answers.existingSite.trim() && scrapeStatus !== "ok")
         }
       />
       <TextareaField
@@ -267,38 +292,40 @@ export function FoundationStep({
       />
 
       <div>
-        <SectionHeader>Verksamhetsfamilj *</SectionHeader>
-        <HelperText>
-          Styr scaffold + starter — vilken Next.js-mall backend bygger på. Välj
-          den som passar bäst.
-        </HelperText>
+        <SectionHeader help="Styr scaffold + starter — vilken Next.js-mall backend bygger på. Färg och layout-skiss visar default-vibens känsla (du kan ändra i steg 2).">
+          Verksamhetsfamilj *
+        </SectionHeader>
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {BUSINESS_FAMILIES.map((option) => {
-            const isSelected = selectedFamily === option.id;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => selectFamily(option.id)}
-                aria-pressed={isSelected}
-                className={[
-                  "rounded-xl border p-3 text-left transition-colors",
-                  isSelected
-                    ? "border-foreground bg-foreground/[0.04] shadow-sm"
-                    : "border-border/70 bg-card hover:border-foreground/40 hover:bg-foreground/[0.02]",
-                ].join(" ")}
-              >
-                <div className="text-foreground text-[13px] font-semibold tracking-tight">
-                  {option.label}
-                </div>
-                <div className="text-muted-foreground mt-1 text-[11.5px] leading-snug">
-                  {option.description}
-                </div>
-              </button>
-            );
-          })}
+          {BUSINESS_FAMILIES.map((option) => (
+            <FamilyCard
+              key={option.id}
+              family={option}
+              selected={selectedFamily === option.id}
+              onSelect={() => selectFamily(option.id)}
+            />
+          ))}
         </div>
       </div>
+
+      {/* Live transparens — visas direkt när family + offer är ifyllda så
+          operatören ser EXAKT vilka beslut backend kommer att fatta
+          (scaffold, default-vibe, branch, förvalda funktioner).
+          Minimalism v2: panelen ligger nu bakom en collapsible
+          MetadataPanel så default-vyn för foundation är minimal och
+          operatören klickar för transparens när hen vill ha det. */}
+      {answers.businessFamily && answers.offer.trim() ? (
+        <MetadataPanel
+          id="foundation-summary"
+          title="Så här tolkar vi dina val"
+          subtitle="Scaffold, vibe, typografi, branch & förvalda funktioner — klicka för förhandsvisning."
+        >
+          <FoundationSummary
+            businessFamily={answers.businessFamily}
+            companyName={answers.companyName}
+            offer={answers.offer}
+          />
+        </MetadataPanel>
+      ) : null}
 
       {/* ADVANCED — i disclosure: specialisering + kontakt. URL-skrape
           ligger numera ovanför FieldStack (alltid synlig). */}
@@ -309,16 +336,20 @@ export function FoundationStep({
         count={2}
         activeCount={advancedFilled}
       >
-        {/* Sub-specialisering — filtrerade chips för vald family. */}
+        {/* Sub-specialisering — filtrerade chips för vald family.
+            Minimalism v2: helper-text bakom info-ikon. Fallback-noteringen
+            visas inline bara när vi är i fallback-läge (operatören behöver
+            veta att vi inte använder governance-listan). */}
         {selectedFamily && subCategoryOptions.length > 0 ? (
           <div>
-            <SectionHeader>Specialisering</SectionHeader>
-            <HelperText>
-              En eller flera sub-kategorier för bättre copy och SEO.
-              {source === "fallback"
-                ? " (Visar lokal UI-cache tills governance-listan laddats.)"
-                : ""}
-            </HelperText>
+            <SectionHeader help="En eller flera sub-kategorier för bättre copy och SEO.">
+              Specialisering
+            </SectionHeader>
+            {source === "fallback" ? (
+              <HelperText>
+                Visar lokal UI-cache tills governance-listan laddats.
+              </HelperText>
+            ) : null}
             <div className="mt-2">
               <ChipRow>
                 {subCategoryOptions.map((category) => (
@@ -382,5 +413,66 @@ export function FoundationStep({
         </div>
       </AdvancedDisclosure>
     </FieldStack>
+  );
+}
+
+/**
+ * FamilyCard — verksamhets­familje-kort i steg 1. Berikat (Front 2) med
+ * en default-vibens swatch-rad + mini hero-layout-glyph så operatören
+ * direkt ser visuell signal innan hen klickat på family. All data
+ * härleds från BUSINESS_FAMILIES.defaultVariantId → findVibe(), så
+ * korten är alltid synkade med vad backend faktiskt får skickat sig.
+ */
+function FamilyCard({
+  family,
+  selected,
+  onSelect,
+}: {
+  family: BusinessFamily;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const defaultVibe = findVibe(family.defaultVariantId);
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={[
+        "group flex w-full items-stretch gap-3 overflow-hidden rounded-xl border text-left transition-all",
+        selected
+          ? "border-foreground bg-foreground/[0.04] shadow-sm"
+          : "border-border/70 bg-card hover:border-foreground/40 hover:bg-foreground/[0.02] hover:shadow-sm",
+      ].join(" ")}
+    >
+      {/* Visuell preview-kolumn till vänster — speglar default-vibens
+          färger och hero-känsla. Aria-hidden eftersom den är dekorativ;
+          texten till höger har all meningsbärande info. */}
+      <div
+        aria-hidden
+        className="relative flex w-[68px] shrink-0 flex-col items-stretch justify-between p-1.5"
+        style={{ background: defaultVibe?.background ?? "var(--muted)" }}
+      >
+        <div className="flex justify-end">
+          <VibeSwatchRow
+            primary={defaultVibe?.primarySwatch ?? "#0f172a"}
+            accent={defaultVibe?.accentSwatch ?? "#94a3b8"}
+            size={9}
+          />
+        </div>
+        <HeroLayoutGlyph
+          variant=""
+          className="text-foreground/40 h-7 w-full"
+        />
+      </div>
+      <div className="flex flex-1 flex-col justify-center px-2 py-3">
+        <div className="text-foreground text-[13px] font-semibold tracking-tight">
+          {family.label}
+        </div>
+        <div className="text-muted-foreground mt-1 line-clamp-2 text-[11.5px] leading-snug">
+          {family.description}
+        </div>
+      </div>
+    </button>
   );
 }

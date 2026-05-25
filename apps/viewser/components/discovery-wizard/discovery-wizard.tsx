@@ -1,8 +1,15 @@
 "use client";
 
-import { Check, Keyboard, Loader2, Sparkles, X } from "lucide-react";
+import { Check, Info, Keyboard, Loader2, Sparkles, X } from "lucide-react";
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +40,6 @@ import {
   emptyWizardAnswers,
   validateWizardStep,
   WIZARD_STEP_ORDER,
-  WIZARD_STEP_PIPELINE_BADGE,
   WIZARD_STEP_TITLES,
   wizardCompletionPercent,
 } from "./wizard-types";
@@ -99,34 +105,45 @@ const KEYBOARD_SHORTCUTS: ReadonlyArray<{
   { label: "Stäng wizarden", keys: ["esc"] },
 ];
 
+/**
+ * STEP_META — `eyebrow` = kort kategori-pill ovanför rubriken.
+ * `description` = en (1) mening som visas under titeln.
+ * `descriptionLong` = valfri längre prosa som flyttas bakom en info-
+ *   ikon på rubrik-raden så default-vyn förblir luftig och minimalistisk.
+ */
 const STEP_META: Record<
   WizardStepId,
-  { eyebrow: string; description: string }
+  { eyebrow: string; description: string; descriptionLong?: string }
 > = {
   foundation: {
     eyebrow: "Sidor",
-    description:
-      "Vem ni är och vilken typ av verksamhet. Styr scaffold + starter (vilken Next.js-mall vi använder).",
+    description: "Vem ni är och vilken typ av verksamhet.",
+    descriptionLong:
+      "Styr scaffold + starter (vilken Next.js-mall vi använder).",
   },
   visual: {
     eyebrow: "Visuellt",
-    description:
-      "Vibe, färger och typografi. Styr variant (CSS-tokens) — färgerna kan skriva över vibens defaults.",
+    description: "Vibe, färger och typografi.",
+    descriptionLong:
+      "Styr variant (CSS-tokens) — färgerna kan skriva över vibens defaults.",
   },
   functions: {
     eyebrow: "Funktioner",
-    description:
-      "Vad ska sajten kunna göra? Funktionerna styr Dossier-val och sid-routes på en gång.",
+    description: "Vad ska sajten kunna göra?",
+    descriptionLong:
+      "Funktionerna styr Dossier-val och sid-routes på en gång.",
   },
   content: {
     eyebrow: "Innehåll",
-    description:
-      "Tjänster, produkter, story, ton och målgrupp — allt som matar copy och planner.",
+    description: "Tjänster, produkter, story och ton.",
+    descriptionLong:
+      "Allt som matar copy och planner. Målgrupp lägger du bakom disclosure längre ner.",
   },
   media: {
     eyebrow: "Media",
-    description:
-      "Logotyp, hero, galleri, favicon, OG-image och bakgrundsvideo. Sjsta steget innan vi bygger.",
+    description: "Logotyp, hero och galleri.",
+    descriptionLong:
+      "Favicon, social-image och bakgrundsvideo finns bakom 'mer'-pilen. Sista steget innan vi bygger.",
   },
 };
 
@@ -575,24 +592,36 @@ export function DiscoveryWizard({
             <X className="h-4 w-4" />
           </button>
 
-          <DialogHeader className="space-y-3 px-10 pt-10 pb-7 text-left">
+          <DialogHeader className="space-y-2.5 px-10 pt-10 pb-6 text-left">
+            {/* Header-pill — bara en (eyebrow) istället för tidigare
+                dubbletten eyebrow + pipeline-badge. Pipeline-mappning
+                framgår av sidebar-numreringen och dokumenteras i
+                rules/handoff.md. */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="bg-foreground/[0.04] text-foreground/70 inline-flex items-center gap-2 rounded-full px-2.5 py-1 font-mono text-[9.5px] font-medium tracking-[0.2em] uppercase">
                 {meta.eyebrow}
-              </span>
-              <span
-                title="Pipeline-del som detta steg primärt styr"
-                className="bg-foreground text-background inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[9px] font-semibold tracking-[0.18em] uppercase"
-              >
-                {WIZARD_STEP_PIPELINE_BADGE[step]}
               </span>
             </div>
             <DialogTitle className="text-foreground text-[28px] leading-[1.15] font-semibold tracking-tight">
               {WIZARD_STEP_TITLES[step]}
             </DialogTitle>
+            {/* DialogDescription renderas som <p>; interaktiva element
+                (knappar/expansion-panel) får inte ligga inuti <p> per
+                HTML-spec. Vi delar därför upp i en kort <p> + en
+                syskon-region där info-knappen och panelen lever. */}
             <DialogDescription className="text-muted-foreground max-w-xl text-[13.5px] leading-relaxed">
               {meta.description}
             </DialogDescription>
+            {meta.descriptionLong ? (
+              // key={step} re-mountar komponenten vid steg-byte, så
+              // intern useState(open) nollställs naturligt utan att
+              // vi triggar setState i en effect (vilket React 19:s
+              // `react-hooks/set-state-in-effect` blockerar).
+              <StepDescriptionMoreButton
+                key={step}
+                text={meta.descriptionLong}
+              />
+            ) : null}
           </DialogHeader>
 
           <div className="bg-border/50 h-px w-full" aria-hidden />
@@ -652,19 +681,20 @@ export function DiscoveryWizard({
               </Button>
               {/* Demo-knapp för utveckling. Roterar genom DEMO_PROFILES
                   så operatören kan testa varje content-branch utan att
-                  skriva igenom alla 7 stegen. Dämpad ghost-stil med
-                  Sparkles-ikon — utan att konkurrera visuellt med
-                  primärknappen "Skapa sajt". */}
+                  skriva igenom alla 7 stegen. Ännu mer dämpad i v2:
+                  bara ikon + en bokstav i mindre opacity så den signal-
+                  erar "dev tool" snarare än produkt-funktion. Hela
+                  betydelsen blir tydlig via title-tooltip. */}
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={fillDemo}
-                className="text-muted-foreground hover:text-foreground h-9 gap-1.5 px-2.5 text-[12px] font-medium"
+                aria-label="Fyll wizarden med en demo-profil"
+                className="text-muted-foreground/60 hover:text-foreground hidden h-8 w-8 items-center justify-center p-0 sm:inline-flex"
                 title="Fyll wizarden med en demo-profil för snabb testning"
               >
-                <Sparkles className="h-3.5 w-3.5" />
-                Fyll demo
+                <Sparkles className="h-3.5 w-3.5" aria-hidden />
               </Button>
               {demoNotice ? (
                 <span
@@ -904,5 +934,44 @@ export function DiscoveryWizard({
         ) : null}
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * Inline "mer info"-knapp för step-description. Behåller default-vyn
+ * minimalistisk (1 mening synlig) men låter en operatör som vill ha
+ * mer kontext expandera utan att byta vy. Använder ``key={step}`` i
+ * useState-initiering så texten automatiskt kollapsar vid steg-byte
+ * — annars skulle en expanderad förklaring lämnas öppen mellan steg
+ * och spilla över i nästa.
+ */
+function StepDescriptionMoreButton({ text }: { text: string }) {
+  // useState(false) nollställs automatiskt vid steg-byte eftersom
+  // föräldern monterar denna komponent med `key={step}`, vilket gör
+  // att React remountar instansen vid varje stegbyte och bypassar
+  // React 19:s `react-hooks/set-state-in-effect`-rule.
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  return (
+    <div className="flex flex-col gap-1">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-expanded={open}
+        aria-controls={panelId}
+        aria-label={open ? "Dölj förklaring" : "Visa förklaring"}
+        className="text-muted-foreground/70 hover:text-foreground/85 focus-visible:ring-ring/40 inline-flex h-5 w-5 items-center justify-center self-start rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      >
+        <Info className="h-3 w-3" aria-hidden />
+      </button>
+      <p
+        id={panelId}
+        role="note"
+        hidden={!open}
+        className="text-muted-foreground/80 max-w-xl text-[12px] leading-snug"
+      >
+        {text}
+      </p>
+    </div>
   );
 }
