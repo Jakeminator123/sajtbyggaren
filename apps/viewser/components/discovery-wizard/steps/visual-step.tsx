@@ -28,9 +28,10 @@ import {
   AdvancedDisclosure,
   Chip,
   ChipRow,
+  CollapsibleHelp,
   FieldLabel,
   FieldStack,
-  HelperText,
+  MetadataPanel,
   SectionHeader,
   TextField,
   TextareaField,
@@ -182,28 +183,41 @@ export function VisualStep({
   return (
     <FieldStack>
       {/* CONTEXT-CHIPS — visar vad foundation har lett till (family →
-          scaffold → default-vibe). Operatören ser direkt vilka steg-1-
-          beslut som styr vad hen ser här. */}
+          scaffold → default-vibe). Minimalism v2: ligger nu bakom en
+          collapsible MetadataPanel så vibe-griden är det första
+          operatören möter. Klicka för att se vilka steg-1-beslut
+          som styr filtreringen. */}
       {family ? (
-        <ContextChips
-          familyLabel={family.label}
-          scaffoldHint={family.scaffoldHint}
-          defaultVibe={findVibe(family.defaultVariantId)?.label ?? family.defaultVariantId}
-          selectedVibeLabel={selectedVibe?.label}
-        />
+        <MetadataPanel
+          id="visual-context"
+          title="Foundation-beslut som styr detta steg"
+          subtitle="Family → scaffold → default-vibe"
+        >
+          <ContextChips
+            familyLabel={family.label}
+            scaffoldHint={family.scaffoldHint}
+            defaultVibe={findVibe(family.defaultVariantId)?.label ?? family.defaultVariantId}
+            selectedVibeLabel={selectedVibe?.label}
+          />
+        </MetadataPanel>
       ) : null}
 
       {/* ESSENTIALS — vibe + tonarter ger 90% av personlighet. */}
       <div>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <SectionHeader>Vibe</SectionHeader>
-            <HelperText>
-              Välj den känsla som passar bäst — vibe styr färger, typografi och
-              spacing automatiskt. Listan filtreras efter din verksamhetsfamilj
-              {family ? ` (${family.label})` : ""} och branch
-              {family ? ` (${branchForFamily(family.id)})` : ""}.
-            </HelperText>
+            <SectionHeader
+              help={
+                <>
+                  Vibe styr färger, typografi och spacing automatiskt. Listan
+                  filtreras efter din verksamhetsfamilj
+                  {family ? ` (${family.label})` : ""} och branch
+                  {family ? ` (${branchForFamily(family.id)})` : ""}.
+                </>
+              }
+            >
+              Vibe
+            </SectionHeader>
           </div>
           <PayloadAlignmentPopover
             answers={answers}
@@ -229,10 +243,9 @@ export function VisualStep({
       </div>
 
       <div>
-        <SectionHeader>Tonarter</SectionHeader>
-        <HelperText>
-          Hur ska texten på sajten kännas? Välj en eller flera.
-        </HelperText>
+        <SectionHeader help="Hur ska texten på sajten kännas? Välj en eller flera.">
+          Tonarter
+        </SectionHeader>
         <div className="mt-2">
           <ChipRow>
             {TONE_OPTIONS.map((tone) => (
@@ -259,11 +272,9 @@ export function VisualStep({
       >
       {/* Färgvalsläge. */}
       <div>
-        <SectionHeader>Färger</SectionHeader>
-        <HelperText>
-          Vibens defaults är handvalda — välj egna färger bara om ni har en
-          stark brand-identitet ni vill bevara.
-        </HelperText>
+        <SectionHeader help="Vibens defaults är handvalda — välj egna färger bara om ni har en stark brand-identitet ni vill bevara.">
+          Färger
+        </SectionHeader>
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
           <button
             type="button"
@@ -360,22 +371,22 @@ export function VisualStep({
                 />
               </div>
             </div>
-            <p className="text-muted-foreground text-[11px] sm:col-span-2">
-              Tips: dina hex-värden skrivs in i Project Input men kräver
-              backend-stöd (Gap 1 i <code>docs/backend-handoff.md</code>) för
-              att faktiskt skriva över vibens defaultfärger.
-            </p>
+            <div className="sm:col-span-2">
+              <CollapsibleHelp triggerLabel="Hur används hex-värdena?">
+                Hex-värdena skrivs in i Project Input men kräver backend-
+                stöd (Gap 1 i <code>docs/backend-handoff.md</code>) för att
+                faktiskt skriva över vibens defaultfärger.
+              </CollapsibleHelp>
+            </div>
           </div>
         ) : null}
       </div>
 
       {/* 3. Typografi-känsla. */}
       <div>
-        <SectionHeader>Typografi-känsla</SectionHeader>
-        <HelperText>
-          Avgör om typsnittet ska kännas tidlöst, klassiskt, geometriskt eller
-          organiskt.
-        </HelperText>
+        <SectionHeader help="Avgör om typsnittet ska kännas tidlöst, klassiskt, geometriskt eller organiskt.">
+          Typografi-känsla
+        </SectionHeader>
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {TYPOGRAPHY_FEEL_OPTIONS.map((option) => {
             const isSelected = answers.vibe.typographyFeel === option.id;
@@ -421,29 +432,41 @@ export function VisualStep({
         </div>
       </div>
 
-      {/* Designstil (fallback om vibe ej valts). */}
-      <div>
-        <SectionHeader>Designstil (fallback om vibe ej valts)</SectionHeader>
-        <ChipRow>
-          {DESIGN_STYLE_OPTIONS.map((style) => (
-            <Chip
-              key={style}
-              label={style}
-              selected={answers.brand.designStyle === style}
-              onToggle={() => setDesignStyle(style)}
-            />
-          ))}
-        </ChipRow>
-      </div>
+      {/* Designstil (fallback om vibe ej valts).
+          Minimalism v2: visas BARA när operatören inte har valt en vibe.
+          Med vibe vald är denna fallback redundant och bara visuellt
+          brus — vi döljer den helt så advanced-disclosure-vyn håller
+          sig fokuserad på det operatören faktiskt kan justera. */}
+      {!answers.vibe.vibeId ? (
+        <div>
+          <SectionHeader>Designstil (fallback om vibe ej valts)</SectionHeader>
+          <ChipRow>
+            {DESIGN_STYLE_OPTIONS.map((style) => (
+              <Chip
+                key={style}
+                label={style}
+                selected={answers.brand.designStyle === style}
+                onToggle={() => setDesignStyle(style)}
+              />
+            ))}
+          </ChipRow>
+        </div>
+      ) : null}
 
       {/* 5. Hero-layout (operator-override, valfritt). */}
       <div>
-        <SectionHeader>Hero-layout (valfritt)</SectionHeader>
-        <HelperText>
-          Vill du överstyra automat-valet? Annars härleder vi layouten från
-          din vibe (varma vibes blir centrerade, editorial blir split, etc).
-          Skickas som <code>directives.layoutHint</code> till backend.
-        </HelperText>
+        <SectionHeader
+          help={
+            <>
+              Vill du överstyra automat-valet? Annars härleder vi layouten
+              från din vibe (varma vibes blir centrerade, editorial blir
+              split, etc). Skickas som <code>directives.layoutHint</code>
+              till backend.
+            </>
+          }
+        >
+          Hero-layout (valfritt)
+        </SectionHeader>
         <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
             { id: "" as const, label: "Auto", description: "Härled från vibe" },
@@ -513,12 +536,9 @@ export function VisualStep({
 
       {/* 7. Mood-bilder. */}
       <div>
-        <SectionHeader>Mood-bilder (valfritt)</SectionHeader>
-        <HelperText>
-          1–5 referensbilder för stämning/färg. Används som inspiration — syns
-          inte på sajten. Spara filer du gillar från Pinterest, andra sajter,
-          eller egna foton.
-        </HelperText>
+        <SectionHeader help="1–5 referensbilder för stämning/färg. Används som inspiration — syns inte på sajten. Spara filer du gillar från Pinterest, andra sajter, eller egna foton.">
+          Mood-bilder (valfritt)
+        </SectionHeader>
         {answers.moodImages.length > 0 ? (
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {answers.moodImages.map((img) => (

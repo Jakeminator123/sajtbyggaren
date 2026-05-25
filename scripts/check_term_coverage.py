@@ -447,6 +447,18 @@ COMMON_WORDS = {
     "RunDiff", "ScalarChange", "RunArtefactBundleLike", "RunsApiResponse",
     # Lucide-icon-namn använda i versions-tab:
     "GitCompare",
+    # GAP-viewser-wizard-minimalism — nya wizard-UI primitiver.
+    # CollapsibleHelp + MetadataPanel exporteras från step-primitives
+    # och används konsekvent i alla 5 stegen. MinimalSectionHeader
+    # nämns bara i gap-prosa (vi valde att utöka SectionHeader istället
+    # för att skapa en ny primitiv). InlineHelpButton är en intern
+    # helper inom step-primitives (inte exporterad). Den info-ikon-
+    # baserade wizard-chrome-helpern (info-knapp next to step-titeln)
+    # bor i discovery-wizard.tsx. Samma kategori som FieldLabel /
+    # AdvancedDisclosure / VariantsTab ovan — viewser-lokala UI-
+    # implementation-symboler, inte canonical domain terms.
+    "CollapsibleHelp", "InlineHelpButton", "MetadataPanel",
+    "MinimalSectionHeader", "StepDescriptionMoreButton",
     # ui-tokens shared interaction constants:
     "FOCUS_RING", "PRIMARY_INTERACTIONS", "SECONDARY_INTERACTIONS",
     "CHIP_INTERACTIONS",

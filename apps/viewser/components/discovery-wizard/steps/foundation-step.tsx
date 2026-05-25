@@ -26,6 +26,7 @@ import {
   FieldLabel,
   FieldStack,
   HelperText,
+  MetadataPanel,
   SectionHeader,
   TextField,
   TextareaField,
@@ -200,14 +201,22 @@ export function FoundationStep({
     <FieldStack>
       {/* URL-SKRAPE — alltid högst upp. Snabbväg som auto-fyller
           företagsnamn, offer, kontakt och mer från en befintlig sajt.
-          Får inte gömmas i disclosure (halverar upptäckbarheten). */}
+          Får inte gömmas i disclosure (halverar upptäckbarheten).
+          Minimalism v2: en kort synlig ledtext säljer "lyxvägen" så
+          operatören upptäcker den utan klick, längre förklaring
+          ligger bakom info-ikonen. Status-meddelandet (scrapeMessage)
+          syns kvar inline eftersom det är ett action-resultat
+          operatören måste se utan klick. */}
       <div>
-        <FieldLabel optional>Har ni redan en hemsida?</FieldLabel>
-        <HelperText>
-          Klistra in URL:en så fyller vi i företagsnamn, vad ni gör,
-          kontaktuppgifter och resten automatiskt. Du kan granska och
-          justera allt nedan efteråt.
-        </HelperText>
+        <FieldLabel
+          optional
+          help="Vi läser publika sidor, om-oss, tjänster, kontakt och OG-bilder. Du kan granska och justera allt nedan efteråt."
+        >
+          Har ni redan en hemsida?
+        </FieldLabel>
+        <p className="text-muted-foreground/85 mt-1 text-[12px] leading-snug">
+          Klistra in URL:en så fyller vi i resten automatiskt.
+        </p>
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
           <input
             type="url"
@@ -252,7 +261,10 @@ export function FoundationStep({
         ) : null}
       </div>
 
-      {/* ESSENTIALS — alltid synliga: identitet + family. */}
+      {/* ESSENTIALS — alltid synliga: identitet + family. Hjälptexter
+          ligger nu bakom info-ikon i FieldLabel (TextField/TextareaField
+          dirigerar `helper`-prop:en bakom CollapsibleHelp by default
+          efter minimalism-pass v2). */}
       <TextField
         label="Företagsnamn *"
         value={answers.companyName}
@@ -262,6 +274,12 @@ export function FoundationStep({
           answers.existingSite.trim() && scrapeStatus !== "ok"
             ? "Fylls i automatiskt när du klickar Hämta ovan."
             : undefined
+        }
+        // Scrape-statusen är viktig att se direkt utan klick — annars
+        // ren info-ikon. Vi använder inline-läge när scrape väntar,
+        // annars går helpern bakom info-ikonen.
+        helperInline={
+          !!(answers.existingSite.trim() && scrapeStatus !== "ok")
         }
       />
       <TextareaField
@@ -274,11 +292,9 @@ export function FoundationStep({
       />
 
       <div>
-        <SectionHeader>Verksamhetsfamilj *</SectionHeader>
-        <HelperText>
-          Styr scaffold + starter — vilken Next.js-mall backend bygger på. Färg
-          och layout-skiss visar default-vibens känsla (du kan ändra i steg 2).
-        </HelperText>
+        <SectionHeader help="Styr scaffold + starter — vilken Next.js-mall backend bygger på. Färg och layout-skiss visar default-vibens känsla (du kan ändra i steg 2).">
+          Verksamhetsfamilj *
+        </SectionHeader>
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {BUSINESS_FAMILIES.map((option) => (
             <FamilyCard
@@ -293,12 +309,23 @@ export function FoundationStep({
 
       {/* Live transparens — visas direkt när family + offer är ifyllda så
           operatören ser EXAKT vilka beslut backend kommer att fatta
-          (scaffold, default-vibe, branch, förvalda funktioner). */}
-      <FoundationSummary
-        businessFamily={answers.businessFamily}
-        companyName={answers.companyName}
-        offer={answers.offer}
-      />
+          (scaffold, default-vibe, branch, förvalda funktioner).
+          Minimalism v2: panelen ligger nu bakom en collapsible
+          MetadataPanel så default-vyn för foundation är minimal och
+          operatören klickar för transparens när hen vill ha det. */}
+      {answers.businessFamily && answers.offer.trim() ? (
+        <MetadataPanel
+          id="foundation-summary"
+          title="Så här tolkar vi dina val"
+          subtitle="Scaffold, vibe, typografi, branch & förvalda funktioner — klicka för förhandsvisning."
+        >
+          <FoundationSummary
+            businessFamily={answers.businessFamily}
+            companyName={answers.companyName}
+            offer={answers.offer}
+          />
+        </MetadataPanel>
+      ) : null}
 
       {/* ADVANCED — i disclosure: specialisering + kontakt. URL-skrape
           ligger numera ovanför FieldStack (alltid synlig). */}
@@ -309,16 +336,20 @@ export function FoundationStep({
         count={2}
         activeCount={advancedFilled}
       >
-        {/* Sub-specialisering — filtrerade chips för vald family. */}
+        {/* Sub-specialisering — filtrerade chips för vald family.
+            Minimalism v2: helper-text bakom info-ikon. Fallback-noteringen
+            visas inline bara när vi är i fallback-läge (operatören behöver
+            veta att vi inte använder governance-listan). */}
         {selectedFamily && subCategoryOptions.length > 0 ? (
           <div>
-            <SectionHeader>Specialisering</SectionHeader>
-            <HelperText>
-              En eller flera sub-kategorier för bättre copy och SEO.
-              {source === "fallback"
-                ? " (Visar lokal UI-cache tills governance-listan laddats.)"
-                : ""}
-            </HelperText>
+            <SectionHeader help="En eller flera sub-kategorier för bättre copy och SEO.">
+              Specialisering
+            </SectionHeader>
+            {source === "fallback" ? (
+              <HelperText>
+                Visar lokal UI-cache tills governance-listan laddats.
+              </HelperText>
+            ) : null}
             <div className="mt-2">
               <ChipRow>
                 {subCategoryOptions.map((category) => (
