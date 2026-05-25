@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../../../../governance/schemas/variant.schema.json",
+  "id": "editorial-warm",
+  "enabled": true,
+  "label": "Editorial Warm",
+  "description": "Warm cream-and-ink visual direction for editorial studios, content production houses and brand studios that lead with copy. Generous reading widths, classic-serif posture and a quiet rust accent communicate craft, voice and a slow-internet attention to typography. Reads like a small magazine, not an ad.",
+  "tokens": {
+    "color": {
+      "background": "#f5f0e6",
+      "foreground": "#1a1612",
+      "muted": "#5e554b",
+      "border": "#d8d0bf",
+      "primary": "#1a1612",
+      "primaryForeground": "#f5f0e6",
+      "accent": "#a64f30",
+      "accentForeground": "#f5f0e6"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.22
+    },
+    "radius": {
+      "sm": "0.25rem",
+      "md": "0.5rem",
+      "lg": "0.75rem"
+    },
+    "spacing": {
+      "section": "5.5rem",
+      "container": "min(72rem, 92vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "editorial",
+      "warm",
+      "literary",
+      "considered",
+      "creative",
+      "crafted"
+    ]
+  }
+}

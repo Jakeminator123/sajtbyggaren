@@ -1,0 +1,25 @@
+{
+  "_comment": "Real Dossier IDs only. 'mailto-contact-form' is required because a creative studio without a contact path fails the basic 'brand lead reaches out' test. 'image-gallery' is recommended because work-led studios benefit from richer visuals when actual imagery is supplied. Sections like 'hero', 'selected-work-preview', 'selected-work-grid', 'capabilities-row', 'manifesto-block', 'client-roster' and 'process-steps' are declared in sections.json and must not appear here. See ADR 0012 for the Dossier vs Section distinction.",
+  "required": [
+    "mailto-contact-form"
+  ],
+  "recommended": [
+    "image-gallery",
+    "video-hero"
+  ],
+  "conditional": [
+    {
+      "id": "faq-accordion",
+      "when": "the studio answers the same procurement questions repeatedly (timeline, budget bands, ownership of source files) and wants the answers indexed for SEO"
+    }
+  ],
+  "disallowedByDefault": [
+    "booking-cta",
+    "pricing-table-saas",
+    "dashboard-shell",
+    "auth-flow",
+    "checkout",
+    "interactive-game-loop",
+    "opening-hours"
+  ]
+}

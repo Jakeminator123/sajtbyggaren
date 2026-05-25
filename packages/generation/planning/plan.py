@@ -64,6 +64,25 @@ DEFAULT_SCAFFOLD_ID = "local-service-business"
 SCAFFOLD_TO_STARTER: dict[str, str] = {
     "local-service-business": "marketing-base",
     "ecommerce-lite": "commerce-base",
+    # clinic-healthcare reuses ``marketing-base`` (Next.js + Tailwind) per
+    # Path B step 12 — every route renders via the section dispatcher,
+    # not by extending the starter. Added 2026-05-25 alongside the
+    # ``_DISPATCHED_SCAFFOLDS`` entry in scripts/build_site.py.
+    "clinic-healthcare": "marketing-base",
+    # professional-services is the second Path B native scaffold (step 13,
+    # 2026-05-25). It also runs on ``marketing-base`` because the four
+    # default routes (home / expertise / about / contact) are pure
+    # informational pages — no checkout, no booking surface — and the
+    # scaffold-distinct character lives entirely in the section
+    # composition (expertise-areas / practice-grid / partners-grid).
+    "professional-services": "marketing-base",
+    # agency-studio is the third Path B native scaffold (step 14,
+    # 2026-05-25). Same starter for the same reason — informational
+    # routes (home / work / about / contact); the work-led
+    # composition (selected-work-preview / selected-work-grid /
+    # manifesto-block / process-steps / client-roster) carries the
+    # creative-studio voice.
+    "agency-studio": "marketing-base",
     # Restaurant-hospitality is enabled in scaffold-contract.v1.json and
     # therefore appears in load_scaffold_registry(); without a starter
     # mapping here, produce_site_plan() raises in _resolve_starter_id when
@@ -387,6 +406,22 @@ _DEFAULT_VARIANT_BY_SCAFFOLD: dict[str, str] = {
     # (casual-cafe) or bar-only after-dark (midnight-bar) signals. Picked by
     # _pick_variant() when the planner has no stronger vibe signal.
     "restaurant-hospitality": "warm-bistro",
+    # ``clinic-calm`` is the safest clinic default — bright, soft-blue,
+    # works for general dental, primary care, optometry, paediatric.
+    # warm-care suits chiropractor / naprapath / holistic; modern-precision
+    # suits specialist / fertility / aesthetic medicine.
+    "clinic-healthcare": "clinic-calm",
+    # ``legal-classic`` is the safest professional-services default —
+    # restrained, institutional, works for advokatbyråer, audit firms
+    # and traditional advisory practices without overcommitting to the
+    # minimalist consulting language (consulting-modern) or the warm
+    # accounting language (accounting-trust).
+    "professional-services": "legal-classic",
+    # ``studio-monochrome`` is the safest agency-studio default —
+    # high-contrast, modular, works for design studios and brand
+    # studios without committing to the editorial-warm voice or
+    # the high-energy bold-electric direction.
+    "agency-studio": "studio-monochrome",
 }
 
 

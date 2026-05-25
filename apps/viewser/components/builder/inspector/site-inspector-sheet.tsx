@@ -12,7 +12,10 @@ import { useRunArtefacts } from "@/components/builder/inspector/use-run-artefact
 import { VariantsTab } from "@/components/builder/inspector/variants-tab";
 import { VersionsTab } from "@/components/builder/inspector/versions-tab";
 import { useFollowupBuild } from "@/components/builder/use-followup-build";
-import type { PendingBuildState } from "@/components/builder/use-pending-build";
+import type {
+  PendingBaseRunIdState,
+  PendingBuildState,
+} from "@/components/builder/use-pending-build";
 import type { PromptBuildOutcome } from "@/components/prompt-builder";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,6 +63,15 @@ type SiteInspectorSheetProps = {
    * högst upp i listan medan build pågår.
    */
   pendingBuild?: PendingBuildState | null;
+  /**
+   * Operator-vald baseRunId. Skickas vidare till Versions-tab så
+   * "Iterera från denna" kan markera vald rad och uppdatera state.
+   */
+  pendingBaseRunId?: PendingBaseRunIdState | null;
+  onSetPendingBaseRunId?: (
+    runId: string | null,
+    version?: number | null,
+  ) => void;
   onBuildStart: () => void;
   onBuildEnd: () => void;
   onBuildDone: (runId: string, outcome: PromptBuildOutcome) => void;
@@ -72,6 +84,8 @@ export function SiteInspectorSheet({
   runId,
   isBuilding,
   pendingBuild,
+  pendingBaseRunId,
+  onSetPendingBaseRunId,
   onBuildStart,
   onBuildEnd,
   onBuildDone,
@@ -205,6 +219,9 @@ export function SiteInspectorSheet({
                     currentRunId={runId}
                     isBuilding={isBuilding}
                     pendingBuild={pendingBuild ?? null}
+                    pendingBaseRunId={pendingBaseRunId ?? null}
+                    onSetPendingBaseRunId={onSetPendingBaseRunId}
+                    onCloseInspector={() => onOpenChange(false)}
                   />
                 </TabsContent>
                 <TabsContent value="tokens">

@@ -4,18 +4,34 @@ import Image from "next/image";
 
 type SiteHeaderProps = {
   onOpenConsole: () => void;
+  /**
+   * Döljer brand-bubblan ("Sajtbyggaren"-logon längst upp till vänster)
+   * men behåller konsol-knappen i höger hörn. Används av builder-läget
+   * eftersom logon ligger ovanpå preview-iframens vänsterkant och
+   * stör webbdesignen som operatören granskar. Default `false` så
+   * pre-build-vyn (hero + DiscoveryWizard) fortfarande visar
+   * brandidentiteten.
+   */
+  hideBrand?: boolean;
 };
 
-export function SiteHeader({ onOpenConsole }: SiteHeaderProps) {
+export function SiteHeader({ onOpenConsole, hideBrand = false }: SiteHeaderProps) {
   return (
     <div
       aria-hidden={false}
       className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 px-4 pt-3 sm:px-6 sm:pt-4"
     >
-      <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-border/60 bg-card/80 px-2.5 py-1 text-[12px] shadow-sm backdrop-blur-xl">
-        <Brandmark />
-        <span className="font-medium tracking-tight">Sajtbyggaren</span>
-      </div>
+      {hideBrand ? (
+        // Tom spacer så `justify-between` ändå skjuter konsol-knappen
+        // till höger kant utan att brand-bubblan tar upp click-target-
+        // ytan över previewens vänstersida.
+        <div aria-hidden className="pointer-events-none" />
+      ) : (
+        <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-border/60 bg-card/80 px-2.5 py-1 text-[12px] shadow-sm backdrop-blur-xl">
+          <Brandmark />
+          <span className="font-medium tracking-tight">Sajtbyggaren</span>
+        </div>
+      )}
 
       <button
         type="button"

@@ -156,17 +156,21 @@ def test_recommended_actions_include_planned_or_gap_case() -> None:
     )
 
 
-def test_existing_restaurant_asset_and_taxonomy_status_are_separate() -> None:
+def test_restaurant_runtime_active_after_path_a_promotion() -> None:
+    """Restaurant-kategorin promoterades till active 2026-05-25 via
+    GAP-backend-restaurant-activation. Coverage-raden ska nu spegla att
+    activeScaffoldId och selectedRuntimeScaffoldId båda pekar mot
+    restaurant-hospitality (inte fallback) och att supportStatus är
+    active. Testen som tidigare kontrollerade planned/fallback-vägen
+    ersätts av denna runtime-aktiv-invariant."""
     row = _rows_by_category()["restaurant"]
 
-    assert row["supportStatus"] == "planned"
+    assert row["supportStatus"] == "active"
     assert row["targetScaffoldId"] == "restaurant-hospitality"
     assert row["fallbackScaffoldId"] == "local-service-business"
-    assert row["selectedRuntimeScaffoldId"] == "local-service-business"
-    assert row["targetScaffoldStatus"] in {"active-runtime", "planned"}
-    assert row["coverageStatus"] == "planned"
-    if row["targetScaffoldStatus"] == "active-runtime":
-        assert "policy_asset_divergence" in row["attentionReasons"]
+    assert row["selectedRuntimeScaffoldId"] == "restaurant-hospitality"
+    assert row["targetScaffoldStatus"] == "active-runtime"
+    assert row["coverageStatus"] == "active_native"
 
 
 def test_active_category_without_selected_runtime_is_not_native_or_taxonomy_drift() -> None:

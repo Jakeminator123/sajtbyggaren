@@ -142,21 +142,27 @@ def test_ecommerce_category_picks_ecommerce_lite_and_commerce_base() -> None:
 
 
 @pytest.mark.tooling
-def test_restaurant_falls_back_to_local_service_with_warning() -> None:
+def test_restaurant_resolves_directly_to_restaurant_hospitality() -> None:
+    """Restaurang-kategorin promoterades till active 2026-05-25 via
+    GAP-backend-restaurant-activation. Den ska inte längre falla
+    tillbaka till local-service-business eller utlösa
+    ``category-planned``-varningen — wizard-flödet ska peka direkt mot
+    restaurant-hospitality + warm-bistro + marketing-base."""
     project_input, decision = resolve_discovery(
         raw_prompt="restaurang i Stockholm",
         payload=_payload("restaurant"),
         project_input_candidate=_candidate_project_input(),
     )
-    assert project_input["scaffoldId"] == "local-service-business"
-    assert project_input["variantId"] == "nordic-trust"
-    assert decision.selectedScaffoldId == "local-service-business"
+    assert project_input["scaffoldId"] == "restaurant-hospitality"
+    assert project_input["variantId"] == "warm-bistro"
+    assert decision.selectedScaffoldId == "restaurant-hospitality"
     assert decision.targetScaffoldId == "restaurant-hospitality"
-    assert decision.selectionSource == "fallback"
+    assert decision.selectionSource == "taxonomy"
     assert decision.expectedStarterId == "marketing-base"
     codes = {warning.code for warning in decision.fallbackWarnings}
-    assert "category-planned" in codes
-    assert decision.operatorReviewRequired is True
+    # Får inte längre flagga restaurang som planned eller fallback.
+    assert "category-planned" not in codes
+    assert "category-fallback" not in codes
 
 
 @pytest.mark.tooling
@@ -803,12 +809,14 @@ def test_scaffold_hint_no_op_when_matching_current_scaffold() -> None:
 def test_scaffold_hint_ignored_when_unknown_or_planned() -> None:
     """Gap 3: en hint som pekar på en inte-runtime-aktiv scaffold ska ignoreras.
 
-    ``restaurant-hospitality`` finns i taxonomy som ``planned`` men build_site.py
+    ``portfolio-creator`` finns i taxonomy som ``planned`` men build_site.py
     kan inte rendera den. Ett UI-fel som skickade hint mot en sådan scaffold får
-    INTE override:a — taxonomy-defaulten är säkrare.
+    INTE override:a — taxonomy-defaulten är säkrare. (Tidigare användes
+    ``restaurant-hospitality`` här, men den promoterades till runtime
+    2026-05-25 via GAP-backend-restaurant-activation.)
     """
     payload = _payload("business")
-    payload["directives"] = {"scaffoldHint": "restaurant-hospitality"}
+    payload["directives"] = {"scaffoldHint": "portfolio-creator"}
     project_input, _decision = resolve_discovery(
         raw_prompt="test",
         payload=payload,
@@ -1356,12 +1364,19 @@ def test_multi_select_primary_category_follows_branch_priority() -> None:
 
 @pytest.mark.tooling
 def test_multi_select_picks_restaurant_over_portfolio() -> None:
-    """Restaurant priority 1 vs portfolio priority 3 → restaurant vinner."""
+    """Restaurant priority 1 vs portfolio priority 3 → restaurant vinner.
+
+    Restaurant är runtime-aktiv sedan 2026-05-25 (GAP-backend-restaurant-
+    activation) så ingen ``category-planned``-warning utlöses längre för
+    restaurant. Portfolio är fortfarande planned och triggar varningen.
+    Den centrala invarianten är att primary_category landar på restaurant
+    och att targetScaffold + selectionSource speglar det.
+    """
     payload = {
         "schemaVersion": 1,
         "rawPrompt": "test",
         "contentBranch": "restaurant",
-        "scaffoldHint": "local-service-business",
+        "scaffoldHint": "restaurant-hospitality",
         "answers": {"siteType": ["portfolio", "restaurant"]},
     }
     _, decision = resolve_discovery(
@@ -1369,15 +1384,23 @@ def test_multi_select_picks_restaurant_over_portfolio() -> None:
         payload=payload,
         project_input_candidate=_candidate_project_input(),
     )
-    # Båda är planned med fallback local-service-business; vi kollar
-    # bara att primary_category-id i fallback-warning är restaurant.
+    assert decision.contentBranch == "restaurant"
+    assert decision.targetScaffoldId == "restaurant-hospitality"
+    assert decision.selectedScaffoldId == "restaurant-hospitality"
+    assert decision.selectionSource == "taxonomy"
+    # Portfolio är fortsatt planned — den ska finnas med som secondary
+    # i fallbackWarnings, men inte som primary.
     category_warnings = [
         w for w in decision.fallbackWarnings if w.code == "category-planned"
     ]
-    primary_ids = {w.categoryId for w in category_warnings if w.categoryId}
-    assert "restaurant" in primary_ids
-    assert decision.contentBranch == "restaurant"
-    assert decision.targetScaffoldId == "restaurant-hospitality"
+    portfolio_warned = any(w.categoryId == "portfolio" for w in category_warnings)
+    assert portfolio_warned, "portfolio som secondary planned ska få varning"
+    restaurant_warned = any(
+        w.categoryId == "restaurant" for w in category_warnings
+    )
+    assert not restaurant_warned, (
+        "restaurant är active sedan 2026-05-25 och ska inte längre flaggas planned"
+    )
 
 
 @pytest.mark.tooling
@@ -1523,15 +1546,17 @@ def test_scaffold_hint_used_when_site_type_empty() -> None:
 
 @pytest.mark.tooling
 def test_scaffold_hint_ignored_when_pointing_at_non_runtime_scaffold() -> None:
-    """``scaffoldHint`` accepteras bara för local-service-business och
-    ecommerce-lite — dessa är de två par som planning.SCAFFOLD_TO_STARTER
-    faktiskt mappar idag.
+    """``scaffoldHint`` accepteras bara för runtime-aktiva scaffolds —
+    local-service-business, ecommerce-lite och restaurant-hospitality
+    (sedan 2026-05-25). Hint mot en planned scaffold som
+    ``portfolio-creator`` ska ignoreras till förmån för project-input-
+    candidate-scaffolden.
     """
     payload = {
         "schemaVersion": 1,
         "rawPrompt": "test",
-        "contentBranch": "restaurant",
-        "scaffoldHint": "restaurant-hospitality",  # planned, inte runtime
+        "contentBranch": "portfolio",
+        "scaffoldHint": "portfolio-creator",  # planned, inte runtime
         "answers": {},
     }
     candidate = _candidate_project_input()
@@ -1647,14 +1672,25 @@ def test_blog_uses_fallback_status_not_active() -> None:
 
 
 @pytest.mark.tooling
-def test_multi_select_within_same_branch_prefers_active_over_planned() -> None:
-    """R1 #2 (round 3): ``salon`` (active) och ``healthcare`` (planned)
-    delar branch ``salon``. Tie-break på supportStatus måste välja
-    active så scaffold/variant inte tappas till planned-kategori bara
-    pga inmatningsordningen.
+def test_multi_select_within_same_branch_picks_first_when_status_ties() -> None:
+    """Multi-select inom branch ``salon``: salon (active LSB) och
+    healthcare (active clinic-healthcare via Path B step 12, 2026-05-25)
+    har båda supportStatus=active så tie-break på status faller ut, och
+    resolvern väljer kategorin som listas först. Det är deterministiskt
+    och speglar nuvarande ``pick_primary_category``-kontrakt
+    (active-före-planned + first-listed-on-status-tie).
+
+    Före clinic-healthcare-aktiveringen var healthcare ``planned``, så
+    salon vann oavsett ordning. När healthcare promoterades till active
+    blev tie-breaken first-listed; testet låser den semantiken så vi
+    inte regrederar tillbaka mot inmatningsordnings-känslighet utan att
+    flagga det som ett medvetet beslut.
     """
-    # Båda ordningarna ska ge salon som primary.
-    for order in (["salon", "healthcare"], ["healthcare", "salon"]):
+    cases = [
+        (["salon", "healthcare"], "local-service-business"),
+        (["healthcare", "salon"], "clinic-healthcare"),
+    ]
+    for order, expected_scaffold in cases:
         payload = {
             "schemaVersion": 1,
             "rawPrompt": "test",
@@ -1667,11 +1703,9 @@ def test_multi_select_within_same_branch_prefers_active_over_planned() -> None:
             payload=payload,
             project_input_candidate=_candidate_project_input(),
         )
-        # Salon är active mot local-service-business (target == active).
-        assert decision.selectedScaffoldId == "local-service-business"
-        assert decision.targetScaffoldId == "local-service-business", (
-            f"Med ordning {order} föll resolvern på healthcare (planned) "
-            "istället för salon (active)."
+        assert decision.selectedScaffoldId == expected_scaffold, (
+            f"Med ordning {order} förväntades scaffold {expected_scaffold}, "
+            f"fick {decision.selectedScaffoldId}."
         )
         assert decision.selectionSource == "taxonomy"
 

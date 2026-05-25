@@ -55,18 +55,34 @@ def test_build_runner_realpaths_dossier_override_before_whitelist() -> None:
 @pytest.mark.tooling
 def test_list_runs_slices_before_reading_build_results() -> None:
     """B72: listRuns may stat all run directories, but JSON reads should
-    happen only for the newest ``limit`` survivors.
+    happen only for a bounded window of newest survivors.
+
+    The default window is ``limit``; when a ``siteId`` filter is supplied
+    we expand to a small constant multiple so the post-filter slice has
+    a fair chance of finding the operator's site even if its newest run
+    sat just outside the top-``limit`` (B72 + GAP-backend-build-trace-
+    endpoint). The window is still bounded, not O(N) over disk.
     """
     text = (VIEWSER_DIR / "lib" / "runs.ts").read_text(encoding="utf-8")
     function_start = text.index("export async function listRuns")
-    function_body = text[function_start : text.index("function stringOrUndefined")]
+    function_body = text[function_start : text.index("function buildPendingMeta")]
 
-    slice_idx = function_body.index(".slice(0, limit)")
+    # The early-slice may be either ``.slice(0, limit)`` (no filter) or
+    # ``.slice(0, options.siteId ? Math.max(limit * <K>, limit) : limit)``
+    # (with filter expansion). Both are bounded — accept either form.
+    slice_match = re.search(
+        r"\.slice\(0,\s*(limit|options\.siteId\s*\?\s*Math\.max\(limit\s*\*\s*\d+,\s*limit\)\s*:\s*limit)\)",
+        function_body,
+    )
+    assert slice_match is not None, (
+        "listRuns must call .slice(...) with a bounded window before "
+        "reading build-result.json."
+    )
     build_read_idx = function_body.index("readJsonFile<")
-    assert slice_idx < build_read_idx, (
-        "listRuns must sort/stat directories and slice to limit before "
-        "reading build-result.json, otherwise GET /api/runs remains O(N) "
-        "JSON reads per refresh."
+    assert slice_match.start() < build_read_idx, (
+        "listRuns must sort/stat directories and slice to a bounded "
+        "window before reading build-result.json, otherwise GET /api/runs "
+        "remains O(N) JSON reads per refresh."
     )
     assert "b.stats.mtimeMs - a.stats.mtimeMs" in function_body
 

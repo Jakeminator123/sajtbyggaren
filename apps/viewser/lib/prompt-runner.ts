@@ -40,6 +40,14 @@ export type PromptHelperOptions = {
   mode?: "init" | "followup";
   siteId?: string;
   /**
+   * Iterera från en specifik historisk run istället för senaste. När satt
+   * skickas ``--base-run-id`` till `scripts/prompt_to_project_input.py`
+   * vilket läser PI-snapshotet från ``data/prompt-inputs/<siteId>.v<N>.*``
+   * där ``N`` matchar runens version. Bakåt-kompatibel: utan baseRunId
+   * läser helpern senaste PI som idag.
+   */
+  baseRunId?: string;
+  /**
    * Discovery-payload från `apps/viewser/components/discovery-wizard`.
    * Skrivs till en tempfil och skickas till
    * `prompt_to_project_input.py --discovery <path>` så wizardens
@@ -80,6 +88,20 @@ export async function runPromptToProjectInput(
       throw new Error("Följdprompt kräver ett valt siteId.");
     }
     args.push("--followup-site-id", options.siteId);
+    if (options.baseRunId) {
+      // Validation already happened in /api/prompt route via the regex
+      // (RUN_ID_PATTERN). We re-assert here as a defense-in-depth check
+      // because spawn() does not quote args — a malicious value with
+      // spaces/quotes could otherwise still affect downstream parsing.
+      if (!/^[a-zA-Z0-9._-]+$/.test(options.baseRunId)) {
+        throw new Error(`Ogiltigt baseRunId: ${options.baseRunId}`);
+      }
+      args.push("--base-run-id", options.baseRunId);
+    }
+  } else if (options.baseRunId) {
+    // Defense-in-depth: schema-laget förbjuder redan baseRunId i init-läge,
+    // men om helpern någonsin anropas direkt så låter vi felet bubbla.
+    throw new Error("baseRunId kan bara anges i follow-up-läge.");
   }
 
   // Discovery-payload: skriv till tempdir så Python kan läsa den.

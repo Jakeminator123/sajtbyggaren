@@ -1,0 +1,64 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "selected-work-preview",
+      "capabilities-row",
+      "manifesto-block",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "client-roster",
+      "process-steps"
+    ],
+    "sectionOrderRules": [
+      "Hero must lead with the studio's voice — bold typography, declarative tagline, no stock-business filler.",
+      "Selected work preview must come before any service or capability copy. Agencies sell on the work, not the services list.",
+      "Manifesto block reads as the studio's point of view, not a tagline — full-width statement, no decoration."
+    ]
+  },
+  "work": {
+    "requiredSections": [
+      "selected-work-grid",
+      "client-roster",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "capabilities-row",
+      "manifesto-block"
+    ],
+    "sectionOrderRules": [
+      "Selected work grid must dominate — one card per project, large-enough type to read on a 13-inch laptop.",
+      "Client roster acts as recognition signal, not a logo wall — text-only pill row is enough."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story-block",
+      "manifesto-block",
+      "team-block",
+      "process-steps"
+    ],
+    "optionalSections": [
+      "client-roster"
+    ],
+    "sectionOrderRules": [
+      "Story must be specific (founder names, year founded, where the studio's voice came from), not generic 'we believe great design changes things' filler.",
+      "Team must use first-name-first informality — agencies are people-led, not partner-led.",
+      "Process steps name the studio's actual stages with words a producer recognises (Discovery, Concept, Production, Launch)."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "manifesto-block"
+    ],
+    "sectionOrderRules": [
+      "Phone is a tel: link and email is a mailto: link.",
+      "Address renders as a single readable block so a producer can paste it into a calendar invite."
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../../../governance/schemas/scaffold.schema.json",
+  "id": "professional-services",
+  "version": "1.0.0",
+  "label": "Professional Services",
+  "description": "Authority-led site for law firms, accounting firms, management consultancies, financial advisors, tax advisors, audit firms and other expertise-driven small professional service practices. Emphasises practice areas, named partners with credentials, served industries, and a formal contact path that respects the multi-office and direct-line conventions typical of the segment.",
+  "buildIntent": [
+    "website"
+  ],
+  "primaryJobs": [
+    "establish expertise and authority",
+    "structure practice areas so prospects self-qualify",
+    "introduce named partners with credentials",
+    "make industry specialisation visible",
+    "route serious enquiries to the right office or partner"
+  ],
+  "defaultPageCount": 4,
+  "supportsSinglePage": false,
+  "supportsMultiPage": true,
+  "supportsAppFeatures": false
+}

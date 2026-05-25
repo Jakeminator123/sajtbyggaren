@@ -1,0 +1,36 @@
+{
+  "id": "clinic-healthcare",
+  "embeddingText": "A clinic and healthcare website for dental clinics, dentists, orthodontists, physiotherapists, chiropractors, naprapaths, osteopaths, optometrists, opticians, psychology practices, psychotherapy practices, dietitians, audiologists, podiatrists, specialist medical clinics, fertility clinics, dermatology clinics, aesthetic medicine clinics, occupational health clinics, veterinary clinics and small private healthcare practices. The site centres on credentialed personnel, treatment clarity, opening hours, location and a calm path to booking the first appointment.",
+  "semanticSignals": [
+    "clinic",
+    "treatment",
+    "patient",
+    "appointment booking",
+    "licensed practitioner",
+    "credentials",
+    "consultation",
+    "dental",
+    "physiotherapy",
+    "chiropractic",
+    "psychology",
+    "specialist healthcare",
+    "small healthcare practice"
+  ],
+  "negativeSignals": [
+    "software product",
+    "dashboard application",
+    "ecommerce checkout for physical goods shipping",
+    "online course",
+    "restaurant",
+    "marketplace with multiple independent merchants",
+    "national health authority"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold when the primary visitor goal is to understand a treatment and book a first appointment with a regulated clinician.",
+    "Choose this scaffold for veterinary clinics — the conversion shape (treatments, credentials, opening hours, booking) is identical to human healthcare.",
+    "Do not choose this scaffold for a wellness or beauty salon whose primary offer is non-clinical (massage spa, hair salon, beautician); that is local-service-business.",
+    "Do not choose this scaffold for an ecommerce store selling supplements, wellness products or telehealth subscriptions; that is ecommerce-lite or saas-product."
+  ],
+  "minConfidence": 0.7,
+  "requiresTieBreakWhenWithin": 0.08
+}

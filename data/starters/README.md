@@ -11,7 +11,7 @@ Reviewerns rekommendation: **fem starters täcker våra 14 scaffolds**. Se ADR 0
 | `marketing-base` | 9 av 14 scaffolds (local-service-business, professional-services, restaurant-hospitality, clinic-healthcare, real-estate, nonprofit-community, event-campaign, app-landing, consultant-expert) | Egen bas via `create-next-app` + `shadcn init` | Klar, build verifierad |
 | `saas-base` | `saas-product` | Fork av [vercel/platforms](https://github.com/vercel/platforms) | Mapp finns, kod saknas |
 | `commerce-base` | `ecommerce-lite` | Fork av [vercel/commerce](https://github.com/vercel/commerce) | Vendor-import klar (2026-05-11, upstream `1df2cf6`); bygger lokalt; runtime-mapping aktiverad i B20 step 2 (kör genom `deterministic-v1` codegen tills real-codegen-scope utvidgas) |
-| `portfolio-base` | `portfolio-creator`, `agency-studio` | Fork av [vercel/examples → solutions/blog](https://github.com/vercel/examples/tree/main/solutions/blog) | Vendor-import klar (2026-05-14, upstream `72aaac1`); bygger lokalt; runtime-mapping aktiveras inte i denna PR |
+| `portfolio-base` | `portfolio-creator` | Fork av [vercel/examples → solutions/blog](https://github.com/vercel/examples/tree/main/solutions/blog) | Vendor-import klar (2026-05-14, upstream `72aaac1`); bygger lokalt; runtime-mapping aktiveras inte i denna PR. `agency-studio` mappades ursprungligen hit men flyttades till `marketing-base` 2026-05-25 när Path B-aktiveringen landade — section-driven dispatch klarar agency-strukturen utan att byta starter, så ingen vendor-runtime krävs förrän en framtida portfolio-creator-aktivering tar tillbaka portfolio-base. |
 | `docs-base` | `course-education` | Fork av [shuding/nextra](https://github.com/shuding/nextra) | Vendor-import klar (2026-05-14, upstream `36ba79c`); bygger lokalt; runtime-mapping aktiveras inte i denna PR |
 
 ## Scaffold → Starter routing (målbild)
@@ -41,7 +41,7 @@ från målbilden ska det framgå i status-/handoff-dokumenten eller via B-ID i
 - ecommerce-lite: commerce-base
 - saas-product: saas-base
 - portfolio-creator: portfolio-base
-- agency-studio: portfolio-base
+- agency-studio: marketing-base
 - course-education: docs-base
 <!-- scaffold-starter-mapping:end -->
 

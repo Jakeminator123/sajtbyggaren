@@ -48,8 +48,19 @@ export type WizardCategoryId =
 /**
  * Runtime-safe scaffold hints. Frontend may send these as hints only; the
  * backend Discovery Resolver decides selected scaffold/fallback from taxonomy.
+ *
+ * Speglar `_RUNTIME_SCAFFOLD_HINTS` i
+ * `packages/generation/discovery/resolve.py`. När en ny scaffold flyttas
+ * från planned till runtime (Path A eller Path B) måste denna typ
+ * uppdateras tillsammans med resolve.py:s whitelist.
  */
-export type ScaffoldHint = "local-service-business" | "ecommerce-lite";
+export type ScaffoldHint =
+  | "local-service-business"
+  | "ecommerce-lite"
+  | "restaurant-hospitality"
+  | "clinic-healthcare"
+  | "professional-services"
+  | "agency-studio";
 
 export type WizardCategory = {
   id: WizardCategoryId;
@@ -66,13 +77,22 @@ export type WizardCategory = {
 export const WIZARD_CATEGORIES: WizardCategory[] = [
   { id: "business", label: "Företag / Tjänster", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "ecommerce", label: "Webshop / E-handel", scaffoldHint: "ecommerce-lite", defaultVariantId: "clean-store" },
-  { id: "restaurant", label: "Restaurang / Café", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
+  // Restaurang/Café pekar mot restaurant-hospitality (Path A active
+  // sedan 2026-05-25 — discovery-taxonomy.v1.json id="restaurant"
+  // har activeScaffoldId: restaurant-hospitality). Måste matcha
+  // BUSINESS_FAMILIES[restaurant] så att fallback-discovery-options
+  // (FALLBACK_DISCOVERY_OPTIONS i discovery-options.ts) producerar
+  // samma scaffold + variant som familje-grenen. Tidigare stod här
+  // local-service-business / nordic-trust, vilket missades i den
+  // ursprungliga GAP-viewser-restaurant-wizard-hint-PR:en — fixen
+  // landar nu under samma GAP.
+  { id: "restaurant", label: "Restaurang / Café", scaffoldHint: "restaurant-hospitality", defaultVariantId: "warm-bistro" },
   { id: "portfolio", label: "Portfolio / CV", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "landing", label: "Landningssida", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "blog", label: "Blogg / Magasin", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
-  { id: "consulting", label: "Konsult / Byrå", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
+  { id: "consulting", label: "Konsult / Byrå", scaffoldHint: "agency-studio", defaultVariantId: "studio-monochrome" },
   { id: "tech", label: "Tech / Startup", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
-  { id: "healthcare", label: "Vård / Klinik", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
+  { id: "healthcare", label: "Vård / Klinik", scaffoldHint: "clinic-healthcare", defaultVariantId: "clinic-calm" },
   { id: "realestate", label: "Fastighet / Mäklare", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "salon", label: "Salong / Skönhet", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "fitness", label: "Gym / Tränare", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
@@ -82,8 +102,8 @@ export const WIZARD_CATEGORIES: WizardCategory[] = [
   { id: "nonprofit", label: "Förening / Ideell", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "music", label: "Musik / Artist", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "hotel", label: "Hotell / Boende", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
-  { id: "legal", label: "Juridik / Advokat", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
-  { id: "accounting", label: "Ekonomi / Redovisning", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
+  { id: "legal", label: "Juridik / Advokat", scaffoldHint: "professional-services", defaultVariantId: "legal-classic" },
+  { id: "accounting", label: "Ekonomi / Redovisning", scaffoldHint: "professional-services", defaultVariantId: "accounting-trust" },
   { id: "auto", label: "Bil / Motor", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "travel", label: "Resa / Turism", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "food", label: "Mat / Catering", scaffoldHint: "ecommerce-lite", defaultVariantId: "clean-store" },
@@ -137,8 +157,8 @@ export const BUSINESS_FAMILIES: BusinessFamily[] = [
     id: "restaurant",
     label: "Restaurang / Café",
     description: "Meny, bordsbokning, öppettider och plats — visuellt aptitligt.",
-    scaffoldHint: "local-service-business",
-    defaultVariantId: "warm-craft",
+    scaffoldHint: "restaurant-hospitality",
+    defaultVariantId: "warm-bistro",
     subCategories: ["restaurant"],
   },
   {
@@ -404,6 +424,36 @@ export const VIBE_OPTIONS: Vibe[] = [
     defaultTypographyFeel: "classic-serif",
   },
   {
+    id: "clinic-calm",
+    scaffoldHint: "clinic-healthcare",
+    label: "Clinic Calm",
+    description: "Ljust, lugnt och vårdande — som en privatklinik.",
+    primarySwatch: "#1f6f8b",
+    accentSwatch: "#a8d8c5",
+    background: "#fbfdfe",
+    defaultTypographyFeel: "modern-sans",
+  },
+  {
+    id: "warm-care",
+    scaffoldHint: "clinic-healthcare",
+    label: "Warm Care",
+    description: "Varmt, mänskligt och hands-on — som en naprapat eller barnmorska.",
+    primarySwatch: "#6f7a4a",
+    accentSwatch: "#cf997b",
+    background: "#faf6f0",
+    defaultTypographyFeel: "modern-sans",
+  },
+  {
+    id: "modern-precision",
+    scaffoldHint: "clinic-healthcare",
+    label: "Modern Precision",
+    description: "Skarpt, tekniskt och precist — som en specialistklinik.",
+    primarySwatch: "#1c2e4a",
+    accentSwatch: "#c7cfdb",
+    background: "#ffffff",
+    defaultTypographyFeel: "modern-sans",
+  },
+  {
     id: "vintage-curio",
     scaffoldHint: "ecommerce-lite",
     label: "Vintage Curio",
@@ -412,6 +462,66 @@ export const VIBE_OPTIONS: Vibe[] = [
     accentSwatch: "#a87f3e",
     background: "#f4ecd8",
     defaultTypographyFeel: "classic-serif",
+  },
+  {
+    id: "legal-classic",
+    scaffoldHint: "professional-services",
+    label: "Legal Classic",
+    description: "Mörk navy och elfenben — som en traditionsrik advokatbyrå.",
+    primarySwatch: "#0d1c2c",
+    accentSwatch: "#9b7a3b",
+    background: "#fbf8f1",
+    defaultTypographyFeel: "modern-sans",
+  },
+  {
+    id: "consulting-modern",
+    scaffoldHint: "professional-services",
+    label: "Consulting Modern",
+    description: "Vitt, grafit och kyligt — som en strategikonsult med skarpt språk.",
+    primarySwatch: "#101418",
+    accentSwatch: "#0e7c86",
+    background: "#ffffff",
+    defaultTypographyFeel: "modern-sans",
+  },
+  {
+    id: "accounting-trust",
+    scaffoldHint: "professional-services",
+    label: "Accounting Trust",
+    description: "Varmt grönt och pergament — som en revisionsbyrå med hand om småföretag.",
+    primarySwatch: "#1f4d3a",
+    accentSwatch: "#c9a55a",
+    background: "#f7f4ec",
+    defaultTypographyFeel: "modern-sans",
+  },
+  {
+    id: "studio-monochrome",
+    scaffoldHint: "agency-studio",
+    label: "Studio Monochrome",
+    description: "Strikt svart och vit — som en designstudio som låter arbetet tala.",
+    primarySwatch: "#0a0a0a",
+    accentSwatch: "#caa14a",
+    background: "#ffffff",
+    defaultTypographyFeel: "modern-sans",
+  },
+  {
+    id: "editorial-warm",
+    scaffoldHint: "agency-studio",
+    label: "Editorial Warm",
+    description: "Krämvit och bläck — som ett magasin som råkar vara en byrå.",
+    primarySwatch: "#1a1612",
+    accentSwatch: "#a64f30",
+    background: "#f5f0e6",
+    defaultTypographyFeel: "classic-serif",
+  },
+  {
+    id: "bold-electric",
+    scaffoldHint: "agency-studio",
+    label: "Bold Electric",
+    description: "Mörkt och elektriskt — som en motion-studio med energi.",
+    primarySwatch: "#3d5cff",
+    accentSwatch: "#3d5cff",
+    background: "#0a0a0a",
+    defaultTypographyFeel: "modern-sans",
   },
 ];
 

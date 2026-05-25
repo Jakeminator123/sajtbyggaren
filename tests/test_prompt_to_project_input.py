@@ -1084,6 +1084,120 @@ def test_generate_followup_requires_existing_meta(tmp_path: Path) -> None:
 
 
 @pytest.mark.tooling
+def test_generate_followup_with_base_run_id_iterates_from_specific_version(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """GAP-backend-build-trace-endpoint D-criterion.
+
+    When ``base_run_id`` points at v1's run, follow-up should:
+      * Read the v1 PI snapshot (not the latest v2 pointer).
+      * Bump version to ``max(latest, base) + 1`` so we never overwrite
+        an existing snapshot.
+      * Persist ``baseRunId`` in the new meta so the operator can audit
+        which version a v3 was iterated from.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    runs_dir = tmp_path / "runs"
+    runs_dir.mkdir()
+
+    initial_pi, _initial_meta, _initial_pi_path, _ = generate(
+        "Skapa en hemsida för en elektriker i Malmö",
+        output_dir=tmp_path,
+        site_id="electrician-fork",
+        project_id="stable-project-id",
+    )
+    # Anchor a fake v1 run on disk that points back at the v1 snapshot.
+    v1_run_id = "run-v1-anchor"
+    v1_run_dir = runs_dir / v1_run_id
+    v1_run_dir.mkdir()
+    (v1_run_dir / "input.json").write_text(
+        json.dumps(
+            {
+                "runId": v1_run_id,
+                "mode": "init",
+                "rawPrompt": "Skapa en hemsida för en elektriker i Malmö",
+                "dossierPath": "irrelevant",
+                "projectId": "stable-project-id",
+                "version": 1,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    # Bump latest to v2 first so we can prove that base-run-id reads v1
+    # rather than picking up the latest pointer.
+    generate_followup(
+        "Lägg till mer fokus på laddboxar",
+        output_dir=tmp_path,
+        site_id="electrician-fork",
+    )
+    assert (tmp_path / "electrician-fork.v2.project-input.json").exists()
+
+    # Now iterate from v1 — expected to land at v3 (max(2, 1) + 1) and
+    # use the v1 PI snapshot as base, not v2.
+    project_input, meta, project_input_path, meta_path = generate_followup(
+        "Hoppa tillbaka och förstärk lokal närhet istället",
+        output_dir=tmp_path,
+        site_id="electrician-fork",
+        base_run_id=v1_run_id,
+        runs_dir=runs_dir,
+    )
+
+    assert project_input_path.name == "electrician-fork.v3.project-input.json"
+    assert meta_path.name == "electrician-fork.v3.meta.json"
+    assert meta["version"] == 3
+    assert meta["previousVersion"] == 1
+    assert meta["baseRunId"] == v1_run_id
+    assert project_input["company"]["story"] == initial_pi["company"]["story"]
+
+
+@pytest.mark.tooling
+def test_generate_followup_rejects_unknown_base_run_id(tmp_path: Path) -> None:
+    """An empty data/runs directory means the baseRunId cannot be resolved
+    — surface a clean SystemExit instead of a stack trace.
+    """
+    runs_dir = tmp_path / "runs"
+    runs_dir.mkdir()
+    generate(
+        "Skapa en hemsida för en cykelbutik",
+        output_dir=tmp_path,
+        site_id="bike-shop",
+        project_id="bs-1",
+    )
+    with pytest.raises(SystemExit, match="baseRunId saknar katalog"):
+        generate_followup(
+            "Justera färgerna",
+            output_dir=tmp_path,
+            site_id="bike-shop",
+            base_run_id="does-not-exist",
+            runs_dir=runs_dir,
+        )
+
+
+@pytest.mark.tooling
+def test_generate_followup_rejects_path_traversal_base_run_id(
+    tmp_path: Path,
+) -> None:
+    runs_dir = tmp_path / "runs"
+    runs_dir.mkdir()
+    generate(
+        "Skapa en hemsida för en bilverkstad",
+        output_dir=tmp_path,
+        site_id="auto-shop",
+        project_id="as-1",
+    )
+    with pytest.raises(SystemExit, match="run-id-mönstret"):
+        generate_followup(
+            "Lägg till bokning",
+            output_dir=tmp_path,
+            site_id="auto-shop",
+            base_run_id="../escape",
+            runs_dir=runs_dir,
+        )
+
+
+@pytest.mark.tooling
 def test_versioned_snapshot_refuses_overwrite(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

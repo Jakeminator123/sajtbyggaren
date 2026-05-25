@@ -134,15 +134,21 @@ def test_ecommerce_targets_active_ecommerce_lite_with_commerce_base(
 
 
 @pytest.mark.tooling
-def test_restaurant_is_planned_with_local_service_fallback(
+def test_restaurant_is_active_with_restaurant_hospitality(
     taxonomy_payload: dict,
 ) -> None:
-    """Scout-planens nyckelexempel: restaurant-hospitality är planned."""
+    """Restaurant-kategorin promoterades till active 2026-05-25 via
+    GAP-backend-restaurant-activation. Path A-renderers (render_menu +
+    render_booking) finns i build_site.py och cafe-bistro-fixturen
+    kör hela end-to-end-flödet. ``fallbackScaffoldId`` behålls som
+    säkerhetsnät om scaffold-mappingen tillfälligt skulle haverera.
+    """
     category = _find_category(taxonomy_payload, "restaurant")
-    assert category["supportStatus"] == "planned"
+    assert category["supportStatus"] == "active"
     assert category["targetScaffoldId"] == "restaurant-hospitality"
+    assert category["activeScaffoldId"] == "restaurant-hospitality"
     assert category["fallbackScaffoldId"] == "local-service-business"
-    assert category["defaultVariantId"] == "nordic-trust"
+    assert category["defaultVariantId"] == "warm-bistro"
     assert category["expectedStarterId"] == "marketing-base"
 
 
@@ -280,24 +286,53 @@ def test_pick_primary_category_tie_breaks_on_support_status() -> None:
     """R1 #2 (round 3): inom samma branch_priority väljs kategorin med
     bäst supportStatus (``active`` > ``fallback`` > ``planned``).
 
-    ``salon`` (active) och ``healthcare`` (planned) delar branch
-    ``salon`` (priority 2). Utan tie-break föll beslutet på listordning;
-    nu vinner alltid active.
+    Använder syntetiska ``TaxonomyCategory``-instanser så testet låser
+    tie-break-logiken utan att vara känsligt för aktuell promotion-
+    status i ``discovery-taxonomy.v1.json``. Tidigare användes
+    ``salon`` (active) + ``healthcare`` (planned) som live-fixturer,
+    men efter Path B step 12 (2026-05-25) är båda active så live-data
+    räcker inte längre för att verifiera planned-vs-active tie-breaket.
     """
     from packages.generation.discovery import load_discovery_taxonomy
+    from packages.generation.discovery.taxonomy import TaxonomyCategory
 
     loaded = load_discovery_taxonomy()
-    salon = loaded.get("salon")
-    healthcare = loaded.get("healthcare")
-    assert salon is not None and salon.supportStatus == "active"
-    assert healthcare is not None and healthcare.supportStatus == "planned"
-    # Branch:en är samma; supportStatus avgör.
-    assert salon.contentBranch == healthcare.contentBranch
+    branch_id = "salon"
+    assert branch_id in loaded.branch_priority, (
+        "Test förväntar att branch 'salon' finns i taxonomy.contentBranches."
+    )
+    active = TaxonomyCategory(
+        id="active-stub",
+        labelSv="Active stub",
+        contentBranch=branch_id,
+        supportStatus="active",
+        targetScaffoldId="local-service-business",
+        defaultVariantId="nordic-trust",
+        requestedCapabilities=[],
+        candidateDossiers=[],
+        rationale="Synthetic active stub for tie-break unit test.",
+        activeScaffoldId="local-service-business",
+        expectedStarterId="marketing-base",
+    )
+    planned = TaxonomyCategory(
+        id="planned-stub",
+        labelSv="Planned stub",
+        contentBranch=branch_id,
+        supportStatus="planned",
+        targetScaffoldId="clinic-healthcare",
+        defaultVariantId="clinic-calm",
+        requestedCapabilities=[],
+        candidateDossiers=[],
+        rationale="Synthetic planned stub for tie-break unit test.",
+        fallbackScaffoldId="local-service-business",
+        expectedStarterId="marketing-base",
+    )
+    assert active.contentBranch == planned.contentBranch
 
-    primary = loaded.pick_primary_category([salon, healthcare])
-    assert primary is not None and primary.id == "salon"
-    primary = loaded.pick_primary_category([healthcare, salon])
-    assert primary is not None and primary.id == "salon", (
+    primary = loaded.pick_primary_category([active, planned])
+    assert primary is not None and primary.id == "active-stub"
+    primary = loaded.pick_primary_category([planned, active])
+    assert primary is not None and primary.id == "active-stub", (
         "Resolvern föll på listordning istället för supportStatus tie-break."
     )
 

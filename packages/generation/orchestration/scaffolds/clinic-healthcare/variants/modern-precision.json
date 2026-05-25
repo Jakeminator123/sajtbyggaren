@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../../../../governance/schemas/variant.schema.json",
+  "id": "modern-precision",
+  "enabled": true,
+  "label": "Modern Precision",
+  "description": "Sharp, deep-navy and silver palette for specialist clinics — fertility, dermatology, aesthetic medicine, orthopaedic specialists, sports rehabilitation. Tighter typographic scale, near-square radii and a confident accent communicate technical authority and surgical-grade precision without feeling cold.",
+  "tokens": {
+    "color": {
+      "background": "#ffffff",
+      "foreground": "#0c1622",
+      "muted": "#56657a",
+      "border": "#dde3eb",
+      "primary": "#1c2e4a",
+      "primaryForeground": "#ffffff",
+      "accent": "#c7cfdb",
+      "accentForeground": "#0c1622"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.18
+    },
+    "radius": {
+      "sm": "0.25rem",
+      "md": "0.5rem",
+      "lg": "0.75rem"
+    },
+    "spacing": {
+      "section": "6rem",
+      "container": "min(74rem, 92vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "precise",
+      "specialist",
+      "authoritative",
+      "modern",
+      "technical",
+      "confident"
+    ]
+  }
+}

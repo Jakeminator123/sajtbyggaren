@@ -1,0 +1,67 @@
+{
+  "home": {
+    "requiredSections": [
+      "hero",
+      "treatment-summary",
+      "credentials",
+      "trust-proof",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "story",
+      "testimonials",
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Hero must convey calm and competence; avoid stock-business imagery and avoid showing surgical or distressing visuals on the first scroll.",
+      "Credentials must be visible above the fold on desktop so the visitor sees a licensed clinician, not just a brand.",
+      "Contact-cta should be a low-friction 'Boka tid' affordance, not a generic 'Kontakta oss'."
+    ]
+  },
+  "treatments": {
+    "requiredSections": [
+      "treatment-list",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "credentials",
+      "faq",
+      "trust-proof"
+    ],
+    "sectionOrderRules": [
+      "Treatment list must use plain language, not jargon — 'tandimplantat' rather than 'osseointegrated dental fixtures'.",
+      "Each treatment should give the visitor enough information to decide whether to book — typical duration, what happens during the visit, and indicative price band where the clinic publishes one.",
+      "Contact-cta at the bottom should reinforce the booking path that the page exists to drive."
+    ]
+  },
+  "about": {
+    "requiredSections": [
+      "about-story",
+      "team",
+      "credentials",
+      "trust-proof"
+    ],
+    "optionalSections": [
+      "story"
+    ],
+    "sectionOrderRules": [
+      "Story must be specific (founder's name, year established, clinical philosophy), not generic 'we care about our patients' copy.",
+      "Team must list at least one named clinician with their credential or licence so the visitor recognises a regulated practitioner."
+    ]
+  },
+  "contact": {
+    "requiredSections": [
+      "contact-info",
+      "hours-summary",
+      "contact-cta"
+    ],
+    "optionalSections": [
+      "faq"
+    ],
+    "sectionOrderRules": [
+      "Phone number must be a tel: link and email a mailto: link.",
+      "Opening hours must list every day and mark closed days unambiguously — a visitor in pain on a Sunday should immediately see whether they can call.",
+      "Address must be readable as a single block so it can be copied straight into a maps app."
+    ]
+  }
+}
