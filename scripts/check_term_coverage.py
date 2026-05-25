@@ -187,6 +187,11 @@ COMMON_WORDS = {
     # in scripts/prune_generated_previews.py. Same treatment as KeyError /
     # FileNotFoundError / SystemExit above.
     "ConnectionRefusedError", "TimeoutError",
+    # Python built-in exception caught by backoffice/views/evals.py's
+    # _terminate_process_tree helper on POSIX when ``os.killpg`` races
+    # the subprocess exiting. Same treatment as the other Python builtin
+    # exception names in this skiplist.
+    "ProcessLookupError",
     # pytest stdlib type used as type annotation in tests. Same treatment
     # as MonkeyPatch above.
     "CaptureFixture",

@@ -38,6 +38,10 @@ data/versions/
 data/evals/eval-runs/*.json
 data/evals/manual-scorecards/*.json
 data/evals/generated/
+# scripts/run_scaffold_selection_probe.py output. Same kategori: lokal
+# observability per körning, inte arkiverat i git. .gitkeep behåller mappen.
+data/evals/scaffold-probe/*.json
+data/evals/scaffold-probe/*.md
 
 audits/
 data/prompt-inputs/
