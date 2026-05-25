@@ -34,7 +34,7 @@ PASS_CASE_THRESHOLD = 6.5
 
 
 @dataclass(frozen=True)
-class GoldenPathCase:
+class Case:
     """One baseline prompt and its expected deterministic routing signals."""
 
     case_id: str
@@ -50,8 +50,8 @@ class GoldenPathCase:
     ideal_note: str = ""
 
 
-BASELINE_CASES: tuple[GoldenPathCase, ...] = (
-    GoldenPathCase(
+BASELINE_CASES: tuple[Case, ...] = (
+    Case(
         case_id="electrician-malmo",
         label="Elektriker Malmö",
         prompt="Skapa en hemsida för en elektriker i Malmö.",
@@ -64,7 +64,7 @@ BASELINE_CASES: tuple[GoldenPathCase, ...] = (
         locality_terms=("malmö", "malmo"),
         ideal_note="Bra fit för lokal service; främst kontakt- och copy-bevis behöver hålla.",
     ),
-    GoldenPathCase(
+    Case(
         case_id="salon-goteborg",
         label="Frisörsalong Göteborg",
         prompt="Skapa en hemsida för en frisörsalong i Göteborg.",
@@ -77,7 +77,7 @@ BASELINE_CASES: tuple[GoldenPathCase, ...] = (
         locality_terms=("göteborg", "goteborg"),
         ideal_note="Saknar dedikerad salon-scaffold; kvaliteten avgörs av copy och bokningsnära CTA.",
     ),
-    GoldenPathCase(
+    Case(
         case_id="naprapat-stockholm",
         label="Naprapatklinik Stockholm",
         prompt="Skapa en hemsida för en naprapatklinik i Stockholm.",
@@ -99,7 +99,7 @@ BASELINE_CASES: tuple[GoldenPathCase, ...] = (
             "väljs är problemet selection/signal, inte retrieval."
         ),
     ),
-    GoldenPathCase(
+    Case(
         case_id="ceramics-shop",
         label="Keramik e-handel",
         prompt="Skapa en hemsida för en liten e-handel som säljer keramik.",
@@ -287,7 +287,7 @@ def assess_route_sanity(expected: tuple[str, ...], plan_routes: list[str], fs_ro
     }
 
 
-def assess_contact_cta(case: GoldenPathCase, plan_routes: list[str], fs_routes: list[str], text: str, build_result: dict[str, Any]) -> dict[str, Any]:
+def assess_contact_cta(case: Case, plan_routes: list[str], fs_routes: list[str], text: str, build_result: dict[str, Any]) -> dict[str, Any]:
     """Assess the contact or product CTA path for a generated case."""
 
     has_contact_route = "/kontakt" in plan_routes and "/kontakt" in fs_routes
@@ -331,7 +331,7 @@ def assess_contact_cta(case: GoldenPathCase, plan_routes: list[str], fs_routes: 
 
 
 def score_traits(
-    case: GoldenPathCase,
+    case: Case,
     *,
     project_input: dict[str, Any],
     site_brief: dict[str, Any],
@@ -543,7 +543,7 @@ def deterministic_llm_env(enabled: bool) -> Iterator[None]:
             os.environ[OPENAI_API_KEY_ENV] = previous
 
 
-def run_case(case: GoldenPathCase, *, work_dir: Path, mode: str) -> dict[str, Any]:
+def run_case(case: Case, *, work_dir: Path, mode: str) -> dict[str, Any]:
     """Generate, build and score one golden path case."""
 
     from scripts.build_site import build
@@ -968,7 +968,7 @@ def run_golden_path_eval(
     mode: str = "deterministic",
     evals_dir: Path = DEFAULT_EVALS_DIR,
     eval_id: str | None = None,
-    cases: tuple[GoldenPathCase, ...] = BASELINE_CASES,
+    cases: tuple[Case, ...] = BASELINE_CASES,
 ) -> dict[str, Any]:
     """Run all cases and write JSON + Markdown outputs."""
 
