@@ -190,6 +190,11 @@ Korta motiveringar i [`governance/decisions/`](governance/decisions/):
 - [0021](governance/decisions/0021-stackblitz-preview-payload-workarounds.md) - StackBlitz preview-payload-workarounds.
 - [0022](governance/decisions/0022-site-brief-company-contact-fields.md) - Site Brief company/contact-fält.
 - [0023](governance/decisions/0023-enabled-toggle-for-generation-assets.md) - Enabled-toggle för generationstillgångar.
+- [0024](governance/decisions/0024-discovery-resolver-canonical-terms.md) - Discovery Resolver canonical terms.
+- [0025](governance/decisions/0025-browser-fallback-preview.md) - Browser fallback preview.
+- [0026](governance/decisions/0026-embeddings-postponed-until-contract.md) - Embeddings pausas tills kontraktet är klart.
+- [0027](governance/decisions/0027-semantic-followup-merge.md) - Semantic follow-up merge i Project DNA V1.
+- [0028](governance/decisions/0028-runtime-ladder.md) - Runtime ladder för PreviewRuntime.
 
 ## Engine Run
 
