@@ -103,6 +103,7 @@ def test_eval_case_lists_are_the_cli_source_of_truth() -> None:
         "cafe-bistro",
         "clinic-tandvard",
         "advokatbyra-novum",
+        "studio-bjork",
     )
     assert get_full_case_ids() == (
         "painter-palma",
@@ -110,10 +111,11 @@ def test_eval_case_lists_are_the_cli_source_of_truth() -> None:
         "cafe-bistro",
         "clinic-tandvard",
         "advokatbyra-novum",
+        "studio-bjork",
     )
     assert format_case_list(get_full_case_ids(), separator=" + ") == (
         "painter-palma + atelje-bird + cafe-bistro + clinic-tandvard"
-        " + advokatbyra-novum"
+        " + advokatbyra-novum + studio-bjork"
     )
 
 
@@ -130,6 +132,7 @@ def test_full_suite_covers_all_runtime_scaffolds() -> None:
         "restaurant-hospitality",
         "clinic-healthcare",
         "professional-services",
+        "agency-studio",
     }
 
 

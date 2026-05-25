@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../../../../governance/schemas/variant.schema.json",
+  "id": "studio-monochrome",
+  "enabled": true,
+  "label": "Studio Monochrome",
+  "description": "High-contrast black-on-white visual direction for design studios and brand studios. Strict modular grid, restrained accent of muted ochre and sharp typographic posture signal a confident creative point of view without resorting to bright palette tricks. Reads as a curated portfolio site, not a marketing brochure.",
+  "tokens": {
+    "color": {
+      "background": "#ffffff",
+      "foreground": "#0a0a0a",
+      "muted": "#5b5b5b",
+      "border": "#e0e0e0",
+      "primary": "#0a0a0a",
+      "primaryForeground": "#ffffff",
+      "accent": "#caa14a",
+      "accentForeground": "#0a0a0a"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.25
+    },
+    "radius": {
+      "sm": "0.125rem",
+      "md": "0.25rem",
+      "lg": "0.5rem"
+    },
+    "spacing": {
+      "section": "6rem",
+      "container": "min(76rem, 92vw)"
+    },
+    "motion": {
+      "level": "subtle"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "monochrome",
+      "modular",
+      "sharp",
+      "curated",
+      "confident",
+      "creative"
+    ]
+  }
+}

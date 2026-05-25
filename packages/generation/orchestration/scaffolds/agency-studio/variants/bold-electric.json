@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../../../../governance/schemas/variant.schema.json",
+  "id": "bold-electric",
+  "enabled": true,
+  "label": "Bold Electric",
+  "description": "High-saturation electric-blue and off-black visual direction for younger digital studios, motion shops and culture-led brand studios. Tight grid, oversized typography and a bright accent communicate energy and recent work without slipping into corporate marketing language. Designed for studios that lead with motion and interaction.",
+  "tokens": {
+    "color": {
+      "background": "#0a0a0a",
+      "foreground": "#f7f7f7",
+      "muted": "#a6a6a6",
+      "border": "#262626",
+      "primary": "#3d5cff",
+      "primaryForeground": "#f7f7f7",
+      "accent": "#3d5cff",
+      "accentForeground": "#0a0a0a"
+    },
+    "typography": {
+      "fontFamilyDisplay": "var(--font-geist-sans)",
+      "fontFamilyBody": "var(--font-geist-sans)",
+      "fontFamilyMono": "var(--font-geist-mono)",
+      "scaleRatio": 1.3
+    },
+    "radius": {
+      "sm": "0.125rem",
+      "md": "0.25rem",
+      "lg": "0.5rem"
+    },
+    "spacing": {
+      "section": "6rem",
+      "container": "min(78rem, 92vw)"
+    },
+    "motion": {
+      "level": "expressive"
+    }
+  },
+  "tone": {
+    "vibe": [
+      "bold",
+      "electric",
+      "energetic",
+      "modern",
+      "creative",
+      "decisive"
+    ]
+  }
+}

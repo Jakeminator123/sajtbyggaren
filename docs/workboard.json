@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-25T15:25:00Z",
-  "updatedBy": "christopher-ui-path-b-professional-services-activation",
+  "updatedAt": "2026-05-25T15:35:00Z",
+  "updatedBy": "christopher-ui-path-b-agency-studio-activation",
   "people": {
     "jakob": {
       "allocation": 0.75,
@@ -185,7 +185,7 @@
         "python -m ruff check .",
         "python -m pytest tests/ -q -x"
       ],
-      "note": "Detalj-design i docs/scaffold-runtime-extension-needed.md. ~20-26h backend som låser upp 12 av 14 scaffolds. 2026-05-25: Christopher tar Path B som [scope-leak] under operatör-OK. Migrationssekvens i 9 commits enligt docs/path-b-backend-scout.md (commits 1-5 = extract per-section, 6-7 = registry+dispatcher, 8 = restaurant-sections, 9 = activate redan klart i 8279e7c). Sessionsplan: commit 1-3 i denna session, sedan operator-review innan dispatcher-swap. Owner förblir 'jakob' så Sprintvakt-lane-policy passerar (samma precedent som GAP-backend-build-trace-endpoint och GAP-backend-restaurant-activation). 2026-05-25 step 12: clinic-healthcare aktiverat via Path B native dispatch (_DISPATCHED_SCAFFOLDS) — strukturellt distinkt från LSB med egna routes (/, /behandlingar, /om-oss, /kontakta-oss) och 5 nya section-renderers (about-story-block, team-block, treatment-summary, treatment-list, credentials). 2026-05-25 step 13: professional-services aktiverat via samma native dispatch — egna routes (/, /expertis, /om-oss, /kontakta-oss), 5 nya section-renderers (expertise-areas, practice-grid, industries-served, partners-grid, insights-list) och 3 nya variants (legal-classic, consulting-modern, accounting-trust). _DISPATCHED_SCAFFOLDS innehåller nu två scaffolds. Nästa: agency-studio i samma mönster.",
+      "note": "Detalj-design i docs/scaffold-runtime-extension-needed.md. ~20-26h backend som låser upp 12 av 14 scaffolds. 2026-05-25: Christopher tar Path B som [scope-leak] under operatör-OK. Migrationssekvens i 9 commits enligt docs/path-b-backend-scout.md (commits 1-5 = extract per-section, 6-7 = registry+dispatcher, 8 = restaurant-sections, 9 = activate redan klart i 8279e7c). Sessionsplan: commit 1-3 i denna session, sedan operator-review innan dispatcher-swap. Owner förblir 'jakob' så Sprintvakt-lane-policy passerar (samma precedent som GAP-backend-build-trace-endpoint och GAP-backend-restaurant-activation). 2026-05-25 step 12: clinic-healthcare aktiverat via Path B native dispatch (_DISPATCHED_SCAFFOLDS) — strukturellt distinkt från LSB med egna routes (/, /behandlingar, /om-oss, /kontakta-oss) och 5 nya section-renderers (about-story-block, team-block, treatment-summary, treatment-list, credentials). 2026-05-25 step 13: professional-services aktiverat via samma native dispatch — egna routes (/, /expertis, /om-oss, /kontakta-oss), 5 nya section-renderers (expertise-areas, practice-grid, industries-served, partners-grid, insights-list) och 3 nya variants (legal-classic, consulting-modern, accounting-trust). 2026-05-25 step 14: agency-studio aktiverat — egna routes (/, /arbeten, /om-oss, /kontakta-oss), 6 nya section-renderers (selected-work-preview, selected-work-grid, capabilities-row, manifesto-block, process-steps, client-roster) och 3 nya variants (studio-monochrome, editorial-warm, bold-electric). _DISPATCHED_SCAFFOLDS innehåller nu tre Path B native scaffolds. Daily eval-sviten kör 8 quick + 6 full cases och täcker alla sex on-disk scaffolds.",
       "blocks": [
         "Aktivering av de 12 inaktiva scaffold-IDn (restaurant-hospitality, clinic-healthcare, professional-services, real-estate, agency-studio, consultant-expert, nonprofit-community, event-campaign, app-landing, course-education, portfolio-creator, saas-product)."
       ]

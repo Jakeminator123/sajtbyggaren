@@ -76,6 +76,13 @@ SCAFFOLD_TO_STARTER: dict[str, str] = {
     # scaffold-distinct character lives entirely in the section
     # composition (expertise-areas / practice-grid / partners-grid).
     "professional-services": "marketing-base",
+    # agency-studio is the third Path B native scaffold (step 14,
+    # 2026-05-25). Same starter for the same reason — informational
+    # routes (home / work / about / contact); the work-led
+    # composition (selected-work-preview / selected-work-grid /
+    # manifesto-block / process-steps / client-roster) carries the
+    # creative-studio voice.
+    "agency-studio": "marketing-base",
     # Restaurant-hospitality is enabled in scaffold-contract.v1.json and
     # therefore appears in load_scaffold_registry(); without a starter
     # mapping here, produce_site_plan() raises in _resolve_starter_id when
@@ -410,6 +417,11 @@ _DEFAULT_VARIANT_BY_SCAFFOLD: dict[str, str] = {
     # minimalist consulting language (consulting-modern) or the warm
     # accounting language (accounting-trust).
     "professional-services": "legal-classic",
+    # ``studio-monochrome`` is the safest agency-studio default —
+    # high-contrast, modular, works for design studios and brand
+    # studios without committing to the editorial-warm voice or
+    # the high-energy bold-electric direction.
+    "agency-studio": "studio-monochrome",
 }
 
 

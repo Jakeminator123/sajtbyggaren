@@ -159,22 +159,24 @@
       "labelSv": "Konsult / Byrå",
       "labelEn": "Consulting / Agency",
       "contentBranch": "consulting",
-      "supportStatus": "planned",
-      "targetScaffoldId": "consultant-expert",
+      "supportStatus": "active",
+      "targetScaffoldId": "agency-studio",
+      "activeScaffoldId": "agency-studio",
       "fallbackScaffoldId": "local-service-business",
-      "defaultVariantId": "nordic-trust",
+      "defaultVariantId": "studio-monochrome",
       "expectedStarterId": "marketing-base",
       "requestedCapabilities": ["contact-form", "faq-section"],
       "candidateDossiers": [],
       "recommendedPages": [
         "Startsida / Hero",
+        "Selected work",
         "Om oss / Om mig",
         "Vårt team",
-        "Priser och paket",
-        "Kundrecensioner",
+        "Process",
         "Kontaktformulär"
       ],
-      "rationale": "Konsult/byrå pekar mot consultant-expert eller agency-studio. Båda är planned; fallback till local-service-business."
+      "rationale": "Konsult/byrå pekar mot agency-studio (kreativa byråer, designstudios, produktionsbolag). Strategikonsulter (management consulting med named partners) är fortsatt PS via legal/accounting-kategorierna; consultant-expert (planned) tar enmansbyråer när scaffolden landar.",
+      "operatorNotes": "2026-05-25: promoted to active via Path B step 14 (_DISPATCHED_SCAFFOLDS). targetScaffoldId switched from consultant-expert (planned) to agency-studio (active); defaultVariantId from nordic-trust to studio-monochrome (PS-native). Fallback chain stays as a safety net."
     },
     {
       "id": "tech",

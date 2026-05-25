@@ -702,6 +702,16 @@ _RUNTIME_SCAFFOLD_HINTS: dict[str, tuple[str, str, str]] = {
         "legal-classic",
         "marketing-base",
     ),
+    # agency-studio lades till 2026-05-25 via Path B step 14. Tredje
+    # native-dispatcher-scaffolden — portfolio-driven layout (work /
+    # selected-work-grid / capabilities-row / manifesto-block /
+    # process-steps / client-roster) för kreativa byråer och
+    # designstudios.
+    "agency-studio": (
+        "agency-studio",
+        "studio-monochrome",
+        "marketing-base",
+    ),
 }
 
 

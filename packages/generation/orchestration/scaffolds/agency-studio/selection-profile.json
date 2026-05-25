@@ -1,0 +1,42 @@
+{
+  "id": "agency-studio",
+  "embeddingText": "An agency and studio website for creative agencies, brand studios, design studios, branding agencies, identity studios, web design studios, digital agencies, motion design studios, animation studios, illustration studios, content production houses, video production agencies, post-production studios, photography studios, art direction studios, type foundries, packaging design studios, industrial design studios, product design studios and small to mid-size partner-led creative shops. The site centres on selected work, capability disciplines, a manifesto-style point of view, named clients and a measured path from a brand lead to a real conversation.",
+  "semanticSignals": [
+    "creative agency",
+    "design studio",
+    "brand studio",
+    "branding agency",
+    "identity studio",
+    "web design studio",
+    "digital agency",
+    "motion studio",
+    "animation studio",
+    "production house",
+    "video production",
+    "post-production",
+    "photography studio",
+    "art direction",
+    "selected work",
+    "case studies",
+    "client roster"
+  ],
+  "negativeSignals": [
+    "law firm",
+    "advokatbyrå",
+    "audit firm",
+    "physical retail store",
+    "restaurant",
+    "clinic with patient bookings",
+    "ecommerce checkout",
+    "SaaS product",
+    "individual freelancer with no studio identity"
+  ],
+  "llmClassificationHints": [
+    "Choose this scaffold when the primary visitor goal is to recognise and respect a creative point of view — typical of brand studios, design studios, motion studios and small partner-led agencies.",
+    "Choose this scaffold when the firm's site is itself the showcase: bold typography, work-led, manifesto-driven, with named clients and capability disciplines.",
+    "Do not choose this scaffold for a law, audit or tax practice that leads with named partners and credentials; that is professional-services.",
+    "Do not choose this scaffold for an individual freelance designer or photographer with no studio identity; portfolio-creator (planned) is more appropriate."
+  ],
+  "minConfidence": 0.7,
+  "requiresTieBreakWhenWithin": 0.08
+}

@@ -72,6 +72,13 @@ QUICK_CASES: tuple[str, ...] = (
     # / ``partners-grid`` section renderers and the second
     # ``_DISPATCHED_SCAFFOLDS`` arm so PS regressions are caught daily.
     "advokatbyra-novum",
+    # agency-studio regression fixture, Path B step 14 (2026-05-25).
+    # Pinned to the studio-monochrome variant + marketing-base starter;
+    # covers the new ``selected-work-preview`` / ``selected-work-grid``
+    # / ``capabilities-row`` / ``manifesto-block`` / ``process-steps`` /
+    # ``client-roster`` section renderers and the third
+    # ``_DISPATCHED_SCAFFOLDS`` arm.
+    "studio-bjork",
 )
 
 FULL_CASES: tuple[str, ...] = (
@@ -96,6 +103,11 @@ FULL_CASES: tuple[str, ...] = (
     # all five on-disk scaffolds and exercises both
     # ``_DISPATCHED_SCAFFOLDS`` arms (clinic + professional-services).
     "advokatbyra-novum",
+    # agency-studio (studio-monochrome variant, marketing-base starter).
+    # Added 2026-05-25 alongside Path B step 14 so the full suite covers
+    # all six on-disk scaffolds and exercises every ``_DISPATCHED_SCAFFOLDS``
+    # arm (clinic + professional-services + agency-studio).
+    "studio-bjork",
 )
 
 # `scripts/build_site.py` prints `runId: <id>` on stdout. Other tools in

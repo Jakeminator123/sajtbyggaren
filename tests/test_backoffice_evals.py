@@ -27,10 +27,10 @@ class _FakeProcess:
 def test_backoffice_eval_labels_follow_canonical_case_lists() -> None:
     from backoffice.views.evals import _full_button_label, _quick_button_label
 
-    assert _quick_button_label() == "Snabb regression (7x skip-build)"
+    assert _quick_button_label() == "Snabb regression (8x skip-build)"
     assert _full_button_label() == (
         "Full build (painter-palma + atelje-bird + cafe-bistro + clinic-tandvard"
-        " + advokatbyra-novum)"
+        " + advokatbyra-novum + studio-bjork)"
     )
 
 

@@ -3835,6 +3835,10 @@ _HERO_STYLE_BY_VARIANT: dict[str, str] = {
     "legal-classic": "split",
     "consulting-modern": "split",
     "accounting-trust": "centered",
+    # agency-studio (Path B native — _DISPATCHED_SCAFFOLDS)
+    "studio-monochrome": "split",
+    "editorial-warm": "centered",
+    "bold-electric": "split",
 }
 
 # Tone-driven fallback för hero-stil när layoutHint saknas OCH varianten
@@ -5785,6 +5789,270 @@ _SECTION_RENDERERS.update(
 )
 
 
+def render_section_selected_work_preview(
+    dossier: dict,
+    *,
+    contact_path: str = "/kontakta-oss",  # noqa: ARG001 — included for kwarg-call symmetry; preview uses /arbeten as the explicit follow link
+) -> str:
+    """Render the home-page Selected Work preview for agency-studio.
+
+    Picks the first four entries from ``dossier.services`` (which an
+    agency uses as its case-studies array) and renders them as a
+    2-column wide-card grid: project label, summary, and a discreet
+    "Se case"-link pointing at the /arbeten route. Visually distinct
+    from the LSB / clinic / PS service-grid blocks — wide cards,
+    big type, almost no chrome — so the home reads "this studio
+    leads with work, not service descriptions".
+
+    Returns "" when no work is declared so the dispatcher does not
+    emit an empty grid.
+    """
+    services = dossier.get("services") or []
+    if not services:
+        return ""
+    cards = "\n".join(
+        f'            <article key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-4 border-t border-[color:var(--border)] pt-8">\n'
+        f'              <p className="text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(f"Case {idx:02d}")}</p>\n'
+        f'              <h3 className="text-2xl font-semibold tracking-tight md:text-3xl">{_jsx_safe_string(svc["label"])}</h3>\n'
+        f'              <p className="text-base text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(svc["summary"])}</p>\n'
+        '              <a href={"/arbeten"} className="mt-2 inline-flex items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Se case<ArrowRight className="size-4" /></a>\n'
+        "            </article>"
+        for idx, svc in enumerate(services[:4], start=1)
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-12 py-[var(--section-spacing)]">\n'
+        '          <div className="flex flex-col gap-3 max-w-2xl">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Selected work</p>\n'
+        '            <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">Senaste arbeten</h2>\n'
+        "          </div>\n"
+        '          <div className="grid gap-12 md:grid-cols-2">\n'
+        f"{cards}\n"
+        "          </div>\n"
+        '          <a href={"/arbeten"} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Hela arbets-arkivet<ArrowRight className="size-4" /></a>\n'
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+def render_section_selected_work_grid(
+    dossier: dict,
+    *,
+    contact_path: str = "/kontakta-oss",
+) -> str:
+    """Render the full Selected Work catalogue for agency-studio /arbeten.
+
+    Iterates the entire ``dossier.services`` array as case studies
+    and emits a single-column editorial layout — large project
+    label, generous reading width on the summary, and a quiet
+    "Diskutera projekt"-link at the bottom of each entry pointing
+    at the contact route. Distinct from the LSB ``service-list``
+    (vertical, icon-led, USP bullets), the clinic ``treatment-list``
+    (clinical menu) and the PS ``practice-grid`` (3-col counsel
+    cards) — agency work pages read as a magazine spread, not a
+    services catalogue.
+
+    Returns "" when no work is declared so the dispatcher does
+    not emit an empty list scaffold.
+    """
+    services = dossier.get("services") or []
+    if not services:
+        return ""
+    items = "\n".join(
+        f'            <li key={_jsx_safe_string(svc["id"])} className="flex flex-col gap-5 border-t border-[color:var(--border)] py-12 first:border-t-0 first:pt-0 last:pb-0">\n'
+        f'              <p className="text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(f"Case {idx:02d}")}</p>\n'
+        f'              <h2 className="max-w-3xl text-3xl font-semibold tracking-tight md:text-5xl">{_jsx_safe_string(svc["label"])}</h2>\n'
+        f'              <p className="max-w-3xl text-base text-[color:var(--muted)] leading-relaxed md:text-lg">{_jsx_safe_string(svc["summary"])}</p>\n'
+        f'              <a href={_jsx_safe_string(contact_path)} className="inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">Diskutera projekt<ArrowRight className="size-4" /></a>\n'
+        "            </li>"
+        for idx, svc in enumerate(services, start=1)
+    )
+    return (
+        '      <section className="border-b border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-12 py-[var(--section-spacing)]">\n'
+        '          <header className="flex flex-col gap-3 max-w-2xl">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Arkivet</p>\n'
+        '            <h1 className="text-4xl font-semibold tracking-tight md:text-6xl">Selected work</h1>\n'
+        "          </header>\n"
+        '          <ul className="flex flex-col">\n'
+        f"{items}\n"
+        "          </ul>\n"
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+def render_section_capabilities_row(dossier: dict) -> str:
+    """Render a horizontal capabilities row for agency-studio.
+
+    Reads ``dossier.tone.secondary`` (the studio's secondary tone
+    descriptors are the most natural place to lift discipline
+    keywords like 'Brand identity', 'Motion', 'Web' until the
+    project-input schema grows a structured capabilities array)
+    and renders them as a single horizontal row of monospace
+    pills under a "What we make"-eyebrow. Distinct from the LSB
+    services-summary block (cards) and the PS industries-served
+    block (uppercase pills under a different framing) — agency
+    capabilities read as a one-liner taxonomy, not a card grid.
+
+    Returns "" when no tone descriptors are declared so the
+    dispatcher does not emit a hollow row.
+    """
+    tone = dossier.get("tone") or {}
+    secondary = tone.get("secondary") or []
+    cleaned: list[str] = [item.strip() for item in secondary if isinstance(item, str) and item.strip()]
+    if not cleaned:
+        return ""
+    pills = "\n".join(
+        f'            <li key={_jsx_safe_string(label)} className="text-sm font-mono uppercase tracking-widest">{_jsx_safe_string(label)}</li>'
+        for label in cleaned
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[calc(var(--section-spacing)*0.6)]">\n'
+        '          <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">What we make</p>\n'
+        '          <ul className="flex flex-wrap gap-x-10 gap-y-3">\n'
+        f"{pills}\n"
+        "          </ul>\n"
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+def render_section_manifesto_block(dossier: dict) -> str:
+    """Render a manifesto statement for agency-studio.
+
+    Lifts ``dossier.company.tagline`` and reads it as the studio's
+    point of view, presented as a single full-width oversized
+    typographic statement. No icons, no decoration — the section
+    is the studio's voice. Distinct from the LSB hero (CTA-led)
+    and the PS about story (multi-paragraph) — a manifesto is
+    one sentence done loud.
+
+    Returns "" when the dossier carries no tagline so the
+    dispatcher does not emit a hollow section.
+    """
+    company = dossier.get("company") or {}
+    tagline = company.get("tagline")
+    if not isinstance(tagline, str) or not tagline.strip():
+        return ""
+    return (
+        '      <section className="border-t border-[color:var(--border)] bg-[color:var(--background)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[calc(var(--section-spacing)*1.2)]">\n'
+        '          <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Manifest</p>\n'
+        f'          <p className="max-w-4xl text-3xl font-semibold leading-tight tracking-tight md:text-5xl lg:text-6xl">{_jsx_safe_string(tagline.strip())}</p>\n'
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+def render_section_process_steps(dossier: dict) -> str:  # noqa: ARG001 — dossier reserved for studio-supplied process descriptions
+    """Render a four-step studio-process block for agency-studio.
+
+    Renders a fixed four-step process (Discovery → Concept →
+    Production → Launch) as a numbered horizontal flow. Each step
+    has a Roman-style numeric label, a step name and a short
+    descriptor pulled from the studio's voice manual rather than
+    the dossier — the names are the actual stages a producer
+    would recognise from any well-run studio engagement, so the
+    section can render even when the dossier carries no
+    structured process data.
+
+    Once project-input.schema.json grows a structured
+    ``process[]`` array the renderer can be extended to read it;
+    until then the fixed step names are a deliberate, non-mock
+    studio convention.
+    """
+    steps = (
+        ("01", "Discovery", "Vi lyssnar, läser och kartlägger så att vi vet vad arbetet faktiskt ska göra."),
+        ("02", "Concept", "Skriver, skissar och visar riktning. Vi visar val, inte färdiga lösningar."),
+        ("03", "Production", "Designar, kodar, animerar — det praktiska arbetet där studion bygger sakerna."),
+        ("04", "Launch", "Vi sjösätter med er och stannar kvar för att se hur arbetet beter sig i världen."),
+    )
+    cells = "\n".join(
+        f'            <li key={_jsx_safe_string(label)} className="flex flex-col gap-3 border-l border-[color:var(--border)] pl-6">\n'
+        f'              <span className="text-xs font-mono uppercase tracking-widest text-[color:var(--muted)]">{_jsx_safe_string(idx)}</span>\n'
+        f'              <h3 className="text-xl font-semibold tracking-tight">{_jsx_safe_string(label)}</h3>\n'
+        f'              <p className="text-sm text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(blurb)}</p>\n'
+        "            </li>"
+        for idx, label, blurb in steps
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-10 py-[var(--section-spacing)]">\n'
+        '          <header className="flex flex-col gap-3 max-w-2xl">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Process</p>\n'
+        '            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Så jobbar vi</h2>\n'
+        "          </header>\n"
+        '          <ol className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">\n'
+        f"{cells}\n"
+        "          </ol>\n"
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+def render_section_client_roster(dossier: dict) -> str:
+    """Render a text-only client roster for agency-studio.
+
+    Reads ``dossier.trustSignals`` (the same field LSB uses for
+    trust bullets) and renders each entry as a discreet pill —
+    no logos, just names — under a "Selected clients"-eyebrow.
+    Studios usually decline to publish actual logos for
+    procurement reasons; a text roster captures the recognition
+    signal without the image-rights complication. Visually
+    distinct from the clinic credentials block (badges) and the
+    PS credentials block (registrations) — agency rosters read as
+    a casually arranged list, not a regulated certification panel.
+
+    Returns "" when no entries are declared so the dispatcher
+    does not emit a hollow section.
+    """
+    trust_raw = dossier.get("trustSignals") or []
+    entries: list[str] = []
+    for item in trust_raw:
+        if isinstance(item, str) and item.strip():
+            entries.append(item.strip())
+        elif isinstance(item, dict):
+            label = item.get("label")
+            if isinstance(label, str) and label.strip():
+                entries.append(label.strip())
+    if not entries:
+        return ""
+    pills = "\n".join(
+        f'            <li key={_jsx_safe_string(label)} className="text-sm text-[color:var(--muted)]">{_jsx_safe_string(label)}</li>'
+        for label in entries
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)]">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[calc(var(--section-spacing)*0.7)]">\n'
+        '          <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Selected clients</p>\n'
+        '          <ul className="grid gap-x-10 gap-y-2 md:grid-cols-2 lg:grid-cols-3">\n'
+        f"{pills}\n"
+        "          </ul>\n"
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+_SECTION_RENDERERS.update(
+    {
+        "selected-work-preview": render_section_selected_work_preview,
+        "selected-work-grid": render_section_selected_work_grid,
+        "capabilities-row": render_section_capabilities_row,
+        "manifesto-block": render_section_manifesto_block,
+        "process-steps": render_section_process_steps,
+        "client-roster": render_section_client_roster,
+    }
+)
+
+
 _CLINIC_SCAFFOLD_DIR = (
     REPO_ROOT
     / "packages"
@@ -5803,10 +6071,20 @@ _PROFESSIONAL_SERVICES_SCAFFOLD_DIR = (
     / "professional-services"
 )
 
+_AGENCY_STUDIO_SCAFFOLD_DIR = (
+    REPO_ROOT
+    / "packages"
+    / "generation"
+    / "orchestration"
+    / "scaffolds"
+    / "agency-studio"
+)
+
 
 _DISPATCHED_SCAFFOLDS: dict[str, Path] = {
     "clinic-healthcare": _CLINIC_SCAFFOLD_DIR,
     "professional-services": _PROFESSIONAL_SERVICES_SCAFFOLD_DIR,
+    "agency-studio": _AGENCY_STUDIO_SCAFFOLD_DIR,
 }
 
 
@@ -5821,6 +6099,9 @@ _DISPATCHED_PAGE_FUNCTION_NAMES: dict[str, str] = {
     "expertise": "ExpertisePage",
     "industries": "IndustriesPage",
     "insights": "InsightsPage",
+    "work": "WorkPage",
+    "process": "ProcessPage",
+    "journal": "JournalPage",
 }
 
 

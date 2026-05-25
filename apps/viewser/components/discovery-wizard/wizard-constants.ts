@@ -59,7 +59,8 @@ export type ScaffoldHint =
   | "ecommerce-lite"
   | "restaurant-hospitality"
   | "clinic-healthcare"
-  | "professional-services";
+  | "professional-services"
+  | "agency-studio";
 
 export type WizardCategory = {
   id: WizardCategoryId;
@@ -80,7 +81,7 @@ export const WIZARD_CATEGORIES: WizardCategory[] = [
   { id: "portfolio", label: "Portfolio / CV", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "landing", label: "Landningssida", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "blog", label: "Blogg / Magasin", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
-  { id: "consulting", label: "Konsult / Byrå", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
+  { id: "consulting", label: "Konsult / Byrå", scaffoldHint: "agency-studio", defaultVariantId: "studio-monochrome" },
   { id: "tech", label: "Tech / Startup", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
   { id: "healthcare", label: "Vård / Klinik", scaffoldHint: "clinic-healthcare", defaultVariantId: "clinic-calm" },
   { id: "realestate", label: "Fastighet / Mäklare", scaffoldHint: "local-service-business", defaultVariantId: "nordic-trust" },
@@ -481,6 +482,36 @@ export const VIBE_OPTIONS: Vibe[] = [
     primarySwatch: "#1f4d3a",
     accentSwatch: "#c9a55a",
     background: "#f7f4ec",
+    defaultTypographyFeel: "modern-sans",
+  },
+  {
+    id: "studio-monochrome",
+    scaffoldHint: "agency-studio",
+    label: "Studio Monochrome",
+    description: "Strikt svart och vit — som en designstudio som låter arbetet tala.",
+    primarySwatch: "#0a0a0a",
+    accentSwatch: "#caa14a",
+    background: "#ffffff",
+    defaultTypographyFeel: "modern-sans",
+  },
+  {
+    id: "editorial-warm",
+    scaffoldHint: "agency-studio",
+    label: "Editorial Warm",
+    description: "Krämvit och bläck — som ett magasin som råkar vara en byrå.",
+    primarySwatch: "#1a1612",
+    accentSwatch: "#a64f30",
+    background: "#f5f0e6",
+    defaultTypographyFeel: "classic-serif",
+  },
+  {
+    id: "bold-electric",
+    scaffoldHint: "agency-studio",
+    label: "Bold Electric",
+    description: "Mörkt och elektriskt — som en motion-studio med energi.",
+    primarySwatch: "#3d5cff",
+    accentSwatch: "#3d5cff",
+    background: "#0a0a0a",
     defaultTypographyFeel: "modern-sans",
   },
 ];
