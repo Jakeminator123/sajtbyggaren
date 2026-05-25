@@ -178,6 +178,26 @@ const VIEWSER_PREVIEW_MODE = (
   process.env.NEXT_PUBLIC_VIEWSER_PREVIEW_MODE ?? "local-next"
 ).toLowerCase();
 const IS_LOCAL_NEXT_MODE = VIEWSER_PREVIEW_MODE === "local-next";
+// Reviewer-fynd (post-PR #101): tidigare provades alltid
+// ``POST /api/preview/<siteId>`` först, även i ``stackblitz``-mode.
+// Det betydde att configen namn (``stackblitz``) inte var sann end-to-
+// end — om sajten råkade ha en lokal ``.next/`` hamnade operatören på
+// lokal preview ändå. ``IS_STACKBLITZ_MODE`` låter Steg 1 (lokal
+// preview-server) hoppas helt i strikt stackblitz-läge, så
+// VIEWSER_PREVIEW_MODE=stackblitz blir auktoritativ:
+//   - ``local-next``  → prova lokal, pedagogiskt fel vid miss
+//   - ``stackblitz``  → hoppa Steg 1, gå direkt till StackBlitz Steg 2
+//   - ``auto``        → prova lokal, fall till StackBlitz vid miss
+//                       (oförändrat — det är vad ``auto`` betyder)
+const IS_STACKBLITZ_MODE = VIEWSER_PREVIEW_MODE === "stackblitz";
+
+// Mode-aware UI-copy för BuildProgressCard-preview-steget. Tidigare
+// hårdkodat "Förbereder StackBlitz-iframen." även i local-next-mode
+// där flödet faktiskt startar en lokal ``next start``-server. Liten
+// drift men ger fel mental modell. Reviewer-fynd post-PR #101.
+const PREVIEW_PREP_HINT = IS_LOCAL_NEXT_MODE
+  ? "Startar lokal preview-server (next start) på en ledig port 4100–4199."
+  : "Förbereder StackBlitz-iframen.";
 
 function formatViewerError(caught: unknown): string {
   if (caught instanceof Error) {
@@ -304,10 +324,20 @@ export function ViewerPanel({
       //                       här är fixet för "CORS-tjafset" som
       //                       drabbar nya prompts där siteId ännu inte
       //                       hunnits byggas.
-      //   - ``stackblitz``  → fall tyst tillbaka till StackBlitz-vägen
-      //   / ``auto``          nedan. COEP är då ON och embedded
-      //                       WebContainer kan rendera.
-      if (siteId) {
+      //   - ``stackblitz``  → hoppa Steg 1 HELT (configens namn är
+      //                       auktoritativ — vi vill se WebContainer-
+      //                       flödet, inte lokal preview). Fall genom
+      //                       till Steg 2 nedan med tom files-fetch.
+      //   - ``auto``        → prova lokal, fall till StackBlitz vid
+      //                       miss (befintlig auto-semantik). COEP är
+      //                       då ON och embedded WebContainer kan
+      //                       rendera.
+      //
+      // ``IS_STACKBLITZ_MODE``-grinden ovanför Steg 1 stänger reviewerns
+      // ärlighetsglapp där configens namn antydde "use StackBlitz" men
+      // flödet i praktiken var "try local first, fall back to
+      // StackBlitz" — oavsett mode.
+      if (!IS_STACKBLITZ_MODE && siteId) {
         try {
           const previewResponse = await fetch(`/api/preview/${siteId}`, {
             method: "POST",
@@ -912,7 +942,7 @@ const BUILD_STEPS: ReadonlyArray<{
   {
     id: "preview",
     title: "Startar preview",
-    hint: "Förbereder StackBlitz-iframen.",
+    hint: PREVIEW_PREP_HINT,
   },
 ];
 
