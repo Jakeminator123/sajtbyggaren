@@ -162,6 +162,9 @@ def test_build_site_delegates_moved_renderers_to_build_package() -> None:
         "render_about",
         "render_contact",
         "render_products",
+        "render_treatments",
+        "render_expertise",
+        "render_work",
         "write_pages",
     ):
         assert f"def {moved_function}(" not in build_site_source
