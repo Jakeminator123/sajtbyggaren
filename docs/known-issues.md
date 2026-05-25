@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 20 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 113 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 19 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 114 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -286,24 +286,6 @@ integrate christopher-ui discovery and asset workflow`, merge
   som monterar den. Källa: extern reviewer 2026-05-18. Fix: open.
   Test: open.
 ### Övriga öppna
-
-- **`B146` Hög** (process-blocker) - PR #105 (Christopher, mergad direkt
-  till main 2026-05-25 18:41) ändrar scripts/build_site.py med
-  +4078/-1570 rader: split av render_home i render_section_hero +
-  dispatcher-pattern. Konflikterar strukturellt med jakob-be:s PR #107
-  som flyttat samma renderers till packages/generation/build/renderers.py.
-  Auto-merge omöjlig; manuell port av Christopher's section-dispatchers
-  till nya paket-strukturen kräver 4-8 timmars careful merge (två
-  arkitektur-direktioner att förlika). Process-leak också: PR #105 gick
-  direkt till main istället för via jakob-be som workflow:n kräver.
-  Två inbox-meddelanden postade till christopher-ui:
-  msg-0007-ae0ac0 (rebase-info) och msg-0008-096fd1 (scope-+
-  process-direktiv). Status: jakob-be och main är medvetet divergerade
-  tills antingen Christopher portar sina render-ändringar till nya
-  paket-strukturen, eller vi planerar dedikerad merge-sprint. Vercel-
-  länkning sker mot jakob-be initialt (operatör-beslut 2026-05-25).
-  Källa: orchestrator-session 2026-05-25 19:45. Fix: open. Test: open.
-
 
 - **`B125` Hög** (produktblocker innan launch) - Embedded
   StackBlitz/WebContainer-preview i Viewser stöds officiellt bara i
@@ -609,6 +591,30 @@ samma kodmönster lever vidare här — därav posten:
   Test: open.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B146` Hög** (stängd 2026-05-25 kväll, B146-port mot jakob-be) -
+  Christopher's PR #105 (Live Build Sync + Restaurant Path A + Wizard
+  polish + Side-by-side preview) och PR #108 (Phase 3 section-treatments
+  operator-pin) landade direkt på main och förgrenade strukturellt mot
+  jakob-be:s PR #107 (renderers-split till packages/generation/build/).
+  Cherry-picken `f500d45` lyfte UI/scaffolds/tester men SKIPPADE
+  `scripts/build_site.py`-delen medvetet. Den här porten gör resterande:
+  ~30 nya `render_section_*` + dispatcher (`_call_section_renderer`,
+  `_treatment_for_section`, `_operator_pin_for_section`,
+  `_SECTION_TREATMENTS_BY_VARIANT`, `render_route_generic`) flyttades
+  till `packages/generation/build/dispatcher.py` (nytt) och
+  `packages/generation/build/renderers.py` (utvidgat med Christophers
+  uppdaterade page renderers). ADR 0031 från PR #108 fick numret 0032
+  eftersom jakob-be redan hade 0031 (Steward auto-bump, PR #106).
+  Phase 3 schema-bumpen, `_SECTION_TREATMENTS_CATALOGUE` i `plan.py`,
+  resolver-additive merge och wizard-UI:t porterades samtidigt. Tester
+  `test_section_treatments_{prompts,propagation,resolve}.py` +
+  `test_section_renderer_registry.py` + `test_project_input_schema.py`
+  porterades och passerar. `scripts/build_site.py` slimmas från 3162
+  rader (jakob-be HEAD) → ~3650 rader (post-port med utökade re-exports
+  + `__getattr__`-shim) i stället för att svälla till main:s 7950.
+  Fix: B146-port PR (jakob-be feature-branch
+  `b146-port-section-dispatcher`). Test: alla 5 nya testfiler + befintliga.
 
 - **`B116` Låg** (stängd 2026-05-25, PR #100 — per-siteId build mutex) -
   `apps/viewser/lib/build-runner.ts` hade tidigare en modul-global

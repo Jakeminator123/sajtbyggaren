@@ -198,6 +198,7 @@ Korta motiveringar i [`governance/decisions/`](governance/decisions/):
 - [0029](governance/decisions/0029-tooling-editable-install.md) - Editable install av `tooling`-paketet i venv för MCP-server.
 - [0030](governance/decisions/0030-preview-provider-portability.md) - Preview/deploy-providers är adapters, inte canonical runtime.
 - [0031](governance/decisions/0031-steward-auto-bump.md) - Steward auto-bump vid PR-merge.
+- [0032](governance/decisions/0032-section-treatments-additive-directive.md) - Section-treatments som additiv directive (Phase 3 schema-bump).
 
 ## Engine Run
 

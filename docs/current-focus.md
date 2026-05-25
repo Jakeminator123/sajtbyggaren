@@ -30,12 +30,41 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `41db367` (2026-05-25 **eftermiddag**, merge-commit
-som drar in main:s sync-PR #103 till `jakob-be`). `main` HEAD är
-`7b7263a` — `jakob-be` och `main` är innehållsmässigt identiska efter
-dagens sync-cykel. **Inga öppna PRs.** Bug-räkning: **20 aktiva /
-5 unknown / 112 stängda** (B116 bör flyttas till stängda — Fix
-`51c1d19` via PR #100, ej gjort i denna bump).
+Last verified state: feature-branch `b146-port-section-dispatcher`
+(2026-05-25 **kväll**, B146-port: Christophers PR #105 + #108
+section-arkitektur portad ovanpå jakob-be:s PR #107 split). `main`
+HEAD är `84bf842`; `jakob-be` HEAD är `ee2a91e`. PR mot `jakob-be`
+öppnas härnäst, följt av en sync-PR `jakob-be → main` när feature
+PR:n mergat. Bug-räkning: **19 aktiva / 5 unknown / 114 stängda**
+(B146 stängd via denna port).
+
+**Kvällens fönster — B146 + Phase 3 port:**
+- `packages/generation/build/dispatcher.py` (ny, ~370 rader): section-id
+  registry, `_SECTION_TREATMENTS_BY_VARIANT`, `_treatment_for_section`,
+  `_operator_pin_for_section`, `_load_scaffold_sections`,
+  `_section_renderer_kwargs`, `_call_section_renderer`,
+  `render_route_generic`.
+- `packages/generation/build/renderers.py`: utvidgat från 2357 → ~4700
+  rader. Alla ~30 nya `render_section_*` + uppdaterade page renderers
+  (`render_home` etc.) från Christophers main-versioner. Initial
+  registrering av basic sections vid modul-slut.
+- `scripts/build_site.py`: utökade re-exports + `__getattr__`-shim så
+  `from scripts.build_site import render_section_X` fortsätter fungera
+  utan att vi listar alla 46 namn manuellt.
+- Phase 3 backend: `_apply_directives_fields` i resolve.py additivt-mergar
+  `directives.sectionTreatments`; `plan.py` får `_SECTION_TREATMENTS_CATALOGUE`
+  och prompt-update; schema-bump i `governance/schemas/project-input.schema.json`.
+- ADR 0031 från main (PR #108 section-treatments) renumrerad till
+  **0032** eftersom jakob-be:s 0031 (Steward auto-bump, PR #106) var
+  äldre. Renumber-not i ADR-toppen + uppdaterade referenser i alla
+  source-/test-/doc-filer som pekade på 0031:section-treatments.
+- Wizard-UI: `treatment-options.ts`, `wizard-types.ts`,
+  `wizard-payload.ts`, `steps/visual-step.tsx`, `demo-answers.ts`,
+  `wizard-constants.ts` (113 rader Phase 3-additioner ovanpå PR #105:s
+  cherry-pickade 126), `docs/contracts/wizard-discovery.v2.md`.
+- Tester: `test_section_treatments_{prompts,propagation,resolve}.py`,
+  `test_section_renderer_registry.py`, `test_project_input_schema.py`
+  (utökat). 126 nya cases passerar.
 
 **Dagens fönster (eftermiddag) — 4 PRs landade i `jakob-be` + sync-PR
 #103 till main:**

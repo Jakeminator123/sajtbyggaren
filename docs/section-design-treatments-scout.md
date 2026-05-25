@@ -1,9 +1,13 @@
 # Section Design Treatments — Scout
 
-Status: **Phase 1 + Phase 2 implemented; Phase 3 blocked**
-Owner: jakob (backend) — Christopher tar pilot + Phase 2
-2026-05-25 som [scope-leak] under operatör-OK.
-Tracks: GAP-section-design-treatments
+Status: **Phase 1 + Phase 2 + Phase 3a implemented (ADR 0032)**
+— operator-pin, schema, planning-prompt och wizard-UI shipped
+2026-05-25. Återstår: Phase 4 (LLM-pick) och en eventuell Phase 3c
+(treatment-registry export i `_treatment_registry.json`).
+Owner: jakob (backend) — Christopher körde pilot + Phase 2 + Phase 3
+under 2026-05-25 som [scope-leak] med operatör-OK.
+Tracks: GAP-section-design-treatments-phase-3-backend (closed),
+GAP-section-design-treatments-phase-3-ui (closed)
 
 ## Problemet
 
@@ -116,53 +120,52 @@ treatment-dispatchen för alla fem sektionerna med 49 assertions
 string_for_customer_text` förlängdes med fyra service-list-
 treatment-helpers så B30 inte regresserar.
 
-## Phase 3-roadmap (planned, blocked)
+## Phase 3-roadmap (status 2026-05-25)
 
 Phase 3 lägger operator-pin via `dossier.directives.section-
 Treatments` och LLM-pick i planeringsfasen så att treatment-
 valen kan styras från wizard / brief / plan istället för
 hårdkodad variant-mappning.
 
-**Blockers (måste lösas innan Phase 3 kan starta):**
+**Blockers (alla lösta 2026-05-25):**
 
-1. Phase 1 + Phase 2 måste mergas in på `main` så Phase 3
-   bygger på en clean baseline (PR #105 är öppen som Draft i
-   skrivande stund).
-2. `GAP-backend-path-b-section-renderer` (Path B-paraplyet)
-   måste flyttas till `completedGaps` så att Phase 3-arbetet
-   kan ta över ägarskap av `scripts/build_site.py`,
-   `packages/generation/planning/plan.py` och
-   `packages/generation/discovery/resolve.py`. Phase 1 + 2
-   landade som [scope-leak] under Path B; Phase 3 är för
-   bred för samma manöver.
-3. Schema-utökning: `governance/schemas/project-input.schema-
-   .json` har `additionalProperties: false` på dossier-nivå.
-   Phase 3 måste lägga `dossier.directives.sectionTreatments`
-   som ett valfritt objekt och verifiera att alla 8 fixturer
-   under `examples/` fortsätter validera. Schema-ändringen
-   kräver ofta ADR.
-4. LLM-prompts: `briefModel` + `planningModel` får ny output-
-   shape (treatment-pick per section). Mock-fallback (`brief-
-   Source=mock-no-key` / `planSource=mock-no-key`) måste också
-   picka rimliga defaults. Kräver `OPENAI_API_KEY` för full
-   regression — annars är Phase 3 blind på real-LLM-pathen.
-5. Wizard-UI: scout-doken säger "wizard / overlay exponerar
-   treatment-val per scaffold-relevant sektion" — men inte
-   var i wizard-flowet eller hur det presenteras. UX-design
-   krävs först.
+1. ✅ Phase 1 + Phase 2 mergades till `main` via PR #105
+   (commit `fe7a9e4`).
+2. ✅ `GAP-backend-path-b-section-renderer` (Path B-paraplyet)
+   flyttades till `completedGaps`. Phase 3-arbetet körs som ny
+   GAP-`GAP-section-design-treatments-phase-3-backend` (closed
+   2026-05-25 efter ADR 0032).
+3. ✅ Schema-utökning: `directives.sectionTreatments`-block med
+   per-section `additionalProperties: false`-enum landade i
+   `governance/schemas/project-input.schema.json` (commit
+   `45955dd`). Drift mot runtime-tabellen vaktas av
+   `tests/test_project_input_schema.py`.
+4. ✅ LLM-prompts: `_SECTION_TREATMENTS_CATALOGUE` + system-
+   instructions clause i `packages/generation/planning/plan.py`
+   (commit `2364b17`). Mock-fallback bevarad — pinned/mock
+   plan-paths lämnar payloaden orörd (per `test_section_-
+   treatments_prompts.py`). `briefModel` rörs inte (ADR 0032
+   §5: brief har ingen `directives`-slot).
+5. ✅ Wizard-UI: section-treatments-disclosure i visual-step
+   med Auto/per-treatment-knappar (commit `f9f26a4`).
 
-**Phase 3-delsteg när blockers är lösta:**
+**Phase 3-delsteg:**
 
-* 3a — schema-utökning + operator-pin (`dossier.directives.-
+* ✅ 3a — schema-utökning + operator-pin (`dossier.directives.-
   sectionTreatments`). Treatment-pin tar precedens över
   variant-default.
-* 3b — LLM-pick i `planningModel` baserat på `tone` +
-  `selectedDossiers`.
-* 3c — treatment-registry export till discovery-payload så
+* ⏳ 3b — LLM-pick i `planningModel` baserat på `tone` +
+  `selectedDossiers`. (Catalogue + prompt clause levererat
+  i prep-steget; faktisk pick implementeras separat när
+  briefModel/planningModel-output-shapen utökas.)
+* ⏳ 3c — treatment-registry export till discovery-payload så
   `scaffold-selection-probe` kan utvärdera tone→treatment-
   matchning.
-* 3d — wizard-UI för operator-pin per scaffold-relevant
+* ✅ 3d — wizard-UI för operator-pin per scaffold-relevant
   sektion. Christopher-lane.
+
+Återstår alltså 3b + 3c + en eventuell Phase 4 (LLM-pick som
+kommer FÖRE operator-pin i resolve-ordningen).
 
 ## Quality / regression
 

@@ -59,7 +59,16 @@ if str(REPO_ROOT) not in sys.path:
 
 _renderer_exports = importlib.import_module("packages.generation.build.renderers")
 _static_asset_exports = importlib.import_module("packages.generation.build.static_assets")
+_dispatcher_exports = importlib.import_module("packages.generation.build.dispatcher")
 
+# Eager re-exports of the most commonly imported names — kept so IDE/static
+# analysis can see them. Everything else (including the 30+ section renderers
+# Christopher added in PR #105 + the Phase 3 operator-pin helpers from PR
+# #108) is re-exported lazily via ``__getattr__`` further down, so callers
+# can still do ``from scripts.build_site import render_section_hero`` after
+# the B146 port without us listing every renderer name twice.
+
+# Page renderers + write_pages (from renderers module).
 _WIZARD_ROUTE_RENDERERS = _renderer_exports._WIZARD_ROUTE_RENDERERS
 _hero_style_for = _renderer_exports._hero_style_for
 render_about = _renderer_exports.render_about
@@ -78,12 +87,53 @@ render_services = _renderer_exports.render_services
 render_team = _renderer_exports.render_team
 write_pages = _renderer_exports.write_pages
 
+# Static asset renderers.
 _render_structured_data_jsonld = _static_asset_exports._render_structured_data_jsonld
 render_global_error = _static_asset_exports.render_global_error
 render_not_found = _static_asset_exports.render_not_found
 render_og_fallback_svg = _static_asset_exports.render_og_fallback_svg
 render_robots_txt = _static_asset_exports.render_robots_txt
 render_sitemap_xml = _static_asset_exports.render_sitemap_xml
+
+# Dispatcher (B146 port, 2026-05-25): section-id registry, scaffold
+# sections cache, treatment-resolution helpers and the generic route
+# composer. These are re-exported so tests and external callers can keep
+# using the ``scripts.build_site`` spelling (e.g.
+# ``bs._SECTION_RENDERERS``, ``bs.render_route_generic``) without
+# learning the new layout. ADR 0032 covers the Phase 3 operator-pin
+# tier; ADR pointers in the dispatcher module itself explain the
+# resolve-order math.
+_SECTION_RENDERERS = _dispatcher_exports._SECTION_RENDERERS
+_SECTION_TREATMENTS_BY_VARIANT = _dispatcher_exports._SECTION_TREATMENTS_BY_VARIANT
+_SCAFFOLD_SECTIONS_CACHE = _dispatcher_exports._SCAFFOLD_SECTIONS_CACHE
+_call_section_renderer = _dispatcher_exports._call_section_renderer
+_load_scaffold_sections = _dispatcher_exports._load_scaffold_sections
+_operator_pin_for_section = _dispatcher_exports._operator_pin_for_section
+_section_renderer_kwargs = _dispatcher_exports._section_renderer_kwargs
+_treatment_for_section = _dispatcher_exports._treatment_for_section
+render_route_generic = _dispatcher_exports.render_route_generic
+
+
+def __getattr__(name: str) -> Any:
+    """Lazy re-export from the build subpackage modules.
+
+    Pre-B146 the entire renderer territory lived in this file
+    (6313+ rader). After the port, source-of-truth moved into
+    ``packages.generation.build.{renderers,static_assets,dispatcher}``
+    and ``scripts.build_site`` is mostly a slim coordinator + a
+    re-export façade. This hook lets callers keep the existing
+    ``from scripts.build_site import render_section_X`` spelling
+    without us having to enumerate every section renderer (Christopher
+    added ~30 in PR #105 alone). Look-ups for names this module
+    defines locally always win over the fallback; only unknown names
+    fall through here.
+    """
+    for _mod in (_renderer_exports, _dispatcher_exports, _static_asset_exports):
+        try:
+            return getattr(_mod, name)
+        except AttributeError:
+            continue
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 STARTERS_DIR = REPO_ROOT / "data" / "starters"
 SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"

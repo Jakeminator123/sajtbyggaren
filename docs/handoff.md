@@ -1,11 +1,40 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-25 eftermiddag. Verifierad `jakob-be` är `41db367`
-(merge-commit som drar in main:s sync-PR #103). `main` HEAD är
-`7b7263a`. `jakob-be` och `main` är **innehållsmässigt identiska**
-efter dagens sync-cykel. **Inga öppna PRs.** Bug-räkning på `jakob-be`:
-**20 aktiva / 5 unknown / 112 stängda** (B116 bör flyttas till stängda —
-Fix `51c1d19` via PR #100).
+**Datum:** 2026-05-25 kväll. Verifierad feature-branch
+`b146-port-section-dispatcher` (B146 stängd: Christophers PR #105 + #108
+section-arkitektur portad ovanpå PR #107-splitten). `jakob-be` HEAD är
+`ee2a91e`; `main` HEAD är `84bf842`. **Öppen PR:** feature →
+`jakob-be` följt av sync-PR `jakob-be → main`. Bug-räkning på
+feature-branchen: **19 aktiva / 5 unknown / 114 stängda** (B146 +
+B116 båda stängda).
+
+**Kvällens fönster (B146 + Phase 3 port):**
+
+- Ny fil `packages/generation/build/dispatcher.py` (~370 rader) med
+  section-id registry, treatment-resolution-helpers, `render_route_generic`.
+- `packages/generation/build/renderers.py` växte från 2357 → ~4710 rader
+  med ~30 nya `render_section_*` + uppdaterade page renderers från
+  Christophers main-versioner. Initial sektion-registrering vid filslut.
+- `scripts/build_site.py` ~3162 → ~3650 rader: utökade re-exports +
+  `__getattr__`-shim som proxar okända namn till
+  renderers/dispatcher/static_assets. `from scripts.build_site import
+  render_section_X` fortsätter fungera.
+- ADR 0031 (section-treatments från main:PR #108) renumrerad till **0032**
+  eftersom jakob-be:s 0031 (Steward auto-bump, PR #106) var äldre.
+  Renumber-not överst i ADR + uppdaterade referenser i alla
+  source-/test-/doc-filer.
+- Phase 3 backend: `_apply_directives_fields` additivt-mergar
+  `directives.sectionTreatments` i resolve.py; `_SECTION_TREATMENTS_CATALOGUE`
+  + planning-prompt-update i plan.py; schema-bump i project-input.schema.json.
+- Wizard-UI: `treatment-options.ts` (ny), `wizard-types.ts`/
+  `wizard-payload.ts`/`steps/visual-step.tsx`/`demo-answers.ts` uppdaterade,
+  `wizard-constants.ts` fick 113 nya rader (deriveEffectiveScaffoldHint +
+  4 restaurant-vibes).
+- Tester: 5 nya/uppdaterade testfiler portade,
+  `tests/test_section_treatments_{prompts,propagation,resolve}.py` +
+  `test_section_renderer_registry.py` + `test_project_input_schema.py` (utökat).
+  126 nya cases passerar. `test_builder_audit_post_3b_next.py` fick utökad
+  JSX-escaping-lista (sätter `render_section_hero`, treatment-helpers etc.).
 
 **Eftermiddags-fönstret (4 produkt-PRs + sync-PR till main):**
 

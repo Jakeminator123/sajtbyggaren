@@ -7,6 +7,11 @@ import type { AssetRef } from "@/lib/asset-store/types";
 
 import { PayloadAlignmentPopover } from "../payload-alignment-popover";
 import {
+  resolveAutoTreatment,
+  type SectionTreatmentSpec,
+  sectionTreatmentSpecsForScaffold,
+} from "../treatment-options";
+import {
   HeroLayoutGlyph,
   typographyPreviewFamily,
   VibeMicroPreview,
@@ -15,6 +20,7 @@ import {
 import {
   BUSINESS_FAMILIES,
   branchForFamily,
+  deriveEffectiveScaffoldHint,
   DESIGN_STYLE_OPTIONS,
   findVibe,
   TONE_OPTIONS,
@@ -65,10 +71,16 @@ export function VisualStep({
   answers: WizardAnswers;
   onChange: (next: Partial<WizardAnswers>) => void;
 }) {
-  // Bestäm scaffold-hint från family (om vald) eller fall tillbaka till
-  // local-service-business som default.
+  // Bestäm scaffold-hint från family + sub-kategori. När operatören har
+  // valt en sub-cat vars scaffoldHint skiljer sig från familyens vinner
+  // sub-kategorin (samma helper används av wizard-payload så UI:t och
+  // backend-payloaden alltid är konsistenta). Defaultar till LSB när
+  // varken family eller sub-cat är vald så vibe-griden inte är tom.
   const family = BUSINESS_FAMILIES.find((f) => f.id === answers.businessFamily);
-  const scaffoldHint = family?.scaffoldHint ?? "local-service-business";
+  const scaffoldHint = useMemo(
+    () => deriveEffectiveScaffoldHint(family, answers.siteType),
+    [family, answers.siteType],
+  );
   const vibes = useMemo(() => vibesForScaffold(scaffoldHint), [scaffoldHint]);
   const selectedVibe = useMemo(
     () => (answers.vibe.vibeId ? findVibe(answers.vibe.vibeId) : undefined),
@@ -158,6 +170,23 @@ export function VisualStep({
     });
   };
 
+  const setSectionTreatment = (sectionId: string, treatmentId: string) => {
+    const next = { ...(answers.vibe.sectionTreatments ?? {}) };
+    if (treatmentId) {
+      next[sectionId] = treatmentId;
+    } else {
+      delete next[sectionId];
+    }
+    onChange({
+      vibe: { ...answers.vibe, sectionTreatments: next },
+    });
+  };
+
+  const applicableTreatmentSpecs = useMemo(
+    () => sectionTreatmentSpecsForScaffold(scaffoldHint),
+    [scaffoldHint],
+  );
+
   const removeMoodImage = (assetId: string) => {
     onChange({
       moodImages: answers.moodImages.filter((img) => img.assetId !== assetId),
@@ -170,7 +199,20 @@ export function VisualStep({
     onChange({ moodImages: merged });
   };
 
-  // Räkna ifyllda advanced-fält så badge:n visar progress.
+  // Räkna ENBART pins som faktiskt visas i UI:t för aktuell scaffold.
+  // Pins kvar i state efter ett scaffold-byte ska inte räknas in i
+  // "ifyllda fält"-räknaren, annars visar disclosure-knappen "1
+  // ifyllda" utan att en motsvarande sektion är synlig.
+  const sectionPinCount = useMemo(() => {
+    const pins = answers.vibe.sectionTreatments ?? {};
+    let count = 0;
+    for (const spec of applicableTreatmentSpecs) {
+      if ((pins[spec.id] ?? "").trim().length > 0) count += 1;
+    }
+    return count;
+  }, [answers.vibe.sectionTreatments, applicableTreatmentSpecs]);
+  const showSectionTreatments = applicableTreatmentSpecs.length > 0;
+
   const advancedFilled =
     (answers.vibe.useCustomColors ? 1 : 0) +
     (answers.vibe.typographyFeel ? 1 : 0) +
@@ -178,7 +220,9 @@ export function VisualStep({
     (answers.vibe.layoutHint ? 1 : 0) +
     (answers.vibe.references.trim() ? 1 : 0) +
     (answers.brand.wordsToAvoid.trim() ? 1 : 0) +
-    (answers.moodImages.length > 0 ? 1 : 0);
+    (answers.moodImages.length > 0 ? 1 : 0) +
+    (sectionPinCount > 0 ? 1 : 0);
+  const advancedTotal = showSectionTreatments ? 8 : 7;
 
   return (
     <FieldStack>
@@ -266,8 +310,8 @@ export function VisualStep({
       <AdvancedDisclosure
         id="visual-advanced"
         label="Designdetaljer"
-        hint="Vibe sätter rimliga defaults. Öppna bara om du vill överstyra färger, typografi-känsla, hero-layout eller lägga in referenser/mood-bilder."
-        count={7}
+        hint="Vibe sätter rimliga defaults. Öppna bara om du vill överstyra färger, typografi-känsla, hero-layout, section-treatments eller lägga in referenser/mood-bilder."
+        count={advancedTotal}
         activeCount={advancedFilled}
       >
       {/* Färgvalsläge. */}
@@ -509,7 +553,51 @@ export function VisualStep({
         </div>
       </div>
 
-      {/* 6. Referenser. */}
+      {/* Section design-treatments (operator-pin, ADR 0032).
+       *   Visas bara när scaffolden har sektioner med
+       *   variant-/section-defaults registrerade — annars är
+       *   override:n meningslös.
+       *
+       *   Resolve-ordning som backend respekterar:
+       *     1. operator-pin (denna UI)
+       *     2. variant-default (`_SECTION_TREATMENTS_BY_VARIANT`)
+       *     3. section-default (i Python-tabellen)
+       *
+       *   "Auto"-knappen labelas med vilken treatment som faktiskt
+       *   körs när inget är pinnat så operatören vet om hen
+       *   behöver klicka eller inte.
+       */}
+      {showSectionTreatments ? (
+        <div>
+          <SectionHeader
+            help={
+              <>
+                Operator-pin per section. Vi väljer alltid en bra default
+                från din vibe — pinna en treatment här bara om du vet att
+                du vill ha en specifik visuell variant. Skickas som
+                <code>directives.sectionTreatments</code> till backend.
+              </>
+            }
+          >
+            Section-treatments (valfritt)
+          </SectionHeader>
+          <div className="mt-2 flex flex-col gap-3">
+            {applicableTreatmentSpecs.map((spec) => (
+              <SectionTreatmentRow
+                key={spec.id}
+                spec={spec}
+                pinned={answers.vibe.sectionTreatments?.[spec.id] ?? ""}
+                variantId={answers.vibe.vibeId || undefined}
+                onChange={(treatmentId) =>
+                  setSectionTreatment(spec.id, treatmentId)
+                }
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Referenser. */}
       <TextField
         label="Referenser ('tänk lite som…')"
         optional
@@ -692,6 +780,90 @@ function ContextChip({
         {value}
       </span>
     </span>
+  );
+}
+
+/**
+ * SectionTreatmentRow — en rad per relevant section i wizardens
+ * designdetaljer. Visar section-namn + beskrivning, en "Auto"-knapp
+ * som visar vilken treatment varianten skulle köra utan operator-pin,
+ * och en knapprad med övriga treatments per section.
+ *
+ * "Auto" är samma sak som "ingen pin"; klick på Auto avregistrerar
+ * en eventuell tidigare pin (`onChange("")`). Dock — om Auto:n
+ * tekniskt sett pekar på samma treatment som operatören har pinnat
+ * markerar vi inte Auto som vald för att hålla state och UI 1:1.
+ */
+function SectionTreatmentRow({
+  spec,
+  pinned,
+  variantId,
+  onChange,
+}: {
+  spec: SectionTreatmentSpec;
+  pinned: string;
+  variantId: string | undefined;
+  onChange: (treatmentId: string) => void;
+}) {
+  const autoTreatment = resolveAutoTreatment(spec, variantId);
+  const autoLabel =
+    spec.treatments.find((t) => t.id === autoTreatment)?.label ?? autoTreatment;
+  const autoSelected = !pinned;
+  return (
+    <div className="border-border/60 rounded-lg border p-3">
+      <div className="flex flex-col gap-0.5">
+        <span className="text-foreground text-[12.5px] font-medium tracking-tight">
+          {spec.label}
+        </span>
+        <span className="text-muted-foreground text-[11px] leading-snug">
+          {spec.description}
+        </span>
+      </div>
+      <div className="mt-2.5 flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          aria-pressed={autoSelected}
+          className={[
+            "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] transition-colors",
+            autoSelected
+              ? "border-foreground bg-foreground/[0.04] text-foreground"
+              : "border-border/70 text-muted-foreground hover:border-foreground/40",
+          ].join(" ")}
+          title={`Default när inget pinnas: ${autoLabel}`}
+        >
+          <span className="font-medium">Auto</span>
+          <span className="text-muted-foreground/80 text-[10.5px]">
+            ({autoLabel})
+          </span>
+        </button>
+        {spec.treatments.map((treatment) => {
+          const isPinned = pinned === treatment.id;
+          return (
+            <button
+              key={treatment.id}
+              type="button"
+              onClick={() => onChange(isPinned ? "" : treatment.id)}
+              aria-pressed={isPinned}
+              className={[
+                "inline-flex flex-col items-start gap-0.5 rounded-lg border px-2.5 py-1.5 text-left text-[11.5px] transition-colors",
+                isPinned
+                  ? "border-foreground bg-foreground/[0.04] text-foreground"
+                  : "border-border/70 text-muted-foreground hover:border-foreground/40",
+              ].join(" ")}
+              title={treatment.description}
+            >
+              <span className="text-foreground font-medium">
+                {treatment.label}
+              </span>
+              <span className="text-muted-foreground/90 text-[10.5px] leading-snug">
+                {treatment.description}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

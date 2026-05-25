@@ -143,6 +143,20 @@ export type WizardBrand = {
  */
 export type HeroLayoutHint = "" | "gradient" | "centered" | "split";
 
+/**
+ * Operator-pin för section design treatments (Phase 3, ADR 0032).
+ *
+ * Nyckeln är section-id (matchar Python `_SECTION_RENDERERS` och
+ * schemats `directives.sectionTreatments.properties`-keys), värdet
+ * är treatment-id (matchar enum-listan per section). Tom map (eller
+ * saknad nyckel) = "auto" — varianten/sectionens default kör.
+ *
+ * Schemat validerar både keys och values så en typo fångas innan
+ * bygget startar; UI:t exponerar bara registrerade ids via
+ * `treatment-options.ts`.
+ */
+export type WizardSectionTreatments = Record<string, string>;
+
 export type WizardVibe = {
   vibeId: string;
   useCustomColors: boolean;
@@ -150,6 +164,13 @@ export type WizardVibe = {
   references: string;
   /** Operator-override av hero-layout. Tom = automatic från vibe. */
   layoutHint: HeroLayoutHint;
+  /**
+   * Operator-pin per section. Speglar
+   * `directives.sectionTreatments` i Project Input.schema.json. Tom
+   * map = inga overrides; varje section kör sin variant- eller
+   * section-default. ADR 0032.
+   */
+  sectionTreatments: WizardSectionTreatments;
 };
 
 /**
@@ -249,6 +270,7 @@ export function emptyWizardAnswers(): WizardAnswers {
       typographyFeel: "",
       references: "",
       layoutHint: "",
+      sectionTreatments: {},
     },
     brand: {
       toneTags: [],

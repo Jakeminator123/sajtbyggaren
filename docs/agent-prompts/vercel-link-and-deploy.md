@@ -228,8 +228,8 @@ hellre än improvisera.
 Dessa hör till operatör-beslut eller framtida agent-uppdrag:
 - Sätta upp custom domän (operatör-val)
 - Byta production-branch från jakob-be till main (efter B146-lösning)
-- Konfigurera Vercel Preview Deployments som B125-fallback (ADR 0031
-  som kommande)
+- Konfigurera Vercel Preview Deployments som B125-fallback (kommande
+  ADR — sannolikt 0033 efter B146-port, eftersom 0031/0032 är upptagna)
 - Vercel Analytics / Speed Insights / Observability Plus (separat ADR)
 - Vercel AI Gateway (separat ADR eftersom det rör LLM-anrop)
 
