@@ -75,6 +75,16 @@ COMMON_WORDS = {
     "AssertionError", "FileExistsError", "NotImplementedError",
     "CalledProcessError", "ModuleNotFoundError",
     "Iterable", "Sequence", "Mapping", "Callable",
+    # Lokala kod-typer i preview-runtime-spåret (apps/viewser/components/
+    # viewer-panel.tsx + apps/viewser/app/api/preview/[siteId]/route.ts +
+    # scripts/check_adr_0021_workarounds.py). PascalCase-identifierare
+    # introducerade i samband med fix för "CORS"/embedding-felet
+    # (preview-error-shape + fix-fallback-headers + adr-0021-recheck).
+    # Inte domänbegrepp — bara internt kod-shape — men matchar PASCAL_RE
+    # och behöver allowlistas på samma sätt som ArgumentParser ovan.
+    "IssueRef", "IssueStatus",
+    "PreviewApiError", "PreviewErrorBody", "PreviewErrorCode",
+    "UnavailableInfo",
     # Status-strängar (verify_run.py + andra tooling-checkers)
     "OK", "FAIL", "WARN", "UNKNOWN", "SKIP",
     # Framework / lib
