@@ -355,41 +355,98 @@ def test_run_one_case_records_generated_dir(tmp_path: Path) -> None:
     assert case["error"] and "dossier not found" in case["error"]
 
 
-def test_full_cases_covers_all_on_disk_scaffolds() -> None:
-    """FULL_CASES must cover one example per on-disk scaffold.
+def _discover_on_disk_scaffold_ids() -> set[str]:
+    """Return the set of scaffoldIds whose directory + scaffold.json exist.
 
-    Without this regression net the full eval suite drifts back to only
-    painter-palma + atelje-bird the next time someone adds a fixture to
-    QUICK_CASES, leaving restaurant-hospitality (Issue #90 / PR #93)
-    verified only via targeted full builds. The set comparison stays
-    valid when new on-disk scaffolds + their fixtures are added because
-    the assert is direction "expected ⊆ FULL_CASES" rather than equality.
+    Mirrors the discovery that ``run_scaffold_selection_probe.py`` does
+    (an on-disk scaffold is a folder under
+    ``packages/generation/orchestration/scaffolds/`` that contains a
+    ``scaffold.json``). Reading the filesystem keeps the coverage
+    assertion below honest when a fourth scaffold (e.g.
+    professional-services from Issue #91) lands; a hard-coded set of
+    expected scaffoldIds would silently grant a pass.
+    """
+
+    repo_root = Path(__file__).resolve().parent.parent
+    scaffolds_dir = repo_root / "packages" / "generation" / "orchestration" / "scaffolds"
+    if not scaffolds_dir.is_dir():
+        return set()
+    return {
+        child.name
+        for child in scaffolds_dir.iterdir()
+        if child.is_dir() and (child / "scaffold.json").is_file()
+    }
+
+
+def _scaffolds_covered_by(case_ids: tuple[str, ...]) -> set[str]:
+    """Return the set of scaffoldIds pinned by the project-input fixtures.
+
+    Each ``examples/<siteId>.project-input.json`` declares the scaffold
+    it pins to; collecting these tells us which scaffolds a given suite
+    actually exercises.
+    """
+
+    repo_root = Path(__file__).resolve().parent.parent
+    examples_dir = repo_root / "examples"
+    covered: set[str] = set()
+    for case_id in case_ids:
+        fixture = examples_dir / f"{case_id}.project-input.json"
+        if not fixture.is_file():
+            continue
+        data = json.loads(fixture.read_text(encoding="utf-8"))
+        scaffold_id = data.get("scaffoldId")
+        if isinstance(scaffold_id, str) and scaffold_id:
+            covered.add(scaffold_id)
+    return covered
+
+
+def test_full_cases_covers_every_on_disk_scaffold() -> None:
+    """FULL_CASES must pin at least one fixture per on-disk scaffold.
+
+    The contract is enforced dynamically against the filesystem: when a
+    new scaffold (e.g. professional-services from Issue #91) lands as a
+    real directory under ``packages/generation/orchestration/scaffolds/``,
+    this test fails until someone adds a fixture for it to FULL_CASES.
+    Without that net the full suite would silently fall back to "only
+    the older scaffolds get a real npm build" and the next
+    restaurant-hospitality-style regression could ship undetected.
     """
 
     from scripts.run_eval_suite import FULL_CASES
 
-    expected_minimum = {"painter-palma", "atelje-bird", "cafe-bistro"}
-    missing = expected_minimum - set(FULL_CASES)
+    on_disk = _discover_on_disk_scaffold_ids()
+    covered = _scaffolds_covered_by(FULL_CASES)
+    missing = on_disk - covered
     assert not missing, (
-        f"FULL_CASES is missing required on-disk-scaffold coverage: {sorted(missing)}; "
-        f"current FULL_CASES = {FULL_CASES}"
+        f"FULL_CASES misses on-disk scaffolds: {sorted(missing)}. "
+        f"Add a fixture to examples/<siteId>.project-input.json pinned to "
+        f"each missing scaffoldId and list its siteId in FULL_CASES. "
+        f"Current FULL_CASES={FULL_CASES} cover scaffolds={sorted(covered)}; "
+        f"on-disk scaffolds={sorted(on_disk)}."
     )
 
 
-def test_quick_cases_includes_cafe_bistro() -> None:
-    """QUICK_CASES must include the restaurant-hospitality fixture.
+def test_quick_cases_covers_every_on_disk_scaffold() -> None:
+    """QUICK_CASES must also pin at least one fixture per on-disk scaffold.
 
-    Pairs with the FULL_CASES assertion above: cafe-bistro is the
-    canonical smoke + full-build fixture for restaurant-hospitality
-    since the menu+booking renderers landed in PR #93. Dropping it from
-    QUICK_CASES would silently regress smoke coverage too.
+    Same dynamic contract as FULL_CASES — quick is the cheap smoke layer
+    that runs daily, so it has to track on-disk reality too. Dropping
+    cafe-bistro (today the sole restaurant-hospitality fixture in
+    either suite) would regress smoke coverage of the menu+booking
+    renderers added in PR #93.
     """
 
     from scripts.run_eval_suite import QUICK_CASES
 
-    assert "cafe-bistro" in QUICK_CASES, (
-        f"QUICK_CASES must include cafe-bistro (restaurant-hospitality fixture); "
-        f"current QUICK_CASES = {QUICK_CASES}"
+    on_disk = _discover_on_disk_scaffold_ids()
+    covered = _scaffolds_covered_by(QUICK_CASES)
+    missing = on_disk - covered
+    assert not missing, (
+        f"QUICK_CASES misses on-disk scaffolds: {sorted(missing)}. "
+        f"Add a fixture to examples/<siteId>.project-input.json pinned to "
+        f"each missing scaffoldId and list its siteId in QUICK_CASES. "
+        f"Current QUICK_CASES={QUICK_CASES} cover scaffolds={sorted(covered)}; "
+        f"on-disk scaffolds={sorted(on_disk)}."
     )
 
 
