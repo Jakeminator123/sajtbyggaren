@@ -75,10 +75,11 @@
       "labelSv": "Restaurang / Café",
       "labelEn": "Restaurant / Cafe",
       "contentBranch": "restaurant",
-      "supportStatus": "planned",
+      "supportStatus": "active",
       "targetScaffoldId": "restaurant-hospitality",
+      "activeScaffoldId": "restaurant-hospitality",
       "fallbackScaffoldId": "local-service-business",
-      "defaultVariantId": "nordic-trust",
+      "defaultVariantId": "warm-bistro",
       "expectedStarterId": "marketing-base",
       "requestedCapabilities": ["contact-form", "faq-section"],
       "candidateDossiers": [],
@@ -90,8 +91,8 @@
         "Karta / Hitta hit",
         "Om oss / Om mig"
       ],
-      "rationale": "Restaurang är en planerad scaffold (restaurant-hospitality). Tills runtime-mapping finns används local-service-business som fallback.",
-      "operatorNotes": "Promotera till active när restaurant-hospitality/scaffold.json + variants + SCAFFOLD_TO_STARTER finns."
+      "rationale": "Restaurang mappas mot restaurant-hospitality + marketing-base. Aktiv runtime via Path A (render_menu + render_booking i build_site.py). fallbackScaffoldId behålls som säkerhetsnät om scaffold-mappingen tillfälligt skulle haverera.",
+      "operatorNotes": "Promoterad till active 2026-05-25 via GAP-backend-restaurant-activation. Path B (section-driven renderer) löser ut renderer-utbredningen för övriga 11 scaffolds."
     },
     {
       "id": "portfolio",

@@ -134,15 +134,21 @@ def test_ecommerce_targets_active_ecommerce_lite_with_commerce_base(
 
 
 @pytest.mark.tooling
-def test_restaurant_is_planned_with_local_service_fallback(
+def test_restaurant_is_active_with_restaurant_hospitality(
     taxonomy_payload: dict,
 ) -> None:
-    """Scout-planens nyckelexempel: restaurant-hospitality är planned."""
+    """Restaurant-kategorin promoterades till active 2026-05-25 via
+    GAP-backend-restaurant-activation. Path A-renderers (render_menu +
+    render_booking) finns i build_site.py och cafe-bistro-fixturen
+    kör hela end-to-end-flödet. ``fallbackScaffoldId`` behålls som
+    säkerhetsnät om scaffold-mappingen tillfälligt skulle haverera.
+    """
     category = _find_category(taxonomy_payload, "restaurant")
-    assert category["supportStatus"] == "planned"
+    assert category["supportStatus"] == "active"
     assert category["targetScaffoldId"] == "restaurant-hospitality"
+    assert category["activeScaffoldId"] == "restaurant-hospitality"
     assert category["fallbackScaffoldId"] == "local-service-business"
-    assert category["defaultVariantId"] == "nordic-trust"
+    assert category["defaultVariantId"] == "warm-bistro"
     assert category["expectedStarterId"] == "marketing-base"
 
 

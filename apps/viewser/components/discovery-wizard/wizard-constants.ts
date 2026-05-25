@@ -48,8 +48,16 @@ export type WizardCategoryId =
 /**
  * Runtime-safe scaffold hints. Frontend may send these as hints only; the
  * backend Discovery Resolver decides selected scaffold/fallback from taxonomy.
+ *
+ * Speglar `_RUNTIME_SCAFFOLD_HINTS` i
+ * `packages/generation/discovery/resolve.py`. När en ny scaffold flyttas
+ * från planned till runtime (Path A eller Path B) måste denna typ
+ * uppdateras tillsammans med resolve.py:s whitelist.
  */
-export type ScaffoldHint = "local-service-business" | "ecommerce-lite";
+export type ScaffoldHint =
+  | "local-service-business"
+  | "ecommerce-lite"
+  | "restaurant-hospitality";
 
 export type WizardCategory = {
   id: WizardCategoryId;
@@ -137,8 +145,8 @@ export const BUSINESS_FAMILIES: BusinessFamily[] = [
     id: "restaurant",
     label: "Restaurang / Café",
     description: "Meny, bordsbokning, öppettider och plats — visuellt aptitligt.",
-    scaffoldHint: "local-service-business",
-    defaultVariantId: "warm-craft",
+    scaffoldHint: "restaurant-hospitality",
+    defaultVariantId: "warm-bistro",
     subCategories: ["restaurant"],
   },
   {

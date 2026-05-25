@@ -665,8 +665,11 @@ def _starter_for_scaffold(scaffold_id: str) -> str | None:
 
 
 # Buildbara scaffolds som ``scaffoldHint`` får peka mot. Spegling av
-# de två par som planning.SCAFFOLD_TO_STARTER faktiskt mappar idag —
+# de tre par som planning.SCAFFOLD_TO_STARTER faktiskt mappar idag —
 # pre-B121 _apply_discovery_overrides accepterade samma whitelist.
+# restaurant-hospitality lades till 2026-05-25 via
+# GAP-backend-restaurant-activation (Path A) eftersom render_menu +
+# render_booking i build_site.py + cafe-bistro-fixturen redan är på plats.
 _RUNTIME_SCAFFOLD_HINTS: dict[str, tuple[str, str, str]] = {
     "local-service-business": (
         "local-service-business",
@@ -674,6 +677,11 @@ _RUNTIME_SCAFFOLD_HINTS: dict[str, tuple[str, str, str]] = {
         "marketing-base",
     ),
     "ecommerce-lite": ("ecommerce-lite", "clean-store", "commerce-base"),
+    "restaurant-hospitality": (
+        "restaurant-hospitality",
+        "warm-bistro",
+        "marketing-base",
+    ),
 }
 
 
@@ -685,9 +693,11 @@ def _scaffold_hint_from_payload(
     Returnerar ``(scaffoldId, variantId, expectedStarterId)`` för
     runtime-aktiva scaffold-hints, annars ``None``. Hinten respekteras
     bara för scaffolds som faktiskt har starter-mapping; en hint som
-    pekar mot en planned scaffold (t.ex. ``restaurant-hospitality``) tas
-    inte som hård signal eftersom det skulle krocka med taxonomins
-    ``planned`` -> ``fallbackScaffoldId``-regel.
+    pekar mot en planned scaffold (t.ex. ``portfolio-creator`` eller
+    ``clinic-healthcare``) tas inte som hård signal eftersom det skulle
+    krocka med taxonomins ``planned`` -> ``fallbackScaffoldId``-regel.
+    Tre scaffolds är runtime idag: ``local-service-business``,
+    ``ecommerce-lite`` och ``restaurant-hospitality`` (Path A).
     """
     if not isinstance(payload, dict):
         return None
@@ -1116,8 +1126,9 @@ def _apply_directives_fields(
     #
     # Säkerhet: bara runtime-aktiva scaffolds får override:a (samma
     # whitelist som pre-B121 ``_scaffold_hint_from_payload``). Planned
-    # scaffolds (``restaurant-hospitality`` m.fl.) tillåts inte eftersom
-    # build_site.py inte kan rendera dem ännu.
+    # scaffolds (``portfolio-creator``, ``clinic-healthcare`` m.fl.)
+    # tillåts inte eftersom build_site.py inte kan rendera dem ännu.
+    # ``restaurant-hospitality`` är runtime sedan 2026-05-25.
     scaffold_hint = directives.get("scaffoldHint")
     if isinstance(scaffold_hint, str):
         clean_scaffold = scaffold_hint.strip()

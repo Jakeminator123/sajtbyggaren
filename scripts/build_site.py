@@ -3408,6 +3408,11 @@ _HERO_STYLE_BY_VARIANT: dict[str, str] = {
     "mono-tech": "split",
     "noir-editorial": "split",
     "street-vivid": "gradient",
+    # restaurant-hospitality (Path A — render_menu + render_booking)
+    "warm-bistro": "centered",
+    "nordic-fine-dining": "split",
+    "casual-cafe": "gradient",
+    "midnight-bar": "split",
 }
 
 # Tone-driven fallback för hero-stil när layoutHint saknas OCH varianten
