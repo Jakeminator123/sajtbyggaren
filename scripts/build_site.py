@@ -37,6 +37,8 @@ LLM status (as of Sprint 2B):
 from __future__ import annotations
 
 import argparse
+import functools
+import inspect
 import json
 import os
 import re
@@ -46,6 +48,7 @@ import sys
 import time
 import urllib.parse
 import uuid
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -3299,6 +3302,171 @@ def render_products(
         "  );\n"
         "}\n"
     )
+
+
+# ---------------------------------------------------------------------------
+# Path B step 6 — section-renderer registry + generic dispatcher.
+#
+# Every section renderer above is registered here under the section id
+# used by the scaffold's ``sections.json``. ``render_route_generic``
+# reads the section list for a route from a scaffold's sections.json
+# (loaded via ``_load_scaffold_sections``), looks each id up in the
+# registry and concatenates the resulting JSX fragments.
+#
+# Section renderers have heterogeneous keyword arguments (some need
+# ``listing_route``, others ``contact_path`` or ``variant_id``). The
+# dispatcher inspects each renderer's signature so callers can pass a
+# single uniform kwargs bag and each renderer receives only the keys it
+# accepts. Renderers that need no kwargs simply ignore the bag.
+#
+# This step adds the infrastructure but does not flip ``write_pages``
+# yet: existing route renderers (render_home, render_services, ...)
+# still compose their sections directly. Future scaffolds can reuse the
+# dispatcher without adding a new ``elif`` branch in ``write_pages``.
+# ---------------------------------------------------------------------------
+
+
+_SECTION_RENDERERS: dict[str, Callable[..., str]] = {
+    "hero": render_section_hero,
+    "service-summary": render_section_services_summary,
+    "services-summary": render_section_services_summary,
+    "service-list": render_section_service_list,
+    "trust-proof": render_section_trust_proof,
+    "about-story": render_section_about_story,
+    "team": render_section_team,
+    "contact-cta": render_section_contact_cta,
+    "contact-info": render_section_contact_info,
+    "products-intro": render_section_products_intro,
+    "product-grid": render_section_product_grid,
+}
+
+
+_SCAFFOLD_SECTIONS_CACHE: dict[Path, dict] = {}
+
+
+def _load_scaffold_sections(scaffold_dir: Path) -> dict:
+    """Load and cache ``sections.json`` for a scaffold directory.
+
+    Returns an empty dict if the file is missing so a scaffold without
+    a sections.json simply makes the dispatcher a no-op for unknown
+    routes (the caller falls back to its specialised renderer).
+    """
+    cached = _SCAFFOLD_SECTIONS_CACHE.get(scaffold_dir)
+    if cached is not None:
+        return cached
+    sections_path = scaffold_dir / "sections.json"
+    if not sections_path.is_file():
+        _SCAFFOLD_SECTIONS_CACHE[scaffold_dir] = {}
+        return {}
+    try:
+        loaded = json.loads(sections_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise SystemExit(
+            "Builder failed: scaffold sections.json at "
+            f"{sections_path} is not valid JSON ({exc.msg} at "
+            f"line {exc.lineno}). Path B requires a parsable "
+            "sections.json so render_route_generic can compose the "
+            "route's sections deterministically."
+        ) from exc
+    if not isinstance(loaded, dict):
+        raise SystemExit(
+            "Builder failed: scaffold sections.json at "
+            f"{sections_path} must be a JSON object whose keys are "
+            "route ids (e.g. \"home\", \"menu\"). Found "
+            f"{type(loaded).__name__}."
+        )
+    _SCAFFOLD_SECTIONS_CACHE[scaffold_dir] = loaded
+    return loaded
+
+
+@functools.cache
+def _section_renderer_kwargs(renderer: Callable[..., str]) -> tuple[str, ...]:
+    """Return the keyword-argument names a section renderer accepts.
+
+    Cached because the dispatcher hits each renderer once per route per
+    build and ``inspect.signature`` is not cheap. The first positional
+    parameter (``dossier``) is always passed positionally and is
+    omitted from the returned tuple.
+    """
+    sig = inspect.signature(renderer)
+    return tuple(
+        name
+        for name in sig.parameters
+        if name != "dossier" and sig.parameters[name].kind
+        in (
+            inspect.Parameter.KEYWORD_ONLY,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        )
+    )
+
+
+def _call_section_renderer(
+    renderer: Callable[..., str],
+    dossier: dict,
+    kwargs: dict[str, Any],
+) -> str:
+    """Call a section renderer passing only the kwargs it accepts.
+
+    Any extra kwargs in ``kwargs`` are silently dropped so callers can
+    pass a uniform context bag to every renderer in a route without
+    each renderer having to declare ``**kwargs`` itself.
+    """
+    accepted = _section_renderer_kwargs(renderer)
+    filtered = {name: kwargs[name] for name in accepted if name in kwargs}
+    return renderer(dossier, **filtered)
+
+
+def render_route_generic(
+    dossier: dict,
+    *,
+    route_id: str,
+    scaffold_sections: dict,
+    **kwargs: Any,
+) -> str:
+    """Compose a route body from its declared sections.
+
+    Reads the section list for ``route_id`` from
+    ``scaffold_sections[route_id]`` (a dict with
+    ``requiredSections`` and optional ``optionalSections`` lists),
+    looks each id up in ``_SECTION_RENDERERS`` and concatenates the
+    resulting JSX fragments in declaration order — required sections
+    first, optionals after — so a scaffold can extend a route just by
+    appending an optional section to its sections.json.
+
+    Returns the concatenated body fragments only. Page shell (icon
+    imports, ``export default function``, ``<main>`` wrapper) is the
+    caller's responsibility. Cross-section coordination (e.g. a
+    testimonials section suppressing the trust-proof block) is also
+    the caller's responsibility — the dispatcher itself stays
+    deterministic and side-effect free.
+
+    Raises ``SystemExit`` for section ids that have no registered
+    renderer so a scaffold cannot silently emit an empty route by
+    naming a section that does not exist yet.
+    """
+    route_block = scaffold_sections.get(route_id) or {}
+    section_ids: list[str] = []
+    required = route_block.get("requiredSections")
+    if isinstance(required, list):
+        section_ids.extend(str(item) for item in required if isinstance(item, str))
+    optional = route_block.get("optionalSections")
+    if isinstance(optional, list):
+        section_ids.extend(str(item) for item in optional if isinstance(item, str))
+    body_fragments: list[str] = []
+    for section_id in section_ids:
+        renderer = _SECTION_RENDERERS.get(section_id)
+        if renderer is None:
+            raise SystemExit(
+                "Builder failed: section id "
+                f"{section_id!r} (used by route {route_id!r}) has no "
+                "renderer in _SECTION_RENDERERS in "
+                "scripts/build_site.py. Add a "
+                f"render_section_{section_id.replace('-', '_')}() "
+                "function and register it, or remove the section from "
+                "the scaffold's sections.json."
+            )
+        body_fragments.append(_call_section_renderer(renderer, dossier, kwargs))
+    return "".join(body_fragments)
 
 
 # ---------------------------------------------------------------------------
