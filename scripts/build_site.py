@@ -5065,14 +5065,68 @@ def render_section_cancellation_policy(dossier: dict) -> str:
     )
 
 
+def _restaurant_optional_section_stub(dossier: dict) -> str:
+    """No-op renderer for optional restaurant sections without bespoke copy.
+
+    Returned by ``render_section_wine_pairings``,
+    ``render_section_lunch_rotation_note`` and
+    ``render_section_menu_download_cta`` so a future operator-driven
+    fix can add real copy by simply replacing the renderer with a
+    section-shaped function. Until then these slots stay empty so
+    the page does not render placeholder marketing copy that the
+    operator did not approve.
+    """
+    return ""
+
+
+def render_section_wine_pairings(dossier: dict) -> str:
+    """Optional wine-pairing recommendations panel for /meny.
+
+    Empty MVP stub: a future scaffold variant or operator override
+    will populate this section with a curated list pulled from a
+    new dossier field. Returning empty keeps the page slim until
+    real content is wired.
+    """
+    return _restaurant_optional_section_stub(dossier)
+
+
+def render_section_lunch_rotation_note(dossier: dict) -> str:
+    """Optional lunch-rotation note for /meny.
+
+    Empty MVP stub: weekday lunch rotations require a structured
+    schedule the project-input schema does not yet model. The
+    section is still registered so a scaffold listing it in
+    optionalSections does not raise SystemExit at build time.
+    """
+    return _restaurant_optional_section_stub(dossier)
+
+
+def render_section_menu_download_cta(dossier: dict) -> str:
+    """Optional menu-PDF download CTA for /meny.
+
+    Empty MVP stub: file uploads are routed through
+    ``public/uploads`` only for hero/gallery/logo today. A future
+    scaffold can wire a menu PDF upload through the same path and
+    swap this stub for a real download button.
+    """
+    return _restaurant_optional_section_stub(dossier)
+
+
 # Restaurant section renderers register here so render_route_generic
 # can dispatch on the section ids declared in
 # packages/generation/orchestration/scaffolds/restaurant-hospitality/sections.json.
+# Optional sections without bespoke copy register a no-op stub so the
+# dispatcher can include them without raising SystemExit; operators or
+# scaffold variants can replace each stub with a real renderer when
+# the corresponding dossier fields land.
 _SECTION_RENDERERS.update(
     {
         "menu-intro": render_section_menu_intro,
         "menu-list": render_section_menu_list,
         "dietary-key": render_section_dietary_key,
+        "wine-pairings": render_section_wine_pairings,
+        "lunch-rotation-note": render_section_lunch_rotation_note,
+        "menu-download-cta": render_section_menu_download_cta,
         "booking-intro": render_section_booking_intro,
         "booking-form-or-embed": render_section_booking_form_or_embed,
         "hours-summary": render_section_hours_summary,
@@ -5083,135 +5137,111 @@ _SECTION_RENDERERS.update(
 )
 
 
-def render_menu(dossier: dict, *, contact_path: str = "/hitta-hit") -> str:
-    """Render the restaurant /meny route.
+_RESTAURANT_SCAFFOLD_DIR = (
+    REPO_ROOT
+    / "packages"
+    / "generation"
+    / "orchestration"
+    / "scaffolds"
+    / "restaurant-hospitality"
+)
 
-    Composes ``services``-as-menu-items into a card grid with the
-    wizard-route eyebrow + heading idiom, followed by a trailing CTA
-    to the contact route so a hungry visitor lands on opening hours
-    and phone instead of dead-ending on the menu. The booking page
-    is intentionally not the CTA target here: the scaffold's
-    ``booking-cta`` dossier is mounted separately by the
-    dossier-mounting layer and handles the visible book-a-table
-    affordance in compliance with sections.json's order rule that
-    the booking CTA must appear at least twice on the home page.
 
-    ``contact_path`` defaults to ``/hitta-hit`` to match the
-    scaffold's ``contact`` route slug; callers that pass a different
-    contact route will see the CTA point there instead.
+def _render_restaurant_route(
+    dossier: dict,
+    *,
+    route_id: str,
+    page_function_name: str,
+    contact_path: str,
+) -> str:
+    """Compose a restaurant route via the section dispatcher.
+
+    Loads ``restaurant-hospitality/sections.json`` for the section
+    list, dispatches each id through ``render_route_generic``, then
+    appends the standard contact-CTA section so the visitor always
+    has a path back to opening hours and phone. The page shell
+    (icon import + ``<main>`` wrapper + closing tags) is added
+    here so the renderer remains a drop-in replacement for the
+    previous specialised implementation.
+
+    ``page_function_name`` controls the name of the exported React
+    component (``MenuPage`` / ``BookingPage``) so a future scaffold
+    can reuse this helper for any new route.
     """
-    items = _menu_items(dossier)
-    card_fragments: list[str] = []
-    for item in items:
-        key_attr = _jsx_safe_string("menu-" + str(item["id"]))
-        label_attr = _jsx_safe_string(str(item["label"]))
-        summary_value = item.get("summary")
-        summary_fragment = ""
-        if isinstance(summary_value, str) and summary_value.strip():
-            summary_attr = _jsx_safe_string(summary_value)
-            summary_fragment = (
-                '              <p className="mt-2 text-sm '
-                'text-[color:var(--muted)] leading-relaxed">'
-                f"{summary_attr}</p>\n"
-            )
-        card_fragments.append(
-            f"            <article key={key_attr} "
-            'className="rounded-xl border border-[color:var(--border)] '
-            "bg-[color:var(--card,var(--background))] p-6 transition-all "
-            "duration-300 hover:-translate-y-0.5 "
-            'hover:border-[color:var(--primary)] hover:shadow-md">\n'
-            f'              <h2 className="text-lg font-semibold">{label_attr}</h2>\n'
-            f"{summary_fragment}"
-            "            </article>"
-        )
-    cards = "\n".join(card_fragments)
+    sections = _load_scaffold_sections(_RESTAURANT_SCAFFOLD_DIR)
+    body = render_route_generic(
+        dossier,
+        route_id=route_id,
+        scaffold_sections=sections,
+        contact_path=contact_path,
+    )
+    cta_section = render_section_contact_cta(dossier, contact_path=contact_path)
     return (
         'import { ArrowRight } from "lucide-react";\n'
         "\n"
-        "export default function MenuPage() {\n"
+        f"export default function {page_function_name}() {{\n"
         "  return (\n"
         '    <main className="flex flex-1 flex-col">\n'
-        + _wizard_section_heading(
-            "Meny",
-            "Vad vi serverar just nu",
-            "Menyn växlar med säsongen och tillgången på råvaror. "
-            "Be gärna personalen om dagens rekommendation eller hör av dig "
-            "i förväg om du har önskemål eller allergier.",
-        )
-        + '          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">\n'
-        + cards
-        + "\n          </div>\n"
-        + _wizard_contact_cta(dossier, contact_path)
-        + _wizard_page_footer()
+        + body
+        + cta_section
+        + "    </main>\n"
+        + "  );\n"
+        + "}\n"
+    )
+
+
+def render_menu(dossier: dict, *, contact_path: str = "/hitta-hit") -> str:
+    """Render the restaurant /meny route via the section dispatcher.
+
+    Path B step 8 thin shim. The actual section composition lives
+    in ``render_section_menu_intro`` / ``render_section_menu_list``
+    / ``render_section_dietary_key`` and is dispatched through
+    ``render_route_generic`` based on the section list declared in
+    ``restaurant-hospitality/sections.json``. A future scaffold can
+    extend the route by appending an optional section (for example
+    ``wine-pairings``) to its sections.json without editing this
+    file.
+
+    The trailing contact CTA is added here as a deliberate page-
+    level affordance — the scaffold's sections.json keeps the
+    /menu route lean (intro + list + dietary key) and the CTA is
+    surfaced by the page wrapper so a hungry visitor always has a
+    path back to opening hours and phone.
+
+    ``contact_path`` defaults to ``/hitta-hit`` to match the
+    scaffold's ``contact`` route slug.
+    """
+    return _render_restaurant_route(
+        dossier,
+        route_id="menu",
+        page_function_name="MenuPage",
+        contact_path=contact_path,
     )
 
 
 def render_booking(dossier: dict, *, contact_path: str = "/hitta-hit") -> str:
-    """Render the restaurant /bokning route.
+    """Render the restaurant /bokning route via the section dispatcher.
 
-    Static reservation page: opening hours summary plus a fallback
-    phone (tel:) link and email (mailto:) link so the visitor can
-    book even when no third-party widget is wired. Per Issue #90 we
-    do NOT embed a booking provider here — the operator's preferred
-    provider lands via the ``booking-cta`` dossier in a separate
-    compositional pass.
+    Path B step 8 thin shim. The actual section composition lives
+    in ``render_section_booking_intro`` /
+    ``render_section_booking_form_or_embed`` /
+    ``render_section_hours_summary`` /
+    ``render_section_fallback_phone`` and is dispatched through
+    ``render_route_generic`` based on the section list declared in
+    ``restaurant-hospitality/sections.json``.
 
-    Mirrors render_menu's signature so the dispatcher in write_pages
-    can call both with the same contact_path argument.
+    Per Issue #90 we still do NOT embed a third-party booking
+    provider — the dispatcher composes a static reservation page
+    where the operator handles bookings via phone and email. A
+    scaffold variant can swap
+    ``render_section_booking_form_or_embed`` for an embedded
+    widget without touching the dispatcher.
     """
-    contact = dossier.get("contact") or {}
-    phone = contact.get("phone") if isinstance(contact, dict) else None
-    email = contact.get("email") if isinstance(contact, dict) else None
-    opening = contact.get("openingHours") if isinstance(contact, dict) else None
-
-    rows: list[str] = []
-    if isinstance(opening, str) and opening.strip():
-        rows.append(
-            '            <div className="rounded-xl border border-[color:var(--border)] p-6">\n'
-            '              <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Öppettider</p>\n'
-            f'              <p className="mt-2 text-base">{_jsx_safe_string(opening.strip())}</p>\n'
-            "            </div>"
-        )
-    if isinstance(phone, str) and phone.strip():
-        rows.append(
-            '            <div className="rounded-xl border border-[color:var(--border)] p-6">\n'
-            '              <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Boka via telefon</p>\n'
-            f'              <a href={_jsx_safe_string("tel:" + _phone_href(phone))} '
-            f'className="mt-2 inline-flex items-center gap-2 text-base hover:underline">{_jsx_safe_string(phone)}</a>\n'
-            "            </div>"
-        )
-    if isinstance(email, str) and email.strip():
-        rows.append(
-            '            <div className="rounded-xl border border-[color:var(--border)] p-6">\n'
-            '              <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Boka via e-post</p>\n'
-            f'              <a href={_jsx_safe_string("mailto:" + email.strip())} '
-            f'className="mt-2 inline-flex items-center gap-2 text-base hover:underline">{_jsx_safe_string(email.strip())}</a>\n'
-            "            </div>"
-        )
-    rows_block = "\n".join(rows) if rows else (
-        '            <p className="text-base text-[color:var(--muted)]">'
-        "Boka bord genom att kontakta oss — kontaktuppgifter finns på "
-        "sidan Hitta hit.</p>"
-    )
-
-    return (
-        'import { ArrowRight } from "lucide-react";\n'
-        "\n"
-        "export default function BookingPage() {\n"
-        "  return (\n"
-        '    <main className="flex flex-1 flex-col">\n'
-        + _wizard_section_heading(
-            "Boka bord",
-            "Boka en plats hos oss",
-            "Just nu tar vi bokningar via telefon och e-post. Ring eller "
-            "skriv så bekräftar vi tid och antal personer. För större "
-            "sällskap, hör av dig minst två dagar i förväg.",
-        )
-        + '          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">\n'
-        + rows_block
-        + "\n          </div>\n"
-        + _wizard_contact_cta(dossier, contact_path)
-        + _wizard_page_footer()
+    return _render_restaurant_route(
+        dossier,
+        route_id="booking",
+        page_function_name="BookingPage",
+        contact_path=contact_path,
     )
 
 
