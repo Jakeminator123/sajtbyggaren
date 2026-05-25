@@ -2664,6 +2664,101 @@ def render_section_hero(
     return hero_section_jsx + hero_block_jsx
 
 
+def render_section_trust_proof(dossier: dict) -> str:
+    """Render the home-page "Varför oss" trust-proof bullet section.
+
+    Pulls ``dossier.trustSignals`` and produces a 2-column ShieldCheck-
+    iconed bullet list. Returns "" when the list is empty so the
+    section is suppressed entirely (mirrors the pre-existing
+    ``trust = []`` handling in ``render_home``).
+
+    Path B step 3 (GAP-backend-path-b-section-renderer): extracted
+    from ``render_home``. Note that ``render_home`` is also responsible
+    for suppressing this section when the richer testimonials section
+    has rendered (it sets the local string to "" in that case) — that
+    cross-section coordination stays in ``render_home`` until the
+    section-driven dispatcher lands in commit 6.
+    """
+    trust = dossier["trustSignals"]
+    if not trust:
+        return ""
+    trust_items = "\n".join(
+        f'            <li key="trust-{i}" className="flex items-start gap-3">\n'
+        f'              <ShieldCheck className="mt-0.5 size-5 shrink-0 text-[color:var(--primary)]" />\n'
+        f'              <span className="text-base">{_jsx_safe_string(item)}</span>\n'
+        "            </li>"
+        for i, item in enumerate(trust)
+    )
+    return (
+        '      <section className="border-t border-[color:var(--border)] bg-[color:var(--accent)]/20">\n'
+        '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[var(--section-spacing)]">\n'
+        '          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Varför oss</h2>\n'
+        '          <ul className="grid gap-4 md:grid-cols-2">\n'
+        f"{trust_items}\n"
+        "          </ul>\n"
+        "        </div>\n"
+        "      </section>\n"
+        "\n"
+    )
+
+
+def render_section_about_story(dossier: dict) -> str:
+    """Render the about-page header + story-card block.
+
+    Produces the page header (the about-page eyebrow + company name
+    h1) and the quote-iconed story card (``company.story``). Used as
+    the leading block inside the AboutPage shell.
+
+    Path B step 3: extracted from ``render_about``. Together with
+    ``render_section_team`` and the inline gallery/location sub-blocks
+    these form the LSB ``about`` route's section list. Output is
+    byte-identical to the inline implementation.
+    """
+    company = dossier["company"]
+    return (
+        '          <header className="flex flex-col gap-3">\n'
+        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Om oss</p>\n'
+        f'            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">{_jsx_safe_string(company["name"])}</h1>\n'
+        "          </header>\n"
+        '          <div className="relative max-w-3xl rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 md:p-8">\n'
+        '            <Quote className="absolute -top-3 -left-3 size-8 text-[color:var(--primary)]/20" />\n'
+        f'            <p className="text-lg text-[color:var(--foreground)] leading-relaxed">{_jsx_safe_string(company["story"])}</p>\n'
+        "          </div>\n"
+    )
+
+
+def render_section_team(dossier: dict) -> str:
+    """Render the about-page team-grid block.
+
+    Iterates ``dossier.company.team`` (array of ``{name, role}``) into
+    a 3-column responsive grid of monogram cards. Returns "" when the
+    team is empty (B94 fix: no empty "Teamet" + ``<ul>`` shell).
+
+    Path B step 3: extracted from ``render_about``. Output is
+    byte-identical to the inline implementation.
+    """
+    company = dossier["company"]
+    team = company.get("team", [])
+    if not team:
+        return ""
+    team_items = "\n".join(
+        f'            <li key={_jsx_safe_string(member["name"])} className="rounded-xl border border-[color:var(--border)] p-6">\n'
+        f'              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-full bg-[color:var(--accent)] text-[color:var(--accent-foreground)] text-sm font-semibold uppercase">{_jsx_safe_string(_member_initials(member["name"]))}</span>\n'
+        f'              <p className="text-base font-semibold">{_jsx_safe_string(member["name"])}</p>\n'
+        f'              <p className="mt-1 text-sm text-[color:var(--muted)]">{_jsx_safe_string(member["role"])}</p>\n'
+        "            </li>"
+        for member in team
+    )
+    return (
+        '          <div className="flex flex-col gap-4">\n'
+        '            <h2 className="text-2xl font-semibold tracking-tight">Teamet</h2>\n'
+        '            <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">\n'
+        f"{team_items}\n"
+        "            </ul>\n"
+        "          </div>\n"
+    )
+
+
 def render_section_services_summary(
     dossier: dict,
     *,
@@ -2752,7 +2847,6 @@ def render_home(
     without creating a ghost route.
     """
     services = dossier["services"]
-    trust = dossier["trustSignals"]
     icons_used = _collect_icons_for_pages(services, dossier_routes)
     # USPs propagate either from dossier.uniqueSellingPoints (when the
     # backend has been updated to pass it through) or from
@@ -2786,26 +2880,12 @@ def render_home(
         dossier,
         listing_route=listing_route,
     )
-    trust_items = "\n".join(
-        f'            <li key="trust-{i}" className="flex items-start gap-3">\n'
-        f'              <ShieldCheck className="mt-0.5 size-5 shrink-0 text-[color:var(--primary)]" />\n'
-        f'              <span className="text-base">{_jsx_safe_string(item)}</span>\n'
-        "            </li>"
-        for i, item in enumerate(trust)
-    )
-    trust_section = ""
-    if trust:
-        trust_section = (
-            '      <section className="border-t border-[color:var(--border)] bg-[color:var(--accent)]/20">\n'
-            '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-6 py-[var(--section-spacing)]">\n'
-            '          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Varför oss</h2>\n'
-            '          <ul className="grid gap-4 md:grid-cols-2">\n'
-            f"{trust_items}\n"
-            "          </ul>\n"
-            "        </div>\n"
-            "      </section>\n"
-            "\n"
-        )
+    # Path B step 3 — trust-proof "Varför oss" bullet section is now
+    # produced by ``render_section_trust_proof``. The home-page-only
+    # suppression (replace with "" when the testimonials-section is
+    # rendering, see below) stays here until the section-dispatcher
+    # lands in commit 6.
+    trust_section = render_section_trust_proof(dossier)
     contact_href = _route_href(contact_path)
 
     # Visual proof block placed between services and trust: shows the
@@ -2947,7 +3027,6 @@ def render_services(
 
 def render_about(dossier: dict) -> str:
     company = dossier["company"]
-    team = company.get("team", [])
     location = dossier["location"]
     areas_html = ", ".join(location["serviceAreas"])
     location_section = ""
@@ -2958,30 +3037,11 @@ def render_about(dossier: dict) -> str:
             f'            <p className="text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(areas_html)}</p>\n'
             "          </div>\n"
         )
-    # Demo-baseline-fix 1C (B94): skip the entire team section when no
-    # team members are declared, mirroring B66's trustSignals fix.
-    # Previously the renderer emitted "Teamet" + an empty <ul>, which
-    # surfaced on every generated /om-oss page in the re-Verifierings-
-    # Scout 2026-05-15 run because prompt_to_project_input.py never
-    # populates team.
-    team_section = ""
-    if team:
-        team_items = "\n".join(
-            f'            <li key={_jsx_safe_string(member["name"])} className="rounded-xl border border-[color:var(--border)] p-6">\n'
-            f'              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-full bg-[color:var(--accent)] text-[color:var(--accent-foreground)] text-sm font-semibold uppercase">{_jsx_safe_string(_member_initials(member["name"]))}</span>\n'
-            f'              <p className="text-base font-semibold">{_jsx_safe_string(member["name"])}</p>\n'
-            f'              <p className="mt-1 text-sm text-[color:var(--muted)]">{_jsx_safe_string(member["role"])}</p>\n'
-            "            </li>"
-            for member in team
-        )
-        team_section = (
-            '          <div className="flex flex-col gap-4">\n'
-            '            <h2 className="text-2xl font-semibold tracking-tight">Teamet</h2>\n'
-            '            <ul className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">\n'
-            f"{team_items}\n"
-            "            </ul>\n"
-            "          </div>\n"
-        )
+    # Path B step 3 — about-story (header + quote-iconed story card)
+    # and team-grid blocks are now produced by ``render_section_about_story``
+    # and ``render_section_team``. Output is byte-identical.
+    about_story_block = render_section_about_story(dossier)
+    team_section = render_section_team(dossier)
 
     # Gallery images with placement="about" (or no placement, but we
     # restrict ourselves to about so we do not overload /om-oss).
@@ -3018,14 +3078,7 @@ def render_about(dossier: dict) -> str:
         '    <main className="flex flex-1 flex-col">\n'
         '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
-        '          <header className="flex flex-col gap-3">\n'
-        '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Om oss</p>\n'
-        f'            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">{_jsx_safe_string(company["name"])}</h1>\n'
-        "          </header>\n"
-        '          <div className="relative max-w-3xl rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 md:p-8">\n'
-        '            <Quote className="absolute -top-3 -left-3 size-8 text-[color:var(--primary)]/20" />\n'
-        f'            <p className="text-lg text-[color:var(--foreground)] leading-relaxed">{_jsx_safe_string(company["story"])}</p>\n'
-        "          </div>\n"
+        f"{about_story_block}"
         f"{team_section}"
         f"{gallery_section_jsx}"
         f"{location_section}"

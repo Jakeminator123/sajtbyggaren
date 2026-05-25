@@ -463,16 +463,17 @@ def test_renderers_use_jsx_safe_string_for_customer_text() -> None:
 
     for fn_name in (
         "render_layout",
-        "render_home",
-        # Path B step 2: the actual JSX-escaping for the /tjanster
-        # route now lives in ``render_section_service_list``;
-        # ``render_services`` is a thin shim that composes the section
-        # into the ServicesPage shell and interpolates no customer
-        # text itself, so it is correctly absent from this list.
+        # Path B step 1-3: the actual JSX-escaping for /, /tjanster
+        # and /om-oss routes now lives in the section-renderers below.
+        # ``render_home``, ``render_services`` and ``render_about``
+        # are thin shims that compose sections into their page shells
+        # and interpolate no customer text themselves.
         "render_section_hero",
         "render_section_services_summary",
         "render_section_service_list",
-        "render_about",
+        "render_section_about_story",
+        "render_section_team",
+        "render_section_trust_proof",
         "render_contact",
     ):
         fn = getattr(build_site, fn_name)
