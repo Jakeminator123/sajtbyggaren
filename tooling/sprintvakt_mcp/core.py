@@ -1137,6 +1137,7 @@ def _assert_allowed_write(path: Path, workboard_path: Path | None) -> None:
         or rel == "docs/workboard.yaml"
         or rel == "docs/agent-prompts/sprintvakt.md"
         or rel == "docs/sprintvakt-log.md"
+        or rel == "docs/agent-inbox.jsonl"
         or rel.startswith("docs/gaps/")
     )
     if not allowed:

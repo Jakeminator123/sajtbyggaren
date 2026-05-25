@@ -11,7 +11,7 @@ import sys
 from collections.abc import Callable
 from typing import Any
 
-from tooling.sprintvakt_mcp import core
+from tooling.sprintvakt_mcp import core, inbox
 
 ToolHandler = Callable[[dict[str, Any]], dict[str, Any]]
 
@@ -104,6 +104,55 @@ TOOLS: dict[str, tuple[str, dict[str, Any], ToolHandler]] = {
         "Return exact post-merge branch sync commands for working branches.",
         {"type": "object", "additionalProperties": True},
         core.post_merge_sync_instructions,
+    ),
+    "post_message": (
+        "Append a coordination message to the agent inbox. dryRun defaults to true; writes require confirm:true.",
+        {
+            "type": "object",
+            "properties": {
+                "from": {"type": "string"},
+                "to": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                "subject": {"type": "string"},
+                "body": {"type": "string"},
+                "topic": {"type": "string"},
+                "dryRun": {"type": "boolean"},
+                "confirm": {"type": "boolean"},
+            },
+            "required": ["from", "to", "subject", "body"],
+            "additionalProperties": False,
+        },
+        inbox.post_message,
+    ),
+    "list_messages": (
+        "List inbox messages folded with their acks. Filters: to, from, topic, since, unreadFor, limit.",
+        {
+            "type": "object",
+            "properties": {
+                "to": {"type": "string"},
+                "from": {"type": "string"},
+                "topic": {"type": "string"},
+                "since": {"type": "string"},
+                "unreadFor": {"type": "string"},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 500},
+            },
+            "additionalProperties": False,
+        },
+        inbox.list_messages,
+    ),
+    "ack_message": (
+        "Append a read/processed ack for an inbox message. dryRun defaults to true; writes require confirm:true.",
+        {
+            "type": "object",
+            "properties": {
+                "messageId": {"type": "string"},
+                "by": {"type": "string"},
+                "dryRun": {"type": "boolean"},
+                "confirm": {"type": "boolean"},
+            },
+            "required": ["messageId", "by"],
+            "additionalProperties": False,
+        },
+        inbox.ack_message,
     ),
 }
 

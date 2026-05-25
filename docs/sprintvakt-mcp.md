@@ -43,6 +43,7 @@ eller GitHub-state.
   - `docs/gaps/**`
   - `docs/agent-prompts/sprintvakt.md`
   - `docs/sprintvakt-log.md`
+  - `docs/agent-inbox.jsonl`
 
 ## CLI
 
@@ -185,6 +186,100 @@ collisions.
 ### `post_merge_sync_instructions`
 
 Returnerar sync-kommandon för arbetsbranches efter merge till `main`.
+
+## Agent inbox
+
+Sprintvakt-servern har ett enkelt **append-only meddelandeflöde** för
+koordination mellan operatör, orchestrator-agenter (`jakob-orchestrator`,
+`christopher-orchestrator`) och Builder/Scout/Steward-agenter. Det är inte
+en realtidschatt — varje meddelande är en rad i `docs/agent-inbox.jsonl`,
+så loggen är diff-vänlig och idempotent.
+
+Filen versioneras i git och är samma för alla brancher som synkar mot
+`main`. Det betyder att en cloud-agent på `cursor/foo` kan posta ett
+meddelande, pusha sin branch, och en agent på `christopher-ui` kan läsa
+det efter `git fetch origin` (eller efter att meddelandet mergats till
+`main`).
+
+Två event-typer ligger i loggen:
+
+- `{"type": "message", "id": "msg-0001-a1b2c3", "from": "...", "to": [...], "subject": "...", "body": "...", "createdAt": "..."}`
+- `{"type": "ack", "messageId": "msg-0001-a1b2c3", "by": "...", "at": "..."}`
+
+`list_messages` läser hela filen, viker ihop messages med deras acks och
+returnerar en flat lista med `acks` påhängd. Skrivning sker bara via
+`post_message` och `ack_message` (båda gated av `dryRun`/`confirm`).
+Filen skapas automatiskt första gången någon postar.
+
+### `post_message`
+
+Append ett koordinationsmeddelande.
+
+Input:
+
+```json
+{
+  "from": "jakob-orchestrator",
+  "to": ["christopher-orchestrator"],
+  "subject": "PR #76 mergad",
+  "body": "Recovery-tests + catch-all-fix är inne på jakob-be.",
+  "topic": "GAP-backend-build-trace-endpoint",
+  "dryRun": true
+}
+```
+
+`from`/`to`-värden saneras till `[a-z0-9][a-z0-9._-]{0,39}`. `topic` är
+valfritt men följer `[A-Za-z0-9][A-Za-z0-9._/-]{0,79}`. `subject` får
+max 140 tecken, `body` max 4000 tecken. Skrivning kräver `dryRun:false`
+och `confirm:true`. Message-id är deterministiskt
+(`msg-<ordinal>-<6-char-hash>`).
+
+### `list_messages`
+
+Returnerar messages folded med acks. Inga skrivningar.
+
+Input:
+
+```json
+{"to": "christopher-orchestrator", "unreadFor": "christopher-orchestrator", "limit": 20}
+```
+
+Alla filter är valfria: `to`, `from`, `topic`, `since` (ISO-tid),
+`unreadFor` (filtrera bort meddelanden den deltagaren redan acked) och
+`limit` (1-500, default 50). Svar:
+
+```json
+{
+  "messages": [
+    {
+      "type": "message",
+      "id": "msg-0001-a1b2c3",
+      "from": "jakob-orchestrator",
+      "to": ["christopher-orchestrator"],
+      "subject": "PR #76 mergad",
+      "body": "...",
+      "createdAt": "2026-05-25T04:05:00Z",
+      "acks": [{"by": "christopher-orchestrator", "at": "2026-05-25T04:10:00Z"}]
+    }
+  ],
+  "count": 1,
+  "totalMatched": 1,
+  "inboxFile": "docs/agent-inbox.jsonl"
+}
+```
+
+### `ack_message`
+
+Append en read/processed-ack. Bara mottagare som finns i `to`-listan får
+acka. Skrivning kräver `dryRun:false` och `confirm:true`. Svaret
+inkluderar `alreadyAcked: true/false` så agenter slipper logga
+dubbla-acks även om de råkar köra två gånger.
+
+Input:
+
+```json
+{"messageId": "msg-0001-a1b2c3", "by": "christopher-orchestrator", "dryRun": false, "confirm": true}
+```
 
 ## Källa till sanning: workboard vinner över gap-filer
 
