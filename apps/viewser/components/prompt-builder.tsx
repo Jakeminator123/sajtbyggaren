@@ -348,7 +348,7 @@ export function PromptBuilder({
                 void submitPrompt();
               }
             }}
-            className="min-h-[64px] resize-none border-0 bg-transparent px-4 py-3 text-[15px] leading-relaxed shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+            className="min-h-[64px] resize-none border-0 bg-transparent px-4 py-3 text-base leading-relaxed shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 sm:text-[15px]"
           />
           <div className="flex items-center justify-between gap-2 border-t border-border/40 px-2 py-2">
             <ModeSwitcher
@@ -370,7 +370,7 @@ export function PromptBuilder({
                 onClick={() => void submitPrompt()}
                 variant="default"
                 size="sm"
-                className="size-9 rounded-full p-0"
+                className="min-tap sm:min-tap-0 rounded-full p-0 active:scale-95 sm:size-9"
                 aria-label={localBusy ? "Bygger sajt" : "Bygg sajt"}
               >
                 {localBusy ? (
@@ -464,7 +464,7 @@ function ModePill({
       aria-label={ariaLabel}
       disabled={disabled}
       onClick={onClick}
-      className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition disabled:opacity-40 ${
+      className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition active:scale-95 disabled:opacity-40 sm:px-2.5 sm:py-1 sm:text-[11px] ${
         active
           ? "bg-background text-foreground shadow-sm"
           : "text-muted-foreground hover:text-foreground"
