@@ -341,7 +341,9 @@ function useIsMobileViewport(): boolean {
     if (typeof window === "undefined") return;
     const mq = window.matchMedia("(max-width: 767px)");
     setIsMobile(mq.matches);
-    const update = (event: MediaQueryListEvent) => setIsMobile(event.matches);
+    // Parameter-typen infereras automatiskt av addEventListener-overload
+    // för media-query-listenern; ingen explicit annotation behövs.
+    const update = (event: { matches: boolean }) => setIsMobile(event.matches);
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, []);

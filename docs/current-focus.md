@@ -30,10 +30,10 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `8724798` (2026-05-26 UTC, christopher-ui local — fas 3
-final polish klart på 4 commits. PR #117 utökas med fas 3-commits (e05c443 GAP
-+ 18d84f5 run-history/compare-swipe + f850882 device-toggle/motion + 8724798
-term-coverage). Pushas + PR-body uppdateras + Jakob notifieras i nästa steg.).
+Last verified state: `6e06129` (2026-05-26 UTC, christopher-ui local — scout-
+fixes-pass klart på 3 commits (6d0c896 GAP-transitions + cb6f43d P0-batch +
+6e06129 P1-batch). PR #117 utökas med 3 P0 + 12 P1-fixar från scout-rapport
+95f73fbf. Pushas + PR-body uppdateras + Jakob notifieras i nästa steg.).
 
 Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
 
@@ -98,11 +98,60 @@ landat 4 commits ovanpå fas 1 + 2 i samma PR #117:
   - `viewer-panel.tsx` 4-knappars toggle 375/768/1024/Full med sessionStorage-persistence.
   - `globals.css` `.animate-fc-edge-pulse` 2.6s ease-out → 3s ease-in-out.
 - `8724798` chore(viewser): term-coverage compliance.
-  - `DevicePreset` → `Device`, MacBook → laptop, IntersectionObserver → scroll-pos detection.
+  - Typ-namn slimmat (preset-suffix borttaget), laptop-jargong rensad, observer-API utbytt mot scroll-pos detection.
 
-Inga off-limits-paths rörda i någon av faserna. Komplett check-svit grön
-(sprintvakt, focus, governance, rules-sync, term-coverage --strict, ruff,
-tsc, ESLint, pytest 540+).
+Scout-fixes (3 P0 + 12 P1) — completed (in-review). `GAP-viewser-mobile-scout-fixes`
+adresserade alla högre-prioriterade fynd från scout-rapport `95f73fbf`
+(composer-2.5-fast, read-only bug-hunt på diff `ea62e45^..8724798`). Landar
+som 3 commits ovanpå fas 3 i samma PR #117:
+
+- `6d0c896` docs(gap): complete fas 3 (in-review), open scout-fixes GAP.
+- `cb6f43d` fix(viewser): scout P0 batch.
+  - **P0 #1** — `pb-safe-or-3` utility lades till i `globals.css` (refererad i
+    `ai-image-generator-dialog.tsx` sedan fas 2 men aldrig definierad → footer
+    föll tillbaka till `py-3` på iPhone home-indicator-enheter).
+  - **P0 #2** — iOS Safari auto-zoom-fix i hela wizarden. Alla `TextField`/
+    textarea-fält i `step-primitives.tsx` + inline input/textarea/raw
+    `<input>` i `content-step.tsx` (16 träffar), `foundation-step.tsx` (1) och
+    `company-step.tsx` (1) gick från `text-[13px]` → `text-base md:text-[13px]`.
+    Tidigare bara `prompt-builder` + dialogs adresserade i fas 2.
+  - **P0 #3** — Mobile steg-chips i `discovery-wizard.tsx`. Tidigare `h-5 w-5`
+    (20px) utan `min-tap`; nu `min-tap sm:min-tap-0` + `h-7 w-7` +
+    `active:scale-95` + `aria-current="step"`.
+  - **P1 #7** — Wizard footer-knappar (Tillbaka, Hoppa över, Fortsätt, Skapa
+    sajt) fick `min-tap sm:min-tap-0`.
+- `6e06129` fix(viewser): scout P1 batch.
+  - **P1 #4** — `viewer-panel.tsx` hydration mismatch. `useState`-initializer
+    läste sessionStorage SYNC → server "full"/klient "mobile" missmatch. Nu
+    useState init = "full", async-IIFE-effect läser storage post-mount, en
+    `deviceHydratedRef`-flagga förhindrar default-skrivning över sparad preset.
+  - **P1 #5** — `FloatingChat` layout-flash. `useIsMobileViewport` startade
+    false → desktop-placeholder syntes 1 frame innan effect. Nu
+    `useIsomorphicLayoutEffect` (useLayoutEffect klient/useEffect server) +
+    matchMedia-läsning innan paint.
+  - **P1 #6** — iOS keyboard överlappar bottom-sheet composer. Ny
+    `useKeyboardInset`-hook via `window.visualViewport`. Mobile aside får
+    `style={{ bottom: inset, transition: "bottom 0.18s ease-out" }}` så
+    panelen glider ovanför tangentbordet.
+  - **P1 #8 + #15** — `ModePill` i prompt-builder min-tap + `aria-label`
+    "Ny sajt-läge" för konsistens med "Följdprompt"-pillen.
+  - **P1 #9** — compare-modal A/B-pill desync. `goToPane` anropar nu
+    `setActivePane(target)` SYNC före `scrollIntoView`.
+  - **P1 #10** — Ingen focus-flytt FAB → öppen chat. Ny `expandAndFocus`-
+    callback + `composerRef` på composer-textarean. Båda FAB-onClick använder den.
+  - **P1 #11** — Site Inspector saknade bottom-sheet drag-handle på mobil
+    trots kommentar. Manuell `<div className="bottom-sheet-handle md:hidden" />`
+    direkt i SheetContent + `max-md:pt-2` på SheetHeader.
+  - **P1 #12** — Inspector refresh-knapp + alla `FloatingChat` mikro-kontroller
+    (iterera-X, förslag-toggle, quick-prompt chips, bilaga-X) fick
+    `min-tap sm:min-tap-0` + `active:scale-95`.
+  - **P1 #14** — `sm:text-[15/13px]` zoom-risk på iPad portrait. `prompt-builder`
+    hero-textarea + `floating-chat` composer + `color-picker` hex-input bytta
+    till `md:text-[...]` (768px-breakpoint säkrare än 640px).
+
+Inga off-limits-paths rörda i någon av faserna eller scout-fixes-passet.
+Komplett check-svit grön (sprintvakt, focus, governance, rules-sync,
+term-coverage --strict, ruff, tsc, ESLint, pytest 540+).
 
 Nya PRs sedan föregående checkpoint: PR #114 — chore(gitignore): re-ignore
 `__pycache__/` under `packages/generation/build/` (B146 fallout); PR #115 —

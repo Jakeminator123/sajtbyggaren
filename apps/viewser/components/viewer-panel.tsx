@@ -323,13 +323,26 @@ export function ViewerPanel({
   // läsa "mobile" från storage).
   const deviceHydratedRef = useRef(false);
 
+  // setState wrappas i en async IIFE → setState körs efter `await`,
+  // vilket är "subscription-style" enligt React 19:s
+  // `react-hooks/set-state-in-effect`-regel (samma mönster som
+  // floating-chat.tsx + run-details-panel.tsx använder för
+  // post-mount-state-initialisering).
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = window.sessionStorage.getItem(DEVICE_STORAGE_KEY);
-    if (stored === "mobile" || stored === "tablet" || stored === "laptop") {
-      setDevicePreset(stored);
-    }
-    deviceHydratedRef.current = true;
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      if (typeof window === "undefined") return;
+      const stored = window.sessionStorage.getItem(DEVICE_STORAGE_KEY);
+      if (stored === "mobile" || stored === "tablet" || stored === "laptop") {
+        setDevicePreset(stored);
+      }
+      deviceHydratedRef.current = true;
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Persistera device-val när det ändras (men hoppa över första render
