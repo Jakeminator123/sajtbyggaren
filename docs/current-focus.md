@@ -69,7 +69,7 @@ Sedan c0b59fbe (PR #60) har följande mergats till `main`, i ordning:
 
 **Pågående/öppna PR:s just nu:**
 
-Inga öppna PRs på `jakob-be` eller `main`. PR #116 (`8c057b1`), PR #117 (`2319ef9`), PR #118 (`1740472`), PR #119 (`31d8d74`) och PR #120 (`15aea46`) är alla mergade. `jakob-be` är resetad till `origin/main` 2026-05-26 PM (commit `1004122`) plus följande direkta commits ovanpå: `cc1a5aa` (vercel.json), `0ed5348` (backend-handoff cleanup audit), `3fc187e` (focus bump efter cleanup), `4cd367c` (naprapat plan-fallback fix), `b414c6b` (naprapat pick_scaffold + eval routes fix). `jakob-be` är 5 commits framför `origin/main` — nästa sync-PR till main när nästa större spår är inne (Lane 2 LLM contract propagation eller B147-fixen).
+Inga öppna PRs på `jakob-be` eller `main`. PR #116 (`8c057b1`), PR #117 (`2319ef9`), PR #118 (`1740472`), PR #119 (`31d8d74`) och PR #120 (`15aea46`) är alla mergade. `jakob-be` är resetad till `origin/main` 2026-05-26 PM (commit `1004122`) plus följande direkta commits ovanpå: `cc1a5aa` (vercel.json), `0ed5348` (backend-handoff cleanup audit), `3fc187e` (focus bump efter cleanup), `4cd367c` (naprapat plan-fallback fix), `b414c6b` (naprapat pick_scaffold + eval routes fix), `ee1751f` (focus bump + Lane 2/Lane 4 stale-correction). `jakob-be` är 6 commits framför `origin/main` per `git rev-list --count origin/main..origin/jakob-be` — nästa sync-PR till main när nästa större spår är inne (B147-fixen eller backend-handoff verification deep-dive).
 
 Pending operatörsklick: Vercel production-branch-flip från `jakob-be` till `main` per `docs/operations/vercel-production-branch-todo.md` — se "Direkt nästa fokus" punkt 1 nedan.
 
