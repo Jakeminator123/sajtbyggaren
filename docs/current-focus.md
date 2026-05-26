@@ -30,10 +30,50 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `50217e3` (2026-05-25 UTC, steward-auto efter PR #115 — sync(jakob-be -> main): #114 gitignore hygiene (post-#113 cleanup)).
-Nya PRs sedan föregående checkpoint: PR #114 — chore(gitignore): re-ignore __pycache__/
-under packages/generation/build/ (B146 fallout); PR #115 — sync(jakob-be -> main): #114
-gitignore hygiene (post-#113 cleanup).
+Last verified state: `9593769` (2026-05-26 UTC, christopher-ui local — mobile responsive
+foundation + 5 P0-blockers åtgärdade per audit 2026-05-26; pushas + öppnas som PR mot
+`jakob-be` i samma session per direktiv msg-0008 ack 2026-05-26T08:22:50Z).
+
+Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
+
+- `a1d1a1f` docs(inbox): ack msg-0008 (scope-process-PR-105) + msg-0009 (b146-port).
+- `ea62e45` docs(gap): open GAP-viewser-mobile-responsive-foundation. Pausar tillfälligt
+  `GAP-viewser-pipeline-status-polling` + `GAP-viewser-side-by-side-preview` (samma owner,
+  samma kärnfiler) till queuedGaps. Återöppnas efter denna mobil-PR landar.
+- `31a888a` feat(viewser/ui): mobile foundation — `pb-safe`/`pt-safe`/`px-safe`,
+  `min-tap` (44px Apple HIG), `touch-visible` (motsatsen till hover-only),
+  `bottom-sheet-handle` + `sheet.tsx` bottom-sheet-stöd (`max-h-[90dvh]`,
+  `rounded-t-3xl`, `pb-safe` automatiskt under `data-[side=bottom]`).
+- `3b2420d` feat(viewser/wizard): mobile pass — `validationError` alltid synlig
+  (tidigare `hidden sm:inline-flex` dolde förklaringen till disabled primärknapp),
+  close-knapp + konsol-knapp + popover-close får min-tap mobile, wizard-padding
+  `px-5 sm:px-10`, footer `pb-safe-or-4`, `PayloadAlignmentPopover`
+  `w-[min(340px,calc(100vw-2rem))]` (tidigare fast 340px overflowade),
+  moodboard/produktbild-delete använder `touch-visible` (tidigare osynlig på touch),
+  `site-header` `pt-safe`.
+- `9593769` feat(viewser/builder): mobile pass — `FloatingChat` bottom-sheet på
+  mobil med drag-handle + pb-safe (tidigare fast 360×460 blockerade hela viewporten);
+  minimerat tillstånd = 56×56 FAB nederst höger på mobil (sidotab-mönstret hamnar
+  mitt på 375px); composer-textarea `text-base sm:text-[13px]` (förhindrar iOS
+  Safari auto-zoom); `BuilderActions` `hidden md:flex` (verktygsmenyn skulle
+  hamna under bottom-sheet:n); `SiteInspectorSheet` bottom-sheet på mobil
+  (`max-md:!inset-x-0 max-md:!bottom-0 max-md:!h-[90dvh] max-md:!rounded-t-3xl`)
+  + tabs `overflow-x-auto scrollbar-hidden` så 7 triggers kan scrolla horisontellt.
+
+Inga off-limits-paths rörda (`scripts/`, `packages/generation/`, `apps/viewser/app/api/`,
+`apps/viewser/lib/`, `middleware.ts`, `next.config.ts`, `package.json` — alla intakta).
+Fas 2 (polish/P1: tap-target-svep, typografi-skala, Compare-modal swipe, ViewerPanel
+device-toggle) öppnas som ny GAP efter denna mobil-PR mergat till `jakob-be`.
+
+Nya PRs sedan föregående checkpoint: PR #114 — chore(gitignore): re-ignore
+`__pycache__/` under `packages/generation/build/` (B146 fallout); PR #115 —
+sync(jakob-be -> main): #114 gitignore hygiene (post-#113 cleanup).
+
+Öppen PR utanför vår lane:
+
+- **#116** (`cursor/dossier-candidate-intake-895d`) — `feat(backoffice): add dossier
+  candidate intake from local files`. Backoffice-feature, ägs av jakob-be-lane.
+  Do not start yet från christopher-ui's perspektiv.
 
 Sedan c0b59fbe (PR #60) har följande mergats till `main`, i ordning:
 

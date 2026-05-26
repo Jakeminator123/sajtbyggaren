@@ -280,7 +280,7 @@
       "type": "Gap/UI",
       "owner": "christopher",
       "title": "Mobil-anpassning av viewser-appen — foundation + P0-blockers",
-      "whyNow": "Hela viewser-appen är desktop-first idag. Audit 2026-05-26 visade 5 P0-blockers som gör appen oanvändbar på 375px (iPhone SE). Operatören har bekräftat scope: hela viewser-flödet (wizard + builder), polished fidelity. Denna GAP = foundation + P0; polish/P1 öppnas som separat GAP efter.",
+      "whyNow": "Hela viewser-appen är desktop-first idag. Audit 2026-05-26 visade 5 P0-blockers som gör appen oanvändbar på 375px (iPhone SE). Operatören har bekräftat scope: hela viewser-flödet (wizard + builder), polished kvalitetsnivå. Denna GAP = foundation + P0; polish/P1 öppnas som separat GAP efter.",
       "paths": [
         "apps/viewser/app/globals.css",
         "apps/viewser/components/builder/floating-chat.tsx",

@@ -11,7 +11,7 @@
 
 ## Why now
 
-Hela viewser-appen är desktop-first idag. Audit 2026-05-26 visade 5 P0-blockers som gör appen oanvändbar på 375px (iPhone SE). Operatören har bekräftat scope: hela viewser-flödet (wizard + builder), polished fidelity. Denna GAP = foundation + P0; polish/P1 öppnas som separat GAP efter.
+Hela viewser-appen är desktop-first idag. Audit 2026-05-26 visade 5 P0-blockers som gör appen oanvändbar på 375px (iPhone SE). Operatören har bekräftat scope: hela viewser-flödet (wizard + builder), polished kvalitetsnivå. Denna GAP = foundation + P0; polish/P1 öppnas som separat GAP efter.
 
 ## Paths
 

@@ -230,7 +230,7 @@ export function BuilderActions({
     // FloatingChat hela bottom-edgen som bottom-sheet, så
     // BuilderActions-pillen hamnar under chatten och blir oåtkomlig.
     // Operatören når samma actions via ConsoleDrawer (SiteHeader-
-    // ikonen) och FloatingChats interaktioner. Power-user-genvägen
+    // ikonen) och FloatingChat-interaktioner. Power-user-genvägen
     // lever kvar oförändrad på desktop.
     <div
       ref={containerRef}
