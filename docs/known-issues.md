@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 23 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 114 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 20 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 117 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -630,82 +630,56 @@ matar wizarden med taxonomi-options:
   Källa: operatör 2026-05-25 kväll + extern reviewer-triage 2026-05-26.
   Fix: open. Test: open.
 
-### Read-only buggranskning av build_site.py 2026-05-26 (extern AI-reviewer)
-
-Extern read-only AI-reviewer skannade `scripts/build_site.py` (3669 rader
-efter B146-port; megafilen har splittats men koordinator + helpers ligger
-kvar) och rapporterade tre högkonfidens-fynd som verifierades mot faktisk
-kod 2026-05-26 av jakob-be-orchestrator. Två lägre-konfidens-fynd hör
-hemma redan under B97 (kontakt-copy) respektive B67 (lang hårdkodad),
-det sjätte fyndet (naprapat → fel scaffold) sitter i
-`packages/generation/planning/plan.py` + `packages/generation/discovery/
-resolve.py`, inte i build_site.py. Notera koppling till Golden Path-
-evalens `dominantProblem=contact (3 av 4 case)` — minst B148 träffar
-exakt den signalen.
-
-- **`B148` Medel** - `_nav_items_from_scaffold` i
-  `scripts/build_site.py:2205-2223` hårdkodar `/kontakt` som
-  insertion-anchor för wizard-extras (FAQ, team, karta, etc.). Sökningen
-  efter contact-positionen är `(i for i, (href, _label) in enumerate(items)
-  if href == "/kontakt")` — den letar på path-string, inte på
-  route-id `"contact"`. För scaffolds där contact-routens path *inte*
-  är `/kontakt` blir `contact_idx = None`, och wizard-extras hamnar
-  appended till slutet av nav-listan istället för placerade *före*
-  contact. Idag bites bara `restaurant-hospitality` (vars contact-route
-  ligger på `/hitta-hit` enligt
-  `packages/generation/orchestration/scaffolds/restaurant-hospitality/routes.json:28-29`),
-  men arkitekturen är fragil mot framtida scaffolds. Övriga fem scaffolds
-  (`local-service-business`, `ecommerce-lite`, `clinic-healthcare`,
-  `professional-services`, `agency-studio`) använder alla `/kontakt`
-  idag, så bugg-omfånget i nuvarande kvalitetsmätning är begränsat —
-  men det är en av flera signaler bakom Golden Path-evalens
-  `dominantProblem=contact (3 av 4 case)`. Fix-riktning: matcha på
-  `route["id"] == "contact"` istället för path-string (samma princip som
-  `_pick_contact_route` redan följer på rad 2230+). Cross-ref: B97
-  (contact-copy bransch-blind), B98 (Områden-block fel för e-handel),
-  B147 (Vercel preview-discovery 403). Källa: extern AI-reviewer
-  2026-05-26 + verifiering mot kod (jakob-be `3bedddd`). Fix: open.
-  Test: open.
-
-- **`B149` Låg** - Intent Guard i `scripts/build_site.py:2885-2887`
-  använder substring-match (`if not any(blocked in term for term in
-  candidate_terms): continue`) istället för exact-match. Korta tokens
-  i `_INTENT_GUARD_CONFLICTS` (rad 2822+) som `"bar"`, `"mat"`, `"tak"`,
-  `"spa"` ger falska träffar mot helt orelaterade business types och
-  service terms: `"bar" in "barber"` är True, `"spa" in "spaghetti"`
-  är True, `"mat" in "automation"` är True. Konsekvens: brus i
-  `intentGuardWarnings`, operatörslarm utan verklig konflikt, sänkt
-  förtroende för varningssystemet. Inte poäng-dödande i Golden Path
-  (varningarna avbryter inte build), men en kvalitetsbrist som
-  försvårar operatör-triage. Fix-riktning: byt till exact-match
-  (`blocked in {t for t in candidate_terms}`) eller token-aware
-  jämförelse (split candidate_terms på `-`/space, jämför per token).
-  Cross-ref: B92 (`naprapat -> naprapatklinik` överanpassning, samma
-  mönster av för-aggressiv normalisering). Källa: extern AI-reviewer
-  2026-05-26 + verifiering mot kod. Fix: open. Test: open.
-
-- **`B150` Låg-Medel** - `_normalize_business_type` i
-  `scripts/build_site.py:2027-2039` har bara specifika normaliseringar
-  för naprapat-/frisör-/webshop-varianter; multi-word business types
-  passerar genom kompakteringen utan att mappas till slug:ar som
-  `_BOOKING_BUSINESS_TYPES` (rad 2001-2024) känner igen. Konsekvens:
-  briefModel-output `"massage studio"` blir `"massage-studio"` som inte
-  matchar `_BOOKING_BUSINESS_TYPES`-medlemmen `"massage"`, vilket gör
-  att `_hero_cta_variant` (rad 2042+) faller igenom till generic-CTA
-  (`"Begär offert"`) trots att branschen är bokningsbar (`"Boka tid"`).
-  Samma mönster slår mot `"yoga studio"`, `"pilates studio"`,
-  `"thai massage"`, `"personal training studio"`, m.fl. Kopplar nära
-  till B110 (`_normalize_business_type` split-sanning mellan CTA-flödet
-  och `prompt_to_project_input.py` har egna mappar) men är en separat
-  brist: även inom CTA-flödet self är slug-set:en inte uttömmande för
-  multi-word bokningstyper. Fix-riktning: utöka
-  `_BOOKING_BUSINESS_TYPES` med multi-word varianter, *eller* normalisera
-  multi-word-input till första-ord-base (`"massage-studio"` →
-  `"massage"` om `"massage"` finns i set:en). Cross-ref: B110, B92.
-  Källa: extern AI-reviewer 2026-05-26 + verifiering mot kod.
-  Fix: open. Test: open.
-
 ## Stängda - regression-test säkrar fixet
+
+- **`B148` Medel** (stängd 2026-05-26, fix-sprint för read-only build_site-audit) -
+  `_nav_items_from_scaffold` hårdkodade `/kontakt` som insertion-anchor
+  för wizard-extras. För `restaurant-hospitality` (`/hitta-hit`) blev
+  `contact_idx = None`, så FAQ/team/karta hamnade i slutet av nav istället
+  för före contact-routen. Fix: derivera contact-path från
+  `scaffold_default_routes` via `route.get("id") == "contact"` (mirrors
+  `_pick_contact_route`-mönstret), sök sen items för den pathen.
+  Defensive-fall: scaffold utan contact-route behåller append-till-slutet-
+  fallback. Fix: `f2e84b0`. Test:
+  `tests/test_wizard_route_emission.py::test_b148_nav_inserts_extras_before_non_default_contact_path`,
+  `tests/test_wizard_route_emission.py::test_b148_nav_appends_extras_when_scaffold_lacks_contact_route`,
+  `tests/test_wizard_route_emission.py::test_b148_nav_preserves_local_service_business_behavior`.
+
+- **`B149` Låg** (stängd 2026-05-26, fix-sprint för read-only build_site-audit) -
+  Intent Guard använde substring-match (`blocked in term`) istället för
+  exact-match, så korta tokens i `_INTENT_GUARD_CONFLICTS` (`"bar"`,
+  `"mat"`, `"spa"`) gav falska träffar: `"bar" in "barber"`,
+  `"spa" in "spaghetti"`, `"mat" in "automation"`. Fix: tokenisera
+  candidate_terms (whole + split på whitespace/dash) till en set,
+  kräv `blocked in candidate_tokens` (exact-match). True positives
+  bevarade: slug-form `"hair-salon"` matchar fortfarande via whole-token,
+  och individuella konflikt-ord matchar via sub-token-split. Fix:
+  `f2e84b0`. Test:
+  `tests/test_intent_guard.py::test_b149_no_warning_when_bar_is_substring_of_barber`,
+  `tests/test_intent_guard.py::test_b149_no_warning_when_spa_is_substring_of_spaghetti`,
+  `tests/test_intent_guard.py::test_b149_no_warning_when_mat_is_substring_of_automation`,
+  `tests/test_intent_guard.py::test_b149_exact_match_on_bar_still_warns_for_legit_bar`,
+  `tests/test_intent_guard.py::test_b149_token_split_preserves_hair_match_on_compound_slug`.
+
+- **`B150` Låg-Medel** (stängd 2026-05-26, fix-sprint för read-only build_site-audit) -
+  `_normalize_business_type` täckte bara explicita prefix-mappingar
+  (naprapat*, frisör/hairdresser, webshop-varianter). briefModel:s
+  multi-word business types (`"massage studio"`, `"yoga studio"`,
+  `"personal trainer studio"`) komprimerades till compact slugs
+  (`"massage-studio"`) som inte fanns i `_BOOKING_BUSINESS_TYPES`, så
+  `_hero_cta_variant` föll till generic `"Begär offert"`-CTA istället
+  för `"Boka tid"`/`"Shoppa nu"`. Fix: efter de explicita mappingarna,
+  loopa genom progressivt kortare dash-prefixen (längst först) och
+  returnera den längsta prefixen som finns registrerad i
+  `_BOOKING_BUSINESS_TYPES` eller `_SHOP_BUSINESS_TYPES`. Konservativt
+  — collapsar bara till redan-registrerade slugs, hittar aldrig på nya.
+  Fix: `f2e84b0`. Test:
+  `tests/test_builder_route_emission.py::test_b150_normalize_business_type_collapses_massage_studio`,
+  `tests/test_builder_route_emission.py::test_b150_normalize_business_type_collapses_compound_booking_slugs`,
+  `tests/test_builder_route_emission.py::test_b150_normalize_business_type_preserves_unknown_compound_unchanged`,
+  `tests/test_builder_route_emission.py::test_b150_hero_cta_label_fires_booking_for_massage_studio`,
+  `tests/test_builder_route_emission.py::test_b150_hero_cta_label_fires_booking_for_dash_form_personal_training_studio`,
+  `tests/test_builder_route_emission.py::test_b150_naprapat_explicit_mapping_still_wins`.
 
 - **`B146` Hög** (stängd 2026-05-25 kväll, B146-port mot jakob-be) -
   Christopher's PR #105 (Live Build Sync + Restaurant Path A + Wizard
