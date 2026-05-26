@@ -30,15 +30,15 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `c5d1ba9` (2026-05-26 UTC, christopher-ui local — scout
-pass 4 P1-batch pushat. Tre P1-fynd från fjärde scout-bug-hunt fixade:
-(1) viewer-panel mobile hero safe zone (overflow-y-auto + pb-40 så hero-text
-aldrig täcks av PromptBuilder på iPhone SE 375×667), (2) wizard foundation+
-company "Företagsnamn *" → "Företagsnamn (valfritt)" via optional-prop
-(WCAG 2.2-fix), (3) prompt-builder composer pb-safe-or-4 sm:pb-7 (iPhone X+
-home-indicator respekteras). P1 #4 (StackBlitz containerRef) parkerad —
-default-mode local-next inte påverkad. Inga P0. Alla 4 ändrade filer UI-only,
-inga datakontrakt rörda. PR #117 redo för Jakob att granska.).
+Last verified state: `9964f16` (2026-05-26 UTC, christopher-ui local — PR #117
+handoff-doc pushat. `docs/handoff-pr-117-merge.md` innehåller 8-stegs copy-
+paste-bar Cursor-prompt för Jakobs jakob-be-lane-agent: sanity-check →
+off-limits-guard verifiering → pull christopher-ui → konfliktlösning
+(endast docs/current-focus.md, behåll vår version) → full check-svit →
+merge-commit + post-merge SHA-bump → push → re-aktivera pausade christopher-
+GAPs (pipeline-status-polling + side-by-side-preview) → inbox-svar.
+PR #117 är CONFLICTING (1 trivial docs-konflikt), 31 commits ahead jakob-be,
+100% UI-only verifierat mot merge-base 3bedddd.).
 
 Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
 
