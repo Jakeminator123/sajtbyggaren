@@ -283,8 +283,13 @@ integrate christopher-ui discovery and asset workflow`, merge
   kräver beslut om vilken plats som är kanonisk: `apps/viewser/public/`
   serveras direkt av Next.js dev-servern och är troligen den enda
   faktiskt använda; `/public/` på repo-roten har inget Next.js-app
-  som monterar den. Källa: extern reviewer 2026-05-18. Fix: open.
-  Test: open.
+  som monterar den. Källa: extern reviewer 2026-05-18.
+  Status 2026-05-27: LOGO-halvan löst — `LOGO_SM2.0.png`-kopiorna är
+  raderade ur git i båda mapparna efter logo-byte till
+  `sajtbyggaren_logo.png` (commits `08f8515`, `f05dfe6`); kvarstår är
+  `SM_hero.mp4`-duplikaten som fortfarande används aktivt i hero-
+  videon på både mobil och desktop och därför kräver operatör-beslut
+  om kanonisk plats innan entry kan stängas helt. Fix: open. Test: open.
 ### Övriga öppna
 
 - **`B125` Hög** (produktblocker innan launch) - Embedded
