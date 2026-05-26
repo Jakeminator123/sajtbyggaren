@@ -1,4 +1,4 @@
-"""Generate draft soft Dossier candidate folders.
+"""Generate draft Dossier candidate folders.
 
 The script writes candidate-only folders under ``data/dossier-candidates/``.
 It never writes into canonical ``packages/generation/orchestration/dossiers``;
@@ -338,8 +338,8 @@ def _call_dossier_model(
             {
                 "role": "system",
                 "content": (
-                    "You generate candidate-only soft Dossier manifests and "
-                    "instructions for Sajtbyggaren."
+                    "You generate candidate-only Dossier manifests and "
+                    "instructions for Sajtbyggaren. Respect candidateClass."
                 ),
             },
             {
@@ -532,7 +532,7 @@ def generate_dossier_candidate(
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate a draft soft Dossier candidate under data/dossier-candidates/."
+        description="Generate a draft Dossier candidate under data/dossier-candidates/."
     )
     parser.add_argument("--brief", required=True, help="Short capability brief")
     parser.add_argument("--candidate-id", help="Optional Dossier candidate id slug")
