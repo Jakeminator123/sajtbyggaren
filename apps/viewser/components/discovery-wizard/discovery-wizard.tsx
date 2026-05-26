@@ -340,7 +340,7 @@ export function DiscoveryWizard({
         <div
           role="tablist"
           aria-label="Discovery-steg"
-          className="border-border/60 flex w-full items-stretch gap-0 border-b px-5 sm:px-8"
+          className="border-border/60 flex w-full items-stretch gap-0 border-b px-5 sm:justify-center sm:gap-1 sm:px-8"
         >
           {WIZARD_STEP_ORDER.map((id, idx) => {
             const isActive = idx === stepIndex;
@@ -354,7 +354,7 @@ export function DiscoveryWizard({
                 aria-selected={isActive}
                 onClick={() => setStepIndex(idx)}
                 className={[
-                  "min-tap sm:min-tap-0 relative -mb-px inline-flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2.5 text-[12.5px] font-medium tracking-tight transition-colors sm:flex-none sm:justify-start sm:px-4",
+                  "min-tap sm:min-tap-0 relative -mb-px inline-flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2.5 text-[12.5px] font-medium tracking-tight transition-colors sm:flex-none sm:px-5",
                   isActive
                     ? "text-foreground border-foreground"
                     : "text-muted-foreground hover:text-foreground border-transparent",
