@@ -30,9 +30,10 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `9593769` (2026-05-26 UTC, christopher-ui local — mobile responsive
-foundation + 5 P0-blockers åtgärdade per audit 2026-05-26; pushas + öppnas som PR mot
-`jakob-be` i samma session per direktiv msg-0008 ack 2026-05-26T08:22:50Z).
+Last verified state: `b0140b1` (2026-05-26 UTC, christopher-ui local + origin —
+PR #117 mot `jakob-be` öppen som Draft. Fas 2 (polish/P1) startas nu ovanpå fas 1
+på samma branch per operator-instruktion "Kör fas 2"; GAP-viewser-mobile-responsive-polish
+skapad och aktiverad. PR #117 utökas med fas 2-commits.).
 
 Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
 
@@ -59,11 +60,21 @@ Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
   hamna under bottom-sheet:n); `SiteInspectorSheet` bottom-sheet på mobil
   (`max-md:!inset-x-0 max-md:!bottom-0 max-md:!h-[90dvh] max-md:!rounded-t-3xl`)
   + tabs `overflow-x-auto scrollbar-hidden` så 7 triggers kan scrolla horisontellt.
+- `fb87699` docs(focus): bump current-focus till 9593769 + governance fixes
+  (fidelity-term ut, FloatingChat-syntax i kommentar).
+- `b0140b1` docs(inbox): notify jakob-be om PR #117 + pausade gaps (msg-0010).
 
-Inga off-limits-paths rörda (`scripts/`, `packages/generation/`, `apps/viewser/app/api/`,
-`apps/viewser/lib/`, `middleware.ts`, `next.config.ts`, `package.json` — alla intakta).
-Fas 2 (polish/P1: tap-target-svep, typografi-skala, Compare-modal swipe, ViewerPanel
-device-toggle) öppnas som ny GAP efter denna mobil-PR mergat till `jakob-be`.
+Inga off-limits-paths rörda i fas 1 (`scripts/`, `packages/generation/`,
+`apps/viewser/app/api/`, `apps/viewser/lib/`, `middleware.ts`, `next.config.ts`,
+`package.json` — alla intakta).
+
+Fas 2 (polish/P1) — aktiv. `GAP-viewser-mobile-responsive-polish` adresserar:
+PromptBuilder textarea iOS-zoom-fix + min-tap-submit, `InlineHelpButton` min-tap,
+`ViewerPanel` hero typografi `text-3xl sm:text-4xl` + padding `px-5 sm:px-12`,
+`ai-image-generator-dialog` mobile bottom-sheet-stack + grid-cols-1, asset/color-
+dialog-grids responsiva, `ConsoleDrawer` flexibel höjd, `AssetDropzone` +
+`DirectivesPreview` + `QuickPromptButton` tap-targets. Compare-modal swipe +
+ViewerPanel device-toggle skjuts till fas 3 (kräver UX-design).
 
 Nya PRs sedan föregående checkpoint: PR #114 — chore(gitignore): re-ignore
 `__pycache__/` under `packages/generation/build/` (B146 fallout); PR #115 —
