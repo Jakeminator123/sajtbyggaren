@@ -26,23 +26,26 @@ python scripts/run_eval_suite.py full
 
 | Mode | Cases | Build |
 | ---- | ----- | ----- |
-| `quick` | `atelje-bird`, `painter-palma`, `foto-ram`, `arcade-hall`, `cafe-bistro` | `--skip-build` (filer skrivs, npm hoppas över) |
-| `full` | `painter-palma`, `atelje-bird`, `cafe-bistro` | Inget `--skip-build` (`npm install` + `npm run build`) |
+| `quick` | `atelje-bird`, `painter-palma`, `foto-ram`, `arcade-hall`, `cafe-bistro`, `clinic-tandvard`, `advokatbyra-novum`, `studio-bjork` | `--skip-build` (filer skrivs, npm hoppas över) |
+| `full` | `painter-palma`, `atelje-bird`, `cafe-bistro`, `clinic-tandvard`, `advokatbyra-novum`, `studio-bjork` | Inget `--skip-build` (`npm install` + `npm run build`) |
 
 `quick` tar i regel under två minuter. `full` kan ta flera minuter per
 case eftersom npm körs på riktigt.
 
-Full-suite täcker en case per on-disk-scaffold:
+Full-suite täcker en case per aktiv on-disk-scaffold:
 
 | Scaffold | Case | Starter | Variant |
 | -------- | ---- | ------- | ------- |
 | `local-service-business` | `painter-palma` | `marketing-base` | `nordic-trust` |
 | `ecommerce-lite` | `atelje-bird` | `commerce-base` | `clean-store` |
 | `restaurant-hospitality` | `cafe-bistro` | `marketing-base` | `warm-bistro` |
+| `clinic-healthcare` | `clinic-tandvard` | `marketing-base` | `clinic-calm` |
+| `professional-services` | `advokatbyra-novum` | `marketing-base` | `legal-classic` |
+| `agency-studio` | `studio-bjork` | `marketing-base` | `studio-monochrome` |
 
-Det är fortfarande lika många cases som scaffolds som har en katalog
-på disk; placeholder-scaffolds (som idag faller tillbaka till
-`local-service-business`) täcks inte separat. CLI-help-texten
+Det är fortfarande lika många full-cases som scaffolds som har en aktiv
+on-disk-implementation; placeholder-scaffolds (som idag faller tillbaka
+till `local-service-business`) täcks inte separat. CLI-help-texten
 (`python scripts/run_eval_suite.py --help`) listar de aktuella cases
 dynamiskt så denna tabell ska aldrig vara source of truth.
 
