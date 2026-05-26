@@ -30,10 +30,12 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `2a77c07a7edd2a56dc4e2984d2167007d138a1d0` (2026-05-26 late evening UTC, post B147 closure sync).
+Last verified state: `63656fb976ca4d42ac2a183918861604dc760617` (2026-05-26 late evening UTC, post eval-layout refactor).
 
 Nya commits sedan föregående checkpoint (`0f3bd67`):
 
+- `63656fb` refactor(evals): split data/evals into summaries/ + artifacts/ layout.
+- `91990de` docs(steward): bump focus and handoff counts after B147 sync.
 - `2a77c07` docs(steward): close B147 after host whitelist merge.
 - `d483b7d` docs(steward): bump focus and handoff counts after docs sync commits.
 - `b4473ee` docs(known-issues): move B147 to Stängda after b3834b3.
@@ -70,7 +72,7 @@ Nya commits sedan föregående checkpoint (`0f3bd67`):
 ## Pågående/öppna PR:s just nu
 
 Inga öppna PRs på `jakob-be` eller `main`. `jakob-be` är resetad till
-`origin/main` 2026-05-26 PM (commit `1004122`) plus 28 commits ovanpå
+`origin/main` 2026-05-26 PM (commit `1004122`) plus 31 commits ovanpå
 (listan ovan). Nästa sync-PR till `main` är operatörens beslut — bra läge
 nu när Gap 4 + 5 och Gap 6 + 7 är inne. Gap 9 eller Gap 10 kan buntas in i
 samma sync om operatören vill vänta.
@@ -96,7 +98,7 @@ implementerat hela `GAP-backend-build-trace-endpoint` (3 endpoints + UI +
      `copy_operator_uploads()`-kopiering till `public/products/`, OCH
      renderer-stöd för produktbild i
      `packages/generation/build/renderers.py`-produktgrid. Egen sprint.
-2. **Sync-PR `jakob-be → main`** — `jakob-be` är 30 commits framför
+2. **Sync-PR `jakob-be → main`** — `jakob-be` är 31 commits framför
    `origin/main`. Bra läge nu eller efter en av Gap-fixarna ovan.
    Operatörens beslut.
 
