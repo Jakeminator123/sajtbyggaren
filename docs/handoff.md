@@ -1,6 +1,6 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-26 sen kväll UTC, steward-pass efter `dbc97d8` — cloud-grind prompt-pack + doc/workboard sanity. Verifierad `origin/jakob-be` är `dbc97d8ab8a32c2c7b37b589e16513326bd31b5f`.
+**Datum:** 2026-05-26 sen kväll UTC, steward-pass efter `cb07dbb` — cloud-grind prompt-pack + doc/workboard sanity. Verifierad `jakob-be` är `cb07dbb4bac94c48515e3822c533862cf8f790ff`.
 
 Nya PRs sedan föregående checkpoint: PR #118 — sync(jakob-be -> main): PR #117 mobile
 responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report; PR #120
@@ -20,8 +20,8 @@ krävs en gång per venv enligt ADR 0029.
 **Direkt nästa spår — operatörsbeslut + Gap-fixar:**
 
 1. **B147 vägval a/b/c** — operatörsbeslut. Vercel preview wizard 403 via `assertLocalhost` på `*.vercel.app`. Tre alternativ i `docs/known-issues.md`: (a) `VIEWSER_ALLOW_NON_LOCALHOST=true`, (b) host-whitelist via ny env, (c) ADR-beslut om Viewser-på-Vercel auth-strategi.
-2. **Backend-Gap fixar (post-C4-audit)** — efter Gap 4 + 5 stängdes 2026-05-26 evening är status 7 stängda / 3 delvis / 1 öppen. Nästa i prio: Gap 6+7 paired (~3-4h, M), sedan Gap 9 (~2h, S-M), sedan Gap 10 (~4-6h, M-L). Detaljer i `docs/current-focus.md`.
-3. **Sync-PR `jakob-be → main`** — `jakob-be` är nu 21 commits framför `origin/main`. Bra läge för en sync-PR (operatörens beslut). Kan kombineras med en av Gap-fixarna ovan.
+2. **Backend-Gap fixar (post-C4-audit)** — efter Gap 4 + 5 samt Gap 6 + 7 är status 9 stängda / 1 delvis / 1 öppen. Nästa i prio: Gap 9 (~2h, S-M), sedan Gap 10 (~4-6h, M-L). Detaljer i `docs/current-focus.md`.
+3. **Sync-PR `jakob-be → main`** — `jakob-be` är nu 23 commits framför `origin/main`. Bra läge för en sync-PR (operatörens beslut). Kan kombineras med en av Gap-fixarna ovan.
 
 **Parkerade lanes (väntar trigger):**
 
@@ -186,7 +186,7 @@ produktkompass.
 Se [`docs/current-focus.md`](current-focus.md) → **"Direkt nästa fokus"**.
 Kort: Path B / section-renderer är största spåret men kräver operator-OK;
 Sprintvakt V1.1 follow-up-fynd är queueade som ej akuta; backend-Gap 4 + 5
-är stängda och nästa backend-spår är Gap 6+7, Gap 9 eller Gap 10.
+och Gap 6 + 7 är stängda och nästa backend-spår är Gap 9 eller Gap 10.
 
 ## Operatörspreferenser
 

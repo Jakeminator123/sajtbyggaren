@@ -7,7 +7,8 @@
 Originaldokumentet listar 11 gaps. C4-audit 2026-05-26 verifierade fem
 som stängda, fem som delvis implementerade och ett som öppet. Gap 4
 och Gap 5 stängdes på `jakob-be` 2026-05-26 kväll (commits `1b91ca6`
-och `b89a3d2`), så status är nu sju stängda, tre delvis och ett öppet.
+och `b89a3d2`). Gap 6 och Gap 7 stängdes därefter i `ea6e141`, så status
+är nu nio stängda, ett delvis och ett öppet.
 
 | Gap | Status | Var |
 | --- | --- | --- |
@@ -16,18 +17,18 @@ och `b89a3d2`), så status är nu sju stängda, tre delvis och ett öppet.
 | 3. `businessFamily` scaffold-hint | Stängd (PR #63 / `f9312ec`) | `resolve.py:1163-1190` (`Gap 3:` kommentar markerar tydligt) |
 | 4. `selectedFunctions[]` → `requested_capabilities[]` | Stängd (`jakob-be` / `1b91ca6`) | Frontend mappar `selectedFunctions[]` → `directives.requestedCapabilities` i `apps/viewser/components/discovery-wizard/wizard-payload.ts:406-418`; resolver saniterar + persisterar listan i `_apply_directives_fields()` (`packages/generation/discovery/resolve.py`) och `_resolve_capabilities()` merge:ar den FÖRE `mustHave`-deriverade caps med source-label `"wizard"`; schema `governance/schemas/project-input.schema.json` directives-blocket har det nya fältet; regressioner i `tests/test_discovery_payload.py` (merge + dedupe + unknown-warning + 32-item-cap) |
 | 5. `specialRequests` → `notes_for_planner` | Stängd (`jakob-be` / `b89a3d2`) | Frontend bygger `directives.notesForPlanner` i `apps/viewser/components/discovery-wizard/wizard-payload.ts:496-514`; resolver trimmar + cappar vid 1024 tecken och persisterar till `project_input.directives.notesForPlanner` med field-source `"wizard"` (`packages/generation/discovery/resolve.py:_apply_directives_fields`); `scripts/build_site.py:_apply_operator_directive_note` prepend:ar noten med prefix `"Operator: "` framför `site-brief.json` `notesForPlanner` i både mock- och real-path; schema `governance/schemas/project-input.schema.json` directives-blocket har det nya fältet; regressioner i `tests/test_discovery_payload.py` (persist + cap + tomma värden) + `tests/test_builder_smoke.py` (operator-note merge + skip) |
-| 6. Favicon → `.ico` | Delvis — metadata-render finns, `.ico`-konvertering saknas | Upload/schema/resolver accepterar `media.favicon` (`apps/viewser/app/api/upload-asset/route.ts:52-58`, `governance/schemas/project-input.schema.json:181-188`) och `packages/generation/build/renderers.py:313-331` renderar Next metadata `icons` mot `/uploads/<filename>`; build-pipeline saknar multi-size `public/favicon.ico`-konvertering |
-| 7. OG-image 1200×630-crop | Delvis — metadata-render finns, 1200×630-crop saknas | `media.ogImage` finns i Project Input-schema (`governance/schemas/project-input.schema.json:181-188`) och `packages/generation/build/renderers.py:336-367` skriver Open Graph/Twitter metadata mot `/uploads/<filename>` eller fallback-SVG; build-pipeline saknar center-crop/transkodning till `public/og-image.png` |
+| 6. Favicon → `.ico` | Stängd (`jakob-be` / `ea6e141`) | `copy_operator_uploads()` kopierar originalet till `public/uploads/` och skriver multi-size `public/favicon.ico` från `media.favicon` via Pillow (`scripts/build_site.py:_convert_favicon_to_ico`); SVG-favicon skrivs som `public/favicon.svg`; regressioner i `tests/test_builder_favicon_ogimage.py` |
+| 7. OG-image 1200×630-crop | Stängd (`jakob-be` / `ea6e141`) | `copy_operator_uploads()` center-croppar `media.ogImage` till `public/og-image.png` 1200×630 via Pillow och metadata prioriterar den derivata bilden före original-uploaden; regressioner i `tests/test_builder_favicon_ogimage.py` |
 | 8. Video-mimetype + render | Stängd (PR #62 / `7240fcd`, refactor PR #107 / `348ee05`) | `/api/upload-asset` tillåter bara MP4/WebM för `backgroundVideo` (`apps/viewser/app/api/upload-asset/route.ts:122-145`), asset-store bypassar sharp/vision för video (`apps/viewser/lib/asset-store/local.ts:72-106`), `copy_operator_uploads()` kopierar originalvideo (`scripts/build_site.py:966-973`) och hero renderar `<video autoPlay loop muted playsInline>` (`packages/generation/build/renderers.py:2141-2157`); regression i `tests/test_builder_smoke.py:397-454` |
 | 9. `moodImages[]` isolering | Delvis — prompt-sammanfattning finns, `__mood/`-isolering saknas | UI laddar mood-bilder via `AssetDropzone role="gallery"` i `apps/viewser/components/discovery-wizard/steps/visual-step.tsx:625-648` och `composeMasterPrompt()` sammanfattar dem i `apps/viewser/components/discovery-wizard/wizard-payload.ts:880-887`; ingen backend-path skriver dem till `data/uploads/<runId>/__mood/` eller mappar Vision-resultat till `notesForPlanner` |
 | 10. `products[].productImage` | Öppen — backend-kopiering + renderer-stöd saknas | Frontend-typen/UI:t har `productImage` (`apps/viewser/components/discovery-wizard/wizard-types.ts:70-79`, `apps/viewser/components/discovery-wizard/steps/content-step.tsx:193-196`), men payload/schema/build saknar mapping till Project Input, `copy_operator_uploads()` kopierar inte till `public/products/`, och produktgrid i `packages/generation/build/renderers.py` renderar fortfarande tjänste-/produktkort utan bild |
 | 11. Vercel Blob `sourceUrl` | Stängd (PR #66 + later refinements) | `scripts/build_site.py:794-1013` (disk-first + sourceUrl-fallback + allowlist till `public.blob.vercel-storage.com` + 8 MB cap) |
 
-**Slutsats:** Gap 1, 2, 3, 4, 5, 8 och 11 är verifierat stängda. Gap 6,
-7 och 9 är delvis implementerade men saknar fortfarande deterministisk
-bildbehandling eller backend-isolering enligt acceptanskriterierna. Gap
-10 är öppet. Originaltexten nedan är bevarad för historisk kontext men
-tabellen ovan är auktoritativ när det gäller "klar/inte klar"-status.
+**Slutsats:** Gap 1, 2, 3, 4, 5, 6, 7, 8 och 11 är verifierat stängda.
+Gap 9 är delvis implementerat men saknar fortfarande backend-isolering
+enligt acceptanskriterierna. Gap 10 är öppet. Originaltexten nedan är
+bevarad för historisk kontext men tabellen ovan är auktoritativ när det
+gäller "klar/inte klar"-status.
 
 ---
 
@@ -361,11 +362,9 @@ StackBlitz-payloaden), ingen disk-IO som blockerar för stora filer.
 ## Sammanfattning — vad gör vi nu?
 
 UI:t fungerar end-to-end på dagens backend-beteende (alla nya fält
-ignoreras gracefully). Gap 1-3 är **högst prio** för att new wizard
-ska kännas meningsfull. Gap 6-8 kan vänta tills vi vill ha "rik"
-sajtprofil. Gap 11 (Blob) är behovsdriven — växla bara på
-`ASSET_STORE_DRIVER=vercel-blob` när backend har stöd för
-`sourceUrl`-fältet i `copy_operator_uploads`.
+ignoreras gracefully). Gap 1-8 och 11 är stängda. Gap 9 och Gap 10 är
+återstående backend-poster från denna handoff: mood-bilders isolering och
+produktbild per produkt.
 
 | Gap | Prio | Storlek |
 | --- | --- | --- |

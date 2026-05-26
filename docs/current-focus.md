@@ -30,10 +30,13 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `dbc97d8ab8a32c2c7b37b589e16513326bd31b5f` (2026-05-26 late evening UTC, post cloud-grind prompt-pack + doc/workboard sanity).
+Last verified state: `cb07dbb4bac94c48515e3822c533862cf8f790ff` (2026-05-26 late evening UTC, post cloud-grind prompt-pack + doc/workboard sanity).
 
 Nya commits sedan föregående checkpoint (`0f3bd67`):
 
+- `cb07dbb` docs(steward): sync handoff/focus/workboard with actual code state 2026-05-26.
+- `ea6e141` feat(build): close Gap 6 + 7 — multi-size favicon.ico + 1200x630 og-image.png.
+- `c002aec` chore(deps): add pillow>=10.0 for build-pipeline image conversion.
 - `dbc97d8` docs(agents): add cloud-grind prompt-pack for gaps + B147 + doc-cleanup.
 - `1332efd` settingscommit (befintlig branch-commit, ej rörd i detta steward-pass).
 - `9d052b9` docs(steward): bump current-focus + handoff + write late-evening handoff.
@@ -62,10 +65,10 @@ Nya commits sedan föregående checkpoint (`0f3bd67`):
 ## Pågående/öppna PR:s just nu
 
 Inga öppna PRs på `jakob-be` eller `main`. `jakob-be` är resetad till
-`origin/main` 2026-05-26 PM (commit `1004122`) plus 21 commits ovanpå
+`origin/main` 2026-05-26 PM (commit `1004122`) plus 23 commits ovanpå
 (listan ovan). Nästa sync-PR till `main` är operatörens beslut — bra läge
-nu när Gap 4 + 5 är inne och två-tre Gap-fixar (6+7 paired, 9 eller 10) kan
-buntlas in i samma sync.
+nu när Gap 4 + 5 och Gap 6 + 7 är inne. Gap 9 eller Gap 10 kan buntas in i
+samma sync om operatören vill vänta.
 
 **Christophers `origin/christopher-ui`** — efter PR #117 är hans branch
 synkad mot post-#117-main. Han har under operator-OK scope-leak
@@ -84,16 +87,9 @@ implementerat hela `GAP-backend-build-trace-endpoint` (3 endpoints + UI +
    ADR-beslut om Viewser-på-Vercel auth-strategi (långsiktig).
 2. **Backend-Gap fixar baserade på C4-audit** (cloud-grind levererade
    audit 2026-05-26 i PR #121, `0f3bd67`; Gap 4 + 5 stängdes 2026-05-26
-   evening i `b89a3d2` + `1b91ca6`). Status efter Gap 4 + 5: 7 stängda
-   (1, 2, 3, 4, 5, 8, 11), 3 delvis (6, 7, 9), 1 öppen (10). Återstående
-   fixar i prioritetsordning:
-   - Gap 6 + 7 paired sprint (~3-4h, M): build-pipeline-konvertering.
-     Gap 6 = multi-size `public/favicon.ico` från `media.favicon` (Next
-     metadata `icons` redan rendrad i
-     `packages/generation/build/renderers.py:313-331`). Gap 7 = center-crop
-     till `public/og-image.png` 1200×630 från `media.ogImage` (Next OG-
-     metadata redan i `renderers.py:336-367`). Båda kräver pillow eller
-     sharp i build.
+   evening i `b89a3d2` + `1b91ca6`; Gap 6 + 7 stängdes i `ea6e141`).
+   Status efter Gap 6 + 7: 9 stängda (1, 2, 3, 4, 5, 6, 7, 8, 11),
+   1 delvis (9), 1 öppen (10). Återstående fixar i prioritetsordning:
    - Gap 9 (~2h, S-M): backend-isolering av `moodImages[]` till
      `data/uploads/<runId>/__mood/` istället för publik `public/uploads/`.
      Mappa Vision-resultat till `notesForPlanner`. UI-sidan klar.
@@ -102,7 +98,7 @@ implementerat hela `GAP-backend-build-trace-endpoint` (3 endpoints + UI +
      `copy_operator_uploads()`-kopiering till `public/products/`, OCH
      renderer-stöd för produktbild i
      `packages/generation/build/renderers.py`-produktgrid. Egen sprint.
-3. **Sync-PR `jakob-be → main`** — `jakob-be` är 21 commits framför
+3. **Sync-PR `jakob-be → main`** — `jakob-be` är 23 commits framför
    `origin/main`. Bra läge nu eller efter en av Gap-fixarna ovan.
    Operatörens beslut.
 
@@ -142,7 +138,7 @@ Detaljerade Queue-/Blocked-block ligger i arkivet
 Aktiva spår i prioritetsordning:
 
 1. B147 vägval a/b/c (operatörsbeslut).
-2. Backend-Gap 6+7 paired sprint, sedan Gap 9, sedan Gap 10.
+2. Backend-Gap 9, sedan Gap 10.
 3. Sync-PR `jakob-be → main`.
 4. Christophers `GAP-backend-build-trace-endpoint`-PR (när han öppnar den).
 5. B49 (docs-base page-map sidebar) — låg prio, behövs innan
