@@ -1,7 +1,6 @@
 "use client";
 
 import { ExternalLink, Check, Loader2 } from "lucide-react";
-import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -881,25 +880,9 @@ export function ViewerPanel({
       {showFallback ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center px-6">
           <div className="border-border/60 bg-background/95 pointer-events-auto w-full max-w-[460px] rounded-3xl border p-7 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.25)] backdrop-blur-xl">
-            <div className="mb-5 flex items-center gap-3">
-              <span className="bg-muted/60 inline-flex h-10 w-10 items-center justify-center rounded-xl p-1.5">
-                <Image
-                  src="/sajtbyggaren_logo.png"
-                  alt="Sajtbyggaren"
-                  width={28}
-                  height={28}
-                  className="h-full w-full object-contain"
-                />
-              </span>
-              <div className="flex flex-1 flex-col leading-tight">
-                <span className="text-muted-foreground font-mono text-[9.5px] tracking-[0.22em] uppercase">
-                  Sajtbyggaren · preview
-                </span>
-                <span className="text-foreground text-[15px] font-semibold tracking-tight">
-                  Sajten är klar
-                </span>
-              </div>
-            </div>
+            <h2 className="text-foreground mb-4 text-[17px] font-semibold tracking-tight">
+              Sajten är klar
+            </h2>
 
             <p className="text-foreground/85 mb-3 text-[13px] leading-relaxed">
               {fallback?.kind === "firefox"
@@ -1119,24 +1102,10 @@ function BuildProgressCard({ stage }: { stage: PromptStage }) {
 
   return (
     <div className="border-border/60 bg-background/95 w-full max-w-[560px] rounded-3xl border p-9 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.25)] backdrop-blur-xl">
-      <div className="mb-6 flex items-center gap-3">
-        <span className="bg-muted/60 inline-flex h-10 w-10 items-center justify-center rounded-xl p-1.5">
-          <Image
-            src="/sajtbyggaren_logo.png"
-            alt="Sajtbyggaren"
-            width={28}
-            height={28}
-            className="h-full w-full object-contain"
-          />
-        </span>
-        <div className="flex flex-1 flex-col leading-tight">
-          <span className="text-muted-foreground font-mono text-[9.5px] tracking-[0.22em] uppercase">
-            Sajtbyggaren · build
-          </span>
-          <span className="text-foreground text-[15px] font-semibold tracking-tight">
-            Bygger din sajt
-          </span>
-        </div>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <h2 className="text-foreground text-[17px] font-semibold tracking-tight">
+          Bygger din sajt
+        </h2>
         <span className="bg-muted/50 text-foreground rounded-full px-2.5 py-1 font-mono text-[11px] tracking-tight tabular-nums">
           {minutes}:{seconds}
         </span>
