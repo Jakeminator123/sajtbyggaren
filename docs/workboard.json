@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-26T18:14:58Z",
+  "updatedAt": "2026-05-26T18:15:24Z",
   "updatedBy": "sprintvakt-mcp",
   "people": {
     "jakob": {
@@ -180,42 +180,6 @@
       ],
       "note": "Effort 30 min. Splittat från GAP-backend-restaurant-activation pga Sprintvakt-lane-policy. Landar i samma commit-batch som backend-aktiveringen. 2026-05-25 follow-up: den ursprungliga PR:en uppdaterade bara BUSINESS_FAMILIES[restaurant]; den parallella WIZARD_CATEGORIES[restaurant] missades och pekade fortsatt mot local-service-business / nordic-trust så FALLBACK_DISCOVERY_OPTIONS (byggd via WIZARD_CATEGORIES.map() i discovery-options.ts) gav fel scaffold + variant innan governance-API:t svarade. Fixat under samma GAP.",
       "pairedWith": "GAP-backend-restaurant-activation"
-    },
-    {
-      "id": "GAP-viewser-wizard-pages-picker",
-      "type": "Gap/UI",
-      "owner": "christopher",
-      "title": "Tab 3 till sidor-picker: stora klickbara sidkort istället för dolda funktioner",
-      "whyNow": "Operatorn 2026-05-26 efter popup-revision v2: 'Detta måste bli lättare. För svårt att förstå hur man ska kryssa i olika sidor som ska skapas.' Nuvarande tab 3 visar en statisk 'VALDA FUNKTIONER'-chip-summary som ser klickbar ut men inte är det, plus två gömda disclosures där man faktiskt kryssar i FUNKTIONER (FAQ, kontaktformulär, kundvagn) istället för sidor. Operatorn vill se sidor som hemsidan ska ha och kunna toggla dem direkt. Funktioner härleds automatiskt via pageMustHave-länken som redan finns i FUNCTION_GROUPS.",
-      "paths": [
-        "apps/viewser/components/discovery-wizard/steps/functions-step.tsx"
-      ],
-      "doNotTouch": [
-        "apps/viewser/components/discovery-wizard/wizard-payload.ts",
-        "apps/viewser/components/discovery-wizard/wizard-constants.ts",
-        "packages/generation/**"
-      ],
-      "acceptanceCriteria": [
-        "Tab 3 visar 15 sidor som stora klickbara kort i ett 2/3-kolumns rutnät",
-        "Hela kortet är klickbart med tydlig markerad/avmarkerad state (Check-ikon på markerade)",
-        "togglePage(page) togglar både mustHave OCH motsvarande selectedFunctions-id om pageMustHave-länken finns",
-        "Auto-apply familjens rekommenderade sidor + funktioner vid family-byte när inget redan är förvalt",
-        "Primar CTA + finjustering + speciallaper finns kvar bara i Mer information-popupens Avancerat-flik",
-        "Backend-payload (mustHave + selectedFunctions) oförändrat — wizard-payload.ts rörs inte",
-        "Lint, typecheck och term-coverage rena"
-      ],
-      "checks": [
-        "cd apps/viewser && npm run lint",
-        "cd apps/viewser && npx tsc --noEmit",
-        "python scripts/check_term_coverage.py --strict"
-      ],
-      "collisionRisk": "green",
-      "reviewer": "jakob",
-      "status": "active",
-      "createdAt": "2026-05-26T18:14:54Z",
-      "updatedAt": "2026-05-26T18:14:58Z",
-      "notes": [],
-      "activatedAt": "2026-05-26T18:14:58Z"
     }
   ],
   "completedGaps": [
@@ -1279,6 +1243,44 @@
       "notes": [],
       "activatedAt": "2026-05-26T18:03:13Z",
       "completedAt": "2026-05-26T18:04:18Z",
+      "fixCommits": []
+    },
+    {
+      "id": "GAP-viewser-wizard-pages-picker",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Tab 3 till sidor-picker: stora klickbara sidkort istället för dolda funktioner",
+      "whyNow": "Operatorn 2026-05-26 efter popup-revision v2: 'Detta måste bli lättare. För svårt att förstå hur man ska kryssa i olika sidor som ska skapas.' Nuvarande tab 3 visar en statisk 'VALDA FUNKTIONER'-chip-summary som ser klickbar ut men inte är det, plus två gömda disclosures där man faktiskt kryssar i FUNKTIONER (FAQ, kontaktformulär, kundvagn) istället för sidor. Operatorn vill se sidor som hemsidan ska ha och kunna toggla dem direkt. Funktioner härleds automatiskt via pageMustHave-länken som redan finns i FUNCTION_GROUPS.",
+      "paths": [
+        "apps/viewser/components/discovery-wizard/steps/functions-step.tsx"
+      ],
+      "doNotTouch": [
+        "apps/viewser/components/discovery-wizard/wizard-payload.ts",
+        "apps/viewser/components/discovery-wizard/wizard-constants.ts",
+        "packages/generation/**"
+      ],
+      "acceptanceCriteria": [
+        "Tab 3 visar 15 sidor som stora klickbara kort i ett 2/3-kolumns rutnät",
+        "Hela kortet är klickbart med tydlig markerad/avmarkerad state (Check-ikon på markerade)",
+        "togglePage(page) togglar både mustHave OCH motsvarande selectedFunctions-id om pageMustHave-länken finns",
+        "Auto-apply familjens rekommenderade sidor + funktioner vid family-byte när inget redan är förvalt",
+        "Primar CTA + finjustering + speciallaper finns kvar bara i Mer information-popupens Avancerat-flik",
+        "Backend-payload (mustHave + selectedFunctions) oförändrat — wizard-payload.ts rörs inte",
+        "Lint, typecheck och term-coverage rena"
+      ],
+      "checks": [
+        "cd apps/viewser && npm run lint",
+        "cd apps/viewser && npx tsc --noEmit",
+        "python scripts/check_term_coverage.py --strict"
+      ],
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "createdAt": "2026-05-26T18:14:54Z",
+      "updatedAt": "2026-05-26T18:15:24Z",
+      "notes": [],
+      "activatedAt": "2026-05-26T18:14:58Z",
+      "completedAt": "2026-05-26T18:15:24Z",
       "fixCommits": []
     }
   ],
