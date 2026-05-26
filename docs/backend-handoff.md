@@ -2,6 +2,33 @@
 > från 2026-05-19. För aktuell status inklusive builder-shell, floating-chat,
 > local-preview och Sprint A/B, se `docs/backend-handoff-2026-05-22.md`.
 
+## Implementationsstatus per gap (audit 2026-05-26)
+
+Originaldokumentet listar 11 gaps. Tre är verifierat stängda. Övriga
+behöver verifieras innan vidare arbete planeras.
+
+| Gap | Status | Var |
+| --- | --- | --- |
+| 1. `vibe.useCustomColors` | Stängd (PR #63 / `f9312ec`) | `packages/generation/discovery/resolve.py:995-1009` + tester `tests/test_discovery_resolver.py:507-603` |
+| 2. `vibe.vibeId` variant-val | Behöver verifieras | `resolve.py:1204` refererar till `VIBE_OPTIONS.id` men full mapping ej granskad |
+| 3. `businessFamily` scaffold-hint | Stängd (PR #63 / `f9312ec`) | `resolve.py:1163-1190` (`Gap 3:` kommentar markerar tydligt) |
+| 4. `selectedFunctions[]` → `requested_capabilities[]` | Behöver verifieras | `brief/extract.py:121,305` har `requested_capabilities`-fältet men ej granskat om det fylls från wizard |
+| 5. `specialRequests` → `notes_for_planner` | Behöver verifieras | `brief/extract.py:167,313` har `notes_for_planner`-fältet men ej granskat om det fylls från wizard |
+| 6. Favicon → `.ico` | Sannolikt öppen | Inga sökträffar för favicon-build i `scripts/` eller `packages/generation/` |
+| 7. OG-image 1200×630-crop | Sannolikt öppen | Inga sökträffar för OG-image-build |
+| 8. Video-mimetype + render | Delvis (osäkert) | PR #117 (`59eed4c`) la till `SM-mobile.mp4` som hero-bg på viewser-startsidan, men `<video>`-rendering på genererad sajt ej granskad |
+| 9. `moodImages[]` isolering | Behöver verifieras | UI har `moodImages` men backend-path för `__mood/`-isolation ej granskad |
+| 10. `products[].productImage` | Behöver verifieras | UI har `productImage` men backend-kopiering till `public/products/` ej granskad |
+| 11. Vercel Blob `sourceUrl` | Stängd (PR #66 + later refinements) | `scripts/build_site.py:794-1013` (disk-first + sourceUrl-fallback + allowlist till `public.blob.vercel-storage.com` + 8 MB cap) |
+
+**Slutsats:** Gap 1, 3 och 11 är klara. Övriga 8 behöver en ny audit som
+verifierar mot kod (denna audit gick på SHA `cc1a5aa`, post-jakob-be-reset
+till `1004122` + `vercel.json`-commit). Originaltexten nedan är bevarad
+för historisk kontext men tabellen ovan är auktoritativ när det gäller
+"klar/inte klar"-status.
+
+---
+
 # Backend handoff — Discovery Wizard 5-stegs-omstrukturering
 
 Skapad: 2026-05-19 (Pass 6 av wizardens omdesign på `christopher-ui`).

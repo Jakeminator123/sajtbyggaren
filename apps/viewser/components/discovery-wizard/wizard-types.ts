@@ -129,10 +129,11 @@ export type WizardBrand = {
  * varianter i `VIBE_OPTIONS`), plus typography-feel och valfri
  * kombination av egna färger + referenser + mood-bilder.
  *
- * `useCustomColors=true` betyder att backend ska skriva över variantens
+ * `useCustomColors=true` betyder att backend skriver över variantens
  * default `--primary` och `--accent` med `brand.primaryColorHex` /
- * `brand.accentColorHex` (kräver att Gap 1 stängs av backend; se
- * `docs/backend-handoff.md`).
+ * `brand.accentColorHex`. Implementerat i
+ * `packages/generation/discovery/resolve.py` (Gap 1 stängd, PR #63 —
+ * se `docs/backend-handoff.md` för historik).
  */
 /**
  * Hero-layout-preferens för startsidan. Tom sträng betyder "automatisk"
