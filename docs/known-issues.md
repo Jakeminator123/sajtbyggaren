@@ -1228,7 +1228,7 @@ matar wizarden med taxonomi-options:
   briefen aldrig levererar schemat och `_placeholder_contact` då alltid
   fyller dummyn — operatör kunde tidigare publicera dummy-öppettider
   vid sidan av telefonen utan signal. Källa:
-  `docs/reports/viewser-overlay-e2e-scout-2026-05-19.md` Fynd 1
+  `docs/archive/2026-05-19/viewser-overlay-e2e-scout-2026-05-19.md` Fynd 1
   i Case 3a + Codex review på PR #39 (commit `6121214656`,
   fynd P2 + P2). Fix: `58b6879` + Codex-hardening-commit. Test:
   `tests/test_prompt_to_project_input.py::test_placeholder_contact_returns_field_list`,

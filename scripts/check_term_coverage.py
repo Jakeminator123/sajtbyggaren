@@ -729,7 +729,7 @@ COMMON_WORDS = {
     # docs/handoff.md som bug-sweep round 2-scope.
     "B99", "B100", "B101", "B102", "B103", "B104",
     # Viewser Overlay E2E Scout 2026-05-19
-    # (docs/reports/viewser-overlay-e2e-scout-2026-05-19.md): Scout-
+    # (docs/archive/2026-05-19/viewser-overlay-e2e-scout-2026-05-19.md): Scout-
     # rapportens prose innehåller case-specifika fält (företagsnamn,
     # produktnamn, service-labels), DiscoveryWizard-UI-strängar,
     # Build-status-texter, externa servicenamn och två proposed
