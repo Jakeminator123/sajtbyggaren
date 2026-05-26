@@ -295,7 +295,7 @@ export function TagListInput({
         type="text"
         placeholder={placeholder ?? "Skriv och tryck Enter…"}
         onKeyDown={handleKey}
-        className="h-9 text-[13px]"
+        className="h-9 text-base md:text-[13px]"
       />
     </div>
   );
@@ -356,7 +356,7 @@ export function TextField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="h-9 text-[13px]"
+        className="h-9 text-base md:text-[13px]"
       />
       {helper && helperInline ? <HelperText>{helper}</HelperText> : null}
     </div>
@@ -394,7 +394,7 @@ export function TextareaField({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="text-[13px]"
+        className="text-base md:text-[13px]"
       />
       {helper && helperInline ? <HelperText>{helper}</HelperText> : null}
     </div>

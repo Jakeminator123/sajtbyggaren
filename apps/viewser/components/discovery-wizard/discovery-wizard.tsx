@@ -565,12 +565,18 @@ export function DiscoveryWizard({
                   type="button"
                   onClick={() => setStepIndex(idx)}
                   className={[
-                    "inline-flex h-5 w-5 items-center justify-center rounded-full font-mono text-[9.5px] transition-colors",
+                    // min-tap garanterar 44×44 hit-area på touch (Apple HIG).
+                    // Visuella chip:n är fortfarande h-7 w-7 (28px) men padding
+                    // kring elementet sträcker hit-area till 44×44 utan att
+                    // glesa ut chip-raden visuellt. active:scale ger tactile
+                    // feedback vid tap.
+                    "min-tap sm:min-tap-0 inline-flex h-7 w-7 items-center justify-center rounded-full font-mono text-[10px] transition-colors active:scale-95",
                     isActive || isPast
                       ? "bg-foreground text-background"
                       : "text-muted-foreground ring-border/70 bg-transparent ring-1",
                   ].join(" ")}
                   aria-label={`Steg ${idx + 1}`}
+                  aria-current={isActive ? "step" : undefined}
                 >
                   {idx + 1}
                 </button>
@@ -678,7 +684,7 @@ export function DiscoveryWizard({
                 size="sm"
                 disabled={isFirst}
                 onClick={goBack}
-                className="text-muted-foreground hover:text-foreground h-9 px-3 text-[12.5px] font-medium"
+                className="text-muted-foreground hover:text-foreground min-tap sm:min-tap-0 h-9 px-3 text-[12.5px] font-medium"
               >
                 ← Tillbaka
               </Button>
@@ -734,7 +740,7 @@ export function DiscoveryWizard({
                   variant="ghost"
                   size="sm"
                   onClick={skipStep}
-                  className="text-muted-foreground hover:text-foreground h-9 px-3 text-[12.5px] font-medium"
+                  className="text-muted-foreground hover:text-foreground min-tap sm:min-tap-0 h-9 px-3 text-[12.5px] font-medium"
                 >
                   Hoppa över
                 </Button>
@@ -746,7 +752,7 @@ export function DiscoveryWizard({
                   onClick={finish}
                   disabled={!!validationError || isSubmitting}
                   className={[
-                    "bg-foreground text-background hover:bg-foreground/90 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm disabled:opacity-40",
+                    "bg-foreground text-background hover:bg-foreground/90 min-tap sm:min-tap-0 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm disabled:opacity-40",
                     PRIMARY_INTERACTIONS,
                   ].join(" ")}
                   title="⌘↵ för att skapa sajten"
@@ -767,7 +773,7 @@ export function DiscoveryWizard({
                   onClick={goNext}
                   disabled={!!validationError}
                   className={[
-                    "bg-foreground text-background hover:bg-foreground/90 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm disabled:opacity-40",
+                    "bg-foreground text-background hover:bg-foreground/90 min-tap sm:min-tap-0 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm disabled:opacity-40",
                     PRIMARY_INTERACTIONS,
                   ].join(" ")}
                   title="⌘↵ för att fortsätta"

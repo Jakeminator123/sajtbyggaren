@@ -226,7 +226,7 @@ export function FoundationStep({
               }
             }}
             placeholder="www.dinhemsida.se"
-            className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/30 flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-[13px] shadow-xs transition-colors outline-none focus-visible:ring-2"
+            className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/30 flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-base md:text-[13px] shadow-xs transition-colors outline-none focus-visible:ring-2"
           />
           <Button
             type="button"
