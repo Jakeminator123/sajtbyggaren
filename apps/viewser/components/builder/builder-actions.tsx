@@ -347,9 +347,10 @@ export function BuilderActions({
 
       {/* Dialog-modal för inline-variant. Base UI Dialog hanterar
           backdrop-klick + Escape + focus-trap automatiskt. Boxar
-          rendras 2-per-rad på mobil och 4-per-rad från sm:. Grupp-
-          headers (om action.group satt) blir små caps-rubriker över
-          sub-grids. */}
+          rendras 2-per-rad på mobil och 3-per-rad från sm: (operatör-
+          önskan 2026-05-26 — 4-per-rad blev visuellt trångt vid
+          medium-bredd). Grupp-headers (om action.group satt) blir små
+          caps-rubriker över sub-grids. */}
       {isInline ? (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogContent
@@ -372,7 +373,7 @@ export function BuilderActions({
                         {groupKey}
                       </div>
                     ) : null}
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                       {groupActions.map((action) => {
                         const Icon = iconComponent(action.icon);
                         return (
