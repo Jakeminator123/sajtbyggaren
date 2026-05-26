@@ -298,6 +298,10 @@ COMMON_WORDS = {
     "DossierCandidateModel", "DossierGenerationError",
     "DossierGenerationResult", "DossierManifestModel",
     "DossierModelResolutionError",
+    # Dossier candidate intake implementation symbols. These are local Python
+    # helpers around read-only file scanning, not canonical domain terms.
+    "DossierIntakeError", "DossierIntakeModelResolutionError",
+    "DossierIntakeReviewModel", "IntakeScanCaps",
     # Generic React component names that appear in test fixtures, ADR
     # examples and docstring snippets. They are standard component-
     # cased identifiers (Header, Footer, Hero, About) used by the
@@ -387,7 +391,7 @@ COMMON_WORDS = {
     # Viewser interna error-typer och rubriker (inte domänbegrepp)
     "RunNotFoundError", "DossierEditor",
     # Test-local component names used in dossier collision fixtures.
-    "DossierCard", "StarterCard",
+    "CheckoutButton", "DossierCard", "StarterCard",
     # christopher-ui branch: nya viewser UI-interna identifierare för
     # landing-style operator-konsolen. Samma behandling som
     # PromptStageIndicator, BuildSection, StatusBadge ovan:
@@ -757,6 +761,7 @@ COMMON_WORDS = {
     "B138", "B139", "B140", "B141",  # öppnade post-case-4 (B138/B141 stängd 2026-05-21, B139/B140 öppna)
     "B143", "B144",  # reviewer-feedback 2026-05-21 efter Intent Guard light + PR #49
     "B125",  # Safari/Firefox preview fallback (referenced in ADR 0030 + product-operating-context)
+    "B147",  # Vercel preview wizard 403 via assertLocalhost (öppen 2026-05-26, operator a/b/c)
     "IntentGuard",  # single-token-variant i handoff-prose (basord 'Intent Guard' redan allowlistat)
     "Intent Guard light",  # bolded sprintnamn i handoff/current-focus (Builder-sprint 2026-05-21)
     "ADR 0025 implementation",  # bolded phrase i handoff.md next-steps-tabell

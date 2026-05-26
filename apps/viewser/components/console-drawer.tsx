@@ -56,14 +56,14 @@ export function ConsoleDrawer({
         side="right"
         className="flex h-full w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-md"
       >
-        <SheetHeader className="border-b border-border/60 px-5 py-4">
+        <SheetHeader className="border-b border-border/60 px-5 py-4 pt-safe">
           <SheetTitle>Konsol</SheetTitle>
           <SheetDescription className="font-mono text-[11px] text-muted-foreground">
             {statusText}
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="flex-1 overflow-y-auto px-5 py-4 pb-safe-or-4">
           <div className="flex flex-col gap-4">
             <RunHistory
               runs={runs}

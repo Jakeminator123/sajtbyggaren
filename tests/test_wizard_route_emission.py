@@ -389,6 +389,98 @@ def test_nav_items_dedupe_extra_routes_against_scaffold() -> None:
     assert len(om_oss_entries) == 1
 
 
+# ---------------------------------------------------------------------------
+# B148 — _nav_items_from_scaffold must place wizard extras before the
+# contact route's actual path, not before the hardcoded "/kontakt".
+# Scaffolds like restaurant-hospitality use "/hitta-hit" for the contact id.
+# ---------------------------------------------------------------------------
+
+
+RESTAURANT_ROUTES = {
+    "defaultRoutes": [
+        {"id": "home", "path": "/", "required": True, "purpose": "Home"},
+        {"id": "menu", "path": "/meny", "required": True, "purpose": "Menu"},
+        {"id": "booking", "path": "/bokning", "required": True, "purpose": "Booking"},
+        {"id": "about", "path": "/om-oss", "required": False, "purpose": "About"},
+        {"id": "contact", "path": "/hitta-hit", "required": True, "purpose": "Contact"},
+    ]
+}
+
+
+@pytest.mark.tooling
+def test_b148_nav_inserts_extras_before_non_default_contact_path() -> None:
+    """B148: restaurant-hospitality's contact route is /hitta-hit, not
+    /kontakt. Wizard extras (FAQ, team, karta) must still land *before*
+    the contact entry in the nav, not appended to the end.
+
+    Before the fix, the contact insertion-anchor was hardcoded to
+    ``"/kontakt"``, which made the lookup return ``None`` for
+    restaurant-hospitality and caused wizard extras to be appended after
+    the contact entry — exactly the kind of nav-ordering brist that
+    showed up in the Golden Path eval's ``dominantProblem=contact``
+    signal.
+    """
+    from scripts.build_site import _nav_items_from_scaffold
+
+    extras = [
+        {"id": "faq", "path": "/faq"},
+        {"id": "gallery", "path": "/galleri"},
+    ]
+    items = _nav_items_from_scaffold(RESTAURANT_ROUTES["defaultRoutes"], [], extras)
+    # Labels come from _NAV_LABEL_BY_ROUTE_ID: booking → "Boka bord",
+    # contact → "Kontakt" (the contact-id label, regardless of path).
+    assert items == [
+        ("/", "Hem"),
+        ("/meny", "Meny"),
+        ("/bokning", "Boka bord"),
+        ("/om-oss", "Om oss"),
+        ("/faq", "Vanliga frågor"),
+        ("/galleri", "Galleri"),
+        ("/hitta-hit", "Kontakt"),
+    ]
+
+
+@pytest.mark.tooling
+def test_b148_nav_appends_extras_when_scaffold_lacks_contact_route() -> None:
+    """B148 defensive: a (future) scaffold without a contact id at all
+    must not crash nav-building. Wizard extras simply append to the end,
+    matching the pre-fix fallback behaviour for the no-anchor case.
+    """
+    from scripts.build_site import _nav_items_from_scaffold
+
+    no_contact_routes = [
+        {"id": "home", "path": "/", "required": True, "purpose": "Home"},
+        {"id": "about", "path": "/om-oss", "required": False, "purpose": "About"},
+    ]
+    extras = [{"id": "faq", "path": "/faq"}]
+    items = _nav_items_from_scaffold(no_contact_routes, [], extras)
+    # No contact route → extras append to the tail (same as before B148).
+    assert items == [
+        ("/", "Hem"),
+        ("/om-oss", "Om oss"),
+        ("/faq", "Vanliga frågor"),
+    ]
+
+
+@pytest.mark.tooling
+def test_b148_nav_preserves_local_service_business_behavior() -> None:
+    """B148 compat: local-service-business still places extras before
+    /kontakt — the pre-fix behavior for the most common scaffold must
+    stay byte-stable so no existing nav rendering regresses.
+    """
+    from scripts.build_site import _nav_items_from_scaffold
+
+    extras = [{"id": "team", "path": "/team"}]
+    items = _nav_items_from_scaffold(LSB_ROUTES["defaultRoutes"], [], extras)
+    assert items == [
+        ("/", "Hem"),
+        ("/tjanster", "Tjänster"),
+        ("/om-oss", "Om oss"),
+        ("/team", "Team"),
+        ("/kontakt", "Kontakt"),
+    ]
+
+
 @pytest.mark.tooling
 def test_render_layout_with_extra_routes_writes_nav_labels() -> None:
     from scripts.build_site import render_layout

@@ -1,4 +1,4 @@
-"""Generate draft soft Dossier candidate folders.
+"""Generate draft Dossier candidate folders.
 
 The script writes candidate-only folders under ``data/dossier-candidates/``.
 It never writes into canonical ``packages/generation/orchestration/dossiers``;
@@ -34,6 +34,10 @@ from scripts.candidate_generation_metadata import (  # noqa: E402
     guard_candidate_output_dir,
     repo_or_output_relative,
 )
+from scripts.dossier_candidate_intake import (  # noqa: E402
+    intake_report_hash,
+    sanitize_intake_report_for_model,
+)
 
 DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
 SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
@@ -46,6 +50,7 @@ SLUG_PATTERN_TEXT = r"^[a-z][a-z0-9-]*$"
 SLUG_PATTERN = re.compile(SLUG_PATTERN_TEXT)
 SLUG_CLEAN = re.compile(r"[^a-z0-9-]+")
 SLUG_DASHES = re.compile(r"-{2,}")
+CANDIDATE_CLASSES = {"soft", "hard"}
 
 
 class DossierGenerationError(RuntimeError):
@@ -174,17 +179,26 @@ def _existing_dossier_ids() -> set[str]:
     return ids
 
 
-def _unique_dossier_id(base: str, output_dir: Path, reserved_ids: set[str]) -> str:
+def _unique_dossier_id(
+    base: str,
+    output_dir: Path,
+    reserved_ids: set[str],
+    candidate_class: str,
+) -> str:
     candidate = slugify_dossier_id(base)
-    candidate_dir = output_dir / "soft" / candidate
-    if candidate not in reserved_ids and not candidate_dir.exists():
+    if candidate not in reserved_ids and not _candidate_id_exists(output_dir, candidate):
         return candidate
     suffix = 2
     while True:
         next_id = f"{candidate}-{suffix}"
-        if next_id not in reserved_ids and not (output_dir / "soft" / next_id).exists():
+        if next_id not in reserved_ids and not _candidate_id_exists(output_dir, next_id):
             return next_id
         suffix += 1
+
+
+def _candidate_id_exists(output_dir: Path, dossier_id: str) -> bool:
+    """Return True when a candidate id already exists in any candidate class."""
+    return any((output_dir / candidate_class / dossier_id).exists() for candidate_class in CANDIDATE_CLASSES)
 
 
 def _today() -> str:
@@ -200,21 +214,26 @@ def _mock_dossier_candidate(
     brief: str,
     dossier_id: str,
     capability: str,
+    candidate_class: str,
+    intake_report: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], str]:
     """Deterministic local fallback used without OPENAI_API_KEY."""
     label = _label_from_id(dossier_id)
+    source_hint = ""
+    if intake_report:
+        source_hint = f" based on read-only intake of {intake_report.get('sourcePath')}"
     manifest = {
         "$schema": "../../../../../../governance/schemas/dossier.schema.json",
         "id": dossier_id,
         "enabled": False,
         "label": label,
         "capability": capability,
-        "class": "soft",
+        "class": candidate_class,
         "codeFidelity": "instructions-only",
         "complexity": "low",
         "defaultForCapability": False,
         "summary": (
-            f"Candidate-only soft Dossier for {brief.strip()}. Review and promote "
+            f"Candidate-only {candidate_class} Dossier for {brief.strip()}{source_hint}. Review and promote "
             "manually before canonical use."
         ),
         "envVars": [],
@@ -223,6 +242,16 @@ def _mock_dossier_candidate(
         "exposes": [],
         "lastVerified": _today(),
     }
+    hard_guidance = ""
+    if candidate_class == "hard":
+        hard_guidance = """
+# Hard-candidate boundary
+
+- This candidate only documents a capability that appears to need secrets, API access or backend work later.
+- Do not add API routes, backend files, env-contract.json or integration-contract.json in this V1 candidate.
+- Define the real integration in a separate reviewed implementation PR before canonical promotion.
+"""
+
     instructions = f"""# When to use
 
 Use this candidate Dossier when a project needs: {brief.strip()}.
@@ -233,6 +262,7 @@ Use this candidate Dossier when a project needs: {brief.strip()}.
 - Do not require secrets, backend services, auth, payments or external APIs.
 - Prefer instructions and small reusable components over broad starter changes.
 - Keep copy and visuals project-specific; this Dossier only describes the reusable capability.
+{hard_guidance}
 
 # Avoid
 
@@ -255,12 +285,25 @@ def _normalise_candidate(
     *,
     dossier_id: str,
     capability: str,
+    candidate_class: str,
 ) -> tuple[dict[str, Any], str]:
+    if candidate_class not in CANDIDATE_CLASSES:
+        raise DossierGenerationError(f"Invalid Dossier candidate class: {candidate_class!r}")
     manifest = dict(manifest)
+    returned_class = manifest.get("class")
+    if returned_class in CANDIDATE_CLASSES and returned_class != candidate_class:
+        raise DossierGenerationError(
+            f"dossierModel returned class {returned_class!r}, expected {candidate_class!r}"
+        )
     manifest["id"] = dossier_id
     manifest["capability"] = capability
-    manifest["class"] = "soft"
+    manifest["class"] = candidate_class
     manifest["enabled"] = False
+    # V1 hard candidates are audit artifacts, not real integrations. The
+    # current dossier schema accepts empty envVars/dependencies for both
+    # classes, and dossier-contract.v1 has no extra required hard files yet.
+    # A future promotion/integration PR must add real env/integration
+    # contracts before canonical use.
     manifest["envVars"] = []
     manifest["dependencies"] = []
     model = DossierManifestModel.model_validate(manifest)
@@ -276,7 +319,9 @@ def _call_dossier_model(
     brief: str,
     dossier_id: str,
     capability: str,
+    candidate_class: str,
     model: str,
+    intake_report: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], str]:
     """Call OpenAI dossierModel with strict structured output."""
     from openai import OpenAI
@@ -286,10 +331,15 @@ def _call_dossier_model(
         "operatorBrief": brief,
         "requestedDossierId": dossier_id,
         "capability": capability,
+        "candidateClass": candidate_class,
+        "intakeReport": (
+            sanitize_intake_report_for_model(intake_report) if intake_report else None
+        ),
         "hardRules": [
-            "Return one soft Dossier candidate only.",
-            "Set manifest.class to soft and enabled to false.",
-            "Do not require env vars, secrets, backend services, auth, payments or external APIs.",
+            "Return one Dossier candidate only.",
+            f"Set manifest.class to {candidate_class} and enabled to false.",
+            "Do not add env vars or dependencies in this candidate.",
+            "For hard candidates, document that real integration work must happen later; do not create backend/API/env-contract/integration-contract files.",
             "Do not write canonical files; this is a candidate for manual review.",
             "instructionsMarkdown must be practical English Markdown for codegen.",
         ],
@@ -300,8 +350,8 @@ def _call_dossier_model(
             {
                 "role": "system",
                 "content": (
-                    "You generate candidate-only soft Dossier manifests and "
-                    "instructions for Sajtbyggaren."
+                    "You generate candidate-only Dossier manifests and "
+                    "instructions for Sajtbyggaren. Respect candidateClass."
                 ),
             },
             {
@@ -327,10 +377,14 @@ def _write_candidate(
     source: str,
     model_used: str,
     operator_brief: str,
+    intake_report: dict[str, Any] | None,
     force: bool,
 ) -> tuple[Path, Path, Path, Path, dict[str, Any]]:
     _guard_dossier_output_dir(output_dir)
-    candidate_dir = output_dir / "soft" / dossier_id
+    dossier_class = str(manifest["class"])
+    if dossier_class not in CANDIDATE_CLASSES:
+        raise DossierGenerationError(f"Invalid Dossier candidate class: {dossier_class!r}")
+    candidate_dir = output_dir / dossier_class / dossier_id
     if candidate_dir.exists() and not force:
         raise DossierGenerationError(
             f"Candidate already exists: {candidate_dir}. Pass --force to overwrite."
@@ -355,6 +409,9 @@ def _write_candidate(
         "modelUsed": model_used,
         "modelRole": DOSSIER_ROLE_ID,
         "generator": "scripts.generate_dossier_candidate",
+        "generatedBy": (
+            "dossier-candidate-intake-v1" if intake_report else "brief-only"
+        ),
         "createdAt": created_at(),
         "enabled": manifest["enabled"],
         "outputPath": repo_or_output_relative(
@@ -365,6 +422,19 @@ def _write_candidate(
         ),
         "operatorBriefHash": brief_fingerprint(operator_brief),
     }
+    if intake_report:
+        metadata.update(
+            {
+                "sourcePath": str(intake_report.get("sourcePath") or ""),
+                "sourceFileCount": int(intake_report.get("fileCount") or 0),
+                "intakeReportHash": str(
+                    intake_report.get("reportHash") or intake_report_hash(intake_report)
+                ),
+                "intakeRecommendedClass": str(
+                    intake_report.get("recommendedClass") or ""
+                ),
+            }
+        )
     meta_path.write_text(
         json.dumps(metadata, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
@@ -380,14 +450,28 @@ def generate_dossier_candidate(
     output_dir: Path = DEFAULT_OUTPUT_DIR,
     force: bool = False,
     use_llm: bool = True,
+    intake_report: dict[str, Any] | None = None,
 ) -> DossierGenerationResult:
-    """Generate and write one soft Dossier candidate folder."""
+    """Generate and write one Dossier candidate folder."""
     if not brief.strip():
         raise DossierGenerationError("brief must not be empty")
     _guard_dossier_output_dir(output_dir)
+    recommended_class = str((intake_report or {}).get("recommendedClass") or "soft")
+    if recommended_class == "not-a-dossier":
+        raise DossierGenerationError(
+            "intake_report recommends not-a-dossier; refusing to write candidate"
+        )
+    candidate_class = "hard" if recommended_class == "hard" else "soft"
     reserved = _existing_dossier_ids()
-    dossier_id = _unique_dossier_id(candidate_id or brief, output_dir, reserved)
-    capability_id = slugify_dossier_id(capability or dossier_id)
+    suggested_id = str((intake_report or {}).get("suggestedDossierId") or "")
+    suggested_capability = str((intake_report or {}).get("suggestedCapability") or "")
+    dossier_id = _unique_dossier_id(
+        candidate_id or suggested_id or brief,
+        output_dir,
+        reserved,
+        candidate_class,
+    )
+    capability_id = slugify_dossier_id(capability or suggested_capability or dossier_id)
 
     source = "mock-no-key" if use_llm else "deterministic-v1"
     model_used = "mock" if use_llm else "deterministic"
@@ -398,7 +482,13 @@ def generate_dossier_candidate(
                 brief=brief,
                 dossier_id=dossier_id,
                 capability=capability_id,
+                candidate_class=candidate_class,
                 model=model_used,
+                intake_report=(
+                    sanitize_intake_report_for_model(intake_report)
+                    if intake_report
+                    else None
+                ),
             )
             source = "real"
         except Exception as exc:  # pragma: no cover - covered by caller tests
@@ -407,6 +497,8 @@ def generate_dossier_candidate(
                 brief=brief,
                 dossier_id=dossier_id,
                 capability=capability_id,
+                candidate_class=candidate_class,
+                intake_report=intake_report,
             )
             source = "mock-llm-error"
     else:
@@ -414,6 +506,8 @@ def generate_dossier_candidate(
             brief=brief,
             dossier_id=dossier_id,
             capability=capability_id,
+            candidate_class=candidate_class,
+            intake_report=intake_report,
         )
 
     manifest, instructions = _normalise_candidate(
@@ -421,6 +515,7 @@ def generate_dossier_candidate(
         instructions,
         dossier_id=dossier_id,
         capability=capability_id,
+        candidate_class=candidate_class,
     )
     candidate_dir, manifest_path, instructions_path, meta_path, metadata = _write_candidate(
         output_dir=output_dir,
@@ -430,6 +525,7 @@ def generate_dossier_candidate(
         source=source,
         model_used=model_used,
         operator_brief=brief,
+        intake_report=intake_report,
         force=force,
     )
     return DossierGenerationResult(
@@ -447,7 +543,7 @@ def generate_dossier_candidate(
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate a draft soft Dossier candidate under data/dossier-candidates/."
+        description="Generate a draft Dossier candidate under data/dossier-candidates/."
     )
     parser.add_argument("--brief", required=True, help="Short capability brief")
     parser.add_argument("--candidate-id", help="Optional Dossier candidate id slug")
@@ -460,12 +556,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--force", action="store_true", help="Overwrite an existing candidate")
     parser.add_argument("--no-llm", action="store_true", help="Use deterministic local fallback")
+    parser.add_argument(
+        "--intake-report",
+        type=Path,
+        help="Optional JSON report from scripts/dossier_candidate_intake.py",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
+        intake_report = _read_json(args.intake_report) if args.intake_report else None
         result = generate_dossier_candidate(
             brief=args.brief,
             candidate_id=args.candidate_id,
@@ -473,6 +575,7 @@ def main(argv: list[str] | None = None) -> int:
             output_dir=args.output_dir,
             force=args.force,
             use_llm=not args.no_llm,
+            intake_report=intake_report,
         )
     except DossierGenerationError as exc:
         print(f"dossier candidate generation failed: {exc}", file=sys.stderr)

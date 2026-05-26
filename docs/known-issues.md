@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 19 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 114 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 14 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 126 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -118,24 +118,6 @@ run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
   `ceramic studio`). Kategoriöverlapp med B62 men annan edge-yta. Källa:
   extern reviewer + RO-verifierings-subagent 2026-05-15. Fix: open.
   Test: open.
-- **`B90` Låg-Medel** - `packages/generation/brief/extract.py:ENGLISH_HINTS`
-  innehåller `"a"` och `"an"`, vilket kan ge falska engelska träffar
-  (`A & O El Malmö` klassificeras som `en`). Källa: extern reviewer +
-  RO-verifierings-subagent 2026-05-15. Fix: open. Test: open.
-- **`B91` Medel** - `_normalize_location_hint` i
-  `scripts/prompt_to_project_input.py` mappar idag i praktiken bara
-  `sweden -> Sverige`; övriga vanliga engelska/svenska varianter passerar
-  oförändrat. Källa: extern reviewer + RO-verifierings-subagent
-  2026-05-15. Fix: open. Test: open.
-- **`B92` Låg** - `_BUSINESS_TYPE_LABEL_SV` mappar
-  `naprapat -> naprapatklinik`, vilket överanpassar enskild naprapat till
-  klinikform i H1-fallback. Källa: extern reviewer +
-  RO-verifierings-subagent 2026-05-15. Fix: open. Test: open.
-- **`B93` Låg-Medel** - `_company_business_label` fallback i
-  `scripts/prompt_to_project_input.py` visar rå slugtext i svensk H1
-  (`företag som arbetar med pet grooming`). Svensk mening men engelsk
-  slugläcka i kundcopy. Källa: extern reviewer +
-  RO-verifierings-subagent 2026-05-15. Fix: open. Test: open.
 
 ### Re-Verifierings-Scout 2026-05-15 (post-Grind PR #28 mot `d0ded58`)
 
@@ -151,16 +133,6 @@ jargong synligt på alla fyra case), generisk service-copy ("X -
 kontakta oss för mer information." återanvänds överallt), och hero-
 CTA "Begär offert" hardcoded i `render_home` oavsett bransch
 (bryter särskilt e-handel-trovärdighet). Audit-konfidence 7/10.
-
-- **`B97` Låg** - `/kontakt`-paragrafen "Beskriv jobbet kort så
-  återkommer vi inom en arbetsdag med tider och offert." använder
-  `jobbet`+`offert` hardcoded — passar inte e-handel-cases (frågor om
-  beställning/retur/leverans). Källa: re-Verifierings-Scout
-  2026-05-15. Fix: open. Test: open.
-- **`B98` Låg** - "Områden vi arbetar i"-block på `/om-oss` är
-  meaningless för e-handel — borde inte renderas (eller annan rubrik)
-  när scaffold = `ecommerce-lite`. Källa: re-Verifierings-Scout
-  2026-05-15. Fix: open. Test: open.
 
 **Historisk B71-not:** Re-Verifierings-Scout kunde före Project DNA-
 fixen inte verifiera follow-up-byte-stabilitet i ett första-
@@ -590,7 +562,238 @@ samma kodmönster lever vidare här — därav posten:
   `B13a` (architectural debt i `scripts/build_site.py`). Fix: open.
   Test: open.
 
+### Vercel preview wizard-failure 2026-05-26 (assertLocalhost vs *.vercel.app)
+
+Operatör rapporterade att `Verksamhetsfamilj`-fältet i discovery-wizardens
+foundation-step renderas tomt + ger röd console-error på Vercel preview-
+deploy. Root cause är inte i wizard-komponenten utan i API-grinden som
+matar wizarden med taxonomi-options:
+
+- **`B147` Medel-Hög** - `assertLocalhost` i `apps/viewser/lib/localhost-guard.ts`
+  returnerar `403 { error: "Viewser är localhost-only. ..." }` för alla
+  request:s där `Host`-headern inte är `localhost`/`127.0.0.1`/`::1`.
+  Grinden är applicerad på 12 API-routes inklusive
+  `apps/viewser/app/api/discovery-options/route.ts:189` som matar wizardens
+  `Verksamhetsfamilj`-fält. På `*.vercel.app` preview-deployer returnerar
+  GET `/api/discovery-options` därför 403, wizard-options-listan blir tom,
+  och fältet renderas utan val + loggar 403 i browser-console. Det är
+  **medvetet by design** enligt docstring (`Viewser is an operator-prototype:
+  no auth, no rate limit, no public deploy`) — escape-hatchen är att sätta
+  `VIEWSER_ALLOW_NON_LOCALHOST=true` på Vercel-projektet, men det stänger
+  av grinden för *alla* hostar utan att introducera auth. Konflikten är
+  mellan ADR-baserad localhost-only-säkerhet och faktisk Vercel-deploy
+  som operatör redan kör (`apps/viewser/vercel.json` finns untracked +
+  `docs/operations/vercel-production-branch-todo.md` dokumenterar att
+  production branch är `jakob-be` tills B146 är löst — vilket den nu är,
+  efter PR #112+#113). Tre möjliga vägar: (a) sätt
+  `VIEWSER_ALLOW_NON_LOCALHOST=true` på Vercel-projektets Preview- och
+  Production-env (snabbast, men bekräftar `no auth, no rate limit, no
+  public deploy`-modellen på en publik URL — ska dokumenteras med tydlig
+  reservation i `docs/architecture/viewser.md` + uppdaterad docstring i
+  `localhost-guard.ts`), (b) host-whitelist i `localhost-guard.ts` som
+  släpper igenom specifika Vercel-projektdomäner via ny env-knapp
+  `VIEWSER_ALLOWED_HOSTS` (mer kontrollerat men introducerar ny policy-yta),
+  (c) ADR-beslut om Viewser-på-Vercel auth-strategi som låser den
+  långsiktiga lösningen innan någon snabb-fix väljs. Cross-ref:
+  `apps/viewser/vercel.json` (untracked, repo-spec för Vercel-deploy),
+  `docs/operations/vercel-production-branch-todo.md` (operatörs-TODO,
+  untracked), `docs/reports/b125-preview-fallback-decision-2026-05-22.md`
+  (B125-spårets DNA, samma "Viewser är operatör-lokalt verktyg"-princip).
+  Källa: operatör 2026-05-25 kväll + extern reviewer-triage 2026-05-26.
+  Fix: open. Test: open.
+
 ## Stängda - regression-test säkrar fixet
+
+- **`B151` Medel** (stängd 2026-05-26, post-PR-#117 AI Bug Review-fixar) -
+  `apps/viewser/components/builder/floating-chat.tsx`:s
+  `useIsMobileViewport`-hook anropade `mq.addEventListener("change", ...)`
+  ovillkorligt på matchMedia-resultatet. iOS Safari < 14 (samt äldre
+  Edge-/IE-baserade browsers) stödjer inte den signaturen och faller
+  tillbaka till deprecated `addListener`/`removeListener`. Resultat:
+  chatten kraschade tyst på äldre iOS-enheter i fält. AI Bug Review
+  (Sannolikhet 79 %, impact 8/10) flaggade detta på PR #117. Fix:
+  feature-detect mot `typeof mq.addEventListener === "function"` med
+  fallback till deprecated APIn via inline strukturell cast (inline
+  istället för namngiven PascalCase-typ för att passera
+  term-coverage --strict). Fix: `4a6243a`. Test:
+  `tests/test_viewser_files.py::test_b151_floating_chat_useismobile_feature_detects_addeventlistener`.
+
+- **`B152` Medel** (stängd 2026-05-26, post-PR-#117 AI Bug Review-fixar) -
+  `apps/viewser/components/builder/inspector/compare-preview-modal.tsx`
+  mobile snap-x-scroll hade `w-full` per pane inuti flex-row med
+  `gap-2`. Två 100 %-bredd-panes + 0.5rem gap = 200 % + 0.5rem total
+  scroll-content → pane-A:s högra kant smög 0.5rem in i viewporten
+  när snappat till pane B, vilket bröt den avsedda one-pane-per-snap-
+  upplevelsen. AI Bug Review (Sannolikhet 88 %, impact 7/10) flaggade
+  detta på PR #117. Fix: `w-[calc(100%-0.5rem)]` så pane-bredd + gap
+  = 100 % per snap-segment, snap-positionerna landar nu rent vid varje
+  pane-start. Desktop (lg:) oförändrad — grid-cols-2 har inget
+  gap-overflow-problem. Fix: `4a6243a`. Test:
+  `tests/test_viewser_files.py::test_b152_compare_modal_pane_width_accounts_for_gap`.
+
+- **`B153` Låg** (stängd 2026-05-26, post-PR-#117 AI Bug Review-fixar) -
+  `apps/viewser/components/viewer-panel.tsx` sessionStorage-hydration
+  restorerade bara `"mobile"`/`"tablet"`/`"laptop"`-preset explicit;
+  `"full"` saknades i listan av accepterade värden. Funktionellt
+  räddade default-värdet (också `"full"`) flödet idag, men det är
+  inkonsekvent med övriga presets och om default någonsin ändras
+  tappas `"full"`-persistensen. AI Bug Review (Sannolikhet 84 %, impact
+  5/10) flaggade detta på PR #117. Fix: inkludera alla fyra giltiga
+  device-preset-värden (`"mobile"`/`"tablet"`/`"laptop"`/`"full"`) i
+  hydration-checken. Fix: `4a6243a`. Test:
+  `tests/test_viewser_files.py::test_b153_viewer_panel_hydrates_full_device_preset`.
+
+- **`B90` Låg-Medel** (stängd 2026-05-26, language/location/business-type-kluster) -
+  `packages/generation/brief/extract.py:ENGLISH_HINTS` innehöll de
+  enbokstavliga artiklarna `"a"` och `"an"`. Svenska företagsnamn med
+  enbokstavstoken (`A & O El Malmö`) tokeniserade till en mängd som
+  innehöll `"a"`, vilket matchade ENGLISH_HINTS och fick
+  `detect_language` att returnera `"en"` — felaktigt. Fix: ta bort
+  `"a"` och `"an"` ur ENGLISH_HINTS. Cascadens å/ä/ö-check fångar
+  fortfarande namn med svenska tecken, och default-grenen lutar
+  fortsatt svenska för korta prompts. Genuina engelska briefer
+  fortsätter trigga "en" via `"the"`, `"and"`, `"build"`, `"website"`
+  etc. Fix: `6d4a096`. Test:
+  `tests/test_prompt_to_project_input.py::test_b90_single_letter_swedish_company_name_stays_sv`,
+  `tests/test_prompt_to_project_input.py::test_b90_english_prompts_without_a_an_still_detect_as_english`.
+
+- **`B91` Medel** (stängd 2026-05-26, language/location/business-type-kluster) -
+  `_normalize_location_hint` hade tidigare bara country-name-handling
+  via `_COUNTRY_NAME_LOCATION_HINTS`. Vanliga engelska exonymer för
+  svenska/nordiska städer (`Gothenburg`, `Helsinki`, `Copenhagen`)
+  passerade oförändrat även på `language=sv`-byggen, vilket fick hero-
+  ortstaggen att rendera engelska stadsnamn på svensk-taggade sajter.
+  Fix: ny `_ENGLISH_TO_SWEDISH_CITY`-map med konfirmerade exonymer
+  (Gothenburg→Göteborg, Helsinki→Helsingfors, Copenhagen→Köpenhamn).
+  Översättningen sker bara när `language == "sv"`; engelska byggen
+  passerar igenom oförändrat. Medvetet smal — inga spekulativa
+  stadsöversättningar. Fix: `6d4a096`. Test:
+  `tests/test_prompt_to_project_input.py::test_b91_swedish_builds_translate_english_city_exonyms`,
+  `tests/test_prompt_to_project_input.py::test_b91_english_builds_preserve_english_city_unchanged`,
+  `tests/test_prompt_to_project_input.py::test_b91_unknown_english_city_passes_through`.
+
+- **`B92` Låg** (stängd 2026-05-26, language/location/business-type-kluster) -
+  `_BUSINESS_TYPE_LABEL_SV` mappade alla naprapat-slug-varianter
+  (`naprapat`, `naprapath`, `naprapat-clinic`, `naprapath-clinic`,
+  `naprapatklinik`) till `"naprapatklinik"`, vilket överanpassade
+  enskild naprapat-utövare till klinikform i H1-fallback. Fix: bare
+  `"naprapat"` och `"naprapath"` mappar nu till `"naprapat"`
+  (sole-practitioner). De explicita *-clinic- och `naprapatklinik`-
+  varianterna mappar fortfarande till `"naprapatklinik"` så briefModel
+  kan uttrycka klinik-vs-individ-distinktionen. Existerande test
+  `test_business_type_map_covers_briefmodel_hyphenated_slugs`
+  uppdaterad med nya förväntade mappningar. Fix: `6d4a096`. Test:
+  `tests/test_prompt_to_project_input.py::test_b92_bare_naprapat_slug_renders_sole_practitioner_h1`,
+  `tests/test_prompt_to_project_input.py::test_b92_naprapath_english_slug_also_maps_to_sole_practitioner`,
+  `tests/test_prompt_to_project_input.py::test_b92_explicit_clinic_variants_still_render_clinic_h1`.
+
+- **`B93` Låg-Medel** (stängd 2026-05-26, language/location/business-type-kluster) -
+  `_company_business_label` föll igenom till
+  `"företag som arbetar med <slug>"`-grenen för okända multi-word
+  engelska business-slugs (`pet-grooming`, `personal-trainer`,
+  `tattoo-studio`, `law-firm`, etc.), vilket läckte rå engelsk
+  slugtext in i svensk H1-copy (`"Företag som arbetar med pet
+  grooming i Stockholm"`). Fix: utöka `_BUSINESS_TYPE_LABEL_SV` med
+  22 nya entries för vanliga multi-word engelska slugs som briefModel
+  emitterar. Varje mapas till ett riktigt svenskt substantiv som
+  läser naturligt i H1-copy (`pet-grooming → djursalong`,
+  `personal-trainer → personlig tränare`, `law-firm → advokatbyrå`,
+  etc.). Fallback-grenen behålls för genuint okända slugs så
+  operatörer kan upptäcka un-mappade slugs i test-output. Cross-ref:
+  B63 (original fallback-fix), B92 (relaterad map-precision-fix).
+  Fix: `6d4a096`. Test:
+  `tests/test_prompt_to_project_input.py::test_b93_common_multi_word_english_slugs_map_to_swedish`,
+  `tests/test_prompt_to_project_input.py::test_b93_pet_grooming_h1_no_longer_leaks_english_slug`,
+  `tests/test_prompt_to_project_input.py::test_b93_unknown_swedish_slug_still_uses_swedish_fallback_phrase`.
+
+- **`B97` Låg** (stängd 2026-05-26, scaffold-aware contact-copy sprint) -
+  `render_section_contact_info`:s kontakt-page hero body hårdkodade
+  "Beskriv jobbet kort så återkommer vi inom en arbetsdag med tider och
+  offert." Orden `jobbet` + `tider och offert` antar quote-driven
+  service-business; e-handel-kunder frågar om beställning/leverans/retur
+  och booking-kunder vill boka en tid. Fix: ny dict
+  `_CONTACT_PAGE_HERO_BODY_BY_VARIANT` keyad på `(variant, language)`
+  där variant kommer från `_hero_cta_variant` (samma shop/booking/quote-
+  klassificerare som driver hero-CTA-labels) och language är `sv`/`en`.
+  Quote-variantens svenska copy är byte-identisk så lokala
+  service-business-renders inte regredierar; shop- och booking-varianter
+  får explicit formulerade copies. Ny `_contact_page_hero_body`-helper
+  väljer copyn med fallback till `quote+sv` för okända `(variant,
+  language)`-kombinationer. Hero-headlinen "Hör av dig" är generisk
+  över alla varianter och rörs inte (scope-lock). Bidrar till att lyfta
+  Golden Path-evalens `dominantProblem=contact (3/4 case)`-signal.
+  Fix: `c85ae70`. Test:
+  `tests/test_builder_route_emission.py::test_b97_contact_page_hero_body_quote_variant_default_unchanged`,
+  `tests/test_builder_route_emission.py::test_b97_contact_page_hero_body_shop_variant_for_ecommerce_lite`,
+  `tests/test_builder_route_emission.py::test_b97_contact_page_hero_body_booking_variant_for_booking_business`,
+  `tests/test_builder_route_emission.py::test_b97_contact_page_hero_body_english_quote_variant`,
+  `tests/test_builder_route_emission.py::test_b97_contact_page_hero_body_english_shop_variant`,
+  `tests/test_builder_route_emission.py::test_b97_contact_page_hero_headline_stays_generic_across_variants`.
+
+- **`B98` Låg** (stängd 2026-05-26, scaffold-aware contact-copy sprint) -
+  `render_about`:s "Områden vi arbetar i"-section renderades för alla
+  scaffolds med non-country-only location, inklusive `ecommerce-lite`.
+  Rubriken + MapPin-ikonen är service-business-flavoured och läses
+  awkwardly för e-handel som skickar från en plats (inga lokala
+  serviceområden i samma bemärkelse). Fix: utöka den befintliga B104
+  country-only-suppressionen med en scaffold-check som också suppressar
+  blocket när `scaffoldId == "ecommerce-lite"`. Defensivt: dossiers
+  utan `scaffoldId` faller fortfarande igenom till bara country-only-
+  checken, vilket bevarar bakåtkompatibilitet med äldre callers. Cross-
+  ref: B104 (country-only suppression, denna bygger på den helpern).
+  Fix: `c85ae70`. Test:
+  `tests/test_builder_route_emission.py::test_b98_render_about_omits_service_areas_for_ecommerce_lite`,
+  `tests/test_builder_route_emission.py::test_b98_render_about_keeps_service_areas_for_local_service_business`,
+  `tests/test_builder_route_emission.py::test_b98_render_about_keeps_service_areas_when_scaffold_unspecified`.
+
+- **`B148` Medel** (stängd 2026-05-26, fix-sprint för read-only build_site-audit) -
+  `_nav_items_from_scaffold` hårdkodade `/kontakt` som insertion-anchor
+  för wizard-extras. För `restaurant-hospitality` (`/hitta-hit`) blev
+  `contact_idx = None`, så FAQ/team/karta hamnade i slutet av nav istället
+  för före contact-routen. Fix: derivera contact-path från
+  `scaffold_default_routes` via `route.get("id") == "contact"` (mirrors
+  `_pick_contact_route`-mönstret), sök sen items för den pathen.
+  Defensive-fall: scaffold utan contact-route behåller append-till-slutet-
+  fallback. Fix: `f2e84b0`. Test:
+  `tests/test_wizard_route_emission.py::test_b148_nav_inserts_extras_before_non_default_contact_path`,
+  `tests/test_wizard_route_emission.py::test_b148_nav_appends_extras_when_scaffold_lacks_contact_route`,
+  `tests/test_wizard_route_emission.py::test_b148_nav_preserves_local_service_business_behavior`.
+
+- **`B149` Låg** (stängd 2026-05-26, fix-sprint för read-only build_site-audit) -
+  Intent Guard använde substring-match (`blocked in term`) istället för
+  exact-match, så korta tokens i `_INTENT_GUARD_CONFLICTS` (`"bar"`,
+  `"mat"`, `"spa"`) gav falska träffar: `"bar" in "barber"`,
+  `"spa" in "spaghetti"`, `"mat" in "automation"`. Fix: tokenisera
+  candidate_terms (whole + split på whitespace/dash) till en set,
+  kräv `blocked in candidate_tokens` (exact-match). True positives
+  bevarade: slug-form `"hair-salon"` matchar fortfarande via whole-token,
+  och individuella konflikt-ord matchar via sub-token-split. Fix:
+  `f2e84b0`. Test:
+  `tests/test_intent_guard.py::test_b149_no_warning_when_bar_is_substring_of_barber`,
+  `tests/test_intent_guard.py::test_b149_no_warning_when_spa_is_substring_of_spaghetti`,
+  `tests/test_intent_guard.py::test_b149_no_warning_when_mat_is_substring_of_automation`,
+  `tests/test_intent_guard.py::test_b149_exact_match_on_bar_still_warns_for_legit_bar`,
+  `tests/test_intent_guard.py::test_b149_token_split_preserves_hair_match_on_compound_slug`.
+
+- **`B150` Låg-Medel** (stängd 2026-05-26, fix-sprint för read-only build_site-audit) -
+  `_normalize_business_type` täckte bara explicita prefix-mappingar
+  (naprapat*, frisör/hairdresser, webshop-varianter). briefModel:s
+  multi-word business types (`"massage studio"`, `"yoga studio"`,
+  `"personal trainer studio"`) komprimerades till compact slugs
+  (`"massage-studio"`) som inte fanns i `_BOOKING_BUSINESS_TYPES`, så
+  `_hero_cta_variant` föll till generic `"Begär offert"`-CTA istället
+  för `"Boka tid"`/`"Shoppa nu"`. Fix: efter de explicita mappingarna,
+  loopa genom progressivt kortare dash-prefixen (längst först) och
+  returnera den längsta prefixen som finns registrerad i
+  `_BOOKING_BUSINESS_TYPES` eller `_SHOP_BUSINESS_TYPES`. Konservativt
+  — collapsar bara till redan-registrerade slugs, hittar aldrig på nya.
+  Fix: `f2e84b0`. Test:
+  `tests/test_builder_route_emission.py::test_b150_normalize_business_type_collapses_massage_studio`,
+  `tests/test_builder_route_emission.py::test_b150_normalize_business_type_collapses_compound_booking_slugs`,
+  `tests/test_builder_route_emission.py::test_b150_normalize_business_type_preserves_unknown_compound_unchanged`,
+  `tests/test_builder_route_emission.py::test_b150_hero_cta_label_fires_booking_for_massage_studio`,
+  `tests/test_builder_route_emission.py::test_b150_hero_cta_label_fires_booking_for_dash_form_personal_training_studio`,
+  `tests/test_builder_route_emission.py::test_b150_naprapat_explicit_mapping_still_wins`.
 
 - **`B146` Hög** (stängd 2026-05-25 kväll, B146-port mot jakob-be) -
   Christopher's PR #105 (Live Build Sync + Restaurant Path A + Wizard

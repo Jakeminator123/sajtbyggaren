@@ -216,7 +216,7 @@ export function AIImageGeneratorDialog({
     >
       <div
         ref={dialogRef}
-        className="bg-background w-full max-w-2xl overflow-hidden rounded-xl border shadow-2xl"
+        className="bg-background flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border shadow-2xl"
       >
         {/* Header */}
         <div className="border-border/70 flex items-center justify-between border-b px-5 py-3">
@@ -233,7 +233,7 @@ export function AIImageGeneratorDialog({
             type="button"
             onClick={() => !generating && onClose()}
             disabled={generating}
-            className="text-muted-foreground hover:text-foreground rounded-md p-1 transition-colors disabled:opacity-30"
+            className="text-muted-foreground hover:text-foreground min-tap sm:min-tap-0 inline-flex items-center justify-center rounded-md p-1 transition-colors active:scale-95 disabled:opacity-30"
             aria-label="Stäng dialog"
           >
             <X className="h-4 w-4" />
@@ -241,7 +241,7 @@ export function AIImageGeneratorDialog({
         </div>
 
         {/* Body */}
-        <div className="space-y-4 px-5 py-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
           {/* Prompt */}
           <div>
             <label
@@ -258,7 +258,7 @@ export function AIImageGeneratorDialog({
               disabled={generating}
               rows={3}
               placeholder={ROLE_PLACEHOLDER[role]}
-              className="border-border/70 bg-background focus:border-foreground/40 w-full resize-none rounded-md border px-3 py-2 text-[13px] outline-none transition-colors disabled:opacity-60"
+              className="border-border/70 bg-background focus:border-foreground/40 w-full resize-none rounded-md border px-3 py-2 text-base outline-none transition-colors disabled:opacity-60 sm:text-[13px]"
               maxLength={1000}
             />
             <div className="text-muted-foreground mt-1 flex justify-between text-[10.5px]">
@@ -278,7 +278,7 @@ export function AIImageGeneratorDialog({
             <div
               role="radiogroup"
               aria-labelledby={styleId}
-              className="grid grid-cols-2 gap-2"
+              className="grid grid-cols-1 gap-2 sm:grid-cols-2"
             >
               {STYLE_OPTIONS.map((option) => {
                 const selected = style === option.id;
@@ -291,7 +291,7 @@ export function AIImageGeneratorDialog({
                     onClick={() => setStyle(option.id)}
                     disabled={generating}
                     className={[
-                      "rounded-md border px-3 py-2 text-left text-[12px] transition-all disabled:opacity-50",
+                      "min-tap sm:min-tap-0 rounded-md border px-3 py-3 text-left text-[12px] transition-all active:scale-[0.98] disabled:opacity-50 sm:py-2",
                       selected
                         ? "border-foreground/60 bg-foreground/[0.04]"
                         : "border-border/60 hover:border-foreground/30",
@@ -344,11 +344,11 @@ export function AIImageGeneratorDialog({
         </div>
 
         {/* Footer */}
-        <div className="border-border/70 bg-muted/10 flex items-center justify-between gap-2 border-t px-5 py-3">
-          <div className="text-muted-foreground text-[10.5px]">
+        <div className="border-border/70 bg-muted/10 flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3 pb-safe-or-3">
+          <div className="hidden text-muted-foreground text-[10.5px] sm:block">
             ⌘+enter genererar · esc stänger
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
             {preview && !generating ? (
               <>
                 <button
@@ -357,7 +357,7 @@ export function AIImageGeneratorDialog({
                     setPreview(null);
                     void handleGenerate();
                   }}
-                  className="text-muted-foreground hover:text-foreground rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors"
+                  className="text-muted-foreground hover:text-foreground min-tap sm:min-tap-0 inline-flex items-center justify-center rounded-md px-3 text-[12px] font-medium transition-colors active:scale-[0.98] sm:py-1.5"
                 >
                   Generera om
                 </button>
@@ -366,7 +366,7 @@ export function AIImageGeneratorDialog({
                   onClick={handleAccept}
                   className={[
                     "bg-foreground text-background hover:bg-foreground/90",
-                    "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors",
+                    "min-tap sm:min-tap-0 inline-flex items-center justify-center gap-1.5 rounded-md px-3 text-[12px] font-medium transition-colors active:scale-[0.98] sm:py-1.5",
                     PRIMARY_INTERACTIONS,
                   ].join(" ")}
                 >
@@ -379,7 +379,7 @@ export function AIImageGeneratorDialog({
                   type="button"
                   onClick={onClose}
                   disabled={generating}
-                  className="text-muted-foreground hover:text-foreground rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors disabled:opacity-30"
+                  className="text-muted-foreground hover:text-foreground min-tap sm:min-tap-0 inline-flex items-center justify-center rounded-md px-3 text-[12px] font-medium transition-colors active:scale-[0.98] disabled:opacity-30 sm:py-1.5"
                 >
                   Avbryt
                 </button>
@@ -400,7 +400,7 @@ export function AIImageGeneratorDialog({
                   }}
                   className={[
                     "bg-foreground text-background hover:bg-foreground/90",
-                    "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors disabled:opacity-40",
+                    "min-tap sm:min-tap-0 inline-flex items-center justify-center gap-1.5 rounded-md px-3 text-[12px] font-medium transition-colors active:scale-[0.98] disabled:opacity-40 sm:py-1.5",
                     PRIMARY_INTERACTIONS,
                   ].join(" ")}
                 >

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-25T21:30:00Z",
-  "updatedBy": "jakob-be-b146-port-section-dispatcher",
+  "updatedAt": "2026-05-26T10:52:25Z",
+  "updatedBy": "sprintvakt-mcp",
   "people": {
     "jakob": {
       "allocation": 0.75,
@@ -182,90 +182,47 @@
       "pairedWith": "GAP-backend-restaurant-activation"
     },
     {
-      "id": "GAP-viewser-pipeline-status-polling",
+      "id": "GAP-viewser-mobile-hero-safe-zone",
       "type": "Gap/UI",
       "owner": "christopher",
-      "title": "FloatingChat speglar riktig pipeline-status via trace-endpoint",
-      "collisionRisk": "green",
-      "reviewer": "jakob",
-      "status": "active",
-      "file": "docs/gaps/GAP-viewser-pipeline-status-polling.md",
-      "createdAt": "2026-05-25T13:20:00Z",
-      "startedAt": "2026-05-25T13:20:00Z",
+      "title": "Scout pass 4 P1-fixar: hero safe zone, wizard asterisk, prompt-builder safe-area",
+      "whyNow": "Scout-bug-hunt pass 4 (composer-2.5-fast, read-only) paa christopher-ui-branchen hittade tre P1-fynd som maaste fixas innan PR #117 mergas: (1) Hero-text taecks av PromptBuilder paa iPhone SE 375x667 (video ~300px + text ~200px + composer ~150px laemnar ingen marginal). (2) Wizard Foeretagsnamn-asterisk visas men validation togs bort i 59eed4c WCAG 2.2-brott. (3) PromptBuilder saknar pb-safe knappar ligger naera iPhone home-indicator. Inga P0. P1 nummer 4 StackBlitz containerRef skippas eftersom default-mode local-next inte paaverkas.",
       "paths": [
-        "apps/viewser/components/builder/floating-chat.tsx",
-        "apps/viewser/components/builder/use-pending-build.ts",
-        "apps/viewser/components/builder/use-build-trace-polling.ts"
-      ],
-      "doNotTouch": [
-        "apps/viewser/app/api/runs/**",
-        "apps/viewser/lib/runs.ts",
-        "apps/viewser/components/builder/inspector/**",
-        "apps/viewser/components/discovery-wizard/**",
-        "packages/generation/**",
-        "scripts/build_site.py"
-      ],
-      "acceptanceCriteria": [
-        "Den hårdkodade FOLLOWUP_BUILD_STEPS-kedjan med setTimeout är borta.",
-        "Polling mot /api/runs/[runId]/trace?since=<iso> så fort runId är känt.",
-        "Step-text uppdateras från trace.ndjson-events.",
-        "runStatus = ok/degraded/mock visas med rätt variant.",
-        "Polling stoppar inom 1s efter att build-result landat.",
-        "Backoff: 1.5s → 3s; ingen evig 500ms-polling."
-      ],
-      "checks": [
-        "python scripts/sprintvakt_check.py",
-        "python scripts/governance_validate.py",
-        "python scripts/check_term_coverage.py --strict",
-        "python -m ruff check .",
-        "python -m pytest tests/ -q",
-        "cd apps/viewser && npx tsc --noEmit",
-        "cd apps/viewser && npm run lint"
-      ],
-      "note": "Effort 4-6h. UI-quick-win efter scout 2026-05-25. Trace-endpoint finns i main (commit 74a355b)."
-    },
-    {
-      "id": "GAP-viewser-side-by-side-preview",
-      "type": "Gap/UI",
-      "owner": "christopher",
-      "title": "Sida-vid-sida-preview av två genererade versioner i Versions-tab",
-      "collisionRisk": "green",
-      "reviewer": "jakob",
-      "status": "active",
-      "file": "docs/gaps/GAP-viewser-side-by-side-preview.md",
-      "createdAt": "2026-05-25T04:50:00Z",
-      "startedAt": "2026-05-25T04:50:00Z",
-      "paths": [
-        "apps/viewser/components/builder/inspector/versions-tab.tsx",
-        "apps/viewser/components/builder/inspector/compare-preview-modal.tsx",
-        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
-        "apps/viewser/components/builder/inspector/index.ts"
-      ],
-      "doNotTouch": [
-        "apps/viewser/app/api/runs/**",
-        "apps/viewser/app/api/preview/**",
         "apps/viewser/components/viewer-panel.tsx",
-        "apps/viewser/lib/runs.ts",
-        "packages/generation/**",
-        "scripts/build_site.py"
+        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/company-step.tsx",
+        "apps/viewser/components/prompt-builder.tsx"
+      ],
+      "doNotTouch": [
+        "apps/viewser/components/discovery-wizard/wizard-types.ts",
+        "apps/viewser/app/globals.css",
+        "packages/generation/",
+        "apps/viewser/app/api/",
+        "apps/viewser/lib/"
       ],
       "acceptanceCriteria": [
-        "Versions-tab har en 'Visuell jämförelse'-knapp som aktiveras när både A och B är valda och pekar på olika runIds.",
-        "Klick öppnar full-screen modal med två StackBlitz-iframer sida vid sida (50/50 desktop, stackat på mobil).",
-        "Browser-detection: Safari/Firefox visar fallback med 'Öppna båda i nya fönster' i stället för embeddade iframer.",
-        "ESC eller stängningsknapp avmonterar båda iframerna utan stale DOM.",
-        "Inga ändringar i existerande viewer-panel.tsx eller backend-endpoints."
+        "Mobil 375x667: hero-text scrollas och hamnar aldrig bakom PromptBuilder",
+        "viewer-panel mobil anvaender overflow-y-auto naer showHero=true",
+        "Hero-text container har pb-40 paa mobil saa composer-overlap aldrig sker vid normal text",
+        "Desktop md+ behaaller absolute-overlay-layout med overflow-hidden",
+        "Wizard foundation-step + company-step visar Foeretagsnamn utan asterisk (optional-prop visar 'valfritt' via FieldLabel)",
+        "PromptBuilder composer anvaender pb-safe-or-4 sm:pb-7 saa iPhone X+ home-indicator respekteras"
       ],
       "checks": [
-        "python scripts/sprintvakt_check.py",
-        "python scripts/governance_validate.py",
-        "python scripts/check_term_coverage.py --strict",
-        "python -m ruff check .",
-        "python -m pytest tests/ -q",
-        "cd apps/viewser && npx tsc --noEmit",
-        "cd apps/viewser && npm run lint"
+        "sprintvakt_check",
+        "focus_check",
+        "viewser_typecheck",
+        "viewser_lint",
+        "term_coverage_strict",
+        "ruff_check"
       ],
-      "note": "UI-only feature byggd ovanpå existerande /api/runs/[runId]/files. Två StackBlitz-instanser kostar bara klient-resurser, ingen backend-last. Path B (GAP-backend-path-b-section-renderer) ökar värdet av denna feature kraftigt eftersom strukturellt olika scaffolds då blir möjliga att jämföra."
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "active",
+      "createdAt": "2026-05-26T10:52:20Z",
+      "updatedAt": "2026-05-26T10:52:25Z",
+      "notes": [],
+      "activatedAt": "2026-05-26T10:52:25Z"
     }
   ],
   "completedGaps": [
@@ -749,6 +706,443 @@
         "Mergad till main via PR #71. UI-only del klar — A+D backend-bitar väntar på GAP-backend-build-trace-endpoint."
       ],
       "updatedAt": "2026-05-25T01:42:18Z"
+    },
+    {
+      "id": "GAP-viewser-mobile-responsive-foundation",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Mobil-anpassning av viewser-appen — foundation + P0-blockers",
+      "whyNow": "Hela viewser-appen är desktop-first idag. Audit 2026-05-26 visade 5 P0-blockers som gör appen oanvändbar på 375px (iPhone SE). Operatören har bekräftat scope: hela viewser-flödet (wizard + builder), polished kvalitetsnivå. Denna GAP = foundation + P0; polish/P1 öppnas som separat GAP efter.",
+      "paths": [
+        "apps/viewser/app/globals.css",
+        "apps/viewser/components/builder/floating-chat.tsx",
+        "apps/viewser/components/builder/builder-actions.tsx",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
+        "apps/viewser/components/discovery-wizard/payload-alignment-popover.tsx",
+        "apps/viewser/components/discovery-wizard/steps/visual-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/content-step.tsx",
+        "apps/viewser/components/ui/sheet.tsx",
+        "apps/viewser/components/layout/site-header.tsx"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/**",
+        "apps/viewser/lib/**",
+        "apps/viewser/middleware.ts",
+        "apps/viewser/next.config.ts",
+        "apps/viewser/package.json",
+        "apps/viewser/package-lock.json",
+        "scripts/**",
+        "packages/generation/**",
+        "governance/schemas/**"
+      ],
+      "acceptanceCriteria": [
+        "Mobil-foundation i globals.css: safe-bottom/safe-top/safe-x + min-tap (44px).",
+        "FloatingChat <768px = bottom-sheet (full bredd, max-h-[85dvh], pb-safe). Drag inaktiv touch. Minimerad = 56x56 FAB.",
+        "FloatingChat composer text-base mobil — inget iOS-zoom.",
+        "SiteInspectorSheet <768px = bottom-sheet (h-[90dvh] rounded-t-3xl). TabsList scrollable eller dropdown.",
+        "Wizard validationError visas alltid på mobil.",
+        "Hover-only delete på moodboard/content-bilder synlig på touch.",
+        "PayloadAlignmentPopover max-w-[calc(100vw-2rem)] eller bottom-sheet under sm:.",
+        "BuilderActions kolliderar inte med FloatingChat på mobil.",
+        "site-header konsol-knapp har min-tap på mobil.",
+        "Safe-area-padding på all fixed UI.",
+        "sheet.tsx bottom-sheet får rounded-t-3xl + drag-handle + pb-safe.",
+        "Inga off-limits-paths rörs."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint",
+        "python -m pytest -q tests/"
+      ],
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "createdAt": "2026-05-26T08:36:28Z",
+      "updatedAt": "2026-05-26T09:15:51Z",
+      "notes": [
+        "Levererad i PR #117 mot jakob-be. Status completed lokalt; väntar på review + merge från Jakob.",
+        "10 paths åtgärdade (5 P0 + foundation utilities)."
+      ],
+      "activatedAt": "2026-05-26T08:36:40Z",
+      "completedAt": "2026-05-26T09:15:51Z",
+      "fixCommits": [
+        "ea62e45",
+        "31a888a",
+        "3b2420d",
+        "9593769"
+      ]
+    },
+    {
+      "id": "GAP-viewser-mobile-responsive-polish",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Mobil-anpassning fas 2 — polish + P1 (tap-targets, iOS-zoom, dialogs)",
+      "whyNow": "Fas 1 (PR #117) levererade mobil-foundation + 5 P0-blockers. Fas 2 polerar de återstående ~10 P1-friktionerna från audit 2026-05-26: tap-targets under 44px, text-[13px]/[15px] inputs som triggar iOS Safari auto-zoom, dialoger med för täta grids på smala viewports, hero-typografi som dominerar mobil-canvas, och ConsoleDrawer-listor med fasta höjder.",
+      "paths": [
+        "apps/viewser/components/prompt-builder.tsx",
+        "apps/viewser/components/viewer-panel.tsx",
+        "apps/viewser/components/console-drawer.tsx",
+        "apps/viewser/components/discovery-wizard/steps/step-primitives.tsx",
+        "apps/viewser/components/discovery-wizard/asset-dropzone.tsx",
+        "apps/viewser/components/discovery-wizard/directives-preview.tsx",
+        "apps/viewser/components/discovery-wizard/ai-image-generator-dialog.tsx",
+        "apps/viewser/components/builder/dialogs/asset-uploader-dialog.tsx",
+        "apps/viewser/components/builder/dialogs/color-picker-dialog.tsx",
+        "apps/viewser/components/builder/inspector/quick-prompt-button.tsx"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/**",
+        "apps/viewser/lib/**",
+        "apps/viewser/middleware.ts",
+        "apps/viewser/next.config.ts",
+        "apps/viewser/package.json",
+        "apps/viewser/package-lock.json",
+        "scripts/**",
+        "packages/generation/**",
+        "governance/schemas/**",
+        "apps/viewser/components/builder/floating-chat.tsx",
+        "apps/viewser/components/builder/builder-actions.tsx",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
+        "apps/viewser/components/discovery-wizard/payload-alignment-popover.tsx",
+        "apps/viewser/components/discovery-wizard/steps/visual-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/content-step.tsx",
+        "apps/viewser/components/ui/sheet.tsx",
+        "apps/viewser/components/layout/site-header.tsx",
+        "apps/viewser/app/globals.css"
+      ],
+      "acceptanceCriteria": [
+        "PromptBuilder textarea text-base sm:text-[15px] + submit min-tap.",
+        "InlineHelpButton min-tap mobile, sm:h-4 sm:w-4 desktop.",
+        "ViewerPanel hero H1 text-3xl sm:text-4xl + padding px-5 sm:px-12 lg:px-20.",
+        "AI image generator dialog: grid-cols-1 sm:grid-cols-2 + min-tap.",
+        "Asset uploader: grid-cols-2 sm:grid-cols-3 + min-tap.",
+        "Color picker: grid-cols-4 sm:grid-cols-6 + min-tap.",
+        "ConsoleDrawer RunHistory max-h-[40dvh] istället för h-[26rem].",
+        "AssetDropzone upload-knapp min-tap + drop-area pb-safe.",
+        "DirectivesPreview Copy min-tap.",
+        "QuickPromptButton min-tap.",
+        "Inga off-limits-paths rörda (inklusive alla fas 1-paths)."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/focus_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint",
+        "python -m pytest -q tests/"
+      ],
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "createdAt": "2026-05-26T09:01:46Z",
+      "updatedAt": "2026-05-26T09:15:51Z",
+      "notes": [
+        "Levererad i PR #117 mot jakob-be (ovanpå fas 1). Status completed lokalt; väntar på review + merge från Jakob.",
+        "10 paths polish: PromptBuilder, ViewerPanel, ConsoleDrawer, AI/asset/color-dialogs, helper-knappar."
+      ],
+      "activatedAt": "2026-05-26T09:01:46Z",
+      "completedAt": "2026-05-26T09:15:51Z",
+      "fixCommits": [
+        "62437de",
+        "d7ca301",
+        "6b2d68c",
+        "64445bb",
+        "712a3c2",
+        "7e580b4"
+      ]
+    },
+    {
+      "id": "GAP-viewser-pipeline-status-polling",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "FloatingChat speglar riktig pipeline-status via trace-endpoint",
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "file": "docs/gaps/GAP-viewser-pipeline-status-polling.md",
+      "createdAt": "2026-05-25T13:20:00Z",
+      "startedAt": "2026-05-25T13:20:00Z",
+      "paths": [
+        "apps/viewser/components/builder/floating-chat.tsx",
+        "apps/viewser/components/builder/use-pending-build.ts",
+        "apps/viewser/components/builder/use-build-trace-polling.ts"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/runs/**",
+        "apps/viewser/lib/runs.ts",
+        "apps/viewser/components/builder/inspector/**",
+        "apps/viewser/components/discovery-wizard/**",
+        "packages/generation/**",
+        "scripts/build_site.py"
+      ],
+      "acceptanceCriteria": [
+        "Den hårdkodade FOLLOWUP_BUILD_STEPS-kedjan med setTimeout är borta.",
+        "Polling mot /api/runs/[runId]/trace?since=<iso> så fort runId är känt.",
+        "Step-text uppdateras från trace.ndjson-events.",
+        "runStatus = ok/degraded/mock visas med rätt variant.",
+        "Polling stoppar inom 1s efter att build-result landat.",
+        "Backoff: 1.5s → 3s; ingen evig 500ms-polling."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint"
+      ],
+      "note": "Effort 4-6h. UI-quick-win efter scout 2026-05-25. Trace-endpoint finns i main (commit 74a355b).\n\n2026-05-26 pause: depriorited tillfälligt till förmån för GAP-viewser-mobile-responsive-foundation som rör samma filer (floating-chat.tsx / site-inspector-sheet.tsx) och måste landa först som baseline. Återöppnas (status='active') när mobil-foundation mergat till jakob-be.",
+      "blockedBy": [
+        "GAP-viewser-mobile-responsive-foundation"
+      ],
+      "pausedAt": "2026-05-26T08:35:04Z",
+      "completedAt": "2026-05-26T09:46:10Z",
+      "fixCommits": [],
+      "notes": [
+        "Redan implementerad i tidigare iteration (use-build-trace-polling.ts + floating-chat.tsx-integration via tracePolling-hook). FOLLOWUP_BUILD_STEPS som faktisk kod är borttagen; bara kommentar-referenser kvar.",
+        "Stale queued-status fran fas-1-paus rensad."
+      ],
+      "updatedAt": "2026-05-26T09:46:10Z"
+    },
+    {
+      "id": "GAP-viewser-side-by-side-preview",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Sida-vid-sida-preview av två genererade versioner i Versions-tab",
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "file": "docs/gaps/GAP-viewser-side-by-side-preview.md",
+      "createdAt": "2026-05-25T04:50:00Z",
+      "startedAt": "2026-05-25T04:50:00Z",
+      "paths": [
+        "apps/viewser/components/builder/inspector/versions-tab.tsx",
+        "apps/viewser/components/builder/inspector/compare-preview-modal.tsx",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/components/builder/inspector/index.ts"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/runs/**",
+        "apps/viewser/app/api/preview/**",
+        "apps/viewser/components/viewer-panel.tsx",
+        "apps/viewser/lib/runs.ts",
+        "packages/generation/**",
+        "scripts/build_site.py"
+      ],
+      "acceptanceCriteria": [
+        "Versions-tab har en 'Visuell jämförelse'-knapp som aktiveras när både A och B är valda och pekar på olika runIds.",
+        "Klick öppnar full-screen modal med två StackBlitz-iframer sida vid sida (50/50 desktop, stackat på mobil).",
+        "Browser-detection: Safari/Firefox visar fallback med 'Öppna båda i nya fönster' i stället för embeddade iframer.",
+        "ESC eller stängningsknapp avmonterar båda iframerna utan stale DOM.",
+        "Inga ändringar i existerande viewer-panel.tsx eller backend-endpoints."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint"
+      ],
+      "note": "UI-only feature byggd ovanpå existerande /api/runs/[runId]/files. Två StackBlitz-instanser kostar bara klient-resurser, ingen backend-last. Path B (GAP-backend-path-b-section-renderer) ökar värdet av denna feature kraftigt eftersom strukturellt olika scaffolds då blir möjliga att jämföra.\n\n2026-05-26 pause: depriorited tillfälligt till förmån för GAP-viewser-mobile-responsive-foundation som rör samma filer (floating-chat.tsx / site-inspector-sheet.tsx) och måste landa först som baseline. Återöppnas (status='active') när mobil-foundation mergat till jakob-be.",
+      "blockedBy": [
+        "GAP-viewser-mobile-responsive-foundation"
+      ],
+      "pausedAt": "2026-05-26T08:35:04Z",
+      "completedAt": "2026-05-26T09:46:10Z",
+      "fixCommits": [],
+      "notes": [
+        "Redan implementerad: compare-preview-modal.tsx finns + wired in versions-tab.tsx via 'Visuell jamforelse'-knappen. Modalen forbattrades dessutom i fas 3 med mobile swipe + A/B-pills.",
+        "Stale queued-status fran fas-1-paus rensad."
+      ],
+      "updatedAt": "2026-05-26T09:46:10Z"
+    },
+    {
+      "id": "GAP-viewser-mobile-responsive-final-polish",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Mobil-anpassning fas 3 — final polish (run-history, compare swipe, device-toggle, motion)",
+      "whyNow": "Fas 1 + fas 2 (PR #117) löste foundation + P0 + P1-polish. Fas 3 stänger UX-gap som krävde mer än CSS: run-history fast 416px (62% av 667px-skärm), compare-modal staplar A över B på mobil (jämförelse blir meningslös), viewer-panel saknar device-toggle på desktop, motion polish på edge-pulse + bottom-sheet.",
+      "paths": [
+        "apps/viewser/components/run-history.tsx",
+        "apps/viewser/components/builder/inspector/compare-preview-modal.tsx",
+        "apps/viewser/components/viewer-panel.tsx",
+        "apps/viewser/app/globals.css"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/**",
+        "apps/viewser/lib/**",
+        "apps/viewser/middleware.ts",
+        "apps/viewser/next.config.ts",
+        "apps/viewser/package.json",
+        "apps/viewser/package-lock.json",
+        "scripts/**",
+        "packages/generation/**",
+        "governance/schemas/**"
+      ],
+      "acceptanceCriteria": [
+        "RunHistory: h-[26rem] -> max-h-[50dvh] sm:h-[26rem].",
+        "ComparePreviewModal: mobile swipe + snap-x + A/B-indikator-pills.",
+        "ViewerPanel device-toggle desktop (375/768/1024/full) + sessionStorage.",
+        "FloatingChat edge-pulse: ease-in-out 3s cycle.",
+        "Bottom-sheet scale-in via existing data-starting-style.",
+        "Inga off-limits-paths."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/focus_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint",
+        "python -m pytest -q tests/"
+      ],
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "createdAt": "2026-05-26T09:16:41Z",
+      "updatedAt": "2026-05-26T09:53:14Z",
+      "notes": [
+        "Levererad i PR #117 ovanpa fas 1 + 2. Status completed lokalt; vantar pa Jakob-merge.",
+        "Scout-rapport (95f73fbf) hittade P0+P1 buggar som fixas i ny GAP-viewser-mobile-scout-fixes."
+      ],
+      "activatedAt": "2026-05-26T09:16:41Z",
+      "completedAt": "2026-05-26T09:53:14Z",
+      "fixCommits": [
+        "e05c443",
+        "18d84f5",
+        "f850882",
+        "8724798",
+        "71257ce",
+        "564ab80"
+      ]
+    },
+    {
+      "id": "GAP-viewser-mobile-scout-fixes",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Scout-rapporterade P0+P1 buggar i mobil fas 1+2+3",
+      "whyNow": "Scout-run pa diff ea62e45^..8724798 hittade 3 P0 (pb-safe-or-3 saknas, wizard iOS-zoom, 20px steg-chips) + ~12 P1 (hydration, flash, keyboard, footer min-tap, ModePill, pill-desync, focus, inspector, mikro-kontroller, sm-zoom). Gor PR #117 merge-redo.",
+      "paths": [
+        "apps/viewser/app/globals.css",
+        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
+        "apps/viewser/components/discovery-wizard/steps/step-primitives.tsx",
+        "apps/viewser/components/discovery-wizard/steps/content-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/company-step.tsx",
+        "apps/viewser/components/viewer-panel.tsx",
+        "apps/viewser/components/prompt-builder.tsx",
+        "apps/viewser/components/builder/floating-chat.tsx",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/components/builder/inspector/compare-preview-modal.tsx",
+        "apps/viewser/components/builder/dialogs/color-picker-dialog.tsx"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/**",
+        "apps/viewser/lib/**",
+        "apps/viewser/middleware.ts",
+        "apps/viewser/next.config.ts",
+        "apps/viewser/package.json",
+        "apps/viewser/package-lock.json",
+        "scripts/**",
+        "packages/generation/**",
+        "governance/schemas/**"
+      ],
+      "acceptanceCriteria": [
+        "P0 #1: .pb-safe-or-3 utility finns i globals.css.",
+        "P0 #2: Alla wizard inputs kor text-base i mobile.",
+        "P0 #3: Mobile steg-chips >=44px hit-area.",
+        "P1 #4-14: alla scout-flaggade buggar atgardade.",
+        "Inga off-limits-paths."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/focus_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint",
+        "python -m pytest -q tests/"
+      ],
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "createdAt": "2026-05-26T09:53:14Z",
+      "updatedAt": "2026-05-26T10:35:49Z",
+      "notes": [
+        "3 P0 + 12 P1 implementerade. PR #117 nu redo for Jakob-review."
+      ],
+      "activatedAt": "2026-05-26T09:53:14Z",
+      "completedAt": "2026-05-26T10:35:49Z",
+      "fixCommits": [
+        "6d0c896",
+        "cb6f43d",
+        "6e06129",
+        "420efb0",
+        "3e312f2"
+      ]
+    },
+    {
+      "id": "GAP-viewser-mobile-hero-flow",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Mobil hero: stacked layout med SM-mobile.mp4 som top-banner",
+      "whyNow": "Manuell test pa iPhone 14 Pro-viewport (393x852) i Safari Responsive Design Mode visade tre fynd som scout-rapporten inte tackte:\n\n1. SM_hero.mp4 har object-position 78% (designat for desktop bredd) -> 3D-objektet hamnar bakom rubriken pa mobil.\n2. Hero-rubriken har hardkodad <br /> + max-w-lg -> radbryts till 'Beskriv / din sajt / sa bygger / vi den' pa 393px.\n3. Hela hero kanns inte som ett naturligt flode pa mobil (video, text, composer konkurrerar om utrymmet i samma absolut-positioned canvas).\n\nOperatoren har levererat SM-mobile.mp4 (960x960 fyrkantig, 1.1MB, off-white bakgrund #f0f2ed) som ar designad for mobil top-banner.",
+      "paths": [
+        "apps/viewser/components/viewer-panel.tsx",
+        "apps/viewser/public/SM-mobile.mp4",
+        "apps/viewser/components/discovery-wizard/wizard-types.ts"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/**",
+        "apps/viewser/lib/**",
+        "apps/viewser/middleware.ts",
+        "apps/viewser/next.config.ts",
+        "apps/viewser/package.json",
+        "scripts/**",
+        "packages/generation/**"
+      ],
+      "acceptanceCriteria": [
+        "Mobil (<md): SM-mobile.mp4 renderas som top-banner (fyrkantig, centrerad).",
+        "Mobil hero-bakgrund matchar videons bakgrundsfard (#f0f2ed) sa video flyter in i bakgrunden.",
+        "Mobil hero-text under videon, ingen overlapp med 3D-objektet.",
+        "Hero-rubrik radbryts naturligt utan hardkodad <br /> pa mobil.",
+        "Desktop (md+): oforandrat (SM_hero.mp4 + 78% object-position + overlay-text)."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/focus_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint"
+      ],
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "createdAt": "2026-05-26T10:35:49Z",
+      "updatedAt": "2026-05-26T10:52:03Z",
+      "notes": [
+        "Mobil hero stacked flow + SM-mobile.mp4 implementerad. Wizard companyName-validering (2-tecken) borttagen. Scout pass 4 efter detta hittade tre nya P1-justeringar som flyttas till GAP-viewser-mobile-hero-safe-zone."
+      ],
+      "activatedAt": "2026-05-26T10:35:49Z",
+      "completedAt": "2026-05-26T10:52:03Z",
+      "fixCommits": [
+        "59eed4c"
+      ]
     }
   ],
   "decisions": [

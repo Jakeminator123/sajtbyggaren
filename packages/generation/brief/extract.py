@@ -30,15 +30,21 @@ SWEDISH_HINTS = {
 
 # English stop-words used to refuse the Swedish-default fallback when the
 # prompt clearly reads as English. The list is intentionally tiny: short
-# function words that operators rarely typo into a Swedish prompt
-# ("the", "a", "an", function prepositions) plus a handful of common
-# website-shaped verbs/nouns ("create", "build", "website", "site") that
-# show up in nearly every English brief in this domain. Keeping it small
-# avoids fighting the Swedish-default in mixed-vocabulary prompts; we
-# rather lean Swedish than mistakenly translate a Swedish prompt to
-# English (B62, demo-baseline-fix 1A-hotfix).
+# function words that operators rarely typo into a Swedish prompt plus a
+# handful of common website-shaped verbs/nouns ("create", "build",
+# "website", "site") that show up in nearly every English brief in this
+# domain. Keeping it small avoids fighting the Swedish-default in
+# mixed-vocabulary prompts; we rather lean Swedish than mistakenly
+# translate a Swedish prompt to English (B62, demo-baseline-fix 1A-hotfix).
+#
+# B90 (2026-05-26): "a" and "an" removed because they false-positive on
+# Swedish company names that contain a single-letter token: "A & O El
+# Malmö" tokenises to {"a", "&", "o", "el", "malmö"} and "a" used to
+# match here. The å/ä/ö check still catches that case via "malmö", and
+# the remaining stop-word set is more than sufficient for the genuine
+# English-brief cases.
 ENGLISH_HINTS = {
-    "the", "a", "an", "and", "or", "but",
+    "the", "and", "or", "but",
     "in", "on", "at", "for", "of", "with", "to", "from",
     "is", "are", "was", "were", "be", "been",
     "create", "build", "make", "need", "want",

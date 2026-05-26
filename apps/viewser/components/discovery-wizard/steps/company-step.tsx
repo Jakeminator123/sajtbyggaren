@@ -106,7 +106,8 @@ export function CompanyStep({
   return (
     <FieldStack>
       <TextField
-        label="Företagsnamn *"
+        label="Företagsnamn"
+        optional
         value={answers.companyName}
         onChange={(value) => onChange({ companyName: value })}
         placeholder="t.ex. Ateljé Bird"
@@ -129,7 +130,7 @@ export function CompanyStep({
               }
             }}
             placeholder="www.dinhemsida.se"
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-[13px] shadow-xs transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base md:text-[13px] shadow-xs transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
           />
           <Button
             type="button"

@@ -581,6 +581,119 @@ def test_hero_cta_label_uses_shop_business_type_fallback() -> None:
     assert _hero_cta_label(dossier) == "Shoppa nu"
 
 
+# ---------------------------------------------------------------------------
+# B150 — _normalize_business_type must collapse multi-word business types
+# whose head noun is a registered booking/shop slug. briefModel sometimes
+# emits "massage studio", "yoga studio", "personal trainer studio"; before
+# B150 those compact slugs ("massage-studio") did not match any of the
+# CTA-resolver sets, and the hero CTA fell through to "Begär offert"
+# instead of "Boka tid" / "Shoppa nu".
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_b150_normalize_business_type_collapses_massage_studio() -> None:
+    """B150: ``"massage studio"`` → ``"massage"`` so the booking CTA fires.
+
+    Verifies both the space-form and the dash-form normalise to the
+    registered ``_BOOKING_BUSINESS_TYPES`` slug.
+    """
+    from scripts.build_site import _normalize_business_type
+
+    assert _normalize_business_type("massage studio") == "massage"
+    assert _normalize_business_type("massage-studio") == "massage"
+    assert _normalize_business_type("Massage Studio") == "massage"
+
+
+@pytest.mark.tooling
+def test_b150_normalize_business_type_collapses_compound_booking_slugs() -> None:
+    """B150: compound booking-type slugs with non-booking suffix words
+    ("studio", "shop", "salong") must collapse to the registered head.
+    """
+    from scripts.build_site import _normalize_business_type
+
+    # personal-training is a registered booking slug; -studio suffix
+    # must not break the match.
+    assert _normalize_business_type("personal-training studio") == "personal-training"
+    # barber-shop is itself registered, so the direct compact-match wins
+    # before the head-prefix fallback fires.
+    assert _normalize_business_type("barber-shop") == "barber-shop"
+    # Three-word compound: head is "barber" (registered), even though
+    # "barber-shop" is also registered — the loop prefers the LONGEST
+    # registered prefix, so "barber-shop-studio" → "barber-shop".
+    assert _normalize_business_type("barber-shop studio") == "barber-shop"
+
+
+@pytest.mark.tooling
+def test_b150_normalize_business_type_preserves_unknown_compound_unchanged() -> None:
+    """B150 defensive: ``_normalize_business_type`` must never invent
+    slugs the CTA-resolver does not recognise. An unknown compound
+    business type ("yoga studio" — yoga is not registered) passes
+    through unchanged.
+    """
+    from scripts.build_site import _normalize_business_type
+
+    # "yoga" is NOT in _BOOKING_BUSINESS_TYPES or _SHOP_BUSINESS_TYPES,
+    # so the head-prefix fallback does not fire and the compact slug
+    # remains intact for the caller to handle.
+    assert _normalize_business_type("yoga studio") == "yoga-studio"
+    assert _normalize_business_type("unknown business kind") == "unknown-business-kind"
+
+
+@pytest.mark.tooling
+def test_b150_hero_cta_label_fires_booking_for_massage_studio() -> None:
+    """B150 integration: when briefModel emits ``"massage studio"`` and
+    no conversionGoals, the hero CTA falls back through the normalised
+    business type into ``"Boka tid"`` instead of generic ``"Begär offert"``.
+    """
+    from scripts.build_site import _hero_cta_label
+
+    dossier = {
+        "language": "sv",
+        "scaffoldId": "local-service-business",
+        "conversionGoals": [],
+        "company": {"businessType": "massage studio"},
+    }
+    assert _hero_cta_label(dossier) == "Boka tid"
+
+
+@pytest.mark.tooling
+def test_b150_hero_cta_label_fires_booking_for_dash_form_personal_training_studio() -> None:
+    """B150 integration: ``"personal-training-studio"`` → booking CTA via
+    the longest-registered-prefix fallback (``"personal-training"`` is
+    registered).
+    """
+    from scripts.build_site import _hero_cta_label
+
+    dossier = {
+        "language": "sv",
+        "scaffoldId": "local-service-business",
+        "conversionGoals": [],
+        "company": {"businessType": "personal-training-studio"},
+    }
+    assert _hero_cta_label(dossier) == "Boka tid"
+
+
+@pytest.mark.tooling
+def test_b150_naprapat_explicit_mapping_still_wins() -> None:
+    """B150 compat: the explicit ``naprapat*`` prefix mapping must keep
+    firing before the new generic head-prefix fallback. The old contract
+    where every naprapat variant maps to ``"naprapat-clinic"`` stays.
+    """
+    from scripts.build_site import _normalize_business_type
+
+    for variant in (
+        "naprapat",
+        "naprapath",
+        "naprapatklinik",
+        "naprapath-clinic",
+        "Naprapat AB",
+    ):
+        assert _normalize_business_type(variant) == "naprapat-clinic", (
+            f"naprapat variant {variant!r} must collapse to 'naprapat-clinic'"
+        )
+
+
 @pytest.mark.tooling
 def test_hero_cta_label_explicit_goals_beat_business_type_fallback() -> None:
     """B100: explicit conversionGoals remain the highest priority."""
@@ -935,6 +1048,185 @@ def test_render_about_keeps_service_areas_for_real_city() -> None:
 
     assert "Områden vi arbetar i" in output
     assert "Norrmalm" in output
+
+
+# ---------------------------------------------------------------------------
+# B98 — render_about must suppress the "Områden vi arbetar i"-block for
+# e-handel (ecommerce-lite scaffold) even when the location is a real
+# city. E-commerce ships from one location and the "areas we work in"
+# heading reads as a service-business assumption that does not fit.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_b98_render_about_omits_service_areas_for_ecommerce_lite() -> None:
+    """B98: ecommerce-lite scaffold must not render the location-section
+    on /om-oss. The heading "Områden vi arbetar i" + the MapPin icon
+    are service-business-flavoured and read awkwardly for e-handel,
+    even when the location is a real city (not country-only)."""
+    from scripts.build_site import render_about
+
+    dossier = _minimal_dossier()
+    dossier["scaffoldId"] = "ecommerce-lite"
+    # Real city (not country-only) so the B104 country-only check
+    # would otherwise allow the section to render. B98 suppresses
+    # it via the new scaffold check.
+    dossier["location"] = {
+        "city": "Stockholm",
+        "country": "Sverige",
+        "serviceAreas": ["Stockholm", "Norrmalm", "Södermalm"],
+    }
+    output = render_about(dossier)
+
+    assert "Områden vi arbetar i" not in output, (
+        "ecommerce-lite must not show the 'Områden vi arbetar i' section "
+        "even with real local service areas."
+    )
+
+
+@pytest.mark.tooling
+def test_b98_render_about_keeps_service_areas_for_local_service_business() -> None:
+    """B98 negative: scaffolds other than ecommerce-lite still get the
+    location-section when the location is a real city. The B104 country-
+    only check + the new B98 ecommerce-lite check compose — neither
+    should accidentally suppress local-service-business output."""
+    from scripts.build_site import render_about
+
+    dossier = _minimal_dossier()
+    dossier["scaffoldId"] = "local-service-business"
+    output = render_about(dossier)
+
+    assert "Områden vi arbetar i" in output
+    assert "Norrmalm" in output
+
+
+@pytest.mark.tooling
+def test_b98_render_about_keeps_service_areas_when_scaffold_unspecified() -> None:
+    """B98 defensive: a dossier without ``scaffoldId`` must NOT trigger
+    the new ecommerce-lite suppression. Backwards-compat with older
+    callers that pre-date the scaffold-aware about block."""
+    from scripts.build_site import render_about
+
+    dossier = _minimal_dossier()
+    # No scaffoldId — _minimal_dossier() does not set one by default.
+    dossier.pop("scaffoldId", None)
+    output = render_about(dossier)
+
+    assert "Områden vi arbetar i" in output
+
+
+# ---------------------------------------------------------------------------
+# B97 — render_section_contact_info must vary the kontakt-page hero
+# body paragraph by CTA-variant (shop / booking / quote). The original
+# "Beskriv jobbet kort … med tider och offert." paragraph assumed a
+# quote-driven service business and read awkwardly for e-handel (orders
+# / returns / delivery) and booking (book-a-time) businesses.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_b97_contact_page_hero_body_quote_variant_default_unchanged() -> None:
+    """B97 byte-stability: the quote-variant body must stay identical
+    to the pre-fix copy so existing local-service-business renders
+    do not regress.
+    """
+    from scripts.build_site import render_section_contact_info
+
+    dossier = _minimal_dossier()
+    # _minimal_dossier is a Malmö elektriker — quote-variant by default.
+    output = render_section_contact_info(dossier)
+
+    assert "Beskriv jobbet kort så återkommer vi inom en arbetsdag med tider och offert." in output
+    # The variant-specific shop and booking copies must NOT leak into
+    # the quote-variant output.
+    assert "Frågor om beställning" not in output
+    assert "Berätta kort vad du söker" not in output
+
+
+@pytest.mark.tooling
+def test_b97_contact_page_hero_body_shop_variant_for_ecommerce_lite() -> None:
+    """B97: ecommerce-lite scaffold + shop-variant must show the
+    order/delivery/return-flavoured body, not the quote-flavoured one.
+    """
+    from scripts.build_site import render_section_contact_info
+
+    dossier = _minimal_dossier()
+    dossier["scaffoldId"] = "ecommerce-lite"
+    dossier["conversionGoals"] = ["purchase"]
+    output = render_section_contact_info(dossier)
+
+    assert "Frågor om beställning, leverans eller retur? Vi återkommer inom en arbetsdag." in output
+    # The quote-variant copy with "jobbet" + "offert" must not appear
+    # for an e-commerce contact page.
+    assert "tider och offert" not in output
+    assert "Beskriv jobbet kort" not in output
+
+
+@pytest.mark.tooling
+def test_b97_contact_page_hero_body_booking_variant_for_booking_business() -> None:
+    """B97: booking-business + booking conversion goal must show the
+    book-a-time-flavoured body. Verified through the booking-business-
+    type fallback path in _hero_cta_variant.
+    """
+    from scripts.build_site import render_section_contact_info
+
+    dossier = _minimal_dossier()
+    dossier["conversionGoals"] = []
+    dossier["company"]["businessType"] = "naprapat-clinic"
+    output = render_section_contact_info(dossier)
+
+    assert "Berätta kort vad du söker — vi återkommer inom en arbetsdag med en tid som passar." in output
+    assert "tider och offert" not in output
+
+
+@pytest.mark.tooling
+def test_b97_contact_page_hero_body_english_quote_variant() -> None:
+    """B97: language=en + quote-variant emits the English quote copy."""
+    from scripts.build_site import render_section_contact_info
+
+    dossier = _minimal_dossier()
+    dossier["language"] = "en"
+    output = render_section_contact_info(dossier)
+
+    assert "Tell us briefly about the job and we'll get back within one business day with times and a quote." in output
+
+
+@pytest.mark.tooling
+def test_b97_contact_page_hero_body_english_shop_variant() -> None:
+    """B97: language=en + shop-variant emits the English order/return copy."""
+    from scripts.build_site import render_section_contact_info
+
+    dossier = _minimal_dossier()
+    dossier["language"] = "en"
+    dossier["scaffoldId"] = "ecommerce-lite"
+    dossier["conversionGoals"] = ["purchase"]
+    output = render_section_contact_info(dossier)
+
+    assert "Questions about your order, delivery or return? We get back to you within one business day." in output
+
+
+@pytest.mark.tooling
+def test_b97_contact_page_hero_headline_stays_generic_across_variants() -> None:
+    """B97 scope-lock: only the body paragraph varies. The hero headline
+    'Hör av dig' is generic enough to work across shop/booking/quote
+    and must NOT be variant-branched (would inflate the change surface
+    and risk regressing existing renders).
+    """
+    from scripts.build_site import render_section_contact_info
+
+    for variant_dossier in (
+        # quote (default)
+        _minimal_dossier(),
+        # shop
+        {**_minimal_dossier(), "scaffoldId": "ecommerce-lite", "conversionGoals": ["purchase"]},
+        # booking
+        {**_minimal_dossier(), "conversionGoals": [], "company": {**_minimal_dossier()["company"], "businessType": "naprapat-clinic"}},
+    ):
+        output = render_section_contact_info(variant_dossier)
+        assert ">Hör av dig<" in output, (
+            f"Hero headline must stay 'Hör av dig' across all variants; "
+            f"failed for dossier scaffoldId={variant_dossier.get('scaffoldId')!r}"
+        )
 
 
 # ---------------------------------------------------------------------------
