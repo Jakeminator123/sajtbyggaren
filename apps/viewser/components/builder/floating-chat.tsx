@@ -326,6 +326,18 @@ const PANEL_WIDTH = 360;
 const PANEL_HEIGHT = 460;
 const PANEL_MIN_HEIGHT = 220;
 const VIEWPORT_PADDING = 16;
+/**
+ * Toolbar-pillen (375/768/1024/Full + Verktyg) sitter kant-i-kant
+ * UNDER chat-panelen via `top: position.y + PANEL_HEIGHT`. När vi
+ * clamp:ar drag/resize-position måste vi räkna med pillens egen höjd
+ * (h-8 button + p-0.5 padding ≈ 36px) plus lite andnings-padding så
+ * raden inte klipps av viewportens nederkant. Används som höjd-argument
+ * till clampToViewport där tidigare bara PANEL_HEIGHT användes
+ * (scout-fynd 2026-05-26: toolbar hamnade utanför viewporten vid
+ * default-position nederst till höger).
+ */
+const TOOLBAR_ROW_HEIGHT = 40;
+const PANEL_FOOTPRINT_HEIGHT = PANEL_HEIGHT + TOOLBAR_ROW_HEIGHT;
 const STORAGE_KEY_POSITION = "sajtbyggaren:floating-chat:position";
 const STORAGE_KEY_MINIMIZED = "sajtbyggaren:floating-chat:minimized";
 const STORAGE_KEY_QUICK_PROMPTS = "sajtbyggaren:floating-chat:quick-prompts";
@@ -625,8 +637,8 @@ export function FloatingChat({
       if (cancelled) return;
       const stored = readStoredPosition();
       const initial = stored
-        ? clampToViewport(stored, PANEL_WIDTH, PANEL_HEIGHT)
-        : defaultPosition(PANEL_WIDTH, PANEL_HEIGHT);
+        ? clampToViewport(stored, PANEL_WIDTH, PANEL_FOOTPRINT_HEIGHT)
+        : defaultPosition(PANEL_WIDTH, PANEL_FOOTPRINT_HEIGHT);
       setPosition(initial);
       setIsMinimized(readStoredMinimized());
       setQuickPromptsOpen(readStoredQuickPromptsOpen());
@@ -641,7 +653,7 @@ export function FloatingChat({
     function handleResize() {
       setPosition((current) => {
         if (!current) return current;
-        return clampToViewport(current, PANEL_WIDTH, PANEL_HEIGHT);
+        return clampToViewport(current, PANEL_WIDTH, PANEL_FOOTPRINT_HEIGHT);
       });
     }
     window.addEventListener("resize", handleResize);
@@ -734,7 +746,7 @@ export function FloatingChat({
         clampToViewport(
           { x: start.originX + dx, y: start.originY + dy },
           PANEL_WIDTH,
-          PANEL_HEIGHT,
+          PANEL_FOOTPRINT_HEIGHT,
         ),
       );
     },

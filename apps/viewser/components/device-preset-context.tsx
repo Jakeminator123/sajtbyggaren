@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -74,6 +75,12 @@ export function DevicePresetProvider({ children }: { children: ReactNode }) {
   const [devicePreset, setDevicePresetInternal] =
     useState<DevicePreset>("full");
 
+  // Gating-flag: persist-effekten skriver INTE till sessionStorage förrän
+  // hydration-effekten har kört sin first-mount-läsning. Annars skriver
+  // initial "full" över ett sparat värde innan vi hinner läsa det
+  // (scout-fynd 2026-05-26: reload nollställde valet till Full).
+  const hasHydratedRef = useRef(false);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     let cancelled = false;
@@ -89,6 +96,7 @@ export function DevicePresetProvider({ children }: { children: ReactNode }) {
       ) {
         setDevicePresetInternal(stored);
       }
+      hasHydratedRef.current = true;
     })();
     return () => {
       cancelled = true;
@@ -97,6 +105,7 @@ export function DevicePresetProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!hasHydratedRef.current) return;
     window.sessionStorage.setItem(DEVICE_STORAGE_KEY, devicePreset);
   }, [devicePreset]);
 

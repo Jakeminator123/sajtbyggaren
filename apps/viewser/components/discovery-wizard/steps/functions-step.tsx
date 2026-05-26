@@ -23,6 +23,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import {
+  type BusinessFamilyId,
   findFunctionChoice,
   type FunctionChoice,
   functionGroupsForFamily,
@@ -126,35 +127,73 @@ export function FunctionsStep({
     [answers.mustHave, answers.selectedFunctions, pageToChoice, onChange],
   );
 
-  // Auto-apply familjens rekommenderade sidor + funktioner när family
-  // väljs första gången och inget redan är förvalt. Skyddar mot att
-  // skriva över operatorns avval — om hen redan tagit bort något så
-  // respekterar vi det.
-  const lastAppliedFamilyRef = useRef<string | null>(null);
+  // Auto-apply familjens rekommenderade sidor + funktioner.
+  //
+  // Två fall:
+  //   1. Första gången family sätts och inget redan är förvalt
+  //      (lastAppliedFamilyRef === null) → applicera defaults.
+  //   2. Family BYTS från en tidigare family (lastAppliedFamilyRef
+  //      var ≠ null och ≠ ny family) → byt ut föregående familjs
+  //      defaults mot nya familjens. Custom-tillägg som operatören
+  //      lagt till manuellt (poster som inte fanns i föregående
+  //      familjs defaults) behålls. Scout-fynd 2026-05-26:
+  //      tidigare logik körde bara case 1 — ett family-byte efter
+  //      att functions-tabben besökts behöll restaurang-sidor även
+  //      om operatören bytte till e-handel.
+  const lastAppliedFamilyRef = useRef<BusinessFamilyId | null>(null);
   useEffect(() => {
     if (!family) return;
-    if (lastAppliedFamilyRef.current === family) return;
-    if (
-      answers.selectedFunctions.length === 0 &&
-      answers.mustHave.length === 0
-    ) {
-      const ids = RECOMMENDED_FUNCTIONS_BY_FAMILY[family] ?? [];
-      const fns = new Set<string>();
+    const previousFamily = lastAppliedFamilyRef.current;
+    if (previousFamily === family) return;
+
+    const buildDefaults = (
+      familyKey: BusinessFamilyId,
+    ): { pages: Set<string>; fns: Set<string> } => {
+      const ids = RECOMMENDED_FUNCTIONS_BY_FAMILY[familyKey] ?? [];
       const pages = new Set<string>([
         "Startsida / Hero",
         "Om oss / Om mig",
       ]);
+      const fns = new Set<string>();
       for (const id of ids) {
         const choice = findFunctionChoice(id);
         if (!choice) continue;
         fns.add(choice.id);
         if (choice.pageMustHave) pages.add(choice.pageMustHave);
       }
+      return { pages, fns };
+    };
+
+    if (previousFamily === null) {
+      if (
+        answers.selectedFunctions.length === 0 &&
+        answers.mustHave.length === 0
+      ) {
+        const next = buildDefaults(family);
+        onChange({
+          selectedFunctions: Array.from(next.fns),
+          mustHave: Array.from(next.pages),
+        });
+      }
+    } else {
+      const prev = buildDefaults(previousFamily);
+      const next = buildDefaults(family);
+      const nextPages = new Set<string>();
+      for (const p of answers.mustHave) {
+        if (!prev.pages.has(p) || next.pages.has(p)) nextPages.add(p);
+      }
+      for (const p of next.pages) nextPages.add(p);
+      const nextFns = new Set<string>();
+      for (const f of answers.selectedFunctions) {
+        if (!prev.fns.has(f) || next.fns.has(f)) nextFns.add(f);
+      }
+      for (const f of next.fns) nextFns.add(f);
       onChange({
-        selectedFunctions: Array.from(fns),
-        mustHave: Array.from(pages),
+        selectedFunctions: Array.from(nextFns),
+        mustHave: Array.from(nextPages),
       });
     }
+
     lastAppliedFamilyRef.current = family;
     // applyRecommendations är stabil. Trigga bara på family-byten.
     // eslint-disable-next-line react-hooks/exhaustive-deps
