@@ -114,7 +114,7 @@ Denna session fick två externa AI-reviewers + en cloud-grind-agent:
 
 - **Cloud-grind-agent** (operatörens parallella session) — körde C4 backend-handoff verification audit. Levererade PR #121 med 15 add/15 del på `docs/backend-handoff.md` med exakta paths/rader för alla 11 gaps. Audit verifierad korrekt via 3 stickprov av lokal agent (Gap 2/4/8). PR mergad lokalt med konfliktlösning som `0f3bd67` + co-author-credit. Branch raderad.
 - **Extern reviewer-pass** (separat session) — efter cloud-grindens initiala feedback flaggade tre konkreta drift-punkter: (1) `brief/extract.py`-paths var inkonsekvent angivna i tabellen, (2) C4-scope missade `wizard-payload.ts` + `wizard-types.ts` där flera gap-fält först mappas, (3) `current-focus.md` sa "5 commits framför main" men `git rev-list` returnerade 6. Alla tre fixade i `d3a2ad6` (path-cleanup + scope-utvidgning + count-correction).
-- **`9dbd10a`-fix-kontext** — Term-coverage flaggade `WizardProduct` (PascalCase i backtick) som lokal agent hade fabricerat — typen finns inte i `apps/viewser/components/discovery-wizard/wizard-types.ts`. Bytt till path-only-referens. Cloud-grind-agentens version i PR #121 saknade detta fel från början, så `0f3bd67`-mergen tog hennes mer korrekta version verbatim.
+- **`9dbd10a`-fix-kontext** — Term-coverage flaggade en fabricerad `wizard-product`-typ-referens som lokal agent hade hittat på — typen finns inte i `apps/viewser/components/discovery-wizard/wizard-types.ts`. Bytt till path-only-referens. Cloud-grind-agentens version i PR #121 saknade detta fel från början, så `0f3bd67`-mergen tog hennes mer korrekta version verbatim.
 
 ---
 
