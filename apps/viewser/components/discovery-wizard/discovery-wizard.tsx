@@ -319,18 +319,16 @@ export function DiscoveryWizard({
         </button>
 
         <DialogHeader className="space-y-0 px-5 pt-5 pb-3 text-left sm:px-8 sm:pt-6 sm:pb-3">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
             <Image
               src="/sajtbyggaren_logo.png"
-              alt="Sajtmaskin"
-              width={22}
-              height={22}
+              alt="Sajtbyggaren"
+              width={115}
+              height={28}
               priority
-              className="size-[22px] rounded-md object-contain"
+              className="h-7 w-auto object-contain"
             />
-            <DialogTitle className="text-foreground text-[14px] leading-tight font-semibold tracking-tight">
-              Sajtbyggaren
-            </DialogTitle>
+            <DialogTitle className="sr-only">Sajtbyggaren</DialogTitle>
             <DialogDescription className="text-muted-foreground/70 hidden text-[11.5px] leading-relaxed sm:inline">
               Bygger en personlig hemsida åt dig på några frågor.
             </DialogDescription>

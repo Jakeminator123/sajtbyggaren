@@ -885,7 +885,7 @@ export function ViewerPanel({
               <span className="bg-muted/60 inline-flex h-10 w-10 items-center justify-center rounded-xl p-1.5">
                 <Image
                   src="/sajtbyggaren_logo.png"
-                  alt="Sajtmaskin"
+                  alt="Sajtbyggaren"
                   width={28}
                   height={28}
                   className="h-full w-full object-contain"
@@ -1123,7 +1123,7 @@ function BuildProgressCard({ stage }: { stage: PromptStage }) {
         <span className="bg-muted/60 inline-flex h-10 w-10 items-center justify-center rounded-xl p-1.5">
           <Image
             src="/sajtbyggaren_logo.png"
-            alt="Sajtmaskin"
+            alt="Sajtbyggaren"
             width={28}
             height={28}
             className="h-full w-full object-contain"
