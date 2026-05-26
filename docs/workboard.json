@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-26T09:01:46Z",
+  "updatedAt": "2026-05-26T09:16:41Z",
   "updatedBy": "sprintvakt-mcp",
   "people": {
     "jakob": {
@@ -276,22 +276,16 @@
       "pairedWith": "GAP-backend-restaurant-activation"
     },
     {
-      "id": "GAP-viewser-mobile-responsive-foundation",
+      "id": "GAP-viewser-mobile-responsive-final-polish",
       "type": "Gap/UI",
       "owner": "christopher",
-      "title": "Mobil-anpassning av viewser-appen — foundation + P0-blockers",
-      "whyNow": "Hela viewser-appen är desktop-first idag. Audit 2026-05-26 visade 5 P0-blockers som gör appen oanvändbar på 375px (iPhone SE). Operatören har bekräftat scope: hela viewser-flödet (wizard + builder), polished kvalitetsnivå. Denna GAP = foundation + P0; polish/P1 öppnas som separat GAP efter.",
+      "title": "Mobil-anpassning fas 3 — final polish (run-history, compare swipe, device-toggle, motion)",
+      "whyNow": "Fas 1 + fas 2 (PR #117) löste foundation + P0 + P1-polish. Fas 3 stänger UX-gap som krävde mer än CSS: run-history fast 416px (62% av 667px-skärm), compare-modal staplar A över B på mobil (jämförelse blir meningslös), viewer-panel saknar device-toggle på desktop, motion polish på edge-pulse + bottom-sheet.",
       "paths": [
-        "apps/viewser/app/globals.css",
-        "apps/viewser/components/builder/floating-chat.tsx",
-        "apps/viewser/components/builder/builder-actions.tsx",
-        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
-        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
-        "apps/viewser/components/discovery-wizard/payload-alignment-popover.tsx",
-        "apps/viewser/components/discovery-wizard/steps/visual-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/content-step.tsx",
-        "apps/viewser/components/ui/sheet.tsx",
-        "apps/viewser/components/layout/site-header.tsx"
+        "apps/viewser/components/run-history.tsx",
+        "apps/viewser/components/builder/inspector/compare-preview-modal.tsx",
+        "apps/viewser/components/viewer-panel.tsx",
+        "apps/viewser/app/globals.css"
       ],
       "doNotTouch": [
         "apps/viewser/app/api/**",
@@ -305,87 +299,12 @@
         "governance/schemas/**"
       ],
       "acceptanceCriteria": [
-        "Mobil-foundation i globals.css: safe-bottom/safe-top/safe-x + min-tap (44px).",
-        "FloatingChat <768px = bottom-sheet (full bredd, max-h-[85dvh], pb-safe). Drag inaktiv touch. Minimerad = 56x56 FAB.",
-        "FloatingChat composer text-base mobil — inget iOS-zoom.",
-        "SiteInspectorSheet <768px = bottom-sheet (h-[90dvh] rounded-t-3xl). TabsList scrollable eller dropdown.",
-        "Wizard validationError visas alltid på mobil.",
-        "Hover-only delete på moodboard/content-bilder synlig på touch.",
-        "PayloadAlignmentPopover max-w-[calc(100vw-2rem)] eller bottom-sheet under sm:.",
-        "BuilderActions kolliderar inte med FloatingChat på mobil.",
-        "site-header konsol-knapp har min-tap på mobil.",
-        "Safe-area-padding på all fixed UI.",
-        "sheet.tsx bottom-sheet får rounded-t-3xl + drag-handle + pb-safe.",
-        "Inga off-limits-paths rörs."
-      ],
-      "checks": [
-        "python scripts/sprintvakt_check.py",
-        "python scripts/governance_validate.py",
-        "python scripts/rules_sync.py --check",
-        "python scripts/check_term_coverage.py --strict",
-        "cd apps/viewser && npx tsc --noEmit",
-        "cd apps/viewser && npm run lint",
-        "python -m pytest -q tests/"
-      ],
-      "collisionRisk": "green",
-      "reviewer": "jakob",
-      "status": "active",
-      "createdAt": "2026-05-26T08:36:28Z",
-      "updatedAt": "2026-05-26T08:36:40Z",
-      "notes": [],
-      "activatedAt": "2026-05-26T08:36:40Z"
-    },
-    {
-      "id": "GAP-viewser-mobile-responsive-polish",
-      "type": "Gap/UI",
-      "owner": "christopher",
-      "title": "Mobil-anpassning fas 2 — polish + P1 (tap-targets, iOS-zoom, dialogs)",
-      "whyNow": "Fas 1 (PR #117) levererade mobil-foundation + 5 P0-blockers. Fas 2 polerar de återstående ~10 P1-friktionerna från audit 2026-05-26: tap-targets under 44px, text-[13px]/[15px] inputs som triggar iOS Safari auto-zoom, dialoger med för täta grids på smala viewports, hero-typografi som dominerar mobil-canvas, och ConsoleDrawer-listor med fasta höjder.",
-      "paths": [
-        "apps/viewser/components/prompt-builder.tsx",
-        "apps/viewser/components/viewer-panel.tsx",
-        "apps/viewser/components/console-drawer.tsx",
-        "apps/viewser/components/discovery-wizard/steps/step-primitives.tsx",
-        "apps/viewser/components/discovery-wizard/asset-dropzone.tsx",
-        "apps/viewser/components/discovery-wizard/directives-preview.tsx",
-        "apps/viewser/components/discovery-wizard/ai-image-generator-dialog.tsx",
-        "apps/viewser/components/builder/dialogs/asset-uploader-dialog.tsx",
-        "apps/viewser/components/builder/dialogs/color-picker-dialog.tsx",
-        "apps/viewser/components/builder/inspector/quick-prompt-button.tsx"
-      ],
-      "doNotTouch": [
-        "apps/viewser/app/api/**",
-        "apps/viewser/lib/**",
-        "apps/viewser/middleware.ts",
-        "apps/viewser/next.config.ts",
-        "apps/viewser/package.json",
-        "apps/viewser/package-lock.json",
-        "scripts/**",
-        "packages/generation/**",
-        "governance/schemas/**",
-        "apps/viewser/components/builder/floating-chat.tsx",
-        "apps/viewser/components/builder/builder-actions.tsx",
-        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
-        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
-        "apps/viewser/components/discovery-wizard/payload-alignment-popover.tsx",
-        "apps/viewser/components/discovery-wizard/steps/visual-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/content-step.tsx",
-        "apps/viewser/components/ui/sheet.tsx",
-        "apps/viewser/components/layout/site-header.tsx",
-        "apps/viewser/app/globals.css"
-      ],
-      "acceptanceCriteria": [
-        "PromptBuilder textarea text-base sm:text-[15px] + submit min-tap.",
-        "InlineHelpButton min-tap mobile, sm:h-4 sm:w-4 desktop.",
-        "ViewerPanel hero H1 text-3xl sm:text-4xl + padding px-5 sm:px-12 lg:px-20.",
-        "AI image generator dialog: grid-cols-1 sm:grid-cols-2 + min-tap.",
-        "Asset uploader: grid-cols-2 sm:grid-cols-3 + min-tap.",
-        "Color picker: grid-cols-4 sm:grid-cols-6 + min-tap.",
-        "ConsoleDrawer RunHistory max-h-[40dvh] istället för h-[26rem].",
-        "AssetDropzone upload-knapp min-tap + drop-area pb-safe.",
-        "DirectivesPreview Copy min-tap.",
-        "QuickPromptButton min-tap.",
-        "Inga off-limits-paths rörda (inklusive alla fas 1-paths)."
+        "RunHistory: h-[26rem] -> max-h-[50dvh] sm:h-[26rem].",
+        "ComparePreviewModal: mobile swipe + snap-x + A/B-indikator-pills.",
+        "ViewerPanel device-toggle desktop (375/768/1024/full) + sessionStorage.",
+        "FloatingChat edge-pulse: ease-in-out 3s cycle.",
+        "Bottom-sheet scale-in via existing data-starting-style.",
+        "Inga off-limits-paths."
       ],
       "checks": [
         "python scripts/sprintvakt_check.py",
@@ -400,10 +319,10 @@
       "collisionRisk": "green",
       "reviewer": "jakob",
       "status": "active",
-      "createdAt": "2026-05-26T09:01:46Z",
-      "updatedAt": "2026-05-26T09:01:46Z",
+      "createdAt": "2026-05-26T09:16:41Z",
+      "updatedAt": "2026-05-26T09:16:41Z",
       "notes": [],
-      "activatedAt": "2026-05-26T09:01:46Z"
+      "activatedAt": "2026-05-26T09:16:41Z"
     }
   ],
   "completedGaps": [
@@ -887,6 +806,158 @@
         "Mergad till main via PR #71. UI-only del klar — A+D backend-bitar väntar på GAP-backend-build-trace-endpoint."
       ],
       "updatedAt": "2026-05-25T01:42:18Z"
+    },
+    {
+      "id": "GAP-viewser-mobile-responsive-foundation",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Mobil-anpassning av viewser-appen — foundation + P0-blockers",
+      "whyNow": "Hela viewser-appen är desktop-first idag. Audit 2026-05-26 visade 5 P0-blockers som gör appen oanvändbar på 375px (iPhone SE). Operatören har bekräftat scope: hela viewser-flödet (wizard + builder), polished kvalitetsnivå. Denna GAP = foundation + P0; polish/P1 öppnas som separat GAP efter.",
+      "paths": [
+        "apps/viewser/app/globals.css",
+        "apps/viewser/components/builder/floating-chat.tsx",
+        "apps/viewser/components/builder/builder-actions.tsx",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
+        "apps/viewser/components/discovery-wizard/payload-alignment-popover.tsx",
+        "apps/viewser/components/discovery-wizard/steps/visual-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/content-step.tsx",
+        "apps/viewser/components/ui/sheet.tsx",
+        "apps/viewser/components/layout/site-header.tsx"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/**",
+        "apps/viewser/lib/**",
+        "apps/viewser/middleware.ts",
+        "apps/viewser/next.config.ts",
+        "apps/viewser/package.json",
+        "apps/viewser/package-lock.json",
+        "scripts/**",
+        "packages/generation/**",
+        "governance/schemas/**"
+      ],
+      "acceptanceCriteria": [
+        "Mobil-foundation i globals.css: safe-bottom/safe-top/safe-x + min-tap (44px).",
+        "FloatingChat <768px = bottom-sheet (full bredd, max-h-[85dvh], pb-safe). Drag inaktiv touch. Minimerad = 56x56 FAB.",
+        "FloatingChat composer text-base mobil — inget iOS-zoom.",
+        "SiteInspectorSheet <768px = bottom-sheet (h-[90dvh] rounded-t-3xl). TabsList scrollable eller dropdown.",
+        "Wizard validationError visas alltid på mobil.",
+        "Hover-only delete på moodboard/content-bilder synlig på touch.",
+        "PayloadAlignmentPopover max-w-[calc(100vw-2rem)] eller bottom-sheet under sm:.",
+        "BuilderActions kolliderar inte med FloatingChat på mobil.",
+        "site-header konsol-knapp har min-tap på mobil.",
+        "Safe-area-padding på all fixed UI.",
+        "sheet.tsx bottom-sheet får rounded-t-3xl + drag-handle + pb-safe.",
+        "Inga off-limits-paths rörs."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint",
+        "python -m pytest -q tests/"
+      ],
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "createdAt": "2026-05-26T08:36:28Z",
+      "updatedAt": "2026-05-26T09:15:51Z",
+      "notes": [
+        "Levererad i PR #117 mot jakob-be. Status completed lokalt; väntar på review + merge från Jakob.",
+        "10 paths åtgärdade (5 P0 + foundation utilities)."
+      ],
+      "activatedAt": "2026-05-26T08:36:40Z",
+      "completedAt": "2026-05-26T09:15:51Z",
+      "fixCommits": [
+        "ea62e45",
+        "31a888a",
+        "3b2420d",
+        "9593769"
+      ]
+    },
+    {
+      "id": "GAP-viewser-mobile-responsive-polish",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Mobil-anpassning fas 2 — polish + P1 (tap-targets, iOS-zoom, dialogs)",
+      "whyNow": "Fas 1 (PR #117) levererade mobil-foundation + 5 P0-blockers. Fas 2 polerar de återstående ~10 P1-friktionerna från audit 2026-05-26: tap-targets under 44px, text-[13px]/[15px] inputs som triggar iOS Safari auto-zoom, dialoger med för täta grids på smala viewports, hero-typografi som dominerar mobil-canvas, och ConsoleDrawer-listor med fasta höjder.",
+      "paths": [
+        "apps/viewser/components/prompt-builder.tsx",
+        "apps/viewser/components/viewer-panel.tsx",
+        "apps/viewser/components/console-drawer.tsx",
+        "apps/viewser/components/discovery-wizard/steps/step-primitives.tsx",
+        "apps/viewser/components/discovery-wizard/asset-dropzone.tsx",
+        "apps/viewser/components/discovery-wizard/directives-preview.tsx",
+        "apps/viewser/components/discovery-wizard/ai-image-generator-dialog.tsx",
+        "apps/viewser/components/builder/dialogs/asset-uploader-dialog.tsx",
+        "apps/viewser/components/builder/dialogs/color-picker-dialog.tsx",
+        "apps/viewser/components/builder/inspector/quick-prompt-button.tsx"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/**",
+        "apps/viewser/lib/**",
+        "apps/viewser/middleware.ts",
+        "apps/viewser/next.config.ts",
+        "apps/viewser/package.json",
+        "apps/viewser/package-lock.json",
+        "scripts/**",
+        "packages/generation/**",
+        "governance/schemas/**",
+        "apps/viewser/components/builder/floating-chat.tsx",
+        "apps/viewser/components/builder/builder-actions.tsx",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
+        "apps/viewser/components/discovery-wizard/payload-alignment-popover.tsx",
+        "apps/viewser/components/discovery-wizard/steps/visual-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/content-step.tsx",
+        "apps/viewser/components/ui/sheet.tsx",
+        "apps/viewser/components/layout/site-header.tsx",
+        "apps/viewser/app/globals.css"
+      ],
+      "acceptanceCriteria": [
+        "PromptBuilder textarea text-base sm:text-[15px] + submit min-tap.",
+        "InlineHelpButton min-tap mobile, sm:h-4 sm:w-4 desktop.",
+        "ViewerPanel hero H1 text-3xl sm:text-4xl + padding px-5 sm:px-12 lg:px-20.",
+        "AI image generator dialog: grid-cols-1 sm:grid-cols-2 + min-tap.",
+        "Asset uploader: grid-cols-2 sm:grid-cols-3 + min-tap.",
+        "Color picker: grid-cols-4 sm:grid-cols-6 + min-tap.",
+        "ConsoleDrawer RunHistory max-h-[40dvh] istället för h-[26rem].",
+        "AssetDropzone upload-knapp min-tap + drop-area pb-safe.",
+        "DirectivesPreview Copy min-tap.",
+        "QuickPromptButton min-tap.",
+        "Inga off-limits-paths rörda (inklusive alla fas 1-paths)."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/focus_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint",
+        "python -m pytest -q tests/"
+      ],
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "createdAt": "2026-05-26T09:01:46Z",
+      "updatedAt": "2026-05-26T09:15:51Z",
+      "notes": [
+        "Levererad i PR #117 mot jakob-be (ovanpå fas 1). Status completed lokalt; väntar på review + merge från Jakob.",
+        "10 paths polish: PromptBuilder, ViewerPanel, ConsoleDrawer, AI/asset/color-dialogs, helper-knappar."
+      ],
+      "activatedAt": "2026-05-26T09:01:46Z",
+      "completedAt": "2026-05-26T09:15:51Z",
+      "fixCommits": [
+        "62437de",
+        "d7ca301",
+        "6b2d68c",
+        "64445bb",
+        "712a3c2",
+        "7e580b4"
+      ]
     }
   ],
   "decisions": [

@@ -30,9 +30,11 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `712a3c2` (2026-05-26 UTC, christopher-ui local — fas 2
-polish-passet klart på 5 commits. PR #117 utökas med 5 nya commits (62437de
-GAP + 4 fix-commits). Pushas i nästa steg.).
+Last verified state: `86db492` (2026-05-26 UTC, christopher-ui local + origin —
+fas 1 + fas 2 completed (in-review) i workboard, väntar på Jakob-merge av PR #117.
+Fas 3 (final polish) öppnad som ny GAP `GAP-viewser-mobile-responsive-final-polish`;
+implementeras nu på samma branch eftersom #117 inte mergat. Operator-direktiv
+"Kör fas 3" (msg innan denna commit).).
 
 Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
 
