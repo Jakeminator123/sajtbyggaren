@@ -30,30 +30,34 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `aa934cc` (2026-05-26 kvällen, christopher-ui local —
-Verktyg-pillen flyttad in i FloatingChat-toolbar-raden efter operatör-
-feedback "lägg verktyg till höger om dom olika formaten i floating chatt.
-Istället för nere till vänster. Dvs. att formaten och Verktyg alla dessa
-ligger centrerade under floating chatt." BuilderActions fick ny
-`variant?: "fixed" | "inline"`-prop. I "inline" tar pillen bort egen
-`fixed bottom-safe-6 left-6` och menyn popar NEDÅT (absolute top-full
-mt-2, origin-top) istället för uppåt. FloatingChat fick `tools?:
-ReactNode`-slot som rendras till höger om device-preset-pillen i samma
-centrerade flex-rad (gap-2). builder-shell.tsx flyttar BuilderActions
-från separat sibling till tools-propen med variant="inline". Mobil-
-rendering oförändrad — hela raden är hidden md:flex; operatorn når
-samma actions via ConsoleDrawer på mobil. Lint, typecheck och term-
-coverage --strict passerar.).
+Last verified state: `3829260` (2026-05-26 kvällen, christopher-ui local —
+Verktyg-menyn ombyggd från dropdown-lista till Dialog-modal med
+backdrop-blur + grid efter operatör-feedback "när man klickar på verktyg
+ska olika alternativ dyka upp i snygga boxar typ 4 på rad, som en pop-up
+där sajten och chattfloating blir lite nedtonad. Klickar man på sidan av
+någon av knapparna så stängs pop-up ner." BuilderActions inline-variant
+använder nu Base UI Dialog från ui/dialog.tsx — DialogOverlay ger
+`bg-black/10 supports-backdrop-filter:backdrop-blur-xs` som dimmer hela
+viewporten (sajt-preview + FloatingChat). Actions visas som
+`grid grid-cols-2 sm:grid-cols-4 gap-3` med snygga box-knappar
+(ikon-cirkel + label + description). Klick på backdrop + Escape stänger
+automatiskt via Base UI; pointerdown/Escape-fallback-listeners
+begränsade till variant="fixed". Lint + typecheck + term-coverage
+--strict passerar.).
 
 Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
 
+- `3829260` feat(viewser/builder): Verktyg-menyn som modal grid med
+  backdrop. BuilderActions inline-variant: dropdown-listan ersatt av
+  Dialog-modal (Base UI). Boxar i `grid-cols-2 sm:grid-cols-4`, ikon-
+  cirkel + label + description. Backdrop dimmer sajt + chat; klick
+  utanför stänger via Dialog default.
 - `aa934cc` refactor(viewser/builder): Verktyg-pill in i FloatingChat-
   toolbar-raden. BuilderActions: ny `variant: "fixed" | "inline"` (default
-  "fixed"), inline-läge slopar fixed-positioning och drop:ar menyn NEDÅT.
-  FloatingChat: ny `tools?: ReactNode`-slot — toolbar-raden under chatten
-  blir nu en flex-row med device-toggle + tools, fortsatt centrerad mot
-  panel-mittpunkten via translateX(-50%). builder-shell passerar
-  BuilderActions via tools={...} med variant="inline".
+  "fixed"). FloatingChat: ny `tools?: ReactNode`-slot — toolbar-raden
+  under chatten blir nu en flex-row med device-toggle + tools, fortsatt
+  centrerad mot panel-mittpunkten via translateX(-50%). builder-shell
+  passerar BuilderActions via tools={...} med variant="inline".
 - `0296fad` style(viewser): centrera device-toggle under chatt utan gap.
   DevicePresetToggleBar i FloatingChat: `left: position.x + PANEL_WIDTH/2`
   + `transform: translateX(-50%)` centrerar; `top: position.y + PANEL_HEIGHT`
