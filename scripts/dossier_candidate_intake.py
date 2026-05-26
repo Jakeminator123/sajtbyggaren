@@ -50,6 +50,8 @@ RECOGNISED_EXTENSIONS = {
 TEXT_EXTENSIONS = {".css", ".json", ".md", ".ts", ".tsx", ".txt"}
 ASSET_EXTENSIONS = {".jpeg", ".jpg", ".png", ".svg", ".webp"}
 COMPONENT_EXTENSIONS = {".tsx", ".ts", ".css"}
+ALLOWED_REVIEW_DECISIONS = {"can-be-dossier", "not-a-dossier", "needs-review"}
+ALLOWED_RECOMMENDED_CLASSES = {"soft", "hard", "needs-review", "not-a-dossier"}
 FORBIDDEN_DIRECTORY_NAMES = {
     ".git",
     ".next",
@@ -726,6 +728,26 @@ def _safe_package_metadata(payload: dict[str, Any]) -> dict[str, Any]:
     return metadata
 
 
+def _resolve_evidence_candidate(
+    source: Path,
+    relative_path: Path,
+) -> tuple[Path | None, str | None]:
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        return None, "path-escape"
+    candidate = source / relative_path if source.is_dir() else source
+    try:
+        resolved_candidate = candidate.resolve(strict=True)
+    except OSError:
+        return None, "unreadable-file"
+    if source.is_dir() and not (
+        resolved_candidate == source or source in resolved_candidate.parents
+    ):
+        return None, "path-escape"
+    if source.is_file() and resolved_candidate != source:
+        return None, "path-escape"
+    return resolved_candidate, None
+
+
 def build_safe_intake_evidence(
     report: dict[str, Any],
     source_path: str | Path,
@@ -739,23 +761,26 @@ def build_safe_intake_evidence(
         raise DossierIntakeError(f"Source path does not exist: {source_path}") from exc
     evidence: dict[str, Any] = {
         "sourcePath": report.get("sourcePath", _path_for_report(source)),
-        "includedFilePaths": [
-            str(item.get("path"))
-            for item in report.get("includedFiles", [])
-            if isinstance(item, dict) and item.get("path")
-        ],
+        "includedFilePaths": [],
         "manifest": {},
         "markdown": {},
         "package": {},
         "components": [],
+        "warnings": [],
     }
     for item in report.get("includedFiles", []):
         if not isinstance(item, dict) or not item.get("path"):
             continue
         relative_path = Path(str(item["path"]))
-        candidate = source / relative_path if source.is_dir() else source
+        candidate, warning = _resolve_evidence_candidate(source, relative_path)
+        if warning is not None:
+            evidence["warnings"].append({"path": str(item["path"]), "reason": warning})
+            continue
+        if candidate is None:
+            continue
         if _is_secret_like_path(candidate) or item.get("readState") == "skipped-too-large":
             continue
+        evidence["includedFilePaths"].append(str(item["path"]))
         text = _read_safe_text_for_evidence(candidate)
         if not text:
             continue
@@ -782,6 +807,33 @@ def build_safe_intake_evidence(
                 }
             )
     return evidence
+
+
+def _normalise_review_choice(value: str, allowed: set[str], fallback: str) -> str:
+    normalised = _slugify(value)
+    if normalised in allowed:
+        return normalised
+    if normalised in {"hard-candidate", "hard-dossier"} and "hard" in allowed:
+        return "hard"
+    if normalised in {"soft-candidate", "soft-dossier"} and "soft" in allowed:
+        return "soft"
+    return fallback
+
+
+def normalise_intake_review(review: dict[str, Any]) -> dict[str, Any]:
+    """Normalise model enum-like values to the V1.1 review contract."""
+    normalised = dict(review)
+    normalised["decision"] = _normalise_review_choice(
+        str(normalised.get("decision") or ""),
+        ALLOWED_REVIEW_DECISIONS,
+        "needs-review",
+    )
+    normalised["recommendedClass"] = _normalise_review_choice(
+        str(normalised.get("recommendedClass") or ""),
+        ALLOWED_RECOMMENDED_CLASSES,
+        "needs-review",
+    )
+    return normalised
 
 
 def _operator_questions_for_review(recommended_class: str, capability: str) -> list[str]:
@@ -812,7 +864,11 @@ def _deterministic_intake_review(
     source: str,
     model_used: str,
 ) -> dict[str, Any]:
-    recommended_class = str(intake_report.get("recommendedClass") or "needs-review")
+    recommended_class = _normalise_review_choice(
+        str(intake_report.get("recommendedClass") or "needs-review"),
+        ALLOWED_RECOMMENDED_CLASSES,
+        "needs-review",
+    )
     suggested_id = _slugify(
         str(
             safe_evidence.get("manifest", {}).get("id")
@@ -835,7 +891,7 @@ def _deterministic_intake_review(
     risks = list(intake_report.get("riskFlags") or [])
     if recommended_class == "hard":
         risks.append("real integration intentionally blocked in candidate-only V1")
-    return {
+    return normalise_intake_review({
         "decision": decision,
         "recommendedClass": recommended_class,
         "suggestedDossierId": suggested_id,
@@ -864,7 +920,7 @@ def _deterministic_intake_review(
         "source": source,
         "modelRole": DOSSIER_ROLE_ID,
         "modelUsed": model_used,
-    }
+    })
 
 
 def _call_intake_review_model(
@@ -923,12 +979,12 @@ def review_dossier_intake_with_model(
     if use_llm and has_openai_api_key():
         try:
             model_used = resolve_dossier_model()
-            review = _call_intake_review_model(
+            review = normalise_intake_review(_call_intake_review_model(
                 operator_brief=operator_brief,
                 intake_report=sanitize_intake_report_for_model(intake_report),
                 safe_evidence=safe_evidence,
                 model=model_used,
-            )
+            ))
             review["source"] = "real"
             review["modelRole"] = DOSSIER_ROLE_ID
             review["modelUsed"] = model_used

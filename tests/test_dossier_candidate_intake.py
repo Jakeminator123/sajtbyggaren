@@ -14,6 +14,7 @@ from scripts.dossier_candidate_intake import (
     analyze_dossier_source,
     build_safe_intake_evidence,
     intake_report_hash,
+    normalise_intake_review,
     review_dossier_intake_with_model,
     sanitize_intake_report_for_model,
     suggest_capability_from_source_path,
@@ -300,6 +301,57 @@ def test_safe_intake_evidence_includes_safe_fields_and_excludes_secrets(
     assert "sk_live_secret" not in json.dumps(evidence)
 
 
+def test_safe_intake_evidence_ignores_manipulated_path_escape(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "payments-stripe-checkout"
+    source.mkdir()
+    outside = tmp_path / "secret.txt"
+    outside.write_text("outside secret\n", encoding="utf-8")
+    (source / "instructions.md").write_text("# Safe\n", encoding="utf-8")
+    report = {
+        "sourcePath": str(source),
+        "includedFiles": [
+            {"path": "instructions.md"},
+            {"path": "../secret.txt"},
+        ],
+    }
+    original_read_text = Path.read_text
+
+    def guarded_read_text(path: Path, *args: Any, **kwargs: Any) -> str:
+        if path == outside:
+            raise AssertionError("path escape must not be read")
+        return original_read_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", guarded_read_text)
+
+    evidence = build_safe_intake_evidence(report, source)
+
+    assert "instructions.md" in evidence["markdown"]
+    assert "../secret.txt" not in json.dumps(
+        {key: value for key, value in evidence.items() if key != "warnings"}
+    )
+    assert {"path": "../secret.txt", "reason": "path-escape"} in evidence["warnings"]
+
+
+def test_safe_intake_evidence_ignores_absolute_path_outside_source(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    outside = tmp_path / "outside.md"
+    outside.write_text("# Outside\n", encoding="utf-8")
+
+    evidence = build_safe_intake_evidence(
+        {"includedFiles": [{"path": str(outside)}]},
+        source,
+    )
+
+    assert evidence["markdown"] == {}
+    assert evidence["warnings"][0]["reason"] == "path-escape"
+
+
 def test_review_no_key_fallback_uses_safe_evidence_and_path_capability(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -326,6 +378,18 @@ def test_review_no_key_fallback_uses_safe_evidence_and_path_capability(
     assert review["recommendedClass"] == "hard"
     assert review["suggestedCapability"] == "stripe-checkout"
     assert review["operatorQuestions"]
+
+
+def test_review_enum_values_are_normalised() -> None:
+    review = normalise_intake_review(
+        {
+            "decision": "Hard candidate",
+            "recommendedClass": "Hard",
+        }
+    )
+
+    assert review["decision"] == "needs-review"
+    assert review["recommendedClass"] == "hard"
 
 
 def test_llm_review_payload_contains_safe_evidence_not_secret_content(
