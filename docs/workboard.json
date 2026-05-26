@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-26T09:16:41Z",
+  "updatedAt": "2026-05-26T09:46:10Z",
   "updatedBy": "sprintvakt-mcp",
   "people": {
     "jakob": {
@@ -140,100 +140,6 @@
         "cd apps/viewser && npx tsc --noEmit"
       ],
       "note": "UI-skriven backend-spec. Blockerar Live Build Sync A (real pipeline-status) och D (iterera från version N med riktig PI-snapshot). UI har workaround idag (prompt-prefix) som automatiskt uppgraderas till baseRunId så fort backend stödjer det. 2026-05-25 04:24: Christopher implementerade hela gapet under operator-OK scope-leak (`origin/christopher-ui` commit `74a355b`) — 3 endpoints + bug-hunt + tester. Owner kvar 'jakob' i workboard så Sprintvakt-lane-policy passerar (samma precedent som plan.py-fix i PR #68). PR från `christopher-ui` mot `main` väntar — Jakob är reviewer."
-    },
-    {
-      "id": "GAP-viewser-pipeline-status-polling",
-      "type": "Gap/UI",
-      "owner": "christopher",
-      "title": "FloatingChat speglar riktig pipeline-status via trace-endpoint",
-      "collisionRisk": "green",
-      "reviewer": "jakob",
-      "status": "queued",
-      "file": "docs/gaps/GAP-viewser-pipeline-status-polling.md",
-      "createdAt": "2026-05-25T13:20:00Z",
-      "startedAt": "2026-05-25T13:20:00Z",
-      "paths": [
-        "apps/viewser/components/builder/floating-chat.tsx",
-        "apps/viewser/components/builder/use-pending-build.ts",
-        "apps/viewser/components/builder/use-build-trace-polling.ts"
-      ],
-      "doNotTouch": [
-        "apps/viewser/app/api/runs/**",
-        "apps/viewser/lib/runs.ts",
-        "apps/viewser/components/builder/inspector/**",
-        "apps/viewser/components/discovery-wizard/**",
-        "packages/generation/**",
-        "scripts/build_site.py"
-      ],
-      "acceptanceCriteria": [
-        "Den hårdkodade FOLLOWUP_BUILD_STEPS-kedjan med setTimeout är borta.",
-        "Polling mot /api/runs/[runId]/trace?since=<iso> så fort runId är känt.",
-        "Step-text uppdateras från trace.ndjson-events.",
-        "runStatus = ok/degraded/mock visas med rätt variant.",
-        "Polling stoppar inom 1s efter att build-result landat.",
-        "Backoff: 1.5s → 3s; ingen evig 500ms-polling."
-      ],
-      "checks": [
-        "python scripts/sprintvakt_check.py",
-        "python scripts/governance_validate.py",
-        "python scripts/check_term_coverage.py --strict",
-        "python -m ruff check .",
-        "python -m pytest tests/ -q",
-        "cd apps/viewser && npx tsc --noEmit",
-        "cd apps/viewser && npm run lint"
-      ],
-      "note": "Effort 4-6h. UI-quick-win efter scout 2026-05-25. Trace-endpoint finns i main (commit 74a355b).\n\n2026-05-26 pause: depriorited tillfälligt till förmån för GAP-viewser-mobile-responsive-foundation som rör samma filer (floating-chat.tsx / site-inspector-sheet.tsx) och måste landa först som baseline. Återöppnas (status='active') när mobil-foundation mergat till jakob-be.",
-      "blockedBy": [
-        "GAP-viewser-mobile-responsive-foundation"
-      ],
-      "pausedAt": "2026-05-26T08:35:04Z"
-    },
-    {
-      "id": "GAP-viewser-side-by-side-preview",
-      "type": "Gap/UI",
-      "owner": "christopher",
-      "title": "Sida-vid-sida-preview av två genererade versioner i Versions-tab",
-      "collisionRisk": "green",
-      "reviewer": "jakob",
-      "status": "queued",
-      "file": "docs/gaps/GAP-viewser-side-by-side-preview.md",
-      "createdAt": "2026-05-25T04:50:00Z",
-      "startedAt": "2026-05-25T04:50:00Z",
-      "paths": [
-        "apps/viewser/components/builder/inspector/versions-tab.tsx",
-        "apps/viewser/components/builder/inspector/compare-preview-modal.tsx",
-        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
-        "apps/viewser/components/builder/inspector/index.ts"
-      ],
-      "doNotTouch": [
-        "apps/viewser/app/api/runs/**",
-        "apps/viewser/app/api/preview/**",
-        "apps/viewser/components/viewer-panel.tsx",
-        "apps/viewser/lib/runs.ts",
-        "packages/generation/**",
-        "scripts/build_site.py"
-      ],
-      "acceptanceCriteria": [
-        "Versions-tab har en 'Visuell jämförelse'-knapp som aktiveras när både A och B är valda och pekar på olika runIds.",
-        "Klick öppnar full-screen modal med två StackBlitz-iframer sida vid sida (50/50 desktop, stackat på mobil).",
-        "Browser-detection: Safari/Firefox visar fallback med 'Öppna båda i nya fönster' i stället för embeddade iframer.",
-        "ESC eller stängningsknapp avmonterar båda iframerna utan stale DOM.",
-        "Inga ändringar i existerande viewer-panel.tsx eller backend-endpoints."
-      ],
-      "checks": [
-        "python scripts/sprintvakt_check.py",
-        "python scripts/governance_validate.py",
-        "python scripts/check_term_coverage.py --strict",
-        "python -m ruff check .",
-        "python -m pytest tests/ -q",
-        "cd apps/viewser && npx tsc --noEmit",
-        "cd apps/viewser && npm run lint"
-      ],
-      "note": "UI-only feature byggd ovanpå existerande /api/runs/[runId]/files. Två StackBlitz-instanser kostar bara klient-resurser, ingen backend-last. Path B (GAP-backend-path-b-section-renderer) ökar värdet av denna feature kraftigt eftersom strukturellt olika scaffolds då blir möjliga att jämföra.\n\n2026-05-26 pause: depriorited tillfälligt till förmån för GAP-viewser-mobile-responsive-foundation som rör samma filer (floating-chat.tsx / site-inspector-sheet.tsx) och måste landa först som baseline. Återöppnas (status='active') när mobil-foundation mergat till jakob-be.",
-      "blockedBy": [
-        "GAP-viewser-mobile-responsive-foundation"
-      ],
-      "pausedAt": "2026-05-26T08:35:04Z"
     }
   ],
   "activeGaps": [
@@ -958,6 +864,114 @@
         "712a3c2",
         "7e580b4"
       ]
+    },
+    {
+      "id": "GAP-viewser-pipeline-status-polling",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "FloatingChat speglar riktig pipeline-status via trace-endpoint",
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "file": "docs/gaps/GAP-viewser-pipeline-status-polling.md",
+      "createdAt": "2026-05-25T13:20:00Z",
+      "startedAt": "2026-05-25T13:20:00Z",
+      "paths": [
+        "apps/viewser/components/builder/floating-chat.tsx",
+        "apps/viewser/components/builder/use-pending-build.ts",
+        "apps/viewser/components/builder/use-build-trace-polling.ts"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/runs/**",
+        "apps/viewser/lib/runs.ts",
+        "apps/viewser/components/builder/inspector/**",
+        "apps/viewser/components/discovery-wizard/**",
+        "packages/generation/**",
+        "scripts/build_site.py"
+      ],
+      "acceptanceCriteria": [
+        "Den hårdkodade FOLLOWUP_BUILD_STEPS-kedjan med setTimeout är borta.",
+        "Polling mot /api/runs/[runId]/trace?since=<iso> så fort runId är känt.",
+        "Step-text uppdateras från trace.ndjson-events.",
+        "runStatus = ok/degraded/mock visas med rätt variant.",
+        "Polling stoppar inom 1s efter att build-result landat.",
+        "Backoff: 1.5s → 3s; ingen evig 500ms-polling."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint"
+      ],
+      "note": "Effort 4-6h. UI-quick-win efter scout 2026-05-25. Trace-endpoint finns i main (commit 74a355b).\n\n2026-05-26 pause: depriorited tillfälligt till förmån för GAP-viewser-mobile-responsive-foundation som rör samma filer (floating-chat.tsx / site-inspector-sheet.tsx) och måste landa först som baseline. Återöppnas (status='active') när mobil-foundation mergat till jakob-be.",
+      "blockedBy": [
+        "GAP-viewser-mobile-responsive-foundation"
+      ],
+      "pausedAt": "2026-05-26T08:35:04Z",
+      "completedAt": "2026-05-26T09:46:10Z",
+      "fixCommits": [],
+      "notes": [
+        "Redan implementerad i tidigare iteration (use-build-trace-polling.ts + floating-chat.tsx-integration via tracePolling-hook). FOLLOWUP_BUILD_STEPS som faktisk kod är borttagen; bara kommentar-referenser kvar.",
+        "Stale queued-status fran fas-1-paus rensad."
+      ],
+      "updatedAt": "2026-05-26T09:46:10Z"
+    },
+    {
+      "id": "GAP-viewser-side-by-side-preview",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Sida-vid-sida-preview av två genererade versioner i Versions-tab",
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "file": "docs/gaps/GAP-viewser-side-by-side-preview.md",
+      "createdAt": "2026-05-25T04:50:00Z",
+      "startedAt": "2026-05-25T04:50:00Z",
+      "paths": [
+        "apps/viewser/components/builder/inspector/versions-tab.tsx",
+        "apps/viewser/components/builder/inspector/compare-preview-modal.tsx",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/components/builder/inspector/index.ts"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/runs/**",
+        "apps/viewser/app/api/preview/**",
+        "apps/viewser/components/viewer-panel.tsx",
+        "apps/viewser/lib/runs.ts",
+        "packages/generation/**",
+        "scripts/build_site.py"
+      ],
+      "acceptanceCriteria": [
+        "Versions-tab har en 'Visuell jämförelse'-knapp som aktiveras när både A och B är valda och pekar på olika runIds.",
+        "Klick öppnar full-screen modal med två StackBlitz-iframer sida vid sida (50/50 desktop, stackat på mobil).",
+        "Browser-detection: Safari/Firefox visar fallback med 'Öppna båda i nya fönster' i stället för embeddade iframer.",
+        "ESC eller stängningsknapp avmonterar båda iframerna utan stale DOM.",
+        "Inga ändringar i existerande viewer-panel.tsx eller backend-endpoints."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint"
+      ],
+      "note": "UI-only feature byggd ovanpå existerande /api/runs/[runId]/files. Två StackBlitz-instanser kostar bara klient-resurser, ingen backend-last. Path B (GAP-backend-path-b-section-renderer) ökar värdet av denna feature kraftigt eftersom strukturellt olika scaffolds då blir möjliga att jämföra.\n\n2026-05-26 pause: depriorited tillfälligt till förmån för GAP-viewser-mobile-responsive-foundation som rör samma filer (floating-chat.tsx / site-inspector-sheet.tsx) och måste landa först som baseline. Återöppnas (status='active') när mobil-foundation mergat till jakob-be.",
+      "blockedBy": [
+        "GAP-viewser-mobile-responsive-foundation"
+      ],
+      "pausedAt": "2026-05-26T08:35:04Z",
+      "completedAt": "2026-05-26T09:46:10Z",
+      "fixCommits": [],
+      "notes": [
+        "Redan implementerad: compare-preview-modal.tsx finns + wired in versions-tab.tsx via 'Visuell jamforelse'-knappen. Modalen forbattrades dessutom i fas 3 med mobile swipe + A/B-pills.",
+        "Stale queued-status fran fas-1-paus rensad."
+      ],
+      "updatedAt": "2026-05-26T09:46:10Z"
     }
   ],
   "decisions": [
