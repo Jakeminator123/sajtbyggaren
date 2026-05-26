@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { PromptStage } from "@/components/prompt-builder";
+import { cn } from "@/lib/utils";
 
 /**
  * Device — operatörens valda preview-bredd på desktop. Sätts via
@@ -767,7 +768,18 @@ export function ViewerPanel({
     !!runId && !showEmpty && !showUnavailable && !isBuilding && !showFallback;
 
   return (
-    <div className="viewer-canvas bg-background relative flex h-full w-full overflow-hidden">
+    <div
+      className={cn(
+        // Mobil: flex-col så SM-mobile.mp4 (top-banner) + hero-text staplas
+        //   vertikalt som ett naturligt flöde. Bakgrundsfärgen byts till
+        //   videons egen off-white (#f0f2ed) när hero visas så filmens
+        //   bakgrund flyter sömlöst in i canvasen utan synlig edge.
+        // Desktop (md+): flex-row + bg-background — videon ligger absolute
+        //   och hero-texten ovanpå som overlay (oförändrad layout).
+        "viewer-canvas relative flex h-full w-full flex-col overflow-hidden md:flex-row",
+        showHero ? "bg-[#f0f2ed] md:bg-background" : "bg-background",
+      )}
+    >
       {/* Device-toggle bar (desktop only). Sitter top-2 right-2 med
           subtle bg-card så den inte konkurrerar med själva sajt-previewn.
           Klick på en preset sätter wrapper-bredd via state, vilket
@@ -807,15 +819,42 @@ export function ViewerPanel({
         </div>
       ) : null}
 
-      {/* Hero-bakgrundsvideo. Autoplay + muted + loop + playsInline så
-          den startar i alla browsers utan användarinteraktion. Videons
-          centrum förskjuts mot höger via object-position så 3D-objektet
-          inte krockar med hero-texten i vänsterspalten. */}
+      {/* Hero-bakgrundsvideo. Två separata videos: SM_hero.mp4
+          (16:9 desktop-version med 3D-objekt skiftat höger via 78%
+          object-position) och SM-mobile.mp4 (960x960 fyrkantig
+          mobile-version med 3D-objekt centrerat). Båda är autoPlay +
+          muted + loop + playsInline för universal browser-support.
+
+          - Mobil (<md): SM-mobile.mp4 som centrerad fyrkantig top-banner.
+            Hero-bakgrund får videons egen färg (#f0f2ed) via
+            mobile-hero-bg-klassen så filmen flyter sömlöst in i
+            bakgrunden — ingen hård edge mellan video och canvas.
+          - Desktop (md+): SM_hero.mp4 fullbredd-bakgrund med två
+            gradient-overlays (horisontell + vertikal) som ger hero-
+            texten kontrast i vänsterspalten. */}
       {showHero ? (
         <>
+          {/* Mobile-only fyrkantig top-banner. md:hidden så desktop-
+              video aldrig laddas dubbelt. aspect-square + max-w-xs
+              centrerar filmen utan att äta mer än ~280px höjd på en
+              iPhone 14 Pro (393×852). */}
+          <video
+            key="sm-hero-mobile"
+            className="pointer-events-none relative z-0 mx-auto mt-6 block aspect-square w-[min(280px,70vw)] object-contain md:hidden"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            aria-hidden
+          >
+            <source src="/SM-mobile.mp4" type="video/mp4" />
+          </video>
+          {/* Desktop-version: 16:9 fullbredd-bakgrund. hidden md:block
+              så mobilen aldrig laddar 1.5MB-filen. */}
           <video
             key="sm-hero"
-            className="pointer-events-none absolute inset-0 h-full w-full object-cover [object-position:78%_center]"
+            className="pointer-events-none absolute inset-0 hidden h-full w-full object-cover [object-position:78%_center] md:block"
             autoPlay
             muted
             loop
@@ -825,16 +864,17 @@ export function ViewerPanel({
           >
             <source src="/SM_hero.mp4" type="video/mp4" />
           </video>
-          {/* Två gradienter: en horisontell som mörknar vänsterkanten
-              så hero-texten alltid har kontrast, plus en vertikal som
-              fadar mot botten där prompt-rutan lever. */}
+          {/* Två gradienter (desktop only): horisontell som mörknar
+              vänsterkanten + vertikal som fadar mot botten där prompt-
+              rutan lever. Inte renderade på mobil där videon är en
+              fristående top-banner istället för fullbredd-bakgrund. */}
           <div
             aria-hidden
-            className="from-background/85 via-background/40 dark:from-background/90 dark:via-background/50 pointer-events-none absolute inset-0 bg-gradient-to-r to-transparent"
+            className="from-background/85 via-background/40 dark:from-background/90 dark:via-background/50 pointer-events-none absolute inset-0 hidden bg-gradient-to-r to-transparent md:block"
           />
           <div
             aria-hidden
-            className="to-background/80 dark:to-background/90 pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent"
+            className="to-background/80 dark:to-background/90 pointer-events-none absolute inset-0 hidden bg-gradient-to-b from-transparent via-transparent md:block"
           />
         </>
       ) : null}
@@ -866,24 +906,30 @@ export function ViewerPanel({
       ) : null}
 
       {/* Hero-text — visas alltid när StackBlitz inte aktivt visar en
-          sajt (empty, unavailable, error). Vänsterställd så den inte
-          krockar med videons 3D-objekt till höger.
+          sajt (empty, unavailable, error).
 
-          Mobil-padding minskad till px-5 (vs desktop px-12/lg:px-20)
-          eftersom 32px+32px tar 17% av en 375px-skärm. Hero-H1 sänks
-          ett steg per breakpoint (text-3xl sm:text-4xl md:text-5xl)
-          så headern inte dominerar canvasen på iPhone — på 375px
-          tog tidigare text-4xl en sjudel av vertical-canvas i bara
-          rubriken. */}
+          Två olika layouter för mobil vs desktop:
+            - Mobil (<md): text staplad direkt under SM-mobile.mp4-bannern.
+              Center-justerad (items-center) så hela hero ser ut som ett
+              vertikalt flöde: video → eyebrow → rubrik → underrubrik →
+              composer (composer kommer från PromptBuilder i page.tsx
+              och ligger fixed bottom).
+            - Desktop (md+): absolute overlay vänsterställd i canvasen
+              ovanpå videons 3D-objekt (som sitter höger via 78%
+              object-position).
+
+          Rubriken har inte längre hårdkodad br — radbrytningen styrs
+          istället av container-width och text-balance, vilket på 393px
+          ger naturligt "Beskriv din sajt så / bygger vi den." istället
+          för tidigare 4-rads-staplingen. */}
       {showHeroText ? (
-        <div className="relative z-10 flex h-full w-full items-center px-5 sm:px-12 lg:px-20">
-          <div className="flex max-w-lg flex-col items-start gap-4 text-left">
+        <div className="relative z-10 flex w-full flex-col items-center px-5 pt-4 text-center md:absolute md:inset-0 md:h-full md:flex-row md:items-center md:px-12 md:text-left lg:px-20">
+          <div className="flex max-w-lg flex-col items-center gap-4 md:items-start">
             <span className="border-border/40 bg-background/70 text-foreground/70 rounded-full border px-3 py-1 font-mono text-[10px] tracking-[0.22em] uppercase shadow-sm backdrop-blur">
               Sajtbyggaren · localhost
             </span>
             <h1 className="text-foreground text-3xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-4xl md:text-5xl">
-              Beskriv din sajt
-              <br />
+              Beskriv din sajt{" "}
               <span className="text-foreground/60">så bygger vi den.</span>
             </h1>
             <p className="text-foreground/75 max-w-md text-[13.5px] leading-relaxed text-balance sm:text-[14px] md:text-[15px]">

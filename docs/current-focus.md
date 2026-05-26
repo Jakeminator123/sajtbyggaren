@@ -30,10 +30,13 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `6e06129` (2026-05-26 UTC, christopher-ui local — scout-
-fixes-pass klart på 3 commits (6d0c896 GAP-transitions + cb6f43d P0-batch +
-6e06129 P1-batch). PR #117 utökas med 3 P0 + 12 P1-fixar från scout-rapport
-95f73fbf. Pushas + PR-body uppdateras + Jakob notifieras i nästa steg.).
+Last verified state: `3e312f2` (2026-05-26 UTC, christopher-ui local — scout-
+fixes-pass klart + pushat + Jakob notifierad. Nästa fix-pass: mobile hero-flow
+ovanpå scout-fixes — SM-mobile.mp4 (operatör-levererad 960×960 fyrkantig film,
+1.1MB, off-white #f0f2ed) som mobile top-banner + bakgrundsfärg som matchar
+filmens bakgrund så hero blir ett sömlöst flöde. Hero-rubrik utan hårdkodad
+br. Wizard foundation-validering: företagsnamn-min-längd borttagen på
+operatör-begäran så snabb-test går smidigt.).
 
 Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
 
@@ -152,6 +155,26 @@ som 3 commits ovanpå fas 3 i samma PR #117:
 Inga off-limits-paths rörda i någon av faserna eller scout-fixes-passet.
 Komplett check-svit grön (sprintvakt, focus, governance, rules-sync,
 term-coverage --strict, ruff, tsc, ESLint, pytest 540+).
+
+Mobile hero-flow — completed (in-review). `GAP-viewser-mobile-hero-flow`
+adresserade tre fynd från manuell test på iPhone 14 Pro-viewport (393×852)
+som scout-rapporten inte täckte. Operatör-driven post-scout-fix:
+
+- `viewer-panel.tsx` mobile hero stacked layout. SM_hero.mp4 hade
+  `[object-position:78%_center]` (designat för desktop bredd) → 3D-objektet
+  hamnade bakom rubriken på mobil. Operatören levererade SM-mobile.mp4
+  (960×960 fyrkantig, 1.1MB, off-white #f0f2ed) som mobile top-banner.
+  Container blev `flex flex-col md:flex-row` med `bg-[#f0f2ed]
+  md:bg-background` när hero visas så filmens bakgrund flyter sömlöst in
+  i canvasen. Hero-text staplad under videon på mobil (centrerad), absolute
+  overlay vänsterställd på desktop (oförändrat).
+- Hero-rubriken hade hårdkodad `<br />` + `max-w-lg` → radbröts till
+  "Beskriv / din sajt / så bygger / vi den" på 393px. `<br />` borttagen;
+  texten flödar nu naturligt via text-balance.
+- `wizard-types.ts` foundation-validering: företagsnamn-min-längd-kollen
+  borttagen på operatör-begäran så snabb-test av wizarden går smidigare.
+  Övriga foundation-validations (offer.length ≥ 3, businessFamily required)
+  kvarstår som signal till pipeline.
 
 Nya PRs sedan föregående checkpoint: PR #114 — chore(gitignore): re-ignore
 `__pycache__/` under `packages/generation/build/` (B146 fallout); PR #115 —

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-26T09:53:14Z",
+  "updatedAt": "2026-05-26T10:35:49Z",
   "updatedBy": "sprintvakt-mcp",
   "people": {
     "jakob": {
@@ -182,24 +182,15 @@
       "pairedWith": "GAP-backend-restaurant-activation"
     },
     {
-      "id": "GAP-viewser-mobile-scout-fixes",
+      "id": "GAP-viewser-mobile-hero-flow",
       "type": "Gap/UI",
       "owner": "christopher",
-      "title": "Scout-rapporterade P0+P1 buggar i mobil fas 1+2+3",
-      "whyNow": "Scout-run pa diff ea62e45^..8724798 hittade 3 P0 (pb-safe-or-3 saknas, wizard iOS-zoom, 20px steg-chips) + ~12 P1 (hydration, flash, keyboard, footer min-tap, ModePill, pill-desync, focus, inspector, mikro-kontroller, sm-zoom). Gor PR #117 merge-redo.",
+      "title": "Mobil hero: stacked layout med SM-mobile.mp4 som top-banner",
+      "whyNow": "Manuell test pa iPhone 14 Pro-viewport (393x852) i Safari Responsive Design Mode visade tre fynd som scout-rapporten inte tackte:\n\n1. SM_hero.mp4 har object-position 78% (designat for desktop bredd) -> 3D-objektet hamnar bakom rubriken pa mobil.\n2. Hero-rubriken har hardkodad <br /> + max-w-lg -> radbryts till 'Beskriv / din sajt / sa bygger / vi den' pa 393px.\n3. Hela hero kanns inte som ett naturligt flode pa mobil (video, text, composer konkurrerar om utrymmet i samma absolut-positioned canvas).\n\nOperatoren har levererat SM-mobile.mp4 (960x960 fyrkantig, 1.1MB, off-white bakgrund #f0f2ed) som ar designad for mobil top-banner.",
       "paths": [
-        "apps/viewser/app/globals.css",
-        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
-        "apps/viewser/components/discovery-wizard/steps/step-primitives.tsx",
-        "apps/viewser/components/discovery-wizard/steps/content-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/company-step.tsx",
         "apps/viewser/components/viewer-panel.tsx",
-        "apps/viewser/components/prompt-builder.tsx",
-        "apps/viewser/components/builder/floating-chat.tsx",
-        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
-        "apps/viewser/components/builder/inspector/compare-preview-modal.tsx",
-        "apps/viewser/components/builder/dialogs/color-picker-dialog.tsx"
+        "apps/viewser/public/SM-mobile.mp4",
+        "apps/viewser/components/discovery-wizard/wizard-types.ts"
       ],
       "doNotTouch": [
         "apps/viewser/app/api/**",
@@ -207,17 +198,15 @@
         "apps/viewser/middleware.ts",
         "apps/viewser/next.config.ts",
         "apps/viewser/package.json",
-        "apps/viewser/package-lock.json",
         "scripts/**",
-        "packages/generation/**",
-        "governance/schemas/**"
+        "packages/generation/**"
       ],
       "acceptanceCriteria": [
-        "P0 #1: .pb-safe-or-3 utility finns i globals.css.",
-        "P0 #2: Alla wizard inputs kor text-base i mobile.",
-        "P0 #3: Mobile steg-chips >=44px hit-area.",
-        "P1 #4-14: alla scout-flaggade buggar atgardade.",
-        "Inga off-limits-paths."
+        "Mobil (<md): SM-mobile.mp4 renderas som top-banner (fyrkantig, centrerad).",
+        "Mobil hero-bakgrund matchar videons bakgrundsfard (#f0f2ed) sa video flyter in i bakgrunden.",
+        "Mobil hero-text under videon, ingen overlapp med 3D-objektet.",
+        "Hero-rubrik radbryts naturligt utan hardkodad <br /> pa mobil.",
+        "Desktop (md+): oforandrat (SM_hero.mp4 + 78% object-position + overlay-text)."
       ],
       "checks": [
         "python scripts/sprintvakt_check.py",
@@ -226,16 +215,15 @@
         "python scripts/rules_sync.py --check",
         "python scripts/check_term_coverage.py --strict",
         "cd apps/viewser && npx tsc --noEmit",
-        "cd apps/viewser && npm run lint",
-        "python -m pytest -q tests/"
+        "cd apps/viewser && npm run lint"
       ],
       "collisionRisk": "green",
       "reviewer": "jakob",
       "status": "active",
-      "createdAt": "2026-05-26T09:53:14Z",
-      "updatedAt": "2026-05-26T09:53:14Z",
+      "createdAt": "2026-05-26T10:35:49Z",
+      "updatedAt": "2026-05-26T10:35:49Z",
       "notes": [],
-      "activatedAt": "2026-05-26T09:53:14Z"
+      "activatedAt": "2026-05-26T10:35:49Z"
     }
   ],
   "completedGaps": [
@@ -1039,6 +1027,72 @@
         "8724798",
         "71257ce",
         "564ab80"
+      ]
+    },
+    {
+      "id": "GAP-viewser-mobile-scout-fixes",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Scout-rapporterade P0+P1 buggar i mobil fas 1+2+3",
+      "whyNow": "Scout-run pa diff ea62e45^..8724798 hittade 3 P0 (pb-safe-or-3 saknas, wizard iOS-zoom, 20px steg-chips) + ~12 P1 (hydration, flash, keyboard, footer min-tap, ModePill, pill-desync, focus, inspector, mikro-kontroller, sm-zoom). Gor PR #117 merge-redo.",
+      "paths": [
+        "apps/viewser/app/globals.css",
+        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
+        "apps/viewser/components/discovery-wizard/steps/step-primitives.tsx",
+        "apps/viewser/components/discovery-wizard/steps/content-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/company-step.tsx",
+        "apps/viewser/components/viewer-panel.tsx",
+        "apps/viewser/components/prompt-builder.tsx",
+        "apps/viewser/components/builder/floating-chat.tsx",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/components/builder/inspector/compare-preview-modal.tsx",
+        "apps/viewser/components/builder/dialogs/color-picker-dialog.tsx"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/**",
+        "apps/viewser/lib/**",
+        "apps/viewser/middleware.ts",
+        "apps/viewser/next.config.ts",
+        "apps/viewser/package.json",
+        "apps/viewser/package-lock.json",
+        "scripts/**",
+        "packages/generation/**",
+        "governance/schemas/**"
+      ],
+      "acceptanceCriteria": [
+        "P0 #1: .pb-safe-or-3 utility finns i globals.css.",
+        "P0 #2: Alla wizard inputs kor text-base i mobile.",
+        "P0 #3: Mobile steg-chips >=44px hit-area.",
+        "P1 #4-14: alla scout-flaggade buggar atgardade.",
+        "Inga off-limits-paths."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/focus_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint",
+        "python -m pytest -q tests/"
+      ],
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "createdAt": "2026-05-26T09:53:14Z",
+      "updatedAt": "2026-05-26T10:35:49Z",
+      "notes": [
+        "3 P0 + 12 P1 implementerade. PR #117 nu redo for Jakob-review."
+      ],
+      "activatedAt": "2026-05-26T09:53:14Z",
+      "completedAt": "2026-05-26T10:35:49Z",
+      "fixCommits": [
+        "6d0c896",
+        "cb6f43d",
+        "6e06129",
+        "420efb0",
+        "3e312f2"
       ]
     }
   ],
