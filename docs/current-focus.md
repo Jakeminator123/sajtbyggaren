@@ -30,28 +30,45 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `3829260` (2026-05-26 kvällen, christopher-ui local —
-Verktyg-menyn ombyggd från dropdown-lista till Dialog-modal med
-backdrop-blur + grid efter operatör-feedback "när man klickar på verktyg
-ska olika alternativ dyka upp i snygga boxar typ 4 på rad, som en pop-up
-där sajten och chattfloating blir lite nedtonad. Klickar man på sidan av
-någon av knapparna så stängs pop-up ner." BuilderActions inline-variant
-använder nu Base UI Dialog från ui/dialog.tsx — DialogOverlay ger
-`bg-black/10 supports-backdrop-filter:backdrop-blur-xs` som dimmer hela
-viewporten (sajt-preview + FloatingChat). Actions visas som
-`grid grid-cols-2 sm:grid-cols-4 gap-3` med snygga box-knappar
-(ikon-cirkel + label + description). Klick på backdrop + Escape stänger
-automatiskt via Base UI; pointerdown/Escape-fallback-listeners
-begränsade till variant="fixed". Lint + typecheck + term-coverage
---strict passerar.).
+Last verified state: `15efae0` (2026-05-26 sen kväll, christopher-ui
+local — scout-pass över hela toolbar/wizard-batchen sedan PR #117 mergades.
+Tre P1-regressioner åtgärdade i ett sammanhängande pass:
+A) DevicePresetProvider hydration race — persist-effekten skrev "full"
+till sessionStorage före hydration läste, så valet nollställdes vid
+reload. Fix: hasHydratedRef gate:ar persist tills hydration är klar.
+B) Toolbar-pillen utanför viewport vid default-position — clampToViewport
+räknade bara PANEL_HEIGHT (460) och inte toolbar-radens ~36-40px nedanför.
+Fix: ny PANEL_FOOTPRINT_HEIGHT-konstant används i alla 4 clamp-anrop.
+C) Functions-step bevarade restaurang-sidor vid byte till e-handel.
+Fix: family-switch räknar nu diff mellan föregående och nya familjs
+defaults, byter ut defaults men behåller operatorns custom-tillägg.
+Plus 4 P2-cleanups parkade som non-blocking i scout-batchen. Lint +
+typecheck + term-coverage --strict passerar.).
 
 Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
 
+- `15efae0` fix(viewser): scout-pass P1 — device-preset persist,
+  toolbar clamp, family-switch resync. DevicePresetProvider: hasHydratedRef
+  gating för persist-effekten. FloatingChat: PANEL_FOOTPRINT_HEIGHT
+  inkluderar TOOLBAR_ROW_HEIGHT (40px) i alla clampToViewport-anrop.
+  functions-step: useEffect hanterar previousFamily ≠ null separat —
+  byter ut föregående familjs defaults, behåller operatorns tillägg.
+  lastAppliedFamilyRef typad om till BusinessFamilyId|null.
+- `23a5c16` style(viewser/builder): unified toolbar pill — format +
+  Verktyg ihopkopplade i EN container med samma `bg-card/95` som chat-
+  panelen + subtil vertikal divider mellan device-knapparna och
+  Verktyg-knappen. BuilderActions inline-knappen rensad från egen
+  border/shadow så den smälter in.
+- `481593d` fix(viewser/builder): flat Verktyg-grid + Versioner-text.
+  Dialog-modalen rendar nu alla actions i en enda `grid-cols-2 sm:grid-
+  cols-3` istället för per grupp. Versioner-description statisk
+  "Bläddra tidigare bygg" (var dynamisk runId).
+- `46a54cd` style(viewser/builder): Verktyg-grid 3-per-rad på desktop
+  (`sm:grid-cols-3`, var `sm:grid-cols-4`).
 - `3829260` feat(viewser/builder): Verktyg-menyn som modal grid med
   backdrop. BuilderActions inline-variant: dropdown-listan ersatt av
-  Dialog-modal (Base UI). Boxar i `grid-cols-2 sm:grid-cols-4`, ikon-
-  cirkel + label + description. Backdrop dimmer sajt + chat; klick
-  utanför stänger via Dialog default.
+  Dialog-modal (Base UI). Backdrop dimmer sajt + chat; klick utanför
+  stänger via Dialog default.
 - `aa934cc` refactor(viewser/builder): Verktyg-pill in i FloatingChat-
   toolbar-raden. BuilderActions: ny `variant: "fixed" | "inline"` (default
   "fixed"). FloatingChat: ny `tools?: ReactNode`-slot — toolbar-raden
