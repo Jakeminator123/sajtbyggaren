@@ -104,7 +104,6 @@ export function PromptBuilder({
   hidden = false,
 }: PromptBuilderProps) {
   const [prompt, setPrompt] = useState("");
-  const [mode, setMode] = useState<PromptMode>("init");
   const [stage, setStage] = useState<PromptStage>("idle");
   const [error, setError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<{
@@ -152,6 +151,15 @@ export function PromptBuilder({
     targetSiteId.trim().length > 0 &&
     targetSiteId !== "unknown" &&
     targetInput?.source === "prompt-inputs";
+  /**
+   * Bygg-läget deriveras automatiskt: om en run/sajt är vald och redo
+   * för iteration (followupReady) skickas prompten som en följdprompt
+   * direkt mot /api/prompt; annars öppnas DiscoveryWizard för att
+   * skapa en ny sajt. Tidigare visades två manuella pillar ("Ny sajt"
+   * / "Följdprompt") under textarean — de togs bort i samband med
+   * total minimalism eftersom valet är entydigt givet kontexten.
+   */
+  const mode: PromptMode = followupReady ? "followup" : "init";
 
   useEffect(() => {
     return () => {
@@ -355,13 +363,7 @@ export function PromptBuilder({
             }}
             className="min-h-[64px] resize-none border-0 bg-transparent px-4 py-3 text-base leading-relaxed shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 md:text-[15px]"
           />
-          <div className="flex items-center justify-between gap-2 border-t border-border/40 px-2 py-2">
-            <ModeSwitcher
-              mode={mode}
-              onChange={setMode}
-              disabled={disabled}
-              followupReady={followupReady}
-            />
+          <div className="flex items-center justify-end gap-2 border-t border-border/40 px-2 py-2">
             <div className="flex items-center gap-2">
               <span className="hidden font-mono text-[10px] text-muted-foreground/70 sm:inline">
                 ⌘ + ↵
@@ -409,75 +411,6 @@ function ArrowUpIcon() {
       <path d="M12 19V5" />
       <path d="m5 12 7-7 7 7" />
     </svg>
-  );
-}
-
-function ModeSwitcher({
-  mode,
-  onChange,
-  disabled,
-  followupReady,
-}: {
-  mode: PromptMode;
-  onChange: (next: PromptMode) => void;
-  disabled: boolean;
-  followupReady: boolean;
-}) {
-  return (
-    <div
-      role="tablist"
-      aria-label="Bygg-läge"
-      className="inline-flex rounded-full bg-muted/60 p-0.5 text-[11px]"
-    >
-      <ModePill
-        active={mode === "init"}
-        disabled={disabled}
-        onClick={() => onChange("init")}
-        aria-label="Ny sajt-läge"
-      >
-        Ny sajt
-      </ModePill>
-      <ModePill
-        active={mode === "followup"}
-        disabled={disabled || !followupReady}
-        onClick={() => onChange("followup")}
-        aria-label="Följdprompt på vald run/siteId"
-      >
-        Följdprompt
-      </ModePill>
-    </div>
-  );
-}
-
-function ModePill({
-  children,
-  active,
-  disabled,
-  onClick,
-  "aria-label": ariaLabel,
-}: {
-  children: React.ReactNode;
-  active: boolean;
-  disabled: boolean;
-  onClick: () => void;
-  "aria-label"?: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      aria-label={ariaLabel}
-      disabled={disabled}
-      onClick={onClick}
-      className={`min-tap sm:min-tap-0 rounded-full px-3 py-1.5 text-[12px] font-medium transition active:scale-95 disabled:opacity-40 sm:px-2.5 sm:py-1 sm:text-[11px] ${
-        active
-          ? "bg-background text-foreground shadow-sm"
-          : "text-muted-foreground hover:text-foreground"
-      }`}
-    >
-      {children}
-    </button>
   );
 }
 
