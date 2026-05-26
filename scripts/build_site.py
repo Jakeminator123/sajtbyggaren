@@ -2025,7 +2025,19 @@ _BOOKING_BUSINESS_TYPES: frozenset[str] = frozenset(
 
 
 def _normalize_business_type(value: object) -> str:
-    """Normalize briefModel business type variants for CTA fallback lookup."""
+    """Normalize briefModel business type variants for CTA fallback lookup.
+
+    B150: briefModel sometimes emits multi-word business types
+    ("massage studio", "yoga studio", "personal trainer studio"). The
+    compact slug ("massage-studio") does not appear in
+    ``_BOOKING_BUSINESS_TYPES`` or ``_SHOP_BUSINESS_TYPES``, which made
+    ``_hero_cta_variant`` fall through to the generic "Begär offert" CTA
+    instead of firing "Boka tid" / "Handla nu" for these branscher. We
+    therefore try progressively shorter dash-prefixes and return the
+    longest prefix that is itself a registered slug. The function never
+    invents new slugs — it can only return strings that the CTA-resolver
+    already knows about, or the unchanged compact form.
+    """
     raw = str(value or "").strip().lower()
     if not raw:
         return ""
@@ -2036,6 +2048,14 @@ def _normalize_business_type(value: object) -> str:
         return "hair-salon"
     if compact in {"webshop", "webbshop", "online-shop"}:
         return "e-commerce"
+    if compact in _BOOKING_BUSINESS_TYPES or compact in _SHOP_BUSINESS_TYPES:
+        return compact
+    if "-" in compact:
+        parts = compact.split("-")
+        for n in range(len(parts) - 1, 0, -1):
+            prefix = "-".join(parts[:n])
+            if prefix in _BOOKING_BUSINESS_TYPES or prefix in _SHOP_BUSINESS_TYPES:
+                return prefix
     return compact
 
 
@@ -2203,10 +2223,28 @@ def _nav_items_from_scaffold(
     ]
     existing_paths = {href for href, _ in items}
     if extra_routes:
-        contact_idx = next(
-            (i for i, (href, _label) in enumerate(items) if href == "/kontakt"),
+        # B148: look up the contact route's actual path from the scaffold
+        # rather than hardcoding "/kontakt". restaurant-hospitality uses
+        # "/hitta-hit" and future scaffolds may pick other ids — the
+        # insert-before-contact heuristic must follow the scaffold, not
+        # the most common path. Mirrors the lookup pattern in
+        # ``_pick_contact_route`` (no SystemExit here — nav-building must
+        # stay defensive even if a scaffold lacks a contact route, in
+        # which case wizard-extras simply append to the end).
+        contact_path = next(
+            (
+                route.get("path")
+                for route in scaffold_default_routes
+                if route.get("id") == "contact"
+            ),
             None,
         )
+        contact_idx: int | None = None
+        if isinstance(contact_path, str) and contact_path:
+            contact_idx = next(
+                (i for i, (href, _label) in enumerate(items) if href == contact_path),
+                None,
+            )
         for route in extra_routes:
             if not isinstance(route, dict):
                 continue
@@ -2876,6 +2914,24 @@ def _intent_guard_warnings(
     ]
     candidate_terms = ([business_type] if business_type else []) + service_terms
 
+    # B149: tokenise candidate terms so we can exact-token-match against the
+    # conflict tokens instead of substring-matching. The original
+    # ``blocked in term`` check produced false positives for short tokens
+    # ("bar" in "barber", "spa" in "spaghetti", "mat" in "automation",
+    # "tak" in "kontakt"). Each candidate term contributes itself plus any
+    # sub-tokens split on whitespace and dashes — so slug entries in the
+    # conflict tables ("hair-salon", "food-truck") still match against
+    # slug-form business_type values, and bare tokens ("hair", "salon")
+    # match individual words inside Swedish servicesMentioned strings.
+    candidate_tokens: set[str] = set()
+    for term in candidate_terms:
+        if not term:
+            continue
+        candidate_tokens.add(term)
+        for sub in term.replace("-", " ").split():
+            if sub:
+                candidate_tokens.add(sub)
+
     warnings: list[dict[str, str]] = []
     seen: set[tuple[str, str]] = set()
     for category_id in category_ids:
@@ -2883,7 +2939,7 @@ def _intent_guard_warnings(
         if not forbidden:
             continue
         for blocked in forbidden:
-            if not any(blocked in term for term in candidate_terms):
+            if blocked not in candidate_tokens:
                 continue
             key = (category_id, blocked)
             if key in seen:

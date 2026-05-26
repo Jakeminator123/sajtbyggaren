@@ -352,3 +352,95 @@ def test_b143_existing_mat_case_still_warns() -> None:
     )
     mat_warnings = [w for w in warnings if w["conflictingTerm"] == "mat"]
     assert mat_warnings, "The 'mat' term conflict must still trigger."
+
+
+# ---------------------------------------------------------------------------
+# B149 — Intent Guard must exact-token-match the conflict tokens, not
+# substring-match. ``"bar" in "barber"`` was True; ``"spa" in "spaghetti"``
+# was True; ``"mat" in "automation"`` was True. All three should now be
+# silent because the token is not present in the candidate term's token set.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_b149_no_warning_when_bar_is_substring_of_barber() -> None:
+    """B149 core: fitness conflicts contain ``"bar"``. A pure ``"barber"``
+    business_type (legitimate beauty business) must NOT trigger the
+    ``"bar"`` conflict — substring-match would have warned, exact-token
+    must stay silent.
+    """
+    brief = _brief(businessTypeGuess="barber", servicesMentioned=[])
+    warnings = _intent_guard_warnings(brief, _prompt_meta(["fitness"]))
+    # No fitness/"bar" warning. The actual conflicts (fitness vs
+    # hairdresser-family) are construction/beauty business, not fitness.
+    bar_warnings = [w for w in warnings if w.get("conflictingTerm") == "bar"]
+    assert bar_warnings == [], (
+        f"'bar' must not match the substring 'barber'; got {warnings}"
+    )
+
+
+@pytest.mark.tooling
+def test_b149_no_warning_when_spa_is_substring_of_spaghetti() -> None:
+    """B149: construction conflicts include ``"spa"``. A restaurant whose
+    services mention ``"spaghetti"`` must NOT trigger the ``"spa"``
+    conflict.
+    """
+    brief = _brief(
+        businessTypeGuess="restaurant",
+        servicesMentioned=["spaghetti", "pizza"],
+    )
+    warnings = _intent_guard_warnings(brief, _prompt_meta(["construction"]))
+    spa_warnings = [w for w in warnings if w.get("conflictingTerm") == "spa"]
+    assert spa_warnings == [], (
+        f"'spa' must not match the substring 'spaghetti'; got {warnings}"
+    )
+
+
+@pytest.mark.tooling
+def test_b149_no_warning_when_mat_is_substring_of_automation() -> None:
+    """B149: fitness conflicts include ``"mat"``. A home-automation
+    business in fitness category must NOT trigger ``"mat"`` via the
+    substring in ``"automation"``.
+    """
+    brief = _brief(
+        businessTypeGuess="automation",
+        servicesMentioned=["home automation", "smart-home"],
+    )
+    warnings = _intent_guard_warnings(brief, _prompt_meta(["fitness"]))
+    mat_warnings = [w for w in warnings if w.get("conflictingTerm") == "mat"]
+    assert mat_warnings == [], (
+        f"'mat' must not match the substring 'automation'; got {warnings}"
+    )
+
+
+@pytest.mark.tooling
+def test_b149_exact_match_on_bar_still_warns_for_legit_bar() -> None:
+    """B149 true-positive: ``businessTypeGuess="bar"`` (a real bar) in
+    fitness category must still trigger the ``"bar"`` conflict — exact
+    token match catches the legitimate case the substring fix is
+    supposed to preserve.
+    """
+    brief = _brief(businessTypeGuess="bar", servicesMentioned=[])
+    warnings = _intent_guard_warnings(brief, _prompt_meta(["fitness"]))
+    bar_warnings = [w for w in warnings if w.get("conflictingTerm") == "bar"]
+    assert bar_warnings, (
+        f"'bar' as exact businessTypeGuess in fitness category must warn; "
+        f"got {warnings}"
+    )
+
+
+@pytest.mark.tooling
+def test_b149_token_split_preserves_hair_match_on_compound_slug() -> None:
+    """B149 true-positive on compound slugs: ``businessTypeGuess="hair-salon"``
+    in construction category must still trigger BOTH the ``"hair-salon"``
+    whole-token match AND not regress the ``"hair-salon"`` slug-form match.
+    """
+    brief = _brief(businessTypeGuess="hair-salon", servicesMentioned=[])
+    warnings = _intent_guard_warnings(brief, _prompt_meta(["construction"]))
+    hair_salon_warnings = [
+        w for w in warnings if w.get("conflictingTerm") == "hair-salon"
+    ]
+    assert hair_salon_warnings, (
+        f"'hair-salon' slug must still match exactly in construction; "
+        f"got {warnings}"
+    )

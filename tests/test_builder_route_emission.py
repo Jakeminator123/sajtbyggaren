@@ -581,6 +581,119 @@ def test_hero_cta_label_uses_shop_business_type_fallback() -> None:
     assert _hero_cta_label(dossier) == "Shoppa nu"
 
 
+# ---------------------------------------------------------------------------
+# B150 — _normalize_business_type must collapse multi-word business types
+# whose head noun is a registered booking/shop slug. briefModel sometimes
+# emits "massage studio", "yoga studio", "personal trainer studio"; before
+# B150 those compact slugs ("massage-studio") did not match any of the
+# CTA-resolver sets, and the hero CTA fell through to "Begär offert"
+# instead of "Boka tid" / "Shoppa nu".
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_b150_normalize_business_type_collapses_massage_studio() -> None:
+    """B150: ``"massage studio"`` → ``"massage"`` so the booking CTA fires.
+
+    Verifies both the space-form and the dash-form normalise to the
+    registered ``_BOOKING_BUSINESS_TYPES`` slug.
+    """
+    from scripts.build_site import _normalize_business_type
+
+    assert _normalize_business_type("massage studio") == "massage"
+    assert _normalize_business_type("massage-studio") == "massage"
+    assert _normalize_business_type("Massage Studio") == "massage"
+
+
+@pytest.mark.tooling
+def test_b150_normalize_business_type_collapses_compound_booking_slugs() -> None:
+    """B150: compound booking-type slugs with non-booking suffix words
+    ("studio", "shop", "salong") must collapse to the registered head.
+    """
+    from scripts.build_site import _normalize_business_type
+
+    # personal-training is a registered booking slug; -studio suffix
+    # must not break the match.
+    assert _normalize_business_type("personal-training studio") == "personal-training"
+    # barber-shop is itself registered, so the direct compact-match wins
+    # before the head-prefix fallback fires.
+    assert _normalize_business_type("barber-shop") == "barber-shop"
+    # Three-word compound: head is "barber" (registered), even though
+    # "barber-shop" is also registered — the loop prefers the LONGEST
+    # registered prefix, so "barber-shop-studio" → "barber-shop".
+    assert _normalize_business_type("barber-shop studio") == "barber-shop"
+
+
+@pytest.mark.tooling
+def test_b150_normalize_business_type_preserves_unknown_compound_unchanged() -> None:
+    """B150 defensive: ``_normalize_business_type`` must never invent
+    slugs the CTA-resolver does not recognise. An unknown compound
+    business type ("yoga studio" — yoga is not registered) passes
+    through unchanged.
+    """
+    from scripts.build_site import _normalize_business_type
+
+    # "yoga" is NOT in _BOOKING_BUSINESS_TYPES or _SHOP_BUSINESS_TYPES,
+    # so the head-prefix fallback does not fire and the compact slug
+    # remains intact for the caller to handle.
+    assert _normalize_business_type("yoga studio") == "yoga-studio"
+    assert _normalize_business_type("unknown business kind") == "unknown-business-kind"
+
+
+@pytest.mark.tooling
+def test_b150_hero_cta_label_fires_booking_for_massage_studio() -> None:
+    """B150 integration: when briefModel emits ``"massage studio"`` and
+    no conversionGoals, the hero CTA falls back through the normalised
+    business type into ``"Boka tid"`` instead of generic ``"Begär offert"``.
+    """
+    from scripts.build_site import _hero_cta_label
+
+    dossier = {
+        "language": "sv",
+        "scaffoldId": "local-service-business",
+        "conversionGoals": [],
+        "company": {"businessType": "massage studio"},
+    }
+    assert _hero_cta_label(dossier) == "Boka tid"
+
+
+@pytest.mark.tooling
+def test_b150_hero_cta_label_fires_booking_for_dash_form_personal_training_studio() -> None:
+    """B150 integration: ``"personal-training-studio"`` → booking CTA via
+    the longest-registered-prefix fallback (``"personal-training"`` is
+    registered).
+    """
+    from scripts.build_site import _hero_cta_label
+
+    dossier = {
+        "language": "sv",
+        "scaffoldId": "local-service-business",
+        "conversionGoals": [],
+        "company": {"businessType": "personal-training-studio"},
+    }
+    assert _hero_cta_label(dossier) == "Boka tid"
+
+
+@pytest.mark.tooling
+def test_b150_naprapat_explicit_mapping_still_wins() -> None:
+    """B150 compat: the explicit ``naprapat*`` prefix mapping must keep
+    firing before the new generic head-prefix fallback. The old contract
+    where every naprapat variant maps to ``"naprapat-clinic"`` stays.
+    """
+    from scripts.build_site import _normalize_business_type
+
+    for variant in (
+        "naprapat",
+        "naprapath",
+        "naprapatklinik",
+        "naprapath-clinic",
+        "Naprapat AB",
+    ):
+        assert _normalize_business_type(variant) == "naprapat-clinic", (
+            f"naprapat variant {variant!r} must collapse to 'naprapat-clinic'"
+        )
+
+
 @pytest.mark.tooling
 def test_hero_cta_label_explicit_goals_beat_business_type_fallback() -> None:
     """B100: explicit conversionGoals remain the highest priority."""

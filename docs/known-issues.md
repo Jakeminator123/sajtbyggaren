@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 19 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 114 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 23 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 114 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -589,6 +589,121 @@ samma kodmönster lever vidare här — därav posten:
   (deployment build log limit=80). Cross-ref: ADR 0020,
   `B13a` (architectural debt i `scripts/build_site.py`). Fix: open.
   Test: open.
+
+### Vercel preview wizard-failure 2026-05-26 (assertLocalhost vs *.vercel.app)
+
+Operatör rapporterade att `Verksamhetsfamilj`-fältet i discovery-wizardens
+foundation-step renderas tomt + ger röd console-error på Vercel preview-
+deploy. Root cause är inte i wizard-komponenten utan i API-grinden som
+matar wizarden med taxonomi-options:
+
+- **`B147` Medel-Hög** - `assertLocalhost` i `apps/viewser/lib/localhost-guard.ts`
+  returnerar `403 { error: "Viewser är localhost-only. ..." }` för alla
+  request:s där `Host`-headern inte är `localhost`/`127.0.0.1`/`::1`.
+  Grinden är applicerad på 12 API-routes inklusive
+  `apps/viewser/app/api/discovery-options/route.ts:189` som matar wizardens
+  `Verksamhetsfamilj`-fält. På `*.vercel.app` preview-deployer returnerar
+  GET `/api/discovery-options` därför 403, wizard-options-listan blir tom,
+  och fältet renderas utan val + loggar 403 i browser-console. Det är
+  **medvetet by design** enligt docstring (`Viewser is an operator-prototype:
+  no auth, no rate limit, no public deploy`) — escape-hatchen är att sätta
+  `VIEWSER_ALLOW_NON_LOCALHOST=true` på Vercel-projektet, men det stänger
+  av grinden för *alla* hostar utan att introducera auth. Konflikten är
+  mellan ADR-baserad localhost-only-säkerhet och faktisk Vercel-deploy
+  som operatör redan kör (`apps/viewser/vercel.json` finns untracked +
+  `docs/operations/vercel-production-branch-todo.md` dokumenterar att
+  production branch är `jakob-be` tills B146 är löst — vilket den nu är,
+  efter PR #112+#113). Tre möjliga vägar: (a) sätt
+  `VIEWSER_ALLOW_NON_LOCALHOST=true` på Vercel-projektets Preview- och
+  Production-env (snabbast, men bekräftar `no auth, no rate limit, no
+  public deploy`-modellen på en publik URL — ska dokumenteras med tydlig
+  reservation i `docs/architecture/viewser.md` + uppdaterad docstring i
+  `localhost-guard.ts`), (b) host-whitelist i `localhost-guard.ts` som
+  släpper igenom specifika Vercel-projektdomäner via ny env-knapp
+  `VIEWSER_ALLOWED_HOSTS` (mer kontrollerat men introducerar ny policy-yta),
+  (c) ADR-beslut om Viewser-på-Vercel auth-strategi som låser den
+  långsiktiga lösningen innan någon snabb-fix väljs. Cross-ref:
+  `apps/viewser/vercel.json` (untracked, repo-spec för Vercel-deploy),
+  `docs/operations/vercel-production-branch-todo.md` (operatörs-TODO,
+  untracked), `docs/reports/b125-preview-fallback-decision-2026-05-22.md`
+  (B125-spårets DNA, samma "Viewser är operatör-lokalt verktyg"-princip).
+  Källa: operatör 2026-05-25 kväll + extern reviewer-triage 2026-05-26.
+  Fix: open. Test: open.
+
+### Read-only buggranskning av build_site.py 2026-05-26 (extern AI-reviewer)
+
+Extern read-only AI-reviewer skannade `scripts/build_site.py` (3669 rader
+efter B146-port; megafilen har splittats men koordinator + helpers ligger
+kvar) och rapporterade tre högkonfidens-fynd som verifierades mot faktisk
+kod 2026-05-26 av jakob-be-orchestrator. Två lägre-konfidens-fynd hör
+hemma redan under B97 (kontakt-copy) respektive B67 (lang hårdkodad),
+det sjätte fyndet (naprapat → fel scaffold) sitter i
+`packages/generation/planning/plan.py` + `packages/generation/discovery/
+resolve.py`, inte i build_site.py. Notera koppling till Golden Path-
+evalens `dominantProblem=contact (3 av 4 case)` — minst B148 träffar
+exakt den signalen.
+
+- **`B148` Medel** - `_nav_items_from_scaffold` i
+  `scripts/build_site.py:2205-2223` hårdkodar `/kontakt` som
+  insertion-anchor för wizard-extras (FAQ, team, karta, etc.). Sökningen
+  efter contact-positionen är `(i for i, (href, _label) in enumerate(items)
+  if href == "/kontakt")` — den letar på path-string, inte på
+  route-id `"contact"`. För scaffolds där contact-routens path *inte*
+  är `/kontakt` blir `contact_idx = None`, och wizard-extras hamnar
+  appended till slutet av nav-listan istället för placerade *före*
+  contact. Idag bites bara `restaurant-hospitality` (vars contact-route
+  ligger på `/hitta-hit` enligt
+  `packages/generation/orchestration/scaffolds/restaurant-hospitality/routes.json:28-29`),
+  men arkitekturen är fragil mot framtida scaffolds. Övriga fem scaffolds
+  (`local-service-business`, `ecommerce-lite`, `clinic-healthcare`,
+  `professional-services`, `agency-studio`) använder alla `/kontakt`
+  idag, så bugg-omfånget i nuvarande kvalitetsmätning är begränsat —
+  men det är en av flera signaler bakom Golden Path-evalens
+  `dominantProblem=contact (3 av 4 case)`. Fix-riktning: matcha på
+  `route["id"] == "contact"` istället för path-string (samma princip som
+  `_pick_contact_route` redan följer på rad 2230+). Cross-ref: B97
+  (contact-copy bransch-blind), B98 (Områden-block fel för e-handel),
+  B147 (Vercel preview-discovery 403). Källa: extern AI-reviewer
+  2026-05-26 + verifiering mot kod (jakob-be `3bedddd`). Fix: open.
+  Test: open.
+
+- **`B149` Låg** - Intent Guard i `scripts/build_site.py:2885-2887`
+  använder substring-match (`if not any(blocked in term for term in
+  candidate_terms): continue`) istället för exact-match. Korta tokens
+  i `_INTENT_GUARD_CONFLICTS` (rad 2822+) som `"bar"`, `"mat"`, `"tak"`,
+  `"spa"` ger falska träffar mot helt orelaterade business types och
+  service terms: `"bar" in "barber"` är True, `"spa" in "spaghetti"`
+  är True, `"mat" in "automation"` är True. Konsekvens: brus i
+  `intentGuardWarnings`, operatörslarm utan verklig konflikt, sänkt
+  förtroende för varningssystemet. Inte poäng-dödande i Golden Path
+  (varningarna avbryter inte build), men en kvalitetsbrist som
+  försvårar operatör-triage. Fix-riktning: byt till exact-match
+  (`blocked in {t for t in candidate_terms}`) eller token-aware
+  jämförelse (split candidate_terms på `-`/space, jämför per token).
+  Cross-ref: B92 (`naprapat -> naprapatklinik` överanpassning, samma
+  mönster av för-aggressiv normalisering). Källa: extern AI-reviewer
+  2026-05-26 + verifiering mot kod. Fix: open. Test: open.
+
+- **`B150` Låg-Medel** - `_normalize_business_type` i
+  `scripts/build_site.py:2027-2039` har bara specifika normaliseringar
+  för naprapat-/frisör-/webshop-varianter; multi-word business types
+  passerar genom kompakteringen utan att mappas till slug:ar som
+  `_BOOKING_BUSINESS_TYPES` (rad 2001-2024) känner igen. Konsekvens:
+  briefModel-output `"massage studio"` blir `"massage-studio"` som inte
+  matchar `_BOOKING_BUSINESS_TYPES`-medlemmen `"massage"`, vilket gör
+  att `_hero_cta_variant` (rad 2042+) faller igenom till generic-CTA
+  (`"Begär offert"`) trots att branschen är bokningsbar (`"Boka tid"`).
+  Samma mönster slår mot `"yoga studio"`, `"pilates studio"`,
+  `"thai massage"`, `"personal training studio"`, m.fl. Kopplar nära
+  till B110 (`_normalize_business_type` split-sanning mellan CTA-flödet
+  och `prompt_to_project_input.py` har egna mappar) men är en separat
+  brist: även inom CTA-flödet self är slug-set:en inte uttömmande för
+  multi-word bokningstyper. Fix-riktning: utöka
+  `_BOOKING_BUSINESS_TYPES` med multi-word varianter, *eller* normalisera
+  multi-word-input till första-ord-base (`"massage-studio"` →
+  `"massage"` om `"massage"` finns i set:en). Cross-ref: B110, B92.
+  Källa: extern AI-reviewer 2026-05-26 + verifiering mot kod.
+  Fix: open. Test: open.
 
 ## Stängda - regression-test säkrar fixet
 
