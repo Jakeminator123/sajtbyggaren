@@ -1073,6 +1073,10 @@ export function FloatingChat({
         aria-label="Sajtmaskin-chatt"
         className={cn(
           "border-border/60 bg-card/95 pointer-events-auto fixed z-40 flex flex-col border shadow-2xl backdrop-blur-xl",
+          // Pre-mount-placeholdern visas i 1 frame innan layout-effect
+          // satt position-state. Full rounded-2xl här eftersom toolbar-
+          // raden inte rendras än — annars skulle chat-panelen se
+          // "ofullständig" ut (avhuggen nederkant utan något under).
           isMobile
             ? "inset-x-0 bottom-0 max-h-[85dvh] w-full rounded-t-3xl pb-safe"
             : "right-6 bottom-6 w-[360px] rounded-2xl",
@@ -1187,9 +1191,13 @@ export function FloatingChat({
         "border-border/60 bg-card/95 pointer-events-auto fixed z-40 flex flex-col overflow-hidden border shadow-2xl backdrop-blur-xl",
         // Mobil = bottom-sheet (full bredd, kapad höjd, safe-area).
         // Desktop = 360px floating panel med inline position-state.
+        // På desktop används rounded-t-2xl (inte rounded-2xl) eftersom
+        // toolbar-raden under (format + Verktyg) hänger ihop kant-i-kant
+        // och formar tillsammans EN rektangel med rundade ytter-hörn.
+        // Bottom-rundningen lever på toolbar-raden istället.
         isMobile
           ? "inset-x-0 bottom-0 w-full max-h-[85dvh] rounded-t-3xl pb-safe"
-          : "w-[360px] rounded-2xl",
+          : "w-[360px] rounded-t-2xl",
         isDragging
           ? "cursor-grabbing transition-none"
           : "motion-safe:transition-[box-shadow] motion-safe:duration-150",
@@ -1553,11 +1561,14 @@ export function FloatingChat({
     {/* Toolbar-rad UNDER chat-panelen — innehåller device-preset-
         knapparna (375/768/1024/Full), en subtil vertikal divider, och
         en optional `tools`-slot (typiskt BuilderActions inline-knappen).
-        Allt sitter i EN gemensam pill med samma `bg-card/95` +
-        `border-border/60` som chat-panelen, så raden visuellt hänger
-        ihop med "resten av floating chat" (operatör-önskan 2026-05-26).
-        Centrerad mot panelens mittpunkt (PANEL_WIDTH/2 + translateX
-        -50%) och kant-i-kant utan gap mot chat-panelens nederkant.
+        Bredd = PANEL_WIDTH (360px) och `rounded-b-2xl` så toolbar-raden
+        + chat-panelen ovanför formar visuellt EN sammanhängande
+        rektangel: chat = rounded-t-2xl, toolbar = rounded-b-2xl, raka
+        sidkanter på båda. `border-t-0` döljer top-borden så chat-
+        panelens border-bottom syns igenom som en subtil divider mellan
+        de två sektionerna (operatör-önskan 2026-05-26: "inte ligga i
+        en egen bubbla utan raka kanter på sidorna som om dom ligger i
+        samma fyrkant som resten av chattrutan").
 
         Renderas bara på desktop (md+) och endast när panelen inte är
         minimerad — på mobile är enheten själv liten och toggle-värdet
@@ -1568,11 +1579,11 @@ export function FloatingChat({
       <div
         role="toolbar"
         aria-label="Förhandsvisningsbredd och verktyg"
-        className="border-border/60 bg-card/95 pointer-events-auto fixed z-40 hidden items-center gap-0.5 rounded-full border p-0.5 shadow-2xl backdrop-blur-xl md:inline-flex"
+        className="border-border/60 bg-card/95 pointer-events-auto fixed z-40 hidden items-center justify-center gap-0.5 rounded-b-2xl border border-t-0 p-1 shadow-2xl backdrop-blur-xl md:flex"
         style={{
-          left: position.x + PANEL_WIDTH / 2,
+          left: position.x,
           top: position.y + PANEL_HEIGHT,
-          transform: "translateX(-50%)",
+          width: PANEL_WIDTH,
         }}
       >
         {DEVICE_PRESET_OPTIONS.map((option) => {
