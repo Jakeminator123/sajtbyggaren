@@ -66,8 +66,11 @@ som `max_tokens` till OpenAI. Dessutom valideras request-payload mot:
 ## Säkerhetsgränser
 
 - **Localhost-guard** (`lib/localhost-guard.ts`) avvisar allt som inte är
-  `localhost` / `127.0.0.1` / `::1`. Kan stängas av med
-  `VIEWSER_ALLOW_NON_LOCALHOST=true` (escape hatch).
+  `localhost` / `127.0.0.1` / `::1`. `VIEWSER_ALLOWED_HOSTS` kan sättas
+  till en comma-separated lista med specifika hostar (t.ex. Vercel preview-
+  och production-domäner) som får använda API:erna utan att hela ytan öppnas.
+  `VIEWSER_ALLOW_NON_LOCALHOST=true` finns kvar som full bypass, men bör bara
+  användas medvetet eftersom Viewser fortfarande saknar auth och rate-limit.
 - `siteId` valideras mot `^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$` innan
   `assertProjectInputExists` rör filsystemet.
 - `runId` valideras mot `^[a-zA-Z0-9._-]+$` och path-containment kollas mot
