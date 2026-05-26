@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-26T09:46:10Z",
+  "updatedAt": "2026-05-26T09:53:14Z",
   "updatedBy": "sprintvakt-mcp",
   "people": {
     "jakob": {
@@ -182,16 +182,24 @@
       "pairedWith": "GAP-backend-restaurant-activation"
     },
     {
-      "id": "GAP-viewser-mobile-responsive-final-polish",
+      "id": "GAP-viewser-mobile-scout-fixes",
       "type": "Gap/UI",
       "owner": "christopher",
-      "title": "Mobil-anpassning fas 3 — final polish (run-history, compare swipe, device-toggle, motion)",
-      "whyNow": "Fas 1 + fas 2 (PR #117) löste foundation + P0 + P1-polish. Fas 3 stänger UX-gap som krävde mer än CSS: run-history fast 416px (62% av 667px-skärm), compare-modal staplar A över B på mobil (jämförelse blir meningslös), viewer-panel saknar device-toggle på desktop, motion polish på edge-pulse + bottom-sheet.",
+      "title": "Scout-rapporterade P0+P1 buggar i mobil fas 1+2+3",
+      "whyNow": "Scout-run pa diff ea62e45^..8724798 hittade 3 P0 (pb-safe-or-3 saknas, wizard iOS-zoom, 20px steg-chips) + ~12 P1 (hydration, flash, keyboard, footer min-tap, ModePill, pill-desync, focus, inspector, mikro-kontroller, sm-zoom). Gor PR #117 merge-redo.",
       "paths": [
-        "apps/viewser/components/run-history.tsx",
-        "apps/viewser/components/builder/inspector/compare-preview-modal.tsx",
+        "apps/viewser/app/globals.css",
+        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
+        "apps/viewser/components/discovery-wizard/steps/step-primitives.tsx",
+        "apps/viewser/components/discovery-wizard/steps/content-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/company-step.tsx",
         "apps/viewser/components/viewer-panel.tsx",
-        "apps/viewser/app/globals.css"
+        "apps/viewser/components/prompt-builder.tsx",
+        "apps/viewser/components/builder/floating-chat.tsx",
+        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
+        "apps/viewser/components/builder/inspector/compare-preview-modal.tsx",
+        "apps/viewser/components/builder/dialogs/color-picker-dialog.tsx"
       ],
       "doNotTouch": [
         "apps/viewser/app/api/**",
@@ -205,11 +213,10 @@
         "governance/schemas/**"
       ],
       "acceptanceCriteria": [
-        "RunHistory: h-[26rem] -> max-h-[50dvh] sm:h-[26rem].",
-        "ComparePreviewModal: mobile swipe + snap-x + A/B-indikator-pills.",
-        "ViewerPanel device-toggle desktop (375/768/1024/full) + sessionStorage.",
-        "FloatingChat edge-pulse: ease-in-out 3s cycle.",
-        "Bottom-sheet scale-in via existing data-starting-style.",
+        "P0 #1: .pb-safe-or-3 utility finns i globals.css.",
+        "P0 #2: Alla wizard inputs kor text-base i mobile.",
+        "P0 #3: Mobile steg-chips >=44px hit-area.",
+        "P1 #4-14: alla scout-flaggade buggar atgardade.",
         "Inga off-limits-paths."
       ],
       "checks": [
@@ -225,10 +232,10 @@
       "collisionRisk": "green",
       "reviewer": "jakob",
       "status": "active",
-      "createdAt": "2026-05-26T09:16:41Z",
-      "updatedAt": "2026-05-26T09:16:41Z",
+      "createdAt": "2026-05-26T09:53:14Z",
+      "updatedAt": "2026-05-26T09:53:14Z",
       "notes": [],
-      "activatedAt": "2026-05-26T09:16:41Z"
+      "activatedAt": "2026-05-26T09:53:14Z"
     }
   ],
   "completedGaps": [
@@ -972,6 +979,67 @@
         "Stale queued-status fran fas-1-paus rensad."
       ],
       "updatedAt": "2026-05-26T09:46:10Z"
+    },
+    {
+      "id": "GAP-viewser-mobile-responsive-final-polish",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Mobil-anpassning fas 3 — final polish (run-history, compare swipe, device-toggle, motion)",
+      "whyNow": "Fas 1 + fas 2 (PR #117) löste foundation + P0 + P1-polish. Fas 3 stänger UX-gap som krävde mer än CSS: run-history fast 416px (62% av 667px-skärm), compare-modal staplar A över B på mobil (jämförelse blir meningslös), viewer-panel saknar device-toggle på desktop, motion polish på edge-pulse + bottom-sheet.",
+      "paths": [
+        "apps/viewser/components/run-history.tsx",
+        "apps/viewser/components/builder/inspector/compare-preview-modal.tsx",
+        "apps/viewser/components/viewer-panel.tsx",
+        "apps/viewser/app/globals.css"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/**",
+        "apps/viewser/lib/**",
+        "apps/viewser/middleware.ts",
+        "apps/viewser/next.config.ts",
+        "apps/viewser/package.json",
+        "apps/viewser/package-lock.json",
+        "scripts/**",
+        "packages/generation/**",
+        "governance/schemas/**"
+      ],
+      "acceptanceCriteria": [
+        "RunHistory: h-[26rem] -> max-h-[50dvh] sm:h-[26rem].",
+        "ComparePreviewModal: mobile swipe + snap-x + A/B-indikator-pills.",
+        "ViewerPanel device-toggle desktop (375/768/1024/full) + sessionStorage.",
+        "FloatingChat edge-pulse: ease-in-out 3s cycle.",
+        "Bottom-sheet scale-in via existing data-starting-style.",
+        "Inga off-limits-paths."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/focus_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint",
+        "python -m pytest -q tests/"
+      ],
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "createdAt": "2026-05-26T09:16:41Z",
+      "updatedAt": "2026-05-26T09:53:14Z",
+      "notes": [
+        "Levererad i PR #117 ovanpa fas 1 + 2. Status completed lokalt; vantar pa Jakob-merge.",
+        "Scout-rapport (95f73fbf) hittade P0+P1 buggar som fixas i ny GAP-viewser-mobile-scout-fixes."
+      ],
+      "activatedAt": "2026-05-26T09:16:41Z",
+      "completedAt": "2026-05-26T09:53:14Z",
+      "fixCommits": [
+        "e05c443",
+        "18d84f5",
+        "f850882",
+        "8724798",
+        "71257ce",
+        "564ab80"
+      ]
     }
   ],
   "decisions": [
