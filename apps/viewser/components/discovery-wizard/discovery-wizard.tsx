@@ -401,19 +401,21 @@ export function DiscoveryWizard({
                 <VisualStep answers={answers} onChange={updateAnswers} />
               ) : null}
               {step === "functions" ? (
+                <FunctionsStep answers={answers} onChange={updateAnswers} />
+              ) : null}
+              {step === "assets" ? (
                 <>
-                  <FunctionsStep answers={answers} onChange={updateAnswers} />
+                  {/* Logo + mediamaterial — egen tab så det blir tydligt
+                      att uppladdning är ett separat steg. Vision-modellen
+                      pickar bästa hero/galleribild från det operatorn
+                      laddar upp här (favicon / OG / bakgrundsvideo ligger
+                      kvar i Mer information-popupen). */}
+                  <AssetsStep answers={answers} onChange={updateAnswers} />
 
-                  {/* Logo + mediamaterial direkt på tab 3 — Vision-modellen
-                      pickar bästa hero/galleribild från det operatorn laddar
-                      upp här (favicon / OG / bakgrundsvideo ligger i popupen). */}
-                  <div className="border-border/40 mt-8 border-t pt-6">
-                    <h3 className="text-foreground mb-3 text-[13.5px] font-semibold tracking-tight">
-                      Logo & mediamaterial
-                    </h3>
-                    <AssetsStep answers={answers} onChange={updateAnswers} />
-                  </div>
-
+                  {/* "Mer information"-knappen flyttades hit från tab 3
+                      eftersom Bilder nu är sista tabben — knappen syns
+                      precis innan "Skapa sajt", vilket var operatorens
+                      ursprungliga önskemål. */}
                   <div className="border-border/40 mt-8 border-t pt-6">
                     <Button
                       type="button"

@@ -38,11 +38,19 @@ import type { AssetRef } from "@/lib/asset-store/types";
  * återanvänder samma fält) men ingår INTE längre i `WIZARD_STEP_ORDER`
  * och har följaktligen ingen sidebar/tab-knapp. Backend-payload ändras
  * INTE — alla fält skickas fortfarande via `buildDiscoveryPayload`.
+ *
+ * 2026-05-26 (v2) — Bilder-flik tillagd (GAP-viewser-wizard-assets-tab).
+ * Logo + mediamaterial (AssetsStep) flyttades ut ur "functions"-tabben
+ * och fick en egen fjärde tab "Bilder" så operatorn ser tydligt att
+ * uppladdning är ett separat steg, inte en kropp under sidor. "Ange
+ * information"-popup-knappen flyttades samtidigt till "Bilder"-tabben
+ * så den ligger precis innan "Skapa sajt".
  */
 export type WizardStepId =
   | "foundation"
   | "visual"
   | "functions"
+  | "assets"
   | "content"
   | "media";
 
@@ -50,6 +58,7 @@ export const WIZARD_STEP_ORDER: WizardStepId[] = [
   "foundation",
   "visual",
   "functions",
+  "assets",
 ];
 
 /**
@@ -61,6 +70,7 @@ export const WIZARD_STEP_ORDER_LEGACY_ALL: WizardStepId[] = [
   "foundation",
   "visual",
   "functions",
+  "assets",
   "content",
   "media",
 ];
@@ -69,6 +79,7 @@ export const WIZARD_STEP_TITLES: Record<WizardStepId, string> = {
   foundation: "Företaget",
   visual: "Stil",
   functions: "Funktioner",
+  assets: "Bilder",
   // Visas inte som tab, men behålls för legacy-läsare som mappar
   // alla WizardStepId till en titel (t.ex. payload-debug).
   content: "Innehåll",
@@ -86,6 +97,7 @@ export const WIZARD_STEP_PIPELINE_BADGE: Record<WizardStepId, PipelinePart> = {
   foundation: "Sidor",
   visual: "Visuellt",
   functions: "Funktioner",
+  assets: "Media",
   content: "Innehåll",
   media: "Media",
 };
@@ -360,6 +372,10 @@ export function validateWizardStep(
       // Total-minimalism: ingen hard-validation längre. Recommended-funktioner
       // förefylls auto från businessFamily i `functions-step.tsx`. Operatorn
       // kan alltid gå direkt till "Skapa sajt".
+      return null;
+    case "assets":
+      // Bilder-tabben är alltid skip-bar — operatorn kan generera sajten
+      // utan uppladdat material (monogram-logo + AI-genererad hero används).
       return null;
     case "content":
       // Innehållssteget är alltid valfritt — utan tjänster/produkter
