@@ -115,7 +115,7 @@ export function ColorPickerDialog({
             <Label className="text-muted-foreground mb-2 block text-[11px] tracking-tight uppercase">
               Förslag
             </Label>
-            <div className="grid grid-cols-6 gap-2">
+            <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
               {PRESET_PALETTE.map((preset) => {
                 const isActive =
                   color.toLowerCase() === preset.hex.toLowerCase();
@@ -128,7 +128,7 @@ export function ColorPickerDialog({
                     aria-label={preset.label}
                     aria-pressed={isActive}
                     className={cn(
-                      "relative h-10 rounded-md border transition-all",
+                      "relative min-tap sm:min-tap-0 rounded-md border transition-all active:scale-95 sm:h-10",
                       isActive
                         ? "border-foreground ring-foreground/40 ring-2 ring-offset-2"
                         : "border-border/60 hover:border-border",
@@ -154,7 +154,7 @@ export function ColorPickerDialog({
                 onChange={handleHexChange}
                 placeholder="#2D5F3F"
                 spellCheck={false}
-                className="font-mono"
+                className="font-mono text-base sm:text-sm"
               />
             </div>
             <div>
@@ -169,7 +169,7 @@ export function ColorPickerDialog({
                 type="color"
                 value={color}
                 onChange={handleNativePickerChange}
-                className="border-border/60 h-9 w-12 cursor-pointer rounded-md border bg-transparent p-1"
+                className="border-border/60 min-tap sm:min-tap-0 w-14 cursor-pointer rounded-md border bg-transparent p-1 sm:h-9 sm:w-12"
               />
             </div>
           </div>
