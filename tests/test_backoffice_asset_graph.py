@@ -382,6 +382,10 @@ def test_asset_graph_lists_dossier_candidates(
                 "source": "mock-no-key",
                 "modelUsed": "mock",
                 "createdAt": "2026-05-25T00:00:00Z",
+                "sourcePath": "legacy/faq",
+                "sourceFileCount": 2,
+                "intakeReportHash": "sha256:intake",
+                "intakeRecommendedClass": "soft",
             }
         ),
         encoding="utf-8",
@@ -398,6 +402,46 @@ def test_asset_graph_lists_dossier_candidates(
     assert dossier_node["source"] == "mock-no-key"
     assert dossier_node["modelUsed"] == "mock"
     assert dossier_node["createdAt"] == "2026-05-25T00:00:00Z"
+    assert dossier_node["sourcePath"] == "legacy/faq"
+    assert dossier_node["sourceFileCount"] == 2
+    assert dossier_node["intakeReportHash"] == "sha256:intake"
+    assert dossier_node["intakeRecommendedClass"] == "soft"
+
+
+def test_asset_graph_lists_hard_dossier_candidates(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    candidates_dir = tmp_path / "dossier-candidates"
+    manifest = candidates_dir / "hard" / "openai-chat" / "manifest.json"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        json.dumps({"id": "openai-chat", "enabled": False, "capability": "ai-chat"}),
+        encoding="utf-8",
+    )
+    (manifest.parent / "meta.json").write_text(
+        json.dumps(
+            {
+                "source": "deterministic-v1",
+                "modelUsed": "deterministic",
+                "createdAt": "2026-05-26T00:00:00Z",
+                "intakeRecommendedClass": "hard",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(asset_graph, "DOSSIER_CANDIDATES_DIR", candidates_dir)
+
+    graph = asset_graph.build_graph()
+
+    dossier_node = next(
+        node
+        for node in graph["nodes"]
+        if (node["type"], node["id"]) == ("dossier-candidate", "hard/openai-chat")
+    )
+    assert dossier_node["status"] == "candidate"
+    assert dossier_node["source"] == "deterministic-v1"
+    assert dossier_node["intakeRecommendedClass"] == "hard"
 
 
 def test_dedicated_candidate_views_default_to_no_llm() -> None:
@@ -410,6 +454,8 @@ def test_dedicated_candidate_views_default_to_no_llm() -> None:
     assert 'st.checkbox("Använd dossierModel om OPENAI_API_KEY finns", value=False)' in (
         dossier_source
     )
+    assert "Analysera källa" in dossier_source
+    assert "Skapa kandidat från analys" in dossier_source
 
 
 def test_asset_graph_starter_rows_match_runtime_mapping() -> None:
@@ -679,11 +725,44 @@ def test_dossier_candidate_ui_helper_writes_only_candidate_dir(
         capability="faq-section",
         use_llm=False,
         force=False,
+        intake_report={"recommendedClass": "soft", "sourcePath": "legacy/faq"},
     )
 
     assert result.manifest["enabled"] is False
     assert captured["output_dir"] == building_blocks.DOSSIER_CANDIDATES_DIR
     assert "packages/generation/orchestration/dossiers" not in str(captured["output_dir"])
+    assert captured["intake_report"] == {
+        "recommendedClass": "soft",
+        "sourcePath": "legacy/faq",
+    }
+
+
+def test_dossier_intake_ui_helper_can_run_without_streamlit_session(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_analyze_dossier_source(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        captured.update(kwargs)
+        captured["source_path"] = args[0]
+        return {"recommendedClass": "soft", "sourcePath": args[0]}
+
+    monkeypatch.setattr(
+        building_blocks,
+        "analyze_dossier_source",
+        fake_analyze_dossier_source,
+    )
+
+    report = building_blocks.analyze_dossier_source_from_ui(
+        source_path="data/legacy-dossiers/faq",
+        operator_brief="FAQ accordion",
+    )
+
+    assert report["recommendedClass"] == "soft"
+    assert captured == {
+        "source_path": "data/legacy-dossiers/faq",
+        "operator_brief": "FAQ accordion",
+    }
 
 
 def test_pyrightconfig_adds_scripts_extra_path(repo_root: Path) -> None:

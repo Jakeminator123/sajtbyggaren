@@ -7,6 +7,10 @@ from pathlib import Path
 
 import streamlit as st
 
+from scripts.dossier_candidate_intake import (
+    DossierIntakeError,
+    analyze_dossier_source,
+)
 from scripts.generate_dossier_candidate import (
     DossierGenerationError,
     generate_dossier_candidate,
@@ -85,8 +89,9 @@ def create_dossier_candidate_from_ui(
     capability: str | None,
     use_llm: bool,
     force: bool,
+    intake_report: dict | None = None,
 ):
-    """Generate a soft Dossier candidate from Backoffice without touching canonical files."""
+    """Generate a Dossier candidate from Backoffice without touching canonical files."""
     return generate_dossier_candidate(
         brief=brief,
         candidate_id=candidate_id,
@@ -94,6 +99,19 @@ def create_dossier_candidate_from_ui(
         output_dir=DOSSIER_CANDIDATES_DIR,
         force=force,
         use_llm=use_llm,
+        intake_report=intake_report,
+    )
+
+
+def analyze_dossier_source_from_ui(
+    *,
+    source_path: str,
+    operator_brief: str,
+) -> dict:
+    """Analyse a local source path from Backoffice without writing files."""
+    return analyze_dossier_source(
+        source_path,
+        operator_brief=operator_brief,
     )
 
 
@@ -1522,11 +1540,122 @@ def view_dossiers() -> None:
 def view_dossier_candidates() -> None:
     st.title("Dossier Candidates")
     st.caption(
-        "Skapar candidate-only Soft Dossier-mappar under `data/dossier-candidates/`. "
+        "Skapar candidate-only Dossier-mappar under `data/dossier-candidates/`. "
         "Det här promoterar aldrig till canonical Dossier-mappar."
     )
     _render_candidate_source_help()
 
+    st.subheader("Intake från lokal källa")
+    st.caption(
+        "V1 analyserar bara lokala filer och mappar. URL/web-input är planerat för "
+        "V1.5 och fetchas inte här."
+    )
+    with st.form("dossier_intake_analyze_form"):
+        source_path = st.text_input(
+            "Lokal source path",
+            placeholder="t.ex. data/legacy-dossiers/old-carousel",
+        )
+        intake_brief = st.text_area(
+            "Operator brief för analysen",
+            height=120,
+            placeholder="Beskriv vilken återanvändbar capability du hoppas hitta.",
+        )
+        intake_submitted = st.form_submit_button("Analysera källa")
+
+    if intake_submitted:
+        try:
+            report = analyze_dossier_source_from_ui(
+                source_path=source_path.strip(),
+                operator_brief=intake_brief,
+            )
+        except (DossierIntakeError, ValueError, RuntimeError) as exc:
+            st.error(f"Kunde inte analysera källa: {exc}")
+        else:
+            st.session_state["dossier_candidate_intake_report"] = report
+            st.session_state["dossier_candidate_intake_brief"] = intake_brief
+            st.success("Intake-rapport skapad. Inget har skrivits till disk.")
+
+    intake_report = st.session_state.get("dossier_candidate_intake_report")
+    if isinstance(intake_report, dict):
+        st.markdown("**senaste intake report**")
+        metric_cols = st.columns(4)
+        metric_cols[0].metric("Rekommendation", str(intake_report["recommendedClass"]))
+        metric_cols[1].metric("Filer", int(intake_report.get("fileCount") or 0))
+        metric_cols[2].metric(
+            "Inkluderade",
+            len(intake_report.get("includedFiles") or []),
+        )
+        metric_cols[3].metric(
+            "Exkluderade",
+            len(intake_report.get("excludedFiles") or []),
+        )
+        st.write(f"**Suggested id:** `{intake_report.get('suggestedDossierId', '')}`")
+        st.write(f"**Capability:** `{intake_report.get('suggestedCapability', '')}`")
+        risk_flags = intake_report.get("riskFlags") or []
+        if risk_flags:
+            st.warning("Riskflaggor: " + ", ".join(f"`{flag}`" for flag in risk_flags))
+        operator_questions = intake_report.get("operatorQuestions") or []
+        if operator_questions:
+            with st.expander("Operatorfrågor"):
+                for question in operator_questions:
+                    st.write(f"- {question}")
+        with st.expander("Intake report JSON"):
+            st.json(intake_report, expanded=False)
+
+        if intake_report.get("recommendedClass") == "not-a-dossier":
+            st.warning(
+                "Rapporten rekommenderar `not-a-dossier`. Skapa ingen kandidat från "
+                "denna källa utan att flytta materialet till Project Input/assets."
+            )
+        else:
+            with st.form("dossier_intake_create_form"):
+                intake_candidate_id = st.text_input(
+                    "Dossier id från analys",
+                    value=str(intake_report.get("suggestedDossierId") or ""),
+                )
+                intake_capability = st.text_input(
+                    "Capability från analys",
+                    value=str(intake_report.get("suggestedCapability") or ""),
+                )
+                intake_create_brief = st.text_area(
+                    "Capability-brief från analys",
+                    value=str(st.session_state.get("dossier_candidate_intake_brief") or ""),
+                    height=160,
+                )
+                intake_use_llm = st.checkbox(
+                    "Använd dossierModel om OPENAI_API_KEY finns",
+                    value=False,
+                    key="dossier_intake_use_llm",
+                )
+                intake_force = st.checkbox(
+                    "Skriv över befintlig kandidat med samma id",
+                    value=False,
+                    key="dossier_intake_force",
+                )
+                intake_create = st.form_submit_button("Skapa kandidat från analys")
+            if intake_create:
+                try:
+                    result = create_dossier_candidate_from_ui(
+                        brief=intake_create_brief,
+                        candidate_id=intake_candidate_id.strip() or None,
+                        capability=intake_capability.strip() or None,
+                        use_llm=intake_use_llm,
+                        force=intake_force,
+                        intake_report=intake_report,
+                    )
+                except (DossierGenerationError, ValueError, RuntimeError) as exc:
+                    st.error(f"Kunde inte skapa kandidat från analys: {exc}")
+                    return
+                st.success(f"Skapade `{result.candidate_dir.relative_to(REPO_ROOT)}`")
+                st.write(f"**Source:** `{result.source}`")
+                st.write(f"**Model:** `{result.model_used}`")
+                st.subheader("manifest.json")
+                st.json(result.manifest, expanded=False)
+                st.subheader("instructions.md")
+                st.code(result.instructions, language="markdown")
+
+    st.divider()
+    st.subheader("Brief-only kandidat")
     with st.form("dossier_candidate_form"):
         candidate_id = st.text_input("Dossier id (valfritt)")
         capability = st.text_input("Capability (valfritt)")

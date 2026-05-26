@@ -298,6 +298,9 @@ COMMON_WORDS = {
     "DossierCandidateModel", "DossierGenerationError",
     "DossierGenerationResult", "DossierManifestModel",
     "DossierModelResolutionError",
+    # Dossier candidate intake implementation symbols. These are local Python
+    # helpers around read-only file scanning, not canonical domain terms.
+    "DossierIntakeError", "IntakeScanCaps",
     # Generic React component names that appear in test fixtures, ADR
     # examples and docstring snippets. They are standard component-
     # cased identifiers (Header, Footer, Hero, About) used by the
