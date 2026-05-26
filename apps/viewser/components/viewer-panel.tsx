@@ -25,10 +25,10 @@ import type { PromptStage } from "@/components/prompt-builder";
  *   - "laptop"  → 1024px (vanlig laptop-canvas-bredd)
  *   - "full"    → ingen constraint (default; iframe fyller canvasen)
  *
- * Valet persisterar i sessionStorage så reload av sidan behåller
- * det operatören jobbar i (men inte tvärs över browser-sessioner —
- * vi vill att en ny dag/session börjar på "full" så ingen blir
- * förvirrad av en oväntat smal iframe).
+ * Valet persisterar i sessionStorage så valet behålls tills tab/flik
+ * stängs. Nästa gång samma operatör öppnar viewser i en ny tab börjar
+ * det därför alltid på "full" (sessionStorage är per-tab, inte
+ * cross-session).
  *
  * device-toggle döljs på mobile (`hidden md:flex`) eftersom enheten
  * SJÄLV är liten — det är redan en mobil-preview och toggeln skulle
@@ -307,24 +307,36 @@ export function ViewerPanel({
   const [openingExternal, setOpeningExternal] = useState(false);
 
   /**
-   * Device-preset (375/768/1024/full). Initial state läses synkront
-   * från sessionStorage så ingen FOUC från default "full" → senast
-   * valda preset. SSR-fallback = "full" eftersom sessionStorage inte
-   * finns på servern (typeof window-checken).
+   * Device-preset (375/768/1024/full). Initialiseras ALLTID till "full"
+   * för att matcha SSR-renderingen — sessionStorage läses i en separat
+   * useEffect direkt efter mount och uppdaterar state synkront. Tidigare
+   * useState-initializer-läsningen orsakade hydration mismatch när
+   * operatören hade en sparad preset (server returnerade "full", klient
+   * "mobile") som React klagade på i konsolen vid första paint.
+   *
+   * Samma mönster som floating-chat.tsx:isMinimized-init.
    */
-  const [devicePreset, setDevicePreset] = useState<Device>(() => {
-    if (typeof window === "undefined") return "full";
-    const stored = window.sessionStorage.getItem(DEVICE_STORAGE_KEY);
-    if (stored === "mobile" || stored === "tablet" || stored === "laptop") {
-      return stored;
-    }
-    return "full";
-  });
+  const [devicePreset, setDevicePreset] = useState<Device>("full");
+  // Räknar om initial-läsning är klar, så vi inte persisterar "full"-
+  // default tillbaka över en faktiskt lagrad preset i window-effekten
+  // nedan (annars skulle första render skriva "full" innan vi hunnit
+  // läsa "mobile" från storage).
+  const deviceHydratedRef = useRef(false);
 
-  // Persistera device-val när det ändras. Pure side-effect (DOM-call,
-  // ingen setState) — tillåten i useEffect.
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const stored = window.sessionStorage.getItem(DEVICE_STORAGE_KEY);
+    if (stored === "mobile" || stored === "tablet" || stored === "laptop") {
+      setDevicePreset(stored);
+    }
+    deviceHydratedRef.current = true;
+  }, []);
+
+  // Persistera device-val när det ändras (men hoppa över första render
+  // innan hydration läst eventuell sparad preset).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!deviceHydratedRef.current) return;
     window.sessionStorage.setItem(DEVICE_STORAGE_KEY, devicePreset);
   }, [devicePreset]);
 

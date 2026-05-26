@@ -325,17 +325,63 @@ const STORAGE_KEY_QUICK_PROMPTS = "sajtbyggaren:floating-chat:quick-prompts";
  * mobilskärmen och respekterar iOS home-indicator. SSR-säker
  * (returnerar false under server-rendering, läses först post-mount).
  */
+// useIsomorphicLayoutEffect — useLayoutEffect på klient, useEffect på
+// server. Behövs för att eliminera FloatingChat-layout-flickern: tidigare
+// useEffect-mönstret returnerade false vid första paint på mobil
+// (desktop-placeholder right-6 bottom-6 syntes 1 frame innan effect
+// kördes). useLayoutEffect kör innan paint så första synliga frame har
+// rätt isMobile-värde. SSR-pathen faller tillbaka till useEffect så vi
+// undviker Reacts "useLayoutEffect does nothing on the server"-varning.
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
 function useIsMobileViewport(): boolean {
   const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (typeof window === "undefined") return;
     const mq = window.matchMedia("(max-width: 767px)");
-    const update = () => setIsMobile(mq.matches);
-    update();
+    setIsMobile(mq.matches);
+    const update = (event: MediaQueryListEvent) => setIsMobile(event.matches);
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, []);
   return isMobile;
+}
+
+/**
+ * useKeyboardInset — returnerar antalet pixlar som virtuella tangent-
+ * bordet täcker av viewporten på iOS Safari. Driver bottom-offset på
+ * bottom-sheet-panelen så att composern aldrig hamnar under tangent-
+ * bordet när operatören skriver.
+ *
+ * Implementation via `window.visualViewport`-API:t som specifikt rapporterar
+ * sektionen som faktiskt är synlig för användaren (inte hela window).
+ * Skillnaden `innerHeight - visualViewport.height - visualViewport.offsetTop`
+ * = höjden av det som ligger nedanför synlig viewport, dvs keyboard.
+ *
+ * Disabled när `enabled` är false (vi vill inte lyssna på dessa events
+ * när chatten är minimerad eller desktop-läge är aktivt).
+ */
+function useKeyboardInset(enabled: boolean): number {
+  const [inset, setInset] = useState(0);
+  useEffect(() => {
+    if (!enabled) return;
+    if (typeof window === "undefined") return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const offset = window.innerHeight - vv.height - vv.offsetTop;
+      setInset(Math.max(0, Math.round(offset)));
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, [enabled]);
+  return inset;
 }
 
 function readStoredPosition(): Position | null {
@@ -471,6 +517,11 @@ export function FloatingChat({
   // initial hydration; skiftar till true post-mount om matchMedia
   // träffar.
   const isMobile = useIsMobileViewport();
+  // keyboardInset enabled bara när chatten är öppen på mobil — vi
+  // behöver inte lyssna på visualViewport-resize:s när panelen är
+  // minimerad eller när vi är på desktop (där tangentbord inte
+  // täcker overlay-elementet).
+  const keyboardInset = useKeyboardInset(isMobile && !isMinimized);
   // Initial-meddelandet beräknas en gång från siteId (lazy init) så
   // ingen useEffect behöver setState efter mount för att synca
   // intron mot sajten. Sajt-byten löses via key={siteId} i
@@ -516,6 +567,20 @@ export function FloatingChat({
   const headerRef = useRef<HTMLDivElement | null>(null);
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // Ref till composer-textarea så vi kan flytta focus dit när panelen
+  // expanderas från minimerat läge (annars stannar tangentbords-focus
+  // på FAB-knappen och operatören måste Tab:a sig in i textfältet).
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Expandera panelen + flytta focus till composer i samma callback.
+  // setTimeout(0) säkerställer att React renderat panelen + textarean
+  // innan vi anropar focus() — annars är composerRef.current null.
+  const expandAndFocus = useCallback(() => {
+    setIsMinimized(false);
+    setTimeout(() => {
+      composerRef.current?.focus();
+    }, 50);
+  }, []);
 
   // Initiera position + minimized från localStorage efter mount.
   //
@@ -1006,7 +1071,7 @@ export function FloatingChat({
       return (
         <button
           type="button"
-          onClick={() => setIsMinimized(false)}
+          onClick={expandAndFocus}
           aria-label="Öppna Sajtmaskin-chatten"
           title="Öppna chatten"
           className={cn(
@@ -1042,7 +1107,7 @@ export function FloatingChat({
     return (
       <button
         type="button"
-        onClick={() => setIsMinimized(false)}
+        onClick={expandAndFocus}
         aria-label="Öppna Sajtmaskin-chatten"
         title="Öppna chatten"
         className={cn(
@@ -1099,7 +1164,13 @@ export function FloatingChat({
       )}
       style={
         isMobile
-          ? undefined
+          ? // bottom: keyboardInset hänger panelen ovanför iOS-tangentbordet
+            // (= 0 när keyboard ej syns, > 0 när det är öppet). transition
+            // gör att panelen glider upp/ner smidigt istället för att hoppa.
+            {
+              bottom: keyboardInset,
+              transition: "bottom 0.18s ease-out",
+            }
           : {
               left: position.x,
               top: position.y,
@@ -1240,7 +1311,7 @@ export function FloatingChat({
                 aria-label="Avbryt iterera-läge"
                 title="Avbryt iterera-läge"
                 className={cn(
-                  "hover:bg-sky-500/15 inline-flex h-5 w-5 items-center justify-center rounded-full",
+                  "hover:bg-sky-500/15 min-tap sm:min-tap-0 inline-flex h-5 w-5 items-center justify-center rounded-full active:scale-95",
                   "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
                 )}
               >
@@ -1266,7 +1337,7 @@ export function FloatingChat({
               title={quickPromptsOpen ? "Dölj förslag" : "Visa förslag"}
               className={cn(
                 "text-muted-foreground/70 hover:text-foreground hover:bg-muted/50",
-                "inline-flex h-5 w-9 items-center justify-center rounded-full",
+                "min-tap sm:min-tap-0 inline-flex h-5 w-9 items-center justify-center rounded-full active:scale-95",
                 "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
                 "transition-colors",
               )}
@@ -1306,7 +1377,7 @@ export function FloatingChat({
                             "border-border/60 bg-background/80 text-foreground/80",
                             "hover:border-border hover:bg-card hover:text-foreground",
                             "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
-                            "rounded-full border px-2 py-0.5 text-[10.5px] transition-colors",
+                            "min-tap sm:min-tap-0 rounded-full border px-2.5 py-1 text-[11px] transition-colors active:scale-95 sm:px-2 sm:py-0.5 sm:text-[10.5px]",
                             CHIP_INTERACTIONS,
                           )}
                         >
@@ -1338,7 +1409,7 @@ export function FloatingChat({
                   type="button"
                   onClick={() => removeAttachment(ref.assetId)}
                   aria-label={`Ta bort ${ref.filename}`}
-                  className="text-muted-foreground hover:text-foreground inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded"
+                  className="text-muted-foreground hover:text-foreground min-tap sm:min-tap-0 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded active:scale-95"
                 >
                   <X className="h-2.5 w-2.5" />
                 </button>
@@ -1358,6 +1429,7 @@ export function FloatingChat({
 
         <div className="border-border/70 bg-background focus-within:border-ring/50 focus-within:ring-ring/30 overflow-hidden rounded-xl border focus-within:ring-2">
           <Textarea
+            ref={composerRef}
             value={input}
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={handleKeyDown}
@@ -1370,8 +1442,10 @@ export function FloatingChat({
             maxLength={4000}
             disabled={isSending || isBuilding}
             // text-base (16px) på mobil förhindrar iOS Safari från att
-            // auto-zooma vid fokus; krymper till text-[13px] på sm+.
-            className="min-h-[60px] resize-none border-0 bg-transparent px-3 py-2 text-base sm:text-[13px] shadow-none focus-visible:ring-0"
+            // auto-zooma vid fokus; krymper till text-[13px] på md+.
+            // sm:-breakpoint (640px) är fortfarande iPad-portrait där
+            // iOS-zoom kan trigga; md: (768px) är säkrare.
+            className="min-h-[60px] resize-none border-0 bg-transparent px-3 py-2 text-base md:text-[13px] shadow-none focus-visible:ring-0"
           />
           <div className="border-border/60 flex items-center justify-between gap-2 border-t px-2 py-1.5">
             <div className="flex items-center gap-1">

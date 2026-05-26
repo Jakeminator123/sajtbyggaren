@@ -135,7 +135,17 @@ export function SiteInspectorSheet({
         side="right"
         className="w-full max-w-[560px] gap-0 p-0 sm:max-w-[560px] max-md:!inset-x-0 max-md:!bottom-0 max-md:!top-auto max-md:!left-0 max-md:!right-0 max-md:!h-[90dvh] max-md:!w-full max-md:!max-w-none max-md:!rounded-t-3xl max-md:!border-t max-md:!border-l-0 max-md:pb-safe"
       >
-        <SheetHeader className="border-border/60 flex flex-row items-start justify-between gap-3 border-b p-5">
+        {/* Bottom-sheet drag-handle (mobile only). Endast visuell —
+            informerar operatören att panelen är swipe:bar (faktisk
+            drag-to-dismiss skickas till framtida P2-arbete, men
+            handle:n är ett standardiserat bottom-sheet-affordance
+            som matchar SheetContent side="bottom"-pattern. md:hidden
+            så den inte syns i desktop-side-drawer. */}
+        <div
+          aria-hidden
+          className="bottom-sheet-handle md:hidden"
+        />
+        <SheetHeader className="border-border/60 flex flex-row items-start justify-between gap-3 border-b p-5 max-md:pt-2">
           <div className="flex min-w-0 flex-col gap-1">
             <SheetTitle className="flex items-center gap-2 text-[16px] tracking-tight">
               <ScanSearch className="h-4 w-4" aria-hidden />
@@ -158,7 +168,7 @@ export function SiteInspectorSheet({
             disabled={state.status === "loading"}
             aria-label="Uppdatera artefakter"
             title="Uppdatera artefakter"
-            className="mr-9 shrink-0"
+            className="mr-9 shrink-0 min-tap sm:min-tap-0"
           >
             <RefreshCw
               className={`h-3.5 w-3.5 ${state.status === "loading" ? "animate-spin" : ""}`}

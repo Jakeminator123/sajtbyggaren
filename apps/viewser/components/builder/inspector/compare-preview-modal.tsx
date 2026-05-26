@@ -93,7 +93,13 @@ export function ComparePreviewModal({
   // Lg-breakpoint (1024px) använder grid istället för snap-scroll så
   // scrollIntoView är inget no-op där — vi väljer ändå att alltid scrolla,
   // eftersom desktop-flex-grid har båda panes i view oavsett.
+  //
+  // setActivePane(target) körs SYNKRONT (innan scrollIntoView) så
+  // pill-indikatorn flippar omedelbart vid tap istället för att vänta
+  // tills scroll-ratio passerar 0.5 (orsakade desync-frame mellan
+  // tap och visuell aktiv-pill under smooth scroll).
   const goToPane = useCallback((target: "A" | "B") => {
+    setActivePane(target);
     const ref = target === "A" ? paneARef.current : paneBRef.current;
     ref?.scrollIntoView({
       behavior: "smooth",

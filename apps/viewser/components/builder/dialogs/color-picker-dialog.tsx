@@ -154,7 +154,7 @@ export function ColorPickerDialog({
                 onChange={handleHexChange}
                 placeholder="#2D5F3F"
                 spellCheck={false}
-                className="font-mono text-base sm:text-sm"
+                className="font-mono text-base md:text-sm"
               />
             </div>
             <div>

@@ -348,7 +348,7 @@ export function PromptBuilder({
                 void submitPrompt();
               }
             }}
-            className="min-h-[64px] resize-none border-0 bg-transparent px-4 py-3 text-base leading-relaxed shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 sm:text-[15px]"
+            className="min-h-[64px] resize-none border-0 bg-transparent px-4 py-3 text-base leading-relaxed shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 md:text-[15px]"
           />
           <div className="flex items-center justify-between gap-2 border-t border-border/40 px-2 py-2">
             <ModeSwitcher
@@ -428,6 +428,7 @@ function ModeSwitcher({
         active={mode === "init"}
         disabled={disabled}
         onClick={() => onChange("init")}
+        aria-label="Ny sajt-läge"
       >
         Ny sajt
       </ModePill>
@@ -464,7 +465,7 @@ function ModePill({
       aria-label={ariaLabel}
       disabled={disabled}
       onClick={onClick}
-      className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition active:scale-95 disabled:opacity-40 sm:px-2.5 sm:py-1 sm:text-[11px] ${
+      className={`min-tap sm:min-tap-0 rounded-full px-3 py-1.5 text-[12px] font-medium transition active:scale-95 disabled:opacity-40 sm:px-2.5 sm:py-1 sm:text-[11px] ${
         active
           ? "bg-background text-foreground shadow-sm"
           : "text-muted-foreground hover:text-foreground"
