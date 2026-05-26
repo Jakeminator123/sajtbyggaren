@@ -302,6 +302,10 @@ COMMON_WORDS = {
     # helpers around read-only file scanning, not canonical domain terms.
     "DossierIntakeError", "DossierIntakeModelResolutionError",
     "DossierIntakeReviewModel", "IntakeScanCaps",
+    # PowerShell parameter names + Cursor IDE tool names that appear in
+    # operator docs and agent prompts under docs/agent-prompts/. Not
+    # domain terms — PS standard verb/noun parameters + IDE tool labels.
+    "FilePath", "ItemType", "StrReplace",
     # Generic React component names that appear in test fixtures, ADR
     # examples and docstring snippets. They are standard component-
     # cased identifiers (Header, Footer, Hero, About) used by the

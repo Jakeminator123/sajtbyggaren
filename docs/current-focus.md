@@ -577,8 +577,8 @@ orkestrator-fokus:** kör Viewser-overlay-mini-eval med verkligt UI-flöde
 och `scripts/verify_run.py` där artefakter behöver kontrolleras. Tidigare
 paragraf:
 
-> **Tidigare djup-historik:** `Last verified state` / `Föregående verified
-> state`-paragrafer som täckte 2026-05-15 till 2026-05-21 har flyttats till
+> **Tidigare djup-historik:** verified-state-paragrafer som täckte
+> 2026-05-15 till 2026-05-21 har flyttats till
 > [`docs/archive/current-focus-history-2026-05-26.md`](archive/current-focus-history-2026-05-26.md)
 > för att hålla denna fil hanterbar (samma metod som `docs/handoff.md`
 > fick i historiken — se `git log --follow docs/current-focus.md` för full kontext).
