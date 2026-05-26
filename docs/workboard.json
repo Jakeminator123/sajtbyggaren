@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-26T16:59:28Z",
+  "updatedAt": "2026-05-26T17:19:56Z",
   "updatedBy": "sprintvakt-mcp",
   "people": {
     "jakob": {
@@ -180,55 +180,6 @@
       ],
       "note": "Effort 30 min. Splittat från GAP-backend-restaurant-activation pga Sprintvakt-lane-policy. Landar i samma commit-batch som backend-aktiveringen. 2026-05-25 follow-up: den ursprungliga PR:en uppdaterade bara BUSINESS_FAMILIES[restaurant]; den parallella WIZARD_CATEGORIES[restaurant] missades och pekade fortsatt mot local-service-business / nordic-trust så FALLBACK_DISCOVERY_OPTIONS (byggd via WIZARD_CATEGORIES.map() i discovery-options.ts) gav fel scaffold + variant innan governance-API:t svarade. Fixat under samma GAP.",
       "pairedWith": "GAP-backend-restaurant-activation"
-    },
-    {
-      "id": "GAP-viewser-wizard-minimal-tabs",
-      "type": "Gap/UI",
-      "owner": "christopher",
-      "title": "Wizard total-minimalism: 3-tabs överst + 'Mer information'-popup med scaffold-aware flikar",
-      "whyNow": "Operatör-feedback efter 5-stegs-konsolidering: wizard fortfarande för rörig. Vill ha total minimalism — färre frågor synliga, skrap-driven bakgrundsifyllning, popup för djupare info istället för tvingande steg. Backend-payload (validateWizardStep, buildDiscoveryPayload) ändras INTE — bara UI omgrupperar samma svar.",
-      "paths": [
-        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
-        "apps/viewser/components/discovery-wizard/wizard-types.ts",
-        "apps/viewser/components/discovery-wizard/more-info-dialog.tsx",
-        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/visual-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/functions-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/media-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/content-orchestrator.tsx"
-      ],
-      "doNotTouch": [
-        "scripts/",
-        "packages/generation/",
-        "schemas/",
-        "docs/governance/",
-        "tests/",
-        "apps/viewser/app/api/",
-        "apps/viewser/components/discovery-wizard/wizard-payload.ts"
-      ],
-      "acceptanceCriteria": [
-        "WIZARD_STEP_ORDER reducerad från 5 till 3 (foundation, visual, functions)",
-        "Tabs visas högst upp istället för sidebar (desktop + mobile)",
-        "Inga proaktiva tips/varningar synliga som default - bara på fel eller info-ikon",
-        "'Mer information'-knapp på tab 3 öppnar popup med scaffold-aware flikar",
-        "Popup återanvänder content+media-fält och påverkar inte buildDiscoveryPayload-shape",
-        "Logo + mediamaterial uppladdning behålls på tab 3 (functions), favicon/ogImage/backgroundVideo flyttas till popup",
-        "GPT Vision auto-pick av hero från mediamaterial fungerar (Commit 3)",
-        "Manuell skip från valfri tab tillåts (inga hard-requirements utöver foundation min-validering)",
-        "Lint, typecheck, term-coverage --strict passerar"
-      ],
-      "checks": [
-        "npm -w @sajtbyggaren/viewser run lint",
-        "npm -w @sajtbyggaren/viewser run typecheck",
-        "python scripts/check_term_coverage.py --strict"
-      ],
-      "collisionRisk": "green",
-      "reviewer": "jakob",
-      "status": "active",
-      "createdAt": "2026-05-26T16:59:15Z",
-      "updatedAt": "2026-05-26T16:59:28Z",
-      "notes": [],
-      "activatedAt": "2026-05-26T16:59:28Z"
     }
   ],
   "completedGaps": [
@@ -1198,6 +1149,66 @@
       "activatedAt": "2026-05-26T10:52:25Z",
       "completedAt": "2026-05-26T16:58:55Z",
       "fixCommits": []
+    },
+    {
+      "id": "GAP-viewser-wizard-minimal-tabs",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Wizard total-minimalism: 3-tabs överst + 'Mer information'-popup med scaffold-aware flikar",
+      "whyNow": "Operatör-feedback efter 5-stegs-konsolidering: wizard fortfarande för rörig. Vill ha total minimalism — färre frågor synliga, skrap-driven bakgrundsifyllning, popup för djupare info istället för tvingande steg. Backend-payload (validateWizardStep, buildDiscoveryPayload) ändras INTE — bara UI omgrupperar samma svar.",
+      "paths": [
+        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
+        "apps/viewser/components/discovery-wizard/wizard-types.ts",
+        "apps/viewser/components/discovery-wizard/more-info-dialog.tsx",
+        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/visual-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/functions-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/media-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/content-orchestrator.tsx"
+      ],
+      "doNotTouch": [
+        "scripts/",
+        "packages/generation/",
+        "schemas/",
+        "docs/governance/",
+        "tests/",
+        "apps/viewser/app/api/",
+        "apps/viewser/components/discovery-wizard/wizard-payload.ts"
+      ],
+      "acceptanceCriteria": [
+        "WIZARD_STEP_ORDER reducerad från 5 till 3 (foundation, visual, functions)",
+        "Tabs visas högst upp istället för sidebar (desktop + mobile)",
+        "Inga proaktiva tips/varningar synliga som default - bara på fel eller info-ikon",
+        "'Mer information'-knapp på tab 3 öppnar popup med scaffold-aware flikar",
+        "Popup återanvänder content+media-fält och påverkar inte buildDiscoveryPayload-shape",
+        "Logo + mediamaterial uppladdning behålls på tab 3 (functions), favicon/ogImage/backgroundVideo flyttas till popup",
+        "GPT Vision auto-pick av hero från mediamaterial fungerar (Commit 3)",
+        "Manuell skip från valfri tab tillåts (inga hard-requirements utöver foundation min-validering)",
+        "Lint, typecheck, term-coverage --strict passerar"
+      ],
+      "checks": [
+        "npm -w @sajtbyggaren/viewser run lint",
+        "npm -w @sajtbyggaren/viewser run typecheck",
+        "python scripts/check_term_coverage.py --strict"
+      ],
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "createdAt": "2026-05-26T16:59:15Z",
+      "updatedAt": "2026-05-26T17:19:56Z",
+      "notes": [
+        "Klar och pushad i 3 commits på christopher-ui.",
+        "Commit 1 (1c1a9fb): 3-tabs-skal överst + Mer information-popup placeholder + WIZARD_STEP_ORDER reducerad från 5 till 3.",
+        "Commit 2 (b1e92ca): popup utvidgad till 4 flikar (Innehåll/Kontakt/Media/Avancerat) + logo+mediamaterial på tab 3 + kontakt-disclosure flyttad från foundation-step.",
+        "Commit 3 (1ab516c): Vision-driven auto-hero-pick från galleri (pickHeroFromGallery + onUploaded-promote). Backend-payload oändrad."
+      ],
+      "activatedAt": "2026-05-26T16:59:28Z",
+      "completedAt": "2026-05-26T17:19:56Z",
+      "fixCommits": [
+        "1c1a9fb",
+        "b1e92ca",
+        "1ab516c"
+      ]
     }
   ],
   "decisions": [

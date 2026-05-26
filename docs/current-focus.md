@@ -30,17 +30,37 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `9964f16` (2026-05-26 UTC, christopher-ui local — PR #117
-handoff-doc pushat. `docs/handoff-pr-117-merge.md` innehåller 8-stegs copy-
-paste-bar Cursor-prompt för Jakobs jakob-be-lane-agent: sanity-check →
-off-limits-guard verifiering → pull christopher-ui → konfliktlösning
-(endast docs/current-focus.md, behåll vår version) → full check-svit →
-merge-commit + post-merge SHA-bump → push → re-aktivera pausade christopher-
-GAPs (pipeline-status-polling + side-by-side-preview) → inbox-svar.
-PR #117 är CONFLICTING (1 trivial docs-konflikt), 31 commits ahead jakob-be,
-100% UI-only verifierat mot merge-base 3bedddd.).
+Last verified state: `1ab516c` (2026-05-26 UTC, christopher-ui local — wizard
+total-minimalism-pass landade i 3 commits 1c1a9fb/b1e92ca/1ab516c efter
+operatör-feedback "wizarden är fortfarande för rörig — vill ha total
+minimalism, färre frågor synliga, skrap-driven bakgrundsifyllning, popup
+för djupare info, tabs överst istället för side-banner". Tre tabs överst
+(Företaget/Stil/Funktioner), 'Mer information'-popup med fyra flikar
+(Innehåll/Kontakt/Media/Avancerat), logo+mediamaterial på tab 3 med GPT
+Vision auto-hero-pick från galleri. Backend-payload oändrad. Lint,
+typecheck och term-coverage --strict passerar. GAP-viewser-wizard-minimal-
+tabs stängd. Föregående 9964f16 PR-117-handoff-state finns kvar i historik.).
 
 Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
+
+- `1ab516c` feat(viewser): GPT Vision auto-hero-pick från mediamaterial-galleri.
+  AssetsStep gallery-dropzone promoteras till hero automatiskt om operatorn
+  inte explicit valt en — picks bästa kandidaten via `pickHeroFromGallery`
+  (placement+visionConfidence). Klassificering finns redan i upload-asset/api.
+- `b1e92ca` feat(viewser): wizard popup utvidgning + logo/mediamaterial på tab 3.
+  MoreInfoDialog: 4 flikar (Innehåll/Kontakt/Media/Avancerat) som återanvänder
+  ContentOrchestratorStep + nya ContactBlock/MediaExtrasBlock/AdvancedBlock.
+  Tab 3 (functions) får AssetsStep direkt. Kontakt-disclosure flyttad från
+  foundation-step.
+- `1c1a9fb` feat(viewser): wizard total-minimalism — 3 tabs överst + Mer
+  information-popup. WIZARD_STEP_ORDER 5→3 (foundation/visual/functions).
+  Sidebar borttagen, tabs på desktop+mobile. Inga proaktiva tips/varningar.
+  Foundation: bara offer + businessFamily är hard-required; alla andra fält
+  och steg är skip-bara.
+- `4442aea` feat(viewser): device-preset-context + iframe-mounted-during-build.
+  DevicePresetProvider för delad state mellan FloatingChat (toggle-bar under
+  panelen) + ViewerPanel. Iframen behålls mountad under build (BuildProgressCard
+  med backdrop-blur) så ingen vit canvas mellan iterationer.
 
 - `a1d1a1f` docs(inbox): ack msg-0008 (scope-process-PR-105) + msg-0009 (b146-port).
 - `ea62e45` docs(gap): open GAP-viewser-mobile-responsive-foundation. Pausar tillfälligt
