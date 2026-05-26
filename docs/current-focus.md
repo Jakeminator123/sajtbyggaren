@@ -138,9 +138,9 @@ Sedan c0b59fbe (PR #60) har följande mergats till `main`, i ordning:
 
 **Pågående/öppna PR:s just nu:**
 
-- **PR #117 — `feat(viewser): mobile responsive — foundation + polish + final (fas 1+2+3)`** från Christophers `christopher-ui` mot `jakob-be`. State OPEN, mergeStateStatus CLEAN, mergeable, ej draft. 1718 inser / 244 del över 34 filer. Author `chgenberg`. **Jakob är reviewer per team-workflow** (Christopher-PRs mot `jakob-be`, inte direkt mot `main` — han har rebasat christopher-ui ovanpå post-#116-arkitekturen så B146-konflikten är löst). Inte mergad än; väntar Jakob-review.
+- **PR #118 — `sync(jakob-be -> main): PR #117 mobile responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report`** från `jakob-be` mot `main`. State OPEN, MERGEABLE, mergeStateStatus UNSTABLE (CI run pending när PR öppnades). 45 commits / 56 filer / +5158 / -328. Innehåller hela sessionens leverans inklusive PR #117-mergen + B151-B153-fixarna. **Väntar på operatörsgranskning + merge.** Efter merge: flippa Vercel production branch från `jakob-be` till `main` per `docs/operations/vercel-production-branch-todo.md`.
 
-Cloud-grind-sessionen är klar för sin runda — kan stängas eller plockas för ny coordination-prompt vid nästa pass.
+PR #117 är nu MERGED (mergeCommit `2319ef9`). PR #116 är MERGED (mergeCommit `8c057b1`). Inga andra öppna PRs.
 
 **Christophers `origin/christopher-ui` (`9f63f15`)** — Christopher har
 under operator-OK scope-leak implementerat hela
