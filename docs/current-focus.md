@@ -30,84 +30,52 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: post-merge `jakob-be` HEAD (2026-05-26 ~13:15 UTC, merge av PR #117 — `feat(viewser): mobile responsive — foundation + polish + final (fas 1+2+3 + scout passes)`).
-
-Nya PRs / direkta commits till `jakob-be` sedan föregående checkpoint (`50217e3`):
-
-- `a337f01` (du / Jakob, 2026-05-26 ~01:55) — committade `docs/reports/pr113-ours-conflict-audit-2026-05-26.md` (audit-rapport: PR #113 `--ours`-konfliktresolution är clean; symbol-complete port, 14/16 filer differar bara genom ADR 0031 → 0032 renumber + path-refs).
-- `f2e84b0` (direkt commit, 2026-05-26) — `fix(builder): close B148+B149+B150 from external read-only audit`. B148 nav `_nav_items_from_scaffold` letar contact-path från scaffold istället för att hårdkoda `/kontakt` (restaurant-hospitality bites). B149 Intent Guard tokeniserar candidate_terms för exact-token-match (substring-match gav `"bar" in "barber"` false-positives). B150 `_normalize_business_type` collapsar multi-word slugs via dash-prefix-walking. 14 nya regression-tester.
-- `e6a23a3` — `docs(steward): move B148+B149+B150 to Stängda with fix=f2e84b0`.
-- `c85ae70` — `fix(builder): close B97 + B98 (contact-page copy + om-oss areas-block per scaffold)`. B97 ny `_CONTACT_PAGE_HERO_BODY_BY_VARIANT`-dict + helper för per-variant (shop/booking/quote) × language (sv/en) kontakt-page hero body — eliminerar "Beskriv jobbet kort … med tider och offert"-läckaget för e-handel/booking. B98 suppress `Områden vi arbetar i` för `ecommerce-lite`. 9 nya regression-tester.
-- `3b5a798` — `docs(steward): move B97 + B98 to Stängda with fix=c85ae70`.
-- `6d4a096` — `fix(brief): close B90+B91+B92+B93 (language/location/business-type cluster)`. B90 ta bort "a"/"an" ur ENGLISH_HINTS. B91 `_ENGLISH_TO_SWEDISH_CITY` (Gothenburg→Göteborg, Helsinki→Helsingfors, Copenhagen→Köpenhamn) på sv-byggen. B92 bare `naprapat`/`naprapath` → `naprapat` (sole-practitioner), bara explicita `*-clinic`/`naprapatklinik` → `naprapatklinik`. B93 22 nya multi-word engelska business-slugs → svenska. ~20 nya regression-tester.
-- `49f5513` — `docs(steward): move B90+B91+B92+B93 to Stängda with fix=6d4a096`.
-- `8c057b1` — **PR #116 squash-merged till `jakob-be`**, `feat(backoffice): add dossier candidate intake from local files`. 1453 inser / 21 del, 8 filer, ny `scripts/dossier_candidate_intake.py` (614 rader) + ny `tests/test_dossier_candidate_intake.py` (269 rader).
-- **PR #117 merged via lokal merge-commit till `jakob-be`** — `feat(viewser): mobile responsive — foundation + polish + final (fas 1+2+3 + scout passes)`. 31 commits från `christopher-ui`, 100 % UI-only mot merge-base `3bedddd` verifierat. 35 filer ändrade, +1866 / -252 rader. Konfliktlösning: `docs/agent-inbox.jsonl` (append båda sidors meddelanden) + `docs/current-focus.md` (kombinerad version — den här filen). Tre AI Bug Review-fynd (B151+B152+B153) registrerade efter merge.
-
-Christophers commits från PR #117 (mobil-anpassningen, mergebase→HEAD):
-
-- `a1d1a1f` docs(inbox): ack msg-0008 (scope-process-PR-105) + msg-0009 (b146-port).
-- `ea62e45` docs(gap): open GAP-viewser-mobile-responsive-foundation. Pausar tillfälligt
-  `GAP-viewser-pipeline-status-polling` + `GAP-viewser-side-by-side-preview` till queuedGaps.
-- `31a888a` feat(viewser/ui): mobile foundation — `pb-safe`/`pt-safe`/`px-safe`,
-  `min-tap` (44px Apple HIG), `touch-visible`, `bottom-sheet-handle` + `sheet.tsx`
-  bottom-sheet-stöd.
-- `3b2420d` feat(viewser/wizard): mobile pass — `validationError` alltid synlig,
-  close/konsol/popover-close min-tap, wizard-padding `px-5 sm:px-10`, footer
-  `pb-safe-or-4`, `PayloadAlignmentPopover` clamp, moodboard/produktbild-delete
-  `touch-visible`, `site-header` `pt-safe`.
-- `9593769` feat(viewser/builder): mobile pass — `FloatingChat` bottom-sheet på mobil
-  med drag-handle + pb-safe, 56×56 FAB minimerat, composer-textarea `text-base
-  sm:text-[13px]` (iOS-zoom-fix), `BuilderActions` `hidden md:flex`,
-  `SiteInspectorSheet` bottom-sheet på mobil + tabs `overflow-x-auto`.
-- `fb87699` docs(focus) + governance-fixar (fidelity-term ut, FloatingChat-syntax).
-- `b0140b1` docs(inbox): msg-0010 notify jakob-be om PR #117 + pausade gaps.
-- `62437de` docs(gap): open GAP-viewser-mobile-responsive-polish (fas 2).
-- `d7ca301` fix(viewser/prompt): PromptBuilder composer tap-targets + iOS-zoom-fix.
-- `6b2d68c` fix(viewser/wizard,builder): systematic tap-target upgrade — InlineHelpButton,
-  AssetDropzone "Välj fil", DirectivesPreview Copy, QuickPromptButton.
-- `64445bb` fix(viewser/canvas): hero typography scale + console-drawer safe-area.
-- `712a3c2` fix(viewser/dialogs): mobile-friendly grids + iOS-zoom-fix på inputs
-  (ai-image-generator, asset-uploader, color-picker — alla responsiva).
-- `e05c443` docs(gap): complete fas 1+2 (in-review), open fas 3 — final polish.
-- `18d84f5` fix(viewser): mobile responsive height + compare-modal swipe A/B.
-- `f850882` feat(viewser/canvas): device-toggle desktop preview (375/768/1024/Full)
-  + edge-pulse motion polish.
-- `8724798` chore(viewser): term-coverage compliance (Device-typ slimmad, scroll-pos
-  detection).
-- `6d0c896` docs(gap): complete fas 3, open scout-fixes GAP.
-- `cb6f43d` fix(viewser): scout P0 batch — pb-safe-or-3 utility, wizard iOS-zoom,
-  steg-chips min-tap, footer-knappar min-tap.
-- `6e06129` fix(viewser): scout P1 batch — hydration mismatch, layout-flash, iOS
-  keyboard `useKeyboardInset`, ModePill min-tap, A/B-pill desync, FAB → composer
-  focus-flytt, Site Inspector drag-handle, Inspector + FloatingChat mikro-kontroller,
-  iPad portrait zoom-risk.
-- `420efb0` chore(viewser): lint + term-coverage compliance för scout-fixes.
-- `59eed4c` feat(viewser): mobile hero stacked flow + SM-mobile.mp4 banner — adress
-  fynd från manuell test på iPhone 14 Pro 393×852 (3D-objekt bakom rubrik,
-  `<br />`-radbrytning, sömlöst hero-flöde).
-- `c5d1ba9` fix(viewser): scout pass 4 P1-batch — hero safe zone på iPhone SE,
-  wizard företagsnamn-asterisk borttagen (WCAG 2.2), composer pb-safe-or-4.
-- `6f24786` + `9964f16` + `07973ca` — docs/focus + docs/inbox handoff-promp till jakob-be.
-
-Inga off-limits-paths rörda i någon av faserna eller scout-fixes-passet
-(`scripts/`, `packages/generation/`, `apps/viewser/app/api/`, `apps/viewser/lib/`,
-`middleware.ts`, `next.config.ts`, `package.json` — alla intakta verifierat mot
-merge-base `3bedddd`).
-
-AI Bug Review-fynd från PR #117 (filerades direkt som Stängda i samma session — se docs/known-issues.md):
-
-1. B151 (Medel) — `floating-chat.tsx` useIsMobileViewport kallar matchMedia-listenern (addEventListener-signaturen) ovillkorligt. iOS Safari <14 stödjer inte den signaturen → chat kan krascha på äldre iOS. Fix: feature-detect mot addListener-fallback.
-2. B152 (Medel) — `compare-preview-modal.tsx` mobile snap-scroll har `w-full` per pane + `gap-2` → kan overflowa och bryta one-pane-snap. Fix: `w-screen` eller `w-[calc(100%-0.5rem)]`.
-3. B153 (Låg) — `viewer-panel.tsx` sessionStorage-hydration restorerar `'mobile'`/`'tablet'`/`'laptop'`-preset men hoppar `'full'`. Fix: inkludera `'full'` i accepterade värden.
-
-Operatör-beslut 2026-05-26 ~13:10: jakob-be-orchestrator tar dessa själv (samtidigt med merge) trots att de ligger i Christophers lane — för momentum. Christopher informerad via inbox msg-0010-6f4bed + uppföljnings-msg efter fixarna landat.
-
-Plus: ny aktiv bugg **B147 Medel-Hög** filerades (Vercel preview wizard 403 via `assertLocalhost` på `*.vercel.app`). **Operatörsbeslut a/b/c krävs** innan kod-fix kan väljas. Cross-ref: `docs/reports/b125-preview-fallback-decision-2026-05-22.md`.
-
-Net bug-räkning post-#117-merge + B151-B153-fix: bumpning skedde i samma session, slutläge anges i Stängda-sektionen av `docs/known-issues.md`.
-
-`origin/jakob-be` är 8+ commits före `origin/main`. Sync-PR `jakob-be → main` är queued men ej öppnad — Christophers `christopher-ui` är nu mergad (genom #117), så den blockaren är löst. Kvarvarande blockare: B147-vägval + Vercel-production-branch-flip (`docs/operations/vercel-production-branch-todo.md`).
+Last verified state: `1740472` (2026-05-26 UTC, steward-auto efter PR #118 — sync(jakob-be -> main): PR #117 mobile responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report).
+Nya PRs sedan föregående checkpoint: PR #55 — fix(viewser): stale run-following och
+artefakt-panel; PR #59 — feat(backoffice): add read-only asset graph lens; PR #60 —
+tooling: Starter Candidate Auditor v1 (read-only); PR #61 — docs: add team parallel
+workflow and ownership map; PR #62 — feat(viewser): integrate christopher-ui builder
+workflow; PR #63 — feat(discovery): respect wizard directives — useCustomColors +
+scaffoldHint (Gap 1 + 3); PR #64 — docs(ownership): add branch-naming conventions for
+parallel team work; PR #66 — fix(assets): sourceUrl uploads with stream-safe fetch
+(supersedes #65); PR #67 — ci: add AI bug review workflow step; PR #68 — feat(week1):
+restaurant-hospitality scaffold + 11 soft dossiers + 14 variants (fantastic sites W1);
+PR #70 — feat(tooling): add Sprintvakt V1 coordination guard; PR #71 — feat(viewser):
+Front 1-3 + wizard minimalism — preview, iteration & polish; PR #75 — feat: Sprintvakt
+V1.1+V1.2 + CI hardening + industry coverage + docs sync (post-PR70 batch); PR #76 —
+fix(backoffice): recover regression tests and catch-all coverage status; PR #77 —
+feat(tooling): add Sprintvakt agent inbox (post/list/ack); PR #78 — fix(backoffice):
+harden candidate generation provenance and defaults; PR #81 — fix(grind): close B83
+service slug collision; PR #82 — docs(scout): embedding readiness audit 2026-05-25; PR
+#80 — fix(grind): close B85 stdout contract drift; PR #79 — fix(grind): close B87 model
+fallback warning; PR #83 — docs(grind): close B72 + B75 status-sync to Stängda; PR #84 —
+test(generation): contract regression net for B137-B141 + extend B139 tone fallback; PR
+#87 — feat(backoffice): add one-click eval smoke runs; PR #89 — feat(eval-probe): add
+scaffold-selection probe + docs; PR #88 — fix(viewser): make preview mode drive local
+iframe headers; PR #92 — fix(viewser): handle quoted-with-comment + $VAR expansion in
+dev-dispatcher .env-parser; PR #93 — feat(builder): wire menu+booking renderers so
+restaurant-hospitality builds; PR #94 — docs(dossiers): import-readiness scope-doc for
+Sajtmaskin material; PR #95 — feat(evals): add cafe-bistro to FULL_CASES so full suite
+covers all 3 on-disk scaffolds; PR #97 — fix(viewser): pedagogical preview-error in
+local-next mode + soft transport-mismatch warning; PR #99 — docs(adr): 0030
+preview/deploy-providers are adapters, not canonical runtime; PR #98 — chore(tooling):
+lucide-react cross-policy lock + ADR 0021 upstream-issue recheck + B145 entry; PR #100 —
+fix(viewser): per-siteId build mutex so unrelated sites can build in parallel; PR #101 —
+fix(viewser): cross-origin-isolated permissions policy + dispatcher https signal; PR
+#102 — fix(evals): cherry-pick timeout-hardening + helper API from #96; PR #104 —
+fix(viewser): honor preview mode end-to-end + mode-aware progress copy; PR #103 —
+sync(jakob-be -> main): 5 produkt + 6 härdning + 2 docs (13 commits); PR #105 — Live
+Build Sync + Restaurant Path A + Wizard polish + Side-by-side preview; PR #106 —
+feat(steward): auto-bump current-focus + handoff on PR merge to main (ADR 0031); PR #107
+— refactor(builder): extract page renderers from build_site.py to
+packages/generation/build (B13a step C); PR #108 — Phase 3 — section-treatments
+operator-pin + scout-driven polish; PR #112 — feat(b146): port Christopher's
+section-arkitektur ovanpå PR #107-splitten; PR #109 — test(builder): lock runtime
+scaffold smoke coverage on jakob-be; PR #110 — feat(evals): add deterministic golden
+path scorecard and embeddings gate; PR #111 — fix(agents): correct python3-venv package
+name for Ubuntu Noble; PR #114 — chore(gitignore): re-ignore __pycache__/ under
+packages/generation/build/ (B146 fallout); PR #118 — sync(jakob-be -> main): PR #117
+mobile responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report.
 
 Sedan c0b59fbe (PR #60) har följande mergats till `main`, i ordning:
 
@@ -1409,3 +1377,84 @@ scaffold smoke coverage on jakob-be; PR #110 — feat(evals): add deterministic 
 path scorecard and embeddings gate; PR #111 — fix(agents): correct python3-venv package
 name for Ubuntu Noble; PR #113 — sync(jakob-be -> main): B146 reconciliation + runtime
 smoke-lock + golden-path eval (#112, #109, #110).
+
+### 2026-05-26 UTC — current-focus.md före `2057241`
+
+Last verified state: post-merge `jakob-be` HEAD (2026-05-26 ~13:15 UTC, merge av PR #117 — `feat(viewser): mobile responsive — foundation + polish + final (fas 1+2+3 + scout passes)`).
+
+Nya PRs / direkta commits till `jakob-be` sedan föregående checkpoint (`50217e3`):
+
+- `a337f01` (du / Jakob, 2026-05-26 ~01:55) — committade `docs/reports/pr113-ours-conflict-audit-2026-05-26.md` (audit-rapport: PR #113 `--ours`-konfliktresolution är clean; symbol-complete port, 14/16 filer differar bara genom ADR 0031 → 0032 renumber + path-refs).
+- `f2e84b0` (direkt commit, 2026-05-26) — `fix(builder): close B148+B149+B150 from external read-only audit`. B148 nav `_nav_items_from_scaffold` letar contact-path från scaffold istället för att hårdkoda `/kontakt` (restaurant-hospitality bites). B149 Intent Guard tokeniserar candidate_terms för exact-token-match (substring-match gav `"bar" in "barber"` false-positives). B150 `_normalize_business_type` collapsar multi-word slugs via dash-prefix-walking. 14 nya regression-tester.
+- `e6a23a3` — `docs(steward): move B148+B149+B150 to Stängda with fix=f2e84b0`.
+- `c85ae70` — `fix(builder): close B97 + B98 (contact-page copy + om-oss areas-block per scaffold)`. B97 ny `_CONTACT_PAGE_HERO_BODY_BY_VARIANT`-dict + helper för per-variant (shop/booking/quote) × language (sv/en) kontakt-page hero body — eliminerar "Beskriv jobbet kort … med tider och offert"-läckaget för e-handel/booking. B98 suppress `Områden vi arbetar i` för `ecommerce-lite`. 9 nya regression-tester.
+- `3b5a798` — `docs(steward): move B97 + B98 to Stängda with fix=c85ae70`.
+- `6d4a096` — `fix(brief): close B90+B91+B92+B93 (language/location/business-type cluster)`. B90 ta bort "a"/"an" ur ENGLISH_HINTS. B91 `_ENGLISH_TO_SWEDISH_CITY` (Gothenburg→Göteborg, Helsinki→Helsingfors, Copenhagen→Köpenhamn) på sv-byggen. B92 bare `naprapat`/`naprapath` → `naprapat` (sole-practitioner), bara explicita `*-clinic`/`naprapatklinik` → `naprapatklinik`. B93 22 nya multi-word engelska business-slugs → svenska. ~20 nya regression-tester.
+- `49f5513` — `docs(steward): move B90+B91+B92+B93 to Stängda with fix=6d4a096`.
+- `8c057b1` — **PR #116 squash-merged till `jakob-be`**, `feat(backoffice): add dossier candidate intake from local files`. 1453 inser / 21 del, 8 filer, ny `scripts/dossier_candidate_intake.py` (614 rader) + ny `tests/test_dossier_candidate_intake.py` (269 rader).
+- **PR #117 merged via lokal merge-commit till `jakob-be`** — `feat(viewser): mobile responsive — foundation + polish + final (fas 1+2+3 + scout passes)`. 31 commits från `christopher-ui`, 100 % UI-only mot merge-base `3bedddd` verifierat. 35 filer ändrade, +1866 / -252 rader. Konfliktlösning: `docs/agent-inbox.jsonl` (append båda sidors meddelanden) + `docs/current-focus.md` (kombinerad version — den här filen). Tre AI Bug Review-fynd (B151+B152+B153) registrerade efter merge.
+
+Christophers commits från PR #117 (mobil-anpassningen, mergebase→HEAD):
+
+- `a1d1a1f` docs(inbox): ack msg-0008 (scope-process-PR-105) + msg-0009 (b146-port).
+- `ea62e45` docs(gap): open GAP-viewser-mobile-responsive-foundation. Pausar tillfälligt
+  `GAP-viewser-pipeline-status-polling` + `GAP-viewser-side-by-side-preview` till queuedGaps.
+- `31a888a` feat(viewser/ui): mobile foundation — `pb-safe`/`pt-safe`/`px-safe`,
+  `min-tap` (44px Apple HIG), `touch-visible`, `bottom-sheet-handle` + `sheet.tsx`
+  bottom-sheet-stöd.
+- `3b2420d` feat(viewser/wizard): mobile pass — `validationError` alltid synlig,
+  close/konsol/popover-close min-tap, wizard-padding `px-5 sm:px-10`, footer
+  `pb-safe-or-4`, `PayloadAlignmentPopover` clamp, moodboard/produktbild-delete
+  `touch-visible`, `site-header` `pt-safe`.
+- `9593769` feat(viewser/builder): mobile pass — `FloatingChat` bottom-sheet på mobil
+  med drag-handle + pb-safe, 56×56 FAB minimerat, composer-textarea `text-base
+  sm:text-[13px]` (iOS-zoom-fix), `BuilderActions` `hidden md:flex`,
+  `SiteInspectorSheet` bottom-sheet på mobil + tabs `overflow-x-auto`.
+- `fb87699` docs(focus) + governance-fixar (fidelity-term ut, FloatingChat-syntax).
+- `b0140b1` docs(inbox): msg-0010 notify jakob-be om PR #117 + pausade gaps.
+- `62437de` docs(gap): open GAP-viewser-mobile-responsive-polish (fas 2).
+- `d7ca301` fix(viewser/prompt): PromptBuilder composer tap-targets + iOS-zoom-fix.
+- `6b2d68c` fix(viewser/wizard,builder): systematic tap-target upgrade — InlineHelpButton,
+  AssetDropzone "Välj fil", DirectivesPreview Copy, QuickPromptButton.
+- `64445bb` fix(viewser/canvas): hero typography scale + console-drawer safe-area.
+- `712a3c2` fix(viewser/dialogs): mobile-friendly grids + iOS-zoom-fix på inputs
+  (ai-image-generator, asset-uploader, color-picker — alla responsiva).
+- `e05c443` docs(gap): complete fas 1+2 (in-review), open fas 3 — final polish.
+- `18d84f5` fix(viewser): mobile responsive height + compare-modal swipe A/B.
+- `f850882` feat(viewser/canvas): device-toggle desktop preview (375/768/1024/Full)
+  + edge-pulse motion polish.
+- `8724798` chore(viewser): term-coverage compliance (Device-typ slimmad, scroll-pos
+  detection).
+- `6d0c896` docs(gap): complete fas 3, open scout-fixes GAP.
+- `cb6f43d` fix(viewser): scout P0 batch — pb-safe-or-3 utility, wizard iOS-zoom,
+  steg-chips min-tap, footer-knappar min-tap.
+- `6e06129` fix(viewser): scout P1 batch — hydration mismatch, layout-flash, iOS
+  keyboard `useKeyboardInset`, ModePill min-tap, A/B-pill desync, FAB → composer
+  focus-flytt, Site Inspector drag-handle, Inspector + FloatingChat mikro-kontroller,
+  iPad portrait zoom-risk.
+- `420efb0` chore(viewser): lint + term-coverage compliance för scout-fixes.
+- `59eed4c` feat(viewser): mobile hero stacked flow + SM-mobile.mp4 banner — adress
+  fynd från manuell test på iPhone 14 Pro 393×852 (3D-objekt bakom rubrik,
+  `<br />`-radbrytning, sömlöst hero-flöde).
+- `c5d1ba9` fix(viewser): scout pass 4 P1-batch — hero safe zone på iPhone SE,
+  wizard företagsnamn-asterisk borttagen (WCAG 2.2), composer pb-safe-or-4.
+- `6f24786` + `9964f16` + `07973ca` — docs/focus + docs/inbox handoff-promp till jakob-be.
+
+Inga off-limits-paths rörda i någon av faserna eller scout-fixes-passet
+(`scripts/`, `packages/generation/`, `apps/viewser/app/api/`, `apps/viewser/lib/`,
+`middleware.ts`, `next.config.ts`, `package.json` — alla intakta verifierat mot
+merge-base `3bedddd`).
+
+AI Bug Review-fynd från PR #117 (filerades direkt som Stängda i samma session — se docs/known-issues.md):
+
+1. B151 (Medel) — `floating-chat.tsx` useIsMobileViewport kallar matchMedia-listenern (addEventListener-signaturen) ovillkorligt. iOS Safari <14 stödjer inte den signaturen → chat kan krascha på äldre iOS. Fix: feature-detect mot addListener-fallback.
+2. B152 (Medel) — `compare-preview-modal.tsx` mobile snap-scroll har `w-full` per pane + `gap-2` → kan overflowa och bryta one-pane-snap. Fix: `w-screen` eller `w-[calc(100%-0.5rem)]`.
+3. B153 (Låg) — `viewer-panel.tsx` sessionStorage-hydration restorerar `'mobile'`/`'tablet'`/`'laptop'`-preset men hoppar `'full'`. Fix: inkludera `'full'` i accepterade värden.
+
+Operatör-beslut 2026-05-26 ~13:10: jakob-be-orchestrator tar dessa själv (samtidigt med merge) trots att de ligger i Christophers lane — för momentum. Christopher informerad via inbox msg-0010-6f4bed + uppföljnings-msg efter fixarna landat.
+
+Plus: ny aktiv bugg **B147 Medel-Hög** filerades (Vercel preview wizard 403 via `assertLocalhost` på `*.vercel.app`). **Operatörsbeslut a/b/c krävs** innan kod-fix kan väljas. Cross-ref: `docs/reports/b125-preview-fallback-decision-2026-05-22.md`.
+
+Net bug-räkning post-#117-merge + B151-B153-fix: bumpning skedde i samma session, slutläge anges i Stängda-sektionen av `docs/known-issues.md`.
+
+`origin/jakob-be` är 8+ commits före `origin/main`. Sync-PR `jakob-be → main` är queued men ej öppnad — Christophers `christopher-ui` är nu mergad (genom #117), så den blockaren är löst. Kvarvarande blockare: B147-vägval + Vercel-production-branch-flip (`docs/operations/vercel-production-branch-todo.md`).

@@ -1,23 +1,52 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-26 ~14:05 UTC, post-merge bump efter PR #117 + B151-B153 + sync-PR #118 öppnad. Verifierad `jakob-be` HEAD är `05a84bb`. `origin/main` är fortsatt `50217e3` (12 commits efter `jakob-be`); **sync-PR #118 är ÖPPEN** (`jakob-be → main`, OPEN/MERGEABLE/UNSTABLE-CI) och väntar på operatörens granskning + merge.
+**Datum:** 2026-05-26 UTC, steward-auto efter PR #118 — sync(jakob-be -> main): PR #117 mobile responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report. Verifierad `main` är `1740472`.
 
-Nya PRs / direkta commits till `jakob-be` sedan föregående checkpoint (`50217e3`):
-
-- `a337f01` audit-rapport `docs/reports/pr113-ours-conflict-audit-2026-05-26.md` (PR #113 `--ours`-resolution är clean).
-- `f2e84b0` + `e6a23a3` — B148 (nav `/kontakt`-hardcode), B149 (Intent Guard substring), B150 (`_normalize_business_type` multi-word) stängda + 14 regression-tester.
-- `c85ae70` + `3b5a798` — B97 (kontakt-page hero body per CTA-variant), B98 (`Områden vi arbetar i` suppress för ecommerce-lite) stängda + 9 regression-tester.
-- `6d4a096` + `49f5513` — B90 (ENGLISH_HINTS "a"/"an" false positives), B91 (English-exonym → svensk endonym), B92 (`naprapat` ≠ `naprapatklinik`), B93 (22 nya multi-word slugs) stängda + ~20 regression-tester.
-- `8c057b1` **PR #116 mergad** — `feat(backoffice): add dossier candidate intake from local files` (1453 inser / 21 del, 8 filer, ny `scripts/dossier_candidate_intake.py` + tester).
-- `2319ef9` **PR #117 mergad** — `feat(viewser): mobile responsive — foundation + polish + final (fas 1+2+3 + scout passes)`. 31 commits från `christopher-ui`, 100 % UI-only mot merge-base `3bedddd`. Konflikter på `docs/agent-inbox.jsonl` + `docs/current-focus.md` lösta med kombinerade versioner.
-- `4a6243a` + `1471d16` — **B151+B152+B153 stängda** direkt efter PR #117-merge (per operatörs-momentum-beslut, inte väntat på Christopher-följ-PR). Floating-chat iOS Safari <14 compat, compare-modal w-full overflow, viewer-panel `'full'`-preset hydration. 3 source-lock regression-tester i `tests/test_viewser_files.py`.
-- `05a84bb` inbox msg-0017-c3f924 till christopher-ui (rapport om merge + att vi tog AI-fynden).
-
-Ny aktiv: **B147 Medel-Hög** (Vercel preview wizard 403 via `assertLocalhost`). Operatörsbeslut a/b/c krävs innan kod-fix. Bug-räkning: **14 aktiva / 0 misplaced / 5 unknown / 126 stängda** (från 19/0/5/114 vid sessionsstart — netto 5 färre aktiva, 12 stängda, 1 ny tracked).
-
-**Öppen PR just nu:**
-
-- **#118 sync(jakob-be → main)** — OPEN, MERGEABLE, mergeStateStatus UNSTABLE (CI pågår). 45 commits / 56 filer / +5158/-328. Innehåller hela sessionens leverans. Operatörsbeslut: granska body + checks, sedan merge. Efter merge ska Vercel production branch flippas från `jakob-be` till `main` per `docs/operations/vercel-production-branch-todo.md` (B146 är löst, blockaren är borta).
+Nya PRs sedan föregående checkpoint: PR #55 — fix(viewser): stale run-following och
+artefakt-panel; PR #59 — feat(backoffice): add read-only asset graph lens; PR #60 —
+tooling: Starter Candidate Auditor v1 (read-only); PR #61 — docs: add team parallel
+workflow and ownership map; PR #62 — feat(viewser): integrate christopher-ui builder
+workflow; PR #63 — feat(discovery): respect wizard directives — useCustomColors +
+scaffoldHint (Gap 1 + 3); PR #64 — docs(ownership): add branch-naming conventions for
+parallel team work; PR #66 — fix(assets): sourceUrl uploads with stream-safe fetch
+(supersedes #65); PR #67 — ci: add AI bug review workflow step; PR #68 — feat(week1):
+restaurant-hospitality scaffold + 11 soft dossiers + 14 variants (fantastic sites W1);
+PR #70 — feat(tooling): add Sprintvakt V1 coordination guard; PR #71 — feat(viewser):
+Front 1-3 + wizard minimalism — preview, iteration & polish; PR #75 — feat: Sprintvakt
+V1.1+V1.2 + CI hardening + industry coverage + docs sync (post-PR70 batch); PR #76 —
+fix(backoffice): recover regression tests and catch-all coverage status; PR #77 —
+feat(tooling): add Sprintvakt agent inbox (post/list/ack); PR #78 — fix(backoffice):
+harden candidate generation provenance and defaults; PR #81 — fix(grind): close B83
+service slug collision; PR #82 — docs(scout): embedding readiness audit 2026-05-25; PR
+#80 — fix(grind): close B85 stdout contract drift; PR #79 — fix(grind): close B87 model
+fallback warning; PR #83 — docs(grind): close B72 + B75 status-sync to Stängda; PR #84 —
+test(generation): contract regression net for B137-B141 + extend B139 tone fallback; PR
+#87 — feat(backoffice): add one-click eval smoke runs; PR #89 — feat(eval-probe): add
+scaffold-selection probe + docs; PR #88 — fix(viewser): make preview mode drive local
+iframe headers; PR #92 — fix(viewser): handle quoted-with-comment + $VAR expansion in
+dev-dispatcher .env-parser; PR #93 — feat(builder): wire menu+booking renderers so
+restaurant-hospitality builds; PR #94 — docs(dossiers): import-readiness scope-doc for
+Sajtmaskin material; PR #95 — feat(evals): add cafe-bistro to FULL_CASES so full suite
+covers all 3 on-disk scaffolds; PR #97 — fix(viewser): pedagogical preview-error in
+local-next mode + soft transport-mismatch warning; PR #99 — docs(adr): 0030
+preview/deploy-providers are adapters, not canonical runtime; PR #98 — chore(tooling):
+lucide-react cross-policy lock + ADR 0021 upstream-issue recheck + B145 entry; PR #100 —
+fix(viewser): per-siteId build mutex so unrelated sites can build in parallel; PR #101 —
+fix(viewser): cross-origin-isolated permissions policy + dispatcher https signal; PR
+#102 — fix(evals): cherry-pick timeout-hardening + helper API from #96; PR #104 —
+fix(viewser): honor preview mode end-to-end + mode-aware progress copy; PR #103 —
+sync(jakob-be -> main): 5 produkt + 6 härdning + 2 docs (13 commits); PR #105 — Live
+Build Sync + Restaurant Path A + Wizard polish + Side-by-side preview; PR #106 —
+feat(steward): auto-bump current-focus + handoff on PR merge to main (ADR 0031); PR #107
+— refactor(builder): extract page renderers from build_site.py to
+packages/generation/build (B13a step C); PR #108 — Phase 3 — section-treatments
+operator-pin + scout-driven polish; PR #112 — feat(b146): port Christopher's
+section-arkitektur ovanpå PR #107-splitten; PR #109 — test(builder): lock runtime
+scaffold smoke coverage on jakob-be; PR #110 — feat(evals): add deterministic golden
+path scorecard and embeddings gate; PR #111 — fix(agents): correct python3-venv package
+name for Ubuntu Noble; PR #114 — chore(gitignore): re-ignore __pycache__/ under
+packages/generation/build/ (B146 fallout); PR #118 — sync(jakob-be -> main): PR #117
+mobile responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report.
 
 **MCP-server-status:** Sprintvakt-servern exponerar 14 tools efter
 PR #77 (`get_workboard`, `list_gaps`, `create_gap`, `activate_gap`,
@@ -407,3 +436,24 @@ scaffold smoke coverage on jakob-be; PR #110 — feat(evals): add deterministic 
 path scorecard and embeddings gate; PR #111 — fix(agents): correct python3-venv package
 name for Ubuntu Noble; PR #113 — sync(jakob-be -> main): B146 reconciliation + runtime
 smoke-lock + golden-path eval (#112, #109, #110).
+
+### 2026-05-26 UTC — handoff.md före `2057241`
+
+**Datum:** 2026-05-26 ~14:05 UTC, post-merge bump efter PR #117 + B151-B153 + sync-PR #118 öppnad. Verifierad `jakob-be` HEAD är `05a84bb`. `origin/main` är fortsatt `50217e3` (12 commits efter `jakob-be`); **sync-PR #118 är ÖPPEN** (`jakob-be → main`, OPEN/MERGEABLE/UNSTABLE-CI) och väntar på operatörens granskning + merge.
+
+Nya PRs / direkta commits till `jakob-be` sedan föregående checkpoint (`50217e3`):
+
+- `a337f01` audit-rapport `docs/reports/pr113-ours-conflict-audit-2026-05-26.md` (PR #113 `--ours`-resolution är clean).
+- `f2e84b0` + `e6a23a3` — B148 (nav `/kontakt`-hardcode), B149 (Intent Guard substring), B150 (`_normalize_business_type` multi-word) stängda + 14 regression-tester.
+- `c85ae70` + `3b5a798` — B97 (kontakt-page hero body per CTA-variant), B98 (`Områden vi arbetar i` suppress för ecommerce-lite) stängda + 9 regression-tester.
+- `6d4a096` + `49f5513` — B90 (ENGLISH_HINTS "a"/"an" false positives), B91 (English-exonym → svensk endonym), B92 (`naprapat` ≠ `naprapatklinik`), B93 (22 nya multi-word slugs) stängda + ~20 regression-tester.
+- `8c057b1` **PR #116 mergad** — `feat(backoffice): add dossier candidate intake from local files` (1453 inser / 21 del, 8 filer, ny `scripts/dossier_candidate_intake.py` + tester).
+- `2319ef9` **PR #117 mergad** — `feat(viewser): mobile responsive — foundation + polish + final (fas 1+2+3 + scout passes)`. 31 commits från `christopher-ui`, 100 % UI-only mot merge-base `3bedddd`. Konflikter på `docs/agent-inbox.jsonl` + `docs/current-focus.md` lösta med kombinerade versioner.
+- `4a6243a` + `1471d16` — **B151+B152+B153 stängda** direkt efter PR #117-merge (per operatörs-momentum-beslut, inte väntat på Christopher-följ-PR). Floating-chat iOS Safari <14 compat, compare-modal w-full overflow, viewer-panel `'full'`-preset hydration. 3 source-lock regression-tester i `tests/test_viewser_files.py`.
+- `05a84bb` inbox msg-0017-c3f924 till christopher-ui (rapport om merge + att vi tog AI-fynden).
+
+Ny aktiv: **B147 Medel-Hög** (Vercel preview wizard 403 via `assertLocalhost`). Operatörsbeslut a/b/c krävs innan kod-fix. Bug-räkning: **14 aktiva / 0 misplaced / 5 unknown / 126 stängda** (från 19/0/5/114 vid sessionsstart — netto 5 färre aktiva, 12 stängda, 1 ny tracked).
+
+**Öppen PR just nu:**
+
+- **#118 sync(jakob-be → main)** — OPEN, MERGEABLE, mergeStateStatus UNSTABLE (CI pågår). 45 commits / 56 filer / +5158/-328. Innehåller hela sessionens leverans. Operatörsbeslut: granska body + checks, sedan merge. Efter merge ska Vercel production branch flippas från `jakob-be` till `main` per `docs/operations/vercel-production-branch-todo.md` (B146 är löst, blockaren är borta).
