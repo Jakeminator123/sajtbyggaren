@@ -208,7 +208,7 @@ export function BuilderShell({
       {
         id: "history",
         label: "Versioner",
-        description: runId ? `Aktiv: ${runId}` : "Tidigare bygg",
+        description: "Bläddra tidigare bygg",
         icon: "history",
         group: "Bygg",
         onSelect: onOpenHistory,
@@ -242,7 +242,6 @@ export function BuilderShell({
     ],
     [
       isBuilding,
-      runId,
       openDialogFactory,
       onOpenHistory,
       onOpenConsole,

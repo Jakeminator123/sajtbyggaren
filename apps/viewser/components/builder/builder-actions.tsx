@@ -346,11 +346,12 @@ export function BuilderActions({
       ) : null}
 
       {/* Dialog-modal för inline-variant. Base UI Dialog hanterar
-          backdrop-klick + Escape + focus-trap automatiskt. Boxar
-          rendras 2-per-rad på mobil och 3-per-rad från sm: (operatör-
-          önskan 2026-05-26 — 4-per-rad blev visuellt trångt vid
-          medium-bredd). Grupp-headers (om action.group satt) blir små
-          caps-rubriker över sub-grids. */}
+          backdrop-klick + Escape + focus-trap automatiskt. Operatören
+          (2026-05-26) ville ha konsekvent 3-per-rad i hela modalen,
+          så vi ignorerar groupedActions här och rendar ALLA actions
+          i EN flat grid: grid-cols-2 på mobil, grid-cols-3 från sm:.
+          Grupp-headers används bara i fixed-varianten (legacy
+          dropdown) ovan. */}
       {isInline ? (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogContent
@@ -364,73 +365,60 @@ export function BuilderActions({
                 Välj en åtgärd. Klicka utanför rutan för att stänga.
               </DialogDescription>
             </DialogHeader>
-            <div className="flex flex-col gap-4">
-              {Array.from(groupedActions.entries()).map(
-                ([groupKey, groupActions]) => (
-                  <Fragment key={groupKey}>
-                    {groupKey !== "_ungrouped" ? (
-                      <div className="text-muted-foreground/80 px-1 pt-1 font-mono text-[10px] tracking-[0.18em] uppercase">
-                        {groupKey}
-                      </div>
-                    ) : null}
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                      {groupActions.map((action) => {
-                        const Icon = iconComponent(action.icon);
-                        return (
-                          <button
-                            type="button"
-                            key={action.id}
-                            data-action-button
-                            disabled={action.disabled}
-                            onClick={() => handleSelect(action)}
-                            className={cn(
-                              "group border-border/60 bg-card/80 flex flex-col items-center gap-2 rounded-xl border p-3 text-center shadow-sm transition",
-                              "hover:bg-card hover:border-border focus-visible:ring-ring/50 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-                              "disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-card/80",
-                              action.isDestructive && "hover:border-destructive/60",
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                "bg-muted/70 group-hover:bg-muted flex h-10 w-10 items-center justify-center rounded-full transition",
-                                action.isDestructive &&
-                                  "bg-destructive/10 group-hover:bg-destructive/15",
-                              )}
-                            >
-                              <Icon
-                                className={cn(
-                                  "h-5 w-5",
-                                  action.isDestructive
-                                    ? "text-destructive"
-                                    : "text-muted-foreground group-hover:text-foreground",
-                                )}
-                                aria-hidden
-                              />
-                            </span>
-                            <span className="flex min-h-[2.25rem] flex-col leading-tight">
-                              <span
-                                className={cn(
-                                  "text-[12.5px] font-medium tracking-tight",
-                                  action.isDestructive
-                                    ? "text-destructive"
-                                    : "text-foreground",
-                                )}
-                              >
-                                {action.label}
-                              </span>
-                              {action.description ? (
-                                <span className="text-muted-foreground mt-0.5 text-[10.5px]">
-                                  {action.description}
-                                </span>
-                              ) : null}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </Fragment>
-                ),
-              )}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {actions.map((action) => {
+                const Icon = iconComponent(action.icon);
+                return (
+                  <button
+                    type="button"
+                    key={action.id}
+                    data-action-button
+                    disabled={action.disabled}
+                    onClick={() => handleSelect(action)}
+                    className={cn(
+                      "group border-border/60 bg-card/80 flex flex-col items-center gap-2 rounded-xl border p-3 text-center shadow-sm transition",
+                      "hover:bg-card hover:border-border focus-visible:ring-ring/50 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                      "disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-card/80",
+                      action.isDestructive && "hover:border-destructive/60",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "bg-muted/70 group-hover:bg-muted flex h-10 w-10 items-center justify-center rounded-full transition",
+                        action.isDestructive &&
+                          "bg-destructive/10 group-hover:bg-destructive/15",
+                      )}
+                    >
+                      <Icon
+                        className={cn(
+                          "h-5 w-5",
+                          action.isDestructive
+                            ? "text-destructive"
+                            : "text-muted-foreground group-hover:text-foreground",
+                        )}
+                        aria-hidden
+                      />
+                    </span>
+                    <span className="flex min-h-[2.25rem] flex-col leading-tight">
+                      <span
+                        className={cn(
+                          "text-[12.5px] font-medium tracking-tight",
+                          action.isDestructive
+                            ? "text-destructive"
+                            : "text-foreground",
+                        )}
+                      >
+                        {action.label}
+                      </span>
+                      {action.description ? (
+                        <span className="text-muted-foreground mt-0.5 text-[10.5px]">
+                          {action.description}
+                        </span>
+                      ) : null}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </DialogContent>
         </Dialog>
