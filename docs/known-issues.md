@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 18 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 119 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 14 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 123 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -118,24 +118,6 @@ run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
   `ceramic studio`). Kategoriöverlapp med B62 men annan edge-yta. Källa:
   extern reviewer + RO-verifierings-subagent 2026-05-15. Fix: open.
   Test: open.
-- **`B90` Låg-Medel** - `packages/generation/brief/extract.py:ENGLISH_HINTS`
-  innehåller `"a"` och `"an"`, vilket kan ge falska engelska träffar
-  (`A & O El Malmö` klassificeras som `en`). Källa: extern reviewer +
-  RO-verifierings-subagent 2026-05-15. Fix: open. Test: open.
-- **`B91` Medel** - `_normalize_location_hint` i
-  `scripts/prompt_to_project_input.py` mappar idag i praktiken bara
-  `sweden -> Sverige`; övriga vanliga engelska/svenska varianter passerar
-  oförändrat. Källa: extern reviewer + RO-verifierings-subagent
-  2026-05-15. Fix: open. Test: open.
-- **`B92` Låg** - `_BUSINESS_TYPE_LABEL_SV` mappar
-  `naprapat -> naprapatklinik`, vilket överanpassar enskild naprapat till
-  klinikform i H1-fallback. Källa: extern reviewer +
-  RO-verifierings-subagent 2026-05-15. Fix: open. Test: open.
-- **`B93` Låg-Medel** - `_company_business_label` fallback i
-  `scripts/prompt_to_project_input.py` visar rå slugtext i svensk H1
-  (`företag som arbetar med pet grooming`). Svensk mening men engelsk
-  slugläcka i kundcopy. Källa: extern reviewer +
-  RO-verifierings-subagent 2026-05-15. Fix: open. Test: open.
 
 ### Re-Verifierings-Scout 2026-05-15 (post-Grind PR #28 mot `d0ded58`)
 
@@ -621,6 +603,69 @@ matar wizarden med taxonomi-options:
   Fix: open. Test: open.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B90` Låg-Medel** (stängd 2026-05-26, language/location/business-type-kluster) -
+  `packages/generation/brief/extract.py:ENGLISH_HINTS` innehöll de
+  enbokstavliga artiklarna `"a"` och `"an"`. Svenska företagsnamn med
+  enbokstavstoken (`A & O El Malmö`) tokeniserade till en mängd som
+  innehöll `"a"`, vilket matchade ENGLISH_HINTS och fick
+  `detect_language` att returnera `"en"` — felaktigt. Fix: ta bort
+  `"a"` och `"an"` ur ENGLISH_HINTS. Cascadens å/ä/ö-check fångar
+  fortfarande namn med svenska tecken, och default-grenen lutar
+  fortsatt svenska för korta prompts. Genuina engelska briefer
+  fortsätter trigga "en" via `"the"`, `"and"`, `"build"`, `"website"`
+  etc. Fix: `6d4a096`. Test:
+  `tests/test_prompt_to_project_input.py::test_b90_single_letter_swedish_company_name_stays_sv`,
+  `tests/test_prompt_to_project_input.py::test_b90_english_prompts_without_a_an_still_detect_as_english`.
+
+- **`B91` Medel** (stängd 2026-05-26, language/location/business-type-kluster) -
+  `_normalize_location_hint` hade tidigare bara country-name-handling
+  via `_COUNTRY_NAME_LOCATION_HINTS`. Vanliga engelska exonymer för
+  svenska/nordiska städer (`Gothenburg`, `Helsinki`, `Copenhagen`)
+  passerade oförändrat även på `language=sv`-byggen, vilket fick hero-
+  ortstaggen att rendera engelska stadsnamn på svensk-taggade sajter.
+  Fix: ny `_ENGLISH_TO_SWEDISH_CITY`-map med konfirmerade exonymer
+  (Gothenburg→Göteborg, Helsinki→Helsingfors, Copenhagen→Köpenhamn).
+  Översättningen sker bara när `language == "sv"`; engelska byggen
+  passerar igenom oförändrat. Medvetet smal — inga spekulativa
+  stadsöversättningar. Fix: `6d4a096`. Test:
+  `tests/test_prompt_to_project_input.py::test_b91_swedish_builds_translate_english_city_exonyms`,
+  `tests/test_prompt_to_project_input.py::test_b91_english_builds_preserve_english_city_unchanged`,
+  `tests/test_prompt_to_project_input.py::test_b91_unknown_english_city_passes_through`.
+
+- **`B92` Låg** (stängd 2026-05-26, language/location/business-type-kluster) -
+  `_BUSINESS_TYPE_LABEL_SV` mappade alla naprapat-slug-varianter
+  (`naprapat`, `naprapath`, `naprapat-clinic`, `naprapath-clinic`,
+  `naprapatklinik`) till `"naprapatklinik"`, vilket överanpassade
+  enskild naprapat-utövare till klinikform i H1-fallback. Fix: bare
+  `"naprapat"` och `"naprapath"` mappar nu till `"naprapat"`
+  (sole-practitioner). De explicita *-clinic- och `naprapatklinik`-
+  varianterna mappar fortfarande till `"naprapatklinik"` så briefModel
+  kan uttrycka klinik-vs-individ-distinktionen. Existerande test
+  `test_business_type_map_covers_briefmodel_hyphenated_slugs`
+  uppdaterad med nya förväntade mappningar. Fix: `6d4a096`. Test:
+  `tests/test_prompt_to_project_input.py::test_b92_bare_naprapat_slug_renders_sole_practitioner_h1`,
+  `tests/test_prompt_to_project_input.py::test_b92_naprapath_english_slug_also_maps_to_sole_practitioner`,
+  `tests/test_prompt_to_project_input.py::test_b92_explicit_clinic_variants_still_render_clinic_h1`.
+
+- **`B93` Låg-Medel** (stängd 2026-05-26, language/location/business-type-kluster) -
+  `_company_business_label` föll igenom till
+  `"företag som arbetar med <slug>"`-grenen för okända multi-word
+  engelska business-slugs (`pet-grooming`, `personal-trainer`,
+  `tattoo-studio`, `law-firm`, etc.), vilket läckte rå engelsk
+  slugtext in i svensk H1-copy (`"Företag som arbetar med pet
+  grooming i Stockholm"`). Fix: utöka `_BUSINESS_TYPE_LABEL_SV` med
+  22 nya entries för vanliga multi-word engelska slugs som briefModel
+  emitterar. Varje mapas till ett riktigt svenskt substantiv som
+  läser naturligt i H1-copy (`pet-grooming → djursalong`,
+  `personal-trainer → personlig tränare`, `law-firm → advokatbyrå`,
+  etc.). Fallback-grenen behålls för genuint okända slugs så
+  operatörer kan upptäcka un-mappade slugs i test-output. Cross-ref:
+  B63 (original fallback-fix), B92 (relaterad map-precision-fix).
+  Fix: `6d4a096`. Test:
+  `tests/test_prompt_to_project_input.py::test_b93_common_multi_word_english_slugs_map_to_swedish`,
+  `tests/test_prompt_to_project_input.py::test_b93_pet_grooming_h1_no_longer_leaks_english_slug`,
+  `tests/test_prompt_to_project_input.py::test_b93_unknown_swedish_slug_still_uses_swedish_fallback_phrase`.
 
 - **`B97` Låg** (stängd 2026-05-26, scaffold-aware contact-copy sprint) -
   `render_section_contact_info`:s kontakt-page hero body hårdkodade
