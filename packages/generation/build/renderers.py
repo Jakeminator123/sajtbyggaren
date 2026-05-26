@@ -336,7 +336,21 @@ def render_layout(
     if isinstance(og_image_asset, dict) and og_image_asset.get("filename"):
         og_url = "/uploads/" + str(og_image_asset["filename"])
         og_alt = og_image_asset.get("alt") or company["tagline"] or company["name"]
-        og_image_type_block = ""
+        og_image_entries = (
+            "      {\n"
+            f"        url: {_js_string_literal('/og-image.png')},\n"
+            f"        alt: {_js_string_literal(og_alt)},\n"
+            "        width: 1200,\n"
+            "        height: 630,\n"
+            '        type: "image/png",\n'
+            "      },\n"
+            "      {\n"
+            f"        url: {_js_string_literal(og_url)},\n"
+            f"        alt: {_js_string_literal(og_alt)},\n"
+            "        width: 1200,\n"
+            "        height: 630,\n"
+            "      },\n"
+        )
     else:
         og_url = "/og-image-fallback.svg"
         og_alt = company["tagline"] or company["name"]
@@ -344,19 +358,21 @@ def render_layout(
         # serialiserar det som image/svg+xml i meta-taggen. Vissa
         # äldre social-parsers använder type-hinten istället för att
         # sniffa MIME från Content-Type.
-        og_image_type_block = '        type: "image/svg+xml",\n'
+        og_image_entries = (
+            "      {\n"
+            f"        url: {_js_string_literal(og_url)},\n"
+            f"        alt: {_js_string_literal(og_alt)},\n"
+            "        width: 1200,\n"
+            "        height: 630,\n"
+            '        type: "image/svg+xml",\n'
+            "      },\n"
+        )
     metadata_extras.append(
         "  openGraph: {\n"
         f"    title: {_js_string_literal(company['name'])},\n"
         f"    description: {_js_string_literal(company['tagline'])},\n"
         "    images: [\n"
-        "      {\n"
-        f"        url: {_js_string_literal(og_url)},\n"
-        f"        alt: {_js_string_literal(og_alt)},\n"
-        "        width: 1200,\n"
-        "        height: 630,\n"
-        f"{og_image_type_block}"
-        "      },\n"
+        f"{og_image_entries}"
         "    ],\n"
         "  },\n"
         "  twitter: {\n"

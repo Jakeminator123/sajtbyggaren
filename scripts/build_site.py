@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import io
 import json
 import os
 import re
@@ -911,6 +912,131 @@ def _fetch_asset_bytes_from_url(url: str) -> bytes | None:
         response.close()
 
 
+_FAVICON_ICO_SIZES: tuple[tuple[int, int], ...] = (
+    (16, 16),
+    (32, 32),
+    (48, 48),
+    (64, 64),
+)
+_OG_IMAGE_SIZE = (1200, 630)
+
+
+def _asset_requires_derived_public_output(ref: dict) -> bool:
+    return ref.get("role") in {"favicon", "ogImage"}
+
+
+def _is_svg_favicon(ref: dict, image_bytes: bytes, source_file: Path | None = None) -> bool:
+    mime_type = ref.get("mimeType")
+    if isinstance(mime_type, str) and mime_type.strip().lower() == "image/svg+xml":
+        return True
+    filename = ref.get("filename")
+    if isinstance(filename, str) and filename.strip().lower().endswith(".svg"):
+        return True
+    if source_file is not None and source_file.suffix.lower() == ".svg":
+        return True
+    prefix = image_bytes.lstrip()[:512].lower()
+    return b"<svg" in prefix
+
+
+def _convert_favicon_to_ico(image_bytes: bytes, output_path: Path) -> bool:
+    """Write a deterministic multi-size favicon.ico from uploaded image bytes."""
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        print(
+            "Warning: Pillow is not installed; skipping favicon.ico conversion "
+            f"({exc}). Original upload will still be copied.",
+            file=sys.stderr,
+        )
+        return False
+
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with Image.open(io.BytesIO(image_bytes)) as image:
+            converted = image.convert("RGBA")
+            converted.save(output_path, format="ICO", sizes=list(_FAVICON_ICO_SIZES))
+        return True
+    except Exception as exc:
+        print(
+            "Warning: failed to convert favicon to public/favicon.ico "
+            f"({type(exc).__name__}: {exc}). Original upload will still be copied.",
+            file=sys.stderr,
+        )
+        return False
+
+
+def _convert_og_image_to_1200x630_png(image_bytes: bytes, output_path: Path) -> bool:
+    """Write a center-cropped 1200×630 PNG from uploaded Open Graph bytes."""
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        print(
+            "Warning: Pillow is not installed; skipping og-image.png conversion "
+            f"({exc}). Original upload will still be copied.",
+            file=sys.stderr,
+        )
+        return False
+
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with Image.open(io.BytesIO(image_bytes)) as image:
+            image.load()
+            source = image.convert("RGBA" if image.mode in {"LA", "P", "RGBA"} else "RGB")
+            width, height = source.size
+            target_width, target_height = _OG_IMAGE_SIZE
+            target_ratio = target_width / target_height
+            source_ratio = width / height
+
+            if source_ratio > target_ratio:
+                crop_width = int(height * target_ratio)
+                left = (width - crop_width) // 2
+                crop_box = (left, 0, left + crop_width, height)
+            else:
+                crop_height = int(width / target_ratio)
+                top = (height - crop_height) // 2
+                crop_box = (0, top, width, top + crop_height)
+
+            resampling = getattr(Image, "Resampling", Image).LANCZOS
+            cropped = source.crop(crop_box)
+            resized = cropped.resize(_OG_IMAGE_SIZE, resampling)
+            resized.save(output_path, format="PNG", optimize=True)
+        return True
+    except Exception as exc:
+        print(
+            "Warning: failed to convert Open Graph image to public/og-image.png "
+            f"({type(exc).__name__}: {exc}). Original upload will still be copied.",
+            file=sys.stderr,
+        )
+        return False
+
+
+def _write_derived_media_asset(
+    ref: dict,
+    image_bytes: bytes,
+    target: Path,
+    *,
+    source_file: Path | None = None,
+) -> None:
+    """Write derived public root assets for favicon/OG uploads without aborting builds."""
+    public_dir = target / "public"
+    role = ref.get("role")
+    if role == "favicon":
+        if _is_svg_favicon(ref, image_bytes, source_file):
+            print(
+                "favicon är SVG, hoppar över .ico-konvertering — "
+                "Next.js Metadata API rendrar SVG direkt",
+                file=sys.stderr,
+            )
+            favicon_svg = public_dir / "favicon.svg"
+            favicon_svg.parent.mkdir(parents=True, exist_ok=True)
+            favicon_svg.write_bytes(image_bytes)
+            return
+        _convert_favicon_to_ico(image_bytes, public_dir / "favicon.ico")
+        return
+    if role == "ogImage":
+        _convert_og_image_to_1200x630_png(image_bytes, public_dir / "og-image.png")
+
+
 def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> int:
     """Copy operator-uploaded assets to the generated site's public/uploads/.
 
@@ -975,6 +1101,13 @@ def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> in
             source_file: Path | None = next((c for c in candidates if c.exists()), None)
             if source_file is not None:
                 dest = public_uploads / filename
+                if _asset_requires_derived_public_output(ref):
+                    _write_derived_media_asset(
+                        ref,
+                        source_file.read_bytes(),
+                        target,
+                        source_file=source_file,
+                    )
                 shutil.copy2(source_file, dest)
                 copied += 1
                 continue
@@ -1000,6 +1133,8 @@ def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> in
             if data is None:
                 continue
             dest = public_uploads / filename
+            if _asset_requires_derived_public_output(ref):
+                _write_derived_media_asset(ref, data, target)
             dest.write_bytes(data)
             copied += 1
             continue
