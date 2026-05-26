@@ -30,20 +30,30 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `0296fad` (2026-05-26 kvällen, christopher-ui local —
-device-preset-toggle under FloatingChat centrerad utan gap efter operatör-
-feedback "Lägg dom olika formaten under floating chatt så att dom hänger
-ihop med chatten och inget mellanrum mellan. Samt centrera dom under chatt-
-fönstret och inte till vänster som nu." DevicePresetToggleBar i
-floating-chat.tsx ändrad: `left: position.x` → `left: position.x +
-PANEL_WIDTH/2` + ny `transform: translateX(-50%)` centrerar pillen exakt
-under panelens mittpunkt; `top: position.y + PANEL_HEIGHT + 8` → `top:
-position.y + PANEL_HEIGHT` tar bort 8px-gappet så toggle-baren hänger
-kant-i-kant med chat-panelen. Ingen påverkan på state, drag-logik eller
-mobil-rendering. Lint + typecheck + term-coverage --strict passerar.).
+Last verified state: `aa934cc` (2026-05-26 kvällen, christopher-ui local —
+Verktyg-pillen flyttad in i FloatingChat-toolbar-raden efter operatör-
+feedback "lägg verktyg till höger om dom olika formaten i floating chatt.
+Istället för nere till vänster. Dvs. att formaten och Verktyg alla dessa
+ligger centrerade under floating chatt." BuilderActions fick ny
+`variant?: "fixed" | "inline"`-prop. I "inline" tar pillen bort egen
+`fixed bottom-safe-6 left-6` och menyn popar NEDÅT (absolute top-full
+mt-2, origin-top) istället för uppåt. FloatingChat fick `tools?:
+ReactNode`-slot som rendras till höger om device-preset-pillen i samma
+centrerade flex-rad (gap-2). builder-shell.tsx flyttar BuilderActions
+från separat sibling till tools-propen med variant="inline". Mobil-
+rendering oförändrad — hela raden är hidden md:flex; operatorn når
+samma actions via ConsoleDrawer på mobil. Lint, typecheck och term-
+coverage --strict passerar.).
 
 Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
 
+- `aa934cc` refactor(viewser/builder): Verktyg-pill in i FloatingChat-
+  toolbar-raden. BuilderActions: ny `variant: "fixed" | "inline"` (default
+  "fixed"), inline-läge slopar fixed-positioning och drop:ar menyn NEDÅT.
+  FloatingChat: ny `tools?: ReactNode`-slot — toolbar-raden under chatten
+  blir nu en flex-row med device-toggle + tools, fortsatt centrerad mot
+  panel-mittpunkten via translateX(-50%). builder-shell passerar
+  BuilderActions via tools={...} med variant="inline".
 - `0296fad` style(viewser): centrera device-toggle under chatt utan gap.
   DevicePresetToggleBar i FloatingChat: `left: position.x + PANEL_WIDTH/2`
   + `transform: translateX(-50%)` centrerar; `top: position.y + PANEL_HEIGHT`
