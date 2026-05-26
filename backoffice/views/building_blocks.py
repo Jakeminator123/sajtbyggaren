@@ -10,6 +10,8 @@ import streamlit as st
 from scripts.dossier_candidate_intake import (
     DossierIntakeError,
     analyze_dossier_source,
+    build_safe_intake_evidence,
+    review_dossier_intake_with_model,
 )
 from scripts.generate_dossier_candidate import (
     DossierGenerationError,
@@ -112,6 +114,23 @@ def analyze_dossier_source_from_ui(
     return analyze_dossier_source(
         source_path,
         operator_brief=operator_brief,
+    )
+
+
+def review_dossier_intake_from_ui(
+    *,
+    operator_brief: str,
+    intake_report: dict,
+    source_path: str,
+    use_llm: bool,
+) -> dict:
+    """Review a Dossier intake report with safe evidence only."""
+    safe_evidence = build_safe_intake_evidence(intake_report, source_path)
+    return review_dossier_intake_with_model(
+        operator_brief=operator_brief,
+        intake_report=intake_report,
+        safe_evidence=safe_evidence,
+        use_llm=use_llm,
     )
 
 
@@ -1573,6 +1592,8 @@ def view_dossier_candidates() -> None:
         else:
             st.session_state["dossier_candidate_intake_report"] = report
             st.session_state["dossier_candidate_intake_brief"] = intake_brief
+            st.session_state["dossier_candidate_intake_source_path"] = source_path.strip()
+            st.session_state.pop("dossier_candidate_intake_review", None)
             st.success("Intake-rapport skapad. Inget har skrivits till disk.")
 
     intake_report = st.session_state.get("dossier_candidate_intake_report")
@@ -1602,24 +1623,109 @@ def view_dossier_candidates() -> None:
         with st.expander("Intake report JSON"):
             st.json(intake_report, expanded=False)
 
+        st.markdown("**LLM-review**")
+        st.caption(
+            "Kör separat review med säker evidens. Utan OPENAI_API_KEY används deterministic fallback."
+        )
+        with st.form("dossier_intake_review_form"):
+            review_use_llm = st.checkbox(
+                "Använd dossierModel om OPENAI_API_KEY finns",
+                value=False,
+                key="dossier_intake_review_use_llm",
+            )
+            review_submitted = st.form_submit_button("Resonera med dossierModel")
+        if review_submitted:
+            try:
+                review = review_dossier_intake_from_ui(
+                    operator_brief=str(
+                        st.session_state.get("dossier_candidate_intake_brief") or ""
+                    ),
+                    intake_report=intake_report,
+                    source_path=str(
+                        st.session_state.get("dossier_candidate_intake_source_path")
+                        or intake_report.get("sourcePath")
+                        or ""
+                    ),
+                    use_llm=review_use_llm,
+                )
+            except (DossierIntakeError, ValueError, RuntimeError) as exc:
+                st.error(f"Kunde inte resonera med dossierModel: {exc}")
+            else:
+                st.session_state["dossier_candidate_intake_review"] = review
+                st.success(
+                    "Review klar. "
+                    f"Source: `{review.get('source')}`, model: `{review.get('modelUsed')}`."
+                )
+
+        intake_review = st.session_state.get("dossier_candidate_intake_review")
+        if isinstance(intake_review, dict):
+            review_cols = st.columns(4)
+            review_cols[0].metric("Decision", str(intake_review.get("decision") or ""))
+            review_cols[1].metric(
+                "Rekommendation",
+                str(intake_review.get("recommendedClass") or ""),
+            )
+            review_cols[2].metric(
+                "Dossier id",
+                str(intake_review.get("suggestedDossierId") or ""),
+            )
+            review_cols[3].metric(
+                "Capability",
+                str(intake_review.get("suggestedCapability") or ""),
+            )
+            if intake_review.get("summary"):
+                st.write(str(intake_review["summary"]))
+            for title, key in (
+                ("Föreslaget innehåll", "proposedContents"),
+                ("Risker", "risks"),
+                ("Operatorfrågor", "operatorQuestions"),
+                ("Testplan", "testPlan"),
+            ):
+                values = list(intake_review.get(key) or [])
+                if values:
+                    with st.expander(title):
+                        for value in values:
+                            st.write(f"- {value}")
+            if intake_review.get("promotionBlockedReason"):
+                st.warning(str(intake_review["promotionBlockedReason"]))
+            with st.expander("Review JSON"):
+                st.json(intake_review, expanded=False)
+
         if intake_report.get("recommendedClass") == "not-a-dossier":
             st.warning(
                 "Rapporten rekommenderar `not-a-dossier`. Skapa ingen kandidat från "
                 "denna källa utan att flytta materialet till Project Input/assets."
             )
         else:
+            review_defaults = (
+                st.session_state.get("dossier_candidate_intake_review")
+                if isinstance(st.session_state.get("dossier_candidate_intake_review"), dict)
+                else {}
+            )
             with st.form("dossier_intake_create_form"):
                 intake_candidate_id = st.text_input(
                     "Dossier id från analys",
-                    value=str(intake_report.get("suggestedDossierId") or ""),
+                    value=str(
+                        review_defaults.get("suggestedDossierId")
+                        or intake_report.get("suggestedDossierId")
+                        or ""
+                    ),
                 )
                 intake_capability = st.text_input(
                     "Capability från analys",
-                    value=str(intake_report.get("suggestedCapability") or ""),
+                    value=str(
+                        review_defaults.get("suggestedCapability")
+                        or intake_report.get("suggestedCapability")
+                        or ""
+                    ),
                 )
                 intake_create_brief = st.text_area(
                     "Capability-brief från analys",
-                    value=str(st.session_state.get("dossier_candidate_intake_brief") or ""),
+                    value=str(
+                        review_defaults.get("summary")
+                        or st.session_state.get("dossier_candidate_intake_brief")
+                        or ""
+                    ),
                     height=160,
                 )
                 intake_use_llm = st.checkbox(
@@ -1641,7 +1747,18 @@ def view_dossier_candidates() -> None:
                         capability=intake_capability.strip() or None,
                         use_llm=intake_use_llm,
                         force=intake_force,
-                        intake_report=intake_report,
+                        intake_report={
+                            **intake_report,
+                            **(
+                                {
+                                    "recommendedClass": review_defaults.get("recommendedClass"),
+                                    "suggestedDossierId": review_defaults.get("suggestedDossierId"),
+                                    "suggestedCapability": review_defaults.get("suggestedCapability"),
+                                }
+                                if review_defaults
+                                else {}
+                            ),
+                        },
                     )
                 except (DossierGenerationError, ValueError, RuntimeError) as exc:
                     st.error(f"Kunde inte skapa kandidat från analys: {exc}")

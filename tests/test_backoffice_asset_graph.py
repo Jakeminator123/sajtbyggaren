@@ -456,6 +456,8 @@ def test_dedicated_candidate_views_default_to_no_llm() -> None:
     )
     assert "Analysera källa" in dossier_source
     assert "Skapa kandidat från analys" in dossier_source
+    assert "Resonera med dossierModel" in dossier_source
+    assert "dossier_candidate_intake_review" in dossier_source
 
 
 def test_asset_graph_starter_rows_match_runtime_mapping() -> None:
@@ -763,6 +765,44 @@ def test_dossier_intake_ui_helper_can_run_without_streamlit_session(
         "source_path": "data/legacy-dossiers/faq",
         "operator_brief": "FAQ accordion",
     }
+
+
+def test_dossier_intake_review_ui_helper_uses_safe_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def fake_build_safe_intake_evidence(report: dict[str, Any], source_path: str) -> dict[str, Any]:
+        captured["evidence_report"] = report
+        captured["source_path"] = source_path
+        return {"includedFilePaths": ["instructions.md"]}
+
+    def fake_review_dossier_intake_with_model(**kwargs: Any) -> dict[str, Any]:
+        captured.update(kwargs)
+        return {"suggestedCapability": "stripe-checkout"}
+
+    monkeypatch.setattr(
+        building_blocks,
+        "build_safe_intake_evidence",
+        fake_build_safe_intake_evidence,
+    )
+    monkeypatch.setattr(
+        building_blocks,
+        "review_dossier_intake_with_model",
+        fake_review_dossier_intake_with_model,
+    )
+
+    review = building_blocks.review_dossier_intake_from_ui(
+        operator_brief="Review payments",
+        intake_report={"sourcePath": "övrigt/payments-stripe-checkout"},
+        source_path="övrigt/payments-stripe-checkout",
+        use_llm=False,
+    )
+
+    assert review["suggestedCapability"] == "stripe-checkout"
+    assert captured["source_path"] == "övrigt/payments-stripe-checkout"
+    assert captured["safe_evidence"] == {"includedFilePaths": ["instructions.md"]}
+    assert captured["use_llm"] is False
 
 
 def test_pyrightconfig_adds_scripts_extra_path(repo_root: Path) -> None:

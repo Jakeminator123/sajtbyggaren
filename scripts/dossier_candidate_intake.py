@@ -19,11 +19,18 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict, Field
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from packages.generation.brief.models import has_openai_api_key  # noqa: E402
+
 DEFAULT_GENERATED_DIR = REPO_ROOT.parent / "sajtbyggaren-output" / ".generated"
+DEFAULT_POLICY_PATH = REPO_ROOT / "governance" / "policies" / "llm-models.v1.json"
+DOSSIER_ROLE_ID = "dossierModel"
+EXPECTED_PROVIDER = "openai"
 REPORT_VERSION = 1
 DEFAULT_MAX_FILES = 500
 DEFAULT_MAX_TOTAL_BYTES = 20 * 1024 * 1024
@@ -103,10 +110,26 @@ CUSTOMER_SIGNAL_RE = re.compile(
 )
 SLUG_CLEAN = re.compile(r"[^a-z0-9-]+")
 SLUG_DASHES = re.compile(r"-{2,}")
+WORD_RE = re.compile(r"[a-z0-9]+")
+HEADING_RE = re.compile(r"^(#{1,6})\s+(.+)$", re.MULTILINE)
+IMPORT_RE = re.compile(r"^\s*import\s+(?:[^'\"]+\s+from\s+)?['\"]([^'\"]+)['\"]", re.MULTILINE)
+EXPORT_RE = re.compile(r"\bexport\s+(?:default\s+)?(?:function|const|class)\s+([A-Za-z0-9_]+)")
+SECRET_TEXT_RE = re.compile(
+    r"(sk-[A-Za-z0-9_-]+|secret[_ -]?key\s*[:=]|api[_ -]?key\s*[:=]|"
+    r"token\s*[:=]|-----BEGIN [A-Z ]+PRIVATE KEY-----)",
+    re.IGNORECASE,
+)
+SAFE_SNIPPET_CHARS = 1200
+SAFE_LINE_CHARS = 220
+SAFE_DEPENDENCY_LIMIT = 40
 
 
 class DossierIntakeError(RuntimeError):
     """Raised when a source path cannot be analysed safely."""
+
+
+class DossierIntakeModelResolutionError(RuntimeError):
+    """Raised when llm-models.v1.json has no usable dossierModel role."""
 
 
 @dataclass(frozen=True)
@@ -116,6 +139,49 @@ class IntakeScanCaps:
     max_files: int = DEFAULT_MAX_FILES
     max_total_bytes: int = DEFAULT_MAX_TOTAL_BYTES
     max_readable_text_bytes_per_file: int = DEFAULT_MAX_READABLE_TEXT_BYTES_PER_FILE
+
+
+class DossierIntakeReviewModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    decision: str
+    recommendedClass: str
+    suggestedDossierId: str
+    suggestedCapability: str
+    summary: str
+    proposedContents: list[str] = Field(default_factory=list)
+    risks: list[str] = Field(default_factory=list)
+    operatorQuestions: list[str] = Field(default_factory=list)
+    testPlan: list[str] = Field(default_factory=list)
+    promotionBlockedReason: str = ""
+
+
+def resolve_dossier_model(policy_path: Path | None = None) -> str:
+    """Return the model string registered for dossierModel."""
+    path = policy_path or DEFAULT_POLICY_PATH
+    if not path.exists():
+        raise DossierIntakeModelResolutionError(f"llm-models.v1.json missing at {path}")
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise DossierIntakeModelResolutionError(
+            f"llm-models.v1.json is not valid JSON: {exc}"
+        ) from exc
+    for role in data.get("roles", []):
+        if role.get("id") != DOSSIER_ROLE_ID:
+            continue
+        provider = role.get("provider")
+        if provider != EXPECTED_PROVIDER:
+            raise DossierIntakeModelResolutionError(
+                f"dossierModel provider must be {EXPECTED_PROVIDER!r}, got {provider!r}"
+            )
+        model = role.get("model")
+        if not isinstance(model, str) or not model.strip():
+            raise DossierIntakeModelResolutionError(
+                "dossierModel role is missing a non-empty model value"
+            )
+        return model
+    raise DossierIntakeModelResolutionError(f"dossierModel role missing from {path.name}")
 
 
 def _normalise_report_for_hash(report: dict[str, Any]) -> dict[str, Any]:
@@ -190,6 +256,31 @@ def _slugify(text: str) -> str:
     if cleaned[0].isdigit():
         cleaned = f"dossier-{cleaned}"
     return cleaned
+
+
+def _words_from_slug(text: str) -> list[str]:
+    return WORD_RE.findall(_slugify(text))
+
+
+def suggest_capability_from_source_path(source_path: str | Path) -> str:
+    """Suggest a capability from source path before falling back to operator prose."""
+    slug = _slugify(Path(str(source_path)).stem or Path(str(source_path)).name)
+    words = _words_from_slug(slug)
+    word_set = set(words)
+    if {"stripe", "checkout"} <= word_set:
+        return "stripe-checkout"
+    if "checkout" in word_set and ({"payment", "payments"} & word_set):
+        return "payment-checkout"
+    if {"resend", "contact", "form"} <= word_set:
+        return "contact-form"
+    if {"contact", "form"} <= word_set:
+        return "contact-form"
+    if {"openai", "chat"} <= word_set:
+        return "ai-chat"
+    if "payments" in words:
+        words = ["payment" if word == "payments" else word for word in words]
+    filtered = [word for word in words if word not in {"dossier", "candidate", "legacy"}]
+    return "-".join(filtered[:3]) if filtered else slug
 
 
 def _default_allowed_roots() -> list[Path]:
@@ -455,7 +546,9 @@ def _finish_recommendation(report: dict[str, Any], *, operator_brief: str) -> No
         report["recommendedClass"] = "needs-review"
 
     if not report["suggestedCapability"]:
-        report["suggestedCapability"] = _slugify(operator_brief or report["suggestedDossierId"])
+        report["suggestedCapability"] = suggest_capability_from_source_path(
+            str(report.get("sourcePath") or report.get("suggestedDossierId") or operator_brief)
+        )
     if not report["suggestedDossierId"]:
         report["suggestedDossierId"] = _slugify(operator_brief or report["sourcePath"])
 
@@ -573,6 +666,290 @@ def analyze_dossier_source(
     _finish_recommendation(report, operator_brief=operator_brief)
     report["reportHash"] = intake_report_hash(report)
     return report
+
+
+def _safe_excerpt(text: str, *, limit: int = SAFE_SNIPPET_CHARS) -> str:
+    safe_lines: list[str] = []
+    for line in text.splitlines():
+        if SECRET_TEXT_RE.search(line):
+            continue
+        stripped = line.strip()
+        if stripped:
+            safe_lines.append(stripped[:SAFE_LINE_CHARS])
+        if len("\n".join(safe_lines)) >= limit:
+            break
+    return "\n".join(safe_lines)[:limit]
+
+
+def _headings_from_text(text: str) -> list[str]:
+    return [match.group(2).strip()[:SAFE_LINE_CHARS] for match in HEADING_RE.finditer(text)]
+
+
+def _component_symbols(text: str) -> dict[str, list[str]]:
+    return {
+        "imports": sorted(set(IMPORT_RE.findall(text)))[:SAFE_DEPENDENCY_LIMIT],
+        "exports": sorted(set(EXPORT_RE.findall(text)))[:SAFE_DEPENDENCY_LIMIT],
+    }
+
+
+def _read_safe_text_for_evidence(path: Path) -> str:
+    if _is_secret_like_path(path):
+        return ""
+    if path.suffix.lower() not in TEXT_EXTENSIONS:
+        return ""
+    try:
+        if path.stat().st_size > DEFAULT_MAX_READABLE_TEXT_BYTES_PER_FILE:
+            return ""
+        return path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+
+
+def _json_object_from_text(text: str) -> dict[str, Any]:
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _safe_package_metadata(payload: dict[str, Any]) -> dict[str, Any]:
+    metadata: dict[str, Any] = {}
+    for key in ("name", "version", "description"):
+        value = payload.get(key)
+        if isinstance(value, str):
+            metadata[key] = value[:SAFE_LINE_CHARS]
+    for key in ("dependencies", "devDependencies", "peerDependencies"):
+        value = payload.get(key)
+        if isinstance(value, dict):
+            metadata[key] = sorted(str(item) for item in value)[:SAFE_DEPENDENCY_LIMIT]
+    return metadata
+
+
+def build_safe_intake_evidence(
+    report: dict[str, Any],
+    source_path: str | Path,
+) -> dict[str, Any]:
+    """Build safe, bounded evidence for dossierModel review."""
+    raw_source = Path(source_path).expanduser()
+    source = raw_source if raw_source.is_absolute() else REPO_ROOT / raw_source
+    try:
+        source = source.resolve(strict=True)
+    except FileNotFoundError as exc:
+        raise DossierIntakeError(f"Source path does not exist: {source_path}") from exc
+    evidence: dict[str, Any] = {
+        "sourcePath": report.get("sourcePath", _path_for_report(source)),
+        "includedFilePaths": [
+            str(item.get("path"))
+            for item in report.get("includedFiles", [])
+            if isinstance(item, dict) and item.get("path")
+        ],
+        "manifest": {},
+        "markdown": {},
+        "package": {},
+        "components": [],
+    }
+    for item in report.get("includedFiles", []):
+        if not isinstance(item, dict) or not item.get("path"):
+            continue
+        relative_path = Path(str(item["path"]))
+        candidate = source / relative_path if source.is_dir() else source
+        if _is_secret_like_path(candidate) or item.get("readState") == "skipped-too-large":
+            continue
+        text = _read_safe_text_for_evidence(candidate)
+        if not text:
+            continue
+        name = candidate.name.lower()
+        if name == "manifest.json":
+            manifest = _json_object_from_text(text)
+            evidence["manifest"] = {
+                key: manifest.get(key)
+                for key in ("id", "label", "capability", "class", "summary", "envVars", "dependencies")
+                if key in manifest
+            }
+        elif name == "package.json":
+            evidence["package"] = _safe_package_metadata(_json_object_from_text(text))
+        elif name in {"instructions.md", "readme.md"}:
+            evidence["markdown"][item["path"]] = {
+                "headings": _headings_from_text(text)[:20],
+                "excerpt": _safe_excerpt(text),
+            }
+        elif candidate.suffix.lower() in {".ts", ".tsx"}:
+            evidence["components"].append(
+                {
+                    "path": item["path"],
+                    **_component_symbols(text),
+                }
+            )
+    return evidence
+
+
+def _operator_questions_for_review(recommended_class: str, capability: str) -> list[str]:
+    if recommended_class == "hard":
+        return [
+            f"Ska dossiern beskriva {capability} generellt eller just denna implementation?",
+            "Ska den vara hard candidate only tills riktig integration prioriteras?",
+            "Ska V1-kandidaten bara ge CTA/checkout-instruktioner utan backend?",
+            "Finns exempel på success/cancel URL-flöde som ska dokumenteras senare?",
+            "Vilka env vars, till exempel STRIPE_SECRET_KEY, behövs i en separat framtida integration?",
+        ]
+    if recommended_class == "not-a-dossier":
+        return [
+            "Är detta kundspecifikt material som bör ligga i Project Input/assets i stället?",
+            "Vilken återanvändbar capability finns här, om någon?",
+        ]
+    return [
+        "Vilka delar är återanvändbar capability och vilka är projektspecifik copy?",
+        "Vilket preview-case ska bevisa att kandidaten fungerar innan promotion?",
+    ]
+
+
+def _deterministic_intake_review(
+    *,
+    operator_brief: str,
+    intake_report: dict[str, Any],
+    safe_evidence: dict[str, Any],
+    source: str,
+    model_used: str,
+) -> dict[str, Any]:
+    recommended_class = str(intake_report.get("recommendedClass") or "needs-review")
+    suggested_id = _slugify(
+        str(
+            safe_evidence.get("manifest", {}).get("id")
+            or intake_report.get("suggestedDossierId")
+            or safe_evidence.get("sourcePath")
+            or operator_brief
+        )
+    )
+    suggested_capability = _slugify(
+        str(
+            safe_evidence.get("manifest", {}).get("capability")
+            or suggest_capability_from_source_path(str(safe_evidence.get("sourcePath") or suggested_id))
+        )
+    )
+    decision = "can-be-dossier"
+    if recommended_class == "not-a-dossier":
+        decision = "not-a-dossier"
+    elif recommended_class == "needs-review":
+        decision = "needs-review"
+    risks = list(intake_report.get("riskFlags") or [])
+    if recommended_class == "hard":
+        risks.append("real integration intentionally blocked in candidate-only V1")
+    return {
+        "decision": decision,
+        "recommendedClass": recommended_class,
+        "suggestedDossierId": suggested_id,
+        "suggestedCapability": suggested_capability,
+        "summary": (
+            f"Deterministic review of {safe_evidence.get('sourcePath')}. "
+            "Use this as operator guidance before candidate creation."
+        ),
+        "proposedContents": [
+            "manifest.json",
+            "instructions.md",
+            "meta.json",
+        ],
+        "risks": sorted(set(risks)),
+        "operatorQuestions": _operator_questions_for_review(recommended_class, suggested_capability),
+        "testPlan": [
+            "Validate manifest schema.",
+            "Confirm no secrets are copied or sent to the model.",
+            "Create candidate only after operator review.",
+        ],
+        "promotionBlockedReason": (
+            "Hard candidates need a separate reviewed integration PR before canonical promotion."
+            if recommended_class == "hard"
+            else ""
+        ),
+        "source": source,
+        "modelRole": DOSSIER_ROLE_ID,
+        "modelUsed": model_used,
+    }
+
+
+def _call_intake_review_model(
+    *,
+    operator_brief: str,
+    intake_report: dict[str, Any],
+    safe_evidence: dict[str, Any],
+    model: str,
+) -> dict[str, Any]:
+    from openai import OpenAI
+
+    client = OpenAI()
+    payload = {
+        "operatorBrief": operator_brief,
+        "intakeReport": sanitize_intake_report_for_model(intake_report),
+        "safeEvidence": safe_evidence,
+        "hardRules": [
+            "Return structured JSON only.",
+            "Use only intakeReport and safeEvidence; do not assume unseen file contents.",
+            "Never ask to write canonical Dossiers, runtime wiring, API routes, env-contracts or integration-contracts in this V1.1 review.",
+            "For hard candidates, explain that real integration work is blocked until a separate reviewed PR.",
+            "Prefer capability slugs from source path/manifest over slugging the operator question.",
+        ],
+    }
+    response = client.responses.parse(
+        model=model,
+        input=[
+            {
+                "role": "system",
+                "content": (
+                    "You review local Dossier candidate intake for Sajtbyggaren. "
+                    "Decide if it can become a reusable candidate-only Dossier."
+                ),
+            },
+            {
+                "role": "user",
+                "content": json.dumps(payload, ensure_ascii=False, indent=2),
+            },
+        ],
+        text_format=DossierIntakeReviewModel,
+    )
+    parsed = response.output_parsed
+    if parsed is None:
+        raise RuntimeError("dossierModel returned no structured intake review")
+    return parsed.model_dump()
+
+
+def review_dossier_intake_with_model(
+    *,
+    operator_brief: str,
+    intake_report: dict[str, Any],
+    safe_evidence: dict[str, Any],
+    use_llm: bool = True,
+) -> dict[str, Any]:
+    """Review an intake report with dossierModel or deterministic fallback."""
+    if use_llm and has_openai_api_key():
+        try:
+            model_used = resolve_dossier_model()
+            review = _call_intake_review_model(
+                operator_brief=operator_brief,
+                intake_report=sanitize_intake_report_for_model(intake_report),
+                safe_evidence=safe_evidence,
+                model=model_used,
+            )
+            review["source"] = "real"
+            review["modelRole"] = DOSSIER_ROLE_ID
+            review["modelUsed"] = model_used
+            return review
+        except Exception as exc:
+            fallback = _deterministic_intake_review(
+                operator_brief=operator_brief,
+                intake_report=intake_report,
+                safe_evidence=safe_evidence,
+                source="mock-llm-error",
+                model_used="mock",
+            )
+            fallback["risks"].append(f"dossierModel fallback used: {exc}")
+            return fallback
+    return _deterministic_intake_review(
+        operator_brief=operator_brief,
+        intake_report=intake_report,
+        safe_evidence=safe_evidence,
+        source="mock-no-key" if use_llm else "deterministic-v1",
+        model_used="mock" if use_llm else "deterministic",
+    )
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

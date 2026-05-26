@@ -12,8 +12,11 @@ from scripts.dossier_candidate_intake import (
     DossierIntakeError,
     IntakeScanCaps,
     analyze_dossier_source,
+    build_safe_intake_evidence,
     intake_report_hash,
+    review_dossier_intake_with_model,
     sanitize_intake_report_for_model,
+    suggest_capability_from_source_path,
 )
 
 
@@ -169,6 +172,28 @@ def test_hard_candidate_signal_when_env_api_or_backend_is_present(tmp_path: Path
     assert report["recommendedClass"] == "hard"
 
 
+def test_payments_stripe_checkout_path_suggests_capability_not_operator_question(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "payments-stripe-checkout"
+    source.mkdir()
+    (source / "instructions.md").write_text(
+        "# Stripe Checkout\n\nUse process.env.STRIPE_SECRET_KEY later.\n",
+        encoding="utf-8",
+    )
+
+    report = _analyse(
+        source,
+        operator_brief="Hur skulle du göra för att få denna inputkälla till en bra dossier som passar mitt repo?",
+    )
+
+    assert report["recommendedClass"] == "hard"
+    assert report["suggestedDossierId"] == "payments-stripe-checkout"
+    assert report["suggestedCapability"] == "stripe-checkout"
+    assert "hur-skulle" not in report["suggestedCapability"]
+    assert suggest_capability_from_source_path("payments-stripe-checkout") == "stripe-checkout"
+
+
 def test_customer_specific_source_can_be_not_a_dossier(tmp_path: Path) -> None:
     source = tmp_path / "lineage-material"
     source.mkdir()
@@ -229,6 +254,117 @@ def test_sanitized_report_strips_content_like_keys() -> None:
     assert "rawContents" not in safe
     assert "content" not in safe["includedFiles"][0]
     assert "textPreview" not in safe["excludedFiles"][0]
+
+
+def test_safe_intake_evidence_includes_safe_fields_and_excludes_secrets(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "payments-stripe-checkout"
+    source.mkdir()
+    secret = source / ".env"
+    secret.write_text("STRIPE_SECRET_KEY=sk_live_secret\n", encoding="utf-8")
+    (source / "manifest.json").write_text(
+        json.dumps({"id": "stripe-checkout", "capability": "stripe-checkout", "class": "hard"}),
+        encoding="utf-8",
+    )
+    (source / "instructions.md").write_text(
+        "# Stripe Checkout\n\nUse checkout sessions.\n",
+        encoding="utf-8",
+    )
+    (source / "package.json").write_text(
+        json.dumps({"name": "stripe-demo", "dependencies": {"stripe": "^1.0.0"}}),
+        encoding="utf-8",
+    )
+    (source / "checkout.tsx").write_text(
+        "import Stripe from 'stripe';\nexport function CheckoutButton() { return null; }\n",
+        encoding="utf-8",
+    )
+    original_read_text = Path.read_text
+
+    def guarded_read_text(path: Path, *args: Any, **kwargs: Any) -> str:
+        if path == secret:
+            raise AssertionError("secret-like content must not enter safe evidence")
+        return original_read_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", guarded_read_text)
+    report = _analyse(source)
+
+    evidence = build_safe_intake_evidence(report, source)
+
+    assert evidence["manifest"]["id"] == "stripe-checkout"
+    assert "Stripe Checkout" in evidence["markdown"]["instructions.md"]["headings"]
+    assert evidence["package"]["dependencies"] == ["stripe"]
+    assert evidence["components"][0]["exports"] == ["CheckoutButton"]
+    assert ".env" not in json.dumps(evidence)
+    assert "sk_live_secret" not in json.dumps(evidence)
+
+
+def test_review_no_key_fallback_uses_safe_evidence_and_path_capability(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    source = tmp_path / "payments-stripe-checkout"
+    source.mkdir()
+    (source / "instructions.md").write_text(
+        "# Stripe Checkout\n\nUse process.env.STRIPE_SECRET_KEY later.\n",
+        encoding="utf-8",
+    )
+    report = _analyse(source, operator_brief="Hur skulle du göra för att få denna inputkälla?")
+    evidence = build_safe_intake_evidence(report, source)
+
+    review = review_dossier_intake_with_model(
+        operator_brief="Hur skulle du göra för att få denna inputkälla?",
+        intake_report=report,
+        safe_evidence=evidence,
+        use_llm=True,
+    )
+
+    assert review["source"] == "mock-no-key"
+    assert review["modelRole"] == "dossierModel"
+    assert review["recommendedClass"] == "hard"
+    assert review["suggestedCapability"] == "stripe-checkout"
+    assert review["operatorQuestions"]
+
+
+def test_llm_review_payload_contains_safe_evidence_not_secret_content(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import scripts.dossier_candidate_intake as intake
+
+    captured: dict[str, Any] = {}
+
+    def fake_call_intake_review_model(**kwargs: Any) -> dict[str, Any]:
+        captured.update(kwargs)
+        return {
+            "decision": "can-be-dossier",
+            "recommendedClass": "hard",
+            "suggestedDossierId": "payments-stripe-checkout",
+            "suggestedCapability": "stripe-checkout",
+            "summary": "Review",
+            "proposedContents": [],
+            "risks": [],
+            "operatorQuestions": [],
+            "testPlan": [],
+            "promotionBlockedReason": "",
+        }
+
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setattr(intake, "resolve_dossier_model", lambda: "gpt-dossier-test")
+    monkeypatch.setattr(intake, "_call_intake_review_model", fake_call_intake_review_model)
+
+    review = review_dossier_intake_with_model(
+        operator_brief="Review this",
+        intake_report={"rawContents": "must not be sent", "includedFiles": []},
+        safe_evidence={"includedFilePaths": ["instructions.md"], "markdown": {"instructions.md": {"excerpt": "safe"}}},
+        use_llm=True,
+    )
+
+    assert review["source"] == "real"
+    assert captured["safe_evidence"]["includedFilePaths"] == ["instructions.md"]
+    assert "rawContents" not in captured["intake_report"]
+    assert "must not be sent" not in json.dumps(captured)
 
 
 def test_scan_caps_mark_source_too_large(tmp_path: Path) -> None:
