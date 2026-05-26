@@ -711,19 +711,26 @@ export function ViewerPanel({
 
       {/* Hero-text — visas alltid när StackBlitz inte aktivt visar en
           sajt (empty, unavailable, error). Vänsterställd så den inte
-          krockar med videons 3D-objekt till höger. */}
+          krockar med videons 3D-objekt till höger.
+
+          Mobil-padding minskad till px-5 (vs desktop px-12/lg:px-20)
+          eftersom 32px+32px tar 17% av en 375px-skärm. Hero-H1 sänks
+          ett steg per breakpoint (text-3xl sm:text-4xl md:text-5xl)
+          så headern inte dominerar canvasen på iPhone — på 375px
+          tog tidigare text-4xl en sjudel av vertical-canvas i bara
+          rubriken. */}
       {showHeroText ? (
-        <div className="relative z-10 flex h-full w-full items-center px-8 sm:px-12 lg:px-20">
+        <div className="relative z-10 flex h-full w-full items-center px-5 sm:px-12 lg:px-20">
           <div className="flex max-w-lg flex-col items-start gap-4 text-left">
             <span className="border-border/40 bg-background/70 text-foreground/70 rounded-full border px-3 py-1 font-mono text-[10px] tracking-[0.22em] uppercase shadow-sm backdrop-blur">
               Sajtbyggaren · localhost
             </span>
-            <h1 className="text-foreground text-4xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-5xl">
+            <h1 className="text-foreground text-3xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-4xl md:text-5xl">
               Beskriv din sajt
               <br />
               <span className="text-foreground/60">så bygger vi den.</span>
             </h1>
-            <p className="text-foreground/75 max-w-md text-[14px] leading-relaxed text-balance sm:text-[15px]">
+            <p className="text-foreground/75 max-w-md text-[13.5px] leading-relaxed text-balance sm:text-[14px] md:text-[15px]">
               Skriv vad sajten ska göra. Vi genererar Project Input, kör Quality
               Gate och paketerar en preview du kan inspektera direkt här.
             </p>
