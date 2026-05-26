@@ -1,6 +1,6 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-26 UTC, steward-auto efter PR #120 — sync(jakob-be -> main): repo hygiene 2026-05-26 (4 commits, docs-only). Verifierad `main` är `15aea46`.
+**Datum:** 2026-05-26 sen kväll UTC, steward-pass efter `dbc97d8` — cloud-grind prompt-pack + doc/workboard sanity. Verifierad `origin/jakob-be` är `dbc97d8ab8a32c2c7b37b589e16513326bd31b5f`.
 
 Nya PRs sedan föregående checkpoint: PR #118 — sync(jakob-be -> main): PR #117 mobile
 responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report; PR #120
@@ -19,10 +19,9 @@ krävs en gång per venv enligt ADR 0029.
 
 **Direkt nästa spår — operatörsbeslut + Gap-fixar:**
 
-1. **Vercel production-branch-flip** — operatörens manuella klick i Vercel-UI. PR #118 + #120 är mergade till main; flippen är inte längre blockad. Efter flippen: radera `docs/operations/vercel-production-branch-todo.md`.
-2. **B147 vägval a/b/c** — operatörsbeslut. Vercel preview wizard 403 via `assertLocalhost` på `*.vercel.app`. Tre alternativ i `docs/known-issues.md`: (a) `VIEWSER_ALLOW_NON_LOCALHOST=true`, (b) host-whitelist via ny env, (c) ADR-beslut om Viewser-på-Vercel auth-strategi.
-3. **Backend-Gap fixar (post-C4-audit)** — efter Gap 4 + 5 stängdes 2026-05-26 evening är status 7 stängda / 3 delvis / 1 öppen. Nästa i prio: Gap 6+7 paired (~3-4h, M), sedan Gap 9 (~2h, S-M), sedan Gap 10 (~4-6h, M-L). Detaljer i `docs/current-focus.md`.
-4. **Sync-PR `jakob-be → main`** — `jakob-be` är nu 15 commits framför `origin/main`. Bra läge för en sync-PR (operatörens beslut). Kan kombineras med en av Gap-fixarna ovan.
+1. **B147 vägval a/b/c** — operatörsbeslut. Vercel preview wizard 403 via `assertLocalhost` på `*.vercel.app`. Tre alternativ i `docs/known-issues.md`: (a) `VIEWSER_ALLOW_NON_LOCALHOST=true`, (b) host-whitelist via ny env, (c) ADR-beslut om Viewser-på-Vercel auth-strategi.
+2. **Backend-Gap fixar (post-C4-audit)** — efter Gap 4 + 5 stängdes 2026-05-26 evening är status 7 stängda / 3 delvis / 1 öppen. Nästa i prio: Gap 6+7 paired (~3-4h, M), sedan Gap 9 (~2h, S-M), sedan Gap 10 (~4-6h, M-L). Detaljer i `docs/current-focus.md`.
+3. **Sync-PR `jakob-be → main`** — `jakob-be` är nu 21 commits framför `origin/main`. Bra läge för en sync-PR (operatörens beslut). Kan kombineras med en av Gap-fixarna ovan.
 
 **Parkerade lanes (väntar trigger):**
 
@@ -61,9 +60,10 @@ väljs.
 
 **Inga öppna PRs.** PR #69 är stängd. Senaste merge till main: PR #120 (2026-05-26 PM). Senare commits sedan dess ligger på `jakob-be` och väntar nästa sync-PR (se "Direkt nästa spår" ovan).
 
-**Öppna gaps på workboarden:** inga aktiva eller queuade gaps just nu.
-Workboarden är ren och redo att ta första riktiga gapen via
-`create_gap` med `dryRun:true` → `confirm:true`-flödet.
+**Öppna gaps på workboarden:** 1 queued gap:
+`GAP-backend-build-trace-endpoint` — Christopher-implementerat under
+operator-OK scope-leak, väntar PR från `christopher-ui` mot `main`. Inga
+aktiva gaps.
 
 **Christopher-scope-leak-precedent från PR #68:** två backend-commits
 (`acc6265` planner-fix i `plan.py`, `a44740a` resolver-fix i `resolve.py`)
@@ -186,7 +186,7 @@ produktkompass.
 Se [`docs/current-focus.md`](current-focus.md) → **"Direkt nästa fokus"**.
 Kort: Path B / section-renderer är största spåret men kräver operator-OK;
 Sprintvakt V1.1 follow-up-fynd är queueade som ej akuta; backend-Gap 4 + 5
-är öppna.
+är stängda och nästa backend-spår är Gap 6+7, Gap 9 eller Gap 10.
 
 ## Operatörspreferenser
 
@@ -409,4 +409,4 @@ Ny aktiv: **B147 Medel-Hög** (Vercel preview wizard 403 via `assertLocalhost`).
 
 **Öppen PR just nu:**
 
-- **#118 sync(jakob-be → main)** — OPEN, MERGEABLE, mergeStateStatus UNSTABLE (CI pågår). 45 commits / 56 filer / +5158/-328. Innehåller hela sessionens leverans. Operatörsbeslut: granska body + checks, sedan merge. Efter merge ska Vercel production branch flippas från `jakob-be` till `main` per `docs/operations/vercel-production-branch-todo.md` (B146 är löst, blockaren är borta).
+- **#118 sync(jakob-be → main)** — OPEN, MERGEABLE, mergeStateStatus UNSTABLE (CI pågår). 45 commits / 56 filer / +5158/-328. Innehåller hela sessionens leverans. Operatörsbeslut då: granska body + checks, sedan merge. Vercel production branch-flippen är åtgärdad 2026-05-26; B146-blockaren är borta.

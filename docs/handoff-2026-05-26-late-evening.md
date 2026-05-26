@@ -1,9 +1,12 @@
 # Handoff 2026-05-26 sen kväll — till nästa jakob-be-agent
 
+> **Arkiverad 2026-05-26 sen kväll.** Det aktuella innehållet är replikerat
+> och korrigerat i `docs/handoff.md`; behåll denna fil som historisk snapshot.
+
 **Skapad:** 2026-05-26 ~23:20 UTC, post docs-slim + branch-model-clarification.
 **Av:** cursor-jakob-be-agent (Claude Opus 4.7, denna session).
 **För:** nästa Cursor/agent som tar över jakob-be-lane.
-**HEAD:** `origin/jakob-be` = `f7c437e` (lokalt synkat, working tree clean förutom operatörs `.cursor/settings.json`).
+**HEAD vid skapande:** `origin/jakob-be` = `f7c437e` (senare ersatt av `dbc97d8` i `docs/handoff.md`).
 **Föregående handoff:** `docs/handoff-2026-05-26-evening.md` (lämnas kvar som historiskt arkiv).
 
 ---
@@ -58,12 +61,11 @@ Eval       Golden Path 7.34/10, embeddings gate `go` (alla 4 case >= 6.5)
 
 ## Pending — operatörsbeslut krävs
 
-1. **Vercel production branch-flip** — `docs/operations/vercel-production-branch-todo.md` dokumenterar att Production Branch sattes till `jakob-be` 2026-05-25 tills B146 var löst. B146 är nu mergad. Sync-PRs #118 + #120 är i main. Flippen är inte längre blockad. Operatören klickar i Vercel UI: `https://vercel.com/jakeminator123s-projects/sajtbyggaren-viewser/settings/git`. Efter flippen: trigga `vercel --prod` och radera TODO-docen.
-2. **B147 Vercel wizard 403 vägval a/b/c** — Medel-Hög-bugg. `assertLocalhost` returnerar 403 på `*.vercel.app`-deployer för 12 API-routes inkl. `discovery-options`. Tre alternativ dokumenterade i `docs/known-issues.md`:
+1. **B147 Vercel wizard 403 vägval a/b/c** — Medel-Hög-bugg. `assertLocalhost` returnerar 403 på `*.vercel.app`-deployer för 12 API-routes inkl. `discovery-options`. Tre alternativ dokumenterade i `docs/known-issues.md`:
    - (a) `VIEWSER_ALLOW_NON_LOCALHOST=true` på Vercel-projektets Preview + Production env (~5 min, ingen kod-ändring, men bekräftar `no auth, no rate limit, no public deploy`-modellen).
    - (b) Host-whitelist via ny `VIEWSER_ALLOWED_HOSTS`-env (~1-2h kod).
    - (c) ADR-beslut om långsiktig auth-strategi (~1-2 dagar).
-3. **Sync-PR `jakob-be → main`** — `jakob-be` är 15 commits framför `origin/main` och bra läge för en sync nu eller efter en av Gap-fixarna nedan.
+2. **Sync-PR `jakob-be → main`** — `jakob-be` är 15 commits framför `origin/main` och bra läge för en sync nu eller efter en av Gap-fixarna nedan.
 
 ## Pending — nästa kodspår (ditt val)
 
@@ -87,7 +89,7 @@ I prioritetsordning från `docs/backend-handoff.md` (post-C4-audit):
 M .cursor/settings.json        [operatörs personliga, rör aldrig]
 ```
 
-`docs/operations/` är fortfarande untracked (Vercel-flip-TODO-mappen). Föregående evening-handoff sa att en separat agent har raderat själva TODO-filen — verifiera om mappen är tom och kan rensas, eller om operatören vill behålla den för nästa pre-flip-period.
+Vercel-flip-TODO:n är historik efter operatörens 2026-05-26-bekräftelse.
 
 ---
 
@@ -109,7 +111,6 @@ M .cursor/settings.json        [operatörs personliga, rör aldrig]
    ```
 
 3. **Operatörsdialog (vid sessionsstart):**
-   - "Har du gjort Vercel production-branch-flippen? Om inte: ska jag radera todo-docen efter du klickat?"
    - "B147 vägval — vill du köra (a) `VIEWSER_ALLOW_NON_LOCALHOST=true` snabbt, eller (b) host-whitelist, eller (c) ADR för långsiktig auth?"
    - "Vill du att jag plockar Gap 6+7 paired som första kod-spår, eller annat?"
    - "Sync-PR `jakob-be → main` — vill du öppna den nu (15 commits framför) eller vänta tills nästa Gap-fix landar?"

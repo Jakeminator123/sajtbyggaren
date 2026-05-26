@@ -582,10 +582,9 @@ matar wizarden med taxonomi-options:
   `VIEWSER_ALLOW_NON_LOCALHOST=true` på Vercel-projektet, men det stänger
   av grinden för *alla* hostar utan att introducera auth. Konflikten är
   mellan ADR-baserad localhost-only-säkerhet och faktisk Vercel-deploy
-  som operatör redan kör (`apps/viewser/vercel.json` finns untracked +
-  `docs/operations/vercel-production-branch-todo.md` dokumenterar att
-  production branch är `jakob-be` tills B146 är löst — vilket den nu är,
-  efter PR #112+#113). Tre möjliga vägar: (a) sätt
+  som operatör redan kör. Vercel production-branch-flippen är åtgärdad
+  2026-05-26; B147 kvarstår eftersom API-grinden fortfarande stoppar
+  icke-localhost-hostar. Tre möjliga vägar: (a) sätt
   `VIEWSER_ALLOW_NON_LOCALHOST=true` på Vercel-projektets Preview- och
   Production-env (snabbast, men bekräftar `no auth, no rate limit, no
   public deploy`-modellen på en publik URL — ska dokumenteras med tydlig
@@ -595,10 +594,9 @@ matar wizarden med taxonomi-options:
   `VIEWSER_ALLOWED_HOSTS` (mer kontrollerat men introducerar ny policy-yta),
   (c) ADR-beslut om Viewser-på-Vercel auth-strategi som låser den
   långsiktiga lösningen innan någon snabb-fix väljs. Cross-ref:
-  `apps/viewser/vercel.json` (untracked, repo-spec för Vercel-deploy),
-  `docs/operations/vercel-production-branch-todo.md` (operatörs-TODO,
-  untracked), `docs/reports/b125-preview-fallback-decision-2026-05-22.md`
-  (B125-spårets DNA, samma "Viewser är operatör-lokalt verktyg"-princip).
+  `apps/viewser/vercel.json` (repo-spec för Vercel-deploy),
+  `docs/reports/b125-preview-fallback-decision-2026-05-22.md` (B125-spårets
+  DNA, samma "Viewser är operatör-lokalt verktyg"-princip).
   Källa: operatör 2026-05-25 kväll + extern reviewer-triage 2026-05-26.
   Fix: open. Test: open.
 

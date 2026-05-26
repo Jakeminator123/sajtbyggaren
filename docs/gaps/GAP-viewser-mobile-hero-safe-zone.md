@@ -4,10 +4,12 @@
 - type: `Gap/UI`
 - owner: `christopher`
 - reviewer: `jakob`
-- status: `queued`
+- status: `completed`
 - collisionRisk: `green`
 - createdAt: `2026-05-26T10:52:20Z`
-- updatedAt: `2026-05-26T10:52:20Z`
+- updatedAt: `2026-05-26T22:30:00Z`
+- completedAt: `2026-05-26T13:19:16Z`
+- fixCommits: `1740472`
 
 ## Why now
 
@@ -36,6 +38,11 @@ Scout-bug-hunt pass 4 (composer-2.5-fast, read-only) paa christopher-ui-branchen
 - Desktop md+ behaaller absolute-overlay-layout med overflow-hidden
 - Wizard foundation-step + company-step visar Foeretagsnamn utan asterisk (optional-prop visar 'valfritt' via FieldLabel)
 - PromptBuilder composer anvaender pb-safe-or-4 sm:pb-7 saa iPhone X+ home-indicator respekteras
+
+## Completion note
+
+Verifierat 2026-05-26 mot origin/jakob-be: fixen finns i PR #118-squashen
+`1740472` och kodläget uppfyller acceptanskriterierna.
 
 ## Checks
 

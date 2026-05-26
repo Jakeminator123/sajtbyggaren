@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-26T10:52:25Z",
-  "updatedBy": "sprintvakt-mcp",
+  "updatedAt": "2026-05-26T22:30:00Z",
+  "updatedBy": "cursor-cloud-steward",
   "people": {
     "jakob": {
       "allocation": 0.75,
@@ -90,14 +90,6 @@
         "apps/viewser/components/builder/use-build-trace-polling.ts"
       ],
       "reason": "FloatingChat speglar riktig pipeline-status via trace-endpoint istället för fejk setTimeout-kedja (UI-only, /api/runs/[runId]/trace finns redan i main)"
-    },
-    {
-      "owner": "christopher",
-      "gapId": "GAP-viewser-restaurant-wizard-hint",
-      "paths": [
-        "apps/viewser/components/discovery-wizard/wizard-constants.ts"
-      ],
-      "reason": "Wizard Restaurang-familjens scaffoldHint pekar mot restaurant-hospitality (UI-del av paired GAP-backend-restaurant-activation)"
     }
   ],
   "queuedGaps": [
@@ -142,7 +134,8 @@
       "note": "UI-skriven backend-spec. Blockerar Live Build Sync A (real pipeline-status) och D (iterera från version N med riktig PI-snapshot). UI har workaround idag (prompt-prefix) som automatiskt uppgraderas till baseRunId så fort backend stödjer det. 2026-05-25 04:24: Christopher implementerade hela gapet under operator-OK scope-leak (`origin/christopher-ui` commit `74a355b`) — 3 endpoints + bug-hunt + tester. Owner kvar 'jakob' i workboard så Sprintvakt-lane-policy passerar (samma precedent som plan.py-fix i PR #68). PR från `christopher-ui` mot `main` väntar — Jakob är reviewer."
     }
   ],
-  "activeGaps": [
+  "activeGaps": [],
+  "completedGaps": [
     {
       "id": "GAP-viewser-restaurant-wizard-hint",
       "type": "Gap/UI",
@@ -150,10 +143,11 @@
       "title": "Wizard Restaurang/Café-familjen pekar mot restaurant-hospitality scaffold",
       "collisionRisk": "green",
       "reviewer": "jakob",
-      "status": "active",
+      "status": "completed",
       "file": "docs/gaps/GAP-viewser-restaurant-wizard-hint.md",
       "createdAt": "2026-05-25T13:20:00Z",
       "startedAt": "2026-05-25T13:20:00Z",
+      "completedAt": "2026-05-26T13:19:16Z",
       "paths": [
         "apps/viewser/components/discovery-wizard/wizard-constants.ts"
       ],
@@ -179,7 +173,14 @@
         "cd apps/viewser && npm run lint"
       ],
       "note": "Effort 30 min. Splittat från GAP-backend-restaurant-activation pga Sprintvakt-lane-policy. Landar i samma commit-batch som backend-aktiveringen. 2026-05-25 follow-up: den ursprungliga PR:en uppdaterade bara BUSINESS_FAMILIES[restaurant]; den parallella WIZARD_CATEGORIES[restaurant] missades och pekade fortsatt mot local-service-business / nordic-trust så FALLBACK_DISCOVERY_OPTIONS (byggd via WIZARD_CATEGORIES.map() i discovery-options.ts) gav fel scaffold + variant innan governance-API:t svarade. Fixat under samma GAP.",
-      "pairedWith": "GAP-backend-restaurant-activation"
+      "pairedWith": "GAP-backend-restaurant-activation",
+      "fixCommits": [
+        "1e3c1f8",
+        "1740472"
+      ],
+      "notes": [
+        "Verifierad 2026-05-26 mot origin/jakob-be: BUSINESS_FAMILIES[restaurant] och WIZARD_CATEGORIES[restaurant] pekar på restaurant-hospitality med defaultVariantId warm-bistro."
+      ]
     },
     {
       "id": "GAP-viewser-mobile-hero-safe-zone",
@@ -218,14 +219,18 @@
       ],
       "collisionRisk": "green",
       "reviewer": "jakob",
-      "status": "active",
+      "status": "completed",
       "createdAt": "2026-05-26T10:52:20Z",
-      "updatedAt": "2026-05-26T10:52:25Z",
-      "notes": [],
-      "activatedAt": "2026-05-26T10:52:25Z"
-    }
-  ],
-  "completedGaps": [
+      "updatedAt": "2026-05-26T22:30:00Z",
+      "notes": [
+        "Verifierad 2026-05-26 mot origin/jakob-be: viewer-panel har mobil overflow/safe-zone, Företagsnamn är optional i foundation/company-step och PromptBuilder använder pb-safe-or-4."
+      ],
+      "activatedAt": "2026-05-26T10:52:25Z",
+      "completedAt": "2026-05-26T13:19:16Z",
+      "fixCommits": [
+        "1740472"
+      ]
+    },
     {
       "id": "GAP-backend-path-b-section-renderer",
       "type": "Gap/Runtime",

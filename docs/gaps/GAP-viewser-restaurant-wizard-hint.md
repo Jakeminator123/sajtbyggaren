@@ -5,6 +5,11 @@ id: GAP-viewser-restaurant-wizard-hint
 type: Gap/UI
 owner: christopher
 title: Wizard Restaurang/Café-familjen pekar mot restaurant-hospitality scaffold
+status: completed
+completedAt: 2026-05-26T13:19:16Z
+fixCommits:
+  - 1e3c1f8
+  - 1740472
 whyNow: |
   Path A-aktivering av restaurant-hospitality (GAP-backend-restaurant-
   activation, owner=jakob) levererar runtime-stödet i resolve.py +
@@ -52,4 +57,8 @@ note: |
   DISCOVERY_OPTIONS (som byggs av WIZARD_CATEGORIES.map() i
   discovery-options.ts) gav fel scaffold + variant innan governance-
   API:t hann svara. Fixet är en enrads-ändring under samma GAP.
+
+  Verifierat 2026-05-26 mot origin/jakob-be: både BUSINESS_FAMILIES[restaurant]
+  och WIZARD_CATEGORIES[restaurant] pekar mot restaurant-hospitality med
+  defaultVariantId warm-bistro.
 ```
