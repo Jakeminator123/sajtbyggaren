@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
@@ -15,12 +15,8 @@ import {
 } from "../wizard-constants";
 import type { WizardAnswers } from "../wizard-types";
 import {
-  AdvancedDisclosure,
-  Chip,
-  ChipRow,
   FieldLabel,
   FieldStack,
-  HelperText,
   MetadataPanel,
   SectionHeader,
   TextField,
@@ -63,7 +59,6 @@ export function FoundationStep({
   answers,
   onChange,
   options,
-  source,
   onScrapeStateChange,
 }: {
   answers: WizardAnswers;
@@ -72,6 +67,11 @@ export function FoundationStep({
   source: "governance" | "fallback";
   onScrapeStateChange?: (state: ScrapeState) => void;
 }) {
+  // Sub-specialisering togs bort 2026-05-26 efter operator-feedback
+  // "Varför specialisering?". Vi behåller `options`-prop:en för API-
+  // kompabilitet med discovery-wizard.tsx men referensen är void:ad
+  // så TypeScript inte klagar på unused.
+  void options;
   const [scrapeStatus, setScrapeStatus] = useState<ScrapeStatus>("idle");
   const [scrapeMessage, setScrapeMessage] = useState<string>("");
 
@@ -142,29 +142,6 @@ export function FoundationStep({
   ]);
 
   const selectedFamily = answers.businessFamily;
-  const family = BUSINESS_FAMILIES.find((f) => f.id === selectedFamily);
-
-  // Sub-kategori-chips visar bara de som tillhör vald family.
-  // Om ingen family är vald visas inga chips (operatören väljer family först).
-  const subCategoryOptions = useMemo(() => {
-    if (!family) return [];
-    return options.filter((opt) =>
-      (family.subCategories as readonly WizardCategoryId[]).includes(opt.id),
-    );
-  }, [family, options]);
-
-  const toggleSubCategory = useCallback(
-    (id: WizardCategoryId) => {
-      const set = new Set(answers.siteType);
-      if (set.has(id)) {
-        set.delete(id);
-      } else {
-        set.add(id);
-      }
-      onChange({ siteType: Array.from(set) });
-    },
-    [answers.siteType, onChange],
-  );
 
   const selectFamily = useCallback(
     (familyId: BusinessFamilyId) => {
@@ -180,15 +157,6 @@ export function FoundationStep({
     },
     [answers.siteType, onChange],
   );
-
-  // Räkna ifyllda advanced-fält så disclosure-badge visar "(N ifyllda)"
-  // när operatören redan har stoppat in värden. URL-skrape räknas inte
-  // här eftersom den ligger ovanför disclosure. Räknar specialisering
-  // som 1 och kontakt som antal ifyllda kontaktfält.
-  // Kontakt-f\u00e4lten flyttade till "Mer information"-popupen p\u00e5 tab 3
-  // (functions) i GAP-viewser-wizard-minimal-tabs. Bara sub-kategorin
-  // r\u00e4knas h\u00e4r nu \u2014 count==1, activeCount<=1.
-  const advancedFilled = answers.siteType.length > 0 ? 1 : 0;
 
   return (
     <FieldStack>
@@ -321,47 +289,10 @@ export function FoundationStep({
         </MetadataPanel>
       ) : null}
 
-      {/* ADVANCED — bara specialisering kvar. Kontaktuppgifter flyttades
-          till "Mer information"-popupen p\u00e5 tab 3 (functions) i wizard-
-          total-minimalism-passet (GAP-viewser-wizard-minimal-tabs).
-          URL-skrape ligger ovanf\u00f6r FieldStack (alltid synlig). */}
-      <AdvancedDisclosure
-        id="foundation-advanced"
-        label="Specialisering"
-        hint="Sub-kategori f\u00f6r b\u00e4ttre copy/SEO."
-        count={1}
-        activeCount={advancedFilled}
-      >
-        {/* Sub-specialisering — filtrerade chips för vald family.
-            Minimalism v2: helper-text bakom info-ikon. Fallback-noteringen
-            visas inline bara när vi är i fallback-läge (operatören behöver
-            veta att vi inte använder governance-listan). */}
-        {selectedFamily && subCategoryOptions.length > 0 ? (
-          <div>
-            <SectionHeader help="En eller flera sub-kategorier för bättre copy och SEO.">
-              Specialisering
-            </SectionHeader>
-            {source === "fallback" ? (
-              <HelperText>
-                Visar lokal UI-cache tills governance-listan laddats.
-              </HelperText>
-            ) : null}
-            <div className="mt-2">
-              <ChipRow>
-                {subCategoryOptions.map((category) => (
-                  <Chip
-                    key={category.id}
-                    label={category.label}
-                    selected={answers.siteType.includes(category.id)}
-                    onToggle={() => toggleSubCategory(category.id)}
-                  />
-                ))}
-              </ChipRow>
-            </div>
-          </div>
-        ) : null}
-
-      </AdvancedDisclosure>
+      {/* Specialisering-disclosure togs bort 2026-05-26 efter operator-
+          feedback "Varför specialisering? Ta bort?". businessFamily ger
+          backend tillräckligt scaffold-signal; sub-kategori kan alltid
+          autosättas baserat på offer/scrape utan operator-input. */}
     </FieldStack>
   );
 }

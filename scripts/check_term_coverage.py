@@ -904,6 +904,11 @@ COMMON_WORDS = {
     # i GAP-viewser-wizard-minimal-tabs). Same viewser-implementation
     # category as MoreInfoDialog above.
     "ContactBlock", "MediaExtrasBlock", "AdvancedBlock", "MediaCard",
+    # AboutBlock + FileRow — interna komponenter i MoreInfoDialog efter
+    # popup-revision v2 (GAP-viewser-wizard-popup-tabs-v2). AboutBlock
+    # håller story-fält (om-oss/historia/vision/målgrupp), FileRow visar
+    # uppladdad fil-rad. Båda är React-symboler, inga domänbegrepp.
+    "AboutBlock", "FileRow",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
