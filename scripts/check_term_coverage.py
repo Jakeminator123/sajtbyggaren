@@ -909,6 +909,12 @@ COMMON_WORDS = {
     # håller story-fält (om-oss/historia/vision/målgrupp), FileRow visar
     # uppladdad fil-rad. Båda är React-symboler, inga domänbegrepp.
     "AboutBlock", "FileRow",
+    # PageCard — intern komponent i functions-step efter "sidor först"-
+    # revisionen (GAP-viewser-wizard-pages-picker). Renderar ett klickbart
+    # sidkort. Lucide-ikoner (CalendarCheck, HelpCircle, UtensilsCrossed)
+    # och Lucide-typen LucideIcon är externa React-symboler.
+    "PageCard", "CalendarCheck", "HelpCircle", "UtensilsCrossed",
+    "LucideIcon",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
