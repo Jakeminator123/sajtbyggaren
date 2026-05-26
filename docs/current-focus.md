@@ -30,7 +30,17 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `15efae0` (2026-05-26 sen kväll, christopher-ui
+Last verified state: `7b6fb6c` (2026-05-27 natt, christopher-ui local — B122
+stängd. `/api/prompt` exponerar nu NDJSON-stream på `Accept: application/
+x-ndjson` med två events: `{stage:"building"}` exakt mellan Phase 1 och
+Phase 2, samt `{stage:"done", ...result}` som slutevent. PromptBuilder
+läser body-strömmen via `response.body.getReader()` och flippar stage på
+riktig signal istället för den gamla `setTimeout(1500)`-gissningen som
+gav falsk "Bygger sajt" vid snabba svar och falskt "thinking" vid hängda
+prompter. `floating-chat.tsx`/`use-followup-build.ts` skickar inte
+Accept-headern → fortfarande synkron JSON, ingen regression. Två nya
+regressionstester. Term-coverage utökad med TextEncoder/TextDecoder.
+Tidigare verified state: `15efae0` (2026-05-26 sen kväll, christopher-ui
 local — scout-pass över hela toolbar/wizard-batchen sedan PR #117 mergades.
 Tre P1-regressioner åtgärdade i ett sammanhängande pass:
 A) DevicePresetProvider hydration race — persist-effekten skrev "full"
