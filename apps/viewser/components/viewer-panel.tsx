@@ -206,9 +206,13 @@ const IS_STACKBLITZ_MODE = VIEWSER_PREVIEW_MODE === "stackblitz";
 // hårdkodat "Förbereder StackBlitz-iframen." även i local-next-mode
 // där flödet faktiskt startar en lokal ``next start``-server. Liten
 // drift men ger fel mental modell. Reviewer-fynd post-PR #101.
+//
+// Texten är kundvänlig — inga tekniska termer (preview-server,
+// next start, StackBlitz, iframe) eftersom slutkunden inte ska
+// behöva förstå pipelinen för att vänta i lugn och ro.
 const PREVIEW_PREP_HINT = IS_LOCAL_NEXT_MODE
-  ? "Startar lokal preview-server (next start) på en ledig port 4100–4199."
-  : "Förbereder StackBlitz-iframen.";
+  ? "Snart kan du klicka runt på er sajt."
+  : "Laddar förhandsvisningen i webbläsaren.";
 
 function formatViewerError(caught: unknown): string {
   if (caught instanceof Error) {
@@ -833,8 +837,8 @@ export function ViewerPanel({
               <span className="text-foreground/60">så bygger vi den.</span>
             </h1>
             <p className="text-foreground/75 max-w-md text-[13.5px] leading-relaxed text-balance sm:text-[14px] md:text-[15px]">
-              Skriv vad sajten ska göra. Vi genererar Project Input, kör Quality
-              Gate och paketerar en preview du kan inspektera direkt här.
+              Berätta kort vad sajten ska göra. Vi planerar, bygger och visar
+              en förhandsvisning du kan klicka runt i direkt här.
             </p>
           </div>
         </div>
@@ -1042,12 +1046,14 @@ export function ViewerPanel({
 
 /**
  * Central laddningskort som visas i mitten av canvasen under hela
- * /api/prompt-cykeln. Stegmarkören visar var vi är i pipelinen:
+ * /api/prompt-cykeln. Stegmarkören visar var vi är i pipelinen.
  *
- *   1. Förbereder brief
- *   2. Genererar Project Input
- *   3. Bygger sajt
- *   4. Startar preview
+ * Texterna är medvetet kundvänliga — slutoperatorn är inte tekniker
+ * och behöver inte se "briefModel", "Project Input", "npm install",
+ * "Next.js-sandbox" eller liknande. Vi beskriver vad SOM HÄNDER, inte
+ * VILKEN modul som kör. Den tekniska pipelinen lever kvar i kod-
+ * kommentarer och `current-focus.md` för utvecklare som behöver
+ * felsöka.
  *
  * Mappas från PromptStage så vi kan visa rätt aktivt steg medan
  * `executeBuild()` jobbar.
@@ -1059,22 +1065,22 @@ const BUILD_STEPS: ReadonlyArray<{
 }> = [
   {
     id: "prepare",
-    title: "Förbereder brief",
-    hint: "Vi paketerar dina svar till en master-prompt.",
+    title: "Läser dina svar",
+    hint: "Vi går igenom det du har fyllt i i wizarden.",
   },
   {
     id: "generate",
-    title: "Genererar Project Input",
-    hint: "briefModel extraherar mål, ton och kapabiliteter.",
+    title: "Planerar sajten",
+    hint: "Vi väljer rätt struktur, ton och funktioner för er verksamhet.",
   },
   {
     id: "build",
-    title: "Bygger sajt",
-    hint: "npm install + Next.js-bygge i en ren sandbox. Första bygget tar 1–3 minuter eftersom node_modules behöver installeras från noll.",
+    title: "Bygger sajten",
+    hint: "Vi monterar alla sidor och bilder. Första bygget tar 1–3 minuter, sedan går det snabbare.",
   },
   {
     id: "preview",
-    title: "Startar preview",
+    title: "Öppnar förhandsvisning",
     hint: PREVIEW_PREP_HINT,
   },
 ];
