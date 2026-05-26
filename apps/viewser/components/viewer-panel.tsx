@@ -884,7 +884,7 @@ export function ViewerPanel({
             <div className="mb-5 flex items-center gap-3">
               <span className="bg-muted/60 inline-flex h-10 w-10 items-center justify-center rounded-xl p-1.5">
                 <Image
-                  src="/LOGO_SM2.0.png"
+                  src="/sajtbyggaren_logo.png"
                   alt="Sajtmaskin"
                   width={28}
                   height={28}
@@ -1122,7 +1122,7 @@ function BuildProgressCard({ stage }: { stage: PromptStage }) {
       <div className="mb-6 flex items-center gap-3">
         <span className="bg-muted/60 inline-flex h-10 w-10 items-center justify-center rounded-xl p-1.5">
           <Image
-            src="/LOGO_SM2.0.png"
+            src="/sajtbyggaren_logo.png"
             alt="Sajtmaskin"
             width={28}
             height={28}

@@ -321,7 +321,7 @@ export function DiscoveryWizard({
         <DialogHeader className="space-y-0 px-5 pt-5 pb-3 text-left sm:px-8 sm:pt-6 sm:pb-3">
           <div className="flex items-center gap-2.5">
             <Image
-              src="/LOGO_SM2.0.png"
+              src="/sajtbyggaren_logo.png"
               alt="Sajtmaskin"
               width={22}
               height={22}

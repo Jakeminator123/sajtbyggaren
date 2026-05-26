@@ -48,7 +48,7 @@ export function SiteHeader({ onOpenConsole, hideBrand = false }: SiteHeaderProps
 function Brandmark() {
   return (
     <Image
-      src="/LOGO_SM2.0.png"
+      src="/sajtbyggaren_logo.png"
       alt="Sajtmaskin 2.0"
       width={24}
       height={24}
