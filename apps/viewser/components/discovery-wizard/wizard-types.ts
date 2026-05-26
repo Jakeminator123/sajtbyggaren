@@ -30,6 +30,15 @@ import type {
 } from "./wizard-constants";
 import type { AssetRef } from "@/lib/asset-store/types";
 
+/**
+ * 2026-05-26 — Total-minimalism-omg\u00e5ng (GAP-viewser-wizard-minimal-tabs).
+ *
+ * Wizarden reducerades fr\u00e5n 5 till 3 huvudsteg som visas som tabs \u00f6verst.
+ * `content` och `media` finns kvar som typer (popupen "Mer information"
+ * \u00e5teranv\u00e4nder samma f\u00e4lt) men ing\u00e5r INTE l\u00e4ngre i `WIZARD_STEP_ORDER`
+ * och har f\u00f6ljaktligen ingen sidebar/tab-knapp. Backend-payload \u00e4ndras
+ * INTE \u2014 alla f\u00e4lt skickas fortfarande via `buildDiscoveryPayload`.
+ */
 export type WizardStepId =
   | "foundation"
   | "visual"
@@ -41,29 +50,43 @@ export const WIZARD_STEP_ORDER: WizardStepId[] = [
   "foundation",
   "visual",
   "functions",
+];
+
+/**
+ * Lista \u00f6ver alla steg som n\u00e5gonsin har funnits \u2014 anv\u00e4nds av
+ * payload-byggaren och eventuella legacy-validators. ContentBranch +
+ * Media-f\u00e4lt n\u00e5s nu via popupen ist\u00e4llet.
+ */
+export const WIZARD_STEP_ORDER_LEGACY_ALL: WizardStepId[] = [
+  "foundation",
+  "visual",
+  "functions",
   "content",
   "media",
 ];
 
 export const WIZARD_STEP_TITLES: Record<WizardStepId, string> = {
-  foundation: "Företaget & sajttypen",
-  visual: "Visuell identitet",
-  functions: "Funktioner & sidor",
-  content: "Innehåll & ton",
+  foundation: "F\u00f6retaget",
+  visual: "Stil",
+  functions: "Funktioner",
+  // Visas inte som tab, men beh\u00e5lls f\u00f6r legacy-l\u00e4sare som mappar
+  // alla WizardStepId till en titel (t.ex. payload-debug).
+  content: "Inneh\u00e5ll",
   media: "Bilder & media",
 };
 
 /**
- * Pipeline-del som steget primärt styr — visas som badge i UI:t så
- * operatören förstår vad varje fråga "pratar med" på backend.
+ * Pipeline-del som steget prim\u00e4rt styr. Visas inte l\u00e4ngre i UI:t
+ * (total-minimalism-pass) men beh\u00e5lls f\u00f6r ev. debug-vy och s\u00e4nd
+ * den till payload-byggaren.
  */
-export type PipelinePart = "Sidor" | "Visuellt" | "Funktioner" | "Innehåll" | "Media";
+export type PipelinePart = "Sidor" | "Visuellt" | "Funktioner" | "Inneh\u00e5ll" | "Media";
 
 export const WIZARD_STEP_PIPELINE_BADGE: Record<WizardStepId, PipelinePart> = {
   foundation: "Sidor",
   visual: "Visuellt",
   functions: "Funktioner",
-  content: "Innehåll",
+  content: "Inneh\u00e5ll",
   media: "Media",
 };
 
@@ -324,22 +347,19 @@ export function validateWizardStep(
 ): string | null {
   switch (step) {
     case "foundation":
-      // Företagsnamn-min-längd-kollen togs bort på operatör-begäran (snabbare
-      // wizard-test utan tvingande företagsnamn). offer + businessFamily
-      // räcker som signal till pipeline att foundation-steget faktiskt är
-      // ifyllt.
-      if (answers.offer.trim().length < 3) return "Beskriv kort vad ni gör.";
-      if (!answers.businessFamily) return "Välj vilken typ av verksamhet det är.";
+      // Total-minimalism-pass (2026-05-26): bara offer + businessFamily \u00e4r
+      // hard-required. Operatorn kan skippa f\u00f6retagsnamn, kontakt och sub-
+      // kategori \u2014 dessa f\u00e4lt skrapas eller f\u00f6refyllas av Vision/defaults.
+      if (answers.offer.trim().length < 3) return "Beskriv kort vad ni g\u00f6r.";
+      if (!answers.businessFamily) return "V\u00e4lj vilken typ av verksamhet det \u00e4r.";
       return null;
     case "visual":
-      // Vibe + färger är valfria — vi har goda defaults via scaffold.
-      // Steget kan alltid hoppas över.
+      // Stil-tabben \u00e4r alltid skip-bar \u2014 scaffold har goda defaults.
       return null;
     case "functions":
-      // Minst en funktion eller sida bör vara vald så pipeline har något att jobba med.
-      if (answers.selectedFunctions.length === 0 && answers.mustHave.length === 0) {
-        return "Välj minst en funktion eller sida.";
-      }
+      // Total-minimalism: ingen hard-validation l\u00e4ngre. Recommended-funktioner
+      // f\u00f6refylls auto fr\u00e5n businessFamily i `functions-step.tsx`. Operatorn
+      // kan alltid g\u00e5 direkt till "Skapa sajt".
       return null;
     case "content":
       // Innehållssteget är alltid valfritt — utan tjänster/produkter

@@ -887,6 +887,19 @@ COMMON_WORDS = {
     # Same SaaS-name category as Bokadirekt / OpenStreetMap / TripAdvisor
     # above.
     "YouTube",
+    # Viewser-internal React component + context symbols introduced by the
+    # mobile-adaptation passes (2026-05-25/26). Same category as
+    # PromptStageIndicator / RunHistory / ApplyRunsContext above: viewser-
+    # implementation identifiers, not canonical domain terms.
+    "DevicePreset", "DevicePresetContext", "DevicePresetContextValue",
+    "DevicePresetProvider", "DevicePresetToggleBar",
+    # Wizard total-minimalism pass (2026-05-26,
+    # GAP-viewser-wizard-minimal-tabs). MoreInfoDialog is the new popup
+    # opened from tab 3 ("Funktioner") that exposes content + media fields
+    # behind tabs; MoreHorizontal is the lucide-react icon used on the
+    # trigger button. Same viewser-implementation category as the
+    # DevicePreset family directly above.
+    "MoreInfoDialog", "MoreInfoDialogProps", "MoreInfoTabId", "MoreHorizontal",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

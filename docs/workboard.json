@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-26T10:52:25Z",
+  "updatedAt": "2026-05-26T16:59:28Z",
   "updatedBy": "sprintvakt-mcp",
   "people": {
     "jakob": {
@@ -182,47 +182,53 @@
       "pairedWith": "GAP-backend-restaurant-activation"
     },
     {
-      "id": "GAP-viewser-mobile-hero-safe-zone",
+      "id": "GAP-viewser-wizard-minimal-tabs",
       "type": "Gap/UI",
       "owner": "christopher",
-      "title": "Scout pass 4 P1-fixar: hero safe zone, wizard asterisk, prompt-builder safe-area",
-      "whyNow": "Scout-bug-hunt pass 4 (composer-2.5-fast, read-only) paa christopher-ui-branchen hittade tre P1-fynd som maaste fixas innan PR #117 mergas: (1) Hero-text taecks av PromptBuilder paa iPhone SE 375x667 (video ~300px + text ~200px + composer ~150px laemnar ingen marginal). (2) Wizard Foeretagsnamn-asterisk visas men validation togs bort i 59eed4c WCAG 2.2-brott. (3) PromptBuilder saknar pb-safe knappar ligger naera iPhone home-indicator. Inga P0. P1 nummer 4 StackBlitz containerRef skippas eftersom default-mode local-next inte paaverkas.",
+      "title": "Wizard total-minimalism: 3-tabs överst + 'Mer information'-popup med scaffold-aware flikar",
+      "whyNow": "Operatör-feedback efter 5-stegs-konsolidering: wizard fortfarande för rörig. Vill ha total minimalism — färre frågor synliga, skrap-driven bakgrundsifyllning, popup för djupare info istället för tvingande steg. Backend-payload (validateWizardStep, buildDiscoveryPayload) ändras INTE — bara UI omgrupperar samma svar.",
       "paths": [
-        "apps/viewser/components/viewer-panel.tsx",
+        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
+        "apps/viewser/components/discovery-wizard/wizard-types.ts",
+        "apps/viewser/components/discovery-wizard/more-info-dialog.tsx",
         "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/company-step.tsx",
-        "apps/viewser/components/prompt-builder.tsx"
+        "apps/viewser/components/discovery-wizard/steps/visual-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/functions-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/media-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/content-orchestrator.tsx"
       ],
       "doNotTouch": [
-        "apps/viewser/components/discovery-wizard/wizard-types.ts",
-        "apps/viewser/app/globals.css",
+        "scripts/",
         "packages/generation/",
+        "schemas/",
+        "docs/governance/",
+        "tests/",
         "apps/viewser/app/api/",
-        "apps/viewser/lib/"
+        "apps/viewser/components/discovery-wizard/wizard-payload.ts"
       ],
       "acceptanceCriteria": [
-        "Mobil 375x667: hero-text scrollas och hamnar aldrig bakom PromptBuilder",
-        "viewer-panel mobil anvaender overflow-y-auto naer showHero=true",
-        "Hero-text container har pb-40 paa mobil saa composer-overlap aldrig sker vid normal text",
-        "Desktop md+ behaaller absolute-overlay-layout med overflow-hidden",
-        "Wizard foundation-step + company-step visar Foeretagsnamn utan asterisk (optional-prop visar 'valfritt' via FieldLabel)",
-        "PromptBuilder composer anvaender pb-safe-or-4 sm:pb-7 saa iPhone X+ home-indicator respekteras"
+        "WIZARD_STEP_ORDER reducerad från 5 till 3 (foundation, visual, functions)",
+        "Tabs visas högst upp istället för sidebar (desktop + mobile)",
+        "Inga proaktiva tips/varningar synliga som default - bara på fel eller info-ikon",
+        "'Mer information'-knapp på tab 3 öppnar popup med scaffold-aware flikar",
+        "Popup återanvänder content+media-fält och påverkar inte buildDiscoveryPayload-shape",
+        "Logo + mediamaterial uppladdning behålls på tab 3 (functions), favicon/ogImage/backgroundVideo flyttas till popup",
+        "GPT Vision auto-pick av hero från mediamaterial fungerar (Commit 3)",
+        "Manuell skip från valfri tab tillåts (inga hard-requirements utöver foundation min-validering)",
+        "Lint, typecheck, term-coverage --strict passerar"
       ],
       "checks": [
-        "sprintvakt_check",
-        "focus_check",
-        "viewser_typecheck",
-        "viewser_lint",
-        "term_coverage_strict",
-        "ruff_check"
+        "npm -w @sajtbyggaren/viewser run lint",
+        "npm -w @sajtbyggaren/viewser run typecheck",
+        "python scripts/check_term_coverage.py --strict"
       ],
       "collisionRisk": "green",
       "reviewer": "jakob",
       "status": "active",
-      "createdAt": "2026-05-26T10:52:20Z",
-      "updatedAt": "2026-05-26T10:52:25Z",
+      "createdAt": "2026-05-26T16:59:15Z",
+      "updatedAt": "2026-05-26T16:59:28Z",
       "notes": [],
-      "activatedAt": "2026-05-26T10:52:25Z"
+      "activatedAt": "2026-05-26T16:59:28Z"
     }
   ],
   "completedGaps": [
@@ -1143,6 +1149,55 @@
       "fixCommits": [
         "59eed4c"
       ]
+    },
+    {
+      "id": "GAP-viewser-mobile-hero-safe-zone",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Scout pass 4 P1-fixar: hero safe zone, wizard asterisk, prompt-builder safe-area",
+      "whyNow": "Scout-bug-hunt pass 4 (composer-2.5-fast, read-only) paa christopher-ui-branchen hittade tre P1-fynd som maaste fixas innan PR #117 mergas: (1) Hero-text taecks av PromptBuilder paa iPhone SE 375x667 (video ~300px + text ~200px + composer ~150px laemnar ingen marginal). (2) Wizard Foeretagsnamn-asterisk visas men validation togs bort i 59eed4c WCAG 2.2-brott. (3) PromptBuilder saknar pb-safe knappar ligger naera iPhone home-indicator. Inga P0. P1 nummer 4 StackBlitz containerRef skippas eftersom default-mode local-next inte paaverkas.",
+      "paths": [
+        "apps/viewser/components/viewer-panel.tsx",
+        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/company-step.tsx",
+        "apps/viewser/components/prompt-builder.tsx"
+      ],
+      "doNotTouch": [
+        "apps/viewser/components/discovery-wizard/wizard-types.ts",
+        "apps/viewser/app/globals.css",
+        "packages/generation/",
+        "apps/viewser/app/api/",
+        "apps/viewser/lib/"
+      ],
+      "acceptanceCriteria": [
+        "Mobil 375x667: hero-text scrollas och hamnar aldrig bakom PromptBuilder",
+        "viewer-panel mobil anvaender overflow-y-auto naer showHero=true",
+        "Hero-text container har pb-40 paa mobil saa composer-overlap aldrig sker vid normal text",
+        "Desktop md+ behaaller absolute-overlay-layout med overflow-hidden",
+        "Wizard foundation-step + company-step visar Foeretagsnamn utan asterisk (optional-prop visar 'valfritt' via FieldLabel)",
+        "PromptBuilder composer anvaender pb-safe-or-4 sm:pb-7 saa iPhone X+ home-indicator respekteras"
+      ],
+      "checks": [
+        "sprintvakt_check",
+        "focus_check",
+        "viewser_typecheck",
+        "viewser_lint",
+        "term_coverage_strict",
+        "ruff_check"
+      ],
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "createdAt": "2026-05-26T10:52:20Z",
+      "updatedAt": "2026-05-26T16:58:55Z",
+      "notes": [
+        "Klar och pushad i christopher-ui (P1-batch + senare polish).",
+        "Inkluderar: hero safe zone (pb-40 + overflow-y-auto), wizard asterisk-fix, prompt-builder safe-area, device-preset-context (delar state mellan FloatingChat + ViewerPanel), iframe-mounted-during-build (no white screen).",
+        "Stänger för att frigöra foundation-step.tsx till GAP-viewser-wizard-minimal-tabs."
+      ],
+      "activatedAt": "2026-05-26T10:52:25Z",
+      "completedAt": "2026-05-26T16:58:55Z",
+      "fixCommits": []
     }
   ],
   "decisions": [
