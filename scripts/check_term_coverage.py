@@ -302,6 +302,10 @@ COMMON_WORDS = {
     # helpers around read-only file scanning, not canonical domain terms.
     "DossierIntakeError", "DossierIntakeModelResolutionError",
     "DossierIntakeReviewModel", "IntakeScanCaps",
+    # PowerShell parameter names + Cursor IDE tool names that appear in
+    # operator docs and agent prompts under docs/agent-prompts/. Not
+    # domain terms — PS standard verb/noun parameters + IDE tool labels.
+    "FilePath", "ItemType", "StrReplace",
     # Generic React component names that appear in test fixtures, ADR
     # examples and docstring snippets. They are standard component-
     # cased identifiers (Header, Footer, Hero, About) used by the
@@ -729,7 +733,7 @@ COMMON_WORDS = {
     # docs/handoff.md som bug-sweep round 2-scope.
     "B99", "B100", "B101", "B102", "B103", "B104",
     # Viewser Overlay E2E Scout 2026-05-19
-    # (docs/reports/viewser-overlay-e2e-scout-2026-05-19.md): Scout-
+    # (docs/archive/2026-05-19/viewser-overlay-e2e-scout-2026-05-19.md): Scout-
     # rapportens prose innehåller case-specifika fält (företagsnamn,
     # produktnamn, service-labels), DiscoveryWizard-UI-strängar,
     # Build-status-texter, externa servicenamn och två proposed

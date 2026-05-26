@@ -1014,7 +1014,7 @@ def test_run_details_panel_renders_placeholder_contact_warning() -> None:
     of silently letting "+46 8 000 00 00" / "kontakt@example.se" /
     "Adress lämnas på förfrågan" reach the published site without any
     signal. Verified live in Viewser Overlay E2E Scout Case 3a
-    2026-05-19 (`docs/reports/viewser-overlay-e2e-scout-2026-05-19.md`).
+    2026-05-19 (`docs/archive/2026-05-19/viewser-overlay-e2e-scout-2026-05-19.md`).
     """
     panel_text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(
         encoding="utf-8"

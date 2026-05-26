@@ -36,7 +36,7 @@ Scout-orkestrator via "merga PR #X" eller "kör Cloud Agents auto-pilot").
 
 ### Vad är klart
 
-- **Viewser-overlay-E2E-Scout** rapport på `docs/reports/viewser-overlay-e2e-scout-2026-05-19.md`.
+- **Viewser-overlay-E2E-Scout** rapport på `docs/archive/2026-05-19/viewser-overlay-e2e-scout-2026-05-19.md` (flyttad 2026-05-26).
   - Case 1 (keramik): snitt 7.3/10. Verifierade B101 + B102 + B128 live.
   - Case 2 (frisörsalong): snitt 7.4/10. Verifierade B120 live + Page Intent-gap (Obs 3).
   - Case 3a (1753skincare utan scrape): snitt 6.6/10. Verifierade B95/B98 country-only-suppress + 4 nya fynd.
@@ -218,7 +218,7 @@ Skillnaden mellan 7 och 9 ligger i (subjektivt rangordnat):
 Föreslagen första-svar-prompt när nästa agent öppnar denna chat:
 
 ```text
-Tar över Scout-orkestrator-rollen. Läst `docs/scout-orchestrator-handoff-2026-05-19.md`.
+Tar över Scout-orkestrator-rollen. Läst `docs/archive/2026-05-19/scout-orchestrator-handoff-2026-05-19.md`.
 
 Status:
 - Main = <kör `git rev-parse origin/main` för aktuell SHA>
