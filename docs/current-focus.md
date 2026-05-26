@@ -30,24 +30,28 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `57a56c6` (2026-05-26 UTC, christopher-ui local — popup-
-revision v2 + unicode-bugfix landade i 2 commits 3843a80/57a56c6 efter
-operatör-feedback "Varför specialisering? Ta bort? Gör pop-up smalare med
-mindre spacing på sidorna. Hellre fler steg/flikar och mindre att fylla i
-på varje än att man måste skrolla. Anpassa även för mobile." och tre stora
-unicode-buggar (\u00e5/\u00e4/\u00f6) som visades i klartext i wizardens
-UI eftersom JSX text-content inte decodar JS unicode-escapes. Specialiserings-
-disclosure borttagen helt (businessFamily räcker som scaffold-signal —
-backend faller redan tillbaka via branchForFamily()). Popup max-w 720px
-(var 960), header-padding minskat, DialogDescription göms på mobil. 5 smala
-flikar: Om oss / Innehåll / Kontakt / Media / Avancerat — tab-bar med
-overflow-x-auto + snap-x snap-mandatory så 5 flikar får plats på 375px-
-skärmar. Backend-payload oändrad. Lint, typecheck och term-coverage --strict
-passerar. GAP-viewser-wizard-popup-tabs-v2 stängd. Föregående 1ab516c
-wizard-minimalism v1 finns kvar i historik.).
+Last verified state: `0296fad` (2026-05-26 kvällen, christopher-ui local —
+device-preset-toggle under FloatingChat centrerad utan gap efter operatör-
+feedback "Lägg dom olika formaten under floating chatt så att dom hänger
+ihop med chatten och inget mellanrum mellan. Samt centrera dom under chatt-
+fönstret och inte till vänster som nu." DevicePresetToggleBar i
+floating-chat.tsx ändrad: `left: position.x` → `left: position.x +
+PANEL_WIDTH/2` + ny `transform: translateX(-50%)` centrerar pillen exakt
+under panelens mittpunkt; `top: position.y + PANEL_HEIGHT + 8` → `top:
+position.y + PANEL_HEIGHT` tar bort 8px-gappet så toggle-baren hänger
+kant-i-kant med chat-panelen. Ingen påverkan på state, drag-logik eller
+mobil-rendering. Lint + typecheck + term-coverage --strict passerar.).
 
 Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
 
+- `0296fad` style(viewser): centrera device-toggle under chatt utan gap.
+  DevicePresetToggleBar i FloatingChat: `left: position.x + PANEL_WIDTH/2`
+  + `transform: translateX(-50%)` centrerar; `top: position.y + PANEL_HEIGHT`
+  (utan +8) gör att toggle-baren hänger ihop kant-i-kant med chat-rutan.
+- `362a24c` refactor(viewser): ta bort "Foundation-beslut"-panelen från
+  Stil-tabben (visual-step). MetadataPanel + selectedVibe useMemo + ContextChips
+  helpers raderade — operatorn behöver inte se "Family → scaffold → default-
+  vibe"-meta.
 - `57a56c6` refactor(viewser): wizard popup-revision — 5 smala flikar, ta bort
   Specialisering. Foundation-step: Specialiserings-disclosure med sub-kategori-
   chips raderad helt. MoreInfoDialog: max-w 720px (var 960), 4 flikar → 5 flikar
