@@ -207,6 +207,7 @@ _DEFAULT_VARIANT_ID = "nordic-trust"
 _DEFAULT_STARTER_ID = "marketing-base"
 _VALID_LAYOUT_HINTS = {"gradient", "centered", "split"}
 _MAX_UNIQUE_SELLING_POINTS = 4
+_MAX_NOTES_FOR_PLANNER_CHARS = 1024
 _MEDIA_DIRECTIVE_ROLES = ("favicon", "ogImage", "backgroundVideo")
 
 # Rot för scaffold-paket på disk. Varje scaffold har en ``variants/``-
@@ -1253,6 +1254,27 @@ def _apply_directives_fields(
         if usps:
             project_input["uniqueSellingPoints"] = usps
             field_sources["uniqueSellingPoints"] = "wizard"
+
+    # Gap 5: ``directives.notesForPlanner`` är operatörens fritext-orientering
+    # (concat av ``answers.specialRequests`` + USP-listan, byggd i
+    # ``apps/viewser/components/discovery-wizard/wizard-payload.ts:496-514``).
+    # Resolvern persisterar fältet utan att tolka det; ``build_site.py``
+    # prepend:ar det på SiteBrief ``notesForPlanner`` med prefix
+    # ``"Operator: "`` så ``planningModel`` ser operator-intent först.
+    # Cappa vid ``_MAX_NOTES_FOR_PLANNER_CHARS`` (1024) så vi inte
+    # blåser upp planner-prompten med fritext utan gräns.
+    raw_notes = directives.get("notesForPlanner")
+    if isinstance(raw_notes, str):
+        clean_notes = raw_notes.strip()
+        if clean_notes:
+            if len(clean_notes) > _MAX_NOTES_FOR_PLANNER_CHARS:
+                clean_notes = clean_notes[:_MAX_NOTES_FOR_PLANNER_CHARS]
+            existing_directives = project_input.get("directives")
+            if isinstance(existing_directives, dict):
+                existing_directives["notesForPlanner"] = clean_notes
+            else:
+                project_input["directives"] = {"notesForPlanner": clean_notes}
+            field_sources["directives.notesForPlanner"] = "wizard"
 
     # Media: per-roll-tombstone-semantik. När wizarden skickar
     # ``directives.media.<role> = None`` betyder det att operatören

@@ -389,6 +389,75 @@ def test_build_renders_directive_hero_layout_and_usps(
 
 
 @pytest.mark.tooling
+def test_build_site_brief_merges_operator_directive_note(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Gap 5: ``directives.notesForPlanner`` prepend:as på briefens
+    ``notesForPlanner`` med prefix ``"Operator: "`` så ``planningModel``
+    ser operator-intent först. Mock-pathen (no-key) ger en
+    placeholder-orientering som vi förväntar oss kvar efter operator-
+    blocket separerad av blank rad.
+    """
+    from scripts.build_site import build
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    project_input = json.loads(
+        (REPO_ROOT / "examples" / "painter-palma.project-input.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    project_input["siteId"] = "directive-notes-site"
+    project_input["directives"] = {
+        "notesForPlanner": "visa Instagram-feed på startsidan",
+    }
+    project_input_path = tmp_path / "directive-notes-site.project-input.json"
+    project_input_path.write_text(
+        json.dumps(project_input, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    _target, run_dir = build(
+        project_input_path,
+        do_build=False,
+        runs_dir=tmp_path / "runs",
+        generated_dir=tmp_path / "generated",
+    )
+
+    brief = json.loads((run_dir / "site-brief.json").read_text(encoding="utf-8"))
+    notes = brief["notesForPlanner"]
+    assert notes.startswith("Operator: visa Instagram-feed på startsidan")
+    assert "Mock brief" in notes, "Mock-orienteringen ska vara kvar efter operator-blocket"
+    assert "\n\n" in notes, "Operator-noten ska separeras från briefens egen orientering med blank rad"
+
+
+@pytest.mark.tooling
+def test_build_site_brief_skips_directive_note_when_empty(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Gap 5 negativ: utan ``directives.notesForPlanner`` ska briefens
+    egen ``notesForPlanner`` lämnas orörd (mock-orienteringen)."""
+    from scripts.build_site import build
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    project_input_path = (
+        REPO_ROOT / "examples" / "painter-palma.project-input.json"
+    )
+    _target, run_dir = build(
+        project_input_path,
+        do_build=False,
+        runs_dir=tmp_path / "runs",
+        generated_dir=tmp_path / "generated",
+    )
+
+    brief = json.loads((run_dir / "site-brief.json").read_text(encoding="utf-8"))
+    notes = brief["notesForPlanner"]
+    assert not notes.startswith("Operator: ")
+    assert "Mock brief" in notes
+
+
+@pytest.mark.tooling
 def test_build_renders_media_metadata_and_background_video(
     tmp_path: Path,
     monkeypatch,

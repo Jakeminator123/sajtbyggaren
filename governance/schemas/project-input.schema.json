@@ -169,6 +169,11 @@
               "description": "service-list — render_section_service_list (LSB). card-grid = section default; alternating-rows mappas mot warm-craft; icon-strip mappas mot clinical-calm; tabular mappas mot nordic-trust."
             }
           }
+        },
+        "notesForPlanner": {
+          "type": "string",
+          "maxLength": 1024,
+          "description": "Operatörens fritext-orientering till planningModel (Gap 5). Concat av answers.specialRequests + uniqueSellingPoints från wizardens steg 3, byggd av composeMasterPrompt i apps/viewser/components/discovery-wizard/wizard-payload.ts:496-514. Resolvern persisterar fältet utan att tolka det; build_site.py:build_site_brief prepend:ar det på SiteBrief.notesForPlanner med prefix 'Operator: ' så planner ser operator-intent först. Cappa vid 1024 tecken — räcker för 2-3 stycken fri text utan att svälla planner-prompten."
         }
       }
     },

@@ -2659,6 +2659,38 @@ def _npm_step_result(name: str, ok: bool, seconds: float, log_excerpt: str) -> d
 # ---------------------------------------------------------------------------
 
 
+_OPERATOR_DIRECTIVE_NOTE_PREFIX = "Operator: "
+
+
+def _apply_operator_directive_note(brief: dict, dossier: dict) -> None:
+    """Gap 5: Prepend wizardens ``directives.notesForPlanner`` på SiteBrief.
+
+    Operatörens fritext-orientering kommer från
+    ``apps/viewser/components/discovery-wizard/wizard-payload.ts:496-514``
+    (concat:erar ``answers.specialRequests`` + USP-listan). Resolvern har
+    persisterat den till ``project_input.directives.notesForPlanner`` (cap
+    1024 chars). Här prepend:ar vi den med prefix ``"Operator: "`` framför
+    briefens egen ``notesForPlanner`` så ``planningModel`` ser
+    operator-intent först. Tom/saknad directive = no-op (briefens fält
+    rörs inte).
+    """
+    directives = dossier.get("directives")
+    if not isinstance(directives, dict):
+        return
+    raw_note = directives.get("notesForPlanner")
+    if not isinstance(raw_note, str):
+        return
+    note = raw_note.strip()
+    if not note:
+        return
+    existing = brief.get("notesForPlanner")
+    operator_block = f"{_OPERATOR_DIRECTIVE_NOTE_PREFIX}{note}"
+    if isinstance(existing, str) and existing.strip():
+        brief["notesForPlanner"] = f"{operator_block}\n\n{existing}"
+    else:
+        brief["notesForPlanner"] = operator_block
+
+
 def build_site_brief_mock(run_id: str, dossier: dict, scaffold: dict) -> dict:
     """Mock Site Brief derived from the dossier (no LLM).
 
@@ -2690,7 +2722,7 @@ def build_site_brief_mock(run_id: str, dossier: dict, scaffold: dict) -> dict:
         location.get("country"),
     ]
     location_hint = ", ".join(p for p in location_parts if p) or None
-    return {
+    brief = {
         "runId": run_id,
         "language": dossier["language"],
         "rawPrompt": project_input_to_brief_prompt(dossier),
@@ -2714,6 +2746,8 @@ def build_site_brief_mock(run_id: str, dossier: dict, scaffold: dict) -> dict:
         "createdAt": utc_now().isoformat(timespec="seconds"),
         "scaffoldHint": scaffold["id"],
     }
+    _apply_operator_directive_note(brief, dossier)
+    return brief
 
 
 def resolve_brief_model() -> str:
@@ -2828,6 +2862,7 @@ def build_site_brief(run_id: str, dossier: dict, scaffold: dict) -> dict:
 
         brief = site_brief_to_artifact(result, run_id=run_id, model=model)
         brief["scaffoldHint"] = scaffold["id"]
+        _apply_operator_directive_note(brief, dossier)
         return brief
     except Exception as exc:  # noqa: BLE001
         error = f"{type(exc).__name__}: {exc}"
