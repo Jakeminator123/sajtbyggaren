@@ -415,6 +415,7 @@ _PLANNER_IMPERATIVE_PHRASES: tuple[str, ...] = (
 
 _SCAFFOLD_LOCAL_SERVICE = ("local-service-business", "nordic-trust")
 _SCAFFOLD_ECOMMERCE = ("ecommerce-lite", "clean-store")
+_SCAFFOLD_CLINIC = ("clinic-healthcare", "clinic-calm")
 
 FollowupIntent = Literal[
     "tone-shift",
@@ -667,6 +668,59 @@ _ECOMMERCE_TOKENS = frozenset(
     }
 )
 
+# Tokens that flip the default scaffold to clinic-healthcare. Same
+# minimalist principle as _ECOMMERCE_TOKENS — sharp medical terms only
+# (naprapat, kiropraktor, tandläkare, fysioterapi, etc); bare "klinik"
+# / "clinic" is intentionally NOT in the list because beauty-klinik /
+# hair-klinik / wellness-klinik are explicit negative signals in
+# packages/generation/orchestration/scaffolds/clinic-healthcare/selection-profile.json
+# (llmClassificationHints rad 31-32) and belong to local-service-business.
+# B137-precedent: Lane 3 Embeddings audit
+# (docs/reports/embedding-readiness-2026-05-25.md) identified naprapat-
+# stockholm as the single embeddings-gate blocker; pre-fix this path
+# routed every clinic prompt to local-service-business via the default
+# branch, scoring 5.83 (under PASS_CASE_THRESHOLD=6.5). Mirrors the
+# _CLINIC_SIGNALS list in packages/generation/planning/plan.py — both
+# the prompt-time pinning and the mock plan fallback need the same
+# coverage.
+_CLINIC_TOKENS = frozenset(
+    {
+        "naprapat",
+        "naprapath",
+        "naprapatklinik",
+        "kiropraktor",
+        "chiropractor",
+        "chiropractic",
+        # ``tandläkar`` (without the trailing -e) covers tandläkare /
+        # tandläkarmottagning / tandläkarpraktik / tandläkarklinik.
+        # ASCII fallback ``tandlakar`` covers stages that strip diacritics.
+        "tandläkar",
+        "tandlakar",
+        "tandvård",
+        "tandvard",
+        "dentist",
+        "dental",
+        "psykolog",
+        "psychologist",
+        "psykoterapi",
+        "psychotherapy",
+        "fysioterapi",
+        "fysioterapeut",
+        "physiotherapy",
+        "physiotherapist",
+        "sjukgymnast",
+        "ortoped",
+        "orthopedic",
+        "orthopaedic",
+        "audionom",
+        "podiatrist",
+        "optometrist",
+        "specialistklinik",
+        "veterinärklinik",
+        "veterinarklinik",
+    }
+)
+
 
 def _site_id_text_without_master_prompt_header(text: str) -> str:
     stripped = (text or "").strip()
@@ -722,10 +776,18 @@ def pick_scaffold(prompt: str, brief_business_type: str | None) -> tuple[str, st
     Returns (scaffoldId, variantId). Defaults to local-service-business
     /nordic-trust because every Site Brief field can be mapped onto it
     and the renderer always produces a 4-page site with services /
-    contact. Flips to ecommerce-lite only when the prompt or detected
-    business type clearly mentions a shop. The intent is to keep the
-    MVP loop honest: a wrong scaffold is editable in the generated
-    Project Input file before the operator re-builds.
+    contact. Flips to ecommerce-lite when the prompt or detected
+    business type clearly mentions a shop, or to clinic-healthcare when
+    sharp medical signals appear (naprapat, kiropraktor, tandläkare,
+    fysioterapi, etc) — see _CLINIC_TOKENS for the full list. The
+    intent is to keep the MVP loop honest: a wrong scaffold is editable
+    in the generated Project Input file before the operator re-builds.
+
+    Order: commerce > clinic > default. A "tandvårdsbutik som säljer
+    munhygienprodukter" routes to ecommerce-lite (commerce wins), not
+    clinic-healthcare. Real Scaffold Selector with embeddings retrieval
+    will replace this heuristic eventually; until then this pick covers
+    the four ``run_golden_path_eval.py`` baseline cases.
     """
     haystack = (prompt or "").lower()
     business = (brief_business_type or "").lower()
@@ -733,6 +795,10 @@ def pick_scaffold(prompt: str, brief_business_type: str | None) -> tuple[str, st
         return _SCAFFOLD_ECOMMERCE
     if "shop" in business or "store" in business or "ecommerce" in business:
         return _SCAFFOLD_ECOMMERCE
+    if any(token in haystack for token in _CLINIC_TOKENS):
+        return _SCAFFOLD_CLINIC
+    if any(token in business for token in _CLINIC_TOKENS):
+        return _SCAFFOLD_CLINIC
     return _SCAFFOLD_LOCAL_SERVICE
 
 

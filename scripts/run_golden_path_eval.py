@@ -91,7 +91,15 @@ BASELINE_CASES: tuple[Case, ...] = (
             "naprapat-clinic",
             "service-provider",
         ),
-        expected_routes=("/", "/behandlingar", "/team", "/kontakt"),
+        # ``/om-oss`` + ``/kontakta-oss`` är clinic-healthcare-scaffolds
+        # konventioner (samma för professional-services och agency-studio).
+        # Pre-fix listades aspirational ``/team`` + standard ``/kontakt``,
+        # vilket är route-namn för local-service-business — inte för Path B
+        # native dispatcher-scaffolds. Se
+        # packages/generation/orchestration/scaffolds/clinic-healthcare/routes.json
+        # för canonical-listan; tests/test_builder_route_emission.py B45+B101
+        # garanterar att CTA-länkar respekterar scaffolds contact_path.
+        expected_routes=("/", "/behandlingar", "/om-oss", "/kontakta-oss"),
         industry_terms=("naprapat", "behandling", "rådgivning", "smärta"),
         locality_terms=("stockholm",),
         ideal_note=(

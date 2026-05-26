@@ -161,13 +161,22 @@ _COMMERCE_SIGNALS = (
 # (under PASS_CASE_THRESHOLD=6.5) only because the mock fallback routed
 # it to local-service-business. Embeddings will eventually replace the
 # whole heuristic; until then this list stays the deterministic floor.
+#
+# Mirrors ``_CLINIC_TOKENS`` in scripts/prompt_to_project_input.py — both
+# the prompt-time pinning (pick_scaffold) and the mock plan fallback
+# (_pick_scaffold_from_brief) need the same coverage so a clinic prompt
+# routes consistently regardless of which path produced the Project Input.
 _CLINIC_SIGNALS = (
     "naprapat",
     "naprapath",
     "naprapatklinik",
     "kiropraktor",
     "chiropractor",
-    "tandläkare",
+    "chiropractic",
+    "tandläkar",
+    "tandlakar",
+    "tandvård",
+    "tandvard",
     "dentist",
     "dental",
     "psykolog",
@@ -187,6 +196,7 @@ _CLINIC_SIGNALS = (
     "optometrist",
     "specialistklinik",
     "veterinärklinik",
+    "veterinarklinik",
 )
 
 
