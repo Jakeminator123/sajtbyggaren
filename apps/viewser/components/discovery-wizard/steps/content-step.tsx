@@ -268,7 +268,10 @@ function ProductImageColumn({
           type="button"
           onClick={onRemove}
           aria-label="Ta bort produktbild"
-          className="absolute top-1 right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[10px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100"
+          // touch-visible utility: alltid synlig på touch-enheter (där
+          // group-hover aldrig triggar). h-7 w-7 ger tap-target på mobil
+          // utan att förstöra desktop-tätheten där knappen krymper till h-5.
+          className="touch-visible absolute top-1 right-1 inline-flex h-7 w-7 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-black/70 text-[10px] font-bold text-white transition-opacity active:scale-95"
         >
           ×
         </button>

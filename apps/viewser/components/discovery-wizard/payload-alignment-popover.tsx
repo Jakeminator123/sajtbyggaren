@@ -73,7 +73,11 @@ export function PayloadAlignmentPopover({
           role="dialog"
           aria-label="Backend-payload baserat på dina svar"
           className={cn(
-            "border-border/70 bg-popover text-popover-foreground absolute top-full z-30 mt-2 w-[340px] overflow-hidden rounded-xl border shadow-xl",
+            // Tidigare fast w-[340px] orsakade horisontell overflow på 375px-
+            // viewports inuti wizardens steg-padding. Nu: 340px på desktop,
+            // krympt till "så bred som popoverns container tillåter" på
+            // smala skärmar via max-w-[calc(100vw-2rem)].
+            "border-border/70 bg-popover text-popover-foreground absolute top-full z-30 mt-2 w-[min(340px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border shadow-xl",
             align === "right" ? "right-0" : "left-0",
           )}
         >
@@ -90,7 +94,7 @@ export function PayloadAlignmentPopover({
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Stäng"
-              className="text-muted-foreground hover:text-foreground rounded-md p-1 transition-colors"
+              className="text-muted-foreground hover:text-foreground rounded-md min-tap sm:min-tap-0 sm:p-1 flex items-center justify-center transition-colors active:scale-95"
             >
               <X className="h-3.5 w-3.5" />
             </button>

@@ -19,7 +19,7 @@ export function SiteHeader({ onOpenConsole, hideBrand = false }: SiteHeaderProps
   return (
     <div
       aria-hidden={false}
-      className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 px-4 pt-3 sm:px-6 sm:pt-4"
+      className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 px-4 pt-3 pt-safe sm:px-6 sm:pt-4"
     >
       {hideBrand ? (
         // Tom spacer så `justify-between` ändå skjuter konsol-knappen
@@ -37,7 +37,7 @@ export function SiteHeader({ onOpenConsole, hideBrand = false }: SiteHeaderProps
         type="button"
         onClick={onOpenConsole}
         aria-label="Öppna konsol och run-historik"
-        className="pointer-events-auto flex size-9 items-center justify-center rounded-full border border-border/60 bg-card/80 text-foreground/80 shadow-sm backdrop-blur-xl transition hover:bg-card hover:text-foreground"
+        className="pointer-events-auto flex min-tap sm:min-tap-0 sm:size-9 items-center justify-center rounded-full border border-border/60 bg-card/80 text-foreground/80 shadow-sm backdrop-blur-xl transition hover:bg-card hover:text-foreground active:bg-card active:scale-95"
       >
         <ConsoleIcon />
       </button>
