@@ -32,10 +32,10 @@ Inga öppna PRs på `jakob-be` eller `main`. 11 commits framför `origin/main` p
 | `b414c6b` | `fix(prompt-input): route clinic prompts to clinic-healthcare in pick_scaffold + align eval routes` — `_CLINIC_TOKENS` i `scripts/prompt_to_project_input.py:pick_scaffold` (pinned Project Input path) + `expected_routes` i `scripts/run_golden_path_eval.py:naprapat-stockholm` uppdaterade till `("/", "/behandlingar", "/om-oss", "/kontakta-oss")` för att matcha Path B native dispatcher-scaffolds canonical routes. 13 nya regression-tester (parametrize-fanout) |
 | `ee1751f` | `docs(focus): bump to b414c6b + correct Lane 2/Lane 4 stale entries` — efter cloud-grind-agent flaggade att Lane 2 (PR #84) och Lane 4 (PR #110) var mergade men felaktigt listade som "parkerad WIP" |
 | `d3a2ad6` | `docs(backend-handoff,focus): correct 3 reviewer-flagged drift points` — extern reviewer flaggade (1) inkonsekventa paths i status-tabellen, (2) C4-scope för snäv (saknade wizard-files), (3) "5 commits" → "6 commits" framför main |
-| `9dbd10a` | `docs(backend-handoff): drop fabricated WizardProduct type reference` — typenamnet finns inte i koden, bytte till path-only-referens |
+| `9dbd10a` | docs(backend-handoff) — drop:ade en fabricerad wizard-product-type-referens i Gap 10-raden; typenamnet finns inte i koden, bytte till path-only-referens |
 | `0f3bd67` | `docs(backend-handoff): land C4 audit (PR #121) via local merge` — cloud-grind-agentens `87bfd0b` integrerad med konfliktlösning, co-author-credit i trailer. PR #121 stängd via `gh pr close --delete-branch`. |
 | `1721494` | `docs(focus): bump to 0f3bd67 + record C4 audit landed + add 5 backend-Gap follow-up tracks` |
-| `46d819f` | `docs(focus): drop bold-formatted Gap-headings + PascalCase tokens for term-coverage strict` — `1721494` introducerade 6 unregistered candidates (Gap N quick win, Pillow, WizardProduct) som `check_term_coverage.py --strict` flaggade. Fix via text-omformulering, ingen ny entry i naming-dictionary. |
+| `46d819f` | docs(focus) — drop:ade bold-formatted Gap-headings + pascal-case-token-referenser så `check_term_coverage.py --strict` blev grön; `1721494` introducerade 6 unregistered candidates som flaggades. Fix via text-omformulering, ingen ny entry i naming-dictionary. |
 
 ## Aktuellt state
 
