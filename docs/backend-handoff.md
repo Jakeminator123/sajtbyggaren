@@ -4,28 +4,28 @@
 
 ## Implementationsstatus per gap (audit 2026-05-26)
 
-Originaldokumentet listar 11 gaps. Tre är verifierat stängda. Övriga
-behöver verifieras innan vidare arbete planeras.
+Originaldokumentet listar 11 gaps. C4-audit 2026-05-26 verifierar fem
+som stängda, fem som delvis implementerade och ett som öppet.
 
 | Gap | Status | Var |
 | --- | --- | --- |
 | 1. `vibe.useCustomColors` | Stängd (PR #63 / `f9312ec`) | `packages/generation/discovery/resolve.py:995-1009` + tester `tests/test_discovery_resolver.py:507-603` |
-| 2. `vibe.vibeId` variant-val | Behöver verifieras | `resolve.py:1204` refererar till `VIBE_OPTIONS.id` men full mapping ej granskad |
+| 2. `vibe.vibeId` variant-val | Stängd (PR #63 / `f9312ec`) | Frontend mappar `vibe.vibeId` → `directives.variantHint` i `apps/viewser/components/discovery-wizard/wizard-payload.ts:384-389`; resolver validerar global + scaffold-specifik variant-whitelist innan `project_input.variantId` sätts i `packages/generation/discovery/resolve.py:1208-1237`; regressioner i `tests/test_discovery_resolver.py:622-684` |
 | 3. `businessFamily` scaffold-hint | Stängd (PR #63 / `f9312ec`) | `resolve.py:1163-1190` (`Gap 3:` kommentar markerar tydligt) |
-| 4. `selectedFunctions[]` → `requested_capabilities[]` | Behöver verifieras | `brief/extract.py:121,305` har `requested_capabilities`-fältet men ej granskat om det fylls från wizard |
-| 5. `specialRequests` → `notes_for_planner` | Behöver verifieras | `brief/extract.py:167,313` har `notes_for_planner`-fältet men ej granskat om det fylls från wizard |
-| 6. Favicon → `.ico` | Sannolikt öppen | Inga sökträffar för favicon-build i `scripts/` eller `packages/generation/` |
-| 7. OG-image 1200×630-crop | Sannolikt öppen | Inga sökträffar för OG-image-build |
-| 8. Video-mimetype + render | Delvis (osäkert) | PR #117 (`59eed4c`) la till `SM-mobile.mp4` som hero-bg på viewser-startsidan, men `<video>`-rendering på genererad sajt ej granskad |
-| 9. `moodImages[]` isolering | Behöver verifieras | UI har `moodImages` men backend-path för `__mood/`-isolation ej granskad |
-| 10. `products[].productImage` | Behöver verifieras | UI har `productImage` men backend-kopiering till `public/products/` ej granskad |
+| 4. `selectedFunctions[]` → `requested_capabilities[]` | Delvis — frontend emits, backend directive-konsumtion saknas | Frontend mappar `selectedFunctions[]` → `directives.requestedCapabilities` i `apps/viewser/components/discovery-wizard/wizard-payload.ts:406-418`, men `packages/generation/discovery/resolve.py:1325-1362` läser bara `answers.mustHave`, taxonomy och befintlig Project Input; deterministisk merge av `directives.requestedCapabilities` behöver in i `_resolve_capabilities()` |
+| 5. `specialRequests` → `notes_for_planner` | Delvis — frontend emits, backend directive-konsumtion saknas | Frontend bygger `directives.notesForPlanner` i `apps/viewser/components/discovery-wizard/wizard-payload.ts:496-514` och Site Brief har fältet i `packages/generation/brief/extract.py:167-170,313`; men `scripts/prompt_to_project_input.py`/Discovery Resolver persisterar inte directive-värdet till Site Brief eller planner-input |
+| 6. Favicon → `.ico` | Delvis — metadata-render finns, `.ico`-konvertering saknas | Upload/schema/resolver accepterar `media.favicon` (`apps/viewser/app/api/upload-asset/route.ts:52-58`, `governance/schemas/project-input.schema.json:181-188`) och `packages/generation/build/renderers.py:313-331` renderar Next metadata `icons` mot `/uploads/<filename>`; build-pipeline saknar multi-size `public/favicon.ico`-konvertering |
+| 7. OG-image 1200×630-crop | Delvis — metadata-render finns, 1200×630-crop saknas | `media.ogImage` finns i Project Input-schema (`governance/schemas/project-input.schema.json:181-188`) och `packages/generation/build/renderers.py:336-367` skriver Open Graph/Twitter metadata mot `/uploads/<filename>` eller fallback-SVG; build-pipeline saknar center-crop/transkodning till `public/og-image.png` |
+| 8. Video-mimetype + render | Stängd (PR #62 / `7240fcd`, refactor PR #107 / `348ee05`) | `/api/upload-asset` tillåter bara MP4/WebM för `backgroundVideo` (`apps/viewser/app/api/upload-asset/route.ts:122-145`), asset-store bypassar sharp/vision för video (`apps/viewser/lib/asset-store/local.ts:72-106`), `copy_operator_uploads()` kopierar originalvideo (`scripts/build_site.py:966-973`) och hero renderar `<video autoPlay loop muted playsInline>` (`packages/generation/build/renderers.py:2141-2157`); regression i `tests/test_builder_smoke.py:397-454` |
+| 9. `moodImages[]` isolering | Delvis — prompt-sammanfattning finns, `__mood/`-isolering saknas | UI laddar mood-bilder via `AssetDropzone role="gallery"` i `apps/viewser/components/discovery-wizard/steps/visual-step.tsx:625-648` och `composeMasterPrompt()` sammanfattar dem i `apps/viewser/components/discovery-wizard/wizard-payload.ts:880-887`; ingen backend-path skriver dem till `data/uploads/<runId>/__mood/` eller mappar Vision-resultat till `notesForPlanner` |
+| 10. `products[].productImage` | Öppen — backend-kopiering + renderer-stöd saknas | Frontend-typen/UI:t har `productImage` (`apps/viewser/components/discovery-wizard/wizard-types.ts:70-79`, `apps/viewser/components/discovery-wizard/steps/content-step.tsx:193-196`), men payload/schema/build saknar mapping till Project Input, `copy_operator_uploads()` kopierar inte till `public/products/`, och produktgrid i `packages/generation/build/renderers.py` renderar fortfarande tjänste-/produktkort utan bild |
 | 11. Vercel Blob `sourceUrl` | Stängd (PR #66 + later refinements) | `scripts/build_site.py:794-1013` (disk-first + sourceUrl-fallback + allowlist till `public.blob.vercel-storage.com` + 8 MB cap) |
 
-**Slutsats:** Gap 1, 3 och 11 är klara. Övriga 8 behöver en ny audit som
-verifierar mot kod (denna audit gick på SHA `cc1a5aa`, post-jakob-be-reset
-till `1004122` + `vercel.json`-commit). Originaltexten nedan är bevarad
-för historisk kontext men tabellen ovan är auktoritativ när det gäller
-"klar/inte klar"-status.
+**Slutsats:** Gap 1, 2, 3, 8 och 11 är verifierat stängda. Gap 4, 5, 6,
+7 och 9 är delvis implementerade men saknar fortfarande deterministisk
+backend-konsumtion eller bildbehandling enligt acceptanskriterierna. Gap
+10 är öppet. Originaltexten nedan är bevarad för historisk kontext men
+tabellen ovan är auktoritativ när det gäller "klar/inte klar"-status.
 
 ---
 
