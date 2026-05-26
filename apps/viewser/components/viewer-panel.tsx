@@ -336,7 +336,18 @@ export function ViewerPanel({
       if (cancelled) return;
       if (typeof window === "undefined") return;
       const stored = window.sessionStorage.getItem(DEVICE_STORAGE_KEY);
-      if (stored === "mobile" || stored === "tablet" || stored === "laptop") {
+      // B153: "full" saknades tidigare i hydration-checken, vilket
+      // gjorde att en sparad full-preset inte restorerades explicit
+      // utan bara råkade matcha default-värdet. Det är inkonsekvent
+      // med övriga presets (alla restoreras explicit) och om default
+      // någonsin ändras kommer "full" att tappas. Inkluderar alla
+      // fyra giltiga device-preset-värden i listan.
+      if (
+        stored === "mobile" ||
+        stored === "tablet" ||
+        stored === "laptop" ||
+        stored === "full"
+      ) {
         setDevicePreset(stored);
       }
       deviceHydratedRef.current = true;

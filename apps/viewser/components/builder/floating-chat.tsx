@@ -341,11 +341,25 @@ function useIsMobileViewport(): boolean {
     if (typeof window === "undefined") return;
     const mq = window.matchMedia("(max-width: 767px)");
     setIsMobile(mq.matches);
-    // Parameter-typen infereras automatiskt av addEventListener-overload
-    // för media-query-listenern; ingen explicit annotation behövs.
     const update = (event: { matches: boolean }) => setIsMobile(event.matches);
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
+    // B151: iOS Safari < 14 (samt äldre Edge-/IE-baserade browsers) stödjer
+    // inte addEventListener-signaturen på matchMedia-resultatet — där måste
+    // vi falla tillbaka till den deprecated addListener-/removeListener-
+    // signaturen. Feature-detect istället för att anta nyare APIn så
+    // chatten inte kraschar ren-blank på äldre iOS-enheter i fält.
+    if (typeof mq.addEventListener === "function") {
+      mq.addEventListener("change", update);
+      return () => mq.removeEventListener("change", update);
+    }
+    // Inline struktur-typ för deprecated addListener/removeListener (lever
+    // bara här lokalt — undviker en namngiven PascalCase-typ som
+    // term-coverage strict skulle flagga som okänd domän-term).
+    const legacy = mq as unknown as {
+      addListener: (listener: (event: { matches: boolean }) => void) => void;
+      removeListener: (listener: (event: { matches: boolean }) => void) => void;
+    };
+    legacy.addListener(update);
+    return () => legacy.removeListener(update);
   }, []);
   return isMobile;
 }

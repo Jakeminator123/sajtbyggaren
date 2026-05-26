@@ -1719,3 +1719,125 @@ def test_viewser_scope_excludes_canonical_runtime_features() -> None:
                 f"{path.relative_to(REPO_ROOT)} innehåller out-of-scope-symbol "
                 f"'{needle}'. Viewser MVP är localhost-prototype, inte canonical runtime."
             )
+
+
+# ---------------------------------------------------------------------------
+# B151+B152+B153 — AI Bug Review-fynd från PR #117 (mobile responsive).
+# Source-lock-tester som verifierar fixarnas närvaro i TSX-filerna så de
+# inte kan tas bort i framtida UI-refactor utan att testerna failar.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_b151_floating_chat_useismobile_feature_detects_addeventlistener() -> None:
+    """B151: useIsMobileViewport måste feature-detect:a addEventListener på
+    matchMedia-resultatet. iOS Safari < 14 stödjer bara den deprecated
+    addListener-/removeListener-signaturen, så ovillkorlig
+    ``mq.addEventListener("change", ...)`` kraschar chatten på äldre
+    iOS-enheter. AI Bug Review (P 79 %, impact 8/10) flaggade detta på
+    PR #117.
+
+    Locks:
+      1. ``typeof mq.addEventListener === "function"``-checken finns.
+      2. Fallback-grenen anropar ``addListener`` / ``removeListener``
+         via en legacy-cast (TS-typen finns inte i lib.dom utan klassisk
+         matchMedia-typing).
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    pattern_feature_detect = re.compile(
+        r'typeof\s+mq\.addEventListener\s*===\s*["\']function["\']',
+        re.MULTILINE,
+    )
+    assert pattern_feature_detect.search(text), (
+        "floating-chat.tsx useIsMobileViewport saknar feature-detect mot "
+        "``typeof mq.addEventListener === 'function'``. Krävs för iOS "
+        "Safari < 14 fallback per B151."
+    )
+
+    pattern_legacy_fallback = re.compile(
+        r"\.addListener\(\s*update\s*\)[\s\S]{0,200}?\.removeListener\(\s*update\s*\)",
+        re.MULTILINE,
+    )
+    assert pattern_legacy_fallback.search(text), (
+        "floating-chat.tsx useIsMobileViewport saknar legacy "
+        "``addListener``/``removeListener``-fallback för iOS Safari < 14. "
+        "Båda måste finnas så cleanup-funktionen avregistrerar listenern."
+    )
+
+
+@pytest.mark.tooling
+def test_b152_compare_modal_pane_width_accounts_for_gap() -> None:
+    """B152: compare-preview-modal PreviewPane använder
+    ``w-[calc(100%-0.5rem)]`` istället för ``w-full`` så bredden
+    kompenserar för parent-flex-rowens ``gap-2`` (0.5rem). Med ``w-full``
+    + ``gap-2`` overflowade scrollern (200 % + 0.5rem) vilket lät pane-
+    A:s högra kant smyga in i viewporten när snappat till pane B.
+    AI Bug Review (P 88 %, impact 7/10) flaggade detta på PR #117.
+
+    Lock: PreviewPane <section>-elementets className ska INTE innehålla
+    ``flex min-h-0 w-full`` (gamla mönstret) utan ``w-[calc(100%-0.5rem)]``.
+    """
+    text = (
+        VIEWSER_DIR
+        / "components"
+        / "builder"
+        / "inspector"
+        / "compare-preview-modal.tsx"
+    ).read_text(encoding="utf-8")
+
+    pattern_fix = re.compile(
+        r'w-\[calc\(100%-0\.5rem\)\][\s\S]{0,200}?snap-start',
+        re.MULTILINE,
+    )
+    assert pattern_fix.search(text), (
+        "compare-preview-modal.tsx PreviewPane måste använda "
+        "``w-[calc(100%-0.5rem)]`` så pane-bredden + gap-2 = 100 % per "
+        "snap-segment. ``w-full`` + ``gap-2`` overflowar scrollern och "
+        "bryter one-pane-snap (B152)."
+    )
+
+    # Negative: säkerställ att gamla mönstret ``w-full shrink-0 snap-start``
+    # inte finns kvar (skulle vara regression).
+    pattern_regression = re.compile(
+        r'w-full\s+shrink-0\s+snap-start',
+        re.MULTILINE,
+    )
+    assert not pattern_regression.search(text), (
+        "compare-preview-modal.tsx har återgått till ``w-full shrink-0 "
+        "snap-start`` per pane (B152-regression). Måste vara "
+        "``w-[calc(100%-0.5rem)]`` för att kompensera för parent gap-2."
+    )
+
+
+@pytest.mark.tooling
+def test_b153_viewer_panel_hydrates_full_device_preset() -> None:
+    """B153: sessionStorage-hydration i viewer-panel.tsx måste inkludera
+    ``"full"`` bland accepterade Device-värden. Tidigare listades bara
+    ``"mobile"``/``"tablet"``/``"laptop"`` så en sparad ``"full"``-preset
+    relied på att default-värdet råkade vara ``"full"``. Inkonsekvent
+    med övriga preset-värden (alla restoreras explicit) och om default
+    någonsin ändras tappas ``"full"``. AI Bug Review (P 84 %, impact
+    5/10) flaggade detta på PR #117.
+
+    Lock: hydration-checken ska innehålla alla fyra Device-värden.
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    pattern = re.compile(
+        r'stored\s*===\s*["\']mobile["\'][\s\S]{0,200}?'
+        r'stored\s*===\s*["\']tablet["\'][\s\S]{0,200}?'
+        r'stored\s*===\s*["\']laptop["\'][\s\S]{0,200}?'
+        r'stored\s*===\s*["\']full["\']',
+        re.MULTILINE,
+    )
+    assert pattern.search(text), (
+        "viewer-panel.tsx sessionStorage-hydration saknar ``stored === "
+        "'full'`` i listan av accepterade Device-värden. Alla fyra "
+        "Device-värden måste restoreras explicit per B153 — annars "
+        "bryts persistensen för 'full' om default-värdet någonsin ändras."
+    )
