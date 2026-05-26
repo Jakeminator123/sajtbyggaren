@@ -1,6 +1,6 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-26 sen kväll UTC, steward-pass efter `cb07dbb` — cloud-grind prompt-pack + doc/workboard sanity. Verifierad `jakob-be` är `cb07dbb4bac94c48515e3822c533862cf8f790ff`.
+**Datum:** 2026-05-26 sen kväll UTC, steward-pass efter `88dedf0` — backend-handoff Gap 6+7 sync. Verifierad `jakob-be` är `88dedf03189188abdefb5f1967d1efea84133525`.
 
 Nya PRs sedan föregående checkpoint: PR #118 — sync(jakob-be -> main): PR #117 mobile
 responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report; PR #120
@@ -21,7 +21,7 @@ krävs en gång per venv enligt ADR 0029.
 
 1. **B147 vägval a/b/c** — operatörsbeslut. Vercel preview wizard 403 via `assertLocalhost` på `*.vercel.app`. Tre alternativ i `docs/known-issues.md`: (a) `VIEWSER_ALLOW_NON_LOCALHOST=true`, (b) host-whitelist via ny env, (c) ADR-beslut om Viewser-på-Vercel auth-strategi.
 2. **Backend-Gap fixar (post-C4-audit)** — efter Gap 4 + 5 samt Gap 6 + 7 är status 9 stängda / 1 delvis / 1 öppen. Nästa i prio: Gap 9 (~2h, S-M), sedan Gap 10 (~4-6h, M-L). Detaljer i `docs/current-focus.md`.
-3. **Sync-PR `jakob-be → main`** — `jakob-be` är nu 23 commits framför `origin/main`. Bra läge för en sync-PR (operatörens beslut). Kan kombineras med en av Gap-fixarna ovan.
+3. **Sync-PR `jakob-be → main`** — `jakob-be` är nu 26 commits framför `origin/main`. Bra läge för en sync-PR (operatörens beslut). Kan kombineras med en av Gap-fixarna ovan.
 
 **Parkerade lanes (väntar trigger):**
 

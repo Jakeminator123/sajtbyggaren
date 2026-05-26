@@ -30,10 +30,11 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `cb07dbb4bac94c48515e3822c533862cf8f790ff` (2026-05-26 late evening UTC, post cloud-grind prompt-pack + doc/workboard sanity).
+Last verified state: `88dedf03189188abdefb5f1967d1efea84133525` (2026-05-26 late evening UTC, post backend-handoff Gap 6+7 sync).
 
 Nya commits sedan föregående checkpoint (`0f3bd67`):
 
+- `88dedf0` docs(steward): sync backend handoff after gap 6 and 7 merge.
 - `cb07dbb` docs(steward): sync handoff/focus/workboard with actual code state 2026-05-26.
 - `ea6e141` feat(build): close Gap 6 + 7 — multi-size favicon.ico + 1200x630 og-image.png.
 - `c002aec` chore(deps): add pillow>=10.0 for build-pipeline image conversion.
@@ -65,7 +66,7 @@ Nya commits sedan föregående checkpoint (`0f3bd67`):
 ## Pågående/öppna PR:s just nu
 
 Inga öppna PRs på `jakob-be` eller `main`. `jakob-be` är resetad till
-`origin/main` 2026-05-26 PM (commit `1004122`) plus 23 commits ovanpå
+`origin/main` 2026-05-26 PM (commit `1004122`) plus 26 commits ovanpå
 (listan ovan). Nästa sync-PR till `main` är operatörens beslut — bra läge
 nu när Gap 4 + 5 och Gap 6 + 7 är inne. Gap 9 eller Gap 10 kan buntas in i
 samma sync om operatören vill vänta.
@@ -98,7 +99,7 @@ implementerat hela `GAP-backend-build-trace-endpoint` (3 endpoints + UI +
      `copy_operator_uploads()`-kopiering till `public/products/`, OCH
      renderer-stöd för produktbild i
      `packages/generation/build/renderers.py`-produktgrid. Egen sprint.
-3. **Sync-PR `jakob-be → main`** — `jakob-be` är 23 commits framför
+3. **Sync-PR `jakob-be → main`** — `jakob-be` är 26 commits framför
    `origin/main`. Bra läge nu eller efter en av Gap-fixarna ovan.
    Operatörens beslut.
 
