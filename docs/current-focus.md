@@ -30,16 +30,15 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `59eed4c` (2026-05-26 UTC, christopher-ui local — mobile
-hero-flow pushat. Operatör-feedback: "mobilversionen ser superb ut". Scout
-pass 4 (composer-2.5-fast, read-only) körd på de tre senaste commits hittade
-inga P0 men tre P1: (1) hero-text täcks av PromptBuilder på iPhone SE 375×667
-eftersom video~300px + text~200px + composer~150px > viewport-höjden,
-(2) Wizard "Företagsnamn *" visar obligatorisk-asterisk men validation togs
-bort i 59eed4c (WCAG 2.2-brott), (3) PromptBuilder saknar pb-safe så knappar
-ligger nära iPhone X+ home-indicator. P1 #4 (StackBlitz containerRef-höjd)
-parkeras eftersom default-mode local-next inte påverkas. Active GAP:
-GAP-viewser-mobile-hero-safe-zone.).
+Last verified state: `c5d1ba9` (2026-05-26 UTC, christopher-ui local — scout
+pass 4 P1-batch pushat. Tre P1-fynd från fjärde scout-bug-hunt fixade:
+(1) viewer-panel mobile hero safe zone (overflow-y-auto + pb-40 så hero-text
+aldrig täcks av PromptBuilder på iPhone SE 375×667), (2) wizard foundation+
+company "Företagsnamn *" → "Företagsnamn (valfritt)" via optional-prop
+(WCAG 2.2-fix), (3) prompt-builder composer pb-safe-or-4 sm:pb-7 (iPhone X+
+home-indicator respekteras). P1 #4 (StackBlitz containerRef) parkerad —
+default-mode local-next inte påverkad. Inga P0. Alla 4 ändrade filer UI-only,
+inga datakontrakt rörda. PR #117 redo för Jakob att granska.).
 
 Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
 
