@@ -1205,6 +1205,77 @@ def test_prompt_route_surfaces_build_status() -> None:
     )
 
 
+def test_ui_textarea_forwards_ref_explicitly() -> None:
+    """Lock the explicit `ref` forwarding in the shared Textarea wrapper.
+
+    FloatingChat (``apps/viewser/components/builder/floating-chat.tsx``)
+    auto-fokuserar composern när panelen expanderas från minimerat
+    läge via ``composerRef.current?.focus()``. Det fungerar bara om
+    Textarea-komponenten explicit destrukturerar ``ref`` ur props och
+    vidarebefordrar den till underliggande ``<textarea>``.
+
+    Tidigare läckte komponenten ref bara via ``{...props}``-spread,
+    vilket är en bräcklig React 19-detalj (ref behandlas som vanlig
+    prop sedan v19, men spread-vidarebefordran är inte garanterat
+    dokumenterad). Den här testen låser explicit destruktur + bindning
+    så en framtida refaktor inte tyst kan tappa ref:n och bryta
+    auto-focus utan att någon märker det förrän en operator klagar.
+    """
+    text = (VIEWSER_DIR / "components" / "ui" / "textarea.tsx").read_text(
+        encoding="utf-8"
+    )
+    # Destruktur av `ref` ur funktionssignaturen — det är detta som
+    # gör ref tillgänglig som en explicit referens istället för att
+    # gömmas i `...props`.
+    assert "ref,\n" in text or "ref," in text, (
+        "Textarea måste destrukturera `ref` ur sina props så ref-"
+        "vidarebefordran är explicit. Förlita dig inte på att "
+        "{...props}-spread implicit propsar ref."
+    )
+    # `ref={ref}` på <textarea>-elementet — den faktiska bindningen.
+    assert "ref={ref}" in text, (
+        "Textarea måste explicit binda `ref={ref}` på underliggande "
+        "<textarea>-element så DOM-noden exponeras för callers som "
+        "FloatingChat:s composerRef auto-focus."
+    )
+
+
+def test_floating_chat_composer_ref_used_for_expand_focus() -> None:
+    """Anti-regression för auto-focus-flödet i FloatingChat.
+
+    När operatören klickar på den minimerade FAB:en/sidotab:en ska
+    panelen expandera OCH focus flytta till composer-textarean i ett
+    enda steg, så användaren kan börja skriva direkt utan att Tab:a
+    sig in i fältet. Det här testet låser hela kedjan:
+      1. composerRef tilldelas Textarea via `ref={composerRef}`
+      2. expandAndFocus kallar `composerRef.current?.focus()`
+      3. Minimerade FAB-knappen och sidotab-knappen routar onClick
+         genom expandAndFocus (inte setIsMinimized(false) direkt).
+    Tappar någon av dessa bryts mobil-/desktop-fokuseringen tyst.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "composerRef" in text, (
+        "FloatingChat måste ha en composerRef för att kunna flytta "
+        "focus till textarean vid expand."
+    )
+    assert "ref={composerRef}" in text, (
+        "FloatingChat:s Textarea måste få `ref={composerRef}` så "
+        "expand-focus-flödet kan referera DOM-noden."
+    )
+    assert "composerRef.current?.focus()" in text, (
+        "expandAndFocus måste anropa composerRef.current?.focus() — "
+        "annars stannar tangentbords-focus på FAB-knappen efter "
+        "expand och operatören måste Tab:a sig in i textfältet."
+    )
+    assert "onClick={expandAndFocus}" in text, (
+        "Både mobil-FAB och desktop-sidotab måste routa sin onClick "
+        "genom expandAndFocus, inte setIsMinimized(false) direkt — "
+        "annars sker ingen focus-flytt vid återöppning."
+    )
+
+
 def test_prompt_route_emits_ndjson_stream_on_accept_header() -> None:
     """B122-fix 2026-05-27: /api/prompt måste exponera en NDJSON-stream
     när klienten signalerar `Accept: application/x-ndjson`, så PromptBuilder
