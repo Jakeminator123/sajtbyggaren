@@ -424,22 +424,44 @@ export function BuilderActions({
         </Dialog>
       ) : null}
 
+      {/* Verktyg-knappen.
+          - I "fixed"-variant: en fristående pill (h-10) med egen border
+            + shadow.
+          - I "inline"-variant: ren knapp utan border/shadow (h-8) som
+            matchar device-preset-knapparna i FloatingChat-toolbar-raden
+            så hela raden ser ut som EN sammanhängande pill. */}
       <button
         type="button"
         aria-label={isOpen ? "Stäng verktygsmeny" : "Öppna verktygsmeny"}
         aria-expanded={isOpen}
         onClick={() => setIsOpen((prev) => !prev)}
         className={cn(
-          "group border-border/60 bg-card/95 text-muted-foreground pointer-events-auto flex h-10 items-center gap-2 rounded-full border px-3 text-[11px] font-medium shadow-lg backdrop-blur-xl",
-          "hover:bg-card hover:text-foreground transition-colors",
+          "group pointer-events-auto inline-flex items-center font-medium transition active:scale-95",
           "focus-visible:ring-ring/50 focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+          isInline
+            ? cn(
+                "h-8 gap-1.5 rounded-full px-2.5 text-[11px]",
+                isOpen
+                  ? "bg-foreground text-background shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )
+            : cn(
+                "border-border/60 bg-card/95 text-muted-foreground h-10 gap-2 rounded-full border px-3 text-[11px] shadow-lg backdrop-blur-xl",
+                "hover:bg-card hover:text-foreground",
+              ),
         )}
       >
         <span className="relative flex h-2 w-2 items-center justify-center">
           <span
             className={cn(
               "absolute inline-flex h-full w-full rounded-full",
-              isOpen ? "bg-foreground/70" : "bg-muted-foreground/60",
+              isInline
+                ? isOpen
+                  ? "bg-background/70"
+                  : "bg-muted-foreground/60"
+                : isOpen
+                  ? "bg-foreground/70"
+                  : "bg-muted-foreground/60",
               pulsing && !isOpen && "motion-safe:animate-ping",
             )}
             aria-hidden
@@ -447,13 +469,19 @@ export function BuilderActions({
           <span
             className={cn(
               "relative inline-flex h-2 w-2 rounded-full",
-              isOpen ? "bg-foreground" : "bg-muted-foreground",
+              isInline
+                ? isOpen
+                  ? "bg-background"
+                  : "bg-muted-foreground"
+                : isOpen
+                  ? "bg-foreground"
+                  : "bg-muted-foreground",
             )}
             aria-hidden
           />
         </span>
         <span>Verktyg</span>
-        {isOpen ? <X className="h-3.5 w-3.5" aria-hidden /> : null}
+        {!isInline && isOpen ? <X className="h-3.5 w-3.5" aria-hidden /> : null}
       </button>
     </div>
   );
