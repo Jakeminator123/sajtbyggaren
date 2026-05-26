@@ -4,16 +4,18 @@
 
 ## Implementationsstatus per gap (audit 2026-05-26)
 
-Originaldokumentet listar 11 gaps. C4-audit 2026-05-26 verifierar fem
-som stängda, fem som delvis implementerade och ett som öppet.
+Originaldokumentet listar 11 gaps. C4-audit 2026-05-26 verifierade fem
+som stängda, fem som delvis implementerade och ett som öppet. Gap 4
+och Gap 5 stängdes på `jakob-be` 2026-05-26 kväll (commits `1b91ca6`
+och `b89a3d2`), så status är nu sju stängda, tre delvis och ett öppet.
 
 | Gap | Status | Var |
 | --- | --- | --- |
 | 1. `vibe.useCustomColors` | Stängd (PR #63 / `f9312ec`) | `packages/generation/discovery/resolve.py:995-1009` + tester `tests/test_discovery_resolver.py:507-603` |
 | 2. `vibe.vibeId` variant-val | Stängd (PR #63 / `f9312ec`) | Frontend mappar `vibe.vibeId` → `directives.variantHint` i `apps/viewser/components/discovery-wizard/wizard-payload.ts:384-389`; resolver validerar global + scaffold-specifik variant-whitelist innan `project_input.variantId` sätts i `packages/generation/discovery/resolve.py:1208-1237`; regressioner i `tests/test_discovery_resolver.py:622-684` |
 | 3. `businessFamily` scaffold-hint | Stängd (PR #63 / `f9312ec`) | `resolve.py:1163-1190` (`Gap 3:` kommentar markerar tydligt) |
-| 4. `selectedFunctions[]` → `requested_capabilities[]` | Delvis — frontend emits, backend directive-konsumtion saknas | Frontend mappar `selectedFunctions[]` → `directives.requestedCapabilities` i `apps/viewser/components/discovery-wizard/wizard-payload.ts:406-418`, men `packages/generation/discovery/resolve.py:1325-1362` läser bara `answers.mustHave`, taxonomy och befintlig Project Input; deterministisk merge av `directives.requestedCapabilities` behöver in i `_resolve_capabilities()` |
-| 5. `specialRequests` → `notes_for_planner` | Delvis — frontend emits, backend directive-konsumtion saknas | Frontend bygger `directives.notesForPlanner` i `apps/viewser/components/discovery-wizard/wizard-payload.ts:496-514` och Site Brief har fältet i `packages/generation/brief/extract.py:167-170,313`; men `scripts/prompt_to_project_input.py`/Discovery Resolver persisterar inte directive-värdet till Site Brief eller planner-input |
+| 4. `selectedFunctions[]` → `requested_capabilities[]` | Stängd (`jakob-be` / `1b91ca6`) | Frontend mappar `selectedFunctions[]` → `directives.requestedCapabilities` i `apps/viewser/components/discovery-wizard/wizard-payload.ts:406-418`; resolver saniterar + persisterar listan i `_apply_directives_fields()` (`packages/generation/discovery/resolve.py`) och `_resolve_capabilities()` merge:ar den FÖRE `mustHave`-deriverade caps med source-label `"wizard"`; schema `governance/schemas/project-input.schema.json` directives-blocket har det nya fältet; regressioner i `tests/test_discovery_payload.py` (merge + dedupe + unknown-warning + 32-item-cap) |
+| 5. `specialRequests` → `notes_for_planner` | Stängd (`jakob-be` / `b89a3d2`) | Frontend bygger `directives.notesForPlanner` i `apps/viewser/components/discovery-wizard/wizard-payload.ts:496-514`; resolver trimmar + cappar vid 1024 tecken och persisterar till `project_input.directives.notesForPlanner` med field-source `"wizard"` (`packages/generation/discovery/resolve.py:_apply_directives_fields`); `scripts/build_site.py:_apply_operator_directive_note` prepend:ar noten med prefix `"Operator: "` framför `site-brief.json` `notesForPlanner` i både mock- och real-path; schema `governance/schemas/project-input.schema.json` directives-blocket har det nya fältet; regressioner i `tests/test_discovery_payload.py` (persist + cap + tomma värden) + `tests/test_builder_smoke.py` (operator-note merge + skip) |
 | 6. Favicon → `.ico` | Delvis — metadata-render finns, `.ico`-konvertering saknas | Upload/schema/resolver accepterar `media.favicon` (`apps/viewser/app/api/upload-asset/route.ts:52-58`, `governance/schemas/project-input.schema.json:181-188`) och `packages/generation/build/renderers.py:313-331` renderar Next metadata `icons` mot `/uploads/<filename>`; build-pipeline saknar multi-size `public/favicon.ico`-konvertering |
 | 7. OG-image 1200×630-crop | Delvis — metadata-render finns, 1200×630-crop saknas | `media.ogImage` finns i Project Input-schema (`governance/schemas/project-input.schema.json:181-188`) och `packages/generation/build/renderers.py:336-367` skriver Open Graph/Twitter metadata mot `/uploads/<filename>` eller fallback-SVG; build-pipeline saknar center-crop/transkodning till `public/og-image.png` |
 | 8. Video-mimetype + render | Stängd (PR #62 / `7240fcd`, refactor PR #107 / `348ee05`) | `/api/upload-asset` tillåter bara MP4/WebM för `backgroundVideo` (`apps/viewser/app/api/upload-asset/route.ts:122-145`), asset-store bypassar sharp/vision för video (`apps/viewser/lib/asset-store/local.ts:72-106`), `copy_operator_uploads()` kopierar originalvideo (`scripts/build_site.py:966-973`) och hero renderar `<video autoPlay loop muted playsInline>` (`packages/generation/build/renderers.py:2141-2157`); regression i `tests/test_builder_smoke.py:397-454` |
@@ -21,9 +23,9 @@ som stängda, fem som delvis implementerade och ett som öppet.
 | 10. `products[].productImage` | Öppen — backend-kopiering + renderer-stöd saknas | Frontend-typen/UI:t har `productImage` (`apps/viewser/components/discovery-wizard/wizard-types.ts:70-79`, `apps/viewser/components/discovery-wizard/steps/content-step.tsx:193-196`), men payload/schema/build saknar mapping till Project Input, `copy_operator_uploads()` kopierar inte till `public/products/`, och produktgrid i `packages/generation/build/renderers.py` renderar fortfarande tjänste-/produktkort utan bild |
 | 11. Vercel Blob `sourceUrl` | Stängd (PR #66 + later refinements) | `scripts/build_site.py:794-1013` (disk-first + sourceUrl-fallback + allowlist till `public.blob.vercel-storage.com` + 8 MB cap) |
 
-**Slutsats:** Gap 1, 2, 3, 8 och 11 är verifierat stängda. Gap 4, 5, 6,
+**Slutsats:** Gap 1, 2, 3, 4, 5, 8 och 11 är verifierat stängda. Gap 6,
 7 och 9 är delvis implementerade men saknar fortfarande deterministisk
-backend-konsumtion eller bildbehandling enligt acceptanskriterierna. Gap
+bildbehandling eller backend-isolering enligt acceptanskriterierna. Gap
 10 är öppet. Originaltexten nedan är bevarad för historisk kontext men
 tabellen ovan är auktoritativ när det gäller "klar/inte klar"-status.
 
