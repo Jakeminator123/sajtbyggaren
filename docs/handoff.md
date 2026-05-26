@@ -1,23 +1,10 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-26 ~14:05 UTC, post-merge bump efter PR #117 + B151-B153 + sync-PR #118 öppnad. Verifierad `jakob-be` HEAD är `05a84bb`. `origin/main` är fortsatt `50217e3` (12 commits efter `jakob-be`); **sync-PR #118 är ÖPPEN** (`jakob-be → main`, OPEN/MERGEABLE/UNSTABLE-CI) och väntar på operatörens granskning + merge.
+**Datum:** 2026-05-26 UTC, steward-auto efter PR #120 — sync(jakob-be -> main): repo hygiene 2026-05-26 (4 commits, docs-only). Verifierad `main` är `15aea46`.
 
-Nya PRs / direkta commits till `jakob-be` sedan föregående checkpoint (`50217e3`):
-
-- `a337f01` audit-rapport `docs/reports/pr113-ours-conflict-audit-2026-05-26.md` (PR #113 `--ours`-resolution är clean).
-- `f2e84b0` + `e6a23a3` — B148 (nav `/kontakt`-hardcode), B149 (Intent Guard substring), B150 (`_normalize_business_type` multi-word) stängda + 14 regression-tester.
-- `c85ae70` + `3b5a798` — B97 (kontakt-page hero body per CTA-variant), B98 (`Områden vi arbetar i` suppress för ecommerce-lite) stängda + 9 regression-tester.
-- `6d4a096` + `49f5513` — B90 (ENGLISH_HINTS "a"/"an" false positives), B91 (English-exonym → svensk endonym), B92 (`naprapat` ≠ `naprapatklinik`), B93 (22 nya multi-word slugs) stängda + ~20 regression-tester.
-- `8c057b1` **PR #116 mergad** — `feat(backoffice): add dossier candidate intake from local files` (1453 inser / 21 del, 8 filer, ny `scripts/dossier_candidate_intake.py` + tester).
-- `2319ef9` **PR #117 mergad** — `feat(viewser): mobile responsive — foundation + polish + final (fas 1+2+3 + scout passes)`. 31 commits från `christopher-ui`, 100 % UI-only mot merge-base `3bedddd`. Konflikter på `docs/agent-inbox.jsonl` + `docs/current-focus.md` lösta med kombinerade versioner.
-- `4a6243a` + `1471d16` — **B151+B152+B153 stängda** direkt efter PR #117-merge (per operatörs-momentum-beslut, inte väntat på Christopher-följ-PR). Floating-chat iOS Safari <14 compat, compare-modal w-full overflow, viewer-panel `'full'`-preset hydration. 3 source-lock regression-tester i `tests/test_viewser_files.py`.
-- `05a84bb` inbox msg-0017-c3f924 till christopher-ui (rapport om merge + att vi tog AI-fynden).
-
-Ny aktiv: **B147 Medel-Hög** (Vercel preview wizard 403 via `assertLocalhost`). Operatörsbeslut a/b/c krävs innan kod-fix. Bug-räkning: **14 aktiva / 0 misplaced / 5 unknown / 126 stängda** (från 19/0/5/114 vid sessionsstart — netto 5 färre aktiva, 12 stängda, 1 ny tracked).
-
-**Öppen PR just nu:**
-
-- **#118 sync(jakob-be → main)** — OPEN, MERGEABLE, mergeStateStatus UNSTABLE (CI pågår). 45 commits / 56 filer / +5158/-328. Innehåller hela sessionens leverans. Operatörsbeslut: granska body + checks, sedan merge. Efter merge ska Vercel production branch flippas från `jakob-be` till `main` per `docs/operations/vercel-production-branch-todo.md` (B146 är löst, blockaren är borta).
+Nya PRs sedan föregående checkpoint: PR #118 — sync(jakob-be -> main): PR #117 mobile
+responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report; PR #120
+— sync(jakob-be -> main): repo hygiene 2026-05-26 (4 commits, docs-only).
 
 **MCP-server-status:** Sprintvakt-servern exponerar 14 tools efter
 PR #77 (`get_workboard`, `list_gaps`, `create_gap`, `activate_gap`,
@@ -407,3 +394,24 @@ scaffold smoke coverage on jakob-be; PR #110 — feat(evals): add deterministic 
 path scorecard and embeddings gate; PR #111 — fix(agents): correct python3-venv package
 name for Ubuntu Noble; PR #113 — sync(jakob-be -> main): B146 reconciliation + runtime
 smoke-lock + golden-path eval (#112, #109, #110).
+
+### 2026-05-26 UTC — handoff.md före `858f8e8`
+
+**Datum:** 2026-05-26 ~14:05 UTC, post-merge bump efter PR #117 + B151-B153 + sync-PR #118 öppnad. Verifierad `jakob-be` HEAD är `05a84bb`. `origin/main` är fortsatt `50217e3` (12 commits efter `jakob-be`); **sync-PR #118 är ÖPPEN** (`jakob-be → main`, OPEN/MERGEABLE/UNSTABLE-CI) och väntar på operatörens granskning + merge.
+
+Nya PRs / direkta commits till `jakob-be` sedan föregående checkpoint (`50217e3`):
+
+- `a337f01` audit-rapport `docs/reports/pr113-ours-conflict-audit-2026-05-26.md` (PR #113 `--ours`-resolution är clean).
+- `f2e84b0` + `e6a23a3` — B148 (nav `/kontakt`-hardcode), B149 (Intent Guard substring), B150 (`_normalize_business_type` multi-word) stängda + 14 regression-tester.
+- `c85ae70` + `3b5a798` — B97 (kontakt-page hero body per CTA-variant), B98 (`Områden vi arbetar i` suppress för ecommerce-lite) stängda + 9 regression-tester.
+- `6d4a096` + `49f5513` — B90 (ENGLISH_HINTS "a"/"an" false positives), B91 (English-exonym → svensk endonym), B92 (`naprapat` ≠ `naprapatklinik`), B93 (22 nya multi-word slugs) stängda + ~20 regression-tester.
+- `8c057b1` **PR #116 mergad** — `feat(backoffice): add dossier candidate intake from local files` (1453 inser / 21 del, 8 filer, ny `scripts/dossier_candidate_intake.py` + tester).
+- `2319ef9` **PR #117 mergad** — `feat(viewser): mobile responsive — foundation + polish + final (fas 1+2+3 + scout passes)`. 31 commits från `christopher-ui`, 100 % UI-only mot merge-base `3bedddd`. Konflikter på `docs/agent-inbox.jsonl` + `docs/current-focus.md` lösta med kombinerade versioner.
+- `4a6243a` + `1471d16` — **B151+B152+B153 stängda** direkt efter PR #117-merge (per operatörs-momentum-beslut, inte väntat på Christopher-följ-PR). Floating-chat iOS Safari <14 compat, compare-modal w-full overflow, viewer-panel `'full'`-preset hydration. 3 source-lock regression-tester i `tests/test_viewser_files.py`.
+- `05a84bb` inbox msg-0017-c3f924 till christopher-ui (rapport om merge + att vi tog AI-fynden).
+
+Ny aktiv: **B147 Medel-Hög** (Vercel preview wizard 403 via `assertLocalhost`). Operatörsbeslut a/b/c krävs innan kod-fix. Bug-räkning: **14 aktiva / 0 misplaced / 5 unknown / 126 stängda** (från 19/0/5/114 vid sessionsstart — netto 5 färre aktiva, 12 stängda, 1 ny tracked).
+
+**Öppen PR just nu:**
+
+- **#118 sync(jakob-be → main)** — OPEN, MERGEABLE, mergeStateStatus UNSTABLE (CI pågår). 45 commits / 56 filer / +5158/-328. Innehåller hela sessionens leverans. Operatörsbeslut: granska body + checks, sedan merge. Efter merge ska Vercel production branch flippas från `jakob-be` till `main` per `docs/operations/vercel-production-branch-todo.md` (B146 är löst, blockaren är borta).
