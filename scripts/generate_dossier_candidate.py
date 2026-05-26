@@ -290,6 +290,11 @@ def _normalise_candidate(
     if candidate_class not in CANDIDATE_CLASSES:
         raise DossierGenerationError(f"Invalid Dossier candidate class: {candidate_class!r}")
     manifest = dict(manifest)
+    returned_class = manifest.get("class")
+    if returned_class in CANDIDATE_CLASSES and returned_class != candidate_class:
+        raise DossierGenerationError(
+            f"dossierModel returned class {returned_class!r}, expected {candidate_class!r}"
+        )
     manifest["id"] = dossier_id
     manifest["capability"] = capability
     manifest["class"] = candidate_class

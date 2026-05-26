@@ -341,6 +341,50 @@ def test_generate_candidate_passes_sanitized_intake_report_to_dossier_model(
     assert "textPreview" not in sent_report["excludedFiles"][0]
 
 
+def test_dossier_model_class_mismatch_is_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    import generate_dossier_candidate as generator
+
+    def fake_call_dossier_model(**_kwargs: Any) -> tuple[dict[str, Any], str]:
+        return (
+            {
+                "$schema": "../../../../../../governance/schemas/dossier.schema.json",
+                "id": "model-picked-id",
+                "enabled": False,
+                "label": "Model Picked",
+                "capability": "ai-chat",
+                "class": "soft",
+                "codeFidelity": "instructions-only",
+                "complexity": "low",
+                "defaultForCapability": False,
+                "summary": "Model-generated candidate.",
+                "envVars": [],
+                "dependencies": [],
+                "files": [],
+                "exposes": [],
+                "lastVerified": "2026-05-18",
+            },
+            "# When to use\n\nUse when needed.\n",
+        )
+
+    monkeypatch.setenv(OPENAI_API_KEY_ENV, "sk-test-fake")
+    monkeypatch.setattr(generator, "resolve_dossier_model", lambda: "gpt-dossier-test")
+    monkeypatch.setattr(generator, "_call_dossier_model", fake_call_dossier_model)
+
+    with pytest.raises(DossierGenerationError, match="returned class 'soft'"):
+        generate_dossier_candidate(
+            brief="Hard chat candidate.",
+            candidate_id="openai-chat",
+            capability="ai-chat",
+            output_dir=tmp_path,
+            intake_report={"recommendedClass": "hard"},
+        )
+
+    assert not list(tmp_path.rglob("*"))
+
+
 def test_candidate_id_avoids_existing_candidate_dir(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
