@@ -107,8 +107,15 @@ _BUSINESS_TYPE_LABEL_SV: dict[str, str] = {
     "barber-shop": "barberare",
     "dentist": "tandläkare",
     "dental-clinic": "tandläkare",
-    "naprapat": "naprapatklinik",
-    "naprapath": "naprapatklinik",
+    # B92 (2026-05-26): bare "naprapat" / "naprapath" slugs now map to the
+    # sole-practitioner label "naprapat", not the clinic-form
+    # "naprapatklinik". Pre-fix every variant collapsed to "naprapatklinik",
+    # which over-adapted an individual naprapat practitioner's H1 to read
+    # like a multi-employee clinic. The explicit *-clinic and *klinik
+    # slugs still map to "naprapatklinik" so briefModel's deliberate
+    # clinic-form signal is preserved.
+    "naprapat": "naprapat",
+    "naprapath": "naprapat",
     "naprapath-clinic": "naprapatklinik",
     "naprapat-clinic": "naprapatklinik",
     "naprapatklinik": "naprapatklinik",
@@ -143,6 +150,43 @@ _BUSINESS_TYPE_LABEL_SV: dict[str, str] = {
     "ecommerce-store": "webbshop",
     "boat-dealer": "båthandel",
     "egg-farm": "äggproducent",
+    # B93 (2026-05-26): common multi-word English business slugs that
+    # briefModel emits but were not covered before, which made
+    # _company_business_label fall through to the
+    # "företag som arbetar med <slug>" branch and leak the raw English
+    # slug into Swedish H1 copy ("företag som arbetar med pet grooming").
+    # Each entry must map to a real Swedish noun that reads naturally
+    # in "Foo i Stockholm" / "Lokal foo i Stockholm" — see
+    # _derive_company_name / _derive_story for the consumers.
+    "pet-grooming": "djursalong",
+    "dog-grooming": "hundtrim",
+    "veterinary": "veterinär",
+    "veterinary-clinic": "veterinärklinik",
+    "vet-clinic": "veterinärklinik",
+    "tattoo-studio": "tatuerare",
+    "tattoo-shop": "tatuerare",
+    "personal-trainer": "personlig tränare",
+    "personal-training": "personlig tränare",
+    "fitness-studio": "gym",
+    "fitness-center": "gym",
+    "law-firm": "advokatbyrå",
+    "lawyer": "advokat",
+    "accountant": "redovisningskonsult",
+    "accounting-firm": "redovisningsbyrå",
+    "real-estate": "fastighetsmäklare",
+    "real-estate-agent": "fastighetsmäklare",
+    "cleaning-services": "städföretag",
+    "cleaner": "städare",
+    "moving-company": "flyttfirma",
+    "auto-repair": "bilverkstad",
+    "auto-repair-shop": "bilverkstad",
+    "mechanic": "bilmekaniker",
+    "car-dealer": "bilhandlare",
+    "interior-designer": "inredare",
+    "interior-design": "inredningsföretag",
+    "graphic-designer": "grafisk formgivare",
+    "web-design": "webbyrå",
+    "marketing-agency": "marknadsföringsbyrå",
 }
 
 _ECOMMERCE_BUSINESS_TYPES = frozenset(
@@ -1375,13 +1419,26 @@ _COUNTRY_NAME_LOCATION_HINTS: set[str] = {
     "island",
 }
 
+# B91 (2026-05-26): common English city exonyms for Swedish cities.
+# briefModel occasionally emits the English form even on Swedish prompts
+# (rare but observed); on Swedish builds we translate to the proper
+# Swedish endonym so the H1 / hero ortstag reads correctly. Map is
+# intentionally narrow — only confirmed-needed exonyms — to avoid
+# regressing rendered output for English-tagged builds, where the
+# English city name is the correct one to render.
+_ENGLISH_TO_SWEDISH_CITY: dict[str, str] = {
+    "gothenburg": "Göteborg",
+    "helsinki": "Helsingfors",
+    "copenhagen": "Köpenhamn",
+}
+
 
 def _normalize_location_hint(
     location_hint: str | None, language: str
 ) -> str | None:
     """Normalise location hints, treating country names as "no city".
 
-    Two jobs:
+    Three jobs:
 
     1. Demo-baseline-fix 1A-hotfix (B62): rewrite the rare
        ``locationHint="Sweden"`` from briefModel to ``"Sverige"`` on
@@ -1393,11 +1450,17 @@ def _normalize_location_hint(
        Nordic countries we actually see today) we return ``None`` on
        both languages so ``_placeholder_location`` falls back to its
        country-only city and the renderer can suppress the hero
-       ortstag. This is broader than B91 / the previous
+       ortstag. This is broader than the previous
        ``Sweden -> Sverige`` map because it also catches
        ``locationHint="Sverige"`` (no city) which surfaced as a hero
        ortstag for the e-commerce prompt in the re-Verifierings-Scout
        2026-05-15 run.
+    3. B91 (2026-05-26): on Swedish builds, translate confirmed English
+       city exonyms to their Swedish endonym (``"Gothenburg"`` →
+       ``"Göteborg"``, ``"Helsinki"`` → ``"Helsingfors"``,
+       ``"Copenhagen"`` → ``"Köpenhamn"``) so a Swedish-tagged build
+       does not render a rendered city tag with the English name.
+       English-tagged builds pass through unchanged.
     """
     if not location_hint:
         return location_hint
@@ -1406,6 +1469,10 @@ def _normalize_location_hint(
         return None
     if cleaned.lower() in _COUNTRY_NAME_LOCATION_HINTS:
         return None
+    if language == "sv":
+        translated = _ENGLISH_TO_SWEDISH_CITY.get(cleaned.lower())
+        if translated:
+            return translated
     return cleaned
 
 
