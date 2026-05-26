@@ -1051,6 +1051,185 @@ def test_render_about_keeps_service_areas_for_real_city() -> None:
 
 
 # ---------------------------------------------------------------------------
+# B98 — render_about must suppress the "Områden vi arbetar i"-block for
+# e-handel (ecommerce-lite scaffold) even when the location is a real
+# city. E-commerce ships from one location and the "areas we work in"
+# heading reads as a service-business assumption that does not fit.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_b98_render_about_omits_service_areas_for_ecommerce_lite() -> None:
+    """B98: ecommerce-lite scaffold must not render the location-section
+    on /om-oss. The heading "Områden vi arbetar i" + the MapPin icon
+    are service-business-flavoured and read awkwardly for e-handel,
+    even when the location is a real city (not country-only)."""
+    from scripts.build_site import render_about
+
+    dossier = _minimal_dossier()
+    dossier["scaffoldId"] = "ecommerce-lite"
+    # Real city (not country-only) so the B104 country-only check
+    # would otherwise allow the section to render. B98 suppresses
+    # it via the new scaffold check.
+    dossier["location"] = {
+        "city": "Stockholm",
+        "country": "Sverige",
+        "serviceAreas": ["Stockholm", "Norrmalm", "Södermalm"],
+    }
+    output = render_about(dossier)
+
+    assert "Områden vi arbetar i" not in output, (
+        "ecommerce-lite must not show the 'Områden vi arbetar i' section "
+        "even with real local service areas."
+    )
+
+
+@pytest.mark.tooling
+def test_b98_render_about_keeps_service_areas_for_local_service_business() -> None:
+    """B98 negative: scaffolds other than ecommerce-lite still get the
+    location-section when the location is a real city. The B104 country-
+    only check + the new B98 ecommerce-lite check compose — neither
+    should accidentally suppress local-service-business output."""
+    from scripts.build_site import render_about
+
+    dossier = _minimal_dossier()
+    dossier["scaffoldId"] = "local-service-business"
+    output = render_about(dossier)
+
+    assert "Områden vi arbetar i" in output
+    assert "Norrmalm" in output
+
+
+@pytest.mark.tooling
+def test_b98_render_about_keeps_service_areas_when_scaffold_unspecified() -> None:
+    """B98 defensive: a dossier without ``scaffoldId`` must NOT trigger
+    the new ecommerce-lite suppression. Backwards-compat with older
+    callers that pre-date the scaffold-aware about block."""
+    from scripts.build_site import render_about
+
+    dossier = _minimal_dossier()
+    # No scaffoldId — _minimal_dossier() does not set one by default.
+    dossier.pop("scaffoldId", None)
+    output = render_about(dossier)
+
+    assert "Områden vi arbetar i" in output
+
+
+# ---------------------------------------------------------------------------
+# B97 — render_section_contact_info must vary the kontakt-page hero
+# body paragraph by CTA-variant (shop / booking / quote). The original
+# "Beskriv jobbet kort … med tider och offert." paragraph assumed a
+# quote-driven service business and read awkwardly for e-handel (orders
+# / returns / delivery) and booking (book-a-time) businesses.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_b97_contact_page_hero_body_quote_variant_default_unchanged() -> None:
+    """B97 byte-stability: the quote-variant body must stay identical
+    to the pre-fix copy so existing local-service-business renders
+    do not regress.
+    """
+    from scripts.build_site import render_section_contact_info
+
+    dossier = _minimal_dossier()
+    # _minimal_dossier is a Malmö elektriker — quote-variant by default.
+    output = render_section_contact_info(dossier)
+
+    assert "Beskriv jobbet kort så återkommer vi inom en arbetsdag med tider och offert." in output
+    # The variant-specific shop and booking copies must NOT leak into
+    # the quote-variant output.
+    assert "Frågor om beställning" not in output
+    assert "Berätta kort vad du söker" not in output
+
+
+@pytest.mark.tooling
+def test_b97_contact_page_hero_body_shop_variant_for_ecommerce_lite() -> None:
+    """B97: ecommerce-lite scaffold + shop-variant must show the
+    order/delivery/return-flavoured body, not the quote-flavoured one.
+    """
+    from scripts.build_site import render_section_contact_info
+
+    dossier = _minimal_dossier()
+    dossier["scaffoldId"] = "ecommerce-lite"
+    dossier["conversionGoals"] = ["purchase"]
+    output = render_section_contact_info(dossier)
+
+    assert "Frågor om beställning, leverans eller retur? Vi återkommer inom en arbetsdag." in output
+    # The quote-variant copy with "jobbet" + "offert" must not appear
+    # for an e-commerce contact page.
+    assert "tider och offert" not in output
+    assert "Beskriv jobbet kort" not in output
+
+
+@pytest.mark.tooling
+def test_b97_contact_page_hero_body_booking_variant_for_booking_business() -> None:
+    """B97: booking-business + booking conversion goal must show the
+    book-a-time-flavoured body. Verified through the booking-business-
+    type fallback path in _hero_cta_variant.
+    """
+    from scripts.build_site import render_section_contact_info
+
+    dossier = _minimal_dossier()
+    dossier["conversionGoals"] = []
+    dossier["company"]["businessType"] = "naprapat-clinic"
+    output = render_section_contact_info(dossier)
+
+    assert "Berätta kort vad du söker — vi återkommer inom en arbetsdag med en tid som passar." in output
+    assert "tider och offert" not in output
+
+
+@pytest.mark.tooling
+def test_b97_contact_page_hero_body_english_quote_variant() -> None:
+    """B97: language=en + quote-variant emits the English quote copy."""
+    from scripts.build_site import render_section_contact_info
+
+    dossier = _minimal_dossier()
+    dossier["language"] = "en"
+    output = render_section_contact_info(dossier)
+
+    assert "Tell us briefly about the job and we'll get back within one business day with times and a quote." in output
+
+
+@pytest.mark.tooling
+def test_b97_contact_page_hero_body_english_shop_variant() -> None:
+    """B97: language=en + shop-variant emits the English order/return copy."""
+    from scripts.build_site import render_section_contact_info
+
+    dossier = _minimal_dossier()
+    dossier["language"] = "en"
+    dossier["scaffoldId"] = "ecommerce-lite"
+    dossier["conversionGoals"] = ["purchase"]
+    output = render_section_contact_info(dossier)
+
+    assert "Questions about your order, delivery or return? We get back to you within one business day." in output
+
+
+@pytest.mark.tooling
+def test_b97_contact_page_hero_headline_stays_generic_across_variants() -> None:
+    """B97 scope-lock: only the body paragraph varies. The hero headline
+    'Hör av dig' is generic enough to work across shop/booking/quote
+    and must NOT be variant-branched (would inflate the change surface
+    and risk regressing existing renders).
+    """
+    from scripts.build_site import render_section_contact_info
+
+    for variant_dossier in (
+        # quote (default)
+        _minimal_dossier(),
+        # shop
+        {**_minimal_dossier(), "scaffoldId": "ecommerce-lite", "conversionGoals": ["purchase"]},
+        # booking
+        {**_minimal_dossier(), "conversionGoals": [], "company": {**_minimal_dossier()["company"], "businessType": "naprapat-clinic"}},
+    ):
+        output = render_section_contact_info(variant_dossier)
+        assert ">Hör av dig<" in output, (
+            f"Hero headline must stay 'Hör av dig' across all variants; "
+            f"failed for dossier scaffoldId={variant_dossier.get('scaffoldId')!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
 # render_products: shape contract
 # ---------------------------------------------------------------------------
 

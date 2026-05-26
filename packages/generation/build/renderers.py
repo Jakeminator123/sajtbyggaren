@@ -114,6 +114,19 @@ def _hero_cta_label(dossier: dict) -> str:
     return _call_build_site("_hero_cta_label", dossier)
 
 
+def _hero_cta_variant(dossier: dict) -> str:
+    """Shim for ``scripts.build_site._hero_cta_variant``.
+
+    Returns ``"shop"`` / ``"booking"`` / ``"quote"`` based on the
+    dossier's conversionGoals + business type + scaffoldId. B97 uses
+    this to pick per-variant contact-page hero body copy so e-commerce
+    and booking businesses do not show the quote-flavoured
+    "Beskriv jobbet kort så återkommer vi … med tider och offert."
+    paragraph.
+    """
+    return _call_build_site("_hero_cta_variant", dossier)
+
+
 def _hero_cta_target_path(
     dossier: dict,
     listing_route: dict | None,
@@ -727,6 +740,44 @@ def render_section_contact_cta(
     )
 
 
+_CONTACT_PAGE_HERO_BODY_BY_VARIANT: dict[tuple[str, str], str] = {
+    # B97: kontakt-page hero body copy per CTA-variant + language. The
+    # original "Beskriv jobbet kort … med tider och offert." assumed a
+    # quote-driven service business and read awkwardly for e-handel
+    # (orders/returns/delivery) and booking-flow businesses (book a time).
+    # ``_hero_cta_variant`` already encodes the right bucket from
+    # conversionGoals + business type + scaffoldId, so we reuse it here
+    # for consistency with the hero CTA label/target.
+    ("quote", "sv"): "Beskriv jobbet kort så återkommer vi inom en arbetsdag med tider och offert.",
+    ("quote", "en"): "Tell us briefly about the job and we'll get back within one business day with times and a quote.",
+    ("shop", "sv"): "Frågor om beställning, leverans eller retur? Vi återkommer inom en arbetsdag.",
+    ("shop", "en"): "Questions about your order, delivery or return? We get back to you within one business day.",
+    ("booking", "sv"): "Berätta kort vad du söker — vi återkommer inom en arbetsdag med en tid som passar.",
+    ("booking", "en"): "Tell us briefly what you need — we'll come back within one business day with a time that suits you.",
+}
+
+
+def _contact_page_hero_body(dossier: dict) -> str:
+    """Pick the contact-page hero body paragraph for this Project Input.
+
+    B97 fix: branches on ``_hero_cta_variant`` so e-handel and booking
+    scaffolds no longer show the quote-driven
+    "Beskriv jobbet kort … med tider och offert."-paragraph. Falls back
+    to the quote-variant copy when the variant or language is unknown,
+    which keeps the existing local-service-business byte-output intact.
+    Language is normalised the same way ``_hero_cta_label`` does it so
+    non-(sv|en) values fall through to Swedish.
+    """
+    language = (dossier.get("language") or "sv").strip().lower()
+    if language not in ("sv", "en"):
+        language = "sv"
+    variant = _hero_cta_variant(dossier)
+    return _CONTACT_PAGE_HERO_BODY_BY_VARIANT.get(
+        (variant, language),
+        _CONTACT_PAGE_HERO_BODY_BY_VARIANT[("quote", language)],
+    )
+
+
 def render_section_contact_info(dossier: dict) -> str:
     """Render the contact-page Phone / Mail / Address card section.
 
@@ -738,19 +789,25 @@ def render_section_contact_info(dossier: dict) -> str:
 
     Path B step 4: extracted from ``render_contact``. Output is
     byte-identical to the inline implementation it replaces.
+
+    B97 (2026-05-26): the hero body paragraph now varies by CTA-variant
+    via ``_contact_page_hero_body``. The hero headline ("Hör av dig")
+    stays generic across variants — it works for shop, booking and
+    quote alike.
     """
     contact = dossier["contact"]
     address_lines = "\n".join(
         f'                <span className="block">{_jsx_safe_string(line)}</span>'
         for line in contact["addressLines"]
     )
+    hero_body = _contact_page_hero_body(dossier)
     return (
         '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         '          <header className="flex flex-col gap-3">\n'
         '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Kontakt</p>\n'
         '            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Hör av dig</h1>\n'
-        '            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">Beskriv jobbet kort så återkommer vi inom en arbetsdag med tider och offert.</p>\n'
+        f'            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(hero_body)}</p>\n'
         "          </header>\n"
         '          <div className="grid gap-4 md:grid-cols-2">\n'
         '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
@@ -1419,7 +1476,15 @@ def render_about(dossier: dict) -> str:
     location = dossier["location"]
     areas_html = ", ".join(location["serviceAreas"])
     location_section = ""
-    if not _location_is_country_only(location):
+    # B98: "Områden vi arbetar i" är meaningless för e-handel (kunden får
+    # produkter levererade, det finns inga lokala serviceområden i samma
+    # bemärkelse). Suppressas för ecommerce-lite. För övriga scaffolds
+    # gäller fortsatt bara B104-checken (country-only suppression).
+    scaffold_id = (dossier.get("scaffoldId") or "").strip().lower()
+    if (
+        not _location_is_country_only(location)
+        and scaffold_id != "ecommerce-lite"
+    ):
         location_section = (
             '          <div className="flex flex-col gap-2">\n'
             '            <h2 className="inline-flex items-center gap-2 text-2xl font-semibold tracking-tight"><MapPin className="size-5" />Områden vi arbetar i</h2>\n'
