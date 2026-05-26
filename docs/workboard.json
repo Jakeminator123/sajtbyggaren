@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-26T10:35:49Z",
+  "updatedAt": "2026-05-26T10:52:25Z",
   "updatedBy": "sprintvakt-mcp",
   "people": {
     "jakob": {
@@ -182,48 +182,47 @@
       "pairedWith": "GAP-backend-restaurant-activation"
     },
     {
-      "id": "GAP-viewser-mobile-hero-flow",
+      "id": "GAP-viewser-mobile-hero-safe-zone",
       "type": "Gap/UI",
       "owner": "christopher",
-      "title": "Mobil hero: stacked layout med SM-mobile.mp4 som top-banner",
-      "whyNow": "Manuell test pa iPhone 14 Pro-viewport (393x852) i Safari Responsive Design Mode visade tre fynd som scout-rapporten inte tackte:\n\n1. SM_hero.mp4 har object-position 78% (designat for desktop bredd) -> 3D-objektet hamnar bakom rubriken pa mobil.\n2. Hero-rubriken har hardkodad <br /> + max-w-lg -> radbryts till 'Beskriv / din sajt / sa bygger / vi den' pa 393px.\n3. Hela hero kanns inte som ett naturligt flode pa mobil (video, text, composer konkurrerar om utrymmet i samma absolut-positioned canvas).\n\nOperatoren har levererat SM-mobile.mp4 (960x960 fyrkantig, 1.1MB, off-white bakgrund #f0f2ed) som ar designad for mobil top-banner.",
+      "title": "Scout pass 4 P1-fixar: hero safe zone, wizard asterisk, prompt-builder safe-area",
+      "whyNow": "Scout-bug-hunt pass 4 (composer-2.5-fast, read-only) paa christopher-ui-branchen hittade tre P1-fynd som maaste fixas innan PR #117 mergas: (1) Hero-text taecks av PromptBuilder paa iPhone SE 375x667 (video ~300px + text ~200px + composer ~150px laemnar ingen marginal). (2) Wizard Foeretagsnamn-asterisk visas men validation togs bort i 59eed4c WCAG 2.2-brott. (3) PromptBuilder saknar pb-safe knappar ligger naera iPhone home-indicator. Inga P0. P1 nummer 4 StackBlitz containerRef skippas eftersom default-mode local-next inte paaverkas.",
       "paths": [
         "apps/viewser/components/viewer-panel.tsx",
-        "apps/viewser/public/SM-mobile.mp4",
-        "apps/viewser/components/discovery-wizard/wizard-types.ts"
+        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/company-step.tsx",
+        "apps/viewser/components/prompt-builder.tsx"
       ],
       "doNotTouch": [
-        "apps/viewser/app/api/**",
-        "apps/viewser/lib/**",
-        "apps/viewser/middleware.ts",
-        "apps/viewser/next.config.ts",
-        "apps/viewser/package.json",
-        "scripts/**",
-        "packages/generation/**"
+        "apps/viewser/components/discovery-wizard/wizard-types.ts",
+        "apps/viewser/app/globals.css",
+        "packages/generation/",
+        "apps/viewser/app/api/",
+        "apps/viewser/lib/"
       ],
       "acceptanceCriteria": [
-        "Mobil (<md): SM-mobile.mp4 renderas som top-banner (fyrkantig, centrerad).",
-        "Mobil hero-bakgrund matchar videons bakgrundsfard (#f0f2ed) sa video flyter in i bakgrunden.",
-        "Mobil hero-text under videon, ingen overlapp med 3D-objektet.",
-        "Hero-rubrik radbryts naturligt utan hardkodad <br /> pa mobil.",
-        "Desktop (md+): oforandrat (SM_hero.mp4 + 78% object-position + overlay-text)."
+        "Mobil 375x667: hero-text scrollas och hamnar aldrig bakom PromptBuilder",
+        "viewer-panel mobil anvaender overflow-y-auto naer showHero=true",
+        "Hero-text container har pb-40 paa mobil saa composer-overlap aldrig sker vid normal text",
+        "Desktop md+ behaaller absolute-overlay-layout med overflow-hidden",
+        "Wizard foundation-step + company-step visar Foeretagsnamn utan asterisk (optional-prop visar 'valfritt' via FieldLabel)",
+        "PromptBuilder composer anvaender pb-safe-or-4 sm:pb-7 saa iPhone X+ home-indicator respekteras"
       ],
       "checks": [
-        "python scripts/sprintvakt_check.py",
-        "python scripts/focus_check.py",
-        "python scripts/governance_validate.py",
-        "python scripts/rules_sync.py --check",
-        "python scripts/check_term_coverage.py --strict",
-        "cd apps/viewser && npx tsc --noEmit",
-        "cd apps/viewser && npm run lint"
+        "sprintvakt_check",
+        "focus_check",
+        "viewser_typecheck",
+        "viewser_lint",
+        "term_coverage_strict",
+        "ruff_check"
       ],
       "collisionRisk": "green",
       "reviewer": "jakob",
       "status": "active",
-      "createdAt": "2026-05-26T10:35:49Z",
-      "updatedAt": "2026-05-26T10:35:49Z",
+      "createdAt": "2026-05-26T10:52:20Z",
+      "updatedAt": "2026-05-26T10:52:25Z",
       "notes": [],
-      "activatedAt": "2026-05-26T10:35:49Z"
+      "activatedAt": "2026-05-26T10:52:25Z"
     }
   ],
   "completedGaps": [
@@ -1093,6 +1092,56 @@
         "6e06129",
         "420efb0",
         "3e312f2"
+      ]
+    },
+    {
+      "id": "GAP-viewser-mobile-hero-flow",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Mobil hero: stacked layout med SM-mobile.mp4 som top-banner",
+      "whyNow": "Manuell test pa iPhone 14 Pro-viewport (393x852) i Safari Responsive Design Mode visade tre fynd som scout-rapporten inte tackte:\n\n1. SM_hero.mp4 har object-position 78% (designat for desktop bredd) -> 3D-objektet hamnar bakom rubriken pa mobil.\n2. Hero-rubriken har hardkodad <br /> + max-w-lg -> radbryts till 'Beskriv / din sajt / sa bygger / vi den' pa 393px.\n3. Hela hero kanns inte som ett naturligt flode pa mobil (video, text, composer konkurrerar om utrymmet i samma absolut-positioned canvas).\n\nOperatoren har levererat SM-mobile.mp4 (960x960 fyrkantig, 1.1MB, off-white bakgrund #f0f2ed) som ar designad for mobil top-banner.",
+      "paths": [
+        "apps/viewser/components/viewer-panel.tsx",
+        "apps/viewser/public/SM-mobile.mp4",
+        "apps/viewser/components/discovery-wizard/wizard-types.ts"
+      ],
+      "doNotTouch": [
+        "apps/viewser/app/api/**",
+        "apps/viewser/lib/**",
+        "apps/viewser/middleware.ts",
+        "apps/viewser/next.config.ts",
+        "apps/viewser/package.json",
+        "scripts/**",
+        "packages/generation/**"
+      ],
+      "acceptanceCriteria": [
+        "Mobil (<md): SM-mobile.mp4 renderas som top-banner (fyrkantig, centrerad).",
+        "Mobil hero-bakgrund matchar videons bakgrundsfard (#f0f2ed) sa video flyter in i bakgrunden.",
+        "Mobil hero-text under videon, ingen overlapp med 3D-objektet.",
+        "Hero-rubrik radbryts naturligt utan hardkodad <br /> pa mobil.",
+        "Desktop (md+): oforandrat (SM_hero.mp4 + 78% object-position + overlay-text)."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/focus_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/rules_sync.py --check",
+        "python scripts/check_term_coverage.py --strict",
+        "cd apps/viewser && npx tsc --noEmit",
+        "cd apps/viewser && npm run lint"
+      ],
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "createdAt": "2026-05-26T10:35:49Z",
+      "updatedAt": "2026-05-26T10:52:03Z",
+      "notes": [
+        "Mobil hero stacked flow + SM-mobile.mp4 implementerad. Wizard companyName-validering (2-tecken) borttagen. Scout pass 4 efter detta hittade tre nya P1-justeringar som flyttas till GAP-viewser-mobile-hero-safe-zone."
+      ],
+      "activatedAt": "2026-05-26T10:35:49Z",
+      "completedAt": "2026-05-26T10:52:03Z",
+      "fixCommits": [
+        "59eed4c"
       ]
     }
   ],

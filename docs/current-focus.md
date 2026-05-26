@@ -30,13 +30,16 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `3e312f2` (2026-05-26 UTC, christopher-ui local — scout-
-fixes-pass klart + pushat + Jakob notifierad. Nästa fix-pass: mobile hero-flow
-ovanpå scout-fixes — SM-mobile.mp4 (operatör-levererad 960×960 fyrkantig film,
-1.1MB, off-white #f0f2ed) som mobile top-banner + bakgrundsfärg som matchar
-filmens bakgrund så hero blir ett sömlöst flöde. Hero-rubrik utan hårdkodad
-br. Wizard foundation-validering: företagsnamn-min-längd borttagen på
-operatör-begäran så snabb-test går smidigt.).
+Last verified state: `59eed4c` (2026-05-26 UTC, christopher-ui local — mobile
+hero-flow pushat. Operatör-feedback: "mobilversionen ser superb ut". Scout
+pass 4 (composer-2.5-fast, read-only) körd på de tre senaste commits hittade
+inga P0 men tre P1: (1) hero-text täcks av PromptBuilder på iPhone SE 375×667
+eftersom video~300px + text~200px + composer~150px > viewport-höjden,
+(2) Wizard "Företagsnamn *" visar obligatorisk-asterisk men validation togs
+bort i 59eed4c (WCAG 2.2-brott), (3) PromptBuilder saknar pb-safe så knappar
+ligger nära iPhone X+ home-indicator. P1 #4 (StackBlitz containerRef-höjd)
+parkeras eftersom default-mode local-next inte påverkas. Active GAP:
+GAP-viewser-mobile-hero-safe-zone.).
 
 Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
 
@@ -175,6 +178,28 @@ som scout-rapporten inte täckte. Operatör-driven post-scout-fix:
   borttagen på operatör-begäran så snabb-test av wizarden går smidigare.
   Övriga foundation-validations (offer.length ≥ 3, businessFamily required)
   kvarstår som signal till pipeline.
+
+Scout pass 4 — `GAP-viewser-mobile-hero-safe-zone` (in-progress). Operatören
+körde fjärde scout-bug-hunt (composer-2.5-fast, read-only) på de tre senaste
+commits innan PR-update. Inga P0 men tre konkreta P1:
+
+- `viewer-panel.tsx` mobile hero safe zone. På iPhone SE (375×667) räckte
+  inte 667px för video~300px + text~200px + PromptBuilder~150px → hero-
+  underrad döljdes bakom composern. Container fick `md:overflow-hidden`
+  + `overflow-y-auto bg-[#f0f2ed]` när `showHero=true` (desktop oförändrad).
+  Hero-text container fick `pb-40 md:pb-0` så composer-overlap aldrig sker
+  vid normal text. Desktop absolute-overlay-layout intakt.
+- `foundation-step.tsx` + `company-step.tsx` Wizard-asterisk. Båda visade
+  "Företagsnamn *" trots att validering togs bort i 59eed4c → WCAG 2.2-brott
+  (visuellt obligatoriskt fält som går att lämna tomt). Label nu enbart
+  "Företagsnamn" med `optional`-prop som FieldLabel renderar som "(valfritt)".
+- `prompt-builder.tsx` composer safe-area. `pb-5 sm:pb-7` saknade safe-area-
+  koll → composer-knappar 0px från iPhone X+ home-indicator. Bytt till
+  `pb-safe-or-4 sm:pb-7` (samma standard som wizard-footer och FloatingChat).
+
+P1 #4 (StackBlitz containerRef-höjd) parkerad eftersom default-mode
+`local-next` inte påverkas — bara aktuell vid `VIEWSER_PREVIEW_MODE=auto`
+eller `stackblitz` (icke-default operatör-val).
 
 Nya PRs sedan föregående checkpoint: PR #114 — chore(gitignore): re-ignore
 `__pycache__/` under `packages/generation/build/` (B146 fallout); PR #115 —

@@ -261,7 +261,8 @@ export function FoundationStep({
           dirigerar `helper`-prop:en bakom CollapsibleHelp by default
           efter minimalism-pass v2). */}
       <TextField
-        label="Företagsnamn *"
+        label="Företagsnamn"
+        optional
         value={answers.companyName}
         onChange={(value) => onChange({ companyName: value })}
         placeholder="t.ex. Ateljé Bird"

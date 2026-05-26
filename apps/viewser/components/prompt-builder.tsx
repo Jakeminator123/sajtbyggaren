@@ -321,7 +321,12 @@ export function PromptBuilder({
         onComplete={handleWizardComplete}
       />
       <div
-        className={`pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-5 sm:pb-7 ${hidden ? "hidden" : ""}`}
+        // pb-safe-or-4 respekterar iPhone home-indicator (env safe-area-inset
+        // -bottom) + minst 16px under composern. sm:pb-7 (28px) på desktop
+        // där safe-area inte är relevant. Tidigare `pb-5 sm:pb-7` saknade
+        // safe-area-koll och lät composer-knappar ligga 0px från home-indicator
+        // på iPhone X+.
+        className={`pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-safe-or-4 sm:pb-7 ${hidden ? "hidden" : ""}`}
         aria-hidden={hidden}
       >
       <div className="pointer-events-auto flex w-full max-w-[720px] flex-col gap-2">

@@ -776,8 +776,16 @@ export function ViewerPanel({
         //   bakgrund flyter sömlöst in i canvasen utan synlig edge.
         // Desktop (md+): flex-row + bg-background — videon ligger absolute
         //   och hero-texten ovanpå som overlay (oförändrad layout).
-        "viewer-canvas relative flex h-full w-full flex-col overflow-hidden md:flex-row",
-        showHero ? "bg-[#f0f2ed] md:bg-background" : "bg-background",
+        //
+        // overflow på mobil: när hero visas behöver vi `overflow-y-auto`
+        // så hero-text kan scrolla om viewport-höjden är liten (iPhone SE
+        // 667px med video ~300px + text ~200px + composer ~150px lämnar
+        // ingen marginal). Desktop håller `overflow-hidden` eftersom
+        // hero där är absolute-positioned overlay (ingen scroll-behov).
+        "viewer-canvas relative flex h-full w-full flex-col md:flex-row md:overflow-hidden",
+        showHero
+          ? "overflow-y-auto bg-[#f0f2ed] md:bg-background"
+          : "overflow-hidden bg-background",
       )}
     >
       {/* Device-toggle bar (desktop only). Sitter top-2 right-2 med
@@ -923,7 +931,11 @@ export function ViewerPanel({
           ger naturligt "Beskriv din sajt så / bygger vi den." istället
           för tidigare 4-rads-staplingen. */}
       {showHeroText ? (
-        <div className="relative z-10 flex w-full flex-col items-center px-5 pt-4 text-center md:absolute md:inset-0 md:h-full md:flex-row md:items-center md:px-12 md:text-left lg:px-20">
+        // pb-40 på mobil = ~160px safe zone under hero-text så PromptBuilder
+        // (composer ~150px från bottom inkl. safe-area-padding) aldrig täcker
+        // underrad. md:pb-0 + md:absolute återställer desktop-overlay-layouten
+        // där hero-texten är vertikalt centrerad utan bottom-padding-behov.
+        <div className="relative z-10 flex w-full flex-col items-center px-5 pt-4 pb-40 text-center md:absolute md:inset-0 md:h-full md:flex-row md:items-center md:px-12 md:pb-0 md:text-left lg:px-20">
           <div className="flex max-w-lg flex-col items-center gap-4 md:items-start">
             <span className="border-border/40 bg-background/70 text-foreground/70 rounded-full border px-3 py-1 font-mono text-[10px] tracking-[0.22em] uppercase shadow-sm backdrop-blur">
               Sajtbyggaren · localhost

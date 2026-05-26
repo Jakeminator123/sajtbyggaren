@@ -106,7 +106,8 @@ export function CompanyStep({
   return (
     <FieldStack>
       <TextField
-        label="Företagsnamn *"
+        label="Företagsnamn"
+        optional
         value={answers.companyName}
         onChange={(value) => onChange({ companyName: value })}
         placeholder="t.ex. Ateljé Bird"
