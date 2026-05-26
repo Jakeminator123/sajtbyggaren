@@ -8,6 +8,9 @@
     },
     "sanity": {
       "enabled": false
+    },
+    "vercel": {
+      "enabled": true
     }
   }
 }
