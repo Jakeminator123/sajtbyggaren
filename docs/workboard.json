@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-26T18:18:34Z",
+  "updatedAt": "2026-05-26T18:18:54Z",
   "updatedBy": "sprintvakt-mcp",
   "people": {
     "jakob": {
@@ -180,42 +180,6 @@
       ],
       "note": "Effort 30 min. Splittat från GAP-backend-restaurant-activation pga Sprintvakt-lane-policy. Landar i samma commit-batch som backend-aktiveringen. 2026-05-25 follow-up: den ursprungliga PR:en uppdaterade bara BUSINESS_FAMILIES[restaurant]; den parallella WIZARD_CATEGORIES[restaurant] missades och pekade fortsatt mot local-service-business / nordic-trust så FALLBACK_DISCOVERY_OPTIONS (byggd via WIZARD_CATEGORIES.map() i discovery-options.ts) gav fel scaffold + variant innan governance-API:t svarade. Fixat under samma GAP.",
       "pairedWith": "GAP-backend-restaurant-activation"
-    },
-    {
-      "id": "GAP-viewser-wizard-assets-tab",
-      "type": "Gap/UI",
-      "owner": "christopher",
-      "title": "Lägg till fjärde wizard-tab 'Bilder' — logo + mediamaterial får egen tab",
-      "whyNow": "Operatorn 2026-05-26 efter pages-picker-revisionen: 'Gör så att det är fyra tabbar där den fjärde är bilderna som idag ligger i tab 3.' Tab 3 (Funktioner) blev oklar när sidor-pickern och AssetsStep delade samma yta. Att bryta ut bilder till en egen tab gör tab 3 100% sidor och ger uppladdning en tydlig hemvist. 'Mer information'-knappen flyttas samtidigt till den nya sista tabben så den syns precis innan 'Skapa sajt' — vilket var operatorens ursprungliga önskemål.",
-      "paths": [
-        "apps/viewser/components/discovery-wizard/wizard-types.ts",
-        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx"
-      ],
-      "doNotTouch": [
-        "apps/viewser/components/discovery-wizard/wizard-payload.ts",
-        "packages/generation/**"
-      ],
-      "acceptanceCriteria": [
-        "WIZARD_STEP_ORDER har 4 steg: foundation/visual/functions/assets",
-        "WIZARD_STEP_TITLES['assets'] = 'Bilder'",
-        "Tab 4 (Bilder) renderar AssetsStep + 'Mer information'-knappen",
-        "Tab 3 (Funktioner) renderar BARA FunctionsStep (sidor-pickern), inget annat",
-        "validateWizardStep('assets', ...) returnerar null — bilder är skip-bara",
-        "Backend-payload oförändrat",
-        "Lint, typecheck och term-coverage rena"
-      ],
-      "checks": [
-        "cd apps/viewser && npm run lint",
-        "cd apps/viewser && npx tsc --noEmit",
-        "python scripts/check_term_coverage.py --strict"
-      ],
-      "collisionRisk": "green",
-      "reviewer": "jakob",
-      "status": "active",
-      "createdAt": "2026-05-26T18:18:22Z",
-      "updatedAt": "2026-05-26T18:18:34Z",
-      "notes": [],
-      "activatedAt": "2026-05-26T18:18:34Z"
     }
   ],
   "completedGaps": [
@@ -1317,6 +1281,44 @@
       "notes": [],
       "activatedAt": "2026-05-26T18:14:58Z",
       "completedAt": "2026-05-26T18:15:24Z",
+      "fixCommits": []
+    },
+    {
+      "id": "GAP-viewser-wizard-assets-tab",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Lägg till fjärde wizard-tab 'Bilder' — logo + mediamaterial får egen tab",
+      "whyNow": "Operatorn 2026-05-26 efter pages-picker-revisionen: 'Gör så att det är fyra tabbar där den fjärde är bilderna som idag ligger i tab 3.' Tab 3 (Funktioner) blev oklar när sidor-pickern och AssetsStep delade samma yta. Att bryta ut bilder till en egen tab gör tab 3 100% sidor och ger uppladdning en tydlig hemvist. 'Mer information'-knappen flyttas samtidigt till den nya sista tabben så den syns precis innan 'Skapa sajt' — vilket var operatorens ursprungliga önskemål.",
+      "paths": [
+        "apps/viewser/components/discovery-wizard/wizard-types.ts",
+        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx"
+      ],
+      "doNotTouch": [
+        "apps/viewser/components/discovery-wizard/wizard-payload.ts",
+        "packages/generation/**"
+      ],
+      "acceptanceCriteria": [
+        "WIZARD_STEP_ORDER har 4 steg: foundation/visual/functions/assets",
+        "WIZARD_STEP_TITLES['assets'] = 'Bilder'",
+        "Tab 4 (Bilder) renderar AssetsStep + 'Mer information'-knappen",
+        "Tab 3 (Funktioner) renderar BARA FunctionsStep (sidor-pickern), inget annat",
+        "validateWizardStep('assets', ...) returnerar null — bilder är skip-bara",
+        "Backend-payload oförändrat",
+        "Lint, typecheck och term-coverage rena"
+      ],
+      "checks": [
+        "cd apps/viewser && npm run lint",
+        "cd apps/viewser && npx tsc --noEmit",
+        "python scripts/check_term_coverage.py --strict"
+      ],
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "createdAt": "2026-05-26T18:18:22Z",
+      "updatedAt": "2026-05-26T18:18:54Z",
+      "notes": [],
+      "activatedAt": "2026-05-26T18:18:34Z",
+      "completedAt": "2026-05-26T18:18:54Z",
       "fixCommits": []
     }
   ],
