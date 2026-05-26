@@ -201,13 +201,13 @@ function ProductRow({
             value={product.name}
             onChange={(e) => onChange({ name: e.target.value })}
             placeholder="Produktnamn"
-            className="h-9 text-[13px]"
+            className="h-9 text-base md:text-[13px]"
           />
           <Input
             value={product.price ?? ""}
             onChange={(e) => onChange({ price: e.target.value })}
             placeholder="Pris (t.ex. 299 kr)"
-            className="h-9 text-[13px]"
+            className="h-9 text-base md:text-[13px]"
           />
         </div>
         <Textarea
@@ -215,7 +215,7 @@ function ProductRow({
           onChange={(e) => onChange({ description: e.target.value })}
           placeholder="Kort beskrivning (valfritt)"
           rows={2}
-          className="text-[13px]"
+          className="text-base md:text-[13px]"
         />
         <div className="flex justify-end">
           <Button
@@ -268,7 +268,10 @@ function ProductImageColumn({
           type="button"
           onClick={onRemove}
           aria-label="Ta bort produktbild"
-          className="absolute top-1 right-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[10px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100"
+          // touch-visible utility: alltid synlig på touch-enheter (där
+          // group-hover aldrig triggar). h-7 w-7 ger tap-target på mobil
+          // utan att förstöra desktop-tätheten där knappen krymper till h-5.
+          className="touch-visible absolute top-1 right-1 inline-flex h-7 w-7 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-black/70 text-[10px] font-bold text-white transition-opacity active:scale-95"
         >
           ×
         </button>
@@ -398,7 +401,7 @@ function RestaurantContent({
                     updateMenuItem(item.id, { name: e.target.value })
                   }
                   placeholder="Rättens namn"
-                  className="h-9 text-[13px]"
+                  className="h-9 text-base md:text-[13px]"
                 />
                 <Input
                   value={item.price ?? ""}
@@ -406,7 +409,7 @@ function RestaurantContent({
                     updateMenuItem(item.id, { price: e.target.value })
                   }
                   placeholder="Pris"
-                  className="h-9 text-[13px]"
+                  className="h-9 text-base md:text-[13px]"
                 />
               </div>
               <Textarea
@@ -416,7 +419,7 @@ function RestaurantContent({
                 }
                 placeholder="Kort beskrivning"
                 rows={2}
-                className="mt-2 text-[13px]"
+                className="mt-2 text-base md:text-[13px]"
               />
               <div className="mt-2 flex justify-end">
                 <Button
@@ -500,7 +503,7 @@ function SalonContent({
                     updateService(service.id, { name: e.target.value })
                   }
                   placeholder="Behandling"
-                  className="h-9 text-[13px]"
+                  className="h-9 text-base md:text-[13px]"
                 />
                 <Input
                   value={service.price ?? ""}
@@ -508,7 +511,7 @@ function SalonContent({
                     updateService(service.id, { price: e.target.value })
                   }
                   placeholder="Pris"
-                  className="h-9 text-[13px]"
+                  className="h-9 text-base md:text-[13px]"
                 />
                 <Input
                   value={service.durationMinutes?.toString() ?? ""}
@@ -519,7 +522,7 @@ function SalonContent({
                   }
                   placeholder="Min"
                   type="number"
-                  className="h-9 text-[13px]"
+                  className="h-9 text-base md:text-[13px]"
                 />
               </div>
               <div className="mt-2 flex justify-end">
@@ -562,7 +565,7 @@ function SalonContent({
                     updateTeam(member.id, { name: e.target.value })
                   }
                   placeholder="Namn"
-                  className="h-9 text-[13px]"
+                  className="h-9 text-base md:text-[13px]"
                 />
                 <Input
                   value={member.role ?? ""}
@@ -570,7 +573,7 @@ function SalonContent({
                     updateTeam(member.id, { role: e.target.value })
                   }
                   placeholder="Roll"
-                  className="h-9 text-[13px]"
+                  className="h-9 text-base md:text-[13px]"
                 />
               </div>
               <div className="mt-2 flex justify-end">
@@ -652,7 +655,7 @@ function PortfolioContent({
                   updateProject(project.id, { name: e.target.value })
                 }
                 placeholder="Projektnamn"
-                className="h-9 text-[13px]"
+                className="h-9 text-base md:text-[13px]"
               />
               <Input
                 value={project.client ?? ""}
@@ -660,7 +663,7 @@ function PortfolioContent({
                   updateProject(project.id, { client: e.target.value })
                 }
                 placeholder="Kund (valfritt)"
-                className="h-9 text-[13px]"
+                className="h-9 text-base md:text-[13px]"
               />
             </div>
             <Textarea
@@ -670,7 +673,7 @@ function PortfolioContent({
               }
               placeholder="Vad gjorde du? Vilket resultat?"
               rows={2}
-              className="mt-2 text-[13px]"
+              className="mt-2 text-base md:text-[13px]"
             />
             <div className="mt-2 flex justify-end">
               <Button
@@ -792,7 +795,7 @@ function ServicesContent({
                 updateService(service.id, { name: e.target.value })
               }
               placeholder={labels.placeholder}
-              className="h-9 text-[13px]"
+              className="h-9 text-base md:text-[13px]"
             />
             <Textarea
               value={service.description ?? ""}
@@ -801,7 +804,7 @@ function ServicesContent({
               }
               placeholder="Kort beskrivning (valfritt)"
               rows={2}
-              className="mt-2 text-[13px]"
+              className="mt-2 text-base md:text-[13px]"
             />
             <div className="mt-2 flex justify-end">
               <Button

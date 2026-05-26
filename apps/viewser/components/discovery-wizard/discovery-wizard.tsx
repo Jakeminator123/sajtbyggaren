@@ -565,12 +565,18 @@ export function DiscoveryWizard({
                   type="button"
                   onClick={() => setStepIndex(idx)}
                   className={[
-                    "inline-flex h-5 w-5 items-center justify-center rounded-full font-mono text-[9.5px] transition-colors",
+                    // min-tap garanterar 44×44 hit-area på touch (Apple HIG).
+                    // Visuella chip:n är fortfarande h-7 w-7 (28px) men padding
+                    // kring elementet sträcker hit-area till 44×44 utan att
+                    // glesa ut chip-raden visuellt. active:scale ger tactile
+                    // feedback vid tap.
+                    "min-tap sm:min-tap-0 inline-flex h-7 w-7 items-center justify-center rounded-full font-mono text-[10px] transition-colors active:scale-95",
                     isActive || isPast
                       ? "bg-foreground text-background"
                       : "text-muted-foreground ring-border/70 bg-transparent ring-1",
                   ].join(" ")}
                   aria-label={`Steg ${idx + 1}`}
+                  aria-current={isActive ? "step" : undefined}
                 >
                   {idx + 1}
                 </button>
@@ -582,17 +588,18 @@ export function DiscoveryWizard({
         {/* Höger spalt — eyebrow, rubrik, beskrivning, formulär. */}
         <section className="bg-background relative flex min-h-0 flex-col">
           {/* Egen close-knapp i ljus content area så den inte krockar
-              med den mörka sidebarn. */}
+              med den mörka sidebarn. min-tap på mobil för att klara
+              Apple HIG 44px-rekommendationen; kompakt h-8 w-8 på sm+. */}
           <button
             type="button"
             onClick={() => onOpenChange(false)}
             aria-label="Stäng"
-            className="text-muted-foreground hover:bg-foreground/5 hover:text-foreground absolute top-4 right-4 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors"
+            className="text-muted-foreground hover:bg-foreground/5 hover:text-foreground absolute top-3 right-3 sm:top-4 sm:right-4 z-10 inline-flex min-tap sm:min-tap-0 sm:h-8 sm:w-8 items-center justify-center rounded-full transition-colors active:scale-95"
           >
             <X className="h-4 w-4" />
           </button>
 
-          <DialogHeader className="space-y-2.5 px-10 pt-10 pb-6 text-left">
+          <DialogHeader className="space-y-2.5 px-5 pt-6 pb-5 sm:px-10 sm:pt-10 sm:pb-6 text-left">
             {/* Header-pill — bara en (eyebrow) istället för tidigare
                 dubbletten eyebrow + pipeline-badge. Pipeline-mappning
                 framgår av sidebar-numreringen och dokumenteras i
@@ -602,7 +609,7 @@ export function DiscoveryWizard({
                 {meta.eyebrow}
               </span>
             </div>
-            <DialogTitle className="text-foreground text-[28px] leading-[1.15] font-semibold tracking-tight">
+            <DialogTitle className="text-foreground text-[22px] sm:text-[28px] leading-[1.15] font-semibold tracking-tight">
               {WIZARD_STEP_TITLES[step]}
             </DialogTitle>
             {/* DialogDescription renderas som <p>; interaktiva element
@@ -626,7 +633,7 @@ export function DiscoveryWizard({
 
           <div className="bg-border/50 h-px w-full" aria-hidden />
 
-          <div ref={contentRef} className="flex-1 overflow-y-auto px-10 py-8">
+          <div ref={contentRef} className="flex-1 overflow-y-auto px-5 py-6 sm:px-10 sm:py-8">
             <div className="mx-auto max-w-2xl">
               {step === "foundation" ? (
                 <FoundationStep
@@ -666,8 +673,10 @@ export function DiscoveryWizard({
             </div>
           </div>
 
-          {/* Footer — strikt, hög kontrast på primärknappen. */}
-          <div className="border-border/60 bg-background/95 flex items-center justify-between gap-3 border-t px-6 py-4">
+          {/* Footer — strikt, hög kontrast på primärknappen. pb-safe så
+              primärknappen klarar iOS home-indicator när wizarden täcker
+              hela viewporten på mobil. */}
+          <div className="border-border/60 bg-background/95 flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 pb-safe-or-4 sm:px-6 sm:py-4">
             <div className="flex items-center gap-2">
               <Button
                 type="button"
@@ -675,7 +684,7 @@ export function DiscoveryWizard({
                 size="sm"
                 disabled={isFirst}
                 onClick={goBack}
-                className="text-muted-foreground hover:text-foreground h-9 px-3 text-[12.5px] font-medium"
+                className="text-muted-foreground hover:text-foreground min-tap sm:min-tap-0 h-9 px-3 text-[12.5px] font-medium"
               >
                 ← Tillbaka
               </Button>
@@ -710,8 +719,12 @@ export function DiscoveryWizard({
 
             <div className="flex flex-1 items-center justify-end gap-2.5">
               {validationError ? (
+                // Tidigare dolt under sm: vilket lämnade mobiloperatören
+                // utan förklaring till varför primärknappen var disabled.
+                // Visas nu alltid; texten radbryter naturligt på smala
+                // skärmar tack vare flex-wrap på footer-containern.
                 <span
-                  className="hidden items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700 sm:inline-flex dark:bg-amber-400/10 dark:text-amber-300"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:bg-amber-400/10 dark:text-amber-300"
                   role="status"
                 >
                   <span
@@ -727,7 +740,7 @@ export function DiscoveryWizard({
                   variant="ghost"
                   size="sm"
                   onClick={skipStep}
-                  className="text-muted-foreground hover:text-foreground h-9 px-3 text-[12.5px] font-medium"
+                  className="text-muted-foreground hover:text-foreground min-tap sm:min-tap-0 h-9 px-3 text-[12.5px] font-medium"
                 >
                   Hoppa över
                 </Button>
@@ -739,7 +752,7 @@ export function DiscoveryWizard({
                   onClick={finish}
                   disabled={!!validationError || isSubmitting}
                   className={[
-                    "bg-foreground text-background hover:bg-foreground/90 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm disabled:opacity-40",
+                    "bg-foreground text-background hover:bg-foreground/90 min-tap sm:min-tap-0 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm disabled:opacity-40",
                     PRIMARY_INTERACTIONS,
                   ].join(" ")}
                   title="⌘↵ för att skapa sajten"
@@ -760,7 +773,7 @@ export function DiscoveryWizard({
                   onClick={goNext}
                   disabled={!!validationError}
                   className={[
-                    "bg-foreground text-background hover:bg-foreground/90 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm disabled:opacity-40",
+                    "bg-foreground text-background hover:bg-foreground/90 min-tap sm:min-tap-0 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm disabled:opacity-40",
                     PRIMARY_INTERACTIONS,
                   ].join(" ")}
                   title="⌘↵ för att fortsätta"

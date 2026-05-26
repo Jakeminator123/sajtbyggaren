@@ -343,7 +343,12 @@
   }
 
   .animate-fc-edge-pulse {
-    animation: fc-edge-pulse 2.6s ease-out infinite;
+    /* Polish (fas 3): ease-in-out istället för ease-out gör pulsen
+       symmetrisk in/ut så ringen inte känns abrupt vid slutet av
+       cycle. 3s istället för 2.6s ger den lite mer luft mellan
+       pulserna och känns mindre påträngande över längre sessioner
+       (operatören sitter i builder-vyn i timmar). */
+    animation: fc-edge-pulse 3s ease-in-out infinite;
   }
 
   .animate-shimmer {
@@ -361,6 +366,94 @@
   .gpu-accelerate {
     transform: translateZ(0);
     backface-visibility: hidden;
+  }
+
+  /* === Mobile foundation ====================================================
+     Safe-area, touch-targets and touch-visibility utilities used by the
+     wizard, builder shell, FloatingChat, inspector sheet and all fixed UI.
+     Applied with the iOS home-indicator and notch in mind so fixed
+     bottom/top elements stay reachable. ====================================== */
+
+  /* Safe-area insets via env() — fall back to 0 on platforms without notch. */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .px-safe {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  .pb-safe-or-6 {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 1.5rem);
+  }
+
+  .pb-safe-or-4 {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 1rem);
+  }
+
+  .pb-safe-or-3 {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.75rem);
+  }
+
+  .bottom-safe-6 {
+    bottom: max(env(safe-area-inset-bottom, 0px), 1.5rem);
+  }
+
+  .bottom-safe-4 {
+    bottom: max(env(safe-area-inset-bottom, 0px), 1rem);
+  }
+
+  /* Touch target — Apple HIG and Material both recommend 44pt/48dp. We use
+     44px as our baseline on mobile and let desktop shrink back to whatever
+     the component-local size already is. Apply with `min-tap sm:min-tap-0`
+     to opt out on >=640px when components want a denser desktop layout. */
+  .min-tap {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  @media (min-width: 640px) {
+    .sm\:min-tap-0 {
+      min-height: 0;
+      min-width: 0;
+    }
+  }
+
+  /* Bottom-sheet drag handle — used by FloatingChat and SiteInspectorSheet
+     when they render as bottom sheets on <md viewports. Centered grab pill
+     with subtle contrast so it reads as "drag me" without being loud. */
+  .bottom-sheet-handle {
+    width: 36px;
+    height: 4px;
+    border-radius: 9999px;
+    background-color: oklch(from var(--foreground) l c h / 0.18);
+    margin: 8px auto 4px;
+    flex-shrink: 0;
+  }
+
+  /* Touch visibility — opposite of hover-only affordances. Use on
+     destructive controls (moodboard delete, content image trash) that
+     would otherwise sit under `opacity-0 group-hover:opacity-100` and
+     become invisible on touch devices. Always visible on coarse pointers,
+     hidden until hover on fine pointers. */
+  .touch-visible {
+    opacity: 1;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .touch-visible {
+      opacity: 0;
+    }
+
+    .group:hover .touch-visible,
+    .group:focus-within .touch-visible {
+      opacity: 1;
+    }
   }
 }
 
@@ -403,9 +496,18 @@
   .animate-fadeInUp,
   .animate-fadeInScale,
   .animate-subtle-pulse,
-  .animate-shimmer {
+  .animate-shimmer,
+  .animate-fc-edge-pulse {
     animation: none !important;
   }
+  .hover-lift:hover {
+    transform: none;
+  }
+}
+
+/* Disable hover-lift translate on touch devices — translate-on-hover sticks
+   after tap on iOS/Android and looks broken. Keeps the shadow transition. */
+@media (hover: none) {
   .hover-lift:hover {
     transform: none;
   }

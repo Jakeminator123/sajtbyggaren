@@ -324,7 +324,10 @@ export function validateWizardStep(
 ): string | null {
   switch (step) {
     case "foundation":
-      if (answers.companyName.trim().length < 2) return "Ange minst 2 tecken för företagsnamn.";
+      // Företagsnamn-min-längd-kollen togs bort på operatör-begäran (snabbare
+      // wizard-test utan tvingande företagsnamn). offer + businessFamily
+      // räcker som signal till pipeline att foundation-steget faktiskt är
+      // ifyllt.
       if (answers.offer.trim().length < 3) return "Beskriv kort vad ni gör.";
       if (!answers.businessFamily) return "Välj vilken typ av verksamhet det är.";
       return null;

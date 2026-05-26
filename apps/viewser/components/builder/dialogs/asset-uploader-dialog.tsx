@@ -210,7 +210,7 @@ export function AssetUploaderDialog({
             <Label className="text-muted-foreground mb-2 block text-[11px] tracking-tight uppercase">
               Roll
             </Label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {ROLE_OPTIONS.map((option) => {
                 const isActive = role === option.value;
                 const Icon = option.Icon;
@@ -222,7 +222,7 @@ export function AssetUploaderDialog({
                     aria-pressed={isActive}
                     disabled={isUploading || isBusy}
                     className={cn(
-                      "flex flex-col items-start gap-1 rounded-lg border px-3 py-2.5 text-left transition-colors",
+                      "min-tap sm:min-tap-0 flex flex-col items-start gap-1 rounded-lg border px-3 py-3 text-left transition-colors active:scale-[0.98] sm:py-2.5",
                       "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
                       "disabled:cursor-not-allowed disabled:opacity-50",
                       isActive
@@ -327,7 +327,7 @@ export function AssetUploaderDialog({
                 rows={2}
                 maxLength={400}
                 disabled={isBusy}
-                className="min-h-[60px] resize-none text-[12.5px]"
+                className="min-h-[60px] resize-none text-base sm:text-[12.5px]"
               />
             </div>
           ) : null}

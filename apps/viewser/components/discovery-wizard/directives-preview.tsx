@@ -126,7 +126,7 @@ export function DirectivesPreview({
               variant="ghost"
               size="sm"
               onClick={handleCopy}
-              className="absolute top-2 right-2 h-7 gap-1.5 px-2 text-xs"
+              className="min-tap sm:min-tap-0 absolute top-2 right-2 gap-1.5 px-2 text-xs active:scale-95 sm:h-7"
             >
               {copied ? (
                 <>

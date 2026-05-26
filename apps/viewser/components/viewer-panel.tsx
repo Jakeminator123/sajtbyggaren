@@ -1,11 +1,62 @@
 "use client";
 
-import { ExternalLink, Check, Loader2 } from "lucide-react";
+import {
+  ExternalLink,
+  Check,
+  Loader2,
+  Monitor,
+  Smartphone,
+  Tablet,
+} from "lucide-react";
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { PromptStage } from "@/components/prompt-builder";
+import { cn } from "@/lib/utils";
+
+/**
+ * Device — operatörens valda preview-bredd på desktop. Sätts via
+ * device-toggle-baren (skylten ovanför iframe-canvasen) som constraint:ar
+ * iframe-wrappern till en max-width matchande typiska viewports.
+ *
+ * Värden:
+ *   - "mobile"  → 375px (iPhone SE / 12 mini bredd)
+ *   - "tablet"  → 768px (iPad mini portrait)
+ *   - "laptop"  → 1024px (vanlig laptop-canvas-bredd)
+ *   - "full"    → ingen constraint (default; iframe fyller canvasen)
+ *
+ * Valet persisterar i sessionStorage så valet behålls tills tab/flik
+ * stängs. Nästa gång samma operatör öppnar viewser i en ny tab börjar
+ * det därför alltid på "full" (sessionStorage är per-tab, inte
+ * cross-session).
+ *
+ * device-toggle döljs på mobile (`hidden md:flex`) eftersom enheten
+ * SJÄLV är liten — det är redan en mobil-preview och toggeln skulle
+ * bara ta plats utan värde.
+ */
+type Device = "mobile" | "tablet" | "laptop" | "full";
+
+const DEVICE_WIDTHS: Record<Device, number | null> = {
+  mobile: 375,
+  tablet: 768,
+  laptop: 1024,
+  full: null,
+};
+
+const DEVICE_STORAGE_KEY = "viewser:device-preset";
+
+const DEVICE_OPTIONS: ReadonlyArray<{
+  id: Device;
+  label: string;
+  Icon: typeof Monitor;
+  width: number | null;
+}> = [
+  { id: "mobile", label: "375", Icon: Smartphone, width: 375 },
+  { id: "tablet", label: "768", Icon: Tablet, width: 768 },
+  { id: "laptop", label: "1024", Icon: Monitor, width: 1024 },
+  { id: "full", label: "Full", Icon: Monitor, width: null },
+];
 
 type ViewerPanelProps = {
   runId: string | null;
@@ -255,6 +306,66 @@ export function ViewerPanel({
     kind: BrowserKind;
   } | null>(null);
   const [openingExternal, setOpeningExternal] = useState(false);
+
+  /**
+   * Device-preset (375/768/1024/full). Initialiseras ALLTID till "full"
+   * för att matcha SSR-renderingen — sessionStorage läses i en separat
+   * useEffect direkt efter mount och uppdaterar state synkront. Tidigare
+   * useState-initializer-läsningen orsakade hydration mismatch när
+   * operatören hade en sparad preset (server returnerade "full", klient
+   * "mobile") som React klagade på i konsolen vid första paint.
+   *
+   * Samma mönster som floating-chat.tsx:isMinimized-init.
+   */
+  const [devicePreset, setDevicePreset] = useState<Device>("full");
+  // Räknar om initial-läsning är klar, så vi inte persisterar "full"-
+  // default tillbaka över en faktiskt lagrad preset i window-effekten
+  // nedan (annars skulle första render skriva "full" innan vi hunnit
+  // läsa "mobile" från storage).
+  const deviceHydratedRef = useRef(false);
+
+  // setState wrappas i en async IIFE → setState körs efter `await`,
+  // vilket är "subscription-style" enligt React 19:s
+  // `react-hooks/set-state-in-effect`-regel (samma mönster som
+  // floating-chat.tsx + run-details-panel.tsx använder för
+  // post-mount-state-initialisering).
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      if (typeof window === "undefined") return;
+      const stored = window.sessionStorage.getItem(DEVICE_STORAGE_KEY);
+      if (stored === "mobile" || stored === "tablet" || stored === "laptop") {
+        setDevicePreset(stored);
+      }
+      deviceHydratedRef.current = true;
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Persistera device-val när det ändras (men hoppa över första render
+  // innan hydration läst eventuell sparad preset).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!deviceHydratedRef.current) return;
+    window.sessionStorage.setItem(DEVICE_STORAGE_KEY, devicePreset);
+  }, [devicePreset]);
+
+  /**
+   * Iframe-wrapper-stil. När devicePreset != "full" får wrappern en
+   * max-width-constraint som centreras med mx-auto. iframen själv
+   * fyller wrappern (h-full w-full) så den krympker när wrappern krymper.
+   * useMemo så stilobjektet inte recreate:as per render — undviker
+   * onödiga reflows i StackBlitz-iframen.
+   */
+  const previewWrapperStyle = useMemo(() => {
+    const width = DEVICE_WIDTHS[devicePreset];
+    if (width === null) return undefined;
+    return { maxWidth: `${width}px` };
+  }, [devicePreset]);
 
   // Öppna sajten i en ny flik på stackblitz.com (top-level navigation,
   // ingen embed = ingen credentialless-iframe = funkar i Safari/Firefox).
@@ -649,17 +760,109 @@ export function ViewerPanel({
     !showFallback;
   const showBuildCard = isBuilding || isFinalizing;
 
+  // Device-toggle visas bara på desktop (md:+) och bara när en preview
+  // faktiskt visas (lokal preview eller StackBlitz embed). På empty/
+  // unavailable/loading-states är det meningslöst eftersom det inte
+  // finns någon iframe att constraint:a.
+  const showDeviceToggle =
+    !!runId && !showEmpty && !showUnavailable && !isBuilding && !showFallback;
+
   return (
-    <div className="viewer-canvas bg-background relative flex h-full w-full overflow-hidden">
-      {/* Hero-bakgrundsvideo. Autoplay + muted + loop + playsInline så
-          den startar i alla browsers utan användarinteraktion. Videons
-          centrum förskjuts mot höger via object-position så 3D-objektet
-          inte krockar med hero-texten i vänsterspalten. */}
+    <div
+      className={cn(
+        // Mobil: flex-col så SM-mobile.mp4 (top-banner) + hero-text staplas
+        //   vertikalt som ett naturligt flöde. Bakgrundsfärgen byts till
+        //   videons egen off-white (#f0f2ed) när hero visas så filmens
+        //   bakgrund flyter sömlöst in i canvasen utan synlig edge.
+        // Desktop (md+): flex-row + bg-background — videon ligger absolute
+        //   och hero-texten ovanpå som overlay (oförändrad layout).
+        //
+        // overflow på mobil: när hero visas behöver vi `overflow-y-auto`
+        // så hero-text kan scrolla om viewport-höjden är liten (iPhone SE
+        // 667px med video ~300px + text ~200px + composer ~150px lämnar
+        // ingen marginal). Desktop håller `overflow-hidden` eftersom
+        // hero där är absolute-positioned overlay (ingen scroll-behov).
+        "viewer-canvas relative flex h-full w-full flex-col md:flex-row md:overflow-hidden",
+        showHero
+          ? "overflow-y-auto bg-[#f0f2ed] md:bg-background"
+          : "overflow-hidden bg-background",
+      )}
+    >
+      {/* Device-toggle bar (desktop only). Sitter top-2 right-2 med
+          subtle bg-card så den inte konkurrerar med själva sajt-previewn.
+          Klick på en preset sätter wrapper-bredd via state, vilket
+          gör att iframe-wrappern krymper inåt och centreras. */}
+      {showDeviceToggle ? (
+        <div
+          role="toolbar"
+          aria-label="Förhandsvisningsbredd"
+          className="border-border/60 bg-background/90 absolute top-2 right-2 z-[15] hidden items-center gap-0.5 rounded-full border p-0.5 shadow-sm backdrop-blur md:inline-flex"
+        >
+          {DEVICE_OPTIONS.map((option) => {
+            const isActive = devicePreset === option.id;
+            const Icon = option.Icon;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={isActive}
+                aria-label={
+                  option.width
+                    ? `Preview-bredd ${option.label}px`
+                    : "Full bredd"
+                }
+                onClick={() => setDevicePreset(option.id)}
+                className={
+                  "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium transition active:scale-95 " +
+                  (isActive
+                    ? "bg-foreground text-background shadow-sm"
+                    : "text-muted-foreground hover:text-foreground")
+                }
+              >
+                <Icon className="h-3.5 w-3.5" aria-hidden />
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {/* Hero-bakgrundsvideo. Två separata videos: SM_hero.mp4
+          (16:9 desktop-version med 3D-objekt skiftat höger via 78%
+          object-position) och SM-mobile.mp4 (960x960 fyrkantig
+          mobile-version med 3D-objekt centrerat). Båda är autoPlay +
+          muted + loop + playsInline för universal browser-support.
+
+          - Mobil (<md): SM-mobile.mp4 som centrerad fyrkantig top-banner.
+            Hero-bakgrund får videons egen färg (#f0f2ed) via
+            mobile-hero-bg-klassen så filmen flyter sömlöst in i
+            bakgrunden — ingen hård edge mellan video och canvas.
+          - Desktop (md+): SM_hero.mp4 fullbredd-bakgrund med två
+            gradient-overlays (horisontell + vertikal) som ger hero-
+            texten kontrast i vänsterspalten. */}
       {showHero ? (
         <>
+          {/* Mobile-only fyrkantig top-banner. md:hidden så desktop-
+              video aldrig laddas dubbelt. aspect-square + max-w-xs
+              centrerar filmen utan att äta mer än ~280px höjd på en
+              iPhone 14 Pro (393×852). */}
+          <video
+            key="sm-hero-mobile"
+            className="pointer-events-none relative z-0 mx-auto mt-6 block aspect-square w-[min(280px,70vw)] object-contain md:hidden"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            aria-hidden
+          >
+            <source src="/SM-mobile.mp4" type="video/mp4" />
+          </video>
+          {/* Desktop-version: 16:9 fullbredd-bakgrund. hidden md:block
+              så mobilen aldrig laddar 1.5MB-filen. */}
           <video
             key="sm-hero"
-            className="pointer-events-none absolute inset-0 h-full w-full object-cover [object-position:78%_center]"
+            className="pointer-events-none absolute inset-0 hidden h-full w-full object-cover [object-position:78%_center] md:block"
             autoPlay
             muted
             loop
@@ -669,16 +872,17 @@ export function ViewerPanel({
           >
             <source src="/SM_hero.mp4" type="video/mp4" />
           </video>
-          {/* Två gradienter: en horisontell som mörknar vänsterkanten
-              så hero-texten alltid har kontrast, plus en vertikal som
-              fadar mot botten där prompt-rutan lever. */}
+          {/* Två gradienter (desktop only): horisontell som mörknar
+              vänsterkanten + vertikal som fadar mot botten där prompt-
+              rutan lever. Inte renderade på mobil där videon är en
+              fristående top-banner istället för fullbredd-bakgrund. */}
           <div
             aria-hidden
-            className="from-background/85 via-background/40 dark:from-background/90 dark:via-background/50 pointer-events-none absolute inset-0 bg-gradient-to-r to-transparent"
+            className="from-background/85 via-background/40 dark:from-background/90 dark:via-background/50 pointer-events-none absolute inset-0 hidden bg-gradient-to-r to-transparent md:block"
           />
           <div
             aria-hidden
-            className="to-background/80 dark:to-background/90 pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent"
+            className="to-background/80 dark:to-background/90 pointer-events-none absolute inset-0 hidden bg-gradient-to-b from-transparent via-transparent md:block"
           />
         </>
       ) : null}
@@ -710,20 +914,37 @@ export function ViewerPanel({
       ) : null}
 
       {/* Hero-text — visas alltid när StackBlitz inte aktivt visar en
-          sajt (empty, unavailable, error). Vänsterställd så den inte
-          krockar med videons 3D-objekt till höger. */}
+          sajt (empty, unavailable, error).
+
+          Två olika layouter för mobil vs desktop:
+            - Mobil (<md): text staplad direkt under SM-mobile.mp4-bannern.
+              Center-justerad (items-center) så hela hero ser ut som ett
+              vertikalt flöde: video → eyebrow → rubrik → underrubrik →
+              composer (composer kommer från PromptBuilder i page.tsx
+              och ligger fixed bottom).
+            - Desktop (md+): absolute overlay vänsterställd i canvasen
+              ovanpå videons 3D-objekt (som sitter höger via 78%
+              object-position).
+
+          Rubriken har inte längre hårdkodad br — radbrytningen styrs
+          istället av container-width och text-balance, vilket på 393px
+          ger naturligt "Beskriv din sajt så / bygger vi den." istället
+          för tidigare 4-rads-staplingen. */}
       {showHeroText ? (
-        <div className="relative z-10 flex h-full w-full items-center px-8 sm:px-12 lg:px-20">
-          <div className="flex max-w-lg flex-col items-start gap-4 text-left">
+        // pb-40 på mobil = ~160px safe zone under hero-text så PromptBuilder
+        // (composer ~150px från bottom inkl. safe-area-padding) aldrig täcker
+        // underrad. md:pb-0 + md:absolute återställer desktop-overlay-layouten
+        // där hero-texten är vertikalt centrerad utan bottom-padding-behov.
+        <div className="relative z-10 flex w-full flex-col items-center px-5 pt-4 pb-40 text-center md:absolute md:inset-0 md:h-full md:flex-row md:items-center md:px-12 md:pb-0 md:text-left lg:px-20">
+          <div className="flex max-w-lg flex-col items-center gap-4 md:items-start">
             <span className="border-border/40 bg-background/70 text-foreground/70 rounded-full border px-3 py-1 font-mono text-[10px] tracking-[0.22em] uppercase shadow-sm backdrop-blur">
               Sajtbyggaren · localhost
             </span>
-            <h1 className="text-foreground text-4xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-5xl">
-              Beskriv din sajt
-              <br />
+            <h1 className="text-foreground text-3xl leading-[1.05] font-semibold tracking-tight text-balance sm:text-4xl md:text-5xl">
+              Beskriv din sajt{" "}
               <span className="text-foreground/60">så bygger vi den.</span>
             </h1>
-            <p className="text-foreground/75 max-w-md text-[14px] leading-relaxed text-balance sm:text-[15px]">
+            <p className="text-foreground/75 max-w-md text-[13.5px] leading-relaxed text-balance sm:text-[14px] md:text-[15px]">
               Skriv vad sajten ska göra. Vi genererar Project Input, kör Quality
               Gate och paketerar en preview du kan inspektera direkt här.
             </p>
@@ -875,17 +1096,27 @@ export function ViewerPanel({
       !showEmpty &&
       !isBuilding &&
       !isFinalizing ? (
-        <iframe
-          ref={iframeRef}
-          src={localPreviewUrl}
-          title="Lokal sajt-preview"
-          className="absolute inset-0 z-[5] h-full w-full border-0 bg-white"
-          // Tillåt scripts (Next.js client-side hydration) och
-          // same-origin (vi äger localhost:<port> som vi själva
-          // spawnat) men inte top-navigation eller popups från
-          // sajten — extra defensivt även om vi själva byggt den.
-          sandbox="allow-scripts allow-same-origin allow-forms"
-        />
+        // Wrapper-divet bär device-toggle constraint:en (maxWidth).
+        // När devicePreset === "full" har wrappern ingen style så
+        // iframen fyller hela canvasen (oförändrat default-beteende).
+        // När en preset (375/768/1024) är vald får wrappern
+        // max-width + mx-auto så iframen krymper och centreras.
+        <div
+          className="absolute inset-0 z-[5] mx-auto h-full w-full bg-white transition-[max-width] duration-300 ease-out"
+          style={previewWrapperStyle}
+        >
+          <iframe
+            ref={iframeRef}
+            src={localPreviewUrl}
+            title="Lokal sajt-preview"
+            className="h-full w-full border-0 bg-white"
+            // Tillåt scripts (Next.js client-side hydration) och
+            // same-origin (vi äger localhost:<port> som vi själva
+            // spawnat) men inte top-navigation eller popups från
+            // sajten — extra defensivt även om vi själva byggt den.
+            sandbox="allow-scripts allow-same-origin allow-forms"
+          />
+        </div>
       ) : null}
 
       {/*
@@ -899,10 +1130,19 @@ export function ViewerPanel({
         empty/unavailable äger ytan ELLER när lokal preview tagit
         över canvasen.
       */}
+      {/* StackBlitz-container — bär device-preset-constraint på samma
+          sätt som lokal preview-iframen ovan. mx-auto centrerar wrappern
+          när max-width är satt; transition håller resize-rörelsen smooth
+          så iframen inte hoppar abrupt mellan storlekar. */}
       <div
-        ref={containerRef}
-        className={`h-full w-full ${unavailable || showEmpty || isBuilding || isFinalizing || showFallback || localPreviewUrl ? "invisible" : ""}`}
-      />
+        className="mx-auto h-full w-full transition-[max-width] duration-300 ease-out"
+        style={previewWrapperStyle}
+      >
+        <div
+          ref={containerRef}
+          className={`h-full w-full ${unavailable || showEmpty || isBuilding || isFinalizing || showFallback || localPreviewUrl ? "invisible" : ""}`}
+        />
+      </div>
     </div>
   );
 }

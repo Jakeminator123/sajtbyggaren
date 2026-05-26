@@ -44,7 +44,7 @@ export function QuickPromptButton({
       disabled={isBuilding}
       onClick={() => onSelect(prompt)}
       className={cn(
-        "h-7 gap-1 px-2 text-[11.5px] font-medium tracking-tight",
+        "min-tap sm:min-tap-0 gap-1 px-3 text-[12px] font-medium tracking-tight active:scale-95 sm:h-7 sm:px-2 sm:text-[11.5px]",
         className,
       )}
     >

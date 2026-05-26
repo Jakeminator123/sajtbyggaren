@@ -321,7 +321,12 @@ export function PromptBuilder({
         onComplete={handleWizardComplete}
       />
       <div
-        className={`pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-5 sm:pb-7 ${hidden ? "hidden" : ""}`}
+        // pb-safe-or-4 respekterar iPhone home-indicator (env safe-area-inset
+        // -bottom) + minst 16px under composern. sm:pb-7 (28px) på desktop
+        // där safe-area inte är relevant. Tidigare `pb-5 sm:pb-7` saknade
+        // safe-area-koll och lät composer-knappar ligga 0px från home-indicator
+        // på iPhone X+.
+        className={`pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-3 pb-safe-or-4 sm:pb-7 ${hidden ? "hidden" : ""}`}
         aria-hidden={hidden}
       >
       <div className="pointer-events-auto flex w-full max-w-[720px] flex-col gap-2">
@@ -348,7 +353,7 @@ export function PromptBuilder({
                 void submitPrompt();
               }
             }}
-            className="min-h-[64px] resize-none border-0 bg-transparent px-4 py-3 text-[15px] leading-relaxed shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+            className="min-h-[64px] resize-none border-0 bg-transparent px-4 py-3 text-base leading-relaxed shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 md:text-[15px]"
           />
           <div className="flex items-center justify-between gap-2 border-t border-border/40 px-2 py-2">
             <ModeSwitcher
@@ -370,7 +375,7 @@ export function PromptBuilder({
                 onClick={() => void submitPrompt()}
                 variant="default"
                 size="sm"
-                className="size-9 rounded-full p-0"
+                className="min-tap sm:min-tap-0 rounded-full p-0 active:scale-95 sm:size-9"
                 aria-label={localBusy ? "Bygger sajt" : "Bygg sajt"}
               >
                 {localBusy ? (
@@ -428,6 +433,7 @@ function ModeSwitcher({
         active={mode === "init"}
         disabled={disabled}
         onClick={() => onChange("init")}
+        aria-label="Ny sajt-läge"
       >
         Ny sajt
       </ModePill>
@@ -464,7 +470,7 @@ function ModePill({
       aria-label={ariaLabel}
       disabled={disabled}
       onClick={onClick}
-      className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition disabled:opacity-40 ${
+      className={`min-tap sm:min-tap-0 rounded-full px-3 py-1.5 text-[12px] font-medium transition active:scale-95 disabled:opacity-40 sm:px-2.5 sm:py-1 sm:text-[11px] ${
         active
           ? "bg-background text-foreground shadow-sm"
           : "text-muted-foreground hover:text-foreground"

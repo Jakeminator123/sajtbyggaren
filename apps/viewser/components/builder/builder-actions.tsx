@@ -226,11 +226,17 @@ export function BuilderActions({
   );
 
   return (
+    // Verktygsmenyn döljs under md: (768px) — på mobil ockuperar
+    // FloatingChat hela bottom-edgen som bottom-sheet, så
+    // BuilderActions-pillen hamnar under chatten och blir oåtkomlig.
+    // Operatören når samma actions via ConsoleDrawer (SiteHeader-
+    // ikonen) och FloatingChat-interaktioner. Power-user-genvägen
+    // lever kvar oförändrad på desktop.
     <div
       ref={containerRef}
       onKeyDown={handleMenuKeyDown}
       className={cn(
-        "pointer-events-none fixed bottom-6 z-40 flex flex-col items-start gap-2",
+        "pointer-events-none fixed bottom-safe-6 z-40 hidden md:flex flex-col items-start gap-2",
         side === "left" ? "left-6 items-start" : "right-6 items-end",
       )}
     >

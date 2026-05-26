@@ -7,7 +7,7 @@ import {
   Loader2,
   X as XIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -80,6 +80,55 @@ export function ComparePreviewModal({
   versionA,
   versionB,
 }: ComparePreviewModalProps) {
+  // Mobile swipe-state: vilken pane är centrerad i snap-scroll-viewporten.
+  // Uppdateras via scroll-position-mätning så vi vet vilken pill (A/B) som
+  // ska markeras som aktiv när användaren swipar. På desktop (lg:) syns
+  // båda panes samtidigt i 50/50-grid och pillarna är ren visuell etikett.
+  const [activePane, setActivePane] = useState<"A" | "B">("A");
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const paneARef = useRef<HTMLElement | null>(null);
+  const paneBRef = useRef<HTMLElement | null>(null);
+
+  // Smooth-scroll till efterfrågad pane när användaren klickar på pill.
+  // Lg-breakpoint (1024px) använder grid istället för snap-scroll så
+  // scrollIntoView är inget no-op där — vi väljer ändå att alltid scrolla,
+  // eftersom desktop-flex-grid har båda panes i view oavsett.
+  //
+  // setActivePane(target) körs SYNKRONT (innan scrollIntoView) så
+  // pill-indikatorn flippar omedelbart vid tap istället för att vänta
+  // tills scroll-ratio passerar 0.5 (orsakade desync-frame mellan
+  // tap och visuell aktiv-pill under smooth scroll).
+  const goToPane = useCallback((target: "A" | "B") => {
+    setActivePane(target);
+    const ref = target === "A" ? paneARef.current : paneBRef.current;
+    ref?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "start",
+    });
+  }, []);
+
+  // Scroll-position-baserad active-pane-tracking på mobil. Vi mäter
+  // scrollLeft mot scrollWidth - clientWidth → 0% = A vinner, 100% = B
+  // vinner. Threshold 0.5 betyder att vi växlar exakt halvvägs igenom
+  // svepet, vilket matchar `snap-mandatory` som ändå snappar fullt
+  // till en pane vid release. Snabbare och simplare än observers när
+  // vi bara har två snap-targets.
+  useEffect(() => {
+    if (!open) return;
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const handleScroll = () => {
+      const maxScroll = scroller.scrollWidth - scroller.clientWidth;
+      if (maxScroll <= 0) return;
+      const ratio = scroller.scrollLeft / maxScroll;
+      setActivePane(ratio < 0.5 ? "A" : "B");
+    };
+    handleScroll();
+    scroller.addEventListener("scroll", handleScroll, { passive: true });
+    return () => scroller.removeEventListener("scroll", handleScroll);
+  }, [open]);
+
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
@@ -102,16 +151,26 @@ export function ComparePreviewModal({
             runIdB={runIdB}
             versionA={versionA}
             versionB={versionB}
+            activePane={activePane}
+            onPaneSelect={goToPane}
           />
 
+          {/* Mobile: snap-x horizontal scroll mellan A och B, en pane
+              per swipe. Desktop (lg:): 50/50-grid som tidigare så båda
+              syns samtidigt. Refen behövs på lg också eftersom scroll-
+              listener bara fästs när modalen är öppen men inte bryr sig
+              om viewport-bredd. */}
           <div
+            ref={scrollerRef}
             className={cn(
-              "grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden bg-muted/30 p-2",
-              "lg:grid-cols-2",
+              "min-h-0 flex-1 bg-muted/30 p-2",
+              "flex snap-x snap-mandatory gap-2 overflow-x-auto scrollbar-hidden",
+              "lg:grid lg:grid-cols-2 lg:overflow-hidden",
             )}
           >
             <PreviewPane
               key={`A:${runIdA}`}
+              ref={paneARef}
               runId={runIdA}
               version={versionA}
               tone="rose"
@@ -119,6 +178,7 @@ export function ComparePreviewModal({
             />
             <PreviewPane
               key={`B:${runIdB}`}
+              ref={paneBRef}
               runId={runIdB}
               version={versionB}
               tone="emerald"
@@ -136,14 +196,18 @@ function ModalHeader({
   runIdB,
   versionA,
   versionB,
+  activePane,
+  onPaneSelect,
 }: {
   runIdA: string;
   runIdB: string;
   versionA: number | null | undefined;
   versionB: number | null | undefined;
+  activePane: "A" | "B";
+  onPaneSelect: (pane: "A" | "B") => void;
 }) {
   return (
-    <header className="border-border/60 bg-background/95 flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3">
+    <header className="border-border/60 bg-background/95 flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3 pt-safe">
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <DialogPrimitive.Title className="text-foreground text-[14px] font-semibold tracking-tight">
           Visuell jämförelse
@@ -157,6 +221,46 @@ function ModalHeader({
         </span>
       </div>
 
+      {/* A/B-pills: agerar både som visuell aktiv-indikator (när
+          scroll-listener i parent uppdaterar activePane) och som
+          direkt-navigering vid tap. Bara meningsfull på mobil
+          där snap-scroll separerar panes; på lg+ syns båda
+          samtidigt så pillarna fungerar som etiketter. */}
+      <div
+        role="tablist"
+        aria-label="Välj jämförelse-pane"
+        className="bg-muted/60 inline-flex shrink-0 rounded-full p-0.5 text-[11px] lg:hidden"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activePane === "A"}
+          onClick={() => onPaneSelect("A")}
+          className={cn(
+            "min-tap sm:min-tap-0 rounded-full px-3 py-1 font-medium transition active:scale-95 sm:px-2.5",
+            activePane === "A"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground",
+          )}
+        >
+          v{versionA ?? "?"} · A
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activePane === "B"}
+          onClick={() => onPaneSelect("B")}
+          className={cn(
+            "min-tap sm:min-tap-0 rounded-full px-3 py-1 font-medium transition active:scale-95 sm:px-2.5",
+            activePane === "B"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground",
+          )}
+        >
+          v{versionB ?? "?"} · B
+        </button>
+      </div>
+
       <DialogPrimitive.Close
         render={
           <Button variant="ghost" size="icon-sm" aria-label="Stäng">
@@ -168,17 +272,15 @@ function ModalHeader({
   );
 }
 
-function PreviewPane({
-  runId,
-  version,
-  tone,
-  active,
-}: {
-  runId: string;
-  version: number | null | undefined;
-  tone: "rose" | "emerald";
-  active: boolean;
-}) {
+const PreviewPane = forwardRef<
+  HTMLElement,
+  {
+    runId: string;
+    version: number | null | undefined;
+    tone: "rose" | "emerald";
+    active: boolean;
+  }
+>(function PreviewPane({ runId, version, tone, active }, ref) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [status, setStatus] = useState<PaneStatus>({ kind: "loading" });
   const [openingExternal, setOpeningExternal] = useState(false);
@@ -322,7 +424,10 @@ function PreviewPane({
       : "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
 
   return (
-    <section className="border-border/40 bg-background relative flex min-h-0 flex-col overflow-hidden rounded-xl border">
+    <section
+      ref={ref}
+      className="border-border/40 bg-background relative flex min-h-0 w-full shrink-0 snap-start flex-col overflow-hidden rounded-xl border lg:w-auto lg:shrink"
+    >
       <header className="border-border/40 bg-background/95 flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2">
         <span
           className={cn(
@@ -415,7 +520,7 @@ function PreviewPane({
       </div>
     </section>
   );
-}
+});
 
 function PaneOverlay({ children }: { children: React.ReactNode }) {
   return (

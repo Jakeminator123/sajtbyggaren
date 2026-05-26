@@ -90,7 +90,7 @@ export function RunHistory({
             Inga runs än. Skicka en prompt i hero-fältet för att skapa en.
           </div>
         ) : (
-          <ScrollArea className="h-[26rem] rounded-md border border-border/60 bg-background/40">
+          <ScrollArea className="h-[min(26rem,50dvh)] rounded-md border border-border/60 bg-background/40">
             <ul className="divide-y divide-border/40">
               {runs.map((run) => {
                 const selected = run.runId === selectedRunId;
