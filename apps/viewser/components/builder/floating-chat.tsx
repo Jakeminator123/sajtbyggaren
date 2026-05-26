@@ -1533,8 +1533,10 @@ export function FloatingChat({
         panelen. Tidigare låg den i viewer-panel.tsx top-2 right-2 men
         det gjorde att den krockade visuellt med sajt-previewns
         navigations-element. Här följer den med chat-panelens drag-
-        position (left/top + PANEL_HEIGHT + 8px gap) så den alltid
-        ligger precis under chat-rutan.
+        position så den alltid ligger precis under chat-rutan.
+        Centrerad mot panelens mittpunkt (PANEL_WIDTH/2 + translateX
+        -50%) och kant-i-kant utan gap eftersom operatorn vill att de
+        ska "hänga ihop" visuellt.
 
         Renderas bara på desktop (md+) och endast när panelen inte är
         minimerad — på mobile är enheten själv liten och toggle-värdet
@@ -1546,8 +1548,9 @@ export function FloatingChat({
         aria-label="Förhandsvisningsbredd"
         className="border-border/60 bg-background/90 pointer-events-auto fixed z-40 hidden items-center gap-0.5 rounded-full border p-0.5 shadow-sm backdrop-blur md:inline-flex"
         style={{
-          left: position.x,
-          top: position.y + PANEL_HEIGHT + 8,
+          left: position.x + PANEL_WIDTH / 2,
+          top: position.y + PANEL_HEIGHT,
+          transform: "translateX(-50%)",
         }}
       >
         {DEVICE_PRESET_OPTIONS.map((option) => {
