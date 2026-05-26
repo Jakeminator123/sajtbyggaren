@@ -23,6 +23,7 @@ import { PRIMARY_INTERACTIONS } from "@/lib/ui-tokens";
 
 import { DEMO_PROFILES } from "./demo-answers";
 import { MoreInfoDialog } from "./more-info-dialog";
+import { AssetsStep } from "./steps/assets-step";
 import { FoundationStep, type ScrapeState } from "./steps/foundation-step";
 import { FunctionsStep } from "./steps/functions-step";
 import { VisualStep } from "./steps/visual-step";
@@ -402,6 +403,17 @@ export function DiscoveryWizard({
               {step === "functions" ? (
                 <>
                   <FunctionsStep answers={answers} onChange={updateAnswers} />
+
+                  {/* Logo + mediamaterial direkt p\u00e5 tab 3 \u2014 Vision-modellen
+                      pickar bästa hero/galleribild från det operatorn laddar
+                      upp h\u00e4r (favicon / OG / bakgrundsvideo ligger i popupen). */}
+                  <div className="border-border/40 mt-8 border-t pt-6">
+                    <h3 className="text-foreground mb-3 text-[13.5px] font-semibold tracking-tight">
+                      Logo & mediamaterial
+                    </h3>
+                    <AssetsStep answers={answers} onChange={updateAnswers} />
+                  </div>
+
                   <div className="border-border/40 mt-8 border-t pt-6">
                     <Button
                       type="button"
@@ -413,7 +425,7 @@ export function DiscoveryWizard({
                       Ange information till hemsidan
                     </Button>
                     <p className="text-muted-foreground/70 mt-2 text-[11.5px] leading-relaxed">
-                      Detaljer fr\u00e5n din nuvarande hemsida fylls i automatiskt. Klicka f\u00f6r att granska eller komplettera manuellt.
+                      Inneh\u00e5ll, kontaktuppgifter, favicon och fler detaljer \u2014 fylls i automatiskt vid skrapning, men du kan granska eller komplettera h\u00e4r.
                     </p>
                   </div>
                 </>

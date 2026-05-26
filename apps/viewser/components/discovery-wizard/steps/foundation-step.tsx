@@ -185,12 +185,10 @@ export function FoundationStep({
   // när operatören redan har stoppat in värden. URL-skrape räknas inte
   // här eftersom den ligger ovanför disclosure. Räknar specialisering
   // som 1 och kontakt som antal ifyllda kontaktfält.
-  const advancedFilled =
-    (answers.siteType.length > 0 ? 1 : 0) +
-    (answers.contact.phone.trim() ? 1 : 0) +
-    (answers.contact.email.trim() ? 1 : 0) +
-    (answers.contact.address.trim() ? 1 : 0) +
-    (answers.contact.openingHours.trim() ? 1 : 0);
+  // Kontakt-f\u00e4lten flyttade till "Mer information"-popupen p\u00e5 tab 3
+  // (functions) i GAP-viewser-wizard-minimal-tabs. Bara sub-kategorin
+  // r\u00e4knas h\u00e4r nu \u2014 count==1, activeCount<=1.
+  const advancedFilled = answers.siteType.length > 0 ? 1 : 0;
 
   return (
     <FieldStack>
@@ -323,13 +321,15 @@ export function FoundationStep({
         </MetadataPanel>
       ) : null}
 
-      {/* ADVANCED — i disclosure: specialisering + kontakt. URL-skrape
-          ligger numera ovanför FieldStack (alltid synlig). */}
+      {/* ADVANCED — bara specialisering kvar. Kontaktuppgifter flyttades
+          till "Mer information"-popupen p\u00e5 tab 3 (functions) i wizard-
+          total-minimalism-passet (GAP-viewser-wizard-minimal-tabs).
+          URL-skrape ligger ovanf\u00f6r FieldStack (alltid synlig). */}
       <AdvancedDisclosure
         id="foundation-advanced"
-        label="Specialisering & kontakt"
-        hint="Sub-kategori för bättre copy/SEO, och kontaktuppgifter som visas på kontaktsidan."
-        count={2}
+        label="Specialisering"
+        hint="Sub-kategori f\u00f6r b\u00e4ttre copy/SEO."
+        count={1}
         activeCount={advancedFilled}
       >
         {/* Sub-specialisering — filtrerade chips för vald family.
@@ -361,52 +361,6 @@ export function FoundationStep({
           </div>
         ) : null}
 
-        {/* Kontakt. */}
-        <div>
-          <SectionHeader>Kontakt</SectionHeader>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <TextField
-              label="Telefon"
-              type="tel"
-              optional
-              value={answers.contact.phone}
-              onChange={(value) =>
-                onChange({ contact: { ...answers.contact, phone: value } })
-              }
-              placeholder="08-123 45 67"
-            />
-            <TextField
-              label="E-post"
-              type="email"
-              optional
-              value={answers.contact.email}
-              onChange={(value) =>
-                onChange({ contact: { ...answers.contact, email: value } })
-              }
-              placeholder="hej@dittforetag.se"
-            />
-            <TextField
-              label="Adress"
-              optional
-              value={answers.contact.address}
-              onChange={(value) =>
-                onChange({ contact: { ...answers.contact, address: value } })
-              }
-              placeholder="Storgatan 1, 111 22 Stockholm"
-            />
-            <TextField
-              label="Öppettider"
-              optional
-              value={answers.contact.openingHours}
-              onChange={(value) =>
-                onChange({
-                  contact: { ...answers.contact, openingHours: value },
-                })
-              }
-              placeholder="Mån–Fre 09–17"
-            />
-          </div>
-        </div>
       </AdvancedDisclosure>
     </FieldStack>
   );

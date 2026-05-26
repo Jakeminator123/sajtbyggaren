@@ -900,6 +900,10 @@ COMMON_WORDS = {
     # trigger button. Same viewser-implementation category as the
     # DevicePreset family directly above.
     "MoreInfoDialog", "MoreInfoDialogProps", "MoreInfoTabId", "MoreHorizontal",
+    # Sub-block helper components inside more-info-dialog.tsx (Commit 2
+    # i GAP-viewser-wizard-minimal-tabs). Same viewser-implementation
+    # category as MoreInfoDialog above.
+    "ContactBlock", "MediaExtrasBlock", "AdvancedBlock", "MediaCard",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
