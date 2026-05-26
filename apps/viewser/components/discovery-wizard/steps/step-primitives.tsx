@@ -78,9 +78,9 @@ function InlineHelpButton({ children }: { children: React.ReactNode }) {
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={open ? "Dölj hjälp" : "Visa hjälp"}
-        className="text-muted-foreground/60 hover:text-foreground/80 focus-visible:ring-ring/40 inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        className="text-muted-foreground/60 hover:text-foreground/80 focus-visible:ring-ring/40 inline-flex min-tap items-center justify-center rounded-full transition-colors active:scale-95 focus-visible:ring-2 focus-visible:outline-none sm:h-4 sm:w-4 sm:min-h-0 sm:min-w-0"
       >
-        <Info className="h-3 w-3" aria-hidden />
+        <Info className="h-3.5 w-3.5 sm:h-3 sm:w-3" aria-hidden />
       </button>
       {/* Panelen renderas alltid (hidden när stängd) så `aria-controls`
           alltid pekar på ett element som finns i DOM — bättre AT-stöd

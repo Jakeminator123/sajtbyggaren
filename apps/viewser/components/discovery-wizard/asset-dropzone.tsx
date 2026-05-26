@@ -283,7 +283,7 @@ export function AssetDropzone({
           type="button"
           variant="outline"
           size="sm"
-          className="mt-1 h-7 text-[11px]"
+          className="min-tap sm:min-tap-0 mt-1 text-[12px] active:scale-95 sm:h-7 sm:text-[11px]"
           disabled={busy}
           onClick={(event) => {
             event.stopPropagation();
