@@ -238,6 +238,14 @@ def test_generate_hard_candidate_from_intake_writes_only_candidate_contract_file
         "manifest.json",
         "instructions.md",
         "meta.json",
+        "components",
+    }
+    assert (result.candidate_dir / "components").is_dir()
+    assert not list((result.candidate_dir / "components").iterdir())
+    assert {path.name for path in result.candidate_dir.iterdir() if path.is_file()} == {
+        "manifest.json",
+        "instructions.md",
+        "meta.json",
     }
     assert not (result.candidate_dir / "env-contract.json").exists()
     assert not (result.candidate_dir / "integration-contract.json").exists()

@@ -256,3 +256,14 @@ def test_repo_root_source_is_needs_review_without_scanning() -> None:
     assert report["recommendedClass"] == "needs-review"
     assert "source-too-broad" in report["riskFlags"]
     assert "source-too-large" in report["riskFlags"]
+
+
+def test_broad_repo_subtree_source_is_needs_review_without_scanning() -> None:
+    from scripts.dossier_candidate_intake import REPO_ROOT
+
+    report = analyze_dossier_source(REPO_ROOT / "data", allowed_roots=(REPO_ROOT,))
+
+    assert report["fileCount"] == 0
+    assert report["recommendedClass"] == "needs-review"
+    assert "source-too-broad" in report["riskFlags"]
+    assert "source-too-large" in report["riskFlags"]

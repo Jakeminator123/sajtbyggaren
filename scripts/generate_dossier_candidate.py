@@ -385,9 +385,8 @@ def _write_candidate(
             f"Candidate already exists: {candidate_dir}. Pass --force to overwrite."
         )
     candidate_dir.mkdir(parents=True, exist_ok=True)
-    if dossier_class == "soft":
-        components_dir = candidate_dir / "components"
-        components_dir.mkdir(exist_ok=True)
+    components_dir = candidate_dir / "components"
+    components_dir.mkdir(exist_ok=True)
     manifest_path = candidate_dir / "manifest.json"
     instructions_path = candidate_dir / "instructions.md"
     meta_path = candidate_dir / "meta.json"

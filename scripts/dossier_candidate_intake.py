@@ -52,6 +52,22 @@ FORBIDDEN_DIRECTORY_NAMES = {
     "__pycache__",
     "node_modules",
 }
+BROAD_REPO_SOURCE_PARTS = {
+    ".cursor",
+    "apps",
+    "data",
+    "docs",
+    "governance",
+    "packages",
+    "scripts",
+    "tests",
+}
+FORBIDDEN_REPO_SOURCE_PREFIXES = {
+    ("data", "runs"),
+    ("data", "prompt-inputs"),
+    ("data", "versions"),
+    ("data", "output"),
+}
 LOCKFILE_NAMES = {
     "package-lock.json",
     "pnpm-lock.yaml",
@@ -293,6 +309,22 @@ def _initial_report(source: Path, source_kind: str) -> dict[str, Any]:
     }
 
 
+def _repo_relative_parts(path: Path) -> tuple[str, ...]:
+    try:
+        return path.resolve(strict=False).relative_to(REPO_ROOT).parts
+    except ValueError:
+        return ()
+
+
+def _is_broad_repo_source(source: Path) -> bool:
+    parts = _repo_relative_parts(source)
+    if not parts:
+        return source == REPO_ROOT
+    if len(parts) == 1 and parts[0] in BROAD_REPO_SOURCE_PARTS:
+        return True
+    return any(parts[: len(prefix)] == prefix for prefix in FORBIDDEN_REPO_SOURCE_PREFIXES)
+
+
 def _add_unique(values: list[str], value: str) -> None:
     if value not in values:
         values.append(value)
@@ -461,12 +493,12 @@ def analyze_dossier_source(
     summary["maxTotalBytes"] = caps.max_total_bytes
     summary["maxReadableTextBytesPerFile"] = caps.max_readable_text_bytes_per_file
 
-    if source == REPO_ROOT:
+    if _is_broad_repo_source(source):
         _add_unique(report["riskFlags"], "source-too-broad")
         _add_unique(report["riskFlags"], "source-too-large")
         report["recommendedClass"] = "needs-review"
         report["operatorQuestions"].append(
-            "Källan är repo-roten. Välj en smalare fil eller mapp innan intake körs."
+            "Källan är för bred eller pekar på genererade artefakter. Välj en smalare fil eller mapp innan intake körs."
         )
         report["reportHash"] = intake_report_hash(report)
         return report
