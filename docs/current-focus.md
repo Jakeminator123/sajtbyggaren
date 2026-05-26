@@ -30,11 +30,13 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `e3815f6ceef53af7e1303658a908cf648f970bf9` (2026-05-26 late evening UTC, post docs-count bump before B147 closure sync).
+Last verified state: `2a77c07a7edd2a56dc4e2984d2167007d138a1d0` (2026-05-26 late evening UTC, post B147 closure sync).
 
 Nya commits sedan föregående checkpoint (`0f3bd67`):
 
-- `e3815f6` docs(steward): bump focus and handoff counts after docs sync commits.
+- `2a77c07` docs(steward): close B147 after host whitelist merge.
+- `d483b7d` docs(steward): bump focus and handoff counts after docs sync commits.
+- `b4473ee` docs(known-issues): move B147 to Stängda after b3834b3.
 - `b3834b3` feat(viewser): close B147 — add VIEWSER_ALLOWED_HOSTS host-whitelist.
 - `88dedf0` docs(steward): sync backend handoff after gap 6 and 7 merge.
 - `cb07dbb` docs(steward): sync handoff/focus/workboard with actual code state 2026-05-26.
@@ -94,7 +96,7 @@ implementerat hela `GAP-backend-build-trace-endpoint` (3 endpoints + UI +
      `copy_operator_uploads()`-kopiering till `public/products/`, OCH
      renderer-stöd för produktbild i
      `packages/generation/build/renderers.py`-produktgrid. Egen sprint.
-2. **Sync-PR `jakob-be → main`** — `jakob-be` är 28 commits framför
+2. **Sync-PR `jakob-be → main`** — `jakob-be` är 30 commits framför
    `origin/main`. Bra läge nu eller efter en av Gap-fixarna ovan.
    Operatörens beslut.
 
