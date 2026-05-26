@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -10,6 +9,7 @@ import streamlit as st
 
 from backoffice import asset_graph, impact
 from backoffice.maintenance import (
+    MINI_EVAL_KEEP_ENV,
     CleanupItem,
     apply_safe_cleanup,
     apply_warning_cleanup,
@@ -20,6 +20,7 @@ from backoffice.maintenance import (
     list_variant_toggles,
     plan_safe_cleanup,
     plan_warning_cleanup,
+    positive_int_from_env,
     set_collection_entry_enabled,
     set_top_level_enabled,
 )
@@ -28,6 +29,7 @@ from packages.generation.maintenance import (
     MAX_PROMPT_INPUTS_ENV_VAR,
     MAX_RUNS_ENV_VAR,
 )
+from scripts.run_golden_path_eval import MAX_GOLDEN_PATH_EVALS_ENV
 
 from ..paths import REPO_ROOT
 from ._helpers import safe_render
@@ -68,8 +70,8 @@ def _protected_run_ids() -> set[str]:
 def _env_caption(names: Iterable[str]) -> str:
     parts = []
     for name in names:
-        value = os.environ.get(name)
-        parts.append(f"`{name}`={value.strip() if value and value.strip() else 'unset'}")
+        value = positive_int_from_env(name)
+        parts.append(f"`{name}`={value if value is not None else 'unset'}")
     return " · ".join(parts)
 
 
@@ -77,9 +79,18 @@ def view_safe_cleanup() -> None:
     st.title("Cleanup - Säker rensning")
     st.caption(
         "Dry-run som standard. Rensar bara bygg-/cache-artefakter och använder "
-        "befintlig auto-prune-logik för runs och genererade previews."
+        "befintlig auto-prune-logik för runs, genererade previews och eval-output."
     )
-    st.caption(_env_caption([MAX_RUNS_ENV_VAR, MAX_GENERATED_ENV_VAR]))
+    st.caption(
+        _env_caption(
+            [
+                MAX_RUNS_ENV_VAR,
+                MAX_GENERATED_ENV_VAR,
+                MAX_GOLDEN_PATH_EVALS_ENV,
+                MINI_EVAL_KEEP_ENV,
+            ]
+        )
+    )
 
     protected = _protected_run_ids()
     if protected:

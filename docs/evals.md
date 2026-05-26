@@ -53,7 +53,11 @@ CLI-hjälptext läser samma listor så antal och namn inte driver isär.
 ### Output
 
 För varje suite-körning skrivs en summary till
-`data/evals/eval-runs/<evalRunId>.json`. Innehåll per case:
+`data/evals/summaries/suite/<evalRunId>.json`. Full-mode genererad
+Next.js-output landar parallellt under
+`data/evals/artifacts/suite/<evalRunId>/<siteId>/` så varje case kör en
+ren `npm install` utan att återanvända ett tidigare suite-pass
+`node_modules`. Innehåll per case:
 
 - `siteId`, `dossierPath`, `runId`, `skipBuild`, `elapsedSeconds`
 - `briefSource`, `planSource`
@@ -80,13 +84,17 @@ Körning:
 python scripts/run_golden_path_eval.py --mode deterministic
 ```
 
-Output skrivs under `data/evals/golden-path/`:
+Output ligger uppdelat i två rötter (post evals-folder-plan):
 
-- `<evalId>.json` — maskinläsbar summary med alla fyra case.
-- `<evalId>.md` — operatörsrapport med scorecard, embeddings-status och
-  starter-/dossier-status.
-- `<evalId>/` — isolerad arbetsmapp med `prompt-inputs/`, `runs/`,
-  `generated/` och per-case JSON.
+- `data/evals/summaries/golden-path/<evalId>.json` — maskinläsbar
+  summary med alla fyra case.
+- `data/evals/summaries/golden-path/<evalId>.md` — operatörsrapport med
+  scorecard, embeddings-status och starter-/dossier-status.
+- `data/evals/artifacts/golden-path/<evalId>/` — isolerad arbetsmapp
+  med `prompt-inputs/`, `runs/`, `generated/`, `cases/`.
+
+Retention styrs av `SAJTBYGGAREN_MAX_GOLDEN_PATH_EVALS`; gamla `<evalId>/`-
+mappar och matchande `<evalId>.json`/`.md` rensas i samma pass.
 
 Baseline-prompter:
 
@@ -128,7 +136,7 @@ kräver `OPENAI_API_KEY`. Defaultläget ska vara det som grind-agenter kör.
 ## Manuella scorecards
 
 Manuella 1-10-poäng sparas separat, en fil per suite-körning, under
-`data/evals/manual-scorecards/<evalRunId>.json`. Filerna är
+`data/evals/summaries/manual-scorecards/<evalRunId>.json`. Filerna är
 gitignorerade — mappen behålls i git via en `.gitkeep`.
 
 Sex dimensioner plus en fritext-notering per case:
@@ -195,8 +203,8 @@ finns ett kort representativt prompt. Proben:
    `planSource`, samt om scaffolden faktiskt har en katalog på disk
    under `packages/generation/orchestration/scaffolds/<id>/`.
 4. Skriver en summary till
-   `data/evals/scaffold-probe/<probeId>.json` och en parallell markdown-
-   rapport `<probeId>.md`.
+   `data/evals/summaries/scaffold-probe/<probeId>.json` och en parallell
+   markdown-rapport `<probeId>.md`.
 
 Syftet är att synliggöra skillnaden mellan **scaffolds som finns i
 registry** (14 i nuläget) och **scaffolds som planern kan välja**
@@ -236,9 +244,9 @@ Per case loggas:
 - `comment` — kort kategorisering ("planner picked the intended
   scaffold" / "registry-placeholder (no directory on disk)" / etc.)
 
-Outputs ligger under `data/evals/scaffold-probe/` och är gitignorerade
-på samma sätt som övriga eval-artefakter — mappen behålls via
-`.gitkeep`.
+Outputs ligger under `data/evals/summaries/scaffold-probe/` och är
+gitignorerade på samma sätt som övriga eval-artefakter — mappen behålls
+via `.gitkeep`.
 
 ## Avgränsningar
 

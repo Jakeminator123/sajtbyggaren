@@ -15,6 +15,7 @@ import contextlib
 import json
 import os
 import re
+import shutil
 import sys
 import time
 from collections.abc import Iterator
@@ -27,8 +28,15 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-DEFAULT_EVALS_DIR = REPO_ROOT / "data" / "evals" / "golden-path"
+DEFAULT_SUMMARIES_DIR = REPO_ROOT / "data" / "evals" / "summaries" / "golden-path"
+DEFAULT_ARTIFACTS_DIR = REPO_ROOT / "data" / "evals" / "artifacts" / "golden-path"
+# Backwards-compatible alias kept so older imports/tests/scripts that
+# pointed at the combined ``data/evals/golden-path/`` directory keep
+# working until they are migrated to the explicit summaries/artifacts
+# pair below.
+DEFAULT_EVALS_DIR = DEFAULT_ARTIFACTS_DIR
 OPENAI_API_KEY_ENV = "OPENAI_API_KEY"
+MAX_GOLDEN_PATH_EVALS_ENV = "SAJTBYGGAREN_MAX_GOLDEN_PATH_EVALS"
 PASS_AVERAGE_THRESHOLD = 7.0
 PASS_CASE_THRESHOLD = 6.5
 
@@ -150,6 +158,89 @@ def make_eval_id() -> str:
     """Return the default eval id used for JSON and Markdown output."""
 
     return "golden-path-" + datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
+
+
+def read_env_file_value(env_file: Path, name: str) -> str | None:
+    """Return a single key from a simple ``.env`` file without loading secrets."""
+
+    if not env_file.is_file():
+        return None
+    for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        if key.strip() == name:
+            return value.strip().strip('"').strip("'")
+    return None
+
+
+def read_positive_int_setting(name: str, *, env_file: Path = REPO_ROOT / ".env") -> int | None:
+    """Return a positive integer cap from process env or local ``.env``."""
+
+    raw = os.environ.get(name)
+    if raw is None:
+        raw = read_env_file_value(env_file, name)
+    if raw is None:
+        return None
+    raw = raw.strip()
+    if not raw:
+        return None
+    try:
+        value = int(raw)
+    except ValueError:
+        return None
+    return value if value > 0 else None
+
+
+def prune_golden_path_evals(
+    artifacts_dir: Path,
+    max_evals: int,
+    *,
+    protected_eval_ids: set[str] | None = None,
+    dry_run: bool = False,
+    summaries_dir: Path | None = None,
+) -> list[str]:
+    """Prune golden-path eval work dirs and matching JSON/Markdown summaries.
+
+    ``artifacts_dir`` holds the per-eval work directories. ``summaries_dir``
+    holds the operator-facing ``<evalId>.json`` and ``<evalId>.md`` reports
+    and defaults to ``artifacts_dir`` so legacy callers that kept both in
+    the same folder still get the same behavior.
+    """
+
+    if max_evals <= 0 or not artifacts_dir.is_dir():
+        return []
+    summaries_root = summaries_dir if summaries_dir is not None else artifacts_dir
+    protected = protected_eval_ids or set()
+    entries: list[tuple[float, Path]] = []
+    protected_count = 0
+    for child in artifacts_dir.iterdir():
+        if not child.is_dir():
+            continue
+        if child.name in protected:
+            protected_count += 1
+            continue
+        try:
+            mtime = child.stat().st_mtime
+        except OSError:
+            continue
+        entries.append((mtime, child))
+    keep_slots = max(max_evals - protected_count, 0)
+    entries.sort(key=lambda item: item[0], reverse=True)
+    to_remove = [path for _, path in entries[keep_slots:]]
+    removed: list[str] = []
+    for path in to_remove:
+        removed.append(path.name)
+        if dry_run:
+            continue
+        for summary_path in (
+            summaries_root / f"{path.name}.json",
+            summaries_root / f"{path.name}.md",
+        ):
+            summary_path.unlink(missing_ok=True)
+        shutil.rmtree(path)
+    return removed
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -975,25 +1066,50 @@ def markdown_report(summary: dict[str, Any]) -> str:
 def run_golden_path_eval(
     *,
     mode: str = "deterministic",
-    evals_dir: Path = DEFAULT_EVALS_DIR,
+    artifacts_dir: Path = DEFAULT_ARTIFACTS_DIR,
+    summaries_dir: Path = DEFAULT_SUMMARIES_DIR,
     eval_id: str | None = None,
     cases: tuple[Case, ...] = BASELINE_CASES,
+    evals_dir: Path | None = None,
 ) -> dict[str, Any]:
-    """Run all cases and write JSON + Markdown outputs."""
+    """Run all cases and write JSON + Markdown outputs.
+
+    ``artifacts_dir`` holds the per-eval work tree (``prompt-inputs/``,
+    ``runs/``, ``generated/``, ``cases/``). ``summaries_dir`` holds the
+    operator-facing ``<evalId>.json`` and ``<evalId>.md`` reports. The
+    legacy ``evals_dir`` keyword is still accepted: when set, both
+    artifacts and summaries are placed inside that single directory so
+    older callers keep working without changes.
+    """
 
     if mode not in {"deterministic", "real-llm"}:
         raise ValueError(f"unknown mode: {mode!r}")
     if mode == "real-llm" and not os.environ.get(OPENAI_API_KEY_ENV, "").strip():
         raise SystemExit("--mode real-llm kräver OPENAI_API_KEY. Default är --mode deterministic.")
+    if evals_dir is not None:
+        artifacts_dir = evals_dir
+        summaries_dir = evals_dir
     eval_id = eval_id or make_eval_id()
-    evals_dir.mkdir(parents=True, exist_ok=True)
-    work_dir = evals_dir / eval_id
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    summaries_dir.mkdir(parents=True, exist_ok=True)
+    work_dir = artifacts_dir / eval_id
     work_dir.mkdir(parents=True, exist_ok=False)
     results = [run_case(case, work_dir=work_dir, mode=mode) for case in cases]
     write_case_files(work_dir, results)
     summary = build_summary(eval_id, mode, work_dir, results)
-    json_path = evals_dir / f"{eval_id}.json"
-    md_path = evals_dir / f"{eval_id}.md"
+    removed_eval_ids = prune_golden_path_evals(
+        artifacts_dir,
+        read_positive_int_setting(MAX_GOLDEN_PATH_EVALS_ENV) or 0,
+        protected_eval_ids={eval_id},
+        summaries_dir=summaries_dir,
+    )
+    summary["retention"] = {
+        "envVar": MAX_GOLDEN_PATH_EVALS_ENV,
+        "maxEvals": read_positive_int_setting(MAX_GOLDEN_PATH_EVALS_ENV),
+        "removedEvalIds": removed_eval_ids,
+    }
+    json_path = summaries_dir / f"{eval_id}.json"
+    md_path = summaries_dir / f"{eval_id}.md"
     json_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     md_path.write_text(markdown_report(summary), encoding="utf-8")
     summary["jsonPath"] = str(json_path)
@@ -1018,9 +1134,29 @@ def main(argv: list[str] | None = None) -> int:
         help="Alias for --mode real-llm. Requires OPENAI_API_KEY.",
     )
     parser.add_argument(
+        "--artifacts-dir",
+        default=None,
+        help=(
+            "Override per-eval work-tree root. "
+            f"Default: {DEFAULT_ARTIFACTS_DIR}."
+        ),
+    )
+    parser.add_argument(
+        "--summaries-dir",
+        default=None,
+        help=(
+            "Override JSON/MD summary root. "
+            f"Default: {DEFAULT_SUMMARIES_DIR}."
+        ),
+    )
+    parser.add_argument(
         "--evals-dir",
         default=None,
-        help=f"Override output root. Default: {DEFAULT_EVALS_DIR}.",
+        help=(
+            "Legacy single-root override that places both work tree and "
+            "summaries inside the same directory. Prefer --artifacts-dir "
+            "and --summaries-dir."
+        ),
     )
     parser.add_argument(
         "--eval-id",
@@ -1039,12 +1175,26 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     mode = "real-llm" if args.real_llm else args.mode
-    evals_dir = Path(args.evals_dir).resolve() if args.evals_dir else DEFAULT_EVALS_DIR
-    summary = run_golden_path_eval(
-        mode=mode,
-        evals_dir=evals_dir,
-        eval_id=args.eval_id,
-    )
+    if args.evals_dir:
+        legacy_dir = Path(args.evals_dir).resolve()
+        summary = run_golden_path_eval(
+            mode=mode,
+            evals_dir=legacy_dir,
+            eval_id=args.eval_id,
+        )
+    else:
+        artifacts_dir = (
+            Path(args.artifacts_dir).resolve() if args.artifacts_dir else DEFAULT_ARTIFACTS_DIR
+        )
+        summaries_dir = (
+            Path(args.summaries_dir).resolve() if args.summaries_dir else DEFAULT_SUMMARIES_DIR
+        )
+        summary = run_golden_path_eval(
+            mode=mode,
+            artifacts_dir=artifacts_dir,
+            summaries_dir=summaries_dir,
+            eval_id=args.eval_id,
+        )
     if args.json:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
     else:

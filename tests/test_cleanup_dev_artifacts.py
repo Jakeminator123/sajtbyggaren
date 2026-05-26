@@ -18,12 +18,20 @@ def test_resolve_evals_dir_respects_env(monkeypatch: pytest.MonkeyPatch, tmp_pat
 
 
 @pytest.mark.tooling
-def test_default_evals_dir_is_sibling_output() -> None:
-    from scripts.cleanup_dev_artifacts import DEFAULT_EVALS_DIR, REPO_ROOT, resolve_evals_dir
+def test_default_evals_dir_is_inside_data_evals_artifacts_mini() -> None:
+    from scripts.cleanup_dev_artifacts import (
+        DEFAULT_EVALS_DIR,
+        LEGACY_OUTPUT_EVALS_DIR,
+        REPO_ROOT,
+        resolve_evals_dir,
+    )
 
     assert resolve_evals_dir() == DEFAULT_EVALS_DIR.resolve()
-    assert resolve_evals_dir().name == ".evals"
-    assert resolve_evals_dir().parent == (REPO_ROOT.parent / "sajtbyggaren-output").resolve()
+    assert resolve_evals_dir() == (REPO_ROOT / "data" / "evals" / "artifacts" / "mini").resolve()
+    # The pre-migration default still resolves to the external
+    # ``../sajtbyggaren-output/.evals/`` so operators with that env-var
+    # override keep working.
+    assert LEGACY_OUTPUT_EVALS_DIR == (REPO_ROOT.parent / "sajtbyggaren-output" / ".evals")
 
 
 def _mkdir(path: Path) -> Path:

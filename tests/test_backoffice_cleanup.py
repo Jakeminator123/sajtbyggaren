@@ -12,7 +12,8 @@ from backoffice.maintenance import (
     path_size_bytes,
     plan_safe_cleanup,
 )
-from packages.generation.maintenance import MAX_RUNS_ENV_VAR
+from packages.generation.maintenance import MAX_GENERATED_ENV_VAR, MAX_RUNS_ENV_VAR
+from scripts.run_golden_path_eval import MAX_GOLDEN_PATH_EVALS_ENV
 
 
 def _write(path: Path, size: int) -> None:
@@ -41,6 +42,24 @@ def _make_run(repo: Path, name: str, *, size: int, mtime_offset: float) -> Path:
     when = time.time() + mtime_offset
     _set_mtime(run_dir, when)
     return run_dir
+
+
+def _make_eval_generated(repo: Path, name: str, *, size: int, mtime_offset: float) -> Path:
+    eval_dir = repo / "data" / "evals" / "generated" / name
+    _write(eval_dir / "site-a" / "package.json", size)
+    when = time.time() + mtime_offset
+    _set_mtime(eval_dir, when)
+    return eval_dir
+
+
+def _make_golden_path_eval(repo: Path, name: str, *, size: int, mtime_offset: float) -> Path:
+    eval_dir = repo / "data" / "evals" / "golden-path" / name
+    _write(eval_dir / "cases" / "case.json", size)
+    _write(repo / "data" / "evals" / "golden-path" / f"{name}.json", 2)
+    _write(repo / "data" / "evals" / "golden-path" / f"{name}.md", 2)
+    when = time.time() + mtime_offset
+    _set_mtime(eval_dir, when)
+    return eval_dir
 
 
 def test_cleanup_dry_run_does_not_delete(tmp_path: Path) -> None:
@@ -118,3 +137,53 @@ def test_cleanup_apply_reports_size_freed(tmp_path: Path) -> None:
     assert result.deleted_count == 2
     assert not old_run.exists()
     assert not (repo / ".ruff_cache").exists()
+
+
+def test_cleanup_plans_eval_generated_and_golden_path_retention(tmp_path: Path) -> None:
+    repo = _make_repo(tmp_path)
+    old_eval_generated = _make_eval_generated(repo, "eval-old", size=11, mtime_offset=-100)
+    _make_eval_generated(repo, "eval-new", size=13, mtime_offset=0)
+    old_golden = _make_golden_path_eval(repo, "golden-old", size=17, mtime_offset=-100)
+    _make_golden_path_eval(repo, "golden-new", size=19, mtime_offset=0)
+
+    plan = plan_safe_cleanup(
+        repo_root=repo,
+        generated_dir=tmp_path / "generated",
+        environ={
+            MAX_GENERATED_ENV_VAR: "1",
+            MAX_GOLDEN_PATH_EVALS_ENV: "1",
+        },
+    )
+
+    assert old_eval_generated in [item.path for item in plan.items if item.kind == "eval-generated"]
+    assert old_golden in [item.path for item in plan.items if item.kind == "golden-path-eval"]
+    assert old_eval_generated.exists()
+    assert old_golden.exists()
+
+
+def test_cleanup_apply_removes_eval_generated_and_golden_path_summaries(
+    tmp_path: Path,
+) -> None:
+    repo = _make_repo(tmp_path)
+    old_eval_generated = _make_eval_generated(repo, "eval-old", size=11, mtime_offset=-100)
+    _make_eval_generated(repo, "eval-new", size=13, mtime_offset=0)
+    old_golden = _make_golden_path_eval(repo, "golden-old", size=17, mtime_offset=-100)
+    _make_golden_path_eval(repo, "golden-new", size=19, mtime_offset=0)
+    expected = path_size_bytes(old_eval_generated) + path_size_bytes(old_golden)
+
+    result = apply_safe_cleanup(
+        repo_root=repo,
+        generated_dir=tmp_path / "generated",
+        environ={
+            MAX_GENERATED_ENV_VAR: "1",
+            MAX_GOLDEN_PATH_EVALS_ENV: "1",
+        },
+    )
+
+    assert old_eval_generated in result.deleted_paths
+    assert old_golden in result.deleted_paths
+    assert result.freed_bytes == expected
+    assert not old_eval_generated.exists()
+    assert not old_golden.exists()
+    assert not (repo / "data" / "evals" / "golden-path" / "golden-old.json").exists()
+    assert not (repo / "data" / "evals" / "golden-path" / "golden-old.md").exists()

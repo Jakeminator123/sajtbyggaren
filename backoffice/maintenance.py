@@ -23,6 +23,10 @@ from packages.generation.maintenance import (
     prune_runs,
 )
 from scripts.prune_generated_previews import resolve_generated_dir
+from scripts.run_golden_path_eval import (
+    MAX_GOLDEN_PATH_EVALS_ENV,
+    prune_golden_path_evals,
+)
 
 from .paths import REPO_ROOT
 
@@ -30,6 +34,10 @@ SCAFFOLD_CONTRACT_PATH = REPO_ROOT / "governance" / "policies" / "scaffold-contr
 STARTER_REGISTRY_PATH = REPO_ROOT / "governance" / "policies" / "starter-registry.v1.json"
 SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
 DOSSIERS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "dossiers"
+# Mini-eval retention shares the existing env var documented in
+# ``.env.example`` so operators do not get a second knob for the same
+# concept. ``scripts/cleanup_dev_artifacts.py`` reads the same name.
+MINI_EVAL_KEEP_ENV = "SAJTBYGGAREN_MINI_EVAL_KEEP"
 
 
 @dataclass(frozen=True)
@@ -86,10 +94,29 @@ class ToggleRow:
     note: str = ""
 
 
+def _read_env_file_value(env_file: Path, name: str) -> str | None:
+    """Read one simple key from ``.env`` without importing all secrets."""
+
+    if not env_file.is_file():
+        return None
+    for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        if key.strip() == name:
+            return value.strip().strip('"').strip("'")
+    return None
+
+
 def positive_int_from_env(name: str, environ: dict[str, str] | None = None) -> int | None:
     """Parse the opt-in retention caps used by the generation maintenance module."""
-    source = environ if environ is not None else os.environ
-    raw = source.get(name)
+    if environ is not None:
+        raw = environ.get(name)
+    else:
+        raw = os.environ.get(name)
+        if raw is None:
+            raw = _read_env_file_value(REPO_ROOT / ".env", name)
     if raw is None:
         return None
     raw = raw.strip()
@@ -263,6 +290,31 @@ def path_size_bytes(path: Path) -> int:
     return total
 
 
+def prune_child_dirs(root: Path, max_dirs: int, *, dry_run: bool = False) -> list[str]:
+    """Keep the newest ``max_dirs`` direct child directories by mtime."""
+
+    if max_dirs <= 0 or not root.is_dir():
+        return []
+    entries: list[tuple[float, Path]] = []
+    for child in root.iterdir():
+        if not child.is_dir() or child.is_symlink():
+            continue
+        try:
+            mtime = child.stat().st_mtime
+        except OSError:
+            continue
+        entries.append((mtime, child))
+    if len(entries) <= max_dirs:
+        return []
+    entries.sort(key=lambda item: item[0], reverse=True)
+    removed: list[str] = []
+    for _, path in entries[max_dirs:]:
+        removed.append(path.name)
+        if not dry_run:
+            shutil.rmtree(path)
+    return removed
+
+
 def _is_within(path: Path, root: Path) -> bool:
     try:
         path.resolve().relative_to(root.resolve())
@@ -302,6 +354,20 @@ def assert_cleanup_path_allowed(
 
     allowed_roots = [
         repo_root / "data" / "runs",
+        repo_root / "data" / "evals" / "artifacts" / "suite",
+        repo_root / "data" / "evals" / "artifacts" / "golden-path",
+        repo_root / "data" / "evals" / "artifacts" / "mini",
+        repo_root / "data" / "evals" / "summaries" / "golden-path",
+        repo_root / "data" / "evals" / "summaries" / "suite",
+        repo_root / "data" / "evals" / "summaries" / "scaffold-probe",
+        repo_root / "data" / "evals" / "summaries" / "manual-scorecards",
+        # Legacy paths kept whitelisted so the same cleanup pass can
+        # remove pre-migration directories operators still have on disk.
+        repo_root / "data" / "evals" / "generated",
+        repo_root / "data" / "evals" / "golden-path",
+        repo_root / "data" / "evals" / "eval-runs",
+        repo_root / "data" / "evals" / "manual-scorecards",
+        repo_root / "data" / "evals" / "scaffold-probe",
         repo_root / ".pytest_cache",
         repo_root / ".ruff_cache",
         repo_root / "sajtbyggaren.egg-info",
@@ -354,6 +420,56 @@ def plan_safe_cleanup(
             path = generated_root / site_id
             if path.exists():
                 plan.items.append(_item(path, "generated-preview"))
+
+        for eval_generated_root in (
+            repo_root / "data" / "evals" / "artifacts" / "suite",
+            # Pre-migration location. Kept here so the same cap rensar
+            # även operatörens gamla mappar utan extra knapp.
+            repo_root / "data" / "evals" / "generated",
+        ):
+            eval_run_ids = prune_child_dirs(
+                eval_generated_root,
+                max_generated,
+                dry_run=True,
+            )
+            for eval_run_id in eval_run_ids:
+                path = eval_generated_root / eval_run_id
+                if path.exists():
+                    plan.items.append(_item(path, "eval-generated"))
+
+    max_golden_path_evals = positive_int_from_env(MAX_GOLDEN_PATH_EVALS_ENV, environ)
+    if max_golden_path_evals is not None:
+        for artifacts_root, summaries_root in (
+            (
+                repo_root / "data" / "evals" / "artifacts" / "golden-path",
+                repo_root / "data" / "evals" / "summaries" / "golden-path",
+            ),
+            # Pre-migration layout kept both work dirs and summaries
+            # under the same directory.
+            (
+                repo_root / "data" / "evals" / "golden-path",
+                repo_root / "data" / "evals" / "golden-path",
+            ),
+        ):
+            eval_ids = prune_golden_path_evals(
+                artifacts_root,
+                max_golden_path_evals,
+                dry_run=True,
+                summaries_dir=summaries_root,
+            )
+            for eval_id in eval_ids:
+                path = artifacts_root / eval_id
+                if path.exists():
+                    plan.items.append(_item(path, "golden-path-eval"))
+
+    mini_eval_keep = positive_int_from_env(MINI_EVAL_KEEP_ENV, environ)
+    if mini_eval_keep is not None:
+        mini_root = repo_root / "data" / "evals" / "artifacts" / "mini"
+        eval_ids = prune_child_dirs(mini_root, mini_eval_keep, dry_run=True)
+        for eval_id in eval_ids:
+            path = mini_root / eval_id
+            if path.exists():
+                plan.items.append(_item(path, "mini-eval"))
 
     for cache_path in [
         repo_root / ".pytest_cache",
@@ -448,6 +564,52 @@ def apply_safe_cleanup(
             prune_generated(max_generated, dry_run=False, generated_dir=generated_root)
         )
 
+    removed_eval_generated: dict[Path, set[str]] = {}
+    if max_generated is not None:
+        for eval_generated_root in (
+            repo_root / "data" / "evals" / "artifacts" / "suite",
+            repo_root / "data" / "evals" / "generated",
+        ):
+            removed_eval_generated[eval_generated_root] = set(
+                prune_child_dirs(
+                    eval_generated_root,
+                    max_generated,
+                    dry_run=False,
+                )
+            )
+
+    max_golden_path_evals = positive_int_from_env(MAX_GOLDEN_PATH_EVALS_ENV, environ)
+    removed_golden_path_evals: dict[Path, set[str]] = {}
+    if max_golden_path_evals is not None:
+        for artifacts_root, summaries_root in (
+            (
+                repo_root / "data" / "evals" / "artifacts" / "golden-path",
+                repo_root / "data" / "evals" / "summaries" / "golden-path",
+            ),
+            (
+                repo_root / "data" / "evals" / "golden-path",
+                repo_root / "data" / "evals" / "golden-path",
+            ),
+        ):
+            removed_golden_path_evals[artifacts_root] = set(
+                prune_golden_path_evals(
+                    artifacts_root,
+                    max_golden_path_evals,
+                    summaries_dir=summaries_root,
+                )
+            )
+
+    mini_eval_keep = positive_int_from_env(MINI_EVAL_KEEP_ENV, environ)
+    removed_mini_evals: set[str] = set()
+    if mini_eval_keep is not None:
+        removed_mini_evals = set(
+            prune_child_dirs(
+                repo_root / "data" / "evals" / "artifacts" / "mini",
+                mini_eval_keep,
+                dry_run=False,
+            )
+        )
+
     for item in plan.items:
         try:
             assert_cleanup_path_allowed(item.path, repo_root=repo_root, generated_dir=generated_root)
@@ -457,15 +619,29 @@ def apply_safe_cleanup(
             continue
 
         already_handled = (
-            item.kind == "run" and item.path.name in removed_runs
-        ) or (
-            item.kind == "generated-preview" and item.path.name in removed_generated
+            (item.kind == "run" and item.path.name in removed_runs)
+            or (item.kind == "generated-preview" and item.path.name in removed_generated)
+            or (
+                item.kind == "eval-generated"
+                and item.path.name in removed_eval_generated.get(item.path.parent, set())
+            )
+            or (
+                item.kind == "golden-path-eval"
+                and item.path.name in removed_golden_path_evals.get(item.path.parent, set())
+            )
+            or (item.kind == "mini-eval" and item.path.name in removed_mini_evals)
         )
         if already_handled:
             result.deleted_paths.append(item.path)
             result.freed_bytes += item.size_bytes
             continue
-        if item.kind in {"run", "generated-preview"}:
+        if item.kind in {
+            "run",
+            "generated-preview",
+            "eval-generated",
+            "golden-path-eval",
+            "mini-eval",
+        }:
             if item.path.exists():
                 result.skipped_paths.append(item.path)
             else:
