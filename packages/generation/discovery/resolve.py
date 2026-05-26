@@ -723,11 +723,14 @@ def _scaffold_hint_from_payload(
     Returnerar ``(scaffoldId, variantId, expectedStarterId)`` för
     runtime-aktiva scaffold-hints, annars ``None``. Hinten respekteras
     bara för scaffolds som faktiskt har starter-mapping; en hint som
-    pekar mot en planned scaffold (t.ex. ``portfolio-creator`` eller
-    ``clinic-healthcare``) tas inte som hård signal eftersom det skulle
-    krocka med taxonomins ``planned`` -> ``fallbackScaffoldId``-regel.
-    Tre scaffolds är runtime idag: ``local-service-business``,
-    ``ecommerce-lite`` och ``restaurant-hospitality`` (Path A).
+    pekar mot en planned scaffold (t.ex. ``portfolio-creator``) tas inte
+    som hård signal eftersom det skulle krocka med taxonomins
+    ``planned`` -> ``fallbackScaffoldId``-regel. Sex scaffolds är
+    runtime idag: ``local-service-business``, ``ecommerce-lite`` och
+    ``restaurant-hospitality`` (Path A — per-route ``elif``-armar i
+    ``write_pages``) plus ``clinic-healthcare``, ``professional-services``
+    och ``agency-studio`` (Path B native section-driven dispatcher i
+    ``packages/generation/build/dispatcher.py``).
     """
     if not isinstance(payload, dict):
         return None
@@ -1182,9 +1185,11 @@ def _apply_directives_fields(
     #
     # Säkerhet: bara runtime-aktiva scaffolds får override:a (samma
     # whitelist som pre-B121 ``_scaffold_hint_from_payload``). Planned
-    # scaffolds (``portfolio-creator``, ``clinic-healthcare`` m.fl.)
-    # tillåts inte eftersom build_site.py inte kan rendera dem ännu.
-    # ``restaurant-hospitality`` är runtime sedan 2026-05-25.
+    # scaffolds (``portfolio-creator`` m.fl.) tillåts inte eftersom
+    # build_site.py inte kan rendera dem ännu. ``restaurant-hospitality``
+    # är runtime sedan 2026-05-25 och ``clinic-healthcare`` /
+    # ``professional-services`` / ``agency-studio`` är runtime via Path
+    # B native dispatcher (steg 12-14, 2026-05-25).
     scaffold_hint = directives.get("scaffoldHint")
     if isinstance(scaffold_hint, str):
         clean_scaffold = scaffold_hint.strip()
