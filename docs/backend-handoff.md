@@ -22,7 +22,7 @@ Alla paths nedan är relativa repo-roten. Gap 4 + 5 pekar på
 | 7. OG-image 1200×630-crop | Sannolikt öppen | Inga sökträffar för OG-image-build. Wizardens `media.ogImage` definieras i `wizard-types.ts:WizardMedia` men backend-rendering ej verifierad |
 | 8. Video-mimetype + render | Delvis (osäkert) | PR #117 (`59eed4c`) la till `SM-mobile.mp4` som hero-bg på viewser-startsidan, men `<video>`-rendering på den genererade sajten ej granskad. Upload-API i `apps/viewser/app/api/upload-asset/route.ts` är relevant utgångspunkt |
 | 9. `moodImages[]` isolering | Behöver verifieras | UI har `moodImages` i `wizard-types.ts:WizardAnswers` men backend-path för `__mood/`-isolation ej granskad i `scripts/build_site.py:copy_operator_uploads` |
-| 10. `products[].productImage` | Behöver verifieras | UI har `productImage` per produkt i `wizard-types.ts:WizardProduct` men backend-kopiering till `public/products/` ej granskad i `scripts/build_site.py:copy_operator_uploads` |
+| 10. `products[].productImage` | Behöver verifieras | UI har `productImage` per produkt i `apps/viewser/components/discovery-wizard/wizard-types.ts` (products-array) men backend-kopiering till `public/products/` ej granskad i `scripts/build_site.py:copy_operator_uploads` |
 | 11. Vercel Blob `sourceUrl` | Stängd (PR #66 + later refinements) | `scripts/build_site.py:794-1013` (disk-first + sourceUrl-fallback + allowlist till `public.blob.vercel-storage.com` + 8 MB cap) |
 
 **Slutsats:** Gap 1, 3 och 11 är klara. Övriga 8 behöver en ny audit som
