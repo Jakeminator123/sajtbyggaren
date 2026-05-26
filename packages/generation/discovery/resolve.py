@@ -208,6 +208,7 @@ _DEFAULT_STARTER_ID = "marketing-base"
 _VALID_LAYOUT_HINTS = {"gradient", "centered", "split"}
 _MAX_UNIQUE_SELLING_POINTS = 4
 _MAX_NOTES_FOR_PLANNER_CHARS = 1024
+_MAX_DIRECTIVE_CAPABILITIES = 32
 _MEDIA_DIRECTIVE_ROLES = ("favicon", "ogImage", "backgroundVideo")
 
 # Rot för scaffold-paket på disk. Varje scaffold har en ``variants/``-
@@ -1276,6 +1277,39 @@ def _apply_directives_fields(
                 project_input["directives"] = {"notesForPlanner": clean_notes}
             field_sources["directives.notesForPlanner"] = "wizard"
 
+    # Gap 4: ``directives.requestedCapabilities`` är wizard-valda capability-
+    # slugs (mappade från ``answers.selectedFunctions`` via FUNCTION_GROUPS-
+    # tabellen i ``apps/viewser/components/discovery-wizard/wizard-
+    # constants.ts``). Vi persisterar dem under ``directives`` så
+    # ``_resolve_capabilities()`` kan plocka upp dem nedströms och merga med
+    # ``mustHave``-deriverade caps + taxonomy + brief. Sanitering: bara
+    # icke-tomma strängar, dedup-bevara-ordning, max 32 items (samma cap
+    # som schema). Persistens under ``directives`` håller top-level
+    # ``requestedCapabilities`` rent från directive-källan så
+    # ``_resolve_capabilities()`` kan särskilja source per slug.
+    raw_directive_caps = directives.get("requestedCapabilities")
+    if isinstance(raw_directive_caps, list):
+        directive_caps: list[str] = []
+        seen_directive_caps: set[str] = set()
+        for item in raw_directive_caps:
+            if not isinstance(item, str):
+                continue
+            clean = item.strip()
+            if not clean or clean in seen_directive_caps:
+                continue
+            directive_caps.append(clean)
+            seen_directive_caps.add(clean)
+            if len(directive_caps) >= _MAX_DIRECTIVE_CAPABILITIES:
+                break
+        if directive_caps:
+            existing_directives = project_input.get("directives")
+            if isinstance(existing_directives, dict):
+                existing_directives["requestedCapabilities"] = directive_caps
+            else:
+                project_input["directives"] = {
+                    "requestedCapabilities": directive_caps,
+                }
+
     # Media: per-roll-tombstone-semantik. När wizarden skickar
     # ``directives.media.<role> = None`` betyder det att operatören
     # tagit bort en tidigare uppladdad asset i den rollen — vi måste
@@ -1345,6 +1379,23 @@ def _resolve_capabilities(
     ``resolve_discovery`` (R2 P1 + R3 #2 på PR #34).
     """
     existing = list(project_input.get("requestedCapabilities") or [])
+    # Gap 4: ``directives.requestedCapabilities`` (wizard-valda funktioner från
+    # steg 3) går FÖRE ``mustHave``-deriverade caps i source-prioriteten.
+    # Båda är operator-input men direktivet är den explicita "jag vill ha
+    # dessa capabilities"-signalen från wizarden, medan ``mustHave``-mappingen
+    # är en härledning från valda sidor. Båda får source-label ``"wizard"``
+    # — vi sär-skiljer inte i field_sources eftersom befintliga konsumenter
+    # bara förväntar sig ``wizard``-bucketen. Persisterat under
+    # ``project_input["directives"]["requestedCapabilities"]`` av
+    # ``_apply_directives_fields()``; safe getattr-chain för att täcka
+    # legacy-calls utan directives-block.
+    directive_caps_raw = project_input.get("directives")
+    directive_caps: list[str] = []
+    if isinstance(directive_caps_raw, dict):
+        candidate = directive_caps_raw.get("requestedCapabilities")
+        if isinstance(candidate, list):
+            directive_caps = [item for item in candidate if isinstance(item, str)]
+
     wizard_caps: list[str] = []
     must_have = answers.get("mustHave")
     if isinstance(must_have, list):
@@ -1360,6 +1411,12 @@ def _resolve_capabilities(
     combined: list[str] = []
     seen: set[str] = set()
     sources_per_slug: dict[str, FieldSourceLiteral] = {}
+    for slug in directive_caps:
+        canonical = _normalize_capability_slug(slug)
+        if canonical and canonical not in seen:
+            combined.append(canonical)
+            seen.add(canonical)
+            sources_per_slug[canonical] = "wizard"
     for slug in wizard_caps:
         canonical = _normalize_capability_slug(slug)
         if canonical and canonical not in seen:

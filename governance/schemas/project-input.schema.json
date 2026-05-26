@@ -174,6 +174,12 @@
           "type": "string",
           "maxLength": 1024,
           "description": "Operatörens fritext-orientering till planningModel (Gap 5). Concat av answers.specialRequests + uniqueSellingPoints från wizardens steg 3, byggd av composeMasterPrompt i apps/viewser/components/discovery-wizard/wizard-payload.ts:496-514. Resolvern persisterar fältet utan att tolka det; build_site.py:build_site_brief prepend:ar det på SiteBrief.notesForPlanner med prefix 'Operator: ' så planner ser operator-intent först. Cappa vid 1024 tecken — räcker för 2-3 stycken fri text utan att svälla planner-prompten."
+        },
+        "requestedCapabilities": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "maxItems": 32,
+          "description": "Wizard-valda capability-slugs (Gap 4) mappade från answers.selectedFunctions via FUNCTION_GROUPS-tabellen i apps/viewser/components/discovery-wizard/wizard-constants.ts. Resolvern merge:ar dessa deterministiskt i project_input.requestedCapabilities innan _resolve_capabilities() klassificerar dem via capability-map.v1.json. Source-prioritet: directive > wizard.mustHave-derived > taxonomy > brief."
         }
       }
     },
