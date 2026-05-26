@@ -2,6 +2,7 @@ streamlit>=1.39
 jsonschema>=4.23
 pydantic>=2.9
 openai>=1.50
+pillow>=10.0
 
 # discovery wizard URL-scrape (scripts/scrape_site.py)
 requests>=2.32
