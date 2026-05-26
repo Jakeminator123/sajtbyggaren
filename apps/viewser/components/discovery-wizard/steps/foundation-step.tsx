@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 
 import type { discoveryOption } from "../discovery-options";
 import { FoundationSummary } from "../foundation-summary";
+import { VibeSwatchRow } from "../visual-preview-card";
 import {
   BUSINESS_FAMILIES,
   type BusinessFamily,
   type BusinessFamilyId,
   familyForCategory,
+  findVibe,
   type WizardCategoryId,
 } from "../wizard-constants";
 import type { WizardAnswers } from "../wizard-types";
@@ -300,13 +302,19 @@ export function FoundationStep({
 /**
  * FamilyCard — verksamhets­familje-kort i steg 1.
  *
- * Tidigare hade kortet en visuell preview-kolumn med default-vibens
- * färger + hero-glyph, men det signalerade fel: branschen är ortogonal
- * mot visuell identitet. En snickare ska kunna välja "Bygg/Hantverk"
- * och sedan välja mörkt tema i steg 2 utan att kortet säger "men din
- * bransch är ljus och gul". Visuell identitet ägs nu helt av steg 2
- * (`VisualStep`), så detta kort är medvetet rent text/typografi —
- * bara label + kort beskrivning av branschen.
+ * Layouten är medvetet text-tung (label + beskrivning vänster) men
+ * kompletteras av en subtil 3-prick-swatch-rad i kortets högerkant
+ * som speglar default-vibens primary/accent/background. Swatchen är
+ * läst-only PREVIEW — den signalerar "så här ser default-paletten ut
+ * för den här branschen om du inte ändrar" snarare än att låsa
+ * visuell identitet. Operatören får fri visuell ompröving i steg 2
+ * (VisualStep), så en snickare kan välja "Bygg/Hantverk" och sedan
+ * byta till ett mörkt tema utan inkonsekvens.
+ *
+ * Hero-layout-glyph är medvetet UTELÄMNAD här — vibe-id kodar inte
+ * en specifik layout, så en glyph skulle behöva en godtycklig
+ * default-variant och riskera att signalera "din bransch styr
+ * layouten" vilket är fel mental model. Layouten väljs i steg 2.
  */
 function FamilyCard({
   family,
@@ -317,24 +325,36 @@ function FamilyCard({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const defaultVibe = findVibe(family.defaultVariantId);
   return (
     <button
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
       className={[
-        "group flex w-full flex-col items-start gap-1 rounded-xl border px-3.5 py-3 text-left transition-all",
+        "group flex w-full items-start gap-3 rounded-xl border px-3.5 py-3 text-left transition-all",
         selected
           ? "border-foreground bg-foreground/[0.04] shadow-sm"
           : "border-border/70 bg-card hover:border-foreground/40 hover:bg-foreground/[0.02] hover:shadow-sm",
       ].join(" ")}
     >
-      <div className="text-foreground text-[13px] font-semibold tracking-tight">
-        {family.label}
+      <div className="min-w-0 flex-1">
+        <div className="text-foreground text-[13px] font-semibold tracking-tight">
+          {family.label}
+        </div>
+        <div className="text-muted-foreground line-clamp-2 text-[11.5px] leading-snug">
+          {family.description}
+        </div>
       </div>
-      <div className="text-muted-foreground line-clamp-2 text-[11.5px] leading-snug">
-        {family.description}
-      </div>
+      {defaultVibe ? (
+        <VibeSwatchRow
+          primary={defaultVibe.primarySwatch}
+          accent={defaultVibe.accentSwatch}
+          background={defaultVibe.background}
+          size={9}
+          className="mt-0.5 shrink-0 opacity-70 transition-opacity group-hover:opacity-100"
+        />
+      ) : null}
     </button>
   );
 }
