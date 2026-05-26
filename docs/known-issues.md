@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 20 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 117 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 18 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 119 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -151,16 +151,6 @@ jargong synligt på alla fyra case), generisk service-copy ("X -
 kontakta oss för mer information." återanvänds överallt), och hero-
 CTA "Begär offert" hardcoded i `render_home` oavsett bransch
 (bryter särskilt e-handel-trovärdighet). Audit-konfidence 7/10.
-
-- **`B97` Låg** - `/kontakt`-paragrafen "Beskriv jobbet kort så
-  återkommer vi inom en arbetsdag med tider och offert." använder
-  `jobbet`+`offert` hardcoded — passar inte e-handel-cases (frågor om
-  beställning/retur/leverans). Källa: re-Verifierings-Scout
-  2026-05-15. Fix: open. Test: open.
-- **`B98` Låg** - "Områden vi arbetar i"-block på `/om-oss` är
-  meaningless för e-handel — borde inte renderas (eller annan rubrik)
-  när scaffold = `ecommerce-lite`. Källa: re-Verifierings-Scout
-  2026-05-15. Fix: open. Test: open.
 
 **Historisk B71-not:** Re-Verifierings-Scout kunde före Project DNA-
 fixen inte verifiera follow-up-byte-stabilitet i ett första-
@@ -631,6 +621,46 @@ matar wizarden med taxonomi-options:
   Fix: open. Test: open.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B97` Låg** (stängd 2026-05-26, scaffold-aware contact-copy sprint) -
+  `render_section_contact_info`:s kontakt-page hero body hårdkodade
+  "Beskriv jobbet kort så återkommer vi inom en arbetsdag med tider och
+  offert." Orden `jobbet` + `tider och offert` antar quote-driven
+  service-business; e-handel-kunder frågar om beställning/leverans/retur
+  och booking-kunder vill boka en tid. Fix: ny dict
+  `_CONTACT_PAGE_HERO_BODY_BY_VARIANT` keyad på `(variant, language)`
+  där variant kommer från `_hero_cta_variant` (samma shop/booking/quote-
+  klassificerare som driver hero-CTA-labels) och language är `sv`/`en`.
+  Quote-variantens svenska copy är byte-identisk så lokala
+  service-business-renders inte regredierar; shop- och booking-varianter
+  får explicit formulerade copies. Ny `_contact_page_hero_body`-helper
+  väljer copyn med fallback till `quote+sv` för okända `(variant,
+  language)`-kombinationer. Hero-headlinen "Hör av dig" är generisk
+  över alla varianter och rörs inte (scope-lock). Bidrar till att lyfta
+  Golden Path-evalens `dominantProblem=contact (3/4 case)`-signal.
+  Fix: `c85ae70`. Test:
+  `tests/test_builder_route_emission.py::test_b97_contact_page_hero_body_quote_variant_default_unchanged`,
+  `tests/test_builder_route_emission.py::test_b97_contact_page_hero_body_shop_variant_for_ecommerce_lite`,
+  `tests/test_builder_route_emission.py::test_b97_contact_page_hero_body_booking_variant_for_booking_business`,
+  `tests/test_builder_route_emission.py::test_b97_contact_page_hero_body_english_quote_variant`,
+  `tests/test_builder_route_emission.py::test_b97_contact_page_hero_body_english_shop_variant`,
+  `tests/test_builder_route_emission.py::test_b97_contact_page_hero_headline_stays_generic_across_variants`.
+
+- **`B98` Låg** (stängd 2026-05-26, scaffold-aware contact-copy sprint) -
+  `render_about`:s "Områden vi arbetar i"-section renderades för alla
+  scaffolds med non-country-only location, inklusive `ecommerce-lite`.
+  Rubriken + MapPin-ikonen är service-business-flavoured och läses
+  awkwardly för e-handel som skickar från en plats (inga lokala
+  serviceområden i samma bemärkelse). Fix: utöka den befintliga B104
+  country-only-suppressionen med en scaffold-check som också suppressar
+  blocket när `scaffoldId == "ecommerce-lite"`. Defensivt: dossiers
+  utan `scaffoldId` faller fortfarande igenom till bara country-only-
+  checken, vilket bevarar bakåtkompatibilitet med äldre callers. Cross-
+  ref: B104 (country-only suppression, denna bygger på den helpern).
+  Fix: `c85ae70`. Test:
+  `tests/test_builder_route_emission.py::test_b98_render_about_omits_service_areas_for_ecommerce_lite`,
+  `tests/test_builder_route_emission.py::test_b98_render_about_keeps_service_areas_for_local_service_business`,
+  `tests/test_builder_route_emission.py::test_b98_render_about_keeps_service_areas_when_scaffold_unspecified`.
 
 - **`B148` Medel** (stängd 2026-05-26, fix-sprint för read-only build_site-audit) -
   `_nav_items_from_scaffold` hårdkodade `/kontakt` som insertion-anchor
