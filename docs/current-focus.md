@@ -30,11 +30,10 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `86db492` (2026-05-26 UTC, christopher-ui local + origin —
-fas 1 + fas 2 completed (in-review) i workboard, väntar på Jakob-merge av PR #117.
-Fas 3 (final polish) öppnad som ny GAP `GAP-viewser-mobile-responsive-final-polish`;
-implementeras nu på samma branch eftersom #117 inte mergat. Operator-direktiv
-"Kör fas 3" (msg innan denna commit).).
+Last verified state: `8724798` (2026-05-26 UTC, christopher-ui local — fas 3
+final polish klart på 4 commits. PR #117 utökas med fas 3-commits (e05c443 GAP
++ 18d84f5 run-history/compare-swipe + f850882 device-toggle/motion + 8724798
+term-coverage). Pushas + PR-body uppdateras + Jakob notifieras i nästa steg.).
 
 Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
 
@@ -82,13 +81,28 @@ Inga off-limits-paths rörda i fas 1 (`scripts/`, `packages/generation/`,
 `apps/viewser/app/api/`, `apps/viewser/lib/`, `middleware.ts`, `next.config.ts`,
 `package.json` — alla intakta).
 
-Fas 2 (polish/P1) — aktiv. `GAP-viewser-mobile-responsive-polish` adresserar:
-PromptBuilder textarea iOS-zoom-fix + min-tap-submit, `InlineHelpButton` min-tap,
-`ViewerPanel` hero typografi `text-3xl sm:text-4xl` + padding `px-5 sm:px-12`,
-`ai-image-generator-dialog` mobile bottom-sheet-stack + grid-cols-1, asset/color-
-dialog-grids responsiva, `ConsoleDrawer` flexibel höjd, `AssetDropzone` +
-`DirectivesPreview` + `QuickPromptButton` tap-targets. Compare-modal swipe +
-ViewerPanel device-toggle skjuts till fas 3 (kräver UX-design).
+Fas 2 (polish/P1) — completed (in-review). `GAP-viewser-mobile-responsive-polish`
+adresserade: PromptBuilder textarea iOS-zoom-fix + min-tap-submit, `InlineHelpButton`
+min-tap, `ViewerPanel` hero typografi `text-3xl sm:text-4xl` + padding `px-5
+sm:px-12`, `ai-image-generator-dialog` mobile bottom-sheet-stack + grid-cols-1,
+asset/color-dialog-grids responsiva, `ConsoleDrawer` flexibel höjd,
+`AssetDropzone` + `DirectivesPreview` + `QuickPromptButton` tap-targets.
+
+Fas 3 (final polish) — completed (in-review). `GAP-viewser-mobile-responsive-final-polish`
+landat 4 commits ovanpå fas 1 + 2 i samma PR #117:
+- `e05c443` docs(gap): complete fas 1+2 (in-review), open fas 3 — final polish.
+- `18d84f5` fix(viewser): mobile responsive height + compare-modal swipe A/B.
+  - `run-history.tsx` ScrollArea `h-[26rem]` → `h-[min(26rem,50dvh)]` (333px på 667px-skärm).
+  - `compare-preview-modal.tsx` mobil snap-x swipe + A/B-pills + scroll-position-detection.
+- `f850882` feat(viewser/canvas): device-toggle desktop preview + edge-pulse motion.
+  - `viewer-panel.tsx` 4-knappars toggle 375/768/1024/Full med sessionStorage-persistence.
+  - `globals.css` `.animate-fc-edge-pulse` 2.6s ease-out → 3s ease-in-out.
+- `8724798` chore(viewser): term-coverage compliance.
+  - `DevicePreset` → `Device`, MacBook → laptop, IntersectionObserver → scroll-pos detection.
+
+Inga off-limits-paths rörda i någon av faserna. Komplett check-svit grön
+(sprintvakt, focus, governance, rules-sync, term-coverage --strict, ruff,
+tsc, ESLint, pytest 540+).
 
 Nya PRs sedan föregående checkpoint: PR #114 — chore(gitignore): re-ignore
 `__pycache__/` under `packages/generation/build/` (B146 fallout); PR #115 —
