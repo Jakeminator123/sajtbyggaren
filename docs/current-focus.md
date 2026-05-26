@@ -30,10 +30,24 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `50217e3` (2026-05-25 UTC, steward-auto efter PR #115 — sync(jakob-be -> main): #114 gitignore hygiene (post-#113 cleanup)).
-Nya PRs sedan föregående checkpoint: PR #114 — chore(gitignore): re-ignore __pycache__/
-under packages/generation/build/ (B146 fallout); PR #115 — sync(jakob-be -> main): #114
-gitignore hygiene (post-#113 cleanup).
+Last verified state: `8c057b1` (2026-05-26 ~10:40 UTC, post-merge bump efter PR #116 — feat(backoffice): add dossier candidate intake from local files).
+
+Nya PRs / direkta commits till `jakob-be` sedan föregående checkpoint (`50217e3`):
+
+- `a337f01` (du / Jakob, 2026-05-26 ~01:55) — committade `docs/reports/pr113-ours-conflict-audit-2026-05-26.md` (audit-rapport: PR #113 `--ours`-konfliktresolution är clean; symbol-complete port, 14/16 filer differar bara genom ADR 0031 → 0032 renumber + path-refs).
+- `f2e84b0` (direkt commit, 2026-05-26) — `fix(builder): close B148+B149+B150 from external read-only audit`. B148 nav `_nav_items_from_scaffold` letar contact-path från scaffold istället för att hårdkoda `/kontakt` (restaurant-hospitality bites). B149 Intent Guard tokeniserar candidate_terms för exact-token-match (substring-match gav `"bar" in "barber"` false-positives). B150 `_normalize_business_type` collapsar multi-word slugs via dash-prefix-walking. 14 nya regression-tester.
+- `e6a23a3` — `docs(steward): move B148+B149+B150 to Stängda with fix=f2e84b0`.
+- `c85ae70` — `fix(builder): close B97 + B98 (contact-page copy + om-oss areas-block per scaffold)`. B97 ny `_CONTACT_PAGE_HERO_BODY_BY_VARIANT`-dict + helper för per-variant (shop/booking/quote) × language (sv/en) kontakt-page hero body — eliminerar "Beskriv jobbet kort … med tider och offert"-läckaget för e-handel/booking. B98 suppress `Områden vi arbetar i` för `ecommerce-lite`. 9 nya regression-tester.
+- `3b5a798` — `docs(steward): move B97 + B98 to Stängda with fix=c85ae70`.
+- `6d4a096` — `fix(brief): close B90+B91+B92+B93 (language/location/business-type cluster)`. B90 ta bort "a"/"an" ur ENGLISH_HINTS. B91 `_ENGLISH_TO_SWEDISH_CITY` (Gothenburg→Göteborg, Helsinki→Helsingfors, Copenhagen→Köpenhamn) på sv-byggen. B92 bare `naprapat`/`naprapath` → `naprapat` (sole-practitioner), bara explicita `*-clinic`/`naprapatklinik` → `naprapatklinik`. B93 22 nya multi-word engelska business-slugs → svenska. ~20 nya regression-tester.
+- `49f5513` — `docs(steward): move B90+B91+B92+B93 to Stängda with fix=6d4a096`.
+- `8c057b1` — **PR #116 squash-merged till `jakob-be`**, `feat(backoffice): add dossier candidate intake from local files`. 1453 inser / 21 del, 8 filer, ny `scripts/dossier_candidate_intake.py` (614 rader) + ny `tests/test_dossier_candidate_intake.py` (269 rader). Backoffice-verktyg för dossier-candidate-intake från lokala filer. AI Bug Review-kommentar om hard candidates kvarstår men är operatör-bedömd som icke-blockerande för V1 candidate-only.
+
+Plus: ny aktiv bugg **B147 Medel-Hög** filerades (Vercel preview wizard 403 via `assertLocalhost` på `*.vercel.app`). **Operatörsbeslut a/b/c krävs** innan kod-fix kan väljas (acceptera localhost-only + dokumentera / host-whitelist / ADR om Viewser-på-Vercel auth-strategi). Cross-ref: `docs/reports/b125-preview-fallback-decision-2026-05-22.md`.
+
+Net bug-räkning: **14 aktiva / 0 misplaced / 5 unknown / 123 stängda** (från 19/0/5/114 vid sessions-start — netto 5 färre aktiva, 9 buggar stängda, 1 ny tracked).
+
+`origin/jakob-be` är 7 commits före `origin/main`. Sync-PR `jakob-be → main` är queued men ej öppnad — väntar operatörsbeslut om timing (samma blockare som tidigare: Christophers `christopher-ui` har inte rebasat mot post-#112-arkitektur, och Vercel-production-branch står fortsatt på `jakob-be` per `docs/operations/vercel-production-branch-todo.md` tills sync är gjord).
 
 Sedan c0b59fbe (PR #60) har följande mergats till `main`, i ordning:
 
@@ -62,9 +76,11 @@ Sedan c0b59fbe (PR #60) har följande mergats till `main`, i ordning:
 - `2821e5f` docs(steward) — Sprintvåg 1 stängd, bumpade verified state till `7654573`, dokumenterade alla fyra PRs i landade-spår-listan.
 - `2a5d2e5` PR #83 — `docs(grind): close B72 + B75 status-sync to Stängda`. Båda buggarna fixed i `885431b` (PR #28), regression-tester passar mot HEAD, bara docs-position låg fel. Cloud-grind round 4.
 
-**Pågående/öppna PR:s just nu:** Inga öppna PRs mot `jakob-be` eller
-`main`. Cloud-grind-sessionen är klar för sin runda — kan stängas eller
-plockas för ny coordination-prompt vid nästa pass.
+**Pågående/öppna PR:s just nu:**
+
+- **PR #117 — `feat(viewser): mobile responsive — foundation + polish + final (fas 1+2+3)`** från Christophers `christopher-ui` mot `jakob-be`. State OPEN, mergeStateStatus CLEAN, mergeable, ej draft. 1718 inser / 244 del över 34 filer. Author `chgenberg`. **Jakob är reviewer per team-workflow** (Christopher-PRs mot `jakob-be`, inte direkt mot `main` — han har rebasat christopher-ui ovanpå post-#116-arkitekturen så B146-konflikten är löst). Inte mergad än; väntar Jakob-review.
+
+Cloud-grind-sessionen är klar för sin runda — kan stängas eller plockas för ny coordination-prompt vid nästa pass.
 
 **Christophers `origin/christopher-ui` (`9f63f15`)** — Christopher har
 under operator-OK scope-leak implementerat hela

@@ -1,10 +1,16 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-25 UTC, steward-auto efter PR #115 — sync(jakob-be -> main): #114 gitignore hygiene (post-#113 cleanup). Verifierad `main` är `50217e3`.
+**Datum:** 2026-05-26 ~10:40 UTC, manuell steward-bump efter PR #116 — feat(backoffice): add dossier candidate intake from local files. Verifierad `jakob-be` HEAD är `8c057b1`. `origin/main` är fortsatt `50217e3` (7 commits efter `jakob-be`); sync-PR `jakob-be → main` är queued men ej öppnad — operatörsbeslut om timing kvarstår.
 
-Nya PRs sedan föregående checkpoint: PR #114 — chore(gitignore): re-ignore __pycache__/
-under packages/generation/build/ (B146 fallout); PR #115 — sync(jakob-be -> main): #114
-gitignore hygiene (post-#113 cleanup).
+Nya PRs / direkta commits till `jakob-be` sedan föregående checkpoint (`50217e3`):
+
+- `a337f01` audit-rapport `docs/reports/pr113-ours-conflict-audit-2026-05-26.md` (PR #113 `--ours`-resolution är clean).
+- `f2e84b0` + `e6a23a3` — B148 (nav `/kontakt`-hardcode), B149 (Intent Guard substring), B150 (`_normalize_business_type` multi-word) stängda + 14 regression-tester.
+- `c85ae70` + `3b5a798` — B97 (kontakt-page hero body per CTA-variant), B98 (`Områden vi arbetar i` suppress för ecommerce-lite) stängda + 9 regression-tester.
+- `6d4a096` + `49f5513` — B90 (ENGLISH_HINTS "a"/"an" false positives), B91 (English-exonym → svensk endonym), B92 (`naprapat` ≠ `naprapatklinik`), B93 (22 nya multi-word slugs) stängda + ~20 regression-tester.
+- `8c057b1` PR #116 mergad — `feat(backoffice): add dossier candidate intake from local files` (1453 inser / 21 del, 8 filer, ny `scripts/dossier_candidate_intake.py` + tester).
+
+Ny aktiv: **B147 Medel-Hög** (Vercel preview wizard 403 via `assertLocalhost`). Operatörsbeslut a/b/c krävs innan kod-fix. Bug-räkning: **14 aktiva / 0 misplaced / 5 unknown / 123 stängda** (från 19/0/5/114 vid sessionsstart — netto 5 färre aktiva, 9 stängda, 1 ny tracked).
 
 **MCP-server-status:** Sprintvakt-servern exponerar 14 tools efter
 PR #77 (`get_workboard`, `list_gaps`, `create_gap`, `activate_gap`,
