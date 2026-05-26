@@ -22,6 +22,7 @@ import {
   ChangeEvent as ReactChangeEvent,
   KeyboardEvent as ReactKeyboardEvent,
   PointerEvent as ReactPointerEvent,
+  type ReactNode,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -301,6 +302,13 @@ type FloatingChatProps = {
    */
   pendingBaseRunId?: { baseRunId: string; baseVersion: number | null } | null;
   onClearBaseRunId?: () => void;
+  /**
+   * Slot för extra UI som rendras i samma centrerade toolbar-rad UNDER
+   * chat-panelen (till höger om device-preset-toggle). Typiskt
+   * `<BuilderActions variant="inline" ... />`. Renderas bara på desktop
+   * när panelen inte är minimerad.
+   */
+  tools?: ReactNode;
 };
 
 type PromptApiResponse = {
@@ -514,6 +522,7 @@ export function FloatingChat({
   onBuildEnd,
   pendingBaseRunId,
   onClearBaseRunId,
+  tools,
 }: FloatingChatProps) {
   const [position, setPosition] = useState<Position | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -1529,56 +1538,63 @@ export function FloatingChat({
       />
     </aside>
 
-    {/* Device-preset-toggle (375/768/1024/Full) som syskon UNDER chat-
-        panelen. Tidigare låg den i viewer-panel.tsx top-2 right-2 men
-        det gjorde att den krockade visuellt med sajt-previewns
-        navigations-element. Här följer den med chat-panelens drag-
-        position så den alltid ligger precis under chat-rutan.
-        Centrerad mot panelens mittpunkt (PANEL_WIDTH/2 + translateX
-        -50%) och kant-i-kant utan gap eftersom operatorn vill att de
-        ska "hänga ihop" visuellt.
+    {/* Toolbar-rad UNDER chat-panelen — innehåller device-preset-pillen
+        (375/768/1024/Full) och en optional `tools`-slot (typiskt
+        BuilderActions "Verktyg"-pillen). Tidigare låg device-toggle i
+        viewer-panel.tsx top-2 right-2 och Verktyg-pillen i bottom-left
+        som separat fixed-element; nu följer båda med chat-panelens
+        drag-position så de alltid ligger precis under chat-rutan,
+        centrerade mot panelens mittpunkt (PANEL_WIDTH/2 + translateX
+        -50%) och kant-i-kant utan gap eftersom operatorn vill att
+        formaten + Verktyg ska "hänga ihop" visuellt under chatten.
 
         Renderas bara på desktop (md+) och endast när panelen inte är
         minimerad — på mobile är enheten själv liten och toggle-värdet
-        är meningslöst. position-null guard:en hanterar SSR + initial
-        hydration innan first-mount-effekten satt position-state. */}
+        är meningslöst, och Verktyg-pillen är ändå dold under md:.
+        position-null guard:en hanterar SSR + initial hydration innan
+        first-mount-effekten satt position-state. */}
     {!isMobile && !isMinimized && position ? (
       <div
-        role="toolbar"
-        aria-label="Förhandsvisningsbredd"
-        className="border-border/60 bg-background/90 pointer-events-auto fixed z-40 hidden items-center gap-0.5 rounded-full border p-0.5 shadow-sm backdrop-blur md:inline-flex"
+        className="pointer-events-none fixed z-40 hidden items-center gap-2 md:flex"
         style={{
           left: position.x + PANEL_WIDTH / 2,
           top: position.y + PANEL_HEIGHT,
           transform: "translateX(-50%)",
         }}
       >
-        {DEVICE_PRESET_OPTIONS.map((option) => {
-          const isActive = devicePreset === option.id;
-          const Icon = option.Icon;
-          return (
-            <button
-              key={option.id}
-              type="button"
-              aria-pressed={isActive}
-              aria-label={
-                option.width
-                  ? `Preview-bredd ${option.label}px`
-                  : "Full bredd"
-              }
-              onClick={() => setDevicePreset(option.id)}
-              className={cn(
-                "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium transition active:scale-95",
-                isActive
-                  ? "bg-foreground text-background shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <Icon className="h-3.5 w-3.5" aria-hidden />
-              {option.label}
-            </button>
-          );
-        })}
+        <div
+          role="toolbar"
+          aria-label="Förhandsvisningsbredd"
+          className="border-border/60 bg-background/90 pointer-events-auto inline-flex items-center gap-0.5 rounded-full border p-0.5 shadow-sm backdrop-blur"
+        >
+          {DEVICE_PRESET_OPTIONS.map((option) => {
+            const isActive = devicePreset === option.id;
+            const Icon = option.Icon;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={isActive}
+                aria-label={
+                  option.width
+                    ? `Preview-bredd ${option.label}px`
+                    : "Full bredd"
+                }
+                onClick={() => setDevicePreset(option.id)}
+                className={cn(
+                  "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium transition active:scale-95",
+                  isActive
+                    ? "bg-foreground text-background shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" aria-hidden />
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+        {tools}
       </div>
     ) : null}
     </>

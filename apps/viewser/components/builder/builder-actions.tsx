@@ -78,6 +78,14 @@ type BuilderActionsProps = {
   pulsing?: boolean;
   /** Override för pill-position. Default: bottom-left. */
   side?: "left" | "right";
+  /**
+   * "fixed" (default) — pillen positioneras `fixed bottom-safe-6 left-6`
+   *   och menyn popar UPPÅT från knappen.
+   * "inline" — pillen rendras utan egen positionering (parent ansvarar)
+   *   och menyn popar NEDÅT som dropdown via `absolute top-full`. Används
+   *   när BuilderActions sitter i FloatingChat-toolbar-raden under chatten.
+   */
+  variant?: "fixed" | "inline";
 };
 
 const STORAGE_KEY_OPEN = "sajtbyggaren:builder-actions:open";
@@ -124,6 +132,7 @@ export function BuilderActions({
   actions,
   pulsing = false,
   side = "left",
+  variant = "fixed",
 }: BuilderActionsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -225,6 +234,8 @@ export function BuilderActions({
     [],
   );
 
+  const isInline = variant === "inline";
+
   return (
     // Verktygsmenyn döljs under md: (768px) — på mobil ockuperar
     // FloatingChat hela bottom-edgen som bottom-sheet, så
@@ -232,12 +243,20 @@ export function BuilderActions({
     // Operatören når samma actions via ConsoleDrawer (SiteHeader-
     // ikonen) och FloatingChat-interaktioner. Power-user-genvägen
     // lever kvar oförändrad på desktop.
+    //
+    // I "inline"-varianten ligger pillen inuti FloatingChat-toolbar-
+    // raden (efter device-presets). Då har vi ingen egen fixed-position
+    // utan ärver parentens centrering + drag-position.
     <div
       ref={containerRef}
       onKeyDown={handleMenuKeyDown}
       className={cn(
-        "pointer-events-none fixed bottom-safe-6 z-40 hidden md:flex flex-col items-start gap-2",
-        side === "left" ? "left-6 items-start" : "right-6 items-end",
+        isInline
+          ? "pointer-events-auto relative hidden md:inline-flex"
+          : cn(
+              "pointer-events-none fixed bottom-safe-6 z-40 hidden md:flex flex-col items-start gap-2",
+              side === "left" ? "left-6 items-start" : "right-6 items-end",
+            ),
       )}
     >
       {isOpen ? (
@@ -246,7 +265,10 @@ export function BuilderActions({
           aria-label="Builder-verktyg"
           className={cn(
             "border-border/60 bg-card/95 pointer-events-auto flex w-[230px] flex-col gap-0.5 rounded-xl border p-1 shadow-2xl backdrop-blur-xl",
-            "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 origin-bottom motion-safe:duration-150",
+            "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-150",
+            isInline
+              ? "absolute top-full right-0 z-50 mt-2 origin-top"
+              : "origin-bottom",
           )}
         >
           {Array.from(groupedActions.entries()).map(

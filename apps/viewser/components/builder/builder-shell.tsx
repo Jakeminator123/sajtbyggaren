@@ -265,8 +265,14 @@ export function BuilderShell({
         onBuildStart={handleBuildStart}
         onBuildEnd={handleBuildEnd}
         onBuildDone={onBuildDone}
+        tools={
+          <BuilderActions
+            actions={actions}
+            pulsing={isBuilding}
+            variant="inline"
+          />
+        }
       />
-      <BuilderActions actions={actions} pulsing={isBuilding} side="left" />
 
       <VariantPickerDialog
         open={openDialog === "variant"}
