@@ -15,14 +15,14 @@ import { Button } from "@/components/ui/button";
 import type { PromptStage } from "@/components/prompt-builder";
 
 /**
- * DevicePreset — operatörens valda preview-bredd på desktop. Sätts via
+ * Device — operatörens valda preview-bredd på desktop. Sätts via
  * device-toggle-baren (skylten ovanför iframe-canvasen) som constraint:ar
  * iframe-wrappern till en max-width matchande typiska viewports.
  *
  * Värden:
  *   - "mobile"  → 375px (iPhone SE / 12 mini bredd)
  *   - "tablet"  → 768px (iPad mini portrait)
- *   - "laptop"  → 1024px (typiska MacBook-portrait-canvasen)
+ *   - "laptop"  → 1024px (vanlig laptop-canvas-bredd)
  *   - "full"    → ingen constraint (default; iframe fyller canvasen)
  *
  * Valet persisterar i sessionStorage så reload av sidan behåller
@@ -34,9 +34,9 @@ import type { PromptStage } from "@/components/prompt-builder";
  * SJÄLV är liten — det är redan en mobil-preview och toggeln skulle
  * bara ta plats utan värde.
  */
-type DevicePreset = "mobile" | "tablet" | "laptop" | "full";
+type Device = "mobile" | "tablet" | "laptop" | "full";
 
-const DEVICE_WIDTHS: Record<DevicePreset, number | null> = {
+const DEVICE_WIDTHS: Record<Device, number | null> = {
   mobile: 375,
   tablet: 768,
   laptop: 1024,
@@ -46,7 +46,7 @@ const DEVICE_WIDTHS: Record<DevicePreset, number | null> = {
 const DEVICE_STORAGE_KEY = "viewser:device-preset";
 
 const DEVICE_OPTIONS: ReadonlyArray<{
-  id: DevicePreset;
+  id: Device;
   label: string;
   Icon: typeof Monitor;
   width: number | null;
@@ -312,7 +312,7 @@ export function ViewerPanel({
    * valda preset. SSR-fallback = "full" eftersom sessionStorage inte
    * finns på servern (typeof window-checken).
    */
-  const [devicePreset, setDevicePreset] = useState<DevicePreset>(() => {
+  const [devicePreset, setDevicePreset] = useState<Device>(() => {
     if (typeof window === "undefined") return "full";
     const stored = window.sessionStorage.getItem(DEVICE_STORAGE_KEY);
     if (stored === "mobile" || stored === "tablet" || stored === "laptop") {

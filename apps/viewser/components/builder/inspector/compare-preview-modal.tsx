@@ -81,7 +81,7 @@ export function ComparePreviewModal({
   versionB,
 }: ComparePreviewModalProps) {
   // Mobile swipe-state: vilken pane är centrerad i snap-scroll-viewporten.
-  // Uppdateras via IntersectionObserver så vi vet vilken pill (A/B) som
+  // Uppdateras via scroll-position-mätning så vi vet vilken pill (A/B) som
   // ska markeras som aktiv när användaren swipar. På desktop (lg:) syns
   // båda panes samtidigt i 50/50-grid och pillarna är ren visuell etikett.
   const [activePane, setActivePane] = useState<"A" | "B">("A");
@@ -102,31 +102,25 @@ export function ComparePreviewModal({
     });
   }, []);
 
-  // IntersectionObserver-baserad active-pane-tracking. Triggas när
-  // operatören swipar mellan A och B på mobil. Threshold 0.6 betyder
-  // att pane räknas som "aktiv" när minst 60% av den syns — det
-  // matchar `snap-mandatory` som ändå snappar fullt till en pane.
+  // Scroll-position-baserad active-pane-tracking på mobil. Vi mäter
+  // scrollLeft mot scrollWidth - clientWidth → 0% = A vinner, 100% = B
+  // vinner. Threshold 0.5 betyder att vi växlar exakt halvvägs igenom
+  // svepet, vilket matchar `snap-mandatory` som ändå snappar fullt
+  // till en pane vid release. Snabbare och simplare än observers när
+  // vi bara har två snap-targets.
   useEffect(() => {
     if (!open) return;
     const scroller = scrollerRef.current;
     if (!scroller) return;
-    const targets = [paneARef.current, paneBRef.current].filter(
-      Boolean,
-    ) as HTMLElement[];
-    if (targets.length === 0) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (!entry.isIntersecting) continue;
-          if (entry.target === paneARef.current) setActivePane("A");
-          else if (entry.target === paneBRef.current) setActivePane("B");
-        }
-      },
-      { root: scroller, threshold: 0.6 },
-    );
-    for (const t of targets) observer.observe(t);
-    return () => observer.disconnect();
+    const handleScroll = () => {
+      const maxScroll = scroller.scrollWidth - scroller.clientWidth;
+      if (maxScroll <= 0) return;
+      const ratio = scroller.scrollLeft / maxScroll;
+      setActivePane(ratio < 0.5 ? "A" : "B");
+    };
+    handleScroll();
+    scroller.addEventListener("scroll", handleScroll, { passive: true });
+    return () => scroller.removeEventListener("scroll", handleScroll);
   }, [open]);
 
   return (
@@ -157,9 +151,9 @@ export function ComparePreviewModal({
 
           {/* Mobile: snap-x horizontal scroll mellan A och B, en pane
               per swipe. Desktop (lg:): 50/50-grid som tidigare så båda
-              syns samtidigt. Refen behövs på lg också eftersom
-              IntersectionObserver bara aktiveras när modalen är öppen
-              men inte bryr sig om viewport-bredd. */}
+              syns samtidigt. Refen behövs på lg också eftersom scroll-
+              listener bara fästs när modalen är öppen men inte bryr sig
+              om viewport-bredd. */}
           <div
             ref={scrollerRef}
             className={cn(
@@ -222,8 +216,8 @@ function ModalHeader({
       </div>
 
       {/* A/B-pills: agerar både som visuell aktiv-indikator (när
-          IntersectionObserver i parent uppdaterar activePane) och
-          som direkt-navigering vid tap. Bara meningsfull på mobil
+          scroll-listener i parent uppdaterar activePane) och som
+          direkt-navigering vid tap. Bara meningsfull på mobil
           där snap-scroll separerar panes; på lg+ syns båda
           samtidigt så pillarna fungerar som etiketter. */}
       <div
@@ -272,17 +266,15 @@ function ModalHeader({
   );
 }
 
-type PreviewPaneProps = {
-  runId: string;
-  version: number | null | undefined;
-  tone: "rose" | "emerald";
-  active: boolean;
-};
-
-const PreviewPane = forwardRef<HTMLElement, PreviewPaneProps>(function PreviewPane(
-  { runId, version, tone, active },
-  ref,
-) {
+const PreviewPane = forwardRef<
+  HTMLElement,
+  {
+    runId: string;
+    version: number | null | undefined;
+    tone: "rose" | "emerald";
+    active: boolean;
+  }
+>(function PreviewPane({ runId, version, tone, active }, ref) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [status, setStatus] = useState<PaneStatus>({ kind: "loading" });
   const [openingExternal, setOpeningExternal] = useState(false);
