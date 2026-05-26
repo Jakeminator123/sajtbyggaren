@@ -931,8 +931,21 @@ def test_prompt_builder_exposes_followup_mode_and_cleans_stage_timer() -> None:
     text = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(
         encoding="utf-8"
     )
-    assert '"followup"' in text and "Följdprompt på vald run/siteId" in text, (
-        "PromptBuilder måste låta operatorn välja följdprompt-läge."
+    # Följdprompt-läget exponerades tidigare via en synlig "Ny sajt /
+    # Följdprompt"-pill-rad. Efter total-minimalism 2026-05-27 deriveras
+    # läget automatiskt från `followupReady` istället. Testet förankrar
+    # därför auto-derive-mönstret som det stabila kontraktet.
+    assert '"followup"' in text and "followupReady" in text, (
+        "PromptBuilder måste fortfarande exponera followup-läge — antingen "
+        "via UI-val eller auto-derivering."
+    )
+    assert 'followupReady ? "followup" : "init"' in text, (
+        "PromptBuilder måste auto-derivera mode från followupReady så "
+        "operatorns prompt routas rätt utan manuell pill-växling."
+    )
+    assert 'submissionMode: "followup"' in text, (
+        "PromptBuilder måste skicka submissionMode='followup' till "
+        "executeBuild när followupReady är sant."
     )
     assert "clearTimeout(stageTimerRef.current)" in text, (
         "PromptBuilder måste städa stage-transition-timeouten vid unmount "
