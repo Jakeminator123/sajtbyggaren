@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 14 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 123 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 14 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 126 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -603,6 +603,45 @@ matar wizarden med taxonomi-options:
   Fix: open. Test: open.
 
 ## Stängda - regression-test säkrar fixet
+
+- **`B151` Medel** (stängd 2026-05-26, post-PR-#117 AI Bug Review-fixar) -
+  `apps/viewser/components/builder/floating-chat.tsx`:s
+  `useIsMobileViewport`-hook anropade `mq.addEventListener("change", ...)`
+  ovillkorligt på matchMedia-resultatet. iOS Safari < 14 (samt äldre
+  Edge-/IE-baserade browsers) stödjer inte den signaturen och faller
+  tillbaka till deprecated `addListener`/`removeListener`. Resultat:
+  chatten kraschade tyst på äldre iOS-enheter i fält. AI Bug Review
+  (Sannolikhet 79 %, impact 8/10) flaggade detta på PR #117. Fix:
+  feature-detect mot `typeof mq.addEventListener === "function"` med
+  fallback till deprecated APIn via inline strukturell cast (inline
+  istället för namngiven PascalCase-typ för att passera
+  term-coverage --strict). Fix: `4a6243a`. Test:
+  `tests/test_viewser_files.py::test_b151_floating_chat_useismobile_feature_detects_addeventlistener`.
+
+- **`B152` Medel** (stängd 2026-05-26, post-PR-#117 AI Bug Review-fixar) -
+  `apps/viewser/components/builder/inspector/compare-preview-modal.tsx`
+  mobile snap-x-scroll hade `w-full` per pane inuti flex-row med
+  `gap-2`. Två 100 %-bredd-panes + 0.5rem gap = 200 % + 0.5rem total
+  scroll-content → pane-A:s högra kant smög 0.5rem in i viewporten
+  när snappat till pane B, vilket bröt den avsedda one-pane-per-snap-
+  upplevelsen. AI Bug Review (Sannolikhet 88 %, impact 7/10) flaggade
+  detta på PR #117. Fix: `w-[calc(100%-0.5rem)]` så pane-bredd + gap
+  = 100 % per snap-segment, snap-positionerna landar nu rent vid varje
+  pane-start. Desktop (lg:) oförändrad — grid-cols-2 har inget
+  gap-overflow-problem. Fix: `4a6243a`. Test:
+  `tests/test_viewser_files.py::test_b152_compare_modal_pane_width_accounts_for_gap`.
+
+- **`B153` Låg** (stängd 2026-05-26, post-PR-#117 AI Bug Review-fixar) -
+  `apps/viewser/components/viewer-panel.tsx` sessionStorage-hydration
+  restorerade bara `"mobile"`/`"tablet"`/`"laptop"`-preset explicit;
+  `"full"` saknades i listan av accepterade värden. Funktionellt
+  räddade default-värdet (också `"full"`) flödet idag, men det är
+  inkonsekvent med övriga presets och om default någonsin ändras
+  tappas `"full"`-persistensen. AI Bug Review (Sannolikhet 84 %, impact
+  5/10) flaggade detta på PR #117. Fix: inkludera alla fyra giltiga
+  device-preset-värden (`"mobile"`/`"tablet"`/`"laptop"`/`"full"`) i
+  hydration-checken. Fix: `4a6243a`. Test:
+  `tests/test_viewser_files.py::test_b153_viewer_panel_hydrates_full_device_preset`.
 
 - **`B90` Låg-Medel** (stängd 2026-05-26, language/location/business-type-kluster) -
   `packages/generation/brief/extract.py:ENGLISH_HINTS` innehöll de
