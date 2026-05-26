@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 14 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 126 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 13 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 127 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -562,45 +562,19 @@ samma kodmönster lever vidare här — därav posten:
   `B13a` (architectural debt i `scripts/build_site.py`). Fix: open.
   Test: open.
 
-### Vercel preview wizard-failure 2026-05-26 (assertLocalhost vs *.vercel.app)
-
-Operatör rapporterade att `Verksamhetsfamilj`-fältet i discovery-wizardens
-foundation-step renderas tomt + ger röd console-error på Vercel preview-
-deploy. Root cause är inte i wizard-komponenten utan i API-grinden som
-matar wizarden med taxonomi-options:
-
-- **`B147` Medel-Hög** - `assertLocalhost` i `apps/viewser/lib/localhost-guard.ts`
-  returnerar `403 { error: "Viewser är localhost-only. ..." }` för alla
-  request:s där `Host`-headern inte är `localhost`/`127.0.0.1`/`::1`.
-  Grinden är applicerad på 12 API-routes inklusive
-  `apps/viewser/app/api/discovery-options/route.ts:189` som matar wizardens
-  `Verksamhetsfamilj`-fält. På `*.vercel.app` preview-deployer returnerar
-  GET `/api/discovery-options` därför 403, wizard-options-listan blir tom,
-  och fältet renderas utan val + loggar 403 i browser-console. Det är
-  **medvetet by design** enligt docstring (`Viewser is an operator-prototype:
-  no auth, no rate limit, no public deploy`) — escape-hatchen är att sätta
-  `VIEWSER_ALLOW_NON_LOCALHOST=true` på Vercel-projektet, men det stänger
-  av grinden för *alla* hostar utan att introducera auth. Konflikten är
-  mellan ADR-baserad localhost-only-säkerhet och faktisk Vercel-deploy
-  som operatör redan kör. Vercel production-branch-flippen är åtgärdad
-  2026-05-26; B147 kvarstår eftersom API-grinden fortfarande stoppar
-  icke-localhost-hostar. Tre möjliga vägar: (a) sätt
-  `VIEWSER_ALLOW_NON_LOCALHOST=true` på Vercel-projektets Preview- och
-  Production-env (snabbast, men bekräftar `no auth, no rate limit, no
-  public deploy`-modellen på en publik URL — ska dokumenteras med tydlig
-  reservation i `docs/architecture/viewser.md` + uppdaterad docstring i
-  `localhost-guard.ts`), (b) host-whitelist i `localhost-guard.ts` som
-  släpper igenom specifika Vercel-projektdomäner via ny env-knapp
-  `VIEWSER_ALLOWED_HOSTS` (mer kontrollerat men introducerar ny policy-yta),
-  (c) ADR-beslut om Viewser-på-Vercel auth-strategi som låser den
-  långsiktiga lösningen innan någon snabb-fix väljs. Cross-ref:
-  `apps/viewser/vercel.json` (repo-spec för Vercel-deploy),
-  `docs/reports/b125-preview-fallback-decision-2026-05-22.md` (B125-spårets
-  DNA, samma "Viewser är operatör-lokalt verktyg"-princip).
-  Källa: operatör 2026-05-25 kväll + extern reviewer-triage 2026-05-26.
-  Fix: open. Test: open.
-
 ## Stängda - regression-test säkrar fixet
+
+- **`B147` Medel-Hög** (stängd 2026-05-26, B147 host-whitelist) -
+  `assertLocalhost` i `apps/viewser/lib/localhost-guard.ts` blockerade
+  `*.vercel.app`-deployer och gav 403 för discovery-wizardens
+  `/api/discovery-options`, vilket lämnade `Verksamhetsfamilj`-fältet utan
+  val. Fixet lägger till `VIEWSER_ALLOWED_HOSTS` som comma-separated
+  host-whitelist för specifika Vercel preview-/production-domäner, med
+  trimning och case-insensitive jämförelse. Den äldre
+  `VIEWSER_ALLOW_NON_LOCALHOST=true`-vägen finns kvar som fallback för full
+  bypass, men är fortsatt grövre eftersom Viewser saknar auth och
+  rate-limit. Fix: `b3834b3`. Test:
+  `apps/viewser/lib/localhost-guard.test.ts`.
 
 - **`B151` Medel** (stängd 2026-05-26, post-PR-#117 AI Bug Review-fixar) -
   `apps/viewser/components/builder/floating-chat.tsx`:s
