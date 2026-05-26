@@ -124,11 +124,16 @@ export function SiteInspectorSheet({
     onPrompt: handlePrompt,
   };
 
+  // På mobil renderas inspector som bottom-sheet (drag-handle,
+  // rounded-top, max-h-[90dvh]) istället för side-drawer. Sido-
+  // drawern tog 75% bredd på 375px-skärmar och thumb-reach mot
+  // höger-edge är dålig på stora telefoner. Tabs-raden får också
+  // horisontell scroll under md: så de 7 triggers inte overflowar.
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full max-w-[560px] gap-0 p-0 sm:max-w-[560px]"
+        className="w-full max-w-[560px] gap-0 p-0 sm:max-w-[560px] max-md:!inset-x-0 max-md:!bottom-0 max-md:!top-auto max-md:!left-0 max-md:!right-0 max-md:!h-[90dvh] max-md:!w-full max-md:!max-w-none max-md:!rounded-t-3xl max-md:!border-t max-md:!border-l-0 max-md:pb-safe"
       >
         <SheetHeader className="border-border/60 flex flex-row items-start justify-between gap-3 border-b p-5">
           <div className="flex min-w-0 flex-col gap-1">
@@ -186,9 +191,12 @@ export function SiteInspectorSheet({
             </div>
           ) : (
             <Tabs defaultValue="pages" className="flex h-full flex-col gap-0">
+              {/* overflow-x-auto + scrollbar-hidden gör att de 7
+                  triggers kan scrolla horisontellt på smala viewports
+                  utan visuell scrollbar. På desktop ryms alla. */}
               <TabsList
                 variant="line"
-                className="border-border/60 w-full justify-start gap-1 border-b px-4 pt-2 pb-2"
+                className="border-border/60 scrollbar-hidden w-full justify-start gap-1 overflow-x-auto border-b px-4 pt-2 pb-2"
               >
                 <TabsTrigger value="pages">Sidor</TabsTrigger>
                 <TabsTrigger value="brief">Brief &amp; Plan</TabsTrigger>

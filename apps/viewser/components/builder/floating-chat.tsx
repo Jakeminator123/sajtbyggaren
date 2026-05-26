@@ -318,6 +318,26 @@ const STORAGE_KEY_POSITION = "sajtbyggaren:floating-chat:position";
 const STORAGE_KEY_MINIMIZED = "sajtbyggaren:floating-chat:minimized";
 const STORAGE_KEY_QUICK_PROMPTS = "sajtbyggaren:floating-chat:quick-prompts";
 
+/**
+ * Reflekterar Tailwind ``md:``-brytpunkten (768px). Under brytpunkten
+ * renderas FloatingChat som bottom-sheet med drag-handle istället för
+ * fast 360×460-floating panel — det gör att panelen inte täcker hela
+ * mobilskärmen och respekterar iOS home-indicator. SSR-säker
+ * (returnerar false under server-rendering, läses först post-mount).
+ */
+function useIsMobileViewport(): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return isMobile;
+}
+
 function readStoredPosition(): Position | null {
   if (typeof window === "undefined") return null;
   try {
@@ -446,6 +466,11 @@ export function FloatingChat({
   const [position, setPosition] = useState<Position | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  // På mobil (<768px) renderas panelen som bottom-sheet utan drag/
+  // position-hantering. Hooken returnerar false under SSR och vid
+  // initial hydration; skiftar till true post-mount om matchMedia
+  // träffar.
+  const isMobile = useIsMobileViewport();
   // Initial-meddelandet beräknas en gång från siteId (lazy init) så
   // ingen useEffect behöver setState efter mount för att synca
   // intron mot sajten. Sajt-byten löses via key={siteId} i
@@ -945,13 +970,22 @@ export function FloatingChat({
   if (!position) {
     // Pre-mount: render en CSS-positionerad placeholder så panelen
     // syns omedelbart utan layout-shift när position-staten väl
-    // sätts. Använder bottom-right som default-position.
+    // sätts. Mobil = bottom-sheet (full bredd, pb-safe, rounded-top),
+    // desktop = bottom-right floating (360x460).
     return (
       <aside
         aria-label="Sajtmaskin-chatt"
-        className="border-border/60 bg-card/95 pointer-events-auto fixed right-6 bottom-6 z-40 flex w-[360px] flex-col rounded-2xl border shadow-2xl backdrop-blur-xl"
-        style={{ height: PANEL_HEIGHT }}
+        className={cn(
+          "border-border/60 bg-card/95 pointer-events-auto fixed z-40 flex flex-col border shadow-2xl backdrop-blur-xl",
+          isMobile
+            ? "inset-x-0 bottom-0 max-h-[85dvh] w-full rounded-t-3xl pb-safe"
+            : "right-6 bottom-6 w-[360px] rounded-2xl",
+        )}
+        style={isMobile ? undefined : { height: PANEL_HEIGHT }}
       >
+        {isMobile && (
+          <div aria-hidden className="bottom-sheet-handle" />
+        )}
         <div className="border-border/60 flex items-center justify-between border-b px-3 py-2">
           <div className="text-foreground flex items-center gap-2 text-[12px] font-medium tracking-tight">
             <MessageSquare className="text-muted-foreground h-3.5 w-3.5" />
@@ -964,18 +998,47 @@ export function FloatingChat({
   }
 
   if (isMinimized) {
-    // Sido-tab på höger kant. Fast position oavsett var paneeln stod
-    // när operatören klickade Minimera — bubblan följde tidigare
-    // panel-position och kunde hamna mitt på sidan eller dolt bakom
-    // andra UI-lager. Här är den alltid synlig och alltid på samma
-    // ställe, vilket gör interaktionen förutsägbar.
-    //
-    // Pulsen är subtil (motion-safe + 2.6s) så den lockar ögat utan
-    // att nagga. Hover/focus expanderar till en bredare pill med
-    // text och ChevronLeft-ikon — call-to-action är "vi finns här,
-    // klicka för att öppna". Vid återöppning återställs paneeln till
-    // den sparade positionen (samma som innan minimering) eftersom
-    // `position`-state är orört.
+    // Mobil = FAB (56x56) bottom-safe-right. Sidotab-mönstret täcker
+    // för stor del av smala viewports och hamnar dessutom mitt på
+    // skärmen vilket är svårt att nå med tummen. FAB:en lever i
+    // tum-zonen och respekterar safe-area.
+    if (isMobile) {
+      return (
+        <button
+          type="button"
+          onClick={() => setIsMinimized(false)}
+          aria-label="Öppna Sajtmaskin-chatten"
+          title="Öppna chatten"
+          className={cn(
+            "group pointer-events-auto fixed right-4 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full",
+            "border-border/60 bg-card/95 text-foreground border shadow-2xl backdrop-blur-xl",
+            "motion-safe:animate-fc-edge-pulse",
+            "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
+            "active:scale-95 transition-transform",
+            "bottom-safe-4",
+          )}
+        >
+          <MessageSquare
+            aria-hidden
+            className="text-foreground/80 h-5 w-5"
+          />
+          <span
+            aria-hidden
+            className={cn(
+              "absolute top-1.5 right-1.5 h-2 w-2 rounded-full ring-2 ring-card",
+              isBuilding
+                ? "bg-amber-500 motion-safe:animate-pulse"
+                : "bg-emerald-500",
+            )}
+          />
+          <span className="sr-only">Sajtmaskin</span>
+        </button>
+      );
+    }
+    // Desktop: sido-tab på höger kant. Fast position oavsett var
+    // panelen stod när operatören klickade Minimera. Pulsen är
+    // subtil (motion-safe + 2.6s). Hover/focus expanderar till en
+    // bredare pill med text och ChevronLeft-ikon.
     return (
       <button
         type="button"
@@ -1024,27 +1087,43 @@ export function FloatingChat({
     <aside
       aria-label="Sajtmaskin-chatt"
       className={cn(
-        "border-border/60 bg-card/95 pointer-events-auto fixed z-40 flex w-[360px] flex-col overflow-hidden rounded-2xl border shadow-2xl backdrop-blur-xl",
+        "border-border/60 bg-card/95 pointer-events-auto fixed z-40 flex flex-col overflow-hidden border shadow-2xl backdrop-blur-xl",
+        // Mobil = bottom-sheet (full bredd, kapad höjd, safe-area).
+        // Desktop = 360px floating panel med inline position-state.
+        isMobile
+          ? "inset-x-0 bottom-0 w-full max-h-[85dvh] rounded-t-3xl pb-safe"
+          : "w-[360px] rounded-2xl",
         isDragging
           ? "cursor-grabbing transition-none"
           : "motion-safe:transition-[box-shadow] motion-safe:duration-150",
       )}
-      style={{
-        left: position.x,
-        top: position.y,
-        height: PANEL_HEIGHT,
-        minHeight: PANEL_MIN_HEIGHT,
-      }}
+      style={
+        isMobile
+          ? undefined
+          : {
+              left: position.x,
+              top: position.y,
+              height: PANEL_HEIGHT,
+              minHeight: PANEL_MIN_HEIGHT,
+            }
+      }
     >
+      {isMobile && (
+        <div aria-hidden className="bottom-sheet-handle" />
+      )}
       <div
         ref={headerRef}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
+        onPointerDown={isMobile ? undefined : handlePointerDown}
+        onPointerMove={isMobile ? undefined : handlePointerMove}
+        onPointerUp={isMobile ? undefined : handlePointerUp}
+        onPointerCancel={isMobile ? undefined : handlePointerUp}
         className={cn(
           "border-border/60 bg-card/90 flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2 select-none",
-          isDragging ? "cursor-grabbing" : "cursor-grab",
+          isMobile
+            ? "cursor-default"
+            : isDragging
+              ? "cursor-grabbing"
+              : "cursor-grab",
         )}
       >
         <div className="text-foreground flex min-w-0 items-center gap-2 text-[12px] font-medium tracking-tight">
@@ -1071,7 +1150,7 @@ export function FloatingChat({
             type="button"
             onClick={() => setIsMinimized(true)}
             aria-label="Minimera"
-            className="text-muted-foreground hover:text-foreground hover:bg-muted/60 inline-flex h-6 w-6 items-center justify-center rounded-md"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted/60 inline-flex min-tap sm:min-tap-0 sm:h-6 sm:w-6 items-center justify-center rounded-md active:scale-95"
           >
             <Minus className="h-3.5 w-3.5" />
           </button>
@@ -1080,7 +1159,7 @@ export function FloatingChat({
             onClick={() => setIsMinimized(true)}
             aria-label="Stäng (minimera)"
             title="Stäng (öppnas igen från bubblan)"
-            className="text-muted-foreground hover:text-foreground hover:bg-muted/60 inline-flex h-6 w-6 items-center justify-center rounded-md"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted/60 inline-flex min-tap sm:min-tap-0 sm:h-6 sm:w-6 items-center justify-center rounded-md active:scale-95"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -1290,7 +1369,9 @@ export function FloatingChat({
             rows={2}
             maxLength={4000}
             disabled={isSending || isBuilding}
-            className="min-h-[60px] resize-none border-0 bg-transparent px-3 py-2 text-[13px] shadow-none focus-visible:ring-0"
+            // text-base (16px) på mobil förhindrar iOS Safari från att
+            // auto-zooma vid fokus; krymper till text-[13px] på sm+.
+            className="min-h-[60px] resize-none border-0 bg-transparent px-3 py-2 text-base sm:text-[13px] shadow-none focus-visible:ring-0"
           />
           <div className="border-border/60 flex items-center justify-between gap-2 border-t px-2 py-1.5">
             <div className="flex items-center gap-1">
@@ -1303,8 +1384,8 @@ export function FloatingChat({
                 className={cn(
                   "text-muted-foreground hover:text-foreground hover:bg-muted/60",
                   "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
-                  "inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors",
-                  "disabled:opacity-40 disabled:hover:bg-transparent",
+                  "inline-flex min-tap sm:min-tap-0 sm:h-6 sm:w-6 items-center justify-center rounded-md transition-colors",
+                  "disabled:opacity-40 disabled:hover:bg-transparent active:scale-95",
                 )}
               >
                 {isUploading ? (
@@ -1328,8 +1409,8 @@ export function FloatingChat({
               }
               aria-label="Skicka instruktion"
               className={cn(
-                "bg-foreground text-background inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[11.5px] font-medium",
-                "hover:bg-foreground/90 disabled:opacity-40",
+                "bg-foreground text-background inline-flex min-h-[44px] sm:min-h-0 sm:h-7 items-center gap-1.5 rounded-md px-3.5 sm:px-2.5 text-sm sm:text-[11.5px] font-medium",
+                "hover:bg-foreground/90 disabled:opacity-40 active:scale-95",
                 "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
                 PRIMARY_INTERACTIONS,
               )}
