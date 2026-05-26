@@ -21,7 +21,7 @@ from generate_dossier_candidate import (  # noqa: E402
     slugify_dossier_id,
 )
 
-from packages.generation.artifacts import validate_dossier  # noqa: E402
+from packages.generation.artifacts import load_schema, validate_dossier  # noqa: E402
 from packages.generation.brief.models import OPENAI_API_KEY_ENV  # noqa: E402
 
 
@@ -250,6 +250,7 @@ def test_generate_hard_candidate_from_intake_writes_only_candidate_contract_file
     assert not (result.candidate_dir / "env-contract.json").exists()
     assert not (result.candidate_dir / "integration-contract.json").exists()
     validate_dossier(result.manifest)
+    assert "hard" in load_schema("dossier")["properties"]["class"]["enum"]
     contract = json.loads(
         (REPO_ROOT / "governance" / "policies" / "dossier-contract.v1.json").read_text(
             encoding="utf-8"

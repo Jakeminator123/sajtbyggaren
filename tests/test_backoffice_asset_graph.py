@@ -408,6 +408,42 @@ def test_asset_graph_lists_dossier_candidates(
     assert dossier_node["intakeRecommendedClass"] == "soft"
 
 
+def test_asset_graph_lists_hard_dossier_candidates(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    candidates_dir = tmp_path / "dossier-candidates"
+    manifest = candidates_dir / "hard" / "openai-chat" / "manifest.json"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        json.dumps({"id": "openai-chat", "enabled": False, "capability": "ai-chat"}),
+        encoding="utf-8",
+    )
+    (manifest.parent / "meta.json").write_text(
+        json.dumps(
+            {
+                "source": "deterministic-v1",
+                "modelUsed": "deterministic",
+                "createdAt": "2026-05-26T00:00:00Z",
+                "intakeRecommendedClass": "hard",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(asset_graph, "DOSSIER_CANDIDATES_DIR", candidates_dir)
+
+    graph = asset_graph.build_graph()
+
+    dossier_node = next(
+        node
+        for node in graph["nodes"]
+        if (node["type"], node["id"]) == ("dossier-candidate", "hard/openai-chat")
+    )
+    assert dossier_node["status"] == "candidate"
+    assert dossier_node["source"] == "deterministic-v1"
+    assert dossier_node["intakeRecommendedClass"] == "hard"
+
+
 def test_dedicated_candidate_views_default_to_no_llm() -> None:
     variant_source = inspect.getsource(building_blocks.view_variant_candidates)
     dossier_source = inspect.getsource(building_blocks.view_dossier_candidates)
