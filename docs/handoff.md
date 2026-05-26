@@ -17,19 +17,17 @@ konfigurerad med `PYTHONPATH` så `python -m tooling.sprintvakt_mcp.server`
 startar utan ModuleNotFoundError. Editable install (`pip install -e .`)
 krävs en gång per venv enligt ADR 0029.
 
-**Direkt nästa spår — parallell sprint i 4 lanes pågår:**
+**Direkt nästa spår — operatörsbeslut + Gap-fixar:**
 
-1. **Lane 1: Grind-Builder i Cursor Cloud** — tar små buggar + GAP-status en åt gången, PRs mot `jakob-be`, max 200 rader produktionskod per PR. `b12c164` är referensfallet (markdown-escape-bugg → regression-test → push, 80 rader).
-2. **Lane 2: LLM contract propagation** — fixar signal-läckor brief→render (B137-B141). Ensam ägare av `scripts/build_site.py` under sprinten.
-3. **Lane 3: Embeddings readiness audit (Scout, read-only)** — rapport till `docs/reports/embedding-readiness-2026-05-25.md`. Förbereder Go-villkor för embeddings-implementation efter lane 2-fixar.
-4. **Lane 4: Golden Path eval baseline** — deterministic scorecard över fyra ground-truth-prompter (elektriker/frisör/naprapat/keramik). Disjunkt scope i `tests/evals/**`.
+1. **Vercel production-branch-flip** — operatörens manuella klick i Vercel-UI. PR #118 + #120 är mergade till main; flippen är inte längre blockad. Efter flippen: radera `docs/operations/vercel-production-branch-todo.md`.
+2. **B147 vägval a/b/c** — operatörsbeslut. Vercel preview wizard 403 via `assertLocalhost` på `*.vercel.app`. Tre alternativ i `docs/known-issues.md`: (a) `VIEWSER_ALLOW_NON_LOCALHOST=true`, (b) host-whitelist via ny env, (c) ADR-beslut om Viewser-på-Vercel auth-strategi.
+3. **Backend-Gap fixar (post-C4-audit)** — efter Gap 4 + 5 stängdes 2026-05-26 evening är status 7 stängda / 3 delvis / 1 öppen. Nästa i prio: Gap 6+7 paired (~3-4h, M), sedan Gap 9 (~2h, S-M), sedan Gap 10 (~4-6h, M-L). Detaljer i `docs/current-focus.md`.
+4. **Sync-PR `jakob-be → main`** — `jakob-be` är nu 15 commits framför `origin/main`. Bra läge för en sync-PR (operatörens beslut). Kan kombineras med en av Gap-fixarna ovan.
 
 **Parkerade lanes (väntar trigger):**
 
-- **Path B / section-driven renderer** — dokumenterad i `docs/scaffold-runtime-extension-needed.md` + `docs/path-b-backend-scout.md` (~22-28h). Kräver lane 2 mergad först (delar `scripts/build_site.py`).
-- **Christophers `GAP-backend-build-trace-endpoint`-PR** — `origin/christopher-ui` commit `9f63f15` implementerar hela gapet under operator-OK scope-leak. 16 filer, 981 nya rader. Christopher har inte PR:at än. Jakob är reviewer. När PR öppnas: granska scope-leaken (medvetet brutet jakob-lane), kontrollera att workboard.json `owner` är kvar på `jakob` (precedent från PR #68), merge mot `main` när nöjd.
-- **Sync `jakob-be → main`** — `main` ligger nu 5 commits efter `jakob-be` (#76 + steward-sync + #77 + #78 + `a0b06b5` + `b12c164`). Liten PR från `jakob-be` mot `main` lyfter hela batchen och låter `christopher-ui` reset:as mot uppdaterat `main`. Gör efter att Christopher-PR:n är beslutad.
-- **Backend-Gap 4 + 5** från `docs/backend-handoff-2026-05-22.md` — öppna men ej akuta.
+- **Path B / section-driven renderer** — dokumenterad i `docs/scaffold-runtime-extension-needed.md` + `docs/path-b-backend-scout.md` (~22-28h). Lane 2 är klar (B137-B141 stängda 2026-05-22) så Path B är inte längre tekniskt blockad — väntar bara på operatörsbeslut om sprint.
+- **Christophers `GAP-backend-build-trace-endpoint`-PR** — Christopher har implementerat hela gapet på `christopher-ui` under operator-OK scope-leak. Han har inte PR:at än. Jakob är reviewer. När PR öppnas: granska scope-leaken (medvetet brutet jakob-lane), kontrollera att workboard.json `owner` är kvar på `jakob` (precedent från PR #68), merge mot `main` när nöjd.
 - **Sprintvakt V1.3 (potential)** — tvåvägs-sync workboard.json ↔ gap-filer. Flaggat som follow-up i `docs/sprintvakt-mcp.md`.
 
 Vänta fortsatt med embeddings, SNI-runtime, variant-promotion, många nya
@@ -61,10 +59,7 @@ väljs.
   `python scripts/sprintvakt_check.py` ska vara grönt innan nytt arbete
   startar.
 
-**Pågående parallellt:**
-
-- PR #69 (`docs: add product north star runtime ladder`) — docs-only,
-  öppen draft, grön CI, väntar operator-OK.
+**Inga öppna PRs.** PR #69 är stängd. Senaste merge till main: PR #120 (2026-05-26 PM). Senare commits sedan dess ligger på `jakob-be` och väntar nästa sync-PR (se "Direkt nästa spår" ovan).
 
 **Öppna gaps på workboarden:** inga aktiva eller queuade gaps just nu.
 Workboarden är ren och redo att ta första riktiga gapen via

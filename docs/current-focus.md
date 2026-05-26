@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `1c6d033` (2026-05-26 evening UTC, post Gap 4 + Gap 5 close + docs-slim-down).
+Last verified state: `f7c437e` (2026-05-26 late evening UTC, post docs-slim + branch-model-clarification).
 
 Nya commits sedan föregående checkpoint (`0f3bd67`):
 
@@ -44,6 +44,7 @@ Nya commits sedan föregående checkpoint (`0f3bd67`):
 - `b89a3d2` feat(discovery): persist directives.notesForPlanner into Site Brief (**Gap 5 stängd**).
 - `1b91ca6` feat(discovery): merge directives.requestedCapabilities into resolver (**Gap 4 stängd**).
 - `1c6d033` docs(focus,handoff): close Gap 4 + Gap 5 in audit table.
+- `f7c437e` docs: slim current-focus från 1414→205 rader + skriv om branch-discipline.md för enkel modell (jakob-be/christopher-ui default, PR mot main vid officiell version). Auto-regen .cursor/rules-speglar.
 
 ## Branchmodellen (kort)
 
@@ -58,7 +59,7 @@ Nya commits sedan föregående checkpoint (`0f3bd67`):
 ## Pågående/öppna PR:s just nu
 
 Inga öppna PRs på `jakob-be` eller `main`. `jakob-be` är resetad till
-`origin/main` 2026-05-26 PM (commit `1004122`) plus 14 commits ovanpå
+`origin/main` 2026-05-26 PM (commit `1004122`) plus 15 commits ovanpå
 (listan ovan). Nästa sync-PR till `main` är operatörens beslut — bra läge
 nu när Gap 4 + 5 är inne och två-tre Gap-fixar (6+7 paired, 9 eller 10) kan
 buntlas in i samma sync.
