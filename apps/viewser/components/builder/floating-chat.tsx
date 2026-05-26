@@ -31,6 +31,10 @@ import {
 
 import { useBuildTracePolling } from "@/components/builder/use-build-trace-polling";
 import {
+  DEVICE_PRESET_OPTIONS,
+  useDevicePreset,
+} from "@/components/device-preset-context";
+import {
   classifyBuildStatus,
   type PromptBuildOutcome,
 } from "@/components/prompt-builder";
@@ -519,6 +523,10 @@ export function FloatingChat({
   // initial hydration; skiftar till true post-mount om matchMedia
   // träffar.
   const isMobile = useIsMobileViewport();
+  // Device-preset (375/768/1024/full) delas med ViewerPanel via
+  // DevicePresetProvider — toggle-UI:t bor numera under FloatingChat:s
+  // chat-panel (tidigare uppe till höger i canvasen).
+  const { devicePreset, setDevicePreset } = useDevicePreset();
   // keyboardInset enabled bara när chatten är öppen på mobil — vi
   // behöver inte lyssna på visualViewport-resize:s när panelen är
   // minimerad eller när vi är på desktop (där tangentbord inte
@@ -1151,6 +1159,7 @@ export function FloatingChat({
   }
 
   return (
+    <>
     <aside
       aria-label="Sajtmaskin-chatt"
       className={cn(
@@ -1519,6 +1528,57 @@ export function FloatingChat({
         aria-hidden
       />
     </aside>
+
+    {/* Device-preset-toggle (375/768/1024/Full) som syskon UNDER chat-
+        panelen. Tidigare låg den i viewer-panel.tsx top-2 right-2 men
+        det gjorde att den krockade visuellt med sajt-previewns
+        navigations-element. Här följer den med chat-panelens drag-
+        position (left/top + PANEL_HEIGHT + 8px gap) så den alltid
+        ligger precis under chat-rutan.
+
+        Renderas bara på desktop (md+) och endast när panelen inte är
+        minimerad — på mobile är enheten själv liten och toggle-värdet
+        är meningslöst. position-null guard:en hanterar SSR + initial
+        hydration innan first-mount-effekten satt position-state. */}
+    {!isMobile && !isMinimized && position ? (
+      <div
+        role="toolbar"
+        aria-label="Förhandsvisningsbredd"
+        className="border-border/60 bg-background/90 pointer-events-auto fixed z-40 hidden items-center gap-0.5 rounded-full border p-0.5 shadow-sm backdrop-blur md:inline-flex"
+        style={{
+          left: position.x,
+          top: position.y + PANEL_HEIGHT + 8,
+        }}
+      >
+        {DEVICE_PRESET_OPTIONS.map((option) => {
+          const isActive = devicePreset === option.id;
+          const Icon = option.Icon;
+          return (
+            <button
+              key={option.id}
+              type="button"
+              aria-pressed={isActive}
+              aria-label={
+                option.width
+                  ? `Preview-bredd ${option.label}px`
+                  : "Full bredd"
+              }
+              onClick={() => setDevicePreset(option.id)}
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium transition active:scale-95",
+                isActive
+                  ? "bg-foreground text-background shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" aria-hidden />
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    ) : null}
+    </>
   );
 }
 

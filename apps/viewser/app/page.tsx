@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BuilderShell } from "@/components/builder/builder-shell";
 import { usePendingBuild } from "@/components/builder/use-pending-build";
 import { ConsoleDrawer } from "@/components/console-drawer";
+import { DevicePresetProvider } from "@/components/device-preset-context";
 import { SiteHeader } from "@/components/layout/site-header";
 import type { ProjectInputOption } from "@/components/project-input-picker";
 import {
@@ -261,6 +262,7 @@ export default function Home() {
   }
 
   return (
+    <DevicePresetProvider>
     <main className="bg-background relative h-[100dvh] w-full overflow-hidden">
       <SiteHeader
         onOpenConsole={() => setConsoleOpen(true)}
@@ -376,5 +378,6 @@ export default function Home() {
         statusText={statusText}
       />
     </main>
+    </DevicePresetProvider>
   );
 }
