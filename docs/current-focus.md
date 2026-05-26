@@ -30,10 +30,8 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `15aea46` (2026-05-26 UTC, steward-auto efter PR #120 — sync(jakob-be -> main): repo hygiene 2026-05-26 (4 commits, docs-only)).
-Nya PRs sedan föregående checkpoint: PR #118 — sync(jakob-be -> main): PR #117 mobile
-responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report; PR #120
-— sync(jakob-be -> main): repo hygiene 2026-05-26 (4 commits, docs-only).
+Last verified state: `0ed5348` (2026-05-26 PM UTC, post-jakob-be-reset till main + vercel.json commit + backend-handoff cleanup audit).
+Nya PRs sedan föregående checkpoint: PR #118 (sync(jakob-be -> main): PR #117 mobile responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report) och PR #120 (sync(jakob-be -> main): repo hygiene 2026-05-26, 4 commits docs-only) mergade till main. PR #119 (feat(backoffice): add dossier intake model review) mergad till jakob-be som `31d8d74` och inkluderad i PR #118-squashen. Direkta commits ovanpå efter jakob-be → main reset: `cc1a5aa` (chore(viewser): commit vercel.json deploy config) och `0ed5348` (docs(backend-handoff): mark gap 1 + 11 as closed audit 2026-05-26).
 
 Sedan c0b59fbe (PR #60) har följande mergats till `main`, i ordning:
 
@@ -64,9 +62,9 @@ Sedan c0b59fbe (PR #60) har följande mergats till `main`, i ordning:
 
 **Pågående/öppna PR:s just nu:**
 
-- **PR #118 — `sync(jakob-be -> main): PR #117 mobile responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report`** från `jakob-be` mot `main`. State OPEN, MERGEABLE, mergeStateStatus UNSTABLE (CI run pending när PR öppnades). 45 commits / 56 filer / +5158 / -328. Innehåller hela sessionens leverans inklusive PR #117-mergen + B151-B153-fixarna. **Väntar på operatörsgranskning + merge.** Efter merge: flippa Vercel production branch från `jakob-be` till `main` per `docs/operations/vercel-production-branch-todo.md`.
+Inga öppna PRs på `jakob-be` eller `main`. PR #116 (`8c057b1`), PR #117 (`2319ef9`), PR #118 (`1740472`), PR #119 (`31d8d74`) och PR #120 (`15aea46`) är alla mergade. `jakob-be` är resetad till `origin/main` 2026-05-26 PM (commit `1004122`) plus två direkta commits ovanpå (`cc1a5aa` + `0ed5348`).
 
-PR #117 är nu MERGED (mergeCommit `2319ef9`). PR #116 är MERGED (mergeCommit `8c057b1`). Inga andra öppna PRs.
+Pending operatörsklick: Vercel production-branch-flip från `jakob-be` till `main` per `docs/operations/vercel-production-branch-todo.md` — se "Direkt nästa fokus" punkt 1 nedan.
 
 **Christophers `origin/christopher-ui` (`9f63f15`)** — Christopher har
 under operator-OK scope-leak implementerat hela
@@ -97,17 +95,18 @@ följdprompt` snarare än fler koordinations- eller status-PRs.
 
 **Direkt nästa fokus:**
 
-1. **PRIO 1 — Lane 2 LLM contract propagation** (parkerad WIP) — `cursor/jakob-be-llm-contract-propagation` (`7847e5c`). Den ENDA återstående riktiga produktlyften från dagens lane-uppdrag. Starta i isolerad worktree (`git worktree add ../sajtbyggaren-lane2 cursor/jakob-be-llm-contract-propagation`), rebasa mot senaste jakob-be, kör grindar, slutför B137-B141-regression-suiten (tagline, pageCount, tone, brand.primaryColorHex, siteBrief-ref), öppna PR. När mergad ger faktisk brief→render-signalpropagering — listad som hård förutsättning i Lane 3 Embeddings-rapporten.
-2. **PRIO 2 — Sync `jakob-be → main`** — `main` ligger 12 commits efter `jakob-be`. Drift mellan sanningsytorna växer. Bug-räkning 19/112 är `jakob-be`-läget; `main` har fortfarande gamla siffror. Hård blocker: Christophers `christopher-ui` (`9f63f15`) måste först antingen PR:as mot main eller explicit pausas/reset:as. Operatör behöver fatta beslut om Christopher-koordineringen.
-3. **Cloud-grind — PAUSAD permanent denna session.** Hennes leverans av sprintvåg 1+2 är klar. Att starta runda 5 hade gett mer "bokföringsframdrift" utan produktnytta. Säkra att hennes session är stängd innan ny sprint.
-4. **Lane 4 Golden Path eval** (parkerad WIP, ej akut nu) — `cursor/jakob-be-golden-path-eval` (`3bee355`). Värdefull infrastruktur eftersom Lane 3 listar Golden Path ≥7/10 som Go-villkor för embeddings. Bevarad men inte högsta prio förrän Lane 2 är inne. Resume-instruktion: `git worktree add ../sajtbyggaren-lane4 cursor/jakob-be-golden-path-eval && cd ../sajtbyggaren-lane4 && git pull --rebase origin jakob-be`.
-5. **Stackblitz-agent (parallellt)** — operatör driver separat agent på preview-fallback-spår. Disjunkt scope (`apps/viewser/lib/local-preview-server.ts` eller `apps/viewser/lib/stackblitz-files.ts`). Flagga till orchestrator om hon rör Christopher-paths (`apps/viewser/components/**`) — scope-leak.
+1. **Vercel production-branch-flip — operatörens manuell klick.** Gå till `https://vercel.com/jakeminator123s-projects/sajtbyggaren-viewser/settings/git`, ändra Production Branch från `jakob-be` till `main`, trigga `vercel --prod` för verifiering. Efter flippen: radera `docs/operations/vercel-production-branch-todo.md`. PR #118 + #120 är mergade till main — flippen är inte längre blockad av sync-drift. Beslut 2026-05-25 om temporär `jakob-be`-prod-branch är nu uppfyllt.
+2. **C1 — Naprapat scaffold-selection fix** (embeddings-gate-blockare). `naprapat-stockholm`-prompten routar till `local-service-business/nordic-trust` istället för `clinic-healthcare/clinic-calm`. Eval-id `golden-path-20260525T204935Z`, naprapat-score 5.83 (under 6.5-tröskeln) → enda case som drar embeddings-gate till `no-go`. Resolver/brief-signal-arbete i `packages/generation/planning/plan.py:_pick_scaffold_from_brief` (rad 346) + `packages/generation/discovery/resolve.py`. Egen sprint, ingen scope-leak-risk.
+3. **C2 — B147 vägval a/b/c** (operatörsbeslut, sen kod). Vercel preview wizard 403 via `assertLocalhost` på `*.vercel.app`. Tre alternativ i `docs/known-issues.md`: (a) `VIEWSER_ALLOW_NON_LOCALHOST=true` på Vercel-projektets Preview- + Production-env (snabbast, men bekräftar `no auth, no rate limit, no public deploy`-modellen på publik URL), (b) host-whitelist via ny `VIEWSER_ALLOWED_HOSTS`-env (mer kontrollerat), (c) ADR-beslut om Viewser-på-Vercel auth-strategi (långsiktig).
+4. **C3 — Lane 2 LLM contract propagation** (parkerad WIP). `cursor/jakob-be-llm-contract-propagation` (`7847e5c`). Behind med ~4 commits. Resume i isolerad worktree (`git worktree add ../sajtbyggaren-lane2 cursor/jakob-be-llm-contract-propagation`), rebasa mot post-cleanup `0ed5348`, slutför B137-B141-regression-suiten (tagline, pageCount, tone, brand.primaryColorHex, siteBrief-ref), öppna PR. Listad som hård förutsättning i Lane 3 Embeddings-rapporten.
+5. **C4 — backend-handoff verification deep-dive** (icke-akut). Audit 2026-05-26 verifierade Gap 1 + 3 + 11 som stängda i `docs/backend-handoff.md`. Gap 2 + 4 + 5 + 9 + 10 markerade "behöver verifieras". Gap 6 + 7 sannolikt fortfarande öppna. Gap 8 delvis (PR #117 hero-mp4 men `<video>`-rendering på genererad sajt ej granskad). ~30 min audit per gap genom Grep + Read.
+6. **Lane 4 Golden Path eval** (parkerad WIP, ej akut). `cursor/jakob-be-golden-path-eval` (`3bee355`). Värdefull infrastruktur eftersom Lane 3 listar Golden Path ≥7/10 som Go-villkor för embeddings. Bevarad men inte högsta prio förrän Naprapat-fixen är inne (då blir naprapat-score sannolikt över tröskeln och hela Golden Path når Go).
+7. **Vidare current-focus.md slim** (~60-80 KB möjligt enligt repo-hygiene-städ-agenten). Filen är nu 104 KB efter T0+T1+T2 (tier 0 = revert CRLF, tier 1 = arkivera 2026-05-19 scout reports + handoff, tier 2 = slim 147→104 KB). Återstående: arkivera 2026-05-22-blocket + bevara bara senaste 30 dagars commits-listan i 'Sedan c0b59fbe...'-sektionen.
 
 **Parkerade lanes (väntar trigger):**
 
 - Path B / section-driven renderer — kräver Lane 2 mergad först (delar `scripts/build_site.py`).
 - Christophers `GAP-backend-build-trace-endpoint`-PR — Jakob är reviewer när Christopher öppnar PR från `christopher-ui` mot `main`.
-- Sync `jakob-be → main` — väntar tills Lane 2 + Lane 4 är mergade och Christopher-spåret är beslutat. Main ligger nu 9 commits efter.
 - Sajtmaskin inspiration Scout — lokalt-only (kräver `sajtmaskin.rar` på operatörens maskin).
 - Backend-Gap 4 + 5, Sprintvakt V1.3, B125 preview-fallback (om Stackblitz-agenten inte plockar upp det) — öppna men ej akuta.
 
