@@ -1,6 +1,6 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-26 sen kväll UTC, steward-pass efter `88dedf0` — backend-handoff Gap 6+7 sync. Verifierad `jakob-be` är `88dedf03189188abdefb5f1967d1efea84133525`.
+**Datum:** 2026-05-26 sen kväll UTC, steward-pass efter `e3815f6` — docs-count bump före B147-closure-sync. Verifierad `jakob-be` är `e3815f6ceef53af7e1303658a908cf648f970bf9`.
 
 Nya PRs sedan föregående checkpoint: PR #118 — sync(jakob-be -> main): PR #117 mobile
 responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report; PR #120
@@ -19,9 +19,8 @@ krävs en gång per venv enligt ADR 0029.
 
 **Direkt nästa spår — operatörsbeslut + Gap-fixar:**
 
-1. **B147 vägval a/b/c** — operatörsbeslut. Vercel preview wizard 403 via `assertLocalhost` på `*.vercel.app`. Tre alternativ i `docs/known-issues.md`: (a) `VIEWSER_ALLOW_NON_LOCALHOST=true`, (b) host-whitelist via ny env, (c) ADR-beslut om Viewser-på-Vercel auth-strategi.
-2. **Backend-Gap fixar (post-C4-audit)** — efter Gap 4 + 5 samt Gap 6 + 7 är status 9 stängda / 1 delvis / 1 öppen. Nästa i prio: Gap 9 (~2h, S-M), sedan Gap 10 (~4-6h, M-L). Detaljer i `docs/current-focus.md`.
-3. **Sync-PR `jakob-be → main`** — `jakob-be` är nu 26 commits framför `origin/main`. Bra läge för en sync-PR (operatörens beslut). Kan kombineras med en av Gap-fixarna ovan.
+1. **Backend-Gap fixar (post-C4-audit)** — efter Gap 4 + 5 samt Gap 6 + 7 är status 9 stängda / 1 delvis / 1 öppen. Nästa i prio: Gap 9 (~2h, S-M), sedan Gap 10 (~4-6h, M-L). Detaljer i `docs/current-focus.md`.
+2. **Sync-PR `jakob-be → main`** — `jakob-be` är nu 28 commits framför `origin/main`. Bra läge för en sync-PR (operatörens beslut). Kan kombineras med en av Gap-fixarna ovan.
 
 **Parkerade lanes (väntar trigger):**
 
@@ -405,7 +404,7 @@ Nya PRs / direkta commits till `jakob-be` sedan föregående checkpoint (`50217e
 - `4a6243a` + `1471d16` — **B151+B152+B153 stängda** direkt efter PR #117-merge (per operatörs-momentum-beslut, inte väntat på Christopher-följ-PR). Floating-chat iOS Safari <14 compat, compare-modal w-full overflow, viewer-panel `'full'`-preset hydration. 3 source-lock regression-tester i `tests/test_viewser_files.py`.
 - `05a84bb` inbox msg-0017-c3f924 till christopher-ui (rapport om merge + att vi tog AI-fynden).
 
-Ny aktiv: **B147 Medel-Hög** (Vercel preview wizard 403 via `assertLocalhost`). Operatörsbeslut a/b/c krävs innan kod-fix. Bug-räkning: **14 aktiva / 0 misplaced / 5 unknown / 126 stängda** (från 19/0/5/114 vid sessionsstart — netto 5 färre aktiva, 12 stängda, 1 ny tracked).
+Ny aktiv då: **B147 Medel-Hög** (Vercel preview wizard 403 via `assertLocalhost`). Stängd senare i `b3834b3`. Bug-räkning då: **14 aktiva / 0 misplaced / 5 unknown / 126 stängda** (från 19/0/5/114 vid sessionsstart — netto 5 färre aktiva, 12 stängda, 1 ny tracked).
 
 **Öppen PR just nu:**
 

@@ -30,10 +30,12 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `88dedf03189188abdefb5f1967d1efea84133525` (2026-05-26 late evening UTC, post backend-handoff Gap 6+7 sync).
+Last verified state: `e3815f6ceef53af7e1303658a908cf648f970bf9` (2026-05-26 late evening UTC, post docs-count bump before B147 closure sync).
 
 Nya commits sedan föregående checkpoint (`0f3bd67`):
 
+- `e3815f6` docs(steward): bump focus and handoff counts after docs sync commits.
+- `b3834b3` feat(viewser): close B147 — add VIEWSER_ALLOWED_HOSTS host-whitelist.
 - `88dedf0` docs(steward): sync backend handoff after gap 6 and 7 merge.
 - `cb07dbb` docs(steward): sync handoff/focus/workboard with actual code state 2026-05-26.
 - `ea6e141` feat(build): close Gap 6 + 7 — multi-size favicon.ico + 1200x630 og-image.png.
@@ -66,7 +68,7 @@ Nya commits sedan föregående checkpoint (`0f3bd67`):
 ## Pågående/öppna PR:s just nu
 
 Inga öppna PRs på `jakob-be` eller `main`. `jakob-be` är resetad till
-`origin/main` 2026-05-26 PM (commit `1004122`) plus 26 commits ovanpå
+`origin/main` 2026-05-26 PM (commit `1004122`) plus 28 commits ovanpå
 (listan ovan). Nästa sync-PR till `main` är operatörens beslut — bra läge
 nu när Gap 4 + 5 och Gap 6 + 7 är inne. Gap 9 eller Gap 10 kan buntas in i
 samma sync om operatören vill vänta.
@@ -79,14 +81,7 @@ implementerat hela `GAP-backend-build-trace-endpoint` (3 endpoints + UI +
 
 ## Direkt nästa fokus
 
-1. **B147 vägval a/b/c** (operatörsbeslut, sen kod). Vercel preview wizard
-   403 via `assertLocalhost` på `*.vercel.app`. Tre alternativ i
-   `docs/known-issues.md`: (a) `VIEWSER_ALLOW_NON_LOCALHOST=true` på Vercel-
-   projektets Preview- + Production-env (snabbast, men bekräftar `no auth,
-   no rate limit, no public deploy`-modellen på publik URL), (b) host-
-   whitelist via ny `VIEWSER_ALLOWED_HOSTS`-env (mer kontrollerat), (c)
-   ADR-beslut om Viewser-på-Vercel auth-strategi (långsiktig).
-2. **Backend-Gap fixar baserade på C4-audit** (cloud-grind levererade
+1. **Backend-Gap fixar baserade på C4-audit** (cloud-grind levererade
    audit 2026-05-26 i PR #121, `0f3bd67`; Gap 4 + 5 stängdes 2026-05-26
    evening i `b89a3d2` + `1b91ca6`; Gap 6 + 7 stängdes i `ea6e141`).
    Status efter Gap 6 + 7: 9 stängda (1, 2, 3, 4, 5, 6, 7, 8, 11),
@@ -99,7 +94,7 @@ implementerat hela `GAP-backend-build-trace-endpoint` (3 endpoints + UI +
      `copy_operator_uploads()`-kopiering till `public/products/`, OCH
      renderer-stöd för produktbild i
      `packages/generation/build/renderers.py`-produktgrid. Egen sprint.
-3. **Sync-PR `jakob-be → main`** — `jakob-be` är 26 commits framför
+2. **Sync-PR `jakob-be → main`** — `jakob-be` är 28 commits framför
    `origin/main`. Bra läge nu eller efter en av Gap-fixarna ovan.
    Operatörens beslut.
 
@@ -138,15 +133,14 @@ Detaljerade Queue-/Blocked-block ligger i arkivet
 [`docs/archive/current-focus-history-2026-05-26.md`](archive/current-focus-history-2026-05-26.md).
 Aktiva spår i prioritetsordning:
 
-1. B147 vägval a/b/c (operatörsbeslut).
-2. Backend-Gap 9, sedan Gap 10.
-3. Sync-PR `jakob-be → main`.
-4. Christophers `GAP-backend-build-trace-endpoint`-PR (när han öppnar den).
-5. B49 (docs-base page-map sidebar) — låg prio, behövs innan
+1. Backend-Gap 9, sedan Gap 10.
+2. Sync-PR `jakob-be → main`.
+3. Christophers `GAP-backend-build-trace-endpoint`-PR (när han öppnar den).
+4. B49 (docs-base page-map sidebar) — låg prio, behövs innan
    `course-education → docs-base` aktiveras.
-6. B13a arkitektur-flytt — kvarstår som öppen post, kräver egen sprint
+5. B13a arkitektur-flytt — kvarstår som öppen post, kräver egen sprint
    + sannolikt egen ADR.
-7. B53, B47, BO4-followup-cancel — låga, ingen blocker.
+6. B53, B47, BO4-followup-cancel — låga, ingen blocker.
 
 ## Loopen vi följer
 
@@ -231,11 +225,11 @@ B150, B90, B91, B92, B93, B151, B152, B153) + PR #116 dossier-intake
 mergad + PR #117 mobile responsive mergad (31 commits från
 christopher-ui, 100 % UI-only mot merge-base `3bedddd`).
 
-**B147 (Medel-Hög) ny aktiv bugg** — Vercel preview wizard 403 via
-`assertLocalhost` på `*.vercel.app`. Operatörsbeslut a/b/c krävs.
+**B147 (Medel-Hög) ny aktiv bugg då** — Vercel preview wizard 403 via
+`assertLocalhost` på `*.vercel.app`. Stängd senare i `b3834b3`.
 
 `origin/jakob-be` var då 8+ commits före `origin/main`. Sync-PR
 `jakob-be → main` var queued men ej öppnad — Christophers
 `christopher-ui` är nu mergad genom #117, så den blockaren var löst.
 Kvarvarande blockare då: B147-vägval + Vercel-production-branch-flip.
-Vercel-flippen är åtgärdad 2026-05-26; B147 är fortsatt öppen.
+Båda är åtgärdade 2026-05-26; B147 stängdes i `b3834b3`.
