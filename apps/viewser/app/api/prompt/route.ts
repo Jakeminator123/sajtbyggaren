@@ -133,8 +133,18 @@ function extractBuildStatus(buildResult: Record<string, unknown>): string | null
   return typeof value === "string" ? value : null;
 }
 
+/**
+ * runPromptBuildOnce — kör Phase 1 (prompt → Project Input) och Phase 2
+ * (build_site.py via runBuild) sekventiellt. Den frivilliga
+ * `onPhase1Done`-callbacken bjuds in mellan faserna så stream-läget
+ * kan emittera en riktig "building"-signal till klienten exakt när
+ * Phase 1 är klar — istället för att klienten gissar via setTimeout
+ * (B122). Synkrona callers (utan callback) får samma slutresultat
+ * som tidigare utan beteendeskillnad.
+ */
 async function runPromptBuildOnce(
   payload: z.infer<typeof PromptPayloadSchema>,
+  options?: { onPhase1Done?: () => void },
 ) {
   // Phase 1: prompt -> Project Input on disk (data/prompt-inputs/<siteId>.*).
   const helper = await runPromptToProjectInput(payload.prompt, {
@@ -143,6 +153,7 @@ async function runPromptBuildOnce(
     baseRunId: payload.baseRunId,
     discovery: payload.discovery,
   });
+  options?.onPhase1Done?.();
 
   // Phase 2: build_site.py with the absolute dossier path produced
   // above. runBuild's mutex serialises this against any concurrent
@@ -168,6 +179,7 @@ async function runPromptBuildOnce(
 
 async function runPromptBuildSerially(
   payload: z.infer<typeof PromptPayloadSchema>,
+  options?: { onPhase1Done?: () => void },
 ) {
   while (promptInFlight) {
     try {
@@ -177,7 +189,7 @@ async function runPromptBuildSerially(
     }
   }
 
-  const promise = runPromptBuildOnce(payload);
+  const promise = runPromptBuildOnce(payload, options);
   promptInFlight = promise;
   try {
     return await promise;
@@ -218,6 +230,57 @@ export async function POST(request: NextRequest) {
     const message =
       error instanceof Error ? error.message : "Okänt fel vid prompt-anropet.";
     return NextResponse.json({ error: message }, { status: 500 });
+  }
+
+  // B122-fix: när klienten signalerar `Accept: application/x-ndjson`
+  // emitterar vi två NDJSON-rader istället för en synkron JSON:
+  //   1. `{stage:"building"}` exakt när Phase 1 (prompt → Project Input)
+  //      är klar, så PromptBuilder kan flippa stage på en RIKTIG signal
+  //      istället för en gissad `setTimeout(1500)`.
+  //   2. `{stage:"done", runId, siteId, ...}` när Phase 2 är klar.
+  // Vid fel skickas `{stage:"error", error:"..."}` och streamen stängs.
+  // Klienter som inte sätter Accept-headern får oförändrad synkron JSON
+  // (zero impact på floating-chat.tsx + use-followup-build.ts).
+  const acceptHeader = request.headers.get("accept") ?? "";
+  const wantsStream = acceptHeader.includes("application/x-ndjson");
+
+  if (wantsStream) {
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        const enqueueLine = (line: Record<string, unknown>) => {
+          controller.enqueue(encoder.encode(`${JSON.stringify(line)}\n`));
+        };
+        try {
+          const result = await runPromptBuildSerially(payload, {
+            onPhase1Done: () => {
+              enqueueLine({ stage: "building" });
+            },
+          });
+          enqueueLine({ stage: "done", ...result });
+        } catch (error) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Okänt fel vid prompt-anropet.";
+          enqueueLine({ stage: "error", error: message });
+        } finally {
+          controller.close();
+        }
+      },
+    });
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/x-ndjson; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        // X-Accel-Buffering=no hindrar reverse proxies (om någon
+        // tillkommer framför Next.js) från att buffra streamen och
+        // kollapsa den till en synkron response — vi vill att klienten
+        // ska se {stage:"building"} omedelbart efter Phase 1.
+        "X-Accel-Buffering": "no",
+      },
+    });
   }
 
   try {

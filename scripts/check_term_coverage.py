@@ -118,7 +118,7 @@ COMMON_WORDS = {
     # Web standards / native browser APIs
     "HTML", "CSS", "URL", "URI", "DOM", "API", "HTTP", "HTTPS", "REST", "GraphQL", "WebSocket", "OAuth", "CORS", "TLS", "SSL",
     "SharedArrayBuffer", "SharedArrayBuffer is not defined",
-    "XMLHttpRequest", "ReadableStream",
+    "XMLHttpRequest", "ReadableStream", "TextEncoder", "TextDecoder",
     "ElementCreationOptions", "DevTools",
     # Sajtbyggaren-meta-nyckelord (egennamn för repon)
     "Sajtbyggaren", "Sajtmaskin", "Jakeminator123", "Jakemiantor123",

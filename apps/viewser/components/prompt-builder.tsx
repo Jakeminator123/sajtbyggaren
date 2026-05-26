@@ -59,8 +59,10 @@ type PromptBuilderProps = {
   /**
    * När `true` döljs hela prompt-strippen visuellt — men komponenten
    * stannar mountad. Detta är kritiskt: fetch-anropet mot /api/prompt,
-   * setTimeout som flyttar stage `thinking`→`building`, och alla
-   * state-updates måste leva vidare under hela bygget. Att unmounta
+   * NDJSON-stream-läsaren som flyttar stage `thinking`→`building` när
+   * Phase 1-eventet kommer, och alla state-updates måste leva vidare
+   * under hela bygget (B122-fix 2026-05-27 ersatte den tidigare
+   * setTimeout-baserade flippen). Att unmounta
    * komponenten via conditional rendering här triggade en bugg där
    * BuildProgressCard fastnade på steg 1 eftersom `onStageChange`
    * inte längre kunde rapportera nya stages från den döda komponenten.
@@ -127,7 +129,6 @@ export function PromptBuilder({
   // isSubmitting). Etablerat mönster i kodbasen istället för set-state-
   // in-effect (B3+B4 i scout-review 2026-05-24).
   const [wizardSession, setWizardSession] = useState(0);
-  const stageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const localBusy = stage === "thinking" || stage === "building";
@@ -161,13 +162,11 @@ export function PromptBuilder({
    */
   const mode: PromptMode = followupReady ? "followup" : "init";
 
-  useEffect(() => {
-    return () => {
-      if (stageTimerRef.current) {
-        clearTimeout(stageTimerRef.current);
-      }
-    };
-  }, []);
+  // B122-fix 2026-05-27: den 1500ms-baserade stage-transition-timern är
+  // borta — `building`-eventet kommer nu från route:n via NDJSON-stream.
+  // Inget kvar att städa vid unmount (om operatorn lämnar sidan mitt i
+  // ett bygge fortsätter routen på server-sidan oavsett, samma som
+  // tidigare).
 
   // Lyft stage-ändringar uppåt så page.tsx kan dirigera ViewerPanel:s
   // build-progress-card. Vi rapporterar varje stage-flip exakt en gång.
@@ -190,23 +189,22 @@ export function PromptBuilder({
     onBuildStart();
 
     try {
-      // The route does both phases sequentially: prompt -> Project Input
-      // (runs briefModel) and then runs build_site.py. We expose two
-      // visual stages so the operator can see which step is in flight
-      // even though the network call is single-shot.
-      if (stageTimerRef.current) {
-        clearTimeout(stageTimerRef.current);
-      }
-      stageTimerRef.current = setTimeout(() => {
-        stageTimerRef.current = null;
-        setStage((current) =>
-          current === "thinking" ? "building" : current,
-        );
-      }, 1500);
-
+      // B122-fix: route:n exponerar nu en NDJSON-stream när vi sätter
+      // `Accept: application/x-ndjson`. Vi får två events: `building`
+      // exakt när Phase 1 (prompt → Project Input) är klar och `done`
+      // när Phase 2 (build_site.py) är klar. Det ersätter den gamla
+      // gissade 1500ms-timer-flippen som tidigare visade falsk
+      // "Bygger sajt" om svaret kom under 1.5s (cache hit, validation
+      // failure) eller motsatt — hängde i "thinking" om Phase 1 tog
+      // över 1.5s. Bakåtkompatibelt: andra callers (floating-chat,
+      // use-followup-build) skickar inte Accept-headern och får
+      // fortfarande synkron JSON.
       const response = await fetch("/api/prompt", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/x-ndjson",
+        },
         body: JSON.stringify({
           prompt: args.cleanedPrompt,
           mode: args.submissionMode,
@@ -214,9 +212,69 @@ export function PromptBuilder({
           discovery: args.discovery,
         }),
       });
-      const payload = (await response.json()) as PromptApiPayload;
-      if (!response.ok || !payload.runId || !payload.siteId) {
-        throw new Error(payload.error ?? "Prompt-anropet misslyckades.");
+
+      if (!response.ok || !response.body) {
+        // Server kan välja att svara med plain JSON-fel före streamen
+        // hinner öppnas (t.ex. 400 från zod-validering eller 500 vid
+        // server-init). I så fall läser vi en sista JSON och kastar.
+        const fallback = await response.json().catch(() => null);
+        const fallbackError = fallback?.error as string | undefined;
+        throw new Error(
+          fallbackError ??
+            `Prompt-anropet misslyckades (HTTP ${response.status}).`,
+        );
+      }
+
+      let donePayload: PromptApiPayload | null = null;
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        // NDJSON: en JSON per rad, separerade med `\n`. Behåll den
+        // sista (möjligen partiella) raden i bufferten tills nästa
+        // chunk kommer.
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const event = JSON.parse(line) as
+            | { stage: "building" }
+            | { stage: "done" } & PromptApiPayload
+            | { stage: "error"; error: string };
+          if (event.stage === "building") {
+            // RIKTIG signal från route:n. Phase 1 är klar, Phase 2
+            // (build_site.py) har precis startat — visa "Bygger sajt".
+            setStage("building");
+          } else if (event.stage === "done") {
+            donePayload = event;
+          } else if (event.stage === "error") {
+            throw new Error(event.error || "Prompt-anropet misslyckades.");
+          }
+        }
+      }
+      // Sista, eventuellt ofullständiga raden i buffern. NDJSON-
+      // protokollet kräver inte trailing newline, så hantera även
+      // det fall där `done`-eventet kom utan terminator.
+      if (buffer.trim()) {
+        const event = JSON.parse(buffer) as
+          | { stage: "done" } & PromptApiPayload
+          | { stage: "error"; error: string };
+        if (event.stage === "done") {
+          donePayload = event;
+        } else if (event.stage === "error") {
+          throw new Error(event.error || "Prompt-anropet misslyckades.");
+        }
+      }
+
+      if (!donePayload || !donePayload.runId || !donePayload.siteId) {
+        throw new Error(
+          donePayload?.error ??
+            "Prompt-anropet returnerade ingen slutsignal.",
+        );
       }
 
       // B44: classify build status from build-result.json so the
@@ -224,27 +282,23 @@ export function PromptBuilder({
       // showing "Build klar" for a structured failure (build-runner.ts
       // returns a runId on failed builds so the run still appears in
       // Run History).
-      const outcome = classifyBuildStatus(payload.buildStatus);
+      const outcome = classifyBuildStatus(donePayload.buildStatus);
       setStage(outcomeToStage(outcome));
       setLastResult({
-        runId: payload.runId,
-        siteId: payload.siteId,
-        version: payload.version ?? null,
-        briefSource: payload.briefSource ?? null,
-        buildStatus: payload.buildStatus ?? null,
+        runId: donePayload.runId,
+        siteId: donePayload.siteId,
+        version: donePayload.version ?? null,
+        briefSource: donePayload.briefSource ?? null,
+        buildStatus: donePayload.buildStatus ?? null,
         outcome,
       });
       setPrompt("");
       setPendingPrompt("");
-      onBuildDone(payload.runId, outcome, payload.siteId);
+      onBuildDone(donePayload.runId, outcome, donePayload.siteId);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Okänt fel.");
       setStage("failed");
     } finally {
-      if (stageTimerRef.current) {
-        clearTimeout(stageTimerRef.current);
-        stageTimerRef.current = null;
-      }
       onBuildEnd();
     }
   }

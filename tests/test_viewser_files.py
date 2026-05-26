@@ -927,7 +927,7 @@ def test_project_input_picker_includes_prompt_inputs_directory() -> None:
 
 
 @pytest.mark.tooling
-def test_prompt_builder_exposes_followup_mode_and_cleans_stage_timer() -> None:
+def test_prompt_builder_exposes_followup_mode_and_consumes_ndjson_stream() -> None:
     text = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(
         encoding="utf-8"
     )
@@ -947,9 +947,33 @@ def test_prompt_builder_exposes_followup_mode_and_cleans_stage_timer() -> None:
         "PromptBuilder måste skicka submissionMode='followup' till "
         "executeBuild när followupReady är sant."
     )
-    assert "clearTimeout(stageTimerRef.current)" in text, (
-        "PromptBuilder måste städa stage-transition-timeouten vid unmount "
-        "och när prompt-anropet avslutas."
+    # B122-fix 2026-05-27: setTimeout(1500)-baserad stage-flip ersatt
+    # av NDJSON-stream från /api/prompt. PromptBuilder ska skicka
+    # `Accept: application/x-ndjson`, läsa `response.body` som stream
+    # och flippa stage på `stage:"building"`-eventet.
+    # `setTimeout(` (med öppningsparentes) flaggar faktiska function-
+    # anrop. Historiska referenser i kommentarer/docstrings ("den gamla
+    # setTimeout-baserade flippen") är tillåtna så fixet kan dokumentera
+    # bort-refaktoreringen utan att triggas av sin egen förklaringstext.
+    assert "setTimeout(" not in text, (
+        "PromptBuilder får inte ANROPA setTimeout för stage-transitions "
+        "längre — använd riktig signal från /api/prompt:s NDJSON-stream."
+    )
+    assert '"application/x-ndjson"' in text, (
+        "PromptBuilder måste sätta Accept: application/x-ndjson så "
+        "/api/prompt svarar med stream istället för synkron JSON."
+    )
+    assert "response.body.getReader()" in text, (
+        "PromptBuilder måste läsa /api/prompt-svaret som stream via "
+        "response.body.getReader()."
+    )
+    assert 'event.stage === "building"' in text, (
+        "PromptBuilder måste flippa stage till 'building' när NDJSON-"
+        "eventet `stage:\"building\"` kommer från route:n (riktig signal)."
+    )
+    assert 'event.stage === "done"' in text, (
+        "PromptBuilder måste behandla `stage:\"done\"`-eventet som "
+        "slutsignal med runId + siteId + buildStatus."
     )
 
 
@@ -1178,6 +1202,61 @@ def test_prompt_route_surfaces_build_status() -> None:
     assert "extractBuildStatus" in text or "buildResult.status" in text, (
         "/api/prompt route.ts must read build-result.json:status to populate "
         "buildStatus on the response."
+    )
+
+
+def test_prompt_route_emits_ndjson_stream_on_accept_header() -> None:
+    """B122-fix 2026-05-27: /api/prompt måste exponera en NDJSON-stream
+    när klienten signalerar `Accept: application/x-ndjson`, så PromptBuilder
+    kan flippa stage från `thinking` till `building` på en RIKTIG signal
+    (Phase 1 → Phase 2-övergången) istället för den gamla gissade
+    `setTimeout(1500)`-flippen som producerade falsk 'Bygger sajt' om
+    svaret kom under 1.5s eller motsatt — hängde i 'thinking' om Phase 1
+    tog över 1.5s.
+
+    Stream-kontrakt:
+      1. `{stage:"building"}` exakt när Phase 1 (runPromptToProjectInput)
+         är klar — innan runBuild startar.
+      2. `{stage:"done", runId, siteId, ...}` när Phase 2 (runBuild) är klar.
+      3. `{stage:"error", error:"..."}` vid fel.
+
+    Bakåtkompatibelt: klienter som INTE skickar Accept-headern (t.ex.
+    floating-chat.tsx och use-followup-build.ts) får fortfarande en
+    synkron NextResponse.json med samma fält som tidigare.
+    """
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+    assert '"application/x-ndjson"' in text, (
+        "/api/prompt route.ts måste exponera content-type 'application/x-ndjson' "
+        "när Accept-headern begär stream-läge."
+    )
+    assert "ReadableStream" in text, (
+        "/api/prompt route.ts måste returnera en ReadableStream när "
+        "klienten begär NDJSON-läge."
+    )
+    assert "onPhase1Done" in text, (
+        "/api/prompt route.ts måste skicka ett `onPhase1Done`-callback "
+        "in i runPromptBuildOnce/runPromptBuildSerially så stream-läget "
+        "kan emittera `stage:'building'` exakt mellan Phase 1 och Phase 2."
+    )
+    assert 'stage: "building"' in text, (
+        "/api/prompt route.ts måste emittera `{stage:'building'}` i "
+        "NDJSON-streamen när Phase 1 är klar."
+    )
+    assert 'stage: "done"' in text, (
+        "/api/prompt route.ts måste emittera `{stage:'done', ...result}` "
+        "som slutevent i NDJSON-streamen."
+    )
+    assert 'stage: "error"' in text, (
+        "/api/prompt route.ts måste emittera `{stage:'error', error:'...'}` "
+        "om något fas-anrop kastar inom streamen."
+    )
+    # Bakåtkompatibilitet: synkron NextResponse.json-fallback finns kvar
+    # för klienter utan Accept-headern (floating-chat, use-followup-build).
+    assert "NextResponse.json(await runPromptBuildSerially(payload))" in text, (
+        "/api/prompt route.ts måste behålla den synkrona NextResponse.json-"
+        "fallbacken för klienter som inte sätter Accept: application/x-ndjson."
     )
 
 

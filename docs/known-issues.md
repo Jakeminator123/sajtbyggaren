@@ -255,17 +255,26 @@ pass; B119-B122 öppna och listade nedan.
   ordning, inklusive `,`-separator och engelska postnummer-format.
   Källa: extern reviewer 2026-05-18 (runda 2). Fix: open. Test: open.
 - **`B122` Låg** - `apps/viewser/components/prompt-builder.tsx`
-  växlar från `thinking` till `building`-stage via `setTimeout(...,
-  1500)` istället för på en faktisk backend-signal. Det fungerar i
-  praktiken eftersom `/api/prompt` typiskt tar > 1.5s, men en
-  prompt som returnerar snabbt (cache hit, valideringsfel) ger
-  operatören en falsk "Bygger sajt"-vy innan svaret faktiskt finns.
-  Värre: en hängd prompt visar `building` direkt fast den fastnat
-  i `thinking`-fasen, vilket ger fel mental modell. Inte backend-bugg
-  men UI-signalering. Fix-skiss: skicka faktisk stage-signal från
-  `/api/prompt` (t.ex. via Server-Sent Events eller separat
-  `/api/prompt-status?runId=`-poll). Källa: extern reviewer
-  2026-05-18 (runda 2). Fix: open. Test: open.
+  växlade från `thinking` till `building`-stage via `setTimeout(...,
+  1500)` istället för på en faktisk backend-signal. Det fungerade i
+  praktiken eftersom `/api/prompt` typiskt tog > 1.5s, men en
+  prompt som returnerade snabbt (cache hit, valideringsfel) gav
+  operatören en falsk "Bygger sajt"-vy innan svaret faktiskt fanns.
+  Värre: en hängd prompt visade `building` direkt fast den fastnat
+  i `thinking`-fasen, vilket gav fel mental modell. Inte backend-bugg
+  men UI-signalering. Källa: extern reviewer 2026-05-18 (runda 2).
+  Fix: `apps/viewser/app/api/prompt/route.ts` exponerar nu en
+  NDJSON-stream när klienten skickar `Accept: application/x-ndjson`,
+  med två events — `{stage:"building"}` exakt mellan Phase 1
+  (runPromptToProjectInput) och Phase 2 (runBuild), samt
+  `{stage:"done", ...result}` som slutevent. PromptBuilder läser
+  streamen via `response.body.getReader()` och flippar stage på
+  riktig signal istället för timeout. setTimeout(1500)-blocket är
+  borta. Bakåtkompatibelt: floating-chat.tsx och use-followup-build.ts
+  skickar inte Accept-headern och får fortfarande synkron JSON.
+  Fix: open (SHA uppdateras i Closed-sektionen efter commit). Test:
+  `tests/test_viewser_files.py::test_prompt_route_emits_ndjson_stream_on_accept_header`,
+  `tests/test_viewser_files.py::test_prompt_builder_exposes_followup_mode_and_consumes_ndjson_stream`.
 
 ### Extern reviewer-triage 2026-05-18 (post-PR-#31 christopher-ui-integration)
 
