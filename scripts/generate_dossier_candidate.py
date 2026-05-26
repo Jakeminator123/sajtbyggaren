@@ -294,6 +294,11 @@ def _normalise_candidate(
     manifest["capability"] = capability
     manifest["class"] = candidate_class
     manifest["enabled"] = False
+    # V1 hard candidates are audit artifacts, not real integrations. The
+    # current dossier schema accepts empty envVars/dependencies for both
+    # classes, and dossier-contract.v1 has no extra required hard files yet.
+    # A future promotion/integration PR must add real env/integration
+    # contracts before canonical use.
     manifest["envVars"] = []
     manifest["dependencies"] = []
     model = DossierManifestModel.model_validate(manifest)
