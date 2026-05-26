@@ -31,13 +31,13 @@ import type {
 import type { AssetRef } from "@/lib/asset-store/types";
 
 /**
- * 2026-05-26 — Total-minimalism-omg\u00e5ng (GAP-viewser-wizard-minimal-tabs).
+ * 2026-05-26 — Total-minimalism-omgång (GAP-viewser-wizard-minimal-tabs).
  *
- * Wizarden reducerades fr\u00e5n 5 till 3 huvudsteg som visas som tabs \u00f6verst.
+ * Wizarden reducerades från 5 till 3 huvudsteg som visas som tabs överst.
  * `content` och `media` finns kvar som typer (popupen "Mer information"
- * \u00e5teranv\u00e4nder samma f\u00e4lt) men ing\u00e5r INTE l\u00e4ngre i `WIZARD_STEP_ORDER`
- * och har f\u00f6ljaktligen ingen sidebar/tab-knapp. Backend-payload \u00e4ndras
- * INTE \u2014 alla f\u00e4lt skickas fortfarande via `buildDiscoveryPayload`.
+ * återanvänder samma fält) men ingår INTE längre i `WIZARD_STEP_ORDER`
+ * och har följaktligen ingen sidebar/tab-knapp. Backend-payload ändras
+ * INTE — alla fält skickas fortfarande via `buildDiscoveryPayload`.
  */
 export type WizardStepId =
   | "foundation"
@@ -53,9 +53,9 @@ export const WIZARD_STEP_ORDER: WizardStepId[] = [
 ];
 
 /**
- * Lista \u00f6ver alla steg som n\u00e5gonsin har funnits \u2014 anv\u00e4nds av
+ * Lista över alla steg som någonsin har funnits — används av
  * payload-byggaren och eventuella legacy-validators. ContentBranch +
- * Media-f\u00e4lt n\u00e5s nu via popupen ist\u00e4llet.
+ * Media-fält nås nu via popupen istället.
  */
 export const WIZARD_STEP_ORDER_LEGACY_ALL: WizardStepId[] = [
   "foundation",
@@ -66,27 +66,27 @@ export const WIZARD_STEP_ORDER_LEGACY_ALL: WizardStepId[] = [
 ];
 
 export const WIZARD_STEP_TITLES: Record<WizardStepId, string> = {
-  foundation: "F\u00f6retaget",
+  foundation: "Företaget",
   visual: "Stil",
   functions: "Funktioner",
-  // Visas inte som tab, men beh\u00e5lls f\u00f6r legacy-l\u00e4sare som mappar
+  // Visas inte som tab, men behålls för legacy-läsare som mappar
   // alla WizardStepId till en titel (t.ex. payload-debug).
-  content: "Inneh\u00e5ll",
+  content: "Innehåll",
   media: "Bilder & media",
 };
 
 /**
- * Pipeline-del som steget prim\u00e4rt styr. Visas inte l\u00e4ngre i UI:t
- * (total-minimalism-pass) men beh\u00e5lls f\u00f6r ev. debug-vy och s\u00e4nd
+ * Pipeline-del som steget primärt styr. Visas inte längre i UI:t
+ * (total-minimalism-pass) men behålls för ev. debug-vy och sänd
  * den till payload-byggaren.
  */
-export type PipelinePart = "Sidor" | "Visuellt" | "Funktioner" | "Inneh\u00e5ll" | "Media";
+export type PipelinePart = "Sidor" | "Visuellt" | "Funktioner" | "Innehåll" | "Media";
 
 export const WIZARD_STEP_PIPELINE_BADGE: Record<WizardStepId, PipelinePart> = {
   foundation: "Sidor",
   visual: "Visuellt",
   functions: "Funktioner",
-  content: "Inneh\u00e5ll",
+  content: "Innehåll",
   media: "Media",
 };
 
@@ -347,19 +347,19 @@ export function validateWizardStep(
 ): string | null {
   switch (step) {
     case "foundation":
-      // Total-minimalism-pass (2026-05-26): bara offer + businessFamily \u00e4r
-      // hard-required. Operatorn kan skippa f\u00f6retagsnamn, kontakt och sub-
-      // kategori \u2014 dessa f\u00e4lt skrapas eller f\u00f6refyllas av Vision/defaults.
-      if (answers.offer.trim().length < 3) return "Beskriv kort vad ni g\u00f6r.";
-      if (!answers.businessFamily) return "V\u00e4lj vilken typ av verksamhet det \u00e4r.";
+      // Total-minimalism-pass (2026-05-26): bara offer + businessFamily är
+      // hard-required. Operatorn kan skippa företagsnamn, kontakt och sub-
+      // kategori — dessa fält skrapas eller förefyllas av Vision/defaults.
+      if (answers.offer.trim().length < 3) return "Beskriv kort vad ni gör.";
+      if (!answers.businessFamily) return "Välj vilken typ av verksamhet det är.";
       return null;
     case "visual":
-      // Stil-tabben \u00e4r alltid skip-bar \u2014 scaffold har goda defaults.
+      // Stil-tabben är alltid skip-bar — scaffold har goda defaults.
       return null;
     case "functions":
-      // Total-minimalism: ingen hard-validation l\u00e4ngre. Recommended-funktioner
-      // f\u00f6refylls auto fr\u00e5n businessFamily i `functions-step.tsx`. Operatorn
-      // kan alltid g\u00e5 direkt till "Skapa sajt".
+      // Total-minimalism: ingen hard-validation längre. Recommended-funktioner
+      // förefylls auto från businessFamily i `functions-step.tsx`. Operatorn
+      // kan alltid gå direkt till "Skapa sajt".
       return null;
     case "content":
       // Innehållssteget är alltid valfritt — utan tjänster/produkter

@@ -42,23 +42,23 @@ import {
 } from "./wizard-types";
 
 /**
- * Discovery wizard \u2014 total-minimalism-passet (2026-05-26,
+ * Discovery wizard — total-minimalism-passet (2026-05-26,
  * GAP-viewser-wizard-minimal-tabs).
  *
- * Tre tabs h\u00f6gst upp: F\u00f6retaget / Stil / Funktioner. Inneh\u00e5ll och
- * Media-f\u00e4lt finns kvar men ligger bakom "Mer information"-popup p\u00e5
- * tab 3 s\u00e5 default-vyn h\u00e5lls superminimalistisk.
+ * Tre tabs högst upp: Företaget / Stil / Funktioner. Innehåll och
+ * Media-fält finns kvar men ligger bakom "Mer information"-popup på
+ * tab 3 så default-vyn hålls superminimalistisk.
  *
- * URL-skrap p\u00e5 tab 1 fyller alla f\u00e4lt (inkl. content + media-stubbar)
- * automatiskt i bakgrunden \u2014 operatorn beh\u00f6ver inte se eller godk\u00e4nna
+ * URL-skrap på tab 1 fyller alla fält (inkl. content + media-stubbar)
+ * automatiskt i bakgrunden — operatorn behöver inte se eller godkänna
  * texterna. Om hen vill granska/redigera finns det i popupen.
  *
  * Tre lager av text/feedback:
- *   1. Synlig som default: tab-labels + minimum-required-fields p\u00e5 varje tab.
+ *   1. Synlig som default: tab-labels + minimum-required-fields på varje tab.
  *   2. Visas bara vid fel: validation-pill i footern.
- *   3. \u00d6ppnas p\u00e5 beg\u00e4ran: tangentbordsgenvags-overlay (?) + Mer information-popup.
+ *   3. Öppnas på begäran: tangentbordsgenvags-overlay (?) + Mer information-popup.
  *
- * Backend-payload \u00e4r INTE \u00e4ndrad \u2014 vi skickar samma `WizardAnswers`-struct
+ * Backend-payload är INTE ändrad — vi skickar samma `WizardAnswers`-struct
  * till `/api/prompt` via `buildDiscoveryPayload`.
  */
 
@@ -82,11 +82,11 @@ const KEYBOARD_SHORTCUTS: ReadonlyArray<{
   label: string;
   keys: ReadonlyArray<string>;
 }> = [
-  { label: "Forts\u00e4tt till n\u00e4sta tab", keys: ["\u2318\u21b5", "\u2318\u2192"] },
-  { label: "G\u00e5 tillbaka", keys: ["\u2318\u2190"] },
-  { label: "Hoppa till tab 1\u20133", keys: ["\u23181", "\u23182", "\u23183"] },
-  { label: "Visa/d\u00f6lj denna lista", keys: ["?", "\u2318/"] },
-  { label: "St\u00e4ng wizarden", keys: ["esc"] },
+  { label: "Fortsätt till nästa tab", keys: ["⌘↵", "⌘→"] },
+  { label: "Gå tillbaka", keys: ["⌘←"] },
+  { label: "Hoppa till tab 1–3", keys: ["⌘1", "⌘2", "⌘3"] },
+  { label: "Visa/dölj denna lista", keys: ["?", "⌘/"] },
+  { label: "Stäng wizarden", keys: ["esc"] },
 ];
 
 export function DiscoveryWizard({
@@ -163,7 +163,7 @@ export function DiscoveryWizard({
     const profile = DEMO_PROFILES[demoCursorRef.current % DEMO_PROFILES.length];
     demoCursorRef.current = (demoCursorRef.current + 1) % DEMO_PROFILES.length;
     setAnswers(profile.build());
-    setDemoNotice(`Demo inl\u00e4st: ${profile.label}`);
+    setDemoNotice(`Demo inläst: ${profile.label}`);
     if (demoNoticeTimerRef.current) {
       clearTimeout(demoNoticeTimerRef.current);
     }
@@ -312,7 +312,7 @@ export function DiscoveryWizard({
         <button
           type="button"
           onClick={() => onOpenChange(false)}
-          aria-label="St\u00e4ng"
+          aria-label="Stäng"
           className="text-muted-foreground hover:bg-foreground/5 hover:text-foreground min-tap sm:min-tap-0 absolute top-3 right-3 z-10 inline-flex items-center justify-center rounded-full transition-colors active:scale-95 sm:top-4 sm:right-4 sm:h-8 sm:w-8"
         >
           <X className="h-4 w-4" />
@@ -332,7 +332,7 @@ export function DiscoveryWizard({
               Sajtbyggaren
             </DialogTitle>
             <DialogDescription className="text-muted-foreground/70 hidden text-[11.5px] leading-relaxed sm:inline">
-              Bygger en personlig hemsida \u00e5t dig p\u00e5 n\u00e5gra fr\u00e5gor.
+              Bygger en personlig hemsida åt dig på några frågor.
             </DialogDescription>
           </div>
         </DialogHeader>
@@ -404,9 +404,9 @@ export function DiscoveryWizard({
                 <>
                   <FunctionsStep answers={answers} onChange={updateAnswers} />
 
-                  {/* Logo + mediamaterial direkt p\u00e5 tab 3 \u2014 Vision-modellen
+                  {/* Logo + mediamaterial direkt på tab 3 — Vision-modellen
                       pickar bästa hero/galleribild från det operatorn laddar
-                      upp h\u00e4r (favicon / OG / bakgrundsvideo ligger i popupen). */}
+                      upp här (favicon / OG / bakgrundsvideo ligger i popupen). */}
                   <div className="border-border/40 mt-8 border-t pt-6">
                     <h3 className="text-foreground mb-3 text-[13.5px] font-semibold tracking-tight">
                       Logo & mediamaterial
@@ -425,7 +425,7 @@ export function DiscoveryWizard({
                       Ange information till hemsidan
                     </Button>
                     <p className="text-muted-foreground/70 mt-2 text-[11.5px] leading-relaxed">
-                      Inneh\u00e5ll, kontaktuppgifter, favicon och fler detaljer \u2014 fylls i automatiskt vid skrapning, men du kan granska eller komplettera h\u00e4r.
+                      Innehåll, kontaktuppgifter, favicon och fler detaljer — fylls i automatiskt vid skrapning, men du kan granska eller komplettera här.
                     </p>
                   </div>
                 </>
@@ -444,7 +444,7 @@ export function DiscoveryWizard({
               onClick={goBack}
               className="text-muted-foreground hover:text-foreground min-tap sm:min-tap-0 h-9 px-3 text-[12.5px] font-medium"
             >
-              \u2190 Tillbaka
+              ← Tillbaka
             </Button>
             <Button
               type="button"
@@ -453,7 +453,7 @@ export function DiscoveryWizard({
               onClick={fillDemo}
               aria-label="Fyll wizarden med en demo-profil"
               className="text-muted-foreground/50 hover:text-foreground hidden h-8 w-8 items-center justify-center p-0 sm:inline-flex"
-              title="Fyll wizarden med en demo-profil f\u00f6r snabb testning"
+              title="Fyll wizarden med en demo-profil för snabb testning"
             >
               <Sparkles className="h-3.5 w-3.5" aria-hidden />
             </Button>
@@ -492,15 +492,15 @@ export function DiscoveryWizard({
                   "bg-foreground text-background hover:bg-foreground/90 min-tap sm:min-tap-0 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm disabled:opacity-40",
                   PRIMARY_INTERACTIONS,
                 ].join(" ")}
-                title="\u2318\u21b5 f\u00f6r att skapa sajten"
+                title="⌘↵ för att skapa sajten"
               >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    P\u00e5b\u00f6rjar bygge\u2026
+                    Påbörjar bygge…
                   </>
                 ) : (
-                  "Skapa sajt \u2192"
+                  "Skapa sajt →"
                 )}
               </Button>
             ) : (
@@ -513,16 +513,16 @@ export function DiscoveryWizard({
                   "bg-foreground text-background hover:bg-foreground/90 min-tap sm:min-tap-0 h-9 rounded-full px-5 text-[12.5px] font-medium shadow-sm disabled:opacity-40",
                   PRIMARY_INTERACTIONS,
                 ].join(" ")}
-                title="\u2318\u21b5 f\u00f6r att forts\u00e4tta"
+                title="⌘↵ för att fortsätta"
               >
-                Forts\u00e4tt \u2192
+                Fortsätt →
               </Button>
             )}
             <button
               type="button"
               onClick={() => setHelpOpen((prev) => !prev)}
-              aria-label="Visa tangentbordsgenv\u00e4gar"
-              title="Tangentbordsgenv\u00e4gar (?)"
+              aria-label="Visa tangentbordsgenvägar"
+              title="Tangentbordsgenvägar (?)"
               className="text-muted-foreground/50 hover:text-foreground hover:bg-foreground/[0.04] focus-visible:ring-ring/40 hidden h-7 w-7 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none sm:inline-flex"
             >
               <Keyboard className="h-3.5 w-3.5" aria-hidden />
@@ -534,7 +534,7 @@ export function DiscoveryWizard({
           <div
             role="dialog"
             aria-modal="true"
-            aria-label="Tangentbordsgenv\u00e4gar"
+            aria-label="Tangentbordsgenvägar"
             className="bg-background/85 absolute inset-0 z-40 flex items-center justify-center p-6 backdrop-blur-sm sm:rounded-3xl"
             onClick={(event) => {
               if (event.target === event.currentTarget) {
@@ -547,13 +547,13 @@ export function DiscoveryWizard({
                 <div className="flex items-center gap-2">
                   <Keyboard className="text-foreground/70 h-4 w-4" />
                   <h3 className="text-foreground text-[14px] font-semibold tracking-tight">
-                    Tangentbordsgenv\u00e4gar
+                    Tangentbordsgenvägar
                   </h3>
                 </div>
                 <button
                   type="button"
                   onClick={() => setHelpOpen(false)}
-                  aria-label="St\u00e4ng"
+                  aria-label="Stäng"
                   className="text-muted-foreground hover:text-foreground rounded-md p-1 transition-colors"
                 >
                   <X className="h-4 w-4" />
@@ -609,10 +609,10 @@ export function DiscoveryWizard({
               </div>
               <div className="space-y-1.5">
                 <p className="text-foreground text-[16px] leading-tight font-semibold tracking-tight">
-                  P\u00e5b\u00f6rjar bygge av din sajt\u2026
+                  Påbörjar bygge av din sajt…
                 </p>
                 <p className="text-muted-foreground text-[12px]">
-                  Pipelinen k\u00f6r Discovery \u2192 Plan \u2192 Codegen i bakgrunden.
+                  Pipelinen kör Discovery → Plan → Codegen i bakgrunden.
                 </p>
               </div>
             </div>
@@ -639,10 +639,10 @@ export function DiscoveryWizard({
               </div>
               <div className="space-y-1.5">
                 <p className="text-foreground text-[15px] leading-tight font-medium tracking-tight">
-                  H\u00e4mtar inneh\u00e5ll fr\u00e5n {scrapeState?.url ?? "din hemsida"}\u2026
+                  Hämtar innehåll från {scrapeState?.url ?? "din hemsida"}…
                 </p>
                 <p className="text-muted-foreground text-[12px]">
-                  Vi l\u00e4ser sidan och fyller i f\u00e4lt automatiskt.
+                  Vi läser sidan och fyller i fält automatiskt.
                 </p>
               </div>
             </div>
