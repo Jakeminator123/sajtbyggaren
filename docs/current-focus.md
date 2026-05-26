@@ -30,10 +30,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `b0140b1` (2026-05-26 UTC, christopher-ui local + origin —
-PR #117 mot `jakob-be` öppen som Draft. Fas 2 (polish/P1) startas nu ovanpå fas 1
-på samma branch per operator-instruktion "Kör fas 2"; GAP-viewser-mobile-responsive-polish
-skapad och aktiverad. PR #117 utökas med fas 2-commits.).
+Last verified state: `712a3c2` (2026-05-26 UTC, christopher-ui local — fas 2
+polish-passet klart på 5 commits. PR #117 utökas med 5 nya commits (62437de
+GAP + 4 fix-commits). Pushas i nästa steg.).
 
 Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
 
@@ -63,6 +62,19 @@ Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
 - `fb87699` docs(focus): bump current-focus till 9593769 + governance fixes
   (fidelity-term ut, FloatingChat-syntax i kommentar).
 - `b0140b1` docs(inbox): notify jakob-be om PR #117 + pausade gaps (msg-0010).
+- `62437de` docs(gap): open GAP-viewser-mobile-responsive-polish (fas 2).
+- `d7ca301` fix(viewser/prompt): mobile-friendly composer tap-targets + iOS-zoom-fix
+  (PromptBuilder textarea text-base sm:text-[15px], submit min-tap, ModePill px-3).
+- `6b2d68c` fix(viewser/wizard,builder): systematic tap-target upgrade — utility
+  buttons (InlineHelpButton, AssetDropzone "Välj fil", DirectivesPreview Copy,
+  QuickPromptButton — alla min-tap sm:min-tap-0).
+- `64445bb` fix(viewser/canvas): hero typography scale + console-drawer safe-area
+  (ViewerPanel text-3xl sm:text-4xl md:text-5xl + px-5 sm:px-12, ConsoleDrawer
+  pt-safe + pb-safe-or-4).
+- `712a3c2` fix(viewser/dialogs): mobile-friendly grids + iOS-zoom-fix på inputs
+  (ai-image-generator grid-cols-1 sm:grid-cols-2 + max-h-[90dvh], asset-uploader
+  grid-cols-2 sm:grid-cols-3, color-picker grid-cols-4 sm:grid-cols-6 + min-tap
+  per swatch, alla inputs text-base sm:text-[X]).
 
 Inga off-limits-paths rörda i fas 1 (`scripts/`, `packages/generation/`,
 `apps/viewser/app/api/`, `apps/viewser/lib/`, `middleware.ts`, `next.config.ts`,
