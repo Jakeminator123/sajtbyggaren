@@ -59,6 +59,20 @@ def test_real_soft_dossier_with_no_api_language_stays_soft() -> None:
     assert "hard-signal" not in report["riskFlags"]
 
 
+def test_generic_vendor_words_do_not_force_hard_without_secret_context(tmp_path: Path) -> None:
+    source = tmp_path / "pricing-notes"
+    source.mkdir()
+    (source / "instructions.md").write_text(
+        "Mention Stripe, OpenAI, webhook and database words as examples only.\n",
+        encoding="utf-8",
+    )
+
+    report = _analyse(source)
+
+    assert report["recommendedClass"] == "soft"
+    assert "hard-signal" not in report["riskFlags"]
+
+
 def test_intake_directory_with_tsx_and_asset_is_soft_candidate(tmp_path: Path) -> None:
     source = tmp_path / "before-after-slider"
     (source / "components").mkdir(parents=True)

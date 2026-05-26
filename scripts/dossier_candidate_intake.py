@@ -77,7 +77,8 @@ HARD_PATH_SIGNAL_RE = re.compile(
 )
 HARD_TEXT_SIGNAL_RE = re.compile(
     r"\b(process\.env|api[_ -]?key|secret[_ -]?key|access[_ -]?token|bearer|"
-    r"stripe|supabase|clerk|shopify|oauth|webhook|database)\b",
+    r"database[_ -]?url|webhook[_ -]?secret|oauth[_ -]?client|"
+    r"stripe[_ -]?secret|supabase[_ -]?service)\b",
     re.IGNORECASE,
 )
 CUSTOMER_SIGNAL_RE = re.compile(
