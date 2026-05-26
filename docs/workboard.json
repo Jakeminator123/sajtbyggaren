@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-26T18:03:13Z",
+  "updatedAt": "2026-05-26T18:04:18Z",
   "updatedBy": "sprintvakt-mcp",
   "people": {
     "jakob": {
@@ -180,39 +180,6 @@
       ],
       "note": "Effort 30 min. Splittat från GAP-backend-restaurant-activation pga Sprintvakt-lane-policy. Landar i samma commit-batch som backend-aktiveringen. 2026-05-25 follow-up: den ursprungliga PR:en uppdaterade bara BUSINESS_FAMILIES[restaurant]; den parallella WIZARD_CATEGORIES[restaurant] missades och pekade fortsatt mot local-service-business / nordic-trust så FALLBACK_DISCOVERY_OPTIONS (byggd via WIZARD_CATEGORIES.map() i discovery-options.ts) gav fel scaffold + variant innan governance-API:t svarade. Fixat under samma GAP.",
       "pairedWith": "GAP-backend-restaurant-activation"
-    },
-    {
-      "id": "GAP-viewser-wizard-popup-tabs-v2",
-      "type": "Gap/UI",
-      "owner": "christopher",
-      "title": "Wizard popup-revision: 5 smala flikar + ta bort Specialisering",
-      "whyNow": "Operatorn 2026-05-26: 'Varför specialisering? Ta bort? Gör pop-up smalare med mindre spacing på sidorna. Alternativt behåll bredden och flytta upp så att man inte behöver skrolla så mycket. Hellre fler steg/flikar och mindre att fylla i på varje än att man måste skrolla. Anpassa även för mobile.' Wizard-minimalism v1 lämnade kvar Specialiserings-disclosure och en bred popup där Innehåll-fliken blev för lång. Revisionen tar bort sub-specialisering helt (businessFamily räcker som scaffold-signal — backend faller redan tillbaka via branchForFamily) och delar popupen i fem smala flikar (Om oss / Innehåll / Kontakt / Media / Avancerat) med smalare bredd och horisontell tab-scroll på mobil.",
-      "paths": [
-        "apps/viewser/components/discovery-wizard/more-info-dialog.tsx",
-        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx"
-      ],
-      "doNotTouch": [
-        "apps/viewser/components/discovery-wizard/wizard-payload.ts",
-        "packages/generation/**"
-      ],
-      "acceptanceCriteria": [
-        "Specialiserings-disclosure med sub-kategori-chips finns inte längre i Foundation",
-        "MoreInfoDialog har 5 flikar: Om oss / Innehåll / Kontakt / Media / Avancerat",
-        "Popup-bredd <= 720px och tab-baren scrollar horisontellt på mobil",
-        "Lint, typecheck och term-coverage rena"
-      ],
-      "checks": [
-        "cd apps/viewser && npm run lint",
-        "cd apps/viewser && npx tsc --noEmit",
-        "python scripts/check_term_coverage.py --strict"
-      ],
-      "collisionRisk": "green",
-      "reviewer": "jakob",
-      "status": "active",
-      "createdAt": "2026-05-26T18:02:59Z",
-      "updatedAt": "2026-05-26T18:03:13Z",
-      "notes": [],
-      "activatedAt": "2026-05-26T18:03:13Z"
     }
   ],
   "completedGaps": [
@@ -1242,6 +1209,41 @@
         "b1e92ca",
         "1ab516c"
       ]
+    },
+    {
+      "id": "GAP-viewser-wizard-popup-tabs-v2",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Wizard popup-revision: 5 smala flikar + ta bort Specialisering",
+      "whyNow": "Operatorn 2026-05-26: 'Varför specialisering? Ta bort? Gör pop-up smalare med mindre spacing på sidorna. Alternativt behåll bredden och flytta upp så att man inte behöver skrolla så mycket. Hellre fler steg/flikar och mindre att fylla i på varje än att man måste skrolla. Anpassa även för mobile.' Wizard-minimalism v1 lämnade kvar Specialiserings-disclosure och en bred popup där Innehåll-fliken blev för lång. Revisionen tar bort sub-specialisering helt (businessFamily räcker som scaffold-signal — backend faller redan tillbaka via branchForFamily) och delar popupen i fem smala flikar (Om oss / Innehåll / Kontakt / Media / Avancerat) med smalare bredd och horisontell tab-scroll på mobil.",
+      "paths": [
+        "apps/viewser/components/discovery-wizard/more-info-dialog.tsx",
+        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx"
+      ],
+      "doNotTouch": [
+        "apps/viewser/components/discovery-wizard/wizard-payload.ts",
+        "packages/generation/**"
+      ],
+      "acceptanceCriteria": [
+        "Specialiserings-disclosure med sub-kategori-chips finns inte längre i Foundation",
+        "MoreInfoDialog har 5 flikar: Om oss / Innehåll / Kontakt / Media / Avancerat",
+        "Popup-bredd <= 720px och tab-baren scrollar horisontellt på mobil",
+        "Lint, typecheck och term-coverage rena"
+      ],
+      "checks": [
+        "cd apps/viewser && npm run lint",
+        "cd apps/viewser && npx tsc --noEmit",
+        "python scripts/check_term_coverage.py --strict"
+      ],
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "createdAt": "2026-05-26T18:02:59Z",
+      "updatedAt": "2026-05-26T18:04:18Z",
+      "notes": [],
+      "activatedAt": "2026-05-26T18:03:13Z",
+      "completedAt": "2026-05-26T18:04:18Z",
+      "fixCommits": []
     }
   ],
   "decisions": [

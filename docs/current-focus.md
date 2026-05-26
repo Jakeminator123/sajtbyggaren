@@ -30,19 +30,37 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `1ab516c` (2026-05-26 UTC, christopher-ui local — wizard
-total-minimalism-pass landade i 3 commits 1c1a9fb/b1e92ca/1ab516c efter
-operatör-feedback "wizarden är fortfarande för rörig — vill ha total
-minimalism, färre frågor synliga, skrap-driven bakgrundsifyllning, popup
-för djupare info, tabs överst istället för side-banner". Tre tabs överst
-(Företaget/Stil/Funktioner), 'Mer information'-popup med fyra flikar
-(Innehåll/Kontakt/Media/Avancerat), logo+mediamaterial på tab 3 med GPT
-Vision auto-hero-pick från galleri. Backend-payload oändrad. Lint,
-typecheck och term-coverage --strict passerar. GAP-viewser-wizard-minimal-
-tabs stängd. Föregående 9964f16 PR-117-handoff-state finns kvar i historik.).
+Last verified state: `57a56c6` (2026-05-26 UTC, christopher-ui local — popup-
+revision v2 + unicode-bugfix landade i 2 commits 3843a80/57a56c6 efter
+operatör-feedback "Varför specialisering? Ta bort? Gör pop-up smalare med
+mindre spacing på sidorna. Hellre fler steg/flikar och mindre att fylla i
+på varje än att man måste skrolla. Anpassa även för mobile." och tre stora
+unicode-buggar (\u00e5/\u00e4/\u00f6) som visades i klartext i wizardens
+UI eftersom JSX text-content inte decodar JS unicode-escapes. Specialiserings-
+disclosure borttagen helt (businessFamily räcker som scaffold-signal —
+backend faller redan tillbaka via branchForFamily()). Popup max-w 720px
+(var 960), header-padding minskat, DialogDescription göms på mobil. 5 smala
+flikar: Om oss / Innehåll / Kontakt / Media / Avancerat — tab-bar med
+overflow-x-auto + snap-x snap-mandatory så 5 flikar får plats på 375px-
+skärmar. Backend-payload oändrad. Lint, typecheck och term-coverage --strict
+passerar. GAP-viewser-wizard-popup-tabs-v2 stängd. Föregående 1ab516c
+wizard-minimalism v1 finns kvar i historik.).
 
 Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
 
+- `57a56c6` refactor(viewser): wizard popup-revision — 5 smala flikar, ta bort
+  Specialisering. Foundation-step: Specialiserings-disclosure med sub-kategori-
+  chips raderad helt. MoreInfoDialog: max-w 720px (var 960), 4 flikar → 5 flikar
+  (Innehåll splittad i Om oss + Innehåll), header pt-4 pb-2 sm:pt-5 sm:pb-3 så
+  content börjar högre upp, DialogDescription hidden sm:inline, tab-bar med
+  overflow-x-auto + snap-x snap-mandatory för 5 flikar på 375px. Backend oändrad
+  (validateDiscoveryCategoryIds([]) godkänner tom siteType, branchForFamily()
+  fallback finns redan).
+- `3843a80` fix(viewser): wizard texter visade rå \uXXXX-kod — decoda till
+  svenska bokstäver. JSX text-content tolkar inte JS unicode-escape-syntax —
+  operatören såg "Forts\u00e4tt", "\u00e5t dig", "fr\u00e5gor" osv i klartext.
+  239 escapes decodade i discovery-wizard.tsx (80), more-info-dialog.tsx (85),
+  wizard-types.ts (45), assets-step.tsx (20), foundation-step.tsx (9).
 - `1ab516c` feat(viewser): GPT Vision auto-hero-pick från mediamaterial-galleri.
   AssetsStep gallery-dropzone promoteras till hero automatiskt om operatorn
   inte explicit valt en — picks bästa kandidaten via `pickHeroFromGallery`
