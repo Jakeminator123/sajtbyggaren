@@ -186,17 +186,19 @@ def _unique_dossier_id(
     candidate_class: str,
 ) -> str:
     candidate = slugify_dossier_id(base)
-    candidate_dir = output_dir / candidate_class / candidate
-    if candidate not in reserved_ids and not candidate_dir.exists():
+    if candidate not in reserved_ids and not _candidate_id_exists(output_dir, candidate):
         return candidate
     suffix = 2
     while True:
         next_id = f"{candidate}-{suffix}"
-        if next_id not in reserved_ids and not (
-            output_dir / candidate_class / next_id
-        ).exists():
+        if next_id not in reserved_ids and not _candidate_id_exists(output_dir, next_id):
             return next_id
         suffix += 1
+
+
+def _candidate_id_exists(output_dir: Path, dossier_id: str) -> bool:
+    """Return True when a candidate id already exists in any candidate class."""
+    return any((output_dir / candidate_class / dossier_id).exists() for candidate_class in CANDIDATE_CLASSES)
 
 
 def _today() -> str:

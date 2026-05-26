@@ -240,6 +240,24 @@ def _file_entry(path: Path, source_root: Path, *, reason: str | None = None) -> 
     return entry
 
 
+def _excluded_path_entry(path: Path, source_root: Path, *, reason: str) -> dict[str, Any]:
+    """Return an excluded-file entry without stat/read calls.
+
+    Used for secret-like paths so intake can list the path without touching
+    file metadata or contents.
+    """
+    try:
+        relative_path = path.relative_to(source_root).as_posix()
+    except ValueError:
+        relative_path = path.as_posix()
+    return {
+        "path": relative_path,
+        "sizeBytes": 0,
+        "extension": path.suffix.lower(),
+        "reason": reason,
+    }
+
+
 def _initial_report(source: Path, source_kind: str) -> dict[str, Any]:
     return {
         "reportVersion": REPORT_VERSION,
@@ -461,6 +479,11 @@ def analyze_dossier_source(
                 {"path": _path_for_report(path), "reason": "max-files-exceeded"}
             )
             break
+        if _is_secret_like_path(path):
+            report["excludedFiles"].append(
+                _excluded_path_entry(path, source, reason="secret-like-path")
+            )
+            continue
         try:
             resolved_path = path.resolve(strict=True)
         except OSError:
@@ -481,11 +504,6 @@ def analyze_dossier_source(
                 _file_entry(resolved_path, source, reason="max-total-bytes-exceeded")
             )
             break
-        if _is_secret_like_path(resolved_path):
-            report["excludedFiles"].append(
-                _file_entry(resolved_path, source, reason="secret-like-path")
-            )
-            continue
         if resolved_path.name.lower() in LOCKFILE_NAMES:
             report["excludedFiles"].append(
                 _file_entry(resolved_path, source, reason="lockfile")

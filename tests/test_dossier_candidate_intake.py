@@ -115,6 +115,31 @@ def test_secret_like_paths_are_not_read(
     assert excluded["client-token.txt"] == "secret-like-path"
 
 
+def test_secret_like_paths_are_not_stat_touched(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "secret-stat-demo"
+    source.mkdir()
+    secret = source / "client-token.txt"
+    secret.write_text("super secret token\n", encoding="utf-8")
+    (source / "instructions.md").write_text("# Safe\n", encoding="utf-8")
+
+    original_stat = Path.stat
+
+    def guarded_stat(path: Path, *args: Any, **kwargs: Any) -> Any:
+        if path == secret:
+            raise AssertionError("secret-like file metadata must not be touched")
+        return original_stat(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "stat", guarded_stat)
+
+    report = _analyse(source)
+
+    excluded = {entry["path"]: entry["reason"] for entry in report["excludedFiles"]}
+    assert excluded["client-token.txt"] == "secret-like-path"
+
+
 def test_hard_candidate_signal_when_env_api_or_backend_is_present(tmp_path: Path) -> None:
     source = tmp_path / "stripe-checkout"
     source.mkdir()

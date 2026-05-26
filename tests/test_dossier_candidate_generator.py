@@ -244,6 +244,26 @@ def test_generate_hard_candidate_from_intake_writes_only_candidate_contract_file
     validate_dossier(result.manifest)
 
 
+def test_hard_candidate_id_avoids_existing_soft_candidate_dir(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
+    (tmp_path / "soft" / "shared-id").mkdir(parents=True)
+
+    result = generate_dossier_candidate(
+        brief="Future API backed capability.",
+        candidate_id="shared-id",
+        capability="ai-chat",
+        output_dir=tmp_path,
+        use_llm=False,
+        intake_report={"recommendedClass": "hard"},
+    )
+
+    assert result.candidate_dir == tmp_path / "hard" / "shared-id-2"
+    assert result.manifest["id"] == "shared-id-2"
+
+
 def test_generate_candidate_passes_sanitized_intake_report_to_dossier_model(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
