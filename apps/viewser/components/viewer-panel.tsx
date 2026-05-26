@@ -1,11 +1,61 @@
 "use client";
 
-import { ExternalLink, Check, Loader2 } from "lucide-react";
+import {
+  ExternalLink,
+  Check,
+  Loader2,
+  Monitor,
+  Smartphone,
+  Tablet,
+} from "lucide-react";
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { PromptStage } from "@/components/prompt-builder";
+
+/**
+ * DevicePreset — operatörens valda preview-bredd på desktop. Sätts via
+ * device-toggle-baren (skylten ovanför iframe-canvasen) som constraint:ar
+ * iframe-wrappern till en max-width matchande typiska viewports.
+ *
+ * Värden:
+ *   - "mobile"  → 375px (iPhone SE / 12 mini bredd)
+ *   - "tablet"  → 768px (iPad mini portrait)
+ *   - "laptop"  → 1024px (typiska MacBook-portrait-canvasen)
+ *   - "full"    → ingen constraint (default; iframe fyller canvasen)
+ *
+ * Valet persisterar i sessionStorage så reload av sidan behåller
+ * det operatören jobbar i (men inte tvärs över browser-sessioner —
+ * vi vill att en ny dag/session börjar på "full" så ingen blir
+ * förvirrad av en oväntat smal iframe).
+ *
+ * device-toggle döljs på mobile (`hidden md:flex`) eftersom enheten
+ * SJÄLV är liten — det är redan en mobil-preview och toggeln skulle
+ * bara ta plats utan värde.
+ */
+type DevicePreset = "mobile" | "tablet" | "laptop" | "full";
+
+const DEVICE_WIDTHS: Record<DevicePreset, number | null> = {
+  mobile: 375,
+  tablet: 768,
+  laptop: 1024,
+  full: null,
+};
+
+const DEVICE_STORAGE_KEY = "viewser:device-preset";
+
+const DEVICE_OPTIONS: ReadonlyArray<{
+  id: DevicePreset;
+  label: string;
+  Icon: typeof Monitor;
+  width: number | null;
+}> = [
+  { id: "mobile", label: "375", Icon: Smartphone, width: 375 },
+  { id: "tablet", label: "768", Icon: Tablet, width: 768 },
+  { id: "laptop", label: "1024", Icon: Monitor, width: 1024 },
+  { id: "full", label: "Full", Icon: Monitor, width: null },
+];
 
 type ViewerPanelProps = {
   runId: string | null;
@@ -255,6 +305,41 @@ export function ViewerPanel({
     kind: BrowserKind;
   } | null>(null);
   const [openingExternal, setOpeningExternal] = useState(false);
+
+  /**
+   * Device-preset (375/768/1024/full). Initial state läses synkront
+   * från sessionStorage så ingen FOUC från default "full" → senast
+   * valda preset. SSR-fallback = "full" eftersom sessionStorage inte
+   * finns på servern (typeof window-checken).
+   */
+  const [devicePreset, setDevicePreset] = useState<DevicePreset>(() => {
+    if (typeof window === "undefined") return "full";
+    const stored = window.sessionStorage.getItem(DEVICE_STORAGE_KEY);
+    if (stored === "mobile" || stored === "tablet" || stored === "laptop") {
+      return stored;
+    }
+    return "full";
+  });
+
+  // Persistera device-val när det ändras. Pure side-effect (DOM-call,
+  // ingen setState) — tillåten i useEffect.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.setItem(DEVICE_STORAGE_KEY, devicePreset);
+  }, [devicePreset]);
+
+  /**
+   * Iframe-wrapper-stil. När devicePreset != "full" får wrappern en
+   * max-width-constraint som centreras med mx-auto. iframen själv
+   * fyller wrappern (h-full w-full) så den krympker när wrappern krymper.
+   * useMemo så stilobjektet inte recreate:as per render — undviker
+   * onödiga reflows i StackBlitz-iframen.
+   */
+  const previewWrapperStyle = useMemo(() => {
+    const width = DEVICE_WIDTHS[devicePreset];
+    if (width === null) return undefined;
+    return { maxWidth: `${width}px` };
+  }, [devicePreset]);
 
   // Öppna sajten i en ny flik på stackblitz.com (top-level navigation,
   // ingen embed = ingen credentialless-iframe = funkar i Safari/Firefox).
@@ -649,8 +734,54 @@ export function ViewerPanel({
     !showFallback;
   const showBuildCard = isBuilding || isFinalizing;
 
+  // Device-toggle visas bara på desktop (md:+) och bara när en preview
+  // faktiskt visas (lokal preview eller StackBlitz embed). På empty/
+  // unavailable/loading-states är det meningslöst eftersom det inte
+  // finns någon iframe att constraint:a.
+  const showDeviceToggle =
+    !!runId && !showEmpty && !showUnavailable && !isBuilding && !showFallback;
+
   return (
     <div className="viewer-canvas bg-background relative flex h-full w-full overflow-hidden">
+      {/* Device-toggle bar (desktop only). Sitter top-2 right-2 med
+          subtle bg-card så den inte konkurrerar med själva sajt-previewn.
+          Klick på en preset sätter wrapper-bredd via state, vilket
+          gör att iframe-wrappern krymper inåt och centreras. */}
+      {showDeviceToggle ? (
+        <div
+          role="toolbar"
+          aria-label="Förhandsvisningsbredd"
+          className="border-border/60 bg-background/90 absolute top-2 right-2 z-[15] hidden items-center gap-0.5 rounded-full border p-0.5 shadow-sm backdrop-blur md:inline-flex"
+        >
+          {DEVICE_OPTIONS.map((option) => {
+            const isActive = devicePreset === option.id;
+            const Icon = option.Icon;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={isActive}
+                aria-label={
+                  option.width
+                    ? `Preview-bredd ${option.label}px`
+                    : "Full bredd"
+                }
+                onClick={() => setDevicePreset(option.id)}
+                className={
+                  "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium transition active:scale-95 " +
+                  (isActive
+                    ? "bg-foreground text-background shadow-sm"
+                    : "text-muted-foreground hover:text-foreground")
+                }
+              >
+                <Icon className="h-3.5 w-3.5" aria-hidden />
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
       {/* Hero-bakgrundsvideo. Autoplay + muted + loop + playsInline så
           den startar i alla browsers utan användarinteraktion. Videons
           centrum förskjuts mot höger via object-position så 3D-objektet
@@ -882,17 +1013,27 @@ export function ViewerPanel({
       !showEmpty &&
       !isBuilding &&
       !isFinalizing ? (
-        <iframe
-          ref={iframeRef}
-          src={localPreviewUrl}
-          title="Lokal sajt-preview"
-          className="absolute inset-0 z-[5] h-full w-full border-0 bg-white"
-          // Tillåt scripts (Next.js client-side hydration) och
-          // same-origin (vi äger localhost:<port> som vi själva
-          // spawnat) men inte top-navigation eller popups från
-          // sajten — extra defensivt även om vi själva byggt den.
-          sandbox="allow-scripts allow-same-origin allow-forms"
-        />
+        // Wrapper-divet bär device-toggle constraint:en (maxWidth).
+        // När devicePreset === "full" har wrappern ingen style så
+        // iframen fyller hela canvasen (oförändrat default-beteende).
+        // När en preset (375/768/1024) är vald får wrappern
+        // max-width + mx-auto så iframen krymper och centreras.
+        <div
+          className="absolute inset-0 z-[5] mx-auto h-full w-full bg-white transition-[max-width] duration-300 ease-out"
+          style={previewWrapperStyle}
+        >
+          <iframe
+            ref={iframeRef}
+            src={localPreviewUrl}
+            title="Lokal sajt-preview"
+            className="h-full w-full border-0 bg-white"
+            // Tillåt scripts (Next.js client-side hydration) och
+            // same-origin (vi äger localhost:<port> som vi själva
+            // spawnat) men inte top-navigation eller popups från
+            // sajten — extra defensivt även om vi själva byggt den.
+            sandbox="allow-scripts allow-same-origin allow-forms"
+          />
+        </div>
       ) : null}
 
       {/*
@@ -906,10 +1047,19 @@ export function ViewerPanel({
         empty/unavailable äger ytan ELLER när lokal preview tagit
         över canvasen.
       */}
+      {/* StackBlitz-container — bär device-preset-constraint på samma
+          sätt som lokal preview-iframen ovan. mx-auto centrerar wrappern
+          när max-width är satt; transition håller resize-rörelsen smooth
+          så iframen inte hoppar abrupt mellan storlekar. */}
       <div
-        ref={containerRef}
-        className={`h-full w-full ${unavailable || showEmpty || isBuilding || isFinalizing || showFallback || localPreviewUrl ? "invisible" : ""}`}
-      />
+        className="mx-auto h-full w-full transition-[max-width] duration-300 ease-out"
+        style={previewWrapperStyle}
+      >
+        <div
+          ref={containerRef}
+          className={`h-full w-full ${unavailable || showEmpty || isBuilding || isFinalizing || showFallback || localPreviewUrl ? "invisible" : ""}`}
+        />
+      </div>
     </div>
   );
 }

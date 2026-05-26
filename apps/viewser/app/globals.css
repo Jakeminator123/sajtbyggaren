@@ -343,7 +343,12 @@
   }
 
   .animate-fc-edge-pulse {
-    animation: fc-edge-pulse 2.6s ease-out infinite;
+    /* Polish (fas 3): ease-in-out istället för ease-out gör pulsen
+       symmetrisk in/ut så ringen inte känns abrupt vid slutet av
+       cycle. 3s istället för 2.6s ger den lite mer luft mellan
+       pulserna och känns mindre påträngande över längre sessioner
+       (operatören sitter i builder-vyn i timmar). */
+    animation: fc-edge-pulse 3s ease-in-out infinite;
   }
 
   .animate-shimmer {
