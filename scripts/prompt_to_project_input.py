@@ -2666,6 +2666,79 @@ def merge_followup_project_input(
     return merged
 
 
+def _is_discovery_asset_ref(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+    asset_id = value.get("assetId")
+    filename = value.get("filename")
+    return (
+        isinstance(asset_id, str)
+        and bool(asset_id.strip())
+        and isinstance(filename, str)
+        and bool(filename.strip())
+    )
+
+
+def _apply_discovery_products(
+    project_input: dict[str, Any],
+    discovery: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Map wizard products into Project Input products without parsing prompt text."""
+    if not isinstance(discovery, dict):
+        return project_input
+    answers = discovery.get("answers")
+    if not isinstance(answers, dict) or "products" not in answers:
+        return project_input
+    raw_products = answers.get("products")
+    if not isinstance(raw_products, list):
+        project_input.pop("products", None)
+        return project_input
+
+    mapped: list[dict[str, Any]] = []
+    for index, item in enumerate(raw_products):
+        if not isinstance(item, dict):
+            continue
+        raw_label = item.get("name")
+        if not isinstance(raw_label, str) or not raw_label.strip():
+            continue
+        label = raw_label.strip()
+        raw_id = item.get("id")
+        product_id = (
+            _slugify_label(raw_id)
+            if isinstance(raw_id, str) and raw_id.strip()
+            else _slugify_label(label)
+        )
+        if not product_id:
+            product_id = f"product-{index + 1}"
+        raw_description = item.get("description")
+        summary = (
+            raw_description.strip()
+            if isinstance(raw_description, str) and raw_description.strip()
+            else "Kontakta oss så berättar vi mer om produkten."
+        )
+        product: dict[str, Any] = {
+            "id": product_id,
+            "label": label,
+            "summary": summary,
+        }
+        price = item.get("price")
+        if isinstance(price, str) and price.strip():
+            product["price"] = price.strip()
+        image_url = item.get("imageUrl")
+        if isinstance(image_url, str) and image_url.strip():
+            product["imageUrl"] = image_url.strip()
+        product_image = item.get("productImage")
+        if _is_discovery_asset_ref(product_image):
+            product["productImage"] = product_image
+        mapped.append(product)
+
+    if mapped:
+        project_input["products"] = mapped
+    else:
+        project_input.pop("products", None)
+    return project_input
+
+
 def _apply_discovery_overrides(
     project_input: dict[str, Any],
     discovery: dict[str, Any],
@@ -2684,7 +2757,8 @@ def _apply_discovery_overrides(
     ``packages.generation.discovery``, som även returnerar
     ``DiscoveryDecision`` så Backoffice/meta-sidecar får full provenance.
     """
-    return apply_discovery_overrides(project_input, discovery)
+    resolved = apply_discovery_overrides(project_input, discovery)
+    return _apply_discovery_products(resolved, discovery)
 
 
 def _load_discovery_file(path: Path) -> dict[str, Any]:
@@ -2901,6 +2975,7 @@ def generate(
             project_input_candidate=project_input,
             placeholder_fields=pre_resolve_placeholder_fields,
         )
+        project_input = _apply_discovery_products(project_input, discovery)
     wizard_must_have = _wizard_must_have_from_discovery(discovery)
 
     if has_explicit_site_id:
