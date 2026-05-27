@@ -48,6 +48,30 @@ efter `previewRuntime.aliasesForbidden` + `globallyForbidden`).
 `tests/test_no_legacy_terms.py` är CI-grinden som blockerar dem i
 product files.
 
+## `fly`-slot:en — reconciliation mot ADR 0028
+
+Reviewer-fynd 2026-05-27 (post Bite A): typunionen `stackblitz | local | fly`
+matchar inte rakt av varken ADR 0028:s tre nivåer (LocalRuntime,
+StackBlitzRuntime, production-/deploy-check) eller ADR 0030:s fyra
+adapter-mode-namn (`local-next`, `static-export`, `stackblitz`,
+framtida `vercel-preview`). `fly` är ett arvsord från ADR 0003 där
+`FlyRuntime` ursprungligen var kandidat för produktionslik verifiering.
+
+För att hålla Bite A låst utan naming-dict-bump i samma PR:
+
+- `fly` motsvarar i nuläget **ADR 0028 nivå 3** ("production-/deploy-check")
+  — alltså den slot där en framtida `FlyRuntime` eller annan
+  production-lik runtime (vercel-hosted, docker-baserad, etc.) kan landa.
+- Implementation är TBD. ADR 0028 säger explicit att "om den sista nivån
+  senare behöver kodnamn, interface eller policyfält ska det låsas i en
+  ny governance-ändring innan kod skrivs".
+- Inget kod-anrop använder `kind: "fly"` än; adapter-stubsen i
+  `adapters/fly.ts` returnerar `unsupported`.
+
+Detta är dokumenterad reconciliation, inte en arkitektur-fix. Eventuell
+omdöpning av `fly` till mer neutralt namn (t.ex. `production`) kräver
+naming-dictionary-bump till v18 + egen ADR-not och tas inte i Bite A/B/C.
+
 ## Eventuell framtida `vercel-preview`-adapter
 
 ADR 0030 (Preview-Provider Portability) listar `vercel-preview` som adapter
