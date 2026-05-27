@@ -638,6 +638,36 @@ samma kodmönster lever vidare här — därav posten:
   end-to-end-bevis: kör follow-up på commerce-base-site med
   lockfile-drift, förvänta ingen `PermissionError: [WinError 5]`.
 
+  **Round 3 (2026-05-28 ~01:30, Windows process-tree-kill):**
+  End-to-end-test via Viewser-browser 2026-05-28 ~01:08 visade att
+  follow-up build fortfarande failade med samma `WinError 5` även
+  efter round 1 + 2. Process-tree-snapshot bekräftade rotorsaken:
+  `ChildProcess.kill()` på Windows mappar internt till
+  ``TerminateProcess(handle)`` som **bara dödar direct PID, inte
+  descendants**. Sajtbyggaren spawnar preview-servern via
+  ``npx next start`` → processträdet är ``npx (parent)`` →
+  ``next start (barn)``. ``child.kill()`` i Viewser:s
+  ``stopAndWaitPreviewServer`` killade bara npx-shellen — barnet
+  levde vidare och höll fil-låsen på ``next-swc.*.node``-binaries.
+
+  Round 3-fix: ny ``killProcessTree``-helper i
+  `apps/viewser/lib/local-preview-server.ts` som på Windows
+  spawnar ``taskkill /PID <pid> /T /F`` istället för
+  ``child.kill()``. ``/T`` = tree (alla descendants),
+  ``/F`` = force. På POSIX används ``child.kill(signal)`` som
+  vanligt eftersom process groups respekteras där. Plus
+  Windows-fast-path i ``stopAndWaitPreviewServer`` som hoppar
+  över graceful SIGTERM-fönstret (Node.js mappar SIGTERM →
+  TerminateProcess = force på Windows ändå). 4:e regression-
+  test i `tests/test_local_preview_server_b157_followup.py`
+  strukturellt låser tree-kill-mönstret så framtida agenter inte
+  kan refaktorera bort ``taskkill /T``.
+
+  Full diagnostik + reproduktionssteg + verifieringsguide i
+  `B157-WINDOWS-PROCESS-TREE-FYND.md` (repo-rot, för operatörens
+  granskning). Round 1 + 2 är inte raderade — de fungerar för
+  POSIX-pathen och som timing-skydd även på Windows.
+
 - **`B154` Medel** (stängd 2026-05-27, TDZ-smoke + commerce-lock) -
   `npm run dev` i en deterministic `ecommerce-lite`/`noir-editorial`-
   dev-preview kunde hosta `/`, `/produkter`, `/om-oss` och `/kontakt`

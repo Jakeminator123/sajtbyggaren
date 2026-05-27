@@ -197,3 +197,83 @@ def test_b157_followup_documents_reap_contract() -> None:
         "vi väntar på exit-event efter SIGKILL (kernel reap-tid + "
         "Windows file-handle-release)."
     )
+
+
+def test_b157_round3_uses_process_tree_kill_on_windows() -> None:
+    """Round-3 reviewer-fynd: ``child.kill()`` på Windows räcker inte.
+
+    Round 1 (akut, ``adba139``) + Round 2 (reap-fix, ``697cf4f``)
+    löste timing-aspekten av B157 men missade rotorsaken: Node.js
+    ``ChildProcess.kill()`` på Windows mappar internt till
+    ``TerminateProcess(handle)`` som BARA dödar direct PID, inte
+    descendants. För Sajtbyggarens preview-servrar är processträdet:
+
+        npx (parent, i Viewser:s servers-map)
+          └─ next start (barn, håller fil-låsen på .node-binaries)
+
+    ``child.kill("SIGKILL")`` killar bara npx-shellen — barnet lever
+    vidare och håller fil-lås på ``next-swc.win32-x64-msvc.node``.
+
+    Verifierad reproduktion 2026-05-28 ~01:08 (PID 31472 ``next start``
+    levde efter att Viewser:s ``child.kill()`` skickats till PID 27976
+    ``npx``-parent).
+
+    Round-3-fixen: ``killProcessTree``-helper som på Windows spawnar
+    ``taskkill /PID <pid> /T /F``. ``/T`` = "tree" (alla descendants).
+    På POSIX (Linux/macOS) använder den vanlig ``child.kill(signal)``
+    eftersom process groups respekteras naturligt där.
+
+    Detta test låser strukturellt att tree-kill-mönstret finns kvar
+    så framtida agenter inte kan refactor:a bort det utan att också
+    radera taskkill-anropet och dess kommentar.
+    """
+    source = _read_source()
+
+    # Bevis 1: ``killProcessTree``-helper finns deklarerad någonstans
+    # i filen (eller annan helper med liknande namn — vi accepterar
+    # ``killProcessTree``, ``treeKill``, ``killTree``).
+    has_helper = bool(
+        re.search(
+            r"\b(killProcessTree|treeKill|killTree)\s*\(",
+            source,
+        )
+    )
+    assert has_helper, (
+        "``local-preview-server.ts`` saknar tree-kill-helper. Round 3 "
+        "kräver en funktion (förslagsvis ``killProcessTree``) som på "
+        "Windows använder ``taskkill /T /F`` istället för "
+        "``child.kill()`` direkt."
+    )
+
+    # Bevis 2: ``taskkill`` med ``/T`` (tree-flag) spawnas någonstans.
+    # ``/T`` är det avgörande Windows-flagget — utan det dödas bara
+    # direct PID och vi är tillbaka i B157-orphan-territoriet.
+    has_taskkill_tree = bool(
+        re.search(
+            r'taskkill[^\n]*"/T"',
+            source,
+        )
+    )
+    assert has_taskkill_tree, (
+        "``local-preview-server.ts`` spawnar inte ``taskkill /T``. "
+        "Utan ``/T``-flagget dödar taskkill bara direct PID, inte "
+        "process-trädet — exakt det som B157 round 3 fixar. Lägg "
+        "till ``/T`` (tree) och gärna ``/F`` (force) i taskkill-args."
+    )
+
+    # Bevis 3: helpern måste användas från ``stopAndWaitPreviewServer``
+    # (annars är den död kod). Antingen direktanrop eller via
+    # Windows-fast-path-grenen som ``await``:ar helpern.
+    body = _stop_and_wait_body()
+    has_helper_call = bool(
+        re.search(
+            r"\b(killProcessTree|treeKill|killTree)\s*\(",
+            body,
+        )
+    )
+    assert has_helper_call, (
+        "``stopAndWaitPreviewServer`` anropar inte tree-kill-helpern. "
+        "Helpern är död kod om den inte aktiveras från den faktiska "
+        "shutdown-pathen. Lägg in ``await killProcessTree(child, ...)`` "
+        "i Windows-grenen (där ``process.platform === \"win32\"``)."
+    )

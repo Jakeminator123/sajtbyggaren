@@ -238,9 +238,76 @@ export function getPreviewServer(siteId: string): PreviewServerInfo | null {
 }
 
 /**
+ * Windows-safe tree-kill av en spawned process + alla dess descendants.
+ *
+ * **Bakgrund (B157 round 3, 2026-05-28):** Node.js ``ChildProcess.kill()``
+ * på Windows mappar internt till ``TerminateProcess(handle)``, som
+ * **bara dödar direct PID — INTE descendants**. Det betyder att när
+ * vi spawnar preview-servern via ``npx next start`` så blir process-
+ * trädet ``npx (parent)`` → ``next start (child)``. ``child.kill()``
+ * dödar bara npx-shellen — ``next start``-barnet lever vidare och
+ * håller fil-lås på native ``.node``-binaries i
+ * ``node_modules/@next/swc-*-msvc/``. Caller (``copy_starter()``-
+ * ``shutil.rmtree``) får då ``PermissionError: [WinError 5]`` trots
+ * att ``stopAndWaitPreviewServer`` returnerat ``true``.
+ *
+ * Lösning: spawna ``taskkill /PID <pid> /T /F`` som följer hela
+ * Windows-process-trädet. ``/T`` = "tree" (alla descendants),
+ * ``/F`` = "force" (motsvarar SIGKILL — Windows har ingen graceful
+ * variant via taskkill). På POSIX (Linux/macOS) finns process
+ * groups som ``child_process.kill()`` respekterar redan, så där
+ * behåller vi normal ``kill(signal)``.
+ *
+ * Async + non-throwing: returnerar när taskkill exitar (max 2s)
+ * eller efter timeout. Errors sväljs eftersom tree-kill är best-
+ * effort — viktigare att inte hänga än att rapportera misslyckande.
+ *
+ * Detta löser den kvarstående B157-orphanen som ``stopAndWaitPreviewServer``-
+ * round-2-fixen (697cf4f) inte fångade. Verifierad reproduktion
+ * 2026-05-28 ~01:08: ``next start (PID 31472)`` levde kvar efter
+ * att Viewser:s ``child.kill("SIGKILL")`` skickats till
+ * ``npx (PID 27976)``-parent.
+ */
+async function killProcessTree(
+  child: ChildProcess,
+  signal: NodeJS.Signals,
+): Promise<void> {
+  if (process.platform !== "win32") {
+    try {
+      child.kill(signal);
+    } catch {
+      // Race: process kan ha exitat mellan check och kill.
+    }
+    return;
+  }
+
+  if (typeof child.pid !== "number") {
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    let settled = false;
+    const finalize = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+
+    const tk = spawn("taskkill", ["/PID", String(child.pid), "/T", "/F"], {
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    tk.once("exit", finalize);
+    tk.once("error", finalize);
+    // Hard cap så vi aldrig hänger om taskkill själv hänger.
+    setTimeout(finalize, 2_000);
+  });
+}
+
+/**
  * Stoppa preview-servern för ``siteId`` om den körs. Idempotent.
  *
- * Eldsnabb fire-and-forget: SIGTERM + ta bort från map. Väntar INTE
+ * Eldsnabb fire-and-forget: tree-kill + ta bort från map. Väntar INTE
  * in att processen exitar. Använd ``stopAndWaitPreviewServer`` om
  * caller måste säkra att OS släppt filsystem-lås innan nästa steg
  * (t.ex. ``shutil.rmtree(node_modules)`` i ``build_site.py``).
@@ -248,11 +315,9 @@ export function getPreviewServer(siteId: string): PreviewServerInfo | null {
 export function stopPreviewServer(siteId: string): boolean {
   const entry = servers.get(siteId);
   if (!entry) return false;
-  try {
-    entry.process.kill("SIGTERM");
-  } catch {
-    // Process kan redan ha exitat.
-  }
+  // Fire-and-forget tree-kill. Caller bryr sig inte om timing/exit-event.
+  // ``void`` markerar medvetet att vi inte väntar in promisen.
+  void killProcessTree(entry.process, "SIGTERM");
   servers.delete(siteId);
   return true;
 }
@@ -279,15 +344,34 @@ export function stopPreviewServer(siteId: string): boolean {
  *
  * Sekvens:
  *   1. Ta bort entry från ``servers``-map (nästa spawn re-skapar).
- *   2. SIGTERM + vänta in ``exit``-event (eller redan-exitat-state).
- *   3. Timeout-fallback: SIGKILL efter ``timeoutMs``.
- *   4. På Windows: extra 200ms wait så OS hinner släppa file-locks
- *      på native binaries innan caller försöker ``rmtree``.
+ *   2. **Windows-fast-path** (round 3, 2026-05-28): direkt
+ *      ``taskkill /T /F`` på hela process-trädet (npx + next start +
+ *      descendants), vänta in ``exit``-event med reap-cap, sedan
+ *      200ms file-lock-release-wait. Hoppar över graceful SIGTERM-
+ *      fönstret eftersom Node.js på Windows ändå mappar SIGTERM →
+ *      TerminateProcess (force) — det finns ingen graceful path att
+ *      förlora.
+ *   3. **POSIX-graceful-path**: SIGTERM + vänta in ``exit``-event,
+ *      timeout-fallback till SIGKILL efter ``timeoutMs``, sedan
+ *      reap-cap-vänta för faktisk exit. Process groups respekteras
+ *      naturligt av ``child.kill()`` på POSIX.
  *
  * Detta är **temporär fix** (gap-spec laddare nivå 1, ``docs/gaps/
  * GAP-windows-safe-rebuild-pipeline.md``). Rätt arkitektur är
  * immutable build-dir + manifest-pointer-swap så vi aldrig rebuildar
  * ovanpå live output. Tas i egen sprint.
+ *
+ * Round-historik:
+ *   - Round 1 (`adba139`, akut): ``stopAndWaitPreviewServer``-helper
+ *     med SIGTERM + timeout + SIGKILL + 200ms Windows-wait.
+ *   - Round 2 (`697cf4f`, reap-fix): ``sigkillSent``-flag + sekundär
+ *     ``Promise.race([exited, REAP_TIMEOUT_MS])`` så vi väntar på
+ *     faktiskt exit-event efter SIGKILL.
+ *   - Round 3 (denna commit): ``killProcessTree``-helper + Windows-
+ *     fast-path som dödar npx-spawned descendants. Round 1 + 2 läste
+ *     fel rotorsak — race i ``Promise.race`` var en aspekt, men
+ *     huvudproblemet var att ``child.kill()`` på Windows aldrig nådde
+ *     ``next start``-barnprocessen.
  */
 export async function stopAndWaitPreviewServer(
   siteId: string,
@@ -317,10 +401,28 @@ export async function stopAndWaitPreviewServer(
     child.once("exit", () => resolve());
   });
 
+  // Windows-fast-path: direkt tree-kill via taskkill /T /F + vänta
+  // in exit-event med reap-cap + Windows file-lock-release-wait.
+  // Se ``killProcessTree``-jsdoc för bakgrund (B157 round 3).
+  if (process.platform === "win32") {
+    const REAP_TIMEOUT_MS = 2_000;
+    await killProcessTree(child, "SIGKILL");
+    await Promise.race([
+      exited,
+      new Promise<void>((r) => setTimeout(r, REAP_TIMEOUT_MS)),
+    ]);
+    // Extra wait så OS hinner släppa file-handles på native .node-binaries.
+    await new Promise((r) => setTimeout(r, 200));
+    return true;
+  }
+
+  // POSIX-graceful-path: SIGTERM med timeout-fallback till SIGKILL.
+  // ``child.kill()`` respekterar process groups på POSIX så vi
+  // behöver inte tree-kill här.
   try {
     child.kill("SIGTERM");
   } catch {
-    // Process kan ha exitat mellan checken och kill (Windows-race).
+    // Process kan ha exitat mellan checken och kill.
   }
 
   // Steg 1: vänta på SIGTERM-exit eller ``timeoutMs``.
@@ -348,14 +450,9 @@ export async function stopAndWaitPreviewServer(
 
   // Steg 2: om SIGKILL skickades måste vi VÄNTA på faktiskt exit-event
   // innan vi returnerar — annars bryter vi kontraktet att caller kan
-  // köra ``shutil.rmtree(node_modules)`` direkt efter return. SIGKILL
-  // är synkron från avsändarens sida men kerneln behöver ms-tid att
-  // reapa processen + frigöra fil-handles. Tidigare implementation
-  // använde ``Promise.race([exited, timeoutPromise])`` som primär
-  // synk — om timeout vann racet returnerades funktionen direkt
-  // efter SIGKILL utan att vänta på exit, vilket gjorde att
-  // ``rmtree`` kunde köra mot fortfarande-låsta ``next-swc-*.node``-
-  // binaries på Windows och resa B157 igen.
+  // köra fil-IO direkt efter return. SIGKILL är synkron från
+  // avsändarens sida men kerneln behöver ms-tid att reapa processen
+  // + frigöra fil-handles.
   //
   // ``REAP_TIMEOUT_MS`` är hard-floor för kernel-reap. Om processen
   // fortfarande inte exitat efter SIGKILL+REAP_TIMEOUT_MS är något
@@ -370,14 +467,6 @@ export async function stopAndWaitPreviewServer(
     });
     await Promise.race([exited, reapTimeout]);
     if (reapHandle) clearTimeout(reapHandle);
-  }
-
-  // Windows-specific: även efter exit kan OS hålla file-handles
-  // öppna kort stund för native binaries. 200ms är empiriskt vald —
-  // tillräckligt för att släppa next-swc-*.node men inte så lång
-  // att follow-up-bygget känns långsamt.
-  if (process.platform === "win32") {
-    await new Promise((r) => setTimeout(r, 200));
   }
 
   return true;
@@ -396,9 +485,7 @@ export async function stopAndWaitPreviewServer(
  *   - ingen ledig port i poolen
  *   - health-check timeout (next start kraschar oftast med stdout)
  */
-export function startPreviewServer(
-  siteId: string,
-): Promise<PreviewServerInfo> {
+export function startPreviewServer(siteId: string): Promise<PreviewServerInfo> {
   // W1: per-siteId in-flight mutex. Två samtidiga startups för samma
   // siteId delar samma spawn-promise. Mutexen släpps automatiskt när
   // spawn:en klart resolvar (success eller fel).
@@ -419,7 +506,11 @@ async function doStartPreviewServer(
 
   // Idempotent: returnera befintlig server om den fortfarande lever.
   const existing = servers.get(siteId);
-  if (existing && !existing.process.killed && existing.process.exitCode === null) {
+  if (
+    existing &&
+    !existing.process.killed &&
+    existing.process.exitCode === null
+  ) {
     await existing.ready;
     return {
       siteId,
@@ -526,7 +617,9 @@ export function listPreviewServers(): PreviewServerInfo[] {
     siteId,
     port: entry.port,
     url: `http://localhost:${entry.port}`,
-    status: (entry.resolvedReady ? "ready" : "starting") as "starting" | "ready",
+    status: (entry.resolvedReady ? "ready" : "starting") as
+      | "starting"
+      | "ready",
     uptimeMs: Date.now() - entry.startedAt,
   }));
 }
