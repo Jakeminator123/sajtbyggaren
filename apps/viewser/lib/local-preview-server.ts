@@ -239,6 +239,11 @@ export function getPreviewServer(siteId: string): PreviewServerInfo | null {
 
 /**
  * Stoppa preview-servern för ``siteId`` om den körs. Idempotent.
+ *
+ * Eldsnabb fire-and-forget: SIGTERM + ta bort från map. Väntar INTE
+ * in att processen exitar. Använd ``stopAndWaitPreviewServer`` om
+ * caller måste säkra att OS släppt filsystem-lås innan nästa steg
+ * (t.ex. ``shutil.rmtree(node_modules)`` i ``build_site.py``).
  */
 export function stopPreviewServer(siteId: string): boolean {
   const entry = servers.get(siteId);
@@ -249,6 +254,103 @@ export function stopPreviewServer(siteId: string): boolean {
     // Process kan redan ha exitat.
   }
   servers.delete(siteId);
+  return true;
+}
+
+/**
+ * Stoppa preview-servern för ``siteId`` och VÄNTA in att processen
+ * faktiskt exitar + OS-level file-lock-release. Idempotent — returnerar
+ * ``false`` om ingen server körde.
+ *
+ * **Varför detta finns (B157):** ``build_site.py:copy_starter()`` kör
+ * ``shutil.rmtree()`` på ``.generated/<siteId>/``-dirs när lockfile
+ * driftar (``_npm_install_inputs_changed=True``). På Windows håller
+ * en live ``next start``-process hårda fil-lås på native
+ * ``node_modules/@next/swc-win32-*-msvc/next-swc.*.node``-binaries
+ * (de är DLL-liknande). ``rmtree`` failar då med
+ * ``PermissionError: [WinError 5]`` mellan ``poll()`` och faktisk
+ * delete. På Linux/macOS skulle aggressive delete oftast lyckas (inode-
+ * räknaren håller filen tills sista handle stänger) men anti-patternet
+ * att rebuilda ovanpå live preview-katalog kvarstår.
+ *
+ * Fixen: build-runner anropar denna helper FÖRE ``build_site.py``
+ * spawnas så preview-processen är garanterat död + Windows har
+ * frigjort .node-binary-låsen.
+ *
+ * Sekvens:
+ *   1. Ta bort entry från ``servers``-map (nästa spawn re-skapar).
+ *   2. SIGTERM + vänta in ``exit``-event (eller redan-exitat-state).
+ *   3. Timeout-fallback: SIGKILL efter ``timeoutMs``.
+ *   4. På Windows: extra 200ms wait så OS hinner släppa file-locks
+ *      på native binaries innan caller försöker ``rmtree``.
+ *
+ * Detta är **temporär fix** (gap-spec laddare nivå 1, ``docs/gaps/
+ * GAP-windows-safe-rebuild-pipeline.md``). Rätt arkitektur är
+ * immutable build-dir + manifest-pointer-swap så vi aldrig rebuildar
+ * ovanpå live output. Tas i egen sprint.
+ */
+export async function stopAndWaitPreviewServer(
+  siteId: string,
+  timeoutMs = 5_000,
+): Promise<boolean> {
+  const entry = servers.get(siteId);
+  if (!entry) return false;
+
+  const child = entry.process;
+  servers.delete(siteId);
+
+  // Redan dead → bara file-lock-release-wait (om Windows).
+  if (child.killed || child.exitCode !== null) {
+    if (process.platform === "win32") {
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    return true;
+  }
+
+  // exit-event-promise. Resolvar omedelbart om processen redan har
+  // exitat mellan check ovan och här (mikro-race).
+  const exited = new Promise<void>((resolve) => {
+    if (child.exitCode !== null) {
+      resolve();
+      return;
+    }
+    child.once("exit", () => resolve());
+  });
+
+  try {
+    child.kill("SIGTERM");
+  } catch {
+    // Process kan ha exitat mellan checken och kill (Windows-race).
+  }
+
+  // Timeout-fallback: om processen vägrar SIGTERM, eskalera till
+  // SIGKILL. Vi väntar fortfarande på exit-event efter SIGKILL
+  // eftersom kernel-blockade processer kan ta ytterligare lite tid.
+  let timeoutHandle: NodeJS.Timeout | undefined;
+  const timeoutPromise = new Promise<void>((resolve) => {
+    timeoutHandle = setTimeout(() => {
+      if (!child.killed && child.exitCode === null) {
+        try {
+          child.kill("SIGKILL");
+        } catch {
+          // Process kan ha exitat under race.
+        }
+      }
+      resolve();
+    }, timeoutMs);
+  });
+
+  await Promise.race([exited, timeoutPromise]);
+  if (timeoutHandle) clearTimeout(timeoutHandle);
+
+  // Windows-specific: även efter exit kan OS hålla file-handles
+  // öppna kort stund för native binaries. 200ms är empiriskt vald —
+  // tillräckligt för att släppa next-swc-*.node men inte så lång
+  // att follow-up-bygget känns långsamt.
+  if (process.platform === "win32") {
+    await new Promise((r) => setTimeout(r, 200));
+  }
+
   return true;
 }
 
