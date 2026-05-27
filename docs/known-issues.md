@@ -502,7 +502,7 @@ Steward stängde B121 formellt efter PR A+B+C+D. Merge-baseline `e3fa67b`
 (#35 `ec32913`) Viewser overlay alignment, PR C (#36 `89680fa`) Backoffice
 Discovery Control, PR D (#37 `e3fa67b`) CLI baseline-smoke mot fyra
 produktbaseline-prompter — rapport i
-`docs/reports/b121-baseline-smoke.md`. Scout 5 read-only-punkter bedöms
+`docs/archive/b121-baseline-smoke.md`. Scout 5 read-only-punkter bedöms
 täckta av PR A–C-kod + 54 discovery-tester + PR D smoke; full Viewser →
 `/api/prompt` → preview E2E är medveten icke-blocker (samma kategori som
 dry-run ≠ Viewser-payload). Medvetna icke-blockers kvar: per-run trace i
@@ -1392,7 +1392,7 @@ samma kodmönster lever vidare här — därav posten:
   `tests/test_discovery_resolver.py`,
   `tests/test_viewser_files.py` (PR B guards),
   `tests/test_backoffice_discovery_control.py` (PR C, 16 tester);
-  smoke: `docs/reports/b121-baseline-smoke.md`.
+  smoke: `docs/archive/b121-baseline-smoke.md`.
 
 - **`B126` Medel** (stängd 2026-05-18, post-PR-#32 reviewer-fynd 1) -
   `backoffice/asset_graph.py:_compatible_dossier_edges` byggde
