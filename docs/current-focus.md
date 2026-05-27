@@ -30,10 +30,11 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `ea1e435` (2026-05-27 UTC, post contact-CTA
-href-only-fix + markdown-link-fix + BugBot allowlist + steward-bump.
-`jakob-be` är 29 commits framför `origin/main`. PR #133 (öppen, inte
-draft) är redo för ready-merge efter coach-godkänd sanning-städning).
+Last verified state: `67bd89a` (2026-05-27 UTC, post coach-godkänd
+sanning-städning av PR #133. Dynamisk count med
+`git rev-list --count origin/main..origin/jakob-be` visade **40**
+commits framför `origin/main` — inte 29 som tidigare antagits.
+PR #133 (öppen, inte draft) är redo för ready-merge).
 
 Nya commits sedan `c9a730b` (i historisk ordning):
 - `c67b53f` docs(steward): bump verified state to c9a730b post PR #131

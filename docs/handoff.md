@@ -20,11 +20,13 @@ Cursor BugBot suggestions 1-3 (`82b9f99` defensive cleanup i b154-test,
 fix (`0b40b8d` accept scaffold-specific contact-routes inkl.
 `/kontakta-oss` + `/hitta-hit`) + GPT-reviewer-fynd 2 (`ea1e435`
 contact-CTA href-only) + post-coach-cleanup (`a67bc01` steward-bump,
-`f2de33f` BugBot allowlist, `86b5782` markdown-link-fix). Verifierad
-`jakob-be` är `ea1e435`. `origin/main` ligger kvar på `4d879177`
-(29 commits efter `jakob-be`). PR #133 (`jakob-be → main`) är öppen
-(inte draft), ready-for-review-läge — väntar på operatörens slutgodkända
-merge efter coach-godkänd sanning-städning. Bug-count: 16 aktiva (B157 ny).
+`f2de33f` BugBot allowlist, `86b5782` markdown-link-fix) + sanity-
+drift-cleanup-runda 1 (`67bd89a` post-coach-bump). Verifierad `jakob-be`
+är `67bd89a`. `origin/main` ligger kvar på `4d879177` (**40 commits**
+efter `jakob-be`, verifierat med `git rev-list --count`; tidigare
+``25 / 29``-räkningar var stale-antaganden). PR #133 (`jakob-be → main`)
+är öppen (inte draft), ready-for-review-läge — väntar på operatörens
+slutgodkända merge. Bug-count: 16 aktiva (B157 ny).
 
 **PreviewRuntime Bite A (`bb6ab2e`):** typkontrakt + registry + 3
 adapter-stubs i `packages/preview-runtime/`. Skelett bara — alla
