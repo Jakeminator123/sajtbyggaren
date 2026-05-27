@@ -260,9 +260,9 @@ _CTA_TEXT_RE = re.compile(
 # scope:t till bara customer-copy-extensions.
 _PLACEHOLDER_PATTERNS = [
     ("Lorem ipsum", re.compile(r"lorem ipsum", re.IGNORECASE)),
-    ("TBD", re.compile(r"\bTBD\b")),
+    ("TBD", re.compile(r"\bTBD\b", re.IGNORECASE)),
     ("PLATSHÅLLARE", re.compile(r"platshållare", re.IGNORECASE)),
-    ("REPLACE_ME", re.compile(r"\bREPLACE_ME\b")),
+    ("REPLACE_ME", re.compile(r"\bREPLACE_ME\b", re.IGNORECASE)),
     ("<insert ... here>", re.compile(r"<insert\b[^>]*\bhere>", re.IGNORECASE)),
 ]
 

@@ -18,8 +18,10 @@ def test_placeholder_copy_scan_flags_each_pattern(tmp_path: Path) -> None:
     for copy in [
         "lorem ipsum dolor sit amet",
         "this is TBD for launch",
+        "this is tbd for launch",
         "PLATSHÅLLARE för ingress",
         "REPLACE_ME",
+        "replace_me",
         "<insert customer quote here>",
     ]:
         _page(tmp_path, copy)
