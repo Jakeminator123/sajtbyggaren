@@ -97,19 +97,28 @@ def _wait_for_server(process: subprocess.Popen[str], port: int) -> None:
 def _stop_process(process: subprocess.Popen[str]) -> None:
     if process.poll() is not None:
         return
-    if sys.platform != "win32":
-        # Unix: use killpg to terminate the process group (preexec_fn=os.setsid created a group)
-        os.killpg(process.pid, signal.SIGTERM)
-    else:
-        # Windows: use terminate() which is cross-platform
-        process.terminate()
+    # Race: process may exit between the poll() above and the kill below.
+    # On POSIX os.killpg() then raises ProcessLookupError. Swallow it so
+    # the cleanup never crashes and resources still get reaped via wait().
+    try:
+        if sys.platform != "win32":
+            # Unix: use killpg to terminate the process group (preexec_fn=os.setsid created a group)
+            os.killpg(process.pid, signal.SIGTERM)
+        else:
+            # Windows: use terminate() which is cross-platform
+            process.terminate()
+    except ProcessLookupError:
+        return
     try:
         process.wait(timeout=10)
     except subprocess.TimeoutExpired:
-        if sys.platform != "win32":
-            os.killpg(process.pid, signal.SIGKILL)
-        else:
-            process.kill()
+        try:
+            if sys.platform != "win32":
+                os.killpg(process.pid, signal.SIGKILL)
+            else:
+                process.kill()
+        except ProcessLookupError:
+            return
         process.wait(timeout=10)
 
 
