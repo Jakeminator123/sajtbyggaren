@@ -252,12 +252,16 @@ _CTA_TEXT_RE = re.compile(
     r"|hör av|kom igång|get in touch|get started",
     flags=re.IGNORECASE,
 )
+# Customer-copy-placeholders only. Dev-markers som "TODO:" och "FIXME"
+# var med i v1 men gav brus eftersom check:en skannar både code-comments
+# och customer-rendering-strängar — ett "TODO:" i en .tsx-kommentar är inte
+# samma kategori som "Lorem ipsum" i en hero-rubrik. Reviewer-fynd på PR
+# #129 + #133. Lägg inte tillbaka dev-markers utan att samtidigt smala
+# scope:t till bara customer-copy-extensions.
 _PLACEHOLDER_PATTERNS = [
     ("Lorem ipsum", re.compile(r"lorem ipsum", re.IGNORECASE)),
     ("TBD", re.compile(r"\bTBD\b")),
     ("PLATSHÅLLARE", re.compile(r"platshållare", re.IGNORECASE)),
-    ("TODO:", re.compile(r"TODO:")),
-    ("FIXME", re.compile(r"FIXME")),
     ("REPLACE_ME", re.compile(r"\bREPLACE_ME\b")),
     ("<insert ... here>", re.compile(r"<insert\b[^>]*\bhere>", re.IGNORECASE)),
 ]
