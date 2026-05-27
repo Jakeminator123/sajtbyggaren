@@ -3,10 +3,14 @@
 **Datum:** 2026-05-27 UTC, post cloud-grind-batch (7 PRs mergade på
 ~2h fm: #125, #127, #128, #129, #130, #131, #132) + PR #131-follow-up
 (`c9a730b`, smoke-test drain-thread refaktor) + PreviewRuntime Bite A
-skeleton (`bb6ab2e`) + 2 fix-commits (`3e660ea` term-coverage,
-`e9e3f32` smoke-test race) + 2 steward-bumps (`c67b53f`, `<denna>`).
-Verifierad `jakob-be` är `e9e3f32`. `origin/main` ligger kvar på
-`4d879177` (14 commits efter `jakob-be`).
+skeleton (`bb6ab2e`) + tre runda reviewer-fynd-fixar (`3e660ea`,
+`e9e3f32`, `44ea54b`, `e60f493` på smoke-test cleanup;
+`8358326` `test_no_legacy_terms`-fix; `19480dc` fail-loud i
+`currentKind()`; `e2f857c` narrow placeholder-copy-scan) + sync-merge
+mot `origin/main` (`cbe1ba9`) + steward-bumps. Verifierad `jakob-be`
+är `e2f857c`. `origin/main` ligger kvar på `4d879177` (17 commits
+efter `jakob-be`). Draft-PR #133 (`jakob-be → main`) är öppen och
+samlar hela batchen.
 
 **PreviewRuntime Bite A (`bb6ab2e`):** typkontrakt + registry + 3
 adapter-stubs i `packages/preview-runtime/`. Skelett bara — alla

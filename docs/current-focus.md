@@ -30,9 +30,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `e9e3f32` (2026-05-27 UTC, post PreviewRuntime
-Bite A skeleton + 2 fix-commits direct-push på `jakob-be`. `jakob-be`
-är nu 14 commits framför `origin/main`).
+Last verified state: `e2f857c` (2026-05-27 UTC, post PreviewRuntime
+Bite A skeleton + tre runda av reviewer-fynd-fixar i öppen draft-PR
+#133. `jakob-be` är nu 17 commits framför `origin/main`).
 
 Nya commits sedan `c9a730b` (i historisk ordning):
 - `c67b53f` docs(steward): bump verified state to c9a730b post PR #131
@@ -46,8 +46,28 @@ Nya commits sedan `c9a730b` (i historisk ordning):
   (UI-refaktor av `viewer-panel.tsx`) kräver Christopher-koordinering.
   Se ADR 0028 (Runtime Ladder) + ADR 0030 (Preview-Provider Portability).
 - `e9e3f32` fix(test): close race condition in /api/prompt smoke
-  teardown (bot-fynd post PR #130-merge: `os.killpg()` kunde kasta
-  `ProcessLookupError` mellan `poll()` och kill).
+  teardown — `ProcessLookupError` mellan `poll()` och `os.killpg()`.
+- `e6f5376` docs(steward): bump verified state to e9e3f32 post Bite A push.
+- `6375a60` docs(quality-gate): annotate severity-status mapping per ADR 0015
+  (false-positive bot-rapport om `_CHECKS_REGISTRY`).
+- `331aaa0` docs(agent-prompts): add PreviewRuntime Bite B builder prompt.
+- `cbe1ba9` merge: sync `origin/main` steward-auto-bump (`-X ours`).
+- `44ea54b` fix(test): wrap second `wait()` in `/api/prompt` smoke teardown —
+  `TimeoutExpired` om SIGKILL inte reapar D-state-process.
+- `8358326` fix(preview-runtime): refer to forbidden-aliases list, do not
+  copy them — fixade `test_no_legacy_terms` CI-failure på `cbe1ba9`.
+- `e60f493` fix(test): catch `PermissionError` on Windows in `/api/prompt`
+  smoke teardown — Win32-race där `Popen.terminate()` kastar errno 5.
+- `19480dc` feat(preview-runtime): fail loud on unknown VIEWSER_PREVIEW_MODE
+  — `currentKind()` kastar Error på explicit men okänt env-värde,
+  fortsätter tyst fallback till `local` bara på tomt/osatt env.
+- `e2f857c` fix(quality-gate): drop `TODO:`/`FIXME` from
+  `placeholder-copy-scan` — dev-markers var brus när check:en skannar
+  både code-comments och customer-rendering-strängar.
+
+Draft-PR #133 (`jakob-be → main`) är öppen och uppdateras automatiskt
+med varje push. Alla guards gröna lokalt mot HEAD. Sync-merge till main
+är operatörsbeslut när reviewer-trådarna är stängda.
 
 Nya PRs sedan föregående checkpoint (i mergeordning):
 PR #125 — fix(discovery): honor wizard clears across versioned fields.
