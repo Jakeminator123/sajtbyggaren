@@ -272,6 +272,12 @@
       "type": "array",
       "description": "Operator-supplied photo gallery. Each item carries a placement hint that build_site.py renderers consult when placing images on home, about, services, projects, products or a dedicated gallery section. GPT Vision proposes the placement; the operator can override in the wizard.",
       "items": {"$ref": "#/$defs/assetRef"}
+    },
+    "moodImages": {
+      "type": "array",
+      "maxItems": 5,
+      "description": "Operator-supplied mood/reference images for internal planning and Vision context. These asset refs are preserved under Project Input but are not public site assets; build_site.py isolates their bytes under data/uploads/<siteId>/__mood/ instead of public/uploads/.",
+      "items": {"$ref": "#/$defs/assetRef"}
     }
   },
   "$defs": {

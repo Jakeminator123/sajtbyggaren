@@ -525,6 +525,7 @@ def resolve_discovery(
     )
     _apply_services_field(project_input, answers, field_sources)
     _apply_brand_and_assets(project_input, answers, field_sources)
+    _apply_mood_images(project_input, answers, field_sources)
     _apply_tone_field(project_input, answers, field_sources)
     _apply_directives_fields(project_input, payload, field_sources)
     _apply_location_from_address(project_input)
@@ -1088,6 +1089,31 @@ def _apply_brand_and_assets(
         else:
             project_input.pop("gallery", None)
             field_sources["gallery"] = "wizard"
+
+
+def _apply_mood_images(
+    project_input: dict[str, Any],
+    answers: dict[str, Any],
+    field_sources: dict[str, FieldSourceLiteral],
+) -> None:
+    """Preserve wizard mood-reference asset refs without making them gallery assets."""
+    raw_mood_images = answers.get("moodImages")
+    if not isinstance(raw_mood_images, list):
+        return
+
+    mood_refs: list[dict[str, Any]] = []
+    for item in raw_mood_images:
+        if not isinstance(item, dict):
+            continue
+        ref = _sanitize_asset_ref(item, "gallery")
+        if ref is not None:
+            mood_refs.append(ref)
+        if len(mood_refs) >= 5:
+            break
+
+    if mood_refs:
+        project_input["moodImages"] = mood_refs
+        field_sources["moodImages"] = "wizard"
 
 
 def _apply_tone_field(

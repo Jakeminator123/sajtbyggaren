@@ -768,11 +768,15 @@ def resolve_media_asset(project_input: dict, role: str) -> dict | None:
 
 
 def iter_asset_refs(project_input: dict) -> list[dict]:
-    """Returnera alla AssetRef-objekt som finns i Project Input
+    """Returnera publika AssetRef-objekt som finns i Project Input
     (`brand.logo`, `brand.heroImage`, varje item i `gallery`, samt
     `media.favicon` / `media.ogImage` / `media.backgroundVideo`). Tar
     bara med refs där alla fält schemat kräver finns; trasiga refs
-    hoppas över så build:en inte kraschar på en korrupt manifest.json."""
+    hoppas över så build:en inte kraschar på en korrupt manifest.json.
+
+    `moodImages` ingår inte här: de är interna inspirationsbilder och ska
+    isoleras via `copy_mood_assets`, inte publiceras till sajten.
+    """
     refs: list[dict] = []
     brand = project_input.get("brand") or {}
     if isinstance(brand, dict):
@@ -789,6 +793,18 @@ def iter_asset_refs(project_input: dict) -> list[dict]:
         ref = resolve_media_asset(project_input, role)
         if ref is not None:
             refs.append(ref)
+    return refs
+
+
+def _iter_mood_refs(project_input: dict) -> list[dict]:
+    """Return mood-reference asset refs that must stay outside public/uploads."""
+    mood_images = project_input.get("moodImages") or []
+    if not isinstance(mood_images, list):
+        return []
+    refs: list[dict] = []
+    for item in mood_images:
+        if _is_valid_asset_ref(item):
+            refs.append(item)
     return refs
 
 
@@ -1037,6 +1053,102 @@ def _write_derived_media_asset(
         _convert_og_image_to_1200x630_png(image_bytes, public_dir / "og-image.png")
 
 
+def _operator_asset_candidate_dirs(site_id: str) -> list[Path]:
+    return [UPLOADS_ROOT_DIR / site_id, UPLOADS_ROOT_DIR / "__draft"]
+
+
+def _operator_asset_variant_candidates(source_dir: Path) -> list[Path]:
+    return [
+        source_dir / "optimized.webp",
+        source_dir / "original.svg",
+        source_dir / "original.png",
+        source_dir / "original.jpg",
+        source_dir / "original.jpeg",
+        source_dir / "original.webp",
+        source_dir / "original.mp4",
+        source_dir / "original.webm",
+    ]
+
+
+def _resolve_operator_asset_source(
+    site_id: str,
+    ref: dict,
+    *,
+    log_prefix: str,
+) -> tuple[bytes, Path | None] | None:
+    """Resolve operator-uploaded bytes via disk-first/sourceUrl-fallback."""
+    asset_id = ref["assetId"]
+    candidate_dirs = _operator_asset_candidate_dirs(site_id)
+
+    # 1. Disk-lookup först — Local disk har företräde när bytes finns.
+    source_dir: Path | None = None
+    for candidate in candidate_dirs:
+        if (candidate / asset_id).is_dir():
+            source_dir = candidate / asset_id
+            break
+
+    if source_dir is not None:
+        source_file = next(
+            (candidate for candidate in _operator_asset_variant_candidates(source_dir) if candidate.exists()),
+            None,
+        )
+        if source_file is not None:
+            return source_file.read_bytes(), source_file
+        # Source-dir finns men ingen variant-fil — fortsätt till
+        # sourceUrl-fallback istället för att skippa direkt.
+        print(
+            f"{log_prefix}: asset {asset_id} saknar variant-fil "
+            f"i {source_dir}. Försöker sourceUrl-fallback.",
+        )
+
+    # 2. Remote-fallback från sourceUrl när disk saknas.
+    source_url = ref.get("sourceUrl")
+    if isinstance(source_url, str) and source_url.strip():
+        cleaned_source_url = source_url.strip()
+        if not _is_allowed_asset_source_url(cleaned_source_url):
+            print(
+                f"{log_prefix}: sourceUrl for asset {asset_id} "
+                f"is not an allowed HTTPS Vercel Blob URL ({cleaned_source_url!r}). "
+                "Skipping asset.",
+            )
+            return None
+        data = _fetch_asset_bytes_from_url(cleaned_source_url)
+        if data is None:
+            return None
+        return data, None
+
+    # 3. Båda saknas — logga och hoppa över.
+    print(
+        f"{log_prefix}: asset {asset_id} saknas både på disk "
+        f"(letade i {candidate_dirs}) och saknar sourceUrl. Hoppar över.",
+    )
+    return None
+
+
+def _private_mood_asset_extension(ref: dict, source_file: Path | None) -> str:
+    if source_file is not None and source_file.suffix:
+        return source_file.suffix.lower().lstrip(".")
+    filename = ref.get("filename")
+    if isinstance(filename, str):
+        suffix = Path(filename).suffix.lower().lstrip(".")
+        if suffix:
+            return suffix
+    mime_type = str(ref.get("mimeType") or "").strip().lower()
+    return {
+        "image/png": "png",
+        "image/jpeg": "jpg",
+        "image/webp": "webp",
+        "image/svg+xml": "svg",
+        "video/mp4": "mp4",
+        "video/webm": "webm",
+    }.get(mime_type, "bin")
+
+
+def _private_mood_asset_stem(asset_id: str) -> str:
+    stem = re.sub(r"[^A-Za-z0-9._-]+", "-", asset_id).strip(".-")
+    return stem or "asset"
+
+
 def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> int:
     """Copy operator-uploaded assets to the generated site's public/uploads/.
 
@@ -1072,78 +1184,53 @@ def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> in
     if not refs:
         return 0
 
-    candidate_dirs = [UPLOADS_ROOT_DIR / site_id, UPLOADS_ROOT_DIR / "__draft"]
     public_uploads = target / "public" / "uploads"
     public_uploads.mkdir(parents=True, exist_ok=True)
 
     copied = 0
     for ref in refs:
-        asset_id = ref["assetId"]
         filename = ref["filename"]
-
-        # 1. Disk-lookup först — Local disk har företräde när bytes finns.
-        source_dir: Path | None = None
-        for candidate in candidate_dirs:
-            if (candidate / asset_id).is_dir():
-                source_dir = candidate / asset_id
-                break
-
-        if source_dir is not None:
-            candidates = [
-                source_dir / "optimized.webp",
-                source_dir / "original.svg",
-                source_dir / "original.png",
-                source_dir / "original.jpg",
-                source_dir / "original.webp",
-                source_dir / "original.mp4",
-                source_dir / "original.webm",
-            ]
-            source_file: Path | None = next((c for c in candidates if c.exists()), None)
-            if source_file is not None:
-                dest = public_uploads / filename
-                if _asset_requires_derived_public_output(ref):
-                    _write_derived_media_asset(
-                        ref,
-                        source_file.read_bytes(),
-                        target,
-                        source_file=source_file,
-                    )
-                shutil.copy2(source_file, dest)
-                copied += 1
-                continue
-            # Source-dir finns men ingen variant-fil — fortsätt till
-            # sourceUrl-fallback istället för att skippa direkt.
-            print(
-                f"copy_operator_uploads: asset {asset_id} saknar variant-fil "
-                f"i {source_dir}. Försöker sourceUrl-fallback.",
-            )
-
-        # 2. Remote-fallback från sourceUrl när disk saknas.
-        source_url = ref.get("sourceUrl")
-        if isinstance(source_url, str) and source_url.strip():
-            cleaned_source_url = source_url.strip()
-            if not _is_allowed_asset_source_url(cleaned_source_url):
-                print(
-                    f"copy_operator_uploads: sourceUrl for asset {asset_id} "
-                    f"is not an allowed HTTPS Vercel Blob URL ({cleaned_source_url!r}). "
-                    "Skipping asset.",
-                )
-                continue
-            data = _fetch_asset_bytes_from_url(cleaned_source_url)
-            if data is None:
-                continue
-            dest = public_uploads / filename
-            if _asset_requires_derived_public_output(ref):
-                _write_derived_media_asset(ref, data, target)
-            dest.write_bytes(data)
-            copied += 1
-            continue
-
-        # 3. Båda saknas — logga och hoppa över.
-        print(
-            f"copy_operator_uploads: asset {asset_id} saknas både på disk "
-            f"(letade i {candidate_dirs}) och saknar sourceUrl. Hoppar över.",
+        resolved = _resolve_operator_asset_source(
+            site_id,
+            ref,
+            log_prefix="copy_operator_uploads",
         )
+        if resolved is None:
+            continue
+        data, source_file = resolved
+        dest = public_uploads / filename
+        if _asset_requires_derived_public_output(ref):
+            _write_derived_media_asset(ref, data, target, source_file=source_file)
+        dest.write_bytes(data)
+        copied += 1
+
+    return copied
+
+
+def copy_mood_assets(site_id: str, project_input: dict) -> int:
+    """Isolate mood-reference assets under data/uploads/<siteId>/__mood/."""
+    refs = _iter_mood_refs(project_input)
+    if not refs:
+        return 0
+
+    mood_dir = UPLOADS_ROOT_DIR / site_id / "__mood"
+    mood_dir.mkdir(parents=True, exist_ok=True)
+
+    copied = 0
+    for ref in refs:
+        resolved = _resolve_operator_asset_source(
+            site_id,
+            ref,
+            log_prefix="copy_mood_assets",
+        )
+        if resolved is None:
+            continue
+        data, source_file = resolved
+        asset_id = ref["assetId"]
+        extension = _private_mood_asset_extension(ref, source_file)
+        dest = mood_dir / f"{_private_mood_asset_stem(asset_id)}.{extension}"
+        dest.write_bytes(data)
+        copied += 1
 
     return copied
 
@@ -2795,35 +2882,58 @@ def _npm_step_result(name: str, ok: bool, seconds: float, log_excerpt: str) -> d
 
 
 _OPERATOR_DIRECTIVE_NOTE_PREFIX = "Operator: "
+_MOOD_VISUAL_NOTE_PREFIX = "Visual mood: "
+
+
+def _mood_visual_note_blocks(dossier: dict) -> list[str]:
+    """Return planner notes from existing mood-image Vision metadata."""
+    blocks: list[str] = []
+    for ref in _iter_mood_refs(dossier):
+        subject = ref.get("visionSubject")
+        confidence = ref.get("visionConfidence")
+        has_subject = isinstance(subject, str) and bool(subject.strip())
+        has_confidence = isinstance(confidence, str) and bool(confidence.strip())
+        if not has_subject and not has_confidence:
+            continue
+
+        parts: list[str] = []
+        alt = ref.get("alt")
+        if isinstance(alt, str) and alt.strip():
+            parts.append(alt.strip())
+        if has_subject:
+            parts.append(f"subject: {subject.strip()}")
+        if has_confidence:
+            parts.append(f"confidence: {confidence.strip()}")
+        if parts:
+            blocks.append(f"{_MOOD_VISUAL_NOTE_PREFIX}{'; '.join(parts)}")
+    return blocks
 
 
 def _apply_operator_directive_note(brief: dict, dossier: dict) -> None:
-    """Gap 5: Prepend wizardens ``directives.notesForPlanner`` på SiteBrief.
+    """Prepend deterministic operator and mood context to Site Brief notes.
 
-    Operatörens fritext-orientering kommer från
-    ``apps/viewser/components/discovery-wizard/wizard-payload.ts:496-514``
-    (concat:erar ``answers.specialRequests`` + USP-listan). Resolvern har
-    persisterat den till ``project_input.directives.notesForPlanner`` (cap
-    1024 chars). Här prepend:ar vi den med prefix ``"Operator: "`` framför
-    briefens egen ``notesForPlanner`` så ``planningModel`` ser
-    operator-intent först. Tom/saknad directive = no-op (briefens fält
-    rörs inte).
+    Gap 5 adds ``directives.notesForPlanner`` with prefix ``"Operator: "``.
+    Gap 9 adds existing Vision metadata from ``moodImages`` with prefix
+    ``"Visual mood: "`` when those fields are already present on the
+    AssetRef. Missing/empty inputs leave the brief untouched.
     """
+    blocks: list[str] = []
     directives = dossier.get("directives")
-    if not isinstance(directives, dict):
+    if isinstance(directives, dict):
+        raw_note = directives.get("notesForPlanner")
+        if isinstance(raw_note, str):
+            note = raw_note.strip()
+            if note:
+                blocks.append(f"{_OPERATOR_DIRECTIVE_NOTE_PREFIX}{note}")
+
+    blocks.extend(_mood_visual_note_blocks(dossier))
+    if not blocks:
         return
-    raw_note = directives.get("notesForPlanner")
-    if not isinstance(raw_note, str):
-        return
-    note = raw_note.strip()
-    if not note:
-        return
+
     existing = brief.get("notesForPlanner")
-    operator_block = f"{_OPERATOR_DIRECTIVE_NOTE_PREFIX}{note}"
     if isinstance(existing, str) and existing.strip():
-        brief["notesForPlanner"] = f"{operator_block}\n\n{existing}"
-    else:
-        brief["notesForPlanner"] = operator_block
+        blocks.append(existing.strip())
+    brief["notesForPlanner"] = "\n\n".join(blocks)
 
 
 def build_site_brief_mock(run_id: str, dossier: dict, scaffold: dict) -> dict:
@@ -3614,6 +3724,10 @@ def build(
     print("Copying operator uploads (logo, hero, gallery)")
     uploads_copied = copy_operator_uploads(site_id, target, dossier)
     print(f"  -> {uploads_copied} asset(s) copied to public/uploads/")
+
+    print("Isolating mood reference uploads")
+    mood_assets_copied = copy_mood_assets(site_id, dossier)
+    print(f"  -> {mood_assets_copied} mood asset(s) copied to data/uploads/{site_id}/__mood/")
 
     print("Patching package.json")
     patch_package_json(target, dossier)
