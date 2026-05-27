@@ -1,6 +1,6 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-26 sen kväll UTC, steward-pass efter `3b61c73` — Gap 10 product-image merge + B147 closure sync. Verifierad `jakob-be` är `3b61c7362f1726b424d3331eacf216d2a939a3be`.
+**Datum:** 2026-05-27 tidig morgon UTC, steward-pass efter `6222627` — Gap 10 docs/archive cleanup + B147 closure sync. Verifierad `jakob-be` är `6222627afdedeef21700d0f996a1d15166d06d1d`.
 
 Nya PRs sedan föregående checkpoint: PR #118 — sync(jakob-be -> main): PR #117 mobile
 responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report; PR #120
@@ -20,7 +20,7 @@ krävs en gång per venv enligt ADR 0029.
 **Direkt nästa spår — operatörsbeslut + Gap-fixar:**
 
 1. **Backend-Gap fixar (post-C4-audit)** — Gap 1-11 är nu stängda efter Gap 10-merge i PR #122. Detaljer i `docs/current-focus.md`.
-2. **Sync-PR `jakob-be → main`** — `jakob-be` är nu 35 commits framför `origin/main`. Bra läge för en sync-PR (operatörens beslut).
+2. **Sync-PR `jakob-be → main`** — `jakob-be` är nu 36 commits framför `origin/main`. Bra läge för en sync-PR (operatörens beslut).
 
 **Parkerade lanes (väntar trigger):**
 
@@ -183,9 +183,9 @@ produktkompass.
 ## Nästa konkreta uppgift
 
 Se [`docs/current-focus.md`](current-focus.md) → **"Direkt nästa fokus"**.
-Kort: Path B / section-renderer är största spåret men kräver operator-OK;
-Sprintvakt V1.1 follow-up-fynd är queueade som ej akuta; backend-Gap 4 + 5
-och Gap 6 + 7 är stängda och nästa backend-spår är Gap 9 eller Gap 10.
+Kort: backend-Gap 1-11 är stängda och nästa naturliga steg är sync-PR
+`jakob-be → main`. Därefter är Christophers
+`GAP-backend-build-trace-endpoint`-PR nästa review-spår när den öppnas.
 
 ## Operatörspreferenser
 

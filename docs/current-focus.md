@@ -30,10 +30,11 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `3b61c7362f1726b424d3331eacf216d2a939a3be` (2026-05-26 late evening UTC, post Gap 10 product-image merge).
+Last verified state: `6222627afdedeef21700d0f996a1d15166d06d1d` (2026-05-27 early morning UTC, post Gap 10 docs/archive cleanup).
 
 Nya commits sedan föregående checkpoint (`0f3bd67`):
 
+- `6222627` docs(steward): archive completed gap prompts after Gap 10.
 - `3b61c73` feat(build): close Gap 10 product image pipeline (#122).
 - `365c1d7` feat(build): close Gap 9 — isolate moodImages to private uploads.
 - `0043839` docs(current-focus): update verified SHA and commit count after recent changes.
@@ -76,7 +77,7 @@ Nya commits sedan föregående checkpoint (`0f3bd67`):
 ## Pågående/öppna PR:s just nu
 
 Inga öppna PRs på `jakob-be` eller `main`. `jakob-be` är resetad till
-`origin/main` 2026-05-26 PM (commit `1004122`) plus 35 commits ovanpå
+`origin/main` 2026-05-26 PM (commit `1004122`) plus 36 commits ovanpå
 (listan ovan). Nästa sync-PR till `main` är operatörens beslut — bra läge
 nu när Gap 4 + 5, Gap 6 + 7, Gap 9 och Gap 10 är inne.
 
@@ -93,7 +94,7 @@ implementerat hela `GAP-backend-build-trace-endpoint` (3 endpoints + UI +
    evening i `b89a3d2` + `1b91ca6`; Gap 6 + 7 stängdes i `ea6e141`;
    Gap 9 stängdes i `365c1d7`; Gap 10 stängdes i PR #122 / `3b61c73`).
    Status efter Gap 10: 11 stängda, 0 delvis, 0 öppna.
-2. **Sync-PR `jakob-be → main`** — `jakob-be` är 35 commits framför
+2. **Sync-PR `jakob-be → main`** — `jakob-be` är 36 commits framför
    `origin/main`. Bra läge nu när backend-gap-batchen är klar.
    Operatörens beslut.
 

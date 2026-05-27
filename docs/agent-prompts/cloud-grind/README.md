@@ -1,4 +1,4 @@
-# Cloud-grind-promptar — kvarvarande backend-gap
+# Cloud-grind-promptar — avslutad backend-gap-batch
 
 Den här mappen innehåller **fristående copy-paste-promptar** för Cursor Cloud Agents (eller motsvarande cloud-agent som har repo-write-access via GitHub). Varje cloud-agent klonar repot från `github.com/Jakeminator123/sajtbyggaren`, jobbar i sin Ubuntu-VM, pushar till `origin/jakob-be` och slutar. **Operatörens lokala maskin är inte i loopen alls** — det enda touchground är GitHub-remoten.
 
@@ -8,47 +8,35 @@ Varje prompt-fil är self-contained: agenten ska inte behöva läsa något annat
 
 ## Läget nu
 
-Prompterna 1-4 är körda och bortstädade ur denna mapp:
+Prompterna 1-5 är körda och bortstädade ur denna mapp:
 
 - Prompt 1 stängde Gap 6 + 7 i `c002aec` + `ea6e141`.
 - Prompt 2 stängde B147 i `b3834b3`.
 - Prompt 3 körde docs/workboard-sync i `cb07dbb` och efterföljande steward-commits.
 - Prompt 4 stängde Gap 9 i `365c1d7`.
+- Prompt 5 stängde Gap 10 i PR #122 / `3b61c73`.
 
-Kvarvarande prompt är Prompt 5 (Gap 10). Den kan starta när agentens checkout har fast-forwardat till `origin/jakob-be` `365c1d7` eller senare.
+Det finns ingen kvarvarande cloud-grind-prompt i denna batch. Nästa naturliga steg är sync-PR `jakob-be -> main`.
 
 ## Prompt-katalog
 
-| # | Fil | Roll | Branch | Effort | Risk | Lane |
-|---|---|---|---|---|---|---|
-| 5 | [`prompt-5-gap-10-product-image.md`](prompt-5-gap-10-product-image.md) | Builder | `jakob-be` | ~4-6h, M-L | Medel-Hög | Backend payload + schema + renderer |
+Inga aktiva promptfiler.
 
 ## Parallellitet-matris
 
-```mermaid
-flowchart LR
-    P5[Prompt 5<br/>Gap 10<br/>scripts/build_site.py + schema + renderers.py]
-```
-
-**Vad detta betyder:**
-
-- Prompt 5 rör schema, `build_site.py` och renderers. Den är sista prompten i gap-batchen.
-- Starta Prompt 5 först efter `git pull --ff-only origin jakob-be` visar `365c1d7` eller senare.
+Batchen var sekventiell eftersom Gap 6/7, Gap 9 och Gap 10 delade `scripts/build_site.py`-yta.
 
 ## Operatörens trigger-ordning (rekommenderad)
 
 ```
-T0  (nu)         Start Prompt 5.
-T+~4-6h          Alla fem klara. Sync-PR-fönster: gör nu (jakob-be → main).
+Alla fem klara. Sync-PR-fönster: gör nu (jakob-be → main).
 ```
 
 Varje prompt går att stoppa när som helst — de är atomiska.
 
 ## Sync-PR-fönster
 
-`jakob-be` är just nu över 30 commits framför `origin/main`. Bra läge för sync-PR är **efter Prompt 5** så hela gap-batchen + B147 + doc-städet bilar in i samma officiella main-merge.
-
-Alternativt: öppna sync-PR före Prompt 5 och sedan en till efter Prompt 5. Det är operatörens val.
+`jakob-be` är just nu över 30 commits framför `origin/main`. Bra läge för sync-PR är nu, så hela gap-batchen + B147 + doc-städet blir officiell `main`.
 
 ## Övergripande disciplin
 
@@ -70,7 +58,7 @@ Innan en agent börjar, ska VM:n ha:
 
 - Repot klonat till en arbets-katalog och `git switch jakob-be` körts.
 - `pip install -r requirements.txt` körd (för python-guards + ev. nya deps som promptarna lägger till).
-- `cd apps/viewser && npm install` körd (för UI-typecheck/lint i Prompt 2 och Prompt 5).
+- `cd apps/viewser && npm install` körd om prompten ska köra UI-typecheck/lint.
 - `git config user.name` + `git config user.email` satta så commits får rätt author.
 - GitHub-push-token (Personal Access Token eller GitHub App-installation) konfigurerad så `git push origin jakob-be` lyckas.
 

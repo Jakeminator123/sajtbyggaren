@@ -359,10 +359,9 @@ StackBlitz-payloaden), ingen disk-IO som blockerar för stora filer.
 
 ## Sammanfattning — vad gör vi nu?
 
-UI:t fungerar end-to-end på dagens backend-beteende (alla nya fält
-ignoreras gracefully). Gap 1-8 och 11 är stängda. Gap 9 och Gap 10 är
-återstående backend-poster från denna handoff: mood-bilders isolering och
-produktbild per produkt.
+UI:t fungerar end-to-end på dagens backend-beteende. Gap 1-11 är stängda
+och tabellen överst är auktoritativ för verifierad status. Avsnittet nedan
+är historisk arbetsindelning från den ursprungliga handoffen.
 
 | Gap | Prio | Storlek |
 | --- | --- | --- |

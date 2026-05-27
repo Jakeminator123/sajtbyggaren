@@ -1,5 +1,10 @@
 # Morgonstart för ny agent (2026-05-25 sen natt / morgon)
 
+> **Historisk prompt.** Denna prompt innehåller gamla HEAD-/PR-uppgifter
+> från 2026-05-25. Nya agenter ska läsa
+> `docs/current-focus.md` och `docs/handoff.md` för aktuellt läge innan de
+> återanvänder något från detta dokument.
+
 Denna fil är en färdig copy-paste-prompt för en agent som startar en ren
 session efter nattens städ-runda 2026-05-25. Operatören har en typisk
 session där agenten fungerar som **orchestrator** — gör läs-arbete och
