@@ -2731,8 +2731,6 @@ def _apply_discovery_products(
         if _is_discovery_asset_ref(product_image):
             product["productImage"] = product_image
         mapped.append(product)
-        if len(mapped) >= 8:
-            break
 
     if mapped:
         project_input["products"] = mapped

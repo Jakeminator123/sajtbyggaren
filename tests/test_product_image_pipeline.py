@@ -183,6 +183,32 @@ def test_discovery_products_preserve_product_image() -> None:
 
 
 @pytest.mark.tooling
+def test_discovery_products_do_not_silently_truncate_after_eight_items() -> None:
+    import sys
+
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    from prompt_to_project_input import _apply_discovery_overrides  # noqa: E402
+
+    products = [
+        {
+            "id": f"product-{index}",
+            "name": f"Produkt {index}",
+            "description": f"Beskrivning {index}",
+        }
+        for index in range(1, 11)
+    ]
+
+    out = _apply_discovery_overrides(
+        {"services": [{"id": "fallback", "label": "Fallback", "summary": "Fallback"}]},
+        {"answers": {"products": products}},
+    )
+
+    assert len(out["products"]) == 10
+    assert out["products"][8]["id"] == "product-9"
+    assert out["products"][9]["id"] == "product-10"
+
+
+@pytest.mark.tooling
 def test_product_grid_renderer_uses_product_image_url() -> None:
     from packages.generation.build.renderers import render_section_product_grid
 

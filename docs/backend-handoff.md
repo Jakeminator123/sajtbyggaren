@@ -7,8 +7,8 @@
 Originaldokumentet listar 11 gaps. C4-audit 2026-05-26 verifierade fem
 som stängda, fem som delvis implementerade och ett som öppet. Gap 4
 och Gap 5 stängdes på `jakob-be` 2026-05-26 kväll (commits `1b91ca6`
-och `b89a3d2`). Gap 6 och Gap 7 stängdes därefter i `ea6e141`, så status
-är nu nio stängda, ett delvis och ett öppet.
+och `b89a3d2`). Gap 6 och Gap 7 stängdes därefter i `ea6e141`, Gap 9 i
+`365c1d7` och Gap 10 i PR #122, så alla elva gaps är nu stängda.
 
 | Gap | Status | Var |
 | --- | --- | --- |
@@ -20,13 +20,11 @@ och `b89a3d2`). Gap 6 och Gap 7 stängdes därefter i `ea6e141`, så status
 | 6. Favicon → `.ico` | Stängd (`jakob-be` / `ea6e141`) | `copy_operator_uploads()` kopierar originalet till `public/uploads/` och skriver multi-size `public/favicon.ico` från `media.favicon` via Pillow (`scripts/build_site.py:_convert_favicon_to_ico`); SVG-favicon skrivs som `public/favicon.svg`; regressioner i `tests/test_builder_favicon_ogimage.py` |
 | 7. OG-image 1200×630-crop | Stängd (`jakob-be` / `ea6e141`) | `copy_operator_uploads()` center-croppar `media.ogImage` till `public/og-image.png` 1200×630 via Pillow och metadata prioriterar den derivata bilden före original-uploaden; regressioner i `tests/test_builder_favicon_ogimage.py` |
 | 8. Video-mimetype + render | Stängd (PR #62 / `7240fcd`, refactor PR #107 / `348ee05`) | `/api/upload-asset` tillåter bara MP4/WebM för `backgroundVideo` (`apps/viewser/app/api/upload-asset/route.ts:122-145`), asset-store bypassar sharp/vision för video (`apps/viewser/lib/asset-store/local.ts:72-106`), `copy_operator_uploads()` kopierar originalvideo (`scripts/build_site.py:966-973`) och hero renderar `<video autoPlay loop muted playsInline>` (`packages/generation/build/renderers.py:2141-2157`); regression i `tests/test_builder_smoke.py:397-454` |
-| 9. `moodImages[]` isolering | Delvis — prompt-sammanfattning finns, `__mood/`-isolering saknas | UI laddar mood-bilder via `AssetDropzone role="gallery"` i `apps/viewser/components/discovery-wizard/steps/visual-step.tsx:625-648` och `composeMasterPrompt()` sammanfattar dem i `apps/viewser/components/discovery-wizard/wizard-payload.ts:880-887`; ingen backend-path skriver dem till `data/uploads/<runId>/__mood/` eller mappar Vision-resultat till `notesForPlanner` |
-| 10. `products[].productImage` | Öppen — backend-kopiering + renderer-stöd saknas | Frontend-typen/UI:t har `productImage` (`apps/viewser/components/discovery-wizard/wizard-types.ts:70-79`, `apps/viewser/components/discovery-wizard/steps/content-step.tsx:193-196`), men payload/schema/build saknar mapping till Project Input, `copy_operator_uploads()` kopierar inte till `public/products/`, och produktgrid i `packages/generation/build/renderers.py` renderar fortfarande tjänste-/produktkort utan bild |
+| 9. `moodImages[]` isolering | Stängd (`jakob-be` / `365c1d7`) | `iter_asset_refs()` exkluderar mood-bilder från publika uploads, `copy_mood_assets()` isolerar dem under `data/uploads/<siteId>/__mood/`, och regressioner finns i `tests/test_mood_isolation.py` |
+| 10. `products[].productImage` | Stängd (PR #122) | Schema accepterar `products[].productImage`, wizard-produkter mappas till Project Input, `_copy_product_images()` skriver till `public/products/<productId>.<ext>` och muterar `products[].imageUrl`, medan produktgriden renderar `product.imageUrl`; regressioner finns i `tests/test_product_image_pipeline.py` |
 | 11. Vercel Blob `sourceUrl` | Stängd (PR #66 + later refinements) | `scripts/build_site.py:794-1013` (disk-first + sourceUrl-fallback + allowlist till `public.blob.vercel-storage.com` + 8 MB cap) |
 
-**Slutsats:** Gap 1, 2, 3, 4, 5, 6, 7, 8 och 11 är verifierat stängda.
-Gap 9 är delvis implementerat men saknar fortfarande backend-isolering
-enligt acceptanskriterierna. Gap 10 är öppet. Originaltexten nedan är
+**Slutsats:** Gap 1-11 är verifierat stängda. Originaltexten nedan är
 bevarad för historisk kontext men tabellen ovan är auktoritativ när det
 gäller "klar/inte klar"-status.
 
