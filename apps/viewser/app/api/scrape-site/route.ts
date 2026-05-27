@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
+import {
+  hostedPythonRuntimeUnavailable,
+  isHostedVercelRuntime,
+} from "@/lib/hosted-python-runtime";
 import { assertLocalhost } from "@/lib/localhost-guard";
 import { runScrapeSite } from "@/lib/scrape-runner";
 
@@ -33,6 +37,9 @@ const ScrapePayloadSchema = z.object({
 export async function POST(request: NextRequest) {
   const guard = assertLocalhost(request);
   if (guard) return guard;
+  if (isHostedVercelRuntime()) {
+    return hostedPythonRuntimeUnavailable("scrape-site");
+  }
 
   let payload: z.infer<typeof ScrapePayloadSchema>;
   try {

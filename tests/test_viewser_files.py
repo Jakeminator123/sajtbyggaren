@@ -211,6 +211,26 @@ def test_prompt_route_rejects_discovery_starter_id_and_followup_discovery() -> N
 
 
 @pytest.mark.tooling
+def test_python_spawn_routes_fail_explicitly_on_hosted_vercel() -> None:
+    helper = (VIEWSER_DIR / "lib" / "hosted-python-runtime.ts").read_text(
+        encoding="utf-8"
+    )
+    assert 'process.env.VERCEL === "1"' in helper
+    assert "hosted-python-runtime-unavailable" in helper
+
+    for relative, feature in (
+        ("app/api/prompt/route.ts", "prompt-build"),
+        ("app/api/build/route.ts", "build"),
+        ("app/api/scrape-site/route.ts", "scrape-site"),
+    ):
+        text = (VIEWSER_DIR / relative).read_text(encoding="utf-8")
+        assert "isHostedVercelRuntime()" in text, (
+            f"{relative} måste stoppa hosted Vercel innan Python-spawn."
+        )
+        assert f'hostedPythonRuntimeUnavailable("{feature}")' in text
+
+
+@pytest.mark.tooling
 def test_viewser_legacy_dossier_picker_removed() -> None:
     """Operator-mentalmodellen kräver Project Input - inte Dossier - picker."""
     assert not (VIEWSER_DIR / "components" / "dossier-picker.tsx").exists()

@@ -3,6 +3,10 @@ import { z } from "zod";
 
 import { assertLocalhost } from "@/lib/localhost-guard";
 import { runBuild } from "@/lib/build-runner";
+import {
+  hostedPythonRuntimeUnavailable,
+  isHostedVercelRuntime,
+} from "@/lib/hosted-python-runtime";
 
 const BuildPayloadSchema = z.object({
   siteId: z.string().min(1).default("painter-palma"),
@@ -11,6 +15,9 @@ const BuildPayloadSchema = z.object({
 export async function POST(request: NextRequest) {
   const guard = assertLocalhost(request);
   if (guard) return guard;
+  if (isHostedVercelRuntime()) {
+    return hostedPythonRuntimeUnavailable("build");
+  }
 
   try {
     const json = await request.json().catch(() => ({}));
