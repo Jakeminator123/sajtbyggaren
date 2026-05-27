@@ -144,7 +144,7 @@ COMMON_WORDS = {
     # governance/rules/bugbot-pr-loop.md som tekniska citat (inte
     # domänbegrepp). Mirrors how "SharedArrayBuffer is not defined"
     # is registered as a quoted error-string further up.
-    "Cursor Bugbot",
+    "Cursor Bugbot", "BugBot",  # CamelCase-stavning ses i bot-rapporter, commit-bodies, current-focus narrative
     "SUCCESS", "FAILURE", "COMPLETED", "NEUTRAL", "DRAFT",
     "Module not found",
     # Generic word fragments som dyker upp i text
