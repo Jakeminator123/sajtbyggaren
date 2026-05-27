@@ -20,6 +20,19 @@ from .checks import (
 )
 from .models import CheckResult, QualityResult, QualityStatus
 
+# Severity-fältet säger "räknas mot status alls", inte "failure → failed".
+# Avbildning från severity + check-namn till QualityResult.status sker i
+# _aggregate_status() nedan, per ADR 0015 §3:
+#   - typecheck / build-status         (blocking, hardest) → status=failed
+#   - route-scan / policy-compliance   (blocking, soft)    → status=degraded
+#   - contact-cta-presence / placeholder-copy-scan (warning) → no status change
+#
+# `degraded` är ett avsiktligt mellan-tillstånd: pipelinen får exit 0 men
+# overall_status="degraded" så operatören ser att något failade och Repair
+# Pipeline `remainingErrors[]` blir källan för triage. Att lyfta soft-
+# blocking till `failed` bryter både kontraktet i
+# packages/generation/quality_gate/models.py:QualityResult.status och testet
+# tests/test_quality_gate.py::test_run_quality_gate_returns_degraded_on_soft_failure.
 _CHECKS_REGISTRY: tuple[tuple[str, Literal["blocking", "warning"]], ...] = (
     ("typecheck", "blocking"),
     ("route-scan", "blocking"),
