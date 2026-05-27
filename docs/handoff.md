@@ -18,10 +18,13 @@ Cursor BugBot suggestions 1-3 (`82b9f99` defensive cleanup i b154-test,
 `23b473e` smala placeholder-scan till `.tsx`/`.jsx` only, `f446be1` AND
 → OR i `_has_contact_cta`, pushade direkt av BugBot) + GPT P2 Badge
 fix (`0b40b8d` accept scaffold-specific contact-routes inkl.
-`/kontakta-oss` + `/hitta-hit`). Verifierad `jakob-be` är `0b40b8d`.
-`origin/main` ligger kvar på `4d879177` (25 commits efter `jakob-be`).
-Draft-PR #133 (`jakob-be → main`) är öppen — alla reviewer-trådar
-adresserade, redo för ready-flip + merge. Bug-count: 16 aktiva (B157 ny).
+`/kontakta-oss` + `/hitta-hit`) + GPT-reviewer-fynd 2 (`ea1e435`
+contact-CTA href-only) + post-coach-cleanup (`a67bc01` steward-bump,
+`f2de33f` BugBot allowlist, `86b5782` markdown-link-fix). Verifierad
+`jakob-be` är `ea1e435`. `origin/main` ligger kvar på `4d879177`
+(29 commits efter `jakob-be`). PR #133 (`jakob-be → main`) är öppen
+(inte draft), ready-for-review-läge — väntar på operatörens slutgodkända
+merge efter coach-godkänd sanning-städning. Bug-count: 16 aktiva (B157 ny).
 
 **PreviewRuntime Bite A (`bb6ab2e`):** typkontrakt + registry + 3
 adapter-stubs i `packages/preview-runtime/`. Skelett bara — alla
@@ -69,10 +72,9 @@ konfigurerad med `PYTHONPATH` så `python -m tooling.sprintvakt_mcp.server`
 startar utan ModuleNotFoundError. Editable install (`pip install -e .`)
 krävs en gång per venv enligt ADR 0029.
 
-**Direkt nästa spår — operatörsbeslut + Gap-fixar:**
-
-1. **Backend-Gap fixar (post-C4-audit)** — Gap 1-11 är nu stängda efter Gap 10-merge i PR #122. Detaljer i `docs/current-focus.md`.
-2. **Sync-PR `jakob-be → main`** — `jakob-be` är nu 38 commits framför `origin/main`. Bra läge för en sync-PR (operatörens beslut).
+**Direkt nästa spår:** se [`docs/current-focus.md`](current-focus.md)
+"Direkt nästa fokus". Aktuell status: PR #133 öppen och redo för
+operatörens merge; därefter Bite B + B157-val + ADR 0034.
 
 **Parkerade lanes (väntar trigger):**
 
@@ -109,7 +111,10 @@ väljs.
   `python scripts/sprintvakt_check.py` ska vara grönt innan nytt arbete
   startar.
 
-**Inga öppna PRs.** PR #69 är stängd. Senaste merge till main: PR #120 (2026-05-26 PM). Senare commits sedan dess ligger på `jakob-be` och väntar nästa sync-PR (se "Direkt nästa spår" ovan).
+**1 öppen PR:** #133 (`jakob-be → main`), öppen och ready-for-review-läge
+efter coach-godkänd sanning-städning, väntar på operatörens slutgodkända
+merge. Tidigare not: PR #69 stängd, senaste merge till main PR #120
+(2026-05-26 PM).
 
 **Öppna gaps på workboarden:** 1 queued gap:
 `GAP-backend-build-trace-endpoint` — Christopher-implementerat under

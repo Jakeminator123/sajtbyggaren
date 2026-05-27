@@ -30,10 +30,10 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `0b40b8d` (2026-05-27 UTC, post Cursor BugBot
-suggestions 1-3 + GPT P2 Badge contact-route-fix. Alla 4 reviewer-fynd
-på #133 nu inne; alla guards gröna. `jakob-be` är nu 25 commits framför
-`origin/main` — #133 är teknisk redo för ready-flip + merge).
+Last verified state: `ea1e435` (2026-05-27 UTC, post contact-CTA
+href-only-fix + markdown-link-fix + BugBot allowlist + steward-bump.
+`jakob-be` är 29 commits framför `origin/main`. PR #133 (öppen, inte
+draft) är redo för ready-merge efter coach-godkänd sanning-städning).
 
 Nya commits sedan `c9a730b` (i historisk ordning):
 - `c67b53f` docs(steward): bump verified state to c9a730b post PR #131
@@ -107,10 +107,19 @@ Nya commits sedan `c9a730b` (i historisk ordning):
   hardcoda `app/kontakt/page.tsx`. Stänger sista reviewer-fyndet på
   PR #133. Egen sprint som tech-debt: läs scaffoldens routes.json
   direkt istället för pattern-matching.
+- `a67bc01` docs(steward): bump verified state to 0b40b8d + post-merge-
+  133 priolista (Bite B + B157-val + ADR 0034 + städning).
+- `f2de33f` chore(term-coverage): allowlist BugBot CamelCase-stavning.
+- `86b5782` docs(integrations): fix dead markdown link i
+  `webcontainers-notes.md` (pekade på `struktur/PreviewRuntime.ts` som
+  aldrig fanns; nu pekar på `packages/preview-runtime/src/types.ts`).
+- `ea1e435` fix(quality-gate): contact-CTA href-only check (body-text
+  ensamt räcker inte) — GPT-reviewer-fynd post `f446be1` OR-fix där
+  `<a href="/products">Ring oss</a>` falskt godkändes som contact-CTA.
 
-Draft-PR #133 (`jakob-be → main`) är öppen och uppdateras automatiskt
-med varje push. Alla guards gröna lokalt mot HEAD. Sync-merge till main
-är operatörsbeslut när reviewer-trådarna är stängda.
+PR #133 (`jakob-be → main`) är öppen (inte draft) och uppdateras
+automatiskt med varje push. Alla guards gröna lokalt mot HEAD.
+Sync-merge till main är operatörsbeslut när reviewer-trådarna är stängda.
 
 Nya PRs sedan föregående checkpoint (i mergeordning):
 PR #125 — fix(discovery): honor wizard clears across versioned fields.
