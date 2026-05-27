@@ -68,7 +68,8 @@ async function assertDossierPathAllowed(absoluteDossierPath: string): Promise<vo
       ? [...ALLOWED_DOSSIER_ROOTS, path.resolve(root, testPromptRoot)]
       : ALLOWED_DOSSIER_ROOTS;
   for (const subdir of roots) {
-    const allowed = await fs.realpath(path.resolve(root, subdir));
+    const allowed = await fs.realpath(path.resolve(root, subdir)).catch(() => null);
+    if (!allowed) continue;
     const relative = path.relative(allowed, resolved);
     if (
       (relative === "" || relative) &&
