@@ -142,12 +142,35 @@ def _wait_for_dev_ready(
 def _stop_process(process: subprocess.Popen[str]) -> None:
     if process.poll() is not None:
         return
-    process.terminate()
+    # Defensive cleanup: never crash, even if the process resists termination
+    # and never crash if the process exits in one of the platform-specific
+    # race windows below.
+    #   - Windows race: process may exit between the poll() above and
+    #     Popen.terminate(); the underlying Win32 termination call can
+    #     return a "process already gone" status which Python raises as
+    #     PermissionError (errno 5, access denied). Same applies to
+    #     Popen.kill() on Windows.
+    #   - Stuck process: Popen.kill() can fail to reap a process that sits
+    #     in kernel blockage. The post-kill wait would then raise
+    #     subprocess.TimeoutExpired.
+    # All exceptions are swallowed silently — if neither terminate nor kill
+    # works, the test cannot do more, and surface logs/zombies stay for the
+    # operator to triage.
+    try:
+        process.terminate()
+    except PermissionError:
+        return
     try:
         process.wait(timeout=10)
     except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait(timeout=10)
+        try:
+            process.kill()
+        except PermissionError:
+            return
+        try:
+            process.wait(timeout=10)
+        except (subprocess.TimeoutExpired, PermissionError):
+            return
 
 
 def _fetch_route(port: int, route: str) -> str:
