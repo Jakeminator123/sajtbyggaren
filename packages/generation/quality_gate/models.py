@@ -15,6 +15,8 @@ CheckName = Literal[
     "route-scan",
     "build-status",
     "policy-compliance",
+    "contact-cta-presence",
+    "placeholder-copy-scan",
 ]
 
 CheckStatus = Literal["ok", "failed", "skipped"]
@@ -36,6 +38,7 @@ class CheckResult(BaseModel):
     detail: str = ""
     findings: list[str] = Field(default_factory=list)
     durationMs: int = 0
+    severity: Literal["blocking", "warning"] = "blocking"
 
 
 class QualityResult(BaseModel):

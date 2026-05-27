@@ -614,10 +614,12 @@ def test_quality_result_checks_enum_excludes_page_quality_traits() -> None:
         "packages/generation/quality_gate/models.py:CheckName, and "
         "the dispatcher together."
     )
-    # Lock the canonical four-check set.
+    # Lock the canonical v1 check set.
     assert set(check_name_enum) == {
         "typecheck",
         "route-scan",
         "build-status",
         "policy-compliance",
+        "contact-cta-presence",
+        "placeholder-copy-scan",
     }
