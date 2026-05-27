@@ -693,28 +693,82 @@ def render_section_products_intro(dossier: dict) -> str:
     )
 
 
+def _product_grid_items(dossier: dict) -> list[dict]:
+    products = dossier.get("products")
+    if isinstance(products, list) and products:
+        return [item for item in products if isinstance(item, dict)]
+    return dossier["services"]
+
+
+def _product_grid_text(item: dict, key: str, fallback: str) -> str:
+    value = item.get(key)
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return fallback
+
+
+def _render_product_grid_image(item: dict, label: str, escape) -> str:
+    image_url = item.get("imageUrl")
+    if not isinstance(image_url, str) or not image_url.strip():
+        service_id = _product_grid_text(item, "id", "product")
+        return (
+            f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(service_id)} className="size-6" /></span>\n'
+        )
+
+    product_image = item.get("productImage")
+    alt = label
+    if isinstance(product_image, dict):
+        raw_alt = product_image.get("alt")
+        if isinstance(raw_alt, str) and raw_alt.strip():
+            alt = raw_alt.strip()
+    return (
+        '            <div className="mb-5 overflow-hidden rounded-lg border border-[color:var(--border)] bg-[color:var(--accent)]">\n'
+        f'              <img src={escape(image_url.strip())} alt={escape(alt)} width={{640}} height={{480}} loading="lazy" className="h-44 w-full object-cover transition duration-300 group-hover:scale-[1.03]" />\n'
+        "            </div>\n"
+    )
+
+
+def _render_product_grid_card(item: dict, index: int, escape) -> str:
+    item_id = _product_grid_text(item, "id", f"product-{index + 1}")
+    label = _product_grid_text(item, "label", _product_grid_text(item, "name", "Produkt"))
+    summary = _product_grid_text(item, "summary", "")
+    price = _product_grid_text(item, "price", "")
+    price_markup = (
+        f'            <p className="mt-4 text-sm font-semibold text-[color:var(--primary)]">{escape(price)}</p>\n'
+        if price
+        else ""
+    )
+    return (
+        f'          <article key={escape(item_id)} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
+        f"{_render_product_grid_image(item, label, escape)}"
+        f'            <h2 className="text-xl font-semibold">{escape(label)}</h2>\n'
+        f'            <p className="mt-3 text-[color:var(--muted)] leading-relaxed">{escape(summary)}</p>\n'
+        f"{price_markup}"
+        "          </article>"
+    )
+
+
 def render_section_product_grid(dossier: dict) -> str:
     """Render the /produkter product-grid block.
 
-    Iterates ``dossier.services`` (the ecommerce-lite scaffold reuses
-    the services array for products until SCAFFOLD_TO_STARTER flips
-    to ``commerce-base``; see B13). Produces a 3-column responsive
-    grid of article cards with icon + label + summary.
+    Iterates ``dossier.products`` when present, otherwise falls back to
+    ``dossier.services`` for legacy Project Inputs. Produces a 3-column
+    responsive grid of article cards with product image + label + summary
+    or an icon fallback when no imageUrl is available.
 
     Path B step 5: extracted from ``render_products``. Returned as a
     block fragment (no ``<section>`` wrapper) so the route-renderer
     can compose it with the products-intro header and shop-CTA inside
-    a single gradient page section. Output is byte-identical to the
-    inline implementation it replaces.
+    a single gradient page section.
     """
-    products = dossier["services"]
+    products = _product_grid_items(dossier)
+
+    def escape(value: str) -> str:
+        return _jsx_safe_string(value)
+
     items = "\n".join(
-        f'          <article key={_jsx_safe_string(item["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
-        f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(item["id"])} className="size-6" /></span>\n'
-        f'            <h2 className="text-xl font-semibold">{_jsx_safe_string(item["label"])}</h2>\n'
-        f'            <p className="mt-3 text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(item["summary"])}</p>\n'
-        "          </article>"
-        for item in products
+        _render_product_grid_card(item, index, escape)
+        for index, item in enumerate(products)
     )
     return (
         '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'

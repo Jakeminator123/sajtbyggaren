@@ -770,9 +770,10 @@ def resolve_media_asset(project_input: dict, role: str) -> dict | None:
 def iter_asset_refs(project_input: dict) -> list[dict]:
     """Returnera publika AssetRef-objekt som finns i Project Input
     (`brand.logo`, `brand.heroImage`, varje item i `gallery`, samt
-    `media.favicon` / `media.ogImage` / `media.backgroundVideo`). Tar
-    bara med refs där alla fält schemat kräver finns; trasiga refs
-    hoppas över så build:en inte kraschar på en korrupt manifest.json.
+    `products[].productImage`, `media.favicon` / `media.ogImage` /
+    `media.backgroundVideo`). Tar bara med refs där alla fält schemat
+    kräver finns; trasiga refs hoppas över så build:en inte kraschar
+    på en korrupt manifest.json.
 
     `moodImages` ingår inte här: de är interna inspirationsbilder och ska
     isoleras via `copy_mood_assets`, inte publiceras till sajten.
@@ -789,6 +790,14 @@ def iter_asset_refs(project_input: dict) -> list[dict]:
         for item in gallery:
             if _is_valid_asset_ref(item):
                 refs.append(item)
+    products = project_input.get("products") or []
+    if isinstance(products, list):
+        for product in products:
+            if not isinstance(product, dict):
+                continue
+            ref = product.get("productImage")
+            if _is_valid_asset_ref(ref):
+                refs.append(ref)
     for role in ("favicon", "ogImage", "backgroundVideo"):
         ref = resolve_media_asset(project_input, role)
         if ref is not None:
@@ -1149,6 +1158,64 @@ def _private_mood_asset_stem(asset_id: str) -> str:
     return stem or "asset"
 
 
+def _public_product_asset_extension(ref: dict, source_file: Path | None) -> str:
+    if source_file is not None and source_file.suffix:
+        return source_file.suffix.lower().lstrip(".")
+    filename = ref.get("filename")
+    if isinstance(filename, str):
+        suffix = Path(filename).suffix.lower().lstrip(".")
+        if suffix:
+            return suffix
+    mime_type = str(ref.get("mimeType") or "").strip().lower()
+    return {
+        "image/png": "png",
+        "image/jpeg": "jpg",
+        "image/webp": "webp",
+        "image/svg+xml": "svg",
+    }.get(mime_type, "webp")
+
+
+def _public_product_asset_stem(product: dict, index: int) -> str:
+    for key in ("id", "slug"):
+        raw = product.get(key)
+        if isinstance(raw, str) and raw.strip():
+            stem = re.sub(r"[^A-Za-z0-9._-]+", "-", raw.strip().lower()).strip(".-")
+            if stem:
+                return stem
+    return f"product-{index + 1}"
+
+
+def _copy_product_images(site_id: str, target: Path, project_input: dict) -> int:
+    """Copy products[].productImage to public/products/ and set imageUrl."""
+    products = project_input.get("products") or []
+    if not isinstance(products, list):
+        return 0
+
+    public_products = target / "public" / "products"
+    copied = 0
+    for index, product in enumerate(products):
+        if not isinstance(product, dict):
+            continue
+        ref = product.get("productImage")
+        if not _is_valid_asset_ref(ref):
+            continue
+        resolved = _resolve_operator_asset_source(
+            site_id,
+            ref,
+            log_prefix="copy_product_images",
+        )
+        if resolved is None:
+            continue
+        data, source_file = resolved
+        extension = _public_product_asset_extension(ref, source_file)
+        filename = f"{_public_product_asset_stem(product, index)}.{extension}"
+        public_products.mkdir(parents=True, exist_ok=True)
+        (public_products / filename).write_bytes(data)
+        product["imageUrl"] = f"/products/{filename}"
+        copied += 1
+    return copied
+
+
 def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> int:
     """Copy operator-uploaded assets to the generated site's public/uploads/.
 
@@ -1181,29 +1248,28 @@ def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> in
     the build; the renderer can still fall back to alt text / defaults.
     """
     refs = iter_asset_refs(project_input)
-    if not refs:
-        return 0
-
-    public_uploads = target / "public" / "uploads"
-    public_uploads.mkdir(parents=True, exist_ok=True)
-
     copied = 0
-    for ref in refs:
-        filename = ref["filename"]
-        resolved = _resolve_operator_asset_source(
-            site_id,
-            ref,
-            log_prefix="copy_operator_uploads",
-        )
-        if resolved is None:
-            continue
-        data, source_file = resolved
-        dest = public_uploads / filename
-        if _asset_requires_derived_public_output(ref):
-            _write_derived_media_asset(ref, data, target, source_file=source_file)
-        dest.write_bytes(data)
-        copied += 1
+    if refs:
+        public_uploads = target / "public" / "uploads"
+        public_uploads.mkdir(parents=True, exist_ok=True)
 
+        for ref in refs:
+            filename = ref["filename"]
+            resolved = _resolve_operator_asset_source(
+                site_id,
+                ref,
+                log_prefix="copy_operator_uploads",
+            )
+            if resolved is None:
+                continue
+            data, source_file = resolved
+            dest = public_uploads / filename
+            if _asset_requires_derived_public_output(ref):
+                _write_derived_media_asset(ref, data, target, source_file=source_file)
+            dest.write_bytes(data)
+            copied += 1
+
+    copied += _copy_product_images(site_id, target, project_input)
     return copied
 
 
