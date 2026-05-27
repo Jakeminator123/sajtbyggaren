@@ -13,7 +13,6 @@ when it lands.
 from __future__ import annotations
 
 import json
-import queue
 import re
 import shutil
 import socket
@@ -62,13 +61,27 @@ def _write_b154_project_input(tmp_path: Path) -> Path:
     return target
 
 
-def _spawn_next_dev(site_dir: Path, port: int) -> subprocess.Popen[str]:
-    """Spawn ``next dev`` and return the Popen handle immediately.
+def _spawn_next_dev(
+    site_dir: Path, port: int
+) -> tuple[subprocess.Popen[str], list[str], threading.Event, threading.Thread]:
+    """Spawn ``next dev`` and start a daemon thread that drains stdout
+    into a shared output list.
 
-    Caller is responsible for ``_wait_for_dev_ready`` and ``_stop_process``;
-    splitting spawn from wait means the caller can capture the handle in
-    its outer scope before any potentially-raising wait code runs, so the
-    ``finally`` cleanup always sees the process.
+    Returns ``(process, output, ready_event, reader)`` so the caller can:
+
+    - Pass the same ``output`` list into ``_wait_for_dev_ready`` (which
+      reads via ``ready_event``) and continue to receive lines into the
+      *same* list AFTER the ready signal fires. That is critical for
+      B154: the original TDZ error fires during hydration when routes
+      are fetched, i.e. *after* the ready line, so the final assertion
+      that scans ``output`` for ``Cannot access 'w' before initialization``
+      must be able to see lines emitted during route-fetch as well.
+    - Capture the Popen handle in the caller's own scope before any
+      potentially-raising wait code runs, so the ``finally`` cleanup
+      always sees the process.
+    - ``reader.join(timeout=...)`` after ``_stop_process`` so any lines
+      still in the pipe at termination land in ``output`` before the
+      final assertion runs.
     """
     process = subprocess.Popen(
         ["npm", "run", "dev", "--", "--hostname", "127.0.0.1", "--port", str(port)],
@@ -78,59 +91,48 @@ def _spawn_next_dev(site_dir: Path, port: int) -> subprocess.Popen[str]:
         stderr=subprocess.STDOUT,
     )
     assert process.stdout is not None
-    return process
-
-
-def _wait_for_dev_ready(
-    process: subprocess.Popen[str], timeout_seconds: float = DEV_READY_TIMEOUT_SECONDS
-) -> list[str]:
-    """Drain ``process.stdout`` in a worker thread and wait for the Next
-    dev ready-line.
-
-    ``readline`` is blocking, so a previous implementation that called it
-    inside a ``while time.monotonic() < deadline`` loop would never reach
-    the timeout check if Next dev stopped emitting lines. Draining stdout
-    on a background thread and reading via ``queue.get(timeout=...)``
-    keeps the deadline enforced.
-    """
-    line_queue: queue.Queue[str | None] = queue.Queue()
+    output: list[str] = []
+    output_lock = threading.Lock()
+    ready_event = threading.Event()
 
     def _drain() -> None:
         assert process.stdout is not None
-        try:
-            for line in iter(process.stdout.readline, ""):
-                line_queue.put(line)
-        finally:
-            line_queue.put(None)
+        for line in iter(process.stdout.readline, ""):
+            with output_lock:
+                output.append(line)
+            if "Ready" in line or "ready" in line:
+                ready_event.set()
 
     reader = threading.Thread(target=_drain, daemon=True)
     reader.start()
+    return process, output, ready_event, reader
 
-    output: list[str] = []
+
+def _wait_for_dev_ready(
+    process: subprocess.Popen[str],
+    output: list[str],
+    ready_event: threading.Event,
+    timeout_seconds: float = DEV_READY_TIMEOUT_SECONDS,
+) -> None:
+    """Wait for the drain thread to report the Next dev ready line.
+
+    Polls ``process.poll()`` so a process that dies before ready aborts
+    promptly with the accumulated output. Otherwise sleeps in 0.5s
+    intervals to keep the deadline live regardless of whether Next dev
+    emits new lines. The drain thread keeps running after this returns,
+    so post-ready hydration errors are still captured in ``output``.
+    """
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
+        if ready_event.is_set():
+            return
         if process.poll() is not None:
-            while True:
-                try:
-                    line = line_queue.get(timeout=0.5)
-                except queue.Empty:
-                    break
-                if line is None:
-                    break
-                output.append(line)
             raise AssertionError(
                 f"`npm run dev` exited early with code {process.returncode}.\n"
                 + "".join(output)
             )
-        try:
-            line = line_queue.get(timeout=1.0)
-        except queue.Empty:
-            continue
-        if line is None:
-            break
-        output.append(line)
-        if "Ready" in line or "ready" in line:
-            return output
+        if ready_event.wait(timeout=0.5):
+            return
     raise AssertionError(
         f"`npm run dev` did not report Ready within {timeout_seconds:.0f}s.\n"
         + "".join(output)
@@ -222,9 +224,10 @@ def test_b154_next_dev_chunks_do_not_access_w_before_initialization(
     port = _free_port()
     process: subprocess.Popen[str] | None = None
     output: list[str] = []
+    reader: threading.Thread | None = None
     try:
-        process = _spawn_next_dev(site_dir, port)
-        output = _wait_for_dev_ready(process)
+        process, output, ready_event, reader = _spawn_next_dev(site_dir, port)
+        _wait_for_dev_ready(process, output, ready_event)
         for route in ("/", "/produkter", "/om-oss", "/kontakt"):
             html = _fetch_route(port, route)
             assert "<html" in html.lower(), f"{route} did not return HTML"
@@ -238,4 +241,10 @@ def test_b154_next_dev_chunks_do_not_access_w_before_initialization(
     finally:
         if process is not None:
             _stop_process(process)
+        if reader is not None:
+            # Drain thread exits when readline() returns "" after process
+            # close. Join so post-ready output (e.g. hydration errors
+            # logged during the route fetches above) is fully populated
+            # in `output` before the final assertion scans it.
+            reader.join(timeout=5)
         assert "Cannot access 'w' before initialization" not in "".join(output)
