@@ -587,6 +587,46 @@ samma kodmönster lever vidare här — därav posten:
   komplettera chunk-grep med browser-baserad assertion. Källa: extern
   review 2026-05-27 (PR #131). Fix: open. Test: open.
 
+- **`B157` Hög** - Lokala follow-up-builds raiserar
+  `PermissionError: [WinError 5] Åtkomst nekad` på
+  `node_modules/@next/swc-win32-x64-msvc/next-swc.win32-x64-msvc.node` när
+  `build_site.py:copy_starter()` (rad 705-731) försöker
+  `shutil.rmtree(node_modules)` i en `.generated/<siteId>/`-katalog som en
+  live `next dev`/`next start`-process håller låst. På Windows låser den
+  native `.node`-binary hårt; på Linux/macOS skulle aggressive delete
+  kunna lyckas men anti-patternet kvarstår.
+
+  Trigger: `_npm_install_inputs_changed=True` (rad 698-699 i
+  `build_site.py`) — den lockfile-diff-check som B154-fixen (PR #131)
+  introducerade. Vid lockfile-skillnad mellan starter-source och
+  `.generated/<siteId>/` nollas `preserved={"node_modules"}` på rad 720
+  → `rmtree` försöker radera live `node_modules` → WinError 5. Idag
+  triggat av `data/starters/commerce-base/package-lock.json`-bumpen
+  `next 16.2.5 → 16.2.6` som följde med post-#131-batchen.
+
+  Root cause: builder bygger ovanpå aktiv preview-output-katalog.
+  Arkitektur-anti-pattern flaggat av extern reviewer 2026-05-27 efm.
+
+  Fix-strategi (laddrar, lägst → högst, per reviewer-analys):
+  1. **Akut:** stoppa live `next start`/`next dev`-process före
+     `copy_starter()` (utöka per-siteId-mutex i
+     `apps/viewser/lib/local-preview-server.ts`).
+  2. **Snabbfix:** retry/backoff runt `rmtree()` (50ms-1s, max 5 retries)
+     — temporär, döljer arkitektur-skulden.
+  3. **Bättre:** `rename` till `.trash`-suffix + delayed garbage
+     collection (städjobb som tar bort gamla mappar senare).
+  4. **Rätt:** ny `builds/<timestamp>/`-katalog per follow-up + manifest-
+     pointer-swap (Vercel-likt). UI byter från gammal build till ny först
+     när nya builden är klar.
+  5. **Vercel-likt:** varje följdprompt = ny immutable deployment med
+     egen unique URL; gammal preview kvar tills ny verifierad.
+
+  Gap-spec: `docs/gaps/GAP-windows-safe-rebuild-pipeline.md`.
+  Källa: extern reviewer-analys 2026-05-27 efm (post-PR #131 + post-
+  `commerce-base/package-lock.json`-Next-bump). Operatörsobservation:
+  "hänt 1000 gånger" — buggen var ej registrerad tidigare. Fix: open.
+  Test: open.
+
 ## Stängda - regression-test säkrar fixet
 
 - **`B154` Medel** (stängd 2026-05-27, TDZ-smoke + commerce-lock) -
