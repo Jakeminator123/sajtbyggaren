@@ -98,16 +98,25 @@ def _stop_process(process: subprocess.Popen[str]) -> None:
     if process.poll() is not None:
         return
     # Defensive cleanup: never crash, even if the process resists every
-    # termination signal we try.
-    #   - Race: the process may exit between the poll() above and the kill
-    #     below. On POSIX os.killpg() then raises ProcessLookupError.
+    # termination signal we try, and never crash if the process exits in
+    # one of the platform-specific race windows below.
+    #   - POSIX race: process may exit between the poll() above and
+    #     os.killpg(); killpg then raises ProcessLookupError (ESRCH).
+    #   - Windows race: process may exit between poll() and
+    #     Popen.terminate(); the underlying Win32 termination call can
+    #     return a "process already gone" status which Python raises as
+    #     PermissionError (errno 5, access denied). Same applies to
+    #     Popen.kill() on Windows.
     #   - Stuck process: SIGKILL/Popen.kill() can also fail to reap a
     #     process that sits in POSIX D-state (uninterruptible sleep) or
     #     similar kernel blockage. The post-SIGKILL wait would then raise
     #     subprocess.TimeoutExpired.
-    # Both exceptions are swallowed silently — if neither SIGTERM nor
+    # All three exceptions are swallowed silently — if neither SIGTERM nor
     # SIGKILL works, the test cannot do more, and surface logs/zombies
-    # stay for the operator to triage.
+    # stay for the operator to triage. We deliberately do NOT catch the
+    # broader OSError to avoid hiding genuine permission failures (e.g.
+    # the test runs as a user that cannot signal the spawned process at
+    # all — that is a config bug, not a race).
     try:
         if sys.platform != "win32":
             # Unix: use killpg to terminate the process group (preexec_fn=os.setsid created a group)
@@ -115,7 +124,7 @@ def _stop_process(process: subprocess.Popen[str]) -> None:
         else:
             # Windows: use terminate() which is cross-platform
             process.terminate()
-    except ProcessLookupError:
+    except (ProcessLookupError, PermissionError):
         return
     try:
         process.wait(timeout=10)
@@ -125,11 +134,11 @@ def _stop_process(process: subprocess.Popen[str]) -> None:
                 os.killpg(process.pid, signal.SIGKILL)
             else:
                 process.kill()
-        except ProcessLookupError:
+        except (ProcessLookupError, PermissionError):
             return
         try:
             process.wait(timeout=10)
-        except (subprocess.TimeoutExpired, ProcessLookupError):
+        except (subprocess.TimeoutExpired, ProcessLookupError, PermissionError):
             return
 
 
