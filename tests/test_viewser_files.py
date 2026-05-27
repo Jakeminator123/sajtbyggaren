@@ -1145,7 +1145,7 @@ def test_run_details_panel_renders_site_plan_warnings() -> None:
     intentGuardWarnings flaggade ``categoryId='fitness'`` mot
     ``conflictingTerm='mat'`` utan att Run Details visade det. Reviewer
     2026-05-21 (~7/10) öppnade B144 (Medel) som följd, med PR #49-
-    inventeringen ``docs/reports/run-details-warnings-inventory-2026-05-21.md``
+    inventeringen ``docs/archive/run-details-warnings-inventory-2026-05-21.md``
     som placeringsskissen.
 
     Mirror placeholderContactFields-mönstret i BuildSection
