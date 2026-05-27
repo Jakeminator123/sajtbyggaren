@@ -1,10 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-27 tidig morgon UTC, steward-pass efter `91230b4` — completed gap-spec cleanup + B147 closure sync. Verifierad `jakob-be` är `91230b4be799067ec05beb22ce34046ba6e89e0c`.
+**Datum:** 2026-05-27 UTC, steward-auto efter PR #123 — sync(jakob-be -> main): backend gap batch and docs cleanup. Verifierad `main` är `3415e7d`.
 
-Nya PRs sedan föregående checkpoint: PR #118 — sync(jakob-be -> main): PR #117 mobile
-responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report; PR #120
-— sync(jakob-be -> main): repo hygiene 2026-05-26 (4 commits, docs-only).
+Nya PRs sedan föregående checkpoint: PR #123 — sync(jakob-be -> main): backend gap batch
+and docs cleanup.
 
 **MCP-server-status:** Sprintvakt-servern exponerar 14 tools efter
 PR #77 (`get_workboard`, `list_gaps`, `create_gap`, `activate_gap`,
@@ -409,3 +408,11 @@ Ny aktiv då: **B147 Medel-Hög** (Vercel preview wizard 403 via `assertLocalhos
 **Öppen PR just nu:**
 
 - **#118 sync(jakob-be → main)** — OPEN, MERGEABLE, mergeStateStatus UNSTABLE (CI pågår). 45 commits / 56 filer / +5158/-328. Innehåller hela sessionens leverans. Operatörsbeslut då: granska body + checks, sedan merge. Vercel production branch-flippen är åtgärdad 2026-05-26; B146-blockaren är borta.
+
+### 2026-05-27 UTC — handoff.md före `91230b4`
+
+**Datum:** 2026-05-27 tidig morgon UTC, steward-pass efter `91230b4` — completed gap-spec cleanup + B147 closure sync. Verifierad `jakob-be` är `91230b4be799067ec05beb22ce34046ba6e89e0c`.
+
+Nya PRs sedan föregående checkpoint: PR #118 — sync(jakob-be -> main): PR #117 mobile
+responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report; PR #120
+— sync(jakob-be -> main): repo hygiene 2026-05-26 (4 commits, docs-only).

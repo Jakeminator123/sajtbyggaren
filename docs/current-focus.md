@@ -30,40 +30,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `91230b4be799067ec05beb22ce34046ba6e89e0c` (2026-05-27 early morning UTC, post completed gap-spec cleanup).
-
-Nya commits sedan föregående checkpoint (`0f3bd67`):
-
-- `91230b4` docs(steward): prune completed gap specs before sync.
-- `6222627` docs(steward): archive completed gap prompts after Gap 10.
-- `3b61c73` feat(build): close Gap 10 product image pipeline (#122).
-- `365c1d7` feat(build): close Gap 9 — isolate moodImages to private uploads.
-- `0043839` docs(current-focus): update verified SHA and commit count after recent changes.
-- `e9c8afa` docs(handoff): update verified SHA and commit count after eval-layout refactor.
-- `63656fb` refactor(evals): split data/evals into summaries/ + artifacts/ layout.
-- `91990de` docs(steward): bump focus and handoff counts after B147 sync.
-- `2a77c07` docs(steward): close B147 after host whitelist merge.
-- `d483b7d` docs(steward): bump focus and handoff counts after docs sync commits.
-- `b4473ee` docs(known-issues): move B147 to Stängda after b3834b3.
-- `b3834b3` feat(viewser): close B147 — add VIEWSER_ALLOWED_HOSTS host-whitelist.
-- `88dedf0` docs(steward): sync backend handoff after gap 6 and 7 merge.
-- `cb07dbb` docs(steward): sync handoff/focus/workboard with actual code state 2026-05-26.
-- `ea6e141` feat(build): close Gap 6 + 7 — multi-size favicon.ico + 1200x630 og-image.png.
-- `c002aec` chore(deps): add pillow>=10.0 for build-pipeline image conversion.
-- `dbc97d8` docs(agents): add cloud-grind prompt-pack for gaps + B147 + doc-cleanup.
-- `1332efd` settingscommit (befintlig branch-commit, ej rörd i detta steward-pass).
-- `9d052b9` docs(steward): bump current-focus + handoff + write late-evening handoff.
-- `cc1a5aa` chore(viewser): commit vercel.json deploy config.
-- `0ed5348` docs(backend-handoff): mark gap 1 + 11 as closed (audit 2026-05-26).
-- `3fc187e`, `4cd367c`, `b414c6b`, `ee1751f` — naprapat scaffold-fix + Lane 2/4 stale-correction.
-- `d3a2ad6`, `9dbd10a` — reviewer-flagged drift correction.
-- `0f3bd67` — C4 audit landed via local merge (PR #121).
-- `1721494`, `46d819f` — focus bump + Gap-headings cleanup.
-- `6aeec35`, `fdb1fef`, `ff6154e` — evening handoff till nästa orchestrator + term-coverage cleanup.
-- `b89a3d2` feat(discovery): persist directives.notesForPlanner into Site Brief (**Gap 5 stängd**).
-- `1b91ca6` feat(discovery): merge directives.requestedCapabilities into resolver (**Gap 4 stängd**).
-- `1c6d033` docs(focus,handoff): close Gap 4 + Gap 5 in audit table.
-- `f7c437e` docs: slim current-focus från 1414→205 rader + skriv om branch-discipline.md för enkel modell (jakob-be/christopher-ui default, PR mot main vid officiell version). Auto-regen .cursor/rules-speglar.
+Last verified state: `3415e7d` (2026-05-27 UTC, steward-auto efter PR #123 — sync(jakob-be -> main): backend gap batch and docs cleanup).
+Nya PRs sedan föregående checkpoint: PR #123 — sync(jakob-be -> main): backend gap batch
+and docs cleanup.
 
 ## Branchmodellen (kort)
 
@@ -233,3 +202,40 @@ christopher-ui, 100 % UI-only mot merge-base `3bedddd`).
 `christopher-ui` är nu mergad genom #117, så den blockaren var löst.
 Kvarvarande blockare då: B147-vägval + Vercel-production-branch-flip.
 Båda är åtgärdade 2026-05-26; B147 stängdes i `b3834b3`.
+
+### 2026-05-27 UTC — current-focus.md före `91230b4`
+
+Last verified state: `91230b4be799067ec05beb22ce34046ba6e89e0c` (2026-05-27 early morning UTC, post completed gap-spec cleanup).
+
+Nya commits sedan föregående checkpoint (`0f3bd67`):
+
+- `91230b4` docs(steward): prune completed gap specs before sync.
+- `6222627` docs(steward): archive completed gap prompts after Gap 10.
+- `3b61c73` feat(build): close Gap 10 product image pipeline (#122).
+- `365c1d7` feat(build): close Gap 9 — isolate moodImages to private uploads.
+- `0043839` docs(current-focus): update verified SHA and commit count after recent changes.
+- `e9c8afa` docs(handoff): update verified SHA and commit count after eval-layout refactor.
+- `63656fb` refactor(evals): split data/evals into summaries/ + artifacts/ layout.
+- `91990de` docs(steward): bump focus and handoff counts after B147 sync.
+- `2a77c07` docs(steward): close B147 after host whitelist merge.
+- `d483b7d` docs(steward): bump focus and handoff counts after docs sync commits.
+- `b4473ee` docs(known-issues): move B147 to Stängda after b3834b3.
+- `b3834b3` feat(viewser): close B147 — add VIEWSER_ALLOWED_HOSTS host-whitelist.
+- `88dedf0` docs(steward): sync backend handoff after gap 6 and 7 merge.
+- `cb07dbb` docs(steward): sync handoff/focus/workboard with actual code state 2026-05-26.
+- `ea6e141` feat(build): close Gap 6 + 7 — multi-size favicon.ico + 1200x630 og-image.png.
+- `c002aec` chore(deps): add pillow>=10.0 for build-pipeline image conversion.
+- `dbc97d8` docs(agents): add cloud-grind prompt-pack for gaps + B147 + doc-cleanup.
+- `1332efd` settingscommit (befintlig branch-commit, ej rörd i detta steward-pass).
+- `9d052b9` docs(steward): bump current-focus + handoff + write late-evening handoff.
+- `cc1a5aa` chore(viewser): commit vercel.json deploy config.
+- `0ed5348` docs(backend-handoff): mark gap 1 + 11 as closed (audit 2026-05-26).
+- `3fc187e`, `4cd367c`, `b414c6b`, `ee1751f` — naprapat scaffold-fix + Lane 2/4 stale-correction.
+- `d3a2ad6`, `9dbd10a` — reviewer-flagged drift correction.
+- `0f3bd67` — C4 audit landed via local merge (PR #121).
+- `1721494`, `46d819f` — focus bump + Gap-headings cleanup.
+- `6aeec35`, `fdb1fef`, `ff6154e` — evening handoff till nästa orchestrator + term-coverage cleanup.
+- `b89a3d2` feat(discovery): persist directives.notesForPlanner into Site Brief (**Gap 5 stängd**).
+- `1b91ca6` feat(discovery): merge directives.requestedCapabilities into resolver (**Gap 4 stängd**).
+- `1c6d033` docs(focus,handoff): close Gap 4 + Gap 5 in audit table.
+- `f7c437e` docs: slim current-focus från 1414→205 rader + skriv om branch-discipline.md för enkel modell (jakob-be/christopher-ui default, PR mot main vid officiell version). Auto-regen .cursor/rules-speglar.
