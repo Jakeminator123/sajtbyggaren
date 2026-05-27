@@ -468,3 +468,10 @@ and docs cleanup.
 
 Nya PRs sedan föregående checkpoint: PR #125 — fix(discovery): honor wizard clears
 across versioned fields.
+
+### 2026-05-27 UTC — handoff.md före `82ce287`
+
+**Datum:** 2026-05-27 UTC, steward-auto efter PR #124 — feat(llm-golden-path): lock v1 + extend with multi-intent chain, real-build smoke, runbook and handoff. Verifierad `main` är `82ce287`.
+
+Nya PRs sedan föregående checkpoint: PR #124 — feat(llm-golden-path): lock v1 + extend
+with multi-intent chain, real-build smoke, runbook and handoff.

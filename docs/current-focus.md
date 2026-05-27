@@ -293,3 +293,9 @@ and docs cleanup.
 Last verified state: `44bdbdd` (2026-05-27 UTC, steward-auto efter PR #125 — fix(discovery): honor wizard clears across versioned fields).
 Nya PRs sedan föregående checkpoint: PR #125 — fix(discovery): honor wizard clears
 across versioned fields.
+
+### 2026-05-27 UTC — current-focus.md före `82ce287`
+
+Last verified state: `82ce287` (2026-05-27 UTC, steward-auto efter PR #124 — feat(llm-golden-path): lock v1 + extend with multi-intent chain, real-build smoke, runbook and handoff).
+Nya PRs sedan föregående checkpoint: PR #124 — feat(llm-golden-path): lock v1 + extend
+with multi-intent chain, real-build smoke, runbook and handoff.
