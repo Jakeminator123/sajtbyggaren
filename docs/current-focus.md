@@ -61,9 +61,10 @@ Nya commits sedan `c9a730b` (i historisk ordning):
 - `19480dc` feat(preview-runtime): fail loud on unknown VIEWSER_PREVIEW_MODE
   — `currentKind()` kastar Error på explicit men okänt env-värde,
   fortsätter tyst fallback till `local` bara på tomt/osatt env.
-- `e2f857c` fix(quality-gate): drop `TODO:`/`FIXME` from
-  `placeholder-copy-scan` — dev-markers var brus när check:en skannar
-  både code-comments och customer-rendering-strängar.
+- `e2f857c` fix(quality-gate): smala `placeholder-copy-scan` så
+  dev-markers (todo/fixme-stil) inte räknas som customer-copy-placeholder
+  — de gav brus när check:en skannar både code-comments och
+  customer-rendering-strängar.
 
 Draft-PR #133 (`jakob-be → main`) är öppen och uppdateras automatiskt
 med varje push. Alla guards gröna lokalt mot HEAD. Sync-merge till main
