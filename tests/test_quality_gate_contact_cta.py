@@ -36,6 +36,28 @@ def test_contact_cta_presence_accepts_sv_and_en_ctas(tmp_path: Path) -> None:
     )
     assert run_contact_cta_presence_check(tmp_path).status == "ok"
 
+
+def test_contact_cta_presence_accepts_scaffold_specific_routes(tmp_path: Path) -> None:
+    # agency-studio/clinic-healthcare/professional-services använder
+    # /kontakta-oss. GPT P2 Badge + BugBot suggestion 4 (2026-05-27).
+    _site(
+        tmp_path,
+        '<Link href="/kontakta-oss">Kontakta oss</Link>',
+        '<a href="tel:+46">Ring oss</a>',
+        "kontakta-oss",
+    )
+    assert run_contact_cta_presence_check(tmp_path).status == "ok"
+    # restaurant-hospitality använder /hitta-hit (helt unik path som inte
+    # innehåller "kontakt"/"contact"-substring; måste vara i hardcoded
+    # fragment-listan).
+    _site(
+        tmp_path,
+        '<Link href="/hitta-hit">Hitta hit</Link>',
+        '<a href="mailto:info@example.com">Get in touch</a>',
+        "hitta-hit",
+    )
+    assert run_contact_cta_presence_check(tmp_path).status == "ok"
+
 def test_contact_cta_presence_registered_as_warning(tmp_path: Path) -> None:
     _site(tmp_path, "<p>Välkommen</p>", "<p>Kontaktinfo</p>")
     result = run_quality_gate(

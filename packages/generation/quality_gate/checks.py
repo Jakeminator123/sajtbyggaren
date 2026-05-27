@@ -252,6 +252,28 @@ _CTA_TEXT_RE = re.compile(
     r"|hör av|kom igång|get in touch|get started",
     flags=re.IGNORECASE,
 )
+# Scaffolds map ``id="contact"`` i routes.json till olika path-segment.
+# Här täcks de varianter som existerande scaffolds använder:
+#   - ``kontakt`` / ``contact`` (substring matchar ``/kontakt``,
+#     ``/kontakta-oss``, ``/contact-us``)
+#   - ``hitta-hit`` (restaurant-hospitality, helt unik path som inte
+#     innehåller "kontakt"/"contact"-substring)
+# Framtida sprint: läsa scaffoldens routes.json explicit och resolva
+# ``id="contact"`` istället för pattern-matching. Registreras som
+# tech-debt-not i ``docs/known-issues.md`` om någon ny scaffold tappar
+# på pattern-matching här (GPT P2 Badge 2026-05-27).
+_CONTACT_ROUTE_FRAGMENTS = ("kontakt", "contact", "hitta-hit")
+
+
+def _is_contact_href(href: str) -> bool:
+    lower = href.lower()
+    return any(frag in lower for frag in _CONTACT_ROUTE_FRAGMENTS)
+
+
+def _is_contact_route_dir(name: str) -> bool:
+    lower = name.lower()
+    return any(frag in lower for frag in _CONTACT_ROUTE_FRAGMENTS)
+
 # Customer-copy-placeholders only. Dev-markers som "TODO:" och "FIXME"
 # var med i v1 men gav brus eftersom check:en skannar både code-comments
 # och customer-rendering-strängar — ett "TODO:" i en .tsx-kommentar är inte
@@ -323,25 +345,45 @@ def _has_contact_cta(text: str) -> bool:
         body = re.sub(r"<[^>]+>", " ", match.group(3))
         # A link is a valid contact CTA if:
         # 1. It's a tel: or mailto: link (href check is sufficient), OR
-        # 2. It links to a contact page (href check is sufficient), OR
+        # 2. It links to a contact-route page (substring matchar bl.a.
+        #    /kontakt, /kontakta-oss, /contact, /contact-us, /hitta-hit), OR
         # 3. The body text matches CTA patterns (regardless of href)
         if (
             href.startswith(("mailto:", "tel:"))
-            or "/kontakt" in href
-            or "/contact" in href
+            or _is_contact_href(href)
             or _CTA_TEXT_RE.search(body)
         ):
             return True
     return False
 
 
+def _find_contact_page(target_dir: Path) -> Path | None:
+    """Hitta scaffoldens contact-page genom att iterera ``app/``.
+
+    Tidigare hårdkodades ``app/kontakt/page.tsx`` + ``app/contact/page.tsx``,
+    vilket missade scaffolds med alternativa contact-route-paths
+    (``agency-studio``/``clinic-healthcare``/``professional-services`` →
+    ``/kontakta-oss``, ``restaurant-hospitality`` → ``/hitta-hit``).
+    Reviewer-fynd: GPT P2 Badge 2026-05-27 + Cursor BugBot suggestion 4.
+    """
+    app_dir = target_dir / "app"
+    if not app_dir.exists():
+        return None
+    for entry in app_dir.iterdir():
+        if not entry.is_dir():
+            continue
+        if not _is_contact_route_dir(entry.name):
+            continue
+        page = entry / "page.tsx"
+        if page.exists():
+            return page
+    return None
+
+
 def run_contact_cta_presence_check(target_dir: Path) -> CheckResult:
     findings: list[str] = []
     home = target_dir / "app" / "page.tsx"
-    contact = next(
-        (p for p in (target_dir / "app" / "kontakt" / "page.tsx", target_dir / "app" / "contact" / "page.tsx") if p.exists()),
-        None,
-    )
+    contact = _find_contact_page(target_dir)
     if not home.exists() and contact is None:
         return CheckResult(name="contact-cta-presence", status="skipped")
     try:
@@ -352,7 +394,7 @@ def run_contact_cta_presence_check(target_dir: Path) -> CheckResult:
     if not _has_contact_cta(hero):
         findings.append("app/page.tsx: hero saknar kontakt-CTA")
     if contact is None:
-        findings.append("app/kontakt/page.tsx: kontaktsida saknas")
+        findings.append("app/: kontaktsida saknas (sökte efter dir med 'kontakt'/'contact'/'hitta-hit')")
     else:
         try:
             contact_text = contact.read_text(encoding="utf-8")
