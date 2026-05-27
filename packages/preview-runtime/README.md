@@ -42,7 +42,11 @@ Alla namn är låsta:
 - `Preview File` (`previewFile`) — fil i payload
 - `Preview Result` (`previewResult`) — output från Engine Run
 
-Förbjudna alias: `VM`, `sandbox`, `preview-host`, `vercelSandbox`, `webcontainer`.
+Förbjudna alias för `previewRuntime` och relaterade `globallyForbidden`-
+termer listas i `governance/policies/naming-dictionary.v1.json` (sök
+efter `previewRuntime.aliasesForbidden` + `globallyForbidden`).
+`tests/test_no_legacy_terms.py` är CI-grinden som blockerar dem i
+product files.
 
 ## Eventuell framtida `vercel-preview`-adapter
 
