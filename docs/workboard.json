@@ -205,7 +205,6 @@
       "collisionRisk": "red",
       "reviewer": "jakob",
       "status": "completed",
-      "file": "docs/gaps/GAP-backend-path-b-section-renderer.md",
       "createdAt": "2026-05-25T04:50:00Z",
       "startedAt": "2026-05-25T13:45:00Z",
       "completedAt": "2026-05-25T16:30:00Z",
@@ -435,7 +434,6 @@
       "collisionRisk": "yellow",
       "reviewer": "jakob",
       "status": "completed",
-      "file": "docs/gaps/GAP-backend-restaurant-activation.md",
       "createdAt": "2026-05-25T13:20:00Z",
       "completedAt": "2026-05-25T13:20:00Z",
       "paths": [
@@ -482,7 +480,6 @@
       "collisionRisk": "green",
       "reviewer": "jakob",
       "status": "completed",
-      "file": "docs/gaps/GAP-viewser-wizard-minimalism.md",
       "completedAt": "2026-05-25T02:35:00Z",
       "paths": [
         "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
@@ -511,7 +508,6 @@
       "collisionRisk": "green",
       "reviewer": "jakob",
       "status": "completed",
-      "file": "docs/gaps/GAP-viewser-iteration-compare.md",
       "completedAt": "2026-05-25T02:35:00Z",
       "paths": [
         "apps/viewser/components/builder/inspector/versions-tab.tsx",
@@ -535,7 +531,6 @@
       "collisionRisk": "green",
       "reviewer": "jakob",
       "status": "completed",
-      "file": "docs/gaps/GAP-viewser-wizard-first-impression.md",
       "completedAt": "2026-05-25T02:11:00Z",
       "paths": [
         "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
@@ -560,7 +555,6 @@
       "collisionRisk": "yellow",
       "reviewer": "jakob",
       "status": "completed",
-      "file": "docs/gaps/GAP-viewser-variant-live-preview.md",
       "completedAt": "2026-05-25T01:50:00Z",
       "paths": [
         "apps/viewser/components/builder/inspector/variants-tab.tsx",
@@ -625,7 +619,6 @@
       "collisionRisk": "green",
       "reviewer": "jakob",
       "status": "completed",
-      "file": "docs/gaps/GAP-viewser-live-build-sync.md",
       "startedAt": "2026-05-25T02:35:00Z",
       "paths": [
         "apps/viewser/app/page.tsx",
@@ -838,7 +831,6 @@
       "collisionRisk": "green",
       "reviewer": "jakob",
       "status": "completed",
-      "file": "docs/gaps/GAP-viewser-pipeline-status-polling.md",
       "createdAt": "2026-05-25T13:20:00Z",
       "startedAt": "2026-05-25T13:20:00Z",
       "paths": [
@@ -892,7 +884,6 @@
       "collisionRisk": "green",
       "reviewer": "jakob",
       "status": "completed",
-      "file": "docs/gaps/GAP-viewser-side-by-side-preview.md",
       "createdAt": "2026-05-25T04:50:00Z",
       "startedAt": "2026-05-25T04:50:00Z",
       "paths": [
