@@ -7,8 +7,11 @@ skeleton (`bb6ab2e`) + tre runda reviewer-fynd-fixar (`3e660ea`,
 `e9e3f32`, `44ea54b`, `e60f493` på smoke-test cleanup;
 `8358326` `test_no_legacy_terms`-fix; `19480dc` fail-loud i
 `currentKind()`; `e2f857c` narrow placeholder-copy-scan) + sync-merge
-mot `origin/main` (`cbe1ba9`) + steward-bumps. Verifierad `jakob-be`
-är `e2f857c`. `origin/main` ligger kvar på `4d879177` (17 commits
+mot `origin/main` (`cbe1ba9`) + steward-bumps + extern-reviewer-
+cleanup-batch 2026-05-27 efm (`d60bb58` bot-report-verification-regel,
+`abff654` placeholder-scan case-insensitive, `58cfe20` fly-slot-
+reconciliation till ADR 0028 nivå 3 i README). Verifierad `jakob-be`
+är `58cfe20`. `origin/main` ligger kvar på `4d879177` (20 commits
 efter `jakob-be`). Draft-PR #133 (`jakob-be → main`) är öppen och
 samlar hela batchen.
 

@@ -30,9 +30,10 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `e2f857c` (2026-05-27 UTC, post PreviewRuntime
-Bite A skeleton + tre runda av reviewer-fynd-fixar i öppen draft-PR
-#133. `jakob-be` är nu 17 commits framför `origin/main`).
+Last verified state: `58cfe20` (2026-05-27 UTC, post extern-reviewer-
+cleanup ovanpå Bite A: case-insensitive placeholder-scan + fly-slot-
+reconciliation till ADR 0028 nivå 3 + open-PR self-contradiction-fix.
+`jakob-be` är nu 20 commits framför `origin/main`).
 
 Nya commits sedan `c9a730b` (i historisk ordning):
 - `c67b53f` docs(steward): bump verified state to c9a730b post PR #131
@@ -65,6 +66,21 @@ Nya commits sedan `c9a730b` (i historisk ordning):
   dev-markers (todo/fixme-stil) inte räknas som customer-copy-placeholder
   — de gav brus när check:en skannar både code-comments och
   customer-rendering-strängar.
+- `5d5106c` docs(steward): bump verified state to e2f857c post PR #133
+  reviewer batch.
+- `5d4111f` fix(docs): unbacktick dev-marker words in steward-bump body
+  — term-coverage strict false positive på fixme-ordet i förra bumpens body.
+- `d60bb58` docs(rules): add bot-report-verification — alwaysApply: true
+  rule som säger kolla mot `origin/<branch>` innan fix på cachad
+  bot-rapport. Skrevs efter att två stale bot-rundor ledde till
+  onödiga rundor.
+- `abff654` fix(quality-gate): make TBD + REPLACE_ME case-insensitive in
+  placeholder scan — extern reviewer-fynd post #133. `\b`-word-boundaries
+  håller kvar mot infix-false-positives.
+- `58cfe20` docs(preview-runtime): reconcile fly slot to ADR 0028 level 3
+  in README — extern reviewer-fynd post #133. Operatörsbeslut väg (a):
+  behåll typunionen, dokumentera att `fly` är slot för production-/deploy-
+  check (ej implementerad). Naming-dict v17 oförändrad.
 
 Draft-PR #133 (`jakob-be → main`) är öppen och uppdateras automatiskt
 med varje push. Alla guards gröna lokalt mot HEAD. Sync-merge till main
@@ -98,10 +114,14 @@ PR #132 — docs(steward): cleanup pass — archive stale handoffs + completed r
 
 ## Pågående/öppna PR:s just nu
 
-**Inga öppna PRs.** Cloud-grind-batchen 2026-05-27 fm är helt hemma (7 PRs
-mergade till `jakob-be`). Bug-räkning: 15 aktiva / 0 misplaced / 5 unknown
-/ 128 stängda. `jakob-be` är nu ~10 commits framför `origin/main` —
-nästa sync-PR till `main` är operatörens beslut.
+**Draft-PR #133 (`jakob-be → main`) öppen.** Samlar hela post-Bite-A-
+batchen (Bite A-skelett + reviewer-fynd-fixar + smoke-test-cleanup +
+extern-reviewer-cleanup 2026-05-27 efm). Cloud-grind-batchen 2026-05-27
+fm är helt hemma (7 PRs mergade till `jakob-be`). Bug-räkning: 15
+aktiva / 0 misplaced / 5 unknown / 128 stängda. `jakob-be` är 20
+commits framför `origin/main`. Operatörsbeslut: flippa #133 till ready
+(`gh pr ready 133`) eller behåll DRAFT tills Bite B-wiring också är
+inne. Sync-merge sker när reviewer-trådarna är stängda.
 
 **Christophers `origin/christopher-ui`** — efter PR #117 är hans branch
 synkad mot post-#117-main. Han har under operator-OK scope-leak
