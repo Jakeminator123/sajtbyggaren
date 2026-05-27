@@ -30,9 +30,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `3415e7d` (2026-05-27 UTC, steward-auto efter PR #123 — sync(jakob-be -> main): backend gap batch and docs cleanup).
-Nya PRs sedan föregående checkpoint: PR #123 — sync(jakob-be -> main): backend gap batch
-and docs cleanup.
+Last verified state: `44bdbdd` (2026-05-27 UTC, steward-auto efter PR #125 — fix(discovery): honor wizard clears across versioned fields).
+Nya PRs sedan föregående checkpoint: PR #125 — fix(discovery): honor wizard clears
+across versioned fields.
 
 ## Branchmodellen (kort)
 
@@ -239,3 +239,9 @@ Nya commits sedan föregående checkpoint (`0f3bd67`):
 - `1b91ca6` feat(discovery): merge directives.requestedCapabilities into resolver (**Gap 4 stängd**).
 - `1c6d033` docs(focus,handoff): close Gap 4 + Gap 5 in audit table.
 - `f7c437e` docs: slim current-focus från 1414→205 rader + skriv om branch-discipline.md för enkel modell (jakob-be/christopher-ui default, PR mot main vid officiell version). Auto-regen .cursor/rules-speglar.
+
+### 2026-05-27 UTC — current-focus.md före `3415e7d`
+
+Last verified state: `3415e7d` (2026-05-27 UTC, steward-auto efter PR #123 — sync(jakob-be -> main): backend gap batch and docs cleanup).
+Nya PRs sedan föregående checkpoint: PR #123 — sync(jakob-be -> main): backend gap batch
+and docs cleanup.

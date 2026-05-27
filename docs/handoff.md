@@ -1,9 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-27 UTC, steward-auto efter PR #123 — sync(jakob-be -> main): backend gap batch and docs cleanup. Verifierad `main` är `3415e7d`.
+**Datum:** 2026-05-27 UTC, steward-auto efter PR #125 — fix(discovery): honor wizard clears across versioned fields. Verifierad `main` är `44bdbdd`.
 
-Nya PRs sedan föregående checkpoint: PR #123 — sync(jakob-be -> main): backend gap batch
-and docs cleanup.
+Nya PRs sedan föregående checkpoint: PR #125 — fix(discovery): honor wizard clears
+across versioned fields.
 
 **MCP-server-status:** Sprintvakt-servern exponerar 14 tools efter
 PR #77 (`get_workboard`, `list_gaps`, `create_gap`, `activate_gap`,
@@ -416,3 +416,10 @@ Ny aktiv då: **B147 Medel-Hög** (Vercel preview wizard 403 via `assertLocalhos
 Nya PRs sedan föregående checkpoint: PR #118 — sync(jakob-be -> main): PR #117 mobile
 responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report; PR #120
 — sync(jakob-be -> main): repo hygiene 2026-05-26 (4 commits, docs-only).
+
+### 2026-05-27 UTC — handoff.md före `3415e7d`
+
+**Datum:** 2026-05-27 UTC, steward-auto efter PR #123 — sync(jakob-be -> main): backend gap batch and docs cleanup. Verifierad `main` är `3415e7d`.
+
+Nya PRs sedan föregående checkpoint: PR #123 — sync(jakob-be -> main): backend gap batch
+and docs cleanup.
