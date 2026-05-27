@@ -1652,10 +1652,14 @@ def render_products(
     ``/kontakta-oss`` keeps the CTA aligned with the nav (Bugbot PR
     #19 follow-up).
     """
-    products = dossier["services"]
+    products = _product_grid_items(dossier)
     contact_href = _route_href(contact_path)
     icons_used = sorted(
-        {_icon_for_service(item["id"]) for item in products} | {"ArrowRight", "ShoppingBag"}
+        {
+            _icon_for_service(_product_grid_text(item, "id", f"product-{index + 1}"))
+            for index, item in enumerate(products)
+        }
+        | {"ArrowRight", "ShoppingBag"}
     )
     icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
     # Path B step 5 — products-intro header and product-grid blocks

@@ -209,6 +209,30 @@ def test_discovery_products_do_not_silently_truncate_after_eight_items() -> None
 
 
 @pytest.mark.tooling
+def test_discovery_products_empty_list_clears_existing_products() -> None:
+    import sys
+
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    from prompt_to_project_input import _apply_discovery_overrides  # noqa: E402
+
+    out = _apply_discovery_overrides(
+        {
+            "services": [{"id": "fallback", "label": "Fallback", "summary": "Fallback"}],
+            "products": [
+                {
+                    "id": "old-product",
+                    "label": "Gammal produkt",
+                    "summary": "Ska tas bort.",
+                }
+            ],
+        },
+        {"answers": {"products": []}},
+    )
+
+    assert "products" not in out
+
+
+@pytest.mark.tooling
 def test_product_grid_renderer_uses_product_image_url() -> None:
     from packages.generation.build.renderers import render_section_product_grid
 
@@ -239,3 +263,33 @@ def test_product_grid_renderer_uses_product_image_url() -> None:
     assert 'alt={"Rustik limpa"}' in html
     assert 'width={640}' in html
     assert "Fallback" not in html
+
+
+@pytest.mark.tooling
+def test_render_products_imports_fallback_icon_for_products_without_image() -> None:
+    from packages.generation.build.renderers import _icon_for_service, render_products
+
+    icon_name = _icon_for_service("interior-painting")
+    html = render_products(
+        {
+            "products": [
+                {
+                    "id": "interior-painting",
+                    "label": "Keramikvas",
+                    "summary": "Handdrejad vas utan uppladdad bild.",
+                }
+            ],
+            "services": [
+                {
+                    "id": "fallback-service",
+                    "label": "Fallback",
+                    "summary": "Ska inte styra produktgridens ikonimport.",
+                }
+            ],
+            "language": "sv",
+        }
+    )
+
+    import_line = next(line for line in html.splitlines() if "lucide-react" in line)
+    assert icon_name in import_line
+    assert f"<{icon_name} className=\"size-6\" />" in html

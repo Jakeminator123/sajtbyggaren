@@ -140,13 +140,18 @@ def test_discovery_wizard_uses_governance_options_with_ts_cache_fallback() -> No
 
 
 @pytest.mark.tooling
-def test_discovery_payload_blocks_unknown_categories_and_preserves_schema_version() -> None:
+def test_discovery_payload_blocks_unknown_categories_and_emits_schema_version_2() -> None:
     payload = (
         VIEWSER_DIR / "components" / "discovery-wizard" / "wizard-payload.ts"
     ).read_text(encoding="utf-8")
 
-    assert "schemaVersion: 1" in payload, (
-        "Discovery payload måste behålla schemaVersion=1."
+    assert "schemaVersion: 1 | 2" in payload, (
+        "DiscoveryPayload-typen måste fortsätta acceptera legacy v1 för "
+        "bakåtkompatibilitet."
+    )
+    assert "schemaVersion: 2," in payload, (
+        "buildDiscoveryPayload ska emit:a schemaVersion=2 när v2-directives "
+        "skickas från wizarden."
     )
     assert "validateDiscoveryCategoryIds" in payload, (
         "buildDiscoveryPayload måste blocka category ids som saknas i "
@@ -162,6 +167,33 @@ def test_discovery_payload_blocks_unknown_categories_and_preserves_schema_versio
     assert '"starterId"' not in payload, (
         "Frontendens discovery payload får inte sätta starterId."
     )
+
+
+@pytest.mark.tooling
+def test_discovery_payload_preserves_empty_list_tombstones() -> None:
+    payload = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "wizard-payload.ts"
+    ).read_text(encoding="utf-8")
+
+    for key in (
+        '"products"',
+        '"moodImages"',
+        '"requestedCapabilities"',
+        '"conversionGoals"',
+        '"uniqueSellingPoints"',
+        '"sectionTreatments"',
+        '"notesForPlanner"',
+    ):
+        assert key in payload, (
+            f"wizard-payload.ts måste bevara tom lista för {key} så backend "
+            "kan rensa tidigare wizard-värden när operatören tar bort allt."
+        )
+    assert "directives.requestedCapabilities = capabilities" in payload, (
+        "requestedCapabilities måste skickas även när listan är tom."
+    )
+    assert "directives.conversionGoals = mapCtaToConversionGoals" in payload
+    assert "directives.uniqueSellingPoints = answers.uniqueSellingPoints" in payload
+    assert "directives.sectionTreatments = sectionPins" in payload
 
 
 @pytest.mark.tooling
@@ -924,6 +956,14 @@ def test_project_input_picker_includes_prompt_inputs_directory() -> None:
     assert '"examples"' in text, (
         "examples/ måste fortsatt finnas kvar som Project Input-källa."
     )
+    assert "return null" in text and "JSON.parse" in text, (
+        "Korrupta Project Input-filer ska hoppas över lokalt i listProjectInputs "
+        "så en trasig fil inte 500:ar hela /api/runs."
+    )
+    assert "bySiteId.set(item.siteId, item)" in text, (
+        "listProjectInputs måste dedupe:a på siteId och låta prompt-inputs "
+        "vinna över examples när samma siteId finns i båda rötter."
+    )
 
 
 @pytest.mark.tooling
@@ -955,6 +995,37 @@ def test_run_history_can_show_prompt_project_id_and_version() -> None:
     )
     assert "prompt-inputs" in runs_lib and "projectId" in runs_lib, (
         "listRuns måste enrich:a runs med data/prompt-inputs/<siteId>.meta.json."
+    )
+
+
+@pytest.mark.tooling
+def test_runs_api_handles_missing_runs_dir_and_invalid_since() -> None:
+    runs_lib = (VIEWSER_DIR / "lib" / "runs.ts").read_text(encoding="utf-8")
+    trace_route = (
+        VIEWSER_DIR / "app" / "api" / "runs" / "[runId]" / "trace" / "route.ts"
+    ).read_text(encoding="utf-8")
+
+    assert 'code === "ENOENT"' in runs_lib and "return []" in runs_lib, (
+        "listRuns ska returnera tom lista när data/runs saknas i en färsk miljö."
+    )
+    assert "Ogiltigt since-timestamp" in runs_lib, (
+        "readRunTrace ska flagga ogiltig since i stället för att tyst "
+        "returnera hela trace-loggen igen."
+    )
+    assert "Ogiltigt since" in trace_route and "status: 400" in trace_route, (
+        "trace API ska rapportera ogiltig since som 400 inputfel."
+    )
+
+
+@pytest.mark.tooling
+def test_build_runner_latest_run_fallback_tolerates_missing_runs_dir() -> None:
+    text = (VIEWSER_DIR / "lib" / "build-runner.ts").read_text(encoding="utf-8")
+    function_start = text.index("async function detectLatestRunIdByMtime")
+    function_body = text[function_start : text.index("async function runBuildOnce")]
+
+    assert 'code === "ENOENT"' in function_body and "return null" in function_body, (
+        "detectLatestRunIdByMtime ska returnera null när data/runs saknas "
+        "så färska miljöer inte 500:ar efter en lyckad build utan stdout-runId."
     )
 
 

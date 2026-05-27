@@ -105,6 +105,14 @@ def test_load_discovery_accepts_schema_version_2(tmp_path: Path) -> None:
 
 
 @pytest.mark.tooling
+def test_load_discovery_accepts_schema_version_2_without_directives(
+    tmp_path: Path,
+) -> None:
+    payload = _base_payload(schema_version=2)
+    assert _load_discovery_file(_write_payload(tmp_path, payload)) == payload
+
+
+@pytest.mark.tooling
 def test_load_discovery_rejects_future_schema_version(tmp_path: Path) -> None:
     payload = _base_payload(schema_version=3)
     with pytest.raises(SystemExit, match="schemaVersion 1 eller 2"):
@@ -117,7 +125,7 @@ def test_load_discovery_requires_language_for_schema_version_2(
 ) -> None:
     payload = _base_payload(schema_version=2)
     payload["directives"] = {"scaffoldHint": "local-service-business"}
-    with pytest.raises(SystemExit, match="directives.language"):
+    with pytest.raises(SystemExit, match="directives.language när directives skickas"):
         _load_discovery_file(_write_payload(tmp_path, payload))
 
 
@@ -425,3 +433,103 @@ def test_resolver_directive_caps_caps_at_32_items_and_dedupes_input(
     assert stored[0] == "cap-00"
     assert stored[-1] == "cap-31"
     assert len(set(stored)) == 32, "deduperade slugs ska vara unika"
+
+
+@pytest.mark.tooling
+def test_resolver_empty_directive_caps_clear_existing_requested_capabilities(
+    project_input_schema: dict[str, Any],
+) -> None:
+    payload = _base_payload(schema_version=2)
+    payload["answers"].pop("siteType", None)
+    payload["directives"] = {"language": "sv", "requestedCapabilities": []}
+    candidate = _candidate_project_input()
+    candidate["requestedCapabilities"] = ["booking"]
+
+    project_input, decision = resolve_discovery(
+        raw_prompt=payload["rawPrompt"],
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+
+    jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
+    assert project_input["directives"]["requestedCapabilities"] == []
+    assert project_input["requestedCapabilities"] == []
+    assert decision.fieldSources["requestedCapabilities"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_resolver_empty_conversion_goals_clear_existing_wizard_cta() -> None:
+    payload = _base_payload(schema_version=2)
+    payload["directives"] = {"language": "sv", "conversionGoals": []}
+    payload["answers"]["primaryCta"] = ""
+    candidate = _candidate_project_input()
+    candidate["conversionGoals"] = ["booking"]
+
+    project_input, decision = resolve_discovery(
+        raw_prompt=payload["rawPrompt"],
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+
+    assert project_input["conversionGoals"] == []
+    assert decision.fieldSources["conversionGoals"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_resolver_empty_unique_selling_points_clear_existing_values(
+    project_input_schema: dict[str, Any],
+) -> None:
+    payload = _base_payload(schema_version=2)
+    payload["directives"] = {"language": "sv", "uniqueSellingPoints": []}
+    candidate = _candidate_project_input()
+    candidate["uniqueSellingPoints"] = ["Gammal USP"]
+
+    project_input, decision = resolve_discovery(
+        raw_prompt=payload["rawPrompt"],
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+
+    jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
+    assert "uniqueSellingPoints" not in project_input
+    assert decision.fieldSources["uniqueSellingPoints"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_resolver_empty_section_treatments_clear_existing_pins(
+    project_input_schema: dict[str, Any],
+) -> None:
+    payload = _base_payload(schema_version=2)
+    payload["directives"] = {"language": "sv", "sectionTreatments": {}}
+    candidate = _candidate_project_input()
+    candidate["directives"] = {"sectionTreatments": {"service-list": "icon-strip"}}
+
+    project_input, decision = resolve_discovery(
+        raw_prompt=payload["rawPrompt"],
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+
+    jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
+    assert project_input["directives"]["sectionTreatments"] == {}
+    assert decision.fieldSources["directives.sectionTreatments"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_resolver_empty_notes_for_planner_clears_existing_directive(
+    project_input_schema: dict[str, Any],
+) -> None:
+    payload = _base_payload(schema_version=2)
+    payload["directives"] = {"language": "sv", "notesForPlanner": ""}
+    candidate = _candidate_project_input()
+    candidate["directives"] = {"notesForPlanner": "Gammal planner-not"}
+
+    project_input, decision = resolve_discovery(
+        raw_prompt=payload["rawPrompt"],
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+
+    jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
+    assert "notesForPlanner" not in project_input.get("directives", {})
+    assert decision.fieldSources["directives.notesForPlanner"] == "wizard"

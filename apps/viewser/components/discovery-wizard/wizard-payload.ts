@@ -183,6 +183,13 @@ const PRESERVE_EMPTY_KEYS: ReadonlySet<string> = new Set([
   "logo",
   "heroImage",
   "gallery",
+  "products",
+  "moodImages",
+  "requestedCapabilities",
+  "conversionGoals",
+  "uniqueSellingPoints",
+  "sectionTreatments",
+  "notesForPlanner",
   "favicon",
   "ogImage",
   "backgroundVideo",
@@ -404,27 +411,20 @@ export function deriveWizardDirectives(
   }
 
   // requestedCapabilities — slå upp capability per selectedFunction.
-  // Tomma och okända IDs hoppas över; dedupe sker via accumulator.
-  if (answers.selectedFunctions.length > 0) {
-    const capabilities: string[] = [];
-    for (const fnId of answers.selectedFunctions) {
-      const choice = findFunctionChoice(fnId);
-      if (choice?.capability && !capabilities.includes(choice.capability)) {
-        capabilities.push(choice.capability);
-      }
-    }
-    if (capabilities.length > 0) {
-      directives.requestedCapabilities = capabilities;
+  // Tom lista är en tombstone: operatören kan ha avmarkerat allt och
+  // backend måste då kunna rensa tidigare wizard-valda capabilities.
+  const capabilities: string[] = [];
+  for (const fnId of answers.selectedFunctions) {
+    const choice = findFunctionChoice(fnId);
+    if (choice?.capability && !capabilities.includes(choice.capability)) {
+      capabilities.push(choice.capability);
     }
   }
+  directives.requestedCapabilities = capabilities;
 
-  // conversionGoals — keyword-mappa primaryCta. Tom om inget matchar.
-  if (answers.primaryCta.trim()) {
-    const goals = mapCtaToConversionGoals(answers.primaryCta);
-    if (goals.length > 0) {
-      directives.conversionGoals = goals;
-    }
-  }
+  // conversionGoals — keyword-mappa primaryCta. Tom lista är tombstone:
+  // om operatören tömmer CTA-valet ska gamla wizard-mål rensas.
+  directives.conversionGoals = mapCtaToConversionGoals(answers.primaryCta);
 
   // tone — första toneTag som primary, resten som secondary, wordsToAvoid
   // split:as på komma till tone.avoid[]. Backend kan vidare merge:a med
@@ -483,15 +483,10 @@ export function deriveWizardDirectives(
   // backend kan rendera dem som hero-chips utan att parsea text.
   // Trimmar och tar bort tomma; kapar vid 4 så hero-layouten inte
   // svämmar över.
-  if (answers.uniqueSellingPoints.length > 0) {
-    const structuredUsps = answers.uniqueSellingPoints
-      .map((u) => u.trim())
-      .filter(Boolean)
-      .slice(0, 4);
-    if (structuredUsps.length > 0) {
-      directives.uniqueSellingPoints = structuredUsps;
-    }
-  }
+  directives.uniqueSellingPoints = answers.uniqueSellingPoints
+    .map((u) => u.trim())
+    .filter(Boolean)
+    .slice(0, 4);
 
   // notesForPlanner — concat:ar specialRequests + uniqueSellingPoints
   // som fritext. Behålls även när directives.uniqueSellingPoints satt
@@ -509,9 +504,7 @@ export function deriveWizardDirectives(
       notesParts.push(`USP: ${usps.join(", ")}`);
     }
   }
-  if (notesParts.length > 0) {
-    directives.notesForPlanner = notesParts.join(" — ");
-  }
+  directives.notesForPlanner = notesParts.join(" — ");
 
   // Extra media — favicon / ogImage / backgroundVideo. Vi exponerar dem
   // även i `directives.media` (utöver `answers.media`) så Jakob bara
@@ -556,9 +549,7 @@ export function deriveWizardDirectives(
       sectionPins[trimmedSection] = trimmedTreatment;
     }
   }
-  if (Object.keys(sectionPins).length > 0) {
-    directives.sectionTreatments = sectionPins;
-  }
+  directives.sectionTreatments = sectionPins;
 
   return directives;
 }

@@ -1016,6 +1016,15 @@ def _apply_brand_and_assets(
 
     primary = wizard_brand.get("primaryColorHex") if honor_custom_colors else None
     accent = wizard_brand.get("accentColorHex") if honor_custom_colors else None
+    if vibe.get("useCustomColors") is False:
+        brand_block = project_input.get("brand")
+        if isinstance(brand_block, dict):
+            if "primaryColorHex" in brand_block:
+                brand_block.pop("primaryColorHex", None)
+                field_sources["brand.primaryColorHex"] = "wizard"
+            if "accentColorHex" in brand_block:
+                brand_block.pop("accentColorHex", None)
+                field_sources["brand.accentColorHex"] = "wizard"
     if (isinstance(primary, str) and primary.strip()) or (
         isinstance(accent, str) and accent.strip()
     ):
@@ -1114,6 +1123,9 @@ def _apply_mood_images(
     if mood_refs:
         project_input["moodImages"] = mood_refs
         field_sources["moodImages"] = "wizard"
+    else:
+        project_input.pop("moodImages", None)
+        field_sources["moodImages"] = "wizard"
 
 
 def _apply_tone_field(
@@ -1171,6 +1183,11 @@ def _apply_directives_fields(
 
     raw_section_treatments = directives.get("sectionTreatments")
     if isinstance(raw_section_treatments, dict):
+        existing_directives = project_input.get("directives")
+        had_section_treatments = (
+            isinstance(existing_directives, dict)
+            and "sectionTreatments" in existing_directives
+        )
         pinned_treatments: dict[str, str] = {}
         for section_id, treatment_id in raw_section_treatments.items():
             if not isinstance(section_id, str):
@@ -1181,8 +1198,7 @@ def _apply_directives_fields(
             clean_treatment = treatment_id.strip()
             if clean_section and clean_treatment:
                 pinned_treatments[clean_section] = clean_treatment
-        if pinned_treatments:
-            existing_directives = project_input.get("directives")
+        if pinned_treatments or had_section_treatments:
             if isinstance(existing_directives, dict):
                 existing_directives["sectionTreatments"] = pinned_treatments
             else:
@@ -1266,6 +1282,7 @@ def _apply_directives_fields(
 
     raw_usps = directives.get("uniqueSellingPoints")
     if isinstance(raw_usps, list):
+        had_usps = "uniqueSellingPoints" in project_input
         usps: list[str] = []
         seen: set[str] = set()
         for item in raw_usps:
@@ -1281,6 +1298,26 @@ def _apply_directives_fields(
         if usps:
             project_input["uniqueSellingPoints"] = usps
             field_sources["uniqueSellingPoints"] = "wizard"
+        elif had_usps:
+            project_input.pop("uniqueSellingPoints", None)
+            field_sources["uniqueSellingPoints"] = "wizard"
+
+    raw_conversion_goals = directives.get("conversionGoals")
+    if isinstance(raw_conversion_goals, list):
+        had_conversion_goals = "conversionGoals" in project_input
+        conversion_goals: list[str] = []
+        seen_conversion_goals: set[str] = set()
+        for item in raw_conversion_goals:
+            if not isinstance(item, str):
+                continue
+            clean = item.strip()
+            if not clean or clean in seen_conversion_goals:
+                continue
+            conversion_goals.append(clean)
+            seen_conversion_goals.add(clean)
+        if conversion_goals or had_conversion_goals:
+            project_input["conversionGoals"] = conversion_goals
+            field_sources["conversionGoals"] = "wizard"
 
     # Gap 5: ``directives.notesForPlanner`` är operatörens fritext-orientering
     # (concat av ``answers.specialRequests`` + USP-listan, byggd i
@@ -1302,6 +1339,11 @@ def _apply_directives_fields(
             else:
                 project_input["directives"] = {"notesForPlanner": clean_notes}
             field_sources["directives.notesForPlanner"] = "wizard"
+        else:
+            existing_directives = project_input.get("directives")
+            if isinstance(existing_directives, dict) and "notesForPlanner" in existing_directives:
+                existing_directives.pop("notesForPlanner", None)
+                field_sources["directives.notesForPlanner"] = "wizard"
 
     # Gap 4: ``directives.requestedCapabilities`` är wizard-valda capability-
     # slugs (mappade från ``answers.selectedFunctions`` via FUNCTION_GROUPS-
@@ -1327,14 +1369,13 @@ def _apply_directives_fields(
             seen_directive_caps.add(clean)
             if len(directive_caps) >= _MAX_DIRECTIVE_CAPABILITIES:
                 break
-        if directive_caps:
-            existing_directives = project_input.get("directives")
-            if isinstance(existing_directives, dict):
-                existing_directives["requestedCapabilities"] = directive_caps
-            else:
-                project_input["directives"] = {
-                    "requestedCapabilities": directive_caps,
-                }
+        existing_directives = project_input.get("directives")
+        if isinstance(existing_directives, dict):
+            existing_directives["requestedCapabilities"] = directive_caps
+        else:
+            project_input["directives"] = {
+                "requestedCapabilities": directive_caps,
+            }
 
     # Media: per-roll-tombstone-semantik. När wizarden skickar
     # ``directives.media.<role> = None`` betyder det att operatören
@@ -1404,7 +1445,12 @@ def _resolve_capabilities(
     Båda gap- och unknown-fynd höjer ``operatorReviewRequired`` i
     ``resolve_discovery`` (R2 P1 + R3 #2 på PR #34).
     """
-    existing = list(project_input.get("requestedCapabilities") or [])
+    directive_caps_raw = project_input.get("directives")
+    has_directive_caps = (
+        isinstance(directive_caps_raw, dict)
+        and isinstance(directive_caps_raw.get("requestedCapabilities"), list)
+    )
+    existing = [] if has_directive_caps else list(project_input.get("requestedCapabilities") or [])
     # Gap 4: ``directives.requestedCapabilities`` (wizard-valda funktioner från
     # steg 3) går FÖRE ``mustHave``-deriverade caps i source-prioriteten.
     # Båda är operator-input men direktivet är den explicita "jag vill ha
@@ -1415,7 +1461,6 @@ def _resolve_capabilities(
     # ``project_input["directives"]["requestedCapabilities"]`` av
     # ``_apply_directives_fields()``; safe getattr-chain för att täcka
     # legacy-calls utan directives-block.
-    directive_caps_raw = project_input.get("directives")
     directive_caps: list[str] = []
     if isinstance(directive_caps_raw, dict):
         candidate = directive_caps_raw.get("requestedCapabilities")
@@ -1506,6 +1551,8 @@ def _resolve_capabilities(
             if candidate in sources_per_slug.values():
                 field_sources["requestedCapabilities"] = candidate  # type: ignore[assignment]
                 break
+    elif has_directive_caps:
+        field_sources["requestedCapabilities"] = "wizard"
     elif existing:
         field_sources["requestedCapabilities"] = "brief"
     return {"warnings": warnings}
@@ -1516,6 +1563,8 @@ def _apply_cta_field(
     answers: dict[str, Any],
     field_sources: dict[str, FieldSourceLiteral],
 ) -> None:
+    if field_sources.get("conversionGoals") == "wizard":
+        return
     cta = answers.get("primaryCta")
     if not isinstance(cta, str) or not cta.strip():
         if project_input.get("conversionGoals"):
