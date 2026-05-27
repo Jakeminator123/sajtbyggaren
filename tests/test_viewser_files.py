@@ -951,6 +951,14 @@ def test_project_input_picker_includes_prompt_inputs_directory() -> None:
     assert '"examples"' in text, (
         "examples/ måste fortsatt finnas kvar som Project Input-källa."
     )
+    assert "return null" in text and "JSON.parse" in text, (
+        "Korrupta Project Input-filer ska hoppas över lokalt i listProjectInputs "
+        "så en trasig fil inte 500:ar hela /api/runs."
+    )
+    assert "bySiteId.set(item.siteId, item)" in text, (
+        "listProjectInputs måste dedupe:a på siteId och låta prompt-inputs "
+        "vinna över examples när samma siteId finns i båda rötter."
+    )
 
 
 @pytest.mark.tooling
@@ -982,6 +990,37 @@ def test_run_history_can_show_prompt_project_id_and_version() -> None:
     )
     assert "prompt-inputs" in runs_lib and "projectId" in runs_lib, (
         "listRuns måste enrich:a runs med data/prompt-inputs/<siteId>.meta.json."
+    )
+
+
+@pytest.mark.tooling
+def test_runs_api_handles_missing_runs_dir_and_invalid_since() -> None:
+    runs_lib = (VIEWSER_DIR / "lib" / "runs.ts").read_text(encoding="utf-8")
+    trace_route = (
+        VIEWSER_DIR / "app" / "api" / "runs" / "[runId]" / "trace" / "route.ts"
+    ).read_text(encoding="utf-8")
+
+    assert 'code === "ENOENT"' in runs_lib and "return []" in runs_lib, (
+        "listRuns ska returnera tom lista när data/runs saknas i en färsk miljö."
+    )
+    assert "Ogiltigt since-timestamp" in runs_lib, (
+        "readRunTrace ska flagga ogiltig since i stället för att tyst "
+        "returnera hela trace-loggen igen."
+    )
+    assert "Ogiltigt since" in trace_route and "status: 400" in trace_route, (
+        "trace API ska rapportera ogiltig since som 400 inputfel."
+    )
+
+
+@pytest.mark.tooling
+def test_build_runner_latest_run_fallback_tolerates_missing_runs_dir() -> None:
+    text = (VIEWSER_DIR / "lib" / "build-runner.ts").read_text(encoding="utf-8")
+    function_start = text.index("async function detectLatestRunIdByMtime")
+    function_body = text[function_start : text.index("async function runBuildOnce")]
+
+    assert 'code === "ENOENT"' in function_body and "return null" in function_body, (
+        "detectLatestRunIdByMtime ska returnera null när data/runs saknas "
+        "så färska miljöer inte 500:ar efter en lyckad build utan stdout-runId."
     )
 
 

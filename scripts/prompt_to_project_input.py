@@ -2776,12 +2776,13 @@ def _load_discovery_file(path: Path) -> dict[str, Any]:
         raise SystemExit("--discovery payload måste ha schemaVersion 1 eller 2.")
     if schema_version == 2:
         directives = payload.get("directives")
-        if not isinstance(directives, dict):
-            raise SystemExit("--discovery schemaVersion=2 kräver directives.")
-        language = directives.get("language")
-        if not isinstance(language, str) or not language.strip():
+        if isinstance(directives, dict):
+            language = directives.get("language")
+        else:
+            language = None
+        if directives is not None and (not isinstance(language, str) or not language.strip()):
             raise SystemExit(
-                "--discovery schemaVersion=2 kräver directives.language."
+                "--discovery schemaVersion=2 kräver directives.language när directives skickas."
             )
     return payload
 

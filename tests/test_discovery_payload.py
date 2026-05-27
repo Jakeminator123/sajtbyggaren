@@ -105,6 +105,14 @@ def test_load_discovery_accepts_schema_version_2(tmp_path: Path) -> None:
 
 
 @pytest.mark.tooling
+def test_load_discovery_accepts_schema_version_2_without_directives(
+    tmp_path: Path,
+) -> None:
+    payload = _base_payload(schema_version=2)
+    assert _load_discovery_file(_write_payload(tmp_path, payload)) == payload
+
+
+@pytest.mark.tooling
 def test_load_discovery_rejects_future_schema_version(tmp_path: Path) -> None:
     payload = _base_payload(schema_version=3)
     with pytest.raises(SystemExit, match="schemaVersion 1 eller 2"):
@@ -117,7 +125,7 @@ def test_load_discovery_requires_language_for_schema_version_2(
 ) -> None:
     payload = _base_payload(schema_version=2)
     payload["directives"] = {"scaffoldHint": "local-service-business"}
-    with pytest.raises(SystemExit, match="directives.language"):
+    with pytest.raises(SystemExit, match="directives.language när directives skickas"):
         _load_discovery_file(_write_payload(tmp_path, payload))
 
 

@@ -75,7 +75,15 @@ async function assertDossierPathAllowed(absoluteDossierPath: string): Promise<vo
 
 async function detectLatestRunIdByMtime(): Promise<string | null> {
   const root = runsDir();
-  const entries = await fs.readdir(root, { withFileTypes: true });
+  let entries;
+  try {
+    entries = await fs.readdir(root, { withFileTypes: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return null;
+    }
+    throw error;
+  }
   const dirs = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
   if (!dirs.length) return null;
 
