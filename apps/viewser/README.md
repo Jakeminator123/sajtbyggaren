@@ -2,7 +2,9 @@
 
 `apps/viewser` är en **localhost-only operator-prototype** för Sajtbyggaren. Den
 binder ihop PromptBuilder, `scripts/build_site.py`, run history och preview av
-senaste run via StackBlitz. Inget i denna app deployas och inget i den är en
+senaste run via StackBlitz. Den kan deployas som preview/diagnostik-yta, men
+prompt-, build- och scrape-actions är lokala verktyg som shellar Python-skript
+och returnerar därför 501 i hosted Vercel-runtime. Inget i denna app är en
 canonical runtime; den är ett dev-verktyg före Sprint 4.
 
 ## Vad Viewser INTE är
@@ -13,7 +15,11 @@ canonical runtime; den är ett dev-verktyg före Sprint 4.
   Follow-up prompt versions finns i Viewser som operatörsflöde, men kontrakt och
   generation bor fortsatt i `packages/generation/` och scripts.
 - **Inte en publik produkt.** Det finns ingen auth eller rate-limit; servern
-  avvisar non-localhost-anrop.
+  avvisar non-localhost-anrop om inte specifika hosts whitelistats.
+- **Inte en hosted build-backend.** På Vercel visas UI/read-only-yta, men
+  actions som kräver `prompt_to_project_input.py`, `build_site.py` eller
+  `scrape_site.py` blockas med tydlig 501 tills Python-kedjan flyttas till
+  riktig backend-runtime.
 
 ## Stack
 

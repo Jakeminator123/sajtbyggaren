@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { runBuild } from "@/lib/build-runner";
+import {
+  hostedPythonRuntimeUnavailable,
+  isHostedVercelRuntime,
+} from "@/lib/hosted-python-runtime";
 import { assertLocalhost } from "@/lib/localhost-guard";
 import { runPromptToProjectInput } from "@/lib/prompt-runner";
 
@@ -191,6 +195,9 @@ async function runPromptBuildSerially(
 export async function POST(request: NextRequest) {
   const guard = assertLocalhost(request);
   if (guard) return guard;
+  if (isHostedVercelRuntime()) {
+    return hostedPythonRuntimeUnavailable("prompt-build");
+  }
 
   let payload: z.infer<typeof PromptPayloadSchema>;
   try {
