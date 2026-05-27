@@ -342,17 +342,17 @@ def run_policy_compliance_check(target_dir: Path) -> CheckResult:
 def _has_contact_cta(text: str) -> bool:
     for match in _CTA_LINK_RE.finditer(text):
         href = (match.group(1) or match.group(2) or "").lower()
-        body = re.sub(r"<[^>]+>", " ", match.group(3))
-        # A link is a valid contact CTA if:
-        # 1. It's a tel: or mailto: link (href check is sufficient), OR
-        # 2. It links to a contact-route page (substring matchar bl.a.
-        #    /kontakt, /kontakta-oss, /contact, /contact-us, /hitta-hit), OR
-        # 3. The body text matches CTA patterns (regardless of href)
-        if (
-            href.startswith(("mailto:", "tel:"))
-            or _is_contact_href(href)
-            or _CTA_TEXT_RE.search(body)
-        ):
+        # En länk räknas som contact-CTA när intent ligger i href:
+        #   - tel:/mailto:-protocollet är explicit
+        #   - href som länkar till en contact-route-sida (inkl.
+        #     /kontakta-oss + /hitta-hit per scaffold-katalogen)
+        # Body-text matchad mot ``_CTA_TEXT_RE`` räcker INTE ensamt —
+        # annars skulle ``<a href="/products">Ring oss</a>`` falskt
+        # godkännas (reviewer-fynd 2026-05-27 på f446be1:s OR-fix).
+        # ``_CTA_TEXT_RE`` är kvar som hjälpregex för framtida sprint
+        # där body-text + href-kombinationer kanske ska bedömas mer
+        # finkornigt; idag används den inte här.
+        if href.startswith(("mailto:", "tel:")) or _is_contact_href(href):
             return True
     return False
 

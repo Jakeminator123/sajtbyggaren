@@ -37,6 +37,17 @@ def test_contact_cta_presence_accepts_sv_and_en_ctas(tmp_path: Path) -> None:
     assert run_contact_cta_presence_check(tmp_path).status == "ok"
 
 
+def test_contact_cta_presence_rejects_cta_text_with_non_contact_href(tmp_path: Path) -> None:
+    # Reviewer-fynd 2026-05-27: efter f446be1 OR-fixen kunde
+    # <a href="/products">Ring oss</a> godkännas som contact-CTA bara för
+    # att body matchar "ring". Fix: page-länkar kräver BÅDE contact-route-
+    # href OCH CTA-text-mönster; bara tel:/mailto: får stå ensamma på href.
+    _site(tmp_path, '<a href="/products">Ring oss</a>', '<a href="tel:+46">Ring oss</a>')
+    result = run_contact_cta_presence_check(tmp_path)
+    assert result.status == "failed"
+    assert any("hero" in finding for finding in result.findings)
+
+
 def test_contact_cta_presence_accepts_scaffold_specific_routes(tmp_path: Path) -> None:
     # agency-studio/clinic-healthcare/professional-services använder
     # /kontakta-oss. GPT P2 Badge + BugBot suggestion 4 (2026-05-27).
