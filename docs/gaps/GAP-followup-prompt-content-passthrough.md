@@ -5,7 +5,7 @@ id: GAP-followup-prompt-content-passthrough
 type: Gap/Builder
 owner: jakob
 title: Follow-up prompt content passthrough
-status: open
+status: queued
 source: operator verification 2026-05-27
 ```
 

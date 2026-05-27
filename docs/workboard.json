@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-26T22:30:00Z",
-  "updatedBy": "cursor-cloud-steward",
+  "updatedAt": "2026-05-27T21:00:00Z",
+  "updatedBy": "cursor-agent-cleanup-pass",
   "people": {
     "jakob": {
       "allocation": 0.75,
@@ -61,15 +61,98 @@
   ],
   "queuedGaps": [
     {
+      "id": "GAP-windows-safe-rebuild-pipeline",
+      "type": "Gap/Backend",
+      "owner": "jakob",
+      "title": "Windows-safe rebuild pipeline (immutable build-dir + pointer-swap)",
+      "collisionRisk": "yellow",
+      "reviewer": "jakob",
+      "status": "queued",
+      "file": "docs/gaps/GAP-windows-safe-rebuild-pipeline.md",
+      "createdAt": "2026-05-27T18:00:00Z",
+      "paths": [
+        "scripts/build_site.py",
+        "apps/viewser/lib/local-preview-server.ts",
+        "apps/viewser/lib/build-runner.ts",
+        "data/runs/**",
+        "governance/policies/repo-boundaries.v1.json",
+        "tests/test_immutable_builds.py"
+      ],
+      "doNotTouch": [
+        "apps/viewser/components/**",
+        "packages/preview-runtime/**"
+      ],
+      "acceptanceCriteria": [
+        "copy_starter() skriver till builds/<timestamp>/ i stället för target. Ny helper write_active_pointer().",
+        "current.json (pointer-fil) bestämmer vilken build UI ska visa.",
+        "Atomär rename för pointer-swap så kill -9 mid-swap inte ger korrupt state.",
+        "Aktiv next start fortsätter köra mot gammal build under nytt bygge — ingen rmtree-konflikt.",
+        "Delayed GC-jobb tar bort gamla builds (policy: keep latest 5 eller alla < 24h).",
+        "Per-siteId-mutex bibehållen för att undvika simultana parallella builds.",
+        "Reproducerar B157-trigger lokalt utan att generera WinError 5."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q"
+      ],
+      "note": "Akut-fix nivå 1 (B157 closure, adba139) stoppar live preview-server före build_site.py spawnas. Detta GAP täcker nivå 4 — immutable builds/<timestamp>/ + manifest-pointer-swap (Vercel-likt). Egen sprint per gap-spec. Anti-patternet 'rebuilda ovanpå live output-katalog' kvarstår tills nivå 4 landar. relatedBugs: B157."
+    },
+    {
+      "id": "GAP-followup-prompt-content-passthrough",
+      "type": "Gap/Builder",
+      "owner": "jakob",
+      "title": "Follow-up prompt content passthrough — fri text når codegen",
+      "collisionRisk": "yellow",
+      "reviewer": "jakob",
+      "status": "queued",
+      "file": "docs/gaps/GAP-followup-prompt-content-passthrough.md",
+      "createdAt": "2026-05-27T18:00:00Z",
+      "paths": [
+        "governance/schemas/project-input.schema.json",
+        "packages/generation/brief/extract.py",
+        "scripts/prompt_to_project_input.py",
+        "scripts/build_site.py",
+        "packages/generation/planning/plan.py",
+        "packages/generation/build/renderers.py",
+        "packages/generation/codegen/codegen.py",
+        "tests/test_followup_copy_directives.py"
+      ],
+      "doNotTouch": [
+        "apps/viewser/components/**"
+      ],
+      "acceptanceCriteria": [
+        "Följdprompt 'inkludera TEST-JAKOB i hero' producerar ny version där TEST-JAKOB syns i renderad hero-copy och i app/page.tsx.",
+        "Följdprompt 'gör allt mycket ljusare' producerar antingen mätbar token-/style-ändring eller ärligt FloatingChat-svar.",
+        "Site Brief, Project Input, Site Plan, Generation Package och build-result redovisar var direktivet tolkades och om det applicerades.",
+        "Rå följdprompt renderas aldrig okontrollerat som kundcopy.",
+        "Pinned scaffold/variant förblir auktoritativa; copy-direktiv passerar bredvid.",
+        "Regressionstester täcker både lyckad copy-passthrough och no-op-feedback."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q"
+      ],
+      "note": "Operatör-reproducerad 2026-05-27. Två cases: 'Allt ska vara mycket ljusare' (v2->v3) och 'inkludera TEST-JAKOB i hero' (v3->v4). Båda passerade igenom som no-op. Strukturerade fält saknas i Site Brief/Project Input för fri copy-edit. Rekommenderad lösning A i GAP-fil (copyDirectives[]) + lösning B (ärlig FloatingChat-feedback). Träffar kärnflödet 'följdprompt → ny version'."
+    }
+  ],
+  "activeGaps": [],
+  "completedGaps": [
+    {
       "id": "GAP-backend-build-trace-endpoint",
       "type": "Gap/Runtime",
       "owner": "jakob",
       "title": "Build-trace endpoint + baseRunId i /api/prompt — unlocks Live Build Sync A+D",
       "collisionRisk": "yellow",
       "reviewer": "christopher",
-      "status": "queued",
+      "status": "completed",
       "file": "docs/gaps/GAP-backend-build-trace-endpoint.md",
       "createdAt": "2026-05-25T02:35:00Z",
+      "completedAt": "2026-05-25T16:41:27Z",
       "paths": [
         "apps/viewser/app/api/runs/[runId]/trace/route.ts",
         "apps/viewser/app/api/prompt/route.ts",
@@ -98,11 +181,14 @@
         "python -m pytest tests/ -q",
         "cd apps/viewser && npx tsc --noEmit"
       ],
-      "note": "UI-skriven backend-spec. Blockerar Live Build Sync A (real pipeline-status) och D (iterera från version N med riktig PI-snapshot). UI har workaround idag (prompt-prefix) som automatiskt uppgraderas till baseRunId så fort backend stödjer det. 2026-05-25 04:24: Christopher implementerade hela gapet under operator-OK scope-leak (`origin/christopher-ui` commit `74a355b`) — 3 endpoints + bug-hunt + tester. Owner kvar 'jakob' i workboard så Sprintvakt-lane-policy passerar (samma precedent som plan.py-fix i PR #68). PR från `christopher-ui` mot `main` väntar — Jakob är reviewer."
-    }
-  ],
-  "activeGaps": [],
-  "completedGaps": [
+      "fixCommits": [
+        "74a355b",
+        "fe7a9e4"
+      ],
+      "notes": [
+        "UI-skriven backend-spec. Christopher implementerade hela gapet under operator-OK scope-leak (origin/christopher-ui commit 74a355b) — 3 endpoints + bug-hunt + tester. Mergad till main via PR #105 (commit fe7a9e4 2026-05-25T16:41:27Z). Verifierad 2026-05-27: apps/viewser/app/api/runs/[runId]/trace/route.ts existerar och implementerar specat kontrakt med runStatus + events + ?since=<timestamp>-stöd. Owner kvar 'jakob' så Sprintvakt-lane-policy passerar (samma precedent som plan.py-fix i PR #68)."
+      ]
+    },
     {
       "id": "GAP-viewser-restaurant-wizard-hint",
       "type": "Gap/UI",

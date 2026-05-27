@@ -5,7 +5,7 @@ id: GAP-windows-safe-rebuild-pipeline
 type: Gap/Backend
 owner: jakob
 title: Windows-safe rebuild pipeline (immutable build-dir + pointer-swap)
-status: open
+status: queued
 source: extern reviewer-analys 2026-05-27 efm
 relatedBugs: [B157]
 relatedArchitecture: [ADR 0028 Runtime Ladder, ADR 0030 Preview-Provider Portability]
