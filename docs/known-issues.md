@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 13 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 127 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 14 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 127 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -307,6 +307,52 @@ integrate christopher-ui discovery and asset workflow`, merge
   preview", och `docs/integrations/webcontainers-notes.md`. Källa:
   operatörrapport 2026-05-18 (post-B123/B124-diskussion). Fix: open.
   Test: open.
+
+- **`B154` Medel** - `npm run dev` i en byggd dev-preview (här
+  `../sajtbyggaren-output/.generated/foretag-som-arbetar-med-f77c5a`,
+  starter `commerce-base`, scaffold `ecommerce-lite`, variant
+  `noir-editorial`, language `sv`) hostar Next 16.2.6 webpack-läget
+  korrekt och svarar 200 på `/`, `/produkter`, `/om-oss`, `/kontakt`,
+  men klienten tappar med `Uncaught ReferenceError: Cannot access 'w'
+  before initialization` direkt vid hydration på första render. Felet
+  reproduceras på en sajt operatören byggt utan att modifiera koden
+  manuellt (rå deterministic-v1 codegen, `fileCount: 7`,
+  `modelUsed: deterministic`) — det är alltså vår startergenererade
+  output som hostar TDZ-fällan, inte operatör-skriven kod. Hypoteser
+  i fallande sannolikhet: (a) webpack chunk-splittings-ordning i Next
+  16 mot ett av `commerce-base`-beroendena (`shadcn`, `@headlessui/
+  react`, `class-variance-authority`, `geist`, `sonner`,
+  `tw-animate-css`); (b) `lucide-react`-import-mönstret i
+  `render_home`/`render_layout` som ADR 0020 redan flaggar för
+  upstream-instabilitet (relaterar till `B145` cross-repo-signal); (c)
+  cirkulär import i någon av de patchade page-filerna
+  (`render_layout`/`render_home`/`render_products`/`render_about`/
+  `render_contact`) som webpack hoistar i fel ordning. Effekten är
+  produkt-blocker för "öppna `.generated/<siteId>` direkt och `npm
+  run dev`"-flödet som operatören använder som primär verifierings-
+  väg utanför StackBlitz-iframen. StackBlitz-payloaden går genom
+  `npm run build && npm run start` (per ADR 0021) som är en annan
+  kodväg och därför INTE direkt påverkad — embeddet i Viewser-UI:t
+  kan fortfarande boota grönt även när lokal `next dev` fallerar.
+  Reproduktion: starta `scripts/build_site.py` med ovan dossier (eller
+  återanvänd run `20260527T073010.180Z-ab84e4d1-foretag-som-arbetar-
+  med-f77c5a` vars artefakter ligger kvar under `data/runs/`), kör
+  sedan `npm run dev` i `.generated/<siteId>/` och öppna DevTools-
+  Console på första GET `/`. Fix-skiss: (1) lägg en minimal smoke-
+  test som spawnar `next dev` mot en deterministisk
+  `ecommerce-lite/noir-editorial`-build och fångar 'Cannot access X
+  before initialization' i child-stdout/stderr, (2) bisect mellan
+  `commerce-base`-dependency-pinningar och `render_*`-import-ordning
+  för att lokalisera felkällan, (3) följdpatch i `packages/generation/
+  build/renderers.py` om felkällan är import-ordning, eller separat
+  starter-bump om det är ett WebContainer-orelaterat upstream-
+  problem (kvarstår i lokal `next dev`). Aktiv operator-workaround:
+  använd Viewser-UI:ts StackBlitz-embed (`VIEWSER_PREVIEW_MODE=
+  stackblitz` i `.env`) eller bygg om produktionsläge (`npm run build
+  && npm run start`) i `.generated/<siteId>/` — det undviker dev-
+  läge-TDZ:n. Källa: operatör 2026-05-27 (v3-follow-up "Allt sla vara
+  mycket ljusare" på siteId `foretag-som-arbetar-med-f77c5a`). Fix:
+  open. Test: open.
 
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
   subprocess-status och loggutdrag medan körningen pågår, men riktig
