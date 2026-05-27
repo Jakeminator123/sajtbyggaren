@@ -67,8 +67,8 @@ och skriver `briefSource=mock-no-key` respektive `planSource=mock-no-key`.
 
 ## Artefakter att verifiera per run
 
-Varje `data/runs/<runId>/` ska innehålla åtta JSON-filer plus en
-genererad-filer-snapshot:
+Varje `data/runs/<runId>/` ska innehålla åtta canonical run-artefakter
+plus en generated-files-snapshot (`trace.ndjson` är NDJSON, övriga är JSON):
 
 - `input.json`
 - `site-brief.json`
@@ -94,8 +94,9 @@ semantiska merge-kontraktet (tone shift, projectDna, ärvd discovery-beslut).
 
 ## Vad som inte ingår i v1
 
-Codegen-fasen kör en deterministisk codegen v1-manifest från
-`packages/generation/codegen/`. Riktiga codegenModel-anrop och mekaniska
-repair-fixes är Sprint 3B (ADR 0017) och ligger utanför denna låsning.
-Pipelinen är redan wired; det är bara LLM-grenen i codegen-steget som är
-stubbad.
+Codegen-fasen kör ett deterministiskt codegen v1-manifest från
+`packages/generation/codegen/`. Riktiga codegenModel-anrop och full
+Sprint 3B-codegen/repair-gren (ADR 0017) ligger utanför denna låsning.
+Pipelinen är redan wired och vissa mekaniska repair-fixes finns redan
+under `packages/generation/repair/fixes/`; det är LLM-grenen i
+codegen-steget och resten av Sprint 3B-omfånget som är stubbat.
