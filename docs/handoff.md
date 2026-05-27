@@ -39,8 +39,11 @@ startar utan ModuleNotFoundError. Editable install (`pip install -e .`)
 krävs en gång per venv enligt ADR 0029.
 
 **Direkt nästa spår:** se [`docs/current-focus.md`](current-focus.md)
-"Direkt nästa fokus". Aktuell status: PR #133 öppen och redo för
-operatörens merge; därefter Bite B + B157-val + ADR 0034.
+"Direkt nästa fokus". Aktuell status: B157 stängd via akut-fix +
+followup-fix (regression-test säkrar), inga öppna PRs. Priorordning
+nu: manuell B157-end-to-end-verifiering → Bite B (PreviewRuntime
+wiring local + stackblitz) → B157 nivå-4 (immutable build-dir) →
+ADR 0034 (B155 ärlig först).
 
 **Parkerade lanes (väntar trigger):**
 
@@ -77,15 +80,19 @@ väljs.
   `python scripts/sprintvakt_check.py` ska vara grönt innan nytt arbete
   startar.
 
-**1 öppen PR:** #133 (`jakob-be → main`), öppen och ready-for-review-läge
-efter coach-godkänd sanning-städning, väntar på operatörens slutgodkända
-merge. Tidigare not: PR #69 stängd, senaste merge till main PR #120
-(2026-05-26 PM).
+**Inga öppna PRs.** PR #133 mergad till `main` (senaste merge före
+denna handoff). PR #69 stängd, PR #120 (2026-05-26 PM) tidigare merge.
 
-**Öppna gaps på workboarden:** 1 queued gap:
-`GAP-backend-build-trace-endpoint` — Christopher-implementerat under
-operator-OK scope-leak, väntar PR från `christopher-ui` mot `main`. Inga
-aktiva gaps.
+**Öppna gaps på workboarden:** 2 queued gaps + 0 active +
+1 completed-i-detta-pass.
+
+- `queued`: `GAP-windows-safe-rebuild-pipeline` (immutable build-dir +
+  pointer-swap, B157 nivå-4-spår)
+- `queued`: `GAP-followup-prompt-content-passthrough` (fri text når
+  codegen, kärnflödes-fix)
+- `completed`: `GAP-backend-build-trace-endpoint` — Christopher-
+  implementerat under operator-OK scope-leak, mergat via PR #105
+  (commit `fe7a9e4`, 2026-05-25T16:41:27Z). Verifierad 2026-05-27.
 
 **Christopher-scope-leak-precedent från PR #68:** två backend-commits
 (`acc6265` planner-fix i `plan.py`, `a44740a` resolver-fix i `resolve.py`)

@@ -59,54 +59,50 @@ Nya commits sedan PR #133 mergades till `main`:
 
 ## Pågående/öppna PR:s just nu
 
-**Draft-PR #133 (`jakob-be → main`) öppen — alla reviewer-trådar
-adresserade.** Samlar hela post-Bite-A-batchen + alla 4 BugBot-
-suggestions + GPT P2 Badge contact-route-fix. Cloud-grind-batchen
-2026-05-27 fm är helt hemma (7 PRs mergade till `jakob-be`). Bug-
-räkning: **16 aktiva** (B157 ny) / 0 misplaced / 5 unknown / 128 stängda.
-`jakob-be` är 25 commits framför `origin/main`.
-
-**Nästa konkret operatörssteg:** `gh pr ready 133` → CI passerar →
-`gh pr merge 133 --squash`. Allt tekniskt grönt; bara klick saknas.
+**Inga öppna PRs.** PR #133 mergad till `main` (post-Bite-A-batch +
+alla reviewer-trådar). B157 akut-fix + followup landade direkt på
+`jakob-be` ovanpå `4196c17` post-merge-bumpen.
 
 **Christophers `origin/christopher-ui`** — efter PR #117 är hans branch
 synkad mot post-#117-main. Han har under operator-OK scope-leak
 implementerat hela `GAP-backend-build-trace-endpoint` (3 endpoints + UI +
-5 bug-hunt-fixes). Ej PR:ad mot `main`; Jakob är reviewer. Workboardens
-`owner` är medvetet kvar på `jakob` så Sprintvakt-lane-policyn passerar.
+5 bug-hunt-fixes). Mergad via PR #105 / commit `fe7a9e4`; flyttad till
+`completedGaps` i `docs/workboard.json`. Workboardens `owner` är
+medvetet kvar på `jakob` så Sprintvakt-lane-policyn passerar.
 
 ## Direkt nästa fokus
 
-### Steg 0: mergea PR #133 (operatörens klick)
+### Prioordning post-B157-stängning
 
-`gh pr ready 133` → vänta in CI grön → `gh pr merge 133 --squash`.
-**Inga kvarvarande reviewer-trådar.** Detta avblockar resten.
-
-### Efter #133-merge — i prioordning
-
-1. **Bite B (PreviewRuntime wiring)** — builder-prompt finns redan i
+1. **Manuell B157-end-to-end-verifiering** (operatörsuppgift, ~5 min) —
+   kör follow-up på commerce-base-site med lockfile-drift, förvänta
+   ingen `PermissionError: [WinError 5]`. Strukturella regression-
+   tester finns redan (`tests/test_local_preview_server_b157_followup.py`),
+   men en faktisk end-to-end-körning bevisar reap-fixet i naturlig miljö.
+2. **Bite B (PreviewRuntime wiring)** — builder-prompt finns redan i
    `docs/agent-prompts/preview-runtime-bite-b.md`. Wirear `localRuntime`
    + `stackblitzRuntime` adaptrar mot existerande `apps/viewser/lib/`-
    helpers. Self-contained prompt; klistras in i ny agent-session.
-   ~2-4h. Inga UI-ändringar (Bite C kräver Christopher).
-2. **B157 fix (Windows-safe rebuild)** — registrerad efter extern
-   reviewer-analys 2 (WinError 5 på live `node_modules`). Operatörsval:
-   - **(a) Akut fix** (process-stop före `copy_starter`, < 2h) —
-     räddar nuvarande iteration.
-   - **(b) Nivå-4 sprint** (immutable build-dir + pointer-swap, 12-16h)
-     — arkitektur-rätt.
-   - **(c) Vänta** tills Bite B + ev. `vercel-preview`-adapter
-     (24-32h, kräver naming-dict v18).
-   Fix-laddare i `docs/gaps/GAP-windows-safe-rebuild-pipeline.md`.
-3. **ADR 0034 — väg (b) "ärlig först"** (B155). FloatingChat markerar
+   ~2-4h. Inga UI-ändringar (Bite C kräver Christopher). Vercel-
+   preview/Fly/static-export-adaptrar lämnas för senare sprint.
+3. **B157 nivå-4 (Windows-safe rebuild, immutable build-dir + pointer-
+   swap)** — arkitektur-rätta lösningen, 12-16h. Akut nivå-1 +
+   followup-fix räddar 99% av case idag, men anti-patternet "rebuilda
+   ovanpå live output-katalog" kvarstår tills nivå-4 landar. Spec i
+   `docs/gaps/GAP-windows-safe-rebuild-pipeline.md`.
+4. **ADR 0034 — väg (b) "ärlig först"** (B155). FloatingChat markerar
    när följdprompt inte gav synlig effekt. Liten kodändring, kräver
    Christopher-koordinering (UI-yta).
-4. **Quality-gate scaffold-routes-discovery** (tech-debt från `0b40b8d`).
+5. **Quality-gate scaffold-routes-discovery** (tech-debt från `0b40b8d`).
    Läs scaffoldens `routes.json` direkt istället för pattern-matching
    `kontakt`/`contact`/`hitta-hit`-fragmenten. Egen sprint, ej akut.
-5. **B156 follow-up: browser-hydration-smoke** — headless
+6. **B156 follow-up: browser-hydration-smoke** — headless
    playwright/puppeteer ersätter chunk-heuristik. Egen sprint, ej akut.
-6. **Städning** (operatörsbeslut, radera eller resurrect:a):
+7. **Worktree- och städ-cleanup** (operatörsbeslut):
+   - Adapter-WIP på `cursor/preview-runtime-adapters` (worktreen
+     `C:/Users/jakem/Desktop/sajtbyggaren-worktrees/preview-runtime-adapters`)
+     — innehåller vercel-sandbox-adapter-skiss, naming-dict v18-bump,
+     fly-stub. Bör snapshot:as till `origin` innan worktreen rensas.
    - `origin/cursor/dossier-intake-v11-review-895d` (3 commits, ingen PR).
    - `origin/cursor/jakob-be-viewser-local-next-preview` (PR #85 stängd,
      innehåll inne via #88/#92/#97/#100/#101).
