@@ -216,9 +216,32 @@ i planning. Större arbete på `scripts/build_site.py`. Kräver att Lane 2
 6. Steward uppdaterar `docs/current-focus.md` och `docs/handoff.md`
    post-merge — inte under sprinten.
 
+## Referensmaterial (rådata, inte canonical)
+
+För agenter som vill djupdyka i underliggande resonemang finns tre
+primärkällor under [`llm-golden-path-references/`](llm-golden-path-references/):
+
+- [`scout-audit.md`](llm-golden-path-references/scout-audit.md) — den
+  read-only Scout-audit som bestämde att sprinten skulle bli en
+  låsning av befintligt flöde, inte ny pipeline. Innehåller fullständig
+  filkartläggning och risklistor.
+- [`coach-architecture-notes.md`](llm-golden-path-references/coach-architecture-notes.md)
+  — en extern coach-LLM:s 12-stegs-pipeline-skiss och rekommenderade
+  LLM-roller. Mental modell, inte canonical. Innehåller mappning från
+  coachens föreslagna namn till befintliga begrepp i repo:t.
+- [`reviewer-feedback.md`](llm-golden-path-references/reviewer-feedback.md)
+  — extern reviewer-feedback på PR #124, inklusive branch-disciplin-
+  rekommendation och wording-nits som åtgärdats.
+
+Dessa filer är **primärkällor**, inte beslut. Operatören har redan
+filtrerat dem genom Scout, handoff-doc:en och PR-besluten. Använd dem
+om du behöver kontext för nästa större beslut, inte som löpande
+referens.
+
 ## Sprintens leverans i en mening
 
-LLM Golden Path v1 är låst i två testfunktioner, ett multi-step
-chain-test och en runbook — så att hela kedjan från fri prompt till
-versionerad follow-up är bevisbart körbar, deterministisk utan
-OpenAI-key, och dokumenterad för nästa agent.
+LLM Golden Path v1 är låst i tre testfunktioner, en multi-step
+chain-test och en real Next.js build-test plus en runbook och en
+handoff-doc — så att hela kedjan från fri prompt till versionerad
+follow-up är bevisbart körbar, deterministisk utan OpenAI-key, och
+dokumenterad för nästa agent.
