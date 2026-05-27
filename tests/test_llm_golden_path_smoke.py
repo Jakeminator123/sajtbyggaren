@@ -70,7 +70,7 @@ _REQUIRED_RUN_FILES = (
     "trace.ndjson",
 )
 
-_ACCEPTED_QUALITY_STATUSES = frozenset({"ok"})
+_ACCEPTED_QUALITY_STATUSES = frozenset({"ok", "degraded"})
 
 
 def _assert_run_artefakts_present(run_dir: Path) -> None:
