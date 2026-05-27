@@ -200,7 +200,7 @@ def test_run_quality_gate_aggregates_to_ok_when_all_pass(tmp_path):
     )
     assert isinstance(result, QualityResult)
     assert result.status == "ok"
-    assert len(result.checks) == 4
+    assert len(result.checks) == 6
 
 
 @pytest.mark.tooling

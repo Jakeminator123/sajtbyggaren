@@ -287,8 +287,8 @@ def test_degraded_quality_propagates_to_build_status():
 @pytest.mark.tooling
 def test_quality_result_payload_has_real_checks_not_skeleton():
     """Black-box read of the wiring: the runtime payload that ends up in
-    quality-result.json must contain a ``checks`` list with the four
-    Sprint 3A check names, not the legacy ``status=not-run`` shape.
+    quality-result.json must contain the registered ``checks`` list,
+    not the legacy ``status=not-run`` shape.
     """
     from packages.generation.quality_gate import run_quality_gate
 
@@ -305,10 +305,8 @@ def test_quality_result_payload_has_real_checks_not_skeleton():
     assert "checks" in payload
     check_names = {c["name"] for c in payload["checks"]}
     assert check_names == {
-        "typecheck",
-        "route-scan",
-        "build-status",
-        "policy-compliance",
+        "typecheck", "route-scan", "build-status", "policy-compliance",
+        "contact-cta-presence", "placeholder-copy-scan",
     }
     for check in payload["checks"]:
         assert check["status"] != "not-run", (
