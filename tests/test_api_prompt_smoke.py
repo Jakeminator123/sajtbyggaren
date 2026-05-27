@@ -97,9 +97,17 @@ def _wait_for_server(process: subprocess.Popen[str], port: int) -> None:
 def _stop_process(process: subprocess.Popen[str]) -> None:
     if process.poll() is not None:
         return
-    # Race: process may exit between the poll() above and the kill below.
-    # On POSIX os.killpg() then raises ProcessLookupError. Swallow it so
-    # the cleanup never crashes and resources still get reaped via wait().
+    # Defensive cleanup: never crash, even if the process resists every
+    # termination signal we try.
+    #   - Race: the process may exit between the poll() above and the kill
+    #     below. On POSIX os.killpg() then raises ProcessLookupError.
+    #   - Stuck process: SIGKILL/Popen.kill() can also fail to reap a
+    #     process that sits in POSIX D-state (uninterruptible sleep) or
+    #     similar kernel blockage. The post-SIGKILL wait would then raise
+    #     subprocess.TimeoutExpired.
+    # Both exceptions are swallowed silently — if neither SIGTERM nor
+    # SIGKILL works, the test cannot do more, and surface logs/zombies
+    # stay for the operator to triage.
     try:
         if sys.platform != "win32":
             # Unix: use killpg to terminate the process group (preexec_fn=os.setsid created a group)
@@ -119,7 +127,10 @@ def _stop_process(process: subprocess.Popen[str]) -> None:
                 process.kill()
         except ProcessLookupError:
             return
-        process.wait(timeout=10)
+        try:
+            process.wait(timeout=10)
+        except (subprocess.TimeoutExpired, ProcessLookupError):
+            return
 
 
 def _post_prompt(port: int) -> tuple[int, dict[str, object]]:
