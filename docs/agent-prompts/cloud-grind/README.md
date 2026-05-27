@@ -56,10 +56,11 @@ Cloud-agenten **rör inte** `apps/viewser/components/**`, `apps/viewser/app/**/*
 
 Innan en agent börjar, ska VM:n ha:
 
-- Repot klonat till en arbets-katalog och `git switch jakob-be` körts.
+- Repot klonat till en arbets-katalog och `git switch jakob-be` + `git pull origin jakob-be` körda så HEAD matchar `origin/jakob-be` (annars riskerar agenten merge-konflikter mot ändringar pushade strax innan).
+- På Ubuntu Noble (default cloud-VM): `sudo apt-get install -y python3-venv` körd innan venv skapas. Det versionerade `python3.12-venv`-paketet kan saknas i sources; meta-paketet drar in det. (Empiriskt observerat i cloud-grind-pass 2026-05-27 — PR #128.)
 - `pip install -r requirements.txt` körd (för python-guards + ev. nya deps som promptarna lägger till).
 - `cd apps/viewser && npm install` körd om prompten ska köra UI-typecheck/lint.
 - `git config user.name` + `git config user.email` satta så commits får rätt author.
-- GitHub-push-token (Personal Access Token eller GitHub App-installation) konfigurerad så `git push origin jakob-be` lyckas.
+- GitHub-push-token (Personal Access Token eller GitHub App-installation) konfigurerad så `git push origin <feature-branch>` lyckas.
 
 Om något av detta saknas: cloud-agenten ska stoppa direkt med felmeddelande till operatören istället för att försöka workaround-fixa.
