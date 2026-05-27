@@ -68,11 +68,32 @@ export function normalizePreviewMode(raw: string | undefined): PreviewRuntimeKin
 }
 
 /**
- * Hämta nuvarande `PreviewRuntimeKind` från `VIEWSER_PREVIEW_MODE`. Defaults
- * till `"local"` per `apps/viewser/.env.example` (`VIEWSER_PREVIEW_MODE=local-next`).
+ * Hämta nuvarande `PreviewRuntimeKind` från `VIEWSER_PREVIEW_MODE`.
+ *
+ * Failure-modell:
+ *   - Tomt eller osatt env → `"local"` (default per `apps/viewser/.env.example`).
+ *   - Explicit men okänt värde (typo som `stackblitzz`) → kastar `Error` med
+ *     vägledning. Tyst fallback till `local` skulle dölja misskonfiguration —
+ *     adapter-abstraktionen ska göra preview-mode mer explicit, inte
+ *     enklare att gissa fel på.
+ *
+ * Konsumenter som vill ha tyst fallback ska anropa `normalizePreviewMode()`
+ * direkt och hantera `null`-utfallet själva.
  */
 export function currentKind(env: NodeJS.ProcessEnv = process.env): PreviewRuntimeKind {
-  return normalizePreviewMode(env.VIEWSER_PREVIEW_MODE) ?? "local";
+  const raw = env.VIEWSER_PREVIEW_MODE?.trim();
+  if (!raw) {
+    return "local";
+  }
+  const normalized = normalizePreviewMode(raw);
+  if (normalized === null) {
+    throw new Error(
+      `Okänt VIEWSER_PREVIEW_MODE: '${raw}'. Giltiga värden: local, ` +
+        `local-next, stackblitz, fly, auto. Kontrollera .env eller ` +
+        `process.env.VIEWSER_PREVIEW_MODE.`,
+    );
+  }
+  return normalized;
 }
 
 /**
