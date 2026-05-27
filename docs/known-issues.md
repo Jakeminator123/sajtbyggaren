@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 13 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 128 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 14 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 128 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -307,6 +307,19 @@ integrate christopher-ui discovery and asset workflow`, merge
   preview", och `docs/integrations/webcontainers-notes.md`. Källa:
   operatörrapport 2026-05-18 (post-B123/B124-diskussion). Fix: open.
   Test: open.
+
+- **`B155` Medel-Hög** - Följdpromptar som uttrycker fri copy- eller
+  stiländring bevaras som metadata men passerar inte till renderer/codegen
+  som applicerbara direktiv. Operatörsverifiering 2026-05-27 visade att
+  "Allt sla vara mycket ljusare" inte gjorde en noir/editorial/mörk sajt
+  ljusare, och att en prompt som bad om `TEST-JAKOB` i hero och övrig
+  text inte gav någon förekomst i `app/page.tsx`. Audit visar att
+  `scripts/prompt_to_project_input.py` bara mergar stödda strukturerade
+  fält/intent, att `planSource="pinned"` skippar planningModel och att
+  renderers/codegen saknar fält för fri copy-edit. Gap-spec:
+  `docs/gaps/GAP-followup-prompt-content-passthrough.md`. ADR-utkast:
+  `governance/decisions/0034-followup-prompt-content-passthrough.md`.
+  Fix: open. Test: open.
 
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
   subprocess-status och loggutdrag medan körningen pågår, men riktig

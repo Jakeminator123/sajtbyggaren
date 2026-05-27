@@ -8,15 +8,33 @@ the result to ``data/runs/<runId>/quality-result.json``.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from .checks import (
     run_build_status_check,
+    run_contact_cta_presence_check,
+    run_placeholder_copy_scan_check,
     run_policy_compliance_check,
     run_route_scan_check,
     run_typecheck_check,
 )
 from .models import CheckResult, QualityResult, QualityStatus
+
+_CHECKS_REGISTRY: tuple[tuple[str, Literal["blocking", "warning"]], ...] = (
+    ("typecheck", "blocking"),
+    ("route-scan", "blocking"),
+    ("build-status", "blocking"),
+    ("policy-compliance", "blocking"),
+    ("contact-cta-presence", "warning"),
+    ("placeholder-copy-scan", "warning"),
+)
+_CHECK_SEVERITY = dict(_CHECKS_REGISTRY)
+
+
+def _with_registry_severity(check: CheckResult) -> CheckResult:
+    return check.model_copy(
+        update={"severity": _CHECK_SEVERITY.get(check.name, check.severity)}
+    )
 
 
 def _aggregate_status(checks: list[CheckResult]) -> QualityStatus:
@@ -27,7 +45,8 @@ def _aggregate_status(checks: list[CheckResult]) -> QualityStatus:
     blocking checks are ok/skipped.
     ``ok`` otherwise.
     """
-    by_name = {check.name: check for check in checks}
+    blocking_checks = [c for c in checks if c.severity == "blocking"]
+    by_name = {check.name: check for check in blocking_checks}
 
     blocking_failed = (
         by_name.get("typecheck", None)
@@ -53,14 +72,30 @@ def _aggregate_status(checks: list[CheckResult]) -> QualityStatus:
 
 
 def _summary_from_checks(checks: list[CheckResult], status: QualityStatus) -> str:
-    failed = [c.name for c in checks if c.status == "failed"]
+    """Build the operator-facing one-line summary.
+
+    Splits failed checks by severity so the summary cannot contradict
+    ``status``: blocking failures appear as ``failed=...`` (and drive
+    ``status`` to ``degraded``/``failed``), warning failures appear as
+    ``warning=...`` (do not lower ``status`` from ``ok``).
+    """
+    blocking_failed = [
+        c.name for c in checks
+        if c.status == "failed" and c.severity == "blocking"
+    ]
+    warning_failed = [
+        c.name for c in checks
+        if c.status == "failed" and c.severity == "warning"
+    ]
     skipped = [c.name for c in checks if c.status == "skipped"]
     parts = [f"status={status}"]
-    if failed:
-        parts.append(f"failed={','.join(failed)}")
+    if blocking_failed:
+        parts.append(f"failed={','.join(blocking_failed)}")
+    if warning_failed:
+        parts.append(f"warning={','.join(warning_failed)}")
     if skipped:
         parts.append(f"skipped={','.join(skipped)}")
-    if not failed and not skipped:
+    if not blocking_failed and not warning_failed and not skipped:
         parts.append("alla checks ok")
     return " ".join(parts)
 
@@ -89,10 +124,14 @@ def run_quality_gate(
       node_modules state (used by --skip-build paths and tests).
     """
     checks = [
-        run_typecheck_check(target_dir, do_typecheck=do_typecheck),
-        run_route_scan_check(target_dir, required_routes),
-        run_build_status_check(build_status=build_status, npm_steps=npm_steps),
-        run_policy_compliance_check(target_dir),
+        _with_registry_severity(run_typecheck_check(target_dir, do_typecheck=do_typecheck)),
+        _with_registry_severity(run_route_scan_check(target_dir, required_routes)),
+        _with_registry_severity(
+            run_build_status_check(build_status=build_status, npm_steps=npm_steps)
+        ),
+        _with_registry_severity(run_policy_compliance_check(target_dir)),
+        _with_registry_severity(run_contact_cta_presence_check(target_dir)),
+        _with_registry_severity(run_placeholder_copy_scan_check(target_dir)),
     ]
     status = _aggregate_status(checks)
     summary = _summary_from_checks(checks, status)

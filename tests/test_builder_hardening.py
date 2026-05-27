@@ -764,9 +764,8 @@ def test_repair_and_quality_results_are_not_skeleton(
     The artefakter must:
       - Use the new statuses (quality: ok/degraded/failed; repair:
         not-needed/no-fix-applied/fixed/partial-fix), never ``not-run``.
-      - Carry a ``checks`` array on quality-result.json with the four
-        Sprint 3A check names (typecheck, route-scan, build-status,
-        policy-compliance).
+      - Carry a ``checks`` array on quality-result.json with blocking
+        Sprint 3A checks plus non-blocking product-quality warnings.
 
     For ``--skip-build``, the painter-palma example produces all required
     routes from the marketing-base starter, so route-scan and policy-
@@ -796,9 +795,10 @@ def test_repair_and_quality_results_are_not_skeleton(
 
     check_names = {check["name"] for check in quality["checks"]}
     assert check_names == {
-        "typecheck", "route-scan", "build-status", "policy-compliance"
+        "typecheck", "route-scan", "build-status", "policy-compliance",
+        "contact-cta-presence", "placeholder-copy-scan",
     }, (
-        f"Quality Gate must run the four Sprint 3A checks. Got {check_names!r}."
+        f"Quality Gate must run registered checks. Got {check_names!r}."
     )
 
     by_name = {check["name"]: check for check in quality["checks"]}

@@ -200,7 +200,7 @@ def test_run_quality_gate_aggregates_to_ok_when_all_pass(tmp_path):
     )
     assert isinstance(result, QualityResult)
     assert result.status == "ok"
-    assert len(result.checks) == 4
+    assert len(result.checks) == 6
 
 
 @pytest.mark.tooling
@@ -243,6 +243,57 @@ def test_run_quality_gate_summary_lists_failed_and_skipped(tmp_path):
     )
     assert "route-scan" in result.summary or "failed" in result.summary
     assert "skipped" in result.summary
+
+
+@pytest.mark.tooling
+def test_summary_separates_blocking_and_warning_failures():
+    """External reviewer finding post #129: ``_summary_from_checks`` listed
+    any ``status=failed`` check under ``failed=...`` regardless of severity.
+    A warning-only failure (e.g. contact-cta-presence missing) would then
+    render ``status=ok failed=contact-cta-presence`` — a contradiction on
+    the operator surface that the summary is supposed to be.
+
+    The summary must split failed checks by severity so ``failed=`` only
+    contains blocking failures and warning failures land under ``warning=``.
+    """
+    from packages.generation.quality_gate.gate import _summary_from_checks
+
+    checks = [
+        CheckResult(name="typecheck", status="ok", severity="blocking"),
+        CheckResult(name="route-scan", status="ok", severity="blocking"),
+        CheckResult(name="build-status", status="ok", severity="blocking"),
+        CheckResult(name="policy-compliance", status="ok", severity="blocking"),
+        CheckResult(name="contact-cta-presence", status="failed", severity="warning"),
+        CheckResult(name="placeholder-copy-scan", status="ok", severity="warning"),
+    ]
+    summary = _summary_from_checks(checks, "ok")
+    assert "status=ok" in summary
+    assert "warning=contact-cta-presence" in summary
+    assert "failed=" not in summary, (
+        f"warning-only failure should not appear under 'failed=' prefix; got: {summary!r}"
+    )
+
+
+@pytest.mark.tooling
+def test_summary_lists_blocking_under_failed_keeps_warning_separate():
+    """When both blocking and warning checks fail, summary must show both
+    under their own prefixes so status, failed=, and warning= are coherent.
+    """
+    from packages.generation.quality_gate.gate import _summary_from_checks
+
+    checks = [
+        CheckResult(name="typecheck", status="ok", severity="blocking"),
+        CheckResult(name="route-scan", status="failed", severity="blocking"),
+        CheckResult(name="build-status", status="ok", severity="blocking"),
+        CheckResult(name="policy-compliance", status="ok", severity="blocking"),
+        CheckResult(name="contact-cta-presence", status="failed", severity="warning"),
+        CheckResult(name="placeholder-copy-scan", status="failed", severity="warning"),
+    ]
+    summary = _summary_from_checks(checks, "degraded")
+    assert "status=degraded" in summary
+    assert "failed=route-scan" in summary
+    assert "warning=contact-cta-presence" in summary
+    assert "placeholder-copy-scan" in summary
 
 
 @pytest.mark.tooling
