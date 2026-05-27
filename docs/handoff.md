@@ -10,10 +10,13 @@ skeleton (`bb6ab2e`) + tre runda reviewer-fynd-fixar (`3e660ea`,
 mot `origin/main` (`cbe1ba9`) + steward-bumps + extern-reviewer-
 cleanup-batch 2026-05-27 efm (`d60bb58` bot-report-verification-regel,
 `abff654` placeholder-scan case-insensitive, `58cfe20` fly-slot-
-reconciliation till ADR 0028 nivå 3 i README). Verifierad `jakob-be`
-är `58cfe20`. `origin/main` ligger kvar på `4d879177` (20 commits
-efter `jakob-be`). Draft-PR #133 (`jakob-be → main`) är öppen och
-samlar hela batchen.
+reconciliation till ADR 0028 nivå 3 i README) + extern-reviewer-
+analys 2 (`8fb24e4` B157 + GAP-windows-safe-rebuild-pipeline registrerad
+— WinError 5 rmtree på live `node_modules`, arkitektur-anti-pattern att
+rebuilda ovanpå aktiv preview-katalog; ingen kodfix i denna batch).
+Verifierad `jakob-be` är `8fb24e4`. `origin/main` ligger kvar på
+`4d879177` (21 commits efter `jakob-be`). Draft-PR #133 (`jakob-be →
+main`) är öppen och samlar hela batchen. Bug-count: 16 aktiva (B157 ny).
 
 **PreviewRuntime Bite A (`bb6ab2e`):** typkontrakt + registry + 3
 adapter-stubs i `packages/preview-runtime/`. Skelett bara — alla

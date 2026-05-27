@@ -30,10 +30,10 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `58cfe20` (2026-05-27 UTC, post extern-reviewer-
-cleanup ovanpå Bite A: case-insensitive placeholder-scan + fly-slot-
-reconciliation till ADR 0028 nivå 3 + open-PR self-contradiction-fix.
-`jakob-be` är nu 20 commits framför `origin/main`).
+Last verified state: `8fb24e4` (2026-05-27 UTC, post extern-reviewer-
+analys 2 — B157 registrerad + `GAP-windows-safe-rebuild-pipeline` gap-
+spec filerad. Inga kod-ändringar; ren docs-batch. `jakob-be` är nu 21
+commits framför `origin/main`).
 
 Nya commits sedan `c9a730b` (i historisk ordning):
 - `c67b53f` docs(steward): bump verified state to c9a730b post PR #131
@@ -81,6 +81,14 @@ Nya commits sedan `c9a730b` (i historisk ordning):
   in README — extern reviewer-fynd post #133. Operatörsbeslut väg (a):
   behåll typunionen, dokumentera att `fly` är slot för production-/deploy-
   check (ej implementerad). Naming-dict v17 oförändrad.
+- `f8d0d0b` docs(steward): bump verified state to 58cfe20 + fix open-PR
+  contradiction.
+- `8fb24e4` docs: file B157 + GAP-windows-safe-rebuild-pipeline (extern
+  reviewer-analys 2) — WinError 5 rmtree på live `node_modules` när
+  builder rebuildar samma `.generated/<siteId>/` som aktiv preview-
+  process. Root cause: arkitektur-anti-pattern (rebuild ovanpå live
+  output-katalog), trigger: B154-fixens lockfile-diff-check + commerce-
+  base Next-bump. Fix-laddare i gap-spec; ingen kodfix i denna commit.
 
 Draft-PR #133 (`jakob-be → main`) är öppen och uppdateras automatiskt
 med varje push. Alla guards gröna lokalt mot HEAD. Sync-merge till main
@@ -116,12 +124,13 @@ PR #132 — docs(steward): cleanup pass — archive stale handoffs + completed r
 
 **Draft-PR #133 (`jakob-be → main`) öppen.** Samlar hela post-Bite-A-
 batchen (Bite A-skelett + reviewer-fynd-fixar + smoke-test-cleanup +
-extern-reviewer-cleanup 2026-05-27 efm). Cloud-grind-batchen 2026-05-27
-fm är helt hemma (7 PRs mergade till `jakob-be`). Bug-räkning: 15
-aktiva / 0 misplaced / 5 unknown / 128 stängda. `jakob-be` är 20
-commits framför `origin/main`. Operatörsbeslut: flippa #133 till ready
-(`gh pr ready 133`) eller behåll DRAFT tills Bite B-wiring också är
-inne. Sync-merge sker när reviewer-trådarna är stängda.
+extern-reviewer-cleanup 2026-05-27 efm + B157-registrering). Cloud-grind-
+batchen 2026-05-27 fm är helt hemma (7 PRs mergade till `jakob-be`).
+Bug-räkning: **16 aktiva** (B157 ny) / 0 misplaced / 5 unknown / 128
+stängda. `jakob-be` är 21 commits framför `origin/main`. Operatörsbeslut:
+flippa #133 till ready (`gh pr ready 133`) eller behåll DRAFT tills
+Bite B-wiring också är inne. Sync-merge sker när reviewer-trådarna är
+stängda.
 
 **Christophers `origin/christopher-ui`** — efter PR #117 är hans branch
 synkad mot post-#117-main. Han har under operator-OK scope-leak
@@ -150,6 +159,14 @@ implementerat hela `GAP-backend-build-trace-endpoint` (3 endpoints + UI +
    `docs/known-issues.md` som följd av PR #131-reviewer-feedback).
    Headless playwright/puppeteer-smoke ersätter chunk-heuristiken i
    `test_b154_next_dev_tdz.py`. Egen sprint, ej akut.
+5. **B157 + GAP-windows-safe-rebuild-pipeline** (registrerad 2026-05-27
+   efm efter extern reviewer-analys). Lokala follow-up-builds kraschar
+   med WinError 5 på live `node_modules/@next/swc-win32-x64-msvc/.node`
+   när builder rebuildar ovanpå aktiv preview-katalog. Operatörsval:
+   akut fix (retry/backoff eller process-stopp, < 2h) **eller** full
+   immutable-build-dir + pointer-swap-sprint (12-16h) **eller** vänta
+   tills Bite B + ev. `vercel-preview`-adapter (24-32h, kräver
+   naming-dict v18). Fix-laddare i gap-spec; ingen kod i #133.
 
 ## Redan landat (tidigare session-status korrigerad 2026-05-26 PM)
 
