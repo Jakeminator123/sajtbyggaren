@@ -1,21 +1,13 @@
-"""B154 regression smoke test for Next dev TDZ hydration chunks.
-
-The bug only showed up in the local ``next dev --webpack`` path for a
-deterministic ecommerce-lite / noir-editorial site. Production build/start
-was immune, so this test deliberately exercises the development server and
-then inspects the emitted webpack chunks for the known TDZ shape.
-"""
+"""B154 regression smoke test for Next dev TDZ hydration chunks."""
 
 from __future__ import annotations
 
 import json
-import queue
 import re
 import shutil
 import socket
 import subprocess
 import sys
-import threading
 import time
 import urllib.request
 from pathlib import Path
@@ -57,28 +49,6 @@ def _write_b154_project_input(tmp_path: Path) -> Path:
     return target
 
 
-def _run_checked(command: list[str], cwd: Path, timeout: int) -> None:
-    completed = subprocess.run(
-        command,
-        cwd=cwd,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        timeout=timeout,
-        check=False,
-    )
-    assert completed.returncode == 0, (
-        f"Command {' '.join(command)!r} failed with exit code "
-        f"{completed.returncode} in {cwd}.\n{completed.stdout}"
-    )
-
-
-def _reader_thread(stream, output: list[str], lines: queue.Queue[str]) -> None:
-    for line in iter(stream.readline, ""):
-        output.append(line)
-        lines.put(line)
-
-
 def _start_next_dev(site_dir: Path, port: int) -> tuple[subprocess.Popen[str], list[str]]:
     process = subprocess.Popen(
         ["npm", "run", "dev", "--", "--hostname", "127.0.0.1", "--port", str(port)],
@@ -89,13 +59,6 @@ def _start_next_dev(site_dir: Path, port: int) -> tuple[subprocess.Popen[str], l
     )
     assert process.stdout is not None
     output: list[str] = []
-    lines: queue.Queue[str] = queue.Queue()
-    threading.Thread(
-        target=_reader_thread,
-        args=(process.stdout, output, lines),
-        daemon=True,
-    ).start()
-
     deadline = time.monotonic() + DEV_READY_TIMEOUT_SECONDS
     while time.monotonic() < deadline:
         if process.poll() is not None:
@@ -103,10 +66,8 @@ def _start_next_dev(site_dir: Path, port: int) -> tuple[subprocess.Popen[str], l
                 f"`npm run dev` exited early with code {process.returncode}.\n"
                 + "".join(output)
             )
-        try:
-            line = lines.get(timeout=0.25)
-        except queue.Empty:
-            continue
+        line = process.stdout.readline()
+        output.append(line)
         if "Ready" in line or "ready" in line:
             return process, output
     raise AssertionError(
@@ -134,14 +95,12 @@ def _fetch_route(port: int, route: str) -> str:
 
 
 def _chunk_files(site_dir: Path) -> list[Path]:
-    """Return Next dev chunk files across current and legacy output layouts."""
-
-    chunk_roots = (
+    roots = (
         site_dir / ".next" / "dev" / "static" / "chunks",
         site_dir / ".next" / "static" / "chunks",
     )
     chunks: list[Path] = []
-    for root in chunk_roots:
+    for root in roots:
         if root.is_dir():
             chunks.extend(sorted(root.rglob("*.js")))
     return chunks
@@ -175,8 +134,6 @@ def test_b154_next_dev_chunks_do_not_access_w_before_initialization(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Generated commerce/noir dev chunks must not contain the B154 TDZ trap."""
-
     if shutil.which("npm") is None:
         pytest.skip("npm not available; Next dev TDZ smoke test cannot run.")
 
@@ -194,7 +151,7 @@ def test_b154_next_dev_chunks_do_not_access_w_before_initialization(
     assert (site_dir / "package.json").is_file()
 
     if not (site_dir / "node_modules").is_dir():
-        _run_checked(["npm", "install"], site_dir, timeout=180)
+        subprocess.run(["npm", "install"], cwd=site_dir, timeout=180, check=True)
 
     port = _free_port()
     process: subprocess.Popen[str] | None = None
