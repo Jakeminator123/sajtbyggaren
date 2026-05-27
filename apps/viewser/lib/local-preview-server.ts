@@ -323,15 +323,18 @@ export async function stopAndWaitPreviewServer(
     // Process kan ha exitat mellan checken och kill (Windows-race).
   }
 
-  // Timeout-fallback: om processen vägrar SIGTERM, eskalera till
-  // SIGKILL. Vi väntar fortfarande på exit-event efter SIGKILL
-  // eftersom kernel-blockade processer kan ta ytterligare lite tid.
+  // Steg 1: vänta på SIGTERM-exit eller ``timeoutMs``.
+  // Om timeout vinner racet skickar callback:en SIGKILL och resolvar
+  // ``timeoutPromise``. Vi noterar att SIGKILL har skickats så vi
+  // i steg 2 kan vänta YTTERLIGARE på faktiskt exit-event.
+  let sigkillSent = false;
   let timeoutHandle: NodeJS.Timeout | undefined;
   const timeoutPromise = new Promise<void>((resolve) => {
     timeoutHandle = setTimeout(() => {
       if (!child.killed && child.exitCode === null) {
         try {
           child.kill("SIGKILL");
+          sigkillSent = true;
         } catch {
           // Process kan ha exitat under race.
         }
@@ -342,6 +345,32 @@ export async function stopAndWaitPreviewServer(
 
   await Promise.race([exited, timeoutPromise]);
   if (timeoutHandle) clearTimeout(timeoutHandle);
+
+  // Steg 2: om SIGKILL skickades måste vi VÄNTA på faktiskt exit-event
+  // innan vi returnerar — annars bryter vi kontraktet att caller kan
+  // köra ``shutil.rmtree(node_modules)`` direkt efter return. SIGKILL
+  // är synkron från avsändarens sida men kerneln behöver ms-tid att
+  // reapa processen + frigöra fil-handles. Tidigare implementation
+  // använde ``Promise.race([exited, timeoutPromise])`` som primär
+  // synk — om timeout vann racet returnerades funktionen direkt
+  // efter SIGKILL utan att vänta på exit, vilket gjorde att
+  // ``rmtree`` kunde köra mot fortfarande-låsta ``next-swc-*.node``-
+  // binaries på Windows och resa B157 igen.
+  //
+  // ``REAP_TIMEOUT_MS`` är hard-floor för kernel-reap. Om processen
+  // fortfarande inte exitat efter SIGKILL+REAP_TIMEOUT_MS är något
+  // katastrofalt fel (kernel-blockad i D-state e.d.) och caller får
+  // ett pessimistiskt return ändå — bättre att signalera "stopped"
+  // efter rimlig vänta än att hänga viewser-build-pipeline för evigt.
+  const REAP_TIMEOUT_MS = 2_000;
+  if (sigkillSent && child.exitCode === null) {
+    let reapHandle: NodeJS.Timeout | undefined;
+    const reapTimeout = new Promise<void>((resolve) => {
+      reapHandle = setTimeout(() => resolve(), REAP_TIMEOUT_MS);
+    });
+    await Promise.race([exited, reapTimeout]);
+    if (reapHandle) clearTimeout(reapHandle);
+  }
 
   // Windows-specific: även efter exit kan OS hålla file-handles
   // öppna kort stund för native binaries. 200ms är empiriskt vald —

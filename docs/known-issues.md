@@ -614,9 +614,29 @@ samma kodmönster lever vidare här — därav posten:
   åter-startas mitt under build via race med viewer-panel-poll.
 
   Gap-spec: `docs/gaps/GAP-windows-safe-rebuild-pipeline.md`. Källa:
-  extern reviewer-analys 2026-05-27 efm. Fix: `adba139`. Test: open
-  (manual operator-verification: kör follow-up på commerce-base-site
-  med lockfile-drift, förvänta ingen WinError 5).
+  extern reviewer-analys 2026-05-27 efm.
+
+  **Follow-up (2026-05-27 sen kväll, reviewer-fynd post-`adba139`):**
+  ``Promise.race([exited, timeoutPromise])`` resolverade omedelbart när
+  ``timeoutPromise`` resolvar (efter att SIGKILL skickats), utan att
+  vänta på faktiskt ``exit``-event. Det bröt kontraktet att caller
+  kunde göra fil-IO efter return — på Windows kunde native
+  ``.node``-binaries fortfarande vara file-låsta tills kerneln reapade
+  processen. Followup-fix: ``sigkillSent``-flag + sekundär
+  ``REAP_TIMEOUT_MS``-vänta (2s hard-floor) på exit-event efter
+  SIGKILL. Worst-case-tid blev 5000+2000+200ms = 7.2s.
+
+  Fix: `adba139` (akut, initial) + B157-followup-commit på `jakob-be`
+  (sen kväll 2026-05-27, denna session). Test: closed —
+  `tests/test_local_preview_server_b157_followup.py` har tre
+  strukturella regression-tester som kollar (1) ≥2 sync-points på
+  ``exited``-promise, (2) ``sigkillSent``-spårning eller motsvarande,
+  (3) kommentar-/kod-match så framtida agenter inte kan refaktorera
+  tillbaka till buggy form utan att också radera kommentarerna.
+
+  Manuell operator-verifiering kvarstår som best-practice för
+  end-to-end-bevis: kör follow-up på commerce-base-site med
+  lockfile-drift, förvänta ingen `PermissionError: [WinError 5]`.
 
 - **`B154` Medel** (stängd 2026-05-27, TDZ-smoke + commerce-lock) -
   `npm run dev` i en deterministic `ecommerce-lite`/`noir-editorial`-
