@@ -30,9 +30,22 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `acdfad2` (2026-05-27 UTC, steward-auto efter PR #133 — sync(jakob-be -> main): PreviewRuntime Bite A skeleton + race-fix + governance comments + builder prompt).
-Nya PRs sedan föregående checkpoint: PR #133 — sync(jakob-be -> main): PreviewRuntime
-Bite A skeleton + race-fix + governance comments + builder prompt.
+Last verified state: `adba139` (2026-05-27 UTC, post B157 akut-fix —
+``stopAndWaitPreviewServer`` i ``apps/viewser/lib/local-preview-
+server.ts`` + anrop i ``build-runner.ts:runBuildOnce()`` så
+``build_site.py`` aldrig försöker ``rmtree`` live ``node_modules``).
+
+`jakob-be` är 1 commit framför `origin/main` (steward-bump efter
+denna kommer landa det till 2). Inga öppna PRs. Bug-count efter
+B157-stängning: 15 aktiva / 0 misplaced / 5 unknown / 129 stängda.
+
+Nya commits sedan PR #133 mergades till `main`:
+
+- `4196c17` docs(steward-auto): bump HEAD to acdfad2 via PR #133 sync
+  (steward-auto-bump post-merge).
+- `adba139` fix(viewser): close B157 acute — stop local preview before
+  ``build_site.py`` (Windows file-lock). ``stopAndWaitPreviewServer``-
+  helper + anrop. Manual verification krävs hos operatör.
 
 ## Branchmodellen (kort)
 

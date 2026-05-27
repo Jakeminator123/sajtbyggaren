@@ -1,9 +1,31 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-27 UTC, steward-auto efter PR #133 — sync(jakob-be -> main): PreviewRuntime Bite A skeleton + race-fix + governance comments + builder prompt. Verifierad `main` är `acdfad2`.
+**Datum:** 2026-05-27 UTC, post PR #133-merge + B157 akut-fix
+(``adba139`` ``fix(viewser): close B157 acute — stop local preview
+before build_site.py``). Verifierad `jakob-be` är `adba139`;
+`origin/main` är `4196c17` (1 commit efter). Inga öppna PRs.
 
-Nya PRs sedan föregående checkpoint: PR #133 — sync(jakob-be -> main): PreviewRuntime
-Bite A skeleton + race-fix + governance comments + builder prompt.
+B157 akut-fix (nivå 1 per gap-spec):
+``apps/viewser/lib/local-preview-server.ts`` exporterar nu
+``stopAndWaitPreviewServer(siteId, timeoutMs=5000)`` som
+SIGTERM:ar live ``next start`` för siteId, väntar in ``exit``-event,
+fallback SIGKILL + 200ms file-lock-release-wait på Windows.
+``apps/viewser/lib/build-runner.ts:runBuildOnce()`` anropar helpern
+INNAN Python spawnas så ``shutil.rmtree(node_modules)`` aldrig kör
+mot låsta native ``.node``-binaries. Manual operator-verification:
+kör follow-up på commerce-base-site med lockfile-drift, förvänta
+ingen ``PermissionError: [WinError 5]``.
+
+Kvarvarande tech-debt: nivå 4 immutable build-dir + manifest-
+pointer-swap (egen sprint per
+``docs/gaps/GAP-windows-safe-rebuild-pipeline.md``).
+
+Bug-count: **15 aktiva** / 0 misplaced / 5 unknown / 129 stängda
+(B157 ny stängd).
+
+Nya PRs sedan föregående checkpoint: PR #133 — sync(jakob-be -> main):
+PreviewRuntime Bite A skeleton + race-fix + governance comments +
+builder prompt.
 
 **MCP-server-status:** Sprintvakt-servern exponerar 14 tools efter
 PR #77 (`get_workboard`, `list_gaps`, `create_gap`, `activate_gap`,
