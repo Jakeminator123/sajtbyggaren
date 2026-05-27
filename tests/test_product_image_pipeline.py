@@ -147,8 +147,8 @@ def test_copy_operator_uploads_product_image_overrides_text_image_url(
 
     copied = build_site.copy_operator_uploads("demo-shop", target, project_input)
 
-    assert copied == 2
-    assert (target / "public" / "uploads" / "sourdough-upload.webp").exists()
+    assert copied == 1
+    assert not (target / "public" / "uploads" / "sourdough-upload.webp").exists()
     assert (target / "public" / "products" / "sourdough-bread.webp").exists()
     assert project_input["products"][0]["imageUrl"] == "/products/sourdough-bread.webp"
 

@@ -805,6 +805,32 @@ def iter_asset_refs(project_input: dict) -> list[dict]:
     return refs
 
 
+def _iter_public_upload_refs(project_input: dict) -> list[dict]:
+    """Return asset refs that should be published under public/uploads/.
+
+    Product images are deliberately excluded here. They are public assets,
+    but their stable generated URL is ``/products/<productId>.<ext>`` and
+    `_copy_product_images` owns both that copy and the imageUrl mutation.
+    """
+    refs: list[dict] = []
+    brand = project_input.get("brand") or {}
+    if isinstance(brand, dict):
+        for key in ("logo", "heroImage"):
+            ref = brand.get(key)
+            if _is_valid_asset_ref(ref):
+                refs.append(ref)
+    gallery = project_input.get("gallery") or []
+    if isinstance(gallery, list):
+        for item in gallery:
+            if _is_valid_asset_ref(item):
+                refs.append(item)
+    for role in ("favicon", "ogImage", "backgroundVideo"):
+        ref = resolve_media_asset(project_input, role)
+        if ref is not None:
+            refs.append(ref)
+    return refs
+
+
 def _iter_mood_refs(project_input: dict) -> list[dict]:
     """Return mood-reference asset refs that must stay outside public/uploads."""
     mood_images = project_input.get("moodImages") or []
@@ -1247,7 +1273,7 @@ def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> in
     Returns the number of files written. A single bad asset never aborts
     the build; the renderer can still fall back to alt text / defaults.
     """
-    refs = iter_asset_refs(project_input)
+    refs = _iter_public_upload_refs(project_input)
     copied = 0
     if refs:
         public_uploads = target / "public" / "uploads"
