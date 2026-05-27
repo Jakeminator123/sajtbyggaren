@@ -22,6 +22,7 @@ from scripts.build_site import build  # noqa: E402
 
 B154_SITE_ID = "b154-noir-editorial-dev"
 DEV_READY_TIMEOUT_SECONDS = 90
+NPM_INSTALL_TIMEOUT_SECONDS = 300
 ROUTE_TIMEOUT_SECONDS = 30
 TDZ_WINDOW_CHARS = 12_000
 TDZ_LET_W_RE = re.compile(r"\blet\s+w\s*;")
@@ -151,7 +152,12 @@ def test_b154_next_dev_chunks_do_not_access_w_before_initialization(
     assert (site_dir / "package.json").is_file()
 
     if not (site_dir / "node_modules").is_dir():
-        subprocess.run(["npm", "install"], cwd=site_dir, timeout=180, check=True)
+        subprocess.run(
+            ["npm", "install"],
+            cwd=site_dir,
+            timeout=NPM_INSTALL_TIMEOUT_SECONDS,
+            check=True,
+        )
 
     port = _free_port()
     process: subprocess.Popen[str] | None = None
