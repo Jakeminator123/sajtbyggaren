@@ -30,22 +30,41 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `adba139` (2026-05-27 UTC, post B157 akut-fix —
-``stopAndWaitPreviewServer`` i ``apps/viewser/lib/local-preview-
-server.ts`` + anrop i ``build-runner.ts:runBuildOnce()`` så
-``build_site.py`` aldrig försöker ``rmtree`` live ``node_modules``).
+Last verified state: `f46c01a` (2026-05-28 UTC ~00:30, post B157
+akut-fix + followup + städ-pass + steward-drift-fix). Pushad till
+`origin/jakob-be`.
 
-`jakob-be` är 1 commit framför `origin/main` (steward-bump efter
-denna kommer landa det till 2). Inga öppna PRs. Bug-count efter
-B157-stängning: 15 aktiva / 0 misplaced / 5 unknown / 129 stängda.
+`jakob-be` är synkad med `origin/jakob-be` (push gjord). `origin/main`
+ligger på `4196c17`. Inga öppna PRs. Bug-count efter B157-stängning:
+15 aktiva / 0 misplaced / 5 unknown / 129 stängda.
 
 Nya commits sedan PR #133 mergades till `main`:
 
-- `4196c17` docs(steward-auto): bump HEAD to acdfad2 via PR #133 sync
-  (steward-auto-bump post-merge).
+- `4196c17` docs(steward-auto): bump HEAD to acdfad2 via PR #133 sync.
 - `adba139` fix(viewser): close B157 acute — stop local preview before
   ``build_site.py`` (Windows file-lock). ``stopAndWaitPreviewServer``-
-  helper + anrop. Manual verification krävs hos operatör.
+  helper + anrop.
+- `9c3bad7` chore(docs): archive 4 sprint-handoffs + drop product-
+  north-star duplicate.
+- `697cf4f` fix(viewser): close B157 followup — wait for actual exit
+  after SIGKILL (reap-fix, ``sigkillSent``-flag + ``REAP_TIMEOUT_MS``)
+  + 3 strukturella regression-tester.
+- `c821b8e` chore(governance): post-B157 cleanup-fixes — alwaysApply
+  på env-rule + GAP-status open→queued + workboard.json sync (lägga
+  till 2 queued + flytta GAP-backend-build-trace-endpoint till
+  completed).
+- `f46c01a` docs(steward): remove stale post-PR-133 focus drift +
+  workboard sync.
+
+**Känt operatörsmönster (B157-orphan):** På Windows kan en preview-
+process från en TIDIGARE Viewser-session leva kvar som orphan utan
+att den nuvarande Viewser-instansen känner till den i sin
+``servers``-map. ``stopAndWaitPreviewServer`` (697cf4f) hanterar
+bara processer som denna Viewser-instans spawned. Symptom: follow-
+up-prompt failar med ``POST /api/prompt 500 in <kort tid>`` +
+``taskkill /PID ... Åtkomst nekad``. Workaround: ``Stop-Process
+-Force -Name node`` innan ny dev-session. Nivå-4-sprinten
+(immutable build-dir + pointer-swap) eliminerar hela klassen.
 
 ## Branchmodellen (kort)
 
@@ -144,13 +163,21 @@ Detaljerade Queue-/Blocked-block ligger i arkivet
 [`docs/archive/current-focus-history-2026-05-26.md`](archive/current-focus-history-2026-05-26.md).
 Aktiva spår i prioritetsordning:
 
-1. Sync-PR `jakob-be → main`.
-2. Christophers `GAP-backend-build-trace-endpoint`-PR (när han öppnar den).
-3. B49 (docs-base page-map sidebar) — låg prio, behövs innan
+1. Manuell B157-end-to-end-verifiering (operatörsuppgift, ~5 min).
+2. Bite B (PreviewRuntime wiring local + stackblitz).
+3. B157 nivå-4 (immutable build-dir + pointer-swap, GAP-windows-
+   safe-rebuild-pipeline) — eliminerar orphan-process-klassen.
+4. ADR 0034 / GAP-followup-prompt-content-passthrough — fri
+   follow-up-text når codegen via ``copyDirectives[]``.
+5. B49 (docs-base page-map sidebar) — låg prio, behövs innan
    `course-education → docs-base` aktiveras.
-4. B13a arkitektur-flytt — kvarstår som öppen post, kräver egen sprint
+6. B13a arkitektur-flytt — kvarstår som öppen post, kräver egen sprint
    + sannolikt egen ADR.
-5. B53, B47, BO4-followup-cancel — låga, ingen blocker.
+7. B53, B47, BO4-followup-cancel — låga, ingen blocker.
+
+(Sync-PR `jakob-be → main` är operatörsbeslut, inte aktivt
+agentarbete. `GAP-backend-build-trace-endpoint` är completed via
+PR #105 / commit `fe7a9e4`.)
 
 ## Loopen vi följer
 

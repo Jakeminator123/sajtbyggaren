@@ -48,7 +48,7 @@ ADR 0034 (B155 ärlig först).
 **Parkerade lanes (väntar trigger):**
 
 - **Path B / section-driven renderer** — dokumenterad i `docs/scaffold-runtime-extension-needed.md` + `docs/path-b-backend-scout.md` (~22-28h). Lane 2 är klar (B137-B141 stängda 2026-05-22) så Path B är inte längre tekniskt blockad — väntar bara på operatörsbeslut om sprint.
-- **Christophers `GAP-backend-build-trace-endpoint`-PR** — Christopher har implementerat hela gapet på `christopher-ui` under operator-OK scope-leak. Han har inte PR:at än. Jakob är reviewer. När PR öppnas: granska scope-leaken (medvetet brutet jakob-lane), kontrollera att workboard.json `owner` är kvar på `jakob` (precedent från PR #68), merge mot `main` när nöjd.
+- **Christophers `GAP-backend-build-trace-endpoint`** — completed via PR #105 / commit `fe7a9e4` (2026-05-25T16:41:27Z). Verifierad 2026-05-27: `apps/viewser/app/api/runs/[runId]/trace/route.ts` implementerar specat kontrakt. Flyttad till `docs/workboard.json::completedGaps` i `c821b8e`. Owner `jakob` bibehållen så Sprintvakt-lane-policy passerar (precedent från PR #68).
 - **Sprintvakt V1.3 (potential)** — tvåvägs-sync workboard.json ↔ gap-filer. Flaggat som follow-up i `docs/sprintvakt-mcp.md`.
 
 Vänta fortsatt med embeddings, SNI-runtime, variant-promotion, många nya
