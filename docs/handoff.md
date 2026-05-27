@@ -1,9 +1,28 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-27 UTC, steward-auto efter PR #124 — feat(llm-golden-path): lock v1 + extend with multi-intent chain, real-build smoke, runbook and handoff. Verifierad `main` är `82ce287`.
+**Datum:** 2026-05-27 UTC, post cloud-grind-batch (7 PRs mergade på
+~2h fm: #125, #127, #128, #129, #130, #131, #132). Verifierad `jakob-be`
+är `943e808`. `origin/main` ligger kvar på `4d879177` (~10 commits efter
+`jakob-be`).
 
-Nya PRs sedan föregående checkpoint: PR #124 — feat(llm-golden-path): lock v1 + extend
-with multi-intent chain, real-build smoke, runbook and handoff.
+**Nya PRs sedan föregående checkpoint (i mergeordning):**
+
+- PR #125 — fix(discovery): honor wizard clears across versioned fields.
+- PR #127 — fix(viewser): block Python-backed actions on hosted Vercel
+  (501 på `/api/prompt`, `/api/build`, `/api/scrape-site` när VERCEL=1).
+- PR #128 — docs(gaps): file followup-prompt-content-passthrough + ADR
+  0034 draft (nya B155, operatör-beslut väg (b) ärlig först).
+- PR #129 — feat(quality-gate): add contact-CTA + placeholder-copy
+  checks som non-blocking warnings. Follow-up `8269800` separerade
+  blocking/warning i summary efter reviewer-fynd.
+- PR #130 — test(api): add HTTP smoke-test för `/api/prompt`-bron
+  (Bite 2 från LLM Golden Path handoff).
+- PR #131 — fix(builder): close B154 — TDZ at dev hydration on
+  deterministic codegen. Lockfile-alignment + chunk-heuristik-smoke
+  + `_npm_install_inputs_changed` diffar nu lockfile-bytes. B156
+  registrerad för browser-hydration follow-up.
+- PR #132 — docs(steward): cleanup pass — 8 filer arkiverade till
+  `docs/archive/` (5 dated handoffs + 3 completed reports, ~78 KB).
 
 **MCP-server-status:** Sprintvakt-servern exponerar 14 tools efter
 PR #77 (`get_workboard`, `list_gaps`, `create_gap`, `activate_gap`,

@@ -30,9 +30,18 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `82ce287` (2026-05-27 UTC, steward-auto efter PR #124 — feat(llm-golden-path): lock v1 + extend with multi-intent chain, real-build smoke, runbook and handoff).
-Nya PRs sedan föregående checkpoint: PR #124 — feat(llm-golden-path): lock v1 + extend
-with multi-intent chain, real-build smoke, runbook and handoff.
+Last verified state: `943e808` (2026-05-27 UTC, post cloud-grind-batch:
+PR #131 B154 TDZ-fix + PR #132 docs cleanup som sista mergar).
+
+Nya PRs sedan föregående checkpoint (i mergeordning):
+PR #125 — fix(discovery): honor wizard clears across versioned fields.
+PR #127 — fix(viewser): block Python-backed actions on hosted Vercel.
+PR #128 — docs(gaps): file followup-prompt-content-passthrough + ADR 0034 draft.
+PR #129 — feat(quality-gate): add contact-CTA + placeholder-copy checks (+ follow-up
+  summary-severity-fix i `8269800`).
+PR #130 — test(api): add HTTP smoke-test for /api/prompt Node->Python bridge.
+PR #131 — fix(builder): close B154 — TDZ at dev hydration on deterministic codegen.
+PR #132 — docs(steward): cleanup pass — archive stale handoffs + completed reports.
 
 ## Branchmodellen (kort)
 
@@ -46,10 +55,10 @@ with multi-intent chain, real-build smoke, runbook and handoff.
 
 ## Pågående/öppna PR:s just nu
 
-Inga öppna PRs på `jakob-be` eller `main`. `jakob-be` är resetad till
-`origin/main` 2026-05-26 PM (commit `1004122`) plus 38 commits ovanpå
-(listan ovan). Nästa sync-PR till `main` är operatörens beslut — bra läge
-nu när Gap 4 + 5, Gap 6 + 7, Gap 9 och Gap 10 är inne.
+**Inga öppna PRs.** Cloud-grind-batchen 2026-05-27 fm är helt hemma (7 PRs
+mergade till `jakob-be`). Bug-räkning: 15 aktiva / 0 misplaced / 5 unknown
+/ 128 stängda. `jakob-be` är nu ~10 commits framför `origin/main` —
+nästa sync-PR till `main` är operatörens beslut.
 
 **Christophers `origin/christopher-ui`** — efter PR #117 är hans branch
 synkad mot post-#117-main. Han har under operator-OK scope-leak
@@ -59,14 +68,25 @@ implementerat hela `GAP-backend-build-trace-endpoint` (3 endpoints + UI +
 
 ## Direkt nästa fokus
 
-1. **Backend-Gap fixar baserade på C4-audit** (cloud-grind levererade
-   audit 2026-05-26 i PR #121, `0f3bd67`; Gap 4 + 5 stängdes 2026-05-26
-   evening i `b89a3d2` + `1b91ca6`; Gap 6 + 7 stängdes i `ea6e141`;
-   Gap 9 stängdes i `365c1d7`; Gap 10 stängdes i PR #122 / `3b61c73`).
-   Status efter Gap 10: 11 stängda, 0 delvis, 0 öppna.
-2. **Sync-PR `jakob-be → main`** — `jakob-be` är 38 commits framför
-   `origin/main`. Bra läge nu när backend-gap-batchen är klar.
+1. **ADR 0034 — implementera väg (b) "ärlig först"** (operator-beslut
+   2026-05-27 fm, både orchestrator + coach rekommenderade samma).
+   FloatingChat ska markera när en följdprompt inte gav synlig effekt
+   istället för att låtsas "klart, v3 → v4". Liten kodändring, stort
+   förtroendelyft. Detta är den första riktiga produkt-fixen för
+   gapet B155 dokumenterar.
+2. **Sync-PR `jakob-be → main`** — `jakob-be` är ~10 commits framför
+   `origin/main` efter dagens batch. Bra läge nu när allt är klart.
    Operatörens beslut.
+3. **Mysterie-branches (operatörsbeslut: radera eller resurrect:a):**
+   - `origin/cursor/dossier-intake-v11-review-895d` (3 commits, ingen
+     PR-koppling).
+   - `origin/cursor/jakob-be-viewser-local-next-preview` (4 commits,
+     PR #85 stängd unmerged — innehåll kring `VIEWSER_PREVIEW_MODE` +
+     `SAJTBYGGAREN_GENERATED_DIR`-hantering, ev. värt att resurrect:a).
+4. **B156 follow-up: browser-hydration-smoke** (registrerad i
+   `docs/known-issues.md` som följd av PR #131-reviewer-feedback).
+   Headless playwright/puppeteer-smoke ersätter chunk-heuristiken i
+   `test_b154_next_dev_tdz.py`. Egen sprint, ej akut.
 
 ## Redan landat (tidigare session-status korrigerad 2026-05-26 PM)
 
