@@ -321,11 +321,16 @@ def _has_contact_cta(text: str) -> bool:
     for match in _CTA_LINK_RE.finditer(text):
         href = (match.group(1) or match.group(2) or "").lower()
         body = re.sub(r"<[^>]+>", " ", match.group(3))
+        # A link is a valid contact CTA if:
+        # 1. It's a tel: or mailto: link (href check is sufficient), OR
+        # 2. It links to a contact page (href check is sufficient), OR
+        # 3. The body text matches CTA patterns (regardless of href)
         if (
             href.startswith(("mailto:", "tel:"))
             or "/kontakt" in href
             or "/contact" in href
-        ) and _CTA_TEXT_RE.search(body):
+            or _CTA_TEXT_RE.search(body)
+        ):
             return True
     return False
 
