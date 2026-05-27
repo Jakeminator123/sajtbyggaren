@@ -87,7 +87,7 @@ Viktigt:
 
 ## Hur detta passar in i `PreviewRuntime`
 
-Interface (utkast i [`struktur/PreviewRuntime.ts`](../../struktur/PreviewRuntime.ts), flyttas till `packages/preview-runtime/`):
+Interface (definierat i [`packages/preview-runtime/src/types.ts`](../../packages/preview-runtime/src/types.ts) sedan Bite A `bb6ab2e`):
 
 ```ts
 export interface PreviewRuntime {
