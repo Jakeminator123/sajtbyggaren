@@ -13,10 +13,15 @@ cleanup-batch 2026-05-27 efm (`d60bb58` bot-report-verification-regel,
 reconciliation till ADR 0028 nivå 3 i README) + extern-reviewer-
 analys 2 (`8fb24e4` B157 + GAP-windows-safe-rebuild-pipeline registrerad
 — WinError 5 rmtree på live `node_modules`, arkitektur-anti-pattern att
-rebuilda ovanpå aktiv preview-katalog; ingen kodfix i denna batch).
-Verifierad `jakob-be` är `8fb24e4`. `origin/main` ligger kvar på
-`4d879177` (21 commits efter `jakob-be`). Draft-PR #133 (`jakob-be →
-main`) är öppen och samlar hela batchen. Bug-count: 16 aktiva (B157 ny).
+rebuilda ovanpå aktiv preview-katalog; ingen kodfix i denna batch) +
+Cursor BugBot suggestions 1-3 (`82b9f99` defensive cleanup i b154-test,
+`23b473e` smala placeholder-scan till `.tsx`/`.jsx` only, `f446be1` AND
+→ OR i `_has_contact_cta`, pushade direkt av BugBot) + GPT P2 Badge
+fix (`0b40b8d` accept scaffold-specific contact-routes inkl.
+`/kontakta-oss` + `/hitta-hit`). Verifierad `jakob-be` är `0b40b8d`.
+`origin/main` ligger kvar på `4d879177` (25 commits efter `jakob-be`).
+Draft-PR #133 (`jakob-be → main`) är öppen — alla reviewer-trådar
+adresserade, redo för ready-flip + merge. Bug-count: 16 aktiva (B157 ny).
 
 **PreviewRuntime Bite A (`bb6ab2e`):** typkontrakt + registry + 3
 adapter-stubs i `packages/preview-runtime/`. Skelett bara — alla
