@@ -178,6 +178,7 @@ def test_cleanup_apply_removes_eval_generated_and_golden_path_summaries(
             MAX_GENERATED_ENV_VAR: "1",
             MAX_GOLDEN_PATH_EVALS_ENV: "1",
         },
+        skip_generated_live_check=True,
     )
 
     assert old_eval_generated in result.deleted_paths

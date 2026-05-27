@@ -534,6 +534,7 @@ def apply_safe_cleanup(
     generated_dir: Path | None = None,
     environ: dict[str, str] | None = None,
     protected_run_ids: set[str] | None = None,
+    skip_generated_live_check: bool = False,
 ) -> CleanupResult:
     """Apply safe cleanup and report deleted paths + freed bytes."""
     generated_root = generated_dir if generated_dir is not None else resolve_generated_dir()
@@ -561,7 +562,12 @@ def apply_safe_cleanup(
     removed_generated: set[str] = set()
     if max_generated is not None:
         removed_generated = set(
-            prune_generated(max_generated, dry_run=False, generated_dir=generated_root)
+            prune_generated(
+                max_generated,
+                dry_run=False,
+                generated_dir=generated_root,
+                skip_live_check=skip_generated_live_check,
+            )
         )
 
     removed_eval_generated: dict[Path, set[str]] = {}

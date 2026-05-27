@@ -255,6 +255,7 @@ def prune_generated(
     *,
     dry_run: bool = False,
     generated_dir: Path | None = None,
+    skip_live_check: bool = False,
 ) -> list[str]:
     """Prune ``.generated/`` previews down to ``max_generated`` newest.
 
@@ -289,6 +290,7 @@ def prune_generated(
         keep_per_site=max_generated,
         keep_total=max_generated,
         apply=not dry_run,
+        skip_live_check=skip_live_check,
     )
     delete_decisions = {
         DECISION_DELETE_PER_SITE,
