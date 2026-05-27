@@ -230,3 +230,198 @@ def test_resolver_ignores_unknown_directive_values(
     assert "uniqueSellingPoints" not in project_input
     assert "directives.layoutHint" not in decision.fieldSources
     assert "uniqueSellingPoints" not in decision.fieldSources
+
+
+@pytest.mark.tooling
+def test_resolver_persists_directives_notes_for_planner(
+    project_input_schema: dict[str, Any],
+) -> None:
+    """Gap 5: wizardens ``directives.notesForPlanner`` ska persisteras till
+    Project Input ``directives.notesForPlanner`` med field-source
+    ``"wizard"``. ``build_site.py`` prepend:ar sedan noten på briefens
+    egen ``notesForPlanner`` så ``planningModel`` ser operator-intent
+    först. Whitespace ska trimmas men innehållet bevaras 1:1."""
+    payload = _base_payload(schema_version=2)
+    payload["directives"] = {
+        "language": "sv",
+        "notesForPlanner": "  visa Instagram-feed på startsidan — USP: lokala hantverkare  ",
+    }
+
+    project_input, decision = resolve_discovery(
+        raw_prompt=payload["rawPrompt"],
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+
+    jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
+    assert project_input["directives"] == {
+        "notesForPlanner": "visa Instagram-feed på startsidan — USP: lokala hantverkare",
+    }
+    assert decision.fieldSources["directives.notesForPlanner"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_resolver_caps_notes_for_planner_at_1024_chars(
+    project_input_schema: dict[str, Any],
+) -> None:
+    """Gap 5: fritext-noten cappas vid 1024 tecken så planner-prompten
+    inte sväller okontrollerat. Cappningen sker på det redan trimmade
+    värdet — föregående test säkerställer trim-beteendet."""
+    payload = _base_payload(schema_version=2)
+    long_text = "x" * 1500
+    payload["directives"] = {"language": "sv", "notesForPlanner": long_text}
+
+    project_input, decision = resolve_discovery(
+        raw_prompt=payload["rawPrompt"],
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+
+    jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
+    stored = project_input["directives"]["notesForPlanner"]
+    assert len(stored) == 1024
+    assert stored == "x" * 1024
+    assert decision.fieldSources["directives.notesForPlanner"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_resolver_ignores_empty_or_non_string_notes_for_planner(
+    project_input_schema: dict[str, Any],
+) -> None:
+    """Gap 5: tom sträng, whitespace-only och icke-string ska inte
+    persisteras och inte registrera en field-source."""
+    for raw_value in ["", "   ", 123, None, ["list", "not", "string"]]:
+        payload = _base_payload(schema_version=2)
+        payload["directives"] = {"language": "sv", "notesForPlanner": raw_value}
+
+        project_input, decision = resolve_discovery(
+            raw_prompt=payload["rawPrompt"],
+            payload=payload,
+            project_input_candidate=_candidate_project_input(),
+        )
+
+        jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
+        assert "directives" not in project_input or "notesForPlanner" not in (
+            project_input.get("directives") or {}
+        )
+        assert "directives.notesForPlanner" not in decision.fieldSources
+
+
+@pytest.mark.tooling
+def test_resolver_merges_directive_requested_capabilities(
+    project_input_schema: dict[str, Any],
+) -> None:
+    """Gap 4: ``directives.requestedCapabilities`` mappade från wizardens
+    ``answers.selectedFunctions`` ska mergas deterministiskt i
+    ``project_input["requestedCapabilities"]`` av ``_resolve_capabilities()``
+    innan Dossier-resolvern klassificerar dem. Source-label "wizard"
+    (samma bucket som ``mustHave``-deriverade caps)."""
+    payload = _base_payload(schema_version=2)
+    payload["directives"] = {
+        "language": "sv",
+        "requestedCapabilities": ["booking", "pricing-table"],
+    }
+
+    project_input, decision = resolve_discovery(
+        raw_prompt=payload["rawPrompt"],
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+
+    jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
+    assert project_input["directives"]["requestedCapabilities"] == [
+        "booking",
+        "pricing-table",
+    ]
+    assert "booking" in project_input["requestedCapabilities"]
+    assert "pricing-table" in project_input["requestedCapabilities"]
+    assert decision.fieldSources["requestedCapabilities"] == "wizard"
+
+
+@pytest.mark.tooling
+def test_resolver_dedupes_directive_caps_with_must_have_derived(
+    project_input_schema: dict[str, Any],
+) -> None:
+    """Gap 4: när wizardens ``mustHave`` mappar till samma capability
+    som ``directives.requestedCapabilities`` ska resultatet vara unikt —
+    capabilityn dyker bara upp en gång i ``requestedCapabilities``."""
+    payload = _base_payload(schema_version=2)
+    payload["answers"]["mustHave"] = ["Bokning online"]  # → "booking" via _PAGE_TO_CAPABILITY
+    payload["directives"] = {
+        "language": "sv",
+        "requestedCapabilities": ["booking"],
+    }
+
+    project_input, _decision = resolve_discovery(
+        raw_prompt=payload["rawPrompt"],
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+
+    jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
+    booking_count = project_input["requestedCapabilities"].count("booking")
+    assert booking_count == 1, (
+        f"booking ska bara förekomma en gång i requestedCapabilities, hittade "
+        f"{booking_count} i {project_input['requestedCapabilities']!r}"
+    )
+
+
+@pytest.mark.tooling
+def test_resolver_directive_caps_unknown_emits_warning_and_review_flag(
+    project_input_schema: dict[str, Any],
+) -> None:
+    """Gap 4: en directive-supplied capability som inte finns i
+    ``capability-map.v1.json`` ska ge en ``capability-unknown``-warning
+    OCH höja ``operatorReviewRequired`` — samma kontrakt som för andra
+    capability-källor (wizard/taxonomy/brief)."""
+    payload = _base_payload(schema_version=2)
+    payload["directives"] = {
+        "language": "sv",
+        "requestedCapabilities": ["imaginary-future-feature"],
+    }
+
+    project_input, decision = resolve_discovery(
+        raw_prompt=payload["rawPrompt"],
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+
+    jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
+    assert "imaginary-future-feature" in project_input["requestedCapabilities"]
+    codes = {warning.code for warning in decision.fallbackWarnings}
+    assert "capability-unknown" in codes
+    by_capability = {
+        warning.capabilityId for warning in decision.fallbackWarnings
+        if warning.code == "capability-unknown"
+    }
+    assert "imaginary-future-feature" in by_capability
+    assert decision.operatorReviewRequired is True
+
+
+@pytest.mark.tooling
+def test_resolver_directive_caps_caps_at_32_items_and_dedupes_input(
+    project_input_schema: dict[str, Any],
+) -> None:
+    """Gap 4: directive-listan saniteras i ``_apply_directives_fields()``
+    — tomma strängar/non-string hoppas över, dedup bevarar ordning, och
+    listan cappas vid 32 items (samma som schema-maxItems)."""
+    big_list: list[Any] = []
+    for i in range(50):
+        big_list.append(f"cap-{i:02d}")
+    big_list.extend([" ", "", None, 123, "cap-00", "  cap-01  "])
+
+    payload = _base_payload(schema_version=2)
+    payload["directives"] = {"language": "sv", "requestedCapabilities": big_list}
+
+    project_input, _decision = resolve_discovery(
+        raw_prompt=payload["rawPrompt"],
+        payload=payload,
+        project_input_candidate=_candidate_project_input(),
+    )
+
+    jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
+    stored = project_input["directives"]["requestedCapabilities"]
+    assert len(stored) == 32
+    assert stored[0] == "cap-00"
+    assert stored[-1] == "cap-31"
+    assert len(set(stored)) == 32, "deduperade slugs ska vara unika"

@@ -415,6 +415,7 @@ _PLANNER_IMPERATIVE_PHRASES: tuple[str, ...] = (
 
 _SCAFFOLD_LOCAL_SERVICE = ("local-service-business", "nordic-trust")
 _SCAFFOLD_ECOMMERCE = ("ecommerce-lite", "clean-store")
+_SCAFFOLD_CLINIC = ("clinic-healthcare", "clinic-calm")
 
 FollowupIntent = Literal[
     "tone-shift",
@@ -667,6 +668,59 @@ _ECOMMERCE_TOKENS = frozenset(
     }
 )
 
+# Tokens that flip the default scaffold to clinic-healthcare. Same
+# minimalist principle as _ECOMMERCE_TOKENS — sharp medical terms only
+# (naprapat, kiropraktor, tandläkare, fysioterapi, etc); bare "klinik"
+# / "clinic" is intentionally NOT in the list because beauty-klinik /
+# hair-klinik / wellness-klinik are explicit negative signals in
+# packages/generation/orchestration/scaffolds/clinic-healthcare/selection-profile.json
+# (llmClassificationHints rad 31-32) and belong to local-service-business.
+# B137-precedent: Lane 3 Embeddings audit
+# (docs/reports/embedding-readiness-2026-05-25.md) identified naprapat-
+# stockholm as the single embeddings-gate blocker; pre-fix this path
+# routed every clinic prompt to local-service-business via the default
+# branch, scoring 5.83 (under PASS_CASE_THRESHOLD=6.5). Mirrors the
+# _CLINIC_SIGNALS list in packages/generation/planning/plan.py — both
+# the prompt-time pinning and the mock plan fallback need the same
+# coverage.
+_CLINIC_TOKENS = frozenset(
+    {
+        "naprapat",
+        "naprapath",
+        "naprapatklinik",
+        "kiropraktor",
+        "chiropractor",
+        "chiropractic",
+        # ``tandläkar`` (without the trailing -e) covers tandläkare /
+        # tandläkarmottagning / tandläkarpraktik / tandläkarklinik.
+        # ASCII fallback ``tandlakar`` covers stages that strip diacritics.
+        "tandläkar",
+        "tandlakar",
+        "tandvård",
+        "tandvard",
+        "dentist",
+        "dental",
+        "psykolog",
+        "psychologist",
+        "psykoterapi",
+        "psychotherapy",
+        "fysioterapi",
+        "fysioterapeut",
+        "physiotherapy",
+        "physiotherapist",
+        "sjukgymnast",
+        "ortoped",
+        "orthopedic",
+        "orthopaedic",
+        "audionom",
+        "podiatrist",
+        "optometrist",
+        "specialistklinik",
+        "veterinärklinik",
+        "veterinarklinik",
+    }
+)
+
 
 def _site_id_text_without_master_prompt_header(text: str) -> str:
     stripped = (text or "").strip()
@@ -722,10 +776,18 @@ def pick_scaffold(prompt: str, brief_business_type: str | None) -> tuple[str, st
     Returns (scaffoldId, variantId). Defaults to local-service-business
     /nordic-trust because every Site Brief field can be mapped onto it
     and the renderer always produces a 4-page site with services /
-    contact. Flips to ecommerce-lite only when the prompt or detected
-    business type clearly mentions a shop. The intent is to keep the
-    MVP loop honest: a wrong scaffold is editable in the generated
-    Project Input file before the operator re-builds.
+    contact. Flips to ecommerce-lite when the prompt or detected
+    business type clearly mentions a shop, or to clinic-healthcare when
+    sharp medical signals appear (naprapat, kiropraktor, tandläkare,
+    fysioterapi, etc) — see _CLINIC_TOKENS for the full list. The
+    intent is to keep the MVP loop honest: a wrong scaffold is editable
+    in the generated Project Input file before the operator re-builds.
+
+    Order: commerce > clinic > default. A "tandvårdsbutik som säljer
+    munhygienprodukter" routes to ecommerce-lite (commerce wins), not
+    clinic-healthcare. Real Scaffold Selector with embeddings retrieval
+    will replace this heuristic eventually; until then this pick covers
+    the four ``run_golden_path_eval.py`` baseline cases.
     """
     haystack = (prompt or "").lower()
     business = (brief_business_type or "").lower()
@@ -733,6 +795,10 @@ def pick_scaffold(prompt: str, brief_business_type: str | None) -> tuple[str, st
         return _SCAFFOLD_ECOMMERCE
     if "shop" in business or "store" in business or "ecommerce" in business:
         return _SCAFFOLD_ECOMMERCE
+    if any(token in haystack for token in _CLINIC_TOKENS):
+        return _SCAFFOLD_CLINIC
+    if any(token in business for token in _CLINIC_TOKENS):
+        return _SCAFFOLD_CLINIC
     return _SCAFFOLD_LOCAL_SERVICE
 
 
@@ -2600,6 +2666,79 @@ def merge_followup_project_input(
     return merged
 
 
+def _is_discovery_asset_ref(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+    asset_id = value.get("assetId")
+    filename = value.get("filename")
+    return (
+        isinstance(asset_id, str)
+        and bool(asset_id.strip())
+        and isinstance(filename, str)
+        and bool(filename.strip())
+    )
+
+
+def _apply_discovery_products(
+    project_input: dict[str, Any],
+    discovery: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Map wizard products into Project Input products without parsing prompt text."""
+    if not isinstance(discovery, dict):
+        return project_input
+    answers = discovery.get("answers")
+    if not isinstance(answers, dict) or "products" not in answers:
+        return project_input
+    raw_products = answers.get("products")
+    if not isinstance(raw_products, list):
+        project_input.pop("products", None)
+        return project_input
+
+    mapped: list[dict[str, Any]] = []
+    for index, item in enumerate(raw_products):
+        if not isinstance(item, dict):
+            continue
+        raw_label = item.get("name")
+        if not isinstance(raw_label, str) or not raw_label.strip():
+            continue
+        label = raw_label.strip()
+        raw_id = item.get("id")
+        product_id = (
+            _slugify_label(raw_id)
+            if isinstance(raw_id, str) and raw_id.strip()
+            else _slugify_label(label)
+        )
+        if not product_id:
+            product_id = f"product-{index + 1}"
+        raw_description = item.get("description")
+        summary = (
+            raw_description.strip()
+            if isinstance(raw_description, str) and raw_description.strip()
+            else "Kontakta oss så berättar vi mer om produkten."
+        )
+        product: dict[str, Any] = {
+            "id": product_id,
+            "label": label,
+            "summary": summary,
+        }
+        price = item.get("price")
+        if isinstance(price, str) and price.strip():
+            product["price"] = price.strip()
+        image_url = item.get("imageUrl")
+        if isinstance(image_url, str) and image_url.strip():
+            product["imageUrl"] = image_url.strip()
+        product_image = item.get("productImage")
+        if _is_discovery_asset_ref(product_image):
+            product["productImage"] = product_image
+        mapped.append(product)
+
+    if mapped:
+        project_input["products"] = mapped
+    else:
+        project_input.pop("products", None)
+    return project_input
+
+
 def _apply_discovery_overrides(
     project_input: dict[str, Any],
     discovery: dict[str, Any],
@@ -2618,7 +2757,8 @@ def _apply_discovery_overrides(
     ``packages.generation.discovery``, som även returnerar
     ``DiscoveryDecision`` så Backoffice/meta-sidecar får full provenance.
     """
-    return apply_discovery_overrides(project_input, discovery)
+    resolved = apply_discovery_overrides(project_input, discovery)
+    return _apply_discovery_products(resolved, discovery)
 
 
 def _load_discovery_file(path: Path) -> dict[str, Any]:
@@ -2835,6 +2975,7 @@ def generate(
             project_input_candidate=project_input,
             placeholder_fields=pre_resolve_placeholder_fields,
         )
+        project_input = _apply_discovery_products(project_input, discovery)
     wizard_must_have = _wizard_must_have_from_discovery(discovery)
 
     if has_explicit_site_id:

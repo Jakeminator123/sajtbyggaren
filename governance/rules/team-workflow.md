@@ -11,9 +11,10 @@ Läs `docs/ownership-map.md` innan större ändringar som kan korsa frontend,
 backend, generation, governance eller shared contract.
 
 Följ alltid `governance/rules/branch-discipline.md` för branch- och PR-flöde.
-Det betyder normalt direkt-main med backup först. PR/branch används när
-operatören uttryckligen ber om det, vid Cloud/Grind-arbete, eller när en
-större/riskfylld ändring väljs till PR-flöde. Hitta inte på egna branch-prefix.
+Standardflödet är att Jakob jobbar på `jakob-be`, Christopher på
+`christopher-ui`, och PR mot `main` öppnas när en ny officiell version
+ska in. Hitta inte på egna branch-prefix utöver `cursor/<syfte>` för
+tillfälliga feature-branches.
 
 ## Contract-first
 
@@ -57,6 +58,7 @@ självändamål.
 
 Vid PR-merge till `main` bumpas HEAD-pekaren i `docs/current-focus.md` och
 `docs/handoff.md` automatiskt av `steward-auto-bump` enligt
-ADR 0031. Manuell Steward-uppdatering behövs fortfarande vid direktpush, arbete
-utanför `main`, eller när active sprint, next action, risk/blocker, workboard
-eller längre handoff-text faktiskt ändras.
+ADR 0031. Manuell Steward-uppdatering behövs fortfarande vid arbete på
+`jakob-be`/`christopher-ui` som inte gått via PR, vid direktpush till
+`main` (Steward-undantaget), eller när active sprint, next action,
+risk/blocker, workboard eller längre handoff-text faktiskt ändras.

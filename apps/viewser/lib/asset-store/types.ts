@@ -70,9 +70,12 @@ export interface AssetRef {
    * blob-store. `LocalAssetStore` lämnar fältet `undefined` (filen finns
    * under `data/uploads/<siteId>/<assetId>/optimized.webp`).
    *
-   * `scripts/build_site.py copy_operator_uploads` ska föredra `sourceUrl`
-   * framför disk-lookup när fältet finns (HTTP-fetch → skriv till
-   * `public/uploads/<filename>`). Se `docs/backend-handoff.md` gap #11.
+   * `scripts/build_site.py copy_operator_uploads` är disk-first; när
+   * disk-lookup misslyckas och `sourceUrl` finns + pekar på en
+   * allowlist:ad HTTPS-host (`public.blob.vercel-storage.com`) HTTP-
+   * fetchas bytes och skrivs till `public/uploads/<filename>` med en
+   * 8 MB cap och 15 s timeout. Se `docs/backend-handoff.md` gap #11
+   * för historik (gap stängd, PR #66 + senare refinements).
    */
   sourceUrl?: string;
 }

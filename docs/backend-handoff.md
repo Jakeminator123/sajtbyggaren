@@ -2,6 +2,34 @@
 > från 2026-05-19. För aktuell status inklusive builder-shell, floating-chat,
 > local-preview och Sprint A/B, se `docs/backend-handoff-2026-05-22.md`.
 
+## Implementationsstatus per gap (audit 2026-05-26)
+
+Originaldokumentet listar 11 gaps. C4-audit 2026-05-26 verifierade fem
+som stängda, fem som delvis implementerade och ett som öppet. Gap 4
+och Gap 5 stängdes på `jakob-be` 2026-05-26 kväll (commits `1b91ca6`
+och `b89a3d2`). Gap 6 och Gap 7 stängdes därefter i `ea6e141`, Gap 9 i
+`365c1d7` och Gap 10 i PR #122, så alla elva gaps är nu stängda.
+
+| Gap | Status | Var |
+| --- | --- | --- |
+| 1. `vibe.useCustomColors` | Stängd (PR #63 / `f9312ec`) | `packages/generation/discovery/resolve.py:995-1009` + tester `tests/test_discovery_resolver.py:507-603` |
+| 2. `vibe.vibeId` variant-val | Stängd (PR #63 / `f9312ec`) | Frontend mappar `vibe.vibeId` → `directives.variantHint` i `apps/viewser/components/discovery-wizard/wizard-payload.ts:384-389`; resolver validerar global + scaffold-specifik variant-whitelist innan `project_input.variantId` sätts i `packages/generation/discovery/resolve.py:1208-1237`; regressioner i `tests/test_discovery_resolver.py:622-684` |
+| 3. `businessFamily` scaffold-hint | Stängd (PR #63 / `f9312ec`) | `resolve.py:1163-1190` (`Gap 3:` kommentar markerar tydligt) |
+| 4. `selectedFunctions[]` → `requested_capabilities[]` | Stängd (`jakob-be` / `1b91ca6`) | Frontend mappar `selectedFunctions[]` → `directives.requestedCapabilities` i `apps/viewser/components/discovery-wizard/wizard-payload.ts:406-418`; resolver saniterar + persisterar listan i `_apply_directives_fields()` (`packages/generation/discovery/resolve.py`) och `_resolve_capabilities()` merge:ar den FÖRE `mustHave`-deriverade caps med source-label `"wizard"`; schema `governance/schemas/project-input.schema.json` directives-blocket har det nya fältet; regressioner i `tests/test_discovery_payload.py` (merge + dedupe + unknown-warning + 32-item-cap) |
+| 5. `specialRequests` → `notes_for_planner` | Stängd (`jakob-be` / `b89a3d2`) | Frontend bygger `directives.notesForPlanner` i `apps/viewser/components/discovery-wizard/wizard-payload.ts:496-514`; resolver trimmar + cappar vid 1024 tecken och persisterar till `project_input.directives.notesForPlanner` med field-source `"wizard"` (`packages/generation/discovery/resolve.py:_apply_directives_fields`); `scripts/build_site.py:_apply_operator_directive_note` prepend:ar noten med prefix `"Operator: "` framför `site-brief.json` `notesForPlanner` i både mock- och real-path; schema `governance/schemas/project-input.schema.json` directives-blocket har det nya fältet; regressioner i `tests/test_discovery_payload.py` (persist + cap + tomma värden) + `tests/test_builder_smoke.py` (operator-note merge + skip) |
+| 6. Favicon → `.ico` | Stängd (`jakob-be` / `ea6e141`) | `copy_operator_uploads()` kopierar originalet till `public/uploads/` och skriver multi-size `public/favicon.ico` från `media.favicon` via Pillow (`scripts/build_site.py:_convert_favicon_to_ico`); SVG-favicon skrivs som `public/favicon.svg`; regressioner i `tests/test_builder_favicon_ogimage.py` |
+| 7. OG-image 1200×630-crop | Stängd (`jakob-be` / `ea6e141`) | `copy_operator_uploads()` center-croppar `media.ogImage` till `public/og-image.png` 1200×630 via Pillow och metadata prioriterar den derivata bilden före original-uploaden; regressioner i `tests/test_builder_favicon_ogimage.py` |
+| 8. Video-mimetype + render | Stängd (PR #62 / `7240fcd`, refactor PR #107 / `348ee05`) | `/api/upload-asset` tillåter bara MP4/WebM för `backgroundVideo` (`apps/viewser/app/api/upload-asset/route.ts:122-145`), asset-store bypassar sharp/vision för video (`apps/viewser/lib/asset-store/local.ts:72-106`), `copy_operator_uploads()` kopierar originalvideo (`scripts/build_site.py:966-973`) och hero renderar `<video autoPlay loop muted playsInline>` (`packages/generation/build/renderers.py:2141-2157`); regression i `tests/test_builder_smoke.py:397-454` |
+| 9. `moodImages[]` isolering | Stängd (`jakob-be` / `365c1d7`) | `moodImages` bevaras i Project Input/schema, hålls utanför `iter_asset_refs()`/`public/uploads/`, kopieras via separat `copy_mood_assets()` till `data/uploads/<siteId>/__mood/`, och befintlig Vision-metadata mappas till `notesForPlanner`; regressioner finns i `tests/test_mood_isolation.py` |
+| 10. `products[].productImage` | Stängd (PR #122) | Schema accepterar `products[].productImage`, wizard-produkter mappas till Project Input, `_copy_product_images()` skriver till `public/products/<productId>.<ext>` och muterar `products[].imageUrl`, medan produktgriden renderar `product.imageUrl`; regressioner finns i `tests/test_product_image_pipeline.py` |
+| 11. Vercel Blob `sourceUrl` | Stängd (PR #66 + later refinements) | `scripts/build_site.py:794-1013` (disk-first + sourceUrl-fallback + allowlist till `public.blob.vercel-storage.com` + 8 MB cap) |
+
+**Slutsats:** Gap 1-11 är verifierat stängda. Originaltexten nedan är
+bevarad för historisk kontext men tabellen ovan är auktoritativ när det
+gäller "klar/inte klar"-status.
+
+---
+
 # Backend handoff — Discovery Wizard 5-stegs-omstrukturering
 
 Skapad: 2026-05-19 (Pass 6 av wizardens omdesign på `christopher-ui`).
@@ -331,12 +359,9 @@ StackBlitz-payloaden), ingen disk-IO som blockerar för stora filer.
 
 ## Sammanfattning — vad gör vi nu?
 
-UI:t fungerar end-to-end på dagens backend-beteende (alla nya fält
-ignoreras gracefully). Gap 1-3 är **högst prio** för att new wizard
-ska kännas meningsfull. Gap 6-8 kan vänta tills vi vill ha "rik"
-sajtprofil. Gap 11 (Blob) är behovsdriven — växla bara på
-`ASSET_STORE_DRIVER=vercel-blob` när backend har stöd för
-`sourceUrl`-fältet i `copy_operator_uploads`.
+UI:t fungerar end-to-end på dagens backend-beteende. Gap 1-11 är stängda
+och tabellen överst är auktoritativ för verifierad status. Avsnittet nedan
+är historisk arbetsindelning från den ursprungliga handoffen.
 
 | Gap | Prio | Storlek |
 | --- | --- | --- |

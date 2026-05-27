@@ -273,6 +273,177 @@ def test_produce_site_plan_picks_ecommerce_lite_on_commerce_signal(monkeypatch):
     )
 
 
+# ---------------------------------------------------------------------------
+# Mock heuristic — clinic-healthcare routing (closes Lane 3 embeddings-gate
+# blocker for naprapat-stockholm baseline case in
+# scripts/run_golden_path_eval.py). Regression tests pin that sharp medical
+# terms route to clinic-healthcare/clinic-calm/marketing-base while wellness/
+# salon/ecommerce briefs keep their existing routing.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_produce_site_plan_picks_clinic_healthcare_on_naprapat_signal(monkeypatch):
+    """Mock heuristic: ``naprapatklinik`` in the prompt routes to clinic-healthcare.
+
+    This is the exact ``naprapat-stockholm`` case from
+    ``scripts/run_golden_path_eval.py``. Pre-fix the deterministic mock
+    fallback only knew about ecommerce-lite vs local-service-business and
+    therefore routed naprapat to local-service-business/nordic-trust,
+    scoring 5.83 (below PASS_CASE_THRESHOLD=6.5) and dragging the whole
+    Lane 3 embeddings-readiness gate to no-go.
+    """
+    monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
+
+    brief = _baseline_brief(
+        rawPrompt="Skapa en hemsida för en naprapatklinik i Stockholm.",
+        businessTypeGuess="naprapatklinik",
+    )
+    result = produce_site_plan(brief, run_id="test-clinic-naprapat")
+
+    assert result.site_plan["scaffoldId"] == "clinic-healthcare"
+    assert result.site_plan["variantId"] == "clinic-calm", (
+        "_DEFAULT_VARIANT_BY_SCAFFOLD pins clinic-calm as the safest "
+        "clinic-healthcare default; warm-care suits chiropractor / "
+        "naprapath / holistic, and modern-precision suits specialist / "
+        "fertility / aesthetic."
+    )
+    assert result.site_plan["starterId"] == "marketing-base", (
+        "clinic-healthcare reuses marketing-base via SCAFFOLD_TO_STARTER "
+        "(Path B step 12). No new starter was vendored."
+    )
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    "raw_prompt,business_type,case_label",
+    [
+        (
+            "Skapa en hemsida för en tandläkarmottagning i Uppsala.",
+            "dentist",
+            "dentist (tandläkare)",
+        ),
+        (
+            "Skapa en hemsida för en kiropraktor i Lund.",
+            "kiropraktor",
+            "chiropractor (kiropraktor)",
+        ),
+        (
+            "Skapa en hemsida för en fysioterapeut i Borås.",
+            "fysioterapeut",
+            "physiotherapist (fysioterapeut)",
+        ),
+        (
+            "Skapa en hemsida för en psykolog i Linköping.",
+            "psykolog",
+            "psychologist (psykolog)",
+        ),
+        (
+            "Skapa en hemsida för en veterinärklinik i Skövde.",
+            "veterinärklinik",
+            "veterinary (veterinärklinik)",
+        ),
+    ],
+)
+def test_produce_site_plan_picks_clinic_healthcare_on_sharp_medical_signal(
+    monkeypatch, raw_prompt, business_type, case_label
+):
+    """Mock heuristic: sharp medical terms in the brief route to clinic-healthcare.
+
+    Mirrors the regulated-clinician subset of
+    ``packages/generation/orchestration/scaffolds/clinic-healthcare/selection-profile.json``
+    semanticSignals while staying conservative against false positives on
+    wellness/salon briefs.
+    """
+    monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
+
+    brief = _baseline_brief(
+        rawPrompt=raw_prompt,
+        businessTypeGuess=business_type,
+    )
+    result = produce_site_plan(brief, run_id=f"test-clinic-{business_type}")
+
+    assert result.site_plan["scaffoldId"] == "clinic-healthcare", (
+        f"{case_label} should route to clinic-healthcare "
+        f"(prompt={raw_prompt!r}, businessTypeGuess={business_type!r})."
+    )
+    assert result.site_plan["variantId"] == "clinic-calm"
+    assert result.site_plan["starterId"] == "marketing-base"
+
+
+@pytest.mark.tooling
+def test_produce_site_plan_skips_clinic_for_salon_brief(monkeypatch):
+    """Negative: hairsalon prompt must keep routing to local-service-business.
+
+    Bare ``klinik`` / ``clinic`` is intentionally NOT in _CLINIC_SIGNALS
+    because beauty-klinik / hair-klinik / wellness-klinik are scaffold's
+    explicit negative-signals (selection-profile.json
+    llmClassificationHints rad 31-32) and belong to local-service-business.
+    Mirrors the salon-goteborg baseline case in run_golden_path_eval.py.
+    """
+    monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
+
+    brief = _baseline_brief(
+        rawPrompt="Skapa en hemsida för en frisörsalong i Göteborg.",
+        businessTypeGuess="frisor-salong",
+        servicesMentioned=["klippning", "färg", "styling"],
+    )
+    result = produce_site_plan(brief, run_id="test-salon-neg")
+
+    assert result.site_plan["scaffoldId"] == "local-service-business", (
+        "frisörsalong must remain on local-service-business — beauty/"
+        "salon is the scaffold's negative-signal per selection-profile.json."
+    )
+
+
+@pytest.mark.tooling
+def test_produce_site_plan_picks_ecommerce_over_clinic_when_both_signal(monkeypatch):
+    """Order-of-operations: commerce signals beat clinic signals.
+
+    A "tandvårdsbutik som säljer munhygienprodukter" has both
+    ``tandvård`` (loose clinic-adjacent) and ``produkt`` + ``butik``
+    (commerce) in the haystack. The mock fallback must pick ecommerce-lite,
+    not clinic-healthcare — otherwise an obvious ecommerce shop would
+    silently inherit clinic chrome (treatments page, credentials row, etc).
+    """
+    monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
+
+    brief = _baseline_brief(
+        rawPrompt=(
+            "Bygg en webshop för en tandvårdsbutik som säljer "
+            "munhygienprodukter i Stockholm."
+        ),
+        businessTypeGuess="dental-supplies-shop",
+        servicesMentioned=["tandborstar", "tandkräm", "produkter"],
+    )
+    result = produce_site_plan(brief, run_id="test-clinic-vs-commerce")
+
+    assert result.site_plan["scaffoldId"] == "ecommerce-lite", (
+        "Commerce signals must win over clinic signals — otherwise an "
+        "obvious shop would silently inherit clinic chrome."
+    )
+
+
+@pytest.mark.tooling
+def test_produce_site_plan_clinic_routing_via_business_type_only(monkeypatch):
+    """businessTypeGuess alone (no rawPrompt match) must drive clinic-routing.
+
+    briefModel sometimes produces a precise ``businessTypeGuess`` while
+    ``rawPrompt`` reuses the operator's ad-hoc prompt that happens not
+    to mention the medical term. The fallback must still see the signal.
+    """
+    monkeypatch.delenv(OPENAI_API_KEY_ENV, raising=False)
+
+    brief = _baseline_brief(
+        rawPrompt="Hjälp med ryggsmärta — lugn och bekväm mottagning.",
+        businessTypeGuess="naprapath-clinic",
+    )
+    result = produce_site_plan(brief, run_id="test-clinic-via-bizt")
+
+    assert result.site_plan["scaffoldId"] == "clinic-healthcare"
+    assert result.site_plan["variantId"] == "clinic-calm"
+
+
 @pytest.mark.tooling
 def test_produce_site_plan_records_rejected_capabilities_in_object_form(monkeypatch):
     """When mock filter rejects capabilities, selectedDossiers must be the

@@ -38,23 +38,23 @@ data/runs/
 data/output/
 data/versions/
 
-# Lokal eval-suite output (scripts/run_eval_suite.py + backoffice
-# eval-knapparna). Per-suite summary och manuella scorecards genereras
-# på operatörens maskin och versionsas inte. Mapparna behålls i git via
-# .gitkeep så backoffice-vyn alltid har en plats att skriva till.
-# data/evals/generated/<evalRunId>/<siteId>/ är per-case Next.js-output
-# som full-mode-bygget skapar för att tvinga ren npm install.
-data/evals/eval-runs/*.json
-data/evals/manual-scorecards/*.json
+# Lokal eval-output (post evals-folder-plan). Allt under
+# ``data/evals/`` är operatör-lokala körningar — varken summary-
+# rapporter eller tunga work-träd versionsas. summaries/ behålls i git
+# via .gitkeep i varje undermapp så backoffice alltid har en plats att
+# skriva till; artifacts/ ignoreras komplett och scripten kör
+# mkdir(parents=True, exist_ok=True) när nya runs skrivs.
+data/evals/summaries/*/*.json
+data/evals/summaries/*/*.md
+data/evals/artifacts/
+
+# Legacy eval-mappar — kvar i ignore tills migrationen är slutförd
+# på operatörens maskin. Backoffice cleanup känner igen båda strukturer.
+data/evals/eval-runs/
+data/evals/manual-scorecards/
 data/evals/generated/
-# scripts/run_scaffold_selection_probe.py output. Same kategori: lokal
-# observability per körning, inte arkiverat i git. .gitkeep behåller mappen.
-data/evals/scaffold-probe/*.json
-data/evals/scaffold-probe/*.md
-# scripts/run_golden_path_eval.py output. Summary JSON/Markdown plus
-# isolated prompt-inputs/runs/generated work dirs are per-run artefacts.
-data/evals/golden-path/*
-!data/evals/golden-path/.gitkeep
+data/evals/scaffold-probe/
+data/evals/golden-path/
 
 audits/
 data/prompt-inputs/
@@ -109,6 +109,7 @@ Thumbs.db
 .tmp-*
 .tmp.*
 .commit-msg.tmp
+COMMIT_EDITMSG_*.txt
 konversation.txt
 .review-*/
 

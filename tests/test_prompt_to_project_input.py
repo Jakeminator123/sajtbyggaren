@@ -154,6 +154,125 @@ def test_pick_scaffold_flips_via_business_type_signal() -> None:
     assert scaffold_id == "ecommerce-lite"
 
 
+# ---------------------------------------------------------------------------
+# pick_scaffold — clinic-healthcare routing (closes Lane 3 embeddings-gate
+# blocker for naprapat-stockholm baseline case in
+# scripts/run_golden_path_eval.py). Pre-fix the pinned-Project-Input flow
+# routed every clinic prompt to local-service-business via the default
+# branch; the eval scored naprapat-stockholm 5.83 (under
+# PASS_CASE_THRESHOLD=6.5). Mirrors the _CLINIC_SIGNALS test block in
+# tests/test_planning.py — both code paths need the same coverage.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_pick_scaffold_flips_to_clinic_on_naprapat_prompt() -> None:
+    """The exact naprapat-stockholm prompt from run_golden_path_eval.py."""
+    scaffold_id, variant_id = pick_scaffold(
+        "Skapa en hemsida för en naprapatklinik i Stockholm.",
+        brief_business_type=None,
+    )
+    assert scaffold_id == "clinic-healthcare"
+    assert variant_id == "clinic-calm"
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    "prompt,case_label",
+    [
+        ("Skapa en hemsida för en tandläkarmottagning i Uppsala.", "tandläkare"),
+        ("Skapa en hemsida för en kiropraktor i Lund.", "kiropraktor"),
+        ("Skapa en hemsida för en fysioterapeut i Borås.", "fysioterapeut"),
+        ("Skapa en hemsida för en psykolog i Linköping.", "psykolog"),
+        ("Skapa en hemsida för en veterinärklinik i Skövde.", "veterinärklinik"),
+        ("Build a site for a chiropractor in Stockholm.", "chiropractor"),
+        ("Build a site for a small dental practice.", "dental"),
+    ],
+)
+def test_pick_scaffold_flips_to_clinic_on_sharp_medical_prompt(
+    prompt, case_label
+) -> None:
+    """Sharp medical terms in the prompt route to clinic-healthcare.
+
+    Mirrors the regulated-clinician subset of
+    ``packages/generation/orchestration/scaffolds/clinic-healthcare/selection-profile.json``
+    semanticSignals while staying conservative against false positives on
+    wellness/salon briefs.
+    """
+    scaffold_id, variant_id = pick_scaffold(prompt, brief_business_type=None)
+    assert scaffold_id == "clinic-healthcare", (
+        f"{case_label} should route to clinic-healthcare (prompt={prompt!r})."
+    )
+    assert variant_id == "clinic-calm"
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    "business_type,case_label",
+    [
+        ("naprapath-clinic", "naprapath-clinic slug"),
+        ("naprapatklinik", "naprapatklinik slug"),
+        ("dental-clinic", "dental-clinic slug"),
+        ("physiotherapy-clinic", "physiotherapy-clinic slug"),
+        ("chiropractic-clinic", "chiropractic-clinic slug"),
+    ],
+)
+def test_pick_scaffold_flips_to_clinic_via_business_type_signal(
+    business_type, case_label
+) -> None:
+    """When the prompt has no medical tokens but briefModel returned a
+    clinic-flavoured business-type slug, still flip to clinic-healthcare.
+
+    Mirrors the existing ecommerce business-type branch — briefModel
+    sometimes produces a precise ``businessTypeGuess`` while the
+    operator's prompt is generic ("Hjälp med ryggsmärta — lugn mottagning").
+    """
+    scaffold_id, _ = pick_scaffold(
+        "Hjälp med ryggsmärta — lugn och bekväm mottagning.",
+        brief_business_type=business_type,
+    )
+    assert scaffold_id == "clinic-healthcare", (
+        f"{case_label} businessType should route to clinic-healthcare."
+    )
+
+
+@pytest.mark.tooling
+def test_pick_scaffold_keeps_local_service_for_salon_prompt() -> None:
+    """Negative: hairsalon prompt must keep routing to local-service-business.
+
+    Bare ``klinik`` / ``clinic`` is intentionally NOT in _CLINIC_TOKENS
+    because beauty-klinik / hair-klinik / wellness-klinik are scaffold's
+    explicit negative-signals (selection-profile.json
+    llmClassificationHints rad 31-32). Mirrors the salon-goteborg
+    baseline case in run_golden_path_eval.py.
+    """
+    scaffold_id, _ = pick_scaffold(
+        "Skapa en hemsida för en frisörsalong i Göteborg.",
+        brief_business_type="frisor-salong",
+    )
+    assert scaffold_id == "local-service-business"
+
+
+@pytest.mark.tooling
+def test_pick_scaffold_picks_ecommerce_over_clinic_when_both_signal() -> None:
+    """Order-of-operations: commerce signals beat clinic signals.
+
+    A "tandvårdsbutik som säljer munhygienprodukter" has both ``dental``
+    (clinic-adjacent in _CLINIC_TOKENS) and ``produkter`` + ``butik``
+    (commerce). The pick must route to ecommerce-lite, not clinic-
+    healthcare — otherwise an obvious shop would silently inherit clinic
+    chrome (treatments page, credentials row, etc).
+    """
+    scaffold_id, _ = pick_scaffold(
+        (
+            "Bygg en webshop för en tandvårdsbutik som säljer "
+            "munhygienprodukter i Stockholm."
+        ),
+        brief_business_type="dental-supplies-shop",
+    )
+    assert scaffold_id == "ecommerce-lite"
+
+
 @pytest.mark.tooling
 def test_site_brief_to_project_input_validates_against_schema(
     project_input_schema: dict,

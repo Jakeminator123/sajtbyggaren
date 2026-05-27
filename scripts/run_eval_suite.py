@@ -14,16 +14,16 @@ Two modes:
 
 For each case the runner reads the canonical artefakter under
 ``data/runs/<runId>/`` and writes a summary to
-``data/evals/eval-runs/<evalRunId>.json`` containing the nine trace fields
-that operators inspect to see whether the chain is alive:
+``data/evals/summaries/suite/<evalRunId>.json`` containing the nine trace
+fields that operators inspect to see whether the chain is alive:
 ``briefSource``, ``planSource``, ``scaffoldId``, ``variantId``,
 ``starterId``, ``selectedDossiers``, ``rejectedCapabilities``,
 ``qualityStatus`` and ``buildStatus``.
 
 This is **smoke/regression signal, not a 1-10 quality score**. Manual
 ``1-10`` scorecards live separately under
-``data/evals/manual-scorecards/<evalRunId>.json`` (format documented in
-``docs/evals.md``).
+``data/evals/summaries/manual-scorecards/<evalRunId>.json`` (format
+documented in ``docs/evals.md``).
 
 The runner is dev-tooling and does not modify ``build_site.py`` or any
 ``packages/generation/`` code. It is safe to invoke from the backoffice
@@ -48,6 +48,13 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 DEFAULT_EVALS_DIR = REPO_ROOT / "data" / "evals"
+# Sub-roots inside ``data/evals/`` (post evals-folder-plan). The CLI
+# argument ``--evals-dir`` still overrides the top-level evals root so
+# tests can point everything at ``tmp_path`` without knowing the new
+# layout; ``run_suite`` derives the suite-specific summary/artifact
+# directories from whatever evals root it ends up with.
+SUITE_SUMMARIES_SUBDIR = ("summaries", "suite")
+SUITE_ARTIFACTS_SUBDIR = ("artifacts", "suite")
 RUNS_DIR = REPO_ROOT / "data" / "runs"
 EXAMPLES_DIR = REPO_ROOT / "examples"
 
@@ -400,7 +407,7 @@ def run_suite(
     # let ``copy_starter`` preserve a stale ``node_modules`` and make
     # the suite blind to dependency regressions). Skip-build keeps the
     # default target — there is no npm step to isolate.
-    generated_root = evals_dir / "generated" / eval_run_id
+    generated_root = evals_dir.joinpath(*SUITE_ARTIFACTS_SUBDIR) / eval_run_id
 
     for site_id in site_ids:
         case_generated_dir = None if skip_build else generated_root / site_id
@@ -414,7 +421,7 @@ def run_suite(
         )
         summary["cases"].append(case)
 
-    out_dir = evals_dir / "eval-runs"
+    out_dir = evals_dir.joinpath(*SUITE_SUMMARIES_SUBDIR)
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{eval_run_id}.json"
     tmp_path = out_path.with_suffix(".json.tmp")
@@ -472,7 +479,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Run a canonical eval suite over examples/*.project-input.json "
-            "and write a smoke summary to data/evals/eval-runs/."
+            "and write a smoke summary to data/evals/summaries/suite/."
         ),
     )
     parser.add_argument(

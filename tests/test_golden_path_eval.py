@@ -144,3 +144,88 @@ def test_golden_path_eval_gate_is_go_when_all_thresholds_pass() -> None:
     assert gate["embeddingsReadiness"] == "go"
     assert gate["nextGate"] == "go"
     assert gate["casesBelowThreshold"] == []
+
+
+@pytest.mark.tooling
+def test_prune_golden_path_evals_removes_old_work_dirs_and_summaries(
+    tmp_path: Path,
+) -> None:
+    from scripts.run_golden_path_eval import prune_golden_path_evals
+
+    for index, eval_id in enumerate(("old", "middle", "new")):
+        work_dir = tmp_path / eval_id
+        work_dir.mkdir()
+        (work_dir / "case.json").write_text("{}", encoding="utf-8")
+        (tmp_path / f"{eval_id}.json").write_text("{}", encoding="utf-8")
+        (tmp_path / f"{eval_id}.md").write_text("# report\n", encoding="utf-8")
+        mtime = 1_700_000_000 + index
+        os.utime(work_dir, (mtime, mtime))
+
+    removed = prune_golden_path_evals(tmp_path, max_evals=2)
+
+    assert removed == ["old"]
+    assert not (tmp_path / "old").exists()
+    assert not (tmp_path / "old.json").exists()
+    assert not (tmp_path / "old.md").exists()
+    assert (tmp_path / "middle").is_dir()
+    assert (tmp_path / "new").is_dir()
+
+
+@pytest.mark.tooling
+def test_prune_golden_path_evals_protects_current_eval(tmp_path: Path) -> None:
+    from scripts.run_golden_path_eval import prune_golden_path_evals
+
+    for eval_id in ("newest", "current"):
+        (tmp_path / eval_id).mkdir()
+        (tmp_path / f"{eval_id}.json").write_text("{}", encoding="utf-8")
+        (tmp_path / f"{eval_id}.md").write_text("# report\n", encoding="utf-8")
+    os.utime(tmp_path / "newest", (1_700_000_010, 1_700_000_010))
+    os.utime(tmp_path / "current", (1_700_000_000, 1_700_000_000))
+
+    removed = prune_golden_path_evals(
+        tmp_path,
+        max_evals=1,
+        protected_eval_ids={"current"},
+    )
+
+    assert removed == ["newest"]
+    assert (tmp_path / "current").is_dir()
+
+
+@pytest.mark.tooling
+def test_prune_golden_path_evals_dry_run_reports_without_deleting(tmp_path: Path) -> None:
+    from scripts.run_golden_path_eval import prune_golden_path_evals
+
+    for index, eval_id in enumerate(("old", "new")):
+        (tmp_path / eval_id).mkdir()
+        (tmp_path / f"{eval_id}.json").write_text("{}", encoding="utf-8")
+        (tmp_path / f"{eval_id}.md").write_text("# report\n", encoding="utf-8")
+        os.utime(tmp_path / eval_id, (1_700_000_000 + index, 1_700_000_000 + index))
+
+    removed = prune_golden_path_evals(tmp_path, max_evals=1, dry_run=True)
+
+    assert removed == ["old"]
+    assert (tmp_path / "old").is_dir()
+    assert (tmp_path / "old.json").is_file()
+    assert (tmp_path / "old.md").is_file()
+
+
+@pytest.mark.tooling
+def test_read_positive_int_setting_falls_back_to_env_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from scripts.run_golden_path_eval import (
+        MAX_GOLDEN_PATH_EVALS_ENV,
+        read_positive_int_setting,
+    )
+
+    monkeypatch.delenv(MAX_GOLDEN_PATH_EVALS_ENV, raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "OTHER=value\n"
+        f"{MAX_GOLDEN_PATH_EVALS_ENV}=10\n",
+        encoding="utf-8",
+    )
+
+    assert read_positive_int_setting(MAX_GOLDEN_PATH_EVALS_ENV, env_file=env_file) == 10

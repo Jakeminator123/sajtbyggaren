@@ -207,6 +207,8 @@ _DEFAULT_VARIANT_ID = "nordic-trust"
 _DEFAULT_STARTER_ID = "marketing-base"
 _VALID_LAYOUT_HINTS = {"gradient", "centered", "split"}
 _MAX_UNIQUE_SELLING_POINTS = 4
+_MAX_NOTES_FOR_PLANNER_CHARS = 1024
+_MAX_DIRECTIVE_CAPABILITIES = 32
 _MEDIA_DIRECTIVE_ROLES = ("favicon", "ogImage", "backgroundVideo")
 
 # Rot för scaffold-paket på disk. Varje scaffold har en ``variants/``-
@@ -523,6 +525,7 @@ def resolve_discovery(
     )
     _apply_services_field(project_input, answers, field_sources)
     _apply_brand_and_assets(project_input, answers, field_sources)
+    _apply_mood_images(project_input, answers, field_sources)
     _apply_tone_field(project_input, answers, field_sources)
     _apply_directives_fields(project_input, payload, field_sources)
     _apply_location_from_address(project_input)
@@ -723,11 +726,14 @@ def _scaffold_hint_from_payload(
     Returnerar ``(scaffoldId, variantId, expectedStarterId)`` för
     runtime-aktiva scaffold-hints, annars ``None``. Hinten respekteras
     bara för scaffolds som faktiskt har starter-mapping; en hint som
-    pekar mot en planned scaffold (t.ex. ``portfolio-creator`` eller
-    ``clinic-healthcare``) tas inte som hård signal eftersom det skulle
-    krocka med taxonomins ``planned`` -> ``fallbackScaffoldId``-regel.
-    Tre scaffolds är runtime idag: ``local-service-business``,
-    ``ecommerce-lite`` och ``restaurant-hospitality`` (Path A).
+    pekar mot en planned scaffold (t.ex. ``portfolio-creator``) tas inte
+    som hård signal eftersom det skulle krocka med taxonomins
+    ``planned`` -> ``fallbackScaffoldId``-regel. Sex scaffolds är
+    runtime idag: ``local-service-business``, ``ecommerce-lite`` och
+    ``restaurant-hospitality`` (Path A — per-route ``elif``-armar i
+    ``write_pages``) plus ``clinic-healthcare``, ``professional-services``
+    och ``agency-studio`` (Path B native section-driven dispatcher i
+    ``packages/generation/build/dispatcher.py``).
     """
     if not isinstance(payload, dict):
         return None
@@ -1085,6 +1091,31 @@ def _apply_brand_and_assets(
             field_sources["gallery"] = "wizard"
 
 
+def _apply_mood_images(
+    project_input: dict[str, Any],
+    answers: dict[str, Any],
+    field_sources: dict[str, FieldSourceLiteral],
+) -> None:
+    """Preserve wizard mood-reference asset refs without making them gallery assets."""
+    raw_mood_images = answers.get("moodImages")
+    if not isinstance(raw_mood_images, list):
+        return
+
+    mood_refs: list[dict[str, Any]] = []
+    for item in raw_mood_images:
+        if not isinstance(item, dict):
+            continue
+        ref = _sanitize_asset_ref(item, "gallery")
+        if ref is not None:
+            mood_refs.append(ref)
+        if len(mood_refs) >= 5:
+            break
+
+    if mood_refs:
+        project_input["moodImages"] = mood_refs
+        field_sources["moodImages"] = "wizard"
+
+
 def _apply_tone_field(
     project_input: dict[str, Any],
     answers: dict[str, Any],
@@ -1182,9 +1213,11 @@ def _apply_directives_fields(
     #
     # Säkerhet: bara runtime-aktiva scaffolds får override:a (samma
     # whitelist som pre-B121 ``_scaffold_hint_from_payload``). Planned
-    # scaffolds (``portfolio-creator``, ``clinic-healthcare`` m.fl.)
-    # tillåts inte eftersom build_site.py inte kan rendera dem ännu.
-    # ``restaurant-hospitality`` är runtime sedan 2026-05-25.
+    # scaffolds (``portfolio-creator`` m.fl.) tillåts inte eftersom
+    # build_site.py inte kan rendera dem ännu. ``restaurant-hospitality``
+    # är runtime sedan 2026-05-25 och ``clinic-healthcare`` /
+    # ``professional-services`` / ``agency-studio`` är runtime via Path
+    # B native dispatcher (steg 12-14, 2026-05-25).
     scaffold_hint = directives.get("scaffoldHint")
     if isinstance(scaffold_hint, str):
         clean_scaffold = scaffold_hint.strip()
@@ -1248,6 +1281,60 @@ def _apply_directives_fields(
         if usps:
             project_input["uniqueSellingPoints"] = usps
             field_sources["uniqueSellingPoints"] = "wizard"
+
+    # Gap 5: ``directives.notesForPlanner`` är operatörens fritext-orientering
+    # (concat av ``answers.specialRequests`` + USP-listan, byggd i
+    # ``apps/viewser/components/discovery-wizard/wizard-payload.ts:496-514``).
+    # Resolvern persisterar fältet utan att tolka det; ``build_site.py``
+    # prepend:ar det på SiteBrief ``notesForPlanner`` med prefix
+    # ``"Operator: "`` så ``planningModel`` ser operator-intent först.
+    # Cappa vid ``_MAX_NOTES_FOR_PLANNER_CHARS`` (1024) så vi inte
+    # blåser upp planner-prompten med fritext utan gräns.
+    raw_notes = directives.get("notesForPlanner")
+    if isinstance(raw_notes, str):
+        clean_notes = raw_notes.strip()
+        if clean_notes:
+            if len(clean_notes) > _MAX_NOTES_FOR_PLANNER_CHARS:
+                clean_notes = clean_notes[:_MAX_NOTES_FOR_PLANNER_CHARS]
+            existing_directives = project_input.get("directives")
+            if isinstance(existing_directives, dict):
+                existing_directives["notesForPlanner"] = clean_notes
+            else:
+                project_input["directives"] = {"notesForPlanner": clean_notes}
+            field_sources["directives.notesForPlanner"] = "wizard"
+
+    # Gap 4: ``directives.requestedCapabilities`` är wizard-valda capability-
+    # slugs (mappade från ``answers.selectedFunctions`` via FUNCTION_GROUPS-
+    # tabellen i ``apps/viewser/components/discovery-wizard/wizard-
+    # constants.ts``). Vi persisterar dem under ``directives`` så
+    # ``_resolve_capabilities()`` kan plocka upp dem nedströms och merga med
+    # ``mustHave``-deriverade caps + taxonomy + brief. Sanitering: bara
+    # icke-tomma strängar, dedup-bevara-ordning, max 32 items (samma cap
+    # som schema). Persistens under ``directives`` håller top-level
+    # ``requestedCapabilities`` rent från directive-källan så
+    # ``_resolve_capabilities()`` kan särskilja source per slug.
+    raw_directive_caps = directives.get("requestedCapabilities")
+    if isinstance(raw_directive_caps, list):
+        directive_caps: list[str] = []
+        seen_directive_caps: set[str] = set()
+        for item in raw_directive_caps:
+            if not isinstance(item, str):
+                continue
+            clean = item.strip()
+            if not clean or clean in seen_directive_caps:
+                continue
+            directive_caps.append(clean)
+            seen_directive_caps.add(clean)
+            if len(directive_caps) >= _MAX_DIRECTIVE_CAPABILITIES:
+                break
+        if directive_caps:
+            existing_directives = project_input.get("directives")
+            if isinstance(existing_directives, dict):
+                existing_directives["requestedCapabilities"] = directive_caps
+            else:
+                project_input["directives"] = {
+                    "requestedCapabilities": directive_caps,
+                }
 
     # Media: per-roll-tombstone-semantik. När wizarden skickar
     # ``directives.media.<role> = None`` betyder det att operatören
@@ -1318,6 +1405,23 @@ def _resolve_capabilities(
     ``resolve_discovery`` (R2 P1 + R3 #2 på PR #34).
     """
     existing = list(project_input.get("requestedCapabilities") or [])
+    # Gap 4: ``directives.requestedCapabilities`` (wizard-valda funktioner från
+    # steg 3) går FÖRE ``mustHave``-deriverade caps i source-prioriteten.
+    # Båda är operator-input men direktivet är den explicita "jag vill ha
+    # dessa capabilities"-signalen från wizarden, medan ``mustHave``-mappingen
+    # är en härledning från valda sidor. Båda får source-label ``"wizard"``
+    # — vi sär-skiljer inte i field_sources eftersom befintliga konsumenter
+    # bara förväntar sig ``wizard``-bucketen. Persisterat under
+    # ``project_input["directives"]["requestedCapabilities"]`` av
+    # ``_apply_directives_fields()``; safe getattr-chain för att täcka
+    # legacy-calls utan directives-block.
+    directive_caps_raw = project_input.get("directives")
+    directive_caps: list[str] = []
+    if isinstance(directive_caps_raw, dict):
+        candidate = directive_caps_raw.get("requestedCapabilities")
+        if isinstance(candidate, list):
+            directive_caps = [item for item in candidate if isinstance(item, str)]
+
     wizard_caps: list[str] = []
     must_have = answers.get("mustHave")
     if isinstance(must_have, list):
@@ -1333,6 +1437,12 @@ def _resolve_capabilities(
     combined: list[str] = []
     seen: set[str] = set()
     sources_per_slug: dict[str, FieldSourceLiteral] = {}
+    for slug in directive_caps:
+        canonical = _normalize_capability_slug(slug)
+        if canonical and canonical not in seen:
+            combined.append(canonical)
+            seen.add(canonical)
+            sources_per_slug[canonical] = "wizard"
     for slug in wizard_caps:
         canonical = _normalize_capability_slug(slug)
         if canonical and canonical not in seen:

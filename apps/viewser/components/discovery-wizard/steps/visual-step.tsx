@@ -417,9 +417,9 @@ export function VisualStep({
             </div>
             <div className="sm:col-span-2">
               <CollapsibleHelp triggerLabel="Hur används hex-värdena?">
-                Hex-värdena skrivs in i Project Input men kräver backend-
-                stöd (Gap 1 i <code>docs/backend-handoff.md</code>) för att
-                faktiskt skriva över vibens defaultfärger.
+                Hex-värdena skrivs in i Project Input och skriver över
+                vibens defaultfärger när &quot;Egna färger&quot; är valt
+                (backend stöder detta sedan PR #63 — Gap 1 stängd).
               </CollapsibleHelp>
             </div>
           </div>

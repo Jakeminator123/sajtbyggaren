@@ -2,10 +2,14 @@
 
 Två knappar spawnar `scripts/run_eval_suite.py` som subprocess och streamar
 loggar live. Senaste suite-körningens summary (under
-`data/evals/eval-runs/`) renderas som en tabell över de nio spårfälten
-operatören tittar på. Ett manuellt 1-10 scorecard per case sparas
-separat under `data/evals/manual-scorecards/`. Formatet är dokumenterat
-i `docs/evals.md`.
+`data/evals/summaries/suite/`) renderas som en tabell över de nio
+spårfälten operatören tittar på. Ett manuellt 1-10 scorecard per case
+sparas separat under `data/evals/summaries/manual-scorecards/`. Formatet
+är dokumenterat i `docs/evals.md`.
+
+Vyn läser även från äldre platser (`data/evals/eval-runs/` och
+`data/evals/manual-scorecards/`) under en kort migrationsperiod så
+gamla rapporter syns även innan de flyttats till nya layouten.
 
 Vyn ändrar inte `quality-result.json` eller någon `packages/generation/`-
 modul — den är en read-only iakttagare ovanpå builderns artefakter.
@@ -28,7 +32,14 @@ import streamlit as st
 
 from scripts.run_eval_suite import format_case_list, get_full_case_ids, get_quick_case_ids
 
-from ..paths import EVAL_RUNS_DIR, MANUAL_SCORECARDS_DIR, REPO_ROOT, SCRIPTS_DIR
+from ..paths import (
+    EVAL_RUNS_DIR,
+    LEGACY_EVAL_RUNS_DIR,
+    LEGACY_MANUAL_SCORECARDS_DIR,
+    MANUAL_SCORECARDS_DIR,
+    REPO_ROOT,
+    SCRIPTS_DIR,
+)
 from ._helpers import safe_render
 
 SCORE_DIMENSIONS: tuple[tuple[str, str], ...] = (
@@ -251,21 +262,35 @@ def _run_eval_suite(mode: str, status_slot: Any | None) -> dict[str, Any]:
 
 
 def _list_summaries() -> list[Path]:
-    if not EVAL_RUNS_DIR.exists():
-        return []
-    files = [p for p in EVAL_RUNS_DIR.glob("*.json") if p.is_file()]
-    files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-    return files
+    """Return suite summaries from the new path plus legacy fallback.
+
+    Old reports still on disk (``data/evals/eval-runs/``) appear next to
+    new ones (``data/evals/summaries/suite/``) until the operator moves
+    them. The same ``evalRunId`` filename in the new path wins over the
+    legacy copy so manual scorecards stay aligned.
+    """
+
+    files: dict[str, Path] = {}
+    for root in (EVAL_RUNS_DIR, LEGACY_EVAL_RUNS_DIR):
+        if not root.exists():
+            continue
+        for path in root.glob("*.json"):
+            if not path.is_file():
+                continue
+            files.setdefault(path.name, path)
+    return sorted(files.values(), key=lambda p: p.stat().st_mtime, reverse=True)
 
 
 def _load_scorecard(eval_run_id: str) -> dict[str, Any] | None:
-    path = MANUAL_SCORECARDS_DIR / f"{eval_run_id}.json"
-    if not path.exists():
-        return None
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return None
+    for root in (MANUAL_SCORECARDS_DIR, LEGACY_MANUAL_SCORECARDS_DIR):
+        path = root / f"{eval_run_id}.json"
+        if not path.exists():
+            continue
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return None
+    return None
 
 
 def _save_scorecard(eval_run_id: str, items: list[dict[str, Any]]) -> Path:

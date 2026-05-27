@@ -18,7 +18,13 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_ROOT = REPO_ROOT.parent / "sajtbyggaren-output"
-DEFAULT_EVALS_DIR = OUTPUT_ROOT / ".evals"
+# Default mini-eval cleanup root mirrors ``scripts/mini_eval.py``:
+# operator-local runs now land under ``data/evals/artifacts/mini/`` (post
+# evals-folder-plan). ``LEGACY_OUTPUT_EVALS_DIR`` is kept so allowlist
+# checks accept the previous default when an operator still has a
+# ``SAJTBYGGAREN_EVALS_DIR=``-override pointing there.
+DEFAULT_EVALS_DIR = REPO_ROOT / "data" / "evals" / "artifacts" / "mini"
+LEGACY_OUTPUT_EVALS_DIR = OUTPUT_ROOT / ".evals"
 DEFAULT_GENERATED_DIR = OUTPUT_ROOT / ".generated"
 RUNS_DIR = REPO_ROOT / "data" / "runs"
 PROMPT_INPUTS_DIR = REPO_ROOT / "data" / "prompt-inputs"

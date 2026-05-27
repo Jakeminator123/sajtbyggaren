@@ -41,7 +41,13 @@ if str(REPO_ROOT) not in sys.path:
 
 SCAFFOLDS_DIR = REPO_ROOT / "packages" / "generation" / "orchestration" / "scaffolds"
 DEFAULT_RUNS_DIR = REPO_ROOT / "data" / "runs"
+# Probe summaries land under the canonical
+# ``data/evals/summaries/scaffold-probe/`` directory (post evals-folder-
+# plan). ``DEFAULT_EVALS_DIR`` is kept as the evals root so the existing
+# ``--evals-dir`` override and existing tests keep working without
+# learning the new sub-path.
 DEFAULT_EVALS_DIR = REPO_ROOT / "data" / "evals"
+SCAFFOLD_PROBE_SUMMARIES_SUBDIR = ("summaries", "scaffold-probe")
 
 
 PROBE_CASES: tuple[dict[str, str], ...] = (
@@ -369,7 +375,7 @@ def run_probe(
         )
         summary["cases"].append(record)
 
-    out_dir = evals_dir / "scaffold-probe"
+    out_dir = evals_dir.joinpath(*SCAFFOLD_PROBE_SUMMARIES_SUBDIR)
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{probe_id}.json"
     tmp_path = out_path.with_suffix(".json.tmp")
@@ -453,7 +459,10 @@ def main() -> int:
     parser.add_argument(
         "--report",
         default=None,
-        help="Optional markdown report path. Default: data/evals/scaffold-probe/<probeId>.md",
+        help=(
+            "Optional markdown report path. "
+            "Default: data/evals/summaries/scaffold-probe/<probeId>.md"
+        ),
     )
     parser.add_argument(
         "--quiet",
@@ -471,7 +480,10 @@ def main() -> int:
     if args.report:
         report_path = Path(args.report).resolve()
     else:
-        report_path = evals_dir / "scaffold-probe" / f"{summary['probeId']}.md"
+        report_path = (
+            evals_dir.joinpath(*SCAFFOLD_PROBE_SUMMARIES_SUBDIR)
+            / f"{summary['probeId']}.md"
+        )
     write_markdown_report(summary, report_path)
 
     if not args.quiet:

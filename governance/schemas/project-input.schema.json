@@ -106,6 +106,11 @@
         }
       }
     },
+    "products": {
+      "type": "array",
+      "description": "Optional ecommerce product catalogue. When present, product-grid renderers prefer this over services. productImage carries an operator-uploaded AssetRef; build_site.py copies it into public/products/<productId>.<ext> and writes imageUrl to that public path before rendering.",
+      "items": {"$ref": "#/$defs/product"}
+    },
     "tone": {
       "type": "object",
       "additionalProperties": false,
@@ -169,6 +174,17 @@
               "description": "service-list — render_section_service_list (LSB). card-grid = section default; alternating-rows mappas mot warm-craft; icon-strip mappas mot clinical-calm; tabular mappas mot nordic-trust."
             }
           }
+        },
+        "notesForPlanner": {
+          "type": "string",
+          "maxLength": 1024,
+          "description": "Operatörens fritext-orientering till planningModel (Gap 5). Concat av answers.specialRequests + uniqueSellingPoints från wizardens steg 3, byggd av composeMasterPrompt i apps/viewser/components/discovery-wizard/wizard-payload.ts:496-514. Resolvern persisterar fältet utan att tolka det; build_site.py:build_site_brief prepend:ar det på SiteBrief.notesForPlanner med prefix 'Operator: ' så planner ser operator-intent först. Cappa vid 1024 tecken — räcker för 2-3 stycken fri text utan att svälla planner-prompten."
+        },
+        "requestedCapabilities": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "maxItems": 32,
+          "description": "Wizard-valda capability-slugs (Gap 4) mappade från answers.selectedFunctions via FUNCTION_GROUPS-tabellen i apps/viewser/components/discovery-wizard/wizard-constants.ts. Resolvern merge:ar dessa deterministiskt i project_input.requestedCapabilities innan _resolve_capabilities() klassificerar dem via capability-map.v1.json. Source-prioritet: directive > wizard.mustHave-derived > taxonomy > brief."
         }
       }
     },
@@ -261,9 +277,28 @@
       "type": "array",
       "description": "Operator-supplied photo gallery. Each item carries a placement hint that build_site.py renderers consult when placing images on home, about, services, projects, products or a dedicated gallery section. GPT Vision proposes the placement; the operator can override in the wizard.",
       "items": {"$ref": "#/$defs/assetRef"}
+    },
+    "moodImages": {
+      "type": "array",
+      "maxItems": 5,
+      "description": "Operator-supplied mood/reference images for internal planning and Vision context. These asset refs are preserved under Project Input but are not public site assets; build_site.py isolates their bytes under data/uploads/<siteId>/__mood/ instead of public/uploads/.",
+      "items": {"$ref": "#/$defs/assetRef"}
     }
   },
   "$defs": {
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "summary"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "label": {"type": "string", "minLength": 1},
+        "summary": {"type": "string", "minLength": 1},
+        "price": {"type": "string"},
+        "imageUrl": {"type": "string"},
+        "productImage": {"$ref": "#/$defs/assetRef"}
+      }
+    },
     "assetRef": {
       "type": "object",
       "additionalProperties": false,
