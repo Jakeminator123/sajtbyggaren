@@ -1,9 +1,67 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-27 UTC, steward-auto efter PR #127 — fix(viewser): block Python-backed actions on hosted Vercel. Verifierad `main` är `f73d3d1`.
+**Datum:** 2026-05-27 UTC, post cloud-grind-batch (7 PRs mergade på
+~2h fm: #125, #127, #128, #129, #130, #131, #132) + PR #131-follow-up
+(`c9a730b`, smoke-test drain-thread refaktor) + PreviewRuntime Bite A
+skeleton (`bb6ab2e`) + tre runda reviewer-fynd-fixar (`3e660ea`,
+`e9e3f32`, `44ea54b`, `e60f493` på smoke-test cleanup;
+`8358326` `test_no_legacy_terms`-fix; `19480dc` fail-loud i
+`currentKind()`; `e2f857c` narrow placeholder-copy-scan) + sync-merge
+mot `origin/main` (`cbe1ba9`) + steward-bumps + extern-reviewer-
+cleanup-batch 2026-05-27 efm (`d60bb58` bot-report-verification-regel,
+`abff654` placeholder-scan case-insensitive, `58cfe20` fly-slot-
+reconciliation till ADR 0028 nivå 3 i README) + extern-reviewer-
+analys 2 (`8fb24e4` B157 + GAP-windows-safe-rebuild-pipeline registrerad
+— WinError 5 rmtree på live `node_modules`, arkitektur-anti-pattern att
+rebuilda ovanpå aktiv preview-katalog; ingen kodfix i denna batch) +
+Cursor BugBot suggestions 1-3 (`82b9f99` defensive cleanup i b154-test,
+`23b473e` smala placeholder-scan till `.tsx`/`.jsx` only, `f446be1` AND
+→ OR i `_has_contact_cta`, pushade direkt av BugBot) + GPT P2 Badge
+fix (`0b40b8d` accept scaffold-specific contact-routes inkl.
+`/kontakta-oss` + `/hitta-hit`) + GPT-reviewer-fynd 2 (`ea1e435`
+contact-CTA href-only) + post-coach-cleanup (`a67bc01` steward-bump,
+`f2de33f` BugBot allowlist, `86b5782` markdown-link-fix) + sanity-
+drift-cleanup-runda 1 (`67bd89a` post-coach-bump). Verifierad `jakob-be`
+är `67bd89a`. `origin/main` ligger kvar på `4d879177` (**40 commits**
+efter `jakob-be`, verifierat med `git rev-list --count`; tidigare
+``25 / 29``-räkningar var stale-antaganden). PR #133 (`jakob-be → main`)
+är öppen (inte draft), ready-for-review-läge — väntar på operatörens
+slutgodkända merge. Bug-count: 16 aktiva (B157 ny).
 
-Nya PRs sedan föregående checkpoint: PR #127 — fix(viewser): block Python-backed actions
-on hosted Vercel.
+**PreviewRuntime Bite A (`bb6ab2e`):** typkontrakt + registry + 3
+adapter-stubs i `packages/preview-runtime/`. Skelett bara — alla
+adaptrar returnerar `unsupported` med tydlig "Bite B-wiring saknas"-
+text. Inga existerande filer ändrade. ADR 0028 + ADR 0030 är de
+canonical-källor som Bite A följer; `PreviewRuntimeKind` är låst till
+naming-dictionary v17 (`stackblitz | local | fly`). Bite B wirear
+local + stackblitz mot `apps/viewser/lib/local-preview-server.ts` resp.
+`apps/viewser/lib/stackblitz-files.ts` när tsconfig path-alias eller
+npm-workspace etableras. Bite C (`viewer-panel.tsx` UI-refaktor) kräver
+Christopher-koordinering eftersom `apps/viewser/components/**` är hans
+lane per `governance/rules/branch-scope-ui-ux.md`.
+
+**Nya PRs sedan föregående checkpoint (i mergeordning):**
+
+- PR #125 — fix(discovery): honor wizard clears across versioned fields.
+- PR #127 — fix(viewser): block Python-backed actions on hosted Vercel
+  (501 på `/api/prompt`, `/api/build`, `/api/scrape-site` när VERCEL=1).
+- PR #128 — docs(gaps): file followup-prompt-content-passthrough + ADR
+  0034 draft (nya B155, operatör-beslut väg (b) ärlig först).
+- PR #129 — feat(quality-gate): add contact-CTA + placeholder-copy
+  checks som non-blocking warnings. Follow-up `8269800` separerade
+  blocking/warning i summary efter reviewer-fynd.
+- PR #130 — test(api): add HTTP smoke-test för `/api/prompt`-bron
+  (Bite 2 från LLM Golden Path handoff).
+- PR #131 — fix(builder): close B154 — TDZ at dev hydration on
+  deterministic codegen. Lockfile-alignment + chunk-heuristik-smoke
+  + `_npm_install_inputs_changed` diffar nu lockfile-bytes. B156
+  registrerad för browser-hydration follow-up. Follow-up `c9a730b`
+  (direct push till `jakob-be` efter merge): drain-tråden i
+  `tests/test_b154_next_dev_tdz.py` skriver nu direkt in i en delad
+  `output`-lista istället för att queue:a, så assertionen ser TDZ-fel
+  som dyker upp *efter* Next.js ready-raden (precis B154-fönstret).
+- PR #132 — docs(steward): cleanup pass — 8 filer arkiverade till
+  `docs/archive/` (5 dated handoffs + 3 completed reports, ~78 KB).
 
 **MCP-server-status:** Sprintvakt-servern exponerar 14 tools efter
 PR #77 (`get_workboard`, `list_gaps`, `create_gap`, `activate_gap`,
@@ -16,10 +74,9 @@ konfigurerad med `PYTHONPATH` så `python -m tooling.sprintvakt_mcp.server`
 startar utan ModuleNotFoundError. Editable install (`pip install -e .`)
 krävs en gång per venv enligt ADR 0029.
 
-**Direkt nästa spår — operatörsbeslut + Gap-fixar:**
-
-1. **Backend-Gap fixar (post-C4-audit)** — Gap 1-11 är nu stängda efter Gap 10-merge i PR #122. Detaljer i `docs/current-focus.md`.
-2. **Sync-PR `jakob-be → main`** — `jakob-be` är nu 38 commits framför `origin/main`. Bra läge för en sync-PR (operatörens beslut).
+**Direkt nästa spår:** se [`docs/current-focus.md`](current-focus.md)
+"Direkt nästa fokus". Aktuell status: PR #133 öppen och redo för
+operatörens merge; därefter Bite B + B157-val + ADR 0034.
 
 **Parkerade lanes (väntar trigger):**
 
@@ -56,7 +113,10 @@ väljs.
   `python scripts/sprintvakt_check.py` ska vara grönt innan nytt arbete
   startar.
 
-**Inga öppna PRs.** PR #69 är stängd. Senaste merge till main: PR #120 (2026-05-26 PM). Senare commits sedan dess ligger på `jakob-be` och väntar nästa sync-PR (se "Direkt nästa spår" ovan).
+**1 öppen PR:** #133 (`jakob-be → main`), öppen och ready-for-review-läge
+efter coach-godkänd sanning-städning, väntar på operatörens slutgodkända
+merge. Tidigare not: PR #69 stängd, senaste merge till main PR #120
+(2026-05-26 PM).
 
 **Öppna gaps på workboarden:** 1 queued gap:
 `GAP-backend-build-trace-endpoint` — Christopher-implementerat under
@@ -394,7 +454,7 @@ smoke-lock + golden-path eval (#112, #109, #110).
 
 Nya PRs / direkta commits till `jakob-be` sedan föregående checkpoint (`50217e3`):
 
-- `a337f01` audit-rapport `docs/reports/pr113-ours-conflict-audit-2026-05-26.md` (PR #113 `--ours`-resolution är clean).
+- `a337f01` audit-rapport `docs/archive/pr113-ours-conflict-audit-2026-05-26.md` (PR #113 `--ours`-resolution är clean).
 - `f2e84b0` + `e6a23a3` — B148 (nav `/kontakt`-hardcode), B149 (Intent Guard substring), B150 (`_normalize_business_type` multi-word) stängda + 14 regression-tester.
 - `c85ae70` + `3b5a798` — B97 (kontakt-page hero body per CTA-variant), B98 (`Områden vi arbetar i` suppress för ecommerce-lite) stängda + 9 regression-tester.
 - `6d4a096` + `49f5513` — B90 (ENGLISH_HINTS "a"/"an" false positives), B91 (English-exonym → svensk endonym), B92 (`naprapat` ≠ `naprapatklinik`), B93 (22 nya multi-word slugs) stängda + ~20 regression-tester.

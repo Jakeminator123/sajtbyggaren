@@ -144,7 +144,7 @@ COMMON_WORDS = {
     # governance/rules/bugbot-pr-loop.md som tekniska citat (inte
     # domänbegrepp). Mirrors how "SharedArrayBuffer is not defined"
     # is registered as a quoted error-string further up.
-    "Cursor Bugbot",
+    "Cursor Bugbot", "BugBot",  # CamelCase-stavning ses i bot-rapporter, commit-bodies, current-focus narrative
     "SUCCESS", "FAILURE", "COMPLETED", "NEUTRAL", "DRAFT",
     "Module not found",
     # Generic word fragments som dyker upp i text
@@ -766,6 +766,9 @@ COMMON_WORDS = {
     "B143", "B144",  # reviewer-feedback 2026-05-21 efter Intent Guard light + PR #49
     "B125",  # Safari/Firefox preview fallback (referenced in ADR 0030 + product-operating-context)
     "B147",  # Vercel preview wizard 403 via assertLocalhost (öppen 2026-05-26, operator a/b/c)
+    "B156",  # browser-hydration-smoke follow-up (öppen 2026-05-27, PR #131 reviewer-feedback)
+    "B157",  # WinError 5 rmtree on live node_modules (öppen 2026-05-27, extern reviewer-analys)
+    "WinError",  # Windows native error-namn (samma kategori som PermissionError ovan); refererad i B157 + gap-spec
     "IntentGuard",  # single-token-variant i handoff-prose (basord 'Intent Guard' redan allowlistat)
     "Intent Guard light",  # bolded sprintnamn i handoff/current-focus (Builder-sprint 2026-05-21)
     "ADR 0025 implementation",  # bolded phrase i handoff.md next-steps-tabell

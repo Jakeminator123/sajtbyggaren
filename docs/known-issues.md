@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 13 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 127 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 16 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 128 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -308,6 +308,19 @@ integrate christopher-ui discovery and asset workflow`, merge
   operatörrapport 2026-05-18 (post-B123/B124-diskussion). Fix: open.
   Test: open.
 
+- **`B155` Medel-Hög** - Följdpromptar som uttrycker fri copy- eller
+  stiländring bevaras som metadata men passerar inte till renderer/codegen
+  som applicerbara direktiv. Operatörsverifiering 2026-05-27 visade att
+  "Allt sla vara mycket ljusare" inte gjorde en noir/editorial/mörk sajt
+  ljusare, och att en prompt som bad om `TEST-JAKOB` i hero och övrig
+  text inte gav någon förekomst i `app/page.tsx`. Audit visar att
+  `scripts/prompt_to_project_input.py` bara mergar stödda strukturerade
+  fält/intent, att `planSource="pinned"` skippar planningModel och att
+  renderers/codegen saknar fält för fri copy-edit. Gap-spec:
+  `docs/gaps/GAP-followup-prompt-content-passthrough.md`. ADR-utkast:
+  `governance/decisions/0034-followup-prompt-content-passthrough.md`.
+  Fix: open. Test: open.
+
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
   subprocess-status och loggutdrag medan körningen pågår, men riktig
   cancellation/background-jobb är fortfarande inte implementerat. Det bör tas
@@ -443,7 +456,7 @@ Steward stängde B121 formellt efter PR A+B+C+D. Merge-baseline `e3fa67b`
 (#35 `ec32913`) Viewser overlay alignment, PR C (#36 `89680fa`) Backoffice
 Discovery Control, PR D (#37 `e3fa67b`) CLI baseline-smoke mot fyra
 produktbaseline-prompter — rapport i
-`docs/reports/b121-baseline-smoke.md`. Scout 5 read-only-punkter bedöms
+`docs/archive/b121-baseline-smoke.md`. Scout 5 read-only-punkter bedöms
 täckta av PR A–C-kod + 54 discovery-tester + PR D smoke; full Viewser →
 `/api/prompt` → preview E2E är medveten icke-blocker (samma kategori som
 dry-run ≠ Viewser-payload). Medvetna icke-blockers kvar: per-run trace i
@@ -562,7 +575,74 @@ samma kodmönster lever vidare här — därav posten:
   `B13a` (architectural debt i `scripts/build_site.py`). Fix: open.
   Test: open.
 
+- **`B156` Låg** - `tests/test_b154_next_dev_tdz.py` är ett *chunk-heuristik*-
+  test (curlar fyra routes + grep:ar emitterade webpack-chunks för
+  `let w; ... w.X ...`-mönstret), inte ett riktigt browser-hydration-
+  smoke. För att helt täcka B154-klassens
+  `Uncaught ReferenceError: Cannot access 'w' before initialization`-fel
+  behöver vi en headless-browser-smoke (playwright/puppeteer) som laddar
+  `/` på en levande `npm run dev`-server och assertar att inga
+  hydration-errors loggas i console. Det här gapet flaggades i extern
+  review av PR #131 (2026-05-27). Vid implementation: ersätt eller
+  komplettera chunk-grep med browser-baserad assertion. Källa: extern
+  review 2026-05-27 (PR #131). Fix: open. Test: open.
+
+- **`B157` Hög** - Lokala follow-up-builds raiserar
+  `PermissionError: [WinError 5] Åtkomst nekad` på
+  `node_modules/@next/swc-win32-x64-msvc/next-swc.win32-x64-msvc.node` när
+  `build_site.py:copy_starter()` (rad 705-731) försöker
+  `shutil.rmtree(node_modules)` i en `.generated/<siteId>/`-katalog som en
+  live `next dev`/`next start`-process håller låst. På Windows låser den
+  native `.node`-binary hårt; på Linux/macOS skulle aggressive delete
+  kunna lyckas men anti-patternet kvarstår.
+
+  Trigger: `_npm_install_inputs_changed=True` (rad 698-699 i
+  `build_site.py`) — den lockfile-diff-check som B154-fixen (PR #131)
+  introducerade. Vid lockfile-skillnad mellan starter-source och
+  `.generated/<siteId>/` nollas `preserved={"node_modules"}` på rad 720
+  → `rmtree` försöker radera live `node_modules` → WinError 5. Idag
+  triggat av `data/starters/commerce-base/package-lock.json`-bumpen
+  `next 16.2.5 → 16.2.6` som följde med post-#131-batchen.
+
+  Root cause: builder bygger ovanpå aktiv preview-output-katalog.
+  Arkitektur-anti-pattern flaggat av extern reviewer 2026-05-27 efm.
+
+  Fix-strategi (laddrar, lägst → högst, per reviewer-analys):
+  1. **Akut:** stoppa live `next start`/`next dev`-process före
+     `copy_starter()` (utöka per-siteId-mutex i
+     `apps/viewser/lib/local-preview-server.ts`).
+  2. **Snabbfix:** retry/backoff runt `rmtree()` (50ms-1s, max 5 retries)
+     — temporär, döljer arkitektur-skulden.
+  3. **Bättre:** `rename` till `.trash`-suffix + delayed garbage
+     collection (städjobb som tar bort gamla mappar senare).
+  4. **Rätt:** ny `builds/<timestamp>/`-katalog per follow-up + manifest-
+     pointer-swap (Vercel-likt). UI byter från gammal build till ny först
+     när nya builden är klar.
+  5. **Vercel-likt:** varje följdprompt = ny immutable deployment med
+     egen unique URL; gammal preview kvar tills ny verifierad.
+
+  Gap-spec: `docs/gaps/GAP-windows-safe-rebuild-pipeline.md`.
+  Källa: extern reviewer-analys 2026-05-27 efm (post-PR #131 + post-
+  `commerce-base/package-lock.json`-Next-bump). Operatörsobservation:
+  "hänt 1000 gånger" — buggen var ej registrerad tidigare. Fix: open.
+  Test: open.
+
 ## Stängda - regression-test säkrar fixet
+
+- **`B154` Medel** (stängd 2026-05-27, TDZ-smoke + commerce-lock) -
+  `npm run dev` i en deterministic `ecommerce-lite`/`noir-editorial`-
+  dev-preview kunde hosta `/`, `/produkter`, `/om-oss` och `/kontakt`
+  men sedan kasta `Cannot access 'w' before initialization` vid första
+  hydration. Bisecten hittade ingen page-filscykel och ingen
+  reproducerbar lucide-runtime-krasch på en färsk temp-build; däremot
+  var `commerce-base/package-lock.json` stale mot `package.json`
+  (Next/`eslint-config-next`/PostCSS låg kvar på föregående baseline).
+  Lockfilen är regenererad så färska generated sites installerar samma
+  Next 16.2.6-devgraf som starter-deklarationen, och smoke-testet
+  startar `next dev --webpack`, curlar alla fyra routes och failar om
+  dev-chunks återintroducerar `let w; w.*` före `w =`. Fix: PR #131
+  squash. Test:
+  `tests/test_b154_next_dev_tdz.py::test_b154_next_dev_chunks_do_not_access_w_before_initialization`.
 
 - **`B147` Medel-Hög** (stängd 2026-05-26, B147 host-whitelist) -
   `assertLocalhost` i `apps/viewser/lib/localhost-guard.ts` blockerade
@@ -1333,7 +1413,7 @@ samma kodmönster lever vidare här — därav posten:
   `tests/test_discovery_resolver.py`,
   `tests/test_viewser_files.py` (PR B guards),
   `tests/test_backoffice_discovery_control.py` (PR C, 16 tester);
-  smoke: `docs/reports/b121-baseline-smoke.md`.
+  smoke: `docs/archive/b121-baseline-smoke.md`.
 
 - **`B126` Medel** (stängd 2026-05-18, post-PR-#32 reviewer-fynd 1) -
   `backoffice/asset_graph.py:_compatible_dossier_edges` byggde

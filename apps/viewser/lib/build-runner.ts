@@ -14,6 +14,9 @@ import { readBuildResult, runDirFromId, runsDir } from "@/lib/runs";
 // 10 min ger gott om utrymme även för kalla cacher utan att vara orimligt.
 const BUILD_TIMEOUT_MS = 600_000;
 const RUN_ID_PATTERN = /runId:\s*([a-zA-Z0-9._-]+)/;
+const TEST_PROMPT_INPUTS_ENV = "VIEWSER_PROMPT_INPUTS_DIR";
+const TEST_ENV_ACTIVE =
+  process.env.NODE_ENV === "test" || process.env.SAJTBYGGAREN_TEST === "1";
 
 // Per-siteId mutex för att serialisera byggen mot SAMMA sajt utan att
 // blockera byggen mot ANDRA sajter. Tidigare implementation hade en
@@ -57,8 +60,16 @@ const ALLOWED_DOSSIER_ROOTS = ["examples", path.join("data", "prompt-inputs")];
 async function assertDossierPathAllowed(absoluteDossierPath: string): Promise<void> {
   const root = repoRoot();
   const resolved = await fs.realpath(path.resolve(absoluteDossierPath));
-  for (const subdir of ALLOWED_DOSSIER_ROOTS) {
-    const allowed = await fs.realpath(path.resolve(root, subdir));
+  // Test-only isolation: set SAJTBYGGAREN_TEST=1 (or NODE_ENV=test) with
+  // VIEWSER_PROMPT_INPUTS_DIR to whitelist tmp Project Inputs.
+  const testPromptRoot = process.env[TEST_PROMPT_INPUTS_ENV]?.trim();
+  const roots =
+    testPromptRoot && TEST_ENV_ACTIVE
+      ? [...ALLOWED_DOSSIER_ROOTS, path.resolve(root, testPromptRoot)]
+      : ALLOWED_DOSSIER_ROOTS;
+  for (const subdir of roots) {
+    const allowed = await fs.realpath(path.resolve(root, subdir)).catch(() => null);
+    if (!allowed) continue;
     const relative = path.relative(allowed, resolved);
     if (
       (relative === "" || relative) &&
@@ -69,7 +80,7 @@ async function assertDossierPathAllowed(absoluteDossierPath: string): Promise<vo
     }
   }
   throw new Error(
-    `Dossier-path ligger utanför tillåtna rötter (${ALLOWED_DOSSIER_ROOTS.join(", ")}): ${absoluteDossierPath}`,
+    `Dossier-path ligger utanför tillåtna rötter (${roots.join(", ")}): ${absoluteDossierPath}`,
   );
 }
 
@@ -126,10 +137,14 @@ async function runBuildOnce(
     dossierPath = await assertProjectInputExists(siteId);
   }
   const scriptPath = path.join(repoRoot(), "scripts", "build_site.py");
+  const args = [scriptPath, "--dossier", dossierPath];
+  // Test-only runs isolation: set SAJTBYGGAREN_TEST=1 and VIEWSER_RUNS_DIR.
+  const testRunsDir = TEST_ENV_ACTIVE ? process.env.VIEWSER_RUNS_DIR?.trim() : "";
+  if (testRunsDir) args.push("--runs-dir", path.resolve(repoRoot(), testRunsDir));
 
   const child = spawn(
     pythonCommand(),
-    [scriptPath, "--dossier", dossierPath],
+    args,
     {
       cwd: repoRoot(),
       env: process.env,

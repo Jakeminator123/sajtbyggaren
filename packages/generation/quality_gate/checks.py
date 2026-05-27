@@ -241,6 +241,52 @@ def run_build_status_check(
 # product .env files. .next is the build output directory. .git would only
 # appear if a starter accidentally committed nested git history.
 _POLICY_SCAN_SKIP_DIRS = {"node_modules", ".next", ".git", "out", ".turbo"}
+_TEXT_EXTENSIONS = {".tsx", ".jsx"}
+_CTA_LINK_RE = re.compile(
+    r"<(?:Link|a)\b(?=[^>]*\bhref=(?:[\"']([^\"']+)[\"']|\{[\"']([^\"']+)[\"']\}))"
+    r"[^>]*>(.*?)</(?:Link|a)>",
+    flags=re.IGNORECASE | re.DOTALL,
+)
+_CTA_TEXT_RE = re.compile(
+    r"\b(kontakta|boka|begär|ring|contact|book|request|call)\b"
+    r"|hör av|kom igång|get in touch|get started",
+    flags=re.IGNORECASE,
+)
+# Scaffolds map ``id="contact"`` i routes.json till olika path-segment.
+# Här täcks de varianter som existerande scaffolds använder:
+#   - ``kontakt`` / ``contact`` (substring matchar ``/kontakt``,
+#     ``/kontakta-oss``, ``/contact-us``)
+#   - ``hitta-hit`` (restaurant-hospitality, helt unik path som inte
+#     innehåller "kontakt"/"contact"-substring)
+# Framtida sprint: läsa scaffoldens routes.json explicit och resolva
+# ``id="contact"`` istället för pattern-matching. Registreras som
+# tech-debt-not i ``docs/known-issues.md`` om någon ny scaffold tappar
+# på pattern-matching här (GPT P2 Badge 2026-05-27).
+_CONTACT_ROUTE_FRAGMENTS = ("kontakt", "contact", "hitta-hit")
+
+
+def _is_contact_href(href: str) -> bool:
+    lower = href.lower()
+    return any(frag in lower for frag in _CONTACT_ROUTE_FRAGMENTS)
+
+
+def _is_contact_route_dir(name: str) -> bool:
+    lower = name.lower()
+    return any(frag in lower for frag in _CONTACT_ROUTE_FRAGMENTS)
+
+# Customer-copy-placeholders only. Dev-markers som "TODO:" och "FIXME"
+# var med i v1 men gav brus eftersom check:en skannar både code-comments
+# och customer-rendering-strängar — ett "TODO:" i en .tsx-kommentar är inte
+# samma kategori som "Lorem ipsum" i en hero-rubrik. Reviewer-fynd på PR
+# #129 + #133. Lägg inte tillbaka dev-markers utan att samtidigt smala
+# scope:t till bara customer-copy-extensions.
+_PLACEHOLDER_PATTERNS = [
+    ("Lorem ipsum", re.compile(r"lorem ipsum", re.IGNORECASE)),
+    ("TBD", re.compile(r"\bTBD\b", re.IGNORECASE)),
+    ("PLATSHÅLLARE", re.compile(r"platshållare", re.IGNORECASE)),
+    ("REPLACE_ME", re.compile(r"\bREPLACE_ME\b", re.IGNORECASE)),
+    ("<insert ... here>", re.compile(r"<insert\b[^>]*\bhere>", re.IGNORECASE)),
+]
 
 
 def run_policy_compliance_check(target_dir: Path) -> CheckResult:
@@ -290,4 +336,94 @@ def run_policy_compliance_check(target_dir: Path) -> CheckResult:
         detail=f"{len(findings)} förbjudna .env-fil(er) hittades.",
         findings=findings,
         durationMs=elapsed,
+    )
+
+
+def _has_contact_cta(text: str) -> bool:
+    for match in _CTA_LINK_RE.finditer(text):
+        href = (match.group(1) or match.group(2) or "").lower()
+        # En länk räknas som contact-CTA när intent ligger i href:
+        #   - tel:/mailto:-protocollet är explicit
+        #   - href som länkar till en contact-route-sida (inkl.
+        #     /kontakta-oss + /hitta-hit per scaffold-katalogen)
+        # Body-text matchad mot ``_CTA_TEXT_RE`` räcker INTE ensamt —
+        # annars skulle ``<a href="/products">Ring oss</a>`` falskt
+        # godkännas (reviewer-fynd 2026-05-27 på f446be1:s OR-fix).
+        # ``_CTA_TEXT_RE`` är kvar som hjälpregex för framtida sprint
+        # där body-text + href-kombinationer kanske ska bedömas mer
+        # finkornigt; idag används den inte här.
+        if href.startswith(("mailto:", "tel:")) or _is_contact_href(href):
+            return True
+    return False
+
+
+def _find_contact_page(target_dir: Path) -> Path | None:
+    """Hitta scaffoldens contact-page genom att iterera ``app/``.
+
+    Tidigare hårdkodades ``app/kontakt/page.tsx`` + ``app/contact/page.tsx``,
+    vilket missade scaffolds med alternativa contact-route-paths
+    (``agency-studio``/``clinic-healthcare``/``professional-services`` →
+    ``/kontakta-oss``, ``restaurant-hospitality`` → ``/hitta-hit``).
+    Reviewer-fynd: GPT P2 Badge 2026-05-27 + Cursor BugBot suggestion 4.
+    """
+    app_dir = target_dir / "app"
+    if not app_dir.exists():
+        return None
+    for entry in app_dir.iterdir():
+        if not entry.is_dir():
+            continue
+        if not _is_contact_route_dir(entry.name):
+            continue
+        page = entry / "page.tsx"
+        if page.exists():
+            return page
+    return None
+
+
+def run_contact_cta_presence_check(target_dir: Path) -> CheckResult:
+    findings: list[str] = []
+    home = target_dir / "app" / "page.tsx"
+    contact = _find_contact_page(target_dir)
+    if not home.exists() and contact is None:
+        return CheckResult(name="contact-cta-presence", status="skipped")
+    try:
+        home_text = home.read_text(encoding="utf-8")
+    except OSError:
+        home_text = ""
+    hero = (re.search(r"<section\b.*?</section>", home_text, re.IGNORECASE | re.DOTALL) or [home_text])[0]
+    if not _has_contact_cta(hero):
+        findings.append("app/page.tsx: hero saknar kontakt-CTA")
+    if contact is None:
+        findings.append("app/: kontaktsida saknas (sökte efter dir med 'kontakt'/'contact'/'hitta-hit')")
+    else:
+        try:
+            contact_text = contact.read_text(encoding="utf-8")
+        except OSError:
+            contact_text = ""
+        if not _has_contact_cta(contact_text):
+            findings.append(f"{contact.relative_to(target_dir)}: saknar kontakt-CTA")
+    return CheckResult(
+        name="contact-cta-presence",
+        status="failed" if findings else "ok",
+        findings=findings,
+    )
+
+
+def run_placeholder_copy_scan_check(target_dir: Path) -> CheckResult:
+    findings: list[str] = []
+    for path in target_dir.rglob("*"):
+        if any(part in _POLICY_SCAN_SKIP_DIRS for part in path.parts) or path.suffix not in _TEXT_EXTENSIONS:
+            continue
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except (OSError, UnicodeDecodeError):
+            continue
+        for line_no, line in enumerate(lines, start=1):
+            for label, pattern in _PLACEHOLDER_PATTERNS:
+                if pattern.search(line):
+                    findings.append(f"{path.relative_to(target_dir)}:{line_no}: {label}")
+    return CheckResult(
+        name="placeholder-copy-scan",
+        status="failed" if findings else "ok",
+        findings=findings[:50],
     )

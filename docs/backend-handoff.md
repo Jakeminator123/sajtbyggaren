@@ -1,7 +1,3 @@
-> **SUPERSEDED** — detta dokument täcker wizardens 5-stegsomstrukturering
-> från 2026-05-19. För aktuell status inklusive builder-shell, floating-chat,
-> local-preview och Sprint A/B, se `docs/backend-handoff-2026-05-22.md`.
-
 ## Implementationsstatus per gap (audit 2026-05-26)
 
 Originaldokumentet listar 11 gaps. C4-audit 2026-05-26 verifierade fem

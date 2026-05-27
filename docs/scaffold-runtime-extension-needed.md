@@ -6,7 +6,7 @@
 
 ## Sync with main (post PR #63, 2026-05-24)
 
-PR #63 (`f9312ec`) closed gaps 1 (`vibe.useCustomColors`) and 3 (`directives.scaffoldHint` override) from `docs/backend-handoff-2026-05-22.md`. Jakob's commit message already calls out the same runtime gap this document describes:
+PR #63 (`f9312ec`) closed gaps 1 (`vibe.useCustomColors`) and 3 (`directives.scaffoldHint` override) from `docs/archive/backend-handoff-2026-05-22.md`. Jakob's commit message already calls out the same runtime gap this document describes:
 
 > Bara runtime-aktiva scaffolds (local-service-business, ecommerce-lite) får override:a. Planned scaffolds (**restaurant-hospitality** m.fl.) ignoreras eftersom build_site.py inte kan rendera dem.
 

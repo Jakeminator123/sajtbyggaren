@@ -211,7 +211,7 @@ Standardflödet efter en kedje-propagation-sprint (B137/B138/B139/etc):
 
 - `docs/archive/2026-05-19/scout-wizard-tagline-pagecount-tone-2026-05-19.md` — Scout-
   kartläggning av kodvägarna B137/B138/B139 pekar på.
-- `docs/reports/run-details-warnings-inventory-2026-05-21.md` — vilka
+- `docs/archive/run-details-warnings-inventory-2026-05-21.md` — vilka
   warning-fält finns idag, var de bör renderas.
 - `docs/agent-handbook.md` — när Scout/Builder/Steward ska köra det här
   verktyget i sina loopar.
