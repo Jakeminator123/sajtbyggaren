@@ -25,7 +25,7 @@
   (direct push till `jakob-be` efter merge): drain-tråden i
   `tests/test_b154_next_dev_tdz.py` skriver nu direkt in i en delad
   `output`-lista istället för att queue:a, så assertionen ser TDZ-fel
-  som dyker upp *efter* `Ready`-raden (precis B154-fönstret).
+  som dyker upp *efter* Next.js ready-raden (precis B154-fönstret).
 - PR #132 — docs(steward): cleanup pass — 8 filer arkiverade till
   `docs/archive/` (5 dated handoffs + 3 completed reports, ~78 KB).
 

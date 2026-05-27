@@ -44,9 +44,10 @@ PR #130 — test(api): add HTTP smoke-test for /api/prompt Node->Python bridge.
 PR #131 — fix(builder): close B154 — TDZ at dev hydration on deterministic codegen.
   Follow-up `c9a730b` (direct push till `jakob-be` efter merge) refaktorerade
   drain-tråden i `tests/test_b154_next_dev_tdz.py` — tidigare returnerade
-  `_wait_for_dev_ready` en fresh list som slutade växa vid `Ready`-raden, så
-  TDZ-fel som trillade ut *efter* ready (precis B154-fönstret) syntes inte.
-  Nu äger `_spawn_next_dev` listan och drain-tråden skriver direkt in i den.
+  `_wait_for_dev_ready` en fresh list som slutade växa vid Next.js
+  ready-raden, så TDZ-fel som trillade ut *efter* ready (precis
+  B154-fönstret) syntes inte. Nu äger `_spawn_next_dev` listan och
+  drain-tråden skriver direkt in i den.
 PR #132 — docs(steward): cleanup pass — archive stale handoffs + completed reports.
 
 ## Branchmodellen (kort)
