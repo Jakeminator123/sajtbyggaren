@@ -30,9 +30,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `44bdbdd` (2026-05-27 UTC, steward-auto efter PR #125 — fix(discovery): honor wizard clears across versioned fields).
-Nya PRs sedan föregående checkpoint: PR #125 — fix(discovery): honor wizard clears
-across versioned fields.
+Last verified state: `82ce287` (2026-05-27 UTC, steward-auto efter PR #124 — feat(llm-golden-path): lock v1 + extend with multi-intent chain, real-build smoke, runbook and handoff).
+Nya PRs sedan föregående checkpoint: PR #124 — feat(llm-golden-path): lock v1 + extend
+with multi-intent chain, real-build smoke, runbook and handoff.
 
 ## Branchmodellen (kort)
 
@@ -245,3 +245,9 @@ Nya commits sedan föregående checkpoint (`0f3bd67`):
 Last verified state: `3415e7d` (2026-05-27 UTC, steward-auto efter PR #123 — sync(jakob-be -> main): backend gap batch and docs cleanup).
 Nya PRs sedan föregående checkpoint: PR #123 — sync(jakob-be -> main): backend gap batch
 and docs cleanup.
+
+### 2026-05-27 UTC — current-focus.md före `44bdbdd`
+
+Last verified state: `44bdbdd` (2026-05-27 UTC, steward-auto efter PR #125 — fix(discovery): honor wizard clears across versioned fields).
+Nya PRs sedan föregående checkpoint: PR #125 — fix(discovery): honor wizard clears
+across versioned fields.

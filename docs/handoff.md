@@ -1,9 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-27 UTC, steward-auto efter PR #125 — fix(discovery): honor wizard clears across versioned fields. Verifierad `main` är `44bdbdd`.
+**Datum:** 2026-05-27 UTC, steward-auto efter PR #124 — feat(llm-golden-path): lock v1 + extend with multi-intent chain, real-build smoke, runbook and handoff. Verifierad `main` är `82ce287`.
 
-Nya PRs sedan föregående checkpoint: PR #125 — fix(discovery): honor wizard clears
-across versioned fields.
+Nya PRs sedan föregående checkpoint: PR #124 — feat(llm-golden-path): lock v1 + extend
+with multi-intent chain, real-build smoke, runbook and handoff.
 
 **MCP-server-status:** Sprintvakt-servern exponerar 14 tools efter
 PR #77 (`get_workboard`, `list_gaps`, `create_gap`, `activate_gap`,
@@ -423,3 +423,10 @@ responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report; 
 
 Nya PRs sedan föregående checkpoint: PR #123 — sync(jakob-be -> main): backend gap batch
 and docs cleanup.
+
+### 2026-05-27 UTC — handoff.md före `44bdbdd`
+
+**Datum:** 2026-05-27 UTC, steward-auto efter PR #125 — fix(discovery): honor wizard clears across versioned fields. Verifierad `main` är `44bdbdd`.
+
+Nya PRs sedan föregående checkpoint: PR #125 — fix(discovery): honor wizard clears
+across versioned fields.
