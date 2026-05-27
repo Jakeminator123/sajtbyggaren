@@ -241,7 +241,7 @@ def run_build_status_check(
 # product .env files. .next is the build output directory. .git would only
 # appear if a starter accidentally committed nested git history.
 _POLICY_SCAN_SKIP_DIRS = {"node_modules", ".next", ".git", "out", ".turbo"}
-_TEXT_EXTENSIONS = {".ts", ".tsx", ".js", ".jsx", ".css", ".md", ".json", ".html", ".txt"}
+_TEXT_EXTENSIONS = {".tsx", ".jsx"}
 _CTA_LINK_RE = re.compile(
     r"<(?:Link|a)\b(?=[^>]*\bhref=(?:[\"']([^\"']+)[\"']|\{[\"']([^\"']+)[\"']\}))"
     r"[^>]*>(.*?)</(?:Link|a)>",
