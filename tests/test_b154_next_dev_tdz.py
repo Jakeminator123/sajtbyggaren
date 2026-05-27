@@ -1,13 +1,25 @@
-"""B154 regression smoke test for Next dev TDZ hydration chunks."""
+"""B154 regression smoke test for Next dev TDZ hydration chunks.
+
+This is a *chunk heuristic* test, not a full browser-hydration smoke. It
+spawns ``next dev``, curls the four canonical routes to confirm the
+server is alive, and greps the emitted webpack chunks for the
+``let w; ... w.X ...`` pattern that B154's TDZ crash produced. A real
+headless-browser hydration check (puppeteer/playwright) that loads ``/``
+and asserts no ``Cannot access 'w' before initialization`` error is
+tracked as a follow-up bug (B156) and would replace the chunk heuristic
+when it lands.
+"""
 
 from __future__ import annotations
 
 import json
+import queue
 import re
 import shutil
 import socket
 import subprocess
 import sys
+import threading
 import time
 import urllib.request
 from pathlib import Path
@@ -50,7 +62,14 @@ def _write_b154_project_input(tmp_path: Path) -> Path:
     return target
 
 
-def _start_next_dev(site_dir: Path, port: int) -> tuple[subprocess.Popen[str], list[str]]:
+def _spawn_next_dev(site_dir: Path, port: int) -> subprocess.Popen[str]:
+    """Spawn ``next dev`` and return the Popen handle immediately.
+
+    Caller is responsible for ``_wait_for_dev_ready`` and ``_stop_process``;
+    splitting spawn from wait means the caller can capture the handle in
+    its outer scope before any potentially-raising wait code runs, so the
+    ``finally`` cleanup always sees the process.
+    """
     process = subprocess.Popen(
         ["npm", "run", "dev", "--", "--hostname", "127.0.0.1", "--port", str(port)],
         cwd=site_dir,
@@ -59,21 +78,62 @@ def _start_next_dev(site_dir: Path, port: int) -> tuple[subprocess.Popen[str], l
         stderr=subprocess.STDOUT,
     )
     assert process.stdout is not None
+    return process
+
+
+def _wait_for_dev_ready(
+    process: subprocess.Popen[str], timeout_seconds: float = DEV_READY_TIMEOUT_SECONDS
+) -> list[str]:
+    """Drain ``process.stdout`` in a worker thread and wait for the Next
+    dev ready-line.
+
+    ``readline`` is blocking, so a previous implementation that called it
+    inside a ``while time.monotonic() < deadline`` loop would never reach
+    the timeout check if Next dev stopped emitting lines. Draining stdout
+    on a background thread and reading via ``queue.get(timeout=...)``
+    keeps the deadline enforced.
+    """
+    line_queue: queue.Queue[str | None] = queue.Queue()
+
+    def _drain() -> None:
+        assert process.stdout is not None
+        try:
+            for line in iter(process.stdout.readline, ""):
+                line_queue.put(line)
+        finally:
+            line_queue.put(None)
+
+    reader = threading.Thread(target=_drain, daemon=True)
+    reader.start()
+
     output: list[str] = []
-    deadline = time.monotonic() + DEV_READY_TIMEOUT_SECONDS
+    deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
         if process.poll() is not None:
+            while True:
+                try:
+                    line = line_queue.get(timeout=0.5)
+                except queue.Empty:
+                    break
+                if line is None:
+                    break
+                output.append(line)
             raise AssertionError(
                 f"`npm run dev` exited early with code {process.returncode}.\n"
                 + "".join(output)
             )
-        line = process.stdout.readline()
+        try:
+            line = line_queue.get(timeout=1.0)
+        except queue.Empty:
+            continue
+        if line is None:
+            break
         output.append(line)
         if "Ready" in line or "ready" in line:
-            return process, output
+            return output
     raise AssertionError(
-        f"`npm run dev` did not report Ready within "
-        f"{DEV_READY_TIMEOUT_SECONDS}s.\n{''.join(output)}"
+        f"`npm run dev` did not report Ready within {timeout_seconds:.0f}s.\n"
+        + "".join(output)
     )
 
 
@@ -163,7 +223,8 @@ def test_b154_next_dev_chunks_do_not_access_w_before_initialization(
     process: subprocess.Popen[str] | None = None
     output: list[str] = []
     try:
-        process, output = _start_next_dev(site_dir, port)
+        process = _spawn_next_dev(site_dir, port)
+        output = _wait_for_dev_ready(process)
         for route in ("/", "/produkter", "/om-oss", "/kontakt"):
             html = _fetch_route(port, route)
             assert "<html" in html.lower(), f"{route} did not return HTML"

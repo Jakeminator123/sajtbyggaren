@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 14 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 128 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 128 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -575,6 +575,18 @@ samma kodmönster lever vidare här — därav posten:
   `B13a` (architectural debt i `scripts/build_site.py`). Fix: open.
   Test: open.
 
+- **`B156` Låg** - `tests/test_b154_next_dev_tdz.py` är ett *chunk-heuristik*-
+  test (curlar fyra routes + grep:ar emitterade webpack-chunks för
+  `let w; ... w.X ...`-mönstret), inte ett riktigt browser-hydration-
+  smoke. För att helt täcka B154-klassens
+  `Uncaught ReferenceError: Cannot access 'w' before initialization`-fel
+  behöver vi en headless-browser-smoke (playwright/puppeteer) som laddar
+  `/` på en levande `npm run dev`-server och assertar att inga
+  hydration-errors loggas i console. Det här gapet flaggades i extern
+  review av PR #131 (2026-05-27). Vid implementation: ersätt eller
+  komplettera chunk-grep med browser-baserad assertion. Källa: extern
+  review 2026-05-27 (PR #131). Fix: open. Test: open.
+
 ## Stängda - regression-test säkrar fixet
 
 - **`B154` Medel** (stängd 2026-05-27, TDZ-smoke + commerce-lock) -
@@ -588,8 +600,8 @@ samma kodmönster lever vidare här — därav posten:
   Lockfilen är regenererad så färska generated sites installerar samma
   Next 16.2.6-devgraf som starter-deklarationen, och smoke-testet
   startar `next dev --webpack`, curlar alla fyra routes och failar om
-  dev-chunks återintroducerar `let w; w.*` före `w =`. Fix:
-  `9824b1a`. Test:
+  dev-chunks återintroducerar `let w; w.*` före `w =`. Fix: PR #131
+  squash. Test:
   `tests/test_b154_next_dev_tdz.py::test_b154_next_dev_chunks_do_not_access_w_before_initialization`.
 
 - **`B147` Medel-Hög** (stängd 2026-05-26, B147 host-whitelist) -

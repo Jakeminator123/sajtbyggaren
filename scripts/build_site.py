@@ -680,7 +680,26 @@ def _npm_install_inputs_changed(source: Path, target: Path) -> bool:
         # cannot be diff:ad mot source. Force a clean reinstall instead
         # of letting the exception abort the whole build.
         return True
-    return any(source_pkg.get(key) != target_pkg.get(key) for key in _NPM_INSTALL_INPUT_KEYS)
+    if any(source_pkg.get(key) != target_pkg.get(key) for key in _NPM_INSTALL_INPUT_KEYS):
+        return True
+
+    # B154 root cause: starter's package-lock.json drifted relative to its
+    # own package.json (Next/eslint-config-next/PostCSS pinned to an older
+    # baseline). Comparing lockfile contents catches that class of bug so
+    # an existing .generated/<siteId> with stale node_modules forcibly
+    # reinstalls when the starter ships an updated lockfile, even if
+    # package.json fields look identical.
+    source_lock = source / "package-lock.json"
+    target_lock = target / "package-lock.json"
+    if source_lock.exists() != target_lock.exists():
+        return True
+    if source_lock.exists() and target_lock.exists():
+        try:
+            if source_lock.read_bytes() != target_lock.read_bytes():
+                return True
+        except OSError:
+            return True
+    return False
 
 
 def copy_starter(starter_id: str, target: Path) -> None:
