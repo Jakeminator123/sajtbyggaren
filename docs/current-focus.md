@@ -30,9 +30,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `82ce287` (2026-05-27 UTC, steward-auto efter PR #124 — feat(llm-golden-path): lock v1 + extend with multi-intent chain, real-build smoke, runbook and handoff).
-Nya PRs sedan föregående checkpoint: PR #124 — feat(llm-golden-path): lock v1 + extend
-with multi-intent chain, real-build smoke, runbook and handoff.
+Last verified state: `f73d3d1` (2026-05-27 UTC, steward-auto efter PR #127 — fix(viewser): block Python-backed actions on hosted Vercel).
+Nya PRs sedan föregående checkpoint: PR #127 — fix(viewser): block Python-backed actions
+on hosted Vercel.
 
 ## Branchmodellen (kort)
 
@@ -251,3 +251,9 @@ and docs cleanup.
 Last verified state: `44bdbdd` (2026-05-27 UTC, steward-auto efter PR #125 — fix(discovery): honor wizard clears across versioned fields).
 Nya PRs sedan föregående checkpoint: PR #125 — fix(discovery): honor wizard clears
 across versioned fields.
+
+### 2026-05-27 UTC — current-focus.md före `82ce287`
+
+Last verified state: `82ce287` (2026-05-27 UTC, steward-auto efter PR #124 — feat(llm-golden-path): lock v1 + extend with multi-intent chain, real-build smoke, runbook and handoff).
+Nya PRs sedan föregående checkpoint: PR #124 — feat(llm-golden-path): lock v1 + extend
+with multi-intent chain, real-build smoke, runbook and handoff.
