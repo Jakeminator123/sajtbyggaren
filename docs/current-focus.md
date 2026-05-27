@@ -30,8 +30,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `943e808` (2026-05-27 UTC, post cloud-grind-batch:
-PR #131 B154 TDZ-fix + PR #132 docs cleanup som sista mergar).
+Last verified state: `c9a730b` (2026-05-27 UTC, post cloud-grind-batch +
+PR #131-follow-up: smoke-test drain-thread refaktorerad så assertion ser
+post-ready output. `jakob-be` är 10 commits framför `origin/main`).
 
 Nya PRs sedan föregående checkpoint (i mergeordning):
 PR #125 — fix(discovery): honor wizard clears across versioned fields.
@@ -41,6 +42,11 @@ PR #129 — feat(quality-gate): add contact-CTA + placeholder-copy checks (+ fol
   summary-severity-fix i `8269800`).
 PR #130 — test(api): add HTTP smoke-test for /api/prompt Node->Python bridge.
 PR #131 — fix(builder): close B154 — TDZ at dev hydration on deterministic codegen.
+  Follow-up `c9a730b` (direct push till `jakob-be` efter merge) refaktorerade
+  drain-tråden i `tests/test_b154_next_dev_tdz.py` — tidigare returnerade
+  `_wait_for_dev_ready` en fresh list som slutade växa vid `Ready`-raden, så
+  TDZ-fel som trillade ut *efter* ready (precis B154-fönstret) syntes inte.
+  Nu äger `_spawn_next_dev` listan och drain-tråden skriver direkt in i den.
 PR #132 — docs(steward): cleanup pass — archive stale handoffs + completed reports.
 
 ## Branchmodellen (kort)
