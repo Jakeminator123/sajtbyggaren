@@ -165,6 +165,33 @@ def test_discovery_payload_blocks_unknown_categories_and_preserves_schema_versio
 
 
 @pytest.mark.tooling
+def test_discovery_payload_preserves_empty_list_tombstones() -> None:
+    payload = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "wizard-payload.ts"
+    ).read_text(encoding="utf-8")
+
+    for key in (
+        '"products"',
+        '"moodImages"',
+        '"requestedCapabilities"',
+        '"conversionGoals"',
+        '"uniqueSellingPoints"',
+        '"sectionTreatments"',
+        '"notesForPlanner"',
+    ):
+        assert key in payload, (
+            f"wizard-payload.ts måste bevara tom lista för {key} så backend "
+            "kan rensa tidigare wizard-värden när operatören tar bort allt."
+        )
+    assert "directives.requestedCapabilities = capabilities" in payload, (
+        "requestedCapabilities måste skickas även när listan är tom."
+    )
+    assert "directives.conversionGoals = mapCtaToConversionGoals" in payload
+    assert "directives.uniqueSellingPoints = answers.uniqueSellingPoints" in payload
+    assert "directives.sectionTreatments = sectionPins" in payload
+
+
+@pytest.mark.tooling
 def test_prompt_route_rejects_discovery_starter_id_and_followup_discovery() -> None:
     text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
         encoding="utf-8"

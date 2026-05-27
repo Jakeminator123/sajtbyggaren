@@ -251,6 +251,32 @@ def test_resolver_preserves_mood_images_in_project_input(
 
 
 @pytest.mark.tooling
+def test_resolver_empty_mood_images_clears_existing_project_input_refs(
+    project_input_schema: dict[str, Any],
+) -> None:
+    payload = {
+        "schemaVersion": 2,
+        "rawPrompt": "Måleri i Stockholm sedan 1998",
+        "contentBranch": "business",
+        "scaffoldHint": "local-service-business",
+        "answers": {"siteType": ["business"], "moodImages": []},
+        "directives": {"language": "sv", "scaffoldHint": "local-service-business"},
+    }
+    candidate = _candidate_project_input()
+    candidate["moodImages"] = [_valid_asset_ref()]
+
+    project_input, decision = resolve_discovery(
+        raw_prompt=payload["rawPrompt"],
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+
+    jsonschema.Draft202012Validator(project_input_schema).validate(project_input)
+    assert "moodImages" not in project_input
+    assert decision.fieldSources["moodImages"] == "wizard"
+
+
+@pytest.mark.tooling
 def test_build_site_brief_maps_mood_vision_to_notes_for_planner(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
