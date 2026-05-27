@@ -30,9 +30,24 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `c9a730b` (2026-05-27 UTC, post cloud-grind-batch +
-PR #131-follow-up: smoke-test drain-thread refaktorerad så assertion ser
-post-ready output. `jakob-be` är 10 commits framför `origin/main`).
+Last verified state: `e9e3f32` (2026-05-27 UTC, post PreviewRuntime
+Bite A skeleton + 2 fix-commits direct-push på `jakob-be`. `jakob-be`
+är nu 14 commits framför `origin/main`).
+
+Nya commits sedan `c9a730b` (i historisk ordning):
+- `c67b53f` docs(steward): bump verified state to c9a730b post PR #131
+  follow-up.
+- `3e660ea` fix(docs): unbacktick Next.js ready output to clear
+  term-coverage strict (false positive från föregående steward-bump).
+- `bb6ab2e` feat(preview-runtime): Bite A skeleton — types + registry
+  + 3 adapter stubs i `packages/preview-runtime/`. Inga callsites bytta;
+  Bite B wirear local + stackblitz mot befintliga `apps/viewser/lib/`-
+  helpers när tsconfig path-alias eller npm-workspace etableras. Bite C
+  (UI-refaktor av `viewer-panel.tsx`) kräver Christopher-koordinering.
+  Se ADR 0028 (Runtime Ladder) + ADR 0030 (Preview-Provider Portability).
+- `e9e3f32` fix(test): close race condition in /api/prompt smoke
+  teardown (bot-fynd post PR #130-merge: `os.killpg()` kunde kasta
+  `ProcessLookupError` mellan `poll()` och kill).
 
 Nya PRs sedan föregående checkpoint (i mergeordning):
 PR #125 — fix(discovery): honor wizard clears across versioned fields.

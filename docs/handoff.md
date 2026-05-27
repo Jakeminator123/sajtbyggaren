@@ -2,9 +2,23 @@
 
 **Datum:** 2026-05-27 UTC, post cloud-grind-batch (7 PRs mergade på
 ~2h fm: #125, #127, #128, #129, #130, #131, #132) + PR #131-follow-up
-(`c9a730b`, smoke-test drain-thread refaktor). Verifierad `jakob-be`
-är `c9a730b`. `origin/main` ligger kvar på `4d879177` (10 commits efter
-`jakob-be`).
+(`c9a730b`, smoke-test drain-thread refaktor) + PreviewRuntime Bite A
+skeleton (`bb6ab2e`) + 2 fix-commits (`3e660ea` term-coverage,
+`e9e3f32` smoke-test race) + 2 steward-bumps (`c67b53f`, `<denna>`).
+Verifierad `jakob-be` är `e9e3f32`. `origin/main` ligger kvar på
+`4d879177` (14 commits efter `jakob-be`).
+
+**PreviewRuntime Bite A (`bb6ab2e`):** typkontrakt + registry + 3
+adapter-stubs i `packages/preview-runtime/`. Skelett bara — alla
+adaptrar returnerar `unsupported` med tydlig "Bite B-wiring saknas"-
+text. Inga existerande filer ändrade. ADR 0028 + ADR 0030 är de
+canonical-källor som Bite A följer; `PreviewRuntimeKind` är låst till
+naming-dictionary v17 (`stackblitz | local | fly`). Bite B wirear
+local + stackblitz mot `apps/viewser/lib/local-preview-server.ts` resp.
+`apps/viewser/lib/stackblitz-files.ts` när tsconfig path-alias eller
+npm-workspace etableras. Bite C (`viewer-panel.tsx` UI-refaktor) kräver
+Christopher-koordinering eftersom `apps/viewser/components/**` är hans
+lane per `governance/rules/branch-scope-ui-ux.md`.
 
 **Nya PRs sedan föregående checkpoint (i mergeordning):**
 
