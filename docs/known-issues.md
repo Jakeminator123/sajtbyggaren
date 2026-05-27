@@ -364,7 +364,7 @@ integrate christopher-ui discovery and asset workflow`, merge
   fält/intent, att `planSource="pinned"` skippar planningModel och att
   renderers/codegen saknar fält för fri copy-edit. Gap-spec:
   `docs/gaps/GAP-followup-prompt-content-passthrough.md`. ADR-utkast:
-  `governance/decisions/0033-followup-prompt-content-passthrough.md`.
+  `governance/decisions/0034-followup-prompt-content-passthrough.md`.
   Fix: open. Test: open.
 
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu

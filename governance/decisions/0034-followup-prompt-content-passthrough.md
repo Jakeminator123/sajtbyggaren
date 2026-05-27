@@ -1,4 +1,4 @@
-# ADR 0033 - follow-up prompt content passthrough
+# ADR 0034 - follow-up prompt content passthrough
 
 **Status:** proposed
 **Datum:** 2026-05-27
