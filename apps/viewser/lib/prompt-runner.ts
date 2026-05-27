@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 
 const PROMPT_TIMEOUT_MS = 90_000;
+const TEST_PROMPT_INPUTS_ENV = "VIEWSER_PROMPT_INPUTS_DIR";
 
 const SITE_ID_LINE = /^siteId:\s*(.+)$/m;
 const PROJECT_ID_LINE = /^projectId:\s*(.+)$/m;
@@ -24,6 +25,17 @@ function pythonCommand(): string {
   );
   if (existsSync(venvPython)) return venvPython;
   return process.platform === "win32" ? "python" : "python3";
+}
+
+function testPromptInputsDir(): string | null {
+  // Test-only isolation: set SAJTBYGGAREN_TEST=1 (or NODE_ENV=test)
+  // together with VIEWSER_PROMPT_INPUTS_DIR to keep smoke-test writes
+  // out of repo-local data/prompt-inputs/. Production ignores the env.
+  const raw = process.env[TEST_PROMPT_INPUTS_ENV]?.trim();
+  if (!raw || (process.env.NODE_ENV !== "test" && process.env.SAJTBYGGAREN_TEST !== "1")) {
+    return null;
+  }
+  return path.resolve(repoRoot(), raw);
 }
 
 export type PromptHelperResult = {
@@ -83,6 +95,8 @@ export async function runPromptToProjectInput(
 
   const scriptPath = path.join(repoRoot(), "scripts", "prompt_to_project_input.py");
   const args = [scriptPath];
+  const outputDir = testPromptInputsDir();
+  if (outputDir) args.push("--output-dir", outputDir);
   if (options.mode === "followup") {
     if (!options.siteId) {
       throw new Error("Följdprompt kräver ett valt siteId.");
