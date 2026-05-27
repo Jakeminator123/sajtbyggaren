@@ -30,10 +30,14 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `63656fb976ca4d42ac2a183918861604dc760617` (2026-05-26 late evening UTC, post eval-layout refactor).
+Last verified state: `3b61c7362f1726b424d3331eacf216d2a939a3be` (2026-05-26 late evening UTC, post Gap 10 product-image merge).
 
 Nya commits sedan föregående checkpoint (`0f3bd67`):
 
+- `3b61c73` feat(build): close Gap 10 product image pipeline (#122).
+- `365c1d7` feat(build): close Gap 9 — isolate moodImages to private uploads.
+- `0043839` docs(current-focus): update verified SHA and commit count after recent changes.
+- `e9c8afa` docs(handoff): update verified SHA and commit count after eval-layout refactor.
 - `63656fb` refactor(evals): split data/evals into summaries/ + artifacts/ layout.
 - `91990de` docs(steward): bump focus and handoff counts after B147 sync.
 - `2a77c07` docs(steward): close B147 after host whitelist merge.
@@ -72,10 +76,9 @@ Nya commits sedan föregående checkpoint (`0f3bd67`):
 ## Pågående/öppna PR:s just nu
 
 Inga öppna PRs på `jakob-be` eller `main`. `jakob-be` är resetad till
-`origin/main` 2026-05-26 PM (commit `1004122`) plus 31 commits ovanpå
+`origin/main` 2026-05-26 PM (commit `1004122`) plus 35 commits ovanpå
 (listan ovan). Nästa sync-PR till `main` är operatörens beslut — bra läge
-nu när Gap 4 + 5 och Gap 6 + 7 är inne. Gap 9 eller Gap 10 kan buntas in i
-samma sync om operatören vill vänta.
+nu när Gap 4 + 5, Gap 6 + 7, Gap 9 och Gap 10 är inne.
 
 **Christophers `origin/christopher-ui`** — efter PR #117 är hans branch
 synkad mot post-#117-main. Han har under operator-OK scope-leak
@@ -87,19 +90,11 @@ implementerat hela `GAP-backend-build-trace-endpoint` (3 endpoints + UI +
 
 1. **Backend-Gap fixar baserade på C4-audit** (cloud-grind levererade
    audit 2026-05-26 i PR #121, `0f3bd67`; Gap 4 + 5 stängdes 2026-05-26
-   evening i `b89a3d2` + `1b91ca6`; Gap 6 + 7 stängdes i `ea6e141`).
-   Status efter Gap 6 + 7: 9 stängda (1, 2, 3, 4, 5, 6, 7, 8, 11),
-   1 delvis (9), 1 öppen (10). Återstående fixar i prioritetsordning:
-   - Gap 9 (~2h, S-M): backend-isolering av `moodImages[]` till
-     `data/uploads/<runId>/__mood/` istället för publik `public/uploads/`.
-     Mappa Vision-resultat till `notesForPlanner`. UI-sidan klar.
-   - Gap 10 (~4-6h, M-L): full backend-mapping för
-     `products[].productImage`. Saknar payload-mapping, schema-fält,
-     `copy_operator_uploads()`-kopiering till `public/products/`, OCH
-     renderer-stöd för produktbild i
-     `packages/generation/build/renderers.py`-produktgrid. Egen sprint.
-2. **Sync-PR `jakob-be → main`** — `jakob-be` är 31 commits framför
-   `origin/main`. Bra läge nu eller efter en av Gap-fixarna ovan.
+   evening i `b89a3d2` + `1b91ca6`; Gap 6 + 7 stängdes i `ea6e141`;
+   Gap 9 stängdes i `365c1d7`; Gap 10 stängdes i PR #122 / `3b61c73`).
+   Status efter Gap 10: 11 stängda, 0 delvis, 0 öppna.
+2. **Sync-PR `jakob-be → main`** — `jakob-be` är 35 commits framför
+   `origin/main`. Bra läge nu när backend-gap-batchen är klar.
    Operatörens beslut.
 
 ## Redan landat (tidigare session-status korrigerad 2026-05-26 PM)
@@ -137,14 +132,13 @@ Detaljerade Queue-/Blocked-block ligger i arkivet
 [`docs/archive/current-focus-history-2026-05-26.md`](archive/current-focus-history-2026-05-26.md).
 Aktiva spår i prioritetsordning:
 
-1. Backend-Gap 9, sedan Gap 10.
-2. Sync-PR `jakob-be → main`.
-3. Christophers `GAP-backend-build-trace-endpoint`-PR (när han öppnar den).
-4. B49 (docs-base page-map sidebar) — låg prio, behövs innan
+1. Sync-PR `jakob-be → main`.
+2. Christophers `GAP-backend-build-trace-endpoint`-PR (när han öppnar den).
+3. B49 (docs-base page-map sidebar) — låg prio, behövs innan
    `course-education → docs-base` aktiveras.
-5. B13a arkitektur-flytt — kvarstår som öppen post, kräver egen sprint
+4. B13a arkitektur-flytt — kvarstår som öppen post, kräver egen sprint
    + sannolikt egen ADR.
-6. B53, B47, BO4-followup-cancel — låga, ingen blocker.
+5. B53, B47, BO4-followup-cancel — låga, ingen blocker.
 
 ## Loopen vi följer
 

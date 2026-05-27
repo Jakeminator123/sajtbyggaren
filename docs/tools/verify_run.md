@@ -136,11 +136,11 @@ För automatiserad lokal mini-eval efter B139/B140 finns nu
 vid sidan av Cursor-agentens huvudflöde:
 
 ```powershell
-# Snabb eval utan npm-build (default). Skriver till ../sajtbyggaren-output/.evals/
+# Snabb eval utan npm-build (default). Skriver till data/evals/artifacts/mini/
 python scripts/mini_eval.py
 
 # Välj eval-root explicit, t.ex. på snabb disk eller i en separat workspace-mapp
-$env:SAJTBYGGAREN_EVALS_DIR = "../sajtbyggaren-output/.evals"
+$env:SAJTBYGGAREN_EVALS_DIR = "D:/sajtbyggaren-evals"
 python scripts/mini_eval.py --eval-id local-smoke-001
 
 # Kör bara ett case medan annat arbete pågår

@@ -1,6 +1,6 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-26 sen kväll UTC, steward-pass efter `63656fb` — eval-layout refactor + B147 closure sync. Verifierad `jakob-be` är `63656fb976ca4d42ac2a183918861604dc760617`.
+**Datum:** 2026-05-26 sen kväll UTC, steward-pass efter `3b61c73` — Gap 10 product-image merge + B147 closure sync. Verifierad `jakob-be` är `3b61c7362f1726b424d3331eacf216d2a939a3be`.
 
 Nya PRs sedan föregående checkpoint: PR #118 — sync(jakob-be -> main): PR #117 mobile
 responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report; PR #120
@@ -19,8 +19,8 @@ krävs en gång per venv enligt ADR 0029.
 
 **Direkt nästa spår — operatörsbeslut + Gap-fixar:**
 
-1. **Backend-Gap fixar (post-C4-audit)** — efter Gap 4 + 5 samt Gap 6 + 7 är status 9 stängda / 1 delvis / 1 öppen. Nästa i prio: Gap 9 (~2h, S-M), sedan Gap 10 (~4-6h, M-L). Detaljer i `docs/current-focus.md`.
-2. **Sync-PR `jakob-be → main`** — `jakob-be` är nu 31 commits framför `origin/main`. Bra läge för en sync-PR (operatörens beslut). Kan kombineras med en av Gap-fixarna ovan.
+1. **Backend-Gap fixar (post-C4-audit)** — Gap 1-11 är nu stängda efter Gap 10-merge i PR #122. Detaljer i `docs/current-focus.md`.
+2. **Sync-PR `jakob-be → main`** — `jakob-be` är nu 35 commits framför `origin/main`. Bra läge för en sync-PR (operatörens beslut).
 
 **Parkerade lanes (väntar trigger):**
 

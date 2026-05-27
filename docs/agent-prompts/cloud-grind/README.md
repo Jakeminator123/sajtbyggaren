@@ -1,4 +1,4 @@
-# Cloud-grind-promptar — gaps + B147 + doc-städ
+# Cloud-grind-promptar — kvarvarande backend-gap
 
 Den här mappen innehåller **fristående copy-paste-promptar** för Cursor Cloud Agents (eller motsvarande cloud-agent som har repo-write-access via GitHub). Varje cloud-agent klonar repot från `github.com/Jakeminator123/sajtbyggaren`, jobbar i sin Ubuntu-VM, pushar till `origin/jakob-be` och slutar. **Operatörens lokala maskin är inte i loopen alls** — det enda touchground är GitHub-remoten.
 
@@ -6,71 +6,49 @@ Operatören öppnar ett nytt cloud-agent-fönster, klistrar in en av prompterna 
 
 Varje prompt-fil är self-contained: agenten ska inte behöva läsa något annat docs/-material för att kunna jobba. Den deklarerar branch, scope, off-limits, acceptanskriterier, tester och commit-format — alla kommandon är bash/Linux (cloud-VM:n är Ubuntu, ingen venv-aktivering krävs eftersom systempython + `pip install -r requirements.txt` förutsätts redan ha körts som setup-steg).
 
-## Bakgrund
+## Läget nu
 
-Sanity-check 2026-05-26 sen kväll visade att doc-läget och kod-läget hade drift på fyra punkter:
+Prompterna 1-4 är körda och bortstädade ur denna mapp:
 
-- Backend-Gap 6+7 är **delvis** (metadata renderas, men ingen .ico-konvertering eller 1200×630-crop).
-- Backend-Gap 9 är **inte alls** implementerad i backend.
-- Backend-Gap 10 är **inte alls** implementerad i backend.
-- B147 är **inte fixat i koden** — bara `VIEWSER_ALLOW_NON_LOCALHOST`-env-bypass finns.
-- Workboard/handoff/current-focus säger ibland motstridiga saker om aktiva gaps.
+- Prompt 1 stängde Gap 6 + 7 i `c002aec` + `ea6e141`.
+- Prompt 2 stängde B147 i `b3834b3`.
+- Prompt 3 körde docs/workboard-sync i `cb07dbb` och efterföljande steward-commits.
+- Prompt 4 stängde Gap 9 i `365c1d7`.
 
-Inget av gapen är en blocker för kärnflödet `prompt → företagshemsida → preview → följdprompt → ny version`, men de är värda att stänga eftersom de är kosmetisk/SEO-finish (Gap 6+7), datahygien (Gap 9), e-handel-funktion (Gap 10), produktionssäkerhet (B147) och agent-disciplin (doc-städ).
+Kvarvarande prompt är Prompt 5 (Gap 10). Den kan starta när agentens checkout har fast-forwardat till `origin/jakob-be` `365c1d7` eller senare.
 
 ## Prompt-katalog
 
 | # | Fil | Roll | Branch | Effort | Risk | Lane |
 |---|---|---|---|---|---|---|
-| 1 | [`prompt-1-gap-67-paired.md`](prompt-1-gap-67-paired.md) | Builder | `jakob-be` | ~3-4h, M | Medel (ny dep `pillow`) | Backend build-pipeline |
-| 2 | [`prompt-2-b147-host-whitelist.md`](prompt-2-b147-host-whitelist.md) | Builder | `jakob-be` | ~1-2h, S | Låg | UI lib + env |
-| 3 | [`prompt-3-doc-workboard-cleanup.md`](prompt-3-doc-workboard-cleanup.md) | Steward | `jakob-be` | ~1h, S | Låg | Docs-only |
-| 4 | [`prompt-4-gap-9-mood-isolation.md`](prompt-4-gap-9-mood-isolation.md) | Builder | `jakob-be` | ~2h, S-M | Medel | Backend asset-pipeline |
 | 5 | [`prompt-5-gap-10-product-image.md`](prompt-5-gap-10-product-image.md) | Builder | `jakob-be` | ~4-6h, M-L | Medel-Hög | Backend payload + schema + renderer |
 
 ## Parallellitet-matris
 
 ```mermaid
 flowchart LR
-    P1[Prompt 1<br/>Gap 6+7<br/>scripts/build_site.py + static_assets.py]
-    P2[Prompt 2<br/>B147<br/>localhost-guard.ts]
-    P3[Prompt 3<br/>Doc-stad<br/>docs/ + workboard.json]
-    P4[Prompt 4<br/>Gap 9<br/>scripts/build_site.py + resolve.py]
     P5[Prompt 5<br/>Gap 10<br/>scripts/build_site.py + schema + renderers.py]
-
-    P1 -.-> P4
-    P4 -.-> P5
-    P2 -.parallel.-> P1
-    P2 -.parallel.-> P3
-    P3 -.parallel.-> P1
 ```
 
 **Vad detta betyder:**
 
-- **Lane A — kan köras parallellt direkt:** Prompt 1, Prompt 2, Prompt 3. Inga av dem rör samma filer, så tre cloud-agenter kan starta samtidigt.
-- **Lane B — sekventiellt efter Prompt 1:** Prompt 4 rör `scripts/build_site.py` precis som Prompt 1 (favicon/og-image-konvertering ligger i samma `copy_operator_uploads`-flöde som mood-isoleringen). Starta Prompt 4 *först när Prompt 1 är mergad till `jakob-be`*.
-- **Lane C — sekventiellt efter Prompt 4:** Prompt 5 rör schema, `build_site.py`, renderers — och vill helst inte krocka med Gap 9-pågående arbete. Starta Prompt 5 *först när Prompt 4 är mergad till `jakob-be`*.
-
-Om operatören vill köra Prompt 4 + Prompt 5 parallellt går det — men risken är `_copy_operator_uploads`-funktions-konflikt och schema-merge-strul. Bättre sekventiellt om inte tid pressar.
+- Prompt 5 rör schema, `build_site.py` och renderers. Den är sista prompten i gap-batchen.
+- Starta Prompt 5 först efter `git pull --ff-only origin jakob-be` visar `365c1d7` eller senare.
 
 ## Operatörens trigger-ordning (rekommenderad)
 
 ```
-T0  (nu)         Start Prompt 1 + Prompt 2 + Prompt 3 parallellt.
-T+~3h            Verifiera att Prompt 1, 2, 3 är pushade till jakob-be.
-T+~3h            Start Prompt 4.
-T+~5h            Verifiera Prompt 4 pushad.
-T+~5h            Start Prompt 5.
-T+~10h           Alla fem klara. Sync-PR-fönster: gör nu (jakob-be → main).
+T0  (nu)         Start Prompt 5.
+T+~4-6h          Alla fem klara. Sync-PR-fönster: gör nu (jakob-be → main).
 ```
 
-Det är ungefär en arbetsdag totalt om allt går smidigt. Men varje prompt går att stoppa när som helst — de är atomiska.
+Varje prompt går att stoppa när som helst — de är atomiska.
 
 ## Sync-PR-fönster
 
-`jakob-be` är just nu **19 commits framför** `origin/main` (docs säger 15; det är tag-drift som Prompt 3 rättar). Bra läge för sync-PR är **efter Prompt 5** så hela gap-batchen + B147 + doc-städet bilar in i samma officiella main-merge.
+`jakob-be` är just nu över 30 commits framför `origin/main`. Bra läge för sync-PR är **efter Prompt 5** så hela gap-batchen + B147 + doc-städet bilar in i samma officiella main-merge.
 
-Alternativt: öppna sync-PR efter Prompt 1+2+3 (för att få in den synliga finput + säkerhetsfix snabbt) och sedan en till efter Prompt 5. Det är operatörens val.
+Alternativt: öppna sync-PR före Prompt 5 och sedan en till efter Prompt 5. Det är operatörens val.
 
 ## Övergripande disciplin
 

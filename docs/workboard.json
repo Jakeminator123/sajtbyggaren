@@ -57,39 +57,6 @@
         "apps/viewser/public/**"
       ],
       "reason": "UI/frontend ownership"
-    },
-    {
-      "owner": "christopher",
-      "gapId": "GAP-viewser-live-build-sync",
-      "paths": [
-        "apps/viewser/app/page.tsx",
-        "apps/viewser/components/builder/builder-shell.tsx",
-        "apps/viewser/components/builder/inspector/versions-tab.tsx",
-        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
-        "apps/viewser/components/builder/use-pending-build.ts"
-      ],
-      "reason": "Live Build Sync — optimistisk pending-version + bättre koordination mellan FloatingChat och Versions-tab (pure UI, läser befintliga API:er och callbacks)"
-    },
-    {
-      "owner": "christopher",
-      "gapId": "GAP-viewser-side-by-side-preview",
-      "paths": [
-        "apps/viewser/components/builder/inspector/versions-tab.tsx",
-        "apps/viewser/components/builder/inspector/compare-preview-modal.tsx",
-        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
-        "apps/viewser/components/builder/inspector/index.ts"
-      ],
-      "reason": "Sida-vid-sida-preview av två genererade versioner i Versions-tab (pure UI, återanvänder /api/runs/[runId]/files via StackBlitz embed)"
-    },
-    {
-      "owner": "christopher",
-      "gapId": "GAP-viewser-pipeline-status-polling",
-      "paths": [
-        "apps/viewser/components/builder/floating-chat.tsx",
-        "apps/viewser/components/builder/use-pending-build.ts",
-        "apps/viewser/components/builder/use-build-trace-polling.ts"
-      ],
-      "reason": "FloatingChat speglar riktig pipeline-status via trace-endpoint istället för fejk setTimeout-kedja (UI-only, /api/runs/[runId]/trace finns redan i main)"
     }
   ],
   "queuedGaps": [
@@ -144,7 +111,6 @@
       "collisionRisk": "green",
       "reviewer": "jakob",
       "status": "completed",
-      "file": "docs/gaps/GAP-viewser-restaurant-wizard-hint.md",
       "createdAt": "2026-05-25T13:20:00Z",
       "startedAt": "2026-05-25T13:20:00Z",
       "completedAt": "2026-05-26T13:19:16Z",
@@ -468,7 +434,7 @@
       "title": "Aktivera restaurant-hospitality scaffold runtime end-to-end (Path A)",
       "collisionRisk": "yellow",
       "reviewer": "jakob",
-      "status": "in-review",
+      "status": "completed",
       "file": "docs/gaps/GAP-backend-restaurant-activation.md",
       "createdAt": "2026-05-25T13:20:00Z",
       "completedAt": "2026-05-25T13:20:00Z",
@@ -515,7 +481,7 @@
       "title": "Wizard minimalism — progressive disclosure av all sekundär text, metadata och fallback-fält",
       "collisionRisk": "green",
       "reviewer": "jakob",
-      "status": "in-review",
+      "status": "completed",
       "file": "docs/gaps/GAP-viewser-wizard-minimalism.md",
       "completedAt": "2026-05-25T02:35:00Z",
       "paths": [
@@ -544,7 +510,7 @@
       "title": "Iteration & Compare — site-scoped versionshistorik + diff-vy i Site Inspector",
       "collisionRisk": "green",
       "reviewer": "jakob",
-      "status": "in-review",
+      "status": "completed",
       "file": "docs/gaps/GAP-viewser-iteration-compare.md",
       "completedAt": "2026-05-25T02:35:00Z",
       "paths": [
@@ -568,7 +534,7 @@
       "title": "Wizard första intryck — foundation + visual step som säljer 'fantastisk sajt' på 5 sekunder",
       "collisionRisk": "green",
       "reviewer": "jakob",
-      "status": "in-review",
+      "status": "completed",
       "file": "docs/gaps/GAP-viewser-wizard-first-impression.md",
       "completedAt": "2026-05-25T02:11:00Z",
       "paths": [
@@ -593,7 +559,7 @@
       "title": "Live-preview switcher för scaffold-variants utan rebuild",
       "collisionRisk": "yellow",
       "reviewer": "jakob",
-      "status": "in-review",
+      "status": "completed",
       "file": "docs/gaps/GAP-viewser-variant-live-preview.md",
       "completedAt": "2026-05-25T01:50:00Z",
       "paths": [
