@@ -140,13 +140,18 @@ def test_discovery_wizard_uses_governance_options_with_ts_cache_fallback() -> No
 
 
 @pytest.mark.tooling
-def test_discovery_payload_blocks_unknown_categories_and_preserves_schema_version() -> None:
+def test_discovery_payload_blocks_unknown_categories_and_emits_schema_version_2() -> None:
     payload = (
         VIEWSER_DIR / "components" / "discovery-wizard" / "wizard-payload.ts"
     ).read_text(encoding="utf-8")
 
-    assert "schemaVersion: 1" in payload, (
-        "Discovery payload måste behålla schemaVersion=1."
+    assert "schemaVersion: 1 | 2" in payload, (
+        "DiscoveryPayload-typen måste fortsätta acceptera legacy v1 för "
+        "bakåtkompatibilitet."
+    )
+    assert "schemaVersion: 2," in payload, (
+        "buildDiscoveryPayload ska emit:a schemaVersion=2 när v2-directives "
+        "skickas från wizarden."
     )
     assert "validateDiscoveryCategoryIds" in payload, (
         "buildDiscoveryPayload måste blocka category ids som saknas i "
