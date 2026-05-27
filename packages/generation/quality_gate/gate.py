@@ -72,14 +72,30 @@ def _aggregate_status(checks: list[CheckResult]) -> QualityStatus:
 
 
 def _summary_from_checks(checks: list[CheckResult], status: QualityStatus) -> str:
-    failed = [c.name for c in checks if c.status == "failed"]
+    """Build the operator-facing one-line summary.
+
+    Splits failed checks by severity so the summary cannot contradict
+    ``status``: blocking failures appear as ``failed=...`` (and drive
+    ``status`` to ``degraded``/``failed``), warning failures appear as
+    ``warning=...`` (do not lower ``status`` from ``ok``).
+    """
+    blocking_failed = [
+        c.name for c in checks
+        if c.status == "failed" and c.severity == "blocking"
+    ]
+    warning_failed = [
+        c.name for c in checks
+        if c.status == "failed" and c.severity == "warning"
+    ]
     skipped = [c.name for c in checks if c.status == "skipped"]
     parts = [f"status={status}"]
-    if failed:
-        parts.append(f"failed={','.join(failed)}")
+    if blocking_failed:
+        parts.append(f"failed={','.join(blocking_failed)}")
+    if warning_failed:
+        parts.append(f"warning={','.join(warning_failed)}")
     if skipped:
         parts.append(f"skipped={','.join(skipped)}")
-    if not failed and not skipped:
+    if not blocking_failed and not warning_failed and not skipped:
         parts.append("alla checks ok")
     return " ".join(parts)
 
