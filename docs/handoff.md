@@ -1,67 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-27 UTC, post cloud-grind-batch (7 PRs mergade på
-~2h fm: #125, #127, #128, #129, #130, #131, #132) + PR #131-follow-up
-(`c9a730b`, smoke-test drain-thread refaktor) + PreviewRuntime Bite A
-skeleton (`bb6ab2e`) + tre runda reviewer-fynd-fixar (`3e660ea`,
-`e9e3f32`, `44ea54b`, `e60f493` på smoke-test cleanup;
-`8358326` `test_no_legacy_terms`-fix; `19480dc` fail-loud i
-`currentKind()`; `e2f857c` narrow placeholder-copy-scan) + sync-merge
-mot `origin/main` (`cbe1ba9`) + steward-bumps + extern-reviewer-
-cleanup-batch 2026-05-27 efm (`d60bb58` bot-report-verification-regel,
-`abff654` placeholder-scan case-insensitive, `58cfe20` fly-slot-
-reconciliation till ADR 0028 nivå 3 i README) + extern-reviewer-
-analys 2 (`8fb24e4` B157 + GAP-windows-safe-rebuild-pipeline registrerad
-— WinError 5 rmtree på live `node_modules`, arkitektur-anti-pattern att
-rebuilda ovanpå aktiv preview-katalog; ingen kodfix i denna batch) +
-Cursor BugBot suggestions 1-3 (`82b9f99` defensive cleanup i b154-test,
-`23b473e` smala placeholder-scan till `.tsx`/`.jsx` only, `f446be1` AND
-→ OR i `_has_contact_cta`, pushade direkt av BugBot) + GPT P2 Badge
-fix (`0b40b8d` accept scaffold-specific contact-routes inkl.
-`/kontakta-oss` + `/hitta-hit`) + GPT-reviewer-fynd 2 (`ea1e435`
-contact-CTA href-only) + post-coach-cleanup (`a67bc01` steward-bump,
-`f2de33f` BugBot allowlist, `86b5782` markdown-link-fix) + sanity-
-drift-cleanup-runda 1 (`67bd89a` post-coach-bump). Verifierad `jakob-be`
-är `67bd89a`. `origin/main` ligger kvar på `4d879177` (**40 commits**
-efter `jakob-be`, verifierat med `git rev-list --count`; tidigare
-``25 / 29``-räkningar var stale-antaganden). PR #133 (`jakob-be → main`)
-är öppen (inte draft), ready-for-review-läge — väntar på operatörens
-slutgodkända merge. Bug-count: 16 aktiva (B157 ny).
+**Datum:** 2026-05-27 UTC, steward-auto efter PR #133 — sync(jakob-be -> main): PreviewRuntime Bite A skeleton + race-fix + governance comments + builder prompt. Verifierad `main` är `acdfad2`.
 
-**PreviewRuntime Bite A (`bb6ab2e`):** typkontrakt + registry + 3
-adapter-stubs i `packages/preview-runtime/`. Skelett bara — alla
-adaptrar returnerar `unsupported` med tydlig "Bite B-wiring saknas"-
-text. Inga existerande filer ändrade. ADR 0028 + ADR 0030 är de
-canonical-källor som Bite A följer; `PreviewRuntimeKind` är låst till
-naming-dictionary v17 (`stackblitz | local | fly`). Bite B wirear
-local + stackblitz mot `apps/viewser/lib/local-preview-server.ts` resp.
-`apps/viewser/lib/stackblitz-files.ts` när tsconfig path-alias eller
-npm-workspace etableras. Bite C (`viewer-panel.tsx` UI-refaktor) kräver
-Christopher-koordinering eftersom `apps/viewser/components/**` är hans
-lane per `governance/rules/branch-scope-ui-ux.md`.
-
-**Nya PRs sedan föregående checkpoint (i mergeordning):**
-
-- PR #125 — fix(discovery): honor wizard clears across versioned fields.
-- PR #127 — fix(viewser): block Python-backed actions on hosted Vercel
-  (501 på `/api/prompt`, `/api/build`, `/api/scrape-site` när VERCEL=1).
-- PR #128 — docs(gaps): file followup-prompt-content-passthrough + ADR
-  0034 draft (nya B155, operatör-beslut väg (b) ärlig först).
-- PR #129 — feat(quality-gate): add contact-CTA + placeholder-copy
-  checks som non-blocking warnings. Follow-up `8269800` separerade
-  blocking/warning i summary efter reviewer-fynd.
-- PR #130 — test(api): add HTTP smoke-test för `/api/prompt`-bron
-  (Bite 2 från LLM Golden Path handoff).
-- PR #131 — fix(builder): close B154 — TDZ at dev hydration on
-  deterministic codegen. Lockfile-alignment + chunk-heuristik-smoke
-  + `_npm_install_inputs_changed` diffar nu lockfile-bytes. B156
-  registrerad för browser-hydration follow-up. Follow-up `c9a730b`
-  (direct push till `jakob-be` efter merge): drain-tråden i
-  `tests/test_b154_next_dev_tdz.py` skriver nu direkt in i en delad
-  `output`-lista istället för att queue:a, så assertionen ser TDZ-fel
-  som dyker upp *efter* Next.js ready-raden (precis B154-fönstret).
-- PR #132 — docs(steward): cleanup pass — 8 filer arkiverade till
-  `docs/archive/` (5 dated handoffs + 3 completed reports, ~78 KB).
+Nya PRs sedan föregående checkpoint: PR #133 — sync(jakob-be -> main): PreviewRuntime
+Bite A skeleton + race-fix + governance comments + builder prompt.
 
 **MCP-server-status:** Sprintvakt-servern exponerar 14 tools efter
 PR #77 (`get_workboard`, `list_gaps`, `create_gap`, `activate_gap`,
@@ -497,3 +439,68 @@ across versioned fields.
 
 Nya PRs sedan föregående checkpoint: PR #124 — feat(llm-golden-path): lock v1 + extend
 with multi-intent chain, real-build smoke, runbook and handoff.
+
+### 2026-05-27 UTC — handoff.md före `67bd89a`
+
+**Datum:** 2026-05-27 UTC, post cloud-grind-batch (7 PRs mergade på
+~2h fm: #125, #127, #128, #129, #130, #131, #132) + PR #131-follow-up
+(`c9a730b`, smoke-test drain-thread refaktor) + PreviewRuntime Bite A
+skeleton (`bb6ab2e`) + tre runda reviewer-fynd-fixar (`3e660ea`,
+`e9e3f32`, `44ea54b`, `e60f493` på smoke-test cleanup;
+`8358326` `test_no_legacy_terms`-fix; `19480dc` fail-loud i
+`currentKind()`; `e2f857c` narrow placeholder-copy-scan) + sync-merge
+mot `origin/main` (`cbe1ba9`) + steward-bumps + extern-reviewer-
+cleanup-batch 2026-05-27 efm (`d60bb58` bot-report-verification-regel,
+`abff654` placeholder-scan case-insensitive, `58cfe20` fly-slot-
+reconciliation till ADR 0028 nivå 3 i README) + extern-reviewer-
+analys 2 (`8fb24e4` B157 + GAP-windows-safe-rebuild-pipeline registrerad
+— WinError 5 rmtree på live `node_modules`, arkitektur-anti-pattern att
+rebuilda ovanpå aktiv preview-katalog; ingen kodfix i denna batch) +
+Cursor BugBot suggestions 1-3 (`82b9f99` defensive cleanup i b154-test,
+`23b473e` smala placeholder-scan till `.tsx`/`.jsx` only, `f446be1` AND
+→ OR i `_has_contact_cta`, pushade direkt av BugBot) + GPT P2 Badge
+fix (`0b40b8d` accept scaffold-specific contact-routes inkl.
+`/kontakta-oss` + `/hitta-hit`) + GPT-reviewer-fynd 2 (`ea1e435`
+contact-CTA href-only) + post-coach-cleanup (`a67bc01` steward-bump,
+`f2de33f` BugBot allowlist, `86b5782` markdown-link-fix) + sanity-
+drift-cleanup-runda 1 (`67bd89a` post-coach-bump). Verifierad `jakob-be`
+är `67bd89a`. `origin/main` ligger kvar på `4d879177` (**40 commits**
+efter `jakob-be`, verifierat med `git rev-list --count`; tidigare
+``25 / 29``-räkningar var stale-antaganden). PR #133 (`jakob-be → main`)
+är öppen (inte draft), ready-for-review-läge — väntar på operatörens
+slutgodkända merge. Bug-count: 16 aktiva (B157 ny).
+
+**PreviewRuntime Bite A (`bb6ab2e`):** typkontrakt + registry + 3
+adapter-stubs i `packages/preview-runtime/`. Skelett bara — alla
+adaptrar returnerar `unsupported` med tydlig "Bite B-wiring saknas"-
+text. Inga existerande filer ändrade. ADR 0028 + ADR 0030 är de
+canonical-källor som Bite A följer; `PreviewRuntimeKind` är låst till
+naming-dictionary v17 (`stackblitz | local | fly`). Bite B wirear
+local + stackblitz mot `apps/viewser/lib/local-preview-server.ts` resp.
+`apps/viewser/lib/stackblitz-files.ts` när tsconfig path-alias eller
+npm-workspace etableras. Bite C (`viewer-panel.tsx` UI-refaktor) kräver
+Christopher-koordinering eftersom `apps/viewser/components/**` är hans
+lane per `governance/rules/branch-scope-ui-ux.md`.
+
+**Nya PRs sedan föregående checkpoint (i mergeordning):**
+
+- PR #125 — fix(discovery): honor wizard clears across versioned fields.
+- PR #127 — fix(viewser): block Python-backed actions on hosted Vercel
+  (501 på `/api/prompt`, `/api/build`, `/api/scrape-site` när VERCEL=1).
+- PR #128 — docs(gaps): file followup-prompt-content-passthrough + ADR
+  0034 draft (nya B155, operatör-beslut väg (b) ärlig först).
+- PR #129 — feat(quality-gate): add contact-CTA + placeholder-copy
+  checks som non-blocking warnings. Follow-up `8269800` separerade
+  blocking/warning i summary efter reviewer-fynd.
+- PR #130 — test(api): add HTTP smoke-test för `/api/prompt`-bron
+  (Bite 2 från LLM Golden Path handoff).
+- PR #131 — fix(builder): close B154 — TDZ at dev hydration on
+  deterministic codegen. Lockfile-alignment + chunk-heuristik-smoke
+  + `_npm_install_inputs_changed` diffar nu lockfile-bytes. B156
+  registrerad för browser-hydration follow-up. Follow-up `c9a730b`
+  (direct push till `jakob-be` efter merge): drain-tråden i
+  `tests/test_b154_next_dev_tdz.py` skriver nu direkt in i en delad
+  `output`-lista istället för att queue:a, så assertionen ser TDZ-fel
+  som dyker upp *efter* Next.js ready-raden (precis B154-fönstret).
+- PR #132 — docs(steward): cleanup pass — 8 filer arkiverade till
+  `docs/archive/` (5 dated handoffs + 3 completed reports, ~78 KB).
