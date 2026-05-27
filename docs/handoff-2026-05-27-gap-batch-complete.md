@@ -2,11 +2,11 @@
 
 ## Verifierat läge
 
-- `jakob-be` är på `6222627` efter steward-städning ovanpå Gap 10-merge.
+- `jakob-be` är på `91230b4` efter steward-städning ovanpå Gap 10-merge.
 - PR #122 är squash-mergad till `jakob-be` som `3b61c73`.
 - Backend-gap 1-11 från `docs/backend-handoff.md` är stängda.
-- `origin/main` ligger kvar på `1004122`; `jakob-be` är 36 commits före
-  `origin/main` efter steward-committen.
+- `origin/main` ligger kvar på `1004122`; `jakob-be` är 38 commits före
+  `origin/main` efter gap-spec-städningen.
 
 ## Landat sedan senaste större sync
 
@@ -19,7 +19,7 @@
   `public/products/` och produktgrid (`3b61c73`).
 - Steward-städning: avslutade cloud-grind-prompter och färdiga gap-specar
   bortstädade, workboard-reservationer rensade, eval-output-dokumentation
-  justerad (`6222627`).
+  justerad (`6222627`, `91230b4`).
 
 ## Nästa rekommenderade steg
 

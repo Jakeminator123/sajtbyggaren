@@ -1,6 +1,6 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-27 tidig morgon UTC, steward-pass efter `6222627` — Gap 10 docs/archive cleanup + B147 closure sync. Verifierad `jakob-be` är `6222627afdedeef21700d0f996a1d15166d06d1d`.
+**Datum:** 2026-05-27 tidig morgon UTC, steward-pass efter `91230b4` — completed gap-spec cleanup + B147 closure sync. Verifierad `jakob-be` är `91230b4be799067ec05beb22ce34046ba6e89e0c`.
 
 Nya PRs sedan föregående checkpoint: PR #118 — sync(jakob-be -> main): PR #117 mobile
 responsive + PR #116 dossier-intake + 12 closed bugs + B147 new + audit-report; PR #120
@@ -20,7 +20,7 @@ krävs en gång per venv enligt ADR 0029.
 **Direkt nästa spår — operatörsbeslut + Gap-fixar:**
 
 1. **Backend-Gap fixar (post-C4-audit)** — Gap 1-11 är nu stängda efter Gap 10-merge i PR #122. Detaljer i `docs/current-focus.md`.
-2. **Sync-PR `jakob-be → main`** — `jakob-be` är nu 36 commits framför `origin/main`. Bra läge för en sync-PR (operatörens beslut).
+2. **Sync-PR `jakob-be → main`** — `jakob-be` är nu 38 commits framför `origin/main`. Bra läge för en sync-PR (operatörens beslut).
 
 **Parkerade lanes (väntar trigger):**
 
