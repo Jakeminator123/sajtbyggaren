@@ -37,6 +37,7 @@ addopts = "-ra -q --strict-markers"
 markers = [
   "governance: governance and cross-policy consistency tests",
   "tooling: tests for scripts under scripts/",
+  "slow: tests that take more than a few seconds (e.g. real Next.js build); skipped automatically when prerequisite tooling like npm is unavailable",
 ]
 filterwarnings = [
   "ignore::DeprecationWarning",
