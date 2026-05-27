@@ -8,6 +8,7 @@ import shutil
 import signal
 import socket
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -62,6 +63,10 @@ def _start_server(port: int, tmp_path: Path) -> subprocess.Popen[str]:
     })
     env.pop("OPENAI_API_KEY", None)
     env.pop("VERCEL", None)
+    # preexec_fn is Unix-only and raises ValueError on Windows
+    kwargs = {}
+    if sys.platform != "win32":
+        kwargs["preexec_fn"] = os.setsid
     process = subprocess.Popen(
         ["npm", "run", script, "--", "--port", str(port), "--hostname", "127.0.0.1"],
         cwd=VIEWSER_DIR,
@@ -69,7 +74,7 @@ def _start_server(port: int, tmp_path: Path) -> subprocess.Popen[str]:
         text=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
-        preexec_fn=os.setsid,
+        **kwargs,
     )
     return process
 
@@ -92,11 +97,19 @@ def _wait_for_server(process: subprocess.Popen[str], port: int) -> None:
 def _stop_process(process: subprocess.Popen[str]) -> None:
     if process.poll() is not None:
         return
-    os.killpg(process.pid, signal.SIGTERM)
+    if sys.platform != "win32":
+        # Unix: use killpg to terminate the process group (preexec_fn=os.setsid created a group)
+        os.killpg(process.pid, signal.SIGTERM)
+    else:
+        # Windows: use terminate() which is cross-platform
+        process.terminate()
     try:
         process.wait(timeout=10)
     except subprocess.TimeoutExpired:
-        os.killpg(process.pid, signal.SIGKILL)
+        if sys.platform != "win32":
+            os.killpg(process.pid, signal.SIGKILL)
+        else:
+            process.kill()
         process.wait(timeout=10)
 
 

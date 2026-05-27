@@ -209,6 +209,66 @@ def test_npm_install_inputs_changed_falls_back_when_target_has_invalid_utf8(
 
 
 @pytest.mark.tooling
+def test_npm_install_inputs_changed_detects_lockfile_drift(tmp_path: Path) -> None:
+    """B154 regression: a starter with the same package.json fields but a
+    drifted package-lock.json must force reinstall.
+
+    The previous helper only compared ``_NPM_INSTALL_INPUT_KEYS`` from
+    package.json, so an updated lockfile (e.g. starter bumped to a fresh
+    Next baseline by regenerating the lock) would not invalidate an
+    existing ``.generated/<siteId>``'s ``node_modules``. B154's root
+    cause was exactly this: commerce-base lockfile drifted relative to
+    its own package.json, but builds reused stale node_modules and kept
+    the broken devgraph. The helper now also diffs the lockfile bytes.
+    """
+    from scripts.build_site import _npm_install_inputs_changed
+
+    source = tmp_path / "source"
+    target = tmp_path / "target"
+    source.mkdir()
+    target.mkdir()
+    pkg = json.dumps({"dependencies": {"next": "16.2.6"}}) + "\n"
+    (source / "package.json").write_text(pkg, encoding="utf-8")
+    (target / "package.json").write_text(pkg, encoding="utf-8")
+    (source / "package-lock.json").write_text(
+        json.dumps({"lockfileVersion": 3, "packages": {"node_modules/next": {"version": "16.2.6"}}}) + "\n",
+        encoding="utf-8",
+    )
+    (target / "package-lock.json").write_text(
+        json.dumps({"lockfileVersion": 3, "packages": {"node_modules/next": {"version": "16.0.0"}}}) + "\n",
+        encoding="utf-8",
+    )
+
+    assert _npm_install_inputs_changed(source, target) is True
+
+
+@pytest.mark.tooling
+def test_npm_install_inputs_changed_no_op_when_pkg_and_lock_match(tmp_path: Path) -> None:
+    """Symmetric guard: when package.json and package-lock.json bytes match,
+    the helper returns False so unchanged regenerations preserve node_modules.
+
+    Without this guard the lockfile diff in
+    ``test_npm_install_inputs_changed_detects_lockfile_drift`` could
+    silently start returning True on every regeneration, killing the
+    node_modules-preservation optimization.
+    """
+    from scripts.build_site import _npm_install_inputs_changed
+
+    source = tmp_path / "source"
+    target = tmp_path / "target"
+    source.mkdir()
+    target.mkdir()
+    pkg = json.dumps({"dependencies": {"next": "16.2.6"}}) + "\n"
+    lock = json.dumps({"lockfileVersion": 3, "packages": {}}) + "\n"
+    (source / "package.json").write_text(pkg, encoding="utf-8")
+    (target / "package.json").write_text(pkg, encoding="utf-8")
+    (source / "package-lock.json").write_text(lock, encoding="utf-8")
+    (target / "package-lock.json").write_text(lock, encoding="utf-8")
+
+    assert _npm_install_inputs_changed(source, target) is False
+
+
+@pytest.mark.tooling
 def test_copy_starter_drops_node_modules_when_target_package_json_has_invalid_utf8(
     tmp_path: Path,
     monkeypatch,
