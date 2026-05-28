@@ -51,12 +51,14 @@ pnpm-lock.yaml
 # Each Engine Run drops 8 artefakter + a generated-files snapshot
 # under `data/runs/<runId>/`. After a few dev-builder runs this grows
 # fast and offers nothing the agent needs to read on every request.
-data/runs/
-data/versions/
-data/prompt-inputs/
-data/embedding-index/
-.generated/
 
+################################################
+#data/runs/
+#data/versions/
+#data/prompt-inputs/
+#data/embedding-index/
+#.generated/
+################################################
 # ---------------------------------------------------------------------------
 # Env-filer (alla varianter); .env.example forblir lasbar
 # ---------------------------------------------------------------------------

@@ -790,8 +790,12 @@ COMMON_WORDS = {
     "ProcessId",  # Win32_Process-filter-property
     "StartTime",  # PowerShell process-property
     "TerminateProcess",  # Win32 API-funktion som child.kill() mappar till
-    "WinError",  # Windows-felkod-prefix (WinError 5 = ERROR_ACCESS_DENIED)
     "WinError 5",  # Windows ERROR_ACCESS_DENIED — backtick-citerad i incident-docs
+    # B-IDs och termer i scout-prompts + kill-dev-trees.py incident-helpers
+    "B155",  # bug-ID i GAP-followup-prompt-content-passthrough scout-prompt
+    "ConvertTo",  # PowerShell cmdlet-suffix (ConvertTo-Json) i kill-dev-trees.py
+    "Dubbelklicka",  # svenskt verb i kill-dev-trees.py-docstring + handoff
+    "Verifiering",  # svensk markdown-rubrik i scout-prompts ("**Verifiering**")
     "SUPERSEDED",  # docs-banner i backend-handoff.md (versaliserat statusord)
     "Konkret content",  # gap-rubrik i 9/10-tabellen
     "Page Intent Variant B",  # proposed produktkoncept (B132-uppföljning)

@@ -39,11 +39,27 @@ startar utan ModuleNotFoundError. Editable install (`pip install -e .`)
 krävs en gång per venv enligt ADR 0029.
 
 **Direkt nästa spår:** se [`docs/current-focus.md`](current-focus.md)
-"Direkt nästa fokus". Aktuell status: B157 stängd via akut-fix +
-followup-fix (regression-test säkrar), inga öppna PRs. Priorordning
-nu: manuell B157-end-to-end-verifiering → Bite B (PreviewRuntime
-wiring local + stackblitz) → B157 nivå-4 (immutable build-dir) →
-ADR 0034 (B155 ärlig först).
+"Direkt nästa fokus". Aktuell status: **B157 stängd genom round
+1+2+3 (alla pushade)**, end-to-end-verifierad i Viewser-browsern
+2026-05-28 ~01:40 (måleri-bygg-genberg + tone-shift follow-up,
+båda byggde grönt). Golden-path eval baseline 7.34/10 (oförändrat
+från senaste — 0 regressioner från natt-batchen). Inga öppna PRs.
+
+Priorordning nu:
+1. Bite B (PreviewRuntime wiring local + stackblitz).
+2. Cloud-agent-grind: 2 scout-prompts klara för utskick (i repo-rot
+   som `SCOUT-PROMPT-A-backoffice-runtime-scaffolds.md` +
+   `SCOUT-PROMPT-B-followup-honest-no-op.md`, original-spegel i
+   `docs/agent-prompts/scout-grind-*.md`).
+3. B157 nivå-4 (immutable build-dir + pointer-swap, GAP-windows-
+   safe-rebuild-pipeline) — eliminerar orphan-process-klassen helt.
+4. ADR 0034 (B155 "ärlig först") — kräver Christopher-koord.
+
+**Operatörs-helper:** `python kill-dev-trees.py` (eller dubbelklicka
+`kill-dev-trees.bat`) tree-killar alla Sajtbyggaren-relaterade
+node-processer (preview-orphans, dev-servers, worktree-Viewsers).
+Whitelist:ar bara matchande processer — skyddar VS Code-instanser
+etc.
 
 **Parkerade lanes (väntar trigger):**
 

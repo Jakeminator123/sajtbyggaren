@@ -30,41 +30,52 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `f46c01a` (2026-05-28 UTC ~00:30, post B157
-akut-fix + followup + städ-pass + steward-drift-fix). Pushad till
-`origin/jakob-be`.
+Last verified state: `7ab5060` (2026-05-28 UTC ~01:35, post B157
+round 1+2+3 + städ-pass + steward-drift-fixar + scout-prompts).
+Pushad till `origin/jakob-be`. **Kärnflödet verifierat end-to-end
+via Viewser-browser** 2026-05-28 ~01:40 (måleri-bygg-genberg-07d364
+init + tone-shift follow-up, båda byggde utan WinError 5).
 
-`jakob-be` är synkad med `origin/jakob-be` (push gjord). `origin/main`
-ligger på `4196c17`. Inga öppna PRs. Bug-count efter B157-stängning:
-15 aktiva / 0 misplaced / 5 unknown / 129 stängda.
+`jakob-be` är synkad med `origin/jakob-be`. `origin/main` ligger på
+`4196c17`. Inga öppna PRs. Bug-count: 15 aktiva / 0 misplaced /
+5 unknown / 129 stängda. Golden-path-eval baseline: **7.34/10,
+embeddings=go** (2026-05-28 00:57, 0 regressioner från natt-batchen).
 
-Nya commits sedan PR #133 mergades till `main`:
+Natt-batchen 2026-05-27 → 2026-05-28 (alla pushade):
 
 - `4196c17` docs(steward-auto): bump HEAD to acdfad2 via PR #133 sync.
 - `adba139` fix(viewser): close B157 acute — stop local preview before
-  ``build_site.py`` (Windows file-lock). ``stopAndWaitPreviewServer``-
-  helper + anrop.
+  ``build_site.py`` (Windows file-lock).
 - `9c3bad7` chore(docs): archive 4 sprint-handoffs + drop product-
   north-star duplicate.
 - `697cf4f` fix(viewser): close B157 followup — wait for actual exit
-  after SIGKILL (reap-fix, ``sigkillSent``-flag + ``REAP_TIMEOUT_MS``)
-  + 3 strukturella regression-tester.
-- `c821b8e` chore(governance): post-B157 cleanup-fixes — alwaysApply
-  på env-rule + GAP-status open→queued + workboard.json sync (lägga
-  till 2 queued + flytta GAP-backend-build-trace-endpoint till
-  completed).
-- `f46c01a` docs(steward): remove stale post-PR-133 focus drift +
-  workboard sync.
+  after SIGKILL (reap-fix, ``sigkillSent`` + ``REAP_TIMEOUT_MS``).
+- `c821b8e` chore(governance): post-B157 cleanup-fixes (alwaysApply,
+  GAP-status, workboard.json sync).
+- `f46c01a` docs(steward): remove stale post-PR-133 focus drift.
+- `9196fa1` docs(steward): complete post-PR-133 drift-fix round 2.
+- `ef8745d` **fix(viewser): close B157 round 3 — Windows process-
+  tree-kill (taskkill /T /F)**. Diagnostiserad rotorsak: Node.js
+  ``ChildProcess.kill()`` på Windows mappar till
+  ``TerminateProcess(handle)`` som **bara dödar direct PID, inte
+  descendants**. ``npx next start`` → child ``next start`` blev
+  orphan med exklusivt fil-lås. Fix: ny ``killProcessTree``-helper
+  + Windows-fast-path. 4:e regression-test låser tree-kill-mönstret.
+  Full diagnostik i `B157-WINDOWS-PROCESS-TREE-FYND.md` (repo-rot).
+- `7ab5060` docs(agent-prompts): add 2 scout-grind prompts för
+  cloud-agent-fixes (backoffice-runtime-scaffolds-stale +
+  followup-honest-no-op-detection backend).
 
-**Känt operatörsmönster (B157-orphan):** På Windows kan en preview-
-process från en TIDIGARE Viewser-session leva kvar som orphan utan
-att den nuvarande Viewser-instansen känner till den i sin
-``servers``-map. ``stopAndWaitPreviewServer`` (697cf4f) hanterar
-bara processer som denna Viewser-instans spawned. Symptom: follow-
-up-prompt failar med ``POST /api/prompt 500 in <kort tid>`` +
-``taskkill /PID ... Åtkomst nekad``. Workaround: ``Stop-Process
--Force -Name node`` innan ny dev-session. Nivå-4-sprinten
-(immutable build-dir + pointer-swap) eliminerar hela klassen.
+**B157-status efter round 3:** verifierat end-to-end. Kvarvarande
+edge case: orphan-processer från en TIDIGARE Viewser-session (pre-
+698f745d-dev-server). För dessa: kör `python kill-dev-trees.py`
+(Windows-only helper i repo-roten) eller dubbelklicka
+`kill-dev-trees.bat`. Whitelist:ar bara Sajtbyggaren-relaterade
+node-processer (skyddar VS Code language-servers etc.).
+
+**Nivå-4-sprinten** (immutable build-dir + pointer-swap, GAP-windows-
+safe-rebuild-pipeline) eliminerar hela klassen anti-pattern
+"rebuilda ovanpå live preview-katalog". Egen sprint per gap-spec.
 
 ## Branchmodellen (kort)
 
