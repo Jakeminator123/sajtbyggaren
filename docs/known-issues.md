@@ -2375,6 +2375,19 @@ samma kodmönster lever vidare här — därav posten:
   och `lib/openai.ts` lämnas orörda — de är fortfarande standalone
   endpoints och Scout pekade inte ut dem.
 
+- **`BO6` Låg** (stängd 2026-05-29, direktpush `d07a007` på `jakob-be`) -
+  `backoffice/discovery_wizard_diagnostics.py` hardkodade `_RUNTIME_SCAFFOLD_IDS`
+  till 2 scaffolds (`local-service-business`, `ecommerce-lite`), men resolverns
+  `_RUNTIME_SCAFFOLD_HINTS` har 6 sedan Path B fas 1+2+3a
+  (`restaurant-hospitality`, `clinic-healthcare`, `professional-services`,
+  `agency-studio`). Ingen runtime-bug — sajterna byggdes korrekt — utan en
+  operatörs-förvirrings-bug: diagnostiken visade fel "active runtime scaffolds"
+  och pekade bara på 2 av 6 `routes.json`-paths. Fix: listan speglas nu
+  dynamiskt via direktimport av `_RUNTIME_SCAFFOLD_HINTS`; `_source_paths`
+  itererar samma lista.
+  Test: `tests/test_backoffice_runtime_scaffolds.py::test_backoffice_runtime_scaffold_ids_match_resolver`,
+  `tests/test_backoffice_runtime_scaffolds.py::test_backoffice_runtime_scaffold_routes_exist`.
+
 - **`BO2` Medel** (stängd 2026-05-14, squash-merge `e1ad5ca` via PR #23) - Backoffice trace
   viewer dumpade tidigare bara rå dataframe för `trace.ndjson`.
   Fix: ny backoffice-helper `backoffice/views/_trace.py` läser halvskrivna
