@@ -30,8 +30,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `7ab5060` (2026-05-28 UTC ~01:35, post B157
-round 1+2+3 + städ-pass + steward-drift-fixar + scout-prompts).
+Last verified state: `2c0d5b3` (2026-05-29 UTC, BO6 stängd —
+backoffice runtime-scaffolds-diagnostik speglas nu dynamiskt från
+resolverns `_RUNTIME_SCAFFOLD_HINTS` istället för hardkodad 2-lista).
 Pushad till `origin/jakob-be`. **Kärnflödet verifierat end-to-end
 via Viewser-browser** 2026-05-28 ~01:40 (måleri-bygg-genberg-07d364
 init + tone-shift follow-up, båda byggde utan WinError 5).

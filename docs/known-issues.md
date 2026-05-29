@@ -2375,7 +2375,7 @@ samma kodmönster lever vidare här — därav posten:
   och `lib/openai.ts` lämnas orörda — de är fortfarande standalone
   endpoints och Scout pekade inte ut dem.
 
-- **`BO6` Låg** (stängd 2026-05-29, direktpush `d07a007` på `jakob-be`) -
+- **`BO6` Låg** (stängd 2026-05-29, direktpush `2c0d5b3` på `jakob-be`) -
   `backoffice/discovery_wizard_diagnostics.py` hardkodade `_RUNTIME_SCAFFOLD_IDS`
   till 2 scaffolds (`local-service-business`, `ecommerce-lite`), men resolverns
   `_RUNTIME_SCAFFOLD_HINTS` har 6 sedan Path B fas 1+2+3a
