@@ -163,6 +163,15 @@ def read_active_build_dir(site_dir: Path | str) -> Path | None:
     build_id = payload.get("activeBuildId")
     if not isinstance(build_id, str) or not _BUILD_ID_RE.match(build_id):
         return None
+    # Cross-validate the decorative ``buildPath`` against ``activeBuildId``.
+    # ``write_active_pointer`` always writes ``builds/<activeBuildId>``; if a
+    # tampered or half-updated pointer has the two fields disagreeing the
+    # pointer is inconsistent, so reject it rather than silently trusting
+    # ``activeBuildId``. ``buildPath`` is optional (older pointers may omit it):
+    # only a present-and-mismatching value rejects.
+    build_path = payload.get("buildPath")
+    if build_path is not None and build_path != f"{BUILDS_DIRNAME}/{build_id}":
+        return None
     build_dir = site_dir / BUILDS_DIRNAME / build_id
     if not build_dir.is_dir():
         return None

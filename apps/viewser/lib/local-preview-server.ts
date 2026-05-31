@@ -100,6 +100,13 @@ function readActiveBuildDir(siteRoot: string): string | null {
   if (typeof activeBuildId !== "string" || !BUILD_ID_RE.test(activeBuildId)) {
     return null;
   }
+  // Cross-validate the decorative buildPath against activeBuildId (mirror of
+  // immutable_builds.read_active_build_dir): a present-but-mismatching buildPath
+  // means the pointer is inconsistent (tampered/half-updated), so reject it.
+  const buildPath = (payload as { buildPath?: unknown }).buildPath;
+  if (typeof buildPath === "string" && buildPath !== `builds/${activeBuildId}`) {
+    return null;
+  }
   const buildDir = path.join(siteRoot, "builds", activeBuildId);
   return existsSync(buildDir) ? buildDir : null;
 }

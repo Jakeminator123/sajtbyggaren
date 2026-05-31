@@ -159,6 +159,27 @@ def test_read_active_build_dir_missing_build_dir_returns_none(tmp_path: Path) ->
     assert read_active_build_dir(site_dir) is None
 
 
+def test_read_active_build_dir_rejects_inconsistent_build_path(tmp_path: Path) -> None:
+    # B-review 2026-05-31: activeBuildId is valid and its build dir exists, but
+    # buildPath disagrees (tampered/half-updated pointer). Cross-validation must
+    # treat the pointer as inconsistent and return None rather than silently
+    # trusting activeBuildId.
+    site_dir = tmp_path / "site"
+    build_id = "20260531T184500Z"
+    (site_dir / "builds" / build_id).mkdir(parents=True)
+    (site_dir / POINTER_FILENAME).write_text(
+        json.dumps(
+            {
+                "activeBuildId": build_id,
+                "updatedAt": "2026-05-31T18:45:00+00:00",
+                "buildPath": "builds/20260531T185000Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert read_active_build_dir(site_dir) is None
+
+
 # ---------------------------------------------------------------------------
 # build() pointer-swap gate
 # ---------------------------------------------------------------------------
