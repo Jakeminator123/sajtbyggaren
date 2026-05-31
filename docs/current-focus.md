@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `e4c4351` (2026-05-31 UTC, session close-out cleanup ovanpå PR #137-syncen). PR #137 mergade B157 level 4 (immutable build-dir + pointer-swap + GC) till `main` (`40b7d29`, steward-auto `9e1a025`); `jakob-be` synkades till main och bär nu bara `e4c4351` = cursor-indexing-ignore-städ + färsk orchestrator-handoff + branch-cleanup-notis. Alla guards gröna.
+Last verified state: `61ec707` (2026-05-31 UTC, Streamlit-deprecation-fix i backoffice: 54 `use_container_width=True` → `width="stretch"` (1.57-migrering) ovanpå session close-out-städen `e4c4351`). PR #137 mergade B157 level 4 (immutable build-dir + pointer-swap + GC) till `main` (`40b7d29`, steward-auto `9e1a025`); `jakob-be` synkades till main och bär nu bara `e4c4351` = cursor-indexing-ignore-städ + färsk orchestrator-handoff + branch-cleanup-notis. Alla guards gröna.
 Nya PRs sedan föregående checkpoint: PR #137 — sync(jakob-be -> main): B157 level 4
 immutable build-dir + pointer-swap + GC.
 
