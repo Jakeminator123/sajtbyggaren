@@ -24,7 +24,7 @@ INIT_PROMPT = "Skapa en hemsida för Surdegsbagaren i Malmö."
 NO_OP_FOLLOWUP_PROMPT = "Lägg till mycket mer info om surdegsbröd"
 SITE_ID = "surdegsbagaren-malmo"
 PROJECT_ID = "b155-honest-no-op"
-NO_OP_REASONS = {"intent_no_semantic_change", "page_tsx_unchanged"}
+NO_OP_REASONS = {"intent_no_semantic_change", "visible_files_unchanged"}
 
 
 def _read_json(path: Path) -> dict[str, object]:
@@ -126,7 +126,7 @@ def test_sourdough_followup_no_op_writes_build_result_and_trace(
 
 
 @pytest.mark.tooling
-def test_snapshot_diff_marks_semantic_followup_false_when_page_is_unchanged(
+def test_snapshot_diff_marks_semantic_followup_false_when_visible_files_are_unchanged(
     tmp_path: Path,
 ) -> None:
     runs_root = tmp_path / "runs"
@@ -157,11 +157,11 @@ def test_snapshot_diff_marks_semantic_followup_false_when_page_is_unchanged(
         {},
     )
 
-    assert effect == {"applied": False, "reason": "page_tsx_unchanged"}
+    assert effect == {"applied": False, "reason": "visible_files_unchanged"}
 
 
 @pytest.mark.tooling
-def test_snapshot_diff_marks_semantic_followup_true_when_page_changed(
+def test_snapshot_diff_marks_semantic_followup_true_when_visible_files_changed(
     tmp_path: Path,
 ) -> None:
     runs_root = tmp_path / "runs"
@@ -192,7 +192,45 @@ def test_snapshot_diff_marks_semantic_followup_true_when_page_changed(
         {},
     )
 
-    assert effect == {"applied": True, "reason": "page_tsx_changed"}
+    assert effect == {"applied": True, "reason": "visible_files_changed"}
+
+
+@pytest.mark.tooling
+def test_snapshot_diff_marks_tone_shift_true_when_only_css_changed(
+    tmp_path: Path,
+) -> None:
+    runs_root = tmp_path / "runs"
+    previous_run = runs_root / "previous-run"
+    current_run = runs_root / "current-run"
+    for run_dir, css in (
+        (previous_run, b":root { --primary: #111111; }\n"),
+        (current_run, b":root { --primary: #eeeeee; }\n"),
+    ):
+        page = run_dir / "generated-files" / "app" / "page.tsx"
+        globals_css = run_dir / "generated-files" / "app" / "globals.css"
+        page.parent.mkdir(parents=True)
+        page.write_bytes(b"export default function Page() { return null }\n")
+        globals_css.write_bytes(css)
+    (previous_run / "input.json").write_text(
+        json.dumps({"projectId": PROJECT_ID, "version": 1}),
+        encoding="utf-8",
+    )
+    prompt_meta = {
+        "mode": "followup",
+        "projectId": PROJECT_ID,
+        "version": 2,
+        "previousVersion": 1,
+        "projectDna": {"followUpIntent": {"id": "tone-shift"}},
+    }
+
+    effect = _detect_followup_applied_visible_effect(
+        runs_root,
+        current_run,
+        prompt_meta,
+        {},
+    )
+
+    assert effect == {"applied": True, "reason": "visible_files_changed"}
 
 
 @pytest.mark.tooling

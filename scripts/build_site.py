@@ -3588,12 +3588,12 @@ def snapshot_generated_files(target_dir: Path, run_dir: Path) -> Path:
     return snap_dir
 
 
-def _find_previous_page_snapshot(
+def _find_previous_generated_files_snapshot(
     runs_root: Path,
     current_run_dir: Path,
     prompt_meta: dict[str, Any] | None,
 ) -> Path | None:
-    """Locate v(n-1)'s generated home-page snapshot for a follow-up run."""
+    """Locate v(n-1)'s generated-files snapshot for a follow-up run."""
     project_id = _prompt_meta_project_id(prompt_meta)
     previous_version = _prompt_meta_previous_version(prompt_meta)
     if not project_id or previous_version is None:
@@ -3617,10 +3617,82 @@ def _find_previous_page_snapshot(
             continue
         if input_payload.get("version") != previous_version:
             continue
-        page_snapshot = run_dir / "generated-files" / "app" / "page.tsx"
-        if page_snapshot.is_file():
-            return page_snapshot
+        snapshot = run_dir / "generated-files"
+        if snapshot.is_dir():
+            return snapshot
     return None
+
+
+def _find_previous_page_snapshot(
+    runs_root: Path,
+    current_run_dir: Path,
+    prompt_meta: dict[str, Any] | None,
+) -> Path | None:
+    """Locate v(n-1)'s generated home-page snapshot for a follow-up run."""
+    snapshot = _find_previous_generated_files_snapshot(
+        runs_root,
+        current_run_dir,
+        prompt_meta,
+    )
+    if snapshot is None:
+        return None
+    page_snapshot = snapshot / "app" / "page.tsx"
+    return page_snapshot if page_snapshot.is_file() else None
+
+
+_VISIBLE_EFFECT_SUFFIXES = frozenset(
+    {
+        ".css",
+        ".gif",
+        ".ico",
+        ".jpeg",
+        ".jpg",
+        ".js",
+        ".jsx",
+        ".png",
+        ".svg",
+        ".ts",
+        ".tsx",
+        ".webp",
+    }
+)
+_VISIBLE_EFFECT_ROOTS = ("app", "public")
+
+
+def _visible_snapshot_bytes(snapshot_dir: Path) -> dict[str, bytes] | None:
+    """Return visible source bytes from a generated-files snapshot.
+
+    The home page alone is not enough: style-only follow-ups can change
+    ``app/globals.css`` without changing ``app/page.tsx``. Comparing app/
+    and public/ source assets keeps the no-op signal honest without reading
+    node_modules, build cache, or other non-rendered metadata.
+    """
+    if not snapshot_dir.is_dir():
+        return None
+    visible_files: dict[str, bytes] = {}
+    try:
+        for root_name in _VISIBLE_EFFECT_ROOTS:
+            root = snapshot_dir / root_name
+            if not root.exists():
+                continue
+            for path in root.rglob("*"):
+                if not path.is_file():
+                    continue
+                if path.suffix.lower() not in _VISIBLE_EFFECT_SUFFIXES:
+                    continue
+                visible_files[path.relative_to(snapshot_dir).as_posix()] = path.read_bytes()
+    except OSError:
+        return None
+    return visible_files
+
+
+def _visible_snapshots_changed(previous_snapshot: Path, current_snapshot: Path) -> bool | None:
+    """Return whether visible generated output changed, or None if unreadable."""
+    previous_files = _visible_snapshot_bytes(previous_snapshot)
+    current_files = _visible_snapshot_bytes(current_snapshot)
+    if previous_files is None or current_files is None:
+        return None
+    return previous_files != current_files
 
 
 def _detect_followup_applied_visible_effect(
@@ -3638,6 +3710,34 @@ def _detect_followup_applied_visible_effect(
     if _prompt_meta_mode(prompt_meta) != "followup":
         return None
 
+    current_snapshot = current_run_dir / "generated-files"
+    previous_snapshot = _find_previous_generated_files_snapshot(
+        runs_root,
+        current_run_dir,
+        prompt_meta,
+    )
+    if previous_snapshot is not None:
+        visible_changed = _visible_snapshots_changed(previous_snapshot, current_snapshot)
+        if visible_changed is True:
+            return {
+                "applied": True,
+                "reason": "visible_files_changed",
+            }
+        if visible_changed is False:
+            intent_id = _prompt_meta_followup_intent_id(prompt_meta)
+            has_copy_directives = _has_copy_directives(prompt_meta) or _has_copy_directives(
+                dossier
+            )
+            reason = (
+                "intent_no_semantic_change"
+                if intent_id == "no-semantic-change" and not has_copy_directives
+                else "visible_files_unchanged"
+            )
+            return {
+                "applied": False,
+                "reason": reason,
+            }
+
     intent_id = _prompt_meta_followup_intent_id(prompt_meta)
     has_copy_directives = _has_copy_directives(prompt_meta) or _has_copy_directives(
         dossier
@@ -3646,31 +3746,6 @@ def _detect_followup_applied_visible_effect(
         return {
             "applied": False,
             "reason": "intent_no_semantic_change",
-        }
-
-    current_page = current_run_dir / "generated-files" / "app" / "page.tsx"
-    previous_page = _find_previous_page_snapshot(
-        runs_root,
-        current_run_dir,
-        prompt_meta,
-    )
-    if current_page.is_file() and previous_page is not None:
-        try:
-            current_bytes = current_page.read_bytes()
-            previous_bytes = previous_page.read_bytes()
-        except OSError:
-            return {
-                "applied": True,
-                "reason": "semantic_intent_without_previous_snapshot",
-            }
-        if current_bytes == previous_bytes:
-            return {
-                "applied": False,
-                "reason": "page_tsx_unchanged",
-            }
-        return {
-            "applied": True,
-            "reason": "page_tsx_changed",
         }
 
     return {
