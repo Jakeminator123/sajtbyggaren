@@ -254,9 +254,14 @@ export function getPreviewServer(siteId: string): PreviewServerInfo | null {
  * Lösning: spawna ``taskkill /PID <pid> /T /F`` som följer hela
  * Windows-process-trädet. ``/T`` = "tree" (alla descendants),
  * ``/F`` = "force" (motsvarar SIGKILL — Windows har ingen graceful
- * variant via taskkill). På POSIX (Linux/macOS) finns process
- * groups som ``child_process.kill()`` respekterar redan, så där
- * behåller vi normal ``kill(signal)``.
+ * variant via taskkill). På POSIX (Linux/macOS) skickar vi signalen
+ * till den direkta child-PID:en. OBS: ``child.kill()`` på POSIX dödar
+ * INTE descendants (``npx`` → ``next start``, eller ``python`` → ``npm``
+ * → ``next``) — full POSIX-tree-kill kräver ``detached``-spawn +
+ * ``process.kill(-pid)`` (killpg) och tas som egen Linux-verifierad
+ * sprint. På POSIX är kvarvarande grand-children en process/port-läcka,
+ * inte ett hårt fil-lås (inode-räknaren släpper filen vid sista handle),
+ * så B157-klassen (Windows ``.node``-lås) drabbar inte operatören.
  *
  * Async + non-throwing: returnerar när taskkill exitar (max 2s)
  * eller efter timeout. Errors sväljs eftersom tree-kill är best-
@@ -268,11 +273,13 @@ export function getPreviewServer(siteId: string): PreviewServerInfo | null {
  * att Viewser:s ``child.kill("SIGKILL")`` skickats till
  * ``npx (PID 27976)``-parent.
  */
-async function killProcessTree(
+export async function killProcessTree(
   child: ChildProcess,
   signal: NodeJS.Signals,
 ): Promise<void> {
   if (process.platform !== "win32") {
+    // POSIX best-effort: signalera den direkta child-PID:en. Se JSDoc ovan
+    // om descendant-läckan (kräver detached + killpg för full tree-kill).
     try {
       child.kill(signal);
     } catch {

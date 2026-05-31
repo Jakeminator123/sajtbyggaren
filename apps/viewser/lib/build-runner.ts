@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { stopAndWaitPreviewServer } from "@/lib/local-preview-server";
+import { killProcessTree, stopAndWaitPreviewServer } from "@/lib/local-preview-server";
 import { assertProjectInputExists } from "@/lib/project-inputs";
 import { readBuildResult, runDirFromId, runsDir } from "@/lib/runs";
 
@@ -191,14 +191,19 @@ async function runBuildOnce(
   let timedOut = false;
   const timeout = setTimeout(() => {
     timedOut = true;
-    child.kill();
+    // build_site.py spawnar npm install + next build som descendants.
+    // Ett plain child.kill() signalerar bara Python-PID:en och lämnar
+    // npm/next vid liv — på Windows håller de kvar .node-fil-lås (samma
+    // B157-klass som preview-servern), på POSIX blir det en process-läcka.
+    // Använd samma tree-kill som preview-shutdownen: på Windows ger det
+    // taskkill /T /F över hela bygg-process-trädet.
+    void killProcessTree(child, "SIGTERM");
     setTimeout(() => {
-      if (!child.killed) {
-        try {
-          child.kill("SIGKILL");
-        } catch {
-          // ignore
-        }
+      // child.exitCode === null => processen har inte exitat än; eskalera.
+      // (child.killed räcker inte: det blir true direkt av kill() även om
+      // trädet lever vidare, och sätts aldrig av Windows-taskkill-pathen.)
+      if (child.exitCode === null) {
+        void killProcessTree(child, "SIGKILL");
       }
     }, 5_000).unref?.();
   }, BUILD_TIMEOUT_MS);
