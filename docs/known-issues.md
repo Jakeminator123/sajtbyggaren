@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 129 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 130 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -319,7 +319,9 @@ integrate christopher-ui discovery and asset workflow`, merge
   renderers/codegen saknar fält för fri copy-edit. Gap-spec:
   `docs/gaps/GAP-followup-prompt-content-passthrough.md`. ADR-utkast:
   `governance/decisions/0034-followup-prompt-content-passthrough.md`.
-  Fix: open. Test: open.
+  Fix: open; backend-signal i `build-result.json` och `trace.ndjson` är
+  implementerad, men FloatingChat-feedback och `copyDirectives[]` återstår.
+  Test: `tests/test_followup_honest_no_op.py`.
 
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
   subprocess-status och loggutdrag medan körningen pågår, men riktig
