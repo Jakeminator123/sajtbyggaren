@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 129 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 130 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
