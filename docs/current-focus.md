@@ -30,16 +30,24 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `2c0d5b3` (2026-05-29 UTC, BO6 stängd —
-backoffice runtime-scaffolds-diagnostik speglas nu dynamiskt från
-resolverns `_RUNTIME_SCAFFOLD_HINTS` istället för hardkodad 2-lista).
-Pushad till `origin/jakob-be`. **Kärnflödet verifierat end-to-end
-via Viewser-browser** 2026-05-28 ~01:40 (måleri-bygg-genberg-07d364
-init + tone-shift follow-up, båda byggde utan WinError 5).
+Last verified state: `c4fe767` (2026-05-31 UTC, B155-backend (#135)
++ quality-gate routes-discovery (#134) mergade till `jakob-be`).
+B155: buildern skriver `appliedVisibleEffect` +
+`appliedVisibleEffectReason` till build-result.json och emitterar
+trace-event `followup.no_op_detected` för fri-text-följdpromptar utan
+synlig effekt (hybrid: intent-regel + cross-run byte-diff av
+`app/page.tsx`). UI-delen (FloatingChat-signal) väntar Christopher.
+Quality-gate: contact-route resolveras via scaffoldens `routes.json`
+(`id="contact"`) istället för fragment-matchning av
+`kontakt`/`contact`/`hitta-hit`. Alla guards gröna (ruff, pytest,
+governance, rules-sync, term-coverage, sprintvakt). BO6 (föregående)
+stängd. **Kärnflödet verifierat end-to-end via Viewser-browser**
+2026-05-28 ~01:40 (måleri-bygg-genberg-07d364 init + tone-shift
+follow-up, båda byggde utan WinError 5).
 
 `jakob-be` är synkad med `origin/jakob-be`. `origin/main` ligger på
 `4196c17`. Inga öppna PRs. Bug-count: 15 aktiva / 0 misplaced /
-5 unknown / 129 stängda. Golden-path-eval baseline: **7.34/10,
+5 unknown / 130 stängda. Golden-path-eval baseline: **7.34/10,
 embeddings=go** (2026-05-28 00:57, 0 regressioner från natt-batchen).
 
 Natt-batchen 2026-05-27 → 2026-05-28 (alla pushade):
