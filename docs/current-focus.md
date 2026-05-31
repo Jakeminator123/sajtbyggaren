@@ -30,20 +30,23 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `c4fe767` (2026-05-31 UTC, B155-backend (#135)
-+ quality-gate routes-discovery (#134) mergade till `jakob-be`).
-B155: buildern skriver `appliedVisibleEffect` +
-`appliedVisibleEffectReason` till build-result.json och emitterar
-trace-event `followup.no_op_detected` för fri-text-följdpromptar utan
-synlig effekt (hybrid: intent-regel + cross-run byte-diff av
-`app/page.tsx`). UI-delen (FloatingChat-signal) väntar Christopher.
-Quality-gate: contact-route resolveras via scaffoldens `routes.json`
-(`id="contact"`) istället för fragment-matchning av
-`kontakt`/`contact`/`hitta-hit`. Alla guards gröna (ruff, pytest,
-governance, rules-sync, term-coverage, sprintvakt). BO6 (föregående)
-stängd. **Kärnflödet verifierat end-to-end via Viewser-browser**
-2026-05-28 ~01:40 (måleri-bygg-genberg-07d364 init + tone-shift
-follow-up, båda byggde utan WinError 5).
+Last verified state: `8709aae` (2026-05-31 UTC, B155-backend (#135)
++ quality-gate routes-discovery (#134) + post-merge quality-gate-
+härdning mergade/pushade till `jakob-be`). B155: buildern skriver
+`appliedVisibleEffect` + `appliedVisibleEffectReason` till
+build-result.json och emitterar trace-event `followup.no_op_detected`
+för fri-text-följdpromptar utan synlig effekt (hybrid: intent-regel +
+cross-run byte-diff av `app/page.tsx`). UI-delen (FloatingChat-signal)
+väntar Christopher. Quality-gate: contact-route resolveras via
+scaffoldens `routes.json` (`id="contact"`) istället för
+fragment-matchning; post-merge-review-härdning (`8709aae`) gör en
+oresolverbar contact-route till en synlig warning-finding (ej längre
+tyst ok) + robustare fallback mot kända scaffold-contact-paths. Alla
+guards gröna (ruff, pytest, governance, rules-sync, term-coverage,
+sprintvakt). BO6 (föregående) stängd. **Kärnflödet verifierat
+end-to-end via Viewser-browser** 2026-05-28 ~01:40
+(måleri-bygg-genberg-07d364 init + tone-shift follow-up, båda byggde
+utan WinError 5).
 
 `jakob-be` är synkad med `origin/jakob-be`. `origin/main` ligger på
 `4196c17`. Inga öppna PRs. Bug-count: 15 aktiva / 0 misplaced /
