@@ -30,7 +30,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `e786618` (2026-05-31 UTC, steward-auto efter PR #136 — sync(jakob-be -> main): B157 round 3 + BO6 + B155 backend + quality-gate routes-discovery).
+Last verified state: `aecf9c9` (2026-05-31 UTC, post PR #136-sync till main: B157 round 3 + BO6 + B155 backend + quality-gate routes-discovery + post-merge quality-gate-härdning. `jakob-be` == `main` (`619fb18`) efter syncen; därefter `aecf9c9` på `jakob-be` = test(api)-fix som isolerar `OPENAI_API_KEY` i /api/prompt-smoke så lokal full-suite blir ärlig).
 Nya PRs sedan föregående checkpoint: PR #136 — sync(jakob-be -> main): B157 round 3 +
 BO6 + B155 backend + quality-gate routes-discovery.
 
