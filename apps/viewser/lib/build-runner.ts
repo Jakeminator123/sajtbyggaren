@@ -149,10 +149,17 @@ async function runBuildOnce(
   // SIGTERM, väntar in exit-event + 200ms extra på Windows.
   //
   // Idempotent: returnerar tyst om ingen preview-server körde för
-  // siteId — vanligt fall vid första bygget av en ny sajt. Detta är
-  // **temporär fix** (gap-spec laddare nivå 1, ``docs/gaps/
-  // GAP-windows-safe-rebuild-pipeline.md``). Rätt arkitektur är
-  // immutable build-dir + manifest-pointer-swap, tas i egen sprint.
+  // siteId — vanligt fall vid första bygget av en ny sajt. Detta var
+  // ursprungligen **temporär fix** (gap-spec laddare nivå 1, ``docs/gaps/
+  // GAP-windows-safe-rebuild-pipeline.md``).
+  //
+  // Stage A note (immutable build-dir + pointer-swap, level 4, has now
+  // landed): build_site.py writes to builds/<buildId>/ and never deletes or
+  // overwrites the directory this preview holds open, so this stop is no
+  // longer required as in-place rmtree lock-protection. Its role is now a
+  // controlled restart / consistency one: stop the old preview so the next
+  // start picks up the freshly published current.json build instead of
+  // serving the previous version indefinitely.
   await stopAndWaitPreviewServer(siteId);
 
   const scriptPath = path.join(repoRoot(), "scripts", "build_site.py");

@@ -388,12 +388,20 @@ def test_llm_golden_path_real_build_end_to_end(
         "build-status checks should now run instead of being skipped."
     )
 
-    generated_site = generated_dir / _REAL_BUILD_SITE_ID
-    assert generated_site.is_dir(), (
+    # B157 level 4 Stage A: the build is immutable under
+    # <generated>/<siteId>/builds/<buildId>/ and published via current.json.
+    site_root = generated_dir / _REAL_BUILD_SITE_ID
+    assert site_root.is_dir(), (
         f"Expected the builder to materialise a Next.js project under "
-        f"{generated_site}. Without it Next.js had nothing to compile."
+        f"{site_root}. Without it Next.js had nothing to compile."
     )
-    next_output = generated_site / ".next"
+    pointer = json.loads((site_root / "current.json").read_text(encoding="utf-8"))
+    active_build_dir = site_root / pointer["buildPath"]
+    assert active_build_dir.is_dir(), (
+        f"current.json points at {pointer['buildPath']} but that build "
+        f"directory is missing under {site_root}."
+    )
+    next_output = active_build_dir / ".next"
     assert next_output.is_dir(), (
         f"Expected Next.js to write its build output to {next_output}. "
         "Missing .next/ means `next build` did not actually run or "

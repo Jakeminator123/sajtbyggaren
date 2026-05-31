@@ -196,4 +196,9 @@ def test_api_prompt_route_spawns_python_end_to_end(tmp_path: Path) -> None:
         assert (run_dir / artefact).is_file(), f"Missing canonical artefact {artefact}"
     assert (run_dir / "generated-files" / "app" / "page.tsx").is_file()
     assert (tmp_path / "prompt-inputs" / f"{payload['siteId']}.project-input.json").is_file()
-    assert (tmp_path / "generated" / str(payload["siteId"]) / ".next").is_dir()
+    # B157 level 4 Stage A: the build is immutable under
+    # <generated>/<siteId>/builds/<buildId>/ and published via current.json.
+    site_root = tmp_path / "generated" / str(payload["siteId"])
+    pointer = json.loads((site_root / "current.json").read_text(encoding="utf-8"))
+    active_build_dir = site_root / pointer["buildPath"]
+    assert (active_build_dir / ".next").is_dir()

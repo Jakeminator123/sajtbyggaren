@@ -38,7 +38,7 @@
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createConnection } from "node:net";
 import path from "node:path";
 
@@ -64,6 +64,68 @@ function resolveGeneratedDir(): string {
   // till repo-roten + ut och in i sajtbyggaren-output.
   const repoRoot = path.resolve(process.cwd(), "..", "..");
   return path.join(repoRoot, "..", "sajtbyggaren-output", ".generated");
+}
+
+// Build id format YYYYMMDDTHHMMSSZ with an optional -NN collision suffix.
+// Validated before joining to a path so a tampered or corrupt current.json
+// cannot trigger directory traversal (no slash/backslash/dot-dot can match).
+const BUILD_ID_RE = /^\d{8}T\d{6}Z(?:-\d{2,})?$/;
+
+/**
+ * Läs ``<siteRoot>/current.json`` och returnera absolut sökväg till den
+ * aktiva build-katalogen, eller ``null`` om pekaren saknas/är ogiltig.
+ *
+ * Speglar ``packages/generation/build/immutable_builds.py:read_active_build_dir``
+ * fast på TS-sidan (B157 nivå 4 Stage A). Builder:n bygger numera till
+ * ``<siteRoot>/builds/<buildId>/`` och publicerar aktiv build via en atomär
+ * ``current.json``-pekare; preview ska köra mot den katalogen, aldrig mot en
+ * dir som Builder:n samtidigt skriver till.
+ */
+function readActiveBuildDir(siteRoot: string): string | null {
+  const pointerPath = path.join(siteRoot, "current.json");
+  let raw: string;
+  try {
+    raw = readFileSync(pointerPath, "utf-8");
+  } catch {
+    return null;
+  }
+  let payload: unknown;
+  try {
+    payload = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (typeof payload !== "object" || payload === null) return null;
+  const activeBuildId = (payload as { activeBuildId?: unknown }).activeBuildId;
+  if (typeof activeBuildId !== "string" || !BUILD_ID_RE.test(activeBuildId)) {
+    return null;
+  }
+  const buildDir = path.join(siteRoot, "builds", activeBuildId);
+  return existsSync(buildDir) ? buildDir : null;
+}
+
+/**
+ * Resolverar vilken katalog ``next start`` ska köras i för en redan byggd
+ * sajt under ``<generated>/<siteId>/``.
+ *
+ *   1. Föredra den immutable build:en som ``current.json`` pekar på (om den
+ *      finns och har en ``.next/``-output) — det nya nivå-4-layoutet.
+ *   2. Annars: bakåtkompatibel fallback till det gamla flata layoutet
+ *      ``<siteRoot>/.next`` (sajter byggda före nivå 4, plus det första
+ *      migreringsfönstret innan nästa rebuild skapat en pekare).
+ *
+ * Returnerar ``null`` när varken pekad build eller flat ``.next`` finns, så
+ * callern kan kasta det befintliga "build-artefakter saknas"-felet.
+ */
+function resolveActivePreviewDir(siteRoot: string): string | null {
+  const activeBuildDir = readActiveBuildDir(siteRoot);
+  if (activeBuildDir && existsSync(path.join(activeBuildDir, ".next"))) {
+    return activeBuildDir;
+  }
+  if (existsSync(path.join(siteRoot, ".next"))) {
+    return siteRoot;
+  }
+  return null;
 }
 
 interface ServerEntry {
@@ -528,15 +590,20 @@ async function doStartPreviewServer(
     };
   }
 
-  const siteDir = path.join(resolveGeneratedDir(), siteId);
-  if (!existsSync(siteDir)) {
+  const siteRoot = path.join(resolveGeneratedDir(), siteId);
+  if (!existsSync(siteRoot)) {
     throw new Error(
-      `Genererad sajt saknas: ${siteDir} — kör build_site.py först.`,
+      `Genererad sajt saknas: ${siteRoot} — kör build_site.py först.`,
     );
   }
-  if (!existsSync(path.join(siteDir, ".next"))) {
+  // B157 nivå 4 Stage A: kör preview mot den aktiva immutable build:en
+  // (current.json-pekaren) med fallback till det gamla flata ``.next``-
+  // layoutet. ``siteDir`` är därmed antingen ``builds/<buildId>/`` eller
+  // site-roten — aldrig en katalog Builder:n samtidigt bygger i.
+  const siteDir = resolveActivePreviewDir(siteRoot);
+  if (!siteDir) {
     throw new Error(
-      `Build-artefakter saknas: ${siteDir}/.next/ — kör npm run build i sajtkatalogen.`,
+      `Build-artefakter saknas: ${siteRoot}/.next/ — kör npm run build i sajtkatalogen.`,
     );
   }
   const port = await allocatePort(siteId);
