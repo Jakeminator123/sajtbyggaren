@@ -1,8 +1,22 @@
+import json
 from pathlib import Path
 
+import pytest
+
 from packages.generation.quality_gate import run_quality_gate
-from packages.generation.quality_gate.checks import run_contact_cta_presence_check
+from packages.generation.quality_gate.checks import (
+    _find_contact_page,
+    run_contact_cta_presence_check,
+)
 from packages.generation.quality_gate.gate import _CHECKS_REGISTRY
+
+SCAFFOLDS_DIR = (
+    Path(__file__).resolve().parent.parent
+    / "packages"
+    / "generation"
+    / "orchestration"
+    / "scaffolds"
+)
 
 
 def _site(root: Path, hero: str, contact: str, route: str = "kontakt") -> None:
@@ -16,6 +30,55 @@ def _site(root: Path, hero: str, contact: str, route: str = "kontakt") -> None:
         f"export default function Contact() {{ return <main>{contact}</main>; }}",
         encoding="utf-8",
     )
+    (root / "routes.json").write_text(
+        json.dumps(
+            {
+                "defaultRoutes": [
+                    {"id": "home", "path": "/", "required": True, "purpose": "Home"},
+                    {
+                        "id": "contact",
+                        "path": f"/{route}",
+                        "required": True,
+                        "purpose": "Contact",
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _load_scaffold_routes(scaffold_id: str) -> dict:
+    return json.loads(
+        (SCAFFOLDS_DIR / scaffold_id / "routes.json").read_text(encoding="utf-8")
+    )
+
+
+def _site_from_scaffold(root: Path, scaffold_id: str) -> str:
+    routes_payload = _load_scaffold_routes(scaffold_id)
+    default_routes = routes_payload["defaultRoutes"]
+    contact_route = next(route for route in default_routes if route["id"] == "contact")
+    contact_path = contact_route["path"]
+    for route in default_routes:
+        path = route["path"]
+        page = (
+            root / "app" / "page.tsx"
+            if path == "/"
+            else root / "app" / path.lstrip("/") / "page.tsx"
+        )
+        page.parent.mkdir(parents=True, exist_ok=True)
+        if route["id"] == "home":
+            body = f'<section><Link href="{contact_path}">Kontakta oss</Link></section>'
+        elif route["id"] == "contact":
+            body = '<main><a href="tel:+46">Ring oss</a></main>'
+        else:
+            body = "<main>Ok</main>"
+        page.write_text(
+            f"export default function Page() {{ return {body}; }}",
+            encoding="utf-8",
+        )
+    return contact_path
+
 
 def test_contact_cta_presence_flags_missing_hero_and_contact_ctas(tmp_path: Path) -> None:
     _site(tmp_path, "<p>Välkommen</p>", '<Link href="/kontakt">Kontakta oss</Link>')
@@ -24,6 +87,7 @@ def test_contact_cta_presence_flags_missing_hero_and_contact_ctas(tmp_path: Path
     result = run_contact_cta_presence_check(tmp_path)
     assert result.status == "failed"
     assert any("saknar kontakt-CTA" in finding for finding in result.findings)
+
 
 def test_contact_cta_presence_accepts_sv_and_en_ctas(tmp_path: Path) -> None:
     _site(tmp_path, '<Link href="/kontakt">Kom igång</Link>', '<a href="tel:+46">Ring oss</a>')
@@ -48,9 +112,18 @@ def test_contact_cta_presence_rejects_cta_text_with_non_contact_href(tmp_path: P
     assert any("hero" in finding for finding in result.findings)
 
 
+def test_contact_cta_presence_rejects_contact_href_with_non_cta_text(
+    tmp_path: Path,
+) -> None:
+    _site(tmp_path, '<a href="/kontakt">Läs mer</a>', '<a href="tel:+46">Ring oss</a>')
+
+    result = run_contact_cta_presence_check(tmp_path)
+
+    assert result.status == "failed"
+    assert any("hero" in finding for finding in result.findings)
+
+
 def test_contact_cta_presence_accepts_scaffold_specific_routes(tmp_path: Path) -> None:
-    # agency-studio/clinic-healthcare/professional-services använder
-    # /kontakta-oss. GPT P2 Badge + BugBot suggestion 4 (2026-05-27).
     _site(
         tmp_path,
         '<Link href="/kontakta-oss">Kontakta oss</Link>',
@@ -58,9 +131,6 @@ def test_contact_cta_presence_accepts_scaffold_specific_routes(tmp_path: Path) -
         "kontakta-oss",
     )
     assert run_contact_cta_presence_check(tmp_path).status == "ok"
-    # restaurant-hospitality använder /hitta-hit (helt unik path som inte
-    # innehåller "kontakt"/"contact"-substring; måste vara i hardcoded
-    # fragment-listan).
     _site(
         tmp_path,
         '<Link href="/hitta-hit">Hitta hit</Link>',
@@ -68,6 +138,76 @@ def test_contact_cta_presence_accepts_scaffold_specific_routes(tmp_path: Path) -
         "hitta-hit",
     )
     assert run_contact_cta_presence_check(tmp_path).status == "ok"
+
+
+@pytest.mark.parametrize(
+    ("scaffold_id", "expected_contact_path"),
+    [
+        ("local-service-business", "/kontakt"),
+        ("professional-services", "/kontakta-oss"),
+        ("restaurant-hospitality", "/hitta-hit"),
+    ],
+)
+def test_contact_cta_presence_resolves_contact_path_from_scaffold_routes(
+    tmp_path: Path,
+    scaffold_id: str,
+    expected_contact_path: str,
+) -> None:
+    contact_path = _site_from_scaffold(tmp_path, scaffold_id)
+
+    result = run_contact_cta_presence_check(tmp_path)
+
+    assert contact_path == expected_contact_path
+    assert result.status == "ok"
+    assert expected_contact_path in result.detail
+    assert _find_contact_page(tmp_path) == (
+        tmp_path / "app" / expected_contact_path.lstrip("/") / "page.tsx"
+    )
+
+
+def test_contact_cta_presence_missing_routes_json_skips_contact_page_check(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "app").mkdir()
+    (tmp_path / "app" / "page.tsx").write_text(
+        "export default function Page() { "
+        'return <section><Link href="/hitta-hit">Hitta hit</Link></section>; }',
+        encoding="utf-8",
+    )
+
+    result = run_contact_cta_presence_check(tmp_path)
+
+    assert result.status == "ok"
+    assert "routes.json" in result.detail
+    assert result.findings == []
+
+
+def test_contact_cta_presence_missing_contact_id_skips_contact_page_check(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "app").mkdir()
+    (tmp_path / "app" / "page.tsx").write_text(
+        "export default function Page() { "
+        'return <section><a href="tel:+46">Ring oss</a></section>; }',
+        encoding="utf-8",
+    )
+    (tmp_path / "routes.json").write_text(
+        json.dumps(
+            {
+                "defaultRoutes": [
+                    {"id": "home", "path": "/", "required": True, "purpose": "Home"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_contact_cta_presence_check(tmp_path)
+
+    assert result.status == "ok"
+    assert "routes.json" in result.detail
+    assert result.findings == []
+
 
 def test_contact_cta_presence_registered_as_warning(tmp_path: Path) -> None:
     _site(tmp_path, "<p>Välkommen</p>", "<p>Kontaktinfo</p>")
