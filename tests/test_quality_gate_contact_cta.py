@@ -165,9 +165,14 @@ def test_contact_cta_presence_resolves_contact_path_from_scaffold_routes(
     )
 
 
-def test_contact_cta_presence_missing_routes_json_skips_contact_page_check(
+def test_contact_cta_presence_flags_unresolvable_contact_route(
     tmp_path: Path,
 ) -> None:
+    # B-review 2026-05-31: a generated site whose contact route cannot be
+    # resolved (no own routes.json, no scaffold match, and the linked
+    # /hitta-hit page does not even exist) must NOT pass silently. The
+    # warning-severity check now surfaces a finding so the operator sees that
+    # the contact page went unvalidated. Gate status stays non-blocking.
     (tmp_path / "app").mkdir()
     (tmp_path / "app" / "page.tsx").write_text(
         "export default function Page() { "
@@ -177,14 +182,16 @@ def test_contact_cta_presence_missing_routes_json_skips_contact_page_check(
 
     result = run_contact_cta_presence_check(tmp_path)
 
-    assert result.status == "ok"
-    assert "routes.json" in result.detail
-    assert result.findings == []
+    assert result.status == "failed"
+    assert any("kunde inte resolvas" in finding for finding in result.findings)
 
 
-def test_contact_cta_presence_missing_contact_id_skips_contact_page_check(
+def test_contact_cta_presence_flags_routes_json_without_contact_id(
     tmp_path: Path,
 ) -> None:
+    # routes.json present but missing an id="contact" entry, and no generated
+    # route matches a known scaffold contact path -> unresolvable -> flagged
+    # rather than silently green.
     (tmp_path / "app").mkdir()
     (tmp_path / "app" / "page.tsx").write_text(
         "export default function Page() { "
@@ -204,9 +211,56 @@ def test_contact_cta_presence_missing_contact_id_skips_contact_page_check(
 
     result = run_contact_cta_presence_check(tmp_path)
 
+    assert result.status == "failed"
+    assert any("kunde inte resolvas" in finding for finding in result.findings)
+
+
+def test_contact_cta_presence_flags_contact_via_scaffold_fallback_without_routes_json(
+    tmp_path: Path,
+) -> None:
+    # Robustness (B-review Medium): a partial tree without routes.json that
+    # still has app/hitta-hit/page.tsx must resolve the contact route via the
+    # known scaffold contact paths so the contact page IS validated. A missing
+    # CTA on it must fail (the report's recommended regression case).
+    app = tmp_path / "app"
+    (app / "hitta-hit").mkdir(parents=True)
+    (app / "page.tsx").write_text(
+        "export default function Page() { "
+        'return <section><Link href="/hitta-hit">Hitta hit</Link></section>; }',
+        encoding="utf-8",
+    )
+    (app / "hitta-hit" / "page.tsx").write_text(
+        "export default function Contact() { return <main>Ingen CTA har</main>; }",
+        encoding="utf-8",
+    )
+
+    result = run_contact_cta_presence_check(tmp_path)
+
+    assert result.status == "failed"
+    assert any("hitta-hit" in finding for finding in result.findings)
+
+
+def test_contact_cta_presence_passes_via_scaffold_fallback_without_routes_json(
+    tmp_path: Path,
+) -> None:
+    # Same partial tree, but the resolved contact page carries a CTA -> ok.
+    app = tmp_path / "app"
+    (app / "hitta-hit").mkdir(parents=True)
+    (app / "page.tsx").write_text(
+        "export default function Page() { "
+        'return <section><Link href="/hitta-hit">Hitta hit</Link></section>; }',
+        encoding="utf-8",
+    )
+    (app / "hitta-hit" / "page.tsx").write_text(
+        "export default function Contact() { "
+        'return <main><a href="mailto:info@example.com">Kontakta oss</a></main>; }',
+        encoding="utf-8",
+    )
+
+    result = run_contact_cta_presence_check(tmp_path)
+
     assert result.status == "ok"
-    assert "routes.json" in result.detail
-    assert result.findings == []
+    assert "/hitta-hit" in result.detail
 
 
 def test_contact_cta_presence_registered_as_warning(tmp_path: Path) -> None:

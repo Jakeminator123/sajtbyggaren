@@ -421,6 +421,31 @@ def _contact_path_from_matching_scaffold(target_dir: Path) -> str | None:
     return None
 
 
+def _contact_path_from_known_scaffold_contacts(target_dir: Path) -> str | None:
+    """Resolve the contact route from any scaffold's ``id="contact"`` path.
+
+    Robustness fallback for partial app trees: ``_contact_path_from_matching_scaffold``
+    only matches when a scaffold's *entire* defaultRoutes set is present. When
+    codegen dropped a sibling route (e.g. a restaurant site that kept
+    ``/hitta-hit`` but lost ``/meny``) the whole-scaffold match fails and the
+    contact page would go unvalidated. Here we collect every scaffold's
+    canonical contact path from its ``routes.json`` and accept the first one
+    that exists as a generated route — still derived from the route contract,
+    never from hardcoded ``kontakt``/``contact`` fragments.
+    """
+    existing_routes = _existing_app_routes(target_dir)
+    if not existing_routes or not _SCAFFOLDS_DIR.exists():
+        return None
+    for routes_path in sorted(_SCAFFOLDS_DIR.glob("*/routes.json")):
+        payload = _load_routes_payload(routes_path)
+        if payload is None:
+            continue
+        contact_path = _contact_path_from_routes_payload(payload)
+        if contact_path is not None and contact_path in existing_routes:
+            return contact_path
+    return None
+
+
 def _resolve_contact_route_path(target_dir: Path) -> str | None:
     payload = _load_routes_payload(target_dir / "routes.json")
     if payload is not None:
@@ -428,7 +453,11 @@ def _resolve_contact_route_path(target_dir: Path) -> str | None:
         if contact_path is not None:
             return contact_path
 
-    return _contact_path_from_matching_scaffold(target_dir)
+    scaffold_path = _contact_path_from_matching_scaffold(target_dir)
+    if scaffold_path is not None:
+        return scaffold_path
+
+    return _contact_path_from_known_scaffold_contacts(target_dir)
 
 
 def _has_contact_cta(text: str, contact_route_path: str | None) -> bool:
@@ -484,9 +513,18 @@ def run_contact_cta_presence_check(target_dir: Path) -> CheckResult:
     if not _has_contact_cta(hero, contact_route_path):
         findings.append("app/page.tsx: hero saknar kontakt-CTA")
     if contact_route_path is None:
+        # A generated site whose contact route cannot be resolved from its own
+        # routes.json, a whole-scaffold match, or any known scaffold contact
+        # path has effectively lost its contact page. Surface it as a (warning-
+        # severity, non-blocking) finding instead of a silent ``ok`` so the
+        # operator sees that the contact page could not be validated.
+        findings.append(
+            'routes.json: contact-route (id="contact") kunde inte resolvas - '
+            "kontaktsidan kunde inte valideras"
+        )
         detail = (
-            "Contact-route kunde inte resolvas från routes.json; "
-            "kontaktsidecheck hoppades över."
+            "Contact-route kunde inte resolvas från routes.json eller "
+            "scaffold-routes; kontaktsidecheck kunde inte köras."
         )
     elif contact is None:
         missing_page = _route_to_page_path(target_dir, contact_route_path)
