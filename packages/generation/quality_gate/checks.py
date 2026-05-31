@@ -16,11 +16,13 @@ Sprint 3A v1 implements four checks:
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import subprocess
 import time
 from pathlib import Path
+from typing import Any
 
 from .models import CheckResult
 
@@ -40,6 +42,8 @@ _DEFAULT_EXPORT_RE = re.compile(
 )
 
 DEFAULT_TYPECHECK_TIMEOUT_SECONDS = 180
+_SCAFFOLDS_DIR = Path(__file__).resolve().parents[1] / "orchestration" / "scaffolds"
+_FALLBACK_CONTACT_HREFS = {"/kontakt", "/contact", "/kontakta-oss", "/hitta-hit"}
 
 
 def _route_to_page_path(target: Path, route: str) -> Path:
@@ -249,30 +253,31 @@ _CTA_LINK_RE = re.compile(
 )
 _CTA_TEXT_RE = re.compile(
     r"\b(kontakta|boka|begär|ring|contact|book|request|call)\b"
-    r"|hör av|kom igång|get in touch|get started",
+    r"|hör av|hitta hit|kom igång|get in touch|get started",
     flags=re.IGNORECASE,
 )
-# Scaffolds map ``id="contact"`` i routes.json till olika path-segment.
-# Här täcks de varianter som existerande scaffolds använder:
-#   - ``kontakt`` / ``contact`` (substring matchar ``/kontakt``,
-#     ``/kontakta-oss``, ``/contact-us``)
-#   - ``hitta-hit`` (restaurant-hospitality, helt unik path som inte
-#     innehåller "kontakt"/"contact"-substring)
-# Framtida sprint: läsa scaffoldens routes.json explicit och resolva
-# ``id="contact"`` istället för pattern-matching. Registreras som
-# tech-debt-not i ``docs/known-issues.md`` om någon ny scaffold tappar
-# på pattern-matching här (GPT P2 Badge 2026-05-27).
-_CONTACT_ROUTE_FRAGMENTS = ("kontakt", "contact", "hitta-hit")
 
 
-def _is_contact_href(href: str) -> bool:
-    lower = href.lower()
-    return any(frag in lower for frag in _CONTACT_ROUTE_FRAGMENTS)
+def _normalize_route_path(route_path: str) -> str:
+    path = route_path.strip().lower()
+    if len(path) > 1:
+        path = path.rstrip("/")
+    return path
 
 
-def _is_contact_route_dir(name: str) -> bool:
-    lower = name.lower()
-    return any(frag in lower for frag in _CONTACT_ROUTE_FRAGMENTS)
+def _normalize_internal_href(href: str) -> str:
+    path = href.strip().lower()
+    if not path.startswith("/"):
+        return path
+    path = path.split("#", 1)[0].split("?", 1)[0]
+    return _normalize_route_path(path)
+
+
+def _is_contact_href(href: str, contact_route_path: str | None) -> bool:
+    path = _normalize_internal_href(href)
+    if contact_route_path is not None:
+        return path == _normalize_route_path(contact_route_path)
+    return path in _FALLBACK_CONTACT_HREFS
 
 # Customer-copy-placeholders only. Dev-markers som "TODO:" och "FIXME"
 # var med i v1 men gav brus eftersom check:en skannar både code-comments
@@ -339,72 +344,206 @@ def run_policy_compliance_check(target_dir: Path) -> CheckResult:
     )
 
 
-def _has_contact_cta(text: str) -> bool:
+def _load_routes_payload(routes_path: Path) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(routes_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    return payload
+
+
+def _default_routes_from_payload(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    routes = payload.get("defaultRoutes")
+    if not isinstance(routes, list):
+        return []
+    return [route for route in routes if isinstance(route, dict)]
+
+
+def _contact_path_from_routes_payload(payload: dict[str, Any]) -> str | None:
+    for route in _default_routes_from_payload(payload):
+        if route.get("id") != "contact":
+            continue
+        path = route.get("path")
+        if isinstance(path, str) and path.startswith("/"):
+            return _normalize_route_path(path)
+    return None
+
+
+def _default_route_paths_from_payload(payload: dict[str, Any]) -> set[str]:
+    paths: set[str] = set()
+    for route in _default_routes_from_payload(payload):
+        path = route.get("path")
+        if isinstance(path, str) and path.startswith("/"):
+            paths.add(_normalize_route_path(path))
+    return paths
+
+
+def _existing_app_routes(target_dir: Path) -> set[str]:
+    app_dir = target_dir / "app"
+    if not app_dir.exists():
+        return set()
+
+    routes: set[str] = set()
+    try:
+        pages = list(app_dir.rglob("page.tsx"))
+    except OSError:
+        return set()
+
+    for page in pages:
+        try:
+            relative_parent = page.parent.relative_to(app_dir)
+        except ValueError:
+            continue
+        if relative_parent.parts in ((), (".",)):
+            routes.add("/")
+            continue
+        routes.add(_normalize_route_path("/" + "/".join(relative_parent.parts)))
+    return routes
+
+
+def _contact_path_from_matching_scaffold(target_dir: Path) -> str | None:
+    existing_routes = _existing_app_routes(target_dir)
+    if not existing_routes or not _SCAFFOLDS_DIR.exists():
+        return None
+
+    for routes_path in sorted(_SCAFFOLDS_DIR.glob("*/routes.json")):
+        payload = _load_routes_payload(routes_path)
+        if payload is None:
+            continue
+        default_paths = _default_route_paths_from_payload(payload)
+        if not default_paths or not default_paths.issubset(existing_routes):
+            continue
+        contact_path = _contact_path_from_routes_payload(payload)
+        if contact_path is not None:
+            return contact_path
+    return None
+
+
+def _contact_path_from_known_scaffold_contacts(target_dir: Path) -> str | None:
+    """Resolve the contact route from any scaffold's ``id="contact"`` path.
+
+    Robustness fallback for partial app trees: ``_contact_path_from_matching_scaffold``
+    only matches when a scaffold's *entire* defaultRoutes set is present. When
+    codegen dropped a sibling route (e.g. a restaurant site that kept
+    ``/hitta-hit`` but lost ``/meny``) the whole-scaffold match fails and the
+    contact page would go unvalidated. Here we collect every scaffold's
+    canonical contact path from its ``routes.json`` and accept the first one
+    that exists as a generated route — still derived from the route contract,
+    never from hardcoded ``kontakt``/``contact`` fragments.
+    """
+    existing_routes = _existing_app_routes(target_dir)
+    if not existing_routes or not _SCAFFOLDS_DIR.exists():
+        return None
+    for routes_path in sorted(_SCAFFOLDS_DIR.glob("*/routes.json")):
+        payload = _load_routes_payload(routes_path)
+        if payload is None:
+            continue
+        contact_path = _contact_path_from_routes_payload(payload)
+        if contact_path is not None and contact_path in existing_routes:
+            return contact_path
+    return None
+
+
+def _resolve_contact_route_path(target_dir: Path) -> str | None:
+    payload = _load_routes_payload(target_dir / "routes.json")
+    if payload is not None:
+        contact_path = _contact_path_from_routes_payload(payload)
+        if contact_path is not None:
+            return contact_path
+
+    scaffold_path = _contact_path_from_matching_scaffold(target_dir)
+    if scaffold_path is not None:
+        return scaffold_path
+
+    return _contact_path_from_known_scaffold_contacts(target_dir)
+
+
+def _has_contact_cta(text: str, contact_route_path: str | None) -> bool:
     for match in _CTA_LINK_RE.finditer(text):
         href = (match.group(1) or match.group(2) or "").lower()
-        # En länk räknas som contact-CTA när intent ligger i href:
-        #   - tel:/mailto:-protocollet är explicit
-        #   - href som länkar till en contact-route-sida (inkl.
-        #     /kontakta-oss + /hitta-hit per scaffold-katalogen)
-        # Body-text matchad mot ``_CTA_TEXT_RE`` räcker INTE ensamt —
-        # annars skulle ``<a href="/products">Ring oss</a>`` falskt
-        # godkännas (reviewer-fynd 2026-05-27 på f446be1:s OR-fix).
-        # ``_CTA_TEXT_RE`` är kvar som hjälpregex för framtida sprint
-        # där body-text + href-kombinationer kanske ska bedömas mer
-        # finkornigt; idag används den inte här.
-        if href.startswith(("mailto:", "tel:")) or _is_contact_href(href):
+        body = re.sub(r"<[^>]+>", " ", match.group(3) or "")
+        # A link counts as a contact CTA when the href itself carries the
+        # contact intent: mail/phone protocols are explicit, and page links
+        # must point at the scaffold route whose routes.json id is "contact".
+        # For page links, CTA text is still required. Body text alone is not
+        # enough; otherwise
+        # ``<a href="/products">Ring oss</a>`` would be accepted.
+        if href.startswith(("mailto:", "tel:")):
+            return True
+        if _is_contact_href(href, contact_route_path) and _CTA_TEXT_RE.search(body):
             return True
     return False
 
 
 def _find_contact_page(target_dir: Path) -> Path | None:
-    """Hitta scaffoldens contact-page genom att iterera ``app/``.
-
-    Tidigare hårdkodades ``app/kontakt/page.tsx`` + ``app/contact/page.tsx``,
-    vilket missade scaffolds med alternativa contact-route-paths
-    (``agency-studio``/``clinic-healthcare``/``professional-services`` →
-    ``/kontakta-oss``, ``restaurant-hospitality`` → ``/hitta-hit``).
-    Reviewer-fynd: GPT P2 Badge 2026-05-27 + Cursor BugBot suggestion 4.
-    """
-    app_dir = target_dir / "app"
-    if not app_dir.exists():
+    """Find the contact page from the scaffold routes.json contract."""
+    contact_path = _resolve_contact_route_path(target_dir)
+    if contact_path is None:
         return None
-    for entry in app_dir.iterdir():
-        if not entry.is_dir():
-            continue
-        if not _is_contact_route_dir(entry.name):
-            continue
-        page = entry / "page.tsx"
-        if page.exists():
-            return page
-    return None
+    page = _route_to_page_path(target_dir, contact_path)
+    return page if page.exists() else None
 
 
 def run_contact_cta_presence_check(target_dir: Path) -> CheckResult:
     findings: list[str] = []
+    detail = ""
     home = target_dir / "app" / "page.tsx"
-    contact = _find_contact_page(target_dir)
-    if not home.exists() and contact is None:
-        return CheckResult(name="contact-cta-presence", status="skipped")
+    contact_route_path = _resolve_contact_route_path(target_dir)
+    contact = (
+        _route_to_page_path(target_dir, contact_route_path)
+        if contact_route_path is not None
+        else None
+    )
+    if not home.exists() and contact_route_path is None:
+        return CheckResult(
+            name="contact-cta-presence",
+            status="skipped",
+            detail="Ingen startsida eller resolvbar contact-route hittades.",
+        )
     try:
         home_text = home.read_text(encoding="utf-8")
     except OSError:
         home_text = ""
-    hero = (re.search(r"<section\b.*?</section>", home_text, re.IGNORECASE | re.DOTALL) or [home_text])[0]
-    if not _has_contact_cta(hero):
+    hero = (
+        re.search(r"<section\b.*?</section>", home_text, re.IGNORECASE | re.DOTALL)
+        or [home_text]
+    )[0]
+    if not _has_contact_cta(hero, contact_route_path):
         findings.append("app/page.tsx: hero saknar kontakt-CTA")
-    if contact is None:
-        findings.append("app/: kontaktsida saknas (sökte efter dir med 'kontakt'/'contact'/'hitta-hit')")
+    if contact_route_path is None:
+        # A generated site whose contact route cannot be resolved from its own
+        # routes.json, a whole-scaffold match, or any known scaffold contact
+        # path has effectively lost its contact page. Surface it as a (warning-
+        # severity, non-blocking) finding instead of a silent ``ok`` so the
+        # operator sees that the contact page could not be validated.
+        findings.append(
+            'routes.json: contact-route (id="contact") kunde inte resolvas - '
+            "kontaktsidan kunde inte valideras"
+        )
+        detail = (
+            "Contact-route kunde inte resolvas från routes.json eller "
+            "scaffold-routes; kontaktsidecheck kunde inte köras."
+        )
+    elif contact is None:
+        missing_page = _route_to_page_path(target_dir, contact_route_path)
+        findings.append(
+            f"{contact_route_path} -> {missing_page.relative_to(target_dir)} (saknas)"
+        )
     else:
         try:
             contact_text = contact.read_text(encoding="utf-8")
         except OSError:
             contact_text = ""
-        if not _has_contact_cta(contact_text):
+        if not _has_contact_cta(contact_text, contact_route_path):
             findings.append(f"{contact.relative_to(target_dir)}: saknar kontakt-CTA")
+        else:
+            detail = f"Contact-route resolverad från routes.json: {contact_route_path}."
     return CheckResult(
         name="contact-cta-presence",
         status="failed" if findings else "ok",
+        detail=detail,
         findings=findings,
     )
 

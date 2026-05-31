@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 16 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 128 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 130 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -319,7 +319,9 @@ integrate christopher-ui discovery and asset workflow`, merge
   renderers/codegen saknar fält för fri copy-edit. Gap-spec:
   `docs/gaps/GAP-followup-prompt-content-passthrough.md`. ADR-utkast:
   `governance/decisions/0034-followup-prompt-content-passthrough.md`.
-  Fix: open. Test: open.
+  Fix: open; backend-signal i `build-result.json` och `trace.ndjson` är
+  implementerad, men FloatingChat-feedback och `copyDirectives[]` återstår.
+  Test: `tests/test_followup_honest_no_op.py`.
 
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
   subprocess-status och loggutdrag medan körningen pågår, men riktig
@@ -587,47 +589,86 @@ samma kodmönster lever vidare här — därav posten:
   komplettera chunk-grep med browser-baserad assertion. Källa: extern
   review 2026-05-27 (PR #131). Fix: open. Test: open.
 
-- **`B157` Hög** - Lokala follow-up-builds raiserar
-  `PermissionError: [WinError 5] Åtkomst nekad` på
-  `node_modules/@next/swc-win32-x64-msvc/next-swc.win32-x64-msvc.node` när
-  `build_site.py:copy_starter()` (rad 705-731) försöker
-  `shutil.rmtree(node_modules)` i en `.generated/<siteId>/`-katalog som en
-  live `next dev`/`next start`-process håller låst. På Windows låser den
-  native `.node`-binary hårt; på Linux/macOS skulle aggressive delete
-  kunna lyckas men anti-patternet kvarstår.
-
-  Trigger: `_npm_install_inputs_changed=True` (rad 698-699 i
-  `build_site.py`) — den lockfile-diff-check som B154-fixen (PR #131)
-  introducerade. Vid lockfile-skillnad mellan starter-source och
-  `.generated/<siteId>/` nollas `preserved={"node_modules"}` på rad 720
-  → `rmtree` försöker radera live `node_modules` → WinError 5. Idag
-  triggat av `data/starters/commerce-base/package-lock.json`-bumpen
-  `next 16.2.5 → 16.2.6` som följde med post-#131-batchen.
-
-  Root cause: builder bygger ovanpå aktiv preview-output-katalog.
-  Arkitektur-anti-pattern flaggat av extern reviewer 2026-05-27 efm.
-
-  Fix-strategi (laddrar, lägst → högst, per reviewer-analys):
-  1. **Akut:** stoppa live `next start`/`next dev`-process före
-     `copy_starter()` (utöka per-siteId-mutex i
-     `apps/viewser/lib/local-preview-server.ts`).
-  2. **Snabbfix:** retry/backoff runt `rmtree()` (50ms-1s, max 5 retries)
-     — temporär, döljer arkitektur-skulden.
-  3. **Bättre:** `rename` till `.trash`-suffix + delayed garbage
-     collection (städjobb som tar bort gamla mappar senare).
-  4. **Rätt:** ny `builds/<timestamp>/`-katalog per follow-up + manifest-
-     pointer-swap (Vercel-likt). UI byter från gammal build till ny först
-     när nya builden är klar.
-  5. **Vercel-likt:** varje följdprompt = ny immutable deployment med
-     egen unique URL; gammal preview kvar tills ny verifierad.
-
-  Gap-spec: `docs/gaps/GAP-windows-safe-rebuild-pipeline.md`.
-  Källa: extern reviewer-analys 2026-05-27 efm (post-PR #131 + post-
-  `commerce-base/package-lock.json`-Next-bump). Operatörsobservation:
-  "hänt 1000 gånger" — buggen var ej registrerad tidigare. Fix: open.
-  Test: open.
-
 ## Stängda - regression-test säkrar fixet
+
+- **`B157` Hög** (stängd 2026-05-27, akut-fix nivå 1 —
+  `stopAndWaitPreviewServer` + Windows file-lock-release) - Lokala
+  follow-up-builds raiserade `PermissionError: [WinError 5]` på
+  `node_modules/@next/swc-win32-x64-msvc/next-swc.win32-x64-msvc.node`
+  när `build_site.py:copy_starter()` försökte
+  `shutil.rmtree(node_modules)` i en `.generated/<siteId>/`-katalog
+  som en live `next start`-process höll låst. Trigger:
+  `_npm_install_inputs_changed=True` (B154-fixen) + commerce-base
+  Next 16.2.5 → 16.2.6-bump.
+
+  Akut-fix (laddare nivå 1): ny export `stopAndWaitPreviewServer`
+  i `apps/viewser/lib/local-preview-server.ts` som SIGTERM:ar
+  preview-processen, väntar in `exit`-event, fallback SIGKILL,
+  + 200ms extra wait på Windows för att frigöra native `.node`-
+  file-locks. `apps/viewser/lib/build-runner.ts:runBuildOnce()`
+  anropar helpern FÖRE Python spawnas.
+
+  **Kvarvarande arkitektur-skuld** (egen sprint per gap-spec):
+  nivå 4 — immutable `builds/<timestamp>/` per follow-up + manifest-
+  pointer-swap. Den här nivå-1-fixen löser dagens "1000 gånger"-
+  smärta men anti-patternet "rebuilda ovanpå live output-katalog"
+  kvarstår; en agent-dödad preview-process kan fortfarande
+  åter-startas mitt under build via race med viewer-panel-poll.
+
+  Gap-spec: `docs/gaps/GAP-windows-safe-rebuild-pipeline.md`. Källa:
+  extern reviewer-analys 2026-05-27 efm.
+
+  **Follow-up (2026-05-27 sen kväll, reviewer-fynd post-`adba139`):**
+  ``Promise.race([exited, timeoutPromise])`` resolverade omedelbart när
+  ``timeoutPromise`` resolvar (efter att SIGKILL skickats), utan att
+  vänta på faktiskt ``exit``-event. Det bröt kontraktet att caller
+  kunde göra fil-IO efter return — på Windows kunde native
+  ``.node``-binaries fortfarande vara file-låsta tills kerneln reapade
+  processen. Followup-fix: ``sigkillSent``-flag + sekundär
+  ``REAP_TIMEOUT_MS``-vänta (2s hard-floor) på exit-event efter
+  SIGKILL. Worst-case-tid blev 5000+2000+200ms = 7.2s.
+
+  Fix: `adba139` (akut, initial) + B157-followup-commit på `jakob-be`
+  (sen kväll 2026-05-27, denna session). Test: closed —
+  `tests/test_local_preview_server_b157_followup.py` har tre
+  strukturella regression-tester som kollar (1) ≥2 sync-points på
+  ``exited``-promise, (2) ``sigkillSent``-spårning eller motsvarande,
+  (3) kommentar-/kod-match så framtida agenter inte kan refaktorera
+  tillbaka till buggy form utan att också radera kommentarerna.
+
+  Manuell operator-verifiering kvarstår som best-practice för
+  end-to-end-bevis: kör follow-up på commerce-base-site med
+  lockfile-drift, förvänta ingen `PermissionError: [WinError 5]`.
+
+  **Round 3 (2026-05-28 ~01:30, Windows process-tree-kill):**
+  End-to-end-test via Viewser-browser 2026-05-28 ~01:08 visade att
+  follow-up build fortfarande failade med samma `WinError 5` även
+  efter round 1 + 2. Process-tree-snapshot bekräftade rotorsaken:
+  `ChildProcess.kill()` på Windows mappar internt till
+  ``TerminateProcess(handle)`` som **bara dödar direct PID, inte
+  descendants**. Sajtbyggaren spawnar preview-servern via
+  ``npx next start`` → processträdet är ``npx (parent)`` →
+  ``next start (barn)``. ``child.kill()`` i Viewser:s
+  ``stopAndWaitPreviewServer`` killade bara npx-shellen — barnet
+  levde vidare och höll fil-låsen på ``next-swc.*.node``-binaries.
+
+  Round 3-fix: ny ``killProcessTree``-helper i
+  `apps/viewser/lib/local-preview-server.ts` som på Windows
+  spawnar ``taskkill /PID <pid> /T /F`` istället för
+  ``child.kill()``. ``/T`` = tree (alla descendants),
+  ``/F`` = force. På POSIX används ``child.kill(signal)`` som
+  vanligt eftersom process groups respekteras där. Plus
+  Windows-fast-path i ``stopAndWaitPreviewServer`` som hoppar
+  över graceful SIGTERM-fönstret (Node.js mappar SIGTERM →
+  TerminateProcess = force på Windows ändå). 4:e regression-
+  test i `tests/test_local_preview_server_b157_followup.py`
+  strukturellt låser tree-kill-mönstret så framtida agenter inte
+  kan refaktorera bort ``taskkill /T``.
+
+  Full diagnostik + reproduktionssteg + verifieringsguide i
+  `B157-WINDOWS-PROCESS-TREE-FYND.md` (repo-rot, för operatörens
+  granskning). Round 1 + 2 är inte raderade — de fungerar för
+  POSIX-pathen och som timing-skydd även på Windows.
 
 - **`B154` Medel** (stängd 2026-05-27, TDZ-smoke + commerce-lock) -
   `npm run dev` i en deterministic `ecommerce-lite`/`noir-editorial`-
@@ -2335,6 +2376,19 @@ samma kodmönster lever vidare här — därav posten:
   spegeln synkad via `scripts/rules_sync.py`. `/api/chat`-routen
   och `lib/openai.ts` lämnas orörda — de är fortfarande standalone
   endpoints och Scout pekade inte ut dem.
+
+- **`BO6` Låg** (stängd 2026-05-29, direktpush `2c0d5b3` på `jakob-be`) -
+  `backoffice/discovery_wizard_diagnostics.py` hardkodade `_RUNTIME_SCAFFOLD_IDS`
+  till 2 scaffolds (`local-service-business`, `ecommerce-lite`), men resolverns
+  `_RUNTIME_SCAFFOLD_HINTS` har 6 sedan Path B fas 1+2+3a
+  (`restaurant-hospitality`, `clinic-healthcare`, `professional-services`,
+  `agency-studio`). Ingen runtime-bug — sajterna byggdes korrekt — utan en
+  operatörs-förvirrings-bug: diagnostiken visade fel "active runtime scaffolds"
+  och pekade bara på 2 av 6 `routes.json`-paths. Fix: listan speglas nu
+  dynamiskt via direktimport av `_RUNTIME_SCAFFOLD_HINTS`; `_source_paths`
+  itererar samma lista.
+  Test: `tests/test_backoffice_runtime_scaffolds.py::test_backoffice_runtime_scaffold_ids_match_resolver`,
+  `tests/test_backoffice_runtime_scaffolds.py::test_backoffice_runtime_scaffold_routes_exist`.
 
 - **`BO2` Medel** (stängd 2026-05-14, squash-merge `e1ad5ca` via PR #23) - Backoffice trace
   viewer dumpade tidigare bara rå dataframe för `trace.ndjson`.

@@ -783,6 +783,19 @@ COMMON_WORDS = {
     "Cloud Agents",  # cursor.com-koncept som scoutorkestratorn pratar om
     "ForEach",  # PowerShell-verb i exempelkommandon
     "AbortSignal",  # browser/Node API i local-preview-server JSDoc-prose
+    # PowerShell CIM + Windows-API-termer i B157-incident-docs och kod
+    # (B157-WINDOWS-PROCESS-TREE-FYND.md + local-preview-server.ts).
+    "CimInstance",  # Get-CimInstance — PowerShell CIM cmdlet result-typ
+    "CommandLine",  # Win32_Process-property som CIM exponerar
+    "ProcessId",  # Win32_Process-filter-property
+    "StartTime",  # PowerShell process-property
+    "TerminateProcess",  # Win32 API-funktion som child.kill() mappar till
+    "WinError 5",  # Windows ERROR_ACCESS_DENIED — backtick-citerad i incident-docs
+    # B-IDs och termer i scout-prompts + kill-dev-trees.py incident-helpers
+    "B155",  # bug-ID i GAP-followup-prompt-content-passthrough scout-prompt
+    "ConvertTo",  # PowerShell cmdlet-suffix (ConvertTo-Json) i kill-dev-trees.py
+    "Dubbelklicka",  # svenskt verb i kill-dev-trees.py-docstring + handoff
+    "Verifiering",  # svensk markdown-rubrik i scout-prompts ("**Verifiering**")
     "SUPERSEDED",  # docs-banner i backend-handoff.md (versaliserat statusord)
     "Konkret content",  # gap-rubrik i 9/10-tabellen
     "Page Intent Variant B",  # proposed produktkoncept (B132-uppföljning)

@@ -1,9 +1,31 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-27 UTC, steward-auto efter PR #133 — sync(jakob-be -> main): PreviewRuntime Bite A skeleton + race-fix + governance comments + builder prompt. Verifierad `main` är `acdfad2`.
+**Datum:** 2026-05-27 UTC, post PR #133-merge + B157 akut-fix
+(``adba139`` ``fix(viewser): close B157 acute — stop local preview
+before build_site.py``). Verifierad `jakob-be` är `adba139`;
+`origin/main` är `4196c17` (1 commit efter). Inga öppna PRs.
 
-Nya PRs sedan föregående checkpoint: PR #133 — sync(jakob-be -> main): PreviewRuntime
-Bite A skeleton + race-fix + governance comments + builder prompt.
+B157 akut-fix (nivå 1 per gap-spec):
+``apps/viewser/lib/local-preview-server.ts`` exporterar nu
+``stopAndWaitPreviewServer(siteId, timeoutMs=5000)`` som
+SIGTERM:ar live ``next start`` för siteId, väntar in ``exit``-event,
+fallback SIGKILL + 200ms file-lock-release-wait på Windows.
+``apps/viewser/lib/build-runner.ts:runBuildOnce()`` anropar helpern
+INNAN Python spawnas så ``shutil.rmtree(node_modules)`` aldrig kör
+mot låsta native ``.node``-binaries. Manual operator-verification:
+kör follow-up på commerce-base-site med lockfile-drift, förvänta
+ingen ``PermissionError: [WinError 5]``.
+
+Kvarvarande tech-debt: nivå 4 immutable build-dir + manifest-
+pointer-swap (egen sprint per
+``docs/gaps/GAP-windows-safe-rebuild-pipeline.md``).
+
+Bug-count: **15 aktiva** / 0 misplaced / 5 unknown / 129 stängda
+(B157 ny stängd).
+
+Nya PRs sedan föregående checkpoint: PR #133 — sync(jakob-be -> main):
+PreviewRuntime Bite A skeleton + race-fix + governance comments +
+builder prompt.
 
 **MCP-server-status:** Sprintvakt-servern exponerar 14 tools efter
 PR #77 (`get_workboard`, `list_gaps`, `create_gap`, `activate_gap`,
@@ -17,13 +39,32 @@ startar utan ModuleNotFoundError. Editable install (`pip install -e .`)
 krävs en gång per venv enligt ADR 0029.
 
 **Direkt nästa spår:** se [`docs/current-focus.md`](current-focus.md)
-"Direkt nästa fokus". Aktuell status: PR #133 öppen och redo för
-operatörens merge; därefter Bite B + B157-val + ADR 0034.
+"Direkt nästa fokus". Aktuell status: **B157 stängd genom round
+1+2+3 (alla pushade)**, end-to-end-verifierad i Viewser-browsern
+2026-05-28 ~01:40 (måleri-bygg-genberg + tone-shift follow-up,
+båda byggde grönt). Golden-path eval baseline 7.34/10 (oförändrat
+från senaste — 0 regressioner från natt-batchen). Inga öppna PRs.
+
+Priorordning nu:
+1. Bite B (PreviewRuntime wiring local + stackblitz).
+2. Cloud-agent-grind: 2 scout-prompts klara för utskick (i repo-rot
+   som `SCOUT-PROMPT-A-backoffice-runtime-scaffolds.md` +
+   `SCOUT-PROMPT-B-followup-honest-no-op.md`, original-spegel i
+   `docs/agent-prompts/scout-grind-*.md`).
+3. B157 nivå-4 (immutable build-dir + pointer-swap, GAP-windows-
+   safe-rebuild-pipeline) — eliminerar orphan-process-klassen helt.
+4. ADR 0034 (B155 "ärlig först") — kräver Christopher-koord.
+
+**Operatörs-helper:** `python kill-dev-trees.py` (eller dubbelklicka
+`kill-dev-trees.bat`) tree-killar alla Sajtbyggaren-relaterade
+node-processer (preview-orphans, dev-servers, worktree-Viewsers).
+Whitelist:ar bara matchande processer — skyddar VS Code-instanser
+etc.
 
 **Parkerade lanes (väntar trigger):**
 
 - **Path B / section-driven renderer** — dokumenterad i `docs/scaffold-runtime-extension-needed.md` + `docs/path-b-backend-scout.md` (~22-28h). Lane 2 är klar (B137-B141 stängda 2026-05-22) så Path B är inte längre tekniskt blockad — väntar bara på operatörsbeslut om sprint.
-- **Christophers `GAP-backend-build-trace-endpoint`-PR** — Christopher har implementerat hela gapet på `christopher-ui` under operator-OK scope-leak. Han har inte PR:at än. Jakob är reviewer. När PR öppnas: granska scope-leaken (medvetet brutet jakob-lane), kontrollera att workboard.json `owner` är kvar på `jakob` (precedent från PR #68), merge mot `main` när nöjd.
+- **Christophers `GAP-backend-build-trace-endpoint`** — completed via PR #105 / commit `fe7a9e4` (2026-05-25T16:41:27Z). Verifierad 2026-05-27: `apps/viewser/app/api/runs/[runId]/trace/route.ts` implementerar specat kontrakt. Flyttad till `docs/workboard.json::completedGaps` i `c821b8e`. Owner `jakob` bibehållen så Sprintvakt-lane-policy passerar (precedent från PR #68).
 - **Sprintvakt V1.3 (potential)** — tvåvägs-sync workboard.json ↔ gap-filer. Flaggat som follow-up i `docs/sprintvakt-mcp.md`.
 
 Vänta fortsatt med embeddings, SNI-runtime, variant-promotion, många nya
@@ -55,15 +96,19 @@ väljs.
   `python scripts/sprintvakt_check.py` ska vara grönt innan nytt arbete
   startar.
 
-**1 öppen PR:** #133 (`jakob-be → main`), öppen och ready-for-review-läge
-efter coach-godkänd sanning-städning, väntar på operatörens slutgodkända
-merge. Tidigare not: PR #69 stängd, senaste merge till main PR #120
-(2026-05-26 PM).
+**Inga öppna PRs.** PR #133 mergad till `main` (senaste merge före
+denna handoff). PR #69 stängd, PR #120 (2026-05-26 PM) tidigare merge.
 
-**Öppna gaps på workboarden:** 1 queued gap:
-`GAP-backend-build-trace-endpoint` — Christopher-implementerat under
-operator-OK scope-leak, väntar PR från `christopher-ui` mot `main`. Inga
-aktiva gaps.
+**Öppna gaps på workboarden:** 2 queued gaps + 0 active +
+1 completed-i-detta-pass.
+
+- `queued`: `GAP-windows-safe-rebuild-pipeline` (immutable build-dir +
+  pointer-swap, B157 nivå-4-spår)
+- `queued`: `GAP-followup-prompt-content-passthrough` (fri text når
+  codegen, kärnflödes-fix)
+- `completed`: `GAP-backend-build-trace-endpoint` — Christopher-
+  implementerat under operator-OK scope-leak, mergat via PR #105
+  (commit `fe7a9e4`, 2026-05-25T16:41:27Z). Verifierad 2026-05-27.
 
 **Christopher-scope-leak-precedent från PR #68:** två backend-commits
 (`acc6265` planner-fix i `plan.py`, `a44740a` resolver-fix i `resolve.py`)

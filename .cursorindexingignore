@@ -18,19 +18,21 @@ eval-tmp/
 # Embedding-index-cache (policy låst, implementation kommer).
 # Redan i .gitignore; här ser vi till att Cursor inte börjar indexera
 # tiotusentals vektor-/cache-filer när index byggs i kommande sprint.
-data/embedding-index/
-data/output/
+################################################
+#data/embedding-index/
+#data/output/
 
 # Lokal eval-output (post evals-folder-plan). Behåll .gitkeep-filer i git,
 # men låt inte Cursor-indexet äta tunga artefakter eller maskinrapporter.
-data/evals/artifacts/
-data/evals/summaries/*/*.json
-data/evals/summaries/*/*.md
-data/evals/eval-runs/
-data/evals/manual-scorecards/
-data/evals/generated/
-data/evals/scaffold-probe/
-data/evals/golden-path/
+#data/evals/artifacts/
+#data/evals/summaries/*/*.json
+#data/evals/summaries/*/*.md
+#data/evals/eval-runs/
+#data/evals/manual-scorecards/
+#data/evals/generated/
+#data/evals/scaffold-probe/
+#data/evals/golden-path/
+################################################
 
 # Stora binära media-filer som agenten inte kan tolka meningsfullt.
 # Trackade i git (produktassets) men onödiga att indexera.

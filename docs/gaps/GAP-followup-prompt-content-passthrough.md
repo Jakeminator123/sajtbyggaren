@@ -5,9 +5,18 @@ id: GAP-followup-prompt-content-passthrough
 type: Gap/Builder
 owner: jakob
 title: Follow-up prompt content passthrough
-status: open
+status: queued
 source: operator verification 2026-05-27
 ```
+
+## Status 2026-05-31
+
+Backenddelen av lösning B är implementerad: follow-up-builds skriver
+`appliedVisibleEffect` och `appliedVisibleEffectReason` i
+`build-result.json`, och emitterar trace-eventet `followup.no_op_detected`
+när ingen synlig effekt detekteras. FloatingChat-presentationen väntar
+Christopher. Lösning A (`copyDirectives[]`) är fortfarande separat och
+ADR 0034 står kvar som `proposed`.
 
 ## Reproduktion
 

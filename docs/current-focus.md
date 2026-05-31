@@ -30,9 +30,64 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `acdfad2` (2026-05-27 UTC, steward-auto efter PR #133 — sync(jakob-be -> main): PreviewRuntime Bite A skeleton + race-fix + governance comments + builder prompt).
-Nya PRs sedan föregående checkpoint: PR #133 — sync(jakob-be -> main): PreviewRuntime
-Bite A skeleton + race-fix + governance comments + builder prompt.
+Last verified state: `8709aae` (2026-05-31 UTC, B155-backend (#135)
++ quality-gate routes-discovery (#134) + post-merge quality-gate-
+härdning mergade/pushade till `jakob-be`). B155: buildern skriver
+`appliedVisibleEffect` + `appliedVisibleEffectReason` till
+build-result.json och emitterar trace-event `followup.no_op_detected`
+för fri-text-följdpromptar utan synlig effekt (hybrid: intent-regel +
+cross-run byte-diff av `app/page.tsx`). UI-delen (FloatingChat-signal)
+väntar Christopher. Quality-gate: contact-route resolveras via
+scaffoldens `routes.json` (`id="contact"`) istället för
+fragment-matchning; post-merge-review-härdning (`8709aae`) gör en
+oresolverbar contact-route till en synlig warning-finding (ej längre
+tyst ok) + robustare fallback mot kända scaffold-contact-paths. Alla
+guards gröna (ruff, pytest, governance, rules-sync, term-coverage,
+sprintvakt). BO6 (föregående) stängd. **Kärnflödet verifierat
+end-to-end via Viewser-browser** 2026-05-28 ~01:40
+(måleri-bygg-genberg-07d364 init + tone-shift follow-up, båda byggde
+utan WinError 5).
+
+`jakob-be` är synkad med `origin/jakob-be`. `origin/main` ligger på
+`4196c17`. Inga öppna PRs. Bug-count: 15 aktiva / 0 misplaced /
+5 unknown / 130 stängda. Golden-path-eval baseline: **7.34/10,
+embeddings=go** (2026-05-28 00:57, 0 regressioner från natt-batchen).
+
+Natt-batchen 2026-05-27 → 2026-05-28 (alla pushade):
+
+- `4196c17` docs(steward-auto): bump HEAD to acdfad2 via PR #133 sync.
+- `adba139` fix(viewser): close B157 acute — stop local preview before
+  ``build_site.py`` (Windows file-lock).
+- `9c3bad7` chore(docs): archive 4 sprint-handoffs + drop product-
+  north-star duplicate.
+- `697cf4f` fix(viewser): close B157 followup — wait for actual exit
+  after SIGKILL (reap-fix, ``sigkillSent`` + ``REAP_TIMEOUT_MS``).
+- `c821b8e` chore(governance): post-B157 cleanup-fixes (alwaysApply,
+  GAP-status, workboard.json sync).
+- `f46c01a` docs(steward): remove stale post-PR-133 focus drift.
+- `9196fa1` docs(steward): complete post-PR-133 drift-fix round 2.
+- `ef8745d` **fix(viewser): close B157 round 3 — Windows process-
+  tree-kill (taskkill /T /F)**. Diagnostiserad rotorsak: Node.js
+  ``ChildProcess.kill()`` på Windows mappar till
+  ``TerminateProcess(handle)`` som **bara dödar direct PID, inte
+  descendants**. ``npx next start`` → child ``next start`` blev
+  orphan med exklusivt fil-lås. Fix: ny ``killProcessTree``-helper
+  + Windows-fast-path. 4:e regression-test låser tree-kill-mönstret.
+  Full diagnostik i `B157-WINDOWS-PROCESS-TREE-FYND.md` (repo-rot).
+- `7ab5060` docs(agent-prompts): add 2 scout-grind prompts för
+  cloud-agent-fixes (backoffice-runtime-scaffolds-stale +
+  followup-honest-no-op-detection backend).
+
+**B157-status efter round 3:** verifierat end-to-end. Kvarvarande
+edge case: orphan-processer från en TIDIGARE Viewser-session (pre-
+698f745d-dev-server). För dessa: kör `python kill-dev-trees.py`
+(Windows-only helper i repo-roten) eller dubbelklicka
+`kill-dev-trees.bat`. Whitelist:ar bara Sajtbyggaren-relaterade
+node-processer (skyddar VS Code language-servers etc.).
+
+**Nivå-4-sprinten** (immutable build-dir + pointer-swap, GAP-windows-
+safe-rebuild-pipeline) eliminerar hela klassen anti-pattern
+"rebuilda ovanpå live preview-katalog". Egen sprint per gap-spec.
 
 ## Branchmodellen (kort)
 
@@ -46,54 +101,50 @@ Bite A skeleton + race-fix + governance comments + builder prompt.
 
 ## Pågående/öppna PR:s just nu
 
-**Draft-PR #133 (`jakob-be → main`) öppen — alla reviewer-trådar
-adresserade.** Samlar hela post-Bite-A-batchen + alla 4 BugBot-
-suggestions + GPT P2 Badge contact-route-fix. Cloud-grind-batchen
-2026-05-27 fm är helt hemma (7 PRs mergade till `jakob-be`). Bug-
-räkning: **16 aktiva** (B157 ny) / 0 misplaced / 5 unknown / 128 stängda.
-`jakob-be` är 25 commits framför `origin/main`.
-
-**Nästa konkret operatörssteg:** `gh pr ready 133` → CI passerar →
-`gh pr merge 133 --squash`. Allt tekniskt grönt; bara klick saknas.
+**Inga öppna PRs.** PR #133 mergad till `main` (post-Bite-A-batch +
+alla reviewer-trådar). B157 akut-fix + followup landade direkt på
+`jakob-be` ovanpå `4196c17` post-merge-bumpen.
 
 **Christophers `origin/christopher-ui`** — efter PR #117 är hans branch
 synkad mot post-#117-main. Han har under operator-OK scope-leak
 implementerat hela `GAP-backend-build-trace-endpoint` (3 endpoints + UI +
-5 bug-hunt-fixes). Ej PR:ad mot `main`; Jakob är reviewer. Workboardens
-`owner` är medvetet kvar på `jakob` så Sprintvakt-lane-policyn passerar.
+5 bug-hunt-fixes). Mergad via PR #105 / commit `fe7a9e4`; flyttad till
+`completedGaps` i `docs/workboard.json`. Workboardens `owner` är
+medvetet kvar på `jakob` så Sprintvakt-lane-policyn passerar.
 
 ## Direkt nästa fokus
 
-### Steg 0: mergea PR #133 (operatörens klick)
+### Prioordning post-B157-stängning
 
-`gh pr ready 133` → vänta in CI grön → `gh pr merge 133 --squash`.
-**Inga kvarvarande reviewer-trådar.** Detta avblockar resten.
-
-### Efter #133-merge — i prioordning
-
-1. **Bite B (PreviewRuntime wiring)** — builder-prompt finns redan i
+1. **Manuell B157-end-to-end-verifiering** (operatörsuppgift, ~5 min) —
+   kör follow-up på commerce-base-site med lockfile-drift, förvänta
+   ingen `PermissionError: [WinError 5]`. Strukturella regression-
+   tester finns redan (`tests/test_local_preview_server_b157_followup.py`),
+   men en faktisk end-to-end-körning bevisar reap-fixet i naturlig miljö.
+2. **Bite B (PreviewRuntime wiring)** — builder-prompt finns redan i
    `docs/agent-prompts/preview-runtime-bite-b.md`. Wirear `localRuntime`
    + `stackblitzRuntime` adaptrar mot existerande `apps/viewser/lib/`-
    helpers. Self-contained prompt; klistras in i ny agent-session.
-   ~2-4h. Inga UI-ändringar (Bite C kräver Christopher).
-2. **B157 fix (Windows-safe rebuild)** — registrerad efter extern
-   reviewer-analys 2 (WinError 5 på live `node_modules`). Operatörsval:
-   - **(a) Akut fix** (process-stop före `copy_starter`, < 2h) —
-     räddar nuvarande iteration.
-   - **(b) Nivå-4 sprint** (immutable build-dir + pointer-swap, 12-16h)
-     — arkitektur-rätt.
-   - **(c) Vänta** tills Bite B + ev. `vercel-preview`-adapter
-     (24-32h, kräver naming-dict v18).
-   Fix-laddare i `docs/gaps/GAP-windows-safe-rebuild-pipeline.md`.
-3. **ADR 0034 — väg (b) "ärlig först"** (B155). FloatingChat markerar
+   ~2-4h. Inga UI-ändringar (Bite C kräver Christopher). Vercel-
+   preview/Fly/static-export-adaptrar lämnas för senare sprint.
+3. **B157 nivå-4 (Windows-safe rebuild, immutable build-dir + pointer-
+   swap)** — arkitektur-rätta lösningen, 12-16h. Akut nivå-1 +
+   followup-fix räddar 99% av case idag, men anti-patternet "rebuilda
+   ovanpå live output-katalog" kvarstår tills nivå-4 landar. Spec i
+   `docs/gaps/GAP-windows-safe-rebuild-pipeline.md`.
+4. **ADR 0034 — väg (b) "ärlig först"** (B155). FloatingChat markerar
    när följdprompt inte gav synlig effekt. Liten kodändring, kräver
    Christopher-koordinering (UI-yta).
-4. **Quality-gate scaffold-routes-discovery** (tech-debt från `0b40b8d`).
+5. **Quality-gate scaffold-routes-discovery** (tech-debt från `0b40b8d`).
    Läs scaffoldens `routes.json` direkt istället för pattern-matching
    `kontakt`/`contact`/`hitta-hit`-fragmenten. Egen sprint, ej akut.
-5. **B156 follow-up: browser-hydration-smoke** — headless
+6. **B156 follow-up: browser-hydration-smoke** — headless
    playwright/puppeteer ersätter chunk-heuristik. Egen sprint, ej akut.
-6. **Städning** (operatörsbeslut, radera eller resurrect:a):
+7. **Worktree- och städ-cleanup** (operatörsbeslut):
+   - Adapter-WIP på `cursor/preview-runtime-adapters` (worktreen
+     `C:/Users/jakem/Desktop/sajtbyggaren-worktrees/preview-runtime-adapters`)
+     — innehåller vercel-sandbox-adapter-skiss, naming-dict v18-bump,
+     fly-stub. Bör snapshot:as till `origin` innan worktreen rensas.
    - `origin/cursor/dossier-intake-v11-review-895d` (3 commits, ingen PR).
    - `origin/cursor/jakob-be-viewser-local-next-preview` (PR #85 stängd,
      innehåll inne via #88/#92/#97/#100/#101).
@@ -135,13 +186,21 @@ Detaljerade Queue-/Blocked-block ligger i arkivet
 [`docs/archive/current-focus-history-2026-05-26.md`](archive/current-focus-history-2026-05-26.md).
 Aktiva spår i prioritetsordning:
 
-1. Sync-PR `jakob-be → main`.
-2. Christophers `GAP-backend-build-trace-endpoint`-PR (när han öppnar den).
-3. B49 (docs-base page-map sidebar) — låg prio, behövs innan
+1. Manuell B157-end-to-end-verifiering (operatörsuppgift, ~5 min).
+2. Bite B (PreviewRuntime wiring local + stackblitz).
+3. B157 nivå-4 (immutable build-dir + pointer-swap, GAP-windows-
+   safe-rebuild-pipeline) — eliminerar orphan-process-klassen.
+4. ADR 0034 / GAP-followup-prompt-content-passthrough — fri
+   follow-up-text når codegen via ``copyDirectives[]``.
+5. B49 (docs-base page-map sidebar) — låg prio, behövs innan
    `course-education → docs-base` aktiveras.
-4. B13a arkitektur-flytt — kvarstår som öppen post, kräver egen sprint
+6. B13a arkitektur-flytt — kvarstår som öppen post, kräver egen sprint
    + sannolikt egen ADR.
-5. B53, B47, BO4-followup-cancel — låga, ingen blocker.
+7. B53, B47, BO4-followup-cancel — låga, ingen blocker.
+
+(Sync-PR `jakob-be → main` är operatörsbeslut, inte aktivt
+agentarbete. `GAP-backend-build-trace-endpoint` är completed via
+PR #105 / commit `fe7a9e4`.)
 
 ## Loopen vi följer
 

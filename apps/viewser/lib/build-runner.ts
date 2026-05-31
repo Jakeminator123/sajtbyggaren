@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
+import { stopAndWaitPreviewServer } from "@/lib/local-preview-server";
 import { assertProjectInputExists } from "@/lib/project-inputs";
 import { readBuildResult, runDirFromId, runsDir } from "@/lib/runs";
 
@@ -136,6 +137,24 @@ async function runBuildOnce(
   } else {
     dossierPath = await assertProjectInputExists(siteId);
   }
+
+  // B157: stoppa lokal preview-server för denna siteId INNAN
+  // build_site.py spawnas. På Windows håller en live ``next start``-
+  // process hårda fil-lås på native ``node_modules/@next/swc-*-*.node``-
+  // binaries (de är DLL-liknande). När ``copy_starter()`` försöker
+  // ``shutil.rmtree(node_modules)`` vid lockfile-drift
+  // (``_npm_install_inputs_changed=True``) failar det med
+  // ``PermissionError: [WinError 5]`` om processen inte är död + OS
+  // har frigjort fil-låsen. ``stopAndWaitPreviewServer`` skickar
+  // SIGTERM, väntar in exit-event + 200ms extra på Windows.
+  //
+  // Idempotent: returnerar tyst om ingen preview-server körde för
+  // siteId — vanligt fall vid första bygget av en ny sajt. Detta är
+  // **temporär fix** (gap-spec laddare nivå 1, ``docs/gaps/
+  // GAP-windows-safe-rebuild-pipeline.md``). Rätt arkitektur är
+  // immutable build-dir + manifest-pointer-swap, tas i egen sprint.
+  await stopAndWaitPreviewServer(siteId);
+
   const scriptPath = path.join(repoRoot(), "scripts", "build_site.py");
   const args = [scriptPath, "--dossier", dossierPath];
   // Test-only runs isolation: set SAJTBYGGAREN_TEST=1 and VIEWSER_RUNS_DIR.

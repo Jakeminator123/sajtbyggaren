@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from packages.generation.discovery.resolve import (
+    _RUNTIME_SCAFFOLD_HINTS,
     get_cta_to_conversion_goal_mapping,
     get_page_to_capability_mapping,
     normalize_capability_slug,
@@ -69,12 +70,11 @@ PROJECT_INPUT_SCHEMA_PATH = (
 )
 BUILD_SITE_PATH = REPO_ROOT / "scripts" / "build_site.py"
 
-# Scaffolds that have a runtime + starter mapping today. Runtime planning
-# tracks these in ``SCAFFOLD_TO_STARTER`` and the resolver mirrors them in
-# ``_RUNTIME_SCAFFOLD_HINTS``; duplicating the short list here keeps the
-# diagnostic robust against transient import issues during operator
-# debugging.
-_RUNTIME_SCAFFOLD_IDS: tuple[str, ...] = ("local-service-business", "ecommerce-lite")
+# Scaffolds that have a runtime + starter mapping today. The resolver owns
+# the authoritative register in ``_RUNTIME_SCAFFOLD_HINTS``; this list is
+# mirrored read-only from it so the diagnostic never drifts out of sync when
+# new runtime scaffolds are activated.
+_RUNTIME_SCAFFOLD_IDS: tuple[str, ...] = tuple(_RUNTIME_SCAFFOLD_HINTS.keys())
 
 # Wizard ``mustHave`` labels whose intent matches a scaffold default
 # route (``home`` / ``about`` / ``contact`` / ``products``) rather than a
@@ -575,8 +575,10 @@ def _classify_must_have(
                 ),
                 "sourcePath": _source_paths(
                     WIZARD_CONSTANTS_PATH,
-                    SCAFFOLDS_DIR / "local-service-business" / "routes.json",
-                    SCAFFOLDS_DIR / "ecommerce-lite" / "routes.json",
+                    *[
+                        SCAFFOLDS_DIR / sid / "routes.json"
+                        for sid in _RUNTIME_SCAFFOLD_IDS
+                    ],
                     BUILD_SITE_PATH,
                 ),
             }
