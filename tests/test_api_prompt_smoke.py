@@ -61,7 +61,14 @@ def _start_server(port: int, tmp_path: Path) -> subprocess.Popen[str]:
         "SAJTBYGGAREN_TEST": "1",
         "VIEWSER_PREVIEW_MODE": "local-next",
     })
-    env.pop("OPENAI_API_KEY", None)
+    # Force the deterministic mock Site Brief (briefSource=mock-no-key).
+    # Popping the key is NOT enough: the Next.js dev server auto-loads
+    # apps/viewser/.env.local / .env into the spawned process env, so a real
+    # OPENAI_API_KEY on the operator's machine would be reloaded and the
+    # bridge would return briefSource="real". Setting an empty string wins
+    # because neither Next nor dotenv overrides an already-set env var, and
+    # has_openai_api_key() treats empty/whitespace as missing.
+    env["OPENAI_API_KEY"] = ""
     env.pop("VERCEL", None)
     # preexec_fn is Unix-only and raises ValueError on Windows
     kwargs = {}
