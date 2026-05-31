@@ -30,64 +30,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `8709aae` (2026-05-31 UTC, B155-backend (#135)
-+ quality-gate routes-discovery (#134) + post-merge quality-gate-
-härdning mergade/pushade till `jakob-be`). B155: buildern skriver
-`appliedVisibleEffect` + `appliedVisibleEffectReason` till
-build-result.json och emitterar trace-event `followup.no_op_detected`
-för fri-text-följdpromptar utan synlig effekt (hybrid: intent-regel +
-cross-run byte-diff av `app/page.tsx`). UI-delen (FloatingChat-signal)
-väntar Christopher. Quality-gate: contact-route resolveras via
-scaffoldens `routes.json` (`id="contact"`) istället för
-fragment-matchning; post-merge-review-härdning (`8709aae`) gör en
-oresolverbar contact-route till en synlig warning-finding (ej längre
-tyst ok) + robustare fallback mot kända scaffold-contact-paths. Alla
-guards gröna (ruff, pytest, governance, rules-sync, term-coverage,
-sprintvakt). BO6 (föregående) stängd. **Kärnflödet verifierat
-end-to-end via Viewser-browser** 2026-05-28 ~01:40
-(måleri-bygg-genberg-07d364 init + tone-shift follow-up, båda byggde
-utan WinError 5).
-
-`jakob-be` är synkad med `origin/jakob-be`. `origin/main` ligger på
-`4196c17`. Inga öppna PRs. Bug-count: 15 aktiva / 0 misplaced /
-5 unknown / 130 stängda. Golden-path-eval baseline: **7.34/10,
-embeddings=go** (2026-05-28 00:57, 0 regressioner från natt-batchen).
-
-Natt-batchen 2026-05-27 → 2026-05-28 (alla pushade):
-
-- `4196c17` docs(steward-auto): bump HEAD to acdfad2 via PR #133 sync.
-- `adba139` fix(viewser): close B157 acute — stop local preview before
-  ``build_site.py`` (Windows file-lock).
-- `9c3bad7` chore(docs): archive 4 sprint-handoffs + drop product-
-  north-star duplicate.
-- `697cf4f` fix(viewser): close B157 followup — wait for actual exit
-  after SIGKILL (reap-fix, ``sigkillSent`` + ``REAP_TIMEOUT_MS``).
-- `c821b8e` chore(governance): post-B157 cleanup-fixes (alwaysApply,
-  GAP-status, workboard.json sync).
-- `f46c01a` docs(steward): remove stale post-PR-133 focus drift.
-- `9196fa1` docs(steward): complete post-PR-133 drift-fix round 2.
-- `ef8745d` **fix(viewser): close B157 round 3 — Windows process-
-  tree-kill (taskkill /T /F)**. Diagnostiserad rotorsak: Node.js
-  ``ChildProcess.kill()`` på Windows mappar till
-  ``TerminateProcess(handle)`` som **bara dödar direct PID, inte
-  descendants**. ``npx next start`` → child ``next start`` blev
-  orphan med exklusivt fil-lås. Fix: ny ``killProcessTree``-helper
-  + Windows-fast-path. 4:e regression-test låser tree-kill-mönstret.
-  Full diagnostik i `B157-WINDOWS-PROCESS-TREE-FYND.md` (repo-rot).
-- `7ab5060` docs(agent-prompts): add 2 scout-grind prompts för
-  cloud-agent-fixes (backoffice-runtime-scaffolds-stale +
-  followup-honest-no-op-detection backend).
-
-**B157-status efter round 3:** verifierat end-to-end. Kvarvarande
-edge case: orphan-processer från en TIDIGARE Viewser-session (pre-
-698f745d-dev-server). För dessa: kör `python kill-dev-trees.py`
-(Windows-only helper i repo-roten) eller dubbelklicka
-`kill-dev-trees.bat`. Whitelist:ar bara Sajtbyggaren-relaterade
-node-processer (skyddar VS Code language-servers etc.).
-
-**Nivå-4-sprinten** (immutable build-dir + pointer-swap, GAP-windows-
-safe-rebuild-pipeline) eliminerar hela klassen anti-pattern
-"rebuilda ovanpå live preview-katalog". Egen sprint per gap-spec.
+Last verified state: `e786618` (2026-05-31 UTC, steward-auto efter PR #136 — sync(jakob-be -> main): B157 round 3 + BO6 + B155 backend + quality-gate routes-discovery).
+Nya PRs sedan föregående checkpoint: PR #136 — sync(jakob-be -> main): B157 round 3 +
+BO6 + B155 backend + quality-gate routes-discovery.
 
 ## Branchmodellen (kort)
 
@@ -458,3 +403,64 @@ PR #131 — fix(builder): close B154 — TDZ at dev hydration on deterministic c
   B154-fönstret) syntes inte. Nu äger `_spawn_next_dev` listan och
   drain-tråden skriver direkt in i den.
 PR #132 — docs(steward): cleanup pass — archive stale handoffs + completed reports.
+
+### 2026-05-31 UTC — current-focus.md före `8709aae`
+
+Last verified state: `8709aae` (2026-05-31 UTC, B155-backend (#135)
++ quality-gate routes-discovery (#134) + post-merge quality-gate-
+härdning mergade/pushade till `jakob-be`). B155: buildern skriver
+`appliedVisibleEffect` + `appliedVisibleEffectReason` till
+build-result.json och emitterar trace-event `followup.no_op_detected`
+för fri-text-följdpromptar utan synlig effekt (hybrid: intent-regel +
+cross-run byte-diff av `app/page.tsx`). UI-delen (FloatingChat-signal)
+väntar Christopher. Quality-gate: contact-route resolveras via
+scaffoldens `routes.json` (`id="contact"`) istället för
+fragment-matchning; post-merge-review-härdning (`8709aae`) gör en
+oresolverbar contact-route till en synlig warning-finding (ej längre
+tyst ok) + robustare fallback mot kända scaffold-contact-paths. Alla
+guards gröna (ruff, pytest, governance, rules-sync, term-coverage,
+sprintvakt). BO6 (föregående) stängd. **Kärnflödet verifierat
+end-to-end via Viewser-browser** 2026-05-28 ~01:40
+(måleri-bygg-genberg-07d364 init + tone-shift follow-up, båda byggde
+utan WinError 5).
+
+`jakob-be` är synkad med `origin/jakob-be`. `origin/main` ligger på
+`4196c17`. Inga öppna PRs. Bug-count: 15 aktiva / 0 misplaced /
+5 unknown / 130 stängda. Golden-path-eval baseline: **7.34/10,
+embeddings=go** (2026-05-28 00:57, 0 regressioner från natt-batchen).
+
+Natt-batchen 2026-05-27 → 2026-05-28 (alla pushade):
+
+- `4196c17` docs(steward-auto): bump HEAD to acdfad2 via PR #133 sync.
+- `adba139` fix(viewser): close B157 acute — stop local preview before
+  ``build_site.py`` (Windows file-lock).
+- `9c3bad7` chore(docs): archive 4 sprint-handoffs + drop product-
+  north-star duplicate.
+- `697cf4f` fix(viewser): close B157 followup — wait for actual exit
+  after SIGKILL (reap-fix, ``sigkillSent`` + ``REAP_TIMEOUT_MS``).
+- `c821b8e` chore(governance): post-B157 cleanup-fixes (alwaysApply,
+  GAP-status, workboard.json sync).
+- `f46c01a` docs(steward): remove stale post-PR-133 focus drift.
+- `9196fa1` docs(steward): complete post-PR-133 drift-fix round 2.
+- `ef8745d` **fix(viewser): close B157 round 3 — Windows process-
+  tree-kill (taskkill /T /F)**. Diagnostiserad rotorsak: Node.js
+  ``ChildProcess.kill()`` på Windows mappar till
+  ``TerminateProcess(handle)`` som **bara dödar direct PID, inte
+  descendants**. ``npx next start`` → child ``next start`` blev
+  orphan med exklusivt fil-lås. Fix: ny ``killProcessTree``-helper
+  + Windows-fast-path. 4:e regression-test låser tree-kill-mönstret.
+  Full diagnostik i `B157-WINDOWS-PROCESS-TREE-FYND.md` (repo-rot).
+- `7ab5060` docs(agent-prompts): add 2 scout-grind prompts för
+  cloud-agent-fixes (backoffice-runtime-scaffolds-stale +
+  followup-honest-no-op-detection backend).
+
+**B157-status efter round 3:** verifierat end-to-end. Kvarvarande
+edge case: orphan-processer från en TIDIGARE Viewser-session (pre-
+698f745d-dev-server). För dessa: kör `python kill-dev-trees.py`
+(Windows-only helper i repo-roten) eller dubbelklicka
+`kill-dev-trees.bat`. Whitelist:ar bara Sajtbyggaren-relaterade
+node-processer (skyddar VS Code language-servers etc.).
+
+**Nivå-4-sprinten** (immutable build-dir + pointer-swap, GAP-windows-
+safe-rebuild-pipeline) eliminerar hela klassen anti-pattern
+"rebuilda ovanpå live preview-katalog". Egen sprint per gap-spec.
