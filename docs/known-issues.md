@@ -319,7 +319,9 @@ integrate christopher-ui discovery and asset workflow`, merge
   renderers/codegen saknar fält för fri copy-edit. Gap-spec:
   `docs/gaps/GAP-followup-prompt-content-passthrough.md`. ADR-utkast:
   `governance/decisions/0034-followup-prompt-content-passthrough.md`.
-  Fix: open. Test: open.
+  Fix: open; backend-signal i `build-result.json` och `trace.ndjson` är
+  implementerad, men FloatingChat-feedback och `copyDirectives[]` återstår.
+  Test: `tests/test_followup_honest_no_op.py`.
 
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
   subprocess-status och loggutdrag medan körningen pågår, men riktig

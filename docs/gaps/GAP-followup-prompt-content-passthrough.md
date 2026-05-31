@@ -9,6 +9,15 @@ status: queued
 source: operator verification 2026-05-27
 ```
 
+## Status 2026-05-31
+
+Backenddelen av lösning B är implementerad: follow-up-builds skriver
+`appliedVisibleEffect` och `appliedVisibleEffectReason` i
+`build-result.json`, och emitterar trace-eventet `followup.no_op_detected`
+när ingen synlig effekt detekteras. FloatingChat-presentationen väntar
+Christopher. Lösning A (`copyDirectives[]`) är fortfarande separat och
+ADR 0034 står kvar som `proposed`.
+
 ## Reproduktion
 
 Operatören verifierade 2026-05-27 att följdpromptar i dag inte når en

@@ -494,6 +494,24 @@ def _prompt_meta_version(prompt_meta: dict[str, Any] | None) -> int | None:
     return version if isinstance(version, int) and version >= 1 else None
 
 
+def _prompt_meta_previous_version(prompt_meta: dict[str, Any] | None) -> int | None:
+    """Return the previous Project Input version for follow-up builds.
+
+    The prompt helper writes ``previousVersion`` on follow-up sidecars.
+    If an older sidecar lacks that field, derive it from ``version - 1``
+    so historical prompt-inputs still get best-effort snapshot lookup.
+    """
+    if not prompt_meta:
+        return None
+    previous_version = prompt_meta.get("previousVersion")
+    if isinstance(previous_version, int) and previous_version >= 1:
+        return previous_version
+    version = _prompt_meta_version(prompt_meta)
+    if version is not None and version > 1:
+        return version - 1
+    return None
+
+
 def _prompt_meta_raw_prompt(prompt_meta: dict[str, Any] | None) -> str | None:
     if not prompt_meta:
         return None
@@ -538,6 +556,34 @@ def _prompt_meta_placeholder_contact_fields(
         ):
             fields.append(value)
     return fields
+
+
+def _prompt_meta_followup_intent_id(prompt_meta: dict[str, Any] | None) -> str | None:
+    """Return ``projectDna.followUpIntent.id`` from the prompt sidecar."""
+    if not prompt_meta:
+        return None
+    project_dna = prompt_meta.get("projectDna")
+    if not isinstance(project_dna, dict):
+        return None
+    followup_intent = project_dna.get("followUpIntent")
+    if not isinstance(followup_intent, dict):
+        return None
+    intent_id = followup_intent.get("id")
+    return intent_id if isinstance(intent_id, str) and intent_id else None
+
+
+def _has_copy_directives(payload: Any) -> bool:
+    """Detect a future ``copyDirectives[]`` contract without implementing it."""
+    if not isinstance(payload, dict):
+        return False
+    copy_directives = payload.get("copyDirectives")
+    if isinstance(copy_directives, list) and bool(copy_directives):
+        return True
+    directives = payload.get("directives")
+    if not isinstance(directives, dict):
+        return False
+    nested_copy_directives = directives.get("copyDirectives")
+    return isinstance(nested_copy_directives, list) and bool(nested_copy_directives)
 
 
 def _placeholder_contact_warning_message(fields: list[str]) -> str:
@@ -608,6 +654,8 @@ class Trace:
         status: str,
         message: str = "",
         payload_path: str | None = None,
+        *,
+        reason: str | None = None,
     ) -> None:
         record = {
             "runId": self.run_id,
@@ -618,6 +666,8 @@ class Trace:
             "timestamp": utc_now().isoformat(),
             "payloadPath": payload_path,
         }
+        if reason is not None:
+            record["reason"] = reason
         with self.path.open("a", encoding="utf-8", newline="\n") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
@@ -3538,6 +3588,97 @@ def snapshot_generated_files(target_dir: Path, run_dir: Path) -> Path:
     return snap_dir
 
 
+def _find_previous_page_snapshot(
+    runs_root: Path,
+    current_run_dir: Path,
+    prompt_meta: dict[str, Any] | None,
+) -> Path | None:
+    """Locate v(n-1)'s generated home-page snapshot for a follow-up run."""
+    project_id = _prompt_meta_project_id(prompt_meta)
+    previous_version = _prompt_meta_previous_version(prompt_meta)
+    if not project_id or previous_version is None:
+        return None
+    if not runs_root.exists():
+        return None
+
+    candidates = [
+        run_dir
+        for run_dir in runs_root.iterdir()
+        if run_dir.is_dir() and run_dir != current_run_dir
+    ]
+    candidates.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+    for run_dir in candidates:
+        input_path = run_dir / "input.json"
+        try:
+            input_payload = json.loads(input_path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            continue
+        if input_payload.get("projectId") != project_id:
+            continue
+        if input_payload.get("version") != previous_version:
+            continue
+        page_snapshot = run_dir / "generated-files" / "app" / "page.tsx"
+        if page_snapshot.is_file():
+            return page_snapshot
+    return None
+
+
+def _detect_followup_applied_visible_effect(
+    runs_root: Path,
+    current_run_dir: Path,
+    prompt_meta: dict[str, Any] | None,
+    dossier: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Return the honest applied-effect signal for follow-up builds.
+
+    ``None`` means the current build is not a follow-up. Follow-up builds
+    always return a boolean so downstream UI can distinguish "not relevant"
+    from "evaluated and not visible".
+    """
+    if _prompt_meta_mode(prompt_meta) != "followup":
+        return None
+
+    intent_id = _prompt_meta_followup_intent_id(prompt_meta)
+    has_copy_directives = _has_copy_directives(prompt_meta) or _has_copy_directives(
+        dossier
+    )
+    if intent_id == "no-semantic-change" and not has_copy_directives:
+        return {
+            "applied": False,
+            "reason": "intent_no_semantic_change",
+        }
+
+    current_page = current_run_dir / "generated-files" / "app" / "page.tsx"
+    previous_page = _find_previous_page_snapshot(
+        runs_root,
+        current_run_dir,
+        prompt_meta,
+    )
+    if current_page.is_file() and previous_page is not None:
+        try:
+            current_bytes = current_page.read_bytes()
+            previous_bytes = previous_page.read_bytes()
+        except OSError:
+            return {
+                "applied": True,
+                "reason": "semantic_intent_without_previous_snapshot",
+            }
+        if current_bytes == previous_bytes:
+            return {
+                "applied": False,
+                "reason": "page_tsx_unchanged",
+            }
+        return {
+            "applied": True,
+            "reason": "page_tsx_changed",
+        }
+
+    return {
+        "applied": True,
+        "reason": "semantic_intent_without_previous_snapshot",
+    }
+
+
 def run_phase3_quality_and_repair(
     run_dir: Path,
     target: Path,
@@ -3619,6 +3760,7 @@ def write_build_result(
     duration_ms: int,
     codegen_summary: dict | None = None,
     prompt_meta: dict[str, Any] | None = None,
+    followup_effect: dict[str, Any] | None = None,
 ) -> dict:
     """Write build-result.json. ``generatedFilesDir`` points at the canonical
     snapshot under the run directory, not at the dev preview, so downstream
@@ -3680,6 +3822,9 @@ def write_build_result(
                 prompt_summary[key] = value
         if prompt_summary:
             result["prompt"] = prompt_summary
+    if followup_effect is not None:
+        result["appliedVisibleEffect"] = bool(followup_effect["applied"])
+        result["appliedVisibleEffectReason"] = followup_effect["reason"]
     # B133 (2026-05-19): surface placeholder contact fields so Viewser
     # Run Details can warn the operator that the published site shows
     # dummy contact info ("+46 8 000 00 00", "kontakt@example.se",
@@ -4017,6 +4162,20 @@ def build(
         "Snapshotted generated files into data/runs/<runId>/generated-files/",
         payload_path="generated-files/",
     )
+    followup_effect = _detect_followup_applied_visible_effect(
+        runs_root,
+        run_dir,
+        prompt_meta,
+        dossier,
+    )
+    if followup_effect is not None and followup_effect["applied"] is False:
+        trace.event(
+            "build",
+            "followup.no_op_detected",
+            "warning",
+            "Follow-up produced no visible effect",
+            reason=followup_effect["reason"],
+        )
 
     # Quality Gate status propagation (ADR 0015):
     #
@@ -4060,6 +4219,7 @@ def build(
         duration_ms,
         codegen_summary=codegen_summary,
         prompt_meta=prompt_meta,
+        followup_effect=followup_effect,
     )
 
     if overall_status == "failed":
