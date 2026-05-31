@@ -16,28 +16,53 @@ konfigurerad med `PYTHONPATH` så `python -m tooling.sprintvakt_mcp.server`
 startar utan ModuleNotFoundError. Editable install (`pip install -e .`)
 krävs en gång per venv enligt ADR 0029.
 
-**Direkt nästa spår:** se [`docs/current-focus.md`](current-focus.md)
-"Direkt nästa fokus". Aktuell status: **B157 stängd genom round
-1+2+3 (alla pushade)**, end-to-end-verifierad i Viewser-browsern
-2026-05-28 ~01:40 (måleri-bygg-genberg + tone-shift follow-up,
-båda byggde grönt). Golden-path eval baseline 7.34/10 (oförändrat
-från senaste — 0 regressioner från natt-batchen). Inga öppna PRs.
+**Status (2026-05-31 PM):** `main` == `jakob-be` == `9e1a025`. Stor batch
+landad via PR #136 + #137. **B157 är arkitektoniskt stängd**: nivå 4
+(immutable build-dir + atomär `current.json`-pointer-swap, Stage A) + delayed
+GC (`scripts/gc_old_builds.py`, Stage B) ligger i `main`. Round 1-3-plåstren
++ build-runner-tree-kill är kvar som redundanta säkerhetsnät. Övrigt landat
+denna omgång: B155-backend (ärlig no-op-detektion via `appliedVisibleEffect`
+i build-result + trace-event), BO6 (backoffice runtime-scaffolds dynamiska
+från resolvern), quality-gate contact-route via `routes.json` + härdning,
+api-smoke env-isolering, samt extern-review-fixar (`kill-dev-trees.py`
+scope:ad + `buildPath`-kryssvalidering). Golden-path eval baseline 7.34/10.
+Inga öppna PRs.
 
-Priorordning nu:
-1. Bite B (PreviewRuntime wiring local + stackblitz).
-2. Cloud-agent-grind: 2 scout-prompts klara för utskick (i repo-rot
-   som `SCOUT-PROMPT-A-backoffice-runtime-scaffolds.md` +
-   `SCOUT-PROMPT-B-followup-honest-no-op.md`, original-spegel i
-   `docs/agent-prompts/scout-grind-*.md`).
-3. B157 nivå-4 (immutable build-dir + pointer-swap, GAP-windows-
-   safe-rebuild-pipeline) — eliminerar orphan-process-klassen helt.
-4. ADR 0034 (B155 "ärlig först") — kräver Christopher-koord.
+**Pre-flight för nästa orchestrator:**
+1. `docs/current-focus.md` (Last verified `40b7d29`/`9e1a025`).
+2. `python scripts/focus_check.py` — ska ge OK.
+3. Vid orphan-processer (Windows): `python kill-dev-trees.py` eller dubbelklicka
+   `kill-dev-trees.bat`. Helpern är nu **scope:ad** — tree-killar bara
+   Sajtbyggaren-processer (repo/output-path-token ELLER `next start`/`next dev`
+   på preview-port 4100-4199), inte främmande Next-projekt på maskinen.
 
-**Operatörs-helper:** `python kill-dev-trees.py` (eller dubbelklicka
-`kill-dev-trees.bat`) tree-killar alla Sajtbyggaren-relaterade
-node-processer (preview-orphans, dev-servers, worktree-Viewsers).
-Whitelist:ar bara matchande processer — skyddar VS Code-instanser
-etc.
+**Priorordning nu:**
+1. **Christopher-koordinering (kärnloopen).** Två backend-halvor väntar på
+   UI: B155-signalen (`appliedVisibleEffect` i `build-result.json` →
+   FloatingChat "ingen synlig ändring"-rad) och — störst — `copyDirectives[]`
+   (ADR 0034 väg A) som gör fri-text-följdprompt → synlig sajt-ändring. Bara
+   Christopher kan UI-delen. Sync-PR `christopher-ui → main` rekommenderas.
+2. **Bite B (PreviewRuntime wiring).** OBS: naiv wiring ger lager-violation
+   (paket→app); rätt väg = dependency-injection + ett `files`-fält på
+   `PreviewResult`. Egen builder-uppgift; unblockar Christophers Bite C.
+3. **Mät bygg-fart.** Immutable builds kör full `npm install` per bygge (varm
+   cache mildrar). Vid seg iteration: `node_modules`-seeding från föregående
+   build (valfri optimering).
+4. **B157-uppföljare (Linux-verifierade, POSIX-only):** flat-layout-GC i
+   `gc_old_builds.py` + POSIX-tree-kill (`detached`-spawn + `killpg`) i
+   `local-preview-server.ts` / `build-runner.ts`. Windows opåverkad.
+
+**Branch-läge (städat 2026-05-31 PM):** raderade
+`cursor/jakob-be-viewser-local-next-preview` (superseded via #88-#101).
+Behållna: alla `backup-*` (operatörens keepsakes), `origin/christopher-ui`
+(aktiv), `origin/cursor/preview-runtime-adapters` (medveten WIP-snapshot för
+framtida vercel-adapter), `origin/cursor/dossier-intake-v11-review-895d`
+(**49 omergrade commits — operatörsbeslut om radering, auto-raderas EJ**).
+
+**Ignore-config:** tunga data-/genererade kataloger (`data/runs/`,
+`.generated/`, `data/evals/*` m.fl.) är index-ignorerade via
+`.cursorindexingignore` (läsbara vid behov, bara inte indexerade).
+`.cursorignore` är agent-skyddad (kan ej editeras av agent) — orörd.
 
 **Parkerade lanes (väntar trigger):**
 

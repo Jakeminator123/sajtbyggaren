@@ -34,6 +34,14 @@ Last verified state: `40b7d29` (2026-05-31 UTC, steward-auto efter PR #137 — s
 Nya PRs sedan föregående checkpoint: PR #137 — sync(jakob-be -> main): B157 level 4
 immutable build-dir + pointer-swap + GC.
 
+**Aktuell priordning + färsk orchestrator-handoff: se
+[`docs/handoff.md`](handoff.md) "Status" + "Priorordning nu".** Kort: B157
+nivå 4 (Stage A+B) är klar i `main`; B155-backend, BO6 och quality-gate-
+routes-discovery likaså. Nästa: Christopher-koordinering (B155 UI-signal +
+`copyDirectives[]`/ADR 0034 = kärnloopen) → Bite B (PreviewRuntime wiring,
+kräver DI) → mät bygg-fart → B157 POSIX/flat-layout-uppföljare. "Direkt
+nästa fokus"-listan längre ned är delvis historisk (förskjuten av denna batch).
+
 ## Branchmodellen (kort)
 
 - Jakob jobbar default på `jakob-be`. Christopher jobbar default på `christopher-ui`.
