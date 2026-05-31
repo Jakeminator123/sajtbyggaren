@@ -243,6 +243,11 @@ COMMON_WORDS = {
     # (dataclass returned by auto_prune_all()). Same treatment as
     # PruneReport - implementation detail, not a domain term.
     "AutoPruneReport",
+    # scripts/gc_old_builds.py local result/decision dataclasses (B157 level 4
+    # Stage B delayed GC of immutable builds). Same treatment as PruneReport /
+    # AutoPruneReport above - tooling implementation containers, not domain
+    # terms.
+    "GcReport", "BuildDecision",
     # planning module internal class identifiers (Sprint 2B). Mirrors the
     # brief module's BriefResult/BriefModelResolutionError treatment - these
     # are Python implementation symbols, not domain terms. The canonical
@@ -799,7 +804,7 @@ COMMON_WORDS = {
     "SUPERSEDED",  # docs-banner i backend-handoff.md (versaliserat statusord)
     "Konkret content",  # gap-rubrik i 9/10-tabellen
     "Page Intent Variant B",  # proposed produktkoncept (B132-uppföljning)
-    "PermissionError", "SubprocessError",  # Python builtin exception-namn
+    "OSError", "PermissionError", "SubprocessError",  # Python builtin exception-namn
     "Project DNA semantic merge",  # proposed sprint-namn (Queue #5)
     "Task",  # Cursor subagent-tool-namn
     "Visuell renderingsverifiering",  # gap-rubrik i 9/10-tabellen
