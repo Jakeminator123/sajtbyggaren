@@ -319,7 +319,14 @@ integrate christopher-ui discovery and asset workflow`, merge
   renderers/codegen saknar fält för fri copy-edit. Gap-spec:
   `docs/gaps/GAP-followup-prompt-content-passthrough.md`. ADR-utkast:
   `governance/decisions/0034-followup-prompt-content-passthrough.md`.
-  Fix: open. Test: open.
+  Backend-delen av ADR 0034 väg (b) (ärlig no-op-detektion) landad:
+  buildern skriver `appliedVisibleEffect`/`appliedEffectReason` till
+  `build-result.json` och emitterar trace-event `followup.no_op_detected`
+  för fri-text-följdpromptar utan synlig effekt
+  (`tests/test_followup_honest_no_op.py`). UI-delen (FloatingChat-rad som
+  visar signalen) är Christophers lane och kvarstår. Den strukturerade
+  `copyDirectives[]`-vägen (ADR 0034 väg A) är fortsatt öppen.
+  Fix: partial (backend). Test: `tests/test_followup_honest_no_op.py`.
 
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
   subprocess-status och loggutdrag medan körningen pågår, men riktig

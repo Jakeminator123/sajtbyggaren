@@ -503,6 +503,106 @@ def _prompt_meta_raw_prompt(prompt_meta: dict[str, Any] | None) -> str | None:
     return value if isinstance(value, str) else None
 
 
+def _prompt_meta_followup_intent(prompt_meta: dict[str, Any] | None) -> str | None:
+    """Return the classified follow-up intent id from the Project DNA snapshot.
+
+    ``prompt_to_project_input.generate`` stores the deterministic
+    ``classify_followup_intent`` result on
+    ``meta.projectDna.followUpIntent.id``. The builder reads it back here to
+    predict whether a follow-up was expected to produce a visible effect.
+    Returns ``None`` when the sidecar predates Project DNA V1 or is malformed.
+    """
+    if not prompt_meta:
+        return None
+    project_dna = prompt_meta.get("projectDna")
+    if not isinstance(project_dna, dict):
+        return None
+    follow_up_intent = project_dna.get("followUpIntent")
+    if not isinstance(follow_up_intent, dict):
+        return None
+    intent_id = follow_up_intent.get("id")
+    return intent_id if isinstance(intent_id, str) and intent_id else None
+
+
+def _dossier_has_copy_directives(dossier: dict[str, Any] | None) -> bool:
+    """Detect the ADR 0034 alternative-A ``copyDirectives[]`` contract.
+
+    That contract is not implemented yet, so this stays defensive: it only
+    reports True when a non-empty list is present at either
+    ``dossier.directives.copyDirectives`` or top-level
+    ``dossier.copyDirectives``. Absent or empty is treated as "no directive".
+    """
+    if not isinstance(dossier, dict):
+        return False
+    candidates: list[Any] = []
+    directives = dossier.get("directives")
+    if isinstance(directives, dict):
+        candidates.append(directives.get("copyDirectives"))
+    candidates.append(dossier.get("copyDirectives"))
+    return any(isinstance(value, list) and len(value) > 0 for value in candidates)
+
+
+def _read_home_page_source(target: Path) -> str | None:
+    """Return ``app/page.tsx`` contents for the generated home route, or None.
+
+    Used as the trivially-available v_n_minus_1 snapshot for the byte-identity
+    no-op check (read pre-build) and the v_n result (read post-build). Any I/O
+    or decode error degrades to ``None`` so the detector falls back to the
+    intent-based prediction instead of failing the build.
+    """
+    try:
+        return (target / "app" / "page.tsx").read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+def determine_applied_visible_effect(
+    *,
+    mode: str,
+    follow_up_intent: str | None,
+    has_copy_directives: bool,
+    previous_page_source: str | None = None,
+    current_page_source: str | None = None,
+) -> tuple[bool | None, str | None]:
+    """Decide whether a follow-up build produced a visible effect (B155).
+
+    Returns ``(applied, reason)``. ``applied`` is ``None`` for init builds so
+    the field is omitted from ``build-result.json`` (it is a follow-up-only
+    concept). The honest no-op signal combines two strategies, mirroring
+    ADR 0034 path (b):
+
+    * Strategy 1 (intent-based, always available): a follow-up classified as
+      ``no-semantic-change`` with no ``copyDirectives[]`` could not move any
+      renderer-consumed field, so no visible effect is expected.
+    * Strategy 2 (byte-identity, best-effort): when both the previous and
+      current home-page sources are available, identical bytes prove the
+      rebuild changed nothing visible. Differing bytes confirm an effect.
+
+    Per ADR 0034 / scout AC1 the value is ``False`` when EITHER the intent
+    no-op holds OR the page is byte-identical; otherwise it is ``True``.
+    """
+    if mode != "followup":
+        return None, None
+
+    intent = follow_up_intent or "no-semantic-change"
+    intent_no_op = intent == "no-semantic-change" and not has_copy_directives
+    if intent_no_op:
+        # Strategy 1 is authoritative for the common silent no-op: a free-text
+        # content prompt ("mer info om surdegsbröd") that maps to no supported
+        # structured field. AC1(a) makes this sufficient on its own.
+        return False, "intent_no_semantic_change"
+
+    if previous_page_source is not None and current_page_source is not None:
+        if previous_page_source == current_page_source:
+            return False, "page_identical"
+        return True, "page_changed"
+
+    # Strategy 1 prediction without a snapshot: a supported structured intent
+    # (or an explicit copyDirective) changed a field the renderer consumes.
+    intent_token = intent.replace("-", "_")
+    return True, f"intent_{intent_token}"
+
+
 _PLACEHOLDER_CONTACT_VALID_FIELDS = (
     "phone",
     "email",
@@ -3619,6 +3719,8 @@ def write_build_result(
     duration_ms: int,
     codegen_summary: dict | None = None,
     prompt_meta: dict[str, Any] | None = None,
+    applied_visible_effect: bool | None = None,
+    applied_effect_reason: str | None = None,
 ) -> dict:
     """Write build-result.json. ``generatedFilesDir`` points at the canonical
     snapshot under the run directory, not at the dev preview, so downstream
@@ -3680,6 +3782,13 @@ def write_build_result(
                 prompt_summary[key] = value
         if prompt_summary:
             result["prompt"] = prompt_summary
+    # B155 (ADR 0034 path b): honest no-op signal for free-text follow-ups.
+    # Follow-up-only — omitted for init builds so consumers can tell a
+    # genuine "no visible effect" from "concept does not apply".
+    if applied_visible_effect is not None:
+        result["appliedVisibleEffect"] = applied_visible_effect
+        if applied_effect_reason is not None:
+            result["appliedEffectReason"] = applied_effect_reason
     # B133 (2026-05-19): surface placeholder contact fields so Viewser
     # Run Details can warn the operator that the published site shows
     # dummy contact info ("+46 8 000 00 00", "kontakt@example.se",
@@ -3827,6 +3936,12 @@ def build(
     # also future-proofs the builder for the day commerce-base is harmonised.
     target = generated_root / site_id
     trace.event("build", "phase.started", "started", "Phase 3 build starts")
+
+    # B155: capture the pre-build home page so we can compare byte-identity
+    # after the rebuild. This is the trivially-available v_n_minus_1 source
+    # (the live preview dir still holds the previous version's output before
+    # copy_starter wipes it); it is None on the first build of a site.
+    previous_home_page_source = _read_home_page_source(target)
 
     starter_id = site_plan["starterId"]
     print(f"Copying starter {starter_id} -> {target}")
@@ -4043,6 +4158,26 @@ def build(
     if codegen_result.error is not None:
         codegen_summary["error"] = codegen_result.error
 
+    # B155 (ADR 0034 path b): decide whether this follow-up produced a
+    # visible effect and emit the honest no-op trace event BEFORE
+    # build-result.json is written, so the Live Build Sync UI can react to
+    # it from the trace stream without first parsing the result artefact.
+    applied_visible_effect, applied_effect_reason = determine_applied_visible_effect(
+        mode=_prompt_meta_mode(prompt_meta),
+        follow_up_intent=_prompt_meta_followup_intent(prompt_meta),
+        has_copy_directives=_dossier_has_copy_directives(dossier),
+        previous_page_source=previous_home_page_source,
+        current_page_source=_read_home_page_source(target),
+    )
+    if applied_visible_effect is False:
+        trace.event(
+            "build",
+            "followup.no_op_detected",
+            "warning",
+            "Follow-up gav ingen synlig effekt "
+            f"(reason={applied_effect_reason}).",
+        )
+
     duration_ms = int((time.monotonic() - started) * 1000)
     write_build_result(
         run_dir,
@@ -4060,6 +4195,8 @@ def build(
         duration_ms,
         codegen_summary=codegen_summary,
         prompt_meta=prompt_meta,
+        applied_visible_effect=applied_visible_effect,
+        applied_effect_reason=applied_effect_reason,
     )
 
     if overall_status == "failed":

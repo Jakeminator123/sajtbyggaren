@@ -5,9 +5,27 @@ id: GAP-followup-prompt-content-passthrough
 type: Gap/Builder
 owner: jakob
 title: Follow-up prompt content passthrough
-status: queued
+status: in-progress
 source: operator verification 2026-05-27
 ```
+
+## Implementationsstatus
+
+- Väg (b) backend (ärlig no-op-detektion, B155): **klar**. Buildern
+  beslutar `appliedVisibleEffect` (med `appliedEffectReason`) i
+  `build-result.json` och emitterar trace-event `followup.no_op_detected`
+  före build-result skrivs. Detektionen kombinerar intent-baserad
+  klassning (`no-semantic-change` utan `copyDirectives` → ingen effekt) med
+  en best-effort byte-identitetskoll av `app/page.tsx` (v_n vs v_n_minus_1
+  från den lokala preview-katalogen). Tester:
+  `tests/test_followup_honest_no_op.py`.
+- Väg (b) UI: **väntar Christopher**. FloatingChat-raden som visar
+  `appliedVisibleEffect: false` för operatören ligger i Viewser-lanen och
+  tas separat. Trace-event + build-result-fält är redan tillgängliga som
+  kontrakt.
+- Väg (a) strukturerat `copyDirectives[]`-kontrakt: **öppet**. Kräver
+  schema-/brief-/merge-/renderer-arbete + naming-dictionary-bump och är en
+  egen sprint.
 
 ## Reproduktion
 
