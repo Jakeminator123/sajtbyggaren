@@ -244,4 +244,4 @@ def render_trace_viewer(
                 _render_event(event)
 
     with st.expander("Rå trace-data"):
-        st.dataframe(events, use_container_width=True, hide_index=True)
+        st.dataframe(events, width="stretch", hide_index=True)

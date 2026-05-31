@@ -141,7 +141,7 @@ def view_naming_dictionary() -> None:
         }
         for t in filtered
     ]
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(rows, width="stretch", hide_index=True)
 
     with st.expander("Visa fullständiga definitioner"):
         for term in filtered:

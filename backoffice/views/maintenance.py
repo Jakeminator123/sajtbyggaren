@@ -53,7 +53,7 @@ def _render_item_preview(items: list[CleanupItem]) -> None:
         for item in items[:20]
     ]
     if rows:
-        st.dataframe(rows, use_container_width=True, hide_index=True)
+        st.dataframe(rows, width="stretch", hide_index=True)
     if len(items) > 20:
         st.caption(f"...resten ({len(items) - 20} till)")
 
@@ -204,7 +204,7 @@ def view_toggle() -> None:
             st.caption(result["runtimeEffect"])
             relation_rows = impact.impact_table_rows(result)
             if relation_rows:
-                st.dataframe(relation_rows, use_container_width=True, hide_index=True)
+                st.dataframe(relation_rows, width="stretch", hide_index=True)
             else:
                 st.write("Inga direkta relationer hittades.")
         return result
