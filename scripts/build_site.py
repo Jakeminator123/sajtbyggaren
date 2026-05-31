@@ -3836,10 +3836,18 @@ def write_build_result(
     codegen_summary: dict | None = None,
     prompt_meta: dict[str, Any] | None = None,
     followup_effect: dict[str, Any] | None = None,
+    active_build_id: str | None = None,
 ) -> dict:
     """Write build-result.json. ``generatedFilesDir`` points at the canonical
     snapshot under the run directory, not at the dev preview, so downstream
     consumers (Backoffice, eval batch) can trust it across regenerations.
+
+    ``devPreviewDir`` points at the immutable build directory this run wrote
+    to (``<generated>/<siteId>/builds/<buildId>/`` since B157 level 4 Stage A).
+    ``active_build_id`` is the build id when the current.json pointer was
+    swapped to this run (status ok|degraded); it is ``None`` for failed/
+    skipped runs, where the pointer is intentionally left on the previous
+    build and ``activeBuildId`` is omitted from build-result.json.
 
     ``starter_id`` mirrors what ``site-plan.json`` chose - the builder no
     longer hardcodes ``marketing-base`` here so the build result reflects
@@ -3915,6 +3923,8 @@ def write_build_result(
         )
     if codegen_summary is not None:
         result["codegen"] = codegen_summary
+    if active_build_id is not None:
+        result["activeBuildId"] = active_build_id
     write_json(run_dir / "build-result.json", result)
     trace.event(
         "build",
@@ -4041,11 +4051,30 @@ def build(
 
     generated_root = resolve_generated_dir(generated_dir)
 
+    # B157 level 4, Stage A (docs/gaps/GAP-windows-safe-rebuild-pipeline.md):
+    # build into an immutable builds/<buildId>/ directory instead of in place
+    # at <generated>/<siteId>/. The Builder never deletes or overwrites a
+    # directory a live preview holds open, so the WinError 5 .node file-lock
+    # class is removed at the architecture level (not patched). The active
+    # build is published via an atomic current.json pointer swap further down,
+    # once overall_status is final and shippable. All pointer/build-id logic
+    # lives in packages/generation/build/immutable_builds.py; this is wiring.
+    from packages.generation.build.immutable_builds import (
+        build_dir_for,
+        new_build_id,
+        write_active_pointer,
+    )
+
+    site_dir = generated_root / site_id
+    build_id = new_build_id(
+        exists=lambda candidate: build_dir_for(generated_root, site_id, candidate).exists()
+    )
+
     # Phase 3: build. The Starter to copy is whatever the plan picked - we
     # used to hardcode 'marketing-base' here, which made the planSource a
     # decoration rather than authoritative. Reading site_plan["starterId"]
     # also future-proofs the builder for the day commerce-base is harmonised.
-    target = generated_root / site_id
+    target = build_dir_for(generated_root, site_id, build_id)
     trace.event("build", "phase.started", "started", "Phase 3 build starts")
 
     starter_id = site_plan["starterId"]
@@ -4266,6 +4295,25 @@ def build(
     elif quality_payload["status"] == "degraded" and overall_status == "ok":
         overall_status = "degraded"
 
+    # B157 level 4, Stage A: publish the immutable build by swapping the
+    # current.json pointer atomically, gated on the final status. "ok" and
+    # "degraded" are shippable (ADR 0015: "degraded" means a route-scan or
+    # policy soft-failure while typecheck/build passed), so the operator's
+    # preview should move to this build. "failed" and "skipped" leave the
+    # pointer untouched so a broken or file-only run never becomes the active
+    # preview - the previous good build keeps serving until a new one lands.
+    active_build_id: str | None = None
+    if overall_status in ("ok", "degraded"):
+        build_path = target.relative_to(site_dir).as_posix()
+        write_active_pointer(site_dir, build_id, build_path)
+        active_build_id = build_id
+        trace.event(
+            "build",
+            "active_pointer.swapped",
+            "done",
+            f"current.json -> {build_path} (status={overall_status})",
+        )
+
     codegen_summary = {
         "source": codegen_result.source,
         "modelUsed": codegen_result.modelUsed,
@@ -4295,6 +4343,7 @@ def build(
         codegen_summary=codegen_summary,
         prompt_meta=prompt_meta,
         followup_effect=followup_effect,
+        active_build_id=active_build_id,
     )
 
     if overall_status == "failed":

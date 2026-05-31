@@ -142,16 +142,52 @@ def find_run_dir(
     raise ValueError("Ge antingen --site-id, --run-id eller --latest")
 
 
+# Build id YYYYMMDDTHHMMSSZ with optional -NN suffix. Mirrors
+# packages/generation/build/immutable_builds.py; inlined because verify_run.py
+# is deliberately dependency-free (no import from packages/ or apps/).
+_BUILD_ID_RE = re.compile(r"^\d{8}T\d{6}Z(?:-\d{2,})?$")
+
+
+def _read_active_build_dir(site_dir: Path) -> Path | None:
+    """Returnera aktiv immutable build-dir om current.json pekar på en giltig.
+
+    Speglar packages/generation/build/immutable_builds.py:read_active_build_dir
+    men inlinad eftersom verify_run.py medvetet är dependency-fri.
+    """
+    pointer = site_dir / "current.json"
+    if not pointer.is_file():
+        return None
+    try:
+        payload = json.loads(pointer.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    build_id = payload.get("activeBuildId")
+    if not isinstance(build_id, str) or not _BUILD_ID_RE.match(build_id):
+        return None
+    build_dir = site_dir / "builds" / build_id
+    return build_dir if build_dir.is_dir() else None
+
+
 def find_generated_dir(site_id: str) -> Path:
     """Generated-output-katalogen för en given site-ID.
 
     Speglar scripts/build_site.py-konventionen:
     prioritet env SAJTBYGGAREN_GENERATED_DIR > default (../sajtbyggaren-output/.generated/).
+
+    B157 nivå 4 Stage A: sajter byggs numera till <site>/builds/<buildId>/ och
+    aktiv build pekas ut av <site>/current.json. Returnera den aktiva build-
+    katalogen när pekaren är giltig, annars fall tillbaka till det flata
+    site-root-layoutet (sajter byggda före nivå 4).
     """
     env = os.environ.get("SAJTBYGGAREN_GENERATED_DIR")
     if env:
-        return Path(env) / site_id
-    return REPO_ROOT.parent / "sajtbyggaren-output" / ".generated" / site_id
+        site_dir = Path(env) / site_id
+    else:
+        site_dir = REPO_ROOT.parent / "sajtbyggaren-output" / ".generated" / site_id
+    active = _read_active_build_dir(site_dir)
+    return active if active is not None else site_dir
 
 
 def find_meta_sidecar(site_id: str) -> Path | None:

@@ -9,15 +9,19 @@ processer som Viewser inte längre vet om (orphans från krasch).
 
 Strategi:
 - Lista alla ``node.exe``-processer via PowerShell + Win32_Process.
-- Whitelist:a bara de vars ``CommandLine`` matchar Sajtbyggaren-paths
-  (``sajtbyggaren``, ``next start``, ``next dev``, ``.generated\\``,
-  eller Viewser-dispatcher-skriptet ``scripts\\dev.mjs``).
+- Whitelist:a bara de vars ``CommandLine`` bär en Sajtbyggaren-scope-signal:
+  antingen en path-token (``sajtbyggaren``, ``.generated\\`` eller
+  dispatchern ``scripts\\dev.mjs``), ELLER ``next start``/``next dev`` på
+  Viewsers preview-portintervall 4100-4199. Ett bart ``next start`` utan
+  Viewser-port räknas INTE — det skulle annars träffa främmande Next.js-
+  projekt som operatören kan ha igång (reviewer-fynd 2026-05-31).
 - Tree-kill matchade PIDs med ``taskkill /T /F`` — samma teknik som
   ``apps/viewser/lib/local-preview-server.ts:killProcessTree`` använder.
 
-Varför whitelist: ``Stop-Process -Name node`` skulle döda ALLA
-node.exe-processer på maskinen, inklusive VS Code language-servers,
-GitHub Desktop, andra dev-servrar etc. Whitelisten skyddar mot det.
+Varför scopad whitelist: ``Stop-Process -Name node`` skulle döda ALLA
+node.exe-processer på maskinen (VS Code language-servers, GitHub Desktop,
+andra dev-servrar). En bred ``next``-match skulle döda andra Next-projekt.
+Scopningen skyddar mot båda.
 
 Användning:
 - **Dubbelklicka** ``kill-dev-trees.bat`` i utforskaren (säkraste vägen).
@@ -34,20 +38,40 @@ Skapad i samband med B157 round 3-fixen 2026-05-28. Se
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent
 
-# Substring-matcher mot CommandLine. Case-insensitive.
-SAJT_PATTERNS: tuple[str, ...] = (
-    "sajtbyggaren",  # täcker repo-roten + ../sajtbyggaren-output/.generated/
-    "next start",  # preview-servrar (port 4100-4199)
-    "next dev",  # dev-servrar
+# Starka Sajtbyggaren-scope-signaler i CommandLine (case-insensitive). En
+# process som bär NÅGON av dessa är repo-/output-scopad och säker att döda.
+SAJT_PATH_TOKENS: tuple[str, ...] = (
+    "sajtbyggaren",  # repo-roten + ../sajtbyggaren-output/.generated/
     r"scripts\dev.mjs",  # Viewser dev-dispatcher
-    r".generated\\",  # genererade sajter
+    ".generated",  # genererade sajter (matchar både / och \ separator)
 )
+
+# ``next start``/``next dev`` ENSAMT är för brett — det matchar VILKET som
+# helst Next.js-projekt på maskinen (operatören kan ha andra Next-appar
+# igång). Vi kvalar bara en sådan process som Sajtbyggaren om den dessutom
+# kör på Viewsers preview-portintervall (``PORT_BASE=4100``, ``PORT_RANGE=100``
+# i ``apps/viewser/lib/local-preview-server.ts`` → 4100-4199). Reviewer-fynd
+# 2026-05-31: utan portkravet kunde helpern tree-killa främmande Next-projekt.
+NEXT_TOKENS: tuple[str, ...] = ("next start", "next dev")
+PREVIEW_PORT_LO = 4100
+PREVIEW_PORT_HI = 4199
+# ``-p 4137`` / ``-p4137`` / ``--port=4137`` / ``--port 4137`` i en next-cmdline.
+_PORT_FLAG_RE = re.compile(r"(?:-p|--port)[=\s]*(\d{2,5})")
+
+
+def _has_preview_port(cmdline_lower: str) -> bool:
+    """True om cmdline har en ``-p``/``--port`` i Viewsers preview-intervall."""
+    return any(
+        PREVIEW_PORT_LO <= int(match) <= PREVIEW_PORT_HI
+        for match in _PORT_FLAG_RE.findall(cmdline_lower)
+    )
 
 
 def list_node_processes() -> list[dict]:
@@ -95,11 +119,23 @@ def list_node_processes() -> list[dict]:
 
 
 def matches_sajtbyggaren(cmdline: str | None) -> bool:
-    """Sant om ``cmdline`` matchar någon Sajtbyggaren-pattern."""
+    """Sant om ``cmdline`` är en Sajtbyggaren-scopad node-process.
+
+    Två vägar att kvala (annars: matchar inte → dödas inte):
+      1. En stark path-scope-signal (``SAJT_PATH_TOKENS``) — repo-roten,
+         ``.generated\\`` eller dev-dispatchern. Räcker ensamt.
+      2. ``next start``/``next dev`` PLUS en preview-port i 4100-4199.
+         Ett bart ``next start`` utan Viewser-port är INTE nog — det skulle
+         träffa främmande Next.js-projekt på maskinen.
+    """
     if not cmdline:
         return False
     cmdline_lower = cmdline.lower()
-    return any(pattern.lower() in cmdline_lower for pattern in SAJT_PATTERNS)
+    if any(token.lower() in cmdline_lower for token in SAJT_PATH_TOKENS):
+        return True
+    if any(token in cmdline_lower for token in NEXT_TOKENS):
+        return _has_preview_port(cmdline_lower)
+    return False
 
 
 def tree_kill(pid: int) -> tuple[bool, str]:

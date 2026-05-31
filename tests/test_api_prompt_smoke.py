@@ -61,7 +61,14 @@ def _start_server(port: int, tmp_path: Path) -> subprocess.Popen[str]:
         "SAJTBYGGAREN_TEST": "1",
         "VIEWSER_PREVIEW_MODE": "local-next",
     })
-    env.pop("OPENAI_API_KEY", None)
+    # Force the deterministic mock Site Brief (briefSource=mock-no-key).
+    # Popping the key is NOT enough: the Next.js dev server auto-loads
+    # apps/viewser/.env.local / .env into the spawned process env, so a real
+    # OPENAI_API_KEY on the operator's machine would be reloaded and the
+    # bridge would return briefSource="real". Setting an empty string wins
+    # because neither Next nor dotenv overrides an already-set env var, and
+    # has_openai_api_key() treats empty/whitespace as missing.
+    env["OPENAI_API_KEY"] = ""
     env.pop("VERCEL", None)
     # preexec_fn is Unix-only and raises ValueError on Windows
     kwargs = {}
@@ -189,4 +196,9 @@ def test_api_prompt_route_spawns_python_end_to_end(tmp_path: Path) -> None:
         assert (run_dir / artefact).is_file(), f"Missing canonical artefact {artefact}"
     assert (run_dir / "generated-files" / "app" / "page.tsx").is_file()
     assert (tmp_path / "prompt-inputs" / f"{payload['siteId']}.project-input.json").is_file()
-    assert (tmp_path / "generated" / str(payload["siteId"]) / ".next").is_dir()
+    # B157 level 4 Stage A: the build is immutable under
+    # <generated>/<siteId>/builds/<buildId>/ and published via current.json.
+    site_root = tmp_path / "generated" / str(payload["siteId"])
+    pointer = json.loads((site_root / "current.json").read_text(encoding="utf-8"))
+    active_build_dir = site_root / pointer["buildPath"]
+    assert (active_build_dir / ".next").is_dir()

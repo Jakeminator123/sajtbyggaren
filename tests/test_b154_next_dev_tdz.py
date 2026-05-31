@@ -233,7 +233,11 @@ def test_b154_next_dev_chunks_do_not_access_w_before_initialization(
         runs_dir=tmp_path / "runs",
         generated_dir=generated_root,
     )
-    assert site_dir == generated_root / B154_SITE_ID
+    # B157 level 4 Stage A: build() returns the immutable build dir
+    # <generated>/<siteId>/builds/<buildId>/, not the flat site root. The
+    # build dir is still the correct cwd for `next dev` + chunk inspection.
+    assert site_dir.parent == generated_root / B154_SITE_ID / "builds"
+    assert site_dir.parent.parent == generated_root / B154_SITE_ID
     assert (site_dir / "package.json").is_file()
 
     if not (site_dir / "node_modules").is_dir():
