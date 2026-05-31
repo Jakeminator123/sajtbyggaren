@@ -1,9 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-31 UTC, steward-auto efter PR #136 — sync(jakob-be -> main): B157 round 3 + BO6 + B155 backend + quality-gate routes-discovery. Verifierad `main` är `e786618`.
+**Datum:** 2026-05-31 UTC, steward-auto efter PR #137 — sync(jakob-be -> main): B157 level 4 immutable build-dir + pointer-swap + GC. Verifierad `main` är `40b7d29`.
 
-Nya PRs sedan föregående checkpoint: PR #136 — sync(jakob-be -> main): B157 round 3 +
-BO6 + B155 backend + quality-gate routes-discovery.
+Nya PRs sedan föregående checkpoint: PR #137 — sync(jakob-be -> main): B157 level 4
+immutable build-dir + pointer-swap + GC.
 
 **MCP-server-status:** Sprintvakt-servern exponerar 14 tools efter
 PR #77 (`get_workboard`, `list_gaps`, `create_gap`, `activate_gap`,
@@ -556,3 +556,10 @@ Bug-count: **15 aktiva** / 0 misplaced / 5 unknown / 129 stängda
 Nya PRs sedan föregående checkpoint: PR #133 — sync(jakob-be -> main):
 PreviewRuntime Bite A skeleton + race-fix + governance comments +
 builder prompt.
+
+### 2026-05-31 UTC — handoff.md före `5746419`
+
+**Datum:** 2026-05-31 UTC, steward-auto efter PR #136 — sync(jakob-be -> main): B157 round 3 + BO6 + B155 backend + quality-gate routes-discovery. Verifierad `main` är `e786618`.
+
+Nya PRs sedan föregående checkpoint: PR #136 — sync(jakob-be -> main): B157 round 3 +
+BO6 + B155 backend + quality-gate routes-discovery.
