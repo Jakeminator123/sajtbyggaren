@@ -1,10 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-01 UTC. PR #139 (christopher-ui UI/UX-batch + B155 UI +
-ADR 0034 väg B-UI) är mergad till `main`; `origin/main` är `efbb425`
-(steward-auto efter `f22d27a`). `jakob-be` har mergat in `origin/main` och bär
-de 10 backend-commitsen (topp `f62bd40`) ovanpå — sync-PR `jakob-be → main` är
-nästa steg (kräver operatörs-OK).
+**Datum:** 2026-06-01 UTC, steward-auto efter PR #142 — sync(jakob-be -> main): ADR 0034 path A copyDirectives + contact eval-fix + placeholder suppression. Verifierad `main` är `fb3b1f8`.
+
+Nya PRs sedan föregående checkpoint: PR #142 — sync(jakob-be -> main): ADR 0034 path A
+copyDirectives + contact eval-fix + placeholder suppression.
 
 ## Orchestrator-pass 2026-06-01 PM — tre scouts gröna, #139 mergad
 
@@ -710,3 +709,11 @@ BO6 + B155 backend + quality-gate routes-discovery.
 
 Nya PRs sedan föregående checkpoint: PR #137 — sync(jakob-be -> main): B157 level 4
 immutable build-dir + pointer-swap + GC.
+
+### 2026-06-01 UTC — handoff.md före `efbb425`
+
+**Datum:** 2026-06-01 UTC. PR #139 (christopher-ui UI/UX-batch + B155 UI +
+ADR 0034 väg B-UI) är mergad till `main`; `origin/main` är `efbb425`
+(steward-auto efter `f22d27a`). `jakob-be` har mergat in `origin/main` och bär
+de 10 backend-commitsen (topp `f62bd40`) ovanpå — sync-PR `jakob-be → main` är
+nästa steg (kräver operatörs-OK).

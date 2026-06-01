@@ -30,16 +30,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `efbb425` i `main` (2026-06-01 UTC, steward-auto efter PR #139 — sync: christopher-ui → main, UI/UX-batch + B155 UI + ADR 0034 väg B-UI). `jakob-be` har mergat in `origin/main` och bär de 10 backend-commitsen (topp `f62bd40`: ADR 0034 väg A copyDirectives, contact-route eval-fix, placeholder-contact-suppression) ovanpå — sync-PR `jakob-be → main` är nästa steg (kräver operatörs-OK + ev. live-test). Tre read-only scouts 2026-06-01 PM: backend-diff grön, PR-triage + #139-djupgranskning utan blocker. Alla guards gröna (governance, rules_sync, term_coverage --strict, ruff, sprintvakt) + 25 nya copydir-tester. **Riktigt LLM-anrop verifierat** (copyDirectiveModel, ej mock).
-Nya PRs sedan föregående checkpoint: PR #139 — sync: christopher-ui → main (UI/UX-batch + B155 UI + ADR 0034 väg B-UI), mergad. Öppna nu: #140 (`cursor/preview-runtime-bite-b-di → jakob-be`, draft, Bite B via dependency-injection), #138 + #141 (docs Cloud-setup till `main`, draft; #141 har en term-coverage-enradsfix kvar). Kommande: sync-PR `jakob-be → main`.
-
-Aktuell priordning + färsk orchestrator-handoff: se
-[`docs/handoff.md`](handoff.md) toppblocket. Kort: #139 (UI-batch inkl. B155
-FloatingChat-no-op + copyDirectives väg B-UI) är mergad till `main`. Nästa:
-(a) sync-PR `jakob-be → main` för backend väg A + eval-/placeholder-fixar
-(operatörs-OK); (b) Bite B (#140) mergas in i `jakob-be`, helst före sync-PR;
-(c) tre låg-impact UI-fynd kvar i Christophers lane. B157 nivå 4 (Stage A+B)
-ligger redan i `main`.
+Last verified state: `fb3b1f8` (2026-06-01 UTC, steward-auto efter PR #142 — sync(jakob-be -> main): ADR 0034 path A copyDirectives + contact eval-fix + placeholder suppression).
+Nya PRs sedan föregående checkpoint: PR #142 — sync(jakob-be -> main): ADR 0034 path A
+copyDirectives + contact eval-fix + placeholder suppression.
 
 ## Branchmodellen (kort)
 
@@ -847,3 +840,16 @@ nu `40b7d29` (post-merge in i christopher-ui via merge-commit pending push).
 - **#116** (`cursor/dossier-candidate-intake-895d`) — `feat(backoffice): add dossier
   candidate intake from local files`. Backoffice-feature, ägs av jakob-be-lane.
   Do not start yet från christopher-ui's perspektiv.
+
+### 2026-06-01 UTC — current-focus.md före `efbb425`
+
+Last verified state: `efbb425` i `main` (2026-06-01 UTC, steward-auto efter PR #139 — sync: christopher-ui → main, UI/UX-batch + B155 UI + ADR 0034 väg B-UI). `jakob-be` har mergat in `origin/main` och bär de 10 backend-commitsen (topp `f62bd40`: ADR 0034 väg A copyDirectives, contact-route eval-fix, placeholder-contact-suppression) ovanpå — sync-PR `jakob-be → main` är nästa steg (kräver operatörs-OK + ev. live-test). Tre read-only scouts 2026-06-01 PM: backend-diff grön, PR-triage + #139-djupgranskning utan blocker. Alla guards gröna (governance, rules_sync, term_coverage --strict, ruff, sprintvakt) + 25 nya copydir-tester. **Riktigt LLM-anrop verifierat** (copyDirectiveModel, ej mock).
+Nya PRs sedan föregående checkpoint: PR #139 — sync: christopher-ui → main (UI/UX-batch + B155 UI + ADR 0034 väg B-UI), mergad. Öppna nu: #140 (`cursor/preview-runtime-bite-b-di → jakob-be`, draft, Bite B via dependency-injection), #138 + #141 (docs Cloud-setup till `main`, draft; #141 har en term-coverage-enradsfix kvar). Kommande: sync-PR `jakob-be → main`.
+
+Aktuell priordning + färsk orchestrator-handoff: se
+[`docs/handoff.md`](handoff.md) toppblocket. Kort: #139 (UI-batch inkl. B155
+FloatingChat-no-op + copyDirectives väg B-UI) är mergad till `main`. Nästa:
+(a) sync-PR `jakob-be → main` för backend väg A + eval-/placeholder-fixar
+(operatörs-OK); (b) Bite B (#140) mergas in i `jakob-be`, helst före sync-PR;
+(c) tre låg-impact UI-fynd kvar i Christophers lane. B157 nivå 4 (Stage A+B)
+ligger redan i `main`.
