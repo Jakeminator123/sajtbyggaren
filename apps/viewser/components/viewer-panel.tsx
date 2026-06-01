@@ -1,62 +1,21 @@
 "use client";
 
-import {
-  ExternalLink,
-  Check,
-  Loader2,
-  Monitor,
-  Smartphone,
-  Tablet,
-} from "lucide-react";
-import Image from "next/image";
+import { ExternalLink, Check, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { PromptStage } from "@/components/prompt-builder";
+import {
+  DEVICE_PRESET_WIDTHS,
+  useDevicePreset,
+} from "@/components/device-preset-context";
 import { cn } from "@/lib/utils";
 
-/**
- * Device — operatörens valda preview-bredd på desktop. Sätts via
- * device-toggle-baren (skylten ovanför iframe-canvasen) som constraint:ar
- * iframe-wrappern till en max-width matchande typiska viewports.
- *
- * Värden:
- *   - "mobile"  → 375px (iPhone SE / 12 mini bredd)
- *   - "tablet"  → 768px (iPad mini portrait)
- *   - "laptop"  → 1024px (vanlig laptop-canvas-bredd)
- *   - "full"    → ingen constraint (default; iframe fyller canvasen)
- *
- * Valet persisterar i sessionStorage så valet behålls tills tab/flik
- * stängs. Nästa gång samma operatör öppnar viewser i en ny tab börjar
- * det därför alltid på "full" (sessionStorage är per-tab, inte
- * cross-session).
- *
- * device-toggle döljs på mobile (`hidden md:flex`) eftersom enheten
- * SJÄLV är liten — det är redan en mobil-preview och toggeln skulle
- * bara ta plats utan värde.
- */
-type Device = "mobile" | "tablet" | "laptop" | "full";
-
-const DEVICE_WIDTHS: Record<Device, number | null> = {
-  mobile: 375,
-  tablet: 768,
-  laptop: 1024,
-  full: null,
-};
-
-const DEVICE_STORAGE_KEY = "viewser:device-preset";
-
-const DEVICE_OPTIONS: ReadonlyArray<{
-  id: Device;
-  label: string;
-  Icon: typeof Monitor;
-  width: number | null;
-}> = [
-  { id: "mobile", label: "375", Icon: Smartphone, width: 375 },
-  { id: "tablet", label: "768", Icon: Tablet, width: 768 },
-  { id: "laptop", label: "1024", Icon: Monitor, width: 1024 },
-  { id: "full", label: "Full", Icon: Monitor, width: null },
-];
+// Device-preset state + DEVICE_OPTIONS-listan lever numera i
+// `components/device-preset-context.tsx` så toggle-UI:t kan flyttas
+// från top-right av canvasen till FloatingChat:s footer utan
+// prop-drilling. ViewerPanel läser bara aktuell preset via
+// `useDevicePreset()`-hooken och stänger inte längre av setter:n.
 
 type ViewerPanelProps = {
   runId: string | null;
@@ -246,9 +205,13 @@ const IS_STACKBLITZ_MODE = VIEWSER_PREVIEW_MODE === "stackblitz";
 // hårdkodat "Förbereder StackBlitz-iframen." även i local-next-mode
 // där flödet faktiskt startar en lokal ``next start``-server. Liten
 // drift men ger fel mental modell. Reviewer-fynd post-PR #101.
+//
+// Texten är kundvänlig — inga tekniska termer (preview-server,
+// next start, StackBlitz, iframe) eftersom slutkunden inte ska
+// behöva förstå pipelinen för att vänta i lugn och ro.
 const PREVIEW_PREP_HINT = IS_LOCAL_NEXT_MODE
-  ? "Startar lokal preview-server (next start) på en ledig port 4100–4199."
-  : "Förbereder StackBlitz-iframen.";
+  ? "Snart kan du klicka runt på er sajt."
+  : "Laddar förhandsvisningen i webbläsaren.";
 
 function formatViewerError(caught: unknown): string {
   if (caught instanceof Error) {
@@ -307,63 +270,13 @@ export function ViewerPanel({
   } | null>(null);
   const [openingExternal, setOpeningExternal] = useState(false);
 
-  /**
-   * Device-preset (375/768/1024/full). Initialiseras ALLTID till "full"
-   * för att matcha SSR-renderingen — sessionStorage läses i en separat
-   * useEffect direkt efter mount och uppdaterar state synkront. Tidigare
-   * useState-initializer-läsningen orsakade hydration mismatch när
-   * operatören hade en sparad preset (server returnerade "full", klient
-   * "mobile") som React klagade på i konsolen vid första paint.
-   *
-   * Samma mönster som floating-chat.tsx:isMinimized-init.
-   */
-  const [devicePreset, setDevicePreset] = useState<Device>("full");
-  // Räknar om initial-läsning är klar, så vi inte persisterar "full"-
-  // default tillbaka över en faktiskt lagrad preset i window-effekten
-  // nedan (annars skulle första render skriva "full" innan vi hunnit
-  // läsa "mobile" från storage).
-  const deviceHydratedRef = useRef(false);
-
-  // setState wrappas i en async IIFE → setState körs efter `await`,
-  // vilket är "subscription-style" enligt React 19:s
-  // `react-hooks/set-state-in-effect`-regel (samma mönster som
-  // floating-chat.tsx + run-details-panel.tsx använder för
-  // post-mount-state-initialisering).
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      await Promise.resolve();
-      if (cancelled) return;
-      if (typeof window === "undefined") return;
-      const stored = window.sessionStorage.getItem(DEVICE_STORAGE_KEY);
-      // B153: "full" saknades tidigare i hydration-checken, vilket
-      // gjorde att en sparad full-preset inte restorerades explicit
-      // utan bara råkade matcha default-värdet. Det är inkonsekvent
-      // med övriga presets (alla restoreras explicit) och om default
-      // någonsin ändras kommer "full" att tappas. Inkluderar alla
-      // fyra giltiga device-preset-värden i listan.
-      if (
-        stored === "mobile" ||
-        stored === "tablet" ||
-        stored === "laptop" ||
-        stored === "full"
-      ) {
-        setDevicePreset(stored);
-      }
-      deviceHydratedRef.current = true;
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Persistera device-val när det ändras (men hoppa över första render
-  // innan hydration läst eventuell sparad preset).
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!deviceHydratedRef.current) return;
-    window.sessionStorage.setItem(DEVICE_STORAGE_KEY, devicePreset);
-  }, [devicePreset]);
+  // Device-preset hämtas från DevicePresetProvider (page.tsx → provider →
+  // ViewerPanel + FloatingChat). Tidigare hade ViewerPanel lokal state
+  // med sessionStorage-persistens, men efter att toggle-UI:t flyttats
+  // till FloatingChat:s footer ligger state lifted i contexten istället.
+  // Hydration-mönstret (initial = "full", post-mount-läs från storage)
+  // har följt med dit oförändrat så vi slipper SSR-mismatch.
+  const { devicePreset } = useDevicePreset();
 
   /**
    * Iframe-wrapper-stil. När devicePreset != "full" får wrappern en
@@ -373,7 +286,7 @@ export function ViewerPanel({
    * onödiga reflows i StackBlitz-iframen.
    */
   const previewWrapperStyle = useMemo(() => {
-    const width = DEVICE_WIDTHS[devicePreset];
+    const width = DEVICE_PRESET_WIDTHS[devicePreset];
     if (width === null) return undefined;
     return { maxWidth: `${width}px` };
   }, [devicePreset]);
@@ -771,12 +684,9 @@ export function ViewerPanel({
     !showFallback;
   const showBuildCard = isBuilding || isFinalizing;
 
-  // Device-toggle visas bara på desktop (md:+) och bara när en preview
-  // faktiskt visas (lokal preview eller StackBlitz embed). På empty/
-  // unavailable/loading-states är det meningslöst eftersom det inte
-  // finns någon iframe att constraint:a.
-  const showDeviceToggle =
-    !!runId && !showEmpty && !showUnavailable && !isBuilding && !showFallback;
+  // showDeviceToggle-flaggan tas bort härifrån: toggle-UI:t lever
+  // numera i FloatingChat:s footer (DevicePresetToggleBar) och visas
+  // när en sajt-preview är aktiv via samma synlighets-villkor där.
 
   return (
     <div
@@ -799,45 +709,6 @@ export function ViewerPanel({
           : "overflow-hidden bg-background",
       )}
     >
-      {/* Device-toggle bar (desktop only). Sitter top-2 right-2 med
-          subtle bg-card så den inte konkurrerar med själva sajt-previewn.
-          Klick på en preset sätter wrapper-bredd via state, vilket
-          gör att iframe-wrappern krymper inåt och centreras. */}
-      {showDeviceToggle ? (
-        <div
-          role="toolbar"
-          aria-label="Förhandsvisningsbredd"
-          className="border-border/60 bg-background/90 absolute top-2 right-2 z-[15] hidden items-center gap-0.5 rounded-full border p-0.5 shadow-sm backdrop-blur md:inline-flex"
-        >
-          {DEVICE_OPTIONS.map((option) => {
-            const isActive = devicePreset === option.id;
-            const Icon = option.Icon;
-            return (
-              <button
-                key={option.id}
-                type="button"
-                aria-pressed={isActive}
-                aria-label={
-                  option.width
-                    ? `Preview-bredd ${option.label}px`
-                    : "Full bredd"
-                }
-                onClick={() => setDevicePreset(option.id)}
-                className={
-                  "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium transition active:scale-95 " +
-                  (isActive
-                    ? "bg-foreground text-background shadow-sm"
-                    : "text-muted-foreground hover:text-foreground")
-                }
-              >
-                <Icon className="h-3.5 w-3.5" aria-hidden />
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-
       {/* Hero-bakgrundsvideo. Två separata videos: SM_hero.mp4
           (16:9 desktop-version med 3D-objekt skiftat höger via 78%
           object-position) och SM-mobile.mp4 (960x960 fyrkantig
@@ -911,9 +782,18 @@ export function ViewerPanel({
       {/* BuildProgressCard — dominant central laddningsmodul när
           bygget pågår. Absolut positionerad så cardet är garanterat
           centrerat på canvasen oavsett vad andra siblings gör i
-          flex-layouten. */}
+          flex-layouten.
+
+          När operatören iterar på en EXISTERANDE preview (followup-
+          mode) hålls föregående iframe mountad under bygge (se 1094
+          nedan) så hen ser v1 medan v2 byggs istället för en vit ruta.
+          Vi lägger då en semi-transparent backdrop på containern så
+          BuildProgressCard har klart fokus utan att helt dölja
+          föregående preview. För första-bygge (ingen tidigare iframe)
+          fungerar samma backdrop ovanpå tom canvas utan visuell
+          skillnad. */}
       {showBuildCard ? (
-        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-6">
+        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-background/85 px-6 backdrop-blur-sm">
           <div className="pointer-events-auto">
             {/* key={buildStage} forces a full remount on every stage
                 transition so elapsedSec restarts at 0 via useState(0)
@@ -956,8 +836,8 @@ export function ViewerPanel({
               <span className="text-foreground/60">så bygger vi den.</span>
             </h1>
             <p className="text-foreground/75 max-w-md text-[13.5px] leading-relaxed text-balance sm:text-[14px] md:text-[15px]">
-              Skriv vad sajten ska göra. Vi genererar Project Input, kör Quality
-              Gate och paketerar en preview du kan inspektera direkt här.
+              Berätta kort vad sajten ska göra. Vi planerar, bygger och visar
+              en förhandsvisning du kan klicka runt i direkt här.
             </p>
           </div>
         </div>
@@ -1000,25 +880,9 @@ export function ViewerPanel({
       {showFallback ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center px-6">
           <div className="border-border/60 bg-background/95 pointer-events-auto w-full max-w-[460px] rounded-3xl border p-7 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.25)] backdrop-blur-xl">
-            <div className="mb-5 flex items-center gap-3">
-              <span className="bg-muted/60 inline-flex h-10 w-10 items-center justify-center rounded-xl p-1.5">
-                <Image
-                  src="/LOGO_SM2.0.png"
-                  alt="Sajtmaskin"
-                  width={28}
-                  height={28}
-                  className="h-full w-full object-contain"
-                />
-              </span>
-              <div className="flex flex-1 flex-col leading-tight">
-                <span className="text-muted-foreground font-mono text-[9.5px] tracking-[0.22em] uppercase">
-                  Sajtbyggaren · preview
-                </span>
-                <span className="text-foreground text-[15px] font-semibold tracking-tight">
-                  Sajten är klar
-                </span>
-              </div>
-            </div>
+            <h2 className="text-foreground mb-4 text-[17px] font-semibold tracking-tight">
+              Sajten är klar
+            </h2>
 
             <p className="text-foreground/85 mb-3 text-[13px] leading-relaxed">
               {fallback?.kind === "firefox"
@@ -1102,16 +966,21 @@ export function ViewerPanel({
         BuildProgressCard (z-20), error-pre (z-20), unavailable/
         fallback (z-10) men över hero-bakgrunden.
       */}
-      {localPreviewUrl &&
-      !unavailable &&
-      !showEmpty &&
-      !isBuilding &&
-      !isFinalizing ? (
+      {localPreviewUrl && !unavailable && !showEmpty ? (
         // Wrapper-divet bär device-toggle constraint:en (maxWidth).
         // När devicePreset === "full" har wrappern ingen style så
         // iframen fyller hela canvasen (oförändrat default-beteende).
         // När en preset (375/768/1024) är vald får wrappern
         // max-width + mx-auto så iframen krymper och centreras.
+        //
+        // Iframen hålls mountad även under `isBuilding`/`isFinalizing`
+        // så operatören ser v1 medan v2 byggs (BuildProgressCard har
+        // bg-background/85 backdrop-blur-sm för fokus). Slipper vit
+        // canvas mellan iterationer. Om backenden stänger v1-server
+        // för att starta v2 kan iframen visa ERR_CONNECTION_REFUSED
+        // kort — backdrop-blurren slöjar det visuellt och progress-
+        // cardet flyttar fokus. Inga visuella regressioner för
+        // första-bygget eftersom localPreviewUrl då är null.
         <div
           className="absolute inset-0 z-[5] mx-auto h-full w-full bg-white transition-[max-width] duration-300 ease-out"
           style={previewWrapperStyle}
@@ -1160,12 +1029,14 @@ export function ViewerPanel({
 
 /**
  * Central laddningskort som visas i mitten av canvasen under hela
- * /api/prompt-cykeln. Stegmarkören visar var vi är i pipelinen:
+ * /api/prompt-cykeln. Stegmarkören visar var vi är i pipelinen.
  *
- *   1. Förbereder brief
- *   2. Genererar Project Input
- *   3. Bygger sajt
- *   4. Startar preview
+ * Texterna är medvetet kundvänliga — slutoperatorn är inte tekniker
+ * och behöver inte se "briefModel", "Project Input", "npm install",
+ * "Next.js-sandbox" eller liknande. Vi beskriver vad SOM HÄNDER, inte
+ * VILKEN modul som kör. Den tekniska pipelinen lever kvar i kod-
+ * kommentarer och `current-focus.md` för utvecklare som behöver
+ * felsöka.
  *
  * Mappas från PromptStage så vi kan visa rätt aktivt steg medan
  * `executeBuild()` jobbar.
@@ -1177,22 +1048,22 @@ const BUILD_STEPS: ReadonlyArray<{
 }> = [
   {
     id: "prepare",
-    title: "Förbereder brief",
-    hint: "Vi paketerar dina svar till en master-prompt.",
+    title: "Läser dina svar",
+    hint: "Vi går igenom det du har fyllt i i wizarden.",
   },
   {
     id: "generate",
-    title: "Genererar Project Input",
-    hint: "briefModel extraherar mål, ton och kapabiliteter.",
+    title: "Planerar sajten",
+    hint: "Vi väljer rätt struktur, ton och funktioner för er verksamhet.",
   },
   {
     id: "build",
-    title: "Bygger sajt",
-    hint: "npm install + Next.js-bygge i en ren sandbox. Första bygget tar 1–3 minuter eftersom node_modules behöver installeras från noll.",
+    title: "Bygger sajten",
+    hint: "Vi monterar alla sidor och bilder. Första bygget tar 1–3 minuter, sedan går det snabbare.",
   },
   {
     id: "preview",
-    title: "Startar preview",
+    title: "Öppnar förhandsvisning",
     hint: PREVIEW_PREP_HINT,
   },
 ];
@@ -1231,24 +1102,10 @@ function BuildProgressCard({ stage }: { stage: PromptStage }) {
 
   return (
     <div className="border-border/60 bg-background/95 w-full max-w-[560px] rounded-3xl border p-9 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.25)] backdrop-blur-xl">
-      <div className="mb-6 flex items-center gap-3">
-        <span className="bg-muted/60 inline-flex h-10 w-10 items-center justify-center rounded-xl p-1.5">
-          <Image
-            src="/LOGO_SM2.0.png"
-            alt="Sajtmaskin"
-            width={28}
-            height={28}
-            className="h-full w-full object-contain"
-          />
-        </span>
-        <div className="flex flex-1 flex-col leading-tight">
-          <span className="text-muted-foreground font-mono text-[9.5px] tracking-[0.22em] uppercase">
-            Sajtbyggaren · build
-          </span>
-          <span className="text-foreground text-[15px] font-semibold tracking-tight">
-            Bygger din sajt
-          </span>
-        </div>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <h2 className="text-foreground text-[17px] font-semibold tracking-tight">
+          Bygger din sajt
+        </h2>
         <span className="bg-muted/50 text-foreground rounded-full px-2.5 py-1 font-mono text-[11px] tracking-tight tabular-nums">
           {minutes}:{seconds}
         </span>

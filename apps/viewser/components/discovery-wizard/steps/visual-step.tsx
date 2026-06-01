@@ -37,7 +37,6 @@ import {
   CollapsibleHelp,
   FieldLabel,
   FieldStack,
-  MetadataPanel,
   SectionHeader,
   TextField,
   TextareaField,
@@ -82,10 +81,6 @@ export function VisualStep({
     [family, answers.siteType],
   );
   const vibes = useMemo(() => vibesForScaffold(scaffoldHint), [scaffoldHint]);
-  const selectedVibe = useMemo(
-    () => (answers.vibe.vibeId ? findVibe(answers.vibe.vibeId) : undefined),
-    [answers.vibe.vibeId],
-  );
   // Preview-rubrik = företagsnamn om ifyllt, annars vibens label —
   // ger operatören en personlig "så här ser det ut för MIN sajt"-känsla
   // när hen har skrivit företagsnamn i foundation.
@@ -226,27 +221,10 @@ export function VisualStep({
 
   return (
     <FieldStack>
-      {/* CONTEXT-CHIPS — visar vad foundation har lett till (family →
-          scaffold → default-vibe). Minimalism v2: ligger nu bakom en
-          collapsible MetadataPanel så vibe-griden är det första
-          operatören möter. Klicka för att se vilka steg-1-beslut
-          som styr filtreringen. */}
-      {family ? (
-        <MetadataPanel
-          id="visual-context"
-          title="Foundation-beslut som styr detta steg"
-          subtitle="Family → scaffold → default-vibe"
-        >
-          <ContextChips
-            familyLabel={family.label}
-            scaffoldHint={family.scaffoldHint}
-            defaultVibe={findVibe(family.defaultVariantId)?.label ?? family.defaultVariantId}
-            selectedVibeLabel={selectedVibe?.label}
-          />
-        </MetadataPanel>
-      ) : null}
-
-      {/* ESSENTIALS — vibe + tonarter ger 90% av personlighet. */}
+      {/* Foundation-beslut-panel (family → scaffold → default-vibe)
+          togs bort 2026-05-26 efter operator-feedback. Var tekniskt
+          transparens-block som inte tillförde värde för slutkunden.
+          ESSENTIALS — vibe + tonarter ger 90% av personlighet. */}
       <div>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
@@ -708,78 +686,6 @@ function VibeCard({
         </p>
       </div>
     </button>
-  );
-}
-
-/**
- * ContextChips — visas högst upp i visual-steget. Berättar för
- * operatören vilka foundation-beslut som styr vibe-listan, scaffold-
- * mapping och default-vibe. Den enda "klickbara" effekten i denna
- * iteration är hover-tooltip — själva navigeringen tillbaka till
- * foundation sker via sidebar i wizardens chrome. Här fokuserar vi
- * på TRANSPARENS, inte navigation, så operatören INSTANT förstår
- * varför just dessa vibes visas.
- */
-function ContextChips({
-  familyLabel,
-  scaffoldHint,
-  defaultVibe,
-  selectedVibeLabel,
-}: {
-  familyLabel: string;
-  scaffoldHint: string;
-  defaultVibe: string;
-  selectedVibeLabel?: string;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <ContextChip label="Family" value={familyLabel} />
-      <span className="text-muted-foreground/60 text-[10px]">→</span>
-      <ContextChip label="Scaffold" value={scaffoldHint} mono />
-      <span className="text-muted-foreground/60 text-[10px]">→</span>
-      <ContextChip
-        label={selectedVibeLabel ? "Vibe" : "Default-vibe"}
-        value={selectedVibeLabel ?? defaultVibe}
-        emphasis={!!selectedVibeLabel}
-      />
-    </div>
-  );
-}
-
-function ContextChip({
-  label,
-  value,
-  mono,
-  emphasis,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-  emphasis?: boolean;
-}) {
-  return (
-    <span
-      className={[
-        "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10.5px]",
-        emphasis
-          ? "border-foreground/40 bg-foreground/[0.04] text-foreground"
-          : "border-border/60 bg-muted/40 text-muted-foreground",
-      ].join(" ")}
-      title={`${label}: ${value}`}
-    >
-      <span className="font-mono text-[9px] tracking-[0.18em] uppercase opacity-70">
-        {label}
-      </span>
-      <span
-        className={
-          mono
-            ? "text-foreground font-mono text-[10.5px]"
-            : "text-foreground font-medium"
-        }
-      >
-        {value}
-      </span>
-    </span>
   );
 }
 

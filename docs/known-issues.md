@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 130 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 14 aktiva, 0 misplaced (av 0), 5 unknown, 131 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -226,18 +226,8 @@ pass; B119-B122 öppna och listade nedan.
   platsdata utan signalering. Fix-skiss: prova flera mönster i fallande
   ordning, inklusive `,`-separator och engelska postnummer-format.
   Källa: extern reviewer 2026-05-18 (runda 2). Fix: open. Test: open.
-- **`B122` Låg** - `apps/viewser/components/prompt-builder.tsx`
-  växlar från `thinking` till `building`-stage via `setTimeout(...,
-  1500)` istället för på en faktisk backend-signal. Det fungerar i
-  praktiken eftersom `/api/prompt` typiskt tar > 1.5s, men en
-  prompt som returnerar snabbt (cache hit, valideringsfel) ger
-  operatören en falsk "Bygger sajt"-vy innan svaret faktiskt finns.
-  Värre: en hängd prompt visar `building` direkt fast den fastnat
-  i `thinking`-fasen, vilket ger fel mental modell. Inte backend-bugg
-  men UI-signalering. Fix-skiss: skicka faktisk stage-signal från
-  `/api/prompt` (t.ex. via Server-Sent Events eller separat
-  `/api/prompt-status?runId=`-poll). Källa: extern reviewer
-  2026-05-18 (runda 2). Fix: open. Test: open.
+<!-- B122 stängd 2026-05-27 (SHA `7b6fb6c`) — se Stängda-sektionen. -->
+
 
 ### Extern reviewer-triage 2026-05-18 (post-PR-#31 christopher-ui-integration)
 
@@ -255,8 +245,13 @@ integrate christopher-ui discovery and asset workflow`, merge
   kräver beslut om vilken plats som är kanonisk: `apps/viewser/public/`
   serveras direkt av Next.js dev-servern och är troligen den enda
   faktiskt använda; `/public/` på repo-roten har inget Next.js-app
-  som monterar den. Källa: extern reviewer 2026-05-18. Fix: open.
-  Test: open.
+  som monterar den. Källa: extern reviewer 2026-05-18.
+  Status 2026-05-27: LOGO-halvan löst — `LOGO_SM2.0.png`-kopiorna är
+  raderade ur git i båda mapparna efter logo-byte till
+  `sajtbyggaren_logo.png` (commits `08f8515`, `f05dfe6`); kvarstår är
+  `SM_hero.mp4`-duplikaten som fortfarande används aktivt i hero-
+  videon på både mobil och desktop och därför kräver operatör-beslut
+  om kanonisk plats innan entry kan stängas helt. Fix: open. Test: open.
 ### Övriga öppna
 
 - **`B125` Hög** (produktblocker innan launch) - Embedded
@@ -591,6 +586,29 @@ samma kodmönster lever vidare här — därav posten:
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B122` Låg** (stängd 2026-05-27, NDJSON-stream för riktig stage-signal) -
+  `apps/viewser/components/prompt-builder.tsx` växlade från `thinking`
+  till `building`-stage via `setTimeout(..., 1500)` istället för på en
+  faktisk backend-signal. Det fungerade i praktiken eftersom
+  `/api/prompt` typiskt tog > 1.5s, men en prompt som returnerade
+  snabbt (cache hit, valideringsfel) gav operatören en falsk
+  "Bygger sajt"-vy innan svaret faktiskt fanns. Värre: en hängd
+  prompt visade `building` direkt fast den fastnat i `thinking`-
+  fasen, vilket gav fel mental modell. Inte backend-bugg men
+  UI-signalering. Källa: extern reviewer 2026-05-18 (runda 2). Fix:
+  `apps/viewser/app/api/prompt/route.ts` exponerar nu en NDJSON-
+  stream när klienten skickar `Accept: application/x-ndjson`, med
+  två events — `{stage:"building"}` exakt mellan Phase 1
+  (`runPromptToProjectInput`) och Phase 2 (`runBuild`), samt
+  `{stage:"done", ...result}` som slutevent. PromptBuilder läser
+  streamen via `response.body.getReader()` och flippar stage på
+  riktig signal istället för timeout. `setTimeout(1500)`-blocket är
+  borta. Bakåtkompatibelt: `floating-chat.tsx` och
+  `use-followup-build.ts` skickar inte Accept-headern och får
+  fortfarande synkron `NextResponse.json` med oförändrad shape.
+  Fix: `7b6fb6c`. Test:
+  `tests/test_viewser_files.py::test_prompt_route_emits_ndjson_stream_on_accept_header`
+  + `tests/test_viewser_files.py::test_prompt_builder_exposes_followup_mode_and_consumes_ndjson_stream`.
 - **`B157` Hög** (stängd 2026-05-27, akut-fix nivå 1 —
   `stopAndWaitPreviewServer` + Windows file-lock-release) - Lokala
   follow-up-builds raiserade `PermissionError: [WinError 5]` på

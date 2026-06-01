@@ -161,6 +161,45 @@ export type AssetsStepProps = {
   onChange: (next: Partial<WizardAnswers>) => void;
 };
 
+/**
+ * Auto-hero-pick från galleri.
+ *
+ * När operatorn laddar upp galleri-bilder och inte har en explicit hero
+ * än, picker vi bästa kandidaten utifrån GPT Vision-klassificeringen
+ * som redan körs av upload-asset/api (AssetRef.placement +
+ * AssetRef.visionConfidence). Detta uppfyller operatorns krav:
+ *
+ *   "GPT Vision ska beräkna vilken av bilderna som passar bäst [som
+ *   hero] från dom bilderna/filmerna som kunden laddar upp i
+ *   mediamaterial."
+ *
+ * Prio-ordning:
+ *   1. placement === "home" och visionConfidence === "high"
+ *   2. placement === "home" och visionConfidence === "medium"
+ *   3. placement === "home" (oavsett confidence)
+ *   4. Första bilden i listan som fallback
+ *
+ * Auto-promote sker BARA om operatorn inte redan har en hero — om hen
+ * tar bort hero efter promoten promoteras INTE nya bilder igen (vi
+ * antar att operator-handlingen är medveten).
+ */
+function pickHeroFromGallery(gallery: WizardAssets["gallery"]) {
+  if (gallery.length === 0) return null;
+  const high = gallery.find(
+    (item) =>
+      item.placement === "home" && item.visionConfidence === "high",
+  );
+  if (high) return high;
+  const medium = gallery.find(
+    (item) =>
+      item.placement === "home" && item.visionConfidence === "medium",
+  );
+  if (medium) return medium;
+  const anyHome = gallery.find((item) => item.placement === "home");
+  if (anyHome) return anyHome;
+  return gallery[0] ?? null;
+}
+
 export function AssetsStep({ answers, onChange }: AssetsStepProps) {
   const updateAssets = useCallback(
     (mutator: (current: WizardAssets) => WizardAssets) => {
@@ -260,10 +299,24 @@ export function AssetsStep({ answers, onChange }: AssetsStepProps) {
       <AssetDropzone
         role="gallery"
         mode="multi"
-        emptyLabel="Släpp galleribilder här"
-        hintLabel="Upp till ~20 bilder. Du kan ändra ordning/placering efteråt."
+        emptyLabel="Släpp galleribilder eller filmer här"
+        hintLabel="Upp till ~20 bilder. Vi väljer automatiskt bästa hero-bilden om du inte laddat upp en separat."
         onUploaded={(refs) =>
-          updateAssets((a) => ({ ...a, gallery: [...a.gallery, ...refs] }))
+          updateAssets((a) => {
+            const nextGallery = [...a.gallery, ...refs];
+            // Auto-hero-pick från galleri (GPT Vision-driven). Endast när
+            // operatorn inte redan har en hero — vi överskriver INTE en
+            // explicit upload eller en tidigare auto-pick som operatorn
+            // medvetet tagit bort. Se `pickHeroFromGallery` ovan för
+            // prio-ordningen (placement + visionConfidence).
+            if (!a.heroImage) {
+              const candidate = pickHeroFromGallery(nextGallery);
+              if (candidate) {
+                return { ...a, gallery: nextGallery, heroImage: candidate };
+              }
+            }
+            return { ...a, gallery: nextGallery };
+          })
         }
       />
 

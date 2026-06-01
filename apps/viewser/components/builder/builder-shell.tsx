@@ -208,7 +208,7 @@ export function BuilderShell({
       {
         id: "history",
         label: "Versioner",
-        description: runId ? `Aktiv: ${runId}` : "Tidigare bygg",
+        description: "Bläddra tidigare bygg",
         icon: "history",
         group: "Bygg",
         onSelect: onOpenHistory,
@@ -242,7 +242,6 @@ export function BuilderShell({
     ],
     [
       isBuilding,
-      runId,
       openDialogFactory,
       onOpenHistory,
       onOpenConsole,
@@ -265,8 +264,14 @@ export function BuilderShell({
         onBuildStart={handleBuildStart}
         onBuildEnd={handleBuildEnd}
         onBuildDone={onBuildDone}
+        tools={
+          <BuilderActions
+            actions={actions}
+            pulsing={isBuilding}
+            variant="inline"
+          />
+        }
       />
-      <BuilderActions actions={actions} pulsing={isBuilding} side="left" />
 
       <VariantPickerDialog
         open={openDialog === "variant"}
