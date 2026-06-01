@@ -30,36 +30,10 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `4c473cb` (2026-06-01 kväll UTC, `jakob-be` hardening +
-PR #143 + Codex-review-fixar (B161/B162), ovanpå PR #142-synken `fb3b1f8`; EJ i
-`main` än — sync-PR **#144** öppen och väntar leveransfönster-OK). `origin/main`
-(`48d5ca0`) är fullt innehållen i `jakob-be` → sync-PR är konfliktfri (jakob-be
-10 commits före, 0 efter). Bug-scope nu: **15 aktiva / 135 stängda**.
-Nya commits sedan föregående checkpoint (alla på `jakob-be`, opushad mot `main`):
-- `74ed629` fix(dev): kill-dev-trees fångar orphan preview/dev node-processer
-  (föräldraträd-matchning + TCP-port-lyssnare 3000-3001/4100-4199 + `--dry-run`/
-  `--verbose`).
-- `2e0c55f` fix(hardening): B158 (hero släpper placeholder-`tel:`), B159
-  (kontaktsida/`/hitta-hit` får ärlig kontakt-CTA), copyDirective-edge-cases
-  (namn-scope / reject-ord-boundary / trailing-instruktion), Streamlit-floor
-  `>=1.49`. Fulltestad, 7 explicita filer.
-- `a90215e` fix(discovery): B120 stad-extraktion läser alla addressLines +
-  flerordiga orter.
-- `d036067` docs(steward): known-issues stänger B158/B159, B120-progress + ny
-  B160 (logo-Image, Christopher-lane), B155-hardening-not, GAP-annotation,
-  Christopher-handoff (`msg-0025`). Bug-scope: **15 aktiva / 133 stängda**.
-- `a3c47a7` docs(focus): dokumenterade PR #143 + markerade #139 mergad.
-- `2320e34` refactor(build): **PR #143 mergad** (squash, base `jakob-be`) —
-  npm/subprocess-helpers flyttade till `packages/generation/build/subprocesses.py`;
-  `scripts.build_site` behåller facade + re-export `run_npm` (monkeypatchbar).
-  Behavior-preserving (AST-verifierad), Scout-grön, full pytest exit 0. PR-branch +
-  duplikat `cursor/refactor-build-site-slice-1` raderade.
-- `63e4758` fix(codex-review): B161 (okvoterad include-token "inkludera
-  TEST-JAKOB i hero" → ej längre tyst no-op) + B162 (TS/Python-paritet i
-  `local-preview-server.ts:readActiveBuildDir` — avvisar närvarande icke-string
-  buildPath). tsc grön; nya tester. (B-IDs registrerade i steward-commit denna.)
-Nästa: #140 Bite B-review (in i `jakob-be`), docs-PR #138/#141-konsolidering,
-sedan sync-PR `jakob-be -> main` för hela batchen när operatören ger OK.
+Last verified state: `fba03d0` (2026-06-01 UTC, steward-auto efter PR #144 — sync(jakob-be -> main): hardening (B158/B159/B120/copyDirectives) + npm-subprocess refactor (#143) + Codex fixes (B161/B162)).
+Nya PRs sedan föregående checkpoint: PR #143 — refactor(build): extract npm subprocess
+helpers; PR #144 — sync(jakob-be -> main): hardening (B158/B159/B120/copyDirectives) +
+npm-subprocess refactor (#143) + Codex fixes (B161/B162).
 
 ## Branchmodellen (kort)
 
@@ -893,3 +867,36 @@ FloatingChat-no-op + copyDirectives väg B-UI) är mergad till `main`. Nästa:
 (operatörs-OK); (b) Bite B (#140) mergas in i `jakob-be`, helst före sync-PR;
 (c) tre låg-impact UI-fynd kvar i Christophers lane. B157 nivå 4 (Stage A+B)
 ligger redan i `main`.
+
+### 2026-06-01 UTC — current-focus.md före `4c473cb`
+
+Last verified state: `4c473cb` (2026-06-01 kväll UTC, `jakob-be` hardening +
+PR #143 + Codex-review-fixar (B161/B162), ovanpå PR #142-synken `fb3b1f8`; EJ i
+`main` än — sync-PR **#144** öppen och väntar leveransfönster-OK). `origin/main`
+(`48d5ca0`) är fullt innehållen i `jakob-be` → sync-PR är konfliktfri (jakob-be
+10 commits före, 0 efter). Bug-scope nu: **15 aktiva / 135 stängda**.
+Nya commits sedan föregående checkpoint (alla på `jakob-be`, opushad mot `main`):
+- `74ed629` fix(dev): kill-dev-trees fångar orphan preview/dev node-processer
+  (föräldraträd-matchning + TCP-port-lyssnare 3000-3001/4100-4199 + `--dry-run`/
+  `--verbose`).
+- `2e0c55f` fix(hardening): B158 (hero släpper placeholder-`tel:`), B159
+  (kontaktsida/`/hitta-hit` får ärlig kontakt-CTA), copyDirective-edge-cases
+  (namn-scope / reject-ord-boundary / trailing-instruktion), Streamlit-floor
+  `>=1.49`. Fulltestad, 7 explicita filer.
+- `a90215e` fix(discovery): B120 stad-extraktion läser alla addressLines +
+  flerordiga orter.
+- `d036067` docs(steward): known-issues stänger B158/B159, B120-progress + ny
+  B160 (logo-Image, Christopher-lane), B155-hardening-not, GAP-annotation,
+  Christopher-handoff (`msg-0025`). Bug-scope: **15 aktiva / 133 stängda**.
+- `a3c47a7` docs(focus): dokumenterade PR #143 + markerade #139 mergad.
+- `2320e34` refactor(build): **PR #143 mergad** (squash, base `jakob-be`) —
+  npm/subprocess-helpers flyttade till `packages/generation/build/subprocesses.py`;
+  `scripts.build_site` behåller facade + re-export `run_npm` (monkeypatchbar).
+  Behavior-preserving (AST-verifierad), Scout-grön, full pytest exit 0. PR-branch +
+  duplikat `cursor/refactor-build-site-slice-1` raderade.
+- `63e4758` fix(codex-review): B161 (okvoterad include-token "inkludera
+  TEST-JAKOB i hero" → ej längre tyst no-op) + B162 (TS/Python-paritet i
+  `local-preview-server.ts:readActiveBuildDir` — avvisar närvarande icke-string
+  buildPath). tsc grön; nya tester. (B-IDs registrerade i steward-commit denna.)
+Nästa: #140 Bite B-review (in i `jakob-be`), docs-PR #138/#141-konsolidering,
+sedan sync-PR `jakob-be -> main` för hela batchen när operatören ger OK.

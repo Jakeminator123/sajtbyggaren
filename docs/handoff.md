@@ -1,8 +1,10 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-01 kväll UTC. `jakob-be` HEAD = `2320e34` (hardening-batch +
-PR #143 refactor-merge). `main` = `fb3b1f8` (oförändrad sedan PR #142).
-`jakob-be` är **inte** synkad till `main` än — väntar operatörs-OK för sync-PR.
+**Datum:** 2026-06-01 UTC, steward-auto efter PR #144 — sync(jakob-be -> main): hardening (B158/B159/B120/copyDirectives) + npm-subprocess refactor (#143) + Codex fixes (B161/B162). Verifierad `main` är `fba03d0`.
+
+Nya PRs sedan föregående checkpoint: PR #143 — refactor(build): extract npm subprocess
+helpers; PR #144 — sync(jakob-be -> main): hardening (B158/B159/B120/copyDirectives) +
+npm-subprocess refactor (#143) + Codex fixes (B161/B162).
 
 ## Mini-handoff 2026-06-01 sen eftermiddag — copyDirective fix + runtime-ordval
 
@@ -794,3 +796,9 @@ ADR 0034 väg B-UI) är mergad till `main`; `origin/main` är `efbb425`
 (steward-auto efter `f22d27a`). `jakob-be` har mergat in `origin/main` och bär
 de 10 backend-commitsen (topp `f62bd40`) ovanpå — sync-PR `jakob-be → main` är
 nästa steg (kräver operatörs-OK).
+
+### 2026-06-01 UTC — handoff.md före `4c473cb`
+
+**Datum:** 2026-06-01 kväll UTC. `jakob-be` HEAD = `2320e34` (hardening-batch +
+PR #143 refactor-merge). `main` = `fb3b1f8` (oförändrad sedan PR #142).
+`jakob-be` är **inte** synkad till `main` än — väntar operatörs-OK för sync-PR.
