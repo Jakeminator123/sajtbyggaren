@@ -90,9 +90,9 @@ const KEYBOARD_SHORTCUTS: ReadonlyArray<{
   label: string;
   keys: ReadonlyArray<string>;
 }> = [
-  { label: "Fortsätt till nästa tab", keys: ["⌘↵", "⌘→"] },
+  { label: "Fortsätt till nästa steg", keys: ["⌘↵", "⌘→"] },
   { label: "Gå tillbaka", keys: ["⌘←"] },
-  { label: "Hoppa till tab 1–3", keys: ["⌘1", "⌘2", "⌘3"] },
+  { label: "Hoppa till ett steg", keys: ["⌘1", "⌘2", "⌘3", "⌘4"] },
   { label: "Visa/dölj denna lista", keys: ["?", "⌘/"] },
   { label: "Stäng wizarden", keys: ["esc"] },
 ];
@@ -174,6 +174,10 @@ export function DiscoveryWizard({
   const [helpOpen, setHelpOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
+  // Submit-overlayn väntar 700 ms innan onComplete (bygg-start) körs. Spara
+  // timern så vi kan avbryta den om operatören stänger wizarden (Esc) under
+  // väntan — annars startade ett bygge efter att hen backat ut.
+  const submitTimerRef = useRef<number | null>(null);
 
   const fillDemo = useCallback(() => {
     if (DEMO_PROFILES.length === 0) return;
@@ -195,8 +199,35 @@ export function DiscoveryWizard({
       if (demoNoticeTimerRef.current) {
         clearTimeout(demoNoticeTimerRef.current);
       }
+      if (submitTimerRef.current !== null) {
+        clearTimeout(submitTimerRef.current);
+        submitTimerRef.current = null;
+      }
     };
   }, []);
+
+  // När wizarden stängs (Esc/klick på X) nollställer vi submitting-state.
+  // Render-time-justering (i st.f. effect) undviker React 19:s
+  // ``set-state-in-effect``-varning, precis som i more-info-dialog.tsx.
+  // Inga refs rörs här — ``react-hooks/refs`` förbjuder ref-access i render;
+  // timer-avbrott + ref-nollställning sker i effekten nedan.
+  const [wizardWasOpen, setWizardWasOpen] = useState(open);
+  if (open !== wizardWasOpen) {
+    setWizardWasOpen(open);
+    if (!open) setIsSubmitting(false);
+  }
+
+  // Avbryt en pågående submit-timer när wizarden stängs så 700 ms-timern
+  // inte fyrar av onComplete (bygg-start) efter att operatören backat ut.
+  // Refs får läsas/skrivas i effekter (men inte i render).
+  useEffect(() => {
+    if (open) return;
+    if (submitTimerRef.current !== null) {
+      clearTimeout(submitTimerRef.current);
+      submitTimerRef.current = null;
+    }
+    submittingRef.current = false;
+  }, [open]);
 
   const finish = useCallback(() => {
     if (submittingRef.current || isSubmitting) return;
@@ -210,7 +241,8 @@ export function DiscoveryWizard({
     }
     submittingRef.current = true;
     setIsSubmitting(true);
-    window.setTimeout(() => {
+    submitTimerRef.current = window.setTimeout(() => {
+      submitTimerRef.current = null;
       onComplete(answers, discoveryOptions);
     }, 700);
   }, [answers, branch, discoveryOptions, isSubmitting, onComplete]);
@@ -252,7 +284,10 @@ export function DiscoveryWizard({
           return;
         }
       }
-      if ((isMod && event.key === "/") || (event.key === "?" && !inEditable)) {
+      if (
+        ((isMod && event.key === "/") || event.key === "?") &&
+        !inEditable
+      ) {
         event.preventDefault();
         setHelpOpen((prev) => !prev);
         return;
@@ -357,7 +392,7 @@ export function DiscoveryWizard({
 
         <div
           role="tablist"
-          aria-label="Discovery-steg"
+          aria-label="Steg i guiden"
           className="border-border/60 flex w-full items-stretch gap-0 border-b px-5 sm:justify-center sm:gap-1 sm:px-8"
         >
           {WIZARD_STEP_ORDER.map((id, idx) => {
@@ -430,9 +465,10 @@ export function DiscoveryWizard({
                       kvar i Mer information-popupen). */}
                   <AssetsStep answers={answers} onChange={updateAnswers} />
 
-                  {/* Telefon-nudge: utan ett riktigt nummer fyller backend
-                      i platshållaren "+46 8 000 00 00" som renderas publikt
-                      på Hero + /kontakt. Vi nudgar bara när fältet är tomt
+                  {/* Telefon-nudge: utan ett riktigt nummer döljer backend
+                      (B158/B159) kontaktfältet publikt och visar en allmän
+                      "Hör av dig"-knapp i stället — sajten får alltså ingen
+                      telefon/Ring-knapp. Vi nudgar bara när fältet är tomt
                       (skrapning fyller det automatiskt annars) och
                       djuplänkar direkt till Kontakt-fliken så operatören
                       inte behöver leta. Ren UI/UX — payloaden är oförändrad. */}
@@ -448,7 +484,7 @@ export function DiscoveryWizard({
                             Inget telefonnummer angivet
                           </p>
                           <p className="text-muted-foreground text-[11.5px] leading-relaxed">
-                            Utan nummer visar sajten en platshållare. Lägg till ditt riktiga nummer så blir kontaktvägen trovärdig.
+                            Utan nummer får sajten ingen Ring-knapp — besökarna ser bara en allmän kontaktknapp. Lägg till ditt riktiga nummer så når kunderna er direkt.
                           </p>
                         </div>
                       </div>
@@ -666,7 +702,7 @@ export function DiscoveryWizard({
                   Påbörjar bygge av din sajt…
                 </p>
                 <p className="text-muted-foreground text-[12px]">
-                  Pipelinen kör Discovery → Plan → Codegen i bakgrunden.
+                  Vi läser dina svar, planerar sidorna och bygger sajten.
                 </p>
               </div>
             </div>

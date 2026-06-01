@@ -1161,9 +1161,19 @@ def test_run_details_panel_renders_placeholder_contact_warning() -> None:
         "Warning copy must include the Swedish phrase 'Kontakt-fält är "
         "platshållare' — operators see the badge but not the JSON."
     )
-    assert "Slutanvändaren ser dummy-värden tills operatör fyllt dem." in panel_text, (
-        "Warning copy must explain the consequence in Swedish so the "
-        "operator can act before sharing the preview with a customer."
+    # B158/B159 (2e0c55f, 2026-06-01): the published site no longer renders
+    # the dummy values — it suppresses them and shows a generic contact CTA.
+    # The warning copy must therefore say the fields are HIDDEN (real contact
+    # info missing), not that visitors see dummies.
+    assert "Sajten döljer fälten publikt" in panel_text, (
+        "Warning copy must reflect post-B158/B159 behaviour: the site hides "
+        "placeholder contact fields and shows a generic CTA instead of "
+        "publishing dummy values. The old 'Slutanvändaren ser dummy-värden' "
+        "copy is now factually wrong."
+    )
+    assert "Slutanvändaren ser dummy-värden" not in panel_text, (
+        "Stale pre-suppression copy must be removed — it claims visitors see "
+        "dummy contact values, which B158/B159 no longer do."
     )
     assert "placeholder-contact-warning" in panel_text, (
         "Warning element must carry data-testid='placeholder-contact-warning' "
@@ -2991,12 +3001,24 @@ def test_handoff_c_more_info_dialog_resets_active_tab_on_open() -> None:
     # Render-tids reset: open !== wasOpen → setActiveTab(initialTab).
     assert re.search(
         r"if \(open !== wasOpen\)\s*\{\s*setWasOpen\(open\);\s*"
+        r"setTrackedInitialTab\(initialTab\);\s*"
         r"if \(open\)\s*setActiveTab\(initialTab\);",
         content,
         re.DOTALL,
     ), (
         "MoreInfoDialog måste nollställa activeTab till initialTab på "
         "open-flanken via render-tids wasOpen-mönstret"
+    )
+    # initialTab-byte MEDAN dialogen är öppen ska också byta flik (djuplänk
+    # som byter mål utan att stänga). Annars hängde activeTab kvar.
+    assert re.search(
+        r"else if \(open && initialTab !== trackedInitialTab\)\s*\{\s*"
+        r"setTrackedInitialTab\(initialTab\);\s*setActiveTab\(initialTab\);",
+        content,
+        re.DOTALL,
+    ), (
+        "MoreInfoDialog måste byta flik när initialTab ändras medan open "
+        "redan är true (annars följer djuplänken inte med)"
     )
     # Dialog ska drivas direkt av parent's onOpenChange (ingen wrapper
     # längre — reset:en bor i render-mönstret ovan).
@@ -3055,5 +3077,113 @@ def test_b160_logo_image_has_explicit_auto_width() -> None:
             f"{path.name}: logo-Image måste ha style={{ width: 'auto' }} "
             "för att tysta Next:s aspect-ratio-varning (B160)"
         )
+
+
+def test_builder_followup_drives_buildstage_via_real_trace_signal() -> None:
+    """Scout-fynd (P1): i builder-läge drevs ``buildStage`` aldrig under
+    follow-ups (``onStageChange={builderActive ? undefined : setBuildStage}``
+    stänger av PromptBuilder:s rapport), så ViewerPanel:s BuildProgressCard
+    frös på föregående bygges sista stage och stegmarkören hoppade direkt
+    till sista steget.
+
+    Fixen trådar ``onStageChange`` page.tsx → BuilderShell → FloatingChat och
+    driver stegen från den RIKTIGA trace.ndjson-signalen
+    (``useBuildTracePolling.currentPhase``), inte en setTimeout-flip (jfr
+    B122). Lås kedjan så den inte tyst kopplas bort igen.
+    """
+    page = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+    shell = (
+        VIEWSER_DIR / "components" / "builder" / "builder-shell.tsx"
+    ).read_text(encoding="utf-8")
+    chat = (
+        VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx"
+    ).read_text(encoding="utf-8")
+
+    # page.tsx måste skicka setBuildStage till BuilderShell (annars är
+    # buildStage frusen under follow-ups).
+    assert "onStageChange={setBuildStage}" in page, (
+        "page.tsx måste skicka onStageChange={setBuildStage} till BuilderShell "
+        "så follow-up-bygget driver BuildProgressCard"
+    )
+    # BuilderShell återställer stage vid VARJE byggstart (FloatingChat ELLER
+    # dialog) + vidarebefordrar till FloatingChat.
+    assert 'onStageChange?.("thinking")' in shell, (
+        "BuilderShell.handleBuildStart måste återställa stage till 'thinking' "
+        "så stegmarkören aldrig fryser på föregående bygges sista stage"
+    )
+    assert "onStageChange={onStageChange}" in shell, (
+        "BuilderShell måste tråda onStageChange vidare till FloatingChat"
+    )
+    # FloatingChat förfinar från trace.ndjson-fasen (riktig signal).
+    assert 'tracePolling.currentPhase === "build"' in chat, (
+        "FloatingChat måste mappa trace.ndjson-fasen 'build' → buildStage "
+        "'building' (riktig signal, inte setTimeout)"
+    )
+    assert 'onStageChange("building")' in chat, (
+        "FloatingChat måste rapportera 'building' när trace når build-fasen"
+    )
+    # Avslut: success/failed rapporteras när bygget landar.
+    assert 'onStageChange?.(outcome === "failed" ? "failed" : "success")' in chat, (
+        "FloatingChat måste rapportera success/failed när bygget landar"
+    )
+
+
+def test_wizard_finish_timer_is_cancelled_on_close() -> None:
+    """Scout-fynd (P1): submit-overlayns 700 ms-timer fyrade av onComplete
+    (bygg-start) även om operatören stängde wizarden (Esc) under väntan.
+    Timern måste sparas i en ref och avbrytas när ``open`` blir false samt
+    vid unmount — annars startas ett oönskat bygge efter att hen backat ut.
+    """
+    content = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx"
+    ).read_text(encoding="utf-8")
+    assert "submitTimerRef" in content, (
+        "finish() måste spara submit-timern i submitTimerRef så den kan avbrytas"
+    )
+    assert "submitTimerRef.current = window.setTimeout(" in content, (
+        "submit-timern måste lagras i submitTimerRef (inte en lös setTimeout)"
+    )
+    # Avbrott när open blir false (Esc/stäng).
+    assert re.search(
+        r"if \(open\) return;\s*\n\s*if \(submitTimerRef\.current !== null\)\s*\{\s*"
+        r"clearTimeout\(submitTimerRef\.current\);",
+        content,
+        re.DOTALL,
+    ), (
+        "Wizarden måste avbryta submit-timern i en effekt när open blir false"
+    )
+
+
+def test_wizard_keyboard_help_lists_all_four_steps() -> None:
+    """Scout-fynd (P1): genvägs-hjälpen sa 'Hoppa till tab 1–3' men wizarden
+    har fyra steg (foundation→assets) och handlern stödjer redan ⌘4. Lås att
+    hjälptexten listar steg 1–4 så dokumentationen matchar UI:t, och att
+    ⌘/-genvägen har samma inEditable-guard som ?.
+    """
+    content = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx"
+    ).read_text(encoding="utf-8")
+    assert '"⌘1", "⌘2", "⌘3", "⌘4"' in content, (
+        "Genvägs-hjälpen måste lista alla fyra steg (⌘1–⌘4)"
+    )
+    assert "Hoppa till tab 1–3" not in content, (
+        "Den föråldrade 'tab 1–3'-texten måste bort — wizarden har fyra steg"
+    )
+
+
+def test_wizard_submit_overlay_uses_customer_language() -> None:
+    """Scout-fynd (microcopy): submit-overlayn visade pipeline-jargong
+    ('Discovery → Plan → Codegen') för en icke-teknisk kund. Lås kundvänlig
+    svenska så kärnflödet prompt→sajt känns begripligt.
+    """
+    content = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx"
+    ).read_text(encoding="utf-8")
+    assert "Discovery → Plan → Codegen" not in content, (
+        "Pipeline-jargong får inte visas i den kundvända submit-overlayn"
+    )
+    assert "Vi läser dina svar, planerar sidorna och bygger sajten." in content, (
+        "Submit-overlayn ska förklara bygget i kundvänlig svenska"
+    )
 
 

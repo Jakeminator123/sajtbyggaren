@@ -96,19 +96,26 @@ export function MoreInfoDialog({
   const [activeTab, setActiveTab] = useState<MoreInfoTabId>(initialTab);
 
   // Nollställ aktiv flik till önskad ``initialTab`` varje gång dialogen
-  // öppnas (false → true). Render-tids state-justering (Reacts
-  // "föregående props"-mönster via ``wasOpen``) istället för
-  // ``useEffect([open])``: dels ogillar React 19:s
-  // ``react-hooks/set-state-in-effect`` effekt-driven setState, dels är
-  // dialogen fullt parent-controlled — Radix routar aldrig open-flanken
-  // genom onOpenChange, så en onOpenChange-wrapper skulle inte hinna
-  // nollställa fliken vid öppning. Render-mönstret kör däremot pålitligt
-  // på varje false→true-övergång oavsett hur ``open`` ändras (knapp på
-  // sista steget, telefon-nudgen, eller framtida triggers).
+  // öppnas (false → true) OCH när ``initialTab`` byts medan dialogen redan
+  // är öppen (t.ex. en framtida djuplänk som byter mål-flik utan att stänga
+  // dialogen — annars hängde activeTab kvar på föregående flik). Render-tids
+  // state-justering (Reacts "föregående props"-mönster via ``wasOpen`` +
+  // ``trackedInitialTab``) istället för ``useEffect([open])``: dels ogillar
+  // React 19:s ``react-hooks/set-state-in-effect`` effekt-driven setState,
+  // dels är dialogen fullt parent-controlled — Radix routar aldrig
+  // open-flanken genom onOpenChange, så en onOpenChange-wrapper skulle inte
+  // hinna nollställa fliken vid öppning. Manuell flik-navigering ändrar
+  // ``activeTab`` men inte ``initialTab``, så den skrivs aldrig över här.
   const [wasOpen, setWasOpen] = useState(open);
+  const [trackedInitialTab, setTrackedInitialTab] =
+    useState<MoreInfoTabId>(initialTab);
   if (open !== wasOpen) {
     setWasOpen(open);
+    setTrackedInitialTab(initialTab);
     if (open) setActiveTab(initialTab);
+  } else if (open && initialTab !== trackedInitialTab) {
+    setTrackedInitialTab(initialTab);
+    setActiveTab(initialTab);
   }
 
   return (

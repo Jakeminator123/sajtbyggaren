@@ -38,6 +38,7 @@ import {
 import {
   classifyBuildStatus,
   type PromptBuildOutcome,
+  type PromptStage,
 } from "@/components/prompt-builder";
 import { Textarea } from "@/components/ui/textarea";
 import type { AssetRef } from "@/lib/asset-store/types";
@@ -293,6 +294,15 @@ type FloatingChatProps = {
   isBuilding: boolean;
   onBuildStart: () => void;
   onBuildEnd: () => void;
+  /**
+   * Rapporterar bygg-stage (idle/thinking/building/success/failed) uppåt så
+   * page.tsx kan driva ViewerPanel:s BuildProgressCard under follow-ups. Utan
+   * den frös buildStage på föregående bygges sista värde (oftast "success")
+   * och stegmarkören hoppade direkt till sista steget vid varje följdprompt.
+   * Stegen drivs av den riktiga trace.ndjson-signalen (useBuildTracePolling),
+   * inte av en setTimeout-flip (jfr B122).
+   */
+  onStageChange?: (stage: PromptStage) => void;
   /**
    * "Iterera från denna" — när satt skickar nästa /api/prompt-fetch med
    * `baseRunId` så backend laddar PI-snapshotet från den runen istället
@@ -673,6 +683,7 @@ export function FloatingChat({
   isBuilding,
   onBuildStart,
   onBuildEnd,
+  onStageChange,
   pendingBaseRunId,
   onClearBaseRunId,
   tools,
@@ -1028,6 +1039,11 @@ export function FloatingChat({
       setBuildProgress(0);
       setIsSending(true);
       onBuildStart();
+      // Återställ stegmarkören till "thinking" direkt — trace-polling-
+      // effekten nedan förfinar till "building" när trace.ndjson når
+      // build-fasen. Utan denna reset visade BuildProgressCard föregående
+      // bygges sista stage.
+      onStageChange?.("thinking");
 
       // Pending-bubblans label drivs av useBuildTracePolling-hooken
       // (lägre ner i komponenten) som sätts enabled när isSending=true.
@@ -1058,6 +1074,7 @@ export function FloatingChat({
             payload.error ??
             `Prompt-anropet misslyckades (HTTP ${response.status})`;
           const classified = classifyFollowupError(errorText);
+          onStageChange?.("failed");
           setMessages((prev) =>
             prev
               .filter((m) => m.id !== pendingMessageId)
@@ -1090,11 +1107,15 @@ export function FloatingChat({
               changes: summary.changes,
             }),
         );
+        // Bygget landade (ok/degraded/failed-status) — markera sista steget
+        // så stegmarkören visar "klart" tills page.tsx tar över.
+        onStageChange?.(outcome === "failed" ? "failed" : "success");
         onBuildDone(payload.runId, outcome);
       } catch (caught) {
         const errorText =
           caught instanceof Error ? caught.message : "Okänt fel.";
         const classified = classifyFollowupError(errorText);
+        onStageChange?.("failed");
         setMessages((prev) =>
           prev
             .filter((m) => m.id !== pendingMessageId)
@@ -1131,6 +1152,7 @@ export function FloatingChat({
       onBuildStart,
       onBuildEnd,
       onBuildDone,
+      onStageChange,
       pendingBaseRunId,
     ],
   );
@@ -1180,6 +1202,22 @@ export function FloatingChat({
       prev.map((m) => (m.id === id ? { ...m, content: tracePolling.label } : m)),
     );
   }, [tracePolling.label, tracePolling.isPending, tracePolling.runStatus]);
+
+  // Förfina bygg-stage från trace.ndjson-fasen: understand/plan = "thinking",
+  // build = "building". page.tsx mappar detta till BuildProgressCard-steget.
+  // Bara medan vi faktiskt skickar (isSending) så vi inte rör buildStage
+  // efter att bygget landat (success/failed sätts i handleSend).
+  useEffect(() => {
+    if (!isSending || !onStageChange) return;
+    if (tracePolling.currentPhase === "build") {
+      onStageChange("building");
+    } else if (
+      tracePolling.currentPhase === "understand" ||
+      tracePolling.currentPhase === "plan"
+    ) {
+      onStageChange("thinking");
+    }
+  }, [tracePolling.currentPhase, isSending, onStageChange]);
 
   const handleKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
@@ -1803,7 +1841,10 @@ function MessageBubble({
     >
       <span
         className={cn(
-          "rounded-xl border px-3 py-2 text-[12.5px] leading-relaxed",
+          // whitespace-pre-line bevarar radbrytningar i fler-rads-svar
+          // (t.ex. copy-directive-sammanfattningar) men kollapsar löpande
+          // blanksteg — utan den platta-pressas allt till en rad.
+          "rounded-xl border px-3 py-2 text-[12.5px] leading-relaxed whitespace-pre-line",
           isUser
             ? "bg-foreground text-background border-transparent"
             : `bg-muted/40 text-foreground ${variantClass}`,

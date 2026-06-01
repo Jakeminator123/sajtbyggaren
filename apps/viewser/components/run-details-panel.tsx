@@ -210,10 +210,12 @@ function BuildSection({ build }: { build: Record<string, unknown> | null }) {
   // only when scripts/prompt_to_project_input.py's _placeholder_contact
   // filled at least one contact slot with a B88 dummy value
   // (e.g. "+46 8 000 00 00", "kontakt@example.se", "Adress lämnas på
-  // förfrågan") and neither wizard nor scrape overwrote it. Without
-  // this warning the operator never sees that the published site is
-  // showing dummy contact info — verified live in Viewser Overlay
-  // E2E Scout Case 3a 2026-05-19.
+  // förfrågan") and neither wizard nor scrape overwrote it. As of
+  // B158/B159 (2026-06-01, 2e0c55f) the published site no longer renders
+  // those dummy values — it suppresses them and shows an honest generic
+  // contact CTA ("Hör av dig") instead. The warning therefore tells the
+  // operator that real contact info is still MISSING (so the site lacks a
+  // direct phone/email), not that dummies are being shown to visitors.
   const placeholderContactFields = Array.isArray(build.placeholderContactFields)
     ? (build.placeholderContactFields as string[]).filter(
         (field) => typeof field === "string" && field.length > 0,
@@ -243,7 +245,8 @@ function BuildSection({ build }: { build: Record<string, unknown> | null }) {
               {`\u26A0 Kontakt-fält är platshållare: ${placeholderContactFields.join(", ")}.`}
             </p>
             <p className="mt-1 text-[11px] text-amber-900/80 dark:text-amber-200/80">
-              Slutanvändaren ser dummy-värden tills operatör fyllt dem.
+              Sajten döljer fälten publikt och visar en allmän kontaktknapp —
+              fyll i riktiga uppgifter så får besökarna en direkt kontaktväg.
             </p>
           </div>
         ) : null}

@@ -478,6 +478,11 @@ export default function Home() {
             onPendingBuildClear={clearPending}
             pendingBaseRunId={pendingBaseRunId}
             onSetPendingBaseRunId={setPendingBaseRunId}
+            // Driv buildStage under follow-ups så ViewerPanel:s
+            // BuildProgressCard visar rätt steg. I builder-läge är
+            // PromptBuilder:s egen onStageChange avstängd, så detta är
+            // enda källan till buildStage tills bygget landar.
+            onStageChange={setBuildStage}
             onBuildStart={() => setBuilding(true)}
             onBuildEnd={() => {
               setBuilding(false);
