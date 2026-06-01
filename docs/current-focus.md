@@ -30,10 +30,11 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `288da76` (2026-06-01 kväll UTC, `jakob-be` fullt synkad
-med `origin/main` post **PR #144** + steward-auto-bumpen `8f7dea5`; jakob-be är
-**0 bakom / 18 före** main). **PR #144 (`jakob-be → main`) är mergad** (squash,
-`origin/main`-innehåll = `fba03d0`, HEAD inkl. auto-bump = `8f7dea5`). Hela hardening-batchen
+Last verified state: `57a6cc2` (2026-06-01 kväll UTC, `jakob-be` fullt synkad
+med `origin/main` post **PR #144** + steward-auto-bumpen `8f7dea5`; därefter
+docs-PR-konsolidering — #138/#141/#145 foldade in i `AGENTS.md` och stängda).
+`jakob-be` innehåller hela `main`. **PR #144 (`jakob-be → main`) är mergad**
+(squash, `origin/main`-innehåll = `fba03d0`, HEAD inkl. auto-bump = `8f7dea5`). Hela hardening-batchen
 ligger nu i `main`: kill-dev-trees orphan-cleanup, B158/B159, copyDirective-
 edge-cases, Streamlit-floor `>=1.49`, B120, #143 subprocess-refactor, B161/B162
 — plus tre review-fixar från denna session (`d03dadd` governance-policy-paritet
@@ -73,14 +74,13 @@ detta steward-steg.
   nya `jakob-be` blir den äkta scopen ~`packages/preview-runtime/**` +
   `apps/viewser/lib/preview-runtime-server.ts` + `tests/test_preview_runtime_di.py`.
   Review sen → in i `jakob-be`, ej `main`.
-- **#138** `cursor/cloud-dev-env-setup-a928 → main` — draft, docs (AGENTS.md
-  Cloud-gotchas). Clean.
-- **#141** `cursor/cloud-agents-md-env-notes-7a3f → main` — draft, docs (AGENTS.md).
-- **#145** `cursor/cloud-agents-md-viewser-4b89 → main` — draft, docs (AGENTS.md
-  Viewser + evals-dir pytest).
-- **Docs-PR-konsolidering:** #138/#141/#145 rör alla `AGENTS.md` Cloud-setup och
-  är nära-dubbletter → slå ihop bästa raderna till EN PR, stäng de andra som
-  duplicate. Mergea inte alla tre.
+- **#138 / #141 / #145** (docs, `AGENTS.md`) — **konsoliderade och stängda**
+  2026-06-01. De tre var nära-dubbletter (rörde bara `AGENTS.md` Cloud-setup).
+  Bästa raderna foldades in i `AGENTS.md` på `jakob-be` (Viewser-rad i
+  services-tabellen, python3.12-venv-not, builds-katalog-not för manuell
+  `npm run dev`, `SAJTBYGGAREN_EVALS_DIR`-testgotcha, tmux för långkörande
+  dev-servrar) och flödar till `main` vid nästa sync. PR-branscherna stängda som
+  duplicate.
 
 **Mergade denna session:**
 - **#144** `jakob-be → main` — **mergad** (squash, `fba03d0`). Hela
