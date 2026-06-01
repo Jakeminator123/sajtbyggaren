@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 14 aktiva, 0 misplaced (av 0), 5 unknown, 131 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (av 0), 5 unknown, 135 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -216,16 +216,21 @@ pass; B119-B122 öppna och listade nedan.
   ses (mailto-länk i header > footer > body, `kontakt`/`contact`-sida
   > start), och välj högsta poäng. Källa: extern reviewer 2026-05-18
   (runda 2). Fix: open. Test: open.
-- **`B120` Låg** - `scripts/prompt_to_project_input.py:_apply_discovery_overrides`
-  (rad 1574-1582) försöker plocka ut stad ur kontakt-addressLines med
-  regex `r"\b\d{3}\s?\d{2}\s+([A-Za-zÅÄÖåäö\-]+)"`. Mönstret matchar
-  bara svensk postnummerstruktur (`xxx xx Stad`), så adresser i
-  format `Götgatan 12, 11646 Stockholm` ger ingen träff (kommat),
-  och internationella adresser missar helt. Effekten är tyst fallback
-  till brief-extracted location. Inte krasch, men halvfel
-  platsdata utan signalering. Fix-skiss: prova flera mönster i fallande
-  ordning, inklusive `,`-separator och engelska postnummer-format.
-  Källa: extern reviewer 2026-05-18 (runda 2). Fix: open. Test: open.
+- **`B120` Låg** - stad-extraktion ur kontakt-`addressLines` i
+  `packages/generation/discovery/resolve.py` (`_apply_location_from_address` +
+  `_SWEDISH_POSTCODE_RE`; B121 flyttade logiken hit från
+  `prompt_to_project_input.py`). Effekten var tyst fallback till brief-extracted
+  location, dvs halvfel platsdata utan signalering. Källa: extern reviewer
+  2026-05-18 (runda 2).
+  Delvis åtgärdad 2026-06-01 (`a90215e`): regexen läser nu ALLA adressrader
+  (inte bara `addressLines[0]`, så `["Storgatan 5", "116 46 Stockholm"]` ger
+  rätt stad) och tillåter flerordiga orter ("Västra Frölunda"); komma-separator
+  och 5-siffrigt postnummer utan mellanslag matchar redan via `search()`.
+  Regression: `tests/test_discovery_resolver.py::test_location_from_address_extracts_city`.
+  Kvarstår (håller B120 öppen): internationella/engelska postnummerformat och
+  "stad före postnummer" (US `City, ST 10001`) hanteras fortfarande inte —
+  medvetet konservativt så fel utländsk stad aldrig sätts (säker fallback).
+  Fix: open. Test: open.
 <!-- B122 stängd 2026-05-27 (SHA `7b6fb6c`) — se Stängda-sektionen. -->
 
 
@@ -326,6 +331,32 @@ integrate christopher-ui discovery and asset workflow`, merge
   (story/services/all-copy) och väg C (modell-patch av `.generated/`).
   Test: `tests/test_followup_copy_directives.py` +
   `tests/test_followup_honest_no_op.py`.
+  Live-test 2026-06-01 (operatör, hamburgare-ab): en följdprompt som bad om
+  ändring av en *tjänstetext* ("Tydlig hjälp med cheeseburgers…") remappades
+  av `copyDirectiveModel` till `tagline` (närmaste tillåtna target) och
+  FloatingChat svarade "Klart! uppdaterade rubriken till …". `appliedVisibleEffect`
+  blev true men fel yta ändrades. Reinforcerar: (a) nivå 2 (bredare targets:
+  services/hero-body/about) behövs för att träffa rätt text, (b) nivå 1 bör
+  hellre vara ärligt avvisande ("kan bara byta namn/tagline nu") än att tyst
+  remappa till tagline och påstå full framgång.
+  Hardening 2026-06-01 (`2e0c55f`): tre väg A-edge-cases stängda i
+  `scripts/prompt_to_project_input.py` — generiskt "namn/namnet" byter inte
+  längre `company.name` när prompten scopar till tjänst/produkt/sida; reject-
+  verb matchas som ord, inte substring (så "byt företagsnamnet till Changemakers"
+  applicerar i stället för att no-op:as); okvoterad trailing "till/to" fångar
+  inte instruktioner ("change the hero to be more premium") som publik tagline.
+  Kvarstår (håller B155 öppen): nivå 2 bredare targets, ärligare nivå-1-svar och
+  väg B/C-presentation. Test: `tests/test_followup_copy_directives.py`.
+
+- **`B160` Låg** - Viewser-headern (`apps/viewser/components/**`, site-header)
+  renderar företagets logo via Next.js `Image` utan ett komplett aspekt-
+  förhållande (bara `width` eller `height` styrs, inte båda eller en
+  `style={{ height: "auto" }}`), vilket ger console-varningen "Image with src …
+  has either width or height modified, but not the other". Kosmetiskt och
+  icke-blockerande, men brus i devtools + en CLS/a11y-risk. Christopher/UI-lane
+  (apps/viewser presentationslager); Jakob-lanen rör inte `apps/viewser/**` utan
+  handoff (se `docs/agent-inbox.jsonl`). Källa: env-genomgång + live-test
+  2026-06-01. Fix: open. Test: open.
 
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
   subprocess-status och loggutdrag medan körningen pågår, men riktig
@@ -595,6 +626,44 @@ samma kodmönster lever vidare här — därav posten:
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B158` Låg-Medel** (stängd 2026-06-01, hardening-slice) - Hero-/CTA-knappen
+  renderade fortfarande placeholder-telefonen `+46 8 000 00 00` även när
+  kontaktfälten var platshållare; suppressionen (`f62bd40`) täckte footer,
+  kontaktsida, hours-summary, booking-fallback, 404 och JSON-LD men inte
+  hjälteblockets sekundära `tel:`-CTA. `_render_hero_block` släpper nu
+  "Ring `<nummer>`"-knappen när telefonen är B88-placeholder (riktig telefon
+  renderas oförändrat). Källa: live-test 2026-06-01. Fix: `2e0c55f`. Test:
+  `tests/test_contact_placeholder_fallback.py::test_home_hero_suppresses_placeholder_phone_cta`
+  + `tests/test_contact_placeholder_fallback.py::test_home_hero_keeps_real_phone_cta`.
+- **`B159` Låg-Medel** (stängd 2026-06-01, hardening-slice) - Quality Gate
+  `contact-cta-presence` failade på `restaurant-hospitality`-scaffoldens
+  `/hitta-hit` (`render_contact`-sidan saknade kontakt-CTA när varken telefon
+  eller e-post var riktig). `render_contact`/`render_section_contact_info` tar nu
+  `contact_path` och lägger en ärlig kontakt-route-CTA ("Hör av dig") när inget
+  riktigt tel:/mailto: finns — ingen dummy-kanal publiceras. Källa: live-test
+  2026-06-01. Fix: `2e0c55f`. Test:
+  `tests/test_contact_placeholder_fallback.py::test_contact_page_has_cta_when_all_channels_placeholder`
+  + `tests/test_contact_placeholder_fallback.py::test_contact_page_address_only_still_has_cta`.
+- **`B161` Låg-Medel** (stängd 2026-06-01, Codex-review-fix) - Okvoterad
+  include-token i en följdprompt blev tyst no-op. `_extract_include_token`
+  (`scripts/prompt_to_project_input.py`) extraherade bara citerade tokens, så den
+  naturliga ADR 0034-acceptansfrasen "inkludera TEST-JAKOB i hero" (utan
+  citattecken) gav "version skapad men ingen synlig ändring". Nu extraheras även
+  ett okvoterat token-likt ord (har versal eller siffra, ej keyword/target-ord)
+  efter include-nyckelordet; vaga "inkludera mer text" förblir ärlig no-op.
+  Källa: Codex read-only-review 2026-06-01. Fix: `63e4758`. Test:
+  `tests/test_followup_copy_directives.py::test_extract_unquoted_include_token_targets_hero_tagline`.
+- **`B162` Låg** (stängd 2026-06-01, Codex-review-fix) - TS/Python-paritetslucka i
+  pointer-validering. `apps/viewser/lib/local-preview-server.ts` (`readActiveBuildDir`)
+  gated buildPath-mismatch-check:en på en typeof-string-guard, så ett närvarande
+  icke-string buildPath (number/object i en korrupt/manipulerad `current.json`)
+  slank igenom — till skillnad från Python-spegeln
+  `immutable_builds.read_active_build_dir` som avvisar varje närvarande
+  icke-matchande buildPath. TS avvisar nu alla närvarande icke-matchande värden
+  (bara `undefined`/`null` tillåtet). Robusthet; ingen normal-drift-effekt
+  (buildern skriver alltid rätt pekare). Källa: Codex read-only-review 2026-06-01.
+  Fix: `63e4758`. Test:
+  `tests/test_local_preview_server_b157_followup.py::test_read_active_build_dir_rejects_present_nonstring_buildpath`.
 - **`B122` Låg** (stängd 2026-05-27, NDJSON-stream för riktig stage-signal) -
   `apps/viewser/components/prompt-builder.tsx` växlade från `thinking`
   till `building`-stage via `setTimeout(..., 1500)` istället för på en

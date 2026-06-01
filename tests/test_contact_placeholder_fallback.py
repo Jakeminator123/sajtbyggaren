@@ -27,6 +27,7 @@ from packages.generation.build import contact_placeholders as cp  # noqa: E402
 from scripts.build_site import (  # noqa: E402
     _render_structured_data_jsonld,
     render_contact,
+    render_home,
     render_layout,
     render_not_found,
     render_section_fallback_phone,
@@ -132,6 +133,10 @@ def test_contact_page_suppresses_placeholder_contact() -> None:
     # lucide import (no icons emitted).
     assert "Så når du oss" in page
     assert 'from "lucide-react"' not in page
+    # B159: even with nothing real, the page keeps an honest contact CTA
+    # (links to the contact route with CTA text; no dummy tel:/mailto:).
+    assert "Hör av dig" in page
+    assert 'href={"/kontakt"}' in page
 
 
 @pytest.mark.tooling
@@ -244,3 +249,97 @@ def test_eval_still_flags_dummy_contact_copy_if_it_reappears() -> None:
 
     leaked = '<a href={"mailto:kontakt@example.se"}>kontakt@example.se</a>'
     assert generic_copy_hits(leaked)
+
+
+# ── mixed address: drop only the placeholder line (Codex 2026-06-01) ──
+
+
+@pytest.mark.tooling
+def test_real_address_lines_drops_placeholder_line_in_mixed_list() -> None:
+    contact = {"addressLines": ["Storgatan 5", "Adress lämnas på förfrågan"]}
+    assert cp.real_address_lines(contact) == ["Storgatan 5"]
+
+
+@pytest.mark.tooling
+def test_contact_page_mixed_address_renders_only_real_line() -> None:
+    contact = {
+        "phone": "+46 8 000 00 00",
+        "email": "kontakt@example.se",
+        "addressLines": ["Storgatan 5", "Adress lämnas på förfrågan"],
+        "openingHours": "Mån-Fre 09:00-17:00",
+    }
+    page = render_contact(_dossier(contact))
+    assert "Storgatan 5" in page
+    assert "Adress lämnas på förfrågan" not in page
+
+
+@pytest.mark.tooling
+def test_contact_page_fast_path_drops_placeholder_address_line() -> None:
+    """Real phone/email/hours + a mixed address takes the byte-identical
+    fast path (is_placeholder_address_lines is False for a mixed list), yet
+    the placeholder line must still be filtered so it never reaches the
+    published contact page. Regression for the Codex 2026-06-01 fast-path
+    leak: previously the fast path iterated contact['addressLines'] verbatim.
+    """
+    contact = {
+        "phone": "+46 70 111 22 33",
+        "email": "info@firma.se",
+        "addressLines": ["Storgatan 5", "Adress lämnas på förfrågan"],
+        "openingHours": "Mån-Fre 08-16",
+    }
+    page = render_contact(_dossier(contact))
+    # Real channel present confirms we took the fast path (no placeholders).
+    assert "+46 70 111 22 33" in page
+    assert "Storgatan 5" in page
+    assert "Adress lämnas på förfrågan" not in page
+
+
+# ── B158: hero secondary phone CTA suppresses the placeholder number ──
+
+
+@pytest.mark.tooling
+def test_home_hero_suppresses_placeholder_phone_cta() -> None:
+    home = render_home(_dossier(PLACEHOLDER_CONTACT), ["/"])
+    assert "+46 8 000 00 00" not in home
+    assert "tel:+4680000000" not in home
+
+
+@pytest.mark.tooling
+def test_home_hero_keeps_real_phone_cta() -> None:
+    home = render_home(_dossier(REAL_CONTACT), ["/"])
+    # _jsx_safe_string wraps the number as {"..."} and _phone_href strips
+    # spaces for the tel: target, so assert both forms rather than the raw
+    # "Ring +46 ..." concatenation.
+    assert "Ring {" in home
+    assert "+46 70 111 22 33" in home
+    assert "tel:+46701112233" in home
+
+
+# ── B159: restaurant /hitta-hit keeps a contact CTA ───────────────────
+
+
+@pytest.mark.tooling
+def test_contact_page_has_cta_when_all_channels_placeholder() -> None:
+    """Mirrors the contact-cta-presence quality gate: a contact-route link
+    with CTA text, even when every channel is a placeholder (restaurant
+    /hitta-hit is rendered by render_contact with that route path)."""
+    page = render_contact(_dossier(PLACEHOLDER_CONTACT), contact_path="/hitta-hit")
+    assert 'href={"/hitta-hit"}' in page
+    assert "Hör av dig" in page
+    assert "tel:+4680000000" not in page
+    assert "mailto:kontakt@example.se" not in page
+
+
+@pytest.mark.tooling
+def test_contact_page_address_only_still_has_cta() -> None:
+    """Real address but no phone/email still appends an explicit contact CTA."""
+    contact = {
+        "phone": "+46 8 000 00 00",
+        "email": "kontakt@example.se",
+        "addressLines": ["Storgatan 5", "111 22 Stockholm"],
+        "openingHours": "Mån-Fre 09:00-17:00",
+    }
+    page = render_contact(_dossier(contact), contact_path="/hitta-hit")
+    assert "Storgatan 5" in page
+    assert 'href={"/hitta-hit"}' in page
+    assert "Hör av dig" in page

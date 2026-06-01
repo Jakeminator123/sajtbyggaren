@@ -1,9 +1,86 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-01 UTC, steward-auto efter PR #142 — sync(jakob-be -> main): ADR 0034 path A copyDirectives + contact eval-fix + placeholder suppression. Verifierad `main` är `fb3b1f8`.
+**Datum:** 2026-06-01 kväll UTC. `jakob-be` HEAD = `2320e34` (hardening-batch +
+PR #143 refactor-merge). `main` = `fb3b1f8` (oförändrad sedan PR #142).
+`jakob-be` är **inte** synkad till `main` än — väntar operatörs-OK för sync-PR.
 
-Nya PRs sedan föregående checkpoint: PR #142 — sync(jakob-be -> main): ADR 0034 path A
-copyDirectives + contact eval-fix + placeholder suppression.
+## Mini-handoff 2026-06-01 sen eftermiddag — copyDirective fix + runtime-ordval
+
+- Verifierad och åtgärdad bug i
+  `scripts/prompt_to_project_input.py:_extract_copy_directives`:
+  `has_replace`/`has_include` använder nu ordgräns-matchning i stället för
+  substring. Resultat: "Jag bytte företagsnamnet till X" triggar inte längre
+  felaktig rename-directive, medan imperativformen "byt företagsnamnet till X"
+  fortsatt fungerar.
+- Ny regression i `tests/test_followup_copy_directives.py` låser scenariot
+  "Jag bytte företagsnamnet till Ny Namn" => `[]`.
+- Dokumentationsförskjutning för Preview Runtime: StackBlitz är inte ett hårt
+  förkrav före VM-/Sandbox-adapter. Adapter-spår kan gå parallellt så länge
+  canonical `Preview Runtime`-kontrakt och adapter-kind/fallback hålls.
+- Naming-policy upplåst för ordbruk i prosa:
+  `sandbox`/`VM`/`Vercel Sandbox`/`Vercel VM` är nu tillåtna alias för
+  `Preview Runtime` (naming-dictionary uppdaterad); globalt förbud mot
+  `vercel-sandbox` borttaget.
+- Term-coverage uppdaterad så `Sandbox`/`Vercel Sandbox`/`Vercel VM` inte
+  felklassas som nya domänbegrepp i docs/prosa.
+
+## Session 2026-06-01 kväll — hardening landad + PR #143 refactor mergad
+
+`jakob-be`-commits denna session (alla pushade, EJ i `main`):
+
+- `74ed629` **kill-dev-trees**: fångar nu orphan preview/dev node-processer
+  (föräldraträd-matchning + TCP-portlyssnare 3000-3001/4100-4199, `--dry-run`/
+  `--verbose`). Validerad live: städade en orphan `next dev` (PID 9420) som
+  blockerade `test_api_prompt_smoke` — testet blev grönt efteråt.
+- `2e0c55f` **fix(hardening)**: B158 (hero släpper placeholder-`tel:`-CTA), B159
+  (`render_contact`/`/hitta-hit` får ärlig kontakt-route-CTA), tre
+  copyDirective-edge-cases (generiskt namn-scope → ingen company-rename vid
+  tjänst/produkt/sida; reject-verb ord-boundary så "Changemakers" applicerar;
+  okvoterad trailing "till/to" fångar ej instruktioner som copy), Streamlit-floor
+  `>=1.49`. 7 explicita filer, fulltestad.
+- `a90215e` **fix(discovery)**: B120 stad-extraktion läser alla `addressLines` +
+  flerordiga orter (intl-format medvetet kvar = säker fallback).
+- `d036067` **docs(steward)**: known-issues stänger B158/B159, B120-progress, ny
+  B160 (logo aspect-ratio-varning i `next/image`, Christopher-lane), B155-hardening-not,
+  GAP-annotation. Christopher-handoff
+  `msg-0025` (B160 + #139-fynd + B155-honesty-koordinering).
+- `a3c47a7` **docs(focus)**: dokumenterade PR #143, markerade #139 mergad.
+- `2320e34` **refactor(build) — PR #143 mergad** (squash, base `jakob-be`):
+  npm/subprocess-helpers (`run_npm`, `_sanitized_npm_env`, `_coerce_subprocess_text`,
+  `_npm_step_result`, NPM_*_TIMEOUT) flyttade till
+  `packages/generation/build/subprocesses.py`. `scripts.build_site` behåller
+  facade + `run_npm = _subprocess_exports.run_npm` (call-sites använder bart
+  modulglobalt namn → `monkeypatch.setattr("scripts.build_site.run_npm", …)`
+  fungerar). Operatörens cloud-agent-arbete, rebasead mot senaste `jakob-be`,
+  Scout-granskad GRÖN (behavior-preserving, AST-verifierad, scope = 3 filer,
+  base `jakob-be`), full pytest exit 0. Branch + duplikat
+  `cursor/refactor-build-site-slice-1` raderade.
+- `63e4758` **fix(codex-review)**: två read-only-review-fynd stängda. B161
+  (Låg-Medel): `_extract_include_token` extraherade bara citerade tokens →
+  "inkludera TEST-JAKOB i hero" (okvoterat) var tyst no-op; nu fångas okvoterade
+  token-lika ord (versal/siffra, ej keyword). B162 (Låg): TS
+  `local-preview-server.ts:readActiveBuildDir` speglar nu Python exakt — avvisar
+  närvarande icke-string buildPath (tidigare typeof-string-gate). tsc grön.
+  Falskt larm i samma review: `_DISPATCHED_ICON_PATTERN` "saknas" — finns på
+  `renderers.py:4983`, sviten grön. Bug-scope nu **15 aktiva / 135 stängda**.
+
+**Lane-disciplin hölls:** all kod i backend/generation/scripts/docs.
+`apps/viewser/lib/local-preview-server.ts` (B162) är run-shape = Jakob-owned per
+`docs/gaps/README.md`. `apps/viewser/**` UI-presentationslager rördes inte
+(Christopher-lane); UI-fynd (B160 logo, #139-trio, B155-honesty) handades av
+via `msg-0025`.
+
+**Branch-städ denna session:** raderade merged PR-branch
+`cursor/build-site-py-refaktorering-b2c1` + duplikat `cursor/refactor-build-site-slice-1`.
+Behållna (medvetet): backups (`backup-25/26-VIKTIG`, `backup-43/44/45`,
+`backup-pre-christopher-ui-merge`), `christopher-ui`, öppna-PR-branchar
+(`#140`/`#138`/`#141`), WIP-snapshots (`cursor/preview-runtime-adapters`,
+`cursor/dossier-intake-v11-review-895d`).
+
+**Nästa:** (1) #140 Bite B-review → in i `jakob-be`. (2) docs-PR #138/#141
+konsolidering. (3) sync-PR `jakob-be → main` för hela batchen när operatören ger
+OK (`jakob-be` får EJ `reset --hard origin/main` i mellanläget — merge/rebase in
+`main`, lös docs-konflikter, öppna sync-PR). (4) Vercel/Sandbox = fortfarande senare.
 
 ## Orchestrator-pass 2026-06-01 PM — tre scouts gröna, #139 mergad
 

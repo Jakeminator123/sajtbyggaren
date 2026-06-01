@@ -30,9 +30,36 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `fb3b1f8` (2026-06-01 UTC, steward-auto efter PR #142 — sync(jakob-be -> main): ADR 0034 path A copyDirectives + contact eval-fix + placeholder suppression).
-Nya PRs sedan föregående checkpoint: PR #142 — sync(jakob-be -> main): ADR 0034 path A
-copyDirectives + contact eval-fix + placeholder suppression.
+Last verified state: `4c473cb` (2026-06-01 kväll UTC, `jakob-be` hardening +
+PR #143 + Codex-review-fixar (B161/B162), ovanpå PR #142-synken `fb3b1f8`; EJ i
+`main` än — sync-PR **#144** öppen och väntar leveransfönster-OK). `origin/main`
+(`48d5ca0`) är fullt innehållen i `jakob-be` → sync-PR är konfliktfri (jakob-be
+10 commits före, 0 efter). Bug-scope nu: **15 aktiva / 135 stängda**.
+Nya commits sedan föregående checkpoint (alla på `jakob-be`, opushad mot `main`):
+- `74ed629` fix(dev): kill-dev-trees fångar orphan preview/dev node-processer
+  (föräldraträd-matchning + TCP-port-lyssnare 3000-3001/4100-4199 + `--dry-run`/
+  `--verbose`).
+- `2e0c55f` fix(hardening): B158 (hero släpper placeholder-`tel:`), B159
+  (kontaktsida/`/hitta-hit` får ärlig kontakt-CTA), copyDirective-edge-cases
+  (namn-scope / reject-ord-boundary / trailing-instruktion), Streamlit-floor
+  `>=1.49`. Fulltestad, 7 explicita filer.
+- `a90215e` fix(discovery): B120 stad-extraktion läser alla addressLines +
+  flerordiga orter.
+- `d036067` docs(steward): known-issues stänger B158/B159, B120-progress + ny
+  B160 (logo-Image, Christopher-lane), B155-hardening-not, GAP-annotation,
+  Christopher-handoff (`msg-0025`). Bug-scope: **15 aktiva / 133 stängda**.
+- `a3c47a7` docs(focus): dokumenterade PR #143 + markerade #139 mergad.
+- `2320e34` refactor(build): **PR #143 mergad** (squash, base `jakob-be`) —
+  npm/subprocess-helpers flyttade till `packages/generation/build/subprocesses.py`;
+  `scripts.build_site` behåller facade + re-export `run_npm` (monkeypatchbar).
+  Behavior-preserving (AST-verifierad), Scout-grön, full pytest exit 0. PR-branch +
+  duplikat `cursor/refactor-build-site-slice-1` raderade.
+- `63e4758` fix(codex-review): B161 (okvoterad include-token "inkludera
+  TEST-JAKOB i hero" → ej längre tyst no-op) + B162 (TS/Python-paritet i
+  `local-preview-server.ts:readActiveBuildDir` — avvisar närvarande icke-string
+  buildPath). tsc grön; nya tester. (B-IDs registrerade i steward-commit denna.)
+Nästa: #140 Bite B-review (in i `jakob-be`), docs-PR #138/#141-konsolidering,
+sedan sync-PR `jakob-be -> main` för hela batchen när operatören ger OK.
 
 ## Branchmodellen (kort)
 
@@ -46,26 +73,36 @@ copyDirectives + contact eval-fix + placeholder suppression.
 
 ## Pågående/öppna PR:s just nu
 
-**Fyra öppna PRs (2026-06-01 PM):**
+**Öppna PRs (2026-06-01 kväll, uppdaterad):**
 
-- **#139** `christopher-ui → main` — ready/clean, alla checks gröna. UI/UX-batch
-  som bär både B155 FloatingChat-no-op-signal och copyDirectives väg B-UI
-  (success/no-op-feedback). Scout-dom: merge-redo, men bekräfta Bugbot-trådar
-  (ingen godkänd review än) + notera additiv scope-läcka i `route.ts`/`runs.ts`/
-  `check_term_coverage.py` utan `[scope-leak]`-tagg (operatörsbeslut).
+- **#144** `jakob-be → main` — **sync-PR (öppen, ready, MERGEABLE/konfliktfri)**.
+  Hela hardening-batchen: kill-dev-trees, B158/B159, copyDirective-edge-cases,
+  Streamlit-floor, B120, #143 refactor (subprocesses), B161/B162. `origin/main`
+  fullt innehållen i `jakob-be` (10 commits före, 0 efter). Full pytest exit 0,
+  tsc 0, guards gröna. **Mergas till `main` = leveransfönster-beslut (operatör).**
+  Bite B (#140) ingår EJ — kan synka i senare batch.
 - **#140** `cursor/preview-runtime-bite-b-di → jakob-be` — draft. Bite B
   PreviewRuntime via dependency-injection. Inom scope; rör ej copyDirectives-
-  filer eller Christopher-UI. Mergas in i `jakob-be`, ej `main`.
+  filer eller Christopher-UI. Mergas in i `jakob-be`, ej `main`. **Nästa review.**
 - **#138** `cursor/cloud-dev-env-setup-a928 → main` — draft, docs (AGENTS.md
   Cloud-gotchas). Clean.
 - **#141** `cursor/cloud-agents-md-env-notes-7a3f → main` — draft, docs.
   Governance failar (term-coverage flaggar ett versalt backtick-ord i AGENTS.md);
   enradsfix kvar. Nästan-dubblett av #138 → konsolidera till en PR.
 
-Rekommenderad main-merge-ordning: **#139 först**, sedan sync-PR
-`jakob-be → main` (löser bara docs-konflikter i `current-focus.md` +
-`known-issues.md`). `jakob-be` får EJ `reset --hard origin/main` i mellanläget
-— `merge`/`rebase` in `main`, lös docs, öppna sync-PR.
+**Mergade denna session:**
+- **#143** `cursor/build-site-py-refaktorering-b2c1 → jakob-be` — **mergad**
+  (`2320e34`, squash). Behavior-preserving npm/subprocess-extraktion (operatörens
+  cloud-agent). Rebasead mot senaste `jakob-be` (inkl. `2e0c55f`), Scout-grön,
+  full svit exit 0. PR-branch + duplikat raderade.
+- **#139** `christopher-ui → main` — mergad tidigare 2026-06-01 (`f22d27a`,
+  steward-auto `efbb425`). UI/UX + B155 FloatingChat-no-op + copyDirectives väg
+  B-UI. Tre låg-impact-fynd kvar i Christophers lane (`msg-0024` + `msg-0025`).
+
+Rekommenderat nästa main-steg: sync-PR `jakob-be → main` för hela
+hardening-batchen (B158/B159 + copyDirective-edge-cases + B120 + kill-dev-trees
++ docs) NÄR operatören ger OK. `jakob-be` får EJ `reset --hard origin/main` i
+mellanläget — `merge`/`rebase` in `main`, lös docs-konflikter, öppna sync-PR.
 
 **Christophers `origin/christopher-ui`** — efter PR #117 är hans branch
 synkad mot post-#117-main. Han har under operator-OK scope-leak
@@ -86,7 +123,10 @@ medvetet kvar på `jakob` så Sprintvakt-lane-policyn passerar.
 2. **Bite B (PreviewRuntime wiring)** — builder-prompt finns redan i
    `docs/agent-prompts/preview-runtime-bite-b.md`. Wirear `localRuntime`
    + `stackblitzRuntime` adaptrar mot existerande `apps/viewser/lib/`-
-   helpers. Self-contained prompt; klistras in i ny agent-session.
+   helpers. Self-contained prompt; klistras in i ny agent-session. **Not:
+   StackBlitz behöver inte vara "färdigfixad" som förkrav för att börja med
+   en VM/Sandbox-adapter**; spåren kan gå parallellt så länge Preview Runtime-
+   kontraktet hålls och adapterkind + fallback är tydligt definierade.
    ~2-4h. Inga UI-ändringar (Bite C kräver Christopher). Vercel-
    preview/Fly/static-export-adaptrar lämnas för senare sprint.
 3. **B157 nivå-4 (Windows-safe rebuild, immutable build-dir + pointer-

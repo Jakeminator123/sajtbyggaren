@@ -2388,7 +2388,7 @@ _COPY_DIRECTIVE_INCLUDE_KEYWORDS: tuple[str, ...] = (
     "ha med",
     "infoga",
     "include",
-    "add ",
+    "add",
 )
 _COPY_DIRECTIVE_REPLACE_KEYWORDS: tuple[str, ...] = (
     "byt",
@@ -2410,26 +2410,123 @@ _COPY_DIRECTIVE_REPLACE_KEYWORDS: tuple[str, ...] = (
     "rename",
     "change",
     "replace",
-    "set ",
+    "set",
     "update",
 )
-# If the extracted payload still contains one of these the extraction grabbed
-# instruction text, not a value - reject it (leak guard).
-_COPY_DIRECTIVE_REJECT_IN_PAYLOAD: tuple[str, ...] = (
+# If the extracted payload still contains one of these as a WORD the
+# extraction grabbed instruction text, not a value - reject it (leak guard).
+# Matched with word/phrase boundaries (``_contains_any_word``), not substring:
+# a legitimate company name like "Changemakers" merely *contains* "change" but
+# is not an instruction, so substring matching wrongly no-op:ed it (Codex-fynd
+# 2026-06-01). Swedish change-verbs carry their common inflections (``ändrar``/
+# ``byter``) so the inflected instruction forms are still caught as words.
+_COPY_DIRECTIVE_REJECT_WORDS: tuple[str, ...] = (
     "byt",
+    "byta",
+    "byter",
+    "bytte",
+    "byt ut",
     "ändra",
+    "ändrar",
+    "ändrade",
+    "ändrat",
     "andra",
+    "andrar",
+    "andrade",
+    "andrat",
     "gör om",
     "gor om",
     "inkludera",
-    "lägg ",
-    "lagg ",
+    "inkluderar",
+    "lägg",
+    "lagg",
     "uppdatera",
+    "uppdaterar",
     "ersätt",
+    "ersätter",
+    "ersatt",
+    "ersatter",
     "change",
+    "changes",
     "replace",
+    "replaces",
     "include",
+    "includes",
     "rename",
+    "renames",
+)
+# Name keywords that *explicitly* mean the company name (header/title/rename
+# idioms). A generic "namn"/"namnet" is NOT in here: on its own it is
+# ambiguous and must not hijack ``company.name`` when the operator scoped the
+# rename to a service/product/page (Codex-fynd 2026-06-01).
+_COPY_DIRECTIVE_EXPLICIT_NAME_KEYWORDS: tuple[str, ...] = (
+    "företagsnamn",
+    "foretagsnamn",
+    "företagsnamnet",
+    "foretagsnamnet",
+    "heter",
+    "kallas",
+    "döp om",
+    "dop om",
+    "döpa om",
+    "dopa om",
+    "header",
+    "headern",
+    "rubrik",
+    "rubriken",
+    "huvudrubrik",
+    "huvudrubriken",
+    "titeln",
+    "company name",
+    "business name",
+    "rename",
+)
+# Scope words that mean the operator is renaming a service/product/page, not
+# the company. When one of these is present and no explicit company-name
+# keyword is, a generic "namn/namnet" must NOT map to ``company-name``.
+_COPY_DIRECTIVE_NONCOMPANY_SCOPE_KEYWORDS: tuple[str, ...] = (
+    "tjänst",
+    "tjänsten",
+    "tjänster",
+    "tjänsterna",
+    "produkt",
+    "produkten",
+    "produkter",
+    "produkterna",
+    "sida",
+    "sidan",
+    "sidor",
+    "sidorna",
+    "service",
+    "services",
+    "product",
+    "products",
+    "page",
+    "pages",
+)
+# Lead words that mark an UNQUOTED trailing ``till``/``to`` value as an
+# instruction (a desired quality/state) rather than literal new copy:
+# "change the hero to be more premium" must not publish "be more premium" as a
+# tagline (Codex-fynd 2026-06-01). Operators who want such words as literal
+# copy can quote them - the quoted branch is respected verbatim.
+_TRAILING_INSTRUCTION_LEADS: tuple[str, ...] = (
+    "att ",
+    "be ",
+    "become ",
+    "look ",
+    "feel ",
+    "seem ",
+    "appear ",
+    "sound ",
+    "make ",
+    "get ",
+    "stay ",
+    "have ",
+    "vara ",
+    "bli ",
+    "kännas ",
+    "verka ",
+    "se ut",
 )
 _COPY_TITLE_CASE_SKIP: frozenset[str] = frozenset(
     {"och", "i", "på", "pa", "av", "för", "for", "the", "of", "and", "a", "an", "&"}
@@ -2492,7 +2589,7 @@ def _safe_copy_payload(
     if not cleaned:
         return None
     lowered = cleaned.lower()
-    if any(token in lowered for token in _COPY_DIRECTIVE_REJECT_IN_PAYLOAD):
+    if _contains_any_word(lowered, _COPY_DIRECTIVE_REJECT_WORDS):
         return None
     safe = _customer_safe_planner_note(cleaned)
     if not safe:
@@ -2519,10 +2616,41 @@ def _classify_copy_target(text_norm: str) -> str | None:
     if _contains_any(text_norm, _COPY_DIRECTIVE_TAGLINE_KEYWORDS):
         return "tagline"
     if _contains_any_word(text_norm, _COPY_DIRECTIVE_NAME_KEYWORDS):
+        # A generic "namn/namnet" must not hijack company.name when the
+        # operator scoped the rename to a service/product/page (Codex-fynd
+        # 2026-06-01): "byt namnet på tjänsten till X" renames a service, not
+        # the company. An explicit company-name keyword (företagsnamn,
+        # header, rubrik, rename, ...) still wins over the scope words.
+        has_explicit_name = _contains_any_word(
+            text_norm, _COPY_DIRECTIVE_EXPLICIT_NAME_KEYWORDS
+        )
+        has_noncompany_scope = _contains_any_word(
+            text_norm, _COPY_DIRECTIVE_NONCOMPANY_SCOPE_KEYWORDS
+        )
+        if has_noncompany_scope and not has_explicit_name:
+            return None
         return "company-name"
     if _contains_any_word(text_norm, _COPY_DIRECTIVE_HERO_KEYWORDS):
         return "tagline"
     return None
+
+
+def _looks_like_trailing_instruction(value: str) -> bool:
+    """True when an UNQUOTED trailing ``till``/``to`` value reads as instruction.
+
+    The bare ``<...> till/to <rest>`` branch is the most permissive value
+    extractor. A phrasing like "change the hero to be more premium" should
+    shift tone, not publish the literal words "be more premium" as a tagline.
+    We reject the capture when it opens with an infinitive / quality
+    construction (Codex-fynd 2026-06-01).
+    """
+    head = _normalise_followup_text(value)
+    if not head:
+        return False
+    return any(
+        head == lead.strip() or head.startswith(lead)
+        for lead in _TRAILING_INSTRUCTION_LEADS
+    )
 
 
 def _extract_replace_value(follow_up_prompt: str) -> str | None:
@@ -2535,20 +2663,74 @@ def _extract_replace_value(follow_up_prompt: str) -> str | None:
         return quoted.group(1)
     trailing = _TILL_VALUE_TRAILING_RE.search(follow_up_prompt)
     if trailing:
-        return trailing.group(1)
+        # Only the unquoted trailing branch needs the instruction guard; the
+        # colon/quoted branches are explicit operator intent and respected.
+        value = trailing.group(1)
+        if _looks_like_trailing_instruction(value):
+            return None
+        return value
+    return None
+
+
+# Token-like words for the UNQUOTED include path: a string with at least one
+# uppercase letter or a digit (e.g. ``TEST-JAKOB`` or a campaign code) reads as
+# a deliberate token; a plain lowercase word ("mer", "text") does not.
+# Keyword/target words are excluded so "inkludera X i hero" never returns
+# "hero" as the token.
+_UNQUOTED_INCLUDE_TOKEN_RE = re.compile(r"[A-Za-zÅÄÖåäö0-9][A-Za-zÅÄÖåäö0-9-]*")
+_COPY_DIRECTIVE_TOKEN_STOPWORDS: frozenset[str] = frozenset(
+    word.strip().lower()
+    for group in (
+        _COPY_DIRECTIVE_TAGLINE_KEYWORDS,
+        _COPY_DIRECTIVE_NAME_KEYWORDS,
+        _COPY_DIRECTIVE_HERO_KEYWORDS,
+        _COPY_DIRECTIVE_INCLUDE_KEYWORDS,
+        _COPY_DIRECTIVE_REPLACE_KEYWORDS,
+    )
+    for word in group
+)
+
+
+def _first_unquoted_include_token(text: str) -> str | None:
+    """Return the first token-like word in ``text`` or ``None``.
+
+    Token-like = contains an uppercase letter or a digit and is not a
+    copy-directive keyword/target word. This keeps a natural unquoted prompt
+    like "inkludera TEST-JAKOB i hero" working while a vague "inkludera mer
+    text" stays an honest no-op rather than grabbing a stray word.
+    """
+    for candidate in _UNQUOTED_INCLUDE_TOKEN_RE.findall(text):
+        token = candidate.strip("-")
+        if len(token) < 2:
+            continue
+        if not any(ch.isupper() or ch.isdigit() for ch in token):
+            continue
+        if token.lower() in _COPY_DIRECTIVE_TOKEN_STOPWORDS:
+            continue
+        return token
     return None
 
 
 def _extract_include_token(follow_up_prompt: str) -> str | None:
-    """Pull a quoted token to include, preferring one after an include keyword."""
+    """Pull a token to include, preferring a quoted span after an include keyword.
+
+    Falls back to an UNQUOTED token-like word after the include keyword
+    (B-Codex 2026-06-01): "inkludera TEST-JAKOB i hero" without quotes is the
+    natural way operators phrase the ADR 0034 acceptance case, and used to be a
+    silent no-op because only quoted spans were extracted.
+    """
     lowered = follow_up_prompt.lower()
     for keyword in _COPY_DIRECTIVE_INCLUDE_KEYWORDS:
         position = lowered.find(keyword.strip())
         if position == -1:
             continue
-        match = _QUOTED_SPAN_RE.search(follow_up_prompt[position:])
+        after = follow_up_prompt[position + len(keyword.strip()) :]
+        match = _QUOTED_SPAN_RE.search(after)
         if match:
             return match.group(1)
+        token = _first_unquoted_include_token(after)
+        if token:
+            return token
     match = _QUOTED_SPAN_RE.search(follow_up_prompt)
     return match.group(1) if match else None
 
@@ -2579,8 +2761,11 @@ def _extract_copy_directives(
     target = _classify_copy_target(text)
     if target is None:
         return []
-    has_include = _contains_any(text, _COPY_DIRECTIVE_INCLUDE_KEYWORDS)
-    has_replace = _contains_any(text, _COPY_DIRECTIVE_REPLACE_KEYWORDS)
+    # Detect command verbs as WHOLE words/phrases, not substrings:
+    # "Jag bytte företagsnamnet till X" is past-tense narration and must not
+    # trigger replace-mode via the substring "byt" inside "bytte".
+    has_include = _contains_any_word(text, _COPY_DIRECTIVE_INCLUDE_KEYWORDS)
+    has_replace = _contains_any_word(text, _COPY_DIRECTIVE_REPLACE_KEYWORDS)
     if not has_include and not has_replace:
         return []
     # include-token wins when both are present ("ändra texten ... till att

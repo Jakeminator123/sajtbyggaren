@@ -45,6 +45,7 @@ from packages.generation.discovery.models import DiscoveryDecision  # noqa: E402
 from packages.generation.discovery.resolve import (  # noqa: E402
     _apply_company_fields,
     _apply_contact_fields,
+    _apply_location_from_address,
 )
 
 
@@ -290,6 +291,50 @@ def test_apply_contact_fields_keeps_brief_when_value_is_real() -> None:
 
     assert candidate["contact"]["phone"] == "0701234567"
     assert field_sources["contact.phone"] == "brief"
+
+
+# --- B120: robust city extraction from address lines -------------------------
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    ("address_lines", "expected_city"),
+    [
+        # Postcode + city on the SECOND line — the old code only read [0].
+        (["Storgatan 5", "116 46 Stockholm"], "Stockholm"),
+        # Comma separator + 5-digit-no-space postcode, single line.
+        (["Götgatan 12, 11646 Stockholm"], "Stockholm"),
+        # 5-digit no-space postcode.
+        (["11646 Stockholm"], "Stockholm"),
+        # Swedish postcode with internal space.
+        (["116 46 Stockholm"], "Stockholm"),
+        # Multi-word city.
+        (["421 31 Västra Frölunda"], "Västra Frölunda"),
+    ],
+)
+def test_location_from_address_extracts_city(
+    address_lines: list[str], expected_city: str
+) -> None:
+    project_input = _candidate_project_input()
+    project_input.pop("location", None)
+    project_input["contact"]["addressLines"] = address_lines
+
+    _apply_location_from_address(project_input)
+
+    assert project_input["location"]["city"] == expected_city
+    assert project_input["location"]["serviceAreas"] == [expected_city]
+
+
+@pytest.mark.tooling
+def test_location_from_address_without_postcode_leaves_location_untouched() -> None:
+    project_input = _candidate_project_input()
+    before = copy.deepcopy(project_input["location"])
+    project_input["contact"]["addressLines"] = ["Storgatan 5"]  # no postcode
+
+    _apply_location_from_address(project_input)
+
+    # Safe fallback: no postcode -> brief-extracted location is kept as-is.
+    assert project_input["location"] == before
 
 
 @pytest.mark.tooling

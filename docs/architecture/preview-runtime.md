@@ -39,7 +39,10 @@ EN gate, fyra checks: `typecheck`, `build`, `route-scan`, `preview-smoke`.
 Det vi inte tar med - exakta förbjudna termer står i [`naming-dictionary.v1.json:globallyForbidden`](../../governance/policies/naming-dictionary.v1.json) och i `previewRuntime:aliasesForbidden`:
 
 - Tier-uppdelad quality gate (`designPreview` vs `integrationsBuild`). Vi har EN gate.
-- Runtime-specifika namn (`vercelSandbox`, m.fl.) som läcker in i produktterminologin.
+- Runtime-specifika namn som ersätter canonical termen `Preview Runtime`.
+  Det är OK att diskutera implementationstyper i prosa (t.ex. "Vercel Sandbox"
+  eller "VM-adapter"), men kod-/policyytor ska fortsatt använda canonical
+  runtime-termer och tydlig adapter-kind.
 - Runtime-specifik kod inne i `packages/generation/`. Det stannar i `packages/preview-runtime/`.
 
 ## Implementation: WebContainer / StackBlitz

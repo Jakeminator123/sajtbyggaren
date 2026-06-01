@@ -163,6 +163,153 @@ def test_leak_guard_rejects_instruction_text_as_payload() -> None:
     assert _extract_copy_directives(prompt, language="sv") == []
 
 
+# --- Codex hardening 2026-06-01: copyDirective edge cases ---------------------
+
+
+@pytest.mark.tooling
+def test_company_rename_to_changemakers_is_not_rejected() -> None:
+    """A real one-word name that merely *contains* a reject-verb must apply.
+
+    "Changemakers" contains the substring "change"; the old substring reject
+    no-op:ed the rename. Word-boundary matching lets the rename through.
+    """
+    directives = _extract_copy_directives(
+        "byt företagsnamnet till Changemakers", language="sv"
+    )
+    assert directives == [
+        {
+            "target": "company-name",
+            "operation": "replace-text",
+            "payload": "Changemakers",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
+def test_service_scoped_generic_namn_does_not_rename_company() -> None:
+    """A generic "namn/namnet" scoped to a service must not touch company.name."""
+    assert (
+        _extract_copy_directives(
+            "byt namnet på tjänsten till Akut eljour", language="sv"
+        )
+        == []
+    )
+
+
+@pytest.mark.tooling
+def test_past_tense_bytte_narrative_does_not_trigger_replace() -> None:
+    """Past-tense narration is not an imperative copy-directive command."""
+    assert (
+        _extract_copy_directives("Jag bytte företagsnamnet till Ny Namn", language="sv")
+        == []
+    )
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "byt namnet på produkten till Premiumpaket",
+        "ändra namnet på sidan till Startsidan",
+    ],
+)
+def test_product_or_page_scoped_generic_namn_is_no_op(prompt: str) -> None:
+    assert _extract_copy_directives(prompt, language="sv") == []
+
+
+@pytest.mark.tooling
+def test_explicit_company_name_keyword_wins_over_scope_word() -> None:
+    """``företagsnamnet`` is explicit, so a stray scope word does not block it."""
+    directives = _extract_copy_directives(
+        "ändra företagsnamnet (inte tjänsten) till Akustik", language="sv"
+    )
+    assert directives == [
+        {
+            "target": "company-name",
+            "operation": "replace-text",
+            "payload": "Akustik",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
+def test_merge_service_scoped_namn_keeps_company_name() -> None:
+    merged = _merge("byt namnet på tjänsten till Akut eljour")
+    assert merged["company"]["name"] == "Örhängsföretaget"
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+@pytest.mark.tooling
+def test_unquoted_trailing_instruction_is_not_captured_as_tagline() -> None:
+    """"change the hero to be more premium" must not publish "be more premium"."""
+    assert _extract_copy_directives("change the hero to be more premium", language="en") == []
+    assert _extract_copy_directives("gör om hero till att bli mer exklusiv", language="sv") == []
+
+
+@pytest.mark.tooling
+def test_quoted_value_after_to_is_still_respected() -> None:
+    """The instruction guard only narrows the UNQUOTED trailing branch."""
+    directives = _extract_copy_directives(
+        "ändra underrubriken till 'Be bold'", language="en"
+    )
+    assert directives == [
+        {
+            "target": "tagline",
+            "operation": "replace-text",
+            "payload": "Be bold",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
+def test_extract_unquoted_include_token_targets_hero_tagline() -> None:
+    """Unquoted "inkludera TEST-JAKOB i hero" surfaces the token (B-Codex 2026-06-01).
+
+    Previously only quoted tokens were extracted, so the natural unquoted
+    phrasing of the ADR 0034 acceptance case was a silent no-op.
+    """
+    directives = _extract_copy_directives("inkludera TEST-JAKOB i hero", language="sv")
+    assert directives == [
+        {
+            "target": "tagline",
+            "operation": "include-token",
+            "payload": "TEST-JAKOB",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "inkludera mer text i hero",  # no token-like word -> honest no-op
+        "lägg till lite mer i rubriken",  # vague, lowercase
+    ],
+)
+def test_extract_unquoted_include_without_token_is_no_op(prompt: str) -> None:
+    assert _extract_copy_directives(prompt, language="sv") == []
+
+
+@pytest.mark.tooling
+def test_extract_unquoted_include_token_with_digits() -> None:
+    """A digit-bearing token (campaign code) also qualifies."""
+    directives = _extract_copy_directives("inkludera SALE2026 i hero", language="sv")
+    assert directives == [
+        {
+            "target": "tagline",
+            "operation": "include-token",
+            "payload": "SALE2026",
+            "source": "prompt-rule",
+        }
+    ]
+
+
 @pytest.mark.tooling
 def test_merge_applies_company_name_and_records_directive() -> None:
     merged = _merge(OPERATOR_RENAME_PROMPT)
