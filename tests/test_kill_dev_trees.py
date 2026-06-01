@@ -108,3 +108,67 @@ def test_has_preview_port_boundaries() -> None:
     assert kill_dev_trees._has_preview_port("next start -p 4099") is False
     assert kill_dev_trees._has_preview_port("next start -p 4200") is False
     assert kill_dev_trees._has_preview_port("next start") is False
+
+
+def test_path_scope_via_ancestry_not_only_own_cmdline() -> None:
+    """Windows barnprocesser har ofta tom cmdline — scope_text från förälder."""
+    assert (
+        matches_sajtbyggaren(
+            None,
+            scope_text=(
+                r"cmd /d /s /c npx next dev "
+                r"C:\Users\jakem\Desktop\sajtbyggaren\apps\viewser"
+            ),
+        )
+        is True
+    )
+
+
+def test_viewser_dev_port_with_path_scope_matches() -> None:
+    cmd = r"node C:\...\sajtbyggaren\apps\viewser\node_modules\next\dist\bin\next dev -p 3000"
+    assert matches_sajtbyggaren(cmd) is True
+
+
+def test_preview_port_listener_matches_even_with_empty_cmdline() -> None:
+    proc = {"ProcessId": 9999, "CommandLine": None}
+    by_pid = {9999: proc}
+    assert (
+        kill_dev_trees.is_target_node_process(
+            proc,
+            by_pid=by_pid,
+            preview_listener_pids={9999},
+            dev_listener_pids=set(),
+        )
+        is True
+    )
+
+
+def test_dev_port_listener_requires_path_scope() -> None:
+    proc = {"ProcessId": 8888, "CommandLine": None}
+    by_pid = {8888: proc}
+    # Tom cmdline, ingen förälder med sajtbyggaren → skyddad.
+    assert (
+        kill_dev_trees.is_target_node_process(
+            proc,
+            by_pid=by_pid,
+            preview_listener_pids=set(),
+            dev_listener_pids={8888},
+        )
+        is False
+    )
+    by_pid[8888] = proc
+    by_pid[7777] = {
+        "ProcessId": 7777,
+        "ParentProcessId": 0,
+        "CommandLine": r"node C:\Users\jakem\Desktop\sajtbyggaren\apps\viewser\scripts\dev.mjs",
+    }
+    proc["ParentProcessId"] = 7777
+    assert (
+        kill_dev_trees.is_target_node_process(
+            proc,
+            by_pid=by_pid,
+            preview_listener_pids=set(),
+            dev_listener_pids={8888},
+        )
+        is True
+    )
