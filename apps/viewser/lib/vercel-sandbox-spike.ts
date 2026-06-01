@@ -238,10 +238,12 @@ interface CollectedSource {
 }
 
 /**
- * Samla in alla käll-filer under ``rootDir`` (utom ``SKIP_DIRS``) som
- * ``writeFiles``-deskriptorer med POSIX-relativa paths. Kastar om projektet
- * är orimligt stort (oftast ett tecken på att ``node_modules`` inte
- * exkluderades) så vi aldrig laddar upp gigabyte.
+ * Samla in alla käll-filer under ``rootDir`` (utom ``SKIP_DIRS``,
+ * ``.env*``-filer och symlinks) som ``writeFiles``-deskriptorer med
+ * POSIX-relativa paths. Kastar om projektet är orimligt stort (oftast ett
+ * tecken på att ``node_modules`` inte exkluderades) så vi aldrig laddar upp
+ * gigabyte. ``.env*`` blockeras (utom ``.env.example``) så inga secrets
+ * läcker till den publika sandboxen.
  */
 function collectSource(rootDir: string): CollectedSource {
   const files: { relPath: string; content: Buffer }[] = [];
@@ -255,7 +257,17 @@ function collectSource(rootDir: string): CollectedSource {
         walk(path.join(absDir, entry.name));
         continue;
       }
+      // Symlinks hoppas över: ``Dirent.isFile()`` är ``false`` för en
+      // symlink (typen speglar katalog-entryn, inte målet).
       if (!entry.isFile()) continue;
+      // Säkerhet (samma B54/B58-mönster som stackblitz-files.ts): ladda
+      // ALDRIG upp ``.env*`` till den publika sandboxen — bara
+      // ``.env.example`` (ofarlig placeholder) är tillåten. Case-insensitivt
+      // så ``.ENV``/``.Env.Local`` också fångas.
+      const lowerName = entry.name.toLowerCase();
+      if (lowerName.startsWith(".env") && lowerName !== ".env.example") {
+        continue;
+      }
       const absPath = path.join(absDir, entry.name);
       const relPath = path.relative(rootDir, absPath).split(path.sep).join("/");
       const size = statSync(absPath).size;
