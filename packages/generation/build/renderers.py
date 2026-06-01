@@ -894,7 +894,7 @@ def _contact_page_hero_body(dossier: dict) -> str:
     )
 
 
-def render_section_contact_info(dossier: dict) -> str:
+def render_section_contact_info(dossier: dict, *, contact_path: str = "/kontakt") -> str:
     """Render the contact-page Phone / Mail / Address card section.
 
     Produces the gradient-headed /kontakt section with three articles
@@ -1017,6 +1017,16 @@ def render_section_contact_info(dossier: dict) -> str:
             "              </address>\n"
             "            </article>\n"
         )
+    # B159: when no real phone/email is available there is no tel:/mailto:
+    # CTA on the page, so the contact route would render with no way to reach
+    # the business (and the contact-cta-presence quality-gate check fails on
+    # e.g. restaurant /hitta-hit). Add an honest CTA that links to the contact
+    # route with CTA text instead of publishing a dummy channel. No tel:/
+    # mailto: and no lucide icon (so a fully-placeholder page stays icon-free).
+    contact_cta_label = "Get in touch" if language == "en" else "Hör av dig"
+    contact_cta_anchor = (
+        f'              <a href={_route_href(contact_path)} className="mt-4 inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{_jsx_safe_string(contact_cta_label)}</a>\n'
+    )
     if not cards:
         invite_heading = "How to reach us" if language == "en" else "Så når du oss"
         invite_body = (
@@ -1028,7 +1038,17 @@ def render_section_contact_info(dossier: dict) -> str:
             '            <article className="rounded-xl border border-[color:var(--border)] p-6 md:col-span-2">\n'
             f'              <h2 className="text-base font-semibold">{_jsx_safe_string(invite_heading)}</h2>\n'
             f'              <p className="mt-2 text-[color:var(--muted)]">{_jsx_safe_string(invite_body)}</p>\n'
-            "            </article>\n"
+            + contact_cta_anchor
+            + "            </article>\n"
+        )
+    elif phone is None and email is None:
+        # A real address (or hours) but no phone/email: keep the rendered
+        # cards and append a standalone contact CTA so the page still offers
+        # an explicit route back to the business.
+        cards.append(
+            '            <article className="rounded-xl border border-[color:var(--border)] p-6 md:col-span-2">\n'
+            + contact_cta_anchor
+            + "            </article>\n"
         )
     return header + "".join(cards) + footer
 
@@ -1740,7 +1760,7 @@ def render_about(dossier: dict) -> str:
     )
 
 
-def render_contact(dossier: dict) -> str:
+def render_contact(dossier: dict, *, contact_path: str = "/kontakt") -> str:
     # Path B step 4 — contact-info card grid (Phone / Mail / Address)
     # is produced by ``render_section_contact_info``. The lucide import is
     # derived from the icons the section actually emits (the same approach
@@ -1748,7 +1768,11 @@ def render_contact(dossier: dict) -> str:
     # does not leave an unused icon import. For fully-real contact data the
     # section emits Phone/Clock/Mail/MapPin and the import is byte-identical
     # to the previous static ``Clock, Mail, MapPin, Phone`` line.
-    contact_info_section = render_section_contact_info(dossier)
+    #
+    # ``contact_path`` is threaded through so the B159 honest-CTA fallback
+    # (no real phone/email) links back to the scaffold's contact route
+    # (``/hitta-hit`` for restaurant-hospitality, ``/kontakt`` elsewhere).
+    contact_info_section = render_section_contact_info(dossier, contact_path=contact_path)
     icons = sorted(set(_DISPATCHED_ICON_PATTERN.findall(contact_info_section)))
     icon_import = (
         ("import { " + ", ".join(icons) + ' } from "lucide-react";\n' + "\n")
@@ -2407,10 +2431,21 @@ def _render_hero_block(
     usp_chips_centered = _render_hero_usp_chips(usp_list, centered=True)
     video_layer = _render_hero_background_video(background_video, hero_asset)
     has_video = bool(video_layer)
+    # B158: never render the secondary "Ring <nummer>"-CTA when the phone is
+    # the B88 placeholder. A ``tel:+4680000000``-button looks broken and
+    # publishes a dummy number; the primary CTA (``hero_cta_href`` → contact/
+    # booking route) still gives the visitor a path, so dropping the dummy-
+    # phone button is the honest degrade. Computed once and reused across all
+    # three hero layouts so real-phone output stays byte-identical.
+    phone_cta_button = ""
+    if not is_placeholder_phone(contact_phone):
+        phone_cta_button = (
+            f'            <a href={_jsx_safe_string("tel:" + _phone_href(contact_phone))} className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />Ring {_jsx_safe_string(contact_phone)}</a>\n'
+        )
     cta_buttons = (
         '          <div className="flex flex-wrap gap-3">\n'
         f'            <a href={hero_cta_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{hero_cta_label}<ArrowRight className="size-4" /></a>\n'
-        f'            <a href={_jsx_safe_string("tel:" + _phone_href(contact_phone))} className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />Ring {_jsx_safe_string(contact_phone)}</a>\n'
+        f"{phone_cta_button}"
         f"{spel_cta}"
         "          </div>\n"
     )
@@ -2440,7 +2475,7 @@ def _render_hero_block(
             f"{usp_chips_centered}"
             '          <div className="flex flex-wrap items-center justify-center gap-3">\n'
             f'            <a href={hero_cta_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{hero_cta_label}<ArrowRight className="size-4" /></a>\n'
-            f'            <a href={_jsx_safe_string("tel:" + _phone_href(contact_phone))} className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />Ring {_jsx_safe_string(contact_phone)}</a>\n'
+            f"{phone_cta_button}"
             f"{spel_cta}"
             "          </div>\n"
             "        </div>\n"
@@ -5110,7 +5145,7 @@ def write_pages(
         elif route_id == "about":
             content = render_about(dossier)
         elif route_id == "contact":
-            content = render_contact(dossier)
+            content = render_contact(dossier, contact_path=contact_route["path"])
         else:
             raise SystemExit(
                 "Builder failed: scaffold route id "

@@ -1,4 +1,8 @@
-streamlit>=1.39
+# Backoffice uses the modern width="stretch"/"content" API (st.dataframe,
+# st.button, st.form_submit_button). width="stretch" for buttons landed in
+# 1.48 and for dataframe in 1.49; use_container_width was removed after
+# 2025-12-31, so the floor must guarantee the new API (Codex-fynd 2026-06-01).
+streamlit>=1.49
 jsonschema>=4.23
 pydantic>=2.9
 openai>=1.50
