@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 14 aktiva, 0 misplaced (av 0), 5 unknown, 131 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 16 aktiva, 0 misplaced (av 0), 5 unknown, 131 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -326,6 +326,32 @@ integrate christopher-ui discovery and asset workflow`, merge
   (story/services/all-copy) och väg C (modell-patch av `.generated/`).
   Test: `tests/test_followup_copy_directives.py` +
   `tests/test_followup_honest_no_op.py`.
+  Live-test 2026-06-01 (operatör, hamburgare-ab): en följdprompt som bad om
+  ändring av en *tjänstetext* ("Tydlig hjälp med cheeseburgers…") remappades
+  av `copyDirectiveModel` till `tagline` (närmaste tillåtna target) och
+  FloatingChat svarade "Klart! uppdaterade rubriken till …". `appliedVisibleEffect`
+  blev true men fel yta ändrades. Reinforcerar: (a) nivå 2 (bredare targets:
+  services/hero-body/about) behövs för att träffa rätt text, (b) nivå 1 bör
+  hellre vara ärligt avvisande ("kan bara byta namn/tagline nu") än att tyst
+  remappa till tagline och påstå full framgång.
+
+- **`B158` Låg-Medel** - Hero-/CTA-knappen renderar fortfarande placeholder-
+  telefonen `+46 8 000 00 00` även när kontaktfälten är platshållare.
+  Placeholder-suppressionen (`packages/generation/build/contact_placeholders.py`,
+  commit `f62bd40`) täcker footer, kontaktsida, hours-summary, booking-fallback,
+  404 och JSON-LD — men INTE hero-/CTA-knappens `tel:`-länk. Källa: live-test
+  2026-06-01 (operatör + browser-agent, smyckes- och hamburgar-sajt). Effekt:
+  slutanvändaren ser dummy-telefon i den mest synliga CTA:n tills operatör fyllt
+  i riktig data. Fix: open (utöka suppressionen till hero/CTA-`tel:`-länkar i
+  renderers). Test: open.
+
+- **`B159` Låg-Medel** - Quality Gate `contact-cta-presence` failar på
+  `restaurant-hospitality`-scaffoldens `/hitta-hit` (`app/hitta-hit/page.tsx`
+  saknar kontakt-CTA). Icke-blockerande (bygget går igenom), men kontaktvägen
+  saknar tydlig CTA vilket sänker konvertering. Källa: live-test 2026-06-01
+  (hamburgare-ab, restaurant-hospitality midnight-bar). Fix: open (lägg
+  kontakt-CTA i hitta-hit-renderingen eller scaffold-routens contact-yta).
+  Test: open.
 
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
   subprocess-status och loggutdrag medan körningen pågår, men riktig
