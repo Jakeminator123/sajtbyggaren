@@ -1551,15 +1551,23 @@ def test_page_useeffect_guards_success_path_with_cancelled_check() -> None:
     cancelled-guard sitting between them. Source-lock that ordering
     so a future refactor cannot collapse the two back into one
     function and silently drop the guard.
+
+    Tier 1 (2026-06-01): vi extraherade fetch-loopen till en
+    återanvändbar ``loadRuns``-callback (för retry-knapp i
+    runsLoadError-cardet). Guarden använder nu ``cancelledRef.current``
+    istället för en bool-variabel ``cancelled``. Båda mönstren
+    accepteras av denna regex.
     """
     text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
 
-    # Look for ``await fetchRuns()`` -> ``if (cancelled) return`` ->
-    # ``applyRunsData`` (or ``setRuns(``) ordering inside the same
-    # try-block. The 0-300 character window keeps the regex tight
-    # against accidental matches across unrelated code.
+    # Look for ``await fetchRuns()`` -> ``if (cancelled) return`` eller
+    # ``if (cancelledRef?.current) return`` -> ``applyRunsData`` (eller
+    # ``setRuns(``) ordering inside the same try-block. 0-300 character
+    # window håller regexen tight.
     pattern = re.compile(
-        r"await\s+fetchRuns\(\)[\s\S]{0,300}?if\s*\(\s*cancelled\s*\)\s*return\s*;[\s\S]{0,300}?(?:applyRunsData|setRuns\()",
+        r"await\s+fetchRuns\(\)[\s\S]{0,300}?"
+        r"if\s*\(\s*(?:cancelled|cancelledRef\??\.current)\s*\)\s*return\s*;"
+        r"[\s\S]{0,300}?(?:applyRunsData|setRuns\()",
         re.MULTILINE,
     )
     assert pattern.search(text), (
@@ -2315,4 +2323,134 @@ def test_b155_path_b_floating_chat_does_not_inject_payload_as_html() -> None:
         "JSX-element eller i config-object — copyDirective.payload härstammar "
         "från operatörens prompt och måste renderas som textnod via React's "
         "automatic escape."
+    )
+
+
+# --- Tier 1 (robusthet, 2026-06-01) ---------------------------------------
+#
+# Tre regressionstester för Tier 1-frontend-paketet:
+#   * ErrorBoundary måste finnas och wrappa fel-prona subtree:er i page.tsx
+#   * ToastProvider måste vara mountat högst upp i Providers
+#   * /api/runs-failure visar retry-card + toast (inte tyst stuck status)
+#
+# Syftet är att hindra framtida refactors från att tysta dessa fel-
+# hanteringsytor utan att vi märker det. Att radera ErrorBoundary eller
+# ToastProvider av misstag är en regression som är svår att upptäcka
+# tills produktionen kraschar.
+
+
+@pytest.mark.tooling
+def test_tier1_error_boundary_component_exists() -> None:
+    """ErrorBoundary-komponenten måste finnas i ``components/error-boundary.tsx``.
+
+    Den är en klasskomponent (React 19 har inget hook-API för error
+    boundaries) och måste exportera ``ErrorBoundary`` med en ``area``-
+    prop så fallback-rubriken kan anpassas per call-site.
+    """
+    path = VIEWSER_DIR / "components" / "error-boundary.tsx"
+    assert path.exists(), "ErrorBoundary-komponenten saknas"
+    text = path.read_text(encoding="utf-8")
+
+    assert "export class ErrorBoundary" in text, (
+        "ErrorBoundary måste vara en exporterad klass — React 19 har "
+        "fortfarande inget hook-API för error boundaries"
+    )
+    assert "getDerivedStateFromError" in text, (
+        "ErrorBoundary måste implementera getDerivedStateFromError för "
+        "att fånga rendering-fel"
+    )
+    assert "componentDidCatch" in text, (
+        "ErrorBoundary måste implementera componentDidCatch för att "
+        "logga fel till devtools/operatör-konsolen"
+    )
+    assert "area:" in text or "area: string" in text, (
+        "ErrorBoundary måste ta en ``area``-prop så fallback-rubriken kan "
+        "anpassas per call-site (t.ex. 'Builder', 'Wizard')"
+    )
+
+
+@pytest.mark.tooling
+def test_tier1_page_wraps_subtrees_in_error_boundary() -> None:
+    """``app/page.tsx`` måste wrappa ViewerPanel, PromptBuilder och
+    BuilderShell i ErrorBoundary så ett crash i någon subtree inte
+    ger vit skärm för hela appen.
+    """
+    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+
+    assert 'from "@/components/error-boundary"' in text, (
+        "page.tsx måste importera ErrorBoundary"
+    )
+
+    # Räkna antal ErrorBoundary-öppningar i JSX. Tre boundaries:
+    # ViewerPanel, PromptBuilder, BuilderShell. Mindre tolerant vore
+    # bättre men gör testet sprödare; nuvarande gräns säger bara
+    # "minst tre", vilket fångar borttagningar.
+    boundary_opens = len(re.findall(r"<ErrorBoundary\s+area=", text))
+    assert boundary_opens >= 3, (
+        "page.tsx måste wrappa minst tre fel-prona subtree:er "
+        "(ViewerPanel, PromptBuilder, BuilderShell) i ErrorBoundary "
+        f"— hittade bara {boundary_opens}"
+    )
+
+
+@pytest.mark.tooling
+def test_tier1_toast_system_exists_and_is_mounted() -> None:
+    """Toast-systemet måste finnas i ``components/ui/toast.tsx`` med
+    publika API:erna ``ToastProvider``, ``useToast`` och en viewport-
+    region som mountas via Provider:n. Providers.tsx ska wrappa
+    ToastProvider runt resten av app:en så ``useToast()`` är tillgängligt
+    från hela komponentträdet.
+    """
+    toast_path = VIEWSER_DIR / "components" / "ui" / "toast.tsx"
+    assert toast_path.exists(), "Toast-systemet saknas"
+    toast_text = toast_path.read_text(encoding="utf-8")
+
+    assert "export function ToastProvider" in toast_text, (
+        "toast.tsx måste exportera ToastProvider"
+    )
+    assert "export function useToast" in toast_text, (
+        "toast.tsx måste exportera useToast()"
+    )
+    # aria-live krävs för skärmläsar-uppläsning av toaster.
+    assert "aria-live" in toast_text, (
+        "Toast-regionen/items måste ha aria-live så skärmläsare läser "
+        "upp dem när de visas"
+    )
+    # role="alert" eller role="status" krävs för att toaster ska
+    # annonseras.
+    assert 'role="alert"' in toast_text or "liveRole" in toast_text, (
+        'Toast-items måste ha role="alert"/"status" beroende på variant'
+    )
+
+    providers_text = (VIEWSER_DIR / "app" / "providers.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "ToastProvider" in providers_text, (
+        "Providers.tsx måste mounta ToastProvider så useToast() funkar "
+        "från hela komponentträdet"
+    )
+
+
+@pytest.mark.tooling
+def test_tier1_page_handles_runs_load_failure_with_retry() -> None:
+    """``app/page.tsx`` måste visa en retry-yta när initial /api/runs
+    failar — inte bara en tyst stuck loading-text. Vi söker efter
+    ``runsLoadError``-state och en RunsLoadErrorCard- (eller
+    motsvarande) -komponent med retry-knapp.
+    """
+    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+
+    assert "runsLoadError" in text, (
+        "page.tsx måste ha runsLoadError-state för att visa retry-card "
+        "vid /api/runs-failures"
+    )
+    assert "RunsLoadErrorCard" in text or "onRetry" in text, (
+        "page.tsx måste rendera ett retry-card med onRetry-callback "
+        "när runsLoadError är satt"
+    )
+    # Toast-feedback för failure-pathen så operatören ser felet även
+    # om hen inte tittar på hero-ytan.
+    assert 'variant: "error"' in text and "Kunde inte ladda runs" in text, (
+        "page.tsx måste visa en error-toast med titel 'Kunde inte "
+        "ladda runs' när initial fetch failar"
     )

@@ -810,6 +810,26 @@ COMMON_WORDS = {
     # Allowlistas här så christopher-ui:s sync-PR går igenom term-coverage
     # --strict utan att vi behöver röra governance/policies från UI-lanen.
     "AppliedCopyDirective",
+    # Tier 1 robusthet (2026-06-01) — christopher-ui frontend-paket A+B+C:
+    # ErrorBoundary-komponent (klass, React 19) + lokalt toast-system. Alla
+    # är apps/viewser-interna UI-helpers — varken canonical domain terms
+    # eller backend-yta. Samma logik som AppliedCopyDirective ovan.
+    # ErrorBoundary + helpers:
+    "DefaultFallback",
+    "ErrorBoundaryProps",
+    "ErrorBoundaryState",
+    "ErrorInfo",  # React-typ från `import type { ErrorInfo } from "react"`
+    "RunsLoadErrorCard",  # lokal komponent i apps/viewser/app/page.tsx
+    # Toast-system (eget mini-system, ingen extern dep):
+    "ToastContext",
+    "ToastContextValue",
+    "ToastEntry",
+    "ToastInput",
+    "ToastItem",
+    "ToastProvider",
+    "ToastVariant",
+    "ToastViewport",
+    "TriangleAlert",  # lucide-react icon-namn (precis som CheckCircle2 m.fl.)
     "ConvertTo",  # PowerShell cmdlet-suffix (ConvertTo-Json) i kill-dev-trees.py
     "Dubbelklicka",  # svenskt verb i kill-dev-trees.py-docstring + handoff
     "Verifiering",  # svensk markdown-rubrik i scout-prompts ("**Verifiering**")

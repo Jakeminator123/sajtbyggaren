@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { RefreshCw, WifiOff } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { BuilderShell } from "@/components/builder/builder-shell";
 import { usePendingBuild } from "@/components/builder/use-pending-build";
 import { ConsoleDrawer } from "@/components/console-drawer";
 import { DevicePresetProvider } from "@/components/device-preset-context";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { SiteHeader } from "@/components/layout/site-header";
 import type { ProjectInputOption } from "@/components/project-input-picker";
 import {
@@ -14,6 +16,8 @@ import {
   type PromptStage,
 } from "@/components/prompt-builder";
 import type { RunHistoryItem } from "@/components/run-history";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { ViewerPanel } from "@/components/viewer-panel";
 
 type RunsApiPayload = {
@@ -65,6 +69,13 @@ export default function Home() {
   const [building, setBuilding] = useState(false);
   const [buildStage, setBuildStage] = useState<PromptStage>("idle");
   const [consoleOpen, setConsoleOpen] = useState(false);
+  // Network-failure UX: när initial /api/runs failar visar vi en
+  // dedikerad retry-rad i hero-ytan istället för bara en stuck status-
+  // text. `runsLoadError` är operatör-läsbart fel-meddelande, eller null
+  // när allt är OK eller ännu inte laddat. Sätts av `loadRuns()` nedan.
+  const [runsLoadError, setRunsLoadError] = useState<string | null>(null);
+  const [runsLoading, setRunsLoading] = useState(true);
+  const toast = useToast();
   // Live Build Sync: pending-build-state delas mellan BuilderShell
   // (som äger FloatingChat + dialogerna) och Versions-tab. Sätts
   // av onBuildStart-callbacks, rensas av onBuildEnd.
@@ -153,33 +164,85 @@ export default function Home() {
     }
   }
 
-  useEffect(() => {
-    let cancelled = false;
-    // Wrap refresh in an async IIFE so the React 19
-    // `react-hooks/set-state-in-effect` rule sees subscription-style
-    // updates (after await) rather than synchronous-in-effect. The
-    // cancelled-guards on BOTH success and catch paths mirror the
-    // pattern in viewer-panel / run-details-panel: a stale resolution
-    // arriving after unmount must not write setState.
-    void (async () => {
+  // Stable ref för retry-callback i toast-action. Utan ref:en skulle vi
+  // stänga över sig själv (`loadRuns` används innan den deklareras), vilket
+  // bryter React 19:s `react-hooks/immutability`-regel. Ref:en pekar alltid
+  // på senaste `loadRuns` och kallas bara på user-klick, så det är en
+  // safe escape hatch.
+  const loadRunsRef = useRef<(() => Promise<void>) | null>(null);
+
+  // Återanvändbar loader för initial fetch + retry-knapp. Sätter både
+  // `runsLoadError` (för retry-cardet) och `statusText` (för headern).
+  // Använder `cancelled` så avmonterad component inte skriver state efter
+  // unmount. Returneras som callback så retry-knappen kan trigga om.
+  //
+  // OBS: vi sätter INTE `setRunsLoading(true)` här. React 19:s
+  // `react-hooks/set-state-in-effect` flaggar sync setState innan första
+  // `await` i en effect-trigad async-funktion. `runsLoading` initieras
+  // istället till `true` i useState ovan, och retry-callsite (user event)
+  // sätter den till true igen — vilket är OK eftersom det inte är en
+  // effect.
+  const loadRuns = useCallback(
+    async (cancelledRef?: { current: boolean }): Promise<void> => {
       try {
         const data = await fetchRuns();
-        if (cancelled) return;
+        if (cancelledRef?.current) return;
         applyRunsData(data);
+        setRunsLoadError(null);
       } catch (error) {
-        if (cancelled) return;
+        if (cancelledRef?.current) return;
         const message =
           error instanceof Error
             ? error.message
             : "Kunde inte läsa initial data.";
+        setRunsLoadError(message);
         setStatusText(message);
+        // Toast så operatören ser felet även om hen inte tittar på hero
+        // -ytan. Action ger snabb retry utan att leta upp kortet — vi
+        // läser via ref:en så vi inte stänger över oss själva.
+        toast.show({
+          variant: "error",
+          title: "Kunde inte ladda runs",
+          description: message,
+          action: {
+            label: "Försök igen",
+            onClick: () => {
+              setRunsLoading(true);
+              void loadRunsRef.current?.();
+            },
+          },
+        });
+      } finally {
+        if (!cancelledRef?.current) {
+          setRunsLoading(false);
+        }
       }
+    },
+    // applyRunsData är en stabil closure (samma identitet hela komponentens
+    // livstid) och ändras aldrig — låter eslint-disable peka ut det
+    // explicit istället för att lyfta den ut till useCallback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [toast],
+  );
+
+  // Håll ref:en synkad med senaste closure varje render.
+  useEffect(() => {
+    loadRunsRef.current = () => loadRuns();
+  }, [loadRuns]);
+
+  useEffect(() => {
+    const cancelledRef = { current: false };
+    // Wrap i async IIFE så React 19:s `react-hooks/set-state-in-effect`
+    // ser att setState landar EFTER en await-gräns. Att kalla `loadRuns`
+    // direkt fångar inte regelmotorn — den kan inte följa setState förbi
+    // callback-gränsen och flaggar som om vi satte state synkront.
+    void (async () => {
+      await loadRuns(cancelledRef);
     })();
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadRuns]);
 
   // Aktuell runs- + project-input-state avgör om vi är i "builder-mode"
   // (= en prompt-genererad sajt är vald, follow-ups via FloatingChat är
@@ -216,6 +279,29 @@ export default function Home() {
     outcome: PromptBuildOutcome,
     siteId?: string,
   ) {
+    // Bygget landade — visa toast så operatören ser status även om
+    // FloatingChat eller PromptBuilder inte är synlig (t.ex. på liten
+    // skärm där hero scrollats ur sikte). FloatingChat visar fortfarande
+    // sin egen rad med detaljer; toasten är en kort sammanfattning.
+    if (outcome === "ok") {
+      toast.show({
+        variant: "success",
+        description: `Bygget klart för ${runId}.`,
+      });
+    } else if (outcome === "degraded") {
+      toast.show({
+        variant: "warning",
+        title: "Bygget klart med varning",
+        description: `Run ${runId} levererade mock- eller degraded-resultat. Se Quality Gate i Inspector.`,
+      });
+    } else if (outcome === "failed") {
+      toast.show({
+        variant: "error",
+        title: "Bygget misslyckades",
+        description: `Run ${runId} kunde inte slutföras. Försök igen eller iterera från en tidigare version.`,
+      });
+    }
+
     // B6: om operatören aktivt lämnat den här buildens mål-vy mellan
     // start och completion (Ny sajt eller annan run vald) får vi inte
     // rycka tillbaka selectedRunId/selectedSiteId. Vi uppdaterar bara
@@ -236,6 +322,11 @@ export default function Home() {
               ? error.message
               : "Kunde inte uppdatera runs.";
           setStatusText(message);
+          toast.show({
+            variant: "warning",
+            title: "Kunde inte uppdatera historiken",
+            description: message,
+          });
         });
       return;
     }
@@ -258,6 +349,11 @@ export default function Home() {
         const message =
           error instanceof Error ? error.message : "Kunde inte uppdatera runs.";
         setStatusText(message);
+        toast.show({
+          variant: "warning",
+          title: "Kunde inte uppdatera historiken",
+          description: message,
+        });
       });
   }
 
@@ -274,12 +370,29 @@ export default function Home() {
         hideBrand={builderActive}
       />
 
-      <ViewerPanel
-        runId={selectedRunId}
-        siteId={selectedSiteId}
-        isBuilding={building}
-        buildStage={buildStage}
-      />
+      <ErrorBoundary area="Förhandsvisningen">
+        <ViewerPanel
+          runId={selectedRunId}
+          siteId={selectedSiteId}
+          isBuilding={building}
+          buildStage={buildStage}
+        />
+      </ErrorBoundary>
+
+      {/* Network-failure UX: visas bara om initial /api/runs failade
+          OCH operatören ännu inte kommit in i builder-läget (då har vi
+          redan en run och kan jobba mot den lokalt). Cardet ligger
+          centrerat över hero-ytan så det syns även när PromptBuilder är
+          dold. Retry-knappen anropar samma loader som useEffect:en. */}
+      {runsLoadError && !runsLoading && !builderActive ? (
+        <RunsLoadErrorCard
+          message={runsLoadError}
+          onRetry={() => {
+            setRunsLoading(true);
+            void loadRuns();
+          }}
+        />
+      ) : null}
 
       {/* Prompt-rutan döljs visuellt medan bygget pågår (BuildProgressCard
           tar över hero-ytan) OCH när builder-mode är aktivt (då tar
@@ -290,22 +403,24 @@ export default function Home() {
           nu alltid mountad även när builder-mode är aktivt. Tidigare
           conditional unmount → remount under follow-up återställde
           stage till "idle" och kraschade build-progress-cardet. */}
-      <PromptBuilder
-        isBusy={building}
-        runs={runs}
-        projectInputs={projectInputs}
-        selectedRunId={selectedRunId}
-        selectedSiteId={selectedSiteId}
-        onBuildStart={() => setBuilding(true)}
-        onBuildEnd={() => setBuilding(false)}
-        // Rapportera stage endast när PromptBuilder är "owner" av
-        // bygget. I builder-mode driver FloatingChat follow-ups så
-        // PromptBuilder:s interna stage-effekt får inte skriva över
-        // buildStage med "idle" eller en stale tidigare success.
-        onStageChange={builderActive ? undefined : setBuildStage}
-        hidden={building || builderActive}
-        onBuildDone={handleBuildDone}
-      />
+      <ErrorBoundary area="Prompt-rutan">
+        <PromptBuilder
+          isBusy={building}
+          runs={runs}
+          projectInputs={projectInputs}
+          selectedRunId={selectedRunId}
+          selectedSiteId={selectedSiteId}
+          onBuildStart={() => setBuilding(true)}
+          onBuildEnd={() => setBuilding(false)}
+          // Rapportera stage endast när PromptBuilder är "owner" av
+          // bygget. I builder-mode driver FloatingChat follow-ups så
+          // PromptBuilder:s interna stage-effekt får inte skriva över
+          // buildStage med "idle" eller en stale tidigare success.
+          onStageChange={builderActive ? undefined : setBuildStage}
+          hidden={building || builderActive}
+          onBuildDone={handleBuildDone}
+        />
+      </ErrorBoundary>
 
       {/* Builder-shell: floating draggable chat + dolt verktygsmeny.
           Visas så snart vi har en prompt-genererad run vald. Pre-build
@@ -315,52 +430,54 @@ export default function Home() {
           ViewerPanel:s BuildProgressCard fortsätter fungera under
           rebuild-cykeln. */}
       {builderActive && builderTarget ? (
-        <BuilderShell
-          siteId={builderTarget.siteId}
-          runId={selectedRunId}
-          isBuilding={building}
-          pendingBuild={pendingBuild}
-          onPendingBuildBegin={beginPending}
-          onPendingBuildClear={clearPending}
-          pendingBaseRunId={pendingBaseRunId}
-          onSetPendingBaseRunId={setPendingBaseRunId}
-          onBuildStart={() => setBuilding(true)}
-          onBuildEnd={() => {
-            setBuilding(false);
-            // Säkerhetsnet: om onPendingBuildClear inte hann kallas
-            // (t.ex. dialog som glömde rensa pending) tar vi bort den
-            // här så vi aldrig får orphan-pending-rader.
-            clearPending();
-            // OBS: pendingBaseRunId rensas INTE här. onBuildEnd kallas
-            // även när bygget misslyckas, och en operatör som klickar
-            // "Försök igen" på error-bubblan vill iterera från samma
-            // base-version — inte fall tillbaka till latest. Vi rensar
-            // istället i handleBuildDone (success-path), via TTL-guarden
-            // i usePendingBuild (5 min) och via "Iterera"-toggle.
-          }}
-          onBuildDone={(runId, outcome) => {
-            // Bygget lyckades (eller hamnade i mock/degraded — alla
-            // outcomes utom hård exception). Operatörens iteration
-            // konsumerades och ska inte oavsiktligt återanvändas av
-            // nästa fri-text-prompt. Signaturen i BuilderShell skickar
-            // inte siteId vidare; det löser handleBuildDone själv via
-            // runs-listan när den re-fetchar.
-            setPendingBaseRunId(null);
-            handleBuildDone(runId, outcome);
-          }}
-          onNewSite={() => {
-            // Återgår till pre-build-läget: rensar både selectedRunId
-            // och buildStage så hero + DiscoveryWizard tar över igen.
-            // Markera att operatören navigerat bort om ett bygge pågår
-            // så handleBuildDone inte rycker tillbaka selectedRunId.
-            if (building) userNavigatedAwayRef.current = true;
-            setSelectedRunId(null);
-            setBuildStage("idle");
-            setStatusText("Beskriv en ny sajt nedan så bygger vi den åt dig.");
-          }}
-          onOpenConsole={() => setConsoleOpen(true)}
-          onOpenHistory={() => setConsoleOpen(true)}
-        />
+        <ErrorBoundary area="Builder">
+          <BuilderShell
+            siteId={builderTarget.siteId}
+            runId={selectedRunId}
+            isBuilding={building}
+            pendingBuild={pendingBuild}
+            onPendingBuildBegin={beginPending}
+            onPendingBuildClear={clearPending}
+            pendingBaseRunId={pendingBaseRunId}
+            onSetPendingBaseRunId={setPendingBaseRunId}
+            onBuildStart={() => setBuilding(true)}
+            onBuildEnd={() => {
+              setBuilding(false);
+              // Säkerhetsnet: om onPendingBuildClear inte hann kallas
+              // (t.ex. dialog som glömde rensa pending) tar vi bort den
+              // här så vi aldrig får orphan-pending-rader.
+              clearPending();
+              // OBS: pendingBaseRunId rensas INTE här. onBuildEnd kallas
+              // även när bygget misslyckas, och en operatör som klickar
+              // "Försök igen" på error-bubblan vill iterera från samma
+              // base-version — inte fall tillbaka till latest. Vi rensar
+              // istället i handleBuildDone (success-path), via TTL-guarden
+              // i usePendingBuild (5 min) och via "Iterera"-toggle.
+            }}
+            onBuildDone={(runId, outcome) => {
+              // Bygget lyckades (eller hamnade i mock/degraded — alla
+              // outcomes utom hård exception). Operatörens iteration
+              // konsumerades och ska inte oavsiktligt återanvändas av
+              // nästa fri-text-prompt. Signaturen i BuilderShell skickar
+              // inte siteId vidare; det löser handleBuildDone själv via
+              // runs-listan när den re-fetchar.
+              setPendingBaseRunId(null);
+              handleBuildDone(runId, outcome);
+            }}
+            onNewSite={() => {
+              // Återgår till pre-build-läget: rensar både selectedRunId
+              // och buildStage så hero + DiscoveryWizard tar över igen.
+              // Markera att operatören navigerat bort om ett bygge pågår
+              // så handleBuildDone inte rycker tillbaka selectedRunId.
+              if (building) userNavigatedAwayRef.current = true;
+              setSelectedRunId(null);
+              setBuildStage("idle");
+              setStatusText("Beskriv en ny sajt nedan så bygger vi den åt dig.");
+            }}
+            onOpenConsole={() => setConsoleOpen(true)}
+            onOpenHistory={() => setConsoleOpen(true)}
+          />
+        </ErrorBoundary>
       ) : null}
 
       <ConsoleDrawer
@@ -379,5 +496,51 @@ export default function Home() {
       />
     </main>
     </DevicePresetProvider>
+  );
+}
+
+// Visas i hero-ytan när initial /api/runs failade. Använder `role="alert"`
+// så skärmläsare läser upp den direkt vid mount. Retry-knappen anropar
+// `loadRuns()` igen och rensar felet om det lyckas.
+function RunsLoadErrorCard({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div
+      role="alert"
+      className="pointer-events-none fixed inset-x-0 top-24 z-30 mx-auto flex w-full max-w-md justify-center px-4"
+    >
+      <div className="border-destructive/40 bg-card pointer-events-auto flex flex-col gap-3 rounded-2xl border p-4 shadow-md">
+        <div className="flex items-center gap-2">
+          <WifiOff
+            className="text-destructive h-4 w-4 shrink-0"
+            aria-hidden
+          />
+          <h2 className="text-foreground text-sm font-semibold">
+            Kunde inte ladda runs
+          </h2>
+        </div>
+        <p className="text-muted-foreground text-[13px] leading-relaxed">
+          Servern svarade inte. Kontrollera att backend kör (
+          <code className="bg-muted/60 rounded px-1 py-0.5 font-mono text-[11px]">
+            npm run dev
+          </code>
+          ) och försök igen.
+        </p>
+        <pre className="bg-muted/60 text-muted-foreground max-h-20 overflow-auto rounded-md p-2 font-mono text-[11px] leading-snug">
+          {message}
+        </pre>
+        <div className="flex justify-end">
+          <Button size="sm" variant="outline" onClick={onRetry}>
+            <RefreshCw aria-hidden />
+            Försök igen
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
