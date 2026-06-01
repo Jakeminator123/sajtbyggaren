@@ -1,10 +1,40 @@
 # ADR 0034 - follow-up prompt content passthrough
 
-**Status:** proposed
-**Datum:** 2026-05-27
+**Status:** accepterad (väg A, first slice) / proposed (väg B UI + väg C)
+**Datum:** 2026-05-27 (uppdaterad 2026-06-01)
 **Beroenden:** ADR 0017 (minimal real codegenModel v1), ADR 0027
 (semantic follow-up merge i Project DNA V1), ADR 0032 (section
 treatments additive directive), GAP-followup-prompt-content-passthrough.
+
+## Implementationsnot 2026-06-01 (väg A, first slice)
+
+Väg A:s första slice är implementerad på `jakob-be` (ej i `main` än). Detta
+är medvetet INTE "full LLM-flow" - det är "ADR 0034 Path A / copyDirectives
+first slice":
+
+- **Kontrakt:** `directives.copyDirectives[]` i `project-input.schema.json`
+  (strikt: `target` enum `company-name | tagline`, `operation` enum
+  `replace-text | include-token`, `payload` validerad/maxLength 200,
+  `source` enum `prompt-rule | llm | explicit`). Naming-dictionary v18
+  registrerar Copy Directive.
+- Deterministiska regler (`scripts/prompt_to_project_input.py`):
+  "byt/ändra/gör om \<namn|header|rubrik\> till '\<Y\>'" -> replace-text på
+  company-name; "inkludera '\<TOKEN\>' i hero" -> include-token på tagline.
+  Körs offline, fullt testbar.
+- **LLM-extraktor:** dedikerad `copyDirectiveModel`-roll (llm-models.v1.json
+  v5, EJ återanvänd briefModel). Fyrar bara i produktions-CLI (Viewser ->
+  `--followup-site-id`), när deterministiska regler missar OCH följdprompten
+  är genuint oklassad icke-additiv. All output går genom samma
+  public-copy-validator som deterministiska direktiv.
+- **Spårbarhet:** applicerade direktiv sparas i Project Input
+  (`directives.copyDirectives`); `build-result.json:appliedVisibleEffect`
+  (B155) blir `true` när page.tsx ändras.
+- **Leak-säkerhet:** rå följdprompt renderas aldrig okontrollerat - bara en
+  validerad payload till ett känt strukturerat fält.
+
+Kvar (proposed): väg B FloatingChat-feedback (kräver Christopher/UI), bredare
+targets (story/services/all-copy), och väg C (modell patchar `.generated/`
+direkt - kräver sandbox/diff/rollback enligt nedan).
 
 ## Kontext
 

@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/llm-models.schema.json",
   "policyId": "llm-models.v1",
-  "version": 4,
+  "version": 5,
   "status": "draft-but-authoritative",
-  "purpose": "Mappar Model Roles till konkreta modellnamn. Provider-agnostisk - byts utan att produktkoden ändras. Tunn första version: en linje av modeller, gpt-5.4 överallt. Version 2 lägger till sharedModelGroups som gör delning explicit. Version 3 lägger till variantModel för kontrollerad generering av Scaffold Variant-kandidater. Version 4 lägger till dossierModel för kandidat-only Soft Dossier-generering.",
+  "purpose": "Mappar Model Roles till konkreta modellnamn. Provider-agnostisk - byts utan att produktkoden ändras. Tunn första version: en linje av modeller, gpt-5.4 överallt. Version 2 lägger till sharedModelGroups som gör delning explicit. Version 3 lägger till variantModel för kontrollerad generering av Scaffold Variant-kandidater. Version 4 lägger till dossierModel för kandidat-only Soft Dossier-generering. Version 5 lägger till copyDirectiveModel: tolkar en följdprompt till validerade copyDirectives (ADR 0034 väg A) så fri följdprompt-text kan bli en synlig, spårbar sajt-ändring utan att rå prompt renderas som kundcopy. Egen roll (inte återanvänd briefModel) så syftet hålls separat.",
   "principles": [
     "Ingen kod får anropa en LLM utan att gå via en registrerad Model Role.",
     "Provider-agnostiskt: model-strängen är opaque för produktkoden. Provider-resolveren mappar mot OpenAI, Anthropic eller annan.",
@@ -25,6 +25,12 @@
     {
       "id": "planningModel",
       "purpose": "Fas 2 Plan - reasoning där det behövs (route-hints, dossier-rationale).",
+      "model": "gpt-5.4",
+      "provider": "openai"
+    },
+    {
+      "id": "copyDirectiveModel",
+      "purpose": "Följdprompt-tolkning (ADR 0034 väg A) - läser en fri följdprompt + sajtens redigerbara fält och föreslår validerade copyDirectives (target/operation/payload). Output går alltid genom samma copy-validator som deterministiska direktiv; modellen skriver aldrig direkt i renderad kod.",
       "model": "gpt-5.4",
       "provider": "openai"
     },
@@ -80,7 +86,7 @@
     {
       "groupId": "smallReasoning",
       "purpose": "Light reasoning, classification, rerank.",
-      "roles": ["briefModel", "planningModel", "rerankModel", "verifierModel"]
+      "roles": ["briefModel", "planningModel", "copyDirectiveModel", "rerankModel", "verifierModel"]
     },
     {
       "groupId": "heavyCodegen",

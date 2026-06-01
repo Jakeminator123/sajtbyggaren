@@ -15,24 +15,32 @@ pnpm-lock.yaml
 .cursor/tmp_*
 eval-tmp/
 
+# Engine Run-artefakter + genererad output. Varje Engine Run lägger 8
+# artefakter + en generated-files-snapshot under data/runs/<runId>/, och
+# .generated/ är fulla Next-projekt med node_modules (B157 nivå 4 lägger nu
+# dessutom builds/<buildId>/ per sajt). Tungt; behövs inte i Cursor-indexet
+# (fortfarande läsbart vid behov via Read/terminal, bara inte indexerat).
+data/runs/
+data/versions/
+data/prompt-inputs/
+.generated/
+
 # Embedding-index-cache (policy låst, implementation kommer).
 # Redan i .gitignore; här ser vi till att Cursor inte börjar indexera
 # tiotusentals vektor-/cache-filer när index byggs i kommande sprint.
-################################################
-#data/embedding-index/
-#data/output/
+data/embedding-index/
+data/output/
 
 # Lokal eval-output (post evals-folder-plan). Behåll .gitkeep-filer i git,
 # men låt inte Cursor-indexet äta tunga artefakter eller maskinrapporter.
-#data/evals/artifacts/
-#data/evals/summaries/*/*.json
-#data/evals/summaries/*/*.md
-#data/evals/eval-runs/
-#data/evals/manual-scorecards/
-#data/evals/generated/
-#data/evals/scaffold-probe/
-#data/evals/golden-path/
-################################################
+data/evals/artifacts/
+data/evals/summaries/*/*.json
+data/evals/summaries/*/*.md
+data/evals/eval-runs/
+data/evals/manual-scorecards/
+data/evals/generated/
+data/evals/scaffold-probe/
+data/evals/golden-path/
 
 # Stora binära media-filer som agenten inte kan tolka meningsfullt.
 # Trackade i git (produktassets) men onödiga att indexera.

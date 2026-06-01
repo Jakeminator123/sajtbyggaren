@@ -131,7 +131,7 @@ def view_model_roles() -> None:
                 "Syfte": role.get("purpose"),
             }
         )
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(rows, width="stretch", hide_index=True)
 
     st.divider()
     st.subheader("Redigera modell per roll")
@@ -224,7 +224,7 @@ def view_fix_types() -> None:
         }
         for f in fixes.get("mechanicalFixes", [])
     ]
-    st.dataframe(mech_rows, use_container_width=True, hide_index=True)
+    st.dataframe(mech_rows, width="stretch", hide_index=True)
 
     st.subheader("LLM-fixar (triggas vid specifika fel)")
     llm_rows = [
@@ -236,7 +236,7 @@ def view_fix_types() -> None:
         }
         for f in fixes.get("llmFixes", [])
     ]
-    st.dataframe(llm_rows, use_container_width=True, hide_index=True)
+    st.dataframe(llm_rows, width="stretch", hide_index=True)
 
     st.divider()
     st.markdown("**Principer**")
@@ -279,7 +279,7 @@ def view_embeddings() -> None:
         }
         for d in emb.get("domains", [])
     ]
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(rows, width="stretch", hide_index=True)
 
     st.divider()
     st.markdown("**Principer**")

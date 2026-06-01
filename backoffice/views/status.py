@@ -47,11 +47,11 @@ def view_overview() -> None:
     st.divider()
     st.subheader("Snabbåtgärder")
     a1, a2, a3 = st.columns(3)
-    if a1.button("Kör governance-validering", use_container_width=True, key="ov_validate"):
+    if a1.button("Kör governance-validering", width="stretch", key="ov_validate"):
         st.session_state["overview_check"] = health.run_governance_validate()
-    if a2.button("Verifiera rules-sync", use_container_width=True, key="ov_sync"):
+    if a2.button("Verifiera rules-sync", width="stretch", key="ov_sync"):
         st.session_state["overview_check"] = health.run_rules_sync_check()
-    if a3.button("Term-coverage (strict)", use_container_width=True, key="ov_terms"):
+    if a3.button("Term-coverage (strict)", width="stretch", key="ov_terms"):
         st.session_state["overview_check"] = health.run_term_coverage(strict=True)
 
     if "overview_check" in st.session_state:

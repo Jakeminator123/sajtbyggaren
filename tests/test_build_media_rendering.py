@@ -306,7 +306,13 @@ def test_not_found_includes_company_name_and_back_link() -> None:
     assert "Brief Company AB" in page
     assert 'href="/"' in page
     assert "Tillbaka till startsidan" in page
-    assert "+46 8 000 00 00" in page, "Contact phone should be reachable from 404"
+    # Honest contact fallback (fix(contact)): the fixture phone is the B88
+    # placeholder, so the 404 must NOT offer it as a callable affordance —
+    # the home link is the honest next step. The Phone icon is dropped from
+    # the import so no unused-import is emitted.
+    assert "+46 8 000 00 00" not in page
+    assert 'import { ArrowLeft } from "lucide-react";' in page
+    assert "Phone" not in page
 
 
 @pytest.mark.tooling
@@ -385,7 +391,12 @@ def test_jsonld_emits_localbusiness_with_required_fields() -> None:
     assert payload["@context"] == "https://schema.org"
     assert payload["@type"] == "LocalBusiness"
     assert payload["name"] == "Brief Company AB"
-    assert payload["telephone"] == "+46 8 000 00 00"
+    # Honest contact fallback (fix(contact)): the fixture phone + opening
+    # hours are B88 placeholders, so they are omitted from the structured
+    # data rather than published as fake "Verified Business" fields. The
+    # real email + address are still emitted.
+    assert "telephone" not in payload
+    assert "openingHours" not in payload
     assert payload["email"] == "hej@example.se"
     assert payload["description"] == "Hantverk på vita väggar"
     assert payload["address"]["addressLocality"] == "Stockholm"

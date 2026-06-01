@@ -30,18 +30,16 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `f22d27a` (2026-06-01 UTC, steward-auto efter PR #139 — sync: christopher-ui → main (UI/UX-batch + B155 UI)).
-Nya PRs sedan föregående checkpoint: PR #114 — chore(gitignore): re-ignore __pycache__/
-under packages/generation/build/ (B146 fallout); PR #118 — sync(jakob-be -> main): PR
-#117 mobile responsive + PR #116 dossier-intake + 12 closed bugs + B147 new +
-audit-report; PR #120 — sync(jakob-be -> main): repo hygiene 2026-05-26 (4 commits,
-docs-only); PR #123 — sync(jakob-be -> main): backend gap batch and docs cleanup; PR
-#125 — fix(discovery): honor wizard clears across versioned fields; PR #127 —
-fix(viewser): block Python-backed actions on hosted Vercel; PR #133 — sync(jakob-be ->
-main): PreviewRuntime Bite A skeleton + race-fix + governance comments + builder prompt;
-PR #135 — feat(builder): close B155 backend — applied-effect-detektion + trace-event för
-fri follow-up; PR #134 — refactor(quality-gate): resolve contact-route via routes.json;
-PR #139 — sync: christopher-ui → main (UI/UX-batch + B155 UI).
+Last verified state: `efbb425` i `main` (2026-06-01 UTC, steward-auto efter PR #139 — sync: christopher-ui → main, UI/UX-batch + B155 UI + ADR 0034 väg B-UI). `jakob-be` har mergat in `origin/main` och bär de 10 backend-commitsen (topp `f62bd40`: ADR 0034 väg A copyDirectives, contact-route eval-fix, placeholder-contact-suppression) ovanpå — sync-PR `jakob-be → main` är nästa steg (kräver operatörs-OK + ev. live-test). Tre read-only scouts 2026-06-01 PM: backend-diff grön, PR-triage + #139-djupgranskning utan blocker. Alla guards gröna (governance, rules_sync, term_coverage --strict, ruff, sprintvakt) + 25 nya copydir-tester. **Riktigt LLM-anrop verifierat** (copyDirectiveModel, ej mock).
+Nya PRs sedan föregående checkpoint: PR #139 — sync: christopher-ui → main (UI/UX-batch + B155 UI + ADR 0034 väg B-UI), mergad. Öppna nu: #140 (`cursor/preview-runtime-bite-b-di → jakob-be`, draft, Bite B via dependency-injection), #138 + #141 (docs Cloud-setup till `main`, draft; #141 har en term-coverage-enradsfix kvar). Kommande: sync-PR `jakob-be → main`.
+
+Aktuell priordning + färsk orchestrator-handoff: se
+[`docs/handoff.md`](handoff.md) toppblocket. Kort: #139 (UI-batch inkl. B155
+FloatingChat-no-op + copyDirectives väg B-UI) är mergad till `main`. Nästa:
+(a) sync-PR `jakob-be → main` för backend väg A + eval-/placeholder-fixar
+(operatörs-OK); (b) Bite B (#140) mergas in i `jakob-be`, helst före sync-PR;
+(c) tre låg-impact UI-fynd kvar i Christophers lane. B157 nivå 4 (Stage A+B)
+ligger redan i `main`.
 
 ## Branchmodellen (kort)
 
@@ -55,9 +53,26 @@ PR #139 — sync: christopher-ui → main (UI/UX-batch + B155 UI).
 
 ## Pågående/öppna PR:s just nu
 
-**Inga öppna PRs.** PR #133 mergad till `main` (post-Bite-A-batch +
-alla reviewer-trådar). B157 akut-fix + followup landade direkt på
-`jakob-be` ovanpå `4196c17` post-merge-bumpen.
+**Fyra öppna PRs (2026-06-01 PM):**
+
+- **#139** `christopher-ui → main` — ready/clean, alla checks gröna. UI/UX-batch
+  som bär både B155 FloatingChat-no-op-signal och copyDirectives väg B-UI
+  (success/no-op-feedback). Scout-dom: merge-redo, men bekräfta Bugbot-trådar
+  (ingen godkänd review än) + notera additiv scope-läcka i `route.ts`/`runs.ts`/
+  `check_term_coverage.py` utan `[scope-leak]`-tagg (operatörsbeslut).
+- **#140** `cursor/preview-runtime-bite-b-di → jakob-be` — draft. Bite B
+  PreviewRuntime via dependency-injection. Inom scope; rör ej copyDirectives-
+  filer eller Christopher-UI. Mergas in i `jakob-be`, ej `main`.
+- **#138** `cursor/cloud-dev-env-setup-a928 → main` — draft, docs (AGENTS.md
+  Cloud-gotchas). Clean.
+- **#141** `cursor/cloud-agents-md-env-notes-7a3f → main` — draft, docs.
+  Governance failar (term-coverage flaggar ett versalt backtick-ord i AGENTS.md);
+  enradsfix kvar. Nästan-dubblett av #138 → konsolidera till en PR.
+
+Rekommenderad main-merge-ordning: **#139 först**, sedan sync-PR
+`jakob-be → main` (löser bara docs-konflikter i `current-focus.md` +
+`known-issues.md`). `jakob-be` får EJ `reset --hard origin/main` i mellanläget
+— `merge`/`rebase` in `main`, lös docs, öppna sync-PR.
 
 **Christophers `origin/christopher-ui`** — efter PR #117 är hans branch
 synkad mot post-#117-main. Han har under operator-OK scope-leak
@@ -145,7 +160,13 @@ Aktiva spår i prioritetsordning:
 3. B157 nivå-4 (immutable build-dir + pointer-swap, GAP-windows-
    safe-rebuild-pipeline) — eliminerar orphan-process-klassen.
 4. ADR 0034 / GAP-followup-prompt-content-passthrough — fri
-   follow-up-text når codegen via ``copyDirectives[]``.
+   follow-up-text når codegen via ``copyDirectives[]``. **Väg A first
+   slice landad på `jakob-be` 2026-06-01 (ej i `main`, ingen PR än):**
+   ``directives.copyDirectives`` (target company-name|tagline, operation
+   replace-text|include-token), deterministisk extraktor + ny
+   ``copyDirectiveModel``-roll (llm-models v5), guards gröna, 25 nya
+   tester. Nästa: operatör-review + ev. sync-PR `jakob-be → main`; sen
+   väg B FloatingChat-UI (Christopher) + bredare targets.
 5. B49 (docs-base page-map sidebar) — låg prio, behövs innan
    `course-education → docs-base` aktiveras.
 6. B13a arkitektur-flytt — kvarstår som öppen post, kräver egen sprint

@@ -1,6 +1,105 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-01 UTC, steward-auto efter PR #139 — sync: christopher-ui → main (UI/UX-batch + B155 UI). Verifierad `main` är `f22d27a`.
+**Datum:** 2026-06-01 UTC. PR #139 (christopher-ui UI/UX-batch + B155 UI +
+ADR 0034 väg B-UI) är mergad till `main`; `origin/main` är `efbb425`
+(steward-auto efter `f22d27a`). `jakob-be` har mergat in `origin/main` och bär
+de 10 backend-commitsen (topp `f62bd40`) ovanpå — sync-PR `jakob-be → main` är
+nästa steg (kräver operatörs-OK).
+
+## Orchestrator-pass 2026-06-01 PM — tre scouts gröna, #139 mergad
+
+Tre read-only scouts kördes (ingen produktkod rörd):
+
+- Backend-diff `jakob-be → main` (10 commits) bedöms grön. copyDirectives väg A
+  (`641abc9`), contact-route eval-fix (`0ff7657` + `0cc146c`) och placeholder-
+  contact-suppression (`f62bd40`) är säkra; noll scope-läcka mot Bite B eller
+  Christopher. En gul copy-kvalitetsnot: okvoterad multi-clause-rename kan få med
+  svansord i `company.name`; kvoterad form undviker den.
+- PR-triage: fyra öppna PRs (#138–#141). Rekommenderad main-ordning är #139
+  först, sedan sync-PR `jakob-be → main`.
+- #139-djupgranskning: ready/clean, alla checks gröna. Bär både B155-no-op-signal
+  och copyDirectives väg B-UI. Förbehåll: ingen godkänd review än (bekräfta
+  bugbot-trådar), och additiv scope-läcka i `apps/viewser/app/api/prompt/route.ts`,
+  `apps/viewser/lib/runs.ts` och `scripts/check_term_coverage.py` utan
+  `[scope-leak]`-tagg (operatörsbeslut).
+
+Status i sekvensen: (1) #139 mergad till `main` (`f22d27a`, steward-auto
+`efbb425`). (2) `christopher-ui` resynkad till `origin/main` via
+`--force-with-lease` (efbb425). (3) `jakob-be` har mergat in `origin/main` och
+löst docs-konflikterna (`current-focus.md` + `handoff.md`). Kvar: öppna sync-PR
+`jakob-be → main` (väntar operatörs-OK + ev. live-test). Bite B (#140) mergas
+helst in i `jakob-be` före sync-PR så den följer med samma main-leverans.
+Live-checkar före sync-merge: okvoterad rename i Viewser, sajt utan
+kontaktuppgifter (inga dummyvärden men äkta data byte-identisk), och
+`copyDirectiveModel` fyrar bara i Viewser-produktionsflödet med nyckel.
+
+## Status (2026-06-01) — ADR 0034 väg A first slice landad på jakob-be
+
+**Det riktiga LLM-flödet är igång (nivå 1).** Fri följdprompt → validerade
+`directives.copyDirectives[]` → synlig, spårbar sajt-ändring, utan att rå
+prompt läcker som kundcopy. Detta är "LLM-driven intent → säker deterministisk
+applicering", inte direkt modell-patch av genererad kod (väg C, parkerad).
+
+- `641abc9` `feat(followup)`: copyDirectives first slice. Schema
+  `directives.copyDirectives` (strikt enum: target `company-name | tagline`,
+  operation `replace-text | include-token`, payload validerad maxLength 200,
+  source). Deterministisk läck-säker extraktor + dedikerad
+  **`copyDirectiveModel`-roll** (llm-models v5, EJ återanvänd briefModel) +
+  resolver; LLM-output genom samma copy-validator som deterministiska direktiv,
+  aktiv bara i produktions-CLI:t (Viewser `--followup-site-id`).
+  Naming-dict v18 (Copy Directive). 25 nya tester. Real-LLM-smoke verifierad:
+  "kalla firman X istället" → `company.name`-rename, `source=llm`,
+  `appliedVisibleEffect=true`, token i `app/page.tsx`.
+- `0be2f42` `docs(agent-prompts)`: Christopher-handoff för väg B.
+
+**Kvar på copyDirectives-gapet (förblir öppet):** väg B ärlig
+FloatingChat-feedback (Christopher/UI — handoff finns), bredare targets
+(story/services/about/all-copy = nivå 2), väg C (modell patchar `.generated/`
+direkt — kräver sandbox/diff/rollback/Quality Gate, egen ADR).
+
+## Priorordning nu (2026-06-01)
+
+1. **Operatör-review / live-test** av `641abc9` i Viewser, sen beslut om
+   sync-PR `jakob-be → main`. (Coach-rekommendation: review/Scout före PR.)
+2. **Christopher: väg B** FloatingChat honest-feedback. Oblockerad. Prompt:
+   [`docs/agent-prompts/christopher-followup-honest-feedback.md`](agent-prompts/christopher-followup-honest-feedback.md).
+3. **Grind/Cloud Builder: Bite B** (PreviewRuntime wiring via DI) — se
+   "Parallellt Grind-arbete" nedan.
+4. Nivå 2 copyDirectives (bredare targets) — backend-agent, efter att slice 1
+   är reviewad/mergad.
+
+## Parallellt Grind-arbete (Bite B PreviewRuntime DI) — 2026-06-01
+
+Operatören startar en Grind/Cloud Builder-agent som kör **vid sidan om**
+detta arbete. Den agenten:
+
+- skapar branch `cursor/preview-runtime-bite-b-di` från `origin/jakob-be`,
+  jobbar EJ direkt på `main` eller `jakob-be`, PR:ar mot `jakob-be`;
+- implementerar Bite B: `packages/preview-runtime` får dependency-injected
+  handlers från `apps/viewser/lib` (ingen package→app-import), `PreviewResult`
+  bär StackBlitz file-payload via ett `files`-fält, `localRuntime` delegerar
+  till local-preview-server-logiken, `stackblitzRuntime` returnerar payload,
+  `flyRuntime` förblir unsupported;
+- **får INTE röra** copyDirectives-spåret:
+  `scripts/prompt_to_project_input.py`, `packages/generation/brief/**`,
+  `governance/schemas/project-input.schema.json`,
+  `governance/policies/llm-models.v1.json`,
+  `governance/policies/naming-dictionary.v1.json`,
+  `governance/decisions/0034-*`,
+  `docs/gaps/GAP-followup-prompt-content-passthrough.md`,
+  `tests/test_followup_copy_directives.py`;
+- **får INTE röra** Christopher/UI-paths (`apps/viewser/components/**`,
+  `apps/viewser/app/**/*.tsx`, `apps/viewser/app/**/*.css`,
+  `apps/viewser/public/**`) och bygger ingen Vercel/Fly/static-export-adapter.
+
+**Konfliktrisk är låg:** Bite B rör `packages/preview-runtime/**` +
+`apps/viewser/lib/**`; copyDirectives rör generation/brief + governance-
+scheman. Ingen filöverlapp. När Bite-B-PR:n mergats till `jakob-be` synkar
+nästa backend-pass med `git reset --hard origin/jakob-be` innan nivå 2.
+
+## Tidigare checkpoint (#139 christopher-ui → main)
+
+**Datum:** 2026-06-01 UTC, steward-auto efter PR #139 — sync: christopher-ui → main (UI/UX-batch + B155 UI + ADR 0034 väg B-UI). Verifierad `main` är `f22d27a` (steward-auto `efbb425`).
 
 Nya PRs sedan föregående checkpoint: PR #114 — chore(gitignore): re-ignore __pycache__/
 under packages/generation/build/ (B146 fallout); PR #118 — sync(jakob-be -> main): PR
@@ -14,6 +113,13 @@ PR #135 — feat(builder): close B155 backend — applied-effect-detektion + tra
 fri follow-up; PR #134 — refactor(quality-gate): resolve contact-route via routes.json;
 PR #139 — sync: christopher-ui → main (UI/UX-batch + B155 UI).
 
+## Tidigare checkpoint (B157 level 4)
+
+**Datum:** 2026-05-31 UTC, steward-auto efter PR #137 — sync(jakob-be -> main): B157 level 4 immutable build-dir + pointer-swap + GC. Verifierad `main` är `40b7d29`.
+
+Nya PRs sedan föregående checkpoint: PR #137 — sync(jakob-be -> main): B157 level 4
+immutable build-dir + pointer-swap + GC.
+
 **MCP-server-status:** Sprintvakt-servern exponerar 14 tools efter
 PR #77 (`get_workboard`, `list_gaps`, `create_gap`, `activate_gap`,
 `complete_gap`, `reserve_paths`, `detect_collisions`, `suggest_next_gaps`,
@@ -25,28 +131,53 @@ konfigurerad med `PYTHONPATH` så `python -m tooling.sprintvakt_mcp.server`
 startar utan ModuleNotFoundError. Editable install (`pip install -e .`)
 krävs en gång per venv enligt ADR 0029.
 
-**Direkt nästa spår:** se [`docs/current-focus.md`](current-focus.md)
-"Direkt nästa fokus". Aktuell status: **B157 stängd genom round
-1+2+3 (alla pushade)**, end-to-end-verifierad i Viewser-browsern
-2026-05-28 ~01:40 (måleri-bygg-genberg + tone-shift follow-up,
-båda byggde grönt). Golden-path eval baseline 7.34/10 (oförändrat
-från senaste — 0 regressioner från natt-batchen). Inga öppna PRs.
+**Status (2026-05-31 PM):** `main` == `jakob-be` == `9e1a025`. Stor batch
+landad via PR #136 + #137. **B157 är arkitektoniskt stängd**: nivå 4
+(immutable build-dir + atomär `current.json`-pointer-swap, Stage A) + delayed
+GC (`scripts/gc_old_builds.py`, Stage B) ligger i `main`. Round 1-3-plåstren
++ build-runner-tree-kill är kvar som redundanta säkerhetsnät. Övrigt landat
+denna omgång: B155-backend (ärlig no-op-detektion via `appliedVisibleEffect`
+i build-result + trace-event), BO6 (backoffice runtime-scaffolds dynamiska
+från resolvern), quality-gate contact-route via `routes.json` + härdning,
+api-smoke env-isolering, samt extern-review-fixar (`kill-dev-trees.py`
+scope:ad + `buildPath`-kryssvalidering). Golden-path eval baseline 7.34/10.
+Inga öppna PRs.
 
-Priorordning nu:
-1. Bite B (PreviewRuntime wiring local + stackblitz).
-2. Cloud-agent-grind: 2 scout-prompts klara för utskick (i repo-rot
-   som `SCOUT-PROMPT-A-backoffice-runtime-scaffolds.md` +
-   `SCOUT-PROMPT-B-followup-honest-no-op.md`, original-spegel i
-   `docs/agent-prompts/scout-grind-*.md`).
-3. B157 nivå-4 (immutable build-dir + pointer-swap, GAP-windows-
-   safe-rebuild-pipeline) — eliminerar orphan-process-klassen helt.
-4. ADR 0034 (B155 "ärlig först") — kräver Christopher-koord.
+**Pre-flight för nästa orchestrator:**
+1. `docs/current-focus.md` (Last verified `40b7d29`/`9e1a025`).
+2. `python scripts/focus_check.py` — ska ge OK.
+3. Vid orphan-processer (Windows): `python kill-dev-trees.py` eller dubbelklicka
+   `kill-dev-trees.bat`. Helpern är nu **scope:ad** — tree-killar bara
+   Sajtbyggaren-processer (repo/output-path-token ELLER `next start`/`next dev`
+   på preview-port 4100-4199), inte främmande Next-projekt på maskinen.
 
-**Operatörs-helper:** `python kill-dev-trees.py` (eller dubbelklicka
-`kill-dev-trees.bat`) tree-killar alla Sajtbyggaren-relaterade
-node-processer (preview-orphans, dev-servers, worktree-Viewsers).
-Whitelist:ar bara matchande processer — skyddar VS Code-instanser
-etc.
+**Priorordning nu:**
+1. **Christopher-koordinering (kärnloopen).** Två backend-halvor väntar på
+   UI: B155-signalen (`appliedVisibleEffect` i `build-result.json` →
+   FloatingChat "ingen synlig ändring"-rad) och — störst — `copyDirectives[]`
+   (ADR 0034 väg A) som gör fri-text-följdprompt → synlig sajt-ändring. Bara
+   Christopher kan UI-delen. Sync-PR `christopher-ui → main` rekommenderas.
+2. **Bite B (PreviewRuntime wiring).** OBS: naiv wiring ger lager-violation
+   (paket→app); rätt väg = dependency-injection + ett `files`-fält på
+   `PreviewResult`. Egen builder-uppgift; unblockar Christophers Bite C.
+3. **Mät bygg-fart.** Immutable builds kör full `npm install` per bygge (varm
+   cache mildrar). Vid seg iteration: `node_modules`-seeding från föregående
+   build (valfri optimering).
+4. **B157-uppföljare (Linux-verifierade, POSIX-only):** flat-layout-GC i
+   `gc_old_builds.py` + POSIX-tree-kill (`detached`-spawn + `killpg`) i
+   `local-preview-server.ts` / `build-runner.ts`. Windows opåverkad.
+
+**Branch-läge (städat 2026-05-31 PM):** raderade
+`cursor/jakob-be-viewser-local-next-preview` (superseded via #88-#101).
+Behållna: alla `backup-*` (operatörens keepsakes), `origin/christopher-ui`
+(aktiv), `origin/cursor/preview-runtime-adapters` (medveten WIP-snapshot för
+framtida vercel-adapter), `origin/cursor/dossier-intake-v11-review-895d`
+(**49 omergrade commits — operatörsbeslut om radering, auto-raderas EJ**).
+
+**Ignore-config:** tunga data-/genererade kataloger (`data/runs/`,
+`.generated/`, `data/evals/*` m.fl.) är index-ignorerade via
+`.cursorindexingignore` (läsbara vid behov, bara inte indexerade).
+`.cursorignore` är agent-skyddad (kan ej editeras av agent) — orörd.
 
 **Parkerade lanes (väntar trigger):**
 
