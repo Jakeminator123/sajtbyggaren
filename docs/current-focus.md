@@ -5,6 +5,29 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
+## Nästa (2026-06-02, färsk orchestrator-session)
+
+`main` = `jakob-be` = `2d636b0`, i sync, inga öppna PR:er. Vercel-sandbox-
+spåret är i `main` (#146 spike, ADR 0033, #147 opt-in-adapter via
+`VIEWSER_PREVIEW_MODE=vercel-sandbox`); default-preview är fortfarande
+`local-next` (inte flippad) och adaptern är inte UI-wirad. copyDirectives
+nivå 1 (ADR 0034 väg A: `company-name` | `tagline`) är **i `main`**.
+
+Nästa konkreta steg:
+
+1. **copyDirectives nivå 2** (backend, `jakob-be`): utöka väg A-pipelinen
+   från `company-name` | `tagline` till `about` (company.story), `tone`,
+   `cta` och `services` (services[].summary). Riskordnade slices:
+   about + ton → cta → services. Hårda regler: remappa INTE tjänstetext till
+   tagline; generated output förblir vanlig Next.js; rör inte
+   preview-runtime/adaptern; ingen UI (Christophers lane).
+2. Bite C (Christopher/UI): flippa `app/api/preview/[siteId]` till
+   `currentViewserRuntime()`.
+
+Parkerat (kräver operatörs-OK): default-flip till `vercel-sandbox` (kräver
+Bite C klar + smoke), `forbidden`-radering (egen ADR + test-omskrivningar),
+optional/lazy `@vercel/sandbox`-dep.
+
 ## Vem uppdaterar denna fil
 
 **Agenten.** Inte operatören. Standard loop steg 8 i
@@ -30,9 +53,8 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `499bb34` (2026-06-01 UTC, steward-auto efter PR #148 — sync(jakob-be -> main): Vercel Sandbox spike + ADR 0033 + adapter + hardening batch).
-Nya PRs sedan föregående checkpoint: PR #148 — sync(jakob-be -> main): Vercel Sandbox
-spike + ADR 0033 + adapter + hardening batch.
+Last verified state: `2d636b0` (2026-06-02 UTC, färsk orchestrator-session — `main` = `jakob-be` = `2d636b0`, i sync, inga öppna PR:er. Steward-pass återinför Nästa-blocket (auto-bumpen tog bort det) och rättar stale copyDirectives-väg-A-status).
+Nya PRs sedan föregående checkpoint: inga (#148 var senaste — sync(jakob-be -> main): Vercel Sandbox spike + ADR 0033 + adapter + hardening batch).
 
 ## Branchmodellen (kort)
 
@@ -171,13 +193,13 @@ Aktiva spår i prioritetsordning:
 3. B157 nivå-4 (immutable build-dir + pointer-swap, GAP-windows-
    safe-rebuild-pipeline) — eliminerar orphan-process-klassen.
 4. ADR 0034 / GAP-followup-prompt-content-passthrough — fri
-   follow-up-text når codegen via ``copyDirectives[]``. **Väg A first
-   slice landad på `jakob-be` 2026-06-01 (ej i `main`, ingen PR än):**
-   ``directives.copyDirectives`` (target company-name|tagline, operation
-   replace-text|include-token), deterministisk extraktor + ny
-   ``copyDirectiveModel``-roll (llm-models v5), guards gröna, 25 nya
-   tester. Nästa: operatör-review + ev. sync-PR `jakob-be → main`; sen
-   väg B FloatingChat-UI (Christopher) + bredare targets.
+   follow-up-text når codegen via ``copyDirectives[]``. **Väg A (nivå 1)
+   är i `main`** (via #142/#144/#148): ``directives.copyDirectives``
+   (target company-name|tagline, operation replace-text|include-token),
+   deterministisk extraktor + ``copyDirectiveModel``-roll (llm-models v5),
+   25 tester, real-LLM-smoke verifierad. Väg B FloatingChat-UI (Christopher)
+   är också i `main` (#139). **Nästa: nivå 2** — bredare targets
+   (about/tone/cta/services), backend på `jakob-be`, riskordnade slices.
 5. B49 (docs-base page-map sidebar) — låg prio, behövs innan
    `course-education → docs-base` aktiveras.
 6. B13a arkitektur-flytt — kvarstår som öppen post, kräver egen sprint
