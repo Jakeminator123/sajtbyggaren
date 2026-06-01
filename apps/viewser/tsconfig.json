@@ -19,6 +19,8 @@
       }
     ],
     "paths": {
+      "@preview-runtime": ["../../packages/preview-runtime/src/index"],
+      "@preview-runtime/*": ["../../packages/preview-runtime/src/*"],
       "@/*": ["./*"]
     }
   },
@@ -28,6 +30,7 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
+    "../../packages/preview-runtime/src/**/*.ts",
     "**/*.mts"
   ],
   "exclude": ["node_modules"]
