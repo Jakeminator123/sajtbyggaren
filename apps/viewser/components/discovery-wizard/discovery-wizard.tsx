@@ -1,6 +1,14 @@
 "use client";
 
-import { Check, Keyboard, Loader2, MoreHorizontal, Sparkles, X } from "lucide-react";
+import {
+  Check,
+  Keyboard,
+  Loader2,
+  MoreHorizontal,
+  Phone,
+  Sparkles,
+  X,
+} from "lucide-react";
 import Image from "next/image";
 import {
   useCallback,
@@ -22,7 +30,7 @@ import {
 import { PRIMARY_INTERACTIONS } from "@/lib/ui-tokens";
 
 import { DEMO_PROFILES } from "./demo-answers";
-import { MoreInfoDialog } from "./more-info-dialog";
+import { MoreInfoDialog, type MoreInfoTabId } from "./more-info-dialog";
 import { AssetsStep } from "./steps/assets-step";
 import { FoundationStep, type ScrapeState } from "./steps/foundation-step";
 import { FunctionsStep } from "./steps/functions-step";
@@ -111,6 +119,15 @@ export function DiscoveryWizard({
     }));
   const [scrapeState, setScrapeState] = useState<ScrapeState | null>(null);
   const [moreInfoOpen, setMoreInfoOpen] = useState(false);
+  const [moreInfoTab, setMoreInfoTab] = useState<MoreInfoTabId>("about");
+
+  // Öppnar "Mer information"-popupen på en specifik flik. Telefon-nudgen
+  // på sista steget djuplänkar till "contact" så operatören slipper leta
+  // upp Kontakt-fliken själv; den vanliga knappen öppnar på "about".
+  const openMoreInfo = useCallback((tab: MoreInfoTabId = "about") => {
+    setMoreInfoTab(tab);
+    setMoreInfoOpen(true);
+  }, []);
 
   const demoCursorRef = useRef(0);
   const [demoNotice, setDemoNotice] = useState<string | null>(null);
@@ -410,6 +427,40 @@ export function DiscoveryWizard({
                       kvar i Mer information-popupen). */}
                   <AssetsStep answers={answers} onChange={updateAnswers} />
 
+                  {/* Telefon-nudge: utan ett riktigt nummer fyller backend
+                      i platshållaren "+46 8 000 00 00" som renderas publikt
+                      på Hero + /kontakt. Vi nudgar bara när fältet är tomt
+                      (skrapning fyller det automatiskt annars) och
+                      djuplänkar direkt till Kontakt-fliken så operatören
+                      inte behöver leta. Ren UI/UX — payloaden är oförändrad. */}
+                  {!answers.contact.phone.trim() ? (
+                    <div className="mt-8 flex flex-col gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-start gap-2.5">
+                        <Phone
+                          className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400"
+                          aria-hidden
+                        />
+                        <div className="space-y-0.5">
+                          <p className="text-foreground text-[12.5px] leading-tight font-medium">
+                            Inget telefonnummer angivet
+                          </p>
+                          <p className="text-muted-foreground text-[11.5px] leading-relaxed">
+                            Utan nummer visar sajten en platshållare. Lägg till ditt riktiga nummer så blir kontaktvägen trovärdig.
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => openMoreInfo("contact")}
+                        className="min-tap sm:min-tap-0 h-9 shrink-0 rounded-full border border-amber-500/40 px-4 text-[12px] font-medium text-amber-700 hover:bg-amber-500/10 dark:text-amber-300"
+                      >
+                        Lägg till nummer
+                      </Button>
+                    </div>
+                  ) : null}
+
                   {/* "Mer information"-knappen flyttades hit från tab 3
                       eftersom Bilder nu är sista tabben — knappen syns
                       precis innan "Skapa sajt", vilket var operatorens
@@ -418,7 +469,7 @@ export function DiscoveryWizard({
                     <Button
                       type="button"
                       variant="ghost"
-                      onClick={() => setMoreInfoOpen(true)}
+                      onClick={() => openMoreInfo("about")}
                       className="text-muted-foreground hover:text-foreground hover:bg-foreground/[0.04] min-tap sm:min-tap-0 inline-flex h-9 items-center gap-2 rounded-full border border-dashed border-current/40 px-4 text-[12.5px] font-medium"
                     >
                       <MoreHorizontal className="h-3.5 w-3.5" aria-hidden />
@@ -656,6 +707,7 @@ export function DiscoveryWizard({
         answers={answers}
         onChange={updateAnswers}
         branch={branch}
+        initialTab={moreInfoTab}
       />
     </Dialog>
   );

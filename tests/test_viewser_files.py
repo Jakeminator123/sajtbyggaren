@@ -2965,46 +2965,72 @@ def test_handoff_a_prompt_builder_ndjson_parse_is_defensive() -> None:
 
 
 def test_handoff_c_more_info_dialog_resets_active_tab_on_open() -> None:
-    """``more-info-dialog.tsx`` måste nollställa ``activeTab`` till
-    ``"about"`` varje gång ``open`` flippar från false → true så
-    operatören inte ser föregående flik (Radix Dialog-content
-    unmountar inte tree:t mellan open-toggles när controlled).
+    """``more-info-dialog.tsx`` måste nollställa ``activeTab`` till den
+    begärda ``initialTab`` (default "about") varje gång ``open`` flippar
+    från false → true så operatören inte ser föregående flik (Radix
+    Dialog-content unmountar inte tree:t mellan open-toggles när
+    controlled).
 
-    Vi hookar in reset:en i en ``onOpenChange``-wrapper
-    (``handleOpenChange``) istället för ``useEffect([open])`` eftersom
-    React 19:s ``react-hooks/set-state-in-effect``-regel kräver att
-    state-uppdateringar drivs av explicita user-events.
+    Reset:en görs som en render-tids state-justering (Reacts "föregående
+    props"-mönster via ``wasOpen``) istället för en ``onOpenChange``-
+    wrapper: dels ogillar React 19:s ``react-hooks/set-state-in-effect``
+    effekt-driven setState, dels är dialogen fullt parent-controlled —
+    Radix routar aldrig open-flanken genom onOpenChange, så en wrapper
+    skulle inte hinna nollställa fliken vid öppning. Render-mönstret kör
+    pålitligt på varje false→true-övergång oavsett trigger (knapp,
+    telefon-nudge etc.).
     """
     path = (
         VIEWSER_DIR / "components" / "discovery-wizard" / "more-info-dialog.tsx"
     )
     content = path.read_text(encoding="utf-8")
-    # useCallback måste importeras (vi använder den för handleOpenChange).
+    # initialTab-prop med "about"-default måste finnas.
+    assert re.search(r'initialTab\s*=\s*"about"', content), (
+        'MoreInfoDialog måste ha en initialTab-prop med default "about"'
+    )
+    # Render-tids reset: open !== wasOpen → setActiveTab(initialTab).
     assert re.search(
-        r'import \{[^}]*\buseCallback\b[^}]*\} from "react"',
-        content,
-    ), "useCallback måste importeras från React"
-    # handleOpenChange-wrappern måste finnas och reset:a activeTab när
-    # nextOpen är true.
-    assert re.search(
-        r'handleOpenChange\s*=\s*useCallback\(\s*\(nextOpen[^)]*\)\s*=>\s*\{\s*'
-        r'if \(nextOpen\)\s*setActiveTab\("about"\);\s*'
-        r'onOpenChange\(nextOpen\);',
+        r"if \(open !== wasOpen\)\s*\{\s*setWasOpen\(open\);\s*"
+        r"if \(open\)\s*setActiveTab\(initialTab\);",
         content,
         re.DOTALL,
     ), (
-        "MoreInfoDialog måste ha en handleOpenChange-wrapper som "
-        'setActiveTab("about") när nextOpen=true, sedan delegerar till '
-        "parent's onOpenChange"
+        "MoreInfoDialog måste nollställa activeTab till initialTab på "
+        "open-flanken via render-tids wasOpen-mönstret"
     )
-    # Dialog och close-button måste använda handleOpenChange (inte
-    # parent's onOpenChange direkt) så reset-logiken inte kringgås.
-    assert "<Dialog open={open} onOpenChange={handleOpenChange}>" in content, (
-        "Dialog ska driva sin onOpenChange via handleOpenChange"
+    # Dialog ska drivas direkt av parent's onOpenChange (ingen wrapper
+    # längre — reset:en bor i render-mönstret ovan).
+    assert "<Dialog open={open} onOpenChange={onOpenChange}>" in content, (
+        "Dialog ska driva sin onOpenChange direkt från parent"
     )
-    assert "onClick={() => handleOpenChange(false)}" in content, (
-        "Close-knappen ska kalla handleOpenChange(false), inte parent's "
-        "onOpenChange direkt — annars kringgås reset-logiken"
+
+
+def test_wizard_contact_nudge_deeplinks_to_contact_tab() -> None:
+    """``discovery-wizard.tsx`` ska visa en nudge när telefonnummer
+    saknas och kunna öppna MoreInfoDialog direkt på Kontakt-fliken så
+    operatören inte oavsiktligt publicerar platshållar-numret
+    (+46 8 000 00 00). Ren UI/UX — backend-payloaden är oförändrad.
+    """
+    path = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx"
+    )
+    content = path.read_text(encoding="utf-8")
+    # openMoreInfo-helper som sätter både flik och open.
+    assert "const openMoreInfo = useCallback(" in content, (
+        "Wizarden måste ha en openMoreInfo-helper som sätter flik + open"
+    )
+    # Nudge-knappen måste djuplänka till Kontakt-fliken.
+    assert 'openMoreInfo("contact")' in content, (
+        'Nudge-knappen måste djuplänka via openMoreInfo("contact")'
+    )
+    # Nudgen ska villkoras på saknat (trimmat) telefonnummer.
+    assert "!answers.contact.phone.trim()" in content, (
+        "Telefon-nudgen måste villkoras på answers.contact.phone.trim()"
+    )
+    # initialTab måste skickas vidare till MoreInfoDialog.
+    assert "initialTab={moreInfoTab}" in content, (
+        "MoreInfoDialog måste få initialTab={moreInfoTab} så djuplänken "
+        "till Kontakt-fliken fungerar"
     )
 
 
