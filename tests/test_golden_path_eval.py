@@ -30,6 +30,88 @@ def test_list_generated_routes_detects_nested_next_routes(tmp_path: Path) -> Non
 
 
 @pytest.mark.tooling
+def test_route_path_by_id_resolves_scaffold_specific_slugs() -> None:
+    """Contact/products paths come from routePlan ids, not a hardcoded slug."""
+
+    from scripts.run_golden_path_eval import route_path_by_id
+
+    clinic_plan = {
+        "routePlan": [
+            {"id": "home", "path": "/"},
+            {"id": "treatments", "path": "/behandlingar"},
+            {"id": "about", "path": "/om-oss"},
+            {"id": "contact", "path": "/kontakta-oss"},
+        ]
+    }
+    commerce_plan = {
+        "routePlan": [
+            {"id": "home", "path": "/"},
+            {"id": "products", "path": "/produkter"},
+            {"id": "contact", "path": "/kontakt"},
+        ]
+    }
+
+    assert route_path_by_id(clinic_plan, "contact") == "/kontakta-oss"
+    assert route_path_by_id(clinic_plan, "products") is None
+    assert route_path_by_id(commerce_plan, "contact") == "/kontakt"
+    assert route_path_by_id(commerce_plan, "products") == "/produkter"
+    assert route_path_by_id({}, "contact") is None
+
+
+@pytest.mark.tooling
+def test_assess_contact_cta_accepts_clinic_kontakta_oss_route() -> None:
+    """clinic-healthcare's /kontakta-oss must count as a valid contact path."""
+
+    from scripts.run_golden_path_eval import BASELINE_CASES, assess_contact_cta
+
+    naprapat = next(c for c in BASELINE_CASES if c.case_id == "naprapat-stockholm")
+    plan_routes = ["/", "/behandlingar", "/om-oss", "/kontakta-oss"]
+    fs_routes = ["/", "/behandlingar", "/om-oss", "/kontakta-oss"]
+    text = '<a href={"/kontakta-oss"} className="...">Kontakta oss</a>'
+
+    result = assess_contact_cta(
+        naprapat,
+        plan_routes,
+        fs_routes,
+        text,
+        {"placeholderContactFields": []},
+        contact_path="/kontakta-oss",
+        products_path="/produkter",
+    )
+
+    assert result["status"] == "pass"
+    assert result["hasContactRoute"] is True
+    assert result["hasContactHref"] is True
+    assert result["contactPath"] == "/kontakta-oss"
+
+
+@pytest.mark.tooling
+def test_assess_contact_cta_default_kontakt_slug_misses_clinic_route() -> None:
+    """Regression guard: the old hardcoded /kontakt slug would fail clinic."""
+
+    from scripts.run_golden_path_eval import BASELINE_CASES, assess_contact_cta
+
+    naprapat = next(c for c in BASELINE_CASES if c.case_id == "naprapat-stockholm")
+    plan_routes = ["/", "/behandlingar", "/om-oss", "/kontakta-oss"]
+    fs_routes = ["/", "/behandlingar", "/om-oss", "/kontakta-oss"]
+    text = '<a href={"/kontakta-oss"}>Kontakta oss</a>'
+
+    # Resolving against the default /kontakt slug reproduces the false negative
+    # the routePlan-id fix removes.
+    result = assess_contact_cta(
+        naprapat,
+        plan_routes,
+        fs_routes,
+        text,
+        {"placeholderContactFields": []},
+    )
+
+    assert result["status"] == "fail"
+    assert result["hasContactRoute"] is False
+    assert result["hasContactHref"] is False
+
+
+@pytest.mark.tooling
 def test_golden_path_eval_writes_all_four_cases_without_llm_key(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

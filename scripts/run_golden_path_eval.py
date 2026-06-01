@@ -315,6 +315,42 @@ def route_paths(site_plan: dict[str, Any]) -> list[str]:
     return paths
 
 
+def route_path_by_id(site_plan: dict[str, Any], route_id: str) -> str | None:
+    """Return the ``routePlan`` path for a stable route id (e.g. ``contact``).
+
+    Scaffolds do not share one contact slug: clinic-healthcare,
+    professional-services and agency-studio emit ``/kontakta-oss`` while
+    local-service-business and ecommerce-lite emit ``/kontakt``. Resolving by
+    route ``id`` lets the scorecard judge the route the scaffold actually
+    generates instead of a hardcoded ``/kontakt`` (which produced a false
+    negative for clinic-healthcare).
+    """
+
+    routes = site_plan.get("routePlan", [])
+    if not isinstance(routes, list):
+        return None
+    for route in routes:
+        if (
+            isinstance(route, dict)
+            and route.get("id") == route_id
+            and isinstance(route.get("path"), str)
+        ):
+            return route["path"]
+    return None
+
+
+def href_present(text: str, path: str) -> bool:
+    """Return true when generated copy links to ``path`` via an ``href``.
+
+    Mirrors the historical ``href={"/kontakt"}`` / ``href="/kontakt"`` shapes
+    but for an arbitrary, regex-escaped path so non-default contact slugs are
+    detected too.
+    """
+
+    pattern = r"href=\{?['\"]" + re.escape(path) + r"['\"]\}?"
+    return bool(re.search(pattern, text))
+
+
 def score_from_checks(points: float, evidence: list[str]) -> dict[str, Any]:
     """Create a bounded trait score payload."""
 
@@ -387,13 +423,30 @@ def assess_route_sanity(expected: tuple[str, ...], plan_routes: list[str], fs_ro
     }
 
 
-def assess_contact_cta(case: Case, plan_routes: list[str], fs_routes: list[str], text: str, build_result: dict[str, Any]) -> dict[str, Any]:
-    """Assess the contact or product CTA path for a generated case."""
+def assess_contact_cta(
+    case: Case,
+    plan_routes: list[str],
+    fs_routes: list[str],
+    text: str,
+    build_result: dict[str, Any],
+    *,
+    contact_path: str = "/kontakt",
+    products_path: str = "/produkter",
+) -> dict[str, Any]:
+    """Assess the contact or product CTA path for a generated case.
 
-    has_contact_route = "/kontakt" in plan_routes and "/kontakt" in fs_routes
-    has_contact_href = bool(re.search(r"href=\{?['\"]\/kontakt['\"]\}?", text))
-    has_products_route = "/produkter" in plan_routes and "/produkter" in fs_routes
-    has_products_href = bool(re.search(r"href=\{?['\"]\/produkter['\"]\}?", text))
+    ``contact_path`` and ``products_path`` are resolved from the Site Plan
+    ``routePlan`` by route id (see ``route_path_by_id``) so a scaffold that
+    uses a different contact slug — clinic-healthcare's ``/kontakta-oss`` — is
+    scored on the route it actually emits instead of a hardcoded ``/kontakt``.
+    The defaults preserve the historical behaviour when a plan has no
+    contact/products entry.
+    """
+
+    has_contact_route = contact_path in plan_routes and contact_path in fs_routes
+    has_contact_href = href_present(text, contact_path)
+    has_products_route = products_path in plan_routes and products_path in fs_routes
+    has_products_href = href_present(text, products_path)
     placeholder_fields = build_result.get("placeholderContactFields", [])
     if not isinstance(placeholder_fields, list):
         placeholder_fields = []
@@ -401,18 +454,18 @@ def assess_contact_cta(case: Case, plan_routes: list[str], fs_routes: list[str],
     status = "pass"
     notes: list[str] = []
     if has_contact_route:
-        notes.append("/kontakt exists in plan and generated files")
+        notes.append(f"{contact_path} exists in plan and generated files")
     else:
-        notes.append("/kontakt is missing from plan or generated files")
+        notes.append(f"{contact_path} is missing from plan or generated files")
         status = "fail"
     if has_contact_href:
-        notes.append("generated copy links to /kontakt")
+        notes.append(f"generated copy links to {contact_path}")
     else:
-        notes.append("no generated href to /kontakt detected")
+        notes.append(f"no generated href to {contact_path} detected")
         status = "warn" if status == "pass" else status
     if ecommerce:
         if has_products_route and has_products_href:
-            notes.append("commerce case has /produkter route and product CTA")
+            notes.append(f"commerce case has {products_path} route and product CTA")
         else:
             notes.append("commerce case lacks product route or product CTA")
             status = "warn" if status == "pass" else status
@@ -421,6 +474,8 @@ def assess_contact_cta(case: Case, plan_routes: list[str], fs_routes: list[str],
         status = "warn" if status == "pass" else status
     return {
         "status": status,
+        "contactPath": contact_path,
+        "productsPath": products_path,
         "hasContactRoute": has_contact_route,
         "hasContactHref": has_contact_href,
         "hasProductsRoute": has_products_route,
@@ -681,7 +736,17 @@ def run_case(case: Case, *, work_dir: Path, mode: str) -> dict[str, Any]:
     plan_routes = route_paths(site_plan)
     fs_routes = list_generated_routes(run_dir)
     route_sanity = assess_route_sanity(case.expected_routes, plan_routes, fs_routes)
-    contact_cta = assess_contact_cta(case, plan_routes, fs_routes, text, build_result)
+    contact_path = route_path_by_id(site_plan, "contact") or "/kontakt"
+    products_path = route_path_by_id(site_plan, "products") or "/produkter"
+    contact_cta = assess_contact_cta(
+        case,
+        plan_routes,
+        fs_routes,
+        text,
+        build_result,
+        contact_path=contact_path,
+        products_path=products_path,
+    )
     trait_scores = score_traits(
         case,
         project_input=project_input,
