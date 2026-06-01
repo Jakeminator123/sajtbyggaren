@@ -981,6 +981,15 @@ COMMON_WORDS = {
     # och Lucide-typen LucideIcon är externa React-symboler.
     "PageCard", "CalendarCheck", "HelpCircle", "UtensilsCrossed",
     "LucideIcon",
+    # Vercel-sandbox-spike (flag-gated PoC, docs/spikes/vercel-sandbox-spike.md
+    # + apps/viewser/lib/vercel-sandbox-spike.ts). Lokala TS-implementation-
+    # shapes — INTE canonical domain terms och INTE PreviewResult/PreviewSession
+    # från packages/preview-runtime. Samma behandling som de andra apps/viewser-
+    # symbolerna ovan (PromptApiPayload, FollowupBuildState, ...). En riktig
+    # vercel-sandbox PreviewRuntime-adapter (med canonical term) kräver ADR 0033
+    # + naming-bump per ADR 0030.
+    "CollectedSource", "SandboxPreviewRequest", "SandboxPreviewResult",
+    "SandboxStopResult",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
