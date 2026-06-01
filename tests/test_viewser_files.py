@@ -3034,3 +3034,26 @@ def test_wizard_contact_nudge_deeplinks_to_contact_tab() -> None:
     )
 
 
+def test_b160_logo_image_has_explicit_auto_width() -> None:
+    """B160: logon i ``site-header.tsx`` + ``discovery-wizard.tsx``
+    renderas via next/image med höjden styrd av ``h-7``. Utan en inline
+    ``style`` med ``width: "auto"`` varnar Next ("Image ... has either
+    width or height modified, but not the other") eftersom Next läser
+    inline-style, inte Tailwind-klassen ``w-auto``. Lås att båda har
+    ``style.width: "auto"`` så devtools-bruset/CLS-risken inte återkommer.
+    """
+    for rel in (
+        ("components", "layout", "site-header.tsx"),
+        ("components", "discovery-wizard", "discovery-wizard.tsx"),
+    ):
+        path = VIEWSER_DIR.joinpath(*rel)
+        content = path.read_text(encoding="utf-8")
+        assert 'src="/sajtbyggaren_logo.png"' in content, (
+            f"{path.name} ska rendera sajtbyggaren-logon"
+        )
+        assert re.search(r'style=\{\{\s*width:\s*"auto"\s*\}\}', content), (
+            f"{path.name}: logo-Image måste ha style={{ width: 'auto' }} "
+            "för att tysta Next:s aspect-ratio-varning (B160)"
+        )
+
+

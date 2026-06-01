@@ -343,6 +343,9 @@ export function DiscoveryWizard({
               width={115}
               height={28}
               priority
+              // Se site-header.tsx: style.width auto bevarar aspect-ratio
+              // och tystar Next:s aspect-ratio-varning (B160).
+              style={{ width: "auto" }}
               className="h-7 w-auto object-contain"
             />
             <DialogTitle className="sr-only">Sajtbyggaren</DialogTitle>
