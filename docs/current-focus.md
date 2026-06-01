@@ -37,20 +37,31 @@ injection, env-styrt via `VIEWSER_PREVIEW_MODE`, paket→app-lager-regeln låst 
 `main`, `origin/main` = `8f7dea5`) + docs-PR-konsolidering (#138/#141/#145 foldade
 in i `AGENTS.md` `48adcde` och stängda). `jakob-be` innehåller hela `main`.
 Bug-scope: **15 aktiva / 135 stängda**.
-Nästa (coachens sprintplan, produktflöde först):
-(1) **4-case live Golden Path** (operatör-drivet) — elektriker Malmö, frisör
-Göteborg, naprapat Stockholm, liten keramik-e-handel; för varje: prompt → preview
-→ följdprompt → ny version; bedöm preview/copy/CTA/kontaktväg/mobil + om
-följdprompten träffar rätt yta. Styr vad som byggs härnäst.
-(2) **nivå 2 copyDirectives** (hero/services/about/CTA/ton; får INTE remappa
-tjänstetext till tagline; ärligt nej om ytan inte stöds) baserat på vad 4-case
-visar svagast.
-(3) embeddings för selector/rerank. (4) fler starters bara om testet visar lucka.
-(5) Vercel/sandbox-adapter = ADR/spike EFTER ovan, inte före.
-Refaktor av stora Python-filer = max en liten behavior-preserving slice som
-20%-sidospår (PR mot `jakob-be`), aldrig huvudspår. Bite C (flippa
-produktions-route `app/api/preview/[siteId]` till `currentViewserRuntime()`)
-kräver Christopher/UI-koordinering.
+Nästa (omvärderad prio 2026-06-01 kväll, operatörsbeslut): fokus skiftar till
+Vercel-sandbox + agent-orkestrering för produktflödet. **Nästa agentpass = Scout
+read-only sandbox-spike** — definiera om sandbox ska vara (A) ny PreviewRuntime-
+adapter, (B) separat server-side sandbox-runner, (C) Vercel deployment/export-
+pipeline, eller (D) bara flag-gated PoC först — plus minsta slice som bevisar
+"kan vi skapa/visa en isolerad preview stabilt?" bakom feature-flag. INGEN full
+`vercelRuntime`-adapter, INGEN `PreviewRuntimeKind`-utökning och INGEN ny canonical
+term förrän spiken + ADR säger det. Prior skiss finns på
+`cursor/preview-runtime-adapters` (`vercel-sandbox.ts`-stub + `runtime-adapter-plan.md`).
+Köat (efter sandbox-riktningen satts, ej parkerat): 4-case live Golden Path
+(elektriker Malmö / frisör Göteborg / naprapat Stockholm / liten keramik-e-handel;
+prompt → preview → följdprompt → ny version) och nivå 2 copyDirectives
+(hero/services/about/CTA/ton; remappar INTE tjänstetext till tagline). Nivå 2
+copyDirectives är **pausad** tills sandbox-riktningen är satt. Embeddings + fler
+starters längre fram. Refaktor av stora Python-filer = max en liten
+behavior-preserving slice som 20%-sidospår, aldrig huvudspår. Bite C (flippa
+produktions-route `app/api/preview/[siteId]` till `currentViewserRuntime()`) =
+Christopher/UI.
+
+> Branchmodell-OBS (motsägelse att lösa): `docs/agent-prompts.md` säger ännu
+> "vi jobbar på `main` + `backup-N`", medan denna fil + `branch-discipline.md`
+> säger att Jakob default jobbar på `jakob-be` och Christopher på
+> `christopher-ui` (PR mot `main` per leveransfönster). `jakob-be`/
+> `christopher-ui` är den gällande modellen; `agent-prompts.md` behöver
+> uppdateras (operatörsbeslut — ej ändrad i detta pass).
 
 ## Branchmodellen (kort)
 
@@ -103,15 +114,11 @@ medvetet kvar på `jakob` så Sprintvakt-lane-policyn passerar.
    ingen `PermissionError: [WinError 5]`. Strukturella regression-
    tester finns redan (`tests/test_local_preview_server_b157_followup.py`),
    men en faktisk end-to-end-körning bevisar reap-fixet i naturlig miljö.
-2. **Bite B (PreviewRuntime wiring)** — builder-prompt finns redan i
-   `docs/agent-prompts/preview-runtime-bite-b.md`. Wirear `localRuntime`
-   + `stackblitzRuntime` adaptrar mot existerande `apps/viewser/lib/`-
-   helpers. Self-contained prompt; klistras in i ny agent-session. **Not:
-   StackBlitz behöver inte vara "färdigfixad" som förkrav för att börja med
-   en VM/Sandbox-adapter**; spåren kan gå parallellt så länge Preview Runtime-
-   kontraktet hålls och adapterkind + fallback är tydligt definierade.
-   ~2-4h. Inga UI-ändringar (Bite C kräver Christopher). Vercel-
-   preview/Fly/static-export-adaptrar lämnas för senare sprint.
+2. **Bite B (PreviewRuntime DI-wiring) — KLAR** (PR #140 mergad `da5ef7b`,
+   2026-06-01). `localRuntime`/`stackblitzRuntime` delegerar via dependency
+   injection; env-styrt; paket→app-lager-regel testlåst. Kvar: Bite C (UI-flip,
+   Christopher) + Pushvakt-fynd parkerade som liten slice (DI-state-isolering,
+   StackBlitz `about:blank`-kontrakt, PascalCase-handler-typer).
 3. **B157 nivå-4 (Windows-safe rebuild, immutable build-dir + pointer-
    swap)** — arkitektur-rätta lösningen, 12-16h. Akut nivå-1 +
    followup-fix räddar 99% av case idag, men anti-patternet "rebuilda
@@ -172,7 +179,8 @@ Detaljerade Queue-/Blocked-block ligger i arkivet
 Aktiva spår i prioritetsordning:
 
 1. Manuell B157-end-to-end-verifiering (operatörsuppgift, ~5 min).
-2. Bite B (PreviewRuntime wiring local + stackblitz).
+2. Bite B (PreviewRuntime DI-wiring) — KLAR (#140 mergad da5ef7b). Nästa
+   runtime-steg: Scout sandbox-spike (se "Nästa" överst).
 3. B157 nivå-4 (immutable build-dir + pointer-swap, GAP-windows-
    safe-rebuild-pipeline) — eliminerar orphan-process-klassen.
 4. ADR 0034 / GAP-followup-prompt-content-passthrough — fri
