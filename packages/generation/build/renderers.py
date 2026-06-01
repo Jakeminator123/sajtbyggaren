@@ -37,6 +37,16 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+from packages.generation.build.contact_placeholders import (
+    is_placeholder_address_lines,
+    is_placeholder_email,
+    is_placeholder_opening_hours,
+    is_placeholder_phone,
+    real_address_lines,
+    real_email,
+    real_opening_hours,
+    real_phone,
+)
 from packages.generation.build.dispatcher import (
     _SECTION_RENDERERS,
     _load_scaffold_sections,
@@ -261,7 +271,45 @@ def render_layout(
         f'            <a href={_route_href(href)} className="text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors">{_jsx_safe_string(label)}</a>'
         for href, label in nav_items
     )
-    address_line = ", ".join(contact["addressLines"])
+    # Honest footer contact column: only render channels the operator
+    # actually supplied. Placeholder phone/email/address (the B88
+    # fallbacks scripts/prompt_to_project_input.py writes to satisfy the
+    # schema) are suppressed so every page footer never publishes
+    # ``+46 8 000 00 00`` / ``kontakt@example.se`` as if they were real.
+    # When no channel is real the column degrades to an honest "Kontakta
+    # oss" link pointing at the scaffold contact route. The lucide import
+    # is derived from the lines actually emitted so a suppressed channel
+    # does not leave an unused icon import in the generated layout.tsx.
+    footer_real_phone = real_phone(contact)
+    footer_real_email = real_email(contact)
+    footer_real_address = real_address_lines(contact)
+    footer_contact_lines: list[str] = []
+    footer_icons: list[str] = []
+    if footer_real_phone is not None:
+        footer_contact_lines.append(
+            f'              <a href={_jsx_safe_string("tel:" + _phone_href(footer_real_phone))} className="inline-flex items-center gap-2 hover:underline"><Phone className="size-4" />{_jsx_safe_string(footer_real_phone)}</a>'
+        )
+        footer_icons.append("Phone")
+    if footer_real_email is not None:
+        footer_contact_lines.append(
+            f'              <a href={_jsx_safe_string("mailto:" + footer_real_email)} className="inline-flex items-center gap-2 hover:underline"><Mail className="size-4" />{_jsx_safe_string(footer_real_email)}</a>'
+        )
+        footer_icons.append("Mail")
+    if footer_real_address:
+        footer_contact_lines.append(
+            f'              <p className="inline-flex items-start gap-2 text-[color:var(--muted)]"><MapPin className="size-4 mt-0.5" />{_jsx_safe_string(", ".join(footer_real_address))}</p>'
+        )
+        footer_icons.append("MapPin")
+    if not footer_contact_lines:
+        footer_contact_lines.append(
+            f'              <a href={contact_href} className="inline-flex items-center gap-2 font-medium hover:underline">Kontakta oss</a>'
+        )
+    footer_contact_block = "\n".join(footer_contact_lines)
+    footer_icon_import = (
+        ("import { " + ", ".join(sorted(footer_icons)) + ' } from "lucide-react";\n')
+        if footer_icons
+        else ""
+    )
 
     # Operatör-uppladdad logotyp (om finns) → renderas i header och
     # footer. Annars faller vi tillbaka till bokstavs-monogram-spannet
@@ -405,7 +453,7 @@ def render_layout(
     return (
         'import type { Metadata, Viewport } from "next";\n'
         'import { Geist, Geist_Mono } from "next/font/google";\n'
-        'import { Mail, MapPin, Phone } from "lucide-react";\n'
+        f"{footer_icon_import}"
         'import "./globals.css";\n'
         "\n"
         "const geistSans = Geist({\n"
@@ -523,9 +571,7 @@ def render_layout(
         "            </div>\n"
         '            <div className="flex flex-col gap-2 text-sm">\n'
         '              <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Kontakt</p>\n'
-        f'              <a href={_jsx_safe_string("tel:" + _phone_href(contact["phone"]))} className="inline-flex items-center gap-2 hover:underline"><Phone className="size-4" />{_jsx_safe_string(contact["phone"])}</a>\n'
-        f'              <a href={_jsx_safe_string("mailto:" + contact["email"])} className="inline-flex items-center gap-2 hover:underline"><Mail className="size-4" />{_jsx_safe_string(contact["email"])}</a>\n'
-        f'              <p className="inline-flex items-start gap-2 text-[color:var(--muted)]"><MapPin className="size-4 mt-0.5" />{_jsx_safe_string(address_line)}</p>\n'
+        f"{footer_contact_block}\n"
         "            </div>\n"
         '            <div className="flex flex-col gap-2 text-sm text-[color:var(--muted)]">\n'
         '              <p className="text-xs uppercase tracking-widest">Sajt</p>\n'
@@ -866,12 +912,8 @@ def render_section_contact_info(dossier: dict) -> str:
     quote alike.
     """
     contact = dossier["contact"]
-    address_lines = "\n".join(
-        f'                <span className="block">{_jsx_safe_string(line)}</span>'
-        for line in contact["addressLines"]
-    )
     hero_body = _contact_page_hero_body(dossier)
-    return (
+    header = (
         '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         '          <header className="flex flex-col gap-3">\n'
@@ -880,31 +922,115 @@ def render_section_contact_info(dossier: dict) -> str:
         f'            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(hero_body)}</p>\n'
         "          </header>\n"
         '          <div className="grid gap-4 md:grid-cols-2">\n'
-        '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
-        '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><Phone className="size-5" /></span>\n'
-        '              <h2 className="text-base font-semibold">Telefon</h2>\n'
-        f'              <a href={_jsx_safe_string("tel:" + _phone_href(contact["phone"]))} className="mt-2 block text-lg font-medium hover:underline">{_jsx_safe_string(contact["phone"])}</a>\n'
-        '              <p className="mt-2 inline-flex items-center gap-2 text-sm text-[color:var(--muted)]">\n'
-        '                <Clock className="size-4" />\n'
-        f"                <span>{_jsx_safe_string(contact['openingHours'])}</span>\n"
-        "              </p>\n"
-        "            </article>\n"
-        '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
-        '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><Mail className="size-5" /></span>\n'
-        '              <h2 className="text-base font-semibold">E-post</h2>\n'
-        f'              <a href={_jsx_safe_string("mailto:" + contact["email"])} className="mt-2 block text-lg font-medium hover:underline">{_jsx_safe_string(contact["email"])}</a>\n'
-        "            </article>\n"
-        '            <article className="rounded-xl border border-[color:var(--border)] p-6 md:col-span-2">\n'
-        '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><MapPin className="size-5" /></span>\n'
-        '              <h2 className="text-base font-semibold">Adress</h2>\n'
-        '              <address className="mt-2 not-italic">\n'
-        f"{address_lines}\n"
-        "              </address>\n"
-        "            </article>\n"
-        "          </div>\n"
-        "        </div>\n"
-        "      </section>\n"
     )
+    footer = "          </div>\n        </div>\n      </section>\n"
+
+    # Byte-identical fast path: when no contact field is a placeholder the
+    # historical three-article layout is returned verbatim so every
+    # existing real-data snapshot/byte-exact test stays unchanged.
+    no_placeholders = not (
+        is_placeholder_phone(contact.get("phone"))
+        or is_placeholder_email(contact.get("email"))
+        or is_placeholder_opening_hours(contact.get("openingHours"))
+        or is_placeholder_address_lines(contact.get("addressLines"))
+    )
+    if no_placeholders:
+        address_lines = "\n".join(
+            f'                <span className="block">{_jsx_safe_string(line)}</span>'
+            for line in contact["addressLines"]
+        )
+        return (
+            header
+            + '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
+            '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><Phone className="size-5" /></span>\n'
+            '              <h2 className="text-base font-semibold">Telefon</h2>\n'
+            f'              <a href={_jsx_safe_string("tel:" + _phone_href(contact["phone"]))} className="mt-2 block text-lg font-medium hover:underline">{_jsx_safe_string(contact["phone"])}</a>\n'
+            '              <p className="mt-2 inline-flex items-center gap-2 text-sm text-[color:var(--muted)]">\n'
+            '                <Clock className="size-4" />\n'
+            f"                <span>{_jsx_safe_string(contact['openingHours'])}</span>\n"
+            "              </p>\n"
+            "            </article>\n"
+            '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
+            '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><Mail className="size-5" /></span>\n'
+            '              <h2 className="text-base font-semibold">E-post</h2>\n'
+            f'              <a href={_jsx_safe_string("mailto:" + contact["email"])} className="mt-2 block text-lg font-medium hover:underline">{_jsx_safe_string(contact["email"])}</a>\n'
+            "            </article>\n"
+            '            <article className="rounded-xl border border-[color:var(--border)] p-6 md:col-span-2">\n'
+            '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><MapPin className="size-5" /></span>\n'
+            '              <h2 className="text-base font-semibold">Adress</h2>\n'
+            '              <address className="mt-2 not-italic">\n'
+            f"{address_lines}\n"
+            "              </address>\n"
+            "            </article>\n"
+            + footer
+        )
+
+    # Honest path: at least one field is a placeholder. Render only the
+    # channels the operator actually supplied; never publish dummy
+    # phone/email/address. When nothing is real the section degrades to a
+    # neutral invitation card so the contact page still reads honestly
+    # (the contact route + page hero remain the visitor's call to action).
+    phone = real_phone(contact)
+    email = real_email(contact)
+    hours = real_opening_hours(contact)
+    address = real_address_lines(contact)
+    language = (dossier.get("language") or "sv").strip().lower()
+    cards: list[str] = []
+    if phone is not None:
+        hours_line = (
+            (
+                '              <p className="mt-2 inline-flex items-center gap-2 text-sm text-[color:var(--muted)]">\n'
+                '                <Clock className="size-4" />\n'
+                f"                <span>{_jsx_safe_string(hours)}</span>\n"
+                "              </p>\n"
+            )
+            if hours is not None
+            else ""
+        )
+        cards.append(
+            '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
+            '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><Phone className="size-5" /></span>\n'
+            '              <h2 className="text-base font-semibold">Telefon</h2>\n'
+            f'              <a href={_jsx_safe_string("tel:" + _phone_href(phone))} className="mt-2 block text-lg font-medium hover:underline">{_jsx_safe_string(phone)}</a>\n'
+            + hours_line
+            + "            </article>\n"
+        )
+    if email is not None:
+        cards.append(
+            '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
+            '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><Mail className="size-5" /></span>\n'
+            '              <h2 className="text-base font-semibold">E-post</h2>\n'
+            f'              <a href={_jsx_safe_string("mailto:" + email)} className="mt-2 block text-lg font-medium hover:underline">{_jsx_safe_string(email)}</a>\n'
+            "            </article>\n"
+        )
+    if address:
+        address_lines = "\n".join(
+            f'                <span className="block">{_jsx_safe_string(line)}</span>'
+            for line in address
+        )
+        cards.append(
+            '            <article className="rounded-xl border border-[color:var(--border)] p-6 md:col-span-2">\n'
+            '              <span className="mb-3 inline-flex size-10 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><MapPin className="size-5" /></span>\n'
+            '              <h2 className="text-base font-semibold">Adress</h2>\n'
+            '              <address className="mt-2 not-italic">\n'
+            f"{address_lines}\n"
+            "              </address>\n"
+            "            </article>\n"
+        )
+    if not cards:
+        invite_heading = "How to reach us" if language == "en" else "Så når du oss"
+        invite_body = (
+            "Tell us briefly what you need and we'll get back to you as soon as we can."
+            if language == "en"
+            else "Beskriv kort vad du söker så återkommer vi så snart vi kan."
+        )
+        cards.append(
+            '            <article className="rounded-xl border border-[color:var(--border)] p-6 md:col-span-2">\n'
+            f'              <h2 className="text-base font-semibold">{_jsx_safe_string(invite_heading)}</h2>\n'
+            f'              <p className="mt-2 text-[color:var(--muted)]">{_jsx_safe_string(invite_body)}</p>\n'
+            "            </article>\n"
+        )
+    return header + "".join(cards) + footer
 
 
 def render_section_trust_proof(dossier: dict) -> str:
@@ -1616,13 +1742,22 @@ def render_about(dossier: dict) -> str:
 
 def render_contact(dossier: dict) -> str:
     # Path B step 4 — contact-info card grid (Phone / Mail / Address)
-    # is produced by ``render_section_contact_info``. Output is
-    # byte-identical to the inline implementation.
+    # is produced by ``render_section_contact_info``. The lucide import is
+    # derived from the icons the section actually emits (the same approach
+    # the dispatched scaffolds use) so a suppressed placeholder channel
+    # does not leave an unused icon import. For fully-real contact data the
+    # section emits Phone/Clock/Mail/MapPin and the import is byte-identical
+    # to the previous static ``Clock, Mail, MapPin, Phone`` line.
     contact_info_section = render_section_contact_info(dossier)
+    icons = sorted(set(_DISPATCHED_ICON_PATTERN.findall(contact_info_section)))
+    icon_import = (
+        ("import { " + ", ".join(icons) + ' } from "lucide-react";\n' + "\n")
+        if icons
+        else ""
+    )
     return (
-        'import { Clock, Mail, MapPin, Phone } from "lucide-react";\n'
-        "\n"
-        "export default function ContactPage() {\n"
+        icon_import
+        + "export default function ContactPage() {\n"
         "  return (\n"
         '    <main className="flex flex-1 flex-col">\n'
         f"{contact_info_section}"
@@ -3198,8 +3333,10 @@ def render_section_hours_summary(dossier: dict) -> str:
     section is invisible rather than rendering an empty placeholder.
     """
     contact = dossier.get("contact") or {}
-    opening = contact.get("openingHours") if isinstance(contact, dict) else None
-    if not isinstance(opening, str) or not opening.strip():
+    # Suppress the dummy "Mån-Fre 09:00-17:00" fallback so the card never
+    # presents placeholder hours as if they were the real schedule.
+    opening = real_opening_hours(contact)
+    if opening is None:
         return ""
     safe_hours = _jsx_safe_string(opening.strip())
     return (
@@ -3223,8 +3360,11 @@ def render_section_fallback_phone(dossier: dict) -> str:
     when neither channel is configured.
     """
     contact = dossier.get("contact") or {}
-    phone = contact.get("phone") if isinstance(contact, dict) else None
-    email = contact.get("email") if isinstance(contact, dict) else None
+    # Only surface channels the operator actually staffs — placeholder
+    # phone/email are suppressed so /bokning never shows a dummy number
+    # or address as a bookable channel.
+    phone = real_phone(contact)
+    email = real_email(contact)
     cards: list[str] = []
     if isinstance(phone, str) and phone.strip():
         cards.append(
