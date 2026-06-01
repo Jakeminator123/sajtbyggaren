@@ -37,9 +37,11 @@ injection, env-styrt via `VIEWSER_PREVIEW_MODE`, paket→app-lager-regeln låst 
 `main`, `origin/main` = `8f7dea5`) + docs-PR-konsolidering (#138/#141/#145 foldade
 in i `AGENTS.md` `48adcde` och stängda). `jakob-be` innehåller hela `main`.
 Bug-scope: **15 aktiva / 135 stängda**.
-Nästa (omvärderad prio 2026-06-01 kväll, operatörsbeslut): fokus skiftar till
-Vercel-sandbox + agent-orkestrering för produktflödet. **Nästa agentpass = Scout
-read-only sandbox-spike** — definiera om sandbox ska vara (A) ny PreviewRuntime-
+Nästa (prioriteringsändring 2026-06-01 kväll, operatörsbeslut — INTE en ny
+produktstrategi): multi-adapter/provider har varit riktningen länge (se
+`runtime-adapter-plan.md` + ADR 0028/0030); vi **aktiverar nu Vercel-sandbox-
+spåret före nivå 2 copyDirectives**. Nästa agentpass = Scout read-only
+sandbox-spike — definiera om sandbox ska vara (A) ny PreviewRuntime-
 adapter, (B) separat server-side sandbox-runner, (C) Vercel deployment/export-
 pipeline, eller (D) bara flag-gated PoC först — plus minsta slice som bevisar
 "kan vi skapa/visa en isolerad preview stabilt?" bakom feature-flag. INGEN full
