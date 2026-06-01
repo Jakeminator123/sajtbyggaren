@@ -1,9 +1,18 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-05-31 UTC, steward-auto efter PR #137 — sync(jakob-be -> main): B157 level 4 immutable build-dir + pointer-swap + GC. Verifierad `main` är `40b7d29`.
+**Datum:** 2026-06-01 UTC, steward-auto efter PR #139 — sync: christopher-ui → main (UI/UX-batch + B155 UI). Verifierad `main` är `f22d27a`.
 
-Nya PRs sedan föregående checkpoint: PR #137 — sync(jakob-be -> main): B157 level 4
-immutable build-dir + pointer-swap + GC.
+Nya PRs sedan föregående checkpoint: PR #114 — chore(gitignore): re-ignore __pycache__/
+under packages/generation/build/ (B146 fallout); PR #118 — sync(jakob-be -> main): PR
+#117 mobile responsive + PR #116 dossier-intake + 12 closed bugs + B147 new +
+audit-report; PR #120 — sync(jakob-be -> main): repo hygiene 2026-05-26 (4 commits,
+docs-only); PR #123 — sync(jakob-be -> main): backend gap batch and docs cleanup; PR
+#125 — fix(discovery): honor wizard clears across versioned fields; PR #127 —
+fix(viewser): block Python-backed actions on hosted Vercel; PR #133 — sync(jakob-be ->
+main): PreviewRuntime Bite A skeleton + race-fix + governance comments + builder prompt;
+PR #135 — feat(builder): close B155 backend — applied-effect-detektion + trace-event för
+fri follow-up; PR #134 — refactor(quality-gate): resolve contact-route via routes.json;
+PR #139 — sync: christopher-ui → main (UI/UX-batch + B155 UI).
 
 **MCP-server-status:** Sprintvakt-servern exponerar 14 tools efter
 PR #77 (`get_workboard`, `list_gaps`, `create_gap`, `activate_gap`,
@@ -563,3 +572,10 @@ builder prompt.
 
 Nya PRs sedan föregående checkpoint: PR #136 — sync(jakob-be -> main): B157 round 3 +
 BO6 + B155 backend + quality-gate routes-discovery.
+
+### 2026-06-01 UTC — handoff.md före `ee31eb1`
+
+**Datum:** 2026-05-31 UTC, steward-auto efter PR #137 — sync(jakob-be -> main): B157 level 4 immutable build-dir + pointer-swap + GC. Verifierad `main` är `40b7d29`.
+
+Nya PRs sedan föregående checkpoint: PR #137 — sync(jakob-be -> main): B157 level 4
+immutable build-dir + pointer-swap + GC.
