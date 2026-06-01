@@ -30,36 +30,25 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `4c473cb` (2026-06-01 kväll UTC, `jakob-be` hardening +
-PR #143 + Codex-review-fixar (B161/B162), ovanpå PR #142-synken `fb3b1f8`; EJ i
-`main` än — sync-PR **#144** öppen och väntar leveransfönster-OK). `origin/main`
-(`48d5ca0`) är fullt innehållen i `jakob-be` → sync-PR är konfliktfri (jakob-be
-10 commits före, 0 efter). Bug-scope nu: **15 aktiva / 135 stängda**.
-Nya commits sedan föregående checkpoint (alla på `jakob-be`, opushad mot `main`):
-- `74ed629` fix(dev): kill-dev-trees fångar orphan preview/dev node-processer
-  (föräldraträd-matchning + TCP-port-lyssnare 3000-3001/4100-4199 + `--dry-run`/
-  `--verbose`).
-- `2e0c55f` fix(hardening): B158 (hero släpper placeholder-`tel:`), B159
-  (kontaktsida/`/hitta-hit` får ärlig kontakt-CTA), copyDirective-edge-cases
-  (namn-scope / reject-ord-boundary / trailing-instruktion), Streamlit-floor
-  `>=1.49`. Fulltestad, 7 explicita filer.
-- `a90215e` fix(discovery): B120 stad-extraktion läser alla addressLines +
-  flerordiga orter.
-- `d036067` docs(steward): known-issues stänger B158/B159, B120-progress + ny
-  B160 (logo-Image, Christopher-lane), B155-hardening-not, GAP-annotation,
-  Christopher-handoff (`msg-0025`). Bug-scope: **15 aktiva / 133 stängda**.
-- `a3c47a7` docs(focus): dokumenterade PR #143 + markerade #139 mergad.
-- `2320e34` refactor(build): **PR #143 mergad** (squash, base `jakob-be`) —
-  npm/subprocess-helpers flyttade till `packages/generation/build/subprocesses.py`;
-  `scripts.build_site` behåller facade + re-export `run_npm` (monkeypatchbar).
-  Behavior-preserving (AST-verifierad), Scout-grön, full pytest exit 0. PR-branch +
-  duplikat `cursor/refactor-build-site-slice-1` raderade.
-- `63e4758` fix(codex-review): B161 (okvoterad include-token "inkludera
-  TEST-JAKOB i hero" → ej längre tyst no-op) + B162 (TS/Python-paritet i
-  `local-preview-server.ts:readActiveBuildDir` — avvisar närvarande icke-string
-  buildPath). tsc grön; nya tester. (B-IDs registrerade i steward-commit denna.)
-Nästa: #140 Bite B-review (in i `jakob-be`), docs-PR #138/#141-konsolidering,
-sedan sync-PR `jakob-be -> main` för hela batchen när operatören ger OK.
+Last verified state: `939f684` (2026-06-01 kväll UTC, `jakob-be` efter
+sync-merge av `origin/main` post **PR #144**). **PR #144 (`jakob-be → main`)
+är mergad** (squash, `origin/main` = `fba03d0`). Hela hardening-batchen
+ligger nu i `main`: kill-dev-trees orphan-cleanup, B158/B159, copyDirective-
+edge-cases, Streamlit-floor `>=1.49`, B120, #143 subprocess-refactor, B161/B162
+— plus tre review-fixar från denna session (`d03dadd` governance-policy-paritet
+som avblockade CI, `e0e56ce` mixed-address-fast-path + pyproject streamlit-floor
++ kill-dev-trees tom-scope_text, var och en regressionstäckt). `jakob-be` är
+synkad mot `origin/main` via **merge** (`939f684`, trädet identiskt med
+`origin/main`; medvetet INTE `reset --hard` mitt i flödet) och i sync med
+origin. Bug-scope: **15 aktiva / 135 stängda**.
+Nästa: (1) #140 Bite B — rebasa mot nya `jakob-be` + skala ned till äkta
+PreviewRuntime-DI-scope, sen review → in i `jakob-be`. (2) Konsolidera docs-PR
+#138/#141/#145 (alla rör `AGENTS.md` Cloud-setup) till EN, stäng övriga som
+dubbletter. (3) Vercel preview-adapter (operatörsval): egen ADR per ADR 0030 +
+naming-bump (lägg `vercel` i `PreviewRuntimeKind`) + `normalizePreviewMode`-
+mappning för sandbox/vercel + ny `adapters/vercel.ts` + tester; börja med
+Vercel-sandbox-spåret för editbar preview-rung. Ingen ny feature startad i
+detta steward-steg.
 
 ## Branchmodellen (kort)
 
@@ -73,36 +62,37 @@ sedan sync-PR `jakob-be -> main` för hela batchen när operatören ger OK.
 
 ## Pågående/öppna PR:s just nu
 
-**Öppna PRs (2026-06-01 kväll, uppdaterad):**
+**Öppna PRs (2026-06-01 kväll, post-#144-merge):**
 
-- **#144** `jakob-be → main` — **sync-PR (öppen, ready, MERGEABLE/konfliktfri)**.
-  Hela hardening-batchen: kill-dev-trees, B158/B159, copyDirective-edge-cases,
-  Streamlit-floor, B120, #143 refactor (subprocesses), B161/B162. `origin/main`
-  fullt innehållen i `jakob-be` (10 commits före, 0 efter). Full pytest exit 0,
-  tsc 0, guards gröna. **Mergas till `main` = leveransfönster-beslut (operatör).**
-  Bite B (#140) ingår EJ — kan synka i senare batch.
 - **#140** `cursor/preview-runtime-bite-b-di → jakob-be` — draft. Bite B
-  PreviewRuntime via dependency-injection. Inom scope; rör ej copyDirectives-
-  filer eller Christopher-UI. Mergas in i `jakob-be`, ej `main`. **Nästa review.**
+  PreviewRuntime via dependency-injection. **Behöver rebase + prune först:**
+  PR-diffen är uppblåst (39 filer, +1845/-427) för att branchen baserades på en
+  gammal `jakob-be` och släpar med redan-mergade commits (copyDirectives,
+  `prompt_to_project_input.py`, governance-scheman, backoffice). Efter rebase mot
+  nya `jakob-be` blir den äkta scopen ~`packages/preview-runtime/**` +
+  `apps/viewser/lib/preview-runtime-server.ts` + `tests/test_preview_runtime_di.py`.
+  Review sen → in i `jakob-be`, ej `main`.
 - **#138** `cursor/cloud-dev-env-setup-a928 → main` — draft, docs (AGENTS.md
   Cloud-gotchas). Clean.
-- **#141** `cursor/cloud-agents-md-env-notes-7a3f → main` — draft, docs.
-  Governance failar (term-coverage flaggar ett versalt backtick-ord i AGENTS.md);
-  enradsfix kvar. Nästan-dubblett av #138 → konsolidera till en PR.
+- **#141** `cursor/cloud-agents-md-env-notes-7a3f → main` — draft, docs (AGENTS.md).
+- **#145** `cursor/cloud-agents-md-viewser-4b89 → main` — draft, docs (AGENTS.md
+  Viewser + evals-dir pytest).
+- **Docs-PR-konsolidering:** #138/#141/#145 rör alla `AGENTS.md` Cloud-setup och
+  är nära-dubbletter → slå ihop bästa raderna till EN PR, stäng de andra som
+  duplicate. Mergea inte alla tre.
 
 **Mergade denna session:**
-- **#143** `cursor/build-site-py-refaktorering-b2c1 → jakob-be` — **mergad**
-  (`2320e34`, squash). Behavior-preserving npm/subprocess-extraktion (operatörens
-  cloud-agent). Rebasead mot senaste `jakob-be` (inkl. `2e0c55f`), Scout-grön,
-  full svit exit 0. PR-branch + duplikat raderade.
+- **#144** `jakob-be → main` — **mergad** (squash, `fba03d0`). Hela
+  hardening-batchen + tre Vercel-Agent-review-fixar (se "Last verified state").
+  `jakob-be` synkad mot `origin/main` via merge (`939f684`).
+- **#143** `cursor/build-site-py-refaktorering-b2c1 → jakob-be` — mergad
+  (`2320e34`, squash). Behavior-preserving npm/subprocess-extraktion.
 - **#139** `christopher-ui → main` — mergad tidigare 2026-06-01 (`f22d27a`,
   steward-auto `efbb425`). UI/UX + B155 FloatingChat-no-op + copyDirectives väg
   B-UI. Tre låg-impact-fynd kvar i Christophers lane (`msg-0024` + `msg-0025`).
 
-Rekommenderat nästa main-steg: sync-PR `jakob-be → main` för hela
-hardening-batchen (B158/B159 + copyDirective-edge-cases + B120 + kill-dev-trees
-+ docs) NÄR operatören ger OK. `jakob-be` får EJ `reset --hard origin/main` i
-mellanläget — `merge`/`rebase` in `main`, lös docs-konflikter, öppna sync-PR.
+`jakob-be` får INTE `reset --hard origin/main` mitt i ett pågående flöde; efter
+en landad sync mergas `origin/main` in i arbets-branchen (gjordes i `939f684`).
 
 **Christophers `origin/christopher-ui`** — efter PR #117 är hans branch
 synkad mot post-#117-main. Han har under operator-OK scope-leak
