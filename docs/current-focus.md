@@ -30,7 +30,35 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: pending (2026-06-01 fm, christopher-ui local — ADR
+Last verified state: pending (2026-06-01 fm, christopher-ui local — Tier
+1 robusthet implementerad: ErrorBoundary + lättviktigt toast-system +
+network-failure UX för /api/runs. Tre komplement utan backend-beroende,
+alla inom apps/viewser-lanen, för att hindra tysta launch-buggar medan
+Jakob sätter upp Vercel-preview-fallback för B125. (A) Ny
+``components/error-boundary.tsx`` (klass — React 19 har inget hook-API)
+wrappar ViewerPanel + PromptBuilder + BuilderShell i page.tsx så
+crash i någon subtree avgränsas; reset-knapp ökar resetKey → React
+remountar barnträdet. (B) Nytt ``components/ui/toast.tsx``
+(ToastProvider + useToast + viewport, ~250 rader, ingen extern dep,
+aria-live polite/assertive per variant). Mountas i providers.tsx. Hookas
+in på fyra ställen i page.tsx: /api/runs initial-failure
+(error-toast med retry-action), /api/runs follow-up-failure efter build
+(warning-toast), handleBuildDone success (success-toast), degraded
+(warning), failed (error). Stable retry-callback via loadRunsRef så
+toast-actionen inte stänger över sig själv (React 19:s
+react-hooks/immutability-regel). (C) Initial /api/runs-loader
+extraherad till useCallback ``loadRuns`` så retry kan trigga om utan
+duplicerad kod; ny ``RunsLoadErrorCard``-komponent med WifiOff-ikon +
+felmeddelande + Försök-igen-knapp visas centrerat över hero när
+runsLoadError är satt och builder-mode inte är aktivt. Fyra nya
+source-lock-tester (``test_tier1_*``). Pre-existing
+test_page_useeffect_guards_success_path uppdaterat så det accepterar
+både ``cancelled`` (bool) och ``cancelledRef.current`` (ref-objekt).
+ErrorBoundary-/Toast-helpers + TriangleAlert (lucide-ikon) allowlistade
+i scripts/check_term_coverage.py. Slutkontroll grön: tsc 0, lint 0,
+ruff 0, pytest 1198 passed + 3 skipped, governance 18/18, rules-sync
+OK, term-coverage --strict 0 unknowns. Commit: f8f2213. Tidigare
+verified state: pending (2026-06-01 fm, christopher-ui local — ADR
 0034 väg B (B155 path B) implementerad i FloatingChat. Backend för
 path A landade på `jakob-be` (commit 641abc9) men är inte mergad till
 `main` än, så UI:t är redo för end-to-end så fort jakob-be → main
