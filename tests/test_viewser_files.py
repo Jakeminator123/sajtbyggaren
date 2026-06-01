@@ -2917,3 +2917,94 @@ def test_pre_push_cmd_k_skips_select_targets() -> None:
         content,
     ), "⌘K-listenern måste skippa SELECT-element (matcha wizardens mönster)"
 
+
+# ----------------------------------------------------------------------
+# Jakob-handoff bite-A + bite-C (post-PR #139)
+# ----------------------------------------------------------------------
+# Två låg-impact-fynd som flaggades av Jakobs bot efter PR #139:
+#   A. prompt-builder.tsx NDJSON-parsing: inre try/catch runt JSON.parse
+#      så en korrupt rad inte sprider "Unexpected token X" till operatören.
+#      Final-buffer-union utökades med "building" så snabba builds där
+#      Phase 1 + Phase 2 hamnar i samma chunk inte typ-fail:ar.
+#   C. more-info-dialog.tsx activeTab-state ska nollställas till "about"
+#      varje gång dialogen öppnas (Radix unmountar inte tree:t mellan
+#      open-toggles när controlled).
+
+
+def test_handoff_a_prompt_builder_ndjson_parse_is_defensive() -> None:
+    """``prompt-builder.tsx`` NDJSON-parsing måste ha inre try/catch
+    runt BÅDA ``JSON.parse``-anrop (line-iterator + final-buffer) så
+    en korrupt NDJSON-rad inte sprider SyntaxError till operatören.
+    """
+    path = VIEWSER_DIR / "components" / "prompt-builder.tsx"
+    content = path.read_text(encoding="utf-8")
+    # Räkna JSON.parse-anrop i samma kontext — båda måste vara inom
+    # en try/catch-block som loggar och fortsätter/fallback:ar.
+    parse_calls = re.findall(r"JSON\.parse\((line|buffer)\)", content)
+    assert len(parse_calls) == 2, (
+        f"Förväntade 2 JSON.parse-anrop (line + buffer), hittade "
+        f"{len(parse_calls)}: {parse_calls}"
+    )
+    # Båda måste föregås av ``try {`` på samma indent (inom while-loopen
+    # för line, eller efter ``if (buffer.trim())`` för buffer).
+    assert content.count("try {\n            event = JSON.parse(line)") == 1, (
+        "JSON.parse(line) måste vara inom inre try-block i NDJSON-loopen"
+    )
+    assert content.count("try {\n          event = JSON.parse(buffer)") == 1, (
+        "JSON.parse(buffer) måste vara inom inre try-block i final-buffern"
+    )
+    # Final-buffer-union ska inkludera "building" — annars typfail om
+    # en snabb build pushar building+done i samma chunk utan terminator.
+    final_buffer_section = content[content.index("if (buffer.trim())") :]
+    final_buffer_section = final_buffer_section[: final_buffer_section.index("}")
+    + 200]
+    assert '"building"' in final_buffer_section, (
+        "final-buffer-union måste ha ``stage: \"building\"`` för att hantera "
+        "snabba builds där Phase 1 + done hamnar i samma chunk"
+    )
+
+
+def test_handoff_c_more_info_dialog_resets_active_tab_on_open() -> None:
+    """``more-info-dialog.tsx`` måste nollställa ``activeTab`` till
+    ``"about"`` varje gång ``open`` flippar från false → true så
+    operatören inte ser föregående flik (Radix Dialog-content
+    unmountar inte tree:t mellan open-toggles när controlled).
+
+    Vi hookar in reset:en i en ``onOpenChange``-wrapper
+    (``handleOpenChange``) istället för ``useEffect([open])`` eftersom
+    React 19:s ``react-hooks/set-state-in-effect``-regel kräver att
+    state-uppdateringar drivs av explicita user-events.
+    """
+    path = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "more-info-dialog.tsx"
+    )
+    content = path.read_text(encoding="utf-8")
+    # useCallback måste importeras (vi använder den för handleOpenChange).
+    assert re.search(
+        r'import \{[^}]*\buseCallback\b[^}]*\} from "react"',
+        content,
+    ), "useCallback måste importeras från React"
+    # handleOpenChange-wrappern måste finnas och reset:a activeTab när
+    # nextOpen är true.
+    assert re.search(
+        r'handleOpenChange\s*=\s*useCallback\(\s*\(nextOpen[^)]*\)\s*=>\s*\{\s*'
+        r'if \(nextOpen\)\s*setActiveTab\("about"\);\s*'
+        r'onOpenChange\(nextOpen\);',
+        content,
+        re.DOTALL,
+    ), (
+        "MoreInfoDialog måste ha en handleOpenChange-wrapper som "
+        'setActiveTab("about") när nextOpen=true, sedan delegerar till '
+        "parent's onOpenChange"
+    )
+    # Dialog och close-button måste använda handleOpenChange (inte
+    # parent's onOpenChange direkt) så reset-logiken inte kringgås.
+    assert "<Dialog open={open} onOpenChange={handleOpenChange}>" in content, (
+        "Dialog ska driva sin onOpenChange via handleOpenChange"
+    )
+    assert "onClick={() => handleOpenChange(false)}" in content, (
+        "Close-knappen ska kalla handleOpenChange(false), inte parent's "
+        "onOpenChange direkt — annars kringgås reset-logiken"
+    )
+
+

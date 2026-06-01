@@ -1,7 +1,7 @@
 "use client";
 
 import { Globe, Settings2, Square, Video, X } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { AssetDropzone } from "@/components/discovery-wizard/asset-dropzone";
 import { Button } from "@/components/ui/button";
@@ -82,15 +82,33 @@ export function MoreInfoDialog({
 }: MoreInfoDialogProps) {
   const [activeTab, setActiveTab] = useState<MoreInfoTabId>("about");
 
+  // Nollställ aktiv flik till "about" varje gång dialogen öppnas.
+  // Vi hookar i ``onOpenChange`` istället för ``useEffect([open])``
+  // eftersom React 19:s ``react-hooks/set-state-in-effect``-regel
+  // (och själva pattern:et) gillar att state-uppdateringar drivs av
+  // explicita user-events, inte av reactive effects. Radix
+  // ``Dialog.Content`` förstör inte sitt mountade tree mellan
+  // open-toggles när dialogen är controlled, så utan denna reset
+  // skulle ``activeTab`` behålla sista valet (operatör som stänger på
+  // "Kontakt" skulle få "Kontakt" tillbaka — inkonsekvent vs steg-1-
+  // känslan när dialogen alltid startar på "Om oss").
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (nextOpen) setActiveTab("about");
+      onOpenChange(nextOpen);
+    },
+    [onOpenChange],
+  );
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="border-border/60 bg-background grid h-[min(100dvh-1.5rem,720px)] !w-[min(100vw-1rem,720px)] !max-w-[min(100vw-1rem,720px)] grid-rows-[auto_auto_1fr_auto] gap-0 overflow-hidden border p-0 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.25)] sm:!max-w-[min(100vw-2rem,720px)] sm:rounded-3xl"
         showCloseButton={false}
       >
         <button
           type="button"
-          onClick={() => onOpenChange(false)}
+          onClick={() => handleOpenChange(false)}
           aria-label="Stäng"
           className="text-muted-foreground hover:bg-foreground/5 hover:text-foreground min-tap sm:min-tap-0 absolute top-2 right-2 z-10 inline-flex items-center justify-center rounded-full transition-colors active:scale-95 sm:top-3 sm:right-3 sm:h-8 sm:w-8"
         >

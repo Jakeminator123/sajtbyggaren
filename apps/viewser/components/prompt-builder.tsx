@@ -241,10 +241,27 @@ export function PromptBuilder({
         buffer = lines.pop() ?? "";
         for (const line of lines) {
           if (!line.trim()) continue;
-          const event = JSON.parse(line) as
+          // Inre try/catch så en enskild korrupt NDJSON-rad
+          // (proxy-buffring, kortvarig disconnect, mid-line abort)
+          // inte sprider en obegriplig "Unexpected token X in JSON at
+          // position N" till operatören. Den korrupta raden loggas
+          // för debugging och vi fortsätter läsa nästa rad — den
+          // riktiga ``stage: "done"`` eller ``stage: "error"`` brukar
+          // komma direkt efter.
+          let event:
             | { stage: "building" }
-            | { stage: "done" } & PromptApiPayload
+            | ({ stage: "done" } & PromptApiPayload)
             | { stage: "error"; error: string };
+          try {
+            event = JSON.parse(line);
+          } catch (parseError) {
+            console.warn(
+              "[prompt-builder] Ignorerar oparseable NDJSON-rad:",
+              parseError,
+              line.slice(0, 200),
+            );
+            continue;
+          }
           if (event.stage === "building") {
             // RIKTIG signal från route:n. Phase 1 är klar, Phase 2
             // (build_site.py) har precis startat — visa "Bygger sajt".
@@ -259,10 +276,30 @@ export function PromptBuilder({
       // Sista, eventuellt ofullständiga raden i buffern. NDJSON-
       // protokollet kräver inte trailing newline, så hantera även
       // det fall där `done`-eventet kom utan terminator.
+      //
+      // ``"building"`` tas med i typunion:en — servern skickar
+      // visserligen ``building`` mitt i streamen idag, men om en
+      // build är så snabb att Phase 1 och Phase 2 hinner emit:a inom
+      // samma chunk kan båda hamna i final-buffer:n utan terminator.
       if (buffer.trim()) {
-        const event = JSON.parse(buffer) as
-          | { stage: "done" } & PromptApiPayload
+        let event:
+          | { stage: "building" }
+          | ({ stage: "done" } & PromptApiPayload)
           | { stage: "error"; error: string };
+        try {
+          event = JSON.parse(buffer);
+        } catch (parseError) {
+          // Ofullständig final-buffer = troligtvis avbruten stream
+          // (timeout, server-restart). Behandla som "ingen slutsignal"
+          // så outer error-check tar över med rätt felmeddelande
+          // istället för att kasta SyntaxError.
+          console.warn(
+            "[prompt-builder] Final-buffer kunde inte parseas:",
+            parseError,
+            buffer.slice(0, 200),
+          );
+          event = { stage: "building" };
+        }
         if (event.stage === "done") {
           donePayload = event;
         } else if (event.stage === "error") {
