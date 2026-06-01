@@ -8,6 +8,7 @@ import {
 } from "@/lib/hosted-python-runtime";
 import { assertLocalhost } from "@/lib/localhost-guard";
 import { runPromptToProjectInput } from "@/lib/prompt-runner";
+import { readAppliedCopyDirectives } from "@/lib/runs";
 
 // Operator-prototype: keep the prompt small enough that an accidental
 // 50 MB paste cannot wedge the build pipeline. The cap is generous for
@@ -164,6 +165,22 @@ async function runPromptBuildOnce(
   // /api/build call so two builds do not race over .generated/.
   const build = await runBuild(helper.siteId, helper.dossierPath);
 
+  // ADR 0034 path B (B155 UI): expose the validated copy-directives
+  // that this version actually applied, härledda ur project-input-
+  // snapshotet på dossierPath. Init-builds + builds utan directives
+  // returnerar [] så UI:t kan särskilja "no-op" (appliedVisibleEffect
+  // === false) från "applied without structured copy" (true men tom
+  // lista). Aldrig en throw — felaktig artefakt landar som [] och
+  // FloatingChat faller tillbaka på den generiska success-raden.
+  let appliedCopyDirectives: Awaited<
+    ReturnType<typeof readAppliedCopyDirectives>
+  > = [];
+  try {
+    appliedCopyDirectives = await readAppliedCopyDirectives(build.runId);
+  } catch {
+    appliedCopyDirectives = [];
+  }
+
   return {
     runId: build.runId,
     siteId: helper.siteId,
@@ -178,6 +195,7 @@ async function runPromptBuildOnce(
     // on the wire PromptBuilder used to flag those as "Build klar".
     buildStatus: extractBuildStatus(build.buildResult),
     buildResult: build.buildResult,
+    appliedCopyDirectives,
   };
 }
 

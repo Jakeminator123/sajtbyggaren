@@ -327,7 +327,30 @@ type PromptApiResponse = {
   // followup-builds; init-builds saknar fältet (testat i
   // tests/test_followup_honest_no_op.py::test_init_build_omits_*).
   buildResult?: Record<string, unknown>;
+  // ADR 0034 väg B (2026-06-01): exponerar de strukturerade
+  // copy-direktiv som path A applicerade på den här versionens
+  // project-input. Tom lista = init-build, "vanlig" follow-up utan
+  // copy-direktiv eller artefakt-läsning som silently failade. UI:t
+  // härleder svenska success-rader per direktiv; payload renderas
+  // alltid som textnod (React escapar default — vi använder aldrig
+  // dangerouslySetInnerHTML här).
+  appliedCopyDirectives?: AppliedCopyDirective[];
   error?: string;
+};
+
+/**
+ * Strikt typad copy-direktiv-shape som speglar
+ * ``governance/schemas/project-input.schema.json:directives.copyDirectives``.
+ * Måste hållas i synk med ``AppliedCopyDirective`` i
+ * ``apps/viewser/lib/runs.ts``. Den extra typen här finns så FloatingChat
+ * inte tar ett direkt ``import`` på server-only path utan får sin
+ * egen client-bundle-säkra typ.
+ */
+type AppliedCopyDirective = {
+  target: "company-name" | "tagline";
+  operation: "replace-text" | "include-token";
+  payload: string;
+  source?: "prompt-rule" | "llm" | "explicit";
 };
 
 // B155: avläs ``appliedVisibleEffect`` från build-result-payloaden utan
@@ -347,6 +370,44 @@ function extractAppliedVisibleEffect(
     applied,
     reason: typeof reasonRaw === "string" ? reasonRaw : null,
   };
+}
+
+/**
+ * ADR 0034 väg B (B155 path B): bygg en svensk success-rad per applicerat
+ * copy-direktiv. Renderingen i FloatingChat-bubblan sker via
+ * ``{message.content}`` (textnod) — payload escapas alltid av React.
+ * Vi mappar bara de tre kombinationer som schema-enumen på
+ * ``governance/schemas/project-input.schema.json:directives.copyDirectives``
+ * tillåter idag (target=company-name | tagline; operation=replace-text |
+ * include-token). Andra kombinationer faller tillbaka på en neutral
+ * "uppdaterades"-rad så framtida schema-bumps inte tystar UI:t — men
+ * payloaden är redan validerad mot guards på write-sidan, så det är
+ * säkert att rendera även den okända varianten.
+ */
+function summarizeCopyDirectives(
+  directives: AppliedCopyDirective[] | undefined,
+): string[] {
+  if (!directives || directives.length === 0) return [];
+  const lines: string[] = [];
+  for (const directive of directives) {
+    const payload = directive.payload;
+    if (!payload) continue;
+    if (directive.target === "company-name") {
+      lines.push(`Jag ändrade företagsnamnet till "${payload}".`);
+      continue;
+    }
+    if (directive.target === "tagline") {
+      if (directive.operation === "replace-text") {
+        lines.push(`Jag uppdaterade rubriken till "${payload}".`);
+      } else if (directive.operation === "include-token") {
+        lines.push(`Jag la in "${payload}" i hero-texten.`);
+      } else {
+        lines.push(`Jag uppdaterade rubriken till "${payload}".`);
+      }
+      continue;
+    }
+  }
+  return lines;
 }
 
 type Position = { x: number; y: number };
@@ -555,8 +616,28 @@ function summarizeBuildResult(
     if (effect && effect.applied === false) {
       return {
         content:
-          `Ingen synlig ändring fångades.${versionText} Prova en mer specifik följdprompt — t.ex. peka ut vilken sektion som ska ändras eller vilken text som ska bytas ut.`,
+          `Jag kunde inte fånga någon synlig ändring den här gången.${versionText} Testa att ange exakt rubrik, text eller sektion — t.ex. "byt namnet i headern till X".`,
         variant: "info",
+      };
+    }
+    // ADR 0034 väg B: när path A faktiskt skrev strukturerade copy-
+    // direktiv för den här versionen så visa exakt vad som ändrades.
+    // Tom lista = init-build, follow-up utan strukturerade direktiv,
+    // eller artefakt-läsning som silently failade — alla tre
+    // fallbackar till den generiska "Klart!"-raden så vi inte lovar
+    // ändringar vi inte kan bekräfta.
+    const copyLines = summarizeCopyDirectives(payload.appliedCopyDirectives);
+    if (copyLines.length > 0) {
+      const verb = versionText
+        ? `Klart!${versionText}`
+        : "Klart!";
+      const list =
+        copyLines.length === 1
+          ? copyLines[0]
+          : copyLines.map((line) => `• ${line}`).join("\n");
+      return {
+        content: `${verb} ${list}`,
+        variant: "success",
       };
     }
     const changes = summarizeChangesFromPrompt(userPrompt);

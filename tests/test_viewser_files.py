@@ -2145,9 +2145,10 @@ def test_b155_floating_chat_reads_applied_visible_effect() -> None:
         "follow-up som bygger ok men flippar appliedVisibleEffect=false "
         "ska info-grenen fortfarande träffa."
     )
-    assert "Ingen synlig ändring fångades" in text, (
+    assert "Jag kunde inte fånga någon synlig ändring" in text, (
         "Den ärliga raden måste ha en igenkännbar text-anchor (ADR-stil) "
-        "så fil-disciplin inte tappar B155 under refaktorisering."
+        "så fil-disciplin inte tappar B155 under refaktorisering. "
+        "Texten matchar Jakobs handoff för ADR 0034 väg B."
     )
 
 
@@ -2173,4 +2174,145 @@ def test_b155_floating_chat_no_op_does_not_claim_success() -> None:
         "När backend rapporterar ``appliedVisibleEffect: false`` ska UI:t "
         "byta success-bubblan till variant ``\"info\"`` med en ärlig text "
         "— annars luras operatören att tro att följdprompten landade."
+    )
+
+
+@pytest.mark.tooling
+def test_b155_path_b_runs_lib_exports_applied_copy_directives() -> None:
+    """ADR 0034 väg B (B155 path B): ``lib/runs.ts`` måste exportera
+    ``readAppliedCopyDirectives`` + en strikt ``AppliedCopyDirective``-typ
+    som speglar schema-enumen i
+    ``governance/schemas/project-input.schema.json:directives.copyDirectives``.
+
+    Locks:
+      1. Funktionen finns och är exporterad så ``/api/prompt`` kan
+         konsumera den utan att duplicera readern någonannanstans.
+      2. Type-enumen matchar schema-värdena exakt
+         (company-name | tagline; replace-text | include-token).
+      3. Path-traversal-skyddet är på plats: läsaren begränsar
+         dossierPath till ``data/prompt-inputs/`` eller ``examples/``
+         under repo-root så en stulen ``input.json`` inte kan
+         dirigera UI:t att läsa godtyckliga filer.
+    """
+    text = (VIEWSER_DIR / "lib" / "runs.ts").read_text(encoding="utf-8")
+
+    assert "export async function readAppliedCopyDirectives" in text, (
+        "lib/runs.ts måste exportera ``readAppliedCopyDirectives`` så "
+        "/api/prompt-routen kan inkludera direktiven på response. "
+        "Annars måste FloatingChat duplicera readern på client-sidan."
+    )
+    assert "export type AppliedCopyDirective" in text, (
+        "AppliedCopyDirective-typen måste exporteras strikt-typad så "
+        "client och server delar exakt samma shape (target/operation/"
+        "payload/source-enum)."
+    )
+    enum_pattern = re.compile(
+        r'target:\s*"company-name"\s*\|\s*"tagline"[\s\S]{0,200}?'
+        r'operation:\s*"replace-text"\s*\|\s*"include-token"',
+        re.MULTILINE,
+    )
+    assert enum_pattern.search(text), (
+        "AppliedCopyDirective-enumen måste låsa target=company-name|"
+        "tagline och operation=replace-text|include-token så schema-drift "
+        "fångas i typecheck istället för att läcka okända värden till UI:t."
+    )
+    assert 'path.resolve(root, "data", "prompt-inputs")' in text and (
+        'path.resolve(root, "examples")' in text
+    ), (
+        "Path-traversal-skyddet i readAppliedCopyDirectives måste vitlista "
+        "data/prompt-inputs/ + examples/ under repo-root. Utan denna guard "
+        "kan en stulen input.json dirigera UI:t att läsa godtyckliga filer."
+    )
+
+
+@pytest.mark.tooling
+def test_b155_path_b_prompt_route_exposes_applied_copy_directives() -> None:
+    """``/api/prompt`` måste returnera ``appliedCopyDirectives`` på
+    top-level efter en build så FloatingChat har direkt tillgång till
+    fältet utan att behöva en separat round-trip.
+
+    Auktoritetskedjan: build_site.py skriver project-input-snapshotet
+    till dossierPath, prompt-routen läser via readAppliedCopyDirectives,
+    UI:t härleder svenska success-rader. Vi kontrollerar det mellersta
+    steget här.
+    """
+    text = (
+        VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts"
+    ).read_text(encoding="utf-8")
+
+    assert "readAppliedCopyDirectives" in text, (
+        "/api/prompt måste anropa readAppliedCopyDirectives efter att "
+        "runBuild returnerar — annars är fältet alltid undefined på "
+        "wire och path B-success-raden kan aldrig skickas."
+    )
+    assert "appliedCopyDirectives" in text, (
+        "Top-level-fältet måste finnas i return-objektet från "
+        "runPromptBuildOnce. Utan det kan FloatingChat inte härleda "
+        "några svenska success-rader."
+    )
+
+
+@pytest.mark.tooling
+def test_b155_path_b_floating_chat_summarises_copy_directives() -> None:
+    """ADR 0034 väg B (B155 path B): FloatingChat måste härleda en svensk
+    success-rad per applicerat copy-direktiv enligt Jakobs handoff:
+      - target=company-name → "Jag ändrade företagsnamnet till '...'."
+      - target=tagline + operation=replace-text → "Jag uppdaterade rubriken till '...'."
+      - target=tagline + operation=include-token → "Jag la in '...' i hero-texten."
+
+    Pattern verifierar att payload renderas via template-strängen (textnod
+    i React) och inte via ``dangerouslySetInnerHTML`` — payload kommer från
+    operatören och måste alltid escapas.
+    """
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx"
+    ).read_text(encoding="utf-8")
+
+    assert "function summarizeCopyDirectives" in text, (
+        "Helper ``summarizeCopyDirectives`` ska kapsla mappningen från "
+        "AppliedCopyDirective[] till svenska rader så success-grenen i "
+        "summarizeBuildResult inte blandar mappnings-logik med dispatch."
+    )
+    assert "Jag ändrade företagsnamnet till" in text, (
+        "Mappningen för target=company-name saknas eller har bytt form. "
+        "Jakobs handoff kräver exakt rad-prefix för operatör-igenkänning."
+    )
+    assert "Jag uppdaterade rubriken till" in text, (
+        "Mappningen för target=tagline + operation=replace-text saknas "
+        "eller har bytt form."
+    )
+    assert "Jag la in" in text and "i hero-texten" in text, (
+        "Mappningen för target=tagline + operation=include-token saknas "
+        "eller har bytt form."
+    )
+    assert "appliedCopyDirectives" in text, (
+        "PromptApiResponse måste exponera ``appliedCopyDirectives`` så "
+        "summarizeBuildResult kan plocka fältet utan att casta till "
+        "Record<string, unknown>."
+    )
+
+
+@pytest.mark.tooling
+def test_b155_path_b_floating_chat_does_not_inject_payload_as_html() -> None:
+    """Säkerhet: copyDirective.payload är en validerad sträng från
+    backend men kommer ursprungligen från operatörens prompt. Den
+    måste alltid renderas som textnod, aldrig via
+    ``dangerouslySetInnerHTML``.
+
+    Vi söker bara JSX-attribut-användning (``dangerouslySetInnerHTML=``
+    eller ``dangerouslySetInnerHTML:``) — kommentar-referenser som
+    förklarar varför vi *inte* använder det räknas inte. Om någon
+    framtida feature behöver det måste den medvetet introduceras i en
+    separat komponent och vi uppdaterar testet då.
+    """
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx"
+    ).read_text(encoding="utf-8")
+
+    jsx_use_pattern = re.compile(r"dangerouslySetInnerHTML\s*[=:]")
+    assert not jsx_use_pattern.search(text), (
+        "floating-chat.tsx får inte använda dangerouslySetInnerHTML på "
+        "JSX-element eller i config-object — copyDirective.payload härstammar "
+        "från operatörens prompt och måste renderas som textnod via React's "
+        "automatic escape."
     )

@@ -394,6 +394,153 @@ export async function readRunArtefacts(runId: string): Promise<RunArtefactBundle
 }
 
 /**
+ * B155 path B (ADR 0034): strikt typad copy-direktiv som FloatingChat
+ * härleder en svensk success-rad från ("Jag ändrade företagsnamnet
+ * till '...'."). Schema-låst i
+ * ``governance/schemas/project-input.schema.json:directives.copyDirectives``;
+ * fält bortom dessa fyra ignoreras medvetet av readern så en framtida
+ * v2-utbyggnad inte spiller obekant data ut till UI:t.
+ */
+export type AppliedCopyDirective = {
+  target: "company-name" | "tagline";
+  operation: "replace-text" | "include-token";
+  payload: string;
+  source?: "prompt-rule" | "llm" | "explicit";
+};
+
+const COPY_DIRECTIVE_TARGETS = new Set(["company-name", "tagline"] as const);
+const COPY_DIRECTIVE_OPERATIONS = new Set([
+  "replace-text",
+  "include-token",
+] as const);
+const COPY_DIRECTIVE_SOURCES = new Set([
+  "prompt-rule",
+  "llm",
+  "explicit",
+] as const);
+
+function isStringIn<T extends string>(
+  value: unknown,
+  set: ReadonlySet<T>,
+): value is T {
+  return typeof value === "string" && (set as ReadonlySet<string>).has(value);
+}
+
+/**
+ * Read ``directives.copyDirectives`` from the project-input snapshot
+ * that was the actual input to ``runId``. Returns ``[]`` for init
+ * builds, builds without directives, and unparseable artefakter — UI
+ * decides how to surface "no directives applied".
+ *
+ * Auktoritetskedja per Jakobs PR-#136-handoff: ``data/runs/<runId>/
+ * input.json:dossierPath`` pekar på exakt den versionens project-
+ * input-snapshot (``data/prompt-inputs/<siteId>.vN.project-input.json``
+ * för follow-ups). Vi läser DEN filen — inte den senaste på disk —
+ * så snabba parallella followups inte blandar ihop direktiv mellan
+ * versioner.
+ *
+ * Säkerhet:
+ *   - ``runId`` valideras genom ``runDirFromId`` (path-traversal-skydd).
+ *   - Den absoluta dossier-pathen begränsas till repo-root + ``data/
+ *     prompt-inputs/`` ELLER repo-root + ``examples/`` (init-fallback).
+ *     Andra paths kastas så en stulen ``input.json`` inte kan dirigera
+ *     UI:t att läsa godtyckliga filer.
+ *   - Varje directive valideras mot schema-enums; okända fält
+ *     ignoreras (defense in depth — schemavalideringen i
+ *     packages/generation körs redan på write-sidan).
+ */
+export async function readAppliedCopyDirectives(
+  runId: string,
+): Promise<AppliedCopyDirective[]> {
+  let runDir: string;
+  try {
+    runDir = await runDirFromId(runId);
+  } catch {
+    // Tystar runDirFromId: det här är en presentations-helper. Hårda
+    // path-fel surface:as redan av artefakt-routerna; här är "inga
+    // directives" rätt UX-fallback.
+    return [];
+  }
+
+  let inputJson: { dossierPath?: unknown };
+  try {
+    inputJson = await readJsonFile<{ dossierPath?: unknown }>(
+      path.join(runDir, "input.json"),
+    );
+  } catch {
+    return [];
+  }
+
+  const dossierPath = inputJson.dossierPath;
+  if (typeof dossierPath !== "string" || !dossierPath.trim()) {
+    return [];
+  }
+
+  const root = repoRoot();
+  const absoluteDossier = path.isAbsolute(dossierPath)
+    ? path.resolve(dossierPath)
+    : path.resolve(root, dossierPath);
+
+  const allowedRoots = [
+    path.resolve(root, "data", "prompt-inputs"),
+    path.resolve(root, "examples"),
+  ];
+  const insideAllowed = allowedRoots.some((allowed) => {
+    const rel = path.relative(allowed, absoluteDossier);
+    return !rel.startsWith("..") && !path.isAbsolute(rel);
+  });
+  if (!insideAllowed) {
+    return [];
+  }
+
+  let snapshot: Record<string, unknown>;
+  try {
+    snapshot = await readJsonFile<Record<string, unknown>>(absoluteDossier);
+  } catch {
+    return [];
+  }
+
+  const directives = (snapshot.directives ?? null) as
+    | Record<string, unknown>
+    | null;
+  if (!directives || typeof directives !== "object") {
+    return [];
+  }
+
+  const raw = (directives.copyDirectives ?? null) as unknown;
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  const result: AppliedCopyDirective[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const candidate = item as Record<string, unknown>;
+    if (!isStringIn(candidate.target, COPY_DIRECTIVE_TARGETS)) continue;
+    if (!isStringIn(candidate.operation, COPY_DIRECTIVE_OPERATIONS)) continue;
+    if (typeof candidate.payload !== "string" || candidate.payload.length === 0) {
+      continue;
+    }
+    // Schema cap är 200 tecken; defense-in-depth här så en framtida
+    // schema-bump inte oavsiktligt sänker UI-radens budget.
+    if (candidate.payload.length > 200) continue;
+    const directive: AppliedCopyDirective = {
+      target: candidate.target,
+      operation: candidate.operation,
+      payload: candidate.payload,
+    };
+    if (isStringIn(candidate.source, COPY_DIRECTIVE_SOURCES)) {
+      directive.source = candidate.source;
+    }
+    result.push(directive);
+    // Schema cap är 8; klipp på samma siffra så vi inte blåser upp
+    // FloatingChat-bubblan om någon framtid testar listan utan limits.
+    if (result.length >= 8) break;
+  }
+  return result;
+}
+
+/**
  * Resolve the canonical Project Input file for a given siteId.
  *
  * Note: siteId callers MUST validate via `assertSafeSiteId` (see

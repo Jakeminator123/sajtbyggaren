@@ -30,7 +30,35 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: pending (2026-06-01 fm, christopher-ui local — merge
+Last verified state: pending (2026-06-01 fm, christopher-ui local — ADR
+0034 väg B (B155 path B) implementerad i FloatingChat. Backend för
+path A landade på `jakob-be` (commit 641abc9) men är inte mergad till
+`main` än, så UI:t är redo för end-to-end så fort jakob-be → main
+mergas. Kontraktet är låst per Jakobs handoff och vi rör inte
+backend/generation. apps/viewser/lib/runs.ts: ny export
+``readAppliedCopyDirectives(runId)`` som läser ``input.json``
+→ ``dossierPath`` → versionens project-input-snapshot och returnerar
+schema-strikt validerad ``AppliedCopyDirective[]`` (path-traversal-
+skydd vitlistar bara ``data/prompt-inputs/`` + ``examples/`` under
+repo-root). apps/viewser/app/api/prompt/route.ts: anropar helpern
+efter runBuild och inkluderar ``appliedCopyDirectives`` på top-level
+i prompt-svaret. apps/viewser/components/builder/floating-chat.tsx:
+ny ``summarizeCopyDirectives`` helper härleder svenska success-rader
+("Jag ändrade företagsnamnet till '...'.", "Jag uppdaterade rubriken
+till '...'.", "Jag la in '...' i hero-texten.") per direktiv.
+``summarizeBuildResult`` success-grenen prioriterar
+``applied === false`` (info-variant) före applied===true med
+directives före generisk "Klart!"-rad. Säkerhet: payload renderas
+som textnod via React auto-escape; regression-test bevakar att
+``dangerouslySetInnerHTML`` aldrig används i floating-chat.tsx.
+Fyra nya source-lock-tester
+(``test_b155_path_b_*``). ``AppliedCopyDirective`` allowlistad i
+``scripts/check_term_coverage.py`` — lokal UI/server-helper-typ
+(canonical term registreras av jakob-be när path A → main).
+Slutkontroll grön: tsc 1306, ruff 0, pytest pass + 3 skipped,
+governance 18/18, rules-sync OK, term-coverage --strict 0 unknowns.
+PR #139 uppdaterad. Tidigare verified state: pending (2026-06-01 fm,
+christopher-ui local — merge
 av `origin/main` (PR #136 backend-batch: B157, BO6, B155-backend, quality-
 gate) klar. 11 merge-konflikter lösta: 7 i kod (FloatingChat,
 BuilderActions, ComparePreviewModal, DiscoveryWizard, wizard-types,

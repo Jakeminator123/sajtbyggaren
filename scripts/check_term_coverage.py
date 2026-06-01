@@ -798,6 +798,18 @@ COMMON_WORDS = {
     "WinError 5",  # Windows ERROR_ACCESS_DENIED — backtick-citerad i incident-docs
     # B-IDs och termer i scout-prompts + kill-dev-trees.py incident-helpers
     "B155",  # bug-ID i GAP-followup-prompt-content-passthrough scout-prompt
+    # ADR 0034 väg B (B155 path B, 2026-06-01) — christopher-ui FloatingChat
+    # konsumerar de strukturerade copyDirectives som path A landade i
+    # build_site.py/prompt_to_project_input.py och härleder svenska success-
+    # rader. ``AppliedCopyDirective`` är den lokala UI-/server-helper-typen
+    # i apps/viewser/lib/runs.ts + apps/viewser/components/builder/
+    # floating-chat.tsx — schema-strikt mirror av schema-objektet
+    # ``directives.copyDirectives`` (governance/schemas/project-input.schema.json).
+    # Inte ett canonical domain term (hela domänkonceptet heter ``copyDirective``
+    # och registreras i naming-dictionary av jakob-be när path A → main).
+    # Allowlistas här så christopher-ui:s sync-PR går igenom term-coverage
+    # --strict utan att vi behöver röra governance/policies från UI-lanen.
+    "AppliedCopyDirective",
     "ConvertTo",  # PowerShell cmdlet-suffix (ConvertTo-Json) i kill-dev-trees.py
     "Dubbelklicka",  # svenskt verb i kill-dev-trees.py-docstring + handoff
     "Verifiering",  # svensk markdown-rubrik i scout-prompts ("**Verifiering**")
