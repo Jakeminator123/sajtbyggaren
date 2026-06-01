@@ -40,7 +40,25 @@ def test_viewser_expected_files_exist() -> None:
     expected = [
         "package.json",
         "app/layout.tsx",
-        "app/page.tsx",
+        # Marknadssajt P0 (scout-marketing-site): route-group-split. Konsolen
+        # flyttad till (console)/studio; (marketing) äger "/".
+        "app/(console)/layout.tsx",
+        "app/(console)/studio/page.tsx",
+        "app/(marketing)/layout.tsx",
+        "app/(marketing)/page.tsx",
+        "app/(marketing)/for/[yrke]/page.tsx",
+        "components/marketing/marketing-header.tsx",
+        "components/marketing/marketing-footer.tsx",
+        # Marknadssajt P6 (cookie-consent + legal-sidor).
+        "components/marketing/cookie-consent.tsx",
+        "components/marketing/cookie-banner.tsx",
+        "components/marketing/manage-cookies-button.tsx",
+        "components/marketing/legal-page-layout.tsx",
+        "app/(marketing)/cookies/page.tsx",
+        "app/(marketing)/integritetspolicy/page.tsx",
+        "app/(marketing)/anvandarvillkor/page.tsx",
+        "app/(marketing)/kontakt/page.tsx",
+        "lib/auth-config.ts",
         "app/api/chat/route.ts",
         "app/api/build/route.ts",
         "app/api/runs/route.ts",
@@ -1486,7 +1504,7 @@ def test_page_uses_outcome_aware_header_for_prompt_build_done() -> None:
     the headerStatusForOutcome helper so a future refactor cannot drop
     the classification.
     """
-    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
     assert "PromptBuildOutcome" in text, (
         "page.tsx must import PromptBuildOutcome from @/components/prompt-builder."
     )
@@ -1577,7 +1595,7 @@ def test_page_useeffect_guards_success_path_with_cancelled_check() -> None:
     istället för en bool-variabel ``cancelled``. Båda mönstren
     accepteras av denna regex.
     """
-    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
 
     # Look for ``await fetchRuns()`` -> ``if (cancelled) return`` eller
     # ``if (cancelledRef?.current) return`` -> ``applyRunsData`` (eller
@@ -1922,7 +1940,7 @@ def test_page_on_build_done_passes_apply_runs_context() -> None:
     snapshot so applyRunsData does not read a pre-build selectedRunId
     and reset selectedSiteId to the first Project Input.
     """
-    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
     pattern = re.compile(
         r"fetchRuns\(\)[\s\S]{0,400}?applyRunsData\(\s*data\s*,\s*\{[\s\S]{0,200}?selectedRunId:\s*runId",
         re.MULTILINE,
@@ -2394,7 +2412,7 @@ def test_tier1_page_wraps_subtrees_in_error_boundary() -> None:
     BuilderShell i ErrorBoundary så ett crash i någon subtree inte
     ger vit skärm för hela appen.
     """
-    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
 
     assert 'from "@/components/error-boundary"' in text, (
         "page.tsx måste importera ErrorBoundary"
@@ -2457,7 +2475,7 @@ def test_tier1_page_handles_runs_load_failure_with_retry() -> None:
     ``runsLoadError``-state och en RunsLoadErrorCard- (eller
     motsvarande) -komponent med retry-knapp.
     """
-    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
 
     assert "runsLoadError" in text, (
         "page.tsx måste ha runsLoadError-state för att visa retry-card "
@@ -2590,7 +2608,7 @@ def test_tier2_page_registers_cmd_k_shortcut_for_console_drawer() -> None:
     som togglar ConsoleDrawer. Listenern måste hoppa över input/textarea-
     fokus så genvägen inte stjäl tangenten från composern.
     """
-    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
 
     assert 'event.key !== "k"' in text or 'event.key === "k"' in text, (
         "page.tsx måste lyssna på 'k'-tangenten för Cmd+K-shortcut"
@@ -2845,7 +2863,7 @@ def test_pre_push_error_boundary_applies_class_in_success_render() -> None:
     )
     assert re.search(
         r'<ErrorBoundary[^>]*area="Förhandsvisningen"[^>]*className="h-full w-full"',
-        (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8"),
+        (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8"),
     ), (
         "page.tsx måste passa in className=\"h-full w-full\" på "
         "ErrorBoundary runt ViewerPanel"
@@ -2923,7 +2941,7 @@ def test_pre_push_cmd_k_skips_select_targets() -> None:
     eller andra select:s i appen. Matchar DiscoveryWizard's egen
     ⌘K-skip-lista.
     """
-    path = VIEWSER_DIR / "app" / "page.tsx"
+    path = VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx"
     content = path.read_text(encoding="utf-8")
     # Hitta useEffect-blocket för ⌘K och säkerställ att SELECT-skip finns.
     assert re.search(
@@ -3095,7 +3113,7 @@ def test_builder_followup_drives_buildstage_via_real_trace_signal() -> None:
     (``useBuildTracePolling.currentPhase``), inte en setTimeout-flip (jfr
     B122). Lås kedjan så den inte tyst kopplas bort igen.
     """
-    page = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+    page = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
     shell = (
         VIEWSER_DIR / "components" / "builder" / "builder-shell.tsx"
     ).read_text(encoding="utf-8")
@@ -3212,7 +3230,7 @@ def test_cmd_k_has_modal_guard() -> None:
     öppning när konsolen är stängd OCH ett [role="dialog"]/[aria-modal]-
     element finns i DOM, men fortfarande kunna STÄNGA en öppen konsol.
     """
-    content = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+    content = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
     assert "consoleOpenRef" in content, (
         "⌘K-handlern måste spegla consoleOpen via en ref (lever i []-effekt)"
     )
@@ -3322,7 +3340,7 @@ def test_run_history_shows_skeleton_while_loading() -> None:
     drawer = (
         VIEWSER_DIR / "components" / "console-drawer.tsx"
     ).read_text(encoding="utf-8")
-    page = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+    page = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
 
     assert "RunHistorySkeleton" in history and "Skeleton" in history, (
         "RunHistory måste ha en RunHistorySkeleton som använder Skeleton-"
@@ -3372,5 +3390,390 @@ def test_wizard_foundation_copy_avoids_dev_jargon() -> None:
     assert "är runtime-aktiv" not in site_type, (
         "'runtime-aktiv' ska ersättas med kundvänligt 'tillgänglig'"
     )
+
+
+# ----------------------------------------------------------------------
+# Marknadssajt P0 (scout-marketing-site, 2026-06-01)
+# Route-group-split: (marketing) äger "/", konsolen flyttad till
+# (console)/studio. Minimal header/footer + serverad optimerad bild.
+# ----------------------------------------------------------------------
+
+
+def test_console_moved_to_studio_route_group() -> None:
+    """Konsolen ska ligga i app/(console)/studio/page.tsx (flyttad från
+    app/page.tsx) och fortfarande vara klient-konsolen — INTE kvar på "/".
+    """
+    old_path = VIEWSER_DIR / "app" / "page.tsx"
+    new_path = VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx"
+    assert not old_path.exists(), (
+        "app/page.tsx ska vara flyttad — (marketing) äger nu \"/\""
+    )
+    assert new_path.exists(), "Konsolen ska bo i app/(console)/studio/page.tsx"
+    console = new_path.read_text(encoding="utf-8")
+    assert '"use client"' in console, "Konsol-sidan ska förbli en klientkomponent"
+    # Regressionsvakt: ⌘K-listenern + build-wiringen ska ha följt med oförändrad.
+    assert 'event.key !== "k"' in console, (
+        "⌘K-listenern ska ha följt med konsolen till studio"
+    )
+    # (console)-layouten ska sätta noindex så konsolen aldrig indexeras publikt.
+    console_layout = (
+        VIEWSER_DIR / "app" / "(console)" / "layout.tsx"
+    ).read_text(encoding="utf-8")
+    assert "index: false" in console_layout, (
+        "(console)/layout.tsx måste sätta robots index:false (noindex)"
+    )
+
+
+def test_marketing_header_has_exact_nav_items() -> None:
+    """Marknads-headern ska ha exakt Hem/Produkt/Om oss + en 'Logga in'-
+    entry som pekar in i studion via auth-config-seamen.
+    """
+    header = (
+        VIEWSER_DIR / "components" / "marketing" / "marketing-header.tsx"
+    ).read_text(encoding="utf-8")
+    for label in ('label: "Hem"', 'label: "Produkt"', 'label: "Om oss"'):
+        assert label in header, f"Headern saknar nav-item {label}"
+    assert "LOGIN_HREF" in header and "LOGIN_LABEL" in header, (
+        "Headern ska använda auth-config-seamen (LOGIN_HREF/LOGIN_LABEL) "
+        "för 'Logga in' istället för hårdkodad route"
+    )
+    auth = (VIEWSER_DIR / "lib" / "auth-config.ts").read_text(encoding="utf-8")
+    assert 'STUDIO_HREF = "/studio"' in auth, (
+        "auth-config ska peka login-målet till /studio i v1"
+    )
+
+
+def test_marketing_footer_has_legal_links() -> None:
+    """Footern ska länka till de juridiska/hjälpsidor som byggs ut senare
+    (de finns som platshållare i P0 så länkarna inte 404:ar).
+    """
+    footer = (
+        VIEWSER_DIR / "components" / "marketing" / "marketing-footer.tsx"
+    ).read_text(encoding="utf-8")
+    for href in ("/cookies", "/integritetspolicy", "/anvandarvillkor", "/kontakt"):
+        assert f'href: "{href}"' in footer, f"Footern saknar länk till {href}"
+
+
+def test_marketing_homepage_serves_optimized_image() -> None:
+    """Startsidan ska rendera optimerade (WebP) yrkesbilder som faktiskt
+    serveras från apps/viewser/public/Bilder — beviset på asset-pipelinen.
+    P2: bilderna renderas via ProfessionGrid över det delade professions-
+    registret i st.f. en hårdkodad <img> i page.tsx.
+    """
+    home = (
+        VIEWSER_DIR / "app" / "(marketing)" / "page.tsx"
+    ).read_text(encoding="utf-8")
+    assert "ProfessionGrid" in home, (
+        "Startsidan ska rendera ProfessionGrid (bildväggen)"
+    )
+    professions = (
+        VIEWSER_DIR / "lib" / "professions.ts"
+    ).read_text(encoding="utf-8")
+    assert "/Bilder/bilmekaniker.webp" in professions, (
+        "professions.ts ska peka på de optimerade WebP-bilderna"
+    )
+    served = VIEWSER_DIR / "public" / "Bilder" / "bilmekaniker.webp"
+    assert served.exists(), (
+        "Den optimerade bilden måste finnas i apps/viewser/public/Bilder "
+        "(kör npm run assets:images)"
+    )
+
+
+def test_optimize_images_script_targets_served_public() -> None:
+    """optimize-images.mjs ska läsa repo-root public/Bilder och skriva till
+    apps/viewser/public/Bilder (den enda mapp Next.js serverar).
+    """
+    script = (
+        VIEWSER_DIR / "scripts" / "optimize-images.mjs"
+    ).read_text(encoding="utf-8")
+    assert '"../../../public/Bilder"' in script, (
+        "Scriptet ska läsa repo-root public/Bilder som källa"
+    )
+    assert '"../public/Bilder"' in script, (
+        "Scriptet ska skriva till apps/viewser/public/Bilder (serverad mapp)"
+    )
+
+
+def test_marketing_header_has_active_state_and_mobile_menu() -> None:
+    """P1: headern ska markera aktiv route (usePathname → aria-current) och
+    ha en mobil Sheet-meny så nav:en aldrig trängs ihop på smal viewport.
+    """
+    header = (
+        VIEWSER_DIR / "components" / "marketing" / "marketing-header.tsx"
+    ).read_text(encoding="utf-8")
+    assert '"use client"' in header, (
+        "Headern måste vara en klientkomponent för usePathname-aktivstate"
+    )
+    assert "usePathname" in header and 'aria-current={active ? "page"' in header, (
+        "Headern ska härleda aktiv route och sätta aria-current=page"
+    )
+    assert "SheetTrigger" in header and "SheetContent" in header, (
+        "Headern ska ha en mobil Sheet-meny (SheetTrigger/SheetContent)"
+    )
+
+
+def test_marketing_homepage_has_hero_and_sections() -> None:
+    """P2: startsidan ska ha en video-hero (reduced-motion-säker) + de
+    centrala scroll-sektionerna (så-funkar-det-steg, bildvägg, slut-CTA).
+    """
+    home = (
+        VIEWSER_DIR / "app" / "(marketing)" / "page.tsx"
+    ).read_text(encoding="utf-8")
+    assert "HeroVideo" in home, "Startsidan ska rendera HeroVideo"
+    assert "Så funkar det" in home, "Startsidan saknar 'Så funkar det'-sektionen"
+    for step in ("Beskriv", "Bygg", "Förhandsgranska", "Förfina"):
+        assert f'"{step}"' in home, f"Så-funkar-det saknar steget {step}"
+
+    hero = (
+        VIEWSER_DIR / "components" / "marketing" / "hero-video.tsx"
+    ).read_text(encoding="utf-8")
+    assert '"use client"' in hero, "HeroVideo måste vara klient (matchMedia)"
+    assert "prefers-reduced-motion" in hero, (
+        "HeroVideo måste respektera prefers-reduced-motion (still poster)"
+    )
+    assert "hero-poster.webp" in hero, (
+        "HeroVideo ska använda den committade poster-framen"
+    )
+    poster = VIEWSER_DIR / "public" / "hero-poster.webp"
+    assert poster.exists(), "hero-poster.webp måste finnas i apps/viewser/public"
+
+
+def test_professions_registry_covers_all_images() -> None:
+    """P2: det delade yrkesregistret ska täcka alla 20 optimerade bilder och
+    varje slug ha en serverad WebP (grid + framtida /for/[yrke] delar källan).
+    """
+    professions = (
+        VIEWSER_DIR / "lib" / "professions.ts"
+    ).read_text(encoding="utf-8")
+    slugs = re.findall(r'slug:\s*"([^"]+)"', professions)
+    assert len(slugs) == 20, f"Förväntade 20 yrken, fann {len(slugs)}"
+    bilder_dir = VIEWSER_DIR / "public" / "Bilder"
+    for slug in slugs:
+        assert (bilder_dir / f"{slug}.webp").exists(), (
+            f"Saknar optimerad bild för slug {slug}"
+        )
+
+
+def test_profession_grid_is_interactive_living_wall() -> None:
+    """P3: bildväggen ska vara en interaktiv FLIP-swap-wall (Framer Motion)
+    som är reduced-motion-säker och pausar vid hover/fokus/dold flik/utanför
+    viewport — annars glider en ruta bort från en klickare.
+    """
+    grid = (
+        VIEWSER_DIR / "components" / "marketing" / "profession-grid.tsx"
+    ).read_text(encoding="utf-8")
+    assert '"use client"' in grid, "Living wall måste vara klientkomponent"
+    assert 'from "motion/react"' in grid, (
+        "Living wall ska använda Framer Motion (motion/react)"
+    )
+    assert "motion.li" in grid and "layout" in grid, (
+        "Tiles ska vara motion.li med layout-prop för FLIP-swap"
+    )
+    assert "useReducedMotion" in grid and "if (reduced) return" in grid, (
+        "Auto-swap måste stängas av vid prefers-reduced-motion"
+    )
+    assert "IntersectionObserver" in grid and "document.hidden" in grid, (
+        "Auto-swap ska pausa utanför viewport och när fliken är dold"
+    )
+    assert "onMouseEnter" in grid and "onFocusCapture" in grid, (
+        "Auto-swap ska pausa vid hover och fokus"
+    )
+    # motion-depen ska vara deklarerad i package.json.
+    pkg = json.loads((VIEWSER_DIR / "package.json").read_text(encoding="utf-8"))
+    assert "motion" in pkg.get("dependencies", {}), (
+        "motion (Framer Motion) ska vara en deklarerad dependency (D3)"
+    )
+
+
+def test_profession_landing_pages_are_static_and_seo() -> None:
+    """P4: /for/[yrke] ska SSG:a alla 20 yrken (generateStaticParams),
+    404:a okända slugs (dynamicParams=false + notFound) och ha per-yrke SEO
+    (generateMetadata + OG-bild). Varje yrke ska ha headline + pitch.
+    """
+    page = (
+        VIEWSER_DIR / "app" / "(marketing)" / "for" / "[yrke]" / "page.tsx"
+    ).read_text(encoding="utf-8")
+    assert "generateStaticParams" in page, (
+        "/for/[yrke] måste exportera generateStaticParams (SSG)"
+    )
+    assert "export const dynamicParams = false" in page, (
+        "Okända slugs ska inte renderas on-demand (dynamicParams=false)"
+    )
+    assert "notFound()" in page, "Okänd slug ska ge 404 via notFound()"
+    assert "generateMetadata" in page and "openGraph" in page, (
+        "/for/[yrke] måste ha per-yrke generateMetadata med OG-bild"
+    )
+
+    professions = (
+        VIEWSER_DIR / "lib" / "professions.ts"
+    ).read_text(encoding="utf-8")
+    # Räkna bara fält med strängvärde (datat) — typdefinitionen
+    # ``headline: string`` har inget citat och ska inte räknas med.
+    assert len(re.findall(r'headline:\s*"', professions)) == 20, (
+        "Alla 20 yrken måste ha en headline för landningssidan"
+    )
+    assert len(re.findall(r'pitch:\s*"', professions)) == 20, (
+        "Alla 20 yrken måste ha en pitch för landningssidan"
+    )
+
+    # Bildväggen ska nu länka till landningssidorna, inte rakt in i studion.
+    grid = (
+        VIEWSER_DIR / "components" / "marketing" / "profession-grid.tsx"
+    ).read_text(encoding="utf-8")
+    assert "href={`/for/${p.slug}`}" in grid, (
+        "ProfessionGrid-tiles ska länka till /for/[slug] (P4-rewire)"
+    )
+
+
+def test_about_page_has_founders_and_philosophy() -> None:
+    """P5: /om-oss ska presentera båda grundarna (verbatim-roller) via
+    FounderCard och den delade filosofin med slagordet.
+    """
+    about = (
+        VIEWSER_DIR / "app" / "(marketing)" / "om-oss" / "page.tsx"
+    ).read_text(encoding="utf-8")
+    assert "FounderCard" in about, "/om-oss ska rendera grundarkort"
+    assert "Jakob Eberg" in about and "Christopher Genberg" in about, (
+        "Båda grundarna ska finnas med på /om-oss"
+    )
+    # Operatörens verbatim-beskrivningar.
+    assert "AI-fantast och smått galen" in about, (
+        "Jakobs verbatim-roll ska stå kvar oförändrad"
+    )
+    assert "Fullstack-utvecklare & bipolär" in about, (
+        "Christophers verbatim-roll ska stå kvar oförändrad"
+    )
+    assert "Lämna huvudvärken att bygga och underhålla en hemsida med oss." in about, (
+        "Slagordet ska finnas på /om-oss"
+    )
+    # Startsidans teaser (P2) ska länka in till /om-oss.
+    home = (
+        VIEWSER_DIR / "app" / "(marketing)" / "page.tsx"
+    ).read_text(encoding="utf-8")
+    assert 'href="/om-oss"' in home, "Startsidans grundar-teaser ska länka till /om-oss"
+
+
+def test_marketing_layout_has_skip_link() -> None:
+    """P1: marknads-layouten ska ha en skip-länk till #main-content (WCAG
+    2.4.1) och ett main-landmärke med matchande id.
+    """
+    layout = (
+        VIEWSER_DIR / "app" / "(marketing)" / "layout.tsx"
+    ).read_text(encoding="utf-8")
+    assert 'href="#main-content"' in layout, (
+        "Layouten saknar skip-länk till #main-content"
+    )
+    assert 'id="main-content"' in layout, (
+        "Layouten saknar <main id=\"main-content\"> som skip-länken pekar på"
+    )
+
+
+def test_cookie_consent_provider_persists_versioned_choice() -> None:
+    """P6: cookie-consent ska vara en klient-provider som läser/skriver ett
+    versionerat localStorage-val via det sanktionerade async-IIFE-mönstret
+    (await Promise.resolve() före setState) — inte synkront setState i effect.
+    """
+    consent = (
+        VIEWSER_DIR / "components" / "marketing" / "cookie-consent.tsx"
+    ).read_text(encoding="utf-8")
+    assert consent.lstrip().startswith('"use client"'), (
+        "cookie-consent måste vara en klientkomponent"
+    )
+    assert "sajtbyggaren.cookie-consent.v1" in consent, (
+        "Consent-nyckeln ska vara versionerad så den kan migreras senare"
+    )
+    assert '"granted"' in consent and '"denied"' in consent, (
+        "Consent ska lagra explicit granted/denied"
+    )
+    assert "await Promise.resolve()" in consent, (
+        "Storage-läsningen ska följa async-IIFE-mönstret (set-state-in-effect)"
+    )
+    assert "localStorage.setItem" in consent, "Valet ska persisteras i localStorage"
+    assert "export function useCookieConsent" in consent, (
+        "useCookieConsent-hooken ska exporteras"
+    )
+
+
+def test_cookie_banner_is_non_blocking_with_manager() -> None:
+    """P6: cookie-baren ska vara icke-blockerande (role=region, ingen
+    cookie-wall) med accept/avvisa och en manager-dialog som kan öppnas igen.
+    """
+    banner = (
+        VIEWSER_DIR / "components" / "marketing" / "cookie-banner.tsx"
+    ).read_text(encoding="utf-8")
+    assert 'role="region"' in banner, "Cookie-baren ska vara en region, inte en wall"
+    assert "Acceptera alla" in banner and "Endast nödvändiga" in banner, (
+        "Baren ska ge både accept och endast-nödvändiga"
+    )
+    assert "Dialog" in banner and "managerOpen" in banner, (
+        "Managern ska vara en dialog som styrs av managerOpen"
+    )
+    assert "useCookieConsent" in banner, "Baren ska läsa consent-state via hooken"
+    # Baren ska bara visas innan ett val gjorts (consent === null).
+    assert "consent === null" in banner, (
+        "Baren ska bara visas tills ett val gjorts"
+    )
+
+    layout = (
+        VIEWSER_DIR / "app" / "(marketing)" / "layout.tsx"
+    ).read_text(encoding="utf-8")
+    assert "CookieConsentProvider" in layout and "CookieBanner" in layout, (
+        "Layouten ska wrappa marknadssajten i provider + rendera baren"
+    )
+
+
+def test_footer_has_manage_cookies_trigger() -> None:
+    """P6: footern ska ha en 'Hantera cookies'-trigger som öppnar managern."""
+    footer = (
+        VIEWSER_DIR / "components" / "marketing" / "marketing-footer.tsx"
+    ).read_text(encoding="utf-8")
+    assert "ManageCookiesButton" in footer, (
+        "Footern ska rendera 'Hantera cookies'-knappen"
+    )
+    button = (
+        VIEWSER_DIR / "components" / "marketing" / "manage-cookies-button.tsx"
+    ).read_text(encoding="utf-8")
+    assert "openManager" in button, (
+        "Knappen ska öppna cookie-managern via consent-hooken"
+    )
+
+
+def test_legal_pages_use_shared_legal_layout() -> None:
+    """P6: cookies/integritetspolicy/användarvillkor ska byggas på den delade
+    LegalPageLayout-komponenten (konsekvent prose + utkast-notis).
+    """
+    layout = (
+        VIEWSER_DIR / "components" / "marketing" / "legal-page-layout.tsx"
+    ).read_text(encoding="utf-8")
+    assert "Senast uppdaterad" in layout, "Legal-layouten ska visa senast-uppdaterad"
+    for slug in ("cookies", "integritetspolicy", "anvandarvillkor"):
+        page = (
+            VIEWSER_DIR / "app" / "(marketing)" / slug / "page.tsx"
+        ).read_text(encoding="utf-8")
+        assert "LegalPageLayout" in page, (
+            f"/{slug} ska använda den delade LegalPageLayout"
+        )
+    # Kontaktsidan ska vara ärlig: mailto, inget fejkat formulär-flöde.
+    contact = (
+        VIEWSER_DIR / "app" / "(marketing)" / "kontakt" / "page.tsx"
+    ).read_text(encoding="utf-8")
+    assert "mailto:" in contact, (
+        "Kontaktsidan ska länka till e-post (mailto) tills en backend finns"
+    )
+
+
+def test_login_entry_is_honest_about_accounts() -> None:
+    """P7: 'Logga in' ska ärligt signalera att konton inte finns ännu och att
+    man landar i studion (via auth-config-seamen, ingen fejkad login-sida).
+    """
+    auth = (VIEWSER_DIR / "lib" / "auth-config.ts").read_text(encoding="utf-8")
+    assert "LOGIN_HINT" in auth, "auth-config ska exportera en ärlig login-hint"
+    assert "Konton kommer snart" in auth, (
+        "Hinten ska vara ärlig om att konton inte finns ännu"
+    )
+    header = (
+        VIEWSER_DIR / "components" / "marketing" / "marketing-header.tsx"
+    ).read_text(encoding="utf-8")
+    assert "LOGIN_HINT" in header, "Headern ska visa login-hinten som title"
 
 

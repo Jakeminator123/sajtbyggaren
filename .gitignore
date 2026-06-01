@@ -150,6 +150,15 @@ data/taxonomies/**/*.csv
 
 övrigt/
 
+# Råa yrkesbilder (marknadssajtens källmaterial). De 20 PNG:erna i
+# REPO-ROOT public/Bilder är ~7–8 MB styck (~152 MB totalt) och serveras
+# INTE av Next.js (bara apps/viewser/public/ serveras). De är lokal-bara
+# källa; scripts/optimize-images.mjs (apps/viewser) konverterar dem till
+# committade WebP-derivat i apps/viewser/public/Bilder. Ledande slash
+# anchor:ar till repo-root så apps/viewser/public/Bilder/* INTE ignoreras.
+# (Beslut D4, 2026-06-01.)
+/public/Bilder/
+
 # Guard against accidental commits of local scout helpers and Windows temp outputs.
 **/viewser_overlay_scout.py
 **/viewser-scout-runs/
@@ -160,3 +169,7 @@ data/taxonomies/**/*.csv
 # (som är den committade delade utility-versionen).
 tree_v[0-9]*.py
 .vercel
+
+# Råa marknads-hero-filmer (källmaterial, ~28 MB styck). Serveras inte av
+# Next.js; ffmpeg-komprimerade derivat committas i apps/viewser/public.
+/public/Film/

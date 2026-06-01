@@ -827,6 +827,25 @@ COMMON_WORDS = {
     "InspectorLoadingSkeleton",  # lokal Skeleton-komponent i site-inspector-sheet.tsx (Tier 2)
     "VersionsEmptyState",  # lokal EmptyState-komponent i versions-tab/diff-view.tsx (Tier 3 split)
     "RunHistorySkeleton",  # lokal Skeleton-komponent i run-history.tsx (Wave 3 Steg 8)
+    # Marknadssajt P0 (2026-06-01, scout-marketing-site) — nya lokala
+    # UI-/route-symboler i apps/viewser/app/(marketing|console) och
+    # apps/viewser/components/marketing/*. Samma kategori som DiscoveryWizard /
+    # RunHistory ovan: viewser-implementation, inte canonical domain terms.
+    # (AboutPage/ContactPage/ProductsPage finns redan allowlistade ovan.)
+    "MarketingHeader", "MarketingFooter", "MarketingHome", "MarketingLayout",
+    "ConsoleLayout", "PlaceholderPage", "ProductPage", "CookiesPage",
+    "PrivacyPage", "TermsPage", "CookieBanner",
+    # Marknadssajt P2 (startsidans sektioner + hero).
+    "HeroVideo", "ProfessionGrid", "ProfessionTile",
+    # Marknadssajt P3 (interaktiv living wall) — Web Platform-API.
+    "IntersectionObserver",
+    # Marknadssajt P4 (per-yrke-landningssidor).
+    "ProfessionLandingPage",
+    # Marknadssajt P5 (Om oss + grundare).
+    "FounderCard",
+    # Marknadssajt P6/P7 (cookie-consent + legal + login-entry).
+    "CookieConsentProvider", "CookieConsent", "CookieConsentValue",
+    "ManageCookiesButton", "LegalPageLayout", "ActionButtons",
     "SELECT",  # HTML-tagName-konstant i ⌘K-skip (page.tsx + test) — inte domänbegrepp
     "SyntaxError",  # JS-built-in exception-namn i prompt-builder NDJSON-comment + test — inte domänbegrepp
     # Toast-system (eget mini-system, ingen extern dep):
