@@ -60,13 +60,14 @@ sync-PR `jakob-be -> main` för hela hardening-batchen när operatören ger OK.
 
 ## Pågående/öppna PR:s just nu
 
-**Fyra öppna PRs (2026-06-01 PM):**
+**Öppna PRs (2026-06-01 PM, uppdaterad):**
 
-- **#139** `christopher-ui → main` — ready/clean, alla checks gröna. UI/UX-batch
-  som bär både B155 FloatingChat-no-op-signal och copyDirectives väg B-UI
-  (success/no-op-feedback). Scout-dom: merge-redo, men bekräfta Bugbot-trådar
-  (ingen godkänd review än) + notera additiv scope-läcka i `route.ts`/`runs.ts`/
-  `check_term_coverage.py` utan `[scope-leak]`-tagg (operatörsbeslut).
+- **#143** `cursor/build-site-py-refaktorering-b2c1` — refactor(build): extract
+  npm subprocess helpers. Operatörens SEPARATA cloud-agent-spår ("grind mode")
+  som refaktoriserar `scripts/build_site.py`. Rör INTE denna hardening-batch —
+  mina ändringar ligger i `resolve.py` / `renderers.py` / `contact_placeholders.py`
+  / `prompt_to_project_input.py`, aldrig `build_site.py` — så ingen filkonflikt.
+  Review/merge är operatörens beslut, inte denna lane.
 - **#140** `cursor/preview-runtime-bite-b-di → jakob-be` — draft. Bite B
   PreviewRuntime via dependency-injection. Inom scope; rör ej copyDirectives-
   filer eller Christopher-UI. Mergas in i `jakob-be`, ej `main`.
@@ -76,10 +77,15 @@ sync-PR `jakob-be -> main` för hela hardening-batchen när operatören ger OK.
   Governance failar (term-coverage flaggar ett versalt backtick-ord i AGENTS.md);
   enradsfix kvar. Nästan-dubblett av #138 → konsolidera till en PR.
 
-Rekommenderad main-merge-ordning: **#139 först**, sedan sync-PR
-`jakob-be → main` (löser bara docs-konflikter i `current-focus.md` +
-`known-issues.md`). `jakob-be` får EJ `reset --hard origin/main` i mellanläget
-— `merge`/`rebase` in `main`, lös docs, öppna sync-PR.
+**#139** `christopher-ui → main` — MERGAD 2026-06-01 (squash `f22d27a`;
+steward-auto `efbb425`). UI/UX-batch + B155 FloatingChat-no-op + copyDirectives
+väg B-UI ligger nu i `main`. Tre låg-impact-fynd kvar i Christophers lane
+(agent-inbox `msg-0024` + `msg-0025`).
+
+Rekommenderat nästa main-steg: sync-PR `jakob-be → main` för hela
+hardening-batchen (B158/B159 + copyDirective-edge-cases + B120 + kill-dev-trees
++ docs) NÄR operatören ger OK. `jakob-be` får EJ `reset --hard origin/main` i
+mellanläget — `merge`/`rebase` in `main`, lös docs-konflikter, öppna sync-PR.
 
 **Christophers `origin/christopher-ui`** — efter PR #117 är hans branch
 synkad mot post-#117-main. Han har under operator-OK scope-leak
