@@ -75,6 +75,12 @@ sedan sync-PR `jakob-be -> main` för hela batchen när operatören ger OK.
 
 **Öppna PRs (2026-06-01 kväll, uppdaterad):**
 
+- **#144** `jakob-be → main` — **sync-PR (öppen, ready, MERGEABLE/konfliktfri)**.
+  Hela hardening-batchen: kill-dev-trees, B158/B159, copyDirective-edge-cases,
+  Streamlit-floor, B120, #143 refactor (subprocesses), B161/B162. `origin/main`
+  fullt innehållen i `jakob-be` (10 commits före, 0 efter). Full pytest exit 0,
+  tsc 0, guards gröna. **Mergas till `main` = leveransfönster-beslut (operatör).**
+  Bite B (#140) ingår EJ — kan synka i senare batch.
 - **#140** `cursor/preview-runtime-bite-b-di → jakob-be` — draft. Bite B
   PreviewRuntime via dependency-injection. Inom scope; rör ej copyDirectives-
   filer eller Christopher-UI. Mergas in i `jakob-be`, ej `main`. **Nästa review.**
