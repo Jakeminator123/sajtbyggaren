@@ -31,8 +31,8 @@ function printUsage(): void {
   process.stderr.write(
     [
       "Användning:",
-      "  node scripts/spike_vercel_sandbox.ts create <siteId> [runId]",
-      "  node scripts/spike_vercel_sandbox.ts cleanup <sandboxId>",
+      "  node --env-file apps/viewser/.env.local scripts/spike_vercel_sandbox.ts create <siteId> [runId]",
+      "  node --env-file apps/viewser/.env.local scripts/spike_vercel_sandbox.ts cleanup <sandboxId>",
       "",
       "Kräver VIEWSER_SANDBOX_SPIKE=1 + Vercel-credentials (OIDC eller",
       "VERCEL_TOKEN/VERCEL_TEAM_ID/VERCEL_PROJECT_ID).",
@@ -64,7 +64,8 @@ async function runCreate(siteId: string, runId?: string): Promise<number> {
   if (result.status === "ready") {
     process.stderr.write(
       `\nÖppna URL:en ovan i mobil/desktop. Städa när du är klar:\n` +
-        `  node scripts/spike_vercel_sandbox.ts cleanup ${result.sandboxId}\n`,
+        `  node --env-file apps/viewser/.env.local ` +
+        `scripts/spike_vercel_sandbox.ts cleanup ${result.sandboxId}\n`,
     );
     return 0;
   }

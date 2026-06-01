@@ -48,6 +48,7 @@
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const SPIKE_FLAG = "VIEWSER_SANDBOX_SPIKE";
 const TTL_ENV = "VIEWSER_SANDBOX_SPIKE_TTL_MS";
@@ -172,7 +173,15 @@ function resolveGeneratedDir(): string {
   if (envOverride && envOverride.trim()) {
     return path.resolve(envOverride.trim());
   }
-  const repoRoot = path.resolve(process.cwd(), "..", "..");
+  // cwd-OBEROENDE: härled repo-roten från denna fils plats, inte
+  // process.cwd(). Det dokumenterade kommandot körs från repo-roten
+  // (``node scripts/spike_vercel_sandbox.ts``) medan Next.js kör från
+  // apps/viewser — en cwd-baserad uträkning hade letat fel beroende på
+  // varifrån processen startades. Filen ligger på
+  // ``<repo>/apps/viewser/lib/vercel-sandbox-spike.ts`` → tre nivåer upp
+  // från ``lib/`` är repo-roten.
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+  const repoRoot = path.resolve(moduleDir, "..", "..", "..");
   return path.join(repoRoot, "..", "sajtbyggaren-output", ".generated");
 }
 
@@ -214,12 +223,37 @@ function readActiveBuildDir(siteRoot: string): string | null {
 }
 
 /**
+ * Validerar ``siteId`` med samma regel som ``/api/preview/[siteId]``
+ * (a-z, 0-9, bindestreck, max 64 tecken, ingen slash/punkt). Returnerar
+ * ett pedagogiskt felmeddelande eller ``null`` om värdet är giltigt.
+ */
+const SITE_ID_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
+
+function validateSiteId(siteId: string): string | null {
+  if (!siteId || !siteId.trim()) return "siteId saknas.";
+  if (siteId.length > 64) return "siteId är för långt (max 64 tecken).";
+  if (!SITE_ID_PATTERN.test(siteId)) {
+    return "siteId får bara innehålla a-z, 0-9 och bindestreck.";
+  }
+  return null;
+}
+
+/**
  * Resolverar käll-katalogen för en genererad sajt: föredra den aktiva
  * immutable build:en (``current.json``), annars det gamla flata layoutet
  * ``<siteRoot>/``. Returnerar ``null`` om sajten inte finns på disk.
+ *
+ * ``siteId`` valideras av callern (``validateSiteId``); här ligger dessutom
+ * en resolve-/containment-check så ``siteRoot`` aldrig kan hamna utanför
+ * generated-roten även om regex:en någon gång skulle luckras upp.
  */
 function resolveSourceDir(siteId: string): string | null {
-  const siteRoot = path.join(resolveGeneratedDir(), siteId);
+  const generatedRoot = resolveGeneratedDir();
+  const siteRoot = path.resolve(generatedRoot, siteId);
+  const rel = path.relative(generatedRoot, siteRoot);
+  if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) {
+    return null;
+  }
   if (!existsSync(siteRoot)) return null;
   const activeBuildDir = readActiveBuildDir(siteRoot);
   if (activeBuildDir && existsSync(path.join(activeBuildDir, "package.json"))) {
@@ -352,8 +386,9 @@ export async function createSandboxPreview(
     );
   }
 
-  if (!request.siteId || !request.siteId.trim()) {
-    return failed("createSandboxPreview kräver ett siteId.");
+  const siteIdError = validateSiteId(request.siteId ?? "");
+  if (siteIdError) {
+    return failed(`Ogiltigt siteId: ${siteIdError}`);
   }
 
   const credentials = resolveCredentials();
@@ -561,16 +596,18 @@ export async function stopSandboxPreview(
       ...credentials.create,
       name: sandboxId,
     });
-    const result = await sandbox.stop();
+    await sandbox.stop();
     logs.push(`Sandbox ${sandboxId} stoppad.`);
-    // CPU-/nätverks-siffrorna populeras på instans-accessorerna först EFTER
-    // att VM:en stoppat (docs: "Only populated after the VM stops"). Läs dem
-    // INNAN ev. delete() — efter delete blir instansen inert.
+    // Läs kostnadssignalen DEFENSIVT från instans-accessorerna (populeras
+    // efter stop). Vi rör INTE ``stop()``-returvärdet: docs/SDK-versioner
+    // skiljer sig (vissa anger ``Promise<void>``), så vi förlitar oss bara
+    // på de stabila accessorerna. Läs dem INNAN ev. delete() — efter delete
+    // blir instansen inert.
     const cost = {
       activeCpuMs: sandbox.activeCpuUsageMs,
       ingressBytes: sandbox.networkTransfer?.ingress,
       egressBytes: sandbox.networkTransfer?.egress,
-      snapshotId: result.snapshot?.id ?? sandbox.currentSnapshotId,
+      snapshotId: sandbox.currentSnapshotId,
     };
     // Best-effort: ta även bort själva sandbox-recordet så inget ligger kvar.
     // ``stop()`` är huvud-cleanup (räcker med ``persistent:false`` + TTL);
