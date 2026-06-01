@@ -846,6 +846,8 @@ COMMON_WORDS = {
     # Marknadssajt P6/P7 (cookie-consent + legal + login-entry).
     "CookieConsentProvider", "CookieConsent", "CookieConsentValue",
     "ManageCookiesButton", "LegalPageLayout", "ActionButtons",
+    # Marknadssajt P8 (SEO-finish): Next MetadataRoute för sitemap/robots.
+    "MetadataRoute",
     "SELECT",  # HTML-tagName-konstant i ⌘K-skip (page.tsx + test) — inte domänbegrepp
     "SyntaxError",  # JS-built-in exception-namn i prompt-builder NDJSON-comment + test — inte domänbegrepp
     # Toast-system (eget mini-system, ingen extern dep):

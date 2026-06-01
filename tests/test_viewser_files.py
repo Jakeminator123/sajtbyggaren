@@ -58,6 +58,9 @@ def test_viewser_expected_files_exist() -> None:
         "app/(marketing)/integritetspolicy/page.tsx",
         "app/(marketing)/anvandarvillkor/page.tsx",
         "app/(marketing)/kontakt/page.tsx",
+        # Marknadssajt P8 (SEO-finish).
+        "app/sitemap.ts",
+        "app/robots.ts",
         "lib/auth-config.ts",
         "app/api/chat/route.ts",
         "app/api/build/route.ts",
@@ -3775,5 +3778,22 @@ def test_login_entry_is_honest_about_accounts() -> None:
         VIEWSER_DIR / "components" / "marketing" / "marketing-header.tsx"
     ).read_text(encoding="utf-8")
     assert "LOGIN_HINT" in header, "Headern ska visa login-hinten som title"
+
+
+def test_marketing_has_sitemap_and_robots() -> None:
+    """P8: SEO-finish — sitemap ska täcka statiska sidor + 20 yrkessidor;
+    robots ska indexera marknaden men blockera /studio + /api.
+    """
+    sitemap = (VIEWSER_DIR / "app" / "sitemap.ts").read_text(encoding="utf-8")
+    assert "PROFESSIONS" in sitemap, (
+        "Sitemap ska generera per-yrke-sidor från professions-registret"
+    )
+    assert "/for/" in sitemap, "Sitemap ska inkludera /for/[yrke]-sidorna"
+
+    robots = (VIEWSER_DIR / "app" / "robots.ts").read_text(encoding="utf-8")
+    assert "/studio" in robots and "/api/" in robots, (
+        "Robots ska blockera konsolen (/studio) och /api"
+    )
+    assert "sitemap" in robots, "Robots ska peka på sitemap.xml"
 
 
