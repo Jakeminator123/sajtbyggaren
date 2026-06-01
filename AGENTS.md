@@ -107,3 +107,14 @@ Commands are documented in the README under "Snabbstart". Key commands:
   update script creates this directory with open permissions. If tests
   fail with a permission error on that path, run
   `sudo mkdir -p /sajtbyggaren-output && sudo chmod 777 /sajtbyggaren-output`.
+- Each `build_site.py` run writes the npm project under
+  `<generated-dir>/<siteId>/builds/<timestamp>/`. For `npm run dev`, `cd`
+  into the newest `builds/*` directory (not the site root).
+- Cloud Agent secrets often set `SAJTBYGGAREN_EVALS_DIR` and
+  `SAJTBYGGAREN_GENERATED_DIR`. That is fine for builder work, but
+  `tests/test_cleanup_dev_artifacts.py::test_default_evals_dir_is_inside_data_evals_artifacts_mini`
+  expects the default evals path — run that test with
+  `SAJTBYGGAREN_EVALS_DIR` unset if you need a green full suite.
+- Long-running dev servers (Next.js preview, Streamlit backoffice) should
+  use tmux on Cloud Agent VMs; see the portal tmux config under
+  `/exec-daemon/tmux.portal.conf`.
