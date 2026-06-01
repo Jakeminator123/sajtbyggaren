@@ -1644,9 +1644,12 @@ export function FloatingChat({
                 )}
               >
                 {isUploading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2
+                    aria-hidden
+                    className="h-3.5 w-3.5 animate-spin"
+                  />
                 ) : (
-                  <ImagePlus className="h-3.5 w-3.5" />
+                  <ImagePlus aria-hidden className="h-3.5 w-3.5" />
                 )}
               </button>
               <span className="text-muted-foreground text-[10px]">
@@ -1671,9 +1674,9 @@ export function FloatingChat({
               )}
             >
               {isSending || isBuilding ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <Loader2 aria-hidden className="h-3 w-3 animate-spin" />
               ) : (
-                <Send className="h-3 w-3" />
+                <Send aria-hidden className="h-3 w-3" />
               )}
               {isSending || isBuilding
                 ? buildProgress < 15

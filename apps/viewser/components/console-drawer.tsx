@@ -57,7 +57,16 @@ export function ConsoleDrawer({
         className="flex h-full w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-md"
       >
         <SheetHeader className="border-b border-border/60 px-5 py-4 pt-safe">
-          <SheetTitle>Konsol</SheetTitle>
+          <div className="flex items-center justify-between gap-2">
+            <SheetTitle>Konsol</SheetTitle>
+            <kbd
+              aria-hidden
+              className="border-border/60 bg-muted/40 text-muted-foreground rounded-md border px-1.5 py-0.5 font-mono text-[10px] tracking-tight"
+              title="Tryck Cmd+K (eller Ctrl+K på Windows) för att öppna/stänga konsolen"
+            >
+              ⌘K
+            </kbd>
+          </div>
           <SheetDescription className="font-mono text-[11px] text-muted-foreground">
             {statusText}
           </SheetDescription>

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type RunDetailsPanelProps = {
   runId: string | null;
@@ -773,7 +774,18 @@ export function RunDetailsPanel({ runId }: RunDetailsPanelProps) {
       </CardHeader>
       <CardContent className="space-y-3 pt-4">
         {loading ? (
-          <p className="text-sm text-muted-foreground">Laddar artefakter…</p>
+          <div
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+            className="flex flex-col gap-2"
+          >
+            <span className="sr-only">Laddar artefakter…</span>
+            <Skeleton className="h-3 w-32" />
+            <Skeleton className="h-3 w-2/3" />
+            <Skeleton className="h-20 w-full rounded-md" />
+            <Skeleton className="h-20 w-full rounded-md" />
+          </div>
         ) : null}
         {error ? (
           <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">

@@ -606,14 +606,19 @@ def test_viewer_panel_progress_card_hint_is_mode_aware() -> None:
     BUILD_STEPS-listan refererar konstanten istället för
     hårdkodad sträng.
 
+    Tier 3-split flyttade BuildProgressCard + PREVIEW_PREP_HINT från
+    ``viewer-panel.tsx`` till
+    ``viewer-panel/build-progress-card.tsx``. Logiken är oförändrad
+    så låsen pekar nu på den nya filen.
+
     Två lås:
       1. ``PREVIEW_PREP_HINT``-konstant finns med mode-conditional.
       2. BUILD_STEPS preview-steg använder ``hint: PREVIEW_PREP_HINT``
          istället för en hårdkodad sträng.
     """
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
-        encoding="utf-8"
-    )
+    text = (
+        VIEWSER_DIR / "components" / "viewer-panel" / "build-progress-card.tsx"
+    ).read_text(encoding="utf-8")
 
     # Lock 1: konstanten finns med mode-conditional
     pattern_const = re.compile(
@@ -621,7 +626,7 @@ def test_viewer_panel_progress_card_hint_is_mode_aware() -> None:
         re.MULTILINE,
     )
     assert pattern_const.search(text), (
-        "viewer-panel.tsx saknar ``const PREVIEW_PREP_HINT = "
+        "build-progress-card.tsx saknar ``const PREVIEW_PREP_HINT = "
         "IS_LOCAL_NEXT_MODE ? ... : ...``. Krävs för att "
         "BuildProgressCard:s preview-steg ska visa rätt copy per mode."
     )
@@ -632,7 +637,7 @@ def test_viewer_panel_progress_card_hint_is_mode_aware() -> None:
         re.MULTILINE,
     )
     assert pattern_usage.search(text), (
-        "viewer-panel.tsx: BUILD_STEPS preview-steget måste använda "
+        "build-progress-card.tsx: BUILD_STEPS preview-steget måste använda "
         "``hint: PREVIEW_PREP_HINT`` så texten är mode-aware. "
         "Hårdkodad ``\"Förbereder StackBlitz-iframen.\"`` gav fel "
         "mental modell i local-next-mode (reviewer-fynd post-PR #101)."
@@ -2454,3 +2459,461 @@ def test_tier1_page_handles_runs_load_failure_with_retry() -> None:
         "page.tsx måste visa en error-toast med titel 'Kunde inte "
         "ladda runs' när initial fetch failar"
     )
+
+
+# ---------------------------------------------------------------------------
+# Tier 2 — skeleton-konsekvens + Cmd+K shortcut
+# ---------------------------------------------------------------------------
+
+
+def test_tier2_inspector_uses_skeleton_during_loading() -> None:
+    """``site-inspector-sheet.tsx`` måste rendera Skeleton-block under
+    artefact-loading istället för en spinner-only "Läser artefakter…"-
+    rad. Skeleton-mönstret ger operatören en visuell preview av tab-
+    strukturen som kommer dyka upp och förhindrar layout-hopp.
+    """
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "inspector" / "site-inspector-sheet.tsx"
+    ).read_text(encoding="utf-8")
+
+    assert "InspectorLoadingSkeleton" in text, (
+        "site-inspector-sheet.tsx måste ha en InspectorLoadingSkeleton-"
+        "komponent som ersätter den gamla Loader2-spinnern"
+    )
+    assert "import { Skeleton }" in text, (
+        "site-inspector-sheet.tsx måste importera Skeleton från "
+        "@/components/ui/skeleton"
+    )
+    # Loader2 var den gamla spinnern — bekräfta att den är borta från
+    # imports OCH från jsx-trädet i loading-blocket.
+    assert "Loader2" not in text, (
+        "site-inspector-sheet.tsx ska inte längre använda Loader2 — "
+        "skeleton-tillståndet ersätter spinnern"
+    )
+    assert 'role="status"' in text and 'aria-live="polite"' in text, (
+        "InspectorLoadingSkeleton måste ha role=status + aria-live så "
+        "skärmläsare läser upp att vi laddar"
+    )
+
+
+def test_tier2_variants_tab_uses_skeleton_during_loading() -> None:
+    """``variants-tab.tsx`` måste byta sin Loader2-spinner mot Skeleton-
+    kort medan ``options === null``.
+    """
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "inspector" / "variants-tab.tsx"
+    ).read_text(encoding="utf-8")
+
+    assert "import { Skeleton }" in text, (
+        "variants-tab.tsx måste importera Skeleton"
+    )
+    assert "Loader2" not in text, (
+        "variants-tab.tsx ska inte använda Loader2 i loading-blocket"
+    )
+    # 4 skeleton-kort matchar variant-grid (2 cols × 2 rader på sm+).
+    assert "length: 4" in text, (
+        "variants-tab.tsx måste rendera 4 Skeleton-kort som approximerar "
+        "variant-grid"
+    )
+
+
+def test_tier2_versions_tab_uses_skeleton_for_init_and_diff() -> None:
+    """``versions-tab.tsx`` måste byta båda Loader2-spinners (initial-
+    load + diff-load) mot Skeleton-rader. Loader2 får finnas kvar för
+    pågående-bygge-raden (annan use case).
+    """
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "inspector" / "versions-tab.tsx"
+    ).read_text(encoding="utf-8")
+
+    assert "import { Skeleton }" in text, (
+        "versions-tab.tsx måste importera Skeleton"
+    )
+    # Initial-load: text "Läser versioner" får finnas kvar som sr-only-
+    # span, men måste sitta i ett block som också renderar Skeleton.
+    init_idx = text.find("Läser versioner")
+    assert init_idx != -1, (
+        "versions-tab.tsx förväntas ha 'Läser versioner' som sr-only-text "
+        "i loading-blocket"
+    )
+    init_block = text[init_idx - 400 : init_idx + 600]
+    assert "Skeleton" in init_block and "sr-only" in init_block, (
+        "Initial-loading-blocket i versions-tab.tsx måste rendera "
+        "Skeleton + sr-only istället för en Loader2-spinner"
+    )
+    # Diff-load ("Räknar diff…") får inte längre kombineras med Loader2.
+    diff_loading_idx = text.find("Räknar diff")
+    if diff_loading_idx != -1:
+        # Räknar bara om strängen finns kvar (sr-only). Då måste
+        # samma block också använda Skeleton.
+        block = text[diff_loading_idx - 400 : diff_loading_idx + 400]
+        assert "Skeleton" in block, (
+            "Diff-loading-blocket i versions-tab.tsx måste rendera "
+            "Skeleton istället för Loader2"
+        )
+
+
+def test_tier2_run_details_panel_uses_skeleton_during_loading() -> None:
+    """``run-details-panel.tsx`` måste byta "Laddar artefakter…"-text
+    mot Skeleton-rader.
+    """
+    text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert "import { Skeleton }" in text, (
+        "run-details-panel.tsx måste importera Skeleton"
+    )
+    # Säkerställ att den nakna text-only loading-paragrafen är borta.
+    assert "<p className=\"text-sm text-muted-foreground\">Laddar artefakter" not in text, (
+        "run-details-panel.tsx ska inte längre rendera en text-only "
+        "'Laddar artefakter…'-paragraf"
+    )
+
+
+def test_tier2_page_registers_cmd_k_shortcut_for_console_drawer() -> None:
+    """``app/page.tsx`` måste registrera en global Cmd/Ctrl+K-listener
+    som togglar ConsoleDrawer. Listenern måste hoppa över input/textarea-
+    fokus så genvägen inte stjäl tangenten från composern.
+    """
+    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+
+    assert 'event.key !== "k"' in text or 'event.key === "k"' in text, (
+        "page.tsx måste lyssna på 'k'-tangenten för Cmd+K-shortcut"
+    )
+    assert "metaKey" in text and "ctrlKey" in text, (
+        "Cmd+K-listenern måste kolla både metaKey (Mac) och ctrlKey "
+        "(Windows/Linux)"
+    )
+    assert "setConsoleOpen" in text, (
+        "page.tsx måste toggla setConsoleOpen från Cmd+K-listenern"
+    )
+    # Bekräfta att vi hoppar över edit-targets (TEXTAREA / INPUT /
+    # contentEditable) så vi inte stjäl tangent från composern.
+    assert "TEXTAREA" in text and "isContentEditable" in text, (
+        "Cmd+K-listenern måste hoppa över editable-element så den inte "
+        "stjäl tangenten från composern"
+    )
+
+
+def test_tier2_console_drawer_shows_keyboard_hint() -> None:
+    """``console-drawer.tsx`` måste visa en ⌘K-kbd-hint i headern så
+    operatören upptäcker shortcuten.
+    """
+    text = (VIEWSER_DIR / "components" / "console-drawer.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert "⌘K" in text or "Cmd+K" in text, (
+        "console-drawer.tsx måste visa en synlig ⌘K-hint i headern"
+    )
+    assert "<kbd" in text, (
+        "Hinten ska renderas som ett <kbd>-element (semantisk markering "
+        "för tangentbordsgenvägar)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tier 3 — a11y-pass + fil-split (versions-tab + viewer-panel)
+# ---------------------------------------------------------------------------
+
+
+def test_tier3_sheet_and_dialog_use_swedish_close_label() -> None:
+    """De svenska sr-only-labels för close-knappar i ``ui/sheet.tsx`` +
+    ``ui/dialog.tsx`` måste vara "Stäng", inte engelska "Close". Resten
+    av UI:t är konsekvent svenskt — sr-only-text får inte glida.
+    """
+    sheet = (VIEWSER_DIR / "components" / "ui" / "sheet.tsx").read_text(
+        encoding="utf-8"
+    )
+    dialog = (VIEWSER_DIR / "components" / "ui" / "dialog.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert "<span className=\"sr-only\">Stäng</span>" in sheet, (
+        "ui/sheet.tsx måste använda 'Stäng' (inte 'Close') som sr-only-text "
+        "på close-knappen"
+    )
+    assert "<span className=\"sr-only\">Stäng</span>" in dialog, (
+        "ui/dialog.tsx måste använda 'Stäng' (inte 'Close') som sr-only-text "
+        "på close-knappen"
+    )
+    # Bekräfta att engelska "Close" inte ligger kvar i fixerade strängar.
+    # Stränget kan dyka upp i kommentarer eller komponentnamn (`SheetClose`),
+    # så vi söker bara sr-only-mönstret.
+    assert '"sr-only">Close<' not in sheet, (
+        "ui/sheet.tsx har fortfarande 'Close' i sr-only-text — ska vara 'Stäng'"
+    )
+    assert '"sr-only">Close<' not in dialog, (
+        "ui/dialog.tsx har fortfarande 'Close' i sr-only-text — ska vara 'Stäng'"
+    )
+
+
+def test_tier3_floating_chat_decorative_icons_are_aria_hidden() -> None:
+    """Dekorativa ikoner inuti knappar med egen aria-label måste vara
+    ``aria-hidden`` så skärmläsare inte läser upp ikonnamnet ovanpå
+    knappens label. Vi kontrollerar Send + Loader2 + ImagePlus i
+    floating-chat.tsx vars parent-knappar har 'Skicka instruktion'
+    respektive 'Bifoga bild' som aria-label.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    # Send-ikonen i Skicka-knappen.
+    assert "<Send aria-hidden" in text, (
+        "floating-chat.tsx: <Send>-ikonen i Skicka-knappen måste ha "
+        "aria-hidden (parent-knappen har aria-label='Skicka instruktion')"
+    )
+    # ImagePlus-ikonen i Bifoga-bild-knappen.
+    assert "<ImagePlus aria-hidden" in text, (
+        "floating-chat.tsx: <ImagePlus>-ikonen i Bifoga-bild-knappen måste "
+        "ha aria-hidden (parent-knappen har aria-label='Bifoga bild')"
+    )
+
+
+def test_tier3_versions_tab_diff_view_is_extracted() -> None:
+    """``versions-tab.tsx`` växte till 1438 rader innan split — den
+    delade ut DiffView + helpers + EmptyState till en egen fil. Vi
+    kontrollerar att huvudfilen importerar från den nya filen istället
+    för att definiera lokalt, och att den nya filen exporterar det
+    förväntade publika API:et.
+    """
+    main = (
+        VIEWSER_DIR / "components" / "builder" / "inspector" / "versions-tab.tsx"
+    ).read_text(encoding="utf-8")
+    split = (
+        VIEWSER_DIR
+        / "components"
+        / "builder"
+        / "inspector"
+        / "versions-tab"
+        / "diff-view.tsx"
+    ).read_text(encoding="utf-8")
+
+    # Importerar från den nya filen.
+    assert "from \"@/components/builder/inspector/versions-tab/diff-view\"" in main, (
+        "versions-tab.tsx måste importera DiffView/CompareEmptyHint/"
+        "VersionsEmptyState från den nya diff-view-filen"
+    )
+    # Lokala definitioner är borta — annars dubbeldefinition.
+    assert "function DiffView(" not in main, (
+        "versions-tab.tsx ska inte längre definiera DiffView lokalt"
+    )
+    assert "function ScalarChangeRow(" not in main, (
+        "versions-tab.tsx ska inte längre definiera ScalarChangeRow lokalt"
+    )
+    assert "function ValueChip(" not in main, (
+        "versions-tab.tsx ska inte längre definiera ValueChip lokalt"
+    )
+    assert "function ChipDiffRow(" not in main, (
+        "versions-tab.tsx ska inte längre definiera ChipDiffRow lokalt"
+    )
+    assert "function ChangeChip(" not in main, (
+        "versions-tab.tsx ska inte längre definiera ChangeChip lokalt"
+    )
+    assert "function CompareEmptyHint(" not in main, (
+        "versions-tab.tsx ska inte längre definiera CompareEmptyHint lokalt"
+    )
+
+    # Splitfilen exporterar förväntat API.
+    assert "export function DiffView(" in split, (
+        "diff-view.tsx måste exportera DiffView"
+    )
+    assert "export function CompareEmptyHint(" in split, (
+        "diff-view.tsx måste exportera CompareEmptyHint"
+    )
+    assert "export function VersionsEmptyState(" in split, (
+        "diff-view.tsx måste exportera VersionsEmptyState"
+    )
+
+
+def test_tier3_versions_tab_shrunk_below_1300_lines() -> None:
+    """Sanity-check: ``versions-tab.tsx`` ska vara mätbart mindre efter
+    Tier 3-splittet. Var 1438 rader → mål under 1300 (faktiskt resultat:
+    1184). Tröskeln är generös så framtida tilltäg i huvudfilen inte
+    bryter testet förrän det är dags för nästa split.
+    """
+    path = (
+        VIEWSER_DIR / "components" / "builder" / "inspector" / "versions-tab.tsx"
+    )
+    line_count = sum(1 for _ in path.open(encoding="utf-8"))
+    assert line_count < 1300, (
+        f"versions-tab.tsx har växt till {line_count} rader — splitta "
+        f"ytterligare innan vi går över 1300"
+    )
+
+
+def test_tier3_viewer_panel_build_progress_card_is_extracted() -> None:
+    """``viewer-panel.tsx`` växte till 1182 rader innan split — den
+    extraherade BuildProgressCard + BUILD_STEPS + stageToStepIndex +
+    PREVIEW_PREP_HINT till en egen fil.
+    """
+    main = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+    split = (
+        VIEWSER_DIR / "components" / "viewer-panel" / "build-progress-card.tsx"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        "from \"@/components/viewer-panel/build-progress-card\"" in main
+    ), (
+        "viewer-panel.tsx måste importera BuildProgressCard från den nya "
+        "viewer-panel/build-progress-card-filen"
+    )
+    assert "function BuildProgressCard(" not in main, (
+        "viewer-panel.tsx ska inte längre definiera BuildProgressCard lokalt"
+    )
+    assert "const BUILD_STEPS" not in main, (
+        "viewer-panel.tsx ska inte längre definiera BUILD_STEPS lokalt"
+    )
+    assert "function stageToStepIndex(" not in main, (
+        "viewer-panel.tsx ska inte längre definiera stageToStepIndex lokalt"
+    )
+
+    # Splitfilen har det förväntade API:et.
+    assert "export function BuildProgressCard(" in split, (
+        "build-progress-card.tsx måste exportera BuildProgressCard"
+    )
+    # PREVIEW_PREP_HINT-logik ska finnas i splitfilen så Mode-aware-copy
+    # följer med (annars hardcodas "Laddar förhandsvisningen…" oavsett mode).
+    assert "PREVIEW_PREP_HINT" in split, (
+        "build-progress-card.tsx måste behålla PREVIEW_PREP_HINT-logiken "
+        "så local-next-mode visar 'Snart kan du klicka runt…' istället för "
+        "stackblitz-copyn"
+    )
+
+
+def test_tier3_viewer_panel_shrunk_below_1100_lines() -> None:
+    """Sanity-check: ``viewer-panel.tsx`` ska vara mätbart mindre efter
+    Tier 3-splittet. Var 1182 rader → mål under 1100 (faktiskt resultat:
+    1053).
+    """
+    path = VIEWSER_DIR / "components" / "viewer-panel.tsx"
+    line_count = sum(1 for _ in path.open(encoding="utf-8"))
+    assert line_count < 1100, (
+        f"viewer-panel.tsx har växt till {line_count} rader — splitta "
+        f"ytterligare innan vi går över 1100"
+    )
+
+
+# ----------------------------------------------------------------------
+# Pre-push-fixar (efter Tier 3 scout)
+# ----------------------------------------------------------------------
+# Fem P1-fynd från pre-push-scouten:
+#   1. ErrorBoundary måste applicera ``className`` även i success-render
+#      så ``h-full w-full``-kedjan till ViewerPanel inte bryts.
+#   2. Toast ``dismiss`` måste vara idempotent + rensa både auto-dismiss
+#      och cleanup-timers så Map:en inte läcker entries.
+#   3. ToastViewport flyttades från ``bottom-4`` till ``top-20`` för att
+#      inte skymma FloatingChat-composern eller mobil bottom-sheet.
+#   4. ``build-progress-card.tsx`` måste normalisera env-variabeln på
+#      samma sätt som ``viewer-panel.tsx`` (``trim`` + ``toLowerCase``)
+#      annars ljuger PREVIEW_PREP_HINT vid casing-varianter.
+#   5. Cmd+K-listenern hoppar nu över ``SELECT``-element så ConsoleDrawer
+#      inte togglar mitt i ett val.
+
+
+def test_pre_push_error_boundary_applies_class_in_success_render() -> None:
+    """ErrorBoundary måste skicka ``className`` även till div:en runt
+    barnen i success-läget — annars bryter ``h-full w-full``-kedjan
+    till ViewerPanel-canvasen och iframen kollapsar till zero-height.
+    """
+    path = VIEWSER_DIR / "components" / "error-boundary.tsx"
+    content = path.read_text(encoding="utf-8")
+    assert re.search(
+        r"<div\s+key=\{resetKey\}\s+className=\{className\}>",
+        content,
+    ), (
+        "ErrorBoundary måste rendera <div key={resetKey} className={className}> "
+        "i success-läget så call-sites kan behålla layout-höjd"
+    )
+    assert re.search(
+        r'<ErrorBoundary[^>]*area="Förhandsvisningen"[^>]*className="h-full w-full"',
+        (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8"),
+    ), (
+        "page.tsx måste passa in className=\"h-full w-full\" på "
+        "ErrorBoundary runt ViewerPanel"
+    )
+
+
+def test_pre_push_toast_dismiss_is_idempotent() -> None:
+    """``dismiss`` ska vara idempotent (hoppar över om cleanup redan
+    pågår) och rensa både auto-dismiss-timern och cleanup-timern i
+    ``removeToast`` så Map-entries inte läcker.
+    """
+    path = VIEWSER_DIR / "components" / "ui" / "toast.tsx"
+    content = path.read_text(encoding="utf-8")
+    assert re.search(
+        r"timeoutsRef\.current\.has\(`\$\{id\}:cleanup`\)",
+        content,
+    ), "dismiss måste tidigt-returnera om cleanup-timern redan finns"
+    assert "timeoutsRef.current.delete(`${id}:cleanup`)" in content, (
+        "removeToast måste rensa ``${id}:cleanup``-nyckeln så Map:en "
+        "inte växer obegränsat när manuell dismiss races med auto-timeout"
+    )
+
+
+def test_pre_push_toast_viewport_positioned_above_floating_chat() -> None:
+    """ToastViewport får inte ligga på ``bottom-*`` — det krockar med
+    FloatingChat-composern (desktop bottom-6) och mobil bottom-sheet.
+    Top-placement är säkrare yta.
+    """
+    path = VIEWSER_DIR / "components" / "ui" / "toast.tsx"
+    content = path.read_text(encoding="utf-8")
+    assert "top-20" in content, (
+        "ToastViewport ska använda top-20 så aviseringar inte skymmer "
+        "FloatingChat eller PromptBuilder-composern"
+    )
+    # Säkerhetsnät: bottom-positionering ska inte ha smugit tillbaka.
+    # ``bottom-2`` används bara i animations-namnet (slide-in-from-bottom-2)
+    # som vi också ändrade — så vi tillåter den substring som regex.
+    assert "fixed inset-x-0 bottom-" not in content, (
+        "ToastViewport får inte använda bottom-positionering"
+    )
+
+
+def test_pre_push_build_progress_card_env_normalization_matches_viewer_panel() -> None:
+    """``build-progress-card.tsx`` och ``viewer-panel.tsx`` MÅSTE
+    normalisera ``NEXT_PUBLIC_VIEWSER_PREVIEW_MODE`` likadant (annars
+    visar BuildProgressCard fel hint för t.ex. ``LOCAL-NEXT``).
+    Båda ska använda ``.trim().toLowerCase()``.
+    """
+    card = (
+        VIEWSER_DIR / "components" / "viewer-panel" / "build-progress-card.tsx"
+    ).read_text(encoding="utf-8")
+    panel = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+    # Båda filerna ska normalisera med trim+toLowerCase. Tillåt fri
+    # whitespace/radbrytning mellan env-namnet och normaliserings-
+    # anropen — viktigt är att båda metoderna förekommer i koden så
+    # casing-varianter (``LOCAL-NEXT``) tolkas konsekvent.
+    for name, content in [("build-progress-card.tsx", card), ("viewer-panel.tsx", panel)]:
+        assert "NEXT_PUBLIC_VIEWSER_PREVIEW_MODE" in content, (
+            f"{name} måste läsa NEXT_PUBLIC_VIEWSER_PREVIEW_MODE"
+        )
+        assert ".trim()" in content, (
+            f"{name} måste trim:a NEXT_PUBLIC_VIEWSER_PREVIEW_MODE"
+        )
+        assert ".toLowerCase()" in content, (
+            f"{name} måste toLowerCase():a NEXT_PUBLIC_VIEWSER_PREVIEW_MODE "
+            f"så casing-varianter (``LOCAL-NEXT``) tolkas konsekvent"
+        )
+
+
+def test_pre_push_cmd_k_skips_select_targets() -> None:
+    """⌘K-listenern i ``page.tsx`` ska hoppa över SELECT-element så
+    operatören inte tappar fokus i ConsoleDrawer's projekt-väljare
+    eller andra select:s i appen. Matchar DiscoveryWizard's egen
+    ⌘K-skip-lista.
+    """
+    path = VIEWSER_DIR / "app" / "page.tsx"
+    content = path.read_text(encoding="utf-8")
+    # Hitta useEffect-blocket för ⌘K och säkerställ att SELECT-skip finns.
+    assert re.search(
+        r'tagName === "SELECT"',
+        content,
+    ), "⌘K-listenern måste skippa SELECT-element (matcha wizardens mönster)"
+
