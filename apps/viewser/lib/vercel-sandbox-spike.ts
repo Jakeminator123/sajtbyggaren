@@ -265,6 +265,26 @@ function resolveSourceDir(siteId: string): string | null {
   return null;
 }
 
+/**
+ * Lista de siteId:n under generated-roten som ser byggbara ut (giltigt
+ * siteId-format + en upplösbar käll-katalog). CLI-bekvämlighet så operatören
+ * slipper leta mappen manuellt. Icke-kastande: tom lista om roten saknas.
+ */
+export function listGeneratedSiteIds(): string[] {
+  const generatedRoot = resolveGeneratedDir();
+  const out: string[] = [];
+  try {
+    for (const entry of readdirSync(generatedRoot, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      if (validateSiteId(entry.name)) continue;
+      if (resolveSourceDir(entry.name)) out.push(entry.name);
+    }
+  } catch {
+    return [];
+  }
+  return out.sort();
+}
+
 interface CollectedSource {
   files: { relPath: string; content: Buffer }[];
   dirs: string[];
