@@ -30,348 +30,18 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: pending (2026-06-01 fm, christopher-ui local — Tier
-1 robusthet implementerad: ErrorBoundary + lättviktigt toast-system +
-network-failure UX för /api/runs. Tre komplement utan backend-beroende,
-alla inom apps/viewser-lanen, för att hindra tysta launch-buggar medan
-Jakob sätter upp Vercel-preview-fallback för B125. (A) Ny
-``components/error-boundary.tsx`` (klass — React 19 har inget hook-API)
-wrappar ViewerPanel + PromptBuilder + BuilderShell i page.tsx så
-crash i någon subtree avgränsas; reset-knapp ökar resetKey → React
-remountar barnträdet. (B) Nytt ``components/ui/toast.tsx``
-(ToastProvider + useToast + viewport, ~250 rader, ingen extern dep,
-aria-live polite/assertive per variant). Mountas i providers.tsx. Hookas
-in på fyra ställen i page.tsx: /api/runs initial-failure
-(error-toast med retry-action), /api/runs follow-up-failure efter build
-(warning-toast), handleBuildDone success (success-toast), degraded
-(warning), failed (error). Stable retry-callback via loadRunsRef så
-toast-actionen inte stänger över sig själv (React 19:s
-react-hooks/immutability-regel). (C) Initial /api/runs-loader
-extraherad till useCallback ``loadRuns`` så retry kan trigga om utan
-duplicerad kod; ny ``RunsLoadErrorCard``-komponent med WifiOff-ikon +
-felmeddelande + Försök-igen-knapp visas centrerat över hero när
-runsLoadError är satt och builder-mode inte är aktivt. Fyra nya
-source-lock-tester (``test_tier1_*``). Pre-existing
-test_page_useeffect_guards_success_path uppdaterat så det accepterar
-både ``cancelled`` (bool) och ``cancelledRef.current`` (ref-objekt).
-ErrorBoundary-/Toast-helpers + TriangleAlert (lucide-ikon) allowlistade
-i scripts/check_term_coverage.py. Slutkontroll grön: tsc 0, lint 0,
-ruff 0, pytest 1198 passed + 3 skipped, governance 18/18, rules-sync
-OK, term-coverage --strict 0 unknowns. Commit: f8f2213. Tidigare
-verified state: pending (2026-06-01 fm, christopher-ui local — ADR
-0034 väg B (B155 path B) implementerad i FloatingChat. Backend för
-path A landade på `jakob-be` (commit 641abc9) men är inte mergad till
-`main` än, så UI:t är redo för end-to-end så fort jakob-be → main
-mergas. Kontraktet är låst per Jakobs handoff och vi rör inte
-backend/generation. apps/viewser/lib/runs.ts: ny export
-``readAppliedCopyDirectives(runId)`` som läser ``input.json``
-→ ``dossierPath`` → versionens project-input-snapshot och returnerar
-schema-strikt validerad ``AppliedCopyDirective[]`` (path-traversal-
-skydd vitlistar bara ``data/prompt-inputs/`` + ``examples/`` under
-repo-root). apps/viewser/app/api/prompt/route.ts: anropar helpern
-efter runBuild och inkluderar ``appliedCopyDirectives`` på top-level
-i prompt-svaret. apps/viewser/components/builder/floating-chat.tsx:
-ny ``summarizeCopyDirectives`` helper härleder svenska success-rader
-("Jag ändrade företagsnamnet till '...'.", "Jag uppdaterade rubriken
-till '...'.", "Jag la in '...' i hero-texten.") per direktiv.
-``summarizeBuildResult`` success-grenen prioriterar
-``applied === false`` (info-variant) före applied===true med
-directives före generisk "Klart!"-rad. Säkerhet: payload renderas
-som textnod via React auto-escape; regression-test bevakar att
-``dangerouslySetInnerHTML`` aldrig används i floating-chat.tsx.
-Fyra nya source-lock-tester
-(``test_b155_path_b_*``). ``AppliedCopyDirective`` allowlistad i
-``scripts/check_term_coverage.py`` — lokal UI/server-helper-typ
-(canonical term registreras av jakob-be när path A → main).
-Slutkontroll grön: tsc 1306, ruff 0, pytest pass + 3 skipped,
-governance 18/18, rules-sync OK, term-coverage --strict 0 unknowns.
-PR #139 uppdaterad. Tidigare verified state: pending (2026-06-01 fm,
-christopher-ui local — merge
-av `origin/main` (PR #136 backend-batch: B157, BO6, B155-backend, quality-
-gate) klar. 11 merge-konflikter lösta: 7 i kod (FloatingChat,
-BuilderActions, ComparePreviewModal, DiscoveryWizard, wizard-types,
-PromptBuilder, ViewerPanel) + 4 i docs (agent-inbox, current-focus,
-known-issues, workboard). Code-conflicts prioriterade `christopher-ui`s
-minimalist-UI/UX där backend-fixar från `main` ändå behölls (B151
-matchMedia-listener, B152 snap-x-bredd, B153-providern). B155 UI
-implementerad i `floating-chat.tsx`: `summarizeBuildResult` läser nu
-`payload.buildResult.appliedVisibleEffect` (auktoritativ källa per
-Jakobs PR #136) och flippar success-bubblan till en ärlig info-rad
-("Ingen synlig ändring fångades — prova en mer specifik följdprompt")
-när motorn rapporterar `applied=false`. Två nya regressionstester
-låser kontraktet (`test_b155_floating_chat_reads_applied_visible_effect`
-+ `test_b155_floating_chat_no_op_does_not_claim_success`) plus uppdaterat
-`test_b153_device_preset_*`-testet pekar nu på providern istället för
-viewer-panel.tsx. Slutkontroll grön: tsc 1306 filer, ruff 0 findings,
-pytest 1300+ pass / 3 skipped, 18 governance-policies, rule-mirrors i
-synk, term-coverage --strict 0 unknowns. Sync-PR `christopher-ui` →
-`main` öppnas härnäst. Tidigare verified state: `7b6fb6c` (2026-05-27
-natt, christopher-ui local — B122
-stängd. `/api/prompt` exponerar nu NDJSON-stream på `Accept: application/
-x-ndjson` med två events: `{stage:"building"}` exakt mellan Phase 1 och
-Phase 2, samt `{stage:"done", ...result}` som slutevent. PromptBuilder
-läser body-strömmen via `response.body.getReader()` och flippar stage på
-riktig signal istället för den gamla `setTimeout(1500)`-gissningen som
-gav falsk "Bygger sajt" vid snabba svar och falskt "thinking" vid hängda
-prompter. `floating-chat.tsx`/`use-followup-build.ts` skickar inte
-Accept-headern → fortfarande synkron JSON, ingen regression. Två nya
-regressionstester. Term-coverage utökad med TextEncoder/TextDecoder.
-Tidigare verified state: `15efae0` (2026-05-26 sen kväll, christopher-ui
-local — scout-pass över hela toolbar/wizard-batchen sedan PR #117 mergades.
-Tre P1-regressioner åtgärdade i ett sammanhängande pass:
-A) DevicePresetProvider hydration race — persist-effekten skrev "full"
-till sessionStorage före hydration läste, så valet nollställdes vid
-reload. Fix: hasHydratedRef gate:ar persist tills hydration är klar.
-B) Toolbar-pillen utanför viewport vid default-position — clampToViewport
-räknade bara PANEL_HEIGHT (460) och inte toolbar-radens ~36-40px nedanför.
-Fix: ny PANEL_FOOTPRINT_HEIGHT-konstant används i alla 4 clamp-anrop.
-C) Functions-step bevarade restaurang-sidor vid byte till e-handel.
-Fix: family-switch räknar nu diff mellan föregående och nya familjs
-defaults, byter ut defaults men behåller operatorns custom-tillägg.
-Plus 4 P2-cleanups parkade som non-blocking i scout-batchen. Lint +
-typecheck + term-coverage --strict passerar.).
-
-Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
-
-- `15efae0` fix(viewser): scout-pass P1 — device-preset persist,
-  toolbar clamp, family-switch resync. DevicePresetProvider: hasHydratedRef
-  gating för persist-effekten. FloatingChat: PANEL_FOOTPRINT_HEIGHT
-  inkluderar TOOLBAR_ROW_HEIGHT (40px) i alla clampToViewport-anrop.
-  functions-step: useEffect hanterar previousFamily ≠ null separat —
-  byter ut föregående familjs defaults, behåller operatorns tillägg.
-  lastAppliedFamilyRef typad om till BusinessFamilyId|null.
-- `23a5c16` style(viewser/builder): unified toolbar pill — format +
-  Verktyg ihopkopplade i EN container med samma `bg-card/95` som chat-
-  panelen + subtil vertikal divider mellan device-knapparna och
-  Verktyg-knappen. BuilderActions inline-knappen rensad från egen
-  border/shadow så den smälter in.
-- `481593d` fix(viewser/builder): flat Verktyg-grid + Versioner-text.
-  Dialog-modalen rendar nu alla actions i en enda `grid-cols-2 sm:grid-
-  cols-3` istället för per grupp. Versioner-description statisk
-  "Bläddra tidigare bygg" (var dynamisk runId).
-- `46a54cd` style(viewser/builder): Verktyg-grid 3-per-rad på desktop
-  (`sm:grid-cols-3`, var `sm:grid-cols-4`).
-- `3829260` feat(viewser/builder): Verktyg-menyn som modal grid med
-  backdrop. BuilderActions inline-variant: dropdown-listan ersatt av
-  Dialog-modal (Base UI). Backdrop dimmer sajt + chat; klick utanför
-  stänger via Dialog default.
-- `aa934cc` refactor(viewser/builder): Verktyg-pill in i FloatingChat-
-  toolbar-raden. BuilderActions: ny `variant: "fixed" | "inline"` (default
-  "fixed"). FloatingChat: ny `tools?: ReactNode`-slot — toolbar-raden
-  under chatten blir nu en flex-row med device-toggle + tools, fortsatt
-  centrerad mot panel-mittpunkten via translateX(-50%). builder-shell
-  passerar BuilderActions via tools={...} med variant="inline".
-- `0296fad` style(viewser): centrera device-toggle under chatt utan gap.
-  DevicePresetToggleBar i FloatingChat: `left: position.x + PANEL_WIDTH/2`
-  + `transform: translateX(-50%)` centrerar; `top: position.y + PANEL_HEIGHT`
-  (utan +8) gör att toggle-baren hänger ihop kant-i-kant med chat-rutan.
-- `362a24c` refactor(viewser): ta bort "Foundation-beslut"-panelen från
-  Stil-tabben (visual-step). MetadataPanel + selectedVibe useMemo + ContextChips
-  helpers raderade — operatorn behöver inte se "Family → scaffold → default-
-  vibe"-meta.
-- `57a56c6` refactor(viewser): wizard popup-revision — 5 smala flikar, ta bort
-  Specialisering. Foundation-step: Specialiserings-disclosure med sub-kategori-
-  chips raderad helt. MoreInfoDialog: max-w 720px (var 960), 4 flikar → 5 flikar
-  (Innehåll splittad i Om oss + Innehåll), header pt-4 pb-2 sm:pt-5 sm:pb-3 så
-  content börjar högre upp, DialogDescription hidden sm:inline, tab-bar med
-  overflow-x-auto + snap-x snap-mandatory för 5 flikar på 375px. Backend oändrad
-  (validateDiscoveryCategoryIds([]) godkänner tom siteType, branchForFamily()
-  fallback finns redan).
-- `3843a80` fix(viewser): wizard texter visade rå \uXXXX-kod — decoda till
-  svenska bokstäver. JSX text-content tolkar inte JS unicode-escape-syntax —
-  operatören såg "Forts\u00e4tt", "\u00e5t dig", "fr\u00e5gor" osv i klartext.
-  239 escapes decodade i discovery-wizard.tsx (80), more-info-dialog.tsx (85),
-  wizard-types.ts (45), assets-step.tsx (20), foundation-step.tsx (9).
-- `1ab516c` feat(viewser): GPT Vision auto-hero-pick från mediamaterial-galleri.
-  AssetsStep gallery-dropzone promoteras till hero automatiskt om operatorn
-  inte explicit valt en — picks bästa kandidaten via `pickHeroFromGallery`
-  (placement+visionConfidence). Klassificering finns redan i upload-asset/api.
-- `b1e92ca` feat(viewser): wizard popup utvidgning + logo/mediamaterial på tab 3.
-  MoreInfoDialog: 4 flikar (Innehåll/Kontakt/Media/Avancerat) som återanvänder
-  ContentOrchestratorStep + nya ContactBlock/MediaExtrasBlock/AdvancedBlock.
-  Tab 3 (functions) får AssetsStep direkt. Kontakt-disclosure flyttad från
-  foundation-step.
-- `1c1a9fb` feat(viewser): wizard total-minimalism — 3 tabs överst + Mer
-  information-popup. WIZARD_STEP_ORDER 5→3 (foundation/visual/functions).
-  Sidebar borttagen, tabs på desktop+mobile. Inga proaktiva tips/varningar.
-  Foundation: bara offer + businessFamily är hard-required; alla andra fält
-  och steg är skip-bara.
-- `4442aea` feat(viewser): device-preset-context + iframe-mounted-during-build.
-  DevicePresetProvider för delad state mellan FloatingChat (toggle-bar under
-  panelen) + ViewerPanel. Iframen behålls mountad under build (BuildProgressCard
-  med backdrop-blur) så ingen vit canvas mellan iterationer.
-
-- `a1d1a1f` docs(inbox): ack msg-0008 (scope-process-PR-105) + msg-0009 (b146-port).
-- `ea62e45` docs(gap): open GAP-viewser-mobile-responsive-foundation. Pausar tillfälligt
-  `GAP-viewser-pipeline-status-polling` + `GAP-viewser-side-by-side-preview` (samma owner,
-  samma kärnfiler) till queuedGaps. Återöppnas efter denna mobil-PR landar.
-- `31a888a` feat(viewser/ui): mobile foundation — `pb-safe`/`pt-safe`/`px-safe`,
-  `min-tap` (44px Apple HIG), `touch-visible` (motsatsen till hover-only),
-  `bottom-sheet-handle` + `sheet.tsx` bottom-sheet-stöd (`max-h-[90dvh]`,
-  `rounded-t-3xl`, `pb-safe` automatiskt under `data-[side=bottom]`).
-- `3b2420d` feat(viewser/wizard): mobile pass — `validationError` alltid synlig
-  (tidigare `hidden sm:inline-flex` dolde förklaringen till disabled primärknapp),
-  close-knapp + konsol-knapp + popover-close får min-tap mobile, wizard-padding
-  `px-5 sm:px-10`, footer `pb-safe-or-4`, `PayloadAlignmentPopover`
-  `w-[min(340px,calc(100vw-2rem))]` (tidigare fast 340px overflowade),
-  moodboard/produktbild-delete använder `touch-visible` (tidigare osynlig på touch),
-  `site-header` `pt-safe`.
-- `9593769` feat(viewser/builder): mobile pass — `FloatingChat` bottom-sheet på
-  mobil med drag-handle + pb-safe (tidigare fast 360×460 blockerade hela viewporten);
-  minimerat tillstånd = 56×56 FAB nederst höger på mobil (sidotab-mönstret hamnar
-  mitt på 375px); composer-textarea `text-base sm:text-[13px]` (förhindrar iOS
-  Safari auto-zoom); `BuilderActions` `hidden md:flex` (verktygsmenyn skulle
-  hamna under bottom-sheet:n); `SiteInspectorSheet` bottom-sheet på mobil
-  (`max-md:!inset-x-0 max-md:!bottom-0 max-md:!h-[90dvh] max-md:!rounded-t-3xl`)
-  + tabs `overflow-x-auto scrollbar-hidden` så 7 triggers kan scrolla horisontellt.
-- `fb87699` docs(focus): bump current-focus till 9593769 + governance fixes
-  (fidelity-term ut, FloatingChat-syntax i kommentar).
-- `b0140b1` docs(inbox): notify jakob-be om PR #117 + pausade gaps (msg-0010).
-- `62437de` docs(gap): open GAP-viewser-mobile-responsive-polish (fas 2).
-- `d7ca301` fix(viewser/prompt): mobile-friendly composer tap-targets + iOS-zoom-fix
-  (PromptBuilder textarea text-base sm:text-[15px], submit min-tap, ModePill px-3).
-- `6b2d68c` fix(viewser/wizard,builder): systematic tap-target upgrade — utility
-  buttons (InlineHelpButton, AssetDropzone "Välj fil", DirectivesPreview Copy,
-  QuickPromptButton — alla min-tap sm:min-tap-0).
-- `64445bb` fix(viewser/canvas): hero typography scale + console-drawer safe-area
-  (ViewerPanel text-3xl sm:text-4xl md:text-5xl + px-5 sm:px-12, ConsoleDrawer
-  pt-safe + pb-safe-or-4).
-- `712a3c2` fix(viewser/dialogs): mobile-friendly grids + iOS-zoom-fix på inputs
-  (ai-image-generator grid-cols-1 sm:grid-cols-2 + max-h-[90dvh], asset-uploader
-  grid-cols-2 sm:grid-cols-3, color-picker grid-cols-4 sm:grid-cols-6 + min-tap
-  per swatch, alla inputs text-base sm:text-[X]).
-
-Inga off-limits-paths rörda i fas 1 (`scripts/`, `packages/generation/`,
-`apps/viewser/app/api/`, `apps/viewser/lib/`, `middleware.ts`, `next.config.ts`,
-`package.json` — alla intakta).
-
-Fas 2 (polish/P1) — completed (in-review). `GAP-viewser-mobile-responsive-polish`
-adresserade: PromptBuilder textarea iOS-zoom-fix + min-tap-submit, `InlineHelpButton`
-min-tap, `ViewerPanel` hero typografi `text-3xl sm:text-4xl` + padding `px-5
-sm:px-12`, `ai-image-generator-dialog` mobile bottom-sheet-stack + grid-cols-1,
-asset/color-dialog-grids responsiva, `ConsoleDrawer` flexibel höjd,
-`AssetDropzone` + `DirectivesPreview` + `QuickPromptButton` tap-targets.
-
-Fas 3 (final polish) — completed (in-review). `GAP-viewser-mobile-responsive-final-polish`
-landat 4 commits ovanpå fas 1 + 2 i samma PR #117:
-- `e05c443` docs(gap): complete fas 1+2 (in-review), open fas 3 — final polish.
-- `18d84f5` fix(viewser): mobile responsive height + compare-modal swipe A/B.
-  - `run-history.tsx` ScrollArea `h-[26rem]` → `h-[min(26rem,50dvh)]` (333px på 667px-skärm).
-  - `compare-preview-modal.tsx` mobil snap-x swipe + A/B-pills + scroll-position-detection.
-- `f850882` feat(viewser/canvas): device-toggle desktop preview + edge-pulse motion.
-  - `viewer-panel.tsx` 4-knappars toggle 375/768/1024/Full med sessionStorage-persistence.
-  - `globals.css` `.animate-fc-edge-pulse` 2.6s ease-out → 3s ease-in-out.
-- `8724798` chore(viewser): term-coverage compliance.
-  - Typ-namn slimmat (preset-suffix borttaget), laptop-jargong rensad, observer-API utbytt mot scroll-pos detection.
-
-Scout-fixes (3 P0 + 12 P1) — completed (in-review). `GAP-viewser-mobile-scout-fixes`
-adresserade alla högre-prioriterade fynd från scout-rapport `95f73fbf`
-(composer-2.5-fast, read-only bug-hunt på diff `ea62e45^..8724798`). Landar
-som 3 commits ovanpå fas 3 i samma PR #117:
-
-- `6d0c896` docs(gap): complete fas 3 (in-review), open scout-fixes GAP.
-- `cb6f43d` fix(viewser): scout P0 batch.
-  - **P0 #1** — `pb-safe-or-3` utility lades till i `globals.css` (refererad i
-    `ai-image-generator-dialog.tsx` sedan fas 2 men aldrig definierad → footer
-    föll tillbaka till `py-3` på iPhone home-indicator-enheter).
-  - **P0 #2** — iOS Safari auto-zoom-fix i hela wizarden. Alla `TextField`/
-    textarea-fält i `step-primitives.tsx` + inline input/textarea/raw
-    `<input>` i `content-step.tsx` (16 träffar), `foundation-step.tsx` (1) och
-    `company-step.tsx` (1) gick från `text-[13px]` → `text-base md:text-[13px]`.
-    Tidigare bara `prompt-builder` + dialogs adresserade i fas 2.
-  - **P0 #3** — Mobile steg-chips i `discovery-wizard.tsx`. Tidigare `h-5 w-5`
-    (20px) utan `min-tap`; nu `min-tap sm:min-tap-0` + `h-7 w-7` +
-    `active:scale-95` + `aria-current="step"`.
-  - **P1 #7** — Wizard footer-knappar (Tillbaka, Hoppa över, Fortsätt, Skapa
-    sajt) fick `min-tap sm:min-tap-0`.
-- `6e06129` fix(viewser): scout P1 batch.
-  - **P1 #4** — `viewer-panel.tsx` hydration mismatch. `useState`-initializer
-    läste sessionStorage SYNC → server "full"/klient "mobile" missmatch. Nu
-    useState init = "full", async-IIFE-effect läser storage post-mount, en
-    `deviceHydratedRef`-flagga förhindrar default-skrivning över sparad preset.
-  - **P1 #5** — `FloatingChat` layout-flash. `useIsMobileViewport` startade
-    false → desktop-placeholder syntes 1 frame innan effect. Nu
-    `useIsomorphicLayoutEffect` (useLayoutEffect klient/useEffect server) +
-    matchMedia-läsning innan paint.
-  - **P1 #6** — iOS keyboard överlappar bottom-sheet composer. Ny
-    `useKeyboardInset`-hook via `window.visualViewport`. Mobile aside får
-    `style={{ bottom: inset, transition: "bottom 0.18s ease-out" }}` så
-    panelen glider ovanför tangentbordet.
-  - **P1 #8 + #15** — `ModePill` i prompt-builder min-tap + `aria-label`
-    "Ny sajt-läge" för konsistens med "Följdprompt"-pillen.
-  - **P1 #9** — compare-modal A/B-pill desync. `goToPane` anropar nu
-    `setActivePane(target)` SYNC före `scrollIntoView`.
-  - **P1 #10** — Ingen focus-flytt FAB → öppen chat. Ny `expandAndFocus`-
-    callback + `composerRef` på composer-textarean. Båda FAB-onClick använder den.
-  - **P1 #11** — Site Inspector saknade bottom-sheet drag-handle på mobil
-    trots kommentar. Manuell `<div className="bottom-sheet-handle md:hidden" />`
-    direkt i SheetContent + `max-md:pt-2` på SheetHeader.
-  - **P1 #12** — Inspector refresh-knapp + alla `FloatingChat` mikro-kontroller
-    (iterera-X, förslag-toggle, quick-prompt chips, bilaga-X) fick
-    `min-tap sm:min-tap-0` + `active:scale-95`.
-  - **P1 #14** — `sm:text-[15/13px]` zoom-risk på iPad portrait. `prompt-builder`
-    hero-textarea + `floating-chat` composer + `color-picker` hex-input bytta
-    till `md:text-[...]` (768px-breakpoint säkrare än 640px).
-
-Inga off-limits-paths rörda i någon av faserna eller scout-fixes-passet.
-Komplett check-svit grön (sprintvakt, focus, governance, rules-sync,
-term-coverage --strict, ruff, tsc, ESLint, pytest 540+).
-
-Mobile hero-flow — completed (in-review). `GAP-viewser-mobile-hero-flow`
-adresserade tre fynd från manuell test på iPhone 14 Pro-viewport (393×852)
-som scout-rapporten inte täckte. Operatör-driven post-scout-fix:
-
-- `viewer-panel.tsx` mobile hero stacked layout. SM_hero.mp4 hade
-  `[object-position:78%_center]` (designat för desktop bredd) → 3D-objektet
-  hamnade bakom rubriken på mobil. Operatören levererade SM-mobile.mp4
-  (960×960 fyrkantig, 1.1MB, off-white #f0f2ed) som mobile top-banner.
-  Container blev `flex flex-col md:flex-row` med `bg-[#f0f2ed]
-  md:bg-background` när hero visas så filmens bakgrund flyter sömlöst in
-  i canvasen. Hero-text staplad under videon på mobil (centrerad), absolute
-  overlay vänsterställd på desktop (oförändrat).
-- Hero-rubriken hade hårdkodad `<br />` + `max-w-lg` → radbröts till
-  "Beskriv / din sajt / så bygger / vi den" på 393px. `<br />` borttagen;
-  texten flödar nu naturligt via text-balance.
-- `wizard-types.ts` foundation-validering: företagsnamn-min-längd-kollen
-  borttagen på operatör-begäran så snabb-test av wizarden går smidigare.
-  Övriga foundation-validations (offer.length ≥ 3, businessFamily required)
-  kvarstår som signal till pipeline.
-
-Scout pass 4 — `GAP-viewser-mobile-hero-safe-zone` (in-progress). Operatören
-körde fjärde scout-bug-hunt (composer-2.5-fast, read-only) på de tre senaste
-commits innan PR-update. Inga P0 men tre konkreta P1:
-
-- `viewer-panel.tsx` mobile hero safe zone. På iPhone SE (375×667) räckte
-  inte 667px för video~300px + text~200px + PromptBuilder~150px → hero-
-  underrad döljdes bakom composern. Container fick `md:overflow-hidden`
-  + `overflow-y-auto bg-[#f0f2ed]` när `showHero=true` (desktop oförändrad).
-  Hero-text container fick `pb-40 md:pb-0` så composer-overlap aldrig sker
-  vid normal text. Desktop absolute-overlay-layout intakt.
-- `foundation-step.tsx` + `company-step.tsx` Wizard-asterisk. Båda visade
-  "Företagsnamn *" trots att validering togs bort i 59eed4c → WCAG 2.2-brott
-  (visuellt obligatoriskt fält som går att lämna tomt). Label nu enbart
-  "Företagsnamn" med `optional`-prop som FieldLabel renderar som "(valfritt)".
-- `prompt-builder.tsx` composer safe-area. `pb-5 sm:pb-7` saknade safe-area-
-  koll → composer-knappar 0px från iPhone X+ home-indicator. Bytt till
-  `pb-safe-or-4 sm:pb-7` (samma standard som wizard-footer och FloatingChat).
-
-P1 #4 (StackBlitz containerRef-höjd) parkerad eftersom default-mode
-`local-next` inte påverkas — bara aktuell vid `VIEWSER_PREVIEW_MODE=auto`
-eller `stackblitz` (icke-default operatör-val).
-
-Nya PRs sedan föregående checkpoint: PR #114 — chore(gitignore): re-ignore
-`__pycache__/` under `packages/generation/build/` (B146 fallout); PR #115 —
-sync(jakob-be -> main): #114 gitignore hygiene (post-#113 cleanup);
-PR #135 (B155 backend — applied-effect-detektion + trace-event för fri
-follow-up); PR #136 (B157 + BO6 + B155-backend + quality-gate routes-discovery);
-PR #137 (B157 level 4 immutable build-dir + pointer-swap + GC). Main-HEAD
-nu `40b7d29` (post-merge in i christopher-ui via merge-commit pending push).
-
-Öppen PR utanför vår lane:
-
-- **#116** (`cursor/dossier-candidate-intake-895d`) — `feat(backoffice): add dossier
-  candidate intake from local files`. Backoffice-feature, ägs av jakob-be-lane.
-  Do not start yet från christopher-ui's perspektiv.
+Last verified state: `f22d27a` (2026-06-01 UTC, steward-auto efter PR #139 — sync: christopher-ui → main (UI/UX-batch + B155 UI)).
+Nya PRs sedan föregående checkpoint: PR #114 — chore(gitignore): re-ignore __pycache__/
+under packages/generation/build/ (B146 fallout); PR #118 — sync(jakob-be -> main): PR
+#117 mobile responsive + PR #116 dossier-intake + 12 closed bugs + B147 new +
+audit-report; PR #120 — sync(jakob-be -> main): repo hygiene 2026-05-26 (4 commits,
+docs-only); PR #123 — sync(jakob-be -> main): backend gap batch and docs cleanup; PR
+#125 — fix(discovery): honor wizard clears across versioned fields; PR #127 —
+fix(viewser): block Python-backed actions on hosted Vercel; PR #133 — sync(jakob-be ->
+main): PreviewRuntime Bite A skeleton + race-fix + governance comments + builder prompt;
+PR #135 — feat(builder): close B155 backend — applied-effect-detektion + trace-event för
+fri follow-up; PR #134 — refactor(quality-gate): resolve contact-route via routes.json;
+PR #139 — sync: christopher-ui → main (UI/UX-batch + B155 UI).
 
 ## Branchmodellen (kort)
 
@@ -811,3 +481,348 @@ Last verified state: `5746419` (2026-05-31 UTC, extern-review-fixar ovanpå Stag
 Stage B landad ovanpå Stage A i `df640c0`: ny CLI `scripts/gc_old_builds.py` för delayed GC av gamla immutable builds under `<generated>/<siteId>/builds/`. Retention: behåll aktiv build (`current.json`), builds yngre än 24h, samt de 5 senaste per siteId; allt annat är GC-kandidat. Dry-run default, `--apply` krävs för radering. Konservativ vid saknad/korrupt `current.json` (raderar inget för den siteId:n), rör aldrig legacy flat-layout-sajter, robusta deletes (locked build → delete-failed, GC kraschar aldrig, idempotent). Återanvänder Stage A:s helpers (`read_active_build_dir`/`BUILDS_DIRNAME`/`_BUILD_ID_RE`). Alla Stage B-guards gröna (ruff, governance, rules_sync, term_coverage, pytest test_gc_old_builds+test_immutable_builds 31 pass, sprintvakt, focus). GC är operatör-/schemalagt-anropad CLI; inte inwirad i build-flödet. Kvar (framtida): flat-layout-städning + POSIX-tree-kill.)
 Nya PRs sedan föregående checkpoint: PR #136 — sync(jakob-be -> main): B157 round 3 +
 BO6 + B155 backend + quality-gate routes-discovery.
+
+### 2026-06-01 UTC — current-focus.md före `ee31eb1`
+
+Last verified state: pending (2026-06-01 fm, christopher-ui local — Tier
+1 robusthet implementerad: ErrorBoundary + lättviktigt toast-system +
+network-failure UX för /api/runs. Tre komplement utan backend-beroende,
+alla inom apps/viewser-lanen, för att hindra tysta launch-buggar medan
+Jakob sätter upp Vercel-preview-fallback för B125. (A) Ny
+``components/error-boundary.tsx`` (klass — React 19 har inget hook-API)
+wrappar ViewerPanel + PromptBuilder + BuilderShell i page.tsx så
+crash i någon subtree avgränsas; reset-knapp ökar resetKey → React
+remountar barnträdet. (B) Nytt ``components/ui/toast.tsx``
+(ToastProvider + useToast + viewport, ~250 rader, ingen extern dep,
+aria-live polite/assertive per variant). Mountas i providers.tsx. Hookas
+in på fyra ställen i page.tsx: /api/runs initial-failure
+(error-toast med retry-action), /api/runs follow-up-failure efter build
+(warning-toast), handleBuildDone success (success-toast), degraded
+(warning), failed (error). Stable retry-callback via loadRunsRef så
+toast-actionen inte stänger över sig själv (React 19:s
+react-hooks/immutability-regel). (C) Initial /api/runs-loader
+extraherad till useCallback ``loadRuns`` så retry kan trigga om utan
+duplicerad kod; ny ``RunsLoadErrorCard``-komponent med WifiOff-ikon +
+felmeddelande + Försök-igen-knapp visas centrerat över hero när
+runsLoadError är satt och builder-mode inte är aktivt. Fyra nya
+source-lock-tester (``test_tier1_*``). Pre-existing
+test_page_useeffect_guards_success_path uppdaterat så det accepterar
+både ``cancelled`` (bool) och ``cancelledRef.current`` (ref-objekt).
+ErrorBoundary-/Toast-helpers + TriangleAlert (lucide-ikon) allowlistade
+i scripts/check_term_coverage.py. Slutkontroll grön: tsc 0, lint 0,
+ruff 0, pytest 1198 passed + 3 skipped, governance 18/18, rules-sync
+OK, term-coverage --strict 0 unknowns. Commit: f8f2213. Tidigare
+verified state: pending (2026-06-01 fm, christopher-ui local — ADR
+0034 väg B (B155 path B) implementerad i FloatingChat. Backend för
+path A landade på `jakob-be` (commit 641abc9) men är inte mergad till
+`main` än, så UI:t är redo för end-to-end så fort jakob-be → main
+mergas. Kontraktet är låst per Jakobs handoff och vi rör inte
+backend/generation. apps/viewser/lib/runs.ts: ny export
+``readAppliedCopyDirectives(runId)`` som läser ``input.json``
+→ ``dossierPath`` → versionens project-input-snapshot och returnerar
+schema-strikt validerad ``AppliedCopyDirective[]`` (path-traversal-
+skydd vitlistar bara ``data/prompt-inputs/`` + ``examples/`` under
+repo-root). apps/viewser/app/api/prompt/route.ts: anropar helpern
+efter runBuild och inkluderar ``appliedCopyDirectives`` på top-level
+i prompt-svaret. apps/viewser/components/builder/floating-chat.tsx:
+ny ``summarizeCopyDirectives`` helper härleder svenska success-rader
+("Jag ändrade företagsnamnet till '...'.", "Jag uppdaterade rubriken
+till '...'.", "Jag la in '...' i hero-texten.") per direktiv.
+``summarizeBuildResult`` success-grenen prioriterar
+``applied === false`` (info-variant) före applied===true med
+directives före generisk "Klart!"-rad. Säkerhet: payload renderas
+som textnod via React auto-escape; regression-test bevakar att
+``dangerouslySetInnerHTML`` aldrig används i floating-chat.tsx.
+Fyra nya source-lock-tester
+(``test_b155_path_b_*``). ``AppliedCopyDirective`` allowlistad i
+``scripts/check_term_coverage.py`` — lokal UI/server-helper-typ
+(canonical term registreras av jakob-be när path A → main).
+Slutkontroll grön: tsc 1306, ruff 0, pytest pass + 3 skipped,
+governance 18/18, rules-sync OK, term-coverage --strict 0 unknowns.
+PR #139 uppdaterad. Tidigare verified state: pending (2026-06-01 fm,
+christopher-ui local — merge
+av `origin/main` (PR #136 backend-batch: B157, BO6, B155-backend, quality-
+gate) klar. 11 merge-konflikter lösta: 7 i kod (FloatingChat,
+BuilderActions, ComparePreviewModal, DiscoveryWizard, wizard-types,
+PromptBuilder, ViewerPanel) + 4 i docs (agent-inbox, current-focus,
+known-issues, workboard). Code-conflicts prioriterade `christopher-ui`s
+minimalist-UI/UX där backend-fixar från `main` ändå behölls (B151
+matchMedia-listener, B152 snap-x-bredd, B153-providern). B155 UI
+implementerad i `floating-chat.tsx`: `summarizeBuildResult` läser nu
+`payload.buildResult.appliedVisibleEffect` (auktoritativ källa per
+Jakobs PR #136) och flippar success-bubblan till en ärlig info-rad
+("Ingen synlig ändring fångades — prova en mer specifik följdprompt")
+när motorn rapporterar `applied=false`. Två nya regressionstester
+låser kontraktet (`test_b155_floating_chat_reads_applied_visible_effect`
++ `test_b155_floating_chat_no_op_does_not_claim_success`) plus uppdaterat
+`test_b153_device_preset_*`-testet pekar nu på providern istället för
+viewer-panel.tsx. Slutkontroll grön: tsc 1306 filer, ruff 0 findings,
+pytest 1300+ pass / 3 skipped, 18 governance-policies, rule-mirrors i
+synk, term-coverage --strict 0 unknowns. Sync-PR `christopher-ui` →
+`main` öppnas härnäst. Tidigare verified state: `7b6fb6c` (2026-05-27
+natt, christopher-ui local — B122
+stängd. `/api/prompt` exponerar nu NDJSON-stream på `Accept: application/
+x-ndjson` med två events: `{stage:"building"}` exakt mellan Phase 1 och
+Phase 2, samt `{stage:"done", ...result}` som slutevent. PromptBuilder
+läser body-strömmen via `response.body.getReader()` och flippar stage på
+riktig signal istället för den gamla `setTimeout(1500)`-gissningen som
+gav falsk "Bygger sajt" vid snabba svar och falskt "thinking" vid hängda
+prompter. `floating-chat.tsx`/`use-followup-build.ts` skickar inte
+Accept-headern → fortfarande synkron JSON, ingen regression. Två nya
+regressionstester. Term-coverage utökad med TextEncoder/TextDecoder.
+Tidigare verified state: `15efae0` (2026-05-26 sen kväll, christopher-ui
+local — scout-pass över hela toolbar/wizard-batchen sedan PR #117 mergades.
+Tre P1-regressioner åtgärdade i ett sammanhängande pass:
+A) DevicePresetProvider hydration race — persist-effekten skrev "full"
+till sessionStorage före hydration läste, så valet nollställdes vid
+reload. Fix: hasHydratedRef gate:ar persist tills hydration är klar.
+B) Toolbar-pillen utanför viewport vid default-position — clampToViewport
+räknade bara PANEL_HEIGHT (460) och inte toolbar-radens ~36-40px nedanför.
+Fix: ny PANEL_FOOTPRINT_HEIGHT-konstant används i alla 4 clamp-anrop.
+C) Functions-step bevarade restaurang-sidor vid byte till e-handel.
+Fix: family-switch räknar nu diff mellan föregående och nya familjs
+defaults, byter ut defaults men behåller operatorns custom-tillägg.
+Plus 4 P2-cleanups parkade som non-blocking i scout-batchen. Lint +
+typecheck + term-coverage --strict passerar.).
+
+Aktuell christopher-ui-lane (lokala commits sedan `3bedddd`/main):
+
+- `15efae0` fix(viewser): scout-pass P1 — device-preset persist,
+  toolbar clamp, family-switch resync. DevicePresetProvider: hasHydratedRef
+  gating för persist-effekten. FloatingChat: PANEL_FOOTPRINT_HEIGHT
+  inkluderar TOOLBAR_ROW_HEIGHT (40px) i alla clampToViewport-anrop.
+  functions-step: useEffect hanterar previousFamily ≠ null separat —
+  byter ut föregående familjs defaults, behåller operatorns tillägg.
+  lastAppliedFamilyRef typad om till BusinessFamilyId|null.
+- `23a5c16` style(viewser/builder): unified toolbar pill — format +
+  Verktyg ihopkopplade i EN container med samma `bg-card/95` som chat-
+  panelen + subtil vertikal divider mellan device-knapparna och
+  Verktyg-knappen. BuilderActions inline-knappen rensad från egen
+  border/shadow så den smälter in.
+- `481593d` fix(viewser/builder): flat Verktyg-grid + Versioner-text.
+  Dialog-modalen rendar nu alla actions i en enda `grid-cols-2 sm:grid-
+  cols-3` istället för per grupp. Versioner-description statisk
+  "Bläddra tidigare bygg" (var dynamisk runId).
+- `46a54cd` style(viewser/builder): Verktyg-grid 3-per-rad på desktop
+  (`sm:grid-cols-3`, var `sm:grid-cols-4`).
+- `3829260` feat(viewser/builder): Verktyg-menyn som modal grid med
+  backdrop. BuilderActions inline-variant: dropdown-listan ersatt av
+  Dialog-modal (Base UI). Backdrop dimmer sajt + chat; klick utanför
+  stänger via Dialog default.
+- `aa934cc` refactor(viewser/builder): Verktyg-pill in i FloatingChat-
+  toolbar-raden. BuilderActions: ny `variant: "fixed" | "inline"` (default
+  "fixed"). FloatingChat: ny `tools?: ReactNode`-slot — toolbar-raden
+  under chatten blir nu en flex-row med device-toggle + tools, fortsatt
+  centrerad mot panel-mittpunkten via translateX(-50%). builder-shell
+  passerar BuilderActions via tools={...} med variant="inline".
+- `0296fad` style(viewser): centrera device-toggle under chatt utan gap.
+  DevicePresetToggleBar i FloatingChat: `left: position.x + PANEL_WIDTH/2`
+  + `transform: translateX(-50%)` centrerar; `top: position.y + PANEL_HEIGHT`
+  (utan +8) gör att toggle-baren hänger ihop kant-i-kant med chat-rutan.
+- `362a24c` refactor(viewser): ta bort "Foundation-beslut"-panelen från
+  Stil-tabben (visual-step). MetadataPanel + selectedVibe useMemo + ContextChips
+  helpers raderade — operatorn behöver inte se "Family → scaffold → default-
+  vibe"-meta.
+- `57a56c6` refactor(viewser): wizard popup-revision — 5 smala flikar, ta bort
+  Specialisering. Foundation-step: Specialiserings-disclosure med sub-kategori-
+  chips raderad helt. MoreInfoDialog: max-w 720px (var 960), 4 flikar → 5 flikar
+  (Innehåll splittad i Om oss + Innehåll), header pt-4 pb-2 sm:pt-5 sm:pb-3 så
+  content börjar högre upp, DialogDescription hidden sm:inline, tab-bar med
+  overflow-x-auto + snap-x snap-mandatory för 5 flikar på 375px. Backend oändrad
+  (validateDiscoveryCategoryIds([]) godkänner tom siteType, branchForFamily()
+  fallback finns redan).
+- `3843a80` fix(viewser): wizard texter visade rå \uXXXX-kod — decoda till
+  svenska bokstäver. JSX text-content tolkar inte JS unicode-escape-syntax —
+  operatören såg "Forts\u00e4tt", "\u00e5t dig", "fr\u00e5gor" osv i klartext.
+  239 escapes decodade i discovery-wizard.tsx (80), more-info-dialog.tsx (85),
+  wizard-types.ts (45), assets-step.tsx (20), foundation-step.tsx (9).
+- `1ab516c` feat(viewser): GPT Vision auto-hero-pick från mediamaterial-galleri.
+  AssetsStep gallery-dropzone promoteras till hero automatiskt om operatorn
+  inte explicit valt en — picks bästa kandidaten via `pickHeroFromGallery`
+  (placement+visionConfidence). Klassificering finns redan i upload-asset/api.
+- `b1e92ca` feat(viewser): wizard popup utvidgning + logo/mediamaterial på tab 3.
+  MoreInfoDialog: 4 flikar (Innehåll/Kontakt/Media/Avancerat) som återanvänder
+  ContentOrchestratorStep + nya ContactBlock/MediaExtrasBlock/AdvancedBlock.
+  Tab 3 (functions) får AssetsStep direkt. Kontakt-disclosure flyttad från
+  foundation-step.
+- `1c1a9fb` feat(viewser): wizard total-minimalism — 3 tabs överst + Mer
+  information-popup. WIZARD_STEP_ORDER 5→3 (foundation/visual/functions).
+  Sidebar borttagen, tabs på desktop+mobile. Inga proaktiva tips/varningar.
+  Foundation: bara offer + businessFamily är hard-required; alla andra fält
+  och steg är skip-bara.
+- `4442aea` feat(viewser): device-preset-context + iframe-mounted-during-build.
+  DevicePresetProvider för delad state mellan FloatingChat (toggle-bar under
+  panelen) + ViewerPanel. Iframen behålls mountad under build (BuildProgressCard
+  med backdrop-blur) så ingen vit canvas mellan iterationer.
+
+- `a1d1a1f` docs(inbox): ack msg-0008 (scope-process-PR-105) + msg-0009 (b146-port).
+- `ea62e45` docs(gap): open GAP-viewser-mobile-responsive-foundation. Pausar tillfälligt
+  `GAP-viewser-pipeline-status-polling` + `GAP-viewser-side-by-side-preview` (samma owner,
+  samma kärnfiler) till queuedGaps. Återöppnas efter denna mobil-PR landar.
+- `31a888a` feat(viewser/ui): mobile foundation — `pb-safe`/`pt-safe`/`px-safe`,
+  `min-tap` (44px Apple HIG), `touch-visible` (motsatsen till hover-only),
+  `bottom-sheet-handle` + `sheet.tsx` bottom-sheet-stöd (`max-h-[90dvh]`,
+  `rounded-t-3xl`, `pb-safe` automatiskt under `data-[side=bottom]`).
+- `3b2420d` feat(viewser/wizard): mobile pass — `validationError` alltid synlig
+  (tidigare `hidden sm:inline-flex` dolde förklaringen till disabled primärknapp),
+  close-knapp + konsol-knapp + popover-close får min-tap mobile, wizard-padding
+  `px-5 sm:px-10`, footer `pb-safe-or-4`, `PayloadAlignmentPopover`
+  `w-[min(340px,calc(100vw-2rem))]` (tidigare fast 340px overflowade),
+  moodboard/produktbild-delete använder `touch-visible` (tidigare osynlig på touch),
+  `site-header` `pt-safe`.
+- `9593769` feat(viewser/builder): mobile pass — `FloatingChat` bottom-sheet på
+  mobil med drag-handle + pb-safe (tidigare fast 360×460 blockerade hela viewporten);
+  minimerat tillstånd = 56×56 FAB nederst höger på mobil (sidotab-mönstret hamnar
+  mitt på 375px); composer-textarea `text-base sm:text-[13px]` (förhindrar iOS
+  Safari auto-zoom); `BuilderActions` `hidden md:flex` (verktygsmenyn skulle
+  hamna under bottom-sheet:n); `SiteInspectorSheet` bottom-sheet på mobil
+  (`max-md:!inset-x-0 max-md:!bottom-0 max-md:!h-[90dvh] max-md:!rounded-t-3xl`)
+  + tabs `overflow-x-auto scrollbar-hidden` så 7 triggers kan scrolla horisontellt.
+- `fb87699` docs(focus): bump current-focus till 9593769 + governance fixes
+  (fidelity-term ut, FloatingChat-syntax i kommentar).
+- `b0140b1` docs(inbox): notify jakob-be om PR #117 + pausade gaps (msg-0010).
+- `62437de` docs(gap): open GAP-viewser-mobile-responsive-polish (fas 2).
+- `d7ca301` fix(viewser/prompt): mobile-friendly composer tap-targets + iOS-zoom-fix
+  (PromptBuilder textarea text-base sm:text-[15px], submit min-tap, ModePill px-3).
+- `6b2d68c` fix(viewser/wizard,builder): systematic tap-target upgrade — utility
+  buttons (InlineHelpButton, AssetDropzone "Välj fil", DirectivesPreview Copy,
+  QuickPromptButton — alla min-tap sm:min-tap-0).
+- `64445bb` fix(viewser/canvas): hero typography scale + console-drawer safe-area
+  (ViewerPanel text-3xl sm:text-4xl md:text-5xl + px-5 sm:px-12, ConsoleDrawer
+  pt-safe + pb-safe-or-4).
+- `712a3c2` fix(viewser/dialogs): mobile-friendly grids + iOS-zoom-fix på inputs
+  (ai-image-generator grid-cols-1 sm:grid-cols-2 + max-h-[90dvh], asset-uploader
+  grid-cols-2 sm:grid-cols-3, color-picker grid-cols-4 sm:grid-cols-6 + min-tap
+  per swatch, alla inputs text-base sm:text-[X]).
+
+Inga off-limits-paths rörda i fas 1 (`scripts/`, `packages/generation/`,
+`apps/viewser/app/api/`, `apps/viewser/lib/`, `middleware.ts`, `next.config.ts`,
+`package.json` — alla intakta).
+
+Fas 2 (polish/P1) — completed (in-review). `GAP-viewser-mobile-responsive-polish`
+adresserade: PromptBuilder textarea iOS-zoom-fix + min-tap-submit, `InlineHelpButton`
+min-tap, `ViewerPanel` hero typografi `text-3xl sm:text-4xl` + padding `px-5
+sm:px-12`, `ai-image-generator-dialog` mobile bottom-sheet-stack + grid-cols-1,
+asset/color-dialog-grids responsiva, `ConsoleDrawer` flexibel höjd,
+`AssetDropzone` + `DirectivesPreview` + `QuickPromptButton` tap-targets.
+
+Fas 3 (final polish) — completed (in-review). `GAP-viewser-mobile-responsive-final-polish`
+landat 4 commits ovanpå fas 1 + 2 i samma PR #117:
+- `e05c443` docs(gap): complete fas 1+2 (in-review), open fas 3 — final polish.
+- `18d84f5` fix(viewser): mobile responsive height + compare-modal swipe A/B.
+  - `run-history.tsx` ScrollArea `h-[26rem]` → `h-[min(26rem,50dvh)]` (333px på 667px-skärm).
+  - `compare-preview-modal.tsx` mobil snap-x swipe + A/B-pills + scroll-position-detection.
+- `f850882` feat(viewser/canvas): device-toggle desktop preview + edge-pulse motion.
+  - `viewer-panel.tsx` 4-knappars toggle 375/768/1024/Full med sessionStorage-persistence.
+  - `globals.css` `.animate-fc-edge-pulse` 2.6s ease-out → 3s ease-in-out.
+- `8724798` chore(viewser): term-coverage compliance.
+  - Typ-namn slimmat (preset-suffix borttaget), laptop-jargong rensad, observer-API utbytt mot scroll-pos detection.
+
+Scout-fixes (3 P0 + 12 P1) — completed (in-review). `GAP-viewser-mobile-scout-fixes`
+adresserade alla högre-prioriterade fynd från scout-rapport `95f73fbf`
+(composer-2.5-fast, read-only bug-hunt på diff `ea62e45^..8724798`). Landar
+som 3 commits ovanpå fas 3 i samma PR #117:
+
+- `6d0c896` docs(gap): complete fas 3 (in-review), open scout-fixes GAP.
+- `cb6f43d` fix(viewser): scout P0 batch.
+  - **P0 #1** — `pb-safe-or-3` utility lades till i `globals.css` (refererad i
+    `ai-image-generator-dialog.tsx` sedan fas 2 men aldrig definierad → footer
+    föll tillbaka till `py-3` på iPhone home-indicator-enheter).
+  - **P0 #2** — iOS Safari auto-zoom-fix i hela wizarden. Alla `TextField`/
+    textarea-fält i `step-primitives.tsx` + inline input/textarea/raw
+    `<input>` i `content-step.tsx` (16 träffar), `foundation-step.tsx` (1) och
+    `company-step.tsx` (1) gick från `text-[13px]` → `text-base md:text-[13px]`.
+    Tidigare bara `prompt-builder` + dialogs adresserade i fas 2.
+  - **P0 #3** — Mobile steg-chips i `discovery-wizard.tsx`. Tidigare `h-5 w-5`
+    (20px) utan `min-tap`; nu `min-tap sm:min-tap-0` + `h-7 w-7` +
+    `active:scale-95` + `aria-current="step"`.
+  - **P1 #7** — Wizard footer-knappar (Tillbaka, Hoppa över, Fortsätt, Skapa
+    sajt) fick `min-tap sm:min-tap-0`.
+- `6e06129` fix(viewser): scout P1 batch.
+  - **P1 #4** — `viewer-panel.tsx` hydration mismatch. `useState`-initializer
+    läste sessionStorage SYNC → server "full"/klient "mobile" missmatch. Nu
+    useState init = "full", async-IIFE-effect läser storage post-mount, en
+    `deviceHydratedRef`-flagga förhindrar default-skrivning över sparad preset.
+  - **P1 #5** — `FloatingChat` layout-flash. `useIsMobileViewport` startade
+    false → desktop-placeholder syntes 1 frame innan effect. Nu
+    `useIsomorphicLayoutEffect` (useLayoutEffect klient/useEffect server) +
+    matchMedia-läsning innan paint.
+  - **P1 #6** — iOS keyboard överlappar bottom-sheet composer. Ny
+    `useKeyboardInset`-hook via `window.visualViewport`. Mobile aside får
+    `style={{ bottom: inset, transition: "bottom 0.18s ease-out" }}` så
+    panelen glider ovanför tangentbordet.
+  - **P1 #8 + #15** — `ModePill` i prompt-builder min-tap + `aria-label`
+    "Ny sajt-läge" för konsistens med "Följdprompt"-pillen.
+  - **P1 #9** — compare-modal A/B-pill desync. `goToPane` anropar nu
+    `setActivePane(target)` SYNC före `scrollIntoView`.
+  - **P1 #10** — Ingen focus-flytt FAB → öppen chat. Ny `expandAndFocus`-
+    callback + `composerRef` på composer-textarean. Båda FAB-onClick använder den.
+  - **P1 #11** — Site Inspector saknade bottom-sheet drag-handle på mobil
+    trots kommentar. Manuell `<div className="bottom-sheet-handle md:hidden" />`
+    direkt i SheetContent + `max-md:pt-2` på SheetHeader.
+  - **P1 #12** — Inspector refresh-knapp + alla `FloatingChat` mikro-kontroller
+    (iterera-X, förslag-toggle, quick-prompt chips, bilaga-X) fick
+    `min-tap sm:min-tap-0` + `active:scale-95`.
+  - **P1 #14** — `sm:text-[15/13px]` zoom-risk på iPad portrait. `prompt-builder`
+    hero-textarea + `floating-chat` composer + `color-picker` hex-input bytta
+    till `md:text-[...]` (768px-breakpoint säkrare än 640px).
+
+Inga off-limits-paths rörda i någon av faserna eller scout-fixes-passet.
+Komplett check-svit grön (sprintvakt, focus, governance, rules-sync,
+term-coverage --strict, ruff, tsc, ESLint, pytest 540+).
+
+Mobile hero-flow — completed (in-review). `GAP-viewser-mobile-hero-flow`
+adresserade tre fynd från manuell test på iPhone 14 Pro-viewport (393×852)
+som scout-rapporten inte täckte. Operatör-driven post-scout-fix:
+
+- `viewer-panel.tsx` mobile hero stacked layout. SM_hero.mp4 hade
+  `[object-position:78%_center]` (designat för desktop bredd) → 3D-objektet
+  hamnade bakom rubriken på mobil. Operatören levererade SM-mobile.mp4
+  (960×960 fyrkantig, 1.1MB, off-white #f0f2ed) som mobile top-banner.
+  Container blev `flex flex-col md:flex-row` med `bg-[#f0f2ed]
+  md:bg-background` när hero visas så filmens bakgrund flyter sömlöst in
+  i canvasen. Hero-text staplad under videon på mobil (centrerad), absolute
+  overlay vänsterställd på desktop (oförändrat).
+- Hero-rubriken hade hårdkodad `<br />` + `max-w-lg` → radbröts till
+  "Beskriv / din sajt / så bygger / vi den" på 393px. `<br />` borttagen;
+  texten flödar nu naturligt via text-balance.
+- `wizard-types.ts` foundation-validering: företagsnamn-min-längd-kollen
+  borttagen på operatör-begäran så snabb-test av wizarden går smidigare.
+  Övriga foundation-validations (offer.length ≥ 3, businessFamily required)
+  kvarstår som signal till pipeline.
+
+Scout pass 4 — `GAP-viewser-mobile-hero-safe-zone` (in-progress). Operatören
+körde fjärde scout-bug-hunt (composer-2.5-fast, read-only) på de tre senaste
+commits innan PR-update. Inga P0 men tre konkreta P1:
+
+- `viewer-panel.tsx` mobile hero safe zone. På iPhone SE (375×667) räckte
+  inte 667px för video~300px + text~200px + PromptBuilder~150px → hero-
+  underrad döljdes bakom composern. Container fick `md:overflow-hidden`
+  + `overflow-y-auto bg-[#f0f2ed]` när `showHero=true` (desktop oförändrad).
+  Hero-text container fick `pb-40 md:pb-0` så composer-overlap aldrig sker
+  vid normal text. Desktop absolute-overlay-layout intakt.
+- `foundation-step.tsx` + `company-step.tsx` Wizard-asterisk. Båda visade
+  "Företagsnamn *" trots att validering togs bort i 59eed4c → WCAG 2.2-brott
+  (visuellt obligatoriskt fält som går att lämna tomt). Label nu enbart
+  "Företagsnamn" med `optional`-prop som FieldLabel renderar som "(valfritt)".
+- `prompt-builder.tsx` composer safe-area. `pb-5 sm:pb-7` saknade safe-area-
+  koll → composer-knappar 0px från iPhone X+ home-indicator. Bytt till
+  `pb-safe-or-4 sm:pb-7` (samma standard som wizard-footer och FloatingChat).
+
+P1 #4 (StackBlitz containerRef-höjd) parkerad eftersom default-mode
+`local-next` inte påverkas — bara aktuell vid `VIEWSER_PREVIEW_MODE=auto`
+eller `stackblitz` (icke-default operatör-val).
+
+Nya PRs sedan föregående checkpoint: PR #114 — chore(gitignore): re-ignore
+`__pycache__/` under `packages/generation/build/` (B146 fallout); PR #115 —
+sync(jakob-be -> main): #114 gitignore hygiene (post-#113 cleanup);
+PR #135 (B155 backend — applied-effect-detektion + trace-event för fri
+follow-up); PR #136 (B157 + BO6 + B155-backend + quality-gate routes-discovery);
+PR #137 (B157 level 4 immutable build-dir + pointer-swap + GC). Main-HEAD
+nu `40b7d29` (post-merge in i christopher-ui via merge-commit pending push).
+
+Öppen PR utanför vår lane:
+
+- **#116** (`cursor/dossier-candidate-intake-895d`) — `feat(backoffice): add dossier
+  candidate intake from local files`. Backoffice-feature, ägs av jakob-be-lane.
+  Do not start yet från christopher-ui's perspektiv.
