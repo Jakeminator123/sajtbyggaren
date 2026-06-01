@@ -30,8 +30,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `58710ec` (2026-06-01 kväll UTC, **PR #140 Bite B mergad
-till `jakob-be`** — `localRuntime`/`stackblitzRuntime` wirade via dependency
+Last verified state: `53301c4` (2026-06-01 sen kväll UTC, **PR #147
+vercel-sandbox-adapter mergad till `jakob-be`** ovanpå **PR #140 Bite B
+mergad till `jakob-be`** — `localRuntime`/`stackblitzRuntime` wirade via dependency
 injection, env-styrt via `VIEWSER_PREVIEW_MODE`, paket→app-lager-regeln låst av
 `test_preview_runtime_di.py`). Ovanpå PR #144-synken (hela hardening-batchen i
 `main`, `origin/main` = `8f7dea5`) + docs-PR-konsolidering (#138/#141/#145 foldade
@@ -50,14 +51,14 @@ en isolerad preview stabilt?" (painter-palma, ~29 s cold-start, desktop+mobil
 OK). Operatörsbeslut 2026-06-01: `vercel-sandbox` blir PRIMÄR preview-runtime,
 `local-next` fallback, `stackblitz` pausad — se
 [ADR 0033](../governance/decisions/0033-vercel-sandbox-primary-preview.md).
-Nästa steg är därför en adapter-slice (kräver operatörs-OK eftersom den rör
-naming + policy + kod): naming-bump v18→v19 (`previewRuntimeKind` får
-`vercel-sandbox`), `PreviewRuntimeKind`-utökning i
-`packages/preview-runtime/src/types.ts`, registry-mappning så
-`VIEWSER_PREVIEW_MODE=vercel-sandbox` väljer adaptern, samt
-`adapters/vercel-sandbox.ts`. Default-mode i kod ändras inte förrän adaptern är
-verifierad. Prior skiss finns på `cursor/preview-runtime-adapters`
-(`vercel-sandbox.ts`-stub + `runtime-adapter-plan.md`).
+Adapter-slicen är nu mergad till `jakob-be` (#147, `53301c4`): `vercel-sandbox`
+finns som opt-in PreviewRuntime-adapter (naming v19, `PreviewRuntimeKind`
+utökad, delad DI-runner `vercel-sandbox-runner.ts` för spike-CLI + adapter;
+`@vercel/sandbox` bara i `apps/viewser/lib`). Default-mode är fortfarande
+`local-next` (inte flippad). Nästa: (a) sync-PR `jakob-be → main` (öppnad,
+kräver operatörs-OK för själva main-merge) så Christopher kan pulla; (b) Bite C
+— flippa UI-routen `app/api/preview/[siteId]` till `currentViewserRuntime()`
+(Christopher). Prior skiss finns på `cursor/preview-runtime-adapters`.
 Köat (efter sandbox-riktningen satts, ej parkerat): 4-case live Golden Path
 (elektriker Malmö / frisör Göteborg / naprapat Stockholm / liten keramik-e-handel;
 prompt → preview → följdprompt → ny version) och nivå 2 copyDirectives
@@ -91,6 +92,13 @@ Christopher/UI.
 stängda.
 
 **Mergade/stängda denna session:**
+- **#147** `cursor/vercel-sandbox-adapter → jakob-be` — **mergad** (squash,
+  `53301c4`). vercel-sandbox som opt-in PreviewRuntime-adapter (ADR 0033):
+  naming v19, `PreviewRuntimeKind` += `vercel-sandbox`, registry + delad
+  DI-runner `vercel-sandbox-runner.ts` (`@vercel/sandbox` bara i
+  `apps/viewser/lib`, test-låst). Ingen default-flip, ingen UI/Bite C, ingen
+  main-sync. Cleanup efter coach-review: spike-runnern extraherad,
+  `vercel-sandbox-spike.ts` borttagen.
 - **#146** `cursor/vercel-sandbox-spike → jakob-be` — **mergad** (squash,
   `58710ec`). Flag-gated Vercel Sandbox-PoC (spike), **live-verifierad**:
   painter-palma `status: ready`, cold-start ~29 s (install 18 s + build 9 s),
