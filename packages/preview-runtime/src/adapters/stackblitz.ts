@@ -11,6 +11,9 @@
  * Filpayload byggs av injicerad app-logik. Browser-detection
  * (`getBrowserKind` + `supportsStackBlitzEmbed`) och SDK-embed stannar i
  * UI-lagret eftersom de behöver browser APIs.
+ *
+ * StackBlitzRuntime är en implementerad adapter — den returnerar `ready`/
+ * `failed`, aldrig `unsupported`. Endast `fly` är reserverad stub.
  */
 
 import { getPreviewRuntimeHandlers } from "../handlers";
@@ -52,10 +55,12 @@ export const stackblitzRuntime: PreviewRuntime = {
     const handler = getPreviewRuntimeHandlers().stackblitz;
     if (!handler) {
       return {
-        status: "unsupported",
+        status: "failed",
         error:
-          "StackBlitzRuntime saknar injicerad handler. UI-embedet ligger kvar " +
-          "utanför preview-runtime-paketet.",
+          "StackBlitzRuntime saknar injicerad handler. Anropa Viewser:s " +
+          "`installViewserPreviewRuntimeHandlers()` innan adaptern används. " +
+          "UI-embedet (@stackblitz/sdk) ligger kvar utanför preview-runtime-" +
+          "paketet, men filpayload-bygget delegeras hit via DI.",
       };
     }
     if (!config.runId && !config.files) {
