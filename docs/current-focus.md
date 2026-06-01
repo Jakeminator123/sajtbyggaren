@@ -44,14 +44,20 @@ registry/ADR/naming-ändring. Spike-helper bakom `VIEWSER_SANDBOX_SPIKE=1`.
 Nästa (prioriteringsändring 2026-06-01 kväll, operatörsbeslut — INTE en ny
 produktstrategi): multi-adapter/provider har varit riktningen länge (se
 `runtime-adapter-plan.md` + ADR 0028/0030); vi **aktiverar nu Vercel-sandbox-
-spåret före nivå 2 copyDirectives**. Nästa agentpass = Scout read-only
-sandbox-spike — definiera om sandbox ska vara (A) ny PreviewRuntime-
-adapter, (B) separat server-side sandbox-runner, (C) Vercel deployment/export-
-pipeline, eller (D) bara flag-gated PoC först — plus minsta slice som bevisar
-"kan vi skapa/visa en isolerad preview stabilt?" bakom feature-flag. INGEN full
-`vercelRuntime`-adapter, INGEN `PreviewRuntimeKind`-utökning och INGEN ny canonical
-term förrän spiken + ADR säger det. Prior skiss finns på
-`cursor/preview-runtime-adapters` (`vercel-sandbox.ts`-stub + `runtime-adapter-plan.md`).
+spåret före nivå 2 copyDirectives**. Spiken är nu gjord, live-verifierad och
+mergad (#146) — väg (D) flag-gated PoC valdes och bevisade "kan vi skapa/visa
+en isolerad preview stabilt?" (painter-palma, ~29 s cold-start, desktop+mobil
+OK). Operatörsbeslut 2026-06-01: `vercel-sandbox` blir PRIMÄR preview-runtime,
+`local-next` fallback, `stackblitz` pausad — se
+[ADR 0033](../governance/decisions/0033-vercel-sandbox-primary-preview.md).
+Nästa steg är därför en adapter-slice (kräver operatörs-OK eftersom den rör
+naming + policy + kod): naming-bump v18→v19 (`previewRuntimeKind` får
+`vercel-sandbox`), `PreviewRuntimeKind`-utökning i
+`packages/preview-runtime/src/types.ts`, registry-mappning så
+`VIEWSER_PREVIEW_MODE=vercel-sandbox` väljer adaptern, samt
+`adapters/vercel-sandbox.ts`. Default-mode i kod ändras inte förrän adaptern är
+verifierad. Prior skiss finns på `cursor/preview-runtime-adapters`
+(`vercel-sandbox.ts`-stub + `runtime-adapter-plan.md`).
 Köat (efter sandbox-riktningen satts, ej parkerat): 4-case live Golden Path
 (elektriker Malmö / frisör Göteborg / naprapat Stockholm / liten keramik-e-handel;
 prompt → preview → följdprompt → ny version) och nivå 2 copyDirectives

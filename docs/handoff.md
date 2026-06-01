@@ -4,6 +4,27 @@
 `jakob-be` HEAD = `939f684` (sync-merge av `origin/main`, trädet identiskt med
 `origin/main`), i sync med origin.
 
+## Session 2026-06-01 sen kväll — Vercel Sandbox-spike + ADR 0033 (runtime-riktning)
+
+- **#146 mergad till `jakob-be`** (`58710ec`, squash): flag-gated Vercel
+  Sandbox-PoC, **live-verifierad** (painter-palma `ready`, ~29 s cold-start,
+  desktop+mobil render OK, `stop()`+`delete()` rent, ~ett par ören). Helper bakom
+  `VIEWSER_SANDBOX_SPIKE=1`; ingen route/UI-wiring, ingen adapter-promotion.
+- **Operatörsbeslut (ADR 0033):** `vercel-sandbox` blir PRIMÄR preview-runtime,
+  `local-next` fallback, `stackblitz` pausad (får finnas kvar, blockerar inte, ej
+  default, ej testkrav). Allt via `PreviewRuntime`-adapter; ADR 0030:s hårda regler
+  står kvar (vanilla Next.js-output, inga `@vercel/*` i generation/starters,
+  non-Vercel-fallback inwirad, Sajtbyggaren äger `data/runs`-sanningen, sandbox kör
+  bara en ephemeral kopia).
+- **Detta pass = governance/docs-slice** (ADR 0033 + current-focus + handoff +
+  product-operating-context + `.env.example` + `commands.txt`). INTE adaptern:
+  naming v18→v19, `PreviewRuntimeKind`-utökning, registry,
+  `adapters/vercel-sandbox.ts` och ev. `preview-runtime-policy`-justering landar i
+  en separat adapter-slice efter operatörs-OK (de är kopplade till
+  cross-policy-tester, så blast-radius hålls utanför denna slice).
+- `cursor/vercel-sandbox-spike`-branchen kvar; `apps/viewser/.env.vercel.local`
+  (OIDC-token) är gitignored, ej committad. Ingen main-sync.
+
 ## Session 2026-06-01 kväll — #144 mergad till main + jakob-be synkad
 
 Detta steward-pass: tog den gröna `jakob-be`-batchen officiellt in i `main` och

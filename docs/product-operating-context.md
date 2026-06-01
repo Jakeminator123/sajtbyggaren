@@ -72,21 +72,29 @@ Det betyder:
 
 ## Runtime och preview
 
-Sajtbyggaren ska inte låsa sig vid en enda runtime för tidigt.
+Sajtbyggaren ska inte låsa sig vid en enda runtime för tidigt — preview körs
+via `PreviewRuntime`-adaptrar som väljs med `VIEWSER_PREVIEW_MODE`.
 
-Praktisk riktning:
+Praktisk riktning (uppdaterad 2026-06-01, se
+[ADR 0033](../governance/decisions/0033-vercel-sandbox-primary-preview.md)):
 
-- `LocalRuntime` är snabb intern utveckling och felsökning.
-- `StackBlitzRuntime` är första användarnära preview-yta. Eventuell
-  editbarhet ska testas som produktupplevelse ovanpå previewn, inte som
-  ansvar som flyttas in i runtime-lagret.
-- `FlyRuntime` eller annan produktionslik runtime är högre verifieringsnivå
-  när build, routes, miljövariabler, assets och deploybarhet måste testas mer
-  realistiskt.
+- `vercel-sandbox` är **primärt förstahandsval** för användarnära preview: en
+  isolerad Vercel Sandbox kör den genererade sajten och returnerar en publik
+  URL som fungerar i alla browsers (live-verifierat via spike #146).
+- `local-next` (`LocalRuntime`) är snabb intern utveckling, felsökning och
+  garanterad fallback om sandbox inte är tillgänglig.
+- `static-export`, `FlyRuntime` eller annan produktionslik runtime är framtida
+  fallback/verifieringsnivå när build, routes, miljövariabler, assets och
+  deploybarhet måste testas mer realistiskt.
+- `StackBlitzRuntime` är **pausad**: begränsad till Chromium (Safari/Firefox
+  saknar `credentialless`-stöd) och behålls bara som icke-blockerande,
+  icke-default alternativ.
 
-Produktkoden ska därför fortsätta prata med `PreviewRuntime` som abstraktion.
-StackBlitz ska testas ordentligt, men arkitekturen ska hålla dörren öppen för
-produktionslik deploy-check senare.
+Produktkoden ska fortsätta prata med `PreviewRuntime` som abstraktion. Att
+`vercel-sandbox` är primärt val ändrar inte portabilitetsskyddet i ADR 0030:
+generated output förblir vanlig Next.js, leverantörsberoenden stannar i
+preview-runtime-lagret, en non-Vercel-fallback hålls inwirad, och Sajtbyggaren
+äger projekt/versioner (`data/runs`) — sandbox kör bara en ephemeral kopia.
 
 ### Browser-begränsning för embedded WebContainer-preview
 
@@ -109,9 +117,10 @@ preview-fliken inne i Sajtbyggarens egen UI.
 en server-byggd fallback (kandidater i fallande ordning av oberoende från
 externa hostar: lokal `next dev`-process som same-origin iframe, ephemeral
 deploy till valfri hosting med URL i iframe, eller pre-built static export
-embed). Vilken väg som väljs är ett kommande arkitekturbeslut som ska
-landas i en ny ADR — pågående registrering är B125 i
-[`docs/known-issues.md`](known-issues.md). Tekniska detaljer kring
+embed). Vägen är nu vald: ADR 0033 gör `vercel-sandbox` till primär
+server-byggd preview (publik URL i iframe, alla browsers), med `local-next`
+som garanterad fallback. B125-registreringen i
+[`docs/known-issues.md`](known-issues.md) täcks därmed av sandbox-vägen. Tekniska detaljer kring
 WebContainer-fallet finns i
 [`docs/integrations/webcontainers-notes.md`](integrations/webcontainers-notes.md).
 
