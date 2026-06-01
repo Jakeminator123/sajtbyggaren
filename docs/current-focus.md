@@ -30,16 +30,17 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `939f684` (2026-06-01 kväll UTC, `jakob-be` efter
-sync-merge av `origin/main` post **PR #144**). **PR #144 (`jakob-be → main`)
-är mergad** (squash, `origin/main` = `fba03d0`). Hela hardening-batchen
+Last verified state: `288da76` (2026-06-01 kväll UTC, `jakob-be` fullt synkad
+med `origin/main` post **PR #144** + steward-auto-bumpen `8f7dea5`; jakob-be är
+**0 bakom / 18 före** main). **PR #144 (`jakob-be → main`) är mergad** (squash,
+`origin/main`-innehåll = `fba03d0`, HEAD inkl. auto-bump = `8f7dea5`). Hela hardening-batchen
 ligger nu i `main`: kill-dev-trees orphan-cleanup, B158/B159, copyDirective-
 edge-cases, Streamlit-floor `>=1.49`, B120, #143 subprocess-refactor, B161/B162
 — plus tre review-fixar från denna session (`d03dadd` governance-policy-paritet
 som avblockade CI, `e0e56ce` mixed-address-fast-path + pyproject streamlit-floor
 + kill-dev-trees tom-scope_text, var och en regressionstäckt). `jakob-be` är
-synkad mot `origin/main` via **merge** (`939f684`, trädet identiskt med
-`origin/main`; medvetet INTE `reset --hard` mitt i flödet) och i sync med
+synkad mot `origin/main` via **merge** (medvetet INTE `reset --hard` mitt i
+flödet) och innehåller nu hela `main` inkl. steward-auto-bumpen. I sync med
 origin. Bug-scope: **15 aktiva / 135 stängda**.
 Nästa: (1) #140 Bite B — rebasa mot nya `jakob-be` + skala ned till äkta
 PreviewRuntime-DI-scope, sen review → in i `jakob-be`. (2) Konsolidera docs-PR
