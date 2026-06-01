@@ -1,9 +1,12 @@
 /**
  * spike_vercel_sandbox — körbara entries för Vercel-sandbox-spiken (PoC).
  *
- * INTE produktionskod. En tunn CLI runt
- * ``apps/viewser/lib/vercel-sandbox-spike.ts`` så operatören kan köra spiken
- * manuellt med tokens satta. Wirear sig INTE in i någon route.
+ * INTE produktionskod. En tunn CLI runt den spike-agnostiska runnern
+ * ``apps/viewser/lib/vercel-sandbox-runner.ts`` så operatören kan köra spiken
+ * manuellt med tokens satta. CLI:t äger spike-grinden
+ * (``VIEWSER_SANDBOX_SPIKE=1``); produktadaptern delar samma runner men
+ * opt-in:ar i stället via ``VIEWSER_PREVIEW_MODE=vercel-sandbox``. Wirear sig
+ * INTE in i någon route.
  *
  * Kör (Node 22.18+/24 strippar TS-typer + auto-detekterar ESM, så ingen
  * flagga behövs på modern Node; ``--env-file`` laddar tokens):
@@ -19,7 +22,8 @@
  *
  * På äldre Node: lägg till ``--experimental-strip-types``. Tokens kan också
  * exporteras i shell:et istället för ``--env-file``. Flaggan
- * ``VIEWSER_SANDBOX_SPIKE=1`` måste vara satt (annars degraderar helpern).
+ * ``VIEWSER_SANDBOX_SPIKE=1`` måste vara satt (annars vägrar CLI:t köra
+ * create/cleanup).
  *
  * Vid lyckad ``create`` skrivs maskinvärdena (datum, siteId, totalMs,
  * installMs, buildMs, sandboxId) automatiskt in i mätlogg-tabellen i
@@ -27,7 +31,7 @@
  * desktop/mobil och klistra ``activeCpuMs`` från cleanup-svaret.
  *
  * ``@vercel/sandbox`` resolveras från ``apps/viewser/node_modules`` eftersom
- * helpern bor där — kör därför ``cd apps/viewser && npm install`` först.
+ * runnern bor där — kör därför ``cd apps/viewser && npm install`` först.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -38,7 +42,17 @@ import {
   listGeneratedSiteIds,
   stopSandboxPreview,
   type SandboxPreviewResult,
-} from "../apps/viewser/lib/vercel-sandbox-spike.ts";
+} from "../apps/viewser/lib/vercel-sandbox-runner.ts";
+
+/**
+ * Spike-grind: CLI:t/PoC:n kräver ``VIEWSER_SANDBOX_SPIKE=1``. Runnern själv är
+ * spike-agnostisk; produktadaptern opt-in:ar i stället via
+ * ``VIEWSER_PREVIEW_MODE=vercel-sandbox`` + auth (ADR 0033).
+ */
+const SPIKE_FLAG = "VIEWSER_SANDBOX_SPIKE";
+function spikeEnabled(): boolean {
+  return process.env[SPIKE_FLAG] === "1";
+}
 
 /** Unik ankarrad i mätlogg-tabellen (9 kolumner) att infoga rader efter. */
 const MEASUREMENT_SEPARATOR =
@@ -107,6 +121,12 @@ function printUsage(): void {
 }
 
 async function runCreate(siteId: string, runId?: string): Promise<number> {
+  if (!spikeEnabled()) {
+    process.stderr.write(
+      `Vercel-sandbox-spiken är avstängd. Sätt ${SPIKE_FLAG}=1 för att köra create.\n`,
+    );
+    return 2;
+  }
   const result = await createSandboxPreview({ siteId, runId });
   for (const line of result.logs ?? []) {
     process.stderr.write(`  ${line}\n`);
@@ -139,6 +159,12 @@ async function runCreate(siteId: string, runId?: string): Promise<number> {
 }
 
 async function runCleanup(sandboxId: string): Promise<number> {
+  if (!spikeEnabled()) {
+    process.stderr.write(
+      `Vercel-sandbox-spiken är avstängd. Sätt ${SPIKE_FLAG}=1 för att köra cleanup.\n`,
+    );
+    return 2;
+  }
   const result = await stopSandboxPreview(sandboxId);
   for (const line of result.logs ?? []) {
     process.stderr.write(`  ${line}\n`);

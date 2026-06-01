@@ -1,56 +1,42 @@
 /**
- * vercel-sandbox-spike — flag-gated PoC (spike), INTE en PreviewRuntime-adapter.
+ * vercel-sandbox-runner — server-only Vercel Sandbox-runner.
  *
- * Syfte (operatör-direktiv 2026-06-01): bevisa minsta möjliga sandbox som
- * kan SKAPA + VISA en isolerad preview av en redan-genererad sajt, stabilt
- * och länge nog att faktiskt öppna och bedöma (mobilkänsla, cold-start).
- * Detta är en spik bakom ``VIEWSER_SANDBOX_SPIKE=1`` — den wirear sig INTE
- * in i någon produktionsroute, utökar INTE ``PreviewRuntimeKind`` och rör
- * INTE ``packages/preview-runtime/``. Promotion till en riktig
- * ``vercel-sandbox`` PreviewRuntime-adapter kräver egen ADR (kandidat 0033)
- * + naming-bump + DI-wiring per ADR 0030.
+ * Detta är den ÅTERANVÄNDBARA, spike-agnostiska runnern: den tar en redan-
+ * genererad sajt (`siteId`/`runId`), skapar en isolerad Vercel Sandbox, kör
+ * `npm install` + `next build` + `next start` med publicerad port, och
+ * returnerar `{ url, sandboxId, status, ... }`. Den lever i app-lagret
+ * (`apps/viewser/lib`) eftersom `@vercel/sandbox`-SDK:n enligt ADR 0030 aldrig
+ * får importeras i `packages/preview-runtime/` eller `packages/generation/`.
  *
- * Förhållande till ADR 0030 (preview-provider-portability):
- *   - Den genererade sajten kopieras in OFÖRÄNDRAD och körs som vanlig
- *     Next.js (``npm install`` + ``next build`` + ``next start``). Ingen
- *     leverantörsspecifik kod injiceras i outputen (Regel 1).
- *   - Helpern degraderar ärligt (``status: "failed"`` med pedagogisk text,
- *     mönster: ``packages/preview-runtime/src/adapters/local.ts``-
- *     ``missingHandler``) när flaggan är av, tokens saknas, ``@vercel/sandbox``
- *     inte är installerad, eller bygget på disk saknas. Den kraschar aldrig.
+ * Två konsumenter delar denna runner:
+ *   1. `vercel-sandbox-spike.ts` — flag-gated CLI/PoC (kräver
+ *      `VIEWSER_SANDBOX_SPIKE=1`).
+ *   2. `vercel-sandbox` PreviewRuntime-adaptern via DI i
+ *      `preview-runtime-server.ts` — opt-in via `VIEWSER_PREVIEW_MODE=
+ *      vercel-sandbox` + närvaron av Vercel-auth (ADR 0033).
  *
- * STEP 0 — verifierat mot officiella Vercel-docs (``@vercel/sandbox`` v2,
+ * Runnern själv har INGEN spike-flagga; gatingen ligger hos konsumenterna så
+ * produktadaptern aldrig importerar från en `*-spike.ts`-fil.
+ *
+ * Förhållande till ADR 0030: den genererade sajten kopieras in OFÖRÄNDRAD och
+ * körs som vanlig Next.js. Runnern degraderar ärligt (`status: "failed"` med
+ * pedagogisk text, mönster `local.ts:missingHandler`) när auth/`@vercel/sandbox`/
+ * bygget saknas — den kraschar aldrig.
+ *
+ * STEP 0 — verifierat mot officiella Vercel-docs (`@vercel/sandbox` v2,
  * https://vercel.com/docs/vercel-sandbox, 2026-06-01):
- *   - Auth: OIDC-token (``VERCEL_OIDC_TOKEN``, auto på Vercel / via
- *     ``vercel link`` + ``vercel env pull`` lokalt) ELLER access-token-trion
- *     ``VERCEL_TOKEN`` + ``VERCEL_TEAM_ID`` + ``VERCEL_PROJECT_ID`` som
- *     spreadas in i ``Sandbox.create``.
- *   - Runtime: ``node24`` (default), även ``node22`` / ``node26`` /
- *     ``python3.13``. Vi väljer ``node24`` (matchar Viewser-stacken).
- *   - Publik URL: deklarera porten i ``ports: [3000]`` vid create, hämta
- *     sedan publik https-URL via ``sandbox.domain(3000)``. (Prior skiss
- *     antog en ``--publish-port``-flagga — det stämmer INTE; vi följer docs.)
- *   - TTL: ``timeout`` (ms) vid create, default 5 min, max 45 min Hobby /
- *     5 h Pro. ``sandbox.extendTimeout(ms)`` förlänger. Auto-stop vid utgång.
- *   - Cleanup: ``sandbox.stop()`` avslutar sessionen (returnerar
- *     CPU-/nätverks-/snapshot-metadata för kostnadssignal). Reconnect sker
- *     via ``Sandbox.get({ name })`` — i v2 är ``name`` den hållbara handeln.
- *     Vi exponerar den som ``sandboxId`` i PoC-kontraktet (se nedan).
- *   - Filer: ``sandbox.writeFiles([{ path, content: Buffer }])`` (kataloger
- *     skapas separat via ``mkdir -p``). Käll-filerna kopieras in; ``next``-
- *     bygget körs i sandboxen.
- *
- * Kontrakts-not: ``sandboxId`` i resultatet === ``sandbox.name`` i
- * ``@vercel/sandbox`` v2 (v1 hade ett separat ``sandboxId`` som nu backfillas
- * som ``name``). Cleanup-entryn tar emot detta värde och kör
- * ``Sandbox.get({ name })`` + ``stop()``.
+ *   - Auth: OIDC (`VERCEL_OIDC_TOKEN`) eller access-token-trion
+ *     (`VERCEL_TOKEN` + `VERCEL_TEAM_ID` + `VERCEL_PROJECT_ID`).
+ *   - Runtime `node24`; publik URL via `ports: [3000]` + `sandbox.domain(3000)`;
+ *     TTL via `timeout` (ms); cleanup via `sandbox.stop()` (+ best-effort
+ *     `delete()`); reconnect via `Sandbox.get({ name })`; filer via
+ *     `writeFiles([{ path, content: Buffer }])` (+ `mkdir -p`).
  */
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const SPIKE_FLAG = "VIEWSER_SANDBOX_SPIKE";
 const TTL_ENV = "VIEWSER_SANDBOX_SPIKE_TTL_MS";
 
 const PREVIEW_PORT = 3000;
@@ -138,28 +124,6 @@ export interface SandboxStopResult {
   logs?: string[];
 }
 
-function spikeEnabled(): boolean {
-  return process.env[SPIKE_FLAG] === "1";
-}
-
-/**
- * Opt-ut ur spike-flaggan. CLI:t (PoC) kräver `VIEWSER_SANDBOX_SPIKE=1`;
- * `vercel-sandbox` PreviewRuntime-adaptern (ADR 0033) anropar i stället med
- * `requireSpikeFlag: false` eftersom den är sin egen opt-in via
- * `VIEWSER_PREVIEW_MODE` + närvaron av auth.
- */
-export interface SandboxRunOptions {
-  requireSpikeFlag?: boolean;
-}
-
-/**
- * True om Vercel-auth finns (OIDC eller access-token-trion). Används av
- * adapterns `isAvailable()` så den degraderar ärligt utan att kasta.
- */
-export function hasVercelSandboxAuth(): boolean {
-  return resolveCredentials() !== null;
-}
-
 /**
  * Resolverar Vercel-credentials. OIDC vinner om ``VERCEL_OIDC_TOKEN`` finns
  * (SDK:n läser den automatiskt → vi spreadar ingenting). Annars krävs hela
@@ -182,9 +146,17 @@ function resolveCredentials():
 }
 
 /**
+ * True om Vercel-auth finns (OIDC eller access-token-trion). Används av
+ * adapterns `isAvailable()` så den degraderar ärligt utan att kasta.
+ */
+export function hasVercelSandboxAuth(): boolean {
+  return resolveCredentials() !== null;
+}
+
+/**
  * Resolverar var ``build_site.py`` skrivit den genererade sajten. Speglar
  * ``apps/viewser/lib/local-preview-server.ts:resolveGeneratedDir`` men
- * re-implementeras här så spiken är fristående (vi rör inte den filen).
+ * re-implementeras här så runnern är fristående.
  */
 function resolveGeneratedDir(): string {
   const envOverride = process.env.SAJTBYGGAREN_GENERATED_DIR;
@@ -192,12 +164,8 @@ function resolveGeneratedDir(): string {
     return path.resolve(envOverride.trim());
   }
   // cwd-OBEROENDE: härled repo-roten från denna fils plats, inte
-  // process.cwd(). Det dokumenterade kommandot körs från repo-roten
-  // (``node scripts/spike_vercel_sandbox.ts``) medan Next.js kör från
-  // apps/viewser — en cwd-baserad uträkning hade letat fel beroende på
-  // varifrån processen startades. Filen ligger på
-  // ``<repo>/apps/viewser/lib/vercel-sandbox-spike.ts`` → tre nivåer upp
-  // från ``lib/`` är repo-roten.
+  // process.cwd(). Filen ligger på ``<repo>/apps/viewser/lib/<fil>.ts`` →
+  // tre nivåer upp från ``lib/`` är repo-roten.
   const moduleDir = path.dirname(fileURLToPath(import.meta.url));
   const repoRoot = path.resolve(moduleDir, "..", "..", "..");
   return path.join(repoRoot, "..", "sajtbyggaren-output", ".generated");
@@ -411,20 +379,13 @@ async function waitForPublicUrl(url: string): Promise<boolean> {
  * Sandbox. Stoppar INTE sandboxen vid lyckad start — URL:en lever tills TTL
  * löper ut eller ``stopSandboxPreview`` anropas. Vid fel städas en redan
  * skapad sandbox upp så vi inte läcker kostnad.
+ *
+ * Spike-agnostisk: konsumenter (CLI vs adapter) ansvarar för sin egen gating.
  */
 export async function createSandboxPreview(
   request: SandboxPreviewRequest,
-  options: SandboxRunOptions = {},
 ): Promise<SandboxPreviewResult> {
   const logs: string[] = [];
-  const requireSpikeFlag = options.requireSpikeFlag ?? true;
-
-  if (requireSpikeFlag && !spikeEnabled()) {
-    return failed(
-      `Vercel-sandbox-spiken är avstängd. Sätt ${SPIKE_FLAG}=1 för att ` +
-        "aktivera PoC:n. Detta är en konfigurations-grind, inte ett fel.",
-    );
-  }
 
   const siteIdError = validateSiteId(request.siteId ?? "");
   if (siteIdError) {
@@ -436,7 +397,7 @@ export async function createSandboxPreview(
     return failed(
       "Vercel-credentials saknas. Sätt antingen VERCEL_OIDC_TOKEN (via " +
         "`vercel link` + `vercel env pull`) eller trion VERCEL_TOKEN + " +
-        "VERCEL_TEAM_ID + VERCEL_PROJECT_ID. PoC:n degraderar hellre ärligt " +
+        "VERCEL_TEAM_ID + VERCEL_PROJECT_ID. Runnern degraderar hellre ärligt " +
         "än kraschar.",
     );
   }
@@ -457,7 +418,7 @@ export async function createSandboxPreview(
     return failed(
       "@vercel/sandbox är inte installerad i apps/viewser. Kör " +
         "`cd apps/viewser && npm install` (paketet ligger i package.json). " +
-        "PoC:n degraderar ärligt istället för att krascha.",
+        "Runnern degraderar ärligt istället för att krascha.",
       logs,
     );
   }
@@ -475,7 +436,7 @@ export async function createSandboxPreview(
   );
 
   const ttlMs = clampTtl(request.ttlMs);
-  const sandboxName = `sajtbyggaren-spike-${slug(request.siteId)}-${Date.now()}`;
+  const sandboxName = `sajtbyggaren-preview-${slug(request.siteId)}-${Date.now()}`;
 
   const t0 = Date.now();
   let createMs: number | undefined;
@@ -494,7 +455,7 @@ export async function createSandboxPreview(
       runtime: SANDBOX_RUNTIME,
       ports: [PREVIEW_PORT],
       timeout: ttlMs,
-      // Ephemeral PoC: ingen auto-snapshot på stop (sparar snapshot-storage).
+      // Ephemeral preview: ingen auto-snapshot på stop (sparar snapshot-storage).
       persistent: false,
     });
     createMs = Date.now() - t0;
@@ -594,23 +555,15 @@ export async function createSandboxPreview(
 }
 
 /**
- * Stoppa en spike-preview separat (manuell verifiering, TTL-städning eller
- * explicit anrop). Idempotent och icke-kastande. ``sandboxId`` är
- * ``sandbox.name`` från ``createSandboxPreview``.
+ * Stoppa en preview separat (manuell verifiering, TTL-städning eller explicit
+ * anrop). Idempotent och icke-kastande. ``sandboxId`` är ``sandbox.name`` från
+ * ``createSandboxPreview``.
  */
 export async function stopSandboxPreview(
   sandboxId: string,
-  options: SandboxRunOptions = {},
 ): Promise<SandboxStopResult> {
   const logs: string[] = [];
-  const requireSpikeFlag = options.requireSpikeFlag ?? true;
 
-  if (requireSpikeFlag && !spikeEnabled()) {
-    return {
-      status: "failed",
-      error: `Vercel-sandbox-spiken är avstängd. Sätt ${SPIKE_FLAG}=1.`,
-    };
-  }
   if (!sandboxId || !sandboxId.trim()) {
     return { status: "failed", error: "stopSandboxPreview kräver ett sandboxId." };
   }
@@ -690,5 +643,5 @@ function slug(value: string): string {
 }
 
 function messageFromError(error: unknown): string {
-  return error instanceof Error ? error.message : "Okänt fel i vercel-sandbox-spiken.";
+  return error instanceof Error ? error.message : "Okänt fel i Vercel Sandbox-runnern.";
 }

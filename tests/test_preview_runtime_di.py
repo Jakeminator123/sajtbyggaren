@@ -138,8 +138,38 @@ def test_vercel_sandbox_adapter_is_wired() -> None:
     assert "vercelSandbox?: vercelSandboxPreviewRuntimeHandlers" in handlers
     assert "vercelSandbox:" in viewser_wiring
     assert "createSandboxPreview(" in viewser_wiring
-    assert "requireSpikeFlag: false" in viewser_wiring
+    # Produktadaptern måste använda den spike-agnostiska runnern, ALDRIG en
+    # ``*-spike.ts``-fil (coach-review #147). Spike-grinden bor bara i CLI:t.
+    assert 'from "./vercel-sandbox-runner"' in viewser_wiring
+    assert "vercel-sandbox-spike" not in viewser_wiring
     assert 'currentRuntime(envWithPreviewMode("vercel-sandbox"))' in compile_test
+
+
+@pytest.mark.tooling
+def test_vercel_sandbox_runner_is_spike_agnostic() -> None:
+    """Cleanup (coach-review #147): den återanvändbara runnern är icke-spike-
+    namngiven och innehåller ingen spike-flagga; spike-CLI:t äger grinden och
+    delegerar till runnern. SDK:n bor i runnern (app-lagret). Det finns ingen
+    ``*-spike.ts``-modul kvar att importera produktadaptern från."""
+    runner = (VIEWSER_DIR / "lib" / "vercel-sandbox-runner.ts").read_text(
+        encoding="utf-8"
+    )
+    cli = (REPO_ROOT / "scripts" / "spike_vercel_sandbox.ts").read_text(
+        encoding="utf-8"
+    )
+
+    # Runnern är spike-agnostisk: ingen flagg-grind (varken SPIKE_FLAG-konst
+    # eller spikeEnabled-check), men äger SDK-anropet. (TTL-env-namnet delas
+    # fortfarande med spiken, vilket är ok — det är bara en knob, inte en grind.)
+    assert "SPIKE_FLAG" not in runner
+    assert "spikeEnabled" not in runner
+    assert 'import("@vercel/sandbox")' in runner
+    # Spike-CLI:t äger grinden och delegerar till samma runner.
+    assert "VIEWSER_SANDBOX_SPIKE" in cli
+    assert "spikeEnabled" in cli
+    assert "vercel-sandbox-runner" in cli
+    # Den gamla wrapper-modulen är borttagen (produktadaptern importerar runnern).
+    assert not (VIEWSER_DIR / "lib" / "vercel-sandbox-spike.ts").exists()
 
 
 @pytest.mark.tooling

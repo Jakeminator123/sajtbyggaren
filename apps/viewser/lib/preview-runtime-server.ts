@@ -14,7 +14,7 @@ import {
   createSandboxPreview,
   hasVercelSandboxAuth,
   stopSandboxPreview,
-} from "./vercel-sandbox-spike";
+} from "./vercel-sandbox-runner";
 
 /**
  * Server-side DI-wiring för Preview Runtime.
@@ -72,21 +72,18 @@ export function installViewserPreviewRuntimeHandlers(): void {
     },
     vercelSandbox: {
       // VercelSandboxRuntime (ADR 0033, primärt förstahandsval). Den konkreta
-      // ``@vercel/sandbox``-körningen bor i ``vercel-sandbox-spike.ts`` (app-
-      // lagret), aldrig i ``packages/preview-runtime`` (ADR 0030). Adaptern är
-      // tillgänglig bara när Vercel-auth finns; annars degraderar den ärligt.
-      // ``requireSpikeFlag: false`` — adaptern är sin egen opt-in via
-      // ``VIEWSER_PREVIEW_MODE``, inte via PoC-flaggan.
+      // ``@vercel/sandbox``-körningen bor i ``vercel-sandbox-runner.ts`` (app-
+      // lagret, spike-agnostisk runner), aldrig i ``packages/preview-runtime``
+      // (ADR 0030) och aldrig i en ``*-spike.ts``-fil. Adaptern är tillgänglig
+      // bara när Vercel-auth finns; annars degraderar den ärligt. Opt-in sker
+      // via ``VIEWSER_PREVIEW_MODE=vercel-sandbox``, inte via PoC-flaggan.
       isAvailable: () => hasVercelSandboxAuth(),
       start: async (config) => {
         const siteId = config.siteId;
         if (!siteId) {
           return { status: "failed", error: "VercelSandboxRuntime kräver siteId." };
         }
-        const result = await createSandboxPreview(
-          { siteId, runId: config.runId },
-          { requireSpikeFlag: false },
-        );
+        const result = await createSandboxPreview({ siteId, runId: config.runId });
         return {
           status: result.status === "ready" ? "ready" : "failed",
           url: result.url,
@@ -96,7 +93,7 @@ export function installViewserPreviewRuntimeHandlers(): void {
         };
       },
       stop: async (sessionId) => {
-        await stopSandboxPreview(sessionId, { requireSpikeFlag: false });
+        await stopSandboxPreview(sessionId);
       },
     },
   });
