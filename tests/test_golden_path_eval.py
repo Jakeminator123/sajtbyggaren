@@ -112,6 +112,43 @@ def test_assess_contact_cta_default_kontakt_slug_misses_clinic_route() -> None:
 
 
 @pytest.mark.tooling
+def test_assess_contact_cta_placeholder_fields_warn_not_false_pass() -> None:
+    """Placeholder contact data must keep status at warn, never a clean pass.
+
+    Guards against the route-aware fix accidentally turning the legitimate
+    placeholderContactFields penalty into a false pass: route + href resolve
+    correctly, so the only remaining signal is the dummy contact data.
+    """
+
+    from scripts.run_golden_path_eval import BASELINE_CASES, assess_contact_cta
+
+    naprapat = next(c for c in BASELINE_CASES if c.case_id == "naprapat-stockholm")
+    plan_routes = ["/", "/behandlingar", "/om-oss", "/kontakta-oss"]
+    fs_routes = ["/", "/behandlingar", "/om-oss", "/kontakta-oss"]
+    text = '<a href={"/kontakta-oss"}>Kontakta oss</a>'
+
+    result = assess_contact_cta(
+        naprapat,
+        plan_routes,
+        fs_routes,
+        text,
+        {"placeholderContactFields": ["phone", "email", "addressLines", "openingHours"]},
+        contact_path="/kontakta-oss",
+        products_path="/produkter",
+    )
+
+    assert result["hasContactRoute"] is True
+    assert result["hasContactHref"] is True
+    assert result["status"] == "warn"
+    assert result["placeholderContactFields"] == [
+        "phone",
+        "email",
+        "addressLines",
+        "openingHours",
+    ]
+
+
+@pytest.mark.tooling
 def test_golden_path_eval_writes_all_four_cases_without_llm_key(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
