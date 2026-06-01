@@ -277,3 +277,30 @@ def test_b157_round3_uses_process_tree_kill_on_windows() -> None:
         "shutdown-pathen. Lägg in ``await killProcessTree(child, ...)`` "
         "i Windows-grenen (där ``process.platform === \"win32\"``)."
     )
+
+
+def test_read_active_build_dir_rejects_present_nonstring_buildpath() -> None:
+    """``readActiveBuildDir`` måste spegla ``immutable_builds.read_active_build_dir``.
+
+    B-Codex 2026-06-01 (TS/Python-paritetslucka): Python avvisar en närvarande
+    ``buildPath`` som inte exakt är ``builds/<activeBuildId>`` oavsett typ
+    (``build_path is not None and build_path != ...``). TS gated tidigare check:en
+    på ``typeof buildPath === "string"``, så ett närvarande icke-string-värde
+    (number/object i en manipulerad/korrupt ``current.json``) slank igenom. Den
+    här strukturella regressionen låser att TS nu avvisar alla närvarande
+    icke-matchande värden (bara ``undefined``/``null`` släpps igenom).
+    """
+    source = _read_source()
+    # Den gamla string-only-gaten får inte finnas kvar.
+    assert 'typeof buildPath === "string" && buildPath !==' not in source, (
+        "``readActiveBuildDir`` gatar fortfarande buildPath-mismatch-check:en "
+        'på ``typeof buildPath === "string"``, vilket släpper igenom ett '
+        "närvarande icke-string buildPath. Spegla Python: avvisa varje "
+        "närvarande buildPath som inte är exakt ``builds/${activeBuildId}``."
+    )
+    # Spegel-mönstret: avvisa när närvarande (undefined/null tillåtet) + mismatch.
+    assert "buildPath !== undefined" in source and "buildPath !== null" in source, (
+        "``readActiveBuildDir`` måste avvisa ett närvarande buildPath "
+        "(undefined/null tillåtet) som inte är ``builds/${activeBuildId}`` — "
+        "spegla ``immutable_builds.read_active_build_dir``."
+    )

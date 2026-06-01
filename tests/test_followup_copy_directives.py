@@ -258,6 +258,50 @@ def test_quoted_value_after_to_is_still_respected() -> None:
 
 
 @pytest.mark.tooling
+def test_extract_unquoted_include_token_targets_hero_tagline() -> None:
+    """Unquoted "inkludera TEST-JAKOB i hero" surfaces the token (B-Codex 2026-06-01).
+
+    Previously only quoted tokens were extracted, so the natural unquoted
+    phrasing of the ADR 0034 acceptance case was a silent no-op.
+    """
+    directives = _extract_copy_directives("inkludera TEST-JAKOB i hero", language="sv")
+    assert directives == [
+        {
+            "target": "tagline",
+            "operation": "include-token",
+            "payload": "TEST-JAKOB",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "inkludera mer text i hero",  # no token-like word -> honest no-op
+        "lägg till lite mer i rubriken",  # vague, lowercase
+    ],
+)
+def test_extract_unquoted_include_without_token_is_no_op(prompt: str) -> None:
+    assert _extract_copy_directives(prompt, language="sv") == []
+
+
+@pytest.mark.tooling
+def test_extract_unquoted_include_token_with_digits() -> None:
+    """A digit-bearing token (campaign code) also qualifies."""
+    directives = _extract_copy_directives("inkludera SALE2026 i hero", language="sv")
+    assert directives == [
+        {
+            "target": "tagline",
+            "operation": "include-token",
+            "payload": "SALE2026",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
 def test_merge_applies_company_name_and_records_directive() -> None:
     merged = _merge(OPERATOR_RENAME_PROMPT)
     assert merged["company"]["name"] == "Jakobs Örhängen"

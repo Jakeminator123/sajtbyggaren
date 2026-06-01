@@ -2672,16 +2672,65 @@ def _extract_replace_value(follow_up_prompt: str) -> str | None:
     return None
 
 
+# Token-like words for the UNQUOTED include path: a string with at least one
+# uppercase letter or a digit (e.g. ``TEST-JAKOB`` or a campaign code) reads as
+# a deliberate token; a plain lowercase word ("mer", "text") does not.
+# Keyword/target words are excluded so "inkludera X i hero" never returns
+# "hero" as the token.
+_UNQUOTED_INCLUDE_TOKEN_RE = re.compile(r"[A-Za-zÅÄÖåäö0-9][A-Za-zÅÄÖåäö0-9-]*")
+_COPY_DIRECTIVE_TOKEN_STOPWORDS: frozenset[str] = frozenset(
+    word.strip().lower()
+    for group in (
+        _COPY_DIRECTIVE_TAGLINE_KEYWORDS,
+        _COPY_DIRECTIVE_NAME_KEYWORDS,
+        _COPY_DIRECTIVE_HERO_KEYWORDS,
+        _COPY_DIRECTIVE_INCLUDE_KEYWORDS,
+        _COPY_DIRECTIVE_REPLACE_KEYWORDS,
+    )
+    for word in group
+)
+
+
+def _first_unquoted_include_token(text: str) -> str | None:
+    """Return the first token-like word in ``text`` or ``None``.
+
+    Token-like = contains an uppercase letter or a digit and is not a
+    copy-directive keyword/target word. This keeps a natural unquoted prompt
+    like "inkludera TEST-JAKOB i hero" working while a vague "inkludera mer
+    text" stays an honest no-op rather than grabbing a stray word.
+    """
+    for candidate in _UNQUOTED_INCLUDE_TOKEN_RE.findall(text):
+        token = candidate.strip("-")
+        if len(token) < 2:
+            continue
+        if not any(ch.isupper() or ch.isdigit() for ch in token):
+            continue
+        if token.lower() in _COPY_DIRECTIVE_TOKEN_STOPWORDS:
+            continue
+        return token
+    return None
+
+
 def _extract_include_token(follow_up_prompt: str) -> str | None:
-    """Pull a quoted token to include, preferring one after an include keyword."""
+    """Pull a token to include, preferring a quoted span after an include keyword.
+
+    Falls back to an UNQUOTED token-like word after the include keyword
+    (B-Codex 2026-06-01): "inkludera TEST-JAKOB i hero" without quotes is the
+    natural way operators phrase the ADR 0034 acceptance case, and used to be a
+    silent no-op because only quoted spans were extracted.
+    """
     lowered = follow_up_prompt.lower()
     for keyword in _COPY_DIRECTIVE_INCLUDE_KEYWORDS:
         position = lowered.find(keyword.strip())
         if position == -1:
             continue
-        match = _QUOTED_SPAN_RE.search(follow_up_prompt[position:])
+        after = follow_up_prompt[position + len(keyword.strip()) :]
+        match = _QUOTED_SPAN_RE.search(after)
         if match:
             return match.group(1)
+        token = _first_unquoted_include_token(after)
+        if token:
+            return token
     match = _QUOTED_SPAN_RE.search(follow_up_prompt)
     return match.group(1) if match else None
 
