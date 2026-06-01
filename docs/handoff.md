@@ -1,8 +1,35 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-01 UTC. Arbets-branch `jakob-be` är på `0be2f42`
-(pushad till `origin/jakob-be`, **EJ i `main`, ingen öppen PR**). `origin/main`
-ligger kvar på B157-level-4-state (`9e1a025` via PR #137).
+**Datum:** 2026-06-01 UTC. Arbets-branch `jakob-be` är på `f62bd40`
+(pushad till `origin/jakob-be`, **EJ i `main`, ingen sync-PR än**). `origin/main`
+ligger kvar på B157-level-4-state (`9e1a025` via PR #137); `jakob-be` är
+10 commits före.
+
+## Orchestrator-pass 2026-06-01 PM — tre scouts gröna, merge-ordning satt
+
+Tre read-only scouts kördes (ingen produktkod rörd):
+
+- Backend-diff `jakob-be → main` (10 commits) bedöms grön. copyDirectives väg A
+  (`641abc9`), contact-route eval-fix (`0ff7657` + `0cc146c`) och placeholder-
+  contact-suppression (`f62bd40`) är säkra; noll scope-läcka mot Bite B eller
+  Christopher. En gul copy-kvalitetsnot: okvoterad multi-clause-rename kan få med
+  svansord i `company.name`; kvoterad form undviker den.
+- PR-triage: fyra öppna PRs (#138–#141). Rekommenderad main-ordning är #139
+  först, sedan sync-PR `jakob-be → main`.
+- #139-djupgranskning: ready/clean, alla checks gröna. Bär både B155-no-op-signal
+  och copyDirectives väg B-UI. Förbehåll: ingen godkänd review än (bekräfta
+  bugbot-trådar), och additiv scope-läcka i `apps/viewser/app/api/prompt/route.ts`,
+  `apps/viewser/lib/runs.ts` och `scripts/check_term_coverage.py` utan
+  `[scope-leak]`-tagg (operatörsbeslut).
+
+Merge-sekvens (kräver operatörs-OK per merge): #139 → `christopher-ui` gör
+`reset --hard origin/main` + `--force-with-lease`. Sedan öppnar `jakob-be`
+sync-PR, löser docs-konflikter (`current-focus.md` + `known-issues.md`), mergar
+→ `jakob-be` gör samma reset. `jakob-be` får INTE reseta i mellanläget. Bite B
+(#140) mergas helst in i `jakob-be` före sync-PR så den följer med samma
+main-leverans. Live-checkar före merge: okvoterad rename i Viewser, sajt utan
+kontaktuppgifter (inga dummyvärden men äkta data byte-identisk), och
+`copyDirectiveModel` fyrar bara i Viewser-produktionsflödet med nyckel.
 
 ## Status (2026-06-01) — ADR 0034 väg A first slice landad på jakob-be
 

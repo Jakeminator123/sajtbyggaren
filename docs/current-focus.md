@@ -30,8 +30,8 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `0be2f42` (2026-06-01 UTC, jakob-be — EJ i `main`, ingen PR än). ADR 0034 väg A first slice + Christopher-handoff för väg B. `641abc9` = copyDirectives first slice (fri följdprompt → synlig sajt-ändring via validerade `directives.copyDirectives`); `0be2f42` = docs(agent-prompts) Christopher-handoff. Tidigare main-checkpoint: `61ec707`/steward-auto `9e1a025` (B157 level 4 via PR #137). `origin/jakob-be` är i synk med lokalt. Alla guards gröna (governance, rules_sync, term_coverage --strict, ruff, sprintvakt) + 25 nya copydir-tester. **Riktigt LLM-anrop verifierat** (copyDirectiveModel, ej mock).
-Nya PRs sedan föregående checkpoint: inga (jakob-be ligger 2 commits före `origin/main` utan PR).
+Last verified state: `f62bd40` (2026-06-01 UTC, jakob-be — EJ i `main`, ingen sync-PR än). ADR 0034 väg A first slice + contact-route eval-fix + placeholder-contact-suppression, ovanpå Christopher-handoff för väg B. Nya commits sedan `0be2f42`: `7a5fcf6` (steward close-out ADR 0034 väg A + Bite B parallell-handoff), `0ff7657` (eval: poängsätt contact-CTA via routePlan-id, ej hårdkodad `/kontakt`), `0cc146c` (eval-test: placeholder-contact ger warn, ej falsk pass), `f62bd40` (suppress placeholder-kontaktdata i 6 ytor; äkta data byte-identisk). Tidigare main-checkpoint: `9e1a025` (B157 level 4 via PR #137). `origin/jakob-be` 10 commits före `origin/main`. Tre read-only scouts 2026-06-01 PM: backend-diff grön, PR-triage + #139-djupgranskning klara (se [`docs/handoff.md`](handoff.md) "Orchestrator-pass 2026-06-01 PM"). Alla guards gröna (governance, rules_sync, term_coverage --strict, ruff, sprintvakt) + 25 nya copydir-tester. **Riktigt LLM-anrop verifierat** (copyDirectiveModel, ej mock).
+Nya PRs sedan föregående checkpoint: fyra öppna — #139 (`christopher-ui → main`, ready/clean, alla checks gröna, bär B155- + copyDirectives-UI), #140 (`cursor/preview-runtime-bite-b-di → jakob-be`, draft, Bite B via dependency-injection), #138 + #141 (docs Cloud-setup till `main`, draft; #141 har en term-coverage-enradsfix kvar). Rekommenderad main-ordning: #139 först, sedan sync-PR `jakob-be → main`.
 
 **Aktuell priordning + färsk orchestrator-handoff: se
 [`docs/handoff.md`](handoff.md) "Status" + "Priorordning nu".** Kort: ADR 0034
@@ -56,9 +56,26 @@ PR mot `jakob-be`** — får EJ röra copyDirectives-filerna (se handoff
 
 ## Pågående/öppna PR:s just nu
 
-**Inga öppna PRs.** PR #133 mergad till `main` (post-Bite-A-batch +
-alla reviewer-trådar). B157 akut-fix + followup landade direkt på
-`jakob-be` ovanpå `4196c17` post-merge-bumpen.
+**Fyra öppna PRs (2026-06-01 PM):**
+
+- **#139** `christopher-ui → main` — ready/clean, alla checks gröna. UI/UX-batch
+  som bär både B155 FloatingChat-no-op-signal och copyDirectives väg B-UI
+  (success/no-op-feedback). Scout-dom: merge-redo, men bekräfta Bugbot-trådar
+  (ingen godkänd review än) + notera additiv scope-läcka i `route.ts`/`runs.ts`/
+  `check_term_coverage.py` utan `[scope-leak]`-tagg (operatörsbeslut).
+- **#140** `cursor/preview-runtime-bite-b-di → jakob-be` — draft. Bite B
+  PreviewRuntime via dependency-injection. Inom scope; rör ej copyDirectives-
+  filer eller Christopher-UI. Mergas in i `jakob-be`, ej `main`.
+- **#138** `cursor/cloud-dev-env-setup-a928 → main` — draft, docs (AGENTS.md
+  Cloud-gotchas). Clean.
+- **#141** `cursor/cloud-agents-md-env-notes-7a3f → main` — draft, docs.
+  Governance failar (term-coverage flaggar ett versalt backtick-ord i AGENTS.md);
+  enradsfix kvar. Nästan-dubblett av #138 → konsolidera till en PR.
+
+Rekommenderad main-merge-ordning: **#139 först**, sedan sync-PR
+`jakob-be → main` (löser bara docs-konflikter i `current-focus.md` +
+`known-issues.md`). `jakob-be` får EJ `reset --hard origin/main` i mellanläget
+— `merge`/`rebase` in `main`, lös docs, öppna sync-PR.
 
 **Christophers `origin/christopher-ui`** — efter PR #117 är hans branch
 synkad mot post-#117-main. Han har under operator-OK scope-leak
