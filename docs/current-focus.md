@@ -30,7 +30,27 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `7b6fb6c` (2026-05-27 natt, christopher-ui local — B122
+Last verified state: pending (2026-06-01 fm, christopher-ui local — merge
+av `origin/main` (PR #136 backend-batch: B157, BO6, B155-backend, quality-
+gate) klar. 11 merge-konflikter lösta: 7 i kod (FloatingChat,
+BuilderActions, ComparePreviewModal, DiscoveryWizard, wizard-types,
+PromptBuilder, ViewerPanel) + 4 i docs (agent-inbox, current-focus,
+known-issues, workboard). Code-conflicts prioriterade `christopher-ui`s
+minimalist-UI/UX där backend-fixar från `main` ändå behölls (B151
+matchMedia-listener, B152 snap-x-bredd, B153-providern). B155 UI
+implementerad i `floating-chat.tsx`: `summarizeBuildResult` läser nu
+`payload.buildResult.appliedVisibleEffect` (auktoritativ källa per
+Jakobs PR #136) och flippar success-bubblan till en ärlig info-rad
+("Ingen synlig ändring fångades — prova en mer specifik följdprompt")
+när motorn rapporterar `applied=false`. Två nya regressionstester
+låser kontraktet (`test_b155_floating_chat_reads_applied_visible_effect`
++ `test_b155_floating_chat_no_op_does_not_claim_success`) plus uppdaterat
+`test_b153_device_preset_*`-testet pekar nu på providern istället för
+viewer-panel.tsx. Slutkontroll grön: tsc 1306 filer, ruff 0 findings,
+pytest 1300+ pass / 3 skipped, 18 governance-policies, rule-mirrors i
+synk, term-coverage --strict 0 unknowns. Sync-PR `christopher-ui` →
+`main` öppnas härnäst. Tidigare verified state: `7b6fb6c` (2026-05-27
+natt, christopher-ui local — B122
 stängd. `/api/prompt` exponerar nu NDJSON-stream på `Accept: application/
 x-ndjson` med två events: `{stage:"building"}` exakt mellan Phase 1 och
 Phase 2, samt `{stage:"done", ...result}` som slutevent. PromptBuilder

@@ -317,8 +317,37 @@ type PromptApiResponse = {
   version?: number | null;
   buildStatus?: string | null;
   briefSource?: string | null;
+  // B155 (2026-05-30): följdpromptar får ``appliedVisibleEffect`` +
+  // ``appliedVisibleEffectReason`` i ``build-result.json`` (auktoritativ
+  // källa enligt Jakob — trace-event ``followup.no_op_detected`` plockas
+  // inte upp av ``parseTraceLine`` som bara känner sju kända fält).
+  // Builden går alltid igenom, men när motorn upptäcker att ingen synlig
+  // ändring landade flippar vi success-bubblan till en ärlig
+  // info-variant istället för att lova "Klart!". Skrivs bara på
+  // followup-builds; init-builds saknar fältet (testat i
+  // tests/test_followup_honest_no_op.py::test_init_build_omits_*).
+  buildResult?: Record<string, unknown>;
   error?: string;
 };
+
+// B155: avläs ``appliedVisibleEffect`` från build-result-payloaden utan
+// att lita på dess typ. Returnerar `null` när builden inte är en
+// follow-up (init-läge skriver inte fältet) eller när bygget gick i
+// fel/degraded läge — detta gör success-grenen i
+// ``summarizeBuildResult`` säker mot fält-drift utan att vi behöver
+// flytta no-op-logiken till bygg-routen.
+function extractAppliedVisibleEffect(
+  buildResult: Record<string, unknown> | undefined,
+): { applied: boolean; reason: string | null } | null {
+  if (!buildResult) return null;
+  const applied = buildResult.appliedVisibleEffect;
+  if (typeof applied !== "boolean") return null;
+  const reasonRaw = buildResult.appliedVisibleEffectReason;
+  return {
+    applied,
+    reason: typeof reasonRaw === "string" ? reasonRaw : null,
+  };
+}
 
 type Position = { x: number; y: number };
 
@@ -514,6 +543,21 @@ function summarizeBuildResult(
       } else {
         versionText = ` Version 1 publicerad.`;
       }
+    }
+    // B155 (2026-05-30): backend signalerar via build-result.json om
+    // följdprompten faktiskt gav en synlig ändring. När motorn
+    // upptäcker att inget visible-file-set ändrats (eller att intent
+    // klassats som "no semantic change") byter vi success-grenen till
+    // en ärlig info-rad så operatören inte gissar att texten landade
+    // när den inte gjorde det. Visas bara på followups (init saknar
+    // fältet) och bara när effect.applied === false.
+    const effect = extractAppliedVisibleEffect(payload.buildResult);
+    if (effect && effect.applied === false) {
+      return {
+        content:
+          `Ingen synlig ändring fångades.${versionText} Prova en mer specifik följdprompt — t.ex. peka ut vilken sektion som ska ändras eller vilken text som ska bytas ut.`,
+        variant: "info",
+      };
     }
     const changes = summarizeChangesFromPrompt(userPrompt);
     return {

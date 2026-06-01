@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** kommer räknas om av `python scripts/list_open_bugs.py` efter merge — preliminärt 14 aktiva / 131 stängda baserat på union av christopher-ui (B122 stängd) + main (B147/B148/B149/B150/B151/B152/B153/B154/B157/B90/B91/B92/B93/B97/B98 stängda). Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 14 aktiva, 0 misplaced (av 0), 5 unknown, 131 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en

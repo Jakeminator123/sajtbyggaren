@@ -2067,20 +2067,25 @@ def test_b152_compare_modal_pane_width_accounts_for_gap() -> None:
 
 
 @pytest.mark.tooling
-def test_b153_viewer_panel_hydrates_full_device_preset() -> None:
-    """B153: sessionStorage-hydration i viewer-panel.tsx måste inkludera
-    ``"full"`` bland accepterade Device-värden. Tidigare listades bara
+def test_b153_device_preset_hydrates_full_device_preset() -> None:
+    """B153: sessionStorage-hydration måste inkludera
+    ``"full"`` bland accepterade DevicePreset-värden. Tidigare listades bara
     ``"mobile"``/``"tablet"``/``"laptop"`` så en sparad ``"full"``-preset
     relied på att default-värdet råkade vara ``"full"``. Inkonsekvent
     med övriga preset-värden (alla restoreras explicit) och om default
     någonsin ändras tappas ``"full"``. AI Bug Review (P 84 %, impact
     5/10) flaggade detta på PR #117.
 
+    Hydration-logiken flyttades 2026-05-26 från ``viewer-panel.tsx`` till
+    den nya ``device-preset-context.tsx`` så toggle-UI:t kunde lyftas in i
+    FloatingChat:s footer utan prop-drilling. Testet följer hydrationen
+    dit; B153-fixen lever kvar i providern.
+
     Lock: hydration-checken ska innehålla alla fyra Device-värden.
     """
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
-        encoding="utf-8"
-    )
+    text = (
+        VIEWSER_DIR / "components" / "device-preset-context.tsx"
+    ).read_text(encoding="utf-8")
 
     pattern = re.compile(
         r'stored\s*===\s*["\']mobile["\'][\s\S]{0,200}?'
@@ -2090,8 +2095,82 @@ def test_b153_viewer_panel_hydrates_full_device_preset() -> None:
         re.MULTILINE,
     )
     assert pattern.search(text), (
-        "viewer-panel.tsx sessionStorage-hydration saknar ``stored === "
-        "'full'`` i listan av accepterade Device-värden. Alla fyra "
-        "Device-värden måste restoreras explicit per B153 — annars "
-        "bryts persistensen för 'full' om default-värdet någonsin ändras."
+        "device-preset-context.tsx sessionStorage-hydration saknar "
+        "``stored === 'full'`` i listan av accepterade DevicePreset-värden. "
+        "Alla fyra preset-värden måste restoreras explicit per B153 — "
+        "annars bryts persistensen för 'full' om default-värdet någonsin "
+        "ändras."
+    )
+
+
+@pytest.mark.tooling
+def test_b155_floating_chat_reads_applied_visible_effect() -> None:
+    """B155 (2026-05-30): FloatingChat måste läsa ``appliedVisibleEffect``
+    från ``build-result.json`` (auktoritativ källa enligt Jakobs
+    PR #136). Trace-eventet ``followup.no_op_detected`` skickar samma
+    information men ``parseTraceLine`` plockar bara sju kända fält så
+    UI-skiktet får inte bero på trace-payloaden.
+
+    Kontraktet låser tre saker:
+      1. ``PromptApiResponse`` exponerar ``buildResult`` så fältet faktiskt
+         når success-grenen i ``summarizeBuildResult``.
+      2. En extractor läser specifikt ``appliedVisibleEffect`` (boolean)
+         och ``appliedVisibleEffectReason`` (string) — annars riskerar vi
+         att vi börjar parsa trace-eventets ``reason`` av bekvämlighet.
+      3. När ``applied === false`` byts success-bubblan till en ärlig
+         info-rad i stil med "Ingen synlig ändring fångades" — så
+         operatören inte luras tro att fri-text-följdprompten landade.
+    """
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx"
+    ).read_text(encoding="utf-8")
+
+    assert "buildResult?: Record<string, unknown>" in text, (
+        "PromptApiResponse måste deklarera ``buildResult`` så följdprompts "
+        "build-result.json når summarizeBuildResult — annars kan UI:t inte "
+        "läsa appliedVisibleEffect."
+    )
+    assert 'buildResult.appliedVisibleEffect' in text, (
+        "FloatingChat måste läsa ``appliedVisibleEffect`` från build-result "
+        "(auktoritativ källa per B155). Trace-eventet är inte ett godkänt "
+        "alternativ — parseTraceLine plockar inte ``reason``-fältet."
+    )
+    assert 'appliedVisibleEffectReason' in text, (
+        "Reason-fältet måste finnas i extraheringen så vi kan utvidga "
+        "info-bubblan med varför ingen synlig effekt sågs (ADR 0034 path)."
+    )
+    assert 'extractAppliedVisibleEffect' in text, (
+        "Helper ``extractAppliedVisibleEffect`` ska kapsla boolean-checken "
+        "så den inte upprepas i flera grenar — om operatören får en "
+        "follow-up som bygger ok men flippar appliedVisibleEffect=false "
+        "ska info-grenen fortfarande träffa."
+    )
+    assert "Ingen synlig ändring fångades" in text, (
+        "Den ärliga raden måste ha en igenkännbar text-anchor (ADR-stil) "
+        "så fil-disciplin inte tappar B155 under refaktorisering."
+    )
+
+
+@pytest.mark.tooling
+def test_b155_floating_chat_no_op_does_not_claim_success() -> None:
+    """B155: säkerställ att success-grenen i ``summarizeBuildResult``
+    *inte* returnerar variant ``"success"`` när ``appliedVisibleEffect``
+    är ``false``. Pattern matchar att info-grenen kommer FÖRE
+    standardsuccess-grenen i koden, och att den explicit sätter
+    variant ``"info"``.
+    """
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx"
+    ).read_text(encoding="utf-8")
+
+    pattern = re.compile(
+        r"effect\.applied\s*===\s*false[\s\S]{0,400}?"
+        r'variant:\s*"info"',
+        re.MULTILINE,
+    )
+    assert pattern.search(text), (
+        "Info-grenen för B155 (no-op-followup) saknas eller har bytt form. "
+        "När backend rapporterar ``appliedVisibleEffect: false`` ska UI:t "
+        "byta success-bubblan till variant ``\"info\"`` med en ärlig text "
+        "— annars luras operatören att tro att följdprompten landade."
     )
