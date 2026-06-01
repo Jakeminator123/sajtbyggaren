@@ -64,6 +64,7 @@ this automatically.
 
 | Service           | Command                                                                     | Notes                                                                                                                                     |
 | ----------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Viewser (operator UI) | `cd apps/viewser && npm run dev`                                        | Default **http://localhost:3000** (`VIEWSER_PREVIEW_MODE=local-next` in `.env.local`). Shells out to Python for builds; needs repo-root venv active. Copy env once: `cp .env.example .env.local`. |
 | Backoffice        | `streamlit run backoffice.py --server.headless true`                        | Serves on port 8501                                                                                                                       |
 | Engine run | `python scripts/dev_generate.py "your prompt"`                                   | Writes artifacts to `data/runs/`. Calls `briefModel` + `planningModel` when `OPENAI_API_KEY` is set; mock fallback otherwise.             |
 | Builder MVP       | `python scripts/build_site.py --dossier examples/<slug>.project-input.json` | Real Next.js output under `../sajtbyggaren-output/.generated/<siteId>/` by default (override with `--generated-dir` or env `SAJTBYGGAREN_GENERATED_DIR`) + canonical artifacts under `data/runs/<runId>/`. Add `--skip-build` for fast iteration. |
@@ -107,3 +108,5 @@ Commands are documented in the README under "Snabbstart". Key commands:
   update script creates this directory with open permissions. If tests
   fail with a permission error on that path, run
   `sudo mkdir -p /sajtbyggaren-output && sudo chmod 777 /sajtbyggaren-output`.
+- Some hosted VMs export `SAJTBYGGAREN_EVALS_DIR` pointing at a legacy path.
+  That makes `tests/test_cleanup_dev_artifacts.py::test_default_evals_dir_is_inside_data_evals_artifacts_mini` fail even when the repo is healthy. Unset the variable (or point it at `data/evals/artifacts/mini`) before expecting a fully green pytest run.
