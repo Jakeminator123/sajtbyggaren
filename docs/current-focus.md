@@ -30,17 +30,19 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `61ec707` (2026-05-31 UTC, Streamlit-deprecation-fix i backoffice: 54 `use_container_width=True` → `width="stretch"` (1.57-migrering) ovanpå session close-out-städen `e4c4351`). PR #137 mergade B157 level 4 (immutable build-dir + pointer-swap + GC) till `main` (`40b7d29`, steward-auto `9e1a025`); `jakob-be` synkades till main och bär nu bara `e4c4351` = cursor-indexing-ignore-städ + färsk orchestrator-handoff + branch-cleanup-notis. Alla guards gröna.
-Nya PRs sedan föregående checkpoint: PR #137 — sync(jakob-be -> main): B157 level 4
-immutable build-dir + pointer-swap + GC.
+Last verified state: `0be2f42` (2026-06-01 UTC, jakob-be — EJ i `main`, ingen PR än). ADR 0034 väg A first slice + Christopher-handoff för väg B. `641abc9` = copyDirectives first slice (fri följdprompt → synlig sajt-ändring via validerade `directives.copyDirectives`); `0be2f42` = docs(agent-prompts) Christopher-handoff. Tidigare main-checkpoint: `61ec707`/steward-auto `9e1a025` (B157 level 4 via PR #137). `origin/jakob-be` är i synk med lokalt. Alla guards gröna (governance, rules_sync, term_coverage --strict, ruff, sprintvakt) + 25 nya copydir-tester. **Riktigt LLM-anrop verifierat** (copyDirectiveModel, ej mock).
+Nya PRs sedan föregående checkpoint: inga (jakob-be ligger 2 commits före `origin/main` utan PR).
 
 **Aktuell priordning + färsk orchestrator-handoff: se
-[`docs/handoff.md`](handoff.md) "Status" + "Priorordning nu".** Kort: B157
-nivå 4 (Stage A+B) är klar i `main`; B155-backend, BO6 och quality-gate-
-routes-discovery likaså. Nästa: Christopher-koordinering (B155 UI-signal +
-`copyDirectives[]`/ADR 0034 = kärnloopen) → Bite B (PreviewRuntime wiring,
-kräver DI) → mät bygg-fart → B157 POSIX/flat-layout-uppföljare. "Direkt
-nästa fokus"-listan längre ned är delvis historisk (förskjuten av denna batch).
+[`docs/handoff.md`](handoff.md) "Status" + "Priorordning nu".** Kort: ADR 0034
+väg A first slice är landad på `jakob-be` (LLM-flöde nivå 1: följdprompt →
+validerade copyDirectives → synlig ändring). Nästa: (a) operatör-review/
+live-test + ev. sync-PR `jakob-be → main`; (b) Christopher tar väg B
+FloatingChat-feedback (handoff i `docs/agent-prompts/christopher-followup-
+honest-feedback.md`); (c) **en Grind/Cloud Builder-agent kör Bite B
+(PreviewRuntime wiring, DI) på egen branch `cursor/preview-runtime-bite-b-di`,
+PR mot `jakob-be`** — får EJ röra copyDirectives-filerna (se handoff
+"Parallellt Grind-arbete"). B157 nivå 4 (Stage A+B) ligger redan i `main`.
 
 ## Branchmodellen (kort)
 

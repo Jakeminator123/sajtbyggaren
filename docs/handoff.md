@@ -1,5 +1,75 @@
 # Handoff – Sajtbyggaren
 
+**Datum:** 2026-06-01 UTC. Arbets-branch `jakob-be` är på `0be2f42`
+(pushad till `origin/jakob-be`, **EJ i `main`, ingen öppen PR**). `origin/main`
+ligger kvar på B157-level-4-state (`9e1a025` via PR #137).
+
+## Status (2026-06-01) — ADR 0034 väg A first slice landad på jakob-be
+
+**Det riktiga LLM-flödet är igång (nivå 1).** Fri följdprompt → validerade
+`directives.copyDirectives[]` → synlig, spårbar sajt-ändring, utan att rå
+prompt läcker som kundcopy. Detta är "LLM-driven intent → säker deterministisk
+applicering", inte direkt modell-patch av genererad kod (väg C, parkerad).
+
+- `641abc9` `feat(followup)`: copyDirectives first slice. Schema
+  `directives.copyDirectives` (strikt enum: target `company-name | tagline`,
+  operation `replace-text | include-token`, payload validerad maxLength 200,
+  source). Deterministisk läck-säker extraktor + dedikerad
+  **`copyDirectiveModel`-roll** (llm-models v5, EJ återanvänd briefModel) +
+  resolver; LLM-output genom samma copy-validator som deterministiska direktiv,
+  aktiv bara i produktions-CLI:t (Viewser `--followup-site-id`).
+  Naming-dict v18 (Copy Directive). 25 nya tester. Real-LLM-smoke verifierad:
+  "kalla firman X istället" → `company.name`-rename, `source=llm`,
+  `appliedVisibleEffect=true`, token i `app/page.tsx`.
+- `0be2f42` `docs(agent-prompts)`: Christopher-handoff för väg B.
+
+**Kvar på copyDirectives-gapet (förblir öppet):** väg B ärlig
+FloatingChat-feedback (Christopher/UI — handoff finns), bredare targets
+(story/services/about/all-copy = nivå 2), väg C (modell patchar `.generated/`
+direkt — kräver sandbox/diff/rollback/Quality Gate, egen ADR).
+
+## Priorordning nu (2026-06-01)
+
+1. **Operatör-review / live-test** av `641abc9` i Viewser, sen beslut om
+   sync-PR `jakob-be → main`. (Coach-rekommendation: review/Scout före PR.)
+2. **Christopher: väg B** FloatingChat honest-feedback. Oblockerad. Prompt:
+   [`docs/agent-prompts/christopher-followup-honest-feedback.md`](agent-prompts/christopher-followup-honest-feedback.md).
+3. **Grind/Cloud Builder: Bite B** (PreviewRuntime wiring via DI) — se
+   "Parallellt Grind-arbete" nedan.
+4. Nivå 2 copyDirectives (bredare targets) — backend-agent, efter att slice 1
+   är reviewad/mergad.
+
+## Parallellt Grind-arbete (Bite B PreviewRuntime DI) — 2026-06-01
+
+Operatören startar en Grind/Cloud Builder-agent som kör **vid sidan om**
+detta arbete. Den agenten:
+
+- skapar branch `cursor/preview-runtime-bite-b-di` från `origin/jakob-be`,
+  jobbar EJ direkt på `main` eller `jakob-be`, PR:ar mot `jakob-be`;
+- implementerar Bite B: `packages/preview-runtime` får dependency-injected
+  handlers från `apps/viewser/lib` (ingen package→app-import), `PreviewResult`
+  bär StackBlitz file-payload via ett `files`-fält, `localRuntime` delegerar
+  till local-preview-server-logiken, `stackblitzRuntime` returnerar payload,
+  `flyRuntime` förblir unsupported;
+- **får INTE röra** copyDirectives-spåret:
+  `scripts/prompt_to_project_input.py`, `packages/generation/brief/**`,
+  `governance/schemas/project-input.schema.json`,
+  `governance/policies/llm-models.v1.json`,
+  `governance/policies/naming-dictionary.v1.json`,
+  `governance/decisions/0034-*`,
+  `docs/gaps/GAP-followup-prompt-content-passthrough.md`,
+  `tests/test_followup_copy_directives.py`;
+- **får INTE röra** Christopher/UI-paths (`apps/viewser/components/**`,
+  `apps/viewser/app/**/*.tsx`, `apps/viewser/app/**/*.css`,
+  `apps/viewser/public/**`) och bygger ingen Vercel/Fly/static-export-adapter.
+
+**Konfliktrisk är låg:** Bite B rör `packages/preview-runtime/**` +
+`apps/viewser/lib/**`; copyDirectives rör generation/brief + governance-
+scheman. Ingen filöverlapp. När Bite-B-PR:n mergats till `jakob-be` synkar
+nästa backend-pass med `git reset --hard origin/jakob-be` innan nivå 2.
+
+## Tidigare checkpoint (B157 level 4)
+
 **Datum:** 2026-05-31 UTC, steward-auto efter PR #137 — sync(jakob-be -> main): B157 level 4 immutable build-dir + pointer-swap + GC. Verifierad `main` är `40b7d29`.
 
 Nya PRs sedan föregående checkpoint: PR #137 — sync(jakob-be -> main): B157 level 4
