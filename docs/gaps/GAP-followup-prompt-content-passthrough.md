@@ -31,6 +31,21 @@ Kvar:
 - **Väg C** (modell patchar `.generated/` direkt) - parkerad, kräver
   sandbox/diff/rollback per ADR 0034.
 
+### Hardening 2026-06-01 (`2e0c55f`)
+
+Tre väg A-edge-cases från Codex-genomgång stängda i
+`scripts/prompt_to_project_input.py` (regressionstäckt i
+`tests/test_followup_copy_directives.py`):
+
+- Generiskt "namn/namnet" byter inte längre `company.name` när prompten
+  scopar till tjänst/produkt/sida ("byt namnet på tjänsten till X" = no-op).
+- Reject-verb matchas som ord, inte substring, så "byt företagsnamnet till
+  Changemakers" applicerar i stället för att no-op:as.
+- Okvoterad trailing "till/to" fångar inte instruktioner ("change the hero to
+  be more premium") som publik tagline; citerade värden respekteras verbatim.
+
+Påverkar inte "Kvar"-punkterna ovan (nivå 2-targets, väg B/C).
+
 ## Reproduktion
 
 Operatören verifierade 2026-05-27 att följdpromptar i dag inte når en

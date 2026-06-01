@@ -108,15 +108,25 @@ def real_opening_hours(contact: object) -> str | None:
 
 
 def real_address_lines(contact: object) -> list[str]:
-    """Return non-empty address lines only when the address is real.
+    """Return the real address lines, dropping placeholder lines individually.
 
-    Returns ``[]`` when ``addressLines`` is missing or is the dummy
-    fallback so callers can omit the address surface entirely.
+    A mixed list (one real line + one fallback line, e.g.
+    ``["Storgatan 5", "Adress lämnas på förfrågan"]``) keeps only the real
+    line so a placeholder never rides along into published copy on a
+    partially-filled address. Returns ``[]`` when ``addressLines`` is missing
+    or every line is a dummy fallback so callers can omit the address surface
+    entirely.
     """
 
     if not isinstance(contact, dict):
         return []
     value = contact.get("addressLines")
-    if not isinstance(value, list) or is_placeholder_address_lines(value):
+    if not isinstance(value, list):
         return []
-    return [line for line in value if isinstance(line, str) and line.strip()]
+    return [
+        line
+        for line in value
+        if isinstance(line, str)
+        and line.strip()
+        and line.strip() not in PLACEHOLDER_ADDRESS_LINES
+    ]

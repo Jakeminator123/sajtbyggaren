@@ -278,8 +278,15 @@ def _variants_for_scaffold(scaffold_id: str) -> frozenset[str]:
             ids.add(variant_id.strip())
     return frozenset(ids)
 
-# Postnummer-extraktion från svensk adress (samma regex som tidigare).
-_SWEDISH_POSTCODE_RE = re.compile(r"\b\d{3}\s?\d{2}\s+([A-Za-zÅÄÖåäö\-]+)")
+# Postnummer-extraktion från svensk adress. Postnumret "xxx xx" (med eller
+# utan mellanslag, så både "116 46" och "11646" träffar) följt av en ort.
+# B120: orten får vara flerordig ("Västra Frölunda", "Stockholm City"); en
+# komma-separator före postnumret ("Götgatan 12, 11646 Stockholm") fångas av
+# search() oavsett. Klassen utesluter komma och siffror så fångsten stannar
+# vid ortnamnet.
+_SWEDISH_POSTCODE_RE = re.compile(
+    r"\b\d{3}\s?\d{2}\s+([A-Za-zÅÄÖåäö][A-Za-zÅÄÖåäö\- ]*[A-Za-zÅÄÖåäö]|[A-Za-zÅÄÖåäö])"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -1410,13 +1417,19 @@ def _apply_location_from_address(project_input: dict[str, Any]) -> None:
     address_lines = contact.get("addressLines") if isinstance(contact, dict) else None
     if not isinstance(address_lines, list) or not address_lines:
         return
-    line = address_lines[0]
-    if not isinstance(line, str):
-        return
-    match = _SWEDISH_POSTCODE_RE.search(line)
-    if not match:
-        return
-    city = match.group(1).strip()
+    # B120: scan every address line, not just the first. A common two-line
+    # address ``["Storgatan 5", "116 46 Stockholm"]`` keeps the postcode + city
+    # on the second line, so inspecting only ``addressLines[0]`` silently
+    # dropped the city. Use the first line that carries a postcode + city.
+    city = ""
+    for line in address_lines:
+        if not isinstance(line, str):
+            continue
+        match = _SWEDISH_POSTCODE_RE.search(line)
+        if match:
+            city = " ".join(match.group(1).split()).strip()
+            if city:
+                break
     if not city:
         return
     location = project_input.setdefault("location", {})

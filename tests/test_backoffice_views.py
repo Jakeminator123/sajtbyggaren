@@ -125,3 +125,35 @@ def test_paths_module_exposes_runs_and_data():
 
     assert paths.RUNS_DIR.parent == paths.DATA_DIR
     assert paths.DATA_DIR.parent == paths.REPO_ROOT
+
+
+def _streamlit_floor_from_requirements(repo_root: Path) -> tuple[int, int]:
+    """Parse the declared ``streamlit>=X.Y`` floor from requirements.txt."""
+    import re
+
+    text = (repo_root / "requirements.txt").read_text(encoding="utf-8")
+    match = re.search(r"^streamlit>=(\d+)\.(\d+)", text, flags=re.MULTILINE)
+    assert match is not None, "requirements.txt must declare a streamlit floor"
+    return int(match.group(1)), int(match.group(2))
+
+
+@pytest.mark.tooling
+def test_streamlit_floor_supports_width_stretch_api(repo_root: Path):
+    """Backoffice uses width="stretch" (st.dataframe/st.button/form_submit_button).
+
+    That API requires Streamlit >= 1.49 (dataframe width landed in 1.49,
+    buttons in 1.48), and ``use_container_width`` was removed after
+    2025-12-31, so the declared floor must guarantee the new API. This locks
+    the Codex 2026-06-01 compatibility fix so a later downgrade of the floor
+    re-introduces the deprecation/removal break.
+    """
+    assert _streamlit_floor_from_requirements(repo_root) >= (1, 49)
+
+
+@pytest.mark.tooling
+def test_installed_streamlit_matches_declared_floor(repo_root: Path):
+    import streamlit
+
+    parts = streamlit.__version__.split(".")
+    installed = (int(parts[0]), int(parts[1]))
+    assert installed >= _streamlit_floor_from_requirements(repo_root)
