@@ -90,13 +90,15 @@ Amazon Linux 2023, användare `vercel-sandbox` med sudo. Spiken väljer `node24`
 
 ## Vad spiken gör (minsta beviset)
 
-`apps/viewser/lib/vercel-sandbox-spike.ts`:
+`apps/viewser/lib/vercel-sandbox-runner.ts` (spike-agnostisk runner; CLI:t
+`scripts/spike_vercel_sandbox.ts` lägger på `VIEWSER_SANDBOX_SPIKE=1`-grinden,
+produktadaptern `vercel-sandbox` opt-in:ar via `VIEWSER_PREVIEW_MODE`):
 
 - `createSandboxPreview({ siteId, runId?, ttlMs? })` →
   `{ status, url, sandboxId, ttlMs, timings, cost, logs }`
-  1. Grindar på `VIEWSER_SANDBOX_SPIKE=1` + credentials + att bygget finns på
-     disk under `.generated/<siteId>/builds/<id>/` (immutable-pekare via
-     `current.json`, fallback till flat layout).
+  1. Kollar credentials + att bygget finns på disk under
+     `.generated/<siteId>/builds/<id>/` (immutable-pekare via `current.json`,
+     fallback till flat layout). Spike-flaggan kollas av CLI:t, inte runnern.
   2. `Sandbox.create({ ports:[3000], runtime:"node24", timeout, persistent:false })`.
   3. `mkdir -p` + `writeFiles` av käll-filerna.
   4. `npm install` → `next build` → `next start -p 3000` (detached).
@@ -237,7 +239,7 @@ fatta beslut på riktiga siffror.
 
 ## Write-set (denna spike)
 
-- `apps/viewser/lib/vercel-sandbox-spike.ts` — helper (`createSandboxPreview` + `stopSandboxPreview`).
+- `apps/viewser/lib/vercel-sandbox-runner.ts` — spike-agnostisk runner (`createSandboxPreview` + `stopSandboxPreview` + `listGeneratedSiteIds` + `hasVercelSandboxAuth`); delas av spike-CLI:t och `vercel-sandbox`-adaptern.
 - `apps/viewser/package.json` — la till `@vercel/sandbox`.
 - `apps/viewser/.env.example` — flagga + tokens (kommenterade).
 - `scripts/spike_vercel_sandbox.ts` — create + cleanup-entries.

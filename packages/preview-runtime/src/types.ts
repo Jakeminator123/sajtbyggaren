@@ -1,9 +1,10 @@
 /**
  * Preview Runtime — typkontrakt.
  *
- * Canonical-namnen är låsta i naming-dictionary v17:
+ * Canonical-namnen är låsta i naming-dictionary (v19):
  *   - `Preview Runtime` (abstraktionen)
- *   - `PreviewRuntimeKind` (sluten typunion: "stackblitz" | "local" | "fly")
+ *   - `PreviewRuntimeKind` (sluten typunion: "vercel-sandbox" | "local" |
+ *     "stackblitz" | "fly")
  *   - `PreviewRuntimeConfig` (kind, projectName, env)
  *   - `Preview Session` (id, url, kind, createdAt) — alias `PreviewSession`
  *   - `Preview File` (path + content) — alias `PreviewFile`
@@ -13,19 +14,23 @@
  * paketet fritt från app-importer samtidigt som `apps/viewser/lib` kan koppla
  * in sina befintliga server-helpers.
  *
- * Se ADR 0028 (Runtime Ladder) för rollerna mellan local/stackblitz/fly och
- * ADR 0030 (Preview-Provider Portability) för adapter-checklistan som varje
- * ny adapter måste passera innan merge. Eventuell framtida `vercel-preview`-
- * adapter kräver naming-dictionary-bump till v18 (utöka `PreviewRuntimeKind`)
- * + egen ADR per ADR 0030 §"Vad ADR 0030 INTE beslutar".
+ * Se ADR 0028 (Runtime Ladder) för rollerna mellan runtimes och ADR 0030
+ * (Preview-Provider Portability) för adapter-checklistan som varje ny adapter
+ * måste passera innan merge. ADR 0033 gör `vercel-sandbox` till primärt
+ * förstahandsval (local-next fallback, stackblitz pausad) — fortfarande som
+ * adapter bakom `PreviewRuntime`-kontraktet, aldrig hårdkodad specialväg.
  */
 
 /**
  * Sluten typunion för giltiga Preview Runtime-värden. Definierad i
- * naming-dictionary v17:`previewRuntimeKind`. Får inte utökas utan naming-
- * dictionary-bump.
+ * naming-dictionary v19:`previewRuntimeKind`. Får inte utökas utan naming-
+ * dictionary-bump. `vercel-sandbox` är primärt förstahandsval (ADR 0033).
  */
-export type PreviewRuntimeKind = "stackblitz" | "local" | "fly";
+export type PreviewRuntimeKind =
+  | "vercel-sandbox"
+  | "local"
+  | "stackblitz"
+  | "fly";
 
 /**
  * En fil i den filuppsättning som monteras i Preview Runtime.
