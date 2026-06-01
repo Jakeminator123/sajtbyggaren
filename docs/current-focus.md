@@ -30,51 +30,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `53301c4` (2026-06-01 sen kväll UTC, **PR #147
-vercel-sandbox-adapter mergad till `jakob-be`** ovanpå **PR #140 Bite B
-mergad till `jakob-be`** — `localRuntime`/`stackblitzRuntime` wirade via dependency
-injection, env-styrt via `VIEWSER_PREVIEW_MODE`, paket→app-lager-regeln låst av
-`test_preview_runtime_di.py`). Ovanpå PR #144-synken (hela hardening-batchen i
-`main`, `origin/main` = `8f7dea5`) + docs-PR-konsolidering (#138/#141/#145 foldade
-in i `AGENTS.md` `48adcde` och stängda). `jakob-be` innehåller hela `main`.
-Bug-scope: **15 aktiva / 135 stängda**. Ovanpå detta är #146 Vercel
-Sandbox-spike mergad (`58710ec`) som live-verifierad bevis-PoC (painter-palma
-ready, cold-start ~29 s, desktop+mobil render OK, ~ett par ören; `stop()`+
-`delete()` städade rent) — INTE adapter-promotion, ingen `PreviewRuntimeKind`/
-registry/ADR/naming-ändring. Spike-helper bakom `VIEWSER_SANDBOX_SPIKE=1`.
-Nästa (prioriteringsändring 2026-06-01 kväll, operatörsbeslut — INTE en ny
-produktstrategi): multi-adapter/provider har varit riktningen länge (se
-`runtime-adapter-plan.md` + ADR 0028/0030); vi **aktiverar nu Vercel-sandbox-
-spåret före nivå 2 copyDirectives**. Spiken är nu gjord, live-verifierad och
-mergad (#146) — väg (D) flag-gated PoC valdes och bevisade "kan vi skapa/visa
-en isolerad preview stabilt?" (painter-palma, ~29 s cold-start, desktop+mobil
-OK). Operatörsbeslut 2026-06-01: `vercel-sandbox` blir PRIMÄR preview-runtime,
-`local-next` fallback, `stackblitz` pausad — se
-[ADR 0033](../governance/decisions/0033-vercel-sandbox-primary-preview.md).
-Adapter-slicen är nu mergad till `jakob-be` (#147, `53301c4`): `vercel-sandbox`
-finns som opt-in PreviewRuntime-adapter (naming v19, `PreviewRuntimeKind`
-utökad, delad DI-runner `vercel-sandbox-runner.ts` för spike-CLI + adapter;
-`@vercel/sandbox` bara i `apps/viewser/lib`). Default-mode är fortfarande
-`local-next` (inte flippad). Nästa: (a) sync-PR `jakob-be → main` (öppnad,
-kräver operatörs-OK för själva main-merge) så Christopher kan pulla; (b) Bite C
-— flippa UI-routen `app/api/preview/[siteId]` till `currentViewserRuntime()`
-(Christopher). Prior skiss finns på `cursor/preview-runtime-adapters`.
-Köat (efter sandbox-riktningen satts, ej parkerat): 4-case live Golden Path
-(elektriker Malmö / frisör Göteborg / naprapat Stockholm / liten keramik-e-handel;
-prompt → preview → följdprompt → ny version) och nivå 2 copyDirectives
-(hero/services/about/CTA/ton; remappar INTE tjänstetext till tagline). Nivå 2
-copyDirectives är **pausad** tills sandbox-riktningen är satt. Embeddings + fler
-starters längre fram. Refaktor av stora Python-filer = max en liten
-behavior-preserving slice som 20%-sidospår, aldrig huvudspår. Bite C (flippa
-produktions-route `app/api/preview/[siteId]` till `currentViewserRuntime()`) =
-Christopher/UI.
-
-> Branchmodell-OBS (motsägelse att lösa): `docs/agent-prompts.md` säger ännu
-> "vi jobbar på `main` + `backup-N`", medan denna fil + `branch-discipline.md`
-> säger att Jakob default jobbar på `jakob-be` och Christopher på
-> `christopher-ui` (PR mot `main` per leveransfönster). `jakob-be`/
-> `christopher-ui` är den gällande modellen; `agent-prompts.md` behöver
-> uppdateras (operatörsbeslut — ej ändrad i detta pass).
+Last verified state: `499bb34` (2026-06-01 UTC, steward-auto efter PR #148 — sync(jakob-be -> main): Vercel Sandbox spike + ADR 0033 + adapter + hardening batch).
+Nya PRs sedan föregående checkpoint: PR #148 — sync(jakob-be -> main): Vercel Sandbox
+spike + ADR 0033 + adapter + hardening batch.
 
 ## Branchmodellen (kort)
 
@@ -946,3 +904,51 @@ Nya commits sedan föregående checkpoint (alla på `jakob-be`, opushad mot `mai
   buildPath). tsc grön; nya tester. (B-IDs registrerade i steward-commit denna.)
 Nästa: #140 Bite B-review (in i `jakob-be`), docs-PR #138/#141-konsolidering,
 sedan sync-PR `jakob-be -> main` för hela batchen när operatören ger OK.
+
+### 2026-06-01 UTC — current-focus.md före `53301c4`
+
+Last verified state: `53301c4` (2026-06-01 sen kväll UTC, **PR #147
+vercel-sandbox-adapter mergad till `jakob-be`** ovanpå **PR #140 Bite B
+mergad till `jakob-be`** — `localRuntime`/`stackblitzRuntime` wirade via dependency
+injection, env-styrt via `VIEWSER_PREVIEW_MODE`, paket→app-lager-regeln låst av
+`test_preview_runtime_di.py`). Ovanpå PR #144-synken (hela hardening-batchen i
+`main`, `origin/main` = `8f7dea5`) + docs-PR-konsolidering (#138/#141/#145 foldade
+in i `AGENTS.md` `48adcde` och stängda). `jakob-be` innehåller hela `main`.
+Bug-scope: **15 aktiva / 135 stängda**. Ovanpå detta är #146 Vercel
+Sandbox-spike mergad (`58710ec`) som live-verifierad bevis-PoC (painter-palma
+ready, cold-start ~29 s, desktop+mobil render OK, ~ett par ören; `stop()`+
+`delete()` städade rent) — INTE adapter-promotion, ingen `PreviewRuntimeKind`/
+registry/ADR/naming-ändring. Spike-helper bakom `VIEWSER_SANDBOX_SPIKE=1`.
+Nästa (prioriteringsändring 2026-06-01 kväll, operatörsbeslut — INTE en ny
+produktstrategi): multi-adapter/provider har varit riktningen länge (se
+`runtime-adapter-plan.md` + ADR 0028/0030); vi **aktiverar nu Vercel-sandbox-
+spåret före nivå 2 copyDirectives**. Spiken är nu gjord, live-verifierad och
+mergad (#146) — väg (D) flag-gated PoC valdes och bevisade "kan vi skapa/visa
+en isolerad preview stabilt?" (painter-palma, ~29 s cold-start, desktop+mobil
+OK). Operatörsbeslut 2026-06-01: `vercel-sandbox` blir PRIMÄR preview-runtime,
+`local-next` fallback, `stackblitz` pausad — se
+[ADR 0033](../governance/decisions/0033-vercel-sandbox-primary-preview.md).
+Adapter-slicen är nu mergad till `jakob-be` (#147, `53301c4`): `vercel-sandbox`
+finns som opt-in PreviewRuntime-adapter (naming v19, `PreviewRuntimeKind`
+utökad, delad DI-runner `vercel-sandbox-runner.ts` för spike-CLI + adapter;
+`@vercel/sandbox` bara i `apps/viewser/lib`). Default-mode är fortfarande
+`local-next` (inte flippad). Nästa: (a) sync-PR `jakob-be → main` (öppnad,
+kräver operatörs-OK för själva main-merge) så Christopher kan pulla; (b) Bite C
+— flippa UI-routen `app/api/preview/[siteId]` till `currentViewserRuntime()`
+(Christopher). Prior skiss finns på `cursor/preview-runtime-adapters`.
+Köat (efter sandbox-riktningen satts, ej parkerat): 4-case live Golden Path
+(elektriker Malmö / frisör Göteborg / naprapat Stockholm / liten keramik-e-handel;
+prompt → preview → följdprompt → ny version) och nivå 2 copyDirectives
+(hero/services/about/CTA/ton; remappar INTE tjänstetext till tagline). Nivå 2
+copyDirectives är **pausad** tills sandbox-riktningen är satt. Embeddings + fler
+starters längre fram. Refaktor av stora Python-filer = max en liten
+behavior-preserving slice som 20%-sidospår, aldrig huvudspår. Bite C (flippa
+produktions-route `app/api/preview/[siteId]` till `currentViewserRuntime()`) =
+Christopher/UI.
+
+> Branchmodell-OBS (motsägelse att lösa): `docs/agent-prompts.md` säger ännu
+> "vi jobbar på `main` + `backup-N`", medan denna fil + `branch-discipline.md`
+> säger att Jakob default jobbar på `jakob-be` och Christopher på
+> `christopher-ui` (PR mot `main` per leveransfönster). `jakob-be`/
+> `christopher-ui` är den gällande modellen; `agent-prompts.md` behöver
+> uppdateras (operatörsbeslut — ej ändrad i detta pass).

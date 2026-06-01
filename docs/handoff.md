@@ -1,8 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-01 kväll UTC. `main` = `fba03d0` (**PR #144 mergad**).
-`jakob-be` HEAD = `939f684` (sync-merge av `origin/main`, trädet identiskt med
-`origin/main`), i sync med origin.
+**Datum:** 2026-06-01 UTC, steward-auto efter PR #148 — sync(jakob-be -> main): Vercel Sandbox spike + ADR 0033 + adapter + hardening batch. Verifierad `main` är `499bb34`.
+
+Nya PRs sedan föregående checkpoint: PR #148 — sync(jakob-be -> main): Vercel Sandbox
+spike + ADR 0033 + adapter + hardening batch.
 
 ## Session 2026-06-01 sen kväll — Vercel Sandbox-spike + ADR 0033 (runtime-riktning)
 
@@ -864,3 +865,9 @@ nästa steg (kräver operatörs-OK).
 **Datum:** 2026-06-01 kväll UTC. `jakob-be` HEAD = `2320e34` (hardening-batch +
 PR #143 refactor-merge). `main` = `fb3b1f8` (oförändrad sedan PR #142).
 `jakob-be` är **inte** synkad till `main` än — väntar operatörs-OK för sync-PR.
+
+### 2026-06-01 UTC — handoff.md före `53301c4`
+
+**Datum:** 2026-06-01 kväll UTC. `main` = `fba03d0` (**PR #144 mergad**).
+`jakob-be` HEAD = `939f684` (sync-merge av `origin/main`, trädet identiskt med
+`origin/main`), i sync med origin.
