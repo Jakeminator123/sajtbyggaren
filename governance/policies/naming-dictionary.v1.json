@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/naming-dictionary.schema.json",
   "policyId": "naming-dictionary.v1",
-  "version": 18,
+  "version": 19,
   "status": "draft-but-authoritative",
-  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 18 (ADR 0034 väg A, GAP-followup-prompt-content-passthrough) registrerar Copy Directive: en strukturerad, validerad copy-ändring tolkad ur en följdprompt (target company-name | tagline, operation replace-text | include-token, payload). Lagras i project-input directives.copyDirectives och appliceras på strukturerade fält före render så fri följdprompt-text aldrig renderas okontrollerat som kundcopy. Pydantic-aliasen CopyDirectiveCandidate och CopyDirectiveExtraction bär structured output i packages/generation/brief. Version 17 (B121 Discovery Resolver, PR A) registrerar fem nya canonical termer: Discovery Payload (input från Viewser-wizarden), Discovery Decision (resolverns spårbara output med fieldSources och fallbackWarnings), Discovery Taxonomy (governance/policies/discovery-taxonomy.v1.json som mappar WizardCategoryId till scaffold/variant/starter/capability), Discovery Resolver (packages/generation/discovery/resolve.py) och Field Source (strängenum som beskriver var ett Project Input-fält kom från: wizard, scrape, brief, taxonomy, default, operator, pinned). Version 16 (Starter/Dossier Hygiene 1A, post-3B-cleanup-merge) ärligt-omformulerar codeContract och envContract: båda är optional Dossier-filer som hard Dossiers fyller från Sprint 3+ (idag har bara manifest.json/instructions.md krav), och envContract refererar inte längre 'hybrid- och hard-Dossiers' eftersom ADR 0012 tog bort hybrid-klassen. Version 14 (ADR 0016 v1.1, post-reviewer-clean) tar bort de generella tier-bokstäverna ur globallyForbidden så de inte ens ska behöva nämnas i policy-text. De specifika legacy-flaggor som faktiskt fanns i sajtmaskins kod (`F2-only`, `F3-only`) kvarstår som blocklist tillsammans med lane- och fidelity-vokabulären. Version 13 lade till sådan disciplin (verify lane, preview lane, fidelity, fidelity levels). Canonical fas-kedja är phase 1 understand / phase 2 plan / phase 3 build (engine-run.v1) plus Quality Gate / Repair Pipeline / PreviewRuntime / Mechanical Fix / LLM Fix. Version 12 (ADR 0013) registrerar Capability Map som canonical policy-term och lägger 'delta-brief' på globallyForbidden eftersom det är gammalt sajtmaskin-namn för det canonical Site Brief gör i followup-mode. Version 11 registrerar Capability som canonical term för Dossier-fältet capability i MIN_IDE-formatet. Version 10 (ADR 0012) komprimerar vokabulären: tar bort Site/Feature/Integration/Data/Hybrid Dossier som canonical termer eftersom de dubblade modellen ovanpå Dossier-klasserna. Inför 'Project Input' som canonical begrepp för konkreta operator-projekt (t.ex. painter-palma) och låser Dossier-klasser till bara soft och hard. Version 9 begränsade Viewser-vokabulären; tidigare versioner se git-historiken.",
+  "purpose": "Kanonisk ordlista för Sajtbyggaren. Inga synonymer eller alias får uppstå utanför detta dokument utan att de läggs till här. Version 19 (ADR 0033) registrerar VercelSandboxRuntime och utökar previewRuntimeKind med vercel-sandbox (primärt förstahandsval för preview; local-next fallback, stackblitz pausad). Version 18 (ADR 0034 väg A, GAP-followup-prompt-content-passthrough) registrerar Copy Directive: en strukturerad, validerad copy-ändring tolkad ur en följdprompt (target company-name | tagline, operation replace-text | include-token, payload). Lagras i project-input directives.copyDirectives och appliceras på strukturerade fält före render så fri följdprompt-text aldrig renderas okontrollerat som kundcopy. Pydantic-aliasen CopyDirectiveCandidate och CopyDirectiveExtraction bär structured output i packages/generation/brief. Version 17 (B121 Discovery Resolver, PR A) registrerar fem nya canonical termer: Discovery Payload (input från Viewser-wizarden), Discovery Decision (resolverns spårbara output med fieldSources och fallbackWarnings), Discovery Taxonomy (governance/policies/discovery-taxonomy.v1.json som mappar WizardCategoryId till scaffold/variant/starter/capability), Discovery Resolver (packages/generation/discovery/resolve.py) och Field Source (strängenum som beskriver var ett Project Input-fält kom från: wizard, scrape, brief, taxonomy, default, operator, pinned). Version 16 (Starter/Dossier Hygiene 1A, post-3B-cleanup-merge) ärligt-omformulerar codeContract och envContract: båda är optional Dossier-filer som hard Dossiers fyller från Sprint 3+ (idag har bara manifest.json/instructions.md krav), och envContract refererar inte längre 'hybrid- och hard-Dossiers' eftersom ADR 0012 tog bort hybrid-klassen. Version 14 (ADR 0016 v1.1, post-reviewer-clean) tar bort de generella tier-bokstäverna ur globallyForbidden så de inte ens ska behöva nämnas i policy-text. De specifika legacy-flaggor som faktiskt fanns i sajtmaskins kod (`F2-only`, `F3-only`) kvarstår som blocklist tillsammans med lane- och fidelity-vokabulären. Version 13 lade till sådan disciplin (verify lane, preview lane, fidelity, fidelity levels). Canonical fas-kedja är phase 1 understand / phase 2 plan / phase 3 build (engine-run.v1) plus Quality Gate / Repair Pipeline / PreviewRuntime / Mechanical Fix / LLM Fix. Version 12 (ADR 0013) registrerar Capability Map som canonical policy-term och lägger 'delta-brief' på globallyForbidden eftersom det är gammalt sajtmaskin-namn för det canonical Site Brief gör i followup-mode. Version 11 registrerar Capability som canonical term för Dossier-fältet capability i MIN_IDE-formatet. Version 10 (ADR 0012) komprimerar vokabulären: tar bort Site/Feature/Integration/Data/Hybrid Dossier som canonical termer eftersom de dubblade modellen ovanpå Dossier-klasserna. Inför 'Project Input' som canonical begrepp för konkreta operator-projekt (t.ex. painter-palma) och låser Dossier-klasser till bara soft och hard. Version 9 begränsade Viewser-vokabulären; tidigare versioner se git-historiken.",
   "rules": [
     "Ett begrepp får ha exakt ett kanoniskt namn.",
     "Ett kanoniskt namn får bo i exakt en huvudsaklig mapp (se repo-boundaries).",
@@ -327,7 +327,7 @@
     {
       "id": "previewRuntime",
       "canonical": "Preview Runtime",
-      "definition": "Abstraktion för var en genererad sajt körs. Implementationer: StackBlitzRuntime, FlyRuntime, LocalRuntime.",
+      "definition": "Abstraktion för var en genererad sajt körs. Implementationer: VercelSandboxRuntime (primär per ADR 0033), LocalRuntime, StackBlitzRuntime (pausad), FlyRuntime.",
       "ownerPackage": "packages/preview-runtime",
       "aliasesAllowed": ["VM", "sandbox", "Vercel Sandbox", "Vercel VM"],
       "aliasesForbidden": ["preview-host", "webcontainer"]
@@ -335,7 +335,7 @@
     {
       "id": "previewRuntimeKind",
       "canonical": "PreviewRuntimeKind",
-      "definition": "Sluten typunion för giltiga Preview Runtime-värden: stackblitz | local | fly. Definierad i packages/preview-runtime/PreviewRuntime.ts.",
+      "definition": "Sluten typunion för giltiga Preview Runtime-värden: vercel-sandbox | local | stackblitz | fly. Definierad i packages/preview-runtime/src/types.ts. vercel-sandbox är primärt förstahandsval (ADR 0033).",
       "ownerPackage": "packages/preview-runtime",
       "aliasesAllowed": [],
       "aliasesForbidden": []
@@ -386,6 +386,14 @@
       "definition": "Preview Runtime-implementation som kör genererade Next.js-sajter via WebContainer i browserfliken.",
       "ownerPackage": "packages/preview-runtime/stackblitz",
       "aliasesAllowed": ["WebContainerRuntime"],
+      "aliasesForbidden": []
+    },
+    {
+      "id": "vercelSandboxRuntime",
+      "canonical": "VercelSandboxRuntime",
+      "definition": "Preview Runtime-implementation (primärt förstahandsval per ADR 0033) som kör en redan-genererad Next.js-sajt i en isolerad Vercel Sandbox och returnerar en publik preview-URL. @vercel/sandbox-anropet bor server-side i apps/viewser/lib; adaptern i packages/preview-runtime delegerar via dependency injection.",
+      "ownerPackage": "packages/preview-runtime",
+      "aliasesAllowed": [],
       "aliasesForbidden": []
     },
     {

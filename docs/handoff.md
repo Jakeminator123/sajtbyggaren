@@ -1,10 +1,72 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-01 UTC, steward-auto efter PR #144 — sync(jakob-be -> main): hardening (B158/B159/B120/copyDirectives) + npm-subprocess refactor (#143) + Codex fixes (B161/B162). Verifierad `main` är `fba03d0`.
+**Datum:** 2026-06-01 kväll UTC. `main` = `fba03d0` (**PR #144 mergad**).
+`jakob-be` HEAD = `939f684` (sync-merge av `origin/main`, trädet identiskt med
+`origin/main`), i sync med origin.
 
-Nya PRs sedan föregående checkpoint: PR #143 — refactor(build): extract npm subprocess
-helpers; PR #144 — sync(jakob-be -> main): hardening (B158/B159/B120/copyDirectives) +
-npm-subprocess refactor (#143) + Codex fixes (B161/B162).
+## Session 2026-06-01 sen kväll — Vercel Sandbox-spike + ADR 0033 (runtime-riktning)
+
+- **#146 mergad till `jakob-be`** (`58710ec`, squash): flag-gated Vercel
+  Sandbox-PoC, **live-verifierad** (painter-palma `ready`, ~29 s cold-start,
+  desktop+mobil render OK, `stop()`+`delete()` rent, ~ett par ören). Helper bakom
+  `VIEWSER_SANDBOX_SPIKE=1`; ingen route/UI-wiring, ingen adapter-promotion.
+- **Operatörsbeslut (ADR 0033):** `vercel-sandbox` blir PRIMÄR preview-runtime,
+  `local-next` fallback, `stackblitz` pausad (får finnas kvar, blockerar inte, ej
+  default, ej testkrav). Allt via `PreviewRuntime`-adapter; ADR 0030:s hårda regler
+  står kvar (vanilla Next.js-output, inga `@vercel/*` i generation/starters,
+  non-Vercel-fallback inwirad, Sajtbyggaren äger `data/runs`-sanningen, sandbox kör
+  bara en ephemeral kopia).
+- **Detta pass = governance/docs-slice** (ADR 0033 + current-focus + handoff +
+  product-operating-context + `.env.example` + `commands.txt`). INTE adaptern:
+  naming v18→v19, `PreviewRuntimeKind`-utökning, registry,
+  `adapters/vercel-sandbox.ts` och ev. `preview-runtime-policy`-justering landar i
+  en separat adapter-slice efter operatörs-OK (de är kopplade till
+  cross-policy-tester, så blast-radius hålls utanför denna slice).
+- `cursor/vercel-sandbox-spike`-branchen kvar; `apps/viewser/.env.vercel.local`
+  (OIDC-token) är gitignored, ej committad. Ingen main-sync.
+
+## Session 2026-06-01 kväll — #144 mergad till main + jakob-be synkad
+
+Detta steward-pass: tog den gröna `jakob-be`-batchen officiellt in i `main` och
+synkade tillbaka. Ingen ny feature startad.
+
+- **CI-avblockning före merge:** sync-PR #144 var i själva verket RÖD —
+  governance-testet `test_preview_runtime_forbidden_terms_are_in_globally_forbidden`
+  failade för att hardening-batchen låste upp `VM`/`sandbox`/`Vercel Sandbox` som
+  tillåtna alias i naming-dictionary men inte speglade det i
+  `preview-runtime-policy.v1.json:forbiddenTerms`. Fix `d03dadd` tog bort
+  `VM`/`sandbox`/`vercelSandbox` ur policyns forbidden-lista. (OBS: vill man
+  behålla `vercelSandbox` som spärrad kodidentifierare, lägg tillbaka den i
+  `previewRuntime.aliasesForbidden` — prosa-aliaset "Vercel Sandbox" är ändå
+  tillåtet.)
+- **Tre Vercel-Agent-review-fixar** (`e0e56ce`), var och en regressionstäckt:
+  (a) `renderers.py:render_section_contact_info` fast-path filtrerar nu
+  placeholder-adressrader i blandade adresser (`real_address_lines()`,
+  byte-identiskt för helt riktiga adresser); (b) `pyproject.toml` streamlit-floor
+  `>=1.39` → `>=1.49` (paritet med requirements.txt); (c) `kill-dev-trees.py`
+  `matches_sajtbyggaren` faller tillbaka till cmdline på tom `scope_text` (var
+  `is not None`). Tester: `test_contact_page_fast_path_drops_placeholder_address_line`,
+  `test_pyproject_streamlit_floor_matches_requirements`,
+  `test_empty_scope_text_falls_back_to_cmdline`.
+- **#144 squash-mergad** till `main` (`fba03d0`) efter att CI var helt grön
+  (governance, builder-smoke, GitGuardian, Vercel, Vercel Agent Review — alla
+  SUCCESS, `mergeStateStatus: CLEAN`). `jakob-be` deletades INTE.
+- **Sync:** `git merge origin/main` in i `jakob-be` (`939f684`) — konfliktfritt,
+  trädet identiskt med `origin/main`. Medvetet merge, inte `reset --hard`, mitt i
+  flödet. Pushad till `origin/jakob-be`.
+- **Sanity:** full pytest grön (~2027 passerade; den enda röda i en mellankörning
+  var en miljöflake — `test_api_prompt_route_spawns_python_end_to_end` mot en
+  orphan dev-server, städad med `kill-dev-trees.py`, passerar isolerat). ruff
+  rent, governance 18/18, rules-sync OK, term-coverage `--strict` rent.
+
+**Nästa orchestrator:** (1) #140 Bite B — rebasa mot nya `jakob-be`, skala ned
+till äkta PreviewRuntime-DI-scope (PR-diffen är uppblåst av stale base), review →
+in i `jakob-be`. (2) Konsolidera docs-PR #138/#141/#145 (alla `AGENTS.md`
+Cloud-setup) till EN, stäng övriga som duplicate. (3) Vercel preview-adapter
+(operatörsval): egen ADR per ADR 0030 + naming-bump (`vercel` i
+`PreviewRuntimeKind`) + `normalizePreviewMode`-mappning för sandbox/vercel + ny
+`adapters/vercel.ts` + tester; börja med Vercel-sandbox-spåret. Ingen Vercel-kod
+i `packages/generation/` (adapter-checklistan).
 
 ## Mini-handoff 2026-06-01 sen eftermiddag — copyDirective fix + runtime-ordval
 

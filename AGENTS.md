@@ -54,9 +54,9 @@ pip install -r requirements.txt
 ```
 
 On Linux (Cloud Agent VMs), the venv package must be installed first.
-On Ubuntu Noble use `sudo apt-get install -y python3-venv` (the versioned
-package `python3.12-venv` may not be directly available depending on
-sources; the meta-package pulls it in).
+On Ubuntu Noble use `sudo apt-get install -y python3-venv` when available;
+if the meta-package is missing, install `python3.12-venv` explicitly before
+the first `python3 -m venv .venv`.
 Activate with `source .venv/bin/activate`. The update script handles
 this automatically.
 
@@ -67,6 +67,7 @@ this automatically.
 | Backoffice        | `streamlit run backoffice.py --server.headless true`                        | Serves on port 8501                                                                                                                       |
 | Engine run | `python scripts/dev_generate.py "your prompt"`                                   | Writes artifacts to `data/runs/`. Calls `briefModel` + `planningModel` when `OPENAI_API_KEY` is set; mock fallback otherwise.             |
 | Builder MVP       | `python scripts/build_site.py --dossier examples/<slug>.project-input.json` | Real Next.js output under `../sajtbyggaren-output/.generated/<siteId>/` by default (override with `--generated-dir` or env `SAJTBYGGAREN_GENERATED_DIR`) + canonical artifacts under `data/runs/<runId>/`. Add `--skip-build` for fast iteration. |
+| Viewser (operator UI) | `cd apps/viewser && npm install && cp .env.example .env.local && npm run dev` | Operator prototype on http://localhost:3000 (`VIEWSER_PREVIEW_MODE=local-next` in `.env.local`). API routes shell out to `scripts/build_site.py`, so the repo-root `.venv` must be active first. |
 
 ### Lint, test, validate
 
@@ -107,3 +108,14 @@ Commands are documented in the README under "Snabbstart". Key commands:
   update script creates this directory with open permissions. If tests
   fail with a permission error on that path, run
   `sudo mkdir -p /sajtbyggaren-output && sudo chmod 777 /sajtbyggaren-output`.
+- Each `scripts/build_site.py` run writes the npm project under
+  `<generated-dir>/<siteId>/builds/<timestamp>/`. For a manual `npm run dev`,
+  `cd` into the newest `builds/*` directory, not the site root.
+- Cloud Agent secrets often set `SAJTBYGGAREN_EVALS_DIR` (and
+  `SAJTBYGGAREN_GENERATED_DIR`). That is fine for builder work, but
+  `tests/test_cleanup_dev_artifacts.py::test_default_evals_dir_is_inside_data_evals_artifacts_mini`
+  asserts the repo-default evals path — unset `SAJTBYGGAREN_EVALS_DIR` (or
+  point it at `data/evals/artifacts/mini`) for a fully green full suite.
+- Long-running dev servers (Next.js preview, Streamlit backoffice) should run
+  under tmux on Cloud Agent VMs (portal config under
+  `/exec-daemon/tmux.portal.conf`).
