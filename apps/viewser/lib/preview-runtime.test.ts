@@ -36,6 +36,47 @@ describe("PreviewRuntime registry and handler injection", () => {
       currentRuntime(envWithPreviewMode("stackblitz")).kind,
       "stackblitz",
     );
+    assert.equal(
+      currentRuntime(envWithPreviewMode("vercel-sandbox")).kind,
+      "vercel-sandbox",
+    );
+  });
+
+  it("delegates vercel-sandbox runtime to the injected handler", async () => {
+    configurePreviewRuntimeHandlers({
+      vercelSandbox: {
+        isAvailable: () => true,
+        start: async (config) => ({
+          status: "ready",
+          url: "https://sb-test.vercel.run",
+          sessionId: `sandbox-${config.siteId}`,
+        }),
+      },
+    });
+
+    const runtime = resolveRuntime("vercel-sandbox");
+    assert.equal(await runtime.isAvailable(), true);
+
+    const result = await runtime.start(baseConfig);
+    assert.equal(result.status, "ready");
+    assert.equal(result.previewSession?.kind, "vercel-sandbox");
+    assert.equal(result.previewUrl, "https://sb-test.vercel.run");
+  });
+
+  it("maps a failed vercel-sandbox delegate to 'failed' (never 'unsupported')", async () => {
+    configurePreviewRuntimeHandlers({
+      vercelSandbox: {
+        isAvailable: () => false,
+        start: async () => ({
+          status: "failed",
+          error: "Vercel-credentials saknas.",
+        }),
+      },
+    });
+
+    const result = await resolveRuntime("vercel-sandbox").start(baseConfig);
+    assert.equal(result.status, "failed");
+    assert.match(result.error ?? "", /credentials saknas/);
   });
 
   it("delegates local runtime to the injected handler", async () => {
@@ -113,6 +154,10 @@ describe("Viewser preview-runtime server wiring", () => {
     assert.equal(
       currentViewserRuntime(envWithPreviewMode("stackblitz")).kind,
       "stackblitz",
+    );
+    assert.equal(
+      currentViewserRuntime(envWithPreviewMode("vercel-sandbox")).kind,
+      "vercel-sandbox",
     );
     assert.equal(await resolveViewserRuntime("local").isAvailable(), true);
     assert.equal(await resolveViewserRuntime("stackblitz").isAvailable(), true);

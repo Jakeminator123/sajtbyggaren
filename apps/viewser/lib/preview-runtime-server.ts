@@ -10,6 +10,11 @@ import {
 
 import { startPreviewServer, stopPreviewServer } from "./local-preview-server";
 import { readRunFilesForStackblitz } from "./stackblitz-files";
+import {
+  createSandboxPreview,
+  hasVercelSandboxAuth,
+  stopSandboxPreview,
+} from "./vercel-sandbox-spike";
 
 /**
  * Server-side DI-wiring för Preview Runtime.
@@ -64,6 +69,35 @@ export function installViewserPreviewRuntimeHandlers(): void {
       isAvailable: () => true,
       readFiles: async (config) =>
         filesFromConfig(config) ?? readRunFilesForStackblitz(requireRunId(config)),
+    },
+    vercelSandbox: {
+      // VercelSandboxRuntime (ADR 0033, primärt förstahandsval). Den konkreta
+      // ``@vercel/sandbox``-körningen bor i ``vercel-sandbox-spike.ts`` (app-
+      // lagret), aldrig i ``packages/preview-runtime`` (ADR 0030). Adaptern är
+      // tillgänglig bara när Vercel-auth finns; annars degraderar den ärligt.
+      // ``requireSpikeFlag: false`` — adaptern är sin egen opt-in via
+      // ``VIEWSER_PREVIEW_MODE``, inte via PoC-flaggan.
+      isAvailable: () => hasVercelSandboxAuth(),
+      start: async (config) => {
+        const siteId = config.siteId;
+        if (!siteId) {
+          return { status: "failed", error: "VercelSandboxRuntime kräver siteId." };
+        }
+        const result = await createSandboxPreview(
+          { siteId, runId: config.runId },
+          { requireSpikeFlag: false },
+        );
+        return {
+          status: result.status === "ready" ? "ready" : "failed",
+          url: result.url,
+          sessionId: result.sandboxId,
+          error: result.error,
+          logs: result.logs,
+        };
+      },
+      stop: async (sessionId) => {
+        await stopSandboxPreview(sessionId, { requireSpikeFlag: false });
+      },
     },
   });
   handlersInstalled = true;

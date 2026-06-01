@@ -143,6 +143,24 @@ function spikeEnabled(): boolean {
 }
 
 /**
+ * Opt-ut ur spike-flaggan. CLI:t (PoC) kräver `VIEWSER_SANDBOX_SPIKE=1`;
+ * `vercel-sandbox` PreviewRuntime-adaptern (ADR 0033) anropar i stället med
+ * `requireSpikeFlag: false` eftersom den är sin egen opt-in via
+ * `VIEWSER_PREVIEW_MODE` + närvaron av auth.
+ */
+export interface SandboxRunOptions {
+  requireSpikeFlag?: boolean;
+}
+
+/**
+ * True om Vercel-auth finns (OIDC eller access-token-trion). Används av
+ * adapterns `isAvailable()` så den degraderar ärligt utan att kasta.
+ */
+export function hasVercelSandboxAuth(): boolean {
+  return resolveCredentials() !== null;
+}
+
+/**
  * Resolverar Vercel-credentials. OIDC vinner om ``VERCEL_OIDC_TOKEN`` finns
  * (SDK:n läser den automatiskt → vi spreadar ingenting). Annars krävs hela
  * access-token-trion. Returnerar ``null`` om ingen auth är tillgänglig.
@@ -396,10 +414,12 @@ async function waitForPublicUrl(url: string): Promise<boolean> {
  */
 export async function createSandboxPreview(
   request: SandboxPreviewRequest,
+  options: SandboxRunOptions = {},
 ): Promise<SandboxPreviewResult> {
   const logs: string[] = [];
+  const requireSpikeFlag = options.requireSpikeFlag ?? true;
 
-  if (!spikeEnabled()) {
+  if (requireSpikeFlag && !spikeEnabled()) {
     return failed(
       `Vercel-sandbox-spiken är avstängd. Sätt ${SPIKE_FLAG}=1 för att ` +
         "aktivera PoC:n. Detta är en konfigurations-grind, inte ett fel.",
@@ -580,10 +600,12 @@ export async function createSandboxPreview(
  */
 export async function stopSandboxPreview(
   sandboxId: string,
+  options: SandboxRunOptions = {},
 ): Promise<SandboxStopResult> {
   const logs: string[] = [];
+  const requireSpikeFlag = options.requireSpikeFlag ?? true;
 
-  if (!spikeEnabled()) {
+  if (requireSpikeFlag && !spikeEnabled()) {
     return {
       status: "failed",
       error: `Vercel-sandbox-spiken är avstängd. Sätt ${SPIKE_FLAG}=1.`,

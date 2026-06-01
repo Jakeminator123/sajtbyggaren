@@ -989,7 +989,7 @@ COMMON_WORDS = {
     # vercel-sandbox PreviewRuntime-adapter (med canonical term) kräver ADR 0033
     # + naming-bump per ADR 0030.
     "CollectedSource", "SandboxPreviewRequest", "SandboxPreviewResult",
-    "SandboxStopResult",
+    "SandboxStopResult", "SandboxRunOptions",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

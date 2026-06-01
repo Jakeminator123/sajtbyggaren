@@ -78,10 +78,16 @@ def test_only_fly_adapter_returns_unsupported() -> None:
     stackblitz = (
         PREVIEW_RUNTIME_SRC / "adapters" / "stackblitz.ts"
     ).read_text(encoding="utf-8")
+    vercel_sandbox = (
+        PREVIEW_RUNTIME_SRC / "adapters" / "vercel-sandbox.ts"
+    ).read_text(encoding="utf-8")
     fly = (PREVIEW_RUNTIME_SRC / "adapters" / "fly.ts").read_text(encoding="utf-8")
 
     assert 'status: "unsupported"' not in local
     assert 'status: "unsupported"' not in stackblitz
+    # VercelSandboxRuntime är en implementerad adapter (ADR 0033) — den
+    # degraderar till "failed" vid saknad auth/handler, aldrig "unsupported".
+    assert 'status: "unsupported"' not in vercel_sandbox
     assert 'status: "unsupported"' in fly
 
 
@@ -102,3 +108,57 @@ def test_viewser_wiring_exposes_env_driven_entry_point() -> None:
     assert "currentViewserRuntime" in viewser_wiring
     assert "resolveViewserRuntime" in viewser_wiring
     assert "currentRuntime(env)" in viewser_wiring
+
+
+@pytest.mark.tooling
+def test_vercel_sandbox_adapter_is_wired() -> None:
+    """ADR 0033: vercel-sandbox är en implementerad PreviewRuntime-adapter.
+
+    Source-locks: registry mappar env-värdet, adaptern delegerar via DI till
+    den injicerade handlern, app-lagret wirear in den server-only runnern, och
+    compile-testet exercerar den nya kind:en. @vercel/sandbox får bara
+    importeras i app-lagret (apps/viewser/lib), aldrig i paketet (ADR 0030).
+    """
+    registry = (PREVIEW_RUNTIME_SRC / "registry.ts").read_text(encoding="utf-8")
+    adapter = (
+        PREVIEW_RUNTIME_SRC / "adapters" / "vercel-sandbox.ts"
+    ).read_text(encoding="utf-8")
+    handlers = (PREVIEW_RUNTIME_SRC / "handlers.ts").read_text(encoding="utf-8")
+    viewser_wiring = (VIEWSER_DIR / "lib" / "preview-runtime-server.ts").read_text(
+        encoding="utf-8"
+    )
+    compile_test = (VIEWSER_DIR / "lib" / "preview-runtime.test.ts").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'case "vercel-sandbox":' in registry
+    assert '"vercel-sandbox": vercelSandboxRuntime' in registry
+    assert 'kind: "vercel-sandbox"' in adapter
+    assert "getPreviewRuntimeHandlers().vercelSandbox" in adapter
+    assert "vercelSandbox?: vercelSandboxPreviewRuntimeHandlers" in handlers
+    assert "vercelSandbox:" in viewser_wiring
+    assert "createSandboxPreview(" in viewser_wiring
+    assert "requireSpikeFlag: false" in viewser_wiring
+    assert 'currentRuntime(envWithPreviewMode("vercel-sandbox"))' in compile_test
+
+
+@pytest.mark.tooling
+def test_vercel_sdk_not_imported_in_preview_runtime_package() -> None:
+    """ADR 0030: @vercel/sandbox-SDK:n får aldrig importeras i
+    packages/preview-runtime (leverantörsberoende stannar i app-lagret).
+
+    Skannar bara import/export-rader (inte kommentarer) — adapterns docstring
+    nämner ``@vercel/sandbox`` i prosa, vilket inte är ett beroende.
+    """
+    offenders: list[str] = []
+    for path in PREVIEW_RUNTIME_SRC.rglob("*.ts"):
+        for line in path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not (stripped.startswith("import ") or stripped.startswith("export ")):
+                continue
+            if "@vercel/sandbox" in stripped:
+                offenders.append(path.relative_to(REPO_ROOT).as_posix())
+    assert not offenders, (
+        "@vercel/sandbox får inte importeras i packages/preview-runtime: "
+        f"{offenders}"
+    )
