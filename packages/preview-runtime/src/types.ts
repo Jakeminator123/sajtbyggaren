@@ -9,12 +9,9 @@
  *   - `Preview File` (path + content) — alias `PreviewFile`
  *   - `Preview Result` (previewSession, previewUrl, startup-output, status)
  *
- * Filerna här är skelett. `start()`/`stop()` returnerar tills vidare en
- * `unsupported`-status med tydlig "Bite B-wiring saknas"-text. Faktisk
- * wiring mot `apps/viewser/lib/local-preview-server.ts` (LocalRuntime) och
- * `apps/viewser/lib/stackblitz-files.ts` (StackBlitzRuntime) sker i Bite B
- * när vi också konfigurerar tsconfig-path eller npm-workspace så viewser
- * kan importera härifrån.
+ * Adaptrarna får sina konkreta handlers via dependency injection. Det håller
+ * paketet fritt från app-importer samtidigt som `apps/viewser/lib` kan koppla
+ * in sina befintliga server-helpers.
  *
  * Se ADR 0028 (Runtime Ladder) för rollerna mellan local/stackblitz/fly och
  * ADR 0030 (Preview-Provider Portability) för adapter-checklistan som varje
@@ -80,6 +77,8 @@ export interface PreviewResult {
   status: "ready" | "starting" | "failed" | "unsupported";
   previewSession?: PreviewSession;
   previewUrl?: string;
+  /** Filpayload för adaptrar som lämnar över filer till ett UI-lager. */
+  files?: PreviewFile[];
   /** Strukturerade startup-loggar för debugging. */
   logs?: string[];
   /** Mänsklig felförklaring vid `failed`/`unsupported`. */
@@ -88,8 +87,8 @@ export interface PreviewResult {
 
 /**
  * Adapter-kontrakt som varje konkret Preview Runtime-implementation måste
- * uppfylla. Skelett-stubsen i `adapters/` returnerar `unsupported` tills
- * Bite B wirear dem mot befintlig kod i `apps/viewser/lib/`.
+ * uppfylla. Konkreta integrationer injiceras via `configurePreviewRuntimeHandlers`
+ * så `packages/preview-runtime` inte behöver importera app-lagret.
  *
  * Adapter-checklista (ADR 0030 §"Adapter-checklista"):
  *   1. Implementerar detta interface.
