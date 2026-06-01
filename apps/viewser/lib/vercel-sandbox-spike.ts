@@ -564,18 +564,28 @@ export async function stopSandboxPreview(
     const result = await sandbox.stop();
     logs.push(`Sandbox ${sandboxId} stoppad.`);
     // CPU-/nätverks-siffrorna populeras på instans-accessorerna först EFTER
-    // att VM:en stoppat (docs: "Only populated after the VM stops").
-    return {
-      status: "stopped",
-      sandboxId,
-      cost: {
-        activeCpuMs: sandbox.activeCpuUsageMs,
-        ingressBytes: sandbox.networkTransfer?.ingress,
-        egressBytes: sandbox.networkTransfer?.egress,
-        snapshotId: result.snapshot?.id ?? sandbox.currentSnapshotId,
-      },
-      logs,
+    // att VM:en stoppat (docs: "Only populated after the VM stops"). Läs dem
+    // INNAN ev. delete() — efter delete blir instansen inert.
+    const cost = {
+      activeCpuMs: sandbox.activeCpuUsageMs,
+      ingressBytes: sandbox.networkTransfer?.ingress,
+      egressBytes: sandbox.networkTransfer?.egress,
+      snapshotId: result.snapshot?.id ?? sandbox.currentSnapshotId,
     };
+    // Best-effort: ta även bort själva sandbox-recordet så inget ligger kvar.
+    // ``stop()`` är huvud-cleanup (räcker med ``persistent:false`` + TTL);
+    // ``delete()`` får ALDRIG blockera eller kasta — vid fel/avsaknad
+    // rapporterar vi ändå stop-resultatet.
+    try {
+      await sandbox.delete();
+      logs.push(`Sandbox ${sandboxId} raderad (record borttaget).`);
+    } catch {
+      logs.push(
+        `Sandbox ${sandboxId} stoppad; delete() misslyckades — ` +
+          "stop()+persistent:false+TTL är ändå tillräcklig cleanup.",
+      );
+    }
+    return { status: "stopped", sandboxId, cost, logs };
   } catch (error) {
     return {
       status: "failed",
