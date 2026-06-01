@@ -200,11 +200,14 @@ Pro-plan för > 45 min). Auto-stop vid TTL hindrar glömda sandboxar att kosta.
 
 ## Go/No-go — promota till en `vercel-sandbox` PreviewRuntime-adapter?
 
-**Läge nu:** PoC är kod-komplett, typ-checkar, degraderar ärligt. Live-beviset
-(öppningsbar URL + faktisk cold-start) **kräver en operatör-körning med tokens**
-och är inte kört i detta pass.
+**Läge nu (2026-06-01, live-verifierat):** PoC kördes mot `painter-palma` med
+OIDC-auth. Resultat: `status: ready`, publik URL, **cold-start ~29 s**
+(install 18 s + build 9 s), full sajt renderade i både desktop (1280×800) och
+mobil (390×844, responsiv) utan konsolfel, `stop()`+`delete()` städade rent,
+faktisk kostnad ~52 s active CPU + ~155 MB ingress ≈ ett par ören. Se mätloggen.
 
-**Rekommendation: villkorligt GO.** API:t bär exakt det adapter-kontraktet
+**Rekommendation: GO som bevis/spike** (mergas till `jakob-be`), men **inte**
+direkt-promotion till adapter. API:t bär exakt det adapter-kontraktet
 behöver (`start` → URL, `stop`, tyst/ärlig degradering, non-Vercel-fallback
 finns redan via `local-next`/`stackblitz`). Vercel-sandbox är dessutom den enda
 av nuvarande kandidater som ger en publik URL som funkar i alla browsers utan
@@ -227,6 +230,7 @@ fatta beslut på riktiga siffror.
 
 | Datum | siteId | totalMs | installMs | buildMs | URL öppningsbar? | Mobil? | activeCpuMs | Kommentar |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-06-01 20:27 | painter-palma | 29404 | 18190 | 9208 | ja | ja (responsiv, headless 390x844) | 52342 | node24, 2 vCPU, 27 filer/407 kB, ~155 MB ingress; cold-start 29 s; full sajt renderade (hero/tjänster/FAQ/kontakt), inga konsolfel; sandboxId=sajtbyggaren-spike-painter-palma-1780345634605 |
 | _pending_ | | | | | | | | |
 
 ---
