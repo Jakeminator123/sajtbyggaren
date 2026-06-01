@@ -22,6 +22,21 @@ if str(REPO_ROOT) not in sys.path:
 
 
 # ---------------------------------------------------------------------------
+# build_site facade contract
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_build_site_reexports_subprocess_helpers() -> None:
+    """Refactor guard: legacy imports keep resolving through scripts.build_site."""
+    import packages.generation.build.subprocesses as subprocesses
+    import scripts.build_site as build_site
+
+    assert build_site.run_npm is subprocesses.run_npm
+    assert build_site._coerce_subprocess_text is subprocesses._coerce_subprocess_text
+
+
+# ---------------------------------------------------------------------------
 # B4 - .env guard must be case-insensitive
 # ---------------------------------------------------------------------------
 
