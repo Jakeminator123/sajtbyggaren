@@ -30,8 +30,8 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `a90215e` + steward-docs-commit (denna) (2026-06-01 UTC,
-`jakob-be` hardening-session ovanpå PR #142-synken `fb3b1f8`, EJ i `main` än).
+Last verified state: `2320e34` (2026-06-01 UTC, `jakob-be` hardening + PR #143
+refactor-merge, ovanpå PR #142-synken `fb3b1f8`; EJ i `main` än).
 Nya commits sedan föregående checkpoint (alla på `jakob-be`, opushad mot `main`):
 - `74ed629` fix(dev): kill-dev-trees fångar orphan preview/dev node-processer
   (föräldraträd-matchning + TCP-port-lyssnare 3000-3001/4100-4199 + `--dry-run`/
@@ -39,14 +39,20 @@ Nya commits sedan föregående checkpoint (alla på `jakob-be`, opushad mot `mai
 - `2e0c55f` fix(hardening): B158 (hero släpper placeholder-`tel:`), B159
   (kontaktsida/`/hitta-hit` får ärlig kontakt-CTA), copyDirective-edge-cases
   (namn-scope / reject-ord-boundary / trailing-instruktion), Streamlit-floor
-  `>=1.49`.
+  `>=1.49`. Fulltestad, 7 explicita filer.
 - `a90215e` fix(discovery): B120 stad-extraktion läser alla addressLines +
   flerordiga orter.
-- steward-docs-commit (denna): known-issues stänger B158/B159, B120-progress +
-  ny B160 (logo-Image-varning, Christopher-lane), B155-hardening-not, GAP-annotation,
-  Christopher-handoff i `agent-inbox.jsonl`. Bug-scope: 15 aktiva / 133 stängda.
-Nästa: docs-PR #138/#141 konsolidering, #140 Bite B-review, samt en
-sync-PR `jakob-be -> main` för hela hardening-batchen när operatören ger OK.
+- `d036067` docs(steward): known-issues stänger B158/B159, B120-progress + ny
+  B160 (logo-Image, Christopher-lane), B155-hardening-not, GAP-annotation,
+  Christopher-handoff (`msg-0025`). Bug-scope: **15 aktiva / 133 stängda**.
+- `a3c47a7` docs(focus): dokumenterade PR #143 + markerade #139 mergad.
+- `2320e34` refactor(build): **PR #143 mergad** (squash, base `jakob-be`) —
+  npm/subprocess-helpers flyttade till `packages/generation/build/subprocesses.py`;
+  `scripts.build_site` behåller facade + re-export `run_npm` (monkeypatchbar).
+  Behavior-preserving (AST-verifierad), Scout-grön, full pytest exit 0. PR-branch +
+  duplikat `cursor/refactor-build-site-slice-1` raderade.
+Nästa: #140 Bite B-review (in i `jakob-be`), docs-PR #138/#141-konsolidering,
+sedan sync-PR `jakob-be -> main` för hela batchen när operatören ger OK.
 
 ## Branchmodellen (kort)
 
@@ -60,27 +66,25 @@ sync-PR `jakob-be -> main` för hela hardening-batchen när operatören ger OK.
 
 ## Pågående/öppna PR:s just nu
 
-**Öppna PRs (2026-06-01 PM, uppdaterad):**
+**Öppna PRs (2026-06-01 kväll, uppdaterad):**
 
-- **#143** `cursor/build-site-py-refaktorering-b2c1` — refactor(build): extract
-  npm subprocess helpers. Operatörens SEPARATA cloud-agent-spår ("grind mode")
-  som refaktoriserar `scripts/build_site.py`. Rör INTE denna hardening-batch —
-  mina ändringar ligger i `resolve.py` / `renderers.py` / `contact_placeholders.py`
-  / `prompt_to_project_input.py`, aldrig `build_site.py` — så ingen filkonflikt.
-  Review/merge är operatörens beslut, inte denna lane.
 - **#140** `cursor/preview-runtime-bite-b-di → jakob-be` — draft. Bite B
   PreviewRuntime via dependency-injection. Inom scope; rör ej copyDirectives-
-  filer eller Christopher-UI. Mergas in i `jakob-be`, ej `main`.
+  filer eller Christopher-UI. Mergas in i `jakob-be`, ej `main`. **Nästa review.**
 - **#138** `cursor/cloud-dev-env-setup-a928 → main` — draft, docs (AGENTS.md
   Cloud-gotchas). Clean.
 - **#141** `cursor/cloud-agents-md-env-notes-7a3f → main` — draft, docs.
   Governance failar (term-coverage flaggar ett versalt backtick-ord i AGENTS.md);
   enradsfix kvar. Nästan-dubblett av #138 → konsolidera till en PR.
 
-**#139** `christopher-ui → main` — MERGAD 2026-06-01 (squash `f22d27a`;
-steward-auto `efbb425`). UI/UX-batch + B155 FloatingChat-no-op + copyDirectives
-väg B-UI ligger nu i `main`. Tre låg-impact-fynd kvar i Christophers lane
-(agent-inbox `msg-0024` + `msg-0025`).
+**Mergade denna session:**
+- **#143** `cursor/build-site-py-refaktorering-b2c1 → jakob-be` — **mergad**
+  (`2320e34`, squash). Behavior-preserving npm/subprocess-extraktion (operatörens
+  cloud-agent). Rebasead mot senaste `jakob-be` (inkl. `2e0c55f`), Scout-grön,
+  full svit exit 0. PR-branch + duplikat raderade.
+- **#139** `christopher-ui → main` — mergad tidigare 2026-06-01 (`f22d27a`,
+  steward-auto `efbb425`). UI/UX + B155 FloatingChat-no-op + copyDirectives väg
+  B-UI. Tre låg-impact-fynd kvar i Christophers lane (`msg-0024` + `msg-0025`).
 
 Rekommenderat nästa main-steg: sync-PR `jakob-be → main` för hela
 hardening-batchen (B158/B159 + copyDirective-edge-cases + B120 + kill-dev-trees

@@ -1,9 +1,56 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-01 UTC, steward-auto efter PR #142 — sync(jakob-be -> main): ADR 0034 path A copyDirectives + contact eval-fix + placeholder suppression. Verifierad `main` är `fb3b1f8`.
+**Datum:** 2026-06-01 kväll UTC. `jakob-be` HEAD = `2320e34` (hardening-batch +
+PR #143 refactor-merge). `main` = `fb3b1f8` (oförändrad sedan PR #142).
+`jakob-be` är **inte** synkad till `main` än — väntar operatörs-OK för sync-PR.
 
-Nya PRs sedan föregående checkpoint: PR #142 — sync(jakob-be -> main): ADR 0034 path A
-copyDirectives + contact eval-fix + placeholder suppression.
+## Session 2026-06-01 kväll — hardening landad + PR #143 refactor mergad
+
+`jakob-be`-commits denna session (alla pushade, EJ i `main`):
+
+- `74ed629` **kill-dev-trees**: fångar nu orphan preview/dev node-processer
+  (föräldraträd-matchning + TCP-portlyssnare 3000-3001/4100-4199, `--dry-run`/
+  `--verbose`). Validerad live: städade en orphan `next dev` (PID 9420) som
+  blockerade `test_api_prompt_smoke` — testet blev grönt efteråt.
+- `2e0c55f` **fix(hardening)**: B158 (hero släpper placeholder-`tel:`-CTA), B159
+  (`render_contact`/`/hitta-hit` får ärlig kontakt-route-CTA), tre
+  copyDirective-edge-cases (generiskt namn-scope → ingen company-rename vid
+  tjänst/produkt/sida; reject-verb ord-boundary så "Changemakers" applicerar;
+  okvoterad trailing "till/to" fångar ej instruktioner som copy), Streamlit-floor
+  `>=1.49`. 7 explicita filer, fulltestad.
+- `a90215e` **fix(discovery)**: B120 stad-extraktion läser alla `addressLines` +
+  flerordiga orter (intl-format medvetet kvar = säker fallback).
+- `d036067` **docs(steward)**: known-issues stänger B158/B159, B120-progress, ny
+  B160 (logo aspect-ratio-varning i `next/image`, Christopher-lane), B155-hardening-not,
+  GAP-annotation. Bug-scope **15 aktiva / 133 stängda**. Christopher-handoff
+  `msg-0025` (B160 + #139-fynd + B155-honesty-koordinering).
+- `a3c47a7` **docs(focus)**: dokumenterade PR #143, markerade #139 mergad.
+- `2320e34` **refactor(build) — PR #143 mergad** (squash, base `jakob-be`):
+  npm/subprocess-helpers (`run_npm`, `_sanitized_npm_env`, `_coerce_subprocess_text`,
+  `_npm_step_result`, NPM_*_TIMEOUT) flyttade till
+  `packages/generation/build/subprocesses.py`. `scripts.build_site` behåller
+  facade + `run_npm = _subprocess_exports.run_npm` (call-sites använder bart
+  modulglobalt namn → `monkeypatch.setattr("scripts.build_site.run_npm", …)`
+  fungerar). Operatörens cloud-agent-arbete, rebasead mot senaste `jakob-be`,
+  Scout-granskad GRÖN (behavior-preserving, AST-verifierad, scope = 3 filer,
+  base `jakob-be`), full pytest exit 0. Branch + duplikat
+  `cursor/refactor-build-site-slice-1` raderade.
+
+**Lane-disciplin hölls:** all kod i backend/generation/scripts/docs. `apps/viewser/**`
+rördes inte (Christopher-lane); UI-fynd (B160 logo, #139-trio, B155-honesty)
+handades av via `msg-0025`.
+
+**Branch-städ denna session:** raderade merged PR-branch
+`cursor/build-site-py-refaktorering-b2c1` + duplikat `cursor/refactor-build-site-slice-1`.
+Behållna (medvetet): backups (`backup-25/26-VIKTIG`, `backup-43/44/45`,
+`backup-pre-christopher-ui-merge`), `christopher-ui`, öppna-PR-branchar
+(`#140`/`#138`/`#141`), WIP-snapshots (`cursor/preview-runtime-adapters`,
+`cursor/dossier-intake-v11-review-895d`).
+
+**Nästa:** (1) #140 Bite B-review → in i `jakob-be`. (2) docs-PR #138/#141
+konsolidering. (3) sync-PR `jakob-be → main` för hela batchen när operatören ger
+OK (`jakob-be` får EJ `reset --hard origin/main` i mellanläget — merge/rebase in
+`main`, lös docs-konflikter, öppna sync-PR). (4) Vercel/Sandbox = fortfarande senare.
 
 ## Orchestrator-pass 2026-06-01 PM — tre scouts gröna, #139 mergad
 
