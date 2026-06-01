@@ -7,6 +7,11 @@ import {
   type PreviewRuntimeConfig,
 } from "@preview-runtime";
 
+import {
+  currentViewserRuntime,
+  resolveViewserRuntime,
+} from "./preview-runtime-server";
+
 declare const describe: (name: string, fn: () => void) => void;
 declare const it: (name: string, fn: () => void | Promise<void>) => void;
 
@@ -75,5 +80,41 @@ describe("PreviewRuntime registry and handler injection", () => {
       result.files?.map((file) => file.path),
       ["app/page.tsx", "package.json"],
     );
+  });
+
+  it("maps a thrown delegate error to status 'failed' (never 'unsupported')", async () => {
+    configurePreviewRuntimeHandlers({
+      local: {
+        start: async () => {
+          throw new Error("Build-artefakter saknas: .next/ saknas.");
+        },
+      },
+    });
+
+    const result = await resolveRuntime("local").start(baseConfig);
+
+    assert.equal(result.status, "failed");
+    assert.match(result.error ?? "", /Build-artefakter saknas/);
+  });
+
+  it("keeps fly as the only reserved 'unsupported' adapter", async () => {
+    const result = await resolveRuntime("fly").start(baseConfig);
+    assert.equal(result.status, "unsupported");
+    assert.equal(resolveRuntime("fly").isAvailable(), false);
+  });
+});
+
+describe("Viewser preview-runtime server wiring", () => {
+  it("resolves the env-driven runtime with handlers auto-installed", async () => {
+    assert.equal(
+      currentViewserRuntime(envWithPreviewMode("local-next")).kind,
+      "local",
+    );
+    assert.equal(
+      currentViewserRuntime(envWithPreviewMode("stackblitz")).kind,
+      "stackblitz",
+    );
+    assert.equal(await resolveViewserRuntime("local").isAvailable(), true);
+    assert.equal(await resolveViewserRuntime("stackblitz").isAvailable(), true);
   });
 });

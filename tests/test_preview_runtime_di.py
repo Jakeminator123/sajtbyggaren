@@ -64,3 +64,41 @@ def test_preview_runtime_registry_and_di_delegation_are_locked() -> None:
     assert "readRunFilesForStackblitz(requireRunId(config))" in viewser_wiring
     assert "currentRuntime(envWithPreviewMode(\"local-next\"))" in compile_test
     assert "currentRuntime(envWithPreviewMode(\"stackblitz\"))" in compile_test
+
+
+@pytest.mark.tooling
+def test_only_fly_adapter_returns_unsupported() -> None:
+    """local/stackblitz är implementerade adaptrar; bara fly är reserverad stub.
+
+    Bevis på att Bite B-adaptrarna faktiskt delegerar i stället för att vara
+    Bite A-stubbar: de får inte längre emittera `status: "unsupported"`. Endast
+    `fly` (oimplementerad enligt ADR 0028 §3 + ADR 0030) gör det.
+    """
+    local = (PREVIEW_RUNTIME_SRC / "adapters" / "local.ts").read_text(encoding="utf-8")
+    stackblitz = (
+        PREVIEW_RUNTIME_SRC / "adapters" / "stackblitz.ts"
+    ).read_text(encoding="utf-8")
+    fly = (PREVIEW_RUNTIME_SRC / "adapters" / "fly.ts").read_text(encoding="utf-8")
+
+    assert 'status: "unsupported"' not in local
+    assert 'status: "unsupported"' not in stackblitz
+    assert 'status: "unsupported"' in fly
+
+
+@pytest.mark.tooling
+def test_viewser_wiring_exposes_env_driven_entry_point() -> None:
+    """App-lagret har en idempotent install + env-styrd resolver.
+
+    `currentViewserRuntime()`/`resolveViewserRuntime()` garanterar att DI-
+    handlers är installerade innan adaptern resolvas, så `localRuntime`/
+    `stackblitzRuntime` aldrig faller tillbaka på sina "saknar handler"-grenar
+    i normal drift.
+    """
+    viewser_wiring = (VIEWSER_DIR / "lib" / "preview-runtime-server.ts").read_text(
+        encoding="utf-8"
+    )
+
+    assert "ensureViewserPreviewRuntimeHandlers" in viewser_wiring
+    assert "currentViewserRuntime" in viewser_wiring
+    assert "resolveViewserRuntime" in viewser_wiring
+    assert "currentRuntime(env)" in viewser_wiring
