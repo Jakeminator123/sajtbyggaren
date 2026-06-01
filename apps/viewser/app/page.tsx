@@ -557,6 +557,7 @@ export default function Home() {
         runSiteId={runSiteId}
         runSiteIdUnknown={runSiteIdUnknown}
         isBuilding={building}
+        runsLoading={runsLoading}
         statusText={statusText}
       />
     </main>

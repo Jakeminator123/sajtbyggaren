@@ -826,6 +826,7 @@ COMMON_WORDS = {
     "RunsLoadErrorCard",  # lokal komponent i apps/viewser/app/page.tsx
     "InspectorLoadingSkeleton",  # lokal Skeleton-komponent i site-inspector-sheet.tsx (Tier 2)
     "VersionsEmptyState",  # lokal EmptyState-komponent i versions-tab/diff-view.tsx (Tier 3 split)
+    "RunHistorySkeleton",  # lokal Skeleton-komponent i run-history.tsx (Wave 3 Steg 8)
     "SELECT",  # HTML-tagName-konstant i ⌘K-skip (page.tsx + test) — inte domänbegrepp
     "SyntaxError",  # JS-built-in exception-namn i prompt-builder NDJSON-comment + test — inte domänbegrepp
     # Toast-system (eget mini-system, ingen extern dep):

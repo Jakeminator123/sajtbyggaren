@@ -33,6 +33,8 @@ type ConsoleDrawerProps = {
   runSiteId: string | null;
   runSiteIdUnknown?: boolean;
   isBuilding: boolean;
+  /** Initial /api/runs-laddning pågår — RunHistory visar skeleton. */
+  runsLoading?: boolean;
   statusText: string;
 };
 
@@ -48,6 +50,7 @@ export function ConsoleDrawer({
   runSiteId,
   runSiteIdUnknown = false,
   isBuilding,
+  runsLoading = false,
   statusText,
 }: ConsoleDrawerProps) {
   return (
@@ -82,6 +85,7 @@ export function ConsoleDrawer({
                 onOpenChange(false);
               }}
               isBuilding={isBuilding}
+              loading={runsLoading}
             />
 
             <ProjectInputPicker

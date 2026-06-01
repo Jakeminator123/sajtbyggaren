@@ -128,11 +128,15 @@ def test_discovery_wizard_uses_governance_options_with_ts_cache_fallback() -> No
         "blockas av ett transient route-fel."
     )
     assert "source === \"governance\"" in site_type, (
-        "SiteTypeStep ska kunna visa att listan följer Discovery Taxonomy."
+        "SiteTypeStep ska skilja governance-källan från UI-cache-fallbacken "
+        "(gat:ar supportHelper + renderSupportNotice)."
     )
-    assert "Backendens resolver avgör slutlig scaffold" in site_type, (
-        "SiteTypeStep ska göra fallback/planned-status begriplig utan att "
-        "frontend tar scaffold-beslutet."
+    # Wave 3 (Steg 7): fallback/planned-status ska fortfarande vara begriplig
+    # men i KUNDSPRÅK — den gamla 'Backendens resolver avgör slutlig scaffold'
+    # -jargongen ersattes med en kundvänlig formulering.
+    assert "Vi väljer en närliggande mall som grund så länge." in site_type, (
+        "SiteTypeStep ska göra fallback/planned-status begriplig i kundspråk "
+        "utan att frontend tar scaffold-beslutet."
     )
     assert "Discovery Taxonomy is the canonical" in constants, (
         "wizard-constants.ts måste dokumentera att TS-listan bara är UI-cache."
@@ -3284,6 +3288,89 @@ def test_wizard_help_button_visible_on_mobile() -> None:
     )
     assert "min-tap sm:min-tap-0 inline-flex" in btn_class_window, (
         "Hjälp-knappen måste vara inline-flex med min-tap (44px) på mobil"
+    )
+
+
+def test_device_preset_keyboard_shortcuts() -> None:
+    """Wave 3 (Steg 6): device-preset (375/768/1024/Full) saknade genvägar
+    + kbd-hints. ⌥1–⌥4 ska växla preview-bredd (desktop, ej i composern,
+    via event.code) och knapparna ska exponera genvägen via title.
+    """
+    content = (
+        VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx"
+    ).read_text(encoding="utf-8")
+    assert re.search(r"/\^Digit\[1-4\]\$/\.test\(event\.code\)", content), (
+        "Device-preset-genvägen måste matcha ⌥ + event.code (Digit1–4)"
+    )
+    assert "DEVICE_PRESET_OPTIONS[parseInt(event.code.slice(5), 10) - 1]" in content, (
+        "⌥1–⌥4 måste mappa till DEVICE_PRESET_OPTIONS-index"
+    )
+    assert "title={`Genväg ${shortcut}`}" in content, (
+        "Device-preset-knapparna måste exponera genvägen via title"
+    )
+
+
+def test_run_history_shows_skeleton_while_loading() -> None:
+    """Wave 3 (Steg 8): under initial /api/runs-laddning visades tom-CTA:n
+    ('Inga runs än') i förtid. RunHistory ska rendera en skeleton när
+    loading och inga runs ännu finns, och page.tsx → ConsoleDrawer →
+    RunHistory ska tråda loading-flaggan.
+    """
+    history = (
+        VIEWSER_DIR / "components" / "run-history.tsx"
+    ).read_text(encoding="utf-8")
+    drawer = (
+        VIEWSER_DIR / "components" / "console-drawer.tsx"
+    ).read_text(encoding="utf-8")
+    page = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+
+    assert "RunHistorySkeleton" in history and "Skeleton" in history, (
+        "RunHistory måste ha en RunHistorySkeleton som använder Skeleton-"
+        "primitiven"
+    )
+    assert "loading && runs.length === 0" in history, (
+        "RunHistory måste visa skeleton när loading och inga runs ännu finns"
+    )
+    assert "loading={runsLoading}" in drawer, (
+        "ConsoleDrawer måste tråda runsLoading → RunHistory.loading"
+    )
+    assert "runsLoading={runsLoading}" in page, (
+        "page.tsx måste skicka runsLoading till ConsoleDrawer"
+    )
+
+
+def test_wizard_foundation_copy_avoids_dev_jargon() -> None:
+    """Wave 3 (Steg 7): kundvända hjälptexter i foundation- och
+    site-type-stegen exponerade dev-jargong ('scaffold', 'Next.js-mall
+    backend bygger på', 'Discovery Taxonomy', 'Backendens resolver',
+    'runtime-aktiv'). Lås bort de tydligaste på de kundvända ytorna.
+    """
+    foundation = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "steps" / "foundation-step.tsx"
+    ).read_text(encoding="utf-8")
+    site_type = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "steps" / "site-type-step.tsx"
+    ).read_text(encoding="utf-8")
+
+    assert "vilken Next.js-mall backend bygger på" not in foundation, (
+        "Foundation-hjälptexten ska inte exponera 'Next.js-mall backend'-jargong"
+    )
+    assert 'subtitle="Scaffold, vibe, typografi, branch' not in foundation, (
+        "MetadataPanel-subtitle ska inte lista 'Scaffold/branch'-jargong"
+    )
+    # Endast den kundvända HelperText-meningen ska bort — kod-kommentaren som
+    # dokumenterar att listan kommer från Discovery Taxonomy får stå kvar.
+    assert "Listan följer Discovery Taxonomy." not in site_type, (
+        "Den kundvända HelperText-meningen om 'Discovery Taxonomy' ska bort"
+    )
+    assert "Visar lokal UI-cache tills governance-listan laddats." not in site_type, (
+        "Den kundvända UI-cache-jargongen ska bort från HelperText"
+    )
+    assert "Backendens resolver avgör slutlig scaffold" not in site_type, (
+        "Support-notisen ska inte exponera 'Backendens resolver/scaffold'-jargong"
+    )
+    assert "är runtime-aktiv" not in site_type, (
+        "'runtime-aktiv' ska ersättas med kundvänligt 'tillgänglig'"
     )
 
 

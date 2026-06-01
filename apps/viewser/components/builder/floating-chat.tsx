@@ -1219,6 +1219,35 @@ export function FloatingChat({
     }
   }, [tracePolling.currentPhase, isSending, onStageChange]);
 
+  // ⌥1–⌥4 växlar preview-bredd (mobile/tablet/laptop/full) utan att lämna
+  // tangentbordet under preview→följdprompt-loopen. Bara på desktop (presets
+  // är desktop-only) och inte när fokus ligger i composern. Matchar på
+  // event.code (Digit1–4) eftersom Option+siffra ger specialtecken på Mac.
+  // Samma modifier som wizardens steg-hopp, men de samexisterar aldrig —
+  // wizarden är stängd i builder-läget där FloatingChat lever.
+  useEffect(() => {
+    if (isMobile) return;
+    const handler = (event: KeyboardEvent) => {
+      if (!event.altKey || event.metaKey || event.ctrlKey) return;
+      if (!/^Digit[1-4]$/.test(event.code)) return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      const option = DEVICE_PRESET_OPTIONS[parseInt(event.code.slice(5), 10) - 1];
+      if (!option) return;
+      event.preventDefault();
+      setDevicePreset(option.id);
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [isMobile, setDevicePreset]);
+
   const handleKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
       if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
@@ -1768,9 +1797,10 @@ export function FloatingChat({
           width: PANEL_WIDTH,
         }}
       >
-        {DEVICE_PRESET_OPTIONS.map((option) => {
+        {DEVICE_PRESET_OPTIONS.map((option, idx) => {
           const isActive = devicePreset === option.id;
           const Icon = option.Icon;
+          const shortcut = `⌥${idx + 1}`;
           return (
             <button
               key={option.id}
@@ -1778,9 +1808,10 @@ export function FloatingChat({
               aria-pressed={isActive}
               aria-label={
                 option.width
-                  ? `Preview-bredd ${option.label}px`
-                  : "Full bredd"
+                  ? `Preview-bredd ${option.label}px (genväg ${shortcut})`
+                  : `Full bredd (genväg ${shortcut})`
               }
+              title={`Genväg ${shortcut}`}
               onClick={() => setDevicePreset(option.id)}
               className={cn(
                 "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium transition active:scale-95",
