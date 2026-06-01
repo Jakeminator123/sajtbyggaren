@@ -30,13 +30,17 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `da5ef7b` (2026-06-01 kväll UTC, **PR #140 Bite B mergad
+Last verified state: `58710ec` (2026-06-01 kväll UTC, **PR #140 Bite B mergad
 till `jakob-be`** — `localRuntime`/`stackblitzRuntime` wirade via dependency
 injection, env-styrt via `VIEWSER_PREVIEW_MODE`, paket→app-lager-regeln låst av
 `test_preview_runtime_di.py`). Ovanpå PR #144-synken (hela hardening-batchen i
 `main`, `origin/main` = `8f7dea5`) + docs-PR-konsolidering (#138/#141/#145 foldade
 in i `AGENTS.md` `48adcde` och stängda). `jakob-be` innehåller hela `main`.
-Bug-scope: **15 aktiva / 135 stängda**.
+Bug-scope: **15 aktiva / 135 stängda**. Ovanpå detta är #146 Vercel
+Sandbox-spike mergad (`58710ec`) som live-verifierad bevis-PoC (painter-palma
+ready, cold-start ~29 s, desktop+mobil render OK, ~ett par ören; `stop()`+
+`delete()` städade rent) — INTE adapter-promotion, ingen `PreviewRuntimeKind`/
+registry/ADR/naming-ändring. Spike-helper bakom `VIEWSER_SANDBOX_SPIKE=1`.
 Nästa (prioriteringsändring 2026-06-01 kväll, operatörsbeslut — INTE en ny
 produktstrategi): multi-adapter/provider har varit riktningen länge (se
 `runtime-adapter-plan.md` + ADR 0028/0030); vi **aktiverar nu Vercel-sandbox-
@@ -81,6 +85,15 @@ Christopher/UI.
 stängda.
 
 **Mergade/stängda denna session:**
+- **#146** `cursor/vercel-sandbox-spike → jakob-be` — **mergad** (squash,
+  `58710ec`). Flag-gated Vercel Sandbox-PoC (spike), **live-verifierad**:
+  painter-palma `status: ready`, cold-start ~29 s (install 18 s + build 9 s),
+  desktop + mobil render OK utan konsolfel, `stop()`+`delete()` städade rent,
+  faktisk kostnad ~52 s active CPU + ~155 MB ingress (≈ ett par ören). INTE
+  adapter-promotion: `PreviewRuntimeKind`/registry/ADR/naming orörda; helpern
+  ligger bakom `VIEWSER_SANDBOX_SPIKE=1` i `apps/viewser/lib/` (ej route-wirad).
+  Nästa runtime-steg: `vercel-sandbox` som opt-in adapter (kräver ADR 0033 +
+  naming-bump + DI-wiring per ADR 0030; Bite B DI-grund finns redan i `jakob-be`).
 - **#140** `cursor/preview-runtime-bite-b-di → jakob-be` — **mergad** (squash,
   `da5ef7b`). Bite B: `localRuntime`/`stackblitzRuntime` via dependency injection,
   env-styrt, paket→app-lager-regel låst av `test_preview_runtime_di.py`. CI helt
