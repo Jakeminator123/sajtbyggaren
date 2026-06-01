@@ -172,3 +172,16 @@ def test_dev_port_listener_requires_path_scope() -> None:
         )
         is True
     )
+
+
+def test_empty_scope_text_falls_back_to_cmdline() -> None:
+    """A failed/timed-out ancestry query returns scope_text="" (empty, not
+    None). The empty string carries no match signal, so it must not mask a
+    cmdline that does carry a Sajtbyggaren scope token. Regression for the
+    Codex 2026-06-01 `is not None` -> truthiness fix."""
+    cmdline = r"node C:\Users\jakem\Desktop\sajtbyggaren\apps\viewser\scripts\dev.mjs"
+    # With `is not None` the empty scope_text won the ternary and matching
+    # fell back to "" -> False. Truthiness now falls through to cmdline.
+    assert matches_sajtbyggaren(cmdline, scope_text="") is True
+    # An empty scope_text over an unrelated cmdline still does not match.
+    assert matches_sajtbyggaren("node language-server.js", scope_text="") is False

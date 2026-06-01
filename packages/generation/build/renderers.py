@@ -935,9 +935,15 @@ def render_section_contact_info(dossier: dict, *, contact_path: str = "/kontakt"
         or is_placeholder_address_lines(contact.get("addressLines"))
     )
     if no_placeholders:
+        # Filter individual placeholder lines even on the fast path: a mixed
+        # address (real line + fallback line) takes this branch because
+        # is_placeholder_address_lines() is True only when EVERY line is a
+        # placeholder. real_address_lines() drops the fallback lines; for a
+        # fully-real address it returns every line unchanged, so real-data
+        # snapshots stay byte-identical.
         address_lines = "\n".join(
             f'                <span className="block">{_jsx_safe_string(line)}</span>'
-            for line in contact["addressLines"]
+            for line in real_address_lines(contact)
         )
         return (
             header

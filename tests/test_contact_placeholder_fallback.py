@@ -273,6 +273,27 @@ def test_contact_page_mixed_address_renders_only_real_line() -> None:
     assert "Adress lämnas på förfrågan" not in page
 
 
+@pytest.mark.tooling
+def test_contact_page_fast_path_drops_placeholder_address_line() -> None:
+    """Real phone/email/hours + a mixed address takes the byte-identical
+    fast path (is_placeholder_address_lines is False for a mixed list), yet
+    the placeholder line must still be filtered so it never reaches the
+    published contact page. Regression for the Codex 2026-06-01 fast-path
+    leak: previously the fast path iterated contact['addressLines'] verbatim.
+    """
+    contact = {
+        "phone": "+46 70 111 22 33",
+        "email": "info@firma.se",
+        "addressLines": ["Storgatan 5", "Adress lämnas på förfrågan"],
+        "openingHours": "Mån-Fre 08-16",
+    }
+    page = render_contact(_dossier(contact))
+    # Real channel present confirms we took the fast path (no placeholders).
+    assert "+46 70 111 22 33" in page
+    assert "Storgatan 5" in page
+    assert "Adress lämnas på förfrågan" not in page
+
+
 # ── B158: hero secondary phone CTA suppresses the placeholder number ──
 
 

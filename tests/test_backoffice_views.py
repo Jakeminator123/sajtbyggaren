@@ -157,3 +157,25 @@ def test_installed_streamlit_matches_declared_floor(repo_root: Path):
     parts = streamlit.__version__.split(".")
     installed = (int(parts[0]), int(parts[1]))
     assert installed >= _streamlit_floor_from_requirements(repo_root)
+
+
+def _streamlit_floor_from_pyproject(repo_root: Path) -> tuple[int, int]:
+    """Parse the declared ``streamlit>=X.Y`` floor from pyproject.toml."""
+    import re
+
+    text = (repo_root / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'"streamlit>=(\d+)\.(\d+)"', text)
+    assert match is not None, "pyproject.toml must declare a streamlit floor"
+    return int(match.group(1)), int(match.group(2))
+
+
+@pytest.mark.tooling
+def test_pyproject_streamlit_floor_matches_requirements(repo_root: Path):
+    """`pip install .` reads the floor from pyproject.toml, while
+    `pip install -r requirements.txt` reads requirements.txt. If they drift,
+    a pyproject-based install can resolve Streamlit < 1.49 and crash on the
+    width="stretch" API. Lock both to the same >= 1.49 floor (Codex
+    2026-06-01 parity fix)."""
+    pyproject_floor = _streamlit_floor_from_pyproject(repo_root)
+    assert pyproject_floor >= (1, 49)
+    assert pyproject_floor == _streamlit_floor_from_requirements(repo_root)

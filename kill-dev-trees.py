@@ -191,7 +191,11 @@ def matches_sajtbyggaren(cmdline: str | None, *, scope_text: str | None = None) 
     Produktion använder ``is_target_node_process`` som även tar port-lyssnare
     och föräldraträd i beaktande.
     """
-    combined = scope_text if scope_text is not None else (cmdline or "")
+    # Fall back to cmdline on an empty scope_text too: a failed/timed-out
+    # ancestry query yields "" (not None), and an empty string carries no
+    # match signal. ``is not None`` would let that empty string mask a
+    # cmdline that does carry a Sajtbyggaren scope token.
+    combined = scope_text if scope_text else (cmdline or "")
     combined_lower = combined.lower()
     cmdline_lower = (cmdline or "").lower()
 
