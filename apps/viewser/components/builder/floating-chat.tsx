@@ -22,6 +22,7 @@ import {
   ChangeEvent as ReactChangeEvent,
   KeyboardEvent as ReactKeyboardEvent,
   PointerEvent as ReactPointerEvent,
+  type ReactNode,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -30,6 +31,10 @@ import {
 } from "react";
 
 import { useBuildTracePolling } from "@/components/builder/use-build-trace-polling";
+import {
+  DEVICE_PRESET_OPTIONS,
+  useDevicePreset,
+} from "@/components/device-preset-context";
 import {
   classifyBuildStatus,
   type PromptBuildOutcome,
@@ -297,6 +302,13 @@ type FloatingChatProps = {
    */
   pendingBaseRunId?: { baseRunId: string; baseVersion: number | null } | null;
   onClearBaseRunId?: () => void;
+  /**
+   * Slot för extra UI som rendras i samma centrerade toolbar-rad UNDER
+   * chat-panelen (till höger om device-preset-toggle). Typiskt
+   * `<BuilderActions variant="inline" ... />`. Renderas bara på desktop
+   * när panelen inte är minimerad.
+   */
+  tools?: ReactNode;
 };
 
 type PromptApiResponse = {
@@ -305,8 +317,98 @@ type PromptApiResponse = {
   version?: number | null;
   buildStatus?: string | null;
   briefSource?: string | null;
+  // B155 (2026-05-30): följdpromptar får ``appliedVisibleEffect`` +
+  // ``appliedVisibleEffectReason`` i ``build-result.json`` (auktoritativ
+  // källa enligt Jakob — trace-event ``followup.no_op_detected`` plockas
+  // inte upp av ``parseTraceLine`` som bara känner sju kända fält).
+  // Builden går alltid igenom, men när motorn upptäcker att ingen synlig
+  // ändring landade flippar vi success-bubblan till en ärlig
+  // info-variant istället för att lova "Klart!". Skrivs bara på
+  // followup-builds; init-builds saknar fältet (testat i
+  // tests/test_followup_honest_no_op.py::test_init_build_omits_*).
+  buildResult?: Record<string, unknown>;
+  // ADR 0034 väg B (2026-06-01): exponerar de strukturerade
+  // copy-direktiv som path A applicerade på den här versionens
+  // project-input. Tom lista = init-build, "vanlig" follow-up utan
+  // copy-direktiv eller artefakt-läsning som silently failade. UI:t
+  // härleder svenska success-rader per direktiv; payload renderas
+  // alltid som textnod (React escapar default — vi använder aldrig
+  // dangerouslySetInnerHTML här).
+  appliedCopyDirectives?: AppliedCopyDirective[];
   error?: string;
 };
+
+/**
+ * Strikt typad copy-direktiv-shape som speglar
+ * ``governance/schemas/project-input.schema.json:directives.copyDirectives``.
+ * Måste hållas i synk med ``AppliedCopyDirective`` i
+ * ``apps/viewser/lib/runs.ts``. Den extra typen här finns så FloatingChat
+ * inte tar ett direkt ``import`` på server-only path utan får sin
+ * egen client-bundle-säkra typ.
+ */
+type AppliedCopyDirective = {
+  target: "company-name" | "tagline";
+  operation: "replace-text" | "include-token";
+  payload: string;
+  source?: "prompt-rule" | "llm" | "explicit";
+};
+
+// B155: avläs ``appliedVisibleEffect`` från build-result-payloaden utan
+// att lita på dess typ. Returnerar `null` när builden inte är en
+// follow-up (init-läge skriver inte fältet) eller när bygget gick i
+// fel/degraded läge — detta gör success-grenen i
+// ``summarizeBuildResult`` säker mot fält-drift utan att vi behöver
+// flytta no-op-logiken till bygg-routen.
+function extractAppliedVisibleEffect(
+  buildResult: Record<string, unknown> | undefined,
+): { applied: boolean; reason: string | null } | null {
+  if (!buildResult) return null;
+  const applied = buildResult.appliedVisibleEffect;
+  if (typeof applied !== "boolean") return null;
+  const reasonRaw = buildResult.appliedVisibleEffectReason;
+  return {
+    applied,
+    reason: typeof reasonRaw === "string" ? reasonRaw : null,
+  };
+}
+
+/**
+ * ADR 0034 väg B (B155 path B): bygg en svensk success-rad per applicerat
+ * copy-direktiv. Renderingen i FloatingChat-bubblan sker via
+ * ``{message.content}`` (textnod) — payload escapas alltid av React.
+ * Vi mappar bara de tre kombinationer som schema-enumen på
+ * ``governance/schemas/project-input.schema.json:directives.copyDirectives``
+ * tillåter idag (target=company-name | tagline; operation=replace-text |
+ * include-token). Andra kombinationer faller tillbaka på en neutral
+ * "uppdaterades"-rad så framtida schema-bumps inte tystar UI:t — men
+ * payloaden är redan validerad mot guards på write-sidan, så det är
+ * säkert att rendera även den okända varianten.
+ */
+function summarizeCopyDirectives(
+  directives: AppliedCopyDirective[] | undefined,
+): string[] {
+  if (!directives || directives.length === 0) return [];
+  const lines: string[] = [];
+  for (const directive of directives) {
+    const payload = directive.payload;
+    if (!payload) continue;
+    if (directive.target === "company-name") {
+      lines.push(`Jag ändrade företagsnamnet till "${payload}".`);
+      continue;
+    }
+    if (directive.target === "tagline") {
+      if (directive.operation === "replace-text") {
+        lines.push(`Jag uppdaterade rubriken till "${payload}".`);
+      } else if (directive.operation === "include-token") {
+        lines.push(`Jag la in "${payload}" i hero-texten.`);
+      } else {
+        lines.push(`Jag uppdaterade rubriken till "${payload}".`);
+      }
+      continue;
+    }
+  }
+  return lines;
+}
 
 type Position = { x: number; y: number };
 
@@ -314,6 +416,18 @@ const PANEL_WIDTH = 360;
 const PANEL_HEIGHT = 460;
 const PANEL_MIN_HEIGHT = 220;
 const VIEWPORT_PADDING = 16;
+/**
+ * Toolbar-pillen (375/768/1024/Full + Verktyg) sitter kant-i-kant
+ * UNDER chat-panelen via `top: position.y + PANEL_HEIGHT`. När vi
+ * clamp:ar drag/resize-position måste vi räkna med pillens egen höjd
+ * (h-8 button + p-0.5 padding ≈ 36px) plus lite andnings-padding så
+ * raden inte klipps av viewportens nederkant. Används som höjd-argument
+ * till clampToViewport där tidigare bara PANEL_HEIGHT användes
+ * (scout-fynd 2026-05-26: toolbar hamnade utanför viewporten vid
+ * default-position nederst till höger).
+ */
+const TOOLBAR_ROW_HEIGHT = 40;
+const PANEL_FOOTPRINT_HEIGHT = PANEL_HEIGHT + TOOLBAR_ROW_HEIGHT;
 const STORAGE_KEY_POSITION = "sajtbyggaren:floating-chat:position";
 const STORAGE_KEY_MINIMIZED = "sajtbyggaren:floating-chat:minimized";
 const STORAGE_KEY_QUICK_PROMPTS = "sajtbyggaren:floating-chat:quick-prompts";
@@ -341,6 +455,8 @@ function useIsMobileViewport(): boolean {
     if (typeof window === "undefined") return;
     const mq = window.matchMedia("(max-width: 767px)");
     setIsMobile(mq.matches);
+    // Parameter-typen infereras automatiskt av addEventListener-overload
+    // för media-query-listenern; ingen explicit annotation behövs.
     const update = (event: { matches: boolean }) => setIsMobile(event.matches);
     // B151: iOS Safari < 14 (samt äldre Edge-/IE-baserade browsers) stödjer
     // inte addEventListener-signaturen på matchMedia-resultatet — där måste
@@ -489,6 +605,41 @@ function summarizeBuildResult(
         versionText = ` Version 1 publicerad.`;
       }
     }
+    // B155 (2026-05-30): backend signalerar via build-result.json om
+    // följdprompten faktiskt gav en synlig ändring. När motorn
+    // upptäcker att inget visible-file-set ändrats (eller att intent
+    // klassats som "no semantic change") byter vi success-grenen till
+    // en ärlig info-rad så operatören inte gissar att texten landade
+    // när den inte gjorde det. Visas bara på followups (init saknar
+    // fältet) och bara när effect.applied === false.
+    const effect = extractAppliedVisibleEffect(payload.buildResult);
+    if (effect && effect.applied === false) {
+      return {
+        content:
+          `Jag kunde inte fånga någon synlig ändring den här gången.${versionText} Testa att ange exakt rubrik, text eller sektion — t.ex. "byt namnet i headern till X".`,
+        variant: "info",
+      };
+    }
+    // ADR 0034 väg B: när path A faktiskt skrev strukturerade copy-
+    // direktiv för den här versionen så visa exakt vad som ändrades.
+    // Tom lista = init-build, follow-up utan strukturerade direktiv,
+    // eller artefakt-läsning som silently failade — alla tre
+    // fallbackar till den generiska "Klart!"-raden så vi inte lovar
+    // ändringar vi inte kan bekräfta.
+    const copyLines = summarizeCopyDirectives(payload.appliedCopyDirectives);
+    if (copyLines.length > 0) {
+      const verb = versionText
+        ? `Klart!${versionText}`
+        : "Klart!";
+      const list =
+        copyLines.length === 1
+          ? copyLines[0]
+          : copyLines.map((line) => `• ${line}`).join("\n");
+      return {
+        content: `${verb} ${list}`,
+        variant: "success",
+      };
+    }
     const changes = summarizeChangesFromPrompt(userPrompt);
     return {
       content: `Klart!${versionText} Previewen laddas om automatiskt.`,
@@ -524,6 +675,7 @@ export function FloatingChat({
   onBuildEnd,
   pendingBaseRunId,
   onClearBaseRunId,
+  tools,
 }: FloatingChatProps) {
   const [position, setPosition] = useState<Position | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -533,6 +685,10 @@ export function FloatingChat({
   // initial hydration; skiftar till true post-mount om matchMedia
   // träffar.
   const isMobile = useIsMobileViewport();
+  // Device-preset (375/768/1024/full) delas med ViewerPanel via
+  // DevicePresetProvider — toggle-UI:t bor numera under FloatingChat:s
+  // chat-panel (tidigare uppe till höger i canvasen).
+  const { devicePreset, setDevicePreset } = useDevicePreset();
   // keyboardInset enabled bara när chatten är öppen på mobil — vi
   // behöver inte lyssna på visualViewport-resize:s när panelen är
   // minimerad eller när vi är på desktop (där tangentbord inte
@@ -622,8 +778,8 @@ export function FloatingChat({
       if (cancelled) return;
       const stored = readStoredPosition();
       const initial = stored
-        ? clampToViewport(stored, PANEL_WIDTH, PANEL_HEIGHT)
-        : defaultPosition(PANEL_WIDTH, PANEL_HEIGHT);
+        ? clampToViewport(stored, PANEL_WIDTH, PANEL_FOOTPRINT_HEIGHT)
+        : defaultPosition(PANEL_WIDTH, PANEL_FOOTPRINT_HEIGHT);
       setPosition(initial);
       setIsMinimized(readStoredMinimized());
       setQuickPromptsOpen(readStoredQuickPromptsOpen());
@@ -638,7 +794,7 @@ export function FloatingChat({
     function handleResize() {
       setPosition((current) => {
         if (!current) return current;
-        return clampToViewport(current, PANEL_WIDTH, PANEL_HEIGHT);
+        return clampToViewport(current, PANEL_WIDTH, PANEL_FOOTPRINT_HEIGHT);
       });
     }
     window.addEventListener("resize", handleResize);
@@ -731,7 +887,7 @@ export function FloatingChat({
         clampToViewport(
           { x: start.originX + dx, y: start.originY + dy },
           PANEL_WIDTH,
-          PANEL_HEIGHT,
+          PANEL_FOOTPRINT_HEIGHT,
         ),
       );
     },
@@ -1058,6 +1214,10 @@ export function FloatingChat({
         aria-label="Sajtmaskin-chatt"
         className={cn(
           "border-border/60 bg-card/95 pointer-events-auto fixed z-40 flex flex-col border shadow-2xl backdrop-blur-xl",
+          // Pre-mount-placeholdern visas i 1 frame innan layout-effect
+          // satt position-state. Full rounded-2xl här eftersom toolbar-
+          // raden inte rendras än — annars skulle chat-panelen se
+          // "ofullständig" ut (avhuggen nederkant utan något under).
           isMobile
             ? "inset-x-0 bottom-0 max-h-[85dvh] w-full rounded-t-3xl pb-safe"
             : "right-6 bottom-6 w-[360px] rounded-2xl",
@@ -1165,15 +1325,20 @@ export function FloatingChat({
   }
 
   return (
+    <>
     <aside
       aria-label="Sajtmaskin-chatt"
       className={cn(
         "border-border/60 bg-card/95 pointer-events-auto fixed z-40 flex flex-col overflow-hidden border shadow-2xl backdrop-blur-xl",
         // Mobil = bottom-sheet (full bredd, kapad höjd, safe-area).
         // Desktop = 360px floating panel med inline position-state.
+        // På desktop används rounded-t-2xl (inte rounded-2xl) eftersom
+        // toolbar-raden under (format + Verktyg) hänger ihop kant-i-kant
+        // och formar tillsammans EN rektangel med rundade ytter-hörn.
+        // Bottom-rundningen lever på toolbar-raden istället.
         isMobile
           ? "inset-x-0 bottom-0 w-full max-h-[85dvh] rounded-t-3xl pb-safe"
-          : "w-[360px] rounded-2xl",
+          : "w-[360px] rounded-t-2xl",
         isDragging
           ? "cursor-grabbing transition-none"
           : "motion-safe:transition-[box-shadow] motion-safe:duration-150",
@@ -1533,6 +1698,73 @@ export function FloatingChat({
         aria-hidden
       />
     </aside>
+
+    {/* Toolbar-rad UNDER chat-panelen — innehåller device-preset-
+        knapparna (375/768/1024/Full), en subtil vertikal divider, och
+        en optional `tools`-slot (typiskt BuilderActions inline-knappen).
+        Bredd = PANEL_WIDTH (360px) och `rounded-b-2xl` så toolbar-raden
+        + chat-panelen ovanför formar visuellt EN sammanhängande
+        rektangel: chat = rounded-t-2xl, toolbar = rounded-b-2xl, raka
+        sidkanter på båda. `border-t-0` döljer top-borden så chat-
+        panelens border-bottom syns igenom som en subtil divider mellan
+        de två sektionerna (operatör-önskan 2026-05-26: "inte ligga i
+        en egen bubbla utan raka kanter på sidorna som om dom ligger i
+        samma fyrkant som resten av chattrutan").
+
+        Renderas bara på desktop (md+) och endast när panelen inte är
+        minimerad — på mobile är enheten själv liten och toggle-värdet
+        är meningslöst, och Verktyg-pillen är ändå dold under md:.
+        position-null guard:en hanterar SSR + initial hydration innan
+        first-mount-effekten satt position-state. */}
+    {!isMobile && !isMinimized && position ? (
+      <div
+        role="toolbar"
+        aria-label="Förhandsvisningsbredd och verktyg"
+        className="border-border/60 bg-card/95 pointer-events-auto fixed z-40 hidden items-center justify-center gap-0.5 rounded-b-2xl border border-t-0 p-1 shadow-2xl backdrop-blur-xl md:flex"
+        style={{
+          left: position.x,
+          top: position.y + PANEL_HEIGHT,
+          width: PANEL_WIDTH,
+        }}
+      >
+        {DEVICE_PRESET_OPTIONS.map((option) => {
+          const isActive = devicePreset === option.id;
+          const Icon = option.Icon;
+          return (
+            <button
+              key={option.id}
+              type="button"
+              aria-pressed={isActive}
+              aria-label={
+                option.width
+                  ? `Preview-bredd ${option.label}px`
+                  : "Full bredd"
+              }
+              onClick={() => setDevicePreset(option.id)}
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium transition active:scale-95",
+                isActive
+                  ? "bg-foreground text-background shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" aria-hidden />
+              {option.label}
+            </button>
+          );
+        })}
+        {tools ? (
+          <>
+            <span
+              aria-hidden
+              className="bg-border/60 mx-0.5 h-5 w-px"
+            />
+            {tools}
+          </>
+        ) : null}
+      </div>
+    ) : null}
+    </>
   );
 }
 

@@ -1,26 +1,24 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
 import type { discoveryOption } from "../discovery-options";
 import { FoundationSummary } from "../foundation-summary";
+import { VibeSwatchRow } from "../visual-preview-card";
 import {
   BUSINESS_FAMILIES,
   type BusinessFamily,
   type BusinessFamilyId,
   familyForCategory,
+  findVibe,
   type WizardCategoryId,
 } from "../wizard-constants";
 import type { WizardAnswers } from "../wizard-types";
 import {
-  AdvancedDisclosure,
-  Chip,
-  ChipRow,
   FieldLabel,
   FieldStack,
-  HelperText,
   MetadataPanel,
   SectionHeader,
   TextField,
@@ -63,7 +61,6 @@ export function FoundationStep({
   answers,
   onChange,
   options,
-  source,
   onScrapeStateChange,
 }: {
   answers: WizardAnswers;
@@ -72,6 +69,11 @@ export function FoundationStep({
   source: "governance" | "fallback";
   onScrapeStateChange?: (state: ScrapeState) => void;
 }) {
+  // Sub-specialisering togs bort 2026-05-26 efter operator-feedback
+  // "Varför specialisering?". Vi behåller `options`-prop:en för API-
+  // kompabilitet med discovery-wizard.tsx men referensen är void:ad
+  // så TypeScript inte klagar på unused.
+  void options;
   const [scrapeStatus, setScrapeStatus] = useState<ScrapeStatus>("idle");
   const [scrapeMessage, setScrapeMessage] = useState<string>("");
 
@@ -142,29 +144,6 @@ export function FoundationStep({
   ]);
 
   const selectedFamily = answers.businessFamily;
-  const family = BUSINESS_FAMILIES.find((f) => f.id === selectedFamily);
-
-  // Sub-kategori-chips visar bara de som tillhör vald family.
-  // Om ingen family är vald visas inga chips (operatören väljer family först).
-  const subCategoryOptions = useMemo(() => {
-    if (!family) return [];
-    return options.filter((opt) =>
-      (family.subCategories as readonly WizardCategoryId[]).includes(opt.id),
-    );
-  }, [family, options]);
-
-  const toggleSubCategory = useCallback(
-    (id: WizardCategoryId) => {
-      const set = new Set(answers.siteType);
-      if (set.has(id)) {
-        set.delete(id);
-      } else {
-        set.add(id);
-      }
-      onChange({ siteType: Array.from(set) });
-    },
-    [answers.siteType, onChange],
-  );
 
   const selectFamily = useCallback(
     (familyId: BusinessFamilyId) => {
@@ -180,17 +159,6 @@ export function FoundationStep({
     },
     [answers.siteType, onChange],
   );
-
-  // Räkna ifyllda advanced-fält så disclosure-badge visar "(N ifyllda)"
-  // när operatören redan har stoppat in värden. URL-skrape räknas inte
-  // här eftersom den ligger ovanför disclosure. Räknar specialisering
-  // som 1 och kontakt som antal ifyllda kontaktfält.
-  const advancedFilled =
-    (answers.siteType.length > 0 ? 1 : 0) +
-    (answers.contact.phone.trim() ? 1 : 0) +
-    (answers.contact.email.trim() ? 1 : 0) +
-    (answers.contact.address.trim() ? 1 : 0) +
-    (answers.contact.openingHours.trim() ? 1 : 0);
 
   return (
     <FieldStack>
@@ -323,91 +291,10 @@ export function FoundationStep({
         </MetadataPanel>
       ) : null}
 
-      {/* ADVANCED — i disclosure: specialisering + kontakt. URL-skrape
-          ligger numera ovanför FieldStack (alltid synlig). */}
-      <AdvancedDisclosure
-        id="foundation-advanced"
-        label="Specialisering & kontakt"
-        hint="Sub-kategori för bättre copy/SEO, och kontaktuppgifter som visas på kontaktsidan."
-        count={2}
-        activeCount={advancedFilled}
-      >
-        {/* Sub-specialisering — filtrerade chips för vald family.
-            Minimalism v2: helper-text bakom info-ikon. Fallback-noteringen
-            visas inline bara när vi är i fallback-läge (operatören behöver
-            veta att vi inte använder governance-listan). */}
-        {selectedFamily && subCategoryOptions.length > 0 ? (
-          <div>
-            <SectionHeader help="En eller flera sub-kategorier för bättre copy och SEO.">
-              Specialisering
-            </SectionHeader>
-            {source === "fallback" ? (
-              <HelperText>
-                Visar lokal UI-cache tills governance-listan laddats.
-              </HelperText>
-            ) : null}
-            <div className="mt-2">
-              <ChipRow>
-                {subCategoryOptions.map((category) => (
-                  <Chip
-                    key={category.id}
-                    label={category.label}
-                    selected={answers.siteType.includes(category.id)}
-                    onToggle={() => toggleSubCategory(category.id)}
-                  />
-                ))}
-              </ChipRow>
-            </div>
-          </div>
-        ) : null}
-
-        {/* Kontakt. */}
-        <div>
-          <SectionHeader>Kontakt</SectionHeader>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <TextField
-              label="Telefon"
-              type="tel"
-              optional
-              value={answers.contact.phone}
-              onChange={(value) =>
-                onChange({ contact: { ...answers.contact, phone: value } })
-              }
-              placeholder="08-123 45 67"
-            />
-            <TextField
-              label="E-post"
-              type="email"
-              optional
-              value={answers.contact.email}
-              onChange={(value) =>
-                onChange({ contact: { ...answers.contact, email: value } })
-              }
-              placeholder="hej@dittforetag.se"
-            />
-            <TextField
-              label="Adress"
-              optional
-              value={answers.contact.address}
-              onChange={(value) =>
-                onChange({ contact: { ...answers.contact, address: value } })
-              }
-              placeholder="Storgatan 1, 111 22 Stockholm"
-            />
-            <TextField
-              label="Öppettider"
-              optional
-              value={answers.contact.openingHours}
-              onChange={(value) =>
-                onChange({
-                  contact: { ...answers.contact, openingHours: value },
-                })
-              }
-              placeholder="Mån–Fre 09–17"
-            />
-          </div>
-        </div>
-      </AdvancedDisclosure>
+      {/* Specialisering-disclosure togs bort 2026-05-26 efter operator-
+          feedback "Varför specialisering? Ta bort?". businessFamily ger
+          backend tillräckligt scaffold-signal; sub-kategori kan alltid
+          autosättas baserat på offer/scrape utan operator-input. */}
     </FieldStack>
   );
 }
@@ -415,13 +302,19 @@ export function FoundationStep({
 /**
  * FamilyCard — verksamhets­familje-kort i steg 1.
  *
- * Tidigare hade kortet en visuell preview-kolumn med default-vibens
- * färger + hero-glyph, men det signalerade fel: branschen är ortogonal
- * mot visuell identitet. En snickare ska kunna välja "Bygg/Hantverk"
- * och sedan välja mörkt tema i steg 2 utan att kortet säger "men din
- * bransch är ljus och gul". Visuell identitet ägs nu helt av steg 2
- * (`VisualStep`), så detta kort är medvetet rent text/typografi —
- * bara label + kort beskrivning av branschen.
+ * Layouten är medvetet text-tung (label + beskrivning vänster) men
+ * kompletteras av en subtil 3-prick-swatch-rad i kortets högerkant
+ * som speglar default-vibens primary/accent/background. Swatchen är
+ * läst-only PREVIEW — den signalerar "så här ser default-paletten ut
+ * för den här branschen om du inte ändrar" snarare än att låsa
+ * visuell identitet. Operatören får fri visuell ompröving i steg 2
+ * (VisualStep), så en snickare kan välja "Bygg/Hantverk" och sedan
+ * byta till ett mörkt tema utan inkonsekvens.
+ *
+ * Hero-layout-glyph är medvetet UTELÄMNAD här — vibe-id kodar inte
+ * en specifik layout, så en glyph skulle behöva en godtycklig
+ * default-variant och riskera att signalera "din bransch styr
+ * layouten" vilket är fel mental model. Layouten väljs i steg 2.
  */
 function FamilyCard({
   family,
@@ -432,24 +325,36 @@ function FamilyCard({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const defaultVibe = findVibe(family.defaultVariantId);
   return (
     <button
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
       className={[
-        "group flex w-full flex-col items-start gap-1 rounded-xl border px-3.5 py-3 text-left transition-all",
+        "group flex w-full items-start gap-3 rounded-xl border px-3.5 py-3 text-left transition-all",
         selected
           ? "border-foreground bg-foreground/[0.04] shadow-sm"
           : "border-border/70 bg-card hover:border-foreground/40 hover:bg-foreground/[0.02] hover:shadow-sm",
       ].join(" ")}
     >
-      <div className="text-foreground text-[13px] font-semibold tracking-tight">
-        {family.label}
+      <div className="min-w-0 flex-1">
+        <div className="text-foreground text-[13px] font-semibold tracking-tight">
+          {family.label}
+        </div>
+        <div className="text-muted-foreground line-clamp-2 text-[11.5px] leading-snug">
+          {family.description}
+        </div>
       </div>
-      <div className="text-muted-foreground line-clamp-2 text-[11.5px] leading-snug">
-        {family.description}
-      </div>
+      {defaultVibe ? (
+        <VibeSwatchRow
+          primary={defaultVibe.primarySwatch}
+          accent={defaultVibe.accentSwatch}
+          background={defaultVibe.background}
+          size={9}
+          className="mt-0.5 shrink-0 opacity-70 transition-opacity group-hover:opacity-100"
+        />
+      ) : null}
     </button>
   );
 }

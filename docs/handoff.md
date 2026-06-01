@@ -1,11 +1,12 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-01 UTC. Arbets-branch `jakob-be` är på `f62bd40`
-(pushad till `origin/jakob-be`, **EJ i `main`, ingen sync-PR än**). `origin/main`
-ligger kvar på B157-level-4-state (`9e1a025` via PR #137); `jakob-be` är
-10 commits före.
+**Datum:** 2026-06-01 UTC. PR #139 (christopher-ui UI/UX-batch + B155 UI +
+ADR 0034 väg B-UI) är mergad till `main`; `origin/main` är `efbb425`
+(steward-auto efter `f22d27a`). `jakob-be` har mergat in `origin/main` och bär
+de 10 backend-commitsen (topp `f62bd40`) ovanpå — sync-PR `jakob-be → main` är
+nästa steg (kräver operatörs-OK).
 
-## Orchestrator-pass 2026-06-01 PM — tre scouts gröna, merge-ordning satt
+## Orchestrator-pass 2026-06-01 PM — tre scouts gröna, #139 mergad
 
 Tre read-only scouts kördes (ingen produktkod rörd):
 
@@ -22,12 +23,13 @@ Tre read-only scouts kördes (ingen produktkod rörd):
   `apps/viewser/lib/runs.ts` och `scripts/check_term_coverage.py` utan
   `[scope-leak]`-tagg (operatörsbeslut).
 
-Merge-sekvens (kräver operatörs-OK per merge): #139 → `christopher-ui` gör
-`reset --hard origin/main` + `--force-with-lease`. Sedan öppnar `jakob-be`
-sync-PR, löser docs-konflikter (`current-focus.md` + `known-issues.md`), mergar
-→ `jakob-be` gör samma reset. `jakob-be` får INTE reseta i mellanläget. Bite B
-(#140) mergas helst in i `jakob-be` före sync-PR så den följer med samma
-main-leverans. Live-checkar före merge: okvoterad rename i Viewser, sajt utan
+Status i sekvensen: (1) #139 mergad till `main` (`f22d27a`, steward-auto
+`efbb425`). (2) `christopher-ui` resynkad till `origin/main` via
+`--force-with-lease` (efbb425). (3) `jakob-be` har mergat in `origin/main` och
+löst docs-konflikterna (`current-focus.md` + `handoff.md`). Kvar: öppna sync-PR
+`jakob-be → main` (väntar operatörs-OK + ev. live-test). Bite B (#140) mergas
+helst in i `jakob-be` före sync-PR så den följer med samma main-leverans.
+Live-checkar före sync-merge: okvoterad rename i Viewser, sajt utan
 kontaktuppgifter (inga dummyvärden men äkta data byte-identisk), och
 `copyDirectiveModel` fyrar bara i Viewser-produktionsflödet med nyckel.
 
@@ -94,6 +96,22 @@ detta arbete. Den agenten:
 `apps/viewser/lib/**`; copyDirectives rör generation/brief + governance-
 scheman. Ingen filöverlapp. När Bite-B-PR:n mergats till `jakob-be` synkar
 nästa backend-pass med `git reset --hard origin/jakob-be` innan nivå 2.
+
+## Tidigare checkpoint (#139 christopher-ui → main)
+
+**Datum:** 2026-06-01 UTC, steward-auto efter PR #139 — sync: christopher-ui → main (UI/UX-batch + B155 UI + ADR 0034 väg B-UI). Verifierad `main` är `f22d27a` (steward-auto `efbb425`).
+
+Nya PRs sedan föregående checkpoint: PR #114 — chore(gitignore): re-ignore __pycache__/
+under packages/generation/build/ (B146 fallout); PR #118 — sync(jakob-be -> main): PR
+#117 mobile responsive + PR #116 dossier-intake + 12 closed bugs + B147 new +
+audit-report; PR #120 — sync(jakob-be -> main): repo hygiene 2026-05-26 (4 commits,
+docs-only); PR #123 — sync(jakob-be -> main): backend gap batch and docs cleanup; PR
+#125 — fix(discovery): honor wizard clears across versioned fields; PR #127 —
+fix(viewser): block Python-backed actions on hosted Vercel; PR #133 — sync(jakob-be ->
+main): PreviewRuntime Bite A skeleton + race-fix + governance comments + builder prompt;
+PR #135 — feat(builder): close B155 backend — applied-effect-detektion + trace-event för
+fri follow-up; PR #134 — refactor(quality-gate): resolve contact-route via routes.json;
+PR #139 — sync: christopher-ui → main (UI/UX-batch + B155 UI).
 
 ## Tidigare checkpoint (B157 level 4)
 
@@ -685,3 +703,10 @@ builder prompt.
 
 Nya PRs sedan föregående checkpoint: PR #136 — sync(jakob-be -> main): B157 round 3 +
 BO6 + B155 backend + quality-gate routes-discovery.
+
+### 2026-06-01 UTC — handoff.md före `ee31eb1`
+
+**Datum:** 2026-05-31 UTC, steward-auto efter PR #137 — sync(jakob-be -> main): B157 level 4 immutable build-dir + pointer-swap + GC. Verifierad `main` är `40b7d29`.
+
+Nya PRs sedan föregående checkpoint: PR #137 — sync(jakob-be -> main): B157 level 4
+immutable build-dir + pointer-swap + GC.

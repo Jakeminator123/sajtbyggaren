@@ -987,16 +987,53 @@ def test_project_input_picker_includes_prompt_inputs_directory() -> None:
 
 
 @pytest.mark.tooling
-def test_prompt_builder_exposes_followup_mode_and_cleans_stage_timer() -> None:
+def test_prompt_builder_exposes_followup_mode_and_consumes_ndjson_stream() -> None:
     text = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(
         encoding="utf-8"
     )
-    assert '"followup"' in text and "Följdprompt på vald run/siteId" in text, (
-        "PromptBuilder måste låta operatorn välja följdprompt-läge."
+    # Följdprompt-läget exponerades tidigare via en synlig "Ny sajt /
+    # Följdprompt"-pill-rad. Efter total-minimalism 2026-05-27 deriveras
+    # läget automatiskt från `followupReady` istället. Testet förankrar
+    # därför auto-derive-mönstret som det stabila kontraktet.
+    assert '"followup"' in text and "followupReady" in text, (
+        "PromptBuilder måste fortfarande exponera followup-läge — antingen "
+        "via UI-val eller auto-derivering."
     )
-    assert "clearTimeout(stageTimerRef.current)" in text, (
-        "PromptBuilder måste städa stage-transition-timeouten vid unmount "
-        "och när prompt-anropet avslutas."
+    assert 'followupReady ? "followup" : "init"' in text, (
+        "PromptBuilder måste auto-derivera mode från followupReady så "
+        "operatorns prompt routas rätt utan manuell pill-växling."
+    )
+    assert 'submissionMode: "followup"' in text, (
+        "PromptBuilder måste skicka submissionMode='followup' till "
+        "executeBuild när followupReady är sant."
+    )
+    # B122-fix 2026-05-27: setTimeout(1500)-baserad stage-flip ersatt
+    # av NDJSON-stream från /api/prompt. PromptBuilder ska skicka
+    # `Accept: application/x-ndjson`, läsa `response.body` som stream
+    # och flippa stage på `stage:"building"`-eventet.
+    # `setTimeout(` (med öppningsparentes) flaggar faktiska function-
+    # anrop. Historiska referenser i kommentarer/docstrings ("den gamla
+    # setTimeout-baserade flippen") är tillåtna så fixet kan dokumentera
+    # bort-refaktoreringen utan att triggas av sin egen förklaringstext.
+    assert "setTimeout(" not in text, (
+        "PromptBuilder får inte ANROPA setTimeout för stage-transitions "
+        "längre — använd riktig signal från /api/prompt:s NDJSON-stream."
+    )
+    assert '"application/x-ndjson"' in text, (
+        "PromptBuilder måste sätta Accept: application/x-ndjson så "
+        "/api/prompt svarar med stream istället för synkron JSON."
+    )
+    assert "response.body.getReader()" in text, (
+        "PromptBuilder måste läsa /api/prompt-svaret som stream via "
+        "response.body.getReader()."
+    )
+    assert 'event.stage === "building"' in text, (
+        "PromptBuilder måste flippa stage till 'building' när NDJSON-"
+        "eventet `stage:\"building\"` kommer från route:n (riktig signal)."
+    )
+    assert 'event.stage === "done"' in text, (
+        "PromptBuilder måste behandla `stage:\"done\"`-eventet som "
+        "slutsignal med runId + siteId + buildStatus."
     )
 
 
@@ -1259,6 +1296,132 @@ def test_prompt_route_surfaces_build_status() -> None:
     )
 
 
+def test_ui_textarea_forwards_ref_explicitly() -> None:
+    """Lock the explicit `ref` forwarding in the shared Textarea wrapper.
+
+    FloatingChat (``apps/viewser/components/builder/floating-chat.tsx``)
+    auto-fokuserar composern när panelen expanderas från minimerat
+    läge via ``composerRef.current?.focus()``. Det fungerar bara om
+    Textarea-komponenten explicit destrukturerar ``ref`` ur props och
+    vidarebefordrar den till underliggande ``<textarea>``.
+
+    Tidigare läckte komponenten ref bara via ``{...props}``-spread,
+    vilket är en bräcklig React 19-detalj (ref behandlas som vanlig
+    prop sedan v19, men spread-vidarebefordran är inte garanterat
+    dokumenterad). Den här testen låser explicit destruktur + bindning
+    så en framtida refaktor inte tyst kan tappa ref:n och bryta
+    auto-focus utan att någon märker det förrän en operator klagar.
+    """
+    text = (VIEWSER_DIR / "components" / "ui" / "textarea.tsx").read_text(
+        encoding="utf-8"
+    )
+    # Destruktur av `ref` ur funktionssignaturen — det är detta som
+    # gör ref tillgänglig som en explicit referens istället för att
+    # gömmas i `...props`.
+    assert "ref,\n" in text or "ref," in text, (
+        "Textarea måste destrukturera `ref` ur sina props så ref-"
+        "vidarebefordran är explicit. Förlita dig inte på att "
+        "{...props}-spread implicit propsar ref."
+    )
+    # `ref={ref}` på <textarea>-elementet — den faktiska bindningen.
+    assert "ref={ref}" in text, (
+        "Textarea måste explicit binda `ref={ref}` på underliggande "
+        "<textarea>-element så DOM-noden exponeras för callers som "
+        "FloatingChat:s composerRef auto-focus."
+    )
+
+
+def test_floating_chat_composer_ref_used_for_expand_focus() -> None:
+    """Anti-regression för auto-focus-flödet i FloatingChat.
+
+    När operatören klickar på den minimerade FAB:en/sidotab:en ska
+    panelen expandera OCH focus flytta till composer-textarean i ett
+    enda steg, så användaren kan börja skriva direkt utan att Tab:a
+    sig in i fältet. Det här testet låser hela kedjan:
+      1. composerRef tilldelas Textarea via `ref={composerRef}`
+      2. expandAndFocus kallar `composerRef.current?.focus()`
+      3. Minimerade FAB-knappen och sidotab-knappen routar onClick
+         genom expandAndFocus (inte setIsMinimized(false) direkt).
+    Tappar någon av dessa bryts mobil-/desktop-fokuseringen tyst.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "composerRef" in text, (
+        "FloatingChat måste ha en composerRef för att kunna flytta "
+        "focus till textarean vid expand."
+    )
+    assert "ref={composerRef}" in text, (
+        "FloatingChat:s Textarea måste få `ref={composerRef}` så "
+        "expand-focus-flödet kan referera DOM-noden."
+    )
+    assert "composerRef.current?.focus()" in text, (
+        "expandAndFocus måste anropa composerRef.current?.focus() — "
+        "annars stannar tangentbords-focus på FAB-knappen efter "
+        "expand och operatören måste Tab:a sig in i textfältet."
+    )
+    assert "onClick={expandAndFocus}" in text, (
+        "Både mobil-FAB och desktop-sidotab måste routa sin onClick "
+        "genom expandAndFocus, inte setIsMinimized(false) direkt — "
+        "annars sker ingen focus-flytt vid återöppning."
+    )
+
+
+def test_prompt_route_emits_ndjson_stream_on_accept_header() -> None:
+    """B122-fix 2026-05-27: /api/prompt måste exponera en NDJSON-stream
+    när klienten signalerar `Accept: application/x-ndjson`, så PromptBuilder
+    kan flippa stage från `thinking` till `building` på en RIKTIG signal
+    (Phase 1 → Phase 2-övergången) istället för den gamla gissade
+    `setTimeout(1500)`-flippen som producerade falsk 'Bygger sajt' om
+    svaret kom under 1.5s eller motsatt — hängde i 'thinking' om Phase 1
+    tog över 1.5s.
+
+    Stream-kontrakt:
+      1. `{stage:"building"}` exakt när Phase 1 (runPromptToProjectInput)
+         är klar — innan runBuild startar.
+      2. `{stage:"done", runId, siteId, ...}` när Phase 2 (runBuild) är klar.
+      3. `{stage:"error", error:"..."}` vid fel.
+
+    Bakåtkompatibelt: klienter som INTE skickar Accept-headern (t.ex.
+    floating-chat.tsx och use-followup-build.ts) får fortfarande en
+    synkron NextResponse.json med samma fält som tidigare.
+    """
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+    assert '"application/x-ndjson"' in text, (
+        "/api/prompt route.ts måste exponera content-type 'application/x-ndjson' "
+        "när Accept-headern begär stream-läge."
+    )
+    assert "ReadableStream" in text, (
+        "/api/prompt route.ts måste returnera en ReadableStream när "
+        "klienten begär NDJSON-läge."
+    )
+    assert "onPhase1Done" in text, (
+        "/api/prompt route.ts måste skicka ett `onPhase1Done`-callback "
+        "in i runPromptBuildOnce/runPromptBuildSerially så stream-läget "
+        "kan emittera `stage:'building'` exakt mellan Phase 1 och Phase 2."
+    )
+    assert 'stage: "building"' in text, (
+        "/api/prompt route.ts måste emittera `{stage:'building'}` i "
+        "NDJSON-streamen när Phase 1 är klar."
+    )
+    assert 'stage: "done"' in text, (
+        "/api/prompt route.ts måste emittera `{stage:'done', ...result}` "
+        "som slutevent i NDJSON-streamen."
+    )
+    assert 'stage: "error"' in text, (
+        "/api/prompt route.ts måste emittera `{stage:'error', error:'...'}` "
+        "om något fas-anrop kastar inom streamen."
+    )
+    # Bakåtkompatibilitet: synkron NextResponse.json-fallback finns kvar
+    # för klienter utan Accept-headern (floating-chat, use-followup-build).
+    assert "NextResponse.json(await runPromptBuildSerially(payload))" in text, (
+        "/api/prompt route.ts måste behålla den synkrona NextResponse.json-"
+        "fallbacken för klienter som inte sätter Accept: application/x-ndjson."
+    )
+
+
 @pytest.mark.tooling
 def test_prompt_builder_classifies_failed_build_distinctly() -> None:
     """B44: PromptBuilder must classify build outcomes via classifyBuildStatus
@@ -1388,15 +1551,23 @@ def test_page_useeffect_guards_success_path_with_cancelled_check() -> None:
     cancelled-guard sitting between them. Source-lock that ordering
     so a future refactor cannot collapse the two back into one
     function and silently drop the guard.
+
+    Tier 1 (2026-06-01): vi extraherade fetch-loopen till en
+    återanvändbar ``loadRuns``-callback (för retry-knapp i
+    runsLoadError-cardet). Guarden använder nu ``cancelledRef.current``
+    istället för en bool-variabel ``cancelled``. Båda mönstren
+    accepteras av denna regex.
     """
     text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
 
-    # Look for ``await fetchRuns()`` -> ``if (cancelled) return`` ->
-    # ``applyRunsData`` (or ``setRuns(``) ordering inside the same
-    # try-block. The 0-300 character window keeps the regex tight
-    # against accidental matches across unrelated code.
+    # Look for ``await fetchRuns()`` -> ``if (cancelled) return`` eller
+    # ``if (cancelledRef?.current) return`` -> ``applyRunsData`` (eller
+    # ``setRuns(``) ordering inside the same try-block. 0-300 character
+    # window håller regexen tight.
     pattern = re.compile(
-        r"await\s+fetchRuns\(\)[\s\S]{0,300}?if\s*\(\s*cancelled\s*\)\s*return\s*;[\s\S]{0,300}?(?:applyRunsData|setRuns\()",
+        r"await\s+fetchRuns\(\)[\s\S]{0,300}?"
+        r"if\s*\(\s*(?:cancelled|cancelledRef\??\.current)\s*\)\s*return\s*;"
+        r"[\s\S]{0,300}?(?:applyRunsData|setRuns\()",
         re.MULTILINE,
     )
     assert pattern.search(text), (
@@ -1904,20 +2075,25 @@ def test_b152_compare_modal_pane_width_accounts_for_gap() -> None:
 
 
 @pytest.mark.tooling
-def test_b153_viewer_panel_hydrates_full_device_preset() -> None:
-    """B153: sessionStorage-hydration i viewer-panel.tsx måste inkludera
-    ``"full"`` bland accepterade Device-värden. Tidigare listades bara
+def test_b153_device_preset_hydrates_full_device_preset() -> None:
+    """B153: sessionStorage-hydration måste inkludera
+    ``"full"`` bland accepterade DevicePreset-värden. Tidigare listades bara
     ``"mobile"``/``"tablet"``/``"laptop"`` så en sparad ``"full"``-preset
     relied på att default-värdet råkade vara ``"full"``. Inkonsekvent
     med övriga preset-värden (alla restoreras explicit) och om default
     någonsin ändras tappas ``"full"``. AI Bug Review (P 84 %, impact
     5/10) flaggade detta på PR #117.
 
+    Hydration-logiken flyttades 2026-05-26 från ``viewer-panel.tsx`` till
+    den nya ``device-preset-context.tsx`` så toggle-UI:t kunde lyftas in i
+    FloatingChat:s footer utan prop-drilling. Testet följer hydrationen
+    dit; B153-fixen lever kvar i providern.
+
     Lock: hydration-checken ska innehålla alla fyra Device-värden.
     """
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
-        encoding="utf-8"
-    )
+    text = (
+        VIEWSER_DIR / "components" / "device-preset-context.tsx"
+    ).read_text(encoding="utf-8")
 
     pattern = re.compile(
         r'stored\s*===\s*["\']mobile["\'][\s\S]{0,200}?'
@@ -1927,8 +2103,354 @@ def test_b153_viewer_panel_hydrates_full_device_preset() -> None:
         re.MULTILINE,
     )
     assert pattern.search(text), (
-        "viewer-panel.tsx sessionStorage-hydration saknar ``stored === "
-        "'full'`` i listan av accepterade Device-värden. Alla fyra "
-        "Device-värden måste restoreras explicit per B153 — annars "
-        "bryts persistensen för 'full' om default-värdet någonsin ändras."
+        "device-preset-context.tsx sessionStorage-hydration saknar "
+        "``stored === 'full'`` i listan av accepterade DevicePreset-värden. "
+        "Alla fyra preset-värden måste restoreras explicit per B153 — "
+        "annars bryts persistensen för 'full' om default-värdet någonsin "
+        "ändras."
+    )
+
+
+@pytest.mark.tooling
+def test_b155_floating_chat_reads_applied_visible_effect() -> None:
+    """B155 (2026-05-30): FloatingChat måste läsa ``appliedVisibleEffect``
+    från ``build-result.json`` (auktoritativ källa enligt Jakobs
+    PR #136). Trace-eventet ``followup.no_op_detected`` skickar samma
+    information men ``parseTraceLine`` plockar bara sju kända fält så
+    UI-skiktet får inte bero på trace-payloaden.
+
+    Kontraktet låser tre saker:
+      1. ``PromptApiResponse`` exponerar ``buildResult`` så fältet faktiskt
+         når success-grenen i ``summarizeBuildResult``.
+      2. En extractor läser specifikt ``appliedVisibleEffect`` (boolean)
+         och ``appliedVisibleEffectReason`` (string) — annars riskerar vi
+         att vi börjar parsa trace-eventets ``reason`` av bekvämlighet.
+      3. När ``applied === false`` byts success-bubblan till en ärlig
+         info-rad i stil med "Ingen synlig ändring fångades" — så
+         operatören inte luras tro att fri-text-följdprompten landade.
+    """
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx"
+    ).read_text(encoding="utf-8")
+
+    assert "buildResult?: Record<string, unknown>" in text, (
+        "PromptApiResponse måste deklarera ``buildResult`` så följdprompts "
+        "build-result.json når summarizeBuildResult — annars kan UI:t inte "
+        "läsa appliedVisibleEffect."
+    )
+    assert 'buildResult.appliedVisibleEffect' in text, (
+        "FloatingChat måste läsa ``appliedVisibleEffect`` från build-result "
+        "(auktoritativ källa per B155). Trace-eventet är inte ett godkänt "
+        "alternativ — parseTraceLine plockar inte ``reason``-fältet."
+    )
+    assert 'appliedVisibleEffectReason' in text, (
+        "Reason-fältet måste finnas i extraheringen så vi kan utvidga "
+        "info-bubblan med varför ingen synlig effekt sågs (ADR 0034 path)."
+    )
+    assert 'extractAppliedVisibleEffect' in text, (
+        "Helper ``extractAppliedVisibleEffect`` ska kapsla boolean-checken "
+        "så den inte upprepas i flera grenar — om operatören får en "
+        "follow-up som bygger ok men flippar appliedVisibleEffect=false "
+        "ska info-grenen fortfarande träffa."
+    )
+    assert "Jag kunde inte fånga någon synlig ändring" in text, (
+        "Den ärliga raden måste ha en igenkännbar text-anchor (ADR-stil) "
+        "så fil-disciplin inte tappar B155 under refaktorisering. "
+        "Texten matchar Jakobs handoff för ADR 0034 väg B."
+    )
+
+
+@pytest.mark.tooling
+def test_b155_floating_chat_no_op_does_not_claim_success() -> None:
+    """B155: säkerställ att success-grenen i ``summarizeBuildResult``
+    *inte* returnerar variant ``"success"`` när ``appliedVisibleEffect``
+    är ``false``. Pattern matchar att info-grenen kommer FÖRE
+    standardsuccess-grenen i koden, och att den explicit sätter
+    variant ``"info"``.
+    """
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx"
+    ).read_text(encoding="utf-8")
+
+    pattern = re.compile(
+        r"effect\.applied\s*===\s*false[\s\S]{0,400}?"
+        r'variant:\s*"info"',
+        re.MULTILINE,
+    )
+    assert pattern.search(text), (
+        "Info-grenen för B155 (no-op-followup) saknas eller har bytt form. "
+        "När backend rapporterar ``appliedVisibleEffect: false`` ska UI:t "
+        "byta success-bubblan till variant ``\"info\"`` med en ärlig text "
+        "— annars luras operatören att tro att följdprompten landade."
+    )
+
+
+@pytest.mark.tooling
+def test_b155_path_b_runs_lib_exports_applied_copy_directives() -> None:
+    """ADR 0034 väg B (B155 path B): ``lib/runs.ts`` måste exportera
+    ``readAppliedCopyDirectives`` + en strikt ``AppliedCopyDirective``-typ
+    som speglar schema-enumen i
+    ``governance/schemas/project-input.schema.json:directives.copyDirectives``.
+
+    Locks:
+      1. Funktionen finns och är exporterad så ``/api/prompt`` kan
+         konsumera den utan att duplicera readern någonannanstans.
+      2. Type-enumen matchar schema-värdena exakt
+         (company-name | tagline; replace-text | include-token).
+      3. Path-traversal-skyddet är på plats: läsaren begränsar
+         dossierPath till ``data/prompt-inputs/`` eller ``examples/``
+         under repo-root så en stulen ``input.json`` inte kan
+         dirigera UI:t att läsa godtyckliga filer.
+    """
+    text = (VIEWSER_DIR / "lib" / "runs.ts").read_text(encoding="utf-8")
+
+    assert "export async function readAppliedCopyDirectives" in text, (
+        "lib/runs.ts måste exportera ``readAppliedCopyDirectives`` så "
+        "/api/prompt-routen kan inkludera direktiven på response. "
+        "Annars måste FloatingChat duplicera readern på client-sidan."
+    )
+    assert "export type AppliedCopyDirective" in text, (
+        "AppliedCopyDirective-typen måste exporteras strikt-typad så "
+        "client och server delar exakt samma shape (target/operation/"
+        "payload/source-enum)."
+    )
+    enum_pattern = re.compile(
+        r'target:\s*"company-name"\s*\|\s*"tagline"[\s\S]{0,200}?'
+        r'operation:\s*"replace-text"\s*\|\s*"include-token"',
+        re.MULTILINE,
+    )
+    assert enum_pattern.search(text), (
+        "AppliedCopyDirective-enumen måste låsa target=company-name|"
+        "tagline och operation=replace-text|include-token så schema-drift "
+        "fångas i typecheck istället för att läcka okända värden till UI:t."
+    )
+    assert 'path.resolve(root, "data", "prompt-inputs")' in text and (
+        'path.resolve(root, "examples")' in text
+    ), (
+        "Path-traversal-skyddet i readAppliedCopyDirectives måste vitlista "
+        "data/prompt-inputs/ + examples/ under repo-root. Utan denna guard "
+        "kan en stulen input.json dirigera UI:t att läsa godtyckliga filer."
+    )
+
+
+@pytest.mark.tooling
+def test_b155_path_b_prompt_route_exposes_applied_copy_directives() -> None:
+    """``/api/prompt`` måste returnera ``appliedCopyDirectives`` på
+    top-level efter en build så FloatingChat har direkt tillgång till
+    fältet utan att behöva en separat round-trip.
+
+    Auktoritetskedjan: build_site.py skriver project-input-snapshotet
+    till dossierPath, prompt-routen läser via readAppliedCopyDirectives,
+    UI:t härleder svenska success-rader. Vi kontrollerar det mellersta
+    steget här.
+    """
+    text = (
+        VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts"
+    ).read_text(encoding="utf-8")
+
+    assert "readAppliedCopyDirectives" in text, (
+        "/api/prompt måste anropa readAppliedCopyDirectives efter att "
+        "runBuild returnerar — annars är fältet alltid undefined på "
+        "wire och path B-success-raden kan aldrig skickas."
+    )
+    assert "appliedCopyDirectives" in text, (
+        "Top-level-fältet måste finnas i return-objektet från "
+        "runPromptBuildOnce. Utan det kan FloatingChat inte härleda "
+        "några svenska success-rader."
+    )
+
+
+@pytest.mark.tooling
+def test_b155_path_b_floating_chat_summarises_copy_directives() -> None:
+    """ADR 0034 väg B (B155 path B): FloatingChat måste härleda en svensk
+    success-rad per applicerat copy-direktiv enligt Jakobs handoff:
+      - target=company-name → "Jag ändrade företagsnamnet till '...'."
+      - target=tagline + operation=replace-text → "Jag uppdaterade rubriken till '...'."
+      - target=tagline + operation=include-token → "Jag la in '...' i hero-texten."
+
+    Pattern verifierar att payload renderas via template-strängen (textnod
+    i React) och inte via ``dangerouslySetInnerHTML`` — payload kommer från
+    operatören och måste alltid escapas.
+    """
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx"
+    ).read_text(encoding="utf-8")
+
+    assert "function summarizeCopyDirectives" in text, (
+        "Helper ``summarizeCopyDirectives`` ska kapsla mappningen från "
+        "AppliedCopyDirective[] till svenska rader så success-grenen i "
+        "summarizeBuildResult inte blandar mappnings-logik med dispatch."
+    )
+    assert "Jag ändrade företagsnamnet till" in text, (
+        "Mappningen för target=company-name saknas eller har bytt form. "
+        "Jakobs handoff kräver exakt rad-prefix för operatör-igenkänning."
+    )
+    assert "Jag uppdaterade rubriken till" in text, (
+        "Mappningen för target=tagline + operation=replace-text saknas "
+        "eller har bytt form."
+    )
+    assert "Jag la in" in text and "i hero-texten" in text, (
+        "Mappningen för target=tagline + operation=include-token saknas "
+        "eller har bytt form."
+    )
+    assert "appliedCopyDirectives" in text, (
+        "PromptApiResponse måste exponera ``appliedCopyDirectives`` så "
+        "summarizeBuildResult kan plocka fältet utan att casta till "
+        "Record<string, unknown>."
+    )
+
+
+@pytest.mark.tooling
+def test_b155_path_b_floating_chat_does_not_inject_payload_as_html() -> None:
+    """Säkerhet: copyDirective.payload är en validerad sträng från
+    backend men kommer ursprungligen från operatörens prompt. Den
+    måste alltid renderas som textnod, aldrig via
+    ``dangerouslySetInnerHTML``.
+
+    Vi söker bara JSX-attribut-användning (``dangerouslySetInnerHTML=``
+    eller ``dangerouslySetInnerHTML:``) — kommentar-referenser som
+    förklarar varför vi *inte* använder det räknas inte. Om någon
+    framtida feature behöver det måste den medvetet introduceras i en
+    separat komponent och vi uppdaterar testet då.
+    """
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx"
+    ).read_text(encoding="utf-8")
+
+    jsx_use_pattern = re.compile(r"dangerouslySetInnerHTML\s*[=:]")
+    assert not jsx_use_pattern.search(text), (
+        "floating-chat.tsx får inte använda dangerouslySetInnerHTML på "
+        "JSX-element eller i config-object — copyDirective.payload härstammar "
+        "från operatörens prompt och måste renderas som textnod via React's "
+        "automatic escape."
+    )
+
+
+# --- Tier 1 (robusthet, 2026-06-01) ---------------------------------------
+#
+# Tre regressionstester för Tier 1-frontend-paketet:
+#   * ErrorBoundary måste finnas och wrappa fel-prona subtree:er i page.tsx
+#   * ToastProvider måste vara mountat högst upp i Providers
+#   * /api/runs-failure visar retry-card + toast (inte tyst stuck status)
+#
+# Syftet är att hindra framtida refactors från att tysta dessa fel-
+# hanteringsytor utan att vi märker det. Att radera ErrorBoundary eller
+# ToastProvider av misstag är en regression som är svår att upptäcka
+# tills produktionen kraschar.
+
+
+@pytest.mark.tooling
+def test_tier1_error_boundary_component_exists() -> None:
+    """ErrorBoundary-komponenten måste finnas i ``components/error-boundary.tsx``.
+
+    Den är en klasskomponent (React 19 har inget hook-API för error
+    boundaries) och måste exportera ``ErrorBoundary`` med en ``area``-
+    prop så fallback-rubriken kan anpassas per call-site.
+    """
+    path = VIEWSER_DIR / "components" / "error-boundary.tsx"
+    assert path.exists(), "ErrorBoundary-komponenten saknas"
+    text = path.read_text(encoding="utf-8")
+
+    assert "export class ErrorBoundary" in text, (
+        "ErrorBoundary måste vara en exporterad klass — React 19 har "
+        "fortfarande inget hook-API för error boundaries"
+    )
+    assert "getDerivedStateFromError" in text, (
+        "ErrorBoundary måste implementera getDerivedStateFromError för "
+        "att fånga rendering-fel"
+    )
+    assert "componentDidCatch" in text, (
+        "ErrorBoundary måste implementera componentDidCatch för att "
+        "logga fel till devtools/operatör-konsolen"
+    )
+    assert "area:" in text or "area: string" in text, (
+        "ErrorBoundary måste ta en ``area``-prop så fallback-rubriken kan "
+        "anpassas per call-site (t.ex. 'Builder', 'Wizard')"
+    )
+
+
+@pytest.mark.tooling
+def test_tier1_page_wraps_subtrees_in_error_boundary() -> None:
+    """``app/page.tsx`` måste wrappa ViewerPanel, PromptBuilder och
+    BuilderShell i ErrorBoundary så ett crash i någon subtree inte
+    ger vit skärm för hela appen.
+    """
+    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+
+    assert 'from "@/components/error-boundary"' in text, (
+        "page.tsx måste importera ErrorBoundary"
+    )
+
+    # Räkna antal ErrorBoundary-öppningar i JSX. Tre boundaries:
+    # ViewerPanel, PromptBuilder, BuilderShell. Mindre tolerant vore
+    # bättre men gör testet sprödare; nuvarande gräns säger bara
+    # "minst tre", vilket fångar borttagningar.
+    boundary_opens = len(re.findall(r"<ErrorBoundary\s+area=", text))
+    assert boundary_opens >= 3, (
+        "page.tsx måste wrappa minst tre fel-prona subtree:er "
+        "(ViewerPanel, PromptBuilder, BuilderShell) i ErrorBoundary "
+        f"— hittade bara {boundary_opens}"
+    )
+
+
+@pytest.mark.tooling
+def test_tier1_toast_system_exists_and_is_mounted() -> None:
+    """Toast-systemet måste finnas i ``components/ui/toast.tsx`` med
+    publika API:erna ``ToastProvider``, ``useToast`` och en viewport-
+    region som mountas via Provider:n. Providers.tsx ska wrappa
+    ToastProvider runt resten av app:en så ``useToast()`` är tillgängligt
+    från hela komponentträdet.
+    """
+    toast_path = VIEWSER_DIR / "components" / "ui" / "toast.tsx"
+    assert toast_path.exists(), "Toast-systemet saknas"
+    toast_text = toast_path.read_text(encoding="utf-8")
+
+    assert "export function ToastProvider" in toast_text, (
+        "toast.tsx måste exportera ToastProvider"
+    )
+    assert "export function useToast" in toast_text, (
+        "toast.tsx måste exportera useToast()"
+    )
+    # aria-live krävs för skärmläsar-uppläsning av toaster.
+    assert "aria-live" in toast_text, (
+        "Toast-regionen/items måste ha aria-live så skärmläsare läser "
+        "upp dem när de visas"
+    )
+    # role="alert" eller role="status" krävs för att toaster ska
+    # annonseras.
+    assert 'role="alert"' in toast_text or "liveRole" in toast_text, (
+        'Toast-items måste ha role="alert"/"status" beroende på variant'
+    )
+
+    providers_text = (VIEWSER_DIR / "app" / "providers.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "ToastProvider" in providers_text, (
+        "Providers.tsx måste mounta ToastProvider så useToast() funkar "
+        "från hela komponentträdet"
+    )
+
+
+@pytest.mark.tooling
+def test_tier1_page_handles_runs_load_failure_with_retry() -> None:
+    """``app/page.tsx`` måste visa en retry-yta när initial /api/runs
+    failar — inte bara en tyst stuck loading-text. Vi söker efter
+    ``runsLoadError``-state och en RunsLoadErrorCard- (eller
+    motsvarande) -komponent med retry-knapp.
+    """
+    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+
+    assert "runsLoadError" in text, (
+        "page.tsx måste ha runsLoadError-state för att visa retry-card "
+        "vid /api/runs-failures"
+    )
+    assert "RunsLoadErrorCard" in text or "onRetry" in text, (
+        "page.tsx måste rendera ett retry-card med onRetry-callback "
+        "när runsLoadError är satt"
+    )
+    # Toast-feedback för failure-pathen så operatören ser felet även
+    # om hen inte tittar på hero-ytan.
+    assert 'variant: "error"' in text and "Kunde inte ladda runs" in text, (
+        "page.tsx måste visa en error-toast med titel 'Kunde inte "
+        "ladda runs' när initial fetch failar"
     )

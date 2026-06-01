@@ -5,7 +5,7 @@ import Image from "next/image";
 type SiteHeaderProps = {
   onOpenConsole: () => void;
   /**
-   * Döljer brand-bubblan ("Sajtbyggaren"-logon längst upp till vänster)
+   * Döljer brand-bubblan (Sajtbyggaren-logon längst upp till vänster)
    * men behåller konsol-knappen i höger hörn. Används av builder-läget
    * eftersom logon ligger ovanpå preview-iframens vänsterkant och
    * stör webbdesignen som operatören granskar. Default `false` så
@@ -27,9 +27,8 @@ export function SiteHeader({ onOpenConsole, hideBrand = false }: SiteHeaderProps
         // ytan över previewens vänstersida.
         <div aria-hidden className="pointer-events-none" />
       ) : (
-        <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-border/60 bg-card/80 px-2.5 py-1 text-[12px] shadow-sm backdrop-blur-xl">
+        <div className="pointer-events-auto inline-flex items-center rounded-full border border-border/60 bg-card/80 px-3 py-1 shadow-sm backdrop-blur-xl">
           <Brandmark />
-          <span className="font-medium tracking-tight">Sajtbyggaren</span>
         </div>
       )}
 
@@ -48,12 +47,12 @@ export function SiteHeader({ onOpenConsole, hideBrand = false }: SiteHeaderProps
 function Brandmark() {
   return (
     <Image
-      src="/LOGO_SM2.0.png"
-      alt="Sajtmaskin 2.0"
-      width={24}
-      height={24}
+      src="/sajtbyggaren_logo.png"
+      alt="Sajtbyggaren"
+      width={115}
+      height={28}
       priority
-      className="size-6 rounded-md object-contain"
+      className="h-7 w-auto object-contain"
     />
   );
 }

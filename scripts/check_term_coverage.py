@@ -118,7 +118,7 @@ COMMON_WORDS = {
     # Web standards / native browser APIs
     "HTML", "CSS", "URL", "URI", "DOM", "API", "HTTP", "HTTPS", "REST", "GraphQL", "WebSocket", "OAuth", "CORS", "TLS", "SSL",
     "SharedArrayBuffer", "SharedArrayBuffer is not defined",
-    "XMLHttpRequest", "ReadableStream",
+    "XMLHttpRequest", "ReadableStream", "TextEncoder", "TextDecoder",
     "ElementCreationOptions", "DevTools",
     # Sajtbyggaren-meta-nyckelord (egennamn för repon)
     "Sajtbyggaren", "Sajtmaskin", "Jakeminator123", "Jakemiantor123",
@@ -798,6 +798,38 @@ COMMON_WORDS = {
     "WinError 5",  # Windows ERROR_ACCESS_DENIED — backtick-citerad i incident-docs
     # B-IDs och termer i scout-prompts + kill-dev-trees.py incident-helpers
     "B155",  # bug-ID i GAP-followup-prompt-content-passthrough scout-prompt
+    # ADR 0034 väg B (B155 path B, 2026-06-01) — christopher-ui FloatingChat
+    # konsumerar de strukturerade copyDirectives som path A landade i
+    # build_site.py/prompt_to_project_input.py och härleder svenska success-
+    # rader. ``AppliedCopyDirective`` är den lokala UI-/server-helper-typen
+    # i apps/viewser/lib/runs.ts + apps/viewser/components/builder/
+    # floating-chat.tsx — schema-strikt mirror av schema-objektet
+    # ``directives.copyDirectives`` (governance/schemas/project-input.schema.json).
+    # Inte ett canonical domain term (hela domänkonceptet heter ``copyDirective``
+    # och registreras i naming-dictionary av jakob-be när path A → main).
+    # Allowlistas här så christopher-ui:s sync-PR går igenom term-coverage
+    # --strict utan att vi behöver röra governance/policies från UI-lanen.
+    "AppliedCopyDirective",
+    # Tier 1 robusthet (2026-06-01) — christopher-ui frontend-paket A+B+C:
+    # ErrorBoundary-komponent (klass, React 19) + lokalt toast-system. Alla
+    # är apps/viewser-interna UI-helpers — varken canonical domain terms
+    # eller backend-yta. Samma logik som AppliedCopyDirective ovan.
+    # ErrorBoundary + helpers:
+    "DefaultFallback",
+    "ErrorBoundaryProps",
+    "ErrorBoundaryState",
+    "ErrorInfo",  # React-typ från `import type { ErrorInfo } from "react"`
+    "RunsLoadErrorCard",  # lokal komponent i apps/viewser/app/page.tsx
+    # Toast-system (eget mini-system, ingen extern dep):
+    "ToastContext",
+    "ToastContextValue",
+    "ToastEntry",
+    "ToastInput",
+    "ToastItem",
+    "ToastProvider",
+    "ToastVariant",
+    "ToastViewport",
+    "TriangleAlert",  # lucide-react icon-namn (precis som CheckCircle2 m.fl.)
     "ConvertTo",  # PowerShell cmdlet-suffix (ConvertTo-Json) i kill-dev-trees.py
     "Dubbelklicka",  # svenskt verb i kill-dev-trees.py-docstring + handoff
     "Verifiering",  # svensk markdown-rubrik i scout-prompts ("**Verifiering**")
@@ -917,6 +949,34 @@ COMMON_WORDS = {
     # Same SaaS-name category as Bokadirekt / OpenStreetMap / TripAdvisor
     # above.
     "YouTube",
+    # Viewser-internal React component + context symbols introduced by the
+    # mobile-adaptation passes (2026-05-25/26). Same category as
+    # PromptStageIndicator / RunHistory / ApplyRunsContext above: viewser-
+    # implementation identifiers, not canonical domain terms.
+    "DevicePreset", "DevicePresetContext", "DevicePresetContextValue",
+    "DevicePresetProvider", "DevicePresetToggleBar",
+    # Wizard total-minimalism pass (2026-05-26,
+    # GAP-viewser-wizard-minimal-tabs). MoreInfoDialog is the new popup
+    # opened from tab 3 ("Funktioner") that exposes content + media fields
+    # behind tabs; MoreHorizontal is the lucide-react icon used on the
+    # trigger button. Same viewser-implementation category as the
+    # DevicePreset family directly above.
+    "MoreInfoDialog", "MoreInfoDialogProps", "MoreInfoTabId", "MoreHorizontal",
+    # Sub-block helper components inside more-info-dialog.tsx (Commit 2
+    # i GAP-viewser-wizard-minimal-tabs). Same viewser-implementation
+    # category as MoreInfoDialog above.
+    "ContactBlock", "MediaExtrasBlock", "AdvancedBlock", "MediaCard",
+    # AboutBlock + FileRow — interna komponenter i MoreInfoDialog efter
+    # popup-revision v2 (GAP-viewser-wizard-popup-tabs-v2). AboutBlock
+    # håller story-fält (om-oss/historia/vision/målgrupp), FileRow visar
+    # uppladdad fil-rad. Båda är React-symboler, inga domänbegrepp.
+    "AboutBlock", "FileRow",
+    # PageCard — intern komponent i functions-step efter "sidor först"-
+    # revisionen (GAP-viewser-wizard-pages-picker). Renderar ett klickbart
+    # sidkort. Lucide-ikoner (CalendarCheck, HelpCircle, UtensilsCrossed)
+    # och Lucide-typen LucideIcon är externa React-symboler.
+    "PageCard", "CalendarCheck", "HelpCircle", "UtensilsCrossed",
+    "LucideIcon",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

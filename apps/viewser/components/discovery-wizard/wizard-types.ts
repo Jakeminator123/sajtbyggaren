@@ -30,10 +30,27 @@ import type {
 } from "./wizard-constants";
 import type { AssetRef } from "@/lib/asset-store/types";
 
+/**
+ * 2026-05-26 — Total-minimalism-omgång (GAP-viewser-wizard-minimal-tabs).
+ *
+ * Wizarden reducerades från 5 till 3 huvudsteg som visas som tabs överst.
+ * `content` och `media` finns kvar som typer (popupen "Mer information"
+ * återanvänder samma fält) men ingår INTE längre i `WIZARD_STEP_ORDER`
+ * och har följaktligen ingen sidebar/tab-knapp. Backend-payload ändras
+ * INTE — alla fält skickas fortfarande via `buildDiscoveryPayload`.
+ *
+ * 2026-05-26 (v2) — Bilder-flik tillagd (GAP-viewser-wizard-assets-tab).
+ * Logo + mediamaterial (AssetsStep) flyttades ut ur "functions"-tabben
+ * och fick en egen fjärde tab "Bilder" så operatorn ser tydligt att
+ * uppladdning är ett separat steg, inte en kropp under sidor. "Ange
+ * information"-popup-knappen flyttades samtidigt till "Bilder"-tabben
+ * så den ligger precis innan "Skapa sajt".
+ */
 export type WizardStepId =
   | "foundation"
   | "visual"
   | "functions"
+  | "assets"
   | "content"
   | "media";
 
@@ -41,21 +58,38 @@ export const WIZARD_STEP_ORDER: WizardStepId[] = [
   "foundation",
   "visual",
   "functions",
+  "assets",
+];
+
+/**
+ * Lista över alla steg som någonsin har funnits — används av
+ * payload-byggaren och eventuella legacy-validators. ContentBranch +
+ * Media-fält nås nu via popupen istället.
+ */
+export const WIZARD_STEP_ORDER_LEGACY_ALL: WizardStepId[] = [
+  "foundation",
+  "visual",
+  "functions",
+  "assets",
   "content",
   "media",
 ];
 
 export const WIZARD_STEP_TITLES: Record<WizardStepId, string> = {
-  foundation: "Företaget & sajttypen",
-  visual: "Visuell identitet",
-  functions: "Funktioner & sidor",
-  content: "Innehåll & ton",
+  foundation: "Företaget",
+  visual: "Stil",
+  functions: "Funktioner",
+  assets: "Bilder",
+  // Visas inte som tab, men behålls för legacy-läsare som mappar
+  // alla WizardStepId till en titel (t.ex. payload-debug).
+  content: "Innehåll",
   media: "Bilder & media",
 };
 
 /**
- * Pipeline-del som steget primärt styr — visas som badge i UI:t så
- * operatören förstår vad varje fråga "pratar med" på backend.
+ * Pipeline-del som steget primärt styr. Visas inte längre i UI:t
+ * (total-minimalism-pass) men behålls för ev. debug-vy och sänd
+ * den till payload-byggaren.
  */
 export type PipelinePart = "Sidor" | "Visuellt" | "Funktioner" | "Innehåll" | "Media";
 
@@ -63,6 +97,7 @@ export const WIZARD_STEP_PIPELINE_BADGE: Record<WizardStepId, PipelinePart> = {
   foundation: "Sidor",
   visual: "Visuellt",
   functions: "Funktioner",
+  assets: "Media",
   content: "Innehåll",
   media: "Media",
 };
@@ -325,6 +360,9 @@ export function validateWizardStep(
 ): string | null {
   switch (step) {
     case "foundation":
+      // Total-minimalism-pass (2026-05-26): bara offer + businessFamily är
+      // hard-required. Operatorn kan skippa företagsnamn, kontakt och sub-
+      // kategori — dessa fält skrapas eller förefyllas av Vision/defaults.
       // Företagsnamn-min-längd-kollen togs bort på operatör-begäran (snabbare
       // wizard-test utan tvingande företagsnamn). offer + businessFamily
       // räcker som signal till pipeline att foundation-steget faktiskt är
@@ -333,14 +371,16 @@ export function validateWizardStep(
       if (!answers.businessFamily) return "Välj vilken typ av verksamhet det är.";
       return null;
     case "visual":
-      // Vibe + färger är valfria — vi har goda defaults via scaffold.
-      // Steget kan alltid hoppas över.
+      // Stil-tabben är alltid skip-bar — scaffold har goda defaults.
       return null;
     case "functions":
-      // Minst en funktion eller sida bör vara vald så pipeline har något att jobba med.
-      if (answers.selectedFunctions.length === 0 && answers.mustHave.length === 0) {
-        return "Välj minst en funktion eller sida.";
-      }
+      // Total-minimalism: ingen hard-validation längre. Recommended-funktioner
+      // förefylls auto från businessFamily i `functions-step.tsx`. Operatorn
+      // kan alltid gå direkt till "Skapa sajt".
+      return null;
+    case "assets":
+      // Bilder-tabben är alltid skip-bar — operatorn kan generera sajten
+      // utan uppladdat material (monogram-logo + AI-genererad hero används).
       return null;
     case "content":
       // Innehållssteget är alltid valfritt — utan tjänster/produkter
