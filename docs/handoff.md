@@ -22,7 +22,7 @@ PR #143 refactor-merge). `main` = `fb3b1f8` (oförändrad sedan PR #142).
   flerordiga orter (intl-format medvetet kvar = säker fallback).
 - `d036067` **docs(steward)**: known-issues stänger B158/B159, B120-progress, ny
   B160 (logo aspect-ratio-varning i `next/image`, Christopher-lane), B155-hardening-not,
-  GAP-annotation. Bug-scope **15 aktiva / 133 stängda**. Christopher-handoff
+  GAP-annotation. Christopher-handoff
   `msg-0025` (B160 + #139-fynd + B155-honesty-koordinering).
 - `a3c47a7` **docs(focus)**: dokumenterade PR #143, markerade #139 mergad.
 - `2320e34` **refactor(build) — PR #143 mergad** (squash, base `jakob-be`):
@@ -35,10 +35,20 @@ PR #143 refactor-merge). `main` = `fb3b1f8` (oförändrad sedan PR #142).
   Scout-granskad GRÖN (behavior-preserving, AST-verifierad, scope = 3 filer,
   base `jakob-be`), full pytest exit 0. Branch + duplikat
   `cursor/refactor-build-site-slice-1` raderade.
+- `63e4758` **fix(codex-review)**: två read-only-review-fynd stängda. B161
+  (Låg-Medel): `_extract_include_token` extraherade bara citerade tokens →
+  "inkludera TEST-JAKOB i hero" (okvoterat) var tyst no-op; nu fångas okvoterade
+  token-lika ord (versal/siffra, ej keyword). B162 (Låg): TS
+  `local-preview-server.ts:readActiveBuildDir` speglar nu Python exakt — avvisar
+  närvarande icke-string buildPath (tidigare typeof-string-gate). tsc grön.
+  Falskt larm i samma review: `_DISPATCHED_ICON_PATTERN` "saknas" — finns på
+  `renderers.py:4983`, sviten grön. Bug-scope nu **15 aktiva / 135 stängda**.
 
-**Lane-disciplin hölls:** all kod i backend/generation/scripts/docs. `apps/viewser/**`
-rördes inte (Christopher-lane); UI-fynd (B160 logo, #139-trio, B155-honesty)
-handades av via `msg-0025`.
+**Lane-disciplin hölls:** all kod i backend/generation/scripts/docs.
+`apps/viewser/lib/local-preview-server.ts` (B162) är run-shape = Jakob-owned per
+`docs/gaps/README.md`. `apps/viewser/**` UI-presentationslager rördes inte
+(Christopher-lane); UI-fynd (B160 logo, #139-trio, B155-honesty) handades av
+via `msg-0025`.
 
 **Branch-städ denna session:** raderade merged PR-branch
 `cursor/build-site-py-refaktorering-b2c1` + duplikat `cursor/refactor-build-site-slice-1`.

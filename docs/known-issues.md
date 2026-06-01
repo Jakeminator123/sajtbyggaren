@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (av 0), 5 unknown, 133 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (av 0), 5 unknown, 135 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -644,6 +644,26 @@ samma kodmönster lever vidare här — därav posten:
   2026-06-01. Fix: `2e0c55f`. Test:
   `tests/test_contact_placeholder_fallback.py::test_contact_page_has_cta_when_all_channels_placeholder`
   + `tests/test_contact_placeholder_fallback.py::test_contact_page_address_only_still_has_cta`.
+- **`B161` Låg-Medel** (stängd 2026-06-01, Codex-review-fix) - Okvoterad
+  include-token i en följdprompt blev tyst no-op. `_extract_include_token`
+  (`scripts/prompt_to_project_input.py`) extraherade bara citerade tokens, så den
+  naturliga ADR 0034-acceptansfrasen "inkludera TEST-JAKOB i hero" (utan
+  citattecken) gav "version skapad men ingen synlig ändring". Nu extraheras även
+  ett okvoterat token-likt ord (har versal eller siffra, ej keyword/target-ord)
+  efter include-nyckelordet; vaga "inkludera mer text" förblir ärlig no-op.
+  Källa: Codex read-only-review 2026-06-01. Fix: `63e4758`. Test:
+  `tests/test_followup_copy_directives.py::test_extract_unquoted_include_token_targets_hero_tagline`.
+- **`B162` Låg** (stängd 2026-06-01, Codex-review-fix) - TS/Python-paritetslucka i
+  pointer-validering. `apps/viewser/lib/local-preview-server.ts` (`readActiveBuildDir`)
+  gated buildPath-mismatch-check:en på en typeof-string-guard, så ett närvarande
+  icke-string buildPath (number/object i en korrupt/manipulerad `current.json`)
+  slank igenom — till skillnad från Python-spegeln
+  `immutable_builds.read_active_build_dir` som avvisar varje närvarande
+  icke-matchande buildPath. TS avvisar nu alla närvarande icke-matchande värden
+  (bara `undefined`/`null` tillåtet). Robusthet; ingen normal-drift-effekt
+  (buildern skriver alltid rätt pekare). Källa: Codex read-only-review 2026-06-01.
+  Fix: `63e4758`. Test:
+  `tests/test_local_preview_server_b157_followup.py::test_read_active_build_dir_rejects_present_nonstring_buildpath`.
 - **`B122` Låg** (stängd 2026-05-27, NDJSON-stream för riktig stage-signal) -
   `apps/viewser/components/prompt-builder.tsx` växlade från `thinking`
   till `building`-stage via `setTimeout(..., 1500)` istället för på en

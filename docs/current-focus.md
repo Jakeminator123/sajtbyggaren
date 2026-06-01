@@ -30,8 +30,11 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `2320e34` (2026-06-01 UTC, `jakob-be` hardening + PR #143
-refactor-merge, ovanpå PR #142-synken `fb3b1f8`; EJ i `main` än).
+Last verified state: `63e4758` + steward-commit (denna) (2026-06-01 UTC,
+`jakob-be` hardening + PR #143 + Codex-review-fixar, ovanpå PR #142-synken
+`fb3b1f8`; EJ i `main` än). `origin/main` (`48d5ca0`) är fullt innehållen i
+`jakob-be` → en sync-PR `jakob-be → main` är konfliktfri (jakob-be 8+ commits
+före, 0 efter). Bug-scope nu: **15 aktiva / 135 stängda**.
 Nya commits sedan föregående checkpoint (alla på `jakob-be`, opushad mot `main`):
 - `74ed629` fix(dev): kill-dev-trees fångar orphan preview/dev node-processer
   (föräldraträd-matchning + TCP-port-lyssnare 3000-3001/4100-4199 + `--dry-run`/
@@ -51,6 +54,10 @@ Nya commits sedan föregående checkpoint (alla på `jakob-be`, opushad mot `mai
   `scripts.build_site` behåller facade + re-export `run_npm` (monkeypatchbar).
   Behavior-preserving (AST-verifierad), Scout-grön, full pytest exit 0. PR-branch +
   duplikat `cursor/refactor-build-site-slice-1` raderade.
+- `63e4758` fix(codex-review): B161 (okvoterad include-token "inkludera
+  TEST-JAKOB i hero" → ej längre tyst no-op) + B162 (TS/Python-paritet i
+  `local-preview-server.ts:readActiveBuildDir` — avvisar närvarande icke-string
+  buildPath). tsc grön; nya tester. (B-IDs registrerade i steward-commit denna.)
 Nästa: #140 Bite B-review (in i `jakob-be`), docs-PR #138/#141-konsolidering,
 sedan sync-PR `jakob-be -> main` för hela batchen när operatören ger OK.
 
