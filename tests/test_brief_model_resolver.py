@@ -18,6 +18,7 @@ from packages.generation.brief import (
     BriefModelResolutionError,
     has_openai_api_key,
     resolve_brief_model,
+    resolve_copy_directive_model,
 )
 from packages.generation.brief.models import DEFAULT_POLICY_PATH, OPENAI_API_KEY_ENV
 
@@ -103,6 +104,42 @@ def test_returns_declared_model_for_synthetic_policy(tmp_path: Path):
         encoding="utf-8",
     )
     assert resolve_brief_model(policy_path=policy) == "gpt-test-4"
+
+
+@pytest.mark.tooling
+def test_resolves_copy_directive_model_from_real_policy():
+    """ADR 0034 path A: copyDirectiveModel is a registered role (llm-models v5)."""
+    model = resolve_copy_directive_model()
+    assert isinstance(model, str) and model.strip() == model and model
+
+
+@pytest.mark.tooling
+def test_copy_directive_model_resolver_is_role_specific(tmp_path: Path):
+    policy = tmp_path / "models.json"
+    policy.write_text(
+        json.dumps(
+            {
+                "roles": [
+                    {"id": "briefModel", "provider": "openai", "model": "gpt-brief"},
+                    {"id": "copyDirectiveModel", "provider": "openai", "model": "gpt-copy"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert resolve_copy_directive_model(policy_path=policy) == "gpt-copy"
+    assert resolve_brief_model(policy_path=policy) == "gpt-brief"
+
+
+@pytest.mark.tooling
+def test_copy_directive_model_raises_when_role_missing(tmp_path: Path):
+    policy = tmp_path / "models.json"
+    policy.write_text(
+        json.dumps({"roles": [{"id": "briefModel", "provider": "openai", "model": "x"}]}),
+        encoding="utf-8",
+    )
+    with pytest.raises(BriefModelResolutionError, match="copyDirectiveModel role missing"):
+        resolve_copy_directive_model(policy_path=policy)
 
 
 @pytest.mark.tooling

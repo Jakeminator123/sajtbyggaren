@@ -103,8 +103,17 @@ function readActiveBuildDir(siteRoot: string): string | null {
   // Cross-validate the decorative buildPath against activeBuildId (mirror of
   // immutable_builds.read_active_build_dir): a present-but-mismatching buildPath
   // means the pointer is inconsistent (tampered/half-updated), so reject it.
+  // B-Codex 2026-06-01: mirror Python's ``build_path is not None and
+  // build_path != f"builds/{build_id}"`` EXACTLY — a present buildPath of ANY
+  // type (number, object, mismatching string) rejects; only absent (undefined)
+  // or JSON-null is allowed. The previous ``typeof === "string"`` guard let a
+  // present non-string buildPath slip through (TS/Python parity gap).
   const buildPath = (payload as { buildPath?: unknown }).buildPath;
-  if (typeof buildPath === "string" && buildPath !== `builds/${activeBuildId}`) {
+  if (
+    buildPath !== undefined &&
+    buildPath !== null &&
+    buildPath !== `builds/${activeBuildId}`
+  ) {
     return null;
   }
   const buildDir = path.join(siteRoot, "builds", activeBuildId);

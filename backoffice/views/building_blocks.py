@@ -145,13 +145,13 @@ def _render_impact_summary(result: dict) -> None:
 
     relation_rows = impact.impact_table_rows(result)
     if relation_rows:
-        st.dataframe(relation_rows, use_container_width=True, hide_index=True)
+        st.dataframe(relation_rows, width="stretch", hide_index=True)
     else:
         st.caption("Inga direkta relationer hittades.")
 
     if result["affectedNodes"]:
         with st.expander("Påverkade noder"):
-            st.dataframe(result["affectedNodes"], use_container_width=True, hide_index=True)
+            st.dataframe(result["affectedNodes"], width="stretch", hide_index=True)
     if result["affectedPaths"]:
         with st.expander("Berörda filer"):
             for path in result["affectedPaths"]:
@@ -206,16 +206,16 @@ def _render_discovery_mapping() -> None:
     for index, status in enumerate(("active", "fallback", "planned", "disabled")):
         cols[index].metric(status, status_counts.get(status, 0))
 
-    st.dataframe(mapping_rows, use_container_width=True, hide_index=True)
+    st.dataframe(mapping_rows, width="stretch", hide_index=True)
 
     with st.expander("Discovery relationer i asset graph"):
-        st.dataframe(discovery_graph["nodes"], use_container_width=True, hide_index=True)
-        st.dataframe(discovery_graph["edges"], use_container_width=True, hide_index=True)
+        st.dataframe(discovery_graph["nodes"], width="stretch", hide_index=True)
+        st.dataframe(discovery_graph["edges"], width="stretch", hide_index=True)
 
     with st.expander("Discovery gap/orphan"):
         gap_rows = discovery_control.discovery_gap_rows(policy)
         if gap_rows:
-            st.dataframe(gap_rows, use_container_width=True, hide_index=True)
+            st.dataframe(gap_rows, width="stretch", hide_index=True)
         else:
             st.success("Inga Discovery mapping-fynd.")
 
@@ -336,7 +336,7 @@ def _render_discovery_mapping() -> None:
         else:
             st.success("Dry-run validation OK. Inget skrevs till disk.")
         if findings:
-            st.dataframe(findings, use_container_width=True, hide_index=True)
+            st.dataframe(findings, width="stretch", hide_index=True)
 
 
 def _filter_options(rows: list[dict], key: str) -> list[str]:
@@ -466,7 +466,7 @@ def _render_asset_graph() -> None:
             },
             attention_filter=selected_attention,
         )
-        st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+        st.dataframe(filtered_rows, width="stretch", hide_index=True)
         with st.expander("Category-detaljer"):
             st.write(
                 "Category-raderna delegerar supportStatus/mappingState till "
@@ -506,7 +506,7 @@ def _render_asset_graph() -> None:
             multi_filters={},
             attention_filter=selected_attention,
         )
-        st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+        st.dataframe(filtered_rows, width="stretch", hide_index=True)
         with st.expander("Scaffold-detaljer"):
             st.write(
                 "Scaffold-status kombinerar scaffold-contract registry, filer "
@@ -546,7 +546,7 @@ def _render_asset_graph() -> None:
             },
             attention_filter=selected_attention,
         )
-        st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+        st.dataframe(filtered_rows, width="stretch", hide_index=True)
         with st.expander("Starter-detaljer"):
             st.write(
                 "Runtime-mappade starters kommer från `SCAFFOLD_TO_STARTER`; "
@@ -586,7 +586,7 @@ def _render_asset_graph() -> None:
             },
             attention_filter=selected_attention,
         )
-        st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+        st.dataframe(filtered_rows, width="stretch", hide_index=True)
         with st.expander("Capability-detaljer"):
             st.write(
                 "Capabilities med tom `dossiers`-lista markeras som gap; "
@@ -676,7 +676,7 @@ def _render_wizard_generation_mapping() -> None:
             ).lower()
         ]
 
-    st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+    st.dataframe(filtered_rows, width="stretch", hide_index=True)
 
     with st.expander("Källa och avgränsning"):
         st.markdown(
@@ -743,7 +743,7 @@ def _render_sni_discovery_mapping() -> None:
                 "enda policyrad i SNI Discovery Map. Inte ett fel — bara en "
                 "indikator på var policyn kan breddas i en framtida sprint."
             )
-            st.dataframe(coverage_gaps, use_container_width=True, hide_index=True)
+            st.dataframe(coverage_gaps, width="stretch", hide_index=True)
         else:
             st.success("Alla Discovery Taxonomy-kategorier har minst en SNI-mappning.")
 
@@ -754,7 +754,7 @@ def _render_sni_discovery_mapping() -> None:
         key="sni_mapping_category_filter",
     )
     filtered_rows = sni_diagnostics.filter_rows_by_category(rows, selected_category)
-    st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+    st.dataframe(filtered_rows, width="stretch", hide_index=True)
 
     st.divider()
     st.markdown("**Testa en SNI-kod**")
@@ -781,7 +781,7 @@ def _render_sni_discovery_mapping() -> None:
         else:
             if parent_chain:
                 st.markdown("**Parent-chain i SNI 2025-referensen**")
-                st.dataframe(parent_chain, use_container_width=True, hide_index=True)
+                st.dataframe(parent_chain, width="stretch", hide_index=True)
             if lookup["matchedLevel"] == "unknown":
                 st.info(
                     "Koden finns i SNI-referensen men ingen policymappning "
@@ -1040,7 +1040,7 @@ def _render_industry_coverage() -> None:
             if selected_branch == "Alla"
             else [row for row in summary_rows if row["contentBranch"] == selected_branch]
         )
-        st.dataframe(filtered_summary, use_container_width=True, hide_index=True)
+        st.dataframe(filtered_summary, width="stretch", hide_index=True)
 
     with category_tab:
         filter_cols = st.columns(5)
@@ -1077,7 +1077,7 @@ def _render_industry_coverage() -> None:
             scaffold=selected_scaffold,
             only_attention=only_attention,
         )
-        st.dataframe(filtered_rows, use_container_width=True, hide_index=True)
+        st.dataframe(filtered_rows, width="stretch", hide_index=True)
 
     with sni_tab:
         sni_rows = [
@@ -1095,11 +1095,11 @@ def _render_industry_coverage() -> None:
             }
             for row in table_rows
         ]
-        st.dataframe(sni_rows, use_container_width=True, hide_index=True)
+        st.dataframe(sni_rows, width="stretch", hide_index=True)
         missing_sni = [row for row in sni_rows if int(row["sniMappingCount"]) == 0]
         with st.expander(f"Kategorier utan SNI-mappning ({len(missing_sni)})"):
             if missing_sni:
-                st.dataframe(missing_sni, use_container_width=True, hide_index=True)
+                st.dataframe(missing_sni, width="stretch", hide_index=True)
             else:
                 st.success("Alla kategorier har minst en SNI-mappning.")
 
@@ -1114,7 +1114,7 @@ def _render_industry_coverage() -> None:
             if selected_action == "Alla"
             else [row for row in action_rows if row["action"] == selected_action]
         )
-        st.dataframe(filtered_actions, use_container_width=True, hide_index=True)
+        st.dataframe(filtered_actions, width="stretch", hide_index=True)
         if filtered_actions:
             selected_category = st.selectbox(
                 "Visa category-kontext",
@@ -1146,13 +1146,13 @@ def view_control_plane() -> None:
     if not findings:
         st.success("Inga kända driftfynd.")
     else:
-        st.dataframe(findings, use_container_width=True, hide_index=True)
+        st.dataframe(findings, width="stretch", hide_index=True)
 
     st.subheader("Nodes")
-    st.dataframe(graph["nodes"], use_container_width=True, hide_index=True)
+    st.dataframe(graph["nodes"], width="stretch", hide_index=True)
 
     st.subheader("Relationer")
-    st.dataframe(graph["edges"], use_container_width=True, hide_index=True)
+    st.dataframe(graph["edges"], width="stretch", hide_index=True)
 
     st.divider()
     _render_discovery_mapping()
@@ -1226,7 +1226,7 @@ def view_scaffolds() -> None:
         }
         for s in registry
     ]
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(rows, width="stretch", hide_index=True)
     if placeholder_scaffolds:
         st.warning(
             "Följande scaffolds har bara platshållarfiler och bör fyllas eller tas "
@@ -1311,7 +1311,7 @@ def view_variants() -> None:
     if not rows:
         st.info("Inga variants finns än under befintliga Scaffolds.")
         return
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(rows, width="stretch", hide_index=True)
 
 
 def view_selection_profiles() -> None:
@@ -1330,7 +1330,7 @@ def view_selection_profiles() -> None:
     if not summaries:
         st.info("Inga selection-profile-filer hittades.")
         return
-    st.dataframe(summaries, use_container_width=True, hide_index=True)
+    st.dataframe(summaries, width="stretch", hide_index=True)
 
     scaffold_ids = [row["scaffold"] for row in summaries]
     selected = st.selectbox("Scaffold", scaffold_ids, key="selection_profile_scaffold")
@@ -1465,13 +1465,13 @@ def view_variant_candidates() -> None:
             st.subheader("Likhet mot canonical variants")
             st.dataframe(
                 asset_graph.compare_variant_to_existing(result.payload, existing),
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
             )
             st.subheader(f"Diff mot `{existing[0].get('id', 'canonical')}`")
             st.dataframe(
                 asset_graph.variant_diff_rows(result.payload, existing[0]),
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
             )
 
@@ -1483,7 +1483,7 @@ def view_variant_candidates() -> None:
         return
 
     _warn_non_real_sources(candidate_rows)
-    st.dataframe(candidate_rows, use_container_width=True, hide_index=True)
+    st.dataframe(candidate_rows, width="stretch", hide_index=True)
     candidate_options = [
         f"{row['scaffold']}:{row['candidate']}" for row in candidate_rows
     ]
@@ -1517,7 +1517,7 @@ def view_variant_candidates() -> None:
         candidate_payload,
         canonical_by_id[canonical_id],
     )
-    st.dataframe(diff_rows, use_container_width=True, hide_index=True)
+    st.dataframe(diff_rows, width="stretch", hide_index=True)
 
 
 def view_dossiers() -> None:
@@ -1542,7 +1542,7 @@ def view_dossiers() -> None:
         st.info("Inga Dossiers implementerade än.")
         return
     rows = [{"Klass": cls, "id": d.name} for cls, d in items]
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(rows, width="stretch", hide_index=True)
 
     st.divider()
     layout = contract["dossierDirectoryLayout"]
@@ -1818,7 +1818,7 @@ def view_dossier_candidates() -> None:
         st.info("Inga Dossier-kandidater finns ännu.")
         return
     _warn_non_real_sources(candidate_nodes)
-    st.dataframe(candidate_nodes, use_container_width=True, hide_index=True)
+    st.dataframe(candidate_nodes, width="stretch", hide_index=True)
 
 
 def view_reference_templates() -> None:

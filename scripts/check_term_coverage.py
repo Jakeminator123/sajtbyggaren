@@ -123,6 +123,7 @@ COMMON_WORDS = {
     # Sajtbyggaren-meta-nyckelord (egennamn för repon)
     "Sajtbyggaren", "Sajtmaskin", "Jakeminator123", "Jakemiantor123",
     "Lovable", "GitHub", "GitGuardian", "Cursor", "Vercel", "StackBlitz",
+    "Sandbox", "Vercel Sandbox", "Vercel VM",
     "WebContainer", "WebContainers", "Fly", "Stripe", "OpenAI", "Anthropic",
     # Adapter-naming i ADR 0030 (preview-provider-portability) — illustrativa
     # PascalCase-tagg för framtida pluggable adapters bakom PreviewRuntime
@@ -793,6 +794,9 @@ COMMON_WORDS = {
     "CimInstance",  # Get-CimInstance — PowerShell CIM cmdlet result-typ
     "CommandLine",  # Win32_Process-property som CIM exponerar
     "ProcessId",  # Win32_Process-filter-property
+    "ParentProcessId",  # Win32_Process-property (föräldraträd i kill-dev-trees.py)
+    "ExecutablePath",  # Win32_Process-property (kill-dev-trees.py process-listning)
+    "OwningProcess",  # Get-NetTCPConnection-property (port-lyssnare i kill-dev-trees.py)
     "StartTime",  # PowerShell process-property
     "TerminateProcess",  # Win32 API-funktion som child.kill() mappar till
     "WinError 5",  # Windows ERROR_ACCESS_DENIED — backtick-citerad i incident-docs

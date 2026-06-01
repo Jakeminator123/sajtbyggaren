@@ -11,6 +11,13 @@ import sys
 from types import ModuleType
 from typing import Any
 
+from packages.generation.build.contact_placeholders import (
+    real_address_lines,
+    real_email,
+    real_opening_hours,
+    real_phone,
+)
+
 
 def _build_site_module() -> ModuleType:
     main_module = sys.modules.get("__main__")
@@ -148,14 +155,19 @@ def _render_structured_data_jsonld(dossier: dict) -> str:
     }
     if company.get("tagline"):
         payload["description"] = company["tagline"]
-    if contact.get("phone"):
-        payload["telephone"] = contact["phone"]
-    if contact.get("email"):
-        payload["email"] = contact["email"]
+    # Only publish real contact data in structured metadata. Placeholder
+    # fallbacks (B88 dummy phone/email/address) are omitted rather than
+    # emitted as a fake "Verified Business" telephone/email/address.
+    real_contact_phone = real_phone(contact)
+    if real_contact_phone is not None:
+        payload["telephone"] = real_contact_phone
+    real_contact_email = real_email(contact)
+    if real_contact_email is not None:
+        payload["email"] = real_contact_email
 
-    address_lines = contact.get("addressLines") if isinstance(contact, dict) else None
+    address_lines = real_address_lines(contact)
     address_part: dict[str, Any] = {}
-    if isinstance(address_lines, list) and address_lines:
+    if address_lines:
         address_part["streetAddress"] = ", ".join(
             line.strip() for line in address_lines if isinstance(line, str) and line.strip()
         )
@@ -177,13 +189,15 @@ def _render_structured_data_jsonld(dossier: dict) -> str:
         if clean_areas:
             payload["areaServed"] = clean_areas
 
-    if contact.get("openingHours"):
+    real_contact_hours = real_opening_hours(contact)
+    if real_contact_hours is not None:
         # OpeningHours-fältet i Schema.org förväntar ett strukturerat
         # format (e.g. "Mo-Fr 09:00-17:00"). Dossier-värdet är fri
         # svensk text ("Mån-Fre 09:00-17:00"). Vi rendrar den som
         # ``openingHoursSpecification`` i ren string-form — Google
-        # accepterar både den och den strukturerade varianten.
-        payload["openingHours"] = contact["openingHours"]
+        # accepterar både den och den strukturerade varianten. Placeholder-
+        # öppettider utelämnas så markeringen inte publicerar fejkdata.
+        payload["openingHours"] = real_contact_hours
 
     # ``json.dumps`` skapar valid JSON; vi förlitar oss på Reacts
     # inbyggda JSX-escaping för att skydda script-innehållet via
@@ -309,11 +323,24 @@ def render_not_found(dossier: dict) -> str:
     contact = dossier["contact"]
     safe_name = _jsx_safe_string(company["name"])
     safe_tagline = _jsx_safe_string(company["tagline"])
-    phone_href = _jsx_safe_string("tel:" + _phone_href(contact["phone"]))
+    # Only surface the phone CTA when it is a real number. A placeholder
+    # phone is suppressed (and the Phone icon dropped from the import) so
+    # the 404 never offers ``+46 8 000 00 00`` as a callable affordance —
+    # the "Tillbaka till startsidan" link remains the honest next step.
+    real_contact_phone = real_phone(contact)
+    if real_contact_phone is not None:
+        icon_import = 'import { ArrowLeft, Phone } from "lucide-react";\n'
+        phone_href = _jsx_safe_string("tel:" + _phone_href(real_contact_phone))
+        phone_cta = (
+            f'        <a href={phone_href} className="inline-flex items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />{_jsx_safe_string(real_contact_phone)}</a>\n'
+        )
+    else:
+        icon_import = 'import { ArrowLeft } from "lucide-react";\n'
+        phone_cta = ""
     return (
         'import Link from "next/link";\n'
-        'import { ArrowLeft, Phone } from "lucide-react";\n'
-        "\n"
+        + icon_import
+        + "\n"
         "export default function NotFound() {\n"
         "  return (\n"
         '    <main className="mx-auto flex w-[var(--container-width)] flex-col items-center gap-8 py-[calc(var(--section-spacing)*1.5)] text-center">\n'
@@ -322,8 +349,8 @@ def render_not_found(dossier: dict) -> str:
         f'      <p className="max-w-xl text-lg text-[color:var(--muted)] leading-relaxed">Sidan kan ha flyttats eller tagits bort. Hör av dig till {safe_name} så hjälper vi dig vidare.</p>\n'
         '      <div className="flex flex-wrap items-center justify-center gap-3">\n'
         '        <Link href="/" className="inline-flex items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity"><ArrowLeft className="size-4" />Tillbaka till startsidan</Link>\n'
-        f'        <a href={phone_href} className="inline-flex items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />{_jsx_safe_string(contact["phone"])}</a>\n'
-        "      </div>\n"
+        + phone_cta
+        + "      </div>\n"
         f'      <p className="text-xs text-[color:var(--muted)]">{safe_tagline}</p>\n'
         "    </main>\n"
         "  );\n"

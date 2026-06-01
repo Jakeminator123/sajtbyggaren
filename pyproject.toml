@@ -5,7 +5,7 @@ description = "Sajtbyggaren backoffice and governance tooling."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-  "streamlit>=1.39",
+  "streamlit>=1.49",
   "jsonschema>=4.23",
   "pydantic>=2.9",
   "openai>=1.50",

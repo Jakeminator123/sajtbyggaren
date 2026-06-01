@@ -61,7 +61,7 @@ def main() -> None:
     for section, pages in SECTIONS.items():
         st.sidebar.markdown(f"**{section}**")
         for page_name in pages:
-            if st.sidebar.button(page_name, key=f"nav-{page_name}", use_container_width=True):
+            if st.sidebar.button(page_name, key=f"nav-{page_name}", width="stretch"):
                 st.session_state["current_view"] = page_name
         st.sidebar.markdown("")
 
@@ -71,7 +71,7 @@ def main() -> None:
         "**Inte runtime.** Slutanvändarens flöde ligger i `apps/` + `packages/`."
     )
 
-    if st.sidebar.button("Rensa cache", use_container_width=True):
+    if st.sidebar.button("Rensa cache", width="stretch"):
         _hard_reset_caches()
         st.sidebar.success("Cache rensad.")
 

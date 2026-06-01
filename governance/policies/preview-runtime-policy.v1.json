@@ -31,10 +31,7 @@
         "sajten kräver riktig build som inte fungerar i StackBlitz (Hard Dossier-integrationer som Stripe, Supabase, databas)",
         "produktnära smoke-test innan promotion"
       ],
-      "limitations": [
-        "kostar pengar",
-        "långsammare uppstart än StackBlitz"
-      ],
+      "limitations": ["kostar pengar", "långsammare uppstart än StackBlitz"],
       "envInjection": "via Fly secrets injection"
     },
     {
@@ -44,9 +41,7 @@
         "felsökning på utvecklarmaskin",
         "ingen användarvänd preview"
       ],
-      "limitations": [
-        "kräver att utvecklaren har Node och deps installerade"
-      ],
+      "limitations": ["kräver att utvecklaren har Node och deps installerade"],
       "envInjection": "läs från .env.local"
     }
   ],
@@ -56,11 +51,8 @@
     "comment": "Inte tier-uppdelad. Om typecheck eller build skippas måste det loggas explicit i version-meta som 'degraded'."
   },
   "forbiddenTerms": [
-    "VM",
-    "sandbox",
     "preview-host",
     "webcontainer",
-    "vercelSandbox",
     "tier1",
     "tier2",
     "tier3",

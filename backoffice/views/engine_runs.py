@@ -69,7 +69,7 @@ def view_engine_runs() -> None:
             ),
         }
     )
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(rows, width="stretch", hide_index=True)
 
     tab_trace, tab_brief, tab_plan, tab_build, tab_files = st.tabs(
         ["Trace", "Site Brief", "Site Plan + Package", "Build Result", "Generated Files"]

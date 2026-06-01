@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 import sys
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -317,3 +317,118 @@ def site_brief_to_artifact(
         "briefError": result.error,
         "createdAt": datetime.now(UTC).isoformat(timespec="seconds"),
     }
+
+
+# --- copyDirective extraction (ADR 0034 path A) -----------------------------
+#
+# Follow-up copy edits ("byt namnet i headern till X", "lägg in TEST-JAKOB i
+# hero") go through the dedicated copyDirectiveModel role (llm-models.v1.json
+# v5) - a separate role from briefModel so the two purposes stay distinct. The
+# model only proposes a structured target+operation+payload triple; the caller
+# (scripts/prompt_to_project_input.py) re-validates every payload through the
+# public-copy guards before anything is applied, so a hallucinated or
+# instruction-shaped payload can never become customer copy. V1 targets are
+# intentionally narrow (company-name + tagline). This module hosts the call
+# (it already owns the OpenAI structured-output plumbing); the role is what
+# governance tracks, not the file location.
+
+
+class CopyDirectiveCandidate(BaseModel):
+    """One structured copy edit proposed by the model from a follow-up prompt."""
+
+    target: Literal["company-name", "tagline"] = Field(
+        description=(
+            "Which field to change. 'company-name' = the business name shown "
+            "in the nav header and hero H1. 'tagline' = the hero subheading."
+        )
+    )
+    operation: Literal["replace-text", "include-token"] = Field(
+        description=(
+            "'replace-text' = set the field to payload. 'include-token' = add "
+            "the payload to the existing field (for 'include X in the hero')."
+        )
+    )
+    payload: str = Field(
+        description=(
+            "ONLY the resulting copy: the new name, new tagline, or token to "
+            "include. Never the operator's instruction phrasing or any verb "
+            "like 'change'/'rename'. Keep it short (a name or one line)."
+        )
+    )
+
+
+class CopyDirectiveExtraction(BaseModel):
+    """Structured output: zero or more copy directives, empty when unclear."""
+
+    directives: list[CopyDirectiveCandidate] = Field(default_factory=list)
+
+
+_COPY_DIRECTIVE_SYSTEM = (
+    "You are the follow-up copy interpreter for Sajtbyggaren. The operator "
+    "already has a generated website and typed a short follow-up asking for a "
+    "change. Decide whether the follow-up asks to change the company NAME "
+    "(target 'company-name') or the hero TAGLINE/subheading (target "
+    "'tagline'). Emit at most one directive per target. payload must contain "
+    "ONLY the resulting customer-facing copy - the new name, the new tagline, "
+    "or the exact token to include - never the operator's instruction wording "
+    "and never a verb such as 'change', 'rename', 'byt' or 'ändra'. If the "
+    "follow-up is about anything else (tone, colours, layout, adding pages, "
+    "new services) or is unclear, return an empty directives list. Do not "
+    "invent content the operator did not ask for."
+)
+
+
+def extract_copy_directives_llm(
+    follow_up_prompt: str,
+    *,
+    company_name: str,
+    tagline: str,
+    language: str,
+    model: str,
+) -> list[dict[str, str]]:
+    """Best-effort LLM extraction of copy directives from a follow-up prompt.
+
+    Returns a list of ``{target, operation, payload, source: "llm"}`` dicts.
+    Returns ``[]`` when no API key is configured or on any error - follow-up
+    generation must never fail because this optional understanding step did.
+    The caller re-validates every payload, so this function does not need to
+    be the security boundary.
+    """
+    if not has_openai_api_key():
+        return []
+    try:
+        from openai import OpenAI
+
+        client = OpenAI()
+        context = (
+            f"Language: {language}\n"
+            f"Current company name: {company_name}\n"
+            f"Current hero tagline: {tagline}\n\n"
+            f"Operator follow-up: {follow_up_prompt}"
+        )
+        response = client.responses.parse(
+            model=model,
+            input=[
+                {"role": "system", "content": _COPY_DIRECTIVE_SYSTEM},
+                {"role": "user", "content": context},
+            ],
+            text_format=CopyDirectiveExtraction,
+        )
+        parsed = response.output_parsed
+    except Exception as exc:  # noqa: BLE001
+        message = f"copyDirective extraction error: {type(exc).__name__}: {exc}"
+        logger.warning(message)
+        sys.stderr.write(f"[copyDirective] {message}\n")
+        sys.stderr.flush()
+        return []
+    if parsed is None:
+        return []
+    return [
+        {
+            "target": directive.target,
+            "operation": directive.operation,
+            "payload": directive.payload,
+            "source": "llm",
+        }
+        for directive in parsed.directives
+    ]

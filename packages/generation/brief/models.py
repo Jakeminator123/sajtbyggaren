@@ -18,6 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_POLICY_PATH = REPO_ROOT / "governance" / "policies" / "llm-models.v1.json"
 
 BRIEF_ROLE_ID = "briefModel"
+COPY_DIRECTIVE_ROLE_ID = "copyDirectiveModel"
 EXPECTED_PROVIDER = "openai"
 OPENAI_API_KEY_ENV = "OPENAI_API_KEY"
 
@@ -38,16 +39,22 @@ def has_openai_api_key() -> bool:
 
 
 class BriefModelResolutionError(RuntimeError):
-    """Raised when llm-models.v1.json does not declare a usable briefModel."""
+    """Raised when llm-models.v1.json does not declare a usable Model Role.
+
+    The name is historical (the first role resolved this way was briefModel);
+    it is reused for every registered role (briefModel, copyDirectiveModel,
+    ...) so callers have a single error type to catch. The message always
+    names the specific role that failed to resolve.
+    """
 
 
-def resolve_brief_model(policy_path: Path | None = None) -> str:
-    """Return the model string registered for briefModel in llm-models.v1.json.
+def _resolve_role_model(role_id: str, policy_path: Path | None = None) -> str:
+    """Return the model string registered for ``role_id`` in llm-models.v1.json.
 
     Strict: raises ``BriefModelResolutionError`` when the policy file is
-    missing the role, the provider is not openai, or the model field is
-    empty. We prefer a hard failure here over a silent default because the
-    policy is the contract Sprint 2A locked in.
+    missing, malformed, missing the role, the provider is not openai, or the
+    model field is empty. We prefer a hard failure over a silent default
+    because the policy is the Model Role contract Sprint 2A locked in.
     """
     path = policy_path or DEFAULT_POLICY_PATH
     if not path.exists():
@@ -63,20 +70,30 @@ def resolve_brief_model(policy_path: Path | None = None) -> str:
         ) from exc
 
     for role in data.get("roles", []):
-        if role.get("id") != BRIEF_ROLE_ID:
+        if role.get("id") != role_id:
             continue
         provider = role.get("provider")
         if provider != EXPECTED_PROVIDER:
             raise BriefModelResolutionError(
-                f"briefModel provider must be {EXPECTED_PROVIDER!r}, got {provider!r}"
+                f"{role_id} provider must be {EXPECTED_PROVIDER!r}, got {provider!r}"
             )
         model = role.get("model")
         if not isinstance(model, str) or not model.strip():
             raise BriefModelResolutionError(
-                "briefModel role is missing a non-empty model value"
+                f"{role_id} role is missing a non-empty model value"
             )
         return model
 
     raise BriefModelResolutionError(
-        f"briefModel role missing from {path.name}"
+        f"{role_id} role missing from {path.name}"
     )
+
+
+def resolve_brief_model(policy_path: Path | None = None) -> str:
+    """Return the model string registered for briefModel in llm-models.v1.json."""
+    return _resolve_role_model(BRIEF_ROLE_ID, policy_path)
+
+
+def resolve_copy_directive_model(policy_path: Path | None = None) -> str:
+    """Return the model string registered for copyDirectiveModel (ADR 0034)."""
+    return _resolve_role_model(COPY_DIRECTIVE_ROLE_ID, policy_path)

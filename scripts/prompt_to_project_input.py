@@ -55,7 +55,10 @@ from packages.generation.brief import (  # noqa: E402
     extract_site_brief,
     site_brief_to_artifact,
 )
-from packages.generation.brief.models import resolve_brief_model  # noqa: E402
+from packages.generation.brief.models import (  # noqa: E402
+    resolve_brief_model,
+    resolve_copy_directive_model,
+)
 from packages.generation.discovery import (  # noqa: E402
     DiscoveryDecision,
     apply_discovery_overrides,
@@ -2324,6 +2327,648 @@ def _semantic_source_entry(
     }
 
 
+# --- copyDirectives (ADR 0034 path A, GAP-followup-prompt-content-passthrough) ---
+#
+# A follow-up like "Gör om 'X' på headern till 'Y'" used to die in
+# merge_followup_project_input: company.name is always preserved from the
+# previous version, so the rename never reached the renderer. These helpers
+# translate a narrow, leak-safe set of phrasings into structured copy
+# directives applied to specific Project Input fields (company.name,
+# company.tagline) BEFORE the deterministic renderer runs. The raw prompt is
+# never rendered as customer copy - only the validated payload, to a known
+# field. V1 targets are intentionally small (company-name + tagline).
+
+_COPY_DIRECTIVE_TAGLINE_KEYWORDS: tuple[str, ...] = (
+    "tagline",
+    "taglinen",
+    "slogan",
+    "sloganen",
+    "underrubrik",
+    "underrubriken",
+    "undertext",
+    "undertexten",
+    "hero-text",
+    "hero text",
+    "herotext",
+    "subtitle",
+    "subheading",
+)
+_COPY_DIRECTIVE_NAME_KEYWORDS: tuple[str, ...] = (
+    "företagsnamn",
+    "foretagsnamn",
+    "företagsnamnet",
+    "foretagsnamnet",
+    "namnet",
+    "namn",
+    "heter",
+    "kallas",
+    "döp om",
+    "dop om",
+    "döpa om",
+    "dopa om",
+    "header",
+    "headern",
+    "rubrik",
+    "rubriken",
+    "huvudrubrik",
+    "huvudrubriken",
+    "titeln",
+    "company name",
+    "business name",
+    "rename",
+)
+_COPY_DIRECTIVE_HERO_KEYWORDS: tuple[str, ...] = ("hero",)
+_COPY_DIRECTIVE_INCLUDE_KEYWORDS: tuple[str, ...] = (
+    "inkludera",
+    "inkluderar",
+    "lägg in",
+    "lagg in",
+    "lägg till",
+    "lagg till",
+    "ha med",
+    "infoga",
+    "include",
+    "add",
+)
+_COPY_DIRECTIVE_REPLACE_KEYWORDS: tuple[str, ...] = (
+    "byt",
+    "byta",
+    "ändra",
+    "andra",
+    "gör om",
+    "gor om",
+    "göra om",
+    "gora om",
+    "döp om",
+    "dop om",
+    "sätt",
+    "satt",
+    "uppdatera",
+    "ersätt",
+    "ersatt",
+    "kalla",
+    "rename",
+    "change",
+    "replace",
+    "set",
+    "update",
+)
+# If the extracted payload still contains one of these as a WORD the
+# extraction grabbed instruction text, not a value - reject it (leak guard).
+# Matched with word/phrase boundaries (``_contains_any_word``), not substring:
+# a legitimate company name like "Changemakers" merely *contains* "change" but
+# is not an instruction, so substring matching wrongly no-op:ed it (Codex-fynd
+# 2026-06-01). Swedish change-verbs carry their common inflections (``ändrar``/
+# ``byter``) so the inflected instruction forms are still caught as words.
+_COPY_DIRECTIVE_REJECT_WORDS: tuple[str, ...] = (
+    "byt",
+    "byta",
+    "byter",
+    "bytte",
+    "byt ut",
+    "ändra",
+    "ändrar",
+    "ändrade",
+    "ändrat",
+    "andra",
+    "andrar",
+    "andrade",
+    "andrat",
+    "gör om",
+    "gor om",
+    "inkludera",
+    "inkluderar",
+    "lägg",
+    "lagg",
+    "uppdatera",
+    "uppdaterar",
+    "ersätt",
+    "ersätter",
+    "ersatt",
+    "ersatter",
+    "change",
+    "changes",
+    "replace",
+    "replaces",
+    "include",
+    "includes",
+    "rename",
+    "renames",
+)
+# Name keywords that *explicitly* mean the company name (header/title/rename
+# idioms). A generic "namn"/"namnet" is NOT in here: on its own it is
+# ambiguous and must not hijack ``company.name`` when the operator scoped the
+# rename to a service/product/page (Codex-fynd 2026-06-01).
+_COPY_DIRECTIVE_EXPLICIT_NAME_KEYWORDS: tuple[str, ...] = (
+    "företagsnamn",
+    "foretagsnamn",
+    "företagsnamnet",
+    "foretagsnamnet",
+    "heter",
+    "kallas",
+    "döp om",
+    "dop om",
+    "döpa om",
+    "dopa om",
+    "header",
+    "headern",
+    "rubrik",
+    "rubriken",
+    "huvudrubrik",
+    "huvudrubriken",
+    "titeln",
+    "company name",
+    "business name",
+    "rename",
+)
+# Scope words that mean the operator is renaming a service/product/page, not
+# the company. When one of these is present and no explicit company-name
+# keyword is, a generic "namn/namnet" must NOT map to ``company-name``.
+_COPY_DIRECTIVE_NONCOMPANY_SCOPE_KEYWORDS: tuple[str, ...] = (
+    "tjänst",
+    "tjänsten",
+    "tjänster",
+    "tjänsterna",
+    "produkt",
+    "produkten",
+    "produkter",
+    "produkterna",
+    "sida",
+    "sidan",
+    "sidor",
+    "sidorna",
+    "service",
+    "services",
+    "product",
+    "products",
+    "page",
+    "pages",
+)
+# Lead words that mark an UNQUOTED trailing ``till``/``to`` value as an
+# instruction (a desired quality/state) rather than literal new copy:
+# "change the hero to be more premium" must not publish "be more premium" as a
+# tagline (Codex-fynd 2026-06-01). Operators who want such words as literal
+# copy can quote them - the quoted branch is respected verbatim.
+_TRAILING_INSTRUCTION_LEADS: tuple[str, ...] = (
+    "att ",
+    "be ",
+    "become ",
+    "look ",
+    "feel ",
+    "seem ",
+    "appear ",
+    "sound ",
+    "make ",
+    "get ",
+    "stay ",
+    "have ",
+    "vara ",
+    "bli ",
+    "kännas ",
+    "verka ",
+    "se ut",
+)
+_COPY_TITLE_CASE_SKIP: frozenset[str] = frozenset(
+    {"och", "i", "på", "pa", "av", "för", "for", "the", "of", "and", "a", "an", "&"}
+)
+_QUOTE_CHARS = "'\"\u201c\u201d\u2018\u2019"
+_TILL_VALUE_QUOTED_RE = re.compile(
+    rf"(?:\btill\b|\bto\b)\s+[{_QUOTE_CHARS}]([^{_QUOTE_CHARS}]+)[{_QUOTE_CHARS}]",
+    re.IGNORECASE,
+)
+_TILL_VALUE_COLON_RE = re.compile(
+    r"(?:\btill\b|\bto\b)\s*[:：]\s*(.+)$",
+    re.IGNORECASE | re.DOTALL,
+)
+_TILL_VALUE_TRAILING_RE = re.compile(
+    r"(?:\btill\b|\bto\b)\s+(.+)$",
+    re.IGNORECASE | re.DOTALL,
+)
+_QUOTED_SPAN_RE = re.compile(rf"[{_QUOTE_CHARS}]([^{_QUOTE_CHARS}]+)[{_QUOTE_CHARS}]")
+
+
+def _title_case_company_name(value: str) -> str:
+    """Capitalise an all-lowercase company name without mangling intended case.
+
+    Only called when the operator typed an all-lowercase payload (e.g.
+    "jakobs örhängen" -> "Jakobs Örhängen"). Words that already carry an
+    uppercase letter (``iPhone``, ``AB``) are preserved verbatim, and small
+    Swedish/English connector words stay lowercase unless first.
+    """
+    words = value.split()
+    out: list[str] = []
+    for idx, word in enumerate(words):
+        if any(ch.isupper() for ch in word):
+            out.append(word)
+        elif idx != 0 and word.lower() in _COPY_TITLE_CASE_SKIP:
+            out.append(word.lower())
+        else:
+            out.append(word[:1].upper() + word[1:])
+    return " ".join(out)
+
+
+def _safe_copy_payload(
+    value: Any,
+    *,
+    follow_up_prompt: str,
+    max_length: int,
+) -> str | None:
+    """Validate a candidate copy payload through the public-copy guards.
+
+    Returns ``None`` when the candidate is empty, looks like the raw
+    instruction, still contains a change-verb (extraction grabbed too much)
+    or trips the existing B99/B128 planner-note blocklist. This is the single
+    choke point that keeps the operator's instruction text from ever becoming
+    customer copy.
+    """
+    cleaned = _string_value(value)
+    if not cleaned:
+        return None
+    cleaned = cleaned.strip().strip(_QUOTE_CHARS).strip()
+    cleaned = cleaned.strip(".:,;!? ").strip()
+    if not cleaned:
+        return None
+    lowered = cleaned.lower()
+    if _contains_any_word(lowered, _COPY_DIRECTIVE_REJECT_WORDS):
+        return None
+    safe = _customer_safe_planner_note(cleaned)
+    if not safe:
+        return None
+    safe = safe.removesuffix(".").strip()
+    if not safe:
+        return None
+    # A normal extracted value IS a substring of the prompt, so the usual
+    # "is a substring of" leak check (_looks_like_raw_followup_prompt) would
+    # reject everything. Reject only when the candidate is essentially the
+    # entire instruction (extraction failed to narrow it down).
+    if _normalise_followup_text(safe) == _normalise_followup_text(follow_up_prompt):
+        return None
+    return safe[:max_length].strip() or None
+
+
+def _classify_copy_target(text_norm: str) -> str | None:
+    """Decide which structured field a copy directive targets.
+
+    ``text_norm`` is the output of ``_normalise_followup_text`` (lower-case,
+    quotes stripped). Tagline-specific signals win over the generic name
+    signals; a bare ``hero`` mention maps to the hero tagline.
+    """
+    if _contains_any(text_norm, _COPY_DIRECTIVE_TAGLINE_KEYWORDS):
+        return "tagline"
+    if _contains_any_word(text_norm, _COPY_DIRECTIVE_NAME_KEYWORDS):
+        # A generic "namn/namnet" must not hijack company.name when the
+        # operator scoped the rename to a service/product/page (Codex-fynd
+        # 2026-06-01): "byt namnet på tjänsten till X" renames a service, not
+        # the company. An explicit company-name keyword (företagsnamn,
+        # header, rubrik, rename, ...) still wins over the scope words.
+        has_explicit_name = _contains_any_word(
+            text_norm, _COPY_DIRECTIVE_EXPLICIT_NAME_KEYWORDS
+        )
+        has_noncompany_scope = _contains_any_word(
+            text_norm, _COPY_DIRECTIVE_NONCOMPANY_SCOPE_KEYWORDS
+        )
+        if has_noncompany_scope and not has_explicit_name:
+            return None
+        return "company-name"
+    if _contains_any_word(text_norm, _COPY_DIRECTIVE_HERO_KEYWORDS):
+        return "tagline"
+    return None
+
+
+def _looks_like_trailing_instruction(value: str) -> bool:
+    """True when an UNQUOTED trailing ``till``/``to`` value reads as instruction.
+
+    The bare ``<...> till/to <rest>`` branch is the most permissive value
+    extractor. A phrasing like "change the hero to be more premium" should
+    shift tone, not publish the literal words "be more premium" as a tagline.
+    We reject the capture when it opens with an infinitive / quality
+    construction (Codex-fynd 2026-06-01).
+    """
+    head = _normalise_followup_text(value)
+    if not head:
+        return False
+    return any(
+        head == lead.strip() or head.startswith(lead)
+        for lead in _TRAILING_INSTRUCTION_LEADS
+    )
+
+
+def _extract_replace_value(follow_up_prompt: str) -> str | None:
+    """Pull the new value after a ``till``/``to`` marker (colon, quoted, trailing)."""
+    colon = _TILL_VALUE_COLON_RE.search(follow_up_prompt.strip())
+    if colon:
+        return colon.group(1)
+    quoted = _TILL_VALUE_QUOTED_RE.search(follow_up_prompt)
+    if quoted:
+        return quoted.group(1)
+    trailing = _TILL_VALUE_TRAILING_RE.search(follow_up_prompt)
+    if trailing:
+        # Only the unquoted trailing branch needs the instruction guard; the
+        # colon/quoted branches are explicit operator intent and respected.
+        value = trailing.group(1)
+        if _looks_like_trailing_instruction(value):
+            return None
+        return value
+    return None
+
+
+# Token-like words for the UNQUOTED include path: a string with at least one
+# uppercase letter or a digit (e.g. ``TEST-JAKOB`` or a campaign code) reads as
+# a deliberate token; a plain lowercase word ("mer", "text") does not.
+# Keyword/target words are excluded so "inkludera X i hero" never returns
+# "hero" as the token.
+_UNQUOTED_INCLUDE_TOKEN_RE = re.compile(r"[A-Za-zÅÄÖåäö0-9][A-Za-zÅÄÖåäö0-9-]*")
+_COPY_DIRECTIVE_TOKEN_STOPWORDS: frozenset[str] = frozenset(
+    word.strip().lower()
+    for group in (
+        _COPY_DIRECTIVE_TAGLINE_KEYWORDS,
+        _COPY_DIRECTIVE_NAME_KEYWORDS,
+        _COPY_DIRECTIVE_HERO_KEYWORDS,
+        _COPY_DIRECTIVE_INCLUDE_KEYWORDS,
+        _COPY_DIRECTIVE_REPLACE_KEYWORDS,
+    )
+    for word in group
+)
+
+
+def _first_unquoted_include_token(text: str) -> str | None:
+    """Return the first token-like word in ``text`` or ``None``.
+
+    Token-like = contains an uppercase letter or a digit and is not a
+    copy-directive keyword/target word. This keeps a natural unquoted prompt
+    like "inkludera TEST-JAKOB i hero" working while a vague "inkludera mer
+    text" stays an honest no-op rather than grabbing a stray word.
+    """
+    for candidate in _UNQUOTED_INCLUDE_TOKEN_RE.findall(text):
+        token = candidate.strip("-")
+        if len(token) < 2:
+            continue
+        if not any(ch.isupper() or ch.isdigit() for ch in token):
+            continue
+        if token.lower() in _COPY_DIRECTIVE_TOKEN_STOPWORDS:
+            continue
+        return token
+    return None
+
+
+def _extract_include_token(follow_up_prompt: str) -> str | None:
+    """Pull a token to include, preferring a quoted span after an include keyword.
+
+    Falls back to an UNQUOTED token-like word after the include keyword
+    (B-Codex 2026-06-01): "inkludera TEST-JAKOB i hero" without quotes is the
+    natural way operators phrase the ADR 0034 acceptance case, and used to be a
+    silent no-op because only quoted spans were extracted.
+    """
+    lowered = follow_up_prompt.lower()
+    for keyword in _COPY_DIRECTIVE_INCLUDE_KEYWORDS:
+        position = lowered.find(keyword.strip())
+        if position == -1:
+            continue
+        after = follow_up_prompt[position + len(keyword.strip()) :]
+        match = _QUOTED_SPAN_RE.search(after)
+        if match:
+            return match.group(1)
+        token = _first_unquoted_include_token(after)
+        if token:
+            return token
+    match = _QUOTED_SPAN_RE.search(follow_up_prompt)
+    return match.group(1) if match else None
+
+
+def _extract_copy_directives(
+    follow_up_prompt: str,
+    *,
+    language: str,
+) -> list[dict[str, Any]]:
+    """Translate a follow-up prompt into a narrow, leak-safe copy-directive list.
+
+    V1 understands two phrasings, both validated through the public-copy
+    guards so the raw instruction can never become customer copy:
+
+    - "byt/ändra/gör om <namnet|headern|...> till '<Y>'" -> replace-text on
+      company-name (the operator's reported failing case: the company name in
+      the nav header + hero H1).
+    - "inkludera '<TOKEN>' i hero/rubriken" -> include-token on the hero
+      tagline (ADR 0034 acceptance case).
+
+    Returns ``[]`` when nothing safe is recognised, so the honest no-op path
+    (B155) still fires.
+    """
+    _ = language  # reserved for the LLM-backed extractor (copyDirectiveModel)
+    text = _normalise_followup_text(follow_up_prompt)
+    if not text or len(text) < 4:
+        return []
+    target = _classify_copy_target(text)
+    if target is None:
+        return []
+    # Detect command verbs as WHOLE words/phrases, not substrings:
+    # "Jag bytte företagsnamnet till X" is past-tense narration and must not
+    # trigger replace-mode via the substring "byt" inside "bytte".
+    has_include = _contains_any_word(text, _COPY_DIRECTIVE_INCLUDE_KEYWORDS)
+    has_replace = _contains_any_word(text, _COPY_DIRECTIVE_REPLACE_KEYWORDS)
+    if not has_include and not has_replace:
+        return []
+    # include-token wins when both are present ("ändra texten ... till att
+    # inkludera 'TEST-JAKOB'") because the operator named a token to add.
+    if has_include:
+        payload = _safe_copy_payload(
+            _extract_include_token(follow_up_prompt),
+            follow_up_prompt=follow_up_prompt,
+            max_length=60,
+        )
+        if payload is None:
+            return []
+        return [
+            {
+                "target": target,
+                "operation": "include-token",
+                "payload": payload,
+                "source": "prompt-rule",
+            }
+        ]
+    payload = _safe_copy_payload(
+        _extract_replace_value(follow_up_prompt),
+        follow_up_prompt=follow_up_prompt,
+        max_length=80 if target == "company-name" else 140,
+    )
+    if payload is None:
+        return []
+    if target == "company-name" and payload == payload.lower():
+        payload = _title_case_company_name(payload)
+    return [
+        {
+            "target": target,
+            "operation": "replace-text",
+            "payload": payload,
+            "source": "prompt-rule",
+        }
+    ]
+
+
+def _copy_directive_llm_eligible(
+    follow_up_prompt: str,
+    *,
+    intent: FollowupIntent,
+) -> bool:
+    """Decide whether to consult copyDirectiveModel for this follow-up.
+
+    Only genuinely unclassified follow-ups qualify. Additive prompts
+    ("lägg till ...") and the known semantic intents (tone-shift,
+    tagline-update, story-emphasize, positioning-shift, clarify) already have
+    deterministic handling - firing the model there risks a spurious copy edit
+    (e.g. "lägg till premium produkt" must not rewrite the tagline).
+    """
+    if intent != "no-semantic-change":
+        return False
+    text = _normalise_followup_text(follow_up_prompt)
+    if _contains_any(text, _FOLLOWUP_ADD_ONLY_KEYWORDS):
+        return False
+    return True
+
+
+def _validate_copy_directive_candidate(
+    candidate: dict[str, Any],
+    *,
+    follow_up_prompt: str,
+) -> dict[str, Any] | None:
+    """Re-validate a model-proposed copy directive through the public guards.
+
+    This is the single security boundary for the LLM path: target/operation
+    must be known enums and the payload must survive ``_safe_copy_payload``
+    (change-verb reject + planner-note blocklist + length cap). A hallucinated
+    or instruction-shaped payload is dropped here, never rendered.
+    """
+    target = candidate.get("target")
+    operation = candidate.get("operation")
+    if target not in {"company-name", "tagline"}:
+        return None
+    if operation not in {"replace-text", "include-token"}:
+        return None
+    payload = _safe_copy_payload(
+        candidate.get("payload"),
+        follow_up_prompt=follow_up_prompt,
+        max_length=80 if target == "company-name" else 140,
+    )
+    if payload is None:
+        return None
+    if target == "company-name" and payload == payload.lower():
+        payload = _title_case_company_name(payload)
+    return {
+        "target": target,
+        "operation": operation,
+        "payload": payload,
+        "source": "llm",
+    }
+
+
+def _extract_copy_directives_via_llm(
+    follow_up_prompt: str,
+    *,
+    company: dict[str, Any],
+    language: str,
+) -> list[dict[str, Any]]:
+    """LLM fallback for copy directives when the deterministic rules miss.
+
+    Uses the dedicated copyDirectiveModel role (llm-models.v1.json v5).
+    Fail-safe: any resolution/call error yields ``[]`` so the honest no-op
+    path still fires. Every candidate is re-validated through
+    ``_validate_copy_directive_candidate``.
+    """
+    try:
+        from packages.generation.brief.extract import extract_copy_directives_llm
+
+        model = resolve_copy_directive_model()
+        raw_directives = extract_copy_directives_llm(
+            follow_up_prompt,
+            company_name=str(company.get("name") or ""),
+            tagline=str(company.get("tagline") or ""),
+            language=language,
+            model=model,
+        )
+    except Exception:  # noqa: BLE001
+        return []
+    validated: list[dict[str, Any]] = []
+    seen_targets: set[str] = set()
+    for candidate in raw_directives:
+        directive = _validate_copy_directive_candidate(
+            candidate if isinstance(candidate, dict) else {},
+            follow_up_prompt=follow_up_prompt,
+        )
+        if directive is None or directive["target"] in seen_targets:
+            continue
+        seen_targets.add(directive["target"])
+        validated.append(directive)
+    return validated
+
+
+def _apply_copy_directives(
+    merged: dict[str, Any],
+    directives: list[dict[str, Any]],
+) -> None:
+    """Apply validated copy directives to structured Project Input fields.
+
+    Mutates ``merged`` in place (company.name / company.tagline) and records
+    the applied directives under ``directives.copyDirectives`` for
+    traceability - ``build_site.py:_has_copy_directives`` reads it for honest
+    no-op detection. The list is REPLACED, not accumulated, so each version's
+    Project Input reflects exactly the directives interpreted for that
+    follow-up (a later unrelated follow-up must not re-claim an old rename).
+    """
+    directives_block = merged.get("directives")
+    if not isinstance(directives_block, dict):
+        directives_block = {}
+
+    def _store(applied_directives: list[dict[str, Any]]) -> None:
+        if applied_directives:
+            directives_block["copyDirectives"] = applied_directives
+            merged["directives"] = directives_block
+            return
+        # No directive applied this version: drop any inherited copyDirectives
+        # so _has_copy_directives reflects only the current follow-up. Keep the
+        # directives block iff it still carries other keys (layoutHint etc.).
+        directives_block.pop("copyDirectives", None)
+        if directives_block:
+            merged["directives"] = directives_block
+        else:
+            merged.pop("directives", None)
+
+    if not directives:
+        _store([])
+        return
+
+    company = merged.setdefault("company", {})
+    applied: list[dict[str, Any]] = []
+    for directive in directives:
+        target = directive.get("target")
+        operation = directive.get("operation")
+        payload = directive.get("payload")
+        if not isinstance(payload, str) or not payload.strip():
+            continue
+        field = {"company-name": "name", "tagline": "tagline"}.get(target or "")
+        if field is None:
+            continue
+        if operation == "replace-text":
+            company[field] = payload
+        elif operation == "include-token":
+            current = company.get(field) if isinstance(company.get(field), str) else ""
+            if payload.lower() in current.lower():
+                pass  # token already present; record directive but no field change
+            elif current:
+                company[field] = f"{current} {payload}".strip()
+            else:
+                company[field] = payload
+        else:
+            continue
+        applied.append(
+            {
+                key: directive[key]
+                for key in ("target", "operation", "payload", "source")
+                if key in directive
+            }
+        )
+    _store(applied)
+
+
 def _apply_semantic_patch(
     merged: dict[str, Any],
     candidate: dict[str, Any],
@@ -2599,6 +3244,7 @@ def merge_followup_project_input(
     candidate: dict[str, Any],
     *,
     follow_up_prompt: str,
+    enable_llm_fallback: bool = False,
 ) -> dict[str, Any]:
     """Preserve prior site context while applying a follow-up prompt.
 
@@ -2653,9 +3299,10 @@ def merge_followup_project_input(
         merged["tone"] = copy.deepcopy(candidate.get("tone", {}))
     if "trustSignals" not in merged:
         merged["trustSignals"] = copy.deepcopy(candidate.get("trustSignals", []))
+    language = merged.get("language", "sv")
     intent = classify_followup_intent(
         follow_up_prompt,
-        language=merged.get("language", "sv"),
+        language=language,
     )
     _apply_semantic_patch(
         merged,
@@ -2663,6 +3310,29 @@ def merge_followup_project_input(
         intent=intent,
         follow_up_prompt=follow_up_prompt,
     )
+    # ADR 0034 path A: explicit copy directives (rename / include-token) are
+    # applied AFTER the semantic patch so an explicit "byt namnet till X" wins
+    # over the conservative semantic merge. Leak-safe by construction - only a
+    # validated payload reaches a known structured field. The deterministic
+    # rules run first (no API needed, fully testable); the copyDirectiveModel
+    # extractor only fills in when (a) the caller opted in (production CLI),
+    # (b) the rules found nothing, and (c) the follow-up is a genuinely
+    # unclassified non-additive prompt - so the model can interpret fuzzier
+    # phrasings without weakening the guarantees or breaking offline tests.
+    copy_directives = _extract_copy_directives(follow_up_prompt, language=language)
+    if (
+        not copy_directives
+        and enable_llm_fallback
+        and _copy_directive_llm_eligible(follow_up_prompt, intent=intent)
+    ):
+        copy_directives = _extract_copy_directives_via_llm(
+            follow_up_prompt,
+            company=merged.get("company", {})
+            if isinstance(merged.get("company"), dict)
+            else {},
+            language=language,
+        )
+    _apply_copy_directives(merged, copy_directives)
     return merged
 
 
@@ -2867,6 +3537,7 @@ def generate(
     previous_project_dna: dict[str, Any] | None = None,
     meta_overrides: dict[str, Any] | None = None,
     discovery: dict[str, Any] | None = None,
+    enable_copy_directive_llm: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any], Path, Path]:
     """End-to-end: prompt -> Site Brief -> Project Input on disk.
 
@@ -2936,6 +3607,7 @@ def generate(
             base_project_input,
             candidate_project_input,
             follow_up_prompt=prompt,
+            enable_llm_fallback=enable_copy_directive_llm,
         )
     else:
         project_input = candidate_project_input
@@ -3080,6 +3752,7 @@ def generate_followup(
     reset_wizard_must_have: bool = False,
     base_run_id: str | None = None,
     runs_dir: Path = DEFAULT_RUNS_DIR,
+    enable_copy_directive_llm: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any], Path, Path]:
     """Generate a new Project Input version from an existing meta sidecar.
 
@@ -3161,6 +3834,7 @@ def generate_followup(
         else None,
         meta_overrides=meta_overrides,
         discovery=discovery,
+        enable_copy_directive_llm=enable_copy_directive_llm,
     )
 
 
@@ -3260,6 +3934,13 @@ def main() -> int:
             output_dir=output_dir,
             site_id=args.followup_site_id,
             base_run_id=args.base_run_id,
+            # Production follow-up entrypoint (Viewser spawns this CLI via
+            # apps/viewser/lib/prompt-runner.ts): opt into the
+            # copyDirectiveModel fallback so free-text follow-ups the
+            # deterministic rules miss still get a chance at a structured,
+            # validated copy edit. Programmatic callers + tests keep the
+            # default (off) so they stay deterministic and offline.
+            enable_copy_directive_llm=True,
         )
     else:
         project_input, meta, project_input_path, meta_path = generate(

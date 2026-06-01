@@ -9,14 +9,42 @@ status: queued
 source: operator verification 2026-05-27
 ```
 
-## Status 2026-05-31
+## Status 2026-06-01
 
-Backenddelen av lösning B är implementerad: follow-up-builds skriver
-`appliedVisibleEffect` och `appliedVisibleEffectReason` i
-`build-result.json`, och emitterar trace-eventet `followup.no_op_detected`
-när ingen synlig effekt detekteras. FloatingChat-presentationen väntar
-Christopher. Lösning A (`copyDirectives[]`) är fortfarande separat och
-ADR 0034 står kvar som `proposed`.
+Lösning A (`copyDirectives[]`) **first slice är implementerad** på
+`jakob-be` (ej i `main` än). Följdprompt -> validerade
+`directives.copyDirectives[]` (target `company-name | tagline`, operation
+`replace-text | include-token`) appliceras på `company.name`/`company.tagline`
+före render. Deterministisk extraktor + dedikerad `copyDirectiveModel`-roll
+(llm-models v5, ej återanvänd briefModel) för fri text; all output genom
+samma public-copy-guards. Acceptanskriterierna för "byt namnet i headern
+till X" och "inkludera TEST-JAKOB i hero" är gröna
+(`tests/test_followup_copy_directives.py`, inkl. end-to-end mot byggd
+`app/page.tsx`). Se ADR 0034 implementationsnot 2026-06-01.
+
+Kvar:
+- **Väg B** (ärlig FloatingChat-feedback): backend-signalen är klar
+  (`appliedVisibleEffect` + `appliedVisibleEffectReason` i
+  `build-result.json` + trace-event `followup.no_op_detected`).
+  UI-presentationen väntar Christopher.
+- Fler copy-targets (story, services, all-copy) - senare slice.
+- **Väg C** (modell patchar `.generated/` direkt) - parkerad, kräver
+  sandbox/diff/rollback per ADR 0034.
+
+### Hardening 2026-06-01 (`2e0c55f`)
+
+Tre väg A-edge-cases från Codex-genomgång stängda i
+`scripts/prompt_to_project_input.py` (regressionstäckt i
+`tests/test_followup_copy_directives.py`):
+
+- Generiskt "namn/namnet" byter inte längre `company.name` när prompten
+  scopar till tjänst/produkt/sida ("byt namnet på tjänsten till X" = no-op).
+- Reject-verb matchas som ord, inte substring, så "byt företagsnamnet till
+  Changemakers" applicerar i stället för att no-op:as.
+- Okvoterad trailing "till/to" fångar inte instruktioner ("change the hero to
+  be more premium") som publik tagline; citerade värden respekteras verbatim.
+
+Påverkar inte "Kvar"-punkterna ovan (nivå 2-targets, väg B/C).
 
 ## Reproduktion
 

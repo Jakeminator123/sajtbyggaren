@@ -351,7 +351,7 @@ def _render_summary_table(summary: dict[str, Any]) -> None:
                 "error": case.get("error") or "",
             }
         )
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(rows, width="stretch", hide_index=True)
 
 
 def _render_scorecard_form(summary: dict[str, Any]) -> None:
@@ -411,7 +411,7 @@ def _render_scorecard_form(summary: dict[str, Any]) -> None:
             )
             st.divider()
 
-        submitted = st.form_submit_button("Spara scorecard", type="primary", use_container_width=True)
+        submitted = st.form_submit_button("Spara scorecard", type="primary", width="stretch")
         if submitted:
             out = _save_scorecard(eval_run_id, new_items)
             st.success(f"Scorecard sparat: `{out.relative_to(REPO_ROOT)}`")
@@ -447,7 +447,7 @@ def view_evals() -> None:
     cols = st.columns(2)
     if cols[0].button(
         _quick_button_label(),
-        use_container_width=True,
+        width="stretch",
         type="primary",
         key="eval-quick",
     ):
@@ -464,7 +464,7 @@ def view_evals() -> None:
 
     if cols[1].button(
         _full_button_label(),
-        use_container_width=True,
+        width="stretch",
         key="eval-full",
         help=(
             "Kör npm install + npm run build per case: "

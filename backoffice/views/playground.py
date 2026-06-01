@@ -285,13 +285,13 @@ def view_playground() -> None:
             else:
                 st.error(f"Subprocess failade med exit code {result['exit_code']}.")
 
-    if a.button("Fas 1: brief", use_container_width=True, key="pg_brief", disabled=not can_run):
+    if a.button("Fas 1: brief", width="stretch", key="pg_brief", disabled=not can_run):
         _run("brief", requires_existing_run=False)
-    if b.button("Fas 2: plan", use_container_width=True, key="pg_plan", disabled=not can_run):
+    if b.button("Fas 2: plan", width="stretch", key="pg_plan", disabled=not can_run):
         _run("plan", requires_existing_run=True)
-    if c.button("Fas 3: build", use_container_width=True, key="pg_build", disabled=not can_run):
+    if c.button("Fas 3: build", width="stretch", key="pg_build", disabled=not can_run):
         _run("build", requires_existing_run=True)
-    if d.button("Kör allt", use_container_width=True, type="primary", key="pg_all", disabled=not can_run):
+    if d.button("Kör allt", width="stretch", type="primary", key="pg_all", disabled=not can_run):
         _run("all", requires_existing_run=False)
 
     output = st.session_state.get("playground_output", "")
