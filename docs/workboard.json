@@ -137,7 +137,7 @@
         "python -m ruff check .",
         "python -m pytest tests/ -q"
       ],
-      "note": "Operatör-reproducerad 2026-05-27. Två cases: 'Allt ska vara mycket ljusare' (v2->v3) och 'inkludera TEST-JAKOB i hero' (v3->v4). Båda passerade igenom som no-op. Strukturerade fält saknas i Site Brief/Project Input för fri copy-edit. Rekommenderad lösning A i GAP-fil (copyDirectives[]) + lösning B (ärlig FloatingChat-feedback). Träffar kärnflödet 'följdprompt → ny version'."
+      "note": "Operatör-reproducerad 2026-05-27. Två cases: 'Allt ska vara mycket ljusare' (v2->v3) och 'inkludera TEST-JAKOB i hero' (v3->v4). Båda passerade igenom som no-op. Strukturerade fält saknas i Site Brief/Project Input för fri copy-edit. Rekommenderad lösning A i GAP-fil (copyDirectives[]) + lösning B (ärlig FloatingChat-feedback). Träffar kärnflödet 'följdprompt → ny version'. STATUS 2026-06-01: lösning A first slice implementerad på jakob-be (directives.copyDirectives target company-name|tagline, operation replace-text|include-token; deterministisk extraktor + copyDirectiveModel-roll llm-models v5; ej i main än). Acceptans 'byt namnet i headern' + 'inkludera TEST-JAKOB i hero' gröna i tests/test_followup_copy_directives.py. Kvar: väg B FloatingChat-UI (Christopher), bredare targets, väg C. Behålls queued tills hela gapet stängs."
     }
   ],
   "activeGaps": [],

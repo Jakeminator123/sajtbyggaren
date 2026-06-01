@@ -319,9 +319,18 @@ integrate christopher-ui discovery and asset workflow`, merge
   renderers/codegen saknar fält för fri copy-edit. Gap-spec:
   `docs/gaps/GAP-followup-prompt-content-passthrough.md`. ADR-utkast:
   `governance/decisions/0034-followup-prompt-content-passthrough.md`.
-  Fix: open; backend-signal i `build-result.json` och `trace.ndjson` är
-  implementerad, men FloatingChat-feedback och `copyDirectives[]` återstår.
-  Test: `tests/test_followup_honest_no_op.py`.
+  Fix: open (ADR 0034 väg A first slice landad 2026-06-01, jakob-be, ej i
+  main): följdprompt -> validerade `directives.copyDirectives[]` (target
+  company-name | tagline, operation replace-text | include-token) appliceras
+  på company.name/tagline före render. Deterministisk extraktor + dedikerad
+  `copyDirectiveModel`-roll (llm-models v5) för fri text; rå prompt läcker
+  aldrig (samma public-copy-guards). "byt namnet i headern till X" och
+  "inkludera TEST-JAKOB i hero" ger nu synlig ändring +
+  `appliedVisibleEffect=true`. Förblir öppen tills resten landar: väg B
+  FloatingChat-feedback (kräver Christopher/UI), bredare targets
+  (story/services/all-copy) och väg C (modell-patch av `.generated/`).
+  Test: `tests/test_followup_copy_directives.py` +
+  `tests/test_followup_honest_no_op.py`.
 
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
   subprocess-status och loggutdrag medan körningen pågår, men riktig

@@ -144,7 +144,13 @@ Aktiva spår i prioritetsordning:
 3. B157 nivå-4 (immutable build-dir + pointer-swap, GAP-windows-
    safe-rebuild-pipeline) — eliminerar orphan-process-klassen.
 4. ADR 0034 / GAP-followup-prompt-content-passthrough — fri
-   follow-up-text når codegen via ``copyDirectives[]``.
+   follow-up-text når codegen via ``copyDirectives[]``. **Väg A first
+   slice landad på `jakob-be` 2026-06-01 (ej i `main`, ingen PR än):**
+   ``directives.copyDirectives`` (target company-name|tagline, operation
+   replace-text|include-token), deterministisk extraktor + ny
+   ``copyDirectiveModel``-roll (llm-models v5), guards gröna, 25 nya
+   tester. Nästa: operatör-review + ev. sync-PR `jakob-be → main`; sen
+   väg B FloatingChat-UI (Christopher) + bredare targets.
 5. B49 (docs-base page-map sidebar) — låg prio, behövs innan
    `course-education → docs-base` aktiveras.
 6. B13a arkitektur-flytt — kvarstår som öppen post, kräver egen sprint
