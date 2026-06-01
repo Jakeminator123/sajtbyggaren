@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 16 aktiva, 0 misplaced (av 0), 5 unknown, 131 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** 15 aktiva, 0 misplaced (av 0), 5 unknown, 133 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -216,16 +216,21 @@ pass; B119-B122 öppna och listade nedan.
   ses (mailto-länk i header > footer > body, `kontakt`/`contact`-sida
   > start), och välj högsta poäng. Källa: extern reviewer 2026-05-18
   (runda 2). Fix: open. Test: open.
-- **`B120` Låg** - `scripts/prompt_to_project_input.py:_apply_discovery_overrides`
-  (rad 1574-1582) försöker plocka ut stad ur kontakt-addressLines med
-  regex `r"\b\d{3}\s?\d{2}\s+([A-Za-zÅÄÖåäö\-]+)"`. Mönstret matchar
-  bara svensk postnummerstruktur (`xxx xx Stad`), så adresser i
-  format `Götgatan 12, 11646 Stockholm` ger ingen träff (kommat),
-  och internationella adresser missar helt. Effekten är tyst fallback
-  till brief-extracted location. Inte krasch, men halvfel
-  platsdata utan signalering. Fix-skiss: prova flera mönster i fallande
-  ordning, inklusive `,`-separator och engelska postnummer-format.
-  Källa: extern reviewer 2026-05-18 (runda 2). Fix: open. Test: open.
+- **`B120` Låg** - stad-extraktion ur kontakt-`addressLines` i
+  `packages/generation/discovery/resolve.py` (`_apply_location_from_address` +
+  `_SWEDISH_POSTCODE_RE`; B121 flyttade logiken hit från
+  `prompt_to_project_input.py`). Effekten var tyst fallback till brief-extracted
+  location, dvs halvfel platsdata utan signalering. Källa: extern reviewer
+  2026-05-18 (runda 2).
+  Delvis åtgärdad 2026-06-01 (`a90215e`): regexen läser nu ALLA adressrader
+  (inte bara `addressLines[0]`, så `["Storgatan 5", "116 46 Stockholm"]` ger
+  rätt stad) och tillåter flerordiga orter ("Västra Frölunda"); komma-separator
+  och 5-siffrigt postnummer utan mellanslag matchar redan via `search()`.
+  Regression: `tests/test_discovery_resolver.py::test_location_from_address_extracts_city`.
+  Kvarstår (håller B120 öppen): internationella/engelska postnummerformat och
+  "stad före postnummer" (US `City, ST 10001`) hanteras fortfarande inte —
+  medvetet konservativt så fel utländsk stad aldrig sätts (säker fallback).
+  Fix: open. Test: open.
 <!-- B122 stängd 2026-05-27 (SHA `7b6fb6c`) — se Stängda-sektionen. -->
 
 
@@ -334,24 +339,24 @@ integrate christopher-ui discovery and asset workflow`, merge
   services/hero-body/about) behövs för att träffa rätt text, (b) nivå 1 bör
   hellre vara ärligt avvisande ("kan bara byta namn/tagline nu") än att tyst
   remappa till tagline och påstå full framgång.
+  Hardening 2026-06-01 (`2e0c55f`): tre väg A-edge-cases stängda i
+  `scripts/prompt_to_project_input.py` — generiskt "namn/namnet" byter inte
+  längre `company.name` när prompten scopar till tjänst/produkt/sida; reject-
+  verb matchas som ord, inte substring (så "byt företagsnamnet till Changemakers"
+  applicerar i stället för att no-op:as); okvoterad trailing "till/to" fångar
+  inte instruktioner ("change the hero to be more premium") som publik tagline.
+  Kvarstår (håller B155 öppen): nivå 2 bredare targets, ärligare nivå-1-svar och
+  väg B/C-presentation. Test: `tests/test_followup_copy_directives.py`.
 
-- **`B158` Låg-Medel** - Hero-/CTA-knappen renderar fortfarande placeholder-
-  telefonen `+46 8 000 00 00` även när kontaktfälten är platshållare.
-  Placeholder-suppressionen (`packages/generation/build/contact_placeholders.py`,
-  commit `f62bd40`) täcker footer, kontaktsida, hours-summary, booking-fallback,
-  404 och JSON-LD — men INTE hero-/CTA-knappens `tel:`-länk. Källa: live-test
-  2026-06-01 (operatör + browser-agent, smyckes- och hamburgar-sajt). Effekt:
-  slutanvändaren ser dummy-telefon i den mest synliga CTA:n tills operatör fyllt
-  i riktig data. Fix: open (utöka suppressionen till hero/CTA-`tel:`-länkar i
-  renderers). Test: open.
-
-- **`B159` Låg-Medel** - Quality Gate `contact-cta-presence` failar på
-  `restaurant-hospitality`-scaffoldens `/hitta-hit` (`app/hitta-hit/page.tsx`
-  saknar kontakt-CTA). Icke-blockerande (bygget går igenom), men kontaktvägen
-  saknar tydlig CTA vilket sänker konvertering. Källa: live-test 2026-06-01
-  (hamburgare-ab, restaurant-hospitality midnight-bar). Fix: open (lägg
-  kontakt-CTA i hitta-hit-renderingen eller scaffold-routens contact-yta).
-  Test: open.
+- **`B160` Låg** - Viewser-headern (`apps/viewser/components/**`, site-header)
+  renderar företagets logo via Next.js `Image` utan ett komplett aspekt-
+  förhållande (bara `width` eller `height` styrs, inte båda eller en
+  `style={{ height: "auto" }}`), vilket ger console-varningen "Image with src …
+  has either width or height modified, but not the other". Kosmetiskt och
+  icke-blockerande, men brus i devtools + en CLS/a11y-risk. Christopher/UI-lane
+  (apps/viewser presentationslager); Jakob-lanen rör inte `apps/viewser/**` utan
+  handoff (se `docs/agent-inbox.jsonl`). Källa: env-genomgång + live-test
+  2026-06-01. Fix: open. Test: open.
 
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
   subprocess-status och loggutdrag medan körningen pågår, men riktig
@@ -621,6 +626,24 @@ samma kodmönster lever vidare här — därav posten:
 
 ## Stängda - regression-test säkrar fixet
 
+- **`B158` Låg-Medel** (stängd 2026-06-01, hardening-slice) - Hero-/CTA-knappen
+  renderade fortfarande placeholder-telefonen `+46 8 000 00 00` även när
+  kontaktfälten var platshållare; suppressionen (`f62bd40`) täckte footer,
+  kontaktsida, hours-summary, booking-fallback, 404 och JSON-LD men inte
+  hjälteblockets sekundära `tel:`-CTA. `_render_hero_block` släpper nu
+  "Ring `<nummer>`"-knappen när telefonen är B88-placeholder (riktig telefon
+  renderas oförändrat). Källa: live-test 2026-06-01. Fix: `2e0c55f`. Test:
+  `tests/test_contact_placeholder_fallback.py::test_home_hero_suppresses_placeholder_phone_cta`
+  + `tests/test_contact_placeholder_fallback.py::test_home_hero_keeps_real_phone_cta`.
+- **`B159` Låg-Medel** (stängd 2026-06-01, hardening-slice) - Quality Gate
+  `contact-cta-presence` failade på `restaurant-hospitality`-scaffoldens
+  `/hitta-hit` (`render_contact`-sidan saknade kontakt-CTA när varken telefon
+  eller e-post var riktig). `render_contact`/`render_section_contact_info` tar nu
+  `contact_path` och lägger en ärlig kontakt-route-CTA ("Hör av dig") när inget
+  riktigt tel:/mailto: finns — ingen dummy-kanal publiceras. Källa: live-test
+  2026-06-01. Fix: `2e0c55f`. Test:
+  `tests/test_contact_placeholder_fallback.py::test_contact_page_has_cta_when_all_channels_placeholder`
+  + `tests/test_contact_placeholder_fallback.py::test_contact_page_address_only_still_has_cta`.
 - **`B122` Låg** (stängd 2026-05-27, NDJSON-stream för riktig stage-signal) -
   `apps/viewser/components/prompt-builder.tsx` växlade från `thinking`
   till `building`-stage via `setTimeout(..., 1500)` istället för på en
