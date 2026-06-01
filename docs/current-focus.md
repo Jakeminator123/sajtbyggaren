@@ -30,7 +30,96 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: pending (2026-06-01 fm, christopher-ui local — Tier
+Last verified state: pending (2026-06-01 ef-3, christopher-ui local —
+pre-push P1-fixar (5 st) ovanpå Tier 1+2+3. Parallell scout-pass
+(2 explore-subagenter) hittade fem P1:n efter Tier 3, alla fixade:
+(1) ErrorBoundary applicerade ``className`` BARA i fallback, inte i
+success-render — wrappern blev ``<div>{children}</div>`` utan
+dimensions och bröt ``h-full w-full``-kedjan till ViewerPanel-
+canvasen. Fix: applicera className även i success + skicka
+``className="h-full w-full"`` på ErrorBoundary runt ViewerPanel.
+(2) Toast-system läckte Map-entries för ``${id}:cleanup``-nyckeln
+när manuell dismiss racade med auto-dismiss, plus dubbla
+``dismiss``-anrop schedulerade dubbla close-animationer. Fix:
+``dismiss`` är nu idempotent (early-return om cleanup-nyckel finns),
+avbryter pågående auto-dismiss-timer innan close-animation, och
+``removeToast`` rensar BÅDA nycklarna. (3) ToastViewport satt
+``fixed bottom-4`` och skymde FloatingChat-composern (desktop
+bottom-6 + mobil bottom-sheet). Fix: flyttad till top-center mobil /
+top-right desktop (``top-20`` på båda) + animation från bottom-2
+till top-2. (4) ``NEXT_PUBLIC_VIEWSER_PREVIEW_MODE`` normaliserades
+olika i de två filerna efter Tier 3-splitten — viewer-panel.tsx
+körde ``.toLowerCase()`` medan build-progress-card.tsx körde
+``.trim()``. Resultat: ``LOCAL-NEXT`` gav rätt preview-mode men fel
+PREVIEW_PREP_HINT. Fix: båda filerna kör nu identiskt
+``.trim().toLowerCase()``. (5) ⌘K-listenern i page.tsx hoppade över INPUT/TEXTAREA/contentEditable men INTE
+SELECT — operatören kunde tappa fokus i ConsoleDrawer:s
+projekt-väljare. Fix: lägg till SELECT
+i skip-listan (matchar DiscoveryWizards eget mönster). Fem nya
+source-lock-tester (``test_pre_push_*``). ``SELECT`` allowlistad i
+check_term_coverage.py (HTML-tagName, inte domänbegrepp).
+Slutkontroll grön: tsc 0, eslint --max-warnings=0 0, ruff 0,
+pytest 583 passed + 3 skipped, governance 18/18, rules-sync OK,
+term-coverage --strict 0 unknowns. Tidigare verified state:
+pending (2026-06-01 ef-2, christopher-ui local —
+Tier 3 frontend-polish implementerad: a11y-pass + fil-splittar. Inga
+backend-beroenden, allt inom apps/viewser-lanen. (G) A11y-pass:
+``ui/sheet.tsx`` + ``ui/dialog.tsx`` byter sr-only "Close" mot "Stäng"
+(svenskt UI ska inte ha engelska sr-only-strings); ``floating-chat.tsx``
+får ``aria-hidden`` på dekorativa Send/Loader2/ImagePlus-ikoner inom
+knappar med egen aria-label (skärmläsare ska inte läsa upp ikonnamn
+ovanpå knapplabel); ``site-inspector-sheet.tsx`` + ``versions-tab.tsx``
++ ``compare-preview-modal.tsx`` får ``aria-hidden`` på dekorativa
+RefreshCw/RotateCcw/XIcon. (H) ``versions-tab.tsx`` splittas — DiffView
++ ScalarChangeRow + ValueChip + ChipDiffRow + ChangeChip +
+CompareEmptyHint + EmptyState flyttas till ny
+``versions-tab/diff-view.tsx`` (300 rader). Huvudfilen 1438 → 1184
+rader (−254). EmptyState döps till VersionsEmptyState för att undvika
+namnkollision med andra ``EmptyState``-komponenter i inspector-tabs. (I)
+``viewer-panel.tsx`` splittas — BuildProgressCard + BUILD_STEPS +
+stageToStepIndex + PREVIEW_PREP_HINT flyttas till ny
+``viewer-panel/build-progress-card.tsx`` (173 rader). Huvudfilen
+1182 → 1053 rader (−129). PREVIEW_PREP_HINT läser samma
+``NEXT_PUBLIC_VIEWSER_PREVIEW_MODE`` i den nya filen så local-next-vs-
+stackblitz-copy fungerar identiskt. Pre-existing
+``test_viewer_panel_progress_card_hint_is_mode_aware`` uppdaterat så
+det pekar på den nya filen. Sju nya source-lock-tester (``test_tier3_*``)
+med sanity-checks att filerna verkligen är under 1300 (versions-tab)
+respektive 1100 (viewer-panel) rader. ``VersionsEmptyState`` allowlistad
+i scripts/check_term_coverage.py. Slutkontroll grön: tsc 0, lint 0
+(--max-warnings=0 på alla ändrade filer), ruff 0, pytest 1212 passed +
+3 skipped, governance 18/18, rules-sync OK, term-coverage --strict 0
+unknowns. INTE PUSHAT (på operatörens begäran). Tidigare verified
+state: pending (2026-06-01 ef, christopher-ui local — Tier
+2 frontend-polish implementerad: skeleton-konsekvens i loading-states +
+global Cmd/Ctrl+K shortcut för ConsoleDrawer. Inga backend-beroenden,
+allt inom apps/viewser-lanen. (D) Skeleton-tillstånd ersätter Loader2-
+spinner-only-blocken på fem ställen: ``site-inspector-sheet.tsx`` får
+ny ``InspectorLoadingSkeleton`` (tab-strip + 3 kort som approximerar
+verklig layout); ``variants-tab.tsx`` byter spinnern mot 4 skeleton-
+kort som matchar variant-grid (2 cols × 2 rader); ``versions-tab.tsx``
+byter både initial-load (4 listrader) och diff-load (4 textrader);
+``run-details-panel.tsx`` byter "Laddar artefakter…"-paragrafen mot 4
+skeleton-rader. Alla loading-block får ``role=status`` +
+``aria-live=polite`` + ``aria-busy=true`` + sr-only-text så skärm-
+läsare läser upp tillstånden. Loader2-importen togs bort från site-
+inspector-sheet.tsx och variants-tab.tsx; i versions-tab.tsx finns
+Loader2 kvar för pågående-bygge-raden (annan use case). (F) Global
+Cmd/Ctrl+K-listener i ``app/page.tsx`` toggar ConsoleDrawer.
+Listenern hoppar över edit-targets (TEXTAREA / INPUT /
+contentEditable) så genvägen inte stjäl tangenten från composern.
+``console-drawer.tsx`` får synlig ⌘K-kbd-hint i headern så operatören
+upptäcker shortcuten. (E) Onboarding-card skippades — hero-vyn
+("Beskriv din sajt så bygger vi den.") fyller redan första-intryck-
+funktionen och ett extra 3-stegs-card hade brutit minimalism-temat
+användaren har varit tydlig om. Sex nya source-lock-tester
+(``test_tier2_*``). ``InspectorLoadingSkeleton`` allowlistad i
+scripts/check_term_coverage.py. Slutkontroll grön: tsc 0, lint 0
+(strikt --max-warnings=0 på alla ändrade filer), ruff 0, pytest
+1204 passed + 3 skipped, governance 18/18, rules-sync OK,
+term-coverage --strict 0 unknowns. INTE PUSHAT (på operatörens
+begäran). Tidigare verified state: pending (2026-06-01 fm,
+christopher-ui local — Tier
 1 robusthet implementerad: ErrorBoundary + lättviktigt toast-system +
 network-failure UX för /api/runs. Tre komplement utan backend-beroende,
 alla inom apps/viewser-lanen, för att hindra tysta launch-buggar medan
