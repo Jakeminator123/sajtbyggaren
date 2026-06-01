@@ -123,7 +123,10 @@ medvetet kvar på `jakob` så Sprintvakt-lane-policyn passerar.
 2. **Bite B (PreviewRuntime wiring)** — builder-prompt finns redan i
    `docs/agent-prompts/preview-runtime-bite-b.md`. Wirear `localRuntime`
    + `stackblitzRuntime` adaptrar mot existerande `apps/viewser/lib/`-
-   helpers. Self-contained prompt; klistras in i ny agent-session.
+   helpers. Self-contained prompt; klistras in i ny agent-session. **Not:
+   StackBlitz behöver inte vara "färdigfixad" som förkrav för att börja med
+   en VM/Sandbox-adapter**; spåren kan gå parallellt så länge Preview Runtime-
+   kontraktet hålls och adapterkind + fallback är tydligt definierade.
    ~2-4h. Inga UI-ändringar (Bite C kräver Christopher). Vercel-
    preview/Fly/static-export-adaptrar lämnas för senare sprint.
 3. **B157 nivå-4 (Windows-safe rebuild, immutable build-dir + pointer-

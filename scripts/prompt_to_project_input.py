@@ -2388,7 +2388,7 @@ _COPY_DIRECTIVE_INCLUDE_KEYWORDS: tuple[str, ...] = (
     "ha med",
     "infoga",
     "include",
-    "add ",
+    "add",
 )
 _COPY_DIRECTIVE_REPLACE_KEYWORDS: tuple[str, ...] = (
     "byt",
@@ -2410,7 +2410,7 @@ _COPY_DIRECTIVE_REPLACE_KEYWORDS: tuple[str, ...] = (
     "rename",
     "change",
     "replace",
-    "set ",
+    "set",
     "update",
 )
 # If the extracted payload still contains one of these as a WORD the
@@ -2761,8 +2761,11 @@ def _extract_copy_directives(
     target = _classify_copy_target(text)
     if target is None:
         return []
-    has_include = _contains_any(text, _COPY_DIRECTIVE_INCLUDE_KEYWORDS)
-    has_replace = _contains_any(text, _COPY_DIRECTIVE_REPLACE_KEYWORDS)
+    # Detect command verbs as WHOLE words/phrases, not substrings:
+    # "Jag bytte företagsnamnet till X" is past-tense narration and must not
+    # trigger replace-mode via the substring "byt" inside "bytte".
+    has_include = _contains_any_word(text, _COPY_DIRECTIVE_INCLUDE_KEYWORDS)
+    has_replace = _contains_any_word(text, _COPY_DIRECTIVE_REPLACE_KEYWORDS)
     if not has_include and not has_replace:
         return []
     # include-token wins when both are present ("ändra texten ... till att

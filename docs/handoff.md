@@ -4,6 +4,26 @@
 PR #143 refactor-merge). `main` = `fb3b1f8` (oförändrad sedan PR #142).
 `jakob-be` är **inte** synkad till `main` än — väntar operatörs-OK för sync-PR.
 
+## Mini-handoff 2026-06-01 sen eftermiddag — copyDirective fix + runtime-ordval
+
+- Verifierad och åtgärdad bug i
+  `scripts/prompt_to_project_input.py:_extract_copy_directives`:
+  `has_replace`/`has_include` använder nu ordgräns-matchning i stället för
+  substring. Resultat: "Jag bytte företagsnamnet till X" triggar inte längre
+  felaktig rename-directive, medan imperativformen "byt företagsnamnet till X"
+  fortsatt fungerar.
+- Ny regression i `tests/test_followup_copy_directives.py` låser scenariot
+  "Jag bytte företagsnamnet till Ny Namn" => `[]`.
+- Dokumentationsförskjutning för Preview Runtime: StackBlitz är inte ett hårt
+  förkrav före VM-/Sandbox-adapter. Adapter-spår kan gå parallellt så länge
+  canonical `Preview Runtime`-kontrakt och adapter-kind/fallback hålls.
+- Naming-policy upplåst för ordbruk i prosa:
+  `sandbox`/`VM`/`Vercel Sandbox`/`Vercel VM` är nu tillåtna alias för
+  `Preview Runtime` (naming-dictionary uppdaterad); globalt förbud mot
+  `vercel-sandbox` borttaget.
+- Term-coverage uppdaterad så `Sandbox`/`Vercel Sandbox`/`Vercel VM` inte
+  felklassas som nya domänbegrepp i docs/prosa.
+
 ## Session 2026-06-01 kväll — hardening landad + PR #143 refactor mergad
 
 `jakob-be`-commits denna session (alla pushade, EJ i `main`):

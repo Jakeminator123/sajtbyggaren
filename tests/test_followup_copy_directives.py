@@ -198,6 +198,15 @@ def test_service_scoped_generic_namn_does_not_rename_company() -> None:
 
 
 @pytest.mark.tooling
+def test_past_tense_bytte_narrative_does_not_trigger_replace() -> None:
+    """Past-tense narration is not an imperative copy-directive command."""
+    assert (
+        _extract_copy_directives("Jag bytte företagsnamnet till Ny Namn", language="sv")
+        == []
+    )
+
+
+@pytest.mark.tooling
 @pytest.mark.parametrize(
     "prompt",
     [

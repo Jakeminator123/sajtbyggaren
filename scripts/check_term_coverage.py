@@ -123,6 +123,7 @@ COMMON_WORDS = {
     # Sajtbyggaren-meta-nyckelord (egennamn för repon)
     "Sajtbyggaren", "Sajtmaskin", "Jakeminator123", "Jakemiantor123",
     "Lovable", "GitHub", "GitGuardian", "Cursor", "Vercel", "StackBlitz",
+    "Sandbox", "Vercel Sandbox", "Vercel VM",
     "WebContainer", "WebContainers", "Fly", "Stripe", "OpenAI", "Anthropic",
     # Adapter-naming i ADR 0030 (preview-provider-portability) — illustrativa
     # PascalCase-tagg för framtida pluggable adapters bakom PreviewRuntime

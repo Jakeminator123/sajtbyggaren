@@ -329,8 +329,8 @@
       "canonical": "Preview Runtime",
       "definition": "Abstraktion för var en genererad sajt körs. Implementationer: StackBlitzRuntime, FlyRuntime, LocalRuntime.",
       "ownerPackage": "packages/preview-runtime",
-      "aliasesAllowed": [],
-      "aliasesForbidden": ["VM", "sandbox", "preview-host", "vercelSandbox", "webcontainer"]
+      "aliasesAllowed": ["VM", "sandbox", "Vercel Sandbox", "Vercel VM"],
+      "aliasesForbidden": ["preview-host", "webcontainer"]
     },
     {
       "id": "previewRuntimeKind",
@@ -710,7 +710,6 @@
     }
   ],
   "globallyForbidden": [
-    "vercel-sandbox",
     "preview-host",
     "AI_GATEWAY",
     "demoUrl",
