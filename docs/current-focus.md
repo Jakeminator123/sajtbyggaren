@@ -30,11 +30,11 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `63e4758` + steward-commit (denna) (2026-06-01 UTC,
-`jakob-be` hardening + PR #143 + Codex-review-fixar, ovanpå PR #142-synken
-`fb3b1f8`; EJ i `main` än). `origin/main` (`48d5ca0`) är fullt innehållen i
-`jakob-be` → en sync-PR `jakob-be → main` är konfliktfri (jakob-be 8+ commits
-före, 0 efter). Bug-scope nu: **15 aktiva / 135 stängda**.
+Last verified state: `4c473cb` (2026-06-01 kväll UTC, `jakob-be` hardening +
+PR #143 + Codex-review-fixar (B161/B162), ovanpå PR #142-synken `fb3b1f8`; EJ i
+`main` än — sync-PR **#144** öppen och väntar leveransfönster-OK). `origin/main`
+(`48d5ca0`) är fullt innehållen i `jakob-be` → sync-PR är konfliktfri (jakob-be
+10 commits före, 0 efter). Bug-scope nu: **15 aktiva / 135 stängda**.
 Nya commits sedan föregående checkpoint (alla på `jakob-be`, opushad mot `main`):
 - `74ed629` fix(dev): kill-dev-trees fångar orphan preview/dev node-processer
   (föräldraträd-matchning + TCP-port-lyssnare 3000-3001/4100-4199 + `--dry-run`/
