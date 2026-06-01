@@ -35,7 +35,10 @@ export function SiteHeader({ onOpenConsole, hideBrand = false }: SiteHeaderProps
       <button
         type="button"
         onClick={onOpenConsole}
-        aria-label="Öppna konsol och run-historik"
+        aria-label="Öppna konsol och run-historik (genväg ⌘K)"
+        // title gör ⌘K-genvägen upptäckbar INNAN konsolen öppnats — annars
+        // syns hinten bara inuti den redan öppna drawern (console-drawer.tsx).
+        title="Konsol & run-historik — ⌘K (Ctrl+K på Windows)"
         className="pointer-events-auto flex min-tap sm:min-tap-0 sm:size-9 items-center justify-center rounded-full border border-border/60 bg-card/80 text-foreground/80 shadow-sm backdrop-blur-xl transition hover:bg-card hover:text-foreground active:bg-card active:scale-95"
       >
         <ConsoleIcon />

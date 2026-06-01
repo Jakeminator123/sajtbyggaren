@@ -92,7 +92,7 @@ const KEYBOARD_SHORTCUTS: ReadonlyArray<{
 }> = [
   { label: "Fortsätt till nästa steg", keys: ["⌘↵", "⌘→"] },
   { label: "Gå tillbaka", keys: ["⌘←"] },
-  { label: "Hoppa till ett steg", keys: ["⌘1", "⌘2", "⌘3", "⌘4"] },
+  { label: "Hoppa till ett steg", keys: ["⌥1", "⌥2", "⌥3", "⌥4"] },
   { label: "Visa/dölj denna lista", keys: ["?", "⌘/"] },
   { label: "Stäng wizarden", keys: ["esc"] },
 ];
@@ -276,8 +276,19 @@ export function DiscoveryWizard({
         goBack();
         return;
       }
-      if (isMod && /^[1-9]$/.test(event.key) && !inEditable) {
-        const num = parseInt(event.key, 10);
+      // Steg-hopp via ⌥ (Alt) + siffra, INTE ⌘/Ctrl: Cmd+siffra (Mac) och
+      // Ctrl+siffra (Win/Linux) är webbläsarens egna flik-genvägar och
+      // preventDefault hinner sällan före — operatören trodde sig hoppa
+      // steg men bytte webbläsarflik. Option+siffra ger specialtecken på
+      // Mac så vi matchar på event.code (Digit1–Digit9), inte event.key.
+      if (
+        event.altKey &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !inEditable &&
+        /^Digit[1-9]$/.test(event.code)
+      ) {
+        const num = parseInt(event.code.slice(5), 10);
         if (num >= 1 && num <= WIZARD_STEP_ORDER.length) {
           event.preventDefault();
           goToStep(num - 1);
@@ -613,7 +624,11 @@ export function DiscoveryWizard({
               onClick={() => setHelpOpen((prev) => !prev)}
               aria-label="Visa tangentbordsgenvägar"
               title="Tangentbordsgenvägar (?)"
-              className="text-muted-foreground/50 hover:text-foreground hover:bg-foreground/[0.04] focus-visible:ring-ring/40 hidden h-7 w-7 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none sm:inline-flex"
+              // Tidigare ``hidden sm:inline-flex`` dolde hjälpen helt på
+              // smal viewport (t.ex. iPad i porträtt med tangentbord). Nu
+              // alltid synlig; ``min-tap`` ger ett 44px tap-target på mobil
+              // medan ikonen behåller sin diskreta 28px-yta på desktop.
+              className="text-muted-foreground/50 hover:text-foreground hover:bg-foreground/[0.04] focus-visible:ring-ring/40 min-tap sm:min-tap-0 inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               <Keyboard className="h-3.5 w-3.5" aria-hidden />
             </button>

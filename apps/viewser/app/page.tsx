@@ -99,6 +99,13 @@ export default function Home() {
   // listan så den färdiga runen finns där om operatören vill gå
   // tillbaka. B6 i scout-review 2026-05-24.
   const userNavigatedAwayRef = useRef(false);
+  // Speglar consoleOpen för ⌘K-handlern (som lever i en []-effekt och
+  // annars stänger över initialt värde). Synkas i effekt — ref-mutation i
+  // render flaggas av react-hooks/refs.
+  const consoleOpenRef = useRef(consoleOpen);
+  useEffect(() => {
+    consoleOpenRef.current = consoleOpen;
+  }, [consoleOpen]);
 
   // siteId som är "aktivt" via vald run (om någon). Används för att
   // visa "Följer vald run"-hint i ProjectInputPicker så operatören ser
@@ -270,6 +277,21 @@ export default function Home() {
         ) {
           // Composern (FloatingChat / PromptBuilder) — låt tangenten gå
           // som vanlig text-edit istället för att toggla drawern.
+          return;
+        }
+      }
+      // Modal-guard: är konsolen STÄNGD och en annan modal öppen
+      // (DiscoveryWizard, MoreInfoDialog, Verktyg, bygg-dialoger) ska ⌘K
+      // inte öppna konsolen BAKOM den — det rycker upp en bakgrundspanel
+      // mitt i kärnflödet. Stängda dialoger avmonteras, så närvaron av ett
+      // [role="dialog"]/[aria-modal]-element = en öppen modal. När konsolen
+      // själv är öppen hoppar vi över kontrollen så ⌘K alltid kan stänga den.
+      if (!consoleOpenRef.current) {
+        if (
+          document.querySelector(
+            '[role="dialog"], [role="alertdialog"], [aria-modal="true"]',
+          )
+        ) {
           return;
         }
       }

@@ -3156,18 +3156,32 @@ def test_wizard_finish_timer_is_cancelled_on_close() -> None:
 
 def test_wizard_keyboard_help_lists_all_four_steps() -> None:
     """Scout-fynd (P1): genvägs-hjälpen sa 'Hoppa till tab 1–3' men wizarden
-    har fyra steg (foundation→assets) och handlern stödjer redan ⌘4. Lås att
-    hjälptexten listar steg 1–4 så dokumentationen matchar UI:t, och att
-    ⌘/-genvägen har samma inEditable-guard som ?.
+    har fyra steg (foundation→assets). Lås att hjälptexten listar steg 1–4.
+
+    Wave 2 (Steg 4): steg-hoppet flyttades från ⌘/Ctrl+siffra till ⌥+siffra
+    eftersom ⌘/Ctrl+siffra är webbläsarens egna flik-genvägar — matchningen
+    görs på event.code (Digit1–9) eftersom Option+siffra ger specialtecken
+    på Mac. ⌘/-genvägen har samma inEditable-guard som ?.
     """
     content = (
         VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx"
     ).read_text(encoding="utf-8")
-    assert '"⌘1", "⌘2", "⌘3", "⌘4"' in content, (
-        "Genvägs-hjälpen måste lista alla fyra steg (⌘1–⌘4)"
+    assert '"⌥1", "⌥2", "⌥3", "⌥4"' in content, (
+        "Genvägs-hjälpen måste lista alla fyra steg med ⌥-modifier (⌥1–⌥4)"
     )
     assert "Hoppa till tab 1–3" not in content, (
         "Den föråldrade 'tab 1–3'-texten måste bort — wizarden har fyra steg"
+    )
+    assert '"⌘1", "⌘2", "⌘3", "⌘4"' not in content, (
+        "⌘-baserade steg-genvägar måste bort — de krockar med webbläsarens "
+        "flik-genvägar (Steg 4)"
+    )
+    # Handlern måste matcha ⌥ + event.code (inte ⌘/Ctrl + event.key).
+    assert "event.altKey" in content and re.search(
+        r"/\^Digit\[1-9\]\$/\.test\(event\.code\)", content
+    ), (
+        "Steg-hoppet måste matcha event.altKey + event.code (Digit1–9) så det "
+        "inte krockar med webbläsarens ⌘/Ctrl+siffra-flikbyte"
     )
 
 
@@ -3184,6 +3198,92 @@ def test_wizard_submit_overlay_uses_customer_language() -> None:
     )
     assert "Vi läser dina svar, planerar sidorna och bygger sajten." in content, (
         "Submit-overlayn ska förklara bygget i kundvänlig svenska"
+    )
+
+
+def test_cmd_k_has_modal_guard() -> None:
+    """Wave 2 (Steg 1): global ⌘K togglade ConsoleDrawer även när en annan
+    modal (DiscoveryWizard/MoreInfoDialog/Verktyg/bygg-dialog) var öppen och
+    ryckte upp en bakgrundspanel mitt i kärnflödet. Handlern måste suppressa
+    öppning när konsolen är stängd OCH ett [role="dialog"]/[aria-modal]-
+    element finns i DOM, men fortfarande kunna STÄNGA en öppen konsol.
+    """
+    content = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+    assert "consoleOpenRef" in content, (
+        "⌘K-handlern måste spegla consoleOpen via en ref (lever i []-effekt)"
+    )
+    assert re.search(
+        r"if \(!consoleOpenRef\.current\)\s*\{\s*if \(\s*document\.querySelector\(",
+        content,
+        re.DOTALL,
+    ), (
+        "⌘K måste suppressas när konsolen är stängd och en annan modal är "
+        "öppen (querySelector på role=dialog/aria-modal)"
+    )
+    assert '[role="dialog"], [role="alertdialog"], [aria-modal="true"]' in content, (
+        "Modal-guarden måste täcka role=dialog, role=alertdialog och "
+        "aria-modal=true"
+    )
+
+
+def test_builder_actions_arrow_keys_scope_to_current_target() -> None:
+    """Wave 2 (Steg 2): handleMenuKeyDown frågade containerRef, men i
+    inline-varianten renderas Verktyg-modalen i en portal UTANFÖR
+    containerRef → piltangenterna var döda i just den modal operatören
+    använder. Handlern måste fråga event.currentTarget och onKeyDown måste
+    sitta på grid-diven inuti dialogen (inte bara på container-diven).
+    """
+    content = (
+        VIEWSER_DIR / "components" / "builder" / "builder-actions.tsx"
+    ).read_text(encoding="utf-8")
+    assert "const node = event.currentTarget;" in content, (
+        "handleMenuKeyDown måste scope:a sökningen till event.currentTarget "
+        "(inte containerRef) så inline-portalens knappar hittas"
+    )
+    # onKeyDown måste förekomma minst två gånger: container-diven (fixed) +
+    # grid-diven i dialogen (inline).
+    assert content.count("onKeyDown={handleMenuKeyDown}") >= 2, (
+        "onKeyDown={handleMenuKeyDown} måste sitta både på container-diven "
+        "och på inline-dialogens grid-div"
+    )
+
+
+def test_console_button_exposes_cmd_k_hint() -> None:
+    """Wave 2 (Steg 3): ⌘K-hinten syntes bara inuti den redan öppna konsolen.
+    Header-konsolknappen måste exponera genvägen (title + aria-label) så den
+    är upptäckbar innan konsolen öppnats.
+    """
+    content = (
+        VIEWSER_DIR / "components" / "layout" / "site-header.tsx"
+    ).read_text(encoding="utf-8")
+    assert "⌘K (Ctrl+K på Windows)" in content, (
+        "Header-konsolknappen måste ha en title som visar ⌘K-genvägen"
+    )
+    assert "(genväg ⌘K)" in content, (
+        "aria-label måste nämna ⌘K-genvägen för skärmläsare"
+    )
+
+
+def test_wizard_help_button_visible_on_mobile() -> None:
+    """Wave 2 (Steg 5): genvägs-/hjälp-knappen var ``hidden sm:inline-flex``
+    → osynlig på smal viewport (t.ex. iPad i porträtt med tangentbord). Den
+    måste vara synlig på alla viewports med ett 44px tap-target på mobil
+    (min-tap).
+    """
+    content = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx"
+    ).read_text(encoding="utf-8")
+    # Hjälp-knappens block (aria-label="Visa tangentbordsgenvägar") får inte
+    # längre döljas på mobil.
+    help_btn_idx = content.find('aria-label="Visa tangentbordsgenvägar"')
+    assert help_btn_idx != -1, "Hjälp-knappen måste finnas kvar"
+    btn_class_window = content[help_btn_idx : help_btn_idx + 600]
+    assert "hidden" not in btn_class_window or "min-tap sm:min-tap-0" in btn_class_window, (
+        "Hjälp-knappen får inte vara dold på mobil — gör den inline-flex med "
+        "min-tap för 44px tap-target"
+    )
+    assert "min-tap sm:min-tap-0 inline-flex" in btn_class_window, (
+        "Hjälp-knappen måste vara inline-flex med min-tap (44px) på mobil"
     )
 
 
