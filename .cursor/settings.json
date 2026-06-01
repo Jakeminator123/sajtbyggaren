@@ -1,13 +1,7 @@
 {
   "plugins": {
-    "supabase": {
+    "vercel": {
       "enabled": true
-    },
-    "linear": {
-      "enabled": true
-    },
-    "sanity": {
-      "enabled": false
     }
   }
 }

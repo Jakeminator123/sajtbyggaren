@@ -57,7 +57,7 @@ export async function GET(request: Request, context: RouteContext) {
     // 400 för felaktig input (path-escape eller ogiltigt format), 404 endast
     // när run-katalogen saknas på disk. Pollers ska inte tolka en input-bug
     // som "kommer snart" och fortsätta poolla i evighet.
-    if (/Ogiltigt runId|pekar utanför/.test(message)) {
+    if (/Ogiltigt runId|Ogiltigt since|pekar utanför/.test(message)) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
     if (/saknar katalog/.test(message)) {

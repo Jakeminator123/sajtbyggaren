@@ -142,6 +142,64 @@ _COMMERCE_SIGNALS = (
 )
 
 
+# Heuristic keywords used by the deterministic mock planner to pick
+# clinic-healthcare over the default scaffold. Real planningModel does its
+# own classification with selection-profile.json embeddingText /
+# semanticSignals; these signals only fire on the no-key fallback.
+#
+# Sharp medical terms only — bare "klinik"/"clinic" is too broad
+# (beauty-klinik, hair-klinik, wellness-klinik are explicit negative
+# signals in the scaffold's selection-profile.json and belong to
+# local-service-business). The list here mirrors the regulated-clinician
+# subset of selection-profile.json's semanticSignals while staying
+# conservative against false positives on wellness, salon and ecommerce
+# briefs (the other three baseline cases in scripts/run_golden_path_eval.py).
+#
+# B137-precedent: Lane 3 Embeddings audit
+# (docs/reports/embedding-readiness-2026-05-25.md) identified this gap as
+# the single embeddings-gate blocker — naprapat-stockholm scored 5.83
+# (under PASS_CASE_THRESHOLD=6.5) only because the mock fallback routed
+# it to local-service-business. Embeddings will eventually replace the
+# whole heuristic; until then this list stays the deterministic floor.
+#
+# Mirrors ``_CLINIC_TOKENS`` in scripts/prompt_to_project_input.py — both
+# the prompt-time pinning (pick_scaffold) and the mock plan fallback
+# (_pick_scaffold_from_brief) need the same coverage so a clinic prompt
+# routes consistently regardless of which path produced the Project Input.
+_CLINIC_SIGNALS = (
+    "naprapat",
+    "naprapath",
+    "naprapatklinik",
+    "kiropraktor",
+    "chiropractor",
+    "chiropractic",
+    "tandläkar",
+    "tandlakar",
+    "tandvård",
+    "tandvard",
+    "dentist",
+    "dental",
+    "psykolog",
+    "psychologist",
+    "psykoterapi",
+    "psychotherapy",
+    "fysioterapi",
+    "fysioterapeut",
+    "physiotherapy",
+    "physiotherapist",
+    "sjukgymnast",
+    "ortoped",
+    "orthopedic",
+    "orthopaedic",
+    "audionom",
+    "podiatrist",
+    "optometrist",
+    "specialistklinik",
+    "veterinärklinik",
+    "veterinarklinik",
+)
+
+
 # ---------------------------------------------------------------------------
 # Pydantic types
 # ---------------------------------------------------------------------------
@@ -399,8 +457,16 @@ def _pick_scaffold_from_brief(
     """Deterministic scaffold selector used in mock fallback paths.
 
     Picks ``ecommerce-lite`` when commerce signals appear in the brief,
-    otherwise the default ``local-service-business``. Falls back to the
-    first registered scaffold if neither preferred scaffold has content.
+    ``clinic-healthcare`` when sharp medical signals appear (and no
+    commerce override fires first), otherwise the default
+    ``local-service-business``. Falls back to the first registered
+    scaffold if neither preferred scaffold has content.
+
+    Order matters: commerce wins over clinic so a "tandvårdsbutik som
+    säljer munhygienprodukter" routes to ecommerce-lite, not
+    clinic-healthcare. Real ``planningModel`` (with embeddings retrieval
+    eventually) handles the nuance; this fallback only fires in the
+    no-key path.
     """
     if not registry:
         raise RuntimeError(
@@ -417,6 +483,9 @@ def _pick_scaffold_from_brief(
     if any(signal in haystack for signal in _COMMERCE_SIGNALS):
         if any(s["id"] == "ecommerce-lite" for s in registry):
             chosen_id = "ecommerce-lite"
+    elif any(signal in haystack for signal in _CLINIC_SIGNALS):
+        if any(s["id"] == "clinic-healthcare" for s in registry):
+            chosen_id = "clinic-healthcare"
 
     by_id = {s["id"]: s for s in registry}
     return by_id.get(chosen_id, registry[0])
@@ -487,6 +556,7 @@ def _mock_plan_choice(
     rationale = (
         f"{rationale_prefix}: chose scaffold {scaffold['id']!r} via "
         "deterministic heuristic (commerce signals -> ecommerce-lite, "
+        "clinic/healthcare signals -> clinic-healthcare, "
         "otherwise local-service-business)."
     )
     return (

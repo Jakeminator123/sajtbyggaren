@@ -164,10 +164,11 @@ export type WizardBrand = {
  * varianter i `VIBE_OPTIONS`), plus typography-feel och valfri
  * kombination av egna färger + referenser + mood-bilder.
  *
- * `useCustomColors=true` betyder att backend ska skriva över variantens
+ * `useCustomColors=true` betyder att backend skriver över variantens
  * default `--primary` och `--accent` med `brand.primaryColorHex` /
- * `brand.accentColorHex` (kräver att Gap 1 stängs av backend; se
- * `docs/backend-handoff.md`).
+ * `brand.accentColorHex`. Implementerat i
+ * `packages/generation/discovery/resolve.py` (Gap 1 stängd, PR #63 —
+ * se `docs/backend-handoff.md` för historik).
  */
 /**
  * Hero-layout-preferens för startsidan. Tom sträng betyder "automatisk"
@@ -362,6 +363,10 @@ export function validateWizardStep(
       // Total-minimalism-pass (2026-05-26): bara offer + businessFamily är
       // hard-required. Operatorn kan skippa företagsnamn, kontakt och sub-
       // kategori — dessa fält skrapas eller förefyllas av Vision/defaults.
+      // Företagsnamn-min-längd-kollen togs bort på operatör-begäran (snabbare
+      // wizard-test utan tvingande företagsnamn). offer + businessFamily
+      // räcker som signal till pipeline att foundation-steget faktiskt är
+      // ifyllt.
       if (answers.offer.trim().length < 3) return "Beskriv kort vad ni gör.";
       if (!answers.businessFamily) return "Välj vilken typ av verksamhet det är.";
       return null;

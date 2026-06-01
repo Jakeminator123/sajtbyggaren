@@ -57,16 +57,21 @@ async function listProjectInputsFromDir(
     .map((entry) => entry.name);
 
   const inputs = await Promise.all(
-    siteFiles.map(async (filename) => {
+    siteFiles.map(async (filename): Promise<ProjectInputInfo | null> => {
       const filePath = path.join(dir, filename);
-      const raw = await fs.readFile(filePath, "utf-8");
-      const parsed = JSON.parse(raw) as {
+      let parsed: {
         siteId: string;
         scaffoldId: string;
         variantId: string;
         language: string;
         company?: { name?: string };
       };
+      try {
+        const raw = await fs.readFile(filePath, "utf-8");
+        parsed = JSON.parse(raw) as typeof parsed;
+      } catch {
+        return null;
+      }
 
       return {
         siteId: parsed.siteId,
@@ -79,7 +84,7 @@ async function listProjectInputsFromDir(
     }),
   );
 
-  return inputs;
+  return inputs.filter((item): item is ProjectInputInfo => item !== null);
 }
 
 export async function listProjectInputs(): Promise<ProjectInputInfo[]> {
@@ -88,9 +93,15 @@ export async function listProjectInputs(): Promise<ProjectInputInfo[]> {
     listProjectInputsFromDir(promptInputsDir(), "prompt-inputs"),
   ]);
 
-  return [...examples, ...promptInputs].sort((a, b) =>
-    a.siteId.localeCompare(b.siteId),
-  );
+  const bySiteId = new Map<string, ProjectInputInfo>();
+  for (const item of examples) {
+    bySiteId.set(item.siteId, item);
+  }
+  for (const item of promptInputs) {
+    bySiteId.set(item.siteId, item);
+  }
+
+  return Array.from(bySiteId.values()).sort((a, b) => a.siteId.localeCompare(b.siteId));
 }
 
 export async function assertProjectInputExists(siteId: string): Promise<string> {

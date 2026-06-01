@@ -563,6 +563,39 @@ def test_use_custom_colors_false_blocks_brand_hex_persistence() -> None:
 
 
 @pytest.mark.tooling
+def test_use_custom_colors_false_clears_existing_brand_hex_values() -> None:
+    candidate = _candidate_project_input()
+    candidate["brand"] = {
+        "primaryColorHex": "#16a34a",
+        "accentColorHex": "#cdb98a",
+        "logo": {
+            "assetId": "01HKEEPLOGO00000000000000",
+            "filename": "keep.webp",
+            "mimeType": "image/webp",
+            "sizeBytes": 999,
+            "role": "logo",
+        },
+    }
+    payload = _payload(
+        "business",
+        vibe={"vibeId": "warm-craft", "useCustomColors": False},
+        brand={"primaryColorHex": "#16a34a", "accentColorHex": "#cdb98a"},
+    )
+
+    project_input, decision = resolve_discovery(
+        raw_prompt="test",
+        payload=payload,
+        project_input_candidate=candidate,
+    )
+
+    assert "primaryColorHex" not in project_input["brand"]
+    assert "accentColorHex" not in project_input["brand"]
+    assert project_input["brand"]["logo"]["assetId"] == "01HKEEPLOGO00000000000000"
+    assert decision.fieldSources["brand.primaryColorHex"] == "wizard"
+    assert decision.fieldSources["brand.accentColorHex"] == "wizard"
+
+
+@pytest.mark.tooling
 def test_use_custom_colors_missing_falls_back_to_v1_behavior() -> None:
     """Gap 1: saknad ``useCustomColors``-flagga → v1 backward-compat.
 

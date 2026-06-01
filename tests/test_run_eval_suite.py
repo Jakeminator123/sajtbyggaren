@@ -299,12 +299,20 @@ def test_run_suite_writes_summary_with_missing_dossiers(tmp_path: Path) -> None:
     assert len(summary["cases"]) == len(QUICK_CASES)
     assert all(case["error"] for case in summary["cases"])
 
-    summary_path = evals_dir / "eval-runs" / f"{summary['evalRunId']}.json"
+    summary_path = (
+        evals_dir / "summaries" / "suite" / f"{summary['evalRunId']}.json"
+    )
     assert summary_path.exists()
     on_disk = json.loads(summary_path.read_text(encoding="utf-8"))
     assert on_disk["evalRunId"] == summary["evalRunId"]
     assert on_disk["mode"] == "quick"
     assert {case["siteId"] for case in on_disk["cases"]} == set(QUICK_CASES)
+    # Full-mode artefakter (när det skulle finnas några) ska landa under
+    # samma evals-rot men i artifacts/suite/<evalRunId>/. Quick-mode
+    # skapar inga generated-mappar; vi verifierar bara att inget hamnar
+    # i den gamla layouten ``evals/generated/`` av misstag.
+    assert not (evals_dir / "generated").exists()
+    assert not (evals_dir / "eval-runs").exists()
 
 
 def test_run_suite_rejects_unknown_mode(tmp_path: Path) -> None:
@@ -389,7 +397,9 @@ def test_run_one_case_records_generated_dir(tmp_path: Path) -> None:
 
     from scripts.run_eval_suite import run_one_case
 
-    case_generated = tmp_path / "evals" / "generated" / "evalX" / "site-a"
+    case_generated = (
+        tmp_path / "evals" / "artifacts" / "suite" / "evalX" / "site-a"
+    )
     case = run_one_case(
         "site-a",
         skip_build=False,

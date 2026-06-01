@@ -18,8 +18,9 @@
  *
  *   - `AssetRef.sourceUrl` är satt till blob-URL:en för `optimized.webp`
  *     (eller `original.svg`/`original.<ext>` om webp hoppades över).
- *     `scripts/build_site.py copy_operator_uploads` ska föredra detta
- *     fält framför disk-lookup — se `docs/backend-handoff.md` gap #11.
+ *     `scripts/build_site.py copy_operator_uploads` är disk-first och
+ *     använder `sourceUrl` som fallback när disk-lookup misslyckas — se
+ *     `docs/backend-handoff.md` gap #11 för historik (gap stängd).
  *
  *   - `resolveOptimizedPath()` kastar — det finns ingen disk-sökväg.
  *     Använd `ref.sourceUrl` istället i den lilla mängd kallare som

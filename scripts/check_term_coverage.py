@@ -144,7 +144,7 @@ COMMON_WORDS = {
     # governance/rules/bugbot-pr-loop.md som tekniska citat (inte
     # domänbegrepp). Mirrors how "SharedArrayBuffer is not defined"
     # is registered as a quoted error-string further up.
-    "Cursor Bugbot",
+    "Cursor Bugbot", "BugBot",  # CamelCase-stavning ses i bot-rapporter, commit-bodies, current-focus narrative
     "SUCCESS", "FAILURE", "COMPLETED", "NEUTRAL", "DRAFT",
     "Module not found",
     # Generic word fragments som dyker upp i text
@@ -243,6 +243,11 @@ COMMON_WORDS = {
     # (dataclass returned by auto_prune_all()). Same treatment as
     # PruneReport - implementation detail, not a domain term.
     "AutoPruneReport",
+    # scripts/gc_old_builds.py local result/decision dataclasses (B157 level 4
+    # Stage B delayed GC of immutable builds). Same treatment as PruneReport /
+    # AutoPruneReport above - tooling implementation containers, not domain
+    # terms.
+    "GcReport", "BuildDecision",
     # planning module internal class identifiers (Sprint 2B). Mirrors the
     # brief module's BriefResult/BriefModelResolutionError treatment - these
     # are Python implementation symbols, not domain terms. The canonical
@@ -298,6 +303,14 @@ COMMON_WORDS = {
     "DossierCandidateModel", "DossierGenerationError",
     "DossierGenerationResult", "DossierManifestModel",
     "DossierModelResolutionError",
+    # Dossier candidate intake implementation symbols. These are local Python
+    # helpers around read-only file scanning, not canonical domain terms.
+    "DossierIntakeError", "DossierIntakeModelResolutionError",
+    "DossierIntakeReviewModel", "IntakeScanCaps",
+    # PowerShell parameter names + Cursor IDE tool names that appear in
+    # operator docs and agent prompts under docs/agent-prompts/. Not
+    # domain terms — PS standard verb/noun parameters + IDE tool labels.
+    "FilePath", "ItemType", "StrReplace",
     # Generic React component names that appear in test fixtures, ADR
     # examples and docstring snippets. They are standard component-
     # cased identifiers (Header, Footer, Hero, About) used by the
@@ -387,7 +400,7 @@ COMMON_WORDS = {
     # Viewser interna error-typer och rubriker (inte domänbegrepp)
     "RunNotFoundError", "DossierEditor",
     # Test-local component names used in dossier collision fixtures.
-    "DossierCard", "StarterCard",
+    "CheckoutButton", "DossierCard", "StarterCard",
     # christopher-ui branch: nya viewser UI-interna identifierare för
     # landing-style operator-konsolen. Samma behandling som
     # PromptStageIndicator, BuildSection, StatusBadge ovan:
@@ -725,7 +738,7 @@ COMMON_WORDS = {
     # docs/handoff.md som bug-sweep round 2-scope.
     "B99", "B100", "B101", "B102", "B103", "B104",
     # Viewser Overlay E2E Scout 2026-05-19
-    # (docs/reports/viewser-overlay-e2e-scout-2026-05-19.md): Scout-
+    # (docs/archive/2026-05-19/viewser-overlay-e2e-scout-2026-05-19.md): Scout-
     # rapportens prose innehåller case-specifika fält (företagsnamn,
     # produktnamn, service-labels), DiscoveryWizard-UI-strängar,
     # Build-status-texter, externa servicenamn och två proposed
@@ -757,6 +770,10 @@ COMMON_WORDS = {
     "B138", "B139", "B140", "B141",  # öppnade post-case-4 (B138/B141 stängd 2026-05-21, B139/B140 öppna)
     "B143", "B144",  # reviewer-feedback 2026-05-21 efter Intent Guard light + PR #49
     "B125",  # Safari/Firefox preview fallback (referenced in ADR 0030 + product-operating-context)
+    "B147",  # Vercel preview wizard 403 via assertLocalhost (öppen 2026-05-26, operator a/b/c)
+    "B156",  # browser-hydration-smoke follow-up (öppen 2026-05-27, PR #131 reviewer-feedback)
+    "B157",  # WinError 5 rmtree on live node_modules (öppen 2026-05-27, extern reviewer-analys)
+    "WinError",  # Windows native error-namn (samma kategori som PermissionError ovan); refererad i B157 + gap-spec
     "IntentGuard",  # single-token-variant i handoff-prose (basord 'Intent Guard' redan allowlistat)
     "Intent Guard light",  # bolded sprintnamn i handoff/current-focus (Builder-sprint 2026-05-21)
     "ADR 0025 implementation",  # bolded phrase i handoff.md next-steps-tabell
@@ -771,10 +788,23 @@ COMMON_WORDS = {
     "Cloud Agents",  # cursor.com-koncept som scoutorkestratorn pratar om
     "ForEach",  # PowerShell-verb i exempelkommandon
     "AbortSignal",  # browser/Node API i local-preview-server JSDoc-prose
+    # PowerShell CIM + Windows-API-termer i B157-incident-docs och kod
+    # (B157-WINDOWS-PROCESS-TREE-FYND.md + local-preview-server.ts).
+    "CimInstance",  # Get-CimInstance — PowerShell CIM cmdlet result-typ
+    "CommandLine",  # Win32_Process-property som CIM exponerar
+    "ProcessId",  # Win32_Process-filter-property
+    "StartTime",  # PowerShell process-property
+    "TerminateProcess",  # Win32 API-funktion som child.kill() mappar till
+    "WinError 5",  # Windows ERROR_ACCESS_DENIED — backtick-citerad i incident-docs
+    # B-IDs och termer i scout-prompts + kill-dev-trees.py incident-helpers
+    "B155",  # bug-ID i GAP-followup-prompt-content-passthrough scout-prompt
+    "ConvertTo",  # PowerShell cmdlet-suffix (ConvertTo-Json) i kill-dev-trees.py
+    "Dubbelklicka",  # svenskt verb i kill-dev-trees.py-docstring + handoff
+    "Verifiering",  # svensk markdown-rubrik i scout-prompts ("**Verifiering**")
     "SUPERSEDED",  # docs-banner i backend-handoff.md (versaliserat statusord)
     "Konkret content",  # gap-rubrik i 9/10-tabellen
     "Page Intent Variant B",  # proposed produktkoncept (B132-uppföljning)
-    "PermissionError", "SubprocessError",  # Python builtin exception-namn
+    "OSError", "PermissionError", "SubprocessError",  # Python builtin exception-namn
     "Project DNA semantic merge",  # proposed sprint-namn (Queue #5)
     "Task",  # Cursor subagent-tool-namn
     "Visuell renderingsverifiering",  # gap-rubrik i 9/10-tabellen

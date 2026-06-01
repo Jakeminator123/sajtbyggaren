@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Datum:** 2026-05-24
-**Beroenden:** ADR 0003 (PreviewRuntime-abstraktion med StackBlitz först), `docs/product-north-star.md`.
+**Beroenden:** ADR 0003 (PreviewRuntime-abstraktion med StackBlitz först), `docs/product-operating-context.md`.
 
 ## Kontext
 

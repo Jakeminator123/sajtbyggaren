@@ -426,7 +426,16 @@ const PreviewPane = forwardRef<
   return (
     <section
       ref={ref}
-      className="border-border/40 bg-background relative flex min-h-0 w-full shrink-0 snap-start flex-col overflow-hidden rounded-xl border lg:w-auto lg:shrink"
+      // B152: tidigare ``w-full`` per pane inuti snap-x flex-row med
+      // ``gap-2`` lät två 100 %-bredd-panes + 0.5rem gap totalt
+      // exceedera scroller-bredden (200 % + 0.5rem). I praktiken
+      // funkade snap-start fortfarande men geometrin var fragil —
+      // pane-A:s högra kant smög 0.5rem in i viewporten när snappat
+      // till pane B. ``w-[calc(100%-0.5rem)]`` gör pane-bredd +
+      // gap = 100 % per pane-segment så snap-positionerna landar
+      // rent vid varje pane-start. Desktop (lg:) oförändrat —
+      // grid-cols-2 har inget gap-overflow-problem.
+      className="border-border/40 bg-background relative flex min-h-0 w-[calc(100%-0.5rem)] shrink-0 snap-start flex-col overflow-hidden rounded-xl border lg:w-auto lg:shrink"
     >
       <header className="border-border/40 bg-background/95 flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2">
         <span

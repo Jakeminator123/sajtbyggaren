@@ -154,6 +154,125 @@ def test_pick_scaffold_flips_via_business_type_signal() -> None:
     assert scaffold_id == "ecommerce-lite"
 
 
+# ---------------------------------------------------------------------------
+# pick_scaffold — clinic-healthcare routing (closes Lane 3 embeddings-gate
+# blocker for naprapat-stockholm baseline case in
+# scripts/run_golden_path_eval.py). Pre-fix the pinned-Project-Input flow
+# routed every clinic prompt to local-service-business via the default
+# branch; the eval scored naprapat-stockholm 5.83 (under
+# PASS_CASE_THRESHOLD=6.5). Mirrors the _CLINIC_SIGNALS test block in
+# tests/test_planning.py — both code paths need the same coverage.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_pick_scaffold_flips_to_clinic_on_naprapat_prompt() -> None:
+    """The exact naprapat-stockholm prompt from run_golden_path_eval.py."""
+    scaffold_id, variant_id = pick_scaffold(
+        "Skapa en hemsida för en naprapatklinik i Stockholm.",
+        brief_business_type=None,
+    )
+    assert scaffold_id == "clinic-healthcare"
+    assert variant_id == "clinic-calm"
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    "prompt,case_label",
+    [
+        ("Skapa en hemsida för en tandläkarmottagning i Uppsala.", "tandläkare"),
+        ("Skapa en hemsida för en kiropraktor i Lund.", "kiropraktor"),
+        ("Skapa en hemsida för en fysioterapeut i Borås.", "fysioterapeut"),
+        ("Skapa en hemsida för en psykolog i Linköping.", "psykolog"),
+        ("Skapa en hemsida för en veterinärklinik i Skövde.", "veterinärklinik"),
+        ("Build a site for a chiropractor in Stockholm.", "chiropractor"),
+        ("Build a site for a small dental practice.", "dental"),
+    ],
+)
+def test_pick_scaffold_flips_to_clinic_on_sharp_medical_prompt(
+    prompt, case_label
+) -> None:
+    """Sharp medical terms in the prompt route to clinic-healthcare.
+
+    Mirrors the regulated-clinician subset of
+    ``packages/generation/orchestration/scaffolds/clinic-healthcare/selection-profile.json``
+    semanticSignals while staying conservative against false positives on
+    wellness/salon briefs.
+    """
+    scaffold_id, variant_id = pick_scaffold(prompt, brief_business_type=None)
+    assert scaffold_id == "clinic-healthcare", (
+        f"{case_label} should route to clinic-healthcare (prompt={prompt!r})."
+    )
+    assert variant_id == "clinic-calm"
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    "business_type,case_label",
+    [
+        ("naprapath-clinic", "naprapath-clinic slug"),
+        ("naprapatklinik", "naprapatklinik slug"),
+        ("dental-clinic", "dental-clinic slug"),
+        ("physiotherapy-clinic", "physiotherapy-clinic slug"),
+        ("chiropractic-clinic", "chiropractic-clinic slug"),
+    ],
+)
+def test_pick_scaffold_flips_to_clinic_via_business_type_signal(
+    business_type, case_label
+) -> None:
+    """When the prompt has no medical tokens but briefModel returned a
+    clinic-flavoured business-type slug, still flip to clinic-healthcare.
+
+    Mirrors the existing ecommerce business-type branch — briefModel
+    sometimes produces a precise ``businessTypeGuess`` while the
+    operator's prompt is generic ("Hjälp med ryggsmärta — lugn mottagning").
+    """
+    scaffold_id, _ = pick_scaffold(
+        "Hjälp med ryggsmärta — lugn och bekväm mottagning.",
+        brief_business_type=business_type,
+    )
+    assert scaffold_id == "clinic-healthcare", (
+        f"{case_label} businessType should route to clinic-healthcare."
+    )
+
+
+@pytest.mark.tooling
+def test_pick_scaffold_keeps_local_service_for_salon_prompt() -> None:
+    """Negative: hairsalon prompt must keep routing to local-service-business.
+
+    Bare ``klinik`` / ``clinic`` is intentionally NOT in _CLINIC_TOKENS
+    because beauty-klinik / hair-klinik / wellness-klinik are scaffold's
+    explicit negative-signals (selection-profile.json
+    llmClassificationHints rad 31-32). Mirrors the salon-goteborg
+    baseline case in run_golden_path_eval.py.
+    """
+    scaffold_id, _ = pick_scaffold(
+        "Skapa en hemsida för en frisörsalong i Göteborg.",
+        brief_business_type="frisor-salong",
+    )
+    assert scaffold_id == "local-service-business"
+
+
+@pytest.mark.tooling
+def test_pick_scaffold_picks_ecommerce_over_clinic_when_both_signal() -> None:
+    """Order-of-operations: commerce signals beat clinic signals.
+
+    A "tandvårdsbutik som säljer munhygienprodukter" has both ``dental``
+    (clinic-adjacent in _CLINIC_TOKENS) and ``produkter`` + ``butik``
+    (commerce). The pick must route to ecommerce-lite, not clinic-
+    healthcare — otherwise an obvious shop would silently inherit clinic
+    chrome (treatments page, credentials row, etc).
+    """
+    scaffold_id, _ = pick_scaffold(
+        (
+            "Bygg en webshop för en tandvårdsbutik som säljer "
+            "munhygienprodukter i Stockholm."
+        ),
+        brief_business_type="dental-supplies-shop",
+    )
+    assert scaffold_id == "ecommerce-lite"
+
+
 @pytest.mark.tooling
 def test_site_brief_to_project_input_validates_against_schema(
     project_input_schema: dict,
@@ -2947,7 +3066,11 @@ def test_placeholder_contact_address_prefers_brief_value_over_fallback() -> None
         ("ecommerce-store", "webbshop"),
         ("naprapath-clinic", "naprapatklinik"),
         ("naprapat-clinic", "naprapatklinik"),
-        ("naprapat", "naprapatklinik"),
+        # B92 (2026-05-26): bare "naprapat" / "naprapath" slugs now map
+        # to the sole-practitioner form, not the clinic form. The
+        # explicit *-clinic variants (above) keep the clinic mapping.
+        ("naprapat", "naprapat"),
+        ("naprapath", "naprapat"),
         ("electrical-services", "elektriker"),
         ("plumbing-services", "rörmokare"),
         ("hair-salon", "frisör"),
@@ -3004,3 +3127,206 @@ def test_company_name_for_naprapath_clinic_brief_uses_swedish_label() -> None:
         language="sv",
     )
     assert name == "Naprapatklinik i Stockholm"
+
+
+# ---------------------------------------------------------------------------
+# B92 — `naprapat` (sole practitioner) must NOT be over-adapted to
+# "naprapatklinik" (clinic). The explicit *-clinic / *klinik slugs stay
+# clinic-form so briefModel can express the distinction.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_b92_bare_naprapat_slug_renders_sole_practitioner_h1() -> None:
+    """B92: businessTypeGuess="naprapat" -> H1 reads "Naprapat i Stockholm"
+    (sole practitioner). Previously over-adapted to "Naprapatklinik".
+    """
+    name = _derive_company_name(
+        business_type="naprapat",
+        location_hint="Stockholm",
+        language="sv",
+    )
+    assert name == "Naprapat i Stockholm"
+
+
+@pytest.mark.tooling
+def test_b92_naprapath_english_slug_also_maps_to_sole_practitioner() -> None:
+    """B92: English slug "naprapath" mirrors the bare "naprapat" mapping.
+    Only the explicit *-clinic variants carry the clinic meaning.
+    """
+    name = _derive_company_name(
+        business_type="naprapath",
+        location_hint="Stockholm",
+        language="sv",
+    )
+    assert name == "Naprapat i Stockholm"
+
+
+@pytest.mark.tooling
+def test_b92_explicit_clinic_variants_still_render_clinic_h1() -> None:
+    """B92 scope-lock: every explicit clinic-flavoured naprapat slug
+    must still render the clinic H1, so operators that intend the
+    clinic form keep their existing output.
+    """
+    for slug in ("naprapat-clinic", "naprapath-clinic", "naprapatklinik"):
+        name = _derive_company_name(
+            business_type=slug,
+            location_hint="Stockholm",
+            language="sv",
+        )
+        assert name == "Naprapatklinik i Stockholm", (
+            f"slug {slug!r} must still render the clinic-form H1"
+        )
+
+
+# ---------------------------------------------------------------------------
+# B93 — common multi-word English business slugs that briefModel emits
+# must map to a Swedish noun in `_BUSINESS_TYPE_LABEL_SV` instead of
+# leaking through the "företag som arbetar med <slug>"-fallback.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    ("slug", "expected"),
+    [
+        ("pet-grooming", "djursalong"),
+        ("dog-grooming", "hundtrim"),
+        ("veterinary-clinic", "veterinärklinik"),
+        ("tattoo-studio", "tatuerare"),
+        ("personal-trainer", "personlig tränare"),
+        ("personal-training", "personlig tränare"),
+        ("fitness-studio", "gym"),
+        ("law-firm", "advokatbyrå"),
+        ("real-estate-agent", "fastighetsmäklare"),
+        ("cleaning-services", "städföretag"),
+        ("auto-repair", "bilverkstad"),
+        ("interior-designer", "inredare"),
+        ("graphic-designer", "grafisk formgivare"),
+        ("marketing-agency", "marknadsföringsbyrå"),
+    ],
+)
+def test_b93_common_multi_word_english_slugs_map_to_swedish(
+    slug: str, expected: str
+) -> None:
+    """B93: common briefModel multi-word slugs no longer leak through
+    the "företag som arbetar med <slug>"-fallback. Each registered slug
+    maps to a real Swedish noun that reads naturally in H1 copy.
+    """
+    assert _company_business_label(slug, "sv") == expected
+
+
+@pytest.mark.tooling
+def test_b93_pet_grooming_h1_no_longer_leaks_english_slug() -> None:
+    """B93 integration: the reviewer's specific example. Before the fix,
+    H1 read "Företag som arbetar med pet grooming i Stockholm" — English
+    slug masquerading as Swedish copy. After fix, H1 reads "Djursalong i
+    Stockholm".
+    """
+    name = _derive_company_name(
+        business_type="pet-grooming",
+        location_hint="Stockholm",
+        language="sv",
+    )
+    assert name == "Djursalong i Stockholm"
+    assert "pet grooming" not in name
+
+
+@pytest.mark.tooling
+def test_b93_unknown_swedish_slug_still_uses_swedish_fallback_phrase() -> None:
+    """B93 scope-lock: only known English slugs got new mappings.
+    Genuinely unknown slugs (Swedish or otherwise) still fall through
+    to the "företag som arbetar med <slug>"-phrase so operators can
+    spot un-mapped slugs in test output.
+    """
+    label = _company_business_label("okänt-företag", "sv")
+    assert label is not None
+    assert label.startswith("företag som arbetar med ")
+
+
+# ---------------------------------------------------------------------------
+# B91 — `_normalize_location_hint` translates confirmed English city
+# exonyms to their Swedish endonym on Swedish builds, so a Swedish-
+# tagged build does not render an English city name in the hero
+# ortstag. English-tagged builds keep the English form unchanged.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    ("english", "swedish"),
+    [
+        ("Gothenburg", "Göteborg"),
+        ("gothenburg", "Göteborg"),
+        ("GOTHENBURG", "Göteborg"),
+        ("Helsinki", "Helsingfors"),
+        ("Copenhagen", "Köpenhamn"),
+        ("  Gothenburg  ", "Göteborg"),
+    ],
+)
+def test_b91_swedish_builds_translate_english_city_exonyms(
+    english: str, swedish: str
+) -> None:
+    """B91: on language=sv, the English exonym for a Swedish/Nordic city
+    is translated to the proper Swedish endonym. Case-insensitive and
+    whitespace-tolerant lookup mirrors `_normalize_location_hint`'s
+    existing country-name handling.
+    """
+    assert _normalize_location_hint(english, "sv") == swedish
+
+
+@pytest.mark.tooling
+def test_b91_english_builds_preserve_english_city_unchanged() -> None:
+    """B91 scope-lock: language=en builds must NOT get the Swedish
+    translation — the English city name is the correct render for an
+    English-tagged site.
+    """
+    assert _normalize_location_hint("Gothenburg", "en") == "Gothenburg"
+    assert _normalize_location_hint("Helsinki", "en") == "Helsinki"
+    assert _normalize_location_hint("Copenhagen", "en") == "Copenhagen"
+
+
+@pytest.mark.tooling
+def test_b91_unknown_english_city_passes_through() -> None:
+    """B91 scope-lock: the translation map is intentionally narrow.
+    Unknown city names pass through unchanged on both languages so we
+    do not invent translations the operator did not provide.
+    """
+    assert _normalize_location_hint("Stockholm", "sv") == "Stockholm"
+    assert _normalize_location_hint("Boston", "sv") == "Boston"
+    assert _normalize_location_hint("Malmoo", "sv") == "Malmoo"
+
+
+# ---------------------------------------------------------------------------
+# B90 — ENGLISH_HINTS no longer contains the single-letter "a"/"an"
+# articles, so Swedish company names with single-letter tokens
+# ("A & O El Malmö") no longer false-positive as English.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_b90_single_letter_swedish_company_name_stays_sv() -> None:
+    """B90: "A & O El Malmö" used to tokenise to a set containing "a",
+    which matched ENGLISH_HINTS and made detect_language return "en".
+    After the B90 fix (a/an removed from ENGLISH_HINTS), the å/ä/ö in
+    "Malmö" carries the prompt back to "sv" via the cascade step 3.
+    """
+    from packages.generation.brief import detect_language
+
+    assert detect_language("A & O El Malmö") == "sv"
+    assert detect_language("A&O El Stockholm") == "sv"  # falls through to default
+    assert detect_language("Skapa hemsida för A & O Bygg") == "sv"
+
+
+@pytest.mark.tooling
+def test_b90_english_prompts_without_a_an_still_detect_as_english() -> None:
+    """B90 scope-lock: the remaining English stop-words in the set
+    ("the", "and", "for", "create", "build", "website", etc.) still
+    fire for genuine English prompts. The articles "a"/"an" were
+    redundant given the other hints.
+    """
+    from packages.generation.brief import detect_language
+
+    assert detect_language("Build a website for a clinic in Boston") == "en"
+    assert detect_language("Create the page for my shop") == "en"
+    assert detect_language("Make a site for our store") == "en"

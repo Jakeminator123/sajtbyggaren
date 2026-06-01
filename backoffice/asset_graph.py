@@ -58,6 +58,13 @@ def _candidate_provenance(meta_path: Path) -> dict[str, Any]:
         "modelUsed": _metadata_string(metadata, "modelUsed"),
         "createdAt": _metadata_string(metadata, "createdAt"),
         "metaPath": repo_relative(meta_path) if metadata else "",
+        "sourcePath": _metadata_string(metadata, "sourcePath"),
+        "sourceFileCount": metadata.get("sourceFileCount", ""),
+        "intakeReportHash": _metadata_string(metadata, "intakeReportHash"),
+        "intakeRecommendedClass": _metadata_string(
+            metadata,
+            "intakeRecommendedClass",
+        ),
     }
     return provenance
 

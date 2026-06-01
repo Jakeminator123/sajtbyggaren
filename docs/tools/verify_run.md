@@ -136,11 +136,11 @@ För automatiserad lokal mini-eval efter B139/B140 finns nu
 vid sidan av Cursor-agentens huvudflöde:
 
 ```powershell
-# Snabb eval utan npm-build (default). Skriver till ../sajtbyggaren-output/.evals/
+# Snabb eval utan npm-build (default). Skriver till data/evals/artifacts/mini/
 python scripts/mini_eval.py
 
 # Välj eval-root explicit, t.ex. på snabb disk eller i en separat workspace-mapp
-$env:SAJTBYGGAREN_EVALS_DIR = "../sajtbyggaren-output/.evals"
+$env:SAJTBYGGAREN_EVALS_DIR = "D:/sajtbyggaren-evals"
 python scripts/mini_eval.py --eval-id local-smoke-001
 
 # Kör bara ett case medan annat arbete pågår
@@ -209,9 +209,9 @@ Standardflödet efter en kedje-propagation-sprint (B137/B138/B139/etc):
 
 ## Relaterat
 
-- `docs/reports/scout-wizard-tagline-pagecount-tone-2026-05-19.md` — Scout-
+- `docs/archive/2026-05-19/scout-wizard-tagline-pagecount-tone-2026-05-19.md` — Scout-
   kartläggning av kodvägarna B137/B138/B139 pekar på.
-- `docs/reports/run-details-warnings-inventory-2026-05-21.md` — vilka
+- `docs/archive/run-details-warnings-inventory-2026-05-21.md` — vilka
   warning-fält finns idag, var de bör renderas.
 - `docs/agent-handbook.md` — när Scout/Builder/Steward ska köra det här
   verktyget i sina loopar.

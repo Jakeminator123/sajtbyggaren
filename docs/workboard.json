@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-26T18:18:54Z",
-  "updatedBy": "sprintvakt-mcp",
+  "updatedAt": "2026-05-27T21:00:00Z",
+  "updatedBy": "cursor-agent-cleanup-pass",
   "people": {
     "jakob": {
       "allocation": 0.75,
@@ -57,50 +57,91 @@
         "apps/viewser/public/**"
       ],
       "reason": "UI/frontend ownership"
-    },
-    {
-      "owner": "christopher",
-      "gapId": "GAP-viewser-live-build-sync",
-      "paths": [
-        "apps/viewser/app/page.tsx",
-        "apps/viewser/components/builder/builder-shell.tsx",
-        "apps/viewser/components/builder/inspector/versions-tab.tsx",
-        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
-        "apps/viewser/components/builder/use-pending-build.ts"
-      ],
-      "reason": "Live Build Sync — optimistisk pending-version + bättre koordination mellan FloatingChat och Versions-tab (pure UI, läser befintliga API:er och callbacks)"
-    },
-    {
-      "owner": "christopher",
-      "gapId": "GAP-viewser-side-by-side-preview",
-      "paths": [
-        "apps/viewser/components/builder/inspector/versions-tab.tsx",
-        "apps/viewser/components/builder/inspector/compare-preview-modal.tsx",
-        "apps/viewser/components/builder/inspector/site-inspector-sheet.tsx",
-        "apps/viewser/components/builder/inspector/index.ts"
-      ],
-      "reason": "Sida-vid-sida-preview av två genererade versioner i Versions-tab (pure UI, återanvänder /api/runs/[runId]/files via StackBlitz embed)"
-    },
-    {
-      "owner": "christopher",
-      "gapId": "GAP-viewser-pipeline-status-polling",
-      "paths": [
-        "apps/viewser/components/builder/floating-chat.tsx",
-        "apps/viewser/components/builder/use-pending-build.ts",
-        "apps/viewser/components/builder/use-build-trace-polling.ts"
-      ],
-      "reason": "FloatingChat speglar riktig pipeline-status via trace-endpoint istället för fejk setTimeout-kedja (UI-only, /api/runs/[runId]/trace finns redan i main)"
-    },
-    {
-      "owner": "christopher",
-      "gapId": "GAP-viewser-restaurant-wizard-hint",
-      "paths": [
-        "apps/viewser/components/discovery-wizard/wizard-constants.ts"
-      ],
-      "reason": "Wizard Restaurang-familjens scaffoldHint pekar mot restaurant-hospitality (UI-del av paired GAP-backend-restaurant-activation)"
     }
   ],
   "queuedGaps": [
+    {
+      "id": "GAP-windows-safe-rebuild-pipeline",
+      "type": "Gap/Backend",
+      "owner": "jakob",
+      "title": "Windows-safe rebuild pipeline (immutable build-dir + pointer-swap)",
+      "collisionRisk": "yellow",
+      "reviewer": "jakob",
+      "status": "queued",
+      "file": "docs/gaps/GAP-windows-safe-rebuild-pipeline.md",
+      "createdAt": "2026-05-27T18:00:00Z",
+      "paths": [
+        "scripts/build_site.py",
+        "apps/viewser/lib/local-preview-server.ts",
+        "apps/viewser/lib/build-runner.ts",
+        "data/runs/**",
+        "governance/policies/repo-boundaries.v1.json",
+        "tests/test_immutable_builds.py"
+      ],
+      "doNotTouch": [
+        "apps/viewser/components/**",
+        "packages/preview-runtime/**"
+      ],
+      "acceptanceCriteria": [
+        "copy_starter() skriver till builds/<timestamp>/ i stället för target. Ny helper write_active_pointer().",
+        "current.json (pointer-fil) bestämmer vilken build UI ska visa.",
+        "Atomär rename för pointer-swap så kill -9 mid-swap inte ger korrupt state.",
+        "Aktiv next start fortsätter köra mot gammal build under nytt bygge — ingen rmtree-konflikt.",
+        "Delayed GC-jobb tar bort gamla builds (policy: keep latest 5 eller alla < 24h).",
+        "Per-siteId-mutex bibehållen för att undvika simultana parallella builds.",
+        "Reproducerar B157-trigger lokalt utan att generera WinError 5."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q"
+      ],
+      "note": "Akut-fix nivå 1 (B157 closure, adba139) stoppar live preview-server före build_site.py spawnas. Detta GAP täcker nivå 4 — immutable builds/<timestamp>/ + manifest-pointer-swap (Vercel-likt). Egen sprint per gap-spec. Anti-patternet 'rebuilda ovanpå live output-katalog' kvarstår tills nivå 4 landar. relatedBugs: B157."
+    },
+    {
+      "id": "GAP-followup-prompt-content-passthrough",
+      "type": "Gap/Builder",
+      "owner": "jakob",
+      "title": "Follow-up prompt content passthrough — fri text når codegen",
+      "collisionRisk": "yellow",
+      "reviewer": "jakob",
+      "status": "queued",
+      "file": "docs/gaps/GAP-followup-prompt-content-passthrough.md",
+      "createdAt": "2026-05-27T18:00:00Z",
+      "paths": [
+        "governance/schemas/project-input.schema.json",
+        "packages/generation/brief/extract.py",
+        "scripts/prompt_to_project_input.py",
+        "scripts/build_site.py",
+        "packages/generation/planning/plan.py",
+        "packages/generation/build/renderers.py",
+        "packages/generation/codegen/codegen.py",
+        "tests/test_followup_copy_directives.py"
+      ],
+      "doNotTouch": [
+        "apps/viewser/components/**"
+      ],
+      "acceptanceCriteria": [
+        "Följdprompt 'inkludera TEST-JAKOB i hero' producerar ny version där TEST-JAKOB syns i renderad hero-copy och i app/page.tsx.",
+        "Följdprompt 'gör allt mycket ljusare' producerar antingen mätbar token-/style-ändring eller ärligt FloatingChat-svar.",
+        "Site Brief, Project Input, Site Plan, Generation Package och build-result redovisar var direktivet tolkades och om det applicerades.",
+        "Rå följdprompt renderas aldrig okontrollerat som kundcopy.",
+        "Pinned scaffold/variant förblir auktoritativa; copy-direktiv passerar bredvid.",
+        "Regressionstester täcker både lyckad copy-passthrough och no-op-feedback."
+      ],
+      "checks": [
+        "python scripts/sprintvakt_check.py",
+        "python scripts/governance_validate.py",
+        "python scripts/check_term_coverage.py --strict",
+        "python -m ruff check .",
+        "python -m pytest tests/ -q"
+      ],
+      "note": "Operatör-reproducerad 2026-05-27. Två cases: 'Allt ska vara mycket ljusare' (v2->v3) och 'inkludera TEST-JAKOB i hero' (v3->v4). Båda passerade igenom som no-op. Strukturerade fält saknas i Site Brief/Project Input för fri copy-edit. Rekommenderad lösning A i GAP-fil (copyDirectives[]) + lösning B (ärlig FloatingChat-feedback). Träffar kärnflödet 'följdprompt → ny version'."
+    }
+  ],
+  "activeGaps": [],
+  "completedGaps": [
     {
       "id": "GAP-backend-build-trace-endpoint",
       "type": "Gap/Runtime",
@@ -108,9 +149,10 @@
       "title": "Build-trace endpoint + baseRunId i /api/prompt — unlocks Live Build Sync A+D",
       "collisionRisk": "yellow",
       "reviewer": "christopher",
-      "status": "queued",
+      "status": "completed",
       "file": "docs/gaps/GAP-backend-build-trace-endpoint.md",
       "createdAt": "2026-05-25T02:35:00Z",
+      "completedAt": "2026-05-25T16:41:27Z",
       "paths": [
         "apps/viewser/app/api/runs/[runId]/trace/route.ts",
         "apps/viewser/app/api/prompt/route.ts",
@@ -139,10 +181,14 @@
         "python -m pytest tests/ -q",
         "cd apps/viewser && npx tsc --noEmit"
       ],
-      "note": "UI-skriven backend-spec. Blockerar Live Build Sync A (real pipeline-status) och D (iterera från version N med riktig PI-snapshot). UI har workaround idag (prompt-prefix) som automatiskt uppgraderas till baseRunId så fort backend stödjer det. 2026-05-25 04:24: Christopher implementerade hela gapet under operator-OK scope-leak (`origin/christopher-ui` commit `74a355b`) — 3 endpoints + bug-hunt + tester. Owner kvar 'jakob' i workboard så Sprintvakt-lane-policy passerar (samma precedent som plan.py-fix i PR #68). PR från `christopher-ui` mot `main` väntar — Jakob är reviewer."
-    }
-  ],
-  "activeGaps": [
+      "fixCommits": [
+        "74a355b",
+        "fe7a9e4"
+      ],
+      "notes": [
+        "UI-skriven backend-spec. Christopher implementerade hela gapet under operator-OK scope-leak (origin/christopher-ui commit 74a355b) — 3 endpoints + bug-hunt + tester. Mergad till main via PR #105 (commit fe7a9e4 2026-05-25T16:41:27Z). Verifierad 2026-05-27: apps/viewser/app/api/runs/[runId]/trace/route.ts existerar och implementerar specat kontrakt med runStatus + events + ?since=<timestamp>-stöd. Owner kvar 'jakob' så Sprintvakt-lane-policy passerar (samma precedent som plan.py-fix i PR #68)."
+      ]
+    },
     {
       "id": "GAP-viewser-restaurant-wizard-hint",
       "type": "Gap/UI",
@@ -150,10 +196,10 @@
       "title": "Wizard Restaurang/Café-familjen pekar mot restaurant-hospitality scaffold",
       "collisionRisk": "green",
       "reviewer": "jakob",
-      "status": "active",
-      "file": "docs/gaps/GAP-viewser-restaurant-wizard-hint.md",
+      "status": "completed",
       "createdAt": "2026-05-25T13:20:00Z",
       "startedAt": "2026-05-25T13:20:00Z",
+      "completedAt": "2026-05-26T13:19:16Z",
       "paths": [
         "apps/viewser/components/discovery-wizard/wizard-constants.ts"
       ],
@@ -179,10 +225,64 @@
         "cd apps/viewser && npm run lint"
       ],
       "note": "Effort 30 min. Splittat från GAP-backend-restaurant-activation pga Sprintvakt-lane-policy. Landar i samma commit-batch som backend-aktiveringen. 2026-05-25 follow-up: den ursprungliga PR:en uppdaterade bara BUSINESS_FAMILIES[restaurant]; den parallella WIZARD_CATEGORIES[restaurant] missades och pekade fortsatt mot local-service-business / nordic-trust så FALLBACK_DISCOVERY_OPTIONS (byggd via WIZARD_CATEGORIES.map() i discovery-options.ts) gav fel scaffold + variant innan governance-API:t svarade. Fixat under samma GAP.",
-      "pairedWith": "GAP-backend-restaurant-activation"
-    }
-  ],
-  "completedGaps": [
+      "pairedWith": "GAP-backend-restaurant-activation",
+      "fixCommits": [
+        "1e3c1f8",
+        "1740472"
+      ],
+      "notes": [
+        "Verifierad 2026-05-26 mot origin/jakob-be: BUSINESS_FAMILIES[restaurant] och WIZARD_CATEGORIES[restaurant] pekar på restaurant-hospitality med defaultVariantId warm-bistro."
+      ]
+    },
+    {
+      "id": "GAP-viewser-mobile-hero-safe-zone",
+      "type": "Gap/UI",
+      "owner": "christopher",
+      "title": "Scout pass 4 P1-fixar: hero safe zone, wizard asterisk, prompt-builder safe-area",
+      "whyNow": "Scout-bug-hunt pass 4 (composer-2.5-fast, read-only) paa christopher-ui-branchen hittade tre P1-fynd som maaste fixas innan PR #117 mergas: (1) Hero-text taecks av PromptBuilder paa iPhone SE 375x667 (video ~300px + text ~200px + composer ~150px laemnar ingen marginal). (2) Wizard Foeretagsnamn-asterisk visas men validation togs bort i 59eed4c WCAG 2.2-brott. (3) PromptBuilder saknar pb-safe knappar ligger naera iPhone home-indicator. Inga P0. P1 nummer 4 StackBlitz containerRef skippas eftersom default-mode local-next inte paaverkas.",
+      "paths": [
+        "apps/viewser/components/viewer-panel.tsx",
+        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
+        "apps/viewser/components/discovery-wizard/steps/company-step.tsx",
+        "apps/viewser/components/prompt-builder.tsx"
+      ],
+      "doNotTouch": [
+        "apps/viewser/components/discovery-wizard/wizard-types.ts",
+        "apps/viewser/app/globals.css",
+        "packages/generation/",
+        "apps/viewser/app/api/",
+        "apps/viewser/lib/"
+      ],
+      "acceptanceCriteria": [
+        "Mobil 375x667: hero-text scrollas och hamnar aldrig bakom PromptBuilder",
+        "viewer-panel mobil anvaender overflow-y-auto naer showHero=true",
+        "Hero-text container har pb-40 paa mobil saa composer-overlap aldrig sker vid normal text",
+        "Desktop md+ behaaller absolute-overlay-layout med overflow-hidden",
+        "Wizard foundation-step + company-step visar Foeretagsnamn utan asterisk (optional-prop visar 'valfritt' via FieldLabel)",
+        "PromptBuilder composer anvaender pb-safe-or-4 sm:pb-7 saa iPhone X+ home-indicator respekteras"
+      ],
+      "checks": [
+        "sprintvakt_check",
+        "focus_check",
+        "viewser_typecheck",
+        "viewser_lint",
+        "term_coverage_strict",
+        "ruff_check"
+      ],
+      "collisionRisk": "green",
+      "reviewer": "jakob",
+      "status": "completed",
+      "createdAt": "2026-05-26T10:52:20Z",
+      "updatedAt": "2026-05-26T22:30:00Z",
+      "notes": [
+        "Verifierad 2026-05-26 mot origin/jakob-be: viewer-panel har mobil overflow/safe-zone, Företagsnamn är optional i foundation/company-step och PromptBuilder använder pb-safe-or-4."
+      ],
+      "activatedAt": "2026-05-26T10:52:25Z",
+      "completedAt": "2026-05-26T13:19:16Z",
+      "fixCommits": [
+        "1740472"
+      ]
+    },
     {
       "id": "GAP-backend-path-b-section-renderer",
       "type": "Gap/Runtime",
@@ -191,7 +291,6 @@
       "collisionRisk": "red",
       "reviewer": "jakob",
       "status": "completed",
-      "file": "docs/gaps/GAP-backend-path-b-section-renderer.md",
       "createdAt": "2026-05-25T04:50:00Z",
       "startedAt": "2026-05-25T13:45:00Z",
       "completedAt": "2026-05-25T16:30:00Z",
@@ -420,8 +519,7 @@
       "title": "Aktivera restaurant-hospitality scaffold runtime end-to-end (Path A)",
       "collisionRisk": "yellow",
       "reviewer": "jakob",
-      "status": "in-review",
-      "file": "docs/gaps/GAP-backend-restaurant-activation.md",
+      "status": "completed",
       "createdAt": "2026-05-25T13:20:00Z",
       "completedAt": "2026-05-25T13:20:00Z",
       "paths": [
@@ -467,8 +565,7 @@
       "title": "Wizard minimalism — progressive disclosure av all sekundär text, metadata och fallback-fält",
       "collisionRisk": "green",
       "reviewer": "jakob",
-      "status": "in-review",
-      "file": "docs/gaps/GAP-viewser-wizard-minimalism.md",
+      "status": "completed",
       "completedAt": "2026-05-25T02:35:00Z",
       "paths": [
         "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
@@ -496,8 +593,7 @@
       "title": "Iteration & Compare — site-scoped versionshistorik + diff-vy i Site Inspector",
       "collisionRisk": "green",
       "reviewer": "jakob",
-      "status": "in-review",
-      "file": "docs/gaps/GAP-viewser-iteration-compare.md",
+      "status": "completed",
       "completedAt": "2026-05-25T02:35:00Z",
       "paths": [
         "apps/viewser/components/builder/inspector/versions-tab.tsx",
@@ -520,8 +616,7 @@
       "title": "Wizard första intryck — foundation + visual step som säljer 'fantastisk sajt' på 5 sekunder",
       "collisionRisk": "green",
       "reviewer": "jakob",
-      "status": "in-review",
-      "file": "docs/gaps/GAP-viewser-wizard-first-impression.md",
+      "status": "completed",
       "completedAt": "2026-05-25T02:11:00Z",
       "paths": [
         "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
@@ -545,8 +640,7 @@
       "title": "Live-preview switcher för scaffold-variants utan rebuild",
       "collisionRisk": "yellow",
       "reviewer": "jakob",
-      "status": "in-review",
-      "file": "docs/gaps/GAP-viewser-variant-live-preview.md",
+      "status": "completed",
       "completedAt": "2026-05-25T01:50:00Z",
       "paths": [
         "apps/viewser/components/builder/inspector/variants-tab.tsx",
@@ -611,7 +705,6 @@
       "collisionRisk": "green",
       "reviewer": "jakob",
       "status": "completed",
-      "file": "docs/gaps/GAP-viewser-live-build-sync.md",
       "startedAt": "2026-05-25T02:35:00Z",
       "paths": [
         "apps/viewser/app/page.tsx",
@@ -824,7 +917,6 @@
       "collisionRisk": "green",
       "reviewer": "jakob",
       "status": "completed",
-      "file": "docs/gaps/GAP-viewser-pipeline-status-polling.md",
       "createdAt": "2026-05-25T13:20:00Z",
       "startedAt": "2026-05-25T13:20:00Z",
       "paths": [
@@ -878,7 +970,6 @@
       "collisionRisk": "green",
       "reviewer": "jakob",
       "status": "completed",
-      "file": "docs/gaps/GAP-viewser-side-by-side-preview.md",
       "createdAt": "2026-05-25T04:50:00Z",
       "startedAt": "2026-05-25T04:50:00Z",
       "paths": [
@@ -1100,226 +1191,6 @@
       "fixCommits": [
         "59eed4c"
       ]
-    },
-    {
-      "id": "GAP-viewser-mobile-hero-safe-zone",
-      "type": "Gap/UI",
-      "owner": "christopher",
-      "title": "Scout pass 4 P1-fixar: hero safe zone, wizard asterisk, prompt-builder safe-area",
-      "whyNow": "Scout-bug-hunt pass 4 (composer-2.5-fast, read-only) paa christopher-ui-branchen hittade tre P1-fynd som maaste fixas innan PR #117 mergas: (1) Hero-text taecks av PromptBuilder paa iPhone SE 375x667 (video ~300px + text ~200px + composer ~150px laemnar ingen marginal). (2) Wizard Foeretagsnamn-asterisk visas men validation togs bort i 59eed4c WCAG 2.2-brott. (3) PromptBuilder saknar pb-safe knappar ligger naera iPhone home-indicator. Inga P0. P1 nummer 4 StackBlitz containerRef skippas eftersom default-mode local-next inte paaverkas.",
-      "paths": [
-        "apps/viewser/components/viewer-panel.tsx",
-        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/company-step.tsx",
-        "apps/viewser/components/prompt-builder.tsx"
-      ],
-      "doNotTouch": [
-        "apps/viewser/components/discovery-wizard/wizard-types.ts",
-        "apps/viewser/app/globals.css",
-        "packages/generation/",
-        "apps/viewser/app/api/",
-        "apps/viewser/lib/"
-      ],
-      "acceptanceCriteria": [
-        "Mobil 375x667: hero-text scrollas och hamnar aldrig bakom PromptBuilder",
-        "viewer-panel mobil anvaender overflow-y-auto naer showHero=true",
-        "Hero-text container har pb-40 paa mobil saa composer-overlap aldrig sker vid normal text",
-        "Desktop md+ behaaller absolute-overlay-layout med overflow-hidden",
-        "Wizard foundation-step + company-step visar Foeretagsnamn utan asterisk (optional-prop visar 'valfritt' via FieldLabel)",
-        "PromptBuilder composer anvaender pb-safe-or-4 sm:pb-7 saa iPhone X+ home-indicator respekteras"
-      ],
-      "checks": [
-        "sprintvakt_check",
-        "focus_check",
-        "viewser_typecheck",
-        "viewser_lint",
-        "term_coverage_strict",
-        "ruff_check"
-      ],
-      "collisionRisk": "green",
-      "reviewer": "jakob",
-      "status": "completed",
-      "createdAt": "2026-05-26T10:52:20Z",
-      "updatedAt": "2026-05-26T16:58:55Z",
-      "notes": [
-        "Klar och pushad i christopher-ui (P1-batch + senare polish).",
-        "Inkluderar: hero safe zone (pb-40 + overflow-y-auto), wizard asterisk-fix, prompt-builder safe-area, device-preset-context (delar state mellan FloatingChat + ViewerPanel), iframe-mounted-during-build (no white screen).",
-        "Stänger för att frigöra foundation-step.tsx till GAP-viewser-wizard-minimal-tabs."
-      ],
-      "activatedAt": "2026-05-26T10:52:25Z",
-      "completedAt": "2026-05-26T16:58:55Z",
-      "fixCommits": []
-    },
-    {
-      "id": "GAP-viewser-wizard-minimal-tabs",
-      "type": "Gap/UI",
-      "owner": "christopher",
-      "title": "Wizard total-minimalism: 3-tabs överst + 'Mer information'-popup med scaffold-aware flikar",
-      "whyNow": "Operatör-feedback efter 5-stegs-konsolidering: wizard fortfarande för rörig. Vill ha total minimalism — färre frågor synliga, skrap-driven bakgrundsifyllning, popup för djupare info istället för tvingande steg. Backend-payload (validateWizardStep, buildDiscoveryPayload) ändras INTE — bara UI omgrupperar samma svar.",
-      "paths": [
-        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx",
-        "apps/viewser/components/discovery-wizard/wizard-types.ts",
-        "apps/viewser/components/discovery-wizard/more-info-dialog.tsx",
-        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/visual-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/functions-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/media-step.tsx",
-        "apps/viewser/components/discovery-wizard/steps/content-orchestrator.tsx"
-      ],
-      "doNotTouch": [
-        "scripts/",
-        "packages/generation/",
-        "schemas/",
-        "docs/governance/",
-        "tests/",
-        "apps/viewser/app/api/",
-        "apps/viewser/components/discovery-wizard/wizard-payload.ts"
-      ],
-      "acceptanceCriteria": [
-        "WIZARD_STEP_ORDER reducerad från 5 till 3 (foundation, visual, functions)",
-        "Tabs visas högst upp istället för sidebar (desktop + mobile)",
-        "Inga proaktiva tips/varningar synliga som default - bara på fel eller info-ikon",
-        "'Mer information'-knapp på tab 3 öppnar popup med scaffold-aware flikar",
-        "Popup återanvänder content+media-fält och påverkar inte buildDiscoveryPayload-shape",
-        "Logo + mediamaterial uppladdning behålls på tab 3 (functions), favicon/ogImage/backgroundVideo flyttas till popup",
-        "GPT Vision auto-pick av hero från mediamaterial fungerar (Commit 3)",
-        "Manuell skip från valfri tab tillåts (inga hard-requirements utöver foundation min-validering)",
-        "Lint, typecheck, term-coverage --strict passerar"
-      ],
-      "checks": [
-        "npm -w @sajtbyggaren/viewser run lint",
-        "npm -w @sajtbyggaren/viewser run typecheck",
-        "python scripts/check_term_coverage.py --strict"
-      ],
-      "collisionRisk": "green",
-      "reviewer": "jakob",
-      "status": "completed",
-      "createdAt": "2026-05-26T16:59:15Z",
-      "updatedAt": "2026-05-26T17:19:56Z",
-      "notes": [
-        "Klar och pushad i 3 commits på christopher-ui.",
-        "Commit 1 (1c1a9fb): 3-tabs-skal överst + Mer information-popup placeholder + WIZARD_STEP_ORDER reducerad från 5 till 3.",
-        "Commit 2 (b1e92ca): popup utvidgad till 4 flikar (Innehåll/Kontakt/Media/Avancerat) + logo+mediamaterial på tab 3 + kontakt-disclosure flyttad från foundation-step.",
-        "Commit 3 (1ab516c): Vision-driven auto-hero-pick från galleri (pickHeroFromGallery + onUploaded-promote). Backend-payload oändrad."
-      ],
-      "activatedAt": "2026-05-26T16:59:28Z",
-      "completedAt": "2026-05-26T17:19:56Z",
-      "fixCommits": [
-        "1c1a9fb",
-        "b1e92ca",
-        "1ab516c"
-      ]
-    },
-    {
-      "id": "GAP-viewser-wizard-popup-tabs-v2",
-      "type": "Gap/UI",
-      "owner": "christopher",
-      "title": "Wizard popup-revision: 5 smala flikar + ta bort Specialisering",
-      "whyNow": "Operatorn 2026-05-26: 'Varför specialisering? Ta bort? Gör pop-up smalare med mindre spacing på sidorna. Alternativt behåll bredden och flytta upp så att man inte behöver skrolla så mycket. Hellre fler steg/flikar och mindre att fylla i på varje än att man måste skrolla. Anpassa även för mobile.' Wizard-minimalism v1 lämnade kvar Specialiserings-disclosure och en bred popup där Innehåll-fliken blev för lång. Revisionen tar bort sub-specialisering helt (businessFamily räcker som scaffold-signal — backend faller redan tillbaka via branchForFamily) och delar popupen i fem smala flikar (Om oss / Innehåll / Kontakt / Media / Avancerat) med smalare bredd och horisontell tab-scroll på mobil.",
-      "paths": [
-        "apps/viewser/components/discovery-wizard/more-info-dialog.tsx",
-        "apps/viewser/components/discovery-wizard/steps/foundation-step.tsx"
-      ],
-      "doNotTouch": [
-        "apps/viewser/components/discovery-wizard/wizard-payload.ts",
-        "packages/generation/**"
-      ],
-      "acceptanceCriteria": [
-        "Specialiserings-disclosure med sub-kategori-chips finns inte längre i Foundation",
-        "MoreInfoDialog har 5 flikar: Om oss / Innehåll / Kontakt / Media / Avancerat",
-        "Popup-bredd <= 720px och tab-baren scrollar horisontellt på mobil",
-        "Lint, typecheck och term-coverage rena"
-      ],
-      "checks": [
-        "cd apps/viewser && npm run lint",
-        "cd apps/viewser && npx tsc --noEmit",
-        "python scripts/check_term_coverage.py --strict"
-      ],
-      "collisionRisk": "green",
-      "reviewer": "jakob",
-      "status": "completed",
-      "createdAt": "2026-05-26T18:02:59Z",
-      "updatedAt": "2026-05-26T18:04:18Z",
-      "notes": [],
-      "activatedAt": "2026-05-26T18:03:13Z",
-      "completedAt": "2026-05-26T18:04:18Z",
-      "fixCommits": []
-    },
-    {
-      "id": "GAP-viewser-wizard-pages-picker",
-      "type": "Gap/UI",
-      "owner": "christopher",
-      "title": "Tab 3 till sidor-picker: stora klickbara sidkort istället för dolda funktioner",
-      "whyNow": "Operatorn 2026-05-26 efter popup-revision v2: 'Detta måste bli lättare. För svårt att förstå hur man ska kryssa i olika sidor som ska skapas.' Nuvarande tab 3 visar en statisk 'VALDA FUNKTIONER'-chip-summary som ser klickbar ut men inte är det, plus två gömda disclosures där man faktiskt kryssar i FUNKTIONER (FAQ, kontaktformulär, kundvagn) istället för sidor. Operatorn vill se sidor som hemsidan ska ha och kunna toggla dem direkt. Funktioner härleds automatiskt via pageMustHave-länken som redan finns i FUNCTION_GROUPS.",
-      "paths": [
-        "apps/viewser/components/discovery-wizard/steps/functions-step.tsx"
-      ],
-      "doNotTouch": [
-        "apps/viewser/components/discovery-wizard/wizard-payload.ts",
-        "apps/viewser/components/discovery-wizard/wizard-constants.ts",
-        "packages/generation/**"
-      ],
-      "acceptanceCriteria": [
-        "Tab 3 visar 15 sidor som stora klickbara kort i ett 2/3-kolumns rutnät",
-        "Hela kortet är klickbart med tydlig markerad/avmarkerad state (Check-ikon på markerade)",
-        "togglePage(page) togglar både mustHave OCH motsvarande selectedFunctions-id om pageMustHave-länken finns",
-        "Auto-apply familjens rekommenderade sidor + funktioner vid family-byte när inget redan är förvalt",
-        "Primar CTA + finjustering + speciallaper finns kvar bara i Mer information-popupens Avancerat-flik",
-        "Backend-payload (mustHave + selectedFunctions) oförändrat — wizard-payload.ts rörs inte",
-        "Lint, typecheck och term-coverage rena"
-      ],
-      "checks": [
-        "cd apps/viewser && npm run lint",
-        "cd apps/viewser && npx tsc --noEmit",
-        "python scripts/check_term_coverage.py --strict"
-      ],
-      "collisionRisk": "green",
-      "reviewer": "jakob",
-      "status": "completed",
-      "createdAt": "2026-05-26T18:14:54Z",
-      "updatedAt": "2026-05-26T18:15:24Z",
-      "notes": [],
-      "activatedAt": "2026-05-26T18:14:58Z",
-      "completedAt": "2026-05-26T18:15:24Z",
-      "fixCommits": []
-    },
-    {
-      "id": "GAP-viewser-wizard-assets-tab",
-      "type": "Gap/UI",
-      "owner": "christopher",
-      "title": "Lägg till fjärde wizard-tab 'Bilder' — logo + mediamaterial får egen tab",
-      "whyNow": "Operatorn 2026-05-26 efter pages-picker-revisionen: 'Gör så att det är fyra tabbar där den fjärde är bilderna som idag ligger i tab 3.' Tab 3 (Funktioner) blev oklar när sidor-pickern och AssetsStep delade samma yta. Att bryta ut bilder till en egen tab gör tab 3 100% sidor och ger uppladdning en tydlig hemvist. 'Mer information'-knappen flyttas samtidigt till den nya sista tabben så den syns precis innan 'Skapa sajt' — vilket var operatorens ursprungliga önskemål.",
-      "paths": [
-        "apps/viewser/components/discovery-wizard/wizard-types.ts",
-        "apps/viewser/components/discovery-wizard/discovery-wizard.tsx"
-      ],
-      "doNotTouch": [
-        "apps/viewser/components/discovery-wizard/wizard-payload.ts",
-        "packages/generation/**"
-      ],
-      "acceptanceCriteria": [
-        "WIZARD_STEP_ORDER har 4 steg: foundation/visual/functions/assets",
-        "WIZARD_STEP_TITLES['assets'] = 'Bilder'",
-        "Tab 4 (Bilder) renderar AssetsStep + 'Mer information'-knappen",
-        "Tab 3 (Funktioner) renderar BARA FunctionsStep (sidor-pickern), inget annat",
-        "validateWizardStep('assets', ...) returnerar null — bilder är skip-bara",
-        "Backend-payload oförändrat",
-        "Lint, typecheck och term-coverage rena"
-      ],
-      "checks": [
-        "cd apps/viewser && npm run lint",
-        "cd apps/viewser && npx tsc --noEmit",
-        "python scripts/check_term_coverage.py --strict"
-      ],
-      "collisionRisk": "green",
-      "reviewer": "jakob",
-      "status": "completed",
-      "createdAt": "2026-05-26T18:18:22Z",
-      "updatedAt": "2026-05-26T18:18:54Z",
-      "notes": [],
-      "activatedAt": "2026-05-26T18:18:34Z",
-      "completedAt": "2026-05-26T18:18:54Z",
-      "fixCommits": []
     }
   ],
   "decisions": [

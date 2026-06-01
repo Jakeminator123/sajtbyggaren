@@ -1,5 +1,5 @@
 ---
-description: Jobba på main med numrerad backup-branch före varje sprint. PR används inte som standard.
+description: Jakob arbetar på `jakob-be`, Christopher på `christopher-ui`, `main` är canonical. PR mot `main` när en ny officiell version ska in.
 alwaysApply: true
 ---
 
@@ -7,152 +7,219 @@ alwaysApply: true
 
 ## Grundregel
 
-Agenten jobbar på `main` genom hela sprinten om operatören inte uttryckligen
-säger något annat. **Standardflödet är backup-branch först, därefter commit +
-push direkt mot `origin/main`**. Remote är
-`https://github.com/Jakeminator123/sajtbyggaren.git`.
+- **Jakob** jobbar default på arbets-branchen `jakob-be` (backend,
+  generation, governance, scripts, runtime, merge-review).
+- **Christopher** jobbar default på arbets-branchen `christopher-ui`
+  (UI/frontend i `apps/viewser/`, presentationslagret för genererade
+  sajter).
+- **`main`** är projektets canonical / sanningsbranch. Pushas aldrig med
+  `--force`. Direkt-pushes till `main` är undantag, inte standard.
+- PR från `jakob-be` eller `christopher-ui` mot `main` öppnas när en ny
+  officiell version ska in — typiskt när en sprint, ett fix-batch eller en
+  fas är klar och granskad. Ingen schemalagd cadence; det är ett
+  operatörs- eller agentbeslut per leveransfönster.
+- Efter merge: arbets-branchen synkas till `origin/main` via
+  `git fetch origin && git reset --hard origin/main && git push --force-
+  with-lease origin <branch>` — inte via en separat sync-PR i motsatt
+  riktning.
 
-Backup-branchen är bara en återställningspunkt. Den är inte en arbetsbranch,
-ska inte checkas ut för implementation och ska inte få en PR.
+Remote är `https://github.com/Jakeminator123/sajtbyggaren.git`.
 
-## Sprintstart: skapa backup-branch
+## Standardflöde: commit + push på arbets-branchen
 
-Inför varje ny sprintrunda skapar agenten en numrerad backup-branch från ren
-och synkad `main`:
-
-1. Verifiera att aktuell branch är `main` (`git branch --show-current`).
-2. Verifiera att `main` är synkad med `origin/main` (`git status` eller
-   `python scripts/focus_check.py`).
-3. Lista befintliga backups med `git branch -a --list "*backup-*"`.
-4. Välj nästa nummer: högsta befintliga `backup-N` + 1.
-5. Skapa backupen från nuvarande `main`: `git branch backup-N`.
-6. Pusha backupen när operatören vill ha fjärrbackup:
-   `git push origin backup-N`.
-7. Stanna kvar på `main` och gör sprintarbetet där.
-
-Exempel: om `backup-1` till `backup-5` finns blir nästa `backup-6`.
-
-## Standardflöde: commit + push på main
-
-För all vanlig agent-aktivitet pushas ändringen direkt till `main`:
-
-1. Verifiera att aktuell branch är `main`.
-2. Verifiera att sprintens backup-branch finns.
+1. Verifiera att aktuell branch är `jakob-be` (Jakob) eller
+   `christopher-ui` (Christopher) — `git branch --show-current`.
+2. Verifiera att branchen är synkad med sin egen origin
+   (`git status` eller `python scripts/focus_check.py`).
 3. Stage + commit med atomisk avgränsning (en commit per logiskt steg).
 4. Kör de fyra guards (se nedan). Alla ska vara gröna.
 5. Vid icke-trivial produkt- eller workflow-diff: låt Scout-agenten göra
    read-only bug review av diffen före push.
-6. `git push origin main`.
+6. `git push origin jakob-be` (eller `christopher-ui`).
 
-Detta gäller dokumentation, governance, kod, tester, scaffolds, dossiers och
-refaktoriseringar. Om ändringen är stor eller riskabel ska agenten stanna och
-be operatören bekräfta riktningen innan commit, men den skapar inte automatiskt
-en feature-branch eller PR.
+Detta gäller dokumentation, governance, kod, tester, scaffolds, dossiers
+och refaktoriseringar. Om ändringen är stor eller riskabel ska agenten
+stanna och be operatören bekräfta riktningen innan commit.
 
-Scout-agenten ersätter Bugbot som pre-push-granskare i direkt-main-flödet.
-Scout får inte fixa fynden själv, utan rapporterar blocker, risk,
-nice-to-have eller falskt fynd. Builder- eller Steward-agenten gör sedan
-eventuell fix inom samma scope.
+## När en PR mot `main` öppnas
 
-## När agenten skapar annan branch eller PR
+PR från arbets-branchen mot `main` öppnas när:
 
-Endast när operatören uttryckligen säger något av:
+- En sprint eller fas är klar och ska bli en officiell version.
+- En batch fixar har samlats på arbets-branchen och operatören vill ha en
+  granskad merge till `main`.
+- Operatören uttryckligen ber om PR-flöde för en specifik ändring.
 
-- "öppna en PR för X"
-- "gör detta på separat arbetsbranch"
-- "byt till branch Y"
+Standard-PR-flödet:
 
-Om instruktionen är otydlig: fråga operatör innan branch eller PR skapas.
+1. `git fetch origin && git status` — säkerställ att arbets-branchen är
+   ren och pushad.
+2. Verifiera de fyra guards lokalt (se nedan).
+3. Öppna PR via GitHub-UI eller `gh pr create --base main --head <branch>`.
+4. Vänta på Cursor Bugbot + CI-checks. Granska eventuella fynd; PR ska
+   vara `mergeable`, `mergeStateStatus == "CLEAN"`, 0 aktiva
+   review-trådar och inga oadresserade HIGH-severity fynd före merge.
+5. Operatören eller agenten mergar via squash-merge (standardval).
+6. Efter merge: synka arbets-branchen till nytt `origin/main` enligt
+   "Post-merge-sync" nedan.
 
-## Vad agenten aldrig gör utan tillstånd
+PR-loop-detaljer (Bugbot-iterationer, bekräftelser, nödläge-eskalering)
+finns i [`governance/rules/bugbot-pr-loop.md`](bugbot-pr-loop.md).
 
-- Skapar feature-branches "för säkerhets skull" eller "för att vara försiktig".
-- Arbetar på backup-branches.
-- Öppnar PR utan uttryckligt uppdrag.
-- Tar bort backup-branches.
-- Force-pushar till `main` (`git push --force` eller liknande).
+## Direkt-push till `main`
 
-## Push-fel
+Direkt-push till `main` är **undantag**, inte standard. Tillåtet bara för:
 
-Om `git push origin main` avvisas (non-fast-forward, hooks, eller annat):
+- Pure docs/governance-bumpar som steward-rollen gör (t.ex.
+  `docs/current-focus.md`-bumpar efter merge när inget annat ändras).
+- Operatörens egna manuella commits (operatören är alltid sista
+  beslutsfattare).
+- Steward-auto-bump-arbetsflödet i `.github/workflows/steward-auto-bump.yml`
+  som kör post-merge.
 
-1. Stoppa direkt - ingen automatisk `--force` eller `--force-with-lease`.
-2. Kör `git fetch origin && git status` för att förstå läget.
-3. Fråga operatör innan rebase, merge eller force-push.
+För all produktkod, schemas, tester, scripts och packages gäller
+PR-flödet ovan.
 
-## Naming när arbetsbranch ändå behövs
+## Post-merge-sync
 
-- Format: `cursor/<kort-syfte-pa-svenska-utan-aaoo>` (git hanterar åäö inkonsekvent på olika plattformar)
+Efter en PR har mergats till `main`:
+
+1. `git fetch origin --prune`.
+2. På arbets-branchen: `git reset --hard origin/main`.
+3. `git push --force-with-lease origin <branch>` — uppdaterar
+   `origin/jakob-be` (eller `origin/christopher-ui`) till nya
+   `origin/main`-spetsen.
+
+**Pulla aldrig** en redan squash-mergad branch — det skapar dubbletter.
+Använd `reset --hard origin/main` i stället. `--force-with-lease` är OK
+på de permanenta arbets-branchema eftersom de är solo-ägda enligt
+[`governance/rules/branch-scope-ui-ux.md`](branch-scope-ui-ux.md).
+
+## Backup-branches (frivillig)
+
+Backup-branches är ett operatörsverktyg, inte en agent-rutin. Operatören
+skapar dem när hen vill ha extra säkerhet före en större operation
+(t.ex. före en stor merge eller en riskabel refactor). Agenten skapar
+inte backup-branches på eget initiativ — `jakob-be` och `christopher-ui`
+är själva permanenta säkerhetsnät via Git-historiken.
+
+Om operatören ber om en backup:
+
+1. Lista befintliga backups: `git branch -a --list "*backup-*"`.
+2. Välj nästa nummer: högsta `backup-N` + 1.
+3. Skapa: `git branch backup-N <SHA>` (typiskt aktuell HEAD).
+4. Pusha: `git push origin backup-N`.
+
+Befintliga backup-branches på origin (idag `backup-11` t.o.m. höga
+nummer + tre `*-BRA`/`*-VIKTIG`-suffix) ägs av operatören och ska aldrig
+raderas utan explicit operatörsinstruktion.
+
+## Tillfälliga feature-branches
+
+Om en specifik uppgift kräver en tillfällig branch (Cloud-/Grind-agent-
+arbete, experiment, dedikerad PR-spår), används namnmönstret:
+
+- `cursor/<kort-syfte-på-svenska-utan-aaoo>` (git hanterar åäö
+  inkonsekvent på olika plattformar)
 - Exempel: `cursor/marketing-base`, `cursor/dossier-typer-v2`
 - Aldrig: `cursor/work`, `cursor/wip`, `cursor/test`, `cursor/temp`
 
-## Cleanup-rutin (när arbetsbranch ändå har använts)
+Cleanup efter merge:
 
-Efter merge till `main`:
+1. `git push origin --delete <branchname>` (ta bort på GitHub).
+2. `git branch -d <branchname>` (ta bort lokalt).
+3. `git fetch origin --prune` (rensa stale referenser).
 
-1. `git push origin --delete <branchname>` (ta bort på GitHub)
-2. `git branch -d <branchname>` (ta bort lokalt)
-3. `git fetch origin --prune` (rensa stale referenser)
+## Vad agenten aldrig gör utan tillstånd
 
-Mål: `git branch -a` ska bara visa `main`, `origin/main` och bevarade
-`backup-N`-branches när inget pågår.
+- Skapar permanenta branches utöver `jakob-be` / `christopher-ui` /
+  `backup-N`.
+- Arbetar på backup-branches.
+- Öppnar PR utan tydlig anledning (en sprint är klar, en officiell
+  version ska in, eller operatören har bett om det).
+- Tar bort backup-branches.
+- Force-pushar till `main`.
+
+## Push-fel
+
+Om `git push origin <branch>` avvisas (non-fast-forward, hooks, eller
+annat):
+
+1. Stoppa direkt — ingen automatisk `--force` på `main`. På
+   `jakob-be`/`christopher-ui` är `--force-with-lease` OK enligt
+   "Post-merge-sync" ovan, men bara när det är post-merge-syncen som är
+   anledningen.
+2. Kör `git fetch origin && git status` för att förstå läget.
+3. Fråga operatör innan rebase, merge eller force-push.
 
 ## Parallella agenter
 
-När flera agenter jobbar samtidigt mot samma repo (typiskt: en lokal agent på `main` plus en cloud-/feature-agent på en egen branch), gäller en strikt rollfördelning som hindrar att två agenter rör samma filer.
+När flera agenter jobbar samtidigt:
 
-### Mainline-steward
+### Jakob-agent och Christopher-agent
 
-Stannar på `main` och pushar direkt till `origin/main`, men bara för låg-risk-arbete:
-
-- docs, governance-text och agent/reviewer-checklists
-- lokal branch-cleanup (`git branch -d`, `git fetch --prune`)
-- sanity-rapporter (kör de fyra guards + verifiera artefakter)
-- små verifierade fixar där alla fyra guards är gröna före push
-
-Mainline-steward får inte röra filer som ligger i scope för en pågående feature-/grind-agent.
+- Jobbar på sin egen arbets-branch (`jakob-be` respektive
+  `christopher-ui`) och rör inte motpartens branch.
+- Off-limits-paths för Christopher-agenten är listade i
+  [`governance/rules/branch-scope-ui-ux.md`](branch-scope-ui-ux.md).
+- Jakob-agenten rör inte `apps/viewser/components/**`,
+  `apps/viewser/app/**/*.tsx` eller andra UI-paths utan operatörens OK
+  (se `docs/ownership-map.md`).
+- Vid undantag: tagga commit-body med `[scope-leak] Approved by
+  operator: <motivering>` enligt branch-scope-regeln. Detta är
+  engångsundantag, inte permanent norm.
 
 ### Scout-agent
 
-Är read-only i alla lägen. När Builder- eller Steward-agenten jobbar direkt
-på `main` kan Scout-agenten granska diffen före push och leta efter buggar,
-scope-läckage, saknade tester och stale docs. Scout-agenten ändrar inget.
+Är read-only i alla lägen. Kan granska diffen på vilken som helst
+arbets-branch före push och leta efter buggar, scope-läckage, saknade
+tester och stale docs. Ändrar inget.
 
-### Builder-agent
+### Steward-agent
 
-Jobbar normalt direkt på `main` efter att sprintens backup-branch har skapats.
-Pushar till `origin/main` först efter gröna guards och operatörens godkännande
-om arbetet är stort eller riskabelt. Skapar inte PR om operatören inte ber om
-det uttryckligen.
+Hanterar låg-risk docs/governance/sanity. Kan jobba på:
 
-### Scope-läckage förebyggs så här
+- Sin egen arbets-branch (`jakob-be` eller `christopher-ui` beroende på
+  vem hen agerar åt) för docs som hör till pågående arbete.
+- Direkt på `main` för pure docs/governance-bumpar som inte påverkar
+  produktkod (se "Direkt-push till `main`" ovan).
 
-1. Före varje main-commit läser mainline-steward `docs/known-issues.md` och senaste `docs/handoff.md` för att se vilka B-IDs eller sprint-spår som är aktiva. De filer som ett aktivt spår räknar upp som scope är off-limits för andra agenter tills Builder-agenten är klar.
-2. Om mainline-steward upptäcker att en städning kräver att den rör en off-limits-fil: stoppa, rapportera till operatören, och låt Builder-agenten ta ändringen i samma sprint i stället.
-3. Operatören kan när som helst nominera en specifik fil-lista som off-limits för en pågående uppgift; den listan har företräde över det här regelverket.
+Steward får inte röra filer som ligger i scope för en pågående Builder-
+sprint. Aktiva scope listas i `docs/known-issues.md` eller
+`docs/current-focus.md`.
 
 ### Push-race
 
-Två agenter får aldrig pusha samtidigt till `main`. Den lokala agenten kör `git fetch --prune` och verifierar `main == origin/main` direkt före sin push; om remote rörde sig mellan fetch och push avbryts pushen och operatör beslutar nästa steg. Aldrig `--force` eller `--force-with-lease` på `main`.
+Två agenter får aldrig pusha samtidigt till `main`. Den lokala agenten
+kör `git fetch --prune` och verifierar att remote inte rört sig direkt
+före sin push; om remote rörde sig avbryts pushen och operatör beslutar
+nästa steg. Aldrig `--force` eller `--force-with-lease` på `main`.
+
+Mellan `jakob-be` och `christopher-ui` finns ingen push-race eftersom
+brancherna är solo-ägda.
 
 ## Före varje commit (de fyra guards)
 
 Agenten kör i denna ordning:
 
-1. `git branch --show-current` - verifiera `main`
+1. `git branch --show-current` — verifiera rätt branch (`jakob-be`,
+   `christopher-ui` eller `main` för Steward-undantag).
 2. `python scripts/governance_validate.py`
 3. `python scripts/rules_sync.py --check`
 4. `python scripts/check_term_coverage.py --strict`
 5. `python -m pytest -q`
 
-Alla ska vara gröna. Om någon failar: stoppa, fixa, eller fråga operatören om något är oklart. Aldrig commit + push på rött.
+Alla ska vara gröna. Om någon failar: stoppa, fixa, eller fråga operatören
+om något är oklart. Aldrig commit + push på rött.
 
 ## Commit-meddelanden
 
-- Commit-titlar på engelska enligt `code-in-english.md`
-- Body på engelska
-- ÅÄÖ skrivs korrekt om de förekommer (aldrig `\u00f6` eller ASCII-translit)
-- Format: kort imperativ titel + 1-3 raders kropp som förklarar varför, inte vad
+- Commit-titlar på engelska enligt `code-in-english.md`.
+- Body på engelska.
+- ÅÄÖ skrivs korrekt om de förekommer (aldrig `\u00f6` eller ASCII-
+  translit).
+- Format: kort imperativ titel + 1-3 raders kropp som förklarar varför,
+  inte vad.
 
 ### Multi-line commit-meddelanden på Windows/PowerShell
 
@@ -173,7 +240,7 @@ chore: kort imperativ titel
 Body-rad 1 förklarar varför.
 Body-rad 2 listar ändrade filer eller kontext.
 
-Guards: governance_validate (17 OK), check_term_coverage --strict OK,
+Guards: governance_validate (18 OK), check_term_coverage --strict OK,
 pytest test_docs_freshness + test_no_legacy_terms (5 passed).
 "@ | git commit -F -
 ```

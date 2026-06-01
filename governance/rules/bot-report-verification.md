@@ -1,0 +1,99 @@
+---
+description: När en bot-rapport (Bugbot, AI-bug-review, extern reviewer-LLM, manuell review-kommentar) flaggar en fil-nivå issue, verifiera ALLTID mot `origin/<branch>:<fil>` direkt med git innan fix påbörjas. Bot-tooling cachar ofta filer från första PR-pushen och rapporterar fynd som redan är fixade i senare commits. Att fixa ett redan-fixat fynd skapar onödiga commits, dubbelarbete och förvirrar PR-history.
+alwaysApply: true
+---
+
+# Bot-rapport-verifiering — kolla mot remote, inte mot snippet
+
+Den här regeln gäller när någon bot eller extern reviewer postar ett
+fynd om en specifik fil + radnummer i en PR-tråd, en chat-kommentar
+eller ett operatör-vidarebefordrat reviewer-meddelande. Innan agenten
+börjar fixa, MÅSTE följande verifieras.
+
+## 1. Varför detta är ett verkligt problem
+
+Bot-tooling som postar review-kommentarer (Bugbot, AI-bug-review,
+externa reviewer-LLM via Codex/Connector, manuella reviewers som
+arbetar mot stale UI-state) gör typiskt en eller flera av följande
+optimeringar för latency:
+
+- **Filcache per PR-head.** Snapshot:ar filerna vid första
+  PR-pushen och scannar mot snapshoten även efter senare commits.
+- **Diff-cache.** Beräknar diff:en mot base bara en gång och
+  återanvänder.
+- **Embedding-cache.** Lagrar fil-embeddings per commit-SHA och
+  hashar inte om vid varje push.
+
+Resultatet är att en review som börjar mot `<första-PR-SHA>` kan
+fortsätta rapportera fynd från den filversionen även efter att
+agenten har pushat fixar i senare commits. Botten ser inte de nya
+commits utan läser från sin cachade snapshot.
+
+Den `code_selection`-snippet som följer med ett chat-meddelande är
+ofta från IDE:s lokala cache, inte från `origin`. Att fixa baserat på
+den snippet:en utan verifiering = risk för duplicate fixar.
+
+## 2. Verifieringsprocedur (innan fix)
+
+Steg 1: identifiera fil + ungefärlig rad-region från bot-rapporten.
+
+Steg 2: kör mot remote, inte mot lokal working copy:
+
+```powershell
+git fetch origin
+git show origin/<branch>:<fil> | Select-String -Pattern "<fix-mönster>" -Context 1
+```
+
+På POSIX:
+
+```bash
+git fetch origin
+git show origin/<branch>:<fil> | grep -n -C 1 '<fix-mönster>'
+```
+
+Välj `<fix-mönster>` så det matchar **fixens unika signatur**, inte
+bara symptom-mönstret. Exempel:
+
+- Bot säger `os.killpg() saknar try/except` → `<fix-mönster>` är
+  `except.*PermissionError` eller motsvarande snittet av exception-
+  klasser fixen redan introducerat. Inte `os.killpg`.
+- Bot säger `silent fallback i currentKind()` → `<fix-mönster>` är
+  `throw new Error.*VIEWSER_PREVIEW_MODE` eller den loud-error-text
+  fixen redan har. Inte `currentKind`.
+
+Steg 3: tolka resultatet.
+
+- **Match på remote** = fixen är på `origin/<branch>` redan. Avslå
+  fyndet som duplikat. Posta gärna en kort kommentar i bot-tråden
+  ("redan fixat i `<SHA>`") så reviewer-historiken blir tydlig.
+- **Ingen match på remote** = fyndet stämmer mot remote, gå vidare
+  med fix-loopen enligt `bugbot-pr-loop.md` eller motsvarande.
+
+Steg 4 (vid duplikat): rapportera kort till operatören vilken commit
+som redan adresserade fyndet. Ingen ny commit, ingen ny push.
+
+## 3. När regeln särskilt gäller
+
+- Återkommande bot-fynd om samma funktion på en redan-öppen PR
+  (typiskt 2-3 fynd om samma `_stop_process`/`currentKind`/etc i
+  rad inom timmar).
+- Operatör-vidarebefordrade reviewer-meddelanden där `code_selection`
+  visar gammalt rad-innehåll.
+- Bot-rapport som flaggar något som låter "redan fixat".
+- En PR där 3+ commits pushats efter PR-skapandet — botten kan ha
+  scannar gamla commit:er.
+
+## 4. När regeln INTE gäller
+
+- Första bot-rapporten på en ny PR (inget cache-tillstånd än).
+- Bot-rapport som flaggar något som inte finns i någon tidigare
+  fix-commit (inget att verifiera mot).
+- Fynd som handlar om hela arkitekturer, design-beslut eller policy
+  (de är inte fil-snippet-baserade).
+
+## 5. Cross-references
+
+- `governance/rules/bugbot-pr-loop.md` — Bugbot-specifik fix-loop
+  (denna regel är ett pre-step till sektion 5 där).
+- `docs/agent-handbook.md` — Standard loop, post-PR-flöde.
+- `.cursor/BUGBOT.md` — vad Bugbot själv kollar efter.

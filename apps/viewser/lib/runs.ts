@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs";
+import type { Dirent } from "node:fs";
 import type { Stats } from "node:fs";
 import path from "node:path";
 
@@ -77,7 +78,15 @@ export async function listRuns(
   options: { siteId?: string } = {},
 ): Promise<RunMeta[]> {
   const dir = runsDir();
-  const entries = await fs.readdir(dir, { withFileTypes: true });
+  let entries: Dirent[];
+  try {
+    entries = await fs.readdir(dir, { withFileTypes: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return [];
+    }
+    throw error;
+  }
   const directories = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
 
   const liveDirectories = (
@@ -417,6 +426,9 @@ export async function readRunTrace(
   const runDir = await runDirFromId(runId);
   const limit = clampLimit(options.limit);
   const sinceMs = parseSinceTimestamp(options.since);
+  if (options.since && sinceMs === null) {
+    throw new Error("Ogiltigt since-timestamp.");
+  }
 
   const tracePath = path.join(runDir, "trace.ndjson");
   let traceCorrupt = false;

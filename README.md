@@ -72,6 +72,7 @@ gitignorerad och ska aldrig committas):
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+python -m pip install -e .
 ```
 
 På macOS/Linux:
@@ -80,6 +81,7 @@ På macOS/Linux:
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+python -m pip install -e .
 ```
 
 Kör validerings- och teskedjan:
@@ -89,7 +91,7 @@ python scripts/governance_validate.py    # validerar policies mot schemas
 python scripts/rules_sync.py --check     # verifierar att .cursor/rules är speglad
 python scripts/check_term_coverage.py    # hittar nya termer som saknar registrering
 python -m pytest tests/                  # pytest-svit för cross-policy-konsistens
-python scripts/mini_eval.py              # isolerad fyra-case mini-eval under ../sajtbyggaren-output/.evals
+python scripts/mini_eval.py              # isolerad fyra-case mini-eval under data/evals/artifacts/mini
 
 streamlit run backoffice.py              # backoffice för att se/redigera governance
 ```
@@ -135,9 +137,10 @@ Preview-output skrivs som standard till `../sajtbyggaren-output/.generated/<site
 `clean-runs.ps1` är en bekvämlighetsrensare för canonical `data/runs/`.
 `cleanup_dev_artifacts.py` är den säkrare samlade dev-cleanupen: dry-run
 som default, `--apply` krävs för radering. Den kan sammanfatta/rensa
-mini-evals under `SAJTBYGGAREN_EVALS_DIR` eller
-`../sajtbyggaren-output/.evals`, generated previews under
-`SAJTBYGGAREN_GENERATED_DIR` eller `../sajtbyggaren-output/.generated`, och
+mini-evals under `data/evals/artifacts/mini` (eller
+`SAJTBYGGAREN_EVALS_DIR`; äldre `../sajtbyggaren-output/.evals` accepteras
+som legacy-root), generated previews under `SAJTBYGGAREN_GENERATED_DIR`
+eller `../sajtbyggaren-output/.generated`, och
 Python-cache (`__pycache__`, `.pytest_cache`) inom tillåtna rötter.
 
 ## Var vad bor

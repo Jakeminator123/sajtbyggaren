@@ -114,6 +114,19 @@ def _hero_cta_label(dossier: dict) -> str:
     return _call_build_site("_hero_cta_label", dossier)
 
 
+def _hero_cta_variant(dossier: dict) -> str:
+    """Shim for ``scripts.build_site._hero_cta_variant``.
+
+    Returns ``"shop"`` / ``"booking"`` / ``"quote"`` based on the
+    dossier's conversionGoals + business type + scaffoldId. B97 uses
+    this to pick per-variant contact-page hero body copy so e-commerce
+    and booking businesses do not show the quote-flavoured
+    "Beskriv jobbet kort så återkommer vi … med tider och offert."
+    paragraph.
+    """
+    return _call_build_site("_hero_cta_variant", dossier)
+
+
 def _hero_cta_target_path(
     dossier: dict,
     listing_route: dict | None,
@@ -323,7 +336,21 @@ def render_layout(
     if isinstance(og_image_asset, dict) and og_image_asset.get("filename"):
         og_url = "/uploads/" + str(og_image_asset["filename"])
         og_alt = og_image_asset.get("alt") or company["tagline"] or company["name"]
-        og_image_type_block = ""
+        og_image_entries = (
+            "      {\n"
+            f"        url: {_js_string_literal('/og-image.png')},\n"
+            f"        alt: {_js_string_literal(og_alt)},\n"
+            "        width: 1200,\n"
+            "        height: 630,\n"
+            '        type: "image/png",\n'
+            "      },\n"
+            "      {\n"
+            f"        url: {_js_string_literal(og_url)},\n"
+            f"        alt: {_js_string_literal(og_alt)},\n"
+            "        width: 1200,\n"
+            "        height: 630,\n"
+            "      },\n"
+        )
     else:
         og_url = "/og-image-fallback.svg"
         og_alt = company["tagline"] or company["name"]
@@ -331,19 +358,21 @@ def render_layout(
         # serialiserar det som image/svg+xml i meta-taggen. Vissa
         # äldre social-parsers använder type-hinten istället för att
         # sniffa MIME från Content-Type.
-        og_image_type_block = '        type: "image/svg+xml",\n'
+        og_image_entries = (
+            "      {\n"
+            f"        url: {_js_string_literal(og_url)},\n"
+            f"        alt: {_js_string_literal(og_alt)},\n"
+            "        width: 1200,\n"
+            "        height: 630,\n"
+            '        type: "image/svg+xml",\n'
+            "      },\n"
+        )
     metadata_extras.append(
         "  openGraph: {\n"
         f"    title: {_js_string_literal(company['name'])},\n"
         f"    description: {_js_string_literal(company['tagline'])},\n"
         "    images: [\n"
-        "      {\n"
-        f"        url: {_js_string_literal(og_url)},\n"
-        f"        alt: {_js_string_literal(og_alt)},\n"
-        "        width: 1200,\n"
-        "        height: 630,\n"
-        f"{og_image_type_block}"
-        "      },\n"
+        f"{og_image_entries}"
         "    ],\n"
         "  },\n"
         "  twitter: {\n"
@@ -664,28 +693,82 @@ def render_section_products_intro(dossier: dict) -> str:
     )
 
 
+def _product_grid_items(dossier: dict) -> list[dict]:
+    products = dossier.get("products")
+    if isinstance(products, list) and products:
+        return [item for item in products if isinstance(item, dict)]
+    return dossier["services"]
+
+
+def _product_grid_text(item: dict, key: str, fallback: str) -> str:
+    value = item.get(key)
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return fallback
+
+
+def _render_product_grid_image(item: dict, label: str, escape) -> str:
+    image_url = item.get("imageUrl")
+    if not isinstance(image_url, str) or not image_url.strip():
+        service_id = _product_grid_text(item, "id", "product")
+        return (
+            f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(service_id)} className="size-6" /></span>\n'
+        )
+
+    product_image = item.get("productImage")
+    alt = label
+    if isinstance(product_image, dict):
+        raw_alt = product_image.get("alt")
+        if isinstance(raw_alt, str) and raw_alt.strip():
+            alt = raw_alt.strip()
+    return (
+        '            <div className="mb-5 overflow-hidden rounded-lg border border-[color:var(--border)] bg-[color:var(--accent)]">\n'
+        f'              <img src={escape(image_url.strip())} alt={escape(alt)} width={{640}} height={{480}} loading="lazy" className="h-44 w-full object-cover transition duration-300 group-hover:scale-[1.03]" />\n'
+        "            </div>\n"
+    )
+
+
+def _render_product_grid_card(item: dict, index: int, escape) -> str:
+    item_id = _product_grid_text(item, "id", f"product-{index + 1}")
+    label = _product_grid_text(item, "label", _product_grid_text(item, "name", "Produkt"))
+    summary = _product_grid_text(item, "summary", "")
+    price = _product_grid_text(item, "price", "")
+    price_markup = (
+        f'            <p className="mt-4 text-sm font-semibold text-[color:var(--primary)]">{escape(price)}</p>\n'
+        if price
+        else ""
+    )
+    return (
+        f'          <article key={escape(item_id)} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
+        f"{_render_product_grid_image(item, label, escape)}"
+        f'            <h2 className="text-xl font-semibold">{escape(label)}</h2>\n'
+        f'            <p className="mt-3 text-[color:var(--muted)] leading-relaxed">{escape(summary)}</p>\n'
+        f"{price_markup}"
+        "          </article>"
+    )
+
+
 def render_section_product_grid(dossier: dict) -> str:
     """Render the /produkter product-grid block.
 
-    Iterates ``dossier.services`` (the ecommerce-lite scaffold reuses
-    the services array for products until SCAFFOLD_TO_STARTER flips
-    to ``commerce-base``; see B13). Produces a 3-column responsive
-    grid of article cards with icon + label + summary.
+    Iterates ``dossier.products`` when present, otherwise falls back to
+    ``dossier.services`` for legacy Project Inputs. Produces a 3-column
+    responsive grid of article cards with product image + label + summary
+    or an icon fallback when no imageUrl is available.
 
     Path B step 5: extracted from ``render_products``. Returned as a
     block fragment (no ``<section>`` wrapper) so the route-renderer
     can compose it with the products-intro header and shop-CTA inside
-    a single gradient page section. Output is byte-identical to the
-    inline implementation it replaces.
+    a single gradient page section.
     """
-    products = dossier["services"]
+    products = _product_grid_items(dossier)
+
+    def escape(value: str) -> str:
+        return _jsx_safe_string(value)
+
     items = "\n".join(
-        f'          <article key={_jsx_safe_string(item["id"])} className="group rounded-xl border border-[color:var(--border)] bg-[color:var(--background)] p-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-[color:var(--primary)] hover:shadow-md">\n'
-        f'            <span className="mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--accent-foreground)]"><{_icon_for_service(item["id"])} className="size-6" /></span>\n'
-        f'            <h2 className="text-xl font-semibold">{_jsx_safe_string(item["label"])}</h2>\n'
-        f'            <p className="mt-3 text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(item["summary"])}</p>\n'
-        "          </article>"
-        for item in products
+        _render_product_grid_card(item, index, escape)
+        for index, item in enumerate(products)
     )
     return (
         '          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">\n'
@@ -727,6 +810,44 @@ def render_section_contact_cta(
     )
 
 
+_CONTACT_PAGE_HERO_BODY_BY_VARIANT: dict[tuple[str, str], str] = {
+    # B97: kontakt-page hero body copy per CTA-variant + language. The
+    # original "Beskriv jobbet kort … med tider och offert." assumed a
+    # quote-driven service business and read awkwardly for e-handel
+    # (orders/returns/delivery) and booking-flow businesses (book a time).
+    # ``_hero_cta_variant`` already encodes the right bucket from
+    # conversionGoals + business type + scaffoldId, so we reuse it here
+    # for consistency with the hero CTA label/target.
+    ("quote", "sv"): "Beskriv jobbet kort så återkommer vi inom en arbetsdag med tider och offert.",
+    ("quote", "en"): "Tell us briefly about the job and we'll get back within one business day with times and a quote.",
+    ("shop", "sv"): "Frågor om beställning, leverans eller retur? Vi återkommer inom en arbetsdag.",
+    ("shop", "en"): "Questions about your order, delivery or return? We get back to you within one business day.",
+    ("booking", "sv"): "Berätta kort vad du söker — vi återkommer inom en arbetsdag med en tid som passar.",
+    ("booking", "en"): "Tell us briefly what you need — we'll come back within one business day with a time that suits you.",
+}
+
+
+def _contact_page_hero_body(dossier: dict) -> str:
+    """Pick the contact-page hero body paragraph for this Project Input.
+
+    B97 fix: branches on ``_hero_cta_variant`` so e-handel and booking
+    scaffolds no longer show the quote-driven
+    "Beskriv jobbet kort … med tider och offert."-paragraph. Falls back
+    to the quote-variant copy when the variant or language is unknown,
+    which keeps the existing local-service-business byte-output intact.
+    Language is normalised the same way ``_hero_cta_label`` does it so
+    non-(sv|en) values fall through to Swedish.
+    """
+    language = (dossier.get("language") or "sv").strip().lower()
+    if language not in ("sv", "en"):
+        language = "sv"
+    variant = _hero_cta_variant(dossier)
+    return _CONTACT_PAGE_HERO_BODY_BY_VARIANT.get(
+        (variant, language),
+        _CONTACT_PAGE_HERO_BODY_BY_VARIANT[("quote", language)],
+    )
+
+
 def render_section_contact_info(dossier: dict) -> str:
     """Render the contact-page Phone / Mail / Address card section.
 
@@ -738,19 +859,25 @@ def render_section_contact_info(dossier: dict) -> str:
 
     Path B step 4: extracted from ``render_contact``. Output is
     byte-identical to the inline implementation it replaces.
+
+    B97 (2026-05-26): the hero body paragraph now varies by CTA-variant
+    via ``_contact_page_hero_body``. The hero headline ("Hör av dig")
+    stays generic across variants — it works for shop, booking and
+    quote alike.
     """
     contact = dossier["contact"]
     address_lines = "\n".join(
         f'                <span className="block">{_jsx_safe_string(line)}</span>'
         for line in contact["addressLines"]
     )
+    hero_body = _contact_page_hero_body(dossier)
     return (
         '      <section className="bg-gradient-to-b from-[color:var(--background)] to-[color:var(--accent)]/20">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-8 py-[var(--section-spacing)]">\n'
         '          <header className="flex flex-col gap-3">\n'
         '            <p className="text-xs uppercase tracking-widest text-[color:var(--muted)]">Kontakt</p>\n'
         '            <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Hör av dig</h1>\n'
-        '            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">Beskriv jobbet kort så återkommer vi inom en arbetsdag med tider och offert.</p>\n'
+        f'            <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed">{_jsx_safe_string(hero_body)}</p>\n'
         "          </header>\n"
         '          <div className="grid gap-4 md:grid-cols-2">\n'
         '            <article className="rounded-xl border border-[color:var(--border)] p-6">\n'
@@ -1419,7 +1546,15 @@ def render_about(dossier: dict) -> str:
     location = dossier["location"]
     areas_html = ", ".join(location["serviceAreas"])
     location_section = ""
-    if not _location_is_country_only(location):
+    # B98: "Områden vi arbetar i" är meaningless för e-handel (kunden får
+    # produkter levererade, det finns inga lokala serviceområden i samma
+    # bemärkelse). Suppressas för ecommerce-lite. För övriga scaffolds
+    # gäller fortsatt bara B104-checken (country-only suppression).
+    scaffold_id = (dossier.get("scaffoldId") or "").strip().lower()
+    if (
+        not _location_is_country_only(location)
+        and scaffold_id != "ecommerce-lite"
+    ):
         location_section = (
             '          <div className="flex flex-col gap-2">\n'
             '            <h2 className="inline-flex items-center gap-2 text-2xl font-semibold tracking-tight"><MapPin className="size-5" />Områden vi arbetar i</h2>\n'
@@ -1517,10 +1652,14 @@ def render_products(
     ``/kontakta-oss`` keeps the CTA aligned with the nav (Bugbot PR
     #19 follow-up).
     """
-    products = dossier["services"]
+    products = _product_grid_items(dossier)
     contact_href = _route_href(contact_path)
     icons_used = sorted(
-        {_icon_for_service(item["id"]) for item in products} | {"ArrowRight", "ShoppingBag"}
+        {
+            _icon_for_service(_product_grid_text(item, "id", f"product-{index + 1}"))
+            for index, item in enumerate(products)
+        }
+        | {"ArrowRight", "ShoppingBag"}
     )
     icon_import = "import { " + ", ".join(icons_used) + ' } from "lucide-react";\n'
     # Path B step 5 — products-intro header and product-grid blocks

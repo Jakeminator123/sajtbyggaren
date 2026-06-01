@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
+import { killProcessTree, stopAndWaitPreviewServer } from "@/lib/local-preview-server";
 import { assertProjectInputExists } from "@/lib/project-inputs";
 import { readBuildResult, runDirFromId, runsDir } from "@/lib/runs";
 
@@ -14,6 +15,9 @@ import { readBuildResult, runDirFromId, runsDir } from "@/lib/runs";
 // 10 min ger gott om utrymme även för kalla cacher utan att vara orimligt.
 const BUILD_TIMEOUT_MS = 600_000;
 const RUN_ID_PATTERN = /runId:\s*([a-zA-Z0-9._-]+)/;
+const TEST_PROMPT_INPUTS_ENV = "VIEWSER_PROMPT_INPUTS_DIR";
+const TEST_ENV_ACTIVE =
+  process.env.NODE_ENV === "test" || process.env.SAJTBYGGAREN_TEST === "1";
 
 // Per-siteId mutex för att serialisera byggen mot SAMMA sajt utan att
 // blockera byggen mot ANDRA sajter. Tidigare implementation hade en
@@ -57,8 +61,16 @@ const ALLOWED_DOSSIER_ROOTS = ["examples", path.join("data", "prompt-inputs")];
 async function assertDossierPathAllowed(absoluteDossierPath: string): Promise<void> {
   const root = repoRoot();
   const resolved = await fs.realpath(path.resolve(absoluteDossierPath));
-  for (const subdir of ALLOWED_DOSSIER_ROOTS) {
-    const allowed = await fs.realpath(path.resolve(root, subdir));
+  // Test-only isolation: set SAJTBYGGAREN_TEST=1 (or NODE_ENV=test) with
+  // VIEWSER_PROMPT_INPUTS_DIR to whitelist tmp Project Inputs.
+  const testPromptRoot = process.env[TEST_PROMPT_INPUTS_ENV]?.trim();
+  const roots =
+    testPromptRoot && TEST_ENV_ACTIVE
+      ? [...ALLOWED_DOSSIER_ROOTS, path.resolve(root, testPromptRoot)]
+      : ALLOWED_DOSSIER_ROOTS;
+  for (const subdir of roots) {
+    const allowed = await fs.realpath(path.resolve(root, subdir)).catch(() => null);
+    if (!allowed) continue;
     const relative = path.relative(allowed, resolved);
     if (
       (relative === "" || relative) &&
@@ -69,13 +81,21 @@ async function assertDossierPathAllowed(absoluteDossierPath: string): Promise<vo
     }
   }
   throw new Error(
-    `Dossier-path ligger utanför tillåtna rötter (${ALLOWED_DOSSIER_ROOTS.join(", ")}): ${absoluteDossierPath}`,
+    `Dossier-path ligger utanför tillåtna rötter (${roots.join(", ")}): ${absoluteDossierPath}`,
   );
 }
 
 async function detectLatestRunIdByMtime(): Promise<string | null> {
   const root = runsDir();
-  const entries = await fs.readdir(root, { withFileTypes: true });
+  let entries;
+  try {
+    entries = await fs.readdir(root, { withFileTypes: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return null;
+    }
+    throw error;
+  }
   const dirs = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
   if (!dirs.length) return null;
 
@@ -117,11 +137,40 @@ async function runBuildOnce(
   } else {
     dossierPath = await assertProjectInputExists(siteId);
   }
+
+  // B157: stoppa lokal preview-server för denna siteId INNAN
+  // build_site.py spawnas. På Windows håller en live ``next start``-
+  // process hårda fil-lås på native ``node_modules/@next/swc-*-*.node``-
+  // binaries (de är DLL-liknande). När ``copy_starter()`` försöker
+  // ``shutil.rmtree(node_modules)`` vid lockfile-drift
+  // (``_npm_install_inputs_changed=True``) failar det med
+  // ``PermissionError: [WinError 5]`` om processen inte är död + OS
+  // har frigjort fil-låsen. ``stopAndWaitPreviewServer`` skickar
+  // SIGTERM, väntar in exit-event + 200ms extra på Windows.
+  //
+  // Idempotent: returnerar tyst om ingen preview-server körde för
+  // siteId — vanligt fall vid första bygget av en ny sajt. Detta var
+  // ursprungligen **temporär fix** (gap-spec laddare nivå 1, ``docs/gaps/
+  // GAP-windows-safe-rebuild-pipeline.md``).
+  //
+  // Stage A note (immutable build-dir + pointer-swap, level 4, has now
+  // landed): build_site.py writes to builds/<buildId>/ and never deletes or
+  // overwrites the directory this preview holds open, so this stop is no
+  // longer required as in-place rmtree lock-protection. Its role is now a
+  // controlled restart / consistency one: stop the old preview so the next
+  // start picks up the freshly published current.json build instead of
+  // serving the previous version indefinitely.
+  await stopAndWaitPreviewServer(siteId);
+
   const scriptPath = path.join(repoRoot(), "scripts", "build_site.py");
+  const args = [scriptPath, "--dossier", dossierPath];
+  // Test-only runs isolation: set SAJTBYGGAREN_TEST=1 and VIEWSER_RUNS_DIR.
+  const testRunsDir = TEST_ENV_ACTIVE ? process.env.VIEWSER_RUNS_DIR?.trim() : "";
+  if (testRunsDir) args.push("--runs-dir", path.resolve(repoRoot(), testRunsDir));
 
   const child = spawn(
     pythonCommand(),
-    [scriptPath, "--dossier", dossierPath],
+    args,
     {
       cwd: repoRoot(),
       env: process.env,
@@ -149,14 +198,19 @@ async function runBuildOnce(
   let timedOut = false;
   const timeout = setTimeout(() => {
     timedOut = true;
-    child.kill();
+    // build_site.py spawnar npm install + next build som descendants.
+    // Ett plain child.kill() signalerar bara Python-PID:en och lämnar
+    // npm/next vid liv — på Windows håller de kvar .node-fil-lås (samma
+    // B157-klass som preview-servern), på POSIX blir det en process-läcka.
+    // Använd samma tree-kill som preview-shutdownen: på Windows ger det
+    // taskkill /T /F över hela bygg-process-trädet.
+    void killProcessTree(child, "SIGTERM");
     setTimeout(() => {
-      if (!child.killed) {
-        try {
-          child.kill("SIGKILL");
-        } catch {
-          // ignore
-        }
+      // child.exitCode === null => processen har inte exitat än; eskalera.
+      // (child.killed räcker inte: det blir true direkt av kill() även om
+      // trädet lever vidare, och sätts aldrig av Windows-taskkill-pathen.)
+      if (child.exitCode === null) {
+        void killProcessTree(child, "SIGKILL");
       }
     }, 5_000).unref?.();
   }, BUILD_TIMEOUT_MS);

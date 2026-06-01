@@ -140,13 +140,18 @@ def test_discovery_wizard_uses_governance_options_with_ts_cache_fallback() -> No
 
 
 @pytest.mark.tooling
-def test_discovery_payload_blocks_unknown_categories_and_preserves_schema_version() -> None:
+def test_discovery_payload_blocks_unknown_categories_and_emits_schema_version_2() -> None:
     payload = (
         VIEWSER_DIR / "components" / "discovery-wizard" / "wizard-payload.ts"
     ).read_text(encoding="utf-8")
 
-    assert "schemaVersion: 1" in payload, (
-        "Discovery payload måste behålla schemaVersion=1."
+    assert "schemaVersion: 1 | 2" in payload, (
+        "DiscoveryPayload-typen måste fortsätta acceptera legacy v1 för "
+        "bakåtkompatibilitet."
+    )
+    assert "schemaVersion: 2," in payload, (
+        "buildDiscoveryPayload ska emit:a schemaVersion=2 när v2-directives "
+        "skickas från wizarden."
     )
     assert "validateDiscoveryCategoryIds" in payload, (
         "buildDiscoveryPayload måste blocka category ids som saknas i "
@@ -165,6 +170,33 @@ def test_discovery_payload_blocks_unknown_categories_and_preserves_schema_versio
 
 
 @pytest.mark.tooling
+def test_discovery_payload_preserves_empty_list_tombstones() -> None:
+    payload = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "wizard-payload.ts"
+    ).read_text(encoding="utf-8")
+
+    for key in (
+        '"products"',
+        '"moodImages"',
+        '"requestedCapabilities"',
+        '"conversionGoals"',
+        '"uniqueSellingPoints"',
+        '"sectionTreatments"',
+        '"notesForPlanner"',
+    ):
+        assert key in payload, (
+            f"wizard-payload.ts måste bevara tom lista för {key} så backend "
+            "kan rensa tidigare wizard-värden när operatören tar bort allt."
+        )
+    assert "directives.requestedCapabilities = capabilities" in payload, (
+        "requestedCapabilities måste skickas även när listan är tom."
+    )
+    assert "directives.conversionGoals = mapCtaToConversionGoals" in payload
+    assert "directives.uniqueSellingPoints = answers.uniqueSellingPoints" in payload
+    assert "directives.sectionTreatments = sectionPins" in payload
+
+
+@pytest.mark.tooling
 def test_prompt_route_rejects_discovery_starter_id_and_followup_discovery() -> None:
     text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
         encoding="utf-8"
@@ -176,6 +208,26 @@ def test_prompt_route_rejects_discovery_starter_id_and_followup_discovery() -> N
     assert "Discovery-wizarden används bara i init-läge" in text, (
         "Followup mode får inte acceptera discovery-payload."
     )
+
+
+@pytest.mark.tooling
+def test_python_spawn_routes_fail_explicitly_on_hosted_vercel() -> None:
+    helper = (VIEWSER_DIR / "lib" / "hosted-python-runtime.ts").read_text(
+        encoding="utf-8"
+    )
+    assert 'process.env.VERCEL === "1"' in helper
+    assert "hosted-python-runtime-unavailable" in helper
+
+    for relative, feature in (
+        ("app/api/prompt/route.ts", "prompt-build"),
+        ("app/api/build/route.ts", "build"),
+        ("app/api/scrape-site/route.ts", "scrape-site"),
+    ):
+        text = (VIEWSER_DIR / relative).read_text(encoding="utf-8")
+        assert "isHostedVercelRuntime()" in text, (
+            f"{relative} måste stoppa hosted Vercel innan Python-spawn."
+        )
+        assert f'hostedPythonRuntimeUnavailable("{feature}")' in text
 
 
 @pytest.mark.tooling
@@ -924,6 +976,14 @@ def test_project_input_picker_includes_prompt_inputs_directory() -> None:
     assert '"examples"' in text, (
         "examples/ måste fortsatt finnas kvar som Project Input-källa."
     )
+    assert "return null" in text and "JSON.parse" in text, (
+        "Korrupta Project Input-filer ska hoppas över lokalt i listProjectInputs "
+        "så en trasig fil inte 500:ar hela /api/runs."
+    )
+    assert "bySiteId.set(item.siteId, item)" in text, (
+        "listProjectInputs måste dedupe:a på siteId och låta prompt-inputs "
+        "vinna över examples när samma siteId finns i båda rötter."
+    )
 
 
 @pytest.mark.tooling
@@ -996,6 +1056,37 @@ def test_run_history_can_show_prompt_project_id_and_version() -> None:
 
 
 @pytest.mark.tooling
+def test_runs_api_handles_missing_runs_dir_and_invalid_since() -> None:
+    runs_lib = (VIEWSER_DIR / "lib" / "runs.ts").read_text(encoding="utf-8")
+    trace_route = (
+        VIEWSER_DIR / "app" / "api" / "runs" / "[runId]" / "trace" / "route.ts"
+    ).read_text(encoding="utf-8")
+
+    assert 'code === "ENOENT"' in runs_lib and "return []" in runs_lib, (
+        "listRuns ska returnera tom lista när data/runs saknas i en färsk miljö."
+    )
+    assert "Ogiltigt since-timestamp" in runs_lib, (
+        "readRunTrace ska flagga ogiltig since i stället för att tyst "
+        "returnera hela trace-loggen igen."
+    )
+    assert "Ogiltigt since" in trace_route and "status: 400" in trace_route, (
+        "trace API ska rapportera ogiltig since som 400 inputfel."
+    )
+
+
+@pytest.mark.tooling
+def test_build_runner_latest_run_fallback_tolerates_missing_runs_dir() -> None:
+    text = (VIEWSER_DIR / "lib" / "build-runner.ts").read_text(encoding="utf-8")
+    function_start = text.index("async function detectLatestRunIdByMtime")
+    function_body = text[function_start : text.index("async function runBuildOnce")]
+
+    assert 'code === "ENOENT"' in function_body and "return null" in function_body, (
+        "detectLatestRunIdByMtime ska returnera null när data/runs saknas "
+        "så färska miljöer inte 500:ar efter en lyckad build utan stdout-runId."
+    )
+
+
+@pytest.mark.tooling
 def test_run_details_panel_handles_missing_artefakter_defensively() -> None:
     """B38 / Builder UX MVP: ÄLDRE runs (pre-Sprint 3A) saknar
     quality-result.json + repair-result.json, och dev_generate-runs
@@ -1051,7 +1142,7 @@ def test_run_details_panel_renders_placeholder_contact_warning() -> None:
     of silently letting "+46 8 000 00 00" / "kontakt@example.se" /
     "Adress lämnas på förfrågan" reach the published site without any
     signal. Verified live in Viewser Overlay E2E Scout Case 3a
-    2026-05-19 (`docs/reports/viewser-overlay-e2e-scout-2026-05-19.md`).
+    2026-05-19 (`docs/archive/2026-05-19/viewser-overlay-e2e-scout-2026-05-19.md`).
     """
     panel_text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(
         encoding="utf-8"
@@ -1091,7 +1182,7 @@ def test_run_details_panel_renders_site_plan_warnings() -> None:
     intentGuardWarnings flaggade ``categoryId='fitness'`` mot
     ``conflictingTerm='mat'`` utan att Run Details visade det. Reviewer
     2026-05-21 (~7/10) öppnade B144 (Medel) som följd, med PR #49-
-    inventeringen ``docs/reports/run-details-warnings-inventory-2026-05-21.md``
+    inventeringen ``docs/archive/run-details-warnings-inventory-2026-05-21.md``
     som placeringsskissen.
 
     Mirror placeholderContactFields-mönstret i BuildSection
@@ -1882,3 +1973,125 @@ def test_viewser_scope_excludes_canonical_runtime_features() -> None:
                 f"{path.relative_to(REPO_ROOT)} innehåller out-of-scope-symbol "
                 f"'{needle}'. Viewser MVP är localhost-prototype, inte canonical runtime."
             )
+
+
+# ---------------------------------------------------------------------------
+# B151+B152+B153 — AI Bug Review-fynd från PR #117 (mobile responsive).
+# Source-lock-tester som verifierar fixarnas närvaro i TSX-filerna så de
+# inte kan tas bort i framtida UI-refactor utan att testerna failar.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_b151_floating_chat_useismobile_feature_detects_addeventlistener() -> None:
+    """B151: useIsMobileViewport måste feature-detect:a addEventListener på
+    matchMedia-resultatet. iOS Safari < 14 stödjer bara den deprecated
+    addListener-/removeListener-signaturen, så ovillkorlig
+    ``mq.addEventListener("change", ...)`` kraschar chatten på äldre
+    iOS-enheter. AI Bug Review (P 79 %, impact 8/10) flaggade detta på
+    PR #117.
+
+    Locks:
+      1. ``typeof mq.addEventListener === "function"``-checken finns.
+      2. Fallback-grenen anropar ``addListener`` / ``removeListener``
+         via en legacy-cast (TS-typen finns inte i lib.dom utan klassisk
+         matchMedia-typing).
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    pattern_feature_detect = re.compile(
+        r'typeof\s+mq\.addEventListener\s*===\s*["\']function["\']',
+        re.MULTILINE,
+    )
+    assert pattern_feature_detect.search(text), (
+        "floating-chat.tsx useIsMobileViewport saknar feature-detect mot "
+        "``typeof mq.addEventListener === 'function'``. Krävs för iOS "
+        "Safari < 14 fallback per B151."
+    )
+
+    pattern_legacy_fallback = re.compile(
+        r"\.addListener\(\s*update\s*\)[\s\S]{0,200}?\.removeListener\(\s*update\s*\)",
+        re.MULTILINE,
+    )
+    assert pattern_legacy_fallback.search(text), (
+        "floating-chat.tsx useIsMobileViewport saknar legacy "
+        "``addListener``/``removeListener``-fallback för iOS Safari < 14. "
+        "Båda måste finnas så cleanup-funktionen avregistrerar listenern."
+    )
+
+
+@pytest.mark.tooling
+def test_b152_compare_modal_pane_width_accounts_for_gap() -> None:
+    """B152: compare-preview-modal PreviewPane använder
+    ``w-[calc(100%-0.5rem)]`` istället för ``w-full`` så bredden
+    kompenserar för parent-flex-rowens ``gap-2`` (0.5rem). Med ``w-full``
+    + ``gap-2`` overflowade scrollern (200 % + 0.5rem) vilket lät pane-
+    A:s högra kant smyga in i viewporten när snappat till pane B.
+    AI Bug Review (P 88 %, impact 7/10) flaggade detta på PR #117.
+
+    Lock: PreviewPane <section>-elementets className ska INTE innehålla
+    ``flex min-h-0 w-full`` (gamla mönstret) utan ``w-[calc(100%-0.5rem)]``.
+    """
+    text = (
+        VIEWSER_DIR
+        / "components"
+        / "builder"
+        / "inspector"
+        / "compare-preview-modal.tsx"
+    ).read_text(encoding="utf-8")
+
+    pattern_fix = re.compile(
+        r'w-\[calc\(100%-0\.5rem\)\][\s\S]{0,200}?snap-start',
+        re.MULTILINE,
+    )
+    assert pattern_fix.search(text), (
+        "compare-preview-modal.tsx PreviewPane måste använda "
+        "``w-[calc(100%-0.5rem)]`` så pane-bredden + gap-2 = 100 % per "
+        "snap-segment. ``w-full`` + ``gap-2`` overflowar scrollern och "
+        "bryter one-pane-snap (B152)."
+    )
+
+    # Negative: säkerställ att gamla mönstret ``w-full shrink-0 snap-start``
+    # inte finns kvar (skulle vara regression).
+    pattern_regression = re.compile(
+        r'w-full\s+shrink-0\s+snap-start',
+        re.MULTILINE,
+    )
+    assert not pattern_regression.search(text), (
+        "compare-preview-modal.tsx har återgått till ``w-full shrink-0 "
+        "snap-start`` per pane (B152-regression). Måste vara "
+        "``w-[calc(100%-0.5rem)]`` för att kompensera för parent gap-2."
+    )
+
+
+@pytest.mark.tooling
+def test_b153_viewer_panel_hydrates_full_device_preset() -> None:
+    """B153: sessionStorage-hydration i viewer-panel.tsx måste inkludera
+    ``"full"`` bland accepterade Device-värden. Tidigare listades bara
+    ``"mobile"``/``"tablet"``/``"laptop"`` så en sparad ``"full"``-preset
+    relied på att default-värdet råkade vara ``"full"``. Inkonsekvent
+    med övriga preset-värden (alla restoreras explicit) och om default
+    någonsin ändras tappas ``"full"``. AI Bug Review (P 84 %, impact
+    5/10) flaggade detta på PR #117.
+
+    Lock: hydration-checken ska innehålla alla fyra Device-värden.
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    pattern = re.compile(
+        r'stored\s*===\s*["\']mobile["\'][\s\S]{0,200}?'
+        r'stored\s*===\s*["\']tablet["\'][\s\S]{0,200}?'
+        r'stored\s*===\s*["\']laptop["\'][\s\S]{0,200}?'
+        r'stored\s*===\s*["\']full["\']',
+        re.MULTILINE,
+    )
+    assert pattern.search(text), (
+        "viewer-panel.tsx sessionStorage-hydration saknar ``stored === "
+        "'full'`` i listan av accepterade Device-värden. Alla fyra "
+        "Device-värden måste restoreras explicit per B153 — annars "
+        "bryts persistensen för 'full' om default-värdet någonsin ändras."
+    )

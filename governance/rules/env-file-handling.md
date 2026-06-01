@@ -1,3 +1,8 @@
+---
+description: Agenter får läsa specifika .env-nycklar vid behov men aldrig hela filen, aldrig eka värden i klartext, aldrig committa .env och aldrig flytta värden till andra filer. Vid misstänkt exponering — notifiera operatören med rekommendation om rotation.
+alwaysApply: true
+---
+
 # Env-file Handling — operatör-direktiv för agenter
 
 Operatören har givit agenter explicit tillåtelse att läsa och redigera

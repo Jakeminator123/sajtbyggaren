@@ -69,8 +69,7 @@ Kort lista över det som oftast missas av agenten men fångas av en reviewer-run
 1. Verifiera varje claim mot källan, inte mot commit-meddelandet. Läs koden för varje "stängd B-ID" innan stämpling.
 2. Race conditions kommer i kluster. En ny `useEffect` med `await` ska ha cancelled-guard på success-, error- och cleanup-vägen; saknad guard på en gren är vanligaste regressionvägen (se B42/B43 i `docs/known-issues.md`).
 3. Source-lock-tester ska låsa beteende, inte syntax. Tighta regex för exakta strängar bryts av harmlösa refactor-er; lås egenskaper ("får inte förekomma X i felgrenen") istället för exakta literaler.
-4. Verifiera de fyra guards lokalt eftersom standardflödet går direkt på
-   `main`:
+4. Verifiera de fyra guards lokalt före push:
    - `python scripts/governance_validate.py`
    - `python scripts/rules_sync.py --check`
    - `python scripts/check_term_coverage.py --strict`
@@ -78,28 +77,31 @@ Kort lista över det som oftast missas av agenten men fångas av en reviewer-run
 5. Verifiera scope. En sprint som rör fil X ska deklarera X i sin scope-rad.
    Scope-läckage är värt en blocker, inte ett godkännande med kommentar.
 6. Naming-dictionary. Nya canonical termer kräver ADR. Lokala TS/Python-symboler bor i `scripts/check_term_coverage.py:COMMON_WORDS`.
-7. Backup-disciplin. Inför varje ny sprint ska en ny `backup-N` skapas från
-   synkad `main`; backupen är fallback, inte arbetsbranch.
+7. Branch-disciplin. Verifiera att arbetet ligger på rätt arbets-branch
+   (`jakob-be` för Jakob, `christopher-ui` för Christopher) och att inga
+   off-limits-paths är rörda (se `governance/rules/branch-scope-ui-ux.md`).
 
 ## Fasta agentroller
 
 Projektet använder tre fasta agentroller:
 
-- **Scout-agent** - read-only. Läser, utreder, hittar risker och fungerar som
-  RO-bugggranskare före push när sprinten går direkt på `main`. Lämnar
-  rekommendation eller Builder-prompt. Gör inga filändringar, commits eller
-  pushar.
-- **Builder-agent** - implementation. Skapar sprintens `backup-N`, jobbar
-  vidare på `main`, implementerar, testar och rapporterar innan push om
-  ändringen är stor eller riskabel.
-- **Steward-agent** - ordning och sanity. Jobbar på `main` med låg-risk
-  docs/governance/fokusuppdateringar, kör sanity och håller
-  `docs/current-focus.md` färsk.
+- **Scout-agent** - read-only. Läser, utreder, hittar risker och fungerar
+  som RO-bugggranskare före push på en arbets-branch (`jakob-be` eller
+  `christopher-ui`) eller före PR mot `main`. Lämnar rekommendation eller
+  Builder-prompt. Gör inga filändringar, commits eller pushar.
+- **Builder-agent** - implementation. Jobbar på sin arbets-branch
+  (`jakob-be` för Jakob, `christopher-ui` för Christopher), implementerar,
+  testar och rapporterar innan push om ändringen är stor eller riskabel.
+- **Steward-agent** - ordning och sanity. Jobbar primärt på arbets-branchen
+  för docs som hör till pågående arbete; kan göra direkt-push till `main`
+  för pure docs/governance-bumpar enligt
+  [`governance/rules/branch-discipline.md`](../governance/rules/branch-discipline.md).
+  Håller `docs/current-focus.md` och `docs/handoff.md` färska.
 
 Operatören beslutar riktning och godkänner risk. Extern GPT-reviewer kan ge
-beslutsstöd men ändrar inte repo. Bugbot är inte en egen agentroll i
-standardflödet; den används bara om operatören uttryckligen väljer PR-flöde.
-Färdiga startprompter för rollerna finns i
+beslutsstöd men ändrar inte repo. Bugbot är default på när PR mot `main`
+öppnas; den är inte aktiv på arbets-branchens push:ar. Färdiga
+startprompter för rollerna finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
 ## Parallella agenter
@@ -108,6 +110,8 @@ När flera agenter jobbar samtidigt gäller rollfördelningen i
 [`governance/rules/branch-discipline.md`](../governance/rules/branch-discipline.md)
 under rubriken "Parallella agenter". Sammanfattning:
 
+- Jakob-agent jobbar på `jakob-be`, Christopher-agent på `christopher-ui`.
+  Brancherna är solo-ägda; ingen rör motpartens branch.
 - Steward-agent får inte röra filer som ligger i scope för en pågående
   Builder-sprint.
 - Builder-agent äger sina scope-filer tills sprinten är klar.
@@ -123,27 +127,35 @@ varje delsteg har en tydlig ägare och en tydlig avlämningsyta.
 0. **Drift-check.** Första kommando i varje ny agentsession är `python scripts/focus_check.py`. Det jämför HEAD mot "Last verified"-SHA:n i [`docs/current-focus.md`](current-focus.md) och varnar om glömd push, glömd pull eller stalad focus-fil. Lös varningar innan något annat startas.
 1. **Scout vid behov.** Om uppdraget är stort eller oklart gör Scout-agenten
    read-only-audit och lämnar rekommenderad Builder-prompt.
-2. **Sprint-backup.** Builder- eller Steward-agenten skapar nästa `backup-N`
-   från synkad `main` och stannar sedan kvar på `main`.
-3. **Implementation på main.** Builder-agenten genomför en avgränsad uppgift
-   direkt på `main`. Steward-agenten gör bara låg-risk docs/governance/sanity.
+2. **Synka arbets-branchen.** Builder- eller Steward-agenten verifierar
+   att aktuell branch är `jakob-be` (Jakob) eller `christopher-ui`
+   (Christopher) och att den är synkad med sin egen origin. Backup-branch
+   skapas bara om operatören uttryckligen ber om det — `jakob-be`/
+   `christopher-ui` är själva permanenta säkerhetsnät.
+3. **Implementation på arbets-branchen.** Builder-agenten genomför en
+   avgränsad uppgift direkt på `jakob-be` eller `christopher-ui`. Steward-
+   agenten gör bara låg-risk docs/governance/sanity.
 4. **RO-review.** Scout-agenten granskar diffen read-only före push och
-   klassar fynd som blocker, risk, nice-to-have eller falskt fynd. Vid
-   PR-undantag kan Bugbot användas, men PR är inte standardflödet. Inför en
-   ny större sprint ska Scout också föreslå modell-/insatsnivå 1-10 för nästa
-   agentpass. Om Scout säger att push är OK och working tree är clean får
-   Builder pusha direkt utan ny manuell operatörs-OK.
-5. **Operatör + extern reviewer** beslutar: fortsätt, fixa eller skrota när
-   Scout inte redan har gett tydlig push-OK eller när risken kräver det.
-6. **Final sanity** kör `python scripts/review_check.py` (samma kedja som pre-push-guards).
-7. **Commit + push till main** efter gröna guards och godkänd riktning. När
-   Builder har pushat klart skickas Builder-resultatet till Steward för
-   post-push-verifiering.
-8. **Steward verifierar post-push och uppdaterar [`docs/current-focus.md`](current-focus.md) / [`docs/handoff.md`](handoff.md) vid behov.** Rapportera alltid: pushed SHA, `git status`, `python scripts/focus_check.py`, om `origin/main` matchar lokal `main`, samt om docs uppdaterades och varför. Uppdatera docs när ny faktisk HEAD avslutar en sprint, active sprint ändras, next action/queue/blocked ändras, agentflöde/branchflöde/Grindmode/rollansvar ändras, ny risk/blocker/nice-to-have blir viktig för nästa agent, eller extern PR/Grind-agent ändrar vad `main` betyder. Hoppa över docs för ren mikrostatus som inte ändrar nästa agents arbete.
+   klassar fynd som blocker, risk, nice-to-have eller falskt fynd. Inför
+   en ny större sprint ska Scout också föreslå modell-/insatsnivå 1-10
+   för nästa agentpass. Om Scout säger att push är OK och working tree är
+   clean får Builder pusha direkt utan ny manuell operatörs-OK.
+5. **Operatör + extern reviewer** beslutar: fortsätt, fixa eller skrota
+   när Scout inte redan har gett tydlig push-OK eller när risken kräver
+   det.
+6. **Final sanity** kör `python scripts/review_check.py` (samma kedja som
+   pre-push-guards).
+7. **Commit + push till arbets-branchen** efter gröna guards och godkänd
+   riktning. När Builder har pushat klart skickas Builder-resultatet till
+   Steward för post-push-verifiering.
+8. **Steward verifierar post-push och uppdaterar [`docs/current-focus.md`](current-focus.md) / [`docs/handoff.md`](handoff.md) vid behov.** Rapportera alltid: pushed SHA, `git status`, `python scripts/focus_check.py`, om `origin/<branch>` matchar lokal `<branch>`, samt om docs uppdaterades och varför. Uppdatera docs när ny faktisk HEAD avslutar en sprint, active sprint ändras, next action/queue/blocked ändras, agentflöde/branchflöde/rollansvar ändras, ny risk/blocker/nice-to-have blir viktig för nästa agent, eller extern PR/Grind-agent ändrar vad `main` betyder. Hoppa över docs för ren mikrostatus som inte ändrar nästa agents arbete.
 9. **Nästa etapp** plockas från queue-listan i `docs/current-focus.md`. Builder-agenten ska i slutrapporten ge en grov progressbedömning i procent för sprinten och nästa etapp.
 
-Om operatören uttryckligen väljer PR-flöde används pull request-mallen i
+PR mot `main` öppnas när en sprint eller fas är klar och ska bli en
+officiell version — då används pull request-mallen i
 [`.github/pull_request_template.md`](../.github/pull_request_template.md).
+Bugbot körs på PR:n. Efter merge: post-merge-sync enligt
+[`governance/rules/branch-discipline.md`](../governance/rules/branch-discipline.md).
 
 ## Post-build-verifiering utan preview
 

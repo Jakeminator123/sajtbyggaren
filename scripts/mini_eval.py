@@ -23,7 +23,11 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-DEFAULT_EVALS_DIR = REPO_ROOT.parent / "sajtbyggaren-output" / ".evals"
+DEFAULT_EVALS_DIR = REPO_ROOT / "data" / "evals" / "artifacts" / "mini"
+# Legacy default kept so operators that still set
+# ``SAJTBYGGAREN_EVALS_DIR=`` to the old external path keep getting that
+# directory — only the unset default moved into the new canonical layout.
+LEGACY_EVALS_DIR = REPO_ROOT.parent / "sajtbyggaren-output" / ".evals"
 
 CSS_TOKEN_RE = re.compile(r"--(?P<name>[a-z-]+):\s*(?P<value>[^;]+);")
 BLOCKED_RAW_PHRASES = (

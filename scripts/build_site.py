@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import io
 import json
 import os
 import re
@@ -493,6 +494,24 @@ def _prompt_meta_version(prompt_meta: dict[str, Any] | None) -> int | None:
     return version if isinstance(version, int) and version >= 1 else None
 
 
+def _prompt_meta_previous_version(prompt_meta: dict[str, Any] | None) -> int | None:
+    """Return the previous Project Input version for follow-up builds.
+
+    The prompt helper writes ``previousVersion`` on follow-up sidecars.
+    If an older sidecar lacks that field, derive it from ``version - 1``
+    so historical prompt-inputs still get best-effort snapshot lookup.
+    """
+    if not prompt_meta:
+        return None
+    previous_version = prompt_meta.get("previousVersion")
+    if isinstance(previous_version, int) and previous_version >= 1:
+        return previous_version
+    version = _prompt_meta_version(prompt_meta)
+    if version is not None and version > 1:
+        return version - 1
+    return None
+
+
 def _prompt_meta_raw_prompt(prompt_meta: dict[str, Any] | None) -> str | None:
     if not prompt_meta:
         return None
@@ -537,6 +556,34 @@ def _prompt_meta_placeholder_contact_fields(
         ):
             fields.append(value)
     return fields
+
+
+def _prompt_meta_followup_intent_id(prompt_meta: dict[str, Any] | None) -> str | None:
+    """Return ``projectDna.followUpIntent.id`` from the prompt sidecar."""
+    if not prompt_meta:
+        return None
+    project_dna = prompt_meta.get("projectDna")
+    if not isinstance(project_dna, dict):
+        return None
+    followup_intent = project_dna.get("followUpIntent")
+    if not isinstance(followup_intent, dict):
+        return None
+    intent_id = followup_intent.get("id")
+    return intent_id if isinstance(intent_id, str) and intent_id else None
+
+
+def _has_copy_directives(payload: Any) -> bool:
+    """Detect a future ``copyDirectives[]`` contract without implementing it."""
+    if not isinstance(payload, dict):
+        return False
+    copy_directives = payload.get("copyDirectives")
+    if isinstance(copy_directives, list) and bool(copy_directives):
+        return True
+    directives = payload.get("directives")
+    if not isinstance(directives, dict):
+        return False
+    nested_copy_directives = directives.get("copyDirectives")
+    return isinstance(nested_copy_directives, list) and bool(nested_copy_directives)
 
 
 def _placeholder_contact_warning_message(fields: list[str]) -> str:
@@ -607,6 +654,8 @@ class Trace:
         status: str,
         message: str = "",
         payload_path: str | None = None,
+        *,
+        reason: str | None = None,
     ) -> None:
         record = {
             "runId": self.run_id,
@@ -617,6 +666,8 @@ class Trace:
             "timestamp": utc_now().isoformat(),
             "payloadPath": payload_path,
         }
+        if reason is not None:
+            record["reason"] = reason
         with self.path.open("a", encoding="utf-8", newline="\n") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
@@ -679,7 +730,26 @@ def _npm_install_inputs_changed(source: Path, target: Path) -> bool:
         # cannot be diff:ad mot source. Force a clean reinstall instead
         # of letting the exception abort the whole build.
         return True
-    return any(source_pkg.get(key) != target_pkg.get(key) for key in _NPM_INSTALL_INPUT_KEYS)
+    if any(source_pkg.get(key) != target_pkg.get(key) for key in _NPM_INSTALL_INPUT_KEYS):
+        return True
+
+    # B154 root cause: starter's package-lock.json drifted relative to its
+    # own package.json (Next/eslint-config-next/PostCSS pinned to an older
+    # baseline). Comparing lockfile contents catches that class of bug so
+    # an existing .generated/<siteId> with stale node_modules forcibly
+    # reinstalls when the starter ships an updated lockfile, even if
+    # package.json fields look identical.
+    source_lock = source / "package-lock.json"
+    target_lock = target / "package-lock.json"
+    if source_lock.exists() != target_lock.exists():
+        return True
+    if source_lock.exists() and target_lock.exists():
+        try:
+            if source_lock.read_bytes() != target_lock.read_bytes():
+                return True
+        except OSError:
+            return True
+    return False
 
 
 def copy_starter(starter_id: str, target: Path) -> None:
@@ -767,11 +837,50 @@ def resolve_media_asset(project_input: dict, role: str) -> dict | None:
 
 
 def iter_asset_refs(project_input: dict) -> list[dict]:
-    """Returnera alla AssetRef-objekt som finns i Project Input
+    """Returnera publika AssetRef-objekt som finns i Project Input
     (`brand.logo`, `brand.heroImage`, varje item i `gallery`, samt
-    `media.favicon` / `media.ogImage` / `media.backgroundVideo`). Tar
-    bara med refs där alla fält schemat kräver finns; trasiga refs
-    hoppas över så build:en inte kraschar på en korrupt manifest.json."""
+    `products[].productImage`, `media.favicon` / `media.ogImage` /
+    `media.backgroundVideo`). Tar bara med refs där alla fält schemat
+    kräver finns; trasiga refs hoppas över så build:en inte kraschar
+    på en korrupt manifest.json.
+
+    `moodImages` ingår inte här: de är interna inspirationsbilder och ska
+    isoleras via `copy_mood_assets`, inte publiceras till sajten.
+    """
+    refs: list[dict] = []
+    brand = project_input.get("brand") or {}
+    if isinstance(brand, dict):
+        for key in ("logo", "heroImage"):
+            ref = brand.get(key)
+            if _is_valid_asset_ref(ref):
+                refs.append(ref)
+    gallery = project_input.get("gallery") or []
+    if isinstance(gallery, list):
+        for item in gallery:
+            if _is_valid_asset_ref(item):
+                refs.append(item)
+    products = project_input.get("products") or []
+    if isinstance(products, list):
+        for product in products:
+            if not isinstance(product, dict):
+                continue
+            ref = product.get("productImage")
+            if _is_valid_asset_ref(ref):
+                refs.append(ref)
+    for role in ("favicon", "ogImage", "backgroundVideo"):
+        ref = resolve_media_asset(project_input, role)
+        if ref is not None:
+            refs.append(ref)
+    return refs
+
+
+def _iter_public_upload_refs(project_input: dict) -> list[dict]:
+    """Return asset refs that should be published under public/uploads/.
+
+    Product images are deliberately excluded here. They are public assets,
+    but their stable generated URL is ``/products/<productId>.<ext>`` and
+    `_copy_product_images` owns both that copy and the imageUrl mutation.
+    """
     refs: list[dict] = []
     brand = project_input.get("brand") or {}
     if isinstance(brand, dict):
@@ -788,6 +897,18 @@ def iter_asset_refs(project_input: dict) -> list[dict]:
         ref = resolve_media_asset(project_input, role)
         if ref is not None:
             refs.append(ref)
+    return refs
+
+
+def _iter_mood_refs(project_input: dict) -> list[dict]:
+    """Return mood-reference asset refs that must stay outside public/uploads."""
+    mood_images = project_input.get("moodImages") or []
+    if not isinstance(mood_images, list):
+        return []
+    refs: list[dict] = []
+    for item in mood_images:
+        if _is_valid_asset_ref(item):
+            refs.append(item)
     return refs
 
 
@@ -911,6 +1032,285 @@ def _fetch_asset_bytes_from_url(url: str) -> bytes | None:
         response.close()
 
 
+_FAVICON_ICO_SIZES: tuple[tuple[int, int], ...] = (
+    (16, 16),
+    (32, 32),
+    (48, 48),
+    (64, 64),
+)
+_OG_IMAGE_SIZE = (1200, 630)
+
+
+def _asset_requires_derived_public_output(ref: dict) -> bool:
+    return ref.get("role") in {"favicon", "ogImage"}
+
+
+def _is_svg_favicon(ref: dict, image_bytes: bytes, source_file: Path | None = None) -> bool:
+    mime_type = ref.get("mimeType")
+    if isinstance(mime_type, str) and mime_type.strip().lower() == "image/svg+xml":
+        return True
+    filename = ref.get("filename")
+    if isinstance(filename, str) and filename.strip().lower().endswith(".svg"):
+        return True
+    if source_file is not None and source_file.suffix.lower() == ".svg":
+        return True
+    prefix = image_bytes.lstrip()[:512].lower()
+    return b"<svg" in prefix
+
+
+def _convert_favicon_to_ico(image_bytes: bytes, output_path: Path) -> bool:
+    """Write a deterministic multi-size favicon.ico from uploaded image bytes."""
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        print(
+            "Warning: Pillow is not installed; skipping favicon.ico conversion "
+            f"({exc}). Original upload will still be copied.",
+            file=sys.stderr,
+        )
+        return False
+
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with Image.open(io.BytesIO(image_bytes)) as image:
+            converted = image.convert("RGBA")
+            converted.save(output_path, format="ICO", sizes=list(_FAVICON_ICO_SIZES))
+        return True
+    except Exception as exc:
+        print(
+            "Warning: failed to convert favicon to public/favicon.ico "
+            f"({type(exc).__name__}: {exc}). Original upload will still be copied.",
+            file=sys.stderr,
+        )
+        return False
+
+
+def _convert_og_image_to_1200x630_png(image_bytes: bytes, output_path: Path) -> bool:
+    """Write a center-cropped 1200×630 PNG from uploaded Open Graph bytes."""
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        print(
+            "Warning: Pillow is not installed; skipping og-image.png conversion "
+            f"({exc}). Original upload will still be copied.",
+            file=sys.stderr,
+        )
+        return False
+
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with Image.open(io.BytesIO(image_bytes)) as image:
+            image.load()
+            source = image.convert("RGBA" if image.mode in {"LA", "P", "RGBA"} else "RGB")
+            width, height = source.size
+            target_width, target_height = _OG_IMAGE_SIZE
+            target_ratio = target_width / target_height
+            source_ratio = width / height
+
+            if source_ratio > target_ratio:
+                crop_width = int(height * target_ratio)
+                left = (width - crop_width) // 2
+                crop_box = (left, 0, left + crop_width, height)
+            else:
+                crop_height = int(width / target_ratio)
+                top = (height - crop_height) // 2
+                crop_box = (0, top, width, top + crop_height)
+
+            resampling = getattr(Image, "Resampling", Image).LANCZOS
+            cropped = source.crop(crop_box)
+            resized = cropped.resize(_OG_IMAGE_SIZE, resampling)
+            resized.save(output_path, format="PNG", optimize=True)
+        return True
+    except Exception as exc:
+        print(
+            "Warning: failed to convert Open Graph image to public/og-image.png "
+            f"({type(exc).__name__}: {exc}). Original upload will still be copied.",
+            file=sys.stderr,
+        )
+        return False
+
+
+def _write_derived_media_asset(
+    ref: dict,
+    image_bytes: bytes,
+    target: Path,
+    *,
+    source_file: Path | None = None,
+) -> None:
+    """Write derived public root assets for favicon/OG uploads without aborting builds."""
+    public_dir = target / "public"
+    role = ref.get("role")
+    if role == "favicon":
+        if _is_svg_favicon(ref, image_bytes, source_file):
+            print(
+                "favicon är SVG, hoppar över .ico-konvertering — "
+                "Next.js Metadata API rendrar SVG direkt",
+                file=sys.stderr,
+            )
+            favicon_svg = public_dir / "favicon.svg"
+            favicon_svg.parent.mkdir(parents=True, exist_ok=True)
+            favicon_svg.write_bytes(image_bytes)
+            return
+        _convert_favicon_to_ico(image_bytes, public_dir / "favicon.ico")
+        return
+    if role == "ogImage":
+        _convert_og_image_to_1200x630_png(image_bytes, public_dir / "og-image.png")
+
+
+def _operator_asset_candidate_dirs(site_id: str) -> list[Path]:
+    return [UPLOADS_ROOT_DIR / site_id, UPLOADS_ROOT_DIR / "__draft"]
+
+
+def _operator_asset_variant_candidates(source_dir: Path) -> list[Path]:
+    return [
+        source_dir / "optimized.webp",
+        source_dir / "original.svg",
+        source_dir / "original.png",
+        source_dir / "original.jpg",
+        source_dir / "original.jpeg",
+        source_dir / "original.webp",
+        source_dir / "original.mp4",
+        source_dir / "original.webm",
+    ]
+
+
+def _resolve_operator_asset_source(
+    site_id: str,
+    ref: dict,
+    *,
+    log_prefix: str,
+) -> tuple[bytes, Path | None] | None:
+    """Resolve operator-uploaded bytes via disk-first/sourceUrl-fallback."""
+    asset_id = ref["assetId"]
+    candidate_dirs = _operator_asset_candidate_dirs(site_id)
+
+    # 1. Disk-lookup först — Local disk har företräde när bytes finns.
+    source_dir: Path | None = None
+    for candidate in candidate_dirs:
+        if (candidate / asset_id).is_dir():
+            source_dir = candidate / asset_id
+            break
+
+    if source_dir is not None:
+        source_file = next(
+            (candidate for candidate in _operator_asset_variant_candidates(source_dir) if candidate.exists()),
+            None,
+        )
+        if source_file is not None:
+            return source_file.read_bytes(), source_file
+        # Source-dir finns men ingen variant-fil — fortsätt till
+        # sourceUrl-fallback istället för att skippa direkt.
+        print(
+            f"{log_prefix}: asset {asset_id} saknar variant-fil "
+            f"i {source_dir}. Försöker sourceUrl-fallback.",
+        )
+
+    # 2. Remote-fallback från sourceUrl när disk saknas.
+    source_url = ref.get("sourceUrl")
+    if isinstance(source_url, str) and source_url.strip():
+        cleaned_source_url = source_url.strip()
+        if not _is_allowed_asset_source_url(cleaned_source_url):
+            print(
+                f"{log_prefix}: sourceUrl for asset {asset_id} "
+                f"is not an allowed HTTPS Vercel Blob URL ({cleaned_source_url!r}). "
+                "Skipping asset.",
+            )
+            return None
+        data = _fetch_asset_bytes_from_url(cleaned_source_url)
+        if data is None:
+            return None
+        return data, None
+
+    # 3. Båda saknas — logga och hoppa över.
+    print(
+        f"{log_prefix}: asset {asset_id} saknas både på disk "
+        f"(letade i {candidate_dirs}) och saknar sourceUrl. Hoppar över.",
+    )
+    return None
+
+
+def _private_mood_asset_extension(ref: dict, source_file: Path | None) -> str:
+    if source_file is not None and source_file.suffix:
+        return source_file.suffix.lower().lstrip(".")
+    filename = ref.get("filename")
+    if isinstance(filename, str):
+        suffix = Path(filename).suffix.lower().lstrip(".")
+        if suffix:
+            return suffix
+    mime_type = str(ref.get("mimeType") or "").strip().lower()
+    return {
+        "image/png": "png",
+        "image/jpeg": "jpg",
+        "image/webp": "webp",
+        "image/svg+xml": "svg",
+        "video/mp4": "mp4",
+        "video/webm": "webm",
+    }.get(mime_type, "bin")
+
+
+def _private_mood_asset_stem(asset_id: str) -> str:
+    stem = re.sub(r"[^A-Za-z0-9._-]+", "-", asset_id).strip(".-")
+    return stem or "asset"
+
+
+def _public_product_asset_extension(ref: dict, source_file: Path | None) -> str:
+    if source_file is not None and source_file.suffix:
+        return source_file.suffix.lower().lstrip(".")
+    filename = ref.get("filename")
+    if isinstance(filename, str):
+        suffix = Path(filename).suffix.lower().lstrip(".")
+        if suffix:
+            return suffix
+    mime_type = str(ref.get("mimeType") or "").strip().lower()
+    return {
+        "image/png": "png",
+        "image/jpeg": "jpg",
+        "image/webp": "webp",
+        "image/svg+xml": "svg",
+    }.get(mime_type, "webp")
+
+
+def _public_product_asset_stem(product: dict, index: int) -> str:
+    for key in ("id", "slug"):
+        raw = product.get(key)
+        if isinstance(raw, str) and raw.strip():
+            stem = re.sub(r"[^A-Za-z0-9._-]+", "-", raw.strip().lower()).strip(".-")
+            if stem:
+                return stem
+    return f"product-{index + 1}"
+
+
+def _copy_product_images(site_id: str, target: Path, project_input: dict) -> int:
+    """Copy products[].productImage to public/products/ and set imageUrl."""
+    products = project_input.get("products") or []
+    if not isinstance(products, list):
+        return 0
+
+    public_products = target / "public" / "products"
+    copied = 0
+    for index, product in enumerate(products):
+        if not isinstance(product, dict):
+            continue
+        ref = product.get("productImage")
+        if not _is_valid_asset_ref(ref):
+            continue
+        resolved = _resolve_operator_asset_source(
+            site_id,
+            ref,
+            log_prefix="copy_product_images",
+        )
+        if resolved is None:
+            continue
+        data, source_file = resolved
+        extension = _public_product_asset_extension(ref, source_file)
+        filename = f"{_public_product_asset_stem(product, index)}.{extension}"
+        public_products.mkdir(parents=True, exist_ok=True)
+        (public_products / filename).write_bytes(data)
+        product["imageUrl"] = f"/products/{filename}"
+        copied += 1
+    return copied
+
+
 def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> int:
     """Copy operator-uploaded assets to the generated site's public/uploads/.
 
@@ -942,73 +1342,56 @@ def copy_operator_uploads(site_id: str, target: Path, project_input: dict) -> in
     Returns the number of files written. A single bad asset never aborts
     the build; the renderer can still fall back to alt text / defaults.
     """
-    refs = iter_asset_refs(project_input)
+    refs = _iter_public_upload_refs(project_input)
+    copied = 0
+    if refs:
+        public_uploads = target / "public" / "uploads"
+        public_uploads.mkdir(parents=True, exist_ok=True)
+
+        for ref in refs:
+            filename = ref["filename"]
+            resolved = _resolve_operator_asset_source(
+                site_id,
+                ref,
+                log_prefix="copy_operator_uploads",
+            )
+            if resolved is None:
+                continue
+            data, source_file = resolved
+            dest = public_uploads / filename
+            if _asset_requires_derived_public_output(ref):
+                _write_derived_media_asset(ref, data, target, source_file=source_file)
+            dest.write_bytes(data)
+            copied += 1
+
+    copied += _copy_product_images(site_id, target, project_input)
+    return copied
+
+
+def copy_mood_assets(site_id: str, project_input: dict) -> int:
+    """Isolate mood-reference assets under data/uploads/<siteId>/__mood/."""
+    refs = _iter_mood_refs(project_input)
     if not refs:
         return 0
 
-    candidate_dirs = [UPLOADS_ROOT_DIR / site_id, UPLOADS_ROOT_DIR / "__draft"]
-    public_uploads = target / "public" / "uploads"
-    public_uploads.mkdir(parents=True, exist_ok=True)
+    mood_dir = UPLOADS_ROOT_DIR / site_id / "__mood"
+    mood_dir.mkdir(parents=True, exist_ok=True)
 
     copied = 0
     for ref in refs:
-        asset_id = ref["assetId"]
-        filename = ref["filename"]
-
-        # 1. Disk-lookup först — Local disk har företräde när bytes finns.
-        source_dir: Path | None = None
-        for candidate in candidate_dirs:
-            if (candidate / asset_id).is_dir():
-                source_dir = candidate / asset_id
-                break
-
-        if source_dir is not None:
-            candidates = [
-                source_dir / "optimized.webp",
-                source_dir / "original.svg",
-                source_dir / "original.png",
-                source_dir / "original.jpg",
-                source_dir / "original.webp",
-                source_dir / "original.mp4",
-                source_dir / "original.webm",
-            ]
-            source_file: Path | None = next((c for c in candidates if c.exists()), None)
-            if source_file is not None:
-                dest = public_uploads / filename
-                shutil.copy2(source_file, dest)
-                copied += 1
-                continue
-            # Source-dir finns men ingen variant-fil — fortsätt till
-            # sourceUrl-fallback istället för att skippa direkt.
-            print(
-                f"copy_operator_uploads: asset {asset_id} saknar variant-fil "
-                f"i {source_dir}. Försöker sourceUrl-fallback.",
-            )
-
-        # 2. Remote-fallback från sourceUrl när disk saknas.
-        source_url = ref.get("sourceUrl")
-        if isinstance(source_url, str) and source_url.strip():
-            cleaned_source_url = source_url.strip()
-            if not _is_allowed_asset_source_url(cleaned_source_url):
-                print(
-                    f"copy_operator_uploads: sourceUrl for asset {asset_id} "
-                    f"is not an allowed HTTPS Vercel Blob URL ({cleaned_source_url!r}). "
-                    "Skipping asset.",
-                )
-                continue
-            data = _fetch_asset_bytes_from_url(cleaned_source_url)
-            if data is None:
-                continue
-            dest = public_uploads / filename
-            dest.write_bytes(data)
-            copied += 1
-            continue
-
-        # 3. Båda saknas — logga och hoppa över.
-        print(
-            f"copy_operator_uploads: asset {asset_id} saknas både på disk "
-            f"(letade i {candidate_dirs}) och saknar sourceUrl. Hoppar över.",
+        resolved = _resolve_operator_asset_source(
+            site_id,
+            ref,
+            log_prefix="copy_mood_assets",
         )
+        if resolved is None:
+            continue
+        data, source_file = resolved
+        asset_id = ref["assetId"]
+        extension = _private_mood_asset_extension(ref, source_file)
+        dest = mood_dir / f"{_private_mood_asset_stem(asset_id)}.{extension}"
+        dest.write_bytes(data)
+        copied += 1
 
     return copied
 
@@ -2025,7 +2408,19 @@ _BOOKING_BUSINESS_TYPES: frozenset[str] = frozenset(
 
 
 def _normalize_business_type(value: object) -> str:
-    """Normalize briefModel business type variants for CTA fallback lookup."""
+    """Normalize briefModel business type variants for CTA fallback lookup.
+
+    B150: briefModel sometimes emits multi-word business types
+    ("massage studio", "yoga studio", "personal trainer studio"). The
+    compact slug ("massage-studio") does not appear in
+    ``_BOOKING_BUSINESS_TYPES`` or ``_SHOP_BUSINESS_TYPES``, which made
+    ``_hero_cta_variant`` fall through to the generic "Begär offert" CTA
+    instead of firing "Boka tid" / "Handla nu" for these branscher. We
+    therefore try progressively shorter dash-prefixes and return the
+    longest prefix that is itself a registered slug. The function never
+    invents new slugs — it can only return strings that the CTA-resolver
+    already knows about, or the unchanged compact form.
+    """
     raw = str(value or "").strip().lower()
     if not raw:
         return ""
@@ -2036,6 +2431,14 @@ def _normalize_business_type(value: object) -> str:
         return "hair-salon"
     if compact in {"webshop", "webbshop", "online-shop"}:
         return "e-commerce"
+    if compact in _BOOKING_BUSINESS_TYPES or compact in _SHOP_BUSINESS_TYPES:
+        return compact
+    if "-" in compact:
+        parts = compact.split("-")
+        for n in range(len(parts) - 1, 0, -1):
+            prefix = "-".join(parts[:n])
+            if prefix in _BOOKING_BUSINESS_TYPES or prefix in _SHOP_BUSINESS_TYPES:
+                return prefix
     return compact
 
 
@@ -2203,10 +2606,28 @@ def _nav_items_from_scaffold(
     ]
     existing_paths = {href for href, _ in items}
     if extra_routes:
-        contact_idx = next(
-            (i for i, (href, _label) in enumerate(items) if href == "/kontakt"),
+        # B148: look up the contact route's actual path from the scaffold
+        # rather than hardcoding "/kontakt". restaurant-hospitality uses
+        # "/hitta-hit" and future scaffolds may pick other ids — the
+        # insert-before-contact heuristic must follow the scaffold, not
+        # the most common path. Mirrors the lookup pattern in
+        # ``_pick_contact_route`` (no SystemExit here — nav-building must
+        # stay defensive even if a scaffold lacks a contact route, in
+        # which case wizard-extras simply append to the end).
+        contact_path = next(
+            (
+                route.get("path")
+                for route in scaffold_default_routes
+                if route.get("id") == "contact"
+            ),
             None,
         )
+        contact_idx: int | None = None
+        if isinstance(contact_path, str) and contact_path:
+            contact_idx = next(
+                (i for i, (href, _label) in enumerate(items) if href == contact_path),
+                None,
+            )
         for route in extra_routes:
             if not isinstance(route, dict):
                 continue
@@ -2621,6 +3042,61 @@ def _npm_step_result(name: str, ok: bool, seconds: float, log_excerpt: str) -> d
 # ---------------------------------------------------------------------------
 
 
+_OPERATOR_DIRECTIVE_NOTE_PREFIX = "Operator: "
+_MOOD_VISUAL_NOTE_PREFIX = "Visual mood: "
+
+
+def _mood_visual_note_blocks(dossier: dict) -> list[str]:
+    """Return planner notes from existing mood-image Vision metadata."""
+    blocks: list[str] = []
+    for ref in _iter_mood_refs(dossier):
+        subject = ref.get("visionSubject")
+        confidence = ref.get("visionConfidence")
+        has_subject = isinstance(subject, str) and bool(subject.strip())
+        has_confidence = isinstance(confidence, str) and bool(confidence.strip())
+        if not has_subject and not has_confidence:
+            continue
+
+        parts: list[str] = []
+        alt = ref.get("alt")
+        if isinstance(alt, str) and alt.strip():
+            parts.append(alt.strip())
+        if has_subject:
+            parts.append(f"subject: {subject.strip()}")
+        if has_confidence:
+            parts.append(f"confidence: {confidence.strip()}")
+        if parts:
+            blocks.append(f"{_MOOD_VISUAL_NOTE_PREFIX}{'; '.join(parts)}")
+    return blocks
+
+
+def _apply_operator_directive_note(brief: dict, dossier: dict) -> None:
+    """Prepend deterministic operator and mood context to Site Brief notes.
+
+    Gap 5 adds ``directives.notesForPlanner`` with prefix ``"Operator: "``.
+    Gap 9 adds existing Vision metadata from ``moodImages`` with prefix
+    ``"Visual mood: "`` when those fields are already present on the
+    AssetRef. Missing/empty inputs leave the brief untouched.
+    """
+    blocks: list[str] = []
+    directives = dossier.get("directives")
+    if isinstance(directives, dict):
+        raw_note = directives.get("notesForPlanner")
+        if isinstance(raw_note, str):
+            note = raw_note.strip()
+            if note:
+                blocks.append(f"{_OPERATOR_DIRECTIVE_NOTE_PREFIX}{note}")
+
+    blocks.extend(_mood_visual_note_blocks(dossier))
+    if not blocks:
+        return
+
+    existing = brief.get("notesForPlanner")
+    if isinstance(existing, str) and existing.strip():
+        blocks.append(existing.strip())
+    brief["notesForPlanner"] = "\n\n".join(blocks)
+
+
 def build_site_brief_mock(run_id: str, dossier: dict, scaffold: dict) -> dict:
     """Mock Site Brief derived from the dossier (no LLM).
 
@@ -2652,7 +3128,7 @@ def build_site_brief_mock(run_id: str, dossier: dict, scaffold: dict) -> dict:
         location.get("country"),
     ]
     location_hint = ", ".join(p for p in location_parts if p) or None
-    return {
+    brief = {
         "runId": run_id,
         "language": dossier["language"],
         "rawPrompt": project_input_to_brief_prompt(dossier),
@@ -2676,6 +3152,8 @@ def build_site_brief_mock(run_id: str, dossier: dict, scaffold: dict) -> dict:
         "createdAt": utc_now().isoformat(timespec="seconds"),
         "scaffoldHint": scaffold["id"],
     }
+    _apply_operator_directive_note(brief, dossier)
+    return brief
 
 
 def resolve_brief_model() -> str:
@@ -2790,6 +3268,7 @@ def build_site_brief(run_id: str, dossier: dict, scaffold: dict) -> dict:
 
         brief = site_brief_to_artifact(result, run_id=run_id, model=model)
         brief["scaffoldHint"] = scaffold["id"]
+        _apply_operator_directive_note(brief, dossier)
         return brief
     except Exception as exc:  # noqa: BLE001
         error = f"{type(exc).__name__}: {exc}"
@@ -2876,6 +3355,24 @@ def _intent_guard_warnings(
     ]
     candidate_terms = ([business_type] if business_type else []) + service_terms
 
+    # B149: tokenise candidate terms so we can exact-token-match against the
+    # conflict tokens instead of substring-matching. The original
+    # ``blocked in term`` check produced false positives for short tokens
+    # ("bar" in "barber", "spa" in "spaghetti", "mat" in "automation",
+    # "tak" in "kontakt"). Each candidate term contributes itself plus any
+    # sub-tokens split on whitespace and dashes — so slug entries in the
+    # conflict tables ("hair-salon", "food-truck") still match against
+    # slug-form business_type values, and bare tokens ("hair", "salon")
+    # match individual words inside Swedish servicesMentioned strings.
+    candidate_tokens: set[str] = set()
+    for term in candidate_terms:
+        if not term:
+            continue
+        candidate_tokens.add(term)
+        for sub in term.replace("-", " ").split():
+            if sub:
+                candidate_tokens.add(sub)
+
     warnings: list[dict[str, str]] = []
     seen: set[tuple[str, str]] = set()
     for category_id in category_ids:
@@ -2883,7 +3380,7 @@ def _intent_guard_warnings(
         if not forbidden:
             continue
         for blocked in forbidden:
-            if not any(blocked in term for term in candidate_terms):
+            if blocked not in candidate_tokens:
                 continue
             key = (category_id, blocked)
             if key in seen:
@@ -3091,6 +3588,172 @@ def snapshot_generated_files(target_dir: Path, run_dir: Path) -> Path:
     return snap_dir
 
 
+def _find_previous_generated_files_snapshot(
+    runs_root: Path,
+    current_run_dir: Path,
+    prompt_meta: dict[str, Any] | None,
+) -> Path | None:
+    """Locate v(n-1)'s generated-files snapshot for a follow-up run."""
+    project_id = _prompt_meta_project_id(prompt_meta)
+    previous_version = _prompt_meta_previous_version(prompt_meta)
+    if not project_id or previous_version is None:
+        return None
+    if not runs_root.exists():
+        return None
+
+    candidates = [
+        run_dir
+        for run_dir in runs_root.iterdir()
+        if run_dir.is_dir() and run_dir != current_run_dir
+    ]
+    candidates.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+    for run_dir in candidates:
+        input_path = run_dir / "input.json"
+        try:
+            input_payload = json.loads(input_path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            continue
+        if input_payload.get("projectId") != project_id:
+            continue
+        if input_payload.get("version") != previous_version:
+            continue
+        snapshot = run_dir / "generated-files"
+        if snapshot.is_dir():
+            return snapshot
+    return None
+
+
+def _find_previous_page_snapshot(
+    runs_root: Path,
+    current_run_dir: Path,
+    prompt_meta: dict[str, Any] | None,
+) -> Path | None:
+    """Locate v(n-1)'s generated home-page snapshot for a follow-up run."""
+    snapshot = _find_previous_generated_files_snapshot(
+        runs_root,
+        current_run_dir,
+        prompt_meta,
+    )
+    if snapshot is None:
+        return None
+    page_snapshot = snapshot / "app" / "page.tsx"
+    return page_snapshot if page_snapshot.is_file() else None
+
+
+_VISIBLE_EFFECT_SUFFIXES = frozenset(
+    {
+        ".css",
+        ".gif",
+        ".ico",
+        ".jpeg",
+        ".jpg",
+        ".js",
+        ".jsx",
+        ".png",
+        ".svg",
+        ".ts",
+        ".tsx",
+        ".webp",
+    }
+)
+_VISIBLE_EFFECT_ROOTS = ("app", "public")
+
+
+def _visible_snapshot_bytes(snapshot_dir: Path) -> dict[str, bytes] | None:
+    """Return visible source bytes from a generated-files snapshot.
+
+    The home page alone is not enough: style-only follow-ups can change
+    ``app/globals.css`` without changing ``app/page.tsx``. Comparing app/
+    and public/ source assets keeps the no-op signal honest without reading
+    node_modules, build cache, or other non-rendered metadata.
+    """
+    if not snapshot_dir.is_dir():
+        return None
+    visible_files: dict[str, bytes] = {}
+    try:
+        for root_name in _VISIBLE_EFFECT_ROOTS:
+            root = snapshot_dir / root_name
+            if not root.exists():
+                continue
+            for path in root.rglob("*"):
+                if not path.is_file():
+                    continue
+                if path.suffix.lower() not in _VISIBLE_EFFECT_SUFFIXES:
+                    continue
+                visible_files[path.relative_to(snapshot_dir).as_posix()] = path.read_bytes()
+    except OSError:
+        return None
+    return visible_files
+
+
+def _visible_snapshots_changed(previous_snapshot: Path, current_snapshot: Path) -> bool | None:
+    """Return whether visible generated output changed, or None if unreadable."""
+    previous_files = _visible_snapshot_bytes(previous_snapshot)
+    current_files = _visible_snapshot_bytes(current_snapshot)
+    if previous_files is None or current_files is None:
+        return None
+    return previous_files != current_files
+
+
+def _detect_followup_applied_visible_effect(
+    runs_root: Path,
+    current_run_dir: Path,
+    prompt_meta: dict[str, Any] | None,
+    dossier: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Return the honest applied-effect signal for follow-up builds.
+
+    ``None`` means the current build is not a follow-up. Follow-up builds
+    always return a boolean so downstream UI can distinguish "not relevant"
+    from "evaluated and not visible".
+    """
+    if _prompt_meta_mode(prompt_meta) != "followup":
+        return None
+
+    current_snapshot = current_run_dir / "generated-files"
+    previous_snapshot = _find_previous_generated_files_snapshot(
+        runs_root,
+        current_run_dir,
+        prompt_meta,
+    )
+    if previous_snapshot is not None:
+        visible_changed = _visible_snapshots_changed(previous_snapshot, current_snapshot)
+        if visible_changed is True:
+            return {
+                "applied": True,
+                "reason": "visible_files_changed",
+            }
+        if visible_changed is False:
+            intent_id = _prompt_meta_followup_intent_id(prompt_meta)
+            has_copy_directives = _has_copy_directives(prompt_meta) or _has_copy_directives(
+                dossier
+            )
+            reason = (
+                "intent_no_semantic_change"
+                if intent_id == "no-semantic-change" and not has_copy_directives
+                else "visible_files_unchanged"
+            )
+            return {
+                "applied": False,
+                "reason": reason,
+            }
+
+    intent_id = _prompt_meta_followup_intent_id(prompt_meta)
+    has_copy_directives = _has_copy_directives(prompt_meta) or _has_copy_directives(
+        dossier
+    )
+    if intent_id == "no-semantic-change" and not has_copy_directives:
+        return {
+            "applied": False,
+            "reason": "intent_no_semantic_change",
+        }
+
+    return {
+        "applied": True,
+        "reason": "semantic_intent_without_previous_snapshot",
+    }
+
+
 def run_phase3_quality_and_repair(
     run_dir: Path,
     target: Path,
@@ -3172,10 +3835,19 @@ def write_build_result(
     duration_ms: int,
     codegen_summary: dict | None = None,
     prompt_meta: dict[str, Any] | None = None,
+    followup_effect: dict[str, Any] | None = None,
+    active_build_id: str | None = None,
 ) -> dict:
     """Write build-result.json. ``generatedFilesDir`` points at the canonical
     snapshot under the run directory, not at the dev preview, so downstream
     consumers (Backoffice, eval batch) can trust it across regenerations.
+
+    ``devPreviewDir`` points at the immutable build directory this run wrote
+    to (``<generated>/<siteId>/builds/<buildId>/`` since B157 level 4 Stage A).
+    ``active_build_id`` is the build id when the current.json pointer was
+    swapped to this run (status ok|degraded); it is ``None`` for failed/
+    skipped runs, where the pointer is intentionally left on the previous
+    build and ``activeBuildId`` is omitted from build-result.json.
 
     ``starter_id`` mirrors what ``site-plan.json`` chose - the builder no
     longer hardcodes ``marketing-base`` here so the build result reflects
@@ -3233,6 +3905,9 @@ def write_build_result(
                 prompt_summary[key] = value
         if prompt_summary:
             result["prompt"] = prompt_summary
+    if followup_effect is not None:
+        result["appliedVisibleEffect"] = bool(followup_effect["applied"])
+        result["appliedVisibleEffectReason"] = followup_effect["reason"]
     # B133 (2026-05-19): surface placeholder contact fields so Viewser
     # Run Details can warn the operator that the published site shows
     # dummy contact info ("+46 8 000 00 00", "kontakt@example.se",
@@ -3248,6 +3923,8 @@ def write_build_result(
         )
     if codegen_summary is not None:
         result["codegen"] = codegen_summary
+    if active_build_id is not None:
+        result["activeBuildId"] = active_build_id
     write_json(run_dir / "build-result.json", result)
     trace.event(
         "build",
@@ -3374,11 +4051,30 @@ def build(
 
     generated_root = resolve_generated_dir(generated_dir)
 
+    # B157 level 4, Stage A (docs/gaps/GAP-windows-safe-rebuild-pipeline.md):
+    # build into an immutable builds/<buildId>/ directory instead of in place
+    # at <generated>/<siteId>/. The Builder never deletes or overwrites a
+    # directory a live preview holds open, so the WinError 5 .node file-lock
+    # class is removed at the architecture level (not patched). The active
+    # build is published via an atomic current.json pointer swap further down,
+    # once overall_status is final and shippable. All pointer/build-id logic
+    # lives in packages/generation/build/immutable_builds.py; this is wiring.
+    from packages.generation.build.immutable_builds import (
+        build_dir_for,
+        new_build_id,
+        write_active_pointer,
+    )
+
+    site_dir = generated_root / site_id
+    build_id = new_build_id(
+        exists=lambda candidate: build_dir_for(generated_root, site_id, candidate).exists()
+    )
+
     # Phase 3: build. The Starter to copy is whatever the plan picked - we
     # used to hardcode 'marketing-base' here, which made the planSource a
     # decoration rather than authoritative. Reading site_plan["starterId"]
     # also future-proofs the builder for the day commerce-base is harmonised.
-    target = generated_root / site_id
+    target = build_dir_for(generated_root, site_id, build_id)
     trace.event("build", "phase.started", "started", "Phase 3 build starts")
 
     starter_id = site_plan["starterId"]
@@ -3388,6 +4084,10 @@ def build(
     print("Copying operator uploads (logo, hero, gallery)")
     uploads_copied = copy_operator_uploads(site_id, target, dossier)
     print(f"  -> {uploads_copied} asset(s) copied to public/uploads/")
+
+    print("Isolating mood reference uploads")
+    mood_assets_copied = copy_mood_assets(site_id, dossier)
+    print(f"  -> {mood_assets_copied} mood asset(s) copied to data/uploads/{site_id}/__mood/")
 
     print("Patching package.json")
     patch_package_json(target, dossier)
@@ -3566,6 +4266,20 @@ def build(
         "Snapshotted generated files into data/runs/<runId>/generated-files/",
         payload_path="generated-files/",
     )
+    followup_effect = _detect_followup_applied_visible_effect(
+        runs_root,
+        run_dir,
+        prompt_meta,
+        dossier,
+    )
+    if followup_effect is not None and followup_effect["applied"] is False:
+        trace.event(
+            "build",
+            "followup.no_op_detected",
+            "warning",
+            "Follow-up produced no visible effect",
+            reason=followup_effect["reason"],
+        )
 
     # Quality Gate status propagation (ADR 0015):
     #
@@ -3580,6 +4294,25 @@ def build(
         overall_status = "failed"
     elif quality_payload["status"] == "degraded" and overall_status == "ok":
         overall_status = "degraded"
+
+    # B157 level 4, Stage A: publish the immutable build by swapping the
+    # current.json pointer atomically, gated on the final status. "ok" and
+    # "degraded" are shippable (ADR 0015: "degraded" means a route-scan or
+    # policy soft-failure while typecheck/build passed), so the operator's
+    # preview should move to this build. "failed" and "skipped" leave the
+    # pointer untouched so a broken or file-only run never becomes the active
+    # preview - the previous good build keeps serving until a new one lands.
+    active_build_id: str | None = None
+    if overall_status in ("ok", "degraded"):
+        build_path = target.relative_to(site_dir).as_posix()
+        write_active_pointer(site_dir, build_id, build_path)
+        active_build_id = build_id
+        trace.event(
+            "build",
+            "active_pointer.swapped",
+            "done",
+            f"current.json -> {build_path} (status={overall_status})",
+        )
 
     codegen_summary = {
         "source": codegen_result.source,
@@ -3609,6 +4342,8 @@ def build(
         duration_ms,
         codegen_summary=codegen_summary,
         prompt_meta=prompt_meta,
+        followup_effect=followup_effect,
+        active_build_id=active_build_id,
     )
 
     if overall_status == "failed":

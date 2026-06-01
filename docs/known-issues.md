@@ -1,6 +1,6 @@
 # Known issues + audit-derived bug log
 
-> **Aktivt bug-scope:** 18 aktiva, 0 misplaced (har Fix-SHA men borde flyttas till Stängda), 5 unknown, 115 stängda. Kör `python scripts/list_open_bugs.py` för full lista. Format-disciplin: se governance/rules/bug-scope-discipline.md.
+> **Aktivt bug-scope:** kommer räknas om av `python scripts/list_open_bugs.py` efter merge — preliminärt 14 aktiva / 131 stängda baserat på union av christopher-ui (B122 stängd) + main (B147/B148/B149/B150/B151/B152/B153/B154/B157/B90/B91/B92/B93/B97/B98 stängda). Format-disciplin: se governance/rules/bug-scope-discipline.md.
 
 Den här filen är vår **kanoniska bugg-/aning-lista**. Varje gång en bugg
 hittas i en audit eller via en operatör läggs den in här med ett ID och en
@@ -118,24 +118,6 @@ run/follow-up-flöde. 21 fynd, sorterade på `Probability × Impact`:
   `ceramic studio`). Kategoriöverlapp med B62 men annan edge-yta. Källa:
   extern reviewer + RO-verifierings-subagent 2026-05-15. Fix: open.
   Test: open.
-- **`B90` Låg-Medel** - `packages/generation/brief/extract.py:ENGLISH_HINTS`
-  innehåller `"a"` och `"an"`, vilket kan ge falska engelska träffar
-  (`A & O El Malmö` klassificeras som `en`). Källa: extern reviewer +
-  RO-verifierings-subagent 2026-05-15. Fix: open. Test: open.
-- **`B91` Medel** - `_normalize_location_hint` i
-  `scripts/prompt_to_project_input.py` mappar idag i praktiken bara
-  `sweden -> Sverige`; övriga vanliga engelska/svenska varianter passerar
-  oförändrat. Källa: extern reviewer + RO-verifierings-subagent
-  2026-05-15. Fix: open. Test: open.
-- **`B92` Låg** - `_BUSINESS_TYPE_LABEL_SV` mappar
-  `naprapat -> naprapatklinik`, vilket överanpassar enskild naprapat till
-  klinikform i H1-fallback. Källa: extern reviewer +
-  RO-verifierings-subagent 2026-05-15. Fix: open. Test: open.
-- **`B93` Låg-Medel** - `_company_business_label` fallback i
-  `scripts/prompt_to_project_input.py` visar rå slugtext i svensk H1
-  (`företag som arbetar med pet grooming`). Svensk mening men engelsk
-  slugläcka i kundcopy. Källa: extern reviewer +
-  RO-verifierings-subagent 2026-05-15. Fix: open. Test: open.
 
 ### Re-Verifierings-Scout 2026-05-15 (post-Grind PR #28 mot `d0ded58`)
 
@@ -151,16 +133,6 @@ jargong synligt på alla fyra case), generisk service-copy ("X -
 kontakta oss för mer information." återanvänds överallt), och hero-
 CTA "Begär offert" hardcoded i `render_home` oavsett bransch
 (bryter särskilt e-handel-trovärdighet). Audit-konfidence 7/10.
-
-- **`B97` Låg** - `/kontakt`-paragrafen "Beskriv jobbet kort så
-  återkommer vi inom en arbetsdag med tider och offert." använder
-  `jobbet`+`offert` hardcoded — passar inte e-handel-cases (frågor om
-  beställning/retur/leverans). Källa: re-Verifierings-Scout
-  2026-05-15. Fix: open. Test: open.
-- **`B98` Låg** - "Områden vi arbetar i"-block på `/om-oss` är
-  meaningless för e-handel — borde inte renderas (eller annan rubrik)
-  när scaffold = `ecommerce-lite`. Källa: re-Verifierings-Scout
-  2026-05-15. Fix: open. Test: open.
 
 **Historisk B71-not:** Re-Verifierings-Scout kunde före Project DNA-
 fixen inte verifiera follow-up-byte-stabilitet i ett första-
@@ -331,6 +303,21 @@ integrate christopher-ui discovery and asset workflow`, merge
   operatörrapport 2026-05-18 (post-B123/B124-diskussion). Fix: open.
   Test: open.
 
+- **`B155` Medel-Hög** - Följdpromptar som uttrycker fri copy- eller
+  stiländring bevaras som metadata men passerar inte till renderer/codegen
+  som applicerbara direktiv. Operatörsverifiering 2026-05-27 visade att
+  "Allt sla vara mycket ljusare" inte gjorde en noir/editorial/mörk sajt
+  ljusare, och att en prompt som bad om `TEST-JAKOB` i hero och övrig
+  text inte gav någon förekomst i `app/page.tsx`. Audit visar att
+  `scripts/prompt_to_project_input.py` bara mergar stödda strukturerade
+  fält/intent, att `planSource="pinned"` skippar planningModel och att
+  renderers/codegen saknar fält för fri copy-edit. Gap-spec:
+  `docs/gaps/GAP-followup-prompt-content-passthrough.md`. ADR-utkast:
+  `governance/decisions/0034-followup-prompt-content-passthrough.md`.
+  Fix: open; backend-signal i `build-result.json` och `trace.ndjson` är
+  implementerad, men FloatingChat-feedback och `copyDirectives[]` återstår.
+  Test: `tests/test_followup_honest_no_op.py`.
+
 - **`BO4-followup-cancel` Låg** - `backoffice/views/playground.py` visar nu
   subprocess-status och loggutdrag medan körningen pågår, men riktig
   cancellation/background-jobb är fortfarande inte implementerat. Det bör tas
@@ -466,7 +453,7 @@ Steward stängde B121 formellt efter PR A+B+C+D. Merge-baseline `e3fa67b`
 (#35 `ec32913`) Viewser overlay alignment, PR C (#36 `89680fa`) Backoffice
 Discovery Control, PR D (#37 `e3fa67b`) CLI baseline-smoke mot fyra
 produktbaseline-prompter — rapport i
-`docs/reports/b121-baseline-smoke.md`. Scout 5 read-only-punkter bedöms
+`docs/archive/b121-baseline-smoke.md`. Scout 5 read-only-punkter bedöms
 täckta av PR A–C-kod + 54 discovery-tester + PR D smoke; full Viewser →
 `/api/prompt` → preview E2E är medveten icke-blocker (samma kategori som
 dry-run ≠ Viewser-payload). Medvetna icke-blockers kvar: per-run trace i
@@ -585,6 +572,18 @@ samma kodmönster lever vidare här — därav posten:
   `B13a` (architectural debt i `scripts/build_site.py`). Fix: open.
   Test: open.
 
+- **`B156` Låg** - `tests/test_b154_next_dev_tdz.py` är ett *chunk-heuristik*-
+  test (curlar fyra routes + grep:ar emitterade webpack-chunks för
+  `let w; ... w.X ...`-mönstret), inte ett riktigt browser-hydration-
+  smoke. För att helt täcka B154-klassens
+  `Uncaught ReferenceError: Cannot access 'w' before initialization`-fel
+  behöver vi en headless-browser-smoke (playwright/puppeteer) som laddar
+  `/` på en levande `npm run dev`-server och assertar att inga
+  hydration-errors loggas i console. Det här gapet flaggades i extern
+  review av PR #131 (2026-05-27). Vid implementation: ersätt eller
+  komplettera chunk-grep med browser-baserad assertion. Källa: extern
+  review 2026-05-27 (PR #131). Fix: open. Test: open.
+
 ## Stängda - regression-test säkrar fixet
 
 - **`B122` Låg** (stängd 2026-05-27, NDJSON-stream för riktig stage-signal) -
@@ -610,6 +609,302 @@ samma kodmönster lever vidare här — därav posten:
   Fix: `7b6fb6c`. Test:
   `tests/test_viewser_files.py::test_prompt_route_emits_ndjson_stream_on_accept_header`
   + `tests/test_viewser_files.py::test_prompt_builder_exposes_followup_mode_and_consumes_ndjson_stream`.
+- **`B157` Hög** (stängd 2026-05-27, akut-fix nivå 1 —
+  `stopAndWaitPreviewServer` + Windows file-lock-release) - Lokala
+  follow-up-builds raiserade `PermissionError: [WinError 5]` på
+  `node_modules/@next/swc-win32-x64-msvc/next-swc.win32-x64-msvc.node`
+  när `build_site.py:copy_starter()` försökte
+  `shutil.rmtree(node_modules)` i en `.generated/<siteId>/`-katalog
+  som en live `next start`-process höll låst. Trigger:
+  `_npm_install_inputs_changed=True` (B154-fixen) + commerce-base
+  Next 16.2.5 → 16.2.6-bump.
+
+  Akut-fix (laddare nivå 1): ny export `stopAndWaitPreviewServer`
+  i `apps/viewser/lib/local-preview-server.ts` som SIGTERM:ar
+  preview-processen, väntar in `exit`-event, fallback SIGKILL,
+  + 200ms extra wait på Windows för att frigöra native `.node`-
+  file-locks. `apps/viewser/lib/build-runner.ts:runBuildOnce()`
+  anropar helpern FÖRE Python spawnas.
+
+  **Kvarvarande arkitektur-skuld** (egen sprint per gap-spec):
+  nivå 4 — immutable `builds/<timestamp>/` per follow-up + manifest-
+  pointer-swap. Den här nivå-1-fixen löser dagens "1000 gånger"-
+  smärta men anti-patternet "rebuilda ovanpå live output-katalog"
+  kvarstår; en agent-dödad preview-process kan fortfarande
+  åter-startas mitt under build via race med viewer-panel-poll.
+
+  Gap-spec: `docs/gaps/GAP-windows-safe-rebuild-pipeline.md`. Källa:
+  extern reviewer-analys 2026-05-27 efm.
+
+  **Follow-up (2026-05-27 sen kväll, reviewer-fynd post-`adba139`):**
+  ``Promise.race([exited, timeoutPromise])`` resolverade omedelbart när
+  ``timeoutPromise`` resolvar (efter att SIGKILL skickats), utan att
+  vänta på faktiskt ``exit``-event. Det bröt kontraktet att caller
+  kunde göra fil-IO efter return — på Windows kunde native
+  ``.node``-binaries fortfarande vara file-låsta tills kerneln reapade
+  processen. Followup-fix: ``sigkillSent``-flag + sekundär
+  ``REAP_TIMEOUT_MS``-vänta (2s hard-floor) på exit-event efter
+  SIGKILL. Worst-case-tid blev 5000+2000+200ms = 7.2s.
+
+  Fix: `adba139` (akut, initial) + B157-followup-commit på `jakob-be`
+  (sen kväll 2026-05-27, denna session). Test: closed —
+  `tests/test_local_preview_server_b157_followup.py` har tre
+  strukturella regression-tester som kollar (1) ≥2 sync-points på
+  ``exited``-promise, (2) ``sigkillSent``-spårning eller motsvarande,
+  (3) kommentar-/kod-match så framtida agenter inte kan refaktorera
+  tillbaka till buggy form utan att också radera kommentarerna.
+
+  Manuell operator-verifiering kvarstår som best-practice för
+  end-to-end-bevis: kör follow-up på commerce-base-site med
+  lockfile-drift, förvänta ingen `PermissionError: [WinError 5]`.
+
+  **Round 3 (2026-05-28 ~01:30, Windows process-tree-kill):**
+  End-to-end-test via Viewser-browser 2026-05-28 ~01:08 visade att
+  follow-up build fortfarande failade med samma `WinError 5` även
+  efter round 1 + 2. Process-tree-snapshot bekräftade rotorsaken:
+  `ChildProcess.kill()` på Windows mappar internt till
+  ``TerminateProcess(handle)`` som **bara dödar direct PID, inte
+  descendants**. Sajtbyggaren spawnar preview-servern via
+  ``npx next start`` → processträdet är ``npx (parent)`` →
+  ``next start (barn)``. ``child.kill()`` i Viewser:s
+  ``stopAndWaitPreviewServer`` killade bara npx-shellen — barnet
+  levde vidare och höll fil-låsen på ``next-swc.*.node``-binaries.
+
+  Round 3-fix: ny ``killProcessTree``-helper i
+  `apps/viewser/lib/local-preview-server.ts` som på Windows
+  spawnar ``taskkill /PID <pid> /T /F`` istället för
+  ``child.kill()``. ``/T`` = tree (alla descendants),
+  ``/F`` = force. På POSIX används ``child.kill(signal)`` som
+  vanligt eftersom process groups respekteras där. Plus
+  Windows-fast-path i ``stopAndWaitPreviewServer`` som hoppar
+  över graceful SIGTERM-fönstret (Node.js mappar SIGTERM →
+  TerminateProcess = force på Windows ändå). 4:e regression-
+  test i `tests/test_local_preview_server_b157_followup.py`
+  strukturellt låser tree-kill-mönstret så framtida agenter inte
+  kan refaktorera bort ``taskkill /T``.
+
+  Full diagnostik + reproduktionssteg + verifieringsguide i
+  `B157-WINDOWS-PROCESS-TREE-FYND.md` (repo-rot, för operatörens
+  granskning). Round 1 + 2 är inte raderade — de fungerar för
+  POSIX-pathen och som timing-skydd även på Windows.
+
+- **`B154` Medel** (stängd 2026-05-27, TDZ-smoke + commerce-lock) -
+  `npm run dev` i en deterministic `ecommerce-lite`/`noir-editorial`-
+  dev-preview kunde hosta `/`, `/produkter`, `/om-oss` och `/kontakt`
+  men sedan kasta `Cannot access 'w' before initialization` vid första
+  hydration. Bisecten hittade ingen page-filscykel och ingen
+  reproducerbar lucide-runtime-krasch på en färsk temp-build; däremot
+  var `commerce-base/package-lock.json` stale mot `package.json`
+  (Next/`eslint-config-next`/PostCSS låg kvar på föregående baseline).
+  Lockfilen är regenererad så färska generated sites installerar samma
+  Next 16.2.6-devgraf som starter-deklarationen, och smoke-testet
+  startar `next dev --webpack`, curlar alla fyra routes och failar om
+  dev-chunks återintroducerar `let w; w.*` före `w =`. Fix: PR #131
+  squash. Test:
+  `tests/test_b154_next_dev_tdz.py::test_b154_next_dev_chunks_do_not_access_w_before_initialization`.
+
+- **`B147` Medel-Hög** (stängd 2026-05-26, B147 host-whitelist) -
+  `assertLocalhost` i `apps/viewser/lib/localhost-guard.ts` blockerade
+  `*.vercel.app`-deployer och gav 403 för discovery-wizardens
+  `/api/discovery-options`, vilket lämnade `Verksamhetsfamilj`-fältet utan
+  val. Fixet lägger till `VIEWSER_ALLOWED_HOSTS` som comma-separated
+  host-whitelist för specifika Vercel preview-/production-domäner, med
+  trimning och case-insensitive jämförelse. Den äldre
+  `VIEWSER_ALLOW_NON_LOCALHOST=true`-vägen finns kvar som fallback för full
+  bypass, men är fortsatt grövre eftersom Viewser saknar auth och
+  rate-limit. Fix: `b3834b3`. Test:
+  `apps/viewser/lib/localhost-guard.test.ts`.
+
+- **`B151` Medel** (stängd 2026-05-26, post-PR-#117 AI Bug Review-fixar) -
+  `apps/viewser/components/builder/floating-chat.tsx`:s
+  `useIsMobileViewport`-hook anropade `mq.addEventListener("change", ...)`
+  ovillkorligt på matchMedia-resultatet. iOS Safari < 14 (samt äldre
+  Edge-/IE-baserade browsers) stödjer inte den signaturen och faller
+  tillbaka till deprecated `addListener`/`removeListener`. Resultat:
+  chatten kraschade tyst på äldre iOS-enheter i fält. AI Bug Review
+  (Sannolikhet 79 %, impact 8/10) flaggade detta på PR #117. Fix:
+  feature-detect mot `typeof mq.addEventListener === "function"` med
+  fallback till deprecated APIn via inline strukturell cast (inline
+  istället för namngiven PascalCase-typ för att passera
+  term-coverage --strict). Fix: `4a6243a`. Test:
+  `tests/test_viewser_files.py::test_b151_floating_chat_useismobile_feature_detects_addeventlistener`.
+
+- **`B152` Medel** (stängd 2026-05-26, post-PR-#117 AI Bug Review-fixar) -
+  `apps/viewser/components/builder/inspector/compare-preview-modal.tsx`
+  mobile snap-x-scroll hade `w-full` per pane inuti flex-row med
+  `gap-2`. Två 100 %-bredd-panes + 0.5rem gap = 200 % + 0.5rem total
+  scroll-content → pane-A:s högra kant smög 0.5rem in i viewporten
+  när snappat till pane B, vilket bröt den avsedda one-pane-per-snap-
+  upplevelsen. AI Bug Review (Sannolikhet 88 %, impact 7/10) flaggade
+  detta på PR #117. Fix: `w-[calc(100%-0.5rem)]` så pane-bredd + gap
+  = 100 % per snap-segment, snap-positionerna landar nu rent vid varje
+  pane-start. Desktop (lg:) oförändrad — grid-cols-2 har inget
+  gap-overflow-problem. Fix: `4a6243a`. Test:
+  `tests/test_viewser_files.py::test_b152_compare_modal_pane_width_accounts_for_gap`.
+
+- **`B153` Låg** (stängd 2026-05-26, post-PR-#117 AI Bug Review-fixar) -
+  `apps/viewser/components/viewer-panel.tsx` sessionStorage-hydration
+  restorerade bara `"mobile"`/`"tablet"`/`"laptop"`-preset explicit;
+  `"full"` saknades i listan av accepterade värden. Funktionellt
+  räddade default-värdet (också `"full"`) flödet idag, men det är
+  inkonsekvent med övriga presets och om default någonsin ändras
+  tappas `"full"`-persistensen. AI Bug Review (Sannolikhet 84 %, impact
+  5/10) flaggade detta på PR #117. Fix: inkludera alla fyra giltiga
+  device-preset-värden (`"mobile"`/`"tablet"`/`"laptop"`/`"full"`) i
+  hydration-checken. Fix: `4a6243a`. Test:
+  `tests/test_viewser_files.py::test_b153_viewer_panel_hydrates_full_device_preset`.
+
+- **`B90` Låg-Medel** (stängd 2026-05-26, language/location/business-type-kluster) -
+  `packages/generation/brief/extract.py:ENGLISH_HINTS` innehöll de
+  enbokstavliga artiklarna `"a"` och `"an"`. Svenska företagsnamn med
+  enbokstavstoken (`A & O El Malmö`) tokeniserade till en mängd som
+  innehöll `"a"`, vilket matchade ENGLISH_HINTS och fick
+  `detect_language` att returnera `"en"` — felaktigt. Fix: ta bort
+  `"a"` och `"an"` ur ENGLISH_HINTS. Cascadens å/ä/ö-check fångar
+  fortfarande namn med svenska tecken, och default-grenen lutar
+  fortsatt svenska för korta prompts. Genuina engelska briefer
+  fortsätter trigga "en" via `"the"`, `"and"`, `"build"`, `"website"`
+  etc. Fix: `6d4a096`. Test:
+  `tests/test_prompt_to_project_input.py::test_b90_single_letter_swedish_company_name_stays_sv`,
+  `tests/test_prompt_to_project_input.py::test_b90_english_prompts_without_a_an_still_detect_as_english`.
+
+- **`B91` Medel** (stängd 2026-05-26, language/location/business-type-kluster) -
+  `_normalize_location_hint` hade tidigare bara country-name-handling
+  via `_COUNTRY_NAME_LOCATION_HINTS`. Vanliga engelska exonymer för
+  svenska/nordiska städer (`Gothenburg`, `Helsinki`, `Copenhagen`)
+  passerade oförändrat även på `language=sv`-byggen, vilket fick hero-
+  ortstaggen att rendera engelska stadsnamn på svensk-taggade sajter.
+  Fix: ny `_ENGLISH_TO_SWEDISH_CITY`-map med konfirmerade exonymer
+  (Gothenburg→Göteborg, Helsinki→Helsingfors, Copenhagen→Köpenhamn).
+  Översättningen sker bara när `language == "sv"`; engelska byggen
+  passerar igenom oförändrat. Medvetet smal — inga spekulativa
+  stadsöversättningar. Fix: `6d4a096`. Test:
+  `tests/test_prompt_to_project_input.py::test_b91_swedish_builds_translate_english_city_exonyms`,
+  `tests/test_prompt_to_project_input.py::test_b91_english_builds_preserve_english_city_unchanged`,
+  `tests/test_prompt_to_project_input.py::test_b91_unknown_english_city_passes_through`.
+
+- **`B92` Låg** (stängd 2026-05-26, language/location/business-type-kluster) -
+  `_BUSINESS_TYPE_LABEL_SV` mappade alla naprapat-slug-varianter
+  (`naprapat`, `naprapath`, `naprapat-clinic`, `naprapath-clinic`,
+  `naprapatklinik`) till `"naprapatklinik"`, vilket överanpassade
+  enskild naprapat-utövare till klinikform i H1-fallback. Fix: bare
+  `"naprapat"` och `"naprapath"` mappar nu till `"naprapat"`
+  (sole-practitioner). De explicita *-clinic- och `naprapatklinik`-
+  varianterna mappar fortfarande till `"naprapatklinik"` så briefModel
+  kan uttrycka klinik-vs-individ-distinktionen. Existerande test
+  `test_business_type_map_covers_briefmodel_hyphenated_slugs`
+  uppdaterad med nya förväntade mappningar. Fix: `6d4a096`. Test:
+  `tests/test_prompt_to_project_input.py::test_b92_bare_naprapat_slug_renders_sole_practitioner_h1`,
+  `tests/test_prompt_to_project_input.py::test_b92_naprapath_english_slug_also_maps_to_sole_practitioner`,
+  `tests/test_prompt_to_project_input.py::test_b92_explicit_clinic_variants_still_render_clinic_h1`.
+
+- **`B93` Låg-Medel** (stängd 2026-05-26, language/location/business-type-kluster) -
+  `_company_business_label` föll igenom till
+  `"företag som arbetar med <slug>"`-grenen för okända multi-word
+  engelska business-slugs (`pet-grooming`, `personal-trainer`,
+  `tattoo-studio`, `law-firm`, etc.), vilket läckte rå engelsk
+  slugtext in i svensk H1-copy (`"Företag som arbetar med pet
+  grooming i Stockholm"`). Fix: utöka `_BUSINESS_TYPE_LABEL_SV` med
+  22 nya entries för vanliga multi-word engelska slugs som briefModel
+  emitterar. Varje mapas till ett riktigt svenskt substantiv som
+  läser naturligt i H1-copy (`pet-grooming → djursalong`,
+  `personal-trainer → personlig tränare`, `law-firm → advokatbyrå`,
+  etc.). Fallback-grenen behålls för genuint okända slugs så
+  operatörer kan upptäcka un-mappade slugs i test-output. Cross-ref:
+  B63 (original fallback-fix), B92 (relaterad map-precision-fix).
+  Fix: `6d4a096`. Test:
+  `tests/test_prompt_to_project_input.py::test_b93_common_multi_word_english_slugs_map_to_swedish`,
+  `tests/test_prompt_to_project_input.py::test_b93_pet_grooming_h1_no_longer_leaks_english_slug`,
+  `tests/test_prompt_to_project_input.py::test_b93_unknown_swedish_slug_still_uses_swedish_fallback_phrase`.
+
+- **`B97` Låg** (stängd 2026-05-26, scaffold-aware contact-copy sprint) -
+  `render_section_contact_info`:s kontakt-page hero body hårdkodade
+  "Beskriv jobbet kort så återkommer vi inom en arbetsdag med tider och
+  offert." Orden `jobbet` + `tider och offert` antar quote-driven
+  service-business; e-handel-kunder frågar om beställning/leverans/retur
+  och booking-kunder vill boka en tid. Fix: ny dict
+  `_CONTACT_PAGE_HERO_BODY_BY_VARIANT` keyad på `(variant, language)`
+  där variant kommer från `_hero_cta_variant` (samma shop/booking/quote-
+  klassificerare som driver hero-CTA-labels) och language är `sv`/`en`.
+  Quote-variantens svenska copy är byte-identisk så lokala
+  service-business-renders inte regredierar; shop- och booking-varianter
+  får explicit formulerade copies. Ny `_contact_page_hero_body`-helper
+  väljer copyn med fallback till `quote+sv` för okända `(variant,
+  language)`-kombinationer. Hero-headlinen "Hör av dig" är generisk
+  över alla varianter och rörs inte (scope-lock). Bidrar till att lyfta
+  Golden Path-evalens `dominantProblem=contact (3/4 case)`-signal.
+  Fix: `c85ae70`. Test:
+  `tests/test_builder_route_emission.py::test_b97_contact_page_hero_body_quote_variant_default_unchanged`,
+  `tests/test_builder_route_emission.py::test_b97_contact_page_hero_body_shop_variant_for_ecommerce_lite`,
+  `tests/test_builder_route_emission.py::test_b97_contact_page_hero_body_booking_variant_for_booking_business`,
+  `tests/test_builder_route_emission.py::test_b97_contact_page_hero_body_english_quote_variant`,
+  `tests/test_builder_route_emission.py::test_b97_contact_page_hero_body_english_shop_variant`,
+  `tests/test_builder_route_emission.py::test_b97_contact_page_hero_headline_stays_generic_across_variants`.
+
+- **`B98` Låg** (stängd 2026-05-26, scaffold-aware contact-copy sprint) -
+  `render_about`:s "Områden vi arbetar i"-section renderades för alla
+  scaffolds med non-country-only location, inklusive `ecommerce-lite`.
+  Rubriken + MapPin-ikonen är service-business-flavoured och läses
+  awkwardly för e-handel som skickar från en plats (inga lokala
+  serviceområden i samma bemärkelse). Fix: utöka den befintliga B104
+  country-only-suppressionen med en scaffold-check som också suppressar
+  blocket när `scaffoldId == "ecommerce-lite"`. Defensivt: dossiers
+  utan `scaffoldId` faller fortfarande igenom till bara country-only-
+  checken, vilket bevarar bakåtkompatibilitet med äldre callers. Cross-
+  ref: B104 (country-only suppression, denna bygger på den helpern).
+  Fix: `c85ae70`. Test:
+  `tests/test_builder_route_emission.py::test_b98_render_about_omits_service_areas_for_ecommerce_lite`,
+  `tests/test_builder_route_emission.py::test_b98_render_about_keeps_service_areas_for_local_service_business`,
+  `tests/test_builder_route_emission.py::test_b98_render_about_keeps_service_areas_when_scaffold_unspecified`.
+
+- **`B148` Medel** (stängd 2026-05-26, fix-sprint för read-only build_site-audit) -
+  `_nav_items_from_scaffold` hårdkodade `/kontakt` som insertion-anchor
+  för wizard-extras. För `restaurant-hospitality` (`/hitta-hit`) blev
+  `contact_idx = None`, så FAQ/team/karta hamnade i slutet av nav istället
+  för före contact-routen. Fix: derivera contact-path från
+  `scaffold_default_routes` via `route.get("id") == "contact"` (mirrors
+  `_pick_contact_route`-mönstret), sök sen items för den pathen.
+  Defensive-fall: scaffold utan contact-route behåller append-till-slutet-
+  fallback. Fix: `f2e84b0`. Test:
+  `tests/test_wizard_route_emission.py::test_b148_nav_inserts_extras_before_non_default_contact_path`,
+  `tests/test_wizard_route_emission.py::test_b148_nav_appends_extras_when_scaffold_lacks_contact_route`,
+  `tests/test_wizard_route_emission.py::test_b148_nav_preserves_local_service_business_behavior`.
+
+- **`B149` Låg** (stängd 2026-05-26, fix-sprint för read-only build_site-audit) -
+  Intent Guard använde substring-match (`blocked in term`) istället för
+  exact-match, så korta tokens i `_INTENT_GUARD_CONFLICTS` (`"bar"`,
+  `"mat"`, `"spa"`) gav falska träffar: `"bar" in "barber"`,
+  `"spa" in "spaghetti"`, `"mat" in "automation"`. Fix: tokenisera
+  candidate_terms (whole + split på whitespace/dash) till en set,
+  kräv `blocked in candidate_tokens` (exact-match). True positives
+  bevarade: slug-form `"hair-salon"` matchar fortfarande via whole-token,
+  och individuella konflikt-ord matchar via sub-token-split. Fix:
+  `f2e84b0`. Test:
+  `tests/test_intent_guard.py::test_b149_no_warning_when_bar_is_substring_of_barber`,
+  `tests/test_intent_guard.py::test_b149_no_warning_when_spa_is_substring_of_spaghetti`,
+  `tests/test_intent_guard.py::test_b149_no_warning_when_mat_is_substring_of_automation`,
+  `tests/test_intent_guard.py::test_b149_exact_match_on_bar_still_warns_for_legit_bar`,
+  `tests/test_intent_guard.py::test_b149_token_split_preserves_hair_match_on_compound_slug`.
+
+- **`B150` Låg-Medel** (stängd 2026-05-26, fix-sprint för read-only build_site-audit) -
+  `_normalize_business_type` täckte bara explicita prefix-mappingar
+  (naprapat*, frisör/hairdresser, webshop-varianter). briefModel:s
+  multi-word business types (`"massage studio"`, `"yoga studio"`,
+  `"personal trainer studio"`) komprimerades till compact slugs
+  (`"massage-studio"`) som inte fanns i `_BOOKING_BUSINESS_TYPES`, så
+  `_hero_cta_variant` föll till generic `"Begär offert"`-CTA istället
+  för `"Boka tid"`/`"Shoppa nu"`. Fix: efter de explicita mappingarna,
+  loopa genom progressivt kortare dash-prefixen (längst först) och
+  returnera den längsta prefixen som finns registrerad i
+  `_BOOKING_BUSINESS_TYPES` eller `_SHOP_BUSINESS_TYPES`. Konservativt
+  — collapsar bara till redan-registrerade slugs, hittar aldrig på nya.
+  Fix: `f2e84b0`. Test:
+  `tests/test_builder_route_emission.py::test_b150_normalize_business_type_collapses_massage_studio`,
+  `tests/test_builder_route_emission.py::test_b150_normalize_business_type_collapses_compound_booking_slugs`,
+  `tests/test_builder_route_emission.py::test_b150_normalize_business_type_preserves_unknown_compound_unchanged`,
+  `tests/test_builder_route_emission.py::test_b150_hero_cta_label_fires_booking_for_massage_studio`,
+  `tests/test_builder_route_emission.py::test_b150_hero_cta_label_fires_booking_for_dash_form_personal_training_studio`,
+  `tests/test_builder_route_emission.py::test_b150_naprapat_explicit_mapping_still_wins`.
 
 - **`B146` Hög** (stängd 2026-05-25 kväll, B146-port mot jakob-be) -
   Christopher's PR #105 (Live Build Sync + Restaurant Path A + Wizard
@@ -1044,7 +1339,7 @@ samma kodmönster lever vidare här — därav posten:
   briefen aldrig levererar schemat och `_placeholder_contact` då alltid
   fyller dummyn — operatör kunde tidigare publicera dummy-öppettider
   vid sidan av telefonen utan signal. Källa:
-  `docs/reports/viewser-overlay-e2e-scout-2026-05-19.md` Fynd 1
+  `docs/archive/2026-05-19/viewser-overlay-e2e-scout-2026-05-19.md` Fynd 1
   i Case 3a + Codex review på PR #39 (commit `6121214656`,
   fynd P2 + P2). Fix: `58b6879` + Codex-hardening-commit. Test:
   `tests/test_prompt_to_project_input.py::test_placeholder_contact_returns_field_list`,
@@ -1177,7 +1472,7 @@ samma kodmönster lever vidare här — därav posten:
   `tests/test_discovery_resolver.py`,
   `tests/test_viewser_files.py` (PR B guards),
   `tests/test_backoffice_discovery_control.py` (PR C, 16 tester);
-  smoke: `docs/reports/b121-baseline-smoke.md`.
+  smoke: `docs/archive/b121-baseline-smoke.md`.
 
 - **`B126` Medel** (stängd 2026-05-18, post-PR-#32 reviewer-fynd 1) -
   `backoffice/asset_graph.py:_compatible_dossier_edges` byggde
@@ -2099,6 +2394,19 @@ samma kodmönster lever vidare här — därav posten:
   spegeln synkad via `scripts/rules_sync.py`. `/api/chat`-routen
   och `lib/openai.ts` lämnas orörda — de är fortfarande standalone
   endpoints och Scout pekade inte ut dem.
+
+- **`BO6` Låg** (stängd 2026-05-29, direktpush `2c0d5b3` på `jakob-be`) -
+  `backoffice/discovery_wizard_diagnostics.py` hardkodade `_RUNTIME_SCAFFOLD_IDS`
+  till 2 scaffolds (`local-service-business`, `ecommerce-lite`), men resolverns
+  `_RUNTIME_SCAFFOLD_HINTS` har 6 sedan Path B fas 1+2+3a
+  (`restaurant-hospitality`, `clinic-healthcare`, `professional-services`,
+  `agency-studio`). Ingen runtime-bug — sajterna byggdes korrekt — utan en
+  operatörs-förvirrings-bug: diagnostiken visade fel "active runtime scaffolds"
+  och pekade bara på 2 av 6 `routes.json`-paths. Fix: listan speglas nu
+  dynamiskt via direktimport av `_RUNTIME_SCAFFOLD_HINTS`; `_source_paths`
+  itererar samma lista.
+  Test: `tests/test_backoffice_runtime_scaffolds.py::test_backoffice_runtime_scaffold_ids_match_resolver`,
+  `tests/test_backoffice_runtime_scaffolds.py::test_backoffice_runtime_scaffold_routes_exist`.
 
 - **`BO2` Medel** (stängd 2026-05-14, squash-merge `e1ad5ca` via PR #23) - Backoffice trace
   viewer dumpade tidigare bara rå dataframe för `trace.ndjson`.

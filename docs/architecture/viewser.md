@@ -3,7 +3,9 @@
 `apps/viewser` är en **localhost-only operator-prototype** som binder ihop
 PromptBuilder, build-triggning, run history och preview av senaste run. Den är
 inte en canonical runtime och kommer att ersättas av Sprint 4 LocalRuntime /
-StackBlitzRuntime när de finns.
+StackBlitzRuntime när de finns. Hosted Vercel-deploys får visa UI/read-only
+diagnostik, men prompt/build/scrape-actions blockas med 501 eftersom de ännu
+shellar repo-lokala Python-skript.
 
 ## Avgränsning
 
@@ -14,6 +16,8 @@ Viewser är ett dev-verktyg, inte en produkt. Den får inte:
 - skapa egna artefaktkontrakt utöver det `build_site.py` redan producerar
 - exponera publika endpoints (localhost-guard avvisar non-local anrop)
 - bli produktionsberoende av en deploy-plattform
+- försöka köra `prompt_to_project_input.py`, `build_site.py` eller
+  `scrape_site.py` från hosted Vercel Node-functions
 
 ## Mentalmodell
 
@@ -33,9 +37,11 @@ Klassen är `soft` eller `hard` (se ADR 0012).
 1. Operatören skriver en fri init-prompt eller väljer en befintlig run/site för
    follow-up prompt versions.
 2. `POST /api/prompt` kör helpern som skapar eller uppdaterar Project Input
-   under `data/prompt-inputs/`.
+   under `data/prompt-inputs/` i lokal runtime. På hosted Vercel returnerar
+   routen 501 i stället för att försöka spawna Python.
 3. Viewser triggar Builder MVP med den genererade dossier-pathen.
-4. `POST /api/build` kör `python scripts/build_site.py --dossier <path>`.
+4. `POST /api/build` kör `python scripts/build_site.py --dossier <path>` i
+   lokal runtime. På hosted Vercel returnerar routen 501.
 5. Run-artefakter hamnar i `data/runs/<runId>/` enligt builder MVP.
 6. Viewer Panel hämtar filtrerat filträd via `GET /api/runs/<runId>/files`.
 7. `@stackblitz/sdk.embedProject` mountar projektfilerna i browsern.
@@ -66,8 +72,11 @@ som `max_tokens` till OpenAI. Dessutom valideras request-payload mot:
 ## Säkerhetsgränser
 
 - **Localhost-guard** (`lib/localhost-guard.ts`) avvisar allt som inte är
-  `localhost` / `127.0.0.1` / `::1`. Kan stängas av med
-  `VIEWSER_ALLOW_NON_LOCALHOST=true` (escape hatch).
+  `localhost` / `127.0.0.1` / `::1`. `VIEWSER_ALLOWED_HOSTS` kan sättas
+  till en comma-separated lista med specifika hostar (t.ex. Vercel preview-
+  och production-domäner) som får använda API:erna utan att hela ytan öppnas.
+  `VIEWSER_ALLOW_NON_LOCALHOST=true` finns kvar som full bypass, men bör bara
+  användas medvetet eftersom Viewser fortfarande saknar auth och rate-limit.
 - `siteId` valideras mot `^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$` innan
   `assertProjectInputExists` rör filsystemet.
 - `runId` valideras mot `^[a-zA-Z0-9._-]+$` och path-containment kollas mot
