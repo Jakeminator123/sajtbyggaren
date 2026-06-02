@@ -222,7 +222,25 @@
                 "enum": ["prompt-rule", "llm", "explicit"],
                 "description": "Hur direktivet härleddes: prompt-rule = deterministisk keyword/regex-extraktor; llm = copyDirectiveModel structured output; explicit = explicit till:-markör i prompten."
               }
-            }
+            },
+            "allOf": [
+              {
+                "$comment": "services måste namnge en befintlig tjänst via targetRef (samma kontrakt som Python-valideringen enforcar).",
+                "if": {
+                  "properties": {"target": {"const": "services"}},
+                  "required": ["target"]
+                },
+                "then": {"required": ["target", "operation", "payload", "targetRef"]}
+              },
+              {
+                "$comment": "about-text och services är replace-only; include-token är bara giltigt för company-name/tagline.",
+                "if": {
+                  "properties": {"target": {"enum": ["about-text", "services"]}},
+                  "required": ["target"]
+                },
+                "then": {"properties": {"operation": {"const": "replace-text"}}}
+              }
+            ]
           }
         }
       }

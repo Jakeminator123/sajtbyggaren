@@ -1165,3 +1165,112 @@ def test_end_to_end_planned_about_rewrite_visible(
     assert found, "planned about rewrite should appear in the generated site"
     build_result = _read_json(run_dir_v2 / "build-result.json")
     assert build_result["appliedVisibleEffect"] is True
+
+
+# --- reviewer edge cases 2026-06-02 (pre-sync-PR hardening) ---
+
+
+@pytest.mark.tooling
+def test_about_rewrite_to_quality_phrase_does_not_publish_instruction(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A vibe rewrite via trailing 'till' must never publish the instruction.
+
+    "skriv om om oss till mer personligt" should NOT set company.story =
+    "mer personligt"; with no planner available it is an honest no-op.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    previous = _previous_project_input()
+    merged = _merge(
+        "skriv om om oss till mer personligt",
+        previous=previous,
+        enable_llm_fallback=True,
+    )
+    assert merged["company"]["story"] != "mer personligt"
+    assert merged["company"]["story"] == previous["company"]["story"]
+
+
+@pytest.mark.tooling
+def test_about_text_unquoted_trailing_vibe_is_no_op() -> None:
+    """about-text requires a quoted/colon value; a bare trailing vibe is no-op."""
+    assert (
+        _extract_copy_directives(
+            "ändra om oss-texten till mer personligt", language="sv"
+        )
+        == []
+    )
+
+
+@pytest.mark.tooling
+def test_planned_about_rewrite_without_valid_plan_is_no_op(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Planner enabled but returns [] -> honest no-op, not a semantic append."""
+    monkeypatch.setattr(_PLANNER_PATH, lambda *a, **k: [])
+    previous = _previous_project_input()
+    merged = _merge(
+        "skriv om om oss så det låter mer personligt",
+        previous=previous,
+        enable_llm_fallback=True,
+    )
+    assert merged["company"]["story"] == previous["company"]["story"]
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+@pytest.mark.tooling
+def test_planned_story_rewrite_without_valid_plan_does_not_semantic_append(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A 'historia' rewrite request that the planner cannot fulfil must NOT
+    fall back to a generic story-emphasize append (the no-op promise)."""
+    monkeypatch.setattr(_PLANNER_PATH, lambda *a, **k: [])
+    previous = _previous_project_input()
+    merged = _merge(
+        "skriv om vår historia så den känns mer personlig",
+        previous=previous,
+        enable_llm_fallback=True,
+    )
+    assert merged["company"]["story"] == previous["company"]["story"]
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+def _project_input_with_directive(directive: dict[str, object]) -> dict[str, object]:
+    pi = _previous_project_input()
+    pi.pop("$schema", None)
+    pi["directives"] = {"copyDirectives": [directive]}
+    return pi
+
+
+@pytest.mark.tooling
+def test_schema_rejects_services_directive_without_target_ref() -> None:
+    pi = _project_input_with_directive(
+        {"target": "services", "operation": "replace-text", "payload": "Ny summary"}
+    )
+    with pytest.raises(SystemExit):
+        _validate_against_schema(pi)
+
+
+@pytest.mark.tooling
+def test_schema_accepts_services_directive_with_target_ref() -> None:
+    pi = _project_input_with_directive(
+        {
+            "target": "services",
+            "operation": "replace-text",
+            "payload": "Ny summary",
+            "targetRef": "orhangen",
+        }
+    )
+    _validate_against_schema(pi)  # must not raise
+
+
+@pytest.mark.tooling
+def test_schema_rejects_about_text_include_token() -> None:
+    pi = _project_input_with_directive(
+        {"target": "about-text", "operation": "include-token", "payload": "X"}
+    )
+    with pytest.raises(SystemExit):
+        _validate_against_schema(pi)

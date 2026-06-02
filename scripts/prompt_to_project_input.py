@@ -2778,6 +2778,26 @@ def _extract_replace_value(follow_up_prompt: str) -> str | None:
     return None
 
 
+def _extract_explicit_replace_value(follow_up_prompt: str) -> str | None:
+    """Strict new value: only quoted or colon, NOT a bare trailing ``till <rest>``.
+
+    Used for about-text and services (paragraph-style copy) where a bare
+    trailing value like "till mer personligt" is almost always a vibe
+    instruction, not literal copy - forcing a quote/colon keeps an instruction
+    from being published as customer copy and lets the editPlan planner handle
+    the rewrite instead (reviewer-fynd 2026-06-02). company-name/tagline keep
+    the looser ``_extract_replace_value`` because short labels are commonly
+    given unquoted ("byt namnet till Volvo").
+    """
+    colon = _TILL_VALUE_COLON_RE.search(follow_up_prompt.strip())
+    if colon:
+        return colon.group(1)
+    quoted = _TILL_VALUE_QUOTED_RE.search(follow_up_prompt)
+    if quoted:
+        return quoted.group(1)
+    return None
+
+
 # --- services target ref (slice 2c) -----------------------------------------
 # The operator must name WHICH service to edit. We capture the reference (a
 # service label or id) either quoted right after a service anchor word
@@ -2947,7 +2967,7 @@ def _extract_copy_directives(
         if not has_replace:
             return []
         payload = _safe_copy_payload(
-            _extract_replace_value(follow_up_prompt),
+            _extract_explicit_replace_value(follow_up_prompt),
             follow_up_prompt=follow_up_prompt,
             max_length=_COPY_DIRECTIVE_ABOUT_MAX_LENGTH,
         )
@@ -2973,7 +2993,7 @@ def _extract_copy_directives(
         if not target_ref:
             return []
         payload = _safe_copy_payload(
-            _extract_replace_value(follow_up_prompt),
+            _extract_explicit_replace_value(follow_up_prompt),
             follow_up_prompt=follow_up_prompt,
             max_length=_COPY_DIRECTIVE_SERVICES_MAX_LENGTH,
         )
@@ -3163,35 +3183,45 @@ def _extract_copy_directives_via_llm(
 
 
 def _has_explicit_copy_value(follow_up_prompt: str) -> bool:
-    """True when the operator supplied a literal new value (till/quote/colon)."""
-    return _extract_replace_value(follow_up_prompt) is not None
+    """True when the operator supplied a literal new value (quoted or colon).
+
+    Strict on purpose: a bare trailing ``till <vibe>`` does NOT count, so a
+    rewrite-by-vibe ("skriv om om oss till mer personligt") routes to the
+    planner instead of publishing the instruction as customer copy.
+    """
+    return _extract_explicit_replace_value(follow_up_prompt) is not None
 
 
-def _is_content_rewrite_request(follow_up_prompt: str) -> bool:
-    """True when the follow-up asks to rewrite existing about/service copy.
+def _content_rewrite_target(follow_up_prompt: str) -> str | None:
+    """Return the rewrite target ('about-text'|'services') or None.
 
-    Requires a rewrite/improve verb, NO explicit literal value (those are
-    handled deterministically), and an about-text or services target. A
-    services rewrite still requires a named existing service (targetRef). This
-    is the only gate that activates LLM copy generation, kept separate from the
-    extraction eligibility so the deterministic/extraction behaviour does not
-    change.
+    A content-rewrite request needs a rewrite/improve verb, NO explicit literal
+    value (those are handled deterministically), and an about-text or services
+    target. A services rewrite still requires a named existing service
+    (targetRef). This is the only gate that activates LLM copy generation, kept
+    separate from the extraction eligibility so the deterministic/extraction
+    behaviour does not change.
     """
     text = _normalise_followup_text(follow_up_prompt)
     if not text or len(text) < 4:
-        return False
+        return None
     if _has_explicit_copy_value(follow_up_prompt):
-        return False
+        return None
     if _contains_any(text, _COPY_DIRECTIVE_NEW_SERVICE_GUARD):
-        return False
+        return None
     if not _contains_any_word(text, _COPY_CONTENT_REWRITE_VERBS):
-        return False
+        return None
     target = _classify_copy_target(text)
     if target not in {"about-text", "services"}:
-        return False
+        return None
     if target == "services" and not _extract_service_target_ref(follow_up_prompt):
-        return False
-    return True
+        return None
+    return target
+
+
+def _is_content_rewrite_request(follow_up_prompt: str) -> bool:
+    """True when the follow-up asks to rewrite existing about/service copy."""
+    return _content_rewrite_target(follow_up_prompt) is not None
 
 
 def _build_site_state_for_copy_planning(merged: dict[str, Any]) -> dict[str, Any]:
@@ -3723,6 +3753,21 @@ def merge_followup_project_input(
     if "trustSignals" not in merged:
         merged["trustSignals"] = copy.deepcopy(candidate.get("trustSignals", []))
     language = merged.get("language", "sv")
+    # Snapshot the story before the semantic patch so an about-rewrite request
+    # the planner cannot fulfil stays an honest no-op (the editPlan promise:
+    # "planned rewrite or no-op", never a generic story-emphasize append). Only
+    # active when the planner is enabled - the offline/deterministic path keeps
+    # the existing semantic behaviour (reviewer-fynd 2026-06-02).
+    pre_patch_company = merged.get("company")
+    pre_patch_story = (
+        pre_patch_company.get("story")
+        if isinstance(pre_patch_company, dict)
+        and isinstance(pre_patch_company.get("story"), str)
+        else None
+    )
+    rewrite_target = (
+        _content_rewrite_target(follow_up_prompt) if enable_llm_fallback else None
+    )
     intent = classify_followup_intent(
         follow_up_prompt,
         language=language,
@@ -3749,7 +3794,7 @@ def merge_followup_project_input(
         # and GENERATES new about/service copy (re-validated + grounded). All
         # other unclassified prompts keep the extraction-only fallback so the
         # deterministic/extraction behaviour and intents stay unchanged.
-        if _is_content_rewrite_request(follow_up_prompt):
+        if rewrite_target is not None:
             copy_directives = _plan_copy_directives_via_llm(
                 merged,
                 follow_up_prompt,
@@ -3767,6 +3812,19 @@ def merge_followup_project_input(
                 language=language,
             )
     _apply_copy_directives(merged, copy_directives)
+    # editPlan no-op promise: if an about-text rewrite request produced no
+    # about-text directive (planner returned [], no API key, or candidate
+    # dropped by guards), undo any story change the semantic patch made so the
+    # follow-up is a true no-op rather than a silent generic append.
+    if rewrite_target == "about-text" and pre_patch_story is not None:
+        applied_about = any(
+            isinstance(directive, dict) and directive.get("target") == "about-text"
+            for directive in copy_directives
+        )
+        if not applied_about:
+            company_now = merged.setdefault("company", {})
+            if company_now.get("story") != pre_patch_story:
+                company_now["story"] = pre_patch_story
     return merged
 
 
