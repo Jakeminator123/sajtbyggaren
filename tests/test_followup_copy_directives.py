@@ -1238,6 +1238,67 @@ def test_planned_story_rewrite_without_valid_plan_does_not_semantic_append(
     )
 
 
+@pytest.mark.tooling
+def test_about_rewrite_drops_planner_service_directive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An about-rewrite must never apply a services directive the model
+    returned for the wrong target (scope-leak guard, reviewer P1)."""
+    monkeypatch.setattr(
+        _PLANNER_PATH,
+        lambda *a, **k: [
+            {
+                "target": "services",
+                "operation": "replace-text",
+                "payload": "Felaktig serviceändring",
+                "targetRef": "Örhängen",
+                "source": "llm",
+            }
+        ],
+    )
+    previous = _previous_project_input()
+    merged = _merge(
+        "skriv om om oss så det låter mer personligt",
+        previous=previous,
+        enable_llm_fallback=True,
+    )
+    assert merged["company"]["story"] == previous["company"]["story"]
+    assert merged["services"][0]["summary"] == previous["services"][0]["summary"]
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+@pytest.mark.tooling
+def test_service_rewrite_drops_planner_about_directive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A service rewrite must never apply an about-text directive the model
+    returned for the wrong target (scope-leak guard, reviewer P1)."""
+    monkeypatch.setattr(
+        _PLANNER_PATH,
+        lambda *a, **k: [
+            {
+                "target": "about-text",
+                "operation": "replace-text",
+                "payload": "Felaktig om oss-ändring",
+                "source": "llm",
+            }
+        ],
+    )
+    previous = _previous_project_input()
+    merged = _merge(
+        "förbättra tjänsten 'Örhängen' så den låter mer säljande",
+        previous=previous,
+        enable_llm_fallback=True,
+    )
+    assert merged["company"]["story"] == previous["company"]["story"]
+    assert merged["services"][0]["summary"] == previous["services"][0]["summary"]
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
 def _project_input_with_directive(directive: dict[str, object]) -> dict[str, object]:
     pi = _previous_project_input()
     pi.pop("$schema", None)

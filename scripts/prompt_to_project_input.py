@@ -3278,14 +3278,18 @@ def _plan_copy_directives_via_llm(
     follow_up_prompt: str,
     *,
     language: str,
+    target: str,
 ) -> list[dict[str, Any]]:
     """Generate an edit plan (validated copyDirectives) for a rewrite request.
 
     Uses the copyDirectiveModel planner prompt. Fail-safe: any error yields
     ``[]``. Every candidate is re-validated through
-    ``_validate_copy_directive_candidate``, restricted to about-text/services
-    (company-name/tagline are never generated), and passed through the
-    ungrounded-year guard before it can reach a structured field.
+    ``_validate_copy_directive_candidate`` and passed through the
+    ungrounded-year guard. ``target`` is the requested rewrite target
+    (``about-text`` or ``services``); the planner only fulfils THAT target, so
+    an about rewrite can never apply a services directive (or vice versa) and
+    company-name/tagline are never generated - the scope-leak guard is locked
+    in code, not just the system prompt (reviewer P1 2026-06-02).
     """
     try:
         from packages.generation.brief.extract import plan_copy_directives_llm
@@ -3314,9 +3318,10 @@ def _plan_copy_directives_via_llm(
         )
         if directive is None:
             continue
-        # nivå 3a only generates about-text / services copy; name/tagline are
-        # extraction-only and must never come from the generation path.
-        if directive["target"] not in {"about-text", "services"}:
+        # Only fulfil the requested rewrite target - drop a directive the model
+        # returned for a different field (about<->services) or a non-rewrite
+        # target (company-name/tagline are extraction-only).
+        if directive["target"] != target:
             continue
         if not _planned_payload_grounded(directive["payload"], grounding_text):
             continue
@@ -3799,6 +3804,7 @@ def merge_followup_project_input(
                 merged,
                 follow_up_prompt,
                 language=language,
+                target=rewrite_target,
             )
         elif _copy_directive_llm_eligible(follow_up_prompt, intent=intent):
             copy_directives = _extract_copy_directives_via_llm(
