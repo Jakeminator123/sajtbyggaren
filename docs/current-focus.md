@@ -151,7 +151,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `332e08e` (2026-06-02 UTC, `jakob-be` — kontakt-ärlighets-slice: tätade 3 placeholder-render-läckor (render_global_error, render_map, _faq_pairs öppettider) med befintliga real_*-helpers, 6 nya tester. Ovanpå modulutbrytning (8f2fc1e) + P2-grounding (65aa733) + Lovable-gap-audit (5b2192b). Scout RO-review GO, full pytest grön. EJ i `main` (`main` = `b027b70`). Nästa: trust/branschcopy-slice + sync-PR. Docs-steward-commit ovanpå.).
+Last verified state: `332e08e`-kedjan + docs-PR-merge (2026-06-02 UTC, `jakob-be` — kontakt-ärlighets-slice ovanpå modulutbrytning (8f2fc1e) + P2-grounding (65aa733) + Lovable-gap-audit (5b2192b). Dessutom mergade docs-PR:er: **#152** (.env.example model-override-förtydligande, → `jakob-be`) och **#151** (AGENTS.md virtualenv-fallback, → `main`, in-mergad i `jakob-be`). `main` = `619454c`. Scout RO-review GO, full pytest grön. Nästa: trust/branschcopy-slice + sync-PR.).
 Nya PRs sedan föregående checkpoint: PR #149 (mergad). **Öppen nu: PR #150**
 (christopher-ui) — se nedan.
 
