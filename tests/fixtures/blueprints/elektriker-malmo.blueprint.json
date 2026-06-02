@@ -1,0 +1,121 @@
+{
+  "_fixture": "Baseline branch 'elektriker' (electrician, Malmö). Mock blueprint example for kor-1a: every blueprint field is populated so the optional schema fields are exercised. No model produced this; it is a hand-written fixture for kor-1b/kor-1c tests.",
+  "siteBrief": {
+    "runId": "run-elektriker-malmo",
+    "language": "sv",
+    "rawPrompt": "Hemsida för en elektriker i Malmö som tar privatkunder och mindre företag.",
+    "companyName": "Malmö Elektriska",
+    "businessTypeGuess": "electrician",
+    "locationHint": "Malmö",
+    "tone": ["trygg", "kunnig", "rak"],
+    "targetAudience": ["privatpersoner", "bostadsrättsföreningar", "mindre företag"],
+    "requestedCapabilities": ["contact-form"],
+    "conversionGoals": ["quote-request", "call"],
+    "servicesMentioned": ["elinstallationer", "felsökning", "laddboxar"],
+    "sourceModelRole": "briefModel",
+    "modelUsed": "mock",
+    "briefSource": "mock-no-key",
+    "createdAt": "2026-06-03T08:00:00+00:00",
+    "businessFacts": {
+      "facts": ["verksam i Malmö", "tar privatkunder och mindre företag"],
+      "unknowns": ["telefonnummer", "certifieringar", "antal anställda"]
+    },
+    "positioning": {
+      "oneLiner": "Elektriker i Malmö för trygga installationer och snabb hjälp.",
+      "differentiator": "lokal, tydlig och trygg utan krångliga offerter",
+      "audienceNeed": "någon som löser eljobbet rätt första gången",
+      "localAngle": "snabb på plats i hela Malmö med omnejd",
+      "tone": "trygg, kunnig, rak",
+      "avoid": ["överdrivet teknisk jargong", "påhittade certifieringar", "generiska superlativ"]
+    },
+    "contentStrategy": {
+      "heroAngle": "trygg lokal elektriker som svarar snabbt",
+      "trustStrategy": "ärlig trust utan påhittade claims",
+      "offerStrategy": "lyft tre till fem konkreta tjänster",
+      "avoidGenericClaims": true
+    },
+    "conversion": {
+      "primaryAction": "request_quote",
+      "primaryCta": "Be om offert",
+      "secondaryCta": "Se våra tjänster",
+      "contactPriority": ["phone_if_real", "form", "email_if_real"],
+      "ctaRules": ["visa inte telefon om telefon saknas", "använd inte bokning om bokning saknas"]
+    }
+  },
+  "sitePlan": {
+    "runId": "run-elektriker-malmo",
+    "scaffoldId": "local-service-business",
+    "variantId": "nordic-trust",
+    "starterId": "marketing-base",
+    "routePlan": [
+      {"id": "home", "path": "/", "purpose": "Position the company and drive a quote request"},
+      {"id": "services", "path": "/tjanster", "purpose": "List concrete services"},
+      {"id": "contact", "path": "/kontakt", "purpose": "Make it easy to ask for a quote"}
+    ],
+    "selectedDossiers": ["contact-form"],
+    "buildSpec": {
+      "qualityTarget": 9.0,
+      "verificationPolicy": "build-must-pass",
+      "previewRuntime": "vercel-sandbox"
+    },
+    "sourceModelRole": "planningModel",
+    "modelUsed": "mock",
+    "planSource": "mock-no-key",
+    "createdAt": "2026-06-03T08:00:00+00:00",
+    "sectionPlan": {
+      "home.hero": {
+        "goal": "position fast",
+        "copyIntent": "trygg lokal elektriker",
+        "visualTreatment": "split-proof",
+        "ctaRole": "primary"
+      },
+      "home.trust-proof": {
+        "goal": "build credibility without fake claims",
+        "proofSources": ["prompt", "wizard"]
+      },
+      "services.service-list": {
+        "goal": "show concrete services",
+        "copyIntent": "tre till fem tydliga tjänster",
+        "ctaRole": "secondary"
+      }
+    }
+  },
+  "generationPackage": {
+    "runId": "run-elektriker-malmo",
+    "policyVersions": {"engineRun": "engine-run.v1"},
+    "siteBriefRef": "site-brief.json",
+    "sitePlanRef": "site-plan.json",
+    "scaffoldId": "local-service-business",
+    "variantId": "nordic-trust",
+    "starterId": "marketing-base",
+    "language": "sv",
+    "engineMode": "init",
+    "createdAt": "2026-06-03T08:00:00+00:00",
+    "contentBlocks": {
+      "home.hero": {
+        "headline": "Trygg elektriker i Malmö när jobbet måste bli rätt",
+        "subheadline": "Vi hjälper privatpersoner, föreningar och mindre företag med säkra elinstallationer.",
+        "proofLine": "Tydlig rådgivning, säkra lösningar och snabb återkoppling.",
+        "primaryCta": "Be om offert"
+      },
+      "services.service-list": [
+        {"title": "Elinstallationer", "summary": "Säkra installationer för hem och företag.", "bullets": ["nyinstallation", "ombyggnad"]},
+        {"title": "Felsökning", "summary": "Snabb felsökning när något slutar fungera.", "bullets": ["jordfelsbrytare", "kortslutning"]},
+        {"title": "Laddboxar", "summary": "Installation av laddbox för elbil.", "bullets": ["hemmaladdning", "föreningar"]}
+      ]
+    },
+    "visualDirection": {
+      "mood": "trygg, modern, lokal service",
+      "density": "medium",
+      "heroStyle": "split_with_image",
+      "colorIntent": "warm_neutral_with_electric_accent",
+      "sectionTreatments": {"service-list": "alternating-rows"},
+      "imageBriefs": ["elektriker i modern lägenhet i Malmö, naturligt ljus, tryggt intryck"],
+      "layoutSignals": {"useTrustBandNearHero": true, "avoidOverlyPlayfulShapes": true}
+    },
+    "qualityRisks": [
+      "No fake certifications",
+      "Do not show phone if missing"
+    ]
+  }
+}

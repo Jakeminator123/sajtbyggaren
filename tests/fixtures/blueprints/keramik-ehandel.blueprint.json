@@ -1,0 +1,128 @@
+{
+  "_fixture": "Baseline branch 'keramik-e-handel' (handmade ceramics e-commerce). Mock blueprint example for kor-1a. Hand-written fixture, no model output. Commerce direction with a purchase conversion and a product-list content block.",
+  "siteBrief": {
+    "runId": "run-keramik-ehandel",
+    "language": "sv",
+    "rawPrompt": "Webbshop för handgjord keramik med produkter och berättelse om verkstaden.",
+    "companyName": "Lera och Lyster",
+    "businessTypeGuess": "ceramics-ecommerce",
+    "locationHint": "Sverige",
+    "tone": ["jordnära", "hantverksstolt", "stillsam"],
+    "targetAudience": ["inredningsintresserade", "presentköpare"],
+    "requestedCapabilities": ["product-catalog", "checkout"],
+    "conversionGoals": ["purchase"],
+    "servicesMentioned": ["skålar", "vaser", "muggar"],
+    "sourceModelRole": "briefModel",
+    "modelUsed": "mock",
+    "briefSource": "mock-no-key",
+    "createdAt": "2026-06-03T08:15:00+00:00",
+    "businessFacts": {
+      "facts": ["handgjord keramik", "säljer via webbshop"],
+      "unknowns": ["leveranstider", "fraktpriser", "lagersaldo"]
+    },
+    "positioning": {
+      "oneLiner": "Handgjord keramik med själ, gjord för vardagsbruk.",
+      "differentiator": "varje pjäs är unik och tillverkad i liten skala",
+      "audienceNeed": "vacker keramik som tål att användas",
+      "localAngle": "tillverkad i en liten svensk verkstad",
+      "tone": "jordnära, hantverksstolt, stillsam",
+      "avoid": ["massproducerad känsla", "påhittade recensioner", "uppblåsta löften"]
+    },
+    "contentStrategy": {
+      "heroAngle": "hantverk och känsla framför snabb försäljning",
+      "trustStrategy": "förtroende genom berättelse och bilder, inga fejkade omdömen",
+      "offerStrategy": "lyft ett urval produkter och hänvisa till hela sortimentet",
+      "avoidGenericClaims": true
+    },
+    "conversion": {
+      "primaryAction": "purchase",
+      "primaryCta": "Handla nu",
+      "secondaryCta": "Läs om verkstaden",
+      "contactPriority": ["form", "email_if_real"],
+      "ctaRules": ["lova inga leveranstider om de inte är kända", "visa inte lagersaldo om det saknas"]
+    }
+  },
+  "sitePlan": {
+    "runId": "run-keramik-ehandel",
+    "scaffoldId": "commerce-storefront",
+    "variantId": "minimal-gallery",
+    "starterId": "commerce-base",
+    "routePlan": [
+      {"id": "home", "path": "/", "purpose": "Tell the craft story and surface products"},
+      {"id": "products", "path": "/produkter", "purpose": "Show the product range"},
+      {"id": "about", "path": "/om-verkstaden", "purpose": "Build trust through the workshop story"},
+      {"id": "contact", "path": "/kontakt", "purpose": "Contact and questions"}
+    ],
+    "selectedDossiers": {
+      "required": ["product-catalog"],
+      "recommended": ["image-gallery"],
+      "conditional": ["reviews-display"]
+    },
+    "buildSpec": {
+      "qualityTarget": 9.0,
+      "verificationPolicy": "build-must-pass",
+      "previewRuntime": "vercel-sandbox"
+    },
+    "sourceModelRole": "planningModel",
+    "modelUsed": "mock",
+    "planSource": "mock-no-key",
+    "createdAt": "2026-06-03T08:15:00+00:00",
+    "sectionPlan": {
+      "home.hero": {
+        "goal": "lead with craft, not a hard sell",
+        "copyIntent": "handgjord keramik med själ",
+        "visualTreatment": "image-led",
+        "ctaRole": "primary"
+      },
+      "products.product-grid": {
+        "goal": "make the range easy to browse",
+        "copyIntent": "ett tydligt urval av produkter",
+        "ctaRole": "primary",
+        "proofSources": ["prompt"]
+      },
+      "about.story": {
+        "goal": "build trust through the workshop story",
+        "copyIntent": "berättelse om verkstaden",
+        "ctaRole": "none"
+      }
+    }
+  },
+  "generationPackage": {
+    "runId": "run-keramik-ehandel",
+    "policyVersions": {"engineRun": "engine-run.v1"},
+    "siteBriefRef": "site-brief.json",
+    "sitePlanRef": "site-plan.json",
+    "scaffoldId": "commerce-storefront",
+    "variantId": "minimal-gallery",
+    "starterId": "commerce-base",
+    "language": "sv",
+    "engineMode": "init",
+    "createdAt": "2026-06-03T08:15:00+00:00",
+    "contentBlocks": {
+      "home.hero": {
+        "headline": "Handgjord keramik med själ",
+        "subheadline": "Vaser, skålar och muggar tillverkade i liten skala för vardagsbruk.",
+        "primaryCta": "Handla nu"
+      },
+      "products.product-grid": [
+        {"title": "Skål i seladon", "summary": "Handdrejad skål med matt glasyr."},
+        {"title": "Vas i lergods", "summary": "Stillsam vas för snitt och kvistar."},
+        {"title": "Mugg med öra", "summary": "Mugg som tål vardag och diskmaskin."}
+      ]
+    },
+    "visualDirection": {
+      "mood": "jordnära, hantverksstolt, stillsam",
+      "density": "spacious",
+      "heroStyle": "image_led_gallery",
+      "colorIntent": "earthy_neutral_with_clay_accent",
+      "sectionTreatments": {"product-grid": "masonry-grid"},
+      "imageBriefs": ["närbild på handdrejad keramik, mjukt dagsljus, jordnära toner"],
+      "layoutSignals": {"useTrustBandNearHero": false, "avoidOverlyPlayfulShapes": true}
+    },
+    "qualityRisks": [
+      "No invented reviews",
+      "No promised delivery times unless known",
+      "Do not show stock levels if missing"
+    ]
+  }
+}
