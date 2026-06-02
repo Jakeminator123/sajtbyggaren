@@ -7,15 +7,22 @@ Startpromptar och rollgränser finns i
 
 ## Nästa (2026-06-02, färsk orchestrator-session)
 
-`jakob-be` = `6c860ec` (slice 2a + 2c + nivå 3a + reviewer-härdning).
-`main` = `2d636b0`, inga öppna PR:er. `jakob-be` är 9 commits före `main` —
-**sync-PR är nu mergebar** (de två extern-review-near-blockers stängda i
-`6c860ec`), men öppnas/mergeas på operatörsbeslut. Vercel-sandbox-spåret är i `main` (#146 spike,
-ADR 0033, #147 opt-in-adapter via `VIEWSER_PREVIEW_MODE=vercel-sandbox`);
+`main` = `jakob-be` = `b027b70`, i sync, inga öppna PR:er. **copyDirectives 2a +
+2c + nivå 3a + extern-review-härdning är nu i `main`** (PR #149 mergad, squash
+`3face1c` + steward-auto-bump `b027b70`). Vercel-sandbox-spåret är i `main` (#146
+spike, ADR 0033, #147 opt-in-adapter via `VIEWSER_PREVIEW_MODE=vercel-sandbox`);
 default-preview är fortfarande `local-next` (inte flippad) och adaptern är
-inte UI-wirad. copyDirectives nivå 1 (`company-name` | `tagline`) är i `main`.
+inte UI-wirad.
 
-**copyDirectives-trappa (ADR 0034 väg A, backend på `jakob-be`):**
+**NÄSTA: copyDirective-modulutbrytning** (reviewer-rekommenderad,
+behavior-preserving) — bryt ut copyDirective-delsystemet ur
+`scripts/prompt_to_project_input.py` till `packages/generation/followup/`.
+Scout-verifierad, self-contained builder-prompt redo:
+[`docs/agent-prompts/copydirective-module-extraction.md`](agent-prompts/copydirective-module-extraction.md)
+(baseline: 88 copydir-tester på `main`). Ta gärna in P2-follow-up #4
+(extraction-grounding) i samma refaktor.
+
+**copyDirectives-trappa (ADR 0034 väg A) — allt nedan är i `main`:**
 
 - **Slice 2a — KLAR** (`a1e2502`): `about-text` -> `company.story`,
   replace-only. Deterministisk extraktor (kräver explicit värde) +
@@ -39,27 +46,21 @@ inte UI-wirad. copyDirectives nivå 1 (`company-name` | `tagline`) är i `main`.
   orörda; name/tagline genereras aldrig; grundnings-guard mot påhittade årtal;
   B155 `appliedVisibleEffect` som synlig-effekt-verifierare. Fortfarande väg A
   (inga `.generated/`-patchar). ADR 0034-not + llm-models v6 + naming-dict v22.
-- **Reviewer-härdning — KLAR** (`6c860ec`): två extern-review-near-blockers
-  stängda före sync-PR. (1) Vibe-"till"-läcka: about-text/services kräver nu
-  citerat/kolon-värde (inte fri trailing "till"), så "skriv om om oss till mer
-  personligt" sätter aldrig story = "mer personligt". (2) Planner no-op-löfte:
-  en about-rewrite som planeraren inte kan uppfylla faller inte tillbaka på en
-  generisk story-emphasize-append (story snapshottas + återställs). (3) Schema
-  if/then: services kräver targetRef, about-text/services låsta till
-  replace-text. (4) P1 scope-leak: planeraren låses till det target operatören
-  bad om (`target=rewrite_target`) så fel target aldrig appliceras. 9 nya
-  regressionstester.
+- **Reviewer-härdning — KLAR** (PR #149-review-loopen): (1) vibe-"till"-läcka
+  (about/services kräver citerat/kolon-värde); (2) planner no-op-löfte
+  (story-snapshot+restore, även no-initial-story-fallet); (3) schema if/then
+  (services kräver targetRef, about/services replace-only); (4) P1 scope-leak
+  (planeraren låst till `target=rewrite_target`); (5) P1 service-ref-matchning
+  (planeraren editar bara den namngivna tjänsten, id-vs-label-säkert); (6) P2
+  vibe-tagline (rewrite-verb på name/tagline kräver explicit värde).
 - **Slice 2d — PARKERAD: `cta`/hero.** Inget eget fält idag (hero-knappens text är
   en variant-whitelist i `build_site.py`), så detta är en **kontraktsändring**,
   inte bara enum — kräver designbeslut (ny `conversionGoals`-slug vs nytt
-  PI-fält vs begränsad replace mot befintliga labels). Tas efter nivå 3-mönstret.
-- **NÄSTA (rekommenderat av två externa reviewers): copyDirective-modulutbrytning.**
-  `scripts/prompt_to_project_input.py` är nu för central (prompt-mapping +
-  follow-up-merge + semantic patch + copyDirective extract/plan/validate/apply).
-  Bryt ut copyDirective-delsystemet (keywords, extract, plan, validate, apply,
-  site-state, grounding) till en egen modul med tydliga contracts **innan**
-  fler targets (cta/all-copy) byggs. Behavior-preserving, egen builder-prompt:
-  [`docs/agent-prompts/copydirective-module-extraction.md`](agent-prompts/copydirective-module-extraction.md).
+  PI-fält vs begränsad replace mot befintliga labels). Tas efter modulutbrytningen.
+- **P2-follow-ups** (dokumenterade i `docs/handoff.md`): #1 unquoted service-ref
+  utan "till" (no-op-UX), #4 extraction-vägens grounding-guard (designval, tas i
+  modulutbrytningen), #3 Viewser `AppliedCopyDirective` (Christopher-lane), #5
+  Project DNA-refresh vid about-text.
 - **Nivå 3 fortsättning (efter modulutbrytning, eget beslut):** multi-target
   editPlan, separat `verifierModel` (synlig effekt bortom B155-fil-diff), bredare
   grounding-guard (siffror/orter/namn/certifieringar, inte bara årtal), och
@@ -73,10 +74,10 @@ ingen UI (Christophers lane); rå prompt blir aldrig kundcopy.
 Parallellt (Christopher/UI): Bite C — flippa `app/api/preview/[siteId]` till
 `currentViewserRuntime()`.
 
-Parkerat (kräver operatörs-OK): sync-PR `jakob-be -> main` (slice 2a + 2c + 3a +
-reviewer-härdning — **nu mergebar**), default-flip till `vercel-sandbox` (kräver
+Parkerat (kräver operatörs-OK): default-flip till `vercel-sandbox` (kräver
 Bite C klar + smoke), `forbidden`-radering (egen ADR + test-omskrivningar),
-optional/lazy `@vercel/sandbox`-dep.
+optional/lazy `@vercel/sandbox`-dep. (Sync-PR #149 är mergad — copyDirective-
+batchen är i `main`.)
 
 ## Vem uppdaterar denna fil
 
@@ -103,9 +104,8 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `3face1c` (2026-06-02 UTC, steward-auto efter PR #149 — sync(jakob-be -> main): copyDirectives 2a/2c + niva 3a editPlan + reviewer hardening).
-Nya PRs sedan föregående checkpoint: PR #149 — sync(jakob-be -> main): copyDirectives
-2a/2c + niva 3a editPlan + reviewer hardening.
+Last verified state: `b027b70` (2026-06-02 UTC, `main` = `jakob-be` = `b027b70` post PR #149-merge — copyDirectives 2a/2c + nivå 3a editPlan + extern-review-härdning i `main`, squash `3face1c` + steward-auto-bump. 88 copydir-tester. Nästa: copyDirective-modulutbrytning).
+Nya PRs sedan föregående checkpoint: PR #149 — sync(jakob-be -> main): copyDirectives 2a/2c + niva 3a editPlan + reviewer hardening (mergad).
 
 ## Branchmodellen (kort)
 

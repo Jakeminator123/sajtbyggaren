@@ -1,9 +1,13 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-02 UTC, steward-auto efter PR #149 — sync(jakob-be -> main): copyDirectives 2a/2c + niva 3a editPlan + reviewer hardening. Verifierad `main` är `3face1c`.
+**Datum:** 2026-06-02 UTC. **PR #149 mergad** — `main` = `jakob-be` = `b027b70`
+(squash `3face1c` + steward-auto-bump), i sync, inga öppna PR:er. copyDirectives
+2a/2c + nivå 3a editPlan + extern-review-härdning är nu i `main`. 88 copydir-tester.
+**Nästa:** copyDirective-modulutbrytning (builder-prompt redo i
+`docs/agent-prompts/copydirective-module-extraction.md`) + P2-follow-ups nedan.
 
 Nya PRs sedan föregående checkpoint: PR #149 — sync(jakob-be -> main): copyDirectives
-2a/2c + niva 3a editPlan + reviewer hardening.
+2a/2c + niva 3a editPlan + reviewer hardening (mergad).
 
 ## Tillägg 2026-06-02 — sync-PR #149 + review-loop (Codex/Vercel)
 
