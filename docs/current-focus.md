@@ -15,6 +15,18 @@ ADR 0033, #147 opt-in-adapter via `VIEWSER_PREVIEW_MODE=vercel-sandbox`);
 default-preview är fortfarande `local-next` (inte flippad) och adaptern är
 inte UI-wirad. copyDirectives nivå 1 (`company-name` | `tagline`) är i `main`.
 
+**Christopher-lane / operatörsbeslut 2026-06-02 (auth + billing aktiverat):**
+Operatören har uttryckligen godkänt auth + billing + credits + Stripe som eget
+stack (undantaget i produktkompassens vänta-lista, se
+[`docs/product-operating-context.md`](product-operating-context.md)). Det ligger
+i PR #150 (`christopher-ui → main`, CONFLICTING mot copyDirectives-overlappen +
+delade docs — konfliktlösning på Jakobs sida). Hård gräns: auth/credits läcker
+INTE in i bygg-ingången (`app/api/prompt`); källlås-testet
+`test_build_pipeline_untouched_by_auth` vaktar det. Vercel Agent Review föreslog
+credit-enforcement i bygg-routen — medvetet avvisat (skulle tvinga inloggning på
+kärnflödet + bryta källlåset). Kreditmätning av byggen är ett separat
+produktbeslut.
+
 **copyDirectives-trappa (ADR 0034 väg A, backend på `jakob-be`):**
 
 - **Slice 2a — KLAR** (`a1e2502`): `about-text` -> `company.story`,

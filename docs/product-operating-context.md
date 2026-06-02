@@ -163,6 +163,20 @@ Vänta om inte operatören uttryckligen säger annat:
 - marketplace eller för många starter-spår
 - flera konkurrerande initieringsvägar
 
+### Operatörsbeslut 2026-06-02: auth + billing aktiverat (eget stack)
+
+Operatören har uttryckligen sagt "annat": bygg auth + billing + credits +
+Stripe som eget stack (scrypt-sessioner + SQLite-store + Stripe-prenumeration
+som ger en månatlig kreditpott). Det landade i christopher-ui-lanen (PR #150).
+Detta är alltså undantaget enligt vänta-listan ovan, inte ett brott mot den.
+
+Hård gräns som gäller framåt: auth/credits får INTE läcka in i bygg-ingången
+(`app/api/prompt`). Kärnflödet prompt → preview ska förbli friktionsfritt och
+utloggade ska kunna bygga. Källlås-testet `test_build_pipeline_untouched_by_auth`
+upprätthåller gränsen. Om/när byggen ska kreditmäteras är det ett separat
+produktbeslut (utloggad demo vs tvingad inloggning, var krediten dras) — inte en
+mekanisk fix i bygg-routen.
+
 ## Första kvalitetsbaseline
 
 Nästa tydliga produktbevis är att kunna demonstrera fyra småföretagssajter
