@@ -994,6 +994,23 @@ COMMON_WORDS = {
     # + naming-bump per ADR 0030.
     "CollectedSource", "SandboxPreviewRequest", "SandboxPreviewResult",
     "SandboxStopResult",
+    # Heavy-LLM-flow run-plan docs (docs/heavy-llm-flow/, commit 8c0e7c4).
+    # These docs were pushed directly to jakob-be without a CI run, so
+    # term-coverage first surfaced them on later PRs. They are NOT canonical
+    # domain terms - per the run-plan's own rule ("forbjud canonicalisering,
+    # inte ord"): proposed OpenClaw-router design types shown as code
+    # identifiers (MessageKind/BuildRequirement/EditKind/ContextLevel),
+    # architecture working-names (OpenClaw, OpenClaw Router, Sajtagenten,
+    # LLM Orchestrator, Deterministic Foundation, Orchestration snapshot),
+    # and a few bold/backtick prose-emphasis phrases. Same allowlist
+    # treatment as the many TS-symbol / Swedish-prose entries above. A real
+    # router/orchestrator runtime term gets registered in naming-dictionary.v1
+    # with an ADR when the code lands (see docs/heavy-llm-flow/kor-6a/6b).
+    "MessageKind", "BuildRequirement", "EditKind", "ContextLevel",
+    "OpenClaw", "OpenClaw Router", "Sajtagenten", "LLM Orchestrator",
+    "Deterministic Foundation", "Orchestration snapshot",
+    "Detta README", "Huvudsekvensen", "Full femguards", "Ingen LLM",
+    "F2 vs F3 lifecycle", "Pausad", "Section", "Inte",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
