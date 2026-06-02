@@ -166,9 +166,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `8a86593` (2026-06-02 EM UTC, `jakob-be` = `8a86593`, i sync, rent träd, 10 commits före `main` = `619454c`. Hela copyDirective-batchen (nivå 1→3a + modulutbrytning + P2-grounding + kontakt-ärlighet) + docs-PR #151/#152 in-mergade. Enda öppna PR: #150 (christopher-ui, hålls). Sessionsavslut — handoff till nästa orchestrator ligger överst i docs/handoff.md. Nästa: sync-PR jakob-be→main (operatörsbeslut) + trust/branschcopy-slice).
-Nya PRs sedan föregående checkpoint: PR #149 (mergad). **Öppen nu: PR #150**
-(christopher-ui) — se nedan.
+Last verified state: `366f6e9` (2026-06-02 UTC, steward-auto efter PR #153 — sync(jakob-be -> main): copyDirective module extraction + P2 grounding + contact honesty).
+Nya PRs sedan föregående checkpoint: PR #153 — sync(jakob-be -> main): copyDirective
+module extraction + P2 grounding + contact honesty.
 
 ## Öppen PR att känna till — #150 (christopher-ui)
 
@@ -1112,3 +1112,9 @@ Christopher/UI.
 
 Last verified state: `093b31a` (2026-06-02 UTC, `jakob-be` — extern-review-härdning ovanpå nivå 3a, inkl. P1 scope-leak-fix: planeraren låses nu till det target operatören bad om (`_plan_copy_directives_via_llm(target=rewrite_target)`), så en about-rewrite aldrig applicerar en services-directive eller tvärtom. Tidigare i denna härdning: vibe-"till"-läcka stängd, planner no-op-löfte (story-snapshot+restore), schema if/then. 9 nya regressionstester totalt; alla near-blockers stängda → sync-PR mergebar. EJ i `main` (väntar operatörs-OK). `main` = `2d636b0`. Föregående steward-checkpoint: `6c860ec`).
 Nya PRs sedan föregående checkpoint: inga (#148 var senaste sync till `main`).
+
+### 2026-06-02 UTC — current-focus.md före `8a86593`
+
+Last verified state: `8a86593` (2026-06-02 EM UTC, `jakob-be` = `8a86593`, i sync, rent träd, 10 commits före `main` = `619454c`. Hela copyDirective-batchen (nivå 1→3a + modulutbrytning + P2-grounding + kontakt-ärlighet) + docs-PR #151/#152 in-mergade. Enda öppna PR: #150 (christopher-ui, hålls). Sessionsavslut — handoff till nästa orchestrator ligger överst i docs/handoff.md. Nästa: sync-PR jakob-be→main (operatörsbeslut) + trust/branschcopy-slice).
+Nya PRs sedan föregående checkpoint: PR #149 (mergad). **Öppen nu: PR #150**
+(christopher-ui) — se nedan.
