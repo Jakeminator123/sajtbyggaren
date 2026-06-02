@@ -52,7 +52,25 @@ _REMOVE_VERBS = (
     "remove", "delete",
 )
 
-_CREATE_VERBS = ("skapa", "bygg", "behöver", "vill ha", "ny", "nytt", "create", "add")
+# Create-verbs feed both route_add and component_add (fix 3). "ny"/"nytt" are
+# intentionally NOT here - they are adjectives that would otherwise pull copy
+# prompts like "skriv ny rubrik" into route_add/component_add (fix 4); they are
+# handled as new-page cues below, gated on a page noun.
+_CREATE_VERBS = ("skapa", "bygg", "bygga", "behöver", "vill ha", "create", "add")
+
+# "New page" cues used ONLY for route_add (alongside a page noun).
+_NEW_PAGE_CUES = ("ny", "nytt", "ytterligare", "extra")
+
+# Change verbs that pair with a noun to disambiguate copy vs style vs layout.
+_CHANGE_VERBS = ("ändra", "byt", "byt ut", "uppdatera", "justera")
+
+# A bare style adjective ("premium") is only an edit when paired with one of
+# these imperative/intensifier cues (or a site ref / change verb / style verb).
+# Otherwise a question like "vad betyder premium?" must stay answer_only (fix 1).
+_STYLE_INTENSIFIERS = (
+    "gör", "göra", "make", "make it", "mer", "mindre", "lite", "mera",
+    "extra", "väldigt", "mycket", "more", "less",
+)
 
 _STYLE_ADJECTIVES = (
     "premium", "lyxig", "lyxigare", "modern", "modernare", "snygg", "snyggare",
@@ -159,10 +177,14 @@ _TLDS = (
 # "www.någonannan.se" would only match the ASCII tail and look like a bogus
 # domain. The label charset therefore includes å/ä/ö.
 _DOMAIN_LABEL = r"[a-z0-9åäö][a-z0-9åäö-]*"
+# The capture group keeps the full URL the user referenced - domain AND any
+# path/query (fix 10) - so a reference like "aftonbladet.se/sport?x=1" is not
+# silently truncated to the bare domain. The optional scheme/www are matched
+# but excluded from the capture (they carry no routing signal).
 _URL_RE = re.compile(
     r"(?:https?://)?(?:www\.)?"
-    r"(" + _DOMAIN_LABEL + r"(?:\." + _DOMAIN_LABEL + r")*\.(?:" + "|".join(_TLDS) + r"))"
-    r"(?:/[^\s]*)?",
+    r"(" + _DOMAIN_LABEL + r"(?:\." + _DOMAIN_LABEL + r")*\.(?:" + "|".join(_TLDS) + r")"
+    r"(?:/[^\s]*)?)",
 )
 
 # General "som på <domän>" / "lik(adan) som ..." reference detector. NOT tied
@@ -250,8 +272,15 @@ def _any_word(text: str, phrases: tuple[str, ...]) -> bool:
 
 
 def _find_url(text: str) -> str | None:
+    """Return the full referenced URL (domain + path/query) or None.
+
+    Trailing sentence punctuation is trimmed so "som på example.com/path."
+    yields "example.com/path", while a real query ("?x=1") is preserved.
+    """
     match = _URL_RE.search(text)
-    return match.group(1) if match else None
+    if not match:
+        return None
+    return match.group(1).rstrip(".,;:!?)")
 
 
 def _is_question(raw: str, text: str) -> bool:
@@ -322,6 +351,31 @@ def _build_target(text: str, ctx: RouterContext) -> RouterTarget | None:
     )
 
 
+# Articles / pronouns / fillers that are not a concrete object on their own.
+_OBJECT_STOPWORDS = frozenset(
+    {
+        "den", "det", "de", "dem", "denna", "detta", "dessa", "här", "där",
+        "som", "en", "ett", "på", "till", "in", "dit", "från", "av", "med",
+        "och", "the", "this", "that", "it", "them",
+    }
+)
+
+
+def _clause_has_object(work: str, verbs: tuple[str, ...]) -> bool:
+    """True when a concrete object noun remains after removing the verb phrases.
+
+    Used so a bare "ta bort" (no object) is treated as ambiguous instead of a
+    component_remove with an empty target (fix 2).
+    """
+    cleaned = work
+    for phrase in verbs:
+        cleaned = re.sub(
+            r"(?<![\wåäö])" + re.escape(phrase) + r"(?![\wåäö])", " ", cleaned
+        )
+    tokens = re.findall(r"[a-z0-9åäö]{3,}", cleaned)
+    return any(tok not in _OBJECT_STOPWORDS for tok in tokens)
+
+
 # ---------------------------------------------------------------------------
 # Clause-level classification
 # ---------------------------------------------------------------------------
@@ -352,52 +406,88 @@ class _ClauseIntent:
 def _classify_clause(clause: str, ctx: RouterContext) -> _ClauseIntent:
     result = _ClauseIntent(instruction=clause)
 
-    if _PRESERVE_RE.search(clause):
+    # fix 6: a preserve constraint in the SAME clause is recorded but does NOT
+    # short-circuit classification. Strip the preserve span so its "ändra
+    # texten" wording cannot masquerade as a copy edit, then classify the rest.
+    preserve = bool(_PRESERVE_RE.search(clause))
+    if preserve:
         result.constraint = "preserve_copy"
-        return result
+    work = _PRESERVE_RE.sub(" ", clause) if preserve else clause
 
-    has_add = _any_word(clause, _ADD_VERBS)
-    has_remove = _any_word(clause, _REMOVE_VERBS)
-    has_create = _any_word(clause, _CREATE_VERBS)
-    has_style_verb = _any_word(clause, _STYLE_VERBS)
-    has_style_adj = _any_word(clause, _STYLE_ADJECTIVES)
-    has_style_noun = _any_word(clause, _STYLE_NOUNS)
-    has_redesign = _any_word(clause, _REDESIGN_VERBS)
-    has_layout_verb = _any_word(clause, _LAYOUT_VERBS)
-    has_copy_verb = _any_word(clause, _COPY_VERBS)
-    has_change_verb = _any_word(clause, ("ändra", "byt", "byt ut", "uppdatera", "justera"))
-    has_page_noun = _any_word(clause, _PAGE_NOUNS)
-    component_intent, _component_word = _detect_component(clause)
+    has_add = _any_word(work, _ADD_VERBS)
+    has_remove = _any_word(work, _REMOVE_VERBS)
+    has_create = _any_word(work, _CREATE_VERBS)
+    has_new = _any_word(work, _NEW_PAGE_CUES)
+    has_style_verb = _any_word(work, _STYLE_VERBS)
+    has_style_adj = _any_word(work, _STYLE_ADJECTIVES)
+    has_style_noun = _any_word(work, _STYLE_NOUNS)
+    has_redesign = _any_word(work, _REDESIGN_VERBS)
+    has_layout_verb = _any_word(work, _LAYOUT_VERBS)
+    has_copy_verb = _any_word(work, _COPY_VERBS)
+    has_change_verb = _any_word(work, _CHANGE_VERBS)
+    has_page_noun = _any_word(work, _PAGE_NOUNS)
+    component_intent, _component_word = _detect_component(work)
+    target = _build_target(work, ctx)
 
-    result.hasEditVerb = any(
-        (has_add, has_remove, has_style_verb, has_style_adj, has_redesign,
-         has_layout_verb, has_copy_verb, has_change_verb)
+    # fix 1: a bare style adjective is only an edit with surrounding context
+    # (a style/redesign/change verb, a site ref, or an intensifier like "mer").
+    style_context = (
+        has_style_verb
+        or has_redesign
+        or has_change_verb
+        or _has_site_ref(work)
+        or _any_word(work, _STYLE_INTENSIFIERS)
+    )
+    is_visual_style = (
+        has_style_verb
+        or has_redesign
+        or (has_style_adj and style_context)
+        or (has_change_verb and has_style_noun)
     )
 
-    # 1. route_add: add/create verb + page noun ("lägg till en kontaktsida").
-    if (has_add or has_create) and has_page_noun:
+    # A bare adjective without context is NOT an edit verb, so a question like
+    # "vad betyder premium?" can still resolve to answer_only.
+    result.hasEditVerb = any(
+        (
+            has_add, has_remove, has_create, has_style_verb, has_redesign,
+            has_layout_verb, has_copy_verb, has_change_verb,
+            (has_style_adj and style_context),
+        )
+    )
+
+    # route_add (fix 4 + 5): a NEW page. Requires a page noun + a create/add/
+    # new cue AND no component noun (a component noun means the page word is a
+    # location -> component_add, e.g. "lägg en klocka på sidan").
+    if has_page_noun and (has_add or has_create or has_new) and component_intent is None:
         result.editKind = "route_add"
         result.scope = "route"
         return result
 
-    # 2. component_remove
+    # component_remove (fix 2): only with a concrete object - a bare "ta bort"
+    # is ambiguous, not a remove with an empty target.
     if has_remove:
-        result.editKind = "component_remove"
-        result.scope = "component"
-        result.componentIntent = component_intent
-        result.target = _build_target(clause, ctx)
+        if (
+            component_intent is not None
+            or target is not None
+            or _clause_has_object(work, _REMOVE_VERBS)
+        ):
+            result.editKind = "component_remove"
+            result.scope = "component"
+            result.componentIntent = component_intent
+            result.target = target
+            return result
+        result.ambiguous = True
         return result
 
-    # 3. component_add: add verb + (component noun OR a placement target).
-    target = _build_target(clause, ctx)
-    if has_add and (component_intent is not None or target is not None):
+    # component_add (fix 3): add OR create verb + (component noun OR target).
+    if (has_add or has_create) and (component_intent is not None or target is not None):
         result.editKind = "component_add"
         result.scope = "component"
         result.componentIntent = component_intent
         result.target = target
         return result
 
-    # 4. layout_change (move / reorder / resize / columns).
+    # layout_change (move / reorder / resize / columns).
     if has_layout_verb:
         result.editKind = "layout_change"
         result.scope = "section" if target is not None else "route"
@@ -405,28 +495,54 @@ def _classify_clause(clause: str, ctx: RouterContext) -> _ClauseIntent:
         result.target = target
         return result
 
-    # 5. copy_change: explicit copy verb, or a change verb + a copy noun.
-    if has_copy_verb or (has_change_verb and _any_word(clause, _COPY_NOUNS)):
+    # copy_change: explicit copy verb, or a change verb + a copy noun.
+    if has_copy_verb or (has_change_verb and _any_word(work, _COPY_NOUNS)):
         result.editKind = "copy_change"
         result.scope = "component"
         return result
 
-    # 6. visual_style: a style verb/adjective, a redesign verb, or
-    #    change-verb + style noun.
-    if has_style_verb or has_style_adj or has_redesign or (has_change_verb and has_style_noun):
+    # visual_style: a style/redesign verb, an adjective in style context, or a
+    # change verb + a style noun.
+    if is_visual_style:
         result.editKind = "visual_style"
         result.scope = (
-            "global"
-            if has_redesign or _has_site_ref(clause) or target is None
-            else "section"
+            "global" if has_redesign or _has_site_ref(work) or target is None else "section"
         )
         result.target = target
         return result
 
-    # 7. add verb but no recognizable object -> ambiguous edit (ask later).
-    if has_add or has_change_verb:
+    # An edit verb with no resolvable object -> ambiguous edit (ask later).
+    if has_add or has_create or has_change_verb:
         result.ambiguous = True
     return result
+
+
+def _propagate_coordinated_objects(
+    clause_results: list[_ClauseIntent], ctx: RouterContext
+) -> None:
+    """Carry a bare add/remove verb over coordinated objects (fix 7).
+
+    "lägg till en karta och ett kontaktformulär" splits into two clauses; the
+    second ("ett kontaktformulär") has the object but not the verb. When a
+    later object-only clause follows an add/remove edit, inherit that editKind
+    so both become subtasks instead of dropping the second one.
+    """
+    last_kind: EditKind | None = None
+    for cr in clause_results:
+        if cr.editKind in ("component_add", "component_remove"):
+            last_kind = cr.editKind
+            continue
+        if cr.editKind != "none" or cr.constraint or cr.ambiguous or cr.hasEditVerb:
+            continue
+        if last_kind is None:
+            continue
+        obj_intent, _word = _detect_component(cr.instruction)
+        if obj_intent is None:
+            continue
+        cr.editKind = last_kind
+        cr.scope = "component"
+        cr.componentIntent = obj_intent
+        cr.target = cr.target or _build_target(cr.instruction, ctx)
 
 
 # ---------------------------------------------------------------------------
@@ -487,6 +603,7 @@ def classify_message(message: str, *, context: RouterContext | None = None) -> R
 
     clauses = _split_clauses(text)
     clause_results = [_classify_clause(c, ctx) for c in clauses]
+    _propagate_coordinated_objects(clause_results, ctx)
     edits = [c for c in clause_results if c.editKind != "none"]
     constraints: list[str] = []
     for c in clause_results:
@@ -499,18 +616,17 @@ def classify_message(message: str, *, context: RouterContext | None = None) -> R
 
     # 1. reference_analysis - external reference, propose own variant, no build.
     if url and _COMPARISON_RE.search(text) and len(edits) < 2:
-        component_intent = edits[0].componentIntent if edits else None
-        object_word = None
-        if component_intent is None:
-            component_intent, object_word = _detect_component(text)
-        else:
-            _intent, object_word = _detect_component(text)
+        detected_intent, object_word = _detect_component(text)
+        component_intent = edits[0].componentIntent if edits else detected_intent
         edit_kind: EditKind = "component_add" if component_intent or object_word else "none"
+        # fix 9: carry any parsed placement target into the reference decision.
+        ref_target = edits[0].target if edits else _build_target(text, ctx)
         return RouterDecision(
             messageKind="reference_analysis",
             editKind=edit_kind,
             buildRequirement="plan_only",
             contextLevel="external_reference",
+            target=ref_target,
             reference=RouterReference(url=url, object=object_word),
             componentIntent=component_intent,
             constraints=constraints,
@@ -541,20 +657,44 @@ def classify_message(message: str, *, context: RouterContext | None = None) -> R
     # 3. multi_intent - two or more actionable edits in one message.
     if len(edits) >= 2:
         subtasks = _build_subtasks(clause_results)
-        build = "targeted_rebuild"
+        # fix 8: a multi-intent that ALSO references an external site keeps the
+        # reference + risk and gates to plan_only (analyse the reference before
+        # building) instead of auto-rebuilding.
+        has_reference = bool(url and _COMPARISON_RE.search(text))
+        reference: RouterReference | None = None
+        risk: str | None = None
+        if has_reference:
+            _intent, object_word = _detect_component(text)
+            build = "plan_only"
+            context_level = "external_reference"
+            reference = RouterReference(url=url, object=object_word)
+            risk = "do_not_copy_exact"
+        else:
+            build = "targeted_rebuild"
+            context_level = "artifacts_plus_sections"
         return RouterDecision(
             messageKind="multi_intent",
             editKind="none",
             buildRequirement=build,
-            contextLevel="artifacts_plus_sections",
+            contextLevel=context_level,
+            target=edits[0].target,
             subtasks=subtasks,
             constraints=constraints,
+            reference=reference,
+            risk=risk,
             shouldStartPreview=_should_start_preview(build, ctx),
             rationale=(
                 f"Multiple intents ({len(edits)} edits"
                 + (f", constraints={constraints}" if constraints else "")
-                + ") - split into ordered subtasks, preserve constraints, "
-                "rebuild only the affected routes/sections."
+                + (f", reference={url}" if has_reference else "")
+                + ") - split into ordered subtasks"
+                + (
+                    "; analyse the external reference first (plan_only, "
+                    "do_not_copy_exact)."
+                    if has_reference
+                    else ", preserve constraints, rebuild only the affected "
+                    "routes/sections."
+                )
             ),
         )
 

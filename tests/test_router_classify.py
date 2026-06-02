@@ -325,3 +325,156 @@ def test_url_without_comparison_stays_an_edit_not_a_reference():
     d = classify_message("lägg till en länk till aftonbladet.se")
     assert d.messageKind == "edit_instruction"
     assert d.editKind == "component_add"
+
+
+# ---------------------------------------------------------------------------
+# P2 Bug Review regressions (chatgpt-codex-connectors, 10 findings)
+# ---------------------------------------------------------------------------
+
+
+def test_p2_1_bare_style_adjective_question_is_answer_only():
+    """Finding 1 (HIGH): a bare style adjective with no edit context must NOT
+    become an edit. "vad betyder premium?" -> answer_only, no preview."""
+    d = classify_message("vad betyder premium?")
+    assert d.messageKind == "answer_only"
+    assert d.buildRequirement == "none"
+    assert d.shouldStartPreview is False
+    # Sanity: the same adjective WITH context (site ref + "mer") is still an edit.
+    d2 = classify_message("gör sidan mer premium")
+    assert d2.messageKind == "edit_instruction"
+    assert d2.editKind == "visual_style"
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    ["vad betyder premium?", "vad är minimalistisk design?", "är modern bättre än elegant?"],
+)
+def test_p2_1_style_word_questions_never_start_preview(prompt):
+    d = classify_message(prompt)
+    assert d.shouldStartPreview is False
+    assert d.buildRequirement == "none"
+    assert d.messageKind in ("answer_only", "site_review", "unclear")
+
+
+def test_p2_2_bare_remove_verb_is_clarification_not_empty_remove():
+    """Finding 2 (HIGH): "ta bort" with no object -> unclear/clarification, not
+    a component_remove with an empty target."""
+    d = classify_message("ta bort")
+    assert d.messageKind == "unclear"
+    assert d.requiresClarification is True
+    assert d.shouldStartPreview is False
+
+
+@pytest.mark.parametrize(
+    "prompt", ["ta bort knappen", "ta bort galleriet", "radera kontaktformuläret"]
+)
+def test_p2_2_remove_with_object_is_component_remove(prompt):
+    d = classify_message(prompt)
+    assert d.messageKind == "edit_instruction"
+    assert d.editKind == "component_remove"
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    ["skapa en klocka i andra sektionen", "bygg en kontaktknapp", "skapa en karta till vänster"],
+)
+def test_p2_3_create_verb_is_component_add(prompt):
+    """Finding 3: create-verbs (skapa/bygg) + a component -> component_add."""
+    d = classify_message(prompt)
+    assert d.messageKind == "edit_instruction"
+    assert d.editKind == "component_add"
+    assert d.buildRequirement == "targeted_rebuild"
+
+
+@pytest.mark.parametrize("prompt", ["skriv ny rubrik", "skriv om rubriken", "uppdatera texten"])
+def test_p2_4_copy_prompts_are_copy_change_not_route_add(prompt):
+    """Finding 4: "ny/nytt" must not pull copy prompts into route_add before
+    copy_change."""
+    d = classify_message(prompt)
+    assert d.messageKind == "edit_instruction"
+    assert d.editKind == "copy_change"
+    assert d.buildRequirement == "artifact_patch_only"
+
+
+def test_p2_4_new_page_cue_still_routes_with_page_noun():
+    """A genuine new page ("lägg till en ny sida") still becomes route_add."""
+    d = classify_message("lägg till en ny sida")
+    assert d.messageKind == "edit_instruction"
+    assert d.editKind == "route_add"
+
+
+def test_p2_5_component_on_page_is_component_add_not_route_add():
+    """Finding 5: a component noun beats a generic page-noun. "lägg en klocka
+    på sidan" -> component_add (the page word is a location, not a new page)."""
+    d = classify_message("lägg en klocka på sidan")
+    assert d.messageKind == "edit_instruction"
+    assert d.editKind == "component_add"
+    assert d.componentIntent == "clock_widget"
+
+
+def test_p2_6_inline_preserve_keeps_edit_and_constraint():
+    """Finding 6: a preserve constraint in the SAME clause is recorded AND the
+    edit is still classified (the "ändra texten" wording does not become a
+    copy edit)."""
+    d = classify_message("gör sidan mörkare utan att ändra texten")
+    assert d.messageKind == "edit_instruction"
+    assert d.editKind == "visual_style"
+    assert "preserve_copy" in d.constraints
+
+
+def test_p2_7_coordinated_objects_keep_both_subtasks():
+    """Finding 7: a bare edit verb carries over coordinated objects -> both
+    objects become subtasks."""
+    d = classify_message("lägg till en karta och ett kontaktformulär")
+    assert d.messageKind == "multi_intent"
+    intents = {s.componentIntent for s in d.subtasks}
+    assert {"map_embed", "contact_form"} <= intents
+    assert all(s.editKind == "component_add" for s in d.subtasks)
+
+
+def test_p2_8_multi_intent_with_reference_stays_plan_only():
+    """Finding 8: multi-intent + an external reference keeps reference + risk
+    and gates to plan_only (no auto-rebuild, no preview)."""
+    d = classify_message("gör sidan mer premium och lägg en klocka som på aftonbladet.se")
+    assert d.messageKind == "multi_intent"
+    assert d.buildRequirement == "plan_only"
+    assert d.reference is not None and d.reference.url == "aftonbladet.se"
+    assert d.risk == "do_not_copy_exact"
+    assert d.shouldStartPreview is False
+    assert len(d.subtasks) >= 2
+
+
+def test_p2_9_reference_with_placement_carries_target():
+    """Finding 9: a reference that includes placement carries the parsed target
+    in the RouterDecision."""
+    d = classify_message("lägg en klocka i andra sektionen till vänster som på aftonbladet.se")
+    assert d.messageKind == "reference_analysis"
+    assert d.target is not None
+    assert d.target.sectionOrdinal == 2
+    assert d.target.position == "left"
+    assert d.reference is not None and d.reference.url == "aftonbladet.se"
+
+
+@pytest.mark.parametrize(
+    "prompt,expected_url",
+    [
+        ("samma klocka som på aftonbladet.se/sport?x=1", "aftonbladet.se/sport?x=1"),
+        ("gör en hero som på stripe.com/pricing", "stripe.com/pricing"),
+        ("som på example.com/path.", "example.com/path"),
+    ],
+)
+def test_p2_10_find_url_keeps_full_path_and_query(prompt, expected_url):
+    """Finding 10: the referenced URL keeps its path/query (trailing sentence
+    punctuation trimmed), not just the domain."""
+    d = classify_message(prompt)
+    assert d.messageKind == "reference_analysis"
+    assert d.reference is not None
+    assert d.reference.url == expected_url
+
+
+def test_p2_10_find_url_unit_keeps_path_strips_scheme_and_punctuation():
+    from packages.generation.orchestration.router.classify import _find_url
+
+    assert _find_url("se aftonbladet.se/sport?x=1 nu") == "aftonbladet.se/sport?x=1"
+    assert _find_url("kolla www.någonannan.se/a/b") == "någonannan.se/a/b"
+    assert _find_url("ingen url här alls") is None
