@@ -155,16 +155,24 @@ _TLDS = (
     "se", "com", "net", "org", "nu", "io", "dev", "app", "co", "eu", "de",
     "fr", "uk", "us", "info", "biz", "tv", "me", "ai", "shop", "store",
 )
+# Unicode-aware: Swedish domains (å/ä/ö) must be captured in full, otherwise
+# "www.någonannan.se" would only match the ASCII tail and look like a bogus
+# domain. The label charset therefore includes å/ä/ö.
+_DOMAIN_LABEL = r"[a-z0-9åäö][a-z0-9åäö-]*"
 _URL_RE = re.compile(
     r"(?:https?://)?(?:www\.)?"
-    r"([a-z0-9][a-z0-9-]{1,}(?:\.[a-z0-9-]+)*\.(?:" + "|".join(_TLDS) + r"))"
+    r"(" + _DOMAIN_LABEL + r"(?:\." + _DOMAIN_LABEL + r")*\.(?:" + "|".join(_TLDS) + r"))"
     r"(?:/[^\s]*)?",
 )
 
+# General "som på <domän>" / "lik(adan) som ..." reference detector. NOT tied
+# to any specific domain - any comparison cue paired with a real domain (see
+# the reference branch in classify_message) is treated as a reference.
 _COMPARISON_RE = re.compile(
-    r"\bsom på\b|\bsom hos\b|\bliknande\b|\bprecis som\b|\bi stil med\b"
-    r"|\binspirer|\bser ut som\b|\blikt\b|\btyp som\b|\bà la\b"
-    r"|\bsamma\b[^.?!]*\bsom\b|\blike\b",
+    r"\bsom på\b|\bsom hos\b|\bliknande\b|\bliknar\b|\bprecis som\b"
+    r"|\bi stil med\b|\binspirer|\bser ut som\b|\blikt\b|\blik\b|\blikadan\b"
+    r"|\btyp som\b|\bà la\b|\bsamma\b[^.?!]*\bsom\b|\blike\b"
+    r"|\bsom\s+(?:www\.)?" + _DOMAIN_LABEL + r"\.(?:" + "|".join(_TLDS) + r")\b",
 )
 
 _DISCOVERY_RE = re.compile(
@@ -247,9 +255,22 @@ def _find_url(text: str) -> str | None:
 
 
 def _is_question(raw: str, text: str) -> bool:
-    if raw.strip().endswith("?"):
+    """True when the message reads as a question.
+
+    Defensive by contract: callers may pass ``None`` or an empty string, and
+    ``str.startswith`` must only ever receive a tuple of non-empty ``str``
+    prefixes (an empty prefix would match everything, a non-str prefix would
+    raise). A question without a trailing '?' (e.g. "vad är klockan") is still
+    detected via the leading question words.
+    """
+    raw_str = raw if isinstance(raw, str) else ""
+    text_str = text if isinstance(text, str) else ""
+    if raw_str.strip().endswith("?"):
         return True
-    return text.startswith(_QUESTION_LEADS)
+    if not text_str:
+        return False
+    leads = tuple(lead for lead in _QUESTION_LEADS if isinstance(lead, str) and lead)
+    return text_str.startswith(leads)
 
 
 def _has_site_ref(text: str) -> bool:

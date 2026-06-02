@@ -253,3 +253,75 @@ def test_pure_questions_never_require_a_build():
         d = classify_message(prompt)
         assert d.buildRequirement in ("none",)
         assert d.shouldStartPreview is False
+
+
+# ---------------------------------------------------------------------------
+# FIX 1 regression (Bug Review blocker) - _is_question must be crash-safe
+# ---------------------------------------------------------------------------
+
+
+def test_is_question_is_robust_to_none_empty_and_tuple_inputs():
+    """_is_question must never raise on None / empty input and must still
+    detect a question that lacks a trailing '?'. str.startswith only ever
+    sees a tuple of non-empty str prefixes."""
+    from packages.generation.orchestration.router.classify import _is_question
+
+    # A question WITHOUT '?' is still detected via the leading question word.
+    assert _is_question("vad är klockan", "vad är klockan") is True
+    # None / empty must resolve to False without raising.
+    assert _is_question(None, None) is False  # type: ignore[arg-type]
+    assert _is_question("", "") is False
+    assert _is_question("ingen fråga alls", "ingen fråga alls") is False
+
+
+def test_question_without_question_mark_classifies_without_crashing():
+    """End-to-end: "vad är klockan" (no '?') classifies as answer_only and
+    never raises (the reported blocker)."""
+    decision = classify_message("vad är klockan")
+    assert isinstance(decision, RouterDecision)
+    assert decision.messageKind == "answer_only"
+    assert decision.buildRequirement == "none"
+    assert decision.shouldStartPreview is False
+
+
+# ---------------------------------------------------------------------------
+# FIX 2 regression (Bug Review blocker) - general "som på <domän>" detector
+# ---------------------------------------------------------------------------
+
+REFERENCE_PROMPTS = [
+    "samma klocka som på aftonbladet.se",
+    "som på aftonbladet.se",
+    "likadan sektion som på example.com",
+    "gör den lik www.någonannan.se",
+    "gör en hero som på stripe.com",
+    "jag vill ha en meny liknande mcdonalds.se",
+    "bygg en sektion i stil med apple.com",
+]
+
+
+@pytest.mark.parametrize("prompt", REFERENCE_PROMPTS)
+def test_reference_analysis_is_domain_agnostic(prompt: str):
+    """Any "som på <domän>" / "lik(adan)" reference across several distinct
+    domains (Unicode included) -> reference_analysis, plan_only, no preview.
+    Proves the detector is general, not hardcoded to aftonbladet."""
+    d = classify_message(prompt)
+    assert d.messageKind == "reference_analysis", f"{prompt!r} -> {d.messageKind} ({d.rationale})"
+    assert d.buildRequirement == "plan_only"
+    assert d.shouldStartPreview is False
+    assert d.reference is not None and d.reference.url
+    assert d.risk == "do_not_copy_exact"
+
+
+def test_reference_detector_recognises_multiple_distinct_domains():
+    """A future hardcode regression (only aftonbladet) must fail here: several
+    different domains, including a Swedish å-domain, must be extracted."""
+    urls = {classify_message(p).reference.url for p in REFERENCE_PROMPTS}
+    assert {"aftonbladet.se", "example.com", "någonannan.se", "stripe.com"} <= urls
+
+
+def test_url_without_comparison_stays_an_edit_not_a_reference():
+    """Guard: a URL without a comparison cue ("lägg till en länk till X") is an
+    edit, not a reference - the detector keys on the comparison, not the URL."""
+    d = classify_message("lägg till en länk till aftonbladet.se")
+    assert d.messageKind == "edit_instruction"
+    assert d.editKind == "component_add"
