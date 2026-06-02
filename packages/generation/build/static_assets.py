@@ -371,13 +371,27 @@ def render_global_error(dossier: dict) -> str:
     company = dossier["company"]
     contact = dossier["contact"]
     safe_name = _jsx_safe_string(company["name"])
-    phone_href = _jsx_safe_string("tel:" + _phone_href(contact["phone"]))
+    # Only surface the phone CTA when it is a real number. A placeholder phone
+    # is suppressed (and the Phone icon dropped from the import) so the error
+    # page never offers ``+46 8 000 00 00`` as a callable affordance — the
+    # "Försök igen" button remains the honest recovery action (mirrors
+    # render_not_found; contact-honesty slice 2026-06-02).
+    real_contact_phone = real_phone(contact)
+    if real_contact_phone is not None:
+        icon_import = 'import { Phone, RefreshCw } from "lucide-react";\n'
+        phone_href = _jsx_safe_string("tel:" + _phone_href(real_contact_phone))
+        phone_cta = (
+            f'        <a href={phone_href} className="inline-flex items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />{_jsx_safe_string(real_contact_phone)}</a>\n'
+        )
+    else:
+        icon_import = 'import { RefreshCw } from "lucide-react";\n'
+        phone_cta = ""
     return (
         '"use client";\n'
         "\n"
         'import { useEffect } from "react";\n'
-        'import { Phone, RefreshCw } from "lucide-react";\n'
-        "\n"
+        + icon_import
+        + "\n"
         "export default function ErrorBoundary({\n"
         "  error,\n"
         "  reset,\n"
@@ -399,8 +413,8 @@ def render_global_error(dossier: dict) -> str:
         f'      <p className="max-w-xl text-lg text-[color:var(--muted)] leading-relaxed">Vi ber om ursäkt — sidan kunde inte laddas just nu. Försök igen eller kontakta {safe_name} så hjälper vi dig.</p>\n'
         '      <div className="flex flex-wrap items-center justify-center gap-3">\n'
         '        <button type="button" onClick={() => reset()} className="inline-flex items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity"><RefreshCw className="size-4" />Försök igen</button>\n'
-        f'        <a href={phone_href} className="inline-flex items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Phone className="size-4" />{_jsx_safe_string(contact["phone"])}</a>\n'
-        "      </div>\n"
+        + phone_cta
+        + "      </div>\n"
         '      {error.digest ? (\n'
         '        <p className="font-mono text-[10px] text-[color:var(--muted)]/70">Fel-ID: {error.digest}</p>\n'
         "      ) : null}\n"
