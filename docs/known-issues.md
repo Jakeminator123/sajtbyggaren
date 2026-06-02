@@ -319,16 +319,19 @@ integrate christopher-ui discovery and asset workflow`, merge
   renderers/codegen saknar fält för fri copy-edit. Gap-spec:
   `docs/gaps/GAP-followup-prompt-content-passthrough.md`. ADR-utkast:
   `governance/decisions/0034-followup-prompt-content-passthrough.md`.
-  Fix: open (ADR 0034 väg A first slice landad 2026-06-01, jakob-be, ej i
-  main): följdprompt -> validerade `directives.copyDirectives[]` (target
-  company-name | tagline, operation replace-text | include-token) appliceras
-  på company.name/tagline före render. Deterministisk extraktor + dedikerad
-  `copyDirectiveModel`-roll (llm-models v5) för fri text; rå prompt läcker
-  aldrig (samma public-copy-guards). "byt namnet i headern till X" och
-  "inkludera TEST-JAKOB i hero" ger nu synlig ändring +
-  `appliedVisibleEffect=true`. Förblir öppen tills resten landar: väg B
-  FloatingChat-feedback (kräver Christopher/UI), bredare targets
-  (story/services/all-copy) och väg C (modell-patch av `.generated/`).
+  Fix: open (ADR 0034 väg A nivå 1-3a är nu i `main` via PR #153 —
+  copyDirective-modulutbrytning + P2 grounding + kontakt-ärlighet, llm-models
+  v6): följdprompt -> validerade `directives.copyDirectives[]` (targets
+  company-name | tagline | about-text | services, operation replace-text |
+  include-token) appliceras före render. Deterministisk extraktor + dedikerad
+  `copyDirectiveModel`-roll för fri text + editPlan-generering (nivå 3a) för
+  about-text/services vid rewrite utan angivet värde; rå prompt läcker aldrig
+  (samma public-copy-guards). "byt namnet i headern till X" och "inkludera
+  TEST-JAKOB i hero" ger synlig ändring + `appliedVisibleEffect=true`. Förblir
+  öppen tills resten landar: bredare/multi-target editPlan, ärligare
+  nivå-1-avvisning (i stället för tyst tagline-remap), separat verifierModel
+  och väg C (modell-patch av `.generated/`). Väg B FloatingChat-feedback är i
+  `main` (PR #139).
   Test: `tests/test_followup_copy_directives.py` +
   `tests/test_followup_honest_no_op.py`.
   Live-test 2026-06-01 (operatör, hamburgare-ab): en följdprompt som bad om

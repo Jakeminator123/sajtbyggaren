@@ -5,6 +5,31 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
+## Current objective (2026-06-02 NATT — KÖR-0 state alignment / stale-doc cleanup)
+
+Smal Steward-slice (KÖR-0) som städar felpekande/stale styrning INNAN
+heavy-LLM-flödet dispatchas — ingen produktfeature. Rör bara docs +
+governance-policy + backoffice-copy + en boundary-fix (inga
+`packages/generation/`- eller `apps/`-körvägar):
+
+- `governance/policies/preview-runtime-policy.v1.json` (+ schema + nytt
+  regressionstest) alignad med ADR 0033: `vercel-sandbox` primär, `local`
+  fallback/dev, `fly` framtida, `stackblitz` pausad (var: stackblitz som
+  default/primary — felpekade agenter mot fel huvudspår).
+- Den här filens "öppna PR"-motsägelse löst (se "Pågående/öppna PR:s just nu").
+- `docs/handoff.md`: placeholderkontakt-frågan markerad besvarad
+  (operatörsval: dölj vid render, ej kräv i wizard).
+- `docs/known-issues.md` B155 + `docs/workboard.json`-noteringar uppdaterade
+  till faktiskt läge (copyDirective nivå 1-3a är i `main` via PR #153; B157
+  nivå 4 Stage A+B landad arkitektoniskt).
+- Backoffice: scaffold-skapande skriver kandidat till
+  `data/scaffold-candidates/` i stället för canonical `packages/`
+  (repo-boundaries); Follow-up-/runtime-copy uppdaterad; System Health får ett
+  lättare "Snabb sanity"-läge bredvid "Kör allt".
+
+Levereras som PR mot `jakob-be`. De TVÅ runtime-buggarna (grå pending-runs;
+layout-följdprompt-no-ops) kvarstår oförändrade — egen slice.
+
 ## Current objective (2026-06-02 SEN KVÄLL #2 — hela loopen live-bevisad + worktree committad)
 
 Verifieringssession: hela kärnloopen prompt -> preview -> följdprompt -> ny
@@ -236,7 +261,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `366f6e9` (2026-06-02 UTC, steward-auto efter PR #153 — sync(jakob-be -> main): copyDirective module extraction + P2 grounding + contact honesty).
+Last verified state: `6a8e39b` (2026-06-02 UTC, `jakob-be` HEAD — live-verifierad
+kärnloop + committad worktree; `main` = `366f6e9` efter PR #153. KÖR-0
+state-alignment-städningen ligger ovanpå i en PR mot `jakob-be`).
 Nya PRs sedan föregående checkpoint: PR #153 — sync(jakob-be -> main): copyDirective
 module extraction + P2 grounding + contact honesty.
 
@@ -268,8 +295,11 @@ mot `main` och kräver hans rebase + operatörens scope-OK före merge.
 
 ## Pågående/öppna PR:s just nu
 
-**Öppna PRs:** inga öppna just nu — alla denna sessions PR:er är mergade eller
-stängda.
+**Öppna PRs:** #150 (`christopher-ui`) är den enda öppna PR:n — den hålls per
+ADR 0035 (se "## Öppen PR att känna till — #150" ovan). Inga öppna PR:er i
+backend-lanen (`jakob-be`); alla denna sessions backend-PR:er är mergade eller
+stängda. (Den eventuella KÖR-0-städ-PR:n mot `jakob-be` läggs till här när den
+öppnas.)
 
 **Mergade/stängda denna session:**
 - **#147** `cursor/vercel-sandbox-adapter → jakob-be` — **mergad** (squash,
