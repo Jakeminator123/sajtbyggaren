@@ -321,7 +321,10 @@ Subjektiv "vill jag fortsätta?" landade på **2/5** för alla fyra → coachens
 selection är inte problemet; embeddings hjälper inte placeholder-kontakt/tom trust.
 
 **Öppna produktfrågor till operatören (måste besvaras innan trovärdighets-slicen):**
-1. Ska placeholderkontakt vara kvar (demo) eller döljas tills wizard/scrape fyllt?
+1. ~~Ska placeholderkontakt vara kvar (demo) eller döljas tills wizard/scrape fyllt?~~
+   **BESVARAD (2026-06-02): dölj placeholderkontakt vid render, ej kräv i wizard.**
+   Implementerad i `332e08e` (se "kontakt-ärlighets-slice" ovan). Kvar bara som
+   historik — inte en öppen fråga längre.
 2. Var ska trust/recensioner/credentials komma från — briefModel, hårdkodade
    branschsnippets, eller wizard-steg?
 3. Naprapat: acceptera `/kontakta-oss` + "Boka tid" (eval-fix) eller normalisera till `/kontakt`?

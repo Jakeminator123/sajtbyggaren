@@ -61,13 +61,23 @@ def view_overview() -> None:
 def view_system_health() -> None:
     st.title("System Health")
     st.caption(
-        "Live status från de tre kontrollskripten plus pytest-svit för "
-        "governance. Plus en API-nyckel-kontroll för LLM-anrop."
+        "Kör rimligt för scope: 'Snabb sanity' (focus_check + governance_validate) "
+        "räcker för docs/policy-smala ändringar; 'Kör allt' är hela policy-sviten "
+        "(governance_validate + rules-sync + term-coverage --strict + pytest -m "
+        "governance). Plus en API-nyckel-kontroll för LLM-anrop."
     )
 
-    if st.button("Kör allt", type="primary", key="sh_run_all"):
+    c_quick, c_full = st.columns(2)
+    if c_quick.button("Snabb sanity", key="sh_run_quick"):
         _hard_reset_caches()
-        with st.spinner("Kör skript..."):
+        with st.spinner("Kör snabb sanity..."):
+            st.session_state["health_results"] = [
+                health.run_focus_check(),
+                health.run_governance_validate(),
+            ]
+    if c_full.button("Kör allt", type="primary", key="sh_run_all"):
+        _hard_reset_caches()
+        with st.spinner("Kör hela policy-sviten..."):
             st.session_state["health_results"] = [
                 health.run_governance_validate(),
                 health.run_rules_sync_check(),

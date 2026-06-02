@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-05-27T21:00:00Z",
-  "updatedBy": "cursor-agent-cleanup-pass",
+  "updatedAt": "2026-06-02T22:00:00Z",
+  "updatedBy": "kor-0-state-alignment",
   "people": {
     "jakob": {
       "allocation": 0.75,
@@ -97,7 +97,7 @@
         "python -m ruff check .",
         "python -m pytest tests/ -q"
       ],
-      "note": "Akut-fix nivå 1 (B157 closure, adba139) stoppar live preview-server före build_site.py spawnas. Detta GAP täcker nivå 4 — immutable builds/<timestamp>/ + manifest-pointer-swap (Vercel-likt). Egen sprint per gap-spec. Anti-patternet 'rebuilda ovanpå live output-katalog' kvarstår tills nivå 4 landar. relatedBugs: B157."
+      "note": "STATUS 2026-06-02: nivå 4 Stage A (immutable builds/<buildId>/ + atomär pointer-swap via current.json) + Stage B (delayed GC, scripts/gc_old_builds.py) har landat och är i main. Anti-patternet 'rebuilda ovanpå live output-katalog' (WinError-5-klassen / B157) är därmed arkitektoniskt eliminerat; round 1-3-plåstren + build-runner-tree-kill är redundanta säkerhetsnät. Kvar (framtida, ej blockerande): flat-layout-städning + POSIX-tree-kill. Historik: akut-fix nivå 1 (B157 closure, adba139) stoppade live preview-server före build_site.py spawnades. relatedBugs: B157."
     },
     {
       "id": "GAP-followup-prompt-content-passthrough",
@@ -137,7 +137,7 @@
         "python -m ruff check .",
         "python -m pytest tests/ -q"
       ],
-      "note": "Operatör-reproducerad 2026-05-27. Två cases: 'Allt ska vara mycket ljusare' (v2->v3) och 'inkludera TEST-JAKOB i hero' (v3->v4). Båda passerade igenom som no-op. Strukturerade fält saknas i Site Brief/Project Input för fri copy-edit. Rekommenderad lösning A i GAP-fil (copyDirectives[]) + lösning B (ärlig FloatingChat-feedback). Träffar kärnflödet 'följdprompt → ny version'. STATUS 2026-06-01: lösning A first slice implementerad på jakob-be (directives.copyDirectives target company-name|tagline, operation replace-text|include-token; deterministisk extraktor + copyDirectiveModel-roll llm-models v5; ej i main än). Acceptans 'byt namnet i headern' + 'inkludera TEST-JAKOB i hero' gröna i tests/test_followup_copy_directives.py. Kvar: väg B FloatingChat-UI (Christopher), bredare targets, väg C. Behålls queued tills hela gapet stängs."
+      "note": "Operatör-reproducerad 2026-05-27. Två cases: 'Allt ska vara mycket ljusare' (v2->v3) och 'inkludera TEST-JAKOB i hero' (v3->v4). Båda passerade igenom som no-op. Strukturerade fält saknades i Site Brief/Project Input för fri copy-edit. Rekommenderad lösning A i GAP-fil (copyDirectives[]) + lösning B (ärlig FloatingChat-feedback). Träffar kärnflödet 'följdprompt → ny version'. STATUS 2026-06-02: lösning A nivå 1-3a är i main via PR #153 (copyDirectives targets company-name|tagline|about-text|services, operation replace-text|include-token; deterministisk extraktor + copyDirectiveModel-roll llm-models v6 inkl. editPlan-generering för about-text/services vid rewrite utan angivet värde). Lösning B FloatingChat-UI är i main (PR #139). Acceptans 'byt namnet i headern' + 'inkludera TEST-JAKOB i hero' gröna i tests/test_followup_copy_directives.py. Kvar (håller gapet queued): bredare/multi-target editPlan, ärligare nivå-1-avvisning i stället för tyst tagline-remap, väg C (modell-patch av .generated/). Behålls queued tills hela gapet stängs."
     }
   ],
   "activeGaps": [],

@@ -6,6 +6,7 @@ alone cannot catch. They are the heart of "repot ska inte växa ifrån".
 
 from __future__ import annotations
 
+import json
 import re
 
 import pytest
@@ -310,6 +311,95 @@ def test_preview_runtime_forbidden_terms_are_in_globally_forbidden(
     assert not leaked, (
         "forbiddenTerms in preview-runtime-policy are not registered as forbidden "
         "in naming-dictionary: " + ", ".join(sorted(leaked))
+    )
+
+
+@pytest.mark.governance
+def test_preview_runtime_aligns_with_adr_0033(preview_runtime_policy: dict):
+    """ADR 0033: vercel-sandbox is the *intended primary* preview runtime, but
+    the *actual* runtime default stays local/local-next until the default-flip
+    (Bite C) is verified. local is the guaranteed fallback/dev runtime and
+    stackblitz is paused (non-default, must not block).
+
+    This guard stops the policy from drifting back to the pre-ADR-0033 state
+    where stackblitz was both ``default`` and ``primary`` AND from over-flipping
+    ``default`` to vercel-sandbox before the runtime/env default actually moves.
+    The kinds must match the canonical PreviewRuntimeKind union (vercel-sandbox
+    | local | stackblitz | fly, naming-dictionary v19).
+    """
+    runtimes = {r["kind"]: r for r in preview_runtime_policy["runtimes"]}
+    default = preview_runtime_policy["default"]
+
+    # a) Default is no longer stackblitz.
+    assert default != "stackblitz", (
+        "preview-runtime default must not be stackblitz after ADR 0033"
+    )
+
+    # b) vercel-sandbox is registered and is the intended primary.
+    assert "vercel-sandbox" in runtimes, (
+        "vercel-sandbox must be a registered runtime (ADR 0033 intended primary)"
+    )
+    assert runtimes["vercel-sandbox"]["status"] == "primary", (
+        "vercel-sandbox must have status 'primary' per ADR 0033"
+    )
+
+    # c) Actual default stays local until the default-flip slice (Bite C).
+    #    ADR 0033 is explicit: VIEWSER_PREVIEW_MODE default does not flip until
+    #    the adapter is verified, so the policy must not claim vercel-sandbox is
+    #    the actual default yet.
+    assert default == "local", (
+        "ADR 0033 keeps the actual runtime default at local/local-next until the "
+        "default-flip (Bite C) is verified; vercel-sandbox is intended primary, "
+        f"not yet the actual default. Got default='{default}'."
+    )
+
+    # d) stackblitz is paused/degraded - never primary, never default.
+    if "stackblitz" in runtimes:
+        assert runtimes["stackblitz"]["status"] in {"paused", "deprecated"}, (
+            "stackblitz must be paused/deprecated per ADR 0033, not "
+            f"'{runtimes['stackblitz']['status']}'"
+        )
+
+    # local stays registered as the dev/fallback runtime (now also the default).
+    assert "local" in runtimes, (
+        "local must stay registered as the guaranteed fallback (ADR 0033)"
+    )
+    assert runtimes["local"]["status"] in {"developer-only", "secondary"}, (
+        "local must remain a dev/fallback runtime, not primary"
+    )
+
+
+@pytest.mark.governance
+def test_site_plan_preview_runtime_enum_matches_policy(
+    preview_runtime_policy: dict, repo_root
+):
+    """site-plan.schema.json buildSpec.previewRuntime enum must allow every
+    runtime kind that preview-runtime-policy knows about, so the planner /
+    operator path can emit any policy runtime (incl. vercel-sandbox, ADR 0033)
+    without ``validate_site_plan`` rejecting it.
+
+    Without this guard the two enums drift: adding vercel-sandbox to the policy
+    while site-plan still only allows local|stackblitz|fly creates a contract
+    gap the moment the planner emits the new runtime.
+    """
+    schema = json.loads(
+        (repo_root / "governance" / "schemas" / "site-plan.schema.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    enum = set(
+        schema["properties"]["buildSpec"]["properties"]["previewRuntime"]["enum"]
+    )
+    policy_kinds = {r["kind"] for r in preview_runtime_policy["runtimes"]}
+
+    missing = policy_kinds - enum
+    assert not missing, (
+        "site-plan previewRuntime enum is missing preview-runtime-policy kind(s): "
+        f"{sorted(missing)}. Add them to site-plan.schema.json so the planner can "
+        "emit them."
+    )
+    assert "vercel-sandbox" in enum, (
+        "site-plan previewRuntime must accept 'vercel-sandbox' after ADR 0033."
     )
 
 
