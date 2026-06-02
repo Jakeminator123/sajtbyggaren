@@ -5,6 +5,63 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
+## Current objective (2026-06-02 SEN KVÄLL #2 — hela loopen live-bevisad + worktree committad)
+
+Verifieringssession: hela kärnloopen prompt -> preview -> följdprompt -> ny
+version är nu LIVE-bevisad end-to-end i vercel-sandbox-läge i Cursor-browsern
+(bageriet renderade full-height i preview-iframen med chatten ovanpå; copy-
+följdprompten bytte företagsnamnet v6 -> v7 och `current.json` promotades korrekt).
+Höjd-fixen i `apps/viewser/components/error-boundary.tsx` (`display:contents`) är
+bekräftad nödvändig. Det tidigare okommitterade trädet (fyra ändringsset +
+höjd-fix) är nu COMMITTAT + PUSHAT till `jakob-be` som EN sammanhållen commit
+(ingen split, ingen PR; full `pytest tests/ -q` ej körd — snabba guards gröna).
+Dev-servrar dödade, sandbox stoppad, mergade backup-brancher rensade lokalt;
+`docs/heavy-llm-flow/` orörd (annan agent). De TVÅ buggarna kvarstår (A: avbrutna
+byggen fastnar grå/`pending`; B: layout-följdprompter är no-ops — bara copy-direktiv
+landar synligt). Full detalj överst i [`docs/handoff.md`](handoff.md).
+
+---
+
+## Current objective (2026-06-02 SEN KVÄLL — preview-iframe fixad, två buggar kvar)
+
+Interaktiv felsökningssession: preview-iframen visade ALDRIG sajten trots korrekt
+`vercel.run`-URL → rotorsak hittad + fixad (ErrorBoundary-wrappern kollapsade
+`.viewer-canvas h-full` till 0 px; fix = `display:contents` i
+`apps/viewser/components/error-boundary.tsx`). Sandbox-previewen + reload-loopen är
+nu live-verifierad i UI:t. **TVÅ buggar kvar för nästa agent** (full detalj +
+start-checklista överst i [`docs/handoff.md`](handoff.md)):
+(A) avbrutna följdbyggen fastnar `pending`/grå i Run History och `current.json`
+promotas inte → preview visar gammal version; (B) layout-följdprompter ("centrera
+hero", "lägg till gallery") är ärliga no-ops (`appliedVisibleEffect:false`) eftersom
+deterministisk codegen-v1 inte gör layout-ändringar än (bara copy-direktiv landar
+synligt). Allt fortsatt OKOMMITTERAT på `jakob-be` (HEAD `ba11514`), ingen PR.
+Dev-servrar dödade.
+
+---
+
+## Current objective (2026-06-02 KVÄLL — Bite C + vercel-sandbox bevisad, OKOMMITTERAT)
+
+En lång interaktiv session byggde + LIVE-verifierade fyra ändringsset som ligger
+**okommitterade** i working tree på `jakob-be` (inget pushat, ingen PR):
+(1) process-läck-tree-kill-fix, (2) S2 ärlig följdprompt-signal
+(`unappliedFollowupIntents`), (3) S3 Fas 1 öppettider i brief, (4) **Bite C —
+vercel-sandbox-preview i iframen, end-to-end-bevisad** (`POST /api/preview` i
+`vercel-sandbox`-läge → publik `vercel.run`-URL → serverade v2-bagerisajten i
+browser). Två Turbopack/term-coverage-buggar hittade + fixade (`turbopack.root` i
+`next.config.ts`; allowlist). **Full detalj + commit/PR-plan överst i
+[`docs/handoff.md`](handoff.md).**
+
+**Nästa (prioordning):**
+1. FULL `pytest tests/ -q` på sammanslaget träd (integrationskoll, ej körd än).
+2. Verifiera in-app-iframe-rendering i `vercel-sandbox`-läge + följdprompt-reload till ny version.
+3. Dela upp i fyra logiska commits → Scout RO-review → PR (operatörs-OK; `apps/viewser` = Christopher-lane).
+4. S3 Fas 2 (wiring i `prompt_to_project_input.py`) — efter att S2 committats.
+
+Default-preview är fortfarande `local-next` (vercel-sandbox EJ flippad). Embeddings PARKERAD.
+**Node-städning (Windows):** kör `kill-dev-trees.bat` SOM ADMIN (se AGENTS.md-gotcha).
+
+---
+
 ## Current objective (2026-06-02 sen EM — sessionsavslut)
 
 `main` = `1d6e069` (**PR #153 mergad**: copyDirective-modulutbrytning + P2-grounding

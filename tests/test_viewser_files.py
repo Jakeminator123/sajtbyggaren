@@ -2454,3 +2454,210 @@ def test_tier1_page_handles_runs_load_failure_with_retry() -> None:
         "page.tsx måste visa en error-toast med titel 'Kunde inte "
         "ladda runs' när initial fetch failar"
     )
+
+
+# ---------------------------------------------------------------------------
+# Bite C — vercel-sandbox preview wiring (ADR 0033)
+# ---------------------------------------------------------------------------
+# Källåls-lås så local-next-vägen förblir oförändrad medan vercel-sandbox-
+# vägen wiras in: route via currentViewserRuntime, ViewerPanel-iframe av den
+# returnerade publika URL:en, tom-header-gren i next.config, dev-dispatcher
+# som inte kastar, ärlig auth-degradering och sandbox-livscykel (stoppa gamla).
+
+
+@pytest.mark.tooling
+def test_preview_route_dispatches_via_current_viewser_runtime() -> None:
+    """Bite C task 1: ``app/api/preview/[siteId]/route.ts`` ska gå via
+    ``currentViewserRuntime()`` (DI) i stället för att hårdkoda local-
+    preview-server. local-next-grenen MÅSTE behålla sitt exakta beteende
+    (``startPreviewServer`` + strukturerad felshape), och en
+    ``vercel_auth``-felkod måste finnas så UI:t kan visa pedagogiskt fel
+    i stället för tyst fallback."""
+    text = (
+        VIEWSER_DIR / "app" / "api" / "preview" / "[siteId]" / "route.ts"
+    ).read_text(encoding="utf-8")
+
+    assert "currentViewserRuntime" in text, (
+        "route.ts måste resolva runtime via currentViewserRuntime() (DI), "
+        "inte hårdkoda local-preview-server."
+    )
+    assert 'from "@/lib/preview-runtime-server"' in text, (
+        "route.ts måste importera currentViewserRuntime från "
+        "@/lib/preview-runtime-server."
+    )
+    # local-next-grenen oförändrad: startPreviewServer + classifyStartError.
+    assert "await startPreviewServer(siteId)" in text, (
+        "route.ts local-grenen måste fortsatt anropa startPreviewServer(siteId) "
+        "så local-next-beteendet är oförändrat."
+    )
+    assert 'runtime.kind !== "local"' in text, (
+        "route.ts måste grena på runtime.kind så icke-lokala adaptrar "
+        "(vercel-sandbox) går via adapterns start/stop."
+    )
+    # Ärlig degradering: vercel_auth-felkod finns.
+    assert '"vercel_auth"' in text, (
+        "route.ts PreviewErrorCode måste innehålla 'vercel_auth' för "
+        "saknad/utgången Vercel-token (ärlig degradering, inte tyst fallback)."
+    )
+    # DELETE stoppar sandbox-sessionen i vercel-sandbox-läge (livscykel/kostnad).
+    assert "stopSandboxSessionForSite" in text, (
+        "route.ts DELETE måste stoppa sandbox-sessionen i vercel-sandbox-läge "
+        "(stopSandboxSessionForSite) så vi inte läcker sandboxar."
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_has_vercel_sandbox_branch() -> None:
+    """Bite C task 2: ViewerPanel måste behandla vercel-sandbox EXAKT som
+    local-next-vägen (POST /api/preview → iframe:a returnerad URL) och visa
+    pedagogiskt fel vid miss i stället för att falla till StackBlitz.
+
+    Lås:
+      1. ``IS_VERCEL_SANDBOX_MODE``-konstant.
+      2. Failure-grenarna gated på ``IS_LOCAL_NEXT_MODE || IS_VERCEL_SANDBOX_MODE``
+         (≥3 ggr — non-OK, network-error, siteId-saknas).
+      3. ``vercel_auth`` hanteras i unavailableForPreviewError.
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    pattern_const = re.compile(
+        r'const\s+IS_VERCEL_SANDBOX_MODE\s*=\s*VIEWSER_PREVIEW_MODE\s*===\s*["\']vercel-sandbox["\']',
+        re.MULTILINE,
+    )
+    assert pattern_const.search(text), (
+        "viewer-panel.tsx saknar ``const IS_VERCEL_SANDBOX_MODE = "
+        "VIEWSER_PREVIEW_MODE === 'vercel-sandbox'``."
+    )
+
+    combined = len(
+        re.findall(r"IS_LOCAL_NEXT_MODE\s*\|\|\s*IS_VERCEL_SANDBOX_MODE", text)
+    )
+    assert combined >= 3, (
+        "viewer-panel.tsx: de tre preview-failure-grenarna (non-OK, "
+        "network-error, siteId-saknas) måste vara gated på "
+        "``IS_LOCAL_NEXT_MODE || IS_VERCEL_SANDBOX_MODE`` så vercel-sandbox "
+        f"visar pedagogiskt fel i stället för StackBlitz-fallback. Hittade {combined}."
+    )
+
+    assert 'code === "vercel_auth"' in text, (
+        "viewer-panel.tsx unavailableForPreviewError måste hantera "
+        "'vercel_auth' med ett pedagogiskt svenskt inloggningsfel."
+    )
+
+
+@pytest.mark.tooling
+def test_next_config_vercel_sandbox_gets_empty_headers() -> None:
+    """Bite C task 3: ``vercel-sandbox`` måste få TOMMA headers (som
+    local-next), INTE COEP/COOP. En publik https-iframe behöver ingen
+    cross-origin-isolation (det krävs bara av StackBlitz/WebContainers)."""
+    text = (VIEWSER_DIR / "next.config.ts").read_text(encoding="utf-8")
+
+    pattern = re.compile(
+        r'if\s*\(\s*effectiveMode\s*===\s*["\']local-next["\']\s*\|\|\s*'
+        r'effectiveMode\s*===\s*["\']vercel-sandbox["\']\s*\)\s*\{\s*return\s*\[\s*\]\s*;',
+        re.MULTILINE,
+    )
+    assert pattern.search(text), (
+        "next.config.ts headers() måste returnera [] för BÅDE local-next och "
+        "vercel-sandbox (``if (effectiveMode === 'local-next' || effectiveMode "
+        "=== 'vercel-sandbox') { return []; }``). Annars hamnar vercel-sandbox "
+        "i COEP/COOP-grenen som blockerar en cross-origin iframe."
+    )
+
+
+@pytest.mark.tooling
+def test_dev_dispatcher_allows_vercel_sandbox_over_http() -> None:
+    """Bite C task 4: ``scripts/dev.mjs`` får INTE kasta på
+    ``VIEWSER_PREVIEW_MODE=vercel-sandbox`` — det ska köra vanlig
+    ``next dev`` (http, COEP off), samma transport som local-next."""
+    text = (VIEWSER_DIR / "scripts" / "dev.mjs").read_text(encoding="utf-8")
+
+    assert '"vercel-sandbox"' in text, (
+        "dev.mjs VALID_MODES måste innehålla 'vercel-sandbox' så dispatchern "
+        "inte kastar på det läget."
+    )
+    # http/COEP-off: vercel-sandbox måste ge useHttps=false (ingen
+    # --experimental-https), precis som local-next.
+    assert "HTTP_COEP_OFF_MODES" in text, (
+        "dev.mjs måste ha en HTTP_COEP_OFF_MODES-mängd som styr useHttps."
+    )
+    pattern = re.compile(
+        r"HTTP_COEP_OFF_MODES\s*=\s*new\s+Set\(\s*\[[^\]]*['\"]vercel-sandbox['\"]",
+        re.MULTILINE,
+    )
+    assert pattern.search(text), (
+        "dev.mjs: 'vercel-sandbox' måste ligga i HTTP_COEP_OFF_MODES så "
+        "useHttps=false (http, COEP off) — sandbox-URL:en är en publik "
+        "https-iframe som bäddas utan cross-origin-isolation."
+    )
+    assert "!HTTP_COEP_OFF_MODES.has(mode)" in text, (
+        "dev.mjs useHttps måste härledas ur HTTP_COEP_OFF_MODES."
+    )
+
+
+@pytest.mark.tooling
+def test_vercel_sandbox_sessions_module_bridges_siteid_to_sandbox() -> None:
+    """Bite C task 6: en sessionsmodul bryggar ``siteId -> sandboxId`` så
+    build-runner och DELETE kan stoppa en sandbox via siteId (de känner inte
+    sandboxId). Modulen delegerar stop till runnern."""
+    path = VIEWSER_DIR / "lib" / "vercel-sandbox-sessions.ts"
+    assert path.exists(), (
+        "apps/viewser/lib/vercel-sandbox-sessions.ts saknas — registret som "
+        "bryggar siteId -> sandboxId för sandbox-livscykeln."
+    )
+    text = path.read_text(encoding="utf-8")
+    assert "recordSandboxSession" in text
+    assert "getSandboxSession" in text
+    assert "export async function stopSandboxSessionForSite" in text
+    assert 'from "./vercel-sandbox-runner"' in text and "stopSandboxPreview" in text, (
+        "sessionsmodulen måste delegera stop till runnerns stopSandboxPreview."
+    )
+
+
+@pytest.mark.tooling
+def test_preview_runtime_server_records_and_stops_old_sandbox() -> None:
+    """Bite C task 5+6: DI-wiringen registrerar en ny sandbox-session och
+    stoppar en ev. tidigare sandbox för samma siteId innan en ny skapas (så
+    vi aldrig kör två parallellt → läcker inte kostnad)."""
+    text = (VIEWSER_DIR / "lib" / "preview-runtime-server.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "recordSandboxSession" in text, (
+        "preview-runtime-server.ts måste registrera den nya sandbox-sessionen "
+        "efter en lyckad createSandboxPreview."
+    )
+    assert "stopSandboxSessionForSite(siteId)" in text, (
+        "preview-runtime-server.ts vercelSandbox.start måste stoppa en ev. "
+        "tidigare sandbox för samma siteId innan en ny skapas."
+    )
+
+
+@pytest.mark.tooling
+def test_build_runner_stops_sandbox_session_before_rebuild() -> None:
+    """Bite C task 6: ett nytt bygge/följdprompt ska stoppa den gamla
+    sandboxen — wirat där local-next:s ``stopAndWaitPreviewServer`` anropas
+    idag. Idempotent no-op i local-next-läge (tomt register)."""
+    text = (VIEWSER_DIR / "lib" / "build-runner.ts").read_text(encoding="utf-8")
+    assert "stopSandboxSessionForSite(siteId)" in text, (
+        "build-runner.ts måste anropa stopSandboxSessionForSite(siteId) "
+        "(bredvid stopAndWaitPreviewServer) så en gammal sandbox stoppas "
+        "innan en ny build — annars läcker sandboxar (TTL ~15 min, kostar ören)."
+    )
+
+
+@pytest.mark.tooling
+def test_vercel_sandbox_runner_autoloads_env_vercel_local() -> None:
+    """Bite C task 5 (auth-wiring): Next auto-laddar inte ``.env.vercel.local``
+    (filen vercel env pull skapar för OIDC-token). Runnern måste därför läsa
+    den filen själv så den körande viewser-processen hittar VERCEL_OIDC_TOKEN —
+    annars visar iframen bara 'credentials saknas' trots en pullad token."""
+    text = (VIEWSER_DIR / "lib" / "vercel-sandbox-runner.ts").read_text(
+        encoding="utf-8"
+    )
+    assert ".env.vercel.local" in text, (
+        "vercel-sandbox-runner.ts måste läsa apps/viewser/.env.vercel.local "
+        "så OIDC-token från `vercel env pull` hittas (Next auto-laddar den inte)."
+    )
+    assert "VERCEL_OIDC_TOKEN" in text

@@ -165,6 +165,60 @@ def test_extract_site_brief_uses_real_path_when_key_set(monkeypatch):
     assert result.brief.conversion_goals == ["call", "quote-request"]
 
 
+# ---------------------------------------------------------------------------
+# ADR 0022-style opening-hours extraction (S3 Fas 1). A free prompt that
+# states opening hours ("öppet tisdag–söndag 07–16") must carry them through
+# the brief into the artefakt; a prompt without them must keep the field null
+# (Fas 1 never invents hours). The real LLM extraction itself is not exercised
+# here - the briefModel call is mocked via _real_brief, mirroring
+# test_extract_site_brief_uses_real_path_when_key_set above so the test stays
+# offline (no live OPENAI call).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_extract_site_brief_carries_opening_hours_when_prompt_states_them(
+    monkeypatch,
+):
+    """Med-öppettid-fallet: when the (mocked) briefModel extracts opening
+    hours, they survive into the brief and the serialised artefakt.
+    """
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key-not-used")
+    prompt = "Skapa en hemsida för ett bageri, öppet tisdag–söndag 07–16"
+    fake_brief = SiteBrief(
+        language="sv",
+        business_type="bakery",
+        raw_prompt=prompt,
+        contact_opening_hours="tisdag–söndag 07–16",
+    )
+
+    with patch(
+        "packages.generation.brief.extract._real_brief",
+        return_value=fake_brief,
+    ):
+        result = extract_site_brief(prompt)
+
+    assert result.source == "real"
+    assert result.brief.contact_opening_hours == "tisdag–söndag 07–16"
+    artifact = site_brief_to_artifact(result, run_id="run-oh", model="gpt-5.4")
+    assert artifact["contactOpeningHours"] == "tisdag–söndag 07–16"
+
+
+@pytest.mark.tooling
+def test_extract_site_brief_opening_hours_null_when_prompt_omits_them(
+    monkeypatch,
+):
+    """Utan-öppettid-fallet: a prompt that never mentions hours leaves
+    contact_opening_hours None - the field is never invented.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    result = extract_site_brief("Skapa en hemsida för ett bageri")
+    assert result.source == "mock-no-key"
+    assert result.brief.contact_opening_hours is None
+    artifact = site_brief_to_artifact(result, run_id="run-noh", model="gpt-5.4")
+    assert artifact["contactOpeningHours"] is None
+
+
 @pytest.mark.tooling
 def test_site_brief_to_artifact_real_run():
     brief = SiteBrief(
@@ -179,6 +233,7 @@ def test_site_brief_to_artifact_real_run():
         contact_phone="0701234567",
         contact_email="hej@voltco.se",
         contact_address="Storgatan 1, 211 22 Malmö",
+        contact_opening_hours="mån-fre 08-17",
         conversion_goals=["call"],
         services_mentioned=["akut-elservice"],
         content_depth="medium",
@@ -199,6 +254,7 @@ def test_site_brief_to_artifact_real_run():
     assert artifact["contactPhone"] == "0701234567"
     assert artifact["contactEmail"] == "hej@voltco.se"
     assert artifact["contactAddress"] == "Storgatan 1, 211 22 Malmö"
+    assert artifact["contactOpeningHours"] == "mån-fre 08-17"
     assert artifact["requestedCapabilities"] == ["contact-form"]
     assert artifact["conversionGoals"] == ["call"]
     assert artifact["servicesMentioned"] == ["akut-elservice"]
@@ -217,6 +273,7 @@ def test_site_brief_to_artifact_mock_no_key():
     assert artifact["contactPhone"] is None
     assert artifact["contactEmail"] is None
     assert artifact["contactAddress"] is None
+    assert artifact["contactOpeningHours"] is None
 
 
 @pytest.mark.tooling

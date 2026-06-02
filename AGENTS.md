@@ -121,3 +121,20 @@ Commands are documented in the README under "Snabbstart". Key commands:
 - Long-running dev servers (Next.js preview, Streamlit backoffice) should run
   under tmux on Cloud Agent VMs (portal config under
   `/exec-daemon/tmux.portal.conf`).
+- Killing leftover Sajtbyggaren node processes (Windows) — the easy-fix: run
+  `kill-dev-trees.bat` (repo root) **as administrator**. It tree-kills only
+  Sajtbyggaren-scoped node trees (path token, or `next start`/`next dev` on the
+  preview port range, or a matching port listener). Run it elevated: without
+  admin the script often cannot read other processes' command lines (especially
+  after UAC changes, or when a process runs at a different integrity level), so
+  the match whitelist sees empty cmdlines and reports "ingen matchar" even when
+  Sajtbyggaren processes exist. Make a shortcut to the `.bat` with "Run as
+  administrator" ticked. This is the canonical "kill all my dev/preview node"
+  recovery after an interrupted `npm run dev` or an orphaned preview server.
+- Operator grant (Jakob, 2026-06-02): the agent has standing rights to read and
+  edit ALL `.env*` files in the repo root and under `apps/viewser/` (including
+  `.env.local` and `.env.vercel.local`) as part of builder/preview work. Never
+  print real secret values in replies, and never commit `.env*` (they stay
+  gitignored). To run the vercel-sandbox preview locally, the dev process needs a
+  fresh `VERCEL_OIDC_TOKEN` (`vercel env pull apps/viewser/.env.vercel.local`,
+  ~12h TTL) in its environment plus `VIEWSER_PREVIEW_MODE=vercel-sandbox`.

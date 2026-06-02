@@ -80,7 +80,20 @@ export class ErrorBoundary extends Component<
     // resetKey som key tvingar React att skapa ett nytt subtree efter
     // reset — viktigt eftersom samma element-stuktur annars återanvänder
     // den korrupta state:n som kraschade.
-    return <div key={resetKey}>{children}</div>;
+    //
+    // `display:contents` (Tailwind `contents`) gör wrappern layout-
+    // transparent: den genererar ingen egen box, så barnens containing
+    // block blir boundary:ns FÖRÄLDER. Utan detta blir wrappern en
+    // block-div med height:auto mellan t.ex. `<main h-[100dvh]>` och
+    // `ViewerPanel`s `.viewer-canvas h-full` — då resolvar `h-full`
+    // (height:100%) mot en auto-höjd förälder och kollapsar till 0 px,
+    // vilket gör preview-iframen (absolute inset-0) osynlig (1920×0) och
+    // döljer desktop-hero-texten. `key` styr fortfarande remount.
+    return (
+      <div key={resetKey} className="contents">
+        {children}
+      </div>
+    );
   }
 }
 

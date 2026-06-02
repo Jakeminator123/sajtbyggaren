@@ -78,6 +78,10 @@
       "type": ["string", "null"],
       "description": "Street/postal address if explicitly mentioned in the prompt. Null when absent."
     },
+    "contactOpeningHours": {
+      "type": ["string", "null"],
+      "description": "Opening hours if explicitly mentioned in the prompt (free-form natural-language string, prompt's original language). Null when absent."
+    },
     "conversionGoals": {
       "type": "array",
       "items": {"type": "string"},

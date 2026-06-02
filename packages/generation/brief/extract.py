@@ -138,6 +138,15 @@ class SiteBrief(BaseModel):
         default=None,
         description="Street/postal address if explicitly mentioned in the prompt. Null otherwise.",
     )
+    contact_opening_hours: str | None = Field(
+        default=None,
+        description=(
+            "Opening hours ONLY when the prompt explicitly states them "
+            "(e.g. 'öppet tisdag–söndag 07–16', 'mån-fre 9-17'). Copy them "
+            "as a short natural-language string in the prompt's original "
+            "language. Null otherwise. Never invent or guess business hours."
+        ),
+    )
     conversion_goals: list[str] = Field(
         default_factory=list,
         description=(
@@ -180,6 +189,10 @@ _SYSTEM_INSTRUCTIONS = (
     "Extract company_name only when the prompt names a real company or brand. "
     "Extract contact_phone, contact_email and contact_address only when the prompt "
     "explicitly includes those details; never invent contact data. "
+    "Extract contact_opening_hours ONLY when the prompt explicitly states opening "
+    "hours (e.g. 'öppet tisdag–söndag 07–16'); copy them as a short natural-language "
+    "string in the prompt's original language. Leave it null otherwise and never "
+    "invent or guess business hours. "
     "The services_mentioned field is the EXCEPTION: return short natural-language phrases "
     "in the prompt's original language so the generated website renders readable labels."
 )
@@ -307,6 +320,7 @@ def site_brief_to_artifact(
         "contactPhone": brief.contact_phone,
         "contactEmail": brief.contact_email,
         "contactAddress": brief.contact_address,
+        "contactOpeningHours": brief.contact_opening_hours,
         "conversionGoals": brief.conversion_goals,
         "servicesMentioned": brief.services_mentioned,
         "contentDepth": brief.content_depth,

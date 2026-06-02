@@ -13,8 +13,10 @@ when it lands.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -89,6 +91,11 @@ def _spawn_next_dev(
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        # POSIX: put the npm launcher and its `next dev` -> worker
+        # descendants in a dedicated process group so _stop_process can
+        # reap the whole tree via os.killpg. No-op on Windows, where the
+        # tree is reaped with `taskkill /T` instead.
+        start_new_session=True,
     )
     assert process.stdout is not None
     output: list[str] = []
@@ -140,37 +147,60 @@ def _wait_for_dev_ready(
 
 
 def _stop_process(process: subprocess.Popen[str]) -> None:
+    """Terminate the dev server *and every descendant*.
+
+    The Popen target is the ``npm`` launcher, which spawns ``next dev``,
+    which spawns a ``start-server.js`` worker. ``Popen.terminate()`` /
+    ``Popen.kill()`` only signal the launcher, so the grandchildren are
+    orphaned: they keep running, keep the build dir's ``node_modules``
+    mapped (including the locked ``next-swc-*.node`` native module), and
+    pile up across runs. B154 leaked dozens of them under
+    ``%TEMP%\\pytest-of-jakem`` until a later ``npm ci`` in apps/viewser
+    failed with ``EPERM: operation not permitted, unlink`` on exactly that
+    native module. Reap the whole tree, not just the launcher.
+
+    Cleanup must never raise: a process can exit in a platform-specific
+    race window between poll() and the kill call (Windows surfaces this as
+    PermissionError; a stuck process surfaces as TimeoutExpired).
+    """
     if process.poll() is not None:
         return
-    # Defensive cleanup: never crash, even if the process resists termination
-    # and never crash if the process exits in one of the platform-specific
-    # race windows below.
-    #   - Windows race: process may exit between the poll() above and
-    #     Popen.terminate(); the underlying Win32 termination call can
-    #     return a "process already gone" status which Python raises as
-    #     PermissionError (errno 5, access denied). Same applies to
-    #     Popen.kill() on Windows.
-    #   - Stuck process: Popen.kill() can fail to reap a process that sits
-    #     in kernel blockage. The post-kill wait would then raise
-    #     subprocess.TimeoutExpired.
-    # All exceptions are swallowed silently — if neither terminate nor kill
-    # works, the test cannot do more, and surface logs/zombies stay for the
-    # operator to triage.
-    try:
-        process.terminate()
-    except PermissionError:
-        return
-    try:
-        process.wait(timeout=10)
-    except subprocess.TimeoutExpired:
+    if sys.platform == "win32":
+        # /T reaps the child tree, /F forces it. taskkill handles the
+        # "already gone" race itself, so we only guard the launch + wait.
         try:
-            process.kill()
-        except PermissionError:
-            return
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+                check=False,
+                capture_output=True,
+                timeout=15,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            pass
         try:
             process.wait(timeout=10)
         except (subprocess.TimeoutExpired, PermissionError):
-            return
+            pass
+        return
+
+    # POSIX: signal the whole process group created by start_new_session.
+    def _signal_group(sig: int) -> None:
+        try:
+            os.killpg(os.getpgid(process.pid), sig)
+        except (ProcessLookupError, PermissionError):
+            pass
+
+    _signal_group(signal.SIGTERM)
+    try:
+        process.wait(timeout=10)
+        return
+    except subprocess.TimeoutExpired:
+        pass
+    _signal_group(signal.SIGKILL)
+    try:
+        process.wait(timeout=10)
+    except (subprocess.TimeoutExpired, PermissionError):
+        return
 
 
 def _fetch_route(port: int, route: str) -> str:

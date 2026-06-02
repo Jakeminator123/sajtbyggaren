@@ -6,14 +6,18 @@
 //
 // Effekter av läget:
 //
-//   local-next   →  npx next dev                       (http, COEP off)
-//   stackblitz   →  npx next dev --experimental-https  (https, COEP on)
-//   auto         →  npx next dev --experimental-https  (https, COEP on)
+//   local-next     →  npx next dev                       (http, COEP off)
+//   vercel-sandbox →  npx next dev                       (http, COEP off)
+//   stackblitz     →  npx next dev --experimental-https  (https, COEP on)
+//   auto           →  npx next dev --experimental-https  (https, COEP on)
 //
 // `local-next` är default. http krävs för att den lokala preview-iframen
 // (port 4100-4199, http) inte ska blockas som mixed content av en https-
-// host. `stackblitz` och `auto` betalar https-/COEP-kostnaden up-front
-// så StackBlitz-embeddet (eller runtime-fallbacken till det) fungerar.
+// host. `vercel-sandbox` (ADR 0033) kör samma transport: dess preview är en
+// publik `…vercel.run`-https-iframe som bäddas utan cross-origin-isolation,
+// så viewser-hosten behöver varken https eller COEP. `stackblitz` och `auto`
+// betalar https-/COEP-kostnaden up-front så StackBlitz-embeddet (eller
+// runtime-fallbacken till det) fungerar.
 //
 // COEP/COOP-headers själva sätts i `next.config.ts`, som läser samma env-
 // variabel. Den här filen säkerställer bara att child-processen ärver
@@ -44,8 +48,18 @@ const __dirname = dirname(__filename);
 const VIEWSER_ROOT = resolve(__dirname, "..");
 const IS_WINDOWS = process.platform === "win32";
 
-const VALID_MODES = new Set(["local-next", "stackblitz", "auto"]);
+const VALID_MODES = new Set([
+  "local-next",
+  "vercel-sandbox",
+  "stackblitz",
+  "auto",
+]);
 const DEFAULT_MODE = "local-next";
+// Lägen som kör vanlig `next dev` (http, COEP off). `vercel-sandbox` ligger
+// här tillsammans med `local-next`: sandbox-URL:en är en publik https-iframe
+// som bäddas utan cross-origin-isolation, så viewser-hosten behöver ingen
+// https/COEP — samma transport som local-next (ADR 0033).
+const HTTP_COEP_OFF_MODES = new Set(["local-next", "vercel-sandbox"]);
 
 // Tiny inline .env-parser. Avsiktligt minimal: ingen multiline. Hanterar
 // dock de vanliga POSIX-shell / dotenv-formerna som `next dev` självt
@@ -167,14 +181,16 @@ if (!VALID_MODES.has(rawMode)) {
 }
 
 const mode = rawMode;
-const useHttps = mode !== "local-next";
+const useHttps = !HTTP_COEP_OFF_MODES.has(mode);
 
 const banner =
   mode === "local-next"
     ? "Viewser dev → mode=local-next (http, COEP off, local-preview iframe enabled)"
-    : mode === "stackblitz"
-      ? "Viewser dev → mode=stackblitz (https, COEP credentialless + COOP same-origin, StackBlitz embed enabled)"
-      : "Viewser dev → mode=auto (https, COEP credentialless + COOP same-origin, runtime-fallback redo för StackBlitz)";
+    : mode === "vercel-sandbox"
+      ? "Viewser dev → mode=vercel-sandbox (http, COEP off, publik vercel.run-iframe från Vercel Sandbox)"
+      : mode === "stackblitz"
+        ? "Viewser dev → mode=stackblitz (https, COEP credentialless + COOP same-origin, StackBlitz embed enabled)"
+        : "Viewser dev → mode=auto (https, COEP credentialless + COOP same-origin, runtime-fallback redo för StackBlitz)";
 process.stdout.write(`${banner}\n`);
 
 // Pass through extra argv (allt efter scriptnamnet). Tillåter t.ex.

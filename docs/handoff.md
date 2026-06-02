@@ -5,6 +5,224 @@
 Nya PRs sedan föregående checkpoint: PR #153 — sync(jakob-be -> main): copyDirective
 module extraction + P2 grounding + contact honesty.
 
+## Orchestrator-handoff 2026-06-02 SEN KVÄLL #2 (hela loopen live-bevisad i browsern + worktree committad/pushad)
+
+> Jag tog över för att VERIFIERA (inte bygga nytt) att hela kärnloopen
+> prompt -> företagshemsida -> preview -> följdprompt -> ny version faktiskt
+> fungerar end-to-end i vercel-sandbox-läge, och för att committa + pusha det
+> okommitterade trädet på operatörens begäran. Allt kördes i Cursor-browsern
+> mot `localhost:3000`.
+>
+> **Resultat: loopen funkar live.** Steg jag verifierade:
+> 1. Startade dev-servern (`npm run dev`, mode=vercel-sandbox, http, COEP off).
+>    Drog färsk OIDC-token med `vercel env pull apps/viewser/.env.vercel.local`.
+> 2. Valde den gröna bageri-runen i run-historiken -> `POST /api/preview` ->
+>    sandbox kallstart (~30 s) -> bageriet renderade full-height i preview-iframen
+>    MED Sajtmaskin-chatten ovanpå. Höjd-fixen (`display:contents` i
+>    `apps/viewser/components/error-boundary.tsx`) är bekräftad nödvändig + korrekt.
+> 3. Skickade en copy-följdprompt ("Byt företagsnamnet till Bryggans
+>    Surdegsbageri") -> bygge v6 -> v7 (`ok`) -> ny sandbox -> iframen laddade om
+>    -> namnet bytte i header-logga + hero. Chatten svarade ärligt "Klart! Sajten
+>    gick från v6 -> v7. Jag ändrade företagsnamnet ...". Pekaren `current.json`
+>    flyttades korrekt fram till v7-bygget (`builds/...195906Z`).
+>
+> **Operatörsfråga besvarad (gröna/gråa prickar i hamburgermenyn):** prickfärgen
+> = runens build-status, inget annat. Grön = `ok` (build skrev `build-result.json`);
+> grå = `pending` (bygget dödades innan resultatfilen skrevs). v3/v4/v6 är gråa
+> rester från avbrutna byggen; v1/v2/v5/v7 är gröna. `error-boundary.tsx`-fixen
+> påverkar BARA iframens höjd (om previewen syns), INTE prickfärgen — den oron
+> var obefogad.
+>
+> **Jag ändrade INGEN källkod.** De 25 modifierade filerna + nya
+> `apps/viewser/lib/vercel-sandbox-sessions.ts` låg redan i working tree från
+> tidigare sessioner (de fyra ändringsseten + höjd-fixen). På operatörens begäran
+> committade + pushade jag dem som EN sammanhållen commit till `jakob-be` (ingen
+> commit-split, ingen PR-merge). FULL `pytest tests/ -q` på sammanslaget träd
+> kördes INTE; snabba guards (ruff/term-coverage/rules-sync/governance) kördes
+> gröna. En framtida PR bör fortfarande organiseras + Scout-granskas.
+>
+> **Städning gjord:** dev-servrar dödade (port 3000 ledig, 0 node), aktiv sandbox
+> stoppad (`DELETE /api/preview`), och mergade backup-brancher rensade lokalt
+> (backup-43/44/45). `cursor/preview-runtime-bite-b-di` lämnades (ahead 22, ej
+> mergad — radera inte). `docs/heavy-llm-flow/` RÖRDES INTE (annan agent äger den).
+>
+> **De TVÅ buggarna kvarstår (oförändrade — nästa agents jobb):**
+> - Bugg A: avbrutna/hårdkillade byggen fastnar `pending`/grå för evigt (ingen
+>   `build-result.json` skrevs) och promotas aldrig. Robusthet mot avbrott +
+>   markera dem failed i UI:t.
+> - Bugg B: layout-följdprompter ("centrera hero", "lägg till gallery") är ärliga
+>   no-ops (`appliedVisibleEffect:false`); bara copy-direktiv (företagsnamn/tagline)
+>   landar synligt. Sprint 3B-codegen.
+> - Liten copy-bugg jag noterade: taglinen visade "exakt: ..." — instruktionsordet
+>   "exakt:" läckte in i copy-texten via copy-direktiv-extraktionen. Kandidat för
+>   `packages/generation/followup/copy_directives.py`.
+
+## Orchestrator-handoff 2026-06-02 SEN KVÄLL (preview-iframe live + två kvarvarande buggar — TA ÖVER HÄR)
+
+> Du tar över mitt i en interaktiv felsöknings-/verifieringssession med operatören
+> (Jakob). Läs FÖRST: detta block, `docs/current-focus.md`, blocket strax nedan
+> ("Bite C live-verifierad"), `AGENTS.md`, `docs/product-operating-context.md`,
+> ADR 0033/0034. **Operatörens uttryckliga uppdrag till dig:** få HELA loopen att
+> faktiskt funka end-to-end — (A) preview-iframen ska visa NYASTE versionen på
+> `localhost:3000`, och (B) en följdprompt ska ge en SYNLIG ändring i sajten (inte
+> bara en ny version som ser identisk ut).
+>
+> **Allt är okommitterat fortfarande** (samma working tree som blocket nedan + EN ny
+> rad av mig — se nästa stycke). HEAD = `ba11514` på `jakob-be`. INGEN PR, INGET
+> pushat. Alla dev-servrar/sandbox-node-processer är DÖDADE (port 3000 ledig, 0 node).
+>
+> **VAD JAG (denna agent) GJORDE:**
+> 1. **Hittade + fixade en riktig preview-bugg (iframe 1920×0 px).** I `app/page.tsx`
+>    wrappas `ViewerPanel` i `<ErrorBoundary>`. Boundaryns success-gren renderade
+>    `<div key={resetKey}>{children}</div>` UTAN höjd → en block-div med `height:auto`
+>    mellan `<main h-[100dvh]>` och `ViewerPanel`s `.viewer-canvas h-full`. Då
+>    resolvade `h-full` (100%) mot auto-höjd → kollapsade till 0 px, så preview-iframen
+>    (`absolute inset-0`) fick bredd men 0 höjd och blev OSYNLIG (det var DÄRFÖR sajten
+>    aldrig syntes i iframen, trots korrekt `vercel.run`-URL). Browser-subagenten mätte
+>    iframe = 1920×0; direkt-navigering till sandbox-URL:en visade full bageri-sajt.
+>    **Fix:** `apps/viewser/components/error-boundary.tsx` rad ~92 →
+>    `<div key={resetKey} className="contents">` (display:contents = layout-transparent).
+>    Efter fix: iframe = 1080px hög, bageri-sajten renderas full-height MED FloatingChat
+>    ovanpå. **Verifiera + behåll denna fix.** (Detta är den enda kod-rad JAG ändrat;
+>    resten av working tree är de fyra ändringsseten från blocket nedan.)
+> 2. **Bekräftade att vercel-sandbox-previewen funkar live i UI:t.** Browser-subagent:
+>    valde bryggans-bageri-run → `POST /api/preview` → sandbox cold-start ~25-30 s →
+>    publik `https://sb-….vercel.run` i iframen → renderade bageriet i appen. Reload-
+>    mekanismen (ny följdprompt → ny sandbox-URL) trigga­des (URL bytte sb-5n2yo… →
+>    sb-42y6w…). OIDC-token i `apps/viewser/.env.vercel.local` giltig till ~06:38
+>    (12 h, dra ny med `vercel env pull` vid behov).
+>
+> **DE TVÅ BUGGARNA DU SKA FIXA (operatörens uppdrag):**
+>
+> **(A) "Gråa runs" + preview visar inte nyaste versionen.** Run History visar v3/v4
+> som GRÅA (`status: pending`) medan äldre v1/v2 är GRÖNA (`ok`). Rotorsak (verifierad
+> på disk): v3 (`…190715`) och v4 (`…191111`) DOG MITT I BYGGET — Cursor-omstart resp.
+> avbruten browser-session dödade `build_site.py`-barnet EFTER `npm install`/`next build`
+> men INNAN `build-result.json` skrevs + `current.json` promotades. Builder-kontraktet
+> säger att `build-result.json` ALLTID ska skrivas (även vid fel), så en saknad fil =
+> hård kill, inte ärligt misslyckande → runen fastnar `pending` för evigt (grå).
+> Konsekvens: `current.json` pekar fortfarande på den GAMLA v2-build:en
+> (`builds/20260602T180615Z`), så när du klickar VILKEN run som helst startar sandboxen
+> den gamla sajten → "äldre fungerar, ser identiska ut". Builds-dirar finns för
+> 180615Z (aktiv), 190725Z, 191120Z, 192207Z men pointern hoppade aldrig fram för de
+> avbrutna. **Att utreda/fixa:** (1) Bör en avbruten/`pending` run kunna städas/markeras
+> som failed i UI:t i stället för att hänga grå? (2) Viktigare: när jag körde följdpromp-
+> ten RENT VIA API (utan browser-avbrott) gick den IGENOM: `buildStatus:"ok"`, v5,
+> `current.json` → `20260602T192207Z`. Så pipelinen funkar när den får köra klart —
+> problemet är robusthet mot avbrott + att UI:t (FloatingChat) körde bygget i ett
+> webbläsarfönster som dödades. Fundera på om `runBuild` ska vara mer kill-resilient
+> eller om UI:t ska polla klart även efter att fliken tappar fokus.
+>
+> **(B) Följdprompt ger TYST NO-OP (ingen synlig ändring).** Den lyckade v5-builden
+> ovan (prompt: "Centrera hero-sektionen och lägg till en gallery-sektion…") gav i
+> `build-result.json`: `appliedVisibleEffect:false`,
+> `appliedVisibleEffectReason:"intent_no_semantic_change"`, `appliedCopyDirectives:[]`,
+> `codegen.rationale:"…Real codegenModel skipped…"`. Dvs DETERMINISTISK codegen-v1 kan
+> ÄNNU INTE göra layout-ändringar (centrera hero, lägg till gallery) — de blir ärliga
+> no-ops (S2-honesty-signalen funkar exakt som tänkt). Idag landar BARA copy-direktiv
+> synligt (företagsnamn/tagline via `appliedCopyDirectives`). **Att fixa:** detta är
+> Sprint 3B-territorium (riktig `codegenModel` + mekaniska layout-fixar). Antingen (1)
+> implementera/aktivera codegen för de vanligaste layout-intents (hero-centrering,
+> gallery-sektion), ELLER (2) först göra UI:t ärligt så operatören tydligt ser "ingen
+> synlig ändring kunde appliceras" (info-bubblan finns redan i FloatingChat via
+> `appliedVisibleEffect:false` men verifiera att den faktiskt visas). Operatören vill
+> i längden ha (1) — att följdprompten FAKTISKT ändrar sajten.
+>
+> **Hur preview-floweet är TÄNKT (så du inte famlar):** `VIEWSER_PREVIEW_MODE=vercel-
+> sandbox` i `.env.local`. ViewerPanel POST:ar `/api/preview/<siteId>` → route →
+> `currentViewserRuntime()` → vercel-sandbox-adaptern: stoppar ev. gammal sandbox för
+> siteId, `createSandboxPreview` laddar upp den AKTIVA build:en (via `current.json` →
+> `builds/<activeBuildId>/`), kör npm install + next build + next start i en Vercel
+> microVM, returnerar publik `…vercel.run`-URL. ViewerPanel iframe:ar den URL:en.
+> Följdprompt: FloatingChat POST:ar `/api/prompt` (mode:followup) → `build_site.py` →
+> ny build + ny `current.json` → `onBuildDone` → page.tsx väljer nya runId → ViewerPanel-
+> effekten (`[runId, siteId]`) kör om → ny `POST /api/preview` → ny sandbox → iframe-URL
+> byts. Allt detta FUNKAR; det som fattas är (A) robusthet mot avbrott och (B) synlig
+> codegen.
+>
+> **Start-checklista för dig:** (1) `cd apps/viewser && npm run dev` (mode=vercel-sandbox,
+> kräver färsk OIDC-token). (2) Öppna `localhost:3000`, meny uppe höger → välj senaste
+> bryggans-bageri-run → vänta ut sandbox cold-start (~30 s) → bekräfta att iframen nu
+> renderar full-height (height-fixen). (3) Skicka en COPY-följdprompt (t.ex. "byt
+> taglinen till X") för att SE en synlig ändring landa (copy-direktiv funkar). (4) Ta
+> tag i (A) och (B) ovan. **Kör `kill-dev-trees.bat` SOM ADMIN** för att städa node-
+> träd mellan försök (se AGENTS.md-gotcha). **PR-strategi:** oförändrad — full
+> `pytest tests/ -q` på sammanslaget träd + commit-split + Scout-review innan PR
+> (se blocket nedan för de fyra ändringsseten; min height-fix är ett FEMTE litet,
+> fristående preview-fix lämpligt som egen commit `fix(viewser): preview-iframe
+> 0px-höjd via ErrorBoundary display:contents`).
+
+## Orchestrator-handoff 2026-06-02 kväll (vercel-sandbox Bite C live-verifierad — sessionsavslut)
+
+> Du tar över efter en lång manuell operatörssession. Läs FÖRST: `docs/current-focus.md`,
+> denna handoff, `AGENTS.md`, `docs/product-operating-context.md`,
+> `docs/orchestrator-playbook.md`, ADR 0028/0030/0033/0034.
+>
+> **Operatörs-grant (denna + kommande sessioner, 2026-06-02):** agenten har fria
+> rättigheter att läsa/ändra ALLA `.env*`-filer i repo-roten och i `apps/viewser/`.
+> Skriv aldrig ut secrets i klartext i svar/commits; committa aldrig `.env*` (gitignored).
+> Vill operatören göra grant:en permanent → flytta in den i `AGENTS.md`/governance.
+>
+> **Stort resultat: `VIEWSER_PREVIEW_MODE=vercel-sandbox` fungerar end-to-end och är
+> LIVE-verifierat.** Kedja: viewser i sandbox-läge → `POST /api/preview/<siteId>` →
+> `currentViewserRuntime()` → vercel-sandbox-adaptern bygger sajten i en Vercel-microVM
+> (~29 s) → publik `https://…vercel.run`-URL (`kind:"vercel-sandbox"`, status ready).
+> Browser-skärmdump bekräftade att URL:en serverar v2-bageriet (med de följdprompt-
+> tillagda produkterna). Detta tar bort hela process-/fil-lås-klassen för previews
+> (preview kör i molnet, inte som lokala node-processer).
+>
+> **INGENTING ÄR COMMITTAT.** Working tree har FYRA logiska ändringsset (var för sig
+> verifierade; en FULL `pytest tests/ -q` på sammanslaget träd ÅTERSTÅR):
+> 1. Process-läck-fix (B157-klass tree-kill): `tests/test_b154_next_dev_tdz.py`
+>    (`_stop_process` → `taskkill /T` på Windows + `os.killpg` på POSIX +
+>    `start_new_session`), `apps/viewser/lib/local-preview-server.ts` (`stopAll` →
+>    `killProcessTree`).
+> 2. S2 — följdprompt-ärlighet (B155 nivå-1): `scripts/prompt_to_project_input.py` +
+>    `scripts/build_site.py` (nytt fält `unappliedFollowupIntents` + trace-event) +
+>    `tests/test_followup_honest_no_op.py`.
+> 3. S3 Fas 1 — öppettider i brief: `packages/generation/brief/extract.py`
+>    (`contact_opening_hours`), `governance/schemas/site-brief.schema.json`,
+>    `tests/test_extract_site_brief.py`, `tests/test_artifact_schemas.py`. Fas 2
+>    (wiring i `prompt_to_project_input.py`) EJ gjord — gör efter commit av S2.
+> 4. Bite C — vercel-sandbox iframe-wiring: `apps/viewser/app/api/preview/[siteId]/route.ts`,
+>    `components/viewer-panel.tsx`, `lib/build-runner.ts`, `lib/preview-runtime-server.ts`,
+>    `lib/vercel-sandbox-runner.ts`, `lib/vercel-sandbox-sessions.ts` (NY),
+>    `next.config.ts`, `scripts/dev.mjs`, `.env.example`, `tests/test_viewser_files.py`,
+>    `scripts/check_term_coverage.py` (allowlist).
+> - Incidentellt: `docs/spikes/vercel-sandbox-spike.md` (spike-CLI:t la själv till en
+>   mätrad — revertas eller tas med).
+> - OBS overlap: `apps/viewser/lib/local-preview-server.ts` bär BÅDE process-läck-fixen
+>   (#1) och ev. Bite C-touch — inspektera diffen vid commit-split.
+>
+> **Två buggar som live-smoken (inte tsc/enhetstester) avslöjade + fix:**
+> - Turbopack kunde inte resolva cross-package-aliaset `@preview-runtime` (paketet i
+>   `../../packages/`, utanför `apps/viewser`). Fix: `turbopack.root` → repo-roten i
+>   `next.config.ts`. Lärdom: `resolveAlias` med ABSOLUT Windows-path funkar EJ
+>   ("windows imports are not implemented yet") — använd `root` + relativt tsconfig-alias.
+> - term-coverage: allowlist:ade `PreviewStartOk`, `PreviewStartResponse`, `SandboxSession`.
+>
+> **Gröna guards denna session:** tsc 0, eslint 0, ruff 0, term-coverage 0, governance
+> 18/18, 92 viewser/preview-tester, S2:s 107 followup-tester + non-slow-svit +
+> golden-path real-build, S3:s 44 extract/schema-tester. ÅTERSTÅR: full `pytest tests/ -q`
+> på sammanslaget träd.
+>
+> **Disk-not:** `sajtbyggaren-output/.generated/` hade städats; jag byggde om
+> `bryggans-bageri-823775` med `build_site.py --skip-build` och skrev `current.json`
+> manuellt (pekare till `builds/20260602T180615Z`) för sandbox-smoken. Inget i repo:t
+> påverkas. OIDC-token ligger i `apps/viewser/.env.vercel.local` (12 h TTL; dra ny med
+> `vercel env pull` vid behov).
+>
+> **Nästa uppgift (operatörens uttryckliga nästa steg):** verifiera att användarsajten
+> faktiskt visas i en iframe PÅ viewser-sidan i `vercel-sandbox`-läge (inte bara att
+> routen returnerar URL:en — bekräfta att `ViewerPanel`-iframen laddar `vercel.run`-URL:en
+> i UI:t), OCH att en följdprompt laddar om previewen så den nya LLM-ändrade versionen
+> kommer upp (bygg om → ny build → stoppa gammal sandbox → ny URL → iframe uppdateras).
+>
+> **PR-strategi (operatörsbeslut "kanske"):** öppna PR efter (a) full pytest grön på
+> sammanslaget träd, (b) commit-split i de 4 grupperna ovan, (c) Scout RO-review
+> (`apps/` + `packages/` + `scripts/` är tunga ytor). Bite C rör `apps/viewser` =
+> Christopher-lane-territorium → koordinera/scope-besluta (jfr PR #150).
+
 ## Orchestrator-handoff 2026-06-02 sen EM (sessionsavslut — klistra in till färsk agent)
 
 > Du är orchestrator/Builder för `Jakeminator123/sajtbyggaren`. Färsk session.

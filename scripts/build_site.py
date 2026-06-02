@@ -3702,6 +3702,57 @@ def empty_model_usage(source: str = "mock-no-key") -> dict:
     return compose_model_usage(source, codegen_summary=None)
 
 
+# B155 honest-level-1: bounds for the unappliedFollowupIntents list so a
+# malformed sidecar cannot smuggle arbitrary/oversized strings into
+# build-result.json (Viewser reads the list verbatim).
+_UNAPPLIED_FOLLOWUP_TARGET_MAX_LENGTH = 80
+_UNAPPLIED_FOLLOWUP_REASON_MAX_LENGTH = 400
+_UNAPPLIED_FOLLOWUP_MAX_ITEMS = 20
+
+
+def _prompt_meta_unapplied_followup_intents(
+    prompt_meta: dict[str, Any] | None,
+) -> list[dict[str, str]]:
+    """Return validated B155 unappliedFollowupIntents from the prompt sidecar.
+
+    Each entry is ``{"target": <str>, "reason": <str>}`` - the honest-level-1
+    complement to ``appliedVisibleEffect`` (a global file-diff boolean). It
+    names the follow-up asks the deterministic v1 pipeline recognised but could
+    not apply (an unmounted capability or a hero/section rewrite with no
+    copyDirective target). Defensive parsing mirrors
+    ``_prompt_meta_placeholder_contact_fields``: skip malformed entries, dedupe
+    on target, cap string lengths and item count.
+    """
+    if not prompt_meta:
+        return []
+    raw = prompt_meta.get("unappliedFollowupIntents")
+    if not isinstance(raw, list):
+        return []
+    posts: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        target = item.get("target")
+        reason = item.get("reason")
+        if not isinstance(target, str) or not isinstance(reason, str):
+            continue
+        target = target.strip()
+        reason = reason.strip()
+        if not target or not reason or target in seen:
+            continue
+        seen.add(target)
+        posts.append(
+            {
+                "target": target[:_UNAPPLIED_FOLLOWUP_TARGET_MAX_LENGTH],
+                "reason": reason[:_UNAPPLIED_FOLLOWUP_REASON_MAX_LENGTH],
+            }
+        )
+        if len(posts) >= _UNAPPLIED_FOLLOWUP_MAX_ITEMS:
+            break
+    return posts
+
+
 def write_build_result(
     run_dir: Path,
     trace: Trace,
@@ -3804,11 +3855,26 @@ def write_build_result(
         result["placeholderContactMessage"] = _placeholder_contact_warning_message(
             placeholder_contact_fields
         )
+    # B155 honest-level-1: surface the follow-up asks the deterministic v1
+    # pipeline recognised but could not apply (computed in
+    # prompt_to_project_input and carried on the meta sidecar). Complements the
+    # global appliedVisibleEffect boolean; emitted only when non-empty.
+    unapplied_followup_intents = _prompt_meta_unapplied_followup_intents(prompt_meta)
+    if unapplied_followup_intents:
+        result["unappliedFollowupIntents"] = unapplied_followup_intents
     if codegen_summary is not None:
         result["codegen"] = codegen_summary
     if active_build_id is not None:
         result["activeBuildId"] = active_build_id
     write_json(run_dir / "build-result.json", result)
+    if unapplied_followup_intents:
+        trace.event(
+            "build",
+            "followup.unapplied_intents_detected",
+            "warning",
+            "Follow-up contained intents the deterministic v1 pipeline could not apply",
+            reason=", ".join(post["target"] for post in unapplied_followup_intents),
+        )
     trace.event(
         "build",
         "build.result.written",

@@ -232,6 +232,7 @@ fatta beslut på riktiga siffror.
 
 | Datum | siteId | totalMs | installMs | buildMs | URL öppningsbar? | Mobil? | activeCpuMs | Kommentar |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-06-02 16:39 | bryggans-bageri-823775 | 27677 | 14649 | 11197 |  |  |  | sandboxId=sajtbyggaren-preview-bryggans-bageri-823775-1780418346884 |
 | 2026-06-01 20:27 | painter-palma | 29404 | 18190 | 9208 | ja | ja (responsiv, headless 390x844) | 52342 | node24, 2 vCPU, 27 filer/407 kB, ~155 MB ingress; cold-start 29 s; full sajt renderade (hero/tjänster/FAQ/kontakt), inga konsolfel; sandboxId=sajtbyggaren-spike-painter-palma-1780345634605 |
 | _pending_ | | | | | | | | |
 

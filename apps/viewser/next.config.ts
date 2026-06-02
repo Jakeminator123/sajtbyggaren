@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import type { NextConfig } from "next";
 
 // Preview-runtime-läge (ADR 0028 — Runtime Ladder).
@@ -30,6 +32,15 @@ import type { NextConfig } from "next";
 //                      LocalRuntime när bygget finns, annars
 //                      StackBlitz). Idag mappar `auto` på StackBlitz-
 //                      headers för säker bakåtkompatibilitet.
+//
+//   4. `vercel-sandbox` — VercelSandboxRuntime (ADR 0033, primärt
+//                      förstahandsval). Previewn serveras från en publik
+//                      `…vercel.run`-https-URL (isolerad Vercel Sandbox) och
+//                      bäddas som en plain cross-origin <iframe>. Precis som
+//                      `local-next` FÅR vi INTE sätta COEP/COOP — en publik
+//                      https-iframe behöver ingen cross-origin-isolation
+//                      (det krävs bara av StackBlitz/WebContainers). Samma
+//                      transport som local-next (http, COEP off).
 //
 // `credentialless` används i StackBlitz-grenen istället för
 // `require-corp` eftersom vi embeddar tredjepartsiframe (stackblitz.com)
@@ -153,6 +164,25 @@ if (
 }
 
 const nextConfig: NextConfig = {
+  // Bite C (ADR 0028/0033): routen laddar nu @preview-runtime-paketet, som bor
+  // i ../../packages/ — UTANFÖR apps/viewser. Turbopack läser per default bara
+  // filer inom sin inferrade workspace-root (apps/viewser har egen lockfile),
+  // så cross-package-källimporten failar med "Module not found: @preview-runtime"
+  // trots att tsc följer aliaset via tsconfig ``paths``.
+  //
+  // Fix: sätt ``root`` till repo-roten (mappen som rymmer BÅDE apps/viewser och
+  // packages/). Då resolvar Turbopack det RELATIVA tsconfig-``paths``-aliaset
+  // (``@preview-runtime`` -> ../../packages/preview-runtime/src/index) inom
+  // roten. Per Next-docs + vercel/next.js#85057. node_modules/next hittas ändå
+  // via vanlig upp-vandring från apps/viewser-filer.
+  //
+  // OBS: använd INTE resolveAlias med en absolut Windows-path här — Turbopack
+  // kastar då "windows imports are not implemented yet" (C:\…-paths stöds ej).
+  // ``root`` + det relativa tsconfig-aliaset räcker och undviker den fällan.
+  // ``process.cwd()`` är apps/viewser när dev.mjs spawnar ``next dev`` därifrån.
+  turbopack: {
+    root: path.resolve(process.cwd(), "..", ".."),
+  },
   // Spegla läget till klienten så ViewerPanel kan ta beslut baserat
   // på det (t.ex. skippa StackBlitz-fallbacken när vi vet att vi kör
   // LocalRuntime). NEXT_PUBLIC_-prefixet är vad Next.js kräver för att
@@ -172,12 +202,17 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_VIEWSER_PREVIEW_MODE: PREVIEW_MODE,
   },
   async headers() {
-    // LocalRuntime-grenen: tom header-lista. COEP credentialless +
-    // COOP same-origin skulle annars blockera den cross-origin iframen
-    // som pekar på localhost:<4100-4199>. Notera: `effectiveMode`, inte
-    // `PREVIEW_MODE` — production-gaten ovanför ser till att vi aldrig
-    // når den här grenen oavsiktligt i `NODE_ENV=production`.
-    if (effectiveMode === "local-next") {
+    // Tom header-lista för local-next OCH vercel-sandbox. COEP
+    // credentialless + COOP same-origin skulle annars blockera en
+    // cross-origin iframe:
+    //   - local-next  → localhost:<4100-4199> (annan port, cross-origin).
+    //   - vercel-sandbox → publik …vercel.run-https-URL (cross-origin).
+    // Ingendera behöver cross-origin isolation (det krävs bara av
+    // StackBlitz/WebContainers för SharedArrayBuffer). En publik https-iframe
+    // bäddas utan isolation (ADR 0033). Notera: `effectiveMode`, inte
+    // `PREVIEW_MODE` — production-gaten ovanför promotar bara local-next, så
+    // vercel-sandbox passerar oförändrad hit även i NODE_ENV=production.
+    if (effectiveMode === "local-next" || effectiveMode === "vercel-sandbox") {
       return [];
     }
 

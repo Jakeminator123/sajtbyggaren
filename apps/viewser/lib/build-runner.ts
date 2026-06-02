@@ -6,6 +6,7 @@ import path from "node:path";
 import { killProcessTree, stopAndWaitPreviewServer } from "@/lib/local-preview-server";
 import { assertProjectInputExists } from "@/lib/project-inputs";
 import { readBuildResult, runDirFromId, runsDir } from "@/lib/runs";
+import { stopSandboxSessionForSite } from "@/lib/vercel-sandbox-sessions";
 
 // Första bygget i en helt ny `.generated/<siteId>/` involverar:
 //   - npm install från noll (typiskt 60–120 sek beroende på cache),
@@ -161,6 +162,13 @@ async function runBuildOnce(
   // start picks up the freshly published current.json build instead of
   // serving the previous version indefinitely.
   await stopAndWaitPreviewServer(siteId);
+
+  // Livscykel/kostnad (ADR 0033): ett nytt bygge/följdprompt ska stoppa en
+  // ev. aktiv Vercel Sandbox för samma siteId — annars lever den gamla
+  // sandboxen kvar tills TTL (~15 min) och kostar ören i onödan. Idempotent
+  // no-op i local-next-läge (sessionsregistret är tomt → oförändrat beteende).
+  // Speglar ``stopAndWaitPreviewServer`` ovan men för den fjärr-körda runtimen.
+  await stopSandboxSessionForSite(siteId);
 
   const scriptPath = path.join(repoRoot(), "scripts", "build_site.py");
   const args = [scriptPath, "--dossier", dossierPath];

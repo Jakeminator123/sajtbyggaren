@@ -143,8 +143,25 @@ def test_site_brief_accepts_company_and_contact_fields():
             "contactPhone": "0701234567",
             "contactEmail": "hej@voltco.se",
             "contactAddress": "Storgatan 1, 211 22 Malmö",
+            "contactOpeningHours": "mån-fre 08-17",
         }
     )
+    validate_site_brief(payload)
+
+
+@pytest.mark.tooling
+def test_site_brief_opening_hours_is_optional_and_nullable():
+    """S3 Fas 1: contactOpeningHours accepts a string, accepts explicit null,
+    and may be omitted entirely (it is not a required property).
+    """
+    payload = _minimal_site_brief()
+    assert "contactOpeningHours" not in payload  # omitted is valid (optional)
+    validate_site_brief(payload)
+
+    payload["contactOpeningHours"] = "tisdag–söndag 07–16"
+    validate_site_brief(payload)
+
+    payload["contactOpeningHours"] = None
     validate_site_brief(payload)
 
 

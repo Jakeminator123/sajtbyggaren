@@ -340,6 +340,10 @@ COMMON_WORDS = {
     "FetchedRunsPayload",
     "ScrollArea", "ScrollAreaPrimitive", "ScrollBar",
     "StackblitzFileMap",
+    # Bite C (ADR 0033) — vercel-sandbox preview wiring TS-symboler. Lokala
+    # viewser/preview-identifierare (route-response-shape + session-registry),
+    # inte domänbegrepp. Samma behandling som PreviewServerInfo / FilesPayload.
+    "PreviewStartOk", "PreviewStartResponse", "SandboxSession",
     "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
     "GameState", "KeyboardEvent", "PacmanGame",
     "Snake", "Tetris", "ThreeCanvasShell",

@@ -15,6 +15,10 @@ import {
   hasVercelSandboxAuth,
   stopSandboxPreview,
 } from "./vercel-sandbox-runner";
+import {
+  recordSandboxSession,
+  stopSandboxSessionForSite,
+} from "./vercel-sandbox-sessions";
 
 /**
  * Server-side DI-wiring för Preview Runtime.
@@ -83,7 +87,17 @@ export function installViewserPreviewRuntimeHandlers(): void {
         if (!siteId) {
           return { status: "failed", error: "VercelSandboxRuntime kräver siteId." };
         }
+        // Livscykel/kostnad (ADR 0033): stoppa en ev. tidigare sandbox för
+        // SAMMA siteId innan en ny skapas, så vi aldrig kör två parallellt
+        // (TTL ~15 min + kostar ören per körning). Idempotent no-op om ingen
+        // session finns. Detta täcker re-select/re-POST utan rebuild; ett nytt
+        // bygge stoppas dessutom redan av build-runner via
+        // ``stopSandboxSessionForSite``.
+        await stopSandboxSessionForSite(siteId);
         const result = await createSandboxPreview({ siteId, runId: config.runId });
+        if (result.status === "ready" && result.url) {
+          recordSandboxSession(siteId, result.sandboxId ?? siteId, result.url);
+        }
         return {
           status: result.status === "ready" ? "ready" : "failed",
           url: result.url,
