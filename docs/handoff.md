@@ -1,8 +1,52 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-02 UTC. `jakob-be` = `4d08526` (copyDirectives slice 2a +
-2c + nivå 3a editPlan). `main` = `2d636b0`, oförändrad. `jakob-be` är 7 commits
-före `main`; ingen sync-PR öppnad (väntar operatörs-OK). Inga öppna PR:er.
+**Datum:** 2026-06-02 UTC. `jakob-be` = `6c860ec` (copyDirectives 2a + 2c +
+nivå 3a + extern-review-härdning). `main` = `2d636b0`, oförändrad. `jakob-be` är
+9 commits före `main`; **sync-PR nu mergebar** (två near-blockers stängda),
+öppnas på operatörsbeslut. Inga öppna PR:er.
+
+## Session 2026-06-02 fm (forts) — extern-review-härdning + nästa-fas-handoff
+
+Två externa reviewers (operatören bad uttryckligen om buggjakt) gav ~8/10 med
+två near-blockers före sync-PR. Båda åtgärdade på `jakob-be` (`6c860ec`):
+
+- **Vibe-"till"-läcka (near-blocker):** about-text/services krävde tidigare bara
+  ett fritt trailing "till <rest>" som värde. "skriv om om oss till mer
+  personligt" hade då satt `company.story = "mer personligt"` (instruktion som
+  kundcopy). Fix: `_extract_explicit_replace_value` (endast citat/kolon) används
+  för about-text/services och i `_has_explicit_copy_value`; sådana vibe-prompter
+  går nu till planeraren eller blir no-op. company-name/tagline behåller löst
+  trailing (korta labels).
+- **Planner no-op-löfte (near-blocker):** när planeraren är på men ger `[]`
+  (saknad nyckel / dropp) får en about-rewrite INTE falla tillbaka på en generisk
+  story-emphasize-append. `merge_followup_project_input` snapshottar story före
+  `_apply_semantic_patch` och **återställer** den om ingen about-text-directive
+  applicerades (`_content_rewrite_target` exponerar målet; bara aktiv när planner
+  enabled). `_apply_semantic_patch`/`classify_followup_intent` orörda.
+- **Schema if/then (governance-härdning):** `directives.copyDirectives`-items
+  fick `allOf` med if/then — target=services kräver `targetRef`; about-text/
+  services låsta till `replace-text`. Speglar Python-kontraktet.
+- 7 nya regressionstester (vibe-läcka, strikt trailing no-op, planner-[]-no-op
+  för både tone-shift- och story-emphasize-prompt, schema-avvisning). Alla guards
+  gröna; full pytest grön (orphan dev-trees rensade före).
+
+**Reviewer-noterade follow-ups (ej blockers):**
+
+1. **copyDirective-modulutbrytning (NÄSTA, reviewer-rekommenderad):**
+   `scripts/prompt_to_project_input.py` är för central. Bryt ut
+   copyDirective-delsystemet till egen modul innan fler targets byggs.
+   Behavior-preserving. Builder-prompt:
+   [`docs/agent-prompts/copydirective-module-extraction.md`](agent-prompts/copydirective-module-extraction.md).
+2. **Bredare grounding-guard:** editPlan-grundnings-guarden skyddar bara mot
+   ogrundade årtal idag; bredda till siffror/priser/orter/personnamn/
+   certifieringsord innan LLM-genererad about-copy litas på i skarp demo.
+3. **UI-gap (Christopher-lane):** FloatingChat/`AppliedCopyDirective` ger
+   heuristisk prompt-summary, inte faktisk applied-directive-diff, och känner
+   bara company-name|tagline. Synka about-text/services/planerade rewrites där.
+4. **ADR 0034 dokumentationsdrift:** dokumentet blandar "first slice"/nivå 2/3a;
+   städa status + kontrakt så det matchar faktisk implementation.
+5. **Sync-PR `jakob-be -> main`** (2a + 2c + 3a + härdning) — nu mergebar,
+   operatörsbeslut.
 
 ## Session 2026-06-02 fm — copyDirectives nivå 3a (editPlan-planerare)
 

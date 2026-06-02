@@ -7,9 +7,10 @@ Startpromptar och rollgränser finns i
 
 ## Nästa (2026-06-02, färsk orchestrator-session)
 
-`jakob-be` = `4d08526` (slice 2a + 2c + nivå 3a editPlan). `main` = `2d636b0`,
-inga öppna PR:er. `jakob-be` är 7 commits före `main` (2a + 2c + 3a +
-steward-docs) — ingen sync-PR ännu (väntar operatörs-OK). Vercel-sandbox-spåret är i `main` (#146 spike,
+`jakob-be` = `6c860ec` (slice 2a + 2c + nivå 3a + reviewer-härdning).
+`main` = `2d636b0`, inga öppna PR:er. `jakob-be` är 9 commits före `main` —
+**sync-PR är nu mergebar** (de två extern-review-near-blockers stängda i
+`6c860ec`), men öppnas/mergeas på operatörsbeslut. Vercel-sandbox-spåret är i `main` (#146 spike,
 ADR 0033, #147 opt-in-adapter via `VIEWSER_PREVIEW_MODE=vercel-sandbox`);
 default-preview är fortfarande `local-next` (inte flippad) och adaptern är
 inte UI-wirad. copyDirectives nivå 1 (`company-name` | `tagline`) är i `main`.
@@ -38,15 +39,30 @@ inte UI-wirad. copyDirectives nivå 1 (`company-name` | `tagline`) är i `main`.
   orörda; name/tagline genereras aldrig; grundnings-guard mot påhittade årtal;
   B155 `appliedVisibleEffect` som synlig-effekt-verifierare. Fortfarande väg A
   (inga `.generated/`-patchar). ADR 0034-not + llm-models v6 + naming-dict v22.
+- **Reviewer-härdning — KLAR** (`6c860ec`): två extern-review-near-blockers
+  stängda före sync-PR. (1) Vibe-"till"-läcka: about-text/services kräver nu
+  citerat/kolon-värde (inte fri trailing "till"), så "skriv om om oss till mer
+  personligt" sätter aldrig story = "mer personligt". (2) Planner no-op-löfte:
+  en about-rewrite som planeraren inte kan uppfylla faller inte tillbaka på en
+  generisk story-emphasize-append (story snapshottas + återställs). (3) Schema
+  if/then: services kräver targetRef, about-text/services låsta till
+  replace-text. 7 nya regressionstester.
 - **Slice 2d — PARKERAD: `cta`/hero.** Inget eget fält idag (hero-knappens text är
   en variant-whitelist i `build_site.py`), så detta är en **kontraktsändring**,
   inte bara enum — kräver designbeslut (ny `conversionGoals`-slug vs nytt
   PI-fält vs begränsad replace mot befintliga labels). Tas efter nivå 3-mönstret.
-- **Nivå 3 fortsättning (NÄSTA, eget beslut):** multi-target editPlan (flera
-  säkra edits i ett svar), separat `verifierModel` (kontrollerar synlig effekt
-  bortom B155-fil-diff), och väg B-UI för editPlan (FloatingChat visar planen +
-  ärlig feedback — Christopher-lane). Nivå 4 = LLM patchar filer/diff med
-  rollback (väg C, eget ADR + sandbox).
+- **NÄSTA (rekommenderat av två externa reviewers): copyDirective-modulutbrytning.**
+  `scripts/prompt_to_project_input.py` är nu för central (prompt-mapping +
+  follow-up-merge + semantic patch + copyDirective extract/plan/validate/apply).
+  Bryt ut copyDirective-delsystemet (keywords, extract, plan, validate, apply,
+  site-state, grounding) till en egen modul med tydliga contracts **innan**
+  fler targets (cta/all-copy) byggs. Behavior-preserving, egen builder-prompt:
+  [`docs/agent-prompts/copydirective-module-extraction.md`](agent-prompts/copydirective-module-extraction.md).
+- **Nivå 3 fortsättning (efter modulutbrytning, eget beslut):** multi-target
+  editPlan, separat `verifierModel` (synlig effekt bortom B155-fil-diff), bredare
+  grounding-guard (siffror/orter/namn/certifieringar, inte bara årtal), och
+  väg B-UI för editPlan (FloatingChat — Christopher). Nivå 4 = väg C (filpatch,
+  eget ADR + sandbox).
 
 Hårda regler genom hela trappan: remappa INTE tjänstetext till tagline/about;
 generated output förblir vanlig Next.js; rör inte preview-runtime/adaptern;
@@ -55,10 +71,10 @@ ingen UI (Christophers lane); rå prompt blir aldrig kundcopy.
 Parallellt (Christopher/UI): Bite C — flippa `app/api/preview/[siteId]` till
 `currentViewserRuntime()`.
 
-Parkerat (kräver operatörs-OK): sync-PR `jakob-be -> main` (slice 2a + 2c + 3a),
-default-flip till `vercel-sandbox` (kräver Bite C klar + smoke),
-`forbidden`-radering (egen ADR + test-omskrivningar), optional/lazy
-`@vercel/sandbox`-dep.
+Parkerat (kräver operatörs-OK): sync-PR `jakob-be -> main` (slice 2a + 2c + 3a +
+reviewer-härdning — **nu mergebar**), default-flip till `vercel-sandbox` (kräver
+Bite C klar + smoke), `forbidden`-radering (egen ADR + test-omskrivningar),
+optional/lazy `@vercel/sandbox`-dep.
 
 ## Vem uppdaterar denna fil
 
@@ -85,7 +101,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `4d08526` (2026-06-02 UTC, `jakob-be` — copyDirectives nivå 3a editPlan-planerare landad: site-state reader + generation-med-guards för about-text/services vid rewrite-instruktion utan värde, leak-/grundnings-guard, 17 nya tester. Scout RO-review: GO. EJ i `main` (ingen sync-PR — väntar operatörs-OK). `main` = `2d636b0`. Föregående steward-checkpoint: `a346bd6` (slice 2c)).
+Last verified state: `6c860ec` (2026-06-02 UTC, `jakob-be` — extern-review-härdning ovanpå nivå 3a: vibe-"till"-läcka stängd (about/services kräver citerat/kolon-värde), planner no-op-löfte (story-snapshot+restore), schema if/then (services-targetRef + about/services replace-only). 7 nya regressionstester; två near-blockers stängda → sync-PR mergebar. EJ i `main` (väntar operatörs-OK). `main` = `2d636b0`. Föregående steward-checkpoint: `4d08526` (nivå 3a)).
 Nya PRs sedan föregående checkpoint: inga (#148 var senaste sync till `main`).
 
 ## Branchmodellen (kort)
@@ -230,11 +246,11 @@ Aktiva spår i prioritetsordning:
    (target company-name|tagline, operation replace-text|include-token),
    deterministisk extraktor + ``copyDirectiveModel``-roll (llm-models v5),
    25 tester, real-LLM-smoke verifierad. Väg B FloatingChat-UI (Christopher)
-   är också i `main` (#139). **Nivå 2 slice 2a (about-text) + slice 2c
-   (services via targetRef) + nivå 3a (editPlan-planerare med generation för
-   about/services) landade på `jakob-be` (`4d08526`), ej i `main`. Slice 2b
-   tone HOPPAD; 2d cta PARKERAD.** Nästa: nivå 3-fortsättning (multi-target
-   editPlan + verifierModel + väg B-UI) — se Nästa-blocket överst.
+   är också i `main` (#139). **Nivå 2 slice 2a (about-text) + 2c (services) +
+   nivå 3a (editPlan-generation) + extern-review-härdning landade på `jakob-be`
+   (`6c860ec`), ej i `main` (sync-PR nu mergebar). Slice 2b tone HOPPAD; 2d cta
+   PARKERAD.** Nästa: copyDirective-modulutbrytning (reviewer-rekommenderad,
+   behavior-preserving) — se Nästa-blocket + builder-prompt i `docs/agent-prompts/`.
 5. B49 (docs-base page-map sidebar) — låg prio, behövs innan
    `course-education → docs-base` aktiveras.
 6. B13a arkitektur-flytt — kvarstår som öppen post, kräver egen sprint
