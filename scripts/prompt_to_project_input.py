@@ -2334,10 +2334,12 @@ def _semantic_source_entry(
 # previous version, so the rename never reached the renderer. These helpers
 # translate a narrow, leak-safe set of phrasings into structured copy
 # directives applied to specific Project Input fields (company.name,
-# company.tagline, company.story) BEFORE the deterministic renderer runs. The
-# raw prompt is never rendered as customer copy - only the validated payload,
-# to a known field. Targets grow in slices: company-name + tagline (nivå 1),
-# about-text -> company.story (slice 2a). about-text is replace-only.
+# company.tagline, company.story, services[].summary) BEFORE the deterministic
+# renderer runs. The raw prompt is never rendered as customer copy - only the
+# validated payload, to a known field. Targets grow in slices: company-name +
+# tagline (nivå 1), about-text -> company.story (slice 2a), services ->
+# services[].summary (slice 2c, via targetRef). about-text and services are
+# replace-only.
 
 _COPY_DIRECTIVE_TAGLINE_KEYWORDS: tuple[str, ...] = (
     "tagline",
@@ -2409,6 +2411,38 @@ _COPY_DIRECTIVE_ABOUT_KEYWORDS: tuple[str, ...] = (
 # payload cap is raised to match (still validated through the same public-copy
 # guards). Name stays capped at 80 and tagline at 140 in code.
 _COPY_DIRECTIVE_ABOUT_MAX_LENGTH = 600
+# Services scope (slice 2c, ADR 0034 väg A nivå 2): these signal that the
+# operator wants to change a specific service's summary (services[].summary).
+# Which service is resolved separately (targetRef -> matched against existing
+# services by id/label); no match is an honest no-op. Service summaries are
+# short, so the code cap is tighter than the about cap.
+_COPY_DIRECTIVE_SERVICES_KEYWORDS: tuple[str, ...] = (
+    "tjänst",
+    "tjänsten",
+    "tjänster",
+    "tjänsterna",
+    "tjänstbeskrivning",
+    "tjänstbeskrivningen",
+    "tjänsttext",
+    "tjänstetext",
+    "service description",
+    "services description",
+    "service",
+    "services",
+)
+_COPY_DIRECTIVE_SERVICES_MAX_LENGTH = 300
+# Additive "add a new service" phrasings. A services copyDirective only ever
+# REPLACES an existing service summary; creating a service is the semantic
+# service merge's job, so these phrasings force an honest no-op even when a
+# replace verb is also present ("uppdatera ... och lägg till ny tjänst").
+_COPY_DIRECTIVE_NEW_SERVICE_GUARD: tuple[str, ...] = (
+    "ny tjänst",
+    "ny tjanst",
+    "nya tjänster",
+    "nya tjanster",
+    "new service",
+    "new services",
+)
 _COPY_DIRECTIVE_INCLUDE_KEYWORDS: tuple[str, ...] = (
     "inkludera",
     "inkluderar",
@@ -2655,6 +2689,17 @@ def _classify_copy_target(text_norm: str) -> str | None:
     # like "ändra om-oss-texten till '...'" edits company.story, not the name.
     if _contains_any(text_norm, _COPY_DIRECTIVE_ABOUT_KEYWORDS):
         return "about-text"
+    # services scope (slice 2c) edits a specific service summary. It must NOT
+    # fire when the operator used an explicit company-name keyword
+    # ("ändra företagsnamnet (inte tjänsten) till X" is a company rename). The
+    # actual service is resolved via targetRef at extract/apply time; an
+    # unnamed or unknown service is an honest no-op. Placed before the generic
+    # name branch so "byt namnet på tjänsten till X" is service-scoped, not a
+    # company rename.
+    if _contains_any(
+        text_norm, _COPY_DIRECTIVE_SERVICES_KEYWORDS
+    ) and not _contains_any_word(text_norm, _COPY_DIRECTIVE_EXPLICIT_NAME_KEYWORDS):
+        return "services"
     if _contains_any_word(text_norm, _COPY_DIRECTIVE_NAME_KEYWORDS):
         # A generic "namn/namnet" must not hijack company.name when the
         # operator scoped the rename to a service/product/page (Codex-fynd
@@ -2709,6 +2754,69 @@ def _extract_replace_value(follow_up_prompt: str) -> str | None:
         if _looks_like_trailing_instruction(value):
             return None
         return value
+    return None
+
+
+# --- services target ref (slice 2c) -----------------------------------------
+# The operator must name WHICH service to edit. We capture the reference (a
+# service label or id) either quoted right after a service anchor word
+# ("tjänsten 'Klippning'") or unquoted between the anchor and the value marker
+# ("tjänsten Klippning till '...'"). The reference is never rendered - it is
+# only matched against the existing services list at apply time, so a fuzzy or
+# wrong reference is an honest no-op, never a hijack of another service.
+_SERVICE_ANCHOR = (
+    r"(?:\btjänsterna\b|\btjänsten\b|\btjänster\b|\btjänst\b"
+    r"|\bservices\b|\bservicen\b|\bservice\b)"
+)
+_SERVICE_REF_QUOTED_RE = re.compile(
+    rf"{_SERVICE_ANCHOR}\s+[{_QUOTE_CHARS}]([^{_QUOTE_CHARS}]+)[{_QUOTE_CHARS}]",
+    re.IGNORECASE,
+)
+_SERVICE_REF_UNQUOTED_RE = re.compile(
+    rf"{_SERVICE_ANCHOR}\s+([^{_QUOTE_CHARS}:]+?)\s+(?:\btill\b|\bto\b)",
+    re.IGNORECASE,
+)
+
+
+def _extract_service_target_ref(follow_up_prompt: str) -> str | None:
+    """Pull the service the operator scoped a services edit to (label or id).
+
+    Prefers a quoted reference right after a service anchor word; falls back to
+    an unquoted reference between the anchor and the ``till``/``to`` value
+    marker. Returns ``None`` when no specific service is named, so a generic
+    "ändra tjänsten till X" stays an honest no-op (we never guess which
+    service). Capped at 80 chars to match the schema targetRef bound.
+    """
+    match = _SERVICE_REF_QUOTED_RE.search(follow_up_prompt)
+    if not match:
+        match = _SERVICE_REF_UNQUOTED_RE.search(follow_up_prompt)
+    if not match:
+        return None
+    ref = match.group(1).strip().strip(_QUOTE_CHARS).strip()
+    ref = ref.strip(".:,;!? ").strip()
+    if not ref:
+        return None
+    return ref[:80]
+
+
+def _match_service_by_ref(services: Any, target_ref: str) -> dict[str, Any] | None:
+    """Find the service whose id or label matches ``target_ref`` (normalised).
+
+    Returns ``None`` when there is no exact normalised match, so an unknown
+    reference never creates a phantom service or hijacks an unrelated one.
+    """
+    if not isinstance(services, list):
+        return None
+    ref = _normalise_followup_text(target_ref)
+    if not ref:
+        return None
+    for service in services:
+        if not isinstance(service, dict):
+            continue
+        for key in ("id", "label"):
+            value = service.get(key)
+            if isinstance(value, str) and _normalise_followup_text(value) == ref:
+                return service
     return None
 
 
@@ -2832,6 +2940,33 @@ def _extract_copy_directives(
                 "source": "prompt-rule",
             }
         ]
+    # services is replace-only (slice 2c): the operator must name WHICH service
+    # (targetRef) and supply the new summary via an explicit "till '<X>'". An
+    # additive "lägg till ny tjänst" is handled by the semantic service merge,
+    # never a copy replace, so we bail on the additive phrasing. No named
+    # service -> honest no-op (we never guess which service to rewrite).
+    if target == "services":
+        if not has_replace or _contains_any(text, _COPY_DIRECTIVE_NEW_SERVICE_GUARD):
+            return []
+        target_ref = _extract_service_target_ref(follow_up_prompt)
+        if not target_ref:
+            return []
+        payload = _safe_copy_payload(
+            _extract_replace_value(follow_up_prompt),
+            follow_up_prompt=follow_up_prompt,
+            max_length=_COPY_DIRECTIVE_SERVICES_MAX_LENGTH,
+        )
+        if payload is None:
+            return []
+        return [
+            {
+                "target": "services",
+                "operation": "replace-text",
+                "payload": payload,
+                "targetRef": target_ref,
+                "source": "prompt-rule",
+            }
+        ]
     # include-token wins when both are present ("ändra texten ... till att
     # inkludera 'TEST-JAKOB'") because the operator named a token to add.
     if has_include:
@@ -2904,18 +3039,27 @@ def _validate_copy_directive_candidate(
     """
     target = candidate.get("target")
     operation = candidate.get("operation")
-    if target not in {"company-name", "tagline", "about-text"}:
+    if target not in {"company-name", "tagline", "about-text", "services"}:
         return None
     if operation not in {"replace-text", "include-token"}:
         return None
-    # about-text is replace-only in slice 2a; a model-proposed include-token on
-    # the about/story field is dropped rather than guessed at.
-    if target == "about-text" and operation != "replace-text":
+    # about-text and services are replace-only; a model-proposed include-token
+    # on those fields is dropped rather than guessed at.
+    if target in {"about-text", "services"} and operation != "replace-text":
         return None
+    # services must name a concrete service (targetRef); without it the apply
+    # step cannot resolve which summary to change, so the candidate is dropped.
+    target_ref: str | None = None
+    if target == "services":
+        raw_ref = candidate.get("targetRef")
+        if not isinstance(raw_ref, str) or not raw_ref.strip():
+            return None
+        target_ref = raw_ref.strip()[:80]
     max_length = {
         "company-name": 80,
         "tagline": 140,
         "about-text": _COPY_DIRECTIVE_ABOUT_MAX_LENGTH,
+        "services": _COPY_DIRECTIVE_SERVICES_MAX_LENGTH,
     }[target]
     payload = _safe_copy_payload(
         candidate.get("payload"),
@@ -2926,18 +3070,22 @@ def _validate_copy_directive_candidate(
         return None
     if target == "company-name" and payload == payload.lower():
         payload = _title_case_company_name(payload)
-    return {
+    validated: dict[str, Any] = {
         "target": target,
         "operation": operation,
         "payload": payload,
         "source": "llm",
     }
+    if target_ref is not None:
+        validated["targetRef"] = target_ref
+    return validated
 
 
 def _extract_copy_directives_via_llm(
     follow_up_prompt: str,
     *,
     company: dict[str, Any],
+    services: list[dict[str, Any]] | None = None,
     language: str,
 ) -> list[dict[str, Any]]:
     """LLM fallback for copy directives when the deterministic rules miss.
@@ -2945,7 +3093,9 @@ def _extract_copy_directives_via_llm(
     Uses the dedicated copyDirectiveModel role (llm-models.v1.json v5).
     Fail-safe: any resolution/call error yields ``[]`` so the honest no-op
     path still fires. Every candidate is re-validated through
-    ``_validate_copy_directive_candidate``.
+    ``_validate_copy_directive_candidate`` (which requires a non-empty
+    targetRef for services); the actual service existence is resolved later in
+    ``_apply_copy_directives`` (unknown ref -> no-op).
     """
     try:
         from packages.generation.brief.extract import extract_copy_directives_llm
@@ -2956,21 +3106,27 @@ def _extract_copy_directives_via_llm(
             company_name=str(company.get("name") or ""),
             tagline=str(company.get("tagline") or ""),
             story=str(company.get("story") or ""),
+            services=services or [],
             language=language,
             model=model,
         )
     except Exception:  # noqa: BLE001
         return []
     validated: list[dict[str, Any]] = []
-    seen_targets: set[str] = set()
+    seen_targets: set[tuple[str, str]] = set()
     for candidate in raw_directives:
         directive = _validate_copy_directive_candidate(
             candidate if isinstance(candidate, dict) else {},
             follow_up_prompt=follow_up_prompt,
         )
-        if directive is None or directive["target"] in seen_targets:
+        if directive is None:
             continue
-        seen_targets.add(directive["target"])
+        # Dedupe on (target, targetRef) so distinct services can each be edited,
+        # while a target like tagline still collapses to one directive.
+        dedupe_key = (directive["target"], directive.get("targetRef", ""))
+        if dedupe_key in seen_targets:
+            continue
+        seen_targets.add(dedupe_key)
         validated.append(directive)
     return validated
 
@@ -3018,6 +3174,27 @@ def _apply_copy_directives(
         operation = directive.get("operation")
         payload = directive.get("payload")
         if not isinstance(payload, str) or not payload.strip():
+            continue
+        # services (slice 2c): replace a specific existing service's summary,
+        # resolved by targetRef against the already-merged services list. No
+        # match -> skip (honest no-op; never create or hijack a service).
+        if target == "services":
+            if operation != "replace-text":
+                continue
+            target_ref = directive.get("targetRef")
+            if not isinstance(target_ref, str) or not target_ref.strip():
+                continue
+            service = _match_service_by_ref(merged.get("services"), target_ref)
+            if service is None:
+                continue
+            service["summary"] = payload
+            applied.append(
+                {
+                    key: directive[key]
+                    for key in ("target", "operation", "payload", "targetRef", "source")
+                    if key in directive
+                }
+            )
             continue
         field = {
             "company-name": "name",
@@ -3409,6 +3586,9 @@ def merge_followup_project_input(
             company=merged.get("company", {})
             if isinstance(merged.get("company"), dict)
             else {},
+            services=merged.get("services")
+            if isinstance(merged.get("services"), list)
+            else [],
             language=language,
         )
     _apply_copy_directives(merged, copy_directives)

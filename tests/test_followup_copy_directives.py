@@ -703,3 +703,209 @@ def test_end_to_end_about_text_visible_in_generated_site(
     build_result = _read_json(run_dir_v2 / "build-result.json")
     assert build_result["engineMode"] == "followup"
     assert build_result["appliedVisibleEffect"] is True
+
+
+# --- slice 2c: services target (services[].summary via targetRef) ---
+
+SERVICES_REPLACE_PROMPT = (
+    "ändra tjänsten 'Örhängen' till 'Handgjorda örhängen i återvunnet silver'"
+)
+
+
+@pytest.mark.tooling
+def test_extract_services_replace_from_quoted_ref_and_value() -> None:
+    directives = _extract_copy_directives(SERVICES_REPLACE_PROMPT, language="sv")
+    assert directives == [
+        {
+            "target": "services",
+            "operation": "replace-text",
+            "payload": "Handgjorda örhängen i återvunnet silver",
+            "targetRef": "Örhängen",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
+def test_extract_services_unquoted_ref() -> None:
+    directives = _extract_copy_directives(
+        "byt beskrivningen av tjänsten Örhängen till 'Snygga handgjorda örhängen'",
+        language="sv",
+    )
+    assert directives == [
+        {
+            "target": "services",
+            "operation": "replace-text",
+            "payload": "Snygga handgjorda örhängen",
+            "targetRef": "Örhängen",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
+def test_merge_applies_services_summary_to_matched_service() -> None:
+    merged = _merge(SERVICES_REPLACE_PROMPT)
+    assert (
+        merged["services"][0]["summary"] == "Handgjorda örhängen i återvunnet silver"
+    )
+    assert merged["services"][0]["id"] == "orhangen"  # id/label unchanged
+    assert merged["services"][0]["label"] == "Örhängen"
+    assert merged["directives"]["copyDirectives"] == [
+        {
+            "target": "services",
+            "operation": "replace-text",
+            "payload": "Handgjorda örhängen i återvunnet silver",
+            "targetRef": "Örhängen",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
+def test_merge_services_matches_by_id_not_only_label() -> None:
+    """A targetRef that matches a service id (not its label) still resolves."""
+    merged = _merge("ändra tjänsten 'orhangen' till 'Handgjorda örhängen i silver'")
+    assert merged["services"][0]["summary"] == "Handgjorda örhängen i silver"
+    assert merged["directives"]["copyDirectives"][0]["targetRef"] == "orhangen"
+
+
+@pytest.mark.tooling
+def test_services_unknown_service_is_honest_no_op() -> None:
+    """An unknown service ref never creates/hijacks a service; it is a no-op."""
+    merged = _merge("ändra tjänsten 'Klippning' till 'Snabb herrklippning'")
+    assert merged["services"][0]["summary"] == "Fina örhängen."  # unchanged
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+@pytest.mark.tooling
+def test_services_additive_new_service_is_no_op() -> None:
+    """Adding a new service is the semantic merge's job, never a copy replace."""
+    assert (
+        _extract_copy_directives(
+            "lägg till ny tjänst 'Klippning' med beskrivning 'Snabb klippning'",
+            language="sv",
+        )
+        == []
+    )
+
+
+@pytest.mark.tooling
+def test_services_without_named_service_is_no_op() -> None:
+    """A generic services edit with no named service stays an honest no-op."""
+    assert (
+        _extract_copy_directives("ändra tjänsten till 'Ny text'", language="sv") == []
+    )
+
+
+@pytest.mark.tooling
+def test_merged_services_directive_passes_schema() -> None:
+    merged = _merge(SERVICES_REPLACE_PROMPT)
+    _validate_against_schema(merged)
+
+
+@pytest.mark.tooling
+def test_services_validate_candidate_requires_target_ref() -> None:
+    without_ref = _validate_copy_directive_candidate(
+        {"target": "services", "operation": "replace-text", "payload": "Ny summary"},
+        follow_up_prompt="ändra tjänsten Örhängen till Ny summary",
+    )
+    assert without_ref is None
+    with_ref = _validate_copy_directive_candidate(
+        {
+            "target": "services",
+            "operation": "replace-text",
+            "payload": "Handgjorda örhängen i silver",
+            "targetRef": "Örhängen",
+        },
+        follow_up_prompt="ändra tjänsten Örhängen till Handgjorda örhängen i silver",
+    )
+    assert with_ref is not None
+    assert with_ref["target"] == "services"
+    assert with_ref["targetRef"] == "Örhängen"
+    assert with_ref["source"] == "llm"
+
+
+@pytest.mark.tooling
+def test_services_rejects_include_token_candidate() -> None:
+    directive = _validate_copy_directive_candidate(
+        {
+            "target": "services",
+            "operation": "include-token",
+            "payload": "X",
+            "targetRef": "Örhängen",
+        },
+        follow_up_prompt="lägg till X i tjänsten Örhängen",
+    )
+    assert directive is None
+
+
+@pytest.mark.tooling
+def test_llm_services_candidate_applied_in_merge(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Deterministic rules miss (no replace verb / value); the mocked model
+    # supplies a validated services replace the merge applies to the summary.
+    assert _extract_copy_directives("fixa tjänsten örhängen lite", language="sv") == []
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_copy_directives_llm",
+        lambda *a, **k: [
+            {
+                "target": "services",
+                "operation": "replace-text",
+                "payload": "Handgjorda örhängen gjutna i Malmö",
+                "targetRef": "orhangen",
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge("fixa tjänsten örhängen lite", enable_llm_fallback=True)
+    assert merged["services"][0]["summary"] == "Handgjorda örhängen gjutna i Malmö"
+    assert merged["directives"]["copyDirectives"][0]["target"] == "services"
+    assert merged["directives"]["copyDirectives"][0]["targetRef"] == "orhangen"
+    assert merged["directives"]["copyDirectives"][0]["source"] == "llm"
+
+
+@pytest.mark.tooling
+def test_end_to_end_services_summary_visible_in_generated_site(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Slice 2c acceptance: a services follow-up reaches the rendered site."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    prompt_inputs_dir = tmp_path / "prompt-inputs"
+    runs_dir = tmp_path / "runs"
+    generated_dir = tmp_path / "generated"
+
+    pi_v1, _, init_path, _ = generate(
+        "Skapa en hemsida för Elflödet Elektriker i Malmö.",
+        output_dir=prompt_inputs_dir,
+        site_id="elflodet-services",
+        project_id="copydir-services",
+    )
+    build(init_path, do_build=False, runs_dir=runs_dir, generated_dir=generated_dir)
+    service_label = pi_v1["services"][0]["label"]
+
+    unique = "Felsökning och akut eljour dygnet runt i hela Malmö"
+    _, _, followup_path, _ = generate_followup(
+        f"ändra tjänsten '{service_label}' till '{unique}'",
+        output_dir=prompt_inputs_dir,
+        site_id="elflodet-services",
+    )
+    _, run_dir_v2 = build(
+        followup_path,
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+    )
+    generated_files = run_dir_v2 / "generated-files"
+    found = any(
+        unique in path.read_text(encoding="utf-8")
+        for path in generated_files.rglob("*.tsx")
+    )
+    assert found, "service summary should appear in the generated site"
+    build_result = _read_json(run_dir_v2 / "build-result.json")
+    assert build_result["engineMode"] == "followup"
+    assert build_result["appliedVisibleEffect"] is True

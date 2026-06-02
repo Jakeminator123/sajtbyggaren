@@ -329,27 +329,38 @@ def site_brief_to_artifact(
 # public-copy guards before anything is applied, so a hallucinated or
 # instruction-shaped payload can never become customer copy. Targets grow in
 # slices: company-name + tagline (nivå 1), about-text -> company.story (slice
-# 2a, replace-only). This module hosts the call (it already owns the OpenAI
-# structured-output plumbing); the role is what governance tracks, not the
-# file location.
+# 2a), services -> services[].summary (slice 2c, via targetRef); about-text and
+# services are replace-only. This module hosts the call (it already owns the
+# OpenAI structured-output plumbing); the role is what governance tracks, not
+# the file location.
 
 
 class CopyDirectiveCandidate(BaseModel):
     """One structured copy edit proposed by the model from a follow-up prompt."""
 
-    target: Literal["company-name", "tagline", "about-text"] = Field(
+    target: Literal["company-name", "tagline", "about-text", "services"] = Field(
         description=(
             "Which field to change. 'company-name' = the business name shown "
             "in the nav header and hero H1. 'tagline' = the hero subheading. "
-            "'about-text' = the company story / 'om oss' about copy."
+            "'about-text' = the company story / 'om oss' about copy. "
+            "'services' = the summary of ONE specific service (set targetRef)."
         )
     )
     operation: Literal["replace-text", "include-token"] = Field(
         description=(
             "'replace-text' = set the field to payload. 'include-token' = add "
             "the payload to the existing field (for 'include X in the hero'). "
-            "'about-text' only supports 'replace-text'."
+            "'about-text' and 'services' only support 'replace-text'."
         )
+    )
+    targetRef: str | None = Field(
+        default=None,
+        description=(
+            "Only for target 'services': the id or label of the existing "
+            "service whose summary to replace, exactly as it appears in the "
+            "provided services list. Leave null for other targets. Never "
+            "invent a service that is not in the list."
+        ),
     )
     payload: str = Field(
         description=(
@@ -373,17 +384,20 @@ _COPY_DIRECTIVE_SYSTEM = (
     "already has a generated website and typed a short follow-up asking for a "
     "change. Decide whether the follow-up asks to change the company NAME "
     "(target 'company-name'), the hero TAGLINE/subheading (target 'tagline'), "
-    "or the ABOUT / 'om oss' company story (target 'about-text'). Emit at most "
-    "one directive per target. payload must contain ONLY the resulting "
-    "customer-facing copy - the new name, the new tagline, the new about copy, "
-    "or the exact token to include - never the operator's instruction wording "
-    "and never a verb such as 'change', 'rename', 'byt' or 'ändra'. "
-    "'about-text' only supports 'replace-text' and the operator must have "
-    "given the actual new about copy; if they only described a vibe ('make it "
-    "more personal') without providing the text, return an empty list. If the "
-    "follow-up is about anything else (tone, colours, layout, adding pages, "
-    "new services) or is unclear, return an empty directives list. Do not "
-    "invent content the operator did not ask for."
+    "the ABOUT / 'om oss' company story (target 'about-text'), or the SUMMARY "
+    "of one specific SERVICE (target 'services'). Emit at most one directive "
+    "per target (one per service for 'services'). payload must contain ONLY "
+    "the resulting customer-facing copy - the new name, tagline, about copy, "
+    "service summary, or the exact token to include - never the operator's "
+    "instruction wording and never a verb such as 'change', 'rename', 'byt' or "
+    "'ändra'. 'about-text' and 'services' only support 'replace-text' and the "
+    "operator must have given the actual new copy; if they only described a "
+    "vibe ('make it more personal') without providing the text, return an "
+    "empty list. For 'services' set targetRef to the id or label of an "
+    "existing service from the provided list - never invent or add a new "
+    "service. If the follow-up is about anything else (tone, colours, layout, "
+    "adding pages, adding new services) or is unclear, return an empty "
+    "directives list. Do not invent content the operator did not ask for."
 )
 
 
@@ -393,6 +407,7 @@ def extract_copy_directives_llm(
     company_name: str,
     tagline: str,
     story: str = "",
+    services: list[dict[str, object]] | None = None,
     language: str,
     model: str,
 ) -> list[dict[str, str]]:
@@ -410,11 +425,24 @@ def extract_copy_directives_llm(
         from openai import OpenAI
 
         client = OpenAI()
+        services_block = ""
+        if services:
+            lines = [
+                f"- id={svc.get('id')!r} label={svc.get('label')!r} "
+                f"summary={svc.get('summary')!r}"
+                for svc in services
+                if isinstance(svc, dict)
+            ]
+            if lines:
+                services_block = "Current services (targetRef must match an id or label here):\n" + "\n".join(
+                    lines
+                ) + "\n"
         context = (
             f"Language: {language}\n"
             f"Current company name: {company_name}\n"
             f"Current hero tagline: {tagline}\n"
-            f"Current about/story copy: {story}\n\n"
+            f"Current about/story copy: {story}\n"
+            f"{services_block}\n"
             f"Operator follow-up: {follow_up_prompt}"
         )
         response = client.responses.parse(
@@ -434,12 +462,17 @@ def extract_copy_directives_llm(
         return []
     if parsed is None:
         return []
-    return [
-        {
+    results: list[dict[str, str]] = []
+    for directive in parsed.directives:
+        item: dict[str, str] = {
             "target": directive.target,
             "operation": directive.operation,
             "payload": directive.payload,
             "source": "llm",
         }
-        for directive in parsed.directives
-    ]
+        # Only carry targetRef when the model set it (services); a stray None on
+        # other targets would fail the strict copyDirectives schema downstream.
+        if directive.targetRef:
+            item["targetRef"] = directive.targetRef
+        results.append(item)
+    return results

@@ -189,7 +189,7 @@
         "copyDirectives": {
           "type": "array",
           "maxItems": 8,
-          "description": "Strukturerade copy-ändringar tolkade ur en följdprompt (ADR 0034 väg A, GAP-followup-prompt-content-passthrough). Varje direktiv är ett validerat target+operation+payload-tripp som merge_followup_project_input applicerar på ett specifikt strukturerat fält (t.ex. company.name) INNAN renderern kör. Fältet finns för spårbarhet: build-result redovisar att en följdprompt faktiskt nådde en synlig effekt. Rå följdprompt renderas aldrig okontrollerat som kundcopy — bara den validerade payloaden, till ett känt fält. Listan ersätts per version (inte ackumulerad) så _has_copy_directives i build_site.py reflekterar exakt den aktuella versionens tolkade direktiv. Targets utökas i slices: nivå 1 = company-name + tagline; slice 2a lägger about-text (company.story); tone/services/cta är senare slices.",
+          "description": "Strukturerade copy-ändringar tolkade ur en följdprompt (ADR 0034 väg A, GAP-followup-prompt-content-passthrough). Varje direktiv är ett validerat target+operation+payload-tripp som merge_followup_project_input applicerar på ett specifikt strukturerat fält (t.ex. company.name) INNAN renderern kör. Fältet finns för spårbarhet: build-result redovisar att en följdprompt faktiskt nådde en synlig effekt. Rå följdprompt renderas aldrig okontrollerat som kundcopy — bara den validerade payloaden, till ett känt fält. Listan ersätts per version (inte ackumulerad) så _has_copy_directives i build_site.py reflekterar exakt den aktuella versionens tolkade direktiv. Targets utökas i slices: nivå 1 = company-name + tagline; slice 2a lägger about-text (company.story); slice 2c lägger services (services[].summary, via targetRef); cta är senare slice (tone hoppas — täcks av tone-shift).",
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -197,19 +197,25 @@
             "properties": {
               "target": {
                 "type": "string",
-                "enum": ["company-name", "tagline", "about-text"],
-                "description": "Vilket strukturerat copy-fält direktivet träffar. company-name = company.name (rendras i nav-header + hero-H1). tagline = company.tagline (hero-underrubrik). about-text = company.story (om oss-/berättelse-copy); slice 2a, replace-text only."
+                "enum": ["company-name", "tagline", "about-text", "services"],
+                "description": "Vilket strukturerat copy-fält direktivet träffar. company-name = company.name (rendras i nav-header + hero-H1). tagline = company.tagline (hero-underrubrik). about-text = company.story (om oss-/berättelse-copy); replace-text only. services = en specifik tjänsts services[].summary (slice 2c); kräver targetRef + replace-text only."
               },
               "operation": {
                 "type": "string",
                 "enum": ["replace-text", "include-token"],
-                "description": "replace-text = sätt fältet till payload. include-token = lägg till payload i fältet om den inte redan finns (additiv, för 'inkludera X i hero'-fall). about-text stödjer bara replace-text."
+                "description": "replace-text = sätt fältet till payload. include-token = lägg till payload i fältet om den inte redan finns (additiv, för 'inkludera X i hero'-fall). about-text och services stödjer bara replace-text."
               },
               "payload": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 600,
-                "description": "Den validerade copy-strängen (nytt namn, ny tagline, ny om oss-text eller token att inkludera). Filtrerad genom samma public-copy-guards som tagline/story så operatörens instruktionstext inte kan läcka ut. Koden cappar per target snävare än schemat: company-name 80, tagline 140, about-text 600."
+                "description": "Den validerade copy-strängen (nytt namn, ny tagline, ny om oss-text, ny tjänst-summary eller token att inkludera). Filtrerad genom samma public-copy-guards som tagline/story så operatörens instruktionstext inte kan läcka ut. Koden cappar per target snävare än schemat: company-name 80, tagline 140, about-text 600, services 300."
+              },
+              "targetRef": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80,
+                "description": "Vilken befintlig tjänst direktivet refererar till (services[].id eller services[].label). Krävs när target=services, utelämnas annars. Matchas case-insensitivt mot existerande tjänster vid applicering; ingen träff = honest no-op (skapar aldrig en ny tjänst)."
               },
               "source": {
                 "type": "string",
