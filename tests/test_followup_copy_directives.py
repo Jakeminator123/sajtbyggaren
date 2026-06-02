@@ -528,3 +528,178 @@ def test_end_to_end_include_token_visible_in_hero(
     )
     assert "TEST-JAKOB" in page.read_text(encoding="utf-8")
     assert build_result["appliedVisibleEffect"] is True
+
+
+# --- slice 2a: about-text target (company.story), ADR 0034 väg A nivå 2 ---
+
+ABOUT_REPLACE_PROMPT = "ändra om oss-texten till 'Vi är ett familjeföretag sedan 1982'"
+
+
+@pytest.mark.tooling
+def test_extract_about_text_replace_from_explicit_value() -> None:
+    directives = _extract_copy_directives(ABOUT_REPLACE_PROMPT, language="sv")
+    assert directives == [
+        {
+            "target": "about-text",
+            "operation": "replace-text",
+            "payload": "Vi är ett familjeföretag sedan 1982",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
+def test_extract_about_text_via_rewrite_verb_with_value() -> None:
+    directives = _extract_copy_directives(
+        "skriv om om-oss-texten till 'En personlig berättelse om vårt hantverk'",
+        language="sv",
+    )
+    assert directives == [
+        {
+            "target": "about-text",
+            "operation": "replace-text",
+            "payload": "En personlig berättelse om vårt hantverk",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
+def test_about_text_vibe_rewrite_without_value_is_honest_no_op() -> None:
+    """A vibe-only rewrite has no literal new copy; slice 2a stays an honest
+    no-op (generating about copy from an instruction is later-level LLM work)."""
+    assert (
+        _extract_copy_directives(
+            "skriv om om oss så det låter mer personligt", language="sv"
+        )
+        == []
+    )
+
+
+@pytest.mark.tooling
+def test_about_text_does_not_hijack_service_text() -> None:
+    """Service/product copy must never become about-text (or tagline)."""
+    assert (
+        _extract_copy_directives(
+            "byt tjänstbeskrivningen till 'Akut eljour dygnet runt'", language="sv"
+        )
+        == []
+    )
+
+
+@pytest.mark.tooling
+def test_tone_prompt_is_not_about_text() -> None:
+    assert _extract_copy_directives("gör tonen mer premium", language="sv") == []
+
+
+@pytest.mark.tooling
+def test_merge_applies_about_text_to_story() -> None:
+    merged = _merge(ABOUT_REPLACE_PROMPT)
+    assert merged["company"]["story"] == "Vi är ett familjeföretag sedan 1982"
+    assert merged["directives"]["copyDirectives"] == [
+        {
+            "target": "about-text",
+            "operation": "replace-text",
+            "payload": "Vi är ett familjeföretag sedan 1982",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
+def test_merged_about_text_passes_schema() -> None:
+    merged = _merge(ABOUT_REPLACE_PROMPT)
+    _validate_against_schema(merged)
+
+
+@pytest.mark.tooling
+def test_about_text_rejects_include_token_candidate() -> None:
+    """about-text is replace-only in slice 2a; a model include-token is dropped."""
+    directive = _validate_copy_directive_candidate(
+        {"target": "about-text", "operation": "include-token", "payload": "X"},
+        follow_up_prompt="lägg till X i om oss",
+    )
+    assert directive is None
+
+
+@pytest.mark.tooling
+def test_about_text_validate_replace_candidate_ok() -> None:
+    directive = _validate_copy_directive_candidate(
+        {
+            "target": "about-text",
+            "operation": "replace-text",
+            "payload": "Vi grundades 1998 av två systrar i Lund.",
+        },
+        follow_up_prompt="skriv om om oss så den nämner att vi grundades 1998",
+    )
+    assert directive is not None
+    assert directive["target"] == "about-text"
+    assert directive["operation"] == "replace-text"
+    assert directive["source"] == "llm"
+    assert directive["payload"].startswith("Vi grundades 1998")
+
+
+@pytest.mark.tooling
+def test_llm_about_text_candidate_applied_in_merge(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Deterministic rules find no explicit value here; the mocked model supplies
+    # a validated about-text replace that the merge applies to company.story.
+    assert _extract_copy_directives("fixa om oss-texten lite", language="sv") == []
+    monkeypatch.setattr(
+        "packages.generation.brief.extract.extract_copy_directives_llm",
+        lambda *a, **k: [
+            {
+                "target": "about-text",
+                "operation": "replace-text",
+                "payload": "Ett familjeägt bageri i hjärtat av Malmö sedan 1962.",
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge("fixa om oss-texten lite", enable_llm_fallback=True)
+    assert merged["company"]["story"].startswith("Ett familjeägt bageri")
+    assert merged["directives"]["copyDirectives"][0]["target"] == "about-text"
+    assert merged["directives"]["copyDirectives"][0]["source"] == "llm"
+
+
+@pytest.mark.tooling
+def test_end_to_end_about_text_visible_in_generated_site(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Slice 2a acceptance: an about-text follow-up reaches the rendered site."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    prompt_inputs_dir = tmp_path / "prompt-inputs"
+    runs_dir = tmp_path / "runs"
+    generated_dir = tmp_path / "generated"
+
+    _, _, init_path, _ = generate(
+        "Skapa en hemsida för Surdegsbagaren i Malmö.",
+        output_dir=prompt_inputs_dir,
+        site_id="surdegsbagaren-about",
+        project_id="copydir-about",
+    )
+    build(init_path, do_build=False, runs_dir=runs_dir, generated_dir=generated_dir)
+
+    unique = "Vi grundades 1962 av tre systrar med kärlek för surdeg"
+    _, _, followup_path, _ = generate_followup(
+        f"ändra om oss-texten till '{unique}'",
+        output_dir=prompt_inputs_dir,
+        site_id="surdegsbagaren-about",
+    )
+    _, run_dir_v2 = build(
+        followup_path,
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+    )
+    generated_files = run_dir_v2 / "generated-files"
+    found = any(
+        unique in path.read_text(encoding="utf-8")
+        for path in generated_files.rglob("*.tsx")
+    )
+    assert found, "about story text should appear in the generated site"
+    build_result = _read_json(run_dir_v2 / "build-result.json")
+    assert build_result["engineMode"] == "followup"
+    assert build_result["appliedVisibleEffect"] is True

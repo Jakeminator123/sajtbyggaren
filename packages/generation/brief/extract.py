@@ -327,32 +327,37 @@ def site_brief_to_artifact(
 # model only proposes a structured target+operation+payload triple; the caller
 # (scripts/prompt_to_project_input.py) re-validates every payload through the
 # public-copy guards before anything is applied, so a hallucinated or
-# instruction-shaped payload can never become customer copy. V1 targets are
-# intentionally narrow (company-name + tagline). This module hosts the call
-# (it already owns the OpenAI structured-output plumbing); the role is what
-# governance tracks, not the file location.
+# instruction-shaped payload can never become customer copy. Targets grow in
+# slices: company-name + tagline (nivå 1), about-text -> company.story (slice
+# 2a, replace-only). This module hosts the call (it already owns the OpenAI
+# structured-output plumbing); the role is what governance tracks, not the
+# file location.
 
 
 class CopyDirectiveCandidate(BaseModel):
     """One structured copy edit proposed by the model from a follow-up prompt."""
 
-    target: Literal["company-name", "tagline"] = Field(
+    target: Literal["company-name", "tagline", "about-text"] = Field(
         description=(
             "Which field to change. 'company-name' = the business name shown "
-            "in the nav header and hero H1. 'tagline' = the hero subheading."
+            "in the nav header and hero H1. 'tagline' = the hero subheading. "
+            "'about-text' = the company story / 'om oss' about copy."
         )
     )
     operation: Literal["replace-text", "include-token"] = Field(
         description=(
             "'replace-text' = set the field to payload. 'include-token' = add "
-            "the payload to the existing field (for 'include X in the hero')."
+            "the payload to the existing field (for 'include X in the hero'). "
+            "'about-text' only supports 'replace-text'."
         )
     )
     payload: str = Field(
         description=(
-            "ONLY the resulting copy: the new name, new tagline, or token to "
-            "include. Never the operator's instruction phrasing or any verb "
-            "like 'change'/'rename'. Keep it short (a name or one line)."
+            "ONLY the resulting copy: the new name, new tagline, new "
+            "about/story copy, or token to include. Never the operator's "
+            "instruction phrasing or any verb like 'change'/'rename'. Keep it "
+            "tight - a name or one line for name/tagline, at most a short "
+            "paragraph for about-text."
         )
     )
 
@@ -367,11 +372,15 @@ _COPY_DIRECTIVE_SYSTEM = (
     "You are the follow-up copy interpreter for Sajtbyggaren. The operator "
     "already has a generated website and typed a short follow-up asking for a "
     "change. Decide whether the follow-up asks to change the company NAME "
-    "(target 'company-name') or the hero TAGLINE/subheading (target "
-    "'tagline'). Emit at most one directive per target. payload must contain "
-    "ONLY the resulting customer-facing copy - the new name, the new tagline, "
+    "(target 'company-name'), the hero TAGLINE/subheading (target 'tagline'), "
+    "or the ABOUT / 'om oss' company story (target 'about-text'). Emit at most "
+    "one directive per target. payload must contain ONLY the resulting "
+    "customer-facing copy - the new name, the new tagline, the new about copy, "
     "or the exact token to include - never the operator's instruction wording "
-    "and never a verb such as 'change', 'rename', 'byt' or 'ändra'. If the "
+    "and never a verb such as 'change', 'rename', 'byt' or 'ändra'. "
+    "'about-text' only supports 'replace-text' and the operator must have "
+    "given the actual new about copy; if they only described a vibe ('make it "
+    "more personal') without providing the text, return an empty list. If the "
     "follow-up is about anything else (tone, colours, layout, adding pages, "
     "new services) or is unclear, return an empty directives list. Do not "
     "invent content the operator did not ask for."
@@ -383,6 +392,7 @@ def extract_copy_directives_llm(
     *,
     company_name: str,
     tagline: str,
+    story: str = "",
     language: str,
     model: str,
 ) -> list[dict[str, str]]:
@@ -403,7 +413,8 @@ def extract_copy_directives_llm(
         context = (
             f"Language: {language}\n"
             f"Current company name: {company_name}\n"
-            f"Current hero tagline: {tagline}\n\n"
+            f"Current hero tagline: {tagline}\n"
+            f"Current about/story copy: {story}\n\n"
             f"Operator follow-up: {follow_up_prompt}"
         )
         response = client.responses.parse(

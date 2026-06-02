@@ -2334,9 +2334,10 @@ def _semantic_source_entry(
 # previous version, so the rename never reached the renderer. These helpers
 # translate a narrow, leak-safe set of phrasings into structured copy
 # directives applied to specific Project Input fields (company.name,
-# company.tagline) BEFORE the deterministic renderer runs. The raw prompt is
-# never rendered as customer copy - only the validated payload, to a known
-# field. V1 targets are intentionally small (company-name + tagline).
+# company.tagline, company.story) BEFORE the deterministic renderer runs. The
+# raw prompt is never rendered as customer copy - only the validated payload,
+# to a known field. Targets grow in slices: company-name + tagline (nivå 1),
+# about-text -> company.story (slice 2a). about-text is replace-only.
 
 _COPY_DIRECTIVE_TAGLINE_KEYWORDS: tuple[str, ...] = (
     "tagline",
@@ -2378,6 +2379,36 @@ _COPY_DIRECTIVE_NAME_KEYWORDS: tuple[str, ...] = (
     "rename",
 )
 _COPY_DIRECTIVE_HERO_KEYWORDS: tuple[str, ...] = ("hero",)
+# About / "om oss" scope (slice 2a, ADR 0034 väg A nivå 2): these signal that
+# the operator wants to change the company STORY (company.story, rendered as
+# the about/"om oss" copy), not the name or tagline. Kept specific on purpose -
+# a bare "text"/"texten" is NOT here, so an ambiguous "ändra texten till X"
+# stays an honest no-op rather than hijacking the about section.
+_COPY_DIRECTIVE_ABOUT_KEYWORDS: tuple[str, ...] = (
+    "om oss",
+    "om-oss",
+    "omoss",
+    "om foretaget",
+    "om företaget",
+    "om verksamheten",
+    "berättelse",
+    "berattelse",
+    "berättelsen",
+    "berattelsen",
+    "historia",
+    "historien",
+    "vår historia",
+    "var historia",
+    "story",
+    "storyn",
+    "about",
+    "about us",
+    "our story",
+)
+# about / story copy is longer free text than a name or a tagline; the schema
+# payload cap is raised to match (still validated through the same public-copy
+# guards). Name stays capped at 80 and tagline at 140 in code.
+_COPY_DIRECTIVE_ABOUT_MAX_LENGTH = 600
 _COPY_DIRECTIVE_INCLUDE_KEYWORDS: tuple[str, ...] = (
     "inkludera",
     "inkluderar",
@@ -2412,6 +2443,11 @@ _COPY_DIRECTIVE_REPLACE_KEYWORDS: tuple[str, ...] = (
     "replace",
     "set",
     "update",
+    "skriv om",
+    "formulera om",
+    "omformulera",
+    "rewrite",
+    "reword",
 )
 # If the extracted payload still contains one of these as a WORD the
 # extraction grabbed instruction text, not a value - reject it (leak guard).
@@ -2615,6 +2651,10 @@ def _classify_copy_target(text_norm: str) -> str | None:
     """
     if _contains_any(text_norm, _COPY_DIRECTIVE_TAGLINE_KEYWORDS):
         return "tagline"
+    # about / "om oss" scope wins over the generic name signals so a follow-up
+    # like "ändra om-oss-texten till '...'" edits company.story, not the name.
+    if _contains_any(text_norm, _COPY_DIRECTIVE_ABOUT_KEYWORDS):
+        return "about-text"
     if _contains_any_word(text_norm, _COPY_DIRECTIVE_NAME_KEYWORDS):
         # A generic "namn/namnet" must not hijack company.name when the
         # operator scoped the rename to a service/product/page (Codex-fynd
@@ -2768,6 +2808,30 @@ def _extract_copy_directives(
     has_replace = _contains_any_word(text, _COPY_DIRECTIVE_REPLACE_KEYWORDS)
     if not has_include and not has_replace:
         return []
+    # about-text is replace-only in slice 2a (operator decision): the operator
+    # must supply the new copy via an explicit "till '<X>'"/colon/quote. A
+    # vibe-only rewrite ("skriv om om oss så det låter mer personligt") has no
+    # literal payload and stays an honest no-op here - generating new about
+    # copy from an instruction is later-level LLM work (site-state rewrite),
+    # not this deterministic slice. include-token on about-text is unsupported.
+    if target == "about-text":
+        if not has_replace:
+            return []
+        payload = _safe_copy_payload(
+            _extract_replace_value(follow_up_prompt),
+            follow_up_prompt=follow_up_prompt,
+            max_length=_COPY_DIRECTIVE_ABOUT_MAX_LENGTH,
+        )
+        if payload is None:
+            return []
+        return [
+            {
+                "target": "about-text",
+                "operation": "replace-text",
+                "payload": payload,
+                "source": "prompt-rule",
+            }
+        ]
     # include-token wins when both are present ("ändra texten ... till att
     # inkludera 'TEST-JAKOB'") because the operator named a token to add.
     if has_include:
@@ -2840,14 +2904,23 @@ def _validate_copy_directive_candidate(
     """
     target = candidate.get("target")
     operation = candidate.get("operation")
-    if target not in {"company-name", "tagline"}:
+    if target not in {"company-name", "tagline", "about-text"}:
         return None
     if operation not in {"replace-text", "include-token"}:
         return None
+    # about-text is replace-only in slice 2a; a model-proposed include-token on
+    # the about/story field is dropped rather than guessed at.
+    if target == "about-text" and operation != "replace-text":
+        return None
+    max_length = {
+        "company-name": 80,
+        "tagline": 140,
+        "about-text": _COPY_DIRECTIVE_ABOUT_MAX_LENGTH,
+    }[target]
     payload = _safe_copy_payload(
         candidate.get("payload"),
         follow_up_prompt=follow_up_prompt,
-        max_length=80 if target == "company-name" else 140,
+        max_length=max_length,
     )
     if payload is None:
         return None
@@ -2882,6 +2955,7 @@ def _extract_copy_directives_via_llm(
             follow_up_prompt,
             company_name=str(company.get("name") or ""),
             tagline=str(company.get("tagline") or ""),
+            story=str(company.get("story") or ""),
             language=language,
             model=model,
         )
@@ -2907,7 +2981,8 @@ def _apply_copy_directives(
 ) -> None:
     """Apply validated copy directives to structured Project Input fields.
 
-    Mutates ``merged`` in place (company.name / company.tagline) and records
+    Mutates ``merged`` in place (company.name / company.tagline /
+    company.story) and records
     the applied directives under ``directives.copyDirectives`` for
     traceability - ``build_site.py:_has_copy_directives`` reads it for honest
     no-op detection. The list is REPLACED, not accumulated, so each version's
@@ -2944,7 +3019,11 @@ def _apply_copy_directives(
         payload = directive.get("payload")
         if not isinstance(payload, str) or not payload.strip():
             continue
-        field = {"company-name": "name", "tagline": "tagline"}.get(target or "")
+        field = {
+            "company-name": "name",
+            "tagline": "tagline",
+            "about-text": "story",
+        }.get(target or "")
         if field is None:
             continue
         if operation == "replace-text":

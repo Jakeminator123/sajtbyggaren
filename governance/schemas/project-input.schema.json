@@ -189,7 +189,7 @@
         "copyDirectives": {
           "type": "array",
           "maxItems": 8,
-          "description": "Strukturerade copy-ändringar tolkade ur en följdprompt (ADR 0034 väg A, GAP-followup-prompt-content-passthrough). Varje direktiv är ett validerat target+operation+payload-tripp som merge_followup_project_input applicerar på ett specifikt strukturerat fält (t.ex. company.name) INNAN renderern kör. Fältet finns för spårbarhet: build-result redovisar att en följdprompt faktiskt nådde en synlig effekt. Rå följdprompt renderas aldrig okontrollerat som kundcopy — bara den validerade payloaden, till ett känt fält. Listan ersätts per version (inte ackumulerad) så _has_copy_directives i build_site.py reflekterar exakt den aktuella versionens tolkade direktiv. V1-targets är medvetet smala (company-name + tagline); bredare targets (story, services, all-copy) är senare slice.",
+          "description": "Strukturerade copy-ändringar tolkade ur en följdprompt (ADR 0034 väg A, GAP-followup-prompt-content-passthrough). Varje direktiv är ett validerat target+operation+payload-tripp som merge_followup_project_input applicerar på ett specifikt strukturerat fält (t.ex. company.name) INNAN renderern kör. Fältet finns för spårbarhet: build-result redovisar att en följdprompt faktiskt nådde en synlig effekt. Rå följdprompt renderas aldrig okontrollerat som kundcopy — bara den validerade payloaden, till ett känt fält. Listan ersätts per version (inte ackumulerad) så _has_copy_directives i build_site.py reflekterar exakt den aktuella versionens tolkade direktiv. Targets utökas i slices: nivå 1 = company-name + tagline; slice 2a lägger about-text (company.story); tone/services/cta är senare slices.",
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -197,19 +197,19 @@
             "properties": {
               "target": {
                 "type": "string",
-                "enum": ["company-name", "tagline"],
-                "description": "Vilket strukturerat copy-fält direktivet träffar. company-name = company.name (rendras i nav-header + hero-H1). tagline = company.tagline (hero-underrubrik)."
+                "enum": ["company-name", "tagline", "about-text"],
+                "description": "Vilket strukturerat copy-fält direktivet träffar. company-name = company.name (rendras i nav-header + hero-H1). tagline = company.tagline (hero-underrubrik). about-text = company.story (om oss-/berättelse-copy); slice 2a, replace-text only."
               },
               "operation": {
                 "type": "string",
                 "enum": ["replace-text", "include-token"],
-                "description": "replace-text = sätt fältet till payload. include-token = lägg till payload i fältet om den inte redan finns (additiv, för 'inkludera X i hero'-fall)."
+                "description": "replace-text = sätt fältet till payload. include-token = lägg till payload i fältet om den inte redan finns (additiv, för 'inkludera X i hero'-fall). about-text stödjer bara replace-text."
               },
               "payload": {
                 "type": "string",
                 "minLength": 1,
-                "maxLength": 200,
-                "description": "Den validerade copy-strängen (nytt namn, ny tagline eller token att inkludera). Filtrerad genom samma public-copy-guards som tagline/story så operatörens instruktionstext inte kan läcka ut."
+                "maxLength": 600,
+                "description": "Den validerade copy-strängen (nytt namn, ny tagline, ny om oss-text eller token att inkludera). Filtrerad genom samma public-copy-guards som tagline/story så operatörens instruktionstext inte kan läcka ut. Koden cappar per target snävare än schemat: company-name 80, tagline 140, about-text 600."
               },
               "source": {
                 "type": "string",
