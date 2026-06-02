@@ -60,7 +60,9 @@ the first `python3 -m venv .venv`. When neither apt package is available,
 the VM update script falls back to `pip install virtualenv` and
 `virtualenv .venv` (same outcome as `python3 -m venv`).
 Activate with `source .venv/bin/activate`. The update script handles
-this automatically.
+this automatically. On Cloud Agent VMs where `apt` cannot install
+`python3-venv`, the update script falls back to `pip install virtualenv`
+and `virtualenv .venv` (same outcome as `python3 -m venv`).
 
 ### Running services
 
