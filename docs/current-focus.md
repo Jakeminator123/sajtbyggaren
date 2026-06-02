@@ -103,8 +103,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `093b31a` (2026-06-02 UTC, `jakob-be` — extern-review-härdning ovanpå nivå 3a, inkl. P1 scope-leak-fix: planeraren låses nu till det target operatören bad om (`_plan_copy_directives_via_llm(target=rewrite_target)`), så en about-rewrite aldrig applicerar en services-directive eller tvärtom. Tidigare i denna härdning: vibe-"till"-läcka stängd, planner no-op-löfte (story-snapshot+restore), schema if/then. 9 nya regressionstester totalt; alla near-blockers stängda → sync-PR mergebar. EJ i `main` (väntar operatörs-OK). `main` = `2d636b0`. Föregående steward-checkpoint: `6c860ec`).
-Nya PRs sedan föregående checkpoint: inga (#148 var senaste sync till `main`).
+Last verified state: `3face1c` (2026-06-02 UTC, steward-auto efter PR #149 — sync(jakob-be -> main): copyDirectives 2a/2c + niva 3a editPlan + reviewer hardening).
+Nya PRs sedan föregående checkpoint: PR #149 — sync(jakob-be -> main): copyDirectives
+2a/2c + niva 3a editPlan + reviewer hardening.
 
 ## Branchmodellen (kort)
 
@@ -1027,3 +1028,8 @@ Christopher/UI.
 > `christopher-ui` (PR mot `main` per leveransfönster). `jakob-be`/
 > `christopher-ui` är den gällande modellen; `agent-prompts.md` behöver
 > uppdateras (operatörsbeslut — ej ändrad i detta pass).
+
+### 2026-06-02 UTC — current-focus.md före `093b31a`
+
+Last verified state: `093b31a` (2026-06-02 UTC, `jakob-be` — extern-review-härdning ovanpå nivå 3a, inkl. P1 scope-leak-fix: planeraren låses nu till det target operatören bad om (`_plan_copy_directives_via_llm(target=rewrite_target)`), så en about-rewrite aldrig applicerar en services-directive eller tvärtom. Tidigare i denna härdning: vibe-"till"-läcka stängd, planner no-op-löfte (story-snapshot+restore), schema if/then. 9 nya regressionstester totalt; alla near-blockers stängda → sync-PR mergebar. EJ i `main` (väntar operatörs-OK). `main` = `2d636b0`. Föregående steward-checkpoint: `6c860ec`).
+Nya PRs sedan föregående checkpoint: inga (#148 var senaste sync till `main`).

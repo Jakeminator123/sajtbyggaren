@@ -1,9 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-02 UTC. `jakob-be` = `093b31a` (copyDirectives 2a + 2c +
-nivå 3a + extern-review-härdning inkl. P1 scope-leak-fix). `main` = `2d636b0`,
-oförändrad. `jakob-be` är 11 commits före `main`; **sync-PR nu mergebar** (alla
-near-blockers + P1 stängda), öppnas på operatörsbeslut. Inga öppna PR:er.
+**Datum:** 2026-06-02 UTC, steward-auto efter PR #149 — sync(jakob-be -> main): copyDirectives 2a/2c + niva 3a editPlan + reviewer hardening. Verifierad `main` är `3face1c`.
+
+Nya PRs sedan föregående checkpoint: PR #149 — sync(jakob-be -> main): copyDirectives
+2a/2c + niva 3a editPlan + reviewer hardening.
 
 ## Tillägg 2026-06-02 — sync-PR #149 + review-loop (Codex/Vercel)
 
@@ -1129,3 +1129,10 @@ PR #143 refactor-merge). `main` = `fb3b1f8` (oförändrad sedan PR #142).
 **Datum:** 2026-06-01 kväll UTC. `main` = `fba03d0` (**PR #144 mergad**).
 `jakob-be` HEAD = `939f684` (sync-merge av `origin/main`, trädet identiskt med
 `origin/main`), i sync med origin.
+
+### 2026-06-02 UTC — handoff.md före `093b31a`
+
+**Datum:** 2026-06-02 UTC. `jakob-be` = `093b31a` (copyDirectives 2a + 2c +
+nivå 3a + extern-review-härdning inkl. P1 scope-leak-fix). `main` = `2d636b0`,
+oförändrad. `jakob-be` är 11 commits före `main`; **sync-PR nu mergebar** (alla
+near-blockers + P1 stängda), öppnas på operatörsbeslut. Inga öppna PR:er.
