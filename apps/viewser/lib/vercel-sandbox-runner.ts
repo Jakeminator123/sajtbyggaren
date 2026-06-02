@@ -212,6 +212,22 @@ export function hasVercelSandboxAuth(): boolean {
 }
 
 /**
+ * Server-only: returnera de credentials-fält som ska spreadas in i
+ * ``Sandbox.create()`` / ``Sandbox.get()`` — tomt objekt i OIDC-läge (SDK:n
+ * läser ``VERCEL_OIDC_TOKEN`` själv) eller token-trion. ``null`` om ingen
+ * Vercel-auth finns. Exponeras så ``sandbox-build-runner.ts`` kan återanvända
+ * EXAKT samma auth-upplösning (inkl. den cwd-oberoende
+ * ``.env.vercel.local``-laddningen) utan att duplicera den.
+ */
+export function resolveSandboxCredentials():
+  | Record<string, never>
+  | { token: string; teamId: string; projectId: string }
+  | null {
+  const credentials = resolveCredentials();
+  return credentials ? credentials.create : null;
+}
+
+/**
  * Resolverar var ``build_site.py`` skrivit den genererade sajten. Speglar
  * ``apps/viewser/lib/local-preview-server.ts:resolveGeneratedDir`` men
  * re-implementeras här så runnern är fristående.

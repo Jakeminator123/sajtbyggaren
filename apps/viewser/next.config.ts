@@ -183,6 +183,36 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(process.cwd(), "..", ".."),
   },
+  // Function-storleksgräns (Vercel: 300 MB okomprimerat per serverless-
+  // funktion). Next:s output-file-tracing har sin rot i MONOREPO-roten, och
+  // svepte därför in stora repo-filer i funktions-bundlarna — framför allt
+  // en 314 MB ``övrigt/chrome-win.zip`` som ensam tippade ``api/prompt`` +
+  // ``api/build`` över taket (~380 MB), plus ``data/evals`` (~35 MB) och
+  // scaffold-träden. Inget av detta behövs i en körande funktion (Python-
+  // pipen klonas numera i sandboxen, inte i funktionen). Globarna är
+  // RELATIVA mot tracing-roten = repo-roten.
+  outputFileTracingExcludes: {
+    "**": [
+      "**/*.zip",
+      "övrigt/**",
+      "referens/**",
+      "MIN_IDE/**",
+      "data/**",
+      "sajtbyggaren-output/**",
+      ".venv/**",
+      ".git/**",
+      "scripts/**",
+      "packages/generation/**",
+      // Bygg-/dev-only + bild-native node_modules (valfri plats i trädet).
+      "**/node_modules/@next/swc-**",
+      "**/node_modules/@img/**",
+      "**/node_modules/sharp/**",
+      "**/node_modules/typescript/**",
+      "**/node_modules/prettier/**",
+      "**/node_modules/@babel/**",
+      "**/node_modules/lightningcss*/**",
+    ],
+  },
   // Spegla läget till klienten så ViewerPanel kan ta beslut baserat
   // på det (t.ex. skippa StackBlitz-fallbacken när vi vet att vi kör
   // LocalRuntime). NEXT_PUBLIC_-prefixet är vad Next.js kräver för att

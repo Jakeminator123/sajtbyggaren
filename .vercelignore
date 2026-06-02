@@ -1,0 +1,18 @@
+# Vercel-deploy-filter (gäller bara denna apps build/upload — rör inga
+# andra agenters arbetsfiler). Inget av detta behövs för Next-bygget av
+# apps/viewser: Python-pipen (scripts/ + packages/generation) klonas i
+# Vercel-sandboxen vid runtime, inte i serverless-funktionen.
+#
+# Utan filtret svepte Next:s output-file-tracing in stora repo-träd i de
+# Python-spawnande routerna (de tippade 8 funktioner över 250 MB-taket)
+# och uploaden blev ~3 GB.
+.venv
+övrigt
+data
+sajtbyggaren-output
+*.zip
+
+# Byggs/installeras på Vercel — ska aldrig laddas upp.
+node_modules
+.next
+.git
