@@ -5,14 +5,29 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Nästa (2026-06-02, färsk orchestrator-session)
+## Current objective (2026-06-02 EM — sessionsavslut)
 
-`main` = `jakob-be` = `b027b70`, i sync, inga öppna PR:er. **copyDirectives 2a +
-2c + nivå 3a + extern-review-härdning är nu i `main`** (PR #149 mergad, squash
-`3face1c` + steward-auto-bump `b027b70`). Vercel-sandbox-spåret är i `main` (#146
-spike, ADR 0033, #147 opt-in-adapter via `VIEWSER_PREVIEW_MODE=vercel-sandbox`);
-default-preview är fortfarande `local-next` (inte flippad) och adaptern är
-inte UI-wirad.
+`main` = `619454c`. `jakob-be` = `8a86593`, i sync, rent träd, **10 commits före
+`main`** (hela copyDirective-batchen + docs). Enda öppna PR: **#150**
+(christopher-ui auth/billing — hålls). **Färsk orchestrator-startprompt finns
+överst i [`docs/handoff.md`](handoff.md).**
+
+**Nästa konkreta steg (prioordning):**
+1. **Sync-PR `jakob-be → main`** (modulutbrytning + P2-grounding + kontakt-
+   ärlighet) — operatörsbeslut/leveransfönster. Mergebar, disjunkt mot #150.
+2. **Trovärdighets-slice steg 2** (backend, taste-tungt): branschnära story/
+   tagline/service-mallar; trust via wizard (kräver Christopher-fält).
+3. Christopher-lane: Bite C + FloatingChat-ärlighet (#5) + scope-beslut PR #150.
+4. Embeddings = parkerad (audit bekräftade att selection inte är gapet).
+
+Vercel-sandbox-spåret är i `main` (#146 spike, ADR 0033, #147 opt-in-adapter via
+`VIEWSER_PREVIEW_MODE=vercel-sandbox`); default-preview är fortfarande `local-next`
+(inte flippad), adaptern är inte UI-wirad. För lokal `npm run dev`: använd
+`VIEWSER_PREVIEW_MODE=local-next` i `apps/viewser/.env.local` (`vercel-sandbox` är
+en opt-in adapter, INTE ett dev-dispatcher-läge — dev.mjs kastar by-design på det
+tills Bite C + smoke + default-flip-OK).
+
+### Historik denna session (allt i ovanstående 10 commits på `jakob-be`)
 
 **copyDirective-modulutbrytning — KLAR** (`8f2fc1e`, på `jakob-be`, ej i `main`).
 Behavior-preserving extraction: copyDirective-delsystemet flyttat ur
@@ -151,7 +166,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `332e08e`-kedjan + docs-PR-merge (2026-06-02 UTC, `jakob-be` — kontakt-ärlighets-slice ovanpå modulutbrytning (8f2fc1e) + P2-grounding (65aa733) + Lovable-gap-audit (5b2192b). Dessutom mergade docs-PR:er: **#152** (.env.example model-override-förtydligande, → `jakob-be`) och **#151** (AGENTS.md virtualenv-fallback, → `main`, in-mergad i `jakob-be`). `main` = `619454c`. Scout RO-review GO, full pytest grön. Nästa: trust/branschcopy-slice + sync-PR.).
+Last verified state: `8a86593` (2026-06-02 EM UTC, `jakob-be` = `8a86593`, i sync, rent träd, 10 commits före `main` = `619454c`. Hela copyDirective-batchen (nivå 1→3a + modulutbrytning + P2-grounding + kontakt-ärlighet) + docs-PR #151/#152 in-mergade. Enda öppna PR: #150 (christopher-ui, hålls). Sessionsavslut — handoff till nästa orchestrator ligger överst i docs/handoff.md. Nästa: sync-PR jakob-be→main (operatörsbeslut) + trust/branschcopy-slice).
 Nya PRs sedan föregående checkpoint: PR #149 (mergad). **Öppen nu: PR #150**
 (christopher-ui) — se nedan.
 

@@ -1,10 +1,70 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-02 UTC. `jakob-be` = `65aa733` (copyDirective-modulutbrytning
-+ P2 grounding-härdning). `main` = `b027b70` (PR #149: 2a/2c + 3a + härdning).
-`jakob-be` är 3 commits före `main` (modulutbrytning + P2 + steward).
+## Orchestrator-handoff 2026-06-02 EM (klistra in till en färsk orchestrator-agent)
+
+> Du är orchestrator/Builder för `Jakeminator123/sajtbyggaren`. Färsk session —
+> ärver ingen tidigare kontext. **Läs FÖRST i ordning:** `docs/current-focus.md`,
+> `docs/handoff.md` (denna), `AGENTS.md`, `docs/product-operating-context.md`,
+> `docs/orchestrator-playbook.md`, samt ADR 0033/0034.
+>
+> **Verifierat nuläge (2026-06-02 EM):** `main` = `619454c`. `jakob-be` =
+> `8a86593`, i sync med origin, rent träd, **10 commits före `main`** (hela
+> copyDirective-batchen + docs). Enda öppna PR: **#150** (christopher-ui,
+> auth/billing/starters — CONFLICTING, operatörs-scope-beslut, rör EJ).
+>
+> **Steg 0 (drift-check):** `python scripts/focus_check.py` + `git status
+> --short --branch`. Stoppa om läget är oklart.
+>
+> **Vad som är gjort denna långa session (allt på `jakob-be`, ej i `main`):**
+> copyDirectives nivå 1→3a (about-text/services/editPlan-generering) + extern-
+> review-härdning + **copyDirective-modulutbrytning** (delsystemet nu i
+> `packages/generation/followup/`) + **P2 grounding-härdning** (extraction
+> begränsad till name/tagline, numerisk whole-token-grounding, Project DNA-
+> refresh) + **kontakt-ärlighet** (placeholder-kontakt döljs vid render). PR #149
+> (2a/2c/3a + härdning) mergad till `main`. Docs-PR #151 (AGENTS.md) + #152
+> (.env.example) mergade.
+>
+> **Current objective / nästa konkreta steg (prioordning):**
+> 1. **Sync-PR `jakob-be → main`** (modulutbrytning + P2-grounding + kontakt-
+>    ärlighet, 10 commits) — operatörsbeslut/leveransfönster. Mergebar (disjunkt
+>    mot #150). Öppna ENDAST på operatörs-OK.
+> 2. **Trovärdighets-slice steg 2 (backend, taste-tungt):** branschnära story/
+>    tagline/service-mallar (ersätt generisk mall i `prompt_to_project_input.py`
+>    ~950–971). Be operatören forma branschtonen innan Builder. trustSignals/
+>    credentials = via wizard (operatörsbeslut) → kräver Christopher-UI-fält.
+> 3. **Eval-ärlighet redan delvis fixad** (contactPath via `route_path_by_id`);
+>    överväg human-scorecard för Lovable-känsla (auto-eval överskattar, 7,73 vs
+>    upplevt 4–5/10 — se Lovable-gap-audit nedan).
+> 4. Christopher-lane: Bite C (flippa `app/api/preview/[siteId]` →
+>    `currentViewserRuntime()`) + FloatingChat/AppliedCopyDirective-ärlighet för
+>    about/services + scope-beslut om PR #150 (auth/billing).
+> 5. **Embeddings = parkerad** (ADR 0026-villkor ej uppfyllda; audit bekräftade
+>    att selection inte är gapet).
+>
+> **Öppna operatörsbeslut (vänta in svar innan relaterad Builder):** se
+> "Lovable-gap-audit ... Öppna produktfrågor" nedan (kontaktpolicy=dölj redan
+> vald; trust-källa=wizard redan vald; kvar: human-scorecard? PR #150 auth/
+> billing-scope? branschton för copy-mallar?).
+>
+> **Hårda regler:** `jakob-be` = backend/generation/governance/scripts; rör inte
+> `apps/viewser/**` (Christopher) eller preview-runtime-adaptern; generated output
+> = vanlig Next.js; rå följdprompt blir aldrig kundcopy; default-preview förblir
+> `local-next` (flippa ej till `vercel-sandbox` förrän Bite C + smoke + operatörs-
+> OK). Branch: arbeta på `jakob-be`, PR mot `main` vid leveransfönster (operatörs-
+> beslut — öppna inte PR utan att fråga).
+>
+> **Guards före varje commit:** `cd apps/viewser; npx tsc --noEmit; cd ..\..`;
+> `python -m pytest tests/ -q` (rensa orphan dev-servrar med `python
+> kill-dev-trees.py` först om `test_api_prompt_route_spawns_python_end_to_end`
+> flakar); `python scripts/governance_validate.py`; `python scripts/rules_sync.py
+> --check`; `python scripts/check_term_coverage.py --strict`; `python -m ruff
+> check .`.
+
+**Datum:** 2026-06-02 UTC. `jakob-be` = `8a86593` (copyDirective nivå 1→3a +
+modulutbrytning + P2-grounding + kontakt-ärlighet; docs-PR #151/#152 in-mergade).
+`main` = `619454c` (PR #149 + #151). `jakob-be` är 10 commits före `main`.
 **Öppen PR: #150 (christopher-ui)** — stor auth/billing/starters/UX-batch,
-CONFLICTING, operatörs-scope-beslut (se current-focus). Backend-lanen blockeras ej.
+CONFLICTING, operatörs-scope-beslut. Backend-lanen blockeras ej.
 
 ## Session 2026-06-02 em (forts) — kontakt-ärlighets-slice (`332e08e`)
 
