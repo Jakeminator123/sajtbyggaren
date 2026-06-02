@@ -175,7 +175,10 @@ const rawMode = expandEnvRefs(mergedEnv.VIEWSER_PREVIEW_MODE ?? DEFAULT_MODE, me
 if (!VALID_MODES.has(rawMode)) {
   process.stderr.write(
     `Okänt VIEWSER_PREVIEW_MODE: '${rawMode}'. ` +
-      `Använd local-next, stackblitz, eller auto.\n`,
+      // Härled listan ur VALID_MODES så meddelandet aldrig kan driva isär
+      // från de faktiskt accepterade lägena (t.ex. vercel-sandbox som
+      // tidigare saknades i texten trots att det var giltigt).
+      `Använd ${[...VALID_MODES].join(", ")}.\n`,
   );
   process.exit(1);
 }
