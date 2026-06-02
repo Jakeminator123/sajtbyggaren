@@ -1367,6 +1367,26 @@ def test_service_rewrite_applies_to_named_service_among_many(
     assert merged["services"][1]["summary"] == "Fina ringar."
 
 
+@pytest.mark.tooling
+def test_planned_about_rewrite_no_op_when_site_had_no_story(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """If the site had no story and the planner fails, the no-op promise still
+    holds: a semantic story-emphasize addition is removed, not left behind."""
+    monkeypatch.setattr(_PLANNER_PATH, lambda *a, **k: [])
+    previous = _previous_project_input()
+    previous["company"].pop("story", None)  # site started without a story
+    merged = _merge(
+        "skriv om vår historia så den känns mer personlig",
+        previous=previous,
+        enable_llm_fallback=True,
+    )
+    assert not merged["company"].get("story")
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
 def _project_input_with_directive(directive: dict[str, object]) -> dict[str, object]:
     pi = _previous_project_input()
     pi.pop("$schema", None)

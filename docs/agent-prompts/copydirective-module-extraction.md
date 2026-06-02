@@ -138,9 +138,9 @@ python -m ruff check .
 ```
 
 - `tests/test_followup_copy_directives.py` ska ha **exakt samma antal pass** som
-  före: **85 passed** (baseline 2026-06-02 på `jakob-be` efter
-  Codex-P1-fixen om service-ref-matchning; filen var 83 vid scout-mätningen och
-  växte med 2 av den fixen). Kräv 85 oförändrade efter-tal.
+  före: **86 passed** (baseline 2026-06-02 på `jakob-be` efter
+  PR #149-review-fixarna: Codex service-ref-matchning + Vercel no-story-no-op).
+  Kräv 86 oförändrade efter-tal.
 - Övriga baseline-tal (Scout 2026-06-02, ska vara identiska efter refaktorn):
   `ruff check .` = 0 findings; `governance_validate.py` = 18/18 policies OK;
   `rules_sync.py --check` = OK; `check_term_coverage.py --strict` = 0 okända.
