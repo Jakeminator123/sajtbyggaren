@@ -6,6 +6,42 @@
 **Öppen PR: #150 (christopher-ui)** — stor auth/billing/starters/UX-batch,
 CONFLICTING, operatörs-scope-beslut (se current-focus). Backend-lanen blockeras ej.
 
+## Lovable-gap-audit 2026-06-02 (read-only) — var 4–5/10 → 9/10-gapet sitter
+
+Statisk Scout-audit mot de fyra baseline-casen (elektriker Malmö / frisör
+Göteborg / naprapat Stockholm / keramik-e-handel). **Kalibrering:** senaste
+golden-path på disk (`golden-path-20260601T084107Z`) = **7,73/10, embeddings-gate
+go**, men mäter scaffold/routes/nyckelord/sektionsantal — INTE upplevd finish.
+Subjektiv "vill jag fortsätta?" landade på **2/5** för alla fyra → coachens 4–5/10
+är rätt. `copySpecificity` 4,5–5,5 är svagast i eval; `mobileFirstFirstImpression`
+9,5 är en sektionsräkning (ej riktig mobilpreview).
+
+**Topp-gap (rangordnat, mest backend):**
+1. Platshållarkontakt renderas rakt av (`prompt_to_project_input.py` default-input;
+   `render_section_contact`) → flaggas men lätt att missa. **jakob-be + UI.**
+2. Tomma `trustSignals` + clinic `credentials` renderas ej (`renderers.py`
+   ~1062–1097; `trust-proof` returnerar "" på tom lista). **jakob-be (brief/plan).**
+3. Generisk story/tagline/FAQ-mall (`prompt_to_project_input.py` ~950–971;
+   `_render_home_faq_section`). **jakob-be.**
+4. Tunt erbjudande (1 tjänst/produkt). **jakob-be.**
+5. Hero-CTA = 3-stryks whitelist (`build_site.py` ~2350–2479), ej följdbar. **jakob-be (kontrakt).**
+6. Följdprompt osynlig i UI för about/services (`floating-chat.tsx` ~349–410;
+   `build-changes.ts` = prompt-heuristik). **christopher-ui.**
+7. Visuell finish (gradient/blob, få riktiga bilder). **jakob-be + UI media-steg.**
+8. Eval överskattar: `contactPath` straffar `/kontakta-oss`, mobil = sektionsräkning
+   (`run_golden_path_eval.py`). **jakob-be (eval-fix, billig).**
+
+**Embeddings:** parkerad bekräftad — alla fyra case träffar rätt scaffold, så
+selection är inte problemet; embeddings hjälper inte placeholder-kontakt/tom trust.
+
+**Öppna produktfrågor till operatören (måste besvaras innan trovärdighets-slicen):**
+1. Ska placeholderkontakt vara kvar (demo) eller döljas tills wizard/scrape fyllt?
+2. Var ska trust/recensioner/credentials komma från — briefModel, hårdkodade
+   branschsnippets, eller wizard-steg?
+3. Naprapat: acceptera `/kontakta-oss` + "Boka tid" (eval-fix) eller normalisera till `/kontakt`?
+4. Mäta Lovable-gap med samma golden-path eller lägga till ett manuellt human-scorecard?
+5. Nästa sprint: backend trovärdighets-slice vs christopher-ui FloatingChat-synlighet — eller parallellt?
+
 ## Session 2026-06-02 em (forts) — P2 grounding-härdning
 
 Ovanpå modulutbrytningen (`8f2fc1e`) landade P2-batchen `65aa733` (Scout-plan ->
