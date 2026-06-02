@@ -7,9 +7,9 @@ Startpromptar och rollgränser finns i
 
 ## Nästa (2026-06-02, färsk orchestrator-session)
 
-`jakob-be` = `a1e2502` (slice 2a). `main` = `2d636b0`, i sync, inga öppna
-PR:er. `jakob-be` är 1 commit före `main` (slice 2a) — ingen sync-PR ännu
-(väntar operatörs-OK). Vercel-sandbox-spåret är i `main` (#146 spike,
+`jakob-be` = `a346bd6` (slice 2a + 2c). `main` = `2d636b0`, inga öppna
+PR:er. `jakob-be` är 3 commits före `main` (slice 2a + slice 2c + steward) —
+ingen sync-PR ännu (väntar operatörs-OK). Vercel-sandbox-spåret är i `main` (#146 spike,
 ADR 0033, #147 opt-in-adapter via `VIEWSER_PREVIEW_MODE=vercel-sandbox`);
 default-preview är fortfarande `local-next` (inte flippad) och adaptern är
 inte UI-wirad. copyDirectives nivå 1 (`company-name` | `tagline`) är i `main`.
@@ -21,18 +21,19 @@ inte UI-wirad. copyDirectives nivå 1 (`company-name` | `tagline`) är i `main`.
   copyDirectiveModel-extraktion. Vibe-rewrite utan angivet värde
   ("skriv om om oss så det låter mer personligt") är **honest no-op** i 2a —
   den klassas som tone-shift och äkta innehållsgenerering hör hemma i nivå 3.
-- **Slice 2b — NÄSTA: `tone`.** Måste undvika dubbel ton-mekanik:
-  `classify_followup_intent` ger redan `tone-shift` + semantisk patch för
-  luddiga ton-prompter. Beslut krävs: (a) tone-copyDirective fyrar bara på
-  explicit citerat värde -> `tone.primary` och luddigt lämnas åt befintlig
-  semantisk patch (rekommenderat, inget regress), eller (b) tone behöver
-  kanske ingen copyDirective alls. Operatörsbeslut innan Builder startar.
-- **Slice 2c — `services`** (services[].summary): kräver vilken-tjänst-
-  disambiguering (serviceId/index) + starka scope-keywords så tjänstetext
-  aldrig blir tagline/about.
-- **Slice 2d — `cta`/hero:** inget eget fält idag (hero-knappens text är en
-  variant-whitelist i `build_site.py`), så detta är en kontraktsändring, inte
-  bara enum. Sist.
+- **Slice 2b — `tone`: HOPPAD** (operatörsbeslut 2026-06-02). Den befintliga
+  `tone-shift`-semantiska patchen mappar redan "gör tonen mer premium" ->
+  `tone.primary`, så en tone-copyDirective hade mest överlappat — lågt
+  mervärde, onödig regressrisk. Ingen tone-target byggd.
+- **Slice 2c — KLAR** (`a346bd6`): `services` -> `services[].summary`,
+  replace-only. Direktiv-objektet fick `targetRef` (service id/label) som
+  pekar ut vilken tjänst; matchas case-insensitivt vid apply, ingen träff =
+  honest no-op (skapar/hijackar aldrig tjänst). Additiv "ny tjänst" + onamngiven
+  "ändra tjänsten till X" = no-op.
+- **Slice 2d — NÄSTA: `cta`/hero.** Inget eget fält idag (hero-knappens text är
+  en variant-whitelist i `build_site.py`), så detta är en **kontraktsändring**,
+  inte bara enum — kräver designbeslut (ny `conversionGoals`-slug vs nytt
+  PI-fält vs begränsad replace mot befintliga labels) innan Builder startar.
 - **Nivå 3 (senare, eget beslut):** site-state reader + edit planner ->
   LLM läser aktuell project/site-state, föreslår en strukturerad multi-target
   editPlan, systemet applicerar, en verifierModel kontrollerar synlig effekt,
@@ -47,7 +48,7 @@ ingen UI (Christophers lane); rå prompt blir aldrig kundcopy.
 Parallellt (Christopher/UI): Bite C — flippa `app/api/preview/[siteId]` till
 `currentViewserRuntime()`.
 
-Parkerat (kräver operatörs-OK): sync-PR `jakob-be -> main` (slice 2a),
+Parkerat (kräver operatörs-OK): sync-PR `jakob-be -> main` (slice 2a + 2c),
 default-flip till `vercel-sandbox` (kräver Bite C klar + smoke),
 `forbidden`-radering (egen ADR + test-omskrivningar), optional/lazy
 `@vercel/sandbox`-dep.
@@ -77,7 +78,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `a1e2502` (2026-06-02 UTC, `jakob-be` — copyDirectives slice 2a landad: about-text -> company.story, replace-only, deterministisk + copyDirectiveModel-extraktion, leak-säker, 12 nya tester. Scout RO-review: GO. EJ i `main` (ingen sync-PR — väntar operatörs-OK). `main` = `2d636b0`. Föregående steward-checkpoint: `061dc1c`).
+Last verified state: `a346bd6` (2026-06-02 UTC, `jakob-be` — copyDirectives slice 2c landad: services -> services[].summary via targetRef, replace-only, leak-säker, 13 nya tester. Slice 2b tone HOPPAD (operatörsbeslut). Scout RO-review: GO. EJ i `main` (ingen sync-PR — väntar operatörs-OK). `main` = `2d636b0`. Föregående steward-checkpoint: `a1e2502` (slice 2a)).
 Nya PRs sedan föregående checkpoint: inga (#148 var senaste sync till `main`).
 
 ## Branchmodellen (kort)
@@ -222,9 +223,10 @@ Aktiva spår i prioritetsordning:
    (target company-name|tagline, operation replace-text|include-token),
    deterministisk extraktor + ``copyDirectiveModel``-roll (llm-models v5),
    25 tester, real-LLM-smoke verifierad. Väg B FloatingChat-UI (Christopher)
-   är också i `main` (#139). **Nivå 2 slice 2a (about-text -> company.story)
-   landad på `jakob-be` (`a1e2502`), ej i `main`.** Nästa: slice 2b `tone`
-   (undvik dubbel ton-mekanik) — se Nästa-blocket överst för hela trappan.
+   är också i `main` (#139). **Nivå 2 slice 2a (about-text) + slice 2c
+   (services via targetRef) landade på `jakob-be` (`a346bd6`), ej i `main`.
+   Slice 2b tone HOPPAD.** Nästa: slice 2d `cta`/hero (kräver kontraktsbeslut)
+   — se Nästa-blocket överst för hela trappan + nivå 3.
 5. B49 (docs-base page-map sidebar) — låg prio, behövs innan
    `course-education → docs-base` aktiveras.
 6. B13a arkitektur-flytt — kvarstår som öppen post, kräver egen sprint

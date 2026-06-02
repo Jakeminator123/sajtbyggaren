@@ -1,8 +1,58 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-02 UTC. `jakob-be` = `a1e2502` (copyDirectives slice 2a).
-`main` = `2d636b0`, oförändrad. `jakob-be` är 1 commit före `main`; ingen
-sync-PR öppnad (väntar operatörs-OK). Inga öppna PR:er.
+**Datum:** 2026-06-02 UTC. `jakob-be` = `a346bd6` (copyDirectives slice 2a +
+2c). `main` = `2d636b0`, oförändrad. `jakob-be` är 3 commits före `main`;
+ingen sync-PR öppnad (väntar operatörs-OK). Inga öppna PR:er.
+
+## Session 2026-06-02 morgon — copyDirectives slice 2c (services) + 2b-beslut
+
+Orchestrator-pass (Scout -> self-Builder -> Scout RO-review -> Steward), branch
+`jakob-be` direkt, ingen main-sync.
+
+- **Slice 2b (`tone`) — HOPPAD** (operatörsbeslut). Den befintliga
+  `tone-shift`-semantiska patchen mappar redan "gör tonen mer premium" ->
+  `tone.primary`, så en tone-copyDirective hade mest överlappat: lågt mervärde,
+  onödig regressrisk. Ingen tone-target byggd.
+- **Slice 2c (`a346bd6`):** nytt target **`services` -> `services[].summary`**,
+  replace-text only. Disambiguering via nytt optional **`targetRef`** (service
+  id eller label) på copyDirective-objektet. Extraktorn fångar tjänst-referensen
+  (quoted efter service-ankare, eller unquoted mellan ankare och "till") + det
+  explicita nya värdet; `_apply_copy_directives` matchar `targetRef` mot
+  `merged["services"]` (case-insensitiv NFKC på id ELLER label) och sätter
+  `service["summary"] = payload`. **Ingen match = honest no-op** (skapar aldrig
+  ny tjänst, hijackar aldrig annan tjänst). Filer: `prompt_to_project_input.py`
+  (`_COPY_DIRECTIVE_SERVICES_KEYWORDS`, `_COPY_DIRECTIVE_NEW_SERVICE_GUARD`,
+  `_extract_service_target_ref`, `_match_service_by_ref`, services-grenar i
+  classify/extract/validate/apply, LLM-dedupe på `(target, targetRef)`),
+  `brief/extract.py` (target += services, `targetRef`-fält, services-lista i
+  context, systemprompt: matcha befintlig tjänst, skapa aldrig ny), schema
+  (target-enum += services, nytt optional `targetRef` maxLength 80), naming-
+  dictionary v20 -> v21, 13 nya tester.
+- **Skydd/no-op verifierat:** services-grenen fyrar bara utan explicit
+  företagsnamn-keyword (så "ändra företagsnamnet (inte tjänsten) till X" förblir
+  company-name — befintligt test grönt); additiv "ny tjänst" -> no-op; onamngiven
+  "ändra tjänsten till X" -> no-op; okänd tjänst -> no-op.
+- **Verifiering:** Scout RO-review GO (ingen scope-läcka; leak-säkerhet, hijack/
+  no-op, merge-ordning efter `_merge_services`, schema/policy/Pydantic-paritet
+  OK). Guards: ruff 0, governance 18/18, rules-sync OK, term-coverage --strict 0,
+  full pytest grön (orphan dev-trees rensade med `kill-dev-trees.py` före
+  körningen så api-smoke-flaken inte slog till). 57 copydir-tester gröna.
+
+### Nästa (copyDirectives-trappa)
+
+1. **Slice 2d — `cta`/hero (NÄSTA).** Kräver designbeslut innan Builder:
+   hero-knappens text är en variant-whitelist i `build_site.py`, inte fri text,
+   så detta är en kontraktsändring (ny `conversionGoals`-slug vs nytt PI-fält
+   vs begränsad replace mot befintliga labels). Operatörsbeslut.
+2. **Nivå 3:** site-state reader + edit planner -> multi-target editPlan +
+   verifierModel + ärlig chatt. "Förstår hela sidan"-känslan. Stegvis, inte fri
+   kodpatchare. Nivå 4 = patch/diff med rollback.
+3. **Sync-PR `jakob-be -> main`** (slice 2a + 2c) = operatörsbeslut (ej öppnad).
+4. **Christopher-lane-följd:** Viewser `AppliedCopyDirective`-typen i
+   `apps/viewser/lib/runs.ts` + FloatingChat-summary känner bara till
+   company-name|tagline. about-text (2a) och services+targetRef (2c) bör synkas
+   där så FloatingChat kan visa ärliga rader ("Jag uppdaterade tjänsten ..."). Ej
+   backend-blocker (direktiven appliceras ändå vid bygget); UI-lane.
 
 ## Session 2026-06-02 natt — copyDirectives slice 2a (about-text) landad på jakob-be
 
