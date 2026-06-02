@@ -1,10 +1,30 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-02 UTC. `jakob-be` = `8f2fc1e` (copyDirective-modulutbrytning,
-behavior-preserving). `main` = `b027b70` (PR #149 mergad; copyDirectives 2a/2c +
-nivå 3a + härdning i `main`). `jakob-be` är 1 commit före `main`.
+**Datum:** 2026-06-02 UTC. `jakob-be` = `65aa733` (copyDirective-modulutbrytning
++ P2 grounding-härdning). `main` = `b027b70` (PR #149: 2a/2c + 3a + härdning).
+`jakob-be` är 3 commits före `main` (modulutbrytning + P2 + steward).
 **Öppen PR: #150 (christopher-ui)** — stor auth/billing/starters/UX-batch,
 CONFLICTING, operatörs-scope-beslut (se current-focus). Backend-lanen blockeras ej.
+
+## Session 2026-06-02 em (forts) — P2 grounding-härdning
+
+Ovanpå modulutbrytningen (`8f2fc1e`) landade P2-batchen `65aa733` (Scout-plan ->
+self-Builder -> Scout RO-review GO -> push):
+- **(A)** `_extract_copy_directives_via_llm` begränsad till company-name|tagline;
+  about/services-generering bara via planner-vägen (stänger hålet där en vag
+  icke-rewrite-prompt kunde applicera ogrundad genererad about/service-copy).
+- **(B)** Grounding-guarden breddad: `_PLANNED_NUMBER_RE` ((?<!\d)\d{2,}...) fångar
+  årtal/priser/antal/procent; **whole-token-matchning** mot tokeniserad grounding
+  (ej substring → "500" grundas inte av "5000"). Endast planner-vägen. Namn/orter/
+  certifieringar = systemprompt + dokumenterad begränsning.
+- **(C)** Project DNA-refresh: `_copy_directive_dna_refresh` markerar story/tagline
+  `source=followup` när ett copyDirective ändrat fältet trots no-semantic-change-
+  intent; gated på faktisk värdeskillnad (byte-stable-kontraktet intakt).
+- **(D)** ADR 0034: "Nuvarande kontrakt"-stycke + historik-märkning.
+- 92 copydir-tester (2 omskrivna → no-op + 5 nya), full pytest grön, alla guards.
+- **Kvarvarande icke-blockerande P2-noteringar** (Scout): test för DNA-refresh
+  vid no-op token-directive + tagline-DNA-refresh under no-semantic-change saknas
+  (täckta i kod, ej testade); namn/ort/cert-grounding är medveten begränsning.
 
 ## Session 2026-06-02 em — copyDirective-modulutbrytning integrerad
 

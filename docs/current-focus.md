@@ -22,18 +22,26 @@ hela systemet verbatim, façade-re-exports i PI). Scout RO-review GO (full
 AST-paritet, acyklisk import, 88 copydir-tester + test_prompt_to_project_input
 oförändrat gröna, alla guards gröna). `_copy_directive_llm_eligible` kvar i PI.
 
-**NÄSTA (coach-rekommenderad ordning, backend på `jakob-be`):**
+**P2 grounding-fixar — KLAR** (`65aa733`, på `jakob-be`): (A) extraction-vägen
+begränsad till company-name|tagline (about/services bara via planner); (B)
+grounding-guarden breddad årtal → alla flersiffriga taltokens, whole-token-
+matchning (ej substring); (C) Project DNA-refresh för about-text→story /
+tagline när copyDirective ändrar fältet; (D) ADR 0034-städning. Bredare icke-
+numerisk grounding (namn/orter/cert) hålls medvetet som systemprompt +
+dokumenterad begränsning. 92 copydir-tester, Scout RO-review GO.
 
-1. **P2 grounding-fixar** (gör befintlig LLM-förmåga pålitlig): extraction-vägen
-   (`_extract_copy_directives_via_llm`) ska INTE generera vag about/services-copy
-   utan samma guard som planner-vägen (#4); bredda grounding-guarden från bara
-   årtal till siffror/priser/orter/namn/certifieringar; Project DNA-refresh när
-   about-text ändras (#5). ADR 0034-städning (status/kontrakt = nivå 2/3a).
-2. **Lovable-gap-audit (read-only, parallellt)** på de fyra baseline-casen
-   (elektriker Malmö / frisör Göteborg / naprapat Stockholm / keramik-e-handel)
-   + ny Golden Path-run — subjektivt: trust/CTA/branschcopy/mobil/"vill jag
-   fortsätta?". Avgör var 4–5/10 → 9/10-gapet sitter.
-3. Embeddings = nästa-NÄSTA backend-slice (ej nu; ADR 0026-villkor ej uppfyllda).
+**NÄSTA (coach-rekommenderad ordning):**
+
+1. **Lovable-gap-audit (read-only)** på de fyra baseline-casen (elektriker Malmö /
+   frisör Göteborg / naprapat Stockholm / keramik-e-handel) + ny Golden Path-run
+   — subjektivt: trust/CTA/branschcopy/mobil/"vill jag fortsätta?". Avgör var
+   4–5/10 → 9/10-gapet sitter. Kan köras read-only nu.
+2. **Sync-PR `jakob-be → main`** (modulutbrytning + P2-grounding) vid
+   leveransfönster — operatörsbeslut.
+3. Christopher-lane: Bite C + FloatingChat/AppliedCopyDirective-ärlighet (#3),
+   samt scope-beslut om PR #150 (auth/billing).
+4. Embeddings = nästa-NÄSTA backend-slice (ej nu; ADR 0026-villkor + Golden
+   Path-run först).
 
 Builder-prompt för modulutbrytningen (genomförd) finns kvar som referens i
 [`docs/agent-prompts/copydirective-module-extraction.md`](agent-prompts/copydirective-module-extraction.md).
@@ -120,7 +128,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `8f2fc1e` (2026-06-02 UTC, `jakob-be` — copyDirective-modulutbrytning landad: delsystemet flyttat till `packages/generation/followup/`, behavior-preserving, Scout RO-review GO, 88 copydir-tester + full pytest oförändrat gröna. EJ i `main` (`main` = `b027b70`). Nästa: P2 grounding-fixar + Lovable-gap-audit).
+Last verified state: `65aa733` (2026-06-02 UTC, `jakob-be` — P2 grounding-härdning ovanpå modulutbrytningen: extraction begränsad till name/tagline, numerisk grounding (whole-token), Project DNA-refresh för about/tagline, ADR 0034-städning. Scout RO-review GO, 92 copydir-tester + full pytest gröna. EJ i `main` (`main` = `b027b70`). Nästa: Lovable-gap-audit + sync-PR).
 Nya PRs sedan föregående checkpoint: PR #149 (mergad). **Öppen nu: PR #150**
 (christopher-ui) — se nedan.
 
