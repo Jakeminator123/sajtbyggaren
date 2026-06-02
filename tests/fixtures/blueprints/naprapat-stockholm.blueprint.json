@@ -113,7 +113,7 @@
       "density": "medium",
       "heroStyle": "portrait_with_text",
       "colorIntent": "cool_calm_neutral",
-      "sectionTreatments": {"treatment-list": "stacked-cards"},
+      "sectionTreatments": {"treatments.treatment-list": "stacked-cards"},
       "imageBriefs": ["lugn behandlingsmiljö i Stockholm, dämpat ljus, tryggt intryck"],
       "layoutSignals": {"useTrustBandNearHero": true, "avoidOverlyPlayfulShapes": true}
     },

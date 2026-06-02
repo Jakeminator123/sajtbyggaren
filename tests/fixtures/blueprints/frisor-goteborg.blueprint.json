@@ -109,7 +109,7 @@
       "density": "spacious",
       "heroStyle": "full_bleed_image",
       "colorIntent": "soft_warm_neutral",
-      "sectionTreatments": {"treatment-list": "card-grid"},
+      "sectionTreatments": {"treatments.treatment-list": "card-grid"},
       "imageBriefs": ["ljus salongsinteriör i Göteborg, varm stämning, naturligt ljus"],
       "layoutSignals": {"useTrustBandNearHero": false, "avoidOverlyPlayfulShapes": false}
     },

@@ -354,7 +354,7 @@ def _package_blueprint() -> dict:
             "density": "medium",
             "heroStyle": "split_with_image",
             "colorIntent": "warm_neutral_with_electric_accent",
-            "sectionTreatments": {"service-list": "alternating-rows"},
+            "sectionTreatments": {"services.service-list": "alternating-rows"},
             "imageBriefs": ["elektriker i Malmö, naturligt ljus"],
             "layoutSignals": {"useTrustBandNearHero": True},
         },
@@ -430,6 +430,25 @@ def test_visual_direction_rejects_unknown_field():
     payload["visualDirection"] = {"mood": "trygg", "bogus": "nope"}
     with pytest.raises(ArtifactSchemaError, match="bogus"):
         validate_generation_package(payload)
+
+
+@pytest.mark.tooling
+def test_visual_direction_section_treatments_enforce_route_section_keys():
+    """sectionTreatments uses the same '<routeId>.<sectionId>' addressing as
+    sectionPlan/contentBlocks (KÖR-1a P2): a bare sectionId key is rejected."""
+    payload = _minimal_generation_package()
+    payload["visualDirection"] = {"sectionTreatments": {"service-list": "card-grid"}}
+    with pytest.raises(ArtifactSchemaError, match="service-list|does not match"):
+        validate_generation_package(payload)
+
+
+@pytest.mark.tooling
+def test_visual_direction_accepts_route_qualified_section_treatments():
+    payload = _minimal_generation_package()
+    payload["visualDirection"] = {
+        "sectionTreatments": {"services.service-list": "card-grid"}
+    }
+    validate_generation_package(payload)
 
 
 @pytest.mark.tooling

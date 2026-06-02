@@ -88,8 +88,12 @@
         "colorIntent": {"type": "string", "description": "Color intent hint (e.g. 'warm_neutral_with_electric_accent')."},
         "sectionTreatments": {
           "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$",
+            "description": "Address contract: exactly '<routeId>.<sectionId>' (same as sectionPlan and contentBlocks)."
+          },
           "additionalProperties": {"type": "string"},
-          "description": "Map of sectionId to a treatment hint string. Tightened to enums in kor-3b."
+          "description": "Map of '<routeId>.<sectionId>' to a treatment hint string. Tightened to enums in kor-3b."
         },
         "imageBriefs": {
           "type": "array",

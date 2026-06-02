@@ -109,7 +109,7 @@
       "density": "medium",
       "heroStyle": "split_with_image",
       "colorIntent": "warm_neutral_with_electric_accent",
-      "sectionTreatments": {"service-list": "alternating-rows"},
+      "sectionTreatments": {"services.service-list": "alternating-rows"},
       "imageBriefs": ["elektriker i modern lägenhet i Malmö, naturligt ljus, tryggt intryck"],
       "layoutSignals": {"useTrustBandNearHero": true, "avoidOverlyPlayfulShapes": true}
     },
