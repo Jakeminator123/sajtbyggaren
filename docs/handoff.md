@@ -1,9 +1,65 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-01 UTC, steward-auto efter PR #148 — sync(jakob-be -> main): Vercel Sandbox spike + ADR 0033 + adapter + hardening batch. Verifierad `main` är `499bb34`.
+**Datum:** 2026-06-02 UTC. `jakob-be` = `a1e2502` (copyDirectives slice 2a).
+`main` = `2d636b0`, oförändrad. `jakob-be` är 1 commit före `main`; ingen
+sync-PR öppnad (väntar operatörs-OK). Inga öppna PR:er.
 
-Nya PRs sedan föregående checkpoint: PR #148 — sync(jakob-be -> main): Vercel Sandbox
-spike + ADR 0033 + adapter + hardening batch.
+## Session 2026-06-02 natt — copyDirectives slice 2a (about-text) landad på jakob-be
+
+Orchestrator-pass (Scout -> self-Builder -> Scout RO-review -> Steward), branch
+`jakob-be` direkt enligt operatörsval, ingen main-sync.
+
+- **Steg 0 (steward, `061dc1c`):** återinförde Nästa-blocket i
+  `current-focus.md` (auto-bumpen hade tagit bort det) och rättade stale
+  påstående om att copyDirectives väg A inte var i `main` (den är, via
+  #142/#144/#148). Guards gröna.
+- **Slice 2a (`a1e2502`):** ADR 0034 väg A nivå 2, första slicen.
+  Nytt copyDirective-target **`about-text` -> `company.story`** (om oss-/
+  berättelse-copy), **replace-text only** (ingen include-token). Filer:
+  `scripts/prompt_to_project_input.py` (`_COPY_DIRECTIVE_ABOUT_KEYWORDS`,
+  about-gren i `_classify_copy_target`/`_extract_copy_directives`,
+  per-target maxLength + include-token-dropp i
+  `_validate_copy_directive_candidate`, apply -> `company.story`, nya
+  rewrite-verb skriv om/formulera om/omformulera/rewrite/reword som bara
+  aktiveras med explicit värde), `packages/generation/brief/extract.py`
+  (copyDirectiveModel-target += about-text + story-kontext + systemprompt
+  som inte genererar copy ur en vibe), schema (target-enum += about-text,
+  payload maxLength 200 -> 600), naming-dictionary (v19 -> v20), 12 nya
+  tester.
+- **Operatörsbeslut (slice 2a = about-only):** ingen tone/services/cta i 2a.
+  Tone togs bort ur 2a eftersom det krockar med befintlig `tone-shift`-
+  semantisk patch (dubbel effekt + leak-risk i `tone.primary`).
+- **Viktig gräns (nivå-3-avgränsning):** en vibe-rewrite utan angivet värde,
+  t.ex. "skriv om om oss så det låter mer personligt", är **honest no-op** i
+  2a. Den klassas dessutom som `tone-shift` av `classify_followup_intent`
+  (för att "mer personlig(t)" matchar en ton-fras), så den deterministiska
+  about-vägen fyrar inte. Äkta innehållsgenerering ("LLM skriver om
+  sektionen") hör hemma i nivå 3 (site-state reader + edit planner), inte i
+  denna deterministiska slice — peta INTE i intent-klassificeraren för att
+  tvinga fram det (regressionsrisk mot tone-shift).
+- **Verifiering:** Scout RO-review GO (ingen scope-läcka, leak-säkerhet +
+  schema/policy/Pydantic-paritet + merge-ordning OK). Guards: ruff 0,
+  governance 18/18, rules-sync OK, term-coverage --strict 0, full pytest
+  grön. Enda röda i full-körningen var den dokumenterade miljö-flaken
+  `test_api_prompt_route_spawns_python_end_to_end` (orphan `next dev`-
+  processer blockerade porten) — `python kill-dev-trees.py` städade 3 orphan-
+  träd, testet grönt isolerat efteråt.
+
+### Nästa (copyDirectives-trappa — se current-focus.md Nästa-blocket)
+
+1. **Slice 2b — `tone`.** Beslut innan Builder: (a) tone-copyDirective fyrar
+   bara på explicit citerat värde -> `tone.primary`, luddigt lämnas åt
+   befintlig semantisk `tone-shift`-patch (rekommenderat, inget regress),
+   eller (b) ingen tone-copyDirective alls. Operatörsbeslut.
+2. **Slice 2c — `services`** (services[].summary): kräver vilken-tjänst-
+   disambiguering + starka scope-keywords (tjänstetext får aldrig bli
+   tagline/about).
+3. **Slice 2d — `cta`/hero:** kontraktsändring (hero-label är variant-
+   whitelist i `build_site.py`), inte bara enum. Sist.
+4. **Nivå 3:** site-state reader + edit planner -> multi-target editPlan +
+   verifierModel + ärlig chatt. "Förstår hela sidan"-känslan börjar här.
+   Byggs stegvis, inte som fri kodpatchare. Nivå 4 = patch/diff med rollback.
+5. **Sync-PR `jakob-be -> main`** för slice 2a är operatörsbeslut (ej öppnad).
 
 ## Session 2026-06-01 sen kväll — Vercel Sandbox-spike + ADR 0033 (runtime-riktning)
 

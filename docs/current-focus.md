@@ -7,26 +7,50 @@ Startpromptar och rollgränser finns i
 
 ## Nästa (2026-06-02, färsk orchestrator-session)
 
-`main` = `jakob-be` = `2d636b0`, i sync, inga öppna PR:er. Vercel-sandbox-
-spåret är i `main` (#146 spike, ADR 0033, #147 opt-in-adapter via
-`VIEWSER_PREVIEW_MODE=vercel-sandbox`); default-preview är fortfarande
-`local-next` (inte flippad) och adaptern är inte UI-wirad. copyDirectives
-nivå 1 (ADR 0034 väg A: `company-name` | `tagline`) är **i `main`**.
+`jakob-be` = `a1e2502` (slice 2a). `main` = `2d636b0`, i sync, inga öppna
+PR:er. `jakob-be` är 1 commit före `main` (slice 2a) — ingen sync-PR ännu
+(väntar operatörs-OK). Vercel-sandbox-spåret är i `main` (#146 spike,
+ADR 0033, #147 opt-in-adapter via `VIEWSER_PREVIEW_MODE=vercel-sandbox`);
+default-preview är fortfarande `local-next` (inte flippad) och adaptern är
+inte UI-wirad. copyDirectives nivå 1 (`company-name` | `tagline`) är i `main`.
 
-Nästa konkreta steg:
+**copyDirectives-trappa (ADR 0034 väg A, backend på `jakob-be`):**
 
-1. **copyDirectives nivå 2** (backend, `jakob-be`): utöka väg A-pipelinen
-   från `company-name` | `tagline` till `about` (company.story), `tone`,
-   `cta` och `services` (services[].summary). Riskordnade slices:
-   about + ton → cta → services. Hårda regler: remappa INTE tjänstetext till
-   tagline; generated output förblir vanlig Next.js; rör inte
-   preview-runtime/adaptern; ingen UI (Christophers lane).
-2. Bite C (Christopher/UI): flippa `app/api/preview/[siteId]` till
-   `currentViewserRuntime()`.
+- **Slice 2a — KLAR** (`a1e2502`): `about-text` -> `company.story`,
+  replace-only. Deterministisk extraktor (kräver explicit värde) +
+  copyDirectiveModel-extraktion. Vibe-rewrite utan angivet värde
+  ("skriv om om oss så det låter mer personligt") är **honest no-op** i 2a —
+  den klassas som tone-shift och äkta innehållsgenerering hör hemma i nivå 3.
+- **Slice 2b — NÄSTA: `tone`.** Måste undvika dubbel ton-mekanik:
+  `classify_followup_intent` ger redan `tone-shift` + semantisk patch för
+  luddiga ton-prompter. Beslut krävs: (a) tone-copyDirective fyrar bara på
+  explicit citerat värde -> `tone.primary` och luddigt lämnas åt befintlig
+  semantisk patch (rekommenderat, inget regress), eller (b) tone behöver
+  kanske ingen copyDirective alls. Operatörsbeslut innan Builder startar.
+- **Slice 2c — `services`** (services[].summary): kräver vilken-tjänst-
+  disambiguering (serviceId/index) + starka scope-keywords så tjänstetext
+  aldrig blir tagline/about.
+- **Slice 2d — `cta`/hero:** inget eget fält idag (hero-knappens text är en
+  variant-whitelist i `build_site.py`), så detta är en kontraktsändring, inte
+  bara enum. Sist.
+- **Nivå 3 (senare, eget beslut):** site-state reader + edit planner ->
+  LLM läser aktuell project/site-state, föreslår en strukturerad multi-target
+  editPlan, systemet applicerar, en verifierModel kontrollerar synlig effekt,
+  chatten svarar ärligt. Detta är där "förstår hela sidan"-känslan börjar.
+  Byggs stegvis, inte som fri kodpatchare. Nivå 4 = LLM patchar filer/diff
+  med rollback.
 
-Parkerat (kräver operatörs-OK): default-flip till `vercel-sandbox` (kräver
-Bite C klar + smoke), `forbidden`-radering (egen ADR + test-omskrivningar),
-optional/lazy `@vercel/sandbox`-dep.
+Hårda regler genom hela trappan: remappa INTE tjänstetext till tagline/about;
+generated output förblir vanlig Next.js; rör inte preview-runtime/adaptern;
+ingen UI (Christophers lane); rå prompt blir aldrig kundcopy.
+
+Parallellt (Christopher/UI): Bite C — flippa `app/api/preview/[siteId]` till
+`currentViewserRuntime()`.
+
+Parkerat (kräver operatörs-OK): sync-PR `jakob-be -> main` (slice 2a),
+default-flip till `vercel-sandbox` (kräver Bite C klar + smoke),
+`forbidden`-radering (egen ADR + test-omskrivningar), optional/lazy
+`@vercel/sandbox`-dep.
 
 ## Vem uppdaterar denna fil
 
@@ -53,8 +77,8 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `2d636b0` (2026-06-02 UTC, färsk orchestrator-session — `main` = `jakob-be` = `2d636b0`, i sync, inga öppna PR:er. Steward-pass återinför Nästa-blocket (auto-bumpen tog bort det) och rättar stale copyDirectives-väg-A-status).
-Nya PRs sedan föregående checkpoint: inga (#148 var senaste — sync(jakob-be -> main): Vercel Sandbox spike + ADR 0033 + adapter + hardening batch).
+Last verified state: `a1e2502` (2026-06-02 UTC, `jakob-be` — copyDirectives slice 2a landad: about-text -> company.story, replace-only, deterministisk + copyDirectiveModel-extraktion, leak-säker, 12 nya tester. Scout RO-review: GO. EJ i `main` (ingen sync-PR — väntar operatörs-OK). `main` = `2d636b0`. Föregående steward-checkpoint: `061dc1c`).
+Nya PRs sedan föregående checkpoint: inga (#148 var senaste sync till `main`).
 
 ## Branchmodellen (kort)
 
@@ -198,8 +222,9 @@ Aktiva spår i prioritetsordning:
    (target company-name|tagline, operation replace-text|include-token),
    deterministisk extraktor + ``copyDirectiveModel``-roll (llm-models v5),
    25 tester, real-LLM-smoke verifierad. Väg B FloatingChat-UI (Christopher)
-   är också i `main` (#139). **Nästa: nivå 2** — bredare targets
-   (about/tone/cta/services), backend på `jakob-be`, riskordnade slices.
+   är också i `main` (#139). **Nivå 2 slice 2a (about-text -> company.story)
+   landad på `jakob-be` (`a1e2502`), ej i `main`.** Nästa: slice 2b `tone`
+   (undvik dubbel ton-mekanik) — se Nästa-blocket överst för hela trappan.
 5. B49 (docs-base page-map sidebar) — låg prio, behövs innan
    `course-education → docs-base` aktiveras.
 6. B13a arkitektur-flytt — kvarstår som öppen post, kräver egen sprint
