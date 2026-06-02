@@ -46,7 +46,9 @@ inte UI-wirad. copyDirectives nivå 1 (`company-name` | `tagline`) är i `main`.
   en about-rewrite som planeraren inte kan uppfylla faller inte tillbaka på en
   generisk story-emphasize-append (story snapshottas + återställs). (3) Schema
   if/then: services kräver targetRef, about-text/services låsta till
-  replace-text. 7 nya regressionstester.
+  replace-text. (4) P1 scope-leak: planeraren låses till det target operatören
+  bad om (`target=rewrite_target`) så fel target aldrig appliceras. 9 nya
+  regressionstester.
 - **Slice 2d — PARKERAD: `cta`/hero.** Inget eget fält idag (hero-knappens text är
   en variant-whitelist i `build_site.py`), så detta är en **kontraktsändring**,
   inte bara enum — kräver designbeslut (ny `conversionGoals`-slug vs nytt
@@ -101,7 +103,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `6c860ec` (2026-06-02 UTC, `jakob-be` — extern-review-härdning ovanpå nivå 3a: vibe-"till"-läcka stängd (about/services kräver citerat/kolon-värde), planner no-op-löfte (story-snapshot+restore), schema if/then (services-targetRef + about/services replace-only). 7 nya regressionstester; två near-blockers stängda → sync-PR mergebar. EJ i `main` (väntar operatörs-OK). `main` = `2d636b0`. Föregående steward-checkpoint: `4d08526` (nivå 3a)).
+Last verified state: `093b31a` (2026-06-02 UTC, `jakob-be` — extern-review-härdning ovanpå nivå 3a, inkl. P1 scope-leak-fix: planeraren låses nu till det target operatören bad om (`_plan_copy_directives_via_llm(target=rewrite_target)`), så en about-rewrite aldrig applicerar en services-directive eller tvärtom. Tidigare i denna härdning: vibe-"till"-läcka stängd, planner no-op-löfte (story-snapshot+restore), schema if/then. 9 nya regressionstester totalt; alla near-blockers stängda → sync-PR mergebar. EJ i `main` (väntar operatörs-OK). `main` = `2d636b0`. Föregående steward-checkpoint: `6c860ec`).
 Nya PRs sedan föregående checkpoint: inga (#148 var senaste sync till `main`).
 
 ## Branchmodellen (kort)

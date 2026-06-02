@@ -1,9 +1,19 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-02 UTC. `jakob-be` = `6c860ec` (copyDirectives 2a + 2c +
-nivå 3a + extern-review-härdning). `main` = `2d636b0`, oförändrad. `jakob-be` är
-9 commits före `main`; **sync-PR nu mergebar** (två near-blockers stängda),
-öppnas på operatörsbeslut. Inga öppna PR:er.
+**Datum:** 2026-06-02 UTC. `jakob-be` = `093b31a` (copyDirectives 2a + 2c +
+nivå 3a + extern-review-härdning inkl. P1 scope-leak-fix). `main` = `2d636b0`,
+oförändrad. `jakob-be` är 11 commits före `main`; **sync-PR nu mergebar** (alla
+near-blockers + P1 stängda), öppnas på operatörsbeslut. Inga öppna PR:er.
+
+## Tillägg 2026-06-02 — P1 scope-leak-fix (extern-review-runda 2)
+
+Coach-review fann en P1 ovanpå härdningen: `_plan_copy_directives_via_llm`
+filtrerade inte planner-output mot det target operatören bad om, så en
+about-rewrite kunde applicera en services-directive (eller tvärtom) om
+copyDirectiveModel returnerade fel target. Fix (`093b31a`): planeraren tar nu
+`target=rewrite_target` och droppar varje directive vars target inte matchar.
+2 nya regressionstester (about-rewrite droppar planner-service-directive +
+omvänt). Scope-leak låst i kod, inte bara systemprompt. Alla guards gröna.
 
 ## Session 2026-06-02 fm (forts) — extern-review-härdning + nästa-fas-handoff
 
