@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -36,9 +37,25 @@ def _run(script: str, *args: str) -> CheckResult:
 def run_focus_check() -> CheckResult:
     """Fast drift check: does the repo match docs/current-focus.md?
 
-    Non-zero exit only on hard errors (diverged branch, missing focus SHA);
-    stale-doc/forgotten-push situations surface as warnings in the output.
+    ``focus_check.py`` cross-checks open PRs by shelling out to the GitHub CLI
+    (``gh pr list``). On a normal local Python env ``gh`` may not be installed,
+    which would make the subprocess crash with ``FileNotFoundError``. A quick
+    sanity check must not require GitHub CLI, so soft-skip when ``gh`` is
+    missing (ok=True, not a red crash). When ``gh`` is present, run the full
+    check - non-zero exit only on hard errors (diverged branch, missing focus
+    SHA); stale-doc/forgotten-push situations surface as warnings.
     """
+    if shutil.which("gh") is None:
+        return CheckResult(
+            name="focus_check.py",
+            ok=True,
+            output=(
+                "SKIPPED - GitHub CLI (gh) saknas; focus_check körs bara när gh "
+                "finns (den shellar ut till `gh pr list`). Kör övriga checks som "
+                "vanligt."
+            ),
+            exit_code=0,
+        )
     return _run("focus_check.py")
 
 
