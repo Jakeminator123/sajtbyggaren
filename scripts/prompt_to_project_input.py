@@ -2348,6 +2348,68 @@ def _field_entry_from_previous(
     )
 
 
+# DNA-tracked fields a copyDirective can change even under a no-semantic-change
+# intent. about-text -> company.story (the reviewer P2 case: "om oss" is not a
+# story-emphasize keyword) and tagline -> company.tagline (e.g. an include-token
+# whose intent does not classify as tagline-update). Both map to a company.*
+# field with the same name.
+_COPY_DIRECTIVE_DNA_FIELDS: dict[str, str] = {
+    "about-text": "story",
+    "tagline": "tagline",
+}
+
+
+def _copy_directive_dna_refresh(
+    project_input: dict[str, Any],
+    previous_project_input: dict[str, Any] | None,
+    *,
+    version: int,
+) -> dict[str, dict[str, Any]]:
+    """DNA source-entries for story/tagline an applied copyDirective changed.
+
+    Returns ``{dna_field: source-entry}`` only for fields a copyDirective
+    targeted AND whose value actually changed vs the previous version, so a
+    no-op directive (e.g. include-token already present) never falsely refreshes
+    DNA. Used to keep versioning honest when the follow-up intent is
+    no-semantic-change but a copyDirective still edited the field.
+    """
+    directives_block = (
+        project_input.get("directives")
+        if isinstance(project_input.get("directives"), dict)
+        else {}
+    )
+    directives = directives_block.get("copyDirectives")
+    if not isinstance(directives, list):
+        return {}
+    company = (
+        project_input.get("company")
+        if isinstance(project_input.get("company"), dict)
+        else {}
+    )
+    previous_company = (
+        previous_project_input.get("company")
+        if isinstance(previous_project_input, dict)
+        and isinstance(previous_project_input.get("company"), dict)
+        else {}
+    )
+    refreshed: dict[str, dict[str, Any]] = {}
+    for directive in directives:
+        if not isinstance(directive, dict):
+            continue
+        dna_field = _COPY_DIRECTIVE_DNA_FIELDS.get(directive.get("target"))
+        if dna_field is None or dna_field in refreshed:
+            continue
+        current_value = company.get(dna_field)
+        if current_value == previous_company.get(dna_field):
+            continue
+        refreshed[dna_field] = _semantic_source_entry(
+            value=current_value,
+            last_updated_version=version,
+            source="followup",
+        )
+    return refreshed
+
+
 def _build_project_dna_snapshot(
     project_input: dict[str, Any],
     *,
@@ -2364,11 +2426,32 @@ def _build_project_dna_snapshot(
         intent = classify_followup_intent(follow_up_prompt or "", language=language)
         if intent in {"no-semantic-change", "clarify"} and isinstance(previous_project_dna, dict):
             snapshot = copy.deepcopy(previous_project_dna)
-            snapshot["followUpIntent"] = {
-                "id": intent,
-                "confidence": "medium",
-                "rationale": "No semantic Project DNA field changed in this follow-up.",
-            }
+            # A copyDirective can change story/tagline even when the intent is
+            # no-semantic-change ("ändra om oss-texten till X" -> story). Refresh
+            # the affected DNA field so versioning reflects the real change
+            # instead of claiming nothing changed (reviewer P2 2026-06-02).
+            refreshed = _copy_directive_dna_refresh(
+                project_input,
+                previous_project_input,
+                version=version,
+            )
+            if refreshed:
+                snapshot.update(refreshed)
+                snapshot["followUpIntent"] = {
+                    "id": intent,
+                    "confidence": "medium",
+                    "rationale": (
+                        "Copy directive updated "
+                        + ", ".join(sorted(refreshed))
+                        + " in this follow-up."
+                    ),
+                }
+            else:
+                snapshot["followUpIntent"] = {
+                    "id": intent,
+                    "confidence": "medium",
+                    "rationale": "No semantic Project DNA field changed in this follow-up.",
+                }
             return snapshot
 
     company = project_input.get("company") if isinstance(project_input.get("company"), dict) else {}
