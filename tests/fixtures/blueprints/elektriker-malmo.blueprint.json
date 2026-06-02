@@ -52,7 +52,7 @@
       {"id": "services", "path": "/tjanster", "purpose": "List concrete services"},
       {"id": "contact", "path": "/kontakt", "purpose": "Make it easy to ask for a quote"}
     ],
-    "selectedDossiers": ["contact-form"],
+    "selectedDossiers": ["mailto-contact-form"],
     "buildSpec": {
       "qualityTarget": 9.0,
       "verificationPolicy": "build-must-pass",

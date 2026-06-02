@@ -45,11 +45,11 @@
   "sitePlan": {
     "runId": "run-frisor-goteborg",
     "scaffoldId": "local-service-business",
-    "variantId": "warm-editorial",
+    "variantId": "nordic-trust",
     "starterId": "marketing-base",
     "routePlan": [
       {"id": "home", "path": "/", "purpose": "Set the warm tone and drive a booking"},
-      {"id": "treatments", "path": "/behandlingar", "purpose": "Present the treatments"},
+      {"id": "services", "path": "/tjanster", "purpose": "Present the salon's services"},
       {"id": "contact", "path": "/kontakt", "purpose": "Booking and contact details"}
     ],
     "selectedDossiers": {
@@ -73,7 +73,7 @@
         "visualTreatment": "full-bleed-image",
         "ctaRole": "primary"
       },
-      "treatments.treatment-list": {
+      "services.service-list": {
         "goal": "present treatments clearly",
         "copyIntent": "vanliga behandlingar utan prispåhitt",
         "ctaRole": "secondary",
@@ -87,7 +87,7 @@
     "siteBriefRef": "site-brief.json",
     "sitePlanRef": "site-plan.json",
     "scaffoldId": "local-service-business",
-    "variantId": "warm-editorial",
+    "variantId": "nordic-trust",
     "starterId": "marketing-base",
     "language": "sv",
     "engineMode": "init",
@@ -98,7 +98,7 @@
         "subheadline": "Personlig frisörsalong mitt i Göteborg med enkel onlinebokning.",
         "primaryCta": "Boka tid"
       },
-      "treatments.treatment-list": [
+      "services.service-list": [
         {"title": "Klippning", "summary": "Klippning för dam och herr."},
         {"title": "Färgning", "summary": "Färg som håller och ser naturlig ut."},
         {"title": "Slingor", "summary": "Slingor för dimension och lyster."}
@@ -109,7 +109,7 @@
       "density": "spacious",
       "heroStyle": "full_bleed_image",
       "colorIntent": "soft_warm_neutral",
-      "sectionTreatments": {"treatments.treatment-list": "card-grid"},
+      "sectionTreatments": {"services.service-list": "card-grid"},
       "imageBriefs": ["ljus salongsinteriör i Göteborg, varm stämning, naturligt ljus"],
       "layoutSignals": {"useTrustBandNearHero": false, "avoidOverlyPlayfulShapes": false}
     },

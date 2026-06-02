@@ -9,7 +9,7 @@
     "locationHint": "Sverige",
     "tone": ["jordnära", "hantverksstolt", "stillsam"],
     "targetAudience": ["inredningsintresserade", "presentköpare"],
-    "requestedCapabilities": ["product-catalog", "checkout"],
+    "requestedCapabilities": ["gallery", "reviews"],
     "conversionGoals": ["purchase"],
     "servicesMentioned": ["skålar", "vaser", "muggar"],
     "sourceModelRole": "briefModel",
@@ -44,17 +44,17 @@
   },
   "sitePlan": {
     "runId": "run-keramik-ehandel",
-    "scaffoldId": "commerce-storefront",
-    "variantId": "minimal-gallery",
+    "scaffoldId": "ecommerce-lite",
+    "variantId": "clean-store",
     "starterId": "commerce-base",
     "routePlan": [
       {"id": "home", "path": "/", "purpose": "Tell the craft story and surface products"},
       {"id": "products", "path": "/produkter", "purpose": "Show the product range"},
-      {"id": "about", "path": "/om-verkstaden", "purpose": "Build trust through the workshop story"},
+      {"id": "about", "path": "/om-oss", "purpose": "Build trust through the workshop story"},
       {"id": "contact", "path": "/kontakt", "purpose": "Contact and questions"}
     ],
     "selectedDossiers": {
-      "required": ["product-catalog"],
+      "required": [],
       "recommended": ["image-gallery"],
       "conditional": ["reviews-display"]
     },
@@ -80,7 +80,7 @@
         "ctaRole": "primary",
         "proofSources": ["prompt"]
       },
-      "about.story": {
+      "about.about-story": {
         "goal": "build trust through the workshop story",
         "copyIntent": "berättelse om verkstaden",
         "ctaRole": "none"
@@ -92,8 +92,8 @@
     "policyVersions": {"engineRun": "engine-run.v1"},
     "siteBriefRef": "site-brief.json",
     "sitePlanRef": "site-plan.json",
-    "scaffoldId": "commerce-storefront",
-    "variantId": "minimal-gallery",
+    "scaffoldId": "ecommerce-lite",
+    "variantId": "clean-store",
     "starterId": "commerce-base",
     "language": "sv",
     "engineMode": "init",

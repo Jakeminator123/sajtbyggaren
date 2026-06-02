@@ -45,12 +45,12 @@
   "sitePlan": {
     "runId": "run-naprapat-stockholm",
     "scaffoldId": "clinic-healthcare",
-    "variantId": "calm-clinical",
+    "variantId": "clinic-calm",
     "starterId": "marketing-base",
     "routePlan": [
       {"id": "home", "path": "/", "purpose": "Reassure and drive a booking"},
       {"id": "treatments", "path": "/behandlingar", "purpose": "Explain treatments honestly"},
-      {"id": "contact", "path": "/kontakt", "purpose": "Booking and location"}
+      {"id": "contact", "path": "/kontakta-oss", "purpose": "Booking and location"}
     ],
     "selectedDossiers": {
       "required": ["booking-cta"],
@@ -90,7 +90,7 @@
     "siteBriefRef": "site-brief.json",
     "sitePlanRef": "site-plan.json",
     "scaffoldId": "clinic-healthcare",
-    "variantId": "calm-clinical",
+    "variantId": "clinic-calm",
     "starterId": "marketing-base",
     "language": "sv",
     "engineMode": "init",
