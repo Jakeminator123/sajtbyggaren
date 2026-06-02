@@ -1191,6 +1191,36 @@ def test_about_rewrite_to_quality_phrase_does_not_publish_instruction(
 
 
 @pytest.mark.tooling
+def test_rewrite_verb_does_not_publish_vibe_as_tagline() -> None:
+    """A rewrite-vibe verb on the tagline requires an explicit value; an
+    unquoted trailing vibe is a no-op, not literal tagline copy (reviewer P2)."""
+    assert (
+        _extract_copy_directives("skriv om hero till mer premium", language="sv")
+        == []
+    )
+    assert (
+        _extract_copy_directives("rewrite hero to more premium", language="sv") == []
+    )
+
+
+@pytest.mark.tooling
+def test_plain_set_verb_keeps_unquoted_tagline_value() -> None:
+    """A plain set verb ('byt') still accepts an unquoted trailing tagline value
+    that legitimately starts with 'mer'."""
+    directives = _extract_copy_directives(
+        "byt taglinen till mer än bara kaffe", language="sv"
+    )
+    assert directives == [
+        {
+            "target": "tagline",
+            "operation": "replace-text",
+            "payload": "mer än bara kaffe",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
 def test_about_text_unquoted_trailing_vibe_is_no_op() -> None:
     """about-text requires a quoted/colon value; a bare trailing vibe is no-op."""
     assert (
@@ -1294,6 +1324,94 @@ def test_service_rewrite_drops_planner_about_directive(
     )
     assert merged["company"]["story"] == previous["company"]["story"]
     assert merged["services"][0]["summary"] == previous["services"][0]["summary"]
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+def _previous_with_two_services() -> dict[str, object]:
+    previous = _previous_project_input()
+    previous["services"] = [
+        {"id": "orhangen", "label": "Örhängen", "summary": "Fina örhängen."},
+        {"id": "ringar", "label": "Ringar", "summary": "Fina ringar."},
+    ]
+    return previous
+
+
+@pytest.mark.tooling
+def test_service_rewrite_drops_planner_directive_for_wrong_service(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The planner may only edit the service the operator named; a directive
+    pointing at a DIFFERENT existing service is dropped (reviewer P1)."""
+    monkeypatch.setattr(
+        _PLANNER_PATH,
+        lambda *a, **k: [
+            {
+                "target": "services",
+                "operation": "replace-text",
+                "payload": "Fel tjänst ändrad",
+                "targetRef": "Ringar",
+                "source": "llm",
+            }
+        ],
+    )
+    previous = _previous_with_two_services()
+    merged = _merge(
+        "förbättra tjänsten 'Örhängen' så den låter mer säljande",
+        previous=previous,
+        enable_llm_fallback=True,
+    )
+    assert merged["services"][0]["summary"] == "Fina örhängen."
+    assert merged["services"][1]["summary"] == "Fina ringar."
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+@pytest.mark.tooling
+def test_service_rewrite_applies_to_named_service_among_many(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The correct named service is still rewritten when several exist."""
+    new_summary = "Handgjorda örhängen i återvunnet silver"
+    monkeypatch.setattr(
+        _PLANNER_PATH,
+        lambda *a, **k: [
+            {
+                "target": "services",
+                "operation": "replace-text",
+                "payload": new_summary,
+                "targetRef": "Örhängen",
+                "source": "llm",
+            }
+        ],
+    )
+    previous = _previous_with_two_services()
+    merged = _merge(
+        "förbättra tjänsten 'Örhängen' så den låter mer säljande",
+        previous=previous,
+        enable_llm_fallback=True,
+    )
+    assert merged["services"][0]["summary"] == new_summary
+    assert merged["services"][1]["summary"] == "Fina ringar."
+
+
+@pytest.mark.tooling
+def test_planned_about_rewrite_no_op_when_site_had_no_story(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """If the site had no story and the planner fails, the no-op promise still
+    holds: a semantic story-emphasize addition is removed, not left behind."""
+    monkeypatch.setattr(_PLANNER_PATH, lambda *a, **k: [])
+    previous = _previous_project_input()
+    previous["company"].pop("story", None)  # site started without a story
+    merged = _merge(
+        "skriv om vår historia så den känns mer personlig",
+        previous=previous,
+        enable_llm_fallback=True,
+    )
+    assert not merged["company"].get("story")
     assert "directives" not in merged or "copyDirectives" not in merged.get(
         "directives", {}
     )

@@ -2464,6 +2464,10 @@ _COPY_CONTENT_REWRITE_VERBS: tuple[str, ...] = (
 # payload must not introduce a year that is absent from the current site-state
 # and the follow-up prompt (catches invented founding dates).
 _PLANNED_YEAR_RE = re.compile(r"\b(?:19|20)\d{2}\b")
+# Sentinel for "company.story was absent before the semantic patch" so the
+# editPlan no-op restore can return to that exact state (remove a semantic
+# addition rather than leave it behind).
+_MISSING_STORY = object()
 _COPY_DIRECTIVE_INCLUDE_KEYWORDS: tuple[str, ...] = (
     "inkludera",
     "inkluderar",
@@ -3026,8 +3030,19 @@ def _extract_copy_directives(
                 "source": "prompt-rule",
             }
         ]
+    # A rewrite-vibe verb ("skriv om hero till mer premium") on name/tagline must
+    # not publish an unquoted trailing vibe as literal copy - require an explicit
+    # quoted/colon value, else no-op (reviewer P2 2026-06-02). A plain set verb
+    # ("byt taglinen till Mer än bara kaffe") keeps the loose trailing so a real
+    # short label that happens to start with "mer" is not rejected.
+    is_rewrite_vibe = _contains_any_word(text, _COPY_CONTENT_REWRITE_VERBS)
+    raw_value = (
+        _extract_explicit_replace_value(follow_up_prompt)
+        if is_rewrite_vibe
+        else _extract_replace_value(follow_up_prompt)
+    )
     payload = _safe_copy_payload(
-        _extract_replace_value(follow_up_prompt),
+        raw_value,
         follow_up_prompt=follow_up_prompt,
         max_length=80 if target == "company-name" else 140,
     )
@@ -3309,6 +3324,18 @@ def _plan_copy_directives_via_llm(
     except Exception:  # noqa: BLE001
         return []
     grounding_text = _site_state_grounding_text(site_state, follow_up_prompt)
+    # For a services rewrite, resolve the service the operator actually named so
+    # the planner can only edit THAT service - a model return pointing at a
+    # different (even existing) service is dropped (reviewer P1 2026-06-02).
+    # Resolved by service identity so an id-vs-label mismatch is not a false
+    # rejection.
+    requested_service = (
+        _match_service_by_ref(
+            merged.get("services"), _extract_service_target_ref(follow_up_prompt) or ""
+        )
+        if target == "services"
+        else None
+    )
     validated: list[dict[str, Any]] = []
     seen_targets: set[tuple[str, str]] = set()
     for candidate in raw_directives:
@@ -3323,6 +3350,12 @@ def _plan_copy_directives_via_llm(
         # target (company-name/tagline are extraction-only).
         if directive["target"] != target:
             continue
+        if target == "services":
+            directive_service = _match_service_by_ref(
+                merged.get("services"), directive.get("targetRef") or ""
+            )
+            if requested_service is None or directive_service is not requested_service:
+                continue
         if not _planned_payload_grounded(directive["payload"], grounding_text):
             continue
         dedupe_key = (directive["target"], directive.get("targetRef", ""))
@@ -3764,11 +3797,14 @@ def merge_followup_project_input(
     # active when the planner is enabled - the offline/deterministic path keeps
     # the existing semantic behaviour (reviewer-fynd 2026-06-02).
     pre_patch_company = merged.get("company")
+    # Sentinel-tagged snapshot so the no-op restore reproduces the EXACT
+    # pre-patch state - including when the story was absent/empty (then a failed
+    # planner must not leave a semantic-emphasize addition behind; Vercel-fynd
+    # 2026-06-02).
     pre_patch_story = (
-        pre_patch_company.get("story")
+        pre_patch_company.get("story", _MISSING_STORY)
         if isinstance(pre_patch_company, dict)
-        and isinstance(pre_patch_company.get("story"), str)
-        else None
+        else _MISSING_STORY
     )
     rewrite_target = (
         _content_rewrite_target(follow_up_prompt) if enable_llm_fallback else None
@@ -3820,16 +3856,19 @@ def merge_followup_project_input(
     _apply_copy_directives(merged, copy_directives)
     # editPlan no-op promise: if an about-text rewrite request produced no
     # about-text directive (planner returned [], no API key, or candidate
-    # dropped by guards), undo any story change the semantic patch made so the
-    # follow-up is a true no-op rather than a silent generic append.
-    if rewrite_target == "about-text" and pre_patch_story is not None:
+    # dropped by guards), restore the story to its EXACT pre-patch state so the
+    # follow-up is a true no-op rather than a silent generic append - including
+    # removing an addition when the story was originally absent.
+    if rewrite_target == "about-text":
         applied_about = any(
             isinstance(directive, dict) and directive.get("target") == "about-text"
             for directive in copy_directives
         )
         if not applied_about:
             company_now = merged.setdefault("company", {})
-            if company_now.get("story") != pre_patch_story:
+            if pre_patch_story is _MISSING_STORY:
+                company_now.pop("story", None)
+            elif company_now.get("story") != pre_patch_story:
                 company_now["story"] = pre_patch_story
     return merged
 

@@ -19,14 +19,15 @@ inte UI-wirad. copyDirectives nivå 1 (`company-name` | `tagline`) är i `main`.
 Operatören har uttryckligen godkänt auth + billing + credits + Stripe som eget
 stack (undantaget i produktkompassens vänta-lista, se
 [`docs/product-operating-context.md`](product-operating-context.md)). Det ligger
-i PR #150 (`christopher-ui → main`, CONFLICTING mot copyDirectives-overlappen +
-delade docs — konfliktlösning på Jakobs sida). Hård gräns: auth/credits läcker
-INTE in i bygg-ingången (`app/api/prompt`); källlås-testet
+i PR #150 (`christopher-ui → main`). Konflikterna mot copyDirectives-overlappen
++ delade docs är **lösta på `christopher-ui`** (merge av `origin/main`; backend-
+filerna tar mains kanoniska version → noll netto-diff på dem). Själva
+merge-beslutet (auth/billing in i `main`) är operatörens. Hård gräns: auth/credits
+läcker INTE in i bygg-ingången (`app/api/prompt`); källlås-testet
 `test_build_pipeline_untouched_by_auth` vaktar det. Vercel Agent Review föreslog
 credit-enforcement i bygg-routen — medvetet avvisat (skulle tvinga inloggning på
 kärnflödet + bryta källlåset). Kreditmätning av byggen är ett separat
 produktbeslut.
-
 **copyDirectives-trappa (ADR 0034 väg A, backend på `jakob-be`):**
 
 - **Slice 2a — KLAR** (`a1e2502`): `about-text` -> `company.story`,
@@ -115,8 +116,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `093b31a` (2026-06-02 UTC, `jakob-be` — extern-review-härdning ovanpå nivå 3a, inkl. P1 scope-leak-fix: planeraren låses nu till det target operatören bad om (`_plan_copy_directives_via_llm(target=rewrite_target)`), så en about-rewrite aldrig applicerar en services-directive eller tvärtom. Tidigare i denna härdning: vibe-"till"-läcka stängd, planner no-op-löfte (story-snapshot+restore), schema if/then. 9 nya regressionstester totalt; alla near-blockers stängda → sync-PR mergebar. EJ i `main` (väntar operatörs-OK). `main` = `2d636b0`. Föregående steward-checkpoint: `6c860ec`).
-Nya PRs sedan föregående checkpoint: inga (#148 var senaste sync till `main`).
+Last verified state: `16a36a6` (2026-06-02 UTC, steward-auto efter PR #151 — docs(agents): virtualenv fallback on Cloud VMs).
+Nya PRs sedan föregående checkpoint: PR #151 — docs(agents): virtualenv fallback on
+Cloud VMs.
 
 ## Branchmodellen (kort)
 
@@ -1039,3 +1041,14 @@ Christopher/UI.
 > `christopher-ui` (PR mot `main` per leveransfönster). `jakob-be`/
 > `christopher-ui` är den gällande modellen; `agent-prompts.md` behöver
 > uppdateras (operatörsbeslut — ej ändrad i detta pass).
+
+### 2026-06-02 UTC — current-focus.md före `093b31a`
+
+Last verified state: `093b31a` (2026-06-02 UTC, `jakob-be` — extern-review-härdning ovanpå nivå 3a, inkl. P1 scope-leak-fix: planeraren låses nu till det target operatören bad om (`_plan_copy_directives_via_llm(target=rewrite_target)`), så en about-rewrite aldrig applicerar en services-directive eller tvärtom. Tidigare i denna härdning: vibe-"till"-läcka stängd, planner no-op-löfte (story-snapshot+restore), schema if/then. 9 nya regressionstester totalt; alla near-blockers stängda → sync-PR mergebar. EJ i `main` (väntar operatörs-OK). `main` = `2d636b0`. Föregående steward-checkpoint: `6c860ec`).
+Nya PRs sedan föregående checkpoint: inga (#148 var senaste sync till `main`).
+
+### 2026-06-02 UTC — current-focus.md före `3face1c`
+
+Last verified state: `3face1c` (2026-06-02 UTC, steward-auto efter PR #149 — sync(jakob-be -> main): copyDirectives 2a/2c + niva 3a editPlan + reviewer hardening).
+Nya PRs sedan föregående checkpoint: PR #149 — sync(jakob-be -> main): copyDirectives
+2a/2c + niva 3a editPlan + reviewer hardening.

@@ -109,7 +109,24 @@ importerar. Verifiera att `copy_directives.py` INTE importerar från
 - `resolve_copy_directive_model` bor i `packages/generation/brief/models.py` —
   importera därifrån (ingen cykel).
 
-## Guards (alla måste vara gröna, jämför mot baseline `6c860ec`)
+### Bekräftat designval (Scout 2026-06-02 — följ detta)
+
+- **`_copy_directive_llm_eligible` STANNAR i `scripts/prompt_to_project_input.py`.**
+  Flytta den INTE till `text.py` eller `copy_directives.py`. Den läser
+  `intent: FollowupIntent` och `_FOLLOWUP_ADD_ONLY_KEYWORDS` — båda är
+  intent-klassificeringsartefakter som hör hemma i PI — och anropar ingen
+  copy-funktion. Att lämna den i PI håller `copy_directives.py` fri från
+  intent-konstanter och undviker att dra `FollowupIntent` +
+  `_FOLLOWUP_ADD_ONLY_KEYWORDS` till `text.py`. `merge_followup_project_input`
+  anropar den lokalt. (Samma gäller `_content_rewrite_target`/
+  `_is_content_rewrite_request`-anropen — själva funktionerna kan flytta med
+  copy_directives eftersom de inte beror på intent, men eligibility-glömmet mot
+  intent stannar i PI.)
+- `FollowupIntent`, `classify_followup_intent`, `_apply_semantic_patch`,
+  `_FOLLOWUP_ADD_ONLY_KEYWORDS` och `_FOLLOWUP_*`-intent-konstanterna stannar i
+  PI — de är inte copyDirective-kod.
+
+## Guards (alla måste vara gröna, jämför mot baseline `df99076`)
 
 ```powershell
 cd apps/viewser; npx tsc --noEmit; cd ..\..
@@ -121,7 +138,14 @@ python -m ruff check .
 ```
 
 - `tests/test_followup_copy_directives.py` ska ha **exakt samma antal pass** som
-  före (81 copydir-tester i denna fil per 2026-06-02), oförändrade.
+  före refaktorn. Kör baslinjen själv direkt efter att du startat (på synkad
+  merge-base) och **lås det exakta antalet passerade tester** (`passed`-siffran
+  från pytet) — det var 88 passed på `jakob-be` 2026-06-02 efter PR
+  #149-review-fixarna, men bekräfta mot din faktiska merge-base. Kräv samma
+  antal oförändrat efter-tal.
+- Övriga baseline-tal (Scout 2026-06-02, ska vara identiska efter refaktorn):
+  `ruff check .` = 0 findings; `governance_validate.py` = 18/18 policies OK;
+  `rules_sync.py --check` = OK; `check_term_coverage.py --strict` = 0 okända.
 - Full pytet grön (samma siffror som baseline; den enda kända flaken är
   `test_api_prompt_route_spawns_python_end_to_end` om en orphan dev-server
   blockerar porten — kör `python kill-dev-trees.py` först).
