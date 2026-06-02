@@ -13,9 +13,12 @@ governance-policy + backoffice-copy + en boundary-fix (inga
 `packages/generation/`- eller `apps/`-körvägar):
 
 - `governance/policies/preview-runtime-policy.v1.json` (+ schema + nytt
-  regressionstest) alignad med ADR 0033: `vercel-sandbox` primär, `local`
-  fallback/dev, `fly` framtida, `stackblitz` pausad (var: stackblitz som
-  default/primary — felpekade agenter mot fel huvudspår).
+  regressionstest) alignad med ADR 0033: `vercel-sandbox` primär/intended
+  primary, men faktisk `default` kvar `local`/local-next tills default-flip
+  (Bite C) verifierats, `fly` framtida, `stackblitz` pausad (var: stackblitz
+  som default/primary — felpekade agenter mot fel huvudspår).
+  `site-plan.schema.json` previewRuntime-enum synkad så `vercel-sandbox`
+  accepteras (ingen drift mot policyn).
 - Den här filens "öppna PR"-motsägelse löst (se "Pågående/öppna PR:s just nu").
 - `docs/handoff.md`: placeholderkontakt-frågan markerad besvarad
   (operatörsval: dölj vid render, ej kräv i wizard).
@@ -25,7 +28,8 @@ governance-policy + backoffice-copy + en boundary-fix (inga
 - Backoffice: scaffold-skapande skriver kandidat till
   `data/scaffold-candidates/` i stället för canonical `packages/`
   (repo-boundaries); Follow-up-/runtime-copy uppdaterad; System Health får ett
-  lättare "Snabb sanity"-läge bredvid "Kör allt".
+  lättare "Snabb sanity"-läge (focus_check soft-skippar om `gh` saknas) bredvid
+  "Kör allt".
 
 Levereras som PR mot `jakob-be`. De TVÅ runtime-buggarna (grå pending-runs;
 layout-följdprompt-no-ops) kvarstår oförändrade — egen slice.
@@ -298,8 +302,8 @@ mot `main` och kräver hans rebase + operatörens scope-OK före merge.
 **Öppna PRs:** #150 (`christopher-ui`) är den enda öppna PR:n — den hålls per
 ADR 0035 (se "## Öppen PR att känna till — #150" ovan). Inga öppna PR:er i
 backend-lanen (`jakob-be`); alla denna sessions backend-PR:er är mergade eller
-stängda. (Den eventuella KÖR-0-städ-PR:n mot `jakob-be` läggs till här när den
-öppnas.)
+stängda. KÖR-0-städningen levereras i **PR #155** mot `jakob-be` (efter merge
+bumpar nästa Steward "Last verified state" till merge-SHA).
 
 **Mergade/stängda denna session:**
 - **#147** `cursor/vercel-sandbox-adapter → jakob-be` — **mergad** (squash,
