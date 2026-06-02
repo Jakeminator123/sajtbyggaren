@@ -1191,6 +1191,36 @@ def test_about_rewrite_to_quality_phrase_does_not_publish_instruction(
 
 
 @pytest.mark.tooling
+def test_rewrite_verb_does_not_publish_vibe_as_tagline() -> None:
+    """A rewrite-vibe verb on the tagline requires an explicit value; an
+    unquoted trailing vibe is a no-op, not literal tagline copy (reviewer P2)."""
+    assert (
+        _extract_copy_directives("skriv om hero till mer premium", language="sv")
+        == []
+    )
+    assert (
+        _extract_copy_directives("rewrite hero to more premium", language="sv") == []
+    )
+
+
+@pytest.mark.tooling
+def test_plain_set_verb_keeps_unquoted_tagline_value() -> None:
+    """A plain set verb ('byt') still accepts an unquoted trailing tagline value
+    that legitimately starts with 'mer'."""
+    directives = _extract_copy_directives(
+        "byt taglinen till mer än bara kaffe", language="sv"
+    )
+    assert directives == [
+        {
+            "target": "tagline",
+            "operation": "replace-text",
+            "payload": "mer än bara kaffe",
+            "source": "prompt-rule",
+        }
+    ]
+
+
+@pytest.mark.tooling
 def test_about_text_unquoted_trailing_vibe_is_no_op() -> None:
     """about-text requires a quoted/colon value; a bare trailing vibe is no-op."""
     assert (

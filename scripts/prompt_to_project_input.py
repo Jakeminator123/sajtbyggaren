@@ -3030,8 +3030,19 @@ def _extract_copy_directives(
                 "source": "prompt-rule",
             }
         ]
+    # A rewrite-vibe verb ("skriv om hero till mer premium") on name/tagline must
+    # not publish an unquoted trailing vibe as literal copy - require an explicit
+    # quoted/colon value, else no-op (reviewer P2 2026-06-02). A plain set verb
+    # ("byt taglinen till Mer än bara kaffe") keeps the loose trailing so a real
+    # short label that happens to start with "mer" is not rejected.
+    is_rewrite_vibe = _contains_any_word(text, _COPY_CONTENT_REWRITE_VERBS)
+    raw_value = (
+        _extract_explicit_replace_value(follow_up_prompt)
+        if is_rewrite_vibe
+        else _extract_replace_value(follow_up_prompt)
+    )
     payload = _safe_copy_payload(
-        _extract_replace_value(follow_up_prompt),
+        raw_value,
         follow_up_prompt=follow_up_prompt,
         max_length=80 if target == "company-name" else 140,
     )

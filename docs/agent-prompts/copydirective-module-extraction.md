@@ -138,9 +138,11 @@ python -m ruff check .
 ```
 
 - `tests/test_followup_copy_directives.py` ska ha **exakt samma antal pass** som
-  före: **86 passed** (baseline 2026-06-02 på `jakob-be` efter
-  PR #149-review-fixarna: Codex service-ref-matchning + Vercel no-story-no-op).
-  Kräv 86 oförändrade efter-tal.
+  före refaktorn. Kör baslinjen själv direkt efter att du startat (på synkad
+  merge-base) och **lås det exakta antalet passerade tester** (`passed`-siffran
+  från pytet) — det var 88 passed på `jakob-be` 2026-06-02 efter PR
+  #149-review-fixarna, men bekräfta mot din faktiska merge-base. Kräv samma
+  antal oförändrat efter-tal.
 - Övriga baseline-tal (Scout 2026-06-02, ska vara identiska efter refaktorn):
   `ruff check .` = 0 findings; `governance_validate.py` = 18/18 policies OK;
   `rules_sync.py --check` = OK; `check_term_coverage.py --strict` = 0 okända.

@@ -5,6 +5,44 @@ nivå 3a + extern-review-härdning inkl. P1 scope-leak-fix). `main` = `2d636b0`,
 oförändrad. `jakob-be` är 11 commits före `main`; **sync-PR nu mergebar** (alla
 near-blockers + P1 stängda), öppnas på operatörsbeslut. Inga öppna PR:er.
 
+## Tillägg 2026-06-02 — sync-PR #149 + review-loop (Codex/Vercel)
+
+Sync-PR **#149** (`jakob-be -> main`) öppnad. Review-loopen (Codex code review +
+Vercel Agent Review + ai-bug-review) körde flera rundor; alla **P1 åtgärdade**,
+P2 nedan kvar som follow-ups.
+
+Åtgärdade i PR #149 (efter öppning):
+- Codex-review (prio 1, `dd2be86`): planner-services-rewrite måste peka på den
+  namngivna tjänsten — `_plan_copy_directives_via_llm(target=...)` + service-
+  identitets-matchning (id-vs-label-säker); fel/okänd tjänst → no-op.
+- Vercel-review (`2e121a2`): no-op-löftet vid avsaknad initial story — story
+  snapshottas med `_MISSING_STORY`-sentinel och återställs exakt (tar bort
+  semantisk tilllaggning om story saknades).
+- Codex-review (prio 2, vibe-läcka tagline): rewrite-verb (skriv om/förbättra/...) på
+  name/tagline kräver nu citerat/kolon-värde (plain set-verb behåller löst
+  trailing) — "skriv om hero till mer premium" publicerar inte längre
+  "mer premium" som tagline.
+
+**Kvarvarande P2 (icke-blockerande, follow-ups):**
+
+1. **Unquoted service-ref utan "till"** (`förbättra tjänsten Örhängen så ...`)
+   → no-op idag (kräver citat eller "till"). UX-förbättring; medveten
+   leak-säker default. Tas ev. i modulutbrytningen/efteråt.
+2. **Generation via extraktions-vägen:** `_extract_copy_directives_via_llm`
+   accepterar about-text/services-targets utan grounding-guard, så en vag prompt
+   ("fixa om oss-texten lite") skulle kunna applicera modell-genererad copy
+   utan planner-guarden. Designbeslut: antingen begränsa extraktions-vägen till
+   company-name/tagline (gör vaga icke-rewrite-prompter till no-op — ändrar
+   2a/2c LLM-testerna) eller applicera grounding-guarden även där. Rekommenderas
+   tas i copyDirective-modulutbrytningen.
+3. **Viewser `AppliedCopyDirective`** (`apps/viewser/lib/runs.ts`) känner bara
+   company-name|tagline + droppar payloads >200 tecken → about-text/services/
+   planerade rewrites visas inte i FloatingChat. **Christopher-lane.**
+4. **Project DNA-refresh:** en about-text-replace uppdaterar `company.story` men
+   prompten klassas no-semantic-change (om oss ∉ story-keywords), så DNA-
+   snapshotten markerar inte story som followup-uppdaterad. Versionsnyans; tas
+   med modulutbrytningen.
+
 ## Tillägg 2026-06-02 — P1 scope-leak-fix (extern-review-runda 2)
 
 Coach-review fann en P1 ovanpå härdningen: `_plan_copy_directives_via_llm`
