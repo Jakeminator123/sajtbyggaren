@@ -2443,6 +2443,27 @@ _COPY_DIRECTIVE_NEW_SERVICE_GUARD: tuple[str, ...] = (
     "new service",
     "new services",
 )
+# Rewrite/improve verbs that mark a *content rewrite request* (slice 3a): the
+# operator wants existing copy rewritten without supplying the literal text.
+# These trigger the editPlan planner (LLM generation) for about-text/services
+# only. Deliberately narrower than the full replace-verb set - plain
+# byt/ändra/uppdatera (rename-style) are NOT here so they cannot pull a vibe
+# prompt into the generation path.
+_COPY_CONTENT_REWRITE_VERBS: tuple[str, ...] = (
+    "skriv om",
+    "formulera om",
+    "omformulera",
+    "förbättra",
+    "forbattra",
+    "snygga till",
+    "rewrite",
+    "reword",
+    "improve",
+)
+# Year tokens (19xx/20xx) used by the planner hallucination guard: a generated
+# payload must not introduce a year that is absent from the current site-state
+# and the follow-up prompt (catches invented founding dates).
+_PLANNED_YEAR_RE = re.compile(r"\b(?:19|20)\d{2}\b")
 _COPY_DIRECTIVE_INCLUDE_KEYWORDS: tuple[str, ...] = (
     "inkludera",
     "inkluderar",
@@ -3090,7 +3111,7 @@ def _extract_copy_directives_via_llm(
 ) -> list[dict[str, Any]]:
     """LLM fallback for copy directives when the deterministic rules miss.
 
-    Uses the dedicated copyDirectiveModel role (llm-models.v1.json v5).
+    Uses the dedicated copyDirectiveModel role (llm-models.v1.json v6).
     Fail-safe: any resolution/call error yields ``[]`` so the honest no-op
     path still fires. Every candidate is re-validated through
     ``_validate_copy_directive_candidate`` (which requires a non-empty
@@ -3123,6 +3144,152 @@ def _extract_copy_directives_via_llm(
             continue
         # Dedupe on (target, targetRef) so distinct services can each be edited,
         # while a target like tagline still collapses to one directive.
+        dedupe_key = (directive["target"], directive.get("targetRef", ""))
+        if dedupe_key in seen_targets:
+            continue
+        seen_targets.add(dedupe_key)
+        validated.append(directive)
+    return validated
+
+
+# --- editPlan planner (ADR 0034 väg A nivå 3a) ------------------------------
+# A content-rewrite request ("skriv om om oss så det låter mer personligt") has
+# no literal value, so the deterministic + extraction paths stay honest no-ops.
+# The planner reads the current site-state and asks copyDirectiveModel to
+# GENERATE new copy for about-text/services only, then re-validates every
+# candidate through the same guards. It runs in a dedicated branch so the
+# extraction path's behaviour (and tone-shift/story-emphasize intents) are
+# untouched.
+
+
+def _has_explicit_copy_value(follow_up_prompt: str) -> bool:
+    """True when the operator supplied a literal new value (till/quote/colon)."""
+    return _extract_replace_value(follow_up_prompt) is not None
+
+
+def _is_content_rewrite_request(follow_up_prompt: str) -> bool:
+    """True when the follow-up asks to rewrite existing about/service copy.
+
+    Requires a rewrite/improve verb, NO explicit literal value (those are
+    handled deterministically), and an about-text or services target. A
+    services rewrite still requires a named existing service (targetRef). This
+    is the only gate that activates LLM copy generation, kept separate from the
+    extraction eligibility so the deterministic/extraction behaviour does not
+    change.
+    """
+    text = _normalise_followup_text(follow_up_prompt)
+    if not text or len(text) < 4:
+        return False
+    if _has_explicit_copy_value(follow_up_prompt):
+        return False
+    if _contains_any(text, _COPY_DIRECTIVE_NEW_SERVICE_GUARD):
+        return False
+    if not _contains_any_word(text, _COPY_CONTENT_REWRITE_VERBS):
+        return False
+    target = _classify_copy_target(text)
+    if target not in {"about-text", "services"}:
+        return False
+    if target == "services" and not _extract_service_target_ref(follow_up_prompt):
+        return False
+    return True
+
+
+def _build_site_state_for_copy_planning(merged: dict[str, Any]) -> dict[str, Any]:
+    """Read-only snapshot of the editable copy fields for the planner context."""
+    company = merged.get("company") if isinstance(merged.get("company"), dict) else {}
+    services: list[dict[str, Any]] = []
+    for service in merged.get("services") or []:
+        if isinstance(service, dict):
+            services.append(
+                {
+                    "id": service.get("id"),
+                    "label": service.get("label"),
+                    "summary": service.get("summary"),
+                }
+            )
+    return {
+        "language": merged.get("language", "sv"),
+        "company": {
+            "name": company.get("name"),
+            "tagline": company.get("tagline"),
+            "story": company.get("story"),
+        },
+        "services": services,
+    }
+
+
+def _site_state_grounding_text(
+    site_state: dict[str, Any], follow_up_prompt: str
+) -> str:
+    """Concatenate the facts the planner is allowed to reuse (for the year guard)."""
+    parts = [follow_up_prompt]
+    company = site_state.get("company") or {}
+    parts.extend(str(company.get(key) or "") for key in ("name", "tagline", "story"))
+    for service in site_state.get("services") or []:
+        parts.append(str(service.get("summary") or ""))
+        parts.append(str(service.get("label") or ""))
+    return " ".join(parts)
+
+
+def _planned_payload_grounded(payload: str, grounding_text: str) -> bool:
+    """Reject a generated payload that introduces an ungrounded year.
+
+    A year (19xx/20xx) that appears in neither the current site-state nor the
+    follow-up prompt is treated as a hallucinated fact and drops the candidate
+    (honest no-op). Years already present are allowed through.
+    """
+    return all(
+        year in grounding_text for year in _PLANNED_YEAR_RE.findall(payload)
+    )
+
+
+def _plan_copy_directives_via_llm(
+    merged: dict[str, Any],
+    follow_up_prompt: str,
+    *,
+    language: str,
+) -> list[dict[str, Any]]:
+    """Generate an edit plan (validated copyDirectives) for a rewrite request.
+
+    Uses the copyDirectiveModel planner prompt. Fail-safe: any error yields
+    ``[]``. Every candidate is re-validated through
+    ``_validate_copy_directive_candidate``, restricted to about-text/services
+    (company-name/tagline are never generated), and passed through the
+    ungrounded-year guard before it can reach a structured field.
+    """
+    try:
+        from packages.generation.brief.extract import plan_copy_directives_llm
+
+        site_state = _build_site_state_for_copy_planning(merged)
+        company_state = site_state["company"]
+        model = resolve_copy_directive_model()
+        raw_directives = plan_copy_directives_llm(
+            follow_up_prompt,
+            company_name=str(company_state.get("name") or ""),
+            tagline=str(company_state.get("tagline") or ""),
+            story=str(company_state.get("story") or ""),
+            services=site_state["services"],
+            language=language,
+            model=model,
+        )
+    except Exception:  # noqa: BLE001
+        return []
+    grounding_text = _site_state_grounding_text(site_state, follow_up_prompt)
+    validated: list[dict[str, Any]] = []
+    seen_targets: set[tuple[str, str]] = set()
+    for candidate in raw_directives:
+        directive = _validate_copy_directive_candidate(
+            candidate if isinstance(candidate, dict) else {},
+            follow_up_prompt=follow_up_prompt,
+        )
+        if directive is None:
+            continue
+        # nivå 3a only generates about-text / services copy; name/tagline are
+        # extraction-only and must never come from the generation path.
+        if directive["target"] not in {"about-text", "services"}:
+            continue
+        if not _planned_payload_grounded(directive["payload"], grounding_text):
+            continue
         dedupe_key = (directive["target"], directive.get("targetRef", ""))
         if dedupe_key in seen_targets:
             continue
@@ -3576,21 +3743,29 @@ def merge_followup_project_input(
     # unclassified non-additive prompt - so the model can interpret fuzzier
     # phrasings without weakening the guarantees or breaking offline tests.
     copy_directives = _extract_copy_directives(follow_up_prompt, language=language)
-    if (
-        not copy_directives
-        and enable_llm_fallback
-        and _copy_directive_llm_eligible(follow_up_prompt, intent=intent)
-    ):
-        copy_directives = _extract_copy_directives_via_llm(
-            follow_up_prompt,
-            company=merged.get("company", {})
-            if isinstance(merged.get("company"), dict)
-            else {},
-            services=merged.get("services")
-            if isinstance(merged.get("services"), list)
-            else [],
-            language=language,
-        )
+    if not copy_directives and enable_llm_fallback:
+        # nivå 3a editPlan: a rewrite/improve request without a literal value
+        # ("skriv om om oss ...") goes to the planner, which reads site-state
+        # and GENERATES new about/service copy (re-validated + grounded). All
+        # other unclassified prompts keep the extraction-only fallback so the
+        # deterministic/extraction behaviour and intents stay unchanged.
+        if _is_content_rewrite_request(follow_up_prompt):
+            copy_directives = _plan_copy_directives_via_llm(
+                merged,
+                follow_up_prompt,
+                language=language,
+            )
+        elif _copy_directive_llm_eligible(follow_up_prompt, intent=intent):
+            copy_directives = _extract_copy_directives_via_llm(
+                follow_up_prompt,
+                company=merged.get("company", {})
+                if isinstance(merged.get("company"), dict)
+                else {},
+                services=merged.get("services")
+                if isinstance(merged.get("services"), list)
+                else [],
+                language=language,
+            )
     _apply_copy_directives(merged, copy_directives)
     return merged
 

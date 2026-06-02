@@ -401,23 +401,76 @@ _COPY_DIRECTIVE_SYSTEM = (
 )
 
 
-def extract_copy_directives_llm(
-    follow_up_prompt: str,
+# Planner mandate (ADR 0034 väg A nivå 3a): the planner reads the current
+# editable site-state and MAY GENERATE new copy for about-text/services when
+# the operator asks to rewrite/improve them without supplying literal text.
+# It still never echoes the raw instruction, never invents facts, and
+# company-name/tagline stay extraction-only. Output is re-validated through the
+# same public-copy guards and applied to structured fields (never .generated/).
+_COPY_DIRECTIVE_PLAN_SYSTEM = (
+    "You are the follow-up edit planner for Sajtbyggaren. The operator already "
+    "has a generated website (its current editable fields are provided) and "
+    "typed a short follow-up asking to rewrite or improve some copy. Produce an "
+    "edit plan as a list of directives. You MAY write new customer-facing copy "
+    "for target 'about-text' (the company story / 'om oss') and target "
+    "'services' (a specific service summary, set targetRef to an existing "
+    "service id or label from the list). Base the rewrite on the CURRENT copy "
+    "shown - keep the real meaning, improve the wording per the operator's "
+    "intent (e.g. 'more personal'). Hard rules: payload contains ONLY the "
+    "finished copy, never the operator's instruction wording or a verb like "
+    "'rewrite'/'skriv om'; never invent facts (founding years, dates, names, "
+    "numbers, places) that are not in the current copy or the follow-up; never "
+    "rewrite the company NAME or the TAGLINE (return nothing for those); for "
+    "'services' you must name an existing service via targetRef - if the "
+    "operator names a service that is not in the list, return an empty list. "
+    "If the target is unclear or the request is not a copy rewrite, return an "
+    "empty directives list."
+)
+
+
+def _build_copy_directive_context(
     *,
     company_name: str,
     tagline: str,
-    story: str = "",
-    services: list[dict[str, object]] | None = None,
+    story: str,
+    services: list[dict[str, object]] | None,
+    follow_up_prompt: str,
     language: str,
-    model: str,
-) -> list[dict[str, str]]:
-    """Best-effort LLM extraction of copy directives from a follow-up prompt.
+) -> str:
+    """Compact, read-only site-state context shared by extract + plan paths."""
+    services_block = ""
+    if services:
+        lines = [
+            f"- id={svc.get('id')!r} label={svc.get('label')!r} "
+            f"summary={svc.get('summary')!r}"
+            for svc in services
+            if isinstance(svc, dict)
+        ]
+        if lines:
+            services_block = (
+                "Current services (targetRef must match an id or label here):\n"
+                + "\n".join(lines)
+                + "\n"
+            )
+    return (
+        f"Language: {language}\n"
+        f"Current company name: {company_name}\n"
+        f"Current hero tagline: {tagline}\n"
+        f"Current about/story copy: {story}\n"
+        f"{services_block}\n"
+        f"Operator follow-up: {follow_up_prompt}"
+    )
 
-    Returns a list of ``{target, operation, payload, source: "llm"}`` dicts.
+
+def _run_copy_directive_model(
+    *, system: str, context: str, model: str
+) -> list[dict[str, str]]:
+    """Shared OpenAI structured-output call for extract + plan paths.
+
     Returns ``[]`` when no API key is configured or on any error - follow-up
     generation must never fail because this optional understanding step did.
-    The caller re-validates every payload, so this function does not need to
-    be the security boundary.
+    The caller re-validates every payload, so this is not the security
+    boundary.
     """
     if not has_openai_api_key():
         return []
@@ -425,37 +478,17 @@ def extract_copy_directives_llm(
         from openai import OpenAI
 
         client = OpenAI()
-        services_block = ""
-        if services:
-            lines = [
-                f"- id={svc.get('id')!r} label={svc.get('label')!r} "
-                f"summary={svc.get('summary')!r}"
-                for svc in services
-                if isinstance(svc, dict)
-            ]
-            if lines:
-                services_block = "Current services (targetRef must match an id or label here):\n" + "\n".join(
-                    lines
-                ) + "\n"
-        context = (
-            f"Language: {language}\n"
-            f"Current company name: {company_name}\n"
-            f"Current hero tagline: {tagline}\n"
-            f"Current about/story copy: {story}\n"
-            f"{services_block}\n"
-            f"Operator follow-up: {follow_up_prompt}"
-        )
         response = client.responses.parse(
             model=model,
             input=[
-                {"role": "system", "content": _COPY_DIRECTIVE_SYSTEM},
+                {"role": "system", "content": system},
                 {"role": "user", "content": context},
             ],
             text_format=CopyDirectiveExtraction,
         )
         parsed = response.output_parsed
     except Exception as exc:  # noqa: BLE001
-        message = f"copyDirective extraction error: {type(exc).__name__}: {exc}"
+        message = f"copyDirective model error: {type(exc).__name__}: {exc}"
         logger.warning(message)
         sys.stderr.write(f"[copyDirective] {message}\n")
         sys.stderr.flush()
@@ -476,3 +509,62 @@ def extract_copy_directives_llm(
             item["targetRef"] = directive.targetRef
         results.append(item)
     return results
+
+
+def extract_copy_directives_llm(
+    follow_up_prompt: str,
+    *,
+    company_name: str,
+    tagline: str,
+    story: str = "",
+    services: list[dict[str, object]] | None = None,
+    language: str,
+    model: str,
+) -> list[dict[str, str]]:
+    """Best-effort LLM extraction of explicit copy directives from a follow-up.
+
+    Extraction-only: the model pulls a value the operator already supplied. It
+    is told NOT to invent content. Used when the deterministic rules miss but
+    the follow-up still carries an explicit copy edit.
+    """
+    context = _build_copy_directive_context(
+        company_name=company_name,
+        tagline=tagline,
+        story=story,
+        services=services,
+        follow_up_prompt=follow_up_prompt,
+        language=language,
+    )
+    return _run_copy_directive_model(
+        system=_COPY_DIRECTIVE_SYSTEM, context=context, model=model
+    )
+
+
+def plan_copy_directives_llm(
+    follow_up_prompt: str,
+    *,
+    company_name: str,
+    tagline: str,
+    story: str = "",
+    services: list[dict[str, object]] | None = None,
+    language: str,
+    model: str,
+) -> list[dict[str, str]]:
+    """Planner path (ADR 0034 väg A nivå 3a): may GENERATE new about/service copy.
+
+    Reads the current site-state and produces an edit plan (list of copy
+    directives) for a rewrite/improve request that lacks an explicit value.
+    Generation is limited to about-text + services by the system prompt; the
+    caller additionally re-validates every payload and enforces scope.
+    """
+    context = _build_copy_directive_context(
+        company_name=company_name,
+        tagline=tagline,
+        story=story,
+        services=services,
+        follow_up_prompt=follow_up_prompt,
+        language=language,
+    )
+    return _run_copy_directive_model(
+        system=_COPY_DIRECTIVE_PLAN_SYSTEM, context=context, model=model
+    )

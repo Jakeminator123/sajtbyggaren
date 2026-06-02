@@ -1,9 +1,9 @@
 {
   "$schema": "../schemas/llm-models.schema.json",
   "policyId": "llm-models.v1",
-  "version": 5,
+  "version": 6,
   "status": "draft-but-authoritative",
-  "purpose": "Mappar Model Roles till konkreta modellnamn. Provider-agnostisk - byts utan att produktkoden ändras. Tunn första version: en linje av modeller, gpt-5.4 överallt. Version 2 lägger till sharedModelGroups som gör delning explicit. Version 3 lägger till variantModel för kontrollerad generering av Scaffold Variant-kandidater. Version 4 lägger till dossierModel för kandidat-only Soft Dossier-generering. Version 5 lägger till copyDirectiveModel: tolkar en följdprompt till validerade copyDirectives (ADR 0034 väg A) så fri följdprompt-text kan bli en synlig, spårbar sajt-ändring utan att rå prompt renderas som kundcopy. Egen roll (inte återanvänd briefModel) så syftet hålls separat.",
+  "purpose": "Mappar Model Roles till konkreta modellnamn. Provider-agnostisk - byts utan att produktkoden ändras. Tunn första version: en linje av modeller, gpt-5.4 överallt. Version 2 lägger till sharedModelGroups som gör delning explicit. Version 3 lägger till variantModel för kontrollerad generering av Scaffold Variant-kandidater. Version 4 lägger till dossierModel för kandidat-only Soft Dossier-generering. Version 5 lägger till copyDirectiveModel: tolkar en följdprompt till validerade copyDirectives (ADR 0034 väg A) så fri följdprompt-text kan bli en synlig, spårbar sajt-ändring utan att rå prompt renderas som kundcopy. Egen roll (inte återanvänd briefModel) så syftet hålls separat. Version 6 (ADR 0034 väg A nivå 3a) breddar copyDirectiveModel: utöver att tolka explicit copy kan rollen i ett editPlan-läge läsa sajtens aktuella redigerbara fält (site-state) och GENERERA ny copy för about-text (company.story) och services (services[].summary) vid en rewrite-instruktion utan angivet värde. Output går alltid genom samma copy-validator + grundnings-guard; name/tagline genereras aldrig och modellen skriver aldrig direkt i renderad kod (ej väg C).",
   "principles": [
     "Ingen kod får anropa en LLM utan att gå via en registrerad Model Role.",
     "Provider-agnostiskt: model-strängen är opaque för produktkoden. Provider-resolveren mappar mot OpenAI, Anthropic eller annan.",
@@ -30,7 +30,7 @@
     },
     {
       "id": "copyDirectiveModel",
-      "purpose": "Följdprompt-tolkning (ADR 0034 väg A) - läser en fri följdprompt + sajtens redigerbara fält och föreslår validerade copyDirectives (target/operation/payload). Output går alltid genom samma copy-validator som deterministiska direktiv; modellen skriver aldrig direkt i renderad kod.",
+      "purpose": "Följdprompt-tolkning + editPlan-planering (ADR 0034 väg A, nivå 1-3a) - läser en fri följdprompt + sajtens redigerbara fält (site-state) och föreslår validerade copyDirectives (target/operation/payload/targetRef). I extraktionsläge tolkar den explicit copy; i planner-läge (nivå 3a) får den generera ny copy för about-text (company.story) och services (services[].summary) vid en rewrite-instruktion utan angivet värde. Output går alltid genom samma copy-validator + grundnings-guard som deterministiska direktiv; name/tagline genereras aldrig och modellen skriver aldrig direkt i renderad kod (ej väg C).",
       "model": "gpt-5.4",
       "provider": "openai"
     },

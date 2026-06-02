@@ -36,6 +36,47 @@ Kvar (proposed): väg B FloatingChat-feedback (kräver Christopher/UI), bredare
 targets (story/services/all-copy), och väg C (modell patchar `.generated/`
 direkt - kräver sandbox/diff/rollback enligt nedan).
 
+## Implementationsnot 2026-06-02 (väg A, nivå 2 + nivå 3a)
+
+Väg A:s targets utökades i smala slices på `jakob-be` (ej i `main` än):
+
+- **Slice 2a:** `about-text` -> `company.story` (replace-only, explicit värde).
+- **Slice 2b (tone):** HOPPAD - den befintliga `tone-shift`-semantiska patchen
+  täcker redan tonändringar; en tone-copyDirective hade mest överlappat.
+- **Slice 2c:** `services` -> `services[].summary` (replace-only) via ett nytt
+  `targetRef` (service id/label) som matchas mot befintliga tjänster vid
+  applicering (ingen ny tjänst skapas).
+
+**Nivå 3a (editPlan, generation-med-guards).** Detta är fortfarande väg A
+(strukturerade fält FÖRE render, ingen `.generated/`-patch - alltså INTE
+väg C), men det utvidgar modellens mandat: vid en *rewrite-instruktion utan
+angivet värde* ("skriv om om oss så det låter mer personligt") läser en
+planerare sajtens aktuella redigerbara fält (site-state) och GENERERAR ny copy.
+
+- **editPlan** är ett planeringssteg (`_plan_copy_directives_via_llm` +
+  `plan_copy_directives_llm`), inte ett nytt lagrat kontrakt: det producerar
+  vanliga validerade `copyDirectives[]` som appliceras via den befintliga
+  leak-säkra apply-kedjan.
+- **Scope:** generering endast för `about-text` (company.story) och `services`
+  (services[].summary). `company-name`/`tagline` förblir extraction-only och
+  genereras aldrig.
+- **Eligibility:** en dedikerad gate (`_is_content_rewrite_request`: rewrite-verb
+  + about/services-scope + INGET explicit värde + namngiven tjänst för services)
+  aktiverar planeraren i en egen gren. `classify_followup_intent` och
+  `_apply_semantic_patch` rörs INTE, så tone-shift/story-emphasize-beteendet är
+  oförändrat (story-rewrite och tone shiftar olika fält - ingen klobbning).
+- **Guards:** varje genererad payload går genom samma public-copy-validator som
+  deterministiska direktiv (rå instruktion kan aldrig bli kundcopy) PLUS en
+  grundnings-guard som dröppar en payload med ett 4-siffrigt årtal som inte
+  finns i site-state eller prompten (motverkar påhittade grundningsår).
+- **Verifiering:** B155 `appliedVisibleEffect` (fil-diff av renderad output)
+  används som synlig-effekt-signal i 3a; en separat `verifierModel` är
+  fortfarande parkerad.
+
+Kvar (proposed): väg B-UI för editPlan, CTA/hero (kräver kontraktsbeslut då
+hero-knappens text är variant-whitelist), multi-step editPlan med verifierModel,
+och väg C (filpatch).
+
 ## Kontext
 
 Sajtbyggarens kärnflöde är `prompt -> företagshemsida -> preview ->

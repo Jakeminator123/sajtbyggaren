@@ -26,6 +26,7 @@ from scripts.build_site import build
 from scripts.prompt_to_project_input import (
     _extract_copy_directives,
     _extract_copy_directives_via_llm,
+    _is_content_rewrite_request,
     _validate_against_schema,
     _validate_copy_directive_candidate,
     generate,
@@ -908,4 +909,259 @@ def test_end_to_end_services_summary_visible_in_generated_site(
     assert found, "service summary should appear in the generated site"
     build_result = _read_json(run_dir_v2 / "build-result.json")
     assert build_result["engineMode"] == "followup"
+    assert build_result["appliedVisibleEffect"] is True
+
+
+# --- nivå 3a: editPlan planner (generation-with-guards) ---
+
+_PLANNER_PATH = "packages.generation.brief.extract.plan_copy_directives_llm"
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "skriv om om oss så det låter mer personligt",
+        "förbättra om-oss-texten så den känns mer levande",
+        "förbättra tjänsten 'Örhängen' så den låter mer säljande",
+        "skriv om tjänsten 'Örhängen' så den blir tydligare",
+    ],
+)
+def test_is_content_rewrite_request_positive(prompt: str) -> None:
+    assert _is_content_rewrite_request(prompt) is True
+
+
+@pytest.mark.tooling
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "gör tonen mer premium",
+        "ändra om oss-texten till 'En ny text'",
+        "förbättra tjänsten så den blir bättre",
+        "förbättra texten lite",
+        "lägg till ny tjänst 'Klippning'",
+    ],
+)
+def test_is_content_rewrite_request_negative(prompt: str) -> None:
+    assert _is_content_rewrite_request(prompt) is False
+
+
+@pytest.mark.tooling
+def test_merge_planned_about_rewrite(monkeypatch: pytest.MonkeyPatch) -> None:
+    new_story = "Vi är ett litet familjeföretag med stort hjärta i Malmö"
+    monkeypatch.setattr(
+        _PLANNER_PATH,
+        lambda *a, **k: [
+            {
+                "target": "about-text",
+                "operation": "replace-text",
+                "payload": new_story,
+                "source": "llm",
+            }
+        ],
+    )
+    # Deterministic + extraction paths must miss; only the planner fires.
+    assert (
+        _extract_copy_directives(
+            "skriv om om oss så det låter mer personligt", language="sv"
+        )
+        == []
+    )
+    merged = _merge(
+        "skriv om om oss så det låter mer personligt", enable_llm_fallback=True
+    )
+    assert merged["company"]["story"] == new_story
+    assert merged["directives"]["copyDirectives"][0]["target"] == "about-text"
+    assert merged["directives"]["copyDirectives"][0]["source"] == "llm"
+
+
+@pytest.mark.tooling
+def test_merge_planned_service_rewrite(monkeypatch: pytest.MonkeyPatch) -> None:
+    new_summary = "Unika handgjorda örhängen i återvunnet silver"
+    monkeypatch.setattr(
+        _PLANNER_PATH,
+        lambda *a, **k: [
+            {
+                "target": "services",
+                "operation": "replace-text",
+                "payload": new_summary,
+                "targetRef": "Örhängen",
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge(
+        "förbättra tjänsten 'Örhängen' så den låter mer säljande",
+        enable_llm_fallback=True,
+    )
+    assert merged["services"][0]["summary"] == new_summary
+    assert merged["directives"]["copyDirectives"][0]["target"] == "services"
+    assert merged["directives"]["copyDirectives"][0]["targetRef"] == "Örhängen"
+
+
+@pytest.mark.tooling
+def test_planner_leak_instruction_payload_dropped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A generated payload that is really an instruction is dropped (no-op)."""
+    monkeypatch.setattr(
+        _PLANNER_PATH,
+        lambda *a, **k: [
+            {
+                "target": "about-text",
+                "operation": "replace-text",
+                "payload": "byt namnet till något annat",
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge(
+        "skriv om om oss så det låter mer personligt", enable_llm_fallback=True
+    )
+    assert merged["company"]["story"] == "En liten butik med stor passion."
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+@pytest.mark.tooling
+def test_planner_drops_company_name_and_tagline_candidates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """nivå 3a only generates about/services copy; name/tagline are dropped."""
+    monkeypatch.setattr(
+        _PLANNER_PATH,
+        lambda *a, **k: [
+            {"target": "company-name", "operation": "replace-text", "payload": "Nytt Namn", "source": "llm"},
+            {"target": "tagline", "operation": "replace-text", "payload": "Ny tagline här", "source": "llm"},
+        ],
+    )
+    merged = _merge(
+        "skriv om om oss så det låter mer personligt", enable_llm_fallback=True
+    )
+    assert merged["company"]["name"] == "Örhängsföretaget"  # unchanged
+    assert merged["company"]["tagline"] == "Handgjorda örhängen i Malmö"  # unchanged
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+@pytest.mark.tooling
+def test_planner_unknown_service_is_no_op(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        _PLANNER_PATH,
+        lambda *a, **k: [
+            {
+                "target": "services",
+                "operation": "replace-text",
+                "payload": "Snabb och prydlig herrklippning",
+                "targetRef": "Klippning",
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge(
+        "förbättra tjänsten 'Klippning' så den blir bättre", enable_llm_fallback=True
+    )
+    assert merged["services"][0]["summary"] == "Fina örhängen."
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+@pytest.mark.tooling
+def test_planner_drops_ungrounded_year(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A generated payload that invents an unfounded year is dropped."""
+    monkeypatch.setattr(
+        _PLANNER_PATH,
+        lambda *a, **k: [
+            {
+                "target": "about-text",
+                "operation": "replace-text",
+                "payload": "Vi har levererat kvalitet sedan 1985",
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge(
+        "skriv om om oss så det låter mer etablerat", enable_llm_fallback=True
+    )
+    assert merged["company"]["story"] == "En liten butik med stor passion."
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+@pytest.mark.tooling
+def test_planner_allows_year_grounded_in_prompt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    new_story = "Vi grundades 1985 av en lokal silversmed i Malmö"
+    monkeypatch.setattr(
+        _PLANNER_PATH,
+        lambda *a, **k: [
+            {
+                "target": "about-text",
+                "operation": "replace-text",
+                "payload": new_story,
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge(
+        "skriv om om oss och nämn att vi grundades 1985", enable_llm_fallback=True
+    )
+    assert merged["company"]["story"] == new_story
+
+
+@pytest.mark.tooling
+def test_end_to_end_planned_about_rewrite_visible(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Nivå 3a acceptance: a planned about rewrite reaches the rendered site."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    unique = "Ett familjeägt smyckesmärke med stort hjärta mitt i Malmö"
+    monkeypatch.setattr(
+        _PLANNER_PATH,
+        lambda *a, **k: [
+            {
+                "target": "about-text",
+                "operation": "replace-text",
+                "payload": unique,
+                "source": "llm",
+            }
+        ],
+    )
+    prompt_inputs_dir = tmp_path / "prompt-inputs"
+    runs_dir = tmp_path / "runs"
+    generated_dir = tmp_path / "generated"
+
+    _, _, init_path, _ = generate(
+        "Skapa en hemsida för Smyckesboden i Malmö.",
+        output_dir=prompt_inputs_dir,
+        site_id="smyckesboden-plan",
+        project_id="copydir-plan",
+    )
+    build(init_path, do_build=False, runs_dir=runs_dir, generated_dir=generated_dir)
+
+    _, _, followup_path, _ = generate_followup(
+        "skriv om om oss så det låter mer personligt",
+        output_dir=prompt_inputs_dir,
+        site_id="smyckesboden-plan",
+        enable_copy_directive_llm=True,
+    )
+    _, run_dir_v2 = build(
+        followup_path,
+        do_build=False,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+    )
+    generated_files = run_dir_v2 / "generated-files"
+    found = any(
+        unique in path.read_text(encoding="utf-8")
+        for path in generated_files.rglob("*.tsx")
+    )
+    assert found, "planned about rewrite should appear in the generated site"
+    build_result = _read_json(run_dir_v2 / "build-result.json")
     assert build_result["appliedVisibleEffect"] is True
