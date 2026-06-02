@@ -1963,12 +1963,15 @@ def _faq_pairs(dossier: dict) -> list[tuple[str, str]]:
     for question, answer_template in _FAQ_DEFAULT_SV:
         pairs.append((question, answer_template.format(areas=areas)))
     contact = dossier.get("contact") or {}
-    opening = contact.get("openingHours") if isinstance(contact, dict) else None
-    if isinstance(opening, str) and opening.strip():
+    # Only add the opening-hours FAQ for real hours - a placeholder
+    # ("Mån-Fre 09:00-17:00") must not be presented as a fact (contact-honesty
+    # slice 2026-06-02).
+    opening = real_opening_hours(contact)
+    if opening is not None:
         pairs.append(
             (
                 "När har ni öppet?",
-                f"Vi har öppet {opening.strip()}.",
+                f"Vi har öppet {opening}.",
             )
         )
     return pairs
@@ -1978,9 +1981,10 @@ def render_faq(dossier: dict, *, contact_path: str = "/kontakt") -> str:
     """Render the wizard-driven /faq route.
 
     Deterministic FAQ built from the dossier: three default questions
-    plus an opening-hours question when ``contact.openingHours`` is
-    set. No invented service prices or warranties — operator-specific
-    answers belong on the operator's wishlist, not in v1 codegen.
+    plus an opening-hours question only when ``contact.openingHours`` is a
+    real (non-placeholder) value. No invented service prices or warranties —
+    operator-specific answers belong on the operator's wishlist, not in v1
+    codegen.
     """
     pairs = _faq_pairs(dossier)
     items = "\n".join(
@@ -2773,8 +2777,9 @@ def _render_home_faq_section(dossier: dict, *, has_faq_route: bool) -> str:
     routes.
 
     ``_faq_pairs`` returns 3–4 deterministic pairs (three defaults
-    plus an opening-hours pair when ``contact.openingHours`` is set),
-    so this section always renders when called — there's no
+    plus an opening-hours pair when ``contact.openingHours`` is a real
+    non-placeholder value), so this section always renders when called —
+    there's no
     operator-data dependency that could short-circuit it to ``""``.
     Callers that want to suppress FAQs entirely should skip calling
     this helper.
@@ -3036,13 +3041,11 @@ def render_map(dossier: dict, *, contact_path: str = "/kontakt") -> str:
     """
     location = dossier.get("location") or {}
     contact = dossier.get("contact") or {}
-    address_lines: list[str] = []
-    if isinstance(contact, dict):
-        raw_lines = contact.get("addressLines")
-        if isinstance(raw_lines, list):
-            for line in raw_lines:
-                if isinstance(line, str) and line.strip():
-                    address_lines.append(line.strip())
+    # Drop placeholder address lines so /karta never shows "Adress lämnas på
+    # förfrågan" or builds a Google Maps query from a dummy address; the empty
+    # fallback below stays honest for the all-placeholder case (contact-honesty
+    # slice 2026-06-02).
+    address_lines: list[str] = real_address_lines(contact)
     if not address_lines:
         city = location.get("city") if isinstance(location, dict) else None
         if isinstance(city, str) and city.strip():

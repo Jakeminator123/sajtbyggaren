@@ -5,15 +5,12 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Nästa (2026-06-02, färsk orchestrator-session)
+## Current objective (2026-06-02 EM — sessionsavslut)
 
-`jakob-be` = `6c860ec` (slice 2a + 2c + nivå 3a + reviewer-härdning).
-`main` = `2d636b0`, inga öppna PR:er. `jakob-be` är 9 commits före `main` —
-**sync-PR är nu mergebar** (de två extern-review-near-blockers stängda i
-`6c860ec`), men öppnas/mergeas på operatörsbeslut. Vercel-sandbox-spåret är i `main` (#146 spike,
-ADR 0033, #147 opt-in-adapter via `VIEWSER_PREVIEW_MODE=vercel-sandbox`);
-default-preview är fortfarande `local-next` (inte flippad) och adaptern är
-inte UI-wirad. copyDirectives nivå 1 (`company-name` | `tagline`) är i `main`.
+`main` = `619454c`. `jakob-be` = `8a86593`, i sync, rent träd, **10 commits före
+`main`** (hela copyDirective-batchen + docs). Enda öppna PR: **#150**
+(christopher-ui auth/billing — hålls). **Färsk orchestrator-startprompt finns
+överst i [`docs/handoff.md`](handoff.md).**
 
 **Christopher-lane / operatörsbeslut 2026-06-02 (auth + billing aktiverat):**
 Operatören har uttryckligen godkänt auth + billing + credits + Stripe som eget
@@ -28,7 +25,80 @@ läcker INTE in i bygg-ingången (`app/api/prompt`); källlås-testet
 credit-enforcement i bygg-routen — medvetet avvisat (skulle tvinga inloggning på
 kärnflödet + bryta källlåset). Kreditmätning av byggen är ett separat
 produktbeslut.
-**copyDirectives-trappa (ADR 0034 väg A, backend på `jakob-be`):**
+
+**Nästa konkreta steg (prioordning):**
+1. **Sync-PR `jakob-be → main`** (modulutbrytning + P2-grounding + kontakt-
+   ärlighet) — operatörsbeslut/leveransfönster. Mergebar, disjunkt mot #150.
+2. **Trovärdighets-slice steg 2** (backend, taste-tungt): branschnära story/
+   tagline/service-mallar; trust via wizard (kräver Christopher-fält).
+3. Christopher-lane: Bite C + FloatingChat-ärlighet (#5) + scope-beslut PR #150.
+4. Embeddings = parkerad (audit bekräftade att selection inte är gapet).
+
+Vercel-sandbox-spåret är i `main` (#146 spike, ADR 0033, #147 opt-in-adapter via
+`VIEWSER_PREVIEW_MODE=vercel-sandbox`); default-preview är fortfarande `local-next`
+(inte flippad), adaptern är inte UI-wirad. För lokal `npm run dev`: använd
+`VIEWSER_PREVIEW_MODE=local-next` i `apps/viewser/.env.local` (`vercel-sandbox` är
+en opt-in adapter, INTE ett dev-dispatcher-läge — dev.mjs kastar by-design på det
+tills Bite C + smoke + default-flip-OK).
+
+### Historik denna session (allt i ovanstående 10 commits på `jakob-be`)
+
+**copyDirective-modulutbrytning — KLAR** (`8f2fc1e`, på `jakob-be`, ej i `main`).
+Behavior-preserving extraction: copyDirective-delsystemet flyttat ur
+`scripts/prompt_to_project_input.py` (4134→~3257 rader) till nytt paket
+`packages/generation/followup/` (`text.py` delade hjälpare, `copy_directives.py`
+hela systemet verbatim, façade-re-exports i PI). Scout RO-review GO (full
+AST-paritet, acyklisk import, 88 copydir-tester + test_prompt_to_project_input
+oförändrat gröna, alla guards gröna). `_copy_directive_llm_eligible` kvar i PI.
+
+**P2 grounding-fixar — KLAR** (`65aa733`, på `jakob-be`): (A) extraction-vägen
+begränsad till company-name|tagline (about/services bara via planner); (B)
+grounding-guarden breddad årtal → alla flersiffriga taltokens, whole-token-
+matchning (ej substring); (C) Project DNA-refresh för about-text→story /
+tagline när copyDirective ändrar fältet; (D) ADR 0034-städning. Bredare icke-
+numerisk grounding (namn/orter/cert) hålls medvetet som systemprompt +
+dokumenterad begränsning. 92 copydir-tester, Scout RO-review GO.
+
+**Lovable-gap-audit — KLAR** (read-only, 2026-06-02). Slutsats: golden-path-eval
+på disk säger 7,73/10 men mäter struktur/nyckelord, inte upplevd finish → coachens
+4–5/10 stämmer. Största hävstångarna mot 9/10 (rangordnat, mest backend/jakob-be):
+
+1. **Platshållarkontakt** (tel `08-000…`, `kontakt@example.se`, "Adress lämnas på
+   förfrågan") renderas rakt av → känns fejk. Kräver: tvinga riktig/ärligt minimal
+   kontakt från prompt/wizard, eller dölj kanaler tills ifyllt. (backend-input + UI-prominens)
+2. **Tomma trust-signaler** (`trustSignals: []`; clinic `credentials` renderas ej
+   trots `sections.json`-krav) → brief/plan bör fylla dem. (backend)
+3. **Generisk story/tagline/FAQ-mall** (samma copy oavsett bransch) → branschnära
+   mallar i `prompt_to_project_input.py` (~950–971). (backend)
+4. Tunt erbjudande (1 tjänst/produkt). (backend)
+5. **Följdprompt syns inte i UI** för about/services (FloatingChat/AppliedCopyDirective
+   bara name|tagline). (christopher-ui)
+6. Eval överskattar (contactPath straffar `/kontakta-oss`; mobil = sektionsräkning) →
+   billig fix. (backend)
+- Hero-CTA/layout/färg/bild via följdprompt = senare (kontraktsbeslut/UI).
+- **Embeddings hjälper INTE dessa gap** (alla fyra case träffar rätt scaffold) →
+  fortsatt parkerad.
+
+**Trovärdighets-slice steg 1 (kontakt-ärlighet) — KLAR** (`332e08e`). Audit-texten
+överskattade: det mesta var redan byggt (`contact_placeholders.py` + B158/B159 +
+#144 + eval `route_path_by_id`). Slicen tätade de 3 kvarvarande läckorna
+(`render_global_error`, `render_map` /karta, `_faq_pairs` öppettider) med
+befintliga `real_*`-helpers + 6 tester. Operatörsval: **dölj** (ej kräv i wizard).
+
+**NÄSTA (operatörsval — produktbeslut delvis fattade):**
+
+1. Trovärdighets-slice steg 2: **trustSignals/credentials via wizard** (operatören
+   fyller i riktiga — beslut taget) + **branschnära story/tagline/service-mallar**
+   (ersätt generisk mall i `prompt_to_project_input.py` ~950–971). Backend, men
+   wizard-delen kräver Christopher-koordinering (UI-fält).
+2. Sync-PR `jakob-be → main` (modulutbrytning + P2-grounding + kontakt-ärlighet)
+   vid leveransfönster.
+3. Christopher-lane: Bite C + FloatingChat-ärlighet (#5), scope-beslut PR #150.
+
+Builder-prompt för modulutbrytningen (genomförd) finns kvar som referens i
+[`docs/agent-prompts/copydirective-module-extraction.md`](agent-prompts/copydirective-module-extraction.md).
+
+**copyDirectives-trappa (ADR 0034 väg A) — allt nedan är i `main`:**
 
 - **Slice 2a — KLAR** (`a1e2502`): `about-text` -> `company.story`,
   replace-only. Deterministisk extraktor (kräver explicit värde) +
@@ -52,27 +122,21 @@ produktbeslut.
   orörda; name/tagline genereras aldrig; grundnings-guard mot påhittade årtal;
   B155 `appliedVisibleEffect` som synlig-effekt-verifierare. Fortfarande väg A
   (inga `.generated/`-patchar). ADR 0034-not + llm-models v6 + naming-dict v22.
-- **Reviewer-härdning — KLAR** (`6c860ec`): två extern-review-near-blockers
-  stängda före sync-PR. (1) Vibe-"till"-läcka: about-text/services kräver nu
-  citerat/kolon-värde (inte fri trailing "till"), så "skriv om om oss till mer
-  personligt" sätter aldrig story = "mer personligt". (2) Planner no-op-löfte:
-  en about-rewrite som planeraren inte kan uppfylla faller inte tillbaka på en
-  generisk story-emphasize-append (story snapshottas + återställs). (3) Schema
-  if/then: services kräver targetRef, about-text/services låsta till
-  replace-text. (4) P1 scope-leak: planeraren låses till det target operatören
-  bad om (`target=rewrite_target`) så fel target aldrig appliceras. 9 nya
-  regressionstester.
+- **Reviewer-härdning — KLAR** (PR #149-review-loopen): (1) vibe-"till"-läcka
+  (about/services kräver citerat/kolon-värde); (2) planner no-op-löfte
+  (story-snapshot+restore, även no-initial-story-fallet); (3) schema if/then
+  (services kräver targetRef, about/services replace-only); (4) P1 scope-leak
+  (planeraren låst till `target=rewrite_target`); (5) P1 service-ref-matchning
+  (planeraren editar bara den namngivna tjänsten, id-vs-label-säkert); (6) P2
+  vibe-tagline (rewrite-verb på name/tagline kräver explicit värde).
 - **Slice 2d — PARKERAD: `cta`/hero.** Inget eget fält idag (hero-knappens text är
   en variant-whitelist i `build_site.py`), så detta är en **kontraktsändring**,
   inte bara enum — kräver designbeslut (ny `conversionGoals`-slug vs nytt
-  PI-fält vs begränsad replace mot befintliga labels). Tas efter nivå 3-mönstret.
-- **NÄSTA (rekommenderat av två externa reviewers): copyDirective-modulutbrytning.**
-  `scripts/prompt_to_project_input.py` är nu för central (prompt-mapping +
-  follow-up-merge + semantic patch + copyDirective extract/plan/validate/apply).
-  Bryt ut copyDirective-delsystemet (keywords, extract, plan, validate, apply,
-  site-state, grounding) till en egen modul med tydliga contracts **innan**
-  fler targets (cta/all-copy) byggs. Behavior-preserving, egen builder-prompt:
-  [`docs/agent-prompts/copydirective-module-extraction.md`](agent-prompts/copydirective-module-extraction.md).
+  PI-fält vs begränsad replace mot befintliga labels). Tas efter modulutbrytningen.
+- **P2-follow-ups** (dokumenterade i `docs/handoff.md`): #1 unquoted service-ref
+  utan "till" (no-op-UX), #4 extraction-vägens grounding-guard (designval, tas i
+  modulutbrytningen), #3 Viewser `AppliedCopyDirective` (Christopher-lane), #5
+  Project DNA-refresh vid about-text.
 - **Nivå 3 fortsättning (efter modulutbrytning, eget beslut):** multi-target
   editPlan, separat `verifierModel` (synlig effekt bortom B155-fil-diff), bredare
   grounding-guard (siffror/orter/namn/certifieringar, inte bara årtal), och
@@ -86,10 +150,10 @@ ingen UI (Christophers lane); rå prompt blir aldrig kundcopy.
 Parallellt (Christopher/UI): Bite C — flippa `app/api/preview/[siteId]` till
 `currentViewserRuntime()`.
 
-Parkerat (kräver operatörs-OK): sync-PR `jakob-be -> main` (slice 2a + 2c + 3a +
-reviewer-härdning — **nu mergebar**), default-flip till `vercel-sandbox` (kräver
+Parkerat (kräver operatörs-OK): default-flip till `vercel-sandbox` (kräver
 Bite C klar + smoke), `forbidden`-radering (egen ADR + test-omskrivningar),
-optional/lazy `@vercel/sandbox`-dep.
+optional/lazy `@vercel/sandbox`-dep. (Sync-PR #149 är mergad — copyDirective-
+batchen är i `main`.)
 
 ## Vem uppdaterar denna fil
 
@@ -116,9 +180,25 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `16a36a6` (2026-06-02 UTC, steward-auto efter PR #151 — docs(agents): virtualenv fallback on Cloud VMs).
-Nya PRs sedan föregående checkpoint: PR #151 — docs(agents): virtualenv fallback on
-Cloud VMs.
+Last verified state: `366f6e9` (2026-06-02 UTC, steward-auto efter PR #153 — sync(jakob-be -> main): copyDirective module extraction + P2 grounding + contact honesty).
+Nya PRs sedan föregående checkpoint: PR #153 — sync(jakob-be -> main): copyDirective
+module extraction + P2 grounding + contact honesty.
+
+## Öppen PR att känna till — #150 (christopher-ui)
+
+**PR #150** `christopher-ui -> main`: "feat(viewser): auth + billing + starters +
+kärnloop-UX + pre-push-härdning". **STOR: 142 filer, +11189/−936, CONFLICTING.**
+Christophers UI-lane. Innehåller bl.a. auth-flöden, billing/Stripe (checkout +
+webhook), starters, marketing-sidor, samt rör `app/api/preview/[siteId]/route.ts`
+(Bite C-territorium), `app/api/prompt/route.ts` och `floating-chat.tsx` (P2 #3).
+
+**Operatörs-OBS (produktkompass-spänning):** auth, billing, Stripe står
+uttryckligen på "vänta tills operatören explicit säger annat"-listan i
+`docs/product-operating-context.md`. Detta är ett operatörsbeslut om scope, inte
+ett agentbeslut. Backend-lanen (`jakob-be`) blockeras INTE av #150 — disjunkt
+filscope (PR #150 rör `apps/viewser/**`, backend rör `packages/generation/` +
+`scripts/`). Jakob mergar/rör inte #150 (Christophers lane); den är CONFLICTING
+mot `main` och kräver hans rebase + operatörens scope-OK före merge.
 
 ## Branchmodellen (kort)
 
@@ -1047,8 +1127,8 @@ Christopher/UI.
 Last verified state: `093b31a` (2026-06-02 UTC, `jakob-be` — extern-review-härdning ovanpå nivå 3a, inkl. P1 scope-leak-fix: planeraren låses nu till det target operatören bad om (`_plan_copy_directives_via_llm(target=rewrite_target)`), så en about-rewrite aldrig applicerar en services-directive eller tvärtom. Tidigare i denna härdning: vibe-"till"-läcka stängd, planner no-op-löfte (story-snapshot+restore), schema if/then. 9 nya regressionstester totalt; alla near-blockers stängda → sync-PR mergebar. EJ i `main` (väntar operatörs-OK). `main` = `2d636b0`. Föregående steward-checkpoint: `6c860ec`).
 Nya PRs sedan föregående checkpoint: inga (#148 var senaste sync till `main`).
 
-### 2026-06-02 UTC — current-focus.md före `3face1c`
+### 2026-06-02 UTC — current-focus.md före `8a86593`
 
-Last verified state: `3face1c` (2026-06-02 UTC, steward-auto efter PR #149 — sync(jakob-be -> main): copyDirectives 2a/2c + niva 3a editPlan + reviewer hardening).
-Nya PRs sedan föregående checkpoint: PR #149 — sync(jakob-be -> main): copyDirectives
-2a/2c + niva 3a editPlan + reviewer hardening.
+Last verified state: `8a86593` (2026-06-02 EM UTC, `jakob-be` = `8a86593`, i sync, rent träd, 10 commits före `main` = `619454c`. Hela copyDirective-batchen (nivå 1→3a + modulutbrytning + P2-grounding + kontakt-ärlighet) + docs-PR #151/#152 in-mergade. Enda öppna PR: #150 (christopher-ui, hålls). Sessionsavslut — handoff till nästa orchestrator ligger överst i docs/handoff.md. Nästa: sync-PR jakob-be→main (operatörsbeslut) + trust/branschcopy-slice).
+Nya PRs sedan föregående checkpoint: PR #149 (mergad). **Öppen nu: PR #150**
+(christopher-ui) — se nedan.
