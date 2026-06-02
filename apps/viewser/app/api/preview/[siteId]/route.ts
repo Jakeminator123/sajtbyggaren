@@ -1,43 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { assertLocalhost } from "@/lib/localhost-guard";
-import {
-  getPreviewServer,
-  startPreviewServer,
-  stopPreviewServer,
-} from "@/lib/local-preview-server";
+import { getPreviewServer, stopPreviewServer } from "@/lib/local-preview-server";
+import { currentViewserRuntime } from "@/lib/preview-runtime-server";
+
+import type { PreviewResult } from "@preview-runtime";
 
 /**
- * /api/preview/[siteId] — hanterar lokal preview-server för en
- * genererad sajt så ViewerPanel kan rendera den i en iframe direkt
- * mot ``http://localhost:<port>`` utan att gå via StackBlitz.
+ * /api/preview/[siteId] — driver Preview Runtime för en genererad sajt så
+ * ViewerPanel kan rendera den i en iframe.
+ *
+ * Bite C (ADR 0028/0030/0033): routen går via ``currentViewserRuntime()``
+ * istället för att hårdkoda ``local-preview-server``. ``VIEWSER_PREVIEW_MODE``
+ * avgör vilken adapter som körs (``local-next`` default, ``vercel-sandbox``
+ * opt-in, ``stackblitz`` pausad). Adaptern returnerar ett generiskt
+ * ``PreviewResult`` som vi mappar till routens HTTP-kontrakt.
  *
  * Endpoints:
  *
- *   - GET  → returnera nuvarande status (eller 404 om ingen server lever).
- *   - POST → starta servern (idempotent — återanvänder existerande).
- *   - DELETE → stoppa servern.
+ *   - GET  → status för local-runtime (404 om ingen server lever; övriga
+ *            runtimes saknar billig status-lookup → 404 med vägledning).
+ *   - POST → starta preview via aktiv runtime (idempotent för local).
+ *   - DELETE → stoppa preview via aktiv runtime.
  *
- * Endast tillgänglig på localhost (assertLocalhost). Vi spawnar
- * ``next start`` som ärvtsen viewser:s env — en utomstående som når
- * routen via tunnel skulle kunna trigga spawn av processer på vår
- * maskin.
+ * Endast tillgänglig på localhost (assertLocalhost). Vi kan spawna processer
+ * (local) eller skapa moln-sandboxes (vercel-sandbox) — en utomstående som
+ * når routen via tunnel skulle annars kunna trigga det.
  *
  * Felshape (alla 4xx/5xx-svar har ``code`` så ViewerPanel kan visa rätt copy
- * istället för att tyst falla tillbaka till StackBlitz; fixar gren A av
- * "CORS"-tjafset där en saknad lokal build maskerades som ett mystiskt
- * Chrome-COEP-fel):
+ * istället för att tyst falla tillbaka). ``logs`` bifogas när runtimen
+ * returnerar strukturerade startup-loggar. Ingen tyst fallback: ett
+ * ``failed``/``unsupported`` från runtimen route:as som ett ärligt fel — vi
+ * faller aldrig tillbaka till en annan runtime bakom ryggen på operatören.
  *
  *   {
  *     error: string,           // human-readable
  *     code: PreviewErrorCode,  // maskinläsbar
- *     hint?: string            // optional next-step för operatören
+ *     hint?: string,           // optional next-step för operatören
+ *     logs?: string[]          // optional startup-loggar från runtimen
  *   }
- *
- * Codes mappar till specifika rotorsaker som ``local-preview-server.ts``
- * kan kasta. ``unknown`` är fall-back när ett oväntat fel uppstår; det
- * är bättre att UI visar "okänt fel" än att tyst route:a vidare och
- * dölja problemet.
  */
 
 export type PreviewErrorCode =
@@ -47,12 +48,16 @@ export type PreviewErrorCode =
   | "port_pool_full"
   | "spawn_failed"
   | "not_running"
+  | "unsupported"
+  | "runtime_misconfigured"
+  | "no_preview_url"
   | "unknown";
 
 interface PreviewErrorBody {
   error: string;
   code: PreviewErrorCode;
   hint?: string;
+  logs?: string[];
 }
 
 const SITE_ID_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
@@ -67,19 +72,14 @@ function validateSiteId(siteId: string): string | null {
 }
 
 /**
- * Klassificera ett fel från ``startPreviewServer`` till en strukturerad
- * felshape. Vi matchar på error-message-prefix eftersom
- * ``local-preview-server.ts`` redan kastar deterministiska, mänskligt
- * läsbara meddelanden — vi bara annoterar dem för UI-grening utan att
- * ändra existerande felmeddelanden (bakåtkompatibelt med tester som
- * kontrollerar message-strängen).
+ * Klassificera ett runtime-fel (``PreviewResult.error``) till en strukturerad
+ * felshape. Vi matchar på meddelande-prefix eftersom ``local-preview-server.ts``
+ * redan kastar deterministiska, mänskligt läsbara meddelanden — adaptern
+ * bär dem oförändrade vidare i ``result.error``. Vercel-sandbox-fel som inte
+ * matchar ett känt prefix landar som ``code: "unknown"`` (ärligt "okänt fel"
+ * istället för tyst omdirigering).
  */
-function classifyStartError(error: unknown): PreviewErrorBody {
-  const message =
-    error instanceof Error
-      ? error.message
-      : "Okänt fel vid start av preview-server.";
-
+function classifyRuntimeError(message: string): PreviewErrorBody {
   if (message.startsWith("Genererad sajt saknas")) {
     return {
       error: message,
@@ -117,6 +117,67 @@ function classifyStartError(error: unknown): PreviewErrorBody {
   };
 }
 
+/**
+ * HTTP-status för en strukturerad felkod. "Inte byggd än" går som 404 så
+ * ViewerPanel kan visa en mjuk "kör build_site.py först"-prompt; port-pool
+ * är 503; ``unsupported`` (t.ex. fly-stub eller runtime utan stöd) är 501.
+ */
+function statusForErrorCode(code: PreviewErrorCode): number {
+  switch (code) {
+    case "not_built":
+    case "missing_artifacts":
+    case "not_running":
+      return 404;
+    case "port_pool_full":
+      return 503;
+    case "unsupported":
+      return 501;
+    case "runtime_misconfigured":
+      return 500;
+    default:
+      return 500;
+  }
+}
+
+/**
+ * Resolva aktiv runtime. ``currentViewserRuntime()`` kastar om
+ * ``VIEWSER_PREVIEW_MODE`` är satt till ett okänt värde (ingen tyst gissning).
+ * Vi fångar det och returnerar ett ärligt konfigurationsfel istället för en
+ * naken 500.
+ */
+function resolveRuntimeOrError():
+  | { runtime: ReturnType<typeof currentViewserRuntime>; error?: never }
+  | { runtime?: never; error: PreviewErrorBody } {
+  try {
+    return { runtime: currentViewserRuntime() };
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Kunde inte resolva Preview Runtime.";
+    return {
+      error: {
+        error: message,
+        code: "runtime_misconfigured",
+        hint: "Kontrollera VIEWSER_PREVIEW_MODE i apps/viewser/.env.local.",
+      },
+    };
+  }
+}
+
+/**
+ * Plocka en iframe-URL ur ett ``PreviewResult``. ViewerPanel läser ``url``;
+ * vi föredrar en explicit ``embedUrl`` om adaptern satt en, annars
+ * ``previewSession.url`` och sist top-level ``previewUrl``.
+ */
+function previewUrlFromResult(result: PreviewResult): string | undefined {
+  return (
+    result.previewSession?.embedUrl ??
+    result.previewSession?.url ??
+    result.previewUrl
+  );
+}
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ siteId: string }> },
@@ -134,6 +195,25 @@ export async function GET(
     return NextResponse.json(body, { status: 400 });
   }
 
+  const resolved = resolveRuntimeOrError();
+  if (resolved.error) {
+    return NextResponse.json(resolved.error, {
+      status: statusForErrorCode(resolved.error.code),
+    });
+  }
+
+  // Status-lookup finns idag bara för local-runtime (in-memory server-Map).
+  // Övriga runtimes (vercel-sandbox m.fl.) saknar billig status-API i
+  // kontraktet — vi gissar inte, utan svarar 404 med vägledning.
+  if (resolved.runtime.kind !== "local") {
+    const body: PreviewErrorBody = {
+      error: `Status-GET stöds inte för runtime '${resolved.runtime.kind}'.`,
+      code: "not_running",
+      hint: "Använd POST /api/preview/<siteId> för att starta en preview-session.",
+    };
+    return NextResponse.json(body, { status: 404 });
+  }
+
   const info = getPreviewServer(siteId);
   if (!info) {
     const body: PreviewErrorBody = {
@@ -143,7 +223,7 @@ export async function GET(
     };
     return NextResponse.json(body, { status: 404 });
   }
-  return NextResponse.json(info);
+  return NextResponse.json({ ...info, kind: "local" });
 }
 
 export async function POST(
@@ -163,22 +243,77 @@ export async function POST(
     return NextResponse.json(body, { status: 400 });
   }
 
-  try {
-    const info = await startPreviewServer(siteId);
-    return NextResponse.json(info);
-  } catch (error) {
-    const body = classifyStartError(error);
-    // 404 för "inte byggd än" så ViewerPanel kan visa en mjuk
-    // "kör build_site.py först"-prompt istället för en hård
-    // 5xx-felindikator. Övriga fel går som 500/503.
-    const status =
-      body.code === "not_built" || body.code === "missing_artifacts"
-        ? 404
-        : body.code === "port_pool_full"
-          ? 503
-          : 500;
-    return NextResponse.json(body, { status });
+  const resolved = resolveRuntimeOrError();
+  if (resolved.error) {
+    return NextResponse.json(resolved.error, {
+      status: statusForErrorCode(resolved.error.code),
+    });
   }
+
+  const { runtime } = resolved;
+
+  // Additiva spårbarhets-fält (runId/versionId) får skickas via query utan
+  // att bryta nuvarande ViewerPanel-kontrakt (som bara POST:ar med siteId).
+  const runId = request.nextUrl.searchParams.get("runId") ?? undefined;
+  const versionId =
+    request.nextUrl.searchParams.get("versionId") ?? undefined;
+
+  // Adaptrarna fångar sina egna fel och returnerar { status: "failed", ... }.
+  // Ett kast här är därför oväntat (programmeringsfel) snarare än ett
+  // förväntat preview-fel — vi mappar ändå till en ärlig 500.
+  let result: PreviewResult;
+  try {
+    result = await runtime.start({
+      kind: runtime.kind,
+      projectName: siteId,
+      siteId,
+      runId,
+      versionId,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Okänt fel vid start av preview.";
+    const body = classifyRuntimeError(message);
+    return NextResponse.json(body, { status: statusForErrorCode(body.code) });
+  }
+
+  if (result.status === "ready" || result.status === "starting") {
+    const url = previewUrlFromResult(result);
+    if (!url) {
+      // Runtimen rapporterar success men utan URL — det är inte användbart
+      // för en iframe. Visa ärligt fel istället för en tom preview.
+      const body: PreviewErrorBody = {
+        error:
+          "Preview-runtimen returnerade en session utan URL. Det går inte att rendera iframen.",
+        code: "no_preview_url",
+        logs: result.logs,
+      };
+      return NextResponse.json(body, { status: 502 });
+    }
+    return NextResponse.json({
+      // Bakåtkompatibelt fält som ViewerPanel läser idag.
+      url,
+      status: result.status,
+      siteId,
+      kind: runtime.kind,
+      previewSession: result.previewSession,
+      previewUrl: result.previewUrl ?? url,
+      logs: result.logs,
+    });
+  }
+
+  // status === "failed" | "unsupported" → ärligt fel, ingen tyst fallback.
+  const message =
+    result.error ??
+    (result.status === "unsupported"
+      ? `Runtime '${runtime.kind}' stödjer inte preview.`
+      : "Preview-runtimen misslyckades utan felmeddelande.");
+  const body: PreviewErrorBody =
+    result.status === "unsupported"
+      ? { error: message, code: "unsupported" }
+      : classifyRuntimeError(message);
+  body.logs = result.logs;
+  return NextResponse.json(body, { status: statusForErrorCode(body.code) });
 }
 
 export async function DELETE(
@@ -198,6 +333,28 @@ export async function DELETE(
     return NextResponse.json(body, { status: 400 });
   }
 
-  const stopped = stopPreviewServer(siteId);
-  return NextResponse.json({ stopped });
+  const resolved = resolveRuntimeOrError();
+  if (resolved.error) {
+    return NextResponse.json(resolved.error, {
+      status: statusForErrorCode(resolved.error.code),
+    });
+  }
+
+  const { runtime } = resolved;
+  // Stateful runtimes identifierar sessionen olika: local nycklar på siteId,
+  // vercel-sandbox på previewSession.id (sandbox-namn). Klienten kan skicka
+  // ?sessionId= för icke-local; annars faller vi tillbaka på siteId.
+  const sessionId =
+    request.nextUrl.searchParams.get("sessionId") ?? siteId;
+
+  // För local kan vi rapportera ett exakt boolean-resultat (servern fanns
+  // eller ej). Övriga runtimes saknar billig "fanns den?"-lookup — vi
+  // delegerar stoppet via runtime-kontraktet och rapporterar stopped:true.
+  if (runtime.kind === "local") {
+    const stopped = stopPreviewServer(sessionId);
+    return NextResponse.json({ stopped, sessionId });
+  }
+
+  await runtime.stop?.(sessionId);
+  return NextResponse.json({ stopped: true, sessionId });
 }

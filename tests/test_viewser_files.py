@@ -40,7 +40,33 @@ def test_viewser_expected_files_exist() -> None:
     expected = [
         "package.json",
         "app/layout.tsx",
-        "app/page.tsx",
+        # Marknadssajt P0 (scout-marketing-site): route-group-split. Konsolen
+        # flyttad till (console)/studio; (marketing) äger "/".
+        "app/(console)/layout.tsx",
+        "app/(console)/studio/page.tsx",
+        "app/(marketing)/layout.tsx",
+        "app/(marketing)/page.tsx",
+        "app/(marketing)/for/[yrke]/page.tsx",
+        "components/marketing/marketing-header.tsx",
+        "components/marketing/marketing-footer.tsx",
+        # Marknadssajt P6 (cookie-consent + legal-sidor).
+        "components/marketing/cookie-consent.tsx",
+        "components/marketing/cookie-banner.tsx",
+        "components/marketing/manage-cookies-button.tsx",
+        "components/marketing/legal-page-layout.tsx",
+        "app/(marketing)/cookies/page.tsx",
+        "app/(marketing)/integritetspolicy/page.tsx",
+        "app/(marketing)/anvandarvillkor/page.tsx",
+        "app/(marketing)/kontakt/page.tsx",
+        # Marknadssajt P8 (SEO-finish).
+        "app/sitemap.ts",
+        "app/robots.ts",
+        # Publika route-konstanter (auth/billing parkerat — egen seam senare).
+        "lib/routes.ts",
+        # Starters-banan (juni 2026): yrkessida/hero-chip/studio-onboarding
+        # förifyller DiscoveryWizarden via en lätt seed. Rör inte bygg-logiken.
+        "lib/starter-presets.ts",
+        "components/marketing/starter-cta.tsx",
         "app/api/chat/route.ts",
         "app/api/build/route.ts",
         "app/api/runs/route.ts",
@@ -88,8 +114,7 @@ def test_discovery_options_route_reads_taxonomy_and_omits_starter_id() -> None:
         "scaffold-kontraktet istället för att hårdkoda UI-labels."
     )
     assert "expectedStarterId" not in text and "starterId" not in text, (
-        "Discovery-options-routen får inte exponera starterId/expectedStarterId "
-        "till frontend."
+        "Discovery-options-routen får inte exponera starterId/expectedStarterId till frontend."
     )
     for field in (
         "id",
@@ -109,30 +134,29 @@ def test_discovery_wizard_uses_governance_options_with_ts_cache_fallback() -> No
         encoding="utf-8"
     )
     site_type = (
-        VIEWSER_DIR
-        / "components"
-        / "discovery-wizard"
-        / "steps"
-        / "site-type-step.tsx"
+        VIEWSER_DIR / "components" / "discovery-wizard" / "steps" / "site-type-step.tsx"
     ).read_text(encoding="utf-8")
-    constants = (
-        VIEWSER_DIR / "components" / "discovery-wizard" / "wizard-constants.ts"
-    ).read_text(encoding="utf-8")
+    constants = (VIEWSER_DIR / "components" / "discovery-wizard" / "wizard-constants.ts").read_text(
+        encoding="utf-8"
+    )
 
     assert 'fetch("/api/discovery-options"' in wizard, (
-        "DiscoveryWizard måste hämta kategori-options från governance-routen "
-        "när overlayen öppnas."
+        "DiscoveryWizard måste hämta kategori-options från governance-routen när overlayen öppnas."
     )
     assert "fallbackDiscoveryOptions" in wizard, (
         "DiscoveryWizard behöver en lokal UI-cache fallback så overlayen inte "
         "blockas av ett transient route-fel."
     )
-    assert "source === \"governance\"" in site_type, (
-        "SiteTypeStep ska kunna visa att listan följer Discovery Taxonomy."
+    assert 'source === "governance"' in site_type, (
+        "SiteTypeStep ska skilja governance-källan från UI-cache-fallbacken "
+        "(gat:ar supportHelper + renderSupportNotice)."
     )
-    assert "Backendens resolver avgör slutlig scaffold" in site_type, (
-        "SiteTypeStep ska göra fallback/planned-status begriplig utan att "
-        "frontend tar scaffold-beslutet."
+    # Wave 3 (Steg 7): fallback/planned-status ska fortfarande vara begriplig
+    # men i KUNDSPRÅK — den gamla 'Backendens resolver avgör slutlig scaffold'
+    # -jargongen ersattes med en kundvänlig formulering.
+    assert "Vi väljer en närliggande mall som grund så länge." in site_type, (
+        "SiteTypeStep ska göra fallback/planned-status begriplig i kundspråk "
+        "utan att frontend tar scaffold-beslutet."
     )
     assert "Discovery Taxonomy is the canonical" in constants, (
         "wizard-constants.ts måste dokumentera att TS-listan bara är UI-cache."
@@ -141,21 +165,18 @@ def test_discovery_wizard_uses_governance_options_with_ts_cache_fallback() -> No
 
 @pytest.mark.tooling
 def test_discovery_payload_blocks_unknown_categories_and_emits_schema_version_2() -> None:
-    payload = (
-        VIEWSER_DIR / "components" / "discovery-wizard" / "wizard-payload.ts"
-    ).read_text(encoding="utf-8")
+    payload = (VIEWSER_DIR / "components" / "discovery-wizard" / "wizard-payload.ts").read_text(
+        encoding="utf-8"
+    )
 
     assert "schemaVersion: 1 | 2" in payload, (
-        "DiscoveryPayload-typen måste fortsätta acceptera legacy v1 för "
-        "bakåtkompatibilitet."
+        "DiscoveryPayload-typen måste fortsätta acceptera legacy v1 för bakåtkompatibilitet."
     )
     assert "schemaVersion: 2," in payload, (
-        "buildDiscoveryPayload ska emit:a schemaVersion=2 när v2-directives "
-        "skickas från wizarden."
+        "buildDiscoveryPayload ska emit:a schemaVersion=2 när v2-directives skickas från wizarden."
     )
     assert "validateDiscoveryCategoryIds" in payload, (
-        "buildDiscoveryPayload måste blocka category ids som saknas i "
-        "governance-options."
+        "buildDiscoveryPayload måste blocka category ids som saknas i governance-options."
     )
     assert "Okänd kategori" in payload, (
         "Okända category ids ska ge tydligt klientfel före /api/prompt."
@@ -164,16 +185,14 @@ def test_discovery_payload_blocks_unknown_categories_and_emits_schema_version_2(
         "buildDiscoveryPayload ska härleda scaffoldHint från category-options "
         "så ecommerce inte skickar local-service-business som motsägande hint."
     )
-    assert '"starterId"' not in payload, (
-        "Frontendens discovery payload får inte sätta starterId."
-    )
+    assert '"starterId"' not in payload, "Frontendens discovery payload får inte sätta starterId."
 
 
 @pytest.mark.tooling
 def test_discovery_payload_preserves_empty_list_tombstones() -> None:
-    payload = (
-        VIEWSER_DIR / "components" / "discovery-wizard" / "wizard-payload.ts"
-    ).read_text(encoding="utf-8")
+    payload = (VIEWSER_DIR / "components" / "discovery-wizard" / "wizard-payload.ts").read_text(
+        encoding="utf-8"
+    )
 
     for key in (
         '"products"',
@@ -198,9 +217,7 @@ def test_discovery_payload_preserves_empty_list_tombstones() -> None:
 
 @pytest.mark.tooling
 def test_prompt_route_rejects_discovery_starter_id_and_followup_discovery() -> None:
-    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(encoding="utf-8")
 
     assert "Discovery-payload får inte sätta starterId" in text, (
         "/api/prompt måste avvisa starterId i discovery.answers."
@@ -212,9 +229,7 @@ def test_prompt_route_rejects_discovery_starter_id_and_followup_discovery() -> N
 
 @pytest.mark.tooling
 def test_python_spawn_routes_fail_explicitly_on_hosted_vercel() -> None:
-    helper = (VIEWSER_DIR / "lib" / "hosted-python-runtime.ts").read_text(
-        encoding="utf-8"
-    )
+    helper = (VIEWSER_DIR / "lib" / "hosted-python-runtime.ts").read_text(encoding="utf-8")
     assert 'process.env.VERCEL === "1"' in helper
     assert "hosted-python-runtime-unavailable" in helper
 
@@ -292,10 +307,73 @@ def test_viewser_api_routes_call_localhost_guard() -> None:
         "app/api/runs/[runId]/files/route.ts",
         "app/api/runs/[runId]/artifacts/route.ts",
         "app/api/prompt/route.ts",
+        "app/api/preview/[siteId]/route.ts",
     ]
     for route in routes:
         text = (VIEWSER_DIR / route).read_text(encoding="utf-8")
         assert "assertLocalhost" in text, f"{route} saknar localhost-guard"
+
+
+def test_bite_c_preview_route_goes_via_runtime_resolver() -> None:
+    """Bite C: ``/api/preview/[siteId]`` POST MÅSTE gå via det env-styrda
+    Preview Runtime-kontraktet (``currentViewserRuntime().start()``), inte
+    hårdkoda ``startPreviewServer`` direkt. ``VIEWSER_PREVIEW_MODE`` ska
+    alltså driva vilken adapter som körs, och resultatet mappas från ett
+    generiskt ``PreviewResult``.
+    """
+    text = (VIEWSER_DIR / "app" / "api" / "preview" / "[siteId]" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "currentViewserRuntime" in text, (
+        "preview-routen måste resolva runtime via currentViewserRuntime() "
+        "så VIEWSER_PREVIEW_MODE styr adaptern (Bite C)"
+    )
+    assert "runtime.start(" in text, "preview-routen måste anropa runtime.start(config)"
+    assert "PreviewResult" in text, "preview-routen måste hantera generiskt PreviewResult"
+    # Start-pathen får INTE längre hårdkoda den lokala preview-servern —
+    # det skulle kringgå runtime-resolvern. GET/DELETE får fortfarande
+    # använda getPreviewServer/stopPreviewServer för local-status.
+    assert "startPreviewServer" not in text, (
+        "preview-routens start-path får inte anropa startPreviewServer direkt "
+        "efter Bite C — den ska gå via currentViewserRuntime()"
+    )
+
+
+def test_bite_c_preview_route_has_no_silent_fallback() -> None:
+    """Bite C: vid ``failed``/``unsupported`` ska routen returnera ett ärligt
+    fel (med ev. ``logs``), aldrig tyst falla tillbaka till en annan runtime.
+    """
+    text = (VIEWSER_DIR / "app" / "api" / "preview" / "[siteId]" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+    assert 'result.status === "ready"' in text, (
+        "routen måste grena explicit på PreviewResult.status === ready"
+    )
+    assert '=== "unsupported"' in text, (
+        "routen måste hantera PreviewResult.status === unsupported (ärligt 501, "
+        "ingen tyst fallback)"
+    )
+    assert "logs" in text, "routen måste vidarebefordra runtime-logs vid fel"
+    assert "ingen tyst fallback" in text.lower() or "no silent" in text.lower(), (
+        "routen ska dokumentera ärlighetsprincipen (ingen tyst fallback)"
+    )
+
+
+def test_bite_c_viewer_panel_is_honest_in_vercel_sandbox_mode() -> None:
+    """Bite C: ``vercel-sandbox`` är en explicit opt-in-runtime. ViewerPanel
+    måste behandla den lika ärligt som ``local-next`` — visa runtime-fel,
+    aldrig tyst falla tillbaka till StackBlitz — och läsa ``previewUrl``
+    (publik *.vercel.run) när runtimen levererar det.
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
+    assert "IS_VERCEL_SANDBOX_MODE" in text, "viewer-panel måste känna igen vercel-sandbox-läget"
+    assert "IS_LOCAL_NEXT_MODE || IS_VERCEL_SANDBOX_MODE" in text, (
+        "vercel-sandbox måste dela local-next:s ärliga felgrenar (ingen tyst StackBlitz-fallback)"
+    )
+    assert "info.previewUrl ?? info.url" in text, (
+        "iframe-URL ska föredra previewUrl (vercel-sandbox) och falla tillbaka "
+        "på det bakåtkompatibla url-fältet"
+    )
 
 
 @pytest.mark.tooling
@@ -332,7 +410,7 @@ def test_stackblitz_files_filter_dotenv_files_from_preview_upload() -> None:
         "starter för lokal test."
     )
     assert re.search(
-        r'\.toLowerCase\(\)',
+        r"\.toLowerCase\(\)",
         text,
     ), (
         "stackblitz-files.ts ``.env*``-filtret måste vara case-insensitivt "
@@ -340,7 +418,7 @@ def test_stackblitz_files_filter_dotenv_files_from_preview_upload() -> None:
         "``.Env.Local`` etc.)."
     )
     assert re.search(
-        r'\.env\.example',
+        r"\.env\.example",
         text,
     ), (
         "stackblitz-files.ts saknar allowlist-undantag för ``.env.example``. "
@@ -384,7 +462,7 @@ def test_stackblitz_files_keeps_package_lock_in_preview_upload() -> None:
         "bort package-lock.json från StackBlitz-payloaden."
     )
     assert re.search(
-        r'stats\.size\s*>\s*MAX_FILE_BYTES\s*&&\s*relPath\s*!==\s*NPM_LOCKFILE',
+        r"stats\.size\s*>\s*MAX_FILE_BYTES\s*&&\s*relPath\s*!==\s*NPM_LOCKFILE",
         text,
     ), (
         "package-lock.json är ofta större än MAX_FILE_BYTES och måste därför "
@@ -422,13 +500,12 @@ def test_stackblitz_files_patches_package_json_for_webpack() -> None:
     """
     text = (VIEWSER_DIR / "lib" / "stackblitz-files.ts").read_text(encoding="utf-8")
     assert "patchPackageJsonForStackblitz" in text, (
-        "stackblitz-files.ts måste innehålla en package.json-patch-funktion "
-        "för StackBlitz-preview."
+        "stackblitz-files.ts måste innehålla en package.json-patch-funktion för StackBlitz-preview."
     )
-    assert 'scripts.dev = ensureWebpackFlag(currentDev)' in text, (
+    assert "scripts.dev = ensureWebpackFlag(currentDev)" in text, (
         "stackblitz-files.ts måste patcha scripts.dev via ensureWebpackFlag."
     )
-    assert 'scripts.build = ensureWebpackFlag(currentBuild)' in text, (
+    assert "scripts.build = ensureWebpackFlag(currentBuild)" in text, (
         "stackblitz-files.ts måste patcha scripts.build via ensureWebpackFlag "
         "eftersom StackBlitz startCommand kör `npm run build` före `npm run start`."
     )
@@ -485,9 +562,7 @@ def test_stackblitz_files_inject_global_error_override() -> None:
     assert "GLOBAL_ERROR_OVERRIDE_CONTENT" in text, (
         "stackblitz-files.ts saknar innehåll för global-error override."
     )
-    assert '"use client"' in text, (
-        "global-error.tsx-overriden måste vara en client component."
-    )
+    assert '"use client"' in text, "global-error.tsx-overriden måste vara en client component."
     assert "if (!(GLOBAL_ERROR_OVERRIDE_PATH in projectFiles))" in text, (
         "stackblitz-files.ts måste bara injicera overriden om generated "
         "site inte redan har en egen app/global-error.tsx."
@@ -565,9 +640,7 @@ def test_viewer_panel_skips_local_preview_in_strict_stackblitz_mode() -> None:
          INTE förändrad (404-guards + cancelled-guards fortsatt
          source-lockade av separata tester).
     """
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
 
     # Lock 1: konstanten finns och har rätt definition
     pattern_const = re.compile(
@@ -582,7 +655,7 @@ def test_viewer_panel_skips_local_preview_in_strict_stackblitz_mode() -> None:
 
     # Lock 2: Steg 1-blocket gated på !IS_STACKBLITZ_MODE
     pattern_gate = re.compile(
-        r'if\s*\(\s*!\s*IS_STACKBLITZ_MODE\s*&&\s*siteId\s*\)\s*\{',
+        r"if\s*\(\s*!\s*IS_STACKBLITZ_MODE\s*&&\s*siteId\s*\)\s*\{",
         re.MULTILINE,
     )
     assert pattern_gate.search(text), (
@@ -606,12 +679,17 @@ def test_viewer_panel_progress_card_hint_is_mode_aware() -> None:
     BUILD_STEPS-listan refererar konstanten istället för
     hårdkodad sträng.
 
+    Tier 3-split flyttade BuildProgressCard + PREVIEW_PREP_HINT från
+    ``viewer-panel.tsx`` till
+    ``viewer-panel/build-progress-card.tsx``. Logiken är oförändrad
+    så låsen pekar nu på den nya filen.
+
     Två lås:
       1. ``PREVIEW_PREP_HINT``-konstant finns med mode-conditional.
       2. BUILD_STEPS preview-steg använder ``hint: PREVIEW_PREP_HINT``
          istället för en hårdkodad sträng.
     """
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+    text = (VIEWSER_DIR / "components" / "viewer-panel" / "build-progress-card.tsx").read_text(
         encoding="utf-8"
     )
 
@@ -621,7 +699,7 @@ def test_viewer_panel_progress_card_hint_is_mode_aware() -> None:
         re.MULTILINE,
     )
     assert pattern_const.search(text), (
-        "viewer-panel.tsx saknar ``const PREVIEW_PREP_HINT = "
+        "build-progress-card.tsx saknar ``const PREVIEW_PREP_HINT = "
         "IS_LOCAL_NEXT_MODE ? ... : ...``. Krävs för att "
         "BuildProgressCard:s preview-steg ska visa rätt copy per mode."
     )
@@ -632,9 +710,9 @@ def test_viewer_panel_progress_card_hint_is_mode_aware() -> None:
         re.MULTILINE,
     )
     assert pattern_usage.search(text), (
-        "viewer-panel.tsx: BUILD_STEPS preview-steget måste använda "
+        "build-progress-card.tsx: BUILD_STEPS preview-steget måste använda "
         "``hint: PREVIEW_PREP_HINT`` så texten är mode-aware. "
-        "Hårdkodad ``\"Förbereder StackBlitz-iframen.\"`` gav fel "
+        'Hårdkodad ``"Förbereder StackBlitz-iframen."`` gav fel '
         "mental modell i local-next-mode (reviewer-fynd post-PR #101)."
     )
 
@@ -646,7 +724,7 @@ def test_viewer_panel_progress_card_hint_is_mode_aware() -> None:
     )
     assert not pattern_forbidden.search(text), (
         "viewer-panel.tsx: BUILD_STEPS preview-steget får inte "
-        "hårdkoda ``hint: \"Förbereder StackBlitz-iframen.\"`` igen. "
+        'hårdkoda ``hint: "Förbereder StackBlitz-iframen."`` igen. '
         "Använd PREVIEW_PREP_HINT-konstanten så local-next-mode får "
         "korrekt text."
     )
@@ -677,9 +755,7 @@ def test_viewer_panel_sets_cross_origin_isolated_on_stackblitz_embed() -> None:
     "Unable to run Embedded Project" och operatören har ingen ledtråd
     om att host-headers faktiskt är korrekta.
     """
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
     pattern = re.compile(
         r"crossOriginIsolated\s*:\s*true",
         re.MULTILINE,
@@ -718,7 +794,7 @@ def test_next_config_trusts_dispatcher_env_over_argv_for_https_check() -> None:
     )
     assert pattern.search(text), (
         "next.config.ts: HTTPS-checken måste läsa "
-        "``process.env.VIEWSER_DISPATCHER_HTTPS === \"1\"`` primärt — "
+        '``process.env.VIEWSER_DISPATCHER_HTTPS === "1"`` primärt — '
         "``process.argv``-grenen ger false-positiva varningar i "
         "Turbopack-workers vars argv inte ärver parent-processens "
         "flaggor (B145)."
@@ -741,7 +817,7 @@ def test_dev_dispatcher_exports_https_signal_to_child() -> None:
     )
     assert pattern.search(text), (
         "scripts/dev.mjs: child-env måste sätta "
-        "``VIEWSER_DISPATCHER_HTTPS: useHttps ? \"1\" : \"0\"`` så "
+        '``VIEWSER_DISPATCHER_HTTPS: useHttps ? "1" : "0"`` så '
         "next.config.ts kan verifiera transport-valet utan argv-"
         "gissning. Speglar den nya check:en i next.config.ts (B145)."
     )
@@ -837,9 +913,7 @@ def test_prompt_route_returns_400_for_zod_validation_errors() -> None:
     Lås att routen särskiljer ZodError -> 400 från övriga fel -> 500
     så framtida refactor inte återinför den breda 500-grenen.
     """
-    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(encoding="utf-8")
     assert "instanceof z.ZodError" in text, (
         "/api/prompt måste skilja Zod-valideringsfel från serverfel via "
         "`error instanceof z.ZodError` och returnera 400 för validering, "
@@ -861,9 +935,7 @@ def test_prompt_payload_schema_trims_whitespace_before_length_check() -> None:
     Lås att schemat trimmar FÖRE min/max så whitespace-only fångas vid
     API-gränsen och returneras som 400 (via ZodError).
     """
-    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(encoding="utf-8")
     pattern = re.compile(
         r"z\s*\.\s*string\(\)\s*\.\s*trim\(\)\s*\.\s*min\(\s*1",
         re.MULTILINE,
@@ -881,9 +953,7 @@ def test_prompt_route_passes_dossier_override_to_run_build() -> None:
     dossier-path override - det skulle leta i `examples/` istället för
     `data/prompt-inputs/` och misslyckas med 'Project Input saknas'.
     Lås kontraktet att routen alltid skickar in helper.dossierPath."""
-    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(encoding="utf-8")
     assert "runBuild(helper.siteId, helper.dossierPath)" in text, (
         "/api/prompt måste anropa runBuild med BÅDE siteId och "
         "helper.dossierPath. Utan path-override hamnar lookupen i "
@@ -895,16 +965,13 @@ def test_prompt_route_passes_dossier_override_to_run_build() -> None:
 @pytest.mark.tooling
 def test_prompt_route_supports_followup_mode_without_schema_migration() -> None:
     """Follow-up prompt ska styras av sidecar-meta, inte Project Input-schema."""
-    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(encoding="utf-8")
     assert 'z.enum(["init", "followup"])' in text, (
         "/api/prompt måste ha explicit init/followup-läge så UI:t kan "
         "skilja ny sajt från ny version."
     )
     assert "siteId" in text and "Följdprompt kräver valt siteId" in text, (
-        "Följdprompt-läget måste kräva siteId vid API-gränsen innan "
-        "prompt-helpern spawnas."
+        "Följdprompt-läget måste kräva siteId vid API-gränsen innan prompt-helpern spawnas."
     )
     assert "projectId: z" not in text and "version: z" not in text, (
         "/api/prompt ska inte validera projectId/version som klientpayload; "
@@ -915,9 +982,7 @@ def test_prompt_route_supports_followup_mode_without_schema_migration() -> None:
 @pytest.mark.tooling
 def test_prompt_route_serializes_prompt_helper_before_build() -> None:
     """Sidecar version bump + Project Input write must not race before build."""
-    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(encoding="utf-8")
     assert "promptInFlight" in text, (
         "/api/prompt måste serialisera prompt-helpern före runBuild så två "
         "följdpromptar för samma siteId inte läser samma meta.version."
@@ -926,8 +991,7 @@ def test_prompt_route_serializes_prompt_helper_before_build() -> None:
     build_index = text.index("runBuild(helper.siteId, helper.dossierPath)")
     queue_index = text.index("promptInFlight")
     assert queue_index < helper_index < build_index, (
-        "Prompt-queue måste omfatta både helpern och builden, inte bara "
-        "runBuild-steget."
+        "Prompt-queue måste omfatta både helpern och builden, inte bara runBuild-steget."
     )
 
 
@@ -973,9 +1037,7 @@ def test_project_input_picker_includes_prompt_inputs_directory() -> None:
         "listProjectInputs måste även läsa data/prompt-inputs/ så operatorn "
         "kan välja prompt-genererade siteIds för följdprompt."
     )
-    assert '"examples"' in text, (
-        "examples/ måste fortsatt finnas kvar som Project Input-källa."
-    )
+    assert '"examples"' in text, "examples/ måste fortsatt finnas kvar som Project Input-källa."
     assert "return null" in text and "JSON.parse" in text, (
         "Korrupta Project Input-filer ska hoppas över lokalt i listProjectInputs "
         "så en trasig fil inte 500:ar hela /api/runs."
@@ -988,9 +1050,7 @@ def test_project_input_picker_includes_prompt_inputs_directory() -> None:
 
 @pytest.mark.tooling
 def test_prompt_builder_exposes_followup_mode_and_consumes_ndjson_stream() -> None:
-    text = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(encoding="utf-8")
     # Följdprompt-läget exponerades tidigare via en synlig "Ny sajt /
     # Följdprompt"-pill-rad. Efter total-minimalism 2026-05-27 deriveras
     # läget automatiskt från `followupReady` istället. Testet förankrar
@@ -1024,28 +1084,24 @@ def test_prompt_builder_exposes_followup_mode_and_consumes_ndjson_stream() -> No
         "/api/prompt svarar med stream istället för synkron JSON."
     )
     assert "response.body.getReader()" in text, (
-        "PromptBuilder måste läsa /api/prompt-svaret som stream via "
-        "response.body.getReader()."
+        "PromptBuilder måste läsa /api/prompt-svaret som stream via response.body.getReader()."
     )
     assert 'event.stage === "building"' in text, (
         "PromptBuilder måste flippa stage till 'building' när NDJSON-"
-        "eventet `stage:\"building\"` kommer från route:n (riktig signal)."
+        'eventet `stage:"building"` kommer från route:n (riktig signal).'
     )
     assert 'event.stage === "done"' in text, (
-        "PromptBuilder måste behandla `stage:\"done\"`-eventet som "
+        'PromptBuilder måste behandla `stage:"done"`-eventet som '
         "slutsignal med runId + siteId + buildStatus."
     )
 
 
 @pytest.mark.tooling
 def test_run_history_can_show_prompt_project_id_and_version() -> None:
-    run_history = (VIEWSER_DIR / "components" / "run-history.tsx").read_text(
-        encoding="utf-8"
-    )
+    run_history = (VIEWSER_DIR / "components" / "run-history.tsx").read_text(encoding="utf-8")
     runs_lib = (VIEWSER_DIR / "lib" / "runs.ts").read_text(encoding="utf-8")
     assert "projectId?: string" in run_history and "version?: number" in run_history, (
-        "RunHistoryItem måste kunna bära sidecar projectId/version för "
-        "prompt-genererade runs."
+        "RunHistoryItem måste kunna bära sidecar projectId/version för prompt-genererade runs."
     )
     assert "run.projectId" in run_history and "run.version" in run_history, (
         "RunHistory måste rendera projectId/version när /api/runs skickar dem."
@@ -1098,9 +1154,7 @@ def test_run_details_panel_handles_missing_artefakter_defensively() -> None:
     surface as a string-mismatch rather than a runtime crash in the
     browser.
     """
-    panel_text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(
-        encoding="utf-8"
-    )
+    panel_text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(encoding="utf-8")
     expected_fallbacks = [
         "saknas i äldre run",
         "ej spårad än",
@@ -1116,9 +1170,7 @@ def test_run_details_panel_handles_missing_artefakter_defensively() -> None:
 @pytest.mark.tooling
 def test_run_details_panel_surfaces_npm_failure_log_excerpt() -> None:
     """Build mismatch triage needs the original npm error in Run Details."""
-    panel_text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(
-        encoding="utf-8"
-    )
+    panel_text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(encoding="utf-8")
 
     assert "devPreviewDir" in panel_text, (
         "RunDetailsPanel must show build-result.json:devPreviewDir so "
@@ -1144,9 +1196,7 @@ def test_run_details_panel_renders_placeholder_contact_warning() -> None:
     signal. Verified live in Viewser Overlay E2E Scout Case 3a
     2026-05-19 (`docs/archive/2026-05-19/viewser-overlay-e2e-scout-2026-05-19.md`).
     """
-    panel_text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(
-        encoding="utf-8"
-    )
+    panel_text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(encoding="utf-8")
 
     assert "placeholderContactFields" in panel_text, (
         "RunDetailsPanel must read build-result.json:placeholderContactFields "
@@ -1156,9 +1206,19 @@ def test_run_details_panel_renders_placeholder_contact_warning() -> None:
         "Warning copy must include the Swedish phrase 'Kontakt-fält är "
         "platshållare' — operators see the badge but not the JSON."
     )
-    assert "Slutanvändaren ser dummy-värden tills operatör fyllt dem." in panel_text, (
-        "Warning copy must explain the consequence in Swedish so the "
-        "operator can act before sharing the preview with a customer."
+    # B158/B159 (2e0c55f, 2026-06-01): the published site no longer renders
+    # the dummy values — it suppresses them and shows a generic contact CTA.
+    # The warning copy must therefore say the fields are HIDDEN (real contact
+    # info missing), not that visitors see dummies.
+    assert "Sajten döljer fälten publikt" in panel_text, (
+        "Warning copy must reflect post-B158/B159 behaviour: the site hides "
+        "placeholder contact fields and shows a generic CTA instead of "
+        "publishing dummy values. The old 'Slutanvändaren ser dummy-värden' "
+        "copy is now factually wrong."
+    )
+    assert "Slutanvändaren ser dummy-värden" not in panel_text, (
+        "Stale pre-suppression copy must be removed — it claims visitors see "
+        "dummy contact values, which B158/B159 no longer do."
     )
     assert "placeholder-contact-warning" in panel_text, (
         "Warning element must carry data-testid='placeholder-contact-warning' "
@@ -1203,9 +1263,7 @@ def test_run_details_panel_renders_site_plan_warnings() -> None:
     4. Svensk rubrik ``Site Plan-varningar`` så operatören förstår
        blockets ursprung utan att läsa JSON.
     """
-    panel_text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(
-        encoding="utf-8"
-    )
+    panel_text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(encoding="utf-8")
 
     for field in ("pageCountWarning", "intentGuardWarnings", "pageIntentWarnings"):
         assert field in panel_text, (
@@ -1283,9 +1341,7 @@ def test_prompt_route_surfaces_build_status() -> None:
     without buildStatus on the wire the operator UI used to flag those
     as "Build klar".
     """
-    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(encoding="utf-8")
     assert "buildStatus" in text, (
         "/api/prompt route.ts must include `buildStatus` in the response "
         "payload so PromptBuilder can classify the build outcome."
@@ -1312,9 +1368,7 @@ def test_ui_textarea_forwards_ref_explicitly() -> None:
     så en framtida refaktor inte tyst kan tappa ref:n och bryta
     auto-focus utan att någon märker det förrän en operator klagar.
     """
-    text = (VIEWSER_DIR / "components" / "ui" / "textarea.tsx").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "components" / "ui" / "textarea.tsx").read_text(encoding="utf-8")
     # Destruktur av `ref` ur funktionssignaturen — det är detta som
     # gör ref tillgänglig som en explicit referens istället för att
     # gömmas i `...props`.
@@ -1348,8 +1402,7 @@ def test_floating_chat_composer_ref_used_for_expand_focus() -> None:
         encoding="utf-8"
     )
     assert "composerRef" in text, (
-        "FloatingChat måste ha en composerRef för att kunna flytta "
-        "focus till textarean vid expand."
+        "FloatingChat måste ha en composerRef för att kunna flytta focus till textarean vid expand."
     )
     assert "ref={composerRef}" in text, (
         "FloatingChat:s Textarea måste få `ref={composerRef}` så "
@@ -1386,16 +1439,13 @@ def test_prompt_route_emits_ndjson_stream_on_accept_header() -> None:
     floating-chat.tsx och use-followup-build.ts) får fortfarande en
     synkron NextResponse.json med samma fält som tidigare.
     """
-    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(encoding="utf-8")
     assert '"application/x-ndjson"' in text, (
         "/api/prompt route.ts måste exponera content-type 'application/x-ndjson' "
         "när Accept-headern begär stream-läge."
     )
     assert "ReadableStream" in text, (
-        "/api/prompt route.ts måste returnera en ReadableStream när "
-        "klienten begär NDJSON-läge."
+        "/api/prompt route.ts måste returnera en ReadableStream när klienten begär NDJSON-läge."
     )
     assert "onPhase1Done" in text, (
         "/api/prompt route.ts måste skicka ett `onPhase1Done`-callback "
@@ -1430,9 +1480,7 @@ def test_prompt_builder_classifies_failed_build_distinctly() -> None:
     runId is present. Lock the classification helper and the three
     distinct UI strings so a future refactor cannot collapse them.
     """
-    text = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(encoding="utf-8")
     assert "classifyBuildStatus" in text, (
         "prompt-builder.tsx must export/use a classifyBuildStatus helper "
         "that maps build-result.json:status to ok/degraded/failed/unknown."
@@ -1442,16 +1490,15 @@ def test_prompt_builder_classifies_failed_build_distinctly() -> None:
         "can render an outcome-aware header instead of a hard-coded 'Build klar'."
     )
     for stage_literal in (
-        "\"degraded\"",
-        "\"failed\"",
+        '"degraded"',
+        '"failed"',
     ):
         assert stage_literal in text, (
             f"prompt-builder.tsx must distinguish stage {stage_literal} so "
             "degraded/failed builds do not render as success."
         )
     assert "Build klar med varning" in text, (
-        "prompt-builder.tsx must render a degraded headline distinct from "
-        "the success banner."
+        "prompt-builder.tsx must render a degraded headline distinct from the success banner."
     )
     assert "Build misslyckades" in text, (
         "prompt-builder.tsx must render a dedicated failure headline when "
@@ -1467,7 +1514,7 @@ def test_page_uses_outcome_aware_header_for_prompt_build_done() -> None:
     the headerStatusForOutcome helper so a future refactor cannot drop
     the classification.
     """
-    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
     assert "PromptBuildOutcome" in text, (
         "page.tsx must import PromptBuildOutcome from @/components/prompt-builder."
     )
@@ -1501,8 +1548,7 @@ def test_build_runner_returns_structured_failure_instead_of_throwing() -> None:
     # B40: the failure branch must read build-result.json from disk so
     # the UI sees a structured failed run instead of bare 500.
     assert re.search(r"exitCode\s*!==\s*0", text), (
-        "build-runner.ts saknar exitCode !== 0-gren - hela B40-kontraktet "
-        "hänger på den."
+        "build-runner.ts saknar exitCode !== 0-gren - hela B40-kontraktet hänger på den."
     )
     assert "readBuildResult" in text, (
         "build-runner.ts måste läsa build-result.json från disk i failure-"
@@ -1522,8 +1568,7 @@ def test_build_runner_returns_structured_failure_instead_of_throwing() -> None:
         re.MULTILINE,
     )
     assert failure_block, (
-        "Kunde inte hitta `if (exitCode !== 0) { ... }`-blocket i "
-        "build-runner.ts."
+        "Kunde inte hitta `if (exitCode !== 0) { ... }`-blocket i build-runner.ts."
     )
     assert "detectLatestRunIdByMtime" not in failure_block.group(0), (
         "build-runner.ts failure-grenen får inte använda "
@@ -1558,7 +1603,7 @@ def test_page_useeffect_guards_success_path_with_cancelled_check() -> None:
     istället för en bool-variabel ``cancelled``. Båda mönstren
     accepteras av denna regex.
     """
-    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
 
     # Look for ``await fetchRuns()`` -> ``if (cancelled) return`` eller
     # ``if (cancelledRef?.current) return`` -> ``applyRunsData`` (eller
@@ -1597,9 +1642,7 @@ def test_viewer_panel_keeps_containerref_mounted_across_unavailable_transitions(
     positive pattern (containerRef-div has ``unavailable``-conditional
     ``hidden`` in className) so a future refactor cannot regress.
     """
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
 
     # Negative: containerRef-div must NOT sit as the else-branch of an
     # `unavailable ? tips : <div ref={containerRef}>` ternary. That
@@ -1663,9 +1706,7 @@ def test_viewer_panel_guards_cancelled_after_dynamic_import_and_embed() -> None:
     Source-lock the guard density: at least two cancelled-checks must
     appear between the StackBlitz import and the final setStatus call.
     """
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
 
     # Status-pillen ("Förhandsvisning aktiv för {runId}") togs medvetet
     # bort i christopher-ui refactor:n (krockade visuellt med
@@ -1711,9 +1752,7 @@ def test_viewer_panel_guards_cancelled_after_dynamic_import_and_embed() -> None:
 @pytest.mark.tooling
 def test_viewer_panel_surfaces_stackblitz_sdk_error_details() -> None:
     """StackBlitz SDK failures must show actionable details, not "unknown"."""
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
     assert "formatViewerError" in text, (
         "viewer-panel.tsx måste formatera SDK-fel centralt så catch-grenen "
         "inte faller tillbaka till ett opakt 'Okänt viewer-fel'."
@@ -1724,12 +1763,10 @@ def test_viewer_panel_surfaces_stackblitz_sdk_error_details() -> None:
             f"20 stackraderna. Saknar {expected!r}."
         )
     assert "non-Error rejection" in text, (
-        "StackBlitz SDK kan rejecta med icke-Error-värden; de måste också "
-        "renderas läsbart."
+        "StackBlitz SDK kan rejecta med icke-Error-värden; de måste också renderas läsbart."
     )
     assert "whitespace-pre-wrap" in text and "<pre" in text, (
-        "Viewer-feldetaljer måste renderas i ett pre-block så stackrader "
-        "och radbrytningar bevaras."
+        "Viewer-feldetaljer måste renderas i ett pre-block så stackrader och radbrytningar bevaras."
     )
 
 
@@ -1746,9 +1783,7 @@ def test_viewer_panel_404_branch_guards_cancelled_before_setstate() -> None:
     refactor cannot drop it. The other branches (success, catch) are
     already guarded; this brings the 404 path in line with them.
     """
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
 
     # Find the 404 branch and verify a `cancelled` guard sits between
     # the `response.status === 404` check and the call to setUnavailable.
@@ -1801,9 +1836,7 @@ def test_viewer_panel_local_next_failure_branches_guard_cancelled() -> None:
     ``setUnavailable(``. Förväntar minst 3 sådana matchningar (en per
     failure-gren).
     """
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
 
     # Limits är frikostiga (800/600) så regex tål både kompakta varianter
     # och de pedagogiska inline-kommentarer som dokumenterar varför
@@ -1848,9 +1881,7 @@ def test_viewer_panel_local_next_non_ok_branch_reguards_after_json_parse() -> No
     en ren one-shot regex eftersom det inte bryts av inline-kommentarer
     eller indenterings-refactors.
     """
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
 
     err_payload_idx = text.find("errPayload = (await previewResponse")
     assert err_payload_idx != -1, (
@@ -1858,9 +1889,7 @@ def test_viewer_panel_local_next_non_ok_branch_reguards_after_json_parse() -> No
         "i IS_LOCAL_NEXT_MODE non-OK-grenen. Annars test kan inte ankra "
         "mellan parsen och state-skrivningen."
     )
-    setunavail_idx = text.find(
-        "setUnavailable(unavailableForPreviewError", err_payload_idx
-    )
+    setunavail_idx = text.find("setUnavailable(unavailableForPreviewError", err_payload_idx)
     assert setunavail_idx != -1, (
         "viewer-panel.tsx saknar `setUnavailable(unavailableForPreviewError(...))` "
         "efter errPayload-deklarationen — non-OK-grenen måste rendera "
@@ -1891,9 +1920,7 @@ def test_run_history_uses_status_dot_colors() -> None:
         "RunHistory ska mappa status -> färgklass via STATUS_DOT_COLORS-tabellen."
     )
     for status in ("ok", "failed", "degraded", "mock-complete"):
-        assert status in text, (
-            f"RunHistory saknar färg-mapping för status {status!r}."
-        )
+        assert status in text, f"RunHistory saknar färg-mapping för status {status!r}."
 
 
 @pytest.mark.tooling
@@ -1903,7 +1930,7 @@ def test_page_on_build_done_passes_apply_runs_context() -> None:
     snapshot so applyRunsData does not read a pre-build selectedRunId
     and reset selectedSiteId to the first Project Input.
     """
-    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
     pattern = re.compile(
         r"fetchRuns\(\)[\s\S]{0,400}?applyRunsData\(\s*data\s*,\s*\{[\s\S]{0,200}?selectedRunId:\s*runId",
         re.MULTILINE,
@@ -1920,9 +1947,7 @@ def test_run_details_panel_clears_bundle_on_run_change() -> None:
     bundle before fetching so the panel never shows the previous run's
     build/quality cards under the new run badge.
     """
-    text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(encoding="utf-8")
     pattern = re.compile(
         r"setBundle\(null\)[\s\S]{0,120}?setLoading\(true\)",
         re.MULTILINE,
@@ -1939,14 +1964,12 @@ def test_prompt_builder_blocks_followup_when_run_siteid_unknown() -> None:
     must not fall back to selectedSiteId for targetSiteId (silent wrong
     site). Source-lock runSiteIdUnknown + explicit submit error.
     """
-    prompt_text = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(
-        encoding="utf-8"
-    )
+    prompt_text = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(encoding="utf-8")
     assert "runSiteIdUnknown" in prompt_text
     assert "follow-up kan inte" in prompt_text
-    picker_text = (
-        VIEWSER_DIR / "components" / "project-input-picker.tsx"
-    ).read_text(encoding="utf-8")
+    picker_text = (VIEWSER_DIR / "components" / "project-input-picker.tsx").read_text(
+        encoding="utf-8"
+    )
     assert "project-input-run-siteid-unknown" in picker_text
 
 
@@ -2043,15 +2066,11 @@ def test_b152_compare_modal_pane_width_accounts_for_gap() -> None:
     ``flex min-h-0 w-full`` (gamla mönstret) utan ``w-[calc(100%-0.5rem)]``.
     """
     text = (
-        VIEWSER_DIR
-        / "components"
-        / "builder"
-        / "inspector"
-        / "compare-preview-modal.tsx"
+        VIEWSER_DIR / "components" / "builder" / "inspector" / "compare-preview-modal.tsx"
     ).read_text(encoding="utf-8")
 
     pattern_fix = re.compile(
-        r'w-\[calc\(100%-0\.5rem\)\][\s\S]{0,200}?snap-start',
+        r"w-\[calc\(100%-0\.5rem\)\][\s\S]{0,200}?snap-start",
         re.MULTILINE,
     )
     assert pattern_fix.search(text), (
@@ -2064,7 +2083,7 @@ def test_b152_compare_modal_pane_width_accounts_for_gap() -> None:
     # Negative: säkerställ att gamla mönstret ``w-full shrink-0 snap-start``
     # inte finns kvar (skulle vara regression).
     pattern_regression = re.compile(
-        r'w-full\s+shrink-0\s+snap-start',
+        r"w-full\s+shrink-0\s+snap-start",
         re.MULTILINE,
     )
     assert not pattern_regression.search(text), (
@@ -2091,9 +2110,7 @@ def test_b153_device_preset_hydrates_full_device_preset() -> None:
 
     Lock: hydration-checken ska innehålla alla fyra Device-värden.
     """
-    text = (
-        VIEWSER_DIR / "components" / "device-preset-context.tsx"
-    ).read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "components" / "device-preset-context.tsx").read_text(encoding="utf-8")
 
     pattern = re.compile(
         r'stored\s*===\s*["\']mobile["\'][\s\S]{0,200}?'
@@ -2129,25 +2146,25 @@ def test_b155_floating_chat_reads_applied_visible_effect() -> None:
          info-rad i stil med "Ingen synlig ändring fångades" — så
          operatören inte luras tro att fri-text-följdprompten landade.
     """
-    text = (
-        VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx"
-    ).read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
 
     assert "buildResult?: Record<string, unknown>" in text, (
         "PromptApiResponse måste deklarera ``buildResult`` så följdprompts "
         "build-result.json når summarizeBuildResult — annars kan UI:t inte "
         "läsa appliedVisibleEffect."
     )
-    assert 'buildResult.appliedVisibleEffect' in text, (
+    assert "buildResult.appliedVisibleEffect" in text, (
         "FloatingChat måste läsa ``appliedVisibleEffect`` från build-result "
         "(auktoritativ källa per B155). Trace-eventet är inte ett godkänt "
         "alternativ — parseTraceLine plockar inte ``reason``-fältet."
     )
-    assert 'appliedVisibleEffectReason' in text, (
+    assert "appliedVisibleEffectReason" in text, (
         "Reason-fältet måste finnas i extraheringen så vi kan utvidga "
         "info-bubblan med varför ingen synlig effekt sågs (ADR 0034 path)."
     )
-    assert 'extractAppliedVisibleEffect' in text, (
+    assert "extractAppliedVisibleEffect" in text, (
         "Helper ``extractAppliedVisibleEffect`` ska kapsla boolean-checken "
         "så den inte upprepas i flera grenar — om operatören får en "
         "follow-up som bygger ok men flippar appliedVisibleEffect=false "
@@ -2168,9 +2185,9 @@ def test_b155_floating_chat_no_op_does_not_claim_success() -> None:
     standardsuccess-grenen i koden, och att den explicit sätter
     variant ``"info"``.
     """
-    text = (
-        VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx"
-    ).read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
 
     pattern = re.compile(
         r"effect\.applied\s*===\s*false[\s\S]{0,400}?"
@@ -2180,7 +2197,7 @@ def test_b155_floating_chat_no_op_does_not_claim_success() -> None:
     assert pattern.search(text), (
         "Info-grenen för B155 (no-op-followup) saknas eller har bytt form. "
         "När backend rapporterar ``appliedVisibleEffect: false`` ska UI:t "
-        "byta success-bubblan till variant ``\"info\"`` med en ärlig text "
+        'byta success-bubblan till variant ``"info"`` med en ärlig text '
         "— annars luras operatören att tro att följdprompten landade."
     )
 
@@ -2244,9 +2261,7 @@ def test_b155_path_b_prompt_route_exposes_applied_copy_directives() -> None:
     UI:t härleder svenska success-rader. Vi kontrollerar det mellersta
     steget här.
     """
-    text = (
-        VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts"
-    ).read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(encoding="utf-8")
 
     assert "readAppliedCopyDirectives" in text, (
         "/api/prompt måste anropa readAppliedCopyDirectives efter att "
@@ -2272,9 +2287,9 @@ def test_b155_path_b_floating_chat_summarises_copy_directives() -> None:
     i React) och inte via ``dangerouslySetInnerHTML`` — payload kommer från
     operatören och måste alltid escapas.
     """
-    text = (
-        VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx"
-    ).read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
 
     assert "function summarizeCopyDirectives" in text, (
         "Helper ``summarizeCopyDirectives`` ska kapsla mappningen från "
@@ -2286,12 +2301,10 @@ def test_b155_path_b_floating_chat_summarises_copy_directives() -> None:
         "Jakobs handoff kräver exakt rad-prefix för operatör-igenkänning."
     )
     assert "Jag uppdaterade rubriken till" in text, (
-        "Mappningen för target=tagline + operation=replace-text saknas "
-        "eller har bytt form."
+        "Mappningen för target=tagline + operation=replace-text saknas eller har bytt form."
     )
     assert "Jag la in" in text and "i hero-texten" in text, (
-        "Mappningen för target=tagline + operation=include-token saknas "
-        "eller har bytt form."
+        "Mappningen för target=tagline + operation=include-token saknas eller har bytt form."
     )
     assert "appliedCopyDirectives" in text, (
         "PromptApiResponse måste exponera ``appliedCopyDirectives`` så "
@@ -2313,9 +2326,9 @@ def test_b155_path_b_floating_chat_does_not_inject_payload_as_html() -> None:
     framtida feature behöver det måste den medvetet introduceras i en
     separat komponent och vi uppdaterar testet då.
     """
-    text = (
-        VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx"
-    ).read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
 
     jsx_use_pattern = re.compile(r"dangerouslySetInnerHTML\s*[=:]")
     assert not jsx_use_pattern.search(text), (
@@ -2323,6 +2336,84 @@ def test_b155_path_b_floating_chat_does_not_inject_payload_as_html() -> None:
         "JSX-element eller i config-object — copyDirective.payload härstammar "
         "från operatörens prompt och måste renderas som textnod via React's "
         "automatic escape."
+    )
+
+
+# --- UI-gap-fix: exakt change-set i FloatingChat (2026-06-02) --------------
+#
+# Jakobs flagga: listan "Troligen ändrat" i FloatingChat var en
+# prompt-heuristik, inte en backend-diff. Christopher-lane efter PR:
+# härled en EXAKT change-set serverside genom att diffa nya runen mot
+# föregående och visa den under "Ändrat". Dessa source-lock-tester hindrar
+# att den exakta vägen tystas bort i en framtida refactor.
+
+
+@pytest.mark.tooling
+def test_change_set_helper_reuses_run_diff() -> None:
+    """``lib/run-change-set.ts`` ska härleda change-set:en genom att
+    återanvända den pure ``computeRunDiff`` + ``readRunArtefacts`` — inte
+    genom att duplicera diff-logik eller röra build_site.py.
+    """
+    path = VIEWSER_DIR / "lib" / "run-change-set.ts"
+    assert path.exists(), "run-change-set.ts saknas — exakt change-set kan inte härledas."
+    text = path.read_text(encoding="utf-8")
+    assert "export async function readRunChangeSet" in text, (
+        "readRunChangeSet måste exporteras så /api/prompt kan kalla den."
+    )
+    assert "computeRunDiff" in text and "readRunArtefacts" in text, (
+        "Change-set:en ska byggas på befintliga artefakter via computeRunDiff "
+        "+ readRunArtefacts — ingen ny diff-implementation, ingen "
+        "build_site.py-ändring."
+    )
+
+
+@pytest.mark.tooling
+def test_prompt_route_exposes_change_set() -> None:
+    """``/api/prompt`` måste anropa ``readRunChangeSet`` och exponera
+    ``changeSet`` på top-level för follow-ups så FloatingChat kan rendera
+    exakta deltas utan en separat round-trip.
+    """
+    text = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(encoding="utf-8")
+    assert "readRunChangeSet" in text, (
+        "/api/prompt måste anropa readRunChangeSet efter runBuild — annars "
+        "är changeSet alltid undefined och den exakta vägen kan aldrig användas."
+    )
+    assert "changeSet" in text, "changeSet måste ligga i return-objektet från runPromptBuildOnce."
+
+
+@pytest.mark.tooling
+def test_floating_chat_prefers_exact_change_set_over_heuristic() -> None:
+    """FloatingChat måste föredra den exakta change-set:en
+    (``summarizeChangeSet``) framför prompt-heuristiken
+    (``summarizeChangesFromPrompt``) och växla rubriken "Ändrat" /
+    "Troligen ändrat" på ``changesExact`` så operatören ser om listan är
+    bekräftad eller en uppskattning.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "summarizeChangeSet" in text, (
+        "FloatingChat måste importera/anropa summarizeChangeSet — annars "
+        "renderas aldrig den exakta change-set:en."
+    )
+    assert "changesExact" in text, (
+        "ChatMessage måste bära changesExact så UI:t kan skilja exakt diff "
+        "från heuristik i rubriken."
+    )
+    assert '"Ändrat"' in text and '"Troligen ändrat"' in text, (
+        "Rubriken måste växla mellan 'Ändrat' (exakt) och 'Troligen ändrat' "
+        "(heuristik) — annars går ärlighetssignalen förlorad."
+    )
+    # Den exakta grenen måste ligga FÖRE heuristik-fallbacken i
+    # summarizeBuildResult, annars blir prompt-gissningen aldrig ersatt.
+    exact_idx = text.find("summarizeChangeSet(payload.changeSet)")
+    heuristic_idx = text.find("summarizeChangesFromPrompt(userPrompt)")
+    assert exact_idx != -1 and heuristic_idx != -1, (
+        "Båda vägarna måste finnas i summarizeBuildResult."
+    )
+    assert exact_idx < heuristic_idx, (
+        "Den exakta change-set-grenen måste utvärderas före prompt-"
+        "heuristiken så bekräftade deltas vinner."
     )
 
 
@@ -2356,8 +2447,7 @@ def test_tier1_error_boundary_component_exists() -> None:
         "fortfarande inget hook-API för error boundaries"
     )
     assert "getDerivedStateFromError" in text, (
-        "ErrorBoundary måste implementera getDerivedStateFromError för "
-        "att fånga rendering-fel"
+        "ErrorBoundary måste implementera getDerivedStateFromError för att fånga rendering-fel"
     )
     assert "componentDidCatch" in text, (
         "ErrorBoundary måste implementera componentDidCatch för att "
@@ -2375,11 +2465,9 @@ def test_tier1_page_wraps_subtrees_in_error_boundary() -> None:
     BuilderShell i ErrorBoundary så ett crash i någon subtree inte
     ger vit skärm för hela appen.
     """
-    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
 
-    assert 'from "@/components/error-boundary"' in text, (
-        "page.tsx måste importera ErrorBoundary"
-    )
+    assert 'from "@/components/error-boundary"' in text, "page.tsx måste importera ErrorBoundary"
 
     # Räkna antal ErrorBoundary-öppningar i JSX. Tre boundaries:
     # ViewerPanel, PromptBuilder, BuilderShell. Mindre tolerant vore
@@ -2405,16 +2493,11 @@ def test_tier1_toast_system_exists_and_is_mounted() -> None:
     assert toast_path.exists(), "Toast-systemet saknas"
     toast_text = toast_path.read_text(encoding="utf-8")
 
-    assert "export function ToastProvider" in toast_text, (
-        "toast.tsx måste exportera ToastProvider"
-    )
-    assert "export function useToast" in toast_text, (
-        "toast.tsx måste exportera useToast()"
-    )
+    assert "export function ToastProvider" in toast_text, "toast.tsx måste exportera ToastProvider"
+    assert "export function useToast" in toast_text, "toast.tsx måste exportera useToast()"
     # aria-live krävs för skärmläsar-uppläsning av toaster.
     assert "aria-live" in toast_text, (
-        "Toast-regionen/items måste ha aria-live så skärmläsare läser "
-        "upp dem när de visas"
+        "Toast-regionen/items måste ha aria-live så skärmläsare läser upp dem när de visas"
     )
     # role="alert" eller role="status" krävs för att toaster ska
     # annonseras.
@@ -2422,12 +2505,9 @@ def test_tier1_toast_system_exists_and_is_mounted() -> None:
         'Toast-items måste ha role="alert"/"status" beroende på variant'
     )
 
-    providers_text = (VIEWSER_DIR / "app" / "providers.tsx").read_text(
-        encoding="utf-8"
-    )
+    providers_text = (VIEWSER_DIR / "app" / "providers.tsx").read_text(encoding="utf-8")
     assert "ToastProvider" in providers_text, (
-        "Providers.tsx måste mounta ToastProvider så useToast() funkar "
-        "från hela komponentträdet"
+        "Providers.tsx måste mounta ToastProvider så useToast() funkar från hela komponentträdet"
     )
 
 
@@ -2438,19 +2518,1380 @@ def test_tier1_page_handles_runs_load_failure_with_retry() -> None:
     ``runsLoadError``-state och en RunsLoadErrorCard- (eller
     motsvarande) -komponent med retry-knapp.
     """
-    text = (VIEWSER_DIR / "app" / "page.tsx").read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
 
     assert "runsLoadError" in text, (
-        "page.tsx måste ha runsLoadError-state för att visa retry-card "
-        "vid /api/runs-failures"
+        "page.tsx måste ha runsLoadError-state för att visa retry-card vid /api/runs-failures"
     )
     assert "RunsLoadErrorCard" in text or "onRetry" in text, (
-        "page.tsx måste rendera ett retry-card med onRetry-callback "
-        "när runsLoadError är satt"
+        "page.tsx måste rendera ett retry-card med onRetry-callback när runsLoadError är satt"
     )
     # Toast-feedback för failure-pathen så operatören ser felet även
     # om hen inte tittar på hero-ytan.
     assert 'variant: "error"' in text and "Kunde inte ladda runs" in text, (
         "page.tsx måste visa en error-toast med titel 'Kunde inte "
         "ladda runs' när initial fetch failar"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tier 2 — skeleton-konsekvens + Cmd+K shortcut
+# ---------------------------------------------------------------------------
+
+
+def test_tier2_inspector_uses_skeleton_during_loading() -> None:
+    """``site-inspector-sheet.tsx`` måste rendera Skeleton-block under
+    artefact-loading istället för en spinner-only "Läser artefakter…"-
+    rad. Skeleton-mönstret ger operatören en visuell preview av tab-
+    strukturen som kommer dyka upp och förhindrar layout-hopp.
+    """
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "inspector" / "site-inspector-sheet.tsx"
+    ).read_text(encoding="utf-8")
+
+    assert "InspectorLoadingSkeleton" in text, (
+        "site-inspector-sheet.tsx måste ha en InspectorLoadingSkeleton-"
+        "komponent som ersätter den gamla Loader2-spinnern"
+    )
+    assert "import { Skeleton }" in text, (
+        "site-inspector-sheet.tsx måste importera Skeleton från @/components/ui/skeleton"
+    )
+    # Loader2 var den gamla spinnern — bekräfta att den är borta från
+    # imports OCH från jsx-trädet i loading-blocket.
+    assert "Loader2" not in text, (
+        "site-inspector-sheet.tsx ska inte längre använda Loader2 — "
+        "skeleton-tillståndet ersätter spinnern"
+    )
+    assert 'role="status"' in text and 'aria-live="polite"' in text, (
+        "InspectorLoadingSkeleton måste ha role=status + aria-live så "
+        "skärmläsare läser upp att vi laddar"
+    )
+
+
+def test_tier2_variants_tab_uses_skeleton_during_loading() -> None:
+    """``variants-tab.tsx`` måste byta sin Loader2-spinner mot Skeleton-
+    kort medan ``options === null``.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "inspector" / "variants-tab.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert "import { Skeleton }" in text, "variants-tab.tsx måste importera Skeleton"
+    assert "Loader2" not in text, "variants-tab.tsx ska inte använda Loader2 i loading-blocket"
+    # 4 skeleton-kort matchar variant-grid (2 cols × 2 rader på sm+).
+    assert "length: 4" in text, (
+        "variants-tab.tsx måste rendera 4 Skeleton-kort som approximerar variant-grid"
+    )
+
+
+def test_tier2_versions_tab_uses_skeleton_for_init_and_diff() -> None:
+    """``versions-tab.tsx`` måste byta båda Loader2-spinners (initial-
+    load + diff-load) mot Skeleton-rader. Loader2 får finnas kvar för
+    pågående-bygge-raden (annan use case).
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "inspector" / "versions-tab.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert "import { Skeleton }" in text, "versions-tab.tsx måste importera Skeleton"
+    # Initial-load: text "Läser versioner" får finnas kvar som sr-only-
+    # span, men måste sitta i ett block som också renderar Skeleton.
+    init_idx = text.find("Läser versioner")
+    assert init_idx != -1, (
+        "versions-tab.tsx förväntas ha 'Läser versioner' som sr-only-text i loading-blocket"
+    )
+    init_block = text[init_idx - 400 : init_idx + 600]
+    assert "Skeleton" in init_block and "sr-only" in init_block, (
+        "Initial-loading-blocket i versions-tab.tsx måste rendera "
+        "Skeleton + sr-only istället för en Loader2-spinner"
+    )
+    # Diff-load ("Räknar diff…") får inte längre kombineras med Loader2.
+    diff_loading_idx = text.find("Räknar diff")
+    if diff_loading_idx != -1:
+        # Räknar bara om strängen finns kvar (sr-only). Då måste
+        # samma block också använda Skeleton.
+        block = text[diff_loading_idx - 400 : diff_loading_idx + 400]
+        assert "Skeleton" in block, (
+            "Diff-loading-blocket i versions-tab.tsx måste rendera Skeleton istället för Loader2"
+        )
+
+
+def test_tier2_run_details_panel_uses_skeleton_during_loading() -> None:
+    """``run-details-panel.tsx`` måste byta "Laddar artefakter…"-text
+    mot Skeleton-rader.
+    """
+    text = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(encoding="utf-8")
+
+    assert "import { Skeleton }" in text, "run-details-panel.tsx måste importera Skeleton"
+    # Säkerställ att den nakna text-only loading-paragrafen är borta.
+    assert '<p className="text-sm text-muted-foreground">Laddar artefakter' not in text, (
+        "run-details-panel.tsx ska inte längre rendera en text-only 'Laddar artefakter…'-paragraf"
+    )
+
+
+def test_tier2_page_registers_cmd_k_shortcut_for_console_drawer() -> None:
+    """``app/page.tsx`` måste registrera en global Cmd/Ctrl+K-listener
+    som togglar ConsoleDrawer. Listenern måste hoppa över input/textarea-
+    fokus så genvägen inte stjäl tangenten från composern.
+    """
+    text = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
+
+    assert 'event.key !== "k"' in text or 'event.key === "k"' in text, (
+        "page.tsx måste lyssna på 'k'-tangenten för Cmd+K-shortcut"
+    )
+    assert "metaKey" in text and "ctrlKey" in text, (
+        "Cmd+K-listenern måste kolla både metaKey (Mac) och ctrlKey (Windows/Linux)"
+    )
+    assert "setConsoleOpen" in text, "page.tsx måste toggla setConsoleOpen från Cmd+K-listenern"
+    # Bekräfta att vi hoppar över edit-targets (TEXTAREA / INPUT /
+    # contentEditable) så vi inte stjäl tangent från composern.
+    assert "TEXTAREA" in text and "isContentEditable" in text, (
+        "Cmd+K-listenern måste hoppa över editable-element så den inte "
+        "stjäl tangenten från composern"
+    )
+
+
+def test_tier2_console_drawer_shows_keyboard_hint() -> None:
+    """``console-drawer.tsx`` måste visa en ⌘K-kbd-hint i headern så
+    operatören upptäcker shortcuten.
+    """
+    text = (VIEWSER_DIR / "components" / "console-drawer.tsx").read_text(encoding="utf-8")
+
+    assert "⌘K" in text or "Cmd+K" in text, (
+        "console-drawer.tsx måste visa en synlig ⌘K-hint i headern"
+    )
+    assert "<kbd" in text, (
+        "Hinten ska renderas som ett <kbd>-element (semantisk markering för tangentbordsgenvägar)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tier 3 — a11y-pass + fil-split (versions-tab + viewer-panel)
+# ---------------------------------------------------------------------------
+
+
+def test_tier3_sheet_and_dialog_use_swedish_close_label() -> None:
+    """De svenska sr-only-labels för close-knappar i ``ui/sheet.tsx`` +
+    ``ui/dialog.tsx`` måste vara "Stäng", inte engelska "Close". Resten
+    av UI:t är konsekvent svenskt — sr-only-text får inte glida.
+    """
+    sheet = (VIEWSER_DIR / "components" / "ui" / "sheet.tsx").read_text(encoding="utf-8")
+    dialog = (VIEWSER_DIR / "components" / "ui" / "dialog.tsx").read_text(encoding="utf-8")
+
+    assert '<span className="sr-only">Stäng</span>' in sheet, (
+        "ui/sheet.tsx måste använda 'Stäng' (inte 'Close') som sr-only-text på close-knappen"
+    )
+    assert '<span className="sr-only">Stäng</span>' in dialog, (
+        "ui/dialog.tsx måste använda 'Stäng' (inte 'Close') som sr-only-text på close-knappen"
+    )
+    # Bekräfta att engelska "Close" inte ligger kvar i fixerade strängar.
+    # Stränget kan dyka upp i kommentarer eller komponentnamn (`SheetClose`),
+    # så vi söker bara sr-only-mönstret.
+    assert '"sr-only">Close<' not in sheet, (
+        "ui/sheet.tsx har fortfarande 'Close' i sr-only-text — ska vara 'Stäng'"
+    )
+    assert '"sr-only">Close<' not in dialog, (
+        "ui/dialog.tsx har fortfarande 'Close' i sr-only-text — ska vara 'Stäng'"
+    )
+
+
+def test_tier3_floating_chat_decorative_icons_are_aria_hidden() -> None:
+    """Dekorativa ikoner inuti knappar med egen aria-label måste vara
+    ``aria-hidden`` så skärmläsare inte läser upp ikonnamnet ovanpå
+    knappens label. Vi kontrollerar Send + Loader2 + ImagePlus i
+    floating-chat.tsx vars parent-knappar har 'Skicka instruktion'
+    respektive 'Bifoga bild' som aria-label.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    # Send-ikonen i Skicka-knappen.
+    assert "<Send aria-hidden" in text, (
+        "floating-chat.tsx: <Send>-ikonen i Skicka-knappen måste ha "
+        "aria-hidden (parent-knappen har aria-label='Skicka instruktion')"
+    )
+    # ImagePlus-ikonen i Bifoga-bild-knappen.
+    assert "<ImagePlus aria-hidden" in text, (
+        "floating-chat.tsx: <ImagePlus>-ikonen i Bifoga-bild-knappen måste "
+        "ha aria-hidden (parent-knappen har aria-label='Bifoga bild')"
+    )
+
+
+def test_tier3_versions_tab_diff_view_is_extracted() -> None:
+    """``versions-tab.tsx`` växte till 1438 rader innan split — den
+    delade ut DiffView + helpers + EmptyState till en egen fil. Vi
+    kontrollerar att huvudfilen importerar från den nya filen istället
+    för att definiera lokalt, och att den nya filen exporterar det
+    förväntade publika API:et.
+    """
+    main = (VIEWSER_DIR / "components" / "builder" / "inspector" / "versions-tab.tsx").read_text(
+        encoding="utf-8"
+    )
+    split = (
+        VIEWSER_DIR / "components" / "builder" / "inspector" / "versions-tab" / "diff-view.tsx"
+    ).read_text(encoding="utf-8")
+
+    # Importerar från den nya filen.
+    assert 'from "@/components/builder/inspector/versions-tab/diff-view"' in main, (
+        "versions-tab.tsx måste importera DiffView/CompareEmptyHint/"
+        "VersionsEmptyState från den nya diff-view-filen"
+    )
+    # Lokala definitioner är borta — annars dubbeldefinition.
+    assert "function DiffView(" not in main, (
+        "versions-tab.tsx ska inte längre definiera DiffView lokalt"
+    )
+    assert "function ScalarChangeRow(" not in main, (
+        "versions-tab.tsx ska inte längre definiera ScalarChangeRow lokalt"
+    )
+    assert "function ValueChip(" not in main, (
+        "versions-tab.tsx ska inte längre definiera ValueChip lokalt"
+    )
+    assert "function ChipDiffRow(" not in main, (
+        "versions-tab.tsx ska inte längre definiera ChipDiffRow lokalt"
+    )
+    assert "function ChangeChip(" not in main, (
+        "versions-tab.tsx ska inte längre definiera ChangeChip lokalt"
+    )
+    assert "function CompareEmptyHint(" not in main, (
+        "versions-tab.tsx ska inte längre definiera CompareEmptyHint lokalt"
+    )
+
+    # Splitfilen exporterar förväntat API.
+    assert "export function DiffView(" in split, "diff-view.tsx måste exportera DiffView"
+    assert "export function CompareEmptyHint(" in split, (
+        "diff-view.tsx måste exportera CompareEmptyHint"
+    )
+    assert "export function VersionsEmptyState(" in split, (
+        "diff-view.tsx måste exportera VersionsEmptyState"
+    )
+
+
+def test_tier3_versions_tab_shrunk_below_1300_lines() -> None:
+    """Sanity-check: ``versions-tab.tsx`` ska vara mätbart mindre efter
+    Tier 3-splittet. Var 1438 rader → mål under 1300 (faktiskt resultat:
+    1184). Tröskeln är generös så framtida tilltäg i huvudfilen inte
+    bryter testet förrän det är dags för nästa split.
+    """
+    path = VIEWSER_DIR / "components" / "builder" / "inspector" / "versions-tab.tsx"
+    line_count = sum(1 for _ in path.open(encoding="utf-8"))
+    assert line_count < 1300, (
+        f"versions-tab.tsx har växt till {line_count} rader — splitta "
+        f"ytterligare innan vi går över 1300"
+    )
+
+
+def test_tier3_viewer_panel_build_progress_card_is_extracted() -> None:
+    """``viewer-panel.tsx`` växte till 1182 rader innan split — den
+    extraherade BuildProgressCard + BUILD_STEPS + stageToStepIndex +
+    PREVIEW_PREP_HINT till en egen fil.
+    """
+    main = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
+    split = (VIEWSER_DIR / "components" / "viewer-panel" / "build-progress-card.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'from "@/components/viewer-panel/build-progress-card"' in main, (
+        "viewer-panel.tsx måste importera BuildProgressCard från den nya "
+        "viewer-panel/build-progress-card-filen"
+    )
+    assert "function BuildProgressCard(" not in main, (
+        "viewer-panel.tsx ska inte längre definiera BuildProgressCard lokalt"
+    )
+    assert "const BUILD_STEPS" not in main, (
+        "viewer-panel.tsx ska inte längre definiera BUILD_STEPS lokalt"
+    )
+    assert "function stageToStepIndex(" not in main, (
+        "viewer-panel.tsx ska inte längre definiera stageToStepIndex lokalt"
+    )
+
+    # Splitfilen har det förväntade API:et.
+    assert "export function BuildProgressCard(" in split, (
+        "build-progress-card.tsx måste exportera BuildProgressCard"
+    )
+    # PREVIEW_PREP_HINT-logik ska finnas i splitfilen så Mode-aware-copy
+    # följer med (annars hardcodas "Laddar förhandsvisningen…" oavsett mode).
+    assert "PREVIEW_PREP_HINT" in split, (
+        "build-progress-card.tsx måste behålla PREVIEW_PREP_HINT-logiken "
+        "så local-next-mode visar 'Snart kan du klicka runt…' istället för "
+        "stackblitz-copyn"
+    )
+
+
+def test_tier3_viewer_panel_shrunk_below_1100_lines() -> None:
+    """Sanity-check: ``viewer-panel.tsx`` ska vara mätbart mindre efter
+    Tier 3-splittet. Var 1182 rader → mål under 1100 (faktiskt resultat:
+    1053).
+    """
+    path = VIEWSER_DIR / "components" / "viewer-panel.tsx"
+    line_count = sum(1 for _ in path.open(encoding="utf-8"))
+    assert line_count < 1100, (
+        f"viewer-panel.tsx har växt till {line_count} rader — splitta "
+        f"ytterligare innan vi går över 1100"
+    )
+
+
+# ----------------------------------------------------------------------
+# Pre-push-fixar (efter Tier 3 scout)
+# ----------------------------------------------------------------------
+# Fem P1-fynd från pre-push-scouten:
+#   1. ErrorBoundary måste applicera ``className`` även i success-render
+#      så ``h-full w-full``-kedjan till ViewerPanel inte bryts.
+#   2. Toast ``dismiss`` måste vara idempotent + rensa både auto-dismiss
+#      och cleanup-timers så Map:en inte läcker entries.
+#   3. ToastViewport flyttades från ``bottom-4`` till ``top-20`` för att
+#      inte skymma FloatingChat-composern eller mobil bottom-sheet.
+#   4. ``build-progress-card.tsx`` måste normalisera env-variabeln på
+#      samma sätt som ``viewer-panel.tsx`` (``trim`` + ``toLowerCase``)
+#      annars ljuger PREVIEW_PREP_HINT vid casing-varianter.
+#   5. Cmd+K-listenern hoppar nu över ``SELECT``-element så ConsoleDrawer
+#      inte togglar mitt i ett val.
+
+
+def test_pre_push_error_boundary_applies_class_in_success_render() -> None:
+    """ErrorBoundary måste skicka ``className`` även till div:en runt
+    barnen i success-läget — annars bryter ``h-full w-full``-kedjan
+    till ViewerPanel-canvasen och iframen kollapsar till zero-height.
+    """
+    path = VIEWSER_DIR / "components" / "error-boundary.tsx"
+    content = path.read_text(encoding="utf-8")
+    assert re.search(
+        r"<div\s+key=\{resetKey\}\s+className=\{className\}>",
+        content,
+    ), (
+        "ErrorBoundary måste rendera <div key={resetKey} className={className}> "
+        "i success-läget så call-sites kan behålla layout-höjd"
+    )
+    assert re.search(
+        r'<ErrorBoundary[^>]*area="Förhandsvisningen"[^>]*className="h-full w-full"',
+        (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8"),
+    ), 'page.tsx måste passa in className="h-full w-full" på ErrorBoundary runt ViewerPanel'
+
+
+def test_pre_push_toast_dismiss_is_idempotent() -> None:
+    """``dismiss`` ska vara idempotent (hoppar över om cleanup redan
+    pågår) och rensa både auto-dismiss-timern och cleanup-timern i
+    ``removeToast`` så Map-entries inte läcker.
+    """
+    path = VIEWSER_DIR / "components" / "ui" / "toast.tsx"
+    content = path.read_text(encoding="utf-8")
+    assert re.search(
+        r"timeoutsRef\.current\.has\(`\$\{id\}:cleanup`\)",
+        content,
+    ), "dismiss måste tidigt-returnera om cleanup-timern redan finns"
+    assert "timeoutsRef.current.delete(`${id}:cleanup`)" in content, (
+        "removeToast måste rensa ``${id}:cleanup``-nyckeln så Map:en "
+        "inte växer obegränsat när manuell dismiss races med auto-timeout"
+    )
+
+
+def test_pre_push_toast_viewport_positioned_above_floating_chat() -> None:
+    """ToastViewport får inte ligga på ``bottom-*`` — det krockar med
+    FloatingChat-composern (desktop bottom-6) och mobil bottom-sheet.
+    Top-placement är säkrare yta.
+    """
+    path = VIEWSER_DIR / "components" / "ui" / "toast.tsx"
+    content = path.read_text(encoding="utf-8")
+    assert "top-20" in content, (
+        "ToastViewport ska använda top-20 så aviseringar inte skymmer "
+        "FloatingChat eller PromptBuilder-composern"
+    )
+    # Säkerhetsnät: bottom-positionering ska inte ha smugit tillbaka.
+    # ``bottom-2`` används bara i animations-namnet (slide-in-from-bottom-2)
+    # som vi också ändrade — så vi tillåter den substring som regex.
+    assert "fixed inset-x-0 bottom-" not in content, (
+        "ToastViewport får inte använda bottom-positionering"
+    )
+
+
+def test_pre_push_build_progress_card_env_normalization_matches_viewer_panel() -> None:
+    """``build-progress-card.tsx`` och ``viewer-panel.tsx`` MÅSTE
+    normalisera ``NEXT_PUBLIC_VIEWSER_PREVIEW_MODE`` likadant (annars
+    visar BuildProgressCard fel hint för t.ex. ``LOCAL-NEXT``).
+    Båda ska använda ``.trim().toLowerCase()``.
+    """
+    card = (VIEWSER_DIR / "components" / "viewer-panel" / "build-progress-card.tsx").read_text(
+        encoding="utf-8"
+    )
+    panel = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
+    # Båda filerna ska normalisera med trim+toLowerCase. Tillåt fri
+    # whitespace/radbrytning mellan env-namnet och normaliserings-
+    # anropen — viktigt är att båda metoderna förekommer i koden så
+    # casing-varianter (``LOCAL-NEXT``) tolkas konsekvent.
+    for name, content in [("build-progress-card.tsx", card), ("viewer-panel.tsx", panel)]:
+        assert "NEXT_PUBLIC_VIEWSER_PREVIEW_MODE" in content, (
+            f"{name} måste läsa NEXT_PUBLIC_VIEWSER_PREVIEW_MODE"
+        )
+        assert ".trim()" in content, f"{name} måste trim:a NEXT_PUBLIC_VIEWSER_PREVIEW_MODE"
+        assert ".toLowerCase()" in content, (
+            f"{name} måste toLowerCase():a NEXT_PUBLIC_VIEWSER_PREVIEW_MODE "
+            f"så casing-varianter (``LOCAL-NEXT``) tolkas konsekvent"
+        )
+
+
+def test_pre_push_cmd_k_skips_select_targets() -> None:
+    """⌘K-listenern i ``page.tsx`` ska hoppa över SELECT-element så
+    operatören inte tappar fokus i ConsoleDrawer's projekt-väljare
+    eller andra select:s i appen. Matchar DiscoveryWizard's egen
+    ⌘K-skip-lista.
+    """
+    path = VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx"
+    content = path.read_text(encoding="utf-8")
+    # Hitta useEffect-blocket för ⌘K och säkerställ att SELECT-skip finns.
+    assert re.search(
+        r'tagName === "SELECT"',
+        content,
+    ), "⌘K-listenern måste skippa SELECT-element (matcha wizardens mönster)"
+
+
+# ----------------------------------------------------------------------
+# Jakob-handoff bite-A + bite-C (post-PR #139)
+# ----------------------------------------------------------------------
+# Två låg-impact-fynd som flaggades av Jakobs bot efter PR #139:
+#   A. prompt-builder.tsx NDJSON-parsing: inre try/catch runt JSON.parse
+#      så en korrupt rad inte sprider "Unexpected token X" till operatören.
+#      Final-buffer-union utökades med "building" så snabba builds där
+#      Phase 1 + Phase 2 hamnar i samma chunk inte typ-fail:ar.
+#   C. more-info-dialog.tsx activeTab-state ska nollställas till "about"
+#      varje gång dialogen öppnas (Radix unmountar inte tree:t mellan
+#      open-toggles när controlled).
+
+
+def test_handoff_a_prompt_builder_ndjson_parse_is_defensive() -> None:
+    """``prompt-builder.tsx`` NDJSON-parsing måste ha inre try/catch
+    runt BÅDA ``JSON.parse``-anrop (line-iterator + final-buffer) så
+    en korrupt NDJSON-rad inte sprider SyntaxError till operatören.
+    """
+    path = VIEWSER_DIR / "components" / "prompt-builder.tsx"
+    content = path.read_text(encoding="utf-8")
+    # Räkna JSON.parse-anrop i samma kontext — båda måste vara inom
+    # en try/catch-block som loggar och fortsätter/fallback:ar.
+    parse_calls = re.findall(r"JSON\.parse\((line|buffer)\)", content)
+    assert len(parse_calls) == 2, (
+        f"Förväntade 2 JSON.parse-anrop (line + buffer), hittade {len(parse_calls)}: {parse_calls}"
+    )
+    # Båda måste föregås av ``try {`` på samma indent (inom while-loopen
+    # för line, eller efter ``if (buffer.trim())`` för buffer).
+    assert content.count("try {\n            event = JSON.parse(line)") == 1, (
+        "JSON.parse(line) måste vara inom inre try-block i NDJSON-loopen"
+    )
+    assert content.count("try {\n          event = JSON.parse(buffer)") == 1, (
+        "JSON.parse(buffer) måste vara inom inre try-block i final-buffern"
+    )
+    # Final-buffer-union ska inkludera "building" — annars typfail om
+    # en snabb build pushar building+done i samma chunk utan terminator.
+    final_buffer_section = content[content.index("if (buffer.trim())") :]
+    final_buffer_section = final_buffer_section[: final_buffer_section.index("}") + 200]
+    assert '"building"' in final_buffer_section, (
+        'final-buffer-union måste ha ``stage: "building"`` för att hantera '
+        "snabba builds där Phase 1 + done hamnar i samma chunk"
+    )
+
+
+def test_handoff_c_more_info_dialog_resets_active_tab_on_open() -> None:
+    """``more-info-dialog.tsx`` måste nollställa ``activeTab`` till den
+    begärda ``initialTab`` (default "about") varje gång ``open`` flippar
+    från false → true så operatören inte ser föregående flik (Radix
+    Dialog-content unmountar inte tree:t mellan open-toggles när
+    controlled).
+
+    Reset:en görs som en render-tids state-justering (Reacts "föregående
+    props"-mönster via ``wasOpen``) istället för en ``onOpenChange``-
+    wrapper: dels ogillar React 19:s ``react-hooks/set-state-in-effect``
+    effekt-driven setState, dels är dialogen fullt parent-controlled —
+    Radix routar aldrig open-flanken genom onOpenChange, så en wrapper
+    skulle inte hinna nollställa fliken vid öppning. Render-mönstret kör
+    pålitligt på varje false→true-övergång oavsett trigger (knapp,
+    telefon-nudge etc.).
+    """
+    path = VIEWSER_DIR / "components" / "discovery-wizard" / "more-info-dialog.tsx"
+    content = path.read_text(encoding="utf-8")
+    # initialTab-prop med "about"-default måste finnas.
+    assert re.search(r'initialTab\s*=\s*"about"', content), (
+        'MoreInfoDialog måste ha en initialTab-prop med default "about"'
+    )
+    # Render-tids reset: open !== wasOpen → setActiveTab(initialTab).
+    assert re.search(
+        r"if \(open !== wasOpen\)\s*\{\s*setWasOpen\(open\);\s*"
+        r"setTrackedInitialTab\(initialTab\);\s*"
+        r"if \(open\)\s*setActiveTab\(initialTab\);",
+        content,
+        re.DOTALL,
+    ), (
+        "MoreInfoDialog måste nollställa activeTab till initialTab på "
+        "open-flanken via render-tids wasOpen-mönstret"
+    )
+    # initialTab-byte MEDAN dialogen är öppen ska också byta flik (djuplänk
+    # som byter mål utan att stänga). Annars hängde activeTab kvar.
+    assert re.search(
+        r"else if \(open && initialTab !== trackedInitialTab\)\s*\{\s*"
+        r"setTrackedInitialTab\(initialTab\);\s*setActiveTab\(initialTab\);",
+        content,
+        re.DOTALL,
+    ), (
+        "MoreInfoDialog måste byta flik när initialTab ändras medan open "
+        "redan är true (annars följer djuplänken inte med)"
+    )
+    # Dialog ska drivas direkt av parent's onOpenChange (ingen wrapper
+    # längre — reset:en bor i render-mönstret ovan).
+    assert "<Dialog open={open} onOpenChange={onOpenChange}>" in content, (
+        "Dialog ska driva sin onOpenChange direkt från parent"
+    )
+
+
+def test_wizard_contact_nudge_deeplinks_to_contact_tab() -> None:
+    """``discovery-wizard.tsx`` ska visa en nudge när telefonnummer
+    saknas och kunna öppna MoreInfoDialog direkt på Kontakt-fliken så
+    operatören inte oavsiktligt publicerar platshållar-numret
+    (+46 8 000 00 00). Ren UI/UX — backend-payloaden är oförändrad.
+    """
+    path = VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx"
+    content = path.read_text(encoding="utf-8")
+    # openMoreInfo-helper som sätter både flik och open.
+    assert "const openMoreInfo = useCallback(" in content, (
+        "Wizarden måste ha en openMoreInfo-helper som sätter flik + open"
+    )
+    # Nudge-knappen måste djuplänka till Kontakt-fliken.
+    assert 'openMoreInfo("contact")' in content, (
+        'Nudge-knappen måste djuplänka via openMoreInfo("contact")'
+    )
+    # Nudgen ska villkoras på saknat (trimmat) telefonnummer.
+    assert "!answers.contact.phone.trim()" in content, (
+        "Telefon-nudgen måste villkoras på answers.contact.phone.trim()"
+    )
+    # initialTab måste skickas vidare till MoreInfoDialog.
+    assert "initialTab={moreInfoTab}" in content, (
+        "MoreInfoDialog måste få initialTab={moreInfoTab} så djuplänken "
+        "till Kontakt-fliken fungerar"
+    )
+
+
+def test_b160_logo_image_has_explicit_auto_width() -> None:
+    """B160: logon i ``site-header.tsx`` + ``discovery-wizard.tsx``
+    renderas via next/image med höjden styrd av ``h-7``. Utan en inline
+    ``style`` med ``width: "auto"`` varnar Next ("Image ... has either
+    width or height modified, but not the other") eftersom Next läser
+    inline-style, inte Tailwind-klassen ``w-auto``. Lås att båda har
+    ``style.width: "auto"`` så devtools-bruset/CLS-risken inte återkommer.
+    """
+    for rel in (
+        ("components", "layout", "site-header.tsx"),
+        ("components", "discovery-wizard", "discovery-wizard.tsx"),
+    ):
+        path = VIEWSER_DIR.joinpath(*rel)
+        content = path.read_text(encoding="utf-8")
+        assert 'src="/sajtbyggaren_logo.png"' in content, (
+            f"{path.name} ska rendera sajtbyggaren-logon"
+        )
+        assert re.search(r'style=\{\{\s*width:\s*"auto"\s*\}\}', content), (
+            f"{path.name}: logo-Image måste ha style={{ width: 'auto' }} "
+            "för att tysta Next:s aspect-ratio-varning (B160)"
+        )
+
+
+def test_builder_followup_drives_buildstage_via_real_trace_signal() -> None:
+    """Scout-fynd (P1): i builder-läge drevs ``buildStage`` aldrig under
+    follow-ups (``onStageChange={builderActive ? undefined : setBuildStage}``
+    stänger av PromptBuilder:s rapport), så ViewerPanel:s BuildProgressCard
+    frös på föregående bygges sista stage och stegmarkören hoppade direkt
+    till sista steget.
+
+    Fixen trådar ``onStageChange`` page.tsx → BuilderShell → FloatingChat och
+    driver stegen från den RIKTIGA trace.ndjson-signalen
+    (``useBuildTracePolling.currentPhase``), inte en setTimeout-flip (jfr
+    B122). Lås kedjan så den inte tyst kopplas bort igen.
+    """
+    page = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
+    shell = (VIEWSER_DIR / "components" / "builder" / "builder-shell.tsx").read_text(
+        encoding="utf-8"
+    )
+    chat = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    # page.tsx måste skicka setBuildStage till BuilderShell (annars är
+    # buildStage frusen under follow-ups).
+    assert "onStageChange={setBuildStage}" in page, (
+        "page.tsx måste skicka onStageChange={setBuildStage} till BuilderShell "
+        "så follow-up-bygget driver BuildProgressCard"
+    )
+    # BuilderShell återställer stage vid VARJE byggstart (FloatingChat ELLER
+    # dialog) + vidarebefordrar till FloatingChat.
+    assert 'onStageChange?.("thinking")' in shell, (
+        "BuilderShell.handleBuildStart måste återställa stage till 'thinking' "
+        "så stegmarkören aldrig fryser på föregående bygges sista stage"
+    )
+    assert "onStageChange={onStageChange}" in shell, (
+        "BuilderShell måste tråda onStageChange vidare till FloatingChat"
+    )
+    # FloatingChat förfinar från trace.ndjson-fasen (riktig signal).
+    assert 'tracePolling.currentPhase === "build"' in chat, (
+        "FloatingChat måste mappa trace.ndjson-fasen 'build' → buildStage "
+        "'building' (riktig signal, inte setTimeout)"
+    )
+    assert 'onStageChange("building")' in chat, (
+        "FloatingChat måste rapportera 'building' när trace når build-fasen"
+    )
+    # Avslut: success/failed rapporteras när bygget landar.
+    assert 'onStageChange?.(outcome === "failed" ? "failed" : "success")' in chat, (
+        "FloatingChat måste rapportera success/failed när bygget landar"
+    )
+
+
+def test_wizard_finish_timer_is_cancelled_on_close() -> None:
+    """Scout-fynd (P1): submit-overlayns 700 ms-timer fyrade av onComplete
+    (bygg-start) även om operatören stängde wizarden (Esc) under väntan.
+    Timern måste sparas i en ref och avbrytas när ``open`` blir false samt
+    vid unmount — annars startas ett oönskat bygge efter att hen backat ut.
+    """
+    content = (VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "submitTimerRef" in content, (
+        "finish() måste spara submit-timern i submitTimerRef så den kan avbrytas"
+    )
+    assert "submitTimerRef.current = window.setTimeout(" in content, (
+        "submit-timern måste lagras i submitTimerRef (inte en lös setTimeout)"
+    )
+    # Avbrott när open blir false (Esc/stäng).
+    assert re.search(
+        r"if \(open\) return;\s*\n\s*if \(submitTimerRef\.current !== null\)\s*\{\s*"
+        r"clearTimeout\(submitTimerRef\.current\);",
+        content,
+        re.DOTALL,
+    ), "Wizarden måste avbryta submit-timern i en effekt när open blir false"
+
+
+def test_wizard_keyboard_help_lists_all_four_steps() -> None:
+    """Scout-fynd (P1): genvägs-hjälpen sa 'Hoppa till tab 1–3' men wizarden
+    har fyra steg (foundation→assets). Lås att hjälptexten listar steg 1–4.
+
+    Wave 2 (Steg 4): steg-hoppet flyttades från ⌘/Ctrl+siffra till ⌥+siffra
+    eftersom ⌘/Ctrl+siffra är webbläsarens egna flik-genvägar — matchningen
+    görs på event.code (Digit1–9) eftersom Option+siffra ger specialtecken
+    på Mac. ⌘/-genvägen har samma inEditable-guard som ?.
+    """
+    content = (VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert '"⌥1", "⌥2", "⌥3", "⌥4"' in content, (
+        "Genvägs-hjälpen måste lista alla fyra steg med ⌥-modifier (⌥1–⌥4)"
+    )
+    assert "Hoppa till tab 1–3" not in content, (
+        "Den föråldrade 'tab 1–3'-texten måste bort — wizarden har fyra steg"
+    )
+    assert '"⌘1", "⌘2", "⌘3", "⌘4"' not in content, (
+        "⌘-baserade steg-genvägar måste bort — de krockar med webbläsarens flik-genvägar (Steg 4)"
+    )
+    # Handlern måste matcha ⌥ + event.code (inte ⌘/Ctrl + event.key).
+    assert "event.altKey" in content and re.search(
+        r"/\^Digit\[1-9\]\$/\.test\(event\.code\)", content
+    ), (
+        "Steg-hoppet måste matcha event.altKey + event.code (Digit1–9) så det "
+        "inte krockar med webbläsarens ⌘/Ctrl+siffra-flikbyte"
+    )
+
+
+def test_wizard_submit_overlay_uses_customer_language() -> None:
+    """Scout-fynd (microcopy): submit-overlayn visade pipeline-jargong
+    ('Discovery → Plan → Codegen') för en icke-teknisk kund. Lås kundvänlig
+    svenska så kärnflödet prompt→sajt känns begripligt.
+    """
+    content = (VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "Discovery → Plan → Codegen" not in content, (
+        "Pipeline-jargong får inte visas i den kundvända submit-overlayn"
+    )
+    assert "Vi läser dina svar, planerar sidorna och bygger sajten." in content, (
+        "Submit-overlayn ska förklara bygget i kundvänlig svenska"
+    )
+
+
+def test_cmd_k_has_modal_guard() -> None:
+    """Wave 2 (Steg 1): global ⌘K togglade ConsoleDrawer även när en annan
+    modal (DiscoveryWizard/MoreInfoDialog/Verktyg/bygg-dialog) var öppen och
+    ryckte upp en bakgrundspanel mitt i kärnflödet. Handlern måste suppressa
+    öppning när konsolen är stängd OCH ett [role="dialog"]/[aria-modal]-
+    element finns i DOM, men fortfarande kunna STÄNGA en öppen konsol.
+    """
+    content = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "consoleOpenRef" in content, (
+        "⌘K-handlern måste spegla consoleOpen via en ref (lever i []-effekt)"
+    )
+    assert re.search(
+        r"if \(!consoleOpenRef\.current\)\s*\{\s*if \(\s*document\.querySelector\(",
+        content,
+        re.DOTALL,
+    ), (
+        "⌘K måste suppressas när konsolen är stängd och en annan modal är "
+        "öppen (querySelector på role=dialog/aria-modal)"
+    )
+    assert '[role="dialog"], [role="alertdialog"], [aria-modal="true"]' in content, (
+        "Modal-guarden måste täcka role=dialog, role=alertdialog och aria-modal=true"
+    )
+
+
+def test_builder_actions_arrow_keys_scope_to_current_target() -> None:
+    """Wave 2 (Steg 2): handleMenuKeyDown frågade containerRef, men i
+    inline-varianten renderas Verktyg-modalen i en portal UTANFÖR
+    containerRef → piltangenterna var döda i just den modal operatören
+    använder. Handlern måste fråga event.currentTarget och onKeyDown måste
+    sitta på grid-diven inuti dialogen (inte bara på container-diven).
+    """
+    content = (VIEWSER_DIR / "components" / "builder" / "builder-actions.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "const node = event.currentTarget;" in content, (
+        "handleMenuKeyDown måste scope:a sökningen till event.currentTarget "
+        "(inte containerRef) så inline-portalens knappar hittas"
+    )
+    # onKeyDown måste förekomma minst två gånger: container-diven (fixed) +
+    # grid-diven i dialogen (inline).
+    assert content.count("onKeyDown={handleMenuKeyDown}") >= 2, (
+        "onKeyDown={handleMenuKeyDown} måste sitta både på container-diven "
+        "och på inline-dialogens grid-div"
+    )
+
+
+def test_console_button_exposes_cmd_k_hint() -> None:
+    """Wave 2 (Steg 3): ⌘K-hinten syntes bara inuti den redan öppna konsolen.
+    Header-konsolknappen måste exponera genvägen (title + aria-label) så den
+    är upptäckbar innan konsolen öppnats.
+    """
+    content = (VIEWSER_DIR / "components" / "layout" / "site-header.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "⌘K (Ctrl+K på Windows)" in content, (
+        "Header-konsolknappen måste ha en title som visar ⌘K-genvägen"
+    )
+    assert "(genväg ⌘K)" in content, "aria-label måste nämna ⌘K-genvägen för skärmläsare"
+
+
+def test_wizard_help_button_visible_on_mobile() -> None:
+    """Wave 2 (Steg 5): genvägs-/hjälp-knappen var ``hidden sm:inline-flex``
+    → osynlig på smal viewport (t.ex. iPad i porträtt med tangentbord). Den
+    måste vara synlig på alla viewports med ett 44px tap-target på mobil
+    (min-tap).
+    """
+    content = (VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx").read_text(
+        encoding="utf-8"
+    )
+    # Hjälp-knappens block (aria-label="Visa tangentbordsgenvägar") får inte
+    # längre döljas på mobil.
+    help_btn_idx = content.find('aria-label="Visa tangentbordsgenvägar"')
+    assert help_btn_idx != -1, "Hjälp-knappen måste finnas kvar"
+    btn_class_window = content[help_btn_idx : help_btn_idx + 600]
+    assert "hidden" not in btn_class_window or "min-tap sm:min-tap-0" in btn_class_window, (
+        "Hjälp-knappen får inte vara dold på mobil — gör den inline-flex med "
+        "min-tap för 44px tap-target"
+    )
+    assert "min-tap sm:min-tap-0 inline-flex" in btn_class_window, (
+        "Hjälp-knappen måste vara inline-flex med min-tap (44px) på mobil"
+    )
+
+
+def test_device_preset_keyboard_shortcuts() -> None:
+    """Wave 3 (Steg 6): device-preset (375/768/1024/Full) saknade genvägar
+    + kbd-hints. ⌥1–⌥4 ska växla preview-bredd (desktop, ej i composern,
+    via event.code) och knapparna ska exponera genvägen via title.
+    """
+    content = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert re.search(r"/\^Digit\[1-4\]\$/\.test\(event\.code\)", content), (
+        "Device-preset-genvägen måste matcha ⌥ + event.code (Digit1–4)"
+    )
+    assert "DEVICE_PRESET_OPTIONS[parseInt(event.code.slice(5), 10) - 1]" in content, (
+        "⌥1–⌥4 måste mappa till DEVICE_PRESET_OPTIONS-index"
+    )
+    assert "title={`Genväg ${shortcut}`}" in content, (
+        "Device-preset-knapparna måste exponera genvägen via title"
+    )
+
+
+def test_run_history_shows_skeleton_while_loading() -> None:
+    """Wave 3 (Steg 8): under initial /api/runs-laddning visades tom-CTA:n
+    ('Inga runs än') i förtid. RunHistory ska rendera en skeleton när
+    loading och inga runs ännu finns, och page.tsx → ConsoleDrawer →
+    RunHistory ska tråda loading-flaggan.
+    """
+    history = (VIEWSER_DIR / "components" / "run-history.tsx").read_text(encoding="utf-8")
+    drawer = (VIEWSER_DIR / "components" / "console-drawer.tsx").read_text(encoding="utf-8")
+    page = (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8")
+
+    assert "RunHistorySkeleton" in history and "Skeleton" in history, (
+        "RunHistory måste ha en RunHistorySkeleton som använder Skeleton-primitiven"
+    )
+    assert "loading && runs.length === 0" in history, (
+        "RunHistory måste visa skeleton när loading och inga runs ännu finns"
+    )
+    assert "loading={runsLoading}" in drawer, (
+        "ConsoleDrawer måste tråda runsLoading → RunHistory.loading"
+    )
+    assert "runsLoading={runsLoading}" in page, (
+        "page.tsx måste skicka runsLoading till ConsoleDrawer"
+    )
+
+
+def test_wizard_foundation_copy_avoids_dev_jargon() -> None:
+    """Wave 3 (Steg 7): kundvända hjälptexter i foundation- och
+    site-type-stegen exponerade dev-jargong ('scaffold', 'Next.js-mall
+    backend bygger på', 'Discovery Taxonomy', 'Backendens resolver',
+    'runtime-aktiv'). Lås bort de tydligaste på de kundvända ytorna.
+    """
+    foundation = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "steps" / "foundation-step.tsx"
+    ).read_text(encoding="utf-8")
+    site_type = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "steps" / "site-type-step.tsx"
+    ).read_text(encoding="utf-8")
+
+    assert "vilken Next.js-mall backend bygger på" not in foundation, (
+        "Foundation-hjälptexten ska inte exponera 'Next.js-mall backend'-jargong"
+    )
+    assert 'subtitle="Scaffold, vibe, typografi, branch' not in foundation, (
+        "MetadataPanel-subtitle ska inte lista 'Scaffold/branch'-jargong"
+    )
+    # Endast den kundvända HelperText-meningen ska bort — kod-kommentaren som
+    # dokumenterar att listan kommer från Discovery Taxonomy får stå kvar.
+    assert "Listan följer Discovery Taxonomy." not in site_type, (
+        "Den kundvända HelperText-meningen om 'Discovery Taxonomy' ska bort"
+    )
+    assert "Visar lokal UI-cache tills governance-listan laddats." not in site_type, (
+        "Den kundvända UI-cache-jargongen ska bort från HelperText"
+    )
+    assert "Backendens resolver avgör slutlig scaffold" not in site_type, (
+        "Support-notisen ska inte exponera 'Backendens resolver/scaffold'-jargong"
+    )
+    assert "är runtime-aktiv" not in site_type, (
+        "'runtime-aktiv' ska ersättas med kundvänligt 'tillgänglig'"
+    )
+
+
+# ----------------------------------------------------------------------
+# Marknadssajt P0 (scout-marketing-site, 2026-06-01)
+# Route-group-split: (marketing) äger "/", konsolen flyttad till
+# (console)/studio. Minimal header/footer + serverad optimerad bild.
+# ----------------------------------------------------------------------
+
+
+def test_console_moved_to_studio_route_group() -> None:
+    """Konsolen ska ligga i app/(console)/studio/page.tsx (flyttad från
+    app/page.tsx) och fortfarande vara klient-konsolen — INTE kvar på "/".
+    """
+    old_path = VIEWSER_DIR / "app" / "page.tsx"
+    new_path = VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx"
+    assert not old_path.exists(), 'app/page.tsx ska vara flyttad — (marketing) äger nu "/"'
+    assert new_path.exists(), "Konsolen ska bo i app/(console)/studio/page.tsx"
+    console = new_path.read_text(encoding="utf-8")
+    assert '"use client"' in console, "Konsol-sidan ska förbli en klientkomponent"
+    # Regressionsvakt: ⌘K-listenern + build-wiringen ska ha följt med oförändrad.
+    assert 'event.key !== "k"' in console, "⌘K-listenern ska ha följt med konsolen till studio"
+    # (console)-layouten ska sätta noindex så konsolen aldrig indexeras publikt.
+    console_layout = (VIEWSER_DIR / "app" / "(console)" / "layout.tsx").read_text(encoding="utf-8")
+    assert "index: false" in console_layout, (
+        "(console)/layout.tsx måste sätta robots index:false (noindex)"
+    )
+
+
+def test_marketing_header_has_exact_nav_items() -> None:
+    """Marknads-headern ska ha exakt Hem/Produkt/Om oss + en primär bygg-CTA
+    som pekar in i studion. Auth/billing (Priser-nav + login-entry) är PARKERAT
+    i den här PR:en, så headern får inte importera auth-config eller rendera
+    en login-/Priser-yta.
+    """
+    header = (VIEWSER_DIR / "components" / "marketing" / "marketing-header.tsx").read_text(
+        encoding="utf-8"
+    )
+    for label in ('label: "Hem"', 'label: "Produkt"', 'label: "Om oss"'):
+        assert label in header, f"Headern saknar nav-item {label}"
+    assert 'label: "Priser"' not in header, (
+        "Priser-nav är parkerat tillsammans med billing — får inte finnas i den här auth-fria PR:en"
+    )
+    assert "auth-config" not in header and "authHeaderEntry" not in header, (
+        "Headern får inte importera auth-config-seamen i den här PR:en (parkerat)"
+    )
+    assert 'from "@/lib/routes"' in header and "STUDIO_HREF" in header, (
+        "Bygg-CTA:n ska peka in i studion via den auth-fria route-konstanten"
+    )
+
+
+def test_marketing_header_centers_nav() -> None:
+    """Operatörsönskemål (juni 2026): menyvalen ska ligga centrerat i headern."""
+    header = (VIEWSER_DIR / "components" / "marketing" / "marketing-header.tsx").read_text(
+        encoding="utf-8"
+    )
+    # Centrerad nav: absolut-centrerad via left-1/2 + -translate-x-1/2.
+    assert "left-1/2" in header and "-translate-x-1/2" in header, (
+        "Desktop-nav:en ska vara horisontellt centrerad i headern"
+    )
+
+
+def test_marketing_footer_has_legal_links() -> None:
+    """Footern ska länka till de juridiska/hjälpsidor som byggs ut senare
+    (de finns som platshållare i P0 så länkarna inte 404:ar).
+    """
+    footer = (VIEWSER_DIR / "components" / "marketing" / "marketing-footer.tsx").read_text(
+        encoding="utf-8"
+    )
+    for href in ("/cookies", "/integritetspolicy", "/anvandarvillkor", "/kontakt"):
+        assert f'href: "{href}"' in footer, f"Footern saknar länk till {href}"
+
+
+def test_marketing_homepage_serves_optimized_image() -> None:
+    """Startsidan ska rendera optimerade (WebP) yrkesbilder som faktiskt
+    serveras från apps/viewser/public/Bilder — beviset på asset-pipelinen.
+    P2: bilderna renderas via ProfessionGrid över det delade professions-
+    registret i st.f. en hårdkodad <img> i page.tsx.
+    """
+    home = (VIEWSER_DIR / "app" / "(marketing)" / "page.tsx").read_text(encoding="utf-8")
+    assert "ProfessionGrid" in home, "Startsidan ska rendera ProfessionGrid (bildväggen)"
+    professions = (VIEWSER_DIR / "lib" / "professions.ts").read_text(encoding="utf-8")
+    assert "/Bilder/bilmekaniker.webp" in professions, (
+        "professions.ts ska peka på de optimerade WebP-bilderna"
+    )
+    served = VIEWSER_DIR / "public" / "Bilder" / "bilmekaniker.webp"
+    assert served.exists(), (
+        "Den optimerade bilden måste finnas i apps/viewser/public/Bilder "
+        "(kör npm run assets:images)"
+    )
+
+
+def test_optimize_images_script_targets_served_public() -> None:
+    """optimize-images.mjs ska läsa repo-root public/Bilder och skriva till
+    apps/viewser/public/Bilder (den enda mapp Next.js serverar).
+    """
+    script = (VIEWSER_DIR / "scripts" / "optimize-images.mjs").read_text(encoding="utf-8")
+    assert '"../../../public/Bilder"' in script, (
+        "Scriptet ska läsa repo-root public/Bilder som källa"
+    )
+    assert '"../public/Bilder"' in script, (
+        "Scriptet ska skriva till apps/viewser/public/Bilder (serverad mapp)"
+    )
+
+
+def test_marketing_header_has_active_state_and_mobile_menu() -> None:
+    """P1: headern ska markera aktiv route (usePathname → aria-current) och
+    ha en mobil Sheet-meny så nav:en aldrig trängs ihop på smal viewport.
+    """
+    header = (VIEWSER_DIR / "components" / "marketing" / "marketing-header.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert '"use client"' in header, (
+        "Headern måste vara en klientkomponent för usePathname-aktivstate"
+    )
+    assert "usePathname" in header and 'aria-current={active ? "page"' in header, (
+        "Headern ska härleda aktiv route och sätta aria-current=page"
+    )
+    assert "SheetTrigger" in header and "SheetContent" in header, (
+        "Headern ska ha en mobil Sheet-meny (SheetTrigger/SheetContent)"
+    )
+
+
+def test_marketing_homepage_has_hero_and_sections() -> None:
+    """P2: startsidan ska ha en video-hero (reduced-motion-säker) + de
+    centrala scroll-sektionerna (så-funkar-det-steg, bildvägg, slut-CTA).
+    """
+    home = (VIEWSER_DIR / "app" / "(marketing)" / "page.tsx").read_text(encoding="utf-8")
+    assert "HeroVideo" in home, "Startsidan ska rendera HeroVideo"
+    assert "Så funkar det" in home, "Startsidan saknar 'Så funkar det'-sektionen"
+    for step in ("Beskriv", "Bygg", "Förhandsgranska", "Förfina"):
+        assert f'"{step}"' in home, f"Så-funkar-det saknar steget {step}"
+
+    hero = (VIEWSER_DIR / "components" / "marketing" / "hero-video.tsx").read_text(encoding="utf-8")
+    assert '"use client"' in hero, "HeroVideo måste vara klient (matchMedia)"
+    assert "prefers-reduced-motion" in hero, (
+        "HeroVideo måste respektera prefers-reduced-motion (still poster)"
+    )
+    assert "hero-poster.webp" in hero, "HeroVideo ska använda den committade poster-framen"
+    poster = VIEWSER_DIR / "public" / "hero-poster.webp"
+    assert poster.exists(), "hero-poster.webp måste finnas i apps/viewser/public"
+
+
+def test_professions_registry_covers_all_images() -> None:
+    """P2: det delade yrkesregistret ska täcka alla 20 optimerade bilder och
+    varje slug ha en serverad WebP (grid + framtida /for/[yrke] delar källan).
+    """
+    professions = (VIEWSER_DIR / "lib" / "professions.ts").read_text(encoding="utf-8")
+    slugs = re.findall(r'slug:\s*"([^"]+)"', professions)
+    assert len(slugs) == 20, f"Förväntade 20 yrken, fann {len(slugs)}"
+    bilder_dir = VIEWSER_DIR / "public" / "Bilder"
+    for slug in slugs:
+        assert (bilder_dir / f"{slug}.webp").exists(), f"Saknar optimerad bild för slug {slug}"
+
+
+def test_profession_grid_is_interactive_living_wall() -> None:
+    """P3: bildväggen ska vara en interaktiv FLIP-swap-wall (Framer Motion)
+    som är reduced-motion-säker och pausar vid hover/fokus/dold flik/utanför
+    viewport — annars glider en ruta bort från en klickare.
+    """
+    grid = (VIEWSER_DIR / "components" / "marketing" / "profession-grid.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert '"use client"' in grid, "Living wall måste vara klientkomponent"
+    assert 'from "motion/react"' in grid, "Living wall ska använda Framer Motion (motion/react)"
+    assert "motion.li" in grid and "layout" in grid, (
+        "Tiles ska vara motion.li med layout-prop för FLIP-swap"
+    )
+    assert "useReducedMotion" in grid and "if (reduced) return" in grid, (
+        "Auto-swap måste stängas av vid prefers-reduced-motion"
+    )
+    assert "IntersectionObserver" in grid and "document.hidden" in grid, (
+        "Auto-swap ska pausa utanför viewport och när fliken är dold"
+    )
+    assert "onMouseEnter" in grid and "onFocusCapture" in grid, (
+        "Auto-swap ska pausa vid hover och fokus"
+    )
+    # motion-depen ska vara deklarerad i package.json.
+    pkg = json.loads((VIEWSER_DIR / "package.json").read_text(encoding="utf-8"))
+    assert "motion" in pkg.get("dependencies", {}), (
+        "motion (Framer Motion) ska vara en deklarerad dependency (D3)"
+    )
+
+
+def test_profession_landing_pages_are_static_and_seo() -> None:
+    """P4: /for/[yrke] ska SSG:a alla 20 yrken (generateStaticParams),
+    404:a okända slugs (dynamicParams=false + notFound) och ha per-yrke SEO
+    (generateMetadata + OG-bild). Varje yrke ska ha headline + pitch.
+    """
+    page = (VIEWSER_DIR / "app" / "(marketing)" / "for" / "[yrke]" / "page.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "generateStaticParams" in page, "/for/[yrke] måste exportera generateStaticParams (SSG)"
+    assert "export const dynamicParams = false" in page, (
+        "Okända slugs ska inte renderas on-demand (dynamicParams=false)"
+    )
+    assert "notFound()" in page, "Okänd slug ska ge 404 via notFound()"
+    assert "generateMetadata" in page and "openGraph" in page, (
+        "/for/[yrke] måste ha per-yrke generateMetadata med OG-bild"
+    )
+
+    professions = (VIEWSER_DIR / "lib" / "professions.ts").read_text(encoding="utf-8")
+    # Räkna bara fält med strängvärde (datat) — typdefinitionen
+    # ``headline: string`` har inget citat och ska inte räknas med.
+    assert len(re.findall(r'headline:\s*"', professions)) == 20, (
+        "Alla 20 yrken måste ha en headline för landningssidan"
+    )
+    assert len(re.findall(r'pitch:\s*"', professions)) == 20, (
+        "Alla 20 yrken måste ha en pitch för landningssidan"
+    )
+
+    # Bildväggen ska nu länka till landningssidorna, inte rakt in i studion.
+    grid = (VIEWSER_DIR / "components" / "marketing" / "profession-grid.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "href={`/for/${p.slug}`}" in grid, (
+        "ProfessionGrid-tiles ska länka till /for/[slug] (P4-rewire)"
+    )
+
+
+def test_professions_have_starter_seed_mapping() -> None:
+    """Starters-banan: varje yrke ska mappa till en verksamhetsfamilj +
+    kategori + en svensk prompt-seed så landningssidans CTA kan förifylla
+    DiscoveryWizarden. Alla 20 yrken måste ha alla tre fälten.
+    """
+    professions = (VIEWSER_DIR / "lib" / "professions.ts").read_text(encoding="utf-8")
+    # Typerna ska komma från wizard-constants (samma källa som wizarden) så
+    # familj/kategori aldrig driftar isär från BUSINESS_FAMILIES.
+    assert "wizard-constants" in professions, (
+        "professions.ts ska importera BusinessFamilyId/WizardCategoryId från "
+        "discovery-wizard/wizard-constants"
+    )
+    assert len(re.findall(r"\bfamily:\s*\"", professions)) == 20, (
+        "Alla 20 yrken måste ha en verksamhetsfamilj"
+    )
+    assert len(re.findall(r"\bcategory:\s*\"", professions)) == 20, (
+        "Alla 20 yrken måste ha en kategori"
+    )
+    assert (
+        len(re.findall(r"\bpromptSeed:\s*$", professions, re.MULTILINE))
+        + len(re.findall(r"\bpromptSeed:\s*\"", professions))
+        >= 20
+    ), "Alla 20 yrken måste ha en promptSeed"
+
+
+def test_profession_landing_cta_seeds_wizard_not_empty_studio() -> None:
+    """Starters-banan: yrkessidans "Bygg din sida" ska gå via StarterCta som
+    lämnar en wizard-seed (familj/kategori/prompt) i stället för att länka
+    rakt till en TOM /studio. Seed:en får bara bära hints — aldrig starterId.
+    """
+    page = (VIEWSER_DIR / "app" / "(marketing)" / "for" / "[yrke]" / "page.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "StarterCta" in page, "/for/[yrke] ska använda StarterCta för bygg-knappen"
+    assert "profession.promptSeed" in page and "profession.family" in page, (
+        "StarterCta ska seedas från yrkets promptSeed + family/category"
+    )
+
+    cta = (VIEWSER_DIR / "components" / "marketing" / "starter-cta.tsx").read_text(encoding="utf-8")
+    assert "setWizardSeed" in cta and "STUDIO_HREF" in cta, (
+        "StarterCta ska lämna en wizard-seed och navigera till studion"
+    )
+    assert "starterId" not in cta, (
+        "Starter-seed:en får inte sätta starterId (backend äger scaffold-valet)"
+    )
+
+
+def test_hero_has_starter_chips() -> None:
+    """Starters-banan: heron ska visa klickbara starter-chips som förifyller
+    prompten OCH förväljer verksamhet i wizarden (initialAnswers).
+    """
+    hero = (VIEWSER_DIR / "components" / "marketing" / "hero-prompt-form.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "STARTER_PRESETS" in hero, "Heron ska rendera starter-presets som chips"
+    assert "startWithPreset" in hero, (
+        "Heron ska ha en preset-handler som förifyller prompt + familj"
+    )
+    assert "initialAnswers" in hero, (
+        "Heron ska skicka förvalda svar till DiscoveryWizarden vid chip-klick"
+    )
+
+
+def test_studio_empty_state_offers_starters() -> None:
+    """Starters-banan: en tom /studio (ingen handoff) ska visa starter-
+    onboarding i stället för en blank canvas, och kunna konsumera en
+    wizard-seed från en yrkessida/hero-chip.
+    """
+    builder = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(encoding="utf-8")
+    assert "consumeWizardSeed" in builder, "PromptBuildern ska konsumera wizard-seed vid mount"
+    assert "openWizardFromPreset" in builder and "STARTER_PRESETS" in builder, (
+        "Tom-läget ska erbjuda starter-chips som öppnar wizarden förvald"
+    )
+    assert "showStarters" in builder, "PromptBuildern ska ha ett tom-läges-onboarding-tillstånd"
+
+
+def test_wizard_seed_handoff_carries_hints_only() -> None:
+    """Starters-banan: seed-handoffen får bara bära lätta hints
+    (prompt + businessFamily + siteType) — inga fullständiga build-beslut
+    och absolut inget starterId (samma invariant som /api/prompt).
+    """
+    handoff = (VIEWSER_DIR / "lib" / "init-prompt-handoff.ts").read_text(encoding="utf-8")
+    assert "setWizardSeed" in handoff and "consumeWizardSeed" in handoff, (
+        "init-prompt-handoff ska exponera set/consumeWizardSeed"
+    )
+    assert "businessFamily" in handoff and "siteType" in handoff, (
+        "WizardSeed ska bära familj + kategori-hints"
+    )
+    assert "starterId" not in handoff, (
+        "WizardSeed får inte bära starterId (backend äger scaffold-valet)"
+    )
+
+
+def test_about_page_has_founders_and_philosophy() -> None:
+    """P5: /om-oss ska presentera båda grundarna (verbatim-roller) via
+    FounderCard och den delade filosofin med slagordet.
+    """
+    about = (VIEWSER_DIR / "app" / "(marketing)" / "om-oss" / "page.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "FounderCard" in about, "/om-oss ska rendera grundarkort"
+    assert "Jakob Eberg" in about and "Christopher Genberg" in about, (
+        "Båda grundarna ska finnas med på /om-oss"
+    )
+    # Operatörens verbatim-beskrivningar.
+    assert "AI-fantast och smått galen" in about, "Jakobs verbatim-roll ska stå kvar oförändrad"
+    assert "Fullstack-utvecklare & bipolär" in about, (
+        "Christophers verbatim-roll ska stå kvar oförändrad"
+    )
+    assert "Lämna huvudvärken att bygga och underhålla en hemsida med oss." in about, (
+        "Slagordet ska finnas på /om-oss"
+    )
+    # Startsidans teaser (P2) ska länka in till /om-oss.
+    home = (VIEWSER_DIR / "app" / "(marketing)" / "page.tsx").read_text(encoding="utf-8")
+    assert 'href="/om-oss"' in home, "Startsidans grundar-teaser ska länka till /om-oss"
+
+
+def test_marketing_layout_has_skip_link() -> None:
+    """P1: marknads-layouten ska ha en skip-länk till #main-content (WCAG
+    2.4.1) och ett main-landmärke med matchande id.
+    """
+    layout = (VIEWSER_DIR / "app" / "(marketing)" / "layout.tsx").read_text(encoding="utf-8")
+    assert 'href="#main-content"' in layout, "Layouten saknar skip-länk till #main-content"
+    assert 'id="main-content"' in layout, (
+        'Layouten saknar <main id="main-content"> som skip-länken pekar på'
+    )
+
+
+def test_cookie_consent_provider_persists_versioned_choice() -> None:
+    """P6: cookie-consent ska vara en klient-provider som läser/skriver ett
+    versionerat localStorage-val via det sanktionerade async-IIFE-mönstret
+    (await Promise.resolve() före setState) — inte synkront setState i effect.
+    """
+    consent = (VIEWSER_DIR / "components" / "marketing" / "cookie-consent.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert consent.lstrip().startswith('"use client"'), (
+        "cookie-consent måste vara en klientkomponent"
+    )
+    assert "sajtbyggaren.cookie-consent.v1" in consent, (
+        "Consent-nyckeln ska vara versionerad så den kan migreras senare"
+    )
+    assert '"granted"' in consent and '"denied"' in consent, (
+        "Consent ska lagra explicit granted/denied"
+    )
+    assert "await Promise.resolve()" in consent, (
+        "Storage-läsningen ska följa async-IIFE-mönstret (set-state-in-effect)"
+    )
+    assert "localStorage.setItem" in consent, "Valet ska persisteras i localStorage"
+    assert "export function useCookieConsent" in consent, "useCookieConsent-hooken ska exporteras"
+
+
+def test_cookie_banner_is_non_blocking_with_manager() -> None:
+    """P6: cookie-baren ska vara icke-blockerande (role=region, ingen
+    cookie-wall) med accept/avvisa och en manager-dialog som kan öppnas igen.
+    """
+    banner = (VIEWSER_DIR / "components" / "marketing" / "cookie-banner.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert 'role="region"' in banner, "Cookie-baren ska vara en region, inte en wall"
+    assert "Acceptera alla" in banner and "Endast nödvändiga" in banner, (
+        "Baren ska ge både accept och endast-nödvändiga"
+    )
+    assert "Dialog" in banner and "managerOpen" in banner, (
+        "Managern ska vara en dialog som styrs av managerOpen"
+    )
+    assert "useCookieConsent" in banner, "Baren ska läsa consent-state via hooken"
+    # Baren ska bara visas innan ett val gjorts (consent === null).
+    assert "consent === null" in banner, "Baren ska bara visas tills ett val gjorts"
+
+    layout = (VIEWSER_DIR / "app" / "(marketing)" / "layout.tsx").read_text(encoding="utf-8")
+    assert "CookieConsentProvider" in layout and "CookieBanner" in layout, (
+        "Layouten ska wrappa marknadssajten i provider + rendera baren"
+    )
+
+
+def test_footer_has_manage_cookies_trigger() -> None:
+    """P6: footern ska ha en 'Hantera cookies'-trigger som öppnar managern."""
+    footer = (VIEWSER_DIR / "components" / "marketing" / "marketing-footer.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "ManageCookiesButton" in footer, "Footern ska rendera 'Hantera cookies'-knappen"
+    button = (VIEWSER_DIR / "components" / "marketing" / "manage-cookies-button.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "openManager" in button, "Knappen ska öppna cookie-managern via consent-hooken"
+
+
+def test_legal_pages_use_shared_legal_layout() -> None:
+    """P6: cookies/integritetspolicy/användarvillkor ska byggas på den delade
+    LegalPageLayout-komponenten (konsekvent prose + utkast-notis).
+    """
+    layout = (VIEWSER_DIR / "components" / "marketing" / "legal-page-layout.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "Senast uppdaterad" in layout, "Legal-layouten ska visa senast-uppdaterad"
+    for slug in ("cookies", "integritetspolicy", "anvandarvillkor"):
+        page = (VIEWSER_DIR / "app" / "(marketing)" / slug / "page.tsx").read_text(encoding="utf-8")
+        assert "LegalPageLayout" in page, f"/{slug} ska använda den delade LegalPageLayout"
+    # Kontaktsidan ska vara ärlig: mailto, inget fejkat formulär-flöde.
+    contact = (VIEWSER_DIR / "app" / "(marketing)" / "kontakt" / "page.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "mailto:" in contact, (
+        "Kontaktsidan ska länka till e-post (mailto) tills en backend finns"
+    )
+
+
+def test_build_pipeline_has_no_auth_or_credit_imports() -> None:
+    """Hård gräns (UI-utan-auth-PR, juni 2026): auth/billing är PARKERAT — det
+    finns ingen auth-kod på den här branchen. Som framåtriktad spärr säkrar vi
+    att bygg-ingångarna (runners + prompt-route + studions prompt-builder) inte
+    importerar auth/session/credits, så en framtida auth-PR aldrig får läcka in
+    i bygg-pipelinen.
+    """
+    for rel in ("lib/build-runner.ts", "lib/prompt-runner.ts", "lib/runs.ts"):
+        text = (VIEWSER_DIR / rel).read_text(encoding="utf-8")
+        assert "@/lib/auth" not in text and "lib/billing" not in text, (
+            f"{rel} får inte importera auth/billing — bygget ska vara orört"
+        )
+    prompt_route = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(encoding="utf-8")
+    assert "auth/session" not in prompt_route and "consumeCredits" not in prompt_route, (
+        "Prompt-routen (bygg-ingången) får inte dra in auth/krediter"
+    )
+    builder = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(encoding="utf-8")
+    assert "@/lib/auth" not in builder and "claim-site" not in builder, (
+        "prompt-builder.tsx får inte importera auth eller anropa claim-site "
+        "i den här PR:en — den ytan är parkerad"
+    )
+
+
+def test_marketing_hero_owns_build_cta() -> None:
+    """u1: bygg-CTA:n ska bo på heron — besökaren beskriver sin sajt direkt
+    där (HeroPromptForm) och slut-CTA:n scrollar tillbaka dit (#start),
+    aldrig till studions tomma prompt-landning.
+    """
+    home = (VIEWSER_DIR / "app" / "(marketing)" / "page.tsx").read_text(encoding="utf-8")
+    assert "HeroPromptForm" in home, (
+        "Heron ska rendera HeroPromptForm (prompt direkt på startsidan)"
+    )
+    assert 'id="start"' in home and 'href="#start"' in home, (
+        "Slut-CTA:n ska scrolla upp till hero-prompten (#start), inte studion"
+    )
+
+
+def test_hero_prompt_opens_wizard_and_hands_off_to_studio() -> None:
+    """u1 (juni 2026): DiscoveryWizarden öppnas DIREKT på marknads-heron så
+    besökaren stannar på den nya startsidan (hero + logotyp bakom popupen).
+    Vid "Skapa sajt" lämnas hela wizard-resultatet över via wizard-handoffen
+    och vi navigerar till studion, som bygger direkt utan en andra wizard.
+    """
+    form = (VIEWSER_DIR / "components" / "marketing" / "hero-prompt-form.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "DiscoveryWizard" in form, "Heron ska rendera DiscoveryWizarden som popup på startsidan"
+    assert "setWizardHandoff" in form and "STUDIO_HREF" in form, (
+        "Heron ska lämna över hela wizard-resultatet och navigera till studion"
+    )
+    builder = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(encoding="utf-8")
+    assert "consumeWizardHandoff" in builder, (
+        "PromptBuildern ska konsumera wizard-handoffen vid mount"
+    )
+    assert "startBuildFromWizardHandoff" in builder, (
+        "PromptBuildern ska bygga direkt från wizard-handoffen (ingen andra wizard i studion)"
+    )
+
+
+def test_marketing_has_sitemap_and_robots() -> None:
+    """P8: SEO-finish — sitemap ska täcka statiska sidor + 20 yrkessidor;
+    robots ska indexera marknaden men blockera /studio + /api.
+    """
+    sitemap = (VIEWSER_DIR / "app" / "sitemap.ts").read_text(encoding="utf-8")
+    assert "PROFESSIONS" in sitemap, (
+        "Sitemap ska generera per-yrke-sidor från professions-registret"
+    )
+    assert "/for/" in sitemap, "Sitemap ska inkludera /for/[yrke]-sidorna"
+
+    robots = (VIEWSER_DIR / "app" / "robots.ts").read_text(encoding="utf-8")
+    assert "/studio" in robots and "/api/" in robots, (
+        "Robots ska blockera konsolen (/studio) och /api"
+    )
+    assert "sitemap" in robots, "Robots ska peka på sitemap.xml"
+
+
+def test_floating_chat_first_run_hint_surfaces_core_loop() -> None:
+    """Synliggör kärnloopen: FloatingChat ska visa en första-gångs-hint som
+    förklarar att en följdprompt bygger om sajten OCH att varje bygge blir en
+    ny version. Hinten ska vara dismiss:bar och persisterad (en gång per
+    webbläsare) och erbjuda en djuplänk till versionsvyn.
+    """
+    chat = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "Så funkar det" in chat, "FloatingChat ska ha en första-gångs-hint som förklarar loopen"
+    assert "ny version" in chat, "Hinten ska nämna att varje bygge blir en ny version"
+    assert "STORAGE_KEY_LOOP_HINT" in chat and "readLoopHintSeen" in chat, (
+        "Hinten ska persistera dismissen så den bara visas en gång"
+    )
+    assert "onShowVersions" in chat and "Visa versioner" in chat, (
+        "Hinten ska kunna djuplänka till versionsvyn"
+    )
+    shell = (VIEWSER_DIR / "components" / "builder" / "builder-shell.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "onShowVersions={onOpenHistory}" in shell, (
+        "BuilderShell ska koppla 'Visa versioner' till historik-ingången"
     )

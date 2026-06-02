@@ -85,15 +85,41 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
-    const timeout = timeoutsRef.current.get(id);
-    if (timeout) {
-      clearTimeout(timeout);
+    // Rensa BÅDA tänkbara timer-nycklar — auto-dismiss (``id``) och
+    // cleanup-timer (``${id}:cleanup``) — så att vi inte läcker
+    // entries i Map:en om en toast både auto-dismissade och blev
+    // manuellt stängd innan close-animationen hann landa.
+    const autoTimeout = timeoutsRef.current.get(id);
+    if (autoTimeout) {
+      clearTimeout(autoTimeout);
       timeoutsRef.current.delete(id);
+    }
+    const cleanupTimeout = timeoutsRef.current.get(`${id}:cleanup`);
+    if (cleanupTimeout) {
+      clearTimeout(cleanupTimeout);
+      timeoutsRef.current.delete(`${id}:cleanup`);
     }
   }, []);
 
   const dismiss = useCallback(
     (id: string) => {
+      // Idempotent: om denna toast redan håller på att stängas (vi har
+      // en cleanup-timer för den) hoppar vi över. Annars schedulerar
+      // vi en ny close-animation + cleanup, vilket leder till dubbel
+      // ``removeToast``-anrop när auto-dismiss och manuell dismiss
+      // träffar samtidigt — ofarligt logiskt men tidigare läckte vi
+      // Map-entries för cleanup-nyckeln.
+      if (timeoutsRef.current.has(`${id}:cleanup`)) return;
+
+      // Stäng pågående auto-dismiss-timer så den inte triggar dismiss
+      // igen mitt under close-animationen och försöker köra
+      // ``removeToast`` parallellt med cleanup-timern.
+      const autoTimeout = timeoutsRef.current.get(id);
+      if (autoTimeout) {
+        clearTimeout(autoTimeout);
+        timeoutsRef.current.delete(id);
+      }
+
       setToasts((prev) =>
         prev.map((toast) =>
           toast.id === id ? { ...toast, closing: true } : toast,
@@ -195,14 +221,19 @@ function ToastViewport({
 }) {
   // role="region" + aria-live ligger på själva listan — varje toast får
   // role="status" eller "alert" beroende på variant.
+  //
+  // Position: top-center på mobil (< sm), top-right på desktop. Vi
+  // bodde tidigare i bottom-region men där krockar vi med
+  // FloatingChat-composern (desktop bottom-6) och bottom-sheet-modes på
+  // mobil. Top är säkrare yta — site-header är vår enda fixed-top och
+  // den ligger på z-20 medan vi använder z-[80].
   return (
     <ol
       role="region"
       aria-label="Aviseringar"
       className={cn(
-        "pointer-events-none fixed inset-x-0 bottom-4 z-[80] mx-auto flex w-full max-w-md flex-col gap-2 px-4",
-        "sm:right-4 sm:bottom-4 sm:left-auto sm:mx-0 sm:max-w-sm sm:px-0",
-        "pb-safe-or-4",
+        "pointer-events-none fixed inset-x-0 top-20 z-[80] mx-auto flex w-full max-w-md flex-col gap-2 px-4",
+        "sm:right-4 sm:top-20 sm:left-auto sm:mx-0 sm:max-w-sm sm:px-0",
       )}
     >
       {toasts.map((toast) => (
@@ -232,8 +263,8 @@ function ToastItem({
         "transition-all duration-200 ease-out",
         VARIANT_CLASSES[variant],
         toast.closing
-          ? "translate-y-1 opacity-0"
-          : "animate-in slide-in-from-bottom-2 fade-in",
+          ? "-translate-y-1 opacity-0"
+          : "animate-in slide-in-from-top-2 fade-in",
       )}
     >
       <Icon

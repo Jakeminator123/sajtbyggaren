@@ -8,6 +8,7 @@ import {
 } from "@/lib/hosted-python-runtime";
 import { assertLocalhost } from "@/lib/localhost-guard";
 import { runPromptToProjectInput } from "@/lib/prompt-runner";
+import { readRunChangeSet } from "@/lib/run-change-set";
 import { readAppliedCopyDirectives } from "@/lib/runs";
 
 // Operator-prototype: keep the prompt small enough that an accidental
@@ -181,6 +182,25 @@ async function runPromptBuildOnce(
     appliedCopyDirectives = [];
   }
 
+  // UI-gap-fix (2026-06-02, Jakobs flagga): exponera en EXAKT change-set
+  // för follow-ups så FloatingChat kan visa bekräftade deltas (routes
+  // tillagda/borttagna, variant-byten) under "Ändrat" istället för
+  // prompt-heuristiken under "Troligen ändrat". Härleds genom att diffa
+  // den nya runen mot föregående run (eller baseRunId). Init-builds har
+  // ingen föregående run → null. Aldrig en throw: artefakt-läsfel landar
+  // som null och UI:t faller tillbaka på heuristiken.
+  let changeSet: Awaited<ReturnType<typeof readRunChangeSet>> = null;
+  if (payload.mode === "followup") {
+    try {
+      changeSet = await readRunChangeSet(
+        build.runId,
+        payload.baseRunId ? { baseRunId: payload.baseRunId } : {},
+      );
+    } catch {
+      changeSet = null;
+    }
+  }
+
   return {
     runId: build.runId,
     siteId: helper.siteId,
@@ -196,6 +216,7 @@ async function runPromptBuildOnce(
     buildStatus: extractBuildStatus(build.buildResult),
     buildResult: build.buildResult,
     appliedCopyDirectives,
+    changeSet,
   };
 }
 

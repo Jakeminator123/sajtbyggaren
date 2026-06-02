@@ -52,7 +52,12 @@ import type { WizardAnswers, WizardMedia } from "./wizard-types";
  * göms på mobil för att spara vertikal yta.
  */
 
-type MoreInfoTabId = "about" | "content" | "contact" | "media" | "advanced";
+export type MoreInfoTabId =
+  | "about"
+  | "content"
+  | "contact"
+  | "media"
+  | "advanced";
 
 const TABS: ReadonlyArray<{
   id: MoreInfoTabId;
@@ -71,6 +76,13 @@ export type MoreInfoDialogProps = {
   answers: WizardAnswers;
   onChange: (next: Partial<WizardAnswers>) => void;
   branch: ContentBranch;
+  /**
+   * Flik som dialogen öppnas på (default "about"). Wizarden sätter den
+   * till "contact" när den djuplänkar hit för att be om ett saknat
+   * telefonnummer, så operatören inte oavsiktligt publicerar
+   * platshållar-numret (+46 8 000 00 00).
+   */
+  initialTab?: MoreInfoTabId;
 };
 
 export function MoreInfoDialog({
@@ -79,8 +91,32 @@ export function MoreInfoDialog({
   answers,
   onChange,
   branch,
+  initialTab = "about",
 }: MoreInfoDialogProps) {
-  const [activeTab, setActiveTab] = useState<MoreInfoTabId>("about");
+  const [activeTab, setActiveTab] = useState<MoreInfoTabId>(initialTab);
+
+  // Nollställ aktiv flik till önskad ``initialTab`` varje gång dialogen
+  // öppnas (false → true) OCH när ``initialTab`` byts medan dialogen redan
+  // är öppen (t.ex. en framtida djuplänk som byter mål-flik utan att stänga
+  // dialogen — annars hängde activeTab kvar på föregående flik). Render-tids
+  // state-justering (Reacts "föregående props"-mönster via ``wasOpen`` +
+  // ``trackedInitialTab``) istället för ``useEffect([open])``: dels ogillar
+  // React 19:s ``react-hooks/set-state-in-effect`` effekt-driven setState,
+  // dels är dialogen fullt parent-controlled — Radix routar aldrig
+  // open-flanken genom onOpenChange, så en onOpenChange-wrapper skulle inte
+  // hinna nollställa fliken vid öppning. Manuell flik-navigering ändrar
+  // ``activeTab`` men inte ``initialTab``, så den skrivs aldrig över här.
+  const [wasOpen, setWasOpen] = useState(open);
+  const [trackedInitialTab, setTrackedInitialTab] =
+    useState<MoreInfoTabId>(initialTab);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    setTrackedInitialTab(initialTab);
+    if (open) setActiveTab(initialTab);
+  } else if (open && initialTab !== trackedInitialTab) {
+    setTrackedInitialTab(initialTab);
+    setActiveTab(initialTab);
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

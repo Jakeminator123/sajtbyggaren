@@ -264,7 +264,7 @@ function ModalHeader({
       <DialogPrimitive.Close
         render={
           <Button variant="ghost" size="icon-sm" aria-label="Stäng">
-            <XIcon className="h-4 w-4" />
+            <XIcon aria-hidden className="h-4 w-4" />
           </Button>
         }
       />

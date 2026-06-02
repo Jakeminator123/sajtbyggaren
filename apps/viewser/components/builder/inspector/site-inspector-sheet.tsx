@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, RefreshCw, ScanSearch } from "lucide-react";
+import { RefreshCw, ScanSearch } from "lucide-react";
 import { useCallback, useState } from "react";
 
 import { BriefTab } from "@/components/builder/inspector/brief-tab";
@@ -18,6 +18,7 @@ import type {
 } from "@/components/builder/use-pending-build";
 import type { PromptBuildOutcome } from "@/components/prompt-builder";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sheet,
   SheetContent,
@@ -171,6 +172,7 @@ export function SiteInspectorSheet({
             className="mr-9 shrink-0 min-tap sm:min-tap-0"
           >
             <RefreshCw
+              aria-hidden
               className={`h-3.5 w-3.5 ${state.status === "loading" ? "animate-spin" : ""}`}
             />
           </Button>
@@ -178,10 +180,7 @@ export function SiteInspectorSheet({
 
         <div className="flex-1 overflow-hidden">
           {state.status === "loading" ? (
-            <div className="text-muted-foreground flex h-full items-center justify-center gap-2 text-[12px]">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Läser artefakter…
-            </div>
+            <InspectorLoadingSkeleton />
           ) : state.status === "error" ? (
             <div className="p-5">
               <p
@@ -268,5 +267,40 @@ export function SiteInspectorSheet({
         ) : null}
       </SheetContent>
     </Sheet>
+  );
+}
+
+// Skeleton för Inspector-laddningstillståndet. Mimic:ar tab-strippen +
+// 3 kort så operatören ser strukturen som kommer dyka upp istället för
+// en tom canvas + spinner. ``role="status"`` + ``aria-live="polite"``
+// + en sr-only-text säger till skärmläsare att vi laddar.
+function InspectorLoadingSkeleton() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      className="flex h-full flex-col gap-0"
+    >
+      <span className="sr-only">Läser artefakter…</span>
+      {/* Tab-strip-skeleton (sju triggers, samma höjd som riktiga
+          TabsList:en så layouten inte hoppar när data landar). */}
+      <div className="border-border/60 flex w-full items-center gap-3 border-b px-4 pt-2 pb-3">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <Skeleton
+            key={i}
+            className="h-4 w-14 shrink-0 rounded-md"
+          />
+        ))}
+      </div>
+      {/* Tre kort som approximerar typisk tab-content. */}
+      <div className="flex flex-col gap-3 px-5 py-4">
+        <Skeleton className="h-3 w-32" />
+        <Skeleton className="h-16 w-full rounded-lg" />
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-12 w-full rounded-lg" />
+        <Skeleton className="h-12 w-full rounded-lg" />
+      </div>
+    </div>
   );
 }

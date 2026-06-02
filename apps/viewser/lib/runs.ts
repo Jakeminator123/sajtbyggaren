@@ -50,7 +50,14 @@ export type RunTraceResponse = {
 };
 
 function repoRoot(): string {
-  return path.resolve(process.cwd(), "..", "..");
+  // ``...up`` (spread av variabel-array) gör resultatet opakt för Turbopacks
+  // statiska analys, så repo-rot-baserade path.join() inte viks ihop till
+  // fil/dir-asset-referenser. Med ``turbopack.root`` = repo-roten (krävs för
+  // att resolva ``@preview-runtime``) skulle annars output-tracern kunna panika
+  // på symlänkar (t.ex. ``.venv``) som pekar ut ur repo-roten. Detta är rent
+  // runtime-logik, aldrig en modul.
+  const up = ["..", ".."];
+  return path.resolve(process.cwd(), ...up);
 }
 
 export function runsDir(): string {
@@ -335,7 +342,12 @@ export async function readArtefactOrNull(
 ): Promise<Record<string, unknown> | null> {
   try {
     const runDir = await runDirFromId(runId);
-    return await readJsonFile(path.join(runDir, filename));
+    // Spread gör sökvägen opak för Turbopacks statiska analys så den inte
+    // bygger en bred ``require.context``-liknande modul över data/runs (med
+    // ``turbopack.root`` = repo-roten skulle ett literalt ``path.join`` annars
+    // matcha tusentals run-artefakter och blåsa upp route-bundlen).
+    const artefactPath = path.join(...[runDir, filename]);
+    return await readJsonFile(artefactPath);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {
       return null;

@@ -38,13 +38,16 @@ import {
 import {
   classifyBuildStatus,
   type PromptBuildOutcome,
+  type PromptStage,
 } from "@/components/prompt-builder";
 import { Textarea } from "@/components/ui/textarea";
 import type { AssetRef } from "@/lib/asset-store/types";
 import {
   CATEGORY_LABEL,
+  summarizeChangeSet,
   summarizeChangesFromPrompt,
   type BuildChange,
+  type RunChangeSet,
 } from "@/lib/build-changes";
 import {
   CHIP_INTERACTIONS,
@@ -108,13 +111,16 @@ type ChatMessage = {
   errorDetails?: string;
   retryPrompt?: string;
   /**
-   * För success-meddelanden: en kort lista över ändringar som
-   * troligen gjordes baserat på operatörens prompt. Heuristik från
-   * `summarizeChangesFromPrompt` — backend exponerar ingen exakt
-   * diff än, men detta ger operatören en känsla av vad som hänt
-   * utan att öppna Inspectorn.
+   * För success-meddelanden: en kort lista över ändringar. Källan
+   * avgörs av `changesExact`:
+   *   - `true`  → bekräftade deltas från en strukturerad change-set
+   *     (`summarizeChangeSet`), renderas under "Ändrat".
+   *   - falsy   → prompt-heuristik (`summarizeChangesFromPrompt`),
+   *     renderas under "Troligen ändrat".
    */
   changes?: BuildChange[];
+  /** True när `changes` kommer från en exakt change-set, inte heuristik. */
+  changesExact?: boolean;
 };
 
 /**
@@ -294,6 +300,15 @@ type FloatingChatProps = {
   onBuildStart: () => void;
   onBuildEnd: () => void;
   /**
+   * Rapporterar bygg-stage (idle/thinking/building/success/failed) uppåt så
+   * page.tsx kan driva ViewerPanel:s BuildProgressCard under follow-ups. Utan
+   * den frös buildStage på föregående bygges sista värde (oftast "success")
+   * och stegmarkören hoppade direkt till sista steget vid varje följdprompt.
+   * Stegen drivs av den riktiga trace.ndjson-signalen (useBuildTracePolling),
+   * inte av en setTimeout-flip (jfr B122).
+   */
+  onStageChange?: (stage: PromptStage) => void;
+  /**
    * "Iterera från denna" — när satt skickar nästa /api/prompt-fetch med
    * `baseRunId` så backend laddar PI-snapshotet från den runen istället
    * för senaste. Operatören sätter via Versions-tab. Rensas via
@@ -302,6 +317,12 @@ type FloatingChatProps = {
    */
   pendingBaseRunId?: { baseRunId: string; baseVersion: number | null } | null;
   onClearBaseRunId?: () => void;
+  /**
+   * Öppnar versionsvyn (ConsoleDrawer-historiken). Driver "Visa
+   * versioner"-knappen i första-gångs-hinten så operatören direkt ser
+   * var tidigare bygg bor. Valfri — utelämnas → knappen döljs.
+   */
+  onShowVersions?: () => void;
   /**
    * Slot för extra UI som rendras i samma centrerade toolbar-rad UNDER
    * chat-panelen (till höger om device-preset-toggle). Typiskt
@@ -335,6 +356,13 @@ type PromptApiResponse = {
   // alltid som textnod (React escapar default — vi använder aldrig
   // dangerouslySetInnerHTML här).
   appliedCopyDirectives?: AppliedCopyDirective[];
+  // UI-gap-fix (2026-06-02): strukturerad, EXAKT change-set för
+  // follow-ups — routes tillagda/borttagna + variant-byten härledda
+  // serverside genom att diffa nya runen mot föregående (se
+  // lib/run-change-set.ts). null/utelämnad på init-builds och
+  // follow-ups utan route-/variant-delta → UI faller tillbaka på
+  // prompt-heuristiken (summarizeChangesFromPrompt).
+  changeSet?: RunChangeSet | null;
   error?: string;
 };
 
@@ -431,6 +459,9 @@ const PANEL_FOOTPRINT_HEIGHT = PANEL_HEIGHT + TOOLBAR_ROW_HEIGHT;
 const STORAGE_KEY_POSITION = "sajtbyggaren:floating-chat:position";
 const STORAGE_KEY_MINIMIZED = "sajtbyggaren:floating-chat:minimized";
 const STORAGE_KEY_QUICK_PROMPTS = "sajtbyggaren:floating-chat:quick-prompts";
+// Första-gångs-hinten "Så funkar det" (kärnloopen: följdprompt → ny
+// version). Visas en gång per webbläsare, sedan persisteras dismissen.
+const STORAGE_KEY_LOOP_HINT = "sajtbyggaren:floating-chat:loop-hint-seen";
 
 /**
  * Reflekterar Tailwind ``md:``-brytpunkten (768px). Under brytpunkten
@@ -548,6 +579,18 @@ function readStoredQuickPromptsOpen(): boolean {
   }
 }
 
+// Returnerar true (= hinten redan sedd → dölj) under SSR så vi inte
+// flimrar in tipset före hydration. Post-mount läser layout-effekten
+// det riktiga värdet och öppnar hinten om den aldrig visats.
+function readLoopHintSeen(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    return window.localStorage.getItem(STORAGE_KEY_LOOP_HINT) === "true";
+  } catch {
+    return false;
+  }
+}
+
 function clampToViewport(
   pos: Position,
   width: number,
@@ -588,6 +631,7 @@ function summarizeBuildResult(
   content: string;
   variant: ChatMessage["variant"];
   changes?: BuildChange[];
+  changesExact?: boolean;
 } {
   // B3 — version-progression i success-meddelandet. När payload.version
   // är t.ex. 3 visar vi "v2 → v3" så operatören får en känsla av
@@ -640,6 +684,19 @@ function summarizeBuildResult(
         variant: "success",
       };
     }
+    // UI-gap-fix (2026-06-02): när backend härledde en EXAKT change-set
+    // (routes tillagda/borttagna, variant-byte) visar vi de bekräftade
+    // deltorna under "Ändrat" istället för prompt-heuristiken. Faller
+    // bara igenom till heuristiken när change-set:en saknas/är tom.
+    const exactChanges = summarizeChangeSet(payload.changeSet);
+    if (exactChanges.length > 0) {
+      return {
+        content: `Klart!${versionText} Previewen laddas om automatiskt.`,
+        variant: "success",
+        changes: exactChanges,
+        changesExact: true,
+      };
+    }
     const changes = summarizeChangesFromPrompt(userPrompt);
     return {
       content: `Klart!${versionText} Previewen laddas om automatiskt.`,
@@ -673,13 +730,19 @@ export function FloatingChat({
   isBuilding,
   onBuildStart,
   onBuildEnd,
+  onStageChange,
   pendingBaseRunId,
   onClearBaseRunId,
+  onShowVersions,
   tools,
 }: FloatingChatProps) {
   const [position, setPosition] = useState<Position | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  // Första-gångs-hinten "Så funkar det". Startar dold (false) → layout-
+  // effekten öppnar den post-mount om den aldrig setts. Persisteras vid
+  // dismiss så den bara visas en gång per webbläsare.
+  const [loopHintOpen, setLoopHintOpen] = useState(false);
   // På mobil (<768px) renderas panelen som bottom-sheet utan drag/
   // position-hantering. Hooken returnerar false under SSR och vid
   // initial hydration; skiftar till true post-mount om matchMedia
@@ -783,10 +846,22 @@ export function FloatingChat({
       setPosition(initial);
       setIsMinimized(readStoredMinimized());
       setQuickPromptsOpen(readStoredQuickPromptsOpen());
+      setLoopHintOpen(!readLoopHintSeen());
     })();
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Stäng hinten + kom ihåg dismissen. Egen callback så render-blocket
+  // hålls rent och localStorage-skrivningen aldrig kraschar UI:t.
+  const dismissLoopHint = useCallback(() => {
+    setLoopHintOpen(false);
+    try {
+      window.localStorage.setItem(STORAGE_KEY_LOOP_HINT, "true");
+    } catch {
+      // Tyst — quota/disabled localStorage får inte krascha UI.
+    }
   }, []);
 
   // Håll position innanför viewport vid resize.
@@ -1028,6 +1103,11 @@ export function FloatingChat({
       setBuildProgress(0);
       setIsSending(true);
       onBuildStart();
+      // Återställ stegmarkören till "thinking" direkt — trace-polling-
+      // effekten nedan förfinar till "building" när trace.ndjson når
+      // build-fasen. Utan denna reset visade BuildProgressCard föregående
+      // bygges sista stage.
+      onStageChange?.("thinking");
 
       // Pending-bubblans label drivs av useBuildTracePolling-hooken
       // (lägre ner i komponenten) som sätts enabled när isSending=true.
@@ -1058,6 +1138,7 @@ export function FloatingChat({
             payload.error ??
             `Prompt-anropet misslyckades (HTTP ${response.status})`;
           const classified = classifyFollowupError(errorText);
+          onStageChange?.("failed");
           setMessages((prev) =>
             prev
               .filter((m) => m.id !== pendingMessageId)
@@ -1088,13 +1169,18 @@ export function FloatingChat({
               content: summary.content,
               variant: summary.variant,
               changes: summary.changes,
+              changesExact: summary.changesExact,
             }),
         );
+        // Bygget landade (ok/degraded/failed-status) — markera sista steget
+        // så stegmarkören visar "klart" tills page.tsx tar över.
+        onStageChange?.(outcome === "failed" ? "failed" : "success");
         onBuildDone(payload.runId, outcome);
       } catch (caught) {
         const errorText =
           caught instanceof Error ? caught.message : "Okänt fel.";
         const classified = classifyFollowupError(errorText);
+        onStageChange?.("failed");
         setMessages((prev) =>
           prev
             .filter((m) => m.id !== pendingMessageId)
@@ -1131,6 +1217,7 @@ export function FloatingChat({
       onBuildStart,
       onBuildEnd,
       onBuildDone,
+      onStageChange,
       pendingBaseRunId,
     ],
   );
@@ -1180,6 +1267,51 @@ export function FloatingChat({
       prev.map((m) => (m.id === id ? { ...m, content: tracePolling.label } : m)),
     );
   }, [tracePolling.label, tracePolling.isPending, tracePolling.runStatus]);
+
+  // Förfina bygg-stage från trace.ndjson-fasen: understand/plan = "thinking",
+  // build = "building". page.tsx mappar detta till BuildProgressCard-steget.
+  // Bara medan vi faktiskt skickar (isSending) så vi inte rör buildStage
+  // efter att bygget landat (success/failed sätts i handleSend).
+  useEffect(() => {
+    if (!isSending || !onStageChange) return;
+    if (tracePolling.currentPhase === "build") {
+      onStageChange("building");
+    } else if (
+      tracePolling.currentPhase === "understand" ||
+      tracePolling.currentPhase === "plan"
+    ) {
+      onStageChange("thinking");
+    }
+  }, [tracePolling.currentPhase, isSending, onStageChange]);
+
+  // ⌥1–⌥4 växlar preview-bredd (mobile/tablet/laptop/full) utan att lämna
+  // tangentbordet under preview→följdprompt-loopen. Bara på desktop (presets
+  // är desktop-only) och inte när fokus ligger i composern. Matchar på
+  // event.code (Digit1–4) eftersom Option+siffra ger specialtecken på Mac.
+  // Samma modifier som wizardens steg-hopp, men de samexisterar aldrig —
+  // wizarden är stängd i builder-läget där FloatingChat lever.
+  useEffect(() => {
+    if (isMobile) return;
+    const handler = (event: KeyboardEvent) => {
+      if (!event.altKey || event.metaKey || event.ctrlKey) return;
+      if (!/^Digit[1-4]$/.test(event.code)) return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      const option = DEVICE_PRESET_OPTIONS[parseInt(event.code.slice(5), 10) - 1];
+      if (!option) return;
+      event.preventDefault();
+      setDevicePreset(option.id);
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [isMobile, setDevicePreset]);
 
   const handleKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
@@ -1418,6 +1550,45 @@ export function FloatingChat({
         </div>
       </div>
 
+      {/* Första-gångs-hint: gör kärnloopen synlig (följdprompt → ny
+          version). Dismiss:bar och persisterad så den bara visas en
+          gång. "Visa versioner" djuplänkar till historiken. */}
+      {loopHintOpen ? (
+        <div className="border-border/60 bg-muted/40 shrink-0 border-b px-3 py-2.5">
+          <div className="flex items-start gap-2">
+            <Sparkles
+              className="text-foreground/70 mt-0.5 h-3.5 w-3.5 shrink-0"
+              aria-hidden
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-foreground text-[12px] leading-relaxed">
+                Så funkar det: beskriv en ändring här så bygger jag om sajten.
+                Varje bygge sparas som en ny version du kan gå tillbaka till.
+              </p>
+              {onShowVersions ? (
+                <button
+                  type="button"
+                  onClick={onShowVersions}
+                  className="text-foreground/80 hover:text-foreground mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium underline-offset-2 hover:underline"
+                >
+                  <GitBranch className="h-3 w-3" aria-hidden />
+                  Visa versioner
+                </button>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              onClick={dismissLoopHint}
+              aria-label="Dölj tipset"
+              title="Dölj"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/60 inline-flex min-tap sm:min-tap-0 sm:h-6 sm:w-6 shrink-0 items-center justify-center rounded-md active:scale-95"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div
         ref={messagesRef}
         className="flex-1 overflow-y-auto px-3 py-3"
@@ -1644,9 +1815,12 @@ export function FloatingChat({
                 )}
               >
                 {isUploading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2
+                    aria-hidden
+                    className="h-3.5 w-3.5 animate-spin"
+                  />
                 ) : (
-                  <ImagePlus className="h-3.5 w-3.5" />
+                  <ImagePlus aria-hidden className="h-3.5 w-3.5" />
                 )}
               </button>
               <span className="text-muted-foreground text-[10px]">
@@ -1671,9 +1845,9 @@ export function FloatingChat({
               )}
             >
               {isSending || isBuilding ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <Loader2 aria-hidden className="h-3 w-3 animate-spin" />
               ) : (
-                <Send className="h-3 w-3" />
+                <Send aria-hidden className="h-3 w-3" />
               )}
               {isSending || isBuilding
                 ? buildProgress < 15
@@ -1727,9 +1901,10 @@ export function FloatingChat({
           width: PANEL_WIDTH,
         }}
       >
-        {DEVICE_PRESET_OPTIONS.map((option) => {
+        {DEVICE_PRESET_OPTIONS.map((option, idx) => {
           const isActive = devicePreset === option.id;
           const Icon = option.Icon;
+          const shortcut = `⌥${idx + 1}`;
           return (
             <button
               key={option.id}
@@ -1737,9 +1912,10 @@ export function FloatingChat({
               aria-pressed={isActive}
               aria-label={
                 option.width
-                  ? `Preview-bredd ${option.label}px`
-                  : "Full bredd"
+                  ? `Preview-bredd ${option.label}px (genväg ${shortcut})`
+                  : `Full bredd (genväg ${shortcut})`
               }
+              title={`Genväg ${shortcut}`}
               onClick={() => setDevicePreset(option.id)}
               className={cn(
                 "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium transition active:scale-95",
@@ -1800,7 +1976,10 @@ function MessageBubble({
     >
       <span
         className={cn(
-          "rounded-xl border px-3 py-2 text-[12.5px] leading-relaxed",
+          // whitespace-pre-line bevarar radbrytningar i fler-rads-svar
+          // (t.ex. copy-directive-sammanfattningar) men kollapsar löpande
+          // blanksteg — utan den platta-pressas allt till en rad.
+          "rounded-xl border px-3 py-2 text-[12.5px] leading-relaxed whitespace-pre-line",
           isUser
             ? "bg-foreground text-background border-transparent"
             : `bg-muted/40 text-foreground ${variantClass}`,
@@ -1817,14 +1996,14 @@ function MessageBubble({
         )}
       </span>
       {/* Success-change-list — visas under success-bubblan med en
-          kort vänster-border per ändring. Heuristik från
-          summarizeChangesFromPrompt, tas bort den dag backend
-          exponerar en strukturerad diff (då används payload-data
-          istället för operatörens prompt). */}
+          kort vänster-border per ändring. Rubriken växlar på
+          message.changesExact: "Ändrat" för bekräftade deltas från en
+          strukturerad change-set (summarizeChangeSet), "Troligen ändrat"
+          för prompt-heuristiken (summarizeChangesFromPrompt). */}
       {isSuccess && message.changes && message.changes.length > 0 ? (
         <div className="border-emerald-500/30 mt-1.5 ml-1 flex flex-col gap-1 border-l-2 pl-2.5">
           <span className="text-muted-foreground/70 font-mono text-[9.5px] tracking-[0.18em] uppercase">
-            Troligen ändrat
+            {message.changesExact ? "Ändrat" : "Troligen ändrat"}
           </span>
           {message.changes.map((change, idx) => (
             <span

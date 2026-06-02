@@ -80,7 +80,17 @@ export class ErrorBoundary extends Component<
     // resetKey som key tvingar React att skapa ett nytt subtree efter
     // reset — viktigt eftersom samma element-stuktur annars återanvänder
     // den korrupta state:n som kraschade.
-    return <div key={resetKey}>{children}</div>;
+    //
+    // className appliceras även i success-läge (inte bara i fallback)
+    // så call-sites som behöver ``h-full w-full`` (ViewerPanel-canvasen
+    // är ett exempel) kan behålla layout-kedjan från sin parent. Utan
+    // detta wrappar boundaryn barnen i ett zero-height div och iframen
+    // kollapsar.
+    return (
+      <div key={resetKey} className={className}>
+        {children}
+      </div>
+    );
   }
 }
 

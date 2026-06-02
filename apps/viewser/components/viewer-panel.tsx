@@ -1,10 +1,16 @@
 "use client";
 
-import { ExternalLink, Check, Loader2 } from "lucide-react";
+import { ExternalLink, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { PromptStage } from "@/components/prompt-builder";
+import { BuildProgressCard } from "@/components/viewer-panel/build-progress-card";
+import {
+  unavailableForPreviewError,
+  type PreviewApiError,
+  type UnavailableInfo,
+} from "@/components/viewer-panel/preview-error";
 import {
   DEVICE_PRESET_WIDTHS,
   useDevicePreset,
@@ -41,10 +47,20 @@ type ViewerPanelProps = {
 
 type PreviewServerInfo = {
   siteId: string;
-  port: number;
+  port?: number;
   url: string;
   status: "starting" | "ready";
-  uptimeMs: number;
+  uptimeMs?: number;
+  /**
+   * Bite C: routen går nu via Preview Runtime-kontraktet och svarar med
+   * generiska ``PreviewResult``-fält utöver det bakåtkompatibla ``url``.
+   * ``previewUrl`` är den kanoniska iframe-URL:en (kan vara en publik
+   * ``*.vercel.run`` i vercel-sandbox-läge); ``kind`` säger vilken runtime
+   * som faktiskt körde.
+   */
+  previewUrl?: string;
+  kind?: string;
+  logs?: string[];
 };
 
 type FilesPayload = {
@@ -91,80 +107,9 @@ function supportsStackBlitzEmbed(kind: BrowserKind): boolean {
   return kind === "chromium";
 }
 
-/**
- * Strukturerad info-shape som banner-renderaren kan visa istället för
- * den tidigare hårdkodade "Mock-runs skriver inte..."-strängen. Tillåter
- * att olika misslyckanden (sajten inte byggd, port-pool full, mock-run
- * utan files, etc.) får specifik copy med titel, beskrivning och en
- * actionable hint istället för en gemensam grå text.
- */
-type UnavailableInfo = {
-  title?: string;
-  message: string;
-  hint?: string;
-};
-
-/**
- * Felshape som ``/api/preview/<siteId>`` returnerar (4xx/5xx). Synkad
- * mot ``apps/viewser/app/api/preview/[siteId]/route.ts:PreviewErrorBody``.
- * Vi kopierar typen istället för att importera den eftersom denna
- * komponent kör i klienten och importera från en server-route-fil
- * skulle dra in onödiga server-bara beroenden.
- */
-type PreviewApiError = {
-  error: string;
-  code?:
-    | "validation_error"
-    | "not_built"
-    | "missing_artifacts"
-    | "port_pool_full"
-    | "spawn_failed"
-    | "not_running"
-    | "unknown";
-  hint?: string;
-};
-
-function unavailableForPreviewError(
-  payload: PreviewApiError | null,
-): UnavailableInfo {
-  const code = payload?.code ?? "unknown";
-  const errMsg = payload?.error;
-  const errHint = payload?.hint;
-  if (code === "not_built" || code === "missing_artifacts") {
-    return {
-      title: "Sajten är inte byggd än",
-      message:
-        errMsg ??
-        "Lokal preview-server kunde inte starta — den genererade sajten finns inte på disk.",
-      hint:
-        errHint ??
-        "Kör python scripts/build_site.py för att bygga sajten först.",
-    };
-  }
-  if (code === "port_pool_full") {
-    return {
-      title: "Inga lediga preview-portar",
-      message: errMsg ?? "Port-poolen 4100-4199 är full.",
-      hint:
-        errHint ??
-        "Stäng några äldre preview-servrar via DELETE /api/preview/<siteId>.",
-    };
-  }
-  if (code === "spawn_failed") {
-    return {
-      title: "Lokal preview-server kraschade",
-      message: errMsg ?? "next start startade inte korrekt.",
-      hint:
-        errHint ??
-        "Kontrollera viewser-loggen för stderr-tail från next start.",
-    };
-  }
-  return {
-    title: "Lokal preview-server kunde inte starta",
-    message: errMsg ?? "Okänt fel från /api/preview/<siteId>.",
-    hint: errHint,
-  };
-}
+// Preview-fel-mappningen (``PreviewApiError`` → ``UnavailableInfo``) bröts ut
+// till ``viewer-panel/preview-error.ts`` (Bite C) för att hålla den här
+// komponenten under radspärren. Importeras nedan.
 
 /**
  * Operatörens uttryckta preview-runtime-läge, läst från den
@@ -186,7 +131,9 @@ function unavailableForPreviewError(
  */
 const VIEWSER_PREVIEW_MODE = (
   process.env.NEXT_PUBLIC_VIEWSER_PREVIEW_MODE ?? "local-next"
-).toLowerCase();
+)
+  .trim()
+  .toLowerCase();
 const IS_LOCAL_NEXT_MODE = VIEWSER_PREVIEW_MODE === "local-next";
 // Reviewer-fynd (post-PR #101): tidigare provades alltid
 // ``POST /api/preview/<siteId>`` först, även i ``stackblitz``-mode.
@@ -200,18 +147,20 @@ const IS_LOCAL_NEXT_MODE = VIEWSER_PREVIEW_MODE === "local-next";
 //   - ``auto``        → prova lokal, fall till StackBlitz vid miss
 //                       (oförändrat — det är vad ``auto`` betyder)
 const IS_STACKBLITZ_MODE = VIEWSER_PREVIEW_MODE === "stackblitz";
+// Bite C: ``vercel-sandbox`` är en explicit runtime som körs via
+// ``POST /api/preview/<siteId>`` (samma Steg 1 som local-next), men dess
+// iframe pekar på en publik ``*.vercel.run``-URL istället för localhost.
+// När runtimen failar ska vi — precis som local-next — visa ett ärligt
+// fel med loggar, ALDRIG tyst falla tillbaka till StackBlitz.
+const IS_VERCEL_SANDBOX_MODE = VIEWSER_PREVIEW_MODE === "vercel-sandbox";
 
-// Mode-aware UI-copy för BuildProgressCard-preview-steget. Tidigare
-// hårdkodat "Förbereder StackBlitz-iframen." även i local-next-mode
-// där flödet faktiskt startar en lokal ``next start``-server. Liten
-// drift men ger fel mental modell. Reviewer-fynd post-PR #101.
-//
-// Texten är kundvänlig — inga tekniska termer (preview-server,
-// next start, StackBlitz, iframe) eftersom slutkunden inte ska
-// behöva förstå pipelinen för att vänta i lugn och ro.
-const PREVIEW_PREP_HINT = IS_LOCAL_NEXT_MODE
-  ? "Snart kan du klicka runt på er sajt."
-  : "Laddar förhandsvisningen i webbläsaren.";
+// Notera: tidigare bodde här en ``PREVIEW_PREP_HINT``-konstant som
+// styrde mode-aware copy i BuildProgressCard ("Öppnar förhandsvisning"-
+// steget). Den följde med komponenten till
+// ``viewer-panel/build-progress-card.tsx`` vid Tier 3-splittet och
+// läser sin egen ``NEXT_PUBLIC_VIEWSER_PREVIEW_MODE`` där. Resten
+// av filen använder fortfarande ``IS_LOCAL_NEXT_MODE`` +
+// ``IS_STACKBLITZ_MODE`` så de stannar.
 
 function formatViewerError(caught: unknown): string {
   if (caught instanceof Error) {
@@ -380,11 +329,14 @@ export function ViewerPanel({
           if (previewResponse.ok) {
             const info = (await previewResponse.json()) as PreviewServerInfo;
             if (cancelled) return;
-            setLocalPreviewUrl(info.url);
+            // Bite C: iframe = previewSession.url/previewUrl när runtimen
+            // levererar det (publik *.vercel.run i sandbox-läge), annars
+            // det bakåtkompatibla top-level ``url`` (localhost för local).
+            setLocalPreviewUrl(info.previewUrl ?? info.url);
             setLoading(false);
             return;
           }
-          if (IS_LOCAL_NEXT_MODE) {
+          if (IS_LOCAL_NEXT_MODE || IS_VERCEL_SANDBOX_MODE) {
             if (cancelled) return;
             const errPayload = (await previewResponse
               .json()
@@ -403,7 +355,7 @@ export function ViewerPanel({
           // build_site.py kan ha skippats medvetet och vi har files
           // tillgängliga via /api/runs/<runId>/files istället.
         } catch {
-          if (IS_LOCAL_NEXT_MODE) {
+          if (IS_LOCAL_NEXT_MODE || IS_VERCEL_SANDBOX_MODE) {
             if (cancelled) return;
             setUnavailable({
               title: "Lokal preview-server kunde inte nås",
@@ -415,7 +367,7 @@ export function ViewerPanel({
           }
           // Stackblitz-mode: fortsätt med StackBlitz-fallback.
         }
-      } else if (IS_LOCAL_NEXT_MODE) {
+      } else if (IS_LOCAL_NEXT_MODE || IS_VERCEL_SANDBOX_MODE) {
         // siteId saknas men runId finns — t.ex. en mock-run från
         // dev_generate.py. I local-next-mode kan vi inte bygga preview
         // utan siteId, så visa pedagogiskt fel istället för att tyst
@@ -660,13 +612,18 @@ export function ViewerPanel({
   // den visuella kontinuiteten från "Bygger sajt" → "Startar preview".
   const isFinalizing =
     buildStage === "success" && loading && !!runId && !unavailable;
-  // Visa hero-videon så länge ingen riktig iframe har mountats. Det
-  // täcker: ingen run vald (empty), 404 på files (unavailable),
-  // pågående fetch (loading), SDK-error, pågående bygge OCH
-  // browser-fallback (Safari/Firefox). `loading` räcker —
+  // Visa hero-videon medan en riktig iframe ännu inte mountats: 404 på
+  // files (unavailable), pågående fetch (loading), SDK-error, pågående
+  // bygge OCH browser-fallback (Safari/Firefox). `loading` räcker —
   // `isFinalizing` är en delmängd av `loading`.
+  //
+  // OBS: det rena tom-läget (`showEmpty` utan bygge/loading/fel) triggar
+  // INTE längre hero. Studions gamla startsida ("Beskriv din sajt så
+  // bygger vi den" + bakgrundsvideo) är borttagen — all bygg-start sker
+  // numera på den nya marknads-heron, och studion öppnar DiscoveryWizarden
+  // direkt via hero-handoffen. Tom-läget ska därför vara en ren bakgrund,
+  // inte den gamla startsidan.
   const showHero =
-    showEmpty ||
     showUnavailable ||
     showFallback ||
     loading ||
@@ -676,9 +633,10 @@ export function ViewerPanel({
   // när bygget precis blivit klart men preview-iframen fortfarande
   // bootas. Hero-texten ska INTE visas i någondera fas — det skulle
   // vara dubbel information med två konkurrerande UI:n. Inte heller
-  // när vi visar browser-fallback-kortet (det äger mittenytan).
+  // när vi visar browser-fallback-kortet (det äger mittenytan) eller i
+  // det rena tom-läget (gamla startsidan är borttagen, se ovan).
   const showHeroText =
-    (showEmpty || showUnavailable || !!error) &&
+    (showUnavailable || !!error) &&
     !isBuilding &&
     !isFinalizing &&
     !showFallback;
@@ -868,6 +826,11 @@ export function ViewerPanel({
                 {unavailable.hint}
               </div>
             ) : null}
+            {unavailable.logs && unavailable.logs.length > 0 ? (
+              <pre className="mt-3 max-h-40 overflow-auto rounded-md bg-amber-950/10 px-3 py-2 text-[11px] leading-relaxed whitespace-pre-wrap text-amber-900/80 dark:bg-amber-100/5 dark:text-amber-200/70">
+                {unavailable.logs.join("\n")}
+              </pre>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -1041,142 +1004,12 @@ export function ViewerPanel({
  * Mappas från PromptStage så vi kan visa rätt aktivt steg medan
  * `executeBuild()` jobbar.
  */
-const BUILD_STEPS: ReadonlyArray<{
-  id: "prepare" | "generate" | "build" | "preview";
-  title: string;
-  hint: string;
-}> = [
-  {
-    id: "prepare",
-    title: "Läser dina svar",
-    hint: "Vi går igenom det du har fyllt i i wizarden.",
-  },
-  {
-    id: "generate",
-    title: "Planerar sajten",
-    hint: "Vi väljer rätt struktur, ton och funktioner för er verksamhet.",
-  },
-  {
-    id: "build",
-    title: "Bygger sajten",
-    hint: "Vi monterar alla sidor och bilder. Första bygget tar 1–3 minuter, sedan går det snabbare.",
-  },
-  {
-    id: "preview",
-    title: "Öppnar förhandsvisning",
-    hint: PREVIEW_PREP_HINT,
-  },
-];
+/* ── BuildProgressCard ──────────────────────────────────────────────
+ *
+ * Den dominanta center-laddningsmodulen är extraherad till
+ * ``viewer-panel/build-progress-card.tsx`` (Tier 3 split). Den
+ * importerades tidigare som lokal funktion härinifrån men har inga
+ * beroenden på ViewerPanel:s state, så ren textextraktion var säker
+ * och förkortar denna fil från 1182 till ~1020 rader.
+ */
 
-function stageToStepIndex(stage: PromptStage): number {
-  switch (stage) {
-    case "idle":
-      return 0;
-    case "thinking":
-      return 1;
-    case "building":
-      return 2;
-    case "success":
-    case "degraded":
-    case "failed":
-      return 3;
-    default:
-      return 0;
-  }
-}
-
-function BuildProgressCard({ stage }: { stage: PromptStage }) {
-  const activeIdx = stageToStepIndex(stage);
-  const [elapsedSec, setElapsedSec] = useState(0);
-
-  useEffect(() => {
-    const start = Date.now();
-    const id = setInterval(() => {
-      setElapsedSec(Math.floor((Date.now() - start) / 1000));
-    }, 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const minutes = Math.floor(elapsedSec / 60);
-  const seconds = (elapsedSec % 60).toString().padStart(2, "0");
-
-  return (
-    <div className="border-border/60 bg-background/95 w-full max-w-[560px] rounded-3xl border p-9 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.25)] backdrop-blur-xl">
-      <div className="mb-6 flex items-center justify-between gap-3">
-        <h2 className="text-foreground text-[17px] font-semibold tracking-tight">
-          Bygger din sajt
-        </h2>
-        <span className="bg-muted/50 text-foreground rounded-full px-2.5 py-1 font-mono text-[11px] tracking-tight tabular-nums">
-          {minutes}:{seconds}
-        </span>
-      </div>
-
-      <ol className="flex flex-col gap-0.5">
-        {BUILD_STEPS.map((step, idx) => {
-          const isActive = idx === activeIdx;
-          const isPast = idx < activeIdx;
-          const isFuture = idx > activeIdx;
-          return (
-            <li
-              key={step.id}
-              className={[
-                "flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors",
-                isActive ? "bg-foreground/[0.04]" : "",
-              ].join(" ")}
-            >
-              <span
-                className={[
-                  "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] transition-colors",
-                  isPast
-                    ? "bg-foreground text-background"
-                    : isActive
-                      ? "bg-foreground text-background"
-                      : "border-border/70 bg-background text-muted-foreground/70 border",
-                ].join(" ")}
-              >
-                {isPast ? (
-                  <Check className="h-3 w-3" strokeWidth={2.5} />
-                ) : isActive ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <span className="font-mono text-[9.5px] tracking-tight">
-                    {idx + 1}
-                  </span>
-                )}
-              </span>
-              <div className="flex flex-1 flex-col leading-snug">
-                <span
-                  className={[
-                    "text-[13px] font-medium tracking-tight",
-                    isFuture ? "text-muted-foreground" : "text-foreground",
-                  ].join(" ")}
-                >
-                  {step.title}
-                </span>
-                <span
-                  className={[
-                    "text-[11.5px] leading-relaxed",
-                    isActive
-                      ? "text-muted-foreground"
-                      : "text-muted-foreground/70",
-                  ].join(" ")}
-                >
-                  {step.hint}
-                </span>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
-
-      <div className="bg-border/50 mt-6 h-[2px] w-full overflow-hidden rounded-full">
-        <div
-          className="bg-foreground/80 h-full animate-pulse rounded-full transition-[width] duration-500 ease-out"
-          style={{
-            width: `${((activeIdx + 1) / BUILD_STEPS.length) * 100}%`,
-          }}
-        />
-      </div>
-    </div>
-  );
-}

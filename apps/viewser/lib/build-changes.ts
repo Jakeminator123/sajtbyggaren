@@ -1,12 +1,21 @@
 /**
- * build-changes — paraphrasera operatörens follow-up-prompt till en
- * kort "Vad gjordes typiskt"-summa som kan visas under success-
- * meddelandet i FloatingChat.
+ * build-changes — sammanfatta vad en follow-up-build ändrade till en
+ * kort lista som kan visas under success-meddelandet i FloatingChat.
  *
- * Detta är en bästa-uppskattning baserat på prompt-textens nyckelord.
- * När backend så småningom exponerar en strukturerad change-set i
- * `PromptApiResponse` (lista över ändrade routes, copy-fält, brand-
- * tokens etc.) kan vi ersätta heuristiken med exakta deltas.
+ * Det finns TVÅ källor, i fallande trovärdighetsordning:
+ *
+ *   1. `summarizeChangeSet(changeSet)` — EXAKT. Bygger på en strukturerad
+ *      change-set som `/api/prompt` härleder serverside genom att diffa
+ *      den nya runens artefakter mot föregående run (se
+ *      `lib/run-change-set.ts` + `computeRunDiff`). Routes som lades
+ *      till/togs bort och variant-byten är faktiska deltas, inte
+ *      gissningar. Renderas under rubriken "Ändrat".
+ *
+ *   2. `summarizeChangesFromPrompt(prompt)` — HEURISTIK. Paraphraserar
+ *      operatörens prompt via nyckelord när ingen exakt change-set finns
+ *      (t.ex. ren copy-/design-justering som inte ändrar route-uppsättning
+ *      eller variant). Renderas under rubriken "Troligen ändrat" så
+ *      operatören vet att det är en uppskattning.
  *
  * Designprinciper:
  *   - Aldrig hitta på något som inte rimligt kan ha hänt.
@@ -20,6 +29,31 @@
 export type BuildChange = {
   category: "design" | "content" | "layout" | "structure" | "media";
   label: string;
+};
+
+/**
+ * Strukturerad, EXAKT change-set som `/api/prompt` skickar på wiren för
+ * follow-up-builds. Härledd serverside i `lib/run-change-set.ts` genom
+ * att diffa den nya runens artefakter mot föregående run via
+ * `computeRunDiff`. `null`/utelämnad = init-build eller en follow-up
+ * där vi inte kunde härleda någon exakt route-/variant-delta (då faller
+ * UI:t tillbaka på prompt-heuristiken).
+ *
+ * Måste hållas medvetet smal: bara deltas vi kan bekräfta från
+ * artefakter på disk. Copy-direktiv (företagsnamn, tagline) lever kvar
+ * i sin egen `appliedCopyDirectives`-väg och dupliceras inte här.
+ */
+export type RunChangeSet = {
+  /** Run vi diffade emot. `null` när ingen föregående run hittades. */
+  previousRunId: string | null;
+  /** Route-paths som finns i nya runen men inte den föregående. */
+  routesAdded: string[];
+  /** Route-paths som fanns i föregående run men inte den nya. */
+  routesRemoved: string[];
+  /** Designvariant före bytet — `null` om variant var oförändrad. */
+  variantBefore: string | null;
+  /** Designvariant efter bytet — `null` om variant var oförändrad. */
+  variantAfter: string | null;
 };
 
 interface KeywordRule {
@@ -160,6 +194,42 @@ export function summarizeChangesFromPrompt(prompt: string): BuildChange[] {
     const label =
       typeof rule.label === "function" ? rule.label(match) : rule.label;
     changes.push({ category: rule.category, label });
+  }
+  return changes;
+}
+
+/**
+ * Mappa en EXAKT change-set till 0-3 BuildChange-bullets. Till skillnad
+ * från `summarizeChangesFromPrompt` är varje rad här en bekräftad delta
+ * (routes/variant härledda ur run-artefakter), så UI:t kan rendera dem
+ * under en "Ändrat"-rubrik istället för "Troligen ändrat".
+ *
+ * Returnerar tom array när change-set:en saknas eller inte innehåller
+ * någon exakt delta — då faller kallaren tillbaka på prompt-heuristiken.
+ */
+export function summarizeChangeSet(
+  changeSet: RunChangeSet | null | undefined,
+): BuildChange[] {
+  if (!changeSet) return [];
+  const changes: BuildChange[] = [];
+  for (const route of changeSet.routesAdded) {
+    if (changes.length >= 3) return changes;
+    changes.push({ category: "structure", label: `Sidan ${route} tillagd` });
+  }
+  for (const route of changeSet.routesRemoved) {
+    if (changes.length >= 3) return changes;
+    changes.push({ category: "structure", label: `Sidan ${route} borttagen` });
+  }
+  if (
+    changes.length < 3 &&
+    changeSet.variantBefore &&
+    changeSet.variantAfter &&
+    changeSet.variantBefore !== changeSet.variantAfter
+  ) {
+    changes.push({
+      category: "design",
+      label: `Designvariant: ${changeSet.variantBefore} → ${changeSet.variantAfter}`,
+    });
   }
   return changes;
 }
