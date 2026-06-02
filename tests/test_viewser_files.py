@@ -4196,6 +4196,30 @@ def test_stripe_webhook_is_idempotent_and_grants_credits() -> None:
     )
 
 
+def test_stripe_webhook_claims_event_atomically_before_side_effects() -> None:
+    """Samtidighetsskydd (Jakob-review 2026-06-02): eventet ska claimas ATOMISKT
+    (``INSERT OR IGNORE`` + ``changes === 1``) FÖRE sidoeffekterna, och claimen
+    ska SLÄPPAS om handlern kastar — så två samtidiga leveranser inte båda kan
+    köra ``addCredits`` (dubbel-kreditering), men en faktisk retry fortfarande
+    kan köra om eventet.
+    """
+    webhook = (
+        VIEWSER_DIR / "app" / "api" / "stripe" / "webhook" / "route.ts"
+    ).read_text(encoding="utf-8")
+    assert "claimEvent" in webhook and "result.changes === 1" in webhook, (
+        "Eventet ska claimas atomiskt (INSERT OR IGNORE + changes === 1) "
+        "innan sidoeffekter körs"
+    )
+    assert "releaseEvent" in webhook and "DELETE FROM processed_stripe_events" in webhook, (
+        "Claimen ska släppas om handlern kastar, så Stripe-retry kan köra om "
+        "eventet utan att krediter tappas"
+    )
+    # Claimen måste ske före handleEvent (annars finns racet kvar).
+    assert webhook.index("claimEvent(event.id)") < webhook.index(
+        "await handleEvent(event"
+    ), "claimEvent måste anropas före handleEvent (annars kvarstår racet)"
+
+
 def test_build_pipeline_untouched_by_auth() -> None:
     """Hård gräns: auth får inte läcka in i bygg-logiken. Bygg-runners och
     prompt-routen ska INTE importera auth/session/credits. Sajt-ägande kopplas

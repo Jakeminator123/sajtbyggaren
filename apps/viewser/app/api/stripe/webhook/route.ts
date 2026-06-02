@@ -45,22 +45,26 @@ function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
   return typeof subId === "string" ? subId : null;
 }
 
-function eventAlreadyProcessed(eventId: string): boolean {
-  return Boolean(
-    getAuthDb()
-      .prepare("SELECT 1 FROM processed_stripe_events WHERE id = ?")
-      .get(eventId),
-  );
-}
-
-function recordProcessedEvent(eventId: string): void {
-  // ``OR IGNORE`` så två samtidiga leveranser av samma event inte kraschar
-  // på UNIQUE-konflikt (en av dem vinner, den andra blir en no-op).
-  getAuthDb()
+function claimEvent(eventId: string): boolean {
+  // Claima eventet ATOMISKT: ``INSERT OR IGNORE`` på UNIQUE-id:t. better-sqlite3
+  // är synkront, så det finns inget await-fönster mellan check och insert —
+  // två samtidiga leveranser av samma event kan därför inte båda vinna claimen.
+  // ``changes === 1`` = vi tog den; ``0`` = någon annan hann före (duplikat).
+  const result = getAuthDb()
     .prepare(
       "INSERT OR IGNORE INTO processed_stripe_events (id, created_at) VALUES (?, ?)",
     )
     .run(eventId, Date.now());
+  return result.changes === 1;
+}
+
+function releaseEvent(eventId: string): void {
+  // Handlern kastade efter att vi tagit claimen → släpp den så Stripe-retryn
+  // kan köra om eventet (annars hade ett halvkört event markerats klart och
+  // krediter tappats).
+  getAuthDb()
+    .prepare("DELETE FROM processed_stripe_events WHERE id = ?")
+    .run(eventId);
 }
 
 function syncSubscriptionRecord(sub: Stripe.Subscription): void {
@@ -100,23 +104,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Ogiltig signatur." }, { status: 400 });
   }
 
-  // Idempotensskydd: hoppa över redan hanterade events (snabb dedup).
-  if (eventAlreadyProcessed(event.id)) {
+  // Idempotens + samtidighetsskydd: claima eventet ATOMISKT innan några
+  // sidoeffekter körs. Vinner vi inte claimen är det en duplikat-/parallell-
+  // leverans → no-op (förhindrar dubbel-kreditering vid samtidiga leveranser).
+  if (!claimEvent(event.id)) {
     return NextResponse.json({ received: true, duplicate: true });
   }
 
-  // Sidoeffekterna körs FÖRE vi markerar eventet som hanterat. Kastar
-  // någon kredit-/Stripe-operation svarar vi 500 så Stripe gör en retry —
-  // annars hade ett halvkört event markerats klart och krediter tappats.
+  // Vi äger nu claimen. Kastar en kredit-/Stripe-operation släpper vi claimen
+  // och svarar 500 så Stripe gör en retry (krediter tappas inte).
   try {
     await handleEvent(event, stripe);
   } catch {
+    releaseEvent(event.id);
     return NextResponse.json(
       { error: "Kunde inte hantera eventet — försök igen." },
       { status: 500 },
     );
   }
-  recordProcessedEvent(event.id);
   return NextResponse.json({ received: true });
 }
 
@@ -127,6 +132,12 @@ async function handleEvent(
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
+      // Hämta ev. subscription FÖRST — det är det enda fallibla anropet här.
+      // Görs det före kreditbokningen kan en retry (efter releaseEvent) inte
+      // dubbel-kreditera på ett fel som inträffar efter addCredits.
+      const sub = session.subscription
+        ? await stripe.subscriptions.retrieve(String(session.subscription))
+        : null;
       const userId =
         typeof asRecord(session.metadata)["userId"] === "string"
           ? (session.metadata!.userId as string)
@@ -140,10 +151,7 @@ async function handleEvent(
         // Första cykelns krediter (renewals hanteras av invoice.paid nedan).
         addCredits(userId, plan.creditsPerMonth, "subscription-start", plan.id);
       }
-      if (session.subscription) {
-        const sub = await stripe.subscriptions.retrieve(
-          String(session.subscription),
-        );
+      if (sub) {
         syncSubscriptionRecord(sub);
       }
       break;

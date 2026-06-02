@@ -1,8 +1,11 @@
 # Handoff: christopher-ui → Jakob (2026-06-02)
 
 **Branch:** `christopher-ui`
-**HEAD:** `50fa063` (pushad till `origin/christopher-ui`)
-**Mot `origin/main` (= `origin/jakob-be`, båda `b027b70`):** 102 commits före, 2 efter.
+**HEAD:** `d87e905` (pushad till `origin/christopher-ui`; batch-commit var `50fa063`,
+sedan merge av `origin/main` `c4c7760` + Jakob-review-fixar nedan).
+**Mot `origin/main`:** synkad via merge av `origin/main` (`619454c`, PR #151) →
+PR #150 rapporterar nu mergebar (inga konflikter kvar; den ostabila check-statusen
+= enbart det medvetet avvisade Vercel-fyndet, se §3).
 
 Detta dokument är en självständig handoff. `docs/current-focus.md` lämnades
 medvetet orörd (den är orchestrator-filen och pekar på `jakob-be`-checkpoint
@@ -64,22 +67,51 @@ En read-only bug-scout kördes på changeseten. Fynd jag **åtgärdade före pus
 3. Öppen redirect i `/login` + `/registrera` (`next.startsWith("/")` släpper
    igenom `//evil.com`). Fix: delad `isSafeNext()` i `auth-config.ts`.
 4. Stripe-webhook markerade event hanterat FÖRE sidoeffekten → en kastande
-   `addCredits`/Stripe-retry kunde tappa krediter. Fix: markera EFTER lyckad
-   `handleEvent` + `INSERT OR IGNORE`; handler-fel → 500 så Stripe gör retry.
+   `addCredits`/Stripe-retry kunde tappa krediter. Fix (steg 1): markera EFTER
+   lyckad `handleEvent` + `INSERT OR IGNORE`; handler-fel → 500 så Stripe gör retry.
+   **Uppdaterat efter Jakob-review (2026-06-02, se §3):** steg 1 lämnade ett
+   samtidighets-race (två parallella leveranser kunde båda passera dedup-checken
+   över `await`-fönstret i `handleEvent` och dubbel-kreditera). Slutlig fix:
+   eventet **claimas atomiskt** (`INSERT OR IGNORE` + `changes === 1`) FÖRE
+   sidoeffekterna, claimen **släpps** (`releaseEvent`/DELETE) om handlern kastar,
+   och `checkout.session.completed` kör det fallibla Stripe-anropet före
+   `addCredits` (retry-säkert). Källlås: `test_stripe_webhook_claims_event_atomically_before_side_effects`.
 
 ---
 
 ## 3. Kvarvarande fynd jag MEDVETET INTE fixade (deploy/design — din kallelse)
 
-Dessa är inte push-blockerare för en dev-branch men bör hanteras före prod:
+Dessa är inte push-blockerare för en dev-branch men bör hanteras före prod.
+**Jakob-review 2026-06-02** gick igenom samma yta; verdikt: LLM-flödet ~8/10,
+auth/billing-lagret ~5/10 "inte produktionssäkert ännu". Det enda **kodbugg**-
+fyndet (Stripe-webhook-racet) är nu **STÄNGT** (se §2.4). Resten är beslut:
 
+- **[BESLUT, ej bugg] Krediter dras inte i `/api/prompt`.** Både Jakob- och
+  Vercel-reviewen flaggar detta som 95%/10. Det är ett **medvetet produktbeslut**,
+  inte ett kodfel: kärnloopen (`prompt → preview`) ska vara friktionsfri för
+  utloggade besökare (produktkompassen), och en inloggnings-/kreditgrind i
+  bygg-ingången skulle dessutom **bryta källlåset** `test_build_pipeline_untouched_by_auth`
+  (asserterar uttryckligen `"consumeCredits" not in prompt_route` +
+  `"auth/session" not in prompt_route`). Den verkliga frågan är ett **operatörsval**:
+  (a) behåll fri demo-bygge + mät krediter på något senare/inloggat steg
+  (t.ex. publicering/claim eller följdprompt för inloggade), eller (b) tvinga
+  inloggning på hela bygget (bryter kärnloopen + kräver omskrivet källlås).
+  Min rekommendation: (a). Jag bygger gärna kreditmätning på ett icke-kärnloop-
+  steg om du pekar ut vilket.
 - **[P0 deploy] SQLite-auth på serverless.** `lib/auth/db.ts` skriver till
   `data/auth/auth.db`. På Vercel/ephemeral nollställs den per instans →
   konton/sessioner/krediter/ägarskap persisterar inte. Kräver durable store
   (Postgres/Neon) eller en uttalad "single-node only"-deploy. Designbeslut.
 - **[P1 design] Site-squatting.** Vilken inloggad användare som helst kan
   `claim`:a vilket känt `siteId` som helst (först-till-kvarn). Bör knytas till
-  build-bevis (run-metadata/signerad handoff). Designbeslut.
+  build-bevis. Eftersom bygget är anonymt (ingen inloggning krävs) finns idag
+  ingen serverkoppling "vem byggde X". Ren fix som **bevarar den anonyma
+  kärnloopen**: bygget utfärdar ett kortlivat **HMAC-signerat claim-token**
+  (`siteId` + utgång) till webbläsaren som byggde (befintlig HMAC-infra i
+  `lib/auth/tokens.ts`); `claim-site` verifierar signatur + utgång + att sajten
+  är oclaim:ad. Binder claim till "den som precis byggde i denna flik" utan att
+  tvinga inloggning vid bygge. Jag bygger den om du vill — annars accepterat-
+  för-nu (first-come på single-node).
 - **[P2] `register`-TOCTOU:** `emailExists`-koll + `createUser` har ett litet
   race-fönster (osannolikt på single-node SQLite); kan stängas med try/catch → 409.
 - **[P2] `claim-site` `siteId`-validering:** bara non-empty/`!== "unknown"`;
@@ -125,15 +157,20 @@ du reviewar. Säg till om du vill att jag öppnar PR:en.
 
 ## 6. Kopiera-klistra till Jakob
 
-> christopher-ui är pushad (`50fa063`), 102 före / 2 efter main. Dagens batch:
-> eget auth (scrypt + HMAC-cookies + SQLite, proxy grindar /konto), Stripe
-> billing, starters-banan, synliggjord kärnloop (FloatingChat-hint + auth-medveten
+> christopher-ui är pushad (`d87e905`), synkad mot main → PR #150 mergebar
+> (konflikterna lösta via merge av origin/main `c4c7760`; backend-filerna tar
+> mains kanoniska PR #149-version = noll netto-diff). Dagens batch: eget auth
+> (scrypt + HMAC-cookies + SQLite, proxy grindar /konto), Stripe billing,
+> starters-banan, synliggjord kärnloop (FloatingChat-hint + auth-medveten
 > claim-toast), Bite C (preview-route mot PreviewRuntime) och UI-gap-fixen
-> (run-change-set). Inga packages/- eller build_site.py-ändringar. Pre-push:
-> alla gates gröna (enda pytest-fail = offline Google Fonts, miljö ej kod) + 4
-> bug-scout-fixar (ärlig claim-site, AUTH_SECRET prod-guard, öppen-redirect-skydd,
-> Stripe-webhook-idempotens). Kvar för dig att besluta före prod: SQLite på
-> serverless (durable store?) + site-squatting-skydd. De 2 commits vi ligger
-> efter = PR #149 (copyDirectives) — backend redan i huvudsak inne hos oss via
-> merge; minimal merge-konflikt väntad. Öppna PR christopher-ui→main med dig som
-> reviewer; merga inte direkt till main.
+> (run-change-set). Inga packages/- eller build_site.py-ändringar. Gates gröna
+> (enda pytest-fail = offline Google Fonts, miljö ej kod). Bug-scout + Jakob-
+> review-fixar: ärlig claim-site, AUTH_SECRET prod-guard, öppen-redirect-skydd,
+> och Stripe-webhook nu **samtidighetssäker** (atomisk claim före sidoeffekter +
+> release vid fel). Kvar = OPERATÖRSBESLUT, inte buggar: (1) kreditmätning av
+> bygget — medvetet INTE i `/api/prompt` (skulle bryta kärnloopen + källlåset
+> `test_build_pipeline_untouched_by_auth`); välj ett icke-kärnloop-steg om du
+> vill mäta. (2) SQLite på serverless → durable store eller uttalad single-node.
+> (3) site-squatting → HMAC-claim-token vid bygge (bevarar anonym loop) eller
+> accepterat-för-nu. Scope-beslutet (auth/billing in i main) är ditt: säg
+> "merga 150".
