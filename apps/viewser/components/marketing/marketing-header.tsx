@@ -13,7 +13,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { authHeaderEntry, STUDIO_HREF } from "@/lib/auth-config";
+import { AUTH_ENABLED, authHeaderEntry, STUDIO_HREF } from "@/lib/auth-config";
 
 // Marknadssajtens header. Medvetet separat från components/layout/site-header.tsx
 // (den är en pointer-events-none preview-overlay för konsolen). Minimal nav:
@@ -42,6 +42,11 @@ function useIsActive() {
 export function MarketingHeader({ authed = false }: { authed?: boolean }) {
   const isActive = useIsActive();
   const entry = authHeaderEntry(authed);
+  // Auth/billing är opt-in (NEXT_PUBLIC_AUTH_ENABLED). När den är av döljs
+  // "Priser" (billing-yta) + auth-entryn; kärnnaven Hem/Produkt/Om oss står kvar.
+  const navItems = AUTH_ENABLED
+    ? NAV_ITEMS
+    : NAV_ITEMS.filter((item) => item.href !== "/priser");
 
   return (
     <header className="border-border/60 bg-background/80 sticky top-0 z-40 w-full border-b backdrop-blur-xl">
@@ -68,7 +73,7 @@ export function MarketingHeader({ authed = false }: { authed?: boolean }) {
           aria-label="Huvudmeny"
           className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 sm:flex"
         >
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const active = isActive(item.href);
             return (
               <Link
@@ -88,14 +93,17 @@ export function MarketingHeader({ authed = false }: { authed?: boolean }) {
         </nav>
 
         {/* Höger: auth-entry ("Logga in" / "Mitt konto") på desktop, längst
-            till höger. På mobil: hamburgare → Sheet-meny. */}
-        <Link
-          href={entry.href}
-          title={entry.hint}
-          className="text-muted-foreground hover:text-foreground hover:border-border focus-visible:ring-ring/50 hidden rounded-full border border-transparent px-3 py-1.5 text-[13px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none sm:inline-flex"
-        >
-          {entry.label}
-        </Link>
+            till höger. Döljs helt när auth-ytan är avstängd. På mobil:
+            hamburgare → Sheet-meny. */}
+        {AUTH_ENABLED && (
+          <Link
+            href={entry.href}
+            title={entry.hint}
+            className="text-muted-foreground hover:text-foreground hover:border-border focus-visible:ring-ring/50 hidden rounded-full border border-transparent px-3 py-1.5 text-[13px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none sm:inline-flex"
+          >
+            {entry.label}
+          </Link>
+        )}
 
         {/* Mobil: hamburgare → Sheet-meny (3 nav-länkar är få men en drawer
             ger fullstora tap-targets + plats för login + primär CTA utan att
@@ -115,7 +123,7 @@ export function MarketingHeader({ authed = false }: { authed?: boolean }) {
               aria-label="Mobilmeny"
               className="flex flex-col gap-1 px-2"
             >
-              {NAV_ITEMS.map((item) => {
+              {navItems.map((item) => {
                 const active = isActive(item.href);
                 return (
                   <SheetClose
@@ -134,13 +142,15 @@ export function MarketingHeader({ authed = false }: { authed?: boolean }) {
               })}
             </nav>
             <div className="mt-auto flex flex-col gap-2 p-4">
-              <SheetClose
-                render={<Link href={entry.href} />}
-                title={entry.hint}
-                className="border-border text-foreground hover:bg-muted focus-visible:ring-ring/50 inline-flex h-11 items-center justify-center rounded-full border text-[14px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
-              >
-                {entry.label}
-              </SheetClose>
+              {AUTH_ENABLED && (
+                <SheetClose
+                  render={<Link href={entry.href} />}
+                  title={entry.hint}
+                  className="border-border text-foreground hover:bg-muted focus-visible:ring-ring/50 inline-flex h-11 items-center justify-center rounded-full border text-[14px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                >
+                  {entry.label}
+                </SheetClose>
+              )}
               <SheetClose
                 render={<Link href={STUDIO_HREF} />}
                 className="bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-ring/50 inline-flex h-11 items-center justify-center rounded-full text-[14px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98]"

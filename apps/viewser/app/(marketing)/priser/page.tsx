@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 
 import { PlanCheckoutButton } from "@/components/billing/plan-checkout-button";
+import { AUTH_ENABLED } from "@/lib/auth-config";
 import { formatSek, PLANS } from "@/lib/billing/plans";
 
 export const metadata: Metadata = {
@@ -10,6 +12,8 @@ export const metadata: Metadata = {
 };
 
 export default function PricingPage() {
+  // Billing-ytan är opt-in (NEXT_PUBLIC_AUTH_ENABLED). Avstängd → 404.
+  if (!AUTH_ENABLED) notFound();
   return (
     <div className="mx-auto w-full max-w-[1100px] px-5 py-20 sm:px-8 sm:py-28">
       <div className="flex max-w-[640px] flex-col gap-4">

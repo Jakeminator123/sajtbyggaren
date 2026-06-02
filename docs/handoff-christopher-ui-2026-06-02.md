@@ -86,6 +86,16 @@ Dessa är inte push-blockerare för en dev-branch men bör hanteras före prod.
 auth/billing-lagret ~5/10 "inte produktionssäkert ännu". Det enda **kodbugg**-
 fyndet (Stripe-webhook-racet) är nu **STÄNGT** (se §2.4). Resten är beslut:
 
+> **Operatörsbeslut 2026-06-02 (efter Jakob-review): auth/billing bakom
+> feature-flagga, DEFAULT AV.** Hela auth/billing-ytan är nu opt-in bakom
+> `NEXT_PUBLIC_AUTH_ENABLED` (default av). Avstängd → `/login`, `/registrera`,
+> `/konto`, `/priser` 404:ar, header-entry + Priser-nav döljs, auth/checkout-API
+> svarar 404. Det gör #150 till **dormant groundwork** i `main` (Jakobs "går
+> troligen att ta in nu, med kontrollerad risk"). De tre punkterna nedan är
+> därmed **förutsättningar för att FLIPPA PÅ flaggan**, inte merge-blockers:
+> operatören aktiverar när durable store + claim-token + kreditmätningspunkt
+> är på plats. Kärnloopen påverkas aldrig (källlås).
+
 - **[BESLUT, ej bugg] Krediter dras inte i `/api/prompt`.** Både Jakob- och
   Vercel-reviewen flaggar detta som 95%/10. Det är ett **medvetet produktbeslut**,
   inte ett kodfel: kärnloopen (`prompt → preview`) ska vara friktionsfri för

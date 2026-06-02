@@ -4220,6 +4220,63 @@ def test_stripe_webhook_claims_event_atomically_before_side_effects() -> None:
     ), "claimEvent måste anropas före handleEvent (annars kvarstår racet)"
 
 
+def test_auth_surface_is_opt_in_flag_default_off() -> None:
+    """Operatörsbeslut 2026-06-02: auth/billing-ytan är OPT-IN bakom
+    ``NEXT_PUBLIC_AUTH_ENABLED`` och DEFAULT AV (dormant groundwork i main).
+    Flaggan får inte vara hårdkodad ``true``; header-entryn + Priser + sidorna
+    + auth/checkout-API måste gardas så ingen kan logga in/köpa innan
+    operatören flippar på den. Kärnloopen rörs aldrig (separat källlås nedan).
+    """
+    auth_config = (VIEWSER_DIR / "lib" / "auth-config.ts").read_text(
+        encoding="utf-8"
+    )
+    assert 'process.env.NEXT_PUBLIC_AUTH_ENABLED === "true"' in auth_config, (
+        "AUTH_ENABLED ska härledas från NEXT_PUBLIC_AUTH_ENABLED (default av), "
+        "inte vara hårdkodad true"
+    )
+    assert "AUTH_ENABLED = true" not in auth_config, (
+        "AUTH_ENABLED får inte vara hårdkodad true — det vore alltid-på"
+    )
+
+    # Server-guard för API-ytan.
+    guard = (VIEWSER_DIR / "lib" / "auth" / "guard.ts").read_text(encoding="utf-8")
+    assert "authSurfaceDisabled" in guard and "404" in guard, (
+        "guard.ts ska exportera authSurfaceDisabled som 404:ar när ytan är av"
+    )
+
+    # Headern döljer auth-entry + Priser när flaggan är av.
+    header = (
+        VIEWSER_DIR / "components" / "marketing" / "marketing-header.tsx"
+    ).read_text(encoding="utf-8")
+    assert "AUTH_ENABLED" in header and '!== "/priser"' in header, (
+        "Headern ska dölja auth-entryn + Priser-nav när AUTH_ENABLED är av"
+    )
+
+    # UI-sidorna 404:ar när av.
+    for rel in (
+        "app/(auth)/layout.tsx",
+        "app/(marketing)/konto/page.tsx",
+        "app/(marketing)/priser/page.tsx",
+    ):
+        text = (VIEWSER_DIR / rel).read_text(encoding="utf-8")
+        assert "if (!AUTH_ENABLED) notFound()" in text, (
+            f"{rel} ska 404:a när auth-ytan är avstängd"
+        )
+
+    # Auth/checkout-actions gardas med authSurfaceDisabled.
+    for rel in (
+        "app/api/auth/login/route.ts",
+        "app/api/auth/register/route.ts",
+        "app/api/auth/logout/route.ts",
+        "app/api/checkout/route.ts",
+        "app/api/checkout/portal/route.ts",
+    ):
+        text = (VIEWSER_DIR / rel).read_text(encoding="utf-8")
+        assert "authSurfaceDisabled" in text, (
+            f"{rel} ska tidigt-returnera 404 via authSurfaceDisabled när ytan är av"
+        )
+
+
 def test_build_pipeline_untouched_by_auth() -> None:
     """Hård gräns: auth får inte läcka in i bygg-logiken. Bygg-runners och
     prompt-routen ska INTE importera auth/session/credits. Sajt-ägande kopplas

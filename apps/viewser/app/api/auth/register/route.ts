@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 
 import { addCredits } from "@/lib/auth/credits";
+import { authSurfaceDisabled } from "@/lib/auth/guard";
 import { clientIp, rateLimit } from "@/lib/auth/rate-limit";
 import { createSession } from "@/lib/auth/session";
 import { createUser, emailExists } from "@/lib/auth/users";
@@ -15,6 +16,8 @@ import { FREE_SIGNUP_CREDITS } from "@/lib/billing/plans";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const off = authSurfaceDisabled();
+  if (off) return off;
   const limit = rateLimit(`register:${clientIp(request)}`, 10, 60 * 60 * 1000);
   if (!limit.allowed) {
     return NextResponse.json(

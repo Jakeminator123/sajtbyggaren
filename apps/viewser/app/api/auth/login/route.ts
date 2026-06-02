@@ -5,6 +5,7 @@
 
 import { NextResponse } from "next/server";
 
+import { authSurfaceDisabled } from "@/lib/auth/guard";
 import { clientIp, rateLimit } from "@/lib/auth/rate-limit";
 import { createSession } from "@/lib/auth/session";
 import { verifyCredentials } from "@/lib/auth/users";
@@ -13,6 +14,8 @@ import { loginSchema } from "@/lib/auth/validation";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const off = authSurfaceDisabled();
+  if (off) return off;
   const limit = rateLimit(`login:${clientIp(request)}`, 20, 15 * 60 * 1000);
   if (!limit.allowed) {
     return NextResponse.json(

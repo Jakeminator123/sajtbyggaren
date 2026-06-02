@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { AUTH_ENABLED } from "@/lib/auth-config";
 
 // Auth-route-gruppen ((auth)): /login, /registrera, /glomt-losenord. Egen,
 // avskalad chrome — ingen marknads-nav/footer, bara logotyp + centrerat kort.
@@ -12,6 +15,8 @@ export const metadata: Metadata = {
 export default function AuthLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Auth-ytan är opt-in (NEXT_PUBLIC_AUTH_ENABLED). Avstängd → 404.
+  if (!AUTH_ENABLED) notFound();
   return (
     <div className="bg-background flex min-h-dvh flex-col">
       <header className="flex h-16 w-full items-center px-5 sm:px-8">

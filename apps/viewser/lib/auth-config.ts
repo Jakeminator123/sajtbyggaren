@@ -9,8 +9,17 @@
  * Identifierare på engelska, användarvänd text på svenska (AGENTS.md).
  */
 
-/** Riktig auth är på. (Behålls som flagga för ev. framtida feature-toggling.) */
-export const AUTH_ENABLED = true as const;
+/**
+ * Auth-ytan (login/registrera/konto/priser + header-entry + Stripe-köp) är en
+ * OPT-IN feature bakom env-flaggan ``NEXT_PUBLIC_AUTH_ENABLED``. **Default AV:**
+ * i en deploy som inte uttryckligen sätter "true" är auth/billing *dormant
+ * groundwork* — sidorna 404:ar, header-entryn + Priser döljs, auth/checkout-API
+ * svarar 404, och kärnloopen (`prompt → preview → följdprompt`) påverkas inte.
+ * Operatören flippar på den när durable store + claim-token + kreditmätnings-
+ * punkt är på plats. `NEXT_PUBLIC_` så samma värde är läsbart både i
+ * klient-headern och i server-routes.
+ */
+export const AUTH_ENABLED = process.env.NEXT_PUBLIC_AUTH_ENABLED === "true";
 
 /** Operatörskonsolen (bygg-studion). Bygg-CTA:er pekar hit. */
 export const STUDIO_HREF = "/studio" as const;

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { ManageSubscriptionButton } from "@/components/account/manage-subscription-button";
 import { LogoutButton } from "@/components/auth/logout-button";
-import { STUDIO_HREF } from "@/lib/auth-config";
+import { AUTH_ENABLED, STUDIO_HREF } from "@/lib/auth-config";
 import { getCreditBalance } from "@/lib/auth/credits";
 import { listOwnedSiteIds } from "@/lib/auth/owned-sites";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -20,6 +20,8 @@ export const metadata: Metadata = {
 };
 
 export default async function AccountPage() {
+  // Auth-ytan är opt-in (NEXT_PUBLIC_AUTH_ENABLED). Avstängd → 404.
+  if (!AUTH_ENABLED) notFound();
   const user = await getCurrentUser();
   // Middleware grindar redan, men dubbelkolla server-side.
   if (!user) redirect("/login?next=/konto");

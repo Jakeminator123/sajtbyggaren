@@ -6,6 +6,7 @@
 
 import { NextResponse } from "next/server";
 
+import { authSurfaceDisabled } from "@/lib/auth/guard";
 import { getCurrentUser } from "@/lib/auth/session";
 import { setStripeCustomerId } from "@/lib/auth/users";
 import { getPlan } from "@/lib/billing/plans";
@@ -19,6 +20,8 @@ import {
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const off = authSurfaceDisabled();
+  if (off) return off;
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Inte inloggad." }, { status: 401 });
