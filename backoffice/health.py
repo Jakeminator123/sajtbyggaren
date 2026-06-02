@@ -33,6 +33,15 @@ def _run(script: str, *args: str) -> CheckResult:
     )
 
 
+def run_focus_check() -> CheckResult:
+    """Fast drift check: does the repo match docs/current-focus.md?
+
+    Non-zero exit only on hard errors (diverged branch, missing focus SHA);
+    stale-doc/forgotten-push situations surface as warnings in the output.
+    """
+    return _run("focus_check.py")
+
+
 def run_governance_validate() -> CheckResult:
     return _run("governance_validate.py")
 
