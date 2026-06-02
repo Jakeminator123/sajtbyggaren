@@ -994,20 +994,32 @@ COMMON_WORDS = {
     # + naming-bump per ADR 0030.
     "CollectedSource", "SandboxPreviewRequest", "SandboxPreviewResult",
     "SandboxStopResult",
-    # KÖR-6a deterministic message router (packages/generation/orchestration/
-    # router/). Python implementation symbols: the RouterDecision Pydantic
-    # models + their Literal type aliases (MessageKind, EditKind,
-    # BuildRequirement, ContextLevel, SubtaskScope) + the RouterContext input
-    # shape. Same treatment as the QualityResult / CodegenResult / RepairResult
-    # families above - implementation symbols, not canonical domain terms.
-    # The working name "OpenClaw Router" is intentionally NOT registered in
-    # naming-dictionary.v1 yet (docs/heavy-llm-flow/02 defers that to a later
-    # slice / kor-6b); "OpenClaw" is allowlisted here so module docstrings can
-    # use the working name without tripping --strict, exactly like the
-    # Sajtbyggaren / Lovable proper-noun allowlist entries above.
+    # Heavy-LLM-flow run-plan docs (docs/heavy-llm-flow/, commit 8c0e7c4).
+    # These docs were pushed directly to jakob-be without a CI run, so
+    # term-coverage first surfaced them on later PRs. They are NOT canonical
+    # domain terms - per the run-plan's own rule ("forbjud canonicalisering,
+    # inte ord"): proposed OpenClaw-router design types shown as code
+    # identifiers (MessageKind/BuildRequirement/EditKind/ContextLevel),
+    # architecture working-names (OpenClaw, OpenClaw Router, Sajtagenten,
+    # LLM Orchestrator, Deterministic Foundation, Orchestration snapshot),
+    # and a few bold/backtick prose-emphasis phrases. Same allowlist
+    # treatment as the many TS-symbol / Swedish-prose entries above. A real
+    # router/orchestrator runtime term gets registered in naming-dictionary.v1
+    # with an ADR when the code lands (see docs/heavy-llm-flow/kor-6a/6b).
+    "MessageKind", "BuildRequirement", "EditKind", "ContextLevel",
+    "OpenClaw", "OpenClaw Router", "Sajtagenten", "LLM Orchestrator",
+    "Deterministic Foundation", "Orchestration snapshot",
+    "Detta README", "Huvudsekvensen", "Full femguards", "Ingen LLM",
+    "F2 vs F3 lifecycle", "Pausad", "Section", "Inte",
+    # KÖR-6a router runtime symbols (packages/generation/orchestration/router/):
+    # the Pydantic model class names + the RouterContext input shape + the
+    # SubtaskScope Literal alias. The router *design* terms shared with the
+    # heavy-llm-flow docs (MessageKind / BuildRequirement / EditKind /
+    # ContextLevel / OpenClaw) are already allowlisted in the block directly
+    # above (#160) - not duplicated here. Same implementation-symbol treatment
+    # as the QualityResult / CodegenResult / RepairResult families above.
     "RouterDecision", "RouterTarget", "RouterReference", "RouterSubtask",
-    "RouterContext", "MessageKind", "EditKind", "BuildRequirement",
-    "ContextLevel", "SubtaskScope", "OpenClaw",
+    "RouterContext", "SubtaskScope",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

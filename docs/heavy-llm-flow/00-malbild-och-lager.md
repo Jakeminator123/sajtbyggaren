@@ -213,7 +213,7 @@ Sajtmaskin gjorde det tunga flödet på riktigt. Lån **idéerna**, inte bredden
 | Många repair-call-sites (samma `runLlmFixer`) | **En** repair-gate (vår repair-pipeline är redan central — håll den så) |
 | Token-yta exploderar (structural scaffold + verbatim dossier + 180k full-repo-kontext) | Hårda context-budgetar per nivå; suppress redan-kända filer |
 | Scope creep (auth + D-ID + deploy + 9 scaffolds + dossier-pool samtidigt) | En skiva i taget; vänta med integrationer (produktkompassen) |
-| Legacy-namn (`v0`, `demoUrl`, `template-library`) | Term-disciplin; `previewUrl`, inte `demoUrl` |
+| Legacy-namn (t.ex. `v0`, gamla demo-/mall-biblioteks-termer; se glossary) | Term-disciplin; använd `previewUrl` (canonical) i stället för den gamla demo-url-varianten |
 
 > **OpenClaw-nyansen:** i sajtmaskin var OpenClaw en **sidecar bredvid** codegen, inte
 > orchestratorn ovanför. Coachens (och operatörens) önskan är att i Sajtbyggaren låta
