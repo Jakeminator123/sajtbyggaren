@@ -7,11 +7,16 @@
  * `resolveRuntime()` så adapter-tillägg/-byten kan göras på en plats.
  *
  * Env-mappning (bakåtkompatibel mot dev.mjs:VALID_MODES):
- *   - "local-next" → "local"      (canonical-kind per naming-dictionary v17)
- *   - "local"      → "local"
- *   - "stackblitz" → "stackblitz"
- *   - "fly"        → "fly"
- *   - "auto"       → "local"      (auto resolveras till local som default)
+ *   - "local-next"     → "local"          (canonical-kind per naming-dictionary)
+ *   - "local"          → "local"
+ *   - "stackblitz"     → "stackblitz"
+ *   - "vercel-sandbox" → "vercel-sandbox" (primärt förstahandsval, ADR 0033)
+ *   - "fly"            → "fly"
+ *   - "auto"           → "local"          (auto resolveras till local som default)
+ *
+ * OBS: default-mode flippas INTE till `vercel-sandbox` här — `auto`/tomt env
+ * faller fortfarande tillbaka till `local`. Att göra `vercel-sandbox` till
+ * faktisk default kräver att route/UI är redo (separat slice).
  *
  * Env-värdet `local-next` finns kvar i `apps/viewser/.env.example`,
  * `apps/viewser/scripts/dev.mjs:VALID_MODES` och
@@ -21,9 +26,15 @@
  */
 
 import type { PreviewRuntime, PreviewRuntimeKind } from "./types";
-import { flyRuntime, localRuntime, stackblitzRuntime } from "./adapters";
+import {
+  flyRuntime,
+  localRuntime,
+  stackblitzRuntime,
+  vercelSandboxRuntime,
+} from "./adapters";
 
 const ADAPTERS: Record<PreviewRuntimeKind, PreviewRuntime> = {
+  "vercel-sandbox": vercelSandboxRuntime,
   local: localRuntime,
   stackblitz: stackblitzRuntime,
   fly: flyRuntime,
@@ -60,6 +71,8 @@ export function normalizePreviewMode(raw: string | undefined): PreviewRuntimeKin
       return "local";
     case "stackblitz":
       return "stackblitz";
+    case "vercel-sandbox":
+      return "vercel-sandbox";
     case "fly":
       return "fly";
     default:
@@ -89,8 +102,8 @@ export function currentKind(env: NodeJS.ProcessEnv = process.env): PreviewRuntim
   if (normalized === null) {
     throw new Error(
       `Okänt VIEWSER_PREVIEW_MODE: '${raw}'. Giltiga värden: local, ` +
-        `local-next, stackblitz, fly, auto. Kontrollera .env eller ` +
-        `process.env.VIEWSER_PREVIEW_MODE.`,
+        `local-next, stackblitz, vercel-sandbox, fly, auto. Kontrollera .env ` +
+        `eller process.env.VIEWSER_PREVIEW_MODE.`,
     );
   }
   return normalized;

@@ -30,12 +30,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: pending (2026-06-01 kväll, christopher-ui local — mergade in `origin/main` (PR #142 ADR 0034 path A copyDirectives + contact eval-fix + placeholder suppression; PR #144 hardening B158/B159/B120 + npm-subprocess refactor #143 + Codex B161/B162) i christopher-ui. Inga kod-konflikter i `apps/viewser/**` — bara docs-konflikter (agent-inbox append-kombinerad, current-focus tar main + denna not). christopher-ui bär utöver main även det ej-pushade-till-main UI-arbetet: Tier 1+2+3 UI/UX-pass + pre-push P1-fixar + wizard telefon-nudge med djuplänk till MoreInfoDialog Kontakt-fliken (`more-info-dialog` initialTab + render-tids reset). Backend-placeholder-suppression (B158 hero `tel:`) som christophers handoff bad om ligger nu i main via PR #142/#144 — UI-nudgen kvarstår som komplementärt skyddsnät. B160 (logo `next/image` aspect-ratio-varning, jakob-be:s handoff) ej åtgärdad än. Slutkontroll efter merge körs härnäst.
-
-Tidigare (main-checkpoint): `fba03d0` (2026-06-01 UTC, steward-auto efter PR #144 — sync(jakob-be -> main): hardening (B158/B159/B120/copyDirectives) + npm-subprocess refactor (#143) + Codex fixes (B161/B162)).
-Nya PRs sedan föregående checkpoint: PR #143 — refactor(build): extract npm subprocess
-helpers; PR #144 — sync(jakob-be -> main): hardening (B158/B159/B120/copyDirectives) +
-npm-subprocess refactor (#143) + Codex fixes (B161/B162).
+Last verified state: `499bb34` (2026-06-01 UTC, steward-auto efter PR #148 — sync(jakob-be -> main): Vercel Sandbox spike + ADR 0033 + adapter + hardening batch).
+Nya PRs sedan föregående checkpoint: PR #148 — sync(jakob-be -> main): Vercel Sandbox
+spike + ADR 0033 + adapter + hardening batch.
 
 ## Branchmodellen (kort)
 
@@ -49,36 +46,44 @@ npm-subprocess refactor (#143) + Codex fixes (B161/B162).
 
 ## Pågående/öppna PR:s just nu
 
-**Öppna PRs (2026-06-01 kväll, uppdaterad):**
+**Öppna PRs:** inga öppna just nu — alla denna sessions PR:er är mergade eller
+stängda.
 
-- **#144** `jakob-be → main` — **sync-PR (öppen, ready, MERGEABLE/konfliktfri)**.
-  Hela hardening-batchen: kill-dev-trees, B158/B159, copyDirective-edge-cases,
-  Streamlit-floor, B120, #143 refactor (subprocesses), B161/B162. `origin/main`
-  fullt innehållen i `jakob-be` (10 commits före, 0 efter). Full pytest exit 0,
-  tsc 0, guards gröna. **Mergas till `main` = leveransfönster-beslut (operatör).**
-  Bite B (#140) ingår EJ — kan synka i senare batch.
-- **#140** `cursor/preview-runtime-bite-b-di → jakob-be` — draft. Bite B
-  PreviewRuntime via dependency-injection. Inom scope; rör ej copyDirectives-
-  filer eller Christopher-UI. Mergas in i `jakob-be`, ej `main`. **Nästa review.**
-- **#138** `cursor/cloud-dev-env-setup-a928 → main` — draft, docs (AGENTS.md
-  Cloud-gotchas). Clean.
-- **#141** `cursor/cloud-agents-md-env-notes-7a3f → main` — draft, docs.
-  Governance failar (term-coverage flaggar ett versalt backtick-ord i AGENTS.md);
-  enradsfix kvar. Nästan-dubblett av #138 → konsolidera till en PR.
-
-**Mergade denna session:**
-- **#143** `cursor/build-site-py-refaktorering-b2c1 → jakob-be` — **mergad**
-  (`2320e34`, squash). Behavior-preserving npm/subprocess-extraktion (operatörens
-  cloud-agent). Rebasead mot senaste `jakob-be` (inkl. `2e0c55f`), Scout-grön,
-  full svit exit 0. PR-branch + duplikat raderade.
+**Mergade/stängda denna session:**
+- **#147** `cursor/vercel-sandbox-adapter → jakob-be` — **mergad** (squash,
+  `53301c4`). vercel-sandbox som opt-in PreviewRuntime-adapter (ADR 0033):
+  naming v19, `PreviewRuntimeKind` += `vercel-sandbox`, registry + delad
+  DI-runner `vercel-sandbox-runner.ts` (`@vercel/sandbox` bara i
+  `apps/viewser/lib`, test-låst). Ingen default-flip, ingen UI/Bite C, ingen
+  main-sync. Cleanup efter coach-review: spike-runnern extraherad,
+  `vercel-sandbox-spike.ts` borttagen.
+- **#146** `cursor/vercel-sandbox-spike → jakob-be` — **mergad** (squash,
+  `58710ec`). Flag-gated Vercel Sandbox-PoC (spike), **live-verifierad**:
+  painter-palma `status: ready`, cold-start ~29 s (install 18 s + build 9 s),
+  desktop + mobil render OK utan konsolfel, `stop()`+`delete()` städade rent,
+  faktisk kostnad ~52 s active CPU + ~155 MB ingress (≈ ett par ören). INTE
+  adapter-promotion: `PreviewRuntimeKind`/registry/ADR/naming orörda; helpern
+  ligger bakom `VIEWSER_SANDBOX_SPIKE=1` i `apps/viewser/lib/` (ej route-wirad).
+  Nästa runtime-steg: `vercel-sandbox` som opt-in adapter (kräver ADR 0033 +
+  naming-bump + DI-wiring per ADR 0030; Bite B DI-grund finns redan i `jakob-be`).
+- **#140** `cursor/preview-runtime-bite-b-di → jakob-be` — **mergad** (squash,
+  `da5ef7b`). Bite B: `localRuntime`/`stackblitzRuntime` via dependency injection,
+  env-styrt, paket→app-lager-regel låst av `test_preview_runtime_di.py`. CI helt
+  grön; exakt 9 filers scope. Produktions-route `app/api/preview/[siteId]` ännu
+  inte flippad till `currentViewserRuntime()` = Bite C (Christopher/UI).
+- **#138 / #141 / #145** (docs, `AGENTS.md`) — **konsoliderade och stängda**.
+  Nära-dubbletter; bästa raderna foldade in i `AGENTS.md` på `jakob-be`
+  (`48adcde`) och flödar till `main` vid nästa sync.
+- **#144** `jakob-be → main` — **mergad** (squash, `fba03d0`). Hela
+  hardening-batchen + tre Vercel-Agent-review-fixar (se "Last verified state").
+- **#143** `cursor/build-site-py-refaktorering-b2c1 → jakob-be` — mergad
+  (`2320e34`, squash). Behavior-preserving npm/subprocess-extraktion.
 - **#139** `christopher-ui → main` — mergad tidigare 2026-06-01 (`f22d27a`,
-  steward-auto `efbb425`). UI/UX + B155 FloatingChat-no-op + copyDirectives väg
-  B-UI. Tre låg-impact-fynd kvar i Christophers lane (`msg-0024` + `msg-0025`).
+  steward-auto `efbb425`). Tre låg-impact-fynd kvar i Christophers lane
+  (`msg-0024` + `msg-0025`).
 
-Rekommenderat nästa main-steg: sync-PR `jakob-be → main` för hela
-hardening-batchen (B158/B159 + copyDirective-edge-cases + B120 + kill-dev-trees
-+ docs) NÄR operatören ger OK. `jakob-be` får EJ `reset --hard origin/main` i
-mellanläget — `merge`/`rebase` in `main`, lös docs-konflikter, öppna sync-PR.
+`jakob-be` får INTE `reset --hard origin/main` mitt i ett pågående flöde; efter
+en landad sync mergas `origin/main` in i arbets-branchen (gjordes i `939f684`).
 
 **Christophers `origin/christopher-ui`** — efter PR #117 är hans branch
 synkad mot post-#117-main. Han har under operator-OK scope-leak
@@ -96,15 +101,11 @@ medvetet kvar på `jakob` så Sprintvakt-lane-policyn passerar.
    ingen `PermissionError: [WinError 5]`. Strukturella regression-
    tester finns redan (`tests/test_local_preview_server_b157_followup.py`),
    men en faktisk end-to-end-körning bevisar reap-fixet i naturlig miljö.
-2. **Bite B (PreviewRuntime wiring)** — builder-prompt finns redan i
-   `docs/agent-prompts/preview-runtime-bite-b.md`. Wirear `localRuntime`
-   + `stackblitzRuntime` adaptrar mot existerande `apps/viewser/lib/`-
-   helpers. Self-contained prompt; klistras in i ny agent-session. **Not:
-   StackBlitz behöver inte vara "färdigfixad" som förkrav för att börja med
-   en VM/Sandbox-adapter**; spåren kan gå parallellt så länge Preview Runtime-
-   kontraktet hålls och adapterkind + fallback är tydligt definierade.
-   ~2-4h. Inga UI-ändringar (Bite C kräver Christopher). Vercel-
-   preview/Fly/static-export-adaptrar lämnas för senare sprint.
+2. **Bite B (PreviewRuntime DI-wiring) — KLAR** (PR #140 mergad `da5ef7b`,
+   2026-06-01). `localRuntime`/`stackblitzRuntime` delegerar via dependency
+   injection; env-styrt; paket→app-lager-regel testlåst. Kvar: Bite C (UI-flip,
+   Christopher) + Pushvakt-fynd parkerade som liten slice (DI-state-isolering,
+   StackBlitz `about:blank`-kontrakt, PascalCase-handler-typer).
 3. **B157 nivå-4 (Windows-safe rebuild, immutable build-dir + pointer-
    swap)** — arkitektur-rätta lösningen, 12-16h. Akut nivå-1 +
    followup-fix räddar 99% av case idag, men anti-patternet "rebuilda
@@ -165,7 +166,8 @@ Detaljerade Queue-/Blocked-block ligger i arkivet
 Aktiva spår i prioritetsordning:
 
 1. Manuell B157-end-to-end-verifiering (operatörsuppgift, ~5 min).
-2. Bite B (PreviewRuntime wiring local + stackblitz).
+2. Bite B (PreviewRuntime DI-wiring) — KLAR (#140 mergad da5ef7b). Nästa
+   runtime-steg: Scout sandbox-spike (se "Nästa" överst).
 3. B157 nivå-4 (immutable build-dir + pointer-swap, GAP-windows-
    safe-rebuild-pipeline) — eliminerar orphan-process-klassen.
 4. ADR 0034 / GAP-followup-prompt-content-passthrough — fri
@@ -902,3 +904,51 @@ Nya commits sedan föregående checkpoint (alla på `jakob-be`, opushad mot `mai
   buildPath). tsc grön; nya tester. (B-IDs registrerade i steward-commit denna.)
 Nästa: #140 Bite B-review (in i `jakob-be`), docs-PR #138/#141-konsolidering,
 sedan sync-PR `jakob-be -> main` för hela batchen när operatören ger OK.
+
+### 2026-06-01 UTC — current-focus.md före `53301c4`
+
+Last verified state: `53301c4` (2026-06-01 sen kväll UTC, **PR #147
+vercel-sandbox-adapter mergad till `jakob-be`** ovanpå **PR #140 Bite B
+mergad till `jakob-be`** — `localRuntime`/`stackblitzRuntime` wirade via dependency
+injection, env-styrt via `VIEWSER_PREVIEW_MODE`, paket→app-lager-regeln låst av
+`test_preview_runtime_di.py`). Ovanpå PR #144-synken (hela hardening-batchen i
+`main`, `origin/main` = `8f7dea5`) + docs-PR-konsolidering (#138/#141/#145 foldade
+in i `AGENTS.md` `48adcde` och stängda). `jakob-be` innehåller hela `main`.
+Bug-scope: **15 aktiva / 135 stängda**. Ovanpå detta är #146 Vercel
+Sandbox-spike mergad (`58710ec`) som live-verifierad bevis-PoC (painter-palma
+ready, cold-start ~29 s, desktop+mobil render OK, ~ett par ören; `stop()`+
+`delete()` städade rent) — INTE adapter-promotion, ingen `PreviewRuntimeKind`/
+registry/ADR/naming-ändring. Spike-helper bakom `VIEWSER_SANDBOX_SPIKE=1`.
+Nästa (prioriteringsändring 2026-06-01 kväll, operatörsbeslut — INTE en ny
+produktstrategi): multi-adapter/provider har varit riktningen länge (se
+`runtime-adapter-plan.md` + ADR 0028/0030); vi **aktiverar nu Vercel-sandbox-
+spåret före nivå 2 copyDirectives**. Spiken är nu gjord, live-verifierad och
+mergad (#146) — väg (D) flag-gated PoC valdes och bevisade "kan vi skapa/visa
+en isolerad preview stabilt?" (painter-palma, ~29 s cold-start, desktop+mobil
+OK). Operatörsbeslut 2026-06-01: `vercel-sandbox` blir PRIMÄR preview-runtime,
+`local-next` fallback, `stackblitz` pausad — se
+[ADR 0033](../governance/decisions/0033-vercel-sandbox-primary-preview.md).
+Adapter-slicen är nu mergad till `jakob-be` (#147, `53301c4`): `vercel-sandbox`
+finns som opt-in PreviewRuntime-adapter (naming v19, `PreviewRuntimeKind`
+utökad, delad DI-runner `vercel-sandbox-runner.ts` för spike-CLI + adapter;
+`@vercel/sandbox` bara i `apps/viewser/lib`). Default-mode är fortfarande
+`local-next` (inte flippad). Nästa: (a) sync-PR `jakob-be → main` (öppnad,
+kräver operatörs-OK för själva main-merge) så Christopher kan pulla; (b) Bite C
+— flippa UI-routen `app/api/preview/[siteId]` till `currentViewserRuntime()`
+(Christopher). Prior skiss finns på `cursor/preview-runtime-adapters`.
+Köat (efter sandbox-riktningen satts, ej parkerat): 4-case live Golden Path
+(elektriker Malmö / frisör Göteborg / naprapat Stockholm / liten keramik-e-handel;
+prompt → preview → följdprompt → ny version) och nivå 2 copyDirectives
+(hero/services/about/CTA/ton; remappar INTE tjänstetext till tagline). Nivå 2
+copyDirectives är **pausad** tills sandbox-riktningen är satt. Embeddings + fler
+starters längre fram. Refaktor av stora Python-filer = max en liten
+behavior-preserving slice som 20%-sidospår, aldrig huvudspår. Bite C (flippa
+produktions-route `app/api/preview/[siteId]` till `currentViewserRuntime()`) =
+Christopher/UI.
+
+> Branchmodell-OBS (motsägelse att lösa): `docs/agent-prompts.md` säger ännu
+> "vi jobbar på `main` + `backup-N`", medan denna fil + `branch-discipline.md`
+> säger att Jakob default jobbar på `jakob-be` och Christopher på
+> `christopher-ui` (PR mot `main` per leveransfönster). `jakob-be`/
+> `christopher-ui` är den gällande modellen; `agent-prompts.md` behöver
+> uppdateras (operatörsbeslut — ej ändrad i detta pass).

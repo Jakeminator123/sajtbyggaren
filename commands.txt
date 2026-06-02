@@ -1,0 +1,106 @@
+============================================================
+ Sajtbyggaren — kommandon-fusklapp (strukturerad)
+============================================================
+Windows/PowerShell-först. Kör från repo-roten om inget annat sägs.
+Aktivera alltid venv:en först (Python-kommandon kräver den).
+Detta är en minneslapp för blaffor som är svåra att memorera men
+som inte platsar i Backoffice. Håll den kort — lägg inte allt här.
+
+------------------------------------------------------------
+ 0) MILJÖ / SETUP
+------------------------------------------------------------
+# Aktivera Python-venv (Windows)
+.\.venv\Scripts\Activate.ps1
+# Aktivera Python-venv (Linux/macOS / Cloud Agent)
+source .venv/bin/activate
+# Installera Python-beroenden
+pip install -r requirements.txt
+
+------------------------------------------------------------
+ 1) GUARDS / CHECKS  (kör dessa innan commit/push)
+------------------------------------------------------------
+python scripts/governance_validate.py            # JSON-policies mot scheman (18/18)
+python scripts/rules_sync.py --check              # .cursor/rules-speglar i synk
+python scripts/check_term_coverage.py --strict    # inga oregistrerade domänbegrepp
+python -m ruff check .                             # lint (baslinje 0 findings)
+python -m ruff format .                            # auto-format (vid behov)
+
+------------------------------------------------------------
+ 2) TESTER
+------------------------------------------------------------
+python -m pytest tests/ -q                         # hela sviten (~9 min)
+python -m pytest tests/test_<namn>.py -q           # en testfil
+# Windows: om en test failar med "dev server exited early" (orphan next dev):
+python kill-dev-trees.py                           # döda kvarvarande preview/dev-träd
+# Tips: unset SAJTBYGGAREN_EVALS_DIR för en helt grön full svit (se AGENTS.md)
+
+------------------------------------------------------------
+ 3) VIEWSER (operatör-UI, Next.js)
+------------------------------------------------------------
+cd apps/viewser; npm install                       # engångs
+cd apps/viewser; npm run dev                        # dev-server (http://localhost:3000)
+cd apps/viewser; npx tsc --noEmit                   # TypeScript-typecheck
+cd apps/viewser; npm run lint                        # ESLint
+
+------------------------------------------------------------
+ 4) BACKOFFICE (governance-/operator-UI, Streamlit)
+------------------------------------------------------------
+streamlit run backoffice.py --server.headless true  # http://localhost:8501
+
+------------------------------------------------------------
+ 5) BYGGA EN SAJT / KÖRA MOTORN
+------------------------------------------------------------
+# Builder MVP: bygg en sajt från ett dossier-exempel (riktig Next.js-output)
+python scripts/build_site.py --dossier examples/<slug>.project-input.json
+python scripts/build_site.py --dossier examples/<slug>.project-input.json --skip-build  # snabb iteration
+# Engine-dry-run (understand/plan/build, skriver data/runs/)
+python scripts/dev_generate.py "din prompt"
+
+------------------------------------------------------------
+ 6) EVAL / KVALITET
+------------------------------------------------------------
+python scripts/run_golden_path_eval.py             # 4-case Golden Path scorecard
+python scripts/focus_check.py                       # current-focus konsistenskoll
+
+------------------------------------------------------------
+ 7) STÄDNING AV GENERERADE BYGGEN
+------------------------------------------------------------
+python scripts/gc_old_builds.py                     # dry-run (visar GC-kandidater)
+python scripts/gc_old_builds.py --apply             # raderar gamla immutable builds
+
+------------------------------------------------------------
+ 8) VERCEL SANDBOX SPIKE  (flag-gated PoC, PR #146)
+------------------------------------------------------------
+# Engångs: hämta OIDC-token till en SEPARAT scratch-fil (gitignored,
+# rör inte din .env.local). Kör i apps/viewser:
+cd apps/viewser; vercel link; vercel env pull .env.vercel.local
+# Lista byggbara sajter (ingen siteId angiven):
+node --env-file apps/viewser/.env.local --env-file apps/viewser/.env.vercel.local scripts/spike_vercel_sandbox.ts create
+# Skapa + servera en preview (skriver url + sandboxId, auto-loggar mätloggen):
+node --env-file apps/viewser/.env.local --env-file apps/viewser/.env.vercel.local scripts/spike_vercel_sandbox.ts create <siteId>
+# Städa (stoppar + raderar sandboxen):
+node --env-file apps/viewser/.env.local --env-file apps/viewser/.env.vercel.local scripts/spike_vercel_sandbox.ts cleanup <sandboxId>
+
+------------------------------------------------------------
+ 9) ENV-VARS att hålla koll på
+------------------------------------------------------------
+# Preview-runtime (apps/viewser/.env.local):
+VIEWSER_PREVIEW_MODE=local-next        # eller: stackblitz  (framtida: vercel-sandbox)
+VIEWSER_SANDBOX_SPIKE=1                  # aktiverar sandbox-spiken (PoC)
+VIEWSER_SANDBOX_SPIKE_TTL_MS=1200000     # sandbox-TTL (klampas 5-45 min)
+# Vercel-auth (helst i SEPARAT .env.vercel.local, ALDRIG i git):
+VERCEL_OIDC_TOKEN=...                    # via `vercel env pull` (utgår ~12h lokalt)
+#   ELLER access-token-trion:
+VERCEL_TOKEN=... ; VERCEL_TEAM_ID=... ; VERCEL_PROJECT_ID=...
+# Builder: OPENAI_API_KEY krävs för riktiga briefModel/planningModel-anrop.
+# Generated output skrivs default till ../sajtbyggaren-output/.generated/<siteId>/
+#   (override: SAJTBYGGAREN_GENERATED_DIR).
+
+------------------------------------------------------------
+ 10) GIT / BRANCH (kort)
+------------------------------------------------------------
+# Default-arbetsbranch: jakob-be (Christopher: christopher-ui).
+# PR mot main först när en ny officiell version ska in (operatörsbeslut).
+git status --short --branch
+gh pr checks <nr>                                   # CI-status för en PR
+gh pr merge <nr> --squash                            # squash-merge (t.ex. mot jakob-be)

@@ -18,6 +18,12 @@ inför inte en fjärde fast agentroll.
 
 ## Gemensam modell
 
+> Aktuell branchmodell styrs av [`docs/current-focus.md`](current-focus.md) +
+> [`governance/rules/branch-discipline.md`](../governance/rules/branch-discipline.md).
+> I nuläget gäller `jakob-be` (Jakob) / `christopher-ui` (Christopher) med PR mot
+> `main` per leveransfönster. Den generiska "main + backup-N"-baseline nedan är
+> historisk och gäller bara där current-focus uttryckligen säger det.
+
 Grundprincip:
 
 - Vi jobbar på `main`.

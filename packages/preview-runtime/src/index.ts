@@ -22,3 +22,5 @@ export {
   normalizePreviewMode,
   resolveRuntime,
 } from "./registry";
+
+export { configurePreviewRuntimeHandlers } from "./handlers";
