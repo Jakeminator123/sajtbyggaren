@@ -1,9 +1,229 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-01 UTC, steward-auto efter PR #148 — sync(jakob-be -> main): Vercel Sandbox spike + ADR 0033 + adapter + hardening batch. Verifierad `main` är `499bb34`.
+**Datum:** 2026-06-02 UTC. `jakob-be` = `093b31a` (copyDirectives 2a + 2c +
+nivå 3a + extern-review-härdning inkl. P1 scope-leak-fix). `main` = `2d636b0`,
+oförändrad. `jakob-be` är 11 commits före `main`; **sync-PR nu mergebar** (alla
+near-blockers + P1 stängda), öppnas på operatörsbeslut. Inga öppna PR:er.
 
-Nya PRs sedan föregående checkpoint: PR #148 — sync(jakob-be -> main): Vercel Sandbox
-spike + ADR 0033 + adapter + hardening batch.
+## Tillägg 2026-06-02 — P1 scope-leak-fix (extern-review-runda 2)
+
+Coach-review fann en P1 ovanpå härdningen: `_plan_copy_directives_via_llm`
+filtrerade inte planner-output mot det target operatören bad om, så en
+about-rewrite kunde applicera en services-directive (eller tvärtom) om
+copyDirectiveModel returnerade fel target. Fix (`093b31a`): planeraren tar nu
+`target=rewrite_target` och droppar varje directive vars target inte matchar.
+2 nya regressionstester (about-rewrite droppar planner-service-directive +
+omvänt). Scope-leak låst i kod, inte bara systemprompt. Alla guards gröna.
+
+## Session 2026-06-02 fm (forts) — extern-review-härdning + nästa-fas-handoff
+
+Två externa reviewers (operatören bad uttryckligen om buggjakt) gav ~8/10 med
+två near-blockers före sync-PR. Båda åtgärdade på `jakob-be` (`6c860ec`):
+
+- **Vibe-"till"-läcka (near-blocker):** about-text/services krävde tidigare bara
+  ett fritt trailing "till <rest>" som värde. "skriv om om oss till mer
+  personligt" hade då satt `company.story = "mer personligt"` (instruktion som
+  kundcopy). Fix: `_extract_explicit_replace_value` (endast citat/kolon) används
+  för about-text/services och i `_has_explicit_copy_value`; sådana vibe-prompter
+  går nu till planeraren eller blir no-op. company-name/tagline behåller löst
+  trailing (korta labels).
+- **Planner no-op-löfte (near-blocker):** när planeraren är på men ger `[]`
+  (saknad nyckel / dropp) får en about-rewrite INTE falla tillbaka på en generisk
+  story-emphasize-append. `merge_followup_project_input` snapshottar story före
+  `_apply_semantic_patch` och **återställer** den om ingen about-text-directive
+  applicerades (`_content_rewrite_target` exponerar målet; bara aktiv när planner
+  enabled). `_apply_semantic_patch`/`classify_followup_intent` orörda.
+- **Schema if/then (governance-härdning):** `directives.copyDirectives`-items
+  fick `allOf` med if/then — target=services kräver `targetRef`; about-text/
+  services låsta till `replace-text`. Speglar Python-kontraktet.
+- 7 nya regressionstester (vibe-läcka, strikt trailing no-op, planner-[]-no-op
+  för både tone-shift- och story-emphasize-prompt, schema-avvisning). Alla guards
+  gröna; full pytest grön (orphan dev-trees rensade före).
+
+**Reviewer-noterade follow-ups (ej blockers):**
+
+1. **copyDirective-modulutbrytning (NÄSTA, reviewer-rekommenderad):**
+   `scripts/prompt_to_project_input.py` är för central. Bryt ut
+   copyDirective-delsystemet till egen modul innan fler targets byggs.
+   Behavior-preserving. Builder-prompt:
+   [`docs/agent-prompts/copydirective-module-extraction.md`](agent-prompts/copydirective-module-extraction.md).
+2. **Bredare grounding-guard:** editPlan-grundnings-guarden skyddar bara mot
+   ogrundade årtal idag; bredda till siffror/priser/orter/personnamn/
+   certifieringsord innan LLM-genererad about-copy litas på i skarp demo.
+3. **UI-gap (Christopher-lane):** FloatingChat/`AppliedCopyDirective` ger
+   heuristisk prompt-summary, inte faktisk applied-directive-diff, och känner
+   bara company-name|tagline. Synka about-text/services/planerade rewrites där.
+4. **ADR 0034 dokumentationsdrift:** dokumentet blandar "first slice"/nivå 2/3a;
+   städa status + kontrakt så det matchar faktisk implementation.
+5. **Sync-PR `jakob-be -> main`** (2a + 2c + 3a + härdning) — nu mergebar,
+   operatörsbeslut.
+
+## Session 2026-06-02 fm — copyDirectives nivå 3a (editPlan-planerare)
+
+Orchestrator-pass (Scout -> self-Builder -> Scout RO-review -> Steward), branch
+`jakob-be` direkt, ingen main-sync.
+
+- **Nivå 3a (`4d08526`):** editPlan-planerare. Vid en **rewrite-instruktion utan
+  angivet värde** ("skriv om om oss så det låter mer personligt") läser
+  `_plan_copy_directives_via_llm` sajtens site-state
+  (`_build_site_state_for_copy_planning`) och låter copyDirectiveModel
+  **generera** ny copy för `about-text` (company.story) och `services`
+  (services[].summary). Detta är första gången modellen genererar kundcopy
+  (tidigare bara extraherade explicit copy). Fortfarande **väg A** (strukturerade
+  fält före render), INTE väg C (ingen `.generated/`-patch).
+- **editPlan = planeringssteg** som producerar vanliga validerade
+  `copyDirectives[]` via befintlig leak-säker apply. Inget nytt schemafält,
+  `source="llm"`, **schema oförändrat**.
+- **Eligibility (egen gate):** `_is_content_rewrite_request` = rewrite-verb
+  (`_COPY_CONTENT_REWRITE_VERBS`: skriv om/formulera om/omformulera/förbättra/
+  snygga till/rewrite/reword/improve) + INGET explicit värde
+  (`_has_explicit_copy_value`) + target about-text|services + (services)
+  namngiven tjänst (targetRef). Körs i egen `if/elif`-gren i
+  `merge_followup_project_input` FÖRE extraction-eligibility.
+- **Ingen regress:** `classify_followup_intent` + `_apply_semantic_patch` är
+  OFÖRÄNDRADE. about/services (planner) och tone/tagline (semantic patch) är
+  olika fält → "skriv om om oss ..." kan ge BÅDE en ton-shift och en
+  story-rewrite utan klobbning. Alla 2a/2c + tone-shift-tester gröna.
+- **Skydd:** generation-scope dubbel-enforced (systemprompt + kod-dropp av
+  targets utanför {about-text, services} — name/tagline genereras aldrig); samma
+  `_safe_copy_payload`-guards på genererad payload + grundnings-guard
+  `_planned_payload_grounded` (dröppar payload med 4-siffrigt årtal som inte finns
+  i site-state/prompt → mot påhittade grundningsår).
+- **Verifierare:** B155 `appliedVisibleEffect` (fil-diff). Separat `verifierModel`
+  parkerad till nivå 3-fortsättning.
+- **extract.py refaktorerad:** delad `_build_copy_directive_context` +
+  `_run_copy_directive_model`; `extract_copy_directives_llm` (extraction,
+  `_COPY_DIRECTIVE_SYSTEM`) + ny `plan_copy_directives_llm` (generation,
+  `_COPY_DIRECTIVE_PLAN_SYSTEM`).
+- **Governance:** llm-models v5->v6 (copyDirectiveModel-purpose breddad till
+  editPlan-generering), naming-dictionary v21->v22, ADR 0034 implementationsnot
+  2026-06-02 (väg A nivå 2 + 3a; tydligt skild från väg C). 17 nya tester.
+- **Verifiering:** Scout RO-review GO (ingen scope-läcka; leak-kedja,
+  gren-separation, generation-scope, grundnings-guard, governance-paritet OK).
+  Guards: ruff 0, governance 18/18, rules-sync OK, term-coverage --strict 0, full
+  pytest grön (orphan dev-trees rensade före körningen). 74 copydir-tester gröna.
+
+### Nästa (copyDirectives-trappa)
+
+1. **Nivå 3-fortsättning (NÄSTA, operatörsbeslut):** (a) multi-target editPlan
+   (flera säkra edits i ett svar — befintlig dedupe på `(target, targetRef)`
+   stödjer det redan i apply, planeraren kan returnera flera); (b) separat
+   `verifierModel` som kontrollerar synlig effekt bortom B155-fil-diff; (c) väg
+   B-UI för editPlan (FloatingChat visar planen + ärlig feedback — Christopher).
+2. **Slice 2d cta/hero — PARKERAD:** kontraktsbeslut (hero-label är variant-
+   whitelist), tas efter nivå 3-mönstret sitter.
+3. **Sync-PR `jakob-be -> main`** (slice 2a + 2c + 3a) = operatörsbeslut.
+4. **Christopher-lane-följd (växande):** Viewser `AppliedCopyDirective` i
+   `apps/viewser/lib/runs.ts` + FloatingChat-summary känner bara company-name|
+   tagline. about-text (2a), services+targetRef (2c) och planerade rewrites (3a)
+   bör synkas där för ärliga FloatingChat-rader. Ej backend-blocker.
+
+## Session 2026-06-02 morgon — copyDirectives slice 2c (services) + 2b-beslut
+
+Orchestrator-pass (Scout -> self-Builder -> Scout RO-review -> Steward), branch
+`jakob-be` direkt, ingen main-sync.
+
+- **Slice 2b (`tone`) — HOPPAD** (operatörsbeslut). Den befintliga
+  `tone-shift`-semantiska patchen mappar redan "gör tonen mer premium" ->
+  `tone.primary`, så en tone-copyDirective hade mest överlappat: lågt mervärde,
+  onödig regressrisk. Ingen tone-target byggd.
+- **Slice 2c (`a346bd6`):** nytt target **`services` -> `services[].summary`**,
+  replace-text only. Disambiguering via nytt optional **`targetRef`** (service
+  id eller label) på copyDirective-objektet. Extraktorn fångar tjänst-referensen
+  (quoted efter service-ankare, eller unquoted mellan ankare och "till") + det
+  explicita nya värdet; `_apply_copy_directives` matchar `targetRef` mot
+  `merged["services"]` (case-insensitiv NFKC på id ELLER label) och sätter
+  `service["summary"] = payload`. **Ingen match = honest no-op** (skapar aldrig
+  ny tjänst, hijackar aldrig annan tjänst). Filer: `prompt_to_project_input.py`
+  (`_COPY_DIRECTIVE_SERVICES_KEYWORDS`, `_COPY_DIRECTIVE_NEW_SERVICE_GUARD`,
+  `_extract_service_target_ref`, `_match_service_by_ref`, services-grenar i
+  classify/extract/validate/apply, LLM-dedupe på `(target, targetRef)`),
+  `brief/extract.py` (target += services, `targetRef`-fält, services-lista i
+  context, systemprompt: matcha befintlig tjänst, skapa aldrig ny), schema
+  (target-enum += services, nytt optional `targetRef` maxLength 80), naming-
+  dictionary v20 -> v21, 13 nya tester.
+- **Skydd/no-op verifierat:** services-grenen fyrar bara utan explicit
+  företagsnamn-keyword (så "ändra företagsnamnet (inte tjänsten) till X" förblir
+  company-name — befintligt test grönt); additiv "ny tjänst" -> no-op; onamngiven
+  "ändra tjänsten till X" -> no-op; okänd tjänst -> no-op.
+- **Verifiering:** Scout RO-review GO (ingen scope-läcka; leak-säkerhet, hijack/
+  no-op, merge-ordning efter `_merge_services`, schema/policy/Pydantic-paritet
+  OK). Guards: ruff 0, governance 18/18, rules-sync OK, term-coverage --strict 0,
+  full pytest grön (orphan dev-trees rensade med `kill-dev-trees.py` före
+  körningen så api-smoke-flaken inte slog till). 57 copydir-tester gröna.
+
+### Nästa (copyDirectives-trappa)
+
+1. **Slice 2d — `cta`/hero (NÄSTA).** Kräver designbeslut innan Builder:
+   hero-knappens text är en variant-whitelist i `build_site.py`, inte fri text,
+   så detta är en kontraktsändring (ny `conversionGoals`-slug vs nytt PI-fält
+   vs begränsad replace mot befintliga labels). Operatörsbeslut.
+2. **Nivå 3:** site-state reader + edit planner -> multi-target editPlan +
+   verifierModel + ärlig chatt. "Förstår hela sidan"-känslan. Stegvis, inte fri
+   kodpatchare. Nivå 4 = patch/diff med rollback.
+3. **Sync-PR `jakob-be -> main`** (slice 2a + 2c) = operatörsbeslut (ej öppnad).
+4. **Christopher-lane-följd:** Viewser `AppliedCopyDirective`-typen i
+   `apps/viewser/lib/runs.ts` + FloatingChat-summary känner bara till
+   company-name|tagline. about-text (2a) och services+targetRef (2c) bör synkas
+   där så FloatingChat kan visa ärliga rader ("Jag uppdaterade tjänsten ..."). Ej
+   backend-blocker (direktiven appliceras ändå vid bygget); UI-lane.
+
+## Session 2026-06-02 natt — copyDirectives slice 2a (about-text) landad på jakob-be
+
+Orchestrator-pass (Scout -> self-Builder -> Scout RO-review -> Steward), branch
+`jakob-be` direkt enligt operatörsval, ingen main-sync.
+
+- **Steg 0 (steward, `061dc1c`):** återinförde Nästa-blocket i
+  `current-focus.md` (auto-bumpen hade tagit bort det) och rättade stale
+  påstående om att copyDirectives väg A inte var i `main` (den är, via
+  #142/#144/#148). Guards gröna.
+- **Slice 2a (`a1e2502`):** ADR 0034 väg A nivå 2, första slicen.
+  Nytt copyDirective-target **`about-text` -> `company.story`** (om oss-/
+  berättelse-copy), **replace-text only** (ingen include-token). Filer:
+  `scripts/prompt_to_project_input.py` (`_COPY_DIRECTIVE_ABOUT_KEYWORDS`,
+  about-gren i `_classify_copy_target`/`_extract_copy_directives`,
+  per-target maxLength + include-token-dropp i
+  `_validate_copy_directive_candidate`, apply -> `company.story`, nya
+  rewrite-verb skriv om/formulera om/omformulera/rewrite/reword som bara
+  aktiveras med explicit värde), `packages/generation/brief/extract.py`
+  (copyDirectiveModel-target += about-text + story-kontext + systemprompt
+  som inte genererar copy ur en vibe), schema (target-enum += about-text,
+  payload maxLength 200 -> 600), naming-dictionary (v19 -> v20), 12 nya
+  tester.
+- **Operatörsbeslut (slice 2a = about-only):** ingen tone/services/cta i 2a.
+  Tone togs bort ur 2a eftersom det krockar med befintlig `tone-shift`-
+  semantisk patch (dubbel effekt + leak-risk i `tone.primary`).
+- **Viktig gräns (nivå-3-avgränsning):** en vibe-rewrite utan angivet värde,
+  t.ex. "skriv om om oss så det låter mer personligt", är **honest no-op** i
+  2a. Den klassas dessutom som `tone-shift` av `classify_followup_intent`
+  (för att "mer personlig(t)" matchar en ton-fras), så den deterministiska
+  about-vägen fyrar inte. Äkta innehållsgenerering ("LLM skriver om
+  sektionen") hör hemma i nivå 3 (site-state reader + edit planner), inte i
+  denna deterministiska slice — peta INTE i intent-klassificeraren för att
+  tvinga fram det (regressionsrisk mot tone-shift).
+- **Verifiering:** Scout RO-review GO (ingen scope-läcka, leak-säkerhet +
+  schema/policy/Pydantic-paritet + merge-ordning OK). Guards: ruff 0,
+  governance 18/18, rules-sync OK, term-coverage --strict 0, full pytest
+  grön. Enda röda i full-körningen var den dokumenterade miljö-flaken
+  `test_api_prompt_route_spawns_python_end_to_end` (orphan `next dev`-
+  processer blockerade porten) — `python kill-dev-trees.py` städade 3 orphan-
+  träd, testet grönt isolerat efteråt.
+
+### Nästa (copyDirectives-trappa — se current-focus.md Nästa-blocket)
+
+1. **Slice 2b — `tone`.** Beslut innan Builder: (a) tone-copyDirective fyrar
+   bara på explicit citerat värde -> `tone.primary`, luddigt lämnas åt
+   befintlig semantisk `tone-shift`-patch (rekommenderat, inget regress),
+   eller (b) ingen tone-copyDirective alls. Operatörsbeslut.
+2. **Slice 2c — `services`** (services[].summary): kräver vilken-tjänst-
+   disambiguering + starka scope-keywords (tjänstetext får aldrig bli
+   tagline/about).
+3. **Slice 2d — `cta`/hero:** kontraktsändring (hero-label är variant-
+   whitelist i `build_site.py`), inte bara enum. Sist.
+4. **Nivå 3:** site-state reader + edit planner -> multi-target editPlan +
+   verifierModel + ärlig chatt. "Förstår hela sidan"-känslan börjar här.
+   Byggs stegvis, inte som fri kodpatchare. Nivå 4 = patch/diff med rollback.
+5. **Sync-PR `jakob-be -> main`** för slice 2a är operatörsbeslut (ej öppnad).
 
 ## Session 2026-06-01 sen kväll — Vercel Sandbox-spike + ADR 0033 (runtime-riktning)
 

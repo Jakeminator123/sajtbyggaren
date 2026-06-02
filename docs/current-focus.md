@@ -5,6 +5,79 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
+## Nästa (2026-06-02, färsk orchestrator-session)
+
+`jakob-be` = `6c860ec` (slice 2a + 2c + nivå 3a + reviewer-härdning).
+`main` = `2d636b0`, inga öppna PR:er. `jakob-be` är 9 commits före `main` —
+**sync-PR är nu mergebar** (de två extern-review-near-blockers stängda i
+`6c860ec`), men öppnas/mergeas på operatörsbeslut. Vercel-sandbox-spåret är i `main` (#146 spike,
+ADR 0033, #147 opt-in-adapter via `VIEWSER_PREVIEW_MODE=vercel-sandbox`);
+default-preview är fortfarande `local-next` (inte flippad) och adaptern är
+inte UI-wirad. copyDirectives nivå 1 (`company-name` | `tagline`) är i `main`.
+
+**copyDirectives-trappa (ADR 0034 väg A, backend på `jakob-be`):**
+
+- **Slice 2a — KLAR** (`a1e2502`): `about-text` -> `company.story`,
+  replace-only. Deterministisk extraktor (kräver explicit värde) +
+  copyDirectiveModel-extraktion. Vibe-rewrite utan angivet värde
+  ("skriv om om oss så det låter mer personligt") är **honest no-op** i 2a —
+  den klassas som tone-shift och äkta innehållsgenerering hör hemma i nivå 3.
+- **Slice 2b — `tone`: HOPPAD** (operatörsbeslut 2026-06-02). Den befintliga
+  `tone-shift`-semantiska patchen mappar redan "gör tonen mer premium" ->
+  `tone.primary`, så en tone-copyDirective hade mest överlappat — lågt
+  mervärde, onödig regressrisk. Ingen tone-target byggd.
+- **Slice 2c — KLAR** (`a346bd6`): `services` -> `services[].summary`,
+  replace-only. Direktiv-objektet fick `targetRef` (service id/label) som
+  pekar ut vilken tjänst; matchas case-insensitivt vid apply, ingen träff =
+  honest no-op (skapar/hijackar aldrig tjänst). Additiv "ny tjänst" + onamngiven
+  "ändra tjänsten till X" = no-op.
+- **Nivå 3a — KLAR** (`4d08526`): editPlan-planerare. Vid en rewrite-instruktion
+  UTAN angivet värde ("skriv om om oss så det låter mer personligt") läser
+  planeraren sajtens site-state och låter copyDirectiveModel **generera** ny copy
+  för `about-text`/`services` (replace), via befintlig leak-säker apply.
+  Egen eligibility-gate (`_is_content_rewrite_request`); intent/semantic patch
+  orörda; name/tagline genereras aldrig; grundnings-guard mot påhittade årtal;
+  B155 `appliedVisibleEffect` som synlig-effekt-verifierare. Fortfarande väg A
+  (inga `.generated/`-patchar). ADR 0034-not + llm-models v6 + naming-dict v22.
+- **Reviewer-härdning — KLAR** (`6c860ec`): två extern-review-near-blockers
+  stängda före sync-PR. (1) Vibe-"till"-läcka: about-text/services kräver nu
+  citerat/kolon-värde (inte fri trailing "till"), så "skriv om om oss till mer
+  personligt" sätter aldrig story = "mer personligt". (2) Planner no-op-löfte:
+  en about-rewrite som planeraren inte kan uppfylla faller inte tillbaka på en
+  generisk story-emphasize-append (story snapshottas + återställs). (3) Schema
+  if/then: services kräver targetRef, about-text/services låsta till
+  replace-text. (4) P1 scope-leak: planeraren låses till det target operatören
+  bad om (`target=rewrite_target`) så fel target aldrig appliceras. 9 nya
+  regressionstester.
+- **Slice 2d — PARKERAD: `cta`/hero.** Inget eget fält idag (hero-knappens text är
+  en variant-whitelist i `build_site.py`), så detta är en **kontraktsändring**,
+  inte bara enum — kräver designbeslut (ny `conversionGoals`-slug vs nytt
+  PI-fält vs begränsad replace mot befintliga labels). Tas efter nivå 3-mönstret.
+- **NÄSTA (rekommenderat av två externa reviewers): copyDirective-modulutbrytning.**
+  `scripts/prompt_to_project_input.py` är nu för central (prompt-mapping +
+  follow-up-merge + semantic patch + copyDirective extract/plan/validate/apply).
+  Bryt ut copyDirective-delsystemet (keywords, extract, plan, validate, apply,
+  site-state, grounding) till en egen modul med tydliga contracts **innan**
+  fler targets (cta/all-copy) byggs. Behavior-preserving, egen builder-prompt:
+  [`docs/agent-prompts/copydirective-module-extraction.md`](agent-prompts/copydirective-module-extraction.md).
+- **Nivå 3 fortsättning (efter modulutbrytning, eget beslut):** multi-target
+  editPlan, separat `verifierModel` (synlig effekt bortom B155-fil-diff), bredare
+  grounding-guard (siffror/orter/namn/certifieringar, inte bara årtal), och
+  väg B-UI för editPlan (FloatingChat — Christopher). Nivå 4 = väg C (filpatch,
+  eget ADR + sandbox).
+
+Hårda regler genom hela trappan: remappa INTE tjänstetext till tagline/about;
+generated output förblir vanlig Next.js; rör inte preview-runtime/adaptern;
+ingen UI (Christophers lane); rå prompt blir aldrig kundcopy.
+
+Parallellt (Christopher/UI): Bite C — flippa `app/api/preview/[siteId]` till
+`currentViewserRuntime()`.
+
+Parkerat (kräver operatörs-OK): sync-PR `jakob-be -> main` (slice 2a + 2c + 3a +
+reviewer-härdning — **nu mergebar**), default-flip till `vercel-sandbox` (kräver
+Bite C klar + smoke), `forbidden`-radering (egen ADR + test-omskrivningar),
+optional/lazy `@vercel/sandbox`-dep.
+
 ## Vem uppdaterar denna fil
 
 **Agenten.** Inte operatören. Standard loop steg 8 i
@@ -30,9 +103,8 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `499bb34` (2026-06-01 UTC, steward-auto efter PR #148 — sync(jakob-be -> main): Vercel Sandbox spike + ADR 0033 + adapter + hardening batch).
-Nya PRs sedan föregående checkpoint: PR #148 — sync(jakob-be -> main): Vercel Sandbox
-spike + ADR 0033 + adapter + hardening batch.
+Last verified state: `093b31a` (2026-06-02 UTC, `jakob-be` — extern-review-härdning ovanpå nivå 3a, inkl. P1 scope-leak-fix: planeraren låses nu till det target operatören bad om (`_plan_copy_directives_via_llm(target=rewrite_target)`), så en about-rewrite aldrig applicerar en services-directive eller tvärtom. Tidigare i denna härdning: vibe-"till"-läcka stängd, planner no-op-löfte (story-snapshot+restore), schema if/then. 9 nya regressionstester totalt; alla near-blockers stängda → sync-PR mergebar. EJ i `main` (väntar operatörs-OK). `main` = `2d636b0`. Föregående steward-checkpoint: `6c860ec`).
+Nya PRs sedan föregående checkpoint: inga (#148 var senaste sync till `main`).
 
 ## Branchmodellen (kort)
 
@@ -171,13 +243,16 @@ Aktiva spår i prioritetsordning:
 3. B157 nivå-4 (immutable build-dir + pointer-swap, GAP-windows-
    safe-rebuild-pipeline) — eliminerar orphan-process-klassen.
 4. ADR 0034 / GAP-followup-prompt-content-passthrough — fri
-   follow-up-text når codegen via ``copyDirectives[]``. **Väg A first
-   slice landad på `jakob-be` 2026-06-01 (ej i `main`, ingen PR än):**
-   ``directives.copyDirectives`` (target company-name|tagline, operation
-   replace-text|include-token), deterministisk extraktor + ny
-   ``copyDirectiveModel``-roll (llm-models v5), guards gröna, 25 nya
-   tester. Nästa: operatör-review + ev. sync-PR `jakob-be → main`; sen
-   väg B FloatingChat-UI (Christopher) + bredare targets.
+   follow-up-text når codegen via ``copyDirectives[]``. **Väg A (nivå 1)
+   är i `main`** (via #142/#144/#148): ``directives.copyDirectives``
+   (target company-name|tagline, operation replace-text|include-token),
+   deterministisk extraktor + ``copyDirectiveModel``-roll (llm-models v5),
+   25 tester, real-LLM-smoke verifierad. Väg B FloatingChat-UI (Christopher)
+   är också i `main` (#139). **Nivå 2 slice 2a (about-text) + 2c (services) +
+   nivå 3a (editPlan-generation) + extern-review-härdning landade på `jakob-be`
+   (`6c860ec`), ej i `main` (sync-PR nu mergebar). Slice 2b tone HOPPAD; 2d cta
+   PARKERAD.** Nästa: copyDirective-modulutbrytning (reviewer-rekommenderad,
+   behavior-preserving) — se Nästa-blocket + builder-prompt i `docs/agent-prompts/`.
 5. B49 (docs-base page-map sidebar) — låg prio, behövs innan
    `course-education → docs-base` aktiveras.
 6. B13a arkitektur-flytt — kvarstår som öppen post, kräver egen sprint
