@@ -5,6 +5,56 @@
 Nya PRs sedan föregående checkpoint: PR #153 — sync(jakob-be -> main): copyDirective
 module extraction + P2 grounding + contact honesty.
 
+## Orchestrator-handoff 2026-06-02 sen EM (sessionsavslut — klistra in till färsk agent)
+
+> Du är orchestrator/Builder för `Jakeminator123/sajtbyggaren`. Färsk session.
+> **Läs FÖRST i ordning:** `docs/current-focus.md`, `docs/handoff.md` (denna),
+> `AGENTS.md`, `docs/product-operating-context.md`, `docs/orchestrator-playbook.md`,
+> ADR 0033/0034/0035.
+>
+> **Verifierat nuläge:** `main` = `1d6e069` (**PR #153 mergad**: copyDirective-
+> modulutbrytning + P2-grounding + kontakt-ärlighet). `jakob-be` = `origin/jakob-be`,
+> rent träd, i sync, några docs-commits före `main` (ADR 0035 + städning) — rider med
+> nästa sync-PR.
+>
+> **Enda öppna PR: #150** (christopher-ui — auth/billing/Stripe/starters/Bite C). Efter
+> #153 är den i konflikt, men ENBART i `docs/current-focus.md` (ingen kodkonflikt;
+> modulutbrytningen tas in automatiskt vid re-sync). Hålls per ADR 0035 — mergas inte
+> bara för att CI är grön. Villkorlig grind — in om allt är isolerat/feature-flaggat/
+> icke-exponerat; parkera/smalna av om claim/billing/auth är aktivt i kundflödet.
+> Webhook-race-fixen (atomisk claim före sidoeffekter) är verifierad/positiv oavsett.
+>
+> **Vad denna session levererade:**
+> - **PR #153 mergad till `main`** (Scout GO + gröna guards; den röda CI:n var en
+>   transient npm-install-nätverksflake, omkörd grön). `jakob-be` synkad (`reset --hard
+>   origin/main` + `--force-with-lease`).
+> - ADR 0035 (`governance/decisions/0035-auth-billing-scope-gate.md`): parkerar
+>   auth/billing/Stripe-scopet bakom en villkorlig merge-grind + granskningschecklista.
+> - **Golden-path baseline omkörd:** 7,75/10, embeddings-gate go — MEN `industryFit` 10
+>   / `scaffoldFit` 9 / `mobileFirstFirstImpression` 9,5 (sektionsräkning) drar upp,
+>   `copySpecificity` 3,8 + kontakt-äkthet svagast. Auto-siffran överskattar upplevd
+>   finish (matchar coachens 4–5/10).
+> - **Städning:** tog bort obsoleta `SCOUT-PROMPT-A-backoffice-runtime-scaffolds.md` +
+>   `B157-WINDOWS-PROCESS-TREE-FYND.md` (B157 stängd; 4 referenser uppdaterade) och
+>   raderade 5 ephemeral cloud-agent-branchar (4 AGENTS-docs superseded av #151/#152, 1
+>   `bc-…`-spegling vars innehåll ligger i `main` via #153).
+>
+> **Current objective (prioordning, se `docs/current-focus.md`):** (1) testa SKARPT
+> skapande av hemsidor på de fyra baseline-prompterna och titta på faktisk render; (2)
+> trovärdighets-slice (branschnära copy-mallar + trust) → kör om golden-path; (3) eval-
+> ärlighet; (4) Christopher-lane #150 (ADR 0035). **Embeddings förblir PARKERAD** —
+> golden-path visar att rätt scaffold/starter väljs varje gång, selection är inte gapet.
+>
+> **Bevarade branchar (rör EJ utan operatörs-OK):** `backup-*` (keepsakes),
+> `cursor/dossier-intake-v11-review-895d` (49 omergrade commits, operatörsbeslut),
+> `cursor/preview-runtime-adapters` (medveten WIP-snapshot), `cursor/preview-runtime-
+> bite-b-di` (22 omergrade commits, Bite B-WIP).
+>
+> **Guards före varje commit:** `cd apps/viewser; npx tsc --noEmit; cd ..\..`; `python
+> -m pytest tests/ -q` (rensa orphan dev-träd med `python kill-dev-trees.py` vid api-
+> smoke-flake); `python scripts/governance_validate.py`; `python scripts/rules_sync.py
+> --check`; `python scripts/check_term_coverage.py --strict`; `python -m ruff check .`.
+
 ## Session 2026-06-02 em (forts) — kontakt-ärlighets-slice (`332e08e`)
 
 Trovärdighets-slice steg 1 (operatörsval: **dölj** placeholder-kontakt vid render,

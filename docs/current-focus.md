@@ -5,20 +5,33 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
-## Current objective (2026-06-02 EM — sessionsavslut)
+## Current objective (2026-06-02 sen EM — sessionsavslut)
 
-`main` = `619454c`. `jakob-be` = `8a86593`, i sync, rent träd, **10 commits före
-`main`** (hela copyDirective-batchen + docs). Enda öppna PR: **#150**
-(christopher-ui auth/billing — hålls). **Färsk orchestrator-startprompt finns
-överst i [`docs/handoff.md`](handoff.md).**
+`main` = `1d6e069` (**PR #153 mergad**: copyDirective-modulutbrytning + P2-grounding
++ kontakt-ärlighet). `jakob-be` = `origin/jakob-be`, i sync, rent träd, några docs-
+commits före `main` (ADR 0035 + denna städning) — rider med nästa sync-PR. Enda öppna
+PR: **#150** (christopher-ui auth/billing) — efter #153 i konflikt (ENBART
+`docs/current-focus.md`, ingen kodkonflikt), **hålls per ADR 0035** (operatörs
+scope-beslut + villkorlig grind). **Färsk orchestrator-startprompt finns överst i
+[`docs/handoff.md`](handoff.md).**
 
 **Nästa konkreta steg (prioordning):**
-1. **Sync-PR `jakob-be → main`** (modulutbrytning + P2-grounding + kontakt-
-   ärlighet) — operatörsbeslut/leveransfönster. Mergebar, disjunkt mot #150.
-2. **Trovärdighets-slice steg 2** (backend, taste-tungt): branschnära story/
-   tagline/service-mallar; trust via wizard (kräver Christopher-fält).
-3. Christopher-lane: Bite C + FloatingChat-ärlighet (#5) + scope-beslut PR #150.
-4. Embeddings = parkerad (audit bekräftade att selection inte är gapet).
+1. **Testa SKARPT skapande av hemsidor** (rekommenderat): kör verkliga flödet
+   (`OPENAI_API_KEY`-brief/plan + riktig build, eller via Viewser) på de fyra
+   baseline-prompterna och titta på faktisk render. Golden-path-baseline = 7,75/10
+   men `industryFit` 10 / `scaffoldFit` 9 / `mobile` 9,5 (sektionsräkning) drar upp
+   medan `copySpecificity` 3,8 + kontakt-äkthet är svagast → siffran överskattar
+   upplevd finish. Skyddar kärnflödet + scope:ar nästa slice med bevis.
+2. **Trovärdighets-slice** (backend, taste-tungt): branschnära story/tagline/service-
+   mallar (`prompt_to_project_input.py` ~950–971) + trust-rendering, sedan kör om
+   golden-path för att bevisa lyftet.
+3. **Eval-ärlighet** (billig): `mobileFirstFirstImpression` är en sektionsräkning,
+   `contactPath` straffar `/kontakta-oss` + läser placeholder-fält i brief/plan trots
+   #153:s render-döljning. Få siffran att matcha känslan.
+4. Christopher-lane: Bite C + FloatingChat-ärlighet + scope-beslut PR #150 (ADR 0035).
+5. **Embeddings = PARKERAD** (ADR 0026). Golden-path bekräftar igen: rätt scaffold/
+   variant/starter väljs varje gång (`industryFit` 10) — selection är inte gapet, så
+   embeddings lyfter inte upplevd kvalitet.
 
 Vercel-sandbox-spåret är i `main` (#146 spike, ADR 0033, #147 opt-in-adapter via
 `VIEWSER_PREVIEW_MODE=vercel-sandbox`); default-preview är fortfarande `local-next`
@@ -645,7 +658,7 @@ Natt-batchen 2026-05-27 → 2026-05-28 (alla pushade):
   descendants**. ``npx next start`` → child ``next start`` blev
   orphan med exklusivt fil-lås. Fix: ny ``killProcessTree``-helper
   + Windows-fast-path. 4:e regression-test låser tree-kill-mönstret.
-  Full diagnostik i `B157-WINDOWS-PROCESS-TREE-FYND.md` (repo-rot).
+  Full diagnostik fanns i en separat FYND-fil (borttagen 2026-06-02; B157 stängd).
 - `7ab5060` docs(agent-prompts): add 2 scout-grind prompts för
   cloud-agent-fixes (backoffice-runtime-scaffolds-stale +
   followup-honest-no-op-detection backend).

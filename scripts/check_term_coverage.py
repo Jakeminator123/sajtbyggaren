@@ -789,8 +789,8 @@ COMMON_WORDS = {
     "Cloud Agents",  # cursor.com-koncept som scoutorkestratorn pratar om
     "ForEach",  # PowerShell-verb i exempelkommandon
     "AbortSignal",  # browser/Node API i local-preview-server JSDoc-prose
-    # PowerShell CIM + Windows-API-termer i B157-incident-docs och kod
-    # (B157-WINDOWS-PROCESS-TREE-FYND.md + local-preview-server.ts).
+    # PowerShell CIM + Windows-API-termer i kill-dev-trees.py +
+    # local-preview-server.ts.
     "CimInstance",  # Get-CimInstance — PowerShell CIM cmdlet result-typ
     "CommandLine",  # Win32_Process-property som CIM exponerar
     "ProcessId",  # Win32_Process-filter-property

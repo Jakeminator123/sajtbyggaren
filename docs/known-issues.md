@@ -761,9 +761,9 @@ samma kodmönster lever vidare här — därav posten:
   strukturellt låser tree-kill-mönstret så framtida agenter inte
   kan refaktorera bort ``taskkill /T``.
 
-  Full diagnostik + reproduktionssteg + verifieringsguide i
-  `B157-WINDOWS-PROCESS-TREE-FYND.md` (repo-rot, för operatörens
-  granskning). Round 1 + 2 är inte raderade — de fungerar för
+  Full diagnostik + reproduktionssteg fanns i en separat FYND-fil i
+  repo-roten (borttagen 2026-06-02 vid städning; B157 är stängd).
+  Round 1 + 2 är inte raderade — de fungerar för
   POSIX-pathen och som timing-skydd även på Windows.
 
 - **`B154` Medel** (stängd 2026-05-27, TDZ-smoke + commerce-lock) -
