@@ -14,13 +14,29 @@ spike, ADR 0033, #147 opt-in-adapter via `VIEWSER_PREVIEW_MODE=vercel-sandbox`);
 default-preview är fortfarande `local-next` (inte flippad) och adaptern är
 inte UI-wirad.
 
-**NÄSTA: copyDirective-modulutbrytning** (reviewer-rekommenderad,
-behavior-preserving) — bryt ut copyDirective-delsystemet ur
-`scripts/prompt_to_project_input.py` till `packages/generation/followup/`.
-Scout-verifierad, self-contained builder-prompt redo:
-[`docs/agent-prompts/copydirective-module-extraction.md`](agent-prompts/copydirective-module-extraction.md)
-(baseline: 88 copydir-tester på `main`). Ta gärna in P2-follow-up #4
-(extraction-grounding) i samma refaktor.
+**copyDirective-modulutbrytning — KLAR** (`8f2fc1e`, på `jakob-be`, ej i `main`).
+Behavior-preserving extraction: copyDirective-delsystemet flyttat ur
+`scripts/prompt_to_project_input.py` (4134→~3257 rader) till nytt paket
+`packages/generation/followup/` (`text.py` delade hjälpare, `copy_directives.py`
+hela systemet verbatim, façade-re-exports i PI). Scout RO-review GO (full
+AST-paritet, acyklisk import, 88 copydir-tester + test_prompt_to_project_input
+oförändrat gröna, alla guards gröna). `_copy_directive_llm_eligible` kvar i PI.
+
+**NÄSTA (coach-rekommenderad ordning, backend på `jakob-be`):**
+
+1. **P2 grounding-fixar** (gör befintlig LLM-förmåga pålitlig): extraction-vägen
+   (`_extract_copy_directives_via_llm`) ska INTE generera vag about/services-copy
+   utan samma guard som planner-vägen (#4); bredda grounding-guarden från bara
+   årtal till siffror/priser/orter/namn/certifieringar; Project DNA-refresh när
+   about-text ändras (#5). ADR 0034-städning (status/kontrakt = nivå 2/3a).
+2. **Lovable-gap-audit (read-only, parallellt)** på de fyra baseline-casen
+   (elektriker Malmö / frisör Göteborg / naprapat Stockholm / keramik-e-handel)
+   + ny Golden Path-run — subjektivt: trust/CTA/branschcopy/mobil/"vill jag
+   fortsätta?". Avgör var 4–5/10 → 9/10-gapet sitter.
+3. Embeddings = nästa-NÄSTA backend-slice (ej nu; ADR 0026-villkor ej uppfyllda).
+
+Builder-prompt för modulutbrytningen (genomförd) finns kvar som referens i
+[`docs/agent-prompts/copydirective-module-extraction.md`](agent-prompts/copydirective-module-extraction.md).
 
 **copyDirectives-trappa (ADR 0034 väg A) — allt nedan är i `main`:**
 
@@ -104,8 +120,25 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `b027b70` (2026-06-02 UTC, `main` = `jakob-be` = `b027b70` post PR #149-merge — copyDirectives 2a/2c + nivå 3a editPlan + extern-review-härdning i `main`, squash `3face1c` + steward-auto-bump. 88 copydir-tester. Nästa: copyDirective-modulutbrytning).
-Nya PRs sedan föregående checkpoint: PR #149 — sync(jakob-be -> main): copyDirectives 2a/2c + niva 3a editPlan + reviewer hardening (mergad).
+Last verified state: `8f2fc1e` (2026-06-02 UTC, `jakob-be` — copyDirective-modulutbrytning landad: delsystemet flyttat till `packages/generation/followup/`, behavior-preserving, Scout RO-review GO, 88 copydir-tester + full pytest oförändrat gröna. EJ i `main` (`main` = `b027b70`). Nästa: P2 grounding-fixar + Lovable-gap-audit).
+Nya PRs sedan föregående checkpoint: PR #149 (mergad). **Öppen nu: PR #150**
+(christopher-ui) — se nedan.
+
+## Öppen PR att känna till — #150 (christopher-ui)
+
+**PR #150** `christopher-ui -> main`: "feat(viewser): auth + billing + starters +
+kärnloop-UX + pre-push-härdning". **STOR: 142 filer, +11189/−936, CONFLICTING.**
+Christophers UI-lane. Innehåller bl.a. auth-flöden, billing/Stripe (checkout +
+webhook), starters, marketing-sidor, samt rör `app/api/preview/[siteId]/route.ts`
+(Bite C-territorium), `app/api/prompt/route.ts` och `floating-chat.tsx` (P2 #3).
+
+**Operatörs-OBS (produktkompass-spänning):** auth, billing, Stripe står
+uttryckligen på "vänta tills operatören explicit säger annat"-listan i
+`docs/product-operating-context.md`. Detta är ett operatörsbeslut om scope, inte
+ett agentbeslut. Backend-lanen (`jakob-be`) blockeras INTE av #150 — disjunkt
+filscope (PR #150 rör `apps/viewser/**`, backend rör `packages/generation/` +
+`scripts/`). Jakob mergar/rör inte #150 (Christophers lane); den är CONFLICTING
+mot `main` och kräver hans rebase + operatörens scope-OK före merge.
 
 ## Branchmodellen (kort)
 

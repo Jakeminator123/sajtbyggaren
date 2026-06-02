@@ -1,13 +1,31 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-02 UTC. **PR #149 mergad** — `main` = `jakob-be` = `b027b70`
-(squash `3face1c` + steward-auto-bump), i sync, inga öppna PR:er. copyDirectives
-2a/2c + nivå 3a editPlan + extern-review-härdning är nu i `main`. 88 copydir-tester.
-**Nästa:** copyDirective-modulutbrytning (builder-prompt redo i
-`docs/agent-prompts/copydirective-module-extraction.md`) + P2-follow-ups nedan.
+**Datum:** 2026-06-02 UTC. `jakob-be` = `8f2fc1e` (copyDirective-modulutbrytning,
+behavior-preserving). `main` = `b027b70` (PR #149 mergad; copyDirectives 2a/2c +
+nivå 3a + härdning i `main`). `jakob-be` är 1 commit före `main`.
+**Öppen PR: #150 (christopher-ui)** — stor auth/billing/starters/UX-batch,
+CONFLICTING, operatörs-scope-beslut (se current-focus). Backend-lanen blockeras ej.
 
-Nya PRs sedan föregående checkpoint: PR #149 — sync(jakob-be -> main): copyDirectives
-2a/2c + niva 3a editPlan + reviewer hardening (mergad).
+## Session 2026-06-02 em — copyDirective-modulutbrytning integrerad
+
+Builder-agent (separat) körde `docs/agent-prompts/copydirective-module-extraction.md`
+och committade `8f2fc1e` lokalt på `jakob-be` (opushad). Orchestrator tog emot:
+Scout RO-review (GO — full AST-paritet, 4-fils-scope, acyklisk import, façade
+komplett, grounding-guard oförändrad, `_copy_directive_llm_eligible` kvar i PI) +
+integrations-gate (ruff 0, governance 18/18, rules-sync, term-coverage,
+test_followup_copy_directives 88 + test_prompt_to_project_input gröna) -> pushad
+till `origin/jakob-be`.
+
+- copyDirective-delsystemet bor nu i `packages/generation/followup/`
+  (`text.py` delade lågnivåhjälpare inkl. `_customer_safe_planner_note`-klustret;
+  `copy_directives.py` hela systemet verbatim; `__init__.py`).
+  `scripts/prompt_to_project_input.py` slimmad (~1158 rader bort), behåller
+  follow-up-orkestrering + intent + `_MISSING_STORY` + façade-re-exports.
+- **Nästa (coach-rekommenderad ordning):** (1) P2 grounding-fixar (extraction-väg
+  #4 + bredare guard + Project DNA-refresh #5 + ADR 0034-städning); (2) Lovable-
+  gap-audit + Golden Path på fyra baseline-case (read-only, parallellt);
+  (3) embeddings = nästa-NÄSTA (ej nu). Christopher-lane: Bite C + FloatingChat/
+  AppliedCopyDirective-ärlighet (#3), och scope-beslut om PR #150.
 
 ## Tillägg 2026-06-02 — sync-PR #149 + review-loop (Codex/Vercel)
 
