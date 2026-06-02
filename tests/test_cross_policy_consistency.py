@@ -314,6 +314,53 @@ def test_preview_runtime_forbidden_terms_are_in_globally_forbidden(
 
 
 @pytest.mark.governance
+def test_preview_runtime_aligns_with_adr_0033(preview_runtime_policy: dict):
+    """ADR 0033: vercel-sandbox is the primary preview runtime, local is the
+    guaranteed fallback/dev runtime, and stackblitz is paused (non-default,
+    must not block).
+
+    This guard stops the policy from drifting back to the pre-ADR-0033 state
+    where stackblitz was both ``default`` and ``primary``. The kinds must match
+    the canonical PreviewRuntimeKind union (vercel-sandbox | local | stackblitz
+    | fly, naming-dictionary v19); the principle being locked is the *role
+    ordering*, not the exact prose.
+    """
+    runtimes = {r["kind"]: r for r in preview_runtime_policy["runtimes"]}
+    default = preview_runtime_policy["default"]
+
+    # 1. Default is no longer stackblitz; it is the ADR 0033 primary.
+    assert default != "stackblitz", (
+        "preview-runtime default must not be stackblitz after ADR 0033"
+    )
+    assert default == "vercel-sandbox", (
+        f"ADR 0033 makes vercel-sandbox the default preview runtime, got '{default}'"
+    )
+
+    # 2. vercel-sandbox is registered and primary.
+    assert "vercel-sandbox" in runtimes, (
+        "vercel-sandbox must be a registered runtime (ADR 0033 primary)"
+    )
+    assert runtimes["vercel-sandbox"]["status"] == "primary", (
+        "vercel-sandbox must have status 'primary' per ADR 0033"
+    )
+
+    # 3. stackblitz is paused/degraded - never primary, never default.
+    if "stackblitz" in runtimes:
+        assert runtimes["stackblitz"]["status"] in {"paused", "deprecated"}, (
+            "stackblitz must be paused/deprecated per ADR 0033, not "
+            f"'{runtimes['stackblitz']['status']}'"
+        )
+
+    # 4. local stays registered as the dev/fallback runtime (not primary).
+    assert "local" in runtimes, (
+        "local must stay registered as the guaranteed fallback (ADR 0033)"
+    )
+    assert runtimes["local"]["status"] in {"developer-only", "secondary"}, (
+        "local must remain a dev/fallback runtime, not primary"
+    )
+
+
+@pytest.mark.governance
 def test_dossier_classes_are_well_known(dossier_contract: dict):
     """ADR 0012: only soft and hard remain as canonical dossier classes."""
     classes = {c["class"] for c in dossier_contract["dossierClasses"]}
