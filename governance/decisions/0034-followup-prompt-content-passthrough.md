@@ -1,10 +1,42 @@
 # ADR 0034 - follow-up prompt content passthrough
 
-**Status:** accepterad (väg A, first slice) / proposed (väg B UI + väg C)
-**Datum:** 2026-05-27 (uppdaterad 2026-06-01)
+**Status:** accepterad (väg A nivå 1 + 2a/2c + 3a, i `main`) / proposed (väg B UI + väg C)
+**Datum:** 2026-05-27 (uppdaterad 2026-06-02)
 **Beroenden:** ADR 0017 (minimal real codegenModel v1), ADR 0027
 (semantic follow-up merge i Project DNA V1), ADR 0032 (section
 treatments additive directive), GAP-followup-prompt-content-passthrough.
+
+## Nuvarande kontrakt (2026-06-02)
+
+Detta stycke är den auktoritativa nulägesbeskrivningen; implementationsnoterna
+nedan är bevarad historik (äldre slices), inte aktuellt kontrakt. Nivå 1 + 2a/2c
++ 3a är i `main` (PR #149). Modulutbrytningen + P2-grounding (extraction
+begränsad till name/tagline, numerisk grounding, DNA-refresh) ligger på
+`jakob-be` och syncas till `main` vid nästa leveransfönster.
+
+- **Targets:** `company-name` (-> company.name), `tagline` (-> company.tagline),
+  `about-text` (-> company.story), `services` (-> services[].summary via
+  `targetRef` = service id/label). Operation: `replace-text | include-token`;
+  about-text och services är replace-only. payload maxLength 600 i schema (koden
+  cappar per target: name 80, tagline 140, about-text 600, services 300).
+  Schema har if/then: services kräver targetRef; about-text/services låsta till
+  replace-text.
+- **Två LLM-vägar (copyDirectiveModel, llm-models v6):** extraction-vägen tolkar
+  explicit copy och är begränsad till company-name|tagline. Planner-vägen
+  (editPlan, nivå 3a) får GENERERA ny copy för about-text/services vid en
+  rewrite-instruktion utan explicit värde, och bara den.
+- **Guards:** alla payloads genom public-copy-validatorn (rå prompt blir aldrig
+  kundcopy); planner-genererad copy passerar dessutom en grundnings-guard som
+  dröppar flersiffriga tal (årtal/priser/antal/procent) som inte finns i
+  site-state eller prompt. Icke-numeriska fakta (namn, orter, certifieringar)
+  hålls av planner-systemprompten + är en dokumenterad begränsning (deterministisk
+  detektion där är för false-positive-benägen).
+- **Spårbarhet:** applicerade direktiv i `directives.copyDirectives`; en
+  about-text/tagline-copyDirective uppdaterar Project DNA-fältet (source
+  `followup`) även när intent är no-semantic-change.
+- **Hoppat/parkerat:** tone (täcks av tone-shift-semantik), cta/hero (kräver
+  kontraktsbeslut — variant-whitelist), väg B-UI (FloatingChat-ärlighet,
+  Christopher), väg C (filpatch i `.generated/`).
 
 ## Implementationsnot 2026-06-01 (väg A, first slice)
 
@@ -107,7 +139,9 @@ Nuvarande pipeline har fyra spärrar:
 
 ## Beslut
 
-Status är proposed. Rekommenderat beslut är en tvåstegslösning:
+> Historik: nedan var det ursprungliga (proposed) beslutet. Väg A är nu
+> accepterad och i `main` (se "Nuvarande kontrakt" överst). Väg C är fortsatt
+> proposed. Rekommenderat beslut var en tvåstegslösning:
 
 1. Lägg till ett strikt, validerat copy-direktivkontrakt i Site Brief och
    Project Input. Starta smalt med en lista som kan bära target,

@@ -1,9 +1,166 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-02 UTC, steward-auto efter PR #151 — docs(agents): virtualenv fallback on Cloud VMs. Verifierad `main` är `16a36a6`.
+## Orchestrator-handoff 2026-06-02 EM (klistra in till en färsk orchestrator-agent)
 
-Nya PRs sedan föregående checkpoint: PR #151 — docs(agents): virtualenv fallback on
-Cloud VMs.
+> Du är orchestrator/Builder för `Jakeminator123/sajtbyggaren`. Färsk session —
+> ärver ingen tidigare kontext. **Läs FÖRST i ordning:** `docs/current-focus.md`,
+> `docs/handoff.md` (denna), `AGENTS.md`, `docs/product-operating-context.md`,
+> `docs/orchestrator-playbook.md`, samt ADR 0033/0034.
+>
+> **Verifierat nuläge (2026-06-02 EM):** `main` = `619454c`. `jakob-be` =
+> `8a86593`, i sync med origin, rent träd, **10 commits före `main`** (hela
+> copyDirective-batchen + docs). Enda öppna PR: **#150** (christopher-ui,
+> auth/billing/starters — CONFLICTING, operatörs-scope-beslut, rör EJ).
+>
+> **Steg 0 (drift-check):** `python scripts/focus_check.py` + `git status
+> --short --branch`. Stoppa om läget är oklart.
+>
+> **Vad som är gjort denna långa session (allt på `jakob-be`, ej i `main`):**
+> copyDirectives nivå 1→3a (about-text/services/editPlan-generering) + extern-
+> review-härdning + **copyDirective-modulutbrytning** (delsystemet nu i
+> `packages/generation/followup/`) + **P2 grounding-härdning** (extraction
+> begränsad till name/tagline, numerisk whole-token-grounding, Project DNA-
+> refresh) + **kontakt-ärlighet** (placeholder-kontakt döljs vid render). PR #149
+> (2a/2c/3a + härdning) mergad till `main`. Docs-PR #151 (AGENTS.md) + #152
+> (.env.example) mergade.
+>
+> **Current objective / nästa konkreta steg (prioordning):**
+> 1. **Sync-PR `jakob-be → main`** (modulutbrytning + P2-grounding + kontakt-
+>    ärlighet, 10 commits) — operatörsbeslut/leveransfönster. Mergebar (disjunkt
+>    mot #150). Öppna ENDAST på operatörs-OK.
+> 2. **Trovärdighets-slice steg 2 (backend, taste-tungt):** branschnära story/
+>    tagline/service-mallar (ersätt generisk mall i `prompt_to_project_input.py`
+>    ~950–971). Be operatören forma branschtonen innan Builder. trustSignals/
+>    credentials = via wizard (operatörsbeslut) → kräver Christopher-UI-fält.
+> 3. **Eval-ärlighet redan delvis fixad** (contactPath via `route_path_by_id`);
+>    överväg human-scorecard för Lovable-känsla (auto-eval överskattar, 7,73 vs
+>    upplevt 4–5/10 — se Lovable-gap-audit nedan).
+> 4. Christopher-lane: Bite C (flippa `app/api/preview/[siteId]` →
+>    `currentViewserRuntime()`) + FloatingChat/AppliedCopyDirective-ärlighet för
+>    about/services + scope-beslut om PR #150 (auth/billing).
+> 5. **Embeddings = parkerad** (ADR 0026-villkor ej uppfyllda; audit bekräftade
+>    att selection inte är gapet).
+>
+> **Öppna operatörsbeslut (vänta in svar innan relaterad Builder):** se
+> "Lovable-gap-audit ... Öppna produktfrågor" nedan (kontaktpolicy=dölj redan
+> vald; trust-källa=wizard redan vald; kvar: human-scorecard? PR #150 auth/
+> billing-scope? branschton för copy-mallar?).
+>
+> **Hårda regler:** `jakob-be` = backend/generation/governance/scripts; rör inte
+> `apps/viewser/**` (Christopher) eller preview-runtime-adaptern; generated output
+> = vanlig Next.js; rå följdprompt blir aldrig kundcopy; default-preview förblir
+> `local-next` (flippa ej till `vercel-sandbox` förrän Bite C + smoke + operatörs-
+> OK). Branch: arbeta på `jakob-be`, PR mot `main` vid leveransfönster (operatörs-
+> beslut — öppna inte PR utan att fråga).
+>
+> **Guards före varje commit:** `cd apps/viewser; npx tsc --noEmit; cd ..\..`;
+> `python -m pytest tests/ -q` (rensa orphan dev-servrar med `python
+> kill-dev-trees.py` först om `test_api_prompt_route_spawns_python_end_to_end`
+> flakar); `python scripts/governance_validate.py`; `python scripts/rules_sync.py
+> --check`; `python scripts/check_term_coverage.py --strict`; `python -m ruff
+> check .`.
+
+**Datum:** 2026-06-02 UTC. `jakob-be` = `8a86593` (copyDirective nivå 1→3a +
+modulutbrytning + P2-grounding + kontakt-ärlighet; docs-PR #151/#152 in-mergade).
+`main` = `619454c` (PR #149 + #151). `jakob-be` är 10 commits före `main`.
+**Öppen PR: #150 (christopher-ui)** — stor auth/billing/starters/UX-batch,
+CONFLICTING, operatörs-scope-beslut. Backend-lanen blockeras ej.
+
+## Session 2026-06-02 em (forts) — kontakt-ärlighets-slice (`332e08e`)
+
+Trovärdighets-slice steg 1 (operatörsval: **dölj** placeholder-kontakt vid render,
+ej kräv i wizard). Scout fann att det mesta redan var byggt — slicen tätade bara
+de 3 kvarvarande läckorna med befintliga `real_*`-helpers:
+- `static_assets.py render_global_error`: `real_phone` + villkorlig Phone-import
+  (speglar `render_not_found`) → error.tsx erbjuder aldrig placeholder-tel.
+- `renderers.py render_map` (/karta): adress via `real_address_lines` → ingen
+  dummy-adress i visning eller Maps-query (city-fallback, annars tom-fallback).
+- `renderers.py _faq_pairs`: öppettids-FAQ bara för `real_opening_hours`.
+- 6 nya tester; eval-contactPath-fix + quality-gate fanns redan (verifierat grönt).
+- **Korrigering:** Lovable-audit-texten överskattade kontakt-gapet (den läste en
+  gammal eval-run före härdningen). Kontakt-render-ärlighet är nu ~komplett.
+
+**Nästa trovärdighets-steg (operatörsval):** trustSignals/credentials via wizard
+(beslut taget: operatör fyller riktiga, ingen auto-generering) + branschnära
+story/tagline/service-mallar (ersätt generisk mall i `prompt_to_project_input.py`
+~950–971). Wizard-delen kräver Christopher-koordinering (UI-fält).
+
+## Lovable-gap-audit 2026-06-02 (read-only) — var 4–5/10 → 9/10-gapet sitter
+
+Statisk Scout-audit mot de fyra baseline-casen (elektriker Malmö / frisör
+Göteborg / naprapat Stockholm / keramik-e-handel). **Kalibrering:** senaste
+golden-path på disk (`golden-path-20260601T084107Z`) = **7,73/10, embeddings-gate
+go**, men mäter scaffold/routes/nyckelord/sektionsantal — INTE upplevd finish.
+Subjektiv "vill jag fortsätta?" landade på **2/5** för alla fyra → coachens 4–5/10
+är rätt. `copySpecificity` 4,5–5,5 är svagast i eval; `mobileFirstFirstImpression`
+9,5 är en sektionsräkning (ej riktig mobilpreview).
+
+**Topp-gap (rangordnat, mest backend):**
+1. Platshållarkontakt renderas rakt av (`prompt_to_project_input.py` default-input;
+   `render_section_contact`) → flaggas men lätt att missa. **jakob-be + UI.**
+2. Tomma `trustSignals` + clinic `credentials` renderas ej (`renderers.py`
+   ~1062–1097; `trust-proof` returnerar "" på tom lista). **jakob-be (brief/plan).**
+3. Generisk story/tagline/FAQ-mall (`prompt_to_project_input.py` ~950–971;
+   `_render_home_faq_section`). **jakob-be.**
+4. Tunt erbjudande (1 tjänst/produkt). **jakob-be.**
+5. Hero-CTA = 3-stryks whitelist (`build_site.py` ~2350–2479), ej följdbar. **jakob-be (kontrakt).**
+6. Följdprompt osynlig i UI för about/services (`floating-chat.tsx` ~349–410;
+   `build-changes.ts` = prompt-heuristik). **christopher-ui.**
+7. Visuell finish (gradient/blob, få riktiga bilder). **jakob-be + UI media-steg.**
+8. Eval överskattar: `contactPath` straffar `/kontakta-oss`, mobil = sektionsräkning
+   (`run_golden_path_eval.py`). **jakob-be (eval-fix, billig).**
+
+**Embeddings:** parkerad bekräftad — alla fyra case träffar rätt scaffold, så
+selection är inte problemet; embeddings hjälper inte placeholder-kontakt/tom trust.
+
+**Öppna produktfrågor till operatören (måste besvaras innan trovärdighets-slicen):**
+1. Ska placeholderkontakt vara kvar (demo) eller döljas tills wizard/scrape fyllt?
+2. Var ska trust/recensioner/credentials komma från — briefModel, hårdkodade
+   branschsnippets, eller wizard-steg?
+3. Naprapat: acceptera `/kontakta-oss` + "Boka tid" (eval-fix) eller normalisera till `/kontakt`?
+4. Mäta Lovable-gap med samma golden-path eller lägga till ett manuellt human-scorecard?
+5. Nästa sprint: backend trovärdighets-slice vs christopher-ui FloatingChat-synlighet — eller parallellt?
+
+## Session 2026-06-02 em (forts) — P2 grounding-härdning
+
+Ovanpå modulutbrytningen (`8f2fc1e`) landade P2-batchen `65aa733` (Scout-plan ->
+self-Builder -> Scout RO-review GO -> push):
+- **(A)** `_extract_copy_directives_via_llm` begränsad till company-name|tagline;
+  about/services-generering bara via planner-vägen (stänger hålet där en vag
+  icke-rewrite-prompt kunde applicera ogrundad genererad about/service-copy).
+- **(B)** Grounding-guarden breddad: `_PLANNED_NUMBER_RE` ((?<!\d)\d{2,}...) fångar
+  årtal/priser/antal/procent; **whole-token-matchning** mot tokeniserad grounding
+  (ej substring → "500" grundas inte av "5000"). Endast planner-vägen. Namn/orter/
+  certifieringar = systemprompt + dokumenterad begränsning.
+- **(C)** Project DNA-refresh: `_copy_directive_dna_refresh` markerar story/tagline
+  `source=followup` när ett copyDirective ändrat fältet trots no-semantic-change-
+  intent; gated på faktisk värdeskillnad (byte-stable-kontraktet intakt).
+- **(D)** ADR 0034: "Nuvarande kontrakt"-stycke + historik-märkning.
+- 92 copydir-tester (2 omskrivna → no-op + 5 nya), full pytest grön, alla guards.
+- **Kvarvarande icke-blockerande P2-noteringar** (Scout): test för DNA-refresh
+  vid no-op token-directive + tagline-DNA-refresh under no-semantic-change saknas
+  (täckta i kod, ej testade); namn/ort/cert-grounding är medveten begränsning.
+
+## Session 2026-06-02 em — copyDirective-modulutbrytning integrerad
+
+Builder-agent (separat) körde `docs/agent-prompts/copydirective-module-extraction.md`
+och committade `8f2fc1e` lokalt på `jakob-be` (opushad). Orchestrator tog emot:
+Scout RO-review (GO — full AST-paritet, 4-fils-scope, acyklisk import, façade
+komplett, grounding-guard oförändrad, `_copy_directive_llm_eligible` kvar i PI) +
+integrations-gate (ruff 0, governance 18/18, rules-sync, term-coverage,
+test_followup_copy_directives 88 + test_prompt_to_project_input gröna) -> pushad
+till `origin/jakob-be`.
+
+- copyDirective-delsystemet bor nu i `packages/generation/followup/`
+  (`text.py` delade lågnivåhjälpare inkl. `_customer_safe_planner_note`-klustret;
+  `copy_directives.py` hela systemet verbatim; `__init__.py`).
+  `scripts/prompt_to_project_input.py` slimmad (~1158 rader bort), behåller
+  follow-up-orkestrering + intent + `_MISSING_STORY` + façade-re-exports.
+- **Nästa (coach-rekommenderad ordning):** (1) P2 grounding-fixar (extraction-väg
+  #4 + bredare guard + Project DNA-refresh #5 + ADR 0034-städning); (2) Lovable-
+  gap-audit + Golden Path på fyra baseline-case (read-only, parallellt);
+  (3) embeddings = nästa-NÄSTA (ej nu). Christopher-lane: Bite C + FloatingChat/
+  AppliedCopyDirective-ärlighet (#3), och scope-beslut om PR #150.
 
 ## Tillägg 2026-06-02 — sync-PR #149 + review-loop (Codex/Vercel)
 
@@ -1136,10 +1293,3 @@ PR #143 refactor-merge). `main` = `fb3b1f8` (oförändrad sedan PR #142).
 nivå 3a + extern-review-härdning inkl. P1 scope-leak-fix). `main` = `2d636b0`,
 oförändrad. `jakob-be` är 11 commits före `main`; **sync-PR nu mergebar** (alla
 near-blockers + P1 stängda), öppnas på operatörsbeslut. Inga öppna PR:er.
-
-### 2026-06-02 UTC — handoff.md före `3face1c`
-
-**Datum:** 2026-06-02 UTC, steward-auto efter PR #149 — sync(jakob-be -> main): copyDirectives 2a/2c + niva 3a editPlan + reviewer hardening. Verifierad `main` är `3face1c`.
-
-Nya PRs sedan föregående checkpoint: PR #149 — sync(jakob-be -> main): copyDirectives
-2a/2c + niva 3a editPlan + reviewer hardening.

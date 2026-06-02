@@ -641,11 +641,14 @@ def test_about_text_validate_replace_candidate_ok() -> None:
 
 
 @pytest.mark.tooling
-def test_llm_about_text_candidate_applied_in_merge(
+def test_llm_extraction_path_drops_about_text_target(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Deterministic rules find no explicit value here; the mocked model supplies
-    # a validated about-text replace that the merge applies to company.story.
+    """The extraction fallback only carries company-name/tagline. Generated
+    about copy must come from the planner path (rewrite-verb + grounding), never
+    the extraction fallback - so a vague non-rewrite prompt is an honest no-op
+    even if the model returns about-text copy (reviewer P2 2026-06-02)."""
+    previous = _previous_project_input()
     assert _extract_copy_directives("fixa om oss-texten lite", language="sv") == []
     monkeypatch.setattr(
         "packages.generation.brief.extract.extract_copy_directives_llm",
@@ -653,15 +656,18 @@ def test_llm_about_text_candidate_applied_in_merge(
             {
                 "target": "about-text",
                 "operation": "replace-text",
-                "payload": "Ett familjeägt bageri i hjärtat av Malmö sedan 1962.",
+                "payload": "Ett familjeägt bageri i hjärtat av Malmö.",
                 "source": "llm",
             }
         ],
     )
-    merged = _merge("fixa om oss-texten lite", enable_llm_fallback=True)
-    assert merged["company"]["story"].startswith("Ett familjeägt bageri")
-    assert merged["directives"]["copyDirectives"][0]["target"] == "about-text"
-    assert merged["directives"]["copyDirectives"][0]["source"] == "llm"
+    merged = _merge(
+        "fixa om oss-texten lite", previous=previous, enable_llm_fallback=True
+    )
+    assert merged["company"]["story"] == previous["company"]["story"]
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
 
 
 @pytest.mark.tooling
@@ -844,12 +850,15 @@ def test_services_rejects_include_token_candidate() -> None:
 
 
 @pytest.mark.tooling
-def test_llm_services_candidate_applied_in_merge(
+def test_llm_extraction_path_drops_services_target(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Deterministic rules miss (no replace verb / value); the mocked model
-    # supplies a validated services replace the merge applies to the summary.
-    assert _extract_copy_directives("fixa tjänsten örhängen lite", language="sv") == []
+    """The extraction fallback must not apply a services rewrite either; that is
+    planner-path territory (reviewer P2 2026-06-02)."""
+    previous = _previous_project_input()
+    assert (
+        _extract_copy_directives("fixa tjänsten örhängen lite", language="sv") == []
+    )
     monkeypatch.setattr(
         "packages.generation.brief.extract.extract_copy_directives_llm",
         lambda *a, **k: [
@@ -862,11 +871,13 @@ def test_llm_services_candidate_applied_in_merge(
             }
         ],
     )
-    merged = _merge("fixa tjänsten örhängen lite", enable_llm_fallback=True)
-    assert merged["services"][0]["summary"] == "Handgjorda örhängen gjutna i Malmö"
-    assert merged["directives"]["copyDirectives"][0]["target"] == "services"
-    assert merged["directives"]["copyDirectives"][0]["targetRef"] == "orhangen"
-    assert merged["directives"]["copyDirectives"][0]["source"] == "llm"
+    merged = _merge(
+        "fixa tjänsten örhängen lite", previous=previous, enable_llm_fallback=True
+    )
+    assert merged["services"][0]["summary"] == previous["services"][0]["summary"]
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
 
 
 @pytest.mark.tooling
@@ -1115,6 +1126,88 @@ def test_planner_allows_year_grounded_in_prompt(
 
 
 @pytest.mark.tooling
+def test_planner_drops_ungrounded_multi_digit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The grounding guard now covers any multi-digit number, not just years:
+    an invented price/count is dropped (honest no-op)."""
+    monkeypatch.setattr(
+        _PLANNER_PATH,
+        lambda *a, **k: [
+            {
+                "target": "about-text",
+                "operation": "replace-text",
+                "payload": "Vi har glatt över 5000 kunder genom åren",
+                "source": "llm",
+            }
+        ],
+    )
+    previous = _previous_project_input()
+    merged = _merge(
+        "skriv om om oss så det låter mer etablerat",
+        previous=previous,
+        enable_llm_fallback=True,
+    )
+    assert merged["company"]["story"] == previous["company"]["story"]
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+@pytest.mark.tooling
+def test_planner_grounding_is_whole_token_not_substring(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A shorter ungrounded number must not slip through as a substring of a
+    longer grounded one: payload '500' is NOT grounded by prompt '5000'."""
+    monkeypatch.setattr(
+        _PLANNER_PATH,
+        lambda *a, **k: [
+            {
+                "target": "about-text",
+                "operation": "replace-text",
+                "payload": "Prova vårt erbjudande för 500 kr",
+                "source": "llm",
+            }
+        ],
+    )
+    previous = _previous_project_input()
+    merged = _merge(
+        "skriv om om oss och nämn att vi haft 5000 kunder",
+        previous=previous,
+        enable_llm_fallback=True,
+    )
+    assert merged["company"]["story"] == previous["company"]["story"]
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+@pytest.mark.tooling
+def test_planner_allows_grounded_number_in_prompt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A number the operator supplied in the prompt is grounded and allowed."""
+    new_story = "Vi har glatt över 5000 kunder sedan starten"
+    monkeypatch.setattr(
+        _PLANNER_PATH,
+        lambda *a, **k: [
+            {
+                "target": "about-text",
+                "operation": "replace-text",
+                "payload": new_story,
+                "source": "llm",
+            }
+        ],
+    )
+    merged = _merge(
+        "skriv om om oss och nämn att vi haft över 5000 kunder",
+        enable_llm_fallback=True,
+    )
+    assert merged["company"]["story"] == new_story
+
+
+@pytest.mark.tooling
 def test_end_to_end_planned_about_rewrite_visible(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -1327,6 +1420,31 @@ def test_service_rewrite_drops_planner_about_directive(
     assert "directives" not in merged or "copyDirectives" not in merged.get(
         "directives", {}
     )
+
+
+@pytest.mark.tooling
+def test_about_copy_directive_refreshes_project_dna_story(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """An about-text copyDirective marks story as followup-updated in Project
+    DNA even though the intent classifies as no-semantic-change (reviewer P2)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    prompt_inputs_dir = tmp_path / "prompt-inputs"
+    generate(
+        "Skapa en hemsida för Surdegsbagaren i Malmö.",
+        output_dir=prompt_inputs_dir,
+        site_id="surdegsbagaren-dna",
+        project_id="copydir-dna",
+    )
+    _, meta, _, _ = generate_followup(
+        "ändra om oss-texten till 'En personlig berättelse om vårt bageri'",
+        output_dir=prompt_inputs_dir,
+        site_id="surdegsbagaren-dna",
+    )
+    story_dna = meta["projectDna"]["story"]
+    assert story_dna["source"] == "followup"
+    assert story_dna["lastUpdatedVersion"] == 2
 
 
 def _previous_with_two_services() -> dict[str, object]:

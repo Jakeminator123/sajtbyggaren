@@ -27,8 +27,11 @@ from packages.generation.build import contact_placeholders as cp  # noqa: E402
 from scripts.build_site import (  # noqa: E402
     _render_structured_data_jsonld,
     render_contact,
+    render_faq,
+    render_global_error,
     render_home,
     render_layout,
+    render_map,
     render_not_found,
     render_section_fallback_phone,
     render_section_hours_summary,
@@ -343,3 +346,69 @@ def test_contact_page_address_only_still_has_cta() -> None:
     assert "Storgatan 5" in page
     assert 'href={"/hitta-hit"}' in page
     assert "Hör av dig" in page
+
+
+# ── /karta map route suppresses the placeholder address ──────────────
+
+
+@pytest.mark.tooling
+def test_map_page_suppresses_placeholder_address() -> None:
+    page = render_map(_dossier(PLACEHOLDER_CONTACT))
+    # The dummy address line is dropped; the honest fallback is the real city
+    # (location.city), never "Adress lämnas på förfrågan".
+    assert "Adress lämnas på förfrågan" not in page
+    assert "Stockholm" in page
+
+
+@pytest.mark.tooling
+def test_map_page_empty_when_no_real_address_or_city() -> None:
+    page = render_map(_dossier(PLACEHOLDER_CONTACT, location={"serviceAreas": []}))
+    assert "Adress lämnas på förfrågan" not in page
+    # No real address and no city -> honest "not confirmed yet" copy.
+    assert "så fort den är bekräftad" in page
+
+
+@pytest.mark.tooling
+def test_map_page_renders_real_address() -> None:
+    page = render_map(_dossier(REAL_CONTACT))
+    assert "Storgatan 5" in page
+    assert "Adress lämnas på förfrågan" not in page
+
+
+# ── /faq opening-hours question only for real hours ──────────────────
+
+
+@pytest.mark.tooling
+def test_faq_suppresses_placeholder_opening_hours() -> None:
+    page = render_faq(_dossier(PLACEHOLDER_CONTACT))
+    assert "Mån-Fre 09:00-17:00" not in page
+    assert "När har ni öppet?" not in page
+
+
+@pytest.mark.tooling
+def test_faq_renders_real_opening_hours() -> None:
+    page = render_faq(_dossier(REAL_CONTACT))
+    assert "När har ni öppet?" in page
+    assert "Mån-Fre 08-16" in page
+
+
+# ── error.tsx suppresses the placeholder phone (mirrors 404) ─────────
+
+
+@pytest.mark.tooling
+def test_global_error_suppresses_placeholder_phone() -> None:
+    page = render_global_error(_dossier(PLACEHOLDER_CONTACT))
+    assert "+46 8 000 00 00" not in page
+    assert "tel:+4680000000" not in page
+    # Phone icon import dropped when there is no real number; "Försök igen"
+    # remains the honest recovery action.
+    assert "Försök igen" in page
+    assert 'import { RefreshCw } from "lucide-react";' in page
+
+
+@pytest.mark.tooling
+def test_global_error_renders_real_phone() -> None:
+    page = render_global_error(_dossier(REAL_CONTACT))
+    assert "+46 70 111 22 33" in page
+    assert "tel:+46701112233" in page
+    assert 'import { Phone, RefreshCw } from "lucide-react";' in page
