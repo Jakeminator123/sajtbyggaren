@@ -510,6 +510,9 @@ COMMON_WORDS = {
     "ErrorBubble", "ErrorKind", "MessageBubble",
     "BuildChange", "BuildChangeCategory", "CategoryLabel",
     "KeywordRule", "ChevronUp", "ChevronDown", "ChevronLeft",
+    # UI-gap-fix (juni 2026): exakt change-set i FloatingChat ("Ändrat")
+    # härledd ur run-diff istället för prompt-heuristik ("Troligen ändrat").
+    "RunChangeSet",
     # Live Build Sync polling-hook (GAP-viewser-pipeline-status-polling):
     "BuildPhase", "BuildTraceState",
     "AbortController", "AbortError",
@@ -848,6 +851,22 @@ COMMON_WORDS = {
     "ManageCookiesButton", "LegalPageLayout", "ActionButtons",
     # Marknadssajt P8 (SEO-finish): Next MetadataRoute för sitemap/robots.
     "MetadataRoute",
+    # Hero-prompt-handoff (juni 2026): besökaren beskriver sin sajt direkt på
+    # heron och landar i bygg-flödet. PromptBuildern = bestämd form i prosa.
+    # WizardHandoff = sessionStorage-payloaden hero→studio (hela wizard-svaret).
+    "HeroPromptForm", "PromptBuildern", "WizardHandoff",
+    # Starters-banan (juni 2026): yrkessidor + hero-chips + studio-onboarding
+    # som förifyller DiscoveryWizarden via en lätt seed. Lokala viewser-symboler
+    # (komponent/typer), inte canonical domain terms. Rör inte bygg-logiken.
+    "StarterCta", "StarterPreset", "WizardSeed",
+    # Egen auth + köpflöde (juni 2026): login/register/konto + Stripe-krediter.
+    # Lokala viewser-symboler (route-sidor, UI-komponenter, interna typer/rows),
+    # inte canonical domain terms. Egen SQLite-store; rör inte bygg-pipelinen.
+    "AuthUser", "AuthForm", "AuthLayout", "HeaderAuthEntry",
+    "LoginPage", "RegisterPage", "ForgotPasswordPage", "AccountPage",
+    "LoginInput", "RegisterInput", "SessionTokenPayload", "SessionRow",
+    "UserRow", "CreditEntry", "SubscriptionRecord",
+    "PlanId", "PlanCheckoutButton", "LogoutButton", "ManageSubscriptionButton",
     "SELECT",  # HTML-tagName-konstant i ⌘K-skip (page.tsx + test) — inte domänbegrepp
     "SyntaxError",  # JS-built-in exception-namn i prompt-builder NDJSON-comment + test — inte domänbegrepp
     # Toast-system (eget mini-system, ingen extern dep):

@@ -1,4 +1,19 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import type { NextConfig } from "next";
+
+// Monorepo-rot (två nivåer upp från apps/viewser). Beräknas från configens
+// egen filsökväg (oberoende av process.cwd(), som inte är pålitlig under
+// Turbopacks worker-processer). Används som ``turbopack.root`` så Turbopack
+// inkluderar ``../../packages`` i modulgrafen — annars kan VARKEN ``next dev``
+// ELLER ``next build`` resolva ``@preview-runtime`` (TS-källa utanför
+// app-roten). Se kommentaren vid ``turbopack`` nedan.
+const REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+);
 
 // Preview-runtime-läge (ADR 0028 — Runtime Ladder).
 // ------------------------------------------------------------------
@@ -153,6 +168,32 @@ if (
 }
 
 const nextConfig: NextConfig = {
+  // ``better-sqlite3`` är en native Node-modul (auth/credits-store). Den får
+  // INTE bundlas av Turbopack — då bryts dess .node-binär. serverExternalPackages
+  // håller den som en vanlig require() i serverruntimen. Den importeras bara från
+  // Node-runtime-ytor (route handlers + server components), aldrig i middleware
+  // (edge) eller klientbundlar.
+  serverExternalPackages: ["better-sqlite3"],
+  // ``@preview-runtime`` är ett tsconfig-path-alias som pekar på delad TS-källa
+  // utanför app-roten (``../../packages/preview-runtime/src``). tsc resolvar det
+  // via ``paths``, men Turbopack (BÅDE ``next dev`` och ``next build``)
+  // inkluderar aldrig moduler vars riktiga sökväg ligger utanför den inferrade
+  // projektroten — så utan detta 500:ar preview-routen i dev och bygget failar.
+  // Bite C är första konsumenten som faktiskt RUNTIME-importerar paketet
+  // (``app/api/preview/[siteId]`` → ``lib/preview-runtime-server.ts``). Därför:
+  //   - ``turbopack.root`` breddar bygg-/dev-roten till repo-roten så
+  //     ``../../packages`` ingår i modulgrafen.
+  //   - ``resolveAlias`` pekar specifieraren på TS-källans index.
+  // De repo-rot-baserade runtime-sökvägarna i ``lib/*-runner.ts`` (python-spawn
+  // mot ``.venv`` m.m.) görs opaka för Turbopacks statiska analys (se
+  // ``repoRoot()`` där) så den bredare roten inte får output-tracern att
+  // försöka inkludera t.ex. ``.venv``-symlänkar som pekar ut ur repo-roten.
+  turbopack: {
+    root: REPO_ROOT,
+    resolveAlias: {
+      "@preview-runtime": "../../packages/preview-runtime/src/index.ts",
+    },
+  },
   // Spegla läget till klienten så ViewerPanel kan ta beslut baserat
   // på det (t.ex. skippa StackBlitz-fallbacken när vi vet att vi kör
   // LocalRuntime). NEXT_PUBLIC_-prefixet är vad Next.js kräver för att

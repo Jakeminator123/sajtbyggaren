@@ -1,36 +1,68 @@
 /**
- * Tunn auth-seam för marknadssajten. Idag finns ingen riktig inloggning —
- * "Logga in" och alla bygg-CTA:er navigerar bara in i studion (konsolen).
- * När Jakobs riktiga auth-backend landar slottas den in här bakom
- * AUTH_ENABLED utan att header/sidor behöver göras om.
+ * Auth-seam för marknadssajten + konsolen. Sedan juni 2026 finns en RIKTIG,
+ * egen inloggning (scrypt + cookie-sessioner + SQLite, se lib/auth/*). Den här
+ * filen är medvetet client-säker: bara etiketter/hrefs och en ren funktion som
+ * mappar inloggningsstatus → header-entry. Den auktoritativa "vem är inloggad?"
+ * -frågan ställs server-side via lib/auth/session.ts (getCurrentUser) och
+ * skickas in som ``authed``-prop till headern.
  *
  * Identifierare på engelska, användarvänd text på svenska (AGENTS.md).
  */
 
-/** Slås på när en riktig auth-backend finns. Tills dess: ren navigation. */
-export const AUTH_ENABLED = false as const;
+/** Riktig auth är på. (Behålls som flagga för ev. framtida feature-toggling.) */
+export const AUTH_ENABLED = true as const;
 
-/** Dit studion (operatörskonsolen) bor efter route-group-spliten. */
+/** Operatörskonsolen (bygg-studion). Bygg-CTA:er pekar hit. */
 export const STUDIO_HREF = "/studio" as const;
 
-/** Mål för "Logga in" + bygg-CTA i v1: rakt in i studion. */
-export const LOGIN_HREF: string = STUDIO_HREF;
+/** Riktig inloggningssida. "Logga in" i headern går hit. */
+export const LOGIN_HREF = "/login" as const;
 
-/** Användarvänd etikett. Ärligt: inget konto skapas ännu. */
+/** Registreringssida ("Skapa konto"). */
+export const REGISTER_HREF = "/registrera" as const;
+
+/** Kontosida (profil, mina sajter, krediter, abonnemang). */
+export const ACCOUNT_HREF = "/konto" as const;
+
 export const LOGIN_LABEL = "Logga in" as const;
+export const REGISTER_LABEL = "Skapa konto" as const;
+
+/** Etikett + mål när besökaren ÄR inloggad ("Logga in" byts mot detta). */
+export const ACCOUNT_LABEL = "Mitt konto" as const;
 
 /**
- * Ärlig hint (title/tooltip) på login-entry tills riktig auth finns: vi fejkar
- * inget konto-flöde, användaren landar rakt i studion. Tas bort/justeras när
- * AUTH_ENABLED slås på.
+ * Är besökaren inloggad? Tar emot den server-resolvade statusen (cookie-
+ * sessionen läses i lib/auth/session.ts, inte här) och grindar den dessutom
+ * bakom AUTH_ENABLED. Hålls som ren funktion så headern kan vara en
+ * klientkomponent utan att importera server-only-kod.
  */
-export const LOGIN_HINT =
-  "Konton kommer snart — tills dess landar du direkt i studion" as const;
+export function isAuthenticated(authed: boolean): boolean {
+  return AUTH_ENABLED && authed;
+}
+
+export type HeaderAuthEntry = {
+  href: string;
+  label: string;
+  hint?: string;
+};
+
+/** Header-entry: växlar mellan "Logga in" och "Mitt konto" beroende på auth. */
+export function authHeaderEntry(authed: boolean): HeaderAuthEntry {
+  return isAuthenticated(authed)
+    ? { href: ACCOUNT_HREF, label: ACCOUNT_LABEL }
+    : { href: LOGIN_HREF, label: LOGIN_LABEL };
+}
 
 /**
- * Enda källan till login-målet, så framtida auth (t.ex. /login bakom
- * AUTH_ENABLED) byter på ETT ställe.
+ * Är ``next``-parametern en säker, intern redirect-mål? Vi tillåter bara
+ * rena interna paths. ``//evil.com`` och ``/\evil`` är protokoll-relativa
+ * öppna redirects och måste avvisas (server- och klient-sida delar denna).
  */
-export function getLoginHref(): string {
-  return AUTH_ENABLED ? "/login" : LOGIN_HREF;
+export function isSafeNext(next: string | undefined | null): boolean {
+  return (
+    typeof next === "string" &&
+    next.startsWith("/") &&
+    !next.startsWith("//") &&
+    !next.startsWith("/\\")
+  );
 }

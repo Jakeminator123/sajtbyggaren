@@ -13,16 +13,18 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { LOGIN_HINT, LOGIN_HREF, LOGIN_LABEL } from "@/lib/auth-config";
+import { authHeaderEntry, STUDIO_HREF } from "@/lib/auth-config";
 
 // Marknadssajtens header. Medvetet separat från components/layout/site-header.tsx
 // (den är en pointer-events-none preview-overlay för konsolen). Minimal nav:
-// Hem / Produkt / Om oss. "Logga in" ligger uppe till vänster (operatörens
-// önskemål) bredvid logotypen och pekar in i studion via auth-config-seamen
-// så Jakobs riktiga auth kan slottas in senare utan redesign.
+// Hem / Produkt / Om oss — centrerad. Logotypen ligger till vänster och
+// auth-entryn ("Logga in" / "Mitt konto") längst till höger. Entryn pekar in i
+// studion via auth-config-seamen och växlar etikett när Jakobs riktiga auth
+// slås på, utan redesign.
 const NAV_ITEMS: ReadonlyArray<{ href: string; label: string }> = [
   { href: "/", label: "Hem" },
   { href: "/produkt", label: "Produkt" },
+  { href: "/priser", label: "Priser" },
   { href: "/om-oss", label: "Om oss" },
 ];
 
@@ -34,40 +36,37 @@ function useIsActive() {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
-export function MarketingHeader() {
+// ``authed`` resolveras server-side (getCurrentUser) i (marketing)/layout.tsx
+// och skickas in hit, så headern (klientkomponent) kan visa "Mitt konto" utan
+// att importera server-only session-kod eller blinka fel state.
+export function MarketingHeader({ authed = false }: { authed?: boolean }) {
   const isActive = useIsActive();
+  const entry = authHeaderEntry(authed);
 
   return (
     <header className="border-border/60 bg-background/80 sticky top-0 z-40 w-full border-b backdrop-blur-xl">
-      <div className="mx-auto flex h-16 w-full max-w-[1200px] items-center justify-between gap-4 px-5 sm:px-8">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            aria-label="Sajtbyggaren — till startsidan"
-            className="focus-visible:ring-ring/50 inline-flex items-center rounded-md focus-visible:ring-2 focus-visible:outline-none"
-          >
-            <Image
-              src="/sajtbyggaren_logo.png"
-              alt="Sajtbyggaren"
-              width={132}
-              height={28}
-              style={{ width: "auto" }}
-              priority
-            />
-          </Link>
-          <Link
-            href={LOGIN_HREF}
-            title={LOGIN_HINT}
-            className="text-muted-foreground hover:text-foreground hover:border-border focus-visible:ring-ring/50 hidden rounded-full border border-transparent px-3 py-1 text-[13px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none sm:inline-flex"
-          >
-            {LOGIN_LABEL}
-          </Link>
-        </div>
+      <div className="relative mx-auto flex h-16 w-full max-w-[1200px] items-center justify-between gap-4 px-5 sm:px-8">
+        {/* Vänster: logotyp. */}
+        <Link
+          href="/"
+          aria-label="Sajtbyggaren — till startsidan"
+          className="focus-visible:ring-ring/50 inline-flex items-center rounded-md focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <Image
+            src="/sajtbyggaren_logo.png"
+            alt="Sajtbyggaren"
+            width={106}
+            height={22}
+            style={{ width: "auto" }}
+            priority
+          />
+        </Link>
 
-        {/* Desktop-nav: inline pills med aktiv-state. */}
+        {/* Center: desktop-nav, absolut centrerad i headern oavsett logo-/
+            entry-bredd (operatörens önskemål om centrerade menyval). */}
         <nav
           aria-label="Huvudmeny"
-          className="hidden items-center gap-1 sm:flex"
+          className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 sm:flex"
         >
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.href);
@@ -87,6 +86,16 @@ export function MarketingHeader() {
             );
           })}
         </nav>
+
+        {/* Höger: auth-entry ("Logga in" / "Mitt konto") på desktop, längst
+            till höger. På mobil: hamburgare → Sheet-meny. */}
+        <Link
+          href={entry.href}
+          title={entry.hint}
+          className="text-muted-foreground hover:text-foreground hover:border-border focus-visible:ring-ring/50 hidden rounded-full border border-transparent px-3 py-1.5 text-[13px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none sm:inline-flex"
+        >
+          {entry.label}
+        </Link>
 
         {/* Mobil: hamburgare → Sheet-meny (3 nav-länkar är få men en drawer
             ger fullstora tap-targets + plats för login + primär CTA utan att
@@ -126,14 +135,14 @@ export function MarketingHeader() {
             </nav>
             <div className="mt-auto flex flex-col gap-2 p-4">
               <SheetClose
-                render={<Link href={LOGIN_HREF} />}
-                title={LOGIN_HINT}
+                render={<Link href={entry.href} />}
+                title={entry.hint}
                 className="border-border text-foreground hover:bg-muted focus-visible:ring-ring/50 inline-flex h-11 items-center justify-center rounded-full border text-[14px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
               >
-                {LOGIN_LABEL}
+                {entry.label}
               </SheetClose>
               <SheetClose
-                render={<Link href={LOGIN_HREF} />}
+                render={<Link href={STUDIO_HREF} />}
                 className="bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-ring/50 inline-flex h-11 items-center justify-center rounded-full text-[14px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98]"
               >
                 Bygg din hemsida

@@ -63,6 +63,10 @@ data/embedding-index/
 # eller i Vercel Blob (VercelBlobAssetStore). Manifest + originals/optimized
 # regenereras vid behov; ingen anledning att versionera 2 MB+ per upload.
 data/uploads/
+# Auth/credits-store (egen SQLite-databas för konton, sessioner, krediter
+# och prenumerationer). Innehåller lösenordshashar + PII — får ALDRIG
+# committas. Skapas/migreras av apps/viewser/lib/auth/db.ts vid behov.
+data/auth/
 # Backoffice + script-genererade soft dossier-kandidater. Skapas av
 # scripts/generate_dossier_candidate.py och Backoffice "create soft
 # dossier candidate"-flödet under operator-review. Samma kategori som

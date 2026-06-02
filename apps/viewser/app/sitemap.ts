@@ -10,6 +10,7 @@ const SITE_URL = "https://sajtbyggaren.se";
 const STATIC_PATHS: ReadonlyArray<string> = [
   "",
   "/produkt",
+  "/priser",
   "/om-oss",
   "/kontakt",
   "/cookies",

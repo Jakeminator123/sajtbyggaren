@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { LOGIN_HREF } from "@/lib/auth-config";
+import { STUDIO_HREF } from "@/lib/auth-config";
 
 // Minimal, on-brand platshållare för marknadssidor som byggs ut i senare
 // faser (Produkt/Om oss/Kontakt + legal). Finns i P0 enbart så header- och
@@ -25,7 +25,7 @@ export function PlaceholderPage({
         {note}
       </p>
       <Link
-        href={LOGIN_HREF}
+        href={STUDIO_HREF}
         className="bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-ring/50 mt-2 inline-flex h-11 items-center rounded-full px-6 text-[14px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
       >
         Bygg din hemsida

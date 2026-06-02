@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { HeroPromptForm } from "@/components/marketing/hero-prompt-form";
 import { HeroVideo } from "@/components/marketing/hero-video";
 import { ProfessionGrid } from "@/components/marketing/profession-grid";
-import { LOGIN_HREF } from "@/lib/auth-config";
 
 export const metadata: Metadata = {
   description:
@@ -20,8 +20,12 @@ const STEPS: ReadonlyArray<{ title: string; body: string }> = [
 export default function MarketingHome() {
   return (
     <>
-      {/* 1. Hero — full-bleed video, få ord, en CTA. */}
-      <section className="relative flex h-[100svh] min-h-[560px] items-end overflow-hidden">
+      {/* 1. Hero — full-bleed video, få ord, prompt-CTA. id="start" = mål för
+          slut-CTA:n så all bygg-start sker här på heron. */}
+      <section
+        id="start"
+        className="relative flex h-[100svh] min-h-[560px] items-end overflow-hidden scroll-mt-16"
+      >
         <HeroVideo />
         <div
           aria-hidden
@@ -35,12 +39,10 @@ export default function MarketingHome() {
             Sajtbyggaren skapar en färdig företagshemsida åt dig med AI. Du
             förfinar med ord — vi bygger om.
           </p>
-          <Link
-            href={LOGIN_HREF}
-            className="bg-background text-foreground hover:bg-background/90 focus-visible:ring-ring/60 mt-7 inline-flex h-12 items-center rounded-full px-7 text-[15px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98]"
-          >
-            Bygg din hemsida
-          </Link>
+          {/* Bygg-CTA:n bor numera HÄR — besökaren beskriver sin sajt direkt
+              på heron och landar i bygg-flödet (DiscoveryWizard förifylld)
+              utan att passera studions tomma prompt-landning. */}
+          <HeroPromptForm />
         </div>
       </section>
 
@@ -134,12 +136,14 @@ export default function MarketingHome() {
           <h2 className="max-w-[20ch] text-3xl font-semibold tracking-tight text-balance sm:text-5xl">
             Redo att se din hemsida ta form?
           </h2>
-          <Link
-            href={LOGIN_HREF}
+          {/* Scrollar upp till hero-prompten (#start) i stället för studions
+              tomma landning — all bygg-start sker via heron. */}
+          <a
+            href="#start"
             className="bg-background text-foreground hover:bg-background/90 focus-visible:ring-background/60 inline-flex h-12 items-center rounded-full px-7 text-[15px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98]"
           >
             Bygg din hemsida
-          </Link>
+          </a>
         </div>
       </section>
     </>

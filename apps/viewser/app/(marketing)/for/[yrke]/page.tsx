@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { LOGIN_HREF } from "@/lib/auth-config";
+import { StarterCta } from "@/components/marketing/starter-cta";
 import { PROFESSIONS, getProfession } from "@/lib/professions";
 
 // Endast de 20 kända yrkena prerenderas; okända slugs → 404 (ingen on-demand
@@ -81,12 +81,13 @@ export default async function ProfessionLandingPage({
             <p className="text-muted-foreground mt-5 max-w-[52ch] text-[16px] leading-relaxed sm:text-[18px]">
               {profession.pitch}
             </p>
-            <Link
-              href={LOGIN_HREF}
-              className="bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-ring/50 mt-7 inline-flex h-12 items-center rounded-full px-7 text-[15px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98]"
-            >
-              Bygg din sida
-            </Link>
+            <div className="mt-7">
+              <StarterCta
+                promptSeed={profession.promptSeed}
+                family={profession.family}
+                category={profession.category}
+              />
+            </div>
           </div>
           <div className="border-border/60 relative aspect-[4/3] w-full overflow-hidden rounded-3xl border">
             <Image
@@ -124,12 +125,12 @@ export default async function ProfessionLandingPage({
             Redo att ge din {profession.displayName.toLowerCase()} en hemsida
             som känns rätt?
           </h2>
-          <Link
-            href={LOGIN_HREF}
-            className="bg-background text-foreground hover:bg-background/90 focus-visible:ring-background/60 inline-flex h-12 items-center rounded-full px-7 text-[15px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98]"
-          >
-            Bygg din sida
-          </Link>
+          <StarterCta
+            promptSeed={profession.promptSeed}
+            family={profession.family}
+            category={profession.category}
+            tone="light"
+          />
           <Link
             href="/"
             className="text-background/70 hover:text-background focus-visible:ring-background/50 rounded text-[14px] underline-offset-4 transition-colors hover:underline focus-visible:ring-2 focus-visible:outline-none"

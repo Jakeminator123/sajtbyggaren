@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { FounderCard } from "@/components/marketing/founder-card";
-import { LOGIN_HREF } from "@/lib/auth-config";
+import { STUDIO_HREF } from "@/lib/auth-config";
 
 export const metadata: Metadata = {
   title: "Om oss",
@@ -75,7 +75,7 @@ export default function AboutPage() {
       {/* CTA. */}
       <section className="border-border/60 border-t py-16 sm:py-24">
         <Link
-          href={LOGIN_HREF}
+          href={STUDIO_HREF}
           className="bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-ring/50 inline-flex h-12 items-center rounded-full px-7 text-[15px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98]"
         >
           Bygg din hemsida

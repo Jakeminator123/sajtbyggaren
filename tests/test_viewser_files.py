@@ -62,6 +62,35 @@ def test_viewser_expected_files_exist() -> None:
         "app/sitemap.ts",
         "app/robots.ts",
         "lib/auth-config.ts",
+        # Egen auth + köpflöde (login/register/konto + Stripe-krediter).
+        # Rör inte bygg-pipelinen; egen SQLite-store under lib/auth/*.
+        "lib/auth/db.ts",
+        "lib/auth/password.ts",
+        "lib/auth/tokens.ts",
+        "lib/auth/session.ts",
+        "lib/auth/users.ts",
+        "lib/auth/credits.ts",
+        "lib/billing/plans.ts",
+        "lib/billing/stripe.ts",
+        "proxy.ts",
+        "app/(auth)/login/page.tsx",
+        "app/(auth)/registrera/page.tsx",
+        "app/(auth)/glomt-losenord/page.tsx",
+        "app/(marketing)/konto/page.tsx",
+        "app/(marketing)/priser/page.tsx",
+        "app/api/auth/register/route.ts",
+        "app/api/auth/login/route.ts",
+        "app/api/auth/logout/route.ts",
+        "app/api/auth/session/route.ts",
+        "app/api/checkout/route.ts",
+        "app/api/checkout/portal/route.ts",
+        "app/api/stripe/webhook/route.ts",
+        "app/api/account/claim-site/route.ts",
+        "components/auth/auth-form.tsx",
+        # Starters-banan (juni 2026): yrkessida/hero-chip/studio-onboarding
+        # förifyller DiscoveryWizarden via en lätt seed. Rör inte bygg-logiken.
+        "lib/starter-presets.ts",
+        "components/marketing/starter-cta.tsx",
         "app/api/chat/route.ts",
         "app/api/build/route.ts",
         "app/api/runs/route.ts",
@@ -317,10 +346,78 @@ def test_viewser_api_routes_call_localhost_guard() -> None:
         "app/api/runs/[runId]/files/route.ts",
         "app/api/runs/[runId]/artifacts/route.ts",
         "app/api/prompt/route.ts",
+        "app/api/preview/[siteId]/route.ts",
     ]
     for route in routes:
         text = (VIEWSER_DIR / route).read_text(encoding="utf-8")
         assert "assertLocalhost" in text, f"{route} saknar localhost-guard"
+
+
+def test_bite_c_preview_route_goes_via_runtime_resolver() -> None:
+    """Bite C: ``/api/preview/[siteId]`` POST MÅSTE gå via det env-styrda
+    Preview Runtime-kontraktet (``currentViewserRuntime().start()``), inte
+    hårdkoda ``startPreviewServer`` direkt. ``VIEWSER_PREVIEW_MODE`` ska
+    alltså driva vilken adapter som körs, och resultatet mappas från ett
+    generiskt ``PreviewResult``.
+    """
+    text = (
+        VIEWSER_DIR / "app" / "api" / "preview" / "[siteId]" / "route.ts"
+    ).read_text(encoding="utf-8")
+    assert "currentViewserRuntime" in text, (
+        "preview-routen måste resolva runtime via currentViewserRuntime() "
+        "så VIEWSER_PREVIEW_MODE styr adaptern (Bite C)"
+    )
+    assert "runtime.start(" in text, "preview-routen måste anropa runtime.start(config)"
+    assert "PreviewResult" in text, "preview-routen måste hantera generiskt PreviewResult"
+    # Start-pathen får INTE längre hårdkoda den lokala preview-servern —
+    # det skulle kringgå runtime-resolvern. GET/DELETE får fortfarande
+    # använda getPreviewServer/stopPreviewServer för local-status.
+    assert "startPreviewServer" not in text, (
+        "preview-routens start-path får inte anropa startPreviewServer direkt "
+        "efter Bite C — den ska gå via currentViewserRuntime()"
+    )
+
+
+def test_bite_c_preview_route_has_no_silent_fallback() -> None:
+    """Bite C: vid ``failed``/``unsupported`` ska routen returnera ett ärligt
+    fel (med ev. ``logs``), aldrig tyst falla tillbaka till en annan runtime.
+    """
+    text = (
+        VIEWSER_DIR / "app" / "api" / "preview" / "[siteId]" / "route.ts"
+    ).read_text(encoding="utf-8")
+    assert 'result.status === "ready"' in text, (
+        "routen måste grena explicit på PreviewResult.status === ready"
+    )
+    assert '=== "unsupported"' in text, (
+        "routen måste hantera PreviewResult.status === unsupported (ärligt 501, "
+        "ingen tyst fallback)"
+    )
+    assert "logs" in text, "routen måste vidarebefordra runtime-logs vid fel"
+    assert "ingen tyst fallback" in text.lower() or "no silent" in text.lower(), (
+        "routen ska dokumentera ärlighetsprincipen (ingen tyst fallback)"
+    )
+
+
+def test_bite_c_viewer_panel_is_honest_in_vercel_sandbox_mode() -> None:
+    """Bite C: ``vercel-sandbox`` är en explicit opt-in-runtime. ViewerPanel
+    måste behandla den lika ärligt som ``local-next`` — visa runtime-fel,
+    aldrig tyst falla tillbaka till StackBlitz — och läsa ``previewUrl``
+    (publik *.vercel.run) när runtimen levererar det.
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "IS_VERCEL_SANDBOX_MODE" in text, (
+        "viewer-panel måste känna igen vercel-sandbox-läget"
+    )
+    assert "IS_LOCAL_NEXT_MODE || IS_VERCEL_SANDBOX_MODE" in text, (
+        "vercel-sandbox måste dela local-next:s ärliga felgrenar (ingen tyst "
+        "StackBlitz-fallback)"
+    )
+    assert "info.previewUrl ?? info.url" in text, (
+        "iframe-URL ska föredra previewUrl (vercel-sandbox) och falla tillbaka "
+        "på det bakåtkompatibla url-fältet"
+    )
 
 
 @pytest.mark.tooling
@@ -2366,6 +2463,88 @@ def test_b155_path_b_floating_chat_does_not_inject_payload_as_html() -> None:
     )
 
 
+# --- UI-gap-fix: exakt change-set i FloatingChat (2026-06-02) --------------
+#
+# Jakobs flagga: listan "Troligen ändrat" i FloatingChat var en
+# prompt-heuristik, inte en backend-diff. Christopher-lane efter PR:
+# härled en EXAKT change-set serverside genom att diffa nya runen mot
+# föregående och visa den under "Ändrat". Dessa source-lock-tester hindrar
+# att den exakta vägen tystas bort i en framtida refactor.
+
+
+@pytest.mark.tooling
+def test_change_set_helper_reuses_run_diff() -> None:
+    """``lib/run-change-set.ts`` ska härleda change-set:en genom att
+    återanvända den pure ``computeRunDiff`` + ``readRunArtefacts`` — inte
+    genom att duplicera diff-logik eller röra build_site.py.
+    """
+    path = VIEWSER_DIR / "lib" / "run-change-set.ts"
+    assert path.exists(), "run-change-set.ts saknas — exakt change-set kan inte härledas."
+    text = path.read_text(encoding="utf-8")
+    assert "export async function readRunChangeSet" in text, (
+        "readRunChangeSet måste exporteras så /api/prompt kan kalla den."
+    )
+    assert "computeRunDiff" in text and "readRunArtefacts" in text, (
+        "Change-set:en ska byggas på befintliga artefakter via computeRunDiff "
+        "+ readRunArtefacts — ingen ny diff-implementation, ingen "
+        "build_site.py-ändring."
+    )
+
+
+@pytest.mark.tooling
+def test_prompt_route_exposes_change_set() -> None:
+    """``/api/prompt`` måste anropa ``readRunChangeSet`` och exponera
+    ``changeSet`` på top-level för follow-ups så FloatingChat kan rendera
+    exakta deltas utan en separat round-trip.
+    """
+    text = (
+        VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts"
+    ).read_text(encoding="utf-8")
+    assert "readRunChangeSet" in text, (
+        "/api/prompt måste anropa readRunChangeSet efter runBuild — annars "
+        "är changeSet alltid undefined och den exakta vägen kan aldrig användas."
+    )
+    assert "changeSet" in text, (
+        "changeSet måste ligga i return-objektet från runPromptBuildOnce."
+    )
+
+
+@pytest.mark.tooling
+def test_floating_chat_prefers_exact_change_set_over_heuristic() -> None:
+    """FloatingChat måste föredra den exakta change-set:en
+    (``summarizeChangeSet``) framför prompt-heuristiken
+    (``summarizeChangesFromPrompt``) och växla rubriken "Ändrat" /
+    "Troligen ändrat" på ``changesExact`` så operatören ser om listan är
+    bekräftad eller en uppskattning.
+    """
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx"
+    ).read_text(encoding="utf-8")
+    assert "summarizeChangeSet" in text, (
+        "FloatingChat måste importera/anropa summarizeChangeSet — annars "
+        "renderas aldrig den exakta change-set:en."
+    )
+    assert "changesExact" in text, (
+        "ChatMessage måste bära changesExact så UI:t kan skilja exakt diff "
+        "från heuristik i rubriken."
+    )
+    assert '"Ändrat"' in text and '"Troligen ändrat"' in text, (
+        "Rubriken måste växla mellan 'Ändrat' (exakt) och 'Troligen ändrat' "
+        "(heuristik) — annars går ärlighetssignalen förlorad."
+    )
+    # Den exakta grenen måste ligga FÖRE heuristik-fallbacken i
+    # summarizeBuildResult, annars blir prompt-gissningen aldrig ersatt.
+    exact_idx = text.find("summarizeChangeSet(payload.changeSet)")
+    heuristic_idx = text.find("summarizeChangesFromPrompt(userPrompt)")
+    assert exact_idx != -1 and heuristic_idx != -1, (
+        "Båda vägarna måste finnas i summarizeBuildResult."
+    )
+    assert exact_idx < heuristic_idx, (
+        "Den exakta change-set-grenen måste utvärderas före prompt-"
+        "heuristiken så bekräftade deltas vinner."
+    )
+
+
 # --- Tier 1 (robusthet, 2026-06-01) ---------------------------------------
 #
 # Tre regressionstester för Tier 1-frontend-paketet:
@@ -3428,21 +3607,48 @@ def test_console_moved_to_studio_route_group() -> None:
 
 
 def test_marketing_header_has_exact_nav_items() -> None:
-    """Marknads-headern ska ha exakt Hem/Produkt/Om oss + en 'Logga in'-
-    entry som pekar in i studion via auth-config-seamen.
+    """Marknads-headern ska ha exakt Hem/Produkt/Om oss + en auth-entry som
+    pekar in i studion via auth-config-seamen (authHeaderEntry).
     """
     header = (
         VIEWSER_DIR / "components" / "marketing" / "marketing-header.tsx"
     ).read_text(encoding="utf-8")
     for label in ('label: "Hem"', 'label: "Produkt"', 'label: "Om oss"'):
         assert label in header, f"Headern saknar nav-item {label}"
-    assert "LOGIN_HREF" in header and "LOGIN_LABEL" in header, (
-        "Headern ska använda auth-config-seamen (LOGIN_HREF/LOGIN_LABEL) "
-        "för 'Logga in' istället för hårdkodad route"
+    assert "authHeaderEntry" in header, (
+        "Headern ska använda auth-config-seamen (authHeaderEntry) som "
+        "växlar 'Logga in'/'Mitt konto' istället för hårdkodad text"
     )
     auth = (VIEWSER_DIR / "lib" / "auth-config.ts").read_text(encoding="utf-8")
     assert 'STUDIO_HREF = "/studio"' in auth, (
         "auth-config ska peka login-målet till /studio i v1"
+    )
+
+
+def test_marketing_header_centers_nav_and_login_right() -> None:
+    """Operatörsönskemål (juni 2026): menyvalen ska ligga centrerat och
+    auth-entryn längst till höger i headern.
+    """
+    header = (
+        VIEWSER_DIR / "components" / "marketing" / "marketing-header.tsx"
+    ).read_text(encoding="utf-8")
+    # Centrerad nav: absolut-centrerad via left-1/2 + -translate-x-1/2.
+    assert "left-1/2" in header and "-translate-x-1/2" in header, (
+        "Desktop-nav:en ska vara horisontellt centrerad i headern"
+    )
+
+
+def test_marketing_header_swaps_login_for_account_when_authed() -> None:
+    """u3: 'Logga in' ska bytas mot 'Mitt konto' när besökaren är inloggad.
+    Seamen finns i auth-config (authHeaderEntry) så headern växlar utan
+    redesign när AUTH_ENABLED slås på.
+    """
+    auth = (VIEWSER_DIR / "lib" / "auth-config.ts").read_text(encoding="utf-8")
+    assert 'ACCOUNT_LABEL = "Mitt konto"' in auth, (
+        "auth-config ska exportera 'Mitt konto'-etiketten"
+    )
+    assert "function authHeaderEntry" in auth and "isAuthenticated" in auth, (
+        "auth-config ska härleda header-entryn från inloggningsstatus"
     )
 
 
@@ -3628,6 +3834,111 @@ def test_profession_landing_pages_are_static_and_seo() -> None:
     )
 
 
+def test_professions_have_starter_seed_mapping() -> None:
+    """Starters-banan: varje yrke ska mappa till en verksamhetsfamilj +
+    kategori + en svensk prompt-seed så landningssidans CTA kan förifylla
+    DiscoveryWizarden. Alla 20 yrken måste ha alla tre fälten.
+    """
+    professions = (
+        VIEWSER_DIR / "lib" / "professions.ts"
+    ).read_text(encoding="utf-8")
+    # Typerna ska komma från wizard-constants (samma källa som wizarden) så
+    # familj/kategori aldrig driftar isär från BUSINESS_FAMILIES.
+    assert "wizard-constants" in professions, (
+        "professions.ts ska importera BusinessFamilyId/WizardCategoryId från "
+        "discovery-wizard/wizard-constants"
+    )
+    assert len(re.findall(r"\bfamily:\s*\"", professions)) == 20, (
+        "Alla 20 yrken måste ha en verksamhetsfamilj"
+    )
+    assert len(re.findall(r"\bcategory:\s*\"", professions)) == 20, (
+        "Alla 20 yrken måste ha en kategori"
+    )
+    assert len(re.findall(r"\bpromptSeed:\s*$", professions, re.MULTILINE)) + len(
+        re.findall(r"\bpromptSeed:\s*\"", professions)
+    ) >= 20, "Alla 20 yrken måste ha en promptSeed"
+
+
+def test_profession_landing_cta_seeds_wizard_not_empty_studio() -> None:
+    """Starters-banan: yrkessidans "Bygg din sida" ska gå via StarterCta som
+    lämnar en wizard-seed (familj/kategori/prompt) i stället för att länka
+    rakt till en TOM /studio. Seed:en får bara bära hints — aldrig starterId.
+    """
+    page = (
+        VIEWSER_DIR / "app" / "(marketing)" / "for" / "[yrke]" / "page.tsx"
+    ).read_text(encoding="utf-8")
+    assert "StarterCta" in page, (
+        "/for/[yrke] ska använda StarterCta för bygg-knappen"
+    )
+    assert "profession.promptSeed" in page and "profession.family" in page, (
+        "StarterCta ska seedas från yrkets promptSeed + family/category"
+    )
+
+    cta = (
+        VIEWSER_DIR / "components" / "marketing" / "starter-cta.tsx"
+    ).read_text(encoding="utf-8")
+    assert "setWizardSeed" in cta and "STUDIO_HREF" in cta, (
+        "StarterCta ska lämna en wizard-seed och navigera till studion"
+    )
+    assert "starterId" not in cta, (
+        "Starter-seed:en får inte sätta starterId (backend äger scaffold-valet)"
+    )
+
+
+def test_hero_has_starter_chips() -> None:
+    """Starters-banan: heron ska visa klickbara starter-chips som förifyller
+    prompten OCH förväljer verksamhet i wizarden (initialAnswers).
+    """
+    hero = (
+        VIEWSER_DIR / "components" / "marketing" / "hero-prompt-form.tsx"
+    ).read_text(encoding="utf-8")
+    assert "STARTER_PRESETS" in hero, "Heron ska rendera starter-presets som chips"
+    assert "startWithPreset" in hero, (
+        "Heron ska ha en preset-handler som förifyller prompt + familj"
+    )
+    assert "initialAnswers" in hero, (
+        "Heron ska skicka förvalda svar till DiscoveryWizarden vid chip-klick"
+    )
+
+
+def test_studio_empty_state_offers_starters() -> None:
+    """Starters-banan: en tom /studio (ingen handoff) ska visa starter-
+    onboarding i stället för en blank canvas, och kunna konsumera en
+    wizard-seed från en yrkessida/hero-chip.
+    """
+    builder = (
+        VIEWSER_DIR / "components" / "prompt-builder.tsx"
+    ).read_text(encoding="utf-8")
+    assert "consumeWizardSeed" in builder, (
+        "PromptBuildern ska konsumera wizard-seed vid mount"
+    )
+    assert "openWizardFromPreset" in builder and "STARTER_PRESETS" in builder, (
+        "Tom-läget ska erbjuda starter-chips som öppnar wizarden förvald"
+    )
+    assert "showStarters" in builder, (
+        "PromptBuildern ska ha ett tom-läges-onboarding-tillstånd"
+    )
+
+
+def test_wizard_seed_handoff_carries_hints_only() -> None:
+    """Starters-banan: seed-handoffen får bara bära lätta hints
+    (prompt + businessFamily + siteType) — inga fullständiga build-beslut
+    och absolut inget starterId (samma invariant som /api/prompt).
+    """
+    handoff = (
+        VIEWSER_DIR / "lib" / "init-prompt-handoff.ts"
+    ).read_text(encoding="utf-8")
+    assert "setWizardSeed" in handoff and "consumeWizardSeed" in handoff, (
+        "init-prompt-handoff ska exponera set/consumeWizardSeed"
+    )
+    assert "businessFamily" in handoff and "siteType" in handoff, (
+        "WizardSeed ska bära familj + kategori-hints"
+    )
+    assert "starterId" not in handoff, (
+        "WizardSeed får inte bära starterId (backend äger scaffold-valet)"
+    )
+
+
 def test_about_page_has_founders_and_philosophy() -> None:
     """P5: /om-oss ska presentera båda grundarna (verbatim-roller) via
     FounderCard och den delade filosofin med slagordet.
@@ -3765,19 +4076,192 @@ def test_legal_pages_use_shared_legal_layout() -> None:
     )
 
 
-def test_login_entry_is_honest_about_accounts() -> None:
-    """P7: 'Logga in' ska ärligt signalera att konton inte finns ännu och att
-    man landar i studion (via auth-config-seamen, ingen fejkad login-sida).
+def test_login_entry_leads_to_real_login_page() -> None:
+    """Auth-omtag (juni 2026): 'Logga in' ska leda till en RIKTIG inloggnings-
+    sida (/login), inte rakt in i studion. ACCOUNT_HREF pekar på /konto. Den
+    gamla "konton finns inte ännu"-hinten är borta — vi har egen auth nu.
     """
     auth = (VIEWSER_DIR / "lib" / "auth-config.ts").read_text(encoding="utf-8")
-    assert "LOGIN_HINT" in auth, "auth-config ska exportera en ärlig login-hint"
-    assert "Konton kommer snart" in auth, (
-        "Hinten ska vara ärlig om att konton inte finns ännu"
+    assert 'LOGIN_HREF = "/login"' in auth, (
+        "auth-config ska peka 'Logga in' till den riktiga /login-sidan"
     )
-    header = (
-        VIEWSER_DIR / "components" / "marketing" / "marketing-header.tsx"
+    assert 'ACCOUNT_HREF = "/konto"' in auth, (
+        "auth-config ska peka 'Mitt konto' till /konto"
+    )
+    assert "Konton kommer snart" not in auth, (
+        "Den gamla 'konton finns inte ännu'-hinten ska vara borttagen — "
+        "vi har riktig auth nu"
+    )
+    assert (VIEWSER_DIR / "app" / "(auth)" / "login" / "page.tsx").exists(), (
+        "En riktig /login-sida måste finnas"
+    )
+
+
+def test_auth_uses_own_crypto_no_third_party_provider() -> None:
+    """Auth byggdes med egen kod (beslut 2026-06-02): scrypt för lösenord +
+    HMAC (Web Crypto) för sessioner. INGEN tredjeparts-auth-leverantör.
+    """
+    password = (VIEWSER_DIR / "lib" / "auth" / "password.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "scrypt" in password and "node:crypto" in password, (
+        "Lösenord ska hashas med Node:s inbyggda scrypt (ingen bcrypt/argon2-dep)"
+    )
+    tokens = (VIEWSER_DIR / "lib" / "auth" / "tokens.ts").read_text(encoding="utf-8")
+    assert "crypto.subtle" in tokens and "HMAC" in tokens, (
+        "Sessioner ska signeras med HMAC via Web Crypto (edge- + node-säkert)"
+    )
+    pkg = json.loads((VIEWSER_DIR / "package.json").read_text(encoding="utf-8"))
+    deps = {**pkg.get("dependencies", {}), **pkg.get("devDependencies", {})}
+    for forbidden in ("next-auth", "@clerk/nextjs", "@supabase/supabase-js"):
+        assert forbidden not in deps, (
+            f"Auth ska vara egen — ingen tredjeparts-auth-dep ({forbidden})"
+        )
+    assert "better-sqlite3" in deps and "stripe" in deps, (
+        "Egen auth-store (better-sqlite3) + Stripe ska finnas i deps"
+    )
+
+
+def test_auth_store_is_separate_from_build_pipeline() -> None:
+    """Auth-storen ska vara en egen SQLite-db under data/auth/ med konto-,
+    sessions- och kredit-tabeller — helt skild från data/runs/bygg-pipelinen.
+    """
+    db = (VIEWSER_DIR / "lib" / "auth" / "db.ts").read_text(encoding="utf-8")
+    assert "better-sqlite3" in db and "data" in db and "auth" in db, (
+        "Auth-storen ska vara en SQLite-db under data/auth/"
+    )
+    for table in ("users", "sessions", "credit_ledger", "subscriptions"):
+        assert table in db, f"Auth-schemat saknar tabellen {table!r}"
+
+
+def test_proxy_gates_konto_but_not_studio() -> None:
+    """Proxyn (Next 16) ska grinda /konto bakom inloggning men LÄMNA /studio
+    orört — bygg-/operatörsflöden ska inte störas av auth-arbetet.
+    """
+    proxy = (VIEWSER_DIR / "proxy.ts").read_text(encoding="utf-8")
+    assert "function proxy" in proxy, (
+        "Next 16 vill ha proxy.ts som exporterar en proxy-funktion"
+    )
+    assert "/konto" in proxy and "/login" in proxy, (
+        "Proxyn ska redirecta oinloggade /konto-besök till /login"
+    )
+    assert '"/studio"' not in proxy, (
+        "Proxyns matcher får INTE inkludera /studio — bygg-konsolen lämnas orörd"
+    )
+
+
+def test_auth_api_routes_validate_and_create_sessions() -> None:
+    """Register/login ska validera input (zod-scheman) och skapa en session."""
+    register = (
+        VIEWSER_DIR / "app" / "api" / "auth" / "register" / "route.ts"
     ).read_text(encoding="utf-8")
-    assert "LOGIN_HINT" in header, "Headern ska visa login-hinten som title"
+    assert "registerSchema" in register and "createSession" in register, (
+        "Register-routen ska validera och skapa en session"
+    )
+    login = (
+        VIEWSER_DIR / "app" / "api" / "auth" / "login" / "route.ts"
+    ).read_text(encoding="utf-8")
+    assert "loginSchema" in login and "verifyCredentials" in login, (
+        "Login-routen ska validera och verifiera credentials"
+    )
+
+
+def test_pricing_uses_subscription_credits_model() -> None:
+    """Pris-modellen: Stripe-prenumeration som ger en månatlig kreditpott."""
+    plans = (VIEWSER_DIR / "lib" / "billing" / "plans.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "creditsPerMonth" in plans and "stripePriceEnv" in plans, (
+        "Paket ska definiera kreditpott/månad + Stripe price via env"
+    )
+    pricing = (
+        VIEWSER_DIR / "app" / "(marketing)" / "priser" / "page.tsx"
+    ).read_text(encoding="utf-8")
+    assert "PLANS" in pricing and "PlanCheckoutButton" in pricing, (
+        "Pris-sidan ska rendera PLANS med en checkout-knapp per paket"
+    )
+
+
+def test_stripe_webhook_is_idempotent_and_grants_credits() -> None:
+    """Webhooken ska vara idempotent (event-id-dedup) och tilldela krediter."""
+    webhook = (
+        VIEWSER_DIR / "app" / "api" / "stripe" / "webhook" / "route.ts"
+    ).read_text(encoding="utf-8")
+    assert "processed_stripe_events" in webhook or "markProcessed" in webhook, (
+        "Webhooken ska deduplicera events (idempotens) så retries inte "
+        "dubbel-krediterar"
+    )
+    assert "addCredits" in webhook and "constructEventAsync" in webhook, (
+        "Webhooken ska verifiera signaturen och tilldela krediter"
+    )
+
+
+def test_build_pipeline_untouched_by_auth() -> None:
+    """Hård gräns: auth får inte läcka in i bygg-logiken. Bygg-runners och
+    prompt-routen ska INTE importera auth/session/credits. Sajt-ägande kopplas
+    bara via ett best-effort fire-and-forget-anrop i studions klientkod.
+    """
+    for rel in ("lib/build-runner.ts", "lib/prompt-runner.ts", "lib/runs.ts"):
+        text = (VIEWSER_DIR / rel).read_text(encoding="utf-8")
+        assert "lib/auth" not in text and "@/lib/auth/" not in text, (
+            f"{rel} får inte importera auth-logik — bygget ska vara orört"
+        )
+    prompt_route = (VIEWSER_DIR / "app" / "api" / "prompt" / "route.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "auth/session" not in prompt_route and "consumeCredits" not in prompt_route, (
+        "Prompt-routen (bygg-ingången) får inte dra in auth/krediter"
+    )
+    builder = (VIEWSER_DIR / "components" / "prompt-builder.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "claim-site" in builder and "void fetch" in builder, (
+        "Sajt-ägande ska kopplas via ett best-effort fire-and-forget-anrop, "
+        "inte genom att blockera bygget"
+    )
+
+
+def test_marketing_hero_owns_build_cta() -> None:
+    """u1: bygg-CTA:n ska bo på heron — besökaren beskriver sin sajt direkt
+    där (HeroPromptForm) och slut-CTA:n scrollar tillbaka dit (#start),
+    aldrig till studions tomma prompt-landning.
+    """
+    home = (
+        VIEWSER_DIR / "app" / "(marketing)" / "page.tsx"
+    ).read_text(encoding="utf-8")
+    assert "HeroPromptForm" in home, (
+        "Heron ska rendera HeroPromptForm (prompt direkt på startsidan)"
+    )
+    assert 'id="start"' in home and 'href="#start"' in home, (
+        "Slut-CTA:n ska scrolla upp till hero-prompten (#start), inte studion"
+    )
+
+
+def test_hero_prompt_opens_wizard_and_hands_off_to_studio() -> None:
+    """u1 (juni 2026): DiscoveryWizarden öppnas DIREKT på marknads-heron så
+    besökaren stannar på den nya startsidan (hero + logotyp bakom popupen).
+    Vid "Skapa sajt" lämnas hela wizard-resultatet över via wizard-handoffen
+    och vi navigerar till studion, som bygger direkt utan en andra wizard.
+    """
+    form = (
+        VIEWSER_DIR / "components" / "marketing" / "hero-prompt-form.tsx"
+    ).read_text(encoding="utf-8")
+    assert "DiscoveryWizard" in form, (
+        "Heron ska rendera DiscoveryWizarden som popup på startsidan"
+    )
+    assert "setWizardHandoff" in form and "STUDIO_HREF" in form, (
+        "Heron ska lämna över hela wizard-resultatet och navigera till studion"
+    )
+    builder = (
+        VIEWSER_DIR / "components" / "prompt-builder.tsx"
+    ).read_text(encoding="utf-8")
+    assert "consumeWizardHandoff" in builder, (
+        "PromptBuildern ska konsumera wizard-handoffen vid mount"
+    )
+    assert "startBuildFromWizardHandoff" in builder, (
+        "PromptBuildern ska bygga direkt från wizard-handoffen (ingen andra "
+        "wizard i studion)"
+    )
 
 
 def test_marketing_has_sitemap_and_robots() -> None:
@@ -3795,5 +4279,57 @@ def test_marketing_has_sitemap_and_robots() -> None:
         "Robots ska blockera konsolen (/studio) och /api"
     )
     assert "sitemap" in robots, "Robots ska peka på sitemap.xml"
+
+
+def test_floating_chat_first_run_hint_surfaces_core_loop() -> None:
+    """Synliggör kärnloopen: FloatingChat ska visa en första-gångs-hint som
+    förklarar att en följdprompt bygger om sajten OCH att varje bygge blir en
+    ny version. Hinten ska vara dismiss:bar och persisterad (en gång per
+    webbläsare) och erbjuda en djuplänk till versionsvyn.
+    """
+    chat = (
+        VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx"
+    ).read_text(encoding="utf-8")
+    assert "Så funkar det" in chat, (
+        "FloatingChat ska ha en första-gångs-hint som förklarar loopen"
+    )
+    assert "ny version" in chat, (
+        "Hinten ska nämna att varje bygge blir en ny version"
+    )
+    assert "STORAGE_KEY_LOOP_HINT" in chat and "readLoopHintSeen" in chat, (
+        "Hinten ska persistera dismissen så den bara visas en gång"
+    )
+    assert "onShowVersions" in chat and "Visa versioner" in chat, (
+        "Hinten ska kunna djuplänka till versionsvyn"
+    )
+    shell = (
+        VIEWSER_DIR / "components" / "builder" / "builder-shell.tsx"
+    ).read_text(encoding="utf-8")
+    assert "onShowVersions={onOpenHistory}" in shell, (
+        "BuilderShell ska koppla 'Visa versioner' till historik-ingången"
+    )
+
+
+def test_claim_site_feedback_is_auth_aware() -> None:
+    """Claim-site-feedbacken ska vara medveten om inloggningsstatus: inloggad
+    → bekräftelse att sajten sparats; utloggad → en EN-gång-per-session-nudge
+    att logga in. Bygget får inte blockeras — fortfarande best-effort
+    fire-and-forget (``void fetch`` mot claim-site behålls).
+    """
+    builder = (
+        VIEWSER_DIR / "components" / "prompt-builder.tsx"
+    ).read_text(encoding="utf-8")
+    assert "claim-site" in builder and "void fetch" in builder, (
+        "Sajt-ägande ska fortfarande kopplas via best-effort fire-and-forget"
+    )
+    assert "Sparad till ditt konto" in builder, (
+        "Inloggad operatör ska få bekräftelse att sajten sparats"
+    )
+    assert (
+        "not-authenticated" in builder and "LOGIN_NUDGE_SESSION_KEY" in builder
+    ), "Utloggad besökare ska få en en-gång-per-session login-nudge"
+    assert "LOGIN_HREF" in builder, (
+        "Nudgen ska länka till den riktiga inloggningssidan"
+    )
 
 

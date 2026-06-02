@@ -7,6 +7,11 @@ import { Button } from "@/components/ui/button";
 import type { PromptStage } from "@/components/prompt-builder";
 import { BuildProgressCard } from "@/components/viewer-panel/build-progress-card";
 import {
+  unavailableForPreviewError,
+  type PreviewApiError,
+  type UnavailableInfo,
+} from "@/components/viewer-panel/preview-error";
+import {
   DEVICE_PRESET_WIDTHS,
   useDevicePreset,
 } from "@/components/device-preset-context";
@@ -42,10 +47,20 @@ type ViewerPanelProps = {
 
 type PreviewServerInfo = {
   siteId: string;
-  port: number;
+  port?: number;
   url: string;
   status: "starting" | "ready";
-  uptimeMs: number;
+  uptimeMs?: number;
+  /**
+   * Bite C: routen går nu via Preview Runtime-kontraktet och svarar med
+   * generiska ``PreviewResult``-fält utöver det bakåtkompatibla ``url``.
+   * ``previewUrl`` är den kanoniska iframe-URL:en (kan vara en publik
+   * ``*.vercel.run`` i vercel-sandbox-läge); ``kind`` säger vilken runtime
+   * som faktiskt körde.
+   */
+  previewUrl?: string;
+  kind?: string;
+  logs?: string[];
 };
 
 type FilesPayload = {
@@ -92,80 +107,9 @@ function supportsStackBlitzEmbed(kind: BrowserKind): boolean {
   return kind === "chromium";
 }
 
-/**
- * Strukturerad info-shape som banner-renderaren kan visa istället för
- * den tidigare hårdkodade "Mock-runs skriver inte..."-strängen. Tillåter
- * att olika misslyckanden (sajten inte byggd, port-pool full, mock-run
- * utan files, etc.) får specifik copy med titel, beskrivning och en
- * actionable hint istället för en gemensam grå text.
- */
-type UnavailableInfo = {
-  title?: string;
-  message: string;
-  hint?: string;
-};
-
-/**
- * Felshape som ``/api/preview/<siteId>`` returnerar (4xx/5xx). Synkad
- * mot ``apps/viewser/app/api/preview/[siteId]/route.ts:PreviewErrorBody``.
- * Vi kopierar typen istället för att importera den eftersom denna
- * komponent kör i klienten och importera från en server-route-fil
- * skulle dra in onödiga server-bara beroenden.
- */
-type PreviewApiError = {
-  error: string;
-  code?:
-    | "validation_error"
-    | "not_built"
-    | "missing_artifacts"
-    | "port_pool_full"
-    | "spawn_failed"
-    | "not_running"
-    | "unknown";
-  hint?: string;
-};
-
-function unavailableForPreviewError(
-  payload: PreviewApiError | null,
-): UnavailableInfo {
-  const code = payload?.code ?? "unknown";
-  const errMsg = payload?.error;
-  const errHint = payload?.hint;
-  if (code === "not_built" || code === "missing_artifacts") {
-    return {
-      title: "Sajten är inte byggd än",
-      message:
-        errMsg ??
-        "Lokal preview-server kunde inte starta — den genererade sajten finns inte på disk.",
-      hint:
-        errHint ??
-        "Kör python scripts/build_site.py för att bygga sajten först.",
-    };
-  }
-  if (code === "port_pool_full") {
-    return {
-      title: "Inga lediga preview-portar",
-      message: errMsg ?? "Port-poolen 4100-4199 är full.",
-      hint:
-        errHint ??
-        "Stäng några äldre preview-servrar via DELETE /api/preview/<siteId>.",
-    };
-  }
-  if (code === "spawn_failed") {
-    return {
-      title: "Lokal preview-server kraschade",
-      message: errMsg ?? "next start startade inte korrekt.",
-      hint:
-        errHint ??
-        "Kontrollera viewser-loggen för stderr-tail från next start.",
-    };
-  }
-  return {
-    title: "Lokal preview-server kunde inte starta",
-    message: errMsg ?? "Okänt fel från /api/preview/<siteId>.",
-    hint: errHint,
-  };
-}
+// Preview-fel-mappningen (``PreviewApiError`` → ``UnavailableInfo``) bröts ut
+// till ``viewer-panel/preview-error.ts`` (Bite C) för att hålla den här
+// komponenten under radspärren. Importeras nedan.
 
 /**
  * Operatörens uttryckta preview-runtime-läge, läst från den
@@ -203,6 +147,12 @@ const IS_LOCAL_NEXT_MODE = VIEWSER_PREVIEW_MODE === "local-next";
 //   - ``auto``        → prova lokal, fall till StackBlitz vid miss
 //                       (oförändrat — det är vad ``auto`` betyder)
 const IS_STACKBLITZ_MODE = VIEWSER_PREVIEW_MODE === "stackblitz";
+// Bite C: ``vercel-sandbox`` är en explicit runtime som körs via
+// ``POST /api/preview/<siteId>`` (samma Steg 1 som local-next), men dess
+// iframe pekar på en publik ``*.vercel.run``-URL istället för localhost.
+// När runtimen failar ska vi — precis som local-next — visa ett ärligt
+// fel med loggar, ALDRIG tyst falla tillbaka till StackBlitz.
+const IS_VERCEL_SANDBOX_MODE = VIEWSER_PREVIEW_MODE === "vercel-sandbox";
 
 // Notera: tidigare bodde här en ``PREVIEW_PREP_HINT``-konstant som
 // styrde mode-aware copy i BuildProgressCard ("Öppnar förhandsvisning"-
@@ -379,11 +329,14 @@ export function ViewerPanel({
           if (previewResponse.ok) {
             const info = (await previewResponse.json()) as PreviewServerInfo;
             if (cancelled) return;
-            setLocalPreviewUrl(info.url);
+            // Bite C: iframe = previewSession.url/previewUrl när runtimen
+            // levererar det (publik *.vercel.run i sandbox-läge), annars
+            // det bakåtkompatibla top-level ``url`` (localhost för local).
+            setLocalPreviewUrl(info.previewUrl ?? info.url);
             setLoading(false);
             return;
           }
-          if (IS_LOCAL_NEXT_MODE) {
+          if (IS_LOCAL_NEXT_MODE || IS_VERCEL_SANDBOX_MODE) {
             if (cancelled) return;
             const errPayload = (await previewResponse
               .json()
@@ -402,7 +355,7 @@ export function ViewerPanel({
           // build_site.py kan ha skippats medvetet och vi har files
           // tillgängliga via /api/runs/<runId>/files istället.
         } catch {
-          if (IS_LOCAL_NEXT_MODE) {
+          if (IS_LOCAL_NEXT_MODE || IS_VERCEL_SANDBOX_MODE) {
             if (cancelled) return;
             setUnavailable({
               title: "Lokal preview-server kunde inte nås",
@@ -414,7 +367,7 @@ export function ViewerPanel({
           }
           // Stackblitz-mode: fortsätt med StackBlitz-fallback.
         }
-      } else if (IS_LOCAL_NEXT_MODE) {
+      } else if (IS_LOCAL_NEXT_MODE || IS_VERCEL_SANDBOX_MODE) {
         // siteId saknas men runId finns — t.ex. en mock-run från
         // dev_generate.py. I local-next-mode kan vi inte bygga preview
         // utan siteId, så visa pedagogiskt fel istället för att tyst
@@ -659,13 +612,18 @@ export function ViewerPanel({
   // den visuella kontinuiteten från "Bygger sajt" → "Startar preview".
   const isFinalizing =
     buildStage === "success" && loading && !!runId && !unavailable;
-  // Visa hero-videon så länge ingen riktig iframe har mountats. Det
-  // täcker: ingen run vald (empty), 404 på files (unavailable),
-  // pågående fetch (loading), SDK-error, pågående bygge OCH
-  // browser-fallback (Safari/Firefox). `loading` räcker —
+  // Visa hero-videon medan en riktig iframe ännu inte mountats: 404 på
+  // files (unavailable), pågående fetch (loading), SDK-error, pågående
+  // bygge OCH browser-fallback (Safari/Firefox). `loading` räcker —
   // `isFinalizing` är en delmängd av `loading`.
+  //
+  // OBS: det rena tom-läget (`showEmpty` utan bygge/loading/fel) triggar
+  // INTE längre hero. Studions gamla startsida ("Beskriv din sajt så
+  // bygger vi den" + bakgrundsvideo) är borttagen — all bygg-start sker
+  // numera på den nya marknads-heron, och studion öppnar DiscoveryWizarden
+  // direkt via hero-handoffen. Tom-läget ska därför vara en ren bakgrund,
+  // inte den gamla startsidan.
   const showHero =
-    showEmpty ||
     showUnavailable ||
     showFallback ||
     loading ||
@@ -675,9 +633,10 @@ export function ViewerPanel({
   // när bygget precis blivit klart men preview-iframen fortfarande
   // bootas. Hero-texten ska INTE visas i någondera fas — det skulle
   // vara dubbel information med två konkurrerande UI:n. Inte heller
-  // när vi visar browser-fallback-kortet (det äger mittenytan).
+  // när vi visar browser-fallback-kortet (det äger mittenytan) eller i
+  // det rena tom-läget (gamla startsidan är borttagen, se ovan).
   const showHeroText =
-    (showEmpty || showUnavailable || !!error) &&
+    (showUnavailable || !!error) &&
     !isBuilding &&
     !isFinalizing &&
     !showFallback;
@@ -866,6 +825,11 @@ export function ViewerPanel({
               <div className="mt-2 text-[12px] text-amber-700/80 dark:text-amber-300/80">
                 {unavailable.hint}
               </div>
+            ) : null}
+            {unavailable.logs && unavailable.logs.length > 0 ? (
+              <pre className="mt-3 max-h-40 overflow-auto rounded-md bg-amber-950/10 px-3 py-2 text-[11px] leading-relaxed whitespace-pre-wrap text-amber-900/80 dark:bg-amber-100/5 dark:text-amber-200/70">
+                {unavailable.logs.join("\n")}
+              </pre>
             ) : null}
           </div>
         </div>

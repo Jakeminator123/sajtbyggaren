@@ -281,6 +281,9 @@ export function BuilderShell({
         onBuildEnd={handleBuildEnd}
         onBuildDone={onBuildDone}
         onStageChange={onStageChange}
+        // Driver "Visa versioner" i första-gångs-hinten — samma ingång
+        // som "Versioner" i Verktyg-menyn (ConsoleDrawer-historiken).
+        onShowVersions={onOpenHistory}
         tools={
           <BuilderActions
             actions={actions}

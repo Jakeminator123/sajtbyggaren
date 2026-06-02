@@ -10,6 +10,7 @@ import { ManageCookiesButton } from "@/components/marketing/manage-cookies-butto
 // providern landar (P6).
 const FOOTER_LINKS: ReadonlyArray<{ href: string; label: string }> = [
   { href: "/produkt", label: "Produkt" },
+  { href: "/priser", label: "Priser" },
   { href: "/om-oss", label: "Om oss" },
   { href: "/kontakt", label: "Kontakt" },
   { href: "/cookies", label: "Cookies" },
