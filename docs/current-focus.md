@@ -50,11 +50,20 @@ på disk säger 7,73/10 men mäter struktur/nyckelord, inte upplevd finish → c
 - **Embeddings hjälper INTE dessa gap** (alla fyra case träffar rätt scaffold) →
   fortsatt parkerad.
 
-**NÄSTA (operatörsval — kräver produktbeslut, se handoff "Öppna frågor"):**
+**Trovärdighets-slice steg 1 (kontakt-ärlighet) — KLAR** (`332e08e`). Audit-texten
+överskattade: det mesta var redan byggt (`contact_placeholders.py` + B158/B159 +
+#144 + eval `route_path_by_id`). Slicen tätade de 3 kvarvarande läckorna
+(`render_global_error`, `render_map` /karta, `_faq_pairs` öppettider) med
+befintliga `real_*`-helpers + 6 tester. Operatörsval: **dölj** (ej kräv i wizard).
 
-1. Backend "trovärdighets-slice" (kontakt-ärlighet + trustSignals/credentials +
-   branschnära copy + eval-contactPath-fix) — störst Lovable-lyft per timme.
-2. Sync-PR `jakob-be → main` (modulutbrytning + P2-grounding) vid leveransfönster.
+**NÄSTA (operatörsval — produktbeslut delvis fattade):**
+
+1. Trovärdighets-slice steg 2: **trustSignals/credentials via wizard** (operatören
+   fyller i riktiga — beslut taget) + **branschnära story/tagline/service-mallar**
+   (ersätt generisk mall i `prompt_to_project_input.py` ~950–971). Backend, men
+   wizard-delen kräver Christopher-koordinering (UI-fält).
+2. Sync-PR `jakob-be → main` (modulutbrytning + P2-grounding + kontakt-ärlighet)
+   vid leveransfönster.
 3. Christopher-lane: Bite C + FloatingChat-ärlighet (#5), scope-beslut PR #150.
 
 Builder-prompt för modulutbrytningen (genomförd) finns kvar som referens i
@@ -142,7 +151,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `65aa733` (2026-06-02 UTC, `jakob-be` — P2 grounding-härdning ovanpå modulutbrytningen: extraction begränsad till name/tagline, numerisk grounding (whole-token), Project DNA-refresh för about/tagline, ADR 0034-städning. Scout RO-review GO, 92 copydir-tester + full pytest gröna. EJ i `main` (`main` = `b027b70`). Lovable-gap-audit körd (read-only) — se handoff. Nästa: trovärdighets-slice (operatörsval) + sync-PR. Docs-steward-commit ovanpå.).
+Last verified state: `332e08e` (2026-06-02 UTC, `jakob-be` — kontakt-ärlighets-slice: tätade 3 placeholder-render-läckor (render_global_error, render_map, _faq_pairs öppettider) med befintliga real_*-helpers, 6 nya tester. Ovanpå modulutbrytning (8f2fc1e) + P2-grounding (65aa733) + Lovable-gap-audit (5b2192b). Scout RO-review GO, full pytest grön. EJ i `main` (`main` = `b027b70`). Nästa: trust/branschcopy-slice + sync-PR. Docs-steward-commit ovanpå.).
 Nya PRs sedan föregående checkpoint: PR #149 (mergad). **Öppen nu: PR #150**
 (christopher-ui) — se nedan.
 

@@ -6,6 +6,25 @@
 **Öppen PR: #150 (christopher-ui)** — stor auth/billing/starters/UX-batch,
 CONFLICTING, operatörs-scope-beslut (se current-focus). Backend-lanen blockeras ej.
 
+## Session 2026-06-02 em (forts) — kontakt-ärlighets-slice (`332e08e`)
+
+Trovärdighets-slice steg 1 (operatörsval: **dölj** placeholder-kontakt vid render,
+ej kräv i wizard). Scout fann att det mesta redan var byggt — slicen tätade bara
+de 3 kvarvarande läckorna med befintliga `real_*`-helpers:
+- `static_assets.py render_global_error`: `real_phone` + villkorlig Phone-import
+  (speglar `render_not_found`) → error.tsx erbjuder aldrig placeholder-tel.
+- `renderers.py render_map` (/karta): adress via `real_address_lines` → ingen
+  dummy-adress i visning eller Maps-query (city-fallback, annars tom-fallback).
+- `renderers.py _faq_pairs`: öppettids-FAQ bara för `real_opening_hours`.
+- 6 nya tester; eval-contactPath-fix + quality-gate fanns redan (verifierat grönt).
+- **Korrigering:** Lovable-audit-texten överskattade kontakt-gapet (den läste en
+  gammal eval-run före härdningen). Kontakt-render-ärlighet är nu ~komplett.
+
+**Nästa trovärdighets-steg (operatörsval):** trustSignals/credentials via wizard
+(beslut taget: operatör fyller riktiga, ingen auto-generering) + branschnära
+story/tagline/service-mallar (ersätt generisk mall i `prompt_to_project_input.py`
+~950–971). Wizard-delen kräver Christopher-koordinering (UI-fält).
+
 ## Lovable-gap-audit 2026-06-02 (read-only) — var 4–5/10 → 9/10-gapet sitter
 
 Statisk Scout-audit mot de fyra baseline-casen (elektriker Malmö / frisör
