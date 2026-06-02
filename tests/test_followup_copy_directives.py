@@ -1299,6 +1299,74 @@ def test_service_rewrite_drops_planner_about_directive(
     )
 
 
+def _previous_with_two_services() -> dict[str, object]:
+    previous = _previous_project_input()
+    previous["services"] = [
+        {"id": "orhangen", "label": "Örhängen", "summary": "Fina örhängen."},
+        {"id": "ringar", "label": "Ringar", "summary": "Fina ringar."},
+    ]
+    return previous
+
+
+@pytest.mark.tooling
+def test_service_rewrite_drops_planner_directive_for_wrong_service(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The planner may only edit the service the operator named; a directive
+    pointing at a DIFFERENT existing service is dropped (reviewer P1)."""
+    monkeypatch.setattr(
+        _PLANNER_PATH,
+        lambda *a, **k: [
+            {
+                "target": "services",
+                "operation": "replace-text",
+                "payload": "Fel tjänst ändrad",
+                "targetRef": "Ringar",
+                "source": "llm",
+            }
+        ],
+    )
+    previous = _previous_with_two_services()
+    merged = _merge(
+        "förbättra tjänsten 'Örhängen' så den låter mer säljande",
+        previous=previous,
+        enable_llm_fallback=True,
+    )
+    assert merged["services"][0]["summary"] == "Fina örhängen."
+    assert merged["services"][1]["summary"] == "Fina ringar."
+    assert "directives" not in merged or "copyDirectives" not in merged.get(
+        "directives", {}
+    )
+
+
+@pytest.mark.tooling
+def test_service_rewrite_applies_to_named_service_among_many(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The correct named service is still rewritten when several exist."""
+    new_summary = "Handgjorda örhängen i återvunnet silver"
+    monkeypatch.setattr(
+        _PLANNER_PATH,
+        lambda *a, **k: [
+            {
+                "target": "services",
+                "operation": "replace-text",
+                "payload": new_summary,
+                "targetRef": "Örhängen",
+                "source": "llm",
+            }
+        ],
+    )
+    previous = _previous_with_two_services()
+    merged = _merge(
+        "förbättra tjänsten 'Örhängen' så den låter mer säljande",
+        previous=previous,
+        enable_llm_fallback=True,
+    )
+    assert merged["services"][0]["summary"] == new_summary
+    assert merged["services"][1]["summary"] == "Fina ringar."
+
+
 def _project_input_with_directive(directive: dict[str, object]) -> dict[str, object]:
     pi = _previous_project_input()
     pi.pop("$schema", None)

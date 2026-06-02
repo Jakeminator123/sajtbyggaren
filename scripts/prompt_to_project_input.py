@@ -3309,6 +3309,18 @@ def _plan_copy_directives_via_llm(
     except Exception:  # noqa: BLE001
         return []
     grounding_text = _site_state_grounding_text(site_state, follow_up_prompt)
+    # For a services rewrite, resolve the service the operator actually named so
+    # the planner can only edit THAT service - a model return pointing at a
+    # different (even existing) service is dropped (reviewer P1 2026-06-02).
+    # Resolved by service identity so an id-vs-label mismatch is not a false
+    # rejection.
+    requested_service = (
+        _match_service_by_ref(
+            merged.get("services"), _extract_service_target_ref(follow_up_prompt) or ""
+        )
+        if target == "services"
+        else None
+    )
     validated: list[dict[str, Any]] = []
     seen_targets: set[tuple[str, str]] = set()
     for candidate in raw_directives:
@@ -3323,6 +3335,12 @@ def _plan_copy_directives_via_llm(
         # target (company-name/tagline are extraction-only).
         if directive["target"] != target:
             continue
+        if target == "services":
+            directive_service = _match_service_by_ref(
+                merged.get("services"), directive.get("targetRef") or ""
+            )
+            if requested_service is None or directive_service is not requested_service:
+                continue
         if not _planned_payload_grounded(directive["payload"], grounding_text):
             continue
         dedupe_key = (directive["target"], directive.get("targetRef", ""))
