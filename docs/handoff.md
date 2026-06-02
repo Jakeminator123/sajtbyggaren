@@ -1,9 +1,9 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-02 UTC, steward-auto efter PR #149 — sync(jakob-be -> main): copyDirectives 2a/2c + niva 3a editPlan + reviewer hardening. Verifierad `main` är `3face1c`.
+**Datum:** 2026-06-02 UTC, steward-auto efter PR #151 — docs(agents): virtualenv fallback on Cloud VMs. Verifierad `main` är `16a36a6`.
 
-Nya PRs sedan föregående checkpoint: PR #149 — sync(jakob-be -> main): copyDirectives
-2a/2c + niva 3a editPlan + reviewer hardening.
+Nya PRs sedan föregående checkpoint: PR #151 — docs(agents): virtualenv fallback on
+Cloud VMs.
 
 ## Tillägg 2026-06-02 — sync-PR #149 + review-loop (Codex/Vercel)
 
@@ -1136,3 +1136,10 @@ PR #143 refactor-merge). `main` = `fb3b1f8` (oförändrad sedan PR #142).
 nivå 3a + extern-review-härdning inkl. P1 scope-leak-fix). `main` = `2d636b0`,
 oförändrad. `jakob-be` är 11 commits före `main`; **sync-PR nu mergebar** (alla
 near-blockers + P1 stängda), öppnas på operatörsbeslut. Inga öppna PR:er.
+
+### 2026-06-02 UTC — handoff.md före `3face1c`
+
+**Datum:** 2026-06-02 UTC, steward-auto efter PR #149 — sync(jakob-be -> main): copyDirectives 2a/2c + niva 3a editPlan + reviewer hardening. Verifierad `main` är `3face1c`.
+
+Nya PRs sedan föregående checkpoint: PR #149 — sync(jakob-be -> main): copyDirectives
+2a/2c + niva 3a editPlan + reviewer hardening.
