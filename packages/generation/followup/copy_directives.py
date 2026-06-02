@@ -149,10 +149,13 @@ _COPY_CONTENT_REWRITE_VERBS: tuple[str, ...] = (
     "reword",
     "improve",
 )
-# Year tokens (19xx/20xx) used by the planner hallucination guard: a generated
-# payload must not introduce a year that is absent from the current site-state
-# and the follow-up prompt (catches invented founding dates).
-_PLANNED_YEAR_RE = re.compile(r"\b(?:19|20)\d{2}\b")
+# Multi-digit number tokens used by the planner hallucination guard: a generated
+# payload must not introduce a number (founding year, price, count, percentage)
+# that is absent from the current site-state and the follow-up prompt. Matches a
+# whole run of >= 2 digits (single digits are too noisy to guard) with an
+# optional decimal part, so "1962", "499", "100", "12,5" are each checked as a
+# whole token rather than as substrings of a longer number.
+_PLANNED_NUMBER_RE = re.compile(r"(?<!\d)\d{2,}(?:[.,]\d+)?(?!\d)")
 _COPY_DIRECTIVE_INCLUDE_KEYWORDS: tuple[str, ...] = (
     "inkludera",
     "inkluderar",
@@ -841,6 +844,14 @@ def _extract_copy_directives_via_llm(
         )
         if directive is None:
             continue
+        # The extraction path only carries copy the operator already supplied:
+        # restrict it to company-name/tagline. Generated about-text/services copy
+        # must come from the planner path (rewrite-verb gate + grounding guard),
+        # never from the extraction fallback - otherwise a vague non-rewrite
+        # prompt ("fixa om oss-texten lite") could apply model-generated about
+        # copy with no grounding (reviewer P2 2026-06-02).
+        if directive["target"] not in {"company-name", "tagline"}:
+            continue
         # Dedupe on (target, targetRef) so distinct services can each be edited,
         # while a target like tagline still collapses to one directive.
         dedupe_key = (directive["target"], directive.get("targetRef", ""))
@@ -930,7 +941,7 @@ def _build_site_state_for_copy_planning(merged: dict[str, Any]) -> dict[str, Any
 def _site_state_grounding_text(
     site_state: dict[str, Any], follow_up_prompt: str
 ) -> str:
-    """Concatenate the facts the planner is allowed to reuse (for the year guard)."""
+    """Concatenate the facts the planner is allowed to reuse (for the number guard)."""
     parts = [follow_up_prompt]
     company = site_state.get("company") or {}
     parts.extend(str(company.get(key) or "") for key in ("name", "tagline", "story"))
@@ -941,14 +952,24 @@ def _site_state_grounding_text(
 
 
 def _planned_payload_grounded(payload: str, grounding_text: str) -> bool:
-    """Reject a generated payload that introduces an ungrounded year.
+    """Reject a generated payload that introduces an ungrounded number.
 
-    A year (19xx/20xx) that appears in neither the current site-state nor the
-    follow-up prompt is treated as a hallucinated fact and drops the candidate
-    (honest no-op). Years already present are allowed through.
+    Any multi-digit number (founding year, price, count, percentage) that
+    appears in neither the current site-state nor the follow-up prompt is
+    treated as a hallucinated fact and drops the candidate (honest no-op).
+    Numbers already present are allowed through. Non-numeric facts (names,
+    places, certifications) are guarded by the planner system prompt + remain a
+    documented limitation - a deterministic check there is too false-positive
+    prone (ADR 0034).
+
+    Matching is whole-token (the grounding numbers are tokenised with the same
+    regex), so a shorter ungrounded number does not slip through as a substring
+    of a longer grounded one (e.g. payload "500" is NOT grounded by "5000").
     """
+    grounded_numbers = set(_PLANNED_NUMBER_RE.findall(grounding_text))
     return all(
-        year in grounding_text for year in _PLANNED_YEAR_RE.findall(payload)
+        number in grounded_numbers
+        for number in _PLANNED_NUMBER_RE.findall(payload)
     )
 
 
