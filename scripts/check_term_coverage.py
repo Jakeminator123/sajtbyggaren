@@ -994,6 +994,20 @@ COMMON_WORDS = {
     # + naming-bump per ADR 0030.
     "CollectedSource", "SandboxPreviewRequest", "SandboxPreviewResult",
     "SandboxStopResult",
+    # KÖR-6a deterministic message router (packages/generation/orchestration/
+    # router/). Python implementation symbols: the RouterDecision Pydantic
+    # models + their Literal type aliases (MessageKind, EditKind,
+    # BuildRequirement, ContextLevel, SubtaskScope) + the RouterContext input
+    # shape. Same treatment as the QualityResult / CodegenResult / RepairResult
+    # families above - implementation symbols, not canonical domain terms.
+    # The working name "OpenClaw Router" is intentionally NOT registered in
+    # naming-dictionary.v1 yet (docs/heavy-llm-flow/02 defers that to a later
+    # slice / kor-6b); "OpenClaw" is allowlisted here so module docstrings can
+    # use the working name without tripping --strict, exactly like the
+    # Sajtbyggaren / Lovable proper-noun allowlist entries above.
+    "RouterDecision", "RouterTarget", "RouterReference", "RouterSubtask",
+    "RouterContext", "MessageKind", "EditKind", "BuildRequirement",
+    "ContextLevel", "SubtaskScope", "OpenClaw",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
