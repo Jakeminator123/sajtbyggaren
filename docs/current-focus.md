@@ -7,9 +7,9 @@ Startpromptar och rollgränser finns i
 
 ## Nästa (2026-06-02, färsk orchestrator-session)
 
-`jakob-be` = `a346bd6` (slice 2a + 2c). `main` = `2d636b0`, inga öppna
-PR:er. `jakob-be` är 3 commits före `main` (slice 2a + slice 2c + steward) —
-ingen sync-PR ännu (väntar operatörs-OK). Vercel-sandbox-spåret är i `main` (#146 spike,
+`jakob-be` = `4d08526` (slice 2a + 2c + nivå 3a editPlan). `main` = `2d636b0`,
+inga öppna PR:er. `jakob-be` är 7 commits före `main` (2a + 2c + 3a +
+steward-docs) — ingen sync-PR ännu (väntar operatörs-OK). Vercel-sandbox-spåret är i `main` (#146 spike,
 ADR 0033, #147 opt-in-adapter via `VIEWSER_PREVIEW_MODE=vercel-sandbox`);
 default-preview är fortfarande `local-next` (inte flippad) och adaptern är
 inte UI-wirad. copyDirectives nivå 1 (`company-name` | `tagline`) är i `main`.
@@ -30,16 +30,23 @@ inte UI-wirad. copyDirectives nivå 1 (`company-name` | `tagline`) är i `main`.
   pekar ut vilken tjänst; matchas case-insensitivt vid apply, ingen träff =
   honest no-op (skapar/hijackar aldrig tjänst). Additiv "ny tjänst" + onamngiven
   "ändra tjänsten till X" = no-op.
-- **Slice 2d — NÄSTA: `cta`/hero.** Inget eget fält idag (hero-knappens text är
+- **Nivå 3a — KLAR** (`4d08526`): editPlan-planerare. Vid en rewrite-instruktion
+  UTAN angivet värde ("skriv om om oss så det låter mer personligt") läser
+  planeraren sajtens site-state och låter copyDirectiveModel **generera** ny copy
+  för `about-text`/`services` (replace), via befintlig leak-säker apply.
+  Egen eligibility-gate (`_is_content_rewrite_request`); intent/semantic patch
+  orörda; name/tagline genereras aldrig; grundnings-guard mot påhittade årtal;
+  B155 `appliedVisibleEffect` som synlig-effekt-verifierare. Fortfarande väg A
+  (inga `.generated/`-patchar). ADR 0034-not + llm-models v6 + naming-dict v22.
+- **Slice 2d — PARKERAD: `cta`/hero.** Inget eget fält idag (hero-knappens text är
   en variant-whitelist i `build_site.py`), så detta är en **kontraktsändring**,
   inte bara enum — kräver designbeslut (ny `conversionGoals`-slug vs nytt
-  PI-fält vs begränsad replace mot befintliga labels) innan Builder startar.
-- **Nivå 3 (senare, eget beslut):** site-state reader + edit planner ->
-  LLM läser aktuell project/site-state, föreslår en strukturerad multi-target
-  editPlan, systemet applicerar, en verifierModel kontrollerar synlig effekt,
-  chatten svarar ärligt. Detta är där "förstår hela sidan"-känslan börjar.
-  Byggs stegvis, inte som fri kodpatchare. Nivå 4 = LLM patchar filer/diff
-  med rollback.
+  PI-fält vs begränsad replace mot befintliga labels). Tas efter nivå 3-mönstret.
+- **Nivå 3 fortsättning (NÄSTA, eget beslut):** multi-target editPlan (flera
+  säkra edits i ett svar), separat `verifierModel` (kontrollerar synlig effekt
+  bortom B155-fil-diff), och väg B-UI för editPlan (FloatingChat visar planen +
+  ärlig feedback — Christopher-lane). Nivå 4 = LLM patchar filer/diff med
+  rollback (väg C, eget ADR + sandbox).
 
 Hårda regler genom hela trappan: remappa INTE tjänstetext till tagline/about;
 generated output förblir vanlig Next.js; rör inte preview-runtime/adaptern;
@@ -48,7 +55,7 @@ ingen UI (Christophers lane); rå prompt blir aldrig kundcopy.
 Parallellt (Christopher/UI): Bite C — flippa `app/api/preview/[siteId]` till
 `currentViewserRuntime()`.
 
-Parkerat (kräver operatörs-OK): sync-PR `jakob-be -> main` (slice 2a + 2c),
+Parkerat (kräver operatörs-OK): sync-PR `jakob-be -> main` (slice 2a + 2c + 3a),
 default-flip till `vercel-sandbox` (kräver Bite C klar + smoke),
 `forbidden`-radering (egen ADR + test-omskrivningar), optional/lazy
 `@vercel/sandbox`-dep.
@@ -78,7 +85,7 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `a346bd6` (2026-06-02 UTC, `jakob-be` — copyDirectives slice 2c landad: services -> services[].summary via targetRef, replace-only, leak-säker, 13 nya tester. Slice 2b tone HOPPAD (operatörsbeslut). Scout RO-review: GO. EJ i `main` (ingen sync-PR — väntar operatörs-OK). `main` = `2d636b0`. Föregående steward-checkpoint: `a1e2502` (slice 2a)).
+Last verified state: `4d08526` (2026-06-02 UTC, `jakob-be` — copyDirectives nivå 3a editPlan-planerare landad: site-state reader + generation-med-guards för about-text/services vid rewrite-instruktion utan värde, leak-/grundnings-guard, 17 nya tester. Scout RO-review: GO. EJ i `main` (ingen sync-PR — väntar operatörs-OK). `main` = `2d636b0`. Föregående steward-checkpoint: `a346bd6` (slice 2c)).
 Nya PRs sedan föregående checkpoint: inga (#148 var senaste sync till `main`).
 
 ## Branchmodellen (kort)
@@ -224,9 +231,10 @@ Aktiva spår i prioritetsordning:
    deterministisk extraktor + ``copyDirectiveModel``-roll (llm-models v5),
    25 tester, real-LLM-smoke verifierad. Väg B FloatingChat-UI (Christopher)
    är också i `main` (#139). **Nivå 2 slice 2a (about-text) + slice 2c
-   (services via targetRef) landade på `jakob-be` (`a346bd6`), ej i `main`.
-   Slice 2b tone HOPPAD.** Nästa: slice 2d `cta`/hero (kräver kontraktsbeslut)
-   — se Nästa-blocket överst för hela trappan + nivå 3.
+   (services via targetRef) + nivå 3a (editPlan-planerare med generation för
+   about/services) landade på `jakob-be` (`4d08526`), ej i `main`. Slice 2b
+   tone HOPPAD; 2d cta PARKERAD.** Nästa: nivå 3-fortsättning (multi-target
+   editPlan + verifierModel + väg B-UI) — se Nästa-blocket överst.
 5. B49 (docs-base page-map sidebar) — låg prio, behövs innan
    `course-education → docs-base` aktiveras.
 6. B13a arkitektur-flytt — kvarstår som öppen post, kräver egen sprint

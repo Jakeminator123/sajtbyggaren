@@ -1,8 +1,68 @@
 # Handoff – Sajtbyggaren
 
-**Datum:** 2026-06-02 UTC. `jakob-be` = `a346bd6` (copyDirectives slice 2a +
-2c). `main` = `2d636b0`, oförändrad. `jakob-be` är 3 commits före `main`;
-ingen sync-PR öppnad (väntar operatörs-OK). Inga öppna PR:er.
+**Datum:** 2026-06-02 UTC. `jakob-be` = `4d08526` (copyDirectives slice 2a +
+2c + nivå 3a editPlan). `main` = `2d636b0`, oförändrad. `jakob-be` är 7 commits
+före `main`; ingen sync-PR öppnad (väntar operatörs-OK). Inga öppna PR:er.
+
+## Session 2026-06-02 fm — copyDirectives nivå 3a (editPlan-planerare)
+
+Orchestrator-pass (Scout -> self-Builder -> Scout RO-review -> Steward), branch
+`jakob-be` direkt, ingen main-sync.
+
+- **Nivå 3a (`4d08526`):** editPlan-planerare. Vid en **rewrite-instruktion utan
+  angivet värde** ("skriv om om oss så det låter mer personligt") läser
+  `_plan_copy_directives_via_llm` sajtens site-state
+  (`_build_site_state_for_copy_planning`) och låter copyDirectiveModel
+  **generera** ny copy för `about-text` (company.story) och `services`
+  (services[].summary). Detta är första gången modellen genererar kundcopy
+  (tidigare bara extraherade explicit copy). Fortfarande **väg A** (strukturerade
+  fält före render), INTE väg C (ingen `.generated/`-patch).
+- **editPlan = planeringssteg** som producerar vanliga validerade
+  `copyDirectives[]` via befintlig leak-säker apply. Inget nytt schemafält,
+  `source="llm"`, **schema oförändrat**.
+- **Eligibility (egen gate):** `_is_content_rewrite_request` = rewrite-verb
+  (`_COPY_CONTENT_REWRITE_VERBS`: skriv om/formulera om/omformulera/förbättra/
+  snygga till/rewrite/reword/improve) + INGET explicit värde
+  (`_has_explicit_copy_value`) + target about-text|services + (services)
+  namngiven tjänst (targetRef). Körs i egen `if/elif`-gren i
+  `merge_followup_project_input` FÖRE extraction-eligibility.
+- **Ingen regress:** `classify_followup_intent` + `_apply_semantic_patch` är
+  OFÖRÄNDRADE. about/services (planner) och tone/tagline (semantic patch) är
+  olika fält → "skriv om om oss ..." kan ge BÅDE en ton-shift och en
+  story-rewrite utan klobbning. Alla 2a/2c + tone-shift-tester gröna.
+- **Skydd:** generation-scope dubbel-enforced (systemprompt + kod-dropp av
+  targets utanför {about-text, services} — name/tagline genereras aldrig); samma
+  `_safe_copy_payload`-guards på genererad payload + grundnings-guard
+  `_planned_payload_grounded` (dröppar payload med 4-siffrigt årtal som inte finns
+  i site-state/prompt → mot påhittade grundningsår).
+- **Verifierare:** B155 `appliedVisibleEffect` (fil-diff). Separat `verifierModel`
+  parkerad till nivå 3-fortsättning.
+- **extract.py refaktorerad:** delad `_build_copy_directive_context` +
+  `_run_copy_directive_model`; `extract_copy_directives_llm` (extraction,
+  `_COPY_DIRECTIVE_SYSTEM`) + ny `plan_copy_directives_llm` (generation,
+  `_COPY_DIRECTIVE_PLAN_SYSTEM`).
+- **Governance:** llm-models v5->v6 (copyDirectiveModel-purpose breddad till
+  editPlan-generering), naming-dictionary v21->v22, ADR 0034 implementationsnot
+  2026-06-02 (väg A nivå 2 + 3a; tydligt skild från väg C). 17 nya tester.
+- **Verifiering:** Scout RO-review GO (ingen scope-läcka; leak-kedja,
+  gren-separation, generation-scope, grundnings-guard, governance-paritet OK).
+  Guards: ruff 0, governance 18/18, rules-sync OK, term-coverage --strict 0, full
+  pytest grön (orphan dev-trees rensade före körningen). 74 copydir-tester gröna.
+
+### Nästa (copyDirectives-trappa)
+
+1. **Nivå 3-fortsättning (NÄSTA, operatörsbeslut):** (a) multi-target editPlan
+   (flera säkra edits i ett svar — befintlig dedupe på `(target, targetRef)`
+   stödjer det redan i apply, planeraren kan returnera flera); (b) separat
+   `verifierModel` som kontrollerar synlig effekt bortom B155-fil-diff; (c) väg
+   B-UI för editPlan (FloatingChat visar planen + ärlig feedback — Christopher).
+2. **Slice 2d cta/hero — PARKERAD:** kontraktsbeslut (hero-label är variant-
+   whitelist), tas efter nivå 3-mönstret sitter.
+3. **Sync-PR `jakob-be -> main`** (slice 2a + 2c + 3a) = operatörsbeslut.
+4. **Christopher-lane-följd (växande):** Viewser `AppliedCopyDirective` i
+   `apps/viewser/lib/runs.ts` + FloatingChat-summary känner bara company-name|
+   tagline. about-text (2a), services+targetRef (2c) och planerade rewrites (3a)
+   bör synkas där för ärliga FloatingChat-rader. Ej backend-blocker.
 
 ## Session 2026-06-02 morgon — copyDirectives slice 2c (services) + 2b-beslut
 
