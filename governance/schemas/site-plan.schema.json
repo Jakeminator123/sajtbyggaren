@@ -102,8 +102,8 @@
         },
         "previewRuntime": {
           "type": "string",
-          "enum": ["local", "stackblitz", "fly"],
-          "description": "Preview Runtime to use after the run. Names match preview-runtime-policy.v1.json."
+          "enum": ["vercel-sandbox", "local", "stackblitz", "fly"],
+          "description": "Preview Runtime to use after the run. Names match preview-runtime-policy.v1.json:runtimes[].kind (canonical PreviewRuntimeKind, naming-dictionary v19)."
         }
       }
     },

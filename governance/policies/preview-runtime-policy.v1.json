@@ -3,20 +3,21 @@
   "policyId": "preview-runtime-policy.v1",
   "version": 1,
   "status": "draft-but-authoritative",
-  "purpose": "Bestämmer vilken Preview Runtime som används, när, och hur runtime-specifika namn hålls borta från produktterminologin. Prioordningen följer ADR 0033: vercel-sandbox är primärt förstahandsval, local är garanterad fallback/dev, stackblitz är pausad.",
+  "purpose": "Bestämmer vilken Preview Runtime som används, när, och hur runtime-specifika namn hålls borta från produktterminologin. ADR 0033: vercel-sandbox är primärt förstahandsval (intended primary, status=primary), MEN faktisk runtime-default (fältet 'default') är fortfarande local/local-next tills default-flip (Bite C) är verifierad. local är garanterad fallback/dev, fly framtida, stackblitz pausad. Policyn ska aldrig peka 'default' på en runtime som koden inte använder ännu.",
   "principles": [
     "Preview Runtime är en abstraktion. Produktkoden talar bara om 'Preview Runtime', aldrig 'VM' eller 'sandbox'.",
-    "vercel-sandbox är primärt förstahandsval för användarpreview (ADR 0033); local är den garanterade fallbacken. Andra runtimes läggs till bara om eval-batchen visar bevisat behov.",
+    "vercel-sandbox är primärt förstahandsval för användarpreview (ADR 0033, status=primary), men fältet 'default' speglar FAKTISK default = local/local-next tills default-flip/Bite C verifierats - intended primary != actual default. local är den garanterade fallbacken. Andra runtimes läggs till bara om eval-batchen visar bevisat behov.",
     "Det finns EN Quality Gate; nya lager läggs först om eval-batchen visar bevisat behov (se ADR 0016)."
   ],
-  "default": "vercel-sandbox",
+  "default": "local",
   "runtimes": [
     {
       "kind": "vercel-sandbox",
       "status": "primary",
       "useWhen": [
         "användarvänd preview av genererad sajt (publik HTTPS-URL i iframe, fungerar i alla browsers)",
-        "kärnflödet prompt -> företagshemsida -> preview -> följdprompt -> ny version"
+        "kärnflödet prompt -> företagshemsida -> preview -> följdprompt -> ny version",
+        "intended primary per ADR 0033 - blir 'default' först när VIEWSER_PREVIEW_MODE-flippen (Bite C) verifierats; tills dess väljs den explicit via VIEWSER_PREVIEW_MODE=vercel-sandbox"
       ],
       "limitations": [
         "kräver Vercel-auth (OIDC eller access-token); utan auth degraderar adaptern till unsupported/failed",
@@ -29,6 +30,7 @@
       "kind": "local",
       "status": "developer-only",
       "useWhen": [
+        "faktisk runtime-default idag (local-next) tills default-flip till vercel-sandbox verifierats (ADR 0033)",
         "lokal dev och felsökning på utvecklarmaskin",
         "garanterad fallback när vercel-sandbox inte är tillgänglig (ingen Vercel-auth)"
       ],
