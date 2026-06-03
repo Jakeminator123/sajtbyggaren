@@ -19,8 +19,14 @@ i verkliga runs) tills `build_site`/`dev_generate` wire:as.
 wiring i renderers/blueprint_render OK, ingen JSX/nya treatments; rebase:as mot a2ffa05)
 och kor-5 (repairModel blueprint-only; planen godkänd men hålls/dormant tills
 no-key-inkonsekvensen + build-väg-wiringen är klara).
-**Nästa:** baseline-eval (read-only) · wira critic/repair i build-vägen · #178-trion
-(siteId-snapshot / previewShouldRefresh / failed-trace) när bryggan kopplas i `/api/prompt`.
+**Justerad ordning (orchestrator + coach, natt):** (1) C/kor-3b landar → (2) wira
+critic/repair + follow-up-bryggan i build-vägen/`/api/prompt` (största hävstången; gör
+kor-4a/7 verkliga + UPPLÅSER Christophers #177) → (3) minimal E2E + read-only baseline-eval
+→ (4) kor-5 (library → wira in) → (5) kor-o2 OpenClaw Core V0 (read-only, spec:as parallellt)
+→ (6) design-system-ADR + `next-shadcn-tailwind`-starter *om evalen visar att gapet är
+visuellt* (annars copy/trust/kontakt-ärlighet först) → (7) kor-4b verifier + kor-6b
+router-fallback. **Princip:** ingen ny LLM-slice utan inkopplingsplan — varje slice når
+en användarväg eller taggas dormant + får en wiring-follow-up (#178-trion filad så).
 **Öppet (ej vår lane):** #177 (Christopher, väntar på routerDecision i `/api/prompt`),
 #181/#182 (docs→main, cloud-env), #156 (parkerad). Main-sync = operatörsbeslut.
 
