@@ -22,6 +22,10 @@ Mock fallback runs when OPENAI_API_KEY is not set (or whitespace-only).
 
 from .extract import (
     BriefResult,
+    BusinessFacts,
+    ContentStrategy,
+    Conversion,
+    Positioning,
     SiteBrief,
     detect_language,
     extract_site_brief,
@@ -41,6 +45,10 @@ __all__ = [
     "COPY_DIRECTIVE_ROLE_ID",
     "BriefModelResolutionError",
     "BriefResult",
+    "BusinessFacts",
+    "ContentStrategy",
+    "Conversion",
+    "Positioning",
     "SiteBrief",
     "detect_language",
     "extract_site_brief",
