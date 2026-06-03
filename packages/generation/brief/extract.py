@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Literal
 
@@ -87,6 +88,130 @@ def detect_language(prompt: str) -> str:
     if any(ch in SWEDISH_CHARS for ch in prompt):
         return "sv"
     return "sv"
+
+
+# --- Blueprint sub-models (kor-1b) ------------------------------------------
+#
+# Optional blueprint fields added to Site Brief in the kor-1a schema skeleton
+# (docs/heavy-llm-flow/01 §2). Shapes mirror governance/schemas/site-brief.
+# schema.json exactly; field names are the snake_case form of the camelCase
+# JSON keys (one_liner -> oneLiner) and are mapped back to camelCase in
+# site_brief_to_artifact. Every field is optional so a brief without a
+# blueprint stays valid (the additive contract from kor-1a).
+
+
+class BusinessFacts(BaseModel):
+    """Confirmed facts vs deliberate unknowns - the honesty engine.
+
+    An item in ``unknowns`` must never be rendered as invented copy: it binds
+    briefModel's understanding to the deterministic contact/trust rules
+    (contact_placeholders, B158/B159). Anything the prompt does not state goes
+    in ``unknowns``, never into a fabricated fact or customer-facing claim.
+    """
+
+    facts: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Facts confirmed from the prompt/wizard (e.g. 'verksam i Malmö'). "
+            "Only include what the prompt actually states; never invent."
+        ),
+    )
+    unknowns: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Slots the model does NOT know (e.g. 'telefonnummer', "
+            "'certifieringar'). Anything not stated in the prompt goes here so "
+            "the renderer never fabricates it as copy."
+        ),
+    )
+
+
+class Positioning(BaseModel):
+    """How the site should position the business: angle and tone, not facts."""
+
+    one_liner: str | None = Field(
+        default=None, description="One-sentence positioning statement."
+    )
+    differentiator: str | None = Field(
+        default=None, description="What sets the business apart, in plain language."
+    )
+    audience_need: str | None = Field(
+        default=None, description="The core need the target audience has."
+    )
+    local_angle: str | None = Field(
+        default=None, description="Local/geographic angle when relevant."
+    )
+    tone: str | None = Field(
+        default=None,
+        description=(
+            "Free-form tone phrase for positioning copy, distinct from the "
+            "top-level tone[] tone words."
+        ),
+    )
+    avoid: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Things the copy must avoid (e.g. 'påhittade certifieringar', "
+            "'generiska superlativ')."
+        ),
+    )
+
+
+class ContentStrategy(BaseModel):
+    """High-level content strategy for the site."""
+
+    hero_angle: str | None = Field(
+        default=None, description="Angle the hero section should take."
+    )
+    trust_strategy: str | None = Field(
+        default=None,
+        description="How trust is built honestly, without fake claims.",
+    )
+    offer_strategy: str | None = Field(
+        default=None, description="How services/offers are surfaced."
+    )
+    avoid_generic_claims: bool | None = Field(
+        default=None,
+        description="When true, generic superlatives/claims should be avoided.",
+    )
+
+
+class Conversion(BaseModel):
+    """Conversion intent that binds to the deterministic contact/CTA rules.
+
+    Additive to the existing top-level conversion_goals[] field - this is the
+    richer blueprint conversion object, never a replacement for conversion_goals.
+    """
+
+    primary_action: str | None = Field(
+        default=None,
+        description=(
+            "Primary conversion action slug (e.g. 'request_quote', 'book', "
+            "'call', 'purchase'). Kebab/snake English slug, not customer copy."
+        ),
+    )
+    primary_cta: str | None = Field(
+        default=None,
+        description="Label for the primary call to action (customer copy, prompt language).",
+    )
+    secondary_cta: str | None = Field(
+        default=None,
+        description="Label for the secondary call to action (customer copy, prompt language).",
+    )
+    contact_priority: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Ordered contact channel preference, slug-shaped "
+            "(e.g. 'phone_if_real', 'form', 'email_if_real')."
+        ),
+    )
+    cta_rules: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Honesty/availability rules for CTAs (e.g. 'do not show phone if "
+            "missing', 'no booking unless booking exists')."
+        ),
+    )
 
 
 class SiteBrief(BaseModel):
@@ -177,6 +302,36 @@ class SiteBrief(BaseModel):
         default=None,
         description="One-line summary that Phase 2 Plan can use as orientation.",
     )
+    business_facts: BusinessFacts | None = Field(
+        default=None,
+        description=(
+            "Blueprint field (kor-1b): confirmed facts vs deliberate unknowns. "
+            "Fill `unknowns` with anything the prompt does not state (phone, "
+            "certifications, prices, opening hours) so nothing is invented."
+        ),
+    )
+    positioning: Positioning | None = Field(
+        default=None,
+        description=(
+            "Blueprint field (kor-1b): how to position the business - angle and "
+            "tone, never fabricated facts."
+        ),
+    )
+    content_strategy: ContentStrategy | None = Field(
+        default=None,
+        description=(
+            "Blueprint field (kor-1b): high-level content strategy (hero angle, "
+            "honest trust, how offers are surfaced)."
+        ),
+    )
+    conversion: Conversion | None = Field(
+        default=None,
+        description=(
+            "Blueprint field (kor-1b): conversion intent (primary action, CTA "
+            "labels, honest CTA rules). Additive to conversion_goals[], not a "
+            "replacement."
+        ),
+    )
 
 
 _SYSTEM_INSTRUCTIONS = (
@@ -194,13 +349,282 @@ _SYSTEM_INSTRUCTIONS = (
     "string in the prompt's original language. Leave it null otherwise and never "
     "invent or guess business hours. "
     "The services_mentioned field is the EXCEPTION: return short natural-language phrases "
-    "in the prompt's original language so the generated website renders readable labels."
+    "in the prompt's original language so the generated website renders readable labels. "
+    "Also fill the blueprint fields - this is where the site gets its angle and soul, but "
+    "honesty is non-negotiable. "
+    "business_facts: put ONLY facts the prompt actually states into facts; put everything "
+    "the prompt does NOT state (phone number, certifications, prices, opening hours, "
+    "reviews, team size) into unknowns. An item in unknowns must NEVER be turned into "
+    "customer copy or a fabricated claim. "
+    "positioning (one_liner, differentiator, audience_need, local_angle, tone, avoid): an "
+    "angle and tone for the copy, derived from the apparent business and place - never an "
+    "invented fact. Use avoid to list pitfalls the copy must steer clear of (e.g. invented "
+    "certifications, generic superlatives). "
+    "content_strategy: heroAngle, an honest trust_strategy (build credibility without fake "
+    "claims), offer_strategy, and set avoid_generic_claims true. "
+    "conversion: primary_action is a kebab/snake slug ('request_quote', 'book', 'call', "
+    "'purchase'); primary_cta and secondary_cta are short labels in the prompt's language; "
+    "contact_priority is an ordered list of slugs ('phone_if_real', 'form', "
+    "'email_if_real'); cta_rules are honesty rules such as 'do not show phone if missing' "
+    "and 'no booking unless booking exists'. conversion is additive to conversion_goals; "
+    "fill both. Never invent contact details, certifications, reviews or prices anywhere."
 )
 
 
+# --- Mock blueprint (kor-1b) ------------------------------------------------
+#
+# When no API key is set the mock still fills the blueprint so the four
+# baseline branches render a site "with soul" offline, while staying honest:
+# positioning is an ANGLE (never a fabricated fact) and business_facts.unknowns
+# carries whatever the prompt does not state (phone, certifications, prices) so
+# the renderer/verifier never invent it. Industry detection is a small keyword
+# match; the rich Swedish profiles only apply to Swedish prompts (the operator
+# population is ~95% Swedish) - other languages get a neutral default so the
+# mock never emits mismatched-language copy. Everything here is a pure function
+# of (prompt, language), so the fallback stays byte-deterministic
+# (test_builder_fallback_is_deterministic_for_examples).
+
+
+@dataclass(frozen=True)
+class _MockProfile:
+    """Honest, industry-reasonable blueprint defaults for the mock fallback.
+
+    one_liner/local_angle may contain a ``{loc}`` placeholder filled with the
+    detected location (or removed when none). Everything is an angle/tone, not a
+    fabricated fact; unknowns carries what the prompt does not state.
+    """
+
+    one_liner: str
+    differentiator: str
+    audience_need: str
+    local_angle: str
+    pos_tone: str
+    avoid: tuple[str, ...]
+    hero_angle: str
+    trust_strategy: str
+    offer_strategy: str
+    primary_action: str
+    primary_cta: str
+    secondary_cta: str
+    contact_priority: tuple[str, ...]
+    cta_rules: tuple[str, ...]
+    unknowns: tuple[str, ...]
+    fact_label: str | None = None
+
+
+# Most-specific first; first profile with any matching keyword (lowercased
+# substring of the prompt) wins.
+_INDUSTRY_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("electrician", ("elektriker", "elinstallation", "elarbete", "electrician")),
+    ("hair-salon", ("frisör", "frisor", "salong", "barber", "hairdress")),
+    ("naprapath", ("naprapat",)),
+    ("ceramics", ("keramik", "lergods", "drej", "pottery", "ceramic")),
+)
+
+_CITY_HINTS: tuple[str, ...] = (
+    "Malmö", "Göteborg", "Stockholm", "Uppsala", "Lund", "Helsingborg",
+    "Örebro", "Linköping", "Västerås", "Norrköping", "Umeå", "Gävle",
+)
+
+_SV_PROFILES: dict[str, _MockProfile] = {
+    "electrician": _MockProfile(
+        fact_label="elektriker",
+        one_liner="Trygg elektriker{loc} när elen måste bli rätt.",
+        differentiator="lokal och rak kommunikation utan krångliga offerter",
+        audience_need="få eljobbet löst säkert och i tid",
+        local_angle="snabbt på plats{loc}",
+        pos_tone="trygg, kunnig, rak",
+        avoid=("påhittade certifieringar", "överdrivet teknisk jargong", "tomma superlativ"),
+        hero_angle="trygg lokal elektriker som svarar snabbt",
+        trust_strategy="ärlig trovärdighet utan påhittade claims",
+        offer_strategy="lyft tre till fem konkreta tjänster",
+        primary_action="request_quote",
+        primary_cta="Be om offert",
+        secondary_cta="Se våra tjänster",
+        contact_priority=("phone_if_real", "form", "email_if_real"),
+        cta_rules=("visa inte telefon om telefonnummer saknas", "använd inte bokning om bokning saknas"),
+        unknowns=("telefonnummer", "certifieringar", "antal anställda"),
+    ),
+    "hair-salon": _MockProfile(
+        fact_label="frisörsalong",
+        one_liner="Personlig frisörsalong{loc} för en look som känns som du.",
+        differentiator="tid att lyssna och ett varmt bemötande",
+        audience_need="en frisör som förstår vad kunden vill ha",
+        local_angle="lätt att boka tid{loc}",
+        pos_tone="varm, personlig, stilren",
+        avoid=("stressig säljton", "påhittade priser", "tomma superlativ"),
+        hero_angle="varm personlig salong med enkel bokning",
+        trust_strategy="äkta känsla genom ton och bilder, inga påhittade omdömen",
+        offer_strategy="lyft de vanligaste behandlingarna tydligt",
+        primary_action="book",
+        primary_cta="Boka tid",
+        secondary_cta="Se behandlingar",
+        contact_priority=("form", "phone_if_real"),
+        cta_rules=("använd inte bokning om bokning saknas", "visa inte priser om priser saknas"),
+        unknowns=("telefonnummer", "prislista", "öppettider"),
+    ),
+    "naprapath": _MockProfile(
+        fact_label="naprapat",
+        one_liner="Naprapat{loc} som hjälper dig tillbaka till rörelse.",
+        differentiator="tydlig behandlingsplan och uppföljning",
+        audience_need="lindra besvär och förstå orsaken",
+        local_angle="lätt att nå{loc}",
+        pos_tone="lugn, professionell, omtänksam",
+        avoid=("ohållbara medicinska löften", "påhittade certifieringar", "skrämselton"),
+        hero_angle="lugnt och kunnigt stöd tillbaka till rörelse",
+        trust_strategy="trovärdighet genom tydlighet, inga ohållbara löften",
+        offer_strategy="förklara behandlingar och vad som ingår",
+        primary_action="book",
+        primary_cta="Boka behandling",
+        secondary_cta="Läs om behandlingar",
+        contact_priority=("form", "phone_if_real", "email_if_real"),
+        cta_rules=("använd inte bokning om bokning saknas", "lova inga medicinska resultat"),
+        unknowns=("telefonnummer", "legitimation", "öppettider"),
+    ),
+    "ceramics": _MockProfile(
+        fact_label="handgjord keramik",
+        one_liner="Handgjord keramik med själ, gjord för vardagsbruk.",
+        differentiator="varje pjäs är unik och tillverkad i liten skala",
+        audience_need="vacker keramik som tål att användas",
+        local_angle="tillverkad i en liten verkstad{loc}",
+        pos_tone="jordnära, hantverksstolt, stillsam",
+        avoid=("massproducerad känsla", "påhittade recensioner", "uppblåsta löften"),
+        hero_angle="hantverk och känsla framför snabb försäljning",
+        trust_strategy="förtroende genom berättelse och bilder, inga påhittade omdömen",
+        offer_strategy="lyft ett urval produkter och hänvisa till hela sortimentet",
+        primary_action="purchase",
+        primary_cta="Handla nu",
+        secondary_cta="Läs om verkstaden",
+        contact_priority=("form", "email_if_real"),
+        cta_rules=("lova inga leveranstider om de inte är kända", "visa inte lagersaldo om det saknas"),
+        unknowns=("telefonnummer", "leveranstider", "fraktpriser"),
+    ),
+}
+
+_SV_DEFAULT_PROFILE = _MockProfile(
+    one_liner="Tydlig och trovärdig hemsida{loc} för verksamheten.",
+    differentiator="ärlig och konkret presentation utan tomma löften",
+    audience_need="snabbt förstå vad företaget erbjuder",
+    local_angle="lokalt förankrad verksamhet{loc}",
+    pos_tone="trovärdig, tydlig, professionell",
+    avoid=("påhittade certifieringar", "påhittade omdömen", "generiska superlativ"),
+    hero_angle="tydligt erbjudande och trovärdig ton",
+    trust_strategy="ärlig trovärdighet utan påhittade claims",
+    offer_strategy="lyft de viktigaste tjänsterna konkret",
+    primary_action="contact",
+    primary_cta="Kontakta oss",
+    secondary_cta="Läs mer",
+    contact_priority=("form", "phone_if_real", "email_if_real"),
+    cta_rules=("visa inte telefon om telefonnummer saknas", "lova inget som inte kan hållas"),
+    unknowns=("telefonnummer", "e-postadress", "öppettider"),
+)
+
+_EN_DEFAULT_PROFILE = _MockProfile(
+    one_liner="A clear, trustworthy website{loc} for the business.",
+    differentiator="honest, concrete presentation without empty promises",
+    audience_need="quickly understand what the business offers",
+    local_angle="a locally grounded business{loc}",
+    pos_tone="trustworthy, clear, professional",
+    avoid=("invented certifications", "invented reviews", "generic superlatives"),
+    hero_angle="a clear offer in a trustworthy tone",
+    trust_strategy="honest credibility without fake claims",
+    offer_strategy="surface the most important services concretely",
+    primary_action="contact",
+    primary_cta="Contact us",
+    secondary_cta="Learn more",
+    contact_priority=("form", "phone_if_real", "email_if_real"),
+    cta_rules=("do not show phone if missing", "do not promise anything that cannot be kept"),
+    unknowns=("phone number", "email address", "opening hours"),
+)
+
+
+def _detect_location(prompt: str) -> str | None:
+    """Return a known Swedish city mentioned in the prompt, else None."""
+    low = prompt.lower()
+    for city in _CITY_HINTS:
+        if city.lower() in low:
+            return city
+    return None
+
+
+def _detect_industry(prompt: str) -> str | None:
+    """Return a baseline industry key from prompt keywords, else None."""
+    low = prompt.lower()
+    for key, keywords in _INDUSTRY_KEYWORDS:
+        if any(keyword in low for keyword in keywords):
+            return key
+    return None
+
+
+def _loc_phrase(location: str | None, language: str) -> str:
+    if not location:
+        return ""
+    preposition = "i" if language == "sv" else "in"
+    return f" {preposition} {location}"
+
+
+def _build_mock_blueprint(
+    prompt: str, language: str
+) -> tuple[BusinessFacts, Positioning, ContentStrategy, Conversion]:
+    """Honest, deterministic blueprint for the mock fallback.
+
+    Positioning is an angle derived from the apparent industry/place; it never
+    asserts a fact the prompt did not state. unknowns carries the missing
+    contact/credentials so they are never rendered as invented copy.
+    """
+    location = _detect_location(prompt)
+    if language == "sv":
+        industry = _detect_industry(prompt)
+        profile = _SV_PROFILES.get(industry or "", _SV_DEFAULT_PROFILE)
+    else:
+        profile = _EN_DEFAULT_PROFILE
+
+    loc = _loc_phrase(location, language)
+
+    facts: list[str] = []
+    if profile.fact_label:
+        facts.append(profile.fact_label)
+    if location:
+        facts.append(
+            f"verksam i {location}" if language == "sv" else f"operates in {location}"
+        )
+
+    business_facts = BusinessFacts(facts=facts, unknowns=list(profile.unknowns))
+    positioning = Positioning(
+        one_liner=profile.one_liner.format(loc=loc),
+        differentiator=profile.differentiator,
+        audience_need=profile.audience_need,
+        local_angle=profile.local_angle.format(loc=loc),
+        tone=profile.pos_tone,
+        avoid=list(profile.avoid),
+    )
+    content_strategy = ContentStrategy(
+        hero_angle=profile.hero_angle,
+        trust_strategy=profile.trust_strategy,
+        offer_strategy=profile.offer_strategy,
+        avoid_generic_claims=True,
+    )
+    conversion = Conversion(
+        primary_action=profile.primary_action,
+        primary_cta=profile.primary_cta,
+        secondary_cta=profile.secondary_cta,
+        contact_priority=list(profile.contact_priority),
+        cta_rules=list(profile.cta_rules),
+    )
+    return business_facts, positioning, content_strategy, conversion
+
+
 def _mock_brief(prompt: str, language_hint: str | None) -> SiteBrief:
-    """Deterministic fallback when no API key is available."""
+    """Deterministic fallback when no API key is available.
+
+    Still fills the blueprint fields (kor-1b) with honest, industry-reasonable
+    values; the existing scalar fields keep their conservative mock defaults so
+    the briefSource=mock-no-key contract is unchanged.
+    """
     language = language_hint or detect_language(prompt)
+    business_facts, positioning, content_strategy, conversion = _build_mock_blueprint(
+        prompt, language
+    )
     return SiteBrief(
         language=language,
         business_type=None,
@@ -216,6 +640,10 @@ def _mock_brief(prompt: str, language_hint: str | None) -> SiteBrief:
         notes_for_planner=(
             "Mock brief - OPENAI_API_KEY saknades, ingen riktig extraktion utförd."
         ),
+        business_facts=business_facts,
+        positioning=positioning,
+        content_strategy=content_strategy,
+        conversion=conversion,
     )
 
 
@@ -291,6 +719,59 @@ def extract_site_brief(
         )
 
 
+def _drop_none(values: dict[str, Any]) -> dict[str, Any]:
+    """Drop None entries so optional non-nullable schema leaves are omitted.
+
+    site-brief.schema.json types the blueprint leaf strings/bool as
+    non-nullable, so a missing value must be omitted, never serialised as null.
+    """
+    return {key: value for key, value in values.items() if value is not None}
+
+
+def _attach_blueprint_fields(artifact: dict[str, Any], brief: SiteBrief) -> None:
+    """Emit the optional blueprint fields (kor-1b) in camelCase, schema-valid.
+
+    Each blueprint object is optional, so a None object is omitted entirely and
+    a None leaf is dropped (never null). Lists are always valid arrays. Purely
+    additive: it never touches the existing conversionGoals field.
+    """
+    if brief.business_facts is not None:
+        artifact["businessFacts"] = {
+            "facts": list(brief.business_facts.facts),
+            "unknowns": list(brief.business_facts.unknowns),
+        }
+    if brief.positioning is not None:
+        artifact["positioning"] = _drop_none(
+            {
+                "oneLiner": brief.positioning.one_liner,
+                "differentiator": brief.positioning.differentiator,
+                "audienceNeed": brief.positioning.audience_need,
+                "localAngle": brief.positioning.local_angle,
+                "tone": brief.positioning.tone,
+                "avoid": list(brief.positioning.avoid),
+            }
+        )
+    if brief.content_strategy is not None:
+        artifact["contentStrategy"] = _drop_none(
+            {
+                "heroAngle": brief.content_strategy.hero_angle,
+                "trustStrategy": brief.content_strategy.trust_strategy,
+                "offerStrategy": brief.content_strategy.offer_strategy,
+                "avoidGenericClaims": brief.content_strategy.avoid_generic_claims,
+            }
+        )
+    if brief.conversion is not None:
+        artifact["conversion"] = _drop_none(
+            {
+                "primaryAction": brief.conversion.primary_action,
+                "primaryCta": brief.conversion.primary_cta,
+                "secondaryCta": brief.conversion.secondary_cta,
+                "contactPriority": list(brief.conversion.contact_priority),
+                "ctaRules": list(brief.conversion.cta_rules),
+            }
+        )
+
+
 def site_brief_to_artifact(
     result: BriefResult,
     *,
@@ -299,14 +780,14 @@ def site_brief_to_artifact(
 ) -> dict[str, Any]:
     """Serialise a BriefResult into the canonical Site Brief artefakt.
 
-    Shape locked by ``governance/schemas/site-brief.schema.json`` (ADR 0013).
-    Reads source from the BriefResult so modelUsed/briefSource reflects the
-    actual code path (real, mock-no-key, mock-llm-error). Never claims real
-    when fallback occurred.
+    Shape locked by ``governance/schemas/site-brief.schema.json`` (ADR 0013,
+    blueprint fields from kor-1a). Reads source from the BriefResult so
+    modelUsed/briefSource reflects the actual code path (real, mock-no-key,
+    mock-llm-error). Never claims real when fallback occurred.
     """
     brief = result.brief
     is_real = result.source == "real"
-    return {
+    artifact: dict[str, Any] = {
         "runId": run_id,
         "language": brief.language,
         "rawPrompt": brief.raw_prompt,
@@ -331,6 +812,8 @@ def site_brief_to_artifact(
         "briefError": result.error,
         "createdAt": datetime.now(UTC).isoformat(timespec="seconds"),
     }
+    _attach_blueprint_fields(artifact, brief)
+    return artifact
 
 
 # --- copyDirective extraction (ADR 0034 path A) -----------------------------
