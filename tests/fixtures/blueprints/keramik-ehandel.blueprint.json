@@ -115,7 +115,6 @@
       "density": "spacious",
       "heroStyle": "image_led_gallery",
       "colorIntent": "earthy_neutral_with_clay_accent",
-      "sectionTreatments": {"products.product-grid": "masonry-grid"},
       "imageBriefs": ["närbild på handdrejad keramik, mjukt dagsljus, jordnära toner"],
       "layoutSignals": {"useTrustBandNearHero": false, "avoidOverlyPlayfulShapes": true}
     },

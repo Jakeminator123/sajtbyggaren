@@ -320,6 +320,43 @@ class RenderBlueprint:
     def density(self) -> str | None:
         return _clean_str(self._visual_direction.get("density"))
 
+    def section_treatment_pick(self, section_id: str) -> str | None:
+        """Return the blueprint's section-treatment pick for ``section_id`` (kor-3b).
+
+        ``visualDirection.sectionTreatments`` is an address-keyed map
+        (``"<routeId>.<sectionId>" -> treatment``), mirroring the ``sectionPlan``
+        / ``contentBlocks`` address contract. Section ids are scaffold-unique, so
+        we match by the ``.<section_id>`` address suffix.
+
+        Returns the single matching treatment string (trimmed), or ``None`` when:
+
+        * there is no match,
+        * the matching value is empty / not a string, or
+        * **more than one address matches the same section id** — an ambiguous
+          blueprint must never be resolved by silently guessing which route's
+          pick to use (kor-3b guard).
+
+        The returned string is NOT validated against the renderer's supported
+        treatments here; the dispatcher
+        (``_treatment_for_section`` / ``_visual_direction_pick_for_section``)
+        owns that validation so an unsupported pick can never be chosen.
+        """
+        if not section_id:
+            return None
+        section_treatments = self._visual_direction.get("sectionTreatments")
+        if not isinstance(section_treatments, dict):
+            return None
+        suffix = f".{section_id}"
+        matching_addresses = [
+            address
+            for address in section_treatments
+            if isinstance(address, str) and address.endswith(suffix)
+        ]
+        if len(matching_addresses) != 1:
+            # 0 matches → no pick; >1 → ambiguous, never guess (kor-3b guard).
+            return None
+        return _clean_str(section_treatments[matching_addresses[0]])
+
     # -- honesty ------------------------------------------------------------
 
     @property

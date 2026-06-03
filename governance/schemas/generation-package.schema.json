@@ -92,8 +92,26 @@
             "pattern": "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$",
             "description": "Address contract: exactly '<routeId>.<sectionId>' (same as sectionPlan and contentBlocks)."
           },
-          "additionalProperties": {"type": "string"},
-          "description": "Map of '<routeId>.<sectionId>' to a treatment hint string. Tightened to enums in kor-3b."
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "card-grid",
+              "alternating-rows",
+              "icon-strip",
+              "tabular",
+              "minimal-rows",
+              "split-cards",
+              "numbered-stack",
+              "dense-grid",
+              "grouped",
+              "numbered-2col",
+              "tag-cluster",
+              "editorial-stack",
+              "asymmetric-grid",
+              "marquee-row"
+            ]
+          },
+          "description": "kor-3b: map of '<routeId>.<sectionId>' to a section-treatment id the renderer chooses (operator-pin > visualDirection > variant-default > section-default). The enum is the UNION of every treatment id registered across the scaffolds/<id>/section-treatments.json files (the kor-3a JSON truth) — it rejects treatment ids unknown to every section. The per-section 1:1 mapping (a treatment must be supported by THAT specific section) is enforced at build time by _visual_direction_pick_for_section in packages/generation/build/dispatcher.py, so e.g. 'tag-cluster' on a 'service-list' address validates here but is ignored at render. tests/test_visual_direction_pick.py guards that this enum stays equal to the JSON-truth union."
         },
         "imageBriefs": {
           "type": "array",
