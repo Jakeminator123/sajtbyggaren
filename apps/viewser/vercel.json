@@ -2,5 +2,15 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "buildCommand": "next build",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "git": {
+    "deploymentEnabled": {
+      "feat/*": false,
+      "feat/**": false,
+      "cursor/*": false,
+      "cursor/**": false,
+      "backup-*": false,
+      "hosted-sandbox-mvp": false
+    }
+  }
 }
