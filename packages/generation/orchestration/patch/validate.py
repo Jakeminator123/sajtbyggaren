@@ -12,7 +12,11 @@ reason when a rail refuses it:
    address must resolve to a section that exists in the scaffold's
    ``sections.json`` (required or optional) for that route. Unknown route or
    section -> rejected (the planner never invents a section).
-4. **capability/dossier** - when the patch value references a capability, that
+4. **accessoryComponent** - a ``contentBlocks.*.accessoryComponent`` value must
+   name a component; a ``{"component": None}`` (or component-less) descriptor is
+   a semantically empty component_add and is rejected (the planner invents no
+   component name).
+5. **capability/dossier** - when the patch value references a capability, that
    capability must exist in ``capability-map.v1.json`` *and* have an
    implementing dossier (an empty dossiers list is a gap, not a feature).
 
@@ -158,7 +162,23 @@ def validate_patch(patch: ArtifactPatch, rails: PatchRails) -> str | None:
                 "sections.json rails (required/optional)"
             )
 
-    # 5. capability/dossier rail (only when the value references one).
+    # 5. accessoryComponent rail: a component_add patch must name a component.
+    # A {"component": None} (or component-less) value is a valid-shaped but
+    # empty component_add; reject it defensively so a hand-built patch cannot
+    # slip a no-op accessoryComponent past the rails (mirrors the planner gate).
+    if (
+        root == "contentBlocks"
+        and len(segments) >= 4
+        and segments[3] == "accessoryComponent"
+        and isinstance(patch.value, dict)
+        and not patch.value.get("component")
+    ):
+        return (
+            "accessoryComponent patch carries no named component "
+            "(value.component saknas); inget att lägga till"
+        )
+
+    # 6. capability/dossier rail (only when the value references one).
     capability = _referenced_capability(patch.value)
     if capability is not None:
         if not rails.capabilitiesAvailable:
