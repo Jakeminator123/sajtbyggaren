@@ -656,8 +656,27 @@ function summarizeBuildResult(
     // en ärlig info-rad så operatören inte gissar att texten landade
     // när den inte gjorde det. Visas bara på followups (init saknar
     // fältet) och bara när effect.applied === false.
+    // Bug B-ärlighet: två distinkta no-op-orsaker från build_site.py kräver
+    // OLIKA råd, annars vilseleder vi operatören.
+    //   - `visible_files_unchanged`: bygget kördes men genererade IDENTISKA
+    //     filer. Operatören bad om en konkret ändring (oftast layout/struktur
+    //     som "centrera hero" / "lägg till gallery") men deterministisk
+    //     codegen-v1 kan inte göra den än. Att be om "mer exakt text/sektion"
+    //     vore fel — problemet är saknad codegen-kapabilitet, inte otydlighet.
+    //     Riktig codegenModel för dessa intents är Sprint 3B (backend-lane).
+    //   - annars (`intent_no_semantic_change`): intenten klassades som att den
+    //     inte kräver någon innehållsändring (fråga/vag prompt) → då hjälper
+    //     det faktiskt att be om en konkret rubrik/text/sektion.
+    // Båda grenarna behåller variant "info" (aldrig "success") — låst av
+    // tests/test_viewser_files.py::test_b155_floating_chat_no_op_does_not_claim_success.
     const effect = extractAppliedVisibleEffect(payload.buildResult);
     if (effect && effect.applied === false) {
+      if (effect.reason === "visible_files_unchanged") {
+        return {
+          content: `Bygget gick igenom${versionText} men sajten ser likadan ut. I nuläget kan jag ändra texter (företagsnamn, rubrik, tagline) — större layout- och strukturändringar som att centrera hero eller lägga till en sektion stöds inte än.`,
+          variant: "info",
+        };
+      }
       return {
         content:
           `Jag kunde inte fånga någon synlig ändring den här gången.${versionText} Testa att ange exakt rubrik, text eller sektion — t.ex. "byt namnet i headern till X".`,

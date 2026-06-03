@@ -2118,6 +2118,44 @@ def test_b155_floating_chat_no_op_does_not_claim_success() -> None:
 
 
 @pytest.mark.tooling
+def test_floating_chat_differentiates_layout_no_op_honestly() -> None:
+    """Bug B-ärlighet: deterministisk codegen-v1 kan ÄNNU inte göra layout-/
+    strukturändringar (centrera hero, lägg till gallery) — de blir ärliga
+    no-ops med ``appliedVisibleEffectReason: "visible_files_unchanged"``. Att
+    då be operatören vara "mer exakt" (samma råd som för
+    ``intent_no_semantic_change``) vore vilseledande: problemet är saknad
+    codegen-kapabilitet, inte otydlighet. FloatingChat måste därför skilja på
+    de två no-op-orsakerna och säga ärligt att layout/struktur inte stöds än,
+    utan att lova en synlig ändring. Riktig codegenModel för dessa intents är
+    Sprint 3B (backend-lane) — den här testen låser bara UI-ärligheten.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    assert '"visible_files_unchanged"' in text, (
+        "FloatingChat måste gren-skilja på reason ``visible_files_unchanged`` "
+        "(bygget gav identiska filer → layout/struktur stöds inte än) från "
+        "``intent_no_semantic_change`` (be om konkret text)."
+    )
+    # Layout-grenen får INTE råda operatören att bara vara mer specifik — den
+    # ska ärligt säga att större layout/struktur-ändringar inte stöds än.
+    assert "stöds inte än" in text, (
+        "Layout-no-op-grenen måste ärligt säga att layout/struktur inte stöds "
+        "än, i st.f. att antyda att otydlighet var problemet."
+    )
+    # Den layout-specifika grenen måste komma FÖRE den generiska
+    # 'mer specifik'-raden så rätt råd vinner. Och båda måste vara info,
+    # aldrig success (regression-skyddat separat i no_op_does_not_claim_success).
+    layout_idx = text.index('"visible_files_unchanged"')
+    generic_idx = text.index("Jag kunde inte fånga någon synlig ändring")
+    assert layout_idx < generic_idx, (
+        "Layout-grenen (visible_files_unchanged) måste utvärderas före den "
+        "generiska 'ange exakt rubrik/text'-raden."
+    )
+
+
+@pytest.mark.tooling
 def test_b155_path_b_runs_lib_exports_applied_copy_directives() -> None:
     """ADR 0034 väg B (B155 path B): ``lib/runs.ts`` måste exportera
     ``readAppliedCopyDirectives`` + en strikt ``AppliedCopyDirective``-typ
