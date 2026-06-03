@@ -30,7 +30,9 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from packages.generation.brief.models import has_openai_api_key
-from packages.generation.build.dispatcher import load_section_treatments_catalogue
+from packages.generation.orchestration.section_treatments import (
+    load_section_treatments_catalogue,
+)
 
 from .blueprint import (
     SectionPlanEntry,
@@ -119,8 +121,9 @@ SCAFFOLD_TO_STARTER: dict[str, str] = {
 #
 # kor-3a (2026-06-03): this catalogue is no longer a hand-maintained
 # Python mirror. It is loaded from the SAME declarative source the build
-# dispatcher reads — ``scaffolds/<id>/section-treatments.json`` via
-# ``packages/generation/build/dispatcher.load_section_treatments_catalogue``
+# dispatcher reads — ``scaffolds/<id>/section-treatments.json`` via the
+# shared loader in ``orchestration/section_treatments`` (moved out of
+# ``build`` in the Pushvakt P1 boundary fix, 2026-06-03)
 # — so the planning prompt and the runtime variant→treatment table
 # (``_SECTION_TREATMENTS_BY_VARIANT``) cannot drift apart. The catalogue
 # stays an LLM-prompt aid; the JSON files + schema enums are the
