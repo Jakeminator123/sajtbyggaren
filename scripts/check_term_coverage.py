@@ -642,6 +642,12 @@ COMMON_WORDS = {
     # CopyFeedback är intern TS-type i versions-tab.tsx för
     # clipboard-feedback-state (M1 från bug-hunt).
     "CopyFeedback",
+    # KÖR-6a RouterDecision-readiness — interna TS-alias i
+    # apps/viewser/components/builder/floating-chat.tsx som speglar enum-
+    # litteralerna i governance/schemas/router-decision.schema.json. De
+    # canonical termerna (RouterDecision, MessageKind, BuildRequirement) bor i
+    # backend-schemat; dessa är viewser-lokala UI-symboler, inte nya domain terms.
+    "RouterMessageKind", "RouterBuildRequirement", "RouterDecisionView",
     # GAP-viewser-side-by-side-preview — interna TS-symboler i
     # apps/viewser/components/builder/inspector/compare-preview-modal.tsx.
     # Lokala UI-komponentnamn och prop-typer, inte domain terms.
