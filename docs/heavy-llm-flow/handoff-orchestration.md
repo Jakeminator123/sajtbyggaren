@@ -7,7 +7,7 @@
 > **Follow-up-bryggan startad** (coach-prioriterad före 4a): `kor-7b` patch planner
 > (dry-run) ligger som **draft-PR #171** (CI grön efter term-coverage-allowlist-fix).
 > `kor-o1` OpenClaw Core-kontrakt skrivet (designkort, ocommittat — under coach-review).
-> Coachen byggde en körbar **OpenClaw Core MVP** (`openclaw-mvp/`, FastAPI-spike) som
+> Coachen byggde en körbar FastAPI-spike (`openclaw-mvp/`) av OpenClaw Core som
 > hålls lokal/gitignored tills placeringen är beslutad. Öppen backend-PR utöver #171:
 > **#170** B86 npm-timeout env-override (grön, vår lane). **#169** = Christophers
 > UI-reconcile på jakob-be (hans lane).
