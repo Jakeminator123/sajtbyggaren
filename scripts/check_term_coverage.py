@@ -1046,6 +1046,15 @@ COMMON_WORDS = {
     # from the router and already allowlisted in the heavy-llm-flow block.
     "AssembledContext", "ContextPaths", "FetchReference", "ManifestEntry",
     "PriorContext", "ReferencePermission", "SelectedFile",
+    # KÖR-7b Artifact Patch Planner runtime symbols
+    # (packages/generation/orchestration/patch/). Sibling dry-run module to the
+    # KÖR-6a router + KÖR-7a context assembler above: ``PatchPlan`` is the
+    # transient result envelope, ``ArtifactPatch`` / ``RejectedPatch`` are its
+    # Pydantic shapes, ``PatchRails`` is the context-projected rails object and
+    # ``PatchOp`` is the closed "set" Literal alias. Transient implementation
+    # symbols (never persisted as a patch-plan.json), not canonical domain
+    # terms - same treatment as the RouterDecision / AssembledContext families.
+    "ArtifactPatch", "PatchOp", "PatchPlan", "PatchRails", "RejectedPatch",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
