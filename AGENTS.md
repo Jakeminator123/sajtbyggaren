@@ -119,5 +119,9 @@ Commands are documented in the README under "Snabbstart". Key commands:
   asserts the repo-default evals path — unset `SAJTBYGGAREN_EVALS_DIR` (or
   point it at `data/evals/artifacts/mini`) for a fully green full suite.
 - Long-running dev servers (Next.js preview, Streamlit backoffice) should run
-  under tmux on Cloud Agent VMs (portal config under
-  `/exec-daemon/tmux.portal.conf`).
+ under tmux on Cloud Agent VMs (portal config under
+ `/exec-daemon/tmux.portal.conf`).
+- Stop Viewser on port 3000 before `python -m pytest tests/`: otherwise
+ `tests/test_auto_prune.py` fails (`port 3000 listening`) and
+ `tests/test_api_prompt_smoke.py` may flake when the suite is already heavy.
+ Run the full suite first, then start `npm run dev` in `apps/viewser`.
