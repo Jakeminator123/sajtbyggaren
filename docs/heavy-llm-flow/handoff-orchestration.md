@@ -1,6 +1,6 @@
 # Orchestrerings-handoff — heavy-llm-flow
 
-**Datum:** 2026-06-03 (uppdaterad) · **Bas:** `jakob-be` @ `ab5db12` · **Governance:** grön (18/18)
+**Datum:** 2026-06-03 (uppdaterad) · **Bas:** `jakob-be` @ `7685c79` · **Governance:** grön (18/18)
 
 > **Sedan förra handoffen (2026-06-03 kväll):** Vercel auto-deploy begränsad till
 > `jakob-be`/`christopher-ui`/`main` (denylist i `apps/viewser/vercel.json`).
@@ -10,10 +10,9 @@
 > (designkort); coachens körbara FastAPI-spike (`openclaw-mvp/`) hålls lokal/gitignored tills
 > placeringen är beslutad. Öppna PR:er (ej vår lane): #172 (pending-runs) + #173 (layout-no-op),
 > båda `apps/viewser`/Christopher; #156 `/live` parkerad.
-> **Reviewer-fynd att åtgärda före kor-7c:** `component_add` utan `componentIntent` kan ge en
-> giltig men tom `{"component": null}`-patch i `planner.py` (`validate_patch` kollar inte att
-> komponenten är namngiven) — avvisa den. Och `_INTENT_CAPABILITY` bör drift-säkras mot
-> `capability-map.v1.json` i stället för att vara en andra sanning.
+> **Reviewer-fynd ÅTGÄRDAT (#174):** `component_add` utan `componentIntent` avvisas nu (planner-gate
+> + defensiv räls i `validate_patch`), och `_INTENT_CAPABILITY` är drift-låst mot
+> `capability-map.v1.json` via test. Patch-planeraren är därmed härdad inför kor-7c.
 
 Överlämning så en ny orchestrator-agent kan fortsätta jobba med operatören (Jakob) utan
 att läsa hela förra sessionens chatt. Läs även `README.md` + `00`–`04` i denna mapp samt
