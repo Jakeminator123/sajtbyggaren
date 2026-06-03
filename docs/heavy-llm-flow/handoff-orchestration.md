@@ -1,6 +1,6 @@
 # Orchestrerings-handoff — heavy-llm-flow
 
-**Datum:** 2026-06-03 (uppdaterad) · **Bas:** `jakob-be` @ `f14904c` · **Governance:** grön (18/18)
+**Datum:** 2026-06-03 (uppdaterad) · **Bas:** `jakob-be` @ `68d8936` · **Governance:** grön (18/18)
 
 > **Sedan förra handoffen (2026-06-03 kväll):** Vercel auto-deploy begränsad till
 > `jakob-be`/`christopher-ui`/`main` (denylist i `apps/viewser/vercel.json`).
@@ -44,9 +44,13 @@ Routern (kor-6a) + Context Assembler (kor-7a) finns som rails för follow-up/pat
 Sekvens (omprioriterad 2026-06-03 EM per coach): `1b ✓ 1c ✓ 2 ✓ 7a ✓ 1c-copy ✓ →`
 **follow-up-bryggan `7b → 7c → 7d`** (stänger B155 — "ändra rubriken" patchar artefakt →
 ny version → synlig ändring) `→ 4a → 3a → 3b → 5 → 6b`.
-**Aktivt nu:** `kor-7d` (targeted rebuild) — `kor-7b`+`kor-7c` inne (#171/#174/#175). **Nästa:**
-`kor-7d` bygger om påverkad route + swap:ar `current.json` → då är capability-följdprompten
-komplett end-to-end. ETT steg i taget, operatören mergar med orchestratorn.
+**Follow-up-bryggan KOMPLETT:** `kor-7b`+`kor-7c`+`kor-7d` inne (#171/#174/#175/#176). En
+capability-backad följdprompt går nu hela vägen: router → context → patch plan → apply (ny
+immutabel v<N+1>) → targeted render → `current.json`-swap (bara ok/degraded) → preview-refresh
+bara vid ärlig synlig ändring. **B155:s capability-väg är stängd end-to-end.**
+**Nästa (huvudspår):** `kor-4a` deterministisk Quality Critic, sedan `3a/3b` (visualDirection),
+`5` (repair), `6b` (router-fallback). Parallellt/valfritt: `kor-o2` OpenClaw Core V0 (read-only).
+ETT steg i taget, operatören mergar med orchestratorn.
 **OPERATÖRSBESLUT (kontrakt, för att HELT stänga B155):** kor-7c applicerar bara
 capability-backade `component_add` (→ `requestedCapabilities`). `copy_change` (sektionsrubrik)
 och inline-`component_add` (utan capability) rapporteras som `unmapped` och skrivs aldrig
