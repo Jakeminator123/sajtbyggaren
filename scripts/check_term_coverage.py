@@ -1034,6 +1034,18 @@ COMMON_WORDS = {
     # as the QualityResult / CodegenResult / RepairResult families above.
     "RouterDecision", "RouterTarget", "RouterReference", "RouterSubtask",
     "RouterContext", "SubtaskScope",
+    # KÖR-7a Context Assembler runtime symbols
+    # (packages/generation/orchestration/context/). Sibling read-only module to
+    # the KÖR-6a router above: ``AssembledContext`` is the result envelope,
+    # ``PriorContext`` / ``ReferencePermission`` / ``ManifestEntry`` /
+    # ``SelectedFile`` are its Pydantic input/output shapes, ``ContextPaths`` is
+    # the read-only path-config dataclass and ``FetchReference`` is a Callable
+    # type alias for the injected external-reference fetch tool. Implementation
+    # symbols, not canonical domain terms - same treatment as the
+    # RouterDecision / RouterContext family above. ``ContextLevel`` is reused
+    # from the router and already allowlisted in the heavy-llm-flow block.
+    "AssembledContext", "ContextPaths", "FetchReference", "ManifestEntry",
+    "PriorContext", "ReferencePermission", "SelectedFile",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
