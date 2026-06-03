@@ -75,6 +75,15 @@ def test_route_id_from_patch_field() -> None:
     assert route_id_from_patch_field(None) is None
 
 
+def test_route_id_from_patch_field_deep_path() -> None:
+    """KÖR-7-STAB #175 guard (deeper field-paths): the route id is the 2nd
+    dotted segment regardless of depth, and a route id cannot contain a dot
+    (patch/validate.py _ID_RE blocks it, the char-class stops at the first dot).
+    """
+    assert route_id_from_patch_field("contentBlocks.contact.hero.cta.label") == "contact"
+    assert route_id_from_patch_field("contentBlocks.home.x.y.z.w") == "home"
+
+
 def test_route_id_for_generated_file() -> None:
     assert route_id_for_generated_file("app/page.tsx") == ROOT_ROUTE_ID
     assert route_id_for_generated_file("app/om-oss/page.tsx") == "om-oss"
@@ -82,6 +91,29 @@ def test_route_id_for_generated_file() -> None:
     assert route_id_for_generated_file("app/globals.css") == SHARED_ROUTE_ID
     assert route_id_for_generated_file("app/layout.tsx") == SHARED_ROUTE_ID
     assert route_id_for_generated_file("public/logo.svg") == SHARED_ROUTE_ID
+
+
+def test_route_id_for_generated_file_uses_route_map() -> None:
+    """KÖR-7-STAB #176: a scaffold route-map translates the URL path segment
+    (``kontakt``) back to the canonical route id (``contact``)."""
+    route_map = {"": "home", "kontakt": "contact"}
+    assert route_id_for_generated_file("app/kontakt/page.tsx", route_map) == "contact"
+    assert route_id_for_generated_file("app/page.tsx", route_map) == "home"
+    # Unmapped segment (dossier/wizard-extra route) falls back to itself.
+    assert route_id_for_generated_file("app/galleri/page.tsx", route_map) == "galleri"
+    # Shared files are never a single route regardless of the map.
+    assert route_id_for_generated_file("app/globals.css", route_map) == SHARED_ROUTE_ID
+
+
+def test_changed_routes_uses_route_map(tmp_path: Path) -> None:
+    prev = _write_snapshot(tmp_path / "prev", {"app/kontakt/page.tsx": "A"})
+    cur = _write_snapshot(tmp_path / "cur", {"app/kontakt/page.tsx": "B"})
+    # Without a map the changed route is the raw segment ('kontakt')...
+    assert changed_routes_between_snapshots(prev, cur) == {"kontakt"}
+    # ...with the scaffold map it is the canonical route id ('contact').
+    assert changed_routes_between_snapshots(prev, cur, {"kontakt": "contact"}) == {
+        "contact"
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -392,7 +424,11 @@ def test_orchestrator_allows_internal_provenance_version(
 def test_orchestrator_allows_explicit_apply_result(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """An explicit apply_result satisfies the internal-chain guard."""
+    """An explicit apply_result satisfies the internal-chain guard.
+
+    The apply_result must still describe the version being built (KÖR-7-STAB
+    #176), so it is constructed to match v1 (siteId/version/projectInputPath).
+    """
     from scripts.build_site import build_targeted_version
 
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
@@ -405,9 +441,18 @@ def test_orchestrator_allows_explicit_apply_result(
         site_id=SITE_ID,
         project_id=PROJECT_ID,
     )
+    apply_result = ApplyResult(
+        applied=True,
+        siteId=SITE_ID,
+        version=1,
+        projectInputPath=str(v1_path),
+        appliedCapabilities=[
+            AppliedCapability(patchField=HOME_FIELD, capability="contact-form")
+        ],
+    )
     result = build_targeted_version(
         v1_path,
-        apply_result=_apply_result(fields=[HOME_FIELD]),
+        apply_result=apply_result,
         do_build=True,
         runs_dir=tmp_path / "runs",
         generated_dir=tmp_path / "gen",
@@ -477,3 +522,352 @@ def test_real_chain_preserves_identity_and_old_runs(
     # Old run untouched (byte-for-byte) and a distinct new run was created.
     assert result.runId != run_dir_v1.name
     assert _hash_tree(run_dir_v1) == run_v1_before
+
+
+# ---------------------------------------------------------------------------
+# KÖR-7-STAB #176: never build/promote a skipped/unmapped apply
+# ---------------------------------------------------------------------------
+
+
+def _exploding_build(*_args, **_kwargs):
+    raise AssertionError("build_fn must not run when apply_result.applied is False")
+
+
+def test_orchestrator_skips_when_apply_not_applied(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A skipped/unmapped apply (applied=False) never triggers build/promote."""
+    from scripts.build_site import build_targeted_version
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    not_applied = ApplyResult(
+        applied=False,
+        siteId=SITE_ID,
+        notes=["unmapped patch; nothing written"],
+    )
+    result = build_targeted_version(
+        tmp_path / f"{SITE_ID}.v2.project-input.json",  # never read
+        apply_result=not_applied,
+        do_build=True,
+        runs_dir=tmp_path / "runs",
+        generated_dir=tmp_path / "gen",
+        build_fn=_exploding_build,
+    )
+    assert result.outcome == "skipped"
+    assert result.previewShouldRefresh is False
+    assert result.activeBuildId is None
+    # No run was created (build_fn never ran).
+    assert not (tmp_path / "runs").exists()
+
+
+# ---------------------------------------------------------------------------
+# KÖR-7-STAB #176: apply_result must match the version being built
+# ---------------------------------------------------------------------------
+
+
+def test_orchestrator_rejects_apply_result_site_mismatch(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from scripts.build_site import build_targeted_version
+
+    prompt_inputs = tmp_path / "prompt-inputs"
+    prompt_inputs.mkdir()
+    v2_path = _seed_applied_v2(monkeypatch, prompt_inputs)
+    with pytest.raises(TargetedRenderError, match="siteId"):
+        build_targeted_version(
+            v2_path,
+            apply_result=ApplyResult(applied=True, siteId="other-site", version=2),
+            do_build=True,
+            runs_dir=tmp_path / "runs",
+            generated_dir=tmp_path / "gen",
+            build_fn=_exploding_build,
+        )
+
+
+def test_orchestrator_rejects_apply_result_version_mismatch(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from scripts.build_site import build_targeted_version
+
+    prompt_inputs = tmp_path / "prompt-inputs"
+    prompt_inputs.mkdir()
+    v2_path = _seed_applied_v2(monkeypatch, prompt_inputs)
+    with pytest.raises(TargetedRenderError, match="version"):
+        build_targeted_version(
+            v2_path,
+            apply_result=ApplyResult(applied=True, siteId=SITE_ID, version=99),
+            do_build=True,
+            runs_dir=tmp_path / "runs",
+            generated_dir=tmp_path / "gen",
+            build_fn=_exploding_build,
+        )
+
+
+def test_orchestrator_rejects_apply_result_path_mismatch(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from scripts.build_site import build_targeted_version
+
+    prompt_inputs = tmp_path / "prompt-inputs"
+    prompt_inputs.mkdir()
+    v2_path = _seed_applied_v2(monkeypatch, prompt_inputs)
+    with pytest.raises(TargetedRenderError, match="projectInputPath"):
+        build_targeted_version(
+            v2_path,
+            apply_result=ApplyResult(
+                applied=True,
+                siteId=SITE_ID,
+                version=2,
+                projectInputPath=str(tmp_path / "somewhere-else.json"),
+            ),
+            do_build=True,
+            runs_dir=tmp_path / "runs",
+            generated_dir=tmp_path / "gen",
+            build_fn=_exploding_build,
+        )
+
+
+def test_orchestrator_accepts_matching_apply_result(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The positive case: a consistent apply_result builds normally."""
+    from scripts.build_site import build_targeted_version
+
+    prompt_inputs = tmp_path / "prompt-inputs"
+    prompt_inputs.mkdir()
+    v2_path = _seed_applied_v2(monkeypatch, prompt_inputs)
+    result = build_targeted_version(
+        v2_path,
+        apply_result=ApplyResult(
+            applied=True,
+            siteId=SITE_ID,
+            version=2,
+            previousVersion=1,
+            projectInputPath=str(v2_path),
+            appliedCapabilities=[
+                AppliedCapability(patchField=HOME_FIELD, capability="contact-form")
+            ],
+        ),
+        do_build=True,
+        runs_dir=tmp_path / "runs",
+        generated_dir=tmp_path / "gen",
+        build_fn=_make_fake_build(status="ok", applied_visible_effect=True),
+    )
+    assert result.outcome == "applied"
+    assert result.affectedRoutes == ["home"]
+
+
+# ---------------------------------------------------------------------------
+# KÖR-7-STAB #176: helper units (active-build snapshot, route-map)
+# ---------------------------------------------------------------------------
+
+
+def test_route_segment_to_id_map(tmp_path: Path) -> None:
+    from scripts.build_site import _route_segment_to_id_map
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "site-plan.json").write_text(
+        json.dumps(
+            {
+                "routePlan": [
+                    {"id": "home", "path": "/"},
+                    {"id": "contact", "path": "/kontakt"},
+                    {"id": "about", "path": "/om-oss"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert _route_segment_to_id_map(run_dir) == {
+        "": "home",
+        "kontakt": "contact",
+        "om-oss": "about",
+    }
+
+
+def test_route_segment_to_id_map_missing_plan(tmp_path: Path) -> None:
+    from scripts.build_site import _route_segment_to_id_map
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    assert _route_segment_to_id_map(run_dir) == {}
+
+
+def test_find_active_build_snapshot_matches_pointer(tmp_path: Path) -> None:
+    from packages.generation.build.immutable_builds import write_active_pointer
+    from scripts.build_site import _find_active_build_generated_files_snapshot
+
+    runs_root = tmp_path / "runs"
+    # Active run published build 20260603T120000Z; a stale run did not.
+    active_run = runs_root / "run-active"
+    (active_run / "generated-files" / "app").mkdir(parents=True)
+    (active_run / "generated-files" / "app" / "page.tsx").write_text("A", encoding="utf-8")
+    (active_run / "build-result.json").write_text(
+        json.dumps({"siteId": SITE_ID, "activeBuildId": "20260603T120000Z"}),
+        encoding="utf-8",
+    )
+    stale_run = runs_root / "run-stale"
+    (stale_run / "generated-files").mkdir(parents=True)
+    (stale_run / "build-result.json").write_text(
+        json.dumps({"siteId": SITE_ID, "activeBuildId": "20260601T000000Z"}),
+        encoding="utf-8",
+    )
+
+    generated_root = tmp_path / "gen"
+    site_dir = generated_root / SITE_ID
+    (site_dir / "builds" / "20260603T120000Z").mkdir(parents=True)
+    write_active_pointer(site_dir, "20260603T120000Z", "builds/20260603T120000Z")
+
+    snapshot = _find_active_build_generated_files_snapshot(
+        runs_root, generated_root, SITE_ID
+    )
+    assert snapshot == active_run / "generated-files"
+
+
+def test_find_active_build_snapshot_none_without_pointer(tmp_path: Path) -> None:
+    from scripts.build_site import _find_active_build_generated_files_snapshot
+
+    assert (
+        _find_active_build_generated_files_snapshot(
+            tmp_path / "runs", tmp_path / "gen", SITE_ID
+        )
+        is None
+    )
+
+
+def test_orchestrator_diffs_active_build_with_route_map(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """End-to-end #176: changed routes are diffed against the ACTIVE build
+    snapshot (current.json) and reported by canonical route id (contact), not the
+    URL segment (kontakt), so no false out-of-scope warning fires."""
+    from packages.generation.build.immutable_builds import write_active_pointer
+    from scripts.build_site import build_targeted_version
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    prompt_inputs = tmp_path / "prompt-inputs"
+    prompt_inputs.mkdir()
+    v2_path = _seed_applied_v2(monkeypatch, prompt_inputs)
+    runs_dir = tmp_path / "runs"
+    generated_dir = tmp_path / "gen"
+
+    # Previous ACTIVE build: a prior run + current.json pointing at it.
+    prev_run = runs_dir / "run-prev"
+    (prev_run / "generated-files" / "app" / "kontakt").mkdir(parents=True)
+    (prev_run / "generated-files" / "app" / "kontakt" / "page.tsx").write_text(
+        "OLD", encoding="utf-8"
+    )
+    (prev_run / "generated-files" / "app" / "page.tsx").write_text(
+        "HOME", encoding="utf-8"
+    )
+    (prev_run / "build-result.json").write_text(
+        json.dumps({"siteId": SITE_ID, "activeBuildId": "20260601T000000Z"}),
+        encoding="utf-8",
+    )
+    site_dir = generated_dir / SITE_ID
+    (site_dir / "builds" / "20260601T000000Z").mkdir(parents=True)
+    write_active_pointer(site_dir, "20260601T000000Z", "builds/20260601T000000Z")
+
+    def fake_build(dossier_path, *, do_build=True, runs_dir=None, generated_dir=None):
+        run_dir = Path(runs_dir) / "run-new"
+        app = run_dir / "generated-files" / "app"
+        (app / "kontakt").mkdir(parents=True)
+        (app / "kontakt" / "page.tsx").write_text("NEW", encoding="utf-8")  # changed
+        (app / "page.tsx").write_text("HOME", encoding="utf-8")  # unchanged
+        (run_dir / "trace.ndjson").write_text("", encoding="utf-8")
+        (run_dir / "site-plan.json").write_text(
+            json.dumps(
+                {"routePlan": [{"id": "home", "path": "/"}, {"id": "contact", "path": "/kontakt"}]}
+            ),
+            encoding="utf-8",
+        )
+        (run_dir / "build-result.json").write_text(
+            json.dumps(
+                {
+                    "siteId": SITE_ID,
+                    "status": "ok",
+                    "version": 2,
+                    "appliedVisibleEffect": True,
+                    "activeBuildId": "20260603T120000Z",
+                    "prompt": {"previousVersion": 1},
+                }
+            ),
+            encoding="utf-8",
+        )
+        target = run_dir / "target"
+        target.mkdir()
+        return target, run_dir
+
+    apply_result = ApplyResult(
+        applied=True,
+        siteId=SITE_ID,
+        version=2,
+        previousVersion=1,
+        projectInputPath=str(v2_path),
+        appliedCapabilities=[
+            AppliedCapability(
+                patchField="contentBlocks.contact.hero.accessoryComponent",
+                capability="contact-form",
+            )
+        ],
+    )
+    result = build_targeted_version(
+        v2_path,
+        apply_result=apply_result,
+        do_build=True,
+        runs_dir=runs_dir,
+        generated_dir=generated_dir,
+        build_fn=fake_build,
+    )
+    assert result.affectedRoutes == ["contact"]
+    assert result.changedRoutes == ["contact"]  # canonical id, not "kontakt"
+    assert all("utanför" not in note for note in result.notes), result.notes
+
+
+# ---------------------------------------------------------------------------
+# KÖR-7-STAB #176: FAILED targeted builds still trace their outcome
+# ---------------------------------------------------------------------------
+
+
+def _make_failing_build():
+    """A build_fn that writes a failed run + build-result then raises (like build())."""
+
+    def fake_build(dossier_path, *, do_build=True, runs_dir=None, generated_dir=None):
+        run_dir = Path(runs_dir) / "run-fake-failed"
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / "trace.ndjson").write_text("", encoding="utf-8")
+        (run_dir / "build-result.json").write_text(
+            json.dumps({"siteId": SITE_ID, "status": "failed", "version": 2}),
+            encoding="utf-8",
+        )
+        raise SystemExit(1)
+
+    return fake_build
+
+
+def test_failed_targeted_build_traces_outcome(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from scripts.build_site import build_targeted_version
+
+    prompt_inputs = tmp_path / "prompt-inputs"
+    prompt_inputs.mkdir()
+    v2_path = _seed_applied_v2(monkeypatch, prompt_inputs)
+    runs_dir = tmp_path / "runs"
+
+    with pytest.raises(SystemExit):
+        build_targeted_version(
+            v2_path,
+            do_build=True,
+            runs_dir=runs_dir,
+            generated_dir=tmp_path / "gen",
+            build_fn=_make_failing_build(),
+        )
+
+    # The failure is traced under the SAME custom runs_dir (runs_root consistency).
+    events = _trace_events(runs_dir / "run-fake-failed")
+    outcome = [e for e in events if e["event"] == "targeted_render.outcome"]
+    assert len(outcome) == 1
+    assert outcome[0]["status"] == "failed"
+    assert "misslyckades" in outcome[0]["message"] or "failed" in outcome[0]["message"]

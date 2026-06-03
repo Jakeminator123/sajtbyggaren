@@ -200,7 +200,9 @@ def derive_targeted_render_plan(apply_result: ApplyResult) -> TargetedRenderPlan
 # ---------------------------------------------------------------------------
 
 
-def route_id_for_generated_file(rel_path: str) -> str:
+def route_id_for_generated_file(
+    rel_path: str, route_map: dict[str, str] | None = None
+) -> str:
     """Map a generated-files relative path to a logical route id.
 
     - ``app/page.tsx`` -> ``home`` (root route).
@@ -209,6 +211,14 @@ def route_id_for_generated_file(rel_path: str) -> str:
       attributed to their top-level path for v1 verification).
     - everything else (``layout.tsx``, ``globals.css``, shared components,
       ``public/**``) -> ``(shared)`` since it is not a single route's page.
+
+    KÖR-7-STAB #176: generated route directories use the route's URL *path*
+    segment (``app/kontakt/page.tsx``) while affected routes are derived from the
+    kor-1a logical route *id* (``contentBlocks.contact``). Diffing on the raw
+    segment would treat ``kontakt`` and ``contact`` as different routes. When a
+    ``route_map`` (path-segment -> route id, from the scaffold's routePlan) is
+    supplied, the segment is translated back to its canonical route id; an
+    unmapped segment (a dossier/wizard-extra route) falls back to itself.
     """
     parts = Path(rel_path).as_posix().split("/")
     if not parts or parts[0] not in _VISIBLE_ROOTS:
@@ -216,8 +226,14 @@ def route_id_for_generated_file(rel_path: str) -> str:
     if parts[0] == "app" and parts[-1] == "page.tsx":
         middle = parts[1:-1]
         if not middle:
+            # Root page: path segment "" -> its route id when mapped, else home.
+            if route_map is not None and "" in route_map:
+                return route_map[""]
             return ROOT_ROUTE_ID
-        return middle[0]
+        segment = middle[0]
+        if route_map is not None:
+            return route_map.get(segment, segment)
+        return segment
     return SHARED_ROUTE_ID
 
 
@@ -250,6 +266,7 @@ def _visible_files(snapshot_dir: Path) -> dict[str, bytes] | None:
 def changed_routes_between_snapshots(
     previous_snapshot: Path | None,
     current_snapshot: Path,
+    route_map: dict[str, str] | None = None,
 ) -> set[str] | None:
     """Return the set of route ids whose visible files differ between snapshots.
 
@@ -257,6 +274,10 @@ def changed_routes_between_snapshots(
     run's snapshot. A file present in one and absent in the other, or with
     different bytes, marks its route as changed. Returns ``None`` when either
     snapshot is unreadable (the caller then cannot verify per-route scope).
+
+    ``route_map`` (path-segment -> route id) translates generated route
+    directories back to their canonical route ids so the changed set lines up
+    with the affected-route ids derived from patch fields (KÖR-7-STAB #176).
     """
     current_files = _visible_files(current_snapshot)
     if current_files is None:
@@ -269,7 +290,7 @@ def changed_routes_between_snapshots(
     changed: set[str] = set()
     for rel_path in set(previous_files) | set(current_files):
         if previous_files.get(rel_path) != current_files.get(rel_path):
-            changed.add(route_id_for_generated_file(rel_path))
+            changed.add(route_id_for_generated_file(rel_path, route_map))
     return changed
 
 

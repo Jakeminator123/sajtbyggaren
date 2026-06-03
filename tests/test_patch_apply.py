@@ -622,6 +622,186 @@ def test_classify_patch_rejects_visual_direction() -> None:
     assert reason is not None
 
 
+def test_classify_patch_deep_field_path_is_unmapped_not_misapplied() -> None:
+    """KÖR-7-STAB #175 guard (deeper field-paths).
+
+    classify_patch reads the leaf at segments[3]; the kor-7b planner only emits
+    the 4-segment ``contentBlocks.<route>.<section>.<leaf>`` shape (enforced by
+    patch/validate.py). A deeper path therefore has no Project Input home and is
+    reported unmapped - never silently misapplied as a capability.
+    """
+    capability, reason = classify_patch(
+        ArtifactPatch(
+            artifact=GENPKG,
+            field="contentBlocks.home.hero.cta.accessoryComponent",
+            value={"component": "contact-form", "capability": "contact-form"},
+        )
+    )
+    assert capability is None
+    assert reason is not None
+
+
+# ---------------------------------------------------------------------------
+# KÖR-7-STAB #175 P1: applied capability also secures its implementing Dossier
+# in selectedDossiers.required so deterministic codegen actually mounts it.
+# ---------------------------------------------------------------------------
+
+
+def _unapplied_intents(previous: dict, merged: dict) -> list[dict[str, str]]:
+    from scripts.prompt_to_project_input import compute_unapplied_followup_intents
+
+    return compute_unapplied_followup_intents(previous, merged, follow_up_prompt="")
+
+
+def _required_dossiers(project_input: dict) -> list[str]:
+    from scripts.build_site import selected_required_dossiers
+
+    return selected_required_dossiers(project_input)
+
+
+def test_apply_capability_secures_dossier_and_clears_unapplied_flag(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """P1 (E2E-ish): apply contact-form -> v2 mounts the Dossier, no flag.
+
+    Before the fix the capability reached requestedCapabilities but its Dossier
+    never reached selectedDossiers.required, so codegen would not mount it and
+    the build's unapplied-follow-up observer would flag it. This locks the fix:
+    the implementing Dossier (mailto-contact-form) lands in
+    selectedDossiers.required, selected_required_dossiers (the codegen mount
+    input) includes it, and compute_unapplied_followup_intents no longer flags
+    contact-form.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    v1_pi, _v1_meta, _v1_path, _ = _init_site(tmp_path)
+
+    result = apply_patch_plan(
+        _capability_patch(capability="contact-form"),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+    )
+    assert result.applied is True
+
+    v2_pi = json.loads(
+        (tmp_path / f"{SITE_ID}.v2.project-input.json").read_text(encoding="utf-8")
+    )
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    jsonschema.Draft202012Validator(schema).validate(v2_pi)
+
+    selected = v2_pi["selectedDossiers"]
+    assert isinstance(selected, dict)
+    assert "mailto-contact-form" in selected["required"]
+    assert "mailto-contact-form" in _required_dossiers(v2_pi)
+
+    # The build's observer no longer reports contact-form as unapplied.
+    posts = _unapplied_intents(v1_pi, v2_pi)
+    assert all(post["target"] != "contact-form" for post in posts), posts
+
+
+def test_apply_gap_capability_left_unmounted_and_still_flagged(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A capability with no implemented Dossier (gap) is applied honestly.
+
+    It lands in requestedCapabilities but apply never invents a Dossier for it,
+    so selectedDossiers.required is unchanged and the observer honestly keeps
+    flagging the gap (no false 'mounted' claim).
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    v1_pi, *_ = _init_site(tmp_path)
+
+    result = apply_patch_plan(
+        _capability_patch(capability="newsletter-subscribe"),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+    )
+    assert result.applied is True
+
+    v2_pi = json.loads(
+        (tmp_path / f"{SITE_ID}.v2.project-input.json").read_text(encoding="utf-8")
+    )
+    assert "newsletter-subscribe" in v2_pi["requestedCapabilities"]
+    # No Dossier exists for the gap capability -> nothing extra mounted.
+    assert _required_dossiers(v2_pi) == _required_dossiers(v1_pi)
+    posts = _unapplied_intents(v1_pi, v2_pi)
+    assert any(post["target"] == "newsletter-subscribe" for post in posts), posts
+
+
+def test_apply_dedups_capability_and_dossier_on_repeat(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Guard: re-applying the same capability never duplicates it.
+
+    requestedCapabilities dedup is owned by merge_followup_project_input's
+    _unique_strings (already correct); the Dossier-securing step is likewise
+    idempotent so selectedDossiers.required never grows a duplicate.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    _init_site(tmp_path)
+    apply_patch_plan(
+        _capability_patch(capability="contact-form"),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+    )
+    apply_patch_plan(
+        _capability_patch(capability="contact-form"),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+    )
+    v3_pi = json.loads(
+        (tmp_path / f"{SITE_ID}.v3.project-input.json").read_text(encoding="utf-8")
+    )
+    assert v3_pi["requestedCapabilities"].count("contact-form") == 1
+    assert v3_pi["selectedDossiers"]["required"].count("mailto-contact-form") == 1
+
+
+# ---------------------------------------------------------------------------
+# KÖR-7-STAB #175: stale follow-up provenance never carries into a patch-driven
+# version (apply is patch-driven, not prompt-driven).
+# ---------------------------------------------------------------------------
+
+
+def test_apply_drops_stale_followup_provenance(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    _init_site(tmp_path)
+    # Simulate a prior prompt-driven follow-up that left provenance on the meta
+    # sidecar apply iterates from.
+    meta_path = tmp_path / f"{SITE_ID}.meta.json"
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    meta["followUpPrompt"] = "lägg till en gammal grej"
+    meta["baseRunId"] = "run-old-followup"
+    meta_path.write_text(json.dumps(meta), encoding="utf-8")
+
+    apply_patch_plan(_capability_patch(), site_id=SITE_ID, output_dir=tmp_path)
+
+    v2_meta = json.loads(
+        (tmp_path / f"{SITE_ID}.v2.meta.json").read_text(encoding="utf-8")
+    )
+    # Patch-driven apply did not supply either -> neither is inherited.
+    assert "followUpPrompt" not in v2_meta
+    assert "baseRunId" not in v2_meta
+
+
+def test_apply_keeps_followup_prompt_when_supplied(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The provenance scrub never drops a value THIS apply actually supplied."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    _init_site(tmp_path)
+    apply_patch_plan(
+        _capability_patch(),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+        follow_up_prompt="lägg till kontaktformulär",
+    )
+    v2_meta = json.loads(
+        (tmp_path / f"{SITE_ID}.v2.meta.json").read_text(encoding="utf-8")
+    )
+    assert v2_meta["followUpPrompt"] == "lägg till kontaktformulär"
+
+
 # ---------------------------------------------------------------------------
 # Mock-safe + deterministic (no OPENAI_API_KEY)
 # ---------------------------------------------------------------------------

@@ -55,6 +55,61 @@ from .trace import log_patch_apply_to_existing_run
 __all__ = ["apply_patch_plan"]
 
 
+def _implementing_dossiers(capabilities: list[str]) -> list[str]:
+    """Resolve the implementing Dossier id(s) for applied capability slugs.
+
+    KÖR-7-STAB #175 P1: reuses the canonical planning capability -> Dossier
+    resolver (``filter_capabilities`` over ``capability-map.v1.json``) instead
+    of re-deriving the mapping. ``filter_capabilities`` returns the default
+    Dossier for each capability that has one (deduped, order-preserving) and
+    drops gaps (empty ``dossiers``) / disabled defaults to ``rejected`` - we
+    take only the selected Dossiers so apply never mounts an unimplemented or
+    disabled Dossier. Lazy import keeps ``import ...apply`` free of the planning
+    import chain, mirroring the ``scripts.prompt_to_project_input`` lazy import
+    in ``apply_patch_plan``.
+    """
+    if not capabilities:
+        return []
+    from packages.generation.planning import filter_capabilities, load_capability_map
+
+    selected, _rejected = filter_capabilities(capabilities, load_capability_map())
+    return selected
+
+
+def _ensure_required_dossiers(
+    project_input: dict, dossier_ids: list[str]
+) -> None:
+    """Ensure ``selectedDossiers.required`` contains ``dossier_ids`` (in place).
+
+    KÖR-7-STAB #175 P1: deterministic codegen mounts only
+    ``selectedDossiers.required``. The object form is canonical (project-input.
+    schema.json), so a missing/legacy shape is normalised to the object form
+    with the previously listed Dossiers treated as required (codegen ignores any
+    other bucket). Order-preserving and idempotent: re-applying the same
+    capability never duplicates its Dossier.
+    """
+    if not dossier_ids:
+        return
+    selected = project_input.get("selectedDossiers")
+    if isinstance(selected, dict):
+        existing = selected.get("required")
+        required = list(existing) if isinstance(existing, list) else []
+    elif isinstance(selected, list):
+        # Legacy plain-list form -> promote to object form; the listed Dossiers
+        # are the ones the operator pinned, which is exactly what codegen mounts.
+        required = [item for item in selected if isinstance(item, str)]
+        selected = {"required": required}
+        project_input["selectedDossiers"] = selected
+    else:
+        selected = {"required": []}
+        required = []
+        project_input["selectedDossiers"] = selected
+    for dossier_id in dossier_ids:
+        if dossier_id not in required:
+            required.append(dossier_id)
+    selected["required"] = required
+
+
 def apply_patch_plan(
     plan: PatchPlan,
     *,
@@ -213,6 +268,26 @@ def apply_patch_plan(
         follow_up_prompt="",
         enable_llm_fallback=False,
     )
+
+    # 5b. KÖR-7-STAB #175 P1: a capability only reaching requestedCapabilities is
+    #     not enough. Deterministic codegen mounts ONLY
+    #     ``selectedDossiers.required`` (build_site.py:selected_required_dossiers),
+    #     and the follow-up merge freezes the prior version's selectedDossiers, so
+    #     a newly applied capability whose Dossier was not already required would
+    #     land in requestedCapabilities yet never be mounted - exactly the gap the
+    #     build's unapplied-follow-up observer flags (prompt_to_project_input.py:
+    #     compute_unapplied_followup_intents). Reuse the planning capability ->
+    #     Dossier resolver (filter_capabilities over capability-map.v1.json) to
+    #     secure the implementing Dossier(s) for the applied capabilities in
+    #     selectedDossiers.required so the build actually mounts them. A capability
+    #     that is a documented gap (empty dossiers) or whose default Dossier is
+    #     disabled yields no Dossier and is left honestly unmounted - apply never
+    #     invents one.
+    mounted_dossiers = _implementing_dossiers(
+        [entry.capability for entry in capabilities]
+    )
+    _ensure_required_dossiers(merged, mounted_dossiers)
+
     _validate_against_schema(merged)
 
     # 6. Build the meta sidecar by carrying the prior version's meta forward and
@@ -230,13 +305,18 @@ def apply_patch_plan(
     meta["variantId"] = merged["variantId"]
     meta.setdefault("createdAt", now)
     meta["updatedAt"] = now
+    # KÖR-7-STAB #175: apply is patch-driven, never prompt-driven. Drop any
+    # stale per-version follow-up provenance carried forward from previous_meta
+    # (a prior prompt-driven follow-up may have written followUpPrompt/baseRunId)
+    # so v<N+1> never makes a false claim. These keys are re-set below ONLY when
+    # THIS apply call actually supplied them.
+    meta.pop("followUpPrompt", None)
+    meta.pop("baseRunId", None)
+    meta.pop("unappliedFollowupIntents", None)
     if follow_up_prompt:
         meta["followUpPrompt"] = follow_up_prompt
     if base_run_id is not None:
         meta["baseRunId"] = base_run_id
-    # Drop a stale per-version follow-up signal so it never carries forward as a
-    # false claim about this apply.
-    meta.pop("unappliedFollowupIntents", None)
     meta["appliedPatchPlan"] = {
         "source": "kor-7c-artifact-apply",
         "patchCount": len(plan.patches),
