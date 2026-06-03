@@ -20,6 +20,17 @@ Mock fallback runs when ``OPENAI_API_KEY`` is missing or the LLM call
 fails, identical to the briefModel pattern.
 """
 
+from .blueprint import (
+    SectionPlanEntry,
+    build_generation_blueprint,
+    derive_content_blocks,
+    derive_quality_risks,
+    derive_section_plan,
+    derive_visual_direction,
+    merge_section_plans,
+    resolve_section_plan,
+    section_addresses,
+)
 from .models import (
     PLANNING_ROLE_ID,
     PlanningModelResolutionError,
@@ -48,6 +59,12 @@ __all__ = [
     "PlanningModelResolutionError",
     "RejectedCapability",
     "SCAFFOLD_TO_STARTER",
+    "SectionPlanEntry",
+    "build_generation_blueprint",
+    "derive_content_blocks",
+    "derive_quality_risks",
+    "derive_section_plan",
+    "derive_visual_direction",
     "dossier_is_enabled",
     "filter_capabilities",
     "load_capability_map",
@@ -55,7 +72,10 @@ __all__ = [
     "load_scaffold_registry",
     "load_starter_registry",
     "merge_operator_selected_with_helper",
+    "merge_section_plans",
     "produce_site_plan",
     "resolve_planning_model",
+    "resolve_section_plan",
+    "section_addresses",
     "starter_is_enabled",
 ]

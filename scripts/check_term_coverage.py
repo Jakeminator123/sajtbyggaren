@@ -256,6 +256,12 @@ COMMON_WORDS = {
     # Scaffold, Variant) are already registered in naming-dictionary.v1.
     "PlanResult", "PlanningChoice", "PlanningModelResolutionError",
     "RejectedCapability",
+    # kor-1c: SectionPlanEntry is the Pydantic list-entry model for the Site
+    # Plan blueprint's sectionPlan (one '<routeId>.<sectionId>' intent line on
+    # PlanningChoice). The canonical field name `sectionPlan` is already
+    # registered in naming-dictionary.v1 (kor-1a); this is just its
+    # implementation class, same treatment as PlanningChoice / RejectedCapability.
+    "SectionPlanEntry",
     # Discovery Resolver module (B121 PR A) internal implementation symbols.
     # The canonical domain terms (Discovery Payload, Discovery Decision,
     # Discovery Taxonomy, Discovery Resolver, Field Source) are registered
