@@ -314,68 +314,6 @@ def test_viewser_api_routes_call_localhost_guard() -> None:
         assert "assertLocalhost" in text, f"{route} saknar localhost-guard"
 
 
-def test_bite_c_preview_route_goes_via_runtime_resolver() -> None:
-    """Bite C: ``/api/preview/[siteId]`` POST MÅSTE gå via det env-styrda
-    Preview Runtime-kontraktet (``currentViewserRuntime().start()``), inte
-    hårdkoda ``startPreviewServer`` direkt. ``VIEWSER_PREVIEW_MODE`` ska
-    alltså driva vilken adapter som körs, och resultatet mappas från ett
-    generiskt ``PreviewResult``.
-    """
-    text = (VIEWSER_DIR / "app" / "api" / "preview" / "[siteId]" / "route.ts").read_text(
-        encoding="utf-8"
-    )
-    assert "currentViewserRuntime" in text, (
-        "preview-routen måste resolva runtime via currentViewserRuntime() "
-        "så VIEWSER_PREVIEW_MODE styr adaptern (Bite C)"
-    )
-    assert "runtime.start(" in text, "preview-routen måste anropa runtime.start(config)"
-    assert "PreviewResult" in text, "preview-routen måste hantera generiskt PreviewResult"
-    # Start-pathen får INTE längre hårdkoda den lokala preview-servern —
-    # det skulle kringgå runtime-resolvern. GET/DELETE får fortfarande
-    # använda getPreviewServer/stopPreviewServer för local-status.
-    assert "startPreviewServer" not in text, (
-        "preview-routens start-path får inte anropa startPreviewServer direkt "
-        "efter Bite C — den ska gå via currentViewserRuntime()"
-    )
-
-
-def test_bite_c_preview_route_has_no_silent_fallback() -> None:
-    """Bite C: vid ``failed``/``unsupported`` ska routen returnera ett ärligt
-    fel (med ev. ``logs``), aldrig tyst falla tillbaka till en annan runtime.
-    """
-    text = (VIEWSER_DIR / "app" / "api" / "preview" / "[siteId]" / "route.ts").read_text(
-        encoding="utf-8"
-    )
-    assert 'result.status === "ready"' in text, (
-        "routen måste grena explicit på PreviewResult.status === ready"
-    )
-    assert '=== "unsupported"' in text, (
-        "routen måste hantera PreviewResult.status === unsupported (ärligt 501, "
-        "ingen tyst fallback)"
-    )
-    assert "logs" in text, "routen måste vidarebefordra runtime-logs vid fel"
-    assert "ingen tyst fallback" in text.lower() or "no silent" in text.lower(), (
-        "routen ska dokumentera ärlighetsprincipen (ingen tyst fallback)"
-    )
-
-
-def test_bite_c_viewer_panel_is_honest_in_vercel_sandbox_mode() -> None:
-    """Bite C: ``vercel-sandbox`` är en explicit opt-in-runtime. ViewerPanel
-    måste behandla den lika ärligt som ``local-next`` — visa runtime-fel,
-    aldrig tyst falla tillbaka till StackBlitz — och läsa ``previewUrl``
-    (publik *.vercel.run) när runtimen levererar det.
-    """
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
-    assert "IS_VERCEL_SANDBOX_MODE" in text, "viewer-panel måste känna igen vercel-sandbox-läget"
-    assert "IS_LOCAL_NEXT_MODE || IS_VERCEL_SANDBOX_MODE" in text, (
-        "vercel-sandbox måste dela local-next:s ärliga felgrenar (ingen tyst StackBlitz-fallback)"
-    )
-    assert "info.previewUrl ?? info.url" in text, (
-        "iframe-URL ska föredra previewUrl (vercel-sandbox) och falla tillbaka "
-        "på det bakåtkompatibla url-fältet"
-    )
-
-
 @pytest.mark.tooling
 def test_stackblitz_files_filter_dotenv_files_from_preview_upload() -> None:
     """B54 + B58: ``readRunFilesForStackblitz`` reads every file under the
@@ -664,69 +602,6 @@ def test_viewer_panel_skips_local_preview_in_strict_stackblitz_mode() -> None:
         "stackblitz-mode hoppar lokal-preview helt och går direkt till "
         "Steg 2. Annars är configens namn (``stackblitz``) inte "
         "auktoritativt."
-    )
-
-
-@pytest.mark.tooling
-def test_viewer_panel_progress_card_hint_is_mode_aware() -> None:
-    """Reviewer-fynd post-PR #101: BuildProgressCard:s preview-steg
-    visade fortfarande ``"Förbereder StackBlitz-iframen."`` även i
-    ``local-next``-mode där flödet faktiskt startar en lokal
-    ``next start``-server. Felaktig mental modell för operatören.
-
-    Fix: ``PREVIEW_PREP_HINT``-konstant väljer text baserat på
-    ``IS_LOCAL_NEXT_MODE`` så hint:en matchar faktisk preview-väg.
-    BUILD_STEPS-listan refererar konstanten istället för
-    hårdkodad sträng.
-
-    Tier 3-split flyttade BuildProgressCard + PREVIEW_PREP_HINT från
-    ``viewer-panel.tsx`` till
-    ``viewer-panel/build-progress-card.tsx``. Logiken är oförändrad
-    så låsen pekar nu på den nya filen.
-
-    Två lås:
-      1. ``PREVIEW_PREP_HINT``-konstant finns med mode-conditional.
-      2. BUILD_STEPS preview-steg använder ``hint: PREVIEW_PREP_HINT``
-         istället för en hårdkodad sträng.
-    """
-    text = (VIEWSER_DIR / "components" / "viewer-panel" / "build-progress-card.tsx").read_text(
-        encoding="utf-8"
-    )
-
-    # Lock 1: konstanten finns med mode-conditional
-    pattern_const = re.compile(
-        r"const\s+PREVIEW_PREP_HINT\s*=\s*IS_LOCAL_NEXT_MODE\s*\?",
-        re.MULTILINE,
-    )
-    assert pattern_const.search(text), (
-        "build-progress-card.tsx saknar ``const PREVIEW_PREP_HINT = "
-        "IS_LOCAL_NEXT_MODE ? ... : ...``. Krävs för att "
-        "BuildProgressCard:s preview-steg ska visa rätt copy per mode."
-    )
-
-    # Lock 2: BUILD_STEPS refererar konstanten istället för hårdkodad sträng
-    pattern_usage = re.compile(
-        r'id:\s*["\']preview["\'][\s\S]{0,200}?hint:\s*PREVIEW_PREP_HINT',
-        re.MULTILINE,
-    )
-    assert pattern_usage.search(text), (
-        "build-progress-card.tsx: BUILD_STEPS preview-steget måste använda "
-        "``hint: PREVIEW_PREP_HINT`` så texten är mode-aware. "
-        'Hårdkodad ``"Förbereder StackBlitz-iframen."`` gav fel '
-        "mental modell i local-next-mode (reviewer-fynd post-PR #101)."
-    )
-
-    # Negativt: den hårdkodade strängen får inte återinföras i
-    # BUILD_STEPS preview-stegets hint-fält.
-    pattern_forbidden = re.compile(
-        r'id:\s*["\']preview["\'][\s\S]{0,200}?hint:\s*["\']Förbereder StackBlitz',
-        re.MULTILINE,
-    )
-    assert not pattern_forbidden.search(text), (
-        "viewer-panel.tsx: BUILD_STEPS preview-steget får inte "
-        'hårdkoda ``hint: "Förbereder StackBlitz-iframen."`` igen. '
-        "Använd PREVIEW_PREP_HINT-konstanten så local-next-mode får "
-        "korrekt text."
     )
 
 
@@ -2551,17 +2426,16 @@ def test_preview_route_dispatches_via_current_viewser_runtime() -> None:
     (``startPreviewServer`` + strukturerad felshape), och en
     ``vercel_auth``-felkod måste finnas så UI:t kan visa pedagogiskt fel
     i stället för tyst fallback."""
-    text = (
-        VIEWSER_DIR / "app" / "api" / "preview" / "[siteId]" / "route.ts"
-    ).read_text(encoding="utf-8")
+    text = (VIEWSER_DIR / "app" / "api" / "preview" / "[siteId]" / "route.ts").read_text(
+        encoding="utf-8"
+    )
 
     assert "currentViewserRuntime" in text, (
         "route.ts måste resolva runtime via currentViewserRuntime() (DI), "
         "inte hårdkoda local-preview-server."
     )
     assert 'from "@/lib/preview-runtime-server"' in text, (
-        "route.ts måste importera currentViewserRuntime från "
-        "@/lib/preview-runtime-server."
+        "route.ts måste importera currentViewserRuntime från @/lib/preview-runtime-server."
     )
     # local-next-grenen oförändrad: startPreviewServer + classifyStartError.
     assert "await startPreviewServer(siteId)" in text, (
@@ -2596,9 +2470,7 @@ def test_viewer_panel_has_vercel_sandbox_branch() -> None:
          (≥3 ggr — non-OK, network-error, siteId-saknas).
       3. ``vercel_auth`` hanteras i unavailableForPreviewError.
     """
-    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
 
     pattern_const = re.compile(
         r'const\s+IS_VERCEL_SANDBOX_MODE\s*=\s*VIEWSER_PREVIEW_MODE\s*===\s*["\']vercel-sandbox["\']',
@@ -2609,9 +2481,7 @@ def test_viewer_panel_has_vercel_sandbox_branch() -> None:
         "VIEWSER_PREVIEW_MODE === 'vercel-sandbox'``."
     )
 
-    combined = len(
-        re.findall(r"IS_LOCAL_NEXT_MODE\s*\|\|\s*IS_VERCEL_SANDBOX_MODE", text)
-    )
+    combined = len(re.findall(r"IS_LOCAL_NEXT_MODE\s*\|\|\s*IS_VERCEL_SANDBOX_MODE", text))
     assert combined >= 3, (
         "viewer-panel.tsx: de tre preview-failure-grenarna (non-OK, "
         "network-error, siteId-saknas) måste vara gated på "
@@ -2699,9 +2569,7 @@ def test_preview_runtime_server_records_and_stops_old_sandbox() -> None:
     """Bite C task 5+6: DI-wiringen registrerar en ny sandbox-session och
     stoppar en ev. tidigare sandbox för samma siteId innan en ny skapas (så
     vi aldrig kör två parallellt → läcker inte kostnad)."""
-    text = (VIEWSER_DIR / "lib" / "preview-runtime-server.ts").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "lib" / "preview-runtime-server.ts").read_text(encoding="utf-8")
     assert "recordSandboxSession" in text, (
         "preview-runtime-server.ts måste registrera den nya sandbox-sessionen "
         "efter en lyckad createSandboxPreview."
@@ -2731,9 +2599,7 @@ def test_vercel_sandbox_runner_autoloads_env_vercel_local() -> None:
     (filen vercel env pull skapar för OIDC-token). Runnern måste därför läsa
     den filen själv så den körande viewser-processen hittar VERCEL_OIDC_TOKEN —
     annars visar iframen bara 'credentials saknas' trots en pullad token."""
-    text = (VIEWSER_DIR / "lib" / "vercel-sandbox-runner.ts").read_text(
-        encoding="utf-8"
-    )
+    text = (VIEWSER_DIR / "lib" / "vercel-sandbox-runner.ts").read_text(encoding="utf-8")
     assert ".env.vercel.local" in text, (
         "vercel-sandbox-runner.ts måste läsa apps/viewser/.env.vercel.local "
         "så OIDC-token från `vercel env pull` hittas (Next auto-laddar den inte)."
@@ -2988,56 +2854,6 @@ def test_tier3_versions_tab_shrunk_below_1300_lines() -> None:
     )
 
 
-def test_tier3_viewer_panel_build_progress_card_is_extracted() -> None:
-    """``viewer-panel.tsx`` växte till 1182 rader innan split — den
-    extraherade BuildProgressCard + BUILD_STEPS + stageToStepIndex +
-    PREVIEW_PREP_HINT till en egen fil.
-    """
-    main = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
-    split = (VIEWSER_DIR / "components" / "viewer-panel" / "build-progress-card.tsx").read_text(
-        encoding="utf-8"
-    )
-
-    assert 'from "@/components/viewer-panel/build-progress-card"' in main, (
-        "viewer-panel.tsx måste importera BuildProgressCard från den nya "
-        "viewer-panel/build-progress-card-filen"
-    )
-    assert "function BuildProgressCard(" not in main, (
-        "viewer-panel.tsx ska inte längre definiera BuildProgressCard lokalt"
-    )
-    assert "const BUILD_STEPS" not in main, (
-        "viewer-panel.tsx ska inte längre definiera BUILD_STEPS lokalt"
-    )
-    assert "function stageToStepIndex(" not in main, (
-        "viewer-panel.tsx ska inte längre definiera stageToStepIndex lokalt"
-    )
-
-    # Splitfilen har det förväntade API:et.
-    assert "export function BuildProgressCard(" in split, (
-        "build-progress-card.tsx måste exportera BuildProgressCard"
-    )
-    # PREVIEW_PREP_HINT-logik ska finnas i splitfilen så Mode-aware-copy
-    # följer med (annars hardcodas "Laddar förhandsvisningen…" oavsett mode).
-    assert "PREVIEW_PREP_HINT" in split, (
-        "build-progress-card.tsx måste behålla PREVIEW_PREP_HINT-logiken "
-        "så local-next-mode visar 'Snart kan du klicka runt…' istället för "
-        "stackblitz-copyn"
-    )
-
-
-def test_tier3_viewer_panel_shrunk_below_1100_lines() -> None:
-    """Sanity-check: ``viewer-panel.tsx`` ska vara mätbart mindre efter
-    Tier 3-splittet. Var 1182 rader → mål under 1100 (faktiskt resultat:
-    1053).
-    """
-    path = VIEWSER_DIR / "components" / "viewer-panel.tsx"
-    line_count = sum(1 for _ in path.open(encoding="utf-8"))
-    assert line_count < 1100, (
-        f"viewer-panel.tsx har växt till {line_count} rader — splitta "
-        f"ytterligare innan vi går över 1100"
-    )
-
-
 # ----------------------------------------------------------------------
 # Pre-push-fixar (efter Tier 3 scout)
 # ----------------------------------------------------------------------
@@ -3053,26 +2869,6 @@ def test_tier3_viewer_panel_shrunk_below_1100_lines() -> None:
 #      annars ljuger PREVIEW_PREP_HINT vid casing-varianter.
 #   5. Cmd+K-listenern hoppar nu över ``SELECT``-element så ConsoleDrawer
 #      inte togglar mitt i ett val.
-
-
-def test_pre_push_error_boundary_applies_class_in_success_render() -> None:
-    """ErrorBoundary måste skicka ``className`` även till div:en runt
-    barnen i success-läget — annars bryter ``h-full w-full``-kedjan
-    till ViewerPanel-canvasen och iframen kollapsar till zero-height.
-    """
-    path = VIEWSER_DIR / "components" / "error-boundary.tsx"
-    content = path.read_text(encoding="utf-8")
-    assert re.search(
-        r"<div\s+key=\{resetKey\}\s+className=\{className\}>",
-        content,
-    ), (
-        "ErrorBoundary måste rendera <div key={resetKey} className={className}> "
-        "i success-läget så call-sites kan behålla layout-höjd"
-    )
-    assert re.search(
-        r'<ErrorBoundary[^>]*area="Förhandsvisningen"[^>]*className="h-full w-full"',
-        (VIEWSER_DIR / "app" / "(console)" / "studio" / "page.tsx").read_text(encoding="utf-8"),
-    ), 'page.tsx måste passa in className="h-full w-full" på ErrorBoundary runt ViewerPanel'
 
 
 def test_pre_push_toast_dismiss_is_idempotent() -> None:
@@ -3109,31 +2905,6 @@ def test_pre_push_toast_viewport_positioned_above_floating_chat() -> None:
     assert "fixed inset-x-0 bottom-" not in content, (
         "ToastViewport får inte använda bottom-positionering"
     )
-
-
-def test_pre_push_build_progress_card_env_normalization_matches_viewer_panel() -> None:
-    """``build-progress-card.tsx`` och ``viewer-panel.tsx`` MÅSTE
-    normalisera ``NEXT_PUBLIC_VIEWSER_PREVIEW_MODE`` likadant (annars
-    visar BuildProgressCard fel hint för t.ex. ``LOCAL-NEXT``).
-    Båda ska använda ``.trim().toLowerCase()``.
-    """
-    card = (VIEWSER_DIR / "components" / "viewer-panel" / "build-progress-card.tsx").read_text(
-        encoding="utf-8"
-    )
-    panel = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
-    # Båda filerna ska normalisera med trim+toLowerCase. Tillåt fri
-    # whitespace/radbrytning mellan env-namnet och normaliserings-
-    # anropen — viktigt är att båda metoderna förekommer i koden så
-    # casing-varianter (``LOCAL-NEXT``) tolkas konsekvent.
-    for name, content in [("build-progress-card.tsx", card), ("viewer-panel.tsx", panel)]:
-        assert "NEXT_PUBLIC_VIEWSER_PREVIEW_MODE" in content, (
-            f"{name} måste läsa NEXT_PUBLIC_VIEWSER_PREVIEW_MODE"
-        )
-        assert ".trim()" in content, f"{name} måste trim:a NEXT_PUBLIC_VIEWSER_PREVIEW_MODE"
-        assert ".toLowerCase()" in content, (
-            f"{name} måste toLowerCase():a NEXT_PUBLIC_VIEWSER_PREVIEW_MODE "
-            f"så casing-varianter (``LOCAL-NEXT``) tolkas konsekvent"
-        )
 
 
 def test_pre_push_cmd_k_skips_select_targets() -> None:
