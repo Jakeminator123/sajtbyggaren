@@ -54,8 +54,17 @@ flaggar inte längre (gap/disablade dossiers lämnas honestly omonterade). #176-
 build aldrig på `applied=false`, diff mot **aktiv** build-snapshot (current.json, read-only),
 route→routeId via scaffoldens `routePlan`, failed-build trace-loggas, runs_root-konsistent.
 Stale `followUpPrompt`/`baseRunId` poppas i v<N+1>. FP:er (dedup/dotted-path/trace) guard-testade.
-**Nästa (huvudspår):** liten **E2E-sanity** (capability-följdprompt end-to-end) → sedan **handoff**
-till ny orchestrator. Efter det per coach-ordning: `kor-4a` critic.
+**VIKTIG STATUS (integration-gap):** hela bryggan (kor-7b→7c→7d→STAB) är **library-komplett +
+test-verifierad + stabiliserad**, men **INTE inkopplad i någon användarväg** — varken `/api/prompt`
+eller CLI anropar `apply_patch_plan`/`build_targeted_version` (bara tester gör det,
+`build_targeted_version` är definierad i build_site.py men aldrig anropad där). En Viewser-följdprompt
+använder alltså fortfarande den GAMLA copyDirective-vägen. **Nästa riktiga integrationsmilstolpe:
+koppla in router→context→plan→apply→targeted-build i `/api/prompt`** (Viewser-följdprompt-handlern) —
+det är det som gör "följdprompt ändrar sajten" verkligt för användare (hänger ihop med coachens
+"exponera `routerDecision` i `/api/prompt`"). En riktig UI/CLI-E2E är blockerad tills dess; bryggan är
+i nuläget bevisad på **integrationstest-nivå** (gröna `test_patch_apply` + `test_targeted_render`).
+**Nästa (huvudspår):** ren **handoff** till ny orchestrator (E2E-via-UI är blockerad på wiringen ovan).
+Efter handoff, per coach-ordning: `/api/prompt`-wiring + `kor-4a` critic.
 **Coach-ordning:** baseline-eval (read-only obs; init ≠ follow-up) → #177 +
 exponera `routerDecision` i `/api/prompt` (Christopher) → `kor-4a` critic → ADR copy_change/inline
 → `kor-o2` OpenClaw V0 → `3a/3b` → `5`. ETT steg i taget, operatören mergar med orchestratorn.

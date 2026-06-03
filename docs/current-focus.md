@@ -12,8 +12,10 @@ Startpromptar och rollgränser finns i
 En capability-backad följdprompt går hela vägen router→context→patch→apply→targeted render→
 current.json-swap→ärlig preview-refresh. **P1 STÄNGD (#178):** apply säkrar nu dossiern i
 selectedDossiers.required via filter_capabilities → codegen monterar den. #176-P2:or fixade
-(ingen build på applied=false, diff mot aktiv build, route→id via routePlan). **Nästa:** liten
-E2E-sanity → handoff till ny orchestrator. Coach-ordning sedan: baseline-eval → #177/routerDecision → kor-4a →
+(ingen build på applied=false, diff mot aktiv build, route→id via routePlan). **INTEGRATION-GAP:**
+bryggan är library-komplett + test-verifierad men INTE inkopplad i `/api/prompt`/CLI — Viewser-följdprompt
+använder fortfarande gamla copyDirective-vägen. Nästa riktiga milstolpe = wira chain:en i `/api/prompt`.
+**Nästa:** handoff till ny orchestrator (UI-E2E blockerad tills wiringen). Coach-ordning sedan: baseline-eval → #177/routerDecision → kor-4a →
 ADR copy_change/inline → kor-o2 → 3a/3b → 5. Main-sync väntar tills STAB + #177 + E2E klara.
 **Tidigare (kor-7c-detalj):** kor-7c (#175) applicerar capability-backade
 `component_add` → `requestedCapabilities` i ny immutabel v<N+1> (ingen build/current.json).
