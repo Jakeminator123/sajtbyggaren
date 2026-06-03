@@ -160,3 +160,9 @@ data/taxonomies/**/*.csv
 # (som är den committade delade utility-versionen).
 tree_v[0-9]*.py
 .vercel
+
+# Per-machine editor/OS junk that showed up as untracked in operator SCM
+# views: multi-root workspace files and Windows shortcuts. Local-only,
+# never committed (e.g. *.code-workspace, kill-dev-trees.bat shortcuts).
+*.code-workspace
+*.lnk
