@@ -121,6 +121,14 @@ Dessa kommer från [`product-operating-context.md`](../product-operating-context
 coach-konversationen och kartläggningen. Detaljer + scope-baserade checks i
 [`04-builder-profil.md`](04-builder-profil.md).
 
+- **Manual/wizard-vägen är en förstaklassväg, inte en fallback.** Det tunga LLM-flödet
+  ersätter inte den deterministiska genereringen — en användare ska fortsatt kunna skapa
+  en helt eller semi-deterministisk startsajt via wizard/UI-val (välja eller härleda
+  scaffold, variant, starter, dossiers). **Alla ingångar** (fri prompt, wizard, starter-/
+  scaffold-/variant-/dossier-val, follow-up, asset-upload, scrape) matar in i **samma**
+  kedja: Project Input → Site Brief → Site Plan → Generation Package → renderer/`build_site`.
+  LLM-flödet får berika, reparera och personalisera samma artefaktkedja — aldrig kringgå
+  eller dubblera den (ingen parallell engine, ingen ny canonical-fil).
 - **LLM:en är exekutor, inte arkitekt.** Den tolkar, skriver, prioriterar, föreslår
   och förbättrar. Resolver, planning, validering, versionering och Quality Gate äger
   alla beslut som måste vara reproducerbara.
