@@ -1444,6 +1444,7 @@ def render_section_service_list(
     *,
     contact_path: str,
     variant_id: str | None = None,
+    blueprint: RenderBlueprint | None = None,
 ) -> str:
     """Render the service-list section for the /tjanster route.
 
@@ -1481,6 +1482,11 @@ def render_section_service_list(
         "service-list",
         default=_SERVICE_LIST_TREATMENT_DEFAULT,
         operator_pin=_operator_pin_for_section(dossier, "service-list"),
+        visual_direction_pick=(
+            blueprint.section_treatment_pick("service-list")
+            if blueprint is not None
+            else None
+        ),
     )
     if treatment == "alternating-rows":
         return _render_service_list_alternating_rows(dossier, contact_path)
@@ -1669,6 +1675,7 @@ def render_services(
     dossier: dict,
     *,
     contact_path: str = "/kontakt",
+    blueprint: RenderBlueprint | None = None,
 ) -> str:
     services = dossier["services"]
     icons_used = sorted({_icon_for_service(svc["id"]) for svc in services} | {"ArrowRight"})
@@ -1680,10 +1687,16 @@ def render_services(
     # tabular). Path B native scaffolds get variant_id threaded
     # through render_route_generic; LSB still goes through this
     # shim so the variant lookup happens here instead.
+    # kor-3b: also forward the blueprint so the service-list section can
+    # honour the Generation Package's visualDirection pick. LSB does not go
+    # through render_route_generic, so without this thread the headline
+    # service-list example (tabular vs alternating-rows) could never see the
+    # blueprint.
     service_list_section = render_section_service_list(
         dossier,
         contact_path=contact_path,
         variant_id=dossier.get("variantId"),
+        blueprint=blueprint,
     )
     return (
         icon_import + "\n"
@@ -4098,6 +4111,7 @@ def render_section_treatment_list(
     *,
     contact_path: str = "/kontakta-oss",
     variant_id: str | None = None,
+    blueprint: RenderBlueprint | None = None,
 ) -> str:
     """Render the full treatment list for the clinic /behandlingar route.
 
@@ -4128,6 +4142,11 @@ def render_section_treatment_list(
         "treatment-list",
         default=_TREATMENT_LIST_TREATMENT_DEFAULT,
         operator_pin=_operator_pin_for_section(dossier, "treatment-list"),
+        visual_direction_pick=(
+            blueprint.section_treatment_pick("treatment-list")
+            if blueprint is not None
+            else None
+        ),
     )
     if treatment == "split-cards":
         return _render_treatment_list_split_cards(services, contact_path)
@@ -4318,6 +4337,7 @@ def render_section_expertise_areas(
     *,
     contact_path: str = "/kontakta-oss",
     variant_id: str | None = None,
+    blueprint: RenderBlueprint | None = None,
 ) -> str:
     """Render a structured expertise-area grid for professional-services home.
 
@@ -4348,6 +4368,11 @@ def render_section_expertise_areas(
         "expertise-areas",
         default=_EXPERTISE_AREAS_TREATMENT_DEFAULT,
         operator_pin=_operator_pin_for_section(dossier, "expertise-areas"),
+        visual_direction_pick=(
+            blueprint.section_treatment_pick("expertise-areas")
+            if blueprint is not None
+            else None
+        ),
     )
     if treatment == "tag-cluster":
         return _render_expertise_areas_tag_cluster(services, contact_path)
@@ -4441,6 +4466,7 @@ def render_section_practice_grid(
     *,
     contact_path: str = "/kontakta-oss",
     variant_id: str | None = None,
+    blueprint: RenderBlueprint | None = None,
 ) -> str:
     """Render the full practice-area catalogue for professional-services /expertis.
 
@@ -4470,6 +4496,11 @@ def render_section_practice_grid(
         "practice-grid",
         default=_PRACTICE_GRID_TREATMENT_DEFAULT,
         operator_pin=_operator_pin_for_section(dossier, "practice-grid"),
+        visual_direction_pick=(
+            blueprint.section_treatment_pick("practice-grid")
+            if blueprint is not None
+            else None
+        ),
     )
     if treatment == "tabular":
         return _render_practice_grid_tabular(services, contact_path)
@@ -4722,6 +4753,7 @@ def render_section_selected_work_preview(
     *,
     contact_path: str = "/kontakta-oss",  # noqa: ARG001 — included for kwarg-call symmetry; preview uses /arbeten as the explicit follow link
     variant_id: str | None = None,
+    blueprint: RenderBlueprint | None = None,
 ) -> str:
     """Render the home-page Selected Work preview for agency-studio.
 
@@ -4759,6 +4791,11 @@ def render_section_selected_work_preview(
         default=_SELECTED_WORK_PREVIEW_TREATMENT_DEFAULT,
         operator_pin=_operator_pin_for_section(
             dossier, "selected-work-preview"
+        ),
+        visual_direction_pick=(
+            blueprint.section_treatment_pick("selected-work-preview")
+            if blueprint is not None
+            else None
         ),
     )
     if treatment == "asymmetric-grid":
@@ -5345,7 +5382,11 @@ def write_pages(
                 blueprint=blueprint,
             )
         elif route_id == "services":
-            content = render_services(render_dossier, contact_path=contact_route["path"])
+            content = render_services(
+                render_dossier,
+                contact_path=contact_route["path"],
+                blueprint=blueprint,
+            )
         elif route_id == "products":
             content = render_products(render_dossier, contact_path=contact_route["path"])
         elif route_id == "menu":

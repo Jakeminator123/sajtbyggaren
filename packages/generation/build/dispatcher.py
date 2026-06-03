@@ -132,10 +132,17 @@ def _call_section_renderer(
 # Phase 3 (ADR 0032, post-B146; ADR 0031 on origin/main pre-port,
 # 2026-05-25) layered operator-pin
 # (``dossier.directives.sectionTreatments``) on top via
-# ``_treatment_for_section(operator_pin=...)`` without changing the
-# section-renderer signatures. A future Phase 4 (kor-3b) will add an
-# LLM-pick step in front of operator-pin; the helper signature is
-# designed to absorb that without touching renderers.
+# ``_treatment_for_section(operator_pin=...)``. kor-3b (2026-06-03)
+# then added the blueprint-driven ``visual_direction_pick`` tier
+# BETWEEN operator-pin and variant-default (final order:
+# operator-pin > visualDirection > variant-default > section-default).
+# The pick value is read from the Generation Package
+# ``visualDirection.sectionTreatments`` by
+# ``blueprint_render.RenderBlueprint.section_treatment_pick`` and threaded
+# into ``_treatment_for_section(visual_direction_pick=...)`` by the five
+# treatment-dispatch section renderers; it is validated against the
+# section's supported treatments here so an unsupported treatment can
+# never be chosen.
 #
 # Renderers that opt in declare ``variant_id: str | None = None`` in
 # their signature and call ``_treatment_for_section`` to pick the
@@ -309,43 +316,110 @@ def _operator_pin_for_section(dossier: dict, section_id: str) -> str | None:
     return pin or None
 
 
+def _supported_treatments_for_section(section_id: str) -> tuple[str, ...]:
+    """Return the treatment ids the renderer supports for ``section_id``.
+
+    Reads the same declarative JSON truth (kor-3a,
+    ``scaffolds/<id>/section-treatments.json``) that the variant table and the
+    planning catalogue consume, via :func:`load_section_treatments`. Because
+    every consumer reads one source on disk, the "supported set" used to gate
+    the kor-3b visual-direction pick can never drift from what the renderers
+    can actually emit. Returns an empty tuple for a section that declares no
+    treatments — then no visual-direction pick is ever accepted for it.
+    """
+    block = load_section_treatments().get(section_id)
+    if not isinstance(block, dict):
+        return ()
+    treatments = block.get("treatments")
+    if not isinstance(treatments, list):
+        return ()
+    return tuple(item for item in treatments if isinstance(item, str))
+
+
+def _visual_direction_pick_for_section(
+    section_id: str, candidate: str | None
+) -> str | None:
+    """Validate a blueprint visual-direction treatment pick for ``section_id``.
+
+    kor-3b: the Generation Package ``visualDirection.sectionTreatments`` may
+    name the treatment a section should render (see
+    ``blueprint_render.RenderBlueprint.section_treatment_pick`` for how the
+    address-keyed map is read). The pick is honoured ONLY when it is a
+    treatment the renderer actually supports for THAT section — i.e. it is in
+    the section-specific ``treatments`` list of the kor-3a JSON. A candidate
+    that is empty, unknown, or only valid for a *different* section (e.g.
+    ``tag-cluster`` belongs to ``expertise-areas``, never ``service-list``) is
+    rejected by returning ``None`` so the resolver falls through to the
+    variant/section default.
+
+    This is the runtime half of the "an unsupported treatment can never be
+    chosen" guarantee; the ``generation-package.schema.json``
+    ``visualDirection.sectionTreatments`` enum is the static half (it rejects
+    treatment ids unknown to every section before the artefakt is even built).
+    """
+    if not isinstance(candidate, str):
+        return None
+    candidate = candidate.strip()
+    if not candidate:
+        return None
+    if candidate not in _supported_treatments_for_section(section_id):
+        return None
+    return candidate
+
+
 def _treatment_for_section(
     variant_id: str | None,
     section_id: str,
     *,
     default: str,
     operator_pin: str | None = None,
+    visual_direction_pick: str | None = None,
 ) -> str:
     """Resolve which design treatment a section should render.
 
-    Resolution order (Phase 3, ADR 0032):
+    Resolution order (kor-3b, layered on Phase 3 / ADR 0032):
 
     1. ``operator_pin`` — explicit per-section treatment pinned by
        the operator in the wizard's visual step
        (``directives.sectionTreatments[section_id]``). Wins over
        everything because the operator has expressed intent.
-    2. ``_SECTION_TREATMENTS_BY_VARIANT[variant_id][section_id]`` —
+    2. ``visual_direction_pick`` — the blueprint's
+       ``visualDirection.sectionTreatments`` choice (from kor-1c),
+       validated against the section's supported treatments via
+       :func:`_visual_direction_pick_for_section`. This is where the
+       same scaffold+variant gets a different feel from a different
+       blueprint without any new CSS. An unsupported / unknown pick is
+       ignored here (it never shadows the variant default).
+    3. ``_SECTION_TREATMENTS_BY_VARIANT[variant_id][section_id]`` —
        the variant's curated default. Phase 2 baseline.
-    3. ``default`` — the section's own fall-back treatment. Used
-       when neither the operator nor the variant has an opinion, or
-       when a future variant is introduced before its treatments
-       are registered.
+    4. ``default`` — the section's own fall-back treatment. Used
+       when none of the above has an opinion, or when a future
+       variant is introduced before its treatments are registered.
 
     The same ``default`` is returned for an unknown variant or for a
     variant that does not register the requested section so a
     section that opts into treatment dispatch never has to know
     which variants exist.
 
+    Regression guarantee (kor-3a parity): with ``visual_direction_pick``
+    left at its default ``None``, this function behaves byte-identically
+    to the pre-kor-3b resolver — operator-pin → variant-default →
+    section-default — so a build without a blueprint is unchanged.
+
     The operator pin is treated as opaque here: validation is done
     by ``project-input.schema.json`` before the dossier loads. A pin
     coming from a hand-edited dossier that bypassed the schema may
     therefore route to an unknown treatment id, but that is the
     section renderer's contract to handle (treat unknown ids as the
-    section default). We deliberately keep this helper trivial so
-    the resolution order stays auditable at a glance.
+    section default). The visual-direction pick, by contrast, IS
+    validated against the supported set here because it originates from
+    a model-produced artefakt rather than an explicit operator choice.
     """
     if operator_pin:
         return operator_pin
+    vd_pick = _visual_direction_pick_for_section(section_id, visual_direction_pick)
+    if vd_pick:
+        return vd_pick
     if not variant_id:
         return default
     bucket = _SECTION_TREATMENTS_BY_VARIANT.get(variant_id)
