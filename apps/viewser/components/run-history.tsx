@@ -63,6 +63,10 @@ const STATUS_DOT_COLORS: Record<string, string> = {
   // stale-pending-detektion). Röd som `failed` — det är ärligt ett misslyckat
   // bygge, inte ett pågående. Skiljer sig från grå `pending` (faktiskt pågår).
   aborted: "bg-destructive",
+  // `pending` = bygget pågår faktiskt (build-result.json saknas än). Egen
+  // sky-färg + pulserande prick (se StatusDot) så det inte konflateras med
+  // de grå terminal-statusarna skipped/unknown.
+  pending: "bg-sky-400",
   skipped: "bg-muted-foreground/40",
   unknown: "bg-muted-foreground/40",
 };
@@ -73,10 +77,13 @@ function shortRun(runId: string): string {
 
 function StatusDot({ status }: { status: string }) {
   const dot = STATUS_DOT_COLORS[status] ?? "bg-muted-foreground/40";
+  // Bara `pending` pulserar (faktiskt pågående bygge). motion-safe så
+  // reduced-motion-användare ser en stilla prick i stället.
+  const pulse = status === "pending" ? " motion-safe:animate-pulse" : "";
   return (
     <span
       aria-label={`status: ${status}`}
-      className={`inline-block size-2 rounded-full ${dot}`}
+      className={`inline-block size-2 rounded-full ${dot}${pulse}`}
     />
   );
 }
@@ -92,6 +99,17 @@ function formatRelative(createdAt: string): string {
   if (hours < 48) return `${hours}h sedan`;
   const days = Math.round(hours / 24);
   return `${days}d sedan`;
+}
+
+// Absolut tidsstämpel för title-tooltip på den relativa tiden. Operatören
+// hovrar "3h sedan" och ser exakt datum/tid (Europe/Stockholm via sv-SE).
+function formatAbsolute(createdAt: string): string {
+  const ts = Date.parse(createdAt);
+  if (!Number.isFinite(ts)) return "";
+  return new Date(ts).toLocaleString("sv-SE", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 }
 
 export function RunHistory({
@@ -153,7 +171,12 @@ export function RunHistory({
                           {run.siteId} · {run.status}
                           {run.version ? ` · v${run.version}` : ""}
                         </span>
-                        <span className="shrink-0">{formatRelative(run.createdAt)}</span>
+                        <span
+                          className="shrink-0"
+                          title={formatAbsolute(run.createdAt)}
+                        >
+                          {formatRelative(run.createdAt)}
+                        </span>
                       </span>
                       {run.projectId ? (
                         <span className="block truncate pl-4 font-mono text-[10px] text-muted-foreground/80">

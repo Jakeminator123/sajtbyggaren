@@ -3951,3 +3951,96 @@ def test_floating_chat_first_run_hint_surfaces_core_loop() -> None:
     assert "onShowVersions={onOpenHistory}" in shell, (
         "BuilderShell ska koppla 'Visa versioner' till historik-ingången"
     )
+
+
+# ---------------------------------------------------------------------------
+# UX-batch (versionssynlighet / preview-tillstånd / FloatingChat / a11y).
+# Source-lock-tester som låser de fyra in-lane-förbättringarna så de inte
+# tyst tas bort i framtida UI-refactor.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_run_history_pending_dot_is_distinct_and_pulses() -> None:
+    """S1: `pending` (faktiskt pågående bygge) ska ha en egen färg + puls
+    så det inte konflateras med de grå terminal-statusarna skipped/unknown.
+    """
+    text = (VIEWSER_DIR / "components" / "run-history.tsx").read_text(encoding="utf-8")
+    assert 'pending: "bg-sky-400"' in text, (
+        "Run History ska ge pending en egen sky-färg, inte falla igenom "
+        "till den grå muted-foreground-pricken."
+    )
+    assert 'status === "pending"' in text and "motion-safe:animate-pulse" in text, (
+        "pending-pricken ska pulsera (motion-safe) för att signalera pågående bygge."
+    )
+    assert "formatAbsolute" in text and "toLocaleString" in text, (
+        "Relativa tider ska ha en absolut tidsstämpel-tooltip (title) via formatAbsolute."
+    )
+
+
+@pytest.mark.tooling
+def test_versions_tab_status_palette_and_absolute_timestamp() -> None:
+    """S1: Versioner-tabbens status-palett ska vara konsekvent med
+    run-history (pending + aborted) och visa absolut tidsstämpel-tooltip.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "inspector" / "versions-tab.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert 'pending: "bg-sky-400"' in text and 'aborted: "bg-destructive"' in text, (
+        "Versioner-tabben ska spegla run-history-paletten (pending + aborted) "
+        "så de två versionsvyerna är konsekventa."
+    )
+    assert "formatAbsolute" in text, (
+        "Versioner-tabben ska ha samma absolut-tidsstämpel-tooltip som run-history."
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_iframe_has_load_state_overlay() -> None:
+    """S2: preview-iframen ska flippa ett iframeLoaded-state via onLoad och
+    visa en skelett-overlay tills dokumentet laddat, gate:ad mot
+    isBuilding/isFinalizing så den inte dubblerar BuildProgressCard.
+    """
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
+    assert "iframeLoaded" in text and "setIframeLoaded" in text, (
+        "ViewerPanel ska spåra iframens laddningsstatus."
+    )
+    assert "onLoad={() => setIframeLoaded(true)}" in text, (
+        "Iframens onLoad ska flippa iframeLoaded → overlayn döljs."
+    )
+    assert "!iframeLoaded && !isBuilding && !isFinalizing" in text, (
+        "Skelett-overlayn ska gate:as mot build-tillstånd så den inte dubblerar BuildProgressCard."
+    )
+
+
+@pytest.mark.tooling
+def test_floating_chat_failed_build_offers_retry() -> None:
+    """S3: ett pipeline-failed bygge (summary.variant === 'error') ska
+    sätta retryPrompt så ErrorBubble visar 'Försök igen'. Tidigare fick
+    bara HTTP/network-fel en retry-knapp, inte själva bygg-felet.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert 'summary.variant === "error" ? trimmed || undefined : undefined' in text, (
+        "Failed-bygget ska sätta retryPrompt så retry-knappen dyker upp."
+    )
+
+
+@pytest.mark.tooling
+def test_wizard_tab_strip_is_keyboard_navigable() -> None:
+    """S4: wizard-stegstripen ska följa WAI-ARIA tabs-mönstret — roving
+    tabindex, pil/Home/End-navigering och tabpanel-koppling.
+    """
+    text = (VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "tabIndex={isActive ? 0 : -1}" in text, (
+        "Stegstripen ska använda roving tabindex (bara aktiv flik i tab-ordningen)."
+    )
+    assert '"ArrowRight"' in text and '"Home"' in text and '"End"' in text, (
+        "Stegstripen ska hantera pil/Home/End-navigering."
+    )
+    assert 'role="tabpanel"' in text and 'aria-controls="wizard-tabpanel"' in text, (
+        "Flikarna ska peka på en tabpanel (aria-controls) och panelen ska ha role=tabpanel."
+    )

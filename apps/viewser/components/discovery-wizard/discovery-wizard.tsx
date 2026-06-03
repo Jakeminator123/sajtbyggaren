@@ -376,7 +376,7 @@ export function DiscoveryWizard({
           type="button"
           onClick={() => onOpenChange(false)}
           aria-label="Stäng"
-          className="text-muted-foreground hover:bg-foreground/5 hover:text-foreground min-tap sm:min-tap-0 absolute top-3 right-3 z-10 inline-flex items-center justify-center rounded-full transition-colors active:scale-95 sm:top-4 sm:right-4 sm:h-8 sm:w-8"
+          className="text-muted-foreground hover:bg-foreground/5 hover:text-foreground focus-visible:ring-ring/50 min-tap sm:min-tap-0 absolute top-3 right-3 z-10 inline-flex items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none active:scale-95 sm:top-4 sm:right-4 sm:h-8 sm:w-8"
         >
           <X className="h-4 w-4" />
         </button>
@@ -404,6 +404,35 @@ export function DiscoveryWizard({
         <div
           role="tablist"
           aria-label="Steg i guiden"
+          // WAI-ARIA tabs-tangentbord: vänster/höger flyttar OCH aktiverar
+          // (automatic activation, samma effekt som klick), Home/End hoppar
+          // till första/sista. Roving tabindex (nedan) gör att bara aktiv
+          // flik är i tab-ordningen; pilarna flyttar fokus inom listan.
+          onKeyDown={(event) => {
+            const last = WIZARD_STEP_ORDER.length - 1;
+            let next: number | null = null;
+            if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+              next = stepIndex >= last ? 0 : stepIndex + 1;
+            } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+              next = stepIndex <= 0 ? last : stepIndex - 1;
+            } else if (event.key === "Home") {
+              next = 0;
+            } else if (event.key === "End") {
+              next = last;
+            }
+            if (next === null) return;
+            event.preventDefault();
+            setStepIndex(next);
+            // Flytta fokus till den nya fliken efter att DOM uppdaterats
+            // (roving tabindex byter vilken knapp som är fokuserbar).
+            const list = event.currentTarget;
+            requestAnimationFrame(() => {
+              const target = list.querySelector<HTMLElement>(
+                `[data-tab-index="${next}"]`,
+              );
+              target?.focus();
+            });
+          }}
           className="border-border/60 flex w-full items-stretch gap-0 border-b px-5 sm:justify-center sm:gap-1 sm:px-8"
         >
           {WIZARD_STEP_ORDER.map((id, idx) => {
@@ -414,11 +443,18 @@ export function DiscoveryWizard({
                 key={id}
                 type="button"
                 role="tab"
+                id={`wizard-tab-${id}`}
+                aria-controls="wizard-tabpanel"
+                data-tab-index={idx}
+                // Roving tabindex: bara aktiv flik når via Tab; pilarna
+                // sköter navigeringen inom listan (APG tabs-mönster).
+                tabIndex={isActive ? 0 : -1}
                 aria-current={isActive ? "step" : undefined}
                 aria-selected={isActive}
                 onClick={() => setStepIndex(idx)}
                 className={[
                   "min-tap sm:min-tap-0 relative -mb-px inline-flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2.5 text-[12.5px] font-medium tracking-tight transition-colors sm:flex-none sm:px-5",
+                  "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
                   isActive
                     ? "text-foreground border-foreground"
                     : "text-muted-foreground hover:text-foreground border-transparent",
@@ -446,7 +482,12 @@ export function DiscoveryWizard({
           })}
         </div>
 
-        <section className="bg-background relative flex min-h-0 flex-col overflow-hidden">
+        <section
+          id="wizard-tabpanel"
+          role="tabpanel"
+          aria-labelledby={`wizard-tab-${step}`}
+          className="bg-background relative flex min-h-0 flex-col overflow-hidden"
+        >
           <div
             ref={contentRef}
             className="flex-1 overflow-y-auto px-5 py-6 sm:px-10 sm:py-8"
@@ -659,7 +700,7 @@ export function DiscoveryWizard({
                   type="button"
                   onClick={() => setHelpOpen(false)}
                   aria-label="Stäng"
-                  className="text-muted-foreground hover:text-foreground rounded-md p-1 transition-colors"
+                  className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 rounded-md p-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
                   <X className="h-4 w-4" />
                 </button>

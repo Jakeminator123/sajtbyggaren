@@ -75,6 +75,12 @@ const STATUS_DOT_COLORS: Record<string, string> = {
   degraded: "bg-amber-500",
   warning: "bg-amber-500",
   failed: "bg-destructive",
+  // `aborted` = dödat bygge (stale-pending). Röd som failed; speglar
+  // run-history.tsx-paletten så de två versionsvyerna är konsekventa.
+  aborted: "bg-destructive",
+  // `pending` = bygget pågår faktiskt. Egen sky-färg + puls (se dotClass)
+  // så det inte ser ut som de grå terminal-statusarna.
+  pending: "bg-sky-400",
   skipped: "bg-muted-foreground/40",
   unknown: "bg-muted-foreground/40",
 };
@@ -90,6 +96,17 @@ function formatRelative(createdAt: string): string {
   if (hours < 48) return `${hours}h sedan`;
   const days = Math.round(hours / 24);
   return `${days}d sedan`;
+}
+
+// Absolut tidsstämpel för title-tooltip på relativa tiden (samma mönster
+// som run-history.tsx). Operatören hovrar och ser exakt datum/tid.
+function formatAbsolute(createdAt: string): string {
+  const ts = Date.parse(createdAt);
+  if (!Number.isFinite(ts)) return "";
+  return new Date(ts).toLocaleString("sv-SE", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 }
 
 function shortRunId(runId: string): string {
@@ -885,6 +902,10 @@ function RunRow({
   onIterateFrom: () => void;
 }) {
   const dotClass = STATUS_DOT_COLORS[run.status] ?? "bg-muted-foreground/40";
+  // Bara `pending` pulserar (faktiskt pågående bygge). motion-safe så
+  // reduced-motion-användare ser en stilla prick.
+  const dotPulse =
+    run.status === "pending" ? "motion-safe:animate-pulse" : undefined;
   // Spärra "Iterera" under pågående bygge: pendingBaseRunId rensas av
   // page.tsx när bygget är klart, så ett klick mitt i bygget skulle
   // sättas och sedan tystas. Bättre att hindra interaktionen helt än
@@ -913,7 +934,7 @@ function RunRow({
         <div className="flex min-w-0 items-center gap-2">
           <span
             aria-label={`status: ${run.status}`}
-            className={cn("inline-block size-2 rounded-full", dotClass)}
+            className={cn("inline-block size-2 rounded-full", dotClass, dotPulse)}
           />
           <span className="text-foreground/90 truncate font-mono text-[11px]">
             {shortRunId(run.runId)}
@@ -933,7 +954,9 @@ function RunRow({
         </div>
         <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 pl-4 text-[10.5px]">
           <Clock aria-hidden className="h-2.5 w-2.5" />
-          {formatRelative(run.createdAt)}
+          <span title={formatAbsolute(run.createdAt)}>
+            {formatRelative(run.createdAt)}
+          </span>
           {run.version ? ` · v${run.version}` : ""}
           {run.status ? ` · ${run.status}` : ""}
         </div>

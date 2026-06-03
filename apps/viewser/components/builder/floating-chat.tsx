@@ -1189,6 +1189,15 @@ export function FloatingChat({
               variant: summary.variant,
               changes: summary.changes,
               changesExact: summary.changesExact,
+              // Pipeline-failed bygge (variant "error", outcome "failed"):
+              // erbjud "Försök igen" med samma prompt. Build-fel är ofta
+              // transienta (npm-timeout, flakig codegen) så en retry är
+              // värdefull — tidigare saknades retry helt på failed-bygget
+              // (bara HTTP/network-fel fick retry-knapp). Endast text-delen
+              // sparas; bilagor kan inte återställas (samma regel som
+              // HTTP-fel-grenen ovan).
+              retryPrompt:
+                summary.variant === "error" ? trimmed || undefined : undefined,
             }),
         );
         // Bygget landade (ok/degraded/failed-status) — markera sista steget

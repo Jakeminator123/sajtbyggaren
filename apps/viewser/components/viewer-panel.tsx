@@ -302,6 +302,13 @@ export function ViewerPanel({
   // och same-machine-iframen tar emot postMessage från Site Inspector
   // för Sprint 5:s live token-editor.
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  // Iframe-dokumentets laddningsstatus. När ``localPreviewUrl`` precis
+  // satts (första preview ELLER byte av vald run) är iframen vit tills
+  // Next.js hunnit hydrera. ``iframeLoaded`` flippas av iframens onLoad
+  // och styr en subtil skelett-overlay (se render) så operatören ser en
+  // laddningsindikator i stället för en blank vit canvas. Återställs till
+  // false varje gång URL:en ändras.
+  const [iframeLoaded, setIframeLoaded] = useState(false);
   // När browsern inte stödjer embed sparar vi hämtade filer + den
   // detekterade browser-kinden i ett gemensamt state-objekt.
   // Knappen anropar `sdk.openProject()` med samma payload (utan att
@@ -385,6 +392,7 @@ export function ViewerPanel({
     setUnavailable(null);
     setFallback(null);
     setLocalPreviewUrl(null);
+    setIframeLoaded(false);
     setLoading(true);
     node.replaceChildren();
 
@@ -437,6 +445,7 @@ export function ViewerPanel({
             // publik …vercel.run-https-URL. Båda iframe:as identiskt.
             const info = (await previewResponse.json()) as PreviewStartResponse;
             if (cancelled) return;
+            setIframeLoaded(false);
             setLocalPreviewUrl(info.url);
             setLoading(false);
             return;
@@ -1053,6 +1062,10 @@ export function ViewerPanel({
             src={localPreviewUrl}
             title="Sajt-preview"
             className="h-full w-full border-0 bg-white"
+            // onLoad flippar iframeLoaded → skelett-overlayn nedan döljs.
+            // Fångar både första render och byte av vald run. (Hanterar
+            // inte fel inuti iframen — det är ett separat, framtida steg.)
+            onLoad={() => setIframeLoaded(true)}
             // Tillåt scripts (Next.js client-side hydration) och
             // same-origin (sajten behåller sin egen origin —
             // localhost:<port> som vi spawnat, eller vercel.run-sandboxen
@@ -1062,6 +1075,25 @@ export function ViewerPanel({
             // och behövs så den genererade sajtens egna fetch/hydration fungerar.
             sandbox="allow-scripts allow-same-origin allow-forms"
           />
+          {/*
+            Skelett-overlay tills iframens dokument laddat. Dödar den vita
+            blixten mellan att URL:en sätts och Next.js hydrerat. Gate:ad
+            mot isBuilding/isFinalizing så den inte dubblerar
+            BuildProgressCard (som redan äger ytan under bygge).
+          */}
+          {!iframeLoaded && !isBuilding && !isFinalizing ? (
+            <div
+              className="pointer-events-none absolute inset-0 z-[6] flex items-center justify-center bg-white"
+              role="status"
+              aria-live="polite"
+            >
+              <span className="sr-only">Laddar preview…</span>
+              <Loader2
+                aria-hidden
+                className="text-muted-foreground/50 h-6 w-6 motion-safe:animate-spin"
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
 
