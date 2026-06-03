@@ -383,10 +383,13 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `d44acd8` (2026-06-04 natt UTC, `jakob-be` HEAD — #188 kor-6b router
-LLM-fallback (ny routerModel-roll, mock=6a, klock-ex gröna) + #189 kor-o2 OpenClaw Core V0
-(read-only transient OpenClawDecision, bygger/skriver aldrig) + #187 platform-baseline (ADR 0037).
-Kvar i kör-sekvensen: ENDAST kor-4b (verifierModel critic). Föregående: #185 kor-5 repairModel
+Last verified state: `029f652` (2026-06-04 natt UTC, `jakob-be` HEAD — #190 kor-4b verifierModel
+read-only smak-critic ovanpå kor-4a (mock=4a, dedup, icke-blockerande, llm-models v8). **HELA
+KÖR-SEKVENSEN i docs/heavy-llm-flow/ ÄR NU IMPLEMENTERAD** (0/1a/1b/1c/2/3a/3b/4a/4b/5/6a/6b/7a/7b/7c/7d/
+STAB/o1/o2). Kvar = INKOPPLING, inte fler kör-kort: rerender-wiring (gör kor-5 verklig),
+`/api/prompt`-wiring + routerDecision (gör follow-up verklig för UI, låser #177), baseline-eval.
+Föregående: #188 kor-6b router LLM-fallback + #189 kor-o2 OpenClaw Core V0 + #187 platform-baseline.
+Föregående: #185 kor-5 repairModel
 blueprint-only repair (dormant library; brief-validering+rollback, rerender try/except, blueprintPasses,
 typfix). Föregående: #186 CLI-wiring (kor-4a critic + kor-7 follow-up-kedja i build-vägen, E2E). Docs-pass:
 system-overview-refresh + current-focus slim-down (Föregående checkpoint → arkiv) +
