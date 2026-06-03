@@ -106,14 +106,16 @@ class RepairResult(BaseModel):
     last pass produced no fixes), per the registry's
     ``mark-degraded-and-emit-engine-event`` abortBehavior.
 
-    ``blueprintRepairs`` / ``passes`` carry the kor-5 blueprint-repair
+    ``blueprintRepairs`` / ``blueprintPasses`` carry the kor-5 blueprint-repair
     telemetry: one ``BlueprintRepair`` per repairModel proposal that was
     received during a real run (success or rejected-before-apply), and the
     number of bounded blueprint-repair passes executed (bounded by
-    ``fix-registry.v1.json:blueprintRepair.maxPasses``, default 1). Both
-    default empty/0 so every existing mechanical-only caller round-trips
-    unchanged; the fields populate only when a Generation Package + critic
-    issues are threaded into ``execute_phase3_quality_and_repair``.
+    ``fix-registry.v1.json:blueprintRepair.maxPasses``, default 1). The field is
+    named ``blueprintPasses`` (not ``passes``) to stay distinct from
+    ``iterations`` (the mechanical sandwich-loop counter). Both default empty/0
+    so every existing mechanical-only caller round-trips unchanged; the fields
+    populate only when a Generation Package + critic issues + a rerender
+    callback are threaded into ``execute_phase3_quality_and_repair``.
     """
 
     status: RepairStatus
@@ -125,4 +127,4 @@ class RepairResult(BaseModel):
     qualityStatusAfter: QualityStatus | None = None
     iterations: int = 0
     blueprintRepairs: list[BlueprintRepair] = Field(default_factory=list)
-    passes: int = 0
+    blueprintPasses: int = 0

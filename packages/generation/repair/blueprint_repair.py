@@ -150,6 +150,11 @@ class BlueprintRepairOutcome(BaseModel):
     repairs: list[BlueprintRepair] = Field(default_factory=list)
     skipped: bool = False
     skipped_reason: str = ""
+    # Set when the injected rerender callback raised: the blueprint was patched
+    # in memory but could not be materialised, so the pass is downgraded to
+    # partial-fix / no-fix-applied and the patched artefakts are NOT surfaced
+    # (the rendered site does not reflect the patch). Never crashes the phase.
+    rerender_error: str = ""
     # Deep-copied, patched artifacts (only set when a patch was applied);
     # callers may persist them. ``None`` on not-needed / skipped / all-invalid.
     patched_generation_package: dict[str, Any] | None = None
@@ -350,28 +355,46 @@ def _grounded(text: str, grounding_text: str) -> tuple[bool, str]:
 # Schema validation of the patched Generation Package (local jsonschema)
 # ---------------------------------------------------------------------------
 
-_GENERATION_PACKAGE_SCHEMA_PATH = (
-    Path(__file__).resolve().parents[3]
-    / "governance"
-    / "schemas"
-    / "generation-package.schema.json"
-)
+_SCHEMAS_DIR = Path(__file__).resolve().parents[3] / "governance" / "schemas"
+_GENERATION_PACKAGE_SCHEMA_PATH = _SCHEMAS_DIR / "generation-package.schema.json"
+_SITE_BRIEF_SCHEMA_PATH = _SCHEMAS_DIR / "site-brief.schema.json"
 
 
-def _generation_package_valid(generation_package: dict[str, Any]) -> bool:
-    """Validate the patched package against generation-package.schema.json.
+def _payload_valid(schema_path: Path, payload: dict[str, Any]) -> bool:
+    """True when ``payload`` validates against the schema at ``schema_path``.
 
     Local jsonschema (no cross-package import) so repair stays inside its
-    repo-boundaries allow-list while still proving a patch never breaks the
-    canonical contract before it is applied.
+    repo-boundaries allow-list while still proving a patch never breaks a
+    canonical contract before it is materialised.
     """
     import jsonschema
 
-    schema = json.loads(
-        _GENERATION_PACKAGE_SCHEMA_PATH.read_text(encoding="utf-8")
-    )
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
     validator = jsonschema.Draft202012Validator(schema)
-    return not list(validator.iter_errors(generation_package))
+    return not list(validator.iter_errors(payload))
+
+
+def _generation_package_valid(generation_package: dict[str, Any]) -> bool:
+    return _payload_valid(_GENERATION_PACKAGE_SCHEMA_PATH, generation_package)
+
+
+def _site_brief_regressed(
+    original_brief: dict[str, Any], patched_brief: dict[str, Any]
+) -> bool:
+    """True when a Site Brief that WAS schema-valid became invalid after patch.
+
+    Reviewer fix: the blueprint pass may write ``conversion.primaryCta`` on the
+    Site Brief, so the patched brief is validated too - symmetric with the
+    Generation Package guard. We only block a *regression* (valid -> invalid):
+    a brief that was already non-conformant (e.g. a minimal test slice) is left
+    as-is rather than spuriously failing, but a real, schema-valid brief can
+    never be pushed out of contract by a repair.
+    """
+    if original_brief == patched_brief:
+        return False
+    if not _payload_valid(_SITE_BRIEF_SCHEMA_PATH, original_brief):
+        return False
+    return not _payload_valid(_SITE_BRIEF_SCHEMA_PATH, patched_brief)
 
 
 # ---------------------------------------------------------------------------
@@ -416,51 +439,88 @@ def _is_offer_address(address: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
+def _apply_missing_cta(
+    issue: CriticIssue,
+    proposal: HeroCopyPatch,
+    patched_brief: dict[str, Any],
+    grounding: str,
+) -> list[BlueprintRepair]:
+    """Add a CTA via the EXISTING ``conversion`` field-group only.
+
+    Contract (reviewer fix): repair never invents the ``conversion`` group out
+    of thin air and never adds a ``primaryCta`` key to a hero block that lacks
+    one. ``conversion.primaryCta`` is a schema-known field of the existing
+    Site Brief conversion group; we fill it only when that group already exists.
+    """
+    field = "conversion.primaryCta"
+    cta = _clean(proposal.primaryCta)
+    if not cta:
+        return [
+            BlueprintRepair(
+                issueType=issue.type, target=issue.target, field=field,
+                success=False,
+                detail="repairModel returned no primaryCta for missing_cta",
+            )
+        ]
+    ok, reason = _grounded(cta, grounding)
+    if not ok:
+        return [
+            BlueprintRepair(
+                issueType=issue.type, target=issue.target, field=field,
+                success=False, detail=f"grounding guard rejected CTA: {reason}",
+            )
+        ]
+    conversion = patched_brief.get("conversion")
+    if not isinstance(conversion, dict):
+        return [
+            BlueprintRepair(
+                issueType=issue.type, target=issue.target, field=field,
+                success=False,
+                detail=(
+                    "no existing conversion field-group on the Site Brief; "
+                    "repair will not invent one"
+                ),
+            )
+        ]
+    before = _clean(conversion.get("primaryCta"))
+    if before == cta:
+        return [
+            BlueprintRepair(
+                issueType=issue.type, target=issue.target, field=field,
+                before=before, after=cta, success=False,
+                detail="proposal identical to existing value",
+            )
+        ]
+    conversion["primaryCta"] = cta
+    return [
+        BlueprintRepair(
+            issueType=issue.type, target=issue.target, field=field,
+            before=before, after=cta, success=True,
+        )
+    ]
+
+
 def _apply_hero_patch(
     issue: CriticIssue,
     proposal: HeroCopyPatch,
     patched_gp: dict[str, Any],
     patched_brief: dict[str, Any],
 ) -> list[BlueprintRepair]:
-    """Apply a hero/copy patch (generic_copy / missing_cta). One entry/field."""
-    entries: list[BlueprintRepair] = []
+    """Apply a hero/copy patch. One entry per field.
+
+    Contract (reviewer fix): a rewrite (``generic_copy``) only REWRITES hero
+    text fields that ALREADY EXIST on the block - it never creates a new key
+    (``proofLine``/``primaryCta``) on a block that lacks it (``contentBlocks``
+    is schema-open, so this rule is enforced here, not by the schema).
+    ``missing_cta`` is handled via the existing ``conversion`` group, never by
+    inventing a hero CTA key.
+    """
     grounding = _grounding_text(patched_gp, patched_brief, issue.target)
+
+    if issue.type == "missing_cta":
+        return _apply_missing_cta(issue, proposal, patched_brief, grounding)
+
     address = _resolve_hero_address(patched_gp, issue.target)
-
-    # missing_cta with no hero block -> patch the existing brief.conversion field.
-    if issue.type == "missing_cta" and address is None:
-        cta = _clean(proposal.primaryCta)
-        if not cta:
-            return [
-                BlueprintRepair(
-                    issueType=issue.type, target=issue.target,
-                    field="conversion.primaryCta", success=False,
-                    detail="repairModel returned no primaryCta for missing_cta",
-                )
-            ]
-        ok, reason = _grounded(cta, grounding)
-        if not ok:
-            return [
-                BlueprintRepair(
-                    issueType=issue.type, target=issue.target,
-                    field="conversion.primaryCta", success=False,
-                    detail=f"grounding guard rejected CTA: {reason}",
-                )
-            ]
-        conversion = patched_brief.get("conversion")
-        if not isinstance(conversion, dict):
-            conversion = {}
-            patched_brief["conversion"] = conversion
-        before = _clean(conversion.get("primaryCta"))
-        conversion["primaryCta"] = cta
-        return [
-            BlueprintRepair(
-                issueType=issue.type, target=issue.target,
-                field="conversion.primaryCta", before=before, after=cta,
-                success=True,
-            )
-        ]
-
     if address is None:
         return [
             BlueprintRepair(
@@ -470,8 +530,12 @@ def _apply_hero_patch(
         ]
 
     block = patched_gp["contentBlocks"][address]
+    entries: list[BlueprintRepair] = []
     proposed: dict[str, str] = {}
-    for key in (*_HERO_FIELDS, "primaryCta"):
+    for key in _HERO_FIELDS:
+        if key not in block:
+            # Contract: never create a new key on a block that lacks it.
+            continue
         value = _clean(getattr(proposal, key, None))
         if value:
             proposed[key] = value
@@ -479,13 +543,16 @@ def _apply_hero_patch(
         return [
             BlueprintRepair(
                 issueType=issue.type, target=address, field="hero",
-                success=False, detail="repairModel returned no usable fields",
+                success=False,
+                detail=(
+                    "repairModel returned no rewrite for an existing hero text "
+                    "field (headline/subheadline/proofLine)"
+                ),
             )
         ]
 
     for key, value in proposed.items():
         field = f"contentBlocks.{address}.{key}"
-        # primaryCta is a label (not a sentence); still grounding-checked.
         ok, reason = _grounded(value, grounding)
         if not ok:
             entries.append(
@@ -650,6 +717,7 @@ def apply_blueprint_repairs(
     repairs: list[BlueprintRepair] = []
     passes = 0
     any_model_response = False
+    rerender_error = ""
     current_eligible = eligible0
     final_critic = critic
 
@@ -661,30 +729,46 @@ def apply_blueprint_repairs(
                 continue  # model unavailable for this issue -> skip, no entry
             any_model_response = True
             entries = _dispatch_issue(issue, proposal, patched_gp, patched_brief)
-            # Schema-guard: only keep a successful apply if the patched package
-            # still validates; otherwise roll the field back is overkill - we
-            # validate the whole package and drop ALL successes this pass if it
-            # breaks the contract (defensive; should never trip for copy edits).
             repairs.extend(entries)
             if any(e.success for e in entries):
                 applied_this_pass = True
         if not applied_this_pass:
             break
-        if not _generation_package_valid(patched_gp):
-            # Extremely defensive: a copy edit broke the schema. Abort the pass,
-            # mark the successes as failed, and do not re-render.
+        # Contract guard: the patched Generation Package must still satisfy its
+        # schema, and a previously-valid Site Brief must not be pushed out of
+        # contract by the conversion edit. On a regression, roll back ALL
+        # successes this pass and do not re-render (defensive; should never trip
+        # for grounded copy edits, but it makes the "blueprint-only, contract-
+        # safe" promise enforceable rather than aspirational).
+        if not _generation_package_valid(patched_gp) or _site_brief_regressed(
+            brief, patched_brief
+        ):
             for entry in repairs:
                 if entry.success:
                     entry.success = False
                     entry.detail = (
-                        "rolled back: patched Generation Package failed schema "
-                        "validation"
+                        "rolled back: patched artefakt failed schema validation"
                     )
             patched_gp = copy.deepcopy(generation_package)
             patched_brief = copy.deepcopy(brief)
             break
         if rerender is not None:
-            rerender(patched_gp, patched_brief)
+            # Re-render is a non-blocking warning lane: a renderer error must
+            # NEVER crash the quality/repair phase. Capture it, stop the loop
+            # and downgrade the outcome - the blueprint was patched in memory
+            # but the rendered site does not reflect it, so we do not claim
+            # "fixed" and do not surface the patched critic/artefakts.
+            try:
+                rerender(patched_gp, patched_brief)
+            except Exception as exc:  # noqa: BLE001 - non-blocking by design
+                import sys
+
+                rerender_error = f"{type(exc).__name__}: {exc}"
+                sys.stderr.write(
+                    f"[blueprint-repair] rerender failed: {rerender_error}\n"
+                )
+                sys.stderr.flush()
+                break
         final_critic = run_deterministic_critic(
             generation_package=patched_gp,
             site_brief=patched_brief,
@@ -701,6 +785,18 @@ def apply_blueprint_repairs(
         )
 
     successes = [r for r in repairs if r.success]
+
+    if rerender_error:
+        # Render failed after an in-memory patch: honest downgrade. Do NOT
+        # surface the patched critic/artefakts (the site was not updated).
+        status_render: BlueprintRepairStatus = (
+            "partial-fix" if successes else "no-fix-applied"
+        )
+        return BlueprintRepairOutcome(
+            status=status_render, passes=passes, repairs=repairs,
+            rerender_error=rerender_error,
+        )
+
     if not successes:
         return BlueprintRepairOutcome(
             status="no-fix-applied", passes=0, repairs=repairs,
@@ -741,9 +837,12 @@ def append_blueprint_repair_trace_event(
     else:
         event = "repair.blueprint_patched"
         message = (
-            f"Blueprint repair status={outcome.status} passes={outcome.passes} "
-            f"applied={applied} rejected={rejected}"
+            f"Blueprint repair status={outcome.status} "
+            f"blueprintPasses={outcome.passes} applied={applied} "
+            f"rejected={rejected}"
         )
+        if outcome.rerender_error:
+            message += f" rerenderError={outcome.rerender_error}"
     record = {
         "runId": run_id,
         "phase": "build",

@@ -473,7 +473,7 @@ def test_execute_phase3_runs_blueprint_repair(tmp_path, monkeypatch):
     )
 
     assert isinstance(repair_result, RepairResult)
-    assert repair_result.passes == 1
+    assert repair_result.blueprintPasses == 1
     assert any(r.success for r in repair_result.blueprintRepairs)
     assert len(rerender_calls) == 1
     # repair-result.json payload validates against the schema.
@@ -497,17 +497,49 @@ def test_execute_phase3_no_key_emits_blueprint_skipped_trace(tmp_path, monkeypat
     gp = _gen_pkg({"home.hero": {"headline": "Välkommen till vår hemsida"}})
     brief = _brief()
 
+    # A rerender callback is required to reach the blueprint-repair pass; with no
+    # key the pass itself short-circuits to skipped (no synthetic failures).
     _, repair_result = execute_phase3_quality_and_repair(
         target_dir=target, required_routes=[], npm_steps=[],
         build_status="ok", do_typecheck=False,
         generation_package=gp, site_brief=brief,
         run_dir=run_dir, run_id="kor5-nokey",
+        rerender=lambda patched_gp, patched_brief: None,
     )
     assert repair_result.status == "no-fix-applied"
-    assert repair_result.passes == 0
+    assert repair_result.blueprintPasses == 0
     assert repair_result.blueprintRepairs == []
     trace = (run_dir / "trace.ndjson").read_text(encoding="utf-8")
     assert "repair.blueprint_skipped" in trace
+
+
+@pytest.mark.tooling
+def test_execute_phase3_blueprint_dormant_without_rerender(tmp_path, monkeypatch):
+    """Blueprint-repair is rerender-gated: build_site passes the blueprint for
+    the kor-4a critic (#186) but no rerender, so the pass stays dormant and
+    never claims an improvement it cannot materialise."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    import packages.generation.repair.blueprint_repair as bp
+
+    monkeypatch.setattr(bp, "run_repair_model", _dispatch_stub)
+    target = tmp_path / "target"
+    (target / "app").mkdir(parents=True)
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    gp = _gen_pkg({"home.hero": {"headline": "Välkommen till vår hemsida"}})
+
+    _, repair_result = execute_phase3_quality_and_repair(
+        target_dir=target, required_routes=[], npm_steps=[],
+        build_status="ok", do_typecheck=False,
+        generation_package=gp, site_brief=_brief(),
+        run_dir=run_dir, run_id="kor5-dormant",
+        # rerender omitted -> dormant
+    )
+    assert repair_result.blueprintRepairs == []
+    assert repair_result.blueprintPasses == 0
+    trace = (run_dir / "trace.ndjson").read_text(encoding="utf-8")
+    assert "repair.blueprint_patched" not in trace
+    assert "repair.blueprint_skipped" not in trace
 
 
 # ---------------------------------------------------------------------------
@@ -531,7 +563,112 @@ def test_execute_phase3_without_blueprint_is_unchanged(tmp_path):
     )
     assert final_quality.critic is None
     assert repair_result.blueprintRepairs == []
-    assert repair_result.passes == 0
+    assert repair_result.blueprintPasses == 0
+
+
+# ---------------------------------------------------------------------------
+# 12. contract: only rewrite EXISTING hero fields (never create new keys)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_generic_copy_never_creates_new_hero_keys(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    # Hero has ONLY a headline; the model also proposes a proofLine.
+    gp = _gen_pkg({"home.hero": {"headline": "Välkommen till vår hemsida"}})
+    brief = _brief()
+
+    def stub(issue, g, b):
+        return HeroCopyPatch(
+            headline="Erfaren elektriker i Malmö",
+            proofLine="Snabb och trygg elservice",  # key absent -> must be ignored
+        )
+
+    outcome = apply_blueprint_repairs(
+        generation_package=gp, site_brief=brief, critic=_critic(gp, brief),
+        trigger_types=_TRIGGER, max_passes=1, model_call=stub,
+    )
+    patched_hero = outcome.patched_generation_package["contentBlocks"]["home.hero"]
+    assert "proofLine" not in patched_hero  # contract: no new key created
+    assert patched_hero["headline"] == "Erfaren elektriker i Malmö"
+    # Only the existing headline produced a success entry.
+    successes = [r for r in outcome.repairs if r.success]
+    assert len(successes) == 1 and successes[0].field.endswith(".headline")
+
+
+# ---------------------------------------------------------------------------
+# 13. missing_cta via the EXISTING conversion group only
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_missing_cta_fills_existing_conversion_group(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    gp = _gen_pkg({"home.hero": {"headline": "Trygg elektriker i Malmö"}})
+    # conversion EXISTS but carries no CTA -> missing_cta fires; repair fills it.
+    brief = _brief(conversion={})
+
+    critic = _critic(gp, brief)
+    assert any(i.type == "missing_cta" for i in critic.issues)
+
+    outcome = apply_blueprint_repairs(
+        generation_package=gp, site_brief=brief, critic=critic,
+        trigger_types=_TRIGGER, max_passes=1, model_call=_dispatch_stub,
+    )
+    assert outcome.status == "fixed"
+    applied = [r for r in outcome.repairs if r.success]
+    assert len(applied) == 1 and applied[0].field == "conversion.primaryCta"
+    assert outcome.patched_site_brief["conversion"]["primaryCta"] == "Be om offert"
+    assert not any(i.type == "missing_cta" for i in outcome.final_critic.issues)
+
+
+@pytest.mark.tooling
+def test_missing_cta_does_not_invent_conversion_group(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    gp = _gen_pkg({"home.hero": {"headline": "Trygg elektriker i Malmö"}})
+    # No conversion group at all -> repair must NOT invent it.
+    brief = _brief()
+    del brief["conversion"]
+
+    critic = _critic(gp, brief)
+    assert any(i.type == "missing_cta" for i in critic.issues)
+
+    outcome = apply_blueprint_repairs(
+        generation_package=gp, site_brief=brief, critic=critic,
+        trigger_types=_TRIGGER, max_passes=1, model_call=_dispatch_stub,
+    )
+    assert outcome.status == "no-fix-applied"
+    assert outcome.repairs and not outcome.repairs[0].success
+    assert "will not invent one" in outcome.repairs[0].detail
+    # No conversion group was created.
+    assert outcome.patched_site_brief is None
+
+
+# ---------------------------------------------------------------------------
+# 14. rerender failure never crashes; honest downgrade
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_rerender_failure_is_non_blocking_downgrade(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    gp = _gen_pkg({"home.hero": {"headline": "Välkommen till vår hemsida"}})
+    brief = _brief()
+
+    def boom(patched_gp, patched_brief):
+        raise RuntimeError("renderer exploded")
+
+    outcome = apply_blueprint_repairs(
+        generation_package=gp, site_brief=brief, critic=_critic(gp, brief),
+        trigger_types=_TRIGGER, max_passes=1, rerender=boom,
+        model_call=_dispatch_stub,
+    )
+    # Never raised; downgraded to partial-fix with the render error recorded.
+    assert outcome.status == "partial-fix"
+    assert "RuntimeError" in outcome.rerender_error
+    # Patched artefakts/critic are NOT surfaced (the site was not updated).
+    assert outcome.patched_generation_package is None
+    assert outcome.final_critic is None
 
 
 # ---------------------------------------------------------------------------
