@@ -1,6 +1,14 @@
 # Orchestrerings-handoff — heavy-llm-flow
 
-**Datum:** 2026-06-03 (uppdaterad) · **Bas:** `jakob-be` @ `f4d2a1e` · **Governance:** grön (18/18)
+**Datum:** 2026-06-03 (natt-uppdatering) · **Bas:** `jakob-be` @ `a2ffa05` · **Governance:** grön (18/18)
+
+> **Natt-uppdatering (2026-06-03):** #179 (kor-3a section-treatments→JSON), #180 (kor-4a
+> deterministisk quality critic v0, non-blocking) och #183 (kor-3a follow-up: loadern flyttad
+> till `orchestration/` så `planning` inte importerar `build` — Pushvakt P1; repo-boundaries v10
+> + fail-closed + import-scan-test) är mergade. kor-4a-critic är dormant i build-vägen tills
+> `build_site`/`dev_generate` skickar `generation_package` till gaten. Cloud-builders kör kor-3b
+> (Option A) + kor-5 (plan godkänd, hålls dormant). #178-trio-fynd (Pushvakt) filade som follow-up
+> till `/api/prompt`-wiringen.
 
 > **Sedan förra handoffen (2026-06-03 kväll):** Vercel auto-deploy begränsad till
 > `jakob-be`/`christopher-ui`/`main` (denylist i `apps/viewser/vercel.json`).

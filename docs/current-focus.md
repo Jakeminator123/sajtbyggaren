@@ -5,6 +5,25 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
+## Current objective (2026-06-03 natt — kor-3a/4a inne + boundary-fix; våg 2 i gång)
+
+`jakob-be` @ `a2ffa05`, rent träd. **Denna session mergade:** #179 (kor-3a:
+section-treatments Python→JSON, en deklarativ källa), #180 (kor-4a: deterministisk
+quality critic v0 — non-blocking, ingen LLM), och #183 (kor-3a follow-up: flyttar
+section-treatments-loadern till `orchestration/` så `planning` inte importerar
+`build` — Pushvakt P1; repo-boundaries v10 + fail-closed på trasig JSON + boundary-test
+som scannar riktiga imports). **Ärlighet:** kor-4a-critic är library-komplett men
+**dormant i build-vägen** (gaten anropas utan `generation_package` → `critic` blir null
+i verkliga runs) tills `build_site`/`dev_generate` wire:as.
+**Pågår (cloud-builders):** kor-3b (visualDirection väljer treatment, Option A — additiv
+wiring i renderers/blueprint_render OK, ingen JSX/nya treatments; rebase:as mot a2ffa05)
+och kor-5 (repairModel blueprint-only; planen godkänd men hålls/dormant tills
+no-key-inkonsekvensen + build-väg-wiringen är klara).
+**Nästa:** baseline-eval (read-only) · wira critic/repair i build-vägen · #178-trion
+(siteId-snapshot / previewShouldRefresh / failed-trace) när bryggan kopplas i `/api/prompt`.
+**Öppet (ej vår lane):** #177 (Christopher, väntar på routerDecision i `/api/prompt`),
+#181/#182 (docs→main, cloud-env), #156 (parkerad). Main-sync = operatörsbeslut.
+
 ## Current objective (2026-06-03 kväll — follow-up-bryggan startad: kor-7b inne)
 
 `jakob-be` @ `f4d2a1e`, rent träd. Heavy-LLM-kedjan är synlig (kor-1b→1c→2→7a→1c-copy inne).
@@ -328,7 +347,10 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `f4d2a1e` (2026-06-03 kväll UTC, `jakob-be` HEAD — #178 KÖR-7-STAB stabiliserar
+Last verified state: `a2ffa05` (2026-06-03 natt UTC, `jakob-be` HEAD — #179 kor-3a
+section-treatments-JSON + #180 kor-4a deterministisk critic + #183 kor-3a planning→build
+boundary-fix (Pushvakt P1: loader → orchestration, repo-boundaries v10, fail-closed,
+import-scan-test) mergade denna session. Föregående `f4d2a1e` (kväll) — #178 KÖR-7-STAB stabiliserar
 apply/targeted-render: P1 stängd (applied capability → selectedDossiers.required via filter_capabilities
 → codegen monterar dossiern), stale provenance rensad, #176-P2:or fixade (ingen build på applied=false,
 diff mot aktiv build-snapshot, route→id via routePlan, failed-trace, runs_root). Föregående: #176 KÖR-7d targeted
