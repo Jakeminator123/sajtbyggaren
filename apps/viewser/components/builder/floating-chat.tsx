@@ -363,6 +363,16 @@ type PromptApiResponse = {
   // follow-ups utan route-/variant-delta → UI faller tillbaka på
   // prompt-heuristiken (summarizeChangesFromPrompt).
   changeSet?: RunChangeSet | null;
+  // KÖR-6a readiness (2026-06-03): det deterministiska router-beslutet för
+  // den här prompten, speglar governance/schemas/router-decision.schema.json.
+  // Backend (classify_message) producerar strukturen men /api/prompt skickar
+  // den ÄNNU INTE — follow-up-bryggan (kor-7b/7c/7d, #176) wirar in den.
+  // Tills dess är fältet utelämnat och ``extractRouterDecision`` returnerar
+  // null → UI:t beter sig EXAKT som idag (graceful degradation, samma mönster
+  // som appliedVisibleEffect/appliedCopyDirectives). När det börjar skickas
+  // härleder ``summarizeRouterDecision`` en ärlig rad per messageKind utan ny
+  // UI-deploy. Renderas aldrig rått (vi läser bara kända enum-fält).
+  routerDecision?: Record<string, unknown>;
   error?: string;
 };
 
@@ -623,6 +633,147 @@ function defaultPosition(width: number, height: number): Position {
   );
 }
 
+// --- KÖR-6a RouterDecision-readiness ---------------------------------------
+// Stängda enum-litteraler speglade från
+// governance/schemas/router-decision.schema.json. Vi mirrorar bara de fält
+// summarizeRouterDecision faktiskt grenar på; resten av kontraktet ignoreras
+// medvetet (UI:t ska inte koppla sig hårt till hela router-shapen).
+type RouterMessageKind =
+  | "answer_only"
+  | "site_review"
+  | "edit_instruction"
+  | "component_discovery"
+  | "reference_analysis"
+  | "bug_report"
+  | "multi_intent"
+  | "unclear";
+
+type RouterBuildRequirement =
+  | "none"
+  | "plan_only"
+  | "artifact_patch_only"
+  | "targeted_rebuild"
+  | "full_rebuild";
+
+type RouterDecisionView = {
+  messageKind: RouterMessageKind;
+  buildRequirement: RouterBuildRequirement;
+  requiresClarification: boolean;
+  subtaskCount: number;
+};
+
+const ROUTER_MESSAGE_KINDS: ReadonlySet<string> = new Set([
+  "answer_only",
+  "site_review",
+  "edit_instruction",
+  "component_discovery",
+  "reference_analysis",
+  "bug_report",
+  "multi_intent",
+  "unclear",
+]);
+
+const ROUTER_BUILD_REQUIREMENTS: ReadonlySet<string> = new Set([
+  "none",
+  "plan_only",
+  "artifact_patch_only",
+  "targeted_rebuild",
+  "full_rebuild",
+]);
+
+// Avläs ``routerDecision`` defensivt utan att lita på dess typ — exakt samma
+// fält-drift-säkra mönster som ``extractAppliedVisibleEffect``. Returnerar
+// null när fältet saknas (dagens läge) eller har en okänd messageKind, så
+// summarizeBuildResult faller tillbaka på oförändrat beteende.
+function extractRouterDecision(
+  payload: PromptApiResponse,
+): RouterDecisionView | null {
+  const raw = payload.routerDecision;
+  if (!raw || typeof raw !== "object") return null;
+  const obj = raw as Record<string, unknown>;
+  const messageKind = obj.messageKind;
+  if (typeof messageKind !== "string" || !ROUTER_MESSAGE_KINDS.has(messageKind)) {
+    return null;
+  }
+  const buildRequirementRaw = obj.buildRequirement;
+  const buildRequirement =
+    typeof buildRequirementRaw === "string" &&
+    ROUTER_BUILD_REQUIREMENTS.has(buildRequirementRaw)
+      ? (buildRequirementRaw as RouterBuildRequirement)
+      : "none";
+  const subtasks = obj.subtasks;
+  return {
+    messageKind: messageKind as RouterMessageKind,
+    buildRequirement,
+    requiresClarification: obj.requiresClarification === true,
+    subtaskCount: Array.isArray(subtasks) ? subtasks.length : 0,
+  };
+}
+
+// Ärlig, förskottslös rad per router-utfall. Returnerar null för de fall där
+// routern faktiskt begärde ett synligt bygge (edit/multi_intent med
+// targeted_rebuild/full_rebuild) → då tar den vanliga bygg-summeringen vid
+// (Bug B/no-op, copy-direktiv, change-set). Vi lovar ALDRIG en ändring som
+// routern inte krävde ett bygge för (orchestrator-punkt 5).
+function summarizeRouterDecision(
+  view: RouterDecisionView,
+): { content: string; variant: ChatMessage["variant"] } | null {
+  if (view.requiresClarification || view.messageKind === "unclear") {
+    return {
+      content:
+        'Jag är inte säker på vad du vill ändra. Beskriv exakt vilken text, sektion eller sida du menar — t.ex. "byt rubriken i hero till X".',
+      variant: "info",
+    };
+  }
+  if (view.messageKind === "answer_only" || view.messageKind === "site_review") {
+    return {
+      content:
+        "Det här tolkade jag som en fråga om sajten, inte en ändring — så jag byggde inte om något. Säg till om du vill att jag ändrar något konkret.",
+      variant: "info",
+    };
+  }
+  if (view.messageKind === "reference_analysis") {
+    return {
+      content:
+        'Att härma en extern referens ("som på …") stöds inte än. Beskriv i stället konkret vad du vill ha — t.ex. "mörk topbar med logga till vänster".',
+      variant: "info",
+    };
+  }
+  if (view.messageKind === "component_discovery") {
+    return {
+      content:
+        "Jag kan inte söka fram färdiga komponenter åt dig än. Beskriv funktionen du vill lägga till så bygger jag den som en vanlig ändring.",
+      variant: "info",
+    };
+  }
+  if (view.messageKind === "bug_report") {
+    return {
+      content:
+        "Tack — jag noterade felrapporten. Jag kan inte felsöka sajten automatiskt än, men beskriv var det ser fel ut så försöker jag åtgärda det.",
+      variant: "info",
+    };
+  }
+  // edit_instruction / multi_intent: bygg-kravet avgör om en synlig ändring
+  // ens väntas. none/plan_only/artifact_patch_only = "plan skapad, men den
+  // targeted rebuild som gör den synlig är inte klar än". targeted_rebuild/
+  // full_rebuild → null så den riktiga bygg-summeringen tar vid.
+  if (
+    view.buildRequirement === "none" ||
+    view.buildRequirement === "plan_only" ||
+    view.buildRequirement === "artifact_patch_only"
+  ) {
+    const intro =
+      view.messageKind === "multi_intent" && view.subtaskCount > 1
+        ? `Jag delade upp din förfrågan i ${view.subtaskCount} delar och planerade dem`
+        : "Jag planerade ändringen";
+    return {
+      content: `${intro}, men bygget som gör den synlig är inte klart i den här versionen än. Previewen visar därför fortfarande föregående version.`,
+      variant: "info",
+    };
+  }
+  return null;
+}
+
 function summarizeBuildResult(
   payload: PromptApiResponse,
   outcome: PromptBuildOutcome,
@@ -633,6 +784,19 @@ function summarizeBuildResult(
   changes?: BuildChange[];
   changesExact?: boolean;
 } {
+  // KÖR-6a readiness: om backend exponerar ett router-beslut låter vi det
+  // ärligt styra meddelandet för icke-bygg-utfall (fråga, oklart, referens,
+  // discovery, plan-only) INNAN success-/no-op-grenarna nedan. Saknas fältet
+  // (dagens läge) → extractRouterDecision = null → oförändrat beteende.
+  // Edit/multi_intent som krävde ett synligt bygge faller igenom
+  // (summarizeRouterDecision → null) till den vanliga summeringen.
+  const routerView = extractRouterDecision(payload);
+  if (routerView) {
+    const routerLine = summarizeRouterDecision(routerView);
+    if (routerLine) {
+      return routerLine;
+    }
+  }
   // B3 — version-progression i success-meddelandet. När payload.version
   // är t.ex. 3 visar vi "v2 → v3" så operatören får en känsla av
   // historiken utan att Inspectorn behöver öppnas. För v1 (första
