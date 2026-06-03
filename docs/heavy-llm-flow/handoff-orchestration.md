@@ -9,7 +9,9 @@ att läsa hela förra sessionens chatt. Läs även `README.md` + `00`–`04` i d
 
 | Commit | Vad |
 |--------|-----|
-| `e30cc15` | denna handoff (refresh) |
+| `fae98f3` | KÖR-1b — briefModel fyller brief-blueprintet (#162) |
+| `8e4f7fe` | KÖR-0b state-realign + VercelSandboxRuntime boundary (#161) |
+| `e30cc15` | handoff-refresh |
 | `1461945` | chore: ignorera lokala junk-filer (`*.code-workspace`, `*.lnk`) |
 | `fa943ac` | handoff efter kor-1a + kor-6a |
 | `89530a1` | KÖR-6a — deterministisk router (#159) |
@@ -40,8 +42,13 @@ och governance-grön.
 
 ## Nästa kort (sekvens enligt README)
 
-`kor-1b → 1c → 2 → 4a → 3a → 3b → 5 → 6b → 7a–d`.
-**Rekommenderat nästa:** `kor-1b` (briefModel fyller brief-blueprintet).
+`kor-1b (inne) → 1c → 2 → 4a → 3a → 3b → 5 → 6b → 7a–d`.
+**Huvudspår nu:** `kor-1c` (planning fyller `sectionPlan`/`contentBlocks`/
+`visualDirection`/`qualityRisks`) → sedan `kor-2` (renderern konsumerar → sidan blir
+bättre). Det är där användaren ser skillnad.
+**Parallellt (valfritt, max en extra agent):** `kor-7a` Context Assembler — read-only,
+fil-disjunkt (`packages/generation/orchestration/context/` vs `planning/`), beror på
+1a+6a (båda inne). Ger inte snyggare sajter direkt, men bra räls för follow-up/patch.
 
 ## Uppskjutet — router v1 P2-luckor (→ `kor-6b` / v1.1)
 
