@@ -32,6 +32,9 @@ const STATUS_TONE: Record<
   warning: "warn",
   "no-fix-applied": "warn",
   failed: "fail",
+  // `aborted` = bygget dödades innan build-result.json skrevs (lib/runs.ts
+  // stale-pending). Ärligt ett misslyckat bygge → röd `fail`-ton, inte neutral.
+  aborted: "fail",
   skipped: "neutral",
   unknown: "neutral",
   "mock-complete": "info",

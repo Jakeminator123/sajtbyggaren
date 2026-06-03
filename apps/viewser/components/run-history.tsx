@@ -59,6 +59,10 @@ const STATUS_DOT_COLORS: Record<string, string> = {
   degraded: "bg-amber-500",
   warning: "bg-amber-500",
   failed: "bg-destructive",
+  // `aborted` = bygget dödades innan build-result.json skrevs (lib/runs.ts
+  // stale-pending-detektion). Röd som `failed` — det är ärligt ett misslyckat
+  // bygge, inte ett pågående. Skiljer sig från grå `pending` (faktiskt pågår).
+  aborted: "bg-destructive",
   skipped: "bg-muted-foreground/40",
   unknown: "bg-muted-foreground/40",
 };

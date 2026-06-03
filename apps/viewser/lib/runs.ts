@@ -9,13 +9,54 @@ const SITE_ID_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 /**
  * Run-status surfaced by `/api/runs` and `/api/runs/[runId]/trace`.
  *
- *   - `pending`  – run finns på disk men `build-result.json` saknas än.
- *                  UI ritar en optimistisk "pågår"-rad. (GAP-backend-build-trace-endpoint.)
+ *   - `pending`  – run finns på disk men `build-result.json` saknas än OCH
+ *                  run-mappen har varit aktiv nyligen. UI ritar en optimistisk
+ *                  "pågår"-rad. (GAP-backend-build-trace-endpoint.)
+ *   - `aborted`  – `build-result.json` saknas men run-mappen har varit inaktiv
+ *                  längre än `STALE_PENDING_TIMEOUT_MS`. Builder-kontraktet skriver
+ *                  ALLTID build-result.json (även vid fel), så en saknad fil efter
+ *                  rimlig byggtid = hård kill (flik stängd, Cursor-omstart), inte
+ *                  ett pågående bygge. Rapporteras ärligt som avbrutet i st.f. att
+ *                  hänga `pending`/grå för evigt och vilseleda operatören.
  *   - `ok` / `degraded` / `failed` / `skipped` – speglar `build-result.json:status`.
  *   - `unknown` – run-mappen finns men varken build-result eller trace
  *                 hittades; UI väljer själv hur den vill rendera.
  */
-export type RunStatus = "pending" | "ok" | "degraded" | "failed" | "skipped" | "unknown";
+export type RunStatus =
+  | "pending"
+  | "aborted"
+  | "ok"
+  | "degraded"
+  | "failed"
+  | "skipped"
+  | "unknown";
+
+// Ett bygge som dödas mitt i (flik stängd, Cursor-omstart, avbruten session)
+// hinner aldrig skriva `build-result.json` eller promota `current.json`. Utan
+// en tidsgräns rapporteras en sådan run som `pending` för evigt (grå prick),
+// vilket vilseleder operatören att tro att ett bygge fortfarande pågår. Efter
+// den här timeouten utan aktivitet (sista trace-event eller run-mappens
+// birthtime) rapporterar vi den ärligt som `aborted` i stället. Gränsen är
+// medvetet generös (> npm install + next build) så ett legitimt långsamt bygge
+// aldrig felflaggas. `VIEWSER_STALE_PENDING_MS` kan justera den.
+const DEFAULT_STALE_PENDING_TIMEOUT_MS = 15 * 60 * 1000;
+
+function stalePendingTimeoutMs(): number {
+  const raw = Number(process.env.VIEWSER_STALE_PENDING_MS);
+  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_STALE_PENDING_TIMEOUT_MS;
+}
+
+/**
+ * En pending run (ingen build-result.json) är "stale" — och alltså avbruten,
+ * inte pågående — om dess senaste aktivitet är äldre än timeouten. Vi mäter
+ * aktivitet som det senare av sista trace-event och run-mappens birthtime
+ * (millisekunder). `lastActivityMs <= 0` (okänd) behandlas konservativt som
+ * INTE stale så vi aldrig felflaggar en run vi saknar tidsdata för.
+ */
+function isStalePending(lastActivityMs: number, now: number = Date.now()): boolean {
+  if (!Number.isFinite(lastActivityMs) || lastActivityMs <= 0) return false;
+  return now - lastActivityMs > stalePendingTimeoutMs();
+}
 
 export type RunMeta = {
   runId: string;
@@ -24,9 +65,9 @@ export type RunMeta = {
   projectId?: string;
   version?: number | null;
   createdAt: string;
-  /** Sätts bara på pending-runs (inläst från sista trace-event). */
+  /** Sätts bara på pending/aborted-runs (inläst från sista trace-event). */
   currentPhase?: string;
-  /** Sätts bara på pending-runs (inläst från sista trace-event). */
+  /** Sätts bara på pending/aborted-runs (inläst från sista trace-event). */
   currentEvent?: string;
 };
 
@@ -178,9 +219,19 @@ async function buildPendingMeta(runId: string, stats: Stats): Promise<RunMeta | 
   }
   const lastTrace = await readLastTraceEvent(runId);
   const promptMeta = await readPromptMeta(inputMeta.siteId);
+  // Senaste aktivitet = det senare av sista trace-event och run-mappens
+  // birthtime. Ett dött bygge (saknad build-result.json) som varit inaktivt
+  // längre än timeouten rapporteras som `aborted`, inte `pending` — annars
+  // hänger den grå för evigt och vilseleder operatören (preview promotas
+  // aldrig). Ett legitimt pågående/nyss startat bygge har färsk aktivitet och
+  // förblir `pending`.
+  const lastTraceMs = lastTrace ? Date.parse(lastTrace.timestamp) : Number.NaN;
+  const lastActivityMs = Number.isFinite(lastTraceMs)
+    ? Math.max(lastTraceMs, stats.birthtimeMs)
+    : stats.birthtimeMs;
   const meta: RunMeta = {
     runId,
-    status: "pending",
+    status: isStalePending(lastActivityMs) ? "aborted" : "pending",
     siteId: inputMeta.siteId ?? promptMeta.siteId ?? "unknown",
     version: inputMeta.version ?? promptMeta.version,
     createdAt: stats.birthtime.toISOString(),
@@ -641,6 +692,28 @@ export async function readRunTrace(
       runStatus = value;
     } else {
       runStatus = "unknown";
+    }
+  } else {
+    // Ingen build-result.json: pending tills bygget skriver den, men markera
+    // ärligt som `aborted` om run-mappen varit inaktiv längre än timeouten.
+    // Måste matcha listRuns/buildPendingMeta så Run History och trace-pollern
+    // är överens — annars skulle use-build-trace-polling polla ett dött bygge
+    // (`runStatus === "pending"`) i all oändlighet. Aktivitet = senare av sista
+    // trace-event och run-mappens birthtime.
+    let lastActivityMs = 0;
+    const lastTrace = await readLastTraceEvent(runId);
+    const lastTraceMs = lastTrace ? Date.parse(lastTrace.timestamp) : Number.NaN;
+    if (Number.isFinite(lastTraceMs)) {
+      lastActivityMs = lastTraceMs;
+    }
+    try {
+      const dirStats = await fs.stat(runDir);
+      lastActivityMs = Math.max(lastActivityMs, dirStats.birthtimeMs);
+    } catch {
+      // birthtime ej läsbar — förlita oss på trace-timestampen ovan (om någon).
+    }
+    if (isStalePending(lastActivityMs)) {
+      runStatus = "aborted";
     }
   }
 

@@ -260,11 +260,12 @@ export function useBuildTracePolling(
         }
 
         if (trace.runStatus !== "pending") {
-          // Build klar (ok/degraded/failed/skipped/unknown) — stoppa.
-          // /api/prompt-fetchen i floating-chat.tsx levererar slut-
-          // bubblan separat med summary + outcome. Vi rensar inte
-          // state här eftersom enabled=false-effekten kommer rensa
-          // när isSending blir false.
+          // Build klar eller avbruten (ok/degraded/failed/skipped/aborted/
+          // unknown) — stoppa. `aborted` (lib/runs.ts stale-pending) fångas av
+          // samma !== "pending"-grind så pollern inte jagar ett dött bygge i
+          // all oändlighet. /api/prompt-fetchen i floating-chat.tsx levererar
+          // slutbubblan separat med summary + outcome. Vi rensar inte state här
+          // eftersom enabled=false-effekten kommer rensa när isSending blir false.
           return;
         }
 
