@@ -14,14 +14,29 @@ Hard guarantees of this slice:
   ``log_router_decision_to_existing_run``, which appends to an *existing*
   run's trace.ndjson and never creates a run.
 
+An optional LLM fallback (KÖR-6b, ``routerModel``) sits on top of the
+heuristic via ``classify_message_with_llm_fallback``: it only escalates
+``unclear`` / long / complex ``multi_intent`` messages to the model, returns the
+same ``RouterDecision`` contract, and is identical to KÖR-6a without an
+``OPENAI_API_KEY`` (no regression). ``shouldStartPreview`` is always recomputed
+deterministically so the model can never start a build/preview it should not.
+
 Public API:
     classify_message(message, *, context=None) -> RouterDecision
+    classify_message_with_llm_fallback(message, *, context=None, ...) -> RouterDecision
     log_router_decision_to_existing_run(run_dir, decision, *, run_id=None) -> bool
     RouterDecision, RouterContext, RouterTarget, RouterReference, RouterSubtask
     MessageKind, EditKind, BuildRequirement, ContextLevel
 """
 
 from .classify import classify_message
+from .llm_fallback import (
+    RouterModelResolutionError,
+    classify_message_with_llm_fallback,
+    has_openai_api_key,
+    needs_llm_fallback,
+    resolve_router_model,
+)
 from .models import (
     BuildRequirement,
     ContextLevel,
@@ -42,9 +57,14 @@ __all__ = [
     "MessageKind",
     "RouterContext",
     "RouterDecision",
+    "RouterModelResolutionError",
     "RouterReference",
     "RouterSubtask",
     "RouterTarget",
     "classify_message",
+    "classify_message_with_llm_fallback",
+    "has_openai_api_key",
     "log_router_decision_to_existing_run",
+    "needs_llm_fallback",
+    "resolve_router_model",
 ]

@@ -1108,6 +1108,15 @@ COMMON_WORDS = {
     # as the QualityResult / CodegenResult / RepairResult families above.
     "RouterDecision", "RouterTarget", "RouterReference", "RouterSubtask",
     "RouterContext", "SubtaskScope",
+    # KÖR-6b router LLM-fallback (packages/generation/orchestration/router/
+    # llm_fallback.py). ``RouterModelResolutionError`` is the local error class
+    # raised when llm-models.v1.json does not declare a usable ``routerModel``
+    # role - an implementation symbol that mirrors the existing
+    # RepairModelResolutionError / PlanningModelResolutionError /
+    # CodegenModelResolutionError family above, not a canonical domain term.
+    # The Model Role itself (``routerModel``) is camelCase and registered in
+    # llm-models.v1.json (v7) + naming-dictionary.v1.json modelRole.aliasesAllowed.
+    "RouterModelResolutionError",
     # KÖR-7a Context Assembler runtime symbols
     # (packages/generation/orchestration/context/). Sibling read-only module to
     # the KÖR-6a router above: ``AssembledContext`` is the result envelope,
@@ -1156,6 +1165,16 @@ COMMON_WORDS = {
     # families above. A real type gets registered in naming-dictionary.v1 with
     # an ADR if/when it becomes a persisted runtime contract (see kor-o2).
     "OpenClawDecision", "OpenClawAction",
+    # KÖR-O2 OpenClaw Core V0 runtime symbols
+    # (packages/generation/orchestration/openclaw/). The V0 module that binds
+    # the KÖR-6a router + KÖR-7a context assembler into one transient
+    # ``OpenClawDecision`` (already allowlisted above). ``PatchPlanRequest`` is
+    # the honest "patch needed, apply path missing (kor-7c)" marker embedded in
+    # the decision; ``ToolCall`` is the proposed-tool shape (always
+    # requiresApproval in V0, never auto-run). Transient implementation symbols
+    # (no saved file, no ADR) - same local-allowlist treatment as the
+    # OpenClawDecision / RouterDecision families above.
+    "PatchPlanRequest", "ToolCall",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

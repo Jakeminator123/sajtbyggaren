@@ -383,7 +383,10 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `802e62b` (2026-06-04 natt UTC, `jakob-be` HEAD — #185 kor-5 repairModel
+Last verified state: `d44acd8` (2026-06-04 natt UTC, `jakob-be` HEAD — #188 kor-6b router
+LLM-fallback (ny routerModel-roll, mock=6a, klock-ex gröna) + #189 kor-o2 OpenClaw Core V0
+(read-only transient OpenClawDecision, bygger/skriver aldrig) + #187 platform-baseline (ADR 0037).
+Kvar i kör-sekvensen: ENDAST kor-4b (verifierModel critic). Föregående: #185 kor-5 repairModel
 blueprint-only repair (dormant library; brief-validering+rollback, rerender try/except, blueprintPasses,
 typfix). Föregående: #186 CLI-wiring (kor-4a critic + kor-7 follow-up-kedja i build-vägen, E2E). Docs-pass:
 system-overview-refresh + current-focus slim-down (Föregående checkpoint → arkiv) +
