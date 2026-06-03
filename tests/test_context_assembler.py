@@ -608,3 +608,20 @@ def test_dispatch_missing_identifier_is_noted_not_raised(env):
         assert ctx.contextLevel == level
         assert ctx.payload == {}
         assert ctx.notes and "missing required" in ctx.notes[0]
+
+
+def test_runs_relative_env_resolves_cwd_independently(monkeypatch, tmp_path):
+    """A relative VIEWSER_RUNS_DIR resolves against apps/viewser (its documented
+    base), not the Python process cwd, so the assembler reads the same runs dir
+    Viewser does regardless of where the process was launched."""
+    paths = ContextPaths()
+    expected = (paths.repoRoot / "data" / "runs").resolve()
+    monkeypatch.setenv("VIEWSER_RUNS_DIR", "../../data/runs")
+    monkeypatch.chdir(tmp_path)  # would break a cwd-relative resolution
+    assert paths.runs.resolve() == expected
+
+
+def test_runs_absolute_env_is_used_verbatim(monkeypatch, tmp_path):
+    target = tmp_path / "operator-runs"
+    monkeypatch.setenv("VIEWSER_RUNS_DIR", str(target))
+    assert ContextPaths().runs == target

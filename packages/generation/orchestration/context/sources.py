@@ -62,7 +62,15 @@ class ContextPaths:
             return self.runsDir
         env = os.environ.get("VIEWSER_RUNS_DIR", "").strip()
         if env:
-            return Path(env)
+            env_path = Path(env)
+            if env_path.is_absolute():
+                return env_path
+            # VIEWSER_RUNS_DIR is documented relative to apps/viewser/
+            # (apps/viewser/.env.example: ``../../data/runs``). Resolve a
+            # relative value against that base, cwd-independently, so the
+            # assembler reads the SAME runs dir an operator's Viewser session
+            # does regardless of the Python process working directory.
+            return (self.repoRoot / "apps" / "viewser" / env_path).resolve()
         return self.repoRoot / "data" / "runs"
 
     @property
