@@ -77,7 +77,9 @@ def apply_patch_plan(
     if one already exists, to append an append-only apply Engine Event to its
     ``trace.ndjson``. It defaults to ``None`` so apply touches no run at all -
     never a *previous* run's directory (that would break the immutability
-    diff). Returns a transient :class:`ApplyResult`.
+    diff). When supplied, **every** outcome is traced (applied, empty no-op,
+    unmapped, rejected) so no apply is ever silently dropped (kor-7d FYND1).
+    Returns a transient :class:`ApplyResult`.
     """
     # Lazy import: keep ``import ...apply`` (models/mapping) free of the brief/
     # discovery import chain that scripts.prompt_to_project_input pulls in, and
@@ -98,10 +100,32 @@ def apply_patch_plan(
     output_dir = output_dir if output_dir is not None else DEFAULT_OUTPUT_DIR
     runs_dir = runs_dir if runs_dir is not None else DEFAULT_RUNS_DIR
 
+    def _trace(result: ApplyResult) -> ApplyResult:
+        # FYND1 (kor-7d trace-gap): every outcome - applied, empty no-op,
+        # unmapped, rejected - leaves an honest append-only trace event when a
+        # run dir is available, so a skipped/rejected apply is never silent.
+        # ``trace_run_dir`` still defaults to None, so apply touches no run
+        # unless a caller (the kor-7d orchestrator) supplies the new version's
+        # run dir - never a previous run's dir (immutability diff).
+        if trace_run_dir is not None:
+            log_patch_apply_to_existing_run(trace_run_dir, result)
+        return result
+
     # 1. Rejected/invalid plan -> never applied (kor-7c DoD). A kor-7b planner
     #    sets valid=False whenever it put a rail-breaking patch in rejected; we
-    #    also refuse any hand-built plan that smuggles rejected entries.
+    #    also refuse any hand-built plan that smuggles rejected entries. The
+    #    refusal is traced (FYND1) before raising so it is never silent.
     if plan.rejected or not plan.valid:
+        _trace(
+            ApplyResult(
+                applied=False,
+                siteId=site_id,
+                notes=[
+                    "Patch plan rejected/ogiltig (valid=False eller rejected ej "
+                    "tom); appliceras aldrig (kor-7c).",
+                ],
+            )
+        )
         raise PatchApplyError(
             "Patch plan är inte giltig (valid=False eller rejected ej tom); "
             "en rejected/ogiltig patch appliceras aldrig (kor-7c)."
@@ -109,10 +133,15 @@ def apply_patch_plan(
 
     # 2. Empty valid plan -> nothing to apply (not an error). No write.
     if not plan.patches:
-        return ApplyResult(
-            applied=False,
-            siteId=site_id,
-            notes=["Tom patch-plan; ingen ändring att applicera, ingen ny version skapad."],
+        return _trace(
+            ApplyResult(
+                applied=False,
+                siteId=site_id,
+                notes=[
+                    "Tom patch-plan; ingen ändring att applicera, ingen ny "
+                    "version skapad.",
+                ],
+            )
         )
 
     # 3. Map every patch onto an existing Project Input field. All-or-nothing:
@@ -136,17 +165,19 @@ def apply_patch_plan(
             )
 
     if unmapped:
-        return ApplyResult(
-            applied=False,
-            siteId=site_id,
-            appliedCapabilities=capabilities,
-            unmapped=unmapped,
-            notes=[
-                "Ingen version skrevs (all-or-nothing): minst en validerad patch "
-                "saknar befintligt Project Input-fält och får inte uppfinna ett "
-                "nytt runtime-kontrakt. Eskalera till operatör (ADR) eller dela "
-                "upp planen.",
-            ],
+        return _trace(
+            ApplyResult(
+                applied=False,
+                siteId=site_id,
+                appliedCapabilities=capabilities,
+                unmapped=unmapped,
+                notes=[
+                    "Ingen version skrevs (all-or-nothing): minst en validerad "
+                    "patch saknar befintligt Project Input-fält och får inte "
+                    "uppfinna ett nytt runtime-kontrakt. Eskalera till operatör "
+                    "(ADR) eller dela upp planen.",
+                ],
+            )
         )
 
     # 4. Read the prior immutable version (rolling latest, or a historical
@@ -243,9 +274,6 @@ def apply_patch_plan(
         ],
     )
 
-    # 8. Optional append-only run trace, only for an explicitly supplied (new)
-    #    run dir - never a previous run (immutability diff).
-    if trace_run_dir is not None:
-        log_patch_apply_to_existing_run(trace_run_dir, result)
-
-    return result
+    # 8. FYND1: trace the applied outcome too (append-only, only for an
+    #    explicitly supplied new run dir - never a previous run).
+    return _trace(result)

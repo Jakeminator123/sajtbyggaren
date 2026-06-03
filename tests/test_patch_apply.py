@@ -492,6 +492,92 @@ def test_trace_logger_never_creates_a_run(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# FYND1 (kor-7d trace-gap): skipped/unmapped/rejected outcomes are traced too
+# ---------------------------------------------------------------------------
+
+
+def _read_trace_events(run_dir: Path) -> list[dict]:
+    trace_path = run_dir / "trace.ndjson"
+    if not trace_path.exists():
+        return []
+    return [
+        json.loads(line)
+        for line in trace_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+
+def test_apply_traces_unmapped_outcome_when_run_dir_exists(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """An unmapped (skipped) apply leaves an honest trace event, not silence."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    _init_site(tmp_path)
+    run_dir = tmp_path / "runs" / "run-unmapped"
+    run_dir.mkdir(parents=True)
+    result = apply_patch_plan(
+        _inline_component_patch(),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+        trace_run_dir=run_dir,
+    )
+    assert result.applied is False
+    assert result.unmapped
+    events = _read_trace_events(run_dir)
+    assert len(events) == 1
+    assert events[0]["event"] == "patch-apply"
+    assert events[0]["status"] == "skipped"
+    assert events[0]["apply"]["applied"] is False
+    assert events[0]["apply"]["unmapped"]
+
+
+def test_apply_traces_empty_plan_outcome_when_run_dir_exists(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    run_dir = tmp_path / "runs" / "run-empty"
+    run_dir.mkdir(parents=True)
+    result = apply_patch_plan(
+        PatchPlan(),
+        site_id=SITE_ID,
+        output_dir=tmp_path,
+        trace_run_dir=run_dir,
+    )
+    assert result.applied is False
+    events = _read_trace_events(run_dir)
+    assert len(events) == 1
+    assert events[0]["status"] == "skipped"
+
+
+def test_apply_traces_rejected_outcome_before_raising(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A rejected/invalid plan is traced (FYND1) and still raises (kor-7c DoD)."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    run_dir = tmp_path / "runs" / "run-rejected"
+    run_dir.mkdir(parents=True)
+    plan = PatchPlan(
+        patches=[],
+        valid=False,
+        rejected=[
+            RejectedPatch(artifact=GENPKG, field="x", value=None, reason="rail break"),
+        ],
+    )
+    with pytest.raises(PatchApplyError):
+        apply_patch_plan(
+            plan,
+            site_id=SITE_ID,
+            output_dir=tmp_path,
+            trace_run_dir=run_dir,
+        )
+    events = _read_trace_events(run_dir)
+    assert len(events) == 1
+    assert events[0]["event"] == "patch-apply"
+    assert events[0]["status"] == "skipped"
+    assert events[0]["apply"]["applied"] is False
+
+
+# ---------------------------------------------------------------------------
 # classify_patch unit (the blueprint-field -> Project Input-field mapping)
 # ---------------------------------------------------------------------------
 

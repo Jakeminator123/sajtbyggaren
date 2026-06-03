@@ -1101,6 +1101,16 @@ COMMON_WORDS = {
     # Project Input version snapshot, never a new canonical artefakt) - same
     # treatment as the RouterDecision / PatchPlan families above.
     "AppliedCapability", "ApplyResult", "PatchApplyError", "UnmappedPatch",
+    # KÖR-7d Targeted render + version-build runtime symbols
+    # (packages/generation/build/targeted_render.py). Sibling to the KÖR-7c
+    # apply above: ``TargetedRenderPlan`` is the transient pre-build plan,
+    # ``TargetedRenderResult`` the transient outcome envelope and
+    # ``TargetedRenderError`` the STOP-and-report exception for a version that
+    # did not come from the internal kor-7b->kor-7c chain. Transient
+    # implementation symbols (kor-7d reuses build()'s immutable build +
+    # current.json swap, mints no new canonical artefakt) - same treatment as
+    # the PatchPlan / ApplyResult families above.
+    "TargetedRenderError", "TargetedRenderPlan", "TargetedRenderResult",
     # KÖR-O1 OpenClaw Core Contract design types (docs/heavy-llm-flow/
     # kor-o1-openclaw-core-contract.md). Transient working-names for the
     # orchestrator decision/action shape that composes RouterDecision +
