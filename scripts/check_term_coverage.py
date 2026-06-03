@@ -1011,6 +1011,15 @@ COMMON_WORDS = {
     "Deterministic Foundation", "Orchestration snapshot",
     "Detta README", "Huvudsekvensen", "Full femguards", "Ingen LLM",
     "F2 vs F3 lifecycle", "Pausad", "Section", "Inte",
+    # KÖR-6a router runtime symbols (packages/generation/orchestration/router/):
+    # the Pydantic model class names + the RouterContext input shape + the
+    # SubtaskScope Literal alias. The router *design* terms shared with the
+    # heavy-llm-flow docs (MessageKind / BuildRequirement / EditKind /
+    # ContextLevel / OpenClaw) are already allowlisted in the block directly
+    # above (#160) - not duplicated here. Same implementation-symbol treatment
+    # as the QualityResult / CodegenResult / RepairResult families above.
+    "RouterDecision", "RouterTarget", "RouterReference", "RouterSubtask",
+    "RouterContext", "SubtaskScope",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.
