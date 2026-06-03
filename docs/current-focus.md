@@ -7,22 +7,24 @@ Startpromptar och rollgränser finns i
 
 ## Current objective (2026-06-03 natt — kor-3a/4a/3b inne; våg 2 landar)
 
-`jakob-be` @ `5b051b6`, rent träd. **Denna session mergade:** #179 (kor-3a:
+`jakob-be` @ `2033282`, rent träd. **Denna session mergade:** #179 (kor-3a:
 section-treatments Python→JSON, en deklarativ källa), #180 (kor-4a: deterministisk
 quality critic v0 — non-blocking, ingen LLM), och #183 (kor-3a follow-up: flyttar
 section-treatments-loadern till `orchestration/` så `planning` inte importerar
 `build` — Pushvakt P1; repo-boundaries v10 + fail-closed på trasig JSON + boundary-test
 som scannar riktiga imports), och #184 (kor-3b: visualDirection väljer section-treatment,
-Option A — verifierad mot kombinerat träd med #183, alla paritets-/pick-tester gröna).
-**Ärlighet:** kor-4a-critic är library-komplett men **dormant i build-vägen** (gaten
-anropas utan `generation_package` → `critic` blir null i verkliga runs) tills
-`build_site`/`dev_generate` wire:as. kor-3b är likaså aktiv bara när blueprintens
-`visualDirection` är satt (annars byte-paritet mot kor-3a).
-**Status cloud-builders:** kor-3b INNE (#184). kor-5 pushad på `feat/kor-5-repair-pass`
-(ingen PR än; hålls/dormant + no-key-inkonsekvensen kvar att fixa innan den tas).
-**Justerad ordning (orchestrator + coach, natt):** (1) ✓ kor-3b inne (#184) → (2) **NU:** wira
-critic/repair + follow-up-bryggan i build-vägen/`/api/prompt` (största hävstången; gör
-kor-4a/7 verkliga + UPPLÅSER Christophers #177) → (3) minimal E2E + read-only baseline-eval
+Option A — verifierad mot kombinerat träd med #183, alla paritets-/pick-tester gröna), och
+#186 (CLI-wiring: kor-4a critic + kor-7 follow-up-kedja i build-vägen + E2E).
+**Ärlighet:** kor-4a-critic **körs nu i CLI-builds** (#186 trådar in `generation_package` →
+`critic` ifylls i quality-result.json; var alltid null). KVAR att wira: `/api/prompt`
+(Christopher) + `dev_generate`. kor-3b är aktiv bara när blueprintens `visualDirection` är
+satt (annars byte-paritet mot kor-3a). Repair (kor-5) fortsatt dormant (#185).
+**Status cloud-builders:** kor-3b INNE (#184); CLI-wiring INNE (#186). kor-5 = **PR #185**
+(dormant library; reviewer-fynd att fixa före merge: skärp "bara befintliga fält", wrappa
+rerender i try/except, uppdatera kor-5-doc (high/trust_missing), rebase ovanpå #186).
+**Justerad ordning (orchestrator + coach, natt):** (1) ✓ kor-3b (#184) → (2) ✓ CLI-wiring inne
+(#186): kor-4a critic + kor-7 follow-up-kedja i build-vägen + E2E; KVAR `/api/prompt` +
+routerDecision (Christopher #177) → (3) read-only baseline-eval
 → (4) kor-5 (library → wira in) → (5) kor-o2 OpenClaw Core V0 (read-only, spec:as parallellt)
 → (6) design-system-ADR + `next-shadcn-tailwind`-starter *om evalen visar att gapet är
 visuellt* (annars copy/trust/kontakt-ärlighet först) → (7) kor-4b verifier + kor-6b
@@ -354,7 +356,8 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `9f638da` (2026-06-03 natt UTC, `jakob-be` HEAD — docs-pass:
+Last verified state: `2033282` (2026-06-03 natt UTC, `jakob-be` HEAD — #186 CLI-wiring
+(kor-4a critic + kor-7 follow-up-kedja i build-vägen, E2E). Föregående docs-pass:
 system-overview-refresh + current-focus slim-down (Föregående checkpoint → arkiv) +
 arkitektur-canvas-bump. Föregående: #184 kor-3b
 visualDirection väljer section-treatment (Option A, verifierad mot kombinerat träd) + #179 kor-3a
