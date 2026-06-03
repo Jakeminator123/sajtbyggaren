@@ -315,6 +315,17 @@ COMMON_WORDS = {
     # schema field names critic/score/issues/etc. live in quality-result.schema.json).
     "CriticIssue", "CriticResult",
     "CriticSeverity", "CriticIssueType", "CriticSource",
+    # kor-4b verifierModel critic (read-only taste lane) implementation symbols
+    # (packages/generation/quality_gate/verifier.py). VerifierFinding /
+    # VerifierFindings are the Pydantic structured-output models the
+    # verifierModel call parses into; VerifierIssueType is the Literal alias for
+    # the taste-finding subset; VerifierModelResolutionError mirrors
+    # RepairModelResolutionError / BriefModelResolutionError. The canonical role
+    # verifierModel is registered in llm-models.v1.json; these are local
+    # implementation symbols, not separate canonical domain terms - same
+    # treatment as the Critic* / Codegen* / Repair* families above.
+    "VerifierFinding", "VerifierFindings", "VerifierIssueType",
+    "VerifierModelResolutionError",
     # Sprint 3B mechanical fix dispatcher metadata. ``MechanicalFixSpec``
     # is a Python dataclass that mirrors fix-registry.v1.json entries;
     # it is not a separate domain term. Same treatment as
