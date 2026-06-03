@@ -1,7 +1,7 @@
 "use client";
 
 import { RefreshCw, ScanSearch } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { BriefTab } from "@/components/builder/inspector/brief-tab";
 import { DossiersTab } from "@/components/builder/inspector/dossiers-tab";
@@ -93,12 +93,28 @@ export function SiteInspectorSheet({
 }: SiteInspectorSheetProps) {
   const { state, refresh } = useRunArtefacts(runId, open);
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
-  const { runFollowup, error: buildError } = useFollowupBuild({
+  // Aktiv tab lyfts till komponent-scope (i st.f. Tabs defaultValue) så valet
+  // överlever att <Tabs> av-/återmonteras när artefakter refreshas
+  // (status ok→loading→ok). Tidigare återställdes tabben till "Sidor" varje
+  // gång operatören tryckte uppdatera eller ett bygge landade.
+  const [activeTab, setActiveTab] = useState("pages");
+  const {
+    runFollowup,
+    error: buildError,
+    clearError,
+  } = useFollowupBuild({
     siteId,
     onBuildStart,
     onBuildEnd,
     onBuildDone,
   });
+
+  // Rensa inline-byggfelet när panelen stängs. Annars överlevde ett fel
+  // sheet-stängningen och dök upp igen nästa gång operatören öppnade
+  // inspectorn — trots att det hörde till en sedan länge avslutad run.
+  useEffect(() => {
+    if (!open) clearError();
+  }, [open, clearError]);
 
   // Skicka en följdprompt direkt från en quick-knapp i någon tab.
   // Inspectorn stängs när bygget startar så operatören ser preview-
@@ -199,7 +215,11 @@ export function SiteInspectorSheet({
               </span>
             </div>
           ) : (
-            <Tabs defaultValue="pages" className="flex h-full flex-col gap-0">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="flex h-full flex-col gap-0"
+            >
               {/* overflow-x-auto + scrollbar-hidden gör att de 7
                   triggers kan scrolla horisontellt på smala viewports
                   utan visuell scrollbar. På desktop ryms alla. */}

@@ -3188,9 +3188,12 @@ def test_builder_followup_drives_buildstage_via_real_trace_signal() -> None:
     assert 'onStageChange("building")' in chat, (
         "FloatingChat måste rapportera 'building' när trace når build-fasen"
     )
-    # Avslut: success/failed rapporteras när bygget landar.
-    assert 'onStageChange?.(outcome === "failed" ? "failed" : "success")' in chat, (
-        "FloatingChat måste rapportera success/failed när bygget landar"
+    # Avslut: success/degraded/failed rapporteras när bygget landar. Mappningen
+    # delas med PromptBuilder via outcomeToStage (P2-fix #26: degraded/unknown
+    # → "degraded", inte "success", så progress-cardet inte visar grönt medan
+    # chatten rapporterar varning).
+    assert "onStageChange?.(outcomeToStage(outcome));" in chat, (
+        "FloatingChat måste rapportera stage via outcomeToStage när bygget landar"
     )
 
 
@@ -4246,4 +4249,147 @@ def test_focus_trap_hook_used_by_custom_dialogs() -> None:
     )
     assert "useFocusTrap(helpPanelRef, helpOpen)" in wizard, (
         "Wizardens kortkommando-overlay ska fånga Tab via useFocusTrap."
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_unavailable_banner_has_retry() -> None:
+    """P2: otillgänglig-bannern var helt pointer-events-none utan retry —
+    operatören tvingades välja om runen för att hämta om previewn. Source-lock
+    att kortet är klickbart (pointer-events-auto) och bumpar en retryNonce som
+    ingår i preview-effektens deps."""
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
+    assert "retryNonce" in text and "[runId, siteId, retryNonce]" in text, (
+        "Preview-effekten ska köra om när retryNonce bumpas."
+    )
+    assert "setRetryNonce((n) => n + 1)" in text and "Försök igen" in text, (
+        "Otillgänglig-bannern ska ha en 'Försök igen'-knapp som bumpar retryNonce."
+    )
+
+
+@pytest.mark.tooling
+def test_viewer_panel_hero_respects_reduced_motion() -> None:
+    """P2: studio-hero-videorna autoplayade alltid (ingen reduced-motion-
+    respekt). Source-lock att autoPlay/loop gat:as mot en reducedMotion-flagga
+    läst via useSyncExternalStore (samma kontrakt som marketing-hero:n)."""
+    text = (VIEWSER_DIR / "components" / "viewer-panel.tsx").read_text(encoding="utf-8")
+    assert "useSyncExternalStore" in text and "reducedMotion" in text, (
+        "ViewerPanel ska läsa prefers-reduced-motion via useSyncExternalStore."
+    )
+    assert text.count("autoPlay={!reducedMotion}") >= 2, (
+        "Båda hero-videorna (mobil + desktop) ska sluta autoplaya under reduced-motion."
+    )
+
+
+@pytest.mark.tooling
+def test_site_inspector_tab_controlled_and_clears_error() -> None:
+    """P2: <Tabs> använde defaultValue och av-/återmonterades vid refresh →
+    aktiv tab nollades till 'Sidor'; och buildError överlevde sheet-stängning.
+    Source-lock att tab-värdet är kontrollerat och clearError körs vid stängning."""
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "inspector" / "site-inspector-sheet.tsx"
+    ).read_text(encoding="utf-8")
+    assert "value={activeTab}" in text and "onValueChange={setActiveTab}" in text, (
+        "Inspector-tabbarna ska vara kontrollerade så valet överlever refresh."
+    )
+    assert "if (!open) clearError();" in text, (
+        "buildError ska rensas när inspectorn stängs."
+    )
+
+
+@pytest.mark.tooling
+def test_compare_modal_sets_cross_origin_isolated() -> None:
+    """P2: jämförelse-embedden saknade crossOriginIsolated (paritet med
+    ViewerPanel) → WebContainern kunde faila att boota. Source-lock att flaggan
+    sätts."""
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "inspector" / "compare-preview-modal.tsx"
+    ).read_text(encoding="utf-8")
+    assert "crossOriginIsolated: true," in text, (
+        "Compare-modalens embed ska sätta crossOriginIsolated för paritet med ViewerPanel."
+    )
+
+
+@pytest.mark.tooling
+def test_payload_popover_uses_effective_scaffold_hint() -> None:
+    """P2: popover:n härledde scaffoldHint bara från family.scaffoldHint och
+    missade sub-kategori-uppgraderingar → visade en annan hint än backend fick.
+    Source-lock att den använder deriveEffectiveScaffoldHint (samma som
+    buildDiscoveryPayload)."""
+    text = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "payload-alignment-popover.tsx"
+    ).read_text(encoding="utf-8")
+    assert "deriveEffectiveScaffoldHint(family, answers.siteType)" in text, (
+        "Popover:n ska härleda scaffoldHint via deriveEffectiveScaffoldHint."
+    )
+
+
+@pytest.mark.tooling
+def test_floating_chat_uses_outcome_to_stage() -> None:
+    """P2: onStageChange mappade degraded/unknown → 'success' så progress-cardet
+    visade grönt medan chatten rapporterade varning. Source-lock att den nu
+    delar outcomeToStage med PromptBuilder."""
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "onStageChange?.(outcomeToStage(outcome));" in text, (
+        "FloatingChat ska mappa outcome via outcomeToStage (degraded ≠ success)."
+    )
+
+
+@pytest.mark.tooling
+def test_asset_dropzone_keeps_partial_uploads() -> None:
+    """P2: vid fel på fil N i en multi-upload kastades de redan uppladdade
+    filerna 1..N-1 bort (onUploaded kördes aldrig) → föräldralösa på servern.
+    Source-lock att catch-grenen lyfter de lyckade uppladdningarna."""
+    text = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "asset-dropzone.tsx"
+    ).read_text(encoding="utf-8")
+    assert "if (uploaded.length > 0) onUploaded(uploaded);" in text, (
+        "Partiellt misslyckad batch ska ändå lyfta de redan uppladdade filerna."
+    )
+
+
+@pytest.mark.tooling
+def test_assets_step_auto_hero_is_decoupled() -> None:
+    """P2: auto-hero delade objektreferens med galleri-raden (alt/placement
+    forkade tyst) och en galleri-borttagning nollade inte hero. Source-lock att
+    kandidaten klonas och att hero nollas när dess källrad tas bort."""
+    text = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "steps" / "assets-step.tsx"
+    ).read_text(encoding="utf-8")
+    assert "heroImage: { ...candidate }" in text, (
+        "Auto-hero ska klona kandidaten så den inte delar referens med galleri-raden."
+    )
+    assert "heroFromThisRow" in text, (
+        "Borttagning av en galleri-rad ska nolla hero om den auto-pickades därifrån."
+    )
+
+
+@pytest.mark.tooling
+def test_versions_tab_refetches_on_active_bundle_change() -> None:
+    """P2: compare-diffen re-fetchade bara på id-byten → om ena sidan var den
+    aktiva runen och dess bundle byggdes om visades en stale diff. Source-lock
+    att en activeBundleSignal ingår i fetch-effektens deps."""
+    text = (
+        VIEWSER_DIR / "components" / "builder" / "inspector" / "versions-tab.tsx"
+    ).read_text(encoding="utf-8")
+    assert "activeBundleSignal" in text, (
+        "CompareSection ska härleda en activeBundleSignal för den aktiva sidan."
+    )
+    assert "[runIdA, runIdB, currentRunId, activeBundleSignal]" in text, (
+        "Fetch-effekten ska re-köra när den aktiva runens bundle ändras."
+    )
+
+
+@pytest.mark.tooling
+def test_toast_dedupes_and_caps_stack() -> None:
+    """P2: identiska toaster (t.ex. upprepade retry-fel) staplades obegränsat.
+    Source-lock att show:en dedupar mot aktiva toaster och har ett max-stack-tak."""
+    text = (VIEWSER_DIR / "components" / "ui" / "toast.tsx").read_text(encoding="utf-8")
+    assert "MAX_VISIBLE_TOASTS" in text, (
+        "Toast-systemet ska ha ett tak (MAX_VISIBLE_TOASTS) på samtidiga toaster."
+    )
+    assert "const duplicate = toastsRef.current.find(" in text, (
+        "show() ska deduplicera identiska aktiva toaster i st.f. att stapla dubbletter."
     )

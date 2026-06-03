@@ -50,11 +50,11 @@ function ThumbnailPreview({ asset }: { asset: AssetRef }) {
   // automatiskt eftersom `useState` initierar om vid key-byte.
   const [failed, setFailed] = useState(false);
   return (
-    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/70 bg-muted/30">
+    <div className="border-border/70 bg-muted/30 flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border">
       {failed ? (
         <span
           aria-label="Förhandsvisning saknas"
-          className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground"
+          className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase"
         >
           {asset.filename.slice(0, 2)}
         </span>
@@ -83,7 +83,7 @@ function VisionBadge({ asset }: { asset: AssetRef }) {
         : "bg-muted text-muted-foreground";
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide ${styles}`}
+      className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-medium tracking-wide uppercase ${styles}`}
       title={
         asset.visionSubject
           ? `GPT Vision: ${asset.visionSubject}`
@@ -107,11 +107,11 @@ function AssetCard({
   onRemove: () => void;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-border/70 bg-card/60 p-3">
+    <div className="border-border/70 bg-card/60 flex items-start gap-3 rounded-xl border p-3">
       <ThumbnailPreview asset={asset} />
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex items-center gap-2">
-          <span className="truncate text-[11px] font-medium text-foreground">
+          <span className="text-foreground truncate text-[11px] font-medium">
             {asset.filename}
           </span>
           <VisionBadge asset={asset} />
@@ -133,7 +133,7 @@ function AssetCard({
                 placement: event.target.value as AssetPlacement,
               })
             }
-            className="h-7 w-full rounded-md border border-input bg-background px-2 text-[12px] text-foreground"
+            className="border-input bg-background text-foreground h-7 w-full rounded-md border px-2 text-[12px]"
           >
             {PLACEMENT_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -186,13 +186,11 @@ export type AssetsStepProps = {
 function pickHeroFromGallery(gallery: WizardAssets["gallery"]) {
   if (gallery.length === 0) return null;
   const high = gallery.find(
-    (item) =>
-      item.placement === "home" && item.visionConfidence === "high",
+    (item) => item.placement === "home" && item.visionConfidence === "high",
   );
   if (high) return high;
   const medium = gallery.find(
-    (item) =>
-      item.placement === "home" && item.visionConfidence === "medium",
+    (item) => item.placement === "home" && item.visionConfidence === "medium",
   );
   if (medium) return medium;
   const anyHome = gallery.find((item) => item.placement === "home");
@@ -213,8 +211,8 @@ export function AssetsStep({ answers, onChange }: AssetsStepProps) {
       <div>
         <SectionHeader>Logotyp</SectionHeader>
         <HelperText>
-          Vi använder logon i header och footer. SVG ger skarpast resultat;
-          PNG med transparent bakgrund fungerar också.
+          Vi använder logon i header och footer. SVG ger skarpast resultat; PNG
+          med transparent bakgrund fungerar också.
         </HelperText>
       </div>
       {answers.assets.logo ? (
@@ -286,12 +284,23 @@ export function AssetsStep({ answers, onChange }: AssetsStepProps) {
               }))
             }
             onRemove={() =>
-              updateAssets((a) => ({
-                ...a,
-                gallery: a.gallery.filter(
+              updateAssets((a) => {
+                const nextGallery = a.gallery.filter(
                   (item) => item.assetId !== galleryItem.assetId,
-                ),
-              }))
+                );
+                // Om hero auto-pickades från just denna galleri-rad (samma
+                // assetId) — nolla hero också. Annars pekade hero kvar på en
+                // bild som inte längre finns i galleriet och payloaden bar en
+                // spök-referens. Explicit hero-upload har eget assetId och
+                // rörs inte.
+                const heroFromThisRow =
+                  a.heroImage?.assetId === galleryItem.assetId;
+                return {
+                  ...a,
+                  gallery: nextGallery,
+                  heroImage: heroFromThisRow ? null : a.heroImage,
+                };
+              })
             }
           />
         ))}
@@ -312,7 +321,16 @@ export function AssetsStep({ answers, onChange }: AssetsStepProps) {
             if (!a.heroImage) {
               const candidate = pickHeroFromGallery(nextGallery);
               if (candidate) {
-                return { ...a, gallery: nextGallery, heroImage: candidate };
+                // Klona kandidaten så hero INTE delar objektreferens med
+                // galleri-raden. Annars pekade båda på samma objekt: en
+                // alt/placement-redigering av hero forkade tyst bort från
+                // galleriet (eller tvärtom). assetId behålls så removal-
+                // detekteringen ovan fortfarande matchar källraden.
+                return {
+                  ...a,
+                  gallery: nextGallery,
+                  heroImage: { ...candidate },
+                };
               }
             }
             return { ...a, gallery: nextGallery };

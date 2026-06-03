@@ -1119,6 +1119,18 @@ function CompareSection({
     currentBundleRef.current = currentBundle;
   });
 
+  // Signal som ändrar identitet när den AKTIVA runens bundle byggs om/
+  // refreshas OCH den deltar i jämförelsen. Tidigare re-kördes fetch-effekten
+  // bara på id-byten → om ena sidan var aktiv run och dess bundle uppdaterades
+  // (manuell refresh / klart bygge med samma runId) visade diffen den gamla
+  // bundlen. När ingen sida är aktiv run förblir signalen null så vi behåller
+  // optimeringen (ingen onödig laddnings-flash vid parent-refresh).
+  const activeBundleSignal = useMemo(
+    () =>
+      runIdA === currentRunId || runIdB === currentRunId ? currentBundle : null,
+    [runIdA, runIdB, currentRunId, currentBundle],
+  );
+
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -1145,7 +1157,10 @@ function CompareSection({
     return () => {
       cancelled = true;
     };
-  }, [runIdA, runIdB, currentRunId]);
+    // activeBundleSignal: re-fetcha diffen när den aktiva runens bundle
+    // ändrats (annars stale diff). currentBundleRef läses inuti, så vi
+    // behöver inte själva bundle-objektet i deps utöver signalen.
+  }, [runIdA, runIdB, currentRunId, activeBundleSignal]);
 
   if (state.status === "loading" || state.status === "idle") {
     return (

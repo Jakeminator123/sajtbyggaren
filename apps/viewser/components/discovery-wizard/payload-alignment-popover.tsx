@@ -5,7 +5,11 @@ import { useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
-import { BUSINESS_FAMILIES, resolveContentBranch } from "./wizard-constants";
+import {
+  BUSINESS_FAMILIES,
+  deriveEffectiveScaffoldHint,
+  resolveContentBranch,
+} from "./wizard-constants";
 import { deriveWizardDirectives } from "./wizard-payload";
 import type { WizardAnswers } from "./wizard-types";
 
@@ -35,19 +39,23 @@ export function PayloadAlignmentPopover({
 }) {
   const [open, setOpen] = useState(false);
 
-  // Härled scaffoldHint på samma sätt som wizard-payload.ts:
-  //   family-vinst → resolveContentBranch-fallback.
-  // Vi använder bara family-grenen här eftersom popover:n visar samma
-  // logik som buildDiscoveryPayload kör vid submit.
+  // Härled scaffoldHint via SAMMA helper som buildDiscoveryPayload använder
+  // vid submit (`deriveEffectiveScaffoldHint`). Tidigare läste popover:n bara
+  // `family.scaffoldHint`, vilket missade sub-kategori-uppgraderingar (t.ex.
+  // service-family + legal-sub-cat → professional-services) → popover:n
+  // visade en annan scaffoldHint än den backend faktiskt fick. Nu är de 1:1.
   const directives = useMemo(() => {
-    const family = BUSINESS_FAMILIES.find((f) => f.id === answers.businessFamily);
-    const scaffoldHint = family?.scaffoldHint ?? "local-service-business";
+    const family = BUSINESS_FAMILIES.find(
+      (f) => f.id === answers.businessFamily,
+    );
+    const scaffoldHint = deriveEffectiveScaffoldHint(family, answers.siteType);
     return deriveWizardDirectives(rawPrompt, answers, scaffoldHint);
   }, [answers, rawPrompt]);
 
-  const branch = useMemo(() => resolveContentBranch(answers.siteType), [
-    answers.siteType,
-  ]);
+  const branch = useMemo(
+    () => resolveContentBranch(answers.siteType),
+    [answers.siteType],
+  );
 
   // Pretty-printed JSON av directives — operatören ser den exakta
   // strukturen som backend tar emot. Vi sorterar inte nycklarna så
@@ -56,7 +64,9 @@ export function PayloadAlignmentPopover({
   const json = useMemo(() => JSON.stringify(directives, null, 2), [directives]);
 
   return (
-    <div className={cn("relative inline-flex", align === "right" ? "ml-auto" : "")}>
+    <div
+      className={cn("relative inline-flex", align === "right" ? "ml-auto" : "")}
+    >
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
@@ -94,15 +104,19 @@ export function PayloadAlignmentPopover({
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Stäng"
-              className="text-muted-foreground hover:text-foreground rounded-md min-tap sm:min-tap-0 sm:p-1 flex items-center justify-center transition-colors active:scale-95"
+              className="text-muted-foreground hover:text-foreground min-tap sm:min-tap-0 flex items-center justify-center rounded-md transition-colors active:scale-95 sm:p-1"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
 
           <div className="border-border/40 bg-muted/30 flex items-center justify-between gap-3 border-b px-3 py-2">
-            <span className="text-muted-foreground text-[11px]">Content branch</span>
-            <span className="text-foreground font-mono text-[11px]">{branch}</span>
+            <span className="text-muted-foreground text-[11px]">
+              Content branch
+            </span>
+            <span className="text-foreground font-mono text-[11px]">
+              {branch}
+            </span>
           </div>
 
           <pre className="max-h-[280px] overflow-y-auto px-3 py-2 font-mono text-[10.5px] leading-relaxed">
@@ -110,8 +124,8 @@ export function PayloadAlignmentPopover({
           </pre>
 
           <p className="border-border/40 text-muted-foreground border-t px-3 py-2 text-[10px] leading-snug">
-            Detta block läses av <code>briefModel</code> som strukturerad sanning —
-            backend hoppar över LLM-extraktion för fält som finns här.
+            Detta block läses av <code>briefModel</code> som strukturerad
+            sanning — backend hoppar över LLM-extraktion för fält som finns här.
           </p>
         </div>
       ) : null}

@@ -37,6 +37,7 @@ import {
 } from "@/components/device-preset-context";
 import {
   classifyBuildStatus,
+  outcomeToStage,
   type PromptBuildOutcome,
   type PromptStage,
 } from "@/components/prompt-builder";
@@ -1231,8 +1232,11 @@ export function FloatingChat({
             }),
         );
         // Bygget landade (ok/degraded/failed-status) — markera sista steget
-        // så stegmarkören visar "klart" tills page.tsx tar över.
-        onStageChange?.(outcome === "failed" ? "failed" : "success");
+        // så stegmarkören visar "klart" tills page.tsx tar över. Använd
+        // samma outcomeToStage-mappning som PromptBuilder: degraded/unknown
+        // → "degraded" (inte "success"), annars visade progress-cardet grönt
+        // medan chatten samtidigt rapporterade en varning.
+        onStageChange?.(outcomeToStage(outcome));
         onBuildDone(payload.runId, outcome);
       } catch (caught) {
         const errorText =
