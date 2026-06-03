@@ -223,7 +223,7 @@ export default function LivePage() {
       pendingReloadRef.current = true;
       pushMessage("system", "Bygger en ny version …");
     } catch (error) {
-      setPhase("ready");
+      setPhase("failed");
       setErrorMsg(error instanceof Error ? error.message : "Okänt fel.");
       pushMessage(
         "system",
@@ -484,6 +484,10 @@ function ChatOverlay({
             <Loader2 className="h-3 w-3 animate-spin" />
             {PHASE_LABEL[phase]}
             {detail ? ` · ${detail}` : ""}
+          </span>
+        ) : errorMsg ? (
+          <span className="text-destructive ml-auto text-[11px]">
+            {PHASE_LABEL[phase]}
           </span>
         ) : (
           <span className="text-muted-foreground/70 ml-auto text-[11px]">
