@@ -1,6 +1,19 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import type { NextConfig } from "next";
+
+// Monorepo-rot (två nivåer upp från apps/viewser). Beräknas från configens
+// egen filsökväg (oberoende av process.cwd(), som inte är pålitlig under
+// Turbopacks worker-processer). Används som ``turbopack.root`` så Turbopack
+// inkluderar ``../../packages`` i modulgrafen — annars kan VARKEN ``next dev``
+// ELLER ``next build`` resolva ``@preview-runtime`` (TS-källa utanför
+// app-roten). Se kommentaren vid ``turbopack`` nedan.
+const REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+);
 
 // Preview-runtime-läge (ADR 0028 — Runtime Ladder).
 // ------------------------------------------------------------------
@@ -164,24 +177,26 @@ if (
 }
 
 const nextConfig: NextConfig = {
-  // Bite C (ADR 0028/0033): routen laddar nu @preview-runtime-paketet, som bor
-  // i ../../packages/ — UTANFÖR apps/viewser. Turbopack läser per default bara
-  // filer inom sin inferrade workspace-root (apps/viewser har egen lockfile),
-  // så cross-package-källimporten failar med "Module not found: @preview-runtime"
-  // trots att tsc följer aliaset via tsconfig ``paths``.
-  //
-  // Fix: sätt ``root`` till repo-roten (mappen som rymmer BÅDE apps/viewser och
-  // packages/). Då resolvar Turbopack det RELATIVA tsconfig-``paths``-aliaset
-  // (``@preview-runtime`` -> ../../packages/preview-runtime/src/index) inom
-  // roten. Per Next-docs + vercel/next.js#85057. node_modules/next hittas ändå
-  // via vanlig upp-vandring från apps/viewser-filer.
-  //
-  // OBS: använd INTE resolveAlias med en absolut Windows-path här — Turbopack
-  // kastar då "windows imports are not implemented yet" (C:\…-paths stöds ej).
-  // ``root`` + det relativa tsconfig-aliaset räcker och undviker den fällan.
-  // ``process.cwd()`` är apps/viewser när dev.mjs spawnar ``next dev`` därifrån.
+  // ``@preview-runtime`` är ett tsconfig-path-alias som pekar på delad TS-källa
+  // utanför app-roten (``../../packages/preview-runtime/src``). tsc resolvar det
+  // via ``paths``, men Turbopack (BÅDE ``next dev`` och ``next build``)
+  // inkluderar aldrig moduler vars riktiga sökväg ligger utanför den inferrade
+  // projektroten — så utan detta 500:ar preview-routen i dev och bygget failar.
+  // Bite C är första konsumenten som faktiskt RUNTIME-importerar paketet
+  // (``app/api/preview/[siteId]`` → ``lib/preview-runtime-server.ts``). Därför:
+  //   - ``turbopack.root`` breddar bygg-/dev-roten till repo-roten (``REPO_ROOT``,
+  //     beräknad från configens egen filsökväg — pålitligare än ``process.cwd()``
+  //     under Turbopacks worker-processer) så ``../../packages`` ingår i modulgrafen.
+  //   - ``resolveAlias`` pekar specifieraren på TS-källans index.
+  // De repo-rot-baserade runtime-sökvägarna i ``lib/*-runner.ts`` (python-spawn
+  // mot ``.venv`` m.m.) görs opaka för Turbopacks statiska analys (se
+  // ``repoRoot()`` där) så den bredare roten inte får output-tracern att
+  // försöka inkludera t.ex. ``.venv``-symlänkar som pekar ut ur repo-roten.
   turbopack: {
-    root: path.resolve(process.cwd(), "..", ".."),
+    root: REPO_ROOT,
+    resolveAlias: {
+      "@preview-runtime": "../../packages/preview-runtime/src/index.ts",
+    },
   },
   // Spegla läget till klienten så ViewerPanel kan ta beslut baserat
   // på det (t.ex. skippa StackBlitz-fallbacken när vi vet att vi kör

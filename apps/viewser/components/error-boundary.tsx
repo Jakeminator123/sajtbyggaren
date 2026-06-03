@@ -88,9 +88,13 @@ export class ErrorBoundary extends Component<
     // `ViewerPanel`s `.viewer-canvas h-full` — då resolvar `h-full`
     // (height:100%) mot en auto-höjd förälder och kollapsar till 0 px,
     // vilket gör preview-iframen (absolute inset-0) osynlig (1920×0) och
-    // döljer desktop-hero-texten. `key` styr fortfarande remount.
+    // döljer desktop-hero-texten. `key` styr fortfarande remount. Success-
+    // wrappern ignorerar `className` med flit (layouten ägs av `contents`);
+    // `className` lever vidare i fallback-cardet (DefaultFallback nedan) så
+    // call-sites som skickar `h-full w-full` får ändå rätt fallback-storlek.
     return (
       <div key={resetKey} className="contents">
+
         {children}
       </div>
     );

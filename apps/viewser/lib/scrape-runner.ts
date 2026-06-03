@@ -10,7 +10,14 @@ import path from "node:path";
 const SCRAPE_TIMEOUT_MS = 120_000;
 
 function repoRoot(): string {
-  return path.resolve(process.cwd(), "..", "..");
+  // ``...up`` (spread av variabel-array) gör resultatet opakt för Turbopacks
+  // statiska analys, så repo-rot-baserade path.join() (t.ex. python-spawn mot
+  // ``.venv/bin/python``) inte viks ihop till fil/dir-asset-referenser. Med
+  // ``turbopack.root`` = repo-roten (krävs för att resolva ``@preview-runtime``)
+  // skulle annars output-tracern panika på ``.venv``-symlänkar som pekar ut ur
+  // repo-roten. Detta är rent runtime-logik, aldrig en modul.
+  const up = ["..", ".."];
+  return path.resolve(process.cwd(), ...up);
 }
 
 function pythonCommand(): string {
