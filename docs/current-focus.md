@@ -5,6 +5,24 @@ Detta är projektets enda aktuella köplan. Varje agent ska läsa denna fil
 Startpromptar och rollgränser finns i
 [`docs/agent-prompts.md`](agent-prompts.md).
 
+## Current objective (2026-06-03 EM — heavy-LLM synliggjord: kor-1b→1c→2→7a→1c-copy inne)
+
+`jakob-be` @ `167ace5`, rent träd. Hela "gör-det-synligt"-kedjan för det tunga LLM-flödet är
+mergad: briefModel + planning fyller blueprint (kor-1b/1c/1c-copy), renderern konsumerar det
+(kor-2), och routern + Context Assembler finns som rails (kor-6a/7a). De fyra baseline-
+branscherna (elektriker/frisör/naprapat/keramik) renderas nu med branschnära hero/CTA/trust +
+story/faq/tjänster (gated på svensk kor-1b-positioning; legacy/mock = byte-identisk, noll
+regression). Orchestrering + nästa kort: `docs/heavy-llm-flow/handoff-orchestration.md`.
+
+**Nästa:** `kor-4a` (deterministisk Quality Critic) → `3a`/`3b` → `5` → `6b` → `7b–d`.
+**Checkpoint pågår:** operatören kör dev-sajt + tittar visuellt innan kor-4a dispatchas
+(coexistence: ingen full-pytest-builder medan dev-sajt körs).
+**Parkerat:** #156 `/live` (P1 security), KÖR-0G renderer naming hygiene (`dossier` =
+render-input, ej orchestration `Dossier`), `resume:false`-härdning (apps/viewser),
+`jakob-be → main`-sync.
+
+---
+
 ## Current objective (2026-06-03 — KÖR-0b state-realign efter heavy-LLM-landning)
 
 Smal Steward-slice (vår lane: docs + governance, ingen `apps/`- eller
@@ -291,11 +309,10 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `e30cc15` (2026-06-03 UTC, `jakob-be` HEAD — heavy-LLM-grunden
-inne: #155 KÖR-0 + #160 governance-unblock + #157 KÖR-1a + #159 KÖR-6a, samt
-`docs/heavy-llm-flow/`. `origin/main` = `1d6e069` (jakob-be 12 commits före; sync =
-operatörsbeslut). KÖR-0b state-realign ligger ovanpå i en PR mot `jakob-be`).
-Nya PRs sedan föregående checkpoint: #155, #160, #157, #159 (alla mergade till
+Last verified state: `167ace5` (2026-06-03 EM UTC, `jakob-be` HEAD — heavy-LLM synliggjord:
+#162 KÖR-1b + #163 guardrail + #164 KÖR-1c + #165 KÖR-2 + #166 KÖR-7a + #167 KÖR-1c-copy alla
+mergade. `origin/main` = `1d6e069`; jakob-be många commits före, sync = operatörsbeslut).
+Nya PRs sedan föregående checkpoint: #162, #163, #164, #165, #166, #167 (alla mergade till
 `jakob-be`).
 
 ## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)

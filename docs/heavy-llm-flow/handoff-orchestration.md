@@ -1,106 +1,119 @@
 # Orchestrerings-handoff — heavy-llm-flow
 
-**Datum:** 2026-06-03 (uppdaterad) · **Bas:** `jakob-be` @ `e30cc15` · **Governance:** grön (18/18)
+**Datum:** 2026-06-03 (uppdaterad) · **Bas:** `jakob-be` @ `167ace5` · **Governance:** grön (18/18)
 
 Överlämning så en ny orchestrator-agent kan fortsätta jobba med operatören (Jakob) utan
-att läsa hela förra sessionens chatt. Läs även `README.md` + `00`–`04` i denna mapp.
+att läsa hela förra sessionens chatt. Läs även `README.md` + `00`–`04` i denna mapp samt
+`docs/current-focus.md`.
 
-## Vad som är mergat i `jakob-be`
+## Vad som är mergat i `jakob-be` (heavy-LLM-kedjan)
 
 | Commit | Vad |
 |--------|-----|
+| `167ace5` | KÖR-1c-copy — rik contentBlocks (story/faq/offer) → synlig branschcopy (#167) |
+| `d86b151` | KÖR-7a — read-only Context Assembler (#166) |
+| `d1541eb` | KÖR-2 — renderern konsumerar blueprint (#165) |
+| `5546905` | KÖR-1c — planning fyller Generation Package-blueprint (#164) |
+| `f0aa175` | guardrail: manual/wizard-vägen förstaklass + `heavy-llm-flow-layers`-regel (#163) |
 | `fae98f3` | KÖR-1b — briefModel fyller brief-blueprintet (#162) |
 | `8e4f7fe` | KÖR-0b state-realign + VercelSandboxRuntime boundary (#161) |
-| `e30cc15` | handoff-refresh |
-| `1461945` | chore: ignorera lokala junk-filer (`*.code-workspace`, `*.lnk`) |
-| `fa943ac` | handoff efter kor-1a + kor-6a |
-| `89530a1` | KÖR-6a — deterministisk router (#159) |
-| `3f210f1` | KÖR-1a — blueprint schema skeleton + ADR 0036 (#157) |
-| `4c469a3` | governance-unblock (#160) |
-| `eb68028` | KÖR-0 state alignment / städning (#155) |
-| `caf9a71`, `6a8e39b` | vercel-sandbox hosting-roadmap + preview-loop-kärna |
+| `4c469a3` `3f210f1` `89530a1` | #160 governance-unblock · #157 KÖR-1a schema · #159 KÖR-6a router |
+| `eb68028` · `caf9a71`/`6a8e39b` | #155 KÖR-0 · vercel-sandbox hosting-roadmap + preview-loop-kärna |
 
-Grunden för det tunga LLM-flödet (blueprint-kontrakt + deterministisk router) är inne
-och governance-grön.
+**Statusen nu:** Hela "gör-det-synligt"-kedjan är inne. Den deterministiska renderern läser
+blueprint som innehållskälla (kor-2), och planning producerar nu rik branschcopy
+(kor-1c-copy) som tänder hero/CTA/trust **och** story/faq/tjänster för de fyra baseline-
+branscherna (elektriker/frisör/naprapat/keramik). Berikning är gated på svensk
+kor-1b-positioning; utan den (legacy/mock) är output byte-identisk = noll regression.
+Routern (kor-6a) + Context Assembler (kor-7a) finns som rails för follow-up/patch.
 
-## Orchestrerings-modellen (hur operatör + orchestrator-agent jobbar)
+## Nästa kort
 
-- Operatören godkänner merges och matar kör-prompter till builder-agenter.
-  Orchestrator-agenten **babysittar** PR:erna (CI + review-trådar) till merge-redo och
-  mergar **på operatörens OK** (`gh pr merge --squash`), aldrig self-merge.
-- **Ett kör-kort = ett worktree** (`Desktop\sajtbyggaren-worktrees\<kort>`) +
-  `feat/<kort>`-branch + PR mot `jakob-be`. Fil-disjunkta kort körs parallellt.
-- **Checks är scope-baserade** (`04-builder-profil.md`). Governance-grindar:
-  `check_term_coverage --strict` + `test_no_legacy_terms`. **Lägg docs via PR, eller kör
-  båda grindarna lokalt före direkt-push** — en direkt-push av docs blockade term-coverage
-  tidigare; #160 allowlistar nu heavy-llm-flow-vokabulären.
-- **Bevakar-mönster:** bakgrunds-poller på `gh pr checks <n>` (governance-grön) + PR-head.
-  Notiser kan lagga några sekunder — verifiera alltid med `gh pr checks` innan merge.
-- **Review-bottar:** två bottar kommenterar PR-rader (codex-connector + Vercels review-bot).
-  Validera fynden — agera på giltiga, ignorera false positives, jaga inte en oändlig
-  P2-ström på deterministisk kod.
+Sekvens: `1b ✓ 1c ✓ 2 ✓ 7a ✓ 1c-copy ✓ → 4a → 3a → 3b → 5 → 6b → 7b–d`.
+**Rekommenderat nästa:** `kor-4a` (deterministisk Quality Critic, ingen LLM, beror på 1c+2 —
+båda inne). Sedan `kor-3a/3b` (section-treatments → visualDirection), `kor-5` (repair),
+`kor-6b` (router LLM-fallback), `kor-7b–d` (patch/apply/targeted rebuild).
+**Coexistence-OBS:** dispatcha INTE en builder som kör full `pytest` medan operatören har en
+Viewser dev-sajt igång — `test_api_prompt_smoke` startar en egen Next.js-dev-server och två
+samtidiga floppar (Windows-orphan-issue, se AGENTS.md). Pausa builder-dispatch under preview.
 
-## Nästa kort (sekvens enligt README)
+## Orchestrerings-modellen (verifierad denna session)
 
-`kor-1b (inne) → 1c → 2 → 4a → 3a → 3b → 5 → 6b → 7a–d`.
-**Huvudspår nu:** `kor-1c` (planning fyller `sectionPlan`/`contentBlocks`/
-`visualDirection`/`qualityRisks`) → sedan `kor-2` (renderern konsumerar → sidan blir
-bättre). Det är där användaren ser skillnad.
-**Parallellt (valfritt, max en extra agent):** `kor-7a` Context Assembler — read-only,
-fil-disjunkt (`packages/generation/orchestration/context/` vs `planning/`), beror på
-1a+6a (båda inne). Ger inte snyggare sajter direkt, men bra räls för follow-up/patch.
+- **Operatören** godkänner scope/merges; **orchestrator-agenten** (du) babysittar PR:er till
+  merge-redo och mergar på operatörens stående OK. "Self-merga aldrig" är *builder*-regeln;
+  orchestratorn mergar.
+- Builder-agenter körs antingen som (a) Cursor cloud-agenter (operatören klistrar prompten)
+  eller (b) bakgrunds-subagenter du startar själv (`Task`, `run_in_background`) som
+  bygger → pushar → öppnar PR. Subagenter gör loopen självgående.
+- **Cloud-agenter öppnar DRAFT-PR:er** → kör `gh pr ready <n>` innan merge.
+- **Babysit-flöde:** verifiera scope (rätt filer, inga off-limits) → `gh pr checks` grön
+  (governance ~3 min är sist klar) → validera review-bot-fynd → fixa giltiga i en **temporär
+  worktree på PR-grenen** (`git fetch origin pull/<n>/head:pr-<n>` + `git worktree add`),
+  pusha → re-CI → `gh pr merge --squash --delete-branch` → `git merge --ff-only
+  origin/jakob-be` → städa worktree + lokal branch + `git fetch --prune`.
+- **Bevakare (valfri):** bakgrunds-PowerShell som pollar `gh pr list/checks` och skriver
+  `ACTIONABLE_GREEN/FAIL` (notify_on_output). Bra för passiv väntan; stäng den när operatören
+  jobbar interaktivt. Den auto-mergar inte — den pingar bara.
+- **Review-bottar:** codex-connector + Vercel review-bot gav denna session **giltiga** fynd
+  (determinism-set, CTA-telefon-ärlighet, appliedVisibleEffect, restaurant-CTA, offer-block,
+  runs-dir-cwd) — alla fixade med regressionstest. Validera varje; fixa giltiga, motivera
+  false positives (en FAQ-tråd var FP).
 
-## Uppskjutet — router v1 P2-luckor (→ `kor-6b` / v1.1)
+## Visible-value-läget + öppen produktfråga
 
-Deterministiska routern (#159) passerade sin DoD + ai-bug-review, men review-bottarna
-listade ~14 rådgivande P2-heuristikluckor (de blockerar inte merge). Jaga dem inte
-deterministiskt — LLM-fallbacken (`kor-6b`) är byggd just för dem. Kvarvarande:
-komponent-vs-route ("klocka på sidan"), create-verb→component_add, bar "ny/nytt",
-preserve i samma klausul, koordinerade listor, bart remove utan mål, fråga-med-stilord,
-multi-intent-referensskydd, referens+placering, "sista sektionen", nordiska TLD:er,
-negerade stil-klausuler, frågeformulerad fix. (Ligger som olösta P2-trådar på #159.)
+- hero/CTA/trust + story/faq/tjänster är nu branschnära för de fyra baselines (mät via
+  dev-sajt: `cd apps/viewser && npm run dev`, svensk prompt per bransch, default `local-next`).
+- **Öppen fråga (ej beslutad):** planningModel *författar* inte contentBlocks-copy som
+  structured output — copy härleds deterministiskt ur briefen (det dokumenterade
+  kor-1c-kontraktet, det som gör mock = real). Att låta modellen skriva copyn direkt =
+  runtime-kontraktsbeslut + ny fabriceringsyta → kräver operatörs-OK + ev. ADR. Flaggat.
 
-## Vercel Sandbox — tre spår, håll isär
+## Uppskjutet / parkerat
 
-1. **Runtime-adaptern** (`apps/viewser/lib/vercel-sandbox-runner.ts` + `PreviewRuntime`,
-   redan på jakob-be): sund ~8/10, behåll. Kör en redan-byggd sajt; `@vercel/sandbox`
-   bara i app-lagret (ADR 0030/0033). Känd P2-härdning: `resume:false` på stop/get.
-2. **#156 hostad `/live`** (öppen PR, live-lane): bygg vidare — merga inte, radera inte.
-   Bevisade hostad prompt→sandbox→preview (~75 s). Riktiga blockers = **säkerhet**
-   (oautentiserad publik start, secrets som env in i VM:en, ingen rate-limit, 12h-token)
-   + tracing-excludes-regressionsrisk på befintliga routes. Bot-fynd: Vercels review-bots
-   5 förslag är giltiga härdningar (status-signatur, fel-state, `resume:false`, race);
-   GPT:s "run-build.sh kan aldrig starta" är en **false positive** (sandbox-cwd är
-   `/vercel/sandbox`, så relativ write == absolut exec; live-verifierat). "Följdprompt
-   syns inte" = heavy-LLM:s copy-direktiv-gap (kor-1b→2 fixar det gratis), inte wiringen.
-3. **hosted-sandbox-mvp** (worktree, 7 ocommittade filer): tredje konkurrerande WIP-spår
-   mot #156 — konvergensbeslut behövs (live-lane). Force-radera worktreet förlorar arbetet.
+- **kor-6b** — router v1.1 LLM-fallback för ~14 rådgivande P2-heuristikluckor i `classify.py`.
+  Jaga dem inte deterministiskt; fallbacken är byggd för dem.
+- **KÖR-0G — renderer naming hygiene** (liten docs/namnstäd, INTE egen PR mitt i flödet):
+  `renderers.py`/`blueprint_render.py` använder `dossier` som namn på render-input-dicten —
+  INTE samma som orchestration-`Dossier` (capability under `packages/.../dossiers/`).
+  Coach-bekräftat: namnskuld, ingen bugg, renderas aldrig som kundcopy. Dokumentera +
+  döp lokalt till `render_input`/`render_context` senare. Batcha med nästa Steward-pass.
+- **Vercel-adapter-härdning** (apps/viewser, live-lane): `resume:false` på `Sandbox.get`/stop
+  i `vercel-sandbox-runner.ts`. P2, ej blocker.
+- **#156 `/live`** — hostad publik loop, parkerad (P1: oautentiserad publik sandbox-start +
+  secrets in i VM + ingen rate-limit). Live-lane, rör/merga ej. (Copy-direktiv-gapet som
+  #156:s "följdprompt syns inte"-fynd nämnde är nu stängt av kor-1c-copy.)
+- **`SAJTBYGGAREN_EVALS_DIR`** (operatörens lokala `.env`): satt till `data/output/.evals` →
+  gör `test_default_evals_dir_is_inside_data_evals_artifacts_mini` röd i full-sviten. För
+  helgrön svit: kommentera ut eller `=data/evals/artifacts/mini`. (Worktree-builders ärver
+  inte root-`.env` → de var gröna.)
+- **Sync `jakob-be → main`** = pending operatörsbeslut.
 
-## Lane-gränser
+## Lane-gränser & gör-inte
 
 - **Vårt:** `packages/generation/**`, `governance/**`, `scripts/**`, `docs/heavy-llm-flow/**`.
-- **Inte vårt — rör ej:** `apps/viewser/**` = live/Christopher-lane (#156 `/live`, #158
-  UI-överhalning, hosted-sandbox-mvp). Säkerhet/hosted/auth väntar tills operatören
-  uttryckligen väljer det som scope (produktkompassen).
+- **Inte vårt — rör ej:** `apps/viewser/**` (live/Christopher: #156, #158, hosted-sandbox-mvp).
+- Merga inte till `main` utan OK; merga inte #156; ingen fri kodagent; inga nya
+  canonical-typer utan ADR; inga påhittade claims; committa aldrig `.env*`; force-radera inte
+  hosted-sandbox-worktreet.
 
 ## Branch/worktree-läge
 
-- **Aktiva worktrees:** huvudträdet (`jakob-be`), `sajtbyggaren-live`
+- **Aktiva worktrees:** huvudträdet (`jakob-be` @ `167ace5`, rent), `sajtbyggaren-live`
   (`feat/live-preview` #156), `sajtbyggaren-hosted-sandbox` (`hosted-sandbox-mvp`,
-  7 ocommittade). Rör inte de två sista.
-- **Raderade mergade branches:** `chore/termcov-heavy-llm-flow`, `feat/kor-1a`,
-  `feat/kor-6a`, `cursor/kor-0-state-alignment-90e4` (#155),
-  `cursor/preview-runtime-bite-b-di` (#140).
-- **Att se över (EJ mergade — rör ej utan beslut):** `cursor/dev-env-setup-7245`
-  (#154 closed, troligen ersatt av #151), `cursor/dossier-intake-v11-review-895d`
-  (49 commits, ingen PR), `cursor/preview-runtime-adapters` (1 commit + 6-dagars tom
-  stash). **Lämna alltid** `backup-*` (säkerhetskopior) och `christopher-ui`.
-- **Sync `jakob-be → main`** = pending operatörsbeslut (så når arbetet canonical linje).
+  ocommittat). Rör inte de två sista.
+- **Mergade + raderade denna session:** `feat/kor-1a`/`feat/kor-6a`, kor-0b-realign (#161),
+  guardrail (#163), kor-1c (#164), kor-2 (#165), kor-7a (#166), kor-1c-copy (#167).
+  (Cursor-footern kan visa stale spök-branches — ladda om fönstret rensar; `git branch` är
+  sanningen.)
+- **Att se över (EJ mergade — rör ej utan beslut):** `cursor/dossier-intake-v11-review-895d`
+  (49 commits, ingen PR), `cursor/dev-env-setup-7245` (#154 closed),
+  `cursor/preview-runtime-adapters`. **Lämna alltid** `backup-*` + `christopher-ui`.
 
-## Gör inte
+## Canvas (operatörsreferens)
 
-- Merga inte till `main` utan operatörens OK; merga inte #156 (säkerhet kvar).
-- Rör inte `apps/viewser/**`, #156/#158 eller hosted-sandbox-mvp (live/Christopher-lane).
-- Bygg inte fri kodagent; inga nya canonical-typer utan ADR; inga påhittade claims.
-- Committa aldrig `.env*`; skriv aldrig ut secrets.
-- Force-radera inte hosted-sandbox-worktreet utan beslut (7 ocommittade filer).
+Arkitekturkartan ligger på
+`~/.cursor/projects/<workspace>/canvases/heavy-llm-flow-arkitektur.canvas.tsx` (öppnas bredvid
+chatten; ligger utanför repot, committas inte). Den speglar två-motor-modellen + kör-status.
+**Uppdatera när kort mergas:** den ska nu visa kor-1b/1c/2/7a/1c-copy som "inne", `kor-4a`
+som "huvudspår nu", och story/faq/tjänster som "branschnära (kor-1c-copy)" i stället för
+"mall tills copy-gapet stängs".
