@@ -58,7 +58,8 @@ On Ubuntu Noble use `sudo apt-get install -y python3-venv` when available;
 if the meta-package is missing, install `python3.12-venv` explicitly before
 the first `python3 -m venv .venv`. When neither apt package is available,
 the VM update script falls back to `pip install virtualenv` and
-`virtualenv .venv` (same outcome as `python3 -m venv`).
+`~/.local/bin/virtualenv .venv` (same outcome as `python3 -m venv`; user
+installs land in `~/.local/bin`, which may be off `PATH` in non-login shells).
 Activate with `source .venv/bin/activate`. The update script handles
 this automatically.
 
