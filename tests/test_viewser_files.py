@@ -1799,6 +1799,46 @@ def test_run_history_uses_status_dot_colors() -> None:
 
 
 @pytest.mark.tooling
+def test_runs_lib_marks_stale_pending_runs_as_aborted() -> None:
+    """Bug A: ett bygge som dödas mitt i (flik stängd, Cursor-omstart) hinner
+    aldrig skriva build-result.json eller promota current.json, så runen
+    fastnade `pending`/grå för evigt och vilseledde operatören. listRuns OCH
+    readRunTrace måste i stället rapportera en pending-run som varit inaktiv
+    längre än en timeout som `aborted` (röd), och båda måste dela samma gräns
+    så Run History och trace-pollern är överens. Lås invarianterna här så en
+    refactor inte tyst återinför grå-för-evigt-buggen.
+    """
+    runs_lib = (VIEWSER_DIR / "lib" / "runs.ts").read_text(encoding="utf-8")
+
+    assert '"aborted"' in runs_lib, (
+        "RunStatus måste innehålla 'aborted' för avbrutna/stale-pending byggen."
+    )
+    assert "isStalePending" in runs_lib and "STALE_PENDING_TIMEOUT_MS" in runs_lib, (
+        "runs.ts måste härleda stale-pending via en delad timeout (isStalePending "
+        "+ STALE_PENDING_TIMEOUT_MS) så listRuns och readRunTrace är överens."
+    )
+    assert "VIEWSER_STALE_PENDING_MS" in runs_lib, (
+        "Stale-pending-timeouten ska gå att justera via VIEWSER_STALE_PENDING_MS."
+    )
+    # Båda kodvägarna (lista + trace) måste markera aborted, annars pollar
+    # use-build-trace-polling ett dött bygge i all oändlighet.
+    assert runs_lib.count('"aborted"') >= 2, (
+        "Både listRuns/buildPendingMeta och readRunTrace måste sätta 'aborted'."
+    )
+
+    run_history = (VIEWSER_DIR / "components" / "run-history.tsx").read_text(encoding="utf-8")
+    assert "aborted:" in run_history, (
+        "RunHistory STATUS_DOT_COLORS måste mappa 'aborted' till en röd prick "
+        "(annars faller den tillbaka till samma grå som pending)."
+    )
+
+    details = (VIEWSER_DIR / "components" / "run-details-panel.tsx").read_text(encoding="utf-8")
+    assert "aborted:" in details, (
+        "RunDetailsPanel STATUS_TONE måste mappa 'aborted' till fail-ton, inte neutral."
+    )
+
+
+@pytest.mark.tooling
 def test_page_on_build_done_passes_apply_runs_context() -> None:
     """Stale-closure guard: after onBuildDone sets selectedRunId, the
     fetchRuns().then(applyRunsData) path must pass an explicit context
