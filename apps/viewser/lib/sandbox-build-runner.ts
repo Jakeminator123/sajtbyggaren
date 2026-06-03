@@ -361,7 +361,7 @@ export async function getLiveStatus(siteId: string): Promise<LiveStatus> {
 
   let sandbox: Awaited<ReturnType<typeof sdk.Sandbox.get>>;
   try {
-    sandbox = await sdk.Sandbox.get({ ...credentials, name: sandboxName(siteId) });
+    sandbox = await sdk.Sandbox.get({ ...credentials, name: sandboxName(siteId), resume: false });
   } catch {
     return {
       siteId,
