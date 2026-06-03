@@ -1,0 +1,12 @@
+{
+  "sections": {
+    "service-list": {
+      "treatments": ["card-grid", "alternating-rows", "icon-strip", "tabular"],
+      "byVariant": {
+        "nordic-trust": "tabular",
+        "warm-craft": "alternating-rows",
+        "clinical-calm": "icon-strip"
+      }
+    }
+  }
+}

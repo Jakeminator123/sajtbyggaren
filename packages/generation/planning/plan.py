@@ -30,6 +30,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from packages.generation.brief.models import has_openai_api_key
+from packages.generation.build.dispatcher import load_section_treatments_catalogue
 
 from .blueprint import (
     SectionPlanEntry,
@@ -113,26 +114,23 @@ SCAFFOLD_TO_STARTER: dict[str, str] = {
 # Phase 3 (ADR 0032, originally landed as ADR 0031 on origin/main pre-port;
 # renumbered during the B146 port to avoid colliding with jakob-be:s
 # ADR 0031 — Steward auto-bump): catalogue of registered section design
-# treatments per section-id. Mirrors
-# governance/schemas/project-input.schema.json
-# directives.sectionTreatments enums and the runtime table
-# packages/generation/build/dispatcher.py::_SECTION_TREATMENTS_BY_VARIANT.
-# Used by the planning prompt so planningModel can reason about visual
-# structure when it picks a scaffold/variant.
+# treatments per section-id. Used by the planning prompt so planningModel
+# can reason about visual structure when it picks a scaffold/variant.
 #
-# This catalogue is an LLM-prompt aid, not a source of truth. The
-# schema enums and the Python runtime table are the canonical
-# sources; tests/test_section_treatments_prompts.py guards against
-# drift between this list and the runtime catalogue (so a new
-# treatment registered in dispatcher.py without bumping this list
-# fails CI before the planning prompt can silently mislead the LLM).
-_SECTION_TREATMENTS_CATALOGUE: dict[str, list[str]] = {
-    "selected-work-preview": ["editorial-stack", "asymmetric-grid", "marquee-row"],
-    "treatment-list": ["minimal-rows", "split-cards", "numbered-stack"],
-    "practice-grid": ["dense-grid", "tabular", "grouped"],
-    "expertise-areas": ["numbered-2col", "tag-cluster"],
-    "service-list": ["card-grid", "alternating-rows", "icon-strip", "tabular"],
-}
+# kor-3a (2026-06-03): this catalogue is no longer a hand-maintained
+# Python mirror. It is loaded from the SAME declarative source the build
+# dispatcher reads — ``scaffolds/<id>/section-treatments.json`` via
+# ``packages/generation/build/dispatcher.load_section_treatments_catalogue``
+# — so the planning prompt and the runtime variant→treatment table
+# (``_SECTION_TREATMENTS_BY_VARIANT``) cannot drift apart. The catalogue
+# stays an LLM-prompt aid; the JSON files + schema enums are the
+# canonical sources. tests/test_section_treatments_prompts.py still
+# guards catalogue↔schema↔runtime agreement, and
+# tests/test_section_treatments_json_parity.py proves the JSON encodes
+# the exact pre-migration values.
+_SECTION_TREATMENTS_CATALOGUE: dict[str, list[str]] = (
+    load_section_treatments_catalogue()
+)
 
 
 # Heuristic keywords used by the deterministic mock planner to pick
