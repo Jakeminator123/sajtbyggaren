@@ -427,8 +427,8 @@ async function readSandboxFile(
   const s = sandbox as RunnableSandbox;
   try {
     const result = shellOverride
-      ? await s.runCommand("sh", ["-c", shellOverride])
-      : await s.runCommand("cat", [filePath]);
+      ? await s.runCommand({ cmd: "sh", args: ["-c", shellOverride] })
+      : await s.runCommand({ cmd: "cat", args: [filePath] });
     return await result.stdout();
   } catch {
     return null;
