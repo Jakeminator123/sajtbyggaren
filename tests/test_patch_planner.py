@@ -42,6 +42,9 @@ from packages.generation.orchestration.patch import (  # noqa: E402
     rails_from_context,
     validate_patch,
 )
+from packages.generation.orchestration.patch.planner import (  # noqa: E402
+    _INTENT_CAPABILITY,
+)
 from packages.generation.orchestration.router import (  # noqa: E402
     RouterDecision,
     RouterSubtask,
@@ -238,6 +241,98 @@ def test_known_capability_with_dossier_is_valid(env):
     assert plan.valid is True
     assert len(plan.patches) == 1
     assert plan.patches[0].value["capability"] == "contact-form"
+
+
+# ---------------------------------------------------------------------------
+# FIND 1: component_add without a named component -> rejected, valid:false
+# ---------------------------------------------------------------------------
+
+
+def test_component_add_without_component_is_rejected(env):
+    """'lägg till något i andra sektionen' (no recognised component) -> rejected.
+
+    The router classifies this as ``component_add`` with ``componentIntent=None``
+    and a resolvable ordinal target. The planner must NOT emit a valid-but-empty
+    ``{"component": None}`` patch (a semantically empty add); it rejects it with a
+    clear reason and the plan is invalid.
+    """
+    paths, _tmp = env
+    context, _registry = _contexts(paths)
+
+    decision = classify_message("lägg till något i andra sektionen")
+    assert decision.editKind == "component_add"
+    assert decision.componentIntent is None
+    assert decision.target is not None
+
+    plan = plan_patches(decision, context)
+    assert plan.valid is False
+    assert plan.patches == []
+    assert len(plan.rejected) == 1
+    rejected = plan.rejected[0]
+    assert "component_add utan namngiven komponent" in rejected.reason
+    # The empty value is echoed so the dry-run stays auditable.
+    assert rejected.value["component"] is None
+
+
+def test_component_add_with_named_component_stays_valid(env):
+    """Regression guard: a named component_add is unaffected by the null gate."""
+    paths, _tmp = env
+    context, _registry = _contexts(paths)
+
+    decision = classify_message("lägg en klocka i andra sektionen")
+    assert decision.editKind == "component_add"
+    assert decision.componentIntent == "clock_widget"
+
+    plan = plan_patches(decision, context)
+    assert plan.valid is True
+    assert plan.rejected == []
+    assert len(plan.patches) == 1
+    assert plan.patches[0].value["component"] == "clock-widget"
+
+
+def test_validate_patch_rejects_componentless_accessory(env):
+    """Defensive rail: a hand-built accessoryComponent with no component is rejected.
+
+    Mirrors the planner gate so a patch built outside the planner cannot smuggle a
+    no-op ``{"component": None}`` accessoryComponent past ``validate_patch``.
+    """
+    paths, _tmp = env
+    context, _registry = _contexts(paths)
+    rails = rails_from_context(context)
+    patch = ArtifactPatch(
+        artifact=GENPKG,
+        field="contentBlocks.home.hero.accessoryComponent",
+        value={"component": None, "variant": None},
+    )
+    reason = validate_patch(patch, rails)
+    assert reason is not None and "no named component" in reason
+
+
+# ---------------------------------------------------------------------------
+# FIND 2: _INTENT_CAPABILITY must not drift from the governance capability-map
+# ---------------------------------------------------------------------------
+
+
+def test_intent_capability_values_are_in_capability_map():
+    """Every _INTENT_CAPABILITY value must be a key in capability-map.v1.json.
+
+    ``_INTENT_CAPABILITY`` is a second source of truth beside the governance
+    ``capability-map.v1.json``; this locks the two so a capability rename cannot
+    drift them apart silently (the planner would otherwise attach a capability
+    slug that no rail recognises).
+    """
+    capability_map = json.loads(
+        (REPO_ROOT / "governance" / "policies" / "capability-map.v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    known = set(capability_map["capabilities"])
+    referenced = set(_INTENT_CAPABILITY.values())
+    missing = referenced - known
+    assert not missing, (
+        "_INTENT_CAPABILITY references capabilities absent from "
+        f"capability-map.v1.json: {sorted(missing)}"
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -145,6 +145,26 @@ def _plan_one(
     field = f"contentBlocks.{route_id}.{section_id}.{leaf}"
     value = _build_value(edit_kind, component_intent, target)
 
+    # A component_add with no resolved component name is semantically empty:
+    # there is nothing to attach. Reject it (with a clear, actionable reason)
+    # instead of emitting a valid-but-empty {"component": None} patch - the
+    # planner invents no component name, so this needs a clarifying follow-up.
+    if edit_kind == "component_add" and (
+        not isinstance(value, dict) or value.get("component") is None
+    ):
+        plan.rejected.append(
+            RejectedPatch(
+                artifact=GENERATION_PACKAGE_ARTIFACT,
+                field=field,
+                value=value,
+                reason=(
+                    "component_add utan namngiven komponent (componentIntent "
+                    "saknas); inget att lägga till — be om förtydligande"
+                ),
+            )
+        )
+        return
+
     if resolve_error is not None:
         plan.rejected.append(
             RejectedPatch(
