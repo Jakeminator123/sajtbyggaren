@@ -528,6 +528,9 @@ COMMON_WORDS = {
     "ErrorBubble", "ErrorKind", "MessageBubble",
     "BuildChange", "BuildChangeCategory", "CategoryLabel",
     "KeywordRule", "ChevronUp", "ChevronDown", "ChevronLeft",
+    # UI-gap-fix (juni 2026): exakt change-set i FloatingChat ("Ändrat")
+    # härledd ur run-diff istället för prompt-heuristik ("Troligen ändrat").
+    "RunChangeSet",
     # Live Build Sync polling-hook (GAP-viewser-pipeline-status-polling):
     "BuildPhase", "BuildTraceState",
     "AbortController", "AbortError",
@@ -842,6 +845,34 @@ COMMON_WORDS = {
     "ErrorBoundaryState",
     "ErrorInfo",  # React-typ från `import type { ErrorInfo } from "react"`
     "RunsLoadErrorCard",  # lokal komponent i apps/viewser/app/page.tsx
+    "InspectorLoadingSkeleton",  # lokal Skeleton-komponent i site-inspector-sheet.tsx (Tier 2)
+    "VersionsEmptyState",  # lokal EmptyState-komponent i versions-tab/diff-view.tsx (Tier 3 split)
+    "RunHistorySkeleton",  # lokal Skeleton-komponent i run-history.tsx (Wave 3 Steg 8)
+    # Marknadssajt (2026-06-01, scout-marketing-site) — nya lokala UI-/route-
+    # symboler i apps/viewser/app/(marketing|console) + components/marketing/*.
+    # Viewser-implementation, inte canonical domain terms. (Auth/billing-
+    # symboler är medvetet UTELÄMNADE här — den ytan är parkerad i denna PR.)
+    "MarketingHeader", "MarketingFooter", "MarketingHome", "MarketingLayout",
+    "ConsoleLayout", "PlaceholderPage", "ProductPage", "CookiesPage",
+    "PrivacyPage", "TermsPage", "CookieBanner",
+    # Startsidans sektioner + hero + interaktiv living wall (Web Platform-API).
+    "HeroVideo", "ProfessionGrid", "IntersectionObserver",
+    # Per-yrke-landningssidor + Om oss/grundare.
+    "ProfessionLandingPage", "FounderCard",
+    # Cookie-consent + legal-sidor.
+    "CookieConsentProvider", "CookieConsent", "CookieConsentValue",
+    "ManageCookiesButton", "LegalPageLayout", "ActionButtons",
+    # SEO-finish: Next MetadataRoute för sitemap/robots.
+    "MetadataRoute",
+    # Hero-prompt-handoff (juni 2026): besökaren beskriver sin sajt direkt på
+    # heron och landar i bygg-flödet. PromptBuildern = bestämd form i prosa.
+    # WizardHandoff = sessionStorage-payloaden hero→studio (hela wizard-svaret).
+    "HeroPromptForm", "PromptBuildern", "WizardHandoff",
+    # Starters-banan (juni 2026): yrkessidor + hero-chips + studio-onboarding
+    # som förifyller DiscoveryWizarden via en lätt seed. Lokala viewser-symboler.
+    "StarterCta", "StarterPreset", "WizardSeed",
+    "SELECT",  # HTML-tagName-konstant i ⌘K-skip (studio + test) — inte domänbegrepp
+    "SyntaxError",  # JS-built-in exception-namn i prompt-builder NDJSON-comment + test
     # Toast-system (eget mini-system, ingen extern dep):
     "ToastContext",
     "ToastContextValue",

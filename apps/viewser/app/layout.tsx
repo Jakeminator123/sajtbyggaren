@@ -16,8 +16,13 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sajtbyggaren",
-  description: "Localhost operator-konsol för Sajtbyggaren — prompt, build och artefakter.",
+  metadataBase: new URL("https://sajtbyggaren.se"),
+  title: {
+    default: "Sajtbyggaren — din hemsida, byggd med AI",
+    template: "%s · Sajtbyggaren",
+  },
+  description:
+    "Sajtbyggaren bygger en färdig företagshemsida åt dig med AI. Beskriv din verksamhet — vi sköter resten.",
 };
 
 export default function RootLayout({

@@ -256,7 +256,7 @@ export function FoundationStep({
       />
 
       <div>
-        <SectionHeader help="Styr scaffold + starter — vilken Next.js-mall backend bygger på. Visuell identitet (färg, typografi, känsla) bestäms i steg 2 och är fri oavsett bransch.">
+        <SectionHeader help="Styr vilken typ av sajt vi bygger som grund. Utseendet (färg, typografi, känsla) väljer du i steg 2 och är fritt oavsett bransch.">
           Verksamhetsfamilj *
         </SectionHeader>
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -281,7 +281,7 @@ export function FoundationStep({
         <MetadataPanel
           id="foundation-summary"
           title="Så här tolkar vi dina val"
-          subtitle="Scaffold, vibe, typografi, branch & förvalda funktioner — klicka för förhandsvisning."
+          subtitle="Sidstruktur, känsla, typografi & förvalda funktioner — klicka för förhandsvisning."
         >
           <FoundationSummary
             businessFamily={answers.businessFamily}

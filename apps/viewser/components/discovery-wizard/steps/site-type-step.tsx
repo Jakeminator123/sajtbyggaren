@@ -34,9 +34,6 @@ export function SiteTypeStep({
     <div className="flex flex-col gap-3">
       <HelperText>
         Välj en eller flera kategorier som beskriver verksamheten bäst.
-        {source === "governance"
-          ? " Listan följer Discovery Taxonomy."
-          : " Visar lokal UI-cache tills governance-listan laddats."}
       </HelperText>
       <ChipRow>
         {options.map((category) => {
@@ -65,7 +62,7 @@ export function SiteTypeStep({
 function supportHelper(option: discoveryOption): string | undefined {
   if (option.supportStatus === "active") return undefined;
   if (option.supportStatus === "planned" && option.fallbackLabel) {
-    return `${option.label} byggs som ${option.fallbackLabel} tills ${option.targetScaffoldLabel} är runtime-aktiv.`;
+    return `${option.label} byggs som ${option.fallbackLabel} tills ${option.targetScaffoldLabel} är tillgänglig.`;
   }
   if (option.supportStatus === "fallback" && option.fallbackLabel) {
     return `${option.label} körs via ${option.fallbackLabel}.`;
@@ -97,14 +94,14 @@ function renderSupportNotice({
     : " körs via fallback";
   const targetText =
     plannedOrFallback.supportStatus === "planned"
-      ? ` tills ${plannedOrFallback.targetScaffoldLabel} är runtime-aktiv`
+      ? ` tills ${plannedOrFallback.targetScaffoldLabel} är tillgänglig`
       : "";
 
   return (
     <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] px-3 py-2 text-[11px] leading-relaxed text-amber-800 dark:text-amber-300">
       {plannedOrFallback.label}
       {fallbackText}
-      {targetText}. Backendens resolver avgör slutlig scaffold.
+      {targetText}. Vi väljer en närliggande mall som grund så länge.
     </div>
   );
 }
