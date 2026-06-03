@@ -1092,6 +1092,15 @@ COMMON_WORDS = {
     # symbols (never persisted as a patch-plan.json), not canonical domain
     # terms - same treatment as the RouterDecision / AssembledContext families.
     "ArtifactPatch", "PatchOp", "PatchPlan", "PatchRails", "RejectedPatch",
+    # KÖR-7c Artifact patch apply runtime symbols
+    # (packages/generation/orchestration/apply/). Sibling to the KÖR-7b patch
+    # planner above: ``ApplyResult`` is the transient outcome envelope,
+    # ``AppliedCapability`` / ``UnmappedPatch`` are its Pydantic shapes and
+    # ``PatchApplyError`` is the hard-stop exception for a rejected/invalid
+    # plan. Transient implementation symbols (apply only writes the next
+    # Project Input version snapshot, never a new canonical artefakt) - same
+    # treatment as the RouterDecision / PatchPlan families above.
+    "AppliedCapability", "ApplyResult", "PatchApplyError", "UnmappedPatch",
     # KÖR-O1 OpenClaw Core Contract design types (docs/heavy-llm-flow/
     # kor-o1-openclaw-core-contract.md). Transient working-names for the
     # orchestrator decision/action shape that composes RouterDecision +
