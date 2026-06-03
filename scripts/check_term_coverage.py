@@ -59,6 +59,12 @@ EXCLUDE_DIRS = {
     # Operator-only reference workspace (gitignored) - never scan as product source
     "MIN_IDE",
     "övrigt",
+    # Coach-built OpenClaw Core MVP spike (gitignored, openclaw-mvp/). A
+    # standalone FastAPI service kept local until its placement is decided
+    # (see docs/heavy-llm-flow/kor-o1-openclaw-core-contract.md). Its internal
+    # symbols are spike-local implementation names, not canonical Sajtbyggaren
+    # domain terms - same treatment as the MIN_IDE workspace above.
+    "openclaw-mvp",
 }
 
 # Vanliga ord som inte ska räknas som domänbegrepp.
@@ -1086,6 +1092,14 @@ COMMON_WORDS = {
     # symbols (never persisted as a patch-plan.json), not canonical domain
     # terms - same treatment as the RouterDecision / AssembledContext families.
     "ArtifactPatch", "PatchOp", "PatchPlan", "PatchRails", "RejectedPatch",
+    # KÖR-O1 OpenClaw Core Contract design types (docs/heavy-llm-flow/
+    # kor-o1-openclaw-core-contract.md). Transient working-names for the
+    # orchestrator decision/action shape that composes RouterDecision +
+    # AssembledContext - NOT canonical artefakts (no saved file, no ADR yet);
+    # same local-allowlist treatment as the RouterDecision / AssembledContext
+    # families above. A real type gets registered in naming-dictionary.v1 with
+    # an ADR if/when it becomes a persisted runtime contract (see kor-o2).
+    "OpenClawDecision", "OpenClawAction",
 }
 
 # Suffix för fil-namnsbaserade domänbegrepp.

@@ -1,6 +1,16 @@
 # Orchestrerings-handoff — heavy-llm-flow
 
-**Datum:** 2026-06-03 (uppdaterad) · **Bas:** `jakob-be` @ `167ace5` · **Governance:** grön (18/18)
+**Datum:** 2026-06-03 (uppdaterad) · **Bas:** `jakob-be` @ `9ba29ce` · **Governance:** grön (18/18)
+
+> **Sedan förra handoffen (2026-06-03 EM):** Vercel auto-deploy begränsad till
+> `jakob-be`/`christopher-ui`/`main` (`9ba29ce`, denylist i `apps/viewser/vercel.json`).
+> **Follow-up-bryggan startad** (coach-prioriterad före 4a): `kor-7b` patch planner
+> (dry-run) ligger som **draft-PR #171** (CI grön efter term-coverage-allowlist-fix).
+> `kor-o1` OpenClaw Core-kontrakt skrivet (designkort, ocommittat — under coach-review).
+> Coachen byggde en körbar **OpenClaw Core MVP** (`openclaw-mvp/`, FastAPI-spike) som
+> hålls lokal/gitignored tills placeringen är beslutad. Öppen backend-PR utöver #171:
+> **#170** B86 npm-timeout env-override (grön, vår lane). **#169** = Christophers
+> UI-reconcile på jakob-be (hans lane).
 
 Överlämning så en ny orchestrator-agent kan fortsätta jobba med operatören (Jakob) utan
 att läsa hela förra sessionens chatt. Läs även `README.md` + `00`–`04` i denna mapp samt
@@ -29,10 +39,15 @@ Routern (kor-6a) + Context Assembler (kor-7a) finns som rails för follow-up/pat
 
 ## Nästa kort
 
-Sekvens: `1b ✓ 1c ✓ 2 ✓ 7a ✓ 1c-copy ✓ → 4a → 3a → 3b → 5 → 6b → 7b–d`.
-**Rekommenderat nästa:** `kor-4a` (deterministisk Quality Critic, ingen LLM, beror på 1c+2 —
-båda inne). Sedan `kor-3a/3b` (section-treatments → visualDirection), `kor-5` (repair),
-`kor-6b` (router LLM-fallback), `kor-7b–d` (patch/apply/targeted rebuild).
+Sekvens (omprioriterad 2026-06-03 EM per coach): `1b ✓ 1c ✓ 2 ✓ 7a ✓ 1c-copy ✓ →`
+**follow-up-bryggan `7b → 7c → 7d`** (stänger B155 — "ändra rubriken" patchar artefakt →
+ny version → synlig ändring) `→ 4a → 3a → 3b → 5 → 6b`.
+**Aktivt nu:** `kor-7b` (PR #171, draft, grön). **Nästa:** `kor-7c` (apply/version) sedan
+`kor-7d` (targeted rebuild) — ETT steg i taget, operatören mergar med orchestratorn.
+**Parallellt (read-only, ingen 7b-beroende):** `kor-o2` OpenClaw Core V0 (binder router +
+context → answer/plan/clarify/patch_plan_request; bygger/skriver/patchar/preview:ar aldrig).
+Builder-prompt finns i `kor-o1-openclaw-core-contract.md`. `kor-4a` critic + visuell
+baseline-eval ligger efter follow-up-bryggan.
 **Coexistence-OBS:** dispatcha INTE en builder som kör full `pytest` medan operatören har en
 Viewser dev-sajt igång — `test_api_prompt_smoke` startar en egen Next.js-dev-server och två
 samtidiga floppar (Windows-orphan-issue, se AGENTS.md). Pausa builder-dispatch under preview.

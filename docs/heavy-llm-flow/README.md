@@ -106,6 +106,7 @@ rekommenderade ordningen; den ger snabbast produktkänsla med minst risk. Varje 
 |-------------|-----------|----------|
 | [`kor-4b-verifier-model-critic.md`](kor-4b-verifier-model-critic.md) | `verifierModel` smak-critic ovanpå den deterministiska. | 4a |
 | [`kor-6b-router-llm-fallback.md`](kor-6b-router-llm-fallback.md) | LLM-fallback för tvetydiga router-meddelanden. | 6a |
+| [`kor-o1-openclaw-core-contract.md`](kor-o1-openclaw-core-contract.md) | OpenClaw Core-kontrakt (design, ingen kod): `OpenClawDecision` + tool-yta + capability-plan. | 6a, 7a |
 
 > **Var börja?** Kör **`kor-0`** (preflight) först — verifiera preview/`current.json`-
 > status och att current-focus/handoff inte lurar agenten. Sedan **`kor-6a`**

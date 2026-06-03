@@ -166,3 +166,10 @@ tree_v[0-9]*.py
 # never committed (e.g. *.code-workspace, kill-dev-trees.bat shortcuts).
 *.code-workspace
 *.lnk
+
+# OpenClaw Core MVP (coach-built spike, openclaw-mvp/). Standalone FastAPI
+# service held LOCAL until its placement is decided — in-repo module under
+# packages/generation/orchestration/openclaw/ vs separate service/repo (see
+# docs/heavy-llm-flow/kor-o1-openclaw-core-contract.md "Var koden hamnar").
+# Kept untracked so no monorepo mapgräns is locked before that decision.
+openclaw-mvp/
