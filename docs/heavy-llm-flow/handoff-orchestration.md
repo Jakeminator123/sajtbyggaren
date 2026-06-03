@@ -1,6 +1,6 @@
 # Orchestrerings-handoff — heavy-llm-flow
 
-**Datum:** 2026-06-03 (uppdaterad) · **Bas:** `jakob-be` @ `1461945` · **Governance:** grön (18/18)
+**Datum:** 2026-06-03 (uppdaterad) · **Bas:** `jakob-be` @ `e30cc15` · **Governance:** grön (18/18)
 
 Överlämning så en ny orchestrator-agent kan fortsätta jobba med operatören (Jakob) utan
 att läsa hela förra sessionens chatt. Läs även `README.md` + `00`–`04` i denna mapp.
@@ -9,8 +9,9 @@ att läsa hela förra sessionens chatt. Läs även `README.md` + `00`–`04` i d
 
 | Commit | Vad |
 |--------|-----|
+| `e30cc15` | denna handoff (refresh) |
 | `1461945` | chore: ignorera lokala junk-filer (`*.code-workspace`, `*.lnk`) |
-| `fa943ac` | denna handoff |
+| `fa943ac` | handoff efter kor-1a + kor-6a |
 | `89530a1` | KÖR-6a — deterministisk router (#159) |
 | `3f210f1` | KÖR-1a — blueprint schema skeleton + ADR 0036 (#157) |
 | `4c469a3` | governance-unblock (#160) |

@@ -261,7 +261,7 @@
     },
     {
       "path": "packages/preview-runtime/",
-      "owns": ["PreviewRuntime-interface", "StackBlitzRuntime", "FlyRuntime", "LocalRuntime"],
+      "owns": ["PreviewRuntime-interface", "VercelSandboxRuntime", "StackBlitzRuntime", "FlyRuntime", "LocalRuntime"],
       "mayImportFrom": ["packages/shared"],
       "mustNotDo": [
         "äga generation-logik",
