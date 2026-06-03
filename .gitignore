@@ -173,3 +173,9 @@ tree_v[0-9]*.py
 # docs/heavy-llm-flow/kor-o1-openclaw-core-contract.md "Var koden hamnar").
 # Kept untracked so no monorepo mapgräns is locked before that decision.
 openclaw-mvp/
+
+# Coach raw advice transcript (non-canonical). Referenced by kor-o1 as optional
+# ("läs som riktning om filen finns"). Kept local so it stops showing as
+# untracked; commit or move to docs/heavy-llm-flow/references/raw/ if it should
+# live in the repo.
+docs/open_claw.txt
