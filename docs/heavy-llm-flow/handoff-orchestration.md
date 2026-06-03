@@ -1,6 +1,6 @@
 # Orchestrerings-handoff — heavy-llm-flow
 
-**Datum:** 2026-06-03 (uppdaterad) · **Bas:** `jakob-be` @ `68d8936` · **Governance:** grön (18/18)
+**Datum:** 2026-06-03 (uppdaterad) · **Bas:** `jakob-be` @ `f4d2a1e` · **Governance:** grön (18/18)
 
 > **Sedan förra handoffen (2026-06-03 kväll):** Vercel auto-deploy begränsad till
 > `jakob-be`/`christopher-ui`/`main` (denylist i `apps/viewser/vercel.json`).
@@ -47,18 +47,19 @@ ny version → synlig ändring) `→ 4a → 3a → 3b → 5 → 6b`.
 **Follow-up-bryggan KOMPLETT:** `kor-7b`+`kor-7c`+`kor-7d` inne (#171/#174/#175/#176). En
 capability-backad följdprompt går nu hela vägen: router → context → patch plan → apply (ny
 immutabel v<N+1>) → targeted render → `current.json`-swap (bara ok/degraded) → preview-refresh
-bara vid ärlig synlig ändring. Bryggan är **rörd** end-to-end men **inte stabil nog** — extern
-reviewer + coach hittade kvarvarande P1/P2 i #175/#176.
-**Nästa (huvudspår): `KÖR-7-STAB`** — stabilisera apply/targeted-render INNAN mer byggs ovanpå.
-**P1 (verifierad):** kor-7c apply lägger capability i `requestedCapabilities` men säkrar inte
-dossiern i `selectedDossiers.required` → codegen monterar den inte (buildens
-`_unapplied_followup`-observer flaggar den). Plus #176-P2:or (build trots `applied=false`, diff
-mot historisk bas ej aktiv build, route→routeId-mappning, failed-build-trace, runs_root).
-Builder-prompt finns (orchestratorn skrev den 2026-06-03).
-**Coach-ordning efter STAB:** baseline-eval (read-only obs; init ≠ follow-up) → #177 +
+bara vid ärlig synlig ändring. **KÖR-7-STAB INNE (#178):** bryggan är nu stabiliserad.
+**P1 STÄNGD (#178):** apply säkrar nu implementerande dossier i `selectedDossiers.required` via
+`filter_capabilities` (capability-map.v1.json) → codegen monterar den, `_unapplied_followup`
+flaggar inte längre (gap/disablade dossiers lämnas honestly omonterade). #176-P2:or också fixade:
+build aldrig på `applied=false`, diff mot **aktiv** build-snapshot (current.json, read-only),
+route→routeId via scaffoldens `routePlan`, failed-build trace-loggas, runs_root-konsistent.
+Stale `followUpPrompt`/`baseRunId` poppas i v<N+1>. FP:er (dedup/dotted-path/trace) guard-testade.
+**Nästa (huvudspår):** liten **E2E-sanity** (capability-följdprompt end-to-end) → sedan **handoff**
+till ny orchestrator. Efter det per coach-ordning: `kor-4a` critic.
+**Coach-ordning:** baseline-eval (read-only obs; init ≠ follow-up) → #177 +
 exponera `routerDecision` i `/api/prompt` (Christopher) → `kor-4a` critic → ADR copy_change/inline
 → `kor-o2` OpenClaw V0 → `3a/3b` → `5`. ETT steg i taget, operatören mergar med orchestratorn.
-**Main-sync: vänta** tills STAB inne + #177 hanterad + `consumeWizardHandoff`-fix + E2E-följdprompt körd.
+**Main-sync: vänta** — STAB inne ✓; kvar: #177 hanterad + `consumeWizardHandoff`-fix (Christopher) + E2E-följdprompt körd.
 **OPERATÖRSBESLUT (kontrakt, för att HELT stänga B155):** kor-7c applicerar bara
 capability-backade `component_add` (→ `requestedCapabilities`). `copy_change` (sektionsrubrik)
 och inline-`component_add` (utan capability) rapporteras som `unmapped` och skrivs aldrig

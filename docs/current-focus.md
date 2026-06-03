@@ -7,13 +7,13 @@ Startpromptar och rollgränser finns i
 
 ## Current objective (2026-06-03 kväll — follow-up-bryggan startad: kor-7b inne)
 
-`jakob-be` @ `68d8936`, rent träd. Heavy-LLM-kedjan är synlig (kor-1b→1c→2→7a→1c-copy inne).
-**Follow-up-bryggan KOMPLETT: 7b ✓ 7c ✓ 7d ✓ (#171/#174/#175/#176).** En capability-backad
-följdprompt går nu hela vägen router→context→patch→apply→targeted render→current.json-swap
-→ärlig preview-refresh. Bryggan är RÖRD men inte stabil nog. **Nästa huvudspår: KÖR-7-STAB**
-(inte kor-4a) — extern reviewer + coach hittade P1/P2 i #175/#176. P1 (verifierad): apply lägger
-capability i requestedCapabilities men säkrar inte dossiern i selectedDossiers → codegen monterar
-den inte. Coach-ordning efter STAB: baseline-eval (read-only) → #177/routerDecision → kor-4a →
+`jakob-be` @ `f4d2a1e`, rent träd. Heavy-LLM-kedjan är synlig (kor-1b→1c→2→7a→1c-copy inne).
+**Follow-up-bryggan KOMPLETT + STABILISERAD: 7b ✓ 7c ✓ 7d ✓ + KÖR-7-STAB ✓ (#171/#174/#175/#176/#178).**
+En capability-backad följdprompt går hela vägen router→context→patch→apply→targeted render→
+current.json-swap→ärlig preview-refresh. **P1 STÄNGD (#178):** apply säkrar nu dossiern i
+selectedDossiers.required via filter_capabilities → codegen monterar den. #176-P2:or fixade
+(ingen build på applied=false, diff mot aktiv build, route→id via routePlan). **Nästa:** liten
+E2E-sanity → handoff till ny orchestrator. Coach-ordning sedan: baseline-eval → #177/routerDecision → kor-4a →
 ADR copy_change/inline → kor-o2 → 3a/3b → 5. Main-sync väntar tills STAB + #177 + E2E klara.
 **Tidigare (kor-7c-detalj):** kor-7c (#175) applicerar capability-backade
 `component_add` → `requestedCapabilities` i ny immutabel v<N+1> (ingen build/current.json).
@@ -326,7 +326,10 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `68d8936` (2026-06-03 kväll UTC, `jakob-be` HEAD — #176 KÖR-7d targeted
+Last verified state: `f4d2a1e` (2026-06-03 kväll UTC, `jakob-be` HEAD — #178 KÖR-7-STAB stabiliserar
+apply/targeted-render: P1 stängd (applied capability → selectedDossiers.required via filter_capabilities
+→ codegen monterar dossiern), stale provenance rensad, #176-P2:or fixade (ingen build på applied=false,
+diff mot aktiv build-snapshot, route→id via routePlan, failed-trace, runs_root). Föregående: #176 KÖR-7d targeted
 render + version-build STÄNGER follow-up-bryggan (7b→7c→7d): capability-följdprompt bygger om
 påverkad route, swap:ar current.json bara på ok/degraded, ärlig appliedVisibleEffect, gamla runs
 orörda, skipped/unmapped loggas i trace. Även inne (Christopher): #172 stale-pending-runs +
@@ -338,7 +341,7 @@ Ovanpå: #171 KÖR-7b artifact patch planner (dry-run) mergad ovanpå #170 (B86 
 env-override) och #169 (Christopher UI-reconcile, hans lane). Plus Vercel deploy-denylist
 (`9ba29ce`) och docs-batch (kor-o1 OpenClaw Core-kontrakt + handoff-bump). `origin/main` =
 `1d6e069`; jakob-be många commits före, sync = operatörsbeslut).
-Nya PRs sedan föregående checkpoint: #169, #170, #171, #172, #173, #174, #175, #176 (alla mergade till `jakob-be`).
+Nya PRs sedan föregående checkpoint: #169, #170, #171, #172, #173, #174, #175, #176, #178 (alla mergade till `jakob-be`).
 
 ## Öppen PR att känna till — #158 (christopher-ui, ersätter stängda #150)
 
