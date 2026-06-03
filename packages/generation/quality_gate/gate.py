@@ -143,11 +143,15 @@ def run_quality_gate(
 
     kor-4a deterministic critic (warning lane, additive + opt-in):
 
-    - ``generation_package`` / ``site_brief``: when either is supplied, the
-      deterministic critic runs over the blueprint + generated output and the
-      result is attached to ``QualityResult.critic``. With neither (the Repair
-      Pipeline / legacy callers) ``critic`` stays ``None`` and the gate behaves
-      exactly as before. The critic NEVER affects ``status``.
+    - ``generation_package``: when the blueprint is supplied the deterministic
+      critic runs over it (plus the optional ``site_brief`` honesty/contact
+      fields and the generated output) and the result is attached to
+      ``QualityResult.critic``. ``site_brief`` alone does NOT trigger the critic
+      — without a blueprint there are no ``contentBlocks`` to critique, so the
+      gate would otherwise emit false findings (e.g. a spurious ``missing_cta``
+      on empty content). With no blueprint (the Repair Pipeline / legacy
+      callers) ``critic`` stays ``None`` and the gate behaves exactly as
+      before. The critic NEVER affects ``status``.
     - ``run_dir`` / ``run_id``: when a run directory exists, the critic logs a
       non-blocking ``critic.evaluated`` event to ``<run_dir>/trace.ndjson``.
     """
@@ -165,7 +169,7 @@ def run_quality_gate(
     summary = _summary_from_checks(checks, status)
 
     critic = None
-    if generation_package is not None or site_brief is not None:
+    if generation_package is not None:
         critic = run_deterministic_critic(
             generation_package=generation_package,
             site_brief=site_brief,

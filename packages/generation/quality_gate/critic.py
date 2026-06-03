@@ -380,7 +380,7 @@ def _check_missing_local_context(
             target=target,
             message=(
                 f'locationHint "{location_hint}" anges men orten "{token}" '
-                "nämns inte i output."
+                "nämns inte i sajtens copy (blueprint eller genererad sida)."
             ),
             repairHint=(
                 f"Nämn orten ({token}) i hero/positionering för lokal "
@@ -453,11 +453,15 @@ def _route_section_for_file(target_dir: Path, page: Path) -> str:
 
 
 def _read_generated_file_texts(target_dir: Path | None) -> list[tuple[str, str]]:
-    """Return ``(target, text)`` for every line in the generated TSX/JSX files.
+    """Return ``(target, text)`` for every line in the generated App Router pages.
 
-    Best-effort and bounded: skips build/dependency directories and silently
-    drops unreadable files. Returns an empty list when ``target_dir`` is None or
-    has no generated pages so the critic stays blueprint-only by default.
+    Scoped to actual ``app/**/page.{tsx,jsx}`` files (not components, layouts or
+    other source), so every ``target`` maps to a real route via
+    ``_route_section_for_file`` and non-page source cannot produce false issues
+    on synthetic routes. Best-effort and bounded: skips build/dependency
+    directories and silently drops unreadable files. Returns an empty list when
+    ``target_dir`` is None or has no generated pages so the critic stays
+    blueprint-only by default.
     """
     if target_dir is None:
         return []
@@ -465,7 +469,7 @@ def _read_generated_file_texts(target_dir: Path | None) -> list[tuple[str, str]]
     if not app_dir.exists():
         return []
     texts: list[tuple[str, str]] = []
-    for page in sorted(target_dir.rglob("*")):
+    for page in sorted(app_dir.rglob("page.*")):
         if page.suffix not in _TEXT_EXTENSIONS:
             continue
         if any(part in _SCAN_SKIP_DIRS for part in page.parts):
