@@ -299,6 +299,16 @@ COMMON_WORDS = {
     "CodegenSource", "CodegenFileSource", "CodegenFileRole",
     "QualityStatus", "CheckStatus", "CheckName",
     "RepairStatus",
+    # kor-4a deterministic Quality Critic (critic v0) implementation symbols
+    # (packages/generation/quality_gate/critic.py). CriticIssue / CriticResult
+    # are the Pydantic models embedded in quality-result.json:critic;
+    # CriticSeverity / CriticIssueType / CriticSource are the Literal type
+    # aliases that name the issue severity/type/source enums. Same treatment as
+    # the QualityStatus / CheckName / CodegenSource family directly above -
+    # implementation symbols, not separate canonical domain terms (the additive
+    # schema field names critic/score/issues/etc. live in quality-result.schema.json).
+    "CriticIssue", "CriticResult",
+    "CriticSeverity", "CriticIssueType", "CriticSource",
     # Sprint 3B mechanical fix dispatcher metadata. ``MechanicalFixSpec``
     # is a Python dataclass that mirrors fix-registry.v1.json entries;
     # it is not a separate domain term. Same treatment as

@@ -21,13 +21,23 @@ chains them. Locked by repo-boundaries.v1.json:packages/generation/
 quality_gate.
 """
 
+from .critic import (
+    CriticIssue,
+    CriticResult,
+    append_critic_trace_event,
+    run_deterministic_critic,
+)
 from .gate import run_quality_gate
 from .models import CheckResult, CheckStatus, QualityResult, QualityStatus
 
 __all__ = [
     "CheckResult",
     "CheckStatus",
+    "CriticIssue",
+    "CriticResult",
     "QualityResult",
     "QualityStatus",
+    "append_critic_trace_event",
+    "run_deterministic_critic",
     "run_quality_gate",
 ]

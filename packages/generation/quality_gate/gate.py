@@ -18,6 +18,7 @@ from .checks import (
     run_route_scan_check,
     run_typecheck_check,
 )
+from .critic import append_critic_trace_event, run_deterministic_critic
 from .models import CheckResult, QualityResult, QualityStatus
 
 # Severity-fältet säger "räknas mot status alls", inte "failure → failed".
@@ -120,6 +121,10 @@ def run_quality_gate(
     npm_steps: list[dict[str, Any]],
     build_status: str,
     do_typecheck: bool = True,
+    generation_package: dict[str, Any] | None = None,
+    site_brief: dict[str, Any] | None = None,
+    run_dir: Path | None = None,
+    run_id: str | None = None,
 ) -> QualityResult:
     """Run all four Quality Gate checks and aggregate into a QualityResult.
 
@@ -135,6 +140,20 @@ def run_quality_gate(
     - ``build_status``: ``ok`` / ``failed`` / ``skipped`` from the builder.
     - ``do_typecheck``: pass False to skip typecheck regardless of
       node_modules state (used by --skip-build paths and tests).
+
+    kor-4a deterministic critic (warning lane, additive + opt-in):
+
+    - ``generation_package``: when the blueprint is supplied the deterministic
+      critic runs over it (plus the optional ``site_brief`` honesty/contact
+      fields and the generated output) and the result is attached to
+      ``QualityResult.critic``. ``site_brief`` alone does NOT trigger the critic
+      — without a blueprint there are no ``contentBlocks`` to critique, so the
+      gate would otherwise emit false findings (e.g. a spurious ``missing_cta``
+      on empty content). With no blueprint (the Repair Pipeline / legacy
+      callers) ``critic`` stays ``None`` and the gate behaves exactly as
+      before. The critic NEVER affects ``status``.
+    - ``run_dir`` / ``run_id``: when a run directory exists, the critic logs a
+      non-blocking ``critic.evaluated`` event to ``<run_dir>/trace.ndjson``.
     """
     checks = [
         _with_registry_severity(run_typecheck_check(target_dir, do_typecheck=do_typecheck)),
@@ -148,4 +167,15 @@ def run_quality_gate(
     ]
     status = _aggregate_status(checks)
     summary = _summary_from_checks(checks, status)
-    return QualityResult(status=status, checks=checks, summary=summary)
+
+    critic = None
+    if generation_package is not None:
+        critic = run_deterministic_critic(
+            generation_package=generation_package,
+            site_brief=site_brief,
+            target_dir=target_dir,
+        )
+        if run_dir is not None:
+            append_critic_trace_event(run_dir, run_id or "unknown", critic)
+
+    return QualityResult(status=status, checks=checks, summary=summary, critic=critic)
