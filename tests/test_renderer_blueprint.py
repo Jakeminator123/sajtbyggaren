@@ -41,8 +41,12 @@ from packages.generation.build.blueprint_render import (  # noqa: E402
 )
 from packages.generation.build.renderers import (  # noqa: E402
     _faq_pairs,
+    render_booking,
+    render_faq,
     render_home,
+    render_menu,
     render_section_contact_cta,
+    render_section_faq,
     render_section_hero,
     render_section_product_grid,
     render_section_service_list,
@@ -418,3 +422,247 @@ def test_story_from_blueprint_overrides_company_story():
     assert effective["company"]["story"] == "Vi drejar varje pjäs för hand i vår lilla verkstad."
     # Original dossier is not mutated.
     assert dossier["company"]["story"] == "En kort, generisk berättelse om företaget."
+
+
+# ===========================================================================
+# Review fixes (PR #165): five findings, one locking test group each.
+# ===========================================================================
+
+
+# --- Finding 1: CTA honesty — phone-promising labels gated when phone missing
+
+
+@pytest.mark.tooling
+def test_phone_cta_gated_when_phone_missing_and_blueprint_flags_it():
+    blueprint = RenderBlueprint(
+        conversion={
+            "primaryAction": "call",
+            "primaryCta": "Ring oss",
+            "ctaRules": ["visa inte telefon om telefon saknas"],
+        },
+        quality_risks=["Do not show phone if missing"],
+    )
+    # Phone missing + honesty signal -> the accessor must not return the label.
+    assert blueprint.primary_cta(phone_available=False) is None
+    assert blueprint.hero_cta("home", phone_available=False) is None
+    # Phone present -> the label is fine.
+    assert blueprint.primary_cta(phone_available=True) == "Ring oss"
+    assert blueprint.hero_cta("home", phone_available=True) == "Ring oss"
+
+
+@pytest.mark.tooling
+def test_non_phone_cta_not_gated_when_phone_missing():
+    blueprint = RenderBlueprint(
+        conversion={"primaryAction": "request_quote", "primaryCta": "Be om offert"},
+        quality_risks=["Do not show phone if missing"],
+    )
+    assert blueprint.primary_cta(phone_available=False) == "Be om offert"
+
+
+@pytest.mark.tooling
+def test_phone_cta_not_gated_without_honesty_signal():
+    # No qualityRisk / ctaRule / unknown about phone -> keep the label even if
+    # the caller reports no phone (no signal to gate on).
+    blueprint = RenderBlueprint(conversion={"primaryAction": "call", "primaryCta": "Ring oss"})
+    assert blueprint.primary_cta(phone_available=False) == "Ring oss"
+
+
+@pytest.mark.tooling
+def test_phone_cta_gated_via_unknowns():
+    blueprint = RenderBlueprint(
+        conversion={"primaryCta": "Ring oss"},
+        business_facts={"facts": [], "unknowns": ["telefonnummer"]},
+    )
+    assert blueprint.primary_cta(phone_available=False) is None
+    assert blueprint.primary_cta(phone_available=True) == "Ring oss"
+
+
+@pytest.mark.tooling
+def test_contact_cta_render_gates_phone_label_when_phone_missing():
+    dossier = _dossier("elektriker-malmo")
+    dossier["contact"]["phone"] = ""  # missing -> not a real phone
+    blueprint = RenderBlueprint(
+        conversion={
+            "primaryAction": "call",
+            "primaryCta": "Ring oss",
+            "ctaRules": ["visa inte telefon om telefon saknas"],
+        },
+        quality_risks=["Do not show phone if missing"],
+    )
+    gated = render_section_contact_cta(dossier, contact_path="/kontakt", blueprint=blueprint)
+    assert ">Ring oss<" not in gated
+    assert ">Kontakta oss<" in gated  # honest template fallback
+
+    dossier["contact"]["phone"] = "+46 70 111 22 33"  # real phone -> label allowed
+    allowed = render_section_contact_cta(dossier, contact_path="/kontakt", blueprint=blueprint)
+    assert ">Ring oss<" in allowed
+
+
+@pytest.mark.tooling
+def test_hero_render_gates_phone_label_when_phone_missing():
+    dossier = _dossier("elektriker-malmo")
+    dossier["contact"]["phone"] = ""
+    blueprint = RenderBlueprint(
+        content_blocks={"home.hero": {"headline": "Trygg el", "primaryCta": "Ring oss"}},
+        conversion={"primaryAction": "call", "primaryCta": "Ring oss"},
+        quality_risks=["Do not show phone if missing"],
+    )
+    hero = render_section_hero(
+        dossier,
+        dossier_routes=[],
+        listing_route=None,
+        contact_path="/kontakt",
+        variant_id=dossier["variantId"],
+        blueprint=blueprint,
+    )
+    assert "Ring oss" not in hero  # phone CTA gated; falls back to template label
+    assert "home.hero.primaryCta" not in blueprint.applied_addresses
+
+
+# --- Finding 2 (false positive lock): blueprint FAQ keeps /faq link + CTA
+
+
+@pytest.mark.tooling
+def test_faq_home_link_preserved_with_and_without_blueprint():
+    """The home FAQ section's "Se alla frågor" → /faq link is gated solely by
+    the presence of a /faq route (``dossier_routes``), independent of whether
+    blueprint pairs replace the template defaults. Locks finding 2: blueprint
+    FAQ never drops the /faq link behaviour."""
+    dossier = _dossier("elektriker-malmo")
+    blueprint = RenderBlueprint(
+        content_blocks={
+            "home.faq": [
+                {"question": "Hur snabbt kan ni komma?", "answer": "Oftast inom en arbetsdag."},
+                {"question": "Jobbar ni med laddboxar?", "answer": "Ja, det gör vi."},
+            ]
+        }
+    )
+    with_bp = render_section_faq(dossier, dossier_routes=["/faq"], blueprint=blueprint)
+    without_bp = render_section_faq(dossier, dossier_routes=["/faq"], blueprint=None)
+    for section in (with_bp, without_bp):
+        assert 'href="/faq"' in section
+        assert "Se alla frågor" in section
+    assert "Hur snabbt kan ni komma?" in with_bp  # blueprint pairs do render
+    # No /faq route -> no link, in both modes (no ghost link introduced).
+    assert 'href="/faq"' not in render_section_faq(dossier, dossier_routes=[], blueprint=blueprint)
+
+
+@pytest.mark.tooling
+def test_dedicated_faq_route_keeps_contact_cta_with_blueprint():
+    """The dedicated /faq route keeps its trailing contact CTA (and receives the
+    blueprint pairs) so it stays consistent with the home section."""
+    dossier = _dossier("elektriker-malmo")
+    blueprint = RenderBlueprint(
+        content_blocks={
+            "home.faq": [{"question": "Hur snabbt kan ni komma?", "answer": "Oftast inom en arbetsdag."}]
+        }
+    )
+    page = render_faq(dossier, contact_path="/kontakt", blueprint=blueprint)
+    assert "Hur snabbt kan ni komma?" in page  # blueprint pair rendered
+    assert 'href={"/kontakt"}' in page  # _wizard_contact_cta preserved
+    # Without a blueprint the dedicated route still renders its CTA.
+    assert 'href={"/kontakt"}' in render_faq(dossier, contact_path="/kontakt")
+
+
+# --- Finding 3: appliedVisibleEffect only when proofLine adds new copy
+
+
+@pytest.mark.tooling
+def test_proof_line_not_marked_when_duplicate_of_subheadline():
+    dossier = _dossier("elektriker-malmo")
+    sub = "Personlig och trygg elhjälp i hela Malmö."
+    blueprint = RenderBlueprint(
+        content_blocks={"home.hero": {"headline": "Trygg el", "subheadline": sub, "proofLine": sub}}
+    )
+    hero = render_section_hero(
+        dossier,
+        dossier_routes=[],
+        listing_route=None,
+        contact_path="/kontakt",
+        variant_id=dossier["variantId"],
+        blueprint=blueprint,
+    )
+    # proofLine restates the subheadline -> not counted, not rendered twice.
+    assert "home.hero.proofLine" not in blueprint.applied_addresses
+    assert hero.count(sub) == 1
+    # The subheadline itself still counts (it differs from the template tagline).
+    assert "home.hero.subheadline" in blueprint.applied_addresses
+
+
+@pytest.mark.tooling
+def test_proof_line_marked_and_rendered_when_distinct():
+    dossier = _dossier("elektriker-malmo")
+    blueprint = RenderBlueprint(
+        content_blocks={
+            "home.hero": {
+                "headline": "Trygg el",
+                "subheadline": "Säker elhjälp i Malmö.",
+                "proofLine": "Tydlig rådgivning och snabb återkoppling.",
+            }
+        }
+    )
+    hero = render_section_hero(
+        dossier,
+        dossier_routes=[],
+        listing_route=None,
+        contact_path="/kontakt",
+        variant_id=dossier["variantId"],
+        blueprint=blueprint,
+    )
+    assert "Tydlig rådgivning och snabb återkoppling." in hero
+    assert "home.hero.proofLine" in blueprint.applied_addresses
+
+
+# --- Finding 4: restaurant routes thread the blueprint to the contact CTA
+
+
+@pytest.mark.tooling
+def test_restaurant_routes_thread_blueprint_to_contact_cta():
+    cafe = json.loads(
+        (REPO_ROOT / "examples" / "cafe-bistro.project-input.json").read_text(encoding="utf-8")
+    )
+    blueprint = RenderBlueprint(conversion={"primaryAction": "book", "primaryCta": "Boka bord"})
+    menu = render_menu(cafe, contact_path="/hitta-hit", blueprint=blueprint)
+    booking = render_booking(cafe, contact_path="/hitta-hit", blueprint=blueprint)
+    assert ">Boka bord<" in menu
+    assert ">Boka bord<" in booking
+    # Without a blueprint the closing CTA is the generic template label.
+    assert ">Kontakta oss<" in render_menu(cafe, contact_path="/hitta-hit")
+    assert ">Kontakta oss<" in render_booking(cafe, contact_path="/hitta-hit")
+
+
+# --- Finding 5: offer-block selection never grabs an arbitrary list block
+
+
+@pytest.mark.tooling
+def test_offer_address_ignores_non_offer_list_blocks():
+    blueprint = RenderBlueprint(
+        content_blocks={
+            "home.faq": [{"question": "Q?", "answer": "A."}],
+            "home.hero": {"headline": "H"},
+        }
+    )
+    assert blueprint.offer_address() is None
+    assert blueprint.offer_items() == []
+
+
+@pytest.mark.tooling
+def test_offer_address_picks_offer_section_among_multiple_lists():
+    blueprint = RenderBlueprint(
+        content_blocks={
+            "home.faq": [{"question": "Q?", "answer": "A."}],
+            "services.service-list": [{"title": "Tjänst", "summary": "Beskrivning."}],
+        }
+    )
+    assert blueprint.offer_address() == "services.service-list"
+
+
+@pytest.mark.tooling
+def test_non_offer_list_block_does_not_override_services():
+    dossier = _dossier("elektriker-malmo")
+    blueprint = RenderBlueprint(
+        content_blocks={"home.faq": [{"question": "Q?", "answer": "A."}]}
+    )
+    effective, changed = apply_blueprint_to_dossier(dossier, blueprint)
+    assert not changed
+    assert effective["services"] == dossier["services"]

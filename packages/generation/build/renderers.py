@@ -652,8 +652,17 @@ def render_section_hero(
         )
         proof = hero_bp.get("proofLine")
         if isinstance(proof, str) and proof.strip():
-            hero_proof_line = proof.strip()
-            blueprint.note_applied("home.hero.proofLine")
+            proof = proof.strip()
+            # B155 honesty: the proof line is an additive element (no template
+            # default). Render it + count it as a visible effect only when it
+            # adds NEW copy — not when it merely restates the rendered headline
+            # or subheadline (that would render a duplicate line and over-report
+            # appliedVisibleEffect).
+            effective_subheadline = hero_subheadline or company["tagline"]
+            effective_headline = hero_headline or company["name"]
+            if proof not in (effective_subheadline, effective_headline):
+                hero_proof_line = proof
+                blueprint.note_applied("home.hero.proofLine")
     spel_cta = (
         '          <a href="/spel" className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Gamepad2 className="size-4" />Spela direkt</a>\n'
         if "/spel" in dossier_routes
@@ -674,13 +683,16 @@ def render_section_hero(
     # service-business "Begär offert" verb in the hero.
     hero_cta_label = _hero_cta_label(dossier)
     # kor-2: the CTA follows conversion.primaryCta from the blueprint when set
-    # (hard requirement #3). The placeholder-phone secondary CTA stays
-    # suppressed by _render_hero_block (B158), so "do not show phone if missing"
-    # is respected regardless of this label.
+    # (hard requirement #3). honesty: a phone-promising blueprint label
+    # ("Ring oss") is dropped when the phone is a placeholder/missing and the
+    # blueprint forbids showing it — the same rule that suppresses the secondary
+    # "Ring <nummer>" button (B158). We pass phone availability to the accessor
+    # so the gate lives next to the other CTA-honesty logic.
     if blueprint is not None:
+        phone_available = real_phone(contact) is not None
         cta_override = blueprint.note_changed(
             "home.hero.primaryCta",
-            blueprint.hero_cta("home"),
+            blueprint.hero_cta("home", phone_available=phone_available),
             hero_cta_label,
         )
         if cta_override is not None:
@@ -897,12 +909,18 @@ def render_section_contact_cta(
     Path B step 4 (GAP-backend-path-b-section-renderer): extracted
     from ``render_home``.
     """
-    del dossier  # reserved for future branch-aware copy
     contact_href = _route_href(contact_path)
     cta_label = "Kontakta oss"
     if blueprint is not None:
+        # honesty: gate a phone-promising blueprint CTA ("Ring oss") when the
+        # dossier has no real phone and the blueprint forbids showing it. The
+        # banner only ever links to ``contact_path`` (never a tel:), but a label
+        # that says "call us" with no phone is still misleading.
+        phone_available = real_phone(dossier.get("contact") or {}) is not None
         override = blueprint.note_changed(
-            "home.contact-cta.primaryCta", blueprint.primary_cta(), cta_label
+            "home.contact-cta.primaryCta",
+            blueprint.primary_cta(phone_available=phone_available),
+            cta_label,
         )
         if override is not None:
             cta_label = override
@@ -3857,6 +3875,7 @@ def _render_restaurant_route(
     route_id: str,
     page_function_name: str,
     contact_path: str,
+    blueprint: RenderBlueprint | None = None,
 ) -> str:
     """Compose a restaurant route via the section dispatcher.
 
@@ -3878,8 +3897,14 @@ def _render_restaurant_route(
         route_id=route_id,
         scaffold_sections=sections,
         contact_path=contact_path,
+        blueprint=blueprint,
     )
-    cta_section = render_section_contact_cta(dossier, contact_path=contact_path)
+    # kor-2: thread the blueprint so the trailing contact CTA follows
+    # conversion.primaryCta (e.g. "Boka bord") instead of the generic
+    # "Kontakta oss", consistent with the rest of the default-route set.
+    cta_section = render_section_contact_cta(
+        dossier, contact_path=contact_path, blueprint=blueprint
+    )
     return (
         'import { ArrowRight } from "lucide-react";\n'
         "\n"
@@ -3894,7 +3919,12 @@ def _render_restaurant_route(
     )
 
 
-def render_menu(dossier: dict, *, contact_path: str = "/hitta-hit") -> str:
+def render_menu(
+    dossier: dict,
+    *,
+    contact_path: str = "/hitta-hit",
+    blueprint: RenderBlueprint | None = None,
+) -> str:
     """Render the restaurant /meny route via the section dispatcher.
 
     Path B step 8 thin shim. The actual section composition lives
@@ -3920,10 +3950,16 @@ def render_menu(dossier: dict, *, contact_path: str = "/hitta-hit") -> str:
         route_id="menu",
         page_function_name="MenuPage",
         contact_path=contact_path,
+        blueprint=blueprint,
     )
 
 
-def render_booking(dossier: dict, *, contact_path: str = "/hitta-hit") -> str:
+def render_booking(
+    dossier: dict,
+    *,
+    contact_path: str = "/hitta-hit",
+    blueprint: RenderBlueprint | None = None,
+) -> str:
     """Render the restaurant /bokning route via the section dispatcher.
 
     Path B step 8 thin shim. The actual section composition lives
@@ -3946,6 +3982,7 @@ def render_booking(dossier: dict, *, contact_path: str = "/hitta-hit") -> str:
         route_id="booking",
         page_function_name="BookingPage",
         contact_path=contact_path,
+        blueprint=blueprint,
     )
 
 
@@ -5312,9 +5349,13 @@ def write_pages(
         elif route_id == "products":
             content = render_products(render_dossier, contact_path=contact_route["path"])
         elif route_id == "menu":
-            content = render_menu(render_dossier, contact_path=contact_route["path"])
+            content = render_menu(
+                render_dossier, contact_path=contact_route["path"], blueprint=blueprint
+            )
         elif route_id == "booking":
-            content = render_booking(render_dossier, contact_path=contact_route["path"])
+            content = render_booking(
+                render_dossier, contact_path=contact_route["path"], blueprint=blueprint
+            )
         elif route_id == "about":
             content = render_about(render_dossier)
         elif route_id == "contact":

@@ -92,6 +92,32 @@ def _clean_list(value: Any) -> list[str]:
     return [item.strip() for item in value if isinstance(item, str) and item.strip()]
 
 
+# CTA labels that promise a phone call. When the phone is a placeholder/missing
+# AND the blueprint flags the phone as unavailable (a "do not show phone if
+# missing" qualityRisk, a phone ctaRule, or a phone unknown), such a label must
+# not be rendered — the same honesty rule that already suppresses the secondary
+# "Ring <nummer>" hero button (B158). A non-phone CTA ("Be om offert", "Boka
+# tid") is never gated.
+_PHONE_CTA_TOKENS: tuple[str, ...] = (
+    "ring oss",
+    "ring ",
+    "ringa",
+    "slå oss en signal",
+    "slå en signal",
+    "call us",
+    "call ",
+    "phone us",
+    "give us a call",
+)
+
+
+def _looks_like_phone_cta(label: str) -> bool:
+    low = label.casefold().strip()
+    if low in {"ring", "ringa", "call"}:
+        return True
+    return any(token in low for token in _PHONE_CTA_TOKENS)
+
+
 def _norm(value: Any) -> str:
     """Case/space-insensitive key for matching offer titles to dossier labels."""
     if not isinstance(value, str):
@@ -178,11 +204,12 @@ class RenderBlueprint:
             section_id = address.partition(".")[2]
             if section_id in _OFFER_SECTION_IDS:
                 return address
-        # Fall back to any list-shaped block so a future offer section id still
-        # surfaces (the planner only ever writes one list block per package).
-        for address, value in self._content_blocks.items():
-            if isinstance(value, list):
-                return address
+        # No blind fallback: only a recognised offer section id
+        # (_OFFER_SECTION_IDS) may drive the services/products override. A
+        # malformed or future blueprint that carries some other list-shaped
+        # block (e.g. an FAQ list, a gallery list) must NOT be mistaken for the
+        # offer list and overwrite the wrong dossier section. Returns None so
+        # the renderer keeps the dossier's offer list.
         return None
 
     def offer_items(self) -> list[dict[str, Any]]:
@@ -226,18 +253,62 @@ class RenderBlueprint:
 
     # -- conversion / visual direction -------------------------------------
 
-    def primary_cta(self) -> str | None:
-        """The brief's ``conversion.primaryCta`` label (raw-interpolation safe)."""
-        return _jsx_raw_safe(self._conversion.get("primaryCta"))
+    def _phone_unavailable_per_blueprint(self) -> bool:
+        """True when the blueprint signals the phone is missing/unknown.
 
-    def hero_cta(self, route_id: str = "home") -> str | None:
+        Reads the honesty fields that already exist: ``qualityRisks`` ("Do not
+        show phone if missing"), ``conversion.ctaRules`` (e.g. "visa inte
+        telefon om telefon saknas") and ``businessFacts.unknowns`` (telefon /
+        phone). Mirrors the deterministic contact/CTA rules (B158/B159).
+        """
+        risk_blob = " ".join(self._quality_risks).casefold()
+        if "phone if missing" in risk_blob:
+            return True
+        cta_blob = " ".join(_clean_list(self._conversion.get("ctaRules"))).casefold()
+        if "telefon" in cta_blob and ("saknas" in cta_blob or "inte" in cta_blob):
+            return True
+        if "phone" in cta_blob and "missing" in cta_blob:
+            return True
+        unknown_blob = " ".join(self.unknowns).casefold()
+        return any(token in unknown_blob for token in ("telefon", "phone"))
+
+    def _cta_blocked(self, label: str, *, phone_available: bool) -> bool:
+        """A phone-oriented CTA is blocked when the phone is unavailable and the
+        blueprint flags it (honesty). Non-phone CTAs are never blocked."""
+        if phone_available:
+            return False
+        promises_call = (
+            _clean_str(self._conversion.get("primaryAction")) == "call"
+            or _looks_like_phone_cta(label)
+        )
+        return promises_call and self._phone_unavailable_per_blueprint()
+
+    def primary_cta(self, *, phone_available: bool = True) -> str | None:
+        """The brief's ``conversion.primaryCta`` label (raw-interpolation safe).
+
+        Returns None — so the renderer keeps its honest template CTA — when the
+        label promises a phone call but the phone is unavailable and the
+        blueprint forbids showing it (``ctaRules`` / ``qualityRisks`` /
+        ``unknowns``).
+        """
+        label = _jsx_raw_safe(self._conversion.get("primaryCta"))
+        if label is None or self._cta_blocked(label, phone_available=phone_available):
+            return None
+        return label
+
+    def hero_cta(self, route_id: str = "home", *, phone_available: bool = True) -> str | None:
         """Hero CTA label: the hero block's ``primaryCta``, else the brief's.
 
-        Both are passed through the raw-interpolation safety guard so a label
-        with a TSX-breaking character is dropped (the renderer keeps its
-        template CTA) rather than emitting invalid TSX.
+        Both are passed through the raw-interpolation safety guard (drop a label
+        with a TSX-breaking character) and the phone-honesty gate (drop a
+        phone-promising label when the phone is unavailable per the blueprint).
         """
-        return _jsx_raw_safe(self.hero(route_id).get("primaryCta")) or self.primary_cta()
+        label = _jsx_raw_safe(self.hero(route_id).get("primaryCta")) or _jsx_raw_safe(
+            self._conversion.get("primaryCta")
+        )
+        if label is None or self._cta_blocked(label, phone_available=phone_available):
+            return None
+        return label
 
     def hero_layout(self) -> str | None:
         """Map ``visualDirection.heroStyle`` to a renderer layout, else None."""
