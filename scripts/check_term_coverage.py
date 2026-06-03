@@ -1097,6 +1097,15 @@ COMMON_WORDS = {
     # as the QualityResult / CodegenResult / RepairResult families above.
     "RouterDecision", "RouterTarget", "RouterReference", "RouterSubtask",
     "RouterContext", "SubtaskScope",
+    # KÖR-6b router LLM-fallback (packages/generation/orchestration/router/
+    # llm_fallback.py). ``RouterModelResolutionError`` is the local error class
+    # raised when llm-models.v1.json does not declare a usable ``routerModel``
+    # role - an implementation symbol that mirrors the existing
+    # RepairModelResolutionError / PlanningModelResolutionError /
+    # CodegenModelResolutionError family above, not a canonical domain term.
+    # The Model Role itself (``routerModel``) is camelCase and registered in
+    # llm-models.v1.json (v7) + naming-dictionary.v1.json modelRole.aliasesAllowed.
+    "RouterModelResolutionError",
     # KÖR-7a Context Assembler runtime symbols
     # (packages/generation/orchestration/context/). Sibling read-only module to
     # the KÖR-6a router above: ``AssembledContext`` is the result envelope,
