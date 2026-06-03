@@ -37,6 +37,10 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+from packages.generation.build.blueprint_render import (
+    RenderBlueprint,
+    apply_blueprint_to_dossier,
+)
 from packages.generation.build.contact_placeholders import (
     is_placeholder_address_lines,
     is_placeholder_email,
@@ -600,6 +604,7 @@ def render_section_hero(
     listing_route: dict | None,
     contact_path: str,
     variant_id: str | None,
+    blueprint: RenderBlueprint | None = None,
 ) -> str:
     """Render the hero section for the home route.
 
@@ -629,6 +634,35 @@ def render_section_hero(
     location = dossier["location"]
     contact = dossier["contact"]
     usp_list = _extract_usps(dossier)
+    # kor-2: prefer grounded blueprint hero copy (contentBlocks.home.hero) over
+    # the template's company name/tagline. Each override falls back to the
+    # template value when the blueprint is absent or the field is empty, so a
+    # no-blueprint build renders byte-identically. The raw prompt never reaches
+    # here — these strings are produced upstream by briefModel/planning.
+    hero_bp = blueprint.hero("home") if blueprint is not None else {}
+    hero_headline: str | None = None
+    hero_subheadline: str | None = None
+    hero_proof_line: str | None = None
+    if blueprint is not None:
+        hero_headline = blueprint.note_changed(
+            "home.hero.headline", hero_bp.get("headline"), company["name"]
+        )
+        hero_subheadline = blueprint.note_changed(
+            "home.hero.subheadline", hero_bp.get("subheadline"), company["tagline"]
+        )
+        proof = hero_bp.get("proofLine")
+        if isinstance(proof, str) and proof.strip():
+            proof = proof.strip()
+            # B155 honesty: the proof line is an additive element (no template
+            # default). Render it + count it as a visible effect only when it
+            # adds NEW copy — not when it merely restates the rendered headline
+            # or subheadline (that would render a duplicate line and over-report
+            # appliedVisibleEffect).
+            effective_subheadline = hero_subheadline or company["tagline"]
+            effective_headline = hero_headline or company["name"]
+            if proof not in (effective_subheadline, effective_headline):
+                hero_proof_line = proof
+                blueprint.note_applied("home.hero.proofLine")
     spel_cta = (
         '          <a href="/spel" className="inline-flex w-fit items-center gap-2 rounded-md border border-[color:var(--border)] px-5 py-3 text-sm font-medium hover:bg-[color:var(--accent)] transition-colors"><Gamepad2 className="size-4" />Spela direkt</a>\n'
         if "/spel" in dossier_routes
@@ -648,6 +682,21 @@ def render_section_hero(
     # (shop / booking / quote) so e-commerce projects do not get a
     # service-business "Begär offert" verb in the hero.
     hero_cta_label = _hero_cta_label(dossier)
+    # kor-2: the CTA follows conversion.primaryCta from the blueprint when set
+    # (hard requirement #3). honesty: a phone-promising blueprint label
+    # ("Ring oss") is dropped when the phone is a placeholder/missing and the
+    # blueprint forbids showing it — the same rule that suppresses the secondary
+    # "Ring <nummer>" button (B158). We pass phone availability to the accessor
+    # so the gate lives next to the other CTA-honesty logic.
+    if blueprint is not None:
+        phone_available = real_phone(contact) is not None
+        cta_override = blueprint.note_changed(
+            "home.hero.primaryCta",
+            blueprint.hero_cta("home", phone_available=phone_available),
+            hero_cta_label,
+        )
+        if cta_override is not None:
+            hero_cta_label = cta_override
     # B101 (re-Verifierings-Scout 3 2026-05-18): when CTA is shop the
     # primary hero button must link to the products listing, not the
     # contact route. Booking and quote variants keep contact as target.
@@ -700,8 +749,16 @@ def render_section_hero(
     # absolut-positionerat ``<video>`` bakom hero-texten med poster
     # fallback mot hero-bilden. Saknas videon renderas hero som vanligt.
     hero_video_asset = resolve_media_asset(dossier, "backgroundVideo")
+    # kor-2: only let the blueprint nudge the hero layout when there is a real
+    # hero content block (the rich path). The live kor-1c mock pipeline emits no
+    # hero block, so this never fires there — zero regression. The full
+    # visual-direction mapping is kor-3b; this is the deliberately light touch.
+    style_blueprint = blueprint if (blueprint is not None and hero_bp) else None
+    hero_style = _hero_style_for(dossier, variant_id, style_blueprint)
+    if style_blueprint is not None and hero_style != _hero_style_for(dossier, variant_id):
+        blueprint.note_applied("home.hero.visualTreatment")
     hero_block_jsx = _render_hero_block(
-        _hero_style_for(dossier, variant_id),
+        hero_style,
         company=company,
         location_tag=location_tag,
         hero_cta_label=hero_cta_label,
@@ -712,6 +769,9 @@ def render_section_hero(
         usps=usp_list,
         unsplash_fallback_url=unsplash_fallback_url,
         background_video=hero_video_asset,
+        headline=hero_headline,
+        subheadline=hero_subheadline,
+        proof_line=hero_proof_line,
     )
     return hero_section_jsx + hero_block_jsx
 
@@ -827,6 +887,7 @@ def render_section_contact_cta(
     dossier: dict,
     *,
     contact_path: str,
+    blueprint: RenderBlueprint | None = None,
 ) -> str:
     """Render the home-page closing contact-CTA section.
 
@@ -837,20 +898,38 @@ def render_section_contact_cta(
     that want a different closing section should compose a different
     section list in their sections.json instead.
 
+    kor-2: the button label follows the blueprint's
+    ``conversion.primaryCta`` when set (so a booking-driven clinic reads
+    "Boka behandling" rather than the generic "Kontakta oss" — exactly
+    the clinic scaffold's contact-cta section rule). The CTA only ever
+    links to the deterministic ``contact_path``; no phone/email is
+    published here, so the honesty rules are unaffected. Falls back to
+    "Kontakta oss" with no blueprint, keeping the output byte-identical.
+
     Path B step 4 (GAP-backend-path-b-section-renderer): extracted
-    from ``render_home``. ``dossier`` is currently unused (the static
-    Swedish copy is hard-coded) but the signature matches the future
-    section-renderer protocol so the registry in commit 6 can call
-    every renderer with the same shape.
+    from ``render_home``.
     """
-    del dossier  # reserved for future branch-aware copy
     contact_href = _route_href(contact_path)
+    cta_label = "Kontakta oss"
+    if blueprint is not None:
+        # honesty: gate a phone-promising blueprint CTA ("Ring oss") when the
+        # dossier has no real phone and the blueprint forbids showing it. The
+        # banner only ever links to ``contact_path`` (never a tel:), but a label
+        # that says "call us" with no phone is still misleading.
+        phone_available = real_phone(dossier.get("contact") or {}) is not None
+        override = blueprint.note_changed(
+            "home.contact-cta.primaryCta",
+            blueprint.primary_cta(phone_available=phone_available),
+            cta_label,
+        )
+        if override is not None:
+            cta_label = override
     return (
         '      <section className="border-t border-[color:var(--border)] bg-[color:var(--primary)] text-[color:var(--primary-foreground)]">\n'
         '        <div className="mx-auto flex w-[var(--container-width)] flex-col gap-4 py-[var(--section-spacing)]">\n'
         '          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Hör av dig idag</h2>\n'
         '          <p className="max-w-2xl text-base opacity-90 md:text-lg">Beskriv kort vad du behöver så återkommer vi inom en arbetsdag.</p>\n'
-        f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary-foreground)] px-5 py-3 text-sm font-medium text-[color:var(--primary)] hover:opacity-90 transition-opacity">Kontakta oss<ArrowRight className="size-4" /></a>\n'
+        f'          <a href={contact_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary-foreground)] px-5 py-3 text-sm font-medium text-[color:var(--primary)] hover:opacity-90 transition-opacity">{cta_label}<ArrowRight className="size-4" /></a>\n'
         "        </div>\n"
         "      </section>\n"
     )
@@ -1059,13 +1138,25 @@ def render_section_contact_info(dossier: dict, *, contact_path: str = "/kontakt"
     return header + "".join(cards) + footer
 
 
-def render_section_trust_proof(dossier: dict) -> str:
+def render_section_trust_proof(
+    dossier: dict,
+    *,
+    blueprint: RenderBlueprint | None = None,
+) -> str:
     """Render the home-page "Varför oss" trust-proof bullet section.
 
     Pulls ``dossier.trustSignals`` and produces a 2-column ShieldCheck-
     iconed bullet list. Returns "" when the list is empty so the
     section is suppressed entirely (mirrors the pre-existing
     ``trust = []`` handling in ``render_home``).
+
+    kor-2: when the dossier carries no trust signals the section is
+    seeded from the blueprint's confirmed ``businessFacts.facts``
+    (filtered against ``unknowns`` / ``qualityRisks`` so no ungrounded
+    claim — fake cert, invented review — is ever rendered). This only
+    fires when the dossier list is empty, so it never changes the
+    testimonials-vs-trust-proof coordination in ``render_home`` (that
+    branch keys off the dossier's own trustSignals count).
 
     Path B step 3 (GAP-backend-path-b-section-renderer): extracted
     from ``render_home``. Note that ``render_home`` is also responsible
@@ -1074,7 +1165,12 @@ def render_section_trust_proof(dossier: dict) -> str:
     cross-section coordination stays in ``render_home`` until the
     section-driven dispatcher lands in commit 6.
     """
-    trust = dossier["trustSignals"]
+    trust = dossier.get("trustSignals") or []
+    if not trust and blueprint is not None:
+        facts = blueprint.honest_trust_signals()
+        if facts:
+            trust = facts
+            blueprint.note_applied("home.trust-proof")
     if not trust:
         return ""
     trust_items = "\n".join(
@@ -1251,6 +1347,7 @@ def render_home(
     listing_route: dict | None = None,
     contact_path: str = "/kontakt",
     variant_id: str | None = None,
+    blueprint: RenderBlueprint | None = None,
 ) -> str:
     """Home page renderer — Path B step 11 dispatcher shim.
 
@@ -1324,6 +1421,7 @@ def render_home(
         listing_route=listing_route,
         contact_path=contact_path,
         variant_id=variant_id,
+        blueprint=blueprint,
     )
 
     return (
@@ -1949,19 +2047,37 @@ _FAQ_DEFAULT_SV: list[tuple[str, str]] = [
 ]
 
 
-def _faq_pairs(dossier: dict) -> list[tuple[str, str]]:
-    """Compose FAQ items from the dossier without inventing facts."""
-    location = dossier.get("location") or {}
-    area_values = location.get("serviceAreas") if isinstance(location, dict) else None
-    if isinstance(area_values, list) and area_values:
-        areas = ", ".join(str(area) for area in area_values if isinstance(area, str))
-    else:
-        city = location.get("city") if isinstance(location, dict) else None
-        country = location.get("country") if isinstance(location, dict) else None
-        areas = str(city or country or "ditt närområde")
+def _faq_pairs(
+    dossier: dict,
+    blueprint: RenderBlueprint | None = None,
+) -> list[tuple[str, str]]:
+    """Compose FAQ items from the dossier without inventing facts.
+
+    kor-2: when the blueprint carries a grounded FAQ list
+    (``contentBlocks.<route>.faq``) it replaces the three generic
+    template questions, so the four baseline branches can read with
+    industry-specific answers instead of the same mall. The real
+    opening-hours pair is still appended in both paths, so honest
+    contact data is never dropped. With no blueprint FAQ block the
+    template defaults render byte-identically.
+    """
     pairs: list[tuple[str, str]] = []
-    for question, answer_template in _FAQ_DEFAULT_SV:
-        pairs.append((question, answer_template.format(areas=areas)))
+    bp_pairs = blueprint.faq(("home", "faq")) if blueprint is not None else []
+    if bp_pairs:
+        pairs.extend(bp_pairs)
+        if blueprint is not None:
+            blueprint.note_applied("home.faq")
+    else:
+        location = dossier.get("location") or {}
+        area_values = location.get("serviceAreas") if isinstance(location, dict) else None
+        if isinstance(area_values, list) and area_values:
+            areas = ", ".join(str(area) for area in area_values if isinstance(area, str))
+        else:
+            city = location.get("city") if isinstance(location, dict) else None
+            country = location.get("country") if isinstance(location, dict) else None
+            areas = str(city or country or "ditt närområde")
+        for question, answer_template in _FAQ_DEFAULT_SV:
+            pairs.append((question, answer_template.format(areas=areas)))
     contact = dossier.get("contact") or {}
     # Only add the opening-hours FAQ for real hours - a placeholder
     # ("Mån-Fre 09:00-17:00") must not be presented as a fact (contact-honesty
@@ -1977,16 +2093,22 @@ def _faq_pairs(dossier: dict) -> list[tuple[str, str]]:
     return pairs
 
 
-def render_faq(dossier: dict, *, contact_path: str = "/kontakt") -> str:
+def render_faq(
+    dossier: dict,
+    *,
+    contact_path: str = "/kontakt",
+    blueprint: RenderBlueprint | None = None,
+) -> str:
     """Render the wizard-driven /faq route.
 
     Deterministic FAQ built from the dossier: three default questions
     plus an opening-hours question only when ``contact.openingHours`` is a
     real (non-placeholder) value. No invented service prices or warranties —
     operator-specific answers belong on the operator's wishlist, not in v1
-    codegen.
+    codegen. kor-2 lets a grounded blueprint FAQ replace the generic
+    template questions (see ``_faq_pairs``).
     """
-    pairs = _faq_pairs(dossier)
+    pairs = _faq_pairs(dossier, blueprint)
     items = "\n".join(
         f'            <article key={_jsx_safe_string(f"faq-{i}")} className="rounded-xl border border-[color:var(--border)] p-6">\n'
         f'              <h2 className="text-lg font-semibold">{_jsx_safe_string(question)}</h2>\n'
@@ -2324,7 +2446,11 @@ def _render_hero_usp_chips(usps: list[str], *, centered: bool = False) -> str:
     )
 
 
-def _hero_style_for(dossier: dict, variant_id: str | None) -> str:
+def _hero_style_for(
+    dossier: dict,
+    variant_id: str | None,
+    blueprint: RenderBlueprint | None = None,
+) -> str:
     """Resolve which hero layout to render for the home page.
 
     Precedence:
@@ -2333,17 +2459,23 @@ def _hero_style_for(dossier: dict, variant_id: str | None) -> str:
        coming from the wizard's visual step. Frontend may set
        ``"gradient" | "centered" | "split"``; anything else is ignored
        so we never trust unknown strings.
-    2. ``_HERO_STYLE_BY_VARIANT[variant_id]`` — vibe-aware default. A
+    2. ``blueprint.hero_layout()`` — kor-2 light touch: the Generation
+       Package ``visualDirection.heroStyle`` mapped onto a renderer
+       layout. Sits below the operator hint (the operator always wins)
+       and above the variant default. ``None`` (no blueprint or an
+       unmapped style) leaves the variant/tone defaults untouched. The
+       full visual-direction mapping is kor-3b.
+    3. ``_HERO_STYLE_BY_VARIANT[variant_id]`` — vibe-aware default. A
        warm-craft variant gets a centered hero by default, a noir-
        editorial gets a split hero, etc.
-    3. ``_HERO_STYLE_BY_TONE[normalized_tone]`` — tone-aware fallback
+    4. ``_HERO_STYLE_BY_TONE[normalized_tone]`` — tone-aware fallback
        (Sprint B/3). Triggas när varianten saknar mapping (framtida
        experimentella variants) ELLER när variantId helt saknas men
        tone är satt. Svenska wizard-tags ("Lekfull", "Lugn och
        förtroendeingivande") normaliseras via ``_normalize_tone_key``
        så samma mapping fungerar oavsett om operatören valde tone
        via chips eller skrev en engelsk semantisk key.
-    4. ``"gradient"`` — universal fallback. Matches the pre-#2 behavior
+    5. ``"gradient"`` — universal fallback. Matches the pre-#2 behavior
        so tests that call ``render_home`` with no variant_id keep the
        same JSX shape they used to.
     """
@@ -2352,6 +2484,10 @@ def _hero_style_for(dossier: dict, variant_id: str | None) -> str:
         hint = directives.get("layoutHint")
         if isinstance(hint, str) and hint in _VALID_HERO_STYLES:
             return hint
+    if blueprint is not None:
+        bp_layout = blueprint.hero_layout()
+        if bp_layout in _VALID_HERO_STYLES:
+            return bp_layout
     if variant_id and variant_id in _HERO_STYLE_BY_VARIANT:
         return _HERO_STYLE_BY_VARIANT[variant_id]
     tone = dossier.get("tone")
@@ -2415,11 +2551,20 @@ def _render_hero_block(
     usps: list[str] | None = None,
     unsplash_fallback_url: str | None = None,
     background_video: dict | None = None,
+    headline: str | None = None,
+    subheadline: str | None = None,
+    proof_line: str | None = None,
 ) -> str:
     """Render the hero <section> for the home page in one of three
     layouts. Customer-text (company.name, company.tagline) is always
     wrapped via ``_jsx_safe_string`` so the JSX-escape tests (B30)
     pass for every variant.
+
+    kor-2: ``headline`` / ``subheadline`` override the company name /
+    tagline when the Generation Package carries grounded hero copy, and
+    ``proof_line`` adds an optional supporting line beneath the
+    subheadline. All three default to ``None`` so a no-blueprint call
+    renders byte-identically to the pre-kor-2 hero.
 
     Layouts:
 
@@ -2434,8 +2579,22 @@ def _render_hero_block(
        layout reads correctly even with no asset. Suits editorial and
        commerce vibes (midnight-counsel, noir-editorial, clean-store).
     """
-    safe_name = _jsx_safe_string(company["name"])
-    safe_tagline = _jsx_safe_string(company["tagline"])
+    safe_name = _jsx_safe_string(headline or company["name"])
+    safe_tagline = _jsx_safe_string(subheadline or company["tagline"])
+    # kor-2: optional grounded proof line beneath the subheadline. Emitted only
+    # when the blueprint supplies one, so the no-blueprint hero is unchanged.
+    # Two indentation variants match the centered/gradient (10 spaces) and
+    # split (12 spaces) column layouts.
+    proof_p_10 = (
+        f'          <p className="max-w-2xl text-base text-[color:var(--foreground)]/80 leading-relaxed">{_jsx_safe_string(proof_line)}</p>\n'
+        if proof_line
+        else ""
+    )
+    proof_p_12 = (
+        f'            <p className="max-w-xl text-base text-[color:var(--foreground)]/80 leading-relaxed">{_jsx_safe_string(proof_line)}</p>\n'
+        if proof_line
+        else ""
+    )
     usp_list = usps or []
     usp_chips_left = _render_hero_usp_chips(usp_list, centered=False)
     usp_chips_centered = _render_hero_usp_chips(usp_list, centered=True)
@@ -2482,6 +2641,7 @@ def _render_hero_block(
             f"{centered_location}"
             f'          <h1 className="max-w-3xl text-4xl font-semibold leading-[1.05] tracking-tight md:text-6xl lg:text-7xl">{safe_name}</h1>\n'
             f'          <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed md:text-xl">{safe_tagline}</p>\n'
+            f"{proof_p_10}"
             f"{usp_chips_centered}"
             '          <div className="flex flex-wrap items-center justify-center gap-3">\n'
             f'            <a href={hero_cta_href} className="inline-flex w-fit items-center gap-2 rounded-md bg-[color:var(--primary)] px-5 py-3 text-sm font-medium text-[color:var(--primary-foreground)] hover:opacity-90 transition-opacity">{hero_cta_label}<ArrowRight className="size-4" /></a>\n'
@@ -2545,6 +2705,7 @@ def _render_hero_block(
             f"{location_tag}"
             f'            <h1 className="max-w-2xl text-4xl font-semibold leading-[1.05] tracking-tight md:text-6xl">{safe_name}</h1>\n'
             f'            <p className="max-w-xl text-lg text-[color:var(--muted)] leading-relaxed md:text-xl">{safe_tagline}</p>\n'
+            f"{proof_p_12}"
             "            "
             + cta_buttons.lstrip()
             + f"{usp_chips_left}"
@@ -2565,6 +2726,7 @@ def _render_hero_block(
         f"{location_tag}"
         f'          <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight md:text-6xl">{safe_name}</h1>\n'
         f'          <p className="max-w-2xl text-lg text-[color:var(--muted)] leading-relaxed md:text-xl">{safe_tagline}</p>\n'
+        f"{proof_p_10}"
         f"{usp_chips_left}"
         + cta_buttons
         + "        </div>\n"
@@ -2767,7 +2929,12 @@ def _render_home_testimonials_section(dossier: dict) -> str:
     )
 
 
-def _render_home_faq_section(dossier: dict, *, has_faq_route: bool) -> str:
+def _render_home_faq_section(
+    dossier: dict,
+    *,
+    has_faq_route: bool,
+    blueprint: RenderBlueprint | None = None,
+) -> str:
     """Render a compact FAQ section on the home page using the
     deterministic ``_faq_pairs`` helper that ``render_faq`` already
     uses for the dedicated /faq route. Shows up to
@@ -2789,7 +2956,7 @@ def _render_home_faq_section(dossier: dict, *, has_faq_route: bool) -> str:
     need additional whitelisting; we still soft-import via the icon
     collector to be explicit).
     """
-    pairs = _faq_pairs(dossier)
+    pairs = _faq_pairs(dossier, blueprint)
     if not pairs:
         return ""
     items = "\n".join(
@@ -3615,6 +3782,7 @@ def render_section_faq(
     dossier: dict,
     *,
     dossier_routes: list[str] | None = None,
+    blueprint: RenderBlueprint | None = None,
 ) -> str:
     """LSB home-page FAQ section.
 
@@ -3623,10 +3791,13 @@ def render_section_faq(
     can pass the same list ``render_home`` already computes. When
     /faq is in the route list the section ends with a "Se alla
     frågor"-CTA pointing at the dedicated route, otherwise the CTA
-    is omitted to avoid a ghost link.
+    is omitted to avoid a ghost link. kor-2: forwards the blueprint so
+    a grounded FAQ replaces the generic template questions.
     """
     has_faq_route = "/faq" in (dossier_routes or [])
-    return _render_home_faq_section(dossier, has_faq_route=has_faq_route)
+    return _render_home_faq_section(
+        dossier, has_faq_route=has_faq_route, blueprint=blueprint
+    )
 
 
 def render_section_service_area(dossier: dict) -> str:
@@ -3704,6 +3875,7 @@ def _render_restaurant_route(
     route_id: str,
     page_function_name: str,
     contact_path: str,
+    blueprint: RenderBlueprint | None = None,
 ) -> str:
     """Compose a restaurant route via the section dispatcher.
 
@@ -3725,8 +3897,14 @@ def _render_restaurant_route(
         route_id=route_id,
         scaffold_sections=sections,
         contact_path=contact_path,
+        blueprint=blueprint,
     )
-    cta_section = render_section_contact_cta(dossier, contact_path=contact_path)
+    # kor-2: thread the blueprint so the trailing contact CTA follows
+    # conversion.primaryCta (e.g. "Boka bord") instead of the generic
+    # "Kontakta oss", consistent with the rest of the default-route set.
+    cta_section = render_section_contact_cta(
+        dossier, contact_path=contact_path, blueprint=blueprint
+    )
     return (
         'import { ArrowRight } from "lucide-react";\n'
         "\n"
@@ -3741,7 +3919,12 @@ def _render_restaurant_route(
     )
 
 
-def render_menu(dossier: dict, *, contact_path: str = "/hitta-hit") -> str:
+def render_menu(
+    dossier: dict,
+    *,
+    contact_path: str = "/hitta-hit",
+    blueprint: RenderBlueprint | None = None,
+) -> str:
     """Render the restaurant /meny route via the section dispatcher.
 
     Path B step 8 thin shim. The actual section composition lives
@@ -3767,10 +3950,16 @@ def render_menu(dossier: dict, *, contact_path: str = "/hitta-hit") -> str:
         route_id="menu",
         page_function_name="MenuPage",
         contact_path=contact_path,
+        blueprint=blueprint,
     )
 
 
-def render_booking(dossier: dict, *, contact_path: str = "/hitta-hit") -> str:
+def render_booking(
+    dossier: dict,
+    *,
+    contact_path: str = "/hitta-hit",
+    blueprint: RenderBlueprint | None = None,
+) -> str:
     """Render the restaurant /bokning route via the section dispatcher.
 
     Path B step 8 thin shim. The actual section composition lives
@@ -3793,6 +3982,7 @@ def render_booking(dossier: dict, *, contact_path: str = "/hitta-hit") -> str:
         route_id="booking",
         page_function_name="BookingPage",
         contact_path=contact_path,
+        blueprint=blueprint,
     )
 
 
@@ -5023,6 +5213,7 @@ def _render_dispatched_route(
     listing_route: dict | None = None,
     contact_path: str,
     variant_id: str | None = None,
+    blueprint: RenderBlueprint | None = None,
 ) -> str:
     """Compose a route end-to-end via the section dispatcher.
 
@@ -5053,6 +5244,7 @@ def _render_dispatched_route(
         dossier_routes=dossier_routes,
         listing_route=listing_route,
         variant_id=variant_id,
+        blueprint=blueprint,
     )
     icons = _collect_dispatched_icons(body)
     icon_import = "import { " + ", ".join(icons) + ' } from "lucide-react";\n'
@@ -5099,6 +5291,7 @@ def write_pages(
     dossier_routes: list[str],
     extra_routes: list[dict] | None = None,
     variant_id: str | None = None,
+    blueprint: RenderBlueprint | None = None,
 ) -> list[str]:
     """Write every page declared in ``scaffold_routes["defaultRoutes"]``.
 
@@ -5121,6 +5314,12 @@ def write_pages(
     listing_route = _pick_listing_route(default_routes)
     contact_route = _pick_contact_route(default_routes)
     scaffold_id = (dossier.get("scaffoldId") or "").strip()
+    # kor-2: build the render dossier whose offer list + company story prefer
+    # grounded blueprint copy (when present). Everything downstream — section
+    # renderers, icon collectors, layout — reads this one dossier so the offer
+    # copy and the icon imports stay byte-consistent. With no blueprint this is
+    # the original dossier object, so non-blueprint builds are unchanged.
+    render_dossier = apply_blueprint_to_dossier(dossier, blueprint)[0]
     written: list[str] = []
     for route in default_routes:
         route_id = route["id"]
@@ -5129,32 +5328,38 @@ def write_pages(
             content = _render_dispatched_route(
                 scaffold_id=scaffold_id,
                 route_id=route_id,
-                dossier=dossier,
+                dossier=render_dossier,
                 dossier_routes=dossier_routes,
                 listing_route=listing_route,
                 contact_path=contact_route["path"],
                 variant_id=variant_id,
+                blueprint=blueprint,
             )
         elif route_id == "home":
             content = render_home(
-                dossier,
+                render_dossier,
                 dossier_routes,
                 listing_route=listing_route,
                 contact_path=contact_route["path"],
                 variant_id=variant_id,
+                blueprint=blueprint,
             )
         elif route_id == "services":
-            content = render_services(dossier, contact_path=contact_route["path"])
+            content = render_services(render_dossier, contact_path=contact_route["path"])
         elif route_id == "products":
-            content = render_products(dossier, contact_path=contact_route["path"])
+            content = render_products(render_dossier, contact_path=contact_route["path"])
         elif route_id == "menu":
-            content = render_menu(dossier, contact_path=contact_route["path"])
+            content = render_menu(
+                render_dossier, contact_path=contact_route["path"], blueprint=blueprint
+            )
         elif route_id == "booking":
-            content = render_booking(dossier, contact_path=contact_route["path"])
+            content = render_booking(
+                render_dossier, contact_path=contact_route["path"], blueprint=blueprint
+            )
         elif route_id == "about":
-            content = render_about(dossier)
+            content = render_about(render_dossier)
         elif route_id == "contact":
-            content = render_contact(dossier, contact_path=contact_route["path"])
+            content = render_contact(render_dossier, contact_path=contact_route["path"])
         else:
             raise SystemExit(
                 "Builder failed: scaffold route id "
@@ -5189,7 +5394,14 @@ def write_pages(
                     "wizard extra route list in "
                     "packages/generation/planning/plan.py."
                 )
-            content = renderer(dossier, contact_path=contact_route["path"])
+            if renderer is render_faq:
+                content = renderer(
+                    render_dossier,
+                    contact_path=contact_route["path"],
+                    blueprint=blueprint,
+                )
+            else:
+                content = renderer(render_dossier, contact_path=contact_route["path"])
             write(route_to_page_path(target, path), content)
             written.append(path)
             seen_extra_paths.add(path)
@@ -5197,7 +5409,7 @@ def write_pages(
     write(
         target / "app" / "layout.tsx",
         render_layout(
-            dossier,
+            render_dossier,
             dossier_routes,
             scaffold_default_routes=default_routes,
             contact_path=contact_route["path"],
@@ -5209,8 +5421,8 @@ def write_pages(
     # scaffold:s defaultRoutes). Next.js plockar upp filerna automatiskt
     # via filsystem-routing: ``not-found.tsx`` används för 404 och
     # ``error.tsx`` för uncaught exceptions i alla under-routes.
-    write(target / "app" / "not-found.tsx", render_not_found(dossier))
-    write(target / "app" / "error.tsx", render_global_error(dossier))
+    write(target / "app" / "not-found.tsx", render_not_found(render_dossier))
+    write(target / "app" / "error.tsx", render_global_error(render_dossier))
     # Sprint 1.5 — auto-OG-fallback. SVG:n skrivs alltid till
     # ``public/og-image-fallback.svg`` så Next.js Metadata API kan
     # länka dit oberoende av om operatorn laddat upp en egen.
@@ -5220,7 +5432,7 @@ def write_pages(
     # framtida sociala delningar utan extra build-steg.
     write(
         target / "public" / "og-image-fallback.svg",
-        render_og_fallback_svg(dossier),
+        render_og_fallback_svg(render_dossier),
     )
     # Sprint 2.2/2.3 — robots.txt + sitemap.xml. Skrivs alltid så att
     # genererade sajter är Google-indexerbara från första bygget.
