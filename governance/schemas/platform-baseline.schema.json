@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "platform-baseline.schema.json",
+  "title": "Platform Version Baseline",
+  "description": "En sanningskälla för runtime- och beroende-versioner som lokalt, Vercel, sandbox, starters och genererad output läser från. Validerad av scripts/check_platform_baseline.py mot apps/viewser/package.json + data/starters/*/package.json (codegen-mallen).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "policyId",
+    "version",
+    "status",
+    "adr",
+    "purpose",
+    "principles",
+    "runtime",
+    "framework",
+    "ui",
+    "styling",
+    "tooling",
+    "enforcement",
+    "targets",
+    "vercelSupport"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "policyId": { "type": "string", "pattern": "^platform-baseline\\.v[0-9]+$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["draft", "draft-but-authoritative", "stable", "deprecated"] },
+    "adr": { "type": "string", "pattern": "^[0-9]{4}$" },
+    "purpose": { "type": "string" },
+    "principles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node", "voltaNode", "npm"],
+      "properties": {
+        "node": { "type": "string", "minLength": 1 },
+        "voltaNode": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "npm": { "type": "string", "minLength": 1 }
+      }
+    },
+    "framework": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["next", "react", "react-dom", "eslint-config-next"],
+      "properties": {
+        "next": { "type": "string", "minLength": 1 },
+        "react": { "type": "string", "minLength": 1 },
+        "react-dom": { "type": "string", "minLength": 1 },
+        "eslint-config-next": { "type": "string", "minLength": 1 }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lucide-react",
+        "shadcn",
+        "class-variance-authority",
+        "tailwind-merge",
+        "clsx",
+        "tw-animate-css",
+        "@base-ui/react"
+      ],
+      "properties": {
+        "lucide-react": { "type": "string", "minLength": 1 },
+        "shadcn": { "type": "string", "minLength": 1 },
+        "class-variance-authority": { "type": "string", "minLength": 1 },
+        "tailwind-merge": { "type": "string", "minLength": 1 },
+        "clsx": { "type": "string", "minLength": 1 },
+        "tw-animate-css": { "type": "string", "minLength": 1 },
+        "@base-ui/react": { "type": "string", "minLength": 1 }
+      }
+    },
+    "styling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tailwindcss", "@tailwindcss/postcss"],
+      "properties": {
+        "tailwindcss": { "type": "string", "minLength": 1 },
+        "@tailwindcss/postcss": { "type": "string", "minLength": 1 }
+      }
+    },
+    "tooling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "typescript",
+        "@types/node",
+        "eslint",
+        "prettier",
+        "prettier-plugin-tailwindcss"
+      ],
+      "properties": {
+        "typescript": { "type": "string", "minLength": 1 },
+        "@types/node": { "type": "string", "minLength": 1 },
+        "eslint": { "type": "string", "minLength": 1 },
+        "prettier": { "type": "string", "minLength": 1 },
+        "prettier-plugin-tailwindcss": { "type": "string", "minLength": 1 }
+      }
+    },
+    "enforcement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enforced", "pendingPropagation", "comment"],
+      "properties": {
+        "enforced": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "description": "npm-paketnamn vars pin måste vara exakt lika med baslinjen där paketet förekommer i ett target. Drift = hard fail i --check."
+        },
+        "pendingPropagation": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Baslinje-mål som steg 4 (--fix, operatörs-OK) propagerar. --check rapporterar dem som pending men failar inte. Token 'engines.node' och 'volta.node' avser package.json-fälten engines.node respektive volta.node."
+        },
+        "comment": { "type": "string" }
+      }
+    },
+    "targets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["include", "comment"],
+      "properties": {
+        "include": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "description": "Glob-relativa paths (från repo-roten) till package.json-filer som måste konforma."
+        },
+        "comment": { "type": "string" }
+      }
+    },
+    "vercelSupport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule", "node", "comment"],
+      "properties": {
+        "rule": { "type": "string" },
+        "node": { "type": "string", "minLength": 1 },
+        "comment": { "type": "string" }
+      }
+    }
+  }
+}
