@@ -132,6 +132,71 @@
     "scaffoldHint": {
       "type": "string",
       "description": "Optional scaffold suggestion the builder attaches when running from a Project Input. Not produced by dev_generate.py."
+    },
+    "businessFacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional blueprint field (kor-1a skeleton, see docs/heavy-llm-flow/01). Separates confirmed facts from deliberate unknowns so downstream renderer/verifier never invent copy. No model fills it in kor-1a; briefModel fills it in kor-1b.",
+      "properties": {
+        "facts": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Confirmed facts derived from prompt/wizard/scrape (e.g. 'serves Malmö', 'family-run since 2008')."
+        },
+        "unknowns": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Deliberately unknown slots (e.g. 'telefon', 'certifieringar'). Honesty engine: an item here must never be rendered as invented copy (ties to contact_placeholders, B158/B159)."
+        }
+      }
+    },
+    "positioning": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional blueprint field (kor-1a skeleton). How the site should position the business. No model fills it in kor-1a; briefModel fills it in kor-1b.",
+      "properties": {
+        "oneLiner": {"type": "string", "description": "One-sentence positioning statement."},
+        "differentiator": {"type": "string", "description": "What sets the business apart, in plain language."},
+        "audienceNeed": {"type": "string", "description": "The core need the target audience has."},
+        "localAngle": {"type": "string", "description": "Local/geographic angle when relevant."},
+        "tone": {"type": "string", "description": "Free-form tone phrase for positioning copy (distinct from the top-level tone[] tone words)."},
+        "avoid": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Things the copy must avoid (e.g. 'pahittade certifieringar', 'generiska superlativ')."
+        }
+      }
+    },
+    "contentStrategy": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional blueprint field (kor-1a skeleton). High-level content strategy for the site. No model fills it in kor-1a; briefModel fills it in kor-1b.",
+      "properties": {
+        "heroAngle": {"type": "string", "description": "Angle the hero section should take."},
+        "trustStrategy": {"type": "string", "description": "How trust is built honestly, without fake claims."},
+        "offerStrategy": {"type": "string", "description": "How services/offers are surfaced."},
+        "avoidGenericClaims": {"type": "boolean", "description": "When true, generic superlatives/claims should be avoided."}
+      }
+    },
+    "conversion": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional blueprint field (kor-1a skeleton). Conversion intent that binds to the deterministic contact/CTA rules. No model fills it in kor-1a; briefModel fills it in kor-1b.",
+      "properties": {
+        "primaryAction": {"type": "string", "description": "Primary conversion action slug (e.g. 'request_quote', 'book', 'call')."},
+        "primaryCta": {"type": "string", "description": "Label for the primary call to action."},
+        "secondaryCta": {"type": "string", "description": "Label for the secondary call to action."},
+        "contactPriority": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Ordered contact channel preference (e.g. 'phone_if_real', 'form', 'email_if_real')."
+        },
+        "ctaRules": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Honesty/availability rules for CTAs (e.g. 'do not show phone if missing', 'no booking unless booking exists')."
+        }
+      }
     }
   }
 }

@@ -64,6 +64,53 @@
       "type": "string",
       "format": "date-time",
       "description": "ISO 8601 timestamp when the package was written."
+    },
+    "contentBlocks": {
+      "type": "object",
+      "description": "Optional blueprint field (kor-1a skeleton, see docs/heavy-llm-flow/01). Per-section copy keyed by '<routeId>.<sectionId>' (same addressing as sectionPlan). Values are free-form objects (e.g. hero with headline/subheadline) or arrays (e.g. a service list). No model fills it in kor-1a; planning fills it in kor-1c, renderer consumes it in kor-2.",
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$",
+        "description": "Address contract: exactly '<routeId>.<sectionId>'."
+      },
+      "additionalProperties": {
+        "type": ["object", "array"],
+        "description": "Section content: an object of fields or an array of items. Internal shape is intentionally open in the kor-1a skeleton."
+      }
+    },
+    "visualDirection": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional blueprint field (kor-1a skeleton). Visual direction for the site. heroStyle and sectionTreatments are kept as free strings here; kor-3b tightens them to enums that map to variant tokens and dispatcher treatments. No model fills it in kor-1a.",
+      "properties": {
+        "mood": {"type": "string", "description": "Overall mood (e.g. 'trygg, modern, lokal service')."},
+        "density": {"type": "string", "description": "Layout density hint (e.g. 'compact', 'medium', 'spacious')."},
+        "heroStyle": {"type": "string", "description": "Hero layout hint (e.g. 'split_with_image'). Tightened to an enum in kor-3b."},
+        "colorIntent": {"type": "string", "description": "Color intent hint (e.g. 'warm_neutral_with_electric_accent')."},
+        "sectionTreatments": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$",
+            "description": "Address contract: exactly '<routeId>.<sectionId>' (same as sectionPlan and contentBlocks)."
+          },
+          "additionalProperties": {"type": "string"},
+          "description": "Map of '<routeId>.<sectionId>' to a treatment hint string. Tightened to enums in kor-3b."
+        },
+        "imageBriefs": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Natural-language briefs for any imagery the site needs."
+        },
+        "layoutSignals": {
+          "type": "object",
+          "additionalProperties": {"type": "boolean"},
+          "description": "Boolean layout signals (e.g. 'useTrustBandNearHero', 'avoidOverlyPlayfulShapes')."
+        }
+      }
+    },
+    "qualityRisks": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Optional blueprint field (kor-1a skeleton). Honesty/quality guardrails the renderer and verifier must respect (e.g. 'No fake certifications', 'Do not show phone if missing'). No model fills it in kor-1a; planning fills it in kor-1c."
     }
   }
 }

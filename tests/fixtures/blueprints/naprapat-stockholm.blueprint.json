@@ -1,0 +1,126 @@
+{
+  "_fixture": "Baseline branch 'naprapat' (naprapath clinic, Stockholm). Mock blueprint example for kor-1a. Hand-written fixture, no model output. Calm/clinical direction, honesty around certifications.",
+  "siteBrief": {
+    "runId": "run-naprapat-stockholm",
+    "language": "sv",
+    "rawPrompt": "Hemsida för en naprapat i Stockholm med tidsbokning och info om behandlingar.",
+    "companyName": "Naprapat Centralt",
+    "businessTypeGuess": "naprapath-clinic",
+    "locationHint": "Stockholm",
+    "tone": ["lugn", "professionell", "omtänksam"],
+    "targetAudience": ["personer med besvär i rygg och nacke", "idrottare"],
+    "requestedCapabilities": ["booking"],
+    "conversionGoals": ["booking"],
+    "servicesMentioned": ["naprapati", "massage", "rehabträning"],
+    "sourceModelRole": "briefModel",
+    "modelUsed": "mock",
+    "briefSource": "mock-no-key",
+    "createdAt": "2026-06-03T08:10:00+00:00",
+    "businessFacts": {
+      "facts": ["mottagning i Stockholm", "erbjuder tidsbokning"],
+      "unknowns": ["legitimation", "specifika certifieringar", "samarbeten med försäkringsbolag"]
+    },
+    "positioning": {
+      "oneLiner": "Naprapat i Stockholm som hjälper dig tillbaka till rörelse.",
+      "differentiator": "tydlig behandlingsplan och uppföljning",
+      "audienceNeed": "lindra smärta och förstå orsaken",
+      "localAngle": "centralt i Stockholm, nära kollektivtrafik",
+      "tone": "lugn, professionell, omtänksam",
+      "avoid": ["medicinska löften som inte kan hållas", "påhittade certifieringar", "skrämselton"]
+    },
+    "contentStrategy": {
+      "heroAngle": "lugnt och kunnigt stöd tillbaka till rörelse",
+      "trustStrategy": "trovärdighet genom tydlighet, inga ohållbara medicinska löften",
+      "offerStrategy": "förklara behandlingar och vad som ingår",
+      "avoidGenericClaims": true
+    },
+    "conversion": {
+      "primaryAction": "book",
+      "primaryCta": "Boka behandling",
+      "secondaryCta": "Läs om behandlingar",
+      "contactPriority": ["form", "phone_if_real", "email_if_real"],
+      "ctaRules": ["använd inte bokning om bokning saknas", "lova inga medicinska resultat"]
+    }
+  },
+  "sitePlan": {
+    "runId": "run-naprapat-stockholm",
+    "scaffoldId": "clinic-healthcare",
+    "variantId": "clinic-calm",
+    "starterId": "marketing-base",
+    "routePlan": [
+      {"id": "home", "path": "/", "purpose": "Reassure and drive a booking"},
+      {"id": "treatments", "path": "/behandlingar", "purpose": "Explain treatments honestly"},
+      {"id": "contact", "path": "/kontakta-oss", "purpose": "Booking and location"}
+    ],
+    "selectedDossiers": {
+      "required": ["booking-cta"],
+      "recommended": ["opening-hours", "map-embed"],
+      "conditional": []
+    },
+    "buildSpec": {
+      "qualityTarget": 9.0,
+      "verificationPolicy": "build-must-pass",
+      "previewRuntime": "vercel-sandbox"
+    },
+    "sourceModelRole": "planningModel",
+    "modelUsed": "mock",
+    "planSource": "mock-no-key",
+    "createdAt": "2026-06-03T08:10:00+00:00",
+    "sectionPlan": {
+      "home.hero": {
+        "goal": "reassure and invite booking",
+        "copyIntent": "lugnt stöd tillbaka till rörelse",
+        "visualTreatment": "calm-portrait",
+        "ctaRole": "primary"
+      },
+      "treatments.treatment-list": {
+        "goal": "explain treatments without medical promises",
+        "copyIntent": "tydliga behandlingar utan ohållbara löften",
+        "ctaRole": "secondary"
+      },
+      "home.trust-proof": {
+        "goal": "build trust without invented certifications",
+        "proofSources": ["wizard"]
+      }
+    }
+  },
+  "generationPackage": {
+    "runId": "run-naprapat-stockholm",
+    "policyVersions": {"engineRun": "engine-run.v1"},
+    "siteBriefRef": "site-brief.json",
+    "sitePlanRef": "site-plan.json",
+    "scaffoldId": "clinic-healthcare",
+    "variantId": "clinic-calm",
+    "starterId": "marketing-base",
+    "language": "sv",
+    "engineMode": "init",
+    "createdAt": "2026-06-03T08:10:00+00:00",
+    "contentBlocks": {
+      "home.hero": {
+        "headline": "Tillbaka till rörelse, i din takt",
+        "subheadline": "Naprapat centralt i Stockholm med tydlig behandlingsplan och uppföljning.",
+        "proofLine": "Vi förklarar vad vi gör och varför.",
+        "primaryCta": "Boka behandling"
+      },
+      "treatments.treatment-list": [
+        {"title": "Naprapati", "summary": "Behandling av besvär i muskler och leder."},
+        {"title": "Massage", "summary": "Avspännande och behandlande massage."},
+        {"title": "Rehabträning", "summary": "Övningar för att förebygga återfall."}
+      ]
+    },
+    "visualDirection": {
+      "mood": "lugn, professionell, omtänksam",
+      "density": "medium",
+      "heroStyle": "portrait_with_text",
+      "colorIntent": "cool_calm_neutral",
+      "sectionTreatments": {"treatments.treatment-list": "stacked-cards"},
+      "imageBriefs": ["lugn behandlingsmiljö i Stockholm, dämpat ljus, tryggt intryck"],
+      "layoutSignals": {"useTrustBandNearHero": true, "avoidOverlyPlayfulShapes": true}
+    },
+    "qualityRisks": [
+      "No fake certifications",
+      "No medical guarantees",
+      "Do not show phone if missing"
+    ]
+  }
+}
