@@ -36,7 +36,9 @@ from packages.generation.brief.models import OPENAI_API_KEY_ENV
 from packages.generation.planning import (
     PlanningChoice,
     SectionPlanEntry,
+    derive_faq,
     derive_quality_risks,
+    derive_story,
     load_scaffold_registry,
     produce_site_plan,
     resolve_section_plan,
@@ -83,9 +85,26 @@ def _disk_section_addresses(scaffold_id: str) -> set[str]:
 
 
 def _offer_block(content_blocks: dict[str, Any]) -> tuple[str | None, list[Any]]:
-    """Return the single list-shaped content block (the offer/services list)."""
+    """Return the offer/services list block.
+
+    kor-1c-copy also emits an FAQ list block, so the offer block is identified
+    by its items carrying a ``title`` (offer items) rather than ``question``
+    (FAQ items) - not merely "the first list".
+    """
     for key, value in content_blocks.items():
-        if isinstance(value, list):
+        if isinstance(value, list) and value and all(
+            isinstance(item, dict) and "title" in item for item in value
+        ):
+            return key, value
+    return None, []
+
+
+def _faq_block(content_blocks: dict[str, Any]) -> tuple[str | None, list[Any]]:
+    """Return the FAQ list block (items carrying ``question``), else (None, [])."""
+    for key, value in content_blocks.items():
+        if isinstance(value, list) and value and all(
+            isinstance(item, dict) and "question" in item for item in value
+        ):
             return key, value
     return None, []
 
@@ -171,6 +190,155 @@ def test_visual_direction_differs_per_industry():
     assert len(set(moods)) == 4, f"mood must differ per industry: {moods}"
     assert len(set(hero_styles)) == 4, f"heroStyle must differ per industry: {hero_styles}"
     assert len(set(color_intents)) == 4, f"colorIntent must differ per industry: {color_intents}"
+
+
+# ---------------------------------------------------------------------------
+# kor-1c-copy: story / faq / offer-summaries are emitted, distinct & grounded
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.tooling
+def test_four_baselines_emit_distinct_grounded_story():
+    """Every baseline emits a company story block composed from its own
+    positioning, and the four stories are clearly different."""
+    stories: list[str] = []
+    for branch in BASELINES:
+        blocks = _plan_for(branch).generation_package["contentBlocks"]
+        story_blocks = [
+            v
+            for k, v in blocks.items()
+            if isinstance(v, dict) and "body" in v and k.split(".")[1] in
+            ("about-story", "about-story-block", "story")
+        ]
+        assert story_blocks, f"{branch}: a story block must be emitted"
+        body = story_blocks[0]["body"]
+        assert body, f"{branch}: story body must be non-empty"
+        # Grounded in the brief's own positioning oneLiner (never the raw prompt).
+        one_liner = _baseline_brief(branch)["positioning"]["oneLiner"]
+        assert one_liner.rstrip(".") in body, (
+            f"{branch}: story must be composed from the brief's positioning"
+        )
+        stories.append(body)
+    assert len(set(stories)) == 4, f"stories must differ per branch: {stories}"
+
+
+@pytest.mark.tooling
+def test_offer_items_carry_distinct_grounded_summaries():
+    """Each baseline offer item carries an honest per-service summary, and the
+    summary sets differ per industry (not the generic template)."""
+    summary_sets: list[tuple[str, ...]] = []
+    for branch in BASELINES:
+        blocks = _plan_for(branch).generation_package["contentBlocks"]
+        _, items = _offer_block(blocks)
+        assert items, f"{branch}: an offer block must be emitted"
+        summaries = tuple(item.get("summary", "") for item in items)
+        assert all(summaries), f"{branch}: every offer item must carry a summary"
+        summary_sets.append(summaries)
+    assert len(set(summary_sets)) == 4, (
+        f"offer summaries must differ per branch: {summary_sets}"
+    )
+
+
+@pytest.mark.tooling
+def test_service_branches_emit_distinct_grounded_faq():
+    """The three branches whose scaffold surfaces a home FAQ (electrician,
+    hair salon, naprapath) emit branschrelevant, grounded FAQ pairs that differ
+    per industry; the ecommerce home (keramik) honestly carries no FAQ block."""
+    faq_first_answers: list[str] = []
+    for branch in ("elektriker-malmo", "frisor-goteborg", "naprapat-stockholm"):
+        blocks = _plan_for(branch).generation_package["contentBlocks"]
+        addr, pairs = _faq_block(blocks)
+        assert addr == "home.faq", f"{branch}: FAQ must address the readable home.faq"
+        assert len(pairs) >= 2, f"{branch}: expected several FAQ pairs, got {pairs}"
+        for pair in pairs:
+            assert pair["question"] and pair["answer"], f"{branch}: FAQ pair incomplete"
+        # The services-answer is grounded in servicesMentioned.
+        services = _baseline_brief(branch)["servicesMentioned"]
+        assert any(services[0] in pair["answer"] for pair in pairs), (
+            f"{branch}: a FAQ answer must surface the brief's concrete services"
+        )
+        faq_first_answers.append(pairs[0]["answer"])
+    assert len(set(faq_first_answers)) == 3, (
+        f"FAQ answers must differ per industry: {faq_first_answers}"
+    )
+
+    keramik_blocks = _plan_for("keramik-ehandel").generation_package["contentBlocks"]
+    assert _faq_block(keramik_blocks) == (None, []), (
+        "ecommerce-lite home has no FAQ section, so no FAQ block may be addressed"
+    )
+
+
+@pytest.mark.tooling
+def test_story_and_faq_omitted_without_positioning_blueprint():
+    """A legacy brief that carries no positioning blueprint (e.g. the builder's
+    dossier-derived mock brief) must stay byte-identical: no story, no FAQ, and
+    a title-only offer list so the renderer keeps the dossier's own copy."""
+    brief = {
+        "runId": "kor1c-legacy",
+        "language": "sv",
+        "rawPrompt": "Hemsida för en elektriker i Malmö.",
+        "businessTypeGuess": "electrician",
+        "servicesMentioned": ["elinstallationer", "felsökning"],
+        "conversionGoals": ["quote-request"],
+        "sourceModelRole": "briefModel",
+        "modelUsed": "mock",
+        "briefSource": "mock-no-key",
+        "createdAt": "2026-06-03T08:00:00+00:00",
+    }
+    blocks = produce_site_plan(brief, run_id="kor1c-legacy").generation_package["contentBlocks"]
+    assert _faq_block(blocks) == (None, []), "no FAQ without a positioning blueprint"
+    assert not any(
+        isinstance(v, dict) and "body" in v for v in blocks.values()
+    ), "no story without a positioning blueprint"
+    _, items = _offer_block(blocks)
+    assert items, "offer titles still emit from servicesMentioned"
+    assert all("summary" not in item for item in items), (
+        "offer stays title-only without enrichment so the dossier summaries win"
+    )
+
+
+@pytest.mark.tooling
+def test_non_swedish_brief_keeps_template_copy():
+    """An English brief keeps the template (no story/FAQ enrichment) so the mock
+    never emits mismatched-language copy - same rule extract.py uses."""
+    brief = dict(_baseline_brief("elektriker-malmo"))
+    brief["language"] = "en"
+    blocks = produce_site_plan(brief, run_id="kor1c-en").generation_package["contentBlocks"]
+    assert _faq_block(blocks) == (None, []), "no Swedish FAQ on an English brief"
+    assert not any(isinstance(v, dict) and "body" in v for v in blocks.values()), (
+        "no Swedish story on an English brief"
+    )
+
+
+@pytest.mark.tooling
+def test_derive_story_and_faq_are_pure_functions_of_the_brief():
+    """derive_story/derive_faq read only the brief - same input, same output,
+    and an empty/legacy brief yields nothing (no fabrication)."""
+    brief = _baseline_brief("naprapat-stockholm")
+    assert derive_story(brief) == derive_story(brief)
+    assert derive_faq(brief) == derive_faq(brief)
+    assert derive_story({"language": "sv"}) is None
+    assert derive_faq({"language": "sv"}) == []
+
+
+@pytest.mark.tooling
+def test_story_and_faq_carry_no_fabricated_contact_or_claims():
+    """story + FAQ copy must never leak a placeholder contact, an invented
+    cert/review, or the raw prompt."""
+    for branch in BASELINES:
+        blocks = _plan_for(branch).generation_package["contentBlocks"]
+        raw_prompt = _baseline_brief(branch).get("rawPrompt", "")
+        for key, value in blocks.items():
+            if key.split(".")[1] not in (
+                "about-story", "about-story-block", "story", "faq", "faq-accordion"
+            ):
+                continue
+            for text in _iter_strings(value):
+                low = text.lower()
+                assert "@" not in text, f"{branch}: {key} leaked an email token: {text!r}"
+                assert "08-000" not in text, f"{branch}: {key} leaked a placeholder phone"
+                assert "example" not in low, f"{branch}: {key} leaked a placeholder token"
+                assert raw_prompt not in text, f"{branch}: {key} leaked the raw prompt"
 
 
 # ---------------------------------------------------------------------------

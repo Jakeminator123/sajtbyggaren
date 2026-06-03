@@ -14,12 +14,22 @@ kor-1b Site Brief blueprint (``positioning`` / ``contentStrategy`` /
   mock-default. The contract is identical either way — the additive blueprint
   rule from ``docs/heavy-llm-flow/01`` §7.
 
+kor-1c-copy closes the visible copy gap left after kor-2: the renderer already
+consumes ``contentBlocks.<route>.story``, ``faq[]`` and the offer service
+summaries, but kor-1c emitted only structure + hero + offer *titles*. This
+module now also composes, for the Swedish baseline industries, a grounded
+company ``story`` (from positioning), branschrelevanta ``faq`` pairs and honest
+per-service ``summary``/``bullets`` - so the four live branches render as four
+clearly different companies instead of the generic template.
+
 Honesty is structural, not decorative: ``businessFacts.unknowns`` and
 ``positioning.avoid`` drive ``qualityRisks`` (so a missing phone becomes
 "Do not show phone if missing"), and nothing the prompt did not state is ever
-turned into customer copy. Every ``<routeId>.<sectionId>`` address is validated
-against the scaffold's ``sections.json`` (the same rail the resolver uses for
-dossiers); an invalid section is rejected, never written.
+turned into customer copy (the story is composed from the brief's own
+positioning angle, never a fabricated fact or the raw prompt). Every
+``<routeId>.<sectionId>`` address is validated against the scaffold's
+``sections.json`` (the same rail the resolver uses for dossiers); an invalid
+section is rejected, never written.
 """
 
 from __future__ import annotations
@@ -46,6 +56,19 @@ _OFFER_SECTION_IDS: tuple[str, ...] = (
 # Story section ids across scaffolds (about-story / about-story-block).
 _ABOUT_STORY_SECTION_IDS: tuple[str, ...] = ("about-story", "about-story-block")
 
+# Section ids (in preference order) that may carry the company story content
+# block. Mirrors ``build.blueprint_render._STORY_SECTION_IDS`` so the renderer
+# reads the same block the planner writes. about-story is preferred over the
+# home story teaser so the block lands on the canonical "story" section.
+_STORY_BLOCK_SECTION_IDS: tuple[str, ...] = ("about-story", "about-story-block", "story")
+
+# Section ids that may carry an FAQ list. Mirrors
+# ``build.blueprint_render._FAQ_SECTION_IDS``. The renderer only reads an FAQ
+# block on the ``home`` or ``faq`` route, so an offer scaffold without a home
+# FAQ section (ecommerce-lite) honestly carries no blueprint FAQ.
+_FAQ_BLOCK_SECTION_IDS: tuple[str, ...] = ("faq", "faq-accordion")
+_FAQ_BLOCK_ROUTE_IDS: tuple[str, ...] = ("home", "faq")
+
 # Primary-CTA fallback when the brief carries no ``conversion.primaryCta``.
 # Keyed by conversion slug (primaryAction or a conversionGoals entry). Values
 # are customer copy in the brief language; English mirror used for non-sv.
@@ -68,6 +91,94 @@ _CTA_BY_SLUG_EN: dict[str, str] = {
     "purchase": "Shop now",
     "newsletter-signup": "Subscribe",
     "contact": "Contact us",
+}
+
+
+# ---------------------------------------------------------------------------
+# kor-1c-copy: deterministic, honest, industry-near copy library
+# ---------------------------------------------------------------------------
+#
+# kor-2 made the renderer consume contentBlocks.<route>.story, .faq[] and the
+# offer service-summaries, but kor-1c only emitted structure + hero + offer
+# *titles*, so the four live branches fell back to the generic template for
+# story/FAQ/service descriptions. This library closes that gap: it lets the
+# deterministic planning path compose rich, branschnära copy from what the Site
+# Brief already states.
+#
+# Honesty (docs/heavy-llm-flow/04 §9, non-negotiable):
+#   * The story is COMPOSED FROM the Site Brief's own positioning fields
+#     (oneLiner / differentiator / localAngle) - never a fabricated fact and
+#     never the raw prompt.
+#   * Service summaries describe the *service category* the brief listed in
+#     ``servicesMentioned``; they assert no certification, review, price or
+#     contact detail about the specific business.
+#   * FAQ answers are grounded in the brief's services / conversion intent /
+#     differentiator. No phone, e-post, opening hours, price or cert is ever
+#     invented (those stay in businessFacts.unknowns / qualityRisks).
+#   * Enrichment only runs for Swedish briefs that carry the kor-1b positioning
+#     blueprint, so a legacy brief (no positioning) stays byte-identical and the
+#     "mock without key == identical contract" rule holds.
+
+# Industry detection tokens (most specific first). Mirrors the baseline
+# detection in ``brief/extract.py`` so the mock brief and the derived blueprint
+# agree on the industry. Matched as a lowercased substring over
+# businessTypeGuess + servicesMentioned + positioning text.
+_INDUSTRY_TOKENS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("electrician", ("electrician", "elektr", "elinstallation", "elarbete")),
+    ("hair-salon", ("hair-salon", "hairdress", "frisör", "frisor", "salong", "barber")),
+    ("naprapath", ("naprapath", "naprapat")),
+    ("ceramics", ("ceramics", "ceramic", "keramik", "lergods", "drej", "pottery")),
+)
+
+# Per-service summary + bullets, keyed by the normalised service token the brief
+# lists in ``servicesMentioned``. Mirrors the hand-authored kor-2 baseline
+# fixtures (tests/fixtures/blueprints/*.blueprint.json) so the deterministic
+# mock output matches "what a real briefModel/planning enrichment produces".
+# Every value is an honest description of the service category, not a claim
+# about the specific business.
+_SERVICE_COPY_SV: dict[str, tuple[str, tuple[str, ...]]] = {
+    # electrician
+    "elinstallationer": ("Säkra installationer för hem och företag.", ("nyinstallation", "ombyggnad")),
+    "elinstallation": ("Säkra installationer för hem och företag.", ("nyinstallation", "ombyggnad")),
+    "felsökning": ("Snabb felsökning när något slutar fungera.", ("jordfelsbrytare", "kortslutning")),
+    "laddboxar": ("Installation av laddbox för elbil.", ("hemmaladdning", "föreningar")),
+    "laddbox": ("Installation av laddbox för elbil.", ("hemmaladdning", "föreningar")),
+    # hair-salon
+    "klippning": ("Klippning för dam och herr.", ("dam", "herr")),
+    "färgning": ("Färg som håller och ser naturlig ut.", ("helfärg", "toning")),
+    "slingor": ("Slingor för dimension och lyster.", ("folieslingor", "balayage")),
+    # naprapath
+    "naprapati": ("Behandling av besvär i muskler och leder.", ("rygg", "nacke")),
+    "massage": ("Avspännande och behandlande massage.", ("triggerpunkter", "spänningar")),
+    "rehabträning": ("Övningar för att förebygga återfall.", ("hemträning", "uppföljning")),
+    "rehabilitering": ("Övningar för att förebygga återfall.", ("hemträning", "uppföljning")),
+    # ceramics
+    "skålar": ("Handdrejade skålar för vardagsbruk.", ("seladon", "matt glasyr")),
+    "vaser": ("Stillsamma vaser för snitt och kvistar.", ("lergods", "unik form")),
+    "muggar": ("Muggar som tål vardag och diskmaskin.", ("öra", "stengods")),
+}
+
+# Honest per-industry fallback summary for a service the lexicon does not key
+# individually, so every item in a baseline offer list carries a summary (the
+# renderer's offer override requires it) without fabricating a claim.
+_INDUSTRY_GENERIC_SUMMARY_SV: dict[str, str] = {
+    "electrician": "El- och installationsarbete utfört på ett säkert sätt.",
+    "hair-salon": "Behandling hos frisör efter dina önskemål.",
+    "naprapath": "Behandling anpassad efter dina besvär.",
+    "ceramics": "Handgjord keramik tillverkad i liten skala.",
+}
+
+# FAQ question for the conversion pair, keyed by the brief's primary action /
+# conversion goal. The ANSWER is grounded copy that never promises a channel
+# (phone) or value (price) the brief does not state.
+_FAQ_CONVERSION_SV: dict[str, tuple[str, str]] = {
+    "request_quote": ("Hur får jag en offert?", "Berätta vad du behöver så återkommer vi med ett tydligt förslag."),
+    "quote-request": ("Hur får jag en offert?", "Berätta vad du behöver så återkommer vi med ett tydligt förslag."),
+    "book": ("Hur bokar jag tid?", "Hör av dig så hittar vi en tid som passar dig."),
+    "booking": ("Hur bokar jag tid?", "Hör av dig så hittar vi en tid som passar dig."),
+    "purchase": ("Hur handlar jag?", "Lägg det du vill ha i varukorgen och följ stegen i kassan."),
+    "call": ("Hur kommer jag i kontakt?", "Hör av dig via kontaktsidan så återkopplar vi så snart vi kan."),
+    "contact": ("Hur kommer jag i kontakt?", "Hör av dig via kontaktsidan så återkopplar vi så snart vi kan."),
 }
 
 
@@ -220,6 +331,79 @@ def _is_swedish(brief: dict[str, Any]) -> bool:
     return (brief.get("language") or "sv") == "sv"
 
 
+def _norm_service(value: Any) -> str:
+    """Whitespace/case-normalised key for matching a service to the lexicon."""
+    if not isinstance(value, str):
+        return ""
+    return " ".join(value.split()).strip().casefold()
+
+
+def _detect_industry(brief: dict[str, Any]) -> str | None:
+    """Return a baseline industry key from the brief, else None.
+
+    Reads businessTypeGuess first (the sharpest signal), then services and the
+    positioning angle, mirroring ``brief/extract.py``'s keyword detection so the
+    mock brief and the derived blueprint agree on the industry.
+    """
+    positioning = _obj(brief, "positioning")
+    haystack = " ".join(
+        [
+            _str(brief.get("businessTypeGuess")) or "",
+            " ".join(_list_str(brief.get("servicesMentioned"))),
+            _str(positioning.get("oneLiner")) or "",
+            _str(positioning.get("tone")) or "",
+        ]
+    ).lower()
+    for key, tokens in _INDUSTRY_TOKENS:
+        if any(token in haystack for token in tokens):
+            return key
+    return None
+
+
+def _enrichment_enabled(brief: dict[str, Any]) -> bool:
+    """Whether to emit the rich story/FAQ/offer-summary copy for this brief.
+
+    Gated on a Swedish brief that carries the kor-1b positioning blueprint. A
+    legacy brief without positioning (e.g. the builder's dossier-derived mock
+    brief) therefore stays byte-identical, and non-Swedish briefs keep the
+    template rather than risk mismatched-language copy - the same conservative
+    rule ``brief/extract.py`` uses for its rich profiles.
+    """
+    if not _is_swedish(brief):
+        return False
+    positioning = _obj(brief, "positioning")
+    return bool(
+        _str(positioning.get("oneLiner"))
+        or _str(positioning.get("differentiator"))
+        or _str(positioning.get("audienceNeed"))
+        or _str(positioning.get("localAngle"))
+    )
+
+
+def _service_summary_and_bullets(
+    service: str, industry: str
+) -> tuple[str, list[str]]:
+    """Honest summary + bullets for one offered service in a baseline industry.
+
+    Uses the per-service lexicon when the token is known, else the industry's
+    generic-but-honest description so every offer item carries a summary (the
+    renderer only overrides the dossier offer list when each item has one).
+    """
+    keyed = _SERVICE_COPY_SV.get(_norm_service(service))
+    if keyed is not None:
+        summary, bullets = keyed
+        return summary, list(bullets)
+    return _INDUSTRY_GENERIC_SUMMARY_SV[industry], []
+
+
+def _sentence(text: str) -> str:
+    """Capitalise and terminate one fragment as a standalone sentence."""
+    cleaned = text.strip().rstrip(".")
+    if not cleaned:
+        return ""
+    return f"{cleaned[:1].upper()}{cleaned[1:]}."
+
+
 def _offer_section(scaffold: dict[str, Any], route_plan: list[dict[str, Any]]) -> str | None:
     """Find the primary offer-list ``<routeId>.<sectionId>`` for this site.
 
@@ -251,6 +435,40 @@ def _about_story_section(
     route_ids = [r.get("id") for r in route_plan if isinstance(r, dict)]
     for route_id in route_ids:
         for section_id in _ABOUT_STORY_SECTION_IDS:
+            address = f"{route_id}.{section_id}"
+            if address in valid:
+                return address
+    return None
+
+
+def _story_block_address(scaffold: dict[str, Any], route_plan: list[dict[str, Any]]) -> str | None:
+    """Return the ``<routeId>.<sectionId>`` to carry the company story block.
+
+    Prefers a dedicated about-story section (the canonical home for a story)
+    over the home story teaser, across the routes actually planned. Only
+    addresses the renderer reads (home/about x story sections) are considered,
+    and every candidate is validated against the scaffold's sections.json.
+    """
+    valid = section_addresses(scaffold)
+    route_ids = [r.get("id") for r in route_plan if isinstance(r, dict)]
+    for section_id in _STORY_BLOCK_SECTION_IDS:
+        for route_id in route_ids:
+            address = f"{route_id}.{section_id}"
+            if address in valid:
+                return address
+    return None
+
+
+def _faq_block_address(scaffold: dict[str, Any]) -> str | None:
+    """Return the ``<routeId>.<sectionId>`` to carry the FAQ block, else None.
+
+    The renderer only reads an FAQ block on the home or faq route, so a scaffold
+    whose home route has no FAQ section (ecommerce-lite) honestly carries no
+    blueprint FAQ rather than addressing a section the renderer never reads.
+    """
+    valid = section_addresses(scaffold)
+    for route_id in _FAQ_BLOCK_ROUTE_IDS:
+        for section_id in _FAQ_BLOCK_SECTION_IDS:
             address = f"{route_id}.{section_id}"
             if address in valid:
                 return address
@@ -366,6 +584,99 @@ def derive_section_plan(
     return plan
 
 
+def derive_story(brief: dict[str, Any]) -> str | None:
+    """Compose an honest, branschnära company story from the Site Brief.
+
+    Built purely from the kor-1b positioning blueprint (``oneLiner`` /
+    ``differentiator`` / ``localAngle``, falling back to
+    ``contentStrategy.heroAngle`` for the lead sentence). Every sentence is a
+    grounded angle the brief already states - never a fabricated fact and never
+    the raw prompt. Returns None when there is no positioning to ground a story
+    (so a legacy brief keeps the dossier/template story unchanged).
+    """
+    if not _enrichment_enabled(brief):
+        return None
+    positioning = _obj(brief, "positioning")
+    content_strategy = _obj(brief, "contentStrategy")
+
+    lead = _str(positioning.get("oneLiner"))
+    if lead is None:
+        hero_angle = _str(content_strategy.get("heroAngle"))
+        lead = _capitalise(hero_angle) if hero_angle else None
+
+    sentences: list[str] = []
+    if lead:
+        sentences.append(_sentence(lead))
+    differentiator = _str(positioning.get("differentiator"))
+    if differentiator:
+        sentences.append(_sentence(differentiator))
+    local_angle = _str(positioning.get("localAngle"))
+    if local_angle:
+        sentences.append(_sentence(local_angle))
+
+    if not sentences:
+        return None
+    return " ".join(sentences)
+
+
+def derive_faq(brief: dict[str, Any]) -> list[dict[str, str]]:
+    """Branschrelevanta, grundade ``(question, answer)`` pairs from the brief.
+
+    Three pairs, each grounded in a field the brief already carries:
+
+    1. the concrete services from ``servicesMentioned``;
+    2. the conversion intent (request a quote / book / shop / contact) - the
+       answer never promises a phone, price or channel the brief did not state;
+    3. the positioning differentiator.
+
+    Returns ``[]`` when enrichment is disabled or there is nothing grounded to
+    say, so the renderer keeps its honest template FAQ.
+    """
+    if not _enrichment_enabled(brief):
+        return []
+    pairs: list[dict[str, str]] = []
+
+    services = _list_str(brief.get("servicesMentioned"))
+    if services:
+        pairs.append(
+            {
+                "question": "Vad kan ni hjälpa till med?",
+                "answer": f"Vi hjälper dig bland annat med {_join_sv(services)}.",
+            }
+        )
+
+    conversion = _obj(brief, "conversion")
+    action = _str(conversion.get("primaryAction"))
+    convo = _FAQ_CONVERSION_SV.get(action or "")
+    if convo is None:
+        for goal in _list_str(brief.get("conversionGoals")):
+            convo = _FAQ_CONVERSION_SV.get(goal)
+            if convo is not None:
+                break
+    if convo is not None:
+        pairs.append({"question": convo[0], "answer": convo[1]})
+
+    differentiator = _str(_obj(brief, "positioning").get("differentiator"))
+    if differentiator:
+        pairs.append(
+            {
+                "question": "Vad kan jag förvänta mig av er?",
+                "answer": _sentence(differentiator),
+            }
+        )
+
+    return pairs
+
+
+def _join_sv(items: list[str]) -> str:
+    """Join a list as a natural Swedish enumeration ('a, b och c')."""
+    if not items:
+        return ""
+    if len(items) == 1:
+        return items[0]
+    return f"{', '.join(items[:-1])} och {items[-1]}"
+
+
 def derive_content_blocks(
     brief: dict[str, Any],
     scaffold: dict[str, Any],
@@ -373,10 +684,19 @@ def derive_content_blocks(
 ) -> dict[str, Any]:
     """Per-section copy keyed by ``<routeId>.<sectionId>`` (the kor-2 work order).
 
-    Emits a hero block (only with an honest headline source) and an offer-list
-    block built from ``servicesMentioned`` (the concrete services the prompt
-    stated). No services stated -> no fabricated list. Always schema-valid and
-    every key validated against sections.json.
+    Emits, when the brief grounds them:
+
+    * a hero block (only with an honest headline source);
+    * an offer-list block from ``servicesMentioned`` - with honest per-service
+      ``summary`` + ``bullets`` for the four baseline industries (kor-1c-copy),
+      else title-only so the renderer keeps the dossier's summaries;
+    * a company ``story`` block composed from positioning (kor-1c-copy);
+    * a branschrelevant ``faq`` block grounded in the brief (kor-1c-copy).
+
+    Nothing the brief did not state becomes copy. Always schema-valid and every
+    key validated against the scaffold's sections.json. The story/FAQ/summary
+    enrichment only runs when :func:`_enrichment_enabled`, so a legacy brief
+    (no positioning) is byte-identical to before kor-1c-copy.
     """
     valid = section_addresses(scaffold)
     blocks: dict[str, Any] = {}
@@ -395,9 +715,37 @@ def derive_content_blocks(
     offer = _offer_section(scaffold, route_plan)
     services = _list_str(brief.get("servicesMentioned"))
     if offer is not None and services:
-        blocks[offer] = [{"title": _capitalise(service)} for service in services]
+        industry = _detect_industry(brief) if _enrichment_enabled(brief) else None
+        blocks[offer] = [_offer_item(service, industry) for service in services]
+
+    story_address = _story_block_address(scaffold, route_plan)
+    story = derive_story(brief)
+    if story_address is not None and story:
+        blocks[story_address] = {"body": story}
+
+    faq_address = _faq_block_address(scaffold)
+    faq = derive_faq(brief)
+    if faq_address is not None and faq:
+        blocks[faq_address] = faq
 
     return blocks
+
+
+def _offer_item(service: str, industry: str | None) -> dict[str, Any]:
+    """One offer-list item: title always, summary + bullets for baselines.
+
+    Outside the four baseline industries (``industry is None``) the item stays
+    title-only - the same shape as before kor-1c-copy - so the renderer keeps
+    the dossier's own (often operator-authored) service summaries rather than
+    overriding them with generic copy.
+    """
+    item: dict[str, Any] = {"title": _capitalise(service)}
+    if industry is not None:
+        summary, bullets = _service_summary_and_bullets(service, industry)
+        item["summary"] = summary
+        if bullets:
+            item["bullets"] = bullets
+    return item
 
 
 def derive_visual_direction(
