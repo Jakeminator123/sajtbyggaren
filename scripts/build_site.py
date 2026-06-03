@@ -3770,6 +3770,7 @@ def write_build_result(
     codegen_summary: dict | None = None,
     prompt_meta: dict[str, Any] | None = None,
     followup_effect: dict[str, Any] | None = None,
+    blueprint_effect: dict[str, Any] | None = None,
     active_build_id: str | None = None,
 ) -> dict:
     """Write build-result.json. ``generatedFilesDir`` points at the canonical
@@ -3842,6 +3843,15 @@ def write_build_result(
     if followup_effect is not None:
         result["appliedVisibleEffect"] = bool(followup_effect["applied"])
         result["appliedVisibleEffectReason"] = followup_effect["reason"]
+    elif blueprint_effect is not None:
+        # kor-2: on init builds (no follow-up file-diff) the honest applied-
+        # effect signal reports whether the Generation Package blueprint
+        # actually changed the rendered output vs the template defaults. Only
+        # emitted when a blueprint was present, so a legacy non-blueprint build
+        # never grows the field (zero regression). Follow-up builds keep the
+        # file-diff signal above; this branch never overrides it.
+        result["appliedVisibleEffect"] = bool(blueprint_effect["applied"])
+        result["appliedVisibleEffectReason"] = blueprint_effect["reason"]
     # B133 (2026-05-19): surface placeholder contact fields so Viewser
     # Run Details can warn the operator that the published site shows
     # dummy contact info ("+46 8 000 00 00", "kontakt@example.se",
@@ -4071,6 +4081,15 @@ def build(
     routes_to_write = all_default_routes(scaffold_routes) + [
         route["path"] for route in wizard_extra_routes
     ]
+    # kor-2: the deterministic renderer now reads the Generation Package
+    # blueprint (contentBlocks/visualDirection) + Site Brief honesty fields
+    # (businessFacts/conversion/qualityRisks) as its content source, with
+    # graceful per-field fallback to the template. The blueprint object also
+    # records which addresses actually changed the render so the build can
+    # report an honest appliedVisibleEffect on init builds (see below).
+    from packages.generation.build.blueprint_render import RenderBlueprint
+
+    blueprint = RenderBlueprint.from_artifacts(generation_package, site_brief)
     print("Writing pages: " + ", ".join(routes_to_write) + " and layout")
     paths_written = write_pages(
         target,
@@ -4079,6 +4098,7 @@ def build(
         dossier_routes,
         extra_routes=wizard_extra_routes or None,
         variant_id=variant.get("id") if isinstance(variant, dict) else None,
+        blueprint=blueprint,
     )
     if paths_written != routes_to_write:
         raise SystemExit(
@@ -4274,6 +4294,13 @@ def build(
     if codegen_result.error is not None:
         codegen_summary["error"] = codegen_result.error
 
+    # kor-2: honest applied-effect signal for init builds — did the blueprint
+    # actually change the rendered output vs the template defaults? Follow-up
+    # builds keep owning appliedVisibleEffect via the file-diff path above; this
+    # is None on non-blueprint builds so the field is never added there.
+    from packages.generation.build.blueprint_render import blueprint_applied_effect
+
+    blueprint_effect = blueprint_applied_effect(blueprint)
     duration_ms = int((time.monotonic() - started) * 1000)
     write_build_result(
         run_dir,
@@ -4292,6 +4319,7 @@ def build(
         codegen_summary=codegen_summary,
         prompt_meta=prompt_meta,
         followup_effect=followup_effect,
+        blueprint_effect=blueprint_effect,
         active_build_id=active_build_id,
     )
 

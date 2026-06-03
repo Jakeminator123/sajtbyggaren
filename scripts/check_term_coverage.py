@@ -262,6 +262,14 @@ COMMON_WORDS = {
     # registered in naming-dictionary.v1 (kor-1a); this is just its
     # implementation class, same treatment as PlanningChoice / RejectedCapability.
     "SectionPlanEntry",
+    # kor-2: RenderBlueprint is the read-only render-side view over the
+    # Generation Package blueprint (contentBlocks/visualDirection) + Site Brief
+    # honesty fields that the deterministic renderer consumes. It is a transient
+    # implementation class, NOT a new canonical artefact/field — the canonical
+    # fields (contentBlocks, visualDirection, businessFacts, conversion,
+    # qualityRisks) are already registered in naming-dictionary.v1 (kor-1a).
+    # Same treatment as PlanningChoice / SectionPlanEntry above.
+    "RenderBlueprint",
     # Discovery Resolver module (B121 PR A) internal implementation symbols.
     # The canonical domain terms (Discovery Payload, Discovery Decision,
     # Discovery Taxonomy, Discovery Resolver, Field Source) are registered
