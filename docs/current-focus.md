@@ -19,9 +19,12 @@ Option A — verifierad mot kombinerat träd med #183, alla paritets-/pick-teste
 `critic` ifylls i quality-result.json; var alltid null). KVAR att wira: `/api/prompt`
 (Christopher) + `dev_generate`. kor-3b är aktiv bara när blueprintens `visualDirection` är
 satt (annars byte-paritet mot kor-3a). Repair (kor-5) fortsatt dormant (#185).
-**Status cloud-builders:** kor-3b INNE (#184); CLI-wiring INNE (#186). kor-5 = **PR #185**
-(dormant library; reviewer-fynd att fixa före merge: skärp "bara befintliga fält", wrappa
-rerender i try/except, uppdatera kor-5-doc (high/trust_missing), rebase ovanpå #186).
+**Status cloud-builders:** kor-3b INNE (#184); CLI-wiring INNE (#186); kor-5 INNE (#185,
+dormant library — repair aktiveras bara när en rerender-callback injiceras). Reviewer-fynd
+åtgärdade vid merge (brief-schemavalidering+rollback, "bara befintliga fält", rerender try/except,
+blueprintPasses, doc-match, typfix `_combine_status` av orchestrator). **Kvar till rerender-wiring-slicen:**
+post-repair-critic ska skrivas till trace FÖRE `critic.evaluated` (annars pre-repair-score i trace
+vs post-repair i quality-result.json); per-entry `success` ska bli `false`/ej-materialiserad när rerender failar.
 **Justerad ordning (orchestrator + coach, natt):** (1) ✓ kor-3b (#184) → (2) ✓ CLI-wiring inne
 (#186): kor-4a critic + kor-7 follow-up-kedja i build-vägen + E2E; KVAR `/api/prompt` +
 routerDecision (Christopher #177) → (3) read-only baseline-eval
@@ -375,8 +378,9 @@ Operatören (Jakob) **verifierar** att det är gjort. Om operatören
 upptäcker att filen är inaktuell är det första instruktionen till nästa
 agent: "uppdatera current-focus innan något annat".
 
-Last verified state: `2033282` (2026-06-03 natt UTC, `jakob-be` HEAD — #186 CLI-wiring
-(kor-4a critic + kor-7 follow-up-kedja i build-vägen, E2E). Föregående docs-pass:
+Last verified state: `802e62b` (2026-06-04 natt UTC, `jakob-be` HEAD — #185 kor-5 repairModel
+blueprint-only repair (dormant library; brief-validering+rollback, rerender try/except, blueprintPasses,
+typfix). Föregående: #186 CLI-wiring (kor-4a critic + kor-7 follow-up-kedja i build-vägen, E2E). Docs-pass:
 system-overview-refresh + current-focus slim-down (Föregående checkpoint → arkiv) +
 arkitektur-canvas-bump. Föregående: #184 kor-3b
 visualDirection väljer section-treatment (Option A, verifierad mot kombinerat träd) + #179 kor-3a
