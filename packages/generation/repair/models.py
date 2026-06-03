@@ -24,6 +24,35 @@ RepairStatus = Literal[
 ]
 
 
+class BlueprintRepair(BaseModel):
+    """One blueprint-repair attempt (kor-5).
+
+    Records a single ``repairModel``-proposed edit to a NAMED, already-existing
+    blueprint field (``contentBlocks`` on the Generation Package / ``conversion``
+    on the Site Brief) in response to a deterministic critic issue. The LLM only
+    ever proposes copy for fields that already exist; it never writes free files.
+
+    ``success=False`` records a proposal that was received during a real repair
+    run but rejected by the rails / grounding guard / schema check BEFORE apply
+    (``detail`` carries why). A missing API key or an unavailable model is NOT a
+    failed repair - that path produces zero ``BlueprintRepair`` entries and a
+    ``repair.blueprint_skipped`` trace event (kor-5 no-key contract).
+
+    ``before`` / ``after`` hold the field value before and after the patch so
+    ``repair-result.json`` is an honest audit trail. ``before`` may be empty
+    when the field did not exist yet (e.g. a missing hero CTA).
+    """
+
+    issueType: str
+    target: str
+    field: str
+    before: str = ""
+    after: str = ""
+    source: Literal["repairModel"] = "repairModel"
+    success: bool = True
+    detail: str = ""
+
+
 class RepairFix(BaseModel):
     """One repair attempt.
 
@@ -76,6 +105,15 @@ class RepairResult(BaseModel):
     the run is marked ``partial-fix`` (or ``no-fix-applied`` if the
     last pass produced no fixes), per the registry's
     ``mark-degraded-and-emit-engine-event`` abortBehavior.
+
+    ``blueprintRepairs`` / ``passes`` carry the kor-5 blueprint-repair
+    telemetry: one ``BlueprintRepair`` per repairModel proposal that was
+    received during a real run (success or rejected-before-apply), and the
+    number of bounded blueprint-repair passes executed (bounded by
+    ``fix-registry.v1.json:blueprintRepair.maxPasses``, default 1). Both
+    default empty/0 so every existing mechanical-only caller round-trips
+    unchanged; the fields populate only when a Generation Package + critic
+    issues are threaded into ``execute_phase3_quality_and_repair``.
     """
 
     status: RepairStatus
@@ -86,3 +124,5 @@ class RepairResult(BaseModel):
     qualityStatusBefore: QualityStatus | None = None
     qualityStatusAfter: QualityStatus | None = None
     iterations: int = 0
+    blueprintRepairs: list[BlueprintRepair] = Field(default_factory=list)
+    passes: int = 0
