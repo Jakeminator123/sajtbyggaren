@@ -33,6 +33,25 @@ en användarväg eller taggas dormant + får en wiring-follow-up (#178-trion fil
 **Öppet (ej vår lane):** #177 (Christopher, väntar på routerDecision i `/api/prompt`),
 #181/#182 (docs→main, cloud-env), #156 (parkerad). Main-sync = operatörsbeslut.
 
+### Follow-ups filade (2026-06-03 natt)
+
+- **#186-härdning** (post-merge, reviewer-fynd): validera `--base-run-id` mot siteId (annars
+  context från fel sajt); bas-run-val ska vara aktiv/senaste `ok|degraded` med kompletta
+  artefakter (ej nyaste mtime oavsett status); lägg `--prompt-inputs-dir`-flagga; överväg
+  `applied`→`projectInputApplied`/separat `visibleEffectApplied` i CLI-svaret.
+- **kor-5 (#185)** — revisionsrunda hos D före merge: skärp "bara befintliga fält", wrappa
+  `rerender` i try/except → partial/no-fix, uppdatera kor-5-doc (high/`trust_missing`),
+  ev. `passes`→`blueprintPasses`, rebase ovanpå #186 (delar `repair/orchestration.py`).
+- **Megafil-refaktor** (backend, behavior-preserving slices, EFTER wiring/eval):
+  `renderers.py` 5518, `build_site.py` 4816, `prompt_to_project_input.py` 3535.
+- **Baseline-eval** (read-only, 4 prompter) — bevisa var upplevd kvalitet brister
+  (copy/trust/kontakt vs visuellt) innan design-system-investering.
+- **Platform-version-baseline** (governance+scripts; spec i
+  `docs/agent-prompts/platform-version-baseline.md` via `b2efe50`): EN sanningskälla för
+  Node/Next/React/UI-pins + drift-checker (`scripts/check_platform_baseline.py --check/--fix`);
+  package.json-propagering via `--fix` (koordineras med Christopher). Möjliggör shadcn/lucide
+  kontrollerat (codegen-allowlist + pinnade versioner).
+
 ## Current objective (2026-06-03 kväll — follow-up-bryggan startad: kor-7b inne)
 
 `jakob-be` @ `f4d2a1e`, rent träd. Heavy-LLM-kedjan är synlig (kor-1b→1c→2→7a→1c-copy inne).
