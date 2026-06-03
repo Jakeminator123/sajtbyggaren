@@ -65,6 +65,12 @@ EXCLUDE_DIRS = {
     # symbols are spike-local implementation names, not canonical Sajtbyggaren
     # domain terms - same treatment as the MIN_IDE workspace above.
     "openclaw-mvp",
+    # Local Cursor canvas mirror (gitignored, docs/heavy-llm-flow/canvases/).
+    # Cursor only renders canvases from ~/.cursor/projects/<ws>/canvases/; we
+    # keep a portable copy in-repo so it survives folder-jumps/restarts. The
+    # .canvas.tsx files carry Cursor SDK component identifiers, not canonical
+    # Sajtbyggaren domain terms - same treatment as MIN_IDE / openclaw-mvp above.
+    "canvases",
 }
 
 # Vanliga ord som inte ska räknas som domänbegrepp.
