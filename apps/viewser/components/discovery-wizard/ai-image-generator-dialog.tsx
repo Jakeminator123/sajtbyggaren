@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import type { AssetRef, AssetRole } from "@/lib/asset-store/types";
 import { CHIP_INTERACTIONS, PRIMARY_INTERACTIONS } from "@/lib/ui-tokens";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 
 /**
  * AIImageGeneratorDialog — wizardens AI-bildgenerator.
@@ -39,11 +40,31 @@ export interface AIImageGeneratorDialogProps {
 
 type StylePreset = "photoreal" | "minimal" | "illustration" | "brand";
 
-const STYLE_OPTIONS: Array<{ id: StylePreset; label: string; description: string }> = [
-  { id: "photoreal", label: "Fotorealistisk", description: "Editorial photo, naturligt ljus" },
-  { id: "minimal", label: "Minimalistisk", description: "Geometriska former, mycket negativ space" },
-  { id: "illustration", label: "Illustration", description: "Handritat vektorlook" },
-  { id: "brand", label: "Brand-anpassad", description: "Anpassad efter företagsfärgen" },
+const STYLE_OPTIONS: Array<{
+  id: StylePreset;
+  label: string;
+  description: string;
+}> = [
+  {
+    id: "photoreal",
+    label: "Fotorealistisk",
+    description: "Editorial photo, naturligt ljus",
+  },
+  {
+    id: "minimal",
+    label: "Minimalistisk",
+    description: "Geometriska former, mycket negativ space",
+  },
+  {
+    id: "illustration",
+    label: "Illustration",
+    description: "Handritat vektorlook",
+  },
+  {
+    id: "brand",
+    label: "Brand-anpassad",
+    description: "Anpassad efter företagsfärgen",
+  },
 ];
 
 const ROLE_LABEL: Record<AssetRole, string> = {
@@ -65,10 +86,8 @@ const ROLE_DEFAULT_STYLE: Record<AssetRole, StylePreset> = {
 };
 
 const ROLE_PLACEHOLDER: Record<AssetRole, string> = {
-  logo:
-    "T.ex. 'En modern logotyp som föreställer en pensel som målar en cirkel, ren linjeföring'",
-  hero:
-    "T.ex. 'Hantverkare som målar en stor vit vägg i ljust morgonsken, varm scandi-känsla'",
+  logo: "T.ex. 'En modern logotyp som föreställer en pensel som målar en cirkel, ren linjeföring'",
+  hero: "T.ex. 'Hantverkare som målar en stor vit vägg i ljust morgonsken, varm scandi-känsla'",
   gallery:
     "T.ex. 'Detaljbild av en målarpensel mot frisk färg på en vägg, hög skärpa'",
   favicon:
@@ -103,6 +122,10 @@ export function AIImageGeneratorDialog({
   const styleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Fånga Tab inom dialogen (docstring lovade det men implementationen
+  // saknades) så tangentbordsanvändare inte tabbar ut bakom overlay:n.
+  useFocusTrap(dialogRef, open);
 
   // Auto-fokus på textarean när dialogen mountas. Pure side-effect (DOM-
   // call, ingen setState) — tillåten i useEffect.
@@ -139,8 +162,8 @@ export function AIImageGeneratorDialog({
   }, [generating]);
 
   const previewSrc = preview
-    ? preview.sourceUrl ??
-      `/api/asset-preview?assetId=${preview.assetId}&siteId=__draft`
+    ? (preview.sourceUrl ??
+      `/api/asset-preview?assetId=${preview.assetId}&siteId=__draft`)
     : null;
 
   const handleGenerate = useCallback(async () => {
@@ -258,7 +281,7 @@ export function AIImageGeneratorDialog({
               disabled={generating}
               rows={3}
               placeholder={ROLE_PLACEHOLDER[role]}
-              className="border-border/70 bg-background focus:border-foreground/40 w-full resize-none rounded-md border px-3 py-2 text-base outline-none transition-colors disabled:opacity-60 sm:text-[13px]"
+              className="border-border/70 bg-background focus:border-foreground/40 w-full resize-none rounded-md border px-3 py-2 text-base transition-colors outline-none disabled:opacity-60 sm:text-[13px]"
               maxLength={1000}
             />
             <div className="text-muted-foreground mt-1 flex justify-between text-[10.5px]">
@@ -344,8 +367,8 @@ export function AIImageGeneratorDialog({
         </div>
 
         {/* Footer */}
-        <div className="border-border/70 bg-muted/10 flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3 pb-safe-or-3">
-          <div className="hidden text-muted-foreground text-[10.5px] sm:block">
+        <div className="border-border/70 bg-muted/10 pb-safe-or-3 flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3">
+          <div className="text-muted-foreground hidden text-[10.5px] sm:block">
             ⌘+enter genererar · esc stänger
           </div>
           <div className="flex w-full items-center justify-end gap-2 sm:w-auto">

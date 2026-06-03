@@ -59,7 +59,7 @@ export function ConsoleDrawer({
         side="right"
         className="flex h-full w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-md"
       >
-        <SheetHeader className="border-b border-border/60 px-5 py-4 pt-safe">
+        <SheetHeader className="border-border/60 pt-safe border-b px-5 py-4">
           <div className="flex items-center justify-between gap-2">
             <SheetTitle>Konsol</SheetTitle>
             <kbd
@@ -70,19 +70,28 @@ export function ConsoleDrawer({
               ⌘K
             </kbd>
           </div>
-          <SheetDescription className="font-mono text-[11px] text-muted-foreground">
+          <SheetDescription className="text-muted-foreground font-mono text-[11px]">
             {statusText}
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4 pb-safe-or-4">
+        <div className="pb-safe-or-4 flex-1 overflow-y-auto px-5 py-4">
           <div className="flex flex-col gap-4">
             <RunHistory
               runs={runs}
               selectedRunId={selectedRunId}
               onSelect={(runId) => {
                 onSelectRunId(runId);
-                onOpenChange(false);
+                // Stäng bara lådan på små skärmar där run-historik och Run
+                // Details inte ryms samtidigt. På sm+ håller vi den öppen så
+                // operatören ser detaljerna för den valda runen i samma
+                // gest istället för att behöva öppna Konsolen igen.
+                if (
+                  typeof window !== "undefined" &&
+                  window.matchMedia("(max-width: 639px)").matches
+                ) {
+                  onOpenChange(false);
+                }
               }}
               isBuilding={isBuilding}
               loading={runsLoading}

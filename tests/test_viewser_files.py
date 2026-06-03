@@ -4044,3 +4044,206 @@ def test_wizard_tab_strip_is_keyboard_navigable() -> None:
     assert 'role="tabpanel"' in text and 'aria-controls="wizard-tabpanel"' in text, (
         "Flikarna ska peka på en tabpanel (aria-controls) och panelen ska ha role=tabpanel."
     )
+
+
+@pytest.mark.tooling
+def test_quality_tab_reads_canonical_artefact_schema() -> None:
+    """P0: Kvalitet-tabben måste läsa de canonical artefakt-shaparna, inte
+    ett påhittat parallellt schema. Den läste tidigare qualityResult.findings
+    / qualityResult.gates och repairResult.actions — fält som inte finns —
+    vilket fick failade runs att visa "Quality Gate gick rent" och dolde
+    hela Repair Pipeline-blocket.
+
+    Sanningskällor:
+      - packages/generation/quality_gate/models.py: QualityResult har
+        status + checks[] (name/status/detail/severity/findings).
+      - packages/generation/repair/models.py: RepairResult har status,
+        iterations, mechanicalFixesApplied[], remainingErrors[],
+        qualityStatusBefore.
+      - build-result.json: runDurationMs (inte durationMs), inget exitCode.
+
+    Source-lock så en framtida refaktor inte kan återinföra fel fältnamn
+    och tysta gate-resultatet igen.
+    """
+    text = (VIEWSER_DIR / "components" / "builder" / "inspector" / "quality-tab.tsx").read_text(
+        encoding="utf-8"
+    )
+
+    # Quality Gate: måste läsa checks[] + status + summary (canonical), inte
+    # findings/gates (det icke-existerande parallella schemat).
+    assert "qualityResult.checks" in text, (
+        "Kvalitet-tabben ska läsa qualityResult.checks[] (canonical), inte "
+        "qualityResult.findings/gates."
+    )
+    assert "qualityResult.status" in text, (
+        "Kvalitet-tabben ska visa gate-status från qualityResult.status."
+    )
+    assert "qualityResult.findings" not in text and "qualityResult.gates" not in text, (
+        "Kvalitet-tabben får inte läsa det påhittade findings/gates-schemat — "
+        "det var P0-buggen som fick failade runs att se rena ut."
+    )
+    assert 'check.status === "failed"' in text, (
+        "Kvalitet-tabben ska härleda failade checks från check.status, inte "
+        "anta att en tom findings-lista betyder rent gate."
+    )
+
+    # Repair Pipeline: canonical mechanicalFixesApplied/remainingErrors, inte actions.
+    assert "repairResult.mechanicalFixesApplied" in text, (
+        "Repair-blocket ska läsa repairResult.mechanicalFixesApplied[]."
+    )
+    assert "repairResult.remainingErrors" in text, (
+        "Repair-blocket ska läsa repairResult.remainingErrors[]."
+    )
+    assert "repairResult.actions" not in text, (
+        "Repair-blocket får inte läsa det icke-existerande repairResult.actions."
+    )
+
+    # Build: runDurationMs (inte durationMs), inget exitCode-fält.
+    assert "buildResult.runDurationMs" in text, (
+        "Build-statusen ska läsa runDurationMs (canonical), inte durationMs."
+    )
+    assert "buildResult.durationMs" not in text and "buildResult.exitCode" not in text, (
+        "Build-statusen får inte läsa durationMs/exitCode — de finns inte i build-result.json."
+    )
+
+
+@pytest.mark.tooling
+def test_dossiers_tab_handles_flat_selected_dossiers() -> None:
+    """P1: site-plan.json:selectedDossiers är ANTINGEN en platt id-lista
+    (vanligast) eller objektformen { required, recommended, conditional,
+    rejected }. Tabben castade tidigare alltid till objekt → den platta
+    listan tappade alla fält och fyra tomma grupper visades på vanliga runs.
+    Source-lock att båda formerna hanteras (Array.isArray-gren)."""
+    text = (VIEWSER_DIR / "components" / "builder" / "inspector" / "dossiers-tab.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "Array.isArray(rawSelected)" in text, (
+        "Dossiers-tabben måste detektera den platta listformen av "
+        "selectedDossiers (Array.isArray), inte bara objektformen."
+    )
+    assert "isFlatList" in text, (
+        "Dossiers-tabben ska rendera en 'Valda'-grupp för den platta listan "
+        "istället för fyra tomma objekt-grupper."
+    )
+
+
+@pytest.mark.tooling
+def test_floating_chat_copy_directive_keeps_exact_change_set() -> None:
+    """P1: när en run har BÅDE copy-direktiv OCH en exakt change-set (routes/
+    variant) ska den strukturella change-set:en fortfarande visas under
+    'Ändrat'. Tidigare returnerade copy-grenen utan changes och dolde
+    tillagda/borttagna sidor. Source-lock att exactChanges beräknas före
+    copy-grenen och bifogas där."""
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+    copy_idx = text.find("const copyLines = summarizeCopyDirectives")
+    exact_idx = text.find("const exactChanges = summarizeChangeSet")
+    assert exact_idx != -1 and copy_idx != -1, (
+        "Både exactChanges och copyLines måste härledas i build-outcome-mappningen."
+    )
+    assert exact_idx < copy_idx, (
+        "exactChanges måste beräknas FÖRE copy-grenen så copy-grenen kan "
+        "bifoga den strukturella change-set:en."
+    )
+
+
+@pytest.mark.tooling
+def test_floating_chat_persist_gated_on_hydration() -> None:
+    """P1: persist-effekterna i FloatingChat skrev default-värdet ('false')
+    till localStorage vid mount INNAN hydrerings-IIFE:n läst stored-värdena,
+    och nollställde därmed operatörens sparade minimized/quick-prompts-
+    preference. Source-lock att en hasHydratedRef-gate finns."""
+    text = (VIEWSER_DIR / "components" / "builder" / "floating-chat.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "hasHydratedRef" in text, (
+        "FloatingChat ska gat:a persist-effekterna mot en hasHydratedRef så "
+        "default-värden inte skriver över sparad localStorage före hydrering."
+    )
+    assert text.count("if (!hasHydratedRef.current) return;") >= 3, (
+        "Alla tre persist-effekterna (position/minimized/quick-prompts) ska "
+        "early-returna tills hydreringen läst klart."
+    )
+
+
+@pytest.mark.tooling
+def test_discovery_wizard_gates_forward_jumps() -> None:
+    """P1: tab-klick, pil-navigering och ⌥-siffra hoppade tidigare till valfritt
+    steg utan validering → operatören kunde skippa ett halvfyllt foundation-
+    steg. Source-lock att en resolveReachableStep-gate clamp:ar framåt-hopp
+    mot maxReachableStep (bakåt fortsatt fritt)."""
+    text = (VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "maxReachableStep" in text and "resolveReachableStep" in text, (
+        "Wizarden ska beräkna maxReachableStep och routa hopp genom resolveReachableStep."
+    )
+    assert "resolveReachableStep(idx, current)" in text, (
+        "Tab-klick ska gå genom resolveReachableStep, inte rå setStepIndex(idx)."
+    )
+
+
+@pytest.mark.tooling
+def test_visual_step_revalidates_vibe_against_scaffold() -> None:
+    """P1: vid family-byte av-/återmonteras VisualStep men auto-default-
+    effekten early-returnade så snart vibeId var truthy → ett stale vibe-id
+    från föregående family behölls (syntes ej markerat men låg kvar i
+    payloaden). Source-lock att den nu validerar mot vibes-listan."""
+    text = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "steps" / "visual-step.tsx"
+    ).read_text(encoding="utf-8")
+    assert (
+        "currentVibeValid" in text and "vibes.some((v) => v.id === answers.vibe.vibeId)" in text
+    ), (
+        "VisualStep ska validera vald vibe mot scaffoldens vibe-lista och "
+        "byta ut en stale vibe mot familjens default."
+    )
+
+
+@pytest.mark.tooling
+def test_tokens_tab_clears_session_storage_on_commit() -> None:
+    """P1: sessionStorage-overrides överlevde en commit och återuppväcktes vid
+    reload — trots att färgerna redan bakats in i sajten — så tabben erbjöd
+    om samma commit i oändlighet. Source-lock att handleCommit rensar storage
+    och att en settle-effekt tömmer buffern efter bygget."""
+    text = (VIEWSER_DIR / "components" / "builder" / "inspector" / "tokens-tab.tsx").read_text(
+        encoding="utf-8"
+    )
+    commit_idx = text.find("const handleCommit = useCallback(")
+    assert commit_idx != -1, "tokens-tab.tsx ska ha handleCommit."
+    # clearStoredTokens måste anropas inom handleCommit (före onPrompt).
+    window = text[commit_idx : commit_idx + 600]
+    assert "clearStoredTokens();" in window, (
+        "handleCommit ska rensa sessionStorage vid commit så overrides inte "
+        "återuppväcks vid reload."
+    )
+    assert "committedPromptRef" in text, (
+        "Tokens-tabben ska spåra den committade prompten och settle:a buffern "
+        "efter att bygget konsumerat den."
+    )
+
+
+@pytest.mark.tooling
+def test_focus_trap_hook_used_by_custom_dialogs() -> None:
+    """P1: de custom overlay-dialogerna (AI-bildgenerator + wizardens
+    kortkommando-overlay) saknade focus-trap trots role=dialog/aria-modal.
+    Source-lock att useFocusTrap-hooken finns och används i båda."""
+    hook = VIEWSER_DIR / "lib" / "use-focus-trap.ts"
+    assert hook.exists(), "lib/use-focus-trap.ts ska finnas."
+    hook_text = hook.read_text(encoding="utf-8")
+    assert "export function useFocusTrap" in hook_text, (
+        "use-focus-trap.ts ska exportera useFocusTrap."
+    )
+    ai_dialog = (
+        VIEWSER_DIR / "components" / "discovery-wizard" / "ai-image-generator-dialog.tsx"
+    ).read_text(encoding="utf-8")
+    wizard = (VIEWSER_DIR / "components" / "discovery-wizard" / "discovery-wizard.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "useFocusTrap(dialogRef, open)" in ai_dialog, (
+        "AI-bilddialogen ska fånga Tab inom dialogen via useFocusTrap."
+    )
+    assert "useFocusTrap(helpPanelRef, helpOpen)" in wizard, (
+        "Wizardens kortkommando-overlay ska fånga Tab via useFocusTrap."
+    )

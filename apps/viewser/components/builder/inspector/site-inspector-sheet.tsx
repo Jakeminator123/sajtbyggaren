@@ -134,7 +134,7 @@ export function SiteInspectorSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full max-w-[560px] gap-0 p-0 sm:max-w-[560px] max-md:!inset-x-0 max-md:!bottom-0 max-md:!top-auto max-md:!left-0 max-md:!right-0 max-md:!h-[90dvh] max-md:!w-full max-md:!max-w-none max-md:!rounded-t-3xl max-md:!border-t max-md:!border-l-0 max-md:pb-safe"
+        className="max-md:pb-safe w-full max-w-[560px] gap-0 p-0 max-md:!inset-x-0 max-md:!top-auto max-md:!right-0 max-md:!bottom-0 max-md:!left-0 max-md:!h-[90dvh] max-md:!w-full max-md:!max-w-none max-md:!rounded-t-3xl max-md:!border-t max-md:!border-l-0 sm:max-w-[560px]"
       >
         {/* Bottom-sheet drag-handle (mobile only). Endast visuell —
             informerar operatören att panelen är swipe:bar (faktisk
@@ -142,10 +142,7 @@ export function SiteInspectorSheet({
             handle:n är ett standardiserat bottom-sheet-affordance
             som matchar SheetContent side="bottom"-pattern. md:hidden
             så den inte syns i desktop-side-drawer. */}
-        <div
-          aria-hidden
-          className="bottom-sheet-handle md:hidden"
-        />
+        <div aria-hidden className="bottom-sheet-handle md:hidden" />
         <SheetHeader className="border-border/60 flex flex-row items-start justify-between gap-3 border-b p-5 max-md:pt-2">
           <div className="flex min-w-0 flex-col gap-1">
             <SheetTitle className="flex items-center gap-2 text-[16px] tracking-tight">
@@ -169,7 +166,7 @@ export function SiteInspectorSheet({
             disabled={state.status === "loading"}
             aria-label="Uppdatera artefakter"
             title="Uppdatera artefakter"
-            className="mr-9 shrink-0 min-tap sm:min-tap-0"
+            className="min-tap sm:min-tap-0 mr-9 shrink-0"
           >
             <RefreshCw
               aria-hidden
@@ -179,7 +176,10 @@ export function SiteInspectorSheet({
         </SheetHeader>
 
         <div className="flex-1 overflow-hidden">
-          {state.status === "loading" ? (
+          {state.status === "loading" || (state.status === "idle" && runId) ? (
+            // idle + giltig runId = fetch är på väg (useRunArtefacts-effekten
+            // sätter loading efter en mikrotask). Visa skelett direkt så vi
+            // inte blinkar "Ingen aktiv run" en frame innan hämtningen börjar.
             <InspectorLoadingSkeleton />
           ) : state.status === "error" ? (
             <div className="p-5">
@@ -190,7 +190,7 @@ export function SiteInspectorSheet({
                 {state.error}
               </p>
             </div>
-          ) : state.status === "idle" || !runId ? (
+          ) : state.status !== "ok" || !runId ? (
             <div className="text-muted-foreground flex h-full items-center justify-center px-6 text-center text-[12px]">
               <span>
                 Ingen aktiv run.
@@ -207,13 +207,27 @@ export function SiteInspectorSheet({
                 variant="line"
                 className="border-border/60 scrollbar-hidden w-full justify-start gap-1 overflow-x-auto border-b px-4 pt-2 pb-2"
               >
-                <TabsTrigger value="pages">Sidor</TabsTrigger>
-                <TabsTrigger value="brief">Brief &amp; Plan</TabsTrigger>
-                <TabsTrigger value="variants">Variants</TabsTrigger>
-                <TabsTrigger value="versions">Versioner</TabsTrigger>
-                <TabsTrigger value="tokens">Färger</TabsTrigger>
-                <TabsTrigger value="dossiers">Dossiers</TabsTrigger>
-                <TabsTrigger value="quality">Kvalitet</TabsTrigger>
+                <TabsTrigger value="pages" className="min-tap md:min-tap-0">
+                  Sidor
+                </TabsTrigger>
+                <TabsTrigger value="brief" className="min-tap md:min-tap-0">
+                  Brief &amp; Plan
+                </TabsTrigger>
+                <TabsTrigger value="variants" className="min-tap md:min-tap-0">
+                  Variants
+                </TabsTrigger>
+                <TabsTrigger value="versions" className="min-tap md:min-tap-0">
+                  Versioner
+                </TabsTrigger>
+                <TabsTrigger value="tokens" className="min-tap md:min-tap-0">
+                  Färger
+                </TabsTrigger>
+                <TabsTrigger value="dossiers" className="min-tap md:min-tap-0">
+                  Dossiers
+                </TabsTrigger>
+                <TabsTrigger value="quality" className="min-tap md:min-tap-0">
+                  Kvalitet
+                </TabsTrigger>
               </TabsList>
               <div className="flex-1 overflow-y-auto px-5 py-4">
                 <TabsContent value="pages">
@@ -287,10 +301,7 @@ function InspectorLoadingSkeleton() {
           TabsList:en så layouten inte hoppar när data landar). */}
       <div className="border-border/60 flex w-full items-center gap-3 border-b px-4 pt-2 pb-3">
         {Array.from({ length: 7 }).map((_, i) => (
-          <Skeleton
-            key={i}
-            className="h-4 w-14 shrink-0 rounded-md"
-          />
+          <Skeleton key={i} className="h-4 w-14 shrink-0 rounded-md" />
         ))}
       </div>
       {/* Tre kort som approximerar typisk tab-content. */}

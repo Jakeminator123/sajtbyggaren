@@ -114,7 +114,21 @@ export function DossiersTab({
   onPrompt,
 }: DossiersTabProps) {
   const sitePlan = bundle.sitePlan ?? {};
-  const selected = (sitePlan.selectedDossiers ?? {}) as Record<string, unknown>;
+  const rawSelected = sitePlan.selectedDossiers;
+
+  // site-plan.json:selectedDossiers är ANTINGEN en platt id-lista (vanligast —
+  // planner/operator-lista utan gap-rapport) ELLER objektformen
+  // { required, recommended, conditional, rejected, rationale } (när helpern
+  // hittade rejected/rationale, se merge_operator_selected_with_helper i
+  // packages/generation/planning/plan.py). Den gamla casten till Record fick
+  // den platta listan att tappa alla fält → fyra tomma grupper på vanliga runs.
+  const isFlatList = Array.isArray(rawSelected);
+  const flatSelected = isFlatList ? asDossierList(rawSelected) : [];
+  const selected = (
+    !isFlatList && rawSelected && typeof rawSelected === "object"
+      ? rawSelected
+      : {}
+  ) as Record<string, unknown>;
 
   const required = asDossierList(selected.required);
   const recommended = asDossierList(selected.recommended);
@@ -136,71 +150,85 @@ export function DossiersTab({
         </p>
       ) : null}
 
-      <DossierGroup
-        icon={CheckCircle2}
-        label="Required"
-        entries={required}
-        emptyText="Inga required dossiers i denna run."
-        colorClass="text-emerald-700 dark:text-emerald-500"
-      />
+      {isFlatList ? (
+        // Platt listform: visa EN "Valda"-grupp istället för fyra tomma
+        // objekt-grupper. Inga rejected/rationale finns i denna form.
+        <DossierGroup
+          icon={CheckCircle2}
+          label="Valda"
+          entries={flatSelected}
+          emptyText="Inga dossiers valda i denna run."
+          colorClass="text-emerald-700 dark:text-emerald-500"
+        />
+      ) : (
+        <>
+          <DossierGroup
+            icon={CheckCircle2}
+            label="Required"
+            entries={required}
+            emptyText="Inga required dossiers i denna run."
+            colorClass="text-emerald-700 dark:text-emerald-500"
+          />
 
-      <DossierGroup
-        icon={Zap}
-        label="Recommended"
-        entries={recommended}
-        emptyText="Inga recommended dossiers."
-        colorClass="text-sky-700 dark:text-sky-500"
-      />
+          <DossierGroup
+            icon={Zap}
+            label="Recommended"
+            entries={recommended}
+            emptyText="Inga recommended dossiers."
+            colorClass="text-sky-700 dark:text-sky-500"
+          />
 
-      <DossierGroup
-        icon={MinusCircle}
-        label="Conditional"
-        entries={conditional}
-        emptyText="Inga conditional dossiers."
-        colorClass="text-muted-foreground"
-      />
+          <DossierGroup
+            icon={MinusCircle}
+            label="Conditional"
+            entries={conditional}
+            emptyText="Inga conditional dossiers."
+            colorClass="text-muted-foreground"
+          />
 
-      <div>
-        <div className="text-destructive mb-1.5 flex items-center gap-1.5 text-[10.5px] tracking-[0.16em] uppercase">
-          <XCircle className="h-3 w-3" aria-hidden />
-          Rejected ({rejected.length})
-        </div>
-        {rejected.length === 0 ? (
-          <p className="text-muted-foreground text-[11.5px] italic">
-            Inga avvisade dossiers.
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-1.5">
-            {rejected.map((entry) => {
-              const retryPrompt = buildRetryPrompt(entry);
-              return (
-                <li
-                  key={entry.id}
-                  className="border-destructive/30 bg-destructive/5 rounded-md border p-2"
-                >
-                  <div className="mb-1 flex items-baseline justify-between gap-2">
-                    <code className="text-foreground bg-muted/40 rounded px-1.5 py-0.5 font-mono text-[10.5px]">
-                      {entry.id}
-                    </code>
-                    <QuickPromptButton
-                      label="Försök ändå"
-                      prompt={retryPrompt}
-                      isBuilding={isBuilding}
-                      isPending={pendingPrompt === retryPrompt}
-                      onSelect={onPrompt}
-                    />
-                  </div>
-                  {entry.reason ? (
-                    <p className="text-muted-foreground text-[11px] leading-snug">
-                      {entry.reason}
-                    </p>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+          <div>
+            <div className="text-destructive mb-1.5 flex items-center gap-1.5 text-[10.5px] tracking-[0.16em] uppercase">
+              <XCircle className="h-3 w-3" aria-hidden />
+              Rejected ({rejected.length})
+            </div>
+            {rejected.length === 0 ? (
+              <p className="text-muted-foreground text-[11.5px] italic">
+                Inga avvisade dossiers.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-1.5">
+                {rejected.map((entry) => {
+                  const retryPrompt = buildRetryPrompt(entry);
+                  return (
+                    <li
+                      key={entry.id}
+                      className="border-destructive/30 bg-destructive/5 rounded-md border p-2"
+                    >
+                      <div className="mb-1 flex items-baseline justify-between gap-2">
+                        <code className="text-foreground bg-muted/40 rounded px-1.5 py-0.5 font-mono text-[10.5px]">
+                          {entry.id}
+                        </code>
+                        <QuickPromptButton
+                          label="Försök ändå"
+                          prompt={retryPrompt}
+                          isBuilding={isBuilding}
+                          isPending={pendingPrompt === retryPrompt}
+                          onSelect={onPrompt}
+                        />
+                      </div>
+                      {entry.reason ? (
+                        <p className="text-muted-foreground text-[11px] leading-snug">
+                          {entry.reason}
+                        </p>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

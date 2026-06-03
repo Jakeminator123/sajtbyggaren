@@ -238,21 +238,33 @@ function classifyFollowupError(rawError: string): {
       tip: "Beskriv ändringen mer konkret (vilken sektion, vad ska ändras).",
     };
   }
-  if (text.includes("openai") || text.includes("anthropic") || text.includes("api key")) {
+  if (
+    text.includes("openai") ||
+    text.includes("anthropic") ||
+    text.includes("api key")
+  ) {
     return {
       kind: "auth",
       message: "AI-tjänsten är otillgänglig.",
       tip: "Kontrollera att .env.local har giltig OPENAI_API_KEY.",
     };
   }
-  if (text.includes("quality") || text.includes("typecheck") || text.includes("build failed")) {
+  if (
+    text.includes("quality") ||
+    text.includes("typecheck") ||
+    text.includes("build failed")
+  ) {
     return {
       kind: "quality",
       message: "Den nya versionen klarade inte Quality Gate.",
       tip: "Pipelinen avbröt automatiskt — sajten är oförändrad. Prova en mer specifik instruktion.",
     };
   }
-  if (text.includes("network") || text.includes("fetch") || text.includes("econnreset")) {
+  if (
+    text.includes("network") ||
+    text.includes("fetch") ||
+    text.includes("econnreset")
+  ) {
     return {
       kind: "network",
       message: "Nätverket avbröts.",
@@ -678,8 +690,7 @@ function summarizeBuildResult(
         };
       }
       return {
-        content:
-          `Jag kunde inte fånga någon synlig ändring den här gången.${versionText} Testa att ange exakt rubrik, text eller sektion — t.ex. "byt namnet i headern till X".`,
+        content: `Jag kunde inte fånga någon synlig ändring den här gången.${versionText} Testa att ange exakt rubrik, text eller sektion — t.ex. "byt namnet i headern till X".`,
         variant: "info",
       };
     }
@@ -689,11 +700,14 @@ function summarizeBuildResult(
     // eller artefakt-läsning som silently failade — alla tre
     // fallbackar till den generiska "Klart!"-raden så vi inte lovar
     // ändringar vi inte kan bekräfta.
+    // UI-gap-fix (2026-06-02): backend kan härleda en EXAKT change-set
+    // (routes tillagda/borttagna, variant-byte). Beräkna den FÖRE copy-
+    // grenen så att den inte göms när en run både har copy-direktiv OCH
+    // strukturella deltan — copy-direktiven beskriver bara text-ändringar.
+    const exactChanges = summarizeChangeSet(payload.changeSet);
     const copyLines = summarizeCopyDirectives(payload.appliedCopyDirectives);
     if (copyLines.length > 0) {
-      const verb = versionText
-        ? `Klart!${versionText}`
-        : "Klart!";
+      const verb = versionText ? `Klart!${versionText}` : "Klart!";
       const list =
         copyLines.length === 1
           ? copyLines[0]
@@ -701,13 +715,15 @@ function summarizeBuildResult(
       return {
         content: `${verb} ${list}`,
         variant: "success",
+        // Bifoga den strukturella change-set:en under "Ändrat" när den finns,
+        // annars göms tillagda/borttagna sidor och variant-byten bakom
+        // copy-raden.
+        ...(exactChanges.length > 0
+          ? { changes: exactChanges, changesExact: true }
+          : {}),
       };
     }
-    // UI-gap-fix (2026-06-02): när backend härledde en EXAKT change-set
-    // (routes tillagda/borttagna, variant-byte) visar vi de bekräftade
-    // deltorna under "Ändrat" istället för prompt-heuristiken. Faller
-    // bara igenom till heuristiken när change-set:en saknas/är tom.
-    const exactChanges = summarizeChangeSet(payload.changeSet);
+    // Faller bara igenom till heuristiken när change-set:en saknas/är tom.
     if (exactChanges.length > 0) {
       return {
         content: `Klart!${versionText} Previewen laddas om automatiskt.`,
@@ -738,7 +754,8 @@ function summarizeBuildResult(
     };
   }
   return {
-    content: "Bygget returnerade okänd status. Kontrollera Inspector → Quality Gate.",
+    content:
+      "Bygget returnerade okänd status. Kontrollera Inspector → Quality Gate.",
     variant: "warning",
   };
 }
@@ -825,6 +842,12 @@ export function FloatingChat({
   // expanderas från minimerat läge (annars stannar tangentbords-focus
   // på FAB-knappen och operatören måste Tab:a sig in i textfältet).
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  // Gate mot localStorage-race: persist-effekterna nedan kör vid mount INNAN
+  // hydrerings-IIFE:n (useLayoutEffect) hunnit läsa stored-värdena. Utan denna
+  // gate skrev de default-värdet ("false") tillbaka till localStorage och
+  // nollställde operatörens sparade minimized/quick-prompts-preference innan
+  // den ens lästs. Sätts true först när hydreringen läst klart.
+  const hasHydratedRef = useRef(false);
 
   // Expandera panelen + flytta focus till composer i samma callback.
   // setTimeout(0) säkerställer att React renderat panelen + textarean
@@ -866,6 +889,10 @@ export function FloatingChat({
       setIsMinimized(readStoredMinimized());
       setQuickPromptsOpen(readStoredQuickPromptsOpen());
       setLoopHintOpen(!readLoopHintSeen());
+      // Markera hydrering klar EFTER att stored-värdena lästs och setState
+      // köats — nu får persist-effekterna börja skriva (den batchade re-
+      // rendern skriver de hydrerade värdena, inte default).
+      hasHydratedRef.current = true;
     })();
     return () => {
       cancelled = true;
@@ -897,6 +924,7 @@ export function FloatingChat({
 
   // Persistera position.
   useEffect(() => {
+    if (!hasHydratedRef.current) return;
     if (!position) return;
     try {
       window.localStorage.setItem(
@@ -910,6 +938,7 @@ export function FloatingChat({
 
   // Persistera minimized-state.
   useEffect(() => {
+    if (!hasHydratedRef.current) return;
     try {
       window.localStorage.setItem(STORAGE_KEY_MINIMIZED, String(isMinimized));
     } catch {
@@ -919,6 +948,7 @@ export function FloatingChat({
 
   // Persistera quick-prompts-toggle.
   useEffect(() => {
+    if (!hasHydratedRef.current) return;
     try {
       window.localStorage.setItem(
         STORAGE_KEY_QUICK_PROMPTS,
@@ -1292,7 +1322,9 @@ export function FloatingChat({
     if (!id) return;
     if (!tracePolling.isPending && tracePolling.runStatus === null) return;
     setMessages((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, content: tracePolling.label } : m)),
+      prev.map((m) =>
+        m.id === id ? { ...m, content: tracePolling.label } : m,
+      ),
     );
   }, [tracePolling.label, tracePolling.isPending, tracePolling.runStatus]);
 
@@ -1332,7 +1364,8 @@ export function FloatingChat({
       ) {
         return;
       }
-      const option = DEVICE_PRESET_OPTIONS[parseInt(event.code.slice(5), 10) - 1];
+      const option =
+        DEVICE_PRESET_OPTIONS[parseInt(event.code.slice(5), 10) - 1];
       if (!option) return;
       event.preventDefault();
       setDevicePreset(option.id);
@@ -1379,14 +1412,12 @@ export function FloatingChat({
           // raden inte rendras än — annars skulle chat-panelen se
           // "ofullständig" ut (avhuggen nederkant utan något under).
           isMobile
-            ? "inset-x-0 bottom-0 max-h-[85dvh] w-full rounded-t-3xl pb-safe"
+            ? "pb-safe inset-x-0 bottom-0 max-h-[85dvh] w-full rounded-t-3xl"
             : "right-6 bottom-6 w-[360px] rounded-2xl",
         )}
         style={isMobile ? undefined : { height: PANEL_HEIGHT }}
       >
-        {isMobile && (
-          <div aria-hidden className="bottom-sheet-handle" />
-        )}
+        {isMobile && <div aria-hidden className="bottom-sheet-handle" />}
         <div className="border-border/60 flex items-center justify-between border-b px-3 py-2">
           <div className="text-foreground flex items-center gap-2 text-[12px] font-medium tracking-tight">
             <MessageSquare className="text-muted-foreground h-3.5 w-3.5" />
@@ -1415,18 +1446,15 @@ export function FloatingChat({
             "border-border/60 bg-card/95 text-foreground border shadow-2xl backdrop-blur-xl",
             "motion-safe:animate-fc-edge-pulse",
             "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
-            "active:scale-95 transition-transform",
+            "transition-transform active:scale-95",
             "bottom-safe-4",
           )}
         >
-          <MessageSquare
-            aria-hidden
-            className="text-foreground/80 h-5 w-5"
-          />
+          <MessageSquare aria-hidden className="text-foreground/80 h-5 w-5" />
           <span
             aria-hidden
             className={cn(
-              "absolute top-1.5 right-1.5 h-2 w-2 rounded-full ring-2 ring-card",
+              "ring-card absolute top-1.5 right-1.5 h-2 w-2 rounded-full ring-2",
               isBuilding
                 ? "bg-amber-500 motion-safe:animate-pulse"
                 : "bg-emerald-500",
@@ -1453,7 +1481,7 @@ export function FloatingChat({
       >
         <span
           className={cn(
-            "border-border/60 bg-card/95 text-foreground flex h-14 items-center gap-2 rounded-l-2xl border border-r-0 pl-2.5 pr-3 backdrop-blur-xl",
+            "border-border/60 bg-card/95 text-foreground flex h-14 items-center gap-2 rounded-l-2xl border border-r-0 pr-3 pl-2.5 backdrop-blur-xl",
             "motion-safe:animate-fc-edge-pulse",
             "transition-[padding,gap] duration-200 ease-out",
             "group-hover:gap-2.5 group-hover:pr-4 group-focus-visible:gap-2.5 group-focus-visible:pr-4",
@@ -1486,422 +1514,417 @@ export function FloatingChat({
 
   return (
     <>
-    <aside
-      aria-label="Sajtmaskin-chatt"
-      className={cn(
-        "border-border/60 bg-card/95 pointer-events-auto fixed z-40 flex flex-col overflow-hidden border shadow-2xl backdrop-blur-xl",
-        // Mobil = bottom-sheet (full bredd, kapad höjd, safe-area).
-        // Desktop = 360px floating panel med inline position-state.
-        // På desktop används rounded-t-2xl (inte rounded-2xl) eftersom
-        // toolbar-raden under (format + Verktyg) hänger ihop kant-i-kant
-        // och formar tillsammans EN rektangel med rundade ytter-hörn.
-        // Bottom-rundningen lever på toolbar-raden istället.
-        isMobile
-          ? "inset-x-0 bottom-0 w-full max-h-[85dvh] rounded-t-3xl pb-safe"
-          : "w-[360px] rounded-t-2xl",
-        isDragging
-          ? "cursor-grabbing transition-none"
-          : "motion-safe:transition-[box-shadow] motion-safe:duration-150",
-      )}
-      style={
-        isMobile
-          ? // bottom: keyboardInset hänger panelen ovanför iOS-tangentbordet
-            // (= 0 när keyboard ej syns, > 0 när det är öppet). transition
-            // gör att panelen glider upp/ner smidigt istället för att hoppa.
-            {
-              bottom: keyboardInset,
-              transition: "bottom 0.18s ease-out",
-            }
-          : {
-              left: position.x,
-              top: position.y,
-              height: PANEL_HEIGHT,
-              minHeight: PANEL_MIN_HEIGHT,
-            }
-      }
-    >
-      {isMobile && (
-        <div aria-hidden className="bottom-sheet-handle" />
-      )}
-      <div
-        ref={headerRef}
-        onPointerDown={isMobile ? undefined : handlePointerDown}
-        onPointerMove={isMobile ? undefined : handlePointerMove}
-        onPointerUp={isMobile ? undefined : handlePointerUp}
-        onPointerCancel={isMobile ? undefined : handlePointerUp}
+      <aside
+        aria-label="Sajtmaskin-chatt"
         className={cn(
-          "border-border/60 bg-card/90 flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2 select-none",
+          "border-border/60 bg-card/95 pointer-events-auto fixed z-40 flex flex-col overflow-hidden border shadow-2xl backdrop-blur-xl",
+          // Mobil = bottom-sheet (full bredd, kapad höjd, safe-area).
+          // Desktop = 360px floating panel med inline position-state.
+          // På desktop används rounded-t-2xl (inte rounded-2xl) eftersom
+          // toolbar-raden under (format + Verktyg) hänger ihop kant-i-kant
+          // och formar tillsammans EN rektangel med rundade ytter-hörn.
+          // Bottom-rundningen lever på toolbar-raden istället.
           isMobile
-            ? "cursor-default"
-            : isDragging
-              ? "cursor-grabbing"
-              : "cursor-grab",
+            ? "pb-safe inset-x-0 bottom-0 max-h-[85dvh] w-full rounded-t-3xl"
+            : "w-[360px] rounded-t-2xl",
+          isDragging
+            ? "cursor-grabbing transition-none"
+            : "motion-safe:transition-[box-shadow] motion-safe:duration-150",
         )}
+        style={
+          isMobile
+            ? // bottom: keyboardInset hänger panelen ovanför iOS-tangentbordet
+              // (= 0 när keyboard ej syns, > 0 när det är öppet). transition
+              // gör att panelen glider upp/ner smidigt istället för att hoppa.
+              {
+                bottom: keyboardInset,
+                transition: "bottom 0.18s ease-out",
+              }
+            : {
+                left: position.x,
+                top: position.y,
+                height: PANEL_HEIGHT,
+                minHeight: PANEL_MIN_HEIGHT,
+              }
+        }
       >
-        <div className="text-foreground flex min-w-0 items-center gap-2 text-[12px] font-medium tracking-tight">
-          <span
-            className={cn(
-              "h-2 w-2 rounded-full",
-              isBuilding
-                ? "bg-amber-500 motion-safe:animate-pulse"
-                : "bg-emerald-500",
-            )}
-            aria-hidden
-          />
-          <MessageSquare className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">Sajtmaskin</span>
-          <span
-            className="text-muted-foreground ml-1 truncate font-mono text-[10px]"
-            title={siteId}
-          >
-            {siteId}
-          </span>
-        </div>
-        <div className="flex shrink-0 items-center gap-0.5">
-          <button
-            type="button"
-            onClick={() => setIsMinimized(true)}
-            aria-label="Minimera"
-            className="text-muted-foreground hover:text-foreground hover:bg-muted/60 inline-flex min-tap sm:min-tap-0 sm:h-6 sm:w-6 items-center justify-center rounded-md active:scale-95"
-          >
-            <Minus className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsMinimized(true)}
-            aria-label="Stäng (minimera)"
-            title="Stäng (öppnas igen från bubblan)"
-            className="text-muted-foreground hover:text-foreground hover:bg-muted/60 inline-flex min-tap sm:min-tap-0 sm:h-6 sm:w-6 items-center justify-center rounded-md active:scale-95"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Första-gångs-hint: gör kärnloopen synlig (följdprompt → ny
-          version). Dismiss:bar och persisterad så den bara visas en
-          gång. "Visa versioner" djuplänkar till historiken. */}
-      {loopHintOpen ? (
-        <div className="border-border/60 bg-muted/40 shrink-0 border-b px-3 py-2.5">
-          <div className="flex items-start gap-2">
-            <Sparkles
-              className="text-foreground/70 mt-0.5 h-3.5 w-3.5 shrink-0"
+        {isMobile && <div aria-hidden className="bottom-sheet-handle" />}
+        <div
+          ref={headerRef}
+          onPointerDown={isMobile ? undefined : handlePointerDown}
+          onPointerMove={isMobile ? undefined : handlePointerMove}
+          onPointerUp={isMobile ? undefined : handlePointerUp}
+          onPointerCancel={isMobile ? undefined : handlePointerUp}
+          className={cn(
+            "border-border/60 bg-card/90 flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2 select-none",
+            isMobile
+              ? "cursor-default"
+              : isDragging
+                ? "cursor-grabbing"
+                : "cursor-grab",
+          )}
+        >
+          <div className="text-foreground flex min-w-0 items-center gap-2 text-[12px] font-medium tracking-tight">
+            <span
+              className={cn(
+                "h-2 w-2 rounded-full",
+                isBuilding
+                  ? "bg-amber-500 motion-safe:animate-pulse"
+                  : "bg-emerald-500",
+              )}
               aria-hidden
             />
-            <div className="min-w-0 flex-1">
-              <p className="text-foreground text-[12px] leading-relaxed">
-                Så funkar det: beskriv en ändring här så bygger jag om sajten.
-                Varje bygge sparas som en ny version du kan gå tillbaka till.
-              </p>
-              {onShowVersions ? (
-                <button
-                  type="button"
-                  onClick={onShowVersions}
-                  className="text-foreground/80 hover:text-foreground mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium underline-offset-2 hover:underline"
-                >
-                  <GitBranch className="h-3 w-3" aria-hidden />
-                  Visa versioner
-                </button>
-              ) : null}
-            </div>
+            <MessageSquare className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">Sajtmaskin</span>
+            <span
+              className="text-muted-foreground ml-1 truncate font-mono text-[10px]"
+              title={siteId}
+            >
+              {siteId}
+            </span>
+          </div>
+          <div className="flex shrink-0 items-center gap-0.5">
             <button
               type="button"
-              onClick={dismissLoopHint}
-              aria-label="Dölj tipset"
-              title="Dölj"
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/60 inline-flex min-tap sm:min-tap-0 sm:h-6 sm:w-6 shrink-0 items-center justify-center rounded-md active:scale-95"
+              onClick={() => setIsMinimized(true)}
+              aria-label="Minimera"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/60 min-tap sm:min-tap-0 inline-flex items-center justify-center rounded-md active:scale-95 sm:h-6 sm:w-6"
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsMinimized(true)}
+              aria-label="Stäng (minimera)"
+              title="Stäng (öppnas igen från bubblan)"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/60 min-tap sm:min-tap-0 inline-flex items-center justify-center rounded-md active:scale-95 sm:h-6 sm:w-6"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
-      ) : null}
 
-      <div
-        ref={messagesRef}
-        className="flex-1 overflow-y-auto px-3 py-3"
-        role="log"
-        aria-live="polite"
-      >
-        <ol className="flex flex-col gap-2">
-          {messages.map((message) => (
-            <li key={message.id} className="flex flex-col">
-              <MessageBubble
-                message={message}
-                onRetry={(prompt) => {
-                  // Sätt input + skicka — operatören kan välja att
-                  // ändra prompten först om hen vill, eller bara
-                  // klicka skicka direkt. Vi rensar inte input om
-                  // operatören redan börjat skriva på något nytt.
-                  if (input.trim().length === 0) {
-                    setInput(prompt);
-                    // Auto-skicka när input var tom — annars är det
-                    // sannolikt operatören håller på med en ny prompt
-                    // och hen får trycka skicka själv.
-                    void sendFollowupPrompt(prompt);
-                  } else {
-                    setInput(prompt);
-                  }
-                }}
+        {/* Första-gångs-hint: gör kärnloopen synlig (följdprompt → ny
+          version). Dismiss:bar och persisterad så den bara visas en
+          gång. "Visa versioner" djuplänkar till historiken. */}
+        {loopHintOpen ? (
+          <div className="border-border/60 bg-muted/40 shrink-0 border-b px-3 py-2.5">
+            <div className="flex items-start gap-2">
+              <Sparkles
+                className="text-foreground/70 mt-0.5 h-3.5 w-3.5 shrink-0"
+                aria-hidden
               />
-            </li>
-          ))}
-        </ol>
-      </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-foreground text-[12px] leading-relaxed">
+                  Så funkar det: beskriv en ändring här så bygger jag om sajten.
+                  Varje bygge sparas som en ny version du kan gå tillbaka till.
+                </p>
+                {onShowVersions ? (
+                  <button
+                    type="button"
+                    onClick={onShowVersions}
+                    className="text-foreground/80 hover:text-foreground mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium underline-offset-2 hover:underline"
+                  >
+                    <GitBranch className="h-3 w-3" aria-hidden />
+                    Visa versioner
+                  </button>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={dismissLoopHint}
+                aria-label="Dölj tipset"
+                title="Dölj"
+                className="text-muted-foreground hover:text-foreground hover:bg-muted/60 min-tap sm:min-tap-0 inline-flex shrink-0 items-center justify-center rounded-md active:scale-95 sm:h-6 sm:w-6"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        ) : null}
 
-      {/* Build progress-bar — visas under build körs. Determinerade
+        <div
+          ref={messagesRef}
+          className="flex-1 overflow-y-auto px-3 py-3"
+          role="log"
+          aria-live="polite"
+        >
+          <ol className="flex flex-col gap-2">
+            {messages.map((message) => (
+              <li key={message.id} className="flex flex-col">
+                <MessageBubble
+                  message={message}
+                  onRetry={(prompt) => {
+                    // Sätt input + skicka — operatören kan välja att
+                    // ändra prompten först om hen vill, eller bara
+                    // klicka skicka direkt. Vi rensar inte input om
+                    // operatören redan börjat skriva på något nytt.
+                    if (input.trim().length === 0) {
+                      setInput(prompt);
+                      // Auto-skicka när input var tom — annars är det
+                      // sannolikt operatören håller på med en ny prompt
+                      // och hen får trycka skicka själv.
+                      void sendFollowupPrompt(prompt);
+                    } else {
+                      setInput(prompt);
+                    }
+                  }}
+                />
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        {/* Build progress-bar — visas under build körs. Determinerade
           steg är 4 (brief/plan/codegen/quality); progress drivs av
           ``buildProgress``-state som ramper från 0 → 95% över
           förväntad total-duration. Stannar vid 95% tills response,
           sedan hoppar till 100% och fade:as ut via onAnimationEnd. */}
-      {(isSending || isBuilding) && (
-        <div className="border-border/40 bg-card/80 shrink-0 border-t">
-          <div className="bg-border/40 relative h-[2px] w-full overflow-hidden">
-            <div
-              className="bg-foreground/80 motion-safe:transition-[width] motion-safe:duration-500 absolute inset-y-0 left-0"
-              style={{ width: `${buildProgress}%` }}
-              aria-hidden
-            />
+        {(isSending || isBuilding) && (
+          <div className="border-border/40 bg-card/80 shrink-0 border-t">
+            <div className="bg-border/40 relative h-[2px] w-full overflow-hidden">
+              <div
+                className="bg-foreground/80 absolute inset-y-0 left-0 motion-safe:transition-[width] motion-safe:duration-500"
+                style={{ width: `${buildProgress}%` }}
+                aria-hidden
+              />
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="border-border/60 bg-card/90 shrink-0 border-t p-2">
-        {/* "Iterera från denna"-pill: visas så fort operatören valt
+        <div className="border-border/60 bg-card/90 shrink-0 border-t p-2">
+          {/* "Iterera från denna"-pill: visas så fort operatören valt
             en historisk version i Versions-tab. Nästa submit skickar
             baseRunId i fetch-bodyn så backend laddar PI-snapshotet
             från den runen istället för senaste. X:et avmarkerar
             utan att skicka. */}
-        {pendingBaseRunId ? (
-          <div
-            role="status"
-            className="mb-2 flex items-center gap-2 rounded-md border border-sky-500/40 bg-sky-500/[0.08] px-2 py-1.5 text-[11px] text-sky-700 dark:text-sky-300"
-          >
-            <GitBranch className="h-3 w-3 shrink-0" aria-hidden />
-            <span className="flex-1 truncate">
-              Iterera från{" "}
-              {pendingBaseRunId.baseVersion !== null
-                ? `version ${pendingBaseRunId.baseVersion}`
-                : "vald version"}
-            </span>
-            {onClearBaseRunId ? (
-              <button
-                type="button"
-                onClick={onClearBaseRunId}
-                aria-label="Avbryt iterera-läge"
-                title="Avbryt iterera-läge"
-                className={cn(
-                  "hover:bg-sky-500/15 min-tap sm:min-tap-0 inline-flex h-5 w-5 items-center justify-center rounded-full active:scale-95",
-                  "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
-                )}
-              >
-                <X className="h-3 w-3" aria-hidden />
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-        {/* Snabbförslag ligger bakom en collapsed "Förslag"-toggle.
+          {pendingBaseRunId ? (
+            <div
+              role="status"
+              className="mb-2 flex items-center gap-2 rounded-md border border-sky-500/40 bg-sky-500/[0.08] px-2 py-1.5 text-[11px] text-sky-700 dark:text-sky-300"
+            >
+              <GitBranch className="h-3 w-3 shrink-0" aria-hidden />
+              <span className="flex-1 truncate">
+                Iterera från{" "}
+                {pendingBaseRunId.baseVersion !== null
+                  ? `version ${pendingBaseRunId.baseVersion}`
+                  : "vald version"}
+              </span>
+              {onClearBaseRunId ? (
+                <button
+                  type="button"
+                  onClick={onClearBaseRunId}
+                  aria-label="Avbryt iterera-läge"
+                  title="Avbryt iterera-läge"
+                  className={cn(
+                    "min-tap sm:min-tap-0 inline-flex h-5 w-5 items-center justify-center rounded-full hover:bg-sky-500/15 active:scale-95",
+                    "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
+                  )}
+                >
+                  <X className="h-3 w-3" aria-hidden />
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          {/* Snabbförslag ligger bakom en collapsed "Förslag"-toggle.
             Klick på en chip fyller textarean (utan att skicka) så
             operatören kan finslipa innan submit. Toggle-läget
             persisteras i localStorage så preference följer med
             mellan reloads. Endast när det inte finns bilagor att
             visa — vi vill inte stapla två chip-rader. */}
-        {attachments.length === 0 && !isSending && !isBuilding ? (
-          <div className="mb-2 flex flex-col items-center">
-            <button
-              type="button"
-              onClick={() => setQuickPromptsOpen((prev) => !prev)}
-              aria-expanded={quickPromptsOpen}
-              aria-controls="floating-chat-quick-prompts"
-              aria-label={quickPromptsOpen ? "Dölj förslag" : "Visa förslag"}
-              title={quickPromptsOpen ? "Dölj förslag" : "Visa förslag"}
-              className={cn(
-                "text-muted-foreground/70 hover:text-foreground hover:bg-muted/50",
-                "min-tap sm:min-tap-0 inline-flex h-5 w-9 items-center justify-center rounded-full active:scale-95",
-                "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
-                "transition-colors",
-              )}
-            >
-              <ChevronUp
-                className={cn(
-                  "h-3.5 w-3.5 transition-transform duration-200",
-                  quickPromptsOpen ? "rotate-180" : "rotate-0",
-                )}
-                aria-hidden
-              />
-            </button>
-            {quickPromptsOpen ? (
-              <div
-                id="floating-chat-quick-prompts"
-                className="mt-1.5 flex w-full flex-col gap-1.5"
-              >
-                {QUICK_PROMPT_CATEGORIES.map((category) => (
-                  <div key={category.id} className="flex flex-col gap-1">
-                    <span
-                      className="text-muted-foreground/60 px-0.5 text-[9.5px] font-medium uppercase tracking-widest"
-                      aria-hidden
-                    >
-                      {category.label}
-                    </span>
-                    <div className="flex flex-wrap gap-1">
-                      {category.prompts.map((suggestion) => (
-                        <button
-                          key={suggestion}
-                          type="button"
-                          onClick={() => {
-                            setInput(suggestion);
-                            setQuickPromptsOpen(false);
-                          }}
-                          title={suggestion}
-                          className={cn(
-                            "border-border/60 bg-background/80 text-foreground/80",
-                            "hover:border-border hover:bg-card hover:text-foreground",
-                            "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
-                            "min-tap sm:min-tap-0 rounded-full border px-2.5 py-1 text-[11px] transition-colors active:scale-95 sm:px-2 sm:py-0.5 sm:text-[10.5px]",
-                            CHIP_INTERACTIONS,
-                          )}
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        {/* Pending-bilagor. Små chips med filnamn + X. När operatören
-            skickar prompten töms listan. */}
-        {attachments.length > 0 ? (
-          <div className="-mx-0.5 mb-2 flex flex-wrap gap-1">
-            {attachments.map((ref) => (
-              <span
-                key={ref.assetId}
-                className="border-border/60 bg-muted/60 text-foreground/85 inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-0.5 text-[11px]"
-              >
-                <ImagePlus className="text-muted-foreground h-3 w-3 shrink-0" />
-                <span className="truncate" title={ref.filename}>
-                  {ref.filename}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeAttachment(ref.assetId)}
-                  aria-label={`Ta bort ${ref.filename}`}
-                  className="text-muted-foreground hover:text-foreground min-tap sm:min-tap-0 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded active:scale-95"
-                >
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              </span>
-            ))}
-          </div>
-        ) : null}
-
-        {uploadError ? (
-          <p
-            role="alert"
-            className="text-destructive mb-2 px-1 text-[11px] leading-snug"
-          >
-            {uploadError}
-          </p>
-        ) : null}
-
-        <div className="border-border/70 bg-background focus-within:border-ring/50 focus-within:ring-ring/30 overflow-hidden rounded-xl border focus-within:ring-2">
-          <Textarea
-            ref={composerRef}
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              attachments.length > 0
-                ? "Berätta hur bilden ska användas (valfritt)…"
-                : "Beskriv ändringen…"
-            }
-            rows={2}
-            maxLength={4000}
-            disabled={isSending || isBuilding}
-            // text-base (16px) på mobil förhindrar iOS Safari från att
-            // auto-zooma vid fokus; krymper till text-[13px] på md+.
-            // sm:-breakpoint (640px) är fortfarande iPad-portrait där
-            // iOS-zoom kan trigga; md: (768px) är säkrare.
-            className="min-h-[60px] resize-none border-0 bg-transparent px-3 py-2 text-base md:text-[13px] shadow-none focus-visible:ring-0"
-          />
-          <div className="border-border/60 flex items-center justify-between gap-2 border-t px-2 py-1.5">
-            <div className="flex items-center gap-1">
+          {attachments.length === 0 && !isSending && !isBuilding ? (
+            <div className="mb-2 flex flex-col items-center">
               <button
                 type="button"
-                onClick={handleUploadClick}
-                disabled={isUploading || isSending || isBuilding}
-                aria-label="Bifoga bild"
-                title="Bifoga bild (PNG, JPEG, WebP, SVG · max 10 MB)"
+                onClick={() => setQuickPromptsOpen((prev) => !prev)}
+                aria-expanded={quickPromptsOpen}
+                aria-controls="floating-chat-quick-prompts"
+                aria-label={quickPromptsOpen ? "Dölj förslag" : "Visa förslag"}
+                title={quickPromptsOpen ? "Dölj förslag" : "Visa förslag"}
                 className={cn(
-                  "text-muted-foreground hover:text-foreground hover:bg-muted/60",
-                  "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
-                  "inline-flex min-tap sm:min-tap-0 sm:h-6 sm:w-6 items-center justify-center rounded-md transition-colors",
-                  "disabled:opacity-40 disabled:hover:bg-transparent active:scale-95",
+                  "text-muted-foreground/70 hover:text-foreground hover:bg-muted/50",
+                  "min-tap sm:min-tap-0 inline-flex h-5 w-9 items-center justify-center rounded-full active:scale-95",
+                  "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
+                  "transition-colors",
                 )}
               >
-                {isUploading ? (
-                  <Loader2
-                    aria-hidden
-                    className="h-3.5 w-3.5 animate-spin"
-                  />
-                ) : (
-                  <ImagePlus aria-hidden className="h-3.5 w-3.5" />
-                )}
+                <ChevronUp
+                  className={cn(
+                    "h-3.5 w-3.5 transition-transform duration-200",
+                    quickPromptsOpen ? "rotate-180" : "rotate-0",
+                  )}
+                  aria-hidden
+                />
               </button>
-              <span className="text-muted-foreground text-[10px]">
-                ⌘↵ skicka · esc minimera
-              </span>
+              {quickPromptsOpen ? (
+                <div
+                  id="floating-chat-quick-prompts"
+                  className="mt-1.5 flex w-full flex-col gap-1.5"
+                >
+                  {QUICK_PROMPT_CATEGORIES.map((category) => (
+                    <div key={category.id} className="flex flex-col gap-1">
+                      <span
+                        className="text-muted-foreground/60 px-0.5 text-[9.5px] font-medium tracking-widest uppercase"
+                        aria-hidden
+                      >
+                        {category.label}
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {category.prompts.map((suggestion) => (
+                          <button
+                            key={suggestion}
+                            type="button"
+                            onClick={() => {
+                              setInput(suggestion);
+                              setQuickPromptsOpen(false);
+                            }}
+                            title={suggestion}
+                            className={cn(
+                              "border-border/60 bg-background/80 text-foreground/80",
+                              "hover:border-border hover:bg-card hover:text-foreground",
+                              "focus-visible:ring-ring/40 focus-visible:ring-2 focus-visible:outline-none",
+                              "min-tap sm:min-tap-0 rounded-full border px-2.5 py-1 text-[11px] transition-colors active:scale-95 sm:px-2 sm:py-0.5 sm:text-[10.5px]",
+                              CHIP_INTERACTIONS,
+                            )}
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
-            <button
-              type="button"
-              onClick={() => void sendFollowupPrompt(input)}
-              disabled={
-                isSending ||
-                isBuilding ||
-                isUploading ||
-                (input.trim().length === 0 && attachments.length === 0)
-              }
-              aria-label="Skicka instruktion"
-              className={cn(
-                "bg-foreground text-background inline-flex min-h-[44px] sm:min-h-0 sm:h-7 items-center gap-1.5 rounded-md px-3.5 sm:px-2.5 text-sm sm:text-[11.5px] font-medium",
-                "hover:bg-foreground/90 disabled:opacity-40 active:scale-95",
-                "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
-                PRIMARY_INTERACTIONS,
-              )}
+          ) : null}
+
+          {/* Pending-bilagor. Små chips med filnamn + X. När operatören
+            skickar prompten töms listan. */}
+          {attachments.length > 0 ? (
+            <div className="-mx-0.5 mb-2 flex flex-wrap gap-1">
+              {attachments.map((ref) => (
+                <span
+                  key={ref.assetId}
+                  className="border-border/60 bg-muted/60 text-foreground/85 inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-0.5 text-[11px]"
+                >
+                  <ImagePlus className="text-muted-foreground h-3 w-3 shrink-0" />
+                  <span className="truncate" title={ref.filename}>
+                    {ref.filename}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(ref.assetId)}
+                    aria-label={`Ta bort ${ref.filename}`}
+                    className="text-muted-foreground hover:text-foreground min-tap sm:min-tap-0 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded active:scale-95"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          {uploadError ? (
+            <p
+              role="alert"
+              className="text-destructive mb-2 px-1 text-[11px] leading-snug"
             >
-              {isSending || isBuilding ? (
-                <Loader2 aria-hidden className="h-3 w-3 animate-spin" />
-              ) : (
-                <Send aria-hidden className="h-3 w-3" />
-              )}
-              {isSending || isBuilding
-                ? buildProgress < 15
-                  ? "Skickar"
-                  : buildProgress < 95
-                    ? "Bygger"
-                    : "Sparar"
-                : "Skicka"}
-            </button>
+              {uploadError}
+            </p>
+          ) : null}
+
+          <div className="border-border/70 bg-background focus-within:border-ring/50 focus-within:ring-ring/30 overflow-hidden rounded-xl border focus-within:ring-2">
+            <Textarea
+              ref={composerRef}
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                attachments.length > 0
+                  ? "Berätta hur bilden ska användas (valfritt)…"
+                  : "Beskriv ändringen…"
+              }
+              rows={2}
+              maxLength={4000}
+              disabled={isSending || isBuilding}
+              // text-base (16px) på mobil förhindrar iOS Safari från att
+              // auto-zooma vid fokus; krymper till text-[13px] på md+.
+              // sm:-breakpoint (640px) är fortfarande iPad-portrait där
+              // iOS-zoom kan trigga; md: (768px) är säkrare.
+              className="min-h-[60px] resize-none border-0 bg-transparent px-3 py-2 text-base shadow-none focus-visible:ring-0 md:text-[13px]"
+            />
+            <div className="border-border/60 flex items-center justify-between gap-2 border-t px-2 py-1.5">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleUploadClick}
+                  disabled={isUploading || isSending || isBuilding}
+                  aria-label="Bifoga bild"
+                  title="Bifoga bild (PNG, JPEG, WebP, SVG · max 10 MB)"
+                  className={cn(
+                    "text-muted-foreground hover:text-foreground hover:bg-muted/60",
+                    "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
+                    "min-tap sm:min-tap-0 inline-flex items-center justify-center rounded-md transition-colors sm:h-6 sm:w-6",
+                    "active:scale-95 disabled:opacity-40 disabled:hover:bg-transparent",
+                  )}
+                >
+                  {isUploading ? (
+                    <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <ImagePlus aria-hidden className="h-3.5 w-3.5" />
+                  )}
+                </button>
+                <span className="text-muted-foreground text-[10px]">
+                  ⌘↵ skicka · esc minimera
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => void sendFollowupPrompt(input)}
+                disabled={
+                  isSending ||
+                  isBuilding ||
+                  isUploading ||
+                  (input.trim().length === 0 && attachments.length === 0)
+                }
+                aria-label="Skicka instruktion"
+                className={cn(
+                  "bg-foreground text-background inline-flex min-h-[44px] items-center gap-1.5 rounded-md px-3.5 text-sm font-medium sm:h-7 sm:min-h-0 sm:px-2.5 sm:text-[11.5px]",
+                  "hover:bg-foreground/90 active:scale-95 disabled:opacity-40",
+                  "focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none",
+                  PRIMARY_INTERACTIONS,
+                )}
+              >
+                {isSending || isBuilding ? (
+                  <Loader2 aria-hidden className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Send aria-hidden className="h-3 w-3" />
+                )}
+                {isSending || isBuilding
+                  ? buildProgress < 15
+                    ? "Skickar"
+                    : buildProgress < 95
+                      ? "Bygger"
+                      : "Sparar"
+                  : "Skicka"}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Dold filinput används av paperclip-knappen. Visuellt
+        {/* Dold filinput används av paperclip-knappen. Visuellt
           gömd men funktionellt aktiverbar via .click(). */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/webp,image/svg+xml"
-        onChange={(event) => void handleFileChange(event)}
-        className="hidden"
-        aria-hidden
-      />
-    </aside>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          onChange={(event) => void handleFileChange(event)}
+          className="hidden"
+          aria-hidden
+        />
+      </aside>
 
-    {/* Toolbar-rad UNDER chat-panelen — innehåller device-preset-
+      {/* Toolbar-rad UNDER chat-panelen — innehåller device-preset-
         knapparna (375/768/1024/Full), en subtil vertikal divider, och
         en optional `tools`-slot (typiskt BuilderActions inline-knappen).
         Bredd = PANEL_WIDTH (360px) och `rounded-b-2xl` så toolbar-raden
@@ -1918,56 +1941,53 @@ export function FloatingChat({
         är meningslöst, och Verktyg-pillen är ändå dold under md:.
         position-null guard:en hanterar SSR + initial hydration innan
         first-mount-effekten satt position-state. */}
-    {!isMobile && !isMinimized && position ? (
-      <div
-        role="toolbar"
-        aria-label="Förhandsvisningsbredd och verktyg"
-        className="border-border/60 bg-card/95 pointer-events-auto fixed z-40 hidden items-center justify-center gap-0.5 rounded-b-2xl border border-t-0 p-1 shadow-2xl backdrop-blur-xl md:flex"
-        style={{
-          left: position.x,
-          top: position.y + PANEL_HEIGHT,
-          width: PANEL_WIDTH,
-        }}
-      >
-        {DEVICE_PRESET_OPTIONS.map((option, idx) => {
-          const isActive = devicePreset === option.id;
-          const Icon = option.Icon;
-          const shortcut = `⌥${idx + 1}`;
-          return (
-            <button
-              key={option.id}
-              type="button"
-              aria-pressed={isActive}
-              aria-label={
-                option.width
-                  ? `Preview-bredd ${option.label}px (genväg ${shortcut})`
-                  : `Full bredd (genväg ${shortcut})`
-              }
-              title={`Genväg ${shortcut}`}
-              onClick={() => setDevicePreset(option.id)}
-              className={cn(
-                "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium transition active:scale-95",
-                isActive
-                  ? "bg-foreground text-background shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <Icon className="h-3.5 w-3.5" aria-hidden />
-              {option.label}
-            </button>
-          );
-        })}
-        {tools ? (
-          <>
-            <span
-              aria-hidden
-              className="bg-border/60 mx-0.5 h-5 w-px"
-            />
-            {tools}
-          </>
-        ) : null}
-      </div>
-    ) : null}
+      {!isMobile && !isMinimized && position ? (
+        <div
+          role="toolbar"
+          aria-label="Förhandsvisningsbredd och verktyg"
+          className="border-border/60 bg-card/95 pointer-events-auto fixed z-40 hidden items-center justify-center gap-0.5 rounded-b-2xl border border-t-0 p-1 shadow-2xl backdrop-blur-xl md:flex"
+          style={{
+            left: position.x,
+            top: position.y + PANEL_HEIGHT,
+            width: PANEL_WIDTH,
+          }}
+        >
+          {DEVICE_PRESET_OPTIONS.map((option, idx) => {
+            const isActive = devicePreset === option.id;
+            const Icon = option.Icon;
+            const shortcut = `⌥${idx + 1}`;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={isActive}
+                aria-label={
+                  option.width
+                    ? `Preview-bredd ${option.label}px (genväg ${shortcut})`
+                    : `Full bredd (genväg ${shortcut})`
+                }
+                title={`Genväg ${shortcut}`}
+                onClick={() => setDevicePreset(option.id)}
+                className={cn(
+                  "inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-medium transition active:scale-95",
+                  isActive
+                    ? "bg-foreground text-background shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" aria-hidden />
+                {option.label}
+              </button>
+            );
+          })}
+          {tools ? (
+            <>
+              <span aria-hidden className="bg-border/60 mx-0.5 h-5 w-px" />
+              {tools}
+            </>
+          ) : null}
+        </div>
+      ) : null}
     </>
   );
 }
@@ -1990,9 +2010,7 @@ function MessageBubble({
   })();
 
   if (isError) {
-    return (
-      <ErrorBubble message={message} onRetry={onRetry} />
-    );
+    return <ErrorBubble message={message} onRetry={onRetry} />;
   }
 
   return (
@@ -2029,7 +2047,7 @@ function MessageBubble({
           strukturerad change-set (summarizeChangeSet), "Troligen ändrat"
           för prompt-heuristiken (summarizeChangesFromPrompt). */}
       {isSuccess && message.changes && message.changes.length > 0 ? (
-        <div className="border-emerald-500/30 mt-1.5 ml-1 flex flex-col gap-1 border-l-2 pl-2.5">
+        <div className="mt-1.5 ml-1 flex flex-col gap-1 border-l-2 border-emerald-500/30 pl-2.5">
           <span className="text-muted-foreground/70 font-mono text-[9.5px] tracking-[0.18em] uppercase">
             {message.changesExact ? "Ändrat" : "Troligen ändrat"}
           </span>
@@ -2039,7 +2057,7 @@ function MessageBubble({
               className="text-foreground/85 inline-flex items-center gap-1.5 text-[11.5px]"
             >
               <Sparkles
-                className="text-emerald-600 dark:text-emerald-400 h-2.5 w-2.5 shrink-0"
+                className="h-2.5 w-2.5 shrink-0 text-emerald-600 dark:text-emerald-400"
                 aria-hidden
               />
               <span className="text-muted-foreground/80 font-medium">
@@ -2083,7 +2101,9 @@ function ErrorBubble({
   onRetry: (prompt: string) => void;
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const Icon = message.errorKind ? ERROR_ICONS[message.errorKind] : AlertTriangle;
+  const Icon = message.errorKind
+    ? ERROR_ICONS[message.errorKind]
+    : AlertTriangle;
   const canRetry =
     typeof message.retryPrompt === "string" && message.retryPrompt.length > 0;
   const hasDetails =

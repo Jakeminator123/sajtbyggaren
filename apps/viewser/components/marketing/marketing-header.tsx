@@ -82,6 +82,15 @@ export function MarketingHeader() {
           })}
         </nav>
 
+        {/* Höger (desktop): primär bygg-CTA. Mobilen får samma CTA längst ner
+            i Sheet-menyn nedan, så headern hålls ren på små skärmar. */}
+        <Link
+          href={STUDIO_HREF}
+          className="bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-ring/50 hidden h-9 items-center justify-center rounded-full px-4 text-[13px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] sm:inline-flex"
+        >
+          Bygg din hemsida
+        </Link>
+
         {/* Mobil: hamburgare → Sheet-meny (3 nav-länkar är få men en drawer
             ger fullstora tap-targets + primär CTA utan att tränga ihop
             headern). */}
@@ -96,10 +105,7 @@ export function MarketingHeader() {
             <SheetHeader>
               <SheetTitle>Meny</SheetTitle>
             </SheetHeader>
-            <nav
-              aria-label="Mobilmeny"
-              className="flex flex-col gap-1 px-2"
-            >
+            <nav aria-label="Mobilmeny" className="flex flex-col gap-1 px-2">
               {navItems.map((item) => {
                 const active = isActive(item.href);
                 return (
